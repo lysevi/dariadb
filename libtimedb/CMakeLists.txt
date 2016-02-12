@@ -2,7 +2,7 @@ include_directories(..)
 include_directories(..)
 
 FILE(GLOB HDRS "*.h" "*.hpp")
-FILE(GLOB SRC "*.cpp")
+FILE(GLOB SRC "*.cpp" ${HDRS})
 
 if(MSVC)
         add_library(libtimedb STATIC ${SRC})
@@ -16,7 +16,7 @@ export(PACKAGE libtimedb)
 set_target_properties(libtimedb PROPERTIES PUBLIC_HEADER "${HDRS}")
  
 install(TARGETS libtimedb
-  EXPORT nkvdbTargets
+  EXPORT timedbTargets
   RUNTIME DESTINATION "${INSTALL_BIN_DIR}"
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}"
   ARCHIVE DESTINATION "${INSTALL_LIB_DIR}/static"

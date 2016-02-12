@@ -1,6 +1,6 @@
 include_directories(../libtimedb)
 
-add_library(timdb_test STATIC test_common.cpp test_common.h)
+add_library(timedb_test STATIC test_common.cpp test_common.h)
 
 MESSAGE(STATUS "Test: " ${name})
 

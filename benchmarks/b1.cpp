@@ -8,10 +8,12 @@
 
 namespace po = boost::program_options;
 
+bool verbose = false;
 
 int main(int argc, char *argv[]) {
   po::options_description desc("IO benchmark.\n Allowed options");
-  desc.add_options()("help", "produce help message")(
+  desc.add_options()
+	  ("help", "produce help message")
       ("verbose", "verbose ouput");
 
   po::variables_map vm;
