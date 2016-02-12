@@ -11,6 +11,7 @@ namespace timedb {
 		~Compression();
 
 		static uint16_t compress_delta_64(uint64_t D);
+		static uint16_t compress_delta_256(uint64_t D);
 	};
 
 }
