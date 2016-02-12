@@ -17,3 +17,18 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
   BOOST_CHECK_EQUAL(timedb::utils::filename(filename), "test");
   BOOST_CHECK_EQUAL(timedb::utils::parent_path(filename), "foo/bar");
 }
+
+BOOST_AUTO_TEST_CASE(BitOperations) {
+	uint8_t value = 255;
+	for (int i = 0; i < 7; i++) {
+		BOOST_CHECK_EQUAL(timedb::utils::BitOperations::check(value, i), true);
+	}
+
+	for (int i = 0; i < 7; i++) {
+		value=timedb::utils::BitOperations::set(value, i,0);
+	}
+
+	for (int i = 0; i < 7; i++) {
+		BOOST_CHECK_EQUAL(timedb::utils::BitOperations::check(value, i), false);
+	}
+}

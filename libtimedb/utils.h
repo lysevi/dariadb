@@ -18,28 +18,48 @@
 #define ENSURE_NOT_NULL(A)
 #endif
 
-namespace timedb{
-namespace utils
-{
+namespace timedb {
+	namespace utils
+	{
 
-class NonCopy {
-private:
-    NonCopy(const NonCopy &) = delete;
-    NonCopy &operator=(const NonCopy &) = delete;
+		struct BitOperations {
+			static inline uint8_t get(uint8_t v, uint8_t num) {
+				return (v >> num) & 1;
+			}
 
-protected:
-    NonCopy() = default;
-};
+			static inline bool check(uint8_t v, uint8_t num) {
+				return get(v, num) == 1;
+			}
 
-std::list<boost::filesystem::path> ls(const std::string &path);
-std::list<boost::filesystem::path> ls(const std::string &path,
-                                      const std::string &ext);
-bool rm(const std::string &rm_path);
-std::string filename(std::string fname); // without ex
-std::string parent_path(std::string fname);
+			static inline uint8_t set(uint8_t v, uint8_t num, uint8_t bitValue) {
+				if (bitValue == 1) {
+					
+					return v | (1 << num);
+				}
+				else {
+					return v & ~(1 << num);
+				}
+			}
+		};
 
-template <typename T> bool inInterval(T from, T to, T value) {
-  return value >= from && value <= to;
-}
-}
+		class NonCopy {
+		private:
+			NonCopy(const NonCopy &) = delete;
+			NonCopy &operator=(const NonCopy &) = delete;
+
+		protected:
+			NonCopy() = default;
+		};
+
+		std::list<boost::filesystem::path> ls(const std::string &path);
+		std::list<boost::filesystem::path> ls(const std::string &path,
+			const std::string &ext);
+		bool rm(const std::string &rm_path);
+		std::string filename(std::string fname); // without ex
+		std::string parent_path(std::string fname);
+
+		template <typename T> bool inInterval(T from, T to, T value) {
+			return value >= from && value <= to;
+		}
+	}
 }
