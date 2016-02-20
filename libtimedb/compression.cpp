@@ -8,8 +8,6 @@ const uint16_t delta_256_mask = 3072;       //1100 0000 0000
 const uint16_t delta_2047_mask = 57344;     //1110 0000 0000 0000
 const uint64_t delta_big_mask = 64424509440;//1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
 
-const uint8_t max_bit_value = 7;
-
 DeltaCompressor::DeltaCompressor()
 {
 }
@@ -37,50 +35,52 @@ uint64_t DeltaCompressor::get_delta_big(uint64_t D) {
 	return delta_big_mask | D;
 }
 
-BinaryBuffer::BinaryBuffer(size_t size):_cap(size), _pos(0),_bitnum(max_bit_value){
-	this->_buf = new value_type[_cap];
-	std::fill_n(_buf, _cap, value_type());
+
+BinaryWriter::BinaryWriter(uint8_t* begin,uint8_t*end):
+    _begin(begin),
+    _end(end),
+    _cap(std::distance(begin,end)),
+    _pos(0),
+    _bitnum(max_bit_value){
 }
 
-BinaryBuffer::BinaryBuffer(const BinaryBuffer & other) {
-	this->_buf = new uint8_t[other._cap];
+BinaryWriter::BinaryWriter(const BinaryWriter & other) {
+    this->_begin = other._begin;
+    this->_end = other._end;
 	_pos = other._pos;
 	_bitnum = other._bitnum;
 	_cap = other._cap;
-	memcpy(_buf, other._buf, _pos);
 }
 
-BinaryBuffer::BinaryBuffer(BinaryBuffer && other){
-	_buf = other._buf;
+BinaryWriter::BinaryWriter(BinaryWriter && other){
+    _begin = other._begin;
+    _end = other._end;
 	_pos = other._pos;
 	_cap = other._cap;
 	_bitnum = other._bitnum;
-	other._buf = nullptr;
 	other._pos = 0;
 	other._cap = 0;
 	other._bitnum = 0;
 }
 
-BinaryBuffer::~BinaryBuffer(){
-	if (_buf != nullptr) {
-		delete[] _buf;
-	}
+BinaryWriter::~BinaryWriter(){
 }
 
-BinaryBuffer& BinaryBuffer::operator=(const BinaryBuffer & other){
-	BinaryBuffer tmp(other);
+BinaryWriter& BinaryWriter::operator=(const BinaryWriter & other){
+    BinaryWriter tmp(other);
 	tmp.swap(*this);
 	return *this;
 }
 
-void BinaryBuffer::swap(BinaryBuffer & other) throw(){
+void BinaryWriter::swap(BinaryWriter & other) throw(){
 	std::swap(_pos, other._pos);
 	std::swap(_cap, other._cap);
-	std::swap(_buf, other._buf);
+    std::swap(_begin, other._begin);
+    std::swap(_end, other._end);
 	std::swap(_bitnum, other._bitnum);
 }
 
-void BinaryBuffer::incbit(){
+void BinaryWriter::incbit(){
 	_bitnum--;
 	if (_bitnum < 0) {
 		incpos();
@@ -88,33 +88,32 @@ void BinaryBuffer::incbit(){
 	}
 }
 
-void BinaryBuffer::incpos(){
+void BinaryWriter::incpos(){
 	_pos++;
 }
 
-void BinaryBuffer::set_bitnum(size_t num) {
+void BinaryWriter::set_bitnum(size_t num) {
 	this->_bitnum = num;
 }
 
-void BinaryBuffer::set_pos(size_t pos) {
+void BinaryWriter::set_pos(size_t pos) {
 	this->_pos = pos;
 }
 
-void BinaryBuffer::reset_pos() { 
+void BinaryWriter::reset_pos() {
 	this->set_pos(0); 
 	this->set_bitnum(max_bit_value);
 }
 
-uint8_t BinaryBuffer::getbit() const{
-	return (_buf[_pos] >> _bitnum) & 1;
+uint8_t BinaryWriter::getbit() const{
+    return (_begin[_pos] >> _bitnum) & 1;
 }
 
 
-void BinaryBuffer::setbit() {
-	auto val = _buf[_pos] | (1 << _bitnum);
-	_buf[_pos] = val;
+void BinaryWriter::setbit() {
+    _begin[_pos] |= (1 << _bitnum);
 }
 
-void BinaryBuffer::clrbit() {
-	_buf[_pos] &= ~(1 << _bitnum);
+void BinaryWriter::clrbit() {
+    _begin[_pos] &= ~(1 << _bitnum);
 }

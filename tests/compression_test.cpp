@@ -4,6 +4,9 @@
 
 #include <compression.h>
 
+#include <iterator>
+#include <sstream>
+
 BOOST_AUTO_TEST_CASE(d_64) {
 	BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_64(1), 513);
 	BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_64(64), 576);
@@ -23,41 +26,42 @@ BOOST_AUTO_TEST_CASE(d_2048) {
 }
 
 BOOST_AUTO_TEST_CASE(d_big) {
-	BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(2049), 64424511489);
-	BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(65535), 64424574975);
-	BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(4095), 64424513535);
-	BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(4294967295), 68719476735);
+    BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(2049), uint64_t(64424511489));
+    BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(65535),uint64_t( 64424574975));
+    BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(4095), uint64_t(64424513535));
+    BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(4294967295), uint64_t(68719476735));
 }
 
 BOOST_AUTO_TEST_CASE(binary_buffer) {
 	const size_t buffer_size = 10;
 	const size_t writed_bits = 7 * buffer_size;
+    uint8_t buffer[buffer_size];
 	//check ctor
-	timedb::compression::BinaryBuffer b(buffer_size);
+    timedb::compression::BinaryWriter b(std::begin(buffer),std::end(buffer));
 	BOOST_CHECK_EQUAL(b.cap(), buffer_size);
 
 	BOOST_CHECK_EQUAL(b.bitnum(), 7);
-	BOOST_CHECK_EQUAL(b.pos(), 0);
+    BOOST_CHECK_EQUAL(b.pos(), size_t(0));
 	
 	//check incs work fine
 	b.incbit();
 	BOOST_CHECK_EQUAL(b.bitnum(), 6);
-	BOOST_CHECK_EQUAL(b.pos(), 0);
+    BOOST_CHECK_EQUAL(b.pos(), size_t(0));
 
 	b.incbit(); b.incbit(); b.incbit(); 
 	b.incbit(); b.incbit(); b.incbit();
 	b.incbit();
 	BOOST_CHECK_EQUAL(b.bitnum(), 7);
-	BOOST_CHECK_EQUAL(b.pos(), 1);
+    BOOST_CHECK_EQUAL(b.pos(), size_t(1));
 
 	
 	{//ctors test.
-		timedb::compression::BinaryBuffer copy_b(b);
+		timedb::compression::BinaryWriter copy_b(b);
 		BOOST_CHECK_EQUAL(b.bitnum(), copy_b.bitnum());
 		BOOST_CHECK_EQUAL(b.pos(), copy_b.pos());
 		auto move_b = std::move(copy_b);
-		BOOST_CHECK(copy_b.bitnum() == copy_b.pos() && copy_b.bitnum() == copy_b.cap());
-		BOOST_CHECK_EQUAL(copy_b.bitnum(), 0);
+        BOOST_CHECK(size_t(copy_b.bitnum()) == copy_b.pos() && size_t(copy_b.bitnum()) == copy_b.cap());
+        BOOST_CHECK_EQUAL(copy_b.bitnum(),0);
 
 		BOOST_CHECK_EQUAL(move_b.bitnum(), b.bitnum());
 		BOOST_CHECK_EQUAL(move_b.pos(), b.pos());
@@ -87,6 +91,11 @@ BOOST_AUTO_TEST_CASE(binary_buffer) {
 		}
 		b.incbit();
 	}
+
+    std::stringstream ss{};
+    ss<<b;
+    BOOST_CHECK(ss.str().size()!=0);
+
 	b.reset_pos();
 	// clear all bits
 	for (size_t i = 0; i < writed_bits; i++) {

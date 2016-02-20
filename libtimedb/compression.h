@@ -1,22 +1,26 @@
 #pragma once
 
+#include <ostream>
 #include "meas.h"
 
 namespace timedb {
 	namespace compression {
-		class BinaryBuffer {
-			typedef uint8_t value_type;
+
+        const uint8_t max_bit_value = 7;
+
+
+        class BinaryWriter {
+             friend std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b);
 		public:
-			
-			BinaryBuffer(size_t size);
-			BinaryBuffer(const BinaryBuffer&other);
-			BinaryBuffer(BinaryBuffer&&other);
-			~BinaryBuffer();
-			BinaryBuffer& operator=(const BinaryBuffer&other);
+            BinaryWriter(uint8_t* _begin,uint8_t*_end);
+            BinaryWriter(const BinaryWriter&other);
+            BinaryWriter(BinaryWriter&&other);
+            ~BinaryWriter();
+            BinaryWriter& operator=(const BinaryWriter&other);
 
-			void swap(BinaryBuffer &other) throw();
+            void swap(BinaryWriter &other) throw();
 
-			int bitnum()const { return _bitnum; }
+            int bitnum()const { return _bitnum; }
 			size_t pos()const { return _pos; }
 			
 			void set_bitnum(size_t num);
@@ -31,15 +35,34 @@ namespace timedb {
 			uint8_t getbit()const;
 			void setbit();
 			void clrbit();
-		private:
-			value_type* _buf;
+
+
+        protected:
+            uint8_t* _begin,*_end;
 			size_t   _cap;
 
 			size_t _pos;
-			int _bitnum;
+            int _bitnum;
 		};
 
-		class DeltaCompressor
+        std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b){
+            stream<<" pos:"<<b._pos<<" cap:"<<b._cap<<" bit:"<<b._bitnum<<" [";
+            for(size_t i=0;i<=b._pos;i++){
+                for(int bit=int(max_bit_value);bit>=0;bit--){
+                    auto is_cur=((bit==b._bitnum) && (i==b._pos));
+                    if (is_cur)
+                        stream<<"[";
+                    stream <<((b._begin[i] >> bit) & 1);
+                    if (is_cur)
+                        stream<<"]";
+                    if(bit==4) stream<<" ";
+                }
+                stream<<std::endl;
+            }
+            return stream<<"]";
+        }
+
+        class DeltaCompressor
 		{
 		public:
 			DeltaCompressor();
