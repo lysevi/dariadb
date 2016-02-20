@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(d_big) {
     BOOST_CHECK_EQUAL(timedb::compression::DeltaCompressor::get_delta_big(4294967295), uint64_t(68719476735));
 }
 
-BOOST_AUTO_TEST_CASE(binary_buffer) {
+BOOST_AUTO_TEST_CASE(binary_writer) {
 	const size_t buffer_size = 10;
 	const size_t writed_bits = 7 * buffer_size;
     uint8_t buffer[buffer_size];

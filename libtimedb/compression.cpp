@@ -60,15 +60,18 @@ BinaryWriter::BinaryWriter(BinaryWriter && other){
 	_bitnum = other._bitnum;
 	other._pos = 0;
 	other._cap = 0;
-	other._bitnum = 0;
+    other._bitnum = 0;
+    other._begin=other._end=nullptr;
 }
 
 BinaryWriter::~BinaryWriter(){
 }
 
 BinaryWriter& BinaryWriter::operator=(const BinaryWriter & other){
-    BinaryWriter tmp(other);
-	tmp.swap(*this);
+    if(this!=&other){
+        BinaryWriter tmp(other);
+        tmp.swap(*this);
+    }
 	return *this;
 }
 
