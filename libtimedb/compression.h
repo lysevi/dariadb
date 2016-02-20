@@ -6,7 +6,7 @@
 namespace timedb {
 	namespace compression {
 
-        const uint8_t max_bit_value = 7;
+        const uint8_t max_bit_pos = 7;
 
 
         class BinaryWriter {
@@ -48,7 +48,7 @@ namespace timedb {
         std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b){
             stream<<" pos:"<<b._pos<<" cap:"<<b._cap<<" bit:"<<b._bitnum<<" [";
             for(size_t i=0;i<=b._pos;i++){
-                for(int bit=int(max_bit_value);bit>=0;bit--){
+                for(int bit=int(max_bit_pos);bit>=0;bit--){
                     auto is_cur=((bit==b._bitnum) && (i==b._pos));
                     if (is_cur)
                         stream<<"[";

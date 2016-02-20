@@ -41,7 +41,7 @@ BinaryWriter::BinaryWriter(uint8_t* begin,uint8_t*end):
     _end(end),
     _cap(std::distance(begin,end)),
     _pos(0),
-    _bitnum(max_bit_value){
+    _bitnum(max_bit_pos){
 }
 
 BinaryWriter::BinaryWriter(const BinaryWriter & other) {
@@ -84,7 +84,7 @@ void BinaryWriter::incbit(){
 	_bitnum--;
 	if (_bitnum < 0) {
 		incpos();
-		_bitnum = max_bit_value;
+		_bitnum = max_bit_pos;
 	}
 }
 
@@ -102,7 +102,7 @@ void BinaryWriter::set_pos(size_t pos) {
 
 void BinaryWriter::reset_pos() {
 	this->set_pos(0); 
-	this->set_bitnum(max_bit_value);
+	this->set_bitnum(max_bit_pos);
 }
 
 uint8_t BinaryWriter::getbit() const{
