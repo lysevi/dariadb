@@ -63,7 +63,9 @@ BOOST_AUTO_TEST_CASE(binary_buffer) {
 		BOOST_CHECK_EQUAL(move_b.pos(), b.pos());
 		BOOST_CHECK_EQUAL(move_b.cap(), b.cap());
 	}
+	// set/clr bit 
 	b.reset_pos();
+	// write 101010101...
 	for (size_t i = 0; i <writed_bits; i++) {
 		if (i % 2) {
 			b.setbit();
@@ -86,6 +88,7 @@ BOOST_AUTO_TEST_CASE(binary_buffer) {
 		b.incbit();
 	}
 	b.reset_pos();
+	// clear all bits
 	for (size_t i = 0; i < writed_bits; i++) {
 		b.clrbit();
 		BOOST_CHECK_EQUAL(b.getbit(), uint8_t(0));

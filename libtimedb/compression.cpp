@@ -38,7 +38,7 @@ uint64_t DeltaCompressor::get_delta_big(uint64_t D) {
 }
 
 BinaryBuffer::BinaryBuffer(size_t size):_cap(size), _pos(0),_bitnum(max_bit_value){
-	this->_buf = new value_type[_pos];
+	this->_buf = new value_type[_cap];
 	std::fill_n(_buf, _cap, value_type());
 }
 
@@ -101,8 +101,8 @@ void BinaryBuffer::set_pos(size_t pos) {
 }
 
 void BinaryBuffer::reset_pos() { 
-	_pos = 0; 
-	_bitnum = max_bit_value; 
+	this->set_pos(0); 
+	this->set_bitnum(max_bit_value);
 }
 
 uint8_t BinaryBuffer::getbit() const{
