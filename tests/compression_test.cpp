@@ -5,24 +5,21 @@
 #include <timedb.h>
 
 BOOST_AUTO_TEST_CASE(d_64) {
-	// 10 0000 0000
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_64(1), (uint16_t)257);
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_64(64), (uint16_t)320);
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_64(63), (uint16_t)319);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_64(1), 513);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_64(64), 576);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_64(63), 575);
 }
 
 BOOST_AUTO_TEST_CASE(d_256) {
-	// 1100 0000 0000
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_256(256), (uint16_t)3328);
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_256(255), (uint16_t)3327);
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_256(65),  (uint16_t)3137);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_256(256), 3328);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_256(255), 3327);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_256(65), 3137);
 }
 
 BOOST_AUTO_TEST_CASE(d_2048) {
-	// 1110 0000 0000 0000
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_2048(2048), (uint16_t)59392);
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_2048(257),  (uint16_t)57601);
-    BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_2048(4095), (uint16_t)61439);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_2048(2048), 59392);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_2048(257), 57601);
+	BOOST_CHECK_EQUAL(timedb::Compression::compress_delta_2048(4095), 61439);
 }
 
 BOOST_AUTO_TEST_CASE(d_big) {

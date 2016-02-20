@@ -3,32 +3,10 @@
 
 using namespace timedb;
 
-union Uint16Union
-{
-	uint16_t all;
-
-	struct {
-		uint8_t low;
-		uint8_t hight;
-	}pair;
-};
-
-union Uint64Union
-{
-	uint64_t all;
-	struct {
-		uint8_t b0;
-		uint8_t b1;
-		uint8_t b2;
-		uint8_t b3;
-		uint8_t b4;
-		uint8_t b5;
-		uint8_t b6;
-		uint8_t b7;
-	}bytes;
-};
-
-
+const uint16_t delta_64_mask = 512;         //10 0000 0000
+const uint16_t delta_256_mask = 3072;       //1100 0000 0000
+const uint16_t delta_2047_mask = 57344;     //1110 0000 0000 0000
+const uint64_t delta_big_mask = 64424509440;//1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
 
 Compression::Compression()
 {
@@ -41,50 +19,18 @@ Compression::~Compression()
 
 
 uint16_t Compression::compress_delta_64(uint64_t D) {
-    //1000 0000 0
-	Uint16Union res_union;
-	Uint64Union u64;
-	u64.all = D;
-
-	res_union.all = 0;
-	res_union.pair.hight = 1;
-	res_union.pair.low = u64.bytes.b0;
-	return res_union.all;
+	return delta_64_mask | static_cast<uint16_t>(D);
 }
 
 uint16_t Compression::compress_delta_256(uint64_t D) {
-	//1100 0000 0000
-	Uint16Union Dbytes;
-	Dbytes.all = (uint16_t)D;
-
-	Uint16Union res;
-	res.all = 0;
-	res.pair.hight = 12; // '110'
-	
-	auto b = utils::BitOperations::get(Dbytes.pair.hight, 0);
-	res.pair.hight=utils::BitOperations::set(res.pair.hight, 0, b);
-	res.pair.low = Dbytes.pair.low;
-	return res.all;
+	return delta_256_mask| static_cast<uint16_t>(D);
 }
 
 uint16_t Compression::compress_delta_2048(uint64_t D) {
-	Uint16Union Dbytes;
-	Dbytes.all = (uint16_t)D;
-
-	Uint16Union res;
-	res.all = Dbytes.all;
-	
-	res.pair.hight = utils::BitOperations::set(res.pair.hight, 4, 0);
-	res.pair.hight = utils::BitOperations::set(res.pair.hight, 5, 1);
-	res.pair.hight = utils::BitOperations::set(res.pair.hight, 6, 1);
-	res.pair.hight = utils::BitOperations::set(res.pair.hight, 7, 1);
-	return res.all;
+	return delta_2047_mask | static_cast<uint16_t>(D);
 }
 
 
 uint64_t Compression::compress_delta_big(uint64_t D) {
-	Uint64Union res;
-	res.all = D;
-	res.bytes.b4 = 15;
-	return res.all;
+	return delta_big_mask | D;
 }
