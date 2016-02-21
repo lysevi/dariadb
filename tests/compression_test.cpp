@@ -230,7 +230,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
         Mok_DeltaCompressor co(timedb::compression::BinaryWriter(std::begin(buffer),std::end(buffer)));
         timedb::Time delta=1;
         std::list<timedb::Time> times{};
-        for (int i=0;i<10;i++){
+        const int steps=30;
+        for (int i=0;i<steps;i++){
             co.append(delta);
             times.push_back(delta);
             delta*=2;
