@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
 }
 
 BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
-    const size_t test_buffer_size =100;
+    const size_t test_buffer_size =1000;
     const timedb::Time t1=100;
     const timedb::Time t2=150;
     const timedb::Time t3=200;
@@ -223,5 +223,24 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
         BOOST_CHECK_EQUAL(dc.read(),t5);
         BOOST_CHECK_EQUAL(dc.read(),t6);
         BOOST_CHECK_EQUAL(dc.read(),t7);
+    }
+
+    std::fill(std::begin(buffer),std::end(buffer),0);
+    {
+        Mok_DeltaCompressor co(timedb::compression::BinaryWriter(std::begin(buffer),std::end(buffer)));
+        timedb::Time delta=1;
+        std::list<timedb::Time> times{};
+        for (int i=0;i<10;i++){
+            co.append(delta);
+            times.push_back(delta);
+            delta*=2;
+        }
+
+        Mok_DeltaDeCompressor dc(timedb::compression::BinaryWriter(std::begin(buffer),std::end(buffer)),times.front());
+        times.pop_front();
+        for(auto&t:times){
+            auto readed=dc.read();
+            BOOST_CHECK_EQUAL(readed,t);
+        }
     }
 }
