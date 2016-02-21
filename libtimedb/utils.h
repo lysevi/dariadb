@@ -24,7 +24,7 @@ namespace timedb {
 
 		struct BitOperations {
             template<class T>
-            static inline T get(T v, uint8_t num) {
+            static inline uint8_t get(T v, uint8_t num) {
 				return (v >> num) & 1;
 			}
 

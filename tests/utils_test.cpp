@@ -2,8 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 
-#include <timedb.h>
-
+#include <utils.h>
 BOOST_AUTO_TEST_CASE(UtilsEmpty) {
   BOOST_CHECK(timedb::utils::inInterval(1, 5, 1));
   BOOST_CHECK(timedb::utils::inInterval(1, 5, 2));
