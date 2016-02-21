@@ -65,13 +65,36 @@ namespace timedb {
         class DeltaCompressor
 		{
 		public:
-			DeltaCompressor();
+            DeltaCompressor()=default;
+            DeltaCompressor(const BinaryWriter &bw);
 			~DeltaCompressor();
 
-			static uint16_t get_delta_64(uint64_t D);
-			static uint16_t get_delta_256(uint64_t D);
-			static uint16_t get_delta_2048(uint64_t D);
-			static uint64_t get_delta_big(uint64_t D);
+            void append(Time t);
+
+            static uint16_t get_delta_64(int64_t D);
+            static uint16_t get_delta_256(int64_t D);
+            static uint16_t get_delta_2048(int64_t D);
+            static uint64_t get_delta_big(int64_t D);
+        protected:
+            bool _is_first;
+            BinaryWriter _bw;
+            Time  _first;
+            uint64_t _prev_delta;
+            Time _prev_time;
 		};
+
+        class DeltaDeCompressor
+        {
+        public:
+            DeltaDeCompressor()=default;
+            DeltaDeCompressor(const BinaryWriter &bw, Time first);
+            ~DeltaDeCompressor();
+
+            Time read();
+        protected:
+            BinaryWriter _bw;
+            uint64_t _prev_delta;
+            Time _prev_time;
+        };
 	}
 }
