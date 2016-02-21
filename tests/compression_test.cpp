@@ -72,12 +72,11 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
 	// write 101010101...
 	for (size_t i = 0; i <writed_bits; i++) {
 		if (i % 2) {
-			b.setbit();
+            b.setbit().incbit();
 		}
 		else {
-			b.clrbit();
+            b.clrbit().incbit();
 		}
-		b.incbit();
 	}
 
 	b.reset_pos();

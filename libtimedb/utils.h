@@ -23,23 +23,25 @@ namespace timedb {
 	{
 
 		struct BitOperations {
-			static inline uint8_t get(uint8_t v, uint8_t num) {
+            template<class T>
+            static inline T get(T v, uint8_t num) {
 				return (v >> num) & 1;
 			}
 
-			static inline bool check(uint8_t v, uint8_t num) {
+            template<class T>
+            static inline bool check(T v, uint8_t num) {
 				return get(v, num) == 1;
 			}
 
-			static inline uint8_t set(uint8_t v, uint8_t num, uint8_t bitValue) {
-				if (bitValue == 1) {
-					
-					return v | (1 << num);
-				}
-				else {
-					return v & ~(1 << num);
-				}
-			}
+            template<class T>
+            static inline T set(T v, uint8_t num) {
+                return v | (1 << num);
+            }
+
+            template<class T>
+            static inline T clr(T v, uint8_t num) {
+                return v & ~(1 << num);
+            }
 		};
 
 		class NonCopy {

@@ -19,13 +19,14 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
 }
 
 BOOST_AUTO_TEST_CASE(BitOperations) {
-	uint8_t value = 255;
+    uint8_t value = 0;
 	for (int i = 0; i < 7; i++) {
+        value=timedb::utils::BitOperations::set(value, i);
 		BOOST_CHECK_EQUAL(timedb::utils::BitOperations::check(value, i), true);
 	}
 
 	for (int i = 0; i < 7; i++) {
-		value=timedb::utils::BitOperations::set(value, i,0);
+        value=timedb::utils::BitOperations::clr(value, i);
 	}
 
 	for (int i = 0; i < 7; i++) {

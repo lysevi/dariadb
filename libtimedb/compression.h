@@ -27,14 +27,14 @@ namespace timedb {
 			void set_pos(size_t pos);
 			void reset_pos();
 
-			void incbit();
-			void incpos();
+            BinaryWriter& incbit();
+            BinaryWriter& incpos();
 			
 			size_t cap()const { return _cap;}
 
 			uint8_t getbit()const;
-			void setbit();
-			void clrbit();
+            BinaryWriter& setbit();
+            BinaryWriter& clrbit();
 
 
         protected:

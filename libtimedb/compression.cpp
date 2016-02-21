@@ -83,16 +83,18 @@ void BinaryWriter::swap(BinaryWriter & other) throw(){
 	std::swap(_bitnum, other._bitnum);
 }
 
-void BinaryWriter::incbit(){
+BinaryWriter& BinaryWriter::incbit(){
 	_bitnum--;
 	if (_bitnum < 0) {
 		incpos();
 		_bitnum = max_bit_pos;
 	}
+    return *this;
 }
 
-void BinaryWriter::incpos(){
+BinaryWriter& BinaryWriter::incpos(){
 	_pos++;
+    return *this;
 }
 
 void BinaryWriter::set_bitnum(size_t num) {
@@ -109,14 +111,16 @@ void BinaryWriter::reset_pos() {
 }
 
 uint8_t BinaryWriter::getbit() const{
-    return (_begin[_pos] >> _bitnum) & 1;
+    return utils::BitOperations::get(_begin[_pos],_bitnum);
 }
 
 
-void BinaryWriter::setbit() {
-    _begin[_pos] |= (1 << _bitnum);
+BinaryWriter& BinaryWriter::setbit() {
+    _begin[_pos]=utils::BitOperations::set(_begin[_pos],_bitnum);
+    return *this;
 }
 
-void BinaryWriter::clrbit() {
-    _begin[_pos] &= ~(1 << _bitnum);
+BinaryWriter& BinaryWriter::clrbit() {
+    _begin[_pos] =utils::BitOperations::clr(_begin[_pos],_bitnum);
+    return *this;
 }
