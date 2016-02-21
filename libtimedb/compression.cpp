@@ -176,7 +176,7 @@ timedb::Time DeltaDeCompressor::read(){
         return ret;
     }
 
-    timedb::Time result(0);
+    int64_t result(0);
     for(int i=31;i>=0;i--){
         if(_bw.getbit()==1){
             result=utils::BitOperations::set(result,i);

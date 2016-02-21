@@ -6,7 +6,7 @@
 
 #include <iterator>
 #include <sstream>
-
+#include<iostream>
 class Mok_DeltaCompressor:public timedb::compression::DeltaCompressor{
 public:
     Mok_DeltaCompressor(const timedb::compression::BinaryWriter&buf):timedb::compression::DeltaCompressor(buf)
@@ -244,4 +244,5 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
             BOOST_CHECK_EQUAL(readed,t);
         }
     }
+
 }
