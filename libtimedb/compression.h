@@ -96,5 +96,22 @@ namespace timedb {
             uint64_t _prev_delta;
             Time _prev_time;
         };
+
+        class XorCompressor
+        {
+        public:
+            XorCompressor()=default;
+            XorCompressor(const BinaryWriter &bw);
+            ~XorCompressor();
+
+            void append(Value v);
+            uint8_t zeros_lead(Value v);
+            uint8_t zeros_tail(Value v);
+        protected:
+            bool _is_first;
+            BinaryWriter _bw;
+            Value  _first;
+            Value _prev_value;
+        };
 	}
 }

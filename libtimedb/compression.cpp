@@ -283,3 +283,34 @@ BinaryWriter& BinaryWriter::clrbit() {
     _begin[_pos] =utils::BitOperations::clr(_begin[_pos],_bitnum);
     return *this;
 }
+
+XorCompressor::XorCompressor(const BinaryWriter &bw):
+    _is_first(true),
+    _bw(bw),
+    _first(0),
+    _prev_value(0)
+{
+
+}
+
+XorCompressor::~XorCompressor(){
+
+}
+
+void XorCompressor::append(timedb::Value v){
+    if(_is_first){
+        _first=v;
+        _is_first=false;
+        _prev_value=v;
+        return;
+    }
+    NOT_IMPLEMENTED;
+}
+
+uint8_t XorCompressor::zeros_lead(timedb::Value v){
+NOT_IMPLEMENTED;
+}
+
+uint8_t XorCompressor::zeros_tail(timedb::Value v){
+NOT_IMPLEMENTED;
+}

@@ -27,6 +27,16 @@ public:
     timedb::compression::BinaryWriter get_bw()const{return this->_bw;}
 };
 
+class Mok_XorCompressor:public timedb::compression::XorCompressor{
+public:
+    Mok_XorCompressor(const timedb::compression::BinaryWriter&buf):timedb::compression::XorCompressor(buf)
+    {}
+    timedb::Time get_prev_value()const {return this->_prev_value;}
+    timedb::Time  get_first()const {return this->_first;}
+    timedb::compression::BinaryWriter get_bw()const{return this->_bw;}
+    bool is_first()const {return this->_is_first;}
+};
+
 BOOST_AUTO_TEST_CASE(binary_writer) {
 	const size_t buffer_size = 10;
 	const size_t writed_bits = 7 * buffer_size;
@@ -245,4 +255,27 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
         }
     }
 
+}
+
+BOOST_AUTO_TEST_CASE(XorCompressor){
+    const size_t test_buffer_size =100;
+
+    const timedb::Value t1=100;
+//    const timedb::Value t2=150;
+//    const timedb::Value t3=200;
+//    const timedb::Value t4=2000;
+//    const timedb::Value t5=3000;
+
+    uint8_t buffer[test_buffer_size];
+    std::fill(std::begin(buffer),std::end(buffer),0);
+    {
+        Mok_XorCompressor dc(timedb::compression::BinaryWriter(std::begin(buffer),std::end(buffer)));
+        BOOST_CHECK(dc.is_first());
+
+
+        dc.append(t1);
+        BOOST_CHECK(!dc.is_first());
+        BOOST_CHECK_EQUAL(dc.get_first(),t1);
+        BOOST_CHECK_EQUAL(dc.get_prev_value(),t1);
+    }
 }
