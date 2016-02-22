@@ -115,5 +115,21 @@ namespace timedb {
             uint8_t _prev_lead;
             uint8_t _prev_tail;
         };
+
+
+        class XorDeCompressor
+        {
+        public:
+            XorDeCompressor()=default;
+            XorDeCompressor(const BinaryWriter &bw, Value first);
+            ~XorDeCompressor()=default;
+
+            Value read();
+        protected:
+            BinaryWriter _bw;
+            Value _prev_value;
+            uint8_t _prev_lead;
+            uint8_t _prev_tail;
+        };
     }
 }

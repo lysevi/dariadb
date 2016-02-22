@@ -382,3 +382,79 @@ uint8_t XorCompressor::zeros_tail(timedb::Value v){
     }
     return result;
 }
+
+XorDeCompressor::XorDeCompressor(const BinaryWriter &bw, timedb::Value first):
+    _bw(bw),
+    _prev_value(first),
+    _prev_lead(0),
+    _prev_tail(0)
+{
+
+}
+
+timedb::Value XorDeCompressor::read()
+{
+    auto b0=_bw.getbit();
+    _bw.incbit();
+    if(b0==0){
+        return _prev_value;
+    }
+
+    auto b1=_bw.getbit();
+    _bw.incbit();
+
+    if(b1==1){
+        uint8_t leading = 0;
+        for (int i = 5; i >= 0; i--) {
+            auto b=_bw.getbit();
+            _bw.incbit();
+            if (b){
+                leading=utils::BitOperations::set(leading,i);
+            }else{
+                leading=utils::BitOperations::clr(leading,i);
+            }
+        }
+
+        uint8_t tail = 0;
+        for (int i = 5; i >= 0; i--) {
+            auto b=_bw.getbit();
+            _bw.incbit();
+            if (b){
+                tail=utils::BitOperations::set(tail,i);
+            }else{
+                tail=utils::BitOperations::clr(tail,i);
+            }
+        }
+        timedb::Value result=0;
+        for (int i = 63 - leading; i >= tail; i--) {
+            auto b=_bw.getbit();
+            _bw.incbit();
+            if (b){
+                result=utils::BitOperations::set(result,i);
+            }else{
+                result=utils::BitOperations::clr(result,i);
+            }
+        }
+
+        _prev_lead = leading;
+        _prev_tail = tail;
+        auto ret= result ^ _prev_value;
+        _prev_value=ret;
+        return ret;
+    }else{
+        timedb::Value result = 0;
+
+        for (int i = int(63 - _prev_lead); i >= _prev_tail; i--) {
+            auto b=_bw.getbit();
+            _bw.incbit();
+            if (b){
+                result=utils::BitOperations::set(result,i);
+            }else{
+                result=utils::BitOperations::clr(result,i);
+            }
+        }
+        auto ret= result ^ _prev_value;
+        _prev_value=ret;
+        return ret;
+    }
+}
