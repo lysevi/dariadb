@@ -258,6 +258,14 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 }
 
 BOOST_AUTO_TEST_CASE(XorCompressor){
+    {
+        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_lead(67553994410557440),8);
+        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_lead(3458764513820540928),2);
+        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_lead(15),60);
+
+        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_tail(240),4);
+        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_tail(3840),8);
+    }
     const size_t test_buffer_size =100;
 
     const timedb::Value t1=100;

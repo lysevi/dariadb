@@ -306,13 +306,79 @@ void XorCompressor::append(timedb::Value v){
         _prev_value=v;
         return;
     }
-    NOT_IMPLEMENTED;
+
+    auto xor_val=_prev_value^v;
+    if (xor_val==0){
+        _bw.clrbit().incbit();
+        return;
+    }
+    _bw.setbit().incbit();
+
+    auto lead=zeros_lead(xor_val);
+    auto tail=zeros_tail(xor_val);
+
+    if ((_prev_lead==lead) && (_prev_tail==tail)){
+        _bw.clrbit().incbit();
+    }else{
+        _bw.setbit().incbit();
+
+
+        for (int8_t i = 5; i >= 0; i--) {
+            auto b= utils::BitOperations::get(lead, i);
+            if (b){
+                _bw.setbit().incbit();
+            }else{
+                _bw.clrbit().incbit();
+            }
+        }
+
+        for (int8_t i = 5; i >= 0; i--) {
+            auto b= utils::BitOperations::get(tail, i);
+            if (b){
+                _bw.setbit().incbit();
+            }else{
+                _bw.clrbit().incbit();
+            }
+        }
+    }
+
+    for (int i = (63 - lead); i >= tail; i--) {
+        auto b = utils::BitOperations::get(xor_val, i);
+        if (b){
+            _bw.setbit().incbit();
+        }else{
+            _bw.clrbit().incbit();
+        }
+    }
+
+    _prev_value = v;
+    _prev_lead=lead;
+    _prev_tail=tail;
+
 }
 
 uint8_t XorCompressor::zeros_lead(timedb::Value v){
-NOT_IMPLEMENTED;
+    const int max_bit_pos=sizeof(Value)*8-1;
+    uint8_t result=0;
+    for(int i=max_bit_pos;i>=0;i--){
+            if(utils::BitOperations::check(v,i)){
+                break;
+            }else{
+                result++;
+            }
+    }
+    return result;
 }
 
 uint8_t XorCompressor::zeros_tail(timedb::Value v){
-NOT_IMPLEMENTED;
+    const int max_bit_pos=sizeof(Value)*8-1;
+    uint8_t result=0;
+    for(int i=0;i<max_bit_pos;i++){
+            if(utils::BitOperations::check(v,i)){
+                break;
+            }else{
+                result++;
+            }
+    }
+    return result;
 }

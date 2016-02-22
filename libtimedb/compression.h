@@ -105,13 +105,15 @@ namespace timedb {
             ~XorCompressor();
 
             void append(Value v);
-            uint8_t zeros_lead(Value v);
-            uint8_t zeros_tail(Value v);
+            static uint8_t zeros_lead(Value v);
+            static uint8_t zeros_tail(Value v);
         protected:
             bool _is_first;
             BinaryWriter _bw;
             Value  _first;
             Value _prev_value;
+            uint8_t _prev_lead;
+            uint8_t _prev_tail;
         };
-	}
+    }
 }
