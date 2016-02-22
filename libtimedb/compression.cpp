@@ -36,6 +36,7 @@ void DeltaCompressor::append(timedb::Time t){
     }else{
         if ((-63<D)&&(D<64)){
             auto d=DeltaCompressor::get_delta_64(D);
+            //TODO move for to BinaryWriter.
             for(auto i=9;i>=0;i--){
                 if(utils::BitOperations::check(d,i)){
                     _bw.setbit().incbit();
@@ -123,6 +124,7 @@ timedb::Time DeltaDeCompressor::read(){
     _bw.incbit();
     if((b0==1) && (b1==0)){//64
         timedb::Time result(0);
+        //TODO move to BinaryWriter.
         for(int i=7;i>=0;i--){
             if(_bw.getbit()==1){
                 result=utils::BitOperations::set(result,i);

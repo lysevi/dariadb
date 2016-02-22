@@ -8,7 +8,7 @@ namespace timedb {
 
         const uint8_t max_bit_pos = 7;
 
-
+        //TODO rename to BinaryBuffer
         class BinaryWriter {
              friend std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b);
 		public:
