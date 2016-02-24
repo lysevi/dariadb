@@ -127,7 +127,7 @@ timedb::Time DeltaDeCompressor::read(){
     auto b1=_bw.getbit();
     _bw.incbit();
     if((b0==1) && (b1==0)){//64
-        timedb::Time result(0);
+        int8_t result(0);
         //TODO move to BinaryBuffer.
         for(int i=7;i>=0;i--){
             if(_bw.getbit()==1){
@@ -137,9 +137,10 @@ timedb::Time DeltaDeCompressor::read(){
             }
             _bw.incbit();
         }
-		if (result > 64) {
-			result = (-63) | result;
+		if (result>64) { //is negative
+			result = (-128) | result;
 		}
+		
         auto ret=_prev_time+result+_prev_delta;
         _prev_delta=result;
         _prev_time=ret;
@@ -149,7 +150,7 @@ timedb::Time DeltaDeCompressor::read(){
     auto b2=_bw.getbit();
     _bw.incbit();
     if((b0==1) && (b1==1)&& (b2==0)){//256
-        timedb::Time result(0);
+        int16_t result(0);
         for(int i=8;i>=0;i--){
             if(_bw.getbit()==1){
                 result=utils::BitOperations::set(result,i);
@@ -158,8 +159,8 @@ timedb::Time DeltaDeCompressor::read(){
             }
             _bw.incbit();
         }
-		if (result > 256) {
-			result = (-255) | result;
+		if (result > 256) { //is negative
+			result = (-256) | result;
 		}
         auto ret=_prev_time+result+_prev_delta;
         _prev_delta=result;
@@ -179,10 +180,10 @@ timedb::Time DeltaDeCompressor::read(){
             }
             _bw.incbit();
         }
-		if (result > 2048) {
+		if (result > 2048) { //is negative
 			result = (-2048) | result;
 		}
-
+		
         auto ret=_prev_time+result+_prev_delta;
         _prev_delta=result;
         _prev_time=ret;
@@ -198,7 +199,9 @@ timedb::Time DeltaDeCompressor::read(){
         }
         _bw.incbit();
     }
-
+	if (result > std::numeric_limits<int32_t>::max()) {
+		result = (-4294967296) | result;
+	}
     auto ret=_prev_time+result+_prev_delta;
     _prev_delta=result;
     _prev_time=ret;

@@ -260,7 +260,26 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
             BOOST_CHECK_EQUAL(readed,t);
         }
     }
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	{//decrease
+		Testable_DeltaCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer), std::end(buffer)));
+		std::vector<timedb::Time> deltas{ 50,255, 1024,2050 };
+		timedb::Time delta = 1000000;
+		std::list<timedb::Time> times{};
+		const int steps = 50;
+		for (int i = 0; i<steps; i++) {
+			co.append(delta);
+			times.push_back(delta);
+			delta -= deltas[i%deltas.size()];
+		}
 
+		Testable_DeltaDeCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer), std::end(buffer)), times.front());
+		times.pop_front();
+		for (auto&t : times) {
+			auto readed = dc.read();
+			BOOST_CHECK_EQUAL(readed, t);
+		}
+	}
 }
 
 BOOST_AUTO_TEST_CASE(XorCompressor){

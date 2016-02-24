@@ -77,7 +77,7 @@ namespace timedb {
             Time read();
         protected:
             BinaryBuffer _bw;
-            uint64_t _prev_delta;
+            int64_t _prev_delta;
             Time _prev_time;
         };
 
