@@ -54,10 +54,26 @@ namespace timedb{
                 MeasChunk(size_t size);
                 ~MeasChunk();
             };
-		public:
+        public:
+            class InnerReader:public Reader{
+            public:
+                bool isEnd() const override;
+                void readNext(Meas::MeasList*output)  override;
+            };
+        public:
 			MemoryStorage(size_t size);
 			~MemoryStorage();
 
+            using AbstractStorage::append;
+            using AbstractStorage::readInterval;
+            using AbstractStorage::readInTimePoint;
+
+            Time minTime();
+            Time maxTime();
+            append_result append(const Meas& value)override;
+            append_result append(const Meas::PMeas begin, const size_t size)override;
+            Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to)override;
+            Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point)override;
 		protected:
 			size_t _size;
 		};
