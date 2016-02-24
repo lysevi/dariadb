@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
     const timedb::Time t3=200;
     const timedb::Time t4=t3+100;
     const timedb::Time t5=t4+1000;
-    const timedb::Time t6=t5*20;
+    const timedb::Time t6=t5*2;
     const timedb::Time t7=t6-50;
 
     uint8_t buffer[test_buffer_size];
@@ -276,9 +276,6 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 
     const timedb::Value t1=240;
     const timedb::Value t2=224;
-//    const timedb::Value t3=200;
-//    const timedb::Value t4=2000;
-//    const timedb::Value t5=3000;
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);

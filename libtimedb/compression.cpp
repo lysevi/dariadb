@@ -5,9 +5,13 @@
 using namespace timedb::compression;
 
 const uint16_t delta_64_mask = 512;         //10 0000 0000
+const uint16_t delta_64_mask_inv = 127;     //00 1111 111
 const uint16_t delta_256_mask = 3072;       //1100 0000 0000
+const uint16_t delta_256_mask_inv = 511;    //0001 1111 1111
 const uint16_t delta_2047_mask = 57344;     //1110 0000 0000 0000
-const uint64_t delta_big_mask = 64424509440;//1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
+const uint16_t delta_2047_mask_inv = 4095;  //0000 1111 1111 1111
+const uint64_t delta_big_mask = 64424509440;   //1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
+const uint64_t delta_big_mask_inv = 4294967295;//0000 1111 1111 1111 1111 1111 1111   1111 1111
 
 DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
     _is_first(true),
@@ -36,7 +40,7 @@ void DeltaCompressor::append(timedb::Time t){
     }else{
         if ((-63<D)&&(D<64)){
             auto d=DeltaCompressor::get_delta_64(D);
-            //TODO move for to BinaryWriter.
+            //TODO move for to BinaryBuffer.
             for(auto i=9;i>=0;i--){
                 if(utils::BitOperations::check(d,i)){
                     _bw.setbit().incbit();
@@ -84,20 +88,20 @@ void DeltaCompressor::append(timedb::Time t){
 
 
 uint16_t DeltaCompressor::get_delta_64(int64_t D) {
-    return delta_64_mask | static_cast<uint16_t>(D);
+    return delta_64_mask |  (delta_64_mask_inv & static_cast<uint16_t>(D));
 }
 
 uint16_t DeltaCompressor::get_delta_256(int64_t D) {
-	return delta_256_mask| static_cast<uint16_t>(D);
+	return delta_256_mask| (delta_256_mask_inv &static_cast<uint16_t>(D));
 }
 
 uint16_t DeltaCompressor::get_delta_2048(int64_t D) {
-	return delta_2047_mask | static_cast<uint16_t>(D);
+	return delta_2047_mask | (delta_2047_mask_inv &static_cast<uint16_t>(D));
 }
 
 
 uint64_t DeltaCompressor::get_delta_big(int64_t D) {
-	return delta_big_mask | D;
+	return delta_big_mask | (delta_big_mask_inv & D);
 }
 
 DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer &bw, timedb::Time first):
@@ -124,7 +128,7 @@ timedb::Time DeltaDeCompressor::read(){
     _bw.incbit();
     if((b0==1) && (b1==0)){//64
         timedb::Time result(0);
-        //TODO move to BinaryWriter.
+        //TODO move to BinaryBuffer.
         for(int i=7;i>=0;i--){
             if(_bw.getbit()==1){
                 result=utils::BitOperations::set(result,i);
@@ -133,7 +137,9 @@ timedb::Time DeltaDeCompressor::read(){
             }
             _bw.incbit();
         }
-
+		if (result > 64) {
+			result = (-63) | result;
+		}
         auto ret=_prev_time+result+_prev_delta;
         _prev_delta=result;
         _prev_time=ret;
@@ -152,7 +158,9 @@ timedb::Time DeltaDeCompressor::read(){
             }
             _bw.incbit();
         }
-
+		if (result > 256) {
+			result = (-255) | result;
+		}
         auto ret=_prev_time+result+_prev_delta;
         _prev_delta=result;
         _prev_time=ret;
@@ -162,7 +170,7 @@ timedb::Time DeltaDeCompressor::read(){
     auto b3=_bw.getbit();
     _bw.incbit();
     if((b0==1) && (b1==1)&& (b2==1)&& (b3==0)){//2048
-        timedb::Time result(0);
+        int16_t result(0);
         for(int i=11;i>=0;i--){
             if(_bw.getbit()==1){
                 result=utils::BitOperations::set(result,i);
@@ -171,6 +179,9 @@ timedb::Time DeltaDeCompressor::read(){
             }
             _bw.incbit();
         }
+		if (result > 2048) {
+			result = (-2048) | result;
+		}
 
         auto ret=_prev_time+result+_prev_delta;
         _prev_delta=result;
