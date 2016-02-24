@@ -332,6 +332,8 @@ XorCompressor::~XorCompressor(){
 }
 
 void XorCompressor::append(timedb::Value v){
+	static_assert(sizeof(timedb::Value) == 8, "Value no x64 value");
+
     if(_is_first){
         _first=v;
         _is_first=false;
@@ -426,6 +428,7 @@ XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, timedb::Value first):
 
 timedb::Value XorDeCompressor::read()
 {
+	static_assert(sizeof(timedb::Value) == 8, "Value no x64 value");
     auto b0=_bw.getbit();
     _bw.incbit();
     if(b0==0){
