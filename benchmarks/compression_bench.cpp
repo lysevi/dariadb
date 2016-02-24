@@ -5,7 +5,7 @@
 
 #include <timedb.h>
 #include <ctime>
-#include <limits.h>
+#include <limits>
 #include <cmath>
 int main(int argc, char *argv[]) {
     auto sz=1024*1024*100;
@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
         for(size_t i=0;i<1000000;i++){
             dc.append(t);
             t+=deltas[i%deltas.size()];
-            if (t> _UI32_MAX){// int32
+            if (t > std::numeric_limits<timedb::Time>::max()){
                 t=0;
             }
         }

@@ -35,12 +35,12 @@ namespace timedb {
 
             template<class T>
             static inline T set(T v, uint8_t num) {
-                return v | (1 << num);
+                return v | (T(1) << num);
             }
 
             template<class T>
             static inline T clr(T v, uint8_t num) {
-                return v & ~(1 << num);
+                return v & ~(T(1) << num);
             }
 		};
 

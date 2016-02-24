@@ -371,11 +371,14 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
         Testable_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         std::list<timedb::Value> values{};
-        int delta=1;
-        //TODO up to 100.
-        for(int i=0;i<25;i++){
-            co.append(int64_t(i*delta));
-            values.push_back(int64_t(i*delta));
+        timedb::Value delta=1;
+        
+		for(int i=0;i<100;i++){
+            co.append(int64_t(delta));
+            values.push_back(int64_t(delta));
+			if (delta > std::numeric_limits<timedb::Value>::max()) {
+				delta = 1;
+			}
             delta*=2;
         }
 
