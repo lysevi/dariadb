@@ -22,16 +22,18 @@ struct Meas {
     typedef std::vector<Meas> MeasArray;
     typedef std::list<Meas> MeasList;
 
+	static Meas empty();
+
 	Meas();
     void readFrom(const Meas::PMeas m);
-    static Meas empty();
+	bool operator==(const Meas&other)const {
+		return id == other.id&&time == other.time&&flag == other.flag&&value == other.value;
+	}
 
     Id id;
     Time time;
-    Flag source;
     Flag flag;
     Value value;
-    size_t size;
 };
 
 }

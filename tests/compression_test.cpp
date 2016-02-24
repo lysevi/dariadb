@@ -428,3 +428,49 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
 		BOOST_CHECK_EQUAL(v, f);
 	}
 }
+
+
+BOOST_AUTO_TEST_CASE(CompressedBlock)
+{
+	const size_t test_buffer_size = 10000;
+
+
+	uint8_t time_begin[test_buffer_size];
+	auto time_end = std::end(time_begin);
+
+	uint8_t value_begin[test_buffer_size];
+	auto value_end = std::end(value_begin);
+
+	uint8_t flag_begin[test_buffer_size];
+	auto flag_end = std::end(flag_begin);;
+
+	std::fill(time_begin, time_end, 0);
+	std::fill(flag_begin, flag_end, 0);
+	std::fill(value_begin, value_end, 0);
+
+	timedb::compression::CopmressedWriter cwr(timedb::compression::BinaryBuffer(time_begin, time_end),
+		timedb::compression::BinaryBuffer(value_begin, value_end),
+		timedb::compression::BinaryBuffer(flag_begin, flag_end));
+
+	std::list<timedb::Meas> meases{};
+	for (int i = 0; i < 100; i++) {
+		auto m = timedb::Meas::empty();
+		m.time = i;
+		m.flag = i;
+		m.value = i;
+		cwr.append(m);
+		meases.push_back(m);
+	}
+
+
+	timedb::compression::CopmressedReader crr(timedb::compression::BinaryBuffer(time_begin, time_end),
+		timedb::compression::BinaryBuffer(value_begin, value_end),
+		timedb::compression::BinaryBuffer(flag_begin, flag_end), meases.front());
+
+	meases.pop_front();
+	for (auto &m : meases) {
+		auto r_m = crr.read();
+		BOOST_CHECK(m == r_m);
+	}
+
+}

@@ -1,6 +1,7 @@
 #include "compression.h"
 #include "utils.h"
 #include <exception>
+#include <sstream>
 
 using namespace timedb::compression;
 
@@ -560,5 +561,54 @@ timedb::Flag timedb::compression::FlagDeCompressor::read()
 		}
 	}
 	
+	return result;
+}
+
+timedb::compression::CopmressedWriter::~CopmressedWriter()
+{}
+
+timedb::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
+	time_comp(bw_time),
+	value_comp(bw_values),
+	flag_comp(bw_flags)
+{
+	_is_first = true;
+}
+
+void timedb::compression::CopmressedWriter::append(const Meas&m) {
+	if (_is_first) {
+		_first = m;
+		_is_first = false;
+	}
+	
+	if (_first.id != m.id) {
+		std::stringstream ss{};
+		ss << "(_first.id != m.id)" << " id:" << m.id << " first.id:" << _first.id;
+		throw std::logic_error(ss.str().c_str());
+	}
+	
+	time_comp.append(m.time);
+	value_comp.append(m.value);
+	flag_comp.append(m.flag);
+}
+
+timedb::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first):
+	time_dcomp(bw_time,first.time),
+	value_dcomp(bw_values, first.value),
+	flag_dcomp(bw_flags, first.flag)
+{
+	_first = first;
+}
+
+timedb::compression::CopmressedReader::~CopmressedReader()
+{
+}
+
+timedb::Meas timedb::compression::CopmressedReader::read()
+{
+	Meas result{};
+	result.time = time_dcomp.read();
+	result.value = value_dcomp.read();
+	result.flag = flag_dcomp.read();
 	return result;
 }

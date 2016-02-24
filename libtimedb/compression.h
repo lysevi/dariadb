@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ostream>
+#include <memory>
 #include "meas.h"
 
 namespace timedb {
@@ -142,5 +143,41 @@ namespace timedb {
 			BinaryBuffer _bw;
 			Flag _prev_value;
 		};
+
+		class CopmressedWriter
+		{
+		public:
+			CopmressedWriter() = default;
+			CopmressedWriter(BinaryBuffer bw_time,	BinaryBuffer bw_values,	BinaryBuffer bw_flags);
+			~CopmressedWriter();
+		
+			void append(const Meas&m);
+
+		protected:
+			Meas _first;
+			bool _is_first;
+
+			DeltaCompressor time_comp;
+			XorCompressor   value_comp;
+			FlagCompressor flag_comp;
+		};
+
+		class CopmressedReader
+		{
+		public:
+			CopmressedReader() = default;
+			CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first);
+			~CopmressedReader();
+
+			Meas read();
+
+		protected:
+			Meas _first;
+
+			DeltaDeCompressor time_dcomp;
+			XorDeCompressor   value_dcomp;
+			FlagDeCompressor flag_dcomp;
+		};
+
     }
 }
