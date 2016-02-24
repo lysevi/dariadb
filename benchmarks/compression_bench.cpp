@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     //delta compression
     std::fill(buffer,buffer+sz,0);
     {
-        timedb::compression::BinaryWriter bw(buffer,buffer+sz);
+        timedb::compression::BinaryBuffer bw(buffer,buffer+sz);
         timedb::compression::DeltaCompressor dc(bw);
 
         std::vector<timedb::Time> deltas{50,255,1024,2050};
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
         std::cout<<"delta copmressor elapsed: "<<elapsed<<std::endl;
     }
     {
-        timedb::compression::BinaryWriter bw(buffer,buffer+sz);
+        timedb::compression::BinaryBuffer bw(buffer,buffer+sz);
         timedb::compression::DeltaDeCompressor dc(bw,0);
 
         auto start=clock();
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     //xor compression
     std::fill(buffer,buffer+sz,0);
     {
-        timedb::compression::BinaryWriter bw(buffer,buffer+sz);
+        timedb::compression::BinaryBuffer bw(buffer,buffer+sz);
         timedb::compression::XorCompressor dc(bw);
 
         timedb::Value t=1;
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
         std::cout<<"xor copmressor elapsed: "<<elapsed<<std::endl;
     }
     {
-        timedb::compression::BinaryWriter bw(buffer,buffer+sz);
+        timedb::compression::BinaryBuffer bw(buffer,buffer+sz);
         timedb::compression::XorDeCompressor dc(bw,0);
 
         auto start=clock();

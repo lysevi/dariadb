@@ -8,17 +8,16 @@ namespace timedb {
 
         const uint8_t max_bit_pos = 7;
 
-        //TODO rename to BinaryBuffer
-        class BinaryWriter {
+        class BinaryBuffer {
             
 		public:
-            BinaryWriter(uint8_t* _begin,uint8_t*_end);
-            BinaryWriter(const BinaryWriter&other);
-            BinaryWriter(BinaryWriter&&other);
-            ~BinaryWriter();
-            BinaryWriter& operator=(const BinaryWriter&other);
+            BinaryBuffer(uint8_t* _begin,uint8_t*_end);
+            BinaryBuffer(const BinaryBuffer&other);
+            BinaryBuffer(BinaryBuffer&&other);
+            ~BinaryBuffer();
+            BinaryBuffer& operator=(const BinaryBuffer&other);
 
-            void swap(BinaryWriter &other) throw();
+            void swap(BinaryBuffer &other) throw();
 
             int bitnum()const { return _bitnum; }
 			size_t pos()const { return _pos; }
@@ -27,16 +26,16 @@ namespace timedb {
 			void set_pos(size_t pos);
 			void reset_pos();
 
-            BinaryWriter& incbit();
-            BinaryWriter& incpos();
+            BinaryBuffer& incbit();
+            BinaryBuffer& incpos();
 			
 			size_t cap()const { return _cap;}
 
 			uint8_t getbit()const;
-            BinaryWriter& setbit();
-            BinaryWriter& clrbit();
+            BinaryBuffer& setbit();
+            BinaryBuffer& clrbit();
 			
-			friend std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b);
+			friend std::ostream& operator<< (std::ostream& stream, const BinaryBuffer& b);
         protected:
             uint8_t* _begin,*_end;
 			size_t   _cap;
@@ -45,13 +44,13 @@ namespace timedb {
             int _bitnum;
 		};
 
-		std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b);
+		std::ostream& operator<< (std::ostream& stream, const BinaryBuffer& b);
 
         class DeltaCompressor
 		{
 		public:
             DeltaCompressor()=default;
-            DeltaCompressor(const BinaryWriter &bw);
+            DeltaCompressor(const BinaryBuffer &bw);
 			~DeltaCompressor();
 
             void append(Time t);
@@ -62,7 +61,7 @@ namespace timedb {
             static uint64_t get_delta_big(int64_t D);
         protected:
             bool _is_first;
-            BinaryWriter _bw;
+            BinaryBuffer _bw;
             Time  _first;
             uint64_t _prev_delta;
             Time _prev_time;
@@ -72,12 +71,12 @@ namespace timedb {
         {
         public:
             DeltaDeCompressor()=default;
-            DeltaDeCompressor(const BinaryWriter &bw, Time first);
+            DeltaDeCompressor(const BinaryBuffer &bw, Time first);
             ~DeltaDeCompressor();
 
             Time read();
         protected:
-            BinaryWriter _bw;
+            BinaryBuffer _bw;
             uint64_t _prev_delta;
             Time _prev_time;
         };
@@ -86,7 +85,7 @@ namespace timedb {
         {
         public:
             XorCompressor()=default;
-            XorCompressor(const BinaryWriter &bw);
+            XorCompressor(const BinaryBuffer &bw);
             ~XorCompressor();
 
             void append(Value v);
@@ -94,7 +93,7 @@ namespace timedb {
             static uint8_t zeros_tail(Value v);
         protected:
             bool _is_first;
-            BinaryWriter _bw;
+            BinaryBuffer _bw;
             Value  _first;
             Value _prev_value;
             uint8_t _prev_lead;
@@ -106,12 +105,12 @@ namespace timedb {
         {
         public:
             XorDeCompressor()=default;
-            XorDeCompressor(const BinaryWriter &bw, Value first);
+            XorDeCompressor(const BinaryBuffer &bw, Value first);
             ~XorDeCompressor()=default;
 
             Value read();
         protected:
-            BinaryWriter _bw;
+            BinaryBuffer _bw;
             Value _prev_value;
             uint8_t _prev_lead;
             uint8_t _prev_tail;

@@ -9,7 +9,7 @@ const uint16_t delta_256_mask = 3072;       //1100 0000 0000
 const uint16_t delta_2047_mask = 57344;     //1110 0000 0000 0000
 const uint64_t delta_big_mask = 64424509440;//1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
 
-DeltaCompressor::DeltaCompressor(const BinaryWriter &bw):
+DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
     _is_first(true),
     _bw(bw),
     _first(0),
@@ -100,7 +100,7 @@ uint64_t DeltaCompressor::get_delta_big(int64_t D) {
 	return delta_big_mask | D;
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const BinaryWriter &bw, timedb::Time first):
+DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer &bw, timedb::Time first):
     _bw(bw),
     _prev_delta(0),
     _prev_time(first)
@@ -194,7 +194,7 @@ timedb::Time DeltaDeCompressor::read(){
     return ret;
 }
 
-BinaryWriter::BinaryWriter(uint8_t* begin,uint8_t*end):
+BinaryBuffer::BinaryBuffer(uint8_t* begin,uint8_t*end):
     _begin(begin),
     _end(end),
     _cap(std::distance(begin,end)),
@@ -202,7 +202,7 @@ BinaryWriter::BinaryWriter(uint8_t* begin,uint8_t*end):
     _bitnum(max_bit_pos){
 }
 
-BinaryWriter::BinaryWriter(const BinaryWriter & other) {
+BinaryBuffer::BinaryBuffer(const BinaryBuffer & other) {
     this->_begin = other._begin;
     this->_end = other._end;
 	_pos = other._pos;
@@ -210,7 +210,7 @@ BinaryWriter::BinaryWriter(const BinaryWriter & other) {
 	_cap = other._cap;
 }
 
-BinaryWriter::BinaryWriter(BinaryWriter && other){
+BinaryBuffer::BinaryBuffer(BinaryBuffer && other){
     _begin = other._begin;
     _end = other._end;
 	_pos = other._pos;
@@ -222,18 +222,18 @@ BinaryWriter::BinaryWriter(BinaryWriter && other){
     other._begin=other._end=nullptr;
 }
 
-BinaryWriter::~BinaryWriter(){
+BinaryBuffer::~BinaryBuffer(){
 }
 
-BinaryWriter& BinaryWriter::operator=(const BinaryWriter & other){
+BinaryBuffer& BinaryBuffer::operator=(const BinaryBuffer & other){
     if(this!=&other){
-        BinaryWriter tmp(other);
+        BinaryBuffer tmp(other);
         tmp.swap(*this);
     }
 	return *this;
 }
 
-void BinaryWriter::swap(BinaryWriter & other) throw(){
+void BinaryBuffer::swap(BinaryBuffer & other) throw(){
 	std::swap(_pos, other._pos);
 	std::swap(_cap, other._cap);
     std::swap(_begin, other._begin);
@@ -241,7 +241,7 @@ void BinaryWriter::swap(BinaryWriter & other) throw(){
 	std::swap(_bitnum, other._bitnum);
 }
 
-BinaryWriter& BinaryWriter::incbit(){
+BinaryBuffer& BinaryBuffer::incbit(){
 	_bitnum--;
 	if (_bitnum < 0) {
 		incpos();
@@ -250,7 +250,7 @@ BinaryWriter& BinaryWriter::incbit(){
     return *this;
 }
 
-BinaryWriter& BinaryWriter::incpos(){
+BinaryBuffer& BinaryBuffer::incpos(){
 	_pos++;
     if (_pos>=_cap){
         throw std::logic_error("BinaryWriter::incpos");
@@ -258,36 +258,36 @@ BinaryWriter& BinaryWriter::incpos(){
     return *this;
 }
 
-void BinaryWriter::set_bitnum(size_t num) {
+void BinaryBuffer::set_bitnum(size_t num) {
 	this->_bitnum = num;
 }
 
-void BinaryWriter::set_pos(size_t pos) {
+void BinaryBuffer::set_pos(size_t pos) {
 	this->_pos = pos;
 }
 
-void BinaryWriter::reset_pos() {
+void BinaryBuffer::reset_pos() {
 	this->set_pos(0); 
 	this->set_bitnum(max_bit_pos);
 }
 
-uint8_t BinaryWriter::getbit() const{
+uint8_t BinaryBuffer::getbit() const{
     return utils::BitOperations::get(_begin[_pos],_bitnum);
 }
 
 
-BinaryWriter& BinaryWriter::setbit() {
+BinaryBuffer& BinaryBuffer::setbit() {
     _begin[_pos]=utils::BitOperations::set(_begin[_pos],_bitnum);
     return *this;
 }
 
-BinaryWriter& BinaryWriter::clrbit() {
+BinaryBuffer& BinaryBuffer::clrbit() {
     _begin[_pos] =utils::BitOperations::clr(_begin[_pos],_bitnum);
     return *this;
 }
 
 
-std::ostream&  timedb::compression::operator<< (std::ostream& stream, const BinaryWriter& b) {
+std::ostream&  timedb::compression::operator<< (std::ostream& stream, const BinaryBuffer& b) {
 	stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum() << " [";
 	for (size_t i = 0; i <= b.pos(); i++) {
 		for (int bit = int(max_bit_pos); bit >= 0; bit--) {
@@ -304,7 +304,7 @@ std::ostream&  timedb::compression::operator<< (std::ostream& stream, const Bina
 	return stream << "]";
 }
 
-XorCompressor::XorCompressor(const BinaryWriter &bw):
+XorCompressor::XorCompressor(const BinaryBuffer &bw):
     _is_first(true),
     _bw(bw),
     _first(0),
@@ -401,7 +401,7 @@ uint8_t XorCompressor::zeros_tail(timedb::Value v){
     return result;
 }
 
-XorDeCompressor::XorDeCompressor(const BinaryWriter &bw, timedb::Value first):
+XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, timedb::Value first):
     _bw(bw),
     _prev_value(first),
     _prev_lead(0),
