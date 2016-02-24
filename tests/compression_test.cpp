@@ -7,9 +7,10 @@
 #include <iterator>
 #include <sstream>
 #include<iostream>
-class Mok_DeltaCompressor:public timedb::compression::DeltaCompressor{
+
+class Testable_DeltaCompressor:public timedb::compression::DeltaCompressor{
 public:
-    Mok_DeltaCompressor(const timedb::compression::BinaryBuffer&buf):timedb::compression::DeltaCompressor(buf)
+    Testable_DeltaCompressor(const timedb::compression::BinaryBuffer&buf):timedb::compression::DeltaCompressor(buf)
     {}
     uint64_t get_prev_delta()const {return this->_prev_delta;}
     timedb::Time get_prev_time()const {return this->_prev_time;}
@@ -18,18 +19,18 @@ public:
     bool is_first()const {return this->_is_first;}
 };
 
-class Mok_DeltaDeCompressor:public timedb::compression::DeltaDeCompressor{
+class Testable_DeltaDeCompressor:public timedb::compression::DeltaDeCompressor{
 public:
-    Mok_DeltaDeCompressor(const timedb::compression::BinaryBuffer&buf,  timedb::Time first):timedb::compression::DeltaDeCompressor(buf,first)
+    Testable_DeltaDeCompressor(const timedb::compression::BinaryBuffer&buf,  timedb::Time first):timedb::compression::DeltaDeCompressor(buf,first)
     {}
     uint64_t get_prev_delta()const {return this->_prev_delta;}
     timedb::Time get_prev_time()const {return this->_prev_time;}
     timedb::compression::BinaryBuffer get_bw()const{return this->_bw;}
 };
 
-class Mok_XorCompressor:public timedb::compression::XorCompressor{
+class Testable_XorCompressor:public timedb::compression::XorCompressor{
 public:
-    Mok_XorCompressor(const timedb::compression::BinaryBuffer&buf):timedb::compression::XorCompressor(buf)
+    Testable_XorCompressor(const timedb::compression::BinaryBuffer&buf):timedb::compression::XorCompressor(buf)
     {}
     timedb::Time get_prev_value()const {return this->_prev_value;}
     timedb::Time  get_first()const {return this->_first;}
@@ -146,7 +147,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
-        Mok_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
         BOOST_CHECK(dc.is_first());
 
 
@@ -161,7 +162,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Mok_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
          dc.append(t1);
          dc.append(t2);
@@ -172,7 +173,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Mok_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
          dc.append(t1);
          dc.append(t3);
@@ -184,7 +185,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
 
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Mok_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
          dc.append(t1);
          dc.append(t4);
@@ -195,7 +196,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Mok_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
          dc.append(t1);
          dc.append(t5);
@@ -222,7 +223,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
-        Mok_DeltaCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_DeltaCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         co.append(t1);
         co.append(t2);
@@ -231,7 +232,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
         co.append(t5);
         co.append(t6);
         co.append(t7);
-        Mok_DeltaDeCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)),t1);
+        Testable_DeltaDeCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)),t1);
         BOOST_CHECK_EQUAL(dc.read(),t2);
         BOOST_CHECK_EQUAL(dc.read(),t3);
         BOOST_CHECK_EQUAL(dc.read(),t4);
@@ -242,7 +243,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
-        Mok_DeltaCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_DeltaCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
         timedb::Time delta=1;
         std::list<timedb::Time> times{};
         const int steps=30;
@@ -252,7 +253,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
             delta*=2;
         }
 
-        Mok_DeltaDeCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)),times.front());
+        Testable_DeltaDeCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)),times.front());
         times.pop_front();
         for(auto&t:times){
             auto readed=dc.read();
@@ -264,12 +265,12 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 
 BOOST_AUTO_TEST_CASE(XorCompressor){
     {
-        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_lead(67553994410557440),8);
-        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_lead(3458764513820540928),2);
-        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_lead(15),60);
+        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_lead(67553994410557440),8);
+        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_lead(3458764513820540928),2);
+        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_lead(15),60);
 
-        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_tail(240),4);
-        BOOST_CHECK_EQUAL(Mok_XorCompressor::zeros_tail(3840),8);
+        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_tail(240),4);
+        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_tail(3840),8);
     }
     const size_t test_buffer_size =1000;
 
@@ -282,7 +283,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
-        Mok_XorCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
         BOOST_CHECK(dc.is_first());
 
 
@@ -294,7 +295,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
-        Mok_XorCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         dc.append(t1);
         dc.append(t2);
@@ -305,7 +306,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
-        Mok_XorCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor dc(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         dc.append(t1);
         dc.set_prev_lead(59);
@@ -315,7 +316,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // cur==prev
-        Mok_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         auto v1 = timedb::Value(240);
         auto v2 = timedb::Value(240);
@@ -328,7 +329,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // cur!=prev
-        Mok_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         auto v1 = timedb::Value(240);
         auto v2 = timedb::Value(96);
@@ -343,7 +344,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // tail/lead is equals
-        Mok_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         auto v1 = timedb::Value(3840);
         auto v2 = timedb::Value(3356);
@@ -355,7 +356,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // tail/lead not equals
-        Mok_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         auto v1 = timedb::Value(3840);
         auto v2 = timedb::Value(3328);
@@ -366,8 +367,8 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
         BOOST_CHECK_EQUAL(dc.read(),v2);
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
-    { // tail/lead not equals
-        Mok_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
+    { 
+        Testable_XorCompressor co(timedb::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
         std::list<timedb::Value> values{};
         int delta=1;
