@@ -432,7 +432,7 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
 
 BOOST_AUTO_TEST_CASE(CompressedBlock)
 {
-	const size_t test_buffer_size = 10000;
+	const size_t test_buffer_size = 1000;
 
 
 	uint8_t time_begin[test_buffer_size];
