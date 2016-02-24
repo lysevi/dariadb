@@ -3,27 +3,30 @@
 
 timedb::storage::MemoryStorage::Block::Block(size_t size)
 {
-	time_begin = new uint8_t[size];
-	time_end = time_begin + size;
+    begin = new uint8_t[size];
+    end = begin + size;
 
-	value_begin = new uint8_t[size];
-	value_end = value_begin + size;
+    memset(begin, 0, size);
 
-	flag_begin = new uint8_t[size];
-	flag_end = flag_begin + size;
-
-	memset(time_begin, 0, size);
-	memset(flag_begin, 0, size);
-	memset(value_begin, 0, size);
 }
 
 timedb::storage::MemoryStorage::Block::~Block()
 {
-	delete[] time_begin;
-	delete[] value_begin;
-	delete[] flag_begin;
+    delete[] begin;
 }
 
+timedb::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size):
+    times(size),
+    flags(size),
+    values(size)
+{
+
+}
+
+timedb::storage::MemoryStorage::MeasChunk::~MeasChunk()
+{
+
+}
 
 timedb::storage::MemoryStorage::MemoryStorage(size_t size):_size(size)
 {
@@ -62,3 +65,5 @@ timedb::storage::Reader_ptr timedb::storage::AbstractStorage::readInTimePoint(Ti
 {
 	NOT_IMPLEMENTED
 }
+
+

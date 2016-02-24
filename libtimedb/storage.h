@@ -39,18 +39,21 @@ namespace timedb{
 		{
 			struct Block
 			{
-				uint8_t *time_begin;
-				uint8_t *time_end;
-
-				uint8_t *value_begin;
-				uint8_t *value_end;
-
-				uint8_t *flag_begin;
-				uint8_t *flag_end;
+                uint8_t *begin;
+                uint8_t *end;
 
 				Block(size_t size);
 				~Block();
 			};
+
+            struct MeasChunk
+            {
+                Block times;
+                Block flags;
+                Block values;
+                MeasChunk(size_t size);
+                ~MeasChunk();
+            };
 		public:
 			MemoryStorage(size_t size);
 			~MemoryStorage();

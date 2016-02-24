@@ -5,6 +5,6 @@
 #include <storage.h>
 
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
-	auto ms=new timedb::storage::MemoryStorage(100);
+    auto ms=new timedb::storage::MemoryStorage(100);
 }
 
