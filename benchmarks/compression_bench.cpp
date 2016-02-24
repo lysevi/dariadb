@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
             }
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-        std::cout<<"delta copmressor : "<<elapsed<<std::endl;
+        std::cout<<"delta compressor : "<<elapsed<<std::endl;
     }
     {
         timedb::compression::BinaryBuffer bw(buffer,buffer+test_buffer_size);
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
             dc.read();
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-        std::cout<<"delta decopmressor : "<<elapsed<<std::endl;
+        std::cout<<"delta decompressor : "<<elapsed<<std::endl;
     }
     //xor compression
     std::fill(buffer,buffer+test_buffer_size,0);
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
             t*=2;
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-        std::cout<<"xor copmressor : "<<elapsed<<std::endl;
+        std::cout<<"xor compressor : "<<elapsed<<std::endl;
     }
     {
         timedb::compression::BinaryBuffer bw(buffer,buffer+test_buffer_size);
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
             dc.read();
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-        std::cout<<"xor decopmressor : "<<elapsed<<std::endl;
+        std::cout<<"xor decompressor : "<<elapsed<<std::endl;
     }
 	{
 		uint8_t* time_begin=new uint8_t[test_buffer_size];
