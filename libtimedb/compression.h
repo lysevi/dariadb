@@ -115,5 +115,32 @@ namespace timedb {
             uint8_t _prev_lead;
             uint8_t _prev_tail;
         };
+
+		class FlagCompressor 
+		{
+		public:
+			FlagCompressor() = default;
+			FlagCompressor(const BinaryBuffer &bw);
+			~FlagCompressor();
+
+			void append(Flag v);
+		protected:
+			bool _is_first;
+			BinaryBuffer _bw;
+			Flag  _first;
+		};
+
+		class FlagDeCompressor
+		{
+		public:
+			FlagDeCompressor() = default;
+			FlagDeCompressor(const BinaryBuffer &bw, Flag first);
+			~FlagDeCompressor() = default;
+
+			Flag read();
+		protected:
+			BinaryBuffer _bw;
+			Flag _prev_value;
+		};
     }
 }

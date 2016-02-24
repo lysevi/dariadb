@@ -405,3 +405,26 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
         }
     }
 }
+
+BOOST_AUTO_TEST_CASE(FlagCompressor) 
+{
+	const size_t test_buffer_size = 1000;
+	uint8_t buffer[test_buffer_size];
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	timedb::compression::FlagCompressor fc(timedb::compression::BinaryBuffer(std::begin(buffer), std::end(buffer)));
+	
+	std::list<timedb::Flag> flags{};
+	timedb::Flag delta = 1;
+	for (int i = 0; i < 10; i++) {
+		fc.append(delta);
+		flags.push_back(delta);
+		delta++;
+	}
+
+	timedb::compression::FlagDeCompressor fd(timedb::compression::BinaryBuffer(std::begin(buffer), std::end(buffer)),flags.front());
+	flags.pop_front();
+	for (auto f : flags) {
+		auto v = fd.read();
+		BOOST_CHECK_EQUAL(v, f);
+	}
+}

@@ -494,3 +494,71 @@ timedb::Value XorDeCompressor::read()
     }
 }
 
+FlagCompressor::FlagCompressor(const BinaryBuffer & bw):
+	_bw(bw),
+	_is_first(true),
+	_first(0)
+{
+}
+
+FlagCompressor::~FlagCompressor()
+{
+}
+
+void FlagCompressor::append(timedb::Flag v)
+{
+	static_assert(sizeof(timedb::Flag)==8,"Flag no x64 value");
+	if (_is_first) {
+		this->_first = v;
+		this->_is_first = false;
+		return;
+	}
+
+	if (v == _first) {
+		_bw.clrbit().incbit();
+	}
+	else {
+		_bw.setbit().incbit();
+
+		for (int i = 63; i >= 0; i--) {
+			auto b = utils::BitOperations::get(v,i);
+			if (b) {
+				_bw.setbit().incbit();
+			}
+			else {
+				_bw.clrbit().incbit();
+			}
+		}
+		_first = v;
+	}
+}
+
+timedb::compression::FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, timedb::Flag first):
+	_bw(bw),
+	_prev_value(first){
+}
+
+timedb::Flag timedb::compression::FlagDeCompressor::read()
+{
+	static_assert(sizeof(timedb::Flag) == 8, "Flag no x64 value");
+	timedb::Flag result(0);
+	if (_bw.getbit() == 0) {
+		_bw.incbit();
+		result = _prev_value;
+	}
+	else {
+		_bw.incbit();
+		for (int i = 63; i >= 0; i--) {
+			auto b = _bw.getbit();
+			_bw.incbit();
+			if (b) {
+				result=utils::BitOperations::set(result, i);
+			}
+			else {
+				result = utils::BitOperations::clr(result, i);
+			}
+		}
+	}
+	
+	return result;
+}
