@@ -100,7 +100,7 @@ uint64_t DeltaCompressor::get_delta_big(int64_t D) {
 	return delta_big_mask | D;
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const BinaryWriter &bw, Time first):
+DeltaDeCompressor::DeltaDeCompressor(const BinaryWriter &bw, timedb::Time first):
     _bw(bw),
     _prev_delta(0),
     _prev_time(first)
@@ -286,6 +286,24 @@ BinaryWriter& BinaryWriter::clrbit() {
     return *this;
 }
 
+
+std::ostream&  timedb::compression::operator<< (std::ostream& stream, const BinaryWriter& b) {
+	stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum() << " [";
+	for (size_t i = 0; i <= b.pos(); i++) {
+		for (int bit = int(max_bit_pos); bit >= 0; bit--) {
+			auto is_cur = ((bit == b.bitnum()) && (i == b.pos()));
+			if (is_cur)
+				stream << "[";
+			stream << ((b._begin[i] >> bit) & 1);
+			if (is_cur)
+				stream << "]";
+			if (bit == 4) stream << " ";
+		}
+		stream << std::endl;
+	}
+	return stream << "]";
+}
+
 XorCompressor::XorCompressor(const BinaryWriter &bw):
     _is_first(true),
     _bw(bw),
@@ -458,3 +476,4 @@ timedb::Value XorDeCompressor::read()
         return ret;
     }
 }
+

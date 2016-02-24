@@ -10,7 +10,7 @@ namespace timedb {
 
         //TODO rename to BinaryBuffer
         class BinaryWriter {
-             friend std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b);
+            
 		public:
             BinaryWriter(uint8_t* _begin,uint8_t*_end);
             BinaryWriter(const BinaryWriter&other);
@@ -35,8 +35,8 @@ namespace timedb {
 			uint8_t getbit()const;
             BinaryWriter& setbit();
             BinaryWriter& clrbit();
-
-
+			
+			friend std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b);
         protected:
             uint8_t* _begin,*_end;
 			size_t   _cap;
@@ -45,22 +45,7 @@ namespace timedb {
             int _bitnum;
 		};
 
-        std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b){
-            stream<<" pos:"<<b._pos<<" cap:"<<b._cap<<" bit:"<<b._bitnum<<" [";
-            for(size_t i=0;i<=b._pos;i++){
-                for(int bit=int(max_bit_pos);bit>=0;bit--){
-                    auto is_cur=((bit==b._bitnum) && (i==b._pos));
-                    if (is_cur)
-                        stream<<"[";
-                    stream <<((b._begin[i] >> bit) & 1);
-                    if (is_cur)
-                        stream<<"]";
-                    if(bit==4) stream<<" ";
-                }
-                stream<<std::endl;
-            }
-            return stream<<"]";
-        }
+		std::ostream& operator<< (std::ostream& stream, const BinaryWriter& b);
 
         class DeltaCompressor
 		{
