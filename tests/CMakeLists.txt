@@ -13,3 +13,4 @@ endmacro(TEST_CASE)
 
 TEST_CASE(utils_test utils_test.cpp)
 TEST_CASE(compression_test compression_test.cpp)
+TEST_CASE(storage_test storage_test.cpp)
