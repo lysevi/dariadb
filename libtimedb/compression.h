@@ -126,8 +126,8 @@ namespace timedb {
 
 			void append(Flag v);
 		protected:
+            BinaryBuffer _bw;
 			bool _is_first;
-			BinaryBuffer _bw;
 			Flag  _first;
 		};
 
