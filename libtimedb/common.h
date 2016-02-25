@@ -8,6 +8,7 @@ namespace timedb
 			return append_result();
 		}
 		append_result() { writed = ignored = 0; }
+		append_result(size_t wr, size_t ig) { writed = wr; ignored = ig; }
 		append_result(const append_result& other) {
 			this->writed = other.writed;
 			this->ignored = other.ignored;

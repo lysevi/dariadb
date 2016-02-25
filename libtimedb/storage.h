@@ -1,7 +1,8 @@
 #pragma once
 
 #include "compression.h"
-
+#include <list>
+#include <memory>
 namespace timedb{
 	namespace storage {
 
@@ -41,9 +42,10 @@ namespace timedb{
 			{
                 uint8_t *begin;
                 uint8_t *end;
-
+				compression::BinaryBuffer bb;
 				Block(size_t size);
 				~Block();
+				bool is_full()const { return bb.free_size() == 0; }
 			};
 
             struct MeasChunk
@@ -51,9 +53,17 @@ namespace timedb{
                 Block times;
                 Block flags;
                 Block values;
-                MeasChunk(size_t size);
+				compression::DeltaCompressor time_compressor;
+				compression::FlagCompressor  flag_compressor;
+				compression::XorCompressor   value_compressor;
+				size_t count;
+				Meas first;
+                MeasChunk(size_t size, Meas first_m);
                 ~MeasChunk();
+				bool append(const Meas&m);
+				bool is_full()const { return times.is_full() || flags.is_full() || values.is_full(); }
             };
+			typedef std::shared_ptr<MeasChunk> Chunk_Ptr;
         public:
             class InnerReader:public Reader{
             public:
@@ -62,7 +72,7 @@ namespace timedb{
             };
         public:
 			MemoryStorage(size_t size);
-			~MemoryStorage();
+			virtual ~MemoryStorage();
 
             using AbstractStorage::append;
             using AbstractStorage::readInterval;
@@ -76,6 +86,8 @@ namespace timedb{
             Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point)override;
 		protected:
 			size_t _size;
+
+			std::list<Chunk_Ptr> _chuncks;
 		};
 	}
 }

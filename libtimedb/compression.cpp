@@ -27,19 +27,25 @@ DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
 DeltaCompressor::~DeltaCompressor(){
 }
 
-void DeltaCompressor::append(timedb::Time t){
+bool DeltaCompressor::append(timedb::Time t){
     if(_is_first){
         _first=t;
         _is_first=false;
         _prev_time=t;
-        return;
+        return true;
     }
 
     int64_t D=(t-_prev_time) - _prev_delta;
     if(D==0){
+		if (_bw.free_size() == 0) {
+			return false;
+		}
         _bw.clrbit().incbit();
     }else{
         if ((-63<D)&&(D<64)){
+			if (_bw.free_size() <2) {
+				return false;
+			}
             auto d=DeltaCompressor::get_delta_64(D);
             //TODO move for to BinaryBuffer.
             for(auto i=9;i>=0;i--){
@@ -51,6 +57,9 @@ void DeltaCompressor::append(timedb::Time t){
             }
         }else{
             if ((-255<D)&&(D<256)){
+				if (_bw.free_size() <2) {
+					return false;
+				}
                 auto d=DeltaCompressor::get_delta_256(D);
                 for(auto i=11;i>=0;i--){
                     if(utils::BitOperations::check(d,i)){
@@ -61,6 +70,9 @@ void DeltaCompressor::append(timedb::Time t){
                 }
             }else{
                 if ((-2047<D)&&(D<2048)){
+					if (_bw.free_size() <3) {
+						return false;
+					}
                     auto d=DeltaCompressor::get_delta_2048(D);
                     for(auto i=15;i>=0;i--){
                         if(utils::BitOperations::check(d,i)){
@@ -70,6 +82,9 @@ void DeltaCompressor::append(timedb::Time t){
                         }
                     }
                 }else{
+					if (_bw.free_size() <5) {
+						return false;
+					}
                     auto d=DeltaCompressor::get_delta_big(D);
                     for(auto i=35;i>=0;i--){
                         if(utils::BitOperations::check(d,i)){
@@ -85,6 +100,7 @@ void DeltaCompressor::append(timedb::Time t){
 
     _prev_delta=D;
     _prev_time=t;
+	return true;
 }
 
 
@@ -332,25 +348,32 @@ XorCompressor::~XorCompressor(){
 
 }
 
-void XorCompressor::append(timedb::Value v){
+bool XorCompressor::append(timedb::Value v){
 	static_assert(sizeof(timedb::Value) == 8, "Value no x64 value");
 
     if(_is_first){
         _first=v;
         _is_first=false;
         _prev_value=v;
-        return;
+        return true;
     }
 
     auto xor_val=_prev_value^v;
     if (xor_val==0){
+		if (_bw.free_size() == 0) {
+			return false;
+		}
         _bw.clrbit().incbit();
-        return;
+        return true;
     }
     _bw.setbit().incbit();
 
     auto lead=zeros_lead(xor_val);
     auto tail=zeros_tail(xor_val);
+
+	if (_bw.free_size() == 8) {
+		return false;
+	}
 
     if ((_prev_lead==lead) && (_prev_tail==tail)){
         _bw.clrbit().incbit();
@@ -389,7 +412,7 @@ void XorCompressor::append(timedb::Value v){
     _prev_value = v;
     _prev_lead=lead;
     _prev_tail=tail;
-
+	return true;
 }
 
 uint8_t XorCompressor::zeros_lead(timedb::Value v){
@@ -506,19 +529,25 @@ FlagCompressor::~FlagCompressor()
 {
 }
 
-void FlagCompressor::append(timedb::Flag v)
+bool FlagCompressor::append(timedb::Flag v)
 {
 	static_assert(sizeof(timedb::Flag)==8,"Flag no x64 value");
 	if (_is_first) {
 		this->_first = v;
 		this->_is_first = false;
-		return;
+		return true;
 	}
 
 	if (v == _first) {
+		if (_bw.free_size() == 0) {
+			return false;
+		}
 		_bw.clrbit().incbit();
 	}
 	else {
+		if (_bw.free_size() < 9) {
+			return false;
+		}
 		_bw.setbit().incbit();
 
 		for (int i = 63; i >= 0; i--) {
@@ -532,6 +561,7 @@ void FlagCompressor::append(timedb::Flag v)
 		}
 		_first = v;
 	}
+	return true;
 }
 
 timedb::compression::FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, timedb::Flag first):

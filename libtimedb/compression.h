@@ -15,6 +15,7 @@ namespace timedb {
             BinaryBuffer(uint8_t* _begin,uint8_t*_end);
             BinaryBuffer(const BinaryBuffer&other);
             BinaryBuffer(BinaryBuffer&&other);
+			BinaryBuffer() = default;
             ~BinaryBuffer();
             BinaryBuffer& operator=(const BinaryBuffer&other);
 
@@ -31,7 +32,7 @@ namespace timedb {
             BinaryBuffer& incpos();
 			
 			size_t cap()const { return _cap;}
-
+			size_t free_size()const { return _cap - _pos; }
 			uint8_t getbit()const;
             BinaryBuffer& setbit();
             BinaryBuffer& clrbit();
@@ -54,7 +55,7 @@ namespace timedb {
             DeltaCompressor(const BinaryBuffer &bw);
 			~DeltaCompressor();
 
-            void append(Time t);
+            bool append(Time t);
 
             static uint16_t get_delta_64(int64_t D);
             static uint16_t get_delta_256(int64_t D);
@@ -89,7 +90,7 @@ namespace timedb {
             XorCompressor(const BinaryBuffer &bw);
             ~XorCompressor();
 
-            void append(Value v);
+            bool append(Value v);
             static uint8_t zeros_lead(Value v);
             static uint8_t zeros_tail(Value v);
         protected:
@@ -124,7 +125,7 @@ namespace timedb {
 			FlagCompressor(const BinaryBuffer &bw);
 			~FlagCompressor();
 
-			void append(Flag v);
+			bool append(Flag v);
 		protected:
             BinaryBuffer _bw;
 			bool _is_first;
