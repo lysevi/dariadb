@@ -3,7 +3,7 @@
 #include <exception>
 #include <sstream>
 
-using namespace timedb::compression;
+using namespace memseries::compression;
 
 const uint16_t delta_64_mask = 512;         //10 0000 0000
 const uint16_t delta_64_mask_inv = 127;     //00 1111 111
@@ -27,7 +27,7 @@ DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
 DeltaCompressor::~DeltaCompressor(){
 }
 
-bool DeltaCompressor::append(timedb::Time t){
+bool DeltaCompressor::append(memseries::Time t){
     if(_is_first){
         _first=t;
         _is_first=false;
@@ -121,7 +121,7 @@ uint64_t DeltaCompressor::get_delta_big(int64_t D) {
 	return delta_big_mask | (delta_big_mask_inv & D);
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer &bw, timedb::Time first):
+DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer &bw, memseries::Time first):
     _bw(bw),
     _prev_delta(0),
     _prev_time(first)
@@ -133,7 +133,7 @@ DeltaDeCompressor::~DeltaDeCompressor(){
 
 }
 
-timedb::Time DeltaDeCompressor::read(){
+memseries::Time DeltaDeCompressor::read(){
     auto b0=_bw.getbit();
     _bw.incbit();
 
@@ -318,7 +318,7 @@ BinaryBuffer& BinaryBuffer::clrbit() {
 }
 
 
-std::ostream&  timedb::compression::operator<< (std::ostream& stream, const BinaryBuffer& b) {
+std::ostream&  memseries::compression::operator<< (std::ostream& stream, const BinaryBuffer& b) {
 	stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum() << " [";
 	for (size_t i = 0; i <= b.pos(); i++) {
 		for (int bit = int(max_bit_pos); bit >= 0; bit--) {
@@ -348,8 +348,8 @@ XorCompressor::~XorCompressor(){
 
 }
 
-bool XorCompressor::append(timedb::Value v){
-	static_assert(sizeof(timedb::Value) == 8, "Value no x64 value");
+bool XorCompressor::append(memseries::Value v){
+	static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
 
     if(_is_first){
         _first=v;
@@ -415,7 +415,7 @@ bool XorCompressor::append(timedb::Value v){
 	return true;
 }
 
-uint8_t XorCompressor::zeros_lead(timedb::Value v){
+uint8_t XorCompressor::zeros_lead(memseries::Value v){
     const int max_bit_pos=sizeof(Value)*8-1;
     uint8_t result=0;
     for(int i=max_bit_pos;i>=0;i--){
@@ -428,7 +428,7 @@ uint8_t XorCompressor::zeros_lead(timedb::Value v){
     return result;
 }
 
-uint8_t XorCompressor::zeros_tail(timedb::Value v){
+uint8_t XorCompressor::zeros_tail(memseries::Value v){
     const int max_bit_pos=sizeof(Value)*8-1;
     uint8_t result=0;
     for(int i=0;i<max_bit_pos;i++){
@@ -441,7 +441,7 @@ uint8_t XorCompressor::zeros_tail(timedb::Value v){
     return result;
 }
 
-XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, timedb::Value first):
+XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, memseries::Value first):
     _bw(bw),
     _prev_value(first),
     _prev_lead(0),
@@ -450,9 +450,9 @@ XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, timedb::Value first):
 
 }
 
-timedb::Value XorDeCompressor::read()
+memseries::Value XorDeCompressor::read()
 {
-	static_assert(sizeof(timedb::Value) == 8, "Value no x64 value");
+	static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
     auto b0=_bw.getbit();
     _bw.incbit();
     if(b0==0){
@@ -484,7 +484,7 @@ timedb::Value XorDeCompressor::read()
                 tail=utils::BitOperations::clr(tail,i);
             }
         }
-        timedb::Value result=0;
+        memseries::Value result=0;
         for (int i = 63 - leading; i >= tail; i--) {
             auto b=_bw.getbit();
             _bw.incbit();
@@ -501,7 +501,7 @@ timedb::Value XorDeCompressor::read()
         _prev_value=ret;
         return ret;
     }else{
-        timedb::Value result = 0;
+        memseries::Value result = 0;
 
         for (int i = int(63 - _prev_lead); i >= _prev_tail; i--) {
             auto b=_bw.getbit();
@@ -529,9 +529,9 @@ FlagCompressor::~FlagCompressor()
 {
 }
 
-bool FlagCompressor::append(timedb::Flag v)
+bool FlagCompressor::append(memseries::Flag v)
 {
-	static_assert(sizeof(timedb::Flag)==8,"Flag no x64 value");
+	static_assert(sizeof(memseries::Flag)==8,"Flag no x64 value");
 	if (_is_first) {
 		this->_first = v;
 		this->_is_first = false;
@@ -564,15 +564,15 @@ bool FlagCompressor::append(timedb::Flag v)
 	return true;
 }
 
-timedb::compression::FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, timedb::Flag first):
+memseries::compression::FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, memseries::Flag first):
 	_bw(bw),
 	_prev_value(first){
 }
 
-timedb::Flag timedb::compression::FlagDeCompressor::read()
+memseries::Flag memseries::compression::FlagDeCompressor::read()
 {
-	static_assert(sizeof(timedb::Flag) == 8, "Flag no x64 value");
-	timedb::Flag result(0);
+	static_assert(sizeof(memseries::Flag) == 8, "Flag no x64 value");
+	memseries::Flag result(0);
 	if (_bw.getbit() == 0) {
 		_bw.incbit();
 		result = _prev_value;
@@ -594,10 +594,10 @@ timedb::Flag timedb::compression::FlagDeCompressor::read()
 	return result;
 }
 
-timedb::compression::CopmressedWriter::~CopmressedWriter()
+memseries::compression::CopmressedWriter::~CopmressedWriter()
 {}
 
-timedb::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
+memseries::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
 	time_comp(bw_time),
 	value_comp(bw_values),
 	flag_comp(bw_flags)
@@ -605,7 +605,7 @@ timedb::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, Bi
 	_is_first = true;
 }
 
-void timedb::compression::CopmressedWriter::append(const Meas&m) {
+void memseries::compression::CopmressedWriter::append(const Meas&m) {
 	if (_is_first) {
 		_first = m;
 		_is_first = false;
@@ -622,7 +622,7 @@ void timedb::compression::CopmressedWriter::append(const Meas&m) {
 	flag_comp.append(m.flag);
 }
 
-timedb::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first):
+memseries::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first):
 	time_dcomp(bw_time,first.time),
 	value_dcomp(bw_values, first.value),
 	flag_dcomp(bw_flags, first.flag)
@@ -630,11 +630,11 @@ timedb::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time, Bi
 	_first = first;
 }
 
-timedb::compression::CopmressedReader::~CopmressedReader()
+memseries::compression::CopmressedReader::~CopmressedReader()
 {
 }
 
-timedb::Meas timedb::compression::CopmressedReader::read()
+memseries::Meas memseries::compression::CopmressedReader::read()
 {
 	Meas result{};
 	result.time = time_dcomp.read();

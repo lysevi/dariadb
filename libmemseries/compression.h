@@ -4,7 +4,7 @@
 #include <memory>
 #include "meas.h"
 
-namespace timedb {
+namespace memseries {
 	namespace compression {
 
         const uint8_t max_bit_pos = 7;

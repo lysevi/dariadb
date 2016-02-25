@@ -18,7 +18,7 @@
 #define ENSURE_NOT_NULL(A)
 #endif
 
-namespace timedb {
+namespace memseries {
 	namespace utils
 	{
 

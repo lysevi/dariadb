@@ -9,7 +9,7 @@
 #include <array>
 #include "common.h"
 
-namespace timedb {
+namespace memseries {
 	typedef uint64_t Time;
 	typedef uint64_t Id;
 	typedef uint64_t Flag;

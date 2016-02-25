@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-using namespace timedb;
+using namespace memseries;
 
 Meas::Meas() { 
     memset(this, 0, sizeof(Meas));
@@ -18,6 +18,6 @@ void Meas::readFrom(const Meas::PMeas m) {
 }
 
 
-bool timedb::in_filter(Flag filter, Flag flg) {
+bool memseries::in_filter(Flag filter, Flag flg) {
 	return (filter == 0) || (filter == flg);
 }

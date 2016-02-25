@@ -3,20 +3,20 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <timedb.h>
+#include <memseries.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
 
-#include <timedb.h>
+#include <memseries.h>
 
 int main(int argc, char *argv[]) {
     {
-		auto ms = new timedb::storage::MemoryStorage{ 100000 };
-		auto m = timedb::Meas::empty();
+		auto ms = new memseries::storage::MemoryStorage{ 100000 };
+		auto m = memseries::Meas::empty();
 		
-		std::vector<timedb::Time> deltas{ 50,255,1024,2050 };
-		timedb::Time t = 1;
+		std::vector<memseries::Time> deltas{ 50,255,1024,2050 };
+		memseries::Time t = 1;
 		const size_t ids_count = 10;
         auto start=clock();
 		for (auto i = 0; i < 1000000; i ++) {
@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 			m.flag = 0xff;
 			m.time=t+deltas[i%deltas.size()];
 			auto sv = (std::sin(i));
-			m.value = *(timedb::Id*)(&sv);
+			m.value = *(memseries::Id*)(&sv);
 			ms->append(m);
 		}
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;

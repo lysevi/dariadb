@@ -1,7 +1,7 @@
 #include "utils.h"
 #include "exception.h"
 
-std::list<boost::filesystem::path> timedb::utils::ls(const std::string &path) {
+std::list<boost::filesystem::path> memseries::utils::ls(const std::string &path) {
     std::list<boost::filesystem::path> result;
 
     std::copy(boost::filesystem::directory_iterator(path),
@@ -11,7 +11,7 @@ std::list<boost::filesystem::path> timedb::utils::ls(const std::string &path) {
     return result;
 }
 
-std::list<boost::filesystem::path> timedb::utils::ls(const std::string &path,
+std::list<boost::filesystem::path> memseries::utils::ls(const std::string &path,
                                              const std::string &ext) {
   std::list<boost::filesystem::path> result;
 
@@ -27,7 +27,7 @@ std::list<boost::filesystem::path> timedb::utils::ls(const std::string &path,
   return result;
 }
 
-bool timedb::utils::rm(const std::string &rm_path) {
+bool memseries::utils::rm(const std::string &rm_path) {
   if (!boost::filesystem::exists(rm_path))
     return true;
   try {
@@ -50,12 +50,12 @@ bool timedb::utils::rm(const std::string &rm_path) {
 }
 
 // without ex
-std::string timedb::utils::filename(std::string fname) {
+std::string memseries::utils::filename(std::string fname) {
   boost::filesystem::path p(fname);
   return p.stem().string();
 }
 
-std::string timedb::utils::parent_path(std::string fname) {
+std::string memseries::utils::parent_path(std::string fname) {
   boost::filesystem::path p(fname);
 
   return p.parent_path().string();

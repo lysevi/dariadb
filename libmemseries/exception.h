@@ -6,9 +6,9 @@
 
 #define POSITION (utils::CodePosition(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg) timedb::utils::Exception::CreateAndLog(POSITION, msg)
+#define MAKE_EXCEPTION(msg) memseries::utils::Exception::CreateAndLog(POSITION, msg)
 
-namespace timedb {
+namespace memseries {
 	namespace utils {
 
 		struct CodePosition {

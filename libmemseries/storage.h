@@ -3,7 +3,7 @@
 #include "compression.h"
 #include <list>
 #include <memory>
-namespace timedb{
+namespace memseries{
 	namespace storage {
 
 		class Reader
@@ -73,7 +73,7 @@ namespace timedb{
 					size_t    count;
 					Chunk_Ptr chunk;
 				};
-				InnerReader(timedb::Flag flag, timedb::Time from, timedb::Time to);
+				InnerReader(memseries::Flag flag, memseries::Time from, memseries::Time to);
 				void add(Chunk_Ptr c, size_t count);
                 bool isEnd() const override;
                 void readNext(Meas::MeasList*output)  override;
@@ -81,9 +81,9 @@ namespace timedb{
 				bool check_meas(Meas&m);
 			protected:
 				std::list<ReadChunk> _chunks;
-				timedb::Flag _flag;
-				timedb::Time _from;
-				timedb::Time _to;
+				memseries::Flag _flag;
+				memseries::Time _from;
+				memseries::Time _to;
 				ReadChunk _next;
             };
         public:

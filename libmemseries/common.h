@@ -1,6 +1,6 @@
 #pragma once
 
-namespace timedb
+namespace memseries
 {
 	struct append_result
 	{

@@ -6,7 +6,7 @@
 #include <storage.h>
 #include <string>
 
-void checkAll(timedb::Meas::MeasList res, std::string msg, timedb::Time from,timedb::Time to,timedb::Time  step) {
+void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time from,memseries::Time to,memseries::Time  step) {
     for (auto i = from; i < to; i += step) {
         bool is_error=true;
         for(auto &m:res) {
@@ -15,14 +15,14 @@ void checkAll(timedb::Meas::MeasList res, std::string msg, timedb::Time from,tim
                 break;
             }
             if (is_error) {
-                BOOST_MESSAGE(msg);
+                BOOST_TEST_MESSAGE(msg);
             }
         }
     }
 }
 
-void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,timedb::Time to,timedb::Time  step){
-    auto m = timedb::Meas::empty();
+void storage_test_check(memseries::storage::AbstractStorage *as,memseries::Time from,memseries::Time to,memseries::Time  step){
+    auto m = memseries::Meas::empty();
     size_t total_count = 0;
     for (auto i = from; i < to; i += step) {
         m.id = i;
@@ -35,13 +35,13 @@ void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,t
         total_count++;
     }
 
-    timedb::Meas::MeasList all{};
+    memseries::Meas::MeasList all{};
     as->readInterval(from,to)->readAll(&all);
     BOOST_CHECK_EQUAL(all.size(), total_count);
 
     checkAll(all, "readAll error: ",from,to,step);
 
-    timedb::IdArray ids{};
+    memseries::IdArray ids{};
     all.clear();
     as->readInterval(ids,0,from,to)->readAll(&all);
     BOOST_CHECK_EQUAL(all.size(), total_count);
@@ -49,7 +49,7 @@ void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,t
     checkAll(all, "read error: ",from,to,step);
 
     ids.push_back(from+step);
-    timedb::Meas::MeasList fltr_res{};
+    memseries::Meas::MeasList fltr_res{};
     as->readInterval(ids,0,from,to)->readAll(&fltr_res);
 
     BOOST_CHECK_EQUAL(fltr_res.size(), size_t(2));
@@ -67,14 +67,14 @@ void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,t
     checkAll(all, "TimePoint error: ",from,to,step);
 
 
-    timedb::IdArray emptyIDs{};
+    memseries::IdArray emptyIDs{};
     fltr_res.clear();
     as->readInTimePoint(to)->readAll(&fltr_res);
     BOOST_CHECK_EQUAL(fltr_res.size(),total_count);
 
     checkAll(all, "TimePointFltr error: ",from,to,step);
 
-    auto magicFlag = timedb::Flag(from + step);
+    auto magicFlag = memseries::Flag(from + step);
     fltr_res.clear();
     as->readInTimePoint(emptyIDs,magicFlag,to)->readAll(&fltr_res);
     BOOST_CHECK_EQUAL(fltr_res.size(),size_t(2));
@@ -85,14 +85,14 @@ void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,t
 
 BOOST_AUTO_TEST_CASE(inFilter) {
 	{
-		BOOST_CHECK(timedb::in_filter(0, 100));
-		BOOST_CHECK(!timedb::in_filter(1, 100));
+		BOOST_CHECK(memseries::in_filter(0, 100));
+		BOOST_CHECK(!memseries::in_filter(1, 100));
 	}
 }
 
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	{
-		auto ms = new timedb::storage::MemoryStorage{ 1000 };
+		auto ms = new memseries::storage::MemoryStorage{ 1000 };
 		storage_test_check(ms, 0, 1000, 2);
 		delete ms;
 	}

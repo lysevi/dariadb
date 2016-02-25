@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace timedb{
+namespace memseries{
 namespace utils
 {
 	Logger* Logger::get() {
