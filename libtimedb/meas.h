@@ -36,5 +36,6 @@ namespace timedb {
 		Value value;
 	};
 
+	bool in_filter(Flag filter, Flag flg);
 	
 }

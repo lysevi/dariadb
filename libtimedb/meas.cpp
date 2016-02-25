@@ -16,3 +16,8 @@ Meas Meas::empty() {
 void Meas::readFrom(const Meas::PMeas m) {
     memcpy(this, m, sizeof(Meas));
 }
+
+
+bool timedb::in_filter(Flag filter, Flag flg) {
+	return (filter == 0) || (filter == flg);
+}
