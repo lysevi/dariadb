@@ -64,11 +64,27 @@ namespace timedb{
 				bool is_full()const { return times.is_full() || flags.is_full() || values.is_full(); }
             };
 			typedef std::shared_ptr<MeasChunk> Chunk_Ptr;
+			typedef std::list<Chunk_Ptr> ChuncksList;
         public:
             class InnerReader:public Reader{
             public:
+				struct ReadChunk
+				{
+					size_t    count;
+					Chunk_Ptr chunk;
+				};
+				InnerReader(timedb::Flag flag, timedb::Time from, timedb::Time to);
+				void add(Chunk_Ptr c, size_t count);
                 bool isEnd() const override;
                 void readNext(Meas::MeasList*output)  override;
+			protected:
+				bool check_meas(Meas&m);
+			protected:
+				std::list<ReadChunk> _chunks;
+				timedb::Flag _flag;
+				timedb::Time _from;
+				timedb::Time _to;
+				ReadChunk _next;
             };
         public:
 			MemoryStorage(size_t size);
@@ -87,7 +103,7 @@ namespace timedb{
 		protected:
 			size_t _size;
 
-			std::list<Chunk_Ptr> _chuncks;
+			ChuncksList _chuncks;
 		};
 	}
 }

@@ -25,8 +25,6 @@ timedb::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size, Meas first_m) 
 	time_compressor = compression::DeltaCompressor(times.bb);
 	flag_compressor = compression::FlagCompressor(flags.bb);
 	value_compressor = compression::XorCompressor(values.bb);
-
-	
 }
 
 timedb::storage::MemoryStorage::MeasChunk::~MeasChunk()
@@ -101,12 +99,20 @@ timedb::append_result timedb::storage::MemoryStorage::append(const timedb::Meas:
 
 timedb::storage::Reader_ptr timedb::storage::MemoryStorage::readInterval(const timedb::IdArray &ids, timedb::Flag flag, timedb::Time from, timedb::Time to)
 {
-    NOT_IMPLEMENTED;
+	auto res= std::make_shared<InnerReader>(flag, from, to);
+	for (auto ch : _chuncks) {
+		if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
+			//TODO check min/max time
+			res->add(ch, ch->count);
+		}
+	}
+	
+	return res;
 }
 
 timedb::storage::Reader_ptr timedb::storage::MemoryStorage::readInTimePoint(const timedb::IdArray &ids, timedb::Flag flag, timedb::Time time_point)
 {
-    NOT_IMPLEMENTED;
+	return this->readInterval(ids, flag, 0, time_point);
 }
 
 
@@ -150,12 +156,63 @@ timedb::storage::Reader_ptr timedb::storage::AbstractStorage::readInTimePoint(Ti
 
 
 
+timedb::storage::MemoryStorage::InnerReader::InnerReader(timedb::Flag flag, timedb::Time from, timedb::Time to):
+	_chunks{},
+	_from(from),
+	_to(to),
+	_flag(flag)
+{
+	_next.chunk = nullptr;
+	_next.count = 0;
+}
+
+void timedb::storage::MemoryStorage::InnerReader::add(Chunk_Ptr c, size_t count)
+{
+	timedb::storage::MemoryStorage::InnerReader::ReadChunk rc;
+	rc.chunk = c;
+	rc.count = count;
+	this->_chunks.push_back(rc);
+}
+
 bool timedb::storage::MemoryStorage::InnerReader::isEnd() const
 {
-    NOT_IMPLEMENTED;
+	return this->_chunks.size() == 0 && _next.count==0;
+}
+
+bool  timedb::storage::MemoryStorage::InnerReader::check_meas(timedb::Meas&m) {
+	if ((timedb::in_filter(_flag, m.flag))	&& (timedb::utils::inInterval(_from, _to, m.time))) {
+		return true;
+	}
+	return false;
 }
 
 void timedb::storage::MemoryStorage::InnerReader::readNext(timedb::Meas::MeasList *output)
 {
-    NOT_IMPLEMENTED;
+	if ((_next.chunk == nullptr) || (_next.count==0)) {
+		if (_chunks.size() != 0) {
+			auto fr = _chunks.front();
+			_next.chunk = fr.chunk;
+			_next.count = fr.count;
+			_chunks.pop_front();
+
+			if (check_meas(_next.chunk->first)) {
+				output->push_back(_next.chunk->first);
+			}
+		}
+	}
+
+	while (_next.count != 0) {
+		timedb::compression::CopmressedReader crr(
+			timedb::compression::BinaryBuffer(_next.chunk->times.begin, _next.chunk->times.end),
+			timedb::compression::BinaryBuffer(_next.chunk->values.begin, _next.chunk->values.end),
+			timedb::compression::BinaryBuffer(_next.chunk->flags.begin, _next.chunk->flags.end), _next.chunk->first);
+
+		for (size_t i = 0; i < _next.count; i++) {
+			auto sub = crr.read();
+			if (check_meas(sub)) {
+				output->push_back(sub);
+			}
+		}
+		_next.count = 0;
+	}
 }

@@ -29,6 +29,9 @@ void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,t
         m.flag = i;
         m.time = i;
         BOOST_CHECK(as->append(m).writed==1);
+		total_count++;
+		m.time++;
+		BOOST_CHECK(as->append(m).writed == 1);
         total_count++;
     }
 
@@ -49,7 +52,7 @@ void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,t
     timedb::Meas::MeasList fltr_res{};
     as->readInterval(ids,0,from,to)->readAll(&fltr_res);
 
-    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
+    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(2));
 
     BOOST_CHECK_EQUAL(fltr_res.front().id,ids[0]);
 
@@ -74,14 +77,24 @@ void storage_test_check(timedb::storage::AbstractStorage *as,timedb::Time from,t
     auto magicFlag = timedb::Flag(from + step);
     fltr_res.clear();
     as->readInTimePoint(emptyIDs,magicFlag,to)->readAll(&fltr_res);
-    BOOST_CHECK_EQUAL(fltr_res.size(),size_t(1));
+    BOOST_CHECK_EQUAL(fltr_res.size(),size_t(2));
 
     BOOST_CHECK_EQUAL(fltr_res.front().flag,magicFlag);
 }
 
+
+BOOST_AUTO_TEST_CASE(inFilter) {
+	{
+		BOOST_CHECK(timedb::in_filter(0, 100));
+		BOOST_CHECK(!timedb::in_filter(1, 100));
+	}
+}
+
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
-    auto ms=new timedb::storage::MemoryStorage{1000};
-    storage_test_check(ms,0,1000,2);
-    delete ms;
+	{
+		auto ms = new timedb::storage::MemoryStorage{ 1000 };
+		storage_test_check(ms, 0, 1000, 2);
+		delete ms;
+	}
 }
 
