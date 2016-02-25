@@ -104,6 +104,7 @@ namespace timedb{
 			size_t _size;
 
 			ChuncksList _chuncks;
+			Time _min_time,_max_time;
 		};
 	}
 }

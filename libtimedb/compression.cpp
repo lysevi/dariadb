@@ -37,7 +37,7 @@ bool DeltaCompressor::append(timedb::Time t){
 
     int64_t D=(t-_prev_time) - _prev_delta;
     if(D==0){
-		if (_bw.free_size() == 0) {
+		if (_bw.free_size() == 1) {
 			return false;
 		}
         _bw.clrbit().incbit();
@@ -360,7 +360,7 @@ bool XorCompressor::append(timedb::Value v){
 
     auto xor_val=_prev_value^v;
     if (xor_val==0){
-		if (_bw.free_size() == 0) {
+		if (_bw.free_size() == 1) {
 			return false;
 		}
         _bw.clrbit().incbit();
@@ -539,7 +539,7 @@ bool FlagCompressor::append(timedb::Flag v)
 	}
 
 	if (v == _first) {
-		if (_bw.free_size() == 0) {
+		if (_bw.free_size() == 1) {
 			return false;
 		}
 		_bw.clrbit().incbit();

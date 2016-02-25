@@ -4,3 +4,4 @@
 #include "utils.h"
 #include "logger.h"
 #include "compression.h"
+#include "storage.h"

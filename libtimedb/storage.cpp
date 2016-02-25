@@ -46,7 +46,11 @@ bool timedb::storage::MemoryStorage::MeasChunk::append(const Meas & m)
 	}
 }
 
-timedb::storage::MemoryStorage::MemoryStorage(size_t size):_size(size){
+timedb::storage::MemoryStorage::MemoryStorage(size_t size):
+	_size(size),
+	_min_time(std::numeric_limits<timedb::Time>::max()),
+	_max_time(std::numeric_limits<timedb::Time>::min())
+{
 }
 
 
@@ -57,12 +61,12 @@ timedb::storage::MemoryStorage::~MemoryStorage()
 
 timedb::Time timedb::storage::MemoryStorage::minTime()
 {
-    NOT_IMPLEMENTED;
+	return _min_time;
 }
 
 timedb::Time timedb::storage::MemoryStorage::maxTime()
 {
-    NOT_IMPLEMENTED;
+	return _max_time;
 }
 
 timedb::append_result timedb::storage::MemoryStorage::append(const timedb::Meas &value)
@@ -85,6 +89,8 @@ timedb::append_result timedb::storage::MemoryStorage::append(const timedb::Meas 
 			_chuncks.push_back(chunk);
 		}
 	}
+	_min_time = std::min(_min_time, value.time);
+	_max_time = std::max(_max_time, value.time);
 	return timedb::append_result(1, 0);
 }
 
@@ -102,8 +108,9 @@ timedb::storage::Reader_ptr timedb::storage::MemoryStorage::readInterval(const t
 	auto res= std::make_shared<InnerReader>(flag, from, to);
 	for (auto ch : _chuncks) {
 		if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
-			//TODO check min/max time
-			res->add(ch, ch->count);
+			if (utils::inInterval(from, to, minTime()) || utils::inInterval(from, to, maxTime())) {
+				res->add(ch, ch->count);
+			}
 		}
 	}
 	
