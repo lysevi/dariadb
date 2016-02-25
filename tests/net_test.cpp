@@ -8,7 +8,7 @@
 #include <chrono>
 
 typedef boost::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr;
-using namespace std::literals;
+
 void client_session(socket_ptr sock)
 {
 	while (true)
@@ -57,7 +57,7 @@ void create_client()
 
 BOOST_AUTO_TEST_CASE(Empty) {
 	std::thread t1(create_server);
-	std::this_thread::sleep_for(1s);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 	std::thread t2(create_client);
 
 	t1.join();

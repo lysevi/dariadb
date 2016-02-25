@@ -19,8 +19,8 @@ memseries::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size, Meas first_
 	times(size),
 	flags(size),
 	values(size),
-	first(first_m),
-	count(0)
+    count(0),
+    first(first_m)
 {
 	time_compressor = compression::DeltaCompressor(times.bb);
 	flag_compressor = compression::FlagCompressor(flags.bb);
@@ -165,9 +165,9 @@ memseries::storage::Reader_ptr memseries::storage::AbstractStorage::readInTimePo
 
 memseries::storage::MemoryStorage::InnerReader::InnerReader(memseries::Flag flag, memseries::Time from, memseries::Time to):
 	_chunks{},
-	_from(from),
-	_to(to),
-	_flag(flag)
+    _flag(flag),
+    _from(from),
+    _to(to)
 {
 	_next.chunk = nullptr;
 	_next.count = 0;

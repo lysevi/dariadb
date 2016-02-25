@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
 		const size_t ids_count = 10;
         auto start=clock();
 		for (auto i = 0; i < 1000000; i ++) {
-			m.id = i%10;
+            m.id = i%ids_count;
 			m.flag = 0xff;
 			m.time=t+deltas[i%deltas.size()];
 			auto sv = (std::sin(i));
