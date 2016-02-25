@@ -45,6 +45,8 @@ IF(WIN32)
   else(MSVC)
         find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem program_options)
   endif(MSVC)
+
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
 else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
   
