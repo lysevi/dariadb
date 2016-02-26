@@ -5,6 +5,8 @@
 #include <meas.h>
 #include <storage.h>
 #include <string>
+#include <thread>
+
 const size_t copies_count = 100;
 void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time from,memseries::Time to,memseries::Time  step) {
     for (auto i = from; i < to; i += step) {
@@ -104,3 +106,32 @@ BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	}
 }
 
+void thread_writer(memseries::Id id, memseries::Time from,memseries::Time to, memseries::Time step, memseries::storage::MemoryStorage *ms)
+{
+    auto m = memseries::Meas::empty();
+    for (auto i = from; i < to; i += step) {
+        m.id = id;
+        m.flag = i;
+        m.time = i;
+        m.value= 0;
+        for (size_t j = 0; j < copies_count; j++) {
+            ms->append(m);
+            m.value=j;
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(MultiThread)
+{
+    auto ms = new memseries::storage::MemoryStorage{ 500 };
+    std::thread t1(thread_writer,0,0,100,2,ms);
+    std::thread t2(thread_writer,1,0,100,2,ms);
+    std::thread t3(thread_writer,2,0,100,2,ms);
+    std::thread t4(thread_writer,3,0,100,2,ms);
+
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    delete ms;
+}

@@ -3,6 +3,8 @@
 #include "compression.h"
 #include <list>
 #include <memory>
+#include <mutex>
+
 namespace memseries{
 	namespace storage {
 
@@ -104,6 +106,8 @@ namespace memseries{
 
 			ChuncksList _chuncks;
 			Time _min_time,_max_time;
+
+            std::mutex _mutex;
 		};
 	}
 }
