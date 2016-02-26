@@ -5,7 +5,7 @@
 #include <meas.h>
 #include <storage.h>
 #include <string>
-
+const size_t copies_count = 100;
 void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time from,memseries::Time to,memseries::Time  step) {
     for (auto i = from; i < to; i += step) {
         bool is_error=true;
@@ -14,25 +14,28 @@ void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time fr
                 is_error=false;
                 break;
             }
-            if (is_error) {
-                BOOST_TEST_MESSAGE(msg);
-            }
+           
         }
+		if (is_error) {
+			BOOST_TEST_MESSAGE(msg);
+		}
     }
 }
 
 void storage_test_check(memseries::storage::AbstractStorage *as,memseries::Time from,memseries::Time to,memseries::Time  step){
     auto m = memseries::Meas::empty();
     size_t total_count = 0;
+	
     for (auto i = from; i < to; i += step) {
         m.id = i;
         m.flag = i;
         m.time = i;
-        BOOST_CHECK(as->append(m).writed==1);
-		total_count++;
-		m.time++;
-		BOOST_CHECK(as->append(m).writed == 1);
-        total_count++;
+		m.value= 0;
+		for (size_t j = 0; j < copies_count; j++) {
+			BOOST_CHECK(as->append(m).writed == 1);
+			total_count++;
+			m.value=j;
+		}
     }
 
     memseries::Meas::MeasList all{};
@@ -52,7 +55,7 @@ void storage_test_check(memseries::storage::AbstractStorage *as,memseries::Time 
     memseries::Meas::MeasList fltr_res{};
     as->readInterval(ids,0,from,to)->readAll(&fltr_res);
 
-    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(2));
+    BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
 
     BOOST_CHECK_EQUAL(fltr_res.front().id,ids[0]);
 
@@ -77,7 +80,7 @@ void storage_test_check(memseries::storage::AbstractStorage *as,memseries::Time 
     auto magicFlag = memseries::Flag(from + step);
     fltr_res.clear();
     as->readInTimePoint(emptyIDs,magicFlag,to)->readAll(&fltr_res);
-    BOOST_CHECK_EQUAL(fltr_res.size(),size_t(2));
+    BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
 
     BOOST_CHECK_EQUAL(fltr_res.front().flag,magicFlag);
 }
@@ -92,8 +95,8 @@ BOOST_AUTO_TEST_CASE(inFilter) {
 
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	{
-		auto ms = new memseries::storage::MemoryStorage{ 1000 };
-		storage_test_check(ms, 0, 1000, 2);
+		auto ms = new memseries::storage::MemoryStorage{ copies_count/2 };
+		storage_test_check(ms, 0, 100, 2);
 		delete ms;
 	}
 }
