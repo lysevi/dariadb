@@ -350,15 +350,15 @@ XorCompressor::~XorCompressor(){
 
 bool XorCompressor::append(memseries::Value v){
 	static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
-
+	auto flat = inner::FlatDouble2Int(v);
     if(_is_first){
-        _first=v;
+        _first= flat;
         _is_first=false;
-        _prev_value=v;
+        _prev_value= flat;
         return true;
     }
 
-    auto xor_val=_prev_value^v;
+    auto xor_val=_prev_value^flat;
     if (xor_val==0){
 		if (_bw.free_size() == 1) {
 			return false;
@@ -409,13 +409,13 @@ bool XorCompressor::append(memseries::Value v){
         }
     }
 
-    _prev_value = v;
+    _prev_value = flat;
     _prev_lead=lead;
     _prev_tail=tail;
 	return true;
 }
 
-uint8_t XorCompressor::zeros_lead(memseries::Value v){
+uint8_t XorCompressor::zeros_lead(uint64_t v){
     const int max_bit_pos=sizeof(Value)*8-1;
     uint8_t result=0;
     for(int i=max_bit_pos;i>=0;i--){
@@ -428,7 +428,7 @@ uint8_t XorCompressor::zeros_lead(memseries::Value v){
     return result;
 }
 
-uint8_t XorCompressor::zeros_tail(memseries::Value v){
+uint8_t XorCompressor::zeros_tail(uint64_t v){
     const int max_bit_pos=sizeof(Value)*8-1;
     uint8_t result=0;
     for(int i=0;i<max_bit_pos;i++){
@@ -443,7 +443,7 @@ uint8_t XorCompressor::zeros_tail(memseries::Value v){
 
 XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, memseries::Value first):
     _bw(bw),
-    _prev_value(first),
+    _prev_value(inner::FlatDouble2Int(first)),
     _prev_lead(0),
     _prev_tail(0)
 {
@@ -456,7 +456,7 @@ memseries::Value XorDeCompressor::read()
     auto b0=_bw.getbit();
     _bw.incbit();
     if(b0==0){
-        return _prev_value;
+        return inner::FlatInt2Double(_prev_value);
     }
 
     auto b1=_bw.getbit();
@@ -484,7 +484,7 @@ memseries::Value XorDeCompressor::read()
                 tail=utils::BitOperations::clr(tail,i);
             }
         }
-        memseries::Value result=0;
+        uint64_t result=0;
         for (int i = 63 - leading; i >= tail; i--) {
             auto b=_bw.getbit();
             _bw.incbit();
@@ -499,9 +499,9 @@ memseries::Value XorDeCompressor::read()
         _prev_tail = tail;
         auto ret= result ^ _prev_value;
         _prev_value=ret;
-        return ret;
+        return inner::FlatInt2Double(ret);
     }else{
-        memseries::Value result = 0;
+        uint64_t result = 0;
 
         for (int i = int(63 - _prev_lead); i >= _prev_tail; i--) {
             auto b=_bw.getbit();
@@ -514,7 +514,7 @@ memseries::Value XorDeCompressor::read()
         }
         auto ret= result ^ _prev_value;
         _prev_value=ret;
-        return ret;
+        return inner::FlatInt2Double(ret);
     }
 }
 

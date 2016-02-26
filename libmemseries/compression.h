@@ -109,13 +109,13 @@ namespace memseries {
             ~XorCompressor();
 
             bool append(Value v);
-            static uint8_t zeros_lead(Value v);
-            static uint8_t zeros_tail(Value v);
+            static uint8_t zeros_lead(uint64_t v);
+            static uint8_t zeros_tail(uint64_t v);
         protected:
             bool _is_first;
             BinaryBuffer _bw;
-            Value  _first;
-            Value _prev_value;
+            uint64_t  _first;
+			uint64_t _prev_value;
             uint8_t _prev_lead;
             uint8_t _prev_tail;
         };
@@ -131,7 +131,7 @@ namespace memseries {
             Value read();
         protected:
             BinaryBuffer _bw;
-            Value _prev_value;
+            uint64_t _prev_value;
             uint8_t _prev_lead;
             uint8_t _prev_tail;
         };
