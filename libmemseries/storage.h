@@ -42,10 +42,8 @@ namespace memseries{
 			{
                 uint8_t *begin;
                 uint8_t *end;
-				compression::BinaryBuffer bb;
 				Block(size_t size);
 				~Block();
-				bool is_full()const { return bb.free_size() == 0; }
 			};
 
             struct MeasChunk
@@ -53,15 +51,13 @@ namespace memseries{
                 Block times;
                 Block flags;
                 Block values;
-				compression::DeltaCompressor time_compressor;
-				compression::FlagCompressor  flag_compressor;
-				compression::XorCompressor   value_compressor;
+				compression::CopmressedWriter c_writer;
 				size_t count;
 				Meas first;
                 MeasChunk(size_t size, Meas first_m);
                 ~MeasChunk();
 				bool append(const Meas&m);
-				bool is_full()const { return times.is_full() || flags.is_full() || values.is_full(); }
+				bool is_full()const { return c_writer.is_full(); }
             };
 			typedef std::shared_ptr<MeasChunk> Chunk_Ptr;
 			typedef std::list<Chunk_Ptr> ChuncksList;
@@ -100,6 +96,9 @@ namespace memseries{
             append_result append(const Meas::PMeas begin, const size_t size)override;
             Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point)override;
+
+			size_t size()const { return _size; }
+			size_t chinks_size()const { return _chuncks.size(); }
 		protected:
 			size_t _size;
 

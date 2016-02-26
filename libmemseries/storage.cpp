@@ -7,7 +7,6 @@ memseries::storage::MemoryStorage::Block::Block(size_t size)
     end = begin + size;
 
     memset(begin, 0, size);
-	bb = compression::BinaryBuffer(begin, end);
 }
 
 memseries::storage::MemoryStorage::Block::~Block()
@@ -22,9 +21,10 @@ memseries::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size, Meas first_
     count(0),
     first(first_m)
 {
-	time_compressor = compression::DeltaCompressor(times.bb);
-	flag_compressor = compression::FlagCompressor(flags.bb);
-	value_compressor = compression::XorCompressor(values.bb);
+	c_writer = memseries::compression::CopmressedWriter(
+		memseries::compression::BinaryBuffer(times.begin, times.end),
+		memseries::compression::BinaryBuffer(values.begin, values.end),
+		memseries::compression::BinaryBuffer(flags.begin, flags.end));
 }
 
 memseries::storage::MemoryStorage::MeasChunk::~MeasChunk()
@@ -34,11 +34,9 @@ memseries::storage::MemoryStorage::MeasChunk::~MeasChunk()
 
 bool memseries::storage::MemoryStorage::MeasChunk::append(const Meas & m)
 {
-	auto t_f=time_compressor.append(first.time);
-	auto f_f = flag_compressor.append(first.flag);
-	auto v_f = value_compressor.append(first.value);
+	auto t_f = this->c_writer.append(m);
 
-	if (!t_f || !f_f || !v_f) {
+	if (!t_f) {
 		return false;
 	}else{
 		count++;

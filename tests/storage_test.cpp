@@ -95,8 +95,12 @@ BOOST_AUTO_TEST_CASE(inFilter) {
 
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	{
-		auto ms = new memseries::storage::MemoryStorage{ copies_count/2 };
-		storage_test_check(ms, 0, 100, 2);
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
+		const memseries::Time from = 0;
+		const memseries::Time to = 100;
+		const memseries::Time step = 2;
+		storage_test_check(ms, from, to, step);
+		BOOST_CHECK(ms->chinks_size() <= (to - from) / step); // id per chunk.
 		delete ms;
 	}
 }

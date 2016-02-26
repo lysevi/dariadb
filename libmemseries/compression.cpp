@@ -357,7 +357,9 @@ bool XorCompressor::append(memseries::Value v){
         _prev_value= flat;
         return true;
     }
-
+	if (_bw.free_size() <9) {
+		return false;
+	}
     auto xor_val=_prev_value^flat;
     if (xor_val==0){
 		if (_bw.free_size() == 1) {
@@ -371,9 +373,7 @@ bool XorCompressor::append(memseries::Value v){
     auto lead=zeros_lead(xor_val);
     auto tail=zeros_tail(xor_val);
 
-	if (_bw.free_size() == 8) {
-		return false;
-	}
+	
 
     if ((_prev_lead==lead) && (_prev_tail==tail)){
         _bw.clrbit().incbit();
@@ -605,7 +605,7 @@ memseries::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time,
 	_is_first = true;
 }
 
-void memseries::compression::CopmressedWriter::append(const Meas&m) {
+bool memseries::compression::CopmressedWriter::append(const Meas&m) {
 	if (_is_first) {
 		_first = m;
 		_is_first = false;
@@ -616,10 +616,19 @@ void memseries::compression::CopmressedWriter::append(const Meas&m) {
 		ss << "(_first.id != m.id)" << " id:" << m.id << " first.id:" << _first.id;
 		throw std::logic_error(ss.str().c_str());
 	}
-	
-	time_comp.append(m.time);
-	value_comp.append(m.value);
-	flag_comp.append(m.flag);
+	if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full()) {
+		return false;
+	}
+	auto t_f = time_comp.append(m.time);
+	auto f_f = value_comp.append(m.value);
+	auto v_f = flag_comp.append(m.flag);
+
+	if (!t_f || !f_f || !v_f) {
+		return false;
+	}
+	else {
+		return true;
+	}
 }
 
 memseries::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first):

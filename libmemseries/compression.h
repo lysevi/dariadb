@@ -51,6 +51,8 @@ namespace memseries {
 			
 			size_t cap()const { return _cap;}
 			size_t free_size()const { return _cap - _pos; }
+			bool is_full()const { return free_size()==0; }
+
 			uint8_t getbit()const;
             BinaryBuffer& setbit();
             BinaryBuffer& clrbit();
@@ -79,6 +81,8 @@ namespace memseries {
             static uint16_t get_delta_256(int64_t D);
             static uint16_t get_delta_2048(int64_t D);
             static uint64_t get_delta_big(int64_t D);
+
+			bool is_full()const { return _bw.is_full(); }
         protected:
             bool _is_first;
             BinaryBuffer _bw;
@@ -95,6 +99,8 @@ namespace memseries {
             ~DeltaDeCompressor();
 
             Time read();
+
+			bool is_full()const { return _bw.is_full(); }
         protected:
             BinaryBuffer _bw;
             int64_t _prev_delta;
@@ -111,6 +117,8 @@ namespace memseries {
             bool append(Value v);
             static uint8_t zeros_lead(uint64_t v);
             static uint8_t zeros_tail(uint64_t v);
+
+			bool is_full()const { return _bw.is_full(); }
         protected:
             bool _is_first;
             BinaryBuffer _bw;
@@ -129,6 +137,8 @@ namespace memseries {
             ~XorDeCompressor()=default;
 
             Value read();
+
+			bool is_full()const { return _bw.is_full(); }
         protected:
             BinaryBuffer _bw;
             uint64_t _prev_value;
@@ -144,6 +154,8 @@ namespace memseries {
 			~FlagCompressor();
 
 			bool append(Flag v);
+
+			bool is_full()const { return _bw.is_full(); }
 		protected:
             BinaryBuffer _bw;
 			bool _is_first;
@@ -158,6 +170,8 @@ namespace memseries {
 			~FlagDeCompressor() = default;
 
 			Flag read();
+
+			bool is_full()const { return _bw.is_full(); }
 		protected:
 			BinaryBuffer _bw;
 			Flag _prev_value;
@@ -170,8 +184,9 @@ namespace memseries {
 			CopmressedWriter(BinaryBuffer bw_time,	BinaryBuffer bw_values,	BinaryBuffer bw_flags);
 			~CopmressedWriter();
 		
-			void append(const Meas&m);
+			bool append(const Meas&m);
 
+			bool is_full()const { return time_comp.is_full() || value_comp.is_full() || flag_comp.is_full(); }
 		protected:
 			Meas _first;
 			bool _is_first;
@@ -189,7 +204,7 @@ namespace memseries {
 			~CopmressedReader();
 
 			Meas read();
-
+			bool is_full()const { return this->time_dcomp.is_full() || this->value_dcomp.is_full() || this->flag_dcomp.is_full(); }
 		protected:
 			Meas _first;
 
