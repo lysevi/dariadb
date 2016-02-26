@@ -186,11 +186,11 @@ namespace memseries {
 		
 			bool append(const Meas&m);
 
-			bool is_full()const { return time_comp.is_full() || value_comp.is_full() || flag_comp.is_full(); }
+			bool is_full()const { return _is_full; }
 		protected:
 			Meas _first;
 			bool _is_first;
-
+			bool _is_full;
 			DeltaCompressor time_comp;
 			XorCompressor   value_comp;
 			FlagCompressor flag_comp;

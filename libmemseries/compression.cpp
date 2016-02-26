@@ -603,6 +603,7 @@ memseries::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time,
 	flag_comp(bw_flags)
 {
 	_is_first = true;
+	_is_full = false;
 }
 
 bool memseries::compression::CopmressedWriter::append(const Meas&m) {
@@ -617,6 +618,7 @@ bool memseries::compression::CopmressedWriter::append(const Meas&m) {
 		throw std::logic_error(ss.str().c_str());
 	}
 	if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full()) {
+		_is_full = true;
 		return false;
 	}
 	auto t_f = time_comp.append(m.time);
@@ -624,6 +626,7 @@ bool memseries::compression::CopmressedWriter::append(const Meas&m) {
 	auto v_f = flag_comp.append(m.flag);
 
 	if (!t_f || !f_f || !v_f) {
+		_is_full = true;
 		return false;
 	}
 	else {
