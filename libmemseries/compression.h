@@ -15,8 +15,16 @@ namespace memseries {
 				int64_t i;
 			};
 
-			int64_t FlatDouble2Int(double v);
-			double FlatInt2Double(int64_t v);
+			inline int64_t FlatDouble2Int(double v) {
+				conv c;
+				c.d = v;
+				return c.i;
+			}
+			inline double FlatInt2Double(int64_t v) {
+				conv c;
+				c.i = v;
+				return c.d;
+			}
 		}
 
         class BinaryBuffer {

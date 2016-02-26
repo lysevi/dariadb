@@ -283,7 +283,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 }
 
 BOOST_AUTO_TEST_CASE(flat_converters) {
-	float pi = 3.14;
+	double pi = 3.14;
 	auto ival = memseries::compression::inner::FlatDouble2Int(pi);
 	auto dval = memseries::compression::inner::FlatInt2Double(ival);
 	BOOST_CHECK_CLOSE(dval, pi, 0.0001);
@@ -399,10 +399,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 		for(int i=0;i<100;i++){
             co.append(int64_t(delta));
             values.push_back(int64_t(delta));
-			if (delta > std::numeric_limits<memseries::Value>::max()) {
-				delta = 1;
-			}
-            delta*=2;
+            delta+=1;
         }
 
         memseries::compression::XorDeCompressor dc(memseries::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)),values.front());
@@ -411,6 +408,29 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
             BOOST_CHECK_EQUAL(dc.read(),v);
         }
     }
+
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	{
+		Testable_XorCompressor co(memseries::compression::BinaryBuffer(std::begin(buffer), std::end(buffer)));
+
+		std::list<double> values{};
+		double delta = 1;
+		const double epsilon= 0.00001;
+		for (int i = 0; i<100; i++) {
+			auto sin_val = std::sin(delta);
+			auto flat = memseries::compression::inner::FlatDouble2Int(sin_val);
+			co.append(flat);
+			values.push_back(sin_val);
+			delta += 0.00001;
+		}
+		auto flat_i = memseries::compression::inner::FlatDouble2Int(values.front());
+		memseries::compression::XorDeCompressor dc(memseries::compression::BinaryBuffer(std::begin(buffer), std::end(buffer)), flat_i);
+		values.pop_front();
+		for (auto&v : values) {
+			auto flat = memseries::compression::inner::FlatInt2Double(dc.read());
+			BOOST_CHECK_CLOSE(flat, v, epsilon);
+		}
+	}
 }
 
 BOOST_AUTO_TEST_CASE(FlagCompressor) 
