@@ -438,7 +438,6 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 {
 	const size_t test_buffer_size = 1000;
 
-
 	uint8_t time_begin[test_buffer_size];
 	auto time_end = std::end(time_begin);
 

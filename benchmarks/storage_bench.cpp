@@ -17,15 +17,16 @@ int main(int argc, char *argv[]) {
 
 		std::vector<memseries::Time> deltas{ 50,255,1024,2050 };
 		memseries::Time t = 1;
-		const size_t ids_count = 10;
+		const size_t ids_count = 2;
 
 		auto start = clock();
-		for (int K = 0; K < 5; K++) {
+		for (int K = 0; K < 2; K++) {
 			
 			for (auto i = 0; i < 1000000; i++) {
 				m.id = i%ids_count;
 				m.flag = 0xff;
-				m.time = t + deltas[i%deltas.size()];
+				t += deltas[i%deltas.size()];
+				m.time = t;
 				m.value = K+i/10.0;
 				ms->append(m);
 			}

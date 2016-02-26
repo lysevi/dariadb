@@ -215,6 +215,7 @@ void memseries::storage::MemoryStorage::InnerReader::readNext(memseries::Meas::M
 		for (size_t i = 0; i < _next.count; i++) {
 			auto sub = crr.read();
 			if (check_meas(sub)) {
+				sub.id = _next.chunk->first.id;
 				output->push_back(sub);
 			}
 		}

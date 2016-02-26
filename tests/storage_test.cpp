@@ -8,16 +8,15 @@
 const size_t copies_count = 100;
 void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time from,memseries::Time to,memseries::Time  step) {
     for (auto i = from; i < to; i += step) {
-        bool is_error=true;
+		size_t count = 0;
         for(auto &m:res) {
-            if ((m.id == i) || (m.flag == i) || (m.time == i)) {
-                is_error=false;
-                break;
+            if ((m.id == i) && (m.flag == i) && (m.time == i)) {
+				count++;
             }
            
         }
-		if (is_error) {
-			BOOST_TEST_MESSAGE(msg);
+		if (count!=copies_count) {
+			BOOST_CHECK_EQUAL(copies_count, count);
 		}
     }
 }
