@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
 
 		auto start = clock();
 		
-		const size_t K = 2;
-		for (auto i = 0; i < K*1000000; i++) {
+        const size_t K = 2;
+        for (size_t i = 0; i < K*1000000; i++) {
 			m.id = i%ids_count;
 			m.flag = 0xff;
 			t += deltas[i%deltas.size()];

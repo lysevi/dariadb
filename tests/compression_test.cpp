@@ -301,7 +301,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     const size_t test_buffer_size =1000;
 
     const memseries::Value t1=240;
-    const memseries::Value t2=224;
+    //const memseries::Value t2=224;
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
