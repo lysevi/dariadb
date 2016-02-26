@@ -14,6 +14,18 @@ const uint16_t delta_2047_mask_inv = 4095;  //0000 1111 1111 1111
 const uint64_t delta_big_mask = 64424509440;   //1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
 const uint64_t delta_big_mask_inv = 4294967295;//0000 1111 1111 1111 1111 1111 1111   1111 1111
 
+int64_t   memseries::compression::inner::FlatDouble2Int(double v) {
+	memseries::compression::inner::conv c;
+	c.d = v;
+	return c.i;
+}
+double memseries::compression::inner::FlatInt2Double(int64_t v) {
+	memseries::compression::inner::conv c;
+	c.i = v;
+	return c.d;
+}
+
+
 DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
     _is_first(true),
     _bw(bw),

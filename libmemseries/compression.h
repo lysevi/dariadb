@@ -9,6 +9,16 @@ namespace memseries {
 
         const uint8_t max_bit_pos = 7;
 
+		namespace inner {
+			union conv {
+				double d;
+				int64_t i;
+			};
+
+			int64_t FlatDouble2Int(double v);
+			double FlatInt2Double(int64_t v);
+		}
+
         class BinaryBuffer {
             
 		public:

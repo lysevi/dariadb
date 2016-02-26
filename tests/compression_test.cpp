@@ -282,6 +282,13 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 	}
 }
 
+BOOST_AUTO_TEST_CASE(flat_converters) {
+	float pi = 3.14;
+	auto ival = memseries::compression::inner::FlatDouble2Int(pi);
+	auto dval = memseries::compression::inner::FlatInt2Double(ival);
+	BOOST_CHECK_CLOSE(dval, pi, 0.0001);
+}
+
 BOOST_AUTO_TEST_CASE(XorCompressor){
     {
         BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_lead(67553994410557440),8);
