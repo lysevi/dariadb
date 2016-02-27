@@ -13,8 +13,8 @@ int main(int argc, char *argv[]) {
     auto m = memseries::Meas::empty();
 
     std::vector<memseries::Time> deltas{ 50,255,1024,2050 };
-    //auto now=std::chrono::high_resolution_clock::now();
-    memseries::Time t = 1;//memseries::timeutil::from_chrono(now);
+    auto now=std::chrono::high_resolution_clock::now();
+    memseries::Time t =memseries::timeutil::from_chrono(now);
     const size_t ids_count = 2;
 
     auto start = clock();
