@@ -33,6 +33,15 @@ int main(int argc, char *argv[]) {
 
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
         std::cout<<"memorystorage insert : "<<elapsed<<std::endl;
-		delete ms;
+
+        start = clock();
+        auto reader=ms->readInTimePoint(ms->maxTime());
+
+        memseries::Meas::MeasList mlist{};
+        reader->readAll(&mlist);
+
+        elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
+        std::cout<<"memorystorage read : "<<elapsed<<std::endl;
+        delete ms;
     }
 }
