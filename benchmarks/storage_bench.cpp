@@ -7,14 +7,15 @@
 #include <ctime>
 #include <limits>
 #include <cmath>
-
+#include <chrono>
 int main(int argc, char *argv[]) {
     {
 		auto ms = new memseries::storage::MemoryStorage{ 1000000 };
 		auto m = memseries::Meas::empty();
 
 		std::vector<memseries::Time> deltas{ 50,255,1024,2050 };
-		memseries::Time t = 1;
+        auto now=std::chrono::high_resolution_clock::now().time_since_epoch();
+        memseries::Time t = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
 		const size_t ids_count = 2;
 
 		auto start = clock();
@@ -39,7 +40,8 @@ int main(int argc, char *argv[]) {
         reader->readAll(&mlist);
 
         elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-        std::cout<<"memorystorage read : "<<elapsed<<std::endl;
+        std::cout<<"memorystorage read: "<<elapsed<<std::endl;
+        std::cout<<"raded: "<<mlist.size()<<std::endl;
         delete ms;
     }
 }
