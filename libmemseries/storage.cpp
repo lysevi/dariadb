@@ -25,6 +25,7 @@ memseries::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size, Meas first_
 		memseries::compression::BinaryBuffer(times.begin, times.end),
 		memseries::compression::BinaryBuffer(values.begin, values.end),
 		memseries::compression::BinaryBuffer(flags.begin, flags.end));
+    c_writer.append(first);
 }
 
 memseries::storage::MemoryStorage::MeasChunk::~MeasChunk()
@@ -213,12 +214,12 @@ void memseries::storage::MemoryStorage::InnerReader::readNext(memseries::Meas::M
 			memseries::compression::BinaryBuffer(_next.chunk->values.begin, _next.chunk->values.end),
 			memseries::compression::BinaryBuffer(_next.chunk->flags.begin, _next.chunk->flags.end), _next.chunk->first);
 
-		for (size_t i = 0; i < _next.count; i++) {
+        for (size_t i = 0; i < _next.count; i++) {
 			auto sub = crr.read();
 			if (check_meas(sub)) {
 				sub.id = _next.chunk->first.id;
 				output->push_back(sub);
-			}
+            }
 		}
 		_next.count = 0;
 	}
