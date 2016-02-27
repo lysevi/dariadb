@@ -63,7 +63,7 @@ bool DeltaCompressor::append(memseries::Time t){
                     auto d=DeltaCompressor::get_delta_2048(D);
                     _bw.write(d,15);
                 }else{
-					if (_bw.free_size() <5) {
+                    if (_bw.free_size() <6) {
 						return false;
 					}
                     auto d=DeltaCompressor::get_delta_big(D);

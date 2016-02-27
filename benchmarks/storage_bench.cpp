@@ -14,8 +14,8 @@ int main(int argc, char *argv[]) {
 		auto m = memseries::Meas::empty();
 
 		std::vector<memseries::Time> deltas{ 50,255,1024,2050 };
-        auto now=std::chrono::high_resolution_clock::now().time_since_epoch();
-        memseries::Time t = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
+        auto now=std::chrono::high_resolution_clock::now();
+        memseries::Time t = memseries::timeutil::from_chrono(now);
 		const size_t ids_count = 2;
 
 		auto start = clock();
@@ -24,8 +24,8 @@ int main(int argc, char *argv[]) {
         for (size_t i = 0; i < K*1000000; i++) {
 			m.id = i%ids_count;
 			m.flag = 0xff;
-			t += deltas[i%deltas.size()];
-			m.time = t;
+            t += deltas[i%deltas.size()];
+            m.time = t;
 			m.value = i;
 			ms->append(m);
 		}
