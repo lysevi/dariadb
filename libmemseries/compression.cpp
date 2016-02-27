@@ -47,52 +47,27 @@ bool DeltaCompressor::append(memseries::Time t){
 				return false;
 			}
             auto d=DeltaCompressor::get_delta_64(D);
-            //TODO move for to BinaryBuffer.
-            for(auto i=9;i>=0;i--){
-                if(utils::BitOperations::check(d,i)){
-                    _bw.setbit().incbit();
-                }else{
-                    _bw.clrbit().incbit();
-                }
-            }
+            _bw.write(d,9);
         }else{
             if ((-255<D)&&(D<256)){
 				if (_bw.free_size() <2) {
 					return false;
 				}
                 auto d=DeltaCompressor::get_delta_256(D);
-                for(auto i=11;i>=0;i--){
-                    if(utils::BitOperations::check(d,i)){
-                        _bw.setbit().incbit();
-                    }else{
-                        _bw.clrbit().incbit();
-                    }
-                }
+               _bw.write(d,11);
             }else{
                 if ((-2047<D)&&(D<2048)){
 					if (_bw.free_size() <3) {
 						return false;
 					}
                     auto d=DeltaCompressor::get_delta_2048(D);
-                    for(auto i=15;i>=0;i--){
-                        if(utils::BitOperations::check(d,i)){
-                            _bw.setbit().incbit();
-                        }else{
-                            _bw.clrbit().incbit();
-                        }
-                    }
+                    _bw.write(d,15);
                 }else{
 					if (_bw.free_size() <5) {
 						return false;
 					}
                     auto d=DeltaCompressor::get_delta_big(D);
-                    for(auto i=35;i>=0;i--){
-                        if(utils::BitOperations::check(d,i)){
-                            _bw.setbit().incbit();
-                        }else{
-                            _bw.clrbit().incbit();
-                        }
-                    }
+                   _bw.write(d,35);
                 }
             }
         }
@@ -144,16 +119,8 @@ memseries::Time DeltaDeCompressor::read(){
     auto b1=_bw.getbit();
     _bw.incbit();
     if((b0==1) && (b1==0)){//64
-        int8_t result(0);
-        //TODO move to BinaryBuffer.
-        for(int i=7;i>=0;i--){
-            if(_bw.getbit()==1){
-                result=utils::BitOperations::set(result,i);
-            }else{
-                result=utils::BitOperations::clr(result,i);
-            }
-            _bw.incbit();
-        }
+        int8_t result=static_cast<int8_t>(_bw.read(7));
+
 		if (result>64) { //is negative
 			result = (-128) | result;
 		}
@@ -167,15 +134,7 @@ memseries::Time DeltaDeCompressor::read(){
     auto b2=_bw.getbit();
     _bw.incbit();
     if((b0==1) && (b1==1)&& (b2==0)){//256
-        int16_t result(0);
-        for(int i=8;i>=0;i--){
-            if(_bw.getbit()==1){
-                result=utils::BitOperations::set(result,i);
-            }else{
-                result=utils::BitOperations::clr(result,i);
-            }
-            _bw.incbit();
-        }
+        int16_t result=static_cast<int16_t>(_bw.read(8));
 		if (result > 256) { //is negative
 			result = (-256) | result;
 		}
@@ -188,15 +147,7 @@ memseries::Time DeltaDeCompressor::read(){
     auto b3=_bw.getbit();
     _bw.incbit();
     if((b0==1) && (b1==1)&& (b2==1)&& (b3==0)){//2048
-        int16_t result(0);
-        for(int i=11;i>=0;i--){
-            if(_bw.getbit()==1){
-                result=utils::BitOperations::set(result,i);
-            }else{
-                result=utils::BitOperations::clr(result,i);
-            }
-            _bw.incbit();
-        }
+        int16_t result=static_cast<int16_t>(_bw.read(11));
 		if (result > 2048) { //is negative
 			result = (-2048) | result;
 		}
@@ -207,15 +158,7 @@ memseries::Time DeltaDeCompressor::read(){
         return ret;
     }
 
-    int64_t result(0);
-    for(int i=31;i>=0;i--){
-        if(_bw.getbit()==1){
-            result=utils::BitOperations::set(result,i);
-        }else{
-            result=utils::BitOperations::clr(result,i);
-        }
-        _bw.incbit();
-    }
+    int64_t result=_bw.read(31);
 	if (result > std::numeric_limits<int32_t>::max()) {
 		result = (-4294967296) | result;
 	}
@@ -317,6 +260,38 @@ BinaryBuffer& BinaryBuffer::clrbit() {
     return *this;
 }
 
+void BinaryBuffer::write(uint16_t v,int8_t count){
+    for(auto i=count;i>=0;i--){
+        if(utils::BitOperations::check(v,i)){
+            setbit().incbit();
+        }else{
+            clrbit().incbit();
+        }
+    }
+}
+
+void BinaryBuffer::write(uint64_t v,int8_t count){
+    for(auto i=count;i>=0;i--){
+        if(utils::BitOperations::check(v,i)){
+            setbit().incbit();
+        }else{
+            clrbit().incbit();
+        }
+    }
+}
+
+uint64_t  BinaryBuffer::read(int8_t count){
+    uint64_t result=0;
+    for(int i=count;i>=0;i--){
+        if(getbit()==1){
+            result=utils::BitOperations::set(result,i);
+        }else{
+            result=utils::BitOperations::clr(result,i);
+        }
+        incbit();
+    }
+    return result;
+}
 
 std::ostream&  memseries::compression::operator<< (std::ostream& stream, const BinaryBuffer& b) {
 	stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum() << " [";
@@ -380,24 +355,8 @@ bool XorCompressor::append(memseries::Value v){
     }else{
         _bw.setbit().incbit();
 
-
-        for (int8_t i = 5; i >= 0; i--) {
-            auto b= utils::BitOperations::get(lead, i);
-            if (b){
-                _bw.setbit().incbit();
-            }else{
-                _bw.clrbit().incbit();
-            }
-        }
-
-        for (int8_t i = 5; i >= 0; i--) {
-            auto b= utils::BitOperations::get(tail, i);
-            if (b){
-                _bw.setbit().incbit();
-            }else{
-                _bw.clrbit().incbit();
-            }
-        }
+        _bw.write((uint16_t)lead,int8_t(5));
+        _bw.write((uint16_t)tail,int8_t(5));
     }
 
     for (int i = (63 - lead); i >= tail; i--) {
@@ -463,27 +422,9 @@ memseries::Value XorDeCompressor::read()
     _bw.incbit();
 
     if(b1==1){
-        uint8_t leading = 0;
-        for (int i = 5; i >= 0; i--) {
-            auto b=_bw.getbit();
-            _bw.incbit();
-            if (b){
-                leading=utils::BitOperations::set(leading,i);
-            }else{
-                leading=utils::BitOperations::clr(leading,i);
-            }
-        }
+        uint8_t leading = static_cast<uint8_t>(_bw.read(5));
 
-        uint8_t tail = 0;
-        for (int i = 5; i >= 0; i--) {
-            auto b=_bw.getbit();
-            _bw.incbit();
-            if (b){
-                tail=utils::BitOperations::set(tail,i);
-            }else{
-                tail=utils::BitOperations::clr(tail,i);
-            }
-        }
+        uint8_t tail = static_cast<uint8_t>(_bw.read(5));
         uint64_t result=0;
         for (int i = 63 - leading; i >= tail; i--) {
             auto b=_bw.getbit();
@@ -549,16 +490,8 @@ bool FlagCompressor::append(memseries::Flag v)
 			return false;
 		}
 		_bw.setbit().incbit();
+        _bw.write(v,63);
 
-		for (int i = 63; i >= 0; i--) {
-			auto b = utils::BitOperations::get(v,i);
-			if (b) {
-				_bw.setbit().incbit();
-			}
-			else {
-				_bw.clrbit().incbit();
-			}
-		}
 		_first = v;
 	}
 	return true;
@@ -579,16 +512,7 @@ memseries::Flag memseries::compression::FlagDeCompressor::read()
 	}
 	else {
 		_bw.incbit();
-		for (int i = 63; i >= 0; i--) {
-			auto b = _bw.getbit();
-			_bw.incbit();
-			if (b) {
-				result=utils::BitOperations::set(result, i);
-			}
-			else {
-				result = utils::BitOperations::clr(result, i);
-			}
-		}
+        result=_bw.read(63);
 	}
 	
 	return result;
