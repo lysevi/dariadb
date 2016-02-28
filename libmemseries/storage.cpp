@@ -42,7 +42,7 @@ bool memseries::storage::MemoryStorage::MeasChunk::append(const Meas & m)
 		return false;
 	}else{
 		count++;
-        if(m.time>last.time){
+        if(m.time>=last.time){
             last=m;
         }
 		return true;
