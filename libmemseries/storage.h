@@ -55,7 +55,7 @@ namespace memseries{
                 Block values;
 				compression::CopmressedWriter c_writer;
 				size_t count;
-				Meas first;
+                Meas first,last;
                 MeasChunk(size_t size, Meas first_m);
                 ~MeasChunk();
 				bool append(const Meas&m);

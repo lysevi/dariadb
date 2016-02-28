@@ -19,7 +19,8 @@ memseries::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size, Meas first_
 	flags(size),
 	values(size),
     count(0),
-    first(first_m)
+    first(first_m),
+    last(first_m)
 {
 	c_writer = memseries::compression::CopmressedWriter(
 		memseries::compression::BinaryBuffer(times.begin, times.end),
@@ -41,6 +42,9 @@ bool memseries::storage::MemoryStorage::MeasChunk::append(const Meas & m)
 		return false;
 	}else{
 		count++;
+        if(m.time>last.time){
+            last=m;
+        }
 		return true;
 	}
 }

@@ -66,6 +66,7 @@ void storage_test_check(memseries::storage::AbstractStorage *as,memseries::Time 
 
     all.clear();
     as->readInTimePoint(to)->readAll(&all);
+    //TODO ==(to-from)/step
     BOOST_CHECK_EQUAL(all.size(),total_count);
 
     checkAll(all, "TimePoint error: ",from,to,step);
