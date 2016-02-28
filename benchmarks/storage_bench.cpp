@@ -9,7 +9,7 @@
 #include <cmath>
 #include <chrono>
 int main(int argc, char *argv[]) {
-    auto ms = new memseries::storage::MemoryStorage{ 1000000 };
+    auto ms = new memseries::storage::MemoryStorage{ 2000000 };
     auto m = memseries::Meas::empty();
 
     std::vector<memseries::Time> deltas{ 50,255,1024,2050 };
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-    std::cout<<"memorystorage insert : "<<elapsed<<std::endl;
+    std::cout<<"memorystorage insert : "<<elapsed/K<<std::endl;
 
     start = clock();
     auto reader=ms->readInTimePoint(ms->maxTime());
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     reader->readAll(&mlist);
 
     elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-    std::cout<<"memorystorage read: "<<elapsed<<std::endl;
+    std::cout<<"memorystorage read: "<<elapsed/K<<std::endl;
     std::cout<<"raded: "<<mlist.size()<<std::endl;
     delete ms;
 }
