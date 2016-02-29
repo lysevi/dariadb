@@ -77,6 +77,8 @@ namespace memseries{
 				void add(Chunk_Ptr c, size_t count);
                 bool isEnd() const override;
                 void readNext(Meas::MeasList*output)  override;
+				void readTimePoint(Meas::MeasList*output);
+				bool is_time_point_reader;
 			protected:
 				bool check_meas(Meas&m);
 				typedef std::vector<ReadChunk> ReadChuncksVector;
@@ -89,6 +91,7 @@ namespace memseries{
 				ReadChunk _next;
 				ReadChuncksVector _cur_vector;
 				size_t _cur_vector_pos;
+				bool _tp_readed;
             };
         public:
 			MemoryStorage(size_t size);

@@ -136,7 +136,17 @@ memseries::storage::Reader_ptr memseries::storage::MemoryStorage::readInterval(c
 
 memseries::storage::Reader_ptr memseries::storage::MemoryStorage::readInTimePoint(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time time_point)
 {
-	return this->readInterval(ids, flag, 0, time_point);
+	auto res = std::make_shared<InnerReader>(flag, time_point, 0);
+	for (auto ch : _chuncks) {
+		if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch.first) != ids.end())) {
+			for (size_t i = 0; i < ch.second.size(); i++) {
+				auto cur_chunk = ch.second[i];
+				res->add(cur_chunk, cur_chunk->count);
+			}
+		}
+	}
+	res->is_time_point_reader = true;
+	return res;
 }
 
 
@@ -185,10 +195,12 @@ memseries::storage::MemoryStorage::InnerReader::InnerReader(memseries::Flag flag
     _flag(flag),
     _from(from),
     _to(to),
-	_cur_vector_pos(0)
+	_cur_vector_pos(0),
+	_tp_readed(false)
 {
 	_next.chunk = nullptr;
 	_next.count = 0;
+	is_time_point_reader = false;
 }
 
 void memseries::storage::MemoryStorage::InnerReader::add(Chunk_Ptr c, size_t count)
@@ -201,7 +213,7 @@ void memseries::storage::MemoryStorage::InnerReader::add(Chunk_Ptr c, size_t cou
 
 bool memseries::storage::MemoryStorage::InnerReader::isEnd() const
 {
-	return this->_chunks.size() == 0 && _next.count == 0 && _cur_vector.size() != 0 && _cur_vector_pos >= _cur_vector.size();
+	return this->_chunks.size() == 0 && _next.count == 0 && _cur_vector.size() == 0 && _cur_vector_pos >= _cur_vector.size();
 }
 
 bool  memseries::storage::MemoryStorage::InnerReader::check_meas(memseries::Meas&m) {
@@ -213,6 +225,15 @@ bool  memseries::storage::MemoryStorage::InnerReader::check_meas(memseries::Meas
 
 void memseries::storage::MemoryStorage::InnerReader::readNext(memseries::Meas::MeasList *output)
 {
+	if (!_tp_readed) {
+		this->readTimePoint(output);
+	}
+	
+	if (is_time_point_reader) {
+		_chunks.clear();
+		return;
+	}
+
 	if ((_next.chunk == nullptr) || (_next.count == 0)) {
 		if ((_cur_vector_pos == _cur_vector.size()) || (_cur_vector.size()==0)) {
 			_cur_vector.clear();
@@ -253,4 +274,44 @@ void memseries::storage::MemoryStorage::InnerReader::readNext(memseries::Meas::M
 		}
 		_next.count = 0;
 	}
+}
+
+void memseries::storage::MemoryStorage::InnerReader::readTimePoint(Meas::MeasList * output)
+{
+	std::list<memseries::storage::MemoryStorage::InnerReader::ReadChunk> to_read_chunks{};
+	for (auto ch : _chunks) {
+		auto candidate = ch.second.front();
+		if (candidate.chunk->first.time > _from) {
+			continue;
+		}
+
+		for (size_t i = 1; i < ch.second.size(); i++) {
+			if ((candidate.chunk->first.time < ch.second[i].chunk->first.time)
+				&& (ch.second[i].chunk->first.time <= _from)) {
+				candidate = ch.second[i];
+			}
+		}
+		to_read_chunks.push_back(candidate);
+	}
+
+	for (auto ch : to_read_chunks) {
+		memseries::compression::CopmressedReader crr(
+			memseries::compression::BinaryBuffer(ch.chunk->times.begin, ch.chunk->times.end),
+			memseries::compression::BinaryBuffer(ch.chunk->values.begin, ch.chunk->values.end),
+			memseries::compression::BinaryBuffer(ch.chunk->flags.begin, ch.chunk->flags.end), ch.chunk->first);
+
+		memseries::Meas candidate;
+		candidate = ch.chunk->first;
+		for (size_t i = 1; i < ch.count; i++) {
+			auto sub = crr.read();
+			sub.id = ch.chunk->first.id;
+			if ((sub.time <= _from) && (sub.time >= candidate.time)) {
+				candidate = sub;
+			}
+		}
+		if (candidate.time <= _from) {
+			output->push_back(candidate);
+		}
+	}
+	_tp_readed = true;
 }
