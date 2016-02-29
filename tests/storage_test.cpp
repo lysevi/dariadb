@@ -136,3 +136,75 @@ BOOST_AUTO_TEST_CASE(MultiThread)
     t4.join();
     delete ms;
 }
+
+BOOST_AUTO_TEST_CASE(ReadInterval) 
+{
+	auto ds= new memseries::storage::MemoryStorage{ 500 };
+	memseries::Meas m;
+	{
+		m.id = 1; m.time = 1;
+		ds->append(m);
+		m.id = 2; m.time = 2;
+		ds->append(m);
+
+		m.id = 4; m.time = 4;
+		ds->append(m);
+		m.id = 5; m.time = 5;
+		ds->append(m);
+		m.id = 55; m.time = 5;
+		ds->append(m);
+
+		{
+			auto tp_reader = ds->readInTimePoint(6);
+			memseries::Meas::MeasList output_in_point{};
+			tp_reader->readAll(&output_in_point);
+
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
+		}
+		{
+
+			auto tp_reader = ds->readInTimePoint(3);
+			memseries::Meas::MeasList output_in_point{};
+			tp_reader->readAll(&output_in_point);
+
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(2));
+			for (auto v : output_in_point) {
+				BOOST_CHECK(v.time <= 3);
+			}
+		}
+		auto reader = ds->readInterval(3, 5);
+		memseries::Meas::MeasList output{};
+		reader->readAll(&output);
+		BOOST_CHECK_EQUAL(output.size(), size_t(5));
+	}
+	{
+		m.id = 1; m.time = 6;
+		ds->append(m);
+		m.id = 2; m.time = 7;
+		ds->append(m);
+
+		m.id = 4; m.time = 9;
+		ds->append(m);
+		m.id = 5; m.time = 10;
+		ds->append(m);
+		m.id = 6; m.time = 10;
+		ds->append(m);
+		{
+
+			auto tp_reader = ds->readInTimePoint(8);
+			memseries::Meas::MeasList output_in_point{};
+			tp_reader->readAll(&output_in_point);
+
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
+			for (auto v : output_in_point) {
+				BOOST_CHECK(v.time <= 8);
+			}
+		}
+
+		auto reader = ds->readInterval(memseries::IdArray{ 1,2,4,5,55 }, 0, 8, 10);
+		memseries::Meas::MeasList output{};
+		reader->readAll(&output);
+		BOOST_CHECK_EQUAL(output.size(), size_t(7));
+	}
+	delete ds;
+}
