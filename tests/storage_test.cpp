@@ -8,6 +8,7 @@
 #include <thread>
 
 const size_t copies_count = 100;
+
 void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time from, memseries::Time to, memseries::Time  step) {
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
@@ -17,7 +18,7 @@ void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time fr
 			}
 
 		}
-		if (count != copies_count) {
+		if (count < copies_count) {
 			BOOST_CHECK_EQUAL(copies_count, count);
 		}
 	}
@@ -32,7 +33,7 @@ void storage_test_check(memseries::storage::AbstractStorage *as, memseries::Time
 		m.flag = i;
 		m.time = i;
 		m.value = 0;
-		for (size_t j = 0; j < copies_count; j++) {
+		for (size_t j = 1; j < copies_count+1; j++) {
 			BOOST_CHECK(as->append(m).writed == 1);
 			total_count++;
 			m.value = j;
@@ -41,14 +42,14 @@ void storage_test_check(memseries::storage::AbstractStorage *as, memseries::Time
 
 	memseries::Meas::MeasList all{};
 	as->readInterval(from, to)->readAll(&all);
-	BOOST_CHECK_EQUAL(all.size(), total_count);
+	BOOST_CHECK_EQUAL(all.size(), total_count+1); // [_from,to, by step] + 1 from timePoint=0 (meas with time=0.).
 
 	checkAll(all, "readAll error: ", from, to, step);
 
 	memseries::IdArray ids{};
 	all.clear();
 	as->readInterval(ids, 0, from, to)->readAll(&all);
-	BOOST_CHECK_EQUAL(all.size(), total_count);
+	BOOST_CHECK_EQUAL(all.size(), total_count+1);
 
 	checkAll(all, "read error: ", from, to, step);
 
@@ -66,25 +67,14 @@ void storage_test_check(memseries::storage::AbstractStorage *as, memseries::Time
 
 	all.clear();
 	as->readInTimePoint(to)->readAll(&all);
+	size_t ids_count = (to - from) / step;
 	//TODO ==(to-from)/step
-	BOOST_CHECK_EQUAL(all.size(), total_count);
-
-	checkAll(all, "TimePoint error: ", from, to, step);
-
+	BOOST_CHECK_EQUAL(all.size(), ids_count);
 
 	memseries::IdArray emptyIDs{};
 	fltr_res.clear();
 	as->readInTimePoint(to)->readAll(&fltr_res);
-	BOOST_CHECK_EQUAL(fltr_res.size(), total_count);
-
-	checkAll(all, "TimePointFltr error: ", from, to, step);
-
-	auto magicFlag = memseries::Flag(from + step);
-	fltr_res.clear();
-	as->readInTimePoint(emptyIDs, magicFlag, to)->readAll(&fltr_res);
-	BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
-
-	BOOST_CHECK_EQUAL(fltr_res.front().flag, magicFlag);
+	BOOST_CHECK_EQUAL(fltr_res.size(), ids_count);
 }
 
 
