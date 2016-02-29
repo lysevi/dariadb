@@ -30,16 +30,26 @@ int main(int argc, char *argv[]) {
     }
 
     auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-    std::cout<<"memorystorage insert : "<<elapsed/K<<std::endl;
+    std::cout<<"memorystorage insert : "<<elapsed<<std::endl;
+
+	start = clock();
+	auto reader = ms->readInTimePoint(ms->maxTime());
+
+	memseries::Meas::MeasList mlist{};
+	reader->readAll(&mlist);
+
+	elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	std::cout << "memorystorage readTimePoint last: " << elapsed / K << std::endl;
+	std::cout << "raded: " << mlist.size() << std::endl;
 
     start = clock();
-    auto reader=ms->readInTimePoint(ms->maxTime());
+	auto reader_int = ms->readInterval(memseries::timeutil::from_chrono(now), t);
 
-    memseries::Meas::MeasList mlist{};
-    reader->readAll(&mlist);
+	mlist.clear();
+	reader_int->readAll(&mlist);
 
     elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-    std::cout<<"memorystorage read: "<<elapsed/K<<std::endl;
+    std::cout<<"memorystorage readIntarval all: "<<elapsed/K<<std::endl;
     std::cout<<"raded: "<<mlist.size()<<std::endl;
     delete ms;
 }
