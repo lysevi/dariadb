@@ -1,10 +1,11 @@
 #pragma once
 
 #include "compression.h"
-#include <list>
+#include <vector>
+#include <map>
 #include <memory>
 #include <mutex>
-
+#include <set>
 namespace memseries{
 	namespace storage {
 
@@ -62,7 +63,8 @@ namespace memseries{
 				bool is_full()const { return c_writer.is_full(); }
             };
 			typedef std::shared_ptr<MeasChunk> Chunk_Ptr;
-			typedef std::list<Chunk_Ptr> ChuncksList;
+			typedef std::vector<Chunk_Ptr> ChuncksVector;
+			typedef std::map<Id, ChuncksVector> ChunkMap;
         public:
             class InnerReader:public Reader{
             public:
@@ -77,12 +79,16 @@ namespace memseries{
                 void readNext(Meas::MeasList*output)  override;
 			protected:
 				bool check_meas(Meas&m);
+				typedef std::vector<ReadChunk> ReadChuncksVector;
+				typedef std::map<Id, ReadChuncksVector> ReadChunkMap;
 			protected:
-				std::list<ReadChunk> _chunks;
+				ReadChunkMap _chunks;
 				memseries::Flag _flag;
 				memseries::Time _from;
 				memseries::Time _to;
 				ReadChunk _next;
+				ReadChuncksVector _cur_vector;
+				size_t _cur_vector_pos;
             };
         public:
 			MemoryStorage(size_t size);
@@ -104,7 +110,7 @@ namespace memseries{
 		protected:
 			size_t _size;
 
-			ChuncksList _chuncks;
+			ChunkMap _chuncks;
 			Time _min_time,_max_time;
 
             std::mutex _mutex;
