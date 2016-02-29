@@ -100,6 +100,11 @@ memseries::append_result memseries::storage::MemoryStorage::append(const memseri
 			this->_chuncks[value.id].push_back(chunk);
 		}
 	}
+	std::sort(
+		this->_chuncks[value.id].begin(), 
+		this->_chuncks[value.id].end(), 
+		[](Chunk_Ptr &l, Chunk_Ptr &r) {return l->first.time < r->first.time; });
+
 	_min_time = std::min(_min_time, value.time);
 	_max_time = std::max(_max_time, value.time);
 	return memseries::append_result(1, 0);
@@ -121,7 +126,7 @@ memseries::storage::Reader_ptr memseries::storage::MemoryStorage::readInterval(c
 		if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch.first) != ids.end())) {
 			for (size_t i = 0; i < ch.second.size(); i++) {
 				auto cur_chunk = ch.second[i];
-					res->add(cur_chunk, cur_chunk->count);
+				res->add(cur_chunk, cur_chunk->count);
 			}
 		}
 	}
