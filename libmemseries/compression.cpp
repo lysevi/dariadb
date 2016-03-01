@@ -359,15 +359,9 @@ bool XorCompressor::append(memseries::Value v){
         _bw.write((uint16_t)tail,int8_t(5));
     }
 
-    for (int i = (63 - lead); i >= tail; i--) {
-        auto b = utils::BitOperations::get(xor_val, i);
-        if (b){
-            _bw.setbit().incbit();
-        }else{
-            _bw.clrbit().incbit();
-        }
-    }
-
+	xor_val = xor_val >> tail;
+	_bw.write(xor_val, (63 - lead - tail));
+    
     _prev_value = flat;
     _prev_lead=lead;
     _prev_tail=tail;
@@ -426,16 +420,10 @@ memseries::Value XorDeCompressor::read()
 
         uint8_t tail = static_cast<uint8_t>(_bw.read(5));
         uint64_t result=0;
-        for (int i = 63 - leading; i >= tail; i--) {
-            auto b=_bw.getbit();
-            _bw.incbit();
-            if (b){
-                result=utils::BitOperations::set(result,i);
-            }else{
-                result=utils::BitOperations::clr(result,i);
-            }
-        }
-
+		
+		result=_bw.read(63 - leading - tail);
+		result = result << tail;
+        
         _prev_lead = leading;
         _prev_tail = tail;
         auto ret= result ^ _prev_value;
@@ -444,15 +432,9 @@ memseries::Value XorDeCompressor::read()
     }else{
         uint64_t result = 0;
 
-        for (int i = int(63 - _prev_lead); i >= _prev_tail; i--) {
-            auto b=_bw.getbit();
-            _bw.incbit();
-            if (b){
-                result=utils::BitOperations::set(result,i);
-            }else{
-                result=utils::BitOperations::clr(result,i);
-            }
-        }
+		result = _bw.read(63 - _prev_lead - _prev_tail);
+		result = result << _prev_tail;
+
         auto ret= result ^ _prev_value;
         _prev_value=ret;
         return inner::FlatInt2Double(ret);
