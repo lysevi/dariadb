@@ -50,8 +50,8 @@ namespace memseries {
             BinaryBuffer& incpos();
 			
 			size_t cap()const { return _cap;}
-			size_t free_size()const { return _cap - _pos; }
-			bool is_full()const { return free_size()==0; }
+            size_t free_size()const { return _pos; }
+            bool is_full()const { return _pos==0; }
 
 			uint8_t getbit()const;
             BinaryBuffer& setbit();

@@ -52,18 +52,18 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
 	BOOST_CHECK_EQUAL(b.cap(), buffer_size);
 
 	BOOST_CHECK_EQUAL(b.bitnum(), 7);
-    BOOST_CHECK_EQUAL(b.pos(), size_t(0));
+    BOOST_CHECK_EQUAL(b.pos(), size_t(buffer_size-1));
 	
 	//check incs work fine
 	b.incbit();
 	BOOST_CHECK_EQUAL(b.bitnum(), 6);
-    BOOST_CHECK_EQUAL(b.pos(), size_t(0));
+    BOOST_CHECK_EQUAL(b.pos(), size_t(buffer_size-1));
 
 	b.incbit(); b.incbit(); b.incbit(); 
 	b.incbit(); b.incbit(); b.incbit();
 	b.incbit();
 	BOOST_CHECK_EQUAL(b.bitnum(), 7);
-    BOOST_CHECK_EQUAL(b.pos(), size_t(1));
+    BOOST_CHECK_EQUAL(b.pos(), size_t(buffer_size-2));
 
 	
 	{//ctors test.
@@ -168,8 +168,8 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
          dc.append(t2);
          BOOST_CHECK_EQUAL(dc.get_prev_time(),t2);
          BOOST_CHECK_EQUAL(dc.get_prev_delta(),t2-t1);
-         BOOST_CHECK_EQUAL(int(buffer[0]),int(140));
-         BOOST_CHECK_EQUAL(int(buffer[1]),int(128));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-1]),int(140));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-2]),int(128));
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
@@ -179,8 +179,8 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
          dc.append(t3);
          BOOST_CHECK_EQUAL(dc.get_prev_time(),t3);
          BOOST_CHECK_EQUAL(dc.get_prev_delta(),t3-t1);
-         BOOST_CHECK_EQUAL(int(buffer[0]),int(198));
-         BOOST_CHECK_EQUAL(int(buffer[1]),int(64));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-1]),int(198));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-2]),int(64));
     }
 
     {
@@ -191,8 +191,8 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
          dc.append(t4);
          BOOST_CHECK_EQUAL(dc.get_prev_time(),t4);
          BOOST_CHECK_EQUAL(dc.get_prev_delta(),t4-t1);
-         BOOST_CHECK_EQUAL(int(buffer[0]),int(231));
-         BOOST_CHECK_EQUAL(int(buffer[1]),int(108));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-1]),int(231));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-2]),int(108));
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
@@ -202,11 +202,11 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
          dc.append(t5);
          BOOST_CHECK_EQUAL(dc.get_prev_time(),t5);
          BOOST_CHECK_EQUAL(dc.get_prev_delta(),t5-t1);
-         BOOST_CHECK_EQUAL(int(buffer[0]),int(240));
-         BOOST_CHECK_EQUAL(int(buffer[1]),int(0));
-         BOOST_CHECK_EQUAL(int(buffer[2]),int(0));
-         BOOST_CHECK_EQUAL(int(buffer[3]),int(181));
-         BOOST_CHECK_EQUAL(int(buffer[4]),int(64));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-1]),int(240));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-2]),int(0));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-3]),int(0));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-4]),int(181));
+         BOOST_CHECK_EQUAL(int(buffer[test_buffer_size-5]),int(64));
     }
 }
 

@@ -171,9 +171,10 @@ memseries::Time DeltaDeCompressor::read(){
 BinaryBuffer::BinaryBuffer(uint8_t* begin,uint8_t*end):
     _begin(begin),
     _end(end),
-    _cap(std::distance(begin,end)),
-    _pos(0),
-    _bitnum(max_bit_pos){
+    _bitnum(max_bit_pos)
+{
+    _cap=(std::distance(begin,end));
+    _pos=_cap-1;
 }
 
 BinaryBuffer::BinaryBuffer(const BinaryBuffer & other) {
@@ -225,8 +226,8 @@ BinaryBuffer& BinaryBuffer::incbit(){
 }
 
 BinaryBuffer& BinaryBuffer::incpos(){
-	_pos++;
-    if (_pos>=_cap){
+    _pos--;
+    if (_pos==0){
         throw std::logic_error("BinaryWriter::incpos");
     }
     return *this;
@@ -241,7 +242,7 @@ void BinaryBuffer::set_pos(size_t pos) {
 }
 
 void BinaryBuffer::reset_pos() {
-	this->set_pos(0); 
+    this->set_pos(_cap-1);
 	this->set_bitnum(max_bit_pos);
 }
 
