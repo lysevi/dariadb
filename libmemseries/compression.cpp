@@ -262,23 +262,45 @@ BinaryBuffer& BinaryBuffer::clrbit() {
 }
 
 void BinaryBuffer::write(uint16_t v,int8_t count){
+	uint32_t *dest = (uint32_t*)(_begin + _pos - 3);
+	auto src = uint32_t(v) << (sizeof(uint16_t)*8 - count - 1);
+	src = src << ((sizeof(uint16_t) * 8) - (max_bit_pos - _bitnum));
+	*dest |= src;
+	//TODO remove for.
+	//auto new_pos = _pos - size_t(count / max_bit_pos);
+	//auto new_bitnum = _bitnum-count % max_bit_pos;
+	//if (new_bitnum < 0) {
+	//	new_bitnum = max_bit_pos+new_bitnum;
+	//	new_pos--;
+	//}
+	//_pos = new_pos;
+	//_bitnum = new_bitnum;
     for(auto i=count;i>=0;i--){
-        if(utils::BitOperations::check(v,i)){
-            setbit().incbit();
-        }else{
-            clrbit().incbit();
-        }
+			incbit();
     }
 }
 
 void BinaryBuffer::write(uint64_t v,int8_t count){
-    for(auto i=count;i>=0;i--){
-        if(utils::BitOperations::check(v,i)){
-            setbit().incbit();
-        }else{
-            clrbit().incbit();
-        }
-    }
+	if (count < 47) {
+		uint64_t *dest = (uint64_t*)(_begin + _pos - 7);
+		auto src = uint64_t(v) << ((sizeof(uint64_t) * 8 - count - 1)- (max_bit_pos - _bitnum));
+		*dest |= src;
+
+		for (auto i = count; i >= 0; i--) {
+			incbit();
+		}
+	}
+	else {
+		for (auto i = count; i >= 0; i--) {
+			if (utils::BitOperations::check(v, i)) {
+				setbit().incbit();
+			}
+			else {
+				clrbit().incbit();
+				
+			}
+		}
+	}
 }
 
 uint64_t  BinaryBuffer::read(int8_t count){
