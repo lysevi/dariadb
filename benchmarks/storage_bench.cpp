@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 	reader->readAll(&mlist);
 
 	elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-	std::cout << "memorystorage readTimePoint last: " << elapsed / K << std::endl;
+    std::cout << "memorystorage readTimePoint last: " << elapsed << std::endl;
 	std::cout << "raded: " << mlist.size() << std::endl;
 
     start = clock();
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 	reader_int->readAll(&mlist);
 
     elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-    std::cout<<"memorystorage readIntarval all: "<<elapsed/K<<std::endl;
+    std::cout<<"memorystorage readIntarval all: "<<elapsed<<std::endl;
     std::cout<<"raded: "<<mlist.size()<<std::endl;
     delete ms;
 }
