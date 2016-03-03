@@ -304,16 +304,26 @@ void BinaryBuffer::write(uint64_t v,int8_t count){
 }
 
 uint64_t  BinaryBuffer::read(int8_t count){
-    uint64_t result=0;
-    for(int i=count;i>=0;i--){
-        if(getbit()==1){
-            result=utils::BitOperations::set(result,i);
-        }else{
-            result=utils::BitOperations::clr(result,i);
+    if(count!=63){
+        uint64_t src = *(uint64_t*)(_begin + _pos - 7);
+        src<<=(max_bit_pos-_bitnum);
+        src>>=(sizeof(uint64_t)*8-count-1);
+        for(int i=count;i>=0;i--){
+            incbit();
         }
-        incbit();
+        return src;
+    }else{
+        uint64_t result=0;
+        for(int i=count;i>=0;i--){
+            if(getbit()==1){
+                result=utils::BitOperations::set(result,i);
+            }else{
+                result=utils::BitOperations::clr(result,i);
+            }
+            incbit();
+        }
+        return result;
     }
-    return result;
 }
 
 std::ostream&  memseries::compression::operator<< (std::ostream& stream, const BinaryBuffer& b) {
