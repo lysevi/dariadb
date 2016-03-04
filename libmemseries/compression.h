@@ -2,6 +2,7 @@
 
 #include <ostream>
 #include <memory>
+#include "exception.h"
 #include "meas.h"
 
 namespace memseries {
@@ -72,6 +73,10 @@ namespace memseries {
 					int r = 1 + (n >> 3);
 					_bitnum = max_bit_pos - (n & 7);
 					_pos -= r;
+				}
+
+				if (_pos>_cap) {
+					throw MAKE_EXCEPTION("BinaryBuffer::move_pos");
 				}
 			}
 
