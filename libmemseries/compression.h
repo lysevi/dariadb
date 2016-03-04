@@ -62,6 +62,8 @@ namespace memseries {
             void write(uint16_t v,int8_t count);
             void write(uint64_t v,int8_t count);
             uint64_t read(int8_t count);
+		protected:
+			void move_pos(int8_t count);
         protected:
             uint8_t* _begin,*_end;
 			size_t   _cap;
