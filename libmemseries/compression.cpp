@@ -266,23 +266,27 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 	auto src = uint32_t(v) << (sizeof(uint16_t)*8 - count - 1);
 	src = src << ((sizeof(uint16_t) * 8) - (max_bit_pos - _bitnum));
 	*dest |= src;
-	/*auto new_bitnum = _bitnum;
+	auto new_bitnum = _bitnum;
 	auto new_pos = _pos;
 	if (count < _bitnum) {
 		new_bitnum -= count;
 	}
 	else {
-		new_bitnum -= (count - new_bitnum);
-		new_pos -= count/ max_bit_pos;
+		new_bitnum -= count%max_bit_pos;
+		new_pos -= count/max_bit_pos;
 		if (new_bitnum < 0) {
-			new_bitnum = max_bit_pos + new_bitnum + 1;
+			new_bitnum = max_bit_pos + new_bitnum;
 		}
-	}*/
+	}
 	////_pos = new_pos;
 	////_bitnum = new_bitnum;
     for(auto i=count;i>=0;i--){
 			incbit();
     }
+
+	if ((_bitnum != new_bitnum) || (_pos != new_pos)) {
+		int a = 3;
+	}
 }
 
 void BinaryBuffer::write(uint64_t v,int8_t count){
