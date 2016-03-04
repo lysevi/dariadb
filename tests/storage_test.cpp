@@ -3,7 +3,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <meas.h>
-#include <storage.h>
+#include <memstorage.h>
 #include <string>
 #include <thread>
 
