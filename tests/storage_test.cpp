@@ -30,7 +30,7 @@ void storage_test_check(memseries::storage::AbstractStorage *as, memseries::Time
 
 	for (auto i = from; i < to; i += step) {
 		m.id = i;
-		m.flag = i;
+		m.flag = memseries::Flag(i);
 		m.time = i;
 		m.value = 0;
 		for (size_t j = 1; j < copies_count+1; j++) {
@@ -62,12 +62,12 @@ void storage_test_check(memseries::storage::AbstractStorage *as, memseries::Time
 	BOOST_CHECK_EQUAL(fltr_res.front().id, ids[0]);
 
 	fltr_res.clear();
-	as->readInterval(ids, to + 1, from, to)->readAll(&fltr_res);
+	as->readInterval(ids, memseries::Flag(to + 1), from, to)->readAll(&fltr_res);
 	BOOST_CHECK_EQUAL(fltr_res.size(), size_t(0));
 
 	all.clear();
 	as->readInTimePoint(to)->readAll(&all);
-	size_t ids_count = (to - from) / step;
+	size_t ids_count = (size_t)((to - from) / step);
 	//TODO ==(to-from)/step
 	BOOST_CHECK_EQUAL(all.size(), ids_count);
 
@@ -102,7 +102,7 @@ void thread_writer(memseries::Id id, memseries::Time from, memseries::Time to, m
 	auto m = memseries::Meas::empty();
 	for (auto i = from; i < to; i += step) {
 		m.id = id;
-		m.flag = i;
+		m.flag = memseries::Flag(i);
 		m.time = i;
 		m.value = 0;
 		for (size_t j = 0; j < copies_count; j++) {

@@ -269,45 +269,20 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 	move_pos(count);	
 }
 
-void BinaryBuffer::write(uint64_t v,int8_t count){
-	if (count < 47) {
-		uint64_t *dest = (uint64_t*)(_begin + _pos - 7);
-		auto src = uint64_t(v) << ((sizeof(uint64_t) * 8 - count - 1)- (max_bit_pos - _bitnum));
-		*dest |= src;
-		move_pos(count);
-	}
-	else {
-		for (auto i = count; i >= 0; i--) {
-			if (utils::BitOperations::check(v, i)) {
-				setbit().incbit();
-			}
-			else {
-				clrbit().incbit();
-				
-			}
-		}
-	}
+void BinaryBuffer::write(uint64_t v, int8_t count) {
+	assert(count < 47);
+	uint64_t *dest = (uint64_t*)(_begin + _pos - 7);
+	auto src = uint64_t(v) << ((sizeof(uint64_t) * 8 - count - 1) - (max_bit_pos - _bitnum));
+	*dest |= src;
+	move_pos(count);
 }
 
-uint64_t  BinaryBuffer::read(int8_t count){
-    if(count!=63){
-        uint64_t src = *(uint64_t*)(_begin + _pos - 7);
-        src<<=(max_bit_pos-_bitnum);
-        src>>=(sizeof(uint64_t)*8-count-1);
-		move_pos(count);
-        return src;
-    }else{
-        uint64_t result=0;
-        for(int i=count;i>=0;i--){
-            if(getbit()==1){
-                result=utils::BitOperations::set(result,i);
-            }else{
-                result=utils::BitOperations::clr(result,i);
-            }
-            incbit();
-        }
-        return result;
-    }
+uint64_t  BinaryBuffer::read(int8_t count) {
+	uint64_t src = *(uint64_t*)(_begin + _pos - 7);
+	src <<= (max_bit_pos - _bitnum);
+	src >>= (sizeof(uint64_t) * 8 - count - 1);
+	move_pos(count);
+	return src;
 }
 
 std::ostream&  memseries::compression::operator<< (std::ostream& stream, const BinaryBuffer& b) {
@@ -471,7 +446,7 @@ FlagCompressor::~FlagCompressor()
 
 bool FlagCompressor::append(memseries::Flag v)
 {
-	static_assert(sizeof(memseries::Flag)==8,"Flag no x64 value");
+	static_assert(sizeof(memseries::Flag)==4,"Flag no x32 value");
 	if (_is_first) {
 		this->_first = v;
 		this->_is_first = false;
@@ -489,7 +464,7 @@ bool FlagCompressor::append(memseries::Flag v)
 			return false;
 		}
 		_bw.setbit().incbit();
-        _bw.write(v,63);
+        _bw.write(uint64_t(v),31);
 
 		_first = v;
 	}
@@ -503,7 +478,7 @@ memseries::compression::FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & 
 
 memseries::Flag memseries::compression::FlagDeCompressor::read()
 {
-	static_assert(sizeof(memseries::Flag) == 8, "Flag no x64 value");
+	static_assert(sizeof(memseries::Flag) == 4, "Flag no x32 value");
 	memseries::Flag result(0);
 	if (_bw.getbit() == 0) {
 		_bw.incbit();
@@ -511,7 +486,7 @@ memseries::Flag memseries::compression::FlagDeCompressor::read()
 	}
 	else {
 		_bw.incbit();
-        result=_bw.read(63);
+        result=(memseries::Flag)_bw.read(31);
 	}
 	
 	return result;
