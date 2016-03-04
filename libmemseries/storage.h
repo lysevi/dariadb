@@ -4,8 +4,8 @@
 #include <vector>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <set>
+
 namespace memseries{
 	namespace storage {
 
@@ -115,8 +115,6 @@ namespace memseries{
 
 			ChunkMap _chuncks;
 			Time _min_time,_max_time;
-
-            std::mutex _mutex;
 		};
 	}
 }

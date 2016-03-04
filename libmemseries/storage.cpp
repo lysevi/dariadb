@@ -74,7 +74,6 @@ memseries::Time memseries::storage::MemoryStorage::maxTime()
 
 memseries::append_result memseries::storage::MemoryStorage::append(const memseries::Meas &value)
 {
-    std::lock_guard<std::mutex> guard(_mutex);
 	Chunk_Ptr chunk=nullptr;
 	auto ch_iter=_chuncks.find(value.id);
 	if (ch_iter != _chuncks.end()) {
