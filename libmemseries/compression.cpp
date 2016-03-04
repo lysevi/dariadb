@@ -1,7 +1,9 @@
 #include "compression.h"
 #include "utils.h"
+#include "exception.h"
 #include <exception>
 #include <sstream>
+#include<cassert>
 
 using namespace memseries::compression;
 
@@ -228,7 +230,7 @@ BinaryBuffer& BinaryBuffer::incbit(){
 BinaryBuffer& BinaryBuffer::incpos(){
     _pos--;
     if (_pos==0){
-        throw std::logic_error("BinaryWriter::incpos");
+		throw MAKE_EXCEPTION("BinaryBuffer::incpos");
     }
     return *this;
 }
