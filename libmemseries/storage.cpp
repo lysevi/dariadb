@@ -87,22 +87,26 @@ memseries::append_result memseries::storage::MemoryStorage::append(const memseri
 	else {
 		this->_chuncks[value.id] = memseries::storage::MemoryStorage::ChuncksVector{};
 	}
-
+	bool need_sort = false;
 	if (chunk == nullptr) {
 		chunk = std::make_shared<MeasChunk>(_size, value);
 		this->_chuncks[value.id].push_back(chunk);
-		
+		need_sort = true;
 	}
 	else {
 		if (!chunk->append(value)) {
 			chunk = std::make_shared<MeasChunk>(_size, value);
 			this->_chuncks[value.id].push_back(chunk);
+			need_sort = true;
 		}
 	}
-	std::sort(
-		this->_chuncks[value.id].begin(), 
-		this->_chuncks[value.id].end(), 
-		[](Chunk_Ptr &l, Chunk_Ptr &r) {return l->first.time < r->first.time; });
+	
+	if (need_sort){
+		std::sort(
+			this->_chuncks[value.id].begin(),
+			this->_chuncks[value.id].end(),
+			[](Chunk_Ptr &l, Chunk_Ptr &r) {return l->first.time < r->first.time; });
+	}
 
 	_min_time = std::min(_min_time, value.time);
 	_max_time = std::max(_max_time, value.time);
