@@ -1,16 +1,8 @@
 *.opendb
 *.so
-*.idx
 *_export.h
-*.db
-*.dbw
-*.dbi
-*.page
-*.pagei
-*.pagew
 *.a
 Makefile
-mdb
 nbproject
 test/*_test
 *~
@@ -189,7 +181,5 @@ FakesAssemblies/
 # Visual Studio 6 workspace options file
 *.opt
 Makefile
-nkvdb.cbp
 *.cbp
-Ladybird
 install_manifest.txt
