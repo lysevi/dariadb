@@ -4,6 +4,7 @@
 #include <exception>
 #include <sstream>
 #include<cassert>
+#include <limits>
 
 using namespace memseries::compression;
 

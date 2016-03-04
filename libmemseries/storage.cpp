@@ -1,5 +1,7 @@
 #include "storage.h"
 #include "utils.h"
+#include <limits>
+#include <algorithm>
 
 memseries::storage::MemoryStorage::Block::Block(size_t size)
 {
