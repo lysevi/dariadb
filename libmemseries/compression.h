@@ -70,7 +70,7 @@ namespace memseries {
 				else {
 					int n = count - _bitnum;
 					int r = 1 + (n >> 3);
-					_bitnum = 7 - (n & 7);
+					_bitnum = max_bit_pos - (n & 7);
 					_pos -= r;
 				}
 			}
