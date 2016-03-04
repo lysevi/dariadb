@@ -40,10 +40,10 @@ IF(WIN32)
   MESSAGE(STATUS "+ boost root: " ${BOOST_ROOT})
 
   if(MSVC)
-	find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem  )
+	find_package(Boost 1.57.0 REQUIRED unit_test_framework)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  /EHsc")
   else(MSVC)
-       find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem program_options thread)
+       find_package(Boost 1.57.0 REQUIRED unit_test_framework)
   endif(MSVC)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
@@ -51,7 +51,7 @@ IF(WIN32)
 else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
   
-  find_package(Boost  REQUIRED unit_test_framework system  filesystem program_options)
+  find_package(Boost  REQUIRED unit_test_framework)
 ENDIF(WIN32)
 
 IF(Boost_FOUND)
