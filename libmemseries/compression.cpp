@@ -310,18 +310,6 @@ uint64_t  BinaryBuffer::read(int8_t count){
     }
 }
 
-void BinaryBuffer::move_pos(int8_t count) {
-	if (count < _bitnum) {
-		_bitnum -= count + 1;
-	}
-	else {
-		int n = count - _bitnum;
-		int r = 1 + (n >> 3);
-		_bitnum = 7 - (n & 7);
-		_pos -= r;
-	}
-}
-
 std::ostream&  memseries::compression::operator<< (std::ostream& stream, const BinaryBuffer& b) {
 	stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum() << " [";
 	for (size_t i = 0; i <= b.pos(); i++) {

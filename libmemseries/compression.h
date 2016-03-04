@@ -63,7 +63,18 @@ namespace memseries {
             void write(uint64_t v,int8_t count);
             uint64_t read(int8_t count);
 		protected:
-			void move_pos(int8_t count);
+			inline void move_pos(int8_t count) {
+				if (count < _bitnum) {
+					_bitnum -= count + 1;
+				}
+				else {
+					int n = count - _bitnum;
+					int r = 1 + (n >> 3);
+					_bitnum = 7 - (n & 7);
+					_pos -= r;
+				}
+			}
+
         protected:
             uint8_t* _begin,*_end;
 			size_t   _cap;
