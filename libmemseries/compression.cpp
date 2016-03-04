@@ -271,8 +271,8 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 	}
 	else {
 		int n = count - _bitnum;
-		int r = 1 + trunc(n / 8);
-		_bitnum = 7 - n % 8;
+		int r = 1 + (n >> 3);
+		_bitnum = 7 - (n & 7);
 		_pos -= r;
 	}
 	
@@ -289,8 +289,8 @@ void BinaryBuffer::write(uint64_t v,int8_t count){
 		}
 		else {
 			int n = count - _bitnum;
-			int r = 1 + trunc(n / 8);
-			_bitnum = 7 - n % 8;
+			int r = 1 + (n >> 3);
+			_bitnum = 7 - (n & 7);
 			_pos -= r;
 		}
 	}
@@ -317,8 +317,8 @@ uint64_t  BinaryBuffer::read(int8_t count){
 		}
 		else {
 			int n = count - _bitnum;
-			int r = 1 + trunc(n / 8);
-			_bitnum = 7 - n % 8;
+			int r = 1 + (n >> 3);
+			_bitnum = 7 - (n & 7);
 			_pos -= r;
 		}
         return src;
