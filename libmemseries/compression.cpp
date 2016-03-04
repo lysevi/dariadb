@@ -266,27 +266,16 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 	auto src = uint32_t(v) << (sizeof(uint16_t)*8 - count - 1);
 	src = src << ((sizeof(uint16_t) * 8) - (max_bit_pos - _bitnum));
 	*dest |= src;
-	auto new_bitnum = _bitnum;
-	auto new_pos = _pos;
 	if (count < _bitnum) {
-		new_bitnum -= count;
+		_bitnum -= count+1;
 	}
 	else {
-		new_bitnum -= count%max_bit_pos;
-		new_pos -= count/max_bit_pos;
-		if (new_bitnum < 0) {
-			new_bitnum = max_bit_pos + new_bitnum;
-		}
+		int n = count - _bitnum;
+		int r = 1 + trunc(n / 8);
+		_bitnum = 7 - n % 8;
+		_pos -= r;
 	}
-	////_pos = new_pos;
-	////_bitnum = new_bitnum;
-    for(auto i=count;i>=0;i--){
-			incbit();
-    }
-
-	if ((_bitnum != new_bitnum) || (_pos != new_pos)) {
-		int a = 3;
-	}
+	
 }
 
 void BinaryBuffer::write(uint64_t v,int8_t count){
@@ -295,8 +284,14 @@ void BinaryBuffer::write(uint64_t v,int8_t count){
 		auto src = uint64_t(v) << ((sizeof(uint64_t) * 8 - count - 1)- (max_bit_pos - _bitnum));
 		*dest |= src;
 
-		for (auto i = count; i >= 0; i--) {
-			incbit();
+		if (count < _bitnum) {
+			_bitnum -= count + 1;
+		}
+		else {
+			int n = count - _bitnum;
+			int r = 1 + trunc(n / 8);
+			_bitnum = 7 - n % 8;
+			_pos -= r;
 		}
 	}
 	else {
@@ -317,9 +312,15 @@ uint64_t  BinaryBuffer::read(int8_t count){
         uint64_t src = *(uint64_t*)(_begin + _pos - 7);
         src<<=(max_bit_pos-_bitnum);
         src>>=(sizeof(uint64_t)*8-count-1);
-        for(int i=count;i>=0;i--){
-            incbit();
-        }
+		if (count < _bitnum) {
+			_bitnum -= count + 1;
+		}
+		else {
+			int n = count - _bitnum;
+			int r = 1 + trunc(n / 8);
+			_bitnum = 7 - n % 8;
+			_pos -= r;
+		}
         return src;
     }else{
         uint64_t result=0;
