@@ -16,12 +16,16 @@ namespace memseries{
             {
                 uint8_t *begin;
                 uint8_t *end;
-                Block(size_t size);
-                ~Block();
+                Block()=default;
+                Block(uint8_t *_begin, uint8_t *_end){
+                    begin=_begin;
+                    end=_end;
+                }
             };
 
             struct MeasChunk
             {
+                uint8_t *_buffer;
                 Block times;
                 Block flags;
                 Block values;

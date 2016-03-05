@@ -3,27 +3,17 @@
 #include <limits>
 #include <algorithm>
 
-memseries::storage::MemoryStorage::Block::Block(size_t size)
-{
-    begin = new uint8_t[size];
-    end = begin + size;
-
-    memset(begin, 0, size);
-}
-
-memseries::storage::MemoryStorage::Block::~Block()
-{
-    delete[] begin;
-}
-
 memseries::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size, Meas first_m) :
-    times(size),
-    flags(size),
-    values(size),
     count(0),
     first(first_m),
     last(first_m)
 {
+    _buffer=new uint8_t[size*3+3];
+
+    times=memseries::storage::MemoryStorage::Block{_buffer,_buffer+sizeof(uint8_t)*size};
+    flags=memseries::storage::MemoryStorage::Block{times.end+1,times.end+sizeof(uint8_t)*size};
+    values=memseries::storage::MemoryStorage::Block{flags.end+1,flags.end+sizeof(uint8_t)*size};
+
     c_writer = memseries::compression::CopmressedWriter(
         memseries::compression::BinaryBuffer(times.begin, times.end),
         memseries::compression::BinaryBuffer(values.begin, values.end),
@@ -33,7 +23,7 @@ memseries::storage::MemoryStorage::MeasChunk::MeasChunk(size_t size, Meas first_
 
 memseries::storage::MemoryStorage::MeasChunk::~MeasChunk()
 {
-
+    delete[] _buffer;
 }
 
 bool memseries::storage::MemoryStorage::MeasChunk::append(const Meas & m)
