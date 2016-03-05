@@ -315,28 +315,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
         BOOST_CHECK_EQUAL(dc.get_first(),t1);
         BOOST_CHECK_EQUAL(dc.get_prev_value(),t1);
     }
-	//TODO delete this?
-   /* std::fill(std::begin(buffer),std::end(buffer),0);
-    {
-        Testable_XorCompressor dc(memseries::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
 
-        dc.append(t1);
-        dc.append(t2);
-        BOOST_CHECK_EQUAL(buffer[0],251);
-        BOOST_CHECK_EQUAL(buffer[1],18);
-        BOOST_CHECK_EQUAL(dc.get_prev_value(),t2);
-    }
-
-    std::fill(std::begin(buffer),std::end(buffer),0);
-    {
-        Testable_XorCompressor dc(memseries::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
-
-        dc.append(t1);
-        dc.set_prev_lead(59);
-        dc.set_prev_tail(4);
-        dc.append(t2);
-        BOOST_CHECK_EQUAL(buffer[0],160);
-    }*/
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // cur==prev
         Testable_XorCompressor co(memseries::compression::BinaryBuffer(std::begin(buffer),std::end(buffer)));
