@@ -105,6 +105,9 @@ protected:
     FlagDeCompressor flag_dcomp;
 };
 
+CopmressedWriter::CopmressedWriter(){
+    this->_Impl=nullptr;
+}
 
 CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags)
 {
@@ -113,7 +116,9 @@ CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values,
 
 CopmressedWriter::~CopmressedWriter()
 {
-    delete _Impl;
+    if(_Impl!=nullptr){
+        delete _Impl;
+    }
 }
 
 CopmressedWriter::CopmressedWriter(const CopmressedWriter &other){
@@ -149,6 +154,11 @@ bool CopmressedWriter::is_full()const{
     return _Impl->is_full();
 }
 
+CopmressedReader::CopmressedReader(){
+    this->_Impl=nullptr;
+}
+
+
 CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first)
 {
     _Impl=new CopmressedReader::Private(bw_time,bw_values,bw_flags,first);
@@ -156,7 +166,9 @@ CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values,
 
 CopmressedReader::~CopmressedReader()
 {
-    delete _Impl;
+    if(_Impl!=nullptr){
+        delete _Impl;
+    }
 }
 
 memseries::Meas CopmressedReader::read()

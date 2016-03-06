@@ -341,7 +341,9 @@ memseries::storage::MemoryStorage::MemoryStorage(size_t size){
 
 
 memseries::storage::MemoryStorage::~MemoryStorage(){
-    delete _Impl;
+    if(_Impl!=nullptr){
+        delete _Impl;
+    }
 }
 
 memseries::Time memseries::storage::MemoryStorage::minTime(){

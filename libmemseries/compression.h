@@ -8,7 +8,7 @@ namespace memseries {
 
         class CopmressedWriter {
         public:
-            CopmressedWriter() = default;
+            CopmressedWriter();
             CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values,
                              BinaryBuffer bw_flags);
             ~CopmressedWriter();
@@ -27,7 +27,7 @@ namespace memseries {
 
         class CopmressedReader {
         public:
-            CopmressedReader() = default;
+            CopmressedReader();
             CopmressedReader(BinaryBuffer bw_time,
                              BinaryBuffer bw_values,
                              BinaryBuffer bw_flags,
