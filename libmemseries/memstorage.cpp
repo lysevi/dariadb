@@ -278,7 +278,7 @@ public:
         if (need_sort){
             std::sort(this->_chuncks[value.id].begin(),
                     this->_chuncks[value.id].end(),
-                    [](Chunk_Ptr &l, Chunk_Ptr &r) {return l->first.time < r->first.time; });
+                    [](const Chunk_Ptr &l, const Chunk_Ptr &r) {return l->first.time < r->first.time; });
         }
 
         _min_time = std::min(_min_time, value.time);
