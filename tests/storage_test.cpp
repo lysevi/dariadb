@@ -191,10 +191,10 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			}
 		}
 
-		auto reader = ds->readInterval(memseries::IdArray{ 1,2,4,5,55 }, 0, 8, 10);
-		memseries::Meas::MeasList output{};
-		reader->readAll(&output);
-		BOOST_CHECK_EQUAL(output.size(), size_t(7));
+        auto reader = ds->readInterval(memseries::IdArray{ 1,2,4,5,55 }, 0, 8, 10);
+        memseries::Meas::MeasList output{};
+        reader->readAll(&output);
+        BOOST_CHECK_EQUAL(output.size(), size_t(7));
 	}
 	delete ds;
 }

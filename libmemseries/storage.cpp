@@ -1,11 +1,34 @@
 #include "storage.h"
+#include "meas.h"
 
+using namespace memseries;
 
+class InnerCallback:public memseries::storage::ReaderClb{
+public:
+    InnerCallback(Meas::MeasList * output){
+        _output=output;
+    }
+    ~InnerCallback(){}
+    void call(const Meas&m){
+        _output->push_back(m);
+    }
+
+    Meas::MeasList *_output;
+};
 
 void memseries::storage::Reader::readAll(Meas::MeasList * output)
 {
+    std::shared_ptr<InnerCallback> clb(new InnerCallback(output));
     while (!isEnd()) {
-        readNext(output);
+        readNext(clb.get());
+    }
+}
+
+
+void memseries::storage::Reader::readAll(ReaderClb*clb)
+{
+    while (!isEnd()) {
+        readNext(clb);
     }
 }
 

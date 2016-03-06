@@ -6,11 +6,19 @@
 namespace memseries {
 namespace storage {
 
+    class ReaderClb{
+      public:
+        virtual void call(const Meas&m)=0;
+        virtual ~ReaderClb(){}
+    };
+
 class Reader {
 public:
   virtual bool isEnd() const = 0;
-  virtual void readNext(Meas::MeasList *output) = 0;
+  virtual void readNext(ReaderClb*clb) = 0;
   virtual void readAll(Meas::MeasList *output);
+  virtual void readAll(ReaderClb*clb);
+
 };
 
 typedef std::shared_ptr<Reader> Reader_ptr;

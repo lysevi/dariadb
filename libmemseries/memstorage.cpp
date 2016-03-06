@@ -112,9 +112,10 @@ public:
                 && _cur_vector_pos >= _cur_vector.size();
     }
 
-    void readNext(Meas::MeasList*output) override {
+
+    void readNext(storage::ReaderClb*clb) override {
         if (!_tp_readed) {
-            this->readTimePoint(output);
+            this->readTimePoint(clb);
         }
 
         if (is_time_point_reader) {
@@ -142,7 +143,7 @@ public:
                 _cur_vector_pos++;
 
                 if (check_meas(_next.chunk->first)) {
-                    output->push_back(_next.chunk->first);
+                    clb->call(_next.chunk->first);
                 }
             }
         }
@@ -158,14 +159,14 @@ public:
                 auto sub = crr.read();
                 if (check_meas(sub)) {
                     sub.id = _next.chunk->first.id;
-                    output->push_back(sub);
+                    clb->call(sub);
                 }
             }
             _next.count = 0;
         }
     }
 
-    void readTimePoint(Meas::MeasList*output){
+    void readTimePoint(storage::ReaderClb*clb){
         std::list<InnerReader::ReadChunk> to_read_chunks{};
         for (auto ch : _chunks) {
             auto candidate = ch.second.front();
@@ -197,7 +198,7 @@ public:
                 }
             }
             if (candidate.time <= _from) {
-                output->push_back(candidate);
+                clb->call(candidate);
             }
         }
         _tp_readed = true;
