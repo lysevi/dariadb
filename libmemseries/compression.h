@@ -1,11 +1,7 @@
 #pragma once
 
-#include "exception.h"
-#include "meas.h"
 #include "compression/binarybuffer.h"
-#include "compression/delta.h"
-#include "compression/xor.h"
-#include "compression/flag.h"
+#include "meas.h"
 #include <memory>
 
 namespace memseries {
@@ -18,42 +14,32 @@ namespace memseries {
             ~CopmressedWriter();
             CopmressedWriter(const CopmressedWriter &other);
             void swap(CopmressedWriter &other);
-            CopmressedWriter& operator=(CopmressedWriter &other);
-            CopmressedWriter& operator=(CopmressedWriter &&other);
-
+            CopmressedWriter &operator=(CopmressedWriter &other);
+            CopmressedWriter &operator=(CopmressedWriter &&other);
 
             bool append(const Meas &m);
-
-            bool is_full() const { return _is_full; }
+            bool is_full() const;
 
         protected:
-            Meas _first;
-            bool _is_first;
-            bool _is_full;
-            DeltaCompressor time_comp;
-            XorCompressor value_comp;
-            FlagCompressor flag_comp;
+            class Impl;
+            Impl *_Impl;
         };
 
         class CopmressedReader {
         public:
             CopmressedReader() = default;
-            CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values,
-                             BinaryBuffer bw_flags, Meas first);
+            CopmressedReader(BinaryBuffer bw_time,
+                             BinaryBuffer bw_values,
+                             BinaryBuffer bw_flags,
+                             Meas first);
             ~CopmressedReader();
 
             Meas read();
-            bool is_full() const {
-                return this->time_dcomp.is_full() || this->value_dcomp.is_full() ||
-                        this->flag_dcomp.is_full();
-            }
+            bool is_full() const;
 
         protected:
-            Meas _first;
-
-            DeltaDeCompressor time_dcomp;
-            XorDeCompressor value_dcomp;
-            FlagDeCompressor flag_dcomp;
+            class Impl;
+            Impl *_Impl;
         };
     }
 }

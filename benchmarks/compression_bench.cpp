@@ -5,6 +5,9 @@
 
 #include <memseries.h>
 #include <compression.h>
+#include <compression/delta.h>
+#include <compression/xor.h>
+#include <compression/flag.h>
 #include <ctime>
 #include <limits>
 #include <cmath>

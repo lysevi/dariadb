@@ -7,7 +7,6 @@
 
 using namespace memseries::compression;
 
-
 XorCompressor::XorCompressor(const BinaryBuffer &bw):
     _is_first(true),
     _bw(bw),
@@ -55,7 +54,7 @@ XorCompressor& XorCompressor::operator=(XorCompressor &&other){
 
 bool XorCompressor::append(memseries::Value v){
     static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
-    auto flat = inner::FlatDouble2Int(v);
+    auto flat = inner::flat_double_to_int(v);
     if(_is_first){
         _first= flat;
         _is_first=false;
@@ -102,11 +101,11 @@ uint8_t XorCompressor::zeros_lead(uint64_t v){
     const int max_bit_pos=sizeof(Value)*8-1;
     uint8_t result=0;
     for(int i=max_bit_pos;i>=0;i--){
-            if(utils::BitOperations::check(v,i)){
-                break;
-            }else{
-                result++;
-            }
+        if(utils::BitOperations::check(v,i)){
+            break;
+        }else{
+            result++;
+        }
     }
     return result;
 }
@@ -115,18 +114,18 @@ uint8_t XorCompressor::zeros_tail(uint64_t v){
     const int max_bit_pos=sizeof(Value)*8-1;
     uint8_t result=0;
     for(int i=0;i<max_bit_pos;i++){
-            if(utils::BitOperations::check(v,i)){
-                break;
-            }else{
-                result++;
-            }
+        if(utils::BitOperations::check(v,i)){
+            break;
+        }else{
+            result++;
+        }
     }
     return result;
 }
 
 XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, memseries::Value first):
     _bw(bw),
-    _prev_value(inner::FlatDouble2Int(first)),
+    _prev_value(inner::flat_double_to_int(first)),
     _prev_lead(0),
     _prev_tail(0)
 {
@@ -175,7 +174,7 @@ memseries::Value XorDeCompressor::read()
     auto b0=_bw.getbit();
     _bw.incbit();
     if(b0==0){
-        return inner::FlatInt2Double(_prev_value);
+        return inner::flat_int_to_double(_prev_value);
     }
 
     auto b1=_bw.getbit();
@@ -194,7 +193,7 @@ memseries::Value XorDeCompressor::read()
         _prev_tail = tail;
         auto ret= result ^ _prev_value;
         _prev_value=ret;
-        return inner::FlatInt2Double(ret);
+        return inner::flat_int_to_double(ret);
     }else{
         uint64_t result = 0;
 
@@ -203,6 +202,6 @@ memseries::Value XorDeCompressor::read()
 
         auto ret= result ^ _prev_value;
         _prev_value=ret;
-        return inner::FlatInt2Double(ret);
+        return inner::flat_int_to_double(ret);
     }
 }
