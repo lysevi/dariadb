@@ -18,6 +18,7 @@ public:
   BinaryBuffer() = default;
   ~BinaryBuffer();
   BinaryBuffer &operator=(const BinaryBuffer &other);
+  BinaryBuffer &operator=(const BinaryBuffer &&other);
 
   void swap(BinaryBuffer &other) throw();
 

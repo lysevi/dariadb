@@ -44,6 +44,13 @@ BinaryBuffer& BinaryBuffer::operator=(const BinaryBuffer & other){
     return *this;
 }
 
+BinaryBuffer &BinaryBuffer::operator=(const BinaryBuffer &&other){
+    if(this!=&other){
+        BinaryBuffer tmp(other);
+        tmp.swap(*this);
+    }
+    return *this;
+}
 void BinaryBuffer::swap(BinaryBuffer & other) throw(){
     std::swap(_pos, other._pos);
     std::swap(_cap, other._cap);

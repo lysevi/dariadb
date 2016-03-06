@@ -30,6 +30,11 @@ class DeltaCompressor {
 public:
   DeltaCompressor() = default;
   DeltaCompressor(const BinaryBuffer &bw);
+  DeltaCompressor(const DeltaCompressor &other);
+  DeltaCompressor(const DeltaCompressor &&other);
+  void swap(DeltaCompressor &other);
+  DeltaCompressor& operator=(DeltaCompressor &other);
+  DeltaCompressor& operator=(DeltaCompressor &&other);
   ~DeltaCompressor();
 
   bool append(Time t);
@@ -54,6 +59,10 @@ public:
   DeltaDeCompressor() = default;
   DeltaDeCompressor(const BinaryBuffer &bw, Time first);
   ~DeltaDeCompressor();
+  DeltaDeCompressor(const DeltaDeCompressor &other);
+  void swap(DeltaDeCompressor &other);
+  DeltaDeCompressor& operator=(DeltaDeCompressor &other);
+  DeltaDeCompressor& operator=(DeltaDeCompressor &&other);
 
   Time read();
 
@@ -70,6 +79,10 @@ public:
   XorCompressor() = default;
   XorCompressor(const BinaryBuffer &bw);
   ~XorCompressor();
+  XorCompressor(const XorCompressor &other);
+  void swap(XorCompressor &other);
+  XorCompressor& operator=(XorCompressor &other);
+  XorCompressor& operator=(XorCompressor &&other);
 
   bool append(Value v);
   static uint8_t zeros_lead(uint64_t v);
@@ -91,6 +104,10 @@ public:
   XorDeCompressor() = default;
   XorDeCompressor(const BinaryBuffer &bw, Value first);
   ~XorDeCompressor() = default;
+  XorDeCompressor(const XorDeCompressor &other);
+  void swap(XorDeCompressor &other);
+  XorDeCompressor& operator=(XorDeCompressor &other);
+  XorDeCompressor& operator=(XorDeCompressor &&other);
 
   Value read();
 
@@ -108,6 +125,10 @@ public:
   FlagCompressor() = default;
   FlagCompressor(const BinaryBuffer &bw);
   ~FlagCompressor();
+  FlagCompressor(const FlagCompressor &other);
+  void swap(FlagCompressor &other);
+  FlagCompressor& operator=(FlagCompressor &other);
+  FlagCompressor& operator=(FlagCompressor &&other);
 
   bool append(Flag v);
 
@@ -124,6 +145,9 @@ public:
   FlagDeCompressor() = default;
   FlagDeCompressor(const BinaryBuffer &bw, Flag first);
   ~FlagDeCompressor() = default;
+  FlagDeCompressor(const FlagDeCompressor &other);
+  void swap(FlagDeCompressor &other);
+  FlagDeCompressor& operator=(FlagDeCompressor &other);
 
   Flag read();
 
@@ -140,6 +164,11 @@ public:
   CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values,
                    BinaryBuffer bw_flags);
   ~CopmressedWriter();
+  CopmressedWriter(const CopmressedWriter &other);
+  void swap(CopmressedWriter &other);
+  CopmressedWriter& operator=(CopmressedWriter &other);
+  CopmressedWriter& operator=(CopmressedWriter &&other);
+
 
   bool append(const Meas &m);
 

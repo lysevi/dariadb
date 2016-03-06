@@ -31,6 +31,49 @@ DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
 DeltaCompressor::~DeltaCompressor(){
 }
 
+
+DeltaCompressor::DeltaCompressor(const DeltaCompressor &other):
+    _is_first(other._is_first),
+    _bw(other._bw),
+    _first(other._first),
+    _prev_delta(other._prev_delta),
+    _prev_time(other._prev_time)
+{}
+
+DeltaCompressor::DeltaCompressor(const DeltaCompressor &&other):
+    _is_first(other._is_first),
+    _bw(std::move(other._bw)),
+    _first(other._first),
+    _prev_delta(other._prev_delta),
+    _prev_time(other._prev_time)
+{}
+
+void DeltaCompressor::swap(DeltaCompressor &other){
+    std::swap(_is_first,other._is_first);
+    std::swap(_bw,other._bw);
+    std::swap(_first,other._first);
+    std::swap(_prev_delta,other._prev_delta);
+    std::swap(_prev_time,other._prev_time);
+}
+
+DeltaCompressor& DeltaCompressor::operator=(DeltaCompressor &other){
+    if(this==&other){
+        return *this;
+    }
+    DeltaCompressor tmp(other);
+    this->swap(tmp);
+    return *this;
+}
+
+DeltaCompressor& DeltaCompressor::operator=(DeltaCompressor &&other){
+    if(this==&other){
+        return *this;
+    }
+    DeltaCompressor tmp(std::move(other));
+    this->swap(tmp);
+    return *this;
+}
+
 bool DeltaCompressor::append(memseries::Time t){
     if(_is_first){
         _first=t;
@@ -112,6 +155,38 @@ DeltaDeCompressor::~DeltaDeCompressor(){
 
 }
 
+
+DeltaDeCompressor::DeltaDeCompressor(const DeltaDeCompressor &other):
+    _bw(other._bw),
+    _prev_delta(other._prev_delta),
+    _prev_time(other._prev_time)
+{}
+
+
+void DeltaDeCompressor::swap(DeltaDeCompressor &other){
+    std::swap(_bw,other._bw);
+    std::swap(_prev_delta,other._prev_delta);
+    std::swap(_prev_time,other._prev_time);
+}
+
+DeltaDeCompressor& DeltaDeCompressor::operator=(DeltaDeCompressor &&other){
+    if(this==&other){
+        return *this;
+    }
+    DeltaDeCompressor tmp(other);
+    this->swap(tmp);
+    return *this;
+}
+
+DeltaDeCompressor& DeltaDeCompressor::operator=(DeltaDeCompressor &other){
+    if(this==&other){
+        return *this;
+    }
+    DeltaDeCompressor tmp(std::move(other));
+    this->swap(tmp);
+    return *this;
+}
+
 memseries::Time DeltaDeCompressor::read(){
     auto b0=_bw.getbit();
     _bw.incbit();
@@ -183,6 +258,40 @@ XorCompressor::XorCompressor(const BinaryBuffer &bw):
 
 XorCompressor::~XorCompressor(){
 
+}
+
+
+XorCompressor::XorCompressor(const XorCompressor &other):
+    _is_first(other._is_first),
+    _bw(other._bw),
+    _first(other._first),
+    _prev_value(other._prev_value)
+{}
+
+
+void XorCompressor::swap(XorCompressor &other){
+    std::swap(_is_first,other._is_first);
+    std::swap(_bw,other._bw);
+    std::swap(_first,other._first);
+    std::swap(_prev_value,other._prev_value);
+}
+
+XorCompressor& XorCompressor::operator=(XorCompressor &other){
+    if(this==&other){
+        return *this;
+    }
+    XorCompressor tmp(other);
+    this->swap(tmp);
+    return *this;
+}
+
+XorCompressor& XorCompressor::operator=(XorCompressor &&other){
+    if(this==&other){
+        return *this;
+    }
+    XorCompressor tmp(std::move(other));
+    this->swap(tmp);
+    return *this;
 }
 
 bool XorCompressor::append(memseries::Value v){
@@ -265,6 +374,42 @@ XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, memseries::Value first)
 
 }
 
+
+XorDeCompressor::XorDeCompressor(const XorDeCompressor &other):
+    _bw(other._bw),
+    _prev_value(other._prev_value),
+    _prev_lead(other._prev_lead),
+    _prev_tail(other._prev_tail)
+{}
+
+
+void XorDeCompressor::swap(XorDeCompressor &other){
+    std::swap(_bw,other._bw);
+    std::swap(_prev_value,other._prev_value);
+    std::swap(_prev_lead,other._prev_lead);
+    std::swap(_prev_tail,other._prev_tail);
+}
+
+XorDeCompressor& XorDeCompressor::operator=(XorDeCompressor &other){
+    if(this==&other){
+        return *this;
+    }
+
+    XorDeCompressor tmp(other);
+    this->swap(tmp);
+    return *this;
+}
+
+XorDeCompressor& XorDeCompressor::operator=(XorDeCompressor &&other){
+    if(this==&other){
+        return *this;
+    }
+
+    XorDeCompressor tmp(std::move(other));
+    this->swap(tmp);
+    return *this;
+}
+
 memseries::Value XorDeCompressor::read()
 {
 	static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
@@ -314,6 +459,38 @@ FlagCompressor::~FlagCompressor()
 {
 }
 
+
+FlagCompressor::FlagCompressor(const FlagCompressor &other):
+    _bw(other._bw),
+    _is_first(other._is_first),
+    _first(other._first)
+{}
+
+
+void FlagCompressor::swap(FlagCompressor &other){
+    std::swap(_is_first,other._is_first);
+    std::swap(_bw,other._bw);
+    std::swap(_first,other._first);
+}
+
+FlagCompressor& FlagCompressor::operator=(FlagCompressor &other){
+    if(this==&other){
+        return *this;
+    }
+    FlagCompressor tmp(other);
+    this->swap(tmp);
+    return *this;
+}
+
+FlagCompressor& FlagCompressor::operator=(FlagCompressor &&other){
+    if(this==&other){
+        return *this;
+    }
+    FlagCompressor tmp(std::move(other));
+    this->swap(tmp);
+    return *this;
+}
+
 bool FlagCompressor::append(memseries::Flag v)
 {
 	static_assert(sizeof(memseries::Flag)==4,"Flag no x32 value");
@@ -341,12 +518,29 @@ bool FlagCompressor::append(memseries::Flag v)
 	return true;
 }
 
-memseries::compression::FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, memseries::Flag first):
+FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, memseries::Flag first):
 	_bw(bw),
 	_prev_value(first){
 }
 
-memseries::Flag memseries::compression::FlagDeCompressor::read()
+FlagDeCompressor::FlagDeCompressor(const FlagDeCompressor &other):
+    _bw(other._bw),
+    _prev_value(other._prev_value)
+{}
+
+
+void FlagDeCompressor::swap(FlagDeCompressor &other){
+    std::swap(_bw,other._bw);
+    std::swap(_prev_value,other._prev_value);
+}
+
+FlagDeCompressor& FlagDeCompressor::operator=(FlagDeCompressor &other){
+    FlagDeCompressor tmp(other);
+    this->swap(tmp);
+    return *this;
+}
+
+memseries::Flag FlagDeCompressor::read()
 {
 	static_assert(sizeof(memseries::Flag) == 4, "Flag no x32 value");
 	memseries::Flag result(0);
@@ -362,10 +556,7 @@ memseries::Flag memseries::compression::FlagDeCompressor::read()
 	return result;
 }
 
-memseries::compression::CopmressedWriter::~CopmressedWriter()
-{}
-
-memseries::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
+CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
 	time_comp(bw_time),
 	value_comp(bw_values),
 	flag_comp(bw_flags)
@@ -374,7 +565,41 @@ memseries::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time,
 	_is_full = false;
 }
 
-bool memseries::compression::CopmressedWriter::append(const Meas&m) {
+CopmressedWriter::~CopmressedWriter()
+{}
+
+CopmressedWriter::CopmressedWriter(const CopmressedWriter &other):
+
+    time_comp(other.time_comp),
+    value_comp(other.value_comp),
+    flag_comp(other.flag_comp)
+
+{
+    _is_first=other._is_first;
+    _is_full=other._is_full;
+}
+
+void CopmressedWriter::swap(CopmressedWriter &other){
+    std::swap(time_comp,other.time_comp);
+    std::swap(value_comp,other.value_comp);
+    std::swap(flag_comp,other.flag_comp);
+    std::swap(_is_first,other._is_first);
+    std::swap(_is_full,other._is_full);
+}
+
+CopmressedWriter& CopmressedWriter::operator=(CopmressedWriter &other){
+    CopmressedWriter temp(other);
+    this->swap(other);
+    return *this;
+}
+
+CopmressedWriter& CopmressedWriter::operator=(CopmressedWriter &&other){
+    CopmressedWriter temp(std::move(other));
+    this->swap(temp);
+    return *this;
+}
+
+bool CopmressedWriter::append(const Meas&m) {
 	if (_is_first) {
 		_first = m;
 		_is_first = false;
@@ -402,7 +627,7 @@ bool memseries::compression::CopmressedWriter::append(const Meas&m) {
 	}
 }
 
-memseries::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first):
+CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first):
 	time_dcomp(bw_time,first.time),
 	value_dcomp(bw_values, first.value),
 	flag_dcomp(bw_flags, first.flag)
@@ -410,11 +635,11 @@ memseries::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time,
 	_first = first;
 }
 
-memseries::compression::CopmressedReader::~CopmressedReader()
+CopmressedReader::~CopmressedReader()
 {
 }
 
-memseries::Meas memseries::compression::CopmressedReader::read()
+memseries::Meas CopmressedReader::read()
 {
 	Meas result{};
 	result.time = time_dcomp.read();
