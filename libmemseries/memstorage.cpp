@@ -182,11 +182,12 @@ public:
             }
             to_read_chunks.push_back(candidate);
         }
-
+        using memseries::compression::CopmressedReader;
+        using memseries::compression::BinaryBuffer;
         for (auto ch : to_read_chunks) {
-            compression::CopmressedReader crr(compression::BinaryBuffer(ch.chunk->times.begin, ch.chunk->times.end),
-                                              compression::BinaryBuffer(ch.chunk->values.begin, ch.chunk->values.end),
-                                              compression::BinaryBuffer(ch.chunk->flags.begin, ch.chunk->flags.end), ch.chunk->first);
+            CopmressedReader crr(BinaryBuffer(ch.chunk->times.begin, ch.chunk->times.end),
+                                 BinaryBuffer(ch.chunk->values.begin, ch.chunk->values.end),
+                                 BinaryBuffer(ch.chunk->flags.begin, ch.chunk->flags.end), ch.chunk->first);
 
             memseries::Meas candidate;
             candidate = ch.chunk->first;
