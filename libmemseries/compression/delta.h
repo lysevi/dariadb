@@ -10,11 +10,6 @@ namespace memseries {
         public:
             DeltaCompressor() = default;
             DeltaCompressor(const BinaryBuffer &bw);
-            DeltaCompressor(const DeltaCompressor &other);
-            DeltaCompressor(const DeltaCompressor &&other);
-            void swap(DeltaCompressor &other);
-            DeltaCompressor &operator=(DeltaCompressor &other);
-            DeltaCompressor &operator=(DeltaCompressor &&other);
             ~DeltaCompressor();
 
             bool append(Time t);
@@ -39,10 +34,6 @@ namespace memseries {
             DeltaDeCompressor() = default;
             DeltaDeCompressor(const BinaryBuffer &bw, Time first);
             ~DeltaDeCompressor();
-            DeltaDeCompressor(const DeltaDeCompressor &other);
-            void swap(DeltaDeCompressor &other);
-            DeltaDeCompressor &operator=(DeltaDeCompressor &other);
-            DeltaDeCompressor &operator=(DeltaDeCompressor &&other);
 
             Time read();
 

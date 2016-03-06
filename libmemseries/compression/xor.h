@@ -28,10 +28,6 @@ namespace memseries {
             XorCompressor() = default;
             XorCompressor(const BinaryBuffer &bw);
             ~XorCompressor();
-            XorCompressor(const XorCompressor &other);
-            void swap(XorCompressor &other);
-            XorCompressor &operator=(XorCompressor &other);
-            XorCompressor &operator=(XorCompressor &&other);
 
             bool append(Value v);
             static uint8_t zeros_lead(uint64_t v);
@@ -53,10 +49,6 @@ namespace memseries {
             XorDeCompressor() = default;
             XorDeCompressor(const BinaryBuffer &bw, Value first);
             ~XorDeCompressor() = default;
-            XorDeCompressor(const XorDeCompressor &other);
-            void swap(XorDeCompressor &other);
-            XorDeCompressor &operator=(XorDeCompressor &other);
-            XorDeCompressor &operator=(XorDeCompressor &&other);
 
             Value read();
 

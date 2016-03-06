@@ -43,9 +43,10 @@ struct MeasChunk
         flags=Block{times.end+1,times.end+sizeof(uint8_t)*size};
         values=Block{flags.end+1,flags.end+sizeof(uint8_t)*size};
 
-        c_writer = compression::CopmressedWriter( compression::BinaryBuffer(times.begin, times.end),
-                                                  compression::BinaryBuffer(values.begin, values.end),
-                                                  compression::BinaryBuffer(flags.begin, flags.end));
+        using compression::BinaryBuffer;
+        c_writer = compression::CopmressedWriter( BinaryBuffer(times.begin, times.end),
+                                                  BinaryBuffer(values.begin, values.end),
+                                                  BinaryBuffer(flags.begin, flags.end));
         c_writer.append(first);
     }
 
@@ -105,7 +106,10 @@ public:
 
 
     bool isEnd() const override{
-        return this->_chunks.size() == 0 && _next.count == 0 && _cur_vector.size() == 0 && _cur_vector_pos >= _cur_vector.size();
+        return this->_chunks.size() == 0
+                && _next.count == 0
+                && _cur_vector.size() == 0
+                && _cur_vector_pos >= _cur_vector.size();
     }
 
     void readNext(Meas::MeasList*output) override {
@@ -142,12 +146,13 @@ public:
                 }
             }
         }
-
+        using compression::BinaryBuffer;
         while (_next.count != 0) {
             compression::CopmressedReader crr(
-                        compression::BinaryBuffer(_next.chunk->times.begin, _next.chunk->times.end),
-                        compression::BinaryBuffer(_next.chunk->values.begin, _next.chunk->values.end),
-                        compression::BinaryBuffer(_next.chunk->flags.begin, _next.chunk->flags.end), _next.chunk->first);
+                        BinaryBuffer(_next.chunk->times.begin, _next.chunk->times.end),
+                        BinaryBuffer(_next.chunk->values.begin, _next.chunk->values.end),
+                        BinaryBuffer(_next.chunk->flags.begin, _next.chunk->flags.end),
+                        _next.chunk->first);
 
             for (size_t i = 0; i < _next.count; i++) {
                 auto sub = crr.read();
@@ -362,7 +367,12 @@ memseries::storage::Reader_ptr memseries::storage::MemoryStorage::readInTimePoin
     return _Impl->readInTimePoint(ids,flag,time_point);
 }
 
-size_t memseries::storage::MemoryStorage::size()const { return _Impl->size(); }
-size_t memseries::storage::MemoryStorage::chunks_size()const { return _Impl->chunks_size(); }
+size_t memseries::storage::MemoryStorage::size()const {
+    return _Impl->size();
+}
+
+size_t memseries::storage::MemoryStorage::chunks_size()const {
+    return _Impl->chunks_size();
+}
 
 

@@ -178,3 +178,28 @@ memseries::Meas CopmressedReader::read()
 bool CopmressedReader::is_full()const{
     return _Impl->is_full();
 }
+
+CopmressedReader::CopmressedReader(const CopmressedReader &other){
+    _Impl=new CopmressedReader::Impl(*other._Impl);
+}
+
+void CopmressedReader::swap(CopmressedReader &other){
+    std::swap(_Impl,other._Impl);
+}
+
+CopmressedReader& CopmressedReader::operator=(CopmressedReader &other){
+    if(this==&other){
+        return *this;
+    }
+    CopmressedReader temp(other);
+    std::swap(this->_Impl,temp._Impl);
+    return *this;
+}
+
+CopmressedReader& CopmressedReader::operator=(CopmressedReader &&other){
+    if(this==&other){
+        return *this;
+    }
+    std::swap(_Impl,other._Impl);
+    return *this;
+}

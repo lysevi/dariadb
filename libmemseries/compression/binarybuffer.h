@@ -12,12 +12,8 @@ namespace memseries {
 
         public:
             BinaryBuffer(uint8_t *_begin, uint8_t *_end);
-            BinaryBuffer(const BinaryBuffer &other);
-            BinaryBuffer(BinaryBuffer &&other);
             BinaryBuffer() = default;
             ~BinaryBuffer();
-            BinaryBuffer &operator=(const BinaryBuffer &other);
-            BinaryBuffer &operator=(const BinaryBuffer &&other);
 
             void swap(BinaryBuffer &other) throw();
 

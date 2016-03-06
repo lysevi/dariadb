@@ -11,13 +11,8 @@ namespace memseries {
             FlagCompressor() = default;
             FlagCompressor(const BinaryBuffer &bw);
             ~FlagCompressor();
-            FlagCompressor(const FlagCompressor &other);
-            void swap(FlagCompressor &other);
-            FlagCompressor& operator=(FlagCompressor &other);
-            FlagCompressor& operator=(FlagCompressor &&other);
 
             bool append(Flag v);
-
             bool is_full() const { return _bw.is_full(); }
 
         protected:
@@ -31,9 +26,6 @@ namespace memseries {
             FlagDeCompressor() = default;
             FlagDeCompressor(const BinaryBuffer &bw, Flag first);
             ~FlagDeCompressor() = default;
-            FlagDeCompressor(const FlagDeCompressor &other);
-            void swap(FlagDeCompressor &other);
-            FlagDeCompressor& operator=(FlagDeCompressor &other);
 
             Flag read();
 

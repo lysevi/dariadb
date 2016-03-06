@@ -13,44 +13,12 @@ FlagCompressor::FlagCompressor(const BinaryBuffer & bw):
 {
 }
 
-FlagCompressor::~FlagCompressor()
-{
+FlagCompressor::~FlagCompressor(){
 }
 
 
-FlagCompressor::FlagCompressor(const FlagCompressor &other):
-    _bw(other._bw),
-    _is_first(other._is_first),
-    _first(other._first)
-{}
+bool FlagCompressor::append(memseries::Flag v){
 
-
-void FlagCompressor::swap(FlagCompressor &other){
-    std::swap(_is_first,other._is_first);
-    std::swap(_bw,other._bw);
-    std::swap(_first,other._first);
-}
-
-FlagCompressor& FlagCompressor::operator=(FlagCompressor &other){
-    if(this==&other){
-        return *this;
-    }
-    FlagCompressor tmp(other);
-    this->swap(tmp);
-    return *this;
-}
-
-FlagCompressor& FlagCompressor::operator=(FlagCompressor &&other){
-    if(this==&other){
-        return *this;
-    }
-    FlagCompressor tmp(std::move(other));
-    this->swap(tmp);
-    return *this;
-}
-
-bool FlagCompressor::append(memseries::Flag v)
-{
     static_assert(sizeof(memseries::Flag)==4,"Flag no x32 value");
     if (_is_first) {
         this->_first = v;
@@ -81,25 +49,7 @@ FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, memseries::Flag firs
     _prev_value(first){
 }
 
-FlagDeCompressor::FlagDeCompressor(const FlagDeCompressor &other):
-    _bw(other._bw),
-    _prev_value(other._prev_value)
-{}
-
-
-void FlagDeCompressor::swap(FlagDeCompressor &other){
-    std::swap(_bw,other._bw);
-    std::swap(_prev_value,other._prev_value);
-}
-
-FlagDeCompressor& FlagDeCompressor::operator=(FlagDeCompressor &other){
-    FlagDeCompressor tmp(other);
-    this->swap(tmp);
-    return *this;
-}
-
-memseries::Flag FlagDeCompressor::read()
-{
+memseries::Flag FlagDeCompressor::read(){
     static_assert(sizeof(memseries::Flag) == 4, "Flag no x32 value");
     memseries::Flag result(0);
     if (_bw.getbit() == 0) {

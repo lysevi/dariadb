@@ -19,39 +19,6 @@ XorCompressor::~XorCompressor(){
 }
 
 
-XorCompressor::XorCompressor(const XorCompressor &other):
-    _is_first(other._is_first),
-    _bw(other._bw),
-    _first(other._first),
-    _prev_value(other._prev_value)
-{}
-
-
-void XorCompressor::swap(XorCompressor &other){
-    std::swap(_is_first,other._is_first);
-    std::swap(_bw,other._bw);
-    std::swap(_first,other._first);
-    std::swap(_prev_value,other._prev_value);
-}
-
-XorCompressor& XorCompressor::operator=(XorCompressor &other){
-    if(this==&other){
-        return *this;
-    }
-    XorCompressor tmp(other);
-    this->swap(tmp);
-    return *this;
-}
-
-XorCompressor& XorCompressor::operator=(XorCompressor &&other){
-    if(this==&other){
-        return *this;
-    }
-    XorCompressor tmp(std::move(other));
-    this->swap(tmp);
-    return *this;
-}
-
 bool XorCompressor::append(memseries::Value v){
     static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
     auto flat = inner::flat_double_to_int(v);
@@ -133,40 +100,6 @@ XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, memseries::Value first)
 }
 
 
-XorDeCompressor::XorDeCompressor(const XorDeCompressor &other):
-    _bw(other._bw),
-    _prev_value(other._prev_value),
-    _prev_lead(other._prev_lead),
-    _prev_tail(other._prev_tail)
-{}
-
-
-void XorDeCompressor::swap(XorDeCompressor &other){
-    std::swap(_bw,other._bw);
-    std::swap(_prev_value,other._prev_value);
-    std::swap(_prev_lead,other._prev_lead);
-    std::swap(_prev_tail,other._prev_tail);
-}
-
-XorDeCompressor& XorDeCompressor::operator=(XorDeCompressor &other){
-    if(this==&other){
-        return *this;
-    }
-
-    XorDeCompressor tmp(other);
-    this->swap(tmp);
-    return *this;
-}
-
-XorDeCompressor& XorDeCompressor::operator=(XorDeCompressor &&other){
-    if(this==&other){
-        return *this;
-    }
-
-    XorDeCompressor tmp(std::move(other));
-    this->swap(tmp);
-    return *this;
-}
 
 memseries::Value XorDeCompressor::read()
 {

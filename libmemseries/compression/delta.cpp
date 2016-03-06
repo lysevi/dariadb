@@ -32,48 +32,6 @@ DeltaCompressor::~DeltaCompressor(){
 }
 
 
-DeltaCompressor::DeltaCompressor(const DeltaCompressor &other):
-    _is_first(other._is_first),
-    _bw(other._bw),
-    _first(other._first),
-    _prev_delta(other._prev_delta),
-    _prev_time(other._prev_time)
-{}
-
-DeltaCompressor::DeltaCompressor(const DeltaCompressor &&other):
-    _is_first(other._is_first),
-    _bw(std::move(other._bw)),
-    _first(other._first),
-    _prev_delta(other._prev_delta),
-    _prev_time(other._prev_time)
-{}
-
-void DeltaCompressor::swap(DeltaCompressor &other){
-    std::swap(_is_first,other._is_first);
-    std::swap(_bw,other._bw);
-    std::swap(_first,other._first);
-    std::swap(_prev_delta,other._prev_delta);
-    std::swap(_prev_time,other._prev_time);
-}
-
-DeltaCompressor& DeltaCompressor::operator=(DeltaCompressor &other){
-    if(this==&other){
-        return *this;
-    }
-    DeltaCompressor tmp(other);
-    this->swap(tmp);
-    return *this;
-}
-
-DeltaCompressor& DeltaCompressor::operator=(DeltaCompressor &&other){
-    if(this==&other){
-        return *this;
-    }
-    DeltaCompressor tmp(std::move(other));
-    this->swap(tmp);
-    return *this;
-}
-
 bool DeltaCompressor::append(memseries::Time t){
     if(_is_first){
         _first=t;
@@ -155,37 +113,6 @@ DeltaDeCompressor::~DeltaDeCompressor(){
 
 }
 
-
-DeltaDeCompressor::DeltaDeCompressor(const DeltaDeCompressor &other):
-    _bw(other._bw),
-    _prev_delta(other._prev_delta),
-    _prev_time(other._prev_time)
-{}
-
-
-void DeltaDeCompressor::swap(DeltaDeCompressor &other){
-    std::swap(_bw,other._bw);
-    std::swap(_prev_delta,other._prev_delta);
-    std::swap(_prev_time,other._prev_time);
-}
-
-DeltaDeCompressor& DeltaDeCompressor::operator=(DeltaDeCompressor &&other){
-    if(this==&other){
-        return *this;
-    }
-    DeltaDeCompressor tmp(other);
-    this->swap(tmp);
-    return *this;
-}
-
-DeltaDeCompressor& DeltaDeCompressor::operator=(DeltaDeCompressor &other){
-    if(this==&other){
-        return *this;
-    }
-    DeltaDeCompressor tmp(std::move(other));
-    this->swap(tmp);
-    return *this;
-}
 
 memseries::Time DeltaDeCompressor::read(){
     auto b0=_bw.getbit();

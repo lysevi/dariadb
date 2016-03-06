@@ -2,7 +2,6 @@
 
 #include "compression/binarybuffer.h"
 #include "meas.h"
-#include <memory>
 
 namespace memseries {
     namespace compression {
@@ -33,6 +32,10 @@ namespace memseries {
                              BinaryBuffer bw_flags,
                              Meas first);
             ~CopmressedReader();
+            CopmressedReader(const CopmressedReader &other);
+            void swap(CopmressedReader &other);
+            CopmressedReader &operator=(CopmressedReader &other);
+            CopmressedReader &operator=(CopmressedReader &&other);
 
             Meas read();
             bool is_full() const;
