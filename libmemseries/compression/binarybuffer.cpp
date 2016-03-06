@@ -1,5 +1,5 @@
 #include "binarybuffer.h"
-#include "utils.h"
+#include "../utils.h"
 #include <cassert>
 
 using namespace memseries::compression;
@@ -13,35 +13,8 @@ BinaryBuffer::BinaryBuffer(uint8_t* begin,uint8_t*end):
     _pos=_cap-1;
 }
 
-BinaryBuffer::BinaryBuffer(const BinaryBuffer & other) {
-    this->_begin = other._begin;
-    this->_end = other._end;
-    _pos = other._pos;
-    _bitnum = other._bitnum;
-    _cap = other._cap;
-}
-
-BinaryBuffer::BinaryBuffer(BinaryBuffer && other){
-    _begin = other._begin;
-    _end = other._end;
-    _pos = other._pos;
-    _cap = other._cap;
-    _bitnum = other._bitnum;
-    other._pos = 0;
-    other._cap = 0;
-    other._bitnum = 0;
-    other._begin=other._end=nullptr;
-}
 
 BinaryBuffer::~BinaryBuffer(){
-}
-
-BinaryBuffer& BinaryBuffer::operator=(const BinaryBuffer & other){
-    if(this!=&other){
-        BinaryBuffer tmp(other);
-        tmp.swap(*this);
-    }
-    return *this;
 }
 
 void BinaryBuffer::swap(BinaryBuffer & other) throw(){

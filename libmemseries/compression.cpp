@@ -1,424 +1,205 @@
 #include "compression.h"
+#include "compression/delta.h"
+#include "compression/xor.h"
+#include "compression/flag.h"
 #include "utils.h"
 #include "exception.h"
-#include "binarybuffer.h"
 
 #include <sstream>
-#include<cassert>
+#include <cassert>
 #include <limits>
 
 using namespace memseries::compression;
 
-const uint16_t delta_64_mask = 512;         //10 0000 0000
-const uint16_t delta_64_mask_inv = 127;     //00 1111 111
-const uint16_t delta_256_mask = 3072;       //1100 0000 0000
-const uint16_t delta_256_mask_inv = 511;    //0001 1111 1111
-const uint16_t delta_2047_mask = 57344;     //1110 0000 0000 0000
-const uint16_t delta_2047_mask_inv = 4095;  //0000 1111 1111 1111
-const uint64_t delta_big_mask = 64424509440;   //1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
-const uint64_t delta_big_mask_inv = 4294967295;//0000 1111 1111 1111 1111 1111 1111   1111 1111
-
-DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
-    _is_first(true),
-    _bw(bw),
-    _first(0),
-    _prev_delta(0),
-    _prev_time(0)
-{
-}
-
-
-DeltaCompressor::~DeltaCompressor(){
-}
-
-bool DeltaCompressor::append(memseries::Time t){
-    if(_is_first){
-        _first=t;
-        _is_first=false;
-        _prev_time=t;
-        return true;
+class CopmressedWriter::Impl {
+public:
+    Impl() = default;
+    Impl(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
+        time_comp(bw_time),
+        value_comp(bw_values),
+        flag_comp(bw_flags)
+    {
+        _is_first = true;
+        _is_full = false;
     }
 
-    int64_t D=(t-_prev_time) - _prev_delta;
-    if(D==0){
-		if (_bw.free_size() == 1) {
-			return false;
-		}
-        _bw.clrbit().incbit();
-    }else{
-        if ((-63<D)&&(D<64)){
-			if (_bw.free_size() <2) {
-				return false;
-			}
-            auto d=DeltaCompressor::get_delta_64(D);
-            _bw.write(d,9);
-        }else{
-            if ((-255<D)&&(D<256)){
-				if (_bw.free_size() <2) {
-					return false;
-				}
-                auto d=DeltaCompressor::get_delta_256(D);
-               _bw.write(d,11);
-            }else{
-                if ((-2047<D)&&(D<2048)){
-					if (_bw.free_size() <3) {
-						return false;
-					}
-                    auto d=DeltaCompressor::get_delta_2048(D);
-                    _bw.write(d,15);
-                }else{
-                    if (_bw.free_size() <6) {
-						return false;
-					}
-                    auto d=DeltaCompressor::get_delta_big(D);
-                   _bw.write(d,35);
-                }
-            }
+    ~Impl(){}
+    Impl(const Impl &other):
+        time_comp(other.time_comp),
+        value_comp(other.value_comp),
+        flag_comp(other.flag_comp)
+    {
+        _is_first=other._is_first;
+        _is_full=other._is_full;
+    }
+    void swap(Impl &other){
+        std::swap(time_comp,other.time_comp);
+        std::swap(value_comp,other.value_comp);
+        std::swap(flag_comp,other.flag_comp);
+        std::swap(_is_first,other._is_first);
+        std::swap(_is_full,other._is_full);
+    }
+
+    bool append(const Meas &m){
+        if (_is_first) {
+            _first = m;
+            _is_first = false;
+        }
+
+        if (_first.id != m.id) {
+            std::stringstream ss{};
+            ss << "(_first.id != m.id)" << " id:" << m.id << " first.id:" << _first.id;
+            throw std::logic_error(ss.str().c_str());
+        }
+        if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full()) {
+            _is_full = true;
+            return false;
+        }
+        auto t_f = time_comp.append(m.time);
+        auto f_f = value_comp.append(m.value);
+        auto v_f = flag_comp.append(m.flag);
+
+        if (!t_f || !f_f || !v_f) {
+            _is_full = true;
+            return false;
+        }
+        else {
+            return true;
         }
     }
 
-    _prev_delta=D;
-    _prev_time=t;
-	return true;
-}
+    bool is_full() const { return _is_full; }
 
+protected:
+    Meas _first;
+    bool _is_first;
+    bool _is_full;
+    DeltaCompressor time_comp;
+    XorCompressor value_comp;
+    FlagCompressor flag_comp;
+};
 
-uint16_t DeltaCompressor::get_delta_64(int64_t D) {
-    return delta_64_mask |  (delta_64_mask_inv & static_cast<uint16_t>(D));
-}
+class CopmressedReader::Impl {
+public:
+    Impl() = default;
+    Impl(BinaryBuffer bw_time,
+         BinaryBuffer bw_values,
+         BinaryBuffer bw_flags, Meas first):
 
-uint16_t DeltaCompressor::get_delta_256(int64_t D) {
-	return delta_256_mask| (delta_256_mask_inv &static_cast<uint16_t>(D));
-}
-
-uint16_t DeltaCompressor::get_delta_2048(int64_t D) {
-	return delta_2047_mask | (delta_2047_mask_inv &static_cast<uint16_t>(D));
-}
-
-
-uint64_t DeltaCompressor::get_delta_big(int64_t D) {
-	return delta_big_mask | (delta_big_mask_inv & D);
-}
-
-DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer &bw, memseries::Time first):
-    _bw(bw),
-    _prev_delta(0),
-    _prev_time(first)
-{
-
-}
-
-DeltaDeCompressor::~DeltaDeCompressor(){
-
-}
-
-memseries::Time DeltaDeCompressor::read(){
-    auto b0=_bw.getbit();
-    _bw.incbit();
-
-    if(b0==0){
-        return _prev_time+_prev_delta;
+        time_dcomp(bw_time,first.time),
+        value_dcomp(bw_values, first.value),
+        flag_dcomp(bw_flags, first.flag)
+    {
+        _first = first;
     }
 
-    auto b1=_bw.getbit();
-    _bw.incbit();
-    if((b0==1) && (b1==0)){//64
-        int8_t result=static_cast<int8_t>(_bw.read(7));
+    ~Impl(){}
 
-		if (result>64) { //is negative
-			result = (-128) | result;
-		}
-		
-        auto ret=_prev_time+result+_prev_delta;
-        _prev_delta=result;
-        _prev_time=ret;
-        return ret;
+    Meas read(){
+        Meas result{};
+        result.time = time_dcomp.read();
+        result.value = value_dcomp.read();
+        result.flag = flag_dcomp.read();
+        return result;
     }
 
-    auto b2=_bw.getbit();
-    _bw.incbit();
-    if((b0==1) && (b1==1)&& (b2==0)){//256
-        int16_t result=static_cast<int16_t>(_bw.read(8));
-		if (result > 256) { //is negative
-			result = (-256) | result;
-		}
-        auto ret=_prev_time+result+_prev_delta;
-        _prev_delta=result;
-        _prev_time=ret;
-        return ret;
+    bool is_full() const {
+        return this->time_dcomp.is_full() || this->value_dcomp.is_full() ||
+                this->flag_dcomp.is_full();
     }
 
-    auto b3=_bw.getbit();
-    _bw.incbit();
-    if((b0==1) && (b1==1)&& (b2==1)&& (b3==0)){//2048
-        int16_t result=static_cast<int16_t>(_bw.read(11));
-		if (result > 2048) { //is negative
-			result = (-2048) | result;
-		}
-		
-        auto ret=_prev_time+result+_prev_delta;
-        _prev_delta=result;
-        _prev_time=ret;
-        return ret;
+protected:
+    memseries::Meas _first;
+
+    DeltaDeCompressor time_dcomp;
+    XorDeCompressor value_dcomp;
+    FlagDeCompressor flag_dcomp;
+};
+
+
+CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags)
+{
+    _Impl=new CopmressedWriter::Impl(bw_time,bw_values,bw_flags);
+}
+
+CopmressedWriter::~CopmressedWriter()
+{
+    delete _Impl;
+}
+
+CopmressedWriter::CopmressedWriter(const CopmressedWriter &other){
+    _Impl=new CopmressedWriter::Impl(*other._Impl);
+}
+
+void CopmressedWriter::swap(CopmressedWriter &other){
+    std::swap(_Impl,other._Impl);
+}
+
+CopmressedWriter& CopmressedWriter::operator=(CopmressedWriter &other){
+    if(this==&other){
+        return *this;
     }
-
-    int64_t result=_bw.read(31);
-	if (result > std::numeric_limits<int32_t>::max()) {
-		result = (-4294967296) | result;
-	}
-    auto ret=_prev_time+result+_prev_delta;
-    _prev_delta=result;
-    _prev_time=ret;
-    return ret;
+    CopmressedWriter temp(other);
+    std::swap(this->_Impl,temp._Impl);
+    return *this;
 }
 
-XorCompressor::XorCompressor(const BinaryBuffer &bw):
-    _is_first(true),
-    _bw(bw),
-    _first(0),
-    _prev_value(0)
-{
-
-}
-
-XorCompressor::~XorCompressor(){
-
-}
-
-bool XorCompressor::append(memseries::Value v){
-	static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
-	auto flat = inner::FlatDouble2Int(v);
-    if(_is_first){
-        _first= flat;
-        _is_first=false;
-        _prev_value= flat;
-        return true;
+CopmressedWriter& CopmressedWriter::operator=(CopmressedWriter &&other){
+    if(this==&other){
+        return *this;
     }
-	if (_bw.free_size() <9) {
-		return false;
-	}
-    auto xor_val=_prev_value^flat;
-    if (xor_val==0){
-		if (_bw.free_size() == 1) {
-			return false;
-		}
-        _bw.clrbit().incbit();
-        return true;
+    std::swap(_Impl,other._Impl);
+    return *this;
+}
+
+bool CopmressedWriter::append(const Meas&m){
+    return _Impl->append(m);
+}
+
+bool CopmressedWriter::is_full()const{
+    return _Impl->is_full();
+}
+
+CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first)
+{
+    _Impl=new CopmressedReader::Impl(bw_time,bw_values,bw_flags,first);
+}
+
+CopmressedReader::~CopmressedReader()
+{
+    delete _Impl;
+}
+
+memseries::Meas CopmressedReader::read()
+{
+    return _Impl->read();
+}
+
+bool CopmressedReader::is_full()const{
+    return _Impl->is_full();
+}
+
+CopmressedReader::CopmressedReader(const CopmressedReader &other){
+    _Impl=new CopmressedReader::Impl(*other._Impl);
+}
+
+void CopmressedReader::swap(CopmressedReader &other){
+    std::swap(_Impl,other._Impl);
+}
+
+CopmressedReader& CopmressedReader::operator=(CopmressedReader &other){
+    if(this==&other){
+        return *this;
     }
-    _bw.setbit().incbit();
+    CopmressedReader temp(other);
+    std::swap(this->_Impl,temp._Impl);
+    return *this;
+}
 
-    auto lead=zeros_lead(xor_val);
-    auto tail=zeros_tail(xor_val);
-
-	
-
-    if ((_prev_lead==lead) && (_prev_tail==tail)){
-        _bw.clrbit().incbit();
-    }else{
-        _bw.setbit().incbit();
-
-        _bw.write((uint16_t)lead,int8_t(5));
-        _bw.write((uint16_t)tail,int8_t(5));
+CopmressedReader& CopmressedReader::operator=(CopmressedReader &&other){
+    if(this==&other){
+        return *this;
     }
-
-	xor_val = xor_val >> tail;
-	_bw.write(xor_val, (63 - lead - tail));
-    
-    _prev_value = flat;
-    _prev_lead=lead;
-    _prev_tail=tail;
-	return true;
-}
-
-uint8_t XorCompressor::zeros_lead(uint64_t v){
-    const int max_bit_pos=sizeof(Value)*8-1;
-    uint8_t result=0;
-    for(int i=max_bit_pos;i>=0;i--){
-            if(utils::BitOperations::check(v,i)){
-                break;
-            }else{
-                result++;
-            }
-    }
-    return result;
-}
-
-uint8_t XorCompressor::zeros_tail(uint64_t v){
-    const int max_bit_pos=sizeof(Value)*8-1;
-    uint8_t result=0;
-    for(int i=0;i<max_bit_pos;i++){
-            if(utils::BitOperations::check(v,i)){
-                break;
-            }else{
-                result++;
-            }
-    }
-    return result;
-}
-
-XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, memseries::Value first):
-    _bw(bw),
-    _prev_value(inner::FlatDouble2Int(first)),
-    _prev_lead(0),
-    _prev_tail(0)
-{
-
-}
-
-memseries::Value XorDeCompressor::read()
-{
-	static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
-    auto b0=_bw.getbit();
-    _bw.incbit();
-    if(b0==0){
-        return inner::FlatInt2Double(_prev_value);
-    }
-
-    auto b1=_bw.getbit();
-    _bw.incbit();
-
-    if(b1==1){
-        uint8_t leading = static_cast<uint8_t>(_bw.read(5));
-
-        uint8_t tail = static_cast<uint8_t>(_bw.read(5));
-        uint64_t result=0;
-		
-		result=_bw.read(63 - leading - tail);
-		result = result << tail;
-        
-        _prev_lead = leading;
-        _prev_tail = tail;
-        auto ret= result ^ _prev_value;
-        _prev_value=ret;
-        return inner::FlatInt2Double(ret);
-    }else{
-        uint64_t result = 0;
-
-		result = _bw.read(63 - _prev_lead - _prev_tail);
-		result = result << _prev_tail;
-
-        auto ret= result ^ _prev_value;
-        _prev_value=ret;
-        return inner::FlatInt2Double(ret);
-    }
-}
-
-FlagCompressor::FlagCompressor(const BinaryBuffer & bw):
-	_bw(bw),
-	_is_first(true),
-	_first(0)
-{
-}
-
-FlagCompressor::~FlagCompressor()
-{
-}
-
-bool FlagCompressor::append(memseries::Flag v)
-{
-	static_assert(sizeof(memseries::Flag)==4,"Flag no x32 value");
-	if (_is_first) {
-		this->_first = v;
-		this->_is_first = false;
-		return true;
-	}
-
-	if (v == _first) {
-		if (_bw.free_size() == 1) {
-			return false;
-		}
-		_bw.clrbit().incbit();
-	}
-	else {
-		if (_bw.free_size() < 9) {
-			return false;
-		}
-		_bw.setbit().incbit();
-        _bw.write(uint64_t(v),31);
-
-		_first = v;
-	}
-	return true;
-}
-
-memseries::compression::FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, memseries::Flag first):
-	_bw(bw),
-	_prev_value(first){
-}
-
-memseries::Flag memseries::compression::FlagDeCompressor::read()
-{
-	static_assert(sizeof(memseries::Flag) == 4, "Flag no x32 value");
-	memseries::Flag result(0);
-	if (_bw.getbit() == 0) {
-		_bw.incbit();
-		result = _prev_value;
-	}
-	else {
-		_bw.incbit();
-        result=(memseries::Flag)_bw.read(31);
-	}
-	
-	return result;
-}
-
-memseries::compression::CopmressedWriter::~CopmressedWriter()
-{}
-
-memseries::compression::CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
-	time_comp(bw_time),
-	value_comp(bw_values),
-	flag_comp(bw_flags)
-{
-	_is_first = true;
-	_is_full = false;
-}
-
-bool memseries::compression::CopmressedWriter::append(const Meas&m) {
-	if (_is_first) {
-		_first = m;
-		_is_first = false;
-	}
-	
-	if (_first.id != m.id) {
-		std::stringstream ss{};
-		ss << "(_first.id != m.id)" << " id:" << m.id << " first.id:" << _first.id;
-		throw std::logic_error(ss.str().c_str());
-	}
-	if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full()) {
-		_is_full = true;
-		return false;
-	}
-	auto t_f = time_comp.append(m.time);
-	auto f_f = value_comp.append(m.value);
-	auto v_f = flag_comp.append(m.flag);
-
-	if (!t_f || !f_f || !v_f) {
-		_is_full = true;
-		return false;
-	}
-	else {
-		return true;
-	}
-}
-
-memseries::compression::CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first):
-	time_dcomp(bw_time,first.time),
-	value_dcomp(bw_values, first.value),
-	flag_dcomp(bw_flags, first.flag)
-{
-	_first = first;
-}
-
-memseries::compression::CopmressedReader::~CopmressedReader()
-{
-}
-
-memseries::Meas memseries::compression::CopmressedReader::read()
-{
-	Meas result{};
-	result.time = time_dcomp.read();
-	result.value = value_dcomp.read();
-	result.flag = flag_dcomp.read();
-	return result;
+    std::swap(_Impl,other._Impl);
+    return *this;
 }

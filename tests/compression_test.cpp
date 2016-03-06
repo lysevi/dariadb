@@ -3,6 +3,9 @@
 #include <boost/test/unit_test.hpp>
 
 #include <compression.h>
+#include <compression/delta.h>
+#include <compression/xor.h>
+#include <compression/flag.h>
 
 #include <iterator>
 #include <sstream>
@@ -32,9 +35,9 @@ class Testable_XorCompressor:public memseries::compression::XorCompressor{
 public:
     Testable_XorCompressor(const memseries::compression::BinaryBuffer&buf):memseries::compression::XorCompressor(buf)
     {}
-    memseries::Value get_prev_value()const {return  memseries::compression::inner::FlatInt2Double(this->_prev_value);}
-    memseries::Value get_first()const {return memseries::compression::inner::FlatInt2Double(this->_first);}
     memseries::compression::BinaryBuffer get_bw()const{return this->_bw;}
+    memseries::Value get_prev_value()const {return  memseries::compression::inner::flat_int_to_double(this->_prev_value);}
+    memseries::Value get_first()const {return memseries::compression::inner::flat_int_to_double(this->_first);}
     bool is_first()const {return this->_is_first;}
     void set_is_first(bool flag) {this->_is_first=flag;}
     uint8_t  get_prev_lead()const{return  _prev_lead;}
@@ -284,8 +287,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 
 BOOST_AUTO_TEST_CASE(flat_converters) {
 	double pi = 3.14;
-	auto ival = memseries::compression::inner::FlatDouble2Int(pi);
-	auto dval = memseries::compression::inner::FlatInt2Double(ival);
+    auto ival = memseries::compression::inner::flat_double_to_int(pi);
+    auto dval = memseries::compression::inner::flat_int_to_double(ival);
 	BOOST_CHECK_CLOSE(dval, pi, 0.0001);
 }
 
