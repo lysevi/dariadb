@@ -8,6 +8,15 @@
 #include <limits>
 #include <cmath>
 #include <chrono>
+
+class BenchCallback:public memseries::storage::ReaderClb{
+public:
+    void call(const memseries::Meas&m){
+        count++;
+    }
+    size_t count;
+};
+
 int main(int argc, char *argv[]) {
     auto ms = new memseries::storage::MemoryStorage{ 2000000 };
     auto m = memseries::Meas::empty();
@@ -31,25 +40,26 @@ int main(int argc, char *argv[]) {
 
     auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
     std::cout<<"memorystorage insert : "<<elapsed<<std::endl;
+    auto clbk=new BenchCallback();
+    clbk->count=0;
 
 	start = clock();
 	auto reader = ms->readInTimePoint(ms->maxTime());
 
-	memseries::Meas::MeasList mlist{};
-	reader->readAll(&mlist);
+    reader->readAll(clbk);
 
 	elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "memorystorage readTimePoint last: " << elapsed << std::endl;
-	std::cout << "raded: " << mlist.size() << std::endl;
+    std::cout << "raded: " << clbk->count << std::endl;
 
     start = clock();
 	auto reader_int = ms->readInterval(memseries::timeutil::from_chrono(now), t);
 
-	mlist.clear();
-	reader_int->readAll(&mlist);
+    clbk->count=0;
+    reader_int->readAll(clbk);
 
     elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
     std::cout<<"memorystorage readIntarval all: "<<elapsed<<std::endl;
-    std::cout<<"raded: "<<mlist.size()<<std::endl;
+    std::cout<<"raded: "<<clbk->count<<std::endl;
     delete ms;
 }
