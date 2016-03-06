@@ -438,9 +438,10 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 		memseries::compression::BinaryBuffer(flag_begin, flag_end));
 
 	std::list<memseries::Meas> meases{};
+    auto zer_t=static_cast<memseries::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
 	for (int i = 0; i < 100; i++) {
 		auto m = memseries::Meas::empty();
-		m.time = static_cast<memseries::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+        m.time = zer_t++;
 		m.flag = i;
 		m.value = i;
 		cwr.append(m);
