@@ -1,1 +1,3 @@
-find . -name '*.cpp' -or -name '*.h' -exec clang-format -i {} \;
+#!/bin/sh
+find . -name '*.h' -exec clang-format -i {} \;
+find . -name '*.cpp' -exec clang-format -i {} \;
