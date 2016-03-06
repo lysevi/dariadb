@@ -1,5 +1,5 @@
 #include "binarybuffer.h"
-#include "utils.h"
+#include "../utils.h"
 #include <cassert>
 
 using namespace memseries::compression;

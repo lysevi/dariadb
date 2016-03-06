@@ -1,8 +1,8 @@
 include_directories(..)
 include_directories(..)
 
-FILE(GLOB HDRS "*.h" "*.hpp")
-FILE(GLOB SRC "*.cpp" ${HDRS})
+FILE(GLOB HDRS "*.h" "*.hpp" "compression/*.h" "compression/*.hpp")
+FILE(GLOB SRC "*.cpp" "compression/*.cpp" ${HDRS})
 
 if(MSVC)
         add_library(libmemseries STATIC ${SRC})
