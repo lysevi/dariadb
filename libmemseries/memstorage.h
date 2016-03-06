@@ -22,11 +22,11 @@ namespace memseries{
             Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point)override;
 
-	  size_t size()const;
-	  size_t chunks_size()const;
-         protected:
-	  class Impl;
-	  Impl*_Impl;
+            size_t size()const;
+            size_t chunks_size()const;
+        protected:
+            class Impl;
+            Impl*_Impl;
         };
     }
 }
