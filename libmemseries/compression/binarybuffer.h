@@ -14,6 +14,10 @@ namespace memseries {
             BinaryBuffer(uint8_t *_begin, uint8_t *_end);
             BinaryBuffer() = default;
             ~BinaryBuffer();
+            BinaryBuffer(const BinaryBuffer &other);
+            BinaryBuffer(BinaryBuffer &&other);
+            BinaryBuffer &operator=(const BinaryBuffer &other);
+            BinaryBuffer &operator=(const BinaryBuffer &&other);
 
             void swap(BinaryBuffer &other) throw();
 
