@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(MemoryStorage) {
 		const memseries::Time to = 100;
 		const memseries::Time step = 2;
 		storage_test_check(ms, from, to, step);
-		BOOST_CHECK_EQUAL(ms->chinks_size(), (to - from) / step); // id per chunk.
+		BOOST_CHECK_EQUAL(ms->chunks_size(), (to - from) / step); // id per chunk.
 		delete ms;
 	}
 }
