@@ -31,13 +31,16 @@ public:
     {
         _is_first=other._is_first;
         _is_full=other._is_full;
+        _first=other._first;
     }
+
     void swap(Private &other){
         std::swap(time_comp,other.time_comp);
         std::swap(value_comp,other.value_comp);
         std::swap(flag_comp,other.flag_comp);
         std::swap(_is_first,other._is_first);
         std::swap(_is_full,other._is_full);
+        std::swap(_first,other._first);
     }
 
     bool append(const Meas &m){
@@ -49,7 +52,7 @@ public:
         if (_first.id != m.id) {
             std::stringstream ss{};
             ss << "(_first.id != m.id)" << " id:" << m.id << " first.id:" << _first.id;
-            throw std::logic_error(ss.str().c_str());
+            throw MAKE_EXCEPTION(ss.str().c_str());
         }
         if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full()) {
             _is_full = true;

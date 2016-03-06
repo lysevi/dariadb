@@ -448,7 +448,7 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 	}
 
 
-	memseries::compression::CopmressedReader crr(memseries::compression::BinaryBuffer(time_begin, time_end),
+    memseries::compression::CopmressedReader crr(memseries::compression::BinaryBuffer(time_begin, time_end),
 		memseries::compression::BinaryBuffer(value_begin, value_end),
 		memseries::compression::BinaryBuffer(flag_begin, flag_end), meases.front());
 
