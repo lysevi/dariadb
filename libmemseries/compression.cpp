@@ -14,6 +14,8 @@ using namespace memseries::compression;
 class CopmressedWriter::Private {
 public:
     Private() = default;
+    ~Private()=default;
+
     Private(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
         time_comp(bw_time),
         value_comp(bw_values),
@@ -23,25 +25,7 @@ public:
         _is_full = false;
     }
 
-    ~Private(){}
-    Private(const Private &other):
-        time_comp(other.time_comp),
-        value_comp(other.value_comp),
-        flag_comp(other.flag_comp)
-    {
-        _is_first=other._is_first;
-        _is_full=other._is_full;
-        _first=other._first;
-    }
 
-    void swap(Private &other){
-        std::swap(time_comp,other.time_comp);
-        std::swap(value_comp,other.value_comp);
-        std::swap(flag_comp,other.flag_comp);
-        std::swap(_is_first,other._is_first);
-        std::swap(_is_full,other._is_full);
-        std::swap(_first,other._first);
-    }
 
     bool append(const Meas &m){
         if (_is_first) {
@@ -85,6 +69,8 @@ protected:
 class CopmressedReader::Private {
 public:
     Private() = default;
+    ~Private()=default;
+
     Private(BinaryBuffer bw_time,
          BinaryBuffer bw_values,
          BinaryBuffer bw_flags, Meas first):
@@ -96,7 +82,7 @@ public:
         _first = first;
     }
 
-    ~Private(){}
+
 
     Meas read(){
         Meas result{};
