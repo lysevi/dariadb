@@ -5,6 +5,7 @@
 
 namespace memseries {
     namespace compression {
+
         class CopmressedWriter {
         public:
             CopmressedWriter() = default;
@@ -20,8 +21,8 @@ namespace memseries {
             bool is_full() const;
 
         protected:
-            class Impl;
-            Impl *_Impl;
+            class Private;
+            Private *_Impl;
         };
 
         class CopmressedReader {
@@ -41,8 +42,8 @@ namespace memseries {
             bool is_full() const;
 
         protected:
-            class Impl;
-            Impl *_Impl;
+            class Private;
+            Private *_Impl;
         };
     }
 }

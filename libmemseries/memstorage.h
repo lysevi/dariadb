@@ -27,8 +27,8 @@ namespace memseries {
             size_t chunks_size() const;
 
         protected:
-            class Impl;
-            Impl *_Impl;
+            class Private;
+            Private *_Impl;
         };
     }
 }

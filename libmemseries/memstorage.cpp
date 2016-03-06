@@ -227,16 +227,16 @@ protected:
 };
 
 
-class storage::MemoryStorage::Impl
+class storage::MemoryStorage::Private
 {
 public:
-    Impl(size_t size):
+    Private(size_t size):
         _size(size),
         _min_time(std::numeric_limits<memseries::Time>::max()),
         _max_time(std::numeric_limits<memseries::Time>::min())
     {}
 
-    ~Impl(){
+    ~Private(){
         _chuncks.clear();
     }
 
@@ -335,7 +335,7 @@ protected:
 
 
 memseries::storage::MemoryStorage::MemoryStorage(size_t size){
-    _Impl=new MemoryStorage::Impl(size);
+    _Impl=new MemoryStorage::Private(size);
 }
 
 
