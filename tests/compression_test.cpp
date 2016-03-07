@@ -116,6 +116,23 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
 		BOOST_CHECK_EQUAL(b.getbit(), uint8_t(0));
 		b.incbit();
 	}
+
+    {
+        b.reset_pos();
+        auto writed=std::numeric_limits<uint16_t>::max();
+        b.write(writed,15);
+        b.reset_pos();
+        auto readed=b.read(15);
+        BOOST_CHECK_EQUAL(writed,readed);
+    }
+    {
+        b.reset_pos();
+        auto writed=std::numeric_limits<uint32_t>::max();
+        b.write((uint64_t)writed,31);
+        b.reset_pos();
+        auto readed=b.read(31);
+        BOOST_CHECK_EQUAL(writed,readed);
+    }
 }
 
 
