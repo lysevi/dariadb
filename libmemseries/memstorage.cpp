@@ -8,28 +8,16 @@
 using namespace memseries;
 using namespace memseries::compression;
 using namespace memseries::storage;
+using memseries::utils::Range;
 
-struct Block
-{
-    uint8_t *begin;
-    uint8_t *end;
-    Block(){
-        begin=end=nullptr;
-    }
-
-    Block(uint8_t *_begin, uint8_t *_end){
-        begin=_begin;
-        end=_end;
-    }
-};
 
 
 struct MeasChunk
 {
     uint8_t *_buffer;
-    Block times;
-    Block flags;
-    Block values;
+    Range times;
+    Range flags;
+    Range values;
     CopmressedWriter c_writer;
     size_t count;
     Meas first;
@@ -45,9 +33,9 @@ struct MeasChunk
 
         _buffer=new uint8_t[size*3+3];
 
-        times=Block{_buffer,_buffer+sizeof(uint8_t)*size};
-        flags=Block{times.end+1,times.end+sizeof(uint8_t)*size};
-        values=Block{flags.end+1,flags.end+sizeof(uint8_t)*size};
+        times=Range{_buffer,_buffer+sizeof(uint8_t)*size};
+        flags=Range{times.end+1,times.end+sizeof(uint8_t)*size};
+        values=Range{flags.end+1,flags.end+sizeof(uint8_t)*size};
 
         using compression::BinaryBuffer;
         c_writer = compression::CopmressedWriter( BinaryBuffer(times.begin, times.end),
