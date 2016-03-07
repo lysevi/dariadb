@@ -1,6 +1,7 @@
 #pragma once
 
 #include "meas.h"
+#include "utils.h"
 #include <memory>
 
 namespace memseries {
@@ -12,7 +13,7 @@ namespace memseries {
             virtual ~ReaderClb(){}
         };
 
-        class Reader {
+        class Reader: public utils::NonCopy {
         public:
             virtual bool isEnd() const = 0;
             virtual void readNext(ReaderClb*clb) = 0;
@@ -22,7 +23,7 @@ namespace memseries {
         };
 
         typedef std::shared_ptr<Reader> Reader_ptr;
-        class AbstractStorage {
+        class AbstractStorage: public utils::NonCopy {
         public:
             virtual ~AbstractStorage() = default;
             /// min time of writed meas
