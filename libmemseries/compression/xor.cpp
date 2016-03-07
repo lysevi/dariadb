@@ -15,12 +15,11 @@ XorCompressor::XorCompressor(const BinaryBuffer &bw):
 {}
 
 XorCompressor::~XorCompressor(){
-
 }
 
 
-bool XorCompressor::append(memseries::Value v){
-    static_assert(sizeof(memseries::Value) == 8, "Value no x64 value");
+bool XorCompressor::append(Value v){
+    static_assert(sizeof(Value) == 8, "Value no x64 value");
     auto flat = inner::flat_double_to_int(v);
     if(_is_first){
         _first= flat;
@@ -90,7 +89,7 @@ uint8_t XorCompressor::zeros_tail(uint64_t v){
     return result;
 }
 
-XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, memseries::Value first):
+XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, Value first):
     _bw(bw),
     _prev_value(inner::flat_double_to_int(first)),
     _prev_lead(0),

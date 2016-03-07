@@ -6,6 +6,8 @@
 #include <map>
 
 using namespace memseries;
+using namespace memseries::compression;
+using namespace memseries::storage;
 
 struct Block
 {
@@ -28,7 +30,7 @@ struct MeasChunk
     Block times;
     Block flags;
     Block values;
-    compression::CopmressedWriter c_writer;
+    CopmressedWriter c_writer;
     size_t count;
     Meas first;
 
@@ -83,7 +85,7 @@ typedef std::vector<Chunk_Ptr> ChuncksVector;
 typedef std::map<Id, ChuncksVector> ChunkMap;
 
 
-class InnerReader: public storage::Reader{
+class InnerReader: public Reader{
 public:
     struct ReadChunk
     {
@@ -129,6 +131,7 @@ public:
 
     bool isEnd() const override{
         return this->end && this->_tp_readed;
+        //TODO replace
         //return this->_chunks.size() == 0 && this->_tp_chunks.size() == 0;
     }
 
@@ -139,15 +142,14 @@ public:
         }
 
 
-        using memseries::compression::CopmressedReader;
-        using memseries::compression::BinaryBuffer;
         for (auto ch : _chunks) {
             for (size_t i = 0; i < ch.second.size(); i++) {
                 if (ch.second[i].chunk->maxTime>=_from){
-                    CopmressedReader crr(BinaryBuffer(ch.second[i].chunk->times.begin, ch.second[i].chunk->times.end),
-                                         BinaryBuffer(ch.second[i].chunk->values.begin, ch.second[i].chunk->values.end),
-                                         BinaryBuffer(ch.second[i].chunk->flags.begin, ch.second[i].chunk->flags.end),
-                                         ch.second[i].chunk->first);
+                    auto cur_ch=ch.second[i].chunk;
+                    CopmressedReader crr(BinaryBuffer(cur_ch->times.begin, cur_ch->times.end),
+                                         BinaryBuffer(cur_ch->values.begin, cur_ch->values.end),
+                                         BinaryBuffer(cur_ch->flags.begin, cur_ch->flags.end),
+                                         cur_ch->first);
 
                     if (check_meas(ch.second[i].chunk->first)) {
                         auto sub=ch.second[i].chunk->first;
@@ -166,6 +168,7 @@ public:
 
         }
         end=true;
+        //TODO replace
         //_chunks.clear();
     }
 
@@ -179,21 +182,22 @@ public:
             }
 
             for (size_t i = 0; i < ch.second.size(); i++) {
-                if ((candidate.chunk->first.time < ch.second[i].chunk->first.time)
-                        && (ch.second[i].chunk->first.time <= _from)) {
+                auto cur_chunk=ch.second[i].chunk;
+                if ((candidate.chunk->first.time < cur_chunk->first.time) && (cur_chunk->first.time <= _from))
+                {
                     candidate = ch.second[i];
                 }
             }
             to_read_chunks.push_back(candidate);
         }
-        using memseries::compression::CopmressedReader;
-        using memseries::compression::BinaryBuffer;
+
         for (auto ch : to_read_chunks) {
             CopmressedReader crr(BinaryBuffer(ch.chunk->times.begin, ch.chunk->times.end),
                                  BinaryBuffer(ch.chunk->values.begin, ch.chunk->values.end),
-                                 BinaryBuffer(ch.chunk->flags.begin, ch.chunk->flags.end), ch.chunk->first);
+                                 BinaryBuffer(ch.chunk->flags.begin, ch.chunk->flags.end),
+                                 ch.chunk->first);
 
-            memseries::Meas candidate;
+            Meas candidate;
             candidate = ch.chunk->first;
             for (size_t i = 1; i < ch.count; i++) {
                 auto sub = crr.read();
@@ -207,14 +211,17 @@ public:
             }
         }
         _tp_readed = true;
-//        _tp_chunks.clear();
+        //TODO replace
+        //        _tp_chunks.clear();
     }
 
 
     bool is_time_point_reader;
 
     bool check_meas(const Meas&m)const{
-        if ((memseries::in_filter(_flag, m.flag))&&(memseries::utils::inInterval(_from, _to, m.time))) {
+        using utils::inInterval;
+
+        if ((in_filter(_flag, m.flag))&&(inInterval(_from, _to, m.time))) {
             return true;
         }
         return false;
@@ -229,11 +236,12 @@ public:
     memseries::Time _from;
     memseries::Time _to;
     bool _tp_readed;
+    //TODO remove end var
     bool end;
 };
 
 
-class storage::MemoryStorage::Private
+class MemoryStorage::Private
 {
 public:
     Private(size_t size):
@@ -350,46 +358,46 @@ protected:
 };
 
 
-memseries::storage::MemoryStorage::MemoryStorage(size_t size){
+MemoryStorage::MemoryStorage(size_t size){
     _Impl=new MemoryStorage::Private(size);
 }
 
 
-memseries::storage::MemoryStorage::~MemoryStorage(){
+MemoryStorage::~MemoryStorage(){
     if(_Impl!=nullptr){
         delete _Impl;
     }
 }
 
-memseries::Time memseries::storage::MemoryStorage::minTime(){
+Time MemoryStorage::minTime(){
     return _Impl->minTime();
 }
 
-memseries::Time memseries::storage::MemoryStorage::maxTime(){
+Time MemoryStorage::maxTime(){
     return _Impl->maxTime();
 }
 
-memseries::append_result memseries::storage::MemoryStorage::append(const memseries::Meas &value){
+append_result MemoryStorage::append(const memseries::Meas &value){
     return _Impl->append(value);
 }
 
-memseries::append_result memseries::storage::MemoryStorage::append(const memseries::Meas::PMeas begin, const size_t size){
+append_result MemoryStorage::append(const memseries::Meas::PMeas begin, const size_t size){
     return _Impl->append(begin,size);
 }
 
-memseries::storage::Reader_ptr memseries::storage::MemoryStorage::readInterval(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time from, memseries::Time to){
+Reader_ptr MemoryStorage::readInterval(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time from, memseries::Time to){
     return _Impl->readInterval(ids,flag,from,to);
 }
 
-memseries::storage::Reader_ptr memseries::storage::MemoryStorage::readInTimePoint(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time time_point){
+Reader_ptr  MemoryStorage::readInTimePoint(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time time_point){
     return _Impl->readInTimePoint(ids,flag,time_point);
 }
 
-size_t memseries::storage::MemoryStorage::size()const {
+size_t  MemoryStorage::size()const {
     return _Impl->size();
 }
 
-size_t memseries::storage::MemoryStorage::chunks_size()const {
+size_t  MemoryStorage::chunks_size()const {
     return _Impl->chunks_size();
 }
 

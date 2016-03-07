@@ -39,9 +39,11 @@ namespace memseries {
             virtual Reader_ptr readInterval(Time from, Time to);
             virtual Reader_ptr readInTimePoint(Time time_point);
 
-            virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
+            virtual Reader_ptr readInterval(const IdArray &ids,
+                                            Flag flag, Time from,
                                             Time to) = 0;
-            virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
+            virtual Reader_ptr readInTimePoint(const IdArray &ids,
+                                               Flag flag,
                                                Time time_point) = 0;
         };
     }

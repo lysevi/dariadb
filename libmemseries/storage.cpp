@@ -2,6 +2,7 @@
 #include "meas.h"
 
 using namespace memseries;
+using namespace memseries::storage;
 
 class InnerCallback:public memseries::storage::ReaderClb{
 public:
@@ -15,8 +16,8 @@ public:
 
     Meas::MeasList *_output;
 };
-
-void memseries::storage::Reader::readAll(Meas::MeasList * output)
+using namespace memseries;
+void Reader::readAll(Meas::MeasList * output)
 {
     std::shared_ptr<InnerCallback> clb(new InnerCallback(output));
     while (!isEnd()) {
@@ -25,7 +26,7 @@ void memseries::storage::Reader::readAll(Meas::MeasList * output)
 }
 
 
-void memseries::storage::Reader::readAll(ReaderClb*clb)
+void Reader::readAll(ReaderClb*clb)
 {
     while (!isEnd()) {
         readNext(clb);
@@ -33,7 +34,7 @@ void memseries::storage::Reader::readAll(ReaderClb*clb)
 }
 
 
-memseries::append_result memseries::storage::AbstractStorage::append(const Meas::MeasArray & ma)
+append_result AbstractStorage::append(const Meas::MeasArray & ma)
 {
     memseries::append_result ar{};
     for(auto&m:ma){
@@ -42,7 +43,7 @@ memseries::append_result memseries::storage::AbstractStorage::append(const Meas:
     return ar;
 }
 
-memseries::append_result memseries::storage::AbstractStorage::append(const Meas::MeasList & ml)
+append_result AbstractStorage::append(const Meas::MeasList & ml)
 {
     memseries::append_result ar{};
     for(auto&m:ml){
@@ -51,13 +52,13 @@ memseries::append_result memseries::storage::AbstractStorage::append(const Meas:
     return ar;
 }
 
-memseries::storage::Reader_ptr memseries::storage::AbstractStorage::readInterval(Time from, Time to)
+Reader_ptr AbstractStorage::readInterval(Time from, Time to)
 {
     static memseries::IdArray empty_id{};
     return this->readInterval(empty_id,0,from,to);
 }
 
-memseries::storage::Reader_ptr memseries::storage::AbstractStorage::readInTimePoint(Time time_point)
+Reader_ptr AbstractStorage::readInTimePoint(Time time_point)
 {
     static memseries::IdArray empty_id{};
     return this->readInTimePoint(empty_id,0,time_point);

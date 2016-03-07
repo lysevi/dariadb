@@ -107,9 +107,11 @@ BinaryBuffer& BinaryBuffer::clrbit() {
 }
 
 void BinaryBuffer::write(uint16_t v,int8_t count){
+    const auto bits_in_ui16=sizeof(uint16_t)*8;
+
     uint32_t *dest = (uint32_t*)(_begin + _pos - 3);
-    auto src = uint32_t(v) << (sizeof(uint16_t)*8 - count - 1);
-    src = src << ((sizeof(uint16_t) * 8) - (max_bit_pos - _bitnum));
+    auto src = uint32_t(v) << (bits_in_ui16 - count - 1);
+    src = src << (bits_in_ui16 - (max_bit_pos - _bitnum));
     *dest |= src;
     move_pos(count);
 }
@@ -117,7 +119,8 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 void BinaryBuffer::write(uint64_t v, int8_t count) {
     assert(count < 47);
     uint64_t *dest = (uint64_t*)(_begin + _pos - 7);
-    auto src = uint64_t(v) << ((sizeof(uint64_t) * 8 - count - 1) - (max_bit_pos - _bitnum));
+    auto shl_cnt=((sizeof(uint64_t) * 8 - count - 1) - (max_bit_pos - _bitnum));
+    auto src = uint64_t(v) << shl_cnt;
     *dest |= src;
     move_pos(count);
 }

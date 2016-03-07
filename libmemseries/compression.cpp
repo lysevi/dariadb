@@ -16,7 +16,9 @@ public:
     Private() = default;
     ~Private()=default;
 
-    Private(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags):
+    Private(BinaryBuffer bw_time,
+            BinaryBuffer bw_values,
+            BinaryBuffer bw_flags):
         time_comp(bw_time),
         value_comp(bw_values),
         flag_comp(bw_flags)
@@ -72,8 +74,9 @@ public:
     ~Private()=default;
 
     Private(BinaryBuffer bw_time,
-         BinaryBuffer bw_values,
-         BinaryBuffer bw_flags, Meas first):
+            BinaryBuffer bw_values,
+            BinaryBuffer bw_flags,
+            Meas first):
 
         time_dcomp(bw_time,first.time),
         value_dcomp(bw_values, first.value),
@@ -93,8 +96,9 @@ public:
     }
 
     bool is_full() const {
-        return this->time_dcomp.is_full() || this->value_dcomp.is_full() ||
-                this->flag_dcomp.is_full();
+        return this->time_dcomp.is_full()
+                || this->value_dcomp.is_full()
+                || this->flag_dcomp.is_full();
     }
 
 protected:
@@ -109,7 +113,9 @@ CopmressedWriter::CopmressedWriter(){
     this->_Impl=nullptr;
 }
 
-CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags)
+CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time,
+                                   BinaryBuffer bw_values,
+                                   BinaryBuffer bw_flags)
 {
     _Impl=new CopmressedWriter::Private(bw_time,bw_values,bw_flags);
 }
@@ -159,7 +165,10 @@ CopmressedReader::CopmressedReader(){
 }
 
 
-CopmressedReader::CopmressedReader(BinaryBuffer bw_time, BinaryBuffer bw_values, BinaryBuffer bw_flags, Meas first)
+CopmressedReader::CopmressedReader(BinaryBuffer bw_time,
+                                   BinaryBuffer bw_values,
+                                   BinaryBuffer bw_flags,
+                                   Meas first)
 {
     _Impl=new CopmressedReader::Private(bw_time,bw_values,bw_flags,first);
 }

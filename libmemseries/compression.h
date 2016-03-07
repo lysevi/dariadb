@@ -9,11 +9,14 @@ namespace memseries {
         class CopmressedWriter {
         public:
             CopmressedWriter();
-            CopmressedWriter(BinaryBuffer bw_time, BinaryBuffer bw_values,
+            CopmressedWriter(BinaryBuffer bw_time,
+                             BinaryBuffer bw_values,
                              BinaryBuffer bw_flags);
             ~CopmressedWriter();
             CopmressedWriter(const CopmressedWriter &other);
+
             void swap(CopmressedWriter &other);
+
             CopmressedWriter &operator=(CopmressedWriter &other);
             CopmressedWriter &operator=(CopmressedWriter &&other);
 
