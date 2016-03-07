@@ -10,7 +10,10 @@
 
 const size_t copies_count = 100;
 
-void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time from, memseries::Time to, memseries::Time  step) {
+void checkAll(memseries::Meas::MeasList res,
+              std::string msg,
+              memseries::Time from,
+              memseries::Time to, memseries::Time  step) {
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
 		for (auto &m : res) {
@@ -25,7 +28,10 @@ void checkAll(memseries::Meas::MeasList res, std::string msg, memseries::Time fr
 	}
 }
 
-void storage_test_check(memseries::storage::AbstractStorage *as, memseries::Time from, memseries::Time to, memseries::Time  step) {
+void storage_test_check(memseries::storage::AbstractStorage *as,
+                        memseries::Time from,
+                        memseries::Time to,
+                        memseries::Time  step) {
 	auto m = memseries::Meas::empty();
 	size_t total_count = 0;
 
@@ -98,7 +104,11 @@ BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	}
 }
 
-void thread_writer(memseries::Id id, memseries::Time from, memseries::Time to, memseries::Time step, memseries::storage::MemoryStorage *ms)
+void thread_writer(memseries::Id id,
+                   memseries::Time from,
+                   memseries::Time to,
+                   memseries::Time step,
+                   memseries::storage::MemoryStorage *ms)
 {
 	auto m = memseries::Meas::empty();
 	for (auto i = from; i < to; i += step) {
@@ -196,6 +206,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
         memseries::Meas::MeasList output{};
         reader->readAll(&output);
         BOOST_CHECK_EQUAL(output.size(), size_t(7));
+
         if(output.size()!=size_t(7)){
             std::cout<<" ERROR!!!!"<<std::endl;
             //reader->readNext(nullptr);
