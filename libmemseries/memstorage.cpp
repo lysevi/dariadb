@@ -38,9 +38,9 @@ struct MeasChunk
         values=Range{flags.end+1,flags.end+sizeof(uint8_t)*size};
 
         using compression::BinaryBuffer;
-        c_writer = compression::CopmressedWriter( BinaryBuffer(times.begin, times.end),
-                                                  BinaryBuffer(values.begin, values.end),
-                                                  BinaryBuffer(flags.begin, flags.end));
+        c_writer = compression::CopmressedWriter( BinaryBuffer(times),
+                                                  BinaryBuffer(values),
+                                                  BinaryBuffer(flags));
         c_writer.append(first);
         minTime=std::min(minTime,first_m.time);
         maxTime=std::max(maxTime,first_m.time);
@@ -134,9 +134,9 @@ public:
             for (size_t i = 0; i < ch.second.size(); i++) {
                 if (ch.second[i].chunk->maxTime>=_from){
                     auto cur_ch=ch.second[i].chunk;
-                    CopmressedReader crr(BinaryBuffer(cur_ch->times.begin, cur_ch->times.end),
-                                         BinaryBuffer(cur_ch->values.begin, cur_ch->values.end),
-                                         BinaryBuffer(cur_ch->flags.begin, cur_ch->flags.end),
+                    CopmressedReader crr(BinaryBuffer(cur_ch->times),
+                                         BinaryBuffer(cur_ch->values),
+                                         BinaryBuffer(cur_ch->flags),
                                          cur_ch->first);
 
                     if (check_meas(ch.second[i].chunk->first)) {
@@ -180,9 +180,9 @@ public:
         }
 
         for (auto ch : to_read_chunks) {
-            CopmressedReader crr(BinaryBuffer(ch.chunk->times.begin, ch.chunk->times.end),
-                                 BinaryBuffer(ch.chunk->values.begin, ch.chunk->values.end),
-                                 BinaryBuffer(ch.chunk->flags.begin, ch.chunk->flags.end),
+            CopmressedReader crr(BinaryBuffer(ch.chunk->times),
+                                 BinaryBuffer(ch.chunk->values),
+                                 BinaryBuffer(ch.chunk->flags),
                                  ch.chunk->first);
 
             Meas candidate;

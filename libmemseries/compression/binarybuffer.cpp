@@ -4,12 +4,12 @@
 
 using namespace memseries::compression;
 
-BinaryBuffer::BinaryBuffer(uint8_t* begin,uint8_t*end):
-    _begin(begin),
-    _end(end),
+BinaryBuffer::BinaryBuffer(const utils::Range& r):
+    _begin(r.begin),
+    _end(r.end),
     _bitnum(max_bit_pos)
 {
-    _cap=(std::distance(begin,end));
+    _cap=(std::distance(_begin,_end));
     _pos=_cap-1;
 }
 

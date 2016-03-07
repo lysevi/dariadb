@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
 	const size_t writed_bits = 7 * buffer_size;
     uint8_t buffer[buffer_size];
 	//check ctor
-    BinaryBuffer b(std::begin(buffer),std::end(buffer));
+    BinaryBuffer b({std::begin(buffer),std::end(buffer)});
 	BOOST_CHECK_EQUAL(b.cap(), buffer_size);
 
 	BOOST_CHECK_EQUAL(b.bitnum(), 7);
@@ -176,8 +176,9 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
+    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
     {
-        Testable_DeltaCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_DeltaCompressor dc{BinaryBuffer(rng)};
         BOOST_CHECK(dc.is_first());
 
 
@@ -192,7 +193,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
 
          dc.append(t1);
          dc.append(t2);
@@ -203,7 +204,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
 
          dc.append(t1);
          dc.append(t3);
@@ -215,7 +216,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
 
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
 
          dc.append(t1);
          dc.append(t4);
@@ -226,7 +227,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
 
          dc.append(t1);
          dc.append(t5);
@@ -252,8 +253,9 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
+    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
     {
-        Testable_DeltaCompressor co(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_DeltaCompressor co(BinaryBuffer{rng});
 
         co.append(t1);
         co.append(t2);
@@ -262,7 +264,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
         co.append(t5);
         co.append(t6);
         co.append(t7);
-        Testable_DeltaDeCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)),t1);
+        Testable_DeltaDeCompressor dc(BinaryBuffer{rng},t1);
         BOOST_CHECK_EQUAL(dc.read(),t2);
         BOOST_CHECK_EQUAL(dc.read(),t3);
         BOOST_CHECK_EQUAL(dc.read(),t4);
@@ -273,7 +275,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
-        Testable_DeltaCompressor co(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_DeltaCompressor co(BinaryBuffer{rng});
         memseries::Time delta=1;
         std::list<memseries::Time> times{};
         const int steps=30;
@@ -283,7 +285,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
             delta*=2;
         }
 
-        Testable_DeltaDeCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)),times.front());
+        Testable_DeltaDeCompressor dc(BinaryBuffer{rng},times.front());
         times.pop_front();
         for(auto&t:times){
             auto readed=dc.read();
@@ -292,7 +294,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
     }
 	std::fill(std::begin(buffer), std::end(buffer), 0);
 	{//decrease
-        Testable_DeltaCompressor co(BinaryBuffer(std::begin(buffer), std::end(buffer)));
+        Testable_DeltaCompressor co(BinaryBuffer{rng});
 		std::vector<memseries::Time> deltas{ 50,255, 1024,2050 };
 		memseries::Time delta = 1000000;
 		std::list<memseries::Time> times{};
@@ -303,7 +305,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 			delta -= deltas[i%deltas.size()];
 		}
 
-        Testable_DeltaDeCompressor dc(BinaryBuffer(std::begin(buffer), std::end(buffer)), times.front());
+        Testable_DeltaDeCompressor dc(BinaryBuffer{rng}, times.front());
 		times.pop_front();
 		for (auto&t : times) {
 			auto readed = dc.read();
@@ -335,8 +337,9 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
+    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
     {
-        Testable_XorCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+         Testable_XorCompressor dc(BinaryBuffer{rng});
         BOOST_CHECK(dc.is_first());
 
 
@@ -348,20 +351,20 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     using  memseries::compression::XorDeCompressor;
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // cur==prev
-        Testable_XorCompressor co(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co(BinaryBuffer{rng});
 
         auto v1 = memseries::Value(240);
         auto v2 = memseries::Value(240);
         co.append(v1);
         co.append(v2);
 
-        XorDeCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)),t1);
+        XorDeCompressor dc(BinaryBuffer{rng},t1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
     }
 
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // cur!=prev
-        Testable_XorCompressor co(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co(BinaryBuffer{rng});
 
         auto v1 = memseries::Value(240);
         auto v2 = memseries::Value(96);
@@ -370,37 +373,37 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
         co.append(v2);
         co.append(v3);
 
-        XorDeCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)),v1);
+        XorDeCompressor dc(BinaryBuffer{rng},v1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
         BOOST_CHECK_EQUAL(dc.read(),v3);
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // tail/lead is equals
-        Testable_XorCompressor co(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co{rng};
 
         auto v1 = memseries::Value(3840);
         auto v2 = memseries::Value(3356);
         co.append(v1);
         co.append(v2);
 
-        XorDeCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)),v1);
+        XorDeCompressor dc(BinaryBuffer{rng},v1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // tail/lead not equals
-        Testable_XorCompressor co(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co{rng};
 
         auto v1 = memseries::Value(3840);
         auto v2 = memseries::Value(3328);
         co.append(v1);
         co.append(v2);
 
-        XorDeCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)),v1);
+        XorDeCompressor dc(BinaryBuffer{rng},v1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
     { 
-        Testable_XorCompressor co(BinaryBuffer(std::begin(buffer),std::end(buffer)));
+        Testable_XorCompressor co(BinaryBuffer{rng});
 
         std::list<memseries::Value> values{};
         memseries::Value delta=1;
@@ -411,7 +414,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
             delta+=1;
         }
 
-        XorDeCompressor dc(BinaryBuffer(std::begin(buffer),std::end(buffer)),values.front());
+        XorDeCompressor dc(BinaryBuffer{rng},values.front());
         values.pop_front();
         for(auto&v:values){
             BOOST_CHECK_EQUAL(dc.read(),v);
@@ -426,7 +429,10 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
 	std::fill(std::begin(buffer), std::end(buffer), 0);
     using memseries::compression::FlagCompressor;
     using memseries::compression::FlagDeCompressor;
-    FlagCompressor fc(BinaryBuffer(std::begin(buffer), std::end(buffer)));
+
+    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
+
+    FlagCompressor fc(BinaryBuffer{rng});
 	
 	std::list<memseries::Flag> flags{};
 	memseries::Flag delta = 1;
@@ -436,7 +442,7 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
 		delta++;
 	}
 
-    FlagDeCompressor fd(BinaryBuffer(std::begin(buffer), std::end(buffer)),flags.front());
+    FlagDeCompressor fd(BinaryBuffer{rng},flags.front());
 	flags.pop_front();
 	for (auto f : flags) {
 		auto v = fd.read();
@@ -465,9 +471,10 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
     using memseries::compression::CopmressedWriter;
     using memseries::compression::CopmressedReader;
 
-    CopmressedWriter cwr(BinaryBuffer(time_begin, time_end),
-        BinaryBuffer(value_begin, value_end),
-        BinaryBuffer(flag_begin, flag_end));
+
+    CopmressedWriter cwr(BinaryBuffer({time_begin, time_end}),
+                         BinaryBuffer({value_begin, value_end}),
+                         BinaryBuffer({flag_begin, flag_end}));
 
 	std::list<memseries::Meas> meases{};
     auto zer_t=static_cast<memseries::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
@@ -481,9 +488,9 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 	}
 
 
-    CopmressedReader crr(BinaryBuffer(time_begin, time_end),
-        BinaryBuffer(value_begin, value_end),
-        BinaryBuffer(flag_begin, flag_end), meases.front());
+    CopmressedReader crr(BinaryBuffer({time_begin, time_end}),
+                         BinaryBuffer({value_begin, value_end}),
+                         BinaryBuffer({flag_begin, flag_end}), meases.front());
 
 	meases.pop_front();
 	for (auto &m : meases) {

@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     //delta compression
     std::fill(buffer,buffer+test_buffer_size,0);
     {
-        memseries::compression::BinaryBuffer bw(buffer,buffer+test_buffer_size);
+        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::DeltaCompressor dc(bw);
 
         std::vector<memseries::Time> deltas{50,255,1024,2050};
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
         std::cout<<"delta compressor : "<<elapsed<<std::endl;
     }
     {
-        memseries::compression::BinaryBuffer bw(buffer,buffer+test_buffer_size);
+        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::DeltaDeCompressor dc(bw,0);
 
         auto start=clock();
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     //xor compression
     std::fill(buffer,buffer+test_buffer_size,0);
     {
-        memseries::compression::BinaryBuffer bw(buffer,buffer+test_buffer_size);
+        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::XorCompressor dc(bw);
 
         memseries::Value t=1;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
         std::cout<<"xor compressor : "<<elapsed<<std::endl;
     }
     {
-        memseries::compression::BinaryBuffer bw(buffer,buffer+test_buffer_size);
+        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::XorDeCompressor dc(bw,0);
 
         auto start=clock();
@@ -77,21 +77,21 @@ int main(int argc, char *argv[]) {
 
     {
         uint8_t* time_begin=new uint8_t[test_buffer_size];
-        auto time_end = time_begin + test_buffer_size;
+        auto time_r = memseries::utils::Range{time_begin, time_begin + test_buffer_size};
 
         uint8_t* value_begin = new uint8_t[test_buffer_size];
-        auto value_end = value_begin + test_buffer_size;
+        auto value_r = memseries::utils::Range{value_begin,value_begin + test_buffer_size};
 
         uint8_t* flag_begin = new uint8_t[test_buffer_size];
-        auto flag_end = flag_begin + test_buffer_size;
+        auto flag_r = memseries::utils::Range{flag_begin,flag_begin + test_buffer_size};
 
-        std::fill(time_begin, time_end, 0);
-        std::fill(flag_begin, flag_end, 0);
-        std::fill(value_begin, value_end, 0);
+        std::fill(time_r.begin, time_r.end, 0);
+        std::fill(time_r.begin, time_r.end, 0);
+        std::fill(time_r.begin, time_r.end, 0);
 
-        memseries::compression::CopmressedWriter cwr(memseries::compression::BinaryBuffer(time_begin, time_end),
-                                                     memseries::compression::BinaryBuffer(value_begin, value_end),
-                                                     memseries::compression::BinaryBuffer(flag_begin, flag_end));
+        memseries::compression::CopmressedWriter cwr{memseries::compression::BinaryBuffer(time_r),
+                                                     memseries::compression::BinaryBuffer(value_r),
+                                                     memseries::compression::BinaryBuffer(flag_r)};
         auto start = clock();
         for (int i = 0; i < 1000000; i++) {
             auto m = memseries::Meas::empty();
@@ -106,9 +106,9 @@ int main(int argc, char *argv[]) {
 
         auto m = memseries::Meas::empty();
 
-        memseries::compression::CopmressedReader crr(memseries::compression::BinaryBuffer(time_begin, time_end),
-                                                     memseries::compression::BinaryBuffer(value_begin, value_end),
-                                                     memseries::compression::BinaryBuffer(flag_begin, flag_end),m);
+        memseries::compression::CopmressedReader crr{memseries::compression::BinaryBuffer(time_r),
+                    memseries::compression::BinaryBuffer(value_r),
+                    memseries::compression::BinaryBuffer(flag_r),m};
 
         start = clock();
         for (int i = 1; i < 1000000; i++) {

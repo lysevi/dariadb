@@ -2,6 +2,7 @@
 
 #include <ostream>
 #include "../exception.h"
+#include "../utils.h"
 
 namespace memseries {
     namespace compression {
@@ -11,7 +12,7 @@ namespace memseries {
         class BinaryBuffer {
 
         public:
-            BinaryBuffer(uint8_t *_begin, uint8_t *_end);
+            BinaryBuffer(const utils::Range& r);
             BinaryBuffer() = default;
             ~BinaryBuffer();
             BinaryBuffer(const BinaryBuffer &other);
