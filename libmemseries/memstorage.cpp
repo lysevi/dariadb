@@ -132,26 +132,25 @@ public:
 
         for (auto ch : _chunks) {
             for (size_t i = 0; i < ch.second.size(); i++) {
-                if (ch.second[i].chunk->maxTime>=_from){
-                    auto cur_ch=ch.second[i].chunk;
-                    CopmressedReader crr(BinaryBuffer(cur_ch->times),
-                                         BinaryBuffer(cur_ch->values),
-                                         BinaryBuffer(cur_ch->flags),
-                                         cur_ch->first);
+                auto cur_ch=ch.second[i].chunk;
+                CopmressedReader crr(BinaryBuffer(cur_ch->times),
+                                     BinaryBuffer(cur_ch->values),
+                                     BinaryBuffer(cur_ch->flags),
+                                     cur_ch->first);
 
-                    if (check_meas(ch.second[i].chunk->first)) {
-                        auto sub=ch.second[i].chunk->first;
+                if (check_meas(ch.second[i].chunk->first)) {
+                    auto sub=ch.second[i].chunk->first;
+                    clb->call(sub);
+                }
+
+                for (size_t j = 0; j < ch.second[i].count; j++) {
+                    auto sub = crr.read();
+                    sub.id = ch.second[i].chunk->first.id;
+                    if (check_meas(sub)) {
                         clb->call(sub);
                     }
-
-                    for (size_t j = 0; j < ch.second[i].count; j++) {
-                        auto sub = crr.read();
-                        sub.id = ch.second[i].chunk->first.id;
-                        if (check_meas(sub)) {
-                            clb->call(sub);
-                        }
-                    }
                 }
+
             }
 
         }
@@ -165,14 +164,10 @@ public:
         std::list<InnerReader::ReadChunk> to_read_chunks{};
         for (auto ch : _tp_chunks) {
             auto candidate = ch.second.front();
-            if (candidate.chunk->minTime > _from) {
-                continue;
-            }
 
             for (size_t i = 0; i < ch.second.size(); i++) {
                 auto cur_chunk=ch.second[i].chunk;
-                if ((candidate.chunk->first.time < cur_chunk->first.time) && (cur_chunk->first.time <= _from))
-                {
+                if (candidate.chunk->first.time < cur_chunk->first.time){
                     candidate = ch.second[i];
                 }
             }
@@ -278,7 +273,8 @@ public:
         if (need_sort){
             std::sort(this->_chuncks[value.id].begin(),
                     this->_chuncks[value.id].end(),
-                    [](const Chunk_Ptr &l, const Chunk_Ptr &r) {return l->first.time < r->first.time; });
+                    [](const Chunk_Ptr &l, const Chunk_Ptr &r)
+            {return l->first.time < r->first.time; });
         }
 
         _min_time = std::min(_min_time, value.time);
