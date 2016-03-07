@@ -6,6 +6,7 @@
 #include <memstorage.h>
 #include <string>
 #include <thread>
+#include <iostream>
 
 const size_t copies_count = 100;
 
@@ -177,7 +178,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 		ds->append(m);
 		m.id = 5; m.time = 10;
 		ds->append(m);
-		m.id = 6; m.time = 10;
+        m.id = 6; m.time = 10;
 		ds->append(m);
 		{
 
@@ -195,6 +196,17 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
         memseries::Meas::MeasList output{};
         reader->readAll(&output);
         BOOST_CHECK_EQUAL(output.size(), size_t(7));
+        if(output.size()!=size_t(7)){
+            std::cout<<" ERROR!!!!"<<std::endl;
+            reader->readNext(nullptr);
+        }
+        for(memseries::Meas v:output){
+            std::cout<<" id:"<<v.id
+                    <<" flg:"<<v.flag
+                   <<" v:"<<v.value
+                  <<" t:"<<v.time<<std::endl;
+        }
+
 	}
 	delete ds;
 }

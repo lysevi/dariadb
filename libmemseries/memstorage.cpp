@@ -30,13 +30,17 @@ struct MeasChunk
     Block values;
     compression::CopmressedWriter c_writer;
     size_t count;
-    Meas first,last;
+    Meas first;
+
+    Time minTime,maxTime;
 
     MeasChunk(size_t size, Meas first_m):
         count(0),
-        first(first_m),
-        last(first_m)
+        first(first_m)
     {
+        minTime=std::numeric_limits<Time>::max();
+        maxTime=std::numeric_limits<Time>::min();
+
         _buffer=new uint8_t[size*3+3];
 
         times=Block{_buffer,_buffer+sizeof(uint8_t)*size};
@@ -48,6 +52,8 @@ struct MeasChunk
                                                   BinaryBuffer(values.begin, values.end),
                                                   BinaryBuffer(flags.begin, flags.end));
         c_writer.append(first);
+        minTime=std::min(minTime,first_m.time);
+        maxTime=std::max(maxTime,first_m.time);
     }
 
     ~MeasChunk(){
@@ -61,9 +67,9 @@ struct MeasChunk
             return false;
         }else{
             count++;
-            if(m.time>=last.time){
-                last=m;
-            }
+
+            minTime=std::min(minTime,m.time);
+            maxTime=std::max(maxTime,m.time);
             return true;
         }
     }
@@ -83,18 +89,28 @@ public:
     {
         size_t    count;
         Chunk_Ptr chunk;
+        ReadChunk()=default;
+        ReadChunk(const ReadChunk&other){
+            count=other.count;
+            chunk=other.chunk;
+        }
+        ReadChunk&operator=(const ReadChunk&other){
+            if(this!=&other){
+                count=other.count;
+                chunk=other.chunk;
+            }
+            return *this;
+        }
     };
     InnerReader(memseries::Flag flag, memseries::Time from, memseries::Time to):
         _chunks{},
         _flag(flag),
         _from(from),
         _to(to),
-        _cur_vector_pos(0),
         _tp_readed(false)
     {
-        _next.chunk = nullptr;
-        _next.count = 0;
         is_time_point_reader = false;
+        end=false;
     }
 
     void add(Chunk_Ptr c, size_t count){
@@ -104,12 +120,16 @@ public:
         this->_chunks[c->first.id].push_back(rc);
     }
 
+    void add_tp(Chunk_Ptr c, size_t count){
+        ReadChunk rc;
+        rc.chunk = c;
+        rc.count = count;
+        this->_tp_chunks[c->first.id].push_back(rc);
+    }
 
     bool isEnd() const override{
-        return this->_chunks.size() == 0
-                && _next.count == 0
-                && _cur_vector.size() == 0
-                && _cur_vector_pos >= _cur_vector.size();
+        return this->end && this->_tp_readed;
+        //return this->_chunks.size() == 0 && this->_tp_chunks.size() == 0;
     }
 
 
@@ -118,63 +138,47 @@ public:
             this->readTimePoint(clb);
         }
 
-        if (is_time_point_reader) {
-            _chunks.clear();
-            return;
-        }
 
-        if ((_next.chunk == nullptr) || (_next.count == 0)) {
-            if ((_cur_vector_pos == _cur_vector.size()) || (_cur_vector.size()==0)) {
-                _cur_vector.clear();
-                _cur_vector_pos = 0;
-                if (_chunks.size() != 0) {
-                    auto cur_pos = _chunks.begin();
-                    _cur_vector = cur_pos->second;
-                    _chunks.erase(cur_pos);
-                }
-                else {
-                    return;
+        using memseries::compression::CopmressedReader;
+        using memseries::compression::BinaryBuffer;
+        for (auto ch : _chunks) {
+            for (size_t i = 0; i < ch.second.size(); i++) {
+                if (ch.second[i].chunk->maxTime>=_from){
+                    CopmressedReader crr(BinaryBuffer(ch.second[i].chunk->times.begin, ch.second[i].chunk->times.end),
+                                         BinaryBuffer(ch.second[i].chunk->values.begin, ch.second[i].chunk->values.end),
+                                         BinaryBuffer(ch.second[i].chunk->flags.begin, ch.second[i].chunk->flags.end),
+                                         ch.second[i].chunk->first);
+
+                    if (check_meas(ch.second[i].chunk->first)) {
+                        auto sub=ch.second[i].chunk->first;
+                        clb->call(sub);
+                    }
+
+                    for (size_t j = 0; j < ch.second[i].count; j++) {
+                        auto sub = crr.read();
+                        sub.id = ch.second[i].chunk->first.id;
+                        if (check_meas(sub)) {
+                            clb->call(sub);
+                        }
+                    }
                 }
             }
-            if (_cur_vector.size() != 0) {
-                auto fr = _cur_vector[_cur_vector_pos];
-                _next.chunk = fr.chunk;
-                _next.count = fr.count;
-                _cur_vector_pos++;
 
-                if (check_meas(_next.chunk->first)) {
-                    clb->call(_next.chunk->first);
-                }
-            }
         }
-        using compression::BinaryBuffer;
-        while (_next.count != 0) {
-            compression::CopmressedReader crr(
-                        BinaryBuffer(_next.chunk->times.begin, _next.chunk->times.end),
-                        BinaryBuffer(_next.chunk->values.begin, _next.chunk->values.end),
-                        BinaryBuffer(_next.chunk->flags.begin, _next.chunk->flags.end),
-                        _next.chunk->first);
-
-            for (size_t i = 0; i < _next.count; i++) {
-                auto sub = crr.read();
-                if (check_meas(sub)) {
-                    sub.id = _next.chunk->first.id;
-                    clb->call(sub);
-                }
-            }
-            _next.count = 0;
-        }
+        end=true;
+        //_chunks.clear();
     }
 
     void readTimePoint(storage::ReaderClb*clb){
+
         std::list<InnerReader::ReadChunk> to_read_chunks{};
-        for (auto ch : _chunks) {
+        for (auto ch : _tp_chunks) {
             auto candidate = ch.second.front();
-            if (candidate.chunk->first.time > _from) {
+            if (candidate.chunk->minTime > _from) {
                 continue;
             }
 
-            for (size_t i = 1; i < ch.second.size(); i++) {
+            for (size_t i = 0; i < ch.second.size(); i++) {
                 if ((candidate.chunk->first.time < ch.second[i].chunk->first.time)
                         && (ch.second[i].chunk->first.time <= _from)) {
                     candidate = ch.second[i];
@@ -203,13 +207,14 @@ public:
             }
         }
         _tp_readed = true;
+//        _tp_chunks.clear();
     }
 
 
     bool is_time_point_reader;
-protected:
-    bool check_meas(Meas&m){
-        if ((memseries::in_filter(_flag, m.flag))	&& (memseries::utils::inInterval(_from, _to, m.time))) {
+
+    bool check_meas(const Meas&m)const{
+        if ((memseries::in_filter(_flag, m.flag))&&(memseries::utils::inInterval(_from, _to, m.time))) {
             return true;
         }
         return false;
@@ -217,15 +222,14 @@ protected:
 
     typedef std::vector<ReadChunk> ReadChuncksVector;
     typedef std::map<Id, ReadChuncksVector> ReadChunkMap;
-protected:
+
     ReadChunkMap _chunks;
+    ReadChunkMap _tp_chunks;
     memseries::Flag _flag;
     memseries::Time _from;
     memseries::Time _to;
-    ReadChunk _next;
-    ReadChuncksVector _cur_vector;
-    size_t _cur_vector_pos;
     bool _tp_readed;
+    bool end;
 };
 
 
@@ -256,9 +260,7 @@ public:
                     break;
                 }
             }
-        }
-
-        else {
+        }else {
             this->_chuncks[value.id] = ChuncksVector{};
         }
 
@@ -298,29 +300,41 @@ public:
 
     }
 
-    Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to){
-        auto res= std::make_shared<InnerReader>(flag, from, to);
+    std::shared_ptr<InnerReader> readInterval(const IdArray &ids, Flag flag, Time from, Time to){
+        auto res= this->readInTimePoint(ids,flag,from);
+        res->_from=from;
+        res->_to=to;
+        res->_flag=flag;
         for (auto ch : _chuncks) {
-            if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch.first) != ids.end())) {
-                for (size_t i = 0; i < ch.second.size(); i++) {
-                    auto cur_chunk = ch.second[i];
+            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
+                continue;
+            }
+            for (size_t i = 0; i < ch.second.size(); i++) {
+                Chunk_Ptr cur_chunk = ch.second[i];
+                if ((utils::inInterval(from,to,cur_chunk->minTime))||
+                        (utils::inInterval(from,to,cur_chunk->maxTime))){
                     res->add(cur_chunk, cur_chunk->count);
                 }
             }
-        }
 
+        }
+        res->is_time_point_reader=false;
         return res;
     }
 
-    Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
+    std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
         auto res = std::make_shared<InnerReader>(flag, time_point, 0);
         for (auto ch : _chuncks) {
-            if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch.first) != ids.end())) {
-                for (size_t i = 0; i < ch.second.size(); i++) {
-                    auto cur_chunk = ch.second[i];
-                    res->add(cur_chunk, cur_chunk->count);
+            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
+                continue;
+            }
+            for (size_t i = 0; i < ch.second.size(); i++) {
+                Chunk_Ptr cur_chunk = ch.second[i];
+                if(cur_chunk->minTime<time_point){
+                    res->add_tp(cur_chunk, cur_chunk->count);
                 }
             }
+
         }
         res->is_time_point_reader = true;
         return res;
