@@ -63,6 +63,10 @@ namespace memseries {
                 begin=_begin;
                 end=_end;
             }
+
+            ~Range(){
+
+            }
         };
     }
 }
