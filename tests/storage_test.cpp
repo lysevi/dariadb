@@ -43,14 +43,14 @@ void storage_test_check(memseries::storage::AbstractStorage *as, memseries::Time
 
 	memseries::Meas::MeasList all{};
 	as->readInterval(from, to)->readAll(&all);
-	BOOST_CHECK_EQUAL(all.size(), total_count+1); // [_from,to, by step] + 1 from timePoint=0 (meas with time=0.).
+    BOOST_CHECK_EQUAL(all.size(), total_count);
 
 	checkAll(all, "readAll error: ", from, to, step);
 
 	memseries::IdArray ids{};
 	all.clear();
 	as->readInterval(ids, 0, from, to)->readAll(&all);
-	BOOST_CHECK_EQUAL(all.size(), total_count+1);
+    BOOST_CHECK_EQUAL(all.size(), total_count);
 
 	checkAll(all, "read error: ", from, to, step);
 
@@ -198,14 +198,15 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
         BOOST_CHECK_EQUAL(output.size(), size_t(7));
         if(output.size()!=size_t(7)){
             std::cout<<" ERROR!!!!"<<std::endl;
-            reader->readNext(nullptr);
+            //reader->readNext(nullptr);
+            for(memseries::Meas v:output){
+                std::cout<<" id:"<<v.id
+                        <<" flg:"<<v.flag
+                       <<" v:"<<v.value
+                      <<" t:"<<v.time<<std::endl;
+            }
         }
-        for(memseries::Meas v:output){
-            std::cout<<" id:"<<v.id
-                    <<" flg:"<<v.flag
-                   <<" v:"<<v.value
-                  <<" t:"<<v.time<<std::endl;
-        }
+
 
 	}
 	delete ds;
