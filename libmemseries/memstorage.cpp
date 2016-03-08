@@ -12,7 +12,7 @@ using memseries::utils::Range;
 
 
 
-struct MeasChunk
+struct Chunk
 {
     uint8_t *_buffer;
     Range times;
@@ -24,7 +24,7 @@ struct MeasChunk
 
     Time minTime,maxTime;
 
-    MeasChunk(size_t size, Meas first_m):
+    Chunk(size_t size, Meas first_m):
         count(0),
         first(first_m)
     {
@@ -46,7 +46,7 @@ struct MeasChunk
         maxTime=std::max(maxTime,first_m.time);
     }
 
-    ~MeasChunk(){
+    ~Chunk(){
         delete[] _buffer;
     }
     bool append(const Meas&m)
@@ -68,7 +68,7 @@ struct MeasChunk
     bool is_full()const { return c_writer.is_full(); }
 };
 
-typedef std::shared_ptr<MeasChunk> Chunk_Ptr;
+typedef std::shared_ptr<Chunk> Chunk_Ptr;
 typedef std::vector<Chunk_Ptr> ChuncksVector;
 typedef std::map<Id, ChuncksVector> ChunkMap;
 
@@ -240,31 +240,35 @@ public:
     Time minTime(){return _min_time;}
     Time maxTime(){return _max_time;}
 
-    append_result append(const Meas& value){
-
-        Chunk_Ptr chunk=nullptr;
-        auto ch_iter=_chuncks.find(value.id);
+    Chunk_Ptr getFreeChunk(memseries::Id id){
+        Chunk_Ptr resulted_chunk=nullptr;
+        auto ch_iter=_chuncks.find(id);
         if (ch_iter != _chuncks.end()) {
             for (size_t i = 0; i < ch_iter->second.size(); i++) {
                 if (!ch_iter->second[i]->is_full()) {
-                    chunk = ch_iter->second[i];
+                    resulted_chunk = ch_iter->second[i];
                     break;
                 }
             }
         }else {
-            this->_chuncks[value.id] = ChuncksVector{};
+            this->_chuncks[id] = ChuncksVector{};
         }
+        return resulted_chunk;
+    }
+
+    append_result append(const Meas& value){
+        Chunk_Ptr chunk=this->getFreeChunk(value.id);
 
         bool need_sort = false;
 
         if (chunk == nullptr) {
-            chunk = std::make_shared<MeasChunk>(_size, value);
+            chunk = std::make_shared<Chunk>(_size, value);
             this->_chuncks[value.id].push_back(chunk);
             need_sort = true;
         }
         else {
             if (!chunk->append(value)) {
-                chunk = std::make_shared<MeasChunk>(_size, value);
+                chunk = std::make_shared<Chunk>(_size, value);
                 this->_chuncks[value.id].push_back(chunk);
                 need_sort = true;
             }
