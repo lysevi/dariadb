@@ -116,19 +116,17 @@ CopmressedWriter::CopmressedWriter(){
 CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time,
                                    BinaryBuffer bw_values,
                                    BinaryBuffer bw_flags)
+    :_Impl(new CopmressedWriter::Private(bw_time,bw_values,bw_flags))
 {
-    _Impl=new CopmressedWriter::Private(bw_time,bw_values,bw_flags);
+
 }
 
 CopmressedWriter::~CopmressedWriter()
-{
-    if(_Impl!=nullptr){
-        delete _Impl;
-    }
-}
+{}
 
-CopmressedWriter::CopmressedWriter(const CopmressedWriter &other){
-    _Impl=new CopmressedWriter::Private(*other._Impl);
+CopmressedWriter::CopmressedWriter(const CopmressedWriter &other)
+    :_Impl(new CopmressedWriter::Private(*other._Impl)){
+
 }
 
 void CopmressedWriter::swap(CopmressedWriter &other){
@@ -169,15 +167,13 @@ CopmressedReader::CopmressedReader(BinaryBuffer bw_time,
                                    BinaryBuffer bw_values,
                                    BinaryBuffer bw_flags,
                                    Meas first)
+    :_Impl(new CopmressedReader::Private(bw_time,bw_values,bw_flags,first))
 {
-    _Impl=new CopmressedReader::Private(bw_time,bw_values,bw_flags,first);
+
 }
 
 CopmressedReader::~CopmressedReader()
 {
-    if(_Impl!=nullptr){
-        delete _Impl;
-    }
 }
 
 memseries::Meas CopmressedReader::read()
@@ -189,8 +185,10 @@ bool CopmressedReader::is_full()const{
     return _Impl->is_full();
 }
 
-CopmressedReader::CopmressedReader(const CopmressedReader &other){
-    _Impl=new CopmressedReader::Private(*other._Impl);
+CopmressedReader::CopmressedReader(const CopmressedReader &other)
+    :_Impl(new CopmressedReader::Private(*other._Impl))
+{
+
 }
 
 void CopmressedReader::swap(CopmressedReader &other){

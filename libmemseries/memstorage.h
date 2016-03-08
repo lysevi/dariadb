@@ -28,7 +28,7 @@ namespace memseries {
 
         protected:
             class Private;
-            Private *_Impl;
+            std::unique_ptr<Private> _Impl;
         };
     }
 }

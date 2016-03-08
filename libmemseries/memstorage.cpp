@@ -342,15 +342,12 @@ protected:
 };
 
 
-MemoryStorage::MemoryStorage(size_t size){
-    _Impl=new MemoryStorage::Private(size);
+MemoryStorage::MemoryStorage(size_t size)
+    :_Impl(new MemoryStorage::Private(size)){
 }
 
 
 MemoryStorage::~MemoryStorage(){
-    if(_Impl!=nullptr){
-        delete _Impl;
-    }
 }
 
 Time MemoryStorage::minTime(){
