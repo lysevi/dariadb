@@ -1,5 +1,6 @@
 #include "membucket.h"
 #include "time_ordered_set.h"
+#include "utils.h"
 #include <algorithm>
 #include <vector>
 #include <limits>
@@ -41,13 +42,18 @@ public:
     }
 
     bool append(const memseries::Meas&m) {
-        if(!_bucks[_cur_bucket]->append(m)){
-            _cur_bucket++;
-            if(!is_full()){
-                _bucks[_cur_bucket]->append(m);
-            }else{
-                return false;
+        bool writed=false;
+        for(auto&tos:_bucks){
+            if (!tos->is_full()){
+                if((utils::inInterval(tos->minTime(),tos->maxTime(),m.time))||(tos->size()==0)){
+                    tos->append(m);
+                    writed=true;
+                    break;
+                }
             }
+        }
+        if(!writed){
+            return false;
         }
         _minTime = std::min(_minTime, m.time);
         _maxTime = std::max(_maxTime, m.time);
