@@ -56,11 +56,11 @@ BOOST_AUTO_TEST_CASE(MemBucketTest)
     BOOST_CHECK_EQUAL(mbucket.max_size(),max_count);
     auto e = memseries::Meas::empty();
     //max time always
-    memseries::Time t=1;
+    memseries::Time t=10;
     for (size_t j = 0; j < max_count; j++){
         for (size_t i = 0; i < max_size; i++) {
             e.time = t;
-            t+=5;
+            t+=10;
             BOOST_CHECK(mbucket.append(e));
         }
     }
@@ -69,11 +69,20 @@ BOOST_AUTO_TEST_CASE(MemBucketTest)
     //BOOST_CHECK(!mbucket.append(e));
 
     //insert in midle buckets
-    e.time = 2;
+    e.time = 12;
     BOOST_CHECK(mbucket.append(e));
-    e.time = 3;
+    e.time = 13;
     BOOST_CHECK(mbucket.append(e));
-    e.time = 4;
+    e.time = 14;
     BOOST_CHECK(mbucket.append(e));
-
+    e.time = max_size+1;
+    BOOST_CHECK(mbucket.append(e));
+    e.time=1;
+    // insert between {from,to} V {min,max}
+    for (size_t j = 0; j < max_count; j++){
+        for (size_t i = 0; i < max_size; i++) {
+            e.time +=1;
+            BOOST_CHECK(mbucket.append(e));
+        }
+    }
 }

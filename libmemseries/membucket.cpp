@@ -47,7 +47,8 @@ public:
         bool writed=false;
 
 
-        if((maxTime()<=m.time)){
+        if((maxTime()<=m.time)
+                ||(utils::inInterval(_last->minTime(),_last->maxTime(),m.time))){
             if(!_last->append(m)){
                 if(_bucks.size()>_count){
                     return false;
@@ -61,12 +62,35 @@ public:
                 writed=true;
             }
         }else{
-            for(auto b:_bucks){
+            auto it=_bucks.begin();
+            tos_ptr target=nullptr;
+            for(;it!=_bucks.end();++it){
+                auto b=*it;
+                //insert in midle
                 if(utils::inInterval(b->minTime(),b->maxTime(),m.time)){
-                    b->append(m,true);
-                    writed=true;
+                    target=b;
                     break;
+                }else{
+                    //if time between of bucks;
+                    if(b->maxTime()<m.time){
+                        auto new_it=it;
+                        new_it++;
+                        //insert in next
+                        if(new_it!=_bucks.end()){
+                            target=*new_it;
+                        }else{//insert in cur
+                            target=b;
+                            break;
+                        }
+                    }else{//insert in cur
+                        target=b;
+                        break;
+                    }
                 }
+            }
+            if(target!=nullptr){
+                target->append(m,true);
+                writed=true;
             }
         }
 
