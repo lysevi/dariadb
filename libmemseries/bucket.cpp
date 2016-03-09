@@ -1,4 +1,4 @@
-#include "membucket.h"
+#include "Bucket.h"
 #include "time_ordered_set.h"
 #include "utils.h"
 #include <algorithm>
@@ -9,7 +9,7 @@
 using namespace memseries;
 using namespace memseries::storage;
 
-class MemBucket::Private
+class Bucket::Private
 {
 public:
     typedef std::shared_ptr<TimeOrderedSet> tos_ptr;
@@ -138,58 +138,58 @@ protected:
     tos_ptr   _last;
 };
 
-MemBucket::MemBucket():_Impl(new MemBucket::Private(0,0))
+Bucket::Bucket():_Impl(new Bucket::Private(0,0))
 {}
 
-MemBucket::~MemBucket()
+Bucket::~Bucket()
 {}
 
-MemBucket::MemBucket(const size_t max_size,const size_t count) :_Impl(new MemBucket::Private(max_size,count))
+Bucket::Bucket(const size_t max_size,const size_t count) :_Impl(new Bucket::Private(max_size,count))
 {}
 
-MemBucket::MemBucket(const MemBucket & other): _Impl(new MemBucket::Private(*other._Impl))
+Bucket::Bucket(const Bucket & other): _Impl(new Bucket::Private(*other._Impl))
 {}
 
-MemBucket::MemBucket(MemBucket && other): _Impl(std::move(other._Impl))
+Bucket::Bucket(Bucket && other): _Impl(std::move(other._Impl))
 {}
 
-void MemBucket::swap(MemBucket & other)throw(){
+void Bucket::swap(Bucket & other)throw(){
     std::swap(_Impl, other._Impl);
 }
 
-MemBucket& MemBucket::operator=(const MemBucket & other){
+Bucket& Bucket::operator=(const Bucket & other){
     if (this != &other) {
-        MemBucket tmp(other);
+        Bucket tmp(other);
         this->swap(tmp);
     }
     return *this;
 }
 
-MemBucket& MemBucket::operator=(MemBucket && other){
+Bucket& Bucket::operator=(Bucket && other){
     this->swap(other);
     return *this;
 }
 
-bool MemBucket::append(const Meas & m){
+bool Bucket::append(const Meas & m){
     return _Impl->append(m);
 }
 
-size_t MemBucket::size()const {
+size_t Bucket::size()const {
     return _Impl->size();
 }
 
-size_t MemBucket::max_size()const {
+size_t Bucket::max_size()const {
     return _Impl->max_size();
 }
 
-memseries::Time MemBucket::minTime()const {
+memseries::Time Bucket::minTime()const {
     return _Impl->minTime();
 }
 
-memseries::Time MemBucket::maxTime()const {
+memseries::Time Bucket::maxTime()const {
     return _Impl->maxTime();
 }
 
-bool MemBucket::is_full()const {
+bool Bucket::is_full()const {
     return _Impl->is_full();
 }

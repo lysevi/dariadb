@@ -6,16 +6,16 @@
 namespace memseries {
     namespace storage {
 
-        class MemBucket {
+        class Bucket {
         public:
-            MemBucket();
-            ~MemBucket();
-            MemBucket(const size_t max_size,const size_t count);
-            MemBucket(const MemBucket&other);
-            MemBucket(MemBucket&&other);
-            void swap(MemBucket&other) throw();
-            MemBucket& operator=(const MemBucket&other);
-            MemBucket& operator=(MemBucket&&other);
+            Bucket();
+            ~Bucket();
+            Bucket(const size_t max_size,const size_t count);
+            Bucket(const Bucket&other);
+            Bucket(Bucket&&other);
+            void swap(Bucket&other) throw();
+            Bucket& operator=(const Bucket&other);
+            Bucket& operator=(Bucket&&other);
 
             bool append(const Meas&m);
             size_t size()const;

@@ -4,7 +4,7 @@
 #include <iterator>
 
 #include <time_ordered_set.h>
-#include <membucket.h>
+#include <Bucket.h>
 #include <ctime>
 
 int main(int argc, char *argv[]) {
@@ -38,15 +38,15 @@ int main(int argc, char *argv[]) {
     }
 
     {
-        const size_t max_size=100000;
+        const size_t max_size=10000;
         const size_t max_count=K*10;
-        auto tos =memseries::storage::MemBucket{ max_size,max_count };
+        auto tos =memseries::storage::Bucket{ max_size,max_count };
         auto m = memseries::Meas::empty();
 
         auto start = clock();
 
 
-        for (size_t i = 0; i < max_size; i++) {
+        for (size_t i = 0; i < K*1000000; i++) {
             m.id = 1;
             m.flag = 0xff;
             m.time = i;
@@ -55,6 +55,6 @@ int main(int argc, char *argv[]) {
         }
 
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-        std::cout<<"MemBucket insert : "<<elapsed<<std::endl;
+        std::cout<<"Bucket insert : "<<elapsed<<std::endl;
     }
 }

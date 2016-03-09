@@ -6,5 +6,5 @@ TARGET_LINK_LIBRARIES(compression_bench libmemseries ${Boost_LIBRARIES})
 add_executable (storage_bench storage_bench.cpp)
 TARGET_LINK_LIBRARIES(storage_bench libmemseries ${Boost_LIBRARIES})
 
-add_executable (membucket_bench membucket_bench.cpp)
-TARGET_LINK_LIBRARIES(membucket_bench libmemseries ${Boost_LIBRARIES})
+add_executable (bucket_bench bucket_bench.cpp)
+TARGET_LINK_LIBRARIES(bucket_bench libmemseries ${Boost_LIBRARIES})
