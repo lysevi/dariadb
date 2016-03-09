@@ -49,14 +49,18 @@ BOOST_AUTO_TEST_CASE(MemBucketTest)
 
     //with move ctor check
     memseries::storage::MemBucket mbucket(std::move(base));
-    BOOST_CHECK_EQUAL(mbucket.size(),max_count);
+    BOOST_CHECK_EQUAL(mbucket.max_size(),max_count);
     auto e = memseries::Meas::empty();
+    //max time always
+    memseries::Time t=1;
     for (size_t j = 0; j < max_count; j++){
         for (size_t i = 0; i < max_size; i++) {
-            e.time = max_size - i;
+            e.time = t;
+            t++;
             BOOST_CHECK(mbucket.append(e));
         }
     }
+    BOOST_CHECK_EQUAL(mbucket.size(),max_count);
     //now bucket is full
-    BOOST_CHECK(!mbucket.append(e));
+    //BOOST_CHECK(!mbucket.append(e));
 }

@@ -19,6 +19,7 @@ namespace memseries {
 
             bool append(const Meas&m);
             size_t size()const;
+            size_t max_size()const;
             bool is_full()const;
             memseries::Time minTime()const;
             memseries::Time maxTime()const;

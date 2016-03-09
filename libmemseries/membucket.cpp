@@ -20,11 +20,15 @@ public:
         _count(count),
         _minTime(std::numeric_limits<memseries::Time>::max()),
         _maxTime(std::numeric_limits<memseries::Time>::min()),
-        _bucks()
+        _bucks(),
+        _last(nullptr)
     {
-        for(size_t i=0;i<_count;i++){
-            _bucks.push_back(std::make_shared<TimeOrderedSet>(_max_size));
-        }
+        _bucks.push_back(alloc_new());
+        _last=_bucks.front();
+    }
+
+    tos_ptr alloc_new(){
+        return std::make_shared<TimeOrderedSet>(_max_size);
     }
 
     Private(const Private &other) :
@@ -32,24 +36,33 @@ public:
         _count(other._count),
         _minTime(other._minTime),
         _maxTime(other._maxTime),
-        _bucks(other._bucks)
-    {
-    }
+        _bucks(other._bucks),
+        _last(other._last)
+    {}
 
     ~Private() {
     }
 
     bool append(const memseries::Meas&m) {
         bool writed=false;
-        for(auto&tos:_bucks){
-            if (!tos->is_full()){
-                if((utils::inInterval(tos->minTime(),tos->maxTime(),m.time))||(tos->size()==0)){
-                    tos->append(m);
-                    writed=true;
-                    break;
+
+
+        if((_last->maxTime()<=m.time)){
+            if(!_last->append(m)){
+                if(_bucks.size()>_count){
+                    return false;
                 }
+
+                _last=alloc_new();
+                _bucks.push_back(_last);
+                _last->append(m);
+                writed=true;
+            }else{
+                 writed=true;
             }
         }
+
+
         if(!writed){
             return false;
         }
@@ -60,6 +73,10 @@ public:
 
 
     size_t size()const {
+        return _bucks.size();
+    }
+
+    size_t max_size()const {
         return _count;
     }
 
@@ -86,6 +103,7 @@ protected:
     memseries::Time _maxTime;
 
     container _bucks;
+    tos_ptr   _last;
 };
 
 MemBucket::MemBucket() :_Impl(new MemBucket::Private(0,0))
@@ -127,6 +145,11 @@ bool MemBucket::append(const Meas & m){
 size_t MemBucket::size()const {
     return _Impl->size();
 }
+
+size_t MemBucket::max_size()const {
+    return _Impl->max_size();
+}
+
 memseries::Time MemBucket::minTime()const {
     return _Impl->minTime();
 }
