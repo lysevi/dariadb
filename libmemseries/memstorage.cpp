@@ -70,6 +70,7 @@ struct Chunk
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;
 typedef std::vector<Chunk_Ptr> ChuncksVector;
+//TODO replace to ChunksList;
 typedef std::map<Id, ChuncksVector> ChunkMap;
 
 
