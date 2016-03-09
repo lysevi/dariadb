@@ -129,7 +129,6 @@ public:
             this->readTimePoint(clb);
         }
 
-
         for (auto ch : _chunks) {
             for (size_t i = 0; i < ch.second.size(); i++) {
                 auto cur_ch=ch.second[i].chunk;
@@ -182,7 +181,7 @@ public:
 
             Meas candidate;
             candidate = ch.chunk->first;
-            for (size_t i = 1; i < ch.count; i++) {
+            for (size_t i = 0; i < ch.count; i++) {
                 auto sub = crr.read();
                 sub.id = ch.chunk->first.id;
                 if ((sub.time <= _from) && (sub.time >= candidate.time)) {
