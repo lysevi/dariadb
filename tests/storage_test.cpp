@@ -161,6 +161,11 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			tp_reader->readAll(&output_in_point);
 
 			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
+
+			auto rdr = ds->readInterval(0, 6);
+			output_in_point.clear();
+			rdr->readAll(&output_in_point);
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
 		}
 		{
 
@@ -178,6 +183,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 		reader->readAll(&output);
 		BOOST_CHECK_EQUAL(output.size(), size_t(5));
 	}
+	// from this point read not from firsts.
 	{
 		m.id = 1; m.time = 6;
 		ds->append(m);
