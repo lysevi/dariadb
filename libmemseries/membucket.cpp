@@ -2,7 +2,7 @@
 #include "time_ordered_set.h"
 #include "utils.h"
 #include <algorithm>
-#include <vector>
+#include <list>
 #include <limits>
 #include <utility>
 
@@ -13,18 +13,17 @@ class MemBucket::Private
 {
 public:
     typedef std::shared_ptr<TimeOrderedSet> tos_ptr;
-    typedef std::vector<tos_ptr>            container;
+    typedef std::list<tos_ptr>            container;
 
     Private(const size_t max_size,const size_t count):
         _max_size(max_size),
         _count(count),
         _minTime(std::numeric_limits<memseries::Time>::max()),
         _maxTime(std::numeric_limits<memseries::Time>::min()),
-        _bucks(count),
-        _cur_bucket(0)
+        _bucks()
     {
         for(size_t i=0;i<_count;i++){
-            _bucks[i]=std::make_shared<TimeOrderedSet>(_max_size);
+            _bucks.push_back(std::make_shared<TimeOrderedSet>(_max_size));
         }
     }
 
@@ -33,8 +32,7 @@ public:
         _count(other._count),
         _minTime(other._minTime),
         _maxTime(other._maxTime),
-        _bucks(other._bucks),
-        _cur_bucket(other._cur_bucket)
+        _bucks(other._bucks)
     {
     }
 
@@ -73,7 +71,12 @@ public:
     }
 
     bool is_full()const{
-        return _cur_bucket>=_count;
+        for(auto&tos:_bucks){
+            if (!tos->is_full()){
+                return false;
+            }
+        }
+        return true;
     }
 protected:
     size_t _max_size;
@@ -83,7 +86,6 @@ protected:
     memseries::Time _maxTime;
 
     container _bucks;
-    size_t _cur_bucket;
 };
 
 MemBucket::MemBucket() :_Impl(new MemBucket::Private(0,0))
