@@ -35,5 +35,7 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 			auto e = a[i - 1];
 			BOOST_CHECK_EQUAL(e.time, i);
 		}
+		BOOST_CHECK_EQUAL(copy_assign.minTime(), memseries::Time(1));
+		BOOST_CHECK_EQUAL(copy_assign.maxTime(), memseries::Time(max_size));
 	}
 }

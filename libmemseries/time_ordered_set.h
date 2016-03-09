@@ -22,6 +22,8 @@ namespace memseries {
 			//TODO must return ref or write to param (pointer to array)
 			memseries::Meas::MeasArray as_array()const;
 			size_t size()const;
+			memseries::Time minTime()const;
+			memseries::Time maxTime()const;
 		protected:
 			class Private;
 			std::unique_ptr<Private> _Impl;

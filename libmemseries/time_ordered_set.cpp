@@ -1,6 +1,8 @@
 #include "time_ordered_set.h"
 #include <algorithm>
 #include <set>
+#include <limits>
+#include <utility>
 
 using namespace memseries;
 using namespace memseries::storage;
@@ -17,14 +19,18 @@ public:
 	typedef std::set<memseries::Meas,meas_time_compare> MeasSet;
 	Private(const size_t max_size):
 		_max_size(max_size),
-		_count(0)
+		_count(0),
+		_minTime(std::numeric_limits<memseries::Time>::max()),
+		_maxTime(std::numeric_limits<memseries::Time>::min())
 	{
 	}
 	
 	Private(const Private &other) :
 		_max_size(other._max_size),
 		_count(other._count),
-		_set(other._set)
+		_set(other._set),
+		_minTime(other._minTime),
+		_maxTime(other._maxTime)
 	{
 	}
 
@@ -37,6 +43,8 @@ public:
 		}
 		else {
 			_set.insert(m);
+			_minTime = std::min(_minTime, m.time);
+			_maxTime = std::max(_maxTime, m.time);
 			_count++;
 			return true;
 		}
@@ -60,10 +68,19 @@ public:
 		return _count >= _max_size;
 	}
 
+	memseries::Time minTime()const {
+		return _minTime;
+	}
+	memseries::Time maxTime()const {
+		return _maxTime;
+	}
 protected:
 	size_t _max_size;
 	size_t _count;
 	MeasSet _set;
+
+	memseries::Time _minTime;
+	memseries::Time _maxTime;
 };
 
 TimeOrderedSet::TimeOrderedSet() :_Impl(new TimeOrderedSet::Private(0))
@@ -117,4 +134,11 @@ memseries::Meas::MeasArray TimeOrderedSet::as_array()const {
 
 size_t TimeOrderedSet::size()const {
 	return _Impl->size();
+}
+memseries::Time TimeOrderedSet::minTime()const {
+	return _Impl->minTime();
+}
+
+memseries::Time TimeOrderedSet::maxTime()const {
+	return _Impl->maxTime();
 }
