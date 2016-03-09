@@ -16,7 +16,7 @@ public:
 
     Meas::MeasList *_output;
 };
-using namespace memseries;
+
 void Reader::readAll(Meas::MeasList * output)
 {
     std::shared_ptr<InnerCallback> clb(new InnerCallback(output));
