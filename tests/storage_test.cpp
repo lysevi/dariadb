@@ -4,6 +4,7 @@
 
 #include <meas.h>
 #include <memstorage.h>
+#include <time_ordered_set.h>
 #include <string>
 #include <thread>
 #include <iostream>
@@ -227,4 +228,30 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 
 	}
 	delete ds;
+}
+
+BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
+{
+	const size_t max_size = 10;
+	memseries::storage::TimeOrderedSet tos{max_size};
+	auto e = memseries::Meas::empty();
+	for (size_t i = 0; i < max_size; i++) {
+		e.time = max_size - i;
+		BOOST_CHECK(tos.append(e));
+	}
+
+	e.time = max_size;
+	BOOST_CHECK(!tos.append(e));
+
+	{
+		memseries::storage::TimeOrderedSet copy_tos{ tos };
+		BOOST_CHECK_EQUAL(copy_tos.size(), max_size);
+
+		auto a = copy_tos.as_array();
+		BOOST_CHECK_EQUAL(a.size(), max_size);
+		for (size_t i = 1; i <= max_size; i++) {
+			auto e = a[i - 1];
+			BOOST_CHECK_EQUAL(e.time, i);
+		}
+	}
 }
