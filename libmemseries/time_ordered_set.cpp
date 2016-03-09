@@ -55,6 +55,11 @@ public:
 	size_t size()const {
 		return _set.size();
 	}
+
+	bool is_full() const {
+		return _count >= _max_size;
+	}
+
 protected:
 	size_t _max_size;
 	size_t _count;
@@ -103,7 +108,7 @@ bool TimeOrderedSet::append(const Meas & m)
 
 bool TimeOrderedSet::is_full() const
 {
-	return false;
+	return _Impl->is_full();
 }
 
 memseries::Meas::MeasArray TimeOrderedSet::as_array()const {

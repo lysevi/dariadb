@@ -26,6 +26,5 @@ namespace memseries {
 			class Private;
 			std::unique_ptr<Private> _Impl;
 		};
-
-	};
-};
+	}
+}
