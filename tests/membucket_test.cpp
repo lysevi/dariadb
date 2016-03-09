@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <time_ordered_set.h>
+#include <membucket.h>
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 {
@@ -16,7 +17,7 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 		e.time = max_size - i;
 		BOOST_CHECK(!tos.is_full());
 		BOOST_CHECK(tos.append(e));
-	}
+    }
 
 	e.time = max_size;
 	BOOST_CHECK(!tos.append(e)); //is_full
@@ -38,4 +39,24 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 		BOOST_CHECK_EQUAL(copy_assign.minTime(), memseries::Time(1));
 		BOOST_CHECK_EQUAL(copy_assign.maxTime(), memseries::Time(max_size));
 	}
+}
+
+BOOST_AUTO_TEST_CASE(MemBucketTest)
+{
+    const size_t max_size = 10;
+    const size_t max_count = 10;
+    auto base = memseries::storage::MemBucket{ max_size, max_count};
+
+    //with move ctor check
+    memseries::storage::MemBucket mbucket(std::move(base));
+    BOOST_CHECK_EQUAL(mbucket.size(),max_count);
+    auto e = memseries::Meas::empty();
+    for (size_t j = 0; j < max_count; j++){
+        for (size_t i = 0; i < max_size; i++) {
+            e.time = max_size - i;
+            BOOST_CHECK(mbucket.append(e));
+        }
+    }
+    //now bucket is full
+    BOOST_CHECK(!mbucket.append(e));
 }
