@@ -37,8 +37,8 @@ public:
 	~Private() {
 	}
 
-	bool append(const memseries::Meas&m) {
-		if (_count >= _max_size) {
+    bool append(const memseries::Meas&m, bool force) {
+        if ((_count >= _max_size)&&(!force)) {
 			return false;
 		}
 		else {
@@ -118,9 +118,9 @@ TimeOrderedSet& TimeOrderedSet::operator=(TimeOrderedSet && other)
 	return *this;
 }
 
-bool TimeOrderedSet::append(const Meas & m)
+bool TimeOrderedSet::append(const Meas & m, bool force)
 {
-	return _Impl->append(m);
+    return _Impl->append(m,force);
 }
 
 bool TimeOrderedSet::is_full() const

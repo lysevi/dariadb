@@ -47,7 +47,7 @@ public:
         bool writed=false;
 
 
-        if((_last->maxTime()<=m.time)){
+        if((maxTime()<=m.time)){
             if(!_last->append(m)){
                 if(_bucks.size()>_count){
                     return false;
@@ -58,7 +58,15 @@ public:
                 _last->append(m);
                 writed=true;
             }else{
-                 writed=true;
+                writed=true;
+            }
+        }else{
+            for(auto b:_bucks){
+                if(utils::inInterval(b->minTime(),b->maxTime(),m.time)){
+                    b->append(m,true);
+                    writed=true;
+                    break;
+                }
             }
         }
 
@@ -106,7 +114,7 @@ protected:
     tos_ptr   _last;
 };
 
-MemBucket::MemBucket() :_Impl(new MemBucket::Private(0,0))
+MemBucket::MemBucket():_Impl(new MemBucket::Private(0,0))
 {}
 
 MemBucket::~MemBucket()

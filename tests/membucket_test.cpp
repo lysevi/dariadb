@@ -39,6 +39,10 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 		BOOST_CHECK_EQUAL(copy_assign.minTime(), memseries::Time(1));
 		BOOST_CHECK_EQUAL(copy_assign.maxTime(), memseries::Time(max_size));
 	}
+    BOOST_CHECK(tos.is_full());
+    e.time=max_size+1;
+    BOOST_CHECK(tos.append(e,true));
+    BOOST_CHECK_EQUAL(tos.size(),max_size+1);
 }
 
 BOOST_AUTO_TEST_CASE(MemBucketTest)
@@ -56,11 +60,20 @@ BOOST_AUTO_TEST_CASE(MemBucketTest)
     for (size_t j = 0; j < max_count; j++){
         for (size_t i = 0; i < max_size; i++) {
             e.time = t;
-            t++;
+            t+=5;
             BOOST_CHECK(mbucket.append(e));
         }
     }
     BOOST_CHECK_EQUAL(mbucket.size(),max_count);
     //now bucket is full
     //BOOST_CHECK(!mbucket.append(e));
+
+    //insert in midle buckets
+    e.time = 2;
+    BOOST_CHECK(mbucket.append(e));
+    e.time = 3;
+    BOOST_CHECK(mbucket.append(e));
+    e.time = 4;
+    BOOST_CHECK(mbucket.append(e));
+
 }

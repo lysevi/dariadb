@@ -17,7 +17,7 @@ namespace memseries {
 			TimeOrderedSet& operator=(const TimeOrderedSet&other);
 			TimeOrderedSet& operator=(TimeOrderedSet&&other);
 
-			bool append(const Meas&m);
+            bool append(const Meas&m, bool force=false);
 			bool is_full() const;
 			//TODO must return ref or write to param (pointer to array)
 			memseries::Meas::MeasArray as_array()const;
