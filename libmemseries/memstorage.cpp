@@ -32,6 +32,7 @@ struct Chunk
         maxTime=std::numeric_limits<Time>::min();
 
         _buffer=new uint8_t[size*3+3];
+		std::fill(_buffer, _buffer + sizeof(uint8_t)*size * 3 + 3,0);
 
         times=Range{_buffer,_buffer+sizeof(uint8_t)*size};
         flags=Range{times.end+1,times.end+sizeof(uint8_t)*size};
