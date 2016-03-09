@@ -9,6 +9,7 @@
 #include <cassert>
 #include <limits>
 
+using namespace memseries;
 using namespace memseries::compression;
 
 class CopmressedWriter::Private {
@@ -16,16 +17,16 @@ public:
     Private() = default;
     ~Private()=default;
 
-    Private(BinaryBuffer bw_time,
-            BinaryBuffer bw_values,
-            BinaryBuffer bw_flags):
-        time_comp(bw_time),
-        value_comp(bw_values),
-        flag_comp(bw_flags)
-    {
-        _is_first = true;
-        _is_full = false;
-    }
+	Private(const BinaryBuffer& bw_time,
+		const BinaryBuffer &bw_values,
+		const BinaryBuffer &bw_flags) :
+		time_comp(bw_time),
+		value_comp(bw_values),
+		flag_comp(bw_flags)
+	{
+		_is_first = true;
+		_is_full = false;
+	}
 
 
 
@@ -73,10 +74,10 @@ public:
     Private() = default;
     ~Private()=default;
 
-    Private(BinaryBuffer bw_time,
-            BinaryBuffer bw_values,
-            BinaryBuffer bw_flags,
-            Meas first):
+	Private(const BinaryBuffer& bw_time,
+		const BinaryBuffer& bw_values,
+		const BinaryBuffer& bw_flags,
+		const Meas &first) :
 
         time_dcomp(bw_time,first.time),
         value_dcomp(bw_values, first.value),
@@ -113,9 +114,7 @@ CopmressedWriter::CopmressedWriter(){
     this->_Impl=nullptr;
 }
 
-CopmressedWriter::CopmressedWriter(BinaryBuffer bw_time,
-                                   BinaryBuffer bw_values,
-                                   BinaryBuffer bw_flags)
+CopmressedWriter::CopmressedWriter(const BinaryBuffer &bw_time, const BinaryBuffer &bw_values, const BinaryBuffer &bw_flags)
     :_Impl(new CopmressedWriter::Private(bw_time,bw_values,bw_flags))
 {
 
@@ -133,7 +132,7 @@ void CopmressedWriter::swap(CopmressedWriter &other){
     std::swap(_Impl,other._Impl);
 }
 
-CopmressedWriter& CopmressedWriter::operator=(CopmressedWriter &other){
+CopmressedWriter& CopmressedWriter::operator=(const CopmressedWriter &other){
     if(this==&other){
         return *this;
     }
@@ -163,10 +162,7 @@ CopmressedReader::CopmressedReader(){
 }
 
 
-CopmressedReader::CopmressedReader(BinaryBuffer bw_time,
-                                   BinaryBuffer bw_values,
-                                   BinaryBuffer bw_flags,
-                                   Meas first)
+CopmressedReader::CopmressedReader(const BinaryBuffer &bw_time, const BinaryBuffer &bw_values, const BinaryBuffer &bw_flags, const Meas &first)
     :_Impl(new CopmressedReader::Private(bw_time,bw_values,bw_flags,first))
 {
 
@@ -195,7 +191,7 @@ void CopmressedReader::swap(CopmressedReader &other){
     std::swap(_Impl,other._Impl);
 }
 
-CopmressedReader& CopmressedReader::operator=(CopmressedReader &other){
+CopmressedReader& CopmressedReader::operator=(const CopmressedReader &other){
     if(this==&other){
         return *this;
     }

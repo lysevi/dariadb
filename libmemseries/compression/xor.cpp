@@ -5,6 +5,7 @@
 #include<cassert>
 #include <limits>
 
+using namespace memseries;
 using namespace memseries::compression;
 
 XorCompressor::XorCompressor(const BinaryBuffer &bw):

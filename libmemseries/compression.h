@@ -10,15 +10,15 @@ namespace memseries {
         class CopmressedWriter {
         public:
             CopmressedWriter();
-            CopmressedWriter(BinaryBuffer bw_time,
-                             BinaryBuffer bw_values,
-                             BinaryBuffer bw_flags);
+            CopmressedWriter(const BinaryBuffer &bw_time,
+				const BinaryBuffer &bw_values,
+				const BinaryBuffer &bw_flags);
             ~CopmressedWriter();
             CopmressedWriter(const CopmressedWriter &other);
 
             void swap(CopmressedWriter &other);
 
-            CopmressedWriter &operator=(CopmressedWriter &other);
+            CopmressedWriter &operator=(const CopmressedWriter &other);
             CopmressedWriter &operator=(CopmressedWriter &&other);
 
             bool append(const Meas &m);
@@ -32,14 +32,14 @@ namespace memseries {
         class CopmressedReader {
         public:
             CopmressedReader();
-            CopmressedReader(BinaryBuffer bw_time,
-                             BinaryBuffer bw_values,
-                             BinaryBuffer bw_flags,
-                             Meas first);
+            CopmressedReader(const BinaryBuffer &bw_time,
+				const BinaryBuffer &bw_values,
+				const BinaryBuffer &bw_flags,
+				const Meas &first);
             ~CopmressedReader();
             CopmressedReader(const CopmressedReader &other);
             void swap(CopmressedReader &other);
-            CopmressedReader &operator=(CopmressedReader &other);
+            CopmressedReader &operator=(const CopmressedReader &other);
             CopmressedReader &operator=(CopmressedReader &&other);
 
             Meas read();

@@ -2,6 +2,7 @@
 #include "../utils.h"
 #include <cassert>
 
+using namespace memseries;
 using namespace memseries::compression;
 
 BinaryBuffer::BinaryBuffer(const utils::Range& r):
