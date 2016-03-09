@@ -281,6 +281,16 @@ public:
             {return l->first.time < r->first.time; });
         }
 
+		CopmressedReader crr(BinaryBuffer(chunk->times),
+			BinaryBuffer(chunk->values),
+			BinaryBuffer(chunk->flags),
+			chunk->first);
+
+		for (size_t j = 0; j < chunk->count; j++) {
+			auto sub = crr.read();
+			sub.id = chunk->first.id;
+		}
+
         _min_time = std::min(_min_time, value.time);
         _max_time = std::max(_max_time, value.time);
         return memseries::append_result(1, 0);
