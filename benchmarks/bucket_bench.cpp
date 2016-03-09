@@ -4,7 +4,7 @@
 #include <iterator>
 
 #include <time_ordered_set.h>
-#include <Bucket.h>
+#include <bucket.h>
 #include <ctime>
 
 int main(int argc, char *argv[]) {
