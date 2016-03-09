@@ -14,7 +14,9 @@ using memseries::utils::Range;
 
 struct Chunk
 {
-    uint8_t *_buffer;
+    std::vector<uint8_t> _buffer_t;
+	std::vector<uint8_t> _buffer_f;
+	std::vector<uint8_t> _buffer_v;
     Range times;
     Range flags;
     Range values;
@@ -31,12 +33,13 @@ struct Chunk
         minTime=std::numeric_limits<Time>::max();
         maxTime=std::numeric_limits<Time>::min();
 
-        _buffer=new uint8_t[size*3+3];
-		std::fill(_buffer, _buffer + sizeof(uint8_t)*size * 3 + 3,0);
+		_buffer_t.resize(size);	std::fill(_buffer_t.begin(), _buffer_t.end(),0);
+		_buffer_f.resize(size);	std::fill(_buffer_f.begin(), _buffer_f.end(), 0);
+		_buffer_v.resize(size);	std::fill(_buffer_v.begin(), _buffer_v.end(), 0);
 
-        times=Range{_buffer,_buffer+sizeof(uint8_t)*size};
-        flags=Range{times.end+1,times.end+sizeof(uint8_t)*size};
-        values=Range{flags.end+1,flags.end+sizeof(uint8_t)*size};
+		times = Range{ _buffer_t.data(),_buffer_t.data() + sizeof(uint8_t)*size };
+		flags = Range{ _buffer_f.data(),_buffer_f.data() + sizeof(uint8_t)*size };
+		values = Range{ _buffer_v.data(),_buffer_v.data() + sizeof(uint8_t)*size };
 
         using compression::BinaryBuffer;
         c_writer = compression::CopmressedWriter( BinaryBuffer(times),
@@ -48,7 +51,7 @@ struct Chunk
     }
 
     ~Chunk(){
-        delete[] _buffer;
+       
     }
     bool append(const Meas&m)
     {
