@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 
     auto start = clock();
 
-    const size_t K = 2;
+    const size_t K = 1;
     for (size_t i = 0; i < K*1000000; i++) {
         m.id = i%ids_count;
         m.flag = 0xff;
