@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	}
 
 	//buckets count;
-    BOOST_CHECK_EQUAL(mbucket.size(), 4);
+    BOOST_CHECK_EQUAL(mbucket.size(), size_t(4));
     //now bucket is full
 	//TODO remove this
     //BOOST_CHECK(!mbucket.append(e));
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     e.time = 14;
     BOOST_CHECK(mbucket.append(e));
 
-	BOOST_CHECK_EQUAL(mbucket.size(), 2);
+    BOOST_CHECK_EQUAL(mbucket.size(), size_t(2));
 	// fill storage to initiate flush to storage
 	auto wr = mbucket.writed_count();
 	auto end = max_size*max_count - wr;
