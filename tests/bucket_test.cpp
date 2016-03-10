@@ -117,8 +117,8 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     }
 
 	BOOST_CHECK_EQUAL(mbucket.size(), 2);
-	auto wr = mbucket.writed_count();;
-	auto end = max_size*max_count - mbucket.writed_count();
+	auto wr = mbucket.writed_count();
+	auto end = max_size*max_count - wr;
 	for (size_t i = 0; i <end; i++) {
 		t ++;
 		BOOST_CHECK(mbucket.append(e));
@@ -134,6 +134,6 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 
 	//time should be increased
 	for (size_t i = 0; i < stor->meases.size() - 1; i++) {
-		BOOST_CHECK(!stor->meases[i].time<stor->meases[i+1].time);
+		BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
 	}
 }
