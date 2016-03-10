@@ -64,6 +64,8 @@ int main(int argc, char *argv[]) {
     {
         const size_t max_size=10000;
         const size_t max_count=K*10;
+        const size_t id_count=10;
+
 		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
         auto tos =memseries::storage::Bucket{ max_size,max_count,stor };
         auto m = memseries::Meas::empty();
@@ -72,7 +74,7 @@ int main(int argc, char *argv[]) {
 
 
         for (size_t i = 0; i < K*1000000; i++) {
-            m.id = 1;
+            m.id = i%id_count;
             m.flag = 0xff;
             m.time = i;
             m.value = i;

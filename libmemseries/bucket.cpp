@@ -3,6 +3,7 @@
 #include "utils.h"
 #include <algorithm>
 #include <vector>
+#include <map>
 #include <limits>
 #include <utility>
 
@@ -12,8 +13,9 @@ using namespace memseries::storage;
 class Bucket::Private
 {
 public:
-    typedef std::shared_ptr<TimeOrderedSet> tos_ptr;
-    typedef std::vector<tos_ptr>            container;
+    typedef std::shared_ptr<TimeOrderedSet>   tos_ptr;
+    typedef std::vector<tos_ptr>              container;
+    typedef std::map<memseries::Id,container> dict;
 
     Private(const size_t max_size,const size_t count, const AbstractStorage_ptr stor):
         _max_size(max_size),
