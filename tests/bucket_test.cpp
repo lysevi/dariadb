@@ -95,6 +95,13 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 		BOOST_CHECK(mbucket.append(e));
 	}
 
+	t = 50;
+	for (size_t i = 0; i < max_size; i++) {
+		e.time = t;
+		t += 1;
+		BOOST_CHECK(mbucket.append(e));
+	}
+
 	t = 10;
 	for (size_t i = 0; i < max_size; i++) {
 		e.time = t;
@@ -102,39 +109,41 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 		BOOST_CHECK(mbucket.append(e));
 	}
 
+	t = 70;
+	for (size_t i = 0; i < max_size; i++) {
+		e.time = t;
+		t += 1;
+		BOOST_CHECK(mbucket.append(e));
+	}
+
 	//buckets count;
-    BOOST_CHECK_EQUAL(mbucket.size(), 2);
+    BOOST_CHECK_EQUAL(mbucket.size(), 4);
     //now bucket is full
+	//TODO remove this
     //BOOST_CHECK(!mbucket.append(e));
 
-    //insert in midle buckets
+    //insert in exists time
     e.time = 12;
     BOOST_CHECK(mbucket.append(e));
     e.time = 13;
     BOOST_CHECK(mbucket.append(e));
     e.time = 14;
     BOOST_CHECK(mbucket.append(e));
-    e.time = max_size+1;
-    BOOST_CHECK(mbucket.append(e));
-    e.time=1;
-    // insert between {from,to} V {min,max}
-    for (size_t j = 0; j < max_count; j++){
-            e.time +=1;
-            BOOST_CHECK(mbucket.append(e));
-    }
 
 	BOOST_CHECK_EQUAL(mbucket.size(), 2);
+	// fill storage to initiate flush to storage
 	auto wr = mbucket.writed_count();
 	auto end = max_size*max_count - wr;
 	for (size_t i = 0; i <end; i++) {
 		t ++;
 		BOOST_CHECK(mbucket.append(e));
 	}
-	e.time++;
+
 	//bucket must be full;
 	BOOST_CHECK(mbucket.is_full());
 	auto wcount = mbucket.writed_count();
 	//drop part of data to storage;
+	e.time++;
 	BOOST_CHECK(mbucket.append(e));
 	BOOST_CHECK(!mbucket.is_full());
 	BOOST_CHECK_EQUAL(stor->writed_count+mbucket.writed_count(),wcount+1);//  one appended when drop to storage.
