@@ -24,100 +24,100 @@ public:
         _maxTime(std::numeric_limits<memseries::Time>::min()),
         _bucks(),
         _last(nullptr),
-		_stor(stor),
-		_writed_count(0)
+        _stor(stor),
+        _writed_count(0)
     {
         _bucks.push_back(alloc_new());
         _last=_bucks.front();
     }
 
-     Private(const Private &other) :
+    Private(const Private &other) :
         _max_size(other._max_size),
         _count(other._count),
         _minTime(other._minTime),
         _maxTime(other._maxTime),
         _bucks(other._bucks),
         _last(other._last),
-		_stor(other._stor),
-		_writed_count(other._writed_count)
+        _stor(other._stor),
+        _writed_count(other._writed_count)
     {}
 
     ~Private() {
     }
 
-	tos_ptr alloc_new() {
-		return std::make_shared<TimeOrderedSet>(_max_size);
-	}
-
-    bool append(const memseries::Meas&m) {
-		if (is_full()) {
-			auto small=_bucks.front();
-			_bucks.erase(_bucks.begin());
-			auto arr=small->as_array();
-			auto stor_res=_stor->append(arr);
-			_writed_count -= arr.size();
-			if (stor_res.writed!=arr.size()) {
-				return false;
-			}
-		}
-
-		tos_ptr target = get_target_to_write(m);
-
-		if (target != nullptr) {
-			target->append(m, true);
-			_writed_count++;
-			_minTime = std::min(_minTime, m.time);
-			_maxTime = std::max(_maxTime, m.time);
-			return true;
-		}else{
-			return false;
-		}
+    tos_ptr alloc_new() {
+        return std::make_shared<TimeOrderedSet>(_max_size);
     }
 
-	tos_ptr get_target_to_write(const Meas&m) {
-		if ((maxTime() <= m.time) || (_last->inInterval(m))) {
-			if (_last->is_full()) {
-				if (_bucks.size()>_count) {
-					return false;
-				}
+    bool append(const memseries::Meas&m) {
+        if (is_full()) {
+            auto small=_bucks.front();
+            _bucks.erase(_bucks.begin());
+            auto arr=small->as_array();
+            auto stor_res=_stor->append(arr);
+            _writed_count -= arr.size();
+            if (stor_res.writed!=arr.size()) {
+                return false;
+            }
+        }
 
-				_last = alloc_new();
-				_bucks.push_back(_last);
-				_last->append(m);
-			}
-			return _last;
-		}
-		else {
-			auto it = _bucks.begin();
+        tos_ptr target = get_target_to_write(m);
 
-			for (; it != _bucks.end(); ++it) {
-				auto b = *it;
-				//insert in midle
-				if (b->inInterval(m)) {
-					return b;
-				}
-				else {
-					//if time between of bucks;
-					if (b->maxTime()<m.time) {
-						auto new_it = it;
-						new_it++;
-						//insert in next
-						if (new_it != _bucks.end()) {
-							return b;
-						}
-						else {//insert in cur
-							return b;
-						}
-					}
-					else {//insert in cur
-						return b;
-					}
-				}
-			}
+        if (target != nullptr) {
+            target->append(m, true);
+            _writed_count++;
+            _minTime = std::min(_minTime, m.time);
+            _maxTime = std::max(_maxTime, m.time);
+            return true;
+        }else{
+            return false;
+        }
+    }
 
-		}
-		return nullptr;
-	}
+    tos_ptr get_target_to_write(const Meas&m) {
+        if ((maxTime() <= m.time) || (_last->inInterval(m))) {
+            if (_last->is_full()) {
+                if (_bucks.size()>_count) {
+                    return false;
+                }
+
+                _last = alloc_new();
+                _bucks.push_back(_last);
+                _last->append(m);
+            }
+            return _last;
+        }
+        else {
+            auto it = _bucks.begin();
+
+            for (; it != _bucks.end(); ++it) {
+                auto b = *it;
+                //insert in midle
+                if (b->inInterval(m)) {
+                    return b;
+                }
+                else {
+                    //if time between of bucks;
+                    if (b->maxTime()<m.time) {
+                        auto new_it = it;
+                        new_it++;
+                        //insert in next
+                        if (new_it != _bucks.end()) {
+                            return b;
+                        }
+                        else {//insert in cur
+                            return b;
+                        }
+                    }
+                    else {//insert in cur
+                        return b;
+                    }
+                }
+            }
+
+        }
+        return nullptr;
+    }
 
     size_t size()const {
         return _bucks.size();
@@ -135,30 +135,30 @@ public:
     }
 
     bool is_full()const{
-		return _writed_count == (_max_size*_count);
+        return _writed_count == (_max_size*_count);
     }
 
-	size_t writed_count()const {
-		return _writed_count;
-	}
+    size_t writed_count()const {
+        return _writed_count;
+    }
 
-	bool flush(){
-		for (auto v : _bucks) {
-			auto arr = v->as_array();
-			auto stor_res = _stor->append(arr);
-			_writed_count -= arr.size();
-			if (stor_res.writed != arr.size()) {
-				return false;
-			}
-		}
-		clear();
-		return true;
-	}
-	
-	void clear(){
-		this->_bucks.clear();
-		_last = alloc_new();
-	}
+    bool flush(){
+        for (auto v : _bucks) {
+            auto arr = v->as_array();
+            auto stor_res = _stor->append(arr);
+            _writed_count -= arr.size();
+            if (stor_res.writed != arr.size()) {
+                return false;
+            }
+        }
+        clear();
+        return true;
+    }
+
+    void clear(){
+        this->_bucks.clear();
+        _last = alloc_new();
+    }
 protected:
     size_t _max_size;
     size_t _count;
@@ -168,8 +168,8 @@ protected:
 
     container _bucks;
     tos_ptr   _last;
-	AbstractStorage_ptr _stor;
-	size_t _writed_count;
+    AbstractStorage_ptr _stor;
+    size_t _writed_count;
 };
 
 Bucket::Bucket():_Impl(new Bucket::Private(0,0,nullptr))
@@ -229,13 +229,13 @@ bool Bucket::is_full()const {
 }
 
 size_t Bucket::writed_count()const {
-	return _Impl->writed_count();
+    return _Impl->writed_count();
 }
 
 bool Bucket::flush() {//write all to storage;
-	return _Impl->flush();
+    return _Impl->flush();
 }
 
 void Bucket::clear() {
-	return _Impl->clear();
+    return _Impl->clear();
 }
