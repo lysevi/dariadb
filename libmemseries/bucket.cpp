@@ -58,64 +58,64 @@ public:
 				return false;
 			}
 		}
-        bool is_writed=false;
 
-        if((maxTime()<=m.time)|| (_last->inInterval(m))){
-            if(!_last->append(m)){
-                if(_bucks.size()>_count){
-                    return false;
-                }
+		tos_ptr target = get_target_to_write(m);
 
-                _last=alloc_new();
-                _bucks.push_back(_last);
-                _last->append(m);
-                is_writed=true;
-            }else{
-                is_writed=true;
-            }
-        }else{
-            auto it=_bucks.begin();
-            tos_ptr target=nullptr;
-            for(;it!=_bucks.end();++it){
-                auto b=*it;
-                //insert in midle
-                if(b->inInterval(m)){
-                    target=b;
-                    break;
-                }else{
-                    //if time between of bucks;
-                    if(b->maxTime()<m.time){
-                        auto new_it=it;
-                        new_it++;
-                        //insert in next
-                        if(new_it!=_bucks.end()){
-                            target=*new_it;
-                        }else{//insert in cur
-                            target=b;
-                            break;
-                        }
-                    }else{//insert in cur
-                        target=b;
-                        break;
-                    }
-                }
-            }
-            if(target!=nullptr){
-                target->append(m,true);
-                is_writed=true;
-            }
-        }
-
-
-        if(!is_writed){
-            return false;
-        }
-		_writed_count++;
-        _minTime = std::min(_minTime, m.time);
-        _maxTime = std::max(_maxTime, m.time);
-        return true;
+		if (target != nullptr) {
+			target->append(m, true);
+			_writed_count++;
+			_minTime = std::min(_minTime, m.time);
+			_maxTime = std::max(_maxTime, m.time);
+			return true;
+		}else{
+			return false;
+		}
     }
 
+	tos_ptr get_target_to_write(const Meas&m) {
+		if ((maxTime() <= m.time) || (_last->inInterval(m))) {
+			if (_last->is_full()) {
+				if (_bucks.size()>_count) {
+					return false;
+				}
+
+				_last = alloc_new();
+				_bucks.push_back(_last);
+				_last->append(m);
+			}
+			return _last;
+		}
+		else {
+			auto it = _bucks.begin();
+
+			for (; it != _bucks.end(); ++it) {
+				auto b = *it;
+				//insert in midle
+				if (b->inInterval(m)) {
+					return b;
+				}
+				else {
+					//if time between of bucks;
+					if (b->maxTime()<m.time) {
+						auto new_it = it;
+						new_it++;
+						//insert in next
+						if (new_it != _bucks.end()) {
+							return b;
+						}
+						else {//insert in cur
+							return b;
+						}
+					}
+					else {//insert in cur
+						return b;
+					}
+				}
+			}
+
+		}
+		return nullptr;
+	}
 
     size_t size()const {
         return _bucks.size();
