@@ -38,7 +38,7 @@ append_result AbstractStorage::append(const Meas::MeasArray & ma)
 {
     memseries::append_result ar{};
     for(auto&m:ma){
-        this->append(m);
+        ar=ar+this->append(m);
     }
     return ar;
 }

@@ -7,6 +7,30 @@
 #include <bucket.h>
 #include <ctime>
 
+class Moc_Storage :public memseries::storage::AbstractStorage {
+public:
+	memseries::append_result append(const memseries::Meas::PMeas begin, const size_t size) {
+		return memseries::append_result(size,0);
+	}
+	memseries::append_result append(const memseries::Meas &value) {
+		return memseries::append_result(1,0);
+	}
+	memseries::storage::Reader_ptr readInterval(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time from, memseries::Time to) {
+		return nullptr;
+	}
+
+	memseries::storage::Reader_ptr readInTimePoint(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time time_point) {
+		return nullptr;
+	}
+	memseries::Time minTime() {
+		return 0;
+	}
+	/// max time of writed meas
+	memseries::Time maxTime() {
+		return 0;
+	}
+};
+
 int main(int argc, char *argv[]) {
     const size_t K = 1;
 
@@ -40,7 +64,8 @@ int main(int argc, char *argv[]) {
     {
         const size_t max_size=10000;
         const size_t max_count=K*10;
-        auto tos =memseries::storage::Bucket{ max_size,max_count };
+		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+        auto tos =memseries::storage::Bucket{ max_size,max_count,stor };
         auto m = memseries::Meas::empty();
 
         auto start = clock();
