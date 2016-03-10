@@ -60,7 +60,7 @@ public:
 		}
         bool is_writed=false;
 
-        if((maxTime()<=m.time)||(utils::inInterval(_last->minTime(),_last->maxTime(),m.time))){
+        if((maxTime()<=m.time)|| (_last->inInterval(m))){
             if(!_last->append(m)){
                 if(_bucks.size()>_count){
                     return false;
@@ -79,7 +79,7 @@ public:
             for(;it!=_bucks.end();++it){
                 auto b=*it;
                 //insert in midle
-                if(utils::inInterval(b->minTime(),b->maxTime(),m.time)){
+                if(b->inInterval(m)){
                     target=b;
                     break;
                 }else{

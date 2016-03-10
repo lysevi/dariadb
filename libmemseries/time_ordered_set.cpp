@@ -1,4 +1,6 @@
 #include "time_ordered_set.h"
+#include "utils.h"
+
 #include <algorithm>
 #include <set>
 #include <limits>
@@ -74,6 +76,9 @@ public:
 	memseries::Time maxTime()const {
 		return _maxTime;
 	}
+	bool inInterval(const memseries::Meas&m)const {
+		return utils::inInterval(_minTime, _maxTime, m.time);
+	}
 protected:
 	size_t _max_size;
 	size_t _count;
@@ -141,4 +146,8 @@ memseries::Time TimeOrderedSet::minTime()const {
 
 memseries::Time TimeOrderedSet::maxTime()const {
 	return _Impl->maxTime();
+}
+
+bool TimeOrderedSet::inInterval(const memseries::Meas&m)const {
+	return _Impl->inInterval(m);
 }

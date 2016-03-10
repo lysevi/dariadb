@@ -24,6 +24,7 @@ namespace memseries {
 			size_t size()const;
 			memseries::Time minTime()const;
 			memseries::Time maxTime()const;
+			bool inInterval(const memseries::Meas&m)const;
 		protected:
 			class Private;
 			std::unique_ptr<Private> _Impl;
