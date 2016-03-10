@@ -76,7 +76,6 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 
 BOOST_AUTO_TEST_CASE(BucketTest)
 {
-    const size_t ids_count=3;
 	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 	stor->writed_count = 0;
     const size_t max_size = 10;
@@ -91,7 +90,6 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     memseries::Time t=100;
 
 	for (size_t i = 0; i < max_size; i++) {
-        e.id=i%ids_count;
 		e.time = t;
 		t += 1;
 		BOOST_CHECK(mbucket.append(e));
@@ -132,7 +130,7 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     e.time = 14;
     BOOST_CHECK(mbucket.append(e));
 
-    BOOST_CHECK_EQUAL(mbucket.size(), ids_count);
+    BOOST_CHECK_EQUAL(mbucket.size(), size_t(2));
 	// fill storage to initiate flush to storage
 	auto wr = mbucket.writed_count();
 	auto end = max_size*max_count - wr;
@@ -148,18 +146,17 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	e.time++;
 	BOOST_CHECK(mbucket.append(e));
 	BOOST_CHECK(!mbucket.is_full());
-    BOOST_CHECK_EQUAL(stor->writed_count+mbucket.writed_count(),wcount+1);//  one appended when drop to storage.
+	BOOST_CHECK_EQUAL(stor->writed_count+mbucket.writed_count(),wcount+1);//  one appended when drop to storage.
 
-    BOOST_CHECK(stor->meases.size()!=size_t(0));
-    if(stor->meases.size()!=size_t(0)){
-        //time should be increased
-        for (size_t i = 0; i < stor->meases.size() - 1; i++) {
-            BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
-        }
-    }
-
+	//time should be increased
+	for (size_t i = 0; i < stor->meases.size() - 1; i++) {
+		BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
+	}
 	stor->meases.clear();
 	stor->writed_count = 0;
 	mbucket.flush();
-    BOOST_CHECK_EQUAL(stor->meases.size(),size_t(0));
+	
+	for (size_t i = 0; i < stor->meases.size() - 1; i++) {
+		BOOST_CHECK(stor->meases[i].time<=stor->meases[i + 1].time);
+	}
 }

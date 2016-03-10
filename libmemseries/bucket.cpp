@@ -14,7 +14,8 @@ class Bucket::Private
 {
 public:
     typedef std::shared_ptr<TimeOrderedSet>   tos_ptr;
-    typedef std::map<memseries::Id,tos_ptr> dict;
+    typedef std::vector<tos_ptr>              container;
+    typedef std::map<memseries::Id,container> dict;
 
     Private(const size_t max_size,const size_t count, const AbstractStorage_ptr stor):
         _max_size(max_size),
@@ -22,9 +23,12 @@ public:
         _minTime(std::numeric_limits<memseries::Time>::max()),
         _maxTime(std::numeric_limits<memseries::Time>::min()),
         _bucks(),
+        _last(nullptr),
         _stor(stor),
         _writed_count(0)
     {
+        _bucks.push_back(alloc_new());
+        _last=_bucks.front();
     }
 
     Private(const Private &other) :
@@ -33,6 +37,7 @@ public:
         _minTime(other._minTime),
         _maxTime(other._maxTime),
         _bucks(other._bucks),
+        _last(other._last),
         _stor(other._stor),
         _writed_count(other._writed_count)
     {}
@@ -46,16 +51,13 @@ public:
 
     bool append(const memseries::Meas&m) {
         if (is_full()) {
-            for(auto kv:_bucks){
-//                if()
-//                auto small=_bucks.front();
-//                _bucks.erase(_bucks.begin());
-//                auto arr=small->as_array();
-//                auto stor_res=_stor->append(arr);
-//                _writed_count -= arr.size();
-//                if (stor_res.writed!=arr.size()) {
-//                    return false;
-//                }
+            auto small=_bucks.front();
+            _bucks.erase(_bucks.begin());
+            auto arr=small->as_array();
+            auto stor_res=_stor->append(arr);
+            _writed_count -= arr.size();
+            if (stor_res.writed!=arr.size()) {
+                return false;
             }
         }
 
@@ -73,13 +75,48 @@ public:
     }
 
     tos_ptr get_target_to_write(const Meas&m) {
-        auto target=_bucks.find(m.id);
-        if(target==_bucks.end()){
-            auto new_target=alloc_new();
-            _bucks[m.id]=new_target;
-            return new_target;
+        if ((maxTime() <= m.time) || (_last->inInterval(m))) {
+            if (_last->is_full()) {
+                if (_bucks.size()>_count) {
+                    return false;
+                }
+
+                _last = alloc_new();
+                _bucks.push_back(_last);
+                _last->append(m);
+            }
+            return _last;
         }
-        return target->second;
+        else {
+            auto it = _bucks.begin();
+
+            for (; it != _bucks.end(); ++it) {
+                auto b = *it;
+                //insert in midle
+                if (b->inInterval(m)) {
+                    return b;
+                }
+                else {
+                    //if time between of bucks;
+                    if (b->maxTime()<m.time) {
+                        auto new_it = it;
+                        new_it++;
+                        //insert in next
+                        if (new_it != _bucks.end()) {
+                            return b;
+                        }
+                        else {//insert in cur
+                            return b;
+                        }
+                    }
+                    else {//insert in cur
+                        return b;
+                    }
+                }
+            }
+
+        }
+        return nullptr;
     }
 
     size_t size()const {
@@ -107,7 +144,7 @@ public:
 
     bool flush(){
         for (auto v : _bucks) {
-            auto arr = v.second->as_array();
+            auto arr = v->as_array();
             auto stor_res = _stor->append(arr);
             _writed_count -= arr.size();
             if (stor_res.writed != arr.size()) {
@@ -120,6 +157,7 @@ public:
 
     void clear(){
         this->_bucks.clear();
+        _last = alloc_new();
     }
 protected:
     size_t _max_size;
@@ -128,7 +166,8 @@ protected:
     memseries::Time _minTime;
     memseries::Time _maxTime;
 
-    dict _bucks;
+    container _bucks;
+    tos_ptr   _last;
     AbstractStorage_ptr _stor;
     size_t _writed_count;
 };
