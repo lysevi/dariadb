@@ -2,7 +2,7 @@
 #include "time_ordered_set.h"
 #include "utils.h"
 #include <algorithm>
-#include <list>
+#include <vector>
 #include <limits>
 #include <utility>
 
@@ -13,7 +13,7 @@ class Bucket::Private
 {
 public:
     typedef std::shared_ptr<TimeOrderedSet> tos_ptr;
-    typedef std::list<tos_ptr>            container;
+    typedef std::vector<tos_ptr>            container;
 
     Private(const size_t max_size,const size_t count, const AbstractStorage_ptr stor):
         _max_size(max_size),
@@ -50,7 +50,7 @@ public:
     bool append(const memseries::Meas&m) {
 		if (is_full()) {
 			auto small=_bucks.front();
-			_bucks.pop_front();
+			_bucks.erase(_bucks.begin());
 			auto arr=small->as_array();
 			auto stor_res=_stor->append(arr);
 			_writed_count -= arr.size();
@@ -60,9 +60,7 @@ public:
 		}
         bool is_writed=false;
 
-
-        if((maxTime()<=m.time)
-                ||(utils::inInterval(_last->minTime(),_last->maxTime(),m.time))){
+        if((maxTime()<=m.time)||(utils::inInterval(_last->minTime(),_last->maxTime(),m.time))){
             if(!_last->append(m)){
                 if(_bucks.size()>_count){
                     return false;
@@ -141,6 +139,24 @@ public:
 	size_t writed_count()const {
 		return _writed_count;
 	}
+
+	bool flush(){
+		for (auto v : _bucks) {
+			auto arr = v->as_array();
+			auto stor_res = _stor->append(arr);
+			_writed_count -= arr.size();
+			if (stor_res.writed != arr.size()) {
+				return false;
+			}
+		}
+		clear();
+		return true;
+	}
+	
+	void clear(){
+		this->_bucks.clear();
+		_last = alloc_new();
+	}
 protected:
     size_t _max_size;
     size_t _count;
@@ -212,4 +228,12 @@ bool Bucket::is_full()const {
 
 size_t Bucket::writed_count()const {
 	return _Impl->writed_count();
+}
+
+bool Bucket::flush() {//write all to storage;
+	return _Impl->flush();
+}
+
+void Bucket::clear() {
+	return _Impl->clear();
 }

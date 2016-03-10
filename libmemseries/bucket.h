@@ -25,6 +25,8 @@ namespace memseries {
             memseries::Time minTime()const;
             memseries::Time maxTime()const;
 			size_t writed_count()const;
+			bool flush();//write all to storage;
+			void clear();
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

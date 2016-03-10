@@ -87,16 +87,23 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     BOOST_CHECK_EQUAL(mbucket.max_size(),max_count);
     auto e = memseries::Meas::empty();
     //max time always
-    memseries::Time t=10;
+    memseries::Time t=100;
 
 	for (size_t i = 0; i < max_size; i++) {
 		e.time = t;
-		t += 10;
+		t += 1;
+		BOOST_CHECK(mbucket.append(e));
+	}
+
+	t = 10;
+	for (size_t i = 0; i < max_size; i++) {
+		e.time = t;
+		t += 1;
 		BOOST_CHECK(mbucket.append(e));
 	}
 
 	//buckets count;
-    BOOST_CHECK_EQUAL(mbucket.size(), 1);
+    BOOST_CHECK_EQUAL(mbucket.size(), 2);
     //now bucket is full
     //BOOST_CHECK(!mbucket.append(e));
 
@@ -135,5 +142,12 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	//time should be increased
 	for (size_t i = 0; i < stor->meases.size() - 1; i++) {
 		BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
+	}
+	stor->meases.clear();
+	stor->writed_count = 0;
+	mbucket.flush();
+	
+	for (size_t i = 0; i < stor->meases.size() - 1; i++) {
+		BOOST_CHECK(stor->meases[i].time<=stor->meases[i + 1].time);
 	}
 }
