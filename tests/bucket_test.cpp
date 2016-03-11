@@ -80,7 +80,8 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	stor->writed_count = 0;
     const size_t max_size = 10;
     const size_t max_count = 10;
-    auto base = memseries::storage::Bucket{ max_size, max_count,stor};
+	const memseries::Time write_window_deep = 100;
+    auto base = memseries::storage::Bucket{ max_size, max_count,stor,write_window_deep};
 
     //with move ctor check
     memseries::storage::Bucket mbucket(std::move(base));

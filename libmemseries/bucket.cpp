@@ -17,29 +17,31 @@ public:
     typedef std::vector<tos_ptr>              container;
     typedef std::map<memseries::Id,container> dict;
 
-    Private(const size_t max_size,const size_t count, const AbstractStorage_ptr stor):
-        _max_size(max_size),
-        _count(count),
-        _minTime(std::numeric_limits<memseries::Time>::max()),
-        _maxTime(std::numeric_limits<memseries::Time>::min()),
-        _bucks(),
-        _last(nullptr),
-        _stor(stor),
-        _writed_count(0)
+	Private(const size_t max_size, const size_t count, const AbstractStorage_ptr stor, const memseries::Time write_window_deep) :
+		_max_size(max_size),
+		_count(count),
+		_minTime(std::numeric_limits<memseries::Time>::max()),
+		_maxTime(std::numeric_limits<memseries::Time>::min()),
+		_bucks(),
+		_last(nullptr),
+		_stor(stor),
+		_writed_count(0),
+		_write_window_deep(write_window_deep)
     {
         _bucks.push_back(alloc_new());
         _last=_bucks.front();
     }
 
-    Private(const Private &other) :
-        _max_size(other._max_size),
-        _count(other._count),
-        _minTime(other._minTime),
-        _maxTime(other._maxTime),
-        _bucks(other._bucks),
-        _last(other._last),
-        _stor(other._stor),
-        _writed_count(other._writed_count)
+	Private(const Private &other) :
+		_max_size(other._max_size),
+		_count(other._count),
+		_minTime(other._minTime),
+		_maxTime(other._maxTime),
+		_bucks(other._bucks),
+		_last(other._last),
+		_stor(other._stor),
+		_writed_count(other._writed_count),
+		_write_window_deep(other._write_window_deep)
     {}
 
     ~Private() {
@@ -170,15 +172,17 @@ protected:
     tos_ptr   _last;
     AbstractStorage_ptr _stor;
     size_t _writed_count;
+	memseries::Time _write_window_deep;
 };
 
-Bucket::Bucket():_Impl(new Bucket::Private(0,0,nullptr))
+Bucket::Bucket():_Impl(new Bucket::Private(0,0,nullptr,0))
 {}
 
 Bucket::~Bucket()
 {}
 
-Bucket::Bucket(const size_t max_size,const size_t count, const AbstractStorage_ptr stor) :_Impl(new Bucket::Private(max_size,count,stor))
+Bucket::Bucket(const size_t max_size,const size_t count, const AbstractStorage_ptr stor, const memseries::Time write_window_deep) :
+	_Impl(new Bucket::Private(max_size,count,stor,write_window_deep))
 {}
 
 Bucket::Bucket(const Bucket & other): _Impl(new Bucket::Private(*other._Impl))

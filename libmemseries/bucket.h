@@ -11,7 +11,7 @@ namespace memseries {
         public:
             Bucket();
             ~Bucket();
-            Bucket(const size_t max_size,const size_t count, const AbstractStorage_ptr stor);
+            Bucket(const size_t max_size,const size_t count, const AbstractStorage_ptr stor, const memseries::Time write_window_deep);
             Bucket(const Bucket&other);
             Bucket(Bucket&&other);
             void swap(Bucket&other) throw();
