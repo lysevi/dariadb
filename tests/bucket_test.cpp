@@ -1,8 +1,8 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
+#include <cassert>
 
-#include <logger.h>
 #include <time_ordered_set.h>
 #include <timeutil.h>
 #include <bucket.h>
@@ -82,23 +82,24 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 	stor->writed_count = 0;
     const size_t max_size = 10;
-    const memseries::Time write_window_deep = 1000;
+    const memseries::Time write_window_deep = 10000;
     auto base = memseries::storage::Bucket{ max_size, stor,write_window_deep};
 
     //with move ctor check
     memseries::storage::Bucket mbucket(std::move(base));
     auto e = memseries::Meas::empty();
+
     //max time always
     memseries::Time t= memseries::timeutil::current_time();
-
+    auto t_2=t+10;
 	for (size_t i = 0; i < max_size; i++) {
-		e.time = t;
-		t += 1;
+        e.time = t_2;
+        t_2 += 1;
 		BOOST_CHECK(mbucket.append(e));
 	}
 
-     t= memseries::timeutil::current_time()-memseries::Time(write_window_deep/4);
-    for (size_t i = 0; i < max_size; i++) {
+    //past
+    for (size_t i = 0; i < 5; i++) {
         e.time = t;
         t += 1;
         BOOST_CHECK(mbucket.append(e));
@@ -115,9 +116,17 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	e.time= memseries::timeutil::current_time()- write_window_deep*2;
 	BOOST_CHECK(!mbucket.append(e));
 
-	//BOOST_CHECK_EQUAL(stor->writed_count+mbucket.writed_count(),wcount+1);//  one appended when drop to storage.
+    //future
+    t=memseries::timeutil::current_time();
+    t+=20;
+    for (size_t i = 0; i < max_size; i++) {
+        e.time =t;
+        t++;
+        BOOST_CHECK(mbucket.append(e));
+    }
+    //BOOST_CHECK(mbucket.size()>100);
 
-	////time should be increased
+    //time should be increased
     //for (size_t i = 0; i < stor->meases.size() - 1; i++) {
     //	BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
     //}
@@ -128,5 +137,8 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 
     for (size_t i = 0; i < stor->meases.size() - 1; i++) {
         BOOST_CHECK(stor->meases[i].time<=stor->meases[i + 1].time);
+        if(stor->meases[i].time>stor->meases[i + 1].time){
+            assert(false);
+        }
     }
 }

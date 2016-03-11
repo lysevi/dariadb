@@ -56,10 +56,10 @@ public:
 	bool is_valid(const memseries::Meas &m)const {
         auto now=memseries::timeutil::current_time();
         auto past=(now-_write_window_deep);
-        if(m.time>= past){
-            return true;
+        if(m.time< past){
+            return false;
         }
-        return false;
+        return true;
 	}
 
     bool append(const memseries::Meas&m) {
@@ -93,8 +93,12 @@ public:
 
             for (; it != _bucks.rend(); ++it) {
                 auto b = *it;
-                //insert in midle
-                if (b->inInterval(m)) {
+                if ((b->inInterval(m))|| (b->maxTime()<m.time)) {
+                    if(b->is_full()){
+                        auto new_b = alloc_new();
+                        _bucks.insert(it.base(),new_b);
+                        return new_b;
+                    }
                     return b;
                 }
             }
