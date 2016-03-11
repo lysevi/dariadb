@@ -11,7 +11,7 @@ namespace memseries {
         public:
             Bucket();
             ~Bucket();
-            Bucket(const size_t max_size,const size_t count, const AbstractStorage_ptr stor, const memseries::Time write_window_deep);
+            Bucket(const size_t max_size, const AbstractStorage_ptr stor, const memseries::Time write_window_deep);
             Bucket(const Bucket&other);
             Bucket(Bucket&&other);
             void swap(Bucket&other) throw();
@@ -20,8 +20,6 @@ namespace memseries {
 
             bool append(const Meas&m);
             size_t size()const;
-            size_t max_size()const;
-            bool is_full()const;
             memseries::Time minTime()const;
             memseries::Time maxTime()const;
 			size_t writed_count()const;

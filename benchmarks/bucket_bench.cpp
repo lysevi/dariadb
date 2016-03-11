@@ -4,6 +4,7 @@
 #include <iterator>
 
 #include <time_ordered_set.h>
+#include <timeutil.h>
 #include <bucket.h>
 #include <ctime>
 
@@ -63,13 +64,12 @@ int main(int argc, char *argv[]) {
 
     {
         const size_t max_size=10000;
-        const size_t max_count=K*10;
         const size_t id_count=10;
 		//TODO select value
 		const memseries::Time write_window_deep = 1000;
 
 		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-        auto tos =memseries::storage::Bucket{ max_size,max_count,stor, write_window_deep };
+        auto tos =memseries::storage::Bucket{ max_size,stor, write_window_deep };
         auto m = memseries::Meas::empty();
 
         auto start = clock();
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
         for (size_t i = 0; i < K*1000000; i++) {
             m.id = i%id_count;
             m.flag = 0xff;
-            m.time = i;
+            m.time = memseries::timeutil::current_time()-(write_window_deep/2);
             m.value = i;
             tos.append(m);
         }
