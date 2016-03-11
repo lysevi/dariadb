@@ -43,6 +43,7 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 	memseries::storage::TimeOrderedSet tos(std::move(base));
 	auto e = memseries::Meas::empty();
 	for (size_t i = 0; i < max_size; i++) {
+		e.id = i % 3;
 		e.time = max_size - i;
 		BOOST_CHECK(!tos.is_full());
 		BOOST_CHECK(tos.append(e));

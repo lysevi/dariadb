@@ -17,7 +17,10 @@ public:
     typedef std::vector<tos_ptr>              container;
     typedef std::map<memseries::Id,container> dict;
 
-	Private(const size_t max_size, const size_t count, const AbstractStorage_ptr stor, const memseries::Time write_window_deep) :
+	Private(const size_t max_size, 
+		const size_t count, 
+		const AbstractStorage_ptr stor, 
+		const memseries::Time write_window_deep):
 		_max_size(max_size),
 		_count(count),
 		_minTime(std::numeric_limits<memseries::Time>::max()),
