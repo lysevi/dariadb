@@ -77,7 +77,8 @@ public:
 		return _maxTime;
 	}
 	bool inInterval(const memseries::Meas&m)const {
-		return utils::inInterval(_minTime, _maxTime, m.time);
+        return (utils::inInterval(_minTime, _maxTime, m.time))
+                || (_maxTime<m.time);
 	}
 protected:
 	size_t _max_size;

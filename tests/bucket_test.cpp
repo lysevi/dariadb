@@ -2,6 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 
+#include <logger.h>
 #include <time_ordered_set.h>
 #include <timeutil.h>
 #include <bucket.h>
@@ -81,8 +82,7 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 	stor->writed_count = 0;
     const size_t max_size = 10;
-    const size_t max_count = 10;
-	const memseries::Time write_window_deep = 100;
+    const memseries::Time write_window_deep = 1000;
     auto base = memseries::storage::Bucket{ max_size, stor,write_window_deep};
 
     //with move ctor check
@@ -97,6 +97,13 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 		BOOST_CHECK(mbucket.append(e));
 	}
 
+     t= memseries::timeutil::current_time()-memseries::Time(write_window_deep/4);
+    for (size_t i = 0; i < max_size; i++) {
+        e.time = t;
+        t += 1;
+        BOOST_CHECK(mbucket.append(e));
+    }
+
 
 	//buckets count;
     BOOST_CHECK(mbucket.size()>0);
@@ -104,7 +111,6 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	//TODO remove this
     //BOOST_CHECK(!mbucket.append(e));
 
-	auto wcount = mbucket.writed_count();
 	//drop part of data to storage;
 	e.time= memseries::timeutil::current_time()- write_window_deep*2;
 	BOOST_CHECK(!mbucket.append(e));
@@ -112,14 +118,15 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	//BOOST_CHECK_EQUAL(stor->writed_count+mbucket.writed_count(),wcount+1);//  one appended when drop to storage.
 
 	////time should be increased
-	//for (size_t i = 0; i < stor->meases.size() - 1; i++) {
-	//	BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
-	//}
-	//stor->meases.clear();
-	//stor->writed_count = 0;
-	//mbucket.flush();
-	//
-	//for (size_t i = 0; i < stor->meases.size() - 1; i++) {
-	//	BOOST_CHECK(stor->meases[i].time<=stor->meases[i + 1].time);
-	//}
+    //for (size_t i = 0; i < stor->meases.size() - 1; i++) {
+    //	BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
+    //}
+
+    stor->meases.clear();
+    stor->writed_count = 0;
+    mbucket.flush();
+
+    for (size_t i = 0; i < stor->meases.size() - 1; i++) {
+        BOOST_CHECK(stor->meases[i].time<=stor->meases[i + 1].time);
+    }
 }

@@ -2,8 +2,9 @@
 #include "time_ordered_set.h"
 #include "utils.h"
 #include "timeutil.h"
+#include <cassert>
 #include <algorithm>
-#include <vector>
+#include <list>
 #include <map>
 #include <limits>
 #include <utility>
@@ -15,7 +16,7 @@ class Bucket::Private
 {
 public:
     typedef std::shared_ptr<TimeOrderedSet>   tos_ptr;
-    typedef std::vector<tos_ptr>              container;
+    typedef std::list<tos_ptr>                container;
 	//TODO remove dict if unneeded
     typedef std::map<memseries::Id,container> dict;
 
@@ -53,7 +54,12 @@ public:
     }
 
 	bool is_valid(const memseries::Meas &m)const {
-		return m.time>= (memseries::timeutil::current_time()-_write_window_deep);
+        auto now=memseries::timeutil::current_time();
+        auto past=(now-_write_window_deep);
+        if(m.time>= past){
+            return true;
+        }
+        return false;
 	}
 
     bool append(const memseries::Meas&m) {
@@ -69,48 +75,34 @@ public:
             _minTime = std::min(_minTime, m.time);
             _maxTime = std::max(_maxTime, m.time);
             return true;
-        }else{
-            return false;
         }
+        assert(false);
+        return false;
     }
 
     tos_ptr get_target_to_write(const Meas&m) {
         if ((maxTime() <= m.time) || (_last->inInterval(m))) {
             if (_last->is_full()) {
-               
                 _last = alloc_new();
                 _bucks.push_back(_last);
-                _last->append(m);
             }
             return _last;
         }
         else {
-            auto it = _bucks.begin();
+            auto it = _bucks.rbegin();
 
-            for (; it != _bucks.end(); ++it) {
+            for (; it != _bucks.rend(); ++it) {
                 auto b = *it;
                 //insert in midle
                 if (b->inInterval(m)) {
                     return b;
                 }
-                else {
-                    //if time between of bucks;
-                    if (b->maxTime()<m.time) {
-                        auto new_it = it;
-                        new_it++;
-                        //insert in next
-                        if (new_it != _bucks.end()) {
-                            return b;
-                        }
-                        else {//insert in cur
-                            return b;
-                        }
-                    }
-                    else {//insert in cur
-                        return b;
-                    }
-                }
             }
+
+            auto new_b = alloc_new();
+            _bucks.push_front(new_b);
+            return new_b;
+
 
         }
         return nullptr;
