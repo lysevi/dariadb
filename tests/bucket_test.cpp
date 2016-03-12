@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 	stor->writed_count = 0;
     const size_t max_size = 10;
-    const memseries::Time write_window_deep = 5000;
+    const memseries::Time write_window_deep = 1000;
     auto base = memseries::storage::Bucket{ max_size, stor,write_window_deep};
 
     //with move ctor check
@@ -150,11 +150,23 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     }
 
 
+    //check write data with time less than write_window_deep;
     stor->meases.clear();
     stor->writed_count = 0;
-    for (size_t i = 0; i < 4000; i++) {
+    t=memseries::timeutil::current_time()-write_window_deep;
+    for (size_t i = 0; i < 100; i++) {
+        e.time =t;
+        t++;
+        BOOST_CHECK(mbucket.append(e));
+    }
+
+    for (size_t i = 0; i < 10000; i++) {
         e.time =memseries::timeutil::current_time();
         BOOST_CHECK(mbucket.append(e));
     }
-    BOOST_CHECK(stor->meases.size()>0);
+    auto first_size=stor->meases.size();
+    BOOST_CHECK(first_size>size_t(0));
+    stor->meases.clear();
+    mbucket.flush();
+    BOOST_CHECK(stor->meases.size()>=first_size);
 }
