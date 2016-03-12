@@ -105,6 +105,12 @@ BOOST_AUTO_TEST_CASE(BucketTest)
         BOOST_CHECK(mbucket.append(e));
     }
 
+    //cur time
+    t= memseries::timeutil::current_time();
+    for (size_t i = 0; i < max_size; i++) {
+        e.time = t++;
+        BOOST_CHECK(mbucket.append(e));
+    }
 
 	//buckets count;
     BOOST_CHECK(mbucket.size()>0);
