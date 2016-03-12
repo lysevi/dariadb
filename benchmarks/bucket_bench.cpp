@@ -85,5 +85,6 @@ int main(int argc, char *argv[]) {
 
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
         std::cout<<"Bucket insert : "<<elapsed<<std::endl;
+        std::cout<<"size : "<<tos.size()<<std::endl;
     }
 }

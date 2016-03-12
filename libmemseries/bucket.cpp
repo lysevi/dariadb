@@ -53,13 +53,17 @@ public:
         return std::make_shared<TimeOrderedSet>(_max_size);
     }
 
-	bool is_valid(const memseries::Meas &m)const {
+    bool is_valid_time(const memseries::Time &t)const {
         auto now=memseries::timeutil::current_time();
         auto past=(now-_write_window_deep);
-        if(m.time< past){
+        if(t< past){
             return false;
         }
         return true;
+    }
+
+	bool is_valid(const memseries::Meas &m)const {
+        return is_valid_time(m.time);
 	}
 
     bool append(const memseries::Meas&m) {
@@ -74,10 +78,18 @@ public:
             _writed_count++;
             _minTime = std::min(_minTime, m.time);
             _maxTime = std::max(_maxTime, m.time);
-            return true;
         }
-        assert(false);
-        return false;
+
+        while(_bucks.size()>0){
+            auto f=_bucks.front();
+            if(is_valid_time(f->maxTime())){
+                break;
+            }else{
+                flush_bucket(f);
+                _bucks.pop_front();
+            }
+        }
+        return true;
     }
 
     tos_ptr get_target_to_write(const Meas&m) {
@@ -129,14 +141,21 @@ public:
 
     bool flush(){
         for (auto v : _bucks) {
-            auto arr = v->as_array();
-            auto stor_res = _stor->append(arr);
-            _writed_count -= arr.size();
-            if (stor_res.writed != arr.size()) {
+            if(!flush_bucket(v)){
                 return false;
             }
         }
         clear();
+        return true;
+    }
+
+    bool flush_bucket(tos_ptr b){
+        auto arr = b->as_array();
+        auto stor_res = _stor->append(arr);
+        _writed_count -= arr.size();
+        if (stor_res.writed != arr.size()) {
+            return false;
+        }
         return true;
     }
 
