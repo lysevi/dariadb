@@ -4,6 +4,7 @@
 
 #include <meas.h>
 #include <memstorage.h>
+#include <time_ordered_set.h>
 #include <string>
 #include <thread>
 #include <iostream>

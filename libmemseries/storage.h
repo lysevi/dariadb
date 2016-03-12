@@ -46,5 +46,6 @@ namespace memseries {
                                                Flag flag,
                                                Time time_point) = 0;
         };
+		typedef std::shared_ptr<AbstractStorage> AbstractStorage_ptr;
     }
 }
