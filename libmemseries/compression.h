@@ -24,6 +24,7 @@ namespace memseries {
             bool append(const Meas &m);
             bool is_full() const;
 
+            size_t writed()const;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

@@ -60,6 +60,10 @@ public:
 
     bool is_full() const { return _is_full; }
 
+    size_t writed()const{
+        //TODO find better method;
+        return time_comp.writed()+value_comp.writed()+flag_comp.writed();
+    }
 protected:
     Meas _first;
     bool _is_first;
@@ -155,6 +159,10 @@ bool CopmressedWriter::append(const Meas&m){
 
 bool CopmressedWriter::is_full()const{
     return _Impl->is_full();
+}
+
+size_t CopmressedWriter::writed()const{
+    return _Impl->writed();
 }
 
 CopmressedReader::CopmressedReader(){

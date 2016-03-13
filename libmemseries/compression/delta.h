@@ -21,6 +21,7 @@ namespace memseries {
 
             bool is_full() const { return _bw.is_full(); }
 
+            size_t writed()const{return _bw.cap()-_bw.pos();}
         protected:
             bool _is_first;
             BinaryBuffer _bw;

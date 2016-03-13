@@ -20,13 +20,14 @@ int main(int argc, char *argv[]) {
     //delta compression
     std::fill(buffer,buffer+test_buffer_size,0);
     {
+        const size_t count=1000000;
         memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::DeltaCompressor dc(bw);
 
         std::vector<memseries::Time> deltas{50,255,1024,2050};
         memseries::Time t=0;
         auto start=clock();
-        for(size_t i=0;i<1000000;i++){
+        for(size_t i=0;i<count;i++){
             dc.append(t);
             t+=deltas[i%deltas.size()];
             if (t > std::numeric_limits<memseries::Time>::max()){
@@ -35,6 +36,12 @@ int main(int argc, char *argv[]) {
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
         std::cout<<"delta compressor : "<<elapsed<<std::endl;
+
+        auto w=dc.writed();
+        auto sz=sizeof(memseries::Time)*count;
+        std::cout<<"compresion persent: "
+               <<(w*100.0)/(sz)
+               <<std::endl;
     }
     {
         memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
@@ -50,17 +57,23 @@ int main(int argc, char *argv[]) {
     //xor compression
     std::fill(buffer,buffer+test_buffer_size,0);
     {
+        const size_t count=1000000;
         memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::XorCompressor dc(bw);
 
         memseries::Value t=1;
         auto start=clock();
-        for(size_t i=0;i<1000000;i++){
+        for(size_t i=0;i<count;i++){
             dc.append(t);
             t*=2;
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
         std::cout<<"xor compressor : "<<elapsed<<std::endl;
+        auto w=dc.writed();
+        auto sz=sizeof(memseries::Time)*count;
+        std::cout<<"compresion persent: "
+               <<(w*100.0)/(sz)
+               <<std::endl;
     }
     {
         memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
@@ -76,6 +89,7 @@ int main(int argc, char *argv[]) {
 
 
     {
+        const size_t count=1000000;
         uint8_t* time_begin=new uint8_t[test_buffer_size];
         auto time_r = memseries::utils::Range{time_begin, time_begin + test_buffer_size};
 
@@ -93,7 +107,7 @@ int main(int argc, char *argv[]) {
                                                      memseries::compression::BinaryBuffer(value_r),
                                                      memseries::compression::BinaryBuffer(flag_r)};
         auto start = clock();
-        for (int i = 0; i < 1000000; i++) {
+        for (size_t i = 0; i < count; i++) {
             auto m = memseries::Meas::empty();
             m.time = static_cast<memseries::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
             m.flag = i;
@@ -103,6 +117,11 @@ int main(int argc, char *argv[]) {
 
         auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "compress writer : " << elapsed << std::endl;
+        auto w=cwr.writed();
+        auto sz=sizeof(memseries::Meas)*count;
+        std::cout<<"compresion persent: "
+               <<(w*100.0)/(sz)
+               <<std::endl;
 
         auto m = memseries::Meas::empty();
 

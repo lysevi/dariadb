@@ -14,7 +14,7 @@ namespace memseries {
 
             bool append(Flag v);
             bool is_full() const { return _bw.is_full(); }
-
+            size_t writed()const{return _bw.cap()-_bw.pos();}
         protected:
             BinaryBuffer _bw;
             bool _is_first;
