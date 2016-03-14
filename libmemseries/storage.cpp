@@ -30,11 +30,12 @@ public:
 		if (_isFirst) {
 			_isFirst = false;
 			_out_clbk->call(m);
+			_last_data = m;
 			_last = m;
 			_new_time_point = (_last.time + _step);
 			return;
 		}
-		/*if (m.time < _new_time_point) {
+		if (m.time < _new_time_point) {
 			_last = m;
 			return;
 		}
@@ -43,15 +44,17 @@ public:
 			memseries::Meas cp{ m };
 			cp.time = _new_time_point;
 			_new_time_point = (_last.time + _step);
+			_last_data = cp;
 			_out_clbk->call(cp);
 			return;
 		}
 		if (m.time > _new_time_point) {
 			auto delta_time = m.time - _new_time_point;
 			memseries::Meas cp{ _last };
-			for (size_t i = 0; i < delta_time / _step; i++) {
-				cp.time = m.time + delta_time*i;
+			for (size_t i = 0; i < (delta_time / _step)+1; i++) {
+				cp.time = _last_data.time + _step;
 				_out_clbk->call(cp);
+				_last_data = cp;
 				_new_time_point += _step;
 			}
 			if (m.time == _new_time_point) {
@@ -60,12 +63,13 @@ public:
 			}
 			_last = m;
 			return;
-		}*/
+		}
 	}
 
 	memseries::storage::ReaderClb *_out_clbk;
 	bool _isFirst;
 	memseries::Meas _last;
+	memseries::Meas _last_data;
 	memseries::Time _step;
 	memseries::Time _new_time_point;
 };

@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 
 
 BOOST_AUTO_TEST_CASE(byStep) {
-	{
+	{// equal step
 		auto ms = new memseries::storage::MemoryStorage{ 500 };
 		
 		auto m = memseries::Meas::empty();
@@ -249,26 +249,37 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		}
 		auto writed = size_t(total_count / time_step);
 		auto rdr=ms->readInterval(0, total_count);
-		/*memseries::Meas::MeasList allByStep5;
-		rdr->readByStep(&allByStep5, 5);
-		BOOST_CHECK_EQUAL(allByStep5.size(), writed * 2);
 
-		memseries::Meas::MeasList allByStep50;
+		memseries::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
-		rdr->readByStep(&allByStep50, 50);
-		BOOST_CHECK_EQUAL(allByStep50.size(), size_t(2));
+		rdr->readByStep(&allByStep, time_step);
+		BOOST_CHECK_EQUAL(allByStep.size(), size_t(total_count/time_step));
+		delete ms;
+	}
 
+	{// less step
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
 
-		memseries::Meas::MeasList allByStep10;
+		auto m = memseries::Meas::empty();
+		const size_t total_count = 100;
+		const memseries::Time time_step = 10;
+
+		for (size_t i = 0; i < total_count; i += time_step) {
+			m.id = i;
+			m.flag = memseries::Flag(i);
+			m.time = i;
+			m.value = 0;
+			ms->append(m);
+		}
+		auto writed = size_t(total_count / time_step);
+		auto rdr = ms->readInterval(0, total_count);
+
+		memseries::Time query_step = 11;
+		memseries::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
-		rdr->readByStep(&allByStep10, 10);
-		BOOST_CHECK_EQUAL(allByStep10.size(), size_t(writed));*/
-
-
-		memseries::Meas::MeasList allByStep3;
-		rdr = ms->readInterval(0, total_count);
-		rdr->readByStep(&allByStep3, 3);
-		BOOST_CHECK_EQUAL(allByStep3.size(), size_t(writed));
+		rdr->readByStep(&allByStep, query_step);
+		auto expected = size_t(total_count / query_step);
+		BOOST_CHECK_EQUAL(allByStep.size(), expected);
 		delete ms;
 	}
 }
