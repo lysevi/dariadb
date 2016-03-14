@@ -6,16 +6,20 @@
 namespace memseries {
 	namespace storage {
 
+		struct meas_time_compare {
+			bool operator() (const memseries::Meas& lhs, const memseries::Meas& rhs) const {
+				return lhs.time < rhs.time;
+			}
+		};
+
 		class TimeOrderedSet {
+			typedef std::set<memseries::Meas, meas_time_compare> MeasSet;
 		public:
 			TimeOrderedSet();
 			~TimeOrderedSet();
 			TimeOrderedSet(const size_t max_size);
 			TimeOrderedSet(const TimeOrderedSet&other);
-			TimeOrderedSet(TimeOrderedSet&&other);
-			void swap(TimeOrderedSet&other) throw();
-			TimeOrderedSet& operator=(const TimeOrderedSet&other);
-			TimeOrderedSet& operator=(TimeOrderedSet&&other);
+			TimeOrderedSet& operator=(const TimeOrderedSet&other)=default;
 
             bool append(const Meas&m, bool force=false);
 			bool is_full() const;
@@ -26,8 +30,12 @@ namespace memseries {
 			memseries::Time maxTime()const;
 			bool inInterval(const memseries::Meas&m)const;
 		protected:
-			class Private;
-			std::unique_ptr<Private> _Impl;
+			size_t _max_size;
+			size_t _count;
+			MeasSet _set;
+
+			memseries::Time _minTime;
+			memseries::Time _maxTime;
 		};
 	}
 }
