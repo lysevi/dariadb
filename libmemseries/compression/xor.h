@@ -5,20 +5,11 @@
 namespace memseries {
     namespace compression {
         namespace inner{
-            union conv {
-                double d;
-                int64_t i;
-            };
-
             inline int64_t flat_double_to_int(double v) {
-                conv c;
-                c.d = v;
-                return c.i;
+				return *(reinterpret_cast<int64_t*>(&v));
             }
             inline double flat_int_to_double(int64_t v) {
-                conv c;
-                c.i = v;
-                return c.d;
+				return *(reinterpret_cast<double*>(&v));
             }
         }
 
