@@ -72,10 +72,9 @@ struct Chunk
     bool is_full()const { return c_writer.is_full(); }
 };
 
-typedef std::shared_ptr<Chunk> Chunk_Ptr;
-typedef std::vector<Chunk_Ptr> ChuncksVector;
-//TODO replace to ChunksList;
-typedef std::map<Id, ChuncksVector> ChunkMap;
+typedef std::shared_ptr<Chunk>    Chunk_Ptr;
+typedef std::list<Chunk_Ptr>      ChuncksList;
+typedef std::map<Id, ChuncksList> ChunkMap;
 
 
 class InnerReader: public Reader{
@@ -248,14 +247,14 @@ public:
         Chunk_Ptr resulted_chunk=nullptr;
         auto ch_iter=_chuncks.find(id);
         if (ch_iter != _chuncks.end()) {
-            for (size_t i = 0; i < ch_iter->second.size(); i++) {
-                if (!ch_iter->second[i]->is_full()) {
-                    resulted_chunk = ch_iter->second[i];
+            for (auto &v:ch_iter->second) {
+                if (!v->is_full()) {
+                    resulted_chunk = v;
                     break;
                 }
             }
         }else {
-            this->_chuncks[id] = ChuncksVector{};
+            this->_chuncks[id] = ChuncksList{};
         }
         return resulted_chunk;
     }
@@ -279,10 +278,10 @@ public:
         }
 
         if (need_sort){
-            std::sort(this->_chuncks[value.id].begin(),
-                    this->_chuncks[value.id].end(),
-                    [](const Chunk_Ptr &l, const Chunk_Ptr &r)
-            {return l->first.time < r->first.time; });
+			this->_chuncks[value.id].sort(
+				[](const Chunk_Ptr &l, const Chunk_Ptr &r) {
+				return l->first.time < r->first.time; 
+			});
         }
 
         _min_time = std::min(_min_time, value.time);
@@ -309,8 +308,8 @@ public:
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
             }
-            for (size_t i = 0; i < ch.second.size(); i++) {
-                Chunk_Ptr cur_chunk = ch.second[i];
+            for (auto &v:ch.second) {
+                Chunk_Ptr cur_chunk = v;
                 if ((utils::inInterval(from,to,cur_chunk->minTime))||
                         (utils::inInterval(from,to,cur_chunk->maxTime))){
                     res->add(cur_chunk, cur_chunk->count);
@@ -328,8 +327,8 @@ public:
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
             }
-            for (size_t i = 0; i < ch.second.size(); i++) {
-                Chunk_Ptr cur_chunk = ch.second[i];
+            for (auto&v: ch.second) {
+                Chunk_Ptr cur_chunk = v;
                 if(cur_chunk->minTime<time_point){
                     res->add_tp(cur_chunk, cur_chunk->count);
                 }
