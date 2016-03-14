@@ -76,7 +76,6 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 	all.clear();
 	as->readInTimePoint(to)->readAll(&all);
 	size_t ids_count = (size_t)((to - from) / step);
-	//TODO ==(to-from)/step
 	BOOST_CHECK_EQUAL(all.size(), ids_count);
 
 	memseries::IdArray emptyIDs{};

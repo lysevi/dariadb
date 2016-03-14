@@ -114,14 +114,9 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 
 	//buckets count;
     BOOST_CHECK(mbucket.size()>0);
-    //now bucket is full
-	//TODO remove this
-    //BOOST_CHECK(!mbucket.append(e));
 
-	//drop part of data to storage;
-    //TODO uncomment that
-//	e.time= memseries::timeutil::current_time()- write_window_deep*2;
-//	BOOST_CHECK(!mbucket.append(e));
+	e.time= memseries::timeutil::current_time()- write_window_deep*2;
+	BOOST_CHECK(!mbucket.append(e));
 
     //future
     t=memseries::timeutil::current_time();

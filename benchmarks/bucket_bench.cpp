@@ -65,7 +65,6 @@ int main(int argc, char *argv[]) {
     {
         const size_t max_size=10000;
         const size_t id_count=10;
-		//TODO select value
         const memseries::Time write_window_deep = 2000;
 
 		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);

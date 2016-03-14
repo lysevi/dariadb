@@ -17,8 +17,6 @@ class Bucket::Private
 public:
     typedef std::shared_ptr<TimeOrderedSet>   tos_ptr;
     typedef std::list<tos_ptr>                container;
-	//TODO remove dict if unneeded
-    typedef std::map<memseries::Id,container> dict;
 
 	Private(const size_t max_size, const AbstractStorage_ptr stor, const memseries::Time write_window_deep):
 
