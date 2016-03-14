@@ -308,13 +308,12 @@ public:
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
             }
-            for (auto &v:ch.second) {
-                Chunk_Ptr cur_chunk = v;
-                if ((utils::inInterval(from,to,cur_chunk->minTime))||
-                        (utils::inInterval(from,to,cur_chunk->maxTime))){
-                    res->add(cur_chunk, cur_chunk->count);
-                }
-            }
+			for (auto &cur_chunk : ch.second) {
+				if ((utils::inInterval(from, to, cur_chunk->minTime)) ||
+					(utils::inInterval(from, to, cur_chunk->maxTime))) {
+					res->add(cur_chunk, cur_chunk->count);
+				}
+			}
 
         }
         res->is_time_point_reader=false;
@@ -327,8 +326,7 @@ public:
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
             }
-            for (auto&v: ch.second) {
-                Chunk_Ptr cur_chunk = v;
+            for (auto&cur_chunk : ch.second) {
                 if(cur_chunk->minTime<time_point){
                     res->add_tp(cur_chunk, cur_chunk->count);
                 }
