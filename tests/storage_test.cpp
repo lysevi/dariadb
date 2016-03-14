@@ -247,7 +247,6 @@ BOOST_AUTO_TEST_CASE(byStep) {
 			m.value = 0;
 			ms->append(m);
 		}
-		auto writed = size_t(total_count / time_step);
 		auto rdr=ms->readInterval(0, total_count);
 
 		memseries::Meas::MeasList allByStep;
@@ -271,7 +270,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
 			m.value = 0;
 			ms->append(m);
 		}
-		auto writed = size_t(total_count / time_step);
+		
 		auto rdr = ms->readInterval(0, total_count);
 
 		memseries::Time query_step = 11;
