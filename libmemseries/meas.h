@@ -3,11 +3,7 @@
 #include <memory>
 #include <vector>
 #include <list>
-#include <ctime>
-#include <cstring>
 #include <set>
-#include <array>
-#include "common.h"
 
 namespace memseries {
 typedef uint64_t Time;

@@ -2,6 +2,7 @@
 
 #include "meas.h"
 #include "utils.h"
+#include "common.h"
 #include <memory>
 
 namespace memseries {
