@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../meas.h"
-#include "binarybuffer.h"
+#include "base_compressor.h"
 
 namespace memseries {
     namespace compression {
@@ -23,7 +22,7 @@ namespace memseries {
             }
         }
 
-        class XorCompressor {
+        class XorCompressor:public BaseCompressor {
         public:
             XorCompressor() = default;
             XorCompressor(const BinaryBuffer &bw);
@@ -32,30 +31,22 @@ namespace memseries {
             bool append(Value v);
             static uint8_t zeros_lead(uint64_t v);
             static uint8_t zeros_tail(uint64_t v);
-
-            bool is_full() const { return _bw.is_full(); }
-            size_t writed()const{return _bw.cap()-_bw.pos();}
         protected:
             bool _is_first;
-            BinaryBuffer _bw;
             uint64_t _first;
             uint64_t _prev_value;
             uint8_t _prev_lead;
             uint8_t _prev_tail;
         };
 
-        class XorDeCompressor {
+        class XorDeCompressor:public BaseCompressor {
         public:
             XorDeCompressor() = default;
             XorDeCompressor(const BinaryBuffer &bw, Value first);
             ~XorDeCompressor() = default;
 
             Value read();
-
-            bool is_full() const { return _bw.is_full(); }
-
         protected:
-            BinaryBuffer _bw;
             uint64_t _prev_value;
             uint8_t _prev_lead;
             uint8_t _prev_tail;

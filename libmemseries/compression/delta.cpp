@@ -19,8 +19,8 @@ const uint64_t delta_big_mask = 64424509440;   //1111 [0000 0000] [0000 0000][00
 const uint64_t delta_big_mask_inv = 4294967295;//0000 1111 1111 1111 1111 1111 1111   1111 1111
 
 DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
-    _is_first(true),
-    _bw(bw),
+	BaseCompressor(bw),
+	_is_first(true),
     _first(0),
     _prev_delta(0),
     _prev_time(0)
@@ -102,7 +102,7 @@ uint64_t DeltaCompressor::get_delta_big(int64_t D) {
 }
 
 DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer &bw, memseries::Time first):
-    _bw(bw),
+	BaseCompressor(bw),
     _prev_delta(0),
     _prev_time(first)
 {

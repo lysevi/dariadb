@@ -7,7 +7,7 @@
 using namespace memseries::compression;
 
 FlagCompressor::FlagCompressor(const BinaryBuffer & bw):
-    _bw(bw),
+    BaseCompressor(bw),
     _is_first(true),
     _first(0)
 {
@@ -45,7 +45,7 @@ bool FlagCompressor::append(memseries::Flag v){
 }
 
 FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, memseries::Flag first):
-    _bw(bw),
+	BaseCompressor(bw),
     _prev_value(first){
 }
 

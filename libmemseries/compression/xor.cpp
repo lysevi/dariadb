@@ -9,8 +9,8 @@ using namespace memseries;
 using namespace memseries::compression;
 
 XorCompressor::XorCompressor(const BinaryBuffer &bw):
+	BaseCompressor(bw),
     _is_first(true),
-    _bw(bw),
     _first(0),
     _prev_value(0)
 {}
@@ -91,7 +91,7 @@ uint8_t XorCompressor::zeros_tail(uint64_t v){
 }
 
 XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, Value first):
-    _bw(bw),
+	BaseCompressor(bw),
     _prev_value(inner::flat_double_to_int(first)),
     _prev_lead(0),
     _prev_tail(0)
