@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
 
         auto w=dc.writed();
         auto sz=sizeof(memseries::Time)*count;
-        std::cout<<"compresion persent: "
-               <<(w*100.0)/(sz)
+        std::cout<<"space:  "
+               <<(w*100.0)/(sz)<<"%"
                <<std::endl;
     }
     {
@@ -71,8 +71,8 @@ int main(int argc, char *argv[]) {
         std::cout<<"xor compressor : "<<elapsed<<std::endl;
         auto w=dc.writed();
         auto sz=sizeof(memseries::Time)*count;
-        std::cout<<"compresion persent: "
-               <<(w*100.0)/(sz)
+        std::cout<<"space: "
+               <<(w*100.0)/(sz)<<"%"
                <<std::endl;
     }
     {
@@ -119,8 +119,8 @@ int main(int argc, char *argv[]) {
         std::cout << "compress writer : " << elapsed << std::endl;
         auto w=cwr.writed();
         auto sz=sizeof(memseries::Meas)*count;
-        std::cout<<"compresion persent: "
-               <<(w*100.0)/(sz)
+        std::cout<<"space: "
+               <<(w*100.0)/(sz)<<"%"
                <<std::endl;
 
         auto m = memseries::Meas::empty();
