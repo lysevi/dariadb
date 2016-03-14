@@ -1,9 +1,9 @@
 #pragma once
 
 #include <stdint.h>
-
+#include "meas.h"
 namespace memseries {
-	enum Flags : uint64_t {
-		NO_DATA = 0xffffffffffffffff
+    enum Flags : Flag {
+        NO_DATA = 0xffffffff
 	};
 }

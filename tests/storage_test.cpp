@@ -62,17 +62,19 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 
 	checkAll(all, "read error: ", from, to, step);
 
-	ids.push_back(from + step);
+    ids.push_back(from + step);
 	memseries::Meas::MeasList fltr_res{};
-	as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
+    as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
 
-	BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
+    BOOST_CHECK_EQUAL(fltr_res.size(), copies_count+1);
 
 	BOOST_CHECK_EQUAL(fltr_res.front().id, ids[0]);
+    BOOST_CHECK_EQUAL(fltr_res.front().flag, memseries::Flags::NO_DATA);
 
 	fltr_res.clear();
 	as->readInterval(ids, memseries::Flag(to + 1), from, to)->readAll(&fltr_res);
-	BOOST_CHECK_EQUAL(fltr_res.size(), size_t(0));
+    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
+    BOOST_CHECK_EQUAL(fltr_res.front().flag, memseries::Flags::NO_DATA);
 
 	all.clear();
 	as->readInTimePoint(to)->readAll(&all);
@@ -83,6 +85,13 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 	fltr_res.clear();
 	as->readInTimePoint(to)->readAll(&fltr_res);
 	BOOST_CHECK_EQUAL(fltr_res.size(), ids_count);
+
+    memseries::IdArray notExstsIDs{9999};
+    fltr_res.clear();
+    as->readInTimePoint(notExstsIDs,0,to-1)->readAll(&fltr_res);
+    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
+    BOOST_CHECK_EQUAL(fltr_res.front().flag, memseries::Flags::NO_DATA);
+
 }
 
 
