@@ -1,5 +1,6 @@
 #include "storage.h"
 #include "meas.h"
+#include "flags.h"
 
 using namespace memseries;
 using namespace memseries::storage;
@@ -17,12 +18,62 @@ public:
     Meas::MeasList *_output;
 };
 
+class ByStepClbk :public memseries::storage::ReaderClb {
+public:
+	ByStepClbk(memseries::storage::ReaderClb*clb, memseries::Time step) {
+		_out_clbk = clb;
+		_isFirst = true;
+		_step = step;
+	}
+	~ByStepClbk() {}
+	void call(const Meas&m) {
+		if (_isFirst) {
+			_isFirst = false;
+			_out_clbk->call(m);
+			_last = m;
+			_new_time_point = (_last.time + _step);
+			return;
+		}
+		/*if (m.time < _new_time_point) {
+			_last = m;
+			return;
+		}
+		if (m.time == _new_time_point) {
+			_last = m;
+			memseries::Meas cp{ m };
+			cp.time = _new_time_point;
+			_new_time_point = (_last.time + _step);
+			_out_clbk->call(cp);
+			return;
+		}
+		if (m.time > _new_time_point) {
+			auto delta_time = m.time - _new_time_point;
+			memseries::Meas cp{ _last };
+			for (size_t i = 0; i < delta_time / _step; i++) {
+				cp.time = m.time + delta_time*i;
+				_out_clbk->call(cp);
+				_new_time_point += _step;
+			}
+			if (m.time == _new_time_point) {
+				_out_clbk->call(m);
+				_new_time_point = (m.time + _step);
+			}
+			_last = m;
+			return;
+		}*/
+	}
+
+	memseries::storage::ReaderClb *_out_clbk;
+	bool _isFirst;
+	memseries::Meas _last;
+	memseries::Time _step;
+	memseries::Time _new_time_point;
+};
+
 void Reader::readAll(Meas::MeasList * output)
 {
-    std::shared_ptr<InnerCallback> clb(new InnerCallback(output));
-    while (!isEnd()) {
-        readNext(clb.get());
-    }
+    std::unique_ptr<InnerCallback> clb(new InnerCallback(output));
+	this->readAll(clb.get());
 }
 
 
@@ -33,6 +84,17 @@ void Reader::readAll(ReaderClb*clb)
     }
 }
 
+void  Reader::readByStep(ReaderClb*clb, memseries::Time step) {
+	std::unique_ptr<ReaderClb> inner_clb(new ByStepClbk(clb,step));
+	while (!isEnd()) {
+		readNext(inner_clb.get());
+	}
+}
+
+void  Reader::readByStep(Meas::MeasList *output, memseries::Time step) {
+	std::unique_ptr<InnerCallback> clb(new InnerCallback(output));
+	this->readByStep(clb.get(),step);
+}
 
 append_result AbstractStorage::append(const Meas::MeasArray & ma)
 {

@@ -5,6 +5,7 @@
 #include <meas.h>
 #include <memstorage.h>
 #include <time_ordered_set.h>
+#include <flags.h>
 #include <string>
 #include <thread>
 #include <iostream>
@@ -123,6 +124,7 @@ void thread_writer(memseries::Id id,
 	}
 }
 
+//TODO uncomment this.
 //BOOST_AUTO_TEST_CASE(MultiThread)
 //{
 //	auto ms = new memseries::storage::MemoryStorage{ 500 };
@@ -227,4 +229,46 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 
 	}
 	delete ds;
+}
+
+
+BOOST_AUTO_TEST_CASE(byStep) {
+	{
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
+		
+		auto m = memseries::Meas::empty();
+		const size_t total_count = 100;
+		const memseries::Time time_step = 10;
+
+		for (auto i = 0; i < total_count; i += time_step) {
+			m.id = i;
+			m.flag = memseries::Flag(i);
+			m.time = i;
+			m.value = 0;
+			ms->append(m);
+		}
+		auto writed = size_t(total_count / time_step);
+		auto rdr=ms->readInterval(0, total_count);
+		/*memseries::Meas::MeasList allByStep5;
+		rdr->readByStep(&allByStep5, 5);
+		BOOST_CHECK_EQUAL(allByStep5.size(), writed * 2);
+
+		memseries::Meas::MeasList allByStep50;
+		rdr = ms->readInterval(0, total_count);
+		rdr->readByStep(&allByStep50, 50);
+		BOOST_CHECK_EQUAL(allByStep50.size(), size_t(2));
+
+
+		memseries::Meas::MeasList allByStep10;
+		rdr = ms->readInterval(0, total_count);
+		rdr->readByStep(&allByStep10, 10);
+		BOOST_CHECK_EQUAL(allByStep10.size(), size_t(writed));*/
+
+
+		memseries::Meas::MeasList allByStep3;
+		rdr = ms->readInterval(0, total_count);
+		rdr->readByStep(&allByStep3, 3);
+		BOOST_CHECK_EQUAL(allByStep3.size(), size_t(writed));
+		delete ms;
+	}
 }
