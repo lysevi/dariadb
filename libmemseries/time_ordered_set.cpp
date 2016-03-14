@@ -25,9 +25,9 @@ TimeOrderedSet::TimeOrderedSet(const size_t max_size):
 TimeOrderedSet::TimeOrderedSet(const TimeOrderedSet & other): 
 	_max_size(other._max_size),
 	_count(other._count),
+	_set(other._set),
 	_minTime(other._minTime),
-	_maxTime(other._maxTime),
-	_set(other._set)
+	_maxTime(other._maxTime)	
 {}
 
 
