@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		const size_t total_count = 100;
 		const memseries::Time time_step = 10;
 
-		for (auto i = 0; i < total_count; i += time_step) {
+		for (size_t i = 0; i < total_count; i += time_step) {
 			m.id = i;
 			m.flag = memseries::Flag(i);
 			m.time = i;
