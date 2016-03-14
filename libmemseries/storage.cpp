@@ -51,6 +51,7 @@ public:
 		if (m.time > _new_time_point) {
 			auto delta_time = m.time - _new_time_point;
 			memseries::Meas cp{ _last };
+			// get all from _new_time_point to m.time  with step
 			for (size_t i = 0; i < (delta_time / _step)+1; i++) {
 				cp.time = _last_data.time + _step;
 				_out_clbk->call(cp);
