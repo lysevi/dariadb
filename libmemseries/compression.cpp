@@ -61,8 +61,8 @@ public:
     bool is_full() const { return _is_full; }
 
     size_t writed()const{
-        //TODO find better method;
-        return time_comp.writed()+value_comp.writed()+flag_comp.writed();
+        auto local_max=std::max(time_comp.writed(),value_comp.writed());
+        return std::max(local_max,flag_comp.writed());
     }
 protected:
     Meas _first;
