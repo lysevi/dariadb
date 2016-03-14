@@ -61,14 +61,14 @@ int main(int argc, char *argv[]) {
         memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::XorCompressor dc(bw);
 
-        memseries::Value t=1;
+        memseries::Value t=3.14;
         auto start=clock();
         for(size_t i=0;i<count;i++){
             dc.append(t);
-            t*=2;
+            t*=1.5;
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-        std::cout<<"xor compressor : "<<elapsed<<std::endl;
+        std::cout<<"\nxor compressor : "<<elapsed<<std::endl;
         auto w=dc.writed();
         auto sz=sizeof(memseries::Time)*count;
         std::cout<<"space: "
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
         }
 
         auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-        std::cout << "compress writer : " << elapsed << std::endl;
+        std::cout << "\ncompress writer : " << elapsed << std::endl;
         auto w=cwr.writed();
         auto sz=sizeof(memseries::Meas)*count;
         std::cout<<"space: "
