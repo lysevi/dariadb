@@ -37,9 +37,9 @@ int main(int argc, char *argv[]) {
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
         std::cout<<"delta compressor : "<<elapsed<<std::endl;
 
-        auto w=dc.writed();
+        auto w=dc.used_space();
         auto sz=sizeof(memseries::Time)*count;
-        std::cout<<"space:  "
+        std::cout<<"used space:  "
                <<(w*100.0)/(sz)<<"%"
                <<std::endl;
     }
@@ -69,28 +69,12 @@ int main(int argc, char *argv[]) {
         }
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
         std::cout<<"\nxor compressor : "<<elapsed<<std::endl;
-        auto w=dc.writed();
+        auto w=dc.used_space();
         auto sz=sizeof(memseries::Time)*count;
-        std::cout<<"space: "
+        std::cout<<"used space: "
                <<(w*100.0)/(sz)<<"%"
                <<std::endl;
     }
-	{
-		const size_t count = 1000000;
-		auto start = clock();
-		for (size_t i = 0; i<count; i++) {
-			memseries::compression::inner::flat_double_to_int(3.14);
-		}
-		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-		std::cout << "flat_double_to_int: " << elapsed << std::endl;
-
-		start = clock();
-		for (size_t i = 0; i<count; i++) {
-			memseries::compression::inner::flat_int_to_double(0xfff);
-		}
-		elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-		std::cout << "flat_int_to_double: " << elapsed << std::endl;
-	}
     {
         memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::XorDeCompressor dc(bw,0);
@@ -103,6 +87,23 @@ int main(int argc, char *argv[]) {
         std::cout<<"xor decompressor : "<<elapsed<<std::endl;
     }
 
+
+    {
+        const size_t count = 1000000;
+        auto start = clock();
+        for (size_t i = 0; i<count; i++) {
+            memseries::compression::inner::flat_double_to_int(3.14);
+        }
+        auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+        std::cout << "\nflat_double_to_int: " << elapsed << std::endl;
+
+        start = clock();
+        for (size_t i = 0; i<count; i++) {
+            memseries::compression::inner::flat_int_to_double(0xfff);
+        }
+        elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+        std::cout << "flat_int_to_double: " << elapsed << std::endl;
+    }
 
     {
         const size_t count=1000000;
@@ -133,9 +134,9 @@ int main(int argc, char *argv[]) {
 
         auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "\ncompress writer : " << elapsed << std::endl;
-        auto w=cwr.writed();
+        auto w=cwr.used_space();
         auto sz=sizeof(memseries::Meas)*count;
-        std::cout<<"space: "
+        std::cout<<"used space: "
                <<(w*100.0)/(sz)<<"%"
                <<std::endl;
 
