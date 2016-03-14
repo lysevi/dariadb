@@ -75,6 +75,22 @@ int main(int argc, char *argv[]) {
                <<(w*100.0)/(sz)<<"%"
                <<std::endl;
     }
+	{
+		const size_t count = 1000000;
+		auto start = clock();
+		for (size_t i = 0; i<count; i++) {
+			memseries::compression::inner::flat_double_to_int(3.14);
+		}
+		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+		std::cout << "flat_double_to_int: " << elapsed << std::endl;
+
+		start = clock();
+		for (size_t i = 0; i<count; i++) {
+			memseries::compression::inner::flat_int_to_double(0xfff);
+		}
+		elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+		std::cout << "flat_int_to_double: " << elapsed << std::endl;
+	}
     {
         memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
         memseries::compression::XorDeCompressor dc(bw,0);
