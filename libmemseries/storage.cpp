@@ -20,10 +20,12 @@ public:
 
 class ByStepClbk :public memseries::storage::ReaderClb {
 public:
-	ByStepClbk(memseries::storage::ReaderClb*clb, memseries::Time step) {
+    ByStepClbk(memseries::storage::ReaderClb*clb,memseries::Time from, memseries::Time to, memseries::Time step) {
 		_out_clbk = clb;
 		_isFirst = true;
 		_step = step;
+        _from=from;
+        _to=to;
 	}
 	~ByStepClbk() {}
 	void call(const Meas&m) {
@@ -73,6 +75,8 @@ public:
 	memseries::Meas _last_data;
 	memseries::Time _step;
 	memseries::Time _new_time_point;
+    memseries::Time _from;
+    memseries::Time _to;
 };
 
 void Reader::readAll(Meas::MeasList * output)
@@ -90,7 +94,7 @@ void Reader::readAll(ReaderClb*clb)
 }
 
 void  Reader::readByStep(ReaderClb*clb, memseries::Time from, memseries::Time to, memseries::Time step) {
-	std::unique_ptr<ByStepClbk> inner_clb(new ByStepClbk(clb,step));
+    std::unique_ptr<ByStepClbk> inner_clb(new ByStepClbk(clb,from,to,step));
 	while (!isEnd()) {
 		readNext(inner_clb.get());
 	}
