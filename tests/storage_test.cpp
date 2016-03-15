@@ -19,7 +19,9 @@ void checkAll(memseries::Meas::MeasList res,
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
 		for (auto &m : res) {
-			if ((m.id == i) && (m.flag == i) && (m.time == i)) {
+			if ((m.id == i) 
+				&& ((m.flag == i) ||(m.flag==memseries::Flags::NO_DATA)) 
+				&& (m.time == i)) {
 				count++;
 			}
 
@@ -51,14 +53,14 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 
 	memseries::Meas::MeasList all{};
 	as->readInterval(from, to)->readAll(&all);
-    BOOST_CHECK_EQUAL(all.size(), total_count);
+    BOOST_CHECK_EQUAL(all.size(), total_count+ copies_count/2);// + time_point with NO_DATA
 
 	checkAll(all, "readAll error: ", from, to, step);
 
 	memseries::IdArray ids{};
 	all.clear();
 	as->readInterval(ids, 0, from, to)->readAll(&all);
-    BOOST_CHECK_EQUAL(all.size(), total_count);
+    BOOST_CHECK_EQUAL(all.size(), total_count + copies_count / 2);// + time_point with NO_DATA
 
 	checkAll(all, "read error: ", from, to, step);
 
@@ -176,7 +178,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			auto rdr = ds->readInterval(0, 6);
 			output_in_point.clear();
 			rdr->readAll(&output_in_point);
-			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5+5));//+ timepoimt(0) with no_data
 		}
 		{
 
@@ -184,7 +186,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			memseries::Meas::MeasList output_in_point{};
 			tp_reader->readAll(&output_in_point);
 
-			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(2));
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(2+3));//+ timepoimt(3) with no_data
 			for (auto v : output_in_point) {
 				BOOST_CHECK(v.time <= 3);
 			}
@@ -192,7 +194,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 		auto reader = ds->readInterval(3, 5);
 		memseries::Meas::MeasList output{};
 		reader->readAll(&output);
-		BOOST_CHECK_EQUAL(output.size(), size_t(5));
+		BOOST_CHECK_EQUAL(output.size(), size_t(5+3));//+ timepoimt(3) with no_data
 	}
 	// from this point read not from firsts.
 	{
@@ -213,7 +215,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			memseries::Meas::MeasList output_in_point{};
 			tp_reader->readAll(&output_in_point);
 
-			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5+1));//+ timepoimt(8) with no_data
 			for (auto v : output_in_point) {
 				BOOST_CHECK(v.time <= 8);
 			}

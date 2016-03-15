@@ -5,6 +5,7 @@
 #include <limits>
 #include <algorithm>
 #include <map>
+#include <tuple>
 
 using namespace memseries;
 using namespace memseries::compression;
@@ -194,7 +195,11 @@ public:
                 }
             }
             if (candidate.time <= _from) {
+				//TODO make options
+				candidate.time = _from;
+
                 clb->call(candidate);
+				_tp_readed_times.insert(std::make_tuple(candidate.id, candidate.time));
             }
         }
         auto m=memseries::Meas::empty();
@@ -213,6 +218,10 @@ public:
     bool is_time_point_reader;
 
     bool check_meas(const Meas&m)const{
+		auto tmp = std::make_tuple(m.id, m.time);
+		if (this->_tp_readed_times.find(tmp) != _tp_readed_times.end()) {
+			return false;
+		}
         using utils::inInterval;
 
         if ((in_filter(_flag, m.flag))&&(inInterval(_from, _to, m.time))) {
@@ -233,6 +242,9 @@ public:
     //TODO remove end var
     bool end;
     IdArray _not_exist;
+
+	typedef std::tuple<memseries::Id, memseries::Time> IdTime;
+	std::set<IdTime> _tp_readed_times;
 };
 
 
@@ -331,20 +343,20 @@ public:
 
     std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
         auto res = std::make_shared<InnerReader>(flag, time_point, 0);
-
+		res->is_time_point_reader = true;
+		
         if(ids.size()==0){
             for (auto ch : _chuncks) {
-                //TODO check that.
-                //bool is_exists=false;
+                bool is_exists=false;
                 for (auto&cur_chunk : ch.second) {
                     if(cur_chunk->minTime<time_point){
                         res->add_tp(cur_chunk, cur_chunk->count);
-                   //     is_exists=true;
+                        is_exists=true;
                     }
                 }
-//                if(!is_exists){
-//                    res->_not_exist.push_back(ch.first);
-//                }
+                if(!is_exists){
+                    res->_not_exist.push_back(ch.first);
+                }
             }
         }else{
             //TODO refact
@@ -368,7 +380,7 @@ public:
             }
         }
 
-        res->is_time_point_reader = true;
+       
         return res;
     }
 
