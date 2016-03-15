@@ -8,7 +8,7 @@
 #include <sstream>
 #include <cassert>
 #include <limits>
-
+#include <algorithm>
 using namespace memseries;
 using namespace memseries::compression;
 
