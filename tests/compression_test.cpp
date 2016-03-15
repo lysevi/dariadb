@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
 	{// 0
 		std::fill(std::begin(buffer), std::end(buffer), 0);
 		b.reset_pos();
-		auto writed = 0;
+        uint64_t writed = 0;
 		b.write((uint16_t)writed, 5);
 		b.reset_pos();
 		auto readed = b.read(5);
