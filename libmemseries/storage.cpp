@@ -90,9 +90,13 @@ void Reader::readAll(ReaderClb*clb)
 }
 
 void  Reader::readByStep(ReaderClb*clb, memseries::Time step) {
-	std::unique_ptr<ReaderClb> inner_clb(new ByStepClbk(clb,step));
+	std::unique_ptr<ByStepClbk> inner_clb(new ByStepClbk(clb,step));
 	while (!isEnd()) {
 		readNext(inner_clb.get());
+	}
+	if (inner_clb->_new_time_point > inner_clb->_last.time) {
+		inner_clb->_last.time = inner_clb->_new_time_point;
+		inner_clb->call(inner_clb->_last);
 	}
 }
 
