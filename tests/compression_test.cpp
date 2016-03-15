@@ -452,8 +452,7 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 		co.append(v2);
 
 		XorDeCompressor dc(BinaryBuffer{ rng }, 0);
-		//TODO replace to BOOST_CHECK issue #17
-		BOOST_CHECK_CLOSE(dc.read(), v2,0.0000001);
+		BOOST_CHECK_EQUAL(dc.read(), v2);
 	}
 }
 
