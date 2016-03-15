@@ -292,4 +292,30 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		BOOST_CHECK_EQUAL(allByStep.size(), expected);
 		delete ms;
 	}
+
+	{// great step
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
+
+		auto m = memseries::Meas::empty();
+		const size_t total_count = 100;
+		const memseries::Time time_step = 10;
+
+		for (size_t i = 0; i < total_count; i += time_step) {
+			m.id = i;
+			m.flag = memseries::Flag(i);
+			m.time = i;
+			m.value = 0;
+			ms->append(m);
+		}
+
+		auto rdr = ms->readInterval(0, total_count);
+
+		memseries::Time query_step = 5;
+		memseries::Meas::MeasList allByStep;
+		rdr = ms->readInterval(0, total_count);
+		rdr->readByStep(&allByStep, query_step);
+		auto expected = size_t(total_count / query_step);
+		BOOST_CHECK_EQUAL(allByStep.size(), expected);
+		delete ms;
+	}
 }
