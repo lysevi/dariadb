@@ -118,13 +118,17 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 }
 
 void BinaryBuffer::write(uint64_t v, int8_t count) {
-    const auto bits_in_ui64=sizeof(uint64_t)*8;
-    assert(count < 63);
-    uint64_t *dest = (uint64_t*)(_begin + _pos - 7);
-    auto shl_cnt=((bits_in_ui64 - count - 1) - (max_bit_pos - _bitnum));
-    auto src = uint64_t(v) << shl_cnt;
-    *dest |= src;
-    move_pos(count);
+	//TODO remove limits. issue #17
+	uint8_t *arr = reinterpret_cast<uint8_t*>(&v);
+	auto max_index = count / 8;
+	auto bits_in_max = (count+1)%8;
+	if (bits_in_max != 0) {
+		this->write((uint16_t)arr[max_index], bits_in_max-1);
+		max_index--;
+	}
+	for (int i = max_index; i >= 0; i--) {
+		this->write((uint16_t)arr[i], max_bit_pos);
+	}
 }
 
 uint64_t  BinaryBuffer::read(int8_t count) {
