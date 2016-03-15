@@ -262,7 +262,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
 
 		memseries::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
-		rdr->readByStep(&allByStep, time_step);
+		rdr->readByStep(&allByStep,0,total_count, time_step);
 		BOOST_CHECK_EQUAL(allByStep.size(), size_t(total_count/time_step+1));//time_point
 		delete ms;
 	}
@@ -287,7 +287,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		memseries::Time query_step = 11;
 		memseries::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
-		rdr->readByStep(&allByStep, query_step);
+		rdr->readByStep(&allByStep, 0, total_count, query_step);
 		auto expected = size_t(total_count / query_step);
 		BOOST_CHECK_EQUAL(allByStep.size(), expected+1); // time_point
 		delete ms;
@@ -315,7 +315,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		memseries::Time query_step = 5;
 		memseries::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
-		rdr->readByStep(&allByStep, query_step);
+		rdr->readByStep(&allByStep, 0, total_count, query_step);
 		auto expected = size_t((total_count / time_step) * (time_step / query_step));
 		BOOST_CHECK_EQUAL(allByStep.size(), expected);
 		delete ms;

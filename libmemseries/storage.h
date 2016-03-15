@@ -20,8 +20,8 @@ namespace memseries {
             virtual void readNext(ReaderClb*clb) = 0;
             virtual void readAll(Meas::MeasList *output);
             virtual void readAll(ReaderClb*clb);
-			virtual void readByStep(ReaderClb*clb, memseries::Time step);
-			virtual void readByStep(Meas::MeasList *output, memseries::Time step);
+			virtual void readByStep(ReaderClb*clb, memseries::Time from, memseries::Time to, memseries::Time step);
+			virtual void readByStep(Meas::MeasList *output, memseries::Time from, memseries::Time to, memseries::Time step);
         };
 
         typedef std::shared_ptr<Reader> Reader_ptr;

@@ -89,7 +89,7 @@ void Reader::readAll(ReaderClb*clb)
     }
 }
 
-void  Reader::readByStep(ReaderClb*clb, memseries::Time step) {
+void  Reader::readByStep(ReaderClb*clb, memseries::Time from, memseries::Time to, memseries::Time step) {
 	std::unique_ptr<ByStepClbk> inner_clb(new ByStepClbk(clb,step));
 	while (!isEnd()) {
 		readNext(inner_clb.get());
@@ -100,9 +100,9 @@ void  Reader::readByStep(ReaderClb*clb, memseries::Time step) {
 	}
 }
 
-void  Reader::readByStep(Meas::MeasList *output, memseries::Time step) {
+void  Reader::readByStep(Meas::MeasList *output, memseries::Time from, memseries::Time to, memseries::Time step) {
 	std::unique_ptr<InnerCallback> clb(new InnerCallback(output));
-	this->readByStep(clb.get(),step);
+	this->readByStep(clb.get(),from,to,step);
 }
 
 append_result AbstractStorage::append(const Meas::MeasArray & ma)
