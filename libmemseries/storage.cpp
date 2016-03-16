@@ -43,7 +43,7 @@ public:
 	void dump_first_value(const Meas&m) {
 		if (m.time > _from) {
 			auto cp = _last[m.id];
-			for (size_t i = _from; i < m.time; i += _step) {
+			for (memseries::Time i = _from; i < m.time; i += _step) {
 				_out_clbk->call(cp);
 				cp.time = _last[m.id].time + _step;
 				_last[m.id] = cp;
@@ -80,7 +80,7 @@ public:
 		if (m.time > _new_time_point[m.id]) {
 			memseries::Meas cp{ _last[m.id] };
 			// get all from _new_time_point to m.time  with step
-			for (size_t i = _new_time_point[m.id]; i < m.time; i += _step) {
+			for (memseries::Time i = _new_time_point[m.id]; i < m.time; i += _step) {
 				cp.time = i;
 				_out_clbk->call(cp);
 				cp.time = _last[m.id].time + _step;
