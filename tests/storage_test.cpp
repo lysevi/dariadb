@@ -369,8 +369,9 @@ BOOST_AUTO_TEST_CASE(byStep) {
 
 class Moc_SubscribeClbk : public memseries::storage::ReaderClb {
 public:
+    std::list<memseries::Meas> values;
 	void call(const memseries::Meas&m) override {
-
+        values.push_back(m);
 	}
 	~Moc_SubscribeClbk() {}
 };
@@ -384,10 +385,13 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 
 	std::unique_ptr<memseries::storage::MemoryStorage> ms{ new memseries::storage::MemoryStorage{ 500 } };
 	memseries::IdArray ids{};
-	ms->subscribe(ids, 0, c1);
-	ms->subscribe(ids, 0, c2);
-	ms->subscribe(ids, 0, c3);
-	ms->subscribe(ids, 0, c4);
+    ms->subscribe(ids, 0, c1); //all
+    ids.push_back(2);
+    ms->subscribe(ids, 0, c2); // 2
+    ids.push_back(1);
+    ms->subscribe(ids, 0, c3); // 1 2
+    ids.clear();
+    ms->subscribe(ids, 1, c4); // with flag=1
 
 	auto m = memseries::Meas::empty();
 	const size_t total_count = 100;
@@ -400,5 +404,14 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 		m.value = 0;
 		ms->append(m);
 	}
-	BOOST_CHECK(false);
+    BOOST_CHECK_EQUAL(c1->values.size(),total_count);
+
+    BOOST_CHECK_EQUAL(c2->values.size(),size_t(total_count/id_count));
+    BOOST_CHECK_EQUAL(c2->values.front().id,memseries::Id(2));
+
+    BOOST_CHECK_EQUAL(c3->values.size(),size_t(total_count/id_count)*2);
+    BOOST_CHECK_EQUAL(c3->values.front().id,memseries::Id(1));
+
+    BOOST_CHECK_EQUAL(c4->values.size(),size_t(1));
+    BOOST_CHECK_EQUAL(c4->values.front().flag,memseries::Flag(1));
 }

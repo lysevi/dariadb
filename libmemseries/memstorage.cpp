@@ -6,12 +6,25 @@
 #include <algorithm>
 #include <map>
 #include <tuple>
-
+#include <assert.h>
 using namespace memseries;
 using namespace memseries::compression;
 using namespace memseries::storage;
 using memseries::utils::Range;
 
+struct SubscribeInfo{
+    IdArray ids;
+    Flag flag;
+    ReaderClb_ptr clbk;
+    bool isYours(const memseries::Meas&m){
+        if((ids.size()==0) || (std::find(ids.begin(),ids.end(),m.id)!=ids.end())){
+            if((flag==0) ||(flag==m.flag)){
+                return true;
+            }
+        }
+        return false;
+    }
+};
 
 
 struct Chunk
@@ -77,7 +90,7 @@ struct Chunk
 typedef std::shared_ptr<Chunk>    Chunk_Ptr;
 typedef std::list<Chunk_Ptr>      ChuncksList;
 typedef std::map<Id, ChuncksList> ChunkMap;
-
+typedef std::shared_ptr<SubscribeInfo> SubscribeInfo_ptr;
 
 class InnerReader: public Reader{
 public:
@@ -275,7 +288,8 @@ public:
     Private(size_t size):
         _size(size),
         _min_time(std::numeric_limits<memseries::Time>::max()),
-        _max_time(std::numeric_limits<memseries::Time>::min())
+        _max_time(std::numeric_limits<memseries::Time>::min()),
+        _subscribes()
     {}
 
     ~Private(){
@@ -326,8 +340,17 @@ public:
 			});
         }
 
+
         _min_time = std::min(_min_time, value.time);
         _max_time = std::max(_max_time, value.time);
+
+        for(auto si:_subscribes){
+            assert(si->clbk!=nullptr);
+            if(si->isYours(value)){
+                si->clbk->call(value);
+            }
+        }
+
         return memseries::append_result(1, 0);
     }
 
@@ -408,13 +431,20 @@ public:
     size_t chunks_size()const { return _chuncks.size(); }
 
 	void subscribe(const IdArray&ids, Flag flag, ReaderClb_ptr clbk) {
-		NOT_IMPLEMENTED;
+        auto new_s=std::make_shared<SubscribeInfo>();
+        new_s->ids=ids;
+        new_s->flag=flag;
+        new_s->clbk=clbk;
+
+        _subscribes.push_back(new_s);
 	}
+
 protected:
     size_t _size;
 
     ChunkMap _chuncks;
     Time _min_time,_max_time;
+    std::list<SubscribeInfo_ptr> _subscribes;
 };
 
 
