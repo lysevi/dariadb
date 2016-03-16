@@ -34,6 +34,9 @@ public:
 	memseries::Time maxTime() {
 		return 0;
 	}
+
+	void subscribe(const memseries::IdArray&ids, memseries::Flag flag, memseries::storage::ReaderClb_ptr clbk) override{
+	}
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)

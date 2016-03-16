@@ -366,3 +366,52 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		delete ms;
 	}
 }
+
+class Moc_SubscribeClbk : public memseries::storage::ReaderClb {
+public:
+    std::list<memseries::Meas> values;
+	void call(const memseries::Meas&m) override {
+        values.push_back(m);
+	}
+	~Moc_SubscribeClbk() {}
+};
+
+BOOST_AUTO_TEST_CASE(Subscribe) {
+	const size_t id_count = 5;
+	std::shared_ptr<Moc_SubscribeClbk> c1(new Moc_SubscribeClbk);
+	std::shared_ptr<Moc_SubscribeClbk> c2(new Moc_SubscribeClbk);
+	std::shared_ptr<Moc_SubscribeClbk> c3(new Moc_SubscribeClbk);
+	std::shared_ptr<Moc_SubscribeClbk> c4(new Moc_SubscribeClbk);
+
+	std::unique_ptr<memseries::storage::MemoryStorage> ms{ new memseries::storage::MemoryStorage{ 500 } };
+	memseries::IdArray ids{};
+    ms->subscribe(ids, 0, c1); //all
+    ids.push_back(2);
+    ms->subscribe(ids, 0, c2); // 2
+    ids.push_back(1);
+    ms->subscribe(ids, 0, c3); // 1 2
+    ids.clear();
+    ms->subscribe(ids, 1, c4); // with flag=1
+
+	auto m = memseries::Meas::empty();
+	const size_t total_count = 100;
+	const memseries::Time time_step = 1;
+
+	for (size_t i = 0; i < total_count; i += time_step) {
+		m.id = i%id_count;
+		m.flag = memseries::Flag(i);
+		m.time = i;
+		m.value = 0;
+		ms->append(m);
+	}
+    BOOST_CHECK_EQUAL(c1->values.size(),total_count);
+
+    BOOST_CHECK_EQUAL(c2->values.size(),size_t(total_count/id_count));
+    BOOST_CHECK_EQUAL(c2->values.front().id,memseries::Id(2));
+
+    BOOST_CHECK_EQUAL(c3->values.size(),size_t(total_count/id_count)*2);
+    BOOST_CHECK_EQUAL(c3->values.front().id,memseries::Id(1));
+
+    BOOST_CHECK_EQUAL(c4->values.size(),size_t(1));
+    BOOST_CHECK_EQUAL(c4->values.front().flag,memseries::Flag(1));
+}
