@@ -61,5 +61,17 @@ int main(int argc, char *argv[]) {
     elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
     std::cout<<"memorystorage readIntarval all: "<<elapsed<<std::endl;
     std::cout<<"raded: "<<clbk->count<<std::endl;
+
+
+	start = clock();
+	auto reader_by_step = ms->readInterval(memseries::timeutil::from_chrono(now), t);
+
+	clbk->count = 0;
+	memseries::Time query_step = 100000;
+	reader_by_step->readByStep(clbk, memseries::timeutil::from_chrono(now)-query_step*10, t, query_step);
+
+	elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	std::cout << "memorystorage byStep("<< query_step<<") all: " << elapsed << std::endl;
+	std::cout << "raded: " << clbk->count << std::endl;
     delete ms;
 }
