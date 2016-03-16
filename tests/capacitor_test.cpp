@@ -6,6 +6,7 @@
 #include <time_ordered_set.h>
 #include <timeutil.h>
 #include <capacitor.h>
+#include <logger.h>
 
 class Moc_Storage :public memseries::storage::AbstractStorage {
 public:
@@ -109,13 +110,13 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     }
 
     //cur time
-    t= memseries::timeutil::current_time();
-    for (size_t i = 0; i < max_size; i++) {
+    t= t_2;
+    for (size_t i = 0; i < 5; i++) {
         e.time = t++;
         BOOST_CHECK(mbucket.append(e));
     }
 
-	//buckets count;
+    //buckets count;
     BOOST_CHECK(mbucket.size()>0);
 
 	e.time= memseries::timeutil::current_time()- write_window_deep*2;
@@ -129,20 +130,16 @@ BOOST_AUTO_TEST_CASE(BucketTest)
         t++;
         BOOST_CHECK(mbucket.append(e));
     }
-    //BOOST_CHECK(mbucket.size()>100);
-
-    //time should be increased
-    //for (size_t i = 0; i < stor->meases.size() - 1; i++) {
-    //	BOOST_CHECK(stor->meases[i].time<stor->meases[i+1].time);
-    //}
 
     stor->meases.clear();
     stor->writed_count = 0;
     mbucket.flush();
 
+    //time should be increased
     for (size_t i = 0; i < stor->meases.size() - 1; i++) {
         BOOST_CHECK(stor->meases[i].time<=stor->meases[i + 1].time);
         if(stor->meases[i].time>stor->meases[i + 1].time){
+            logger("i: "<<i<<" lhs: "<<stor->meases[i].time<<" rhs: "<<stor->meases[i+1].time);
             assert(false);
         }
     }
