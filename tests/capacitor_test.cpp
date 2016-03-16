@@ -5,7 +5,7 @@
 
 #include <time_ordered_set.h>
 #include <timeutil.h>
-#include <bucket.h>
+#include <capacitor.h>
 
 class Moc_Storage :public memseries::storage::AbstractStorage {
 public:
@@ -83,10 +83,10 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	stor->writed_count = 0;
     const size_t max_size = 10;
     const memseries::Time write_window_deep = 1000;
-    auto base = memseries::storage::Bucket{ max_size, stor,write_window_deep};
+    auto base = memseries::storage::Capacitor{ max_size, stor,write_window_deep};
 
     //with move ctor check
-    memseries::storage::Bucket mbucket(std::move(base));
+    memseries::storage::Capacitor mbucket(std::move(base));
     auto e = memseries::Meas::empty();
 
     //max time always

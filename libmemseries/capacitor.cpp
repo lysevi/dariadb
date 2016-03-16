@@ -1,4 +1,4 @@
-#include "bucket.h"
+#include "capacitor.h"
 #include "time_ordered_set.h"
 #include "utils.h"
 #include "timeutil.h"
@@ -12,7 +12,7 @@
 using namespace memseries;
 using namespace memseries::storage;
 
-class Bucket::Private
+class Capacitor::Private
 {
 public:
     typedef std::shared_ptr<TimeOrderedSet>   tos_ptr;
@@ -83,7 +83,7 @@ public:
             if(is_valid_time(f->maxTime())){
                 break;
             }else{
-                flush_bucket(f);
+                flush_Capacitor(f);
                 _bucks.pop_front();
             }
         }
@@ -139,7 +139,7 @@ public:
 
     bool flush(){
         for (auto v : _bucks) {
-            if(!flush_bucket(v)){
+            if(!flush_Capacitor(v)){
                 return false;
             }
         }
@@ -147,7 +147,7 @@ public:
         return true;
     }
 
-    bool flush_bucket(tos_ptr b){
+    bool flush_Capacitor(tos_ptr b){
         auto arr = b->as_array();
         auto stor_res = _stor->append(arr);
         _writed_count -= arr.size();
@@ -174,63 +174,63 @@ protected:
 	memseries::Time _write_window_deep;
 };
 
-Bucket::Bucket():_Impl(new Bucket::Private(0,nullptr,0))
+Capacitor::Capacitor():_Impl(new Capacitor::Private(0,nullptr,0))
 {}
 
-Bucket::~Bucket()
+Capacitor::~Capacitor()
 {}
 
-Bucket::Bucket(const size_t max_size, const AbstractStorage_ptr stor, const memseries::Time write_window_deep) :
-	_Impl(new Bucket::Private(max_size,stor,write_window_deep))
+Capacitor::Capacitor(const size_t max_size, const AbstractStorage_ptr stor, const memseries::Time write_window_deep) :
+	_Impl(new Capacitor::Private(max_size,stor,write_window_deep))
 {}
 
-Bucket::Bucket(const Bucket & other): _Impl(new Bucket::Private(*other._Impl))
+Capacitor::Capacitor(const Capacitor & other): _Impl(new Capacitor::Private(*other._Impl))
 {}
 
-Bucket::Bucket(Bucket && other): _Impl(std::move(other._Impl))
+Capacitor::Capacitor(Capacitor && other): _Impl(std::move(other._Impl))
 {}
 
-void Bucket::swap(Bucket & other)throw(){
+void Capacitor::swap(Capacitor & other)throw(){
     std::swap(_Impl, other._Impl);
 }
 
-Bucket& Bucket::operator=(const Bucket & other){
+Capacitor& Capacitor::operator=(const Capacitor & other){
     if (this != &other) {
-        Bucket tmp(other);
+        Capacitor tmp(other);
         this->swap(tmp);
     }
     return *this;
 }
 
-Bucket& Bucket::operator=(Bucket && other){
+Capacitor& Capacitor::operator=(Capacitor && other){
     this->swap(other);
     return *this;
 }
 
-bool Bucket::append(const Meas & m){
+bool Capacitor::append(const Meas & m){
     return _Impl->append(m);
 }
 
-size_t Bucket::size()const {
+size_t Capacitor::size()const {
     return _Impl->size();
 }
 
-memseries::Time Bucket::minTime()const {
+memseries::Time Capacitor::minTime()const {
     return _Impl->minTime();
 }
 
-memseries::Time Bucket::maxTime()const {
+memseries::Time Capacitor::maxTime()const {
     return _Impl->maxTime();
 }
 
-size_t Bucket::writed_count()const {
+size_t Capacitor::writed_count()const {
     return _Impl->writed_count();
 }
 
-bool Bucket::flush() {//write all to storage;
+bool Capacitor::flush() {//write all to storage;
     return _Impl->flush();
 }
 
-void Bucket::clear() {
+void Capacitor::clear() {
     return _Impl->clear();
 }

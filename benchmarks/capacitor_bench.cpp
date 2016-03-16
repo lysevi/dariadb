@@ -5,7 +5,7 @@
 
 #include <time_ordered_set.h>
 #include <timeutil.h>
-#include <bucket.h>
+#include <capacitor.h>
 #include <ctime>
 
 class Moc_Storage :public memseries::storage::AbstractStorage {
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
         const memseries::Time write_window_deep = 2000;
 
 		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-        auto tos =memseries::storage::Bucket{ max_size,stor, write_window_deep };
+        auto tos =memseries::storage::Capacitor{ max_size,stor, write_window_deep };
         auto m = memseries::Meas::empty();
 
         auto start = clock();

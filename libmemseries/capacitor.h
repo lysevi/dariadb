@@ -7,16 +7,16 @@
 namespace memseries {
     namespace storage {
 
-        class Bucket {
+        class Capacitor {
         public:
-            Bucket();
-            ~Bucket();
-            Bucket(const size_t max_size, const AbstractStorage_ptr stor, const memseries::Time write_window_deep);
-            Bucket(const Bucket&other);
-            Bucket(Bucket&&other);
-            void swap(Bucket&other) throw();
-            Bucket& operator=(const Bucket&other);
-            Bucket& operator=(Bucket&&other);
+            Capacitor();
+            ~Capacitor();
+            Capacitor(const size_t max_size, const AbstractStorage_ptr stor, const memseries::Time write_window_deep);
+            Capacitor(const Capacitor&other);
+            Capacitor(Capacitor&&other);
+            void swap(Capacitor&other) throw();
+            Capacitor& operator=(const Capacitor&other);
+            Capacitor& operator=(Capacitor&&other);
 
             bool append(const Meas&m);
             size_t size()const;
