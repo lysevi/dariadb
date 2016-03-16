@@ -129,6 +129,16 @@ public:
         //return this->_chunks.size() == 0 && this->_tp_chunks.size() == 0;
     }
 
+	memseries::IdArray getIds()const override {
+		memseries::IdArray result;
+		result.resize(_chunks.size());
+		size_t pos = 0;
+		for (auto &kv : _chunks) {
+			result[pos] = kv.first;
+			pos++;
+		}
+		return result;
+	}
 
     void readNext(storage::ReaderClb*clb) override {
         if (!_tp_readed) {
@@ -321,10 +331,17 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInterval(const IdArray &ids, Flag flag, Time from, Time to){
-        auto res= this->readInTimePoint(ids,flag,from);
-        res->_from=from;
-        res->_to=to;
-        res->_flag=flag;
+		std::shared_ptr<InnerReader> res;
+		if ((from > this->minTime()) || (ids.size()!=0))  {
+			res = this->readInTimePoint(ids, flag, from);
+			res->_from = from;
+			res->_to = to;
+			res->_flag = flag;
+		}
+		else {
+			res= std::make_shared<InnerReader>(flag, from, to);
+		}
+        
         for (auto ch : _chuncks) {
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
@@ -342,14 +359,14 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
-        auto res = std::make_shared<InnerReader>(flag, time_point, 0);
+		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
 		res->is_time_point_reader = true;
 		
         if(ids.size()==0){
             for (auto ch : _chuncks) {
                 bool is_exists=false;
                 for (auto&cur_chunk : ch.second) {
-                    if(cur_chunk->minTime<time_point){
+                    if(cur_chunk->minTime<=time_point){
                         res->add_tp(cur_chunk, cur_chunk->count);
                         is_exists=true;
                     }
@@ -368,7 +385,7 @@ public:
                     auto ch=search_res->second;
                     bool is_exists=false;
                     for (auto&cur_chunk : ch) {
-                        if(cur_chunk->minTime<time_point){
+                        if(cur_chunk->minTime<=time_point){
                             res->add_tp(cur_chunk, cur_chunk->count);
                             is_exists=true;
                         }
