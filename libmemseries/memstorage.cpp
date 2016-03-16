@@ -1,9 +1,11 @@
 #include "memstorage.h"
 #include "utils.h"
 #include "compression.h"
+#include "flags.h"
 #include <limits>
 #include <algorithm>
 #include <map>
+#include <tuple>
 
 using namespace memseries;
 using namespace memseries::compression;
@@ -127,6 +129,16 @@ public:
         //return this->_chunks.size() == 0 && this->_tp_chunks.size() == 0;
     }
 
+	memseries::IdArray getIds()const override {
+		memseries::IdArray result;
+		result.resize(_chunks.size());
+		size_t pos = 0;
+		for (auto &kv : _chunks) {
+			result[pos] = kv.first;
+			pos++;
+		}
+		return result;
+	}
 
     void readNext(storage::ReaderClb*clb) override {
         if (!_tp_readed) {
@@ -193,8 +205,19 @@ public:
                 }
             }
             if (candidate.time <= _from) {
+				//TODO make options
+				candidate.time = _from;
+
                 clb->call(candidate);
+				_tp_readed_times.insert(std::make_tuple(candidate.id, candidate.time));
             }
+        }
+        auto m=memseries::Meas::empty();
+        m.time=_from;
+        m.flag=memseries::Flags::NO_DATA;
+        for(auto id:_not_exist){
+            m.id=id;
+            clb->call(m);
         }
         _tp_readed = true;
         //TODO replace
@@ -205,6 +228,10 @@ public:
     bool is_time_point_reader;
 
     bool check_meas(const Meas&m)const{
+		auto tmp = std::make_tuple(m.id, m.time);
+		if (this->_tp_readed_times.find(tmp) != _tp_readed_times.end()) {
+			return false;
+		}
         using utils::inInterval;
 
         if ((in_filter(_flag, m.flag))&&(inInterval(_from, _to, m.time))) {
@@ -224,6 +251,10 @@ public:
     bool _tp_readed;
     //TODO remove end var
     bool end;
+    IdArray _not_exist;
+
+	typedef std::tuple<memseries::Id, memseries::Time> IdTime;
+	std::set<IdTime> _tp_readed_times;
 };
 
 
@@ -300,10 +331,17 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInterval(const IdArray &ids, Flag flag, Time from, Time to){
-        auto res= this->readInTimePoint(ids,flag,from);
-        res->_from=from;
-        res->_to=to;
-        res->_flag=flag;
+		std::shared_ptr<InnerReader> res;
+		if ((from > this->minTime()) || (ids.size()!=0))  {
+			res = this->readInTimePoint(ids, flag, from);
+			res->_from = from;
+			res->_to = to;
+			res->_flag = flag;
+		}
+		else {
+			res= std::make_shared<InnerReader>(flag, from, to);
+		}
+        
         for (auto ch : _chuncks) {
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
@@ -321,19 +359,45 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
-        auto res = std::make_shared<InnerReader>(flag, time_point, 0);
-        for (auto ch : _chuncks) {
-            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
-                continue;
-            }
-            for (auto&cur_chunk : ch.second) {
-                if(cur_chunk->minTime<time_point){
-                    res->add_tp(cur_chunk, cur_chunk->count);
+		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
+		res->is_time_point_reader = true;
+		
+        if(ids.size()==0){
+            for (auto ch : _chuncks) {
+                bool is_exists=false;
+                for (auto&cur_chunk : ch.second) {
+                    if(cur_chunk->minTime<=time_point){
+                        res->add_tp(cur_chunk, cur_chunk->count);
+                        is_exists=true;
+                    }
+                }
+                if(!is_exists){
+                    res->_not_exist.push_back(ch.first);
                 }
             }
-
+        }else{
+            //TODO refact
+            for(auto id:ids){
+                auto search_res=_chuncks.find(id);
+                if(search_res==_chuncks.end()){
+                    res->_not_exist.push_back(id);
+                }else{
+                    auto ch=search_res->second;
+                    bool is_exists=false;
+                    for (auto&cur_chunk : ch) {
+                        if(cur_chunk->minTime<=time_point){
+                            res->add_tp(cur_chunk, cur_chunk->count);
+                            is_exists=true;
+                        }
+                    }
+                    if(!is_exists){
+                        res->_not_exist.push_back(id);
+                    }
+                }
+            }
         }
-        res->is_time_point_reader = true;
+
+       
         return res;
     }
 

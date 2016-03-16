@@ -8,7 +8,7 @@
 #include <sstream>
 #include <cassert>
 #include <limits>
-
+#include <algorithm>
 using namespace memseries;
 using namespace memseries::compression;
 
@@ -60,9 +60,9 @@ public:
 
     bool is_full() const { return _is_full; }
 
-    size_t writed()const{
-        //TODO find better method;
-        return time_comp.writed()+value_comp.writed()+flag_comp.writed();
+    size_t used_space()const{
+        auto local_max=std::max(time_comp.used_space(),value_comp.used_space());
+        return std::max(local_max,flag_comp.used_space());
     }
 protected:
     Meas _first;
@@ -161,8 +161,8 @@ bool CopmressedWriter::is_full()const{
     return _Impl->is_full();
 }
 
-size_t CopmressedWriter::writed()const{
-    return _Impl->writed();
+size_t CopmressedWriter::used_space()const{
+    return _Impl->used_space();
 }
 
 CopmressedReader::CopmressedReader(){

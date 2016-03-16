@@ -142,6 +142,26 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
         auto readed=b.read(31);
         BOOST_CHECK_EQUAL(writed,readed);
     }
+
+	{// max uint64
+		b.reset_pos();
+		auto writed = std::numeric_limits<uint64_t>::max();
+		b.write((uint64_t)writed, 63);
+		b.reset_pos();
+		auto readed = b.read(63);
+		BOOST_CHECK_EQUAL(writed, readed);
+	}
+
+
+	{// 0
+		std::fill(std::begin(buffer), std::end(buffer), 0);
+		b.reset_pos();
+        uint64_t writed = 0;
+		b.write((uint16_t)writed, 5);
+		b.reset_pos();
+		auto readed = b.read(5);
+		BOOST_CHECK_EQUAL(writed, readed);
+	}
 }
 
 
@@ -420,6 +440,20 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
             BOOST_CHECK_EQUAL(dc.read(),v);
         }
     }
+
+	{ // maxValue
+		std::fill(rng.begin, rng.end, 0);
+		Testable_XorCompressor co(BinaryBuffer{ rng });
+		auto max_value = std::numeric_limits<memseries::Value>::max();
+		auto v1 = memseries::Value(0);
+		auto v2 = memseries::Value(max_value);
+		
+		co.append(v1);
+		co.append(v2);
+
+		XorDeCompressor dc(BinaryBuffer{ rng }, 0);
+		BOOST_CHECK_EQUAL(dc.read(), v2);
+	}
 }
 
 BOOST_AUTO_TEST_CASE(FlagCompressor) 

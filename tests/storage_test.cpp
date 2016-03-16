@@ -5,6 +5,7 @@
 #include <meas.h>
 #include <memstorage.h>
 #include <time_ordered_set.h>
+#include <flags.h>
 #include <string>
 #include <thread>
 #include <iostream>
@@ -18,7 +19,9 @@ void checkAll(memseries::Meas::MeasList res,
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
 		for (auto &m : res) {
-			if ((m.id == i) && (m.flag == i) && (m.time == i)) {
+			if ((m.id == i) 
+				&& ((m.flag == i) ||(m.flag==memseries::Flags::NO_DATA)) 
+				&& (m.time == i)) {
 				count++;
 			}
 
@@ -49,8 +52,11 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 	}
 
 	memseries::Meas::MeasList all{};
-	as->readInterval(from, to)->readAll(&all);
+	auto reader = as->readInterval(from, to);
+	reader->readAll(&all);
     BOOST_CHECK_EQUAL(all.size(), total_count);
+	auto readed_ids = reader->getIds();
+	BOOST_CHECK_EQUAL(readed_ids.size(), size_t(to/step));
 
 	checkAll(all, "readAll error: ", from, to, step);
 
@@ -61,17 +67,19 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 
 	checkAll(all, "read error: ", from, to, step);
 
-	ids.push_back(from + step);
+    ids.push_back(from + step);
 	memseries::Meas::MeasList fltr_res{};
-	as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
+    as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
 
-	BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
+    BOOST_CHECK_EQUAL(fltr_res.size(), copies_count+1);
 
 	BOOST_CHECK_EQUAL(fltr_res.front().id, ids[0]);
+    BOOST_CHECK_EQUAL(fltr_res.front().flag, memseries::Flags::NO_DATA);
 
 	fltr_res.clear();
 	as->readInterval(ids, memseries::Flag(to + 1), from, to)->readAll(&fltr_res);
-	BOOST_CHECK_EQUAL(fltr_res.size(), size_t(0));
+    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
+    BOOST_CHECK_EQUAL(fltr_res.front().flag, memseries::Flags::NO_DATA);
 
 	all.clear();
 	as->readInTimePoint(to)->readAll(&all);
@@ -82,6 +90,13 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 	fltr_res.clear();
 	as->readInTimePoint(to)->readAll(&fltr_res);
 	BOOST_CHECK_EQUAL(fltr_res.size(), ids_count);
+
+    memseries::IdArray notExstsIDs{9999};
+    fltr_res.clear();
+    as->readInTimePoint(notExstsIDs,0,to-1)->readAll(&fltr_res);
+    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
+    BOOST_CHECK_EQUAL(fltr_res.front().flag, memseries::Flags::NO_DATA);
+
 }
 
 
@@ -123,6 +138,7 @@ void thread_writer(memseries::Id id,
 	}
 }
 
+//TODO uncomment this.
 //BOOST_AUTO_TEST_CASE(MultiThread)
 //{
 //	auto ms = new memseries::storage::MemoryStorage{ 500 };
@@ -173,7 +189,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			memseries::Meas::MeasList output_in_point{};
 			tp_reader->readAll(&output_in_point);
 
-			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(2));
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(2+3));//+ timepoimt(3) with no_data
 			for (auto v : output_in_point) {
 				BOOST_CHECK(v.time <= 3);
 			}
@@ -181,7 +197,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 		auto reader = ds->readInterval(3, 5);
 		memseries::Meas::MeasList output{};
 		reader->readAll(&output);
-		BOOST_CHECK_EQUAL(output.size(), size_t(5));
+		BOOST_CHECK_EQUAL(output.size(), size_t(5+3));//+ timepoimt(3) with no_data
 	}
 	// from this point read not from firsts.
 	{
@@ -202,7 +218,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			memseries::Meas::MeasList output_in_point{};
 			tp_reader->readAll(&output_in_point);
 
-			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
+			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5+1));//+ timepoimt(8) with no_data
 			for (auto v : output_in_point) {
 				BOOST_CHECK(v.time <= 8);
 			}
@@ -227,4 +243,120 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 
 	}
 	delete ds;
+}
+
+
+BOOST_AUTO_TEST_CASE(byStep) {
+	const size_t id_count = 1;
+	{// equal step
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
+		
+		auto m = memseries::Meas::empty();
+		const size_t total_count = 100;
+		const memseries::Time time_step = 1;
+		
+		for (size_t i = 0; i < total_count; i += time_step) {
+			m.id = i%id_count;
+			m.flag = memseries::Flag(i);
+			m.time = i;
+			m.value = 0;
+			ms->append(m);
+		}
+		auto rdr=ms->readInterval(0, total_count);
+
+		memseries::Meas::MeasList allByStep;
+		rdr = ms->readInterval(0, total_count);
+		rdr->readByStep(&allByStep,0,total_count, time_step);
+		auto expected = size_t(total_count / time_step)*id_count;//+ timepoint
+		BOOST_CHECK_EQUAL(allByStep.size(), expected);
+		delete ms;
+	}
+
+	{// less step
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
+
+		auto m = memseries::Meas::empty();
+		const size_t total_count = 100;
+		const memseries::Time time_step = 10;
+		
+		for (size_t i = 0; i < total_count; i += time_step) {
+			m.id = i%id_count;
+			m.flag = memseries::Flag(i);
+			m.time = i;
+			m.value = 0;
+			ms->append(m);
+		}
+		
+		auto rdr = ms->readInterval(0, total_count);
+
+		memseries::Time query_step = 11;
+		memseries::Meas::MeasList allByStep;
+		rdr = ms->readInterval(0, total_count);
+		rdr->readByStep(&allByStep, 0, total_count, query_step);
+		auto expected = size_t(total_count / query_step)*id_count + id_count;//+ timepoint;
+		BOOST_CHECK_EQUAL(allByStep.size(), expected); 
+		delete ms;
+	}
+
+	{// great step
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
+
+		auto m = memseries::Meas::empty();
+		const size_t total_count = 100;
+		const memseries::Time time_step = 10;
+
+		for (size_t i = 0; i < total_count; i += time_step) {
+			m.id = i%id_count;
+			m.flag = memseries::Flag(i);
+			m.time = i;
+			m.value = 0;
+			ms->append(m);
+		}
+
+		auto rdr = ms->readInterval(0, total_count);
+		memseries::Meas::MeasList all;
+		rdr->readAll(&all);
+
+		memseries::Time query_step = 5;
+		memseries::Meas::MeasList allByStep;
+		rdr = ms->readInterval(0, total_count);
+		rdr->readByStep(&allByStep, 0, total_count, query_step);
+        auto expected = size_t(total_count / time_step)*2 * id_count + id_count;//+ timepoint;
+		BOOST_CHECK_EQUAL(allByStep.size(), expected);
+		delete ms;
+	}
+
+	{// from before data
+		auto ms = new memseries::storage::MemoryStorage{ 500 };
+
+		auto m = memseries::Meas::empty();
+		const size_t total_count = 100;
+		const memseries::Time time_step = 10;
+
+		for (size_t i = time_step; i < total_count; i += time_step) {
+			m.id = i%id_count;
+			m.flag = memseries::Flag(i);
+			m.time = i;
+			m.value = 0;
+			ms->append(m);
+		}
+
+		auto rdr = ms->readInterval(time_step, total_count);
+		memseries::Meas::MeasList all;
+		rdr->readAll(&all);
+
+		memseries::Time query_step = 5;
+		memseries::Meas::MeasList allByStep;
+		rdr = ms->readInterval(time_step, total_count);
+
+		rdr->readByStep(&allByStep, 0, total_count, query_step);
+		
+		auto expected = size_t((total_count - time_step) / time_step) * 2;
+		expected= expected* id_count;
+		expected += id_count*(time_step / query_step);//+ before first value
+		expected += id_count;//one after last  value
+
+		BOOST_CHECK_EQUAL(allByStep.size(), expected);
+		delete ms;
+	}
 }

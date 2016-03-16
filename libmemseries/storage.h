@@ -17,10 +17,12 @@ namespace memseries {
         class Reader: public utils::NonCopy {
         public:
             virtual bool isEnd() const = 0;
+			virtual IdArray getIds()const = 0;
             virtual void readNext(ReaderClb*clb) = 0;
             virtual void readAll(Meas::MeasList *output);
             virtual void readAll(ReaderClb*clb);
-
+			virtual void readByStep(ReaderClb*clb, memseries::Time from, memseries::Time to, memseries::Time step);
+			virtual void readByStep(Meas::MeasList *output, memseries::Time from, memseries::Time to, memseries::Time step);
         };
 
         typedef std::shared_ptr<Reader> Reader_ptr;
@@ -37,6 +39,8 @@ namespace memseries {
             virtual append_result append(const Meas::PMeas begin, const size_t size) = 0;
             virtual append_result append(const Meas &value) = 0;
 
+			/// return data in [from + to]. 
+			/// if 'from'> minTime return data readInTimePoint('from')
             virtual Reader_ptr readInterval(Time from, Time to);
             virtual Reader_ptr readInTimePoint(Time time_point);
 

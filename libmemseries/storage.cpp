@@ -1,5 +1,7 @@
 #include "storage.h"
 #include "meas.h"
+#include "flags.h"
+#include <map>
 
 using namespace memseries;
 using namespace memseries::storage;
@@ -17,12 +19,104 @@ public:
     Meas::MeasList *_output;
 };
 
+class ByStepClbk :public memseries::storage::ReaderClb {
+public:
+	ByStepClbk(memseries::storage::ReaderClb*clb, memseries::IdArray ids, memseries::Time from, memseries::Time to, memseries::Time step) {
+		_out_clbk = clb;
+		_step = step;
+        _from=from;
+        _to=to;
+
+		for (auto id : ids) {
+			_last[id].id = id;
+			_last[id].time = _from;
+			_last[id].flag = memseries::Flags::NO_DATA;
+			_last[id].value = 0;
+
+			_isFirst[id] = true;
+			
+			_new_time_point[id] = from;
+		}
+	}
+	~ByStepClbk() {}
+
+	void dump_first_value(const Meas&m) {
+		if (m.time > _from) {
+			auto cp = _last[m.id];
+			for (memseries::Time i = _from; i < m.time; i += _step) {
+				_out_clbk->call(cp);
+				cp.time = _last[m.id].time + _step;
+				_last[m.id] = cp;
+				_new_time_point[m.id] += _step;
+			}
+		}
+
+		_last[m.id] = m;
+
+		_out_clbk->call(_last[m.id]);
+		_new_time_point[m.id] = (m.time + _step);
+	}
+
+	void call(const Meas&m) {
+		if (_isFirst[m.id]) {
+			_isFirst[m.id] = false;
+
+			dump_first_value(m);
+			return;
+		}
+		
+		if (m.time < _new_time_point[m.id]) {
+			_last[m.id] = m;
+			return;
+		}
+		if (m.time == _new_time_point[m.id]) {
+			_last[m.id] = m;
+			memseries::Meas cp{ m };
+			cp.time = _new_time_point[m.id];
+			_new_time_point[m.id] = (m.time + _step);
+			_out_clbk->call(cp);
+			return;
+		}
+		if (m.time > _new_time_point[m.id]) {
+			auto last_value = _last[m.id];
+			auto new_time_point_value = _new_time_point[m.id];
+
+			memseries::Meas cp{ last_value };
+			// get all from _new_time_point to m.time  with step
+			for (memseries::Time i = new_time_point_value; i < m.time; i += _step) {
+				cp.time = i;
+				_out_clbk->call(cp);
+				cp.time = last_value.time + _step;
+				last_value = cp;
+				new_time_point_value+= _step;
+			}
+			
+			_new_time_point[m.id] = new_time_point_value;
+
+			if (m.time == new_time_point_value) {
+				_out_clbk->call(m);
+				_new_time_point[m.id] = (m.time + _step);
+			}
+			_last[m.id] = m;
+			return;
+		}
+	}
+
+	memseries::storage::ReaderClb *_out_clbk;
+	
+	std::map<memseries::Id, bool> _isFirst;
+	std::map<memseries::Id, memseries::Meas> _last;
+	std::map<memseries::Id, memseries::Time> _new_time_point;
+
+	memseries::Time _step;
+    memseries::Time _from;
+    memseries::Time _to;
+};
+
 void Reader::readAll(Meas::MeasList * output)
 {
-    std::shared_ptr<InnerCallback> clb(new InnerCallback(output));
-    while (!isEnd()) {
-        readNext(clb.get());
-    }
+    std::unique_ptr<InnerCallback> clb(new InnerCallback(output));
+	this->readAll(clb.get());
 }
 
 
@@ -33,6 +127,24 @@ void Reader::readAll(ReaderClb*clb)
     }
 }
 
+void  Reader::readByStep(ReaderClb*clb, memseries::Time from, memseries::Time to, memseries::Time step) {
+    std::unique_ptr<ByStepClbk> inner_clb(new ByStepClbk(clb,this->getIds(),from,to,step));
+	while (!isEnd()) {
+		readNext(inner_clb.get());
+	}
+	for (auto kv : inner_clb->_new_time_point) {
+		if (kv.second < to) {
+			auto cp = inner_clb->_last[kv.first];
+			cp.time = to;
+			inner_clb->call(cp);
+		}
+	}
+}
+
+void  Reader::readByStep(Meas::MeasList *output, memseries::Time from, memseries::Time to, memseries::Time step) {
+	std::unique_ptr<InnerCallback> clb(new InnerCallback(output));
+	this->readByStep(clb.get(),from,to,step);
+}
 
 append_result AbstractStorage::append(const Meas::MeasArray & ma)
 {

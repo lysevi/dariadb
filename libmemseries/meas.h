@@ -21,6 +21,7 @@ struct Meas {
   static Meas empty();
 
   Meas();
+  Meas(const Meas&other)=default;
   void readFrom(const Meas::PMeas m);
   bool operator==(const Meas &other) const {
     return id == other.id && time == other.time && flag == other.flag &&
