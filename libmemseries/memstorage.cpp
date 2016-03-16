@@ -343,7 +343,7 @@ public:
 
     std::shared_ptr<InnerReader> readInterval(const IdArray &ids, Flag flag, Time from, Time to){
 		std::shared_ptr<InnerReader> res;
-		if ((from > this->minTime()) || (ids.size()!=0))  {
+		if (from > this->minTime())  {
 			res = this->readInTimePoint(ids, flag, from);
 			res->_from = from;
 			res->_to = to;
@@ -387,7 +387,7 @@ public:
                 }
             }
         }else{
-            //TODO refact
+			//TODO refact
             for(auto id:ids){
                 auto search_res=_chuncks.find(id);
                 if(search_res==_chuncks.end()){
