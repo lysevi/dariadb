@@ -14,6 +14,9 @@ namespace memseries {
             virtual ~ReaderClb(){}
         };
 
+		class Reader;
+		typedef std::shared_ptr<Reader> Reader_ptr;
+
         class Reader: public utils::NonCopy {
         public:
             virtual bool isEnd() const = 0;
@@ -23,9 +26,11 @@ namespace memseries {
             virtual void readAll(ReaderClb*clb);
 			virtual void readByStep(ReaderClb*clb, memseries::Time from, memseries::Time to, memseries::Time step);
 			virtual void readByStep(Meas::MeasList *output, memseries::Time from, memseries::Time to, memseries::Time step);
+			virtual Reader_ptr clone()const = 0;
+			virtual void reset() = 0; // after reader ead from begining;
         };
 
-        typedef std::shared_ptr<Reader> Reader_ptr;
+        
         class AbstractStorage: public utils::NonCopy {
         public:
             virtual ~AbstractStorage() = default;

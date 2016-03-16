@@ -32,6 +32,21 @@ void checkAll(memseries::Meas::MeasList res,
 	}
 }
 
+void check_reader_of_all(memseries::storage::Reader_ptr reader,
+	memseries::Time from,
+	memseries::Time to,
+	memseries::Time  step, 
+	size_t total_count,std::string message)
+{
+	memseries::Meas::MeasList all{};
+	reader->readAll(&all);
+	BOOST_CHECK_EQUAL(all.size(), total_count);
+	auto readed_ids = reader->getIds();
+	BOOST_CHECK_EQUAL(readed_ids.size(), size_t(to / step));
+
+	checkAll(all, message, from, to, step);
+}
+
 void storage_test_check(memseries::storage::AbstractStorage *as,
                         memseries::Time from,
                         memseries::Time to,
@@ -51,17 +66,16 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 		}
 	}
 
-	memseries::Meas::MeasList all{};
+	
 	auto reader = as->readInterval(from, to);
-	reader->readAll(&all);
-    BOOST_CHECK_EQUAL(all.size(), total_count);
-	auto readed_ids = reader->getIds();
-	BOOST_CHECK_EQUAL(readed_ids.size(), size_t(to/step));
+	check_reader_of_all(reader, from, to, step, total_count, "readAll error: ");
 
-	checkAll(all, "readAll error: ", from, to, step);
+	auto cloned_reader=reader->clone();
+	cloned_reader->reset();
+	check_reader_of_all(cloned_reader, from, to, step, total_count, "cloned readAll error: ");
 
 	memseries::IdArray ids{};
-	all.clear();
+	memseries::Meas::MeasList all{};
 	as->readInterval(ids, 0, from, to)->readAll(&all);
     BOOST_CHECK_EQUAL(all.size(), total_count);
 

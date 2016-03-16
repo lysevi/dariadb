@@ -125,8 +125,6 @@ public:
 
     bool isEnd() const override{
         return this->end && this->_tp_readed;
-        //TODO replace
-        //return this->_chunks.size() == 0 && this->_tp_chunks.size() == 0;
     }
 
 	memseries::IdArray getIds()const override {
@@ -170,8 +168,6 @@ public:
 
         }
         end=true;
-        //TODO replace
-        //_chunks.clear();
     }
 
     void readTimePoint(storage::ReaderClb*clb){
@@ -205,7 +201,7 @@ public:
                 }
             }
             if (candidate.time <= _from) {
-				//TODO make options
+				//TODO make as options
 				candidate.time = _from;
 
                 clb->call(candidate);
@@ -220,8 +216,6 @@ public:
             clb->call(m);
         }
         _tp_readed = true;
-        //TODO replace
-        //        _tp_chunks.clear();
     }
 
 
@@ -240,6 +234,24 @@ public:
         return false;
     }
 
+	Reader_ptr clone()const override{
+		auto res= std::make_shared<InnerReader>(_flag, _from,_to);
+		res->_chunks = _chunks;
+		res->_tp_chunks = _tp_chunks;
+		res->_flag = _flag;
+		res->_from = _from;
+		res->_to = _to;
+		res->_tp_readed = _tp_readed;
+		res->end = end;
+		res->_not_exist = _not_exist;
+		res->_tp_readed_times = _tp_readed_times;
+		return res;
+	}
+	void reset()override {
+		end = false;
+		_tp_readed = false;
+		_tp_readed_times.clear();
+	}
     typedef std::vector<ReadChunk> ReadChuncksVector;
     typedef std::map<Id, ReadChuncksVector> ReadChunkMap;
 
@@ -249,7 +261,6 @@ public:
     memseries::Time _from;
     memseries::Time _to;
     bool _tp_readed;
-    //TODO remove end var
     bool end;
     IdArray _not_exist;
 
