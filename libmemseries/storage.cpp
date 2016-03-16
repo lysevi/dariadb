@@ -26,6 +26,8 @@ public:
 		_step = step;
         _from=from;
         _to=to;
+		_last.time = _from;
+		_last.flag = memseries::Flags::NO_DATA;
 	}
 	~ByStepClbk() {}
 	void call(const Meas&m) {
