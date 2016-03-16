@@ -78,17 +78,22 @@ public:
 			return;
 		}
 		if (m.time > _new_time_point[m.id]) {
-			memseries::Meas cp{ _last[m.id] };
+			auto last_value = _last[m.id];
+			auto new_time_point_value = _new_time_point[m.id];
+
+			memseries::Meas cp{ last_value };
 			// get all from _new_time_point to m.time  with step
-			for (memseries::Time i = _new_time_point[m.id]; i < m.time; i += _step) {
+			for (memseries::Time i = new_time_point_value; i < m.time; i += _step) {
 				cp.time = i;
 				_out_clbk->call(cp);
-				cp.time = _last[m.id].time + _step;
-				_last[m.id] = cp;
-				_new_time_point[m.id] += _step;
+				cp.time = last_value.time + _step;
+				last_value = cp;
+				new_time_point_value+= _step;
 			}
+			
+			_new_time_point[m.id] = new_time_point_value;
 
-			if (m.time == _new_time_point[m.id]) {
+			if (m.time == new_time_point_value) {
 				_out_clbk->call(m);
 				_new_time_point[m.id] = (m.time + _step);
 			}
