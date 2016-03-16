@@ -39,26 +39,29 @@ public:
 		}
 	}
 	~ByStepClbk() {}
+
+	void dump_first_value(const Meas&m) {
+		if (m.time > _from) {
+			auto cp = _last[m.id];
+			for (size_t i = _from; i < m.time; i += _step) {
+				_out_clbk->call(cp);
+				cp.time = _last[m.id].time + _step;
+				_last[m.id] = cp;
+				_new_time_point[m.id] += _step;
+			}
+		}
+
+		_last[m.id] = m;
+
+		_out_clbk->call(_last[m.id]);
+		_new_time_point[m.id] = (m.time + _step);
+	}
+
 	void call(const Meas&m) {
 		if (_isFirst[m.id]) {
 			_isFirst[m.id] = false;
 
-			if (m.time > _from) {
-				auto cp = _last[m.id];
-				for (size_t i = _from; i < m.time; i+=_step) {
-					_out_clbk->call(cp);
-					cp.time = _last[m.id].time + _step;
-					_last[m.id] = cp;
-					_new_time_point[m.id] += _step;
-				}
-				_last_out[m.id] = _last[m.id];
-			}
-			
-			_last[m.id] = m;
-		
-			_out_clbk->call(_last[m.id]);
-			_last_out[m.id] = _last[m.id];
-			_new_time_point[m.id] = (m.time + _step);
+			dump_first_value(m);
 			return;
 		}
 		
@@ -71,7 +74,6 @@ public:
 			memseries::Meas cp{ m };
 			cp.time = _new_time_point[m.id];
 			_new_time_point[m.id] = (m.time + _step);
-			_last_out[m.id] = cp;
 			_out_clbk->call(cp);
 			return;
 		}
@@ -85,6 +87,7 @@ public:
 				_last[m.id] = cp;
 				_new_time_point[m.id] += _step;
 			}
+
 			if (m.time == _new_time_point[m.id]) {
 				_out_clbk->call(m);
 				_new_time_point[m.id] = (m.time + _step);
@@ -98,7 +101,6 @@ public:
 	
 	std::map<memseries::Id, bool> _isFirst;
 	std::map<memseries::Id, memseries::Meas> _last;
-	std::map<memseries::Id, memseries::Meas> _last_out;
 	std::map<memseries::Id, memseries::Time> _new_time_point;
 
 	memseries::Time _step;
