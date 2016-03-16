@@ -13,7 +13,7 @@ namespace memseries {
             virtual void call(const Meas&m)=0;
             virtual ~ReaderClb(){}
         };
-
+		typedef std::shared_ptr<ReaderClb> ReaderClb_ptr;
 		class Reader;
 		typedef std::shared_ptr<Reader> Reader_ptr;
 
@@ -55,6 +55,8 @@ namespace memseries {
             virtual Reader_ptr readInTimePoint(const IdArray &ids,
                                                Flag flag,
                                                Time time_point) = 0;
+
+			virtual void subscribe(const IdArray&ids, Flag flag, ReaderClb_ptr clbk) = 0;
         };
 		typedef std::shared_ptr<AbstractStorage> AbstractStorage_ptr;
     }

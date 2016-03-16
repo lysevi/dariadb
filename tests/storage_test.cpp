@@ -366,3 +366,39 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		delete ms;
 	}
 }
+
+class Moc_SubscribeClbk : public memseries::storage::ReaderClb {
+public:
+	void call(const memseries::Meas&m) override {
+
+	}
+	~Moc_SubscribeClbk() {}
+};
+
+BOOST_AUTO_TEST_CASE(Subscribe) {
+	const size_t id_count = 5;
+	std::shared_ptr<Moc_SubscribeClbk> c1(new Moc_SubscribeClbk);
+	std::shared_ptr<Moc_SubscribeClbk> c2(new Moc_SubscribeClbk);
+	std::shared_ptr<Moc_SubscribeClbk> c3(new Moc_SubscribeClbk);
+	std::shared_ptr<Moc_SubscribeClbk> c4(new Moc_SubscribeClbk);
+
+	std::unique_ptr<memseries::storage::MemoryStorage> ms{ new memseries::storage::MemoryStorage{ 500 } };
+	memseries::IdArray ids{};
+	ms->subscribe(ids, 0, c1);
+	ms->subscribe(ids, 0, c2);
+	ms->subscribe(ids, 0, c3);
+	ms->subscribe(ids, 0, c4);
+
+	auto m = memseries::Meas::empty();
+	const size_t total_count = 100;
+	const memseries::Time time_step = 1;
+
+	for (size_t i = 0; i < total_count; i += time_step) {
+		m.id = i%id_count;
+		m.flag = memseries::Flag(i);
+		m.time = i;
+		m.value = 0;
+		ms->append(m);
+	}
+	BOOST_CHECK(false);
+}

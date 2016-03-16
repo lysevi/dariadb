@@ -26,6 +26,7 @@ namespace memseries {
             size_t size() const;
             size_t chunks_size() const;
 
+			void subscribe(const IdArray&ids, Flag flag, ReaderClb_ptr clbk)override;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;
