@@ -375,42 +375,34 @@ public:
 		
         if(ids.size()==0){
             for (auto ch : _chuncks) {
-                bool is_exists=false;
-                for (auto&cur_chunk : ch.second) {
-                    if(cur_chunk->minTime<=time_point){
-                        res->add_tp(cur_chunk, cur_chunk->count);
-                        is_exists=true;
-                    }
-                }
-                if(!is_exists){
-                    res->_not_exist.push_back(ch.first);
-                }
+				load_tp_from_chunks(res.get(), ch.second, time_point, ch.first);
             }
         }else{
-			//TODO refact
             for(auto id:ids){
                 auto search_res=_chuncks.find(id);
                 if(search_res==_chuncks.end()){
                     res->_not_exist.push_back(id);
                 }else{
                     auto ch=search_res->second;
-                    bool is_exists=false;
-                    for (auto&cur_chunk : ch) {
-                        if(cur_chunk->minTime<=time_point){
-                            res->add_tp(cur_chunk, cur_chunk->count);
-                            is_exists=true;
-                        }
-                    }
-                    if(!is_exists){
-                        res->_not_exist.push_back(id);
-                    }
+					load_tp_from_chunks(res.get(), ch, time_point, id);
                 }
             }
         }
-
-       
         return res;
     }
+
+	void load_tp_from_chunks(InnerReader *_ptr, ChuncksList chunks, Time time_point, Id id) {
+		bool is_exists = false;
+		for (auto&cur_chunk : chunks) {
+			if (cur_chunk->minTime <= time_point) {
+				_ptr->add_tp(cur_chunk, cur_chunk->count);
+				is_exists = true;
+			}
+		}
+		if (!is_exists) {
+			_ptr->_not_exist.push_back(id);
+		}
+	}
 
     size_t size()const { return _size; }
     size_t chunks_size()const { return _chuncks.size(); }
