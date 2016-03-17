@@ -73,7 +73,7 @@ BinaryBuffer& BinaryBuffer::incbit(){
 
 BinaryBuffer& BinaryBuffer::incpos(){
     _pos--;
-	assert(pos != 0);
+	assert(_pos != 0);
     return *this;
 }
 
