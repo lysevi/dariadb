@@ -1,10 +1,15 @@
 include_directories(../libmemseries)
+MESSAGE(STATUS "Benchmarks: ")
 
-add_executable (compression_bench compression_bench.cpp)
-TARGET_LINK_LIBRARIES(compression_bench libmemseries ${Boost_LIBRARIES})
+macro(ADD_BENCHARK name src)
+        MESSAGE(STATUS " +" ${name})
+        add_executable(${name} ${src})
 
-add_executable (storage_bench storage_bench.cpp)
-TARGET_LINK_LIBRARIES(storage_bench libmemseries ${Boost_LIBRARIES})
+        target_link_libraries(${name}
+                                ${Boost_LIBRARIES}
+                                libmemseries )
+endmacro(ADD_BENCHARK)
 
-add_executable (capacitor_bench capacitor_bench.cpp)
-TARGET_LINK_LIBRARIES(capacitor_bench libmemseries ${Boost_LIBRARIES})
+ADD_BENCHARK(compression_bench compression_bench.cpp)
+ADD_BENCHARK(storage_bench storage_bench.cpp)
+ADD_BENCHARK(capacitor_bench capacitor_bench.cpp)

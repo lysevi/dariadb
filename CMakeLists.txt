@@ -1,6 +1,10 @@
 cmake_minimum_required (VERSION 2.8)
 project (memseries)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(AddCXXCompilerFlag)
+
 set(memseries_MAJOR_VERSION 0)
 set(memseries_MINOR_VERSION 0)
 set(memseries_PATCH_VERSION 0)
@@ -52,6 +56,26 @@ else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
   
   find_package(Boost  REQUIRED unit_test_framework)
+
+  set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
+    "Flags used by the C++ compiler during coverage builds."
+    FORCE)
+  set(CMAKE_EXE_LINKER_FLAGS_COVERAGE
+    "${CMAKE_EXE_LINKER_FLAGS_DEBUG}" CACHE STRING
+    "Flags used for linking binaries during coverage builds."
+    FORCE)
+  set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE
+    "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}" CACHE STRING
+    "Flags used by the shared libraries linker during coverage builds."
+    FORCE)
+  mark_as_advanced(
+    CMAKE_CXX_FLAGS_COVERAGE
+    CMAKE_EXE_LINKER_FLAGS_COVERAGE
+    CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
+  set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
+    "Choose the type of build, options are: None Debug Release Coverage."
+    FORCE)
+  add_cxx_compiler_flag(--coverage COVERAGE)
 ENDIF(WIN32)
 
 IF(Boost_FOUND)
