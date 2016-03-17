@@ -4,10 +4,10 @@
 
 namespace memseries{
     namespace statistic{
-        class BaseIntegrall{
+        class BaseIntegral{
         public:
-            BaseIntegrall(){_is_first=true;}
-            virtual ~BaseIntegrall()=default;
+            BaseIntegral(){_is_first=true;}
+            virtual ~BaseIntegral()=default;
             void call(const memseries::Meas&m);
             virtual void calc(const memseries::Meas&a,const memseries::Meas&b)=0;
         protected:

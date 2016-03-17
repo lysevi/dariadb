@@ -1,8 +1,8 @@
-#include "integrall.h"
+#include "integral.h"
 
 using namespace  memseries::statistic;
 
-void BaseIntegrall::call(const memseries::Meas&m){
+void BaseIntegral::call(const memseries::Meas&m){
     if(_is_first){
         _last=m;
         _is_first=false;

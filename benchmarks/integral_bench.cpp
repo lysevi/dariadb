@@ -3,13 +3,16 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <integrall.h>
+#include <integral.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
 #include <chrono>
 
-class Moc_I1:public memseries::statistic::BaseIntegrall{
+const size_t K = 1;
+
+
+class Moc_I1:public memseries::statistic::BaseIntegral{
 public:
     Moc_I1(){
         _a=_b=memseries::Meas::empty();
@@ -22,8 +25,8 @@ public:
     memseries::Meas _b;
 };
 
-const size_t K = 1;
-void bench_int(memseries::statistic::BaseIntegrall*bi){
+
+void bench_int(memseries::statistic::BaseIntegral*bi){
     auto m=memseries::Meas::empty();
     for (size_t i = 1; i < K*1000000; i++) {
         m.value=i;

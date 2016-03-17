@@ -1,9 +1,9 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
-#include <integrall.h>
+#include <integral.h>
 
-class Moc_I1:public memseries::statistic::BaseIntegrall{
+class Moc_I1:public memseries::statistic::BaseIntegral{
 public:
     Moc_I1(){
         _a=_b=memseries::Meas::empty();
