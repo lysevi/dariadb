@@ -30,8 +30,8 @@ struct Meas {
 
   Id id;
   Time time;
-  Flag flag;
   Value value;
+  Flag flag;
 };
 
 bool in_filter(Flag filter, Flag flg);
