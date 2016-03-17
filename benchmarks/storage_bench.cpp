@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     reader_int->readAll(clbk);
 
     elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
-    std::cout<<"memorystorage readIntarval all: "<<elapsed<<std::endl;
+    std::cout<<"memorystorage readInterval all: "<<elapsed<<std::endl;
     std::cout<<"raded: "<<clbk->count<<std::endl;
 
 

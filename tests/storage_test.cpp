@@ -136,11 +136,34 @@ void thread_writer(memseries::Id id,
 		m.id = id;
 		m.flag = memseries::Flag(i);
 		m.time = i;
-		m.value = 0;
-		for (size_t j = 0; j < copies_count; j++) {
-			ms->append(m);
-			m.value = j;
-		}
+		m.value = memseries::Value(i);
+		ms->append(m);
+	}
+}
+
+
+void thread_reader(memseries::Id id,
+	memseries::Time from,
+	memseries::Time to,
+	size_t expected,
+	memseries::storage::MemoryStorage *ms)
+{
+	memseries::IdArray ids;
+	if (id != 0) {
+		ids.push_back(id);
+	}
+
+	if (to == 0) {
+		auto rdr = ms->readInTimePoint(ids, 0, from);
+		memseries::Meas::MeasList out;
+		rdr->readAll(&out);
+		BOOST_CHECK_EQUAL(out.size(), expected);
+	}
+	else {
+		auto rdr = ms->readInterval(ids, 0, from, to);
+		memseries::Meas::MeasList out;
+		rdr->readAll(&out);
+		BOOST_CHECK_EQUAL(out.size(), expected);
 	}
 }
 
@@ -156,6 +179,17 @@ BOOST_AUTO_TEST_CASE(MultiThread)
 	t2.join();
 	t3.join();
 	t4.join();
+
+    std::thread rt1(thread_reader, 0, 0, 100, (50+50+50+100),  ms);
+	std::thread rt2(thread_reader, 1, 50, 0,  1, ms);
+	std::thread rt3(thread_reader, 2, 0, 100, 50,ms);
+	std::thread rt4(thread_reader, 0, 50, 0, 3, ms);
+
+	rt1.join();
+	rt2.join();
+	rt3.join();
+	rt4.join();
+
 	delete ms;
 }
 

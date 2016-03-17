@@ -128,6 +128,7 @@ public:
     }
 
     void add(Chunk_Ptr c, size_t count){
+		std::lock_guard<std::mutex> lg(_mutex);
         ReadChunk rc;
         rc.chunk = c;
         rc.count = count;
@@ -135,6 +136,7 @@ public:
     }
 
     void add_tp(Chunk_Ptr c, size_t count){
+		std::lock_guard<std::mutex> lg(_mutex);
         ReadChunk rc;
         rc.chunk = c;
         rc.count = count;
@@ -157,6 +159,7 @@ public:
 	}
 
     void readNext(storage::ReaderClb*clb) override {
+		std::lock_guard<std::mutex> lg(_mutex);
         if (!_tp_readed) {
             this->readTimePoint(clb);
         }
@@ -189,7 +192,7 @@ public:
     }
 
     void readTimePoint(storage::ReaderClb*clb){
-
+		bool is_locked = _mutex.try_lock();
         std::list<InnerReader::ReadChunk> to_read_chunks{};
         for (auto ch : _tp_chunks) {
             auto candidate = ch.second.front();
@@ -234,6 +237,9 @@ public:
             clb->call(m);
         }
         _tp_readed = true;
+		if (is_locked) {
+			_mutex.unlock();
+		}
     }
 
 
@@ -284,6 +290,8 @@ public:
 
 	typedef std::tuple<memseries::Id, memseries::Time> IdTime;
 	std::set<IdTime> _tp_readed_times;
+
+	std::mutex _mutex;
 };
 
 
@@ -400,6 +408,7 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
+		bool is_locked=_mutex.try_lock();
 		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
 		res->is_time_point_reader = true;
 		
@@ -418,6 +427,9 @@ public:
                 }
             }
         }
+		if (is_locked) {
+			_mutex.unlock();
+		}
         return res;
     }
 
