@@ -15,4 +15,5 @@ TEST_CASE(utils_test utils_test.cpp)
 TEST_CASE(compression_test compression_test.cpp)
 TEST_CASE(storage_test storage_test.cpp)
 TEST_CASE(capacitor_test capacitor_test.cpp)
+TEST_CASE(integrall_test integrall_test.cpp)
 
