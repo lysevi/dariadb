@@ -8,6 +8,7 @@
 #include <map>
 #include <limits>
 #include <utility>
+#include <mutex>
 
 using namespace memseries;
 using namespace memseries::storage;
@@ -65,6 +66,8 @@ public:
 	}
 
     bool append(const memseries::Meas&m) {
+		std::lock_guard<std::mutex> lg(_mutex);
+
 		if (!is_valid(m)) {
 			return false;
 		}
@@ -83,7 +86,7 @@ public:
             if(is_valid_time(f->maxTime())){
                 break;
             }else{
-                flush_Capacitor(f);
+                flush_set(f);
                 _bucks.pop_front();
             }
         }
@@ -138,8 +141,9 @@ public:
     }
 
     bool flush(){
+		std::lock_guard<std::mutex> lg(_mutex);
         for (auto v : _bucks) {
-            if(!flush_Capacitor(v)){
+            if(!flush_set(v)){
                 return false;
             }
         }
@@ -147,7 +151,7 @@ public:
         return true;
     }
 
-    bool flush_Capacitor(tos_ptr b){
+    bool flush_set(tos_ptr b){
         auto arr = b->as_array();
         auto stor_res = _stor->append(arr);
         _writed_count -= arr.size();
@@ -172,6 +176,7 @@ protected:
     AbstractStorage_ptr _stor;
     size_t _writed_count;
 	memseries::Time _write_window_deep;
+	std::mutex _mutex;
 };
 
 Capacitor::Capacitor():_Impl(new Capacitor::Private(0,nullptr,0))

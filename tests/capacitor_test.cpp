@@ -2,6 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 #include <cassert>
+#include <thread>
 
 #include <time_ordered_set.h>
 #include <timeutil.h>
@@ -164,4 +165,55 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     stor->meases.clear();
     mbucket.flush();
     BOOST_CHECK(stor->meases.size()>=first_size);
+}
+
+
+
+void thread_writer(memseries::Id id,
+	memseries::Time from,
+	memseries::Time to,
+	memseries::Time step,
+	memseries::storage::Capacitor *cp)
+{
+	const size_t copies_count = 10;
+	auto m = memseries::Meas::empty();
+	for (auto i = from; i < to; i += step) {
+		m.id = id;
+		m.flag = memseries::Flag(i);
+		m.time = memseries::timeutil::current_time();
+		m.value = 0;
+		for (size_t j = 0; j < copies_count; j++) {
+			cp->append(m);
+			m.value = j;
+		}
+	}
+}
+
+BOOST_AUTO_TEST_CASE(MultiThread)
+{
+	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+	stor->writed_count = 0;
+	const size_t max_size = 10;
+	const memseries::Time write_window_deep = 1000;
+	auto mbucket = memseries::storage::Capacitor{ max_size, stor,write_window_deep };
+
+	std::thread t1(thread_writer, 0, 0, 100, 2, &mbucket);
+	std::thread t2(thread_writer, 1, 0, 100, 2, &mbucket);
+	std::thread t3(thread_writer, 2, 0, 100, 2, &mbucket);
+	std::thread t4(thread_writer, 0, 0, 100, 1, &mbucket);
+
+	t1.join();
+	t2.join();
+	t3.join();
+	t4.join();
+	
+	mbucket.flush();
+	BOOST_CHECK_EQUAL(stor->meases.size(), size_t(50+50+50+100));
+	for (size_t i = 0; i < stor->meases.size() - 1; i++) {
+		BOOST_CHECK(stor->meases[i].time <= stor->meases[i + 1].time);
+		if (stor->meases[i].time>stor->meases[i + 1].time) {
+			logger("i: " << i << " lhs: " << stor->meases[i].time << " rhs: " << stor->meases[i + 1].time);
+			assert(false);
+		}
+	}
 }

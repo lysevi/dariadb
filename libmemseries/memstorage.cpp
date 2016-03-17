@@ -7,6 +7,8 @@
 #include <map>
 #include <tuple>
 #include <assert.h>
+#include <mutex>
+
 using namespace memseries;
 using namespace memseries::compression;
 using namespace memseries::storage;
@@ -40,10 +42,12 @@ struct Chunk
     Meas first;
 
     Time minTime,maxTime;
+	std::mutex _mutex;
 
     Chunk(size_t size, Meas first_m):
         count(0),
-        first(first_m)
+        first(first_m),
+		_mutex()
     {
         minTime=std::numeric_limits<Time>::max();
         maxTime=std::numeric_limits<Time>::min();
@@ -70,6 +74,7 @@ struct Chunk
     }
     bool append(const Meas&m)
     {
+		std::lock_guard<std::mutex> lg(_mutex);
         auto t_f = this->c_writer.append(m);
 
         if (!t_f) {
@@ -316,6 +321,7 @@ public:
     }
 
     append_result append(const Meas& value){
+		std::lock_guard<std::mutex> lg(_mutex);
         Chunk_Ptr chunk=this->getFreeChunk(value.id);
 
         bool need_sort = false;
@@ -365,6 +371,7 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInterval(const IdArray &ids, Flag flag, Time from, Time to){
+		std::lock_guard<std::mutex> lg(_mutex);
 		std::shared_ptr<InnerReader> res;
 		if (from > this->minTime())  {
 			res = this->readInTimePoint(ids, flag, from);
@@ -445,6 +452,7 @@ protected:
     ChunkMap _chuncks;
     Time _min_time,_max_time;
     std::list<SubscribeInfo_ptr> _subscribes;
+	std::mutex _mutex;
 };
 
 

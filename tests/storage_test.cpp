@@ -144,21 +144,20 @@ void thread_writer(memseries::Id id,
 	}
 }
 
-//TODO uncomment this.
-//BOOST_AUTO_TEST_CASE(MultiThread)
-//{
-//	auto ms = new memseries::storage::MemoryStorage{ 500 };
-//	std::thread t1(thread_writer, 0, 0, 100, 2, ms);
-//	std::thread t2(thread_writer, 1, 0, 100, 2, ms);
-//	std::thread t3(thread_writer, 2, 0, 100, 2, ms);
-//	std::thread t4(thread_writer, 3, 0, 100, 2, ms);
+BOOST_AUTO_TEST_CASE(MultiThread)
+{
+	auto ms = new memseries::storage::MemoryStorage{ 500 };
+	std::thread t1(thread_writer, 0, 0, 100, 2, ms);
+	std::thread t2(thread_writer, 1, 0, 100, 2, ms);
+	std::thread t3(thread_writer, 2, 0, 100, 2, ms);
+	std::thread t4(thread_writer, 0, 0, 100, 1, ms);
 
-//	t1.join();
-//	t2.join();
-//	t3.join();
-//	t4.join();
-//	delete ms;
-//}
+	t1.join();
+	t2.join();
+	t3.join();
+	t4.join();
+	delete ms;
+}
 
 BOOST_AUTO_TEST_CASE(ReadInterval)
 {
