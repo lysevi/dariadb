@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 
         elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "TimeOrderedSet as_array: " << elapsed << std::endl;
-        std::cout << "raded: " << reader.size() << std::endl;
+        std::cout << "readed: " << reader.size() << std::endl;
     }
 
     {
