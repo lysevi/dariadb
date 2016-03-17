@@ -73,9 +73,7 @@ BinaryBuffer& BinaryBuffer::incbit(){
 
 BinaryBuffer& BinaryBuffer::incpos(){
     _pos--;
-    if (_pos==0){
-        throw MAKE_EXCEPTION("BinaryBuffer::incpos");
-    }
+	assert(pos != 0);
     return *this;
 }
 
