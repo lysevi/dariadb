@@ -16,7 +16,7 @@ public:
     memseries::Meas _b;
 };
 
-BOOST_AUTO_TEST_CASE(CalCalc) {
+BOOST_AUTO_TEST_CASE(CallCalc) {
     std::unique_ptr<Moc_I1>  p{new Moc_I1};
     auto m=memseries::Meas::empty();
     m.id=1;
