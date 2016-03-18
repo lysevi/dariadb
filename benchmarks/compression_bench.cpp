@@ -14,6 +14,9 @@
 #include <chrono>
 
 int main(int argc, char *argv[]) {
+	(void)argc;
+	(void)argv;
+
     auto test_buffer_size=1024*1024*100;
     uint8_t *buffer=new uint8_t[test_buffer_size];
 

@@ -11,13 +11,15 @@
 
 class BenchCallback:public memseries::storage::ReaderClb{
 public:
-    void call(const memseries::Meas&m){
+    void call(const memseries::Meas&){
         count++;
     }
     size_t count;
 };
 
 int main(int argc, char *argv[]) {
+	(void)argc;
+	(void)argv;
     auto ms = new memseries::storage::MemoryStorage{ 2000000 };
     auto m = memseries::Meas::empty();
 

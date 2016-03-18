@@ -77,7 +77,7 @@ BinaryBuffer& BinaryBuffer::incpos(){
     return *this;
 }
 
-void BinaryBuffer::set_bitnum(size_t num) {
+void BinaryBuffer::set_bitnum(int8_t num) {
     this->_bitnum = num;
 }
 
@@ -118,9 +118,9 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 void BinaryBuffer::write(uint64_t v, int8_t count) {
 	uint8_t *arr = reinterpret_cast<uint8_t*>(&v);
 	auto max_index = count / 8;
-	auto bits_in_max = (count+1)%8;
+	int8_t bits_in_max = (count+1)%8;
 	if (bits_in_max != 0) {
-		this->write((uint16_t)arr[max_index], bits_in_max-1);
+		this->write((uint16_t)arr[max_index],  bits_in_max - 1);
 		max_index--;
 	}
 	for (int i = max_index; i >= 0; i--) {
@@ -131,7 +131,7 @@ void BinaryBuffer::write(uint64_t v, int8_t count) {
 uint64_t  BinaryBuffer::read(int8_t count) {
 	if (count > 61) {
 		uint64_t result = 0;
-		for (int i = count; i >= 0; i--) {
+		for (int8_t i = count; i >= 0; i--) {
 			if (getbit() == 1) {
 				result = utils::BitOperations::set(result, i);
 			}

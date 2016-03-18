@@ -13,7 +13,7 @@ class Moc_Storage :public memseries::storage::AbstractStorage {
 public:
 	size_t writed_count;
 	std::vector<memseries::Meas> meases;
-	memseries::append_result append(const memseries::Meas::PMeas begin, const size_t size) {
+	memseries::append_result append(const memseries::Meas::PMeas , const size_t size) {
 		writed_count+=size;
 		return memseries::append_result(size,0);
 	}
@@ -22,11 +22,11 @@ public:
 		writed_count += 1;
 		return memseries::append_result(1,0);
 	}
-	memseries::storage::Reader_ptr readInterval(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time from, memseries::Time to) {
+	memseries::storage::Reader_ptr readInterval(const memseries::IdArray &, memseries::Flag , memseries::Time , memseries::Time ) {
 		return nullptr;
 	}
 
-	memseries::storage::Reader_ptr readInTimePoint(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time time_point) {
+	memseries::storage::Reader_ptr readInTimePoint(const memseries::IdArray &, memseries::Flag , memseries::Time ) {
 		return nullptr;
 	}
 	memseries::Time minTime() {
@@ -37,7 +37,7 @@ public:
 		return 0;
 	}
 
-	void subscribe(const memseries::IdArray&ids, memseries::Flag flag, memseries::storage::ReaderClb_ptr clbk) override{
+	void subscribe(const memseries::IdArray&, memseries::Flag , memseries::storage::ReaderClb_ptr clbk) override{
 	}
 };
 
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 		auto a = copy_assign.as_array();
 		BOOST_CHECK_EQUAL(a.size(), max_size);
 		for (size_t i = 1; i <= max_size; i++) {
-			auto e = a[i - 1];
+			e = a[i - 1];
 			BOOST_CHECK_EQUAL(e.time, i);
 		}
 		BOOST_CHECK_EQUAL(copy_assign.minTime(), memseries::Time(1));

@@ -22,10 +22,10 @@ namespace memseries {
 
             void swap(BinaryBuffer &other) throw();
 
-            int bitnum() const { return _bitnum; }
+			int8_t bitnum() const { return _bitnum; }
             size_t pos() const { return _pos; }
 
-            void set_bitnum(size_t num);
+            void set_bitnum(int8_t num);
             void set_pos(size_t pos);
             void reset_pos();
 
@@ -67,7 +67,7 @@ namespace memseries {
             size_t _cap;
 
             size_t _pos;
-            int _bitnum;
+            int8_t _bitnum;
         };
 
         std::ostream &operator<<(std::ostream &stream, const BinaryBuffer &b);
