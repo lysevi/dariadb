@@ -1,14 +1,14 @@
 #include "integral.h"
 #include <cassert>
 
-using namespace  memseries::statistic;
+using namespace  dariadb::statistic;
 
 BaseIntegral::BaseIntegral() {
 	_is_first = true;
 	_result = 0;
 }
 
-void BaseIntegral::call(const memseries::Meas&m){
+void BaseIntegral::call(const dariadb::Meas&m){
     if(_is_first){
         _last=m;
         _is_first=false;
@@ -18,7 +18,7 @@ void BaseIntegral::call(const memseries::Meas&m){
     }
 }
 
-memseries::Value BaseIntegral::result()const {
+dariadb::Value BaseIntegral::result()const {
 	return _result;
 }
 
@@ -29,7 +29,7 @@ RectangleMethod::RectangleMethod(const RectangleMethod::Kind k):
 
 
 
-void RectangleMethod::calc(const memseries::Meas&a, const memseries::Meas&b){
+void RectangleMethod::calc(const dariadb::Meas&a, const dariadb::Meas&b){
 	switch (_kind)
 	{
 	case Kind::LEFT:

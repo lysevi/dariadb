@@ -11,9 +11,9 @@
 
 const size_t K = 5;
 
-float bench_int(memseries::statistic::BaseIntegral*bi){
+float bench_int(dariadb::statistic::BaseIntegral*bi){
 	auto start = clock();
-    auto m=memseries::Meas::empty();
+    auto m=dariadb::Meas::empty();
     for (size_t i = 1; i < K*1000000; i++) {
         m.value=i;
         bi->call(m);
@@ -25,7 +25,7 @@ float bench_int(memseries::statistic::BaseIntegral*bi){
 int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
-	using memseries::statistic::RectangleMethod;
+	using dariadb::statistic::RectangleMethod;
 	{
 		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::LEFT) };
 

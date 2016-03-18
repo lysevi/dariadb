@@ -2,19 +2,19 @@
 
 #include "meas.h"
 
-namespace memseries{
+namespace dariadb{
     namespace statistic{
         class BaseIntegral{
         public:
 			BaseIntegral();
             virtual ~BaseIntegral()=default;
-            void call(const memseries::Meas&m);
-            virtual void calc(const memseries::Meas&a,const memseries::Meas&b)=0;
-			virtual memseries::Value result()const;
+            void call(const dariadb::Meas&m);
+            virtual void calc(const dariadb::Meas&a,const dariadb::Meas&b)=0;
+			virtual dariadb::Value result()const;
         protected:
-            memseries::Meas _last;
+			dariadb::Meas _last;
             bool _is_first;
-			memseries::Value _result;
+			dariadb::Value _result;
         };
 
 		class RectangleMethod : public BaseIntegral {
@@ -25,7 +25,7 @@ namespace memseries{
 				MIDLE
 			};
 			RectangleMethod(const Kind k);
-			void calc(const memseries::Meas&a, const memseries::Meas&b) override;
+			void calc(const dariadb::Meas&a, const dariadb::Meas&b) override;
 		protected:
 			Kind _kind;
 		};
