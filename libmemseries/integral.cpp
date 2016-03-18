@@ -3,6 +3,11 @@
 
 using namespace  memseries::statistic;
 
+BaseIntegral::BaseIntegral() {
+	_is_first = true;
+	_result = 0;
+}
+
 void BaseIntegral::call(const memseries::Meas&m){
     if(_is_first){
         _last=m;
@@ -13,15 +18,15 @@ void BaseIntegral::call(const memseries::Meas&m){
     }
 }
 
-BaseIntegral::BaseIntegral() {
-	_is_first = true;
-	_result = 0;
+memseries::Value BaseIntegral::result()const {
+	return _result;
 }
 
 RectangleMethod::RectangleMethod(const RectangleMethod::Kind k): 
 	BaseIntegral(),
 	_kind(k)
 {}
+
 
 
 void RectangleMethod::calc(const memseries::Meas&a, const memseries::Meas&b){
@@ -39,8 +44,4 @@ void RectangleMethod::calc(const memseries::Meas&a, const memseries::Meas&b){
 	default:
 		assert(false);
 	}
-}
-
-memseries::Value BaseIntegral::result()const {
-	return _result;
 }
