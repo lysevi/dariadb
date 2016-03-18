@@ -3,6 +3,8 @@
 #include <boost/test/unit_test.hpp>
 #include <cassert>
 #include <thread>
+#include <atomic>
+#include <map>
 
 #include <time_ordered_set.h>
 #include <timeutil.h>
@@ -12,13 +14,13 @@
 class Moc_Storage :public dariadb::storage::AbstractStorage {
 public:
 	size_t writed_count;
-	std::vector<dariadb::Meas> meases;
+    std::map<dariadb::Id, std::vector<dariadb::Meas>> meases;
 	dariadb::append_result append(const dariadb::Meas::PMeas , const size_t size) {
 		writed_count+=size;
 		return dariadb::append_result(size,0);
 	}
 	dariadb::append_result append(const dariadb::Meas &value) {
-		meases.push_back(value);
+        meases[value.id].push_back(value);
 		writed_count += 1;
 		return dariadb::append_result(1,0);
 	}
@@ -49,11 +51,11 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 	//with move ctor check
 	dariadb::storage::TimeOrderedSet tos(std::move(base));
 	auto e = dariadb::Meas::empty();
-	for (size_t i = 0; i < max_size; i++) {
-		e.id = i % 3;
-		e.time = max_size - i;
-		BOOST_CHECK(!tos.is_full());
-		BOOST_CHECK(tos.append(e));
+    for (size_t i = 0; i < max_size; i++) {
+        e.id = i % 3;
+        e.time = max_size - i;
+        BOOST_CHECK(!tos.is_full());
+        BOOST_CHECK(tos.append(e));
     }
 
 	e.time = max_size;
@@ -137,11 +139,13 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     mbucket.flush();
 
     //time should be increased
-    for (size_t i = 0; i < stor->meases.size() - 1; i++) {
-        BOOST_CHECK(stor->meases[i].time<=stor->meases[i + 1].time);
-        if(stor->meases[i].time>stor->meases[i + 1].time){
-            logger("i: "<<i<<" lhs: "<<stor->meases[i].time<<" rhs: "<<stor->meases[i+1].time);
-            assert(false);
+    for(auto kv:stor->meases){
+        for (size_t i = 0; i < kv.second.size() - 1; i++) {
+            BOOST_CHECK(kv.second[i].time<=kv.second[i + 1].time);
+            if(kv.second[i].time>kv.second[i + 1].time){
+                logger("i: "<<i<<" lhs: "<<kv.second[i].time<<" rhs: "<<kv.second[i+1].time);
+                assert(false);
+            }
         }
     }
 
@@ -163,7 +167,7 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     }
 }
 
-
+std::atomic_long append_count{ 0 };
 
 void thread_writer(dariadb::Id id,
 	dariadb::Time from,
@@ -171,16 +175,18 @@ void thread_writer(dariadb::Id id,
 	dariadb::Time step,
 	dariadb::storage::Capacitor *cp)
 {
-	const size_t copies_count = 10;
+    const size_t copies_count = 1;
 	auto m = dariadb::Meas::empty();
+    m.time = dariadb::timeutil::current_time();
 	for (auto i = from; i < to; i += step) {
 		m.id = id;
 		m.flag = dariadb::Flag(i);
-		m.time = dariadb::timeutil::current_time();
 		m.value = 0;
 		for (size_t j = 0; j < copies_count; j++) {
+            m.time++;
+            m.value = dariadb::Value(j);
 			cp->append(m);
-			m.value = dariadb::Value(i);
+            append_count++;
 		}
 	}
 }
@@ -190,26 +196,31 @@ BOOST_AUTO_TEST_CASE(MultiThread)
 	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 	stor->writed_count = 0;
 	const size_t max_size = 10;
-	const dariadb::Time write_window_deep = 1000;
+    const dariadb::Time write_window_deep = 10000;
 	auto mbucket = dariadb::storage::Capacitor{ max_size, stor,write_window_deep };
 
-	std::thread t1(thread_writer, 0, 0, 100, 2, &mbucket);
-	std::thread t2(thread_writer, 1, 0, 100, 2, &mbucket);
-	std::thread t3(thread_writer, 2, 0, 100, 2, &mbucket);
-	std::thread t4(thread_writer, 0, 0, 100, 1, &mbucket);
+    std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
+    std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);
+    std::thread t3(thread_writer, 2, 0, 100, 2, &mbucket);
+    std::thread t4(thread_writer, 3, 0, 100, 1, &mbucket);
 
 	t1.join();
-	t2.join();
-	t3.join();
-	t4.join();
+    t2.join();
+    t3.join();
+    t4.join();
 	
 	mbucket.flush();
-	BOOST_CHECK_EQUAL(stor->meases.size(), size_t(50+50+50+100));
-	for (size_t i = 0; i < stor->meases.size() - 1; i++) {
-		BOOST_CHECK(stor->meases[i].time <= stor->meases[i + 1].time);
-		if (stor->meases[i].time>stor->meases[i + 1].time) {
-			logger("i: " << i << " lhs: " << stor->meases[i].time << " rhs: " << stor->meases[i + 1].time);
-			assert(false);
-		}
-	}
+    //BOOST_CHECK_EQUAL(stor->meases.size(), size_t(append_count.load()));
+    size_t cnt=0;
+    for(auto kv:stor->meases){
+        cnt+=kv.second.size();
+        for (size_t i = 0; i < kv.second.size() - 1; i++) {
+            BOOST_CHECK(kv.second[i].time<=kv.second[i + 1].time);
+            if(kv.second[i].time>kv.second[i + 1].time){
+                logger("i: "<<i<<" lhs: "<<kv.second[i].time<<" rhs: "<<kv.second[i+1].time);
+                assert(false);
+            }
+        }
+    }
+    BOOST_CHECK_EQUAL(cnt, size_t(append_count.load()));
 }
