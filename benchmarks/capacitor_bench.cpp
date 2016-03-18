@@ -10,17 +10,17 @@
 
 class Moc_Storage :public memseries::storage::AbstractStorage {
 public:
-	memseries::append_result append(const memseries::Meas::PMeas begin, const size_t size) {
+	memseries::append_result append(const memseries::Meas::PMeas, const size_t size) {
 		return memseries::append_result(size,0);
 	}
-	memseries::append_result append(const memseries::Meas &value) {
+	memseries::append_result append(const memseries::Meas &) {
 		return memseries::append_result(1,0);
 	}
-	memseries::storage::Reader_ptr readInterval(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time from, memseries::Time to) {
+	memseries::storage::Reader_ptr readInterval(const memseries::IdArray &, memseries::Flag , memseries::Time , memseries::Time ) {
 		return nullptr;
 	}
 
-	memseries::storage::Reader_ptr readInTimePoint(const memseries::IdArray &ids, memseries::Flag flag, memseries::Time time_point) {
+	memseries::storage::Reader_ptr readInTimePoint(const memseries::IdArray &, memseries::Flag , memseries::Time ) {
 		return nullptr;
 	}
 	memseries::Time minTime() {
@@ -31,11 +31,14 @@ public:
 		return 0;
 	}
 
-	void subscribe(const memseries::IdArray&ids, memseries::Flag flag, memseries::storage::ReaderClb_ptr clbk) override {
+	void subscribe(const memseries::IdArray&, memseries::Flag , memseries::storage::ReaderClb_ptr ) override {
 	}
 };
 
 int main(int argc, char *argv[]) {
+	(void)argc;
+	(void)argv;
+
     const size_t K = 1;
 
     {

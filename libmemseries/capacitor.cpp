@@ -122,7 +122,6 @@ public:
 
 
         }
-        return nullptr;
     }
 
     size_t size()const {

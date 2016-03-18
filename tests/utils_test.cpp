@@ -13,16 +13,16 @@ BOOST_AUTO_TEST_CASE(UtilsEmpty) {
 
 BOOST_AUTO_TEST_CASE(BitOperations) {
     uint8_t value = 0;
-	for (int i = 0; i < 7; i++) {
+	for (int8_t i = 0; i < 7; i++) {
         value=memseries::utils::BitOperations::set(value, i);
 		BOOST_CHECK_EQUAL(memseries::utils::BitOperations::check(value, i), true);
 	}
 
-	for (int i = 0; i < 7; i++) {
+	for (int8_t i = 0; i < 7; i++) {
         value=memseries::utils::BitOperations::clr(value, i);
 	}
 
-	for (int i = 0; i < 7; i++) {
+	for (int8_t i = 0; i < 7; i++) {
 		BOOST_CHECK_EQUAL(memseries::utils::BitOperations::check(value, i), false);
 	}
 }

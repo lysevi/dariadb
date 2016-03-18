@@ -65,9 +65,9 @@ bool XorCompressor::append(Value v){
 }
 
 uint8_t XorCompressor::zeros_lead(uint64_t v){
-    const int max_bit_pos=sizeof(Value)*8-1;
+	const int value_max_bit_pos = sizeof(Value) * 8 - 1;
     uint8_t result=0;
-    for(int i=max_bit_pos;i>=0;i--){
+    for(int8_t i= value_max_bit_pos;i>=0;i--){
         if(utils::BitOperations::check(v,i)){
             break;
         }else{
@@ -78,9 +78,9 @@ uint8_t XorCompressor::zeros_lead(uint64_t v){
 }
 
 uint8_t XorCompressor::zeros_tail(uint64_t v){
-    const int max_bit_pos=sizeof(Value)*8-1;
+	const int value_max_bit_pos = sizeof(Value) * 8 - 1;
     uint8_t result=0;
-    for(int i=0;i<max_bit_pos;i++){
+    for(int8_t i=0;i<value_max_bit_pos;i++){
         if(utils::BitOperations::check(v,i)){
             break;
         }else{

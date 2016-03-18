@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
 
 		rdr->readByStep(&allByStep, 0, total_count, query_step);
 		
-		auto expected = size_t((total_count - time_step) / time_step) * 2;
+		memseries::Time expected = memseries::Time((total_count - time_step) / time_step) * 2;
 		expected= expected* id_count;
 		expected += id_count*(time_step / query_step);//+ before first value
 		expected += id_count;//one after last  value
