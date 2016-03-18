@@ -1,3 +1,3 @@
-[![Build Status](https://travis-ci.org/lysevi/memseries.svg?branch=master)](https://travis-ci.org/lysevi/memseries)
+[![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb)
 
-# memseries
+# dariadb

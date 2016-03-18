@@ -1,7 +1,7 @@
-#include "integral.h"
+#include "statistic.h"
 #include <cassert>
 
-using namespace  dariadb::statistic;
+using namespace  dariadb::statistic::integral;
 
 BaseIntegral::BaseIntegral() {
 	_is_first = true;

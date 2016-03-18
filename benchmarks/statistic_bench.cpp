@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <integral.h>
+#include <statistic.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
@@ -11,7 +11,7 @@
 
 const size_t K = 5;
 
-float bench_int(dariadb::statistic::BaseIntegral*bi){
+float bench_int(dariadb::statistic::integral::BaseIntegral*bi){
 	auto start = clock();
     auto m=dariadb::Meas::empty();
     for (size_t i = 1; i < K*1000000; i++) {
@@ -25,7 +25,7 @@ float bench_int(dariadb::statistic::BaseIntegral*bi){
 int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
-	using dariadb::statistic::RectangleMethod;
+	using dariadb::statistic::integral::RectangleMethod;
 	{
 		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::LEFT) };
 

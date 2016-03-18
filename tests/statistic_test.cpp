@@ -1,9 +1,9 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
-#include <integral.h>
+#include <statistic.h>
 
-class Moc_I1:public dariadb::statistic::BaseIntegral{
+class Moc_I1:public dariadb::statistic::integral::BaseIntegral{
 public:
     Moc_I1(){
         _a=_b=dariadb::Meas::empty();
@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
 
 BOOST_AUTO_TEST_CASE(RectangleMethod) {
 	{//left
-		using dariadb::statistic::RectangleMethod;
+		using dariadb::statistic::integral::RectangleMethod;
 		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::LEFT) };
 
 		auto m = dariadb::Meas::empty();
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(RectangleMethod) {
 	}
 
 	{//right
-		using dariadb::statistic::RectangleMethod;
+		using dariadb::statistic::integral::RectangleMethod;
 		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::RIGHT) };
 
 		auto m = dariadb::Meas::empty();
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(RectangleMethod) {
 
 
 	{//midle
-		using dariadb::statistic::RectangleMethod;
+		using dariadb::statistic::integral::RectangleMethod;
 		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::MIDLE) };
 
 		auto m = dariadb::Meas::empty();
