@@ -5,11 +5,24 @@
 namespace dariadb {
     namespace compression {
         namespace inner{
-            inline int64_t flat_double_to_int(double v) {
-				return *(reinterpret_cast<int64_t*>(&v));
+//            union conv{
+//                dariadb::Value v;
+//                int64_t i;
+//            };
+            inline int64_t flat_double_to_int(dariadb::Value v) {
+                static_assert(sizeof(dariadb::Value)==sizeof(int64_t), "size not equal");
+//                conv c;
+//                c.v=v;
+//                return c.i;
+                auto result=reinterpret_cast<int64_t*>(&v);
+                return *result;
             }
-            inline double flat_int_to_double(int64_t v) {
-				return *(reinterpret_cast<double*>(&v));
+            inline dariadb::Value flat_int_to_double(int64_t i) {
+//                conv c;
+//                c.i=i;
+//                return c.v;
+                auto result=reinterpret_cast<dariadb::Value*>(&i);
+                return *result;
             }
         }
 
