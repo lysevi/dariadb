@@ -49,10 +49,9 @@ bool XorCompressor::append(Value v){
     if ((_prev_lead==lead) && (_prev_tail==tail)){
         _bw.clrbit().incbit();
     }else{
-        _bw.setbit().incbit();
-
-        _bw.write((uint16_t)lead,int8_t(5));
-        _bw.write((uint16_t)tail,int8_t(5));
+		auto new_lead = utils::BitOperations::set(lead, 6);
+		_bw.write((uint16_t)new_lead, int8_t(6));
+		_bw.write((uint16_t)tail, int8_t(5));
     }
 
     xor_val = xor_val >> tail;
