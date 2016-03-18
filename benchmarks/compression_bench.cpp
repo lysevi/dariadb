@@ -130,8 +130,8 @@ int main(int argc, char *argv[]) {
         for (size_t i = 0; i < count; i++) {
             auto m = dariadb::Meas::empty();
             m.time = static_cast<dariadb::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-            m.flag = i;
-            m.value = i;
+			m.flag = dariadb::Flag(i);
+			m.value = dariadb::Value(i);
             cwr.append(m);
         }
 

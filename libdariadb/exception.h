@@ -23,6 +23,7 @@ struct CodePosition {
     ss << File << " line" << Line << " function: " << Function << std::endl;
     return ss.str();
   }
+  CodePosition&operator=(const CodePosition&) = delete;
 };
 
 class Exception : public std::exception {

@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
         m.flag = 0xff;
         t += deltas[i%deltas.size()];
         m.time = t;
-        m.value = i;
+		m.value = dariadb::Value(i);
         ms->append(m);
     }
 

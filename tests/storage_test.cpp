@@ -62,7 +62,7 @@ void storage_test_check(dariadb::storage::AbstractStorage *as,
 		for (size_t j = 1; j < copies_count+1; j++) {
 			BOOST_CHECK(as->append(m).writed == 1);
 			total_count++;
-			m.value = j;
+			m.value = dariadb::Value(j);
 		}
 	}
 

@@ -180,7 +180,7 @@ void thread_writer(dariadb::Id id,
 		m.value = 0;
 		for (size_t j = 0; j < copies_count; j++) {
 			cp->append(m);
-			m.value = j;
+			m.value = dariadb::Value(i);
 		}
 	}
 }

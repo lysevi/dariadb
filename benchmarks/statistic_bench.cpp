@@ -15,7 +15,7 @@ float bench_method(dariadb::statistic::BaseMethod*bi){
 	auto start = clock();
     auto m=dariadb::Meas::empty();
     for (size_t i = 1; i < K*1000000; i++) {
-        m.value=i;
+		m.value = dariadb::Value(i);
         bi->call(m);
     }
 	auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;

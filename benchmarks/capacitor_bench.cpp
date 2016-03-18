@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
             m.id = 1;
             m.flag = 0xff;
             m.time = i;
-            m.value = i;
+            m.value = dariadb::Value(i);
             tos.append(m);
         }
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
             m.id = i%id_count;
             m.flag = 0xff;
             m.time = dariadb::timeutil::current_time();
-            m.value = i;
+			m.value = dariadb::Value(i);
             tos.append(m);
         }
 
