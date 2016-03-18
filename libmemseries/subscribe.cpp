@@ -1,9 +1,10 @@
 #include "subscribe.h"
 #include <cassert>
+#include <algorithm>
 
 using namespace memseries::storage;
 
-bool SubscribeInfo::isYours(const memseries::Meas&m) const {
+bool SubscribeInfo::isYours(const memseries::Meas&m) const { 
 	if ((ids.size() == 0) || (std::find(ids.cbegin(), ids.cend(), m.id) != ids.cend())) {
 		if ((flag == 0) || (flag == m.flag)) {
 			return true;
