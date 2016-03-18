@@ -24,6 +24,7 @@ BaseMethod::BaseMethod() {
 }
 
 void BaseMethod::call(const dariadb::Meas&m){
+	//TODO add check to m.Id. id must be one.
     if(_is_first){
         _last=m;
         _is_first=false;
