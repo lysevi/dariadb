@@ -2,6 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 #include <statistic.h>
+#include <memstorage.h>
 
 class Moc_I1:public dariadb::statistic::BaseMethod {
 public:
@@ -35,6 +36,29 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
     p->call(m);
     BOOST_CHECK_EQUAL(p->_a.id,dariadb::Id(2));
     BOOST_CHECK_EQUAL(p->_b.id,dariadb::Id(3));
+	{
+		using dariadb::statistic::average::Average;
+
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
+
+		m = dariadb::Meas::empty();
+		const size_t total_count = 100;
+		const dariadb::Time time_step = 1;
+
+		for (size_t i = 0; i < total_count; i += time_step) {
+			m.id = 1;
+			m.flag = dariadb::Flag(i);
+			m.time = i;
+			m.value = 5;
+			ms->append(m);
+		}
+		
+		
+		std::unique_ptr<Average>  p_average{ new Average() };
+		auto rdr = ms->readInterval(0, total_count);
+		p_average->fromReader(rdr, 0, total_count, 1);
+		BOOST_CHECK_CLOSE(p_average->result(), dariadb::Value(5), 0.1);
+	}
 }
 
 BOOST_AUTO_TEST_CASE(RectangleMethod) {
@@ -94,7 +118,6 @@ BOOST_AUTO_TEST_CASE(RectangleMethod) {
 	}
 }
 BOOST_AUTO_TEST_CASE(Average) {
-
 	{//midle
 		using dariadb::statistic::average::Average;
 		std::unique_ptr<Average>  p{ new Average() };

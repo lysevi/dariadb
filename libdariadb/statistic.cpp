@@ -5,6 +5,19 @@ using namespace  dariadb::statistic;
 using namespace  dariadb::statistic::integral;
 using namespace  dariadb::statistic::average;
 
+class StatisticReadClbk :public dariadb::storage::ReaderClb {
+public:
+	StatisticReadClbk(BaseMethod*m):_method(m)
+	{
+	}
+	
+	void call(const dariadb::Meas&m) {
+		assert(_method != nullptr);
+		_method->call(m);
+	}
+	BaseMethod*_method;
+};
+
 BaseMethod::BaseMethod() {
 	_is_first = true;
 	_result = 0;
@@ -22,6 +35,11 @@ void BaseMethod::call(const dariadb::Meas&m){
 
 dariadb::Value BaseMethod::result()const {
 	return _result;
+}
+
+void BaseMethod::fromReader(dariadb::storage::Reader_ptr&ptr, dariadb::Time from, dariadb::Time to, dariadb::Time step) {
+	std::unique_ptr<StatisticReadClbk> c{ new StatisticReadClbk{ this } };
+	ptr->readByStep(c.get(), from, to, step);
 }
 
 RectangleMethod::RectangleMethod(const RectangleMethod::Kind k): 

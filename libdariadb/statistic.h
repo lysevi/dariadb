@@ -1,6 +1,7 @@
 #pragma once
 
 #include "meas.h"
+#include "storage.h"
 
 namespace dariadb{
     namespace statistic{
@@ -11,6 +12,8 @@ namespace dariadb{
 			virtual void call(const dariadb::Meas&m);
 			virtual void calc(const dariadb::Meas&a, const dariadb::Meas&b) = 0;
 			virtual dariadb::Value result()const;
+
+			void fromReader(dariadb::storage::Reader_ptr&ptr, dariadb::Time from, dariadb::Time to, dariadb::Time step);
 		protected:
 			dariadb::Meas _last;
 			bool _is_first;
