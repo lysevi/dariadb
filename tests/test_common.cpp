@@ -2,7 +2,7 @@
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>
 
-namespace memseries_test {
+namespace dariadb_test {
 
 
 }

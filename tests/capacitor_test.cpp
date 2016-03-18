@@ -9,46 +9,46 @@
 #include <capacitor.h>
 #include <logger.h>
 
-class Moc_Storage :public memseries::storage::AbstractStorage {
+class Moc_Storage :public dariadb::storage::AbstractStorage {
 public:
 	size_t writed_count;
-	std::vector<memseries::Meas> meases;
-	memseries::append_result append(const memseries::Meas::PMeas , const size_t size) {
+	std::vector<dariadb::Meas> meases;
+	dariadb::append_result append(const dariadb::Meas::PMeas , const size_t size) {
 		writed_count+=size;
-		return memseries::append_result(size,0);
+		return dariadb::append_result(size,0);
 	}
-	memseries::append_result append(const memseries::Meas &value) {
+	dariadb::append_result append(const dariadb::Meas &value) {
 		meases.push_back(value);
 		writed_count += 1;
-		return memseries::append_result(1,0);
+		return dariadb::append_result(1,0);
 	}
-	memseries::storage::Reader_ptr readInterval(const memseries::IdArray &, memseries::Flag , memseries::Time , memseries::Time ) {
+	dariadb::storage::Reader_ptr readInterval(const dariadb::IdArray &, dariadb::Flag , dariadb::Time , dariadb::Time ) {
 		return nullptr;
 	}
 
-	memseries::storage::Reader_ptr readInTimePoint(const memseries::IdArray &, memseries::Flag , memseries::Time ) {
+	dariadb::storage::Reader_ptr readInTimePoint(const dariadb::IdArray &, dariadb::Flag , dariadb::Time ) {
 		return nullptr;
 	}
-	memseries::Time minTime() {
+	dariadb::Time minTime() {
 		return 0;
 	}
 	/// max time of writed meas
-	memseries::Time maxTime() {
+	dariadb::Time maxTime() {
 		return 0;
 	}
 
-	void subscribe(const memseries::IdArray&, memseries::Flag , memseries::storage::ReaderClb_ptr clbk) override{
+	void subscribe(const dariadb::IdArray&, dariadb::Flag , dariadb::storage::ReaderClb_ptr clbk) override{
 	}
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 {
 	const size_t max_size = 10;
-	auto base = memseries::storage::TimeOrderedSet{ max_size };
+	auto base = dariadb::storage::TimeOrderedSet{ max_size };
 	
 	//with move ctor check
-	memseries::storage::TimeOrderedSet tos(std::move(base));
-	auto e = memseries::Meas::empty();
+	dariadb::storage::TimeOrderedSet tos(std::move(base));
+	auto e = dariadb::Meas::empty();
 	for (size_t i = 0; i < max_size; i++) {
 		e.id = i % 3;
 		e.time = max_size - i;
@@ -61,10 +61,10 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 	BOOST_CHECK(tos.is_full());
 
 	{//check copy ctor and operator=
-		memseries::storage::TimeOrderedSet copy_tos{ tos };
+		dariadb::storage::TimeOrderedSet copy_tos{ tos };
 		BOOST_CHECK_EQUAL(copy_tos.size(), max_size);
 
-		memseries::storage::TimeOrderedSet copy_assign{};
+		dariadb::storage::TimeOrderedSet copy_assign{};
 		copy_assign = copy_tos;
 
 		auto a = copy_assign.as_array();
@@ -73,8 +73,8 @@ BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
 			e = a[i - 1];
 			BOOST_CHECK_EQUAL(e.time, i);
 		}
-		BOOST_CHECK_EQUAL(copy_assign.minTime(), memseries::Time(1));
-		BOOST_CHECK_EQUAL(copy_assign.maxTime(), memseries::Time(max_size));
+		BOOST_CHECK_EQUAL(copy_assign.minTime(), dariadb::Time(1));
+		BOOST_CHECK_EQUAL(copy_assign.maxTime(), dariadb::Time(max_size));
 	}
     BOOST_CHECK(tos.is_full());
     e.time=max_size+1;
@@ -87,15 +87,15 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 	stor->writed_count = 0;
     const size_t max_size = 10;
-    const memseries::Time write_window_deep = 1000;
-    auto base = memseries::storage::Capacitor{ max_size, stor,write_window_deep};
+    const dariadb::Time write_window_deep = 1000;
+    auto base = dariadb::storage::Capacitor{ max_size, stor,write_window_deep};
 
     //with move ctor check
-    memseries::storage::Capacitor mbucket(std::move(base));
-    auto e = memseries::Meas::empty();
+    dariadb::storage::Capacitor mbucket(std::move(base));
+    auto e = dariadb::Meas::empty();
 
     //max time always
-    memseries::Time t= memseries::timeutil::current_time();
+    dariadb::Time t= dariadb::timeutil::current_time();
     auto t_2=t+10;
 	for (size_t i = 0; i < max_size; i++) {
         e.time = t_2;
@@ -120,11 +120,11 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     //buckets count;
     BOOST_CHECK(mbucket.size()>0);
 
-	e.time= memseries::timeutil::current_time()- write_window_deep*2;
+	e.time= dariadb::timeutil::current_time()- write_window_deep*2;
 	BOOST_CHECK(!mbucket.append(e));
 
     //future
-    t=memseries::timeutil::current_time();
+    t=dariadb::timeutil::current_time();
     t+=20;
     for (size_t i = 0; i < max_size; i++) {
         e.time =t;
@@ -149,38 +149,34 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     //check write data with time less than write_window_deep;
     stor->meases.clear();
     stor->writed_count = 0;
-    t=memseries::timeutil::current_time()-write_window_deep;
+    t=dariadb::timeutil::current_time()-write_window_deep;
     for (size_t i = 0; i < 100; i++) {
         e.time =t;
         t++;
         BOOST_CHECK(mbucket.append(e));
     }
 
-    for (size_t i = 0; i < 10000; i++) {
-        e.time =memseries::timeutil::current_time();
+	stor->meases.clear();
+    while(stor->meases.size()==0){
+        e.time =dariadb::timeutil::current_time();
         BOOST_CHECK(mbucket.append(e));
     }
-    auto first_size=stor->meases.size();
-    BOOST_CHECK(first_size>size_t(0));
-    stor->meases.clear();
-    mbucket.flush();
-    BOOST_CHECK(stor->meases.size()>=first_size);
 }
 
 
 
-void thread_writer(memseries::Id id,
-	memseries::Time from,
-	memseries::Time to,
-	memseries::Time step,
-	memseries::storage::Capacitor *cp)
+void thread_writer(dariadb::Id id,
+	dariadb::Time from,
+	dariadb::Time to,
+	dariadb::Time step,
+	dariadb::storage::Capacitor *cp)
 {
 	const size_t copies_count = 10;
-	auto m = memseries::Meas::empty();
+	auto m = dariadb::Meas::empty();
 	for (auto i = from; i < to; i += step) {
 		m.id = id;
-		m.flag = memseries::Flag(i);
-		m.time = memseries::timeutil::current_time();
+		m.flag = dariadb::Flag(i);
+		m.time = dariadb::timeutil::current_time();
 		m.value = 0;
 		for (size_t j = 0; j < copies_count; j++) {
 			cp->append(m);
@@ -194,8 +190,8 @@ BOOST_AUTO_TEST_CASE(MultiThread)
 	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 	stor->writed_count = 0;
 	const size_t max_size = 10;
-	const memseries::Time write_window_deep = 1000;
-	auto mbucket = memseries::storage::Capacitor{ max_size, stor,write_window_deep };
+	const dariadb::Time write_window_deep = 1000;
+	auto mbucket = dariadb::storage::Capacitor{ max_size, stor,write_window_deep };
 
 	std::thread t1(thread_writer, 0, 0, 100, 2, &mbucket);
 	std::thread t2(thread_writer, 1, 0, 100, 2, &mbucket);

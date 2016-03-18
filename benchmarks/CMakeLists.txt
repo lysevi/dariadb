@@ -1,4 +1,4 @@
-include_directories(../libmemseries)
+include_directories(../libdariadb)
 MESSAGE(STATUS "Benchmarks: ")
 
 macro(ADD_BENCHARK name src)
@@ -7,7 +7,7 @@ macro(ADD_BENCHARK name src)
 
         target_link_libraries(${name}
                                 ${Boost_LIBRARIES}
-                                libmemseries )
+                                libdariadb)
 endmacro(ADD_BENCHARK)
 
 ADD_BENCHARK(compression_bench compression_bench.cpp)

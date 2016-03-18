@@ -11,41 +11,41 @@
 #include <sstream>
 #include <chrono>
 
-using memseries::compression::BinaryBuffer;
+using dariadb::compression::BinaryBuffer;
 
-class Testable_DeltaCompressor:public memseries::compression::DeltaCompressor{
+class Testable_DeltaCompressor:public dariadb::compression::DeltaCompressor{
 public:
     Testable_DeltaCompressor(const BinaryBuffer&buf):
-        memseries::compression::DeltaCompressor(buf)
+        dariadb::compression::DeltaCompressor(buf)
     {}
 
     uint64_t get_prev_delta()const {return this->_prev_delta;}
-    memseries::Time get_prev_time()const {return this->_prev_time;}
-    memseries::Time  get_first()const {return this->_first;}
+    dariadb::Time get_prev_time()const {return this->_prev_time;}
+    dariadb::Time  get_first()const {return this->_first;}
     BinaryBuffer get_bw()const{return this->_bw;}
     bool is_first()const {return this->_is_first;}
 };
 
-class Testable_DeltaDeCompressor:public memseries::compression::DeltaDeCompressor{
+class Testable_DeltaDeCompressor:public dariadb::compression::DeltaDeCompressor{
 public:
-    Testable_DeltaDeCompressor(const BinaryBuffer&buf,  memseries::Time first):
-        memseries::compression::DeltaDeCompressor(buf,first)
+    Testable_DeltaDeCompressor(const BinaryBuffer&buf,  dariadb::Time first):
+        dariadb::compression::DeltaDeCompressor(buf,first)
     {}
 
     uint64_t get_prev_delta()const {return this->_prev_delta;}
-    memseries::Time get_prev_time()const {return this->_prev_time;}
+    dariadb::Time get_prev_time()const {return this->_prev_time;}
     BinaryBuffer get_bw()const{return this->_bw;}
 };
 
-class Testable_XorCompressor:public memseries::compression::XorCompressor{
+class Testable_XorCompressor:public dariadb::compression::XorCompressor{
 public:
     Testable_XorCompressor(const BinaryBuffer&buf):
-        memseries::compression::XorCompressor(buf)
+        dariadb::compression::XorCompressor(buf)
     {}
 
     BinaryBuffer get_bw()const{return this->_bw;}
-    memseries::Value get_prev_value()const {return  memseries::compression::inner::flat_int_to_double(this->_prev_value);}
-    memseries::Value get_first()const {return memseries::compression::inner::flat_int_to_double(this->_first);}
+    dariadb::Value get_prev_value()const {return  dariadb::compression::inner::flat_int_to_double(this->_prev_value);}
+    dariadb::Value get_first()const {return dariadb::compression::inner::flat_int_to_double(this->_first);}
     bool is_first()const {return this->_is_first;}
     void set_is_first(bool flag) {this->_is_first=flag;}
     uint8_t  get_prev_lead()const{return  _prev_lead;}
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
 
 
 BOOST_AUTO_TEST_CASE(DeltaCompressor_deltas) {
-    using memseries::compression::DeltaCompressor;
+    using dariadb::compression::DeltaCompressor;
     BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_64(1), 513);
     BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_64(64), 576);
     BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_64(63), 575);
@@ -188,15 +188,15 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor_deltas) {
 BOOST_AUTO_TEST_CASE(DeltaCompressor){
     const size_t test_buffer_size =100;
 
-    const memseries::Time t1=100;
-    const memseries::Time t2=150;
-    const memseries::Time t3=200;
-    const memseries::Time t4=2000;
-    const memseries::Time t5=3000;
+    const dariadb::Time t1=100;
+    const dariadb::Time t2=150;
+    const dariadb::Time t3=200;
+    const dariadb::Time t4=2000;
+    const dariadb::Time t5=3000;
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
-    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
+    dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
     {
         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
         BOOST_CHECK(dc.is_first());
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
         BOOST_CHECK_EQUAL(dc.get_prev_time(),t1);
 
         dc.append(t1);
-        BOOST_CHECK_EQUAL(dc.get_bw().bitnum(),memseries::compression::max_bit_pos-1);
+        BOOST_CHECK_EQUAL(dc.get_bw().bitnum(),dariadb::compression::max_bit_pos-1);
         BOOST_CHECK_EQUAL(buffer[0],0);
     }
     {
@@ -263,17 +263,17 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
 
 BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
     const size_t test_buffer_size =1000;
-    const memseries::Time t1=100;
-    const memseries::Time t2=150;
-    const memseries::Time t3=200;
-    const memseries::Time t4=t3+100;
-    const memseries::Time t5=t4+1000;
-    const memseries::Time t6=t5*2;
-    const memseries::Time t7=t6-50;
+    const dariadb::Time t1=100;
+    const dariadb::Time t2=150;
+    const dariadb::Time t3=200;
+    const dariadb::Time t4=t3+100;
+    const dariadb::Time t5=t4+1000;
+    const dariadb::Time t6=t5*2;
+    const dariadb::Time t7=t6-50;
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
-    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
+    dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
     {
         Testable_DeltaCompressor co(BinaryBuffer{rng});
 
@@ -296,8 +296,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
     std::fill(std::begin(buffer),std::end(buffer),0);
     {
         Testable_DeltaCompressor co(BinaryBuffer{rng});
-        memseries::Time delta=1;
-        std::list<memseries::Time> times{};
+        dariadb::Time delta=1;
+        std::list<dariadb::Time> times{};
         const int steps=30;
         for (int i=0;i<steps;i++){
             co.append(delta);
@@ -315,9 +315,9 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 	std::fill(std::begin(buffer), std::end(buffer), 0);
 	{//decrease
         Testable_DeltaCompressor co(BinaryBuffer{rng});
-		std::vector<memseries::Time> deltas{ 50,255, 1024,2050 };
-		memseries::Time delta = 1000000;
-		std::list<memseries::Time> times{};
+		std::vector<dariadb::Time> deltas{ 50,255, 1024,2050 };
+		dariadb::Time delta = 1000000;
+		std::list<dariadb::Time> times{};
 		const int steps = 50;
 		for (int i = 0; i<steps; i++) {
 			co.append(delta);
@@ -336,8 +336,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 
 BOOST_AUTO_TEST_CASE(flat_converters) {
 	double pi = 3.14;
-    auto ival = memseries::compression::inner::flat_double_to_int(pi);
-    auto dval = memseries::compression::inner::flat_int_to_double(ival);
+    auto ival = dariadb::compression::inner::flat_double_to_int(pi);
+    auto dval = dariadb::compression::inner::flat_int_to_double(ival);
 	BOOST_CHECK_CLOSE(dval, pi, 0.0001);
 }
 
@@ -352,12 +352,12 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     }
     const size_t test_buffer_size =1000;
 
-    const memseries::Value t1=240;
-    //const memseries::Value t2=224;
+    const dariadb::Value t1=240;
+    //const dariadb::Value t2=224;
 
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
-    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
+    dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
     {
          Testable_XorCompressor dc(BinaryBuffer{rng});
         BOOST_CHECK(dc.is_first());
@@ -368,13 +368,13 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
         BOOST_CHECK_EQUAL(dc.get_first(),t1);
         BOOST_CHECK_EQUAL(dc.get_prev_value(),t1);
     }
-    using  memseries::compression::XorDeCompressor;
+    using  dariadb::compression::XorDeCompressor;
     std::fill(std::begin(buffer),std::end(buffer),0);
     { // cur==prev
         Testable_XorCompressor co(BinaryBuffer{rng});
 
-        auto v1 = memseries::Value(240);
-        auto v2 = memseries::Value(240);
+        auto v1 = dariadb::Value(240);
+        auto v2 = dariadb::Value(240);
         co.append(v1);
         co.append(v2);
 
@@ -386,9 +386,9 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     { // cur!=prev
         Testable_XorCompressor co(BinaryBuffer{rng});
 
-        auto v1 = memseries::Value(240);
-        auto v2 = memseries::Value(96);
-        auto v3 = memseries::Value(176);
+        auto v1 = dariadb::Value(240);
+        auto v2 = dariadb::Value(96);
+        auto v3 = dariadb::Value(176);
         co.append(v1);
         co.append(v2);
         co.append(v3);
@@ -401,8 +401,8 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     { // tail/lead is equals
         Testable_XorCompressor co{rng};
 
-        auto v1 = memseries::Value(3840);
-        auto v2 = memseries::Value(3356);
+        auto v1 = dariadb::Value(3840);
+        auto v2 = dariadb::Value(3356);
         co.append(v1);
         co.append(v2);
 
@@ -413,8 +413,8 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     { // tail/lead not equals
         Testable_XorCompressor co{rng};
 
-        auto v1 = memseries::Value(3840);
-        auto v2 = memseries::Value(3328);
+        auto v1 = dariadb::Value(3840);
+        auto v2 = dariadb::Value(3328);
         co.append(v1);
         co.append(v2);
 
@@ -425,8 +425,8 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     { 
         Testable_XorCompressor co(BinaryBuffer{rng});
 
-        std::list<memseries::Value> values{};
-        memseries::Value delta=1;
+        std::list<dariadb::Value> values{};
+        dariadb::Value delta=1;
         
 		for(int i=0;i<100;i++){
             co.append(delta);
@@ -444,9 +444,9 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 	{ // maxValue
 		std::fill(rng.begin, rng.end, 0);
 		Testable_XorCompressor co(BinaryBuffer{ rng });
-		auto max_value = std::numeric_limits<memseries::Value>::max();
-		auto v1 = memseries::Value(0);
-		auto v2 = memseries::Value(max_value);
+		auto max_value = std::numeric_limits<dariadb::Value>::max();
+		auto v1 = dariadb::Value(0);
+		auto v2 = dariadb::Value(max_value);
 		
 		co.append(v1);
 		co.append(v2);
@@ -461,15 +461,15 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
 	const size_t test_buffer_size = 1000;
 	uint8_t buffer[test_buffer_size];
 	std::fill(std::begin(buffer), std::end(buffer), 0);
-    using memseries::compression::FlagCompressor;
-    using memseries::compression::FlagDeCompressor;
+    using dariadb::compression::FlagCompressor;
+    using dariadb::compression::FlagDeCompressor;
 
-    memseries::utils::Range rng{std::begin(buffer),std::end(buffer)};
+    dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
 
     FlagCompressor fc(BinaryBuffer{rng});
 	
-	std::list<memseries::Flag> flags{};
-	memseries::Flag delta = 1;
+	std::list<dariadb::Flag> flags{};
+	dariadb::Flag delta = 1;
 	for (int i = 0; i < 10; i++) {
 		fc.append(delta);
 		flags.push_back(delta);
@@ -502,18 +502,18 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 	std::fill(flag_begin, flag_end, 0);
 	std::fill(value_begin, value_end, 0);
 
-    using memseries::compression::CopmressedWriter;
-    using memseries::compression::CopmressedReader;
+    using dariadb::compression::CopmressedWriter;
+    using dariadb::compression::CopmressedReader;
 
 
     CopmressedWriter cwr(BinaryBuffer({time_begin, time_end}),
                          BinaryBuffer({value_begin, value_end}),
                          BinaryBuffer({flag_begin, flag_end}));
 
-	std::list<memseries::Meas> meases{};
-    auto zer_t=static_cast<memseries::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+	std::list<dariadb::Meas> meases{};
+    auto zer_t=static_cast<dariadb::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
 	for (int i = 0; i < 100; i++) {
-		auto m = memseries::Meas::empty();
+		auto m = dariadb::Meas::empty();
         m.time = zer_t++;
 		m.flag = i;
 		m.value = i;

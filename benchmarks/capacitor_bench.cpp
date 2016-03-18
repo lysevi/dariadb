@@ -8,30 +8,30 @@
 #include <capacitor.h>
 #include <ctime>
 
-class Moc_Storage :public memseries::storage::AbstractStorage {
+class Moc_Storage :public dariadb::storage::AbstractStorage {
 public:
-	memseries::append_result append(const memseries::Meas::PMeas, const size_t size) {
-		return memseries::append_result(size,0);
+	dariadb::append_result append(const dariadb::Meas::PMeas, const size_t size) {
+		return dariadb::append_result(size,0);
 	}
-	memseries::append_result append(const memseries::Meas &) {
-		return memseries::append_result(1,0);
+	dariadb::append_result append(const dariadb::Meas &) {
+		return dariadb::append_result(1,0);
 	}
-	memseries::storage::Reader_ptr readInterval(const memseries::IdArray &, memseries::Flag , memseries::Time , memseries::Time ) {
+	dariadb::storage::Reader_ptr readInterval(const dariadb::IdArray &, dariadb::Flag , dariadb::Time , dariadb::Time ) {
 		return nullptr;
 	}
 
-	memseries::storage::Reader_ptr readInTimePoint(const memseries::IdArray &, memseries::Flag , memseries::Time ) {
+	dariadb::storage::Reader_ptr readInTimePoint(const dariadb::IdArray &, dariadb::Flag , dariadb::Time ) {
 		return nullptr;
 	}
-	memseries::Time minTime() {
+	dariadb::Time minTime() {
 		return 0;
 	}
 	/// max time of writed meas
-	memseries::Time maxTime() {
+	dariadb::Time maxTime() {
 		return 0;
 	}
 
-	void subscribe(const memseries::IdArray&, memseries::Flag , memseries::storage::ReaderClb_ptr ) override {
+	void subscribe(const dariadb::IdArray&, dariadb::Flag , dariadb::storage::ReaderClb_ptr ) override {
 	}
 };
 
@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
 
     {
         const size_t max_size=K*100000;
-        auto tos =memseries::storage::TimeOrderedSet{ max_size };
-        auto m = memseries::Meas::empty();
+        auto tos =dariadb::storage::TimeOrderedSet{ max_size };
+        auto m = dariadb::Meas::empty();
 
         auto start = clock();
 
@@ -71,11 +71,11 @@ int main(int argc, char *argv[]) {
     {
         const size_t max_size=10000;
         const size_t id_count=10;
-        const memseries::Time write_window_deep = 2000;
+        const dariadb::Time write_window_deep = 2000;
 
 		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-        auto tos =memseries::storage::Capacitor{ max_size,stor, write_window_deep };
-        auto m = memseries::Meas::empty();
+        auto tos =dariadb::storage::Capacitor{ max_size,stor, write_window_deep };
+        auto m = dariadb::Meas::empty();
 
         auto start = clock();
 
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
         for (size_t i = 0; i < K*1000000; i++) {
             m.id = i%id_count;
             m.flag = 0xff;
-            m.time = memseries::timeutil::current_time();
+            m.time = dariadb::timeutil::current_time();
             m.value = i;
             tos.append(m);
         }
