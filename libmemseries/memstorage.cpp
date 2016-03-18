@@ -2,6 +2,8 @@
 #include "utils.h"
 #include "compression.h"
 #include "flags.h"
+#include "subscribe.h"
+
 #include <limits>
 #include <algorithm>
 #include <map>
@@ -13,20 +15,6 @@ using namespace memseries;
 using namespace memseries::compression;
 using namespace memseries::storage;
 using memseries::utils::Range;
-
-struct SubscribeInfo{
-    IdArray ids;
-    Flag flag;
-    ReaderClb_ptr clbk;
-    bool isYours(const memseries::Meas&m){
-        if((ids.size()==0) || (std::find(ids.begin(),ids.end(),m.id)!=ids.end())){
-            if((flag==0) ||(flag==m.flag)){
-                return true;
-            }
-        }
-        return false;
-    }
-};
 
 
 struct Chunk
@@ -95,7 +83,7 @@ struct Chunk
 typedef std::shared_ptr<Chunk>    Chunk_Ptr;
 typedef std::list<Chunk_Ptr>      ChuncksList;
 typedef std::map<Id, ChuncksList> ChunkMap;
-typedef std::shared_ptr<SubscribeInfo> SubscribeInfo_ptr;
+
 
 class InnerReader: public Reader{
 public:
@@ -295,6 +283,7 @@ public:
 };
 
 
+
 class MemoryStorage::Private
 {
 public:
@@ -302,10 +291,13 @@ public:
         _size(size),
         _min_time(std::numeric_limits<memseries::Time>::max()),
         _max_time(std::numeric_limits<memseries::Time>::min()),
-        _subscribes()
-    {}
+		_subscribe_notify(new SubscribeNotificator)
+    {
+		_subscribe_notify->start();
+	}
 
     ~Private(){
+		_subscribe_notify->stop();
         _chuncks.clear();
     }
 
@@ -358,12 +350,7 @@ public:
         _min_time = std::min(_min_time, value.time);
         _max_time = std::max(_max_time, value.time);
 
-        for(auto si:_subscribes){
-            assert(si->clbk!=nullptr);
-            if(si->isYours(value)){
-                si->clbk->call(value);
-            }
-        }
+		_subscribe_notify->on_append(value);
 
         return memseries::append_result(1, 0);
     }
@@ -455,15 +442,17 @@ public:
         new_s->flag=flag;
         new_s->clbk=clbk;
 
-        _subscribes.push_back(new_s);
+		_subscribe_notify->add(new_s);
 	}
+
+	
 
 protected:
     size_t _size;
 
     ChunkMap _chuncks;
     Time _min_time,_max_time;
-    std::list<SubscribeInfo_ptr> _subscribes;
+	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
 	std::mutex _mutex;
 };
 
