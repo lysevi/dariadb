@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <memseries.h>
+#include <dariadb.h>
 #include <compression.h>
 #include <compression/delta.h>
 #include <compression/xor.h>
@@ -24,16 +24,16 @@ int main(int argc, char *argv[]) {
     std::fill(buffer,buffer+test_buffer_size,0);
     {
         const size_t count=1000000;
-        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
-        memseries::compression::DeltaCompressor dc(bw);
+        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+        dariadb::compression::DeltaCompressor dc(bw);
 
-        std::vector<memseries::Time> deltas{50,255,1024,2050};
-        memseries::Time t=0;
+        std::vector<dariadb::Time> deltas{50,255,1024,2050};
+        dariadb::Time t=0;
         auto start=clock();
         for(size_t i=0;i<count;i++){
             dc.append(t);
             t+=deltas[i%deltas.size()];
-            if (t > std::numeric_limits<memseries::Time>::max()){
+            if (t > std::numeric_limits<dariadb::Time>::max()){
                 t=0;
             }
         }
@@ -41,14 +41,14 @@ int main(int argc, char *argv[]) {
         std::cout<<"delta compressor : "<<elapsed<<std::endl;
 
         auto w=dc.used_space();
-        auto sz=sizeof(memseries::Time)*count;
+        auto sz=sizeof(dariadb::Time)*count;
         std::cout<<"used space:  "
                <<(w*100.0)/(sz)<<"%"
                <<std::endl;
     }
     {
-        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
-        memseries::compression::DeltaDeCompressor dc(bw,0);
+        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+        dariadb::compression::DeltaDeCompressor dc(bw,0);
 
         auto start=clock();
         for(size_t i=1;i<1000000;i++){
@@ -61,10 +61,10 @@ int main(int argc, char *argv[]) {
     std::fill(buffer,buffer+test_buffer_size,0);
     {
         const size_t count=1000000;
-        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
-        memseries::compression::XorCompressor dc(bw);
+        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+        dariadb::compression::XorCompressor dc(bw);
 
-        memseries::Value t=3.14;
+        dariadb::Value t=3.14;
         auto start=clock();
         for(size_t i=0;i<count;i++){
             dc.append(t);
@@ -73,14 +73,14 @@ int main(int argc, char *argv[]) {
         auto elapsed=((float)clock()-start)/ CLOCKS_PER_SEC;
         std::cout<<"\nxor compressor : "<<elapsed<<std::endl;
         auto w=dc.used_space();
-        auto sz=sizeof(memseries::Time)*count;
+        auto sz=sizeof(dariadb::Time)*count;
         std::cout<<"used space: "
                <<(w*100.0)/(sz)<<"%"
                <<std::endl;
     }
     {
-        memseries::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
-        memseries::compression::XorDeCompressor dc(bw,0);
+        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+        dariadb::compression::XorDeCompressor dc(bw,0);
 
         auto start=clock();
         for(size_t i=1;i<1000000;i++){
@@ -95,14 +95,14 @@ int main(int argc, char *argv[]) {
         const size_t count = 1000000;
         auto start = clock();
         for (size_t i = 0; i<count; i++) {
-            memseries::compression::inner::flat_double_to_int(3.14);
+            dariadb::compression::inner::flat_double_to_int(3.14);
         }
         auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "\nflat_double_to_int: " << elapsed << std::endl;
 
         start = clock();
         for (size_t i = 0; i<count; i++) {
-            memseries::compression::inner::flat_int_to_double(0xfff);
+            dariadb::compression::inner::flat_int_to_double(0xfff);
         }
         elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "flat_int_to_double: " << elapsed << std::endl;
@@ -111,25 +111,25 @@ int main(int argc, char *argv[]) {
     {
         const size_t count=1000000;
         uint8_t* time_begin=new uint8_t[test_buffer_size];
-        auto time_r = memseries::utils::Range{time_begin, time_begin + test_buffer_size};
+        auto time_r = dariadb::utils::Range{time_begin, time_begin + test_buffer_size};
 
         uint8_t* value_begin = new uint8_t[test_buffer_size];
-        auto value_r = memseries::utils::Range{value_begin,value_begin + test_buffer_size};
+        auto value_r = dariadb::utils::Range{value_begin,value_begin + test_buffer_size};
 
         uint8_t* flag_begin = new uint8_t[test_buffer_size];
-        auto flag_r = memseries::utils::Range{flag_begin,flag_begin + test_buffer_size};
+        auto flag_r = dariadb::utils::Range{flag_begin,flag_begin + test_buffer_size};
 
         std::fill(time_r.begin, time_r.end, 0);
         std::fill(time_r.begin, time_r.end, 0);
         std::fill(time_r.begin, time_r.end, 0);
 
-        memseries::compression::CopmressedWriter cwr{memseries::compression::BinaryBuffer(time_r),
-                                                     memseries::compression::BinaryBuffer(value_r),
-                                                     memseries::compression::BinaryBuffer(flag_r)};
+        dariadb::compression::CopmressedWriter cwr{dariadb::compression::BinaryBuffer(time_r),
+                                                     dariadb::compression::BinaryBuffer(value_r),
+                                                     dariadb::compression::BinaryBuffer(flag_r)};
         auto start = clock();
         for (size_t i = 0; i < count; i++) {
-            auto m = memseries::Meas::empty();
-            m.time = static_cast<memseries::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+            auto m = dariadb::Meas::empty();
+            m.time = static_cast<dariadb::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
             m.flag = i;
             m.value = i;
             cwr.append(m);
@@ -138,16 +138,16 @@ int main(int argc, char *argv[]) {
         auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "\ncompress writer : " << elapsed << std::endl;
         auto w=cwr.used_space();
-        auto sz=sizeof(memseries::Meas)*count;
+        auto sz=sizeof(dariadb::Meas)*count;
         std::cout<<"used space: "
                <<(w*100.0)/(sz)<<"%"
                <<std::endl;
 
-        auto m = memseries::Meas::empty();
+        auto m = dariadb::Meas::empty();
 
-        memseries::compression::CopmressedReader crr{memseries::compression::BinaryBuffer(time_r),
-                    memseries::compression::BinaryBuffer(value_r),
-                    memseries::compression::BinaryBuffer(flag_r),m};
+        dariadb::compression::CopmressedReader crr{dariadb::compression::BinaryBuffer(time_r),
+                    dariadb::compression::BinaryBuffer(value_r),
+                    dariadb::compression::BinaryBuffer(flag_r),m};
 
         start = clock();
         for (int i = 1; i < 1000000; i++) {

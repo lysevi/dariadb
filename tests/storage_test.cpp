@@ -12,15 +12,15 @@
 
 const size_t copies_count = 100;
 
-void checkAll(memseries::Meas::MeasList res,
+void checkAll(dariadb::Meas::MeasList res,
               std::string msg,
-              memseries::Time from,
-              memseries::Time to, memseries::Time  step) {
+              dariadb::Time from,
+              dariadb::Time to, dariadb::Time  step) {
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
 		for (auto &m : res) {
 			if ((m.id == i) 
-				&& ((m.flag == i) ||(m.flag==memseries::Flags::NO_DATA)) 
+				&& ((m.flag == i) ||(m.flag==dariadb::Flags::NO_DATA)) 
 				&& (m.time == i)) {
 				count++;
 			}
@@ -32,13 +32,13 @@ void checkAll(memseries::Meas::MeasList res,
 	}
 }
 
-void check_reader_of_all(memseries::storage::Reader_ptr reader,
-	memseries::Time from,
-	memseries::Time to,
-	memseries::Time  step, 
+void check_reader_of_all(dariadb::storage::Reader_ptr reader,
+	dariadb::Time from,
+	dariadb::Time to,
+	dariadb::Time  step, 
 	size_t total_count,std::string message)
 {
-	memseries::Meas::MeasList all{};
+	dariadb::Meas::MeasList all{};
 	reader->readAll(&all);
 	BOOST_CHECK_EQUAL(all.size(), total_count);
 	auto readed_ids = reader->getIds();
@@ -47,16 +47,16 @@ void check_reader_of_all(memseries::storage::Reader_ptr reader,
 	checkAll(all, message, from, to, step);
 }
 
-void storage_test_check(memseries::storage::AbstractStorage *as,
-                        memseries::Time from,
-                        memseries::Time to,
-                        memseries::Time  step) {
-	auto m = memseries::Meas::empty();
+void storage_test_check(dariadb::storage::AbstractStorage *as,
+                        dariadb::Time from,
+                        dariadb::Time to,
+                        dariadb::Time  step) {
+	auto m = dariadb::Meas::empty();
 	size_t total_count = 0;
 
 	for (auto i = from; i < to; i += step) {
 		m.id = i;
-		m.flag = memseries::Flag(i);
+		m.flag = dariadb::Flag(i);
 		m.time = i;
 		m.value = 0;
 		for (size_t j = 1; j < copies_count+1; j++) {
@@ -74,15 +74,15 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 	cloned_reader->reset();
 	check_reader_of_all(cloned_reader, from, to, step, total_count, "cloned readAll error: ");
 
-	memseries::IdArray ids{};
-	memseries::Meas::MeasList all{};
+	dariadb::IdArray ids{};
+	dariadb::Meas::MeasList all{};
 	as->readInterval(ids, 0, from, to)->readAll(&all);
     BOOST_CHECK_EQUAL(all.size(), total_count);
 
 	checkAll(all, "read error: ", from, to, step);
 
     ids.push_back(from + step);
-	memseries::Meas::MeasList fltr_res{};
+	dariadb::Meas::MeasList fltr_res{};
     as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
 
     BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
@@ -92,76 +92,76 @@ void storage_test_check(memseries::storage::AbstractStorage *as,
 	size_t ids_count = (size_t)((to - from) / step);
 	BOOST_CHECK_EQUAL(all.size(), ids_count);
 
-	memseries::IdArray emptyIDs{};
+	dariadb::IdArray emptyIDs{};
 	fltr_res.clear();
 	as->readInTimePoint(to)->readAll(&fltr_res);
 	BOOST_CHECK_EQUAL(fltr_res.size(), ids_count);
 
-    memseries::IdArray notExstsIDs{9999};
+    dariadb::IdArray notExstsIDs{9999};
     fltr_res.clear();
     as->readInTimePoint(notExstsIDs,0,to-1)->readAll(&fltr_res);
     BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
-    BOOST_CHECK_EQUAL(fltr_res.front().flag, memseries::Flags::NO_DATA);
+    BOOST_CHECK_EQUAL(fltr_res.front().flag, dariadb::Flags::NO_DATA);
 
 }
 
 
 BOOST_AUTO_TEST_CASE(inFilter) {
 	{
-		BOOST_CHECK(memseries::in_filter(0, 100));
-		BOOST_CHECK(!memseries::in_filter(1, 100));
+		BOOST_CHECK(dariadb::in_filter(0, 100));
+		BOOST_CHECK(!dariadb::in_filter(1, 100));
 	}
 }
 
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	{
-		auto ms = new memseries::storage::MemoryStorage{ 500 };
-		const memseries::Time from = 0;
-		const memseries::Time to = 100;
-		const memseries::Time step = 2;
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
+		const dariadb::Time from = 0;
+		const dariadb::Time to = 100;
+		const dariadb::Time step = 2;
 		storage_test_check(ms, from, to, step);
 		BOOST_CHECK_EQUAL(ms->chunks_size(), (to - from) / step); // id per chunk.
 		delete ms;
 	}
 }
 
-void thread_writer(memseries::Id id,
-                   memseries::Time from,
-                   memseries::Time to,
-                   memseries::Time step,
-                   memseries::storage::MemoryStorage *ms)
+void thread_writer(dariadb::Id id,
+                   dariadb::Time from,
+                   dariadb::Time to,
+                   dariadb::Time step,
+                   dariadb::storage::MemoryStorage *ms)
 {
-	auto m = memseries::Meas::empty();
+	auto m = dariadb::Meas::empty();
 	for (auto i = from; i < to; i += step) {
 		m.id = id;
-		m.flag = memseries::Flag(i);
+		m.flag = dariadb::Flag(i);
 		m.time = i;
-		m.value = memseries::Value(i);
+		m.value = dariadb::Value(i);
 		ms->append(m);
 	}
 }
 
 
-void thread_reader(memseries::Id id,
-	memseries::Time from,
-	memseries::Time to,
+void thread_reader(dariadb::Id id,
+	dariadb::Time from,
+	dariadb::Time to,
 	size_t expected,
-	memseries::storage::MemoryStorage *ms)
+	dariadb::storage::MemoryStorage *ms)
 {
-	memseries::IdArray ids;
+	dariadb::IdArray ids;
 	if (id != 0) {
 		ids.push_back(id);
 	}
 
 	if (to == 0) {
 		auto rdr = ms->readInTimePoint(ids, 0, from);
-		memseries::Meas::MeasList out;
+		dariadb::Meas::MeasList out;
 		rdr->readAll(&out);
 		BOOST_CHECK_EQUAL(out.size(), expected);
 	}
 	else {
 		auto rdr = ms->readInterval(ids, 0, from, to);
-		memseries::Meas::MeasList out;
+		dariadb::Meas::MeasList out;
 		rdr->readAll(&out);
 		BOOST_CHECK_EQUAL(out.size(), expected);
 	}
@@ -169,7 +169,7 @@ void thread_reader(memseries::Id id,
 
 BOOST_AUTO_TEST_CASE(MultiThread)
 {
-	auto ms = new memseries::storage::MemoryStorage{ 500 };
+	auto ms = new dariadb::storage::MemoryStorage{ 500 };
 	std::thread t1(thread_writer, 0, 0, 100, 2, ms);
 	std::thread t2(thread_writer, 1, 0, 100, 2, ms);
 	std::thread t3(thread_writer, 2, 0, 100, 2, ms);
@@ -195,8 +195,8 @@ BOOST_AUTO_TEST_CASE(MultiThread)
 
 BOOST_AUTO_TEST_CASE(ReadInterval)
 {
-	auto ds = new memseries::storage::MemoryStorage{ 500 };
-	memseries::Meas m;
+	auto ds = new dariadb::storage::MemoryStorage{ 500 };
+	dariadb::Meas m;
 	{
 		m.id = 1; m.time = 1;
 		ds->append(m);
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 
 		{
 			auto tp_reader = ds->readInTimePoint(6);
-			memseries::Meas::MeasList output_in_point{};
+			dariadb::Meas::MeasList output_in_point{};
 			tp_reader->readAll(&output_in_point);
 
 			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5));
@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 		{
 
 			auto tp_reader = ds->readInTimePoint(3);
-			memseries::Meas::MeasList output_in_point{};
+			dariadb::Meas::MeasList output_in_point{};
 			tp_reader->readAll(&output_in_point);
 
 			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(2+3));//+ timepoimt(3) with no_data
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			}
 		}
 		auto reader = ds->readInterval(3, 5);
-		memseries::Meas::MeasList output{};
+		dariadb::Meas::MeasList output{};
 		reader->readAll(&output);
 		BOOST_CHECK_EQUAL(output.size(), size_t(5+3));//+ timepoimt(3) with no_data
 	}
@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 		{
 
 			auto tp_reader = ds->readInTimePoint(8);
-			memseries::Meas::MeasList output_in_point{};
+			dariadb::Meas::MeasList output_in_point{};
 			tp_reader->readAll(&output_in_point);
 
 			BOOST_CHECK_EQUAL(output_in_point.size(), size_t(5+1));//+ timepoimt(8) with no_data
@@ -263,15 +263,15 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 			}
 		}
 
-        auto reader = ds->readInterval(memseries::IdArray{ 1,2,4,5,55 }, 0, 8, 10);
-        memseries::Meas::MeasList output{};
+        auto reader = ds->readInterval(dariadb::IdArray{ 1,2,4,5,55 }, 0, 8, 10);
+        dariadb::Meas::MeasList output{};
         reader->readAll(&output);
         BOOST_CHECK_EQUAL(output.size(), size_t(7));
 
         if(output.size()!=size_t(7)){
             std::cout<<" ERROR!!!!"<<std::endl;
             //reader->readNext(nullptr);
-            for(memseries::Meas v:output){
+            for(dariadb::Meas v:output){
                 std::cout<<" id:"<<v.id
                         <<" flg:"<<v.flag
                        <<" v:"<<v.value
@@ -288,22 +288,22 @@ BOOST_AUTO_TEST_CASE(ReadInterval)
 BOOST_AUTO_TEST_CASE(byStep) {
 	const size_t id_count = 1;
 	{// equal step
-		auto ms = new memseries::storage::MemoryStorage{ 500 };
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
 		
-		auto m = memseries::Meas::empty();
+		auto m = dariadb::Meas::empty();
 		const size_t total_count = 100;
-		const memseries::Time time_step = 1;
+		const dariadb::Time time_step = 1;
 		
 		for (size_t i = 0; i < total_count; i += time_step) {
 			m.id = i%id_count;
-			m.flag = memseries::Flag(i);
+			m.flag = dariadb::Flag(i);
 			m.time = i;
 			m.value = 0;
 			ms->append(m);
 		}
 		auto rdr=ms->readInterval(0, total_count);
 
-		memseries::Meas::MeasList allByStep;
+		dariadb::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
 		rdr->readByStep(&allByStep,0,total_count, time_step);
 		auto expected = size_t(total_count / time_step)*id_count;//+ timepoint
@@ -312,15 +312,15 @@ BOOST_AUTO_TEST_CASE(byStep) {
 	}
 
 	{// less step
-		auto ms = new memseries::storage::MemoryStorage{ 500 };
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
 
-		auto m = memseries::Meas::empty();
+		auto m = dariadb::Meas::empty();
 		const size_t total_count = 100;
-		const memseries::Time time_step = 10;
+		const dariadb::Time time_step = 10;
 		
 		for (size_t i = 0; i < total_count; i += time_step) {
 			m.id = i%id_count;
-			m.flag = memseries::Flag(i);
+			m.flag = dariadb::Flag(i);
 			m.time = i;
 			m.value = 0;
 			ms->append(m);
@@ -328,8 +328,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		
 		auto rdr = ms->readInterval(0, total_count);
 
-		memseries::Time query_step = 11;
-		memseries::Meas::MeasList allByStep;
+		dariadb::Time query_step = 11;
+		dariadb::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
 		rdr->readByStep(&allByStep, 0, total_count, query_step);
 		auto expected = size_t(total_count / query_step)*id_count + id_count;//+ timepoint;
@@ -338,26 +338,26 @@ BOOST_AUTO_TEST_CASE(byStep) {
 	}
 
 	{// great step
-		auto ms = new memseries::storage::MemoryStorage{ 500 };
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
 
-		auto m = memseries::Meas::empty();
+		auto m = dariadb::Meas::empty();
 		const size_t total_count = 100;
-		const memseries::Time time_step = 10;
+		const dariadb::Time time_step = 10;
 
 		for (size_t i = 0; i < total_count; i += time_step) {
 			m.id = i%id_count;
-			m.flag = memseries::Flag(i);
+			m.flag = dariadb::Flag(i);
 			m.time = i;
 			m.value = 0;
 			ms->append(m);
 		}
 
 		auto rdr = ms->readInterval(0, total_count);
-		memseries::Meas::MeasList all;
+		dariadb::Meas::MeasList all;
 		rdr->readAll(&all);
 
-		memseries::Time query_step = 5;
-		memseries::Meas::MeasList allByStep;
+		dariadb::Time query_step = 5;
+		dariadb::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
 		rdr->readByStep(&allByStep, 0, total_count, query_step);
         auto expected = size_t(total_count / time_step)*2 * id_count + id_count;//+ timepoint;
@@ -366,31 +366,31 @@ BOOST_AUTO_TEST_CASE(byStep) {
 	}
 
 	{// from before data
-		auto ms = new memseries::storage::MemoryStorage{ 500 };
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
 
-		auto m = memseries::Meas::empty();
+		auto m = dariadb::Meas::empty();
 		const size_t total_count = 100;
-		const memseries::Time time_step = 10;
+		const dariadb::Time time_step = 10;
 
 		for (size_t i = time_step; i < total_count; i += time_step) {
 			m.id = i%id_count;
-			m.flag = memseries::Flag(i);
+			m.flag = dariadb::Flag(i);
 			m.time = i;
 			m.value = 0;
 			ms->append(m);
 		}
 
 		auto rdr = ms->readInterval(time_step, total_count);
-		memseries::Meas::MeasList all;
+		dariadb::Meas::MeasList all;
 		rdr->readAll(&all);
 
-		memseries::Time query_step = 5;
-		memseries::Meas::MeasList allByStep;
+		dariadb::Time query_step = 5;
+		dariadb::Meas::MeasList allByStep;
 		rdr = ms->readInterval(time_step, total_count);
 
 		rdr->readByStep(&allByStep, 0, total_count, query_step);
 		
-		memseries::Time expected = memseries::Time((total_count - time_step) / time_step) * 2;
+		dariadb::Time expected = dariadb::Time((total_count - time_step) / time_step) * 2;
 		expected= expected* id_count;
 		expected += id_count*(time_step / query_step);//+ before first value
 		expected += id_count;//one after last  value
@@ -400,10 +400,10 @@ BOOST_AUTO_TEST_CASE(byStep) {
 	}
 }
 
-class Moc_SubscribeClbk : public memseries::storage::ReaderClb {
+class Moc_SubscribeClbk : public dariadb::storage::ReaderClb {
 public:
-    std::list<memseries::Meas> values;
-	void call(const memseries::Meas&m) override {
+    std::list<dariadb::Meas> values;
+	void call(const dariadb::Meas&m) override {
         values.push_back(m);
 	}
 	~Moc_SubscribeClbk() {}
@@ -416,8 +416,8 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 	std::shared_ptr<Moc_SubscribeClbk> c3(new Moc_SubscribeClbk);
 	std::shared_ptr<Moc_SubscribeClbk> c4(new Moc_SubscribeClbk);
 
-	std::unique_ptr<memseries::storage::MemoryStorage> ms{ new memseries::storage::MemoryStorage{ 500 } };
-	memseries::IdArray ids{};
+	std::unique_ptr<dariadb::storage::MemoryStorage> ms{ new dariadb::storage::MemoryStorage{ 500 } };
+	dariadb::IdArray ids{};
     ms->subscribe(ids, 0, c1); //all
     ids.push_back(2);
     ms->subscribe(ids, 0, c2); // 2
@@ -426,13 +426,13 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     ids.clear();
     ms->subscribe(ids, 1, c4); // with flag=1
 
-	auto m = memseries::Meas::empty();
+	auto m = dariadb::Meas::empty();
 	const size_t total_count = 100;
-	const memseries::Time time_step = 1;
+	const dariadb::Time time_step = 1;
 
 	for (size_t i = 0; i < total_count; i += time_step) {
 		m.id = i%id_count;
-		m.flag = memseries::Flag(i);
+		m.flag = dariadb::Flag(i);
 		m.time = i;
 		m.value = 0;
 		ms->append(m);
@@ -440,11 +440,11 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     BOOST_CHECK_EQUAL(c1->values.size(),total_count);
 
     BOOST_CHECK_EQUAL(c2->values.size(),size_t(total_count/id_count));
-    BOOST_CHECK_EQUAL(c2->values.front().id,memseries::Id(2));
+    BOOST_CHECK_EQUAL(c2->values.front().id,dariadb::Id(2));
 
     BOOST_CHECK_EQUAL(c3->values.size(),size_t(total_count/id_count)*2);
-    BOOST_CHECK_EQUAL(c3->values.front().id,memseries::Id(1));
+    BOOST_CHECK_EQUAL(c3->values.front().id,dariadb::Id(1));
 
     BOOST_CHECK_EQUAL(c4->values.size(),size_t(1));
-    BOOST_CHECK_EQUAL(c4->values.front().flag,memseries::Flag(1));
+    BOOST_CHECK_EQUAL(c4->values.front().flag,dariadb::Flag(1));
 }

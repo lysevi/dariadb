@@ -3,15 +3,15 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <memseries.h>
+#include <dariadb.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
 #include <chrono>
 
-class BenchCallback:public memseries::storage::ReaderClb{
+class BenchCallback:public dariadb::storage::ReaderClb{
 public:
-    void call(const memseries::Meas&){
+    void call(const dariadb::Meas&){
         count++;
     }
     size_t count;
@@ -20,12 +20,12 @@ public:
 int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
-    auto ms = new memseries::storage::MemoryStorage{ 2000000 };
-    auto m = memseries::Meas::empty();
+    auto ms = new dariadb::storage::MemoryStorage{ 2000000 };
+    auto m = dariadb::Meas::empty();
 
-    std::vector<memseries::Time> deltas{ 50,255,1024,2050 };
+    std::vector<dariadb::Time> deltas{ 50,255,1024,2050 };
     auto now=std::chrono::system_clock::now();
-    memseries::Time t =memseries::timeutil::from_chrono(now);
+    dariadb::Time t =dariadb::timeutil::from_chrono(now);
     const size_t ids_count = 2;
 
     auto start = clock();
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     std::cout << "raded: " << clbk->count << std::endl;
 
     start = clock();
-	auto reader_int = ms->readInterval(memseries::timeutil::from_chrono(now), t);
+	auto reader_int = ms->readInterval(dariadb::timeutil::from_chrono(now), t);
 
     clbk->count=0;
     reader_int->readAll(clbk);
@@ -66,11 +66,11 @@ int main(int argc, char *argv[]) {
 
 
 	start = clock();
-	auto reader_by_step = ms->readInterval(memseries::timeutil::from_chrono(now), t);
+	auto reader_by_step = ms->readInterval(dariadb::timeutil::from_chrono(now), t);
 
 	clbk->count = 0;
-	memseries::Time query_step = 100000;
-	reader_by_step->readByStep(clbk, memseries::timeutil::from_chrono(now)-query_step*10, t, query_step);
+	dariadb::Time query_step = 100000;
+	reader_by_step->readByStep(clbk, dariadb::timeutil::from_chrono(now)-query_step*10, t, query_step);
 
 	elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
 	std::cout << "memorystorage byStep("<< query_step<<") all: " << elapsed << std::endl;

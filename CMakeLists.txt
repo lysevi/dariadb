@@ -1,14 +1,14 @@
 cmake_minimum_required (VERSION 2.8)
-project (memseries)
+project (dariadb)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(AddCXXCompilerFlag)
 
-set(memseries_MAJOR_VERSION 0)
-set(memseries_MINOR_VERSION 0)
-set(memseries_PATCH_VERSION 0)
-set(memseries_VERSION${memseries_MAJOR_VERSION}.${memseries_MINOR_VERSION}.${memseries_PATCH_VERSION})
+set(dariadb_MAJOR_VERSION 0)
+set(dariadb_MINOR_VERSION 0)
+set(dariadb_PATCH_VERSION 0)
+set(dariadb_VERSION${dariadb_MAJOR_VERSION}.${dariadb_MINOR_VERSION}.${dariadb_PATCH_VERSION})
 
 # Offer the user the choice of overriding the installation directories
 set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
@@ -18,7 +18,7 @@ set(INSTALL_INCLUDE_DIR include CACHE PATH "Installation directory for header fi
 if(WIN32 AND NOT CYGWIN)
   set(DEF_INSTALL_CMAKE_DIR CMake)
 else()
-  set(DEF_INSTALL_CMAKE_DIR lib/CMake/memseries)
+  set(DEF_INSTALL_CMAKE_DIR lib/CMake/dariadb)
 endif()
 set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH "Installation directory for CMake files")
   
@@ -110,6 +110,6 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 
 enable_testing()
 
-add_subdirectory (libmemseries)
+add_subdirectory (libdariadb)
 add_subdirectory (tests)
 add_subdirectory (benchmarks)
