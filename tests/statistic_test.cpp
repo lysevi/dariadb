@@ -3,7 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <statistic.h>
 
-class Moc_I1:public dariadb::statistic::integral::BaseIntegral{
+class Moc_I1:public dariadb::statistic::BaseMethod {
 public:
     Moc_I1(){
         _a=_b=dariadb::Meas::empty();
@@ -91,5 +91,24 @@ BOOST_AUTO_TEST_CASE(RectangleMethod) {
 		m.time = 2;	m.value = 2;
 		p->call(m);
 		BOOST_CHECK_CLOSE(p->result(), dariadb::Value(2), 0.01);
+	}
+}
+BOOST_AUTO_TEST_CASE(Average) {
+
+	{//midle
+		using dariadb::statistic::average::Average;
+		std::unique_ptr<Average>  p{ new Average() };
+
+		auto m = dariadb::Meas::empty();
+		m.id = 1;
+
+		m.time = 0;	m.value = 0;
+		p->call(m);
+		m.time = 1;	m.value = 1;
+		p->call(m);
+
+		m.time = 2;	m.value = 2;
+		p->call(m);
+		BOOST_CHECK_CLOSE(p->result(), dariadb::Value(1), 0.01);
 	}
 }

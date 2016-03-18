@@ -1,14 +1,16 @@
 #include "statistic.h"
 #include <cassert>
 
+using namespace  dariadb::statistic;
 using namespace  dariadb::statistic::integral;
+using namespace  dariadb::statistic::average;
 
-BaseIntegral::BaseIntegral() {
+BaseMethod::BaseMethod() {
 	_is_first = true;
 	_result = 0;
 }
 
-void BaseIntegral::call(const dariadb::Meas&m){
+void BaseMethod::call(const dariadb::Meas&m){
     if(_is_first){
         _last=m;
         _is_first=false;
@@ -18,12 +20,12 @@ void BaseIntegral::call(const dariadb::Meas&m){
     }
 }
 
-dariadb::Value BaseIntegral::result()const {
+dariadb::Value BaseMethod::result()const {
 	return _result;
 }
 
 RectangleMethod::RectangleMethod(const RectangleMethod::Kind k): 
-	BaseIntegral(),
+	BaseMethod(),
 	_kind(k)
 {}
 
@@ -44,4 +46,20 @@ void RectangleMethod::calc(const dariadb::Meas&a, const dariadb::Meas&b){
 	default:
 		assert(false);
 	}
+}
+Average::Average():BaseMethod() {
+	_count = 0;
+}
+
+void Average::call(const dariadb::Meas&a){
+	_result += a.value;
+	_count++;
+}
+
+void Average::calc(const dariadb::Meas&, const dariadb::Meas&){
+}
+
+dariadb::Value Average::result()const {
+	assert(_count != 0);
+	return _result / _count;
 }

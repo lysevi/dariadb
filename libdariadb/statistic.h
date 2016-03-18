@@ -4,21 +4,21 @@
 
 namespace dariadb{
     namespace statistic{
-		namespace integral {
-			class BaseIntegral {
-			public:
-				BaseIntegral();
-				virtual ~BaseIntegral() = default;
-				void call(const dariadb::Meas&m);
-				virtual void calc(const dariadb::Meas&a, const dariadb::Meas&b) = 0;
-				virtual dariadb::Value result()const;
-			protected:
-				dariadb::Meas _last;
-				bool _is_first;
-				dariadb::Value _result;
-			};
+		class BaseMethod {
+		public:
+			BaseMethod();
+			virtual ~BaseMethod() = default;
+			virtual void call(const dariadb::Meas&m);
+			virtual void calc(const dariadb::Meas&a, const dariadb::Meas&b) = 0;
+			virtual dariadb::Value result()const;
+		protected:
+			dariadb::Meas _last;
+			bool _is_first;
+			dariadb::Value _result;
+		};
 
-			class RectangleMethod : public BaseIntegral {
+		namespace integral {
+			class RectangleMethod : public BaseMethod {
 			public:
 				enum Kind {
 					LEFT,
@@ -29,6 +29,17 @@ namespace dariadb{
 				void calc(const dariadb::Meas&a, const dariadb::Meas&b) override;
 			protected:
 				Kind _kind;
+			};
+		}
+		namespace average {
+			class Average : public BaseMethod {
+			public:
+				Average();
+				void call(const dariadb::Meas&a) override;
+				void calc(const dariadb::Meas&a, const dariadb::Meas&b) override;
+				dariadb::Value result()const override;
+			protected:
+				size_t _count;
 			};
 		}
     }
