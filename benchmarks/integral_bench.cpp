@@ -9,25 +9,7 @@
 #include <cmath>
 #include <chrono>
 
-const size_t K = 1;
-
-
-class Moc_I1:public memseries::statistic::BaseIntegral{
-public:
-    Moc_I1(){
-        _a=_b=memseries::Meas::empty();
-    }
-    void calc(const memseries::Meas&a,const memseries::Meas&b)override{
-        _a=a;
-        _b=b;
-    }
-	memseries::Value result()const {
-		return memseries::Value();
-	}
-    memseries::Meas _a;
-    memseries::Meas _b;
-};
-
+const size_t K = 5;
 
 float bench_int(memseries::statistic::BaseIntegral*bi){
 	auto start = clock();
@@ -37,14 +19,29 @@ float bench_int(memseries::statistic::BaseIntegral*bi){
         bi->call(m);
     }
 	auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-	return elapsed;
+	return elapsed/K;
 }
 
 int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
-    std::unique_ptr<Moc_I1>  p{new Moc_I1};
-  
-    auto elapsed= bench_int(p.get());
-    std::cout << "integrall calls: " << elapsed << std::endl;
+	using memseries::statistic::RectangleMethod;
+	{
+		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::LEFT) };
+
+		auto elapsed = bench_int(p.get());
+		std::cout << "rectangle left: " << elapsed << std::endl;
+	}
+	{
+		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::RIGHT) };
+
+		auto elapsed = bench_int(p.get());
+		std::cout << "rectangle right: " << elapsed << std::endl;
+	}
+	{
+		std::unique_ptr<RectangleMethod>  p{ new RectangleMethod(RectangleMethod::Kind::MIDLE) };
+
+		auto elapsed = bench_int(p.get());
+		std::cout << "rectangle midle: " << elapsed << std::endl;
+	}
 }
