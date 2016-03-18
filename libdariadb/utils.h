@@ -3,6 +3,7 @@
 #include <string>
 #include <list>
 #include <iterator>
+#include <cstdint>
 
 #define NOT_IMPLEMENTED throw std::logic_error("Not implemented");
 
