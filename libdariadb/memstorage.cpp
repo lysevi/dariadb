@@ -83,7 +83,7 @@ struct Chunk
 typedef std::shared_ptr<Chunk>    Chunk_Ptr;
 typedef std::list<Chunk_Ptr>      ChuncksList;
 typedef std::map<Id, ChuncksList> ChunkMap;
-
+typedef std::map<Id, Chunk_Ptr>   FreeChunksMap;
 
 class InnerReader: public Reader{
 public:
@@ -306,16 +306,11 @@ public:
 
     Chunk_Ptr getFreeChunk(dariadb::Id id){
         Chunk_Ptr resulted_chunk=nullptr;
-        auto ch_iter=_chuncks.find(id);
-        if (ch_iter != _chuncks.end()) {
-            for (auto &v:ch_iter->second) {
-                if (!v->is_full()) {
-                    resulted_chunk = v;
-                    break;
-                }
-            }
-        }else {
-            this->_chuncks[id] = ChuncksList{};
+		auto ch_iter = _free_chunks.find(id);
+		if (ch_iter != _free_chunks.end()) {
+			if (!ch_iter->second->is_full()){
+				return ch_iter->second;
+			}
         }
         return resulted_chunk;
     }
@@ -324,28 +319,20 @@ public:
 		std::lock_guard<std::mutex> lg(_mutex);
         Chunk_Ptr chunk=this->getFreeChunk(value.id);
 
-        bool need_sort = false;
-
+       
         if (chunk == nullptr) {
             chunk = std::make_shared<Chunk>(_size, value);
             this->_chuncks[value.id].push_back(chunk);
-            need_sort = true;
+			this->_free_chunks[value.id] = chunk;
+       
         }
         else {
             if (!chunk->append(value)) {
                 chunk = std::make_shared<Chunk>(_size, value);
                 this->_chuncks[value.id].push_back(chunk);
-                need_sort = true;
+       
             }
         }
-
-        if (need_sort){
-			this->_chuncks[value.id].sort(
-				[](const Chunk_Ptr &l, const Chunk_Ptr &r) {
-				return l->first.time < r->first.time; 
-			});
-        }
-
 
         _min_time = std::min(_min_time, value.time);
         _max_time = std::max(_max_time, value.time);
@@ -451,6 +438,7 @@ protected:
     size_t _size;
 
     ChunkMap _chuncks;
+	FreeChunksMap _free_chunks;
     Time _min_time,_max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
 	std::mutex _mutex;
