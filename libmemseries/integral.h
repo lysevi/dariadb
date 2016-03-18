@@ -10,6 +10,7 @@ namespace memseries{
             virtual ~BaseIntegral()=default;
             void call(const memseries::Meas&m);
             virtual void calc(const memseries::Meas&a,const memseries::Meas&b)=0;
+			virtual memseries::Value result()const = 0;
         protected:
             memseries::Meas _last;
             bool _is_first;

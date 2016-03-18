@@ -21,23 +21,30 @@ public:
         _a=a;
         _b=b;
     }
+	memseries::Value result()const {
+		return memseries::Value();
+	}
     memseries::Meas _a;
     memseries::Meas _b;
 };
 
 
-void bench_int(memseries::statistic::BaseIntegral*bi){
+float bench_int(memseries::statistic::BaseIntegral*bi){
+	auto start = clock();
     auto m=memseries::Meas::empty();
     for (size_t i = 1; i < K*1000000; i++) {
         m.value=i;
         bi->call(m);
     }
+	auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	return elapsed;
 }
 
 int main(int argc, char *argv[]) {
+	(void)argc;
+	(void)argv;
     std::unique_ptr<Moc_I1>  p{new Moc_I1};
-    auto start = clock();
-    bench_int(p.get());
-    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+  
+    auto elapsed= bench_int(p.get());
     std::cout << "integrall calls: " << elapsed << std::endl;
 }

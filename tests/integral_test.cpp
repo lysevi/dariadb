@@ -12,6 +12,9 @@ public:
         _a=a;
         _b=b;
     }
+	memseries::Value result()const {
+		return memseries::Value();
+	}
     memseries::Meas _a;
     memseries::Meas _b;
 };
