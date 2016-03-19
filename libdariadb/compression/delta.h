@@ -32,9 +32,6 @@ namespace dariadb {
             ~DeltaDeCompressor();
 
             Time read();
-
-            bool is_full() const { return _bw.is_full(); }
-
         protected:
             int64_t _prev_delta;
             Time _prev_time;
