@@ -20,8 +20,6 @@ using dariadb::utils::Range;
 struct Chunk
 {
     std::vector<uint8_t> _buffer_t;
-	std::vector<uint8_t> _buffer_f;
-	std::vector<uint8_t> _buffer_v;
     Range times;
     Range flags;
     Range values;
@@ -33,20 +31,20 @@ struct Chunk
 	std::mutex _mutex;
 
     Chunk(size_t size, Meas first_m):
+        _buffer_t(size*3),
         count(0),
         first(first_m),
-		_mutex()
+        _mutex()
     {
         minTime=std::numeric_limits<Time>::max();
         maxTime=std::numeric_limits<Time>::min();
 
-		_buffer_t.resize(size);	std::fill(_buffer_t.begin(), _buffer_t.end(),0);
-		_buffer_f.resize(size);	std::fill(_buffer_f.begin(), _buffer_f.end(), 0);
-		_buffer_v.resize(size);	std::fill(_buffer_v.begin(), _buffer_v.end(), 0);
+        std::fill(_buffer_t.begin(), _buffer_t.end(),0);
 
-		times = Range{ _buffer_t.data(),_buffer_t.data() + sizeof(uint8_t)*size };
-		flags = Range{ _buffer_f.data(),_buffer_f.data() + sizeof(uint8_t)*size };
-		values = Range{ _buffer_v.data(),_buffer_v.data() + sizeof(uint8_t)*size };
+
+        times = Range{ _buffer_t.data(),_buffer_t.data() + size - 1};
+        flags = Range{ times.end+1, times.end + size - 1 };
+        values = Range{ flags.end+1, flags.end + size - 1  };
 
         using compression::BinaryBuffer;
         c_writer = compression::CopmressedWriter( BinaryBuffer(times),
