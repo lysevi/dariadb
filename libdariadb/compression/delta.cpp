@@ -9,14 +9,14 @@
 
 using namespace dariadb::compression;
 
-const uint16_t delta_64_mask = 512;         //10 0000 0000
-const uint16_t delta_64_mask_inv = 127;     //00 1111 111
-const uint16_t delta_256_mask = 3072;       //1100 0000 0000
-const uint16_t delta_256_mask_inv = 511;    //0001 1111 1111
-const uint16_t delta_2047_mask = 57344;     //1110 0000 0000 0000
-const uint16_t delta_2047_mask_inv = 4095;  //0000 1111 1111 1111
-const uint64_t delta_big_mask = 64424509440;   //1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
-const uint64_t delta_big_mask_inv = 4294967295;//0000 1111 1111 1111 1111 1111 1111   1111 1111
+const uint16_t delta_64_mask = 0x200;          //10 0000 0000
+const uint16_t delta_64_mask_inv = 0x7F;       //00 1111 111
+const uint16_t delta_256_mask = 0xC00;         //1100 0000 0000
+const uint16_t delta_256_mask_inv = 0x1FF;     //0001 1111 1111
+const uint16_t delta_2047_mask = 0xE000;       //1110 0000 0000 0000
+const uint16_t delta_2047_mask_inv = 0xFFF;    //0000 1111 1111 1111
+const uint64_t delta_big_mask = 0xF00000000;   //1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
+const uint64_t delta_big_mask_inv = 0xFFFFFFFF;//0000 1111 1111 1111 1111 1111 1111   1111 1111
 
 DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
 	BaseCompressor(bw),
