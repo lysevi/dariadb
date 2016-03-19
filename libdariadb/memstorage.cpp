@@ -423,12 +423,8 @@ public:
     size_t size()const { return _size; }
     size_t chunks_size()const { return _chuncks.size(); }
 
-	void subscribe(const IdArray&ids, Flag flag, ReaderClb_ptr clbk) {
-        auto new_s=std::make_shared<SubscribeInfo>();
-        new_s->ids=ids;
-        new_s->flag=flag;
-        new_s->clbk=clbk;
-
+    void subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk) {
+        auto new_s=std::make_shared<SubscribeInfo>(ids,flag,clbk);
 		_subscribe_notify->add(new_s);
 	}
 
@@ -486,6 +482,6 @@ size_t  MemoryStorage::chunks_size()const {
 }
 
 
-void MemoryStorage::subscribe(const IdArray&ids, Flag flag, ReaderClb_ptr clbk) {
+void MemoryStorage::subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk) {
 	return _Impl->subscribe(ids, flag, clbk);
 }

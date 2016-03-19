@@ -9,6 +9,8 @@ namespace dariadb {
 	namespace storage {
 
 		struct SubscribeInfo {
+            SubscribeInfo()=default;
+            SubscribeInfo(const IdArray &i,const Flag& f, const ReaderClb_ptr &c);
 			IdArray ids;
 			Flag flag;
 			mutable ReaderClb_ptr clbk;

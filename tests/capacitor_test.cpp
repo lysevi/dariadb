@@ -39,7 +39,7 @@ public:
 		return 0;
 	}
 
-	void subscribe(const dariadb::IdArray&, dariadb::Flag , dariadb::storage::ReaderClb_ptr clbk) override{
+    void subscribe(const dariadb::IdArray&ids,const dariadb::Flag& flag, const dariadb::storage::ReaderClb_ptr &clbk) override{
 	}
 };
 
