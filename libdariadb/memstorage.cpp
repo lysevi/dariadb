@@ -170,6 +170,10 @@ public:
                     sub.id = ch.second[i].chunk->first.id;
                     if (check_meas(sub)) {
                         clb->call(sub);
+                    }else{
+                        if(sub.time>_to){
+                            break;
+                        }
                     }
                 }
 
@@ -207,6 +211,8 @@ public:
                 sub.id = ch.chunk->first.id;
                 if ((sub.time <= _from) && (sub.time >= candidate.time)) {
                     candidate = sub;
+                }if(sub.time>_from){
+                    break;
                 }
             }
             if (candidate.time <= _from) {
