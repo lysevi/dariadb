@@ -177,7 +177,7 @@ public:
     }
 
     void readTimePoint(storage::ReaderClb*clb){
-		bool is_locked = _mutex.try_lock();
+        std::lock_guard<std::mutex> lg(_mutex_tp);
         std::list<InnerReader::ReadChunk> to_read_chunks{};
         for (auto ch : _tp_chunks) {
             auto candidate = ch.second.front();
@@ -222,10 +222,7 @@ public:
             m.id=id;
             clb->call(m);
         }
-        _tp_readed = true;
-		if (is_locked) {
-			_mutex.unlock();
-		}
+        _tp_readed=true;
     }
 
 
@@ -277,7 +274,7 @@ public:
 	typedef std::tuple<dariadb::Id, dariadb::Time> IdTime;
 	std::set<IdTime> _tp_readed_times;
 
-	std::mutex _mutex;
+    std::mutex _mutex,_mutex_tp;
 };
 
 
