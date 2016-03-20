@@ -59,8 +59,7 @@ public:
     bool is_full() const { return _is_full; }
 
     size_t used_space()const{
-        auto local_max=std::max(time_comp.used_space(),value_comp.used_space());
-        return std::max(local_max,flag_comp.used_space());
+        return time_comp.used_space();
     }
 protected:
     Meas _first;
