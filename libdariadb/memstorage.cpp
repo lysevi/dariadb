@@ -380,7 +380,7 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
-		bool is_locked=_mutex.try_lock();
+        std::lock_guard<std::mutex> lg(_mutex_tp);
 		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
 		res->is_time_point_reader = true;
 		
@@ -399,9 +399,6 @@ public:
                 }
             }
         }
-		if (is_locked) {
-			_mutex.unlock();
-		}
         return res;
     }
 
@@ -436,6 +433,7 @@ protected:
     Time _min_time,_max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
 	std::mutex _mutex;
+    std::mutex _mutex_tp;
 };
 
 
