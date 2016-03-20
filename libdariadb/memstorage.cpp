@@ -312,6 +312,7 @@ public:
 
     append_result append(const Meas& value){
 		std::lock_guard<std::mutex> lg(_mutex);
+
         Chunk_Ptr chunk=this->getFreeChunk(value.id);
 
        
