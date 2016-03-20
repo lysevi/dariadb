@@ -17,12 +17,10 @@ public:
     Private() = default;
     ~Private()=default;
 
-	Private(const BinaryBuffer& bw_time,
-		const BinaryBuffer &bw_values,
-		const BinaryBuffer &bw_flags) :
-		time_comp(bw_time),
-		value_comp(bw_values),
-		flag_comp(bw_flags)
+    Private(const BinaryBuffer_Ptr& bw) :
+        time_comp(bw),
+        value_comp(bw),
+        flag_comp(bw)
 	{
 		_is_first = true;
 		_is_full = false;
@@ -61,8 +59,7 @@ public:
     bool is_full() const { return _is_full; }
 
     size_t used_space()const{
-        auto local_max=std::max(time_comp.used_space(),value_comp.used_space());
-        return std::max(local_max,flag_comp.used_space());
+        return time_comp.used_space();
     }
 protected:
     Meas _first;
@@ -78,14 +75,10 @@ public:
     Private() = default;
     ~Private()=default;
 
-	Private(const BinaryBuffer& bw_time,
-		const BinaryBuffer& bw_values,
-		const BinaryBuffer& bw_flags,
-		const Meas &first) :
-
-        time_dcomp(bw_time,first.time),
-        value_dcomp(bw_values, first.value),
-        flag_dcomp(bw_flags, first.flag)
+    Private(const BinaryBuffer_Ptr& bw, const Meas &first) :
+        time_dcomp(bw,first.time),
+        value_dcomp(bw, first.value),
+        flag_dcomp(bw, first.flag)
     {
         _first = first;
     }
@@ -118,8 +111,8 @@ CopmressedWriter::CopmressedWriter(){
     this->_Impl=nullptr;
 }
 
-CopmressedWriter::CopmressedWriter(const BinaryBuffer &bw_time, const BinaryBuffer &bw_values, const BinaryBuffer &bw_flags)
-    :_Impl(new CopmressedWriter::Private(bw_time,bw_values,bw_flags))
+CopmressedWriter::CopmressedWriter(const BinaryBuffer_Ptr &bw)
+    :_Impl(new CopmressedWriter::Private(bw))
 {
 
 }
@@ -170,8 +163,8 @@ CopmressedReader::CopmressedReader(){
 }
 
 
-CopmressedReader::CopmressedReader(const BinaryBuffer &bw_time, const BinaryBuffer &bw_values, const BinaryBuffer &bw_flags, const Meas &first)
-    :_Impl(new CopmressedReader::Private(bw_time,bw_values,bw_flags,first))
+CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw, const Meas &first)
+    :_Impl(new CopmressedReader::Private(bw,first))
 {
 
 }

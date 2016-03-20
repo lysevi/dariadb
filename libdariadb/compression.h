@@ -10,9 +10,7 @@ namespace dariadb {
         class CopmressedWriter {
         public:
             CopmressedWriter();
-            CopmressedWriter(const BinaryBuffer &bw_time,
-				const BinaryBuffer &bw_values,
-				const BinaryBuffer &bw_flags);
+            CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
             ~CopmressedWriter();
             CopmressedWriter(const CopmressedWriter &other);
 
@@ -33,10 +31,7 @@ namespace dariadb {
         class CopmressedReader {
         public:
             CopmressedReader();
-            CopmressedReader(const BinaryBuffer &bw_time,
-				const BinaryBuffer &bw_values,
-				const BinaryBuffer &bw_flags,
-				const Meas &first);
+            CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
             ~CopmressedReader();
             CopmressedReader(const CopmressedReader &other);
             void swap(CopmressedReader &other);

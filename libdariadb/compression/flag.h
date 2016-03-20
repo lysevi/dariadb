@@ -8,7 +8,7 @@ namespace dariadb {
         class FlagCompressor:public BaseCompressor {
         public:
             FlagCompressor() = default;
-            FlagCompressor(const BinaryBuffer &bw);
+            FlagCompressor(const BinaryBuffer_Ptr &bw);
             ~FlagCompressor();
 
             bool append(Flag v);
@@ -20,7 +20,7 @@ namespace dariadb {
         class FlagDeCompressor :public BaseCompressor {
         public:
             FlagDeCompressor() = default;
-            FlagDeCompressor(const BinaryBuffer &bw, Flag first);
+            FlagDeCompressor(const BinaryBuffer_Ptr &bw, Flag first);
             ~FlagDeCompressor() = default;
 
             Flag read();

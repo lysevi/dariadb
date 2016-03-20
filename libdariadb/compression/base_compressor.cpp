@@ -2,5 +2,5 @@
 
 using namespace dariadb::compression;
 
-BaseCompressor::BaseCompressor(const BinaryBuffer &bw):_bw(bw) {
+BaseCompressor::BaseCompressor(const BinaryBuffer_Ptr &bw):_bw(bw) {
 }

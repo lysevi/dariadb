@@ -136,7 +136,7 @@ void thread_writer(dariadb::Id id,
 		m.id = id;
 		m.flag = dariadb::Flag(i);
 		m.time = i;
-		m.value = dariadb::Value(i);
+        m.value = dariadb::Value(i);
 		ms->append(m);
 	}
 }
@@ -158,39 +158,41 @@ void thread_reader(dariadb::Id id,
 		dariadb::Meas::MeasList out;
 		rdr->readAll(&out);
 		BOOST_CHECK_EQUAL(out.size(), expected);
+        assert(out.size()==expected);
 	}
 	else {
 		auto rdr = ms->readInterval(ids, 0, from, to);
 		dariadb::Meas::MeasList out;
 		rdr->readAll(&out);
 		BOOST_CHECK_EQUAL(out.size(), expected);
+        assert(out.size()==expected);
 	}
 }
 
 BOOST_AUTO_TEST_CASE(MultiThread)
 {
-	auto ms = new dariadb::storage::MemoryStorage{ 500 };
-	std::thread t1(thread_writer, 0, 0, 100, 2, ms);
-	std::thread t2(thread_writer, 1, 0, 100, 2, ms);
-	std::thread t3(thread_writer, 2, 0, 100, 2, ms);
-	std::thread t4(thread_writer, 0, 0, 100, 1, ms);
+    auto ms = new dariadb::storage::MemoryStorage{ 500 };
+    std::thread t1(thread_writer, 0, 0, 100, 2, ms);
+    std::thread t2(thread_writer, 1, 0, 100, 2, ms);
+    std::thread t3(thread_writer, 2, 0, 100, 2, ms);
+    std::thread t4(thread_writer, 0, 0, 100, 1, ms);
 
-	t1.join();
-	t2.join();
-	t3.join();
-	t4.join();
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
 
     std::thread rt1(thread_reader, 0, 0, 100, (50+50+50+100),  ms);
-	std::thread rt2(thread_reader, 1, 50, 0,  1, ms);
-	std::thread rt3(thread_reader, 2, 0, 100, 50,ms);
-	std::thread rt4(thread_reader, 0, 50, 0, 3, ms);
+    std::thread rt2(thread_reader, 1, 50, 0,  1, ms);
+    std::thread rt3(thread_reader, 2, 0, 100, 50,ms);
+    std::thread rt4(thread_reader, 0, 50, 0, 3, ms);
 
-	rt1.join();
-	rt2.join();
-	rt3.join();
-	rt4.join();
+    rt1.join();
+    rt2.join();
+    rt3.join();
+    rt4.join();
 
-	delete ms;
+    delete ms;
 }
 
 BOOST_AUTO_TEST_CASE(ReadInterval)

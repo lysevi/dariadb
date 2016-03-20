@@ -6,7 +6,7 @@
 
 using namespace dariadb::compression;
 
-FlagCompressor::FlagCompressor(const BinaryBuffer & bw):
+FlagCompressor::FlagCompressor(const BinaryBuffer_Ptr & bw):
     BaseCompressor(bw),
     _is_first(true),
     _first(0)
@@ -27,24 +27,24 @@ bool FlagCompressor::append(dariadb::Flag v){
     }
 
     if (v == _first) {
-        if (_bw.free_size() == 1) {
+        if (_bw->free_size() == 1) {
             return false;
         }
-        _bw.clrbit().incbit();
+        _bw->clrbit().incbit();
     }
     else {
-        if (_bw.free_size() < 9) {
+        if (_bw->free_size() < 9) {
             return false;
         }
-        _bw.setbit().incbit();
-        _bw.write(uint64_t(v),31);
+        _bw->setbit().incbit();
+        _bw->write(uint64_t(v),31);
 
         _first = v;
     }
     return true;
 }
 
-FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, dariadb::Flag first):
+FlagDeCompressor::FlagDeCompressor(const BinaryBuffer_Ptr & bw, dariadb::Flag first):
 	BaseCompressor(bw),
     _prev_value(first){
 }
@@ -52,13 +52,13 @@ FlagDeCompressor::FlagDeCompressor(const BinaryBuffer & bw, dariadb::Flag first)
 dariadb::Flag FlagDeCompressor::read(){
     static_assert(sizeof(dariadb::Flag) == 4, "Flag no x32 value");
     dariadb::Flag result(0);
-    if (_bw.getbit() == 0) {
-        _bw.incbit();
+    if (_bw->getbit() == 0) {
+        _bw->incbit();
         result = _prev_value;
     }
     else {
-        _bw.incbit();
-        result=(dariadb::Flag)_bw.read(31);
+        _bw->incbit();
+        result=(dariadb::Flag)_bw->read(31);
     }
 
     return result;

@@ -19,12 +19,15 @@ int main(int argc, char *argv[]) {
 
     auto test_buffer_size=1024*1024*100;
     uint8_t *buffer=new uint8_t[test_buffer_size];
-
+    dariadb::utils::Range rng{buffer,buffer+test_buffer_size};
     //delta compression
     std::fill(buffer,buffer+test_buffer_size,0);
+
     {
         const size_t count=1000000;
-        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+
+        auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+
         dariadb::compression::DeltaCompressor dc(bw);
 
         std::vector<dariadb::Time> deltas{50,255,1024,2050};
@@ -47,7 +50,7 @@ int main(int argc, char *argv[]) {
                <<std::endl;
     }
     {
-        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+        auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
         dariadb::compression::DeltaDeCompressor dc(bw,0);
 
         auto start=clock();
@@ -61,7 +64,7 @@ int main(int argc, char *argv[]) {
     std::fill(buffer,buffer+test_buffer_size,0);
     {
         const size_t count=1000000;
-        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+        auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
         dariadb::compression::XorCompressor dc(bw);
 
         dariadb::Value t=3.14;
@@ -79,7 +82,7 @@ int main(int argc, char *argv[]) {
                <<std::endl;
     }
     {
-        dariadb::compression::BinaryBuffer bw({buffer,buffer+test_buffer_size});
+        auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
         dariadb::compression::XorDeCompressor dc(bw,0);
 
         auto start=clock();
@@ -110,22 +113,12 @@ int main(int argc, char *argv[]) {
 
     {
         const size_t count=1000000;
-        uint8_t* time_begin=new uint8_t[test_buffer_size];
-        auto time_r = dariadb::utils::Range{time_begin, time_begin + test_buffer_size};
+        uint8_t* buf_begin=new uint8_t[test_buffer_size];
 
-        uint8_t* value_begin = new uint8_t[test_buffer_size];
-        auto value_r = dariadb::utils::Range{value_begin,value_begin + test_buffer_size};
+        std::fill(buf_begin, buf_begin+test_buffer_size, 0);
+        auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
 
-        uint8_t* flag_begin = new uint8_t[test_buffer_size];
-        auto flag_r = dariadb::utils::Range{flag_begin,flag_begin + test_buffer_size};
-
-        std::fill(time_r.begin, time_r.end, 0);
-        std::fill(time_r.begin, time_r.end, 0);
-        std::fill(time_r.begin, time_r.end, 0);
-
-        dariadb::compression::CopmressedWriter cwr{dariadb::compression::BinaryBuffer(time_r),
-                                                     dariadb::compression::BinaryBuffer(value_r),
-                                                     dariadb::compression::BinaryBuffer(flag_r)};
+        dariadb::compression::CopmressedWriter cwr{bw};
         auto start = clock();
         for (size_t i = 0; i < count; i++) {
             auto m = dariadb::Meas::empty();
@@ -144,10 +137,8 @@ int main(int argc, char *argv[]) {
                <<std::endl;
 
         auto m = dariadb::Meas::empty();
-
-        dariadb::compression::CopmressedReader crr{dariadb::compression::BinaryBuffer(time_r),
-                    dariadb::compression::BinaryBuffer(value_r),
-                    dariadb::compression::BinaryBuffer(flag_r),m};
+        bw->reset_pos();
+        dariadb::compression::CopmressedReader crr{bw,m};
 
         start = clock();
         for (int i = 1; i < 1000000; i++) {
@@ -156,9 +147,7 @@ int main(int argc, char *argv[]) {
         elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "compress reader : " << elapsed << std::endl;
 
-        delete[] time_begin;
-        delete[] value_begin;
-        delete[] flag_begin;
+        delete[] buf_begin;
     }
     delete[]buffer;
 }

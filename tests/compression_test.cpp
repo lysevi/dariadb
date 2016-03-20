@@ -12,38 +12,39 @@
 #include <chrono>
 
 using dariadb::compression::BinaryBuffer;
+using dariadb::compression::BinaryBuffer_Ptr;
 
 class Testable_DeltaCompressor:public dariadb::compression::DeltaCompressor{
 public:
-    Testable_DeltaCompressor(const BinaryBuffer&buf):
+    Testable_DeltaCompressor(const  BinaryBuffer_Ptr &buf):
         dariadb::compression::DeltaCompressor(buf)
     {}
 
     uint64_t get_prev_delta()const {return this->_prev_delta;}
     dariadb::Time get_prev_time()const {return this->_prev_time;}
     dariadb::Time  get_first()const {return this->_first;}
-    BinaryBuffer get_bw()const{return this->_bw;}
+    BinaryBuffer_Ptr get_bw()const{return this->_bw;}
     bool is_first()const {return this->_is_first;}
 };
 
 class Testable_DeltaDeCompressor:public dariadb::compression::DeltaDeCompressor{
 public:
-    Testable_DeltaDeCompressor(const BinaryBuffer&buf,  dariadb::Time first):
+    Testable_DeltaDeCompressor(const BinaryBuffer_Ptr&buf,  dariadb::Time first):
         dariadb::compression::DeltaDeCompressor(buf,first)
     {}
 
     uint64_t get_prev_delta()const {return this->_prev_delta;}
     dariadb::Time get_prev_time()const {return this->_prev_time;}
-    BinaryBuffer get_bw()const{return this->_bw;}
+    BinaryBuffer_Ptr get_bw()const{return this->_bw;}
 };
 
 class Testable_XorCompressor:public dariadb::compression::XorCompressor{
 public:
-    Testable_XorCompressor(const BinaryBuffer&buf):
+    Testable_XorCompressor(const BinaryBuffer_Ptr&buf):
         dariadb::compression::XorCompressor(buf)
     {}
 
-    BinaryBuffer get_bw()const{return this->_bw;}
+    BinaryBuffer_Ptr get_bw()const{return this->_bw;}
     dariadb::Value get_prev_value()const {return  dariadb::compression::inner::flat_int_to_double(this->_prev_value);}
     dariadb::Value get_first()const {return dariadb::compression::inner::flat_int_to_double(this->_first);}
     bool is_first()const {return this->_is_first;}
@@ -197,8 +198,10 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
     dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
+    auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+
     {
-        Testable_DeltaCompressor dc{BinaryBuffer(rng)};
+        Testable_DeltaCompressor dc{bw};
         BOOST_CHECK(dc.is_first());
 
 
@@ -208,12 +211,13 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
         BOOST_CHECK_EQUAL(dc.get_prev_time(),t1);
 
         dc.append(t1);
-        BOOST_CHECK_EQUAL(dc.get_bw().bitnum(),dariadb::compression::max_bit_pos-1);
+        BOOST_CHECK_EQUAL(dc.get_bw()->bitnum(),dariadb::compression::max_bit_pos-1);
         BOOST_CHECK_EQUAL(buffer[0],0);
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
+         bw->reset_pos();
+         Testable_DeltaCompressor dc{bw};
 
          dc.append(t1);
          dc.append(t2);
@@ -224,7 +228,8 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
+         bw->reset_pos();
+         Testable_DeltaCompressor dc{bw};
 
          dc.append(t1);
          dc.append(t3);
@@ -236,7 +241,8 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
 
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
+         bw->reset_pos();
+         Testable_DeltaCompressor dc{bw};
 
          dc.append(t1);
          dc.append(t4);
@@ -247,7 +253,8 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor){
     }
     {
          std::fill(std::begin(buffer),std::end(buffer),0);
-         Testable_DeltaCompressor dc{BinaryBuffer(rng)};
+         bw->reset_pos();
+         Testable_DeltaCompressor dc{bw};
 
          dc.append(t1);
          dc.append(t5);
@@ -274,8 +281,9 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
     dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
+    auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
     {
-        Testable_DeltaCompressor co(BinaryBuffer{rng});
+        Testable_DeltaCompressor co(bw);
 
         co.append(t1);
         co.append(t2);
@@ -284,7 +292,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
         co.append(t5);
         co.append(t6);
         co.append(t7);
-        Testable_DeltaDeCompressor dc(BinaryBuffer{rng},t1);
+        bw->reset_pos();
+        Testable_DeltaDeCompressor dc(bw,t1);
         BOOST_CHECK_EQUAL(dc.read(),t2);
         BOOST_CHECK_EQUAL(dc.read(),t3);
         BOOST_CHECK_EQUAL(dc.read(),t4);
@@ -294,8 +303,9 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
     }
 
     std::fill(std::begin(buffer),std::end(buffer),0);
+    bw->reset_pos();
     {
-        Testable_DeltaCompressor co(BinaryBuffer{rng});
+        Testable_DeltaCompressor co(bw);
         dariadb::Time delta=1;
         std::list<dariadb::Time> times{};
         const int steps=30;
@@ -304,8 +314,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
             times.push_back(delta);
             delta*=2;
         }
-
-        Testable_DeltaDeCompressor dc(BinaryBuffer{rng},times.front());
+        bw->reset_pos();
+        Testable_DeltaDeCompressor dc(bw,times.front());
         times.pop_front();
         for(auto&t:times){
             auto readed=dc.read();
@@ -313,8 +323,9 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
         }
     }
 	std::fill(std::begin(buffer), std::end(buffer), 0);
+    bw->reset_pos();
 	{//decrease
-        Testable_DeltaCompressor co(BinaryBuffer{rng});
+        Testable_DeltaCompressor co(bw);
 		std::vector<dariadb::Time> deltas{ 50,255, 1024,2050 };
 		dariadb::Time delta = 1000000;
 		std::list<dariadb::Time> times{};
@@ -324,8 +335,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 			times.push_back(delta);
 			delta -= deltas[i%deltas.size()];
 		}
-
-        Testable_DeltaDeCompressor dc(BinaryBuffer{rng}, times.front());
+        bw->reset_pos();
+        Testable_DeltaDeCompressor dc(bw, times.front());
 		times.pop_front();
 		for (auto&t : times) {
 			auto readed = dc.read();
@@ -358,8 +369,9 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     uint8_t buffer[test_buffer_size];
     std::fill(std::begin(buffer),std::end(buffer),0);
     dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
+    auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
     {
-         Testable_XorCompressor dc(BinaryBuffer{rng});
+         Testable_XorCompressor dc(bw);
         BOOST_CHECK(dc.is_first());
 
 
@@ -370,21 +382,23 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
     }
     using  dariadb::compression::XorDeCompressor;
     std::fill(std::begin(buffer),std::end(buffer),0);
+    bw->reset_pos();
     { // cur==prev
-        Testable_XorCompressor co(BinaryBuffer{rng});
+        Testable_XorCompressor co(bw);
 
         auto v1 = dariadb::Value(240);
         auto v2 = dariadb::Value(240);
         co.append(v1);
         co.append(v2);
 
-        XorDeCompressor dc(BinaryBuffer{rng},t1);
+        XorDeCompressor dc(bw,t1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
     }
 
     std::fill(std::begin(buffer),std::end(buffer),0);
+    bw->reset_pos();
     { // cur!=prev
-        Testable_XorCompressor co(BinaryBuffer{rng});
+        Testable_XorCompressor co(bw);
 
         auto v1 = dariadb::Value(240);
         auto v2 = dariadb::Value(96);
@@ -393,37 +407,43 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
         co.append(v2);
         co.append(v3);
 
-        XorDeCompressor dc(BinaryBuffer{rng},v1);
+        bw->reset_pos();
+        XorDeCompressor dc(bw,v1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
         BOOST_CHECK_EQUAL(dc.read(),v3);
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
+    bw->reset_pos();
     { // tail/lead is equals
-        Testable_XorCompressor co{rng};
+        Testable_XorCompressor co{bw};
 
         auto v1 = dariadb::Value(3840);
         auto v2 = dariadb::Value(3356);
         co.append(v1);
         co.append(v2);
 
-        XorDeCompressor dc(BinaryBuffer{rng},v1);
+        bw->reset_pos();
+        XorDeCompressor dc(bw,v1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
+    bw->reset_pos();
     { // tail/lead not equals
-        Testable_XorCompressor co{rng};
+        Testable_XorCompressor co{bw};
 
         auto v1 = dariadb::Value(3840);
         auto v2 = dariadb::Value(3328);
         co.append(v1);
         co.append(v2);
 
-        XorDeCompressor dc(BinaryBuffer{rng},v1);
+        bw->reset_pos();
+        XorDeCompressor dc(bw,v1);
         BOOST_CHECK_EQUAL(dc.read(),v2);
     }
     std::fill(std::begin(buffer),std::end(buffer),0);
+    bw->reset_pos();
     { 
-        Testable_XorCompressor co(BinaryBuffer{rng});
+        Testable_XorCompressor co(bw);
 
         std::list<dariadb::Value> values{};
         dariadb::Value delta=1;
@@ -434,16 +454,17 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
             delta+=1;
         }
 
-        XorDeCompressor dc(BinaryBuffer{rng},values.front());
+        bw->reset_pos();
+        XorDeCompressor dc(bw,values.front());
         values.pop_front();
         for(auto&v:values){
             BOOST_CHECK_EQUAL(dc.read(),v);
         }
     }
-
+    bw->reset_pos();
 	{ // maxValue
 		std::fill(rng.begin, rng.end, 0);
-		Testable_XorCompressor co(BinaryBuffer{ rng });
+        Testable_XorCompressor co(bw);
 		auto max_value = std::numeric_limits<dariadb::Value>::max();
 		auto v1 = dariadb::Value(0);
 		auto v2 = dariadb::Value(max_value);
@@ -451,7 +472,8 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
 		co.append(v1);
 		co.append(v2);
 
-		XorDeCompressor dc(BinaryBuffer{ rng }, 0);
+        bw->reset_pos();
+        XorDeCompressor dc(bw, 0);
 		BOOST_CHECK_EQUAL(dc.read(), v2);
 	}
 }
@@ -465,8 +487,8 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
     using dariadb::compression::FlagDeCompressor;
 
     dariadb::utils::Range rng{std::begin(buffer),std::end(buffer)};
-
-    FlagCompressor fc(BinaryBuffer{rng});
+    auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+    FlagCompressor fc(bw);
 	
 	std::list<dariadb::Flag> flags{};
 	dariadb::Flag delta = 1;
@@ -475,8 +497,8 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
 		flags.push_back(delta);
 		delta++;
 	}
-
-    FlagDeCompressor fd(BinaryBuffer{rng},flags.front());
+    bw->reset_pos();
+    FlagDeCompressor fd(bw,flags.front());
 	flags.pop_front();
 	for (auto f : flags) {
 		auto v = fd.read();
@@ -489,26 +511,20 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 {
 	const size_t test_buffer_size = 1000;
 
-	uint8_t time_begin[test_buffer_size];
-	auto time_end = std::end(time_begin);
+    uint8_t b_begin[test_buffer_size];
+    auto b_end = std::end(b_begin);
 
-	uint8_t value_begin[test_buffer_size];
-	auto value_end = std::end(value_begin);
 
-	uint8_t flag_begin[test_buffer_size];
-	auto flag_end = std::end(flag_begin);;
 
-	std::fill(time_begin, time_end, 0);
-	std::fill(flag_begin, flag_end, 0);
-	std::fill(value_begin, value_end, 0);
+    std::fill(b_begin, b_end, 0);
+    dariadb::utils::Range rng{b_begin,b_end};
 
     using dariadb::compression::CopmressedWriter;
     using dariadb::compression::CopmressedReader;
 
+    auto bw=std::make_shared<dariadb::compression::BinaryBuffer>(rng);
 
-    CopmressedWriter cwr(BinaryBuffer({time_begin, time_end}),
-                         BinaryBuffer({value_begin, value_end}),
-                         BinaryBuffer({flag_begin, flag_end}));
+    CopmressedWriter cwr(bw);
 
 	std::list<dariadb::Meas> meases{};
     auto zer_t=static_cast<dariadb::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
@@ -521,10 +537,8 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 		meases.push_back(m);
 	}
 
-
-    CopmressedReader crr(BinaryBuffer({time_begin, time_end}),
-                         BinaryBuffer({value_begin, value_end}),
-                         BinaryBuffer({flag_begin, flag_end}), meases.front());
+    bw->reset_pos();
+    CopmressedReader crr(bw, meases.front());
 
 	meases.pop_front();
 	for (auto &m : meases) {

@@ -20,9 +20,7 @@ using dariadb::utils::Range;
 struct Chunk
 {
     std::vector<uint8_t> _buffer_t;
-    Range times;
-    Range flags;
-    Range values;
+    Range range;
     CopmressedWriter c_writer;
     size_t count;
     Meas first;
@@ -30,8 +28,9 @@ struct Chunk
     Time minTime,maxTime;
 	std::mutex _mutex;
 
+    BinaryBuffer_Ptr bw;
     Chunk(size_t size, Meas first_m):
-        _buffer_t(size*3),
+        _buffer_t(size),
         count(0),
         first(first_m),
         _mutex()
@@ -42,14 +41,11 @@ struct Chunk
         std::fill(_buffer_t.begin(), _buffer_t.end(),0);
 
 
-        times = Range{ _buffer_t.data(),_buffer_t.data() + size - 1};
-        flags = Range{ times.end+1, times.end + size - 1 };
-        values = Range{ flags.end+1, flags.end + size - 1  };
-
         using compression::BinaryBuffer;
-        c_writer = compression::CopmressedWriter( BinaryBuffer(times),
-                                                  BinaryBuffer(values),
-                                                  BinaryBuffer(flags));
+        range = Range{ _buffer_t.data(),_buffer_t.data() + size - 1};
+        bw=std::make_shared<BinaryBuffer>(range);
+
+        c_writer = compression::CopmressedWriter(bw);
         c_writer.append(first);
         minTime=std::min(minTime,first_m.time);
         maxTime=std::max(maxTime,first_m.time);
@@ -153,10 +149,9 @@ public:
         for (auto ch : _chunks) {
             for (size_t i = 0; i < ch.second.size(); i++) {
                 auto cur_ch=ch.second[i].chunk;
-                CopmressedReader crr(BinaryBuffer(cur_ch->times),
-                                     BinaryBuffer(cur_ch->values),
-                                     BinaryBuffer(cur_ch->flags),
-                                     cur_ch->first);
+                auto bw=std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
+                bw->reset_pos();
+                CopmressedReader crr(bw, cur_ch->first);
 
                 if (check_meas(ch.second[i].chunk->first)) {
                     auto sub=ch.second[i].chunk->first;
@@ -197,10 +192,9 @@ public:
         }
 
         for (auto ch : to_read_chunks) {
-            CopmressedReader crr(BinaryBuffer(ch.chunk->times),
-                                 BinaryBuffer(ch.chunk->values),
-                                 BinaryBuffer(ch.chunk->flags),
-                                 ch.chunk->first);
+            auto bw=std::make_shared<BinaryBuffer>(ch.chunk->bw->get_range());
+            bw->reset_pos();
+            CopmressedReader crr(bw, ch.chunk->first);
 
             Meas candidate;
             candidate = ch.chunk->first;
@@ -386,7 +380,7 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
-		bool is_locked=_mutex.try_lock();
+        std::lock_guard<std::mutex> lg(_mutex_tp);
 		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
 		res->is_time_point_reader = true;
 		
@@ -405,9 +399,6 @@ public:
                 }
             }
         }
-		if (is_locked) {
-			_mutex.unlock();
-		}
         return res;
     }
 
@@ -442,6 +433,7 @@ protected:
     Time _min_time,_max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
 	std::mutex _mutex;
+    std::mutex _mutex_tp;
 };
 
 
