@@ -8,7 +8,7 @@
 using namespace dariadb;
 using namespace dariadb::compression;
 
-XorCompressor::XorCompressor(const BinaryBuffer &bw):
+XorCompressor::XorCompressor(const BinaryBuffer_Ptr &bw):
 	BaseCompressor(bw),
     _is_first(true),
     _first(0),
@@ -28,18 +28,18 @@ bool XorCompressor::append(Value v){
         _prev_value= flat;
         return true;
     }
-    if (_bw.free_size() <9) {
+    if (_bw->free_size() <9) {
         return false;
     }
     auto xor_val=_prev_value^flat;
     if (xor_val==0){
-        if (_bw.free_size() == 1) {
+        if (_bw->free_size() == 1) {
             return false;
         }
-        _bw.clrbit().incbit();
+        _bw->clrbit().incbit();
         return true;
     }
-    _bw.setbit().incbit();
+    _bw->setbit().incbit();
 
     auto lead=zeros_lead(xor_val);
     auto tail=zeros_tail(xor_val);
@@ -47,15 +47,15 @@ bool XorCompressor::append(Value v){
 
 
     if ((_prev_lead==lead) && (_prev_tail==tail)){
-        _bw.clrbit().incbit();
+        _bw->clrbit().incbit();
     }else{
 		auto new_lead = utils::BitOperations::set(lead, 6);
-		_bw.write((uint16_t)new_lead, int8_t(6));
-		_bw.write((uint16_t)tail, int8_t(5));
+        _bw->write((uint16_t)new_lead, int8_t(6));
+        _bw->write((uint16_t)tail, int8_t(5));
     }
 
     xor_val = xor_val >> tail;
-    _bw.write(xor_val, (63 - lead - tail));
+    _bw->write(xor_val, (63 - lead - tail));
 
     _prev_value = flat;
     _prev_lead=lead;
@@ -104,7 +104,7 @@ uint8_t XorCompressor::zeros_tail(uint64_t v){
     return result;
 }
 
-XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, Value first):
+XorDeCompressor::XorDeCompressor(const BinaryBuffer_Ptr &bw, Value first):
 	BaseCompressor(bw),
     _prev_value(inner::flat_double_to_int(first)),
     _prev_lead(0),
@@ -118,22 +118,22 @@ XorDeCompressor::XorDeCompressor(const BinaryBuffer &bw, Value first):
 dariadb::Value XorDeCompressor::read()
 {
     static_assert(sizeof(dariadb::Value) == 8, "Value no x64 value");
-    auto b0=_bw.getbit();
-    _bw.incbit();
+    auto b0=_bw->getbit();
+    _bw->incbit();
     if(b0==0){
         return inner::flat_int_to_double(_prev_value);
     }
 
-    auto b1=_bw.getbit();
-    _bw.incbit();
+    auto b1=_bw->getbit();
+    _bw->incbit();
 
     if(b1==1){
-        uint8_t leading = static_cast<uint8_t>(_bw.read(5));
+        uint8_t leading = static_cast<uint8_t>(_bw->read(5));
 
-        uint8_t tail = static_cast<uint8_t>(_bw.read(5));
+        uint8_t tail = static_cast<uint8_t>(_bw->read(5));
         uint64_t result=0;
 
-        result=_bw.read(63 - leading - tail);
+        result=_bw->read(63 - leading - tail);
         result = result << tail;
 
         _prev_lead = leading;
@@ -144,7 +144,7 @@ dariadb::Value XorDeCompressor::read()
     }else{
         uint64_t result = 0;
 
-        result = _bw.read(63 - _prev_lead - _prev_tail);
+        result = _bw->read(63 - _prev_lead - _prev_tail);
         result = result << _prev_tail;
 
         auto ret= result ^ _prev_value;

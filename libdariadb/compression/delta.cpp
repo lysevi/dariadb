@@ -18,7 +18,7 @@ const uint16_t delta_2047_mask_inv = 0xFFF;    //0000 1111 1111 1111
 const uint64_t delta_big_mask = 0xF00000000;   //1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
 const uint64_t delta_big_mask_inv = 0xFFFFFFFF;//0000 1111 1111 1111 1111 1111 1111   1111 1111
 
-DeltaCompressor::DeltaCompressor(const BinaryBuffer &bw):
+DeltaCompressor::DeltaCompressor(const BinaryBuffer_Ptr &bw):
 	BaseCompressor(bw),
 	_is_first(true),
     _first(0),
@@ -42,37 +42,37 @@ bool DeltaCompressor::append(dariadb::Time t){
 
     int64_t D=(t-_prev_time) - _prev_delta;
     if(D==0){
-        if (_bw.free_size() == 1) {
+        if (_bw->free_size() == 1) {
             return false;
         }
-        _bw.clrbit().incbit();
+        _bw->clrbit().incbit();
     }else{
         if ((-63<D)&&(D<64)){
-            if (_bw.free_size() <2) {
+            if (_bw->free_size() <2) {
                 return false;
             }
             auto d=DeltaCompressor::get_delta_64(D);
-            _bw.write(d,9);
+            _bw->write(d,9);
         }else{
             if ((-255<D)&&(D<256)){
-                if (_bw.free_size() <2) {
+                if (_bw->free_size() <2) {
                     return false;
                 }
                 auto d=DeltaCompressor::get_delta_256(D);
-               _bw.write(d,11);
+               _bw->write(d,11);
             }else{
                 if ((-2047<D)&&(D<2048)){
-                    if (_bw.free_size() <3) {
+                    if (_bw->free_size() <3) {
                         return false;
                     }
                     auto d=DeltaCompressor::get_delta_2048(D);
-                    _bw.write(d,15);
+                    _bw->write(d,15);
                 }else{
-                    if (_bw.free_size() <6) {
+                    if (_bw->free_size() <6) {
                         return false;
                     }
                     auto d=DeltaCompressor::get_delta_big(D);
-                   _bw.write(d,35);
+                   _bw->write(d,35);
                 }
             }
         }
@@ -101,7 +101,7 @@ uint64_t DeltaCompressor::get_delta_big(int64_t D) {
     return delta_big_mask | (delta_big_mask_inv & D);
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer &bw, dariadb::Time first):
+DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Time first):
 	BaseCompressor(bw),
     _prev_delta(0),
     _prev_time(first)
@@ -115,17 +115,17 @@ DeltaDeCompressor::~DeltaDeCompressor(){
 
 
 dariadb::Time DeltaDeCompressor::read(){
-    auto b0=_bw.getbit();
-    _bw.incbit();
+    auto b0=_bw->getbit();
+    _bw->incbit();
 
     if(b0==0){
         return _prev_time+_prev_delta;
     }
 
-    auto b1=_bw.getbit();
-    _bw.incbit();
+    auto b1=_bw->getbit();
+    _bw->incbit();
     if((b0==1) && (b1==0)){//64
-        int8_t result=static_cast<int8_t>(_bw.read(7));
+        int8_t result=static_cast<int8_t>(_bw->read(7));
 
         if (result>64) { //is negative
             result = (-128) | result;
@@ -137,10 +137,10 @@ dariadb::Time DeltaDeCompressor::read(){
         return ret;
     }
 
-    auto b2=_bw.getbit();
-    _bw.incbit();
+    auto b2=_bw->getbit();
+    _bw->incbit();
     if((b0==1) && (b1==1)&& (b2==0)){//256
-        int16_t result=static_cast<int16_t>(_bw.read(8));
+        int16_t result=static_cast<int16_t>(_bw->read(8));
         if (result > 256) { //is negative
             result = (-256) | result;
         }
@@ -150,10 +150,10 @@ dariadb::Time DeltaDeCompressor::read(){
         return ret;
     }
 
-    auto b3=_bw.getbit();
-    _bw.incbit();
+    auto b3=_bw->getbit();
+    _bw->incbit();
     if((b0==1) && (b1==1)&& (b2==1)&& (b3==0)){//2048
-        int16_t result=static_cast<int16_t>(_bw.read(11));
+        int16_t result=static_cast<int16_t>(_bw->read(11));
         if (result > 2048) { //is negative
             result = (-2048) | result;
         }
@@ -164,7 +164,7 @@ dariadb::Time DeltaDeCompressor::read(){
         return ret;
     }
 
-    int64_t result=_bw.read(31);
+    int64_t result=_bw->read(31);
     if (result > std::numeric_limits<int32_t>::max()) {
         result = (-4294967296) | result;
     }
