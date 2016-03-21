@@ -3,6 +3,7 @@
 #include <algorithm>
 
 using namespace dariadb::storage;
+using namespace dariadb;
 
 SubscribeInfo::SubscribeInfo(const IdArray &i,const Flag& f, const ReaderClb_ptr &c):
     ids(i),flag(f),clbk(c){
