@@ -24,7 +24,7 @@ struct Chunk
     Range range;
     CopmressedWriter c_writer;
     size_t count;
-    Meas first;
+    Meas first,last;
 
     Time minTime,maxTime;
 	std::mutex _mutex;
@@ -70,6 +70,7 @@ struct Chunk
             minTime=std::min(minTime,m.time);
             maxTime=std::max(maxTime,m.time);
 			flag_bloom = dariadb::bloom_add(flag_bloom, m.flag);
+			last = m;
             return true;
         }
     }
@@ -144,8 +145,22 @@ public:
 		return result;
 	}
 
+	void readCurVals(storage::ReaderClb*clb) {
+		for (auto v : _cur_values) {
+			clb->call(v);
+		}
+		this->end = true;
+		this->_tp_readed = true;
+	}
+
     void readNext(storage::ReaderClb*clb) override {
 		std::lock_guard<std::mutex> lg(_mutex);
+		
+		if (_cur_values.size() != 0) {
+			readCurVals(clb);
+			return;
+		}
+
         if (!_tp_readed) {
             this->readTimePoint(clb);
         }
@@ -175,7 +190,6 @@ public:
                 }
 
             }
-
         }
         end=true;
     }
@@ -279,6 +293,8 @@ public:
 	std::set<IdTime> _tp_readed_times;
 
     std::mutex _mutex,_mutex_tp;
+
+	dariadb::Meas::MeasList _cur_values;
 };
 
 
@@ -437,8 +453,18 @@ public:
 	}
 
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
-		NOT_IMPLEMENTED;
-		return nullptr;
+		std::lock_guard<std::mutex> lg(_mutex_tp);
+		auto res = std::make_shared<InnerReader>(flag, 0, 0);
+		for (auto &kv: _free_chunks) {
+			auto l = kv.second->last;
+			if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), l.id) == ids.end())) {
+				continue;
+			}
+			if ((flag==0) || (l.flag == flag)) {
+				res->_cur_values.push_back(l);
+			}
+		}
+		return res;
 	}
 
 protected:

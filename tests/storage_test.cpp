@@ -451,3 +451,34 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     BOOST_CHECK_EQUAL(c4->values.size(),size_t(1));
     BOOST_CHECK_EQUAL(c4->values.front().flag,dariadb::Flag(1));
 }
+
+BOOST_AUTO_TEST_CASE(CurValues) {
+	{// equal step
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
+
+		auto m = dariadb::Meas::empty();
+		const size_t total_count = 10;
+		const dariadb::Time time_step = 1;
+		
+		for (int k = 0; k < 10; k++) {
+			for (size_t i = 0; i < total_count; i += time_step) {
+				m.id = dariadb::Id(i);
+				m.time = dariadb::Time(k);
+				m.value = dariadb::Value(i);
+				ms->append(m);
+			}
+		}
+
+		dariadb::IdArray ids;
+		auto rdr = ms->currentValue(ids, 0);
+
+		dariadb::Meas::MeasList all;
+		rdr->readAll(&all);
+		auto expected = total_count;
+		BOOST_CHECK_EQUAL(all.size(), expected);
+		for (auto v : all) {
+			BOOST_CHECK_EQUAL(v.time, 9);
+		}
+		delete ms;
+	}
+}
