@@ -3,6 +3,7 @@
 #include "compression.h"
 #include "flags.h"
 #include "subscribe.h"
+#include "bloom_filter.h"
 
 #include <limits>
 #include <algorithm>
@@ -27,6 +28,7 @@ struct Chunk
 
     Time minTime,maxTime;
 	std::mutex _mutex;
+	dariadb::Flag flag_bloom;
 
     BinaryBuffer_Ptr bw;
     Chunk(size_t size, Meas first_m):
@@ -49,6 +51,7 @@ struct Chunk
         c_writer.append(first);
         minTime=std::min(minTime,first_m.time);
         maxTime=std::max(maxTime,first_m.time);
+		flag_bloom = dariadb::bloom_empty<dariadb::Flag>();
     }
 
     ~Chunk(){
@@ -66,6 +69,7 @@ struct Chunk
 
             minTime=std::min(minTime,m.time);
             maxTime=std::max(maxTime,m.time);
+			flag_bloom = dariadb::bloom_add(flag_bloom, m.flag);
             return true;
         }
     }
@@ -366,8 +370,12 @@ public:
                 continue;
             }
 			for (auto &cur_chunk : ch.second) {
-				if ((utils::inInterval(from, to, cur_chunk->minTime)) ||
-					(utils::inInterval(from, to, cur_chunk->maxTime))) {
+				if (flag != 0) {
+					if (!bloom_check(cur_chunk->flag_bloom, flag)) {
+						continue;
+					}
+				}
+				if ((utils::inInterval(from, to, cur_chunk->minTime)) || (utils::inInterval(from, to, cur_chunk->maxTime))) {
 					res->add(cur_chunk, cur_chunk->count);
 				}
 			}
@@ -382,27 +390,34 @@ public:
 		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
 		res->is_time_point_reader = true;
 		
-        if(ids.size()==0){
-            for (auto ch : _chuncks) {
-				load_tp_from_chunks(res.get(), ch.second, time_point, ch.first);
-            }
-        }else{
-            for(auto id:ids){
-                auto search_res=_chuncks.find(id);
-                if(search_res==_chuncks.end()){
-                    res->_not_exist.push_back(id);
-                }else{
-                    auto ch=search_res->second;
-					load_tp_from_chunks(res.get(), ch, time_point, id);
-                }
-            }
-        }
+		if (ids.size() == 0) {
+			for (auto ch : _chuncks) {
+				load_tp_from_chunks(res.get(), ch.second, time_point, ch.first, flag);
+			}
+		}
+		else {
+			for (auto id : ids) {
+				auto search_res = _chuncks.find(id);
+				if (search_res == _chuncks.end()) {
+					res->_not_exist.push_back(id);
+				}
+				else {
+					auto ch = search_res->second;
+					load_tp_from_chunks(res.get(), ch, time_point, id, flag);
+				}
+			}
+		}
         return res;
     }
 
-	void load_tp_from_chunks(InnerReader *_ptr, ChuncksList chunks, Time time_point, Id id) {
+	void load_tp_from_chunks(InnerReader *_ptr, ChuncksList chunks, Time time_point, Id id,Flag flag) {
 		bool is_exists = false;
 		for (auto&cur_chunk : chunks) {
+			if (flag != 0) {
+				if (!dariadb::bloom_check(cur_chunk->flag_bloom, flag)) {
+					continue;
+				}
+			}
 			if (cur_chunk->minTime <= time_point) {
 				_ptr->add_tp(cur_chunk, cur_chunk->count);
 				is_exists = true;
