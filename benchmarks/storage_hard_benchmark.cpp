@@ -99,28 +99,29 @@ int main(int argc, char *argv[]) {
 		}
 
 		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-		std::cout << "2. insert : " << elapsed <<" writen:"<<writen<< std::endl;
+		std::cout << "2. insert : " << elapsed << std::endl;
 	}
 	{//3
 		std::random_device r;
 		std::default_random_engine e1(r());
 		std::uniform_int_distribution<dariadb::Id> uniform_dist(0, 32768);
-		
+		std::uniform_int_distribution<dariadb::Time> uniform_dist_t(0, 32768);
 		dariadb::IdArray ids;
 		ids.resize(1);
 
 		dariadb::storage::ReaderClb_ptr clbk{ new BenchCallback() };
-		const size_t queries_count = 131072;
+		const size_t queries_count = 32768;
 		auto start = clock();
 		
 		for (size_t i = 0; i < queries_count; i++) {
 			ids[0]= uniform_dist(e1) ;
-			auto rdr=ms->currentValue(ids, 0);
+			auto t = uniform_dist_t(e1);
+			auto rdr=ms->readInTimePoint(ids,0,t);
 			rdr->readAll(clbk.get());
 		}
 
 		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ queries_count;
-		std::cout << "3. current: " << elapsed << std::endl;
+		std::cout << "3. time point: " << elapsed << std::endl;
 	}
 
 	{//4
@@ -135,12 +136,13 @@ int main(int argc, char *argv[]) {
 		auto start = clock();
 
 		for (size_t i = 0; i < queries_count; i++) {
-			auto rdr=ms->currentValue(ids, 0);
+			auto t = uniform_dist(e1);
+			auto rdr=ms->readInTimePoint(ids, 0,t);
 			rdr->readAll(clbk.get());
 		}
 
 		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / queries_count;
-		std::cout << "4. current: " << elapsed << std::endl;
+		std::cout << "4. time point: " << elapsed << std::endl;
 	}
 
 
