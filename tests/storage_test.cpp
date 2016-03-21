@@ -477,7 +477,7 @@ BOOST_AUTO_TEST_CASE(CurValues) {
 		auto expected = total_count;
 		BOOST_CHECK_EQUAL(all.size(), expected);
 		for (auto v : all) {
-			BOOST_CHECK_EQUAL(v.time, 9);
+            BOOST_CHECK_EQUAL(v.time, dariadb::Time(9));
 		}
 		delete ms;
 	}
