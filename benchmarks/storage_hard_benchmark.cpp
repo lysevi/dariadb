@@ -190,6 +190,6 @@ int main(int argc, char *argv[]) {
 		}
 
 		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / queries_count;
-		std::cout << "5. interval: " << elapsed << std::endl;
+		std::cout << "6. interval: " << elapsed << std::endl;
 	}
 }
