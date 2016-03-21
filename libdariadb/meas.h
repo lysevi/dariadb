@@ -32,6 +32,7 @@ struct Meas {
   Time time;
   Value value;
   Flag flag;
+  Flag src;
 };
 
 bool in_filter(Flag filter, Flag flg);

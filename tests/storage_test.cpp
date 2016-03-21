@@ -19,9 +19,11 @@ void checkAll(dariadb::Meas::MeasList res,
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
 		for (auto &m : res) {
-			if ((m.id == i) 
-				&& ((m.flag == i) ||(m.flag==dariadb::Flags::NO_DATA)) 
-				&& (m.time == i)) {
+            if ((m.id == i)
+                    && ((m.flag == i) ||(m.flag==dariadb::Flags::NO_DATA))
+                    && (m.time == i)
+                    && ((m.src == i) ||(m.src==dariadb::Flags::NO_DATA)))
+            {
 				count++;
 			}
 
@@ -57,6 +59,7 @@ void storage_test_check(dariadb::storage::AbstractStorage *as,
 	for (auto i = from; i < to; i += step) {
 		m.id = i;
 		m.flag = dariadb::Flag(i);
+        m.src = dariadb::Flag(i);
 		m.time = i;
 		m.value = 0;
 		for (size_t j = 1; j < copies_count+1; j++) {
