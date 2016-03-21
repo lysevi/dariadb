@@ -20,15 +20,17 @@ public:
 	size_t count;
 };
 
-void writer_1(dariadb::Time t, dariadb::storage::AbstractStorage_ptr ms)
+void writer_1(dariadb::storage::AbstractStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
+	dariadb::Time t = 0;
 	for (dariadb::Id i = 0; i < 32768; i += 1) {
 		m.id = i;
 		m.flag = dariadb::Flag(0);
 		m.time = t;
 		m.value = dariadb::Value(i);
 		ms->append(m);
+		t++;
 	}
 }
 
@@ -39,22 +41,23 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::Abstr
 	std::default_random_engine e1(r());
 	std::uniform_int_distribution<int> uniform_dist(0, 64);
 
-	for (dariadb::Id i =  id_from ; i < (id_from+ id_per_thread); i += 1) {
+	dariadb::Time t = 0;
+	for (dariadb::Id i = id_from; i < (id_from + id_per_thread); i += 1) {
 		dariadb::Value v = 1.0;
-		for (dariadb::Time t = 0; t < 32768; t++) {
-			auto max_rnd = uniform_dist(e1);
-			for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
-				m.id = i;
-				m.flag = dariadb::Flag(0);
-				m.time = t;
-				m.value = v;
-				ms->append(m);
 
-				auto rnd = rand() / float(RAND_MAX);
+		auto max_rnd = uniform_dist(e1);
+		for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
+			m.id = i;
+			m.flag = dariadb::Flag(0);
+			m.time = t++;
+			m.value = v;
+			ms->append(m);
 
-				v += rnd;
-			}
+			auto rnd = rand() / float(RAND_MAX);
+
+			v += rnd;
 		}
+
 	}
 }
 
@@ -63,11 +66,11 @@ int main(int argc, char *argv[]) {
 	(void)argv;
 	srand(static_cast<unsigned int>(time(NULL)));
 	{// 1.
-		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 32768 } };
 		auto start = clock();
-		for (size_t i = 0; i < 32768; i++) {
-			writer_1(i, ms);
-		}
+
+		writer_1(ms);
+
 		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
