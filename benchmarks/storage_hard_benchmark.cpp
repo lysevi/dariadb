@@ -9,7 +9,6 @@
 #include <cmath>
 #include <chrono>
 #include <thread>
-#include <atomic>
 #include <random>
 #include <cstdlib>
 
@@ -21,8 +20,6 @@ public:
 	size_t count;
 };
 
-std::atomic_long append_count{ 0 };
-
 void writer_1(dariadb::Time t, dariadb::storage::AbstractStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
@@ -32,7 +29,32 @@ void writer_1(dariadb::Time t, dariadb::storage::AbstractStorage_ptr ms)
 		m.time = t;
 		m.value = dariadb::Value(i);
 		ms->append(m);
-		append_count++;
+	}
+}
+
+void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::AbstractStorage_ptr ms)
+{
+	auto m = dariadb::Meas::empty();
+	std::random_device r;
+	std::default_random_engine e1(r());
+	std::uniform_int_distribution<int> uniform_dist(0, 64);
+
+	for (dariadb::Id i =  id_from ; i < (id_from+ id_per_thread); i += 1) {
+		dariadb::Value v = 1.0;
+		for (dariadb::Time t = 0; t < 32768; t++) {
+			auto max_rnd = uniform_dist(e1);
+			for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
+				m.id = i;
+				m.flag = dariadb::Flag(0);
+				m.time = t;
+				m.value = v;
+				ms->append(m);
+
+				auto rnd = rand() / float(RAND_MAX);
+
+				v += rnd;
+			}
+		}
 	}
 }
 
@@ -49,32 +71,27 @@ int main(int argc, char *argv[]) {
 		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
+	
 	dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
 
 	{// 2.
-		std::random_device r;
-		std::default_random_engine e1(r());
-		std::uniform_int_distribution<int> uniform_dist(0, 64);
-		
+		const size_t threads_count = 16;
+		const size_t id_per_thread = size_t(32768 / threads_count);
+
 		auto start = clock();
-		for (dariadb::Id i = 0; i < 32768; i++) {
-			auto m = dariadb::Meas::empty();
-			dariadb::Value v = 1.0;
-			for (dariadb::Time t = 0; t < 32768; t++) {
-				auto max_rnd = uniform_dist(e1);
-				for (int p = 0; p < dariadb::Time(max_rnd); p++) {
-					m.id = i;
-					m.flag = dariadb::Flag(0);
-					m.time = t;
-					m.value = v;
-					ms->append(m);
-
-					auto rnd = rand() / float(RAND_MAX);
-
-					v += rnd;
-				}
-			}
+		std::vector<std::thread> writers(threads_count);
+		size_t pos = 0;
+		for (size_t i = 0; i < threads_count; i++) {
+			std::thread t{ writer_2, id_per_thread*(i+1), id_per_thread, ms };
+			writers[pos++] = std::move(t);
 		}
+
+		pos = 0;
+		for (size_t i = 0; i < threads_count; i++) {
+			std::thread t = std::move(writers[pos++]);
+			t.join();
+		}
+
 		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
 		std::cout << "2. insert : " << elapsed << std::endl;
 	}
@@ -157,7 +174,7 @@ int main(int argc, char *argv[]) {
 		auto start = clock();
 
 		for (size_t i = 0; i < queries_count; i++) {
-			for (auto j = 0; j < ids_count; j++) {
+			for (size_t j = 0; j < ids_count; j++) {
 				ids[j] = uniform_dist_id(e1);
 			}
 			auto f = uniform_dist(e1);
