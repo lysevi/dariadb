@@ -11,6 +11,7 @@
 #include <thread>
 #include <random>
 #include <cstdlib>
+#include <atomic>
 
 class BenchCallback :public dariadb::storage::ReaderClb {
 public:
@@ -34,6 +35,8 @@ void writer_1(dariadb::storage::AbstractStorage_ptr ms)
 	}
 }
 
+std::atomic_long writen{ 0 };
+
 void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::AbstractStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
@@ -52,7 +55,7 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::Abstr
 			m.time = t++;
 			m.value = v;
 			ms->append(m);
-
+			writen++;
 			auto rnd = rand() / float(RAND_MAX);
 
 			v += rnd;
@@ -75,7 +78,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
 	
-	dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+	dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 32768 } };
 
 	{// 2.
 		const size_t threads_count = 16;
@@ -96,7 +99,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-		std::cout << "2. insert : " << elapsed << std::endl;
+		std::cout << "2. insert : " << elapsed <<" writen:"<<writen<< std::endl;
 	}
 	{//3
 		std::random_device r;
