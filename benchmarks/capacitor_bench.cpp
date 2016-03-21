@@ -33,6 +33,9 @@ public:
 
     void subscribe(const dariadb::IdArray&,const dariadb::Flag& , const dariadb::storage::ReaderClb_ptr &) override {
 	}
+	dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray&, const dariadb::Flag&) {
+		return nullptr;
+	}
 };
 
 int main(int argc, char *argv[]) {

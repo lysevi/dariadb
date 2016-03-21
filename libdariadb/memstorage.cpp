@@ -436,7 +436,10 @@ public:
 		_subscribe_notify->add(new_s);
 	}
 
-	
+	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
+		NOT_IMPLEMENTED;
+		return nullptr;
+	}
 
 protected:
     size_t _size;
@@ -493,4 +496,8 @@ size_t  MemoryStorage::chunks_size()const {
 
 void MemoryStorage::subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk) {
 	return _Impl->subscribe(ids, flag, clbk);
+}
+
+Reader_ptr MemoryStorage::currentValue(const IdArray&ids, const Flag& flag) {
+	return  _Impl->currentValue(ids, flag);
 }

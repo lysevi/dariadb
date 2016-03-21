@@ -57,6 +57,8 @@ namespace dariadb {
                                                Time time_point) = 0;
 
             virtual void subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk) = 0;
+
+			virtual Reader_ptr currentValue(const IdArray&ids, const Flag& flag) = 0;
         };
 		typedef std::shared_ptr<AbstractStorage> AbstractStorage_ptr;
     }

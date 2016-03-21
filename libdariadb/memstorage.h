@@ -27,6 +27,7 @@ namespace dariadb {
             size_t chunks_size() const;
 
             void subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk)override;
+			Reader_ptr currentValue(const IdArray&ids, const Flag& flag)override;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

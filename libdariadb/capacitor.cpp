@@ -101,16 +101,16 @@ public:
     }
 
     tos_ptr get_target_to_write(const Meas&m) {
-        auto it=_last.find(m.id);
-        if(it==_last.end()){
+        auto last_it=_last.find(m.id);
+        if(last_it ==_last.end()){
             auto n=alloc_new();
             _last[m.id]=n;
             _bucks[m.id].push_back(n);
             return n;
         }
 
-        if ((maxTime() <= m.time) || (_last[m.id]->inInterval(m))) {
-            if (_last[m.id]->is_full()) {
+        if ((maxTime() <= m.time) || (last_it->second->inInterval(m))) {
+            if (last_it->second->is_full()) {
                 auto n=alloc_new();
                 _last[m.id]=n;
                 _bucks[m.id].push_back(n);
