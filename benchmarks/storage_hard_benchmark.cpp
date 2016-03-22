@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 	(void)argv;
 	srand(static_cast<unsigned int>(time(NULL)));
 	{// 1.
-		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 32768 } };
+		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
 		auto start = clock();
 
 		writer_1(ms);
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
 	
-	dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 32768 } };
+	dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
 
 	{// 2.
 		const size_t threads_count = 16;
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
 		std::vector<std::thread> writers(threads_count);
 		size_t pos = 0;
 		for (size_t i = 0; i < threads_count; i++) {
-			std::thread t{ writer_2, id_per_thread*(i+1), id_per_thread, ms };
+			std::thread t{ writer_2, id_per_thread*i, id_per_thread, ms };
 			writers[pos++] = std::move(t);
 		}
 
