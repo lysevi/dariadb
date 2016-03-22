@@ -1,4 +1,5 @@
 #include "xor.h"
+#include "ctz.h"
 #include "binarybuffer.h"
 #include "../utils.h"
 #include <sstream>
@@ -64,44 +65,11 @@ bool XorCompressor::append(Value v){
 }
 
 uint8_t XorCompressor::zeros_lead(uint64_t v){
-	const int value_max_bit_pos = sizeof(Value) * 8 - 1;
-    uint8_t result=0;
-    for(int8_t i= value_max_bit_pos;i>=0;i-=2){
-        if(utils::BitOperations::check(v,i)){
-            break;
-        }else{
-            result++;
-        }
-
-		if (utils::BitOperations::check(v, i-1)){
-			break;
-		}
-		else{
-			result++;
-		}
-    }
-    return result;
+	return clz(v);
 }
 
 uint8_t XorCompressor::zeros_tail(uint64_t v){
-	const int value_max_bit_pos = sizeof(Value) * 8 - 1;
-    uint8_t result=0;
-    for(int8_t i=0;i<value_max_bit_pos;i+=2){
-		if (utils::BitOperations::check(v, i)){
-			break;
-		}
-		else{
-			result++;
-		}
-
-		if (utils::BitOperations::check(v, i + 1)){
-			break;
-		}
-		else{
-			result++;
-		}
-    }
-    return result;
+	return ctz(v);
 }
 
 XorDeCompressor::XorDeCompressor(const BinaryBuffer_Ptr &bw, Value first):
