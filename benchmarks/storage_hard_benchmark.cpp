@@ -42,7 +42,7 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::Abstr
 	auto m = dariadb::Meas::empty();
 	std::random_device r;
 	std::default_random_engine e1(r());
-	std::uniform_int_distribution<int> uniform_dist(0, 64);
+	std::uniform_int_distribution<int> uniform_dist(10, 64);
 
 	dariadb::Time t = 0;
 	for (dariadb::Id i = id_from; i < (id_from + id_per_thread); i += 1) {
