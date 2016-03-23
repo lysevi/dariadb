@@ -4,7 +4,7 @@
 #include <utils.h>
 #include <bloom_filter.h>
 
-BOOST_AUTO_TEST_CASE(UtilsEmpty) {
+BOOST_AUTO_TEST_CASE(InInterval) {
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 1));
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 2));
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 5));
