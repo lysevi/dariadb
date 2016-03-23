@@ -144,7 +144,20 @@ void thread_writer(dariadb::Id id,
         writed_count++;
 	}
 }
+bool stop_read_all{ false };
 
+void thread_read_all(
+	dariadb::Time from,
+	dariadb::Time to,
+	dariadb::storage::MemoryStorage *ms)
+{
+	
+	while (!stop_read_all) {
+		auto rdr=ms->readInterval(from, to);
+		dariadb::Meas::MeasList out;
+		rdr->readAll(&out);
+	}
+}
 
 void thread_reader(dariadb::Id id,
 	dariadb::Time from,
@@ -180,11 +193,14 @@ BOOST_AUTO_TEST_CASE(MultiThread)
     std::thread t2(thread_writer, 1, 0, 100, 2, ms);
     std::thread t3(thread_writer, 2, 0, 100, 2, ms);
     std::thread t4(thread_writer, 0, 100, 200, 1, ms);
+	std::thread t5(thread_read_all, 0, 200,  ms);
 
     t1.join();
     t2.join();
     t3.join();
     t4.join();
+	stop_read_all = false;
+	t5.join();
 
     std::thread rt1(thread_reader, 0, 0, 200, writed_count.load(),  ms);
     std::thread rt2(thread_reader, 1, 50, 0,  1, ms);
