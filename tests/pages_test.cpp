@@ -3,6 +3,10 @@
 #include <boost/test/unit_test.hpp>
 #include <page_manager.h>
 
-BOOST_AUTO_TEST_CASE(PageEmpty) {
-  BOOST_CHECK(true);
+using dariadb::storage::PageManager;
+
+BOOST_AUTO_TEST_CASE(PageManagerInstance) {
+  PageManager::start();
+  BOOST_CHECK(PageManager::instance());
+  PageManager::start();
 }

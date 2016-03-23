@@ -8,3 +8,4 @@
 #include "memstorage.h"
 #include "capacitor.h"
 #include "timeutil.h"
+#include "page_manager.h"
