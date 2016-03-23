@@ -6,6 +6,7 @@
 #include <compression/delta.h>
 #include <compression/xor.h>
 #include <compression/flag.h>
+#include <compression/cz.h>
 
 #include <iterator>
 #include <sstream>
@@ -354,12 +355,12 @@ BOOST_AUTO_TEST_CASE(flat_converters) {
 
 BOOST_AUTO_TEST_CASE(XorCompressor){
     {
-        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_lead(67553994410557440),8);
-        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_lead(3458764513820540928),2);
-        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_lead(15),60);
+        BOOST_CHECK_EQUAL(dariadb::compression::clz(67553994410557440),8);
+        BOOST_CHECK_EQUAL(dariadb::compression::clz(3458764513820540928),2);
+        BOOST_CHECK_EQUAL(dariadb::compression::clz(15),60);
 
-        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_tail(240),4);
-        BOOST_CHECK_EQUAL(Testable_XorCompressor::zeros_tail(3840),8);
+        BOOST_CHECK_EQUAL(dariadb::compression::ctz(240),4);
+        BOOST_CHECK_EQUAL(dariadb::compression::ctz(3840),8);
     }
     const size_t test_buffer_size =1000;
 
