@@ -34,8 +34,14 @@ namespace dariadb {
 			}
 		}
 #elif defined(GNU_CPP) || defined(CLANG_CPP)
-#define clz(x) static_cast<uint8_t>(__builtin_clzll(x))
-#define ctz(x) static_cast<uint8_t>(__builtin_ctzll(x))
+		inline uint8_t  clz(uint64_t x)
+		{
+			return static_cast<uint8_t>(__builtin_clzll(x));
+		}
+		inline uint8_t  ctz(uint64_t x)
+		{
+			return static_cast<uint8_t>(__builtin_ctzll(x));
+		}
 #else
 		static uint8_t inline clz(uint64_t v)
 		{
