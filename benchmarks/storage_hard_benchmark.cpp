@@ -112,10 +112,8 @@ int main(int argc, char *argv[]) {
 
         const size_t queries_count = 32768;
 
-        dariadb::IdArray rnd_ids;
-        rnd_ids.resize(queries_count);
-        std::vector<dariadb::Time> rnd_time;
-        rnd_time.resize(queries_count);
+        dariadb::IdArray rnd_ids(queries_count);
+        std::vector<dariadb::Time> rnd_time(queries_count);
         for (size_t i = 0; i < queries_count; i++){
             rnd_ids[i]=uniform_dist(e1);
             rnd_time[i]=uniform_dist_t(e1);
@@ -143,8 +141,7 @@ int main(int argc, char *argv[]) {
         const size_t queries_count = 32;
 
 		dariadb::IdArray ids;
-        std::vector<dariadb::Time> rnd_time;
-        rnd_time.resize(queries_count);
+        std::vector<dariadb::Time> rnd_time(queries_count);
         for (size_t i = 0; i < queries_count; i++){
             rnd_time[i]=uniform_dist(e1);
         }
@@ -172,9 +169,7 @@ int main(int argc, char *argv[]) {
 		dariadb::storage::ReaderClb_ptr clbk{ new BenchCallback() };
 		const size_t queries_count = 32;
 
-        std::vector<dariadb::Time> rnd_time_from,rnd_time_to;
-        rnd_time_from.resize(queries_count);
-        rnd_time_to.resize(queries_count);
+        std::vector<dariadb::Time> rnd_time_from(queries_count),rnd_time_to(queries_count);
         for (size_t i = 0; i < queries_count; i++){
             rnd_time_from[i]=uniform_dist(e1);
             rnd_time_to[i]=uniform_dist(e1);
@@ -207,9 +202,7 @@ int main(int argc, char *argv[]) {
 		dariadb::storage::ReaderClb_ptr clbk{ new BenchCallback() };
 		const size_t queries_count = 32;
 
-        std::vector<dariadb::Time> rnd_time_from,rnd_time_to;
-        rnd_time_from.resize(queries_count);
-        rnd_time_to.resize(queries_count);
+        std::vector<dariadb::Time> rnd_time_from(queries_count),rnd_time_to(queries_count);
         for (size_t i = 0; i < queries_count; i++){
             rnd_time_from[i]=uniform_dist(e1);
             rnd_time_to[i]=uniform_dist(e1);
