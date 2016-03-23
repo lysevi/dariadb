@@ -19,7 +19,7 @@ public:
 	size_t count;
 };
 
-std::atomic_long append_count{ 0 };
+std::atomic_long append_count{ 0 }, read_all_times{ 0 };
 size_t thread_count = 5;
 size_t iteration_count = 1000000;
 bool stop_info = false;
@@ -38,6 +38,21 @@ void thread_writer(dariadb::Id id,
 		m.value = dariadb::Value(i);
 		ms->append(m);
 		append_count++;
+	}
+}
+
+bool stop_read_all{ false };
+
+void thread_read_all(
+	dariadb::Time from,
+	dariadb::Time to,
+	dariadb::storage::AbstractStorage_ptr ms)
+{
+	auto clb = std::make_shared<BenchCallback>();
+	while (!stop_read_all) {
+		auto rdr = ms->readInterval(from, to);
+		rdr->readAll(clb.get());
+		read_all_times++;
 	}
 }
 
@@ -67,9 +82,22 @@ void show_info() {
 
 		clock_t t1 = clock();
 		auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
-		std::cout << "\rwrites: " << writes_per_sec << "/sec progress:" << (100 * append_count) / all_writes << "%             ";
+		auto read_per_sec = read_all_times.load() / double((t1 - t0) / CLOCKS_PER_SEC);
+		std::cout << "\rwrites: " << writes_per_sec 
+			<< "/sec progress:" << (100 * append_count) / all_writes 
+			<< "%     ";
+		if (!stop_read_all) {
+			std::cout << " read_all_times: " << read_per_sec <<"/sec             ";
+		}
 		std::cout.flush();
 		if (stop_info) {
+			std::cout << "\rwrites: " << writes_per_sec 
+				<< "/sec progress:" << (100 * append_count) / all_writes 
+				<< "%            ";
+			if (!stop_read_all) {
+				std::cout << " read_all_times: " << read_per_sec << "/sec            ";
+			}
+			std::cout.flush();
 			break;
 		}
 	}
@@ -88,6 +116,7 @@ int main(int argc, char *argv[]) {
 			std::thread t{ thread_writer, i, 0, iteration_count,1,ms };
 			writers[pos++] = std::move(t);
 		}
+		std::thread read_all_t{ thread_read_all, 0, dariadb::Time(iteration_count), ms };
 
 		pos = 0;
 		for (size_t i = 0; i < thread_count; i++) {
@@ -95,7 +124,9 @@ int main(int argc, char *argv[]) {
 			t.join();
 		}
 		stop_info = true;
+		stop_read_all = true;
 		info_thread.join();
+		read_all_t.join();
 	}
 	{
 		std::cout << "Capacitor" << std::endl;
@@ -120,7 +151,6 @@ int main(int argc, char *argv[]) {
 		}
 		stop_info = true;
 		info_thread.join();
-		
 		cp->flush();
 	}
 }
