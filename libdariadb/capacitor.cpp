@@ -82,10 +82,9 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-		std::lock_guard<std::mutex> lg(_mutex);
-
 		auto res = check_and_append(m);
 		
+		std::lock_guard<std::mutex> lg(_mutex);
         //flush old sets.
         for(auto &kv:_bucks){
             while(kv.second.size()>0){
@@ -104,8 +103,10 @@ public:
     }
 
     tos_ptr get_target_to_write(const Meas&m) {
+		std::lock_guard<std::mutex> lg(_mutex);
         auto last_it=_last.find(m.id);
         if(last_it ==_last.end()){
+			
             auto n=alloc_new();
             _last[m.id]=n;
             _bucks[m.id].push_back(n);
