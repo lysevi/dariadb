@@ -65,24 +65,27 @@ public:
 	bool is_valid(const dariadb::Meas &m)const {
         return is_valid_time(m.time);
 	}
+	bool check_and_append(const dariadb::Meas&m) {
+		if (!is_valid(m)) {
+			return false;
+		}
+
+		tos_ptr target = get_target_to_write(m);
+
+		if (target != nullptr) {
+			target->append(m, true);
+			_writed_count++;
+			_minTime = std::min(_minTime, m.time);
+			_maxTime = std::max(_maxTime, m.time);
+		}
+		return true;
+	}
 
     bool append(const dariadb::Meas&m) {
 		std::lock_guard<std::mutex> lg(_mutex);
 
-		if (!is_valid(m)) {
-			return false;
-		}
-        
-        tos_ptr target = get_target_to_write(m);
-
-        if (target != nullptr) {
-            target->append(m, true);
-            _writed_count++;
-            _minTime = std::min(_minTime, m.time);
-            _maxTime = std::max(_maxTime, m.time);
-        }
-
-
+		auto res = check_and_append(m);
+		
         //flush old sets.
         for(auto &kv:_bucks){
             while(kv.second.size()>0){
@@ -97,7 +100,7 @@ public:
         }
 
 
-        return true;
+        return res;
     }
 
     tos_ptr get_target_to_write(const Meas&m) {
