@@ -114,8 +114,14 @@ if(CMAKE_COMPILER_IS_CLANG)
   add_definitions(-DCLANG_CPP)
 endif(CMAKE_COMPILER_IS_CLANG)
 
-enable_testing()
+option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 
 add_subdirectory (libdariadb)
-add_subdirectory (tests)
+
+if (ENABLE_TESTING)
+   enable_testing()
+   add_subdirectory(tests)
+endif(ENABLE_TESTING)
+
+
 add_subdirectory (benchmarks)
