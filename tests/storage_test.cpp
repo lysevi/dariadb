@@ -19,9 +19,11 @@ void checkAll(dariadb::Meas::MeasList res,
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
 		for (auto &m : res) {
-			if ((m.id == i) 
-				&& ((m.flag == i) ||(m.flag==dariadb::Flags::NO_DATA)) 
-				&& (m.time == i)) {
+            if ((m.id == i)
+                    && ((m.flag == i) ||(m.flag==dariadb::Flags::NO_DATA))
+                    && (m.time == i)
+                    && ((m.src == i) ||(m.src==dariadb::Flags::NO_DATA)))
+            {
 				count++;
 			}
 
@@ -57,6 +59,7 @@ void storage_test_check(dariadb::storage::AbstractStorage *as,
 	for (auto i = from; i < to; i += step) {
 		m.id = i;
 		m.flag = dariadb::Flag(i);
+        m.src = dariadb::Flag(i);
 		m.time = i;
 		m.value = 0;
 		for (size_t j = 1; j < copies_count+1; j++) {
@@ -141,7 +144,20 @@ void thread_writer(dariadb::Id id,
         writed_count++;
 	}
 }
+bool stop_read_all{ false };
 
+void thread_read_all(
+	dariadb::Time from,
+	dariadb::Time to,
+	dariadb::storage::MemoryStorage *ms)
+{
+	
+	while (!stop_read_all) {
+		auto rdr=ms->readInterval(from, to);
+		dariadb::Meas::MeasList out;
+		rdr->readAll(&out);
+	}
+}
 
 void thread_reader(dariadb::Id id,
 	dariadb::Time from,
@@ -177,11 +193,14 @@ BOOST_AUTO_TEST_CASE(MultiThread)
     std::thread t2(thread_writer, 1, 0, 100, 2, ms);
     std::thread t3(thread_writer, 2, 0, 100, 2, ms);
     std::thread t4(thread_writer, 0, 100, 200, 1, ms);
+	std::thread t5(thread_read_all, 0, 200,  ms);
 
     t1.join();
     t2.join();
     t3.join();
     t4.join();
+	stop_read_all = true;
+	t5.join();
 
     std::thread rt1(thread_reader, 0, 0, 200, writed_count.load(),  ms);
     std::thread rt2(thread_reader, 1, 50, 0,  1, ms);
@@ -450,4 +469,35 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 
     BOOST_CHECK_EQUAL(c4->values.size(),size_t(1));
     BOOST_CHECK_EQUAL(c4->values.front().flag,dariadb::Flag(1));
+}
+
+BOOST_AUTO_TEST_CASE(CurValues) {
+	{// equal step
+		auto ms = new dariadb::storage::MemoryStorage{ 500 };
+
+		auto m = dariadb::Meas::empty();
+		const size_t total_count = 10;
+		const dariadb::Time time_step = 1;
+		
+		for (int k = 0; k < 10; k++) {
+			for (size_t i = 0; i < total_count; i += time_step) {
+				m.id = dariadb::Id(i);
+				m.time = dariadb::Time(k);
+				m.value = dariadb::Value(i);
+				ms->append(m);
+			}
+		}
+
+		dariadb::IdArray ids;
+		auto rdr = ms->currentValue(ids, 0);
+
+		dariadb::Meas::MeasList all;
+		rdr->readAll(&all);
+		auto expected = total_count;
+		BOOST_CHECK_EQUAL(all.size(), expected);
+		for (auto v : all) {
+            BOOST_CHECK_EQUAL(v.time, dariadb::Time(9));
+		}
+		delete ms;
+	}
 }

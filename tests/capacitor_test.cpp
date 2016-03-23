@@ -41,6 +41,10 @@ public:
 
     void subscribe(const dariadb::IdArray&,const dariadb::Flag& , const dariadb::storage::ReaderClb_ptr &) override{
 	}
+
+	dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray&, const dariadb::Flag&) override{
+		return nullptr;
+	}
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)

@@ -33,8 +33,6 @@ namespace dariadb {
             ~XorCompressor();
 
             bool append(Value v);
-            static uint8_t zeros_lead(uint64_t v);
-            static uint8_t zeros_tail(uint64_t v);
         protected:
             bool _is_first;
             uint64_t _first;

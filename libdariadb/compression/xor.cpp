@@ -1,4 +1,5 @@
 #include "xor.h"
+#include "cz.h"
 #include "binarybuffer.h"
 #include "../utils.h"
 #include <sstream>
@@ -41,8 +42,8 @@ bool XorCompressor::append(Value v){
     }
     _bw->setbit().incbit();
 
-    auto lead=zeros_lead(xor_val);
-    auto tail=zeros_tail(xor_val);
+    auto lead= dariadb::compression::clz(xor_val);
+    auto tail= dariadb::compression::ctz(xor_val);
 
 
 
@@ -63,47 +64,6 @@ bool XorCompressor::append(Value v){
     return true;
 }
 
-uint8_t XorCompressor::zeros_lead(uint64_t v){
-	const int value_max_bit_pos = sizeof(Value) * 8 - 1;
-    uint8_t result=0;
-    for(int8_t i= value_max_bit_pos;i>=0;i-=2){
-        if(utils::BitOperations::check(v,i)){
-            break;
-        }else{
-            result++;
-        }
-
-		if (utils::BitOperations::check(v, i-1)){
-			break;
-		}
-		else{
-			result++;
-		}
-    }
-    return result;
-}
-
-uint8_t XorCompressor::zeros_tail(uint64_t v){
-	const int value_max_bit_pos = sizeof(Value) * 8 - 1;
-    uint8_t result=0;
-    for(int8_t i=0;i<value_max_bit_pos;i+=2){
-		if (utils::BitOperations::check(v, i)){
-			break;
-		}
-		else{
-			result++;
-		}
-
-		if (utils::BitOperations::check(v, i + 1)){
-			break;
-		}
-		else{
-			result++;
-		}
-    }
-    return result;
-}
-
 XorDeCompressor::XorDeCompressor(const BinaryBuffer_Ptr &bw, Value first):
 	BaseCompressor(bw),
     _prev_value(inner::flat_double_to_int(first)),
@@ -112,8 +72,6 @@ XorDeCompressor::XorDeCompressor(const BinaryBuffer_Ptr &bw, Value first):
 {
 
 }
-
-
 
 dariadb::Value XorDeCompressor::read()
 {

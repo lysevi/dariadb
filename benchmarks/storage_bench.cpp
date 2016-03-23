@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
 	{
-		auto ms = new dariadb::storage::MemoryStorage{ 2000000 };
+		auto ms = new dariadb::storage::MemoryStorage{ 512 };
 		auto m = dariadb::Meas::empty();
 
 		std::vector<dariadb::Time> deltas{ 50,255,1024,2050 };

@@ -47,8 +47,9 @@ IF(WIN32)
     find_package(Boost 1.57.0 REQUIRED unit_test_framework)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  /EHsc")
     add_cxx_compiler_flag(-W4)
+    add_definitions(-DMSVC)
   else(MSVC)
-       find_package(Boost 1.57.0 REQUIRED unit_test_framework)
+    find_package(Boost 1.57.0 REQUIRED unit_test_framework)
   endif(MSVC)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
@@ -88,6 +89,7 @@ else(Boost_FOUND)
 ENDIF(Boost_FOUND)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
+  add_definitions(-DGNU_CPP)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -ftemplate-backtrace-limit=0")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Werror -pedantic-errors")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
@@ -108,8 +110,18 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   #set(CMAKE_SHARED_LINKER_FLAGS "-pg")
 endif(CMAKE_COMPILER_IS_GNUCXX)
 
-enable_testing()
+if(CMAKE_COMPILER_IS_CLANG)
+  add_definitions(-DCLANG_CPP)
+endif(CMAKE_COMPILER_IS_CLANG)
+
+option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 
 add_subdirectory (libdariadb)
-add_subdirectory (tests)
+
+if (ENABLE_TESTING)
+   enable_testing()
+   add_subdirectory(tests)
+endif(ENABLE_TESTING)
+
+
 add_subdirectory (benchmarks)

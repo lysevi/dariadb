@@ -2,6 +2,7 @@
 
 #include "meas.h"
 #include <memory>
+#include <mutex>
 
 namespace dariadb {
 	namespace storage {
@@ -19,7 +20,7 @@ namespace dariadb {
 			~TimeOrderedSet();
 			TimeOrderedSet(const size_t max_size);
 			TimeOrderedSet(const TimeOrderedSet&other);
-			TimeOrderedSet& operator=(const TimeOrderedSet&other)=default;
+			TimeOrderedSet& operator=(const TimeOrderedSet&other);
 
             bool append(const Meas&m, bool force=false);
 			bool is_full() const;
@@ -36,6 +37,7 @@ namespace dariadb {
 
 			dariadb::Time _minTime;
 			dariadb::Time _maxTime;
+			mutable std::mutex    _mutex;
 		};
 	}
 }
