@@ -369,7 +369,7 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInterval(const IdArray &ids, Flag flag, Time from, Time to){
-		std::lock_guard<std::mutex> lg(_mutex);
+		
 		std::shared_ptr<InnerReader> res;
 		if (from > this->minTime())  {
 			res = this->readInTimePoint(ids, flag, from);
@@ -402,7 +402,7 @@ public:
     }
 
     std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
-        std::lock_guard<std::mutex> lg(_mutex_tp);
+        
 		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
 		res->is_time_point_reader = true;
 		

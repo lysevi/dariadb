@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(MultiThread)
     t2.join();
     t3.join();
     t4.join();
-	stop_read_all = false;
+	stop_read_all = true;
 	t5.join();
 
     std::thread rt1(thread_reader, 0, 0, 200, writed_count.load(),  ms);
