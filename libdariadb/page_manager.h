@@ -15,13 +15,14 @@ namespace dariadb{
             static void stop();
             static PageManager* instance();
 
-			uint64_t calc_page_size();
+			
 
 			bool append_chunk(const Chunk_Ptr&ch);
         private:
             static PageManager*_instance;
-			size_t _chunk_per_storage;
-			size_t _chunk_size;
+			class Private;
+			std::unique_ptr<Private> impl;
+			
         };
     }
 }
