@@ -7,7 +7,7 @@
 using dariadb::storage::PageManager;
 
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
-  PageManager::start(1,1);
+  PageManager::start(dariadb::storage::STORAGE_MODE::SINGLE,1,1);
   BOOST_CHECK(PageManager::instance()!=nullptr);
   PageManager::stop();
 }
@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 	const size_t chunks_count = 10;
 	const size_t chunks_size = 100;
 
-	PageManager::start(chunks_count, chunks_size);
+    PageManager::start(dariadb::storage::STORAGE_MODE::SINGLE,chunks_count, chunks_size);
 	BOOST_CHECK(PageManager::instance() != nullptr);
 	
 	auto t= dariadb::Time(0);

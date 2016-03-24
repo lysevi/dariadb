@@ -86,10 +86,11 @@ struct Page {
 class PageManager::Private
 {
 public:
-	Private(size_t chunk_per_storage, size_t chunk_size) :
+    Private(STORAGE_MODE mode,size_t chunk_per_storage, size_t chunk_size) :
 		_chunk_per_storage(static_cast<uint32_t>(chunk_per_storage)),
 		_chunk_size(static_cast<uint32_t>(chunk_size)),
-		_cur_page(nullptr)
+        _cur_page(nullptr),
+        _mode(mode)
 	{}
 
 	~Private() {
@@ -147,10 +148,11 @@ protected:
 	uint32_t _chunk_per_storage;
 	uint32_t _chunk_size;
 	Page*  _cur_page;
+    STORAGE_MODE _mode;
 };
 
-PageManager::PageManager(size_t chunk_per_storage, size_t chunk_size):
-	impl(new PageManager::Private{chunk_per_storage,chunk_size})
+PageManager::PageManager(STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size):
+    impl(new PageManager::Private{mode,chunk_per_storage,chunk_size})
 {
 	
 }
@@ -158,9 +160,9 @@ PageManager::PageManager(size_t chunk_per_storage, size_t chunk_size):
 PageManager::~PageManager() {
 }
 
-void PageManager::start(size_t chunk_per_storage, size_t chunk_size){
+void PageManager::start(STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size){
     if(PageManager::_instance==nullptr){
-        PageManager::_instance=new PageManager(chunk_per_storage,chunk_size);
+        PageManager::_instance=new PageManager(mode, chunk_per_storage,chunk_size);
     }
 }
 
