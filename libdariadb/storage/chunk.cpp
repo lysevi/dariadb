@@ -9,15 +9,15 @@ using namespace dariadb::compression;
 
 Chunk::Chunk(size_t size, Meas first_m) :
 	_buffer_t(size),
-	count(0),
-	first(first_m),
 	_mutex()
 {
+	count = 0;
+	first = first_m;
+
 	minTime = std::numeric_limits<Time>::max();
 	maxTime = std::numeric_limits<Time>::min();
 
 	std::fill(_buffer_t.begin(), _buffer_t.end(), 0);
-
 
 	using compression::BinaryBuffer;
 	range = Range{ _buffer_t.data(),_buffer_t.data() + size - 1 };

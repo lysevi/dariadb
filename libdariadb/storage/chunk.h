@@ -8,7 +8,14 @@
 
 namespace dariadb {
 	namespace storage {
-		struct Chunk
+		struct ChunkIndexInfo {
+			Meas first, last;
+			size_t count;
+			Time minTime, maxTime;
+			dariadb::Flag flag_bloom;
+		};
+
+		struct Chunk:public ChunkIndexInfo
 		{
 		public:
 			Chunk(size_t size, Meas first_m);
@@ -19,12 +26,8 @@ namespace dariadb {
 			std::vector<uint8_t> _buffer_t;
 			utils::Range range;
 			compression::CopmressedWriter c_writer;
-			size_t count;
-			Meas first, last;
-
-			Time minTime, maxTime;
-			std::mutex _mutex;
-			dariadb::Flag flag_bloom;
+		
+			std::mutex _mutex;			
 			compression::BinaryBuffer_Ptr bw;
 		};
 
