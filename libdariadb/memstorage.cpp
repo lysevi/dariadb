@@ -3,7 +3,6 @@
 #include "compression.h"
 #include "flags.h"
 #include "subscribe.h"
-#include "bloom_filter.h"
 #include "storage/chunk.h"
 
 #include <limits>
@@ -17,7 +16,6 @@ using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
-typedef std::list<Chunk_Ptr>      ChuncksList;
 typedef std::map<Id, ChuncksList> ChunkMap;
 typedef std::map<Id, Chunk_Ptr>   FreeChunksMap;
 

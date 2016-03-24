@@ -2,6 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 #include <page_manager.h>
+#include <compression.h>
 
 using dariadb::storage::PageManager;
 
@@ -12,7 +13,7 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
 }
 
 
-BOOST_AUTO_TEST_CASE(PageManagerAppendChunk) {
+BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 	const size_t chunks_count = 10;
 	const size_t chunks_size = 100;
 
@@ -20,6 +21,7 @@ BOOST_AUTO_TEST_CASE(PageManagerAppendChunk) {
 	BOOST_CHECK(PageManager::instance() != nullptr);
 	
 	auto t= dariadb::Time(0);
+
 	for (size_t cur_chunk_num = 0; cur_chunk_num < chunks_count; cur_chunk_num++) {
 		dariadb::Meas first;
 		first.id = 1;
@@ -35,6 +37,23 @@ BOOST_AUTO_TEST_CASE(PageManagerAppendChunk) {
 		}
 		auto res = PageManager::instance()->append_chunk(ch);
 		BOOST_CHECK(res);
+	}
+
+	//must return all of appended chunks;
+	auto all_chunks=PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0);
+	auto readed_t = dariadb::Time(0);
+	
+	BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
+	for (auto ch : all_chunks) {
+		BOOST_CHECK(ch->is_readonly);
+		
+		ch->bw->reset_pos();
+		dariadb::compression::CopmressedReader crr(ch->bw, ch->first);
+		for (uint32_t i = 0; i < ch->count; i++) {
+			auto m = crr.read();
+			BOOST_CHECK_EQUAL(m.time, readed_t);
+			readed_t++;
+		}
 	}
 
 	PageManager::stop();
