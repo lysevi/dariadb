@@ -1,5 +1,6 @@
 #include "page_manager.h"
 #include <mutex>
+#include <cstring>
 
 using namespace dariadb::storage;
 
