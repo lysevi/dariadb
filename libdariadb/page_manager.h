@@ -5,6 +5,7 @@
 namespace dariadb{
     namespace storage{
         class PageManager:public utils::NonCopy {
+			~PageManager();
         public:
             PageManager();
             static void start();

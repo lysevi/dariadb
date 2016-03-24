@@ -8,6 +8,9 @@ PageManager::PageManager(){
 
 }
 
+PageManager::~PageManager() {
+}
+
 void PageManager::start(){
     if(PageManager::_instance==nullptr){
         PageManager::_instance=new PageManager();
