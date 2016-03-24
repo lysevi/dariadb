@@ -51,3 +51,12 @@ bool Chunk::append(const Meas&m)
 		return true;
 	}
 }
+
+bool Chunk::check_flag(const Flag& f) {
+	if (f != 0) {
+		if (!dariadb::bloom_check(flag_bloom, f)) {
+			return false;
+		}
+	}
+	return true;
+}

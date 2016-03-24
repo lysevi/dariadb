@@ -319,13 +319,12 @@ public:
 		}
         
         for (auto ch : _chuncks) {
-			//TODO move all checks to Chunk class.
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
             }
 			for (auto &cur_chunk : ch.second) {
 				if (flag != 0) {
-					if (!bloom_check(cur_chunk->flag_bloom, flag)) {
+					if (!cur_chunk->check_flag(flag)) {
 						continue;
 					}
 				}
@@ -367,11 +366,8 @@ public:
 	void load_tp_from_chunks(InnerReader *_ptr, ChuncksList chunks, Time time_point, Id id,Flag flag) {
 		bool is_exists = false;
 		for (auto&cur_chunk : chunks) {
-			//TODO move all checks to Chunk class.
-			if (flag != 0) {
-				if (!dariadb::bloom_check(cur_chunk->flag_bloom, flag)) {
-					continue;
-				}
+			if (!cur_chunk->check_flag(flag)) {
+				continue;
 			}
 			if (cur_chunk->minTime <= time_point) {
 				_ptr->add_tp(cur_chunk, cur_chunk->count);

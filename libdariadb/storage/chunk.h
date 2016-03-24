@@ -15,7 +15,7 @@ namespace dariadb {
 			~Chunk();
 			bool append(const Meas&m);
 			bool is_full()const { return c_writer.is_full(); }
-		
+			bool check_flag(const Flag& f);
 			std::vector<uint8_t> _buffer_t;
 			utils::Range range;
 			compression::CopmressedWriter c_writer;
