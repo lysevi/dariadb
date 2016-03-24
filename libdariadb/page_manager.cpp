@@ -12,6 +12,7 @@ using namespace dariadb::storage;
 dariadb::storage::PageManager* PageManager::_instance=nullptr;
 #pragma pack(push, 1)
 struct PageHader {
+    //TODO replace indexes and pos to uint64_t. if needed.
 	uint32_t chunk_per_storage;
 	uint32_t chunk_size;
 
@@ -34,18 +35,38 @@ struct Page {
 	uint8_t        *chunks;
 	std::mutex      lock;
 
-	bool append(const Chunk_Ptr&ch) {
+    uint32_t get_oldes_index(){
+        auto min_time=std::numeric_limits<dariadb::Time>::max();
+        uint32_t pos=0;
+        auto index_end = index + header->chunk_per_storage;
+        uint32_t i=0;
+        for (auto index_it = index; index_it != index_end; ++index_it,++i){
+            if(index_it->info.minTime<min_time){
+                pos=i;
+                min_time=index_it->info.minTime;
+            }
+        }
+        return pos;
+    }
+
+    bool append(const Chunk_Ptr&ch, STORAGE_MODE mode) {
 		std::lock_guard<std::mutex> lg(lock);
 
+        auto index_rec = (ChunkIndexInfo*)ch.get();
+        auto buffer = ch->_buffer_t.data();
+
+        assert(header->chunk_size == ch->_buffer_t.size());
+
 		if (is_full()) {
-			return false;
+            if(mode==STORAGE_MODE::SINGLE){
+                auto pos_index=get_oldes_index();
+
+                index[pos_index].info = *index_rec;
+                memcpy(this->chunks+index[pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
+                return true;
+            }
+            return false;
 		}
-
-		auto index_rec = (ChunkIndexInfo*)ch.get();
-		auto buffer = ch->_buffer_t.data();
-		
-		assert(header->chunk_size == ch->_buffer_t.size());
-
 		index[header->pos_index].info = *index_rec;
 		index[header->pos_index].offset = header->pos_chunks;
 		memcpy(this->chunks+header->pos_chunks, buffer, sizeof(uint8_t)*header->chunk_size);
@@ -135,7 +156,7 @@ public:
 
 	bool append_chunk(const Chunk_Ptr&ch) {
 		auto pg=get_cur_page();
-		return pg->append(ch);
+        return pg->append(ch,_mode);
 	}
 
 	ChuncksList get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {

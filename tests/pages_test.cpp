@@ -25,6 +25,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 	for (size_t cur_chunk_num = 0; cur_chunk_num < chunks_count; cur_chunk_num++) {
 		dariadb::Meas first;
 		first.id = 1;
+        first.time = t;
 		dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
 
 		for (int i = 0;; i++,t++) {
@@ -35,26 +36,57 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 				break;
 			}
 		}
+
 		auto res = PageManager::instance()->append_chunk(ch);
 		BOOST_CHECK(res);
-	}
+    }
+    dariadb::Time minTime(t);
+    {
+        //must return all of appended chunks;
+        auto all_chunks=PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0);
+        auto readed_t = dariadb::Time(0);
 
-	//must return all of appended chunks;
-	auto all_chunks=PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0);
-	auto readed_t = dariadb::Time(0);
-	
-	BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
-	for (auto ch : all_chunks) {
-		BOOST_CHECK(ch->is_readonly);
-		
-		ch->bw->reset_pos();
-		dariadb::compression::CopmressedReader crr(ch->bw, ch->first);
-		for (uint32_t i = 0; i < ch->count; i++) {
-			auto m = crr.read();
-			BOOST_CHECK_EQUAL(m.time, readed_t);
-			readed_t++;
-		}
-	}
+        BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
+        for (auto ch : all_chunks) {
+            BOOST_CHECK(ch->is_readonly);
 
+            minTime=std::min(minTime,ch->minTime);
+            ch->bw->reset_pos();
+            dariadb::compression::CopmressedReader crr(ch->bw, ch->first);
+            for (uint32_t i = 0; i < ch->count; i++) {
+                auto m = crr.read();
+                BOOST_CHECK_EQUAL(m.time, readed_t);
+                readed_t++;
+            }
+        }
+    }
+    {//rewrite oldes chunk
+        dariadb::Meas first;
+        first.id = 1;
+        first.time = t++;
+        dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
+
+        dariadb::Time minTime_replaced(t);
+
+        for (int i = 0;; i++,t++) {
+            first.flag = dariadb::Flag(i);
+            first.time = t;
+            first.value = dariadb::Value(i);
+            if (!ch->append(first)) {
+                break;
+            }
+        }
+        auto res = PageManager::instance()->append_chunk(ch);
+        BOOST_CHECK(res);
+
+        auto all_chunks=PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0);
+        BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
+
+        for (dariadb::storage::Chunk_Ptr ch : all_chunks) {
+            minTime_replaced=std::min(minTime_replaced,ch->minTime);
+        }
+
+        BOOST_CHECK(minTime_replaced>minTime);
+    }
 	PageManager::stop();
 }
