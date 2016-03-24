@@ -19,14 +19,15 @@ BOOST_AUTO_TEST_CASE(PageManagerAppendChunk) {
 	PageManager::start(chunks_count, chunks_size);
 	BOOST_CHECK(PageManager::instance() != nullptr);
 	
+	auto t= dariadb::Time(0);
 	for (size_t cur_chunk_num = 0; cur_chunk_num < chunks_count; cur_chunk_num++) {
 		dariadb::Meas first;
 		first.id = 1;
 		dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
 
-		for (int i = 0;; i++) {
+		for (int i = 0;; i++,t++) {
 			first.flag = dariadb::Flag(i);
-			first.time = dariadb::Time(i);
+			first.time = t;
 			first.value = dariadb::Value(i);
 			if (!ch->append(first)) {
 				break;
