@@ -5,6 +5,7 @@
 #include <mutex>
 #include <cstring>
 #include <cassert>
+#include <algorithm>
 
 using namespace dariadb::storage;
 
