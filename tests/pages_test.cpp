@@ -12,6 +12,25 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   PageManager::stop();
 }
 
+dariadb::Time add_chunk(dariadb::Time t, size_t chunks_size){
+    dariadb::Meas first;
+    first.id = 1;
+    first.time = t;
+    dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
+
+    for (int i = 0;; i++,t++) {
+        first.flag = dariadb::Flag(i);
+        first.time = t;
+        first.value = dariadb::Value(i);
+        if (!ch->append(first)) {
+            break;
+        }
+    }
+
+    auto res = PageManager::instance()->append_chunk(ch);
+    BOOST_CHECK(res);
+    return t;
+}
 
 BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 	const size_t chunks_count = 10;
@@ -23,22 +42,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 	auto t= dariadb::Time(0);
 
 	for (size_t cur_chunk_num = 0; cur_chunk_num < chunks_count; cur_chunk_num++) {
-		dariadb::Meas first;
-		first.id = 1;
-        first.time = t;
-		dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
-
-		for (int i = 0;; i++,t++) {
-			first.flag = dariadb::Flag(i);
-			first.time = t;
-			first.value = dariadb::Value(i);
-			if (!ch->append(first)) {
-				break;
-			}
-		}
-
-		auto res = PageManager::instance()->append_chunk(ch);
-		BOOST_CHECK(res);
+        t=add_chunk(t,chunks_size);
     }
     dariadb::Time minTime(t);
     {
@@ -61,23 +65,9 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         }
     }
     {//rewrite oldes chunk
-        dariadb::Meas first;
-        first.id = 1;
-        first.time = t++;
-        dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
-
         dariadb::Time minTime_replaced(t);
+        t=add_chunk(t,chunks_size);
 
-        for (int i = 0;; i++,t++) {
-            first.flag = dariadb::Flag(i);
-            first.time = t;
-            first.value = dariadb::Value(i);
-            if (!ch->append(first)) {
-                break;
-            }
-        }
-        auto res = PageManager::instance()->append_chunk(ch);
-        BOOST_CHECK(res);
 
         auto all_chunks=PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0);
         BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
