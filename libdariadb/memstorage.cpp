@@ -4,6 +4,7 @@
 #include "flags.h"
 #include "subscribe.h"
 #include "bloom_filter.h"
+#include "storage/chunk.h"
 
 #include <limits>
 #include <algorithm>
@@ -15,71 +16,7 @@
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
-using dariadb::utils::Range;
 
-
-struct Chunk
-{
-    std::vector<uint8_t> _buffer_t;
-    Range range;
-    CopmressedWriter c_writer;
-    size_t count;
-    Meas first,last;
-
-    Time minTime,maxTime;
-	std::mutex _mutex;
-	dariadb::Flag flag_bloom;
-
-    BinaryBuffer_Ptr bw;
-    Chunk(size_t size, Meas first_m):
-        _buffer_t(size),
-        count(0),
-        first(first_m),
-        _mutex()
-    {
-        minTime=std::numeric_limits<Time>::max();
-        maxTime=std::numeric_limits<Time>::min();
-
-        std::fill(_buffer_t.begin(), _buffer_t.end(),0);
-
-
-        using compression::BinaryBuffer;
-        range = Range{ _buffer_t.data(),_buffer_t.data() + size - 1};
-        bw=std::make_shared<BinaryBuffer>(range);
-
-        c_writer = compression::CopmressedWriter(bw);
-        c_writer.append(first);
-        minTime=std::min(minTime,first_m.time);
-        maxTime=std::max(maxTime,first_m.time);
-		flag_bloom = dariadb::bloom_empty<dariadb::Flag>();
-    }
-
-    ~Chunk(){
-       
-    }
-    bool append(const Meas&m)
-    {
-		std::lock_guard<std::mutex> lg(_mutex);
-        auto t_f = this->c_writer.append(m);
-
-        if (!t_f) {
-            return false;
-        }else{
-            count++;
-
-            minTime=std::min(minTime,m.time);
-            maxTime=std::max(maxTime,m.time);
-			flag_bloom = dariadb::bloom_add(flag_bloom, m.flag);
-			last = m;
-            return true;
-        }
-    }
-
-
-    bool is_full()const { return c_writer.is_full(); }
-};
-
-typedef std::shared_ptr<Chunk>    Chunk_Ptr;
 typedef std::list<Chunk_Ptr>      ChuncksList;
 typedef std::map<Id, ChuncksList> ChunkMap;
 typedef std::map<Id, Chunk_Ptr>   FreeChunksMap;
@@ -382,6 +319,7 @@ public:
 		}
         
         for (auto ch : _chuncks) {
+			//TODO move all checks to Chunk class.
             if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
                 continue;
             }
@@ -429,6 +367,7 @@ public:
 	void load_tp_from_chunks(InnerReader *_ptr, ChuncksList chunks, Time time_point, Id id,Flag flag) {
 		bool is_exists = false;
 		for (auto&cur_chunk : chunks) {
+			//TODO move all checks to Chunk class.
 			if (flag != 0) {
 				if (!dariadb::bloom_check(cur_chunk->flag_bloom, flag)) {
 					continue;

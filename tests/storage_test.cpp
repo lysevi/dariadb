@@ -129,6 +129,7 @@ BOOST_AUTO_TEST_CASE(MemoryStorage) {
 		delete ms;
 	}
 }
+
 std::atomic_long writed_count{0};
 void thread_writer(dariadb::Id id,
                    dariadb::Time from,

@@ -1,8 +1,13 @@
 include_directories(..)
 include_directories(..)
 
-FILE(GLOB HDRS "*.h" "*.hpp" "compression/*.h" "compression/*.hpp")
-FILE(GLOB SRC "*.cpp" "compression/*.cpp" ${HDRS})
+FILE(GLOB HDRS "*.h" "*.hpp" 
+               "compression/*.h" "compression/*.hpp" 
+               "storage/*.h" "storage/*.hpp")
+
+FILE(GLOB SRC "*.cpp" 
+	      "compression/*.cpp" 
+              "storage/*.cpp" ${HDRS})
 
 if(MSVC)
         add_library(libdariadb STATIC ${SRC})
