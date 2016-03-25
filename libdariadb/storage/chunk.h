@@ -15,6 +15,9 @@ namespace dariadb {
 			Time minTime, maxTime;
 			dariadb::Flag flag_bloom;
 			uint32_t count;
+			size_t bw_pos;
+			uint8_t  bw_bit_num;
+			bool is_readonly;
 		};
 
 
@@ -34,7 +37,7 @@ namespace dariadb {
 		
 			std::mutex _mutex;			
 			compression::BinaryBuffer_Ptr bw;
-			bool is_readonly;
+			
 		};
 
 		typedef std::shared_ptr<Chunk>    Chunk_Ptr;

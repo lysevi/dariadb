@@ -10,7 +10,7 @@ using namespace dariadb::compression;
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
 	_buffer_t(buffer_length),
-	_mutex{}, is_readonly(true)
+	_mutex{}
 {
 	count = index.count;
 	first = index.first;
@@ -18,12 +18,21 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	last = index.last;
 	maxTime = index.maxTime;
 	minTime = index.minTime;
+	bw_pos = index.bw_pos;
+	bw_bit_num = index.bw_bit_num;
+	is_readonly = index.is_readonly;
+
 	for (size_t i = 0; i < buffer_length; i++) {
 		_buffer_t[i] = buffer[i];
 	}
 
 	range = Range{ _buffer_t.data(),_buffer_t.data() + buffer_length - 1 };
 	bw = std::make_shared<BinaryBuffer>(range);
+	bw->set_bitnum(bw_bit_num);
+	bw->set_pos(bw_pos);
+	
+	c_writer = compression::CopmressedWriter(bw);
+	c_writer.set_first(index.last);
 
 	minTime = std::min(minTime, first.time);
 	maxTime = std::max(maxTime, first.time);
@@ -31,12 +40,13 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 
 Chunk::Chunk(size_t size, Meas first_m) :
 	_buffer_t(size),
-	_mutex(),
-	is_readonly(false)
+	_mutex()
 {
+	is_readonly = false;
+
 	count = 0;
 	first = first_m;
-
+	
 	minTime = std::numeric_limits<Time>::max();
 	maxTime = std::numeric_limits<Time>::min();
 
@@ -62,6 +72,8 @@ bool Chunk::append(const Meas&m)
 
 	std::lock_guard<std::mutex> lg(_mutex);
 	auto t_f = this->c_writer.append(m);
+	bw_pos = bw->pos();
+	bw_bit_num= bw->bitnum();
 
 	if (!t_f) {
 		return false;

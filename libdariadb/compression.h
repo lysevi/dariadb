@@ -23,6 +23,7 @@ namespace dariadb {
             bool is_full() const;
 
             size_t used_space()const;
+			void set_first(const Meas &first);
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

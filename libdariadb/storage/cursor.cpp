@@ -19,7 +19,7 @@ Cursor::Cursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariad
 
 void Cursor::reset_pos() {
 	_is_end = false;
-	_index_end = link->index + link->header->chunk_per_storage;
+	_index_end = link->index + link->header->pos_index;
 	_index_it = link->index;
 }
 

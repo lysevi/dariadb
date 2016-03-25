@@ -64,6 +64,10 @@ public:
     size_t used_space()const{
         return time_comp.used_space();
     }
+	void set_first(const Meas &first) {
+		_first=first;
+		_is_first = false;
+	}
 protected:
     Meas _first;
     bool _is_first;
@@ -164,6 +168,10 @@ bool CopmressedWriter::is_full()const{
 
 size_t CopmressedWriter::used_space()const{
     return _Impl->used_space();
+}
+
+void CopmressedWriter::set_first(const Meas &first) {
+	_Impl->set_first(first);
 }
 
 CopmressedReader::CopmressedReader(){
