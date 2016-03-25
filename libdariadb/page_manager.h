@@ -3,8 +3,8 @@
 #include "utils.h"
 #include "storage/chunk.h"
 #include "storage/storage_mode.h"
-//TODO replace to "cursor.h"
-#include "storage/page.h"
+#include "storage/cursor.h"
+
 #include <vector>
 
 namespace dariadb{
