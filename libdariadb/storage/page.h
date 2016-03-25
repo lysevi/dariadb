@@ -14,6 +14,9 @@ namespace dariadb {
 			uint32_t pos_chunks;
 
 			uint32_t count_readers;
+
+			dariadb::Time minTime;
+			dariadb::Time maxTime;
 		};
 
 		struct Page_ChunkIndex {

@@ -47,6 +47,8 @@ public:
 		
 		res->header->chunk_per_storage = _chunk_per_storage;
 		res->header->chunk_size = _chunk_size;
+		res->header->maxTime = dariadb::Time(0);
+		res->header->minTime = std::numeric_limits<dariadb::Time>::max();
 		return res;
 		
 	}

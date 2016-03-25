@@ -45,6 +45,8 @@ bool Page::append(const Chunk_Ptr&ch, STORAGE_MODE mode) {
 
 	header->pos_chunks += header->chunk_size;
 	header->pos_index++;
+	header->minTime = std::min(header->minTime,ch->minTime);
+	header->maxTime = std::max(header->maxTime, ch->maxTime);
 	return true;
 }
 
@@ -53,9 +55,11 @@ bool Page::is_full()const {
 }
 
 ChuncksList Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
-	header->count_readers++;
-
 	ChuncksList result{};
+	if ((from > header->maxTime) || (to < header->minTime) ){
+		return result;
+	}
+	header->count_readers++;
 	auto index_end = index + header->chunk_per_storage;
 	for (auto index_it = index; index_it != index_end; ++index_it) {
 		if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), index_it->info.first.id) == ids.end())) {
