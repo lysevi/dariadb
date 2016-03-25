@@ -25,8 +25,7 @@ void Cursor::reset_pos() {
 
 Cursor::~Cursor() {
 	if (link != nullptr) {
-		//TODO atomic;
-		link->header->count_readers--;
+		link->dec_reader();
 		link = nullptr;
 	}
 }

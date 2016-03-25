@@ -38,6 +38,7 @@ namespace dariadb {
 			bool append(const Chunk_Ptr&ch, STORAGE_MODE mode);
 			bool is_full()const;
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
+			void dec_reader();
 		};
 	}
 }
