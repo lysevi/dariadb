@@ -2,15 +2,12 @@
 
 #include "utils.h"
 #include "storage/chunk.h"
+#include "storage/storage_mode.h"
 
 #include <vector>
 
 namespace dariadb{
     namespace storage{
-
-        enum class STORAGE_MODE: uint8_t{
-            SINGLE //single file mode
-        };
 
         class PageManager:public utils::NonCopy {
 			~PageManager();
