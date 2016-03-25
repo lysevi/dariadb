@@ -4,8 +4,6 @@
 
 #include <mutex>
 #include <cstring>
-#include <cassert>
-#include <algorithm>
 
 using namespace dariadb::storage;
 dariadb::storage::PageManager* PageManager::_instance = nullptr;
@@ -61,11 +59,14 @@ public:
 	}
 
 	bool append_chunk(const Chunk_Ptr&ch) {
+		std::lock_guard<std::mutex> lg(_mutex);
 		auto pg=get_cur_page();
         return pg->append(ch,_mode);
 	}
 
 	ChuncksList get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
+		//TODO read must be lockfree.
+		std::lock_guard<std::mutex> lg(_mutex);
 		auto p = get_cur_page();
 
 		return p->get_chunks(ids, from, to, flag);
@@ -76,6 +77,7 @@ protected:
 	uint32_t _chunk_size;
 	Page*  _cur_page;
     STORAGE_MODE _mode;
+	std::mutex _mutex;
 };
 
 PageManager::PageManager(STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size):
