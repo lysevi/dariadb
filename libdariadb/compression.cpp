@@ -64,11 +64,7 @@ public:
     size_t used_space()const{
         return time_comp.used_space();
     }
-    void set_first(const Meas &first,const DeltaCompressor::Position &t_pos) {
-		_first=first;
-		_is_first = false;
-        time_comp.restore_position(t_pos);
-	}
+
     CopmressedWriter::Position get_position()const{
         CopmressedWriter::Position result;
         result.first=_first;

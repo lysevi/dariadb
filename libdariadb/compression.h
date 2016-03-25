@@ -1,9 +1,7 @@
 #pragma once
 
 #include "compression/binarybuffer.h"
-#include "compression/delta.h"
-#include "compression/xor.h"
-#include "compression/flag.h"
+#include "compression/positions.h"
 #include "meas.h"
 #include <memory>
 
@@ -13,9 +11,9 @@ namespace dariadb {
         class CopmressedWriter {
         public:
             struct Position{
-                DeltaCompressor::Position time_pos;
-                XorCompressor::Position value_pos;
-                FlagCompressor::Position flag_pos,src_pos;
+                DeltaCompressionPosition time_pos;
+                XorCompressionPosition value_pos;
+                FlagCompressionPosition flag_pos,src_pos;
                 Meas first;
                 bool is_first;
                 bool is_full;

@@ -1,24 +1,21 @@
 #pragma once
 
 #include "base_compressor.h"
+#include "positions.h"
 
 namespace dariadb {
     namespace compression {
 
         class FlagCompressor:public BaseCompressor {
         public:
-            struct Position{
-                bool _is_first;
-                Flag _first;
-            };
             FlagCompressor() = default;
             FlagCompressor(const BinaryBuffer_Ptr &bw);
             ~FlagCompressor();
 
             bool append(Flag v);
 
-            Position get_position()const;
-            void restore_position(const Position&pos);
+            FlagCompressionPosition get_position()const;
+            void restore_position(const FlagCompressionPosition&pos);
         protected:
             bool _is_first;
             Flag _first;
