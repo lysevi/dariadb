@@ -64,10 +64,34 @@ public:
     size_t used_space()const{
         return time_comp.used_space();
     }
-	void set_first(const Meas &first) {
+    void set_first(const Meas &first,const DeltaCompressor::Position &t_pos) {
 		_first=first;
 		_is_first = false;
+        time_comp.restore_position(t_pos);
 	}
+    CopmressedWriter::Position get_position()const{
+        CopmressedWriter::Position result;
+        result.first=_first;
+        result.time_pos=time_comp.get_position();
+        result.value_pos=value_comp.get_position();
+        result.flag_pos=flag_comp.get_position();
+        result.src_pos=src_comp.get_position();
+        result.is_first=_is_first;
+        result.is_full=_is_full;
+        return result;
+    }
+
+    void restore_postion(const CopmressedWriter::Position&pos){
+        _first=pos.first;
+        _is_first=pos.is_first;
+        _is_full=pos.is_full;
+
+        time_comp.restore_position(pos.time_pos);
+        value_comp.restore_position(pos.value_pos);
+        flag_comp.restore_position(pos.flag_pos);
+        src_comp.restore_position(pos.src_pos);
+    }
+
 protected:
     Meas _first;
     bool _is_first;
@@ -109,7 +133,6 @@ public:
                 || this->flag_dcomp.is_full()
                 || this->src_dcomp.is_full();
     }
-
 protected:
     dariadb::Meas _first;
 
@@ -170,8 +193,12 @@ size_t CopmressedWriter::used_space()const{
     return _Impl->used_space();
 }
 
-void CopmressedWriter::set_first(const Meas &first) {
-	_Impl->set_first(first);
+CopmressedWriter::Position CopmressedWriter::get_position()const{
+    return _Impl->get_position();
+}
+
+void CopmressedWriter::restore_position(const CopmressedWriter::Position&pos){
+    _Impl->restore_postion(pos);
 }
 
 CopmressedReader::CopmressedReader(){

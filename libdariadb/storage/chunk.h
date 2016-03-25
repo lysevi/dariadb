@@ -4,6 +4,9 @@
 #include "../utils.h"
 #include "../compression.h"
 #include "../compression/binarybuffer.h"
+#include "../compression/delta.h"
+#include "../compression/xor.h"
+#include "../compression/flag.h"
 #include <mutex>
 
 namespace dariadb {
@@ -18,6 +21,7 @@ namespace dariadb {
 			size_t bw_pos;
 			uint8_t  bw_bit_num;
 			bool is_readonly;
+            compression::CopmressedWriter::Position writer_position;
 		};
 
 

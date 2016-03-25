@@ -28,11 +28,20 @@ namespace dariadb {
 
         class XorCompressor:public BaseCompressor {
         public:
+            struct Position{
+                bool _is_first;
+                uint64_t _first;
+                uint64_t _prev_value;
+                uint8_t _prev_lead;
+                uint8_t _prev_tail;
+            };
             XorCompressor() = default;
             XorCompressor(const BinaryBuffer_Ptr &bw);
             ~XorCompressor();
 
             bool append(Value v);
+            Position get_position()const;
+            void restore_position(const Position&pos);
         protected:
             bool _is_first;
             uint64_t _first;

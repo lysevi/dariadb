@@ -84,6 +84,23 @@ bool DeltaCompressor::append(dariadb::Time t){
 }
 
 
+
+DeltaCompressor::Position DeltaCompressor::get_position()const{
+    Position result;
+    result._first=_first;
+    result._is_first=_is_first;
+    result._prev_delta=_prev_delta;
+    result._prev_time=_prev_time;
+    return result;
+}
+
+void DeltaCompressor::restore_position(const DeltaCompressor::Position&pos){
+    _first=pos._first;
+    _is_first=pos._is_first;
+    _prev_delta=pos._prev_delta;
+    _prev_time=pos._prev_time;
+}
+
 uint16_t DeltaCompressor::get_delta_64(int64_t D) {
     return delta_64_mask |  (delta_64_mask_inv & static_cast<uint16_t>(D));
 }

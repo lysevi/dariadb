@@ -44,6 +44,18 @@ bool FlagCompressor::append(dariadb::Flag v){
     return true;
 }
 
+FlagCompressor::Position FlagCompressor::get_position()const{
+    FlagCompressor::Position result;
+    result._first=_first;
+    result._is_first=_is_first;
+    return result;
+}
+
+void FlagCompressor::restore_position(const FlagCompressor::Position&pos){
+    _first=pos._first;
+    _is_first=pos._is_first;
+}
+
 FlagDeCompressor::FlagDeCompressor(const BinaryBuffer_Ptr & bw, dariadb::Flag first):
 	BaseCompressor(bw),
     _prev_value(first){

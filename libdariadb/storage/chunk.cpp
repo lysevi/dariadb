@@ -32,7 +32,7 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	bw->set_pos(bw_pos);
 	
 	c_writer = compression::CopmressedWriter(bw);
-	c_writer.set_first(index.last);
+    c_writer.restore_position(index.writer_position);
 
 	minTime = std::min(minTime, first.time);
 	maxTime = std::max(maxTime, first.time);
@@ -74,6 +74,7 @@ bool Chunk::append(const Meas&m)
 	auto t_f = this->c_writer.append(m);
 	bw_pos = bw->pos();
 	bw_bit_num= bw->bitnum();
+    writer_position=c_writer.get_position();
 
 	if (!t_f) {
 		return false;

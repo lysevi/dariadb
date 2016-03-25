@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 	first.time = t;
 	dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
 
-	for (int i = 0;i<(chunks_size/10); i++, t++) {
+    for (size_t i = 0;i<(chunks_size/10); i++, t++) {
 		first.flag = dariadb::Flag(i);
 		first.time = t;
 		first.value = dariadb::Value(i);
@@ -110,10 +110,10 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 	BOOST_CHECK(res);
 
 	auto all_chunks=PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0)->readAll();
-	BOOST_CHECK_EQUAL(all_chunks.size(), 1);
+    BOOST_CHECK_EQUAL(all_chunks.size(), size_t(1));
 	if (all_chunks.size() != 0) {
 		auto c = all_chunks.front();
-		first.time += 10;
+        first.time ++;
 		first.flag++;
 		first.value++;
 		BOOST_CHECK(c->append(first));
@@ -125,11 +125,13 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 			auto m = crr.read();
 			ml.push_back(m);
 			if (m.flag != dariadb::Flag(i)) {
-				int a = 3;
+                BOOST_MESSAGE("m.flag != dariadb::Flag(i)");
 			}
+            BOOST_CHECK_EQUAL(m.time, dariadb::Time(i));
 			BOOST_CHECK_EQUAL(m.flag, dariadb::Flag(i));
 			BOOST_CHECK_EQUAL(m.value, dariadb::Value(i));
 		}
+        ml.clear();
 	}
 	PageManager::stop();
 }
