@@ -14,7 +14,7 @@ namespace dariadb {
 			bool is_end()const;
 			Chunk_Ptr readNext();
 			ChuncksList readAll();
-			void reset_pos();//write to begining;
+			void reset_pos();//start read from begining;
 		protected:
 			Page* link;
 			bool _is_end;

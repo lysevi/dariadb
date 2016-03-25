@@ -68,8 +68,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         dariadb::Time minTime_replaced(t);
         t=add_chunk(t,chunks_size);
 
-
-        auto all_chunks=PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0)->readAll();
+		auto cursor = PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0);
+        auto all_chunks=cursor->readAll();
         BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
 
         for (dariadb::storage::Chunk_Ptr ch : all_chunks) {
@@ -77,6 +77,11 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         }
 
         BOOST_CHECK(minTime_replaced>minTime);
+
+		//reset_pos test.
+		cursor->reset_pos();
+		all_chunks = cursor->readAll();
+		BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
     }
 	PageManager::stop();
 }
