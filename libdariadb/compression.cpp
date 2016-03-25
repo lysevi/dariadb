@@ -124,6 +124,7 @@ public:
         result.value = value_dcomp.read();
         result.flag = flag_dcomp.read();
         result.src=src_dcomp.read();
+        result.id=_first.id;
         return result;
     }
 

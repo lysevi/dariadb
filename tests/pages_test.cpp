@@ -120,18 +120,16 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 		
 		c->bw->reset_pos();
 		dariadb::compression::CopmressedReader crr(c->bw, c->first);
-		dariadb::Meas::MeasList ml;
+
 		for (uint32_t i = 0; i < c->count; i++) {
 			auto m = crr.read();
-			ml.push_back(m);
-			if (m.flag != dariadb::Flag(i)) {
-                BOOST_MESSAGE("m.flag != dariadb::Flag(i)");
-			}
+
             BOOST_CHECK_EQUAL(m.time, dariadb::Time(i));
 			BOOST_CHECK_EQUAL(m.flag, dariadb::Flag(i));
 			BOOST_CHECK_EQUAL(m.value, dariadb::Value(i));
+            BOOST_CHECK_EQUAL(m.id, dariadb::Id(1));
 		}
-        ml.clear();
+
 	}
 	PageManager::stop();
 }
