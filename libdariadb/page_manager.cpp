@@ -66,7 +66,7 @@ public:
         return pg->append(ch,_mode);
 	}
 
-	ChuncksList get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
+	Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
 		//TODO read must be lockfree.
 		std::lock_guard<std::mutex> lg(_mutex);
 		auto p = get_cur_page();
@@ -112,6 +112,6 @@ bool PageManager::append_chunk(const Chunk_Ptr&ch) {
 	return impl->append_chunk(ch);
 }
 
-ChuncksList PageManager::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
+Cursor_ptr PageManager::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
 	return impl->get_chunks(ids, from, to, flag);
 }

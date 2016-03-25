@@ -3,7 +3,8 @@
 #include "utils.h"
 #include "storage/chunk.h"
 #include "storage/storage_mode.h"
-
+//TODO replace to "cursor.h"
+#include "storage/page.h"
 #include <vector>
 
 namespace dariadb{
@@ -21,7 +22,7 @@ namespace dariadb{
 
 			
 			bool append_chunk(const Chunk_Ptr&ch);
-			ChuncksList get_chunks(const IdArray&ids, Time from, Time to, Flag flag);
+			Cursor_ptr get_chunks(const IdArray&ids, Time from, Time to, Flag flag);
         private:
             static PageManager*_instance;
 			class Private;

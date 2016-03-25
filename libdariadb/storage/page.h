@@ -4,6 +4,26 @@
 
 namespace dariadb {
 	namespace storage {
+		struct Page;
+		struct Page_ChunkIndex;
+		class Cursor:public utils::NonCopy {
+		public:
+			Cursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
+			~Cursor();
+			Cursor() = delete;
+			bool is_end()const;
+			Chunk_Ptr readNext();
+			ChuncksList readAll();
+			void reset_pos();//write to begining;
+		protected:
+			Page* link;
+			bool _is_end;
+			Page_ChunkIndex *_index_it, *_index_end;
+			dariadb::IdArray _ids;
+			dariadb::Time _from, _to;
+			dariadb::Flag _flag;
+		};
+		typedef std::shared_ptr<Cursor> Cursor_ptr;
 #pragma pack(push, 1)
 		struct PageHeader {
 			//TODO replace indexes and pos to uint64_t. if needed.
@@ -36,7 +56,7 @@ namespace dariadb {
 
 			bool append(const Chunk_Ptr&ch, STORAGE_MODE mode);
 			bool is_full()const;
-			ChuncksList get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
+			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 		};
 	}
 }

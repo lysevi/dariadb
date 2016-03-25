@@ -54,27 +54,75 @@ bool Page::is_full()const {
 	return !(header->pos_index < header->chunk_per_storage);
 }
 
-ChuncksList Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
-	ChuncksList result{};
+Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
+	Cursor_ptr result{ new Cursor{this,ids,from,to,flag} };
 	if ((from > header->maxTime) || (to < header->minTime) ){
 		return result;
 	}
+	
 	header->count_readers++;
-	auto index_end = index + header->chunk_per_storage;
-	for (auto index_it = index; index_it != index_end; ++index_it) {
-		if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), index_it->info.first.id) == ids.end())) {
+	
+	return result;
+}
+
+Cursor::Cursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag):
+	link(page),
+	_ids(ids),
+	_from(from),
+	_to(to),
+	_flag(flag)
+{
+	reset_pos();
+}
+
+void Cursor::reset_pos() {
+	_is_end = false;
+	_index_end = link->index + link->header->chunk_per_storage;
+	_index_it = link->index;
+}
+
+Cursor::~Cursor() {
+	if (link != nullptr) {
+		//TODO atomic;
+		link->header->count_readers--;
+		link = nullptr;
+	}
+}
+
+bool Cursor::is_end()const {
+	return _is_end;
+}
+
+Chunk_Ptr Cursor::readNext() {
+	for (; !_is_end;_index_it++) {
+		if (_index_it == _index_end) {
+			_is_end = true;
+			return nullptr;
+		}
+		if ((_ids.size() != 0) && (std::find(_ids.begin(), _ids.end(), _index_it->info.first.id) == _ids.end())) {
 			continue;
 		}
 
-		if (!dariadb::bloom_check(index_it->info.flag_bloom, flag)) {
+		if (!dariadb::bloom_check(_index_it->info.flag_bloom, _flag)) {
 			continue;
 		}
 
-		if ((dariadb::utils::inInterval(from, to, index_it->info.minTime)) || (dariadb::utils::inInterval(from, to, index_it->info.maxTime))) {
-			Chunk_Ptr c = std::make_shared<Chunk>(index_it->info, chunks + index_it->offset, header->chunk_size);
+		if ((dariadb::utils::inInterval(_from, _to, _index_it->info.minTime)) || (dariadb::utils::inInterval(_from, _to, _index_it->info.maxTime))) {
+			Chunk_Ptr c = std::make_shared<Chunk>(_index_it->info, link->chunks + _index_it->offset, link->header->chunk_size);
+			_index_it++;
+			return c;
+		}
+	}
+	return nullptr;
+}
+
+ChuncksList Cursor::readAll() {
+	ChuncksList result;
+	while (!_is_end) {
+		auto c = readNext();
+		if (c != nullptr) {
 			result.push_back(c);
 		}
 	}
-	header->count_readers--;
 	return result;
 }
