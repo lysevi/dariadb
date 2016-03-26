@@ -8,12 +8,17 @@ namespace dariadb {
 		struct Page_ChunkIndex;
 		class Cursor :public utils::NonCopy {
 		public:
+            class Callback{
+              public:
+                virtual void call(Chunk_Ptr &ptr)=0;
+            };
 			Cursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			~Cursor();
 			Cursor() = delete;
 			bool is_end()const;
-			Chunk_Ptr readNext();
-			ChuncksList readAll();
+            void readNext(Callback*cbk);
+            void readAll(Callback*cbk);
+            void readAll(ChuncksList*output);
 			void reset_pos();//start read from begining;
 		protected:
 			Page* link;
