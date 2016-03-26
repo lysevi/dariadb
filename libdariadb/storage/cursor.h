@@ -1,7 +1,7 @@
 #pragma once
 
 #include "chunk.h"
-
+#include <mutex>
 namespace dariadb {
 	namespace storage {
 		struct Page;
@@ -27,6 +27,7 @@ namespace dariadb {
 			dariadb::IdArray _ids;
 			dariadb::Time _from, _to;
 			dariadb::Flag _flag;
+            std::mutex _mutex;
 		};
 
 		typedef std::shared_ptr<Cursor> Cursor_ptr;
