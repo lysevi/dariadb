@@ -7,6 +7,18 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
+class Cursor_ListAppend_callback:public Cursor::Callback{
+  public:
+    ChuncksList*_out;
+    Cursor_ListAppend_callback(ChuncksList*out){
+        _out=out;
+
+    }
+    void call(Chunk_Ptr &ptr) override{
+        _out->push_back(ptr);
+    }
+};
+
 Cursor::Cursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) :
 	link(page),
 	_ids(ids),
@@ -34,11 +46,11 @@ bool Cursor::is_end()const {
 	return _is_end;
 }
 
-Chunk_Ptr Cursor::readNext() {
+void Cursor::readNext( Cursor::Callback*cbk) {
 	for (; !_is_end; _index_it++) {
 		if (_index_it == _index_end) {
 			_is_end = true;
-			return nullptr;
+            break;
 		}
 		if ((_ids.size() != 0) && (std::find(_ids.begin(), _ids.end(), _index_it->info.first.id) == _ids.end())) {
 			continue;
@@ -50,20 +62,20 @@ Chunk_Ptr Cursor::readNext() {
 
 		if ((dariadb::utils::inInterval(_from, _to, _index_it->info.minTime)) || (dariadb::utils::inInterval(_from, _to, _index_it->info.maxTime))) {
 			Chunk_Ptr c = std::make_shared<Chunk>(_index_it->info, link->chunks + _index_it->offset, link->header->chunk_size);
+            cbk->call(c);
 			_index_it++;
-			return c;
+            break;
 		}
 	}
-	return nullptr;
 }
 
-ChuncksList Cursor::readAll() {
-	ChuncksList result;
+void Cursor::readAll(ChuncksList*output){
+    std::unique_ptr<Cursor_ListAppend_callback> clbk{new Cursor_ListAppend_callback{output}};
+    readAll(clbk.get());
+}
+
+void Cursor::readAll(Callback*cbk) {
 	while (!_is_end) {
-		auto c = readNext();
-		if (c != nullptr) {
-			result.push_back(c);
-		}
+        readNext(cbk);
 	}
-	return result;
 }
