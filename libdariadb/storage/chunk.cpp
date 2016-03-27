@@ -1,5 +1,5 @@
 #include "chunk.h"
-#include "../bloom_filter.h"
+#include "bloom_filter.h"
 #include <algorithm>
 #include <cassert>
 
@@ -60,7 +60,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 	c_writer.append(first);
 	minTime = std::min(minTime, first_m.time);
 	maxTime = std::max(maxTime, first_m.time);
-	flag_bloom = dariadb::bloom_empty<dariadb::Flag>();
+    flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
 }
 
 Chunk::~Chunk() {
@@ -84,7 +84,7 @@ bool Chunk::append(const Meas&m)
 
 		minTime = std::min(minTime, m.time);
 		maxTime = std::max(maxTime, m.time);
-		flag_bloom = dariadb::bloom_add(flag_bloom, m.flag);
+        flag_bloom = dariadb::storage::bloom_add(flag_bloom, m.flag);
 		last = m;
 		return true;
 	}
@@ -92,7 +92,7 @@ bool Chunk::append(const Meas&m)
 
 bool Chunk::check_flag(const Flag& f) {
 	if (f != 0) {
-		if (!dariadb::bloom_check(flag_bloom, f)) {
+        if (!dariadb::storage::bloom_check(flag_bloom, f)) {
 			return false;
 		}
 	}

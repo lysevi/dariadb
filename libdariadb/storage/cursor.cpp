@@ -1,6 +1,6 @@
 #include "cursor.h"
 #include "page.h"
-#include "../bloom_filter.h"
+#include "bloom_filter.h"
 
 #include <algorithm>
 
@@ -57,7 +57,7 @@ void Cursor::readNext( Cursor::Callback*cbk) {
 			continue;
 		}
 
-		if (!dariadb::bloom_check(_index_it->info.flag_bloom, _flag)) {
+        if (!dariadb::storage::bloom_check(_index_it->info.flag_bloom, _flag)) {
 			continue;
 		}
 

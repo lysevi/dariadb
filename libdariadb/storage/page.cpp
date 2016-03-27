@@ -1,5 +1,5 @@
 #include "page.h"
-#include "../bloom_filter.h"
+#include "bloom_filter.h"
 #include <cassert>
 #include <algorithm>
 #include <mutex>

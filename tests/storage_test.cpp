@@ -5,6 +5,8 @@
 #include <meas.h>
 #include <memstorage.h>
 #include <time_ordered_set.h>
+#include <storage/bloom_filter.h>
+
 #include <flags.h>
 #include <string>
 #include <thread>
@@ -14,6 +16,24 @@
 #include "test_common.h"
 
 const size_t copies_count = 100;
+
+
+BOOST_AUTO_TEST_CASE(BloomTest) {
+    typedef uint8_t u8_fltr_t;
+
+    auto u8_fltr = dariadb::storage::bloom_empty<u8_fltr_t>();
+
+    BOOST_CHECK_EQUAL(u8_fltr, uint8_t{ 0 });
+
+    u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{ 1 });
+    u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{ 2 });
+
+    BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 1 }));
+    BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 2 }));
+    BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 3 }));
+    BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{ 4 }));
+    BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{ 5 }));
+}
 
 void checkAll(dariadb::Meas::MeasList res,
 	std::string msg,
