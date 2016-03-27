@@ -7,12 +7,12 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
-using namespace dariadb::storage::fs;
+using namespace dariadb::utils::fs;
 
 namespace bi=boost::interprocess;
 
 namespace dariadb{
-    namespace  storage {
+    namespace  utils {
         namespace fs {
             std::list<std::string> ls(const std::string &path){
                 std::list<boost::filesystem::path> result;

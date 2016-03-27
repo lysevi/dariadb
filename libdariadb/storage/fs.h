@@ -6,7 +6,7 @@
 #include <memory>
 
 namespace dariadb{
-    namespace  storage {
+    namespace  utils {
         namespace fs {
             std::list<std::string> ls(const std::string &path);
             std::list<std::string> ls(const std::string &path, const std::string &ext);
