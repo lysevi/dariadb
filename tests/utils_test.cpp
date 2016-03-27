@@ -55,4 +55,20 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
 
   auto res=dariadb::storage::fs::ls(".");
   BOOST_CHECK(res.size()>0);
+
+  const std::string fname="mapped_file.test";
+  auto mapf=dariadb::storage::fs::MappedFile::touch(fname,1024);
+  for(uint8_t i=0;i<100;i++){
+      mapf->data()[i]=i;
+  }
+  mapf->close();
+
+  res=dariadb::storage::fs::ls(".",".test");
+  BOOST_CHECK(res.size()==1);
+  auto reopen_mapf=dariadb::storage::fs::MappedFile::open(fname);
+  for(uint8_t i=0;i<100;i++){
+      BOOST_CHECK_EQUAL(reopen_mapf->data()[i],i);
+  }
+  reopen_mapf->close();
+  dariadb::storage::fs::rm(fname);
 }

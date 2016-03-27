@@ -1,7 +1,15 @@
 #include "fs.h"
 #include "../exception.h"
 #include <iterator>
+#include <fstream>
 #include <boost/filesystem.hpp>
+
+#include <boost/interprocess/file_mapping.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+
+using namespace dariadb::storage::fs;
+
+namespace bi=boost::interprocess;
 
 namespace dariadb{
     namespace  storage {
@@ -67,13 +75,103 @@ namespace dariadb{
                 boost::filesystem::path p(fname);
                 return p.stem().string();
             }
+
             std::string parent_path(std::string fname){
                 boost::filesystem::path p(fname);
 
                 return p.parent_path().string();
 
             }
-
         }
     }
+}
+class MappedFile::Impl
+{
+public:
+    Impl(){
+        _closed=false;
+        m_file=nullptr;
+        m_region=nullptr;
+    }
+
+    ~Impl(){
+        if(!_closed){
+            close();
+        }
+    }
+
+    static Impl*open(const std::string&path){
+        auto result=new Impl();
+        result->m_file = new bi::file_mapping(path.c_str(), bi::read_write);
+        result->m_region = new bi::mapped_region(*(result->m_file), bi::read_write);
+        return result;
+    }
+
+    static Impl*touch(const std::string&path, uint64_t size){
+        try {
+            bi::file_mapping::remove(path.c_str());
+            std::filebuf fbuf;
+            fbuf.open(path,
+                      std::ios_base::in |
+                      std::ios_base::out|
+                      std::ios_base::trunc|
+                      std::ios_base::binary);
+            //Set the size
+            fbuf.pubseekoff(size-1, std::ios_base::beg);
+            fbuf.sputc(0);
+            fbuf.close();
+            return Impl::open(path);
+        } catch (std::runtime_error &ex) {
+            std::string what = ex.what();
+            throw MAKE_EXCEPTION(ex.what());
+        }
+
+    }
+
+    void close(){
+        _closed=true;
+        m_region->flush();
+        delete m_region;
+        delete m_file;
+        m_region=nullptr;
+        m_file=nullptr;
+    }
+
+    uint8_t* data(){
+        return static_cast<uint8_t*>(m_region->get_address());
+    }
+
+protected:
+    bool _closed;
+
+    bi::file_mapping*m_file;
+    bi::mapped_region*m_region;
+};
+
+MappedFile::MappedFile(Impl* im):_impl(im){
+
+}
+
+MappedFile::~MappedFile(){
+
+}
+
+MappedFile::MapperFile_ptr MappedFile::open(const std::string&path){
+    auto impl_res=MappedFile::Impl::open(path);
+    MappedFile::MapperFile_ptr  result{new MappedFile{impl_res}};
+    return result;
+}
+
+MappedFile::MapperFile_ptr MappedFile::touch(const std::string&path, uint64_t size){
+    auto impl_res=MappedFile::Impl::touch(path,size);
+    MappedFile::MapperFile_ptr  result{new MappedFile{impl_res}};
+    return result;
+}
+
+void MappedFile::close(){
+    _impl->close();
+}
+
+uint8_t* MappedFile::data(){
+    return _impl->data();
 }
