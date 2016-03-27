@@ -23,6 +23,7 @@ namespace dariadb {
 		struct Page_ChunkIndex {
 			ChunkIndexInfo info;
 			uint64_t       offset;
+            bool is_init;
 		};
 #pragma pack(pop)
 

@@ -53,6 +53,10 @@ void Cursor::readNext( Cursor::Callback*cbk) {
 			_is_end = true;
             break;
 		}
+        if(!_index_it->is_init){
+            continue;
+        }
+
 		if ((_ids.size() != 0) && (std::find(_ids.begin(), _ids.end(), _index_it->info.first.id) == _ids.end())) {
 			continue;
 		}

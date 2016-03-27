@@ -34,6 +34,7 @@ bool Page::append(const Chunk_Ptr&ch, STORAGE_MODE mode) {
 			auto pos_index = get_oldes_index();
 
 			index[pos_index].info = *index_rec;
+            index[pos_index].is_init = true;
 			memcpy(this->chunks + index[pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
 			return true;
 		}
@@ -41,6 +42,7 @@ bool Page::append(const Chunk_Ptr&ch, STORAGE_MODE mode) {
 	}
 	index[header->pos_index].info = *index_rec;
 	index[header->pos_index].offset = header->pos_chunks;
+    index[header->pos_index].is_init = true;
 	memcpy(this->chunks + header->pos_chunks, buffer, sizeof(uint8_t)*header->chunk_size);
 
 	header->pos_chunks += header->chunk_size;
