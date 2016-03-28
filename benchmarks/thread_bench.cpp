@@ -4,6 +4,7 @@
 #include <iterator>
 
 #include <dariadb.h>
+#include <utils/fs.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
@@ -74,6 +75,26 @@ void thread_writer_rnd(dariadb::Id id,
 	
 }
 
+
+void thread_writer_rnd_stor(dariadb::Id id,
+	dariadb::Time from,
+	dariadb::Time to,
+	dariadb::Time step,
+	dariadb::storage::AbstractStorage_ptr ms)
+{
+	auto m = dariadb::Meas::empty();
+	for (auto i = from; i < to; i += step) {
+		m.id = id;
+		m.flag = dariadb::Flag(i);
+		m.time = dariadb::timeutil::current_time() - id;
+		m.value = dariadb::Value(i);
+		ms->append(m);
+		append_count++;
+	}
+
+}
+
+
 void show_info() {
 	clock_t t0 = clock();
 	auto all_writes = thread_count*iteration_count;
@@ -82,21 +103,21 @@ void show_info() {
 
 		clock_t t1 = clock();
 		auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
-		auto read_per_sec = read_all_times.load() / double((t1 - t0) / CLOCKS_PER_SEC);
+		//auto read_per_sec = read_all_times.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 		std::cout << "\rwrites: " << writes_per_sec 
 			<< "/sec progress:" << (100 * append_count) / all_writes 
 			<< "%     ";
-		if (!stop_read_all) {
+		/*if (!stop_read_all) {
 			std::cout << " read_all_times: " << read_per_sec <<"/sec             ";
-		}
+		}*/
 		std::cout.flush();
 		if (stop_info) {
-			std::cout << "\rwrites: " << writes_per_sec 
+			/*std::cout << "\rwrites: " << writes_per_sec 
 				<< "/sec progress:" << (100 * append_count) / all_writes 
 				<< "%            ";
 			if (!stop_read_all) {
 				std::cout << " read_all_times: " << read_per_sec << "/sec            ";
-			}
+			}*/
 			std::cout.flush();
 			break;
 		}
@@ -108,6 +129,7 @@ int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
 	{
+		std::cout << "MemStorage" << std::endl;
 		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 2000000 } };
 		std::thread info_thread(show_info);
 		std::vector<std::thread> writers(thread_count);
@@ -116,7 +138,7 @@ int main(int argc, char *argv[]) {
 			std::thread t{ thread_writer, i, 0, iteration_count,1,ms };
 			writers[pos++] = std::move(t);
 		}
-		std::thread read_all_t{ thread_read_all, 0, dariadb::Time(iteration_count), ms };
+		//std::thread read_all_t{ thread_read_all, 0, dariadb::Time(iteration_count), ms };
 
 		pos = 0;
 		for (size_t i = 0; i < thread_count; i++) {
@@ -126,7 +148,7 @@ int main(int argc, char *argv[]) {
 		stop_info = true;
 		stop_read_all = true;
 		info_thread.join();
-		read_all_t.join();
+		//read_all_t.join();
 	}
 	{
 		std::cout << "Capacitor" << std::endl;
@@ -152,5 +174,53 @@ int main(int argc, char *argv[]) {
 		stop_info = true;
 		info_thread.join();
 		cp->flush();
+	}
+	{
+		std::cout << "Union" << std::endl;
+		const std::string storage_path = "testStorage";
+		const size_t chunk_per_storage = 1024;
+		const size_t chunk_size = 512;
+		const size_t cap_max_size = 10000;
+		const dariadb::Time write_window_deep = 2000;
+		
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
+		dariadb::storage::AbstractStorage_ptr ms{
+			new dariadb::storage::UnionStorage(storage_path,
+			dariadb::storage::STORAGE_MODE::SINGLE,
+				chunk_per_storage,
+				chunk_size,
+				write_window_deep,
+				cap_max_size) };
+
+		append_count = 0;
+		stop_info = false;
+		stop_read_all = false;
+
+		std::thread info_thread(show_info);
+		std::vector<std::thread> writers(thread_count);
+
+		size_t pos = 0;
+		for (size_t i = 0; i < thread_count; i++) {
+			std::thread t{ thread_writer_rnd_stor, i, 0, iteration_count,1,ms };
+			writers[pos++] = std::move(t);
+		}
+		//std::thread read_all_t{ thread_read_all, 0, dariadb::Time(iteration_count), ms };
+
+		pos = 0;
+		for (size_t i = 0; i < thread_count; i++) {
+			std::thread t = std::move(writers[pos++]);
+			t.join();
+		}
+		stop_info = true;
+		stop_read_all = true;
+		info_thread.join();
+		//read_all_t.join();
+		
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
 	}
 }

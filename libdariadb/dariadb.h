@@ -7,5 +7,6 @@
 #include "storage.h"
 #include "storage/memstorage.h"
 #include "storage/capacitor.h"
+#include "union_storage.h"
 #include "timeutil.h"
 #include "page_manager.h"

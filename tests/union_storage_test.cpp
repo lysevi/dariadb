@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <union_storage.h>
 #include <timeutil.h>
+#include <utils/fs.h>
 
 BOOST_AUTO_TEST_CASE(UnionStorage) {
 	{
@@ -12,6 +13,10 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 		const size_t cap_max_size = 10000;
 		const dariadb::Time write_window_deep = 2000;
 
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
 		dariadb::storage::AbstractStorage_ptr ms{
 			new dariadb::storage::UnionStorage(storage_path,
 			dariadb::storage::STORAGE_MODE::SINGLE,
@@ -20,17 +25,17 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 				write_window_deep,
 				cap_max_size) };
 
-		const dariadb::Time from = 0;
-		const dariadb::Time to = 100;
-		const dariadb::Time step = 2;
 		auto e = dariadb::Meas::empty();
-
 		//max time always
 		dariadb::Time t = dariadb::timeutil::current_time();
 		for (size_t i = 0; i < cap_max_size; i++) {
 			e.time = t;
 			t += 1;
 			BOOST_CHECK(ms->append(e).writed==1);
+		}
+
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
 		}
 	}
 }
