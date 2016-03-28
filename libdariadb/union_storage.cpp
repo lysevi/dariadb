@@ -1,22 +1,30 @@
 #include "union_storage.h"
 #include "storage/memstorage.h"
 #include "storage/capacitor.h"
+#include "utils/exception.h"
+#include <cassert>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 
 class UnionStorage::Private {
 public:
-	Private(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size, const dariadb::Time write_window_deep, const size_t cap_max_size):
+    Private(const std::string &path,
+            STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size,
+            const dariadb::Time write_window_deep, const size_t cap_max_size,
+            const size_t max_mem_chunks):
 		mem_storage{ new MemoryStorage(chunk_size) },
 		_path(path),
 		_mode(mode),
 		_chunk_per_storage(chunk_per_storage),
 		_chunk_size(chunk_size),
 		_write_window_deep(write_window_deep),
-		_cap_max_size(cap_max_size)
+        _cap_max_size(cap_max_size),
+        _max_mem_chunks(max_mem_chunks)
 	{
 		mem_cap = new Capacitor(_cap_max_size, mem_storage, _write_window_deep);
+        mem_storage_raw=dynamic_cast<MemoryStorage*>(mem_storage.get());
+        assert(mem_storage_raw!=nullptr);
 	}
 	~Private() {
 		delete mem_cap;
@@ -50,6 +58,10 @@ public:
 		else {
 			result.writed++;
 		}
+
+        if(mem_storage_raw->chunks_total_size()>_max_mem_chunks){
+           NOT_IMPLEMENTED;
+        }
 		return result;
 	}
 	
@@ -68,7 +80,8 @@ public:
 		return mem_storage->currentValue(ids, flag);
 	}
 
-	storage::AbstractStorage_ptr mem_storage;
+    storage::AbstractStorage_ptr mem_storage;
+    storage::MemoryStorage* mem_storage_raw;
 	storage::Capacitor* mem_cap;
 	std::string _path;
 	STORAGE_MODE _mode;
@@ -76,10 +89,17 @@ public:
 	size_t _chunk_size;
 	dariadb::Time _write_window_deep;
 	size_t _cap_max_size;
+    size_t _max_mem_chunks;
 };
 
-UnionStorage::UnionStorage(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size, const dariadb::Time write_window_deep, const size_t cap_max_size):
-	_impl{new UnionStorage::Private(path,mode,chunk_per_storage,chunk_size, write_window_deep, cap_max_size)}
+UnionStorage::UnionStorage(const std::string &path,
+                           STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size,
+                           const dariadb::Time write_window_deep, const size_t cap_max_size,
+                           const size_t max_mem_chunks):
+    _impl{new UnionStorage::Private(path,
+                                    mode,chunk_per_storage,chunk_size,
+                                    write_window_deep, cap_max_size,
+                                    max_mem_chunks)}
 {
 }
 
