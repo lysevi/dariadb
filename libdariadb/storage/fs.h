@@ -12,9 +12,9 @@ namespace dariadb{
             std::list<std::string> ls(const std::string &path, const std::string &ext);
 
             bool rm(const std::string &rm_path);
-            std::string filename(std::string fname); // without ex
-            std::string parent_path(std::string fname);
-			std::string append_path(std::string p1, std::string p2);
+            std::string filename(const std::string &fname); // without ex
+            std::string parent_path(const std::string &fname);
+			std::string append_path(const std::string &p1, const std::string &p2);
 
 			bool path_exists(const std::string&path);
 			void mkdir(const std::string&path);

@@ -69,17 +69,17 @@ namespace dariadb{
                 }
             }
 
-            std::string filename(std::string fname){ // without ex
+            std::string filename(const std::string & fname){ // without ex
                 boost::filesystem::path p(fname);
                 return p.stem().string();
             }
 
-            std::string parent_path(std::string fname){
+            std::string parent_path(const std::string & fname){
                 boost::filesystem::path p(fname);
                 return p.parent_path().string();
             }
 			
-			std::string append_path(std::string p1, std::string p2) {
+			std::string append_path(const std::string & p1, const std::string & p2) {
 				boost::filesystem::path p(p1);
 				p.append(p2);
 				return p.string();
