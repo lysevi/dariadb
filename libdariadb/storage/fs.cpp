@@ -81,7 +81,8 @@ namespace dariadb{
 			
 			std::string append_path(const std::string & p1, const std::string & p2) {
 				boost::filesystem::path p(p1);
-				p.append(p2);
+				boost::filesystem::path p_sub(p2);
+				p /= p_sub;
 				return p.string();
 			}
 
