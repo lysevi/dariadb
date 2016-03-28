@@ -43,40 +43,16 @@ public:
 		std::string page_name = ((_mode == STORAGE_MODE::SINGLE) ? "single.page" : "_.page");
 		std::string file_name = dariadb::utils::fs::append_path(_path, page_name);
 
-		auto res = new Page;
+		Page*res = nullptr;
 		
-		//TODO move creation to page class
 		utils::fs::MappedFile::MapperFile_ptr mmap = nullptr;
 		if (!utils::fs::path_exists(file_name)) {
 			auto sz = calc_page_size();
-			mmap = utils::fs::MappedFile::touch(file_name, sz);
-			auto region = mmap->data();
-			std::fill(region, region + sz, 0);
-			
-			res->mmap = mmap;
-			res->region = region;
-			res->header = reinterpret_cast<PageHeader*>(region);
-			res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
-			res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*_chunk_per_storage);
-
-			res->header->chunk_per_storage = _chunk_per_storage;
-			res->header->chunk_size = _chunk_size;
-			res->header->maxTime = dariadb::Time(0);
-			res->header->minTime = std::numeric_limits<dariadb::Time>::max();
+			res = Page::create(file_name, sz,_chunk_per_storage,_chunk_size);
 		}
 		else {
-			mmap = utils::fs::MappedFile::open(file_name);
-
-			auto region = mmap->data();
-
-			res->mmap = mmap;
-			res->region = region;
-			res->header = reinterpret_cast<PageHeader*>(region);
-			res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
-			res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*res->header->chunk_per_storage);
+			res = Page::open(file_name);
 		}
-		
-		
 		return res;
 	}
 

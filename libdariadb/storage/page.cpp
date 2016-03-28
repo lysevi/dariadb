@@ -15,6 +15,39 @@ Page::~Page() {
 	mmap->close();
 }
 
+Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size) {
+	auto res = new Page;
+	auto mmap = utils::fs::MappedFile::touch(file_name, sz);
+	auto region = mmap->data();
+	std::fill(region, region + sz, 0);
+
+	res->mmap = mmap;
+	res->region = region;
+	res->header = reinterpret_cast<PageHeader*>(region);
+	res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
+	res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*chunk_per_storage);
+
+	res->header->chunk_per_storage = chunk_per_storage;
+	res->header->chunk_size = chunk_size;
+	res->header->maxTime = dariadb::Time(0);
+	res->header->minTime = std::numeric_limits<dariadb::Time>::max();
+	return res;
+}
+
+Page* Page::open(std::string file_name) {
+	auto res = new Page;
+	auto mmap = utils::fs::MappedFile::open(file_name);
+
+	auto region = mmap->data();
+
+	res->mmap = mmap;
+	res->region = region;
+	res->header = reinterpret_cast<PageHeader*>(region);
+	res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
+	res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*res->header->chunk_per_storage);
+	return res;
+}
+
 uint32_t Page::get_oldes_index() {
 	auto min_time = std::numeric_limits<dariadb::Time>::max();
 	uint32_t pos = 0;
