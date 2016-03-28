@@ -524,3 +524,31 @@ BOOST_AUTO_TEST_CASE(CurValues) {
 		delete ms;
 	}
 }
+
+BOOST_AUTO_TEST_CASE(DropOldChunks) {
+	auto ms = new dariadb::storage::MemoryStorage{ 500 };
+	auto m = dariadb::Meas::empty();
+	for (auto i = 0; i < 100; i += 1) {
+		m.id = i;
+		m.flag = dariadb::Flag(i);
+		m.src = dariadb::Flag(i);
+		m.time = i;
+		m.value = 0;
+		for (size_t j = 1; j < 1000; j++) {
+			m.value = dariadb::Value(j);
+			m.time++;
+			ms->append(m);
+		}
+	}
+	const dariadb::Time min_time=500;
+	auto before_size=ms->chunks_total_size();
+	auto chunks=ms->drop_old_chunks(min_time);
+	BOOST_CHECK(chunks.size() > 0);
+	for (auto c : chunks) {
+		auto flg = c->maxTime <= min_time;
+		BOOST_CHECK(flg);
+	}
+	auto after_size = ms->chunks_total_size();
+	BOOST_CHECK(before_size >after_size);
+	delete ms;
+}

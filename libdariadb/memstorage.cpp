@@ -380,6 +380,14 @@ public:
     size_t size()const { return _size; }
     size_t chunks_size()const { return _chuncks.size(); }
 
+	size_t chunks_total_size()const { 
+		size_t result = 0;
+		for (auto kv : _chuncks) {
+			result += kv.second.size();
+		}
+		return result;
+	}
+
     void subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk) {
         auto new_s=std::make_shared<SubscribeInfo>(ids,flag,clbk);
 		_subscribe_notify->add(new_s);
@@ -400,6 +408,22 @@ public:
 		return res;
 	}
 
+	dariadb::storage::ChuncksList drop_old_chunks(const dariadb::Time min_time) {
+		std::lock_guard<std::mutex> lg(_mutex_tp);
+		ChuncksList result;
+		for (auto& kv : _chuncks) {
+			while((kv.second.size()>0)) {
+				if (kv.second.front()->maxTime < min_time) {
+					result.push_back(kv.second.front());
+					kv.second.pop_front();
+				}
+				else {
+					break;
+				}
+			}
+		}
+		return result;
+	}
 protected:
     size_t _size;
 
@@ -452,6 +476,9 @@ size_t  MemoryStorage::chunks_size()const {
     return _Impl->chunks_size();
 }
 
+size_t MemoryStorage::chunks_total_size()const {
+	return _Impl->chunks_total_size();
+}
 
 void MemoryStorage::subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk) {
 	return _Impl->subscribe(ids, flag, clbk);
@@ -459,4 +486,9 @@ void MemoryStorage::subscribe(const IdArray&ids,const Flag& flag, const ReaderCl
 
 Reader_ptr MemoryStorage::currentValue(const IdArray&ids, const Flag& flag) {
 	return  _Impl->currentValue(ids, flag);
+}
+
+dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time)
+{
+	return _Impl->drop_old_chunks(min_time);
 }

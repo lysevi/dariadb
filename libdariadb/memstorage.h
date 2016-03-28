@@ -1,6 +1,7 @@
 #pragma once
 
 #include "storage.h"
+#include "storage/chunk.h"
 
 namespace dariadb {
     namespace storage {
@@ -25,9 +26,11 @@ namespace dariadb {
 
             size_t size() const;
             size_t chunks_size() const;
-
+			size_t chunks_total_size()const;
             void subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk)override;
 			Reader_ptr currentValue(const IdArray&ids, const Flag& flag)override;
+
+			ChuncksList drop_old_chunks(const dariadb::Time min_time);
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;
