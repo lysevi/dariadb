@@ -3,11 +3,12 @@
 #include <boost/test/unit_test.hpp>
 
 #include <meas.h>
+#include <union_storage.h>
 #include <storage/memstorage.h>
 #include <storage/time_ordered_set.h>
 #include <storage/bloom_filter.h>
-
 #include <flags.h>
+
 #include <string>
 #include <thread>
 #include <iostream>
@@ -551,4 +552,22 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 	auto after_size = ms->chunks_total_size();
 	BOOST_CHECK(before_size >after_size);
 	delete ms;
+}
+
+
+BOOST_AUTO_TEST_CASE(UnionStorage) {
+	{
+		const std::string storage_path = "testStorage";
+		const size_t chunk_per_storage = 1024;
+		const size_t chunk_size = 512;
+		
+		dariadb::storage::AbstractStorage_ptr ms{
+			new dariadb::storage::UnionStorage(storage_path,
+			dariadb::storage::STORAGE_MODE::SINGLE, chunk_per_storage, chunk_size) };
+
+		const dariadb::Time from = 0;
+		const dariadb::Time to = chunk_size*chunk_size;
+		const dariadb::Time step = 2;
+		storage_test_check(ms.get(), from, to, step);
+	}
 }

@@ -99,29 +99,29 @@ namespace dariadb{
         }
     }
 }
-class MappedFile::Impl
+class MappedFile::Private
 {
 public:
-    Impl(){
+	Private(){
         _closed=false;
         m_file=nullptr;
         m_region=nullptr;
     }
 
-    ~Impl(){
+    ~Private(){
         if(!_closed){
             close();
         }
     }
 
-    static Impl*open(const std::string&path){
-        auto result=new Impl();
+    static Private*open(const std::string&path){
+        auto result=new Private();
         result->m_file = new bi::file_mapping(path.c_str(), bi::read_write);
         result->m_region = new bi::mapped_region(*(result->m_file), bi::read_write);
         return result;
     }
 
-    static Impl*touch(const std::string&path, uint64_t size){
+    static Private*touch(const std::string&path, uint64_t size){
         try {
             bi::file_mapping::remove(path.c_str());
             std::filebuf fbuf;
@@ -134,7 +134,7 @@ public:
             fbuf.pubseekoff(size-1, std::ios_base::beg);
             fbuf.sputc(0);
             fbuf.close();
-            return Impl::open(path);
+            return Private::open(path);
         } catch (std::runtime_error &ex) {
             std::string what = ex.what();
             throw MAKE_EXCEPTION(ex.what());
@@ -162,7 +162,7 @@ protected:
     bi::mapped_region*m_region;
 };
 
-MappedFile::MappedFile(Impl* im):_impl(im){
+MappedFile::MappedFile(Private* im):_impl(im){
 
 }
 
@@ -171,13 +171,13 @@ MappedFile::~MappedFile(){
 }
 
 MappedFile::MapperFile_ptr MappedFile::open(const std::string&path){
-    auto impl_res=MappedFile::Impl::open(path);
+    auto impl_res=MappedFile::Private::open(path);
     MappedFile::MapperFile_ptr  result{new MappedFile{impl_res}};
     return result;
 }
 
 MappedFile::MapperFile_ptr MappedFile::touch(const std::string&path, uint64_t size){
-    auto impl_res=MappedFile::Impl::touch(path,size);
+    auto impl_res=MappedFile::Private::touch(path,size);
     MappedFile::MapperFile_ptr  result{new MappedFile{impl_res}};
     return result;
 }

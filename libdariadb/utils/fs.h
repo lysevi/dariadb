@@ -20,8 +20,8 @@ namespace dariadb{
 			void mkdir(const std::string&path);
 
             class MappedFile:public utils::NonCopy{
-                class Impl;
-                MappedFile(Impl* im);
+                class Private;
+                MappedFile(Private* im);
             public:
                 using MapperFile_ptr=std::shared_ptr<MappedFile>;
 
@@ -32,7 +32,7 @@ namespace dariadb{
                 static MapperFile_ptr open(const std::string&path);
                 static MapperFile_ptr touch(const std::string&path, uint64_t size);
             private:
-                std::unique_ptr<Impl> _impl;
+                std::unique_ptr<Private> _impl;
             };
 
         }
