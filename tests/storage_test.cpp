@@ -554,20 +554,3 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 	delete ms;
 }
 
-
-BOOST_AUTO_TEST_CASE(UnionStorage) {
-	{
-		const std::string storage_path = "testStorage";
-		const size_t chunk_per_storage = 1024;
-		const size_t chunk_size = 512;
-		
-		dariadb::storage::AbstractStorage_ptr ms{
-			new dariadb::storage::UnionStorage(storage_path,
-			dariadb::storage::STORAGE_MODE::SINGLE, chunk_per_storage, chunk_size) };
-
-		const dariadb::Time from = 0;
-		const dariadb::Time to = chunk_size*chunk_size;
-		const dariadb::Time step = 2;
-		storage_test_check(ms.get(), from, to, step);
-	}
-}

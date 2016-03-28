@@ -13,7 +13,7 @@ namespace dariadb {
 			UnionStorage(const UnionStorage&) = delete;
 			UnionStorage&operator=(const UnionStorage&) = delete;
 
-			UnionStorage(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size);
+			UnionStorage(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size, const dariadb::Time write_window_deep, const size_t cap_max_size);
 			Time minTime() override;
 			Time maxTime() override;
 			append_result append(const Meas::PMeas begin, const size_t size) override;
