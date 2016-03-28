@@ -1,8 +1,8 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
-#include <utils.h>
-#include <storage/fs.h>
+#include <utils/utils.h>
+#include <utils/fs.h>
 
 BOOST_AUTO_TEST_CASE(InInterval) {
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 1));

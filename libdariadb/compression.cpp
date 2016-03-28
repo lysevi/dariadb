@@ -2,8 +2,8 @@
 #include "compression/delta.h"
 #include "compression/xor.h"
 #include "compression/flag.h"
-#include "utils.h"
-#include "exception.h"
+#include "utils/utils.h"
+#include "utils/exception.h"
 
 #include <sstream>
 #include <cassert>

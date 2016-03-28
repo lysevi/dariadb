@@ -3,7 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <page_manager.h>
 #include <compression.h>
-#include <storage/fs.h>
+#include <utils/fs.h>
 #include <storage/page.h>
 
 using dariadb::storage::PageManager;

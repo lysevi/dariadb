@@ -6,10 +6,10 @@
 #include <atomic>
 #include <map>
 
-#include <time_ordered_set.h>
+#include <storage/time_ordered_set.h>
 #include <timeutil.h>
-#include <capacitor.h>
-#include <logger.h>
+#include <storage/capacitor.h>
+#include <utils/logger.h>
 
 class Moc_Storage :public dariadb::storage::AbstractStorage {
 public:

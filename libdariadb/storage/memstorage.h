@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage.h"
-#include "storage/chunk.h"
+#include "../storage.h"
+#include "chunk.h"
 
 namespace dariadb {
     namespace storage {

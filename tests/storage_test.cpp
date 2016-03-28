@@ -3,8 +3,8 @@
 #include <boost/test/unit_test.hpp>
 
 #include <meas.h>
-#include <memstorage.h>
-#include <time_ordered_set.h>
+#include <storage/memstorage.h>
+#include <storage/time_ordered_set.h>
 #include <storage/bloom_filter.h>
 
 #include <flags.h>

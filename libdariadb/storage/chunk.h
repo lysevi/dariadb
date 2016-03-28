@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../meas.h"
-#include "../utils.h"
+#include "../utils/utils.h"
 #include "../compression.h"
 #include "../compression/binarybuffer.h"
 

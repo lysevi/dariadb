@@ -1,5 +1,5 @@
 #include "fs.h"
-#include "../exception.h"
+#include "exception.h"
 #include <iterator>
 #include <fstream>
 #include <boost/filesystem.hpp>

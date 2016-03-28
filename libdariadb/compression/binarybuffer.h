@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ostream>
-#include "../exception.h"
-#include "../utils.h"
+#include "../utils/exception.h"
+#include "../utils/utils.h"
 #include <memory>
 
 namespace dariadb {

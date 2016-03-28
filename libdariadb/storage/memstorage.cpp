@@ -1,9 +1,9 @@
 #include "memstorage.h"
-#include "utils.h"
-#include "compression.h"
-#include "flags.h"
+#include "../utils/utils.h"
+#include "../compression.h"
+#include "../flags.h"
 #include "subscribe.h"
-#include "storage/chunk.h"
+#include "chunk.h"
 
 #include <limits>
 #include <algorithm>

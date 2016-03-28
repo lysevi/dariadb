@@ -1,6 +1,6 @@
 #include "delta.h"
-#include "../utils.h"
-#include "../exception.h"
+#include "../utils/utils.h"
+#include "../utils/exception.h"
 #include "binarybuffer.h"
 
 #include <sstream>

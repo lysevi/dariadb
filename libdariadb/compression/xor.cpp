@@ -1,7 +1,7 @@
 #include "xor.h"
 #include "cz.h"
 #include "binarybuffer.h"
-#include "../utils.h"
+#include "../utils/utils.h"
 #include <sstream>
 #include<cassert>
 #include <limits>

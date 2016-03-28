@@ -2,7 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 #include <statistic.h>
-#include <memstorage.h>
+#include <storage/memstorage.h>
 
 class Moc_I1:public dariadb::statistic::BaseMethod {
 public:

@@ -3,9 +3,9 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <time_ordered_set.h>
+#include <storage/time_ordered_set.h>
 #include <timeutil.h>
-#include <capacitor.h>
+#include <storage/capacitor.h>
 #include <ctime>
 
 class Moc_Storage :public dariadb::storage::AbstractStorage {
