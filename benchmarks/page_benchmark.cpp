@@ -64,12 +64,17 @@ int main(int argc, char *argv[]) {
 		BenchCallback*clbk = new BenchCallback;
 		start = clock();
 
-		auto cursor = dariadb::storage::PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, ch->maxTime, 0);
-		cursor->readAll(clbk);
+		dariadb::Time to_t = chunks_size;
+		for (size_t i = 1; i < chunks_count; i++) {
+			auto cursor = dariadb::storage::PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, to_t, 0);
+			cursor->readAll(clbk);
+			cursor = nullptr;
+			to_t *= 2;
+		}
 
 		elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
 		std::cout << "readAll : " << elapsed << std::endl;
-		cursor = nullptr;
+		
 		delete clbk;
 		dariadb::storage::PageManager::stop();
 		if (dariadb::utils::fs::path_exists(storagePath)) {
