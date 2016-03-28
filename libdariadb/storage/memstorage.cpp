@@ -4,6 +4,7 @@
 #include "../flags.h"
 #include "subscribe.h"
 #include "chunk.h"
+#include "../timeutil.h"
 
 #include <limits>
 #include <algorithm>
@@ -411,9 +412,12 @@ public:
 	dariadb::storage::ChuncksList drop_old_chunks(const dariadb::Time min_time) {
 		std::lock_guard<std::mutex> lg(_mutex_tp);
 		ChuncksList result;
+        auto now=dariadb::timeutil::current_time();
+
 		for (auto& kv : _chuncks) {
 			while((kv.second.size()>0)) {
-				if (kv.second.front()->maxTime < min_time) {
+                auto past=(now-min_time);
+                if(kv.second.front()->maxTime< past) {
 					result.push_back(kv.second.front());
 					kv.second.pop_front();
 				}

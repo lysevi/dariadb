@@ -23,11 +23,11 @@ namespace dariadb {
             /// \param chunk_size - size of chunks in byte  (PageManager)
             /// \param write_window_deep - how long in past we can write (Capacitor)
             /// \param cap_max_size - max capacitor size  (Capacitor)
-            /// \param max_mem_chunks - max count of chunks in mem storage (MemStorage_
+            /// \param old_mem_chunks - time when drop old chunks to page (MemStorage)
             UnionStorage(const std::string &path,
                          STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size,
                          const dariadb::Time write_window_deep, const size_t cap_max_size,
-                         const size_t max_mem_chunks);
+                         const dariadb::Time old_mem_chunks);
 
 			Time minTime() override;
 			Time maxTime() override;

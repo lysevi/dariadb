@@ -7,6 +7,8 @@
 #include <storage/memstorage.h>
 #include <storage/time_ordered_set.h>
 #include <storage/bloom_filter.h>
+#include <timeutil.h>
+
 #include <flags.h>
 
 #include <string>
@@ -529,11 +531,12 @@ BOOST_AUTO_TEST_CASE(CurValues) {
 BOOST_AUTO_TEST_CASE(DropOldChunks) {
 	auto ms = new dariadb::storage::MemoryStorage{ 500 };
 	auto m = dariadb::Meas::empty();
-	for (auto i = 0; i < 100; i += 1) {
+    auto t=dariadb::timeutil::current_time();
+    for (auto i = 0; i < 1000; i += 1,t+=100) {
 		m.id = i;
 		m.flag = dariadb::Flag(i);
 		m.src = dariadb::Flag(i);
-		m.time = i;
+        m.time = t;
 		m.value = 0;
 		for (size_t j = 1; j < 1000; j++) {
 			m.value = dariadb::Value(j);
@@ -541,12 +544,13 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 			ms->append(m);
 		}
 	}
-	const dariadb::Time min_time=500;
+    const dariadb::Time min_time=10;
 	auto before_size=ms->chunks_total_size();
 	auto chunks=ms->drop_old_chunks(min_time);
+    auto now=dariadb::timeutil::current_time();
 	BOOST_CHECK(chunks.size() > 0);
 	for (auto c : chunks) {
-		auto flg = c->maxTime <= min_time;
+        auto flg = c->maxTime <= (now-min_time);
 		BOOST_CHECK(flg);
 	}
 	auto after_size = ms->chunks_total_size();
