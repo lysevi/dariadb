@@ -40,8 +40,8 @@ public:
 			dariadb::utils::fs::mkdir(_path);
 		}
 		
-		//TODO implemnt function to concat path
-		std::string file_name = _path + "/" + ((_mode == STORAGE_MODE::SINGLE) ? "single.page" : "_.page");
+		std::string page_name = ((_mode == STORAGE_MODE::SINGLE) ? "single.page" : "_.page");
+		std::string file_name = dariadb::utils::fs::append_path(_path, page_name);
 
 		auto res = new Page;
 		

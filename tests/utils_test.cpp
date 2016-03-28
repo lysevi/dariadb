@@ -51,4 +51,9 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
   }
   reopen_mapf->close();
   dariadb::utils::fs::rm(fname);
+
+  std::string parent_p = "path1";
+  std::string child_p = "path2";
+  auto concat_p=dariadb::utils::fs::append_path(parent_p, child_p);
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(concat_p), parent_p);
 }

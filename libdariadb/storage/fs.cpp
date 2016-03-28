@@ -76,10 +76,15 @@ namespace dariadb{
 
             std::string parent_path(std::string fname){
                 boost::filesystem::path p(fname);
-
                 return p.parent_path().string();
-
             }
+			
+			std::string append_path(std::string p1, std::string p2) {
+				boost::filesystem::path p(p1);
+				p.append(p2);
+				return p.string();
+			}
+
 			bool path_exists(const std::string & path)
 			{
 				return boost::filesystem::exists(path);

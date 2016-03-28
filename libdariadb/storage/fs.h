@@ -14,6 +14,7 @@ namespace dariadb{
             bool rm(const std::string &rm_path);
             std::string filename(std::string fname); // without ex
             std::string parent_path(std::string fname);
+			std::string append_path(std::string p1, std::string p2);
 
 			bool path_exists(const std::string&path);
 			void mkdir(const std::string&path);
