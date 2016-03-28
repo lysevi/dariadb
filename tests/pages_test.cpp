@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 	auto header=dariadb::storage::Page::readHeader(dariadb::utils::fs::append_path(storagePath, "single.page"));
 	BOOST_CHECK_EQUAL(header.chunk_per_storage, chunks_count);
 	BOOST_CHECK_EQUAL(header.chunk_size, chunks_size);
-	BOOST_CHECK_EQUAL(header.count_readers, 0);
+    BOOST_CHECK_EQUAL(header.count_readers, size_t(0));
 
 	PageManager::start(storagePath, dariadb::storage::STORAGE_MODE::SINGLE, chunks_count, chunks_size);
 
