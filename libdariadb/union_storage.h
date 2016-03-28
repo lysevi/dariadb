@@ -7,9 +7,12 @@
 
 namespace dariadb {
 	namespace storage {
-		class UnionStorage :public AbstractStorage, public utils::NonCopy {
+		class UnionStorage :public AbstractStorage{
 		public:
 			UnionStorage() = delete;
+			UnionStorage(const UnionStorage&) = delete;
+			UnionStorage&operator=(const UnionStorage&) = delete;
+
 			UnionStorage(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size);
 			Time minTime() override;
 			Time maxTime() override;
