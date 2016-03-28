@@ -7,6 +7,14 @@
 
 using namespace dariadb::storage;
 
+Page::~Page() {
+	region=nullptr;
+	header=nullptr;
+	index=nullptr;
+	chunks=nullptr;
+	mmap->close();
+}
+
 uint32_t Page::get_oldes_index() {
 	auto min_time = std::numeric_limits<dariadb::Time>::max();
 	uint32_t pos = 0;

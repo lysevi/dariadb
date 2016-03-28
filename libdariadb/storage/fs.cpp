@@ -45,8 +45,6 @@ namespace dariadb{
                     s_result.push_back(it.string());
                 }
                 return s_result;
-
-                return s_result;
             }
 
             bool rm(const std::string &rm_path){
@@ -82,6 +80,16 @@ namespace dariadb{
                 return p.parent_path().string();
 
             }
+			bool path_exists(const std::string & path)
+			{
+				return boost::filesystem::exists(path);
+			}
+			void mkdir(const std::string & path)
+			{
+				if (!boost::filesystem::exists(path)) {
+					boost::filesystem::create_directory(path);
+				}
+			}
         }
     }
 }

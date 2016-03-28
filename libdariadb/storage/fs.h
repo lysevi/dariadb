@@ -15,6 +15,9 @@ namespace dariadb{
             std::string filename(std::string fname); // without ex
             std::string parent_path(std::string fname);
 
+			bool path_exists(const std::string&path);
+			void mkdir(const std::string&path);
+
             class MappedFile:public utils::NonCopy{
                 class Impl;
                 MappedFile(Impl* im);

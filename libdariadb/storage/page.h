@@ -2,6 +2,7 @@
 #include "chunk.h"
 #include "storage_mode.h"
 #include "cursor.h"
+#include "fs.h"
 
 namespace dariadb {
 	namespace storage {
@@ -33,9 +34,9 @@ namespace dariadb {
 			Page_ChunkIndex*index;
 			uint8_t        *chunks;
 			std::mutex      lock;
-
+			utils::fs::MappedFile::MapperFile_ptr mmap;
 			uint32_t get_oldes_index();
-
+			~Page();
 			bool append(const Chunk_Ptr&ch, STORAGE_MODE mode);
 			bool is_full()const;
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);

@@ -1,6 +1,7 @@
 #include "page_manager.h"
 #include "utils.h"
 #include "storage/page.h"
+#include "storage/fs.h"
 
 #include <mutex>
 #include <cstring>
@@ -11,16 +12,16 @@ dariadb::storage::PageManager* PageManager::_instance = nullptr;
 class PageManager::Private
 {
 public:
-    Private(STORAGE_MODE mode,size_t chunk_per_storage, size_t chunk_size) :
+    Private(const std::string &path, STORAGE_MODE mode,size_t chunk_per_storage, size_t chunk_size) :
 		_chunk_per_storage(static_cast<uint32_t>(chunk_per_storage)),
 		_chunk_size(static_cast<uint32_t>(chunk_size)),
         _cur_page(nullptr),
-        _mode(mode)
+        _mode(mode),
+		_path(path)
 	{}
 
 	~Private() {
 		if (_cur_page != nullptr) {
-			delete _cur_page->region;
 			delete _cur_page;
 			_cur_page = nullptr;
 		}
@@ -35,22 +36,48 @@ public:
 	}
 
 	Page* create_page() {
-		auto sz = calc_page_size();
-		auto region = new uint8_t[sz];
-		std::fill(region, region + sz, 0);
+		if (!dariadb::utils::fs::path_exists(_path)) {
+			dariadb::utils::fs::mkdir(_path);
+		}
+		
+		//TODO implemnt function to concat path
+		std::string file_name = _path + "/" + ((_mode == STORAGE_MODE::SINGLE) ? "single.page" : "_.page");
 
 		auto res = new Page;
-		res->region = region;
-		res->header = reinterpret_cast<PageHeader*>(region);
-		res->index =  reinterpret_cast<Page_ChunkIndex*>(region+sizeof(PageHeader));
-		res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*_chunk_per_storage);
 		
-		res->header->chunk_per_storage = _chunk_per_storage;
-		res->header->chunk_size = _chunk_size;
-		res->header->maxTime = dariadb::Time(0);
-		res->header->minTime = std::numeric_limits<dariadb::Time>::max();
+		//TODO move creation to page class
+		utils::fs::MappedFile::MapperFile_ptr mmap = nullptr;
+		if (!utils::fs::path_exists(file_name)) {
+			auto sz = calc_page_size();
+			mmap = utils::fs::MappedFile::touch(file_name, sz);
+			auto region = mmap->data();
+			std::fill(region, region + sz, 0);
+			
+			res->mmap = mmap;
+			res->region = region;
+			res->header = reinterpret_cast<PageHeader*>(region);
+			res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
+			res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*_chunk_per_storage);
+
+			res->header->chunk_per_storage = _chunk_per_storage;
+			res->header->chunk_size = _chunk_size;
+			res->header->maxTime = dariadb::Time(0);
+			res->header->minTime = std::numeric_limits<dariadb::Time>::max();
+		}
+		else {
+			mmap = utils::fs::MappedFile::open(file_name);
+
+			auto region = mmap->data();
+
+			res->mmap = mmap;
+			res->region = region;
+			res->header = reinterpret_cast<PageHeader*>(region);
+			res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
+			res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*res->header->chunk_per_storage);
+		}
+		
+		
 		return res;
-		
 	}
 
 	Page* get_cur_page() {
@@ -80,10 +107,11 @@ protected:
 	Page*  _cur_page;
     STORAGE_MODE _mode;
 	std::mutex _mutex;
+	std::string _path;
 };
 
-PageManager::PageManager(STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size):
-    impl(new PageManager::Private{mode,chunk_per_storage,chunk_size})
+PageManager::PageManager(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size):
+    impl(new PageManager::Private{path, mode,chunk_per_storage,chunk_size})
 {
 	
 }
@@ -91,9 +119,9 @@ PageManager::PageManager(STORAGE_MODE mode, size_t chunk_per_storage, size_t chu
 PageManager::~PageManager() {
 }
 
-void PageManager::start(STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size){
+void PageManager::start(const std::string &path,STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size){
     if(PageManager::_instance==nullptr){
-        PageManager::_instance=new PageManager(mode, chunk_per_storage,chunk_size);
+        PageManager::_instance=new PageManager(path, mode, chunk_per_storage,chunk_size);
     }
 }
 

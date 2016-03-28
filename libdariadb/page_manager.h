@@ -12,11 +12,11 @@ namespace dariadb{
 
         class PageManager:public utils::NonCopy {
 			~PageManager();
-            PageManager(STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size);
+            PageManager(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size);
         public:
 
 			typedef uint32_t handle;
-            static void start(STORAGE_MODE mode,size_t chunk_per_storage,size_t chunk_size);
+            static void start(const std::string &path, STORAGE_MODE mode,size_t chunk_per_storage,size_t chunk_size);
             static void stop();
             static PageManager* instance();
 

@@ -3,11 +3,13 @@
 #include <boost/test/unit_test.hpp>
 #include <page_manager.h>
 #include <compression.h>
+#include <storage/fs.h>
 
 using dariadb::storage::PageManager;
 
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
-  PageManager::start(dariadb::storage::STORAGE_MODE::SINGLE,1,1);
+	const std::string storagePath = "testStorage";
+  PageManager::start(storagePath,dariadb::storage::STORAGE_MODE::SINGLE,1,1);
   BOOST_CHECK(PageManager::instance()!=nullptr);
   PageManager::stop();
 }
@@ -33,10 +35,15 @@ dariadb::Time add_chunk(dariadb::Time t, size_t chunks_size){
 }
 
 BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
+	const std::string storagePath = "testStorage/";
 	const size_t chunks_count = 10;
 	const size_t chunks_size = 100;
 
-    PageManager::start(dariadb::storage::STORAGE_MODE::SINGLE,chunks_count, chunks_size);
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+
+    PageManager::start(storagePath,dariadb::storage::STORAGE_MODE::SINGLE,chunks_count, chunks_size);
 	BOOST_CHECK(PageManager::instance() != nullptr);
 	
 	auto t= dariadb::Time(0);
@@ -65,6 +72,9 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
             }
         }
     }
+	BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
+	BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size()==1);
+
     {//rewrite oldes chunk
         dariadb::Time minTime_replaced(t);
         t=add_chunk(t,chunks_size);
@@ -87,14 +97,23 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 		BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
     }
 	PageManager::stop();
+
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
 }
 
 BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
+	const std::string storagePath = "testStorage";
 	const size_t chunks_count = 10;
 	const size_t chunks_size = 200;
 	auto t = dariadb::Time(0);
 
-	PageManager::start(dariadb::storage::STORAGE_MODE::SINGLE, chunks_count, chunks_size);
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+
+	PageManager::start(storagePath,dariadb::storage::STORAGE_MODE::SINGLE, chunks_count, chunks_size);
 	dariadb::Meas first;
 	first.id = 1;
 	first.time = t;
@@ -108,6 +127,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 			assert(false);
 		}
 	}
+	PageManager::stop();
+	PageManager::start(storagePath, dariadb::storage::STORAGE_MODE::SINGLE, chunks_count, chunks_size);
 
 	auto res = PageManager::instance()->append_chunk(ch);
 	BOOST_CHECK(res);
@@ -136,4 +157,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
 	}
 	PageManager::stop();
+
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
 }
