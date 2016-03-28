@@ -22,14 +22,8 @@ public:
 };
 
 const std::string storagePath = "benchStorage/";
-std::atomic_long append_count{ 0 }, read_all_times{ 0 };
-size_t thread_count = 5;
-size_t iteration_count = 1000000;
 const size_t chunks_count = 1024;
 const size_t chunks_size = 1024;
-bool stop_info = false;
-bool stop_read_all{ false };
-
 
 int main(int argc, char *argv[]) {
 	(void)argc;
@@ -50,6 +44,7 @@ int main(int argc, char *argv[]) {
 				break;
 			}
 		}
+
 		if (dariadb::utils::fs::path_exists(storagePath)) {
 			dariadb::utils::fs::rm(storagePath);
 		}
@@ -58,19 +53,28 @@ int main(int argc, char *argv[]) {
 		auto start = clock();
 
 		for (size_t i = 0; i < chunks_count; ++i) {
-			auto res = dariadb::storage::PageManager::instance()->append_chunk(ch);
+			dariadb::storage::PageManager::instance()->append_chunk(ch);
 			ch->maxTime += dariadb::Time(chunks_size);
 			ch->minTime += dariadb::Time(chunks_size);
-
-			assert(res);
 		}
 
 		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
 		std::cout << "insert : " << elapsed << std::endl;
 
+		BenchCallback*clbk = new BenchCallback;
+		start = clock();
+
+		auto cursor = dariadb::storage::PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, ch->maxTime, 0);
+		cursor->readAll(clbk);
+
+		elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+		std::cout << "readAll : " << elapsed << std::endl;
+		cursor = nullptr;
+		delete clbk;
 		dariadb::storage::PageManager::stop();
 		if (dariadb::utils::fs::path_exists(storagePath)) {
 			dariadb::utils::fs::rm(storagePath);
 		}
+		ch = nullptr;
 	}
 }
