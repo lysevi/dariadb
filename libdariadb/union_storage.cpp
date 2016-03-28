@@ -83,6 +83,9 @@ UnionStorage::UnionStorage(const std::string &path, STORAGE_MODE mode, size_t ch
 {
 }
 
+UnionStorage::~UnionStorage() {
+}
+
 Time UnionStorage::minTime(){
 	return _impl->minTime();
 }
