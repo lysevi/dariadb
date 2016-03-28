@@ -11,6 +11,7 @@ namespace dariadb {
             class Callback{
               public:
                 virtual void call(Chunk_Ptr &ptr)=0;
+				virtual ~Callback() = default;
             };
 			Cursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			~Cursor();
