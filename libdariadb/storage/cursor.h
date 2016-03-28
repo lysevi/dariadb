@@ -4,7 +4,7 @@
 #include <mutex>
 namespace dariadb {
 	namespace storage {
-		struct Page;
+		class Page;
 		struct Page_ChunkIndex;
 		class Cursor :public utils::NonCopy {
 		public:

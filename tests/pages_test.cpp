@@ -4,6 +4,7 @@
 #include <page_manager.h>
 #include <compression.h>
 #include <storage/fs.h>
+#include <storage/page.h>
 
 using dariadb::storage::PageManager;
 
@@ -117,21 +118,28 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 	dariadb::Meas first;
 	first.id = 1;
 	first.time = t;
-	dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
+	{
+		dariadb::storage::Chunk_Ptr ch = std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
 
-    for (size_t i = 0;i<(chunks_size/10); i++, t++) {
-		first.flag = dariadb::Flag(i);
-		first.time = t;
-		first.value = dariadb::Value(i);
-		if (!ch->append(first)) {
-			assert(false);
+		for (size_t i = 0; i < (chunks_size / 10); i++, t++) {
+			first.flag = dariadb::Flag(i);
+			first.time = t;
+			first.value = dariadb::Value(i);
+			if (!ch->append(first)) {
+				assert(false);
+			}
 		}
+		auto res = PageManager::instance()->append_chunk(ch);
+		BOOST_CHECK(res);
 	}
 	PageManager::stop();
-	PageManager::start(storagePath, dariadb::storage::STORAGE_MODE::SINGLE, chunks_count, chunks_size);
 
-	auto res = PageManager::instance()->append_chunk(ch);
-	BOOST_CHECK(res);
+	auto header=dariadb::storage::Page::readHeader(dariadb::utils::fs::append_path(storagePath, "single.page"));
+	BOOST_CHECK_EQUAL(header.chunk_per_storage, chunks_count);
+	BOOST_CHECK_EQUAL(header.chunk_size, chunks_size);
+	BOOST_CHECK_EQUAL(header.count_readers, 0);
+
+	PageManager::start(storagePath, dariadb::storage::STORAGE_MODE::SINGLE, chunks_count, chunks_size);
 
     dariadb::storage::ChuncksList all_chunks;
     PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0)->readAll(&all_chunks);

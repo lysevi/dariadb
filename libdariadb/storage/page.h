@@ -26,23 +26,28 @@ namespace dariadb {
 			uint64_t       offset;
             bool is_init;
 		};
-#pragma pack(pop)
+#pragma pack(pop) 
 
-		struct Page {
-			uint8_t        *region;
-			PageHeader     *header;
-			Page_ChunkIndex*index;
-			uint8_t        *chunks;
-			std::mutex      lock;
-			utils::fs::MappedFile::MapperFile_ptr mmap;
+		class Page {
+			Page() = default;
+		public:
 			static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size);
 			static Page* open(std::string file_name);
+			static PageHeader readHeader(std::string file_name);
 			uint32_t get_oldes_index();
 			~Page();
 			bool append(const Chunk_Ptr&ch, STORAGE_MODE mode);
 			bool is_full()const;
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			void dec_reader();
+		public:
+			uint8_t        *region;
+			PageHeader     *header;
+			Page_ChunkIndex*index;
+			uint8_t        *chunks;
+		protected:
+			std::mutex      lock;
+			utils::fs::MappedFile::MapperFile_ptr mmap;
 		};
 	}
 }

@@ -1,5 +1,6 @@
 #include "page.h"
 #include "bloom_filter.h"
+#include <fstream>
 #include <cassert>
 #include <algorithm>
 #include <mutex>
@@ -46,6 +47,22 @@ Page* Page::open(std::string file_name) {
 	res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
 	res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*res->header->chunk_per_storage);
 	return res;
+}
+
+PageHeader Page::readHeader(std::string file_name) {
+	std::ifstream istream;
+	istream.open(file_name, std::fstream::in | std::fstream::binary);
+	if (!istream.is_open()) {
+		std::stringstream ss;
+		ss << "can't open file. filename=" << file_name;
+		throw MAKE_EXCEPTION(ss.str());
+	}
+	PageHeader result;
+	memset(&result, 0, sizeof(PageHeader));
+	istream.read((char *)&result, sizeof(PageHeader));
+	istream.close();
+	return result;
+
 }
 
 uint32_t Page::get_oldes_index() {
