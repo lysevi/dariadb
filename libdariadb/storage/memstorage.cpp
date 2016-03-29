@@ -324,28 +324,28 @@ public:
         return res;
     }
 
-    std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
-        
+	std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point) {
+
 		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
 		res->is_time_point_reader = true;
-		
-		if (ids.size() == 0) {
-			for (auto ch : _chuncks) {
-				load_tp_from_chunks(res.get(), ch.second, time_point, ch.first, flag);
+
+		auto chunks_before = chunksBeforeTimePoint(ids, flag, time_point);
+		IdArray target_ids{ids};
+		if (target_ids.size() == 0) {
+			target_ids = getIds();
+		}
+
+		for (auto id : target_ids) {
+			auto search_res = chunks_before.find(id);
+			if (search_res == chunks_before.end()) {
+				res->_not_exist.push_back(id);
+			}
+			else {
+				auto ch = search_res->second;
+				res->add_tp(ch, ch->count);
 			}
 		}
-		else {
-			for (auto id : ids) {
-				auto search_res = _chuncks.find(id);
-				if (search_res == _chuncks.end()) {
-					res->_not_exist.push_back(id);
-				}
-				else {
-					auto ch = search_res->second;
-					load_tp_from_chunks(res.get(), ch, time_point, id, flag);
-				}
-			}
-		}
+
         return res;
     }
 
@@ -437,7 +437,38 @@ public:
 			}
 
 		}
+		return result;
+	}
 
+	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
+		IdToChunkMap result;
+		for (auto ch : _chuncks) {
+			if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
+				continue;
+			}
+			auto chunks = &ch.second;
+			for (auto it = chunks->rbegin(); it != chunks->crend(); ++it) {
+				auto cur_chunk = *it;
+				if (!cur_chunk->check_flag(flag)) {
+					continue;
+				}
+				if (cur_chunk->minTime <= timePoint) {
+					result[ch.first] = cur_chunk;
+					break;
+				}
+			}
+		}
+		return result;
+	}
+
+	dariadb::IdArray getIds()const {
+		dariadb::IdArray result;
+		result.resize(_chuncks.size());
+		size_t pos = 0;
+		for (auto&kv : _chuncks) {
+			result[pos] = kv.first;
+			pos++;
+		}
 		return result;
 	}
 protected:
@@ -515,4 +546,12 @@ dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time
 
 ChuncksList MemoryStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
 	return _Impl->chunksByIterval(ids, flag, from, to);
+}
+
+IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
+	return _Impl->chunksBeforeTimePoint(ids, flag, timePoint);
+}
+
+dariadb::IdArray MemoryStorage::getIds()const {
+	return _Impl->getIds();
 }

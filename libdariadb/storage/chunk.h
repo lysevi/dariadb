@@ -51,6 +51,8 @@ namespace dariadb {
 		{
 		public:
 			virtual ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)=0;
+			virtual IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) = 0;
+			virtual IdArray getIds()const=0;
 		};
 	}
 }

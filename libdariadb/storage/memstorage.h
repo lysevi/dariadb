@@ -32,7 +32,10 @@ namespace dariadb {
 			void flush()override;
 
 			ChuncksList drop_old_chunks(const dariadb::Time min_time);
+			
 			ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
+			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
+			IdArray getIds()const override;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;
