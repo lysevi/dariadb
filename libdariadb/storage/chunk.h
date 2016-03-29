@@ -46,6 +46,7 @@ namespace dariadb {
 		typedef std::shared_ptr<Chunk>    Chunk_Ptr;
 		typedef std::list<Chunk_Ptr>      ChuncksList;
 		typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
+		typedef std::map<Id, ChuncksList> ChunkMap;
 
 		class ChunkContainer
 		{
