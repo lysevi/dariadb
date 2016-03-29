@@ -80,22 +80,9 @@ public:
 		return result;
 	}
 
-	void readCurVals(storage::ReaderClb*clb) {
-		for (auto v : _cur_values) {
-			clb->call(v);
-		}
-		this->end = true;
-		this->_tp_readed = true;
-	}
-
     void readNext(storage::ReaderClb*clb) override {
 		std::lock_guard<std::mutex> lg(_mutex);
 		
-		if (_cur_values.size() != 0) {
-			readCurVals(clb);
-			return;
-		}
-
         if (!_tp_readed) {
             this->readTimePoint(clb);
         }
@@ -229,10 +216,55 @@ public:
 
     std::mutex _mutex,_mutex_tp;
 
-	dariadb::Meas::MeasList _cur_values;
+	
 };
 
+class InnerCurrentValuesReader : public Reader {
+public:
+	InnerCurrentValuesReader() {
+		this->end = false;
+	}
+	~InnerCurrentValuesReader() {}
 
+	bool isEnd() const override {
+		return this->end;
+	}
+
+	void readCurVals(storage::ReaderClb*clb) {
+		for (auto v : _cur_values) {
+			clb->call(v);
+		}
+	}
+
+	void readNext(storage::ReaderClb*clb) override {
+		std::lock_guard<std::mutex> lg(_mutex);
+		readCurVals(clb);
+		this->end = true;
+	}
+
+	IdArray getIds()const {
+		dariadb::IdArray result;
+		result.resize(_cur_values.size());
+		size_t pos = 0;
+		for (auto v : _cur_values) {
+			result[pos] = v.id;
+			pos++;
+		}
+		return result;
+	}
+	Reader_ptr clone()const {
+		auto raw_reader = new InnerCurrentValuesReader();
+		Reader_ptr result{ raw_reader };
+		raw_reader->_cur_values = _cur_values;
+		return result;
+	}
+	void reset() {
+		end = false;
+	}
+	bool end;
+	std::mutex _mutex;
+	dariadb::Meas::MeasList _cur_values;
+};
 
 class MemoryStorage::Private
 {
@@ -349,24 +381,6 @@ public:
         return res;
     }
 
-	void load_tp_from_chunks(InnerReader *_ptr, ChuncksList chunks, Time time_point, Id id,Flag flag) {
-		bool is_exists = false;
-		for (auto it=chunks.rbegin(); it != chunks.crend();++it){
-			auto cur_chunk = *it;
-			if (!cur_chunk->check_flag(flag)) {
-				continue;
-			}
-			if (cur_chunk->minTime <= time_point) {
-				_ptr->add_tp(cur_chunk, cur_chunk->count);
-				is_exists = true;
-				break;
-			}
-		}
-		if (!is_exists) {
-			_ptr->_not_exist.push_back(id);
-		}
-	}
-
     size_t size()const { return _size; }
     size_t chunks_size()const { return _chuncks.size(); }
 
@@ -385,14 +399,15 @@ public:
 
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
 		std::lock_guard<std::mutex> lg(_mutex_tp);
-		auto res = std::make_shared<InnerReader>(flag, 0, 0);
+		auto res_raw = new InnerCurrentValuesReader();
+		Reader_ptr res{ res_raw };
 		for (auto &kv: _free_chunks) {
 			auto l = kv.second->last;
 			if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), l.id) == ids.end())) {
 				continue;
 			}
 			if ((flag==0) || (l.flag == flag)) {
-				res->_cur_values.push_back(l);
+				res_raw->_cur_values.push_back(l);
 			}
 		}
 		return res;
