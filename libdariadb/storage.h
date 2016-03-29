@@ -3,6 +3,7 @@
 #include "meas.h"
 #include "utils/utils.h"
 #include "common.h"
+#include "storage/chunk.h"
 #include <memory>
 
 namespace dariadb {
@@ -31,7 +32,7 @@ namespace dariadb {
         };
 
         
-        class AbstractStorage: public utils::NonCopy {
+        class AbstractStorage: public utils::NonCopy, public ChunkContainer {
         public:
             virtual ~AbstractStorage() = default;
             /// min time of writed meas

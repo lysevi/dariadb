@@ -84,6 +84,15 @@ public:
 		NOT_IMPLEMENTED;
 	}
 
+	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+		return mem_storage_raw->chunksByIterval(ids, flag, from, to);
+	}
+	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
+		return mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
+	}
+	IdArray getIds()const {
+		return mem_storage_raw->getIds();
+	}
     storage::AbstractStorage_ptr mem_storage;
     storage::MemoryStorage* mem_storage_raw;
 	storage::Capacitor* mem_cap;
@@ -144,4 +153,16 @@ Reader_ptr UnionStorage::currentValue(const IdArray&ids, const Flag& flag){
 
 void  UnionStorage::flush(){
 	_impl->flush();
+}
+
+ChuncksList UnionStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+	return _impl->chunksByIterval(ids, flag, from, to);
+}
+
+IdToChunkMap UnionStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
+	return _impl->chunksBeforeTimePoint(ids, flag, timePoint);
+}
+
+IdArray UnionStorage::getIds()const {
+	return _impl->getIds();
 }

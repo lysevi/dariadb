@@ -47,6 +47,14 @@ public:
 	}
 	void flush()override {
 	}
+	dariadb::storage::ChuncksList chunksByIterval(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time from, dariadb::Time to) {
+		return dariadb::storage::ChuncksList{};
+	}
+
+	dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time timePoint) {
+		return dariadb::storage::IdToChunkMap{};
+	}
+	dariadb::IdArray getIds()const { return dariadb::IdArray{}; }
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
