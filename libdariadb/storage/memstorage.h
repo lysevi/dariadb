@@ -29,6 +29,7 @@ namespace dariadb {
 			size_t chunks_total_size()const;
             void subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk)override;
 			Reader_ptr currentValue(const IdArray&ids, const Flag& flag)override;
+			void flush()override;
 
 			ChuncksList drop_old_chunks(const dariadb::Time min_time);
         protected:

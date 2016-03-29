@@ -36,6 +36,9 @@ public:
 	dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray&, const dariadb::Flag&) {
 		return nullptr;
 	}
+
+	void flush()override {
+	}
 };
 
 int main(int argc, char *argv[]) {

@@ -37,6 +37,7 @@ namespace dariadb {
 			Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point) override;
 			void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) override;
 			Reader_ptr currentValue(const IdArray&ids, const Flag& flag) override;
+			void flush()override;
 		protected:
 			class Private;
 			std::unique_ptr<Private> _impl;

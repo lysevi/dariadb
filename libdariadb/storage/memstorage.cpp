@@ -492,6 +492,10 @@ Reader_ptr MemoryStorage::currentValue(const IdArray&ids, const Flag& flag) {
 	return  _Impl->currentValue(ids, flag);
 }
 
+void MemoryStorage::flush()
+{
+}
+
 dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time)
 {
 	return _Impl->drop_old_chunks(min_time);

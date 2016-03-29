@@ -45,6 +45,8 @@ public:
 	dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray&, const dariadb::Flag&) override{
 		return nullptr;
 	}
+	void flush()override {
+	}
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)

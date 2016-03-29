@@ -80,6 +80,9 @@ public:
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
 		return mem_storage->currentValue(ids, flag);
 	}
+	void flush(){
+		NOT_IMPLEMENTED;
+	}
 
     storage::AbstractStorage_ptr mem_storage;
     storage::MemoryStorage* mem_storage_raw;
@@ -137,4 +140,8 @@ void UnionStorage::subscribe(const IdArray&ids, const Flag& flag, const ReaderCl
 
 Reader_ptr UnionStorage::currentValue(const IdArray&ids, const Flag& flag){
 	return _impl->currentValue(ids, flag);
+}
+
+void  UnionStorage::flush(){
+	_impl->flush();
 }
