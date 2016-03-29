@@ -11,7 +11,7 @@ namespace dariadb {
         public:
             Capacitor();
             ~Capacitor();
-            Capacitor(const size_t max_size, const AbstractStorage_ptr stor, const dariadb::Time write_window_deep);
+            Capacitor(const size_t max_size, const BaseStorage_ptr stor, const dariadb::Time write_window_deep);
             Capacitor(const Capacitor&other);
             Capacitor(Capacitor&&other);
             void swap(Capacitor&other) throw();

@@ -81,7 +81,7 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader,
 	checkAll(all, message, from, to, step);
 }
 
-void storage_test_check(dariadb::storage::AbstractStorage *as,
+void storage_test_check(dariadb::storage::BaseStorage *as,
 	dariadb::Time from,
 	dariadb::Time to,
 	dariadb::Time  step) {

@@ -93,7 +93,7 @@ public:
 	IdArray getIds()const {
 		return mem_storage_raw->getIds();
 	}
-    storage::AbstractStorage_ptr mem_storage;
+    storage::BaseStorage_ptr mem_storage;
     storage::MemoryStorage* mem_storage_raw;
 	storage::Capacitor* mem_cap;
 	std::string _path;

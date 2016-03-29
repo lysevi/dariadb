@@ -11,7 +11,7 @@
 #include <storage/capacitor.h>
 #include <utils/logger.h>
 
-class Moc_Storage :public dariadb::storage::AbstractStorage {
+class Moc_Storage :public dariadb::storage::BaseStorage {
 public:
 	size_t writed_count;
     std::map<dariadb::Id, std::vector<dariadb::Meas>> meases;

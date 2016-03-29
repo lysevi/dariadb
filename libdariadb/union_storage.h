@@ -7,7 +7,7 @@
 
 namespace dariadb {
 	namespace storage {
-		class UnionStorage :public AbstractStorage{
+		class UnionStorage :public BaseStorage{
 		public:
 			UnionStorage() = delete;
 			UnionStorage(const UnionStorage&) = delete;

@@ -6,14 +6,14 @@
 namespace dariadb {
     namespace storage {
 
-        class MemoryStorage : public AbstractStorage{
+        class MemoryStorage : public BaseStorage{
         public:
             MemoryStorage(size_t size);
             virtual ~MemoryStorage();
 
-            using AbstractStorage::append;
-            using AbstractStorage::readInterval;
-            using AbstractStorage::readInTimePoint;
+            using BaseStorage::append;
+            using BaseStorage::readInterval;
+            using BaseStorage::readInTimePoint;
 
             Time minTime() override;
             Time maxTime() override;

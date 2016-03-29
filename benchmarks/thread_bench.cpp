@@ -29,7 +29,7 @@ void thread_writer(dariadb::Id id,
 	dariadb::Time from,
 	dariadb::Time to,
 	dariadb::Time step,
-	dariadb::storage::AbstractStorage_ptr ms)
+    dariadb::storage::BaseStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
 	for (auto i = from; i < to; i += step) {
@@ -47,7 +47,7 @@ bool stop_read_all{ false };
 void thread_read_all(
 	dariadb::Time from,
 	dariadb::Time to,
-	dariadb::storage::AbstractStorage_ptr ms)
+    dariadb::storage::BaseStorage_ptr ms)
 {
 	auto clb = std::make_shared<BenchCallback>();
 	while (!stop_read_all) {
@@ -80,7 +80,7 @@ void thread_writer_rnd_stor(dariadb::Id id,
 	dariadb::Time from,
 	dariadb::Time to,
 	dariadb::Time step,
-	dariadb::storage::AbstractStorage_ptr ms)
+    dariadb::storage::BaseStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
 	for (auto i = from; i < to; i += step) {
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
 	(void)argv;
 	{
 		std::cout << "MemStorage" << std::endl;
-		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 2000000 } };
+        dariadb::storage::BaseStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 2000000 } };
 		std::thread info_thread(show_info);
 		std::vector<std::thread> writers(thread_count);
 		size_t pos = 0;
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
 	}
 	{
 		std::cout << "Capacitor" << std::endl;
-		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 2000000 } };
+        dariadb::storage::BaseStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 2000000 } };
 		std::unique_ptr<dariadb::storage::Capacitor> cp{ new dariadb::storage::Capacitor(1000, ms, 1000) };
 
 		append_count = 0;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
 			dariadb::utils::fs::rm(storage_path);
 		}
 
-		dariadb::storage::AbstractStorage_ptr ms{
+        dariadb::storage::BaseStorage_ptr ms{
 			new dariadb::storage::UnionStorage(storage_path,
 											   dariadb::storage::STORAGE_MODE::SINGLE,
 											   chunk_per_storage,

@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 			dariadb::utils::fs::rm(storage_path);
 		}
 
-		dariadb::storage::AbstractStorage_ptr ms{
+		dariadb::storage::BaseStorage_ptr ms{
             new dariadb::storage::UnionStorage(storage_path,
 			dariadb::storage::STORAGE_MODE::SINGLE,
 				chunk_per_storage,

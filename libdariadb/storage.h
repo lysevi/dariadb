@@ -32,9 +32,9 @@ namespace dariadb {
         };
 
         
-        class AbstractStorage: public utils::NonCopy, public ChunkContainer {
+        class BaseStorage: public utils::NonCopy, public ChunkContainer {
         public:
-            virtual ~AbstractStorage() = default;
+            virtual ~BaseStorage() = default;
             /// min time of writed meas
             virtual Time minTime() = 0;
             /// max time of writed meas
@@ -58,6 +58,6 @@ namespace dariadb {
 			
 			virtual void flush() = 0;
         };
-		typedef std::shared_ptr<AbstractStorage> AbstractStorage_ptr;
+        typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
     }
 }

@@ -21,7 +21,7 @@ public:
 	size_t count;
 };
 
-void writer_1(dariadb::storage::AbstractStorage_ptr ms)
+void writer_1(dariadb::storage::BaseStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
 	dariadb::Time t = 0;
@@ -37,7 +37,7 @@ void writer_1(dariadb::storage::AbstractStorage_ptr ms)
 
 std::atomic_long writen{ 0 };
 
-void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::AbstractStorage_ptr ms)
+void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::BaseStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
 	std::random_device r;
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 	(void)argv;
 	srand(static_cast<unsigned int>(time(NULL)));
 	{// 1.
-		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+        dariadb::storage::BaseStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
 		auto start = clock();
 
 		writer_1(ms);
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
 	
-	dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+    dariadb::storage::BaseStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
 
 	{// 2.
 		const size_t threads_count = 16;

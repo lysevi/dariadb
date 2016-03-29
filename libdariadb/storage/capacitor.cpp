@@ -21,7 +21,7 @@ public:
     typedef std::map<dariadb::Id,container>   dict;
     typedef std::map<dariadb::Id, tos_ptr>    dict_last;
 
-	Private(const size_t max_size, const AbstractStorage_ptr stor, const dariadb::Time write_window_deep):
+	Private(const size_t max_size, const BaseStorage_ptr stor, const dariadb::Time write_window_deep):
 
 		_max_size(max_size),
 		_minTime(std::numeric_limits<dariadb::Time>::max()),
@@ -195,7 +195,7 @@ protected:
 
     dict _bucks;
     dict_last   _last;
-    AbstractStorage_ptr _stor;
+    BaseStorage_ptr _stor;
     size_t _writed_count;
 	dariadb::Time _write_window_deep;
 	std::mutex _mutex;
@@ -207,7 +207,7 @@ Capacitor::Capacitor():_Impl(new Capacitor::Private(0,nullptr,0))
 Capacitor::~Capacitor()
 {}
 
-Capacitor::Capacitor(const size_t max_size, const AbstractStorage_ptr stor, const dariadb::Time write_window_deep) :
+Capacitor::Capacitor(const size_t max_size, const BaseStorage_ptr stor, const dariadb::Time write_window_deep) :
 	_Impl(new Capacitor::Private(max_size,stor,write_window_deep))
 {}
 

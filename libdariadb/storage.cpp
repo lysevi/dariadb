@@ -148,7 +148,7 @@ void  Reader::readByStep(Meas::MeasList *output, dariadb::Time from, dariadb::Ti
 	this->readByStep(clb.get(),from,to,step);
 }
 
-append_result AbstractStorage::append(const Meas::MeasArray & ma)
+append_result BaseStorage::append(const Meas::MeasArray & ma)
 {
     dariadb::append_result ar{};
     for(auto&m:ma){
@@ -157,7 +157,7 @@ append_result AbstractStorage::append(const Meas::MeasArray & ma)
     return ar;
 }
 
-append_result AbstractStorage::append(const Meas::MeasList & ml)
+append_result BaseStorage::append(const Meas::MeasList & ml)
 {
     dariadb::append_result ar{};
     for(auto&m:ml){
@@ -166,20 +166,20 @@ append_result AbstractStorage::append(const Meas::MeasList & ml)
     return ar;
 }
 
-Reader_ptr AbstractStorage::readInterval(Time from, Time to)
+Reader_ptr BaseStorage::readInterval(Time from, Time to)
 {
     static dariadb::IdArray empty_id{};
     return this->readInterval(empty_id,0,from,to);
 }
 
-Reader_ptr AbstractStorage::readInTimePoint(Time time_point)
+Reader_ptr BaseStorage::readInTimePoint(Time time_point)
 {
     static dariadb::IdArray empty_id{};
     return this->readInTimePoint(empty_id,0,time_point);
 }
 
 
-Reader_ptr AbstractStorage::readInterval(const IdArray &ids, Flag flag, Time from, Time to) {
+Reader_ptr BaseStorage::readInterval(const IdArray &ids, Flag flag, Time from, Time to) {
     std::shared_ptr<InnerReader> res;
     if (from > this->minTime()) {
         auto  tp_res = this->readInTimePoint(ids, flag, from);
@@ -200,7 +200,7 @@ Reader_ptr AbstractStorage::readInterval(const IdArray &ids, Flag flag, Time fro
     return res;
 }
 
-Reader_ptr AbstractStorage::readInTimePoint(const IdArray &ids, Flag flag, Time time_point) {
+Reader_ptr BaseStorage::readInTimePoint(const IdArray &ids, Flag flag, Time time_point) {
     auto res = std::make_shared<InnerReader>(flag, time_point, 0);
     res->is_time_point_reader = true;
 

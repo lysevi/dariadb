@@ -8,7 +8,7 @@
 #include <storage/capacitor.h>
 #include <ctime>
 
-class Moc_Storage :public dariadb::storage::AbstractStorage {
+class Moc_Storage :public dariadb::storage::BaseStorage {
 public:
 	dariadb::append_result append(const dariadb::Meas::PMeas, const size_t size) {
 		return dariadb::append_result(size,0);
