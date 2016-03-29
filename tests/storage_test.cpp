@@ -42,18 +42,24 @@ void checkAll(dariadb::Meas::MeasList res,
 	std::string msg,
 	dariadb::Time from,
 	dariadb::Time to, dariadb::Time  step) {
+
+	dariadb::Id id_val(0);
+	dariadb::Flag flg_val(0);
+
 	for (auto i = from; i < to; i += step) {
 		size_t count = 0;
 		for (auto &m : res) {
-			if ((m.id == i)
-				&& ((m.flag == i) || (m.flag == dariadb::Flags::NO_DATA))
+			if ((m.id == id_val)
+				&& ((m.flag == flg_val) || (m.flag == dariadb::Flags::NO_DATA))
 				&& (m.time == i)
-				&& ((m.src == i) || (m.src == dariadb::Flags::NO_DATA)))
+				&& ((m.src == flg_val) || (m.src == dariadb::Flags::NO_DATA)))
 			{
 				count++;
 			}
 
 		}
+		++id_val;
+		++flg_val;
 		if (count < copies_count) {
 			BOOST_CHECK_EQUAL(copies_count, count);
 		}
@@ -70,7 +76,7 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader,
 	reader->readAll(&all);
 	BOOST_CHECK_EQUAL(all.size(), total_count);
 	auto readed_ids = reader->getIds();
-	BOOST_CHECK_EQUAL(readed_ids.size(), size_t(to / step));
+	BOOST_CHECK_EQUAL(readed_ids.size(), size_t((to-from)/ step));
 
 	checkAll(all, message, from, to, step);
 }
@@ -82,12 +88,16 @@ void storage_test_check(dariadb::storage::AbstractStorage *as,
 	auto m = dariadb::Meas::empty();
 	size_t total_count = 0;
 
+	dariadb::Id id_val(0);
+	dariadb::Flag flg_val(0);
 	for (auto i = from; i < to; i += step) {
-		m.id = i;
-		m.flag = dariadb::Flag(i);
-		m.src = dariadb::Flag(i);
+		m.id = id_val;
+		m.flag = flg_val;
+		m.src = flg_val;
 		m.time = i;
 		m.value = 0;
+		++id_val;
+		++flg_val;
 		for (size_t j = 1; j < copies_count + 1; j++) {
 			BOOST_CHECK(as->append(m).writed == 1);
 			total_count++;
@@ -110,7 +120,7 @@ void storage_test_check(dariadb::storage::AbstractStorage *as,
 
 	checkAll(all, "read error: ", from, to, step);
 
-	ids.push_back(from + step);
+	ids.push_back(2);
 	dariadb::Meas::MeasList fltr_res{};
 	as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
 
@@ -144,8 +154,8 @@ BOOST_AUTO_TEST_CASE(inFilter) {
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	{
 		auto ms = new dariadb::storage::MemoryStorage{ 500 };
-		const dariadb::Time from = 0;
-		const dariadb::Time to = 100;
+		const dariadb::Time from = dariadb::timeutil::current_time();
+		const dariadb::Time to = from+100;
 		const dariadb::Time step = 2;
         storage_test_check(ms, from, to, step);
 		BOOST_CHECK_EQUAL(ms->chunks_size(), (to - from) / step); // id per chunk.
