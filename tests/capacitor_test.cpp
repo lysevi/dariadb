@@ -24,13 +24,7 @@ public:
 		writed_count += 1;
 		return dariadb::append_result(1,0);
 	}
-	dariadb::storage::Reader_ptr readInterval(const dariadb::IdArray &, dariadb::Flag , dariadb::Time , dariadb::Time ) {
-		return nullptr;
-	}
 
-	dariadb::storage::Reader_ptr readInTimePoint(const dariadb::IdArray &, dariadb::Flag , dariadb::Time ) {
-		return nullptr;
-	}
 	dariadb::Time minTime() {
 		return 0;
 	}

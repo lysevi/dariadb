@@ -1,6 +1,7 @@
 #include "storage.h"
 #include "meas.h"
 #include "flags.h"
+#include "storage/inner_readers.h"
 #include <map>
 
 using namespace dariadb;
@@ -175,4 +176,50 @@ Reader_ptr AbstractStorage::readInTimePoint(Time time_point)
 {
     static dariadb::IdArray empty_id{};
     return this->readInTimePoint(empty_id,0,time_point);
+}
+
+
+Reader_ptr AbstractStorage::readInterval(const IdArray &ids, Flag flag, Time from, Time to) {
+    std::shared_ptr<InnerReader> res;
+    if (from > this->minTime()) {
+        auto  tp_res = this->readInTimePoint(ids, flag, from);
+        res=tp_res;
+        res->_from = from;
+        res->_to = to;
+        res->_flag = flag;
+    }
+    else {
+        res = std::make_shared<InnerReader>(flag, from, to);
+    }
+
+    auto neededChunks = chunksByIterval(ids, flag, from, to);
+    for (auto cur_chunk : neededChunks) {
+        res->add(cur_chunk, cur_chunk->count);
+    }
+    res->is_time_point_reader = false;
+    return res;
+}
+
+Reader_ptr AbstractStorage::readInTimePoint(const IdArray &ids, Flag flag, Time time_point) {
+    auto res = std::make_shared<InnerReader>(flag, time_point, 0);
+    res->is_time_point_reader = true;
+
+    auto chunks_before = chunksBeforeTimePoint(ids, flag, time_point);
+    IdArray target_ids{ ids };
+    if (target_ids.size() == 0) {
+        target_ids = getIds();
+    }
+
+    for (auto id : target_ids) {
+        auto search_res = chunks_before.find(id);
+        if (search_res == chunks_before.end()) {
+            res->_not_exist.push_back(id);
+        }
+        else {
+            auto ch = search_res->second;
+            res->add_tp(ch, ch->count);
+        }
+    }
+
+    return res;
 }

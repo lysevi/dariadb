@@ -89,51 +89,7 @@ public:
 
 	}
 
-	std::shared_ptr<InnerReader> readInterval(const IdArray &ids, Flag flag, Time from, Time to) {
-		std::shared_ptr<InnerReader> res;
-		if (from > this->minTime()) {
-			res = this->readInTimePoint(ids, flag, from);
-			res->_from = from;
-			res->_to = to;
-			res->_flag = flag;
-		}
-		else {
-			res = std::make_shared<InnerReader>(flag, from, to);
-		}
-
-		auto neededChunks = chunksByIterval(ids, flag, from, to);
-		for (auto cur_chunk : neededChunks) {
-			res->add(cur_chunk, cur_chunk->count);
-		}
-		res->is_time_point_reader = false;
-		return res;
-	}
-
-	std::shared_ptr<InnerReader> readInTimePoint(const IdArray &ids, Flag flag, Time time_point) {
-		auto res = std::make_shared<InnerReader>(flag, time_point, 0);
-		res->is_time_point_reader = true;
-
-		auto chunks_before = chunksBeforeTimePoint(ids, flag, time_point);
-		IdArray target_ids{ ids };
-		if (target_ids.size() == 0) {
-			target_ids = getIds();
-		}
-
-		for (auto id : target_ids) {
-			auto search_res = chunks_before.find(id);
-			if (search_res == chunks_before.end()) {
-				res->_not_exist.push_back(id);
-			}
-			else {
-				auto ch = search_res->second;
-				res->add_tp(ch, ch->count);
-			}
-		}
-
-		return res;
-	}
-
-	size_t size()const { return _size; }
+    size_t size()const { return _size; }
 	size_t chunks_size()const { return _chuncks.size(); }
 
 	size_t chunks_total_size()const {
@@ -272,14 +228,6 @@ append_result MemoryStorage::append(const dariadb::Meas &value) {
 
 append_result MemoryStorage::append(const dariadb::Meas::PMeas begin, const size_t size) {
 	return _Impl->append(begin, size);
-}
-
-Reader_ptr MemoryStorage::readInterval(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time from, dariadb::Time to) {
-	return _Impl->readInterval(ids, flag, from, to);
-}
-
-Reader_ptr  MemoryStorage::readInTimePoint(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time time_point) {
-	return _Impl->readInTimePoint(ids, flag, time_point);
 }
 
 size_t  MemoryStorage::size()const {
