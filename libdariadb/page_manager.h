@@ -10,8 +10,8 @@
 namespace dariadb{
     namespace storage{
 
-        class PageManager:public utils::NonCopy {
-			~PageManager();
+        class PageManager:public utils::NonCopy, public ChunkContainer {
+            virtual ~PageManager();
             PageManager(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size);
         public:
 
@@ -23,6 +23,10 @@ namespace dariadb{
 			
 			bool append_chunk(const Chunk_Ptr&ch);
 			Cursor_ptr get_chunks(const IdArray&ids, Time from, Time to, Flag flag);
+
+            ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
+            IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
+            IdArray getIds()const override;
         private:
             static PageManager*_instance;
 			class Private;
