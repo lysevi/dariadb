@@ -6,7 +6,7 @@
 namespace dariadb {
     namespace storage {
 
-        class MemoryStorage : public AbstractStorage, public ChunkContainer {
+        class MemoryStorage : public AbstractStorage{
         public:
             MemoryStorage(size_t size);
             virtual ~MemoryStorage();
