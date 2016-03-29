@@ -21,7 +21,7 @@ public:
 };
 
 std::atomic_long append_count{ 0 }, read_all_times{ 0 };
-size_t thread_count = 5;
+size_t thread_count =2 ;
 size_t iteration_count = 1000000;
 bool stop_info = false;
 
@@ -128,7 +128,7 @@ void show_info() {
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
-    {
+   /* {
         std::cout << "MemStorage" << std::endl;
         dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 2000000 } };
         std::thread info_thread(show_info);
@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
         stop_info = true;
         info_thread.join();
         cp->flush();
-    }
+    }*/
     {
         std::cout << "Union" << std::endl;
         const std::string storage_path = "testStorage";
@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
         stop_read_all = true;
         info_thread.join();
         //read_all_t.join();
-
+		ms = nullptr;
         if (dariadb::utils::fs::path_exists(storage_path)) {
             dariadb::utils::fs::rm(storage_path);
         }
