@@ -18,7 +18,6 @@ using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChuncksList> ChunkMap;
-typedef std::map<Id, Chunk_Ptr>   FreeChunksMap;
 
 class InnerReader: public Reader{
 public:
@@ -317,21 +316,9 @@ public:
 			res= std::make_shared<InnerReader>(flag, from, to);
 		}
         
-        for (auto ch : _chuncks) {
-            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
-                continue;
-            }
-			for (auto &cur_chunk : ch.second) {
-				if (flag != 0) {
-					if (!cur_chunk->check_flag(flag)) {
-						continue;
-					}
-				}
-				if ((utils::inInterval(from, to, cur_chunk->minTime)) || (utils::inInterval(from, to, cur_chunk->maxTime))) {
-					res->add(cur_chunk, cur_chunk->count);
-				}
-			}
-
+		auto neededChunks = chunksByIterval(ids, flag, from, to);
+        for (auto cur_chunk : neededChunks) {
+			res->add(cur_chunk, cur_chunk->count);
         }
         res->is_time_point_reader=false;
         return res;
@@ -364,13 +351,15 @@ public:
 
 	void load_tp_from_chunks(InnerReader *_ptr, ChuncksList chunks, Time time_point, Id id,Flag flag) {
 		bool is_exists = false;
-		for (auto&cur_chunk : chunks) {
+		for (auto it=chunks.rbegin(); it != chunks.crend();++it){
+			auto cur_chunk = *it;
 			if (!cur_chunk->check_flag(flag)) {
 				continue;
 			}
 			if (cur_chunk->minTime <= time_point) {
 				_ptr->add_tp(cur_chunk, cur_chunk->count);
 				is_exists = true;
+				break;
 			}
 		}
 		if (!is_exists) {
@@ -428,11 +417,34 @@ public:
 		}
 		return result;
 	}
+
+	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+		ChuncksList result{};
+
+		for (auto ch : _chuncks) {
+			if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
+				continue;
+			}
+			for (auto &cur_chunk : ch.second) {
+				if (flag != 0) {
+					if (!cur_chunk->check_flag(flag)) {
+						continue;
+					}
+				}
+				if ((utils::inInterval(from, to, cur_chunk->minTime)) || (utils::inInterval(from, to, cur_chunk->maxTime))) {
+					result.push_back(cur_chunk);
+				}
+			}
+
+		}
+
+		return result;
+	}
 protected:
     size_t _size;
 
     ChunkMap _chuncks;
-	FreeChunksMap _free_chunks;
+	IdToChunkMap _free_chunks;
     Time _min_time,_max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
 	std::mutex _mutex;
@@ -499,4 +511,8 @@ void MemoryStorage::flush()
 dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time)
 {
 	return _Impl->drop_old_chunks(min_time);
+}
+
+ChuncksList MemoryStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+	return _Impl->chunksByIterval(ids, flag, from, to);
 }

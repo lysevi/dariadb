@@ -6,6 +6,7 @@
 #include "../compression/binarybuffer.h"
 
 #include <mutex>
+#include <map>
 
 namespace dariadb {
 	namespace storage {
@@ -44,5 +45,12 @@ namespace dariadb {
 
 		typedef std::shared_ptr<Chunk>    Chunk_Ptr;
 		typedef std::list<Chunk_Ptr>      ChuncksList;
+		typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
+
+		class ChunkContainer
+		{
+		public:
+			virtual ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)=0;
+		};
 	}
 }
