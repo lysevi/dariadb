@@ -29,10 +29,13 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 		auto e = dariadb::Meas::empty();
 		//max time always
 		dariadb::Time t = dariadb::timeutil::current_time();
-        for (size_t i = 0; i < write_window_deep*write_window_deep; i++) {
+        for (size_t i = 0; ; i++) {
 			e.time = t;
             t += 10;
 			BOOST_CHECK(ms->append(e).writed==1);
+			if (dariadb::utils::fs::path_exists(storage_path)) {
+				break;
+			}
 		}
 
         BOOST_CHECK(dariadb::utils::fs::ls(storage_path,".page").size()==1);
