@@ -41,11 +41,11 @@ public:
 	}
 	void flush()override {
 	}
-	dariadb::storage::ChuncksList chunksByIterval(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time from, dariadb::Time to) {
+	dariadb::storage::ChuncksList chunksByIterval(const dariadb::IdArray &, dariadb::Flag, dariadb::Time, dariadb::Time) {
 		return dariadb::storage::ChuncksList{};
 	}
 
-	dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time timePoint) {
+	dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &, dariadb::Flag, dariadb::Time) {
 		return dariadb::storage::IdToChunkMap{};
 	}
 	dariadb::IdArray getIds()const { return dariadb::IdArray{}; }

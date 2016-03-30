@@ -180,23 +180,25 @@ Reader_ptr BaseStorage::readInTimePoint(Time time_point)
 
 
 Reader_ptr BaseStorage::readInterval(const IdArray &ids, Flag flag, Time from, Time to) {
-    std::shared_ptr<InnerReader> res;
+	Reader_ptr res;
+	InnerReader* res_raw = nullptr;
     if (from > this->minTime()) {
-        auto  tp_res = this->readInTimePoint(ids, flag, from);
-        res=tp_res;
-        res->_from = from;
-        res->_to = to;
-        res->_flag = flag;
+		res = this->readInTimePoint(ids, flag, from);
+		res_raw = dynamic_cast<InnerReader*>(res.get());
+		res_raw->_from = from;
+		res_raw->_to = to;
+		res_raw->_flag = flag;
     }
     else {
         res = std::make_shared<InnerReader>(flag, from, to);
+		res_raw = dynamic_cast<InnerReader*>(res.get());
     }
 
     auto neededChunks = chunksByIterval(ids, flag, from, to);
     for (auto cur_chunk : neededChunks) {
-        res->add(cur_chunk, cur_chunk->count);
+		res_raw->add(cur_chunk, cur_chunk->count);
     }
-    res->is_time_point_reader = false;
+	res_raw->is_time_point_reader = false;
     return res;
 }
 

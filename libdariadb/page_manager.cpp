@@ -70,23 +70,66 @@ public:
     }
 
     Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
-        //TODO read must be lockfree.
-        std::lock_guard<std::mutex> lg(_mutex);
         auto p = get_cur_page();
 
         return p->get_chunks(ids, from, to, flag);
     }
 
     ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to){
-        NOT_IMPLEMENTED;
+		std::lock_guard<std::mutex> lg(_mutex);
+		ChuncksList result;
+		this->get_chunks(ids, from, to, flag)->readAll(&result);
+		return result;
     }
 
     IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint){
-        NOT_IMPLEMENTED;
+		std::lock_guard<std::mutex> lg(_mutex);
+		ChuncksList ch_list;
+		auto cur_page = this->get_cur_page();
+		this->get_chunks(ids, cur_page->header->minTime, timePoint, flag)->readAll(&ch_list);
+
+		IdToChunkMap result;
+		for (auto&v : ch_list) {
+			auto find_res = result.find(v->first.id);
+			if (find_res == result.end()) {
+				result.insert(std::make_pair(v->first.id, v));
+			}
+			else {
+				if (find_res->second->maxTime < v->maxTime) {
+					result[v->first.id] = v;
+				}
+			}
+		}
+		return result;
     }
 
-    dariadb::IdArray getIds()const {
-        NOT_IMPLEMENTED;
+	class CountOfIdCallback :public Cursor::Callback {
+	public:
+		dariadb::IdSet ids;
+		CountOfIdCallback() {
+		}
+		~CountOfIdCallback() {
+		}
+
+		virtual void call(Chunk_Ptr & ptr) override{
+			if (ptr != nullptr) {
+				ids.insert(ptr->first.id);
+			}
+		}
+	};
+
+    dariadb::IdArray getIds() {
+		std::lock_guard<std::mutex> lg(_mutex);
+		auto cur_page = this->get_cur_page();
+		auto cursor = this->get_chunks(dariadb::IdArray{}, cur_page->header->minTime, cur_page->header->maxTime, 0);
+		
+		CountOfIdCallback*clbk_raw = new CountOfIdCallback;
+		std::unique_ptr<Cursor::Callback> clbk{ clbk_raw };
+		
+		cursor->readAll(clbk.get());
+		
+		dariadb::IdArray result{ clbk_raw->ids.begin(),clbk_raw->ids.end() };
+		return result;
     }
 protected:
     uint32_t _chunk_per_storage;
