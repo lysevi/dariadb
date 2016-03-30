@@ -76,7 +76,6 @@ public:
 	}
 	
 	void flush(){
-		//TODO drop all chunks to page and clear memstorage;
 		this->mem_cap->flush();
 		auto all_chunks = this->mem_storage_raw->drop_all();
 		for (auto c : all_chunks) {
