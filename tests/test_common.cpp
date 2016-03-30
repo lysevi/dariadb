@@ -5,7 +5,7 @@
 
 namespace dariadb_test {
 #undef NO_DATA
-
+	
 	void checkAll(dariadb::Meas::MeasList res,
 		std::string msg,
 		dariadb::Time from,
@@ -13,31 +13,29 @@ namespace dariadb_test {
 
 		dariadb::Id id_val(0);
 		dariadb::Flag flg_val(0);
-
 		for (auto i = from; i < to; i += step) {
 			size_t count = 0;
 			for (auto &m : res) {
 				if ((m.id == id_val)
 					&& ((m.flag == flg_val) || (m.flag == dariadb::Flags::NO_DATA))
-					&& (m.time == i)
 					&& ((m.src == flg_val) || (m.src == dariadb::Flags::NO_DATA)))
 				{
 					count++;
 				}
-
 			}
-			++id_val;
-			++flg_val;
+			
 			if (count < copies_count) {
 				throw MAKE_EXCEPTION("count < copies_count");
 			}
+			++id_val;
+			++flg_val;
 		}
 	}
 
 	void check_reader_of_all(dariadb::storage::Reader_ptr reader,
 		dariadb::Time from,
 		dariadb::Time to,
-		dariadb::Time  step,
+		dariadb::Time  step, size_t id_count,
 		size_t total_count, std::string message)
 	{
 		dariadb::Meas::MeasList all{};
@@ -46,7 +44,7 @@ namespace dariadb_test {
 			throw MAKE_EXCEPTION("(all.size() != total_count)");
 		}
 		auto readed_ids = reader->getIds();
-		if (readed_ids.size() != size_t((to - from) / step)) {
+		if (readed_ids.size() != id_count) {
 			throw MAKE_EXCEPTION("(readed_ids.size() != size_t((to - from) / step))");
 		}
 
@@ -61,7 +59,9 @@ namespace dariadb_test {
 		size_t total_count = 0;
 
 		dariadb::Id id_val(0);
+		
 		dariadb::Flag flg_val(0);
+		
 		for (auto i = from; i < to; i += step) {
 			m.id = id_val;
 			m.flag = flg_val;
@@ -76,20 +76,21 @@ namespace dariadb_test {
 				}
 				total_count++;
 				m.value = dariadb::Value(j);
+				m.time++;
 			}
 		}
+		as->flush();
 
-
-		auto reader = as->readInterval(from, to);
-		check_reader_of_all(reader, from, to, step, total_count, "readAll error: ");
+		auto reader = as->readInterval(from, to+ copies_count);
+		check_reader_of_all(reader, from, to, step, id_val,total_count, "readAll error: ");
 
 		auto cloned_reader = reader->clone();
 		cloned_reader->reset();
-		check_reader_of_all(cloned_reader, from, to, step, total_count, "cloned readAll error: ");
+		check_reader_of_all(cloned_reader, from, to , step, id_val, total_count, "cloned readAll error: ");
 
 		dariadb::IdArray ids{};
 		dariadb::Meas::MeasList all{};
-		as->readInterval(ids, 0, from, to)->readAll(&all);
+		as->readInterval(ids, 0, from, to + copies_count)->readAll(&all);
 		if (all.size() != total_count) {
 			throw MAKE_EXCEPTION("all.size() != total_count");
 		}
@@ -98,14 +99,14 @@ namespace dariadb_test {
 
 		ids.push_back(2);
 		dariadb::Meas::MeasList fltr_res{};
-		as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
+		as->readInterval(ids, 0, from, to + copies_count)->readAll(&fltr_res);
 
 		if (fltr_res.size() != copies_count) {
 			throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
 		}
 
 		all.clear();
-		as->readInTimePoint(to)->readAll(&all);
+		as->readInTimePoint(to + copies_count)->readAll(&all);
 		size_t ids_count = (size_t)((to - from) / step);
 		if (all.size() != ids_count) {
 			throw MAKE_EXCEPTION("all.size() != ids_count");
@@ -113,7 +114,7 @@ namespace dariadb_test {
 
 		dariadb::IdArray emptyIDs{};
 		fltr_res.clear();
-		as->readInTimePoint(to)->readAll(&fltr_res);
+		as->readInTimePoint(to + copies_count)->readAll(&fltr_res);
 		if (fltr_res.size() != ids_count) {
 			throw MAKE_EXCEPTION("fltr_res.size() != ids_count");
 		}

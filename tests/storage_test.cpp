@@ -47,8 +47,8 @@ BOOST_AUTO_TEST_CASE(inFilter) {
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	{
 		auto ms = new dariadb::storage::MemoryStorage{ 500 };
-		const dariadb::Time from = dariadb::timeutil::current_time();
-		const dariadb::Time to = from+100;
+		const dariadb::Time from = 0;//dariadb::timeutil::current_time();
+		const dariadb::Time to = dariadb_test::copies_count * 2;//+ from ;
 		const dariadb::Time step = 2;
 		dariadb_test::storage_test_check(ms, from, to, step);
 		BOOST_CHECK_EQUAL(ms->chunks_size(), (to - from) / step); // id per chunk.

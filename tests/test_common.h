@@ -17,7 +17,7 @@ namespace dariadb_test {
 	void check_reader_of_all(dariadb::storage::Reader_ptr reader,
 		dariadb::Time from,
 		dariadb::Time to,
-		dariadb::Time  step,
+		dariadb::Time  step, size_t id_count,
 		size_t total_count, std::string message);
 
 	void storage_test_check(dariadb::storage::BaseStorage *as,

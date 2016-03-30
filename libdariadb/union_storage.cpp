@@ -107,7 +107,16 @@ public:
 		}
 	}
 	IdArray getIds()const {
-		return mem_storage_raw->getIds();
+		auto page_ids=PageManager::instance()->getIds();
+		auto mem_ids=mem_storage_raw->getIds();
+		dariadb::IdSet s;
+		for (auto v : page_ids) {
+			s.insert(v);
+		}
+		for (auto v : mem_ids) {
+			s.insert(v);
+		}
+		return dariadb::IdArray{ s.begin(),s.end() };
 	}
     storage::BaseStorage_ptr mem_storage;
     storage::MemoryStorage* mem_storage_raw;

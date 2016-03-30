@@ -1,6 +1,8 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
+#include "test_common.h"
+
 #include <union_storage.h>
 #include <timeutil.h>
 #include <utils/fs.h>
@@ -76,3 +78,38 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
+	const std::string storage_path = "testStorage";
+	{
+		const size_t chunk_per_storage = 10000;
+		const size_t chunk_size = 1024;
+		const size_t cap_max_size = 500;
+		const dariadb::Time write_window_deep = 6000;
+		const dariadb::Time old_mem_chunks = 600;
+
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
+
+		dariadb::storage::BaseStorage_ptr ms{
+			new dariadb::storage::UnionStorage(storage_path,
+			dariadb::storage::STORAGE_MODE::SINGLE,
+				chunk_per_storage,
+				chunk_size,
+				write_window_deep,
+				cap_max_size,old_mem_chunks) };
+
+		const dariadb::Time from = dariadb::timeutil::current_time();
+		const dariadb::Time to = from + 20000;
+		const dariadb::Time step = 100;
+
+		dariadb_test::storage_test_check(ms.get(), from, to, step);
+
+		BOOST_CHECK(dariadb::utils::fs::path_exists(storage_path));
+	}
+
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}
