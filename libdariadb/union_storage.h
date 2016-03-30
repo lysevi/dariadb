@@ -1,7 +1,7 @@
 #pragma once
 
 #include "storage.h"
-#include "storage/storage_mode.h"
+#include "storage/mode.h"
 #include "utils/utils.h"
 #include <memory>
 
@@ -25,7 +25,7 @@ namespace dariadb {
             /// \param cap_max_size - max capacitor size  (Capacitor)
             /// \param old_mem_chunks - time when drop old chunks to page (MemStorage)
             UnionStorage(const std::string &path,
-                         STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size,
+                         storage::MODE mode, size_t chunk_per_storage, size_t chunk_size,
                          const dariadb::Time write_window_deep, const size_t cap_max_size,
                          const dariadb::Time old_mem_chunks);
 

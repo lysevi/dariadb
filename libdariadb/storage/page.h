@@ -1,6 +1,6 @@
 #pragma once
 #include "chunk.h"
-#include "storage_mode.h"
+#include "mode.h"
 #include "cursor.h"
 #include "../utils/fs.h"
 
@@ -36,7 +36,7 @@ namespace dariadb {
 			static PageHeader readHeader(std::string file_name);
 			uint32_t get_oldes_index();
 			~Page();
-			bool append(const Chunk_Ptr&ch, STORAGE_MODE mode);
+            bool append(const Chunk_Ptr&ch, MODE mode);
 			bool is_full()const;
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			void dec_reader();

@@ -1,7 +1,7 @@
 #include "page_manager.h"
-#include "utils/utils.h"
-#include "storage/page.h"
-#include "utils/fs.h"
+#include "../utils/utils.h"
+#include "page.h"
+#include "../utils/fs.h"
 
 #include <mutex>
 #include <cstring>
@@ -12,7 +12,7 @@ dariadb::storage::PageManager* PageManager::_instance = nullptr;
 class PageManager::Private
 {
 public:
-    Private(const std::string &path, STORAGE_MODE mode,size_t chunk_per_storage, size_t chunk_size) :
+    Private(const std::string &path, MODE mode,size_t chunk_per_storage, size_t chunk_size) :
         _chunk_per_storage(static_cast<uint32_t>(chunk_per_storage)),
         _chunk_size(static_cast<uint32_t>(chunk_size)),
         _cur_page(nullptr),
@@ -40,7 +40,7 @@ public:
             dariadb::utils::fs::mkdir(_path);
         }
 
-        std::string page_name = ((_mode == STORAGE_MODE::SINGLE) ? "single.page" : "_.page");
+        std::string page_name = ((_mode == MODE::SINGLE) ? "single.page" : "_.page");
         std::string file_name = dariadb::utils::fs::append_path(_path, page_name);
 
         Page*res = nullptr;
@@ -135,12 +135,12 @@ protected:
     uint32_t _chunk_per_storage;
     uint32_t _chunk_size;
     Page*  _cur_page;
-    STORAGE_MODE _mode;
+    MODE _mode;
     std::mutex _mutex;
     std::string _path;
 };
 
-PageManager::PageManager(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size):
+PageManager::PageManager(const std::string &path, MODE mode, size_t chunk_per_storage, size_t chunk_size):
     impl(new PageManager::Private{path, mode,chunk_per_storage,chunk_size})
 {
 
@@ -149,7 +149,7 @@ PageManager::PageManager(const std::string &path, STORAGE_MODE mode, size_t chun
 PageManager::~PageManager() {
 }
 
-void PageManager::start(const std::string &path,STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size){
+void PageManager::start(const std::string &path,MODE mode, size_t chunk_per_storage, size_t chunk_size){
     if(PageManager::_instance==nullptr){
         PageManager::_instance=new PageManager(path, mode, chunk_per_storage,chunk_size);
     }

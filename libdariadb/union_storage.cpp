@@ -2,7 +2,7 @@
 #include "storage/memstorage.h"
 #include "storage/capacitor.h"
 #include "utils/exception.h"
-#include "page_manager.h"
+#include "storage/page_manager.h"
 #include <cassert>
 
 using namespace dariadb;
@@ -11,7 +11,7 @@ using namespace dariadb::storage;
 class UnionStorage::Private {
 public:
     Private(const std::string &path,
-            STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size,
+            MODE mode, size_t chunk_per_storage, size_t chunk_size,
             const dariadb::Time write_window_deep, const size_t cap_max_size,
             const dariadb::Time old_mem_chunks):
 		mem_storage{ new MemoryStorage(chunk_size) },
@@ -122,7 +122,7 @@ public:
     storage::MemoryStorage* mem_storage_raw;
 	storage::Capacitor* mem_cap;
 	std::string _path;
-	STORAGE_MODE _mode;
+    MODE _mode;
 	size_t _chunk_per_storage;
 	size_t _chunk_size;
 	dariadb::Time _write_window_deep;
@@ -131,7 +131,7 @@ public:
 };
 
 UnionStorage::UnionStorage(const std::string &path,
-                           STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size,
+                           MODE mode, size_t chunk_per_storage, size_t chunk_size,
                            const dariadb::Time write_window_deep, const size_t cap_max_size,
                            const dariadb::Time old_mem_chunks):
     _impl{new UnionStorage::Private(path,

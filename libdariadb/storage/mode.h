@@ -3,12 +3,12 @@
 #include <cstdint>
 
 namespace dariadb {
-	namespace storage {
+    namespace storage {
         ///
         /// \brief The STORAGE_MODE enum
         /// method write when page is fulle
-		enum class STORAGE_MODE : uint8_t {
+        enum class MODE : uint8_t {
             SINGLE ///single file mode. owerwrite old chunks.
-		};
-	}
+        };
+    }
 }

@@ -5,6 +5,7 @@
 
 #include <dariadb.h>
 #include <utils/fs.h>
+#include <storage/page_manager.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
 		if (dariadb::utils::fs::path_exists(storagePath)) {
 			dariadb::utils::fs::rm(storagePath);
 		}
-		dariadb::storage::PageManager::start(storagePath, dariadb::storage::STORAGE_MODE::SINGLE, chunks_count, chunks_size);
+        dariadb::storage::PageManager::start(storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size);
 
 		auto start = clock();
 

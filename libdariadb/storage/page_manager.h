@@ -1,9 +1,9 @@
 #pragma once
 
-#include "utils/utils.h"
-#include "storage/chunk.h"
-#include "storage/storage_mode.h"
-#include "storage/cursor.h"
+#include "../utils/utils.h"
+#include "chunk.h"
+#include "mode.h"
+#include "cursor.h"
 
 #include <vector>
 
@@ -12,11 +12,11 @@ namespace dariadb{
 
         class PageManager:public utils::NonCopy, public ChunkContainer {
             virtual ~PageManager();
-            PageManager(const std::string &path, STORAGE_MODE mode, size_t chunk_per_storage, size_t chunk_size);
+            PageManager(const std::string &path, MODE mode, size_t chunk_per_storage, size_t chunk_size);
         public:
 
 			typedef uint32_t handle;
-            static void start(const std::string &path, STORAGE_MODE mode,size_t chunk_per_storage,size_t chunk_size);
+            static void start(const std::string &path, MODE mode,size_t chunk_per_storage,size_t chunk_size);
             static void stop();
             static PageManager* instance();
 			

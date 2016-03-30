@@ -4,6 +4,7 @@
 #include <iterator>
 
 #include <dariadb.h>
+#include <storage/memstorage.h>
 #include <ctime>
 #include <limits>
 #include <cmath>

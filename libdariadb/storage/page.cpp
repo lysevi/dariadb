@@ -79,7 +79,7 @@ uint32_t Page::get_oldes_index() {
 	return pos;
 }
 
-bool Page::append(const Chunk_Ptr&ch, STORAGE_MODE mode) {
+bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 	std::lock_guard<std::mutex> lg(lock);
 
 	auto index_rec = (ChunkIndexInfo*)ch.get();
@@ -88,7 +88,7 @@ bool Page::append(const Chunk_Ptr&ch, STORAGE_MODE mode) {
 	assert(header->chunk_size == ch->_buffer_t.size());
 
 	if (is_full()) {
-		if (mode == STORAGE_MODE::SINGLE) {
+        if (mode == MODE::SINGLE) {
 			auto pos_index = get_oldes_index();
 
 			index[pos_index].info = *index_rec;

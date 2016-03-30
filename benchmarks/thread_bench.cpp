@@ -5,6 +5,8 @@
 
 #include <dariadb.h>
 #include <utils/fs.h>
+#include <storage/memstorage.h>
+#include <storage/capacitor.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
@@ -190,7 +192,7 @@ int main(int argc, char *argv[]) {
 
         dariadb::storage::BaseStorage_ptr ms{
 			new dariadb::storage::UnionStorage(storage_path,
-											   dariadb::storage::STORAGE_MODE::SINGLE,
+                                               dariadb::storage::MODE::SINGLE,
 											   chunk_per_storage,
 											   chunk_size,
 											   write_window_deep,
