@@ -556,6 +556,8 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 	}
     const dariadb::Time min_time=10;
 	auto before_size=ms->chunks_total_size();
+	auto before_min = ms->minTime();
+
 	auto chunks=ms->drop_old_chunks(min_time);
     auto now=dariadb::timeutil::current_time();
 	BOOST_CHECK(chunks.size() > 0);
@@ -565,6 +567,8 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 	}
 	auto after_size = ms->chunks_total_size();
 	BOOST_CHECK(before_size >after_size);
+	BOOST_CHECK(ms->minTime() > before_min);
+
 	delete ms;
 }
 

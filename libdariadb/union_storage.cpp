@@ -30,6 +30,7 @@ public:
         PageManager::start(path,mode,chunk_per_storage,chunk_size);
 	}
 	~Private() {
+		this->flush();
         PageManager::stop();
 		delete mem_cap;
 	}
@@ -81,14 +82,32 @@ public:
 		return mem_storage->currentValue(ids, flag);
 	}
 	void flush(){
-		NOT_IMPLEMENTED;
+		//TODO drop all chunks to page and clear memstorage;
+		this->mem_cap->flush();
 	}
 
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-		return mem_storage_raw->chunksByIterval(ids, flag, from, to);
+		ChuncksList page_chunks,mem_chunks;
+		if (from < mem_storage_raw->minTime()) {
+			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
+		}
+		if (to > mem_storage_raw->minTime()) {
+			mem_chunks = mem_storage_raw->chunksByIterval(ids, flag, from, to);
+		}
+
+		for (auto&c : mem_chunks) {
+			page_chunks.push_back(c);
+		}
+
+		return page_chunks;
 	}
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
-		return mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
+		if (timePoint < mem_storage_raw->minTime()) {
+			return PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
+		}
+		else {
+			return mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
+		}
 	}
 	IdArray getIds()const {
 		return mem_storage_raw->getIds();

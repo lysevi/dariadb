@@ -29,6 +29,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 		auto e = dariadb::Meas::empty();
 		//max time always
 		dariadb::Time t = dariadb::timeutil::current_time();
+		dariadb::Time start_time = t;
         for (size_t i = 0; ; i++) {
 			e.time = t;
             t += 10;
@@ -37,8 +38,19 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 				break;
 			}
 		}
+		ms->flush();
 
-        BOOST_CHECK(dariadb::utils::fs::ls(storage_path,".page").size()==1);
+		BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
+		
+		auto all_chunks=ms->chunksByIterval(dariadb::IdArray{}, 0, start_time, t);
+		auto min_time = std::numeric_limits<dariadb::Time>::max();
+		auto max_time = std::numeric_limits<dariadb::Time>::min();
+		for (auto c : all_chunks) {
+			min_time = std::min(c->minTime, min_time);
+			max_time = std::max(c->maxTime, max_time);
+		}
+		
+		BOOST_CHECK(min_time == start_time);
 	}
 
     if (dariadb::utils::fs::path_exists(storage_path)) {

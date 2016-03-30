@@ -138,6 +138,15 @@ public:
 				}
 			}
 		}
+		//update min max
+		this->_min_time = std::numeric_limits<dariadb::Time>::max();
+		this->_max_time = std::numeric_limits<dariadb::Time>::min();
+		for (auto& kv : _chuncks) {
+			for (auto &c : kv.second) {
+				_min_time = std::min(c->minTime, _min_time);
+				_max_time = std::max(c->maxTime, _max_time);
+			}
+		}
 		return result;
 	}
 
@@ -254,8 +263,7 @@ void MemoryStorage::flush()
 {
 }
 
-dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time)
-{
+dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time){
 	return _Impl->drop_old_chunks(min_time);
 }
 
