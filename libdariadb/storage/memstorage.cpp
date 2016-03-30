@@ -154,6 +154,24 @@ public:
 		return result;
 	}
 
+	dariadb::storage::ChuncksList drop_all() {
+		std::lock_guard<std::mutex> lg(_mutex_tp);
+		ChuncksList result;
+		
+		for (auto& kv : _chuncks) {
+			for (auto chunk : kv.second) {
+				result.push_back(chunk);
+			}
+		}
+		this->_free_chunks.clear();
+		this->_chuncks.clear();
+		//update min max
+		this->_min_time = std::numeric_limits<dariadb::Time>::max();
+		this->_max_time = std::numeric_limits<dariadb::Time>::min();
+		
+		return result;
+	}
+
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
 		ChuncksList result{};
 
@@ -269,6 +287,11 @@ void MemoryStorage::flush()
 
 dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time){
 	return _Impl->drop_old_chunks(min_time);
+}
+
+dariadb::storage::ChuncksList MemoryStorage::drop_all()
+{
+	return _Impl->drop_all();
 }
 
 ChuncksList MemoryStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {

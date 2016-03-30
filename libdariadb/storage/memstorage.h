@@ -30,7 +30,8 @@ namespace dariadb {
 
 			//drop old fulled chunks.
 			ChuncksList drop_old_chunks(const dariadb::Time min_time);
-			
+			dariadb::storage::ChuncksList drop_all();
+
 			ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
 			IdArray getIds()const override;

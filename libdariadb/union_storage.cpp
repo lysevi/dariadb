@@ -78,6 +78,10 @@ public:
 	void flush(){
 		//TODO drop all chunks to page and clear memstorage;
 		this->mem_cap->flush();
+		auto all_chunks = this->mem_storage_raw->drop_all();
+		for (auto c : all_chunks) {
+			PageManager::instance()->append_chunk(c);
+		}
 	}
 
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {

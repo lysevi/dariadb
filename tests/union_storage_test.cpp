@@ -8,7 +8,7 @@
 BOOST_AUTO_TEST_CASE(UnionStorage) {
     const std::string storage_path = "testStorage";
 	{
-        const size_t chunk_per_storage = 100;
+        const size_t chunk_per_storage = 5000;
         const size_t chunk_size = 100;
         const size_t cap_max_size = 100;
         const dariadb::Time write_window_deep = 500;
@@ -41,7 +41,6 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 				break;
 			}
 		}
-		ms->flush();
 
 		BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
 		
@@ -57,12 +56,19 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 
 		dariadb::Meas::MeasList output;
 		ms->readInterval(start_time, t)->readAll(&output);
+		BOOST_CHECK(output.size() < count);
+
+		output.clear();
+		ms->flush();
+		ms->readInterval(start_time, t)->readAll(&output);
 		BOOST_CHECK(output.size() == count);
 		dariadb::Value tst_val = 1;
 		for (auto v : output) {
 			BOOST_CHECK_EQUAL(v.value, tst_val);
 			tst_val++;
 		}
+
+		
 	}
 
     if (dariadb::utils::fs::path_exists(storage_path)) {
