@@ -18,7 +18,6 @@
 
 #include "test_common.h"
 
-const size_t copies_count = 100;
 
 
 BOOST_AUTO_TEST_CASE(BloomTest) {
@@ -38,112 +37,6 @@ BOOST_AUTO_TEST_CASE(BloomTest) {
     BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{ 5 }));
 }
 
-void checkAll(dariadb::Meas::MeasList res,
-	std::string msg,
-	dariadb::Time from,
-	dariadb::Time to, dariadb::Time  step) {
-
-	dariadb::Id id_val(0);
-	dariadb::Flag flg_val(0);
-
-	for (auto i = from; i < to; i += step) {
-		size_t count = 0;
-		for (auto &m : res) {
-			if ((m.id == id_val)
-				&& ((m.flag == flg_val) || (m.flag == dariadb::Flags::NO_DATA))
-				&& (m.time == i)
-				&& ((m.src == flg_val) || (m.src == dariadb::Flags::NO_DATA)))
-			{
-				count++;
-			}
-
-		}
-		++id_val;
-		++flg_val;
-		if (count < copies_count) {
-			BOOST_CHECK_EQUAL(copies_count, count);
-		}
-	}
-}
-
-void check_reader_of_all(dariadb::storage::Reader_ptr reader,
-	dariadb::Time from,
-	dariadb::Time to,
-	dariadb::Time  step,
-	size_t total_count, std::string message)
-{
-	dariadb::Meas::MeasList all{};
-	reader->readAll(&all);
-	BOOST_CHECK_EQUAL(all.size(), total_count);
-	auto readed_ids = reader->getIds();
-	BOOST_CHECK_EQUAL(readed_ids.size(), size_t((to-from)/ step));
-
-	checkAll(all, message, from, to, step);
-}
-
-void storage_test_check(dariadb::storage::BaseStorage *as,
-	dariadb::Time from,
-	dariadb::Time to,
-	dariadb::Time  step) {
-	auto m = dariadb::Meas::empty();
-	size_t total_count = 0;
-
-	dariadb::Id id_val(0);
-	dariadb::Flag flg_val(0);
-	for (auto i = from; i < to; i += step) {
-		m.id = id_val;
-		m.flag = flg_val;
-		m.src = flg_val;
-		m.time = i;
-		m.value = 0;
-		++id_val;
-		++flg_val;
-		for (size_t j = 1; j < copies_count + 1; j++) {
-			BOOST_CHECK(as->append(m).writed == 1);
-			total_count++;
-			m.value = dariadb::Value(j);
-		}
-	}
-
-
-	auto reader = as->readInterval(from, to);
-	check_reader_of_all(reader, from, to, step, total_count, "readAll error: ");
-
-	auto cloned_reader = reader->clone();
-	cloned_reader->reset();
-	check_reader_of_all(cloned_reader, from, to, step, total_count, "cloned readAll error: ");
-
-	dariadb::IdArray ids{};
-	dariadb::Meas::MeasList all{};
-	as->readInterval(ids, 0, from, to)->readAll(&all);
-	BOOST_CHECK_EQUAL(all.size(), total_count);
-
-	checkAll(all, "read error: ", from, to, step);
-
-	ids.push_back(2);
-	dariadb::Meas::MeasList fltr_res{};
-	as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
-
-	BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
-
-	all.clear();
-	as->readInTimePoint(to)->readAll(&all);
-	size_t ids_count = (size_t)((to - from) / step);
-	BOOST_CHECK_EQUAL(all.size(), ids_count);
-
-	dariadb::IdArray emptyIDs{};
-	fltr_res.clear();
-	as->readInTimePoint(to)->readAll(&fltr_res);
-	BOOST_CHECK_EQUAL(fltr_res.size(), ids_count);
-
-	dariadb::IdArray notExstsIDs{ 9999 };
-	fltr_res.clear();
-	as->readInTimePoint(notExstsIDs, 0, to - 1)->readAll(&fltr_res);
-	BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
-	BOOST_CHECK_EQUAL(fltr_res.front().flag, dariadb::Flags::NO_DATA);
-
-}
-
 BOOST_AUTO_TEST_CASE(inFilter) {
 	{
 		BOOST_CHECK(dariadb::in_filter(0, 100));
@@ -157,7 +50,7 @@ BOOST_AUTO_TEST_CASE(MemoryStorage) {
 		const dariadb::Time from = dariadb::timeutil::current_time();
 		const dariadb::Time to = from+100;
 		const dariadb::Time step = 2;
-        storage_test_check(ms, from, to, step);
+		dariadb_test::storage_test_check(ms, from, to, step);
 		BOOST_CHECK_EQUAL(ms->chunks_size(), (to - from) / step); // id per chunk.
 		delete ms;
 	}
