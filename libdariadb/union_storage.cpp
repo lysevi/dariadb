@@ -67,13 +67,6 @@ public:
 		return result;
 	}
 	
-	Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to) {
-		return mem_storage->readInterval(ids, flag, from, to);
-	}
-	Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point) {
-		return mem_storage->readInTimePoint(ids, flag, time_point);
-	}
-	
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
 		mem_storage->subscribe(ids, flag, clbk);
 	}
@@ -81,6 +74,7 @@ public:
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
 		return mem_storage->currentValue(ids, flag);
 	}
+	
 	void flush(){
 		//TODO drop all chunks to page and clear memstorage;
 		this->mem_cap->flush();
@@ -152,14 +146,6 @@ append_result UnionStorage::append(const Meas::PMeas begin, const size_t size){
 
 append_result UnionStorage::append(const Meas &value){
 	return _impl->append(value);
-}
-
-Reader_ptr UnionStorage::readInterval(const IdArray &ids, Flag flag, Time from, Time to){
-	return _impl->readInterval(ids, flag, from, to);
-}
-
-Reader_ptr UnionStorage::readInTimePoint(const IdArray &ids, Flag flag, Time time_point){
-	return _impl->readInTimePoint(ids, flag, time_point);
 }
 
 void UnionStorage::subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk){

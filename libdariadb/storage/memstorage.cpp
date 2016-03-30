@@ -129,9 +129,13 @@ public:
 		for (auto& kv : _chuncks) {
 			while ((kv.second.size() > 0)) {
 				auto past = (now - min_time);
-				if (kv.second.front()->maxTime < past) {
-					result.push_back(kv.second.front());
+				if ((kv.second.front()->maxTime < past)&&(kv.second.front()->is_full())) {
+					auto chunk = kv.second.front();
+					result.push_back(chunk);
 					kv.second.pop_front();
+					if (this->_free_chunks[kv.first] == chunk) {
+						this->_free_chunks.erase(kv.first);
+					}
 				}
 				else {
 					break;

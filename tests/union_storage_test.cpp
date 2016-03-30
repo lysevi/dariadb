@@ -30,8 +30,11 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 		//max time always
 		dariadb::Time t = dariadb::timeutil::current_time();
 		dariadb::Time start_time = t;
+		size_t count = 0;
         for (size_t i = 0; ; i++) {
+			count++;
 			e.time = t;
+			e.value++;
             t += 10;
 			BOOST_CHECK(ms->append(e).writed==1);
 			if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -51,6 +54,15 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 		}
 		
 		BOOST_CHECK(min_time == start_time);
+
+		dariadb::Meas::MeasList output;
+		ms->readInterval(start_time, t)->readAll(&output);
+		BOOST_CHECK(output.size() == count);
+		dariadb::Value tst_val = 1;
+		for (auto v : output) {
+			BOOST_CHECK_EQUAL(v.value, tst_val);
+			tst_val++;
+		}
 	}
 
     if (dariadb::utils::fs::path_exists(storage_path)) {
