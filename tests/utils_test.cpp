@@ -3,6 +3,9 @@
 #include <boost/test/unit_test.hpp>
 #include <utils/utils.h>
 #include <utils/fs.h>
+#include <utils/period_worker.h>
+#include <chrono>
+#include <thread>
 
 BOOST_AUTO_TEST_CASE(InInterval) {
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 1));
@@ -56,4 +59,25 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
   std::string child_p = "path2";
   auto concat_p=dariadb::utils::fs::append_path(parent_p, child_p);
   BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(concat_p), parent_p);
+}
+
+class TestPeriodWorker :public dariadb::utils::PeriodWorker {
+public:
+	TestPeriodWorker(const std::chrono::seconds sleep_time):dariadb::utils::PeriodWorker(sleep_time){
+		call_count = 0;
+	}
+	void call() {
+		call_count++;
+	}
+	size_t call_count;
+};
+
+BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
+	auto secs_1 = std::chrono::seconds(1);
+	auto secs_3 = std::chrono::seconds(3);
+	std::unique_ptr<TestPeriodWorker> worker{ new TestPeriodWorker(secs_3) };
+	worker->start();
+	std::this_thread::sleep_for(secs_3);
+	worker->stop();
+	BOOST_CHECK(worker->call_count > 1);
 }
