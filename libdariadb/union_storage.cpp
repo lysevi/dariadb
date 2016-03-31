@@ -28,6 +28,9 @@ public:
         assert(mem_storage_raw!=nullptr);
 
         PageManager::start(path,mode,chunk_per_storage,chunk_size);
+
+		auto open_chunks = PageManager::instance()->get_open_chunks();
+		mem_storage_raw->add_chunks(open_chunks);
 	}
 	~Private() {
 		this->flush();

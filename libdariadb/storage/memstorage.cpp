@@ -136,8 +136,7 @@ public:
 					if (this->_free_chunks[kv.first] == chunk) {
 						this->_free_chunks.erase(kv.first);
 					}
-				}
-				else {
+				}else {
 					break;
 				}
 			}
@@ -225,6 +224,19 @@ public:
 		}
 		return result;
 	}
+
+	void add_chunks(const ChuncksList&clist) {
+		for (auto c : clist) {
+			_chuncks[c->first.id].push_back(c);
+			auto search_res = _free_chunks.find(c->first.id);
+			if (search_res == _free_chunks.end()) {
+				_free_chunks[c->first.id] = c;
+			}
+			else {
+				assert(false);
+			}
+		}
+	}
 protected:
 	size_t _size;
 
@@ -304,4 +316,8 @@ IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
 
 dariadb::IdArray MemoryStorage::getIds()const {
 	return _Impl->getIds();
+}
+
+void MemoryStorage::add_chunks(const ChuncksList&clist) {
+	return _Impl->add_chunks(clist);
 }

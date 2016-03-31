@@ -79,6 +79,10 @@ namespace dariadb_test {
 				m.time++;
 			}
 		}
+		/*dariadb::Meas::MeasList current_mlist;
+		as->currentValue(dariadb::IdArray{}, 0)->readAll(&current_mlist);*/
+		
+
 		as->flush();
 
 		auto reader = as->readInterval(from, to+ copies_count);

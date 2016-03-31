@@ -133,6 +133,9 @@ public:
     }
 
 	dariadb::storage::ChuncksList get_open_chunks() {
+		if(!dariadb::utils::fs::path_exists(_path)) {
+			return ChuncksList{};
+		}
 		return this->get_cur_page()->get_open_chunks();
 	}
 protected:
