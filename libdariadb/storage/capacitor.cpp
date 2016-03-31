@@ -55,11 +55,13 @@ public:
 
     bool is_valid_time(const dariadb::Time &t)const {
         auto now=dariadb::timeutil::current_time();
-        auto past=(now-_write_window_deep);
-        if(t< past){
-            return false;
-        }
-        return true;
+		auto past = (now - _write_window_deep);
+		if (t< past) {
+			return false;
+		}
+		else {
+			return true;
+		}
     }
 
 	bool is_valid(const dariadb::Meas &m)const {

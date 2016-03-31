@@ -185,6 +185,7 @@ int main(int argc, char *argv[]) {
 		const size_t cap_max_size = 10000;
 		const dariadb::Time write_window_deep = 2000;
 		const dariadb::Time old_mem_chunks = 1000;
+		const size_t max_mem_chunks = 1024;
 
 		if (dariadb::utils::fs::path_exists(storage_path)) {
 			dariadb::utils::fs::rm(storage_path);
@@ -196,7 +197,7 @@ int main(int argc, char *argv[]) {
 											   chunk_per_storage,
 											   chunk_size,
 											   write_window_deep,
-											   cap_max_size,old_mem_chunks) };
+											   cap_max_size,max_mem_chunks, old_mem_chunks) };
 
 		append_count = 0;
 		stop_info = false;

@@ -84,7 +84,6 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 	const size_t chunk_size = 1024;
 	const size_t cap_max_size = 500;
 	const dariadb::Time write_window_deep = 2000;
-	const dariadb::Time old_mem_chunks = 600;
 
 	const dariadb::Time from = dariadb::timeutil::current_time();
 	const dariadb::Time to = from + 20000;
@@ -102,7 +101,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 				chunk_per_storage,
 				chunk_size,
 				write_window_deep,
-				cap_max_size,old_mem_chunks) };
+				cap_max_size,0, 0) };
 
 	
 
@@ -117,7 +116,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 				chunk_per_storage,
 				chunk_size,
 				write_window_deep,
-				cap_max_size,old_mem_chunks) };
+				cap_max_size,0,0) };
 
 		dariadb::Meas::MeasList mlist;
 		ms->currentValue(dariadb::IdArray{},0)->readAll(&mlist);

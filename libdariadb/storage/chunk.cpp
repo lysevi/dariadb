@@ -78,6 +78,7 @@ bool Chunk::append(const Meas&m)
 
 	if (!t_f) {
 		is_readonly = true;
+		assert(c_writer.is_full());
 		return false;
 	}
 	else {

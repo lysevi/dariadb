@@ -56,16 +56,18 @@ public:
 
 		Chunk_Ptr chunk = this->getFreeChunk(value.id);
 
-
 		if (chunk == nullptr) {
 			chunk = std::make_shared<Chunk>(_size, value);
 			this->_chuncks[value.id].push_back(chunk);
 			this->_free_chunks[value.id] = chunk;
+
 		}
 		else {
 			if (!chunk->append(value)) {
+				assert(chunk->is_full());
 				chunk = std::make_shared<Chunk>(_size, value);
 				this->_chuncks[value.id].push_back(chunk);
+		
 			}
 		}
 		
@@ -97,6 +99,7 @@ public:
 		for (auto kv : _chuncks) {
 			result += kv.second.size();
 		}
+		std::cout << "res: " << result << std::endl;
 		return result;
 	}
 
@@ -142,6 +145,62 @@ public:
 			}
 		}
 		//update min max
+		update_max_min_after_drop();
+		return result;
+	}
+	
+	//by memory limit
+	ChuncksList drop_old_chunks_by_limit(const size_t max_limit) {
+		std::lock_guard<std::mutex> lg(_mutex_tp);
+		ChuncksList result{};
+		if(chunks_total_size()>max_limit) {
+			dariadb::Id max_key = 0;
+			size_t max_count = 0;
+			for (auto& kv : _chuncks) {
+				if (kv.second.size() > 1) {
+					if (kv.second.size() > max_count) {
+						max_count = kv.second.size();
+						max_key = kv.first;
+					}
+				}
+			}
+			ChuncksList chunks_list= _chuncks[max_key];
+			for (auto c : chunks_list) {
+				if (c->is_readonly) {
+					result.push_back(c);
+				}
+			}
+			if (result.size() == 0) {
+				return result;
+			}
+			for (auto c : chunks_list) {
+				if (c->is_readonly) {
+					if (this->_free_chunks[max_key] == c) {
+						assert(false);
+					}
+				}
+			}
+
+			auto r_if_it = std::remove_if(
+				chunks_list.begin(),
+				chunks_list.end(),
+				[this](const Chunk_Ptr c)
+			{
+				return c->is_readonly;
+			});
+
+			chunks_list.erase(r_if_it, chunks_list.end());
+			_chuncks[max_key] = chunks_list;
+			assert(result.size() > size_t(0));
+		}
+		//update min max
+		if (result.size() != size_t(0)) {
+			update_max_min_after_drop();
+		}
+		return result;
+	}
+
+	void update_max_min_after_drop() {
 		this->_min_time = std::numeric_limits<dariadb::Time>::max();
 		this->_max_time = std::numeric_limits<dariadb::Time>::min();
 		for (auto& kv : _chuncks) {
@@ -150,7 +209,6 @@ public:
 				_max_time = std::max(c->maxTime, _max_time);
 			}
 		}
-		return result;
 	}
 
 	dariadb::storage::ChuncksList drop_all() {
@@ -301,6 +359,9 @@ dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time
 	return _Impl->drop_old_chunks(min_time);
 }
 
+dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks_by_limit(const size_t max_limit) {
+	return _Impl->drop_old_chunks_by_limit(max_limit);
+}
 dariadb::storage::ChuncksList MemoryStorage::drop_all()
 {
 	return _Impl->drop_all();

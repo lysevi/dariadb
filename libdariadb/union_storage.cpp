@@ -10,31 +10,32 @@ using namespace dariadb::storage;
 
 class UnionStorage::Private {
 public:
-    Private(const std::string &path,
-            MODE mode, size_t chunk_per_storage, size_t chunk_size,
-            const dariadb::Time write_window_deep, const size_t cap_max_size,
-            const dariadb::Time old_mem_chunks):
+	Private(const std::string &path,
+		MODE mode, size_t chunk_per_storage, size_t chunk_size,
+		const dariadb::Time write_window_deep, const size_t cap_max_size,
+		const dariadb::Time old_mem_chunks, size_t max_mem_chunks) :
 		mem_storage{ new MemoryStorage(chunk_size) },
 		_path(path),
 		_mode(mode),
 		_chunk_per_storage(chunk_per_storage),
 		_chunk_size(chunk_size),
 		_write_window_deep(write_window_deep),
-        _cap_max_size(cap_max_size),
-        _old_mem_chunks(old_mem_chunks)
+		_cap_max_size(cap_max_size),
+		_old_mem_chunks(old_mem_chunks),
+		_max_mem_chunks(max_mem_chunks)
 	{
 		mem_cap = new Capacitor(_cap_max_size, mem_storage, _write_window_deep);
-        mem_storage_raw=dynamic_cast<MemoryStorage*>(mem_storage.get());
-        assert(mem_storage_raw!=nullptr);
+		mem_storage_raw = dynamic_cast<MemoryStorage*>(mem_storage.get());
+		assert(mem_storage_raw != nullptr);
 
-        PageManager::start(path,mode,chunk_per_storage,chunk_size);
+		PageManager::start(path, mode, chunk_per_storage, chunk_size);
 
 		auto open_chunks = PageManager::instance()->get_open_chunks();
 		mem_storage_raw->add_chunks(open_chunks);
 	}
 	~Private() {
 		this->flush();
-        PageManager::stop();
+		PageManager::stop();
 		delete mem_cap;
 	}
 
@@ -45,15 +46,15 @@ public:
 	Time maxTime() {
 		return mem_storage->maxTime();
 	}
-	
+
 	append_result append(const Meas::PMeas begin, const size_t size) {
 		append_result result{};
 		for (size_t i = 0; i < size; i++) {
-            result=result+this->append(begin[i]);
+			result = result + this->append(begin[i]);
 		}
 		return result;
 	}
-	
+
 	append_result append(const Meas &value) {
 		append_result result{};
 		if (!mem_cap->append(value)) {
@@ -63,22 +64,30 @@ public:
 			result.writed++;
 		}
 
-        auto old_chunks=mem_storage_raw->drop_old_chunks(_old_mem_chunks);
-        for(auto&c:old_chunks){
-            PageManager::instance()->append_chunk(c);
-        }
+		if (_max_mem_chunks == 0) {
+			auto old_chunks = mem_storage_raw->drop_old_chunks(_old_mem_chunks);
+			for (auto&c : old_chunks) {
+				PageManager::instance()->append_chunk(c);
+			}
+		}
+		else {
+			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_max_mem_chunks);
+			for (auto&c : old_chunks) {
+				PageManager::instance()->append_chunk(c);
+			}
+		}
 		return result;
 	}
-	
+
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
 		mem_storage->subscribe(ids, flag, clbk);
 	}
-	
+
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
 		return mem_storage->currentValue(ids, flag);
 	}
-	
-	void flush(){
+
+	void flush() {
 		this->mem_cap->flush();
 		auto all_chunks = this->mem_storage_raw->drop_all();
 		for (auto c : all_chunks) {
@@ -87,7 +96,7 @@ public:
 	}
 
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-		ChuncksList page_chunks,mem_chunks;
+		ChuncksList page_chunks, mem_chunks;
 		if (from < mem_storage_raw->minTime()) {
 			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
 		}
@@ -110,8 +119,8 @@ public:
 		}
 	}
 	IdArray getIds()const {
-		auto page_ids=PageManager::instance()->getIds();
-		auto mem_ids=mem_storage_raw->getIds();
+		auto page_ids = PageManager::instance()->getIds();
+		auto mem_ids = mem_storage_raw->getIds();
 		dariadb::IdSet s;
 		for (auto v : page_ids) {
 			s.insert(v);
@@ -121,57 +130,58 @@ public:
 		}
 		return dariadb::IdArray{ s.begin(),s.end() };
 	}
-    storage::BaseStorage_ptr mem_storage;
-    storage::MemoryStorage* mem_storage_raw;
+	storage::BaseStorage_ptr mem_storage;
+	storage::MemoryStorage* mem_storage_raw;
 	storage::Capacitor* mem_cap;
 	std::string _path;
-    MODE _mode;
+	MODE _mode;
 	size_t _chunk_per_storage;
 	size_t _chunk_size;
 	dariadb::Time _write_window_deep;
 	size_t _cap_max_size;
-    dariadb::Time _old_mem_chunks;
+	size_t _max_mem_chunks;
+	dariadb::Time _old_mem_chunks;
 };
 
 UnionStorage::UnionStorage(const std::string &path,
-                           MODE mode, size_t chunk_per_storage, size_t chunk_size,
-                           const dariadb::Time write_window_deep, const size_t cap_max_size,
-                           const dariadb::Time old_mem_chunks):
-    _impl{new UnionStorage::Private(path,
-                                    mode,chunk_per_storage,chunk_size,
-                                    write_window_deep, cap_max_size,
-                                    old_mem_chunks)}
+	MODE mode, size_t chunk_per_storage, size_t chunk_size,
+	const dariadb::Time write_window_deep, const size_t cap_max_size,
+	const dariadb::Time old_mem_chunks,	const size_t max_mem_chunks) :
+	_impl{ new UnionStorage::Private(path,
+									mode,chunk_per_storage,chunk_size,
+									write_window_deep, cap_max_size,
+									old_mem_chunks, max_mem_chunks) }
 {
 }
 
 UnionStorage::~UnionStorage() {
 }
 
-Time UnionStorage::minTime(){
+Time UnionStorage::minTime() {
 	return _impl->minTime();
 }
 
-Time UnionStorage::maxTime(){
+Time UnionStorage::maxTime() {
 	return _impl->maxTime();
 }
 
-append_result UnionStorage::append(const Meas::PMeas begin, const size_t size){
+append_result UnionStorage::append(const Meas::PMeas begin, const size_t size) {
 	return _impl->append(begin, size);
 }
 
-append_result UnionStorage::append(const Meas &value){
+append_result UnionStorage::append(const Meas &value) {
 	return _impl->append(value);
 }
 
-void UnionStorage::subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk){
+void UnionStorage::subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
 	_impl->subscribe(ids, flag, clbk);
 }
 
-Reader_ptr UnionStorage::currentValue(const IdArray&ids, const Flag& flag){
+Reader_ptr UnionStorage::currentValue(const IdArray&ids, const Flag& flag) {
 	return _impl->currentValue(ids, flag);
 }
 
-void  UnionStorage::flush(){
+void  UnionStorage::flush() {
 	_impl->flush();
 }
 

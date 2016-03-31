@@ -15,9 +15,8 @@
 #include <atomic>
 
 std::atomic_long append_count{ 0 };
-size_t thread_count_per_period = 5;
-size_t total_threads_count = thread_count_per_period * 3;
-size_t iteration_count = 100;
+size_t total_threads_count = 1;
+size_t iteration_count = 1000000000;
 bool stop_info = false;
 
 
@@ -26,14 +25,15 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 {
 	auto sleep_duration = std::chrono::milliseconds(sleep_time);
 	auto m = dariadb::Meas::empty();
+	m.time = dariadb::timeutil::current_time() - id;
 	for (size_t i = 0; i < iteration_count; i++) {
 		m.id = id;
 		m.flag = dariadb::Flag(id);
-		m.time = dariadb::timeutil::current_time() - id;
+		m.time+= sleep_time;
 		m.value = dariadb::Value(i);
 		ms->append(m);
 		append_count++;
-		std::this_thread::sleep_for(sleep_duration);
+		//std::this_thread::sleep_for(sleep_duration);
 	}
 }
 
@@ -66,11 +66,11 @@ int main(int argc, char *argv[]) {
 		std::cout << "write..." << std::endl;
 		const std::string storage_path = "testStorage";
 		const size_t chunk_per_storage = 1024*1024;
-		const size_t chunk_size = 1024;
-		const size_t cap_max_size = 10000;
-		const dariadb::Time write_window_deep = 2000;
-		const dariadb::Time old_mem_chunks = 1000*60;
-
+		const size_t chunk_size = 256;
+		const size_t cap_max_size = 50;
+		const dariadb::Time write_window_deep = 500;
+		const dariadb::Time old_mem_chunks = 0;
+		const size_t max_mem_chunks = 100;
 		if (dariadb::utils::fs::path_exists(storage_path)) {
 			dariadb::utils::fs::rm(storage_path);
 		}
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 											   chunk_per_storage,
 											   chunk_size,
 											   write_window_deep,
-											   cap_max_size,old_mem_chunks) };
+											   cap_max_size,old_mem_chunks,max_mem_chunks) };
 
 		append_count = 0;
 		stop_info = false;
@@ -91,21 +91,11 @@ int main(int argc, char *argv[]) {
 		std::vector<std::thread> writers(total_threads_count);
 
 		size_t pos = 0;
-		for (size_t i = 0; i < thread_count_per_period; i++) {
-			std::thread t{ thread_writer_rnd_stor, pos, dariadb::Time(10), ms };
+		for (size_t i = 1; i < total_threads_count+1; i++) {
+			std::thread t{ thread_writer_rnd_stor, pos, dariadb::Time(i), ms };
 			writers[pos++] = std::move(t);
 		}
-
-		for (size_t i = 0; i < thread_count_per_period; i++) {
-			std::thread t{ thread_writer_rnd_stor, pos, dariadb::Time(20), ms };
-			writers[pos++] = std::move(t);
-		}
-
-		for (size_t i = 0; i < thread_count_per_period; i++) {
-			std::thread t{ thread_writer_rnd_stor, pos, dariadb::Time(30), ms };
-			writers[pos++] = std::move(t);
-		}
-
+		
 		pos = 0;
 		for (size_t i = 0; i < total_threads_count; i++) {
 			std::thread t = std::move(writers[pos++]);
