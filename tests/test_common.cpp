@@ -2,6 +2,7 @@
 #include <flags.h>
 #include <utils/utils.h>
 #include <utils/exception.h>
+#include <thread>
 
 namespace dariadb_test {
 #undef NO_DATA
