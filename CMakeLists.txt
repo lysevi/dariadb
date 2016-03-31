@@ -118,6 +118,8 @@ option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 
 add_subdirectory (libdariadb)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if (ENABLE_TESTING)
    enable_testing()
    add_subdirectory(tests)

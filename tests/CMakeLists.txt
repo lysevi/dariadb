@@ -10,6 +10,8 @@ macro(TEST_CASE name src)
 	add_executable(${name} ${src})
 	TARGET_LINK_LIBRARIES(${name} libcommon_test libdariadb ${Boost_LIBRARIES})
 	add_test(${name} ${name})
+
+        set_target_properties(${name} PROPERTIES FOLDER Tests)
 endmacro(TEST_CASE)
 
 TEST_CASE(utils_test utils_test.cpp)

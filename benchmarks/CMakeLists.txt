@@ -8,6 +8,8 @@ macro(ADD_BENCHARK name src)
         target_link_libraries(${name}
                                 ${Boost_LIBRARIES}
                                 libdariadb)
+
+         set_target_properties(${name} PROPERTIES FOLDER Benchmarks)
 endmacro(ADD_BENCHARK)
 
 ADD_BENCHARK(compression_bench compression_bench.cpp)
