@@ -26,7 +26,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 {
 	auto sleep_duration = std::chrono::milliseconds(sleep_time);
 	auto m = dariadb::Meas::empty();
-	for (auto i = 0; i < iteration_count; i++) {
+	for (size_t i = 0; i < iteration_count; i++) {
 		m.id = id;
 		m.flag = dariadb::Flag(id);
 		m.time = dariadb::timeutil::current_time() - id;
