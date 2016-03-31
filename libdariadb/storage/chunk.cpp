@@ -72,7 +72,7 @@ bool Chunk::append(const Meas&m)
 
 	std::lock_guard<std::mutex> lg(_mutex);
 	auto t_f = this->c_writer.append(m);
-	bw_pos = bw->pos();
+	bw_pos = uint32_t(bw->pos());
 	bw_bit_num= bw->bitnum();
     writer_position=c_writer.get_position();
 

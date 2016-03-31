@@ -17,7 +17,7 @@ namespace dariadb {
 			Time minTime, maxTime;
 			dariadb::Flag flag_bloom;
 			uint32_t count;
-			size_t bw_pos;
+			uint32_t bw_pos;
 			uint8_t  bw_bit_num;
 			bool is_readonly;
             compression::CopmressedWriter::Position writer_position;
