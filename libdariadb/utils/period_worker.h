@@ -14,7 +14,7 @@ namespace dariadb {
 		// look usage example in utils_test.cpp
 		class PeriodWorker {
 		public:
-			PeriodWorker(const std::chrono::seconds sleep_time) {
+			PeriodWorker(const std::chrono::milliseconds sleep_time) {
 				_sleep_time = sleep_time;
 			}
 			virtual ~PeriodWorker() {
@@ -25,18 +25,21 @@ namespace dariadb {
 
 			virtual void call() = 0;
 
+			//TODO rename to start_worker.
 			void start() {
 				m_stop_flag = false;
 				m_thread = std::thread(&PeriodWorker::_thread_func, this);
 				assert(m_thread.joinable());
 			}
 
+			//TODO rename to kill_worker.
 			void kill() {
 				m_stop_flag = true;
 				m_thread.join();
 			}
 
 			/// whait, while all works done and stop thread.
+			//TODO rename to stop_worker.
 			void stop() {
 				m_stop_flag = true;
 				m_thread.join();
@@ -59,7 +62,7 @@ namespace dariadb {
 			mutable std::mutex m_add_lock, m_thread_lock;
 			std::thread m_thread;
 			std::atomic<bool> m_stop_flag, m_thread_work;
-			std::chrono::seconds _sleep_time;
+			std::chrono::milliseconds _sleep_time;
 		};
 	}
 }

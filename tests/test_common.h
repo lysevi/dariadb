@@ -23,5 +23,6 @@ namespace dariadb_test {
 	void storage_test_check(dariadb::storage::BaseStorage *as,
 		dariadb::Time from,
 		dariadb::Time to,
-		dariadb::Time  step);
+		dariadb::Time  step, 
+		dariadb::Time write_window_size = 0);
 }

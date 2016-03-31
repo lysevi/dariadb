@@ -54,7 +54,7 @@ namespace dariadb_test {
 	void storage_test_check(dariadb::storage::BaseStorage *as,
 		dariadb::Time from,
 		dariadb::Time to,
-		dariadb::Time  step) {
+		dariadb::Time  step, dariadb::Time write_window_size) {
 		auto m = dariadb::Meas::empty();
 		size_t total_count = 0;
 
@@ -79,9 +79,12 @@ namespace dariadb_test {
 				m.time++;
 			}
 		}
-		/*dariadb::Meas::MeasList current_mlist;
-		as->currentValue(dariadb::IdArray{}, 0)->readAll(&current_mlist);*/
-		
+		std::this_thread::sleep_for(std::chrono::milliseconds(write_window_size));
+		dariadb::Meas::MeasList current_mlist;
+		as->currentValue(dariadb::IdArray{}, 0)->readAll(&current_mlist);
+		if (current_mlist.size() == 0) {
+			throw MAKE_EXCEPTION("current_mlist.size()>0");
+		}
 
 		as->flush();
 

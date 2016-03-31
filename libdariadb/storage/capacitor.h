@@ -2,21 +2,17 @@
 
 #include "../meas.h"
 #include "../storage.h"
+#include "../utils/period_worker.h"
 #include <memory>
 
 namespace dariadb {
     namespace storage {
-
-        class Capacitor {
+		/// used as added period in PeriodWorker
+		const dariadb::Time capasitor_sync_delta = 300;
+        class Capacitor:public utils::NonCopy, protected dariadb::utils::PeriodWorker {
         public:
-            Capacitor();
             ~Capacitor();
             Capacitor(const size_t max_size, const BaseStorage_ptr stor, const dariadb::Time write_window_deep);
-            Capacitor(const Capacitor&other);
-            Capacitor(Capacitor&&other);
-            void swap(Capacitor&other) throw();
-            Capacitor& operator=(const Capacitor&other);
-            Capacitor& operator=(Capacitor&&other);
 
             bool append(const Meas&m);
             size_t size()const;
@@ -28,6 +24,9 @@ namespace dariadb {
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;
-        };
+
+			// Inherited via PeriodWorker
+			virtual void call() override;
+		};
     }
 }

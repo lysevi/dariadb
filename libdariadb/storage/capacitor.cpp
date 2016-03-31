@@ -85,23 +85,38 @@ public:
 		std::lock_guard<std::mutex> lg(_mutex);
 
 		auto res = check_and_append(m);
-
-        //flush old sets.
-        for(auto &kv:_bucks){
-            while(kv.second.size()>0){
-                auto v=kv.second.front();
-                if(is_valid_time(v->maxTime())){
-                    break;
-                }else{
-                    flush_set(v);
-                    kv.second.pop_front();
-                }
-            }
-        }
-
-
         return res;
     }
+
+	void flush_old_sets() {
+		std::cout << "flush called" << std::endl;
+		std::lock_guard<std::mutex> lg(_mutex);
+		for (auto &kv : _bucks) {
+			bool flushed = false;
+			//while (kv.second.size()>0) 
+			for (auto it = kv.second.begin(); it != kv.second.end();++it)
+			{
+				auto v = *it;
+				if (!is_valid_time(v->maxTime())) {
+					std::cout << "flush" << std::endl;
+					flush_set(v);
+					flushed = true;
+				}
+			}
+			if (flushed) {
+				auto r_if_it = std::remove_if(
+					kv.second.begin(),
+					kv.second.end(),
+					[this](const tos_ptr c)
+				{
+					auto tm = c->maxTime();
+					return !is_valid_time(tm);
+				});
+
+				kv.second.erase(r_if_it, kv.second.end());
+			}
+		}
+	}
 
     tos_ptr get_target_to_write(const Meas&m) {
 //		std::lock_guard<std::mutex> lg(_mutex);
@@ -187,6 +202,10 @@ public:
         this->_bucks.clear();
         _last.clear();
     }
+
+	dariadb::Time get_write_window_deep()const{
+		return _write_window_deep;
+	}
 protected:
     size_t _max_size;
 
@@ -201,37 +220,15 @@ protected:
 	std::mutex _mutex;
 };
 
-Capacitor::Capacitor():_Impl(new Capacitor::Private(0,nullptr,0))
-{}
-
-Capacitor::~Capacitor()
-{}
+Capacitor::~Capacitor(){
+	this->stop();
+}
 
 Capacitor::Capacitor(const size_t max_size, const BaseStorage_ptr stor, const dariadb::Time write_window_deep) :
+	dariadb::utils::PeriodWorker(std::chrono::milliseconds(write_window_deep+ capasitor_sync_delta)),
 	_Impl(new Capacitor::Private(max_size,stor,write_window_deep))
-{}
-
-Capacitor::Capacitor(const Capacitor & other): _Impl(new Capacitor::Private(*other._Impl))
-{}
-
-Capacitor::Capacitor(Capacitor && other): _Impl(std::move(other._Impl))
-{}
-
-void Capacitor::swap(Capacitor & other)throw(){
-    std::swap(_Impl, other._Impl);
-}
-
-Capacitor& Capacitor::operator=(const Capacitor & other){
-    if (this != &other) {
-        Capacitor tmp(other);
-        this->swap(tmp);
-    }
-    return *this;
-}
-
-Capacitor& Capacitor::operator=(Capacitor && other){
-    this->swap(other);
-    return *this;
+{
+	this->start();
 }
 
 bool Capacitor::append(const Meas & m){
@@ -260,4 +257,8 @@ bool Capacitor::flush() {//write all to storage;
 
 void Capacitor::clear() {
     return _Impl->clear();
+}
+
+void Capacitor::call(){
+	this->_Impl->flush_old_sets();
 }

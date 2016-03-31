@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
 
 class TestPeriodWorker :public dariadb::utils::PeriodWorker {
 public:
-	TestPeriodWorker(const std::chrono::seconds sleep_time):dariadb::utils::PeriodWorker(sleep_time){
+	TestPeriodWorker(const std::chrono::milliseconds sleep_time):dariadb::utils::PeriodWorker(sleep_time){
 		call_count = 0;
 	}
 	void call() {
@@ -73,9 +73,9 @@ public:
 };
 
 BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
-	auto secs_1 = std::chrono::seconds(1);
-	auto secs_3 = std::chrono::seconds(3);
-	std::unique_ptr<TestPeriodWorker> worker{ new TestPeriodWorker(secs_3) };
+	auto secs_1 = std::chrono::milliseconds(1000);
+	auto secs_3 = std::chrono::milliseconds(1300);
+	std::unique_ptr<TestPeriodWorker> worker{ new TestPeriodWorker(secs_1) };
 	worker->start();
 	std::this_thread::sleep_for(secs_3);
 	worker->stop();
