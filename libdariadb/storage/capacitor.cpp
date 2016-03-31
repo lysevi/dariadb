@@ -89,7 +89,6 @@ public:
     }
 
 	void flush_old_sets() {
-		std::cout << "flush called" << std::endl;
 		std::lock_guard<std::mutex> lg(_mutex);
 		for (auto &kv : _bucks) {
 			bool flushed = false;
@@ -98,7 +97,6 @@ public:
 			{
 				auto v = *it;
 				if (!is_valid_time(v->maxTime())) {
-					std::cout << "flush" << std::endl;
 					flush_set(v);
 					flushed = true;
 				}
