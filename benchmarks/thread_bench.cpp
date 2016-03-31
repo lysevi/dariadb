@@ -23,8 +23,8 @@ public:
 };
 
 std::atomic_long append_count{ 0 }, read_all_times{ 0 };
-size_t thread_count = 2;
-size_t iteration_count = 1000000;
+size_t thread_count = 3;
+size_t iteration_count = 5000000;
 bool stop_info = false;
 
 void thread_writer(dariadb::Id id,
