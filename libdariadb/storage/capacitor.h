@@ -8,7 +8,7 @@
 namespace dariadb {
     namespace storage {
 		/// used as added period in PeriodWorker
-		const dariadb::Time capasitor_sync_delta = 300;
+        const dariadb::Time capasitor_sync_delta = 500;
         class Capacitor:public utils::NonCopy, protected dariadb::utils::PeriodWorker {
         public:
             ~Capacitor();

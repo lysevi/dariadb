@@ -84,6 +84,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 	const size_t chunk_size = 1024;
 	const size_t cap_max_size = 500;
 	const dariadb::Time write_window_deep = 2000;
+    const dariadb::Time whaitwrite_window_deep = 3000;
 
 	const dariadb::Time from = dariadb::timeutil::current_time();
 	const dariadb::Time to = from + 20000;
@@ -105,7 +106,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 
 	
 
-		dariadb_test::storage_test_check(ms.get(), from, to, step, dariadb::Time(write_window_deep));
+        dariadb_test::storage_test_check(ms.get(), from, to, step, dariadb::Time(whaitwrite_window_deep));
 
 		BOOST_CHECK(dariadb::utils::fs::path_exists(storage_path));
 	}

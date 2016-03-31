@@ -23,7 +23,7 @@ bool stop_info = false;
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     dariadb::storage::BaseStorage_ptr ms)
 {
-	auto sleep_duration = std::chrono::milliseconds(sleep_time);
+    //auto sleep_duration = std::chrono::milliseconds(sleep_time);
 	auto m = dariadb::Meas::empty();
 	m.time = dariadb::timeutil::current_time() - id;
 	for (size_t i = 0; i < iteration_count; i++) {
