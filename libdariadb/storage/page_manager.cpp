@@ -131,6 +131,10 @@ public:
 		dariadb::IdArray result{ clbk_raw->ids.begin(),clbk_raw->ids.end() };
 		return result;
     }
+
+	dariadb::storage::ChuncksList get_open_chunks() {
+		return this->get_cur_page()->get_open_chunks();
+	}
 protected:
     uint32_t _chunk_per_storage;
     uint32_t _chunk_size;
@@ -184,4 +188,8 @@ dariadb::storage::IdToChunkMap PageManager::chunksBeforeTimePoint(const dariadb:
 
 dariadb::IdArray PageManager::getIds()const {
     return impl->getIds();
+}
+
+dariadb::storage::ChuncksList PageManager::get_open_chunks() {
+	return impl->get_open_chunks();
 }

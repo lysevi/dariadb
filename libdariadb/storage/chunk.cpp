@@ -77,6 +77,7 @@ bool Chunk::append(const Meas&m)
     writer_position=c_writer.get_position();
 
 	if (!t_f) {
+		is_readonly = true;
 		return false;
 	}
 	else {

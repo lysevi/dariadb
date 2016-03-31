@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
     PageManager::start(storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size);
 
     dariadb::storage::ChuncksList all_chunks;
-    PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, t, 0)->readAll(&all_chunks);
+	all_chunks=PageManager::instance()->get_open_chunks();
     BOOST_CHECK_EQUAL(all_chunks.size(), size_t(1));
 	if (all_chunks.size() != 0) {
 		auto c = all_chunks.front();

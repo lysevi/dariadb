@@ -127,6 +127,24 @@ Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dari
 	return result;
 }
 
+ChuncksList Page::get_open_chunks() {
+	std::lock_guard<std::mutex> lg(lock);
+	auto index_end = this->index + this->header->pos_index;
+	auto index_it = this->index;
+	ChuncksList result;
+	for (; index_it != index_end; index_it++) {
+		if (!index_it->is_init) {
+			continue;
+		}
+		if (!index_it->info.is_readonly) {
+			index_it->is_init = false;
+			Chunk_Ptr c = std::make_shared<Chunk>(index_it->info, this->chunks + index_it->offset, this->header->chunk_size);
+			result.push_back(c);
+		}
+	}
+	return result;
+}
+
 void Page::dec_reader(){
 	std::lock_guard<std::mutex> lg(lock);
 	header->count_readers--;

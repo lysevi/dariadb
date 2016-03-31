@@ -29,7 +29,8 @@ namespace dariadb{
             ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
             IdArray getIds()const override;
-
+			
+			dariadb::storage::ChuncksList get_open_chunks();
 		private:
             static PageManager*_instance;
 			class Private;
