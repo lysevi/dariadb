@@ -99,7 +99,6 @@ public:
 		for (auto kv : _chuncks) {
 			result += kv.second.size();
 		}
-		std::cout << "res: " << result << std::endl;
 		return result;
 	}
 
@@ -191,7 +190,10 @@ public:
 
 			chunks_list.erase(r_if_it, chunks_list.end());
 			_chuncks[max_key] = chunks_list;
-			assert(result.size() > size_t(0));
+//            if(result.size()>0){
+//                std::cout<<"drop:"<<chunks_total_size()<<std::endl;
+//            }
+            assert(result.size() > size_t(0));
 		}
 		//update min max
 		if (result.size() != size_t(0)) {

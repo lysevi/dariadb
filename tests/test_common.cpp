@@ -80,7 +80,7 @@ namespace dariadb_test {
 				m.time++;
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(write_window_size));
+        std::this_thread::sleep_for(std::chrono::milliseconds(dariadb::Time(write_window_size*1.5)));
 		dariadb::Meas::MeasList current_mlist;
 		as->currentValue(dariadb::IdArray{}, 0)->readAll(&current_mlist);
 		if (current_mlist.size() == 0) {

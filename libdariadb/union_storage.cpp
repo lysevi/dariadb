@@ -21,8 +21,8 @@ public:
 		_chunk_size(chunk_size),
 		_write_window_deep(write_window_deep),
 		_cap_max_size(cap_max_size),
-		_old_mem_chunks(old_mem_chunks),
-		_max_mem_chunks(max_mem_chunks)
+        _max_mem_chunks(max_mem_chunks),
+        _old_mem_chunks(old_mem_chunks)
 	{
 		mem_cap = new Capacitor(_cap_max_size, mem_storage, _write_window_deep);
 		mem_storage_raw = dynamic_cast<MemoryStorage*>(mem_storage.get());

@@ -15,8 +15,8 @@
 #include <atomic>
 
 std::atomic_long append_count{ 0 };
-size_t total_threads_count = 1;
-size_t iteration_count = 1000000000;
+size_t total_threads_count = 4;
+size_t iteration_count = 1000000;
 bool stop_info = false;
 
 
@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
 		const dariadb::Time write_window_deep = 500;
 		const dariadb::Time old_mem_chunks = 0;
 		const size_t max_mem_chunks = 100;
+
 		if (dariadb::utils::fs::path_exists(storage_path)) {
 			dariadb::utils::fs::rm(storage_path);
 		}
