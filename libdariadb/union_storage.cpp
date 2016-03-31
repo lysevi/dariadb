@@ -65,10 +65,12 @@ public:
 		}
 
 		if (_max_mem_chunks == 0) {
-			auto old_chunks = mem_storage_raw->drop_old_chunks(_old_mem_chunks);
-			for (auto&c : old_chunks) {
-				PageManager::instance()->append_chunk(c);
-			}
+            if(_old_mem_chunks!=0){
+                auto old_chunks = mem_storage_raw->drop_old_chunks(_old_mem_chunks);
+                for (auto&c : old_chunks) {
+                    PageManager::instance()->append_chunk(c);
+                }
+            }
 		}
 		else {
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_max_mem_chunks);
@@ -130,6 +132,11 @@ public:
 		}
 		return dariadb::IdArray{ s.begin(),s.end() };
 	}
+
+    size_t chunks_in_memory()const{
+        return mem_storage_raw->chunks_total_size();
+    }
+
 	storage::BaseStorage_ptr mem_storage;
 	storage::MemoryStorage* mem_storage_raw;
 	storage::Capacitor* mem_cap;
@@ -155,6 +162,7 @@ UnionStorage::UnionStorage(const std::string &path,
 }
 
 UnionStorage::~UnionStorage() {
+    _impl=nullptr;
 }
 
 Time UnionStorage::minTime() {
@@ -195,4 +203,8 @@ IdToChunkMap UnionStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag, 
 
 IdArray UnionStorage::getIds()const {
 	return _impl->getIds();
+}
+
+size_t UnionStorage::chunks_in_memory()const{
+    return _impl->chunks_in_memory();
 }

@@ -6,6 +6,7 @@
 #include <union_storage.h>
 #include <timeutil.h>
 #include <utils/fs.h>
+#include <utils/logger.h>
 
 BOOST_AUTO_TEST_CASE(UnionStorage) {
     const std::string storage_path = "testStorage";
@@ -126,4 +127,39 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
 	}
+}
+
+BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
+    const std::string storage_path = "testStorage";
+    const size_t chunk_per_storage = 1000;
+    const size_t chunk_size = 100;
+    const size_t cap_max_size = 10;
+    const dariadb::Time write_window_deep = 1000;
+
+    {
+        if (dariadb::utils::fs::path_exists(storage_path)) {
+            dariadb::utils::fs::rm(storage_path);
+        }
+
+        const size_t max_mem_chunks=5;
+        auto raw_ptr=new dariadb::storage::UnionStorage(storage_path,
+                                                        dariadb::storage::MODE::SINGLE,
+                                                            chunk_per_storage,
+                                                            chunk_size,
+                                                            write_window_deep,
+                                                            cap_max_size,0, max_mem_chunks);
+        //dariadb::storage::BaseStorage_ptr ms{raw_ptr};
+
+        auto m=dariadb::Meas::empty();
+        m.id=1;
+        m.time=dariadb::timeutil::current_time();
+        for(size_t i=0;i<size_t(5000);i++){
+            m.time+=10;
+            m.value++;
+            raw_ptr->append(m);
+            auto val=raw_ptr->chunks_in_memory();
+            BOOST_CHECK(val<=max_mem_chunks);
+        }
+        delete raw_ptr;
+    }
 }

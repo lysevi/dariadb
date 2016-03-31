@@ -63,6 +63,7 @@ public:
 
 		}
 		else {
+            //std::cout<<"append new "<<chunk->count<< " chunks: "<<this->chunks_total_size()<<std::endl;
 			if (!chunk->append(value)) {
 				assert(chunk->is_full());
 				chunk = std::make_shared<Chunk>(_size, value);
