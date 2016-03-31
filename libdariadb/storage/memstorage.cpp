@@ -61,15 +61,15 @@ public:
 			chunk = std::make_shared<Chunk>(_size, value);
 			this->_chuncks[value.id].push_back(chunk);
 			this->_free_chunks[value.id] = chunk;
-
 		}
 		else {
 			if (!chunk->append(value)) {
 				chunk = std::make_shared<Chunk>(_size, value);
 				this->_chuncks[value.id].push_back(chunk);
-
 			}
 		}
+		
+		assert(chunk->last.time == value.time);
 
 		_min_time = std::min(_min_time, value.time);
 		_max_time = std::max(_max_time, value.time);

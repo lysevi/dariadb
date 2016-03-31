@@ -46,7 +46,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 	count = 0;
 	first = first_m;
-	
+	last = first_m;
 	minTime = std::numeric_limits<Time>::max();
 	maxTime = std::numeric_limits<Time>::min();
 

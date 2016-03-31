@@ -85,6 +85,7 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 	auto index_rec = (ChunkIndexInfo*)ch.get();
 	auto buffer = ch->_buffer_t.data();
 
+	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());
 
 	if (is_full()) {
