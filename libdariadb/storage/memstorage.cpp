@@ -67,7 +67,7 @@ public:
 				assert(chunk->is_full());
 				chunk = std::make_shared<Chunk>(_size, value);
 				this->_chuncks[value.id].push_back(chunk);
-		
+				this->_free_chunks[value.id] = chunk;
 			}
 		}
 		
