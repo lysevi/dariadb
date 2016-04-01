@@ -401,7 +401,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 }
 
 BOOST_AUTO_TEST_CASE(CurValues) {
-	{// equal step
+	{
 		auto ms = new dariadb::storage::MemoryStorage{ 500 };
 
 		auto m = dariadb::Meas::empty();
