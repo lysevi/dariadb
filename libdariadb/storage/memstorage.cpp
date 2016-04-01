@@ -154,46 +154,17 @@ public:
 		std::lock_guard<std::mutex> lg(_mutex_tp);
 		ChuncksList result{};
 		if(chunks_total_size()>max_limit) {
-			dariadb::Id max_key = 0;
-			size_t max_count = 0;
-			for (auto& kv : _chuncks) {
-				if (kv.second.size() > 1) {
-					if (kv.second.size() > max_count) {
-						max_count = kv.second.size();
-						max_key = kv.first;
+			while ((chunks_total_size() > (max_limit-size_t(max_limit/3)))){
+				for (auto& kv : _chuncks) {
+					if ((kv.second.size() > 1)) {
+						dariadb::storage::Chunk_Ptr chunk = kv.second.front();
+						if (chunk->is_full()) {
+							result.push_back(chunk);
+							kv.second.pop_front();
+						}
 					}
 				}
 			}
-			ChuncksList chunks_list= _chuncks[max_key];
-			for (auto c : chunks_list) {
-				if (c->is_readonly) {
-					result.push_back(c);
-				}
-			}
-			if (result.size() == 0) {
-				return result;
-			}
-			for (auto c : chunks_list) {
-				if (c->is_readonly) {
-					if (this->_free_chunks[max_key] == c) {
-						assert(false);
-					}
-				}
-			}
-
-			auto r_if_it = std::remove_if(
-				chunks_list.begin(),
-				chunks_list.end(),
-				[this](const Chunk_Ptr c)
-			{
-				return c->is_readonly;
-			});
-
-			chunks_list.erase(r_if_it, chunks_list.end());
-			_chuncks[max_key] = chunks_list;
-//            if(result.size()>0){
-//                std::cout<<"drop:"<<chunks_total_size()<<std::endl;
-//            }
             assert(result.size() > size_t(0));
 		}
 		//update min max
