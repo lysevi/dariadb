@@ -42,7 +42,6 @@ public:
 
         Page*res = nullptr;
 
-        utils::fs::MappedFile::MapperFile_ptr mmap = nullptr;
         if (!utils::fs::path_exists(file_name)) {
             auto sz = calc_page_size();
             res = Page::create(file_name, sz,_param.chunk_per_storage,_param.chunk_size);
@@ -135,6 +134,13 @@ public:
 		}
 		return this->get_cur_page()->get_open_chunks();
 	}
+
+	size_t chunks_in_cur_page() {
+		if (_cur_page == nullptr) {
+			return 0;
+		}
+		return _cur_page->header->pos_index;
+	}
 protected:
     Page*  _cur_page;
 	PageManager::Params _param;
@@ -189,4 +195,9 @@ dariadb::IdArray PageManager::getIds()const {
 
 dariadb::storage::ChuncksList PageManager::get_open_chunks() {
 	return impl->get_open_chunks();
+}
+
+size_t PageManager::chunks_in_cur_page() const
+{
+	return impl->chunks_in_cur_page();
 }

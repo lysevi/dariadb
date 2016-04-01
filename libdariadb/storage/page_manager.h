@@ -15,13 +15,13 @@ namespace dariadb{
 			struct Params {
 				std::string path;
 				MODE mode;
-				size_t chunk_per_storage;
-				size_t chunk_size;
+				uint32_t chunk_per_storage;
+				uint32_t chunk_size;
 				Params(const std::string storage_path, MODE write_mode, size_t chunks_per_storage, size_t one_chunk_size) {
 					path = storage_path;
 					mode = write_mode;
-					chunk_per_storage = chunks_per_storage;
-					chunk_size = one_chunk_size;
+					chunk_per_storage = uint32_t(chunks_per_storage);
+					chunk_size = uint32_t(one_chunk_size);
 				}
 			};
 		protected:
@@ -46,6 +46,7 @@ namespace dariadb{
             IdArray getIds()const override;
 			
 			dariadb::storage::ChuncksList get_open_chunks();
+			size_t chunks_in_cur_page()const;
 		private:
             static PageManager*_instance;
 			class Private;

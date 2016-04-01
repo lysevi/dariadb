@@ -29,8 +29,9 @@ public:
 	}
 	~Private() {
 		this->flush();
-		PageManager::stop();
 		delete mem_cap;
+		PageManager::stop();
+		
 	}
 
 	Time minTime() {
