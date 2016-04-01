@@ -155,7 +155,9 @@ int main(int argc, char *argv[]) {
 	{
 		std::cout << "Capacitor" << std::endl;
         dariadb::storage::BaseStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 2000000 } };
-		std::unique_ptr<dariadb::storage::Capacitor> cp{ new dariadb::storage::Capacitor(1000, ms, 1000) };
+		std::unique_ptr<dariadb::storage::Capacitor> cp{ 
+			new dariadb::storage::Capacitor(ms, dariadb::storage::Capacitor::Params(1000,1000))
+		};
 
 		append_count = 0;
 		stop_info = false;
@@ -192,12 +194,10 @@ int main(int argc, char *argv[]) {
 		}
 
         dariadb::storage::BaseStorage_ptr ms{
-			new dariadb::storage::UnionStorage(storage_path,
-                                               dariadb::storage::MODE::SINGLE,
-											   chunk_per_storage,
-											   chunk_size,
-											   write_window_deep,
-											   cap_max_size,max_mem_chunks, old_mem_chunks) };
+			new dariadb::storage::UnionStorage(
+			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
+				dariadb::storage::Capacitor::Params(cap_max_size,write_window_deep),
+				dariadb::storage::UnionStorage::Limits(max_mem_chunks, old_mem_chunks)) };
 
 		append_count = 0;
 		stop_info = false;

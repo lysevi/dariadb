@@ -12,12 +12,9 @@ dariadb::storage::PageManager* PageManager::_instance = nullptr;
 class PageManager::Private
 {
 public:
-    Private(const std::string &path, MODE mode,size_t chunk_per_storage, size_t chunk_size) :
-        _chunk_per_storage(static_cast<uint32_t>(chunk_per_storage)),
-        _chunk_size(static_cast<uint32_t>(chunk_size)),
+    Private(const PageManager::Params&param) :
         _cur_page(nullptr),
-        _mode(mode),
-        _path(path)
+		_param(param)
     {}
 
     ~Private() {
@@ -28,27 +25,27 @@ public:
     }
 
     uint64_t calc_page_size()const {
-        auto sz_index = sizeof(Page_ChunkIndex)*_chunk_per_storage;
-        auto sz_buffers = _chunk_per_storage*_chunk_size;
+        auto sz_index = sizeof(Page_ChunkIndex)*_param.chunk_per_storage;
+        auto sz_buffers = _param.chunk_per_storage*_param.chunk_size;
         return sizeof(PageHeader)
                 + sz_index
                 + sz_buffers;
     }
 
     Page* create_page() {
-        if (!dariadb::utils::fs::path_exists(_path)) {
-            dariadb::utils::fs::mkdir(_path);
+        if (!dariadb::utils::fs::path_exists(_param.path)) {
+            dariadb::utils::fs::mkdir(_param.path);
         }
 
-        std::string page_name = ((_mode == MODE::SINGLE) ? "single.page" : "_.page");
-        std::string file_name = dariadb::utils::fs::append_path(_path, page_name);
+        std::string page_name = ((_param.mode == MODE::SINGLE) ? "single.page" : "_.page");
+        std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
 
         Page*res = nullptr;
 
         utils::fs::MappedFile::MapperFile_ptr mmap = nullptr;
         if (!utils::fs::path_exists(file_name)) {
             auto sz = calc_page_size();
-            res = Page::create(file_name, sz,_chunk_per_storage,_chunk_size);
+            res = Page::create(file_name, sz,_param.chunk_per_storage,_param.chunk_size);
         }
         else {
             res = Page::open(file_name);
@@ -66,7 +63,7 @@ public:
     bool append_chunk(const Chunk_Ptr&ch) {
         std::lock_guard<std::mutex> lg(_mutex);
         auto pg=get_cur_page();
-        return pg->append(ch,_mode);
+        return pg->append(ch,_param.mode);
     }
 
     Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
@@ -133,22 +130,19 @@ public:
     }
 
 	dariadb::storage::ChuncksList get_open_chunks() {
-		if(!dariadb::utils::fs::path_exists(_path)) {
+		if(!dariadb::utils::fs::path_exists(_param.path)) {
 			return ChuncksList{};
 		}
 		return this->get_cur_page()->get_open_chunks();
 	}
 protected:
-    uint32_t _chunk_per_storage;
-    uint32_t _chunk_size;
     Page*  _cur_page;
-    MODE _mode;
+	PageManager::Params _param;
     std::mutex _mutex;
-    std::string _path;
 };
 
-PageManager::PageManager(const std::string &path, MODE mode, size_t chunk_per_storage, size_t chunk_size):
-    impl(new PageManager::Private{path, mode,chunk_per_storage,chunk_size})
+PageManager::PageManager(const PageManager::Params&param):
+    impl(new PageManager::Private{param})
 {
 
 }
@@ -156,9 +150,9 @@ PageManager::PageManager(const std::string &path, MODE mode, size_t chunk_per_st
 PageManager::~PageManager() {
 }
 
-void PageManager::start(const std::string &path,MODE mode, size_t chunk_per_storage, size_t chunk_size){
+void PageManager::start(const PageManager::Params&param){
     if(PageManager::_instance==nullptr){
-        PageManager::_instance=new PageManager(path, mode, chunk_per_storage,chunk_size);
+        PageManager::_instance=new PageManager(param);
     }
 }
 

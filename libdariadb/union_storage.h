@@ -2,6 +2,8 @@
 
 #include "storage.h"
 #include "storage/mode.h"
+#include "storage/capacitor.h"
+#include "storage/page_manager.h"
 #include "utils/utils.h"
 #include <memory>
 
@@ -9,6 +11,15 @@ namespace dariadb {
 	namespace storage {
 		class UnionStorage :public BaseStorage{
 		public:
+			struct Limits {
+				dariadb::Time old_mem_chunks; // old_mem_chunks - time when drop old chunks to page (MemStorage)
+				size_t max_mem_chunks;        // max_mem_chunks - maximum chunks in memory.zero - by old_mem_chunks(MemStorage)
+				
+				Limits(const dariadb::Time old_time, const size_t max_mem) {
+					old_mem_chunks = old_time;
+					max_mem_chunks = max_mem;
+				}
+			};
 			UnionStorage() = delete;
 			UnionStorage(const UnionStorage&) = delete;
 			UnionStorage&operator=(const UnionStorage&) = delete;
@@ -17,19 +28,11 @@ namespace dariadb {
 
             ///
             /// \brief UnionStorage
-            /// \param path - path to storage (PageManager)
-            /// \param mode - storage mode  (PageManager)
-            /// \param chunk_per_storage  - chunks count in page(PageManager)
-            /// \param chunk_size - size of chunks in byte  (PageManager)
-            /// \param write_window_deep - how long in past we can write (Capacitor)
-            /// \param cap_max_size - max capacitor size  (Capacitor)
-            /// \param max_mem_chunks - maximum chunks in memory. zero - by old_mem_chunks (MemStorage)
-			/// \param old_mem_chunks - time when drop old chunks to page (MemStorage)
-            UnionStorage(const std::string &path,
-                         storage::MODE mode, size_t chunk_per_storage, size_t chunk_size,
-                         const dariadb::Time write_window_deep, const size_t cap_max_size,
-						 const dariadb::Time old_mem_chunks,
-                         const size_t max_mem_chunks);
+            /// \param page_manager_params - params of page manager (PageManager)
+            /// \param cap_params - capacitor params  (Capacitor)
+            UnionStorage(storage::PageManager::Params page_manager_params,
+					     dariadb::storage::Capacitor::Params cap_params,
+						 const Limits&limits);
 
 			Time minTime() override;
 			Time maxTime() override;

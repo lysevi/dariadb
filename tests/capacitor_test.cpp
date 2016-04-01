@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE(BucketTest)
     
 
     //with move ctor check
-    dariadb::storage::Capacitor mbucket(max_size, stor,write_window_deep);
+    dariadb::storage::Capacitor mbucket(stor,dariadb::storage::Capacitor::Params(max_size,write_window_deep));
     auto e = dariadb::Meas::empty();
 
     //max time always
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(MultiThread)
 	stor->writed_count = 0;
 	const size_t max_size = 10;
     const dariadb::Time write_window_deep = 10000;
-	dariadb::storage::Capacitor mbucket{ max_size, stor,write_window_deep };
+	dariadb::storage::Capacitor mbucket{stor,dariadb::storage::Capacitor::Params(max_size,write_window_deep)};
 
     std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
     std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);

@@ -11,12 +11,27 @@ namespace dariadb{
     namespace storage{
 
         class PageManager:public utils::NonCopy, public ChunkContainer {
+		public:
+			struct Params {
+				std::string path;
+				MODE mode;
+				size_t chunk_per_storage;
+				size_t chunk_size;
+				Params(const std::string storage_path, MODE write_mode, size_t chunks_per_storage, size_t one_chunk_size) {
+					path = storage_path;
+					mode = write_mode;
+					chunk_per_storage = chunks_per_storage;
+					chunk_size = one_chunk_size;
+				}
+			};
+		protected:
             virtual ~PageManager();
-            PageManager(const std::string &path, MODE mode, size_t chunk_per_storage, size_t chunk_size);
+		
+            PageManager(const Params&param);
         public:
-
+			
 			typedef uint32_t handle;
-            static void start(const std::string &path, MODE mode,size_t chunk_per_storage,size_t chunk_size);
+            static void start(const Params&param);
             static void stop();
             static PageManager* instance();
 			

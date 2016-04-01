@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
         const dariadb::Time write_window_deep = 2000;
 
 		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-        dariadb::storage::Capacitor tos{ max_size,stor, write_window_deep };
+        dariadb::storage::Capacitor tos{ stor, dariadb::storage::Capacitor::Params(max_size,write_window_deep)};
         auto m = dariadb::Meas::empty();
 
         auto start = clock();

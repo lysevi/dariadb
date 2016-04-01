@@ -10,25 +10,19 @@ using namespace dariadb::storage;
 
 class UnionStorage::Private {
 public:
-	Private(const std::string &path,
-		MODE mode, size_t chunk_per_storage, size_t chunk_size,
-		const dariadb::Time write_window_deep, const size_t cap_max_size,
-		const dariadb::Time old_mem_chunks, size_t max_mem_chunks) :
-		mem_storage{ new MemoryStorage(chunk_size) },
-		_path(path),
-		_mode(mode),
-		_chunk_per_storage(chunk_per_storage),
-		_chunk_size(chunk_size),
-		_write_window_deep(write_window_deep),
-		_cap_max_size(cap_max_size),
-        _max_mem_chunks(max_mem_chunks),
-        _old_mem_chunks(old_mem_chunks)
+	Private(const PageManager::Params&page_storage_params,
+		dariadb::storage::Capacitor::Params cap_params,
+		dariadb::storage::UnionStorage::Limits limits) :
+		mem_storage{ new MemoryStorage(page_storage_params.chunk_size) },
+		_page_manager_params(page_storage_params),
+		_cap_params(cap_params),
+       _limits(limits)
 	{
-		mem_cap = new Capacitor(_cap_max_size, mem_storage, _write_window_deep);
+		mem_cap = new Capacitor(mem_storage, _cap_params);
 		mem_storage_raw = dynamic_cast<MemoryStorage*>(mem_storage.get());
 		assert(mem_storage_raw != nullptr);
 
-		PageManager::start(path, mode, chunk_per_storage, chunk_size);
+		PageManager::start(_page_manager_params);
 
 		auto open_chunks = PageManager::instance()->get_open_chunks();
 		mem_storage_raw->add_chunks(open_chunks);
@@ -64,16 +58,16 @@ public:
 			result.writed++;
 		}
 
-		if (_max_mem_chunks == 0) {
-            if(_old_mem_chunks!=0){
-                auto old_chunks = mem_storage_raw->drop_old_chunks(_old_mem_chunks);
+		if (_limits.max_mem_chunks == 0) {
+            if(_limits.old_mem_chunks!=0){
+                auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
                 for (auto&c : old_chunks) {
                     PageManager::instance()->append_chunk(c);
                 }
             }
 		}
 		else {
-			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_max_mem_chunks);
+			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
 			for (auto&c : old_chunks) {
 				PageManager::instance()->append_chunk(c);
 			}
@@ -140,24 +134,17 @@ public:
 	storage::BaseStorage_ptr mem_storage;
 	storage::MemoryStorage* mem_storage_raw;
 	storage::Capacitor* mem_cap;
-	std::string _path;
-	MODE _mode;
-	size_t _chunk_per_storage;
-	size_t _chunk_size;
-	dariadb::Time _write_window_deep;
-	size_t _cap_max_size;
-	size_t _max_mem_chunks;
-	dariadb::Time _old_mem_chunks;
+
+	storage::PageManager::Params _page_manager_params;
+	dariadb::storage::Capacitor::Params _cap_params;
+	dariadb::storage::UnionStorage::Limits _limits;
 };
 
-UnionStorage::UnionStorage(const std::string &path,
-	MODE mode, size_t chunk_per_storage, size_t chunk_size,
-	const dariadb::Time write_window_deep, const size_t cap_max_size,
-	const dariadb::Time old_mem_chunks,	const size_t max_mem_chunks) :
-	_impl{ new UnionStorage::Private(path,
-									mode,chunk_per_storage,chunk_size,
-									write_window_deep, cap_max_size,
-									old_mem_chunks, max_mem_chunks) }
+UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,
+	dariadb::storage::Capacitor::Params cap_params,
+	const dariadb::storage::UnionStorage::Limits&limits) :
+	_impl{ new UnionStorage::Private(page_manager_params,
+									cap_params, limits) }
 {
 }
 

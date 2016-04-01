@@ -76,13 +76,11 @@ int main(int argc, char *argv[]) {
 			dariadb::utils::fs::rm(storage_path);
 		}
 
-        dariadb::storage::BaseStorage_ptr ms{
-			new dariadb::storage::UnionStorage(storage_path,
-                                               dariadb::storage::MODE::SINGLE,
-											   chunk_per_storage,
-											   chunk_size,
-											   write_window_deep,
-											   cap_max_size,old_mem_chunks,max_mem_chunks) };
+		dariadb::storage::BaseStorage_ptr ms{
+			new dariadb::storage::UnionStorage(
+			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
+				dariadb::storage::Capacitor::Params(cap_max_size,write_window_deep),
+				dariadb::storage::UnionStorage::Limits(old_mem_chunks,max_mem_chunks)) };
 
 		append_count = 0;
 		stop_info = false;
