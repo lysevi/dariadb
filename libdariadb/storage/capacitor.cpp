@@ -76,8 +76,12 @@ public:
 			_writed_count++;
 			_minTime = std::min(_minTime, m.time);
 			_maxTime = std::max(_maxTime, m.time);
-		}
-		return true;
+            return true;
+        }else{
+            assert(false);
+            return false;
+        }
+
 	}
 
     bool append(const dariadb::Meas&m) {
