@@ -4,11 +4,13 @@ include_directories(..)
 FILE(GLOB HDRS "*.h" "*.hpp" 
                "compression/*.h" "compression/*.hpp" 
                "storage/*.h" "storage/*.hpp" 
+               "math/*.h" "math/*.hpp" 
 	       "utils/*.h" "utils/*.hpp")
 
 FILE(GLOB SRC "*.cpp" 
 	      "compression/*.cpp" 
 	      "utils/*.cpp"
+	      "math/*.cpp"
               "storage/*.cpp" ${HDRS})
 
 if(MSVC)

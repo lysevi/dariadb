@@ -1,7 +1,7 @@
 #pragma once
 
-#include "meas.h"
-#include "storage.h"
+#include "../meas.h"
+#include "../storage.h"
 
 namespace dariadb{
     namespace statistic{
