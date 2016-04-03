@@ -10,9 +10,9 @@
 
 BOOST_AUTO_TEST_CASE(UnionStorage) {
     const std::string storage_path = "testStorage";
-    {
-        const size_t chunk_per_storage = 5000;
-        const size_t chunk_size = 100;
+    {// All values must be placed in the page. Without overwriting the old.
+        const size_t chunk_per_storage = 10000;
+        const size_t chunk_size = 256;
         const size_t cap_max_size = 100;
         const dariadb::Time write_window_deep = 500;
         const dariadb::Time old_mem_chunks=500;
@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
             e.value++;
             t += 10;
             BOOST_CHECK(ms->append(e).writed==1);
-            if (dariadb::utils::fs::path_exists(storage_path)) {
+            if (dariadb::storage::PageManager::instance()->chunks_in_cur_page()>0) {
                 break;
             }
         }

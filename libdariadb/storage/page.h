@@ -19,6 +19,7 @@ namespace dariadb {
 
 			dariadb::Time minTime;
 			dariadb::Time maxTime;
+             uint64_t addeded_chunks;
 		};
 
 		struct Page_ChunkIndex {

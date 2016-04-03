@@ -139,7 +139,7 @@ public:
 		if (_cur_page == nullptr) {
 			return 0;
 		}
-		return _cur_page->header->pos_index;
+        return _cur_page->header->addeded_chunks;
 	}
 protected:
     Page*  _cur_page;

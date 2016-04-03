@@ -87,7 +87,7 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 
 	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());
-
+    //TODO refact method.
 	if (is_full()) {
         if (mode == MODE::SINGLE) {
 			auto pos_index = get_oldes_index();
@@ -95,6 +95,9 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 			index[pos_index].info = *index_rec;
             index[pos_index].is_init = true;
 			memcpy(this->chunks + index[pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
+            header->minTime = std::min(header->minTime,ch->minTime);
+            header->maxTime = std::max(header->maxTime, ch->maxTime);
+            header->addeded_chunks++;
 			return true;
 		}
 		return false;
@@ -108,6 +111,7 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 	header->pos_index++;
 	header->minTime = std::min(header->minTime,ch->minTime);
 	header->maxTime = std::max(header->maxTime, ch->maxTime);
+    header->addeded_chunks++;
 	return true;
 }
 
