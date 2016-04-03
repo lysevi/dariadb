@@ -8,6 +8,40 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
+ChunkPool *ChunkPool::_instance=nullptr;
+
+ChunkPool::ChunkPool(){
+
+}
+
+ChunkPool::~ChunkPool(){
+
+}
+
+void ChunkPool::start(){
+
+}
+
+void ChunkPool::stop(){
+    delete ChunkPool::_instance;
+    ChunkPool::_instance=nullptr;
+}
+
+ChunkPool*ChunkPool::instance(){
+    if(_instance==nullptr){
+        _instance=new ChunkPool;
+    }
+    return _instance;
+}
+
+std::shared_ptr<Chunk> ChunkPool::alloc(){
+    return nullptr;
+}
+
+void ChunkPool::free(std::shared_ptr<Chunk> ptr){
+
+}
+
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
 	_buffer_t(buffer_length),
 	_mutex{}

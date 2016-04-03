@@ -70,7 +70,6 @@ namespace dariadb {
                 return *this;
             }
 
-
             Chunk_Ptr& operator=(const std::nullptr_t &ptr){
                 _shared_ptr=ptr;
                 return *this;
@@ -117,7 +116,22 @@ namespace dariadb {
             }
         };
 
-        //typedef std::shared_ptr<Chunk>    Chunk_Ptr;
+        class ChunkPool{
+            static ChunkPool *_instance;
+            ChunkPool();
+            ~ChunkPool();
+        public:
+            static void start();
+            static void stop();
+            static ChunkPool*instance();
+
+            std::shared_ptr<Chunk> alloc();
+            void free(std::shared_ptr<Chunk> ptr);
+        protected:
+            std::list<std::shared_ptr<Chunk>> _ptrs;
+        };
+
+
 		typedef std::list<Chunk_Ptr>      ChuncksList;
 		typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
 		typedef std::map<Id, ChuncksList> ChunkMap;
