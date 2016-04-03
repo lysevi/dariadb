@@ -70,6 +70,12 @@ namespace dariadb {
                 return *this;
             }
 
+
+            Chunk_Ptr& operator=(const std::nullptr_t &ptr){
+                _shared_ptr=ptr;
+                return *this;
+            }
+
             bool operator==(const Chunk* ptr)const{
                 return _shared_ptr.get()==ptr;
             }
@@ -78,12 +84,20 @@ namespace dariadb {
                 return _shared_ptr==ptr._shared_ptr;
             }
 
+            bool operator==(const std::nullptr_t &ptr)const{
+                return _shared_ptr.get()==ptr;
+            }
+
             bool operator!=(const Chunk* ptr)const{
                 return _shared_ptr.get()!=ptr;
             }
 
             bool operator!=(const Chunk_Ptr &ptr)const{
                 return _shared_ptr!=ptr._shared_ptr;
+            }
+
+            bool operator!=(const std::nullptr_t &ptr)const{
+                return _shared_ptr.get()!=ptr;
             }
 
             std::shared_ptr<Chunk> operator ->(){
