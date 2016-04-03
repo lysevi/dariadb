@@ -43,7 +43,67 @@ namespace dariadb {
 			
 		};
 
-		typedef std::shared_ptr<Chunk>    Chunk_Ptr;
+        class Chunk_Ptr{
+        public:
+            std::shared_ptr<Chunk> _shared_ptr;
+            Chunk_Ptr():_shared_ptr{nullptr}
+            {
+
+            }
+            Chunk_Ptr(Chunk*ptr):_shared_ptr{ptr}{
+
+            }
+
+            Chunk_Ptr(std::shared_ptr<Chunk> ptr):_shared_ptr{ptr}{
+
+            }
+
+            Chunk_Ptr& operator=(std::shared_ptr<Chunk> shared_ptr){
+                _shared_ptr=shared_ptr;
+                return *this;
+            }
+
+            Chunk_Ptr& operator=(const Chunk_Ptr &other){
+                if(&other!=this){
+                    _shared_ptr=other._shared_ptr;
+                }
+                return *this;
+            }
+
+            bool operator==(const Chunk* ptr)const{
+                return _shared_ptr.get()==ptr;
+            }
+
+            bool operator==(const Chunk_Ptr &ptr)const{
+                return _shared_ptr==ptr._shared_ptr;
+            }
+
+            bool operator!=(const Chunk* ptr)const{
+                return _shared_ptr.get()!=ptr;
+            }
+
+            bool operator!=(const Chunk_Ptr &ptr)const{
+                return _shared_ptr!=ptr._shared_ptr;
+            }
+
+            std::shared_ptr<Chunk> operator ->(){
+                return _shared_ptr;
+            }
+
+            const std::shared_ptr<Chunk> operator ->()const{
+                return _shared_ptr;
+            }
+
+            Chunk* get(){
+                return _shared_ptr.get();
+            }
+
+            const Chunk* get()const{
+                return _shared_ptr.get();
+            }
+        };
+
+        //typedef std::shared_ptr<Chunk>    Chunk_Ptr;
 		typedef std::list<Chunk_Ptr>      ChuncksList;
 		typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
 		typedef std::map<Id, ChuncksList> ChunkMap;
