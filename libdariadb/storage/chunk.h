@@ -24,26 +24,48 @@ namespace dariadb {
 		};
 
 
-		struct Chunk:public ChunkIndexInfo
-		{
-		public:
-			Chunk(size_t size, Meas first_m);
-			Chunk(const ChunkIndexInfo&index, const uint8_t* buffer,const size_t buffer_length);
-			~Chunk();
-			
-			bool append(const Meas&m);
-			bool is_full()const { return c_writer.is_full(); }
-			bool check_flag(const Flag& f);
-			std::vector<uint8_t> _buffer_t;
-			utils::Range range;
-			compression::CopmressedWriter c_writer;
-		
-			std::mutex _mutex;			
-			compression::BinaryBuffer_Ptr bw;
-			
-		};
+        struct Chunk:public ChunkIndexInfo
+        {
+        public:
+            Chunk(size_t size, Meas first_m);
+            Chunk(const ChunkIndexInfo&index, const uint8_t* buffer,const size_t buffer_length);
+            ~Chunk();
 
-		typedef std::shared_ptr<Chunk>    Chunk_Ptr;
+            bool append(const Meas&m);
+            bool is_full()const { return c_writer.is_full(); }
+            bool check_flag(const Flag& f);
+            std::vector<uint8_t> _buffer_t;
+            utils::Range range;
+            compression::CopmressedWriter c_writer;
+
+            std::mutex _mutex;
+            compression::BinaryBuffer_Ptr bw;
+            static void* operator new(std::size_t sz);
+            static void operator delete(void* ptr, std::size_t sz);
+        };
+
+        typedef std::shared_ptr<Chunk>  Chunk_Ptr;
+
+
+        class ChunkPool{
+        private:
+            ChunkPool();
+        public:
+            ~ChunkPool();
+            static void start();
+            static void stop();
+            static ChunkPool*instance();
+
+            void*alloc(std::size_t sz);
+            void free(void* ptr, std::size_t sz);
+            size_t polled();
+        private:
+            static std::unique_ptr<ChunkPool> _instance;
+            std::list<void*> _ptrs;
+            std::mutex _mutex;
+        };
+
+
 		typedef std::list<Chunk_Ptr>      ChuncksList;
 		typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
 		typedef std::map<Id, ChuncksList> ChunkMap;

@@ -66,7 +66,8 @@ void Cursor::readNext( Cursor::Callback*cbk) {
 		}
 
 		if ((dariadb::utils::inInterval(_from, _to, _index_it->info.minTime)) || (dariadb::utils::inInterval(_from, _to, _index_it->info.maxTime))) {
-			Chunk_Ptr c = std::make_shared<Chunk>(_index_it->info, link->chunks + _index_it->offset, link->header->chunk_size);
+            auto ptr=new Chunk(_index_it->info, link->chunks + _index_it->offset, link->header->chunk_size);
+            Chunk_Ptr c{ptr};
 			assert(c->last.time != 0);
             cbk->call(c);
 			_index_it++;
