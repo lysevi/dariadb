@@ -8,7 +8,6 @@ namespace dariadb {
 	namespace storage {
 #pragma pack(push, 1)
 		struct PageHeader {
-			//TODO replace indexes and pos to uint64_t. if needed.
 			uint32_t chunk_per_storage;
 			uint32_t chunk_size;
 
@@ -19,7 +18,7 @@ namespace dariadb {
 
 			dariadb::Time minTime;
 			dariadb::Time maxTime;
-             uint64_t addeded_chunks;
+            uint64_t addeded_chunks;
 		};
 
 		struct Page_ChunkIndex {
