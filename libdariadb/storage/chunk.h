@@ -11,6 +11,7 @@
 namespace dariadb {
 	namespace storage {
 
+#pragma pack(push, 1)
 		struct ChunkIndexInfo {
 			//!!! check ctor of Chunk when change this struct.
 			Meas first, last;
@@ -22,7 +23,7 @@ namespace dariadb {
 			bool is_readonly;
             compression::CopmressedWriter::Position writer_position;
 		};
-
+#pragma pack(pop)
 
         struct Chunk:public ChunkIndexInfo
         {
@@ -45,7 +46,17 @@ namespace dariadb {
         };
 
         typedef std::shared_ptr<Chunk>  Chunk_Ptr;
+        typedef std::list<Chunk_Ptr>      ChuncksList;
+        typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
+        typedef std::map<Id, ChuncksList> ChunkMap;
 
+        class ChunkContainer
+        {
+        public:
+            virtual ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)=0;
+            virtual IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) = 0;
+            virtual IdArray getIds()const=0;
+        };
 
         class ChunkPool{
         private:
@@ -64,18 +75,5 @@ namespace dariadb {
             std::list<void*> _ptrs;
             std::mutex _mutex;
         };
-
-
-		typedef std::list<Chunk_Ptr>      ChuncksList;
-		typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
-		typedef std::map<Id, ChuncksList> ChunkMap;
-
-		class ChunkContainer
-		{
-		public:
-			virtual ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)=0;
-			virtual IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) = 0;
-			virtual IdArray getIds()const=0;
-		};
 	}
 }
