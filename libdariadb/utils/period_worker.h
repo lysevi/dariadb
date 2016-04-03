@@ -1,11 +1,6 @@
 #pragma once
 
 #include <thread>
-#include <condition_variable>
-#include <queue>
-#include <mutex>
-#include <assert.h>
-#include <atomic>
 #include <chrono>
 
 namespace dariadb {
@@ -14,54 +9,23 @@ namespace dariadb {
 		// look usage example in utils_test.cpp
 		class PeriodWorker {
 		public:
-			PeriodWorker(const std::chrono::milliseconds sleep_time) {
-				_sleep_time = sleep_time;
-			}
-			virtual ~PeriodWorker() {
-				if (m_thread_work) {
-					this->kill();
-				}
-			}
+            PeriodWorker(const std::chrono::milliseconds sleep_time);
+            virtual ~PeriodWorker();
+            virtual void call() = 0;
 
-			virtual void call() = 0;
+            void start_worker();
 
-			//TODO rename to start_worker.
-			void start() {
-				m_stop_flag = false;
-				m_thread = std::thread(&PeriodWorker::_thread_func, this);
-				assert(m_thread.joinable());
-			}
-
-			//TODO rename to kill_worker.
-			void kill() {
-				m_stop_flag = true;
-				m_thread.join();
-			}
+            void kill_worker();
 
 			/// whait, while all works done and stop thread.
-			//TODO rename to stop_worker.
-			void stop() {
-				m_stop_flag = true;
-				m_thread.join();
-			}
-
+            void stop_worker();
 			bool stoped() const { return m_stop_flag; }
 
 		protected:
-			void _thread_func() {
-				std::unique_lock<std::mutex> lock(m_thread_lock);
-				m_thread_work = true;
-				while (!m_stop_flag) {
-					std::this_thread::sleep_for(_sleep_time);
-					this->call();
-				}
-				m_thread_work = false;
-			}
-
+            void _thread_func();
 		private:
-			mutable std::mutex m_add_lock, m_thread_lock;
 			std::thread m_thread;
-			std::atomic<bool> m_stop_flag, m_thread_work;
+            bool m_stop_flag, m_thread_work;
 			std::chrono::milliseconds _sleep_time;
 		};
 	}

@@ -220,14 +220,14 @@ protected:
 };
 
 Capacitor::~Capacitor(){
-	this->stop();
+    this->stop_worker();
 }
 
 Capacitor::Capacitor(const BaseStorage_ptr stor, const Params&params) :
 	dariadb::utils::PeriodWorker(std::chrono::milliseconds(params.write_window_deep + capasitor_sync_delta)),
 	_Impl(new Capacitor::Private(stor,params))
 {
-	this->start();
+    this->start_worker();
 }
 
 bool Capacitor::append(const Meas & m){

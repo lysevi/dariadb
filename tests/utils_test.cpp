@@ -76,8 +76,8 @@ BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
 	auto secs_1 = std::chrono::milliseconds(1000);
 	auto secs_3 = std::chrono::milliseconds(1300);
 	std::unique_ptr<TestPeriodWorker> worker{ new TestPeriodWorker(secs_1) };
-	worker->start();
+    worker->start_worker();
 	std::this_thread::sleep_for(secs_3);
-	worker->stop();
+    worker->stop_worker();
 	BOOST_CHECK(worker->call_count > 1);
 }
