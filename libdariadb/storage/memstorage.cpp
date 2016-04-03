@@ -57,7 +57,8 @@ public:
 		Chunk_Ptr chunk = this->getFreeChunk(value.id);
 
 		if (chunk == nullptr) {
-			chunk = std::make_shared<Chunk>(_size, value);
+            auto ptr=new Chunk(_size,value);
+            chunk = Chunk_Ptr{ptr};
 			this->_chuncks[value.id].push_back(chunk);
 			this->_free_chunks[value.id] = chunk;
 
@@ -66,7 +67,8 @@ public:
             //std::cout<<"append new "<<chunk->count<< " chunks: "<<this->chunks_total_size()<<std::endl;
 			if (!chunk->append(value)) {
 				assert(chunk->is_full());
-				chunk = std::make_shared<Chunk>(_size, value);
+                auto ptr=new Chunk(_size,value);
+                chunk = Chunk_Ptr{ptr};
 				this->_chuncks[value.id].push_back(chunk);
 				this->_free_chunks[value.id] = chunk;
 			}

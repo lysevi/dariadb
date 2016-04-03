@@ -8,14 +8,16 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
-ChunkPool *ChunkPool::_instance=nullptr;
+std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
 ChunkPool::ChunkPool(){
 
 }
 
 ChunkPool::~ChunkPool(){
-
+    for(auto p:_ptrs){
+        :: operator delete(p);
+    }
 }
 
 void ChunkPool::start(){
@@ -23,23 +25,41 @@ void ChunkPool::start(){
 }
 
 void ChunkPool::stop(){
-    delete ChunkPool::_instance;
     ChunkPool::_instance=nullptr;
 }
 
 ChunkPool*ChunkPool::instance(){
     if(_instance==nullptr){
-        _instance=new ChunkPool;
+        _instance=std::unique_ptr<ChunkPool>{new ChunkPool};
     }
-    return _instance;
+    return _instance.get();
 }
 
-std::shared_ptr<Chunk> ChunkPool::alloc(){
-    return nullptr;
+size_t ChunkPool::polled(){
+    return _ptrs.size();
 }
 
-void ChunkPool::free(std::shared_ptr<Chunk> ptr){
+void* ChunkPool::alloc(std::size_t sz){
+    std::lock_guard<std::mutex> lg(_mutex);
+    if(this->_ptrs.size()!=0){
+        auto result= this->_ptrs.back();
+        this->_ptrs.pop_back();
+        return result;
+    }
+    return ::operator new(sz);
+}
 
+void ChunkPool::free(void* ptr, std::size_t sz){
+    std::lock_guard<std::mutex> lg(_mutex);
+    this->_ptrs.push_front(ptr);
+}
+
+void* Chunk::operator new(std::size_t sz){
+    return ChunkPool::instance()->alloc(sz);
+}
+
+void Chunk::operator delete(void* ptr, std::size_t sz){
+    ChunkPool::instance()->free(ptr,sz);
 }
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :

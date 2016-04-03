@@ -49,6 +49,7 @@ void show_info(dariadb::storage::UnionStorage *storage) {
 		std::cout 
 			<<"\rin memory chunks: "<<storage->chunks_in_memory()
 			<< " in disk chunks: " << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
+            << " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
 			<< " writes: "<<append_count
 			<< " speed: "<< writes_per_sec << "/sec progress:" 
 			<< (100 * append_count) / all_writes << "%                ";

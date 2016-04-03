@@ -143,7 +143,8 @@ ChuncksList Page::get_open_chunks() {
 		}
 		if (!index_it->info.is_readonly) {
 			index_it->is_init = false;
-			Chunk_Ptr c = std::make_shared<Chunk>(index_it->info, this->chunks + index_it->offset, this->header->chunk_size);
+            auto ptr=new Chunk(index_it->info, this->chunks + index_it->offset, this->header->chunk_size);
+            Chunk_Ptr c = Chunk_Ptr(ptr);
 			result.push_back(c);
 		}
 	}

@@ -24,111 +24,45 @@ namespace dariadb {
 		};
 
 
-		struct Chunk:public ChunkIndexInfo
-		{
-		public:
-			Chunk(size_t size, Meas first_m);
-			Chunk(const ChunkIndexInfo&index, const uint8_t* buffer,const size_t buffer_length);
-			~Chunk();
-			
-			bool append(const Meas&m);
-			bool is_full()const { return c_writer.is_full(); }
-			bool check_flag(const Flag& f);
-			std::vector<uint8_t> _buffer_t;
-			utils::Range range;
-			compression::CopmressedWriter c_writer;
-		
-			std::mutex _mutex;			
-			compression::BinaryBuffer_Ptr bw;
-			
-		};
-
-        class Chunk_Ptr{
+        struct Chunk:public ChunkIndexInfo
+        {
         public:
-            std::shared_ptr<Chunk> _shared_ptr;
-            Chunk_Ptr():_shared_ptr{nullptr}
-            {
+            Chunk(size_t size, Meas first_m);
+            Chunk(const ChunkIndexInfo&index, const uint8_t* buffer,const size_t buffer_length);
+            ~Chunk();
 
-            }
-            Chunk_Ptr(Chunk*ptr):_shared_ptr{ptr}{
+            bool append(const Meas&m);
+            bool is_full()const { return c_writer.is_full(); }
+            bool check_flag(const Flag& f);
+            std::vector<uint8_t> _buffer_t;
+            utils::Range range;
+            compression::CopmressedWriter c_writer;
 
-            }
-
-            Chunk_Ptr(std::shared_ptr<Chunk> ptr):_shared_ptr{ptr}{
-
-            }
-
-            Chunk_Ptr& operator=(std::shared_ptr<Chunk> shared_ptr){
-                _shared_ptr=shared_ptr;
-                return *this;
-            }
-
-            Chunk_Ptr& operator=(const Chunk_Ptr &other){
-                if(&other!=this){
-                    _shared_ptr=other._shared_ptr;
-                }
-                return *this;
-            }
-
-            Chunk_Ptr& operator=(const std::nullptr_t &ptr){
-                _shared_ptr=ptr;
-                return *this;
-            }
-
-            bool operator==(const Chunk* ptr)const{
-                return _shared_ptr.get()==ptr;
-            }
-
-            bool operator==(const Chunk_Ptr &ptr)const{
-                return _shared_ptr==ptr._shared_ptr;
-            }
-
-            bool operator==(const std::nullptr_t &ptr)const{
-                return _shared_ptr.get()==ptr;
-            }
-
-            bool operator!=(const Chunk* ptr)const{
-                return _shared_ptr.get()!=ptr;
-            }
-
-            bool operator!=(const Chunk_Ptr &ptr)const{
-                return _shared_ptr!=ptr._shared_ptr;
-            }
-
-            bool operator!=(const std::nullptr_t &ptr)const{
-                return _shared_ptr.get()!=ptr;
-            }
-
-            std::shared_ptr<Chunk> operator ->(){
-                return _shared_ptr;
-            }
-
-            const std::shared_ptr<Chunk> operator ->()const{
-                return _shared_ptr;
-            }
-
-            Chunk* get(){
-                return _shared_ptr.get();
-            }
-
-            const Chunk* get()const{
-                return _shared_ptr.get();
-            }
+            std::mutex _mutex;
+            compression::BinaryBuffer_Ptr bw;
+            static void* operator new(std::size_t sz);
+            static void operator delete(void* ptr, std::size_t sz);
         };
 
+        typedef std::shared_ptr<Chunk>  Chunk_Ptr;
+
+
         class ChunkPool{
-            static ChunkPool *_instance;
+        private:
             ChunkPool();
-            ~ChunkPool();
         public:
+            ~ChunkPool();
             static void start();
             static void stop();
             static ChunkPool*instance();
 
-            std::shared_ptr<Chunk> alloc();
-            void free(std::shared_ptr<Chunk> ptr);
-        protected:
-            std::list<std::shared_ptr<Chunk>> _ptrs;
+            void*alloc(std::size_t sz);
+            void free(void* ptr, std::size_t sz);
+            size_t polled();
+        private:
+            static std::unique_ptr<ChunkPool> _instance;
+            std::list<void*> _ptrs;
+            std::mutex _mutex;
         };
 
 
