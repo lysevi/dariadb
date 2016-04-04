@@ -99,8 +99,8 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	c_writer = compression::CopmressedWriter(bw);
     c_writer.restore_position(index.writer_position);
 
-	minTime = std::min(minTime, first.time);
-	maxTime = std::max(maxTime, first.time);
+    minTime =  first.time;
+    maxTime = last.time;
 }
 
 Chunk::Chunk(size_t size, Meas first_m) :
@@ -123,8 +123,8 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 	c_writer = compression::CopmressedWriter(bw);
 	c_writer.append(first);
-	minTime = std::min(minTime, first_m.time);
-	maxTime = std::max(maxTime, first_m.time);
+    minTime = first_m.time;
+    maxTime = first_m.time;
     flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
 }
 
