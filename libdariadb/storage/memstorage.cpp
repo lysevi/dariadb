@@ -51,26 +51,27 @@ public:
 		return resulted_chunk;
 	}
 
+	Chunk_Ptr make_chunk(dariadb::Meas first) {
+		auto ptr = new Chunk(_size, first);
+		auto chunk = Chunk_Ptr{ ptr };
+		this->_chuncks[first.id].push_back(chunk);
+		this->_free_chunks[first.id] = chunk;
+		return chunk;
+	}
+
 	append_result append(const Meas& value) {
 		std::lock_guard<std::mutex> lg(_mutex);
 
 		Chunk_Ptr chunk = this->getFreeChunk(value.id);
 
 		if (chunk == nullptr) {
-            auto ptr=new Chunk(_size,value);
-            chunk = Chunk_Ptr{ptr};
-			this->_chuncks[value.id].push_back(chunk);
-			this->_free_chunks[value.id] = chunk;
-
+			chunk=make_chunk(value);
 		}
 		else {
             //std::cout<<"append new "<<chunk->count<< " chunks: "<<this->chunks_total_size()<<std::endl;
 			if (!chunk->append(value)) {
 				assert(chunk->is_full());
-                auto ptr=new Chunk(_size,value);
-                chunk = Chunk_Ptr{ptr};
-				this->_chuncks[value.id].push_back(chunk);
-				this->_free_chunks[value.id] = chunk;
+				chunk = make_chunk(value);
 			}
 		}
 		
