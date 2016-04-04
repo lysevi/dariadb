@@ -2,6 +2,7 @@
 #include "bloom_filter.h"
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::utils;
@@ -43,20 +44,23 @@ size_t ChunkPool::polled(){
 
 void* ChunkPool::alloc(std::size_t sz){
     std::lock_guard<std::mutex> lg(_mutex);
+    void*result=nullptr;
     if(this->_ptrs.size()!=0){
-        auto result= this->_ptrs.back();
+        result= this->_ptrs.back();
         this->_ptrs.pop_back();
-        return result;
+    }else{
+        result=::operator new(sz);
     }
-    return ::operator new(sz);
+    memset(result,0,sz);
+    return result;
 }
 
 void ChunkPool::free(void* ptr, std::size_t){
     std::lock_guard<std::mutex> lg(_mutex);
-	if (_ptrs.size() < _max_size) {
-		_ptrs.push_front(ptr);
-	}
-	else {
+    if (_ptrs.size() < _max_size) {
+        _ptrs.push_front(ptr);
+    }
+    else {
 		::operator delete(ptr);
 	}
 }
