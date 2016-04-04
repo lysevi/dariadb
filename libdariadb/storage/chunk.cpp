@@ -57,7 +57,7 @@ void ChunkPool::free(void* ptr, std::size_t sz){
 		_ptrs.push_front(ptr);
 	}
 	else {
-		::operator delete(ptr,sz);
+		::operator delete(ptr);
 	}
 }
 
