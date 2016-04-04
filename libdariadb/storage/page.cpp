@@ -65,20 +65,6 @@ PageHeader Page::readHeader(std::string file_name) {
 
 }
 
-uint32_t Page::get_oldes_index() {
-	auto min_time = std::numeric_limits<dariadb::Time>::max();
-	uint32_t pos = 0;
-	auto index_end = index + header->chunk_per_storage;
-	uint32_t i = 0;
-	for (auto index_it = index; index_it != index_end; ++index_it, ++i) {
-		if (index_it->info.minTime<min_time) {
-			pos = i;
-			min_time = index_it->info.minTime;
-		}
-	}
-	return pos;
-}
-
 bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 	std::lock_guard<std::mutex> lg(lock);
 
@@ -90,16 +76,11 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
     //TODO refact method.
 	if (is_full()) {
         if (mode == MODE::SINGLE) {
-			auto pos_index = get_oldes_index();
-
-			index[pos_index].info = *index_rec;
-            index[pos_index].is_init = true;
-			memcpy(this->chunks + index[pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
-            header->minTime = std::min(header->minTime,ch->minTime);
-            header->maxTime = std::max(header->maxTime, ch->maxTime);
-			return true;
+			header->pos_index = 0;
 		}
-		return false;
+		else {
+			return false;
+		}
 	}
 	index[header->pos_index].info = *index_rec;
 	index[header->pos_index].offset = header->pos_chunks;

@@ -51,7 +51,7 @@ void* ChunkPool::alloc(std::size_t sz){
     return ::operator new(sz);
 }
 
-void ChunkPool::free(void* ptr, std::size_t sz){
+void ChunkPool::free(void* ptr, std::size_t){
     std::lock_guard<std::mutex> lg(_mutex);
 	if (_ptrs.size() < _max_size) {
 		_ptrs.push_front(ptr);
