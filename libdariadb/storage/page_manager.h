@@ -47,6 +47,9 @@ namespace dariadb{
 			
 			dariadb::storage::ChuncksList get_open_chunks();
 			size_t chunks_in_cur_page()const;
+
+            dariadb::Time minTime();
+            dariadb::Time maxTime();
 		private:
             static PageManager*_instance;
 			class Private;

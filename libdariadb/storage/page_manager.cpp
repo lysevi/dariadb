@@ -116,6 +116,9 @@ public:
 
     dariadb::IdArray getIds() {
 		std::lock_guard<std::mutex> lg(_mutex);
+        if(_cur_page==nullptr){
+            return dariadb::IdArray{};
+        }
 		auto cur_page = this->get_cur_page();
 		auto cursor = this->get_chunks(dariadb::IdArray{}, cur_page->header->minTime, cur_page->header->maxTime, 0);
 		
@@ -141,6 +144,24 @@ public:
 		}
         return _cur_page->header->addeded_chunks;
 	}
+
+    dariadb::Time minTime(){
+        std::lock_guard<std::mutex> lg(_mutex);
+        if(_cur_page==nullptr){
+            return dariadb::Time(0);
+        }else{
+            return _cur_page->header->minTime;
+        }
+    }
+
+    dariadb::Time maxTime(){
+        std::lock_guard<std::mutex> lg(_mutex);
+        if(_cur_page==nullptr){
+            return dariadb::Time(0);
+        }else{
+            return _cur_page->header->maxTime;
+        }
+    }
 protected:
     Page*  _cur_page;
 	PageManager::Params _param;
@@ -200,4 +221,12 @@ dariadb::storage::ChuncksList PageManager::get_open_chunks() {
 size_t PageManager::chunks_in_cur_page() const
 {
 	return impl->chunks_in_cur_page();
+}
+
+dariadb::Time PageManager::minTime(){
+    return impl->minTime();
+}
+
+dariadb::Time PageManager::maxTime(){
+    return impl->maxTime();
 }

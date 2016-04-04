@@ -37,7 +37,11 @@ public:
 	}
 
 	Time minTime() {
-		return mem_storage->minTime();
+        if(PageManager::instance()->chunks_in_cur_page()>0){
+            return PageManager::instance()->minTime();
+        }else{
+            return mem_storage->minTime();
+        }
 	}
 
 	Time maxTime() {
