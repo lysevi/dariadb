@@ -153,9 +153,11 @@ public:
 	
 	//by memory limit
 	ChuncksList drop_old_chunks_by_limit(const size_t max_limit) {
+		std::lock_guard<std::mutex> lg(_mutex_tp);
+
 		ChuncksList result{};
 		if(chunks_total_size()>max_limit) {
-			std::lock_guard<std::mutex> lg(_mutex_tp);
+			
 			while ((chunks_total_size() > (max_limit-size_t(max_limit/3)))){
 				for (auto& kv : _chuncks) {
 					if ((kv.second.size() > 1)) {
