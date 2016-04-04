@@ -34,7 +34,6 @@ namespace dariadb {
 			static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size);
 			static Page* open(std::string file_name);
 			static PageHeader readHeader(std::string file_name);
-			uint32_t get_oldes_index();
 			~Page();
             bool append(const Chunk_Ptr&ch, MODE mode);
 			bool is_full()const;
