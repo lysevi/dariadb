@@ -155,4 +155,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
         }
         
     }
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
 }
