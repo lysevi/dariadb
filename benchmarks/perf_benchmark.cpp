@@ -13,12 +13,20 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <random>
 
 std::atomic_long append_count{ 0 };
 size_t total_threads_count = 5;
 size_t iteration_count = 1500000;
 bool stop_info = false;
 
+class BenchCallback:public dariadb::storage::ReaderClb{
+public:
+    void call(const dariadb::Meas&){
+        count++;
+    }
+    size_t count;
+};
 
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     dariadb::storage::BaseStorage_ptr ms)
@@ -108,7 +116,26 @@ int main(int argc, char *argv[]) {
 		}
 		stop_info = true;
 		info_thread.join();
-		std::cout << "stoping storage...\n";
+        {
+            std::cout<<"reads..."<<std::endl;
+            std::random_device r;
+            std::default_random_engine e1(r());
+            std::uniform_int_distribution<dariadb::Id> uniform_dist(ms->minTime(), ms->maxTime());
+
+            std::shared_ptr<BenchCallback> clbk{new BenchCallback};
+            auto raw=clbk.get();
+
+            auto start = clock();
+
+            const size_t reads_count=100;
+            for(size_t i=0;i<reads_count;i++){
+                auto time_point=uniform_dist(e1);
+                ms->readInTimePoint(time_point)->readAll(raw);
+            }
+            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ reads_count;
+            std::cout << "time point: " << elapsed << std::endl;
+        }
+        std::cout << "stoping storage...\n";
 		ms = nullptr;
 
 	}
