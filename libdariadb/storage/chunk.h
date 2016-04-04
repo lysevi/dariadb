@@ -58,12 +58,14 @@ namespace dariadb {
             virtual IdArray getIds()const=0;
         };
 
+		const size_t ChunkPool_default_max_size = 200;
+
         class ChunkPool{
         private:
             ChunkPool();
         public:
             ~ChunkPool();
-            static void start();
+            static void start(size_t max_size);
             static void stop();
             static ChunkPool*instance();
 
@@ -73,6 +75,7 @@ namespace dariadb {
         private:
             static std::unique_ptr<ChunkPool> _instance;
             std::list<void*> _ptrs;
+			size_t _max_size;
             std::mutex _mutex;
         };
 	}

@@ -11,7 +11,7 @@ using namespace dariadb::compression;
 std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
 ChunkPool::ChunkPool(){
-
+	_max_size = ChunkPool_default_max_size;
 }
 
 ChunkPool::~ChunkPool(){
@@ -20,8 +20,10 @@ ChunkPool::~ChunkPool(){
     }
 }
 
-void ChunkPool::start(){
-
+void ChunkPool::start(size_t max_size){
+	if (max_size != 0) {
+		ChunkPool::instance()->_max_size = max_size;
+	}
 }
 
 void ChunkPool::stop(){
@@ -51,7 +53,12 @@ void* ChunkPool::alloc(std::size_t sz){
 
 void ChunkPool::free(void* ptr, std::size_t sz){
     std::lock_guard<std::mutex> lg(_mutex);
-    this->_ptrs.push_front(ptr);
+	if (_ptrs.size() < _max_size) {
+		_ptrs.push_front(ptr);
+	}
+	else {
+		::operator delete(ptr,sz);
+	}
 }
 
 void* Chunk::operator new(std::size_t sz){
