@@ -291,7 +291,7 @@ protected:
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
 	mutable std::mutex _mutex;
-	std::atomic_int64_t _chunks_count;
+	std::atomic<int64_t> _chunks_count;
 };
 
 
