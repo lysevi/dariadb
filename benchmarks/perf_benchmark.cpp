@@ -14,10 +14,9 @@
 #include <thread>
 #include <atomic>
 #include <random>
+#include "bench_common.h"
 
 std::atomic_long append_count{ 0 };
-size_t total_threads_count = 5;
-size_t iteration_count = 1500000;
 bool stop_info = false;
 
 class BenchCallback:public dariadb::storage::ReaderClb{
@@ -28,27 +27,12 @@ public:
     size_t count;
 };
 
-void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
-    dariadb::storage::BaseStorage_ptr ms)
-{
-    //auto sleep_duration = std::chrono::milliseconds(sleep_time);
-	auto m = dariadb::Meas::empty();
-	m.time = dariadb::timeutil::current_time() - id;
-	for (size_t i = 0; i < iteration_count; i++) {
-		m.id = id;
-		m.flag = dariadb::Flag(id);
-		m.time+= sleep_time;
-		m.value = dariadb::Value(i);
-		ms->append(m);
-		append_count++;
-		//std::this_thread::sleep_for(sleep_duration);
-	}
-}
+
 
 
 void show_info(dariadb::storage::UnionStorage *storage) {
 	clock_t t0 = clock();
-	auto all_writes = total_threads_count*iteration_count;
+	auto all_writes = dariadb_bench::total_threads_count*dariadb_bench::iteration_count;
 	while (true) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
@@ -101,16 +85,16 @@ int main(int argc, char *argv[]) {
 
 		std::thread info_thread(show_info, raw_ptr);
 		
-		std::vector<std::thread> writers(total_threads_count);
+		std::vector<std::thread> writers(dariadb_bench::total_threads_count);
 
 		size_t pos = 0;
-		for (size_t i = 1; i < total_threads_count+1; i++) {
-			std::thread t{ thread_writer_rnd_stor, pos, dariadb::Time(i), ms };
+		for (size_t i = 1; i < dariadb_bench::total_threads_count+1; i++) {
+			std::thread t{ dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), dariadb::Time(i),&append_count, ms };
 			writers[pos++] = std::move(t);
 		}
 		
 		pos = 0;
-		for (size_t i = 0; i < total_threads_count; i++) {
+		for (size_t i = 0; i < dariadb_bench::total_threads_count; i++) {
 			std::thread t = std::move(writers[pos++]);
 			t.join();
 		}
