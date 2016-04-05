@@ -129,8 +129,9 @@ Chunk::Chunk(size_t size, Meas first_m) :
 }
 
 Chunk::~Chunk() {
-
+	std::lock_guard<std::mutex> lg(_mutex);
 }
+
 bool Chunk::append(const Meas&m)
 {
 	assert(!is_readonly);

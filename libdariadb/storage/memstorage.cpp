@@ -107,6 +107,7 @@ public:
 	}
 
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
+		std::lock_guard<std::mutex> lg(_subscribe_mutex);
 		auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
 		_subscribe_notify->add(new_s);
 	}
@@ -156,9 +157,10 @@ public:
 	
 	//by memory limit
 	ChuncksList drop_old_chunks_by_limit(const size_t max_limit) {
+		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result{};
 		if (chunks_total_size() > max_limit) {
-			std::lock_guard<std::mutex> lg(_mutex);
+			
 			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
 				return result;
@@ -210,6 +212,7 @@ public:
 		}
 		this->_free_chunks.clear();
 		this->_chuncks.clear();
+		_chunks_count = 0;
 		//update min max
 		this->_min_time = std::numeric_limits<dariadb::Time>::max();
 		this->_max_time = std::numeric_limits<dariadb::Time>::min();
@@ -290,6 +293,7 @@ protected:
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
+	mutable std::mutex _subscribe_mutex;
 	mutable std::mutex _mutex;
 	std::atomic<int64_t> _chunks_count;
 };
