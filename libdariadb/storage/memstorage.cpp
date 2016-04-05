@@ -160,25 +160,24 @@ public:
 		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result{};
 		if (chunks_total_size() > max_limit) {
-			
+
 			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
 				return result;
 			}
 			for (auto& kv : _chuncks) {
-					if ((kv.second.size() > 1)) {
-						dariadb::storage::Chunk_Ptr chunk = kv.second.front();
-						if (chunk->is_readonly) {
-							result.push_back(chunk);
-							kv.second.pop_front();
-						}
+				if ((kv.second.size() > 1)) {
+					dariadb::storage::Chunk_Ptr chunk = kv.second.front();
+					if (chunk->is_readonly) {
+						result.push_back(chunk);
+						kv.second.pop_front();
 					}
-					if (int64_t(result.size())>=iterations) {
-						break;
-					}
+				}
+				if (int64_t(result.size()) >= iterations) {
+					break;
+				}
 			}
-			if (result.size() > size_t(0))
-			{
+			if (result.size() > size_t(0)){
 				update_max_min_after_drop();
 				_chunks_count = _chunks_count - long(result.size());
 			}
@@ -217,6 +216,7 @@ public:
 	}
 
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result{};
 
 		for (auto ch : _chuncks) {
