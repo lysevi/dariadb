@@ -121,9 +121,10 @@ bool Page::is_full()const {
 }
 
 Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
-	if ((from > header->maxTime) || (to < header->minTime) ){
+	//TODO check optimiszation
+	/*if ((from > header->maxTime) || (to < header->minTime) ){
 		return nullptr;
-	}
+	}*/
 	std::lock_guard<std::mutex> lg(lock);
 
 	Cursor_ptr result{ new Cursor{ this,ids,from,to,flag } };
