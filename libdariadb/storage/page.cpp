@@ -32,6 +32,7 @@ Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 	res->header->chunk_size = chunk_size;
 	res->header->maxTime = dariadb::Time(0);
 	res->header->minTime = std::numeric_limits<dariadb::Time>::max();
+    res->header->is_overwrite=false;
 	return res;
 }
 
@@ -87,32 +88,29 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 
 	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());
-    //TODO refact method.
 	if (is_full()) {
         if (mode == MODE::SINGLE) {
-            auto pos_index = get_oldes_index();
-            index[pos_index].info = *index_rec;
-            index[pos_index].is_init = true;
-            memcpy(this->chunks + index[pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
-
-            header->minTime = std::min(header->minTime,ch->minTime);
-            header->maxTime = std::max(header->maxTime, ch->maxTime);
-            return true;
-		}
+            header->is_overwrite=true;
+            header->pos_index=0;
+        }
 		else {
 			return false;
 		}
 	}
 	index[header->pos_index].info = *index_rec;
-	index[header->pos_index].offset = header->pos_chunks;
+
     index[header->pos_index].is_init = true;
 	memcpy(this->chunks + header->pos_chunks, buffer, sizeof(uint8_t)*header->chunk_size);
 
-	header->pos_chunks += header->chunk_size;
+    if(!header->is_overwrite){
+        index[header->pos_index].offset = header->pos_chunks;
+        header->pos_chunks += header->chunk_size;
+        header->addeded_chunks++;
+    }
 	header->pos_index++;
 	header->minTime = std::min(header->minTime,ch->minTime);
 	header->maxTime = std::max(header->maxTime, ch->maxTime);
-    header->addeded_chunks++;
+
 	return true;
 }
 
