@@ -33,9 +33,9 @@ bool FlagCompressor::append(dariadb::Flag v){
         _bw->clrbit().incbit();
     }
     else {
-        if (_bw->free_size() < 9) {
-            return false;
-        }
+		if (_bw->free_size() < 5) {
+			return false;
+		}
         _bw->setbit().incbit();
         _bw->write(uint64_t(v),31);
 
