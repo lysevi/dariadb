@@ -80,11 +80,17 @@ public:
 
     IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint){
 		std::lock_guard<std::mutex> lg(_mutex);
+		IdToChunkMap result;
+
 		ChuncksList ch_list;
 		auto cur_page = this->get_cur_page();
-		this->get_chunks(ids, cur_page->header->minTime, timePoint, flag)->readAll(&ch_list);
-
-		IdToChunkMap result;
+		auto cursor = this->get_chunks(ids, cur_page->header->minTime, timePoint, flag);
+		if (cursor == nullptr) {
+			return result;
+		}
+		cursor->readAll(&ch_list);
+		//std::cout << " loaded: " << ch_list.size() << std::endl;
+		
 		for (auto&v : ch_list) {
 			auto find_res = result.find(v->first.id);
 			if (find_res == result.end()) {
