@@ -8,6 +8,15 @@
 #include <utils/fs.h>
 #include <utils/logger.h>
 
+class BenchCallback:public dariadb::storage::ReaderClb{
+public:
+    void call(const dariadb::Meas&){
+        count++;
+    }
+    size_t count;
+};
+
+
 BOOST_AUTO_TEST_CASE(UnionStorage) {
     const std::string storage_path = "testStorage";
     {// All values must be placed in the page. Without overwriting the old.
@@ -58,6 +67,10 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
         dariadb::Meas::MeasList output;
         ms->readInterval(start_time, t)->readAll(&output);
         BOOST_CHECK(output.size() < count);
+
+        std::shared_ptr<BenchCallback> clbk{ new BenchCallback };
+        ms->readInterval(start_time, e.time)->readAll(clbk.get());
+        BOOST_CHECK_GT(clbk->count,size_t(0));
 
         output.clear();
         ms->flush();
