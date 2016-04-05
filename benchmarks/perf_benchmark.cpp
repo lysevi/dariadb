@@ -63,12 +63,12 @@ int main(int argc, char *argv[]) {
 	{
 		std::cout << "write..." << std::endl;
 		
-		const size_t chunk_per_storage = 1024*1024;
-		const size_t chunk_size = 256;
+        const size_t chunk_per_storage = 100;
+        const size_t chunk_size = 128;
 		const size_t cap_max_size = 100;
-		const dariadb::Time write_window_deep = 500;
+        const dariadb::Time write_window_deep = 10;
 		const dariadb::Time old_mem_chunks = 0;
-		const size_t max_mem_chunks = 100;
+        const size_t max_mem_chunks = 50;
 
 		if (dariadb::utils::fs::path_exists(storage_path)) {
 			dariadb::utils::fs::rm(storage_path);
@@ -112,9 +112,10 @@ int main(int argc, char *argv[]) {
             auto start = clock();
 
             const size_t reads_count=100;
-            for(size_t i=0;i<reads_count;i++){
-                auto time_point=uniform_dist(e1);
-                ms->readInTimePoint(time_point)->readAll(clbk.get());
+            auto tp=ms->minTime();
+            auto to=ms->maxTime();
+            for(;tp<to;tp+=1){
+                ms->readInTimePoint(tp)->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ reads_count;
             std::cout << "time: " << elapsed << std::endl;
@@ -131,9 +132,10 @@ int main(int argc, char *argv[]) {
 
 			const size_t reads_count = 100;
 			for (size_t i = 0; i<reads_count; i++) {
-				auto time_point1 = uniform_dist(e1);
-				auto time_point2 = uniform_dist(e1);
-				ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
+//				auto time_point1 = uniform_dist(e1);
+//				auto time_point2 = uniform_dist(e1);
+                //ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
+                ms->readInterval(ms->minTime(),ms->maxTime())->readAll(clbk.get());
 			}
 			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
 			std::cout << "time: " << elapsed << std::endl;
