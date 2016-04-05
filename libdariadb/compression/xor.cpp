@@ -34,11 +34,15 @@ bool XorCompressor::append(Value v){
     }
     auto xor_val=_prev_value^flat;
     if (xor_val==0){
-        if (_bw->free_size() == 1) {
+        if (_bw->free_size() < 1) {
             return false;
         }
         _bw->clrbit().incbit();
         return true;
+    }
+
+    if (_bw->free_size() < 16) {
+        return false;
     }
     _bw->setbit().incbit();
 

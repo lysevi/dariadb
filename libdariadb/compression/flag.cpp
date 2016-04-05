@@ -27,7 +27,7 @@ bool FlagCompressor::append(dariadb::Flag v){
     }
 
     if (v == _first) {
-        if (_bw->free_size() == 1) {
+        if (_bw->free_size() < 1) {
             return false;
         }
         _bw->clrbit().incbit();

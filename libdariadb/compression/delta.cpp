@@ -42,7 +42,7 @@ bool DeltaCompressor::append(dariadb::Time t){
 
     int64_t D=(t-_prev_time) - _prev_delta;
     if(D==0){
-        if (_bw->free_size() == 1) {
+        if (_bw->free_size() < 1) {
             return false;
         }
         _bw->clrbit().incbit();
