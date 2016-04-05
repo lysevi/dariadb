@@ -67,13 +67,18 @@ public:
 			result.writed++;
 		}
 
+		drop_old_chunks();
+		return result;
+	}
+
+	void drop_old_chunks() {
 		if (_limits.max_mem_chunks == 0) {
-            if(_limits.old_mem_chunks!=0){
-                auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
-                for (auto&c : old_chunks) {
-                    PageManager::instance()->append_chunk(c);
-                }
-            }
+			if (_limits.old_mem_chunks != 0) {
+				auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
+				for (auto&c : old_chunks) {
+					PageManager::instance()->append_chunk(c);
+				}
+			}
 		}
 		else {
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
@@ -81,7 +86,6 @@ public:
 				PageManager::instance()->append_chunk(c);
 			}
 		}
-		return result;
 	}
 
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
