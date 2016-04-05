@@ -13,6 +13,7 @@
 #include <tuple>
 #include <assert.h>
 #include <mutex>
+#include <atomic>
 
 using namespace dariadb;
 using namespace dariadb::compression;
@@ -27,9 +28,11 @@ public:
 		_size(size),
 		_min_time(std::numeric_limits<dariadb::Time>::max()),
 		_max_time(std::numeric_limits<dariadb::Time>::min()),
-		_subscribe_notify(new SubscribeNotificator)
+		_subscribe_notify(new SubscribeNotificator),
+		_chunks_count(0)
 	{
 		_subscribe_notify->start();
+		
 	}
 
 	~Private() {
@@ -56,6 +59,7 @@ public:
 		auto chunk = Chunk_Ptr{ ptr };
 		this->_chuncks[first.id].push_back(chunk);
 		this->_free_chunks[first.id] = chunk;
+		_chunks_count++;
 		return chunk;
 	}
 
@@ -99,11 +103,7 @@ public:
 	size_t chunks_size()const { return _chuncks.size(); }
 
 	size_t chunks_total_size()const {
-		size_t result = 0;
-		for (auto kv : _chuncks) {
-			result += kv.second.size();
-		}
-		return result;
+		return _chunks_count;
 	}
 
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
@@ -128,7 +128,7 @@ public:
 	}
 
 	dariadb::storage::ChuncksList drop_old_chunks(const dariadb::Time min_time) {
-        std::lock_guard<std::mutex> lg(_mutex_drop);
+        std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result;
 		auto now = dariadb::timeutil::current_time();
 
@@ -147,43 +147,44 @@ public:
 				}
 			}
 		}
-		//update min max
-		update_max_min_after_drop();
+		if (result.size() > size_t(0)){
+			update_max_min_after_drop();
+		}
+		_chunks_count= _chunks_count -long(result.size());
 		return result;
 	}
 	
 	//by memory limit
 	ChuncksList drop_old_chunks_by_limit(const size_t max_limit) {
-
-
 		ChuncksList result{};
-		if(chunks_total_size()>max_limit) {
-            std::lock_guard<std::mutex> lg(_mutex_drop);
-			while ((chunks_total_size() > (max_limit-size_t(max_limit/3)))){
+		if (chunks_total_size() > max_limit) {
+			std::lock_guard<std::mutex> lg(_mutex);
+			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
+			if (iterations < 0) {
+				return result;
+			}
+			while (int64_t(result.size())<iterations) {
 				for (auto& kv : _chuncks) {
-
 					if ((kv.second.size() > 1)) {
-
 						dariadb::storage::Chunk_Ptr chunk = kv.second.front();
 						if (chunk->is_full()) {
-                           // _mutex.lock();
 							result.push_back(chunk);
 							kv.second.pop_front();
-                           // _mutex.unlock();
 						}
 
 					}
-                    if((chunks_total_size() <= (max_limit-size_t(max_limit/3)))){
-                        break;
-                    }
+					if ((chunks_total_size() <= (max_limit - size_t(max_limit / 3)))) {
+						break;
+					}
 
 				}
 			}
-            assert(result.size() > size_t(0));
-			//update min max
-			update_max_min_after_drop();
+			if (result.size() > size_t(0))
+			{
+				update_max_min_after_drop();
+				_chunks_count = _chunks_count - long(result.size());
+			}
 		}
-		
 		return result;
 	}
 
@@ -199,7 +200,7 @@ public:
 	}
 
 	dariadb::storage::ChuncksList drop_all() {
-        std::lock_guard<std::mutex> lg(_mutex_drop);
+        std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result;
 		
 		for (auto& kv : _chuncks) {
@@ -289,8 +290,8 @@ protected:
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
-	std::mutex _mutex;
-    std::mutex _mutex_drop;
+	mutable std::mutex _mutex;
+	std::atomic_int64_t _chunks_count;
 };
 
 
