@@ -14,6 +14,7 @@
 #include <thread>
 #include <atomic>
 #include <random>
+#include <algorithm>
 #include "bench_common.h"
 
 std::atomic_long append_count{ 0 };
@@ -34,7 +35,7 @@ void show_info(dariadb::storage::UnionStorage *storage) {
 	clock_t t0 = clock();
 	auto all_writes = dariadb_bench::total_threads_count*dariadb_bench::iteration_count;
 	while (true) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 		clock_t t1 = clock();
 		auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
@@ -101,24 +102,42 @@ int main(int argc, char *argv[]) {
 		stop_info = true;
 		info_thread.join();
         {
-            std::cout<<"reads..."<<std::endl;
+            std::cout<<"time point reads..."<<std::endl;
             std::random_device r;
             std::default_random_engine e1(r());
             std::uniform_int_distribution<dariadb::Id> uniform_dist(ms->minTime(), ms->maxTime());
 
             std::shared_ptr<BenchCallback> clbk{new BenchCallback};
-            auto raw=clbk.get();
 
             auto start = clock();
 
             const size_t reads_count=100;
             for(size_t i=0;i<reads_count;i++){
                 auto time_point=uniform_dist(e1);
-                ms->readInTimePoint(time_point)->readAll(raw);
+                ms->readInTimePoint(time_point)->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ reads_count;
-            std::cout << "time point: " << elapsed << std::endl;
+            std::cout << "time: " << elapsed << std::endl;
         }
+		{
+			std::cout << "intervals reads..." << std::endl;
+			std::random_device r;
+			std::default_random_engine e1(r());
+			std::uniform_int_distribution<dariadb::Id> uniform_dist(ms->minTime(), ms->maxTime());
+
+			std::shared_ptr<BenchCallback> clbk{ new BenchCallback };
+
+			auto start = clock();
+
+			const size_t reads_count = 100;
+			for (size_t i = 0; i<reads_count; i++) {
+				auto time_point1 = uniform_dist(e1);
+				auto time_point2 = uniform_dist(e1);
+				ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
+			}
+			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+			std::cout << "time: " << elapsed << std::endl;
+		}
         std::cout << "stoping storage...\n";
 		ms = nullptr;
 
