@@ -41,9 +41,6 @@ bool XorCompressor::append(Value v){
         return true;
     }
 
-    if (_bw->free_size() < 16) {
-        return false;
-    }
     _bw->setbit().incbit();
 
     auto lead= dariadb::compression::clz(xor_val);
@@ -54,13 +51,20 @@ bool XorCompressor::append(Value v){
     if ((_prev_lead==lead) && (_prev_tail==tail)){
         _bw->clrbit().incbit();
     }else{
+
+		if (_bw->free_size() < 16) {
+			return false;
+		}
 		auto new_lead = utils::BitOperations::set(lead, 6);
         _bw->write((uint16_t)new_lead, int8_t(6));
         _bw->write((uint16_t)tail, int8_t(5));
     }
-
+	int8_t bits_to_write = (63 - lead - tail);
+	if (_bw->free_size() <(bits_to_write/8+1)) {
+		return false;
+	}
     xor_val = xor_val >> tail;
-    _bw->write(xor_val, (63 - lead - tail));
+    _bw->write(xor_val, bits_to_write);
 
     _prev_value = flat;
     _prev_lead=lead;
