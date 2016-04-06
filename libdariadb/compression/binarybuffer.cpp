@@ -1,6 +1,7 @@
 #include "binarybuffer.h"
 #include "../utils/utils.h"
 #include <cassert>
+#include <sstream>
 
 using namespace dariadb;
 using namespace dariadb::compression;
@@ -72,7 +73,9 @@ BinaryBuffer& BinaryBuffer::incbit(){
 }
 
 BinaryBuffer& BinaryBuffer::incpos(){
-    assert(_pos != 0);
+    if(_pos==0){
+        throw MAKE_EXCEPTION("_pos==0");
+    }
     _pos--;
     return *this;
 }

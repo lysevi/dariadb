@@ -194,7 +194,7 @@ Reader_ptr BaseStorage::readInterval(const IdArray &ids, Flag flag, Time from, T
 		res_raw = dynamic_cast<InnerReader*>(res.get());
     }
 
-    auto neededChunks = chunksByIterval(ids, flag, from, to);
+    dariadb::storage::ChuncksList neededChunks = chunksByIterval(ids, flag, from, to);
     for (auto cur_chunk : neededChunks) {
 		res_raw->add(cur_chunk, cur_chunk->count);
     }

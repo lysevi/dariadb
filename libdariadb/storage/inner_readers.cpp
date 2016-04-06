@@ -52,38 +52,39 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 	std::lock_guard<std::mutex> lg(_mutex);
 
 	if (!_tp_readed) {
-		this->readTimePoint(clb);
+        this->readTimePoint(clb);
 	}
 
-	for (auto ch : _chunks) {
-		for (size_t i = 0; i < ch.second.size(); i++) {
-			auto cur_ch = ch.second[i].chunk;
-			cur_ch->lock();
-			auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
-			bw->reset_pos();
-			CopmressedReader crr(bw, cur_ch->first);
+    for (auto ch : _chunks) {
+        for (size_t i = 0; i < ch.second.size(); i++) {
+            auto cur_ch = ch.second[i].chunk;
+            cur_ch->lock();
+            auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
+            bw->reset_pos();
+            CopmressedReader crr(bw, cur_ch->first);
 
-			if (check_meas(cur_ch->first)) {
-				auto sub = cur_ch->first;
-				clb->call(sub);
-			}
+            if (check_meas(cur_ch->first)) {
+                auto sub = cur_ch->first;
+                clb->call(sub);
+            }
 
-			for (size_t j = 0; j < cur_ch->count; j++) {
-				auto sub = crr.read();
-				sub.id = cur_ch->first.id;
-				if (check_meas(sub)) {
-					clb->call(sub);
-				}
-				else {
-					if (sub.time > _to) {
-						cur_ch->unlock();
-						break;
-					}
-				}
-			}
-			cur_ch->unlock();
-		}
-	}
+            for (size_t j = 0; j < cur_ch->count; j++) {
+                auto sub = crr.read();
+                sub.id = cur_ch->first.id;
+                if (check_meas(sub)) {
+                    clb->call(sub);
+                }
+                else {
+                    if (sub.time > _to) {
+                        cur_ch->unlock();
+                        break;
+                    }
+                }
+            }
+            cur_ch->unlock();
+        }
+    }
+    _chunks.clear();
 	end = true;
 }
 

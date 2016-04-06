@@ -159,19 +159,23 @@ public:
 	ChuncksList drop_old_chunks_by_limit(const size_t max_limit) {
 		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result{};
+
 		if (chunks_total_size() > max_limit) {
 
 			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
 				return result;
 			}
+
 			for (auto& kv : _chuncks) {
 				if ((kv.second.size() > 1)) {
 					dariadb::storage::Chunk_Ptr chunk = kv.second.front();
 					if (chunk->is_readonly) {
-						result.push_back(chunk);
-						kv.second.pop_front();
-					}
+                        result.push_back(chunk);
+                        kv.second.pop_front();
+                        _chunks_count--;
+                        chunk->is_dropped=true;
+                    }
 				}
 				if (int64_t(result.size()) >= iterations) {
 					break;
@@ -179,7 +183,6 @@ public:
 			}
 			if (result.size() > size_t(0)){
 				update_max_min_after_drop();
-				_chunks_count = _chunks_count - long(result.size());
 			}
 		}
 		return result;

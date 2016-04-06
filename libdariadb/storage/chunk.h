@@ -22,6 +22,8 @@ namespace dariadb {
 			uint8_t  bw_bit_num;
 			bool is_readonly;
             compression::CopmressedWriter::Position writer_position;
+
+            bool is_dropped;
 		};
 #pragma pack(pop)
 

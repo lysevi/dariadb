@@ -60,14 +60,16 @@ public:
 	append_result append(const Meas &value) {
 		std::lock_guard<std::mutex> lg(_mutex);
 		append_result result{};
-		if (!mem_cap->append(value)) {
+        //if (!mem_cap->append(value))
+        if (!mem_storage_raw->append(value).writed!=1)
+        {
 			result.ignored++;
 		}
 		else {
 			result.writed++;
 		}
 
-		drop_old_chunks();
+        drop_old_chunks();
 		return result;
 	}
 
@@ -108,16 +110,17 @@ public:
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
 		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList page_chunks, mem_chunks;
-		if (from < mem_storage_raw->minTime()) {
-			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
-		}
-		if (to > mem_storage_raw->minTime()) {
+//		if (from < mem_storage_raw->minTime()) {
+//			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
+//		}
+        //if (to > mem_storage_raw->minTime())
+        {
 			mem_chunks = mem_storage_raw->chunksByIterval(ids, flag, from, to);
 		}
 
-		for (auto&c : mem_chunks) {
-			page_chunks.push_back(c);
-		}
+        for (auto&c : mem_chunks) {
+            page_chunks.push_back(c);
+        }
 
 		return page_chunks;
 	}

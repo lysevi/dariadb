@@ -18,7 +18,7 @@
 
 #include "test_common.h"
 
-
+/*
 
 BOOST_AUTO_TEST_CASE(BloomTest) {
     typedef uint8_t u8_fltr_t;
@@ -465,3 +465,32 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 	delete ms;
 }
 
+
+*/
+BOOST_AUTO_TEST_CASE(DropByLimitChunks) {
+    auto ms = new dariadb::storage::MemoryStorage{ 500 };
+    auto m = dariadb::Meas::empty();
+    auto t=dariadb::timeutil::current_time();
+    size_t max_limit=100;
+    for (auto i = 0; i < 1000; i += 1,t+=10) {
+        m.id = i;
+        m.flag = dariadb::Flag(i);
+        m.src = dariadb::Flag(i);
+        m.time = t;
+        m.value = 0;
+        for (size_t j = 1; j < 1000; j++) {
+            m.value = dariadb::Value(j);
+            m.time++;
+            ms->append(m);
+        }
+        if(ms->chunks_total_size()>max_limit*2){
+            break;
+        }
+    }
+    auto droped=ms->drop_old_chunks_by_limit(max_limit);
+    BOOST_CHECK(ms->chunks_total_size()<=max_limit);
+    dariadb::Meas::MeasList out;
+    ms->readInterval(dariadb::Time(0), t)->readAll(&out);
+    BOOST_CHECK(out.size()>size_t(0));
+    delete ms;
+}

@@ -108,7 +108,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 	_mutex()
 {
 	is_readonly = false;
-
+    is_dropped=false;
 	count = 0;
 	first = first_m;
 	last = first_m;
@@ -135,6 +135,7 @@ Chunk::~Chunk() {
 bool Chunk::append(const Meas&m)
 {
 	assert(!is_readonly);
+    assert(!is_dropped);
 
 	std::lock_guard<std::mutex> lg(_mutex);
 	auto t_f = this->c_writer.append(m);
