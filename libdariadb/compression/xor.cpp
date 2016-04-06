@@ -60,7 +60,7 @@ bool XorCompressor::append(Value v){
         _bw->write((uint16_t)tail, int8_t(5));
     }
 	int8_t bits_to_write = (63 - lead - tail);
-	if (_bw->free_size() <(bits_to_write/8+1)) {
+	if (_bw->free_size() <size_t(bits_to_write/8+1)) {
 		return false;
 	}
     xor_val = xor_val >> tail;
