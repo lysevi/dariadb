@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 		std::vector<std::thread> writers(dariadb_bench::total_threads_count);
 		size_t pos = 0;
 		for (size_t i = 0; i < dariadb_bench::total_threads_count; i++) {
-			std::thread t{ dariadb_bench::thread_writer_rnd_stor, i,dariadb::Time(i),&append_count, ms };
+			std::thread t{ dariadb_bench::thread_writer_rnd_stor, i,dariadb::Time(i+1),&append_count, ms };
 			writers[pos++] = std::move(t);
 		}
 		//std::thread read_all_t{ thread_read_all, 0, dariadb::Time(iteration_count), ms };
