@@ -35,6 +35,8 @@ namespace dariadb {
             bool append(const Meas&m);
             bool is_full()const { return c_writer.is_full(); }
             bool check_flag(const Flag& f);
+			void lock() { _mutex.lock(); }
+			void unlock() { _mutex.unlock(); }
             std::vector<uint8_t> _buffer_t;
             utils::Range range;
             compression::CopmressedWriter c_writer;

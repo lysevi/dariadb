@@ -58,6 +58,7 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 	for (auto ch : _chunks) {
 		for (size_t i = 0; i < ch.second.size(); i++) {
 			auto cur_ch = ch.second[i].chunk;
+			cur_ch->lock();
 			auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
 			bw->reset_pos();
 			CopmressedReader crr(bw, cur_ch->first);
@@ -75,11 +76,12 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 				}
 				else {
 					if (sub.time > _to) {
+						cur_ch->unlock();
 						break;
 					}
 				}
 			}
-
+			cur_ch->unlock();
 		}
 	}
 	end = true;
@@ -101,13 +103,16 @@ void InnerReader::readTimePoint(storage::ReaderClb*clb) {
 	}
 
 	for (auto ch : to_read_chunks) {
+		
 		auto bw = std::make_shared<BinaryBuffer>(ch.chunk->bw->get_range());
 		bw->reset_pos();
 		CopmressedReader crr(bw, ch.chunk->first);
 
 		Meas candidate;
 		candidate = ch.chunk->first;
+		ch.chunk->lock();
 		for (size_t i = 0; i < ch.count; i++) {
+
 			auto sub = crr.read();
 			sub.id = ch.chunk->first.id;
 			if ((sub.time <= _from) && (sub.time >= candidate.time)) {
@@ -116,6 +121,7 @@ void InnerReader::readTimePoint(storage::ReaderClb*clb) {
 				break;
 			}
 		}
+		ch.chunk->unlock();
 		if (candidate.time <= _from) {
 			//TODO make as options
 			candidate.time = _from;
