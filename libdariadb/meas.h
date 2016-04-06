@@ -4,6 +4,7 @@
 #include <vector>
 #include <list>
 #include <set>
+#include <stdint.h>
 
 namespace dariadb {
 typedef uint64_t Time;
