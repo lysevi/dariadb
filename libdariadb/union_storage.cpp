@@ -60,8 +60,7 @@ public:
 	append_result append(const Meas &value) {
 		std::lock_guard<std::mutex> lg(_mutex);
 		append_result result{};
-
-        if (this->mem_storage_raw->append(value).writed!=1) {
+		if (!mem_cap->append(value)) {
 			result.ignored++;
 		}
 		else {
@@ -83,9 +82,9 @@ public:
 		}
 		else {
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
-//			for (auto&c : old_chunks) {
-//				PageManager::instance()->append_chunk(c);
-//			}
+			for (auto&c : old_chunks) {
+				PageManager::instance()->append_chunk(c);
+			}
 		}
 	}
 
