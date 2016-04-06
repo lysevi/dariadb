@@ -8,35 +8,17 @@
 
 namespace dariadb {
 	namespace storage {
-		struct ReadChunk
-		{
-			size_t    count;
-			Chunk_Ptr chunk;
-			ReadChunk() = default;
-			ReadChunk(const ReadChunk&other) {
-				count = other.count;
-				chunk = other.chunk;
-			}
-			ReadChunk&operator=(const ReadChunk&other) {
-				if (this != &other) {
-					count = other.count;
-					chunk = other.chunk;
-				}
-				return *this;
-			}
-		};
 
-		typedef std::vector<ReadChunk> ReadChuncksVector;
-		typedef std::map<Id, ReadChuncksVector> ReadChunkMap;
+        typedef std::map<Id, dariadb::storage::ChuncksList> ReadChunkMap;
 
 		class InnerReader : public Reader {
 		public:
 
 			InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to);
 
-			void add(Chunk_Ptr c, size_t count);
+            void add(Chunk_Ptr c);
 
-			void add_tp(Chunk_Ptr c, size_t count);
+            void add_tp(Chunk_Ptr c);
 			bool isEnd() const override;
 
 			dariadb::IdArray getIds()const override;

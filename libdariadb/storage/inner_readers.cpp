@@ -1,5 +1,6 @@
 #include "inner_readers.h"
 #include "../flags.h"
+#include <cassert>
 
 using namespace dariadb;
 using namespace dariadb::compression;
@@ -17,20 +18,14 @@ InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time t
 	end = false;
 }
 
-void InnerReader::add(Chunk_Ptr c, size_t count) {
+void InnerReader::add(Chunk_Ptr c) {
 	std::lock_guard<std::mutex> lg(_mutex);
-	ReadChunk rc;
-	rc.chunk = c;
-	rc.count = count;
-	this->_chunks[c->first.id].push_back(rc);
+    this->_chunks[c->first.id].push_back(c);
 }
 
-void InnerReader::add_tp(Chunk_Ptr c, size_t count) {
+void InnerReader::add_tp(Chunk_Ptr c) {
 	std::lock_guard<std::mutex> lg(_mutex);
-	ReadChunk rc;
-	rc.chunk = c;
-	rc.count = count;
-	this->_tp_chunks[c->first.id].push_back(rc);
+    this->_tp_chunks[c->first.id].push_back(c);
 }
 
 bool InnerReader::isEnd() const {
@@ -56,8 +51,8 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 	}
 
     for (auto ch : _chunks) {
-        for (size_t i = 0; i < ch.second.size(); i++) {
-            auto cur_ch = ch.second[i].chunk;
+
+        for (auto cur_ch:ch.second) {
             cur_ch->lock();
             auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
             bw->reset_pos();
@@ -90,14 +85,13 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 
 void InnerReader::readTimePoint(storage::ReaderClb*clb) {
 	std::lock_guard<std::mutex> lg(_mutex_tp);
-	std::list<ReadChunk> to_read_chunks{};
+    std::list<Chunk_Ptr> to_read_chunks{};
 	for (auto ch : _tp_chunks) {
 		auto candidate = ch.second.front();
 
-		for (size_t i = 0; i < ch.second.size(); i++) {
-			auto cur_chunk = ch.second[i].chunk;
-			if (candidate.chunk->first.time < cur_chunk->first.time) {
-				candidate = ch.second[i];
+        for (auto cur_chunk:ch.second) {
+            if (candidate->first.time < cur_chunk->first.time) {
+                candidate = cur_chunk;
 			}
 		}
 		to_read_chunks.push_back(candidate);
@@ -105,24 +99,24 @@ void InnerReader::readTimePoint(storage::ReaderClb*clb) {
 
 	for (auto ch : to_read_chunks) {
 		
-		auto bw = std::make_shared<BinaryBuffer>(ch.chunk->bw->get_range());
+        auto bw = std::make_shared<BinaryBuffer>(ch->bw->get_range());
 		bw->reset_pos();
-		CopmressedReader crr(bw, ch.chunk->first);
+        CopmressedReader crr(bw, ch->first);
 
 		Meas candidate;
-		candidate = ch.chunk->first;
-		ch.chunk->lock();
-		for (size_t i = 0; i < ch.count; i++) {
+        candidate = ch->first;
+        ch->lock();
+        for (size_t i = 0; i < ch->count; i++) {
 
 			auto sub = crr.read();
-			sub.id = ch.chunk->first.id;
+            sub.id = ch->first.id;
 			if ((sub.time <= _from) && (sub.time >= candidate.time)) {
 				candidate = sub;
 			}if (sub.time > _from) {
 				break;
 			}
 		}
-		ch.chunk->unlock();
+        ch->unlock();
 		if (candidate.time <= _from) {
 			//TODO make as options
 			candidate.time = _from;

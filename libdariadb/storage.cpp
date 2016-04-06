@@ -196,7 +196,7 @@ Reader_ptr BaseStorage::readInterval(const IdArray &ids, Flag flag, Time from, T
 
     dariadb::storage::ChuncksList neededChunks = chunksByIterval(ids, flag, from, to);
     for (auto cur_chunk : neededChunks) {
-		res_raw->add(cur_chunk, cur_chunk->count);
+        res_raw->add(cur_chunk);
     }
 	res_raw->is_time_point_reader = false;
     return res;
@@ -219,7 +219,7 @@ Reader_ptr BaseStorage::readInTimePoint(const IdArray &ids, Flag flag, Time time
         }
         else {
             auto ch = search_res->second;
-            res->add_tp(ch, ch->count);
+            res->add_tp(ch);
         }
     }
 
