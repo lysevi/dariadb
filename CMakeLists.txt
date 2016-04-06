@@ -112,6 +112,7 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 
 if(CMAKE_COMPILER_IS_CLANG)
   add_definitions(-DCLANG_CPP)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wc++11-extensions")
 endif(CMAKE_COMPILER_IS_CLANG)
 
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
