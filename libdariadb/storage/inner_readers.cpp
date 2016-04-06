@@ -62,14 +62,14 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 			bw->reset_pos();
 			CopmressedReader crr(bw, cur_ch->first);
 
-			if (check_meas(ch.second[i].chunk->first)) {
-				auto sub = ch.second[i].chunk->first;
+			if (check_meas(cur_ch->first)) {
+				auto sub = cur_ch->first;
 				clb->call(sub);
 			}
 
-			for (size_t j = 0; j < ch.second[i].count; j++) {
+			for (size_t j = 0; j < cur_ch->count; j++) {
 				auto sub = crr.read();
-				sub.id = ch.second[i].chunk->first.id;
+				sub.id = cur_ch->first.id;
 				if (check_meas(sub)) {
 					clb->call(sub);
 				}
