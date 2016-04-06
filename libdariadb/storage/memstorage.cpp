@@ -57,7 +57,7 @@ public:
 	Chunk_Ptr make_chunk(dariadb::Meas first) {
 		auto ptr = new Chunk(_size, first);
 		auto chunk = Chunk_Ptr{ ptr };
-		this->_chuncks[first.id].push_back(chunk);
+        this->_chuncks.push_back(chunk);
 		this->_free_chunks[first.id] = chunk;
 		_chunks_count++;
 		return chunk;
@@ -131,24 +131,20 @@ public:
 	dariadb::storage::ChuncksList drop_old_chunks(const dariadb::Time min_time) {
         std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result;
-		auto now = dariadb::timeutil::current_time();
+        auto now = dariadb::timeutil::current_time();
 
-		for (auto& kv : _chuncks) {
-			while ((kv.second.size() > 0)) {
-				auto past = (now - min_time);
-				if ((kv.second.front()->maxTime < past)&&(kv.second.front()->is_full())) {
-					auto chunk = kv.second.front();
-					result.push_back(chunk);
-					kv.second.pop_front();
-					if (this->_free_chunks[kv.first] == chunk) {
-						this->_free_chunks.erase(kv.first);
-					}
-				}else {
-					break;
-				}
-			}
-		}
+        for (auto& chunk : _chuncks) {
+                auto past = (now - min_time);
+                if ((chunk->maxTime < past)&&(chunk->is_full())) {
+                    result.push_back(chunk);
+                    chunk->is_dropped=true;
+                    if (this->_free_chunks[chunk->first.id] == chunk) {
+                        this->_free_chunks.erase(chunk->first.id);
+                    }
+                }
+        }
 		if (result.size() > size_t(0)){
+            this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
 			update_max_min_after_drop();
 		}
 		_chunks_count= _chunks_count -long(result.size());
@@ -167,23 +163,26 @@ public:
 				return result;
 			}
 
-			for (auto& kv : _chuncks) {
-				if ((kv.second.size() > 1)) {
-					dariadb::storage::Chunk_Ptr chunk = kv.second.front();
-					if (chunk->is_readonly) {
-                        result.push_back(chunk);
-                        kv.second.pop_front();
-                        _chunks_count--;
-                        chunk->is_dropped=true;
+            for (auto& chunk : _chuncks) {
+
+                if (chunk->is_readonly) {
+                    result.push_back(chunk);
+
+                    if (this->_free_chunks[chunk->first.id] == chunk) {
+                        this->_free_chunks.erase(chunk->first.id);
                     }
-				}
-				if (int64_t(result.size()) >= iterations) {
-					break;
-				}
-			}
+                    _chunks_count--;
+                    chunk->is_dropped=true;
+                }
+
+                if (int64_t(result.size()) >= iterations) {
+                    break;
+                }
+            }
 			if (result.size() > size_t(0)){
 				update_max_min_after_drop();
 			}
+            this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
 		}
 		return result;
 	}
@@ -191,11 +190,11 @@ public:
 	void update_max_min_after_drop() {
 		this->_min_time = std::numeric_limits<dariadb::Time>::max();
 		this->_max_time = std::numeric_limits<dariadb::Time>::min();
-		for (auto& kv : _chuncks) {
-			for (auto &c : kv.second) {
+        for (auto& c : _chuncks) {
+
 				_min_time = std::min(c->minTime, _min_time);
 				_max_time = std::max(c->maxTime, _max_time);
-			}
+
 		}
 	}
 
@@ -203,10 +202,8 @@ public:
         std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result;
 		
-		for (auto& kv : _chuncks) {
-			for (auto chunk : kv.second) {
+        for (auto& chunk : _chuncks) {
 				result.push_back(chunk);
-			}
 		}
 		this->_free_chunks.clear();
 		this->_chuncks.clear();
@@ -222,42 +219,44 @@ public:
 		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result{};
 
-		for (auto ch : _chuncks) {
-			if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
-				continue;
-			}
-			for (auto &cur_chunk : ch.second) {
-				if (flag != 0) {
-					if (!cur_chunk->check_flag(flag)) {
-						continue;
-					}
-				}
-				if ((utils::inInterval(from, to, cur_chunk->minTime)) || (utils::inInterval(from, to, cur_chunk->maxTime))) {
-					result.push_back(cur_chunk);
-				}
-			}
+        for (auto ch : _chuncks) {
+            if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
+                continue;
+            }
 
-		}
+            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch->first.id) == ids.end())) {
+                continue;
+            }
+
+            if (flag != 0) {
+                if (!ch->check_flag(flag)) {
+                    continue;
+                }
+            }
+            result.push_back(ch);
+
+        }
 		return result;
 	}
 
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
 		IdToChunkMap result;
-		for (auto ch : _chuncks) {
-			if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch.first) == ids.end())) {
+        for (auto cur_chunk : _chuncks) {
+            if (cur_chunk->minTime > timePoint){
+                break;
+            }
+            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), cur_chunk->first.id) == ids.end())) {
 				continue;
-			}
-			auto chunks = &ch.second;
-			for (auto it = chunks->rbegin(); it != chunks->crend(); ++it) {
-				auto cur_chunk = *it;
-				if (!cur_chunk->check_flag(flag)) {
-					continue;
-				}
-				if (cur_chunk->minTime <= timePoint) {
-					result[ch.first] = cur_chunk;
-					break;
-				}
-			}
+            }
+
+            if (!cur_chunk->check_flag(flag)) {
+                continue;
+            }
+            if (cur_chunk->minTime <= timePoint) {
+                result[cur_chunk->first.id] = cur_chunk;
+                break;
+            }
+
 		}
 		return result;
 	}
@@ -266,7 +265,7 @@ public:
 		dariadb::IdArray result;
 		result.resize(_chuncks.size());
 		size_t pos = 0;
-		for (auto&kv : _chuncks) {
+        for (auto&kv : _free_chunks) {
 			result[pos] = kv.first;
 			pos++;
 		}
@@ -275,7 +274,7 @@ public:
 
 	void add_chunks(const ChuncksList&clist) {
 		for (auto c : clist) {
-			_chuncks[c->first.id].push_back(c);
+            _chuncks.push_back(c);
 			auto search_res = _free_chunks.find(c->first.id);
 			if (search_res == _free_chunks.end()) {
 				_free_chunks[c->first.id] = c;
@@ -288,7 +287,7 @@ public:
 protected:
 	size_t _size;
 
-	ChunkMap _chuncks;
+    ChuncksList _chuncks;
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
