@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
 		}
 		
 		pos = 0;
-		for (size_t i = 0; i < dariadb_bench::total_threads_count; i++) {
+		for (size_t i = 1; i < dariadb_bench::total_threads_count+1; i++) {
 			std::thread t = std::move(writers[pos++]);
 			t.join();
 		}
