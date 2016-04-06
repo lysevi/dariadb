@@ -40,7 +40,7 @@ public:
             ss << "(_first.id != m.id)" << " id:" << m.id << " first.id:" << _first.id;
             throw MAKE_EXCEPTION(ss.str().c_str());
         }
-        if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full()) {
+        if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full() || src_comp.is_full()) {
             _is_full = true;
             return false;
         }
@@ -48,7 +48,7 @@ public:
         auto t_f = time_comp.append(m.time);
         auto f_f = value_comp.append(m.value);
         auto v_f = flag_comp.append(m.flag);
-        auto s_f=src_comp.append(m.src);
+        auto s_f = src_comp.append(m.src);
 
         if (!t_f || !f_f || !v_f || !s_f) {
             _is_full = true;
