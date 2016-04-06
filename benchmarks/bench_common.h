@@ -4,8 +4,8 @@
 
 namespace dariadb_bench 
 {
-    const size_t total_threads_count = 5;
-    const size_t iteration_count = 1000000;
+	const size_t total_threads_count = 5;
+	const size_t iteration_count = 3000000;
 
 	void thread_writer_rnd_stor(
 		dariadb::Id id, 
