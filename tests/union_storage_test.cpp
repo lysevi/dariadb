@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 
         dariadb::Meas::MeasList output;
         ms->readInterval(start_time, t)->readAll(&output);
-        BOOST_CHECK(output.size() < count);
+        BOOST_CHECK(output.size() <= count);
 
         std::shared_ptr<BenchCallback> clbk{ new BenchCallback };
         ms->readInterval(start_time, e.time)->readAll(clbk.get());
