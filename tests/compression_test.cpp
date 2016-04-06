@@ -510,7 +510,7 @@ BOOST_AUTO_TEST_CASE(FlagCompressor)
 
 BOOST_AUTO_TEST_CASE(CompressedBlock)
 {
-	const size_t test_buffer_size = 1000;
+	const size_t test_buffer_size = 128;
 
     uint8_t b_begin[test_buffer_size];
     auto b_end = std::end(b_begin);
@@ -529,12 +529,14 @@ BOOST_AUTO_TEST_CASE(CompressedBlock)
 
 	std::list<dariadb::Meas> meases{};
     auto zer_t=static_cast<dariadb::Time>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count());
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; ; i++) {
 		auto m = dariadb::Meas::empty();
         m.time = zer_t++;
 		m.flag = i;
 		m.value = i;
-		cwr.append(m);
+		if (!cwr.append(m)) {
+			break;
+		}
 		meases.push_back(m);
 	}
 
