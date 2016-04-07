@@ -139,7 +139,8 @@ bool Chunk::append(const Meas&m)
 
 	std::lock_guard<std::mutex> lg(_mutex);
 	auto t_f = this->c_writer.append(m);
-	
+	writer_position = c_writer.get_position();
+
 	if (!t_f) {
 		is_readonly = true;
 		assert(c_writer.is_full());
@@ -148,7 +149,6 @@ bool Chunk::append(const Meas&m)
 	else {
 		bw_pos = uint32_t(bw->pos());
 		bw_bit_num = bw->bitnum();
-		writer_position = c_writer.get_position();
 
 		count++;
 
