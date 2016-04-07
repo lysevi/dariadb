@@ -109,6 +109,9 @@ BinaryBuffer& BinaryBuffer::clrbit() {
 }
 
 void BinaryBuffer::write(uint16_t v,int8_t count){
+	if (count == 0) {
+		throw MAKE_EXCEPTION("count==0");
+	}
     const auto bits_in_ui16=sizeof(uint16_t)*8;
 
     uint32_t *dest = (uint32_t*)(_begin + _pos - 3);
@@ -119,6 +122,19 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 }
 
 void BinaryBuffer::write(uint64_t v, int8_t count) {
+	if (count == 0) {
+		throw MAKE_EXCEPTION("count==0");
+	}
+	for (int8_t i = count; i >= 0; i--) {
+		auto bit = utils::BitOperations::get(v, i);
+		if (bit) {
+			setbit().incbit();
+		}else{
+			clrbit().incbit();
+		}
+	}
+	/*
+	TODO replace up code
 	uint8_t *arr = reinterpret_cast<uint8_t*>(&v);
 	auto max_index = count / 8;
 	int8_t bits_in_max = (count+1)%8;
@@ -128,10 +144,13 @@ void BinaryBuffer::write(uint64_t v, int8_t count) {
 	}
 	for (int i = max_index; i >= 0; i--) {
 		this->write((uint16_t)arr[i], max_bit_pos);
-	}
+	}*/
 }
 
 uint64_t  BinaryBuffer::read(int8_t count) {
+	if (count == 0) {
+		throw MAKE_EXCEPTION("count==0");
+	}
 	if (count > 61) {
 		uint64_t result = 0;
 		for (int8_t i = count; i >= 0; i--) {
