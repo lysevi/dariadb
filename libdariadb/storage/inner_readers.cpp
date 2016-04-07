@@ -74,7 +74,6 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
                 }
                 else {
                     if (sub.time > _to) {
-                        cur_ch->unlock();
                         break;
                     }
                 }
