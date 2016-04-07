@@ -59,10 +59,12 @@ bool XorCompressor::append(Value v){
         _bw->write((uint16_t)new_lead, int8_t(6));
         _bw->write((uint16_t)tail, int8_t(5));
     }
-	int8_t bits_to_write = (63 - lead - tail);
+	int8_t bits_to_write = (64 - lead - tail);
 	if (_bw->free_size() <size_t(bits_to_write/8+1)) {
 		return false;
 	}
+	assert(bits_to_write != 0);
+	
     xor_val = xor_val >> tail;
     _bw->write(xor_val, bits_to_write);
 
@@ -116,8 +118,10 @@ dariadb::Value XorDeCompressor::read()
 
         uint8_t tail = static_cast<uint8_t>(_bw->read(5));
         uint64_t result=0;
+		int8_t bit2read = 64 - leading - tail;
+		assert(bit2read != 0);
 
-        result=_bw->read(63 - leading - tail);
+        result=_bw->read(bit2read);
         result = result << tail;
 
         _prev_lead = leading;
@@ -127,8 +131,9 @@ dariadb::Value XorDeCompressor::read()
         return inner::flat_int_to_double(ret);
     }else{
         uint64_t result = 0;
-
-        result = _bw->read(63 - _prev_lead - _prev_tail);
+		int8_t but2read = 64 - _prev_lead - _prev_tail;
+		assert(but2read != 0);
+        result = _bw->read(but2read);
         result = result << _prev_tail;
 
         auto ret= result ^ _prev_value;
