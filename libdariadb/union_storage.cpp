@@ -110,10 +110,10 @@ public:
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
 		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList page_chunks, mem_chunks;
-//		if (from < mem_storage_raw->minTime()) {
-//			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
-//		}
-        //if (to > mem_storage_raw->minTime())
+		if (from < mem_storage_raw->minTime()) {
+			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
+		}
+        if (to > mem_storage_raw->minTime())
         {
 			mem_chunks = mem_storage_raw->chunksByIterval(ids, flag, from, to);
 		}

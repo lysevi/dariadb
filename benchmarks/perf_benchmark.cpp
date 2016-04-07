@@ -113,8 +113,8 @@ int main(int argc, char *argv[]) {
 
             const size_t reads_count=1000;
             for(size_t i=0;i<reads_count;i++){
-				auto time_point = 57881;// uniform_dist(e1);
-				std::cout << "tp: " << time_point<<std::endl;
+				auto time_point =59896;
+				std::cout << "tP: " << time_point<<std::endl;
                 ms->readInTimePoint(time_point)->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ reads_count;
@@ -125,11 +125,11 @@ int main(int argc, char *argv[]) {
 //			std::random_device r;
 //			std::default_random_engine e1(r());
 //			std::uniform_int_distribution<dariadb::Id> uniform_dist(ms->minTime(), ms->maxTime());
-
+//
 //			std::shared_ptr<BenchCallback> clbk{ new BenchCallback };
-
+//
 //			auto start = clock();
-
+//
 //            const size_t reads_count = 20;
 //			for (size_t i = 0; i<reads_count; i++) {
 //                auto time_point1 = uniform_dist(e1);
