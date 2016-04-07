@@ -40,7 +40,7 @@ public:
             ss << "(_first.id != m.id)" << " id:" << m.id << " first.id:" << _first.id;
             throw MAKE_EXCEPTION(ss.str().c_str());
         }
-        if (time_comp.is_full() || value_comp.is_full() || flag_comp.is_full() || src_comp.is_full()) {
+        if (_is_full || time_comp.is_full() || value_comp.is_full() || flag_comp.is_full() || src_comp.is_full()) {
             _is_full = true;
             return false;
         }
