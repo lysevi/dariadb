@@ -16,10 +16,15 @@ namespace dariadb_bench
 		auto m = dariadb::Meas::empty();
 		m.time = 0;
 		for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
+			
 			m.id = id;
 			m.flag = dariadb::Flag(id);
+			m.src = dariadb::Flag(id);
 			m.time += sleep_time;
 			m.value = dariadb::Value(i);
+			if (m.time == dariadb::Time(59818)) {
+				std::cout << "bug\n";
+			}
 			ms->append(m);
 			(*append_count)++;
 			//std::this_thread::sleep_for(sleep_duration);
