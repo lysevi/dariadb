@@ -132,6 +132,8 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 Chunk::~Chunk() {
 	std::lock_guard<std::mutex> lg(_mutex);
+	this->bw = nullptr;
+	_buffer_t.clear();
 }
 
 bool Chunk::append(const Meas&m)
@@ -139,8 +141,9 @@ bool Chunk::append(const Meas&m)
 	if (m.time == 59819) {
 		std::cout << "append to bug time\n";
 	}
-	if (minTime == 59817) {
-		std::cout << "append to bug\n";
+	if (minTime == 26785)
+	{
+		std::cout << "****\n";
 
 		auto bw_tmp = std::make_shared<dariadb::compression::BinaryBuffer>(this->bw->get_range());
 		bw_tmp->reset_pos();
@@ -155,8 +158,9 @@ bool Chunk::append(const Meas&m)
 		}
 	}
 
-	assert(!is_readonly);
-    assert(!is_dropped);
+	if (is_dropped || is_readonly) {
+		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
+	}
 
 	std::lock_guard<std::mutex> lg(_mutex);
 	auto t_f = this->c_writer.append(m);
