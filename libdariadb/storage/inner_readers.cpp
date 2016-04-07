@@ -52,12 +52,15 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 
     for (auto ch : _chunks) {
 
-        for (auto cur_ch:ch.second) {
+        for (Chunk_Ptr cur_ch:ch.second) {
+			if (cur_ch->is_dropped) {
+				throw MAKE_EXCEPTION("InnerReader::cur_ch->is_dropped");
+			}
             cur_ch->lock();
             auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
             bw->reset_pos();
             CopmressedReader crr(bw, cur_ch->first);
-
+			
             if (check_meas(cur_ch->first)) {
                 auto sub = cur_ch->first;
                 clb->call(sub);
@@ -86,10 +89,10 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 void InnerReader::readTimePoint(storage::ReaderClb*clb) {
 	std::lock_guard<std::mutex> lg(_mutex_tp);
     std::list<Chunk_Ptr> to_read_chunks{};
-	for (auto ch : _tp_chunks) {
-		auto candidate = ch.second.front();
+	for (auto cand_ch : _tp_chunks) {
+		auto candidate = cand_ch.second.front();
 
-        for (auto cur_chunk:ch.second) {
+        for (auto cur_chunk: cand_ch.second) {
             if (candidate->first.time < cur_chunk->first.time) {
                 candidate = cur_chunk;
 			}
