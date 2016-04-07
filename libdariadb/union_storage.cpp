@@ -61,7 +61,7 @@ public:
 		std::lock_guard<std::mutex> lg(_mutex);
 		append_result result{};
         //if (!mem_cap->append(value))
-        if (!mem_storage_raw->append(value).writed!=1)
+        if (mem_storage_raw->append(value).writed!=1)
         {
 			result.ignored++;
 		}

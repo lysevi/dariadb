@@ -27,6 +27,8 @@ bool XorCompressor::append(Value v){
         _first= flat;
         _is_first=false;
         _prev_value= flat;
+        _prev_lead=64;
+        _prev_tail=64;
         return true;
     }
     if (_bw->free_size() <9) {
