@@ -99,9 +99,6 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	
 	c_writer = compression::CopmressedWriter(bw);
     c_writer.restore_position(index.writer_position);
-
-    minTime =  first.time;
-    maxTime = last.time;
 }
 
 Chunk::Chunk(size_t size, Meas first_m) :
