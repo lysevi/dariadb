@@ -86,6 +86,7 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	bw_pos = index.bw_pos;
 	bw_bit_num = index.bw_bit_num;
 	is_readonly = index.is_readonly;
+	is_dropped = index.is_dropped;
 
 	for (size_t i = 0; i < buffer_length; i++) {
 		_buffer_t[i] = buffer[i];
