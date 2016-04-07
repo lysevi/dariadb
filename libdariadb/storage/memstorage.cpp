@@ -179,10 +179,11 @@ public:
                     break;
                 }
             }
-			if (result.size() > size_t(0)){
+			if (result.size() > size_t(0)) {
+				this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
+
 				update_max_min_after_drop();
 			}
-            this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
 		}
 		return result;
 	}
@@ -220,6 +221,9 @@ public:
 		ChuncksList result{};
 
         for (auto ch : _chuncks) {
+			if (ch->is_dropped) {
+				throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
+			}
             if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
                 continue;
             }
@@ -236,6 +240,9 @@ public:
             result.push_back(ch);
 
         }
+		if (result.size() > this->chunks_total_size()) {
+			throw MAKE_EXCEPTION("result.size() > this->chunksBeforeTimePoint()");
+		}
 		return result;
 	}
 
