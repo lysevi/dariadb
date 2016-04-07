@@ -117,7 +117,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 	std::fill(_buffer_t.begin(), _buffer_t.end(), 0);
 
 	using compression::BinaryBuffer;
-	range = Range{ _buffer_t.data(),_buffer_t.data() + size - 1 };
+	range = Range{ _buffer_t.data(),_buffer_t.data() + size };
 	bw = std::make_shared<BinaryBuffer>(range);
 
 	c_writer = compression::CopmressedWriter(bw);
