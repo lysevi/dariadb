@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 		const size_t cap_max_size = 100;
 		const dariadb::Time write_window_deep = 500;
         const dariadb::Time old_mem_chunks = 0;
-        const size_t max_mem_chunks = 99;
+        const size_t max_mem_chunks = 100;
 
 		if (dariadb::utils::fs::path_exists(storage_path)) {
 			dariadb::utils::fs::rm(storage_path);
@@ -113,36 +113,35 @@ int main(int argc, char *argv[]) {
 
             const size_t reads_count=1000;
             for(size_t i=0;i<reads_count;i++){
-				auto time_point =59896;
-				std::cout << "tP: " << time_point<<std::endl;
+                auto time_point = uniform_dist(e1);
                 ms->readInTimePoint(time_point)->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ reads_count;
             std::cout << "time: " << elapsed << std::endl;
         }
-//		{
-//			std::cout << "intervals reads..." << std::endl;
-//			std::random_device r;
-//			std::default_random_engine e1(r());
-//			std::uniform_int_distribution<dariadb::Id> uniform_dist(ms->minTime(), ms->maxTime());
-//
-//			std::shared_ptr<BenchCallback> clbk{ new BenchCallback };
-//
-//			auto start = clock();
-//
-//            const size_t reads_count = 20;
-//			for (size_t i = 0; i<reads_count; i++) {
-//                auto time_point1 = uniform_dist(e1);
-//                auto time_point2 = uniform_dist(e1);
-////                std::cout
-////                        <<" i:"<<i
-////                        <<" from: "<<std::min(time_point1, time_point2)
-////                        <<" to: "<<std::max(time_point1, time_point2)<<std::endl;
-//				ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
-//			}
-//			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-//			std::cout << "time: " << elapsed << std::endl;
-//		}
+        {
+            std::cout << "intervals reads..." << std::endl;
+            std::random_device r;
+            std::default_random_engine e1(r());
+            std::uniform_int_distribution<dariadb::Id> uniform_dist(ms->minTime(), ms->maxTime());
+
+            std::shared_ptr<BenchCallback> clbk{ new BenchCallback };
+
+            auto start = clock();
+
+            const size_t reads_count = 20;
+            for (size_t i = 0; i<reads_count; i++) {
+                auto time_point1 = uniform_dist(e1);
+                auto time_point2 = uniform_dist(e1);
+//                std::cout
+//                        <<" i:"<<i
+//                        <<" from: "<<std::min(time_point1, time_point2)
+//                        <<" to: "<<std::max(time_point1, time_point2)<<std::endl;
+                ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
+            }
+            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+            std::cout << "time: " << elapsed << std::endl;
+        }
         std::cout << "stoping storage...\n";
 		ms = nullptr;
 

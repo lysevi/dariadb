@@ -4,8 +4,8 @@
 
 namespace dariadb_bench 
 {
-    const size_t total_threads_count = 1;
-    const size_t iteration_count = 100000;
+    const size_t total_threads_count = 5;
+    const size_t iteration_count = 300000;
 
 	void thread_writer_rnd_stor(
 		dariadb::Id id, 
@@ -14,7 +14,7 @@ namespace dariadb_bench
 		dariadb::storage::BaseStorage_ptr ms)
 	{
 		auto m = dariadb::Meas::empty();
-		m.time = 0;
+        m.time = dariadb::timeutil::current_time();
 		for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
 			
 			m.id = id;
@@ -22,9 +22,6 @@ namespace dariadb_bench
 			m.src = dariadb::Flag(id);
 			m.time += sleep_time;
 			m.value = dariadb::Value(i);
-			if (m.time == dariadb::Time(59818)) {
-				std::cout << "bug\n";
-			}
 			ms->append(m);
 			(*append_count)++;
 			//std::this_thread::sleep_for(sleep_duration);

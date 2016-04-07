@@ -18,7 +18,6 @@
 
 #include "test_common.h"
 
-/*
 
 BOOST_AUTO_TEST_CASE(BloomTest) {
     typedef uint8_t u8_fltr_t;
@@ -465,8 +464,6 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 	delete ms;
 }
 
-
-*/
 BOOST_AUTO_TEST_CASE(DropByLimitChunks) {
     auto ms = new dariadb::storage::MemoryStorage{ 500 };
     auto m = dariadb::Meas::empty();

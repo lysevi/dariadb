@@ -53,9 +53,6 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
     for (auto ch : _chunks) {
 
         for (Chunk_Ptr cur_ch:ch.second) {
-			if (cur_ch->is_dropped) {
-				throw MAKE_EXCEPTION("InnerReader::cur_ch->is_dropped");
-			}
             cur_ch->lock();
             auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
             bw->reset_pos();
@@ -100,7 +97,7 @@ void InnerReader::readTimePoint(storage::ReaderClb*clb) {
 	}
 
 	for (auto ch : to_read_chunks) {
-		
+
         auto bw = std::make_shared<BinaryBuffer>(ch->bw->get_range());
 		bw->reset_pos();
         CopmressedReader crr(bw, ch->first);
@@ -111,10 +108,11 @@ void InnerReader::readTimePoint(storage::ReaderClb*clb) {
         for (size_t i = 0; i < ch->count; i++) {
 
 			auto sub = crr.read();
-			std::cout << "sub: t" << sub.time
-				<< " v: " << sub.value
-				<< " f: " << sub.flag
-				<< " s: " << sub.src << std::endl;
+            //TODO clean it
+//			std::cout << "sub: t" << sub.time
+//				<< " v: " << sub.value
+//				<< " f: " << sub.flag
+//				<< " s: " << sub.src << std::endl;
             sub.id = ch->first.id;
 			if ((sub.time <= _from) && (sub.time >= candidate.time)) {
 				candidate = sub;

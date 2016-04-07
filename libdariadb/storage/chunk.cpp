@@ -138,7 +138,8 @@ Chunk::~Chunk() {
 
 bool Chunk::append(const Meas&m)
 {
-	if (m.time == 59819) {
+    /*TODO clean it
+      if (m.time == 59819) {
 		std::cout << "append to bug time\n";
 	}
 	if (minTime == 26785)
@@ -157,7 +158,7 @@ bool Chunk::append(const Meas&m)
 				<< " s: " << sub.src << std::endl;
 		}
 	}
-
+*/
 	if (is_dropped || is_readonly) {
 		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
 	}
