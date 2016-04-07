@@ -93,7 +93,7 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	}
 
 	range = Range{ _buffer_t.data(),_buffer_t.data() + buffer_length };
-	assert(size_t(range.end - range.begin), buffer_length);
+	assert(size_t(range.end - range.begin)==buffer_length);
 	bw = std::make_shared<BinaryBuffer>(range);
 	bw->set_bitnum(bw_bit_num);
 	bw->set_pos(bw_pos);
