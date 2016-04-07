@@ -82,7 +82,6 @@ uint32_t Page::get_oldes_index() {
 
 bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 	std::lock_guard<std::mutex> lg(lock);
-
 	auto index_rec = (ChunkIndexInfo*)ch.get();
 	auto buffer = ch->_buffer_t.data();
 
@@ -100,13 +99,15 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 	index[header->pos_index].info = *index_rec;
 
     index[header->pos_index].is_init = true;
-	memcpy(this->chunks + header->pos_chunks, buffer, sizeof(uint8_t)*header->chunk_size);
+	
 
     if(!header->is_overwrite){
         index[header->pos_index].offset = header->pos_chunks;
         header->pos_chunks += header->chunk_size;
         header->addeded_chunks++;
     }
+	memcpy(this->chunks + index[header->pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
+
 	header->pos_index++;
 	header->minTime = std::min(header->minTime,ch->minTime);
 	header->maxTime = std::max(header->maxTime, ch->maxTime);
