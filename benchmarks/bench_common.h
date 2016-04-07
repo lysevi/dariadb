@@ -14,7 +14,7 @@ namespace dariadb_bench
 		dariadb::storage::BaseStorage_ptr ms)
 	{
 		auto m = dariadb::Meas::empty();
-		m.time = dariadb::timeutil::current_time() - id;
+		m.time = 0;
 		for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
 			m.id = id;
 			m.flag = dariadb::Flag(id);

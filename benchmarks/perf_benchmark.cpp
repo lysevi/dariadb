@@ -113,7 +113,8 @@ int main(int argc, char *argv[]) {
 
             const size_t reads_count=1000;
             for(size_t i=0;i<reads_count;i++){
-                auto time_point=uniform_dist(e1);
+				auto time_point = 57881;// uniform_dist(e1);
+				std::cout << "tp: " << time_point<<std::endl;
                 ms->readInTimePoint(time_point)->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ reads_count;
