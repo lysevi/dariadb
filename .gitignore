@@ -1,5 +1,6 @@
 tmp
 packages.config
+.vs
 *.page
 *.dll
 *.lib
