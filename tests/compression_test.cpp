@@ -346,7 +346,8 @@ BOOST_AUTO_TEST_CASE(DeltaDeCompressor){
 		}
 	}
 
-
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	bw->reset_pos();
 	{//333,0,0,0
 		Testable_DeltaCompressor co(bw);
 		dariadb::Time delta = 333;
@@ -482,13 +483,14 @@ BOOST_AUTO_TEST_CASE(XorCompressor){
             BOOST_CHECK_EQUAL(dc.read(),v);
         }
     }
+	std::fill(std::begin(buffer), std::end(buffer), 0);
 	bw->reset_pos();
 	{ // 333,0,0,0,0,0
 		Testable_XorCompressor co(bw);
 		std::list<dariadb::Value> values{};
 		dariadb::Value delta = dariadb::Value(333);
 
-		for (int i = 0; i<2; i++) {
+		for (int i = 0; i<10; i++) {
 			co.append(delta);
 			values.push_back(delta);
 			delta = 0;;

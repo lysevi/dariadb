@@ -37,6 +37,7 @@ bool DeltaCompressor::append(dariadb::Time t){
         _first=t;
         _is_first=false;
         _prev_time=t;
+		_prev_delta = 0;
         return true;
     }
 

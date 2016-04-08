@@ -25,7 +25,7 @@ namespace dariadb {
         protected:
             bool _is_first;
             Time _first;
-            uint64_t _prev_delta;
+            int64_t _prev_delta;
             Time _prev_time;
         };
 
