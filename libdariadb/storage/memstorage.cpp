@@ -220,26 +220,21 @@ public:
 		std::lock_guard<std::mutex> lg(_mutex);
 		ChuncksList result{};
 
-        for (auto ch : _chuncks) {
+		for (auto ch : _chuncks) {
 			if (ch->is_dropped) {
 				throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
 			}
-            if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
-                continue;
-            }
-
-            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), ch->first.id) == ids.end())) {
-                continue;
-            }
-
-            if (flag != 0) {
-                if (!ch->check_flag(flag)) {
-                    continue;
-                }
-            }
-            result.push_back(ch);
-
-        }
+			if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
+				if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
+					if (flag != 0) {
+						if (!ch->check_flag(flag)) {
+							continue;
+						}
+					}
+					result.push_back(ch);
+				}
+			}
+		}
 		if (result.size() > this->chunks_total_size()) {
 			throw MAKE_EXCEPTION("result.size() > this->chunksBeforeTimePoint()");
 		}

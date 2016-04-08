@@ -33,6 +33,7 @@ bool InnerReader::isEnd() const {
 }
 
 dariadb::IdArray InnerReader::getIds()const {
+	//TODO cache result!
 	dariadb::IdArray result;
 	result.resize(_chunks.size());
 	size_t pos = 0;
@@ -78,7 +79,6 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
             cur_ch->unlock();
         }
     }
-    _chunks.clear();
 	end = true;
 }
 
