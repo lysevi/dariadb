@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 
             auto start = clock();
 
-            const size_t reads_count=1000;
+            const size_t reads_count=100;
             for(size_t i=0;i<reads_count;i++){
                 auto time_point = uniform_dist(e1);
                 ms->readInTimePoint(time_point)->readAll(clbk.get());
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
 
             auto start = clock();
 
-            const size_t reads_count = 20;
+            const size_t reads_count = 100;
             for (size_t i = 0; i<reads_count; i++) {
                 auto time_point1 = uniform_dist(e1);
                 auto time_point2 = uniform_dist(e1);
