@@ -57,8 +57,8 @@ bool XorCompressor::append(Value v){
 		if (_bw->free_size() < 16) {
 			return false;
 		}
-		auto new_lead = utils::BitOperations::set(lead, 6);
-        _bw->write((uint16_t)new_lead, int8_t(6));
+		_bw->setbit().incbit();
+        _bw->write((uint16_t)lead, int8_t(5));
         _bw->write((uint16_t)tail, int8_t(5));
     }
 	int8_t bits_to_write = (64 - lead - tail);

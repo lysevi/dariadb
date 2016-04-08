@@ -72,6 +72,6 @@ dariadb::Flag FlagDeCompressor::read(){
         _bw->incbit();
         result=(dariadb::Flag)_bw->read(31);
     }
-
+	_prev_value = result;
     return result;
 }
