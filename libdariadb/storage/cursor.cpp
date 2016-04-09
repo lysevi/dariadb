@@ -47,7 +47,7 @@ bool Cursor::is_end()const {
 }
 
 void Cursor::readNext( Cursor::Callback*cbk) {
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	for (; !_is_end; _index_it++) {
 		if (_index_it == _index_end) {
 			_is_end = true;

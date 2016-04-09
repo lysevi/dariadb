@@ -1,7 +1,8 @@
 #pragma once
 
 #include "chunk.h"
-#include <mutex>
+#include "../utils/spinlock.h"
+
 namespace dariadb {
 	namespace storage {
 		class Page;
@@ -28,7 +29,7 @@ namespace dariadb {
 			dariadb::IdArray _ids;
 			dariadb::Time _from, _to;
 			dariadb::Flag _flag;
-            std::mutex _mutex;
+            dariadb::utils::SpinLock _locker;
 		};
 
 		typedef std::shared_ptr<Cursor> Cursor_ptr;

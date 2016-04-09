@@ -46,7 +46,7 @@ size_t ChunkPool::polled(){
 }
 
 void* ChunkPool::alloc(std::size_t sz){
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
     void*result=nullptr;
     if(this->_ptrs.size()!=0){
         result= this->_ptrs.back();
@@ -59,7 +59,7 @@ void* ChunkPool::alloc(std::size_t sz){
 }
 
 void ChunkPool::free(void* ptr, std::size_t){
-    std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
     if (_ptrs.size() < _max_size) {
         _ptrs.push_front(ptr);
     }
@@ -78,7 +78,7 @@ void Chunk::operator delete(void* ptr, std::size_t sz){
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
 	_buffer_t(buffer_length),
-	_mutex{}
+    _locker{}
 {
 	count = index.count;
 	first = index.first;
@@ -107,7 +107,7 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 
 Chunk::Chunk(size_t size, Meas first_m) :
 	_buffer_t(size),
-	_mutex()
+    _locker()
 {
 	is_readonly = false;
     is_dropped=false;
@@ -131,7 +131,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 }
 
 Chunk::~Chunk() {
-	std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	this->bw = nullptr;
 	_buffer_t.clear();
 }
@@ -163,7 +163,7 @@ bool Chunk::append(const Meas&m)
 		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
 	}
 
-	std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	auto t_f = this->c_writer.append(m);
 	writer_position = c_writer.get_position();
 

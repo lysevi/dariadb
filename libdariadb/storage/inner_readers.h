@@ -2,9 +2,9 @@
 
 #include "../storage.h"
 #include "chunk.h"
+#include "../utils/spinlock.h"
 
 #include <memory>
-#include <mutex>
 
 namespace dariadb {
 	namespace storage {
@@ -45,7 +45,7 @@ namespace dariadb {
 			typedef std::tuple<dariadb::Id, dariadb::Time> IdTime;
 			std::set<IdTime> _tp_readed_times;
 
-			std::mutex _mutex, _mutex_tp;
+            dariadb::utils::SpinLock _locker, _locker_tp;
 
 
 		};
@@ -66,7 +66,7 @@ namespace dariadb {
 			void reset();
 
 			bool end;
-			std::mutex _mutex;
+            dariadb::utils::SpinLock _locker;
 			dariadb::Meas::MeasList _cur_values;
 		};
 

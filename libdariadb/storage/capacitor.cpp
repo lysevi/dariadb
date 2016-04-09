@@ -1,6 +1,7 @@
 #include "capacitor.h"
 #include "time_ordered_set.h"
 #include "../utils/utils.h"
+#include "../utils/spinlock.h"
 #include "../timeutil.h"
 #include <cassert>
 #include <algorithm>
@@ -8,7 +9,6 @@
 #include <map>
 #include <limits>
 #include <utility>
-#include <mutex>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -85,14 +85,14 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 
 		auto res = check_and_append(m);
         return res;
     }
 
 	void flush_old_sets() {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		for (auto &kv : _bucks) {
 			bool flushed = false;
 			//while (kv.second.size()>0) 
@@ -120,7 +120,7 @@ public:
 	}
 
     tos_ptr get_target_to_write(const Meas&m) {
-//		std::lock_guard<std::mutex> lg(_mutex);
+//		std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         auto last_it=_last.find(m.id);
         if(last_it ==_last.end()){
 			
@@ -177,7 +177,7 @@ public:
     }
 
     bool flush(){
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         for (auto kv : _bucks) {
             for(auto v:kv.second){
                 if(!flush_set(v)){
@@ -215,7 +215,7 @@ protected:
     dict_last   _last;
     BaseStorage_ptr _stor;
     size_t _writed_count;
-	std::mutex _mutex;
+    dariadb::utils::SpinLock _locker;
 	Capacitor::Params _params;
 };
 

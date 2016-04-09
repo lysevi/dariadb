@@ -2,10 +2,10 @@
 
 #include "../meas.h"
 #include "../utils/utils.h"
+#include "../utils/spinlock.h"
 #include "../compression.h"
 #include "../compression/binarybuffer.h"
 
-#include <mutex>
 #include <map>
 
 namespace dariadb {
@@ -37,13 +37,13 @@ namespace dariadb {
             bool append(const Meas&m);
             bool is_full()const { return c_writer.is_full(); }
             bool check_flag(const Flag& f);
-			void lock() { _mutex.lock(); }
-			void unlock() { _mutex.unlock(); }
+            void lock() { _locker.lock(); }
+            void unlock() { _locker.unlock(); }
             std::vector<uint8_t> _buffer_t;
             utils::Range range;
             compression::CopmressedWriter c_writer;
 
-            std::mutex _mutex;
+            utils::SpinLock _locker;
             compression::BinaryBuffer_Ptr bw;
             static void* operator new(std::size_t sz);
             static void operator delete(void* ptr, std::size_t sz);
@@ -80,7 +80,7 @@ namespace dariadb {
             static std::unique_ptr<ChunkPool> _instance;
             std::list<void*> _ptrs;
 			size_t _max_size;
-            std::mutex _mutex;
+            utils::SpinLock _locker;
         };
 	}
 }
