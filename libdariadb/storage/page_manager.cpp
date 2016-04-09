@@ -2,8 +2,8 @@
 #include "../utils/utils.h"
 #include "page.h"
 #include "../utils/fs.h"
+#include "../utils/spinlock.h"
 
-#include <mutex>
 #include <cstring>
 
 using namespace dariadb::storage;
@@ -60,7 +60,7 @@ public:
     }
 
     bool append_chunk(const Chunk_Ptr&ch) {
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         auto pg=get_cur_page();
         return pg->append(ch,_param.mode);
     }
@@ -72,14 +72,14 @@ public:
     }
 
     ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to){
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		ChuncksList result;
 		this->get_chunks(ids, from, to, flag)->readAll(&result);
 		return result;
     }
 
     IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint){
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		IdToChunkMap result;
 
 		ChuncksList ch_list;
@@ -121,7 +121,7 @@ public:
 	};
 
     dariadb::IdArray getIds() {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::IdArray{};
         }
@@ -152,7 +152,7 @@ public:
 	}
 
     dariadb::Time minTime(){
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::Time(0);
         }else{
@@ -161,7 +161,7 @@ public:
     }
 
     dariadb::Time maxTime(){
-        std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::Time(0);
         }else{
@@ -171,14 +171,12 @@ public:
 protected:
     Page*  _cur_page;
 	PageManager::Params _param;
-    std::mutex _mutex;
+    dariadb::utils::SpinLock _locker;
 };
 
 PageManager::PageManager(const PageManager::Params&param):
     impl(new PageManager::Private{param})
-{
-
-}
+{}
 
 PageManager::~PageManager() {
 }

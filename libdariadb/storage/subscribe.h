@@ -2,8 +2,8 @@
 
 #include "../meas.h"
 #include "../storage.h"
+#include "../utils/spinlock.h"
 #include <memory>
-#include <mutex>
 
 namespace dariadb {
 	namespace storage {
@@ -22,7 +22,7 @@ namespace dariadb {
 		struct SubscribeNotificator {
 			std::list<SubscribeInfo_ptr> _subscribes;
 			bool is_stoped;
-			std::mutex _mutex;
+            dariadb::utils::SpinLock _locker;
 
 			SubscribeNotificator() = default;
 			~SubscribeNotificator();

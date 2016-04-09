@@ -2,6 +2,7 @@
 #include "storage/memstorage.h"
 #include "storage/capacitor.h"
 #include "utils/exception.h"
+#include "utils/spinlock.h"
 #include "storage/page_manager.h"
 #include <cassert>
 
@@ -37,7 +38,7 @@ public:
 	}
 
 	Time minTime() {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         if(PageManager::instance()->chunks_in_cur_page()>0){
             return PageManager::instance()->minTime();
         }else{
@@ -58,7 +59,7 @@ public:
 	}
 
 	append_result append(const Meas &value) {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		append_result result{};
         if (!mem_cap->append(value)){
 			result.ignored++;
@@ -97,7 +98,7 @@ public:
 	}
 
 	void flush() {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		this->mem_cap->flush();
 		auto all_chunks = this->mem_storage_raw->drop_all();
 		for (auto c : all_chunks) {
@@ -106,7 +107,7 @@ public:
 	}
 
 	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		ChuncksList page_chunks, mem_chunks;
 		if (from < mem_storage_raw->minTime()) {
 			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
@@ -123,7 +124,7 @@ public:
 		return page_chunks;
 	}
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		if (timePoint < mem_storage_raw->minTime()) {
 			return PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
 		}
@@ -132,7 +133,7 @@ public:
 		}
 	}
 	IdArray getIds()const {
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		auto page_ids = PageManager::instance()->getIds();
 		auto mem_ids = mem_storage_raw->getIds();
 		dariadb::IdSet s;
@@ -146,7 +147,7 @@ public:
 	}
 
     size_t chunks_in_memory()const{
-		std::lock_guard<std::mutex> lg(_mutex);
+        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
         return mem_storage_raw->chunks_total_size();
     }
 
@@ -157,7 +158,7 @@ public:
 	storage::PageManager::Params _page_manager_params;
 	dariadb::storage::Capacitor::Params _cap_params;
 	dariadb::storage::UnionStorage::Limits _limits;
-	mutable std::mutex _mutex;
+    mutable dariadb::utils::SpinLock _locker;
 };
 
 UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,

@@ -42,7 +42,7 @@ TimeOrderedSet& TimeOrderedSet::operator=(const TimeOrderedSet&other) {
 }
 
 bool TimeOrderedSet::append(const Meas & m, bool force){
-	std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	if ((_count >= _max_size) && (!force)) {
 		return false;
 	}
@@ -55,13 +55,12 @@ bool TimeOrderedSet::append(const Meas & m, bool force){
 	}
 }
 
-bool TimeOrderedSet::is_full() const
-{
+bool TimeOrderedSet::is_full() const{
 	return _count >= _max_size;
 }
 
 dariadb::Meas::MeasArray TimeOrderedSet::as_array()const {
-	std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	dariadb::Meas::MeasArray result(_set.size());
 	size_t pos = 0;
 	for (auto&v : _set) {

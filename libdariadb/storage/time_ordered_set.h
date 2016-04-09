@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../meas.h"
+#include "../utils/spinlock.h"
 #include <memory>
-#include <mutex>
 
 namespace dariadb {
 	namespace storage {
@@ -37,7 +37,7 @@ namespace dariadb {
 
 			dariadb::Time _minTime;
 			dariadb::Time _maxTime;
-			mutable std::mutex    _mutex;
+            mutable dariadb::utils::SpinLock _locker;
 		};
 	}
 }

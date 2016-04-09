@@ -3,7 +3,6 @@
 #include <fstream>
 #include <cassert>
 #include <algorithm>
-#include <mutex>
 #include <cstring>
 
 using namespace dariadb::storage;
@@ -81,7 +80,7 @@ uint32_t Page::get_oldes_index() {
 }
 
 bool Page::append(const Chunk_Ptr&ch, MODE mode) {
-	std::lock_guard<std::mutex> lg(lock);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	auto index_rec = (ChunkIndexInfo*)ch.get();
 	auto buffer = ch->_buffer_t.data();
 
@@ -124,7 +123,7 @@ Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dari
 	/*if ((from > header->maxTime) || (to < header->minTime) ){
 		return nullptr;
 	}*/
-	std::lock_guard<std::mutex> lg(lock);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 
 	Cursor_ptr result{ new Cursor{ this,ids,from,to,flag } };
 
@@ -134,7 +133,7 @@ Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dari
 }
 
 ChuncksList Page::get_open_chunks() {
-	std::lock_guard<std::mutex> lg(lock);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	auto index_end = this->index + this->header->pos_index;
 	auto index_it = this->index;
 	ChuncksList result;
@@ -153,6 +152,6 @@ ChuncksList Page::get_open_chunks() {
 }
 
 void Page::dec_reader(){
-	std::lock_guard<std::mutex> lg(lock);
+    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	header->count_readers--;
 }
