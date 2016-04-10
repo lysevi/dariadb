@@ -40,9 +40,8 @@ namespace dariadb {
 			}
 
 		public:
-			virtual const char *what() const throw() { return _message.c_str(); }
+            virtual const char *what() const noexcept { return _message.c_str(); }
 			const std::string &GetErrorMessage() const { return _message; }
-			~Exception() throw() {};
 
 		protected:
 			Exception() {}

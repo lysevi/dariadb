@@ -27,11 +27,6 @@ DeltaCompressor::DeltaCompressor(const BinaryBuffer_Ptr &bw):
 {
 }
 
-
-DeltaCompressor::~DeltaCompressor(){
-}
-
-
 bool DeltaCompressor::append(dariadb::Time t){
     if(_is_first){
         _first=t;
@@ -126,11 +121,6 @@ DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Time f
 {
 
 }
-
-DeltaDeCompressor::~DeltaDeCompressor(){
-
-}
-
 
 dariadb::Time DeltaDeCompressor::read(){
     auto b0=_bw->getbit();

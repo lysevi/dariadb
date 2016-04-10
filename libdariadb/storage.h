@@ -29,6 +29,7 @@ namespace dariadb {
 			virtual void readByStep(Meas::MeasList *output, dariadb::Time from, dariadb::Time to, dariadb::Time step);
 			virtual Reader_ptr clone()const = 0;
 			virtual void reset() = 0; // after reader ead from begining;
+            virtual ~Reader(){}
         };
 
         

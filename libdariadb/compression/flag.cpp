@@ -13,9 +13,6 @@ FlagCompressor::FlagCompressor(const BinaryBuffer_Ptr & bw):
 {
 }
 
-FlagCompressor::~FlagCompressor(){
-}
-
 
 bool FlagCompressor::append(dariadb::Flag v){
 

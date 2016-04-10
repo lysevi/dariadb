@@ -23,7 +23,7 @@ namespace dariadb {
             BinaryBuffer &operator=(const BinaryBuffer &other);
             BinaryBuffer &operator=(const BinaryBuffer &&other);
 
-            void swap(BinaryBuffer &other) throw();
+            void swap(BinaryBuffer &other) noexcept;
 
 			int8_t bitnum() const { return _bitnum; }
             size_t pos() const { return _pos; }

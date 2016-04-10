@@ -61,9 +61,9 @@ namespace dariadb {
 
 			void readNext(storage::ReaderClb*clb) override;
 
-			IdArray getIds()const;
-			Reader_ptr clone()const;
-			void reset();
+            IdArray getIds()const override;
+            Reader_ptr clone()const override;
+            void reset() override;
 
 			bool end;
             dariadb::utils::SpinLock _locker;

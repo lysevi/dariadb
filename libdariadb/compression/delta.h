@@ -10,7 +10,6 @@ namespace dariadb {
         public:
             DeltaCompressor() = default;
             DeltaCompressor(const BinaryBuffer_Ptr &bw);
-            ~DeltaCompressor();
 
             bool append(Time t);
 
@@ -31,9 +30,7 @@ namespace dariadb {
 
         class DeltaDeCompressor:public BaseCompressor {
         public:
-            DeltaDeCompressor() = default;
             DeltaDeCompressor(const BinaryBuffer_Ptr &bw, Time first);
-            ~DeltaDeCompressor();
 
             Time read();
         protected:

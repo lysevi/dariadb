@@ -62,8 +62,8 @@ void RectangleMethod::calc(const dariadb::Meas&a, const dariadb::Meas&b){
 	case Kind::MIDLE:
 		_result += ((a.value + b.value) / 2.0)*(b.time - a.time);
 		break;
-	default:
-		assert(false);
+    /*default:
+        assert(false);*/
 	}
 }
 Average::Average():BaseMethod() {

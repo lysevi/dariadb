@@ -14,9 +14,6 @@ using namespace dariadb::compression;
 
 class CopmressedWriter::Private {
 public:
-    Private() = default;
-    ~Private()=default;
-
     Private(const BinaryBuffer_Ptr& bw) :
         time_comp(bw),
         value_comp(bw),
@@ -100,9 +97,6 @@ protected:
 
 class CopmressedReader::Private {
 public:
-    Private() = default;
-    ~Private()=default;
-
     Private(const BinaryBuffer_Ptr& bw, const Meas &first) :
         time_dcomp(bw,first.time),
         value_dcomp(bw, first.value),

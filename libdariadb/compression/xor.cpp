@@ -16,9 +16,6 @@ XorCompressor::XorCompressor(const BinaryBuffer_Ptr &bw):
     _prev_value(0)
 {}
 
-XorCompressor::~XorCompressor(){
-}
-
 
 bool XorCompressor::append(Value v){
     static_assert(sizeof(Value) == 8, "Value no x64 value");

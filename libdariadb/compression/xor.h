@@ -29,10 +29,7 @@ namespace dariadb {
 
         class XorCompressor:public BaseCompressor {
         public:
-
-            XorCompressor() = default;
             XorCompressor(const BinaryBuffer_Ptr &bw);
-            ~XorCompressor();
 
             bool append(Value v);
             XorCompressionPosition get_position()const;
@@ -47,9 +44,7 @@ namespace dariadb {
 
         class XorDeCompressor:public BaseCompressor {
         public:
-            XorDeCompressor() = default;
             XorDeCompressor(const BinaryBuffer_Ptr &bw, Value first);
-            ~XorDeCompressor() = default;
 
             Value read();
         protected:
