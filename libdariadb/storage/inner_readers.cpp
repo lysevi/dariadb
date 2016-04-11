@@ -108,11 +108,6 @@ void InnerReader::readTimePoint(storage::ReaderClb*clb) {
         for (size_t i = 0; i < ch->count; i++) {
 
 			auto sub = crr.read();
-            //TODO clean it
-//			std::cout << "sub: t" << sub.time
-//				<< " v: " << sub.value
-//				<< " f: " << sub.flag
-//				<< " s: " << sub.src << std::endl;
             sub.id = ch->first.id;
 			if ((sub.time <= _from) && (sub.time >= candidate.time)) {
 				candidate = sub;

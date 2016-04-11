@@ -3,9 +3,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
-//TODO remove includes
-#include "../compression.h"
-#include "../compression/binarybuffer.h"
 
 using namespace dariadb;
 using namespace dariadb::utils;
@@ -138,27 +135,6 @@ Chunk::~Chunk() {
 
 bool Chunk::append(const Meas&m)
 {
-    /*TODO clean it
-      if (m.time == 59819) {
-		std::cout << "append to bug time\n";
-	}
-	if (minTime == 26785)
-	{
-		std::cout << "****\n";
-
-		auto bw_tmp = std::make_shared<dariadb::compression::BinaryBuffer>(this->bw->get_range());
-		bw_tmp->reset_pos();
-		dariadb::compression::CopmressedReader crr(bw_tmp, first);
-
-		for (size_t i = 0; i < count; i++) {
-			auto sub = crr.read();
-			std::cout << "sub: t" << sub.time
-				<< " v: " << sub.value
-				<< " f: " << sub.flag
-				<< " s: " << sub.src << std::endl;
-		}
-	}
-*/
 	if (is_dropped || is_readonly) {
 		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
 	}
