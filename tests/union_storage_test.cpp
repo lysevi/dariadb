@@ -54,7 +54,8 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 
         BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
 
-        auto all_chunks=ms->chunksByIterval(dariadb::IdArray{}, 0, start_time, t);
+		dariadb::storage::ChuncksList all_chunks;
+		ms->chunksByIterval(dariadb::IdArray{}, 0, start_time, t)->readAll(&all_chunks);
         auto min_time = std::numeric_limits<dariadb::Time>::max();
         auto max_time = std::numeric_limits<dariadb::Time>::min();
         for (auto c : all_chunks) {

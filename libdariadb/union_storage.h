@@ -43,7 +43,7 @@ namespace dariadb {
 			Reader_ptr currentValue(const IdArray&ids, const Flag& flag) override;
 			void flush()override;
 
-			ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) override;
+			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) override;
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
 			IdArray getIds()const override;
 

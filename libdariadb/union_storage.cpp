@@ -106,9 +106,54 @@ public:
 		}
 	}
 
-	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+	class UnionCursor : public Cursor {
+	public:
+		Cursor_ptr _page_cursor;
+		Cursor_ptr _mem_cursor;
+		UnionCursor(Cursor_ptr &page_cursor, Cursor_ptr&mem_cursor):
+			_page_cursor{page_cursor},
+			_mem_cursor(mem_cursor)
+		{
+			this->reset_pos();
+		}
+		~UnionCursor() {
+			_page_cursor = nullptr;
+			_mem_cursor = nullptr;
+		}
+
+		bool is_end()const override {
+			return 
+				(_page_cursor==nullptr?true:_page_cursor->is_end()) 
+				&& (_mem_cursor==nullptr?true:_mem_cursor->is_end());
+		}
+
+		void readNext(Cursor::Callback*cbk)  override
+		{
+			if (!is_end()) {
+				if (!_page_cursor->is_end()) {
+					_page_cursor->readNext(cbk);
+					return;
+				}
+				else 
+				{
+					if (!_mem_cursor->is_end()) {
+						_mem_cursor->readNext(cbk);
+					}
+				}
+			}
+			
+			cbk->call(Chunk_Ptr{});
+		}
+
+		void reset_pos() override {
+			_page_cursor->reset_pos();
+			_mem_cursor->reset_pos();
+		}
+	};
+
+	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
         std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
-		ChuncksList page_chunks, mem_chunks;
+		Cursor_ptr page_chunks, mem_chunks;
 		if (from < mem_storage_raw->minTime()) {
 			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
 		}
@@ -117,12 +162,11 @@ public:
 			mem_chunks = mem_storage_raw->chunksByIterval(ids, flag, from, to);
 		}
 
-        for (auto&c : mem_chunks) {
-            page_chunks.push_back(c);
-        }
+		Cursor_ptr result{ new UnionCursor{page_chunks,mem_chunks} };
 
-		return page_chunks;
+		return result;
 	}
+
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
         std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		if (timePoint < mem_storage_raw->minTime()) {
@@ -201,7 +245,7 @@ void  UnionStorage::flush() {
 	_impl->flush();
 }
 
-ChuncksList UnionStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+Cursor_ptr UnionStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
 	return _impl->chunksByIterval(ids, flag, from, to);
 }
 
