@@ -16,7 +16,7 @@ namespace dariadb {
 
 			InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to);
 
-            void add(Chunk_Ptr c);
+            void add(Cursor_ptr c);
 
             void add_tp(Chunk_Ptr c);
 			bool isEnd() const override;
@@ -33,7 +33,7 @@ namespace dariadb {
 		
 			bool is_time_point_reader;
 
-			ReadChunkMap _chunks;
+			CursorList _chunks;
 			ReadChunkMap _tp_chunks;
 			dariadb::Flag _flag;
 			dariadb::Time _from;

@@ -24,5 +24,6 @@ namespace dariadb {
 		};
 
 		typedef std::shared_ptr<Cursor> Cursor_ptr;
+		typedef std::list<Cursor_ptr>   CursorList;
 	}
 }

@@ -185,10 +185,14 @@ void PageCursor::readNext(Cursor::Callback*cbk) {
 	std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 	for (; !_is_end; _index_it++) {
 		if (_index_it == _index_end) {
+			Chunk_Ptr empty;
+			cbk->call(empty);
 			_is_end = true;
 			break;
 		}
 		if (!_index_it->is_init) {
+			Chunk_Ptr empty;
+			cbk->call(empty);
 			_is_end = true;
 			continue;
 		}

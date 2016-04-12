@@ -4,6 +4,7 @@
 #include "../flags.h"
 #include "subscribe.h"
 #include "chunk.h"
+#include "cursor.h"
 #include "../timeutil.h"
 #include "inner_readers.h"
 #include "../utils/spinlock.h"
@@ -218,9 +219,45 @@ public:
 		return result;
 	}
 
-	ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+
+	class MemstorageCursor : public Cursor {
+	public:
+		ChuncksList _chunks;
+		ChuncksList::iterator it;
+		MemstorageCursor(ChuncksList &chunks)
+			:_chunks{chunks.begin(),chunks.end()}
+		{
+			this->reset_pos();
+		}
+		~MemstorageCursor() {
+			_chunks.clear();
+		}
+
+		bool is_end()const override {
+			return it == _chunks.end();
+		}
+
+		void readNext(Cursor::Callback*cbk)  override 
+		{
+			if (!is_end()) {
+				cbk->call(*it);
+				++it;
+			}
+			else {
+				cbk->call(Chunk_Ptr{});
+			}
+		}
+
+		void reset_pos() override {
+			it = _chunks.begin();
+		}
+	};
+
+	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
         std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
 		ChuncksList result{};
+
+		
 
 		for (auto ch : _chuncks) {
 			if (ch->is_dropped) {
@@ -240,7 +277,8 @@ public:
 		if (result.size() > this->chunks_total_size()) {
 			throw MAKE_EXCEPTION("result.size() > this->chunksBeforeTimePoint()");
 		}
-		return result;
+		MemstorageCursor *raw = new MemstorageCursor{ result };
+		return Cursor_ptr{raw};
 	}
 
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
@@ -288,6 +326,7 @@ public:
 			}
 		}
 	}
+
 protected:
 	size_t _size;
 
@@ -299,7 +338,6 @@ protected:
     mutable dariadb::utils::SpinLock _locker,_locker_drop;
 	std::atomic<int64_t> _chunks_count;
 };
-
 
 MemoryStorage::MemoryStorage(size_t size)
 	:_Impl(new MemoryStorage::Private(size)) {
@@ -361,7 +399,7 @@ dariadb::storage::ChuncksList MemoryStorage::drop_all()
 	return _Impl->drop_all();
 }
 
-ChuncksList MemoryStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+Cursor_ptr MemoryStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
 	return _Impl->chunksByIterval(ids, flag, from, to);
 }
 

@@ -33,8 +33,9 @@ public:
 
 	void flush()override {
 	}
-	dariadb::storage::ChuncksList chunksByIterval(const dariadb::IdArray &, dariadb::Flag , dariadb::Time , dariadb::Time ) {
-		return dariadb::storage::ChuncksList{};
+	
+	dariadb::storage::Cursor_ptr chunksByIterval(const dariadb::IdArray &, dariadb::Flag, dariadb::Time, dariadb::Time) {
+		return nullptr;
 	}
 
 	dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &, dariadb::Flag , dariadb::Time ) {

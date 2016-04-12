@@ -6,6 +6,16 @@ using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
+class CursorReader :public dariadb::storage::Cursor::Callback {
+public:
+	Chunk_Ptr readed;
+	CursorReader() {
+		readed = nullptr;
+	}
+	void call(dariadb::storage::Chunk_Ptr &ptr)override {
+		readed = ptr;
+	}
+};
 
 InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to) :
 	_chunks{},
@@ -18,9 +28,9 @@ InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time t
 	end = false;
 }
 
-void InnerReader::add(Chunk_Ptr c) {
+void InnerReader::add(Cursor_ptr c) {
     std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
-    this->_chunks[c->first.id].push_back(c);
+    this->_chunks.push_back(c);
 }
 
 void InnerReader::add_tp(Chunk_Ptr c) {
@@ -33,14 +43,17 @@ bool InnerReader::isEnd() const {
 }
 
 dariadb::IdArray InnerReader::getIds()const {
-	//TODO cache result!
-	dariadb::IdArray result;
-	result.resize(_chunks.size());
-	size_t pos = 0;
-	for (auto &kv : _chunks) {
-		result[pos] = kv.first;
-		pos++;
+
+	dariadb::IdSet idset;
+	for (auto &v : _chunks) {
+		//TODO optimise
+		dariadb::storage::ChuncksList out;
+		v->readAll(&out);
+		for (auto &c : out) {
+			idset.insert(c->first.id);
+		}
 	}
+	dariadb::IdArray result{ idset.begin(),idset.end() };
 	return result;
 }
 
@@ -50,11 +63,17 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 	if (!_tp_readed) {
         this->readTimePoint(clb);
 	}
-
+	std::shared_ptr<CursorReader> reader_clbk{ new CursorReader };
     for (auto ch : _chunks) {
 
-        for (Chunk_Ptr cur_ch:ch.second) {
-            cur_ch->lock();
+        //for (Chunk_Ptr cur_ch:ch.second) 
+		while(!ch->is_end())
+		{
+			ch->readNext(reader_clbk.get());
+			if (reader_clbk->readed == nullptr) {
+				break;
+			}
+			auto cur_ch = reader_clbk->readed;
             auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
             bw->reset_pos();
             CopmressedReader crr(bw, cur_ch->first);
@@ -76,7 +95,6 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
                     }
                 }
             }
-            cur_ch->unlock();
         }
     }
 	end = true;

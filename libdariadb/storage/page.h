@@ -55,11 +55,6 @@ namespace dariadb {
 
 		class PageCursor : public dariadb::storage::Cursor{
 		public:
-			class Callback {
-			public:
-				virtual void call(Chunk_Ptr &ptr) = 0;
-				virtual ~Callback() = default;
-			};
 			PageCursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			~PageCursor();
 			bool is_end()const override;
