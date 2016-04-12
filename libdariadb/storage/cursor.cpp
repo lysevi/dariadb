@@ -13,7 +13,9 @@ class Cursor_ListAppend_callback:public Cursor::Callback{
 
     }
     void call(Chunk_Ptr &ptr) override{
-        _out->push_back(ptr);
+		if (ptr != nullptr) {
+			_out->push_back(ptr);
+		}
     }
 };
 

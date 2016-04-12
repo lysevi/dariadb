@@ -146,8 +146,12 @@ public:
 		}
 
 		void reset_pos() override {
-			_page_cursor->reset_pos();
-			_mem_cursor->reset_pos();
+			if (_page_cursor != nullptr) {
+				_page_cursor->reset_pos();
+			}
+			if (_mem_cursor != nullptr) {
+				_mem_cursor->reset_pos();
+			}
 		}
 	};
 
