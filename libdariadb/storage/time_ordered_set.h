@@ -30,6 +30,8 @@ namespace dariadb {
 			dariadb::Time minTime()const;
 			dariadb::Time maxTime()const;
 			bool inInterval(const dariadb::Meas&m)const;
+
+			bool is_dropped;
 		protected:
 			size_t _max_size;
 			size_t _count;

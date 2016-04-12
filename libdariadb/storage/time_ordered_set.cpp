@@ -5,12 +5,15 @@
 #include <set>
 #include <limits>
 #include <utility>
+#include <cassert>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 
 TimeOrderedSet::TimeOrderedSet():TimeOrderedSet(0)
-{}
+{
+	is_dropped = false;
+}
 
 TimeOrderedSet::~TimeOrderedSet()
 {}
@@ -20,14 +23,17 @@ TimeOrderedSet::TimeOrderedSet(const size_t max_size):
 	_count(0),
 	_minTime(std::numeric_limits<dariadb::Time>::max()),
 	_maxTime(std::numeric_limits<dariadb::Time>::min())
-{}
+{
+	is_dropped = false;
+}
 
 TimeOrderedSet::TimeOrderedSet(const TimeOrderedSet & other): 
 	_max_size(other._max_size),
 	_count(other._count),
 	_set(other._set),
 	_minTime(other._minTime),
-	_maxTime(other._maxTime)	
+	_maxTime(other._maxTime),
+	is_dropped(other.is_dropped)
 {}
 
 TimeOrderedSet& TimeOrderedSet::operator=(const TimeOrderedSet&other) {
@@ -37,12 +43,14 @@ TimeOrderedSet& TimeOrderedSet::operator=(const TimeOrderedSet&other) {
 		_set = other._set;
 		_minTime = other._minTime;
 		_maxTime = other._maxTime;
+		is_dropped = other.is_dropped;
 	}
 	return *this;
 }
 
 bool TimeOrderedSet::append(const Meas & m, bool force){
     std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+	assert(!is_dropped);
 	if ((_count >= _max_size) && (!force)) {
 		return false;
 	}

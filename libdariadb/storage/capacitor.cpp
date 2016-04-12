@@ -102,6 +102,7 @@ public:
 				if (!is_valid_time(v->maxTime())) {
 					flush_set(v);
 					flushed = true;
+					v->is_dropped = true;
 				}
 			}
 			if (flushed) {
@@ -110,8 +111,7 @@ public:
 					kv.second.end(),
 					[this](const tos_ptr c)
 				{
-					auto tm = c->maxTime();
-					return !is_valid_time(tm);
+					return c->is_dropped;
 				});
 
 				kv.second.erase(r_if_it, kv.second.end());
@@ -178,11 +178,12 @@ public:
 
     bool flush(){
         std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
-        for (auto kv : _bucks) {
-            for(auto v:kv.second){
+		bool is_error = false;;
+        for (auto &kv : _bucks) {
+            for(auto &v:kv.second){
                 if(!flush_set(v)){
-                    return false;
-                }
+					return false;
+				}
             }
         }
         clear();
