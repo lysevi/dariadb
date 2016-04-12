@@ -178,8 +178,8 @@ public:
 
     bool flush(){
         std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
-		bool is_error = false;;
-        for (auto &kv : _bucks) {
+
+		for (auto &kv : _bucks) {
             for(auto &v:kv.second){
                 if(!flush_set(v)){
 					return false;

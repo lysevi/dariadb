@@ -1,15 +1,17 @@
 #pragma once
 
-#include "chunk.h"
 #include "../utils/spinlock.h"
+#include "../utils/utils.h"
+#include "chunk.h"
 
 namespace dariadb {
 	namespace storage {
+		
 		class Cursor :public utils::NonCopy {
 		public:
             class Callback{
               public:
-                virtual void call(Chunk_Ptr &ptr)=0;
+                virtual void call(dariadb::storage::Chunk_Ptr &ptr)=0;
 				virtual ~Callback() = default;
             };
 			virtual ~Cursor();

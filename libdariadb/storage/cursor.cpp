@@ -1,6 +1,4 @@
 #include "cursor.h"
-#include "page.h"
-#include "bloom_filter.h"
 
 #include <algorithm>
 #include <cassert>
@@ -9,8 +7,8 @@ using namespace dariadb::storage;
 
 class Cursor_ListAppend_callback:public Cursor::Callback{
   public:
-    ChuncksList*_out;
-    Cursor_ListAppend_callback(ChuncksList*out){
+    dariadb::storage::ChuncksList*_out;
+    Cursor_ListAppend_callback(dariadb::storage::ChuncksList*out){
         _out=out;
 
     }

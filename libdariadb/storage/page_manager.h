@@ -2,6 +2,7 @@
 
 #include "../utils/utils.h"
 #include "chunk.h"
+#include "chunk_container.h"
 #include "mode.h"
 #include "cursor.h"
 
@@ -41,7 +42,7 @@ namespace dariadb{
 			Cursor_ptr get_chunks(const IdArray&ids, Time from, Time to, Flag flag);
 
 			//ChunkContainer
-            ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
+            Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
             IdArray getIds()const override;
 			

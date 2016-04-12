@@ -49,19 +49,10 @@ namespace dariadb {
             static void operator delete(void* ptr, std::size_t sz);
         };
 
-        typedef std::shared_ptr<Chunk>  Chunk_Ptr;
+        typedef std::shared_ptr<Chunk>    Chunk_Ptr;
         typedef std::list<Chunk_Ptr>      ChuncksList;
         typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
         typedef std::map<Id, ChuncksList> ChunkMap;
-
-        class ChunkContainer
-        {
-        public:
-            virtual ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)=0;
-            virtual IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) = 0;
-            virtual IdArray getIds()const=0;
-            virtual ~ChunkContainer(){}
-        };
 
 		const size_t ChunkPool_default_max_size = 200;
 

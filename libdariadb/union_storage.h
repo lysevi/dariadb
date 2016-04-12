@@ -4,6 +4,7 @@
 #include "storage/mode.h"
 #include "storage/capacitor.h"
 #include "storage/page_manager.h"
+#include "storage/chunk_container.h"
 #include "utils/utils.h"
 #include <memory>
 

@@ -4,6 +4,7 @@
 #include "utils/utils.h"
 #include "common.h"
 #include "storage/chunk.h"
+#include "storage/chunk_container.h"
 #include <memory>
 
 namespace dariadb {

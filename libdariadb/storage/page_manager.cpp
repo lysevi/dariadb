@@ -71,11 +71,9 @@ public:
         return p->get_chunks(ids, from, to, flag);
     }
 
-    ChuncksList chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to){
+	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to){
         std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
-		ChuncksList result;
-		this->get_chunks(ids, from, to, flag)->readAll(&result);
-		return result;
+		return this->get_chunks(ids, from, to, flag);
     }
 
     IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint){
@@ -206,7 +204,7 @@ Cursor_ptr PageManager::get_chunks(const dariadb::IdArray&ids, dariadb::Time fro
     return impl->get_chunks(ids, from, to, flag);
 }
 
-dariadb::storage::ChuncksList PageManager::chunksByIterval(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time from, dariadb::Time to){
+dariadb::storage::Cursor_ptr PageManager::chunksByIterval(const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time from, dariadb::Time to){
     return impl->chunksByIterval(ids,flag,from,to);
 }
 
