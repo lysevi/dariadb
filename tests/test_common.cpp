@@ -44,6 +44,8 @@ namespace dariadb_test {
 		if (all.size() != total_count) {
 			throw MAKE_EXCEPTION("(all.size() != total_count)");
 		}
+		//TODO reset is sucks
+		reader->reset();
 		auto readed_ids = reader->getIds();
 		if (readed_ids.size() != id_count) {
 			throw MAKE_EXCEPTION("(readed_ids.size() != size_t((to - from) / step))");

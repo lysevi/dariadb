@@ -183,6 +183,9 @@ void InnerReader::reset() {
 	end = false;
 	_tp_readed = false;
 	_tp_readed_times.clear();
+	for (auto ch : _chunks) {
+		ch->reset_pos();
+	}
 }
 
 InnerCurrentValuesReader::InnerCurrentValuesReader() {
