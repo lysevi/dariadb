@@ -28,12 +28,12 @@ TimeOrderedSet::TimeOrderedSet(const size_t max_size):
 }
 
 TimeOrderedSet::TimeOrderedSet(const TimeOrderedSet & other): 
+    is_dropped(other.is_dropped),
 	_max_size(other._max_size),
 	_count(other._count),
 	_set(other._set),
 	_minTime(other._minTime),
-	_maxTime(other._maxTime),
-	is_dropped(other.is_dropped)
+    _maxTime(other._maxTime)
 {}
 
 TimeOrderedSet& TimeOrderedSet::operator=(const TimeOrderedSet&other) {

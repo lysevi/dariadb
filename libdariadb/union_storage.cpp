@@ -141,8 +141,8 @@ public:
 					}
 				}
 			}
-			
-			cbk->call(Chunk_Ptr{});
+            Chunk_Ptr empty;
+            cbk->call(empty);
 		}
 
 		void reset_pos() override {

@@ -244,7 +244,8 @@ public:
 				++it;
 			}
 			else {
-				cbk->call(Chunk_Ptr{});
+                Chunk_Ptr empty;
+                cbk->call(empty);
 			}
 		}
 
