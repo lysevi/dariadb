@@ -32,7 +32,7 @@ public:
 	}
 
 	void readNext(Cursor::Callback*cbk)  override {
-		std::lock_guard<dariadb::utils::Locker> lg(_locker);
+		std::lock_guard<std::mutex> lg(_locker);
 		for (; !_is_end; _index_it++) {
 			if (_index_it == _index_end) {
 				Chunk_Ptr empty;
@@ -99,7 +99,7 @@ protected:
 	dariadb::IdArray _ids;
 	dariadb::Time _from, _to;
 	dariadb::Flag _flag;
-	dariadb::utils::Locker _locker;
+	std::mutex _locker;
 };
 
 
@@ -179,7 +179,7 @@ uint32_t Page::get_oldes_index() {
 }
 
 bool Page::append(const Chunk_Ptr&ch, MODE mode) {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	auto index_rec = (ChunkIndexInfo*)ch.get();
 	auto buffer = ch->_buffer_t.data();
 
@@ -218,7 +218,7 @@ bool Page::is_full()const {
 }
 
 Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
 	auto raw_ptr = new PageCursor(this,ids,from,to,flag );
 	Cursor_ptr result{ raw_ptr };
@@ -229,7 +229,7 @@ Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dari
 }
 
 ChuncksList Page::get_open_chunks() {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	auto index_end = this->index + this->header->pos_index;
 	auto index_it = this->index;
 	ChuncksList result;
@@ -248,7 +248,7 @@ ChuncksList Page::get_open_chunks() {
 }
 
 void Page::dec_reader(){
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	header->count_readers--;
 }
 

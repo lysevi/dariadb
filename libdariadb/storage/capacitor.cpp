@@ -120,7 +120,7 @@ public:
 	}
 
     tos_ptr get_target_to_write(const Meas&m) {
-//		std::lock_guard<dariadb::utils::Locker> lg(_locker);
+//		std::lock_guard<std::mutex> lg(_locker);
         auto last_it=_last.find(m.id);
         if(last_it ==_last.end()){
 			

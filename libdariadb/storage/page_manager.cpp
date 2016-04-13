@@ -60,19 +60,19 @@ public:
     }
 
     bool append_chunk(const Chunk_Ptr&ch) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
         auto pg=get_cur_page();
         return pg->append(ch,_param.mode);
     }
 
     Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to){
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		auto p = get_cur_page();
 		return p->chunksByIterval(ids, flag, from, to);
     }
 
     IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint){
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 
 		auto cur_page = this->get_cur_page();
 
@@ -81,7 +81,7 @@ public:
 
 	
     dariadb::IdArray getIds() {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::IdArray{};
         }
@@ -104,7 +104,7 @@ public:
 	}
 
     dariadb::Time minTime(){
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::Time(0);
         }else{
@@ -113,7 +113,7 @@ public:
     }
 
     dariadb::Time maxTime(){
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::Time(0);
         }else{
@@ -123,7 +123,7 @@ public:
 protected:
     Page*  _cur_page;
 	PageManager::Params _param;
-    dariadb::utils::Locker _locker;
+    std::mutex _locker;
 };
 
 PageManager::PageManager(const PageManager::Params&param):

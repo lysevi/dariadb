@@ -54,7 +54,7 @@ namespace dariadb {
 			Page_ChunkIndex*index;
 			uint8_t        *chunks;
 		protected:
-            mutable dariadb::utils::Locker   _locker;
+            mutable std::mutex   _locker;
             mutable utils::fs::MappedFile::MapperFile_ptr mmap;
 		};
 

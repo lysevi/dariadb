@@ -39,7 +39,7 @@ namespace dariadb {
 
 			dariadb::Time _minTime;
 			dariadb::Time _maxTime;
-            mutable dariadb::utils::Locker _locker;
+            mutable std::mutex _locker;
 		};
 	}
 }

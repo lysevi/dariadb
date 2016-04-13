@@ -94,7 +94,7 @@ public:
 	}
 
 	append_result append(const Meas& value) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 
 		Chunk_Ptr chunk = this->getFreeChunk(value.id);
 
@@ -137,13 +137,13 @@ public:
 	}
 
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
-        std::lock_guard<dariadb::utils::Locker> lg(_subscribe_locker);
+        std::lock_guard<std::mutex> lg(_subscribe_locker);
 		auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
 		_subscribe_notify->add(new_s);
 	}
 
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		auto res_raw = new InnerCurrentValuesReader();
 		Reader_ptr res{ res_raw };
 		for (auto &kv : _free_chunks) {
@@ -159,7 +159,7 @@ public:
 	}
 
 	dariadb::storage::ChuncksList drop_old_chunks(const dariadb::Time min_time) {
-        std::lock_guard<dariadb::utils::Locker> lg_drop(_locker_drop);
+        std::lock_guard<std::mutex> lg_drop(_locker_drop);
 		ChuncksList result;
         auto now = dariadb::timeutil::current_time();
 
@@ -174,7 +174,7 @@ public:
                 }
         }
 		if (result.size() > size_t(0)){
-            std::lock_guard<dariadb::utils::Locker> lg(_locker);
+            std::lock_guard<std::mutex> lg(_locker);
             this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
 			update_max_min_after_drop();
 		}
@@ -184,7 +184,7 @@ public:
 	
 	//by memory limit
 	ChuncksList drop_old_chunks_by_limit(const size_t max_limit) {
-        std::lock_guard<dariadb::utils::Locker> lg_drop(_locker_drop);
+        std::lock_guard<std::mutex> lg_drop(_locker_drop);
 		ChuncksList result{};
 
 		if (chunks_total_size() > max_limit) {
@@ -211,7 +211,7 @@ public:
                 }
             }
 			if (result.size() > size_t(0)) {
-                std::lock_guard<dariadb::utils::Locker> lg(_locker);
+                std::lock_guard<std::mutex> lg(_locker);
 				this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
 
 				update_max_min_after_drop();
@@ -232,13 +232,13 @@ public:
 	}
 
 	dariadb::storage::ChuncksList drop_all() {
-        std::lock_guard<dariadb::utils::Locker> lg_drop(_locker_drop);
+        std::lock_guard<std::mutex> lg_drop(_locker_drop);
 		ChuncksList result;
 		
         for (auto& chunk : _chuncks) {
 				result.push_back(chunk);
 		}
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		this->_free_chunks.clear();
 		this->_chuncks.clear();
 		_chunks_count = 0;
@@ -250,7 +250,7 @@ public:
 	}
 
 	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		ChuncksList result{};
 
 		for (auto ch : _chuncks) {
@@ -328,8 +328,8 @@ protected:
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
-    mutable dariadb::utils::Locker _subscribe_locker;
-    mutable dariadb::utils::Locker _locker,_locker_drop;
+    mutable std::mutex _subscribe_locker;
+    mutable std::mutex _locker,_locker_drop;
 	std::atomic<int64_t> _chunks_count;
 };
 
