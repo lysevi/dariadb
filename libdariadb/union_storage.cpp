@@ -130,13 +130,13 @@ public:
 		void readNext(Cursor::Callback*cbk)  override
 		{
 			if (!is_end()) {
-				if (!_page_cursor->is_end()) {
+				if ((_page_cursor!=nullptr) && (!_page_cursor->is_end())) {
 					_page_cursor->readNext(cbk);
 					return;
 				}
 				else 
 				{
-					if (!_mem_cursor->is_end()) {
+					if ((_mem_cursor!=nullptr)&&(!_mem_cursor->is_end())) {
 						_mem_cursor->readNext(cbk);
 					}
 				}
