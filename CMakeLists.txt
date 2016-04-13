@@ -133,7 +133,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
-option(USE_MUTEX "use mutex or spinlock (OFF value)" OFF)
+option(USE_MUTEX "use mutex or Locker (OFF value)" ON)
 
 if(USE_MUTEX)
    MESSAGE(STATUS "def USE_MUTEX")
