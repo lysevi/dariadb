@@ -70,8 +70,22 @@ int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
 	srand(static_cast<unsigned int>(time(NULL)));
+	
+	const std::string storage_path = "testStorage";
+	const size_t chunk_per_storage = 1024 * 1024;
+	const size_t chunk_size = 256;
+	const size_t cap_max_size = 100;
+	const dariadb::Time write_window_deep = 500;
+	const dariadb::Time old_mem_chunks = 0;
+	const size_t max_mem_chunks = 100;
+
+	
 	{// 1.
-        dariadb::storage::BaseStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+		auto raw_ptr = new dariadb::storage::UnionStorage(
+			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
+			dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+			dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+        dariadb::storage::BaseStorage_ptr ms{ raw_ptr };
 		auto start = clock();
 
 		writer_1(ms);
@@ -80,7 +94,11 @@ int main(int argc, char *argv[]) {
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
 	
-    dariadb::storage::BaseStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+	auto raw_ptr = new dariadb::storage::UnionStorage(
+		dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
+		dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+		dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+	dariadb::storage::BaseStorage_ptr ms{ raw_ptr };
 
 	{// 2.
 		const size_t threads_count = 16;
