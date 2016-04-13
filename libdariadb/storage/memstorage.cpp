@@ -1,25 +1,55 @@
 #include "memstorage.h"
 #include "../utils/utils.h"
-#include "../compression.h"
 #include "../flags.h"
+#include "../utils/locker.h"
+#include "../timeutil.h"
 #include "subscribe.h"
 #include "chunk.h"
 #include "cursor.h"
-#include "../timeutil.h"
 #include "inner_readers.h"
-#include "../utils/locker.h"
 #include <limits>
 #include <algorithm>
-#include <map>
-#include <tuple>
 #include <assert.h>
-#include <atomic>
 
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChuncksList> ChunkMap;
+
+class MemstorageCursor : public Cursor {
+public:
+	ChuncksList _chunks;
+	ChuncksList::iterator it;
+	MemstorageCursor(ChuncksList &chunks)
+		:_chunks{ chunks.begin(),chunks.end() }
+	{
+		this->reset_pos();
+	}
+	~MemstorageCursor() {
+		_chunks.clear();
+	}
+
+	bool is_end()const override {
+		return it == _chunks.end();
+	}
+
+	void readNext(Cursor::Callback*cbk)  override
+	{
+		if (!is_end()) {
+			cbk->call(*it);
+			++it;
+		}
+		else {
+			Chunk_Ptr empty;
+			cbk->call(empty);
+		}
+	}
+
+	void reset_pos() override {
+		it = _chunks.begin();
+	}
+};
 
 class MemoryStorage::Private
 {
@@ -219,46 +249,9 @@ public:
 		return result;
 	}
 
-
-	class MemstorageCursor : public Cursor {
-	public:
-		ChuncksList _chunks;
-		ChuncksList::iterator it;
-		MemstorageCursor(ChuncksList &chunks)
-			:_chunks{chunks.begin(),chunks.end()}
-		{
-			this->reset_pos();
-		}
-		~MemstorageCursor() {
-			_chunks.clear();
-		}
-
-		bool is_end()const override {
-			return it == _chunks.end();
-		}
-
-		void readNext(Cursor::Callback*cbk)  override 
-		{
-			if (!is_end()) {
-				cbk->call(*it);
-				++it;
-			}
-			else {
-                Chunk_Ptr empty;
-                cbk->call(empty);
-			}
-		}
-
-		void reset_pos() override {
-			it = _chunks.begin();
-		}
-	};
-
 	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
         std::lock_guard<dariadb::utils::Locker> lg(_locker);
 		ChuncksList result{};
-
-		
 
 		for (auto ch : _chuncks) {
 			if (ch->is_dropped) {
