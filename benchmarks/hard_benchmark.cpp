@@ -14,6 +14,8 @@
 #include <cstdlib>
 #include <atomic>
 
+dariadb::Time startTime = dariadb::timeutil::current_time();
+
 class BenchCallback :public dariadb::storage::ReaderClb {
 public:
 	void call(const dariadb::Meas&) {
@@ -51,7 +53,7 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::BaseS
     for (dariadb::Id i = id_from; i < max_id; i += 1) {
 		dariadb::Value v = 1.0;
         auto max_rnd = uniform_dist(e1);
-		dariadb::Time t = 0;// dariadb::timeutil::current_time();
+		dariadb::Time t = startTime;
 		for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
 			m.id = i;
 			m.flag = dariadb::Flag(0);
@@ -76,7 +78,7 @@ int main(int argc, char *argv[]) {
 	const size_t chunk_per_storage = 1024 * 1024;
 	const size_t chunk_size = 256;
 	const size_t cap_max_size = 100;
-	const dariadb::Time write_window_deep = 500;
+	const dariadb::Time write_window_deep = 1000;
 	const dariadb::Time old_mem_chunks = 0;
 	const size_t max_mem_chunks = 0;
 
@@ -114,6 +116,8 @@ int main(int argc, char *argv[]) {
 		const size_t threads_count = 16;
 		const size_t id_per_thread = size_t(32768 / threads_count);
 
+		startTime = dariadb::timeutil::current_time();
+
 		auto start = clock();
 		std::vector<std::thread> writers(threads_count);
 		size_t pos = 0;
@@ -135,7 +139,7 @@ int main(int argc, char *argv[]) {
 		std::random_device r;
 		std::default_random_engine e1(r());
 		std::uniform_int_distribution<dariadb::Id> uniform_dist(0, 32768);
-		std::uniform_int_distribution<dariadb::Time> uniform_dist_t(0, 32768);
+		std::uniform_int_distribution<dariadb::Time> uniform_dist_t(startTime, dariadb::timeutil::current_time());
 		dariadb::IdArray ids;
 		ids.resize(1);
 
@@ -193,7 +197,7 @@ int main(int argc, char *argv[]) {
 	{//5
 		std::random_device r;
 		std::default_random_engine e1(r());
-		std::uniform_int_distribution<dariadb::Time> uniform_dist(0, 32768/2);
+		std::uniform_int_distribution<dariadb::Time> uniform_dist(startTime, dariadb::timeutil::current_time());
 
 		dariadb::storage::ReaderClb_ptr clbk{ new BenchCallback() };
 		const size_t queries_count = 32;
@@ -221,7 +225,7 @@ int main(int argc, char *argv[]) {
 	{//6
 		std::random_device r;
 		std::default_random_engine e1(r());
-		std::uniform_int_distribution<dariadb::Time> uniform_dist(0, 32768/2);
+		std::uniform_int_distribution<dariadb::Time> uniform_dist(startTime, dariadb::timeutil::current_time());
 		std::uniform_int_distribution<dariadb::Id> uniform_dist_id(0, 32768);
 
 		const size_t ids_count = size_t(32768 * 0.1);
