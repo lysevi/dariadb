@@ -1,10 +1,13 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
-#include <utils.h>
-#include <bloom_filter.h>
+#include <utils/utils.h>
+#include <utils/fs.h>
+#include <utils/period_worker.h>
+#include <chrono>
+#include <thread>
 
-BOOST_AUTO_TEST_CASE(UtilsEmpty) {
+BOOST_AUTO_TEST_CASE(InInterval) {
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 1));
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 2));
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 5));
@@ -28,20 +31,53 @@ BOOST_AUTO_TEST_CASE(BitOperations) {
 	}
 }
 
+BOOST_AUTO_TEST_CASE(FileUtils) {
+  std::string filename = "foo/bar/test.txt";
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::filename(filename), "test");
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(filename), "foo/bar");
 
-BOOST_AUTO_TEST_CASE(BloomTest) {
-	typedef uint8_t u8_fltr_t;
+  auto ls_res=dariadb::utils::fs::ls(".");
+  BOOST_CHECK(ls_res.size()>0);
 
-	auto u8_fltr = dariadb::bloom_empty<u8_fltr_t>();
+  const std::string fname="mapped_file.test";
+  auto mapf=dariadb::utils::fs::MappedFile::touch(fname,1024);
+  for(uint8_t i=0;i<100;i++){
+      mapf->data()[i]=i;
+  }
+  mapf->close();
 
-	BOOST_CHECK_EQUAL(u8_fltr, uint8_t{ 0 });
+  ls_res=dariadb::utils::fs::ls(".",".test");
+  BOOST_CHECK(ls_res.size()==1);
+  auto reopen_mapf=dariadb::utils::fs::MappedFile::open(fname);
+  for(uint8_t i=0;i<100;i++){
+      BOOST_CHECK_EQUAL(reopen_mapf->data()[i],i);
+  }
+  reopen_mapf->close();
+  dariadb::utils::fs::rm(fname);
 
-	u8_fltr = dariadb::bloom_add(u8_fltr, uint8_t{ 1 });
-	u8_fltr = dariadb::bloom_add(u8_fltr, uint8_t{ 2 });
+  std::string parent_p = "path1";
+  std::string child_p = "path2";
+  auto concat_p=dariadb::utils::fs::append_path(parent_p, child_p);
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(concat_p), parent_p);
+}
 
-	BOOST_CHECK(dariadb::bloom_check(u8_fltr, uint8_t{ 1 }));
-	BOOST_CHECK(dariadb::bloom_check(u8_fltr, uint8_t{ 2 }));
-	BOOST_CHECK(dariadb::bloom_check(u8_fltr, uint8_t{ 3 }));
-	BOOST_CHECK(!dariadb::bloom_check(u8_fltr, uint8_t{ 4 }));
-	BOOST_CHECK(!dariadb::bloom_check(u8_fltr, uint8_t{ 5 }));
+class TestPeriodWorker :public dariadb::utils::PeriodWorker {
+public:
+	TestPeriodWorker(const std::chrono::milliseconds sleep_time):dariadb::utils::PeriodWorker(sleep_time){
+		call_count = 0;
+	}
+	void call() {
+		call_count++;
+	}
+	size_t call_count;
+};
+
+BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
+	auto secs_1 = std::chrono::milliseconds(1000);
+	auto secs_3 = std::chrono::milliseconds(1300);
+	std::unique_ptr<TestPeriodWorker> worker{ new TestPeriodWorker(secs_1) };
+    worker->start_worker();
+	std::this_thread::sleep_for(secs_3);
+    worker->stop_worker();
+	BOOST_CHECK(worker->call_count > 1);
 }

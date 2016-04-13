@@ -1,7 +1,8 @@
 #include "meas.h"
-#include "utils.h"
+#include "utils/utils.h"
 #include <stdlib.h>
 #include <string.h>
+#include <cmath>
 
 using namespace dariadb;
 
@@ -20,4 +21,8 @@ void Meas::readFrom(const Meas::PMeas m) {
 
 bool dariadb::in_filter(Flag filter, Flag flg) {
 	return (filter == 0) || (filter == flg);
+}
+
+bool dariadb::areSame(Value a, Value b, const Value EPSILON){
+    return std::fabs(a - b) < EPSILON;
 }

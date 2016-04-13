@@ -1,6 +1,7 @@
 #pragma once
 
 #include "compression/binarybuffer.h"
+#include "compression/positions.h"
 #include "meas.h"
 #include <memory>
 
@@ -9,6 +10,14 @@ namespace dariadb {
 
         class CopmressedWriter {
         public:
+            struct Position{
+                DeltaCompressionPosition time_pos;
+                XorCompressionPosition value_pos;
+                FlagCompressionPosition flag_pos,src_pos;
+                Meas first;
+                bool is_first;
+                bool is_full;
+            };
             CopmressedWriter();
             CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
             ~CopmressedWriter();
@@ -23,6 +32,9 @@ namespace dariadb {
             bool is_full() const;
 
             size_t used_space()const;
+
+            Position get_position()const;
+            void restore_position(const Position&pos);
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

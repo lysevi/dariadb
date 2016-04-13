@@ -6,12 +6,12 @@
 #include <atomic>
 #include <map>
 
-#include <time_ordered_set.h>
+#include <storage/time_ordered_set.h>
 #include <timeutil.h>
-#include <capacitor.h>
-#include <logger.h>
+#include <storage/capacitor.h>
+#include <utils/logger.h>
 
-class Moc_Storage :public dariadb::storage::AbstractStorage {
+class Moc_Storage :public dariadb::storage::BaseStorage {
 public:
 	size_t writed_count;
     std::map<dariadb::Id, std::vector<dariadb::Meas>> meases;
@@ -24,13 +24,7 @@ public:
 		writed_count += 1;
 		return dariadb::append_result(1,0);
 	}
-	dariadb::storage::Reader_ptr readInterval(const dariadb::IdArray &, dariadb::Flag , dariadb::Time , dariadb::Time ) {
-		return nullptr;
-	}
 
-	dariadb::storage::Reader_ptr readInTimePoint(const dariadb::IdArray &, dariadb::Flag , dariadb::Time ) {
-		return nullptr;
-	}
 	dariadb::Time minTime() {
 		return 0;
 	}
@@ -45,6 +39,16 @@ public:
 	dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray&, const dariadb::Flag&) override{
 		return nullptr;
 	}
+	void flush()override {
+	}
+	dariadb::storage::Cursor_ptr chunksByIterval(const dariadb::IdArray &, dariadb::Flag, dariadb::Time, dariadb::Time) {
+		return nullptr;
+	}
+
+	dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &, dariadb::Flag, dariadb::Time) {
+		return dariadb::storage::IdToChunkMap{};
+	}
+	dariadb::IdArray getIds() { return dariadb::IdArray{}; }
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)
@@ -94,10 +98,10 @@ BOOST_AUTO_TEST_CASE(BucketTest)
 	stor->writed_count = 0;
     const size_t max_size = 10;
     const dariadb::Time write_window_deep = 1000;
-    auto base = dariadb::storage::Capacitor{ max_size, stor,write_window_deep};
+    
 
     //with move ctor check
-    dariadb::storage::Capacitor mbucket(std::move(base));
+    dariadb::storage::Capacitor mbucket(stor,dariadb::storage::Capacitor::Params(max_size,write_window_deep));
     auto e = dariadb::Meas::empty();
 
     //max time always
@@ -201,7 +205,7 @@ BOOST_AUTO_TEST_CASE(MultiThread)
 	stor->writed_count = 0;
 	const size_t max_size = 10;
     const dariadb::Time write_window_deep = 10000;
-	auto mbucket = dariadb::storage::Capacitor{ max_size, stor,write_window_deep };
+	dariadb::storage::Capacitor mbucket{stor,dariadb::storage::Capacitor::Params(max_size,write_window_deep)};
 
     std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
     std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_compressor.h"
+#include "positions.h"
 
 namespace dariadb {
     namespace compression {
@@ -9,9 +10,11 @@ namespace dariadb {
         public:
             DeltaCompressor() = default;
             DeltaCompressor(const BinaryBuffer_Ptr &bw);
-            ~DeltaCompressor();
 
             bool append(Time t);
+
+            DeltaCompressionPosition get_position()const;
+            void restore_position(const DeltaCompressionPosition&pos);
 
             static uint16_t get_delta_64(int64_t D);
             static uint16_t get_delta_256(int64_t D);
@@ -21,15 +24,13 @@ namespace dariadb {
         protected:
             bool _is_first;
             Time _first;
-            uint64_t _prev_delta;
+            int64_t _prev_delta;
             Time _prev_time;
         };
 
         class DeltaDeCompressor:public BaseCompressor {
         public:
-            DeltaDeCompressor() = default;
             DeltaDeCompressor(const BinaryBuffer_Ptr &bw, Time first);
-            ~DeltaDeCompressor();
 
             Time read();
         protected:

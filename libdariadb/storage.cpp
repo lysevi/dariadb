@@ -1,6 +1,7 @@
 #include "storage.h"
 #include "meas.h"
 #include "flags.h"
+#include "storage/inner_readers.h"
 #include <map>
 
 using namespace dariadb;
@@ -130,6 +131,8 @@ void Reader::readAll(ReaderClb*clb)
 
 void  Reader::readByStep(ReaderClb*clb, dariadb::Time from, dariadb::Time to, dariadb::Time step) {
     std::unique_ptr<ByStepClbk> inner_clb(new ByStepClbk(clb,this->getIds(),from,to,step));
+    //TODO reset is sucks
+    this->reset();
 	while (!isEnd()) {
 		readNext(inner_clb.get());
 	}
@@ -147,7 +150,7 @@ void  Reader::readByStep(Meas::MeasList *output, dariadb::Time from, dariadb::Ti
 	this->readByStep(clb.get(),from,to,step);
 }
 
-append_result AbstractStorage::append(const Meas::MeasArray & ma)
+append_result BaseStorage::append(const Meas::MeasArray & ma)
 {
     dariadb::append_result ar{};
     for(auto&m:ma){
@@ -156,7 +159,7 @@ append_result AbstractStorage::append(const Meas::MeasArray & ma)
     return ar;
 }
 
-append_result AbstractStorage::append(const Meas::MeasList & ml)
+append_result BaseStorage::append(const Meas::MeasList & ml)
 {
     dariadb::append_result ar{};
     for(auto&m:ml){
@@ -165,14 +168,60 @@ append_result AbstractStorage::append(const Meas::MeasList & ml)
     return ar;
 }
 
-Reader_ptr AbstractStorage::readInterval(Time from, Time to)
+Reader_ptr BaseStorage::readInterval(Time from, Time to)
 {
     static dariadb::IdArray empty_id{};
     return this->readInterval(empty_id,0,from,to);
 }
 
-Reader_ptr AbstractStorage::readInTimePoint(Time time_point)
+Reader_ptr BaseStorage::readInTimePoint(Time time_point)
 {
     static dariadb::IdArray empty_id{};
     return this->readInTimePoint(empty_id,0,time_point);
+}
+
+
+Reader_ptr BaseStorage::readInterval(const IdArray &ids, Flag flag, Time from, Time to) {
+	Reader_ptr res;
+	InnerReader* res_raw = nullptr;
+    if (from > this->minTime()) {
+		res = this->readInTimePoint(ids, flag, from);
+		res_raw = dynamic_cast<InnerReader*>(res.get());
+		res_raw->_from = from;
+		res_raw->_to = to;
+		res_raw->_flag = flag;
+    }
+    else {
+        res = std::make_shared<InnerReader>(flag, from, to);
+		res_raw = dynamic_cast<InnerReader*>(res.get());
+    }
+
+    auto cursor = chunksByIterval(ids, flag, from, to);
+	res_raw->add(cursor);
+	res_raw->is_time_point_reader = false;
+    return res;
+}
+
+Reader_ptr BaseStorage::readInTimePoint(const IdArray &ids, Flag flag, Time time_point) {
+    auto res = std::make_shared<InnerReader>(flag, time_point, 0);
+    res->is_time_point_reader = true;
+
+    auto chunks_before = chunksBeforeTimePoint(ids, flag, time_point);
+    IdArray target_ids{ ids };
+    if (target_ids.size() == 0) {
+        target_ids = getIds();
+    }
+
+    for (auto id : target_ids) {
+        auto search_res = chunks_before.find(id);
+        if (search_res == chunks_before.end()) {
+            res->_not_exist.push_back(id);
+        }
+        else {
+            auto ch = search_res->second;
+            res->add_tp(ch);
+        }
+    }
+
+    return res;
 }

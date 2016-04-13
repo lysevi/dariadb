@@ -3,111 +3,38 @@
 #include <boost/test/unit_test.hpp>
 
 #include <meas.h>
-#include <memstorage.h>
-#include <time_ordered_set.h>
+#include <union_storage.h>
+#include <storage/memstorage.h>
+#include <storage/time_ordered_set.h>
+#include <storage/bloom_filter.h>
+#include <timeutil.h>
+
 #include <flags.h>
+
 #include <string>
 #include <thread>
 #include <iostream>
 #include <atomic>
-const size_t copies_count = 100;
 
-void checkAll(dariadb::Meas::MeasList res,
-              std::string msg,
-              dariadb::Time from,
-              dariadb::Time to, dariadb::Time  step) {
-	for (auto i = from; i < to; i += step) {
-		size_t count = 0;
-		for (auto &m : res) {
-            if ((m.id == i)
-                    && ((m.flag == i) ||(m.flag==dariadb::Flags::NO_DATA))
-                    && (m.time == i)
-                    && ((m.src == i) ||(m.src==dariadb::Flags::NO_DATA)))
-            {
-				count++;
-			}
+#include "test_common.h"
 
-		}
-		if (count < copies_count) {
-			BOOST_CHECK_EQUAL(copies_count, count);
-		}
-	}
+
+BOOST_AUTO_TEST_CASE(BloomTest) {
+    typedef uint8_t u8_fltr_t;
+
+    auto u8_fltr = dariadb::storage::bloom_empty<u8_fltr_t>();
+
+    BOOST_CHECK_EQUAL(u8_fltr, uint8_t{ 0 });
+
+    u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{ 1 });
+    u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{ 2 });
+
+    BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 1 }));
+    BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 2 }));
+    BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 3 }));
+    BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{ 4 }));
+    BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{ 5 }));
 }
-
-void check_reader_of_all(dariadb::storage::Reader_ptr reader,
-	dariadb::Time from,
-	dariadb::Time to,
-	dariadb::Time  step, 
-	size_t total_count,std::string message)
-{
-	dariadb::Meas::MeasList all{};
-	reader->readAll(&all);
-	BOOST_CHECK_EQUAL(all.size(), total_count);
-	auto readed_ids = reader->getIds();
-	BOOST_CHECK_EQUAL(readed_ids.size(), size_t(to / step));
-
-	checkAll(all, message, from, to, step);
-}
-
-void storage_test_check(dariadb::storage::AbstractStorage *as,
-                        dariadb::Time from,
-                        dariadb::Time to,
-                        dariadb::Time  step) {
-	auto m = dariadb::Meas::empty();
-	size_t total_count = 0;
-
-	for (auto i = from; i < to; i += step) {
-		m.id = i;
-		m.flag = dariadb::Flag(i);
-        m.src = dariadb::Flag(i);
-		m.time = i;
-		m.value = 0;
-		for (size_t j = 1; j < copies_count+1; j++) {
-			BOOST_CHECK(as->append(m).writed == 1);
-			total_count++;
-			m.value = dariadb::Value(j);
-		}
-	}
-
-	
-	auto reader = as->readInterval(from, to);
-	check_reader_of_all(reader, from, to, step, total_count, "readAll error: ");
-
-	auto cloned_reader=reader->clone();
-	cloned_reader->reset();
-	check_reader_of_all(cloned_reader, from, to, step, total_count, "cloned readAll error: ");
-
-	dariadb::IdArray ids{};
-	dariadb::Meas::MeasList all{};
-	as->readInterval(ids, 0, from, to)->readAll(&all);
-    BOOST_CHECK_EQUAL(all.size(), total_count);
-
-	checkAll(all, "read error: ", from, to, step);
-
-    ids.push_back(from + step);
-	dariadb::Meas::MeasList fltr_res{};
-    as->readInterval(ids, 0, from, to)->readAll(&fltr_res);
-
-    BOOST_CHECK_EQUAL(fltr_res.size(), copies_count);
-
-	all.clear();
-	as->readInTimePoint(to)->readAll(&all);
-	size_t ids_count = (size_t)((to - from) / step);
-	BOOST_CHECK_EQUAL(all.size(), ids_count);
-
-	dariadb::IdArray emptyIDs{};
-	fltr_res.clear();
-	as->readInTimePoint(to)->readAll(&fltr_res);
-	BOOST_CHECK_EQUAL(fltr_res.size(), ids_count);
-
-    dariadb::IdArray notExstsIDs{9999};
-    fltr_res.clear();
-    as->readInTimePoint(notExstsIDs,0,to-1)->readAll(&fltr_res);
-    BOOST_CHECK_EQUAL(fltr_res.size(), size_t(1));
-    BOOST_CHECK_EQUAL(fltr_res.front().flag, dariadb::Flags::NO_DATA);
-
-}
-
 
 BOOST_AUTO_TEST_CASE(inFilter) {
 	{
@@ -119,14 +46,15 @@ BOOST_AUTO_TEST_CASE(inFilter) {
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
 	{
 		auto ms = new dariadb::storage::MemoryStorage{ 500 };
-		const dariadb::Time from = 0;
-		const dariadb::Time to = 100;
+		const dariadb::Time from = 0;//dariadb::timeutil::current_time();
+		const dariadb::Time to = dariadb_test::copies_count * 2;//+ from ;
 		const dariadb::Time step = 2;
-		storage_test_check(ms, from, to, step);
+		dariadb_test::storage_test_check(ms, from, to, step);
 		BOOST_CHECK_EQUAL(ms->chunks_size(), (to - from) / step); // id per chunk.
 		delete ms;
 	}
 }
+
 std::atomic_long writed_count{0};
 void thread_writer(dariadb::Id id,
                    dariadb::Time from,
@@ -328,8 +256,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		dariadb::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
 		rdr->readByStep(&allByStep,0,total_count, time_step);
-		auto expected = size_t(total_count / time_step)*id_count;//+ timepoint
-		BOOST_CHECK_EQUAL(allByStep.size(), expected);
+        auto expected = size_t(total_count / time_step)*id_count;//+ timepoint
+        BOOST_CHECK_EQUAL(allByStep.size(), expected);
 		delete ms;
 	}
 
@@ -354,8 +282,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
 		dariadb::Meas::MeasList allByStep;
 		rdr = ms->readInterval(0, total_count);
 		rdr->readByStep(&allByStep, 0, total_count, query_step);
-		auto expected = size_t(total_count / query_step)*id_count + id_count;//+ timepoint;
-		BOOST_CHECK_EQUAL(allByStep.size(), expected); 
+        auto expected = size_t(total_count / query_step)*id_count + id_count;//+ timepoint;
+        BOOST_CHECK_EQUAL(allByStep.size(), expected);
 		delete ms;
 	}
 
@@ -472,7 +400,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 }
 
 BOOST_AUTO_TEST_CASE(CurValues) {
-	{// equal step
+	{
 		auto ms = new dariadb::storage::MemoryStorage{ 500 };
 
 		auto m = dariadb::Meas::empty();
@@ -500,4 +428,66 @@ BOOST_AUTO_TEST_CASE(CurValues) {
 		}
 		delete ms;
 	}
+}
+
+BOOST_AUTO_TEST_CASE(DropOldChunks) {
+	auto ms = new dariadb::storage::MemoryStorage{ 500 };
+	auto m = dariadb::Meas::empty();
+    auto t=dariadb::timeutil::current_time();
+    for (auto i = 0; i < 1000; i += 1,t+=100) {
+		m.id = i;
+		m.flag = dariadb::Flag(i);
+		m.src = dariadb::Flag(i);
+        m.time = t;
+		m.value = 0;
+		for (size_t j = 1; j < 1000; j++) {
+			m.value = dariadb::Value(j);
+			m.time++;
+			ms->append(m);
+		}
+	}
+    const dariadb::Time min_time=10;
+	auto before_size=ms->chunks_total_size();
+	auto before_min = ms->minTime();
+
+	auto chunks=ms->drop_old_chunks(min_time);
+    auto now=dariadb::timeutil::current_time();
+	BOOST_CHECK(chunks.size() > 0);
+	for (auto c : chunks) {
+        auto flg = c->maxTime <= (now-min_time);
+		BOOST_CHECK(flg);
+	}
+	auto after_size = ms->chunks_total_size();
+	BOOST_CHECK(before_size >after_size);
+	BOOST_CHECK(ms->minTime() > before_min);
+
+	delete ms;
+}
+
+BOOST_AUTO_TEST_CASE(DropByLimitChunks) {
+    auto ms = new dariadb::storage::MemoryStorage{ 500 };
+    auto m = dariadb::Meas::empty();
+    auto t=dariadb::timeutil::current_time();
+    size_t max_limit=100;
+    for (auto i = 0; i < 1000; i += 1,t+=10) {
+        m.id = i;
+        m.flag = dariadb::Flag(i);
+        m.src = dariadb::Flag(i);
+        m.time = t;
+        m.value = 0;
+        for (size_t j = 1; j < 1000; j++) {
+            m.value = dariadb::Value(j);
+            m.time++;
+            ms->append(m);
+        }
+        if(ms->chunks_total_size()>max_limit*2){
+            break;
+        }
+    }
+    auto droped=ms->drop_old_chunks_by_limit(max_limit);
+    BOOST_CHECK(ms->chunks_total_size()<=max_limit);
+    dariadb::Meas::MeasList out;
+    ms->readInterval(dariadb::Time(0), t)->readAll(&out);
+    BOOST_CHECK(out.size()>size_t(0));
+    delete ms;
 }

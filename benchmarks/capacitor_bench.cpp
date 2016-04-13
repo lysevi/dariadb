@@ -3,12 +3,12 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <time_ordered_set.h>
+#include <storage/time_ordered_set.h>
 #include <timeutil.h>
-#include <capacitor.h>
+#include <storage/capacitor.h>
 #include <ctime>
 
-class Moc_Storage :public dariadb::storage::AbstractStorage {
+class Moc_Storage :public dariadb::storage::BaseStorage {
 public:
 	dariadb::append_result append(const dariadb::Meas::PMeas, const size_t size) {
 		return dariadb::append_result(size,0);
@@ -16,13 +16,7 @@ public:
 	dariadb::append_result append(const dariadb::Meas &) {
 		return dariadb::append_result(1,0);
 	}
-	dariadb::storage::Reader_ptr readInterval(const dariadb::IdArray &, dariadb::Flag , dariadb::Time , dariadb::Time ) {
-		return nullptr;
-	}
 
-	dariadb::storage::Reader_ptr readInTimePoint(const dariadb::IdArray &, dariadb::Flag , dariadb::Time ) {
-		return nullptr;
-	}
 	dariadb::Time minTime() {
 		return 0;
 	}
@@ -36,6 +30,18 @@ public:
 	dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray&, const dariadb::Flag&) {
 		return nullptr;
 	}
+
+	void flush()override {
+	}
+	
+	dariadb::storage::Cursor_ptr chunksByIterval(const dariadb::IdArray &, dariadb::Flag, dariadb::Time, dariadb::Time) {
+		return nullptr;
+	}
+
+	dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &, dariadb::Flag , dariadb::Time ) {
+		return dariadb::storage::IdToChunkMap{};
+	}
+	dariadb::IdArray getIds() { return dariadb::IdArray{}; }
 };
 
 int main(int argc, char *argv[]) {
@@ -77,7 +83,7 @@ int main(int argc, char *argv[]) {
         const dariadb::Time write_window_deep = 2000;
 
 		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-        auto tos =dariadb::storage::Capacitor{ max_size,stor, write_window_deep };
+        dariadb::storage::Capacitor tos{ stor, dariadb::storage::Capacitor::Params(max_size,write_window_deep)};
         auto m = dariadb::Meas::empty();
 
         auto start = clock();

@@ -13,9 +13,6 @@ FlagCompressor::FlagCompressor(const BinaryBuffer_Ptr & bw):
 {
 }
 
-FlagCompressor::~FlagCompressor(){
-}
-
 
 bool FlagCompressor::append(dariadb::Flag v){
 
@@ -27,21 +24,33 @@ bool FlagCompressor::append(dariadb::Flag v){
     }
 
     if (v == _first) {
-        if (_bw->free_size() == 1) {
+        if (_bw->free_size() < 1) {
             return false;
         }
         _bw->clrbit().incbit();
     }
     else {
-        if (_bw->free_size() < 9) {
-            return false;
-        }
+		if (_bw->free_size() < 5) {
+			return false;
+		}
         _bw->setbit().incbit();
         _bw->write(uint64_t(v),31);
 
         _first = v;
     }
     return true;
+}
+
+FlagCompressionPosition FlagCompressor::get_position()const{
+    FlagCompressionPosition result;
+    result._first=_first;
+    result._is_first=_is_first;
+    return result;
+}
+
+void FlagCompressor::restore_position(const FlagCompressionPosition&pos){
+    _first=pos._first;
+    _is_first=pos._is_first;
 }
 
 FlagDeCompressor::FlagDeCompressor(const BinaryBuffer_Ptr & bw, dariadb::Flag first):
@@ -60,6 +69,6 @@ dariadb::Flag FlagDeCompressor::read(){
         _bw->incbit();
         result=(dariadb::Flag)_bw->read(31);
     }
-
+	_prev_value = result;
     return result;
 }

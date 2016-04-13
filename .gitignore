@@ -1,4 +1,9 @@
 tmp
+packages.config
+.vs
+*.page
+*.dll
+*.lib
 *-prefix
 *.VC.db
 *.opendb
@@ -18,6 +23,7 @@ CTestTestFile.cmake
 *.ctestcase
 Debug
 Release
+RelWithDebInfo
 *.exe
 *.dir
 *.sdf

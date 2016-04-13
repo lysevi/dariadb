@@ -1,6 +1,7 @@
 #include "binarybuffer.h"
-#include "../utils.h"
+#include "../utils/utils.h"
 #include <cassert>
+#include <sstream>
 
 using namespace dariadb;
 using namespace dariadb::compression;
@@ -72,8 +73,10 @@ BinaryBuffer& BinaryBuffer::incbit(){
 }
 
 BinaryBuffer& BinaryBuffer::incpos(){
+    if(_pos==0){
+        throw MAKE_EXCEPTION("_pos==0");
+    }
     _pos--;
-	assert(_pos != 0);
     return *this;
 }
 
@@ -106,6 +109,9 @@ BinaryBuffer& BinaryBuffer::clrbit() {
 }
 
 void BinaryBuffer::write(uint16_t v,int8_t count){
+	if (count == 0) {
+		throw MAKE_EXCEPTION("count==0");
+	}
     const auto bits_in_ui16=sizeof(uint16_t)*8;
 
     uint32_t *dest = (uint32_t*)(_begin + _pos - 3);
@@ -116,19 +122,43 @@ void BinaryBuffer::write(uint16_t v,int8_t count){
 }
 
 void BinaryBuffer::write(uint64_t v, int8_t count) {
+	if (count == 0) {
+		throw MAKE_EXCEPTION("count==0");
+	}
+
+	/*
+	//TODO speed up
 	uint8_t *arr = reinterpret_cast<uint8_t*>(&v);
 	auto max_index = count / 8;
-	int8_t bits_in_max = (count+1)%8;
+	int8_t bits_in_max = (count + 1) % 8;
 	if (bits_in_max != 0) {
-		this->write((uint16_t)arr[max_index],  bits_in_max - 1);
+		this->write((uint16_t)arr[max_index], bits_in_max - 1);
 		max_index--;
 	}
 	for (int i = max_index; i >= 0; i--) {
 		this->write((uint16_t)arr[i], max_bit_pos);
+	}*/
+
+	for (int i = count; ; i--) {
+		if (i < 0) {
+			break;
+		}
+		auto bit = utils::BitOperations::get(v, int8_t(i));
+		if (bit) {
+			setbit().incbit();
+		}
+		else {
+			clrbit().incbit();
+		}
+
 	}
+
 }
 
 uint64_t  BinaryBuffer::read(int8_t count) {
+	if (count == 0) {
+		throw MAKE_EXCEPTION("count==0");
+	}
 	if (count > 61) {
 		uint64_t result = 0;
 		for (int8_t i = count; i >= 0; i--) {

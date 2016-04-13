@@ -1,8 +1,10 @@
 #pragma once
 
 #include "meas.h"
-#include "utils.h"
+#include "utils/utils.h"
 #include "common.h"
+#include "storage/chunk.h"
+#include "storage/chunk_container.h"
 #include <memory>
 
 namespace dariadb {
@@ -27,13 +29,14 @@ namespace dariadb {
 			virtual void readByStep(ReaderClb*clb, dariadb::Time from, dariadb::Time to, dariadb::Time step);
 			virtual void readByStep(Meas::MeasList *output, dariadb::Time from, dariadb::Time to, dariadb::Time step);
 			virtual Reader_ptr clone()const = 0;
-			virtual void reset() = 0; // after reader ead from begining;
+            virtual void reset() = 0; /// need call after each read operation (readAll, readByStep, getIds...) to reset read pos to begining
+            virtual ~Reader(){}
         };
 
         
-        class AbstractStorage: public utils::NonCopy {
+        class BaseStorage: public utils::NonCopy, public ChunkContainer {
         public:
-            virtual ~AbstractStorage() = default;
+            virtual ~BaseStorage() = default;
             /// min time of writed meas
             virtual Time minTime() = 0;
             /// max time of writed meas
@@ -45,21 +48,18 @@ namespace dariadb {
             virtual append_result append(const Meas &value) = 0;
 
 			/// return data in [from + to]. 
-			/// if 'from'> minTime return data readInTimePoint('from')
+			/// if 'from'> minTime return data readInTimePoint('from') + readInterval(from,to)
             virtual Reader_ptr readInterval(Time from, Time to);
             virtual Reader_ptr readInTimePoint(Time time_point);
-
-            virtual Reader_ptr readInterval(const IdArray &ids,
-                                            Flag flag, Time from,
-                                            Time to) = 0;
-            virtual Reader_ptr readInTimePoint(const IdArray &ids,
-                                               Flag flag,
-                                               Time time_point) = 0;
+            virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to);
+            virtual Reader_ptr readInTimePoint(const IdArray &ids,Flag flag,Time time_point);
+			virtual Reader_ptr currentValue(const IdArray&ids, const Flag& flag) = 0;
 
             virtual void subscribe(const IdArray&ids,const Flag& flag, const ReaderClb_ptr &clbk) = 0;
 
-			virtual Reader_ptr currentValue(const IdArray&ids, const Flag& flag) = 0;
+			
+			virtual void flush() = 0;
         };
-		typedef std::shared_ptr<AbstractStorage> AbstractStorage_ptr;
+        typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
     }
 }

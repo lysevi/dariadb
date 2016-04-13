@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <iterator>
 
-#include <statistic.h>
+#include <math/statistic.h>
 #include <ctime>
 #include <limits>
 #include <cmath>

@@ -26,18 +26,18 @@ SubscribeNotificator::~SubscribeNotificator() {
 }
 
 void SubscribeNotificator::start() {
-	std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::Locker> lg(_locker);
 	is_stoped = false;
 }
 
 void SubscribeNotificator::stop() {
-	std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::Locker> lg(_locker);
 	is_stoped = true;
 }
 
 
 void SubscribeNotificator::add(const SubscribeInfo_ptr&n) {
-	std::lock_guard<std::mutex> lg(_mutex);
+    std::lock_guard<dariadb::utils::Locker> lg(_locker);
 	assert(!is_stoped);
 	_subscribes.push_back(n);
 }

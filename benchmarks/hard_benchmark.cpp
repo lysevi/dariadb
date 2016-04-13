@@ -4,6 +4,7 @@
 #include <iterator>
 
 #include <dariadb.h>
+#include <utils/fs.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
@@ -21,10 +22,10 @@ public:
 	size_t count;
 };
 
-void writer_1(dariadb::storage::AbstractStorage_ptr ms)
+void writer_1(dariadb::storage::BaseStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
-	dariadb::Time t = 0;
+	dariadb::Time t = 0;// dariadb::timeutil::current_time();
 	for (dariadb::Id i = 0; i < 32768; i += 1) {
 		m.id = i;
 		m.flag = dariadb::Flag(0);
@@ -37,7 +38,7 @@ void writer_1(dariadb::storage::AbstractStorage_ptr ms)
 
 std::atomic_long writen{ 0 };
 
-void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::AbstractStorage_ptr ms)
+void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::BaseStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
 	std::random_device r;
@@ -45,11 +46,12 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::Abstr
 	std::uniform_int_distribution<int> uniform_dist(10, 64);
 
     size_t max_id=(id_from + id_per_thread);
-    dariadb::Time t = 0;
+   
 
     for (dariadb::Id i = id_from; i < max_id; i += 1) {
 		dariadb::Value v = 1.0;
         auto max_rnd = uniform_dist(e1);
+		dariadb::Time t = 0;// dariadb::timeutil::current_time();
 		for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
 			m.id = i;
 			m.flag = dariadb::Flag(0);
@@ -69,8 +71,27 @@ int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
 	srand(static_cast<unsigned int>(time(NULL)));
+	
+	const std::string storage_path = "testStorage";
+	const size_t chunk_per_storage = 1024 * 1024;
+	const size_t chunk_size = 256;
+	const size_t cap_max_size = 100;
+	const dariadb::Time write_window_deep = 500;
+	const dariadb::Time old_mem_chunks = 0;
+	const size_t max_mem_chunks = 0;
+
+
+	
 	{// 1.
-		dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
+		auto raw_ptr = new dariadb::storage::UnionStorage(
+			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
+			dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+			dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+        dariadb::storage::BaseStorage_ptr ms{ raw_ptr };
 		auto start = clock();
 
 		writer_1(ms);
@@ -79,7 +100,15 @@ int main(int argc, char *argv[]) {
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
 	
-	dariadb::storage::AbstractStorage_ptr ms{ new dariadb::storage::MemoryStorage{ 512 } };
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+
+	auto raw_ptr = new dariadb::storage::UnionStorage(
+		dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
+		dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+		dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+	dariadb::storage::BaseStorage_ptr ms{ raw_ptr };
 
 	{// 2.
 		const size_t threads_count = 16;
@@ -89,7 +118,7 @@ int main(int argc, char *argv[]) {
 		std::vector<std::thread> writers(threads_count);
 		size_t pos = 0;
 		for (size_t i = 0; i < threads_count; i++) {
-			std::thread t{ writer_2, id_per_thread*i, id_per_thread, ms };
+			std::thread t{ writer_2, id_per_thread*i+1, id_per_thread, ms };
 			writers[pos++] = std::move(t);
 		}
 
@@ -222,5 +251,11 @@ int main(int argc, char *argv[]) {
 
 		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / queries_count;
 		std::cout << "6. interval: " << elapsed << std::endl;
+	}
+
+	ms = nullptr;
+
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
 	}
 }

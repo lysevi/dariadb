@@ -1,8 +1,8 @@
 #pragma once
 
-#include "meas.h"
+#include "../meas.h"
+#include "../utils/locker.h"
 #include <memory>
-#include <mutex>
 
 namespace dariadb {
 	namespace storage {
@@ -30,6 +30,8 @@ namespace dariadb {
 			dariadb::Time minTime()const;
 			dariadb::Time maxTime()const;
 			bool inInterval(const dariadb::Meas&m)const;
+
+			bool is_dropped;
 		protected:
 			size_t _max_size;
 			size_t _count;
@@ -37,7 +39,7 @@ namespace dariadb {
 
 			dariadb::Time _minTime;
 			dariadb::Time _maxTime;
-			mutable std::mutex    _mutex;
+            mutable dariadb::utils::Locker _locker;
 		};
 	}
 }

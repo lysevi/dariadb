@@ -31,7 +31,7 @@ namespace dariadb {
             }
 
             template <class T> static inline T set(T v, uint8_t num) {
-                return v | (T(1) << num);
+                return v | (static_cast<T>(T(1) << num));
             }
 
             template <class T> static inline T clr(T v, uint8_t num) {
@@ -65,7 +65,9 @@ namespace dariadb {
                 end=_end;
             }
 
-            ~Range(){
+            Range(const Range&other)=default;
+            ~Range()
+            {
 
             }
         };

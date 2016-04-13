@@ -1,6 +1,6 @@
 #include "delta.h"
-#include "../utils.h"
-#include "../exception.h"
+#include "../utils/utils.h"
+#include "../utils/exception.h"
 #include "binarybuffer.h"
 
 #include <sstream>
@@ -27,22 +27,18 @@ DeltaCompressor::DeltaCompressor(const BinaryBuffer_Ptr &bw):
 {
 }
 
-
-DeltaCompressor::~DeltaCompressor(){
-}
-
-
 bool DeltaCompressor::append(dariadb::Time t){
     if(_is_first){
         _first=t;
         _is_first=false;
         _prev_time=t;
+		_prev_delta = 0;
         return true;
     }
 
     int64_t D=(t-_prev_time) - _prev_delta;
     if(D==0){
-        if (_bw->free_size() == 1) {
+        if (_bw->free_size() < 1) {
             return false;
         }
         _bw->clrbit().incbit();
@@ -84,6 +80,23 @@ bool DeltaCompressor::append(dariadb::Time t){
 }
 
 
+
+DeltaCompressionPosition DeltaCompressor::get_position()const{
+    DeltaCompressionPosition result;
+    result._first=_first;
+    result._is_first=_is_first;
+    result._prev_delta=_prev_delta;
+    result._prev_time=_prev_time;
+    return result;
+}
+
+void DeltaCompressor::restore_position(const DeltaCompressionPosition&pos){
+    _first=pos._first;
+    _is_first=pos._is_first;
+    _prev_delta=pos._prev_delta;
+    _prev_time=pos._prev_time;
+}
+
 uint16_t DeltaCompressor::get_delta_64(int64_t D) {
     return delta_64_mask |  (delta_64_mask_inv & static_cast<uint16_t>(D));
 }
@@ -108,11 +121,6 @@ DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Time f
 {
 
 }
-
-DeltaDeCompressor::~DeltaDeCompressor(){
-
-}
-
 
 dariadb::Time DeltaDeCompressor::read(){
     auto b0=_bw->getbit();
