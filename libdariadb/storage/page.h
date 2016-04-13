@@ -58,21 +58,5 @@ namespace dariadb {
             mutable utils::fs::MappedFile::MapperFile_ptr mmap;
 		};
 
-		class PageCursor : public dariadb::storage::Cursor{
-		public:
-			PageCursor(Page*page, const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
-			~PageCursor();
-			bool is_end()const override;
-			void readNext(Cursor::Callback*cbk)  override;
-			void reset_pos() override;//start read from begining;
-		protected:
-			Page* link;
-			bool _is_end;
-			Page_ChunkIndex *_index_it, *_index_end;
-			dariadb::IdArray _ids;
-			dariadb::Time _from, _to;
-			dariadb::Flag _flag;
-			dariadb::utils::Locker _locker;
-		};
 	}
 }
