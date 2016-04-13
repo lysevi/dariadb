@@ -14,7 +14,7 @@ endmacro(ADD_BENCHARK)
 
 ADD_BENCHARK(compression_bench compression_bench.cpp)
 ADD_BENCHARK(memstorage_bench memstorage_bench.cpp)
-ADD_BENCHARK(memstorage_hard_benchmark memstorage_hard_benchmark.cpp)
+ADD_BENCHARK(hard_benchmark hard_benchmark.cpp)
 ADD_BENCHARK(capacitor_bench capacitor_bench.cpp)
 ADD_BENCHARK(caches_bench caches_bench.cpp)
 ADD_BENCHARK(page_benchmark page_benchmark.cpp)

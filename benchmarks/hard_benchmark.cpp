@@ -4,6 +4,7 @@
 #include <iterator>
 
 #include <dariadb.h>
+#include <utils/fs.h>
 #include <ctime>
 #include <limits>
 #include <cmath>
@@ -24,7 +25,7 @@ public:
 void writer_1(dariadb::storage::BaseStorage_ptr ms)
 {
 	auto m = dariadb::Meas::empty();
-	dariadb::Time t = 0;
+	dariadb::Time t = 0;// dariadb::timeutil::current_time();
 	for (dariadb::Id i = 0; i < 32768; i += 1) {
 		m.id = i;
 		m.flag = dariadb::Flag(0);
@@ -50,7 +51,7 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::BaseS
     for (dariadb::Id i = id_from; i < max_id; i += 1) {
 		dariadb::Value v = 1.0;
         auto max_rnd = uniform_dist(e1);
-		dariadb::Time t = 0;
+		dariadb::Time t = 0;// dariadb::timeutil::current_time();
 		for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
 			m.id = i;
 			m.flag = dariadb::Flag(0);
@@ -79,8 +80,13 @@ int main(int argc, char *argv[]) {
 	const dariadb::Time old_mem_chunks = 0;
 	const size_t max_mem_chunks = 100;
 
+
 	
 	{// 1.
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
 		auto raw_ptr = new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
 			dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
@@ -94,6 +100,10 @@ int main(int argc, char *argv[]) {
 		std::cout << "1. insert : " << elapsed << std::endl;
 	}
 	
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+
 	auto raw_ptr = new dariadb::storage::UnionStorage(
 		dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
 		dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
@@ -241,5 +251,11 @@ int main(int argc, char *argv[]) {
 
 		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / queries_count;
 		std::cout << "6. interval: " << elapsed << std::endl;
+	}
+
+	ms = nullptr;
+
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
 	}
 }

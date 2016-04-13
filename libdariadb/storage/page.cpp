@@ -46,6 +46,9 @@ Page* Page::open(std::string file_name) {
 	res->header = reinterpret_cast<PageHeader*>(region);
 	res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
 	res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*res->header->chunk_per_storage);
+	if (res->header->chunk_size == 0) {
+		throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
+	}
 	return res;
 }
 
