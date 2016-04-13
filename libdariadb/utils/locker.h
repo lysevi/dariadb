@@ -17,7 +17,7 @@ namespace dariadb{
                 while (locked.test_and_set(std::memory_order_acquire)) { ; }
 #else
 				locked.lock();
-#endif;
+#endif
             }
             void unlock() {
 #ifndef USE_MUTEX
