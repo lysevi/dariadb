@@ -55,7 +55,7 @@ public:
 				continue;
 			}
 
-			if ((dariadb::utils::inInterval(_from, _to, _index_it->info.minTime)) || (dariadb::utils::inInterval(_from, _to, _index_it->info.maxTime))) {
+			if (check_index_rec(_index_it)) {
 				auto ptr = new Chunk(_index_it->info, link->chunks + _index_it->offset, link->header->chunk_size);
 				Chunk_Ptr c{ ptr };
 				assert(c->last.time != 0);
@@ -63,13 +63,34 @@ public:
 				_index_it++;
 				break;
 			}
+			else {//end of data;
+				_is_end = true;
+				Chunk_Ptr empty;
+				cbk->call(empty);
+				break;
+			}
 		}
 	}
+	
+	bool check_index_rec(Page_ChunkIndex*it) const{
+		return ((dariadb::utils::inInterval(_from, _to, it->info.minTime)) || (dariadb::utils::inInterval(_from, _to, it->info.maxTime)));
+	}
+
 	void reset_pos() override { //start read from begining;
 		_is_end = false;
 		_index_end = link->index + link->header->chunk_per_storage;
 		_index_it = link->index;
 
+		//move to data begining
+		for (; !_is_end; _index_it++) {
+			if (_index_it == _index_end) {
+				_is_end = true;
+				break;
+			}
+			if (check_index_rec(_index_it)) {
+				break;
+			}
+		}
 	}
 protected:
 	Page* link;
