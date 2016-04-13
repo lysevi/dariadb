@@ -3,7 +3,7 @@
 #include "mode.h"
 #include "cursor.h"
 #include "../utils/fs.h"
-#include "../utils/spinlock.h"
+#include "../utils/locker.h"
 
 namespace dariadb {
 	namespace storage {
@@ -49,7 +49,7 @@ namespace dariadb {
 			Page_ChunkIndex*index;
 			uint8_t        *chunks;
 		protected:
-            dariadb::utils::SpinLock   _locker;
+            dariadb::utils::Locker   _locker;
             utils::fs::MappedFile::MapperFile_ptr mmap;
 		};
 
@@ -67,7 +67,7 @@ namespace dariadb {
 			dariadb::IdArray _ids;
 			dariadb::Time _from, _to;
 			dariadb::Flag _flag;
-			dariadb::utils::SpinLock _locker;
+			dariadb::utils::Locker _locker;
 		};
 	}
 }

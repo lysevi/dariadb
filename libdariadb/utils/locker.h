@@ -5,7 +5,7 @@
 
 namespace dariadb{
     namespace utils{
-        class SpinLock {
+        class Locker {
 #ifndef USE_MUTEX
             std::atomic_flag locked = ATOMIC_FLAG_INIT ;
 #else

@@ -2,7 +2,7 @@
 #include "../utils/utils.h"
 #include "page.h"
 #include "../utils/fs.h"
-#include "../utils/spinlock.h"
+#include "../utils/locker.h"
 
 #include <cstring>
 
@@ -60,7 +60,7 @@ public:
     }
 
     bool append_chunk(const Chunk_Ptr&ch) {
-        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
         auto pg=get_cur_page();
         return pg->append(ch,_param.mode);
     }
@@ -72,12 +72,12 @@ public:
     }
 
 	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to){
-        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
 		return this->get_chunks(ids, from, to, flag);
     }
 
     IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint){
-        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
 		IdToChunkMap result;
 
 		ChuncksList ch_list;
@@ -119,7 +119,7 @@ public:
 	};
 
     dariadb::IdArray getIds() {
-        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::IdArray{};
         }
@@ -150,7 +150,7 @@ public:
 	}
 
     dariadb::Time minTime(){
-        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::Time(0);
         }else{
@@ -159,7 +159,7 @@ public:
     }
 
     dariadb::Time maxTime(){
-        std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
         if(_cur_page==nullptr){
             return dariadb::Time(0);
         }else{
@@ -169,7 +169,7 @@ public:
 protected:
     Page*  _cur_page;
 	PageManager::Params _param;
-    dariadb::utils::SpinLock _locker;
+    dariadb::utils::Locker _locker;
 };
 
 PageManager::PageManager(const PageManager::Params&param):

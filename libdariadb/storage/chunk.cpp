@@ -43,7 +43,7 @@ size_t ChunkPool::polled(){
 }
 
 void* ChunkPool::alloc(std::size_t sz){
-    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+    std::lock_guard<dariadb::utils::Locker> lg(_locker);
     void*result=nullptr;
     if(this->_ptrs.size()!=0){
         result= this->_ptrs.back();
@@ -56,7 +56,7 @@ void* ChunkPool::alloc(std::size_t sz){
 }
 
 void ChunkPool::free(void* ptr, std::size_t){
-    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+    std::lock_guard<dariadb::utils::Locker> lg(_locker);
     if (_ptrs.size() < _max_size) {
         _ptrs.push_front(ptr);
     }
@@ -128,7 +128,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 }
 
 Chunk::~Chunk() {
-    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+    std::lock_guard<dariadb::utils::Locker> lg(_locker);
 	this->bw = nullptr;
 	_buffer_t.clear();
 }
@@ -139,7 +139,7 @@ bool Chunk::append(const Meas&m)
 		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
 	}
 
-    std::lock_guard<dariadb::utils::SpinLock> lg(_locker);
+    std::lock_guard<dariadb::utils::Locker> lg(_locker);
 	auto t_f = this->c_writer.append(m);
 	writer_position = c_writer.get_position();
 

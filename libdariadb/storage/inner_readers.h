@@ -2,7 +2,7 @@
 
 #include "../storage.h"
 #include "chunk.h"
-#include "../utils/spinlock.h"
+#include "../utils/locker.h"
 
 #include <memory>
 
@@ -45,7 +45,7 @@ namespace dariadb {
 			typedef std::tuple<dariadb::Id, dariadb::Time> IdTime;
 			std::set<IdTime> _tp_readed_times;
 
-            dariadb::utils::SpinLock _locker, _locker_tp;
+            dariadb::utils::Locker _locker, _locker_tp;
 
 
 		};
@@ -66,7 +66,7 @@ namespace dariadb {
             void reset() override;
 
 			bool end;
-            dariadb::utils::SpinLock _locker;
+            dariadb::utils::Locker _locker;
 			dariadb::Meas::MeasList _cur_values;
 		};
 

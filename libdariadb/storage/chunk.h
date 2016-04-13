@@ -2,7 +2,7 @@
 
 #include "../meas.h"
 #include "../utils/utils.h"
-#include "../utils/spinlock.h"
+#include "../utils/locker.h"
 #include "../compression.h"
 #include "../compression/binarybuffer.h"
 
@@ -43,7 +43,7 @@ namespace dariadb {
             utils::Range range;
             compression::CopmressedWriter c_writer;
 
-            utils::SpinLock _locker;
+            utils::Locker _locker;
             compression::BinaryBuffer_Ptr bw;
             static void* operator new(std::size_t sz);
             static void operator delete(void* ptr, std::size_t sz);
@@ -72,7 +72,7 @@ namespace dariadb {
             static std::unique_ptr<ChunkPool> _instance;
             std::list<void*> _ptrs;
 			size_t _max_size;
-            utils::SpinLock _locker;
+            utils::Locker _locker;
         };
 	}
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../meas.h"
-#include "../utils/spinlock.h"
+#include "../utils/locker.h"
 #include <memory>
 
 namespace dariadb {
@@ -39,7 +39,7 @@ namespace dariadb {
 
 			dariadb::Time _minTime;
 			dariadb::Time _maxTime;
-            mutable dariadb::utils::SpinLock _locker;
+            mutable dariadb::utils::Locker _locker;
 		};
 	}
 }
