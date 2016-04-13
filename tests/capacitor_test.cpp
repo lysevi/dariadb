@@ -48,7 +48,7 @@ public:
 	dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &, dariadb::Flag, dariadb::Time) {
 		return dariadb::storage::IdToChunkMap{};
 	}
-	dariadb::IdArray getIds()const { return dariadb::IdArray{}; }
+	dariadb::IdArray getIds() { return dariadb::IdArray{}; }
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)

@@ -304,7 +304,7 @@ public:
 		return result;
 	}
 
-	dariadb::IdArray getIds()const {
+	dariadb::IdArray getIds() {
 		dariadb::IdArray result;
 		result.resize(_chuncks.size());
 		size_t pos = 0;
@@ -408,7 +408,7 @@ IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
 	return _Impl->chunksBeforeTimePoint(ids, flag, timePoint);
 }
 
-dariadb::IdArray MemoryStorage::getIds()const {
+dariadb::IdArray MemoryStorage::getIds() {
 	return _Impl->getIds();
 }
 

@@ -180,7 +180,7 @@ public:
 			return mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
 		}
 	}
-	IdArray getIds()const {
+	IdArray getIds() {
         std::lock_guard<dariadb::utils::Locker> lg(_locker);
 		auto page_ids = PageManager::instance()->getIds();
 		auto mem_ids = mem_storage_raw->getIds();
@@ -257,7 +257,7 @@ IdToChunkMap UnionStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag, 
 	return _impl->chunksBeforeTimePoint(ids, flag, timePoint);
 }
 
-IdArray UnionStorage::getIds()const {
+IdArray UnionStorage::getIds() {
 	return _impl->getIds();
 }
 

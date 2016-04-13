@@ -35,7 +35,7 @@ namespace dariadb {
 
 			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
-			IdArray getIds()const override;
+			IdArray getIds() override;
 
 			void add_chunks(const ChuncksList&clist);
         protected:

@@ -1,5 +1,6 @@
 #pragma once
 #include "chunk.h"
+#include "chunk_container.h"
 #include "mode.h"
 #include "cursor.h"
 #include "../utils/fs.h"
@@ -30,7 +31,7 @@ namespace dariadb {
 		};
 #pragma pack(pop) 
 
-		class Page {
+		class Page:public ChunkContainer {
 			Page() = default;
 		public:
 			static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size);
@@ -43,14 +44,18 @@ namespace dariadb {
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			ChuncksList get_open_chunks();
 			void dec_reader();
+
+			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) override;
+			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) override;
+			IdArray getIds() override;
 		public:
 			uint8_t        *region;
 			PageHeader     *header;
 			Page_ChunkIndex*index;
 			uint8_t        *chunks;
 		protected:
-            dariadb::utils::Locker   _locker;
-            utils::fs::MappedFile::MapperFile_ptr mmap;
+            mutable dariadb::utils::Locker   _locker;
+            mutable utils::fs::MappedFile::MapperFile_ptr mmap;
 		};
 
 		class PageCursor : public dariadb::storage::Cursor{

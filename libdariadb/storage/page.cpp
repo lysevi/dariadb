@@ -124,7 +124,8 @@ bool Page::is_full()const {
 Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
     std::lock_guard<dariadb::utils::Locker> lg(_locker);
 
-	Cursor_ptr result{ new PageCursor{ this,ids,from,to,flag } };
+	auto raw_ptr = new PageCursor(this,ids,from,to,flag );
+	Cursor_ptr result{ raw_ptr };
 
 	header->count_readers++;
 	
@@ -153,6 +154,63 @@ ChuncksList Page::get_open_chunks() {
 void Page::dec_reader(){
     std::lock_guard<dariadb::utils::Locker> lg(_locker);
 	header->count_readers--;
+}
+
+Cursor_ptr dariadb::storage::Page::chunksByIterval(const IdArray & ids, Flag flag, Time from, Time to)
+{
+	return get_chunks(ids, from, to, flag);
+}
+
+IdToChunkMap dariadb::storage::Page::chunksBeforeTimePoint(const IdArray & ids, Flag flag, Time timePoint)
+{
+	IdToChunkMap result;
+
+	ChuncksList ch_list;
+	auto cursor = this->get_chunks(ids, header->minTime, timePoint, flag);
+	if (cursor == nullptr) {
+		return result;
+	}
+	cursor->readAll(&ch_list);
+
+	for (auto&v : ch_list) {
+		auto find_res = result.find(v->first.id);
+		if (find_res == result.end()) {
+			result.insert(std::make_pair(v->first.id, v));
+		}
+		else {
+			if (find_res->second->maxTime < v->maxTime) {
+				result[v->first.id] = v;
+			}
+		}
+	}
+	return result;
+}
+class CountOfIdCallback :public Cursor::Callback {
+public:
+	dariadb::IdSet ids;
+	CountOfIdCallback() {
+	}
+	~CountOfIdCallback() {
+	}
+
+	virtual void call(Chunk_Ptr & ptr) override {
+		if (ptr != nullptr) {
+			ids.insert(ptr->first.id);
+		}
+	}
+};
+
+
+dariadb::IdArray dariadb::storage::Page::getIds() 
+{
+	auto cursor = get_chunks(dariadb::IdArray{}, header->minTime, header->maxTime, 0);
+
+	CountOfIdCallback*clbk_raw = new CountOfIdCallback;
+	std::unique_ptr<Cursor::Callback> clbk{ clbk_raw };
+
+	cursor->readAll(clbk.get());
+
+	return dariadb::IdArray{ clbk_raw->ids.begin(),clbk_raw->ids.end() };
 }
 
 

@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
 		dariadb::Time to_t = chunks_size;
 		for (size_t i = 1; i < chunks_count; i++) {
-			auto cursor = dariadb::storage::PageManager::instance()->get_chunks(dariadb::IdArray{}, 0, to_t, 0);
+			auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(dariadb::IdArray{}, 0, to_t, 0);
 			cursor->readAll(clbk);
 			cursor = nullptr;
 			to_t *= 2;

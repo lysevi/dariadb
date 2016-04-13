@@ -38,13 +38,13 @@ namespace dariadb{
 			
 			bool append_chunk(const Chunk_Ptr&ch);
 		
-			/// thread unsafe method
-			Cursor_ptr get_chunks(const IdArray&ids, Time from, Time to, Flag flag);
+			/*/// thread unsafe method
+			Cursor_ptr get_chunks(const IdArray&ids, Time from, Time to, Flag flag);*/
 
 			//ChunkContainer
             Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
-            IdArray getIds()const override;
+            IdArray getIds() override;
 			
 			dariadb::storage::ChuncksList get_open_chunks();
 			size_t chunks_in_cur_page()const;
