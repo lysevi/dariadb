@@ -50,7 +50,7 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::BaseS
     for (dariadb::Id i = id_from; i < max_id; i += 1) {
 		dariadb::Value v = 1.0;
         auto max_rnd = uniform_dist(e1);
-		dariadb::Time t = dariadb::timeutil::current_time();
+		dariadb::Time t = 0;
 		for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
 			m.id = i;
 			m.flag = dariadb::Flag(0);
