@@ -255,17 +255,20 @@ public:
 		return result;
 	}
 
-	bool check_chunk_to_qyery(const IdArray &ids, Flag flag, Time from, Time to, const Chunk_Ptr&ch)
+    bool check_chunk_to_qyery(const IdArray &ids, Flag flag, const Chunk_Ptr&ch)
+    {
+        if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
+            if ((flag == 0) || (!ch->check_flag(flag))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool check_chunk_to_interval(Time from, Time to, const Chunk_Ptr&ch)
 	{
 		if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
-			if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
-				if (flag != 0) {
-					if (!ch->check_flag(flag)) {
-						return false;
-					}
-				}
-				return true;
-			}
+            return true;
 		}
 		return false;
 	}
@@ -280,7 +283,7 @@ public:
 				if (ch->is_dropped) {
 					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
 				}
-				if (check_chunk_to_qyery(ids, flag, from, to, ch)) {
+                if ((check_chunk_to_qyery(ids, flag, ch)) && (check_chunk_to_interval(from, to, ch))){
 					result.push_back(ch);
 				}
 			}
@@ -288,9 +291,9 @@ public:
 		{
 			std::lock_guard<std::mutex> lg(_locker_free_chunks);
 			for (auto kv : _free_chunks) {
-				if (check_chunk_to_qyery(ids, flag, from, to, kv.second)) {
-					result.push_back(kv.second);
-				}
+                if ((check_chunk_to_qyery(ids, flag, kv.second)) && (check_chunk_to_interval(from, to, kv.second))){
+                    result.push_back(kv.second);
+                }
 			}
 		}
 
@@ -305,16 +308,11 @@ public:
 		IdToChunkMap result;
 
 		{
-			//TODO refact this.
 			std::lock_guard<std::mutex> lg(_locker_free_chunks);
 			for (auto kv : _free_chunks) {
-				if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), kv.second->first.id) == ids.end())) {
-					continue;
-				}
-
-				if (!kv.second->check_flag(flag)) {
-					continue;
-				}
+                if(!check_chunk_to_qyery(ids,flag,kv.second)){
+                    continue;
+                }
 				if (kv.second->minTime <= timePoint) {
 					result[kv.second->first.id] = kv.second;
 				}
@@ -326,13 +324,9 @@ public:
 				if (cur_chunk->minTime > timePoint) {
 					break;
 				}
-				if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), cur_chunk->first.id) == ids.end())) {
-					continue;
-				}
-
-				if (!cur_chunk->check_flag(flag)) {
-					continue;
-				}
+                if(!check_chunk_to_qyery(ids,flag,cur_chunk)){
+                    continue;
+                }
 				if (cur_chunk->minTime <= timePoint) {
 					result[cur_chunk->first.id] = cur_chunk;
 				}
