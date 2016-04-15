@@ -59,7 +59,7 @@ public:
 	}
 
 	append_result append(const Meas &value) {
-        std::lock_guard<std::mutex> lg(_locker);
+		//std::lock_guard<std::mutex> lg(_locker);
 		append_result result{};
         if (!mem_cap->append(value)){
 			result.ignored++;

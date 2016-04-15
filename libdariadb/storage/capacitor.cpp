@@ -85,14 +85,14 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 
 		auto res = check_and_append(m);
         return res;
     }
 
 	void flush_old_sets() {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		for (auto &kv : _bucks) {
 			bool flushed = false;
 			//while (kv.second.size()>0) 
@@ -177,7 +177,7 @@ public:
     }
 
     bool flush(){
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 
 		for (auto &kv : _bucks) {
             for(auto &v:kv.second){
@@ -216,7 +216,7 @@ protected:
     dict_last   _last;
     BaseStorage_ptr _stor;
     size_t _writed_count;
-    dariadb::utils::Locker _locker;
+    std::mutex _locker;
 	Capacitor::Params _params;
 };
 
