@@ -94,7 +94,7 @@ public:
 	}
 
 	append_result append(const Meas& value) {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker_free_chunks);
 
 		Chunk_Ptr chunk = this->getFreeChunk(value.id);
 
@@ -104,8 +104,12 @@ public:
 		else {
             //std::cout<<"append new "<<chunk->count<< " chunks: "<<this->chunks_total_size()<<std::endl;
 			if (!chunk->append(value)) {
-				this->_chuncks.push_back(chunk);
-				assert(chunk->is_full());
+				//TODO can be async
+				{
+					std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+					this->_chuncks.push_back(chunk);
+					assert(chunk->is_full());
+				}
 				chunk = make_chunk(value);
 			}
 		}
@@ -144,7 +148,7 @@ public:
 	}
 
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker_free_chunks);
 		auto res_raw = new InnerCurrentValuesReader();
 		Reader_ptr res{ res_raw };
 		for (auto &kv : _free_chunks) {
@@ -223,7 +227,7 @@ public:
 		for (auto& c : _chuncks) {
 			new_min = std::min(c->minTime, new_min);
 		}
-		std::lock_guard<std::mutex> lg_drop(_locker);
+		std::lock_guard<std::mutex> lg_drop(_locker_free_chunks);
 		_min_time = new_min;
 	}
 
@@ -238,7 +242,6 @@ public:
 		for (auto& kv : _free_chunks) {
 			result.push_back(kv.second);
 		}
-        std::lock_guard<std::mutex> lg(_locker);
 		this->_free_chunks.clear();
 		this->_chuncks.clear();
 		_chunks_count = 0;
@@ -265,24 +268,28 @@ public:
 	}
 
 	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-        std::lock_guard<std::mutex> lg(_locker);
+        
 		ChuncksList result{};
 
-		for (auto ch : _chuncks) {
-			if (ch->is_dropped) {
-				throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
-			}
-			if (check_chunk_to_qyery(ids, flag, from, to,ch)){
+		{
+			std::lock_guard<std::mutex> lg(_locker_chunks);
+			for (auto ch : _chuncks) {
+				if (ch->is_dropped) {
+					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
+				}
+				if (check_chunk_to_qyery(ids, flag, from, to, ch)) {
 					result.push_back(ch);
+				}
 			}
 		}
-
-		for (auto kv : _free_chunks) {
-			if (check_chunk_to_qyery(ids, flag, from, to, kv.second)) {
-				result.push_back(kv.second);
+		{
+			std::lock_guard<std::mutex> lg(_locker_free_chunks);
+			for (auto kv : _free_chunks) {
+				if (check_chunk_to_qyery(ids, flag, from, to, kv.second)) {
+					result.push_back(kv.second);
+				}
 			}
 		}
-
 
 		if (result.size() > this->chunks_total_size()) {
 			throw MAKE_EXCEPTION("result.size() > this->chunksBeforeTimePoint()");
@@ -294,34 +301,39 @@ public:
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
 		IdToChunkMap result;
 
-		//TODO refact this.
-		for (auto kv : _free_chunks) {
-			if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), kv.second->first.id) == ids.end())) {
-				continue;
-			}
+		{
+			//TODO refact this.
+			std::lock_guard<std::mutex> lg(_locker_free_chunks);
+			for (auto kv : _free_chunks) {
+				if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), kv.second->first.id) == ids.end())) {
+					continue;
+				}
 
-			if (!kv.second->check_flag(flag)) {
-				continue;
-			}
-			if (kv.second->minTime <= timePoint) {
-				result[kv.second->first.id] = kv.second;
+				if (!kv.second->check_flag(flag)) {
+					continue;
+				}
+				if (kv.second->minTime <= timePoint) {
+					result[kv.second->first.id] = kv.second;
+				}
 			}
 		}
+		{
+			std::lock_guard<std::mutex> lg(_locker_chunks);
+			for (auto cur_chunk : _chuncks) {
+				if (cur_chunk->minTime > timePoint) {
+					break;
+				}
+				if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), cur_chunk->first.id) == ids.end())) {
+					continue;
+				}
 
-        for (auto cur_chunk : _chuncks) {
-            if (cur_chunk->minTime > timePoint){
-                break;
-            }
-            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), cur_chunk->first.id) == ids.end())) {
-				continue;
-            }
-
-            if (!cur_chunk->check_flag(flag)) {
-                continue;
-            }
-            if (cur_chunk->minTime <= timePoint) {
-                result[cur_chunk->first.id] = cur_chunk;
-            }
+				if (!cur_chunk->check_flag(flag)) {
+					continue;
+				}
+				if (cur_chunk->minTime <= timePoint) {
+					result[cur_chunk->first.id] = cur_chunk;
+				}
+			}
 		}
 		return result;
 	}
@@ -358,7 +370,7 @@ protected:
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
     mutable std::mutex _subscribe_locker;
-    mutable std::mutex _locker,_locker_drop;
+    mutable std::mutex _locker_free_chunks, _locker_chunks,_locker_drop;
 	std::atomic<int64_t> _chunks_count;
 };
 
