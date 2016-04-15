@@ -23,19 +23,19 @@ public:
 BOOST_AUTO_TEST_CASE(CallCalc) {
     std::unique_ptr<Moc_I1>  p{new Moc_I1};
     auto m=dariadb::Meas::empty();
-    m.id=1;
+    m.time=1;
     p->call(m);
-    BOOST_CHECK_EQUAL(p->_a.id,dariadb::Id(0));
-    m.id=2;
+    BOOST_CHECK_EQUAL(p->_a.time,dariadb::Time(0));
+    m.time =2;
 
     p->call(m);
-    BOOST_CHECK_EQUAL(p->_a.id,dariadb::Id(1));
-    BOOST_CHECK_EQUAL(p->_b.id,dariadb::Id(2));
+    BOOST_CHECK_EQUAL(p->_a.time,dariadb::Time(1));
+    BOOST_CHECK_EQUAL(p->_b.time,dariadb::Time(2));
 
-    m.id=3;
+    m.time =3;
     p->call(m);
-    BOOST_CHECK_EQUAL(p->_a.id,dariadb::Id(2));
-    BOOST_CHECK_EQUAL(p->_b.id,dariadb::Id(3));
+    BOOST_CHECK_EQUAL(p->_a.time,dariadb::Time(2));
+    BOOST_CHECK_EQUAL(p->_b.time,dariadb::Time(3));
 	{
 		using dariadb::statistic::average::Average;
 
