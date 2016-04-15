@@ -179,6 +179,7 @@ public:
                 }
         }
 		if (result.size() > size_t(0)){
+			std::lock_guard<std::mutex> lg_ch(_locker_chunks);
             this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
 			update_min_after_drop();
 		}
@@ -215,6 +216,7 @@ public:
                 }
             }
 			if (result.size() > size_t(0)) {
+				std::lock_guard<std::mutex> lg_ch(_locker_chunks);
 				this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
 				update_min_after_drop();
 			}
@@ -233,6 +235,7 @@ public:
 
 	dariadb::storage::ChuncksList drop_all() {
         std::lock_guard<std::mutex> lg_drop(_locker_drop);
+		std::lock_guard<std::mutex> lg_ch(_locker_chunks);
 		ChuncksList result;
 		
         for (auto& chunk : _chuncks) {
