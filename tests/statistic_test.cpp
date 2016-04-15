@@ -56,6 +56,8 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
 		
 		std::unique_ptr<Average>  p_average{ new Average() };
 		auto rdr = ms->readInterval(0, total_count);
+		/*dariadb::Meas::MeasList ml;
+		rdr->readAll(&ml);*/
 		p_average->fromReader(rdr, 0, total_count, 1);
 		BOOST_CHECK_CLOSE(p_average->result(), dariadb::Value(5), 0.1);
 	}
