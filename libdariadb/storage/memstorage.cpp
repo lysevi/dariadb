@@ -338,23 +338,31 @@ public:
 				}
 			}
 		}
-		{
+        if(!_chuncks.empty()){
 			std::lock_guard<std::mutex> lg(_locker_chunks);
-            //TODO check lb
+            //TODO check
             auto ub=_chuncks.upper_bound(timePoint);
-            auto lb=_chuncks.begin();
-            for(auto it=lb;it!=ub;it++){
+            for(auto it=ub;;it--){
+                if(it==_chuncks.end()){
+                    break;
+                }
                 auto cur_chunk=(*it).second;
 				if (cur_chunk->minTime > timePoint) {
 					break;
 				}
                 if(!check_chunk_to_qyery(ids,flag,cur_chunk)){
+                    if(it==_chuncks.begin()){
+                        break;
+                    }
                     continue;
                 }
 				if (cur_chunk->minTime <= timePoint) {
 					result[cur_chunk->first.id] = cur_chunk;
 				}
-			}
+                if(it==_chuncks.begin()){
+                    break;
+                }
+            }
 		}
 		return result;
 	}
