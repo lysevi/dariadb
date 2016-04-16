@@ -50,12 +50,15 @@ int main(int argc, char *argv[]) {
 		clbk->count = 0;
 
 		start = clock();
-		auto reader = ms->readInTimePoint(ms->maxTime());
+        //midle
+        const size_t reads_count=1000;
+        for(size_t i=0;i<reads_count;i++){
+            auto reader = ms->readInTimePoint(ms->minTime()+(ms->maxTime()-ms->minTime())/2);
 
-		reader->readAll(clbk);
-
+            reader->readAll(clbk);
+        }
 		elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-		std::cout << "memorystorage readTimePoint last: " << elapsed << std::endl;
+        std::cout << "memorystorage readTimePoint last: " << elapsed/reads_count << std::endl;
 		std::cout << "raded: " << clbk->count << std::endl;
 
 		start = clock();
