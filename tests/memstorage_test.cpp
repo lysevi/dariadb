@@ -467,7 +467,7 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
 BOOST_AUTO_TEST_CASE(DropByLimitChunks) {
     auto ms = new dariadb::storage::MemoryStorage{ 500 };
     auto m = dariadb::Meas::empty();
-    auto t=dariadb::timeutil::current_time();
+    auto t=0;
     size_t max_limit=100;
     for (auto i = 0; i < 1000; i += 1,t+=10) {
         m.id = i;
@@ -487,7 +487,7 @@ BOOST_AUTO_TEST_CASE(DropByLimitChunks) {
     auto droped=ms->drop_old_chunks_by_limit(max_limit);
     BOOST_CHECK(ms->chunks_total_size()<=max_limit);
     dariadb::Meas::MeasList out;
-    ms->readInterval(dariadb::Time(0), t)->readAll(&out);
+    ms->readInterval(t,m.time)->readAll(&out);
     BOOST_CHECK(out.size()>size_t(0));
     delete ms;
 }
