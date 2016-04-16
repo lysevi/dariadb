@@ -87,7 +87,6 @@ public:
 	Chunk_Ptr make_chunk(dariadb::Meas first) {
 		auto ptr = new Chunk(_size, first);
 		auto chunk = Chunk_Ptr{ ptr };
-        //this->_chuncks.push_back(chunk);
 		this->_free_chunks[first.id] = chunk;
 		_chunks_count++;
 		return chunk;
@@ -107,7 +106,7 @@ public:
 				//TODO can be async
 				{
 					std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-					this->_chuncks.push_back(chunk);
+                    this->_chuncks.insert(chunk);
 					assert(chunk->is_full());
 				}
 				chunk = make_chunk(value);
@@ -180,7 +179,14 @@ public:
         }
 		if (result.size() > size_t(0)){
 			std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-            this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
+            for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
+                if ((*i)->is_dropped) {
+                    i = _chuncks.erase( i ); // more modern, typically accepted as C++03
+                } else {
+                    ++ i; // do not include ++ i inside for ( )
+                }
+            }
+            //this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
 			update_min_after_drop();
 		}
 		_chunks_count= _chunks_count -long(result.size());
@@ -217,7 +223,14 @@ public:
             }
 			if (result.size() > size_t(0)) {
 				std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-				this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
+                for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
+                    if ((*i)->is_dropped) {
+                        i = _chuncks.erase( i ); // more modern, typically accepted as C++03
+                    } else {
+                        ++ i; // do not include ++ i inside for ( )
+                    }
+                }
+                //this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
 				update_min_after_drop();
 			}
 		}
@@ -348,7 +361,7 @@ public:
 
 	void add_chunks(const ChuncksList&clist) {
 		for (auto c : clist) {
-            _chuncks.push_back(c);
+            _chuncks.insert(c);
 			auto search_res = _free_chunks.find(c->first.id);
 			if (search_res == _free_chunks.end()) {
 				_free_chunks[c->first.id] = c;
@@ -362,7 +375,7 @@ public:
 protected:
 	size_t _size;
 
-    ChuncksList _chuncks;
+    ChunksByTimeSet _chuncks;
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
