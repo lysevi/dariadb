@@ -106,7 +106,7 @@ public:
 				//TODO can be async
 				{
 					std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-                    this->_chuncks.insert(std::make_pair(chunk->maxTime, chunk));
+                    this->_chuncks.insert(chunk);
 					assert(chunk->is_full());
 				}
 				chunk = make_chunk(value);
@@ -167,8 +167,7 @@ public:
 		ChuncksList result;
         auto now = dariadb::timeutil::current_time();
 
-        for (auto& kv: _chuncks) {
-            auto chunk =kv.second;
+        for (auto& chunk: _chuncks) {
             auto past = (now - min_time);
             if ((chunk->maxTime < past)&&(chunk->is_full())) {
                 result.push_back(chunk);
@@ -181,7 +180,7 @@ public:
 		if (result.size() > size_t(0)){
 			std::lock_guard<std::mutex> lg_ch(_locker_chunks);
             for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
-                if ((*i).second->is_dropped) {
+                if ((*i)->is_dropped) {
                     i = _chuncks.erase( i ); // more modern, typically accepted as C++03
                 } else {
                     ++ i; // do not include ++ i inside for ( )
@@ -206,8 +205,7 @@ public:
 				return result;
 			}
 
-            for (auto& kv : _chuncks) {
-                auto chunk=kv.second;
+            for (auto& chunk : _chuncks) {
                 if (chunk->is_readonly) {
                     result.push_back(chunk);
 
@@ -225,7 +223,7 @@ public:
 			if (result.size() > size_t(0)) {
 				std::lock_guard<std::mutex> lg_ch(_locker_chunks);
                 for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
-                    if ((*i).second->is_dropped) {
+                    if ((*i)->is_dropped) {
                         i = _chuncks.erase( i ); // more modern, typically accepted as C++03
                     } else {
                         ++ i; // do not include ++ i inside for ( )
@@ -240,8 +238,8 @@ public:
 
 	void update_min_after_drop() {
 		auto new_min = std::numeric_limits<dariadb::Time>::max();
-        for (auto& kv : _chuncks) {
-            new_min = std::min(kv.second->minTime, new_min);
+        for (auto& v : _chuncks) {
+            new_min = std::min(v->minTime, new_min);
 		}
 		std::lock_guard<std::mutex> lg_drop(_locker_free_chunks);
 		_min_time = new_min;
@@ -252,8 +250,8 @@ public:
 		std::lock_guard<std::mutex> lg_ch(_locker_chunks);
 		ChuncksList result;
 		
-        for (auto& kv : _chuncks) {
-            result.push_back(kv.second);
+        for (auto& v : _chuncks) {
+            result.push_back(v);
 		}
 		//drops after, becase page storage can be in 'overwrite mode'
 		for (auto& kv : _free_chunks) {
@@ -293,13 +291,7 @@ public:
 
 		{
 			std::lock_guard<std::mutex> lg(_locker_chunks);
-            auto ub=_chuncks.upper_bound(to);
-            auto lb=_chuncks.lower_bound(from);
-            if(lb!=_chuncks.begin()){
-                --lb;
-            }
-            for(auto it=lb;it!=ub;it++){
-                auto ch=(*it).second;
+            for(auto &ch:_chuncks){
 				if (ch->is_dropped) {
 					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
 				}
@@ -341,27 +333,16 @@ public:
         if(!_chuncks.empty()){
 			std::lock_guard<std::mutex> lg(_locker_chunks);
             //TODO check
-            auto ub=_chuncks.upper_bound(timePoint);
-            for(auto it=ub;;it--){
-                if(it==_chuncks.end()){
-                    break;
-                }
-                auto cur_chunk=(*it).second;
+            for(auto &cur_chunk:_chuncks){
 				if (cur_chunk->minTime > timePoint) {
 					break;
 				}
                 if(!check_chunk_to_qyery(ids,flag,cur_chunk)){
-                    if(it==_chuncks.begin()){
-                        break;
-                    }
                     continue;
                 }
 				if (cur_chunk->minTime <= timePoint) {
 					result[cur_chunk->first.id] = cur_chunk;
 				}
-                if(it==_chuncks.begin()){
-                    break;
-                }
             }
 		}
 		return result;
@@ -394,7 +375,7 @@ public:
 protected:
 	size_t _size;
 
-    ChunksByTimeMap _chuncks;
+    ChunksByTimeSet _chuncks;
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
