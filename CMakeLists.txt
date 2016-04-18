@@ -132,6 +132,8 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
 endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
+include_directories(extern)
+
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 
 add_subdirectory (libdariadb)

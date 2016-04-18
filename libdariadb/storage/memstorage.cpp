@@ -10,12 +10,14 @@
 #include <limits>
 #include <algorithm>
 #include <assert.h>
+#include <stx/btree_multimap.h>
 
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChuncksList> ChunkMap;
+typedef stx::btree_multimap<dariadb::Time, Chunk_Ptr> ChunkMaxTimeMap;
 
 class MemstorageCursor : public Cursor {
 public:
@@ -106,7 +108,7 @@ public:
 				//TODO can be async
 				{
 					std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-                    this->_chuncks.insert(chunk);
+                    this->_chuncks.insert(std::make_pair(chunk->maxTime,chunk));
 					assert(chunk->is_full());
 				}
 				chunk = make_chunk(value);
@@ -167,7 +169,8 @@ public:
 		ChuncksList result;
         auto now = dariadb::timeutil::current_time();
 
-        for (auto& chunk: _chuncks) {
+        for (auto& kv: _chuncks) {
+			auto chunk = kv.second;
             auto past = (now - min_time);
             if ((chunk->maxTime < past)&&(chunk->is_full())) {
                 result.push_back(chunk);
@@ -179,13 +182,22 @@ public:
         }
 		if (result.size() > size_t(0)){
 			std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-            for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
-                if ((*i)->is_dropped) {
-                    i = _chuncks.erase( i ); // more modern, typically accepted as C++03
-                } else {
-                    ++ i; // do not include ++ i inside for ( )
-                }
-            }
+			//TODO refact! move to method
+			auto dropped = true;
+			while (dropped) {
+				dropped = false;
+				for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
+					if ((*i).second->is_dropped) {
+						_chuncks.erase(i++);
+						dropped = true;
+						break;
+						//i = _chuncks.erase( i ); // more modern, typically accepted as C++03
+					}
+					else {
+						++i; // do not include ++ i inside for ( )
+					}
+				}
+			}
             //this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
 			update_min_after_drop();
 		}
@@ -205,7 +217,8 @@ public:
 				return result;
 			}
 
-            for (auto& chunk : _chuncks) {
+            for (auto& kv : _chuncks) {
+				auto chunk = kv.second;
                 if (chunk->is_readonly) {
                     result.push_back(chunk);
 
@@ -221,14 +234,23 @@ public:
                 }
             }
 			if (result.size() > size_t(0)) {
+				//TODO refact! move to method
 				std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-                for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
-                    if ((*i)->is_dropped) {
-                        i = _chuncks.erase( i ); // more modern, typically accepted as C++03
-                    } else {
-                        ++ i; // do not include ++ i inside for ( )
-                    }
-                }
+				auto dropped = true;
+				while (dropped) {
+					dropped = false;
+					for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
+						if ((*i).second->is_dropped) {
+							_chuncks.erase(i++);
+							dropped = true;
+							break;
+							//i = _chuncks.erase( i ); // more modern, typically accepted as C++03
+						}
+						else {
+							++i; // do not include ++ i inside for ( )
+						}
+					}
+				}
                 //this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
 				update_min_after_drop();
 			}
@@ -238,8 +260,8 @@ public:
 
 	void update_min_after_drop() {
 		auto new_min = std::numeric_limits<dariadb::Time>::max();
-        for (auto& v : _chuncks) {
-            new_min = std::min(v->minTime, new_min);
+        for (auto& kv : _chuncks) {
+            new_min = std::min(kv.second->minTime, new_min);
 		}
 		std::lock_guard<std::mutex> lg_drop(_locker_free_chunks);
 		_min_time = new_min;
@@ -250,8 +272,8 @@ public:
 		std::lock_guard<std::mutex> lg_ch(_locker_chunks);
 		ChuncksList result;
 		
-        for (auto& v : _chuncks) {
-            result.push_back(v);
+        for (auto& kv : _chuncks) {
+            result.push_back(kv.second);
 		}
 		//drops after, becase page storage can be in 'overwrite mode'
 		for (auto& kv : _free_chunks) {
@@ -291,7 +313,23 @@ public:
 
 		{
 			std::lock_guard<std::mutex> lg(_locker_chunks);
-            for(auto &ch:_chuncks){
+            //for(auto &kv:_chuncks)
+			//TODO move to method
+			auto resf = _chuncks.lower_bound(from);
+			auto rest = _chuncks.upper_bound(to);
+			if ((resf != _chuncks.begin()) && (resf->first != from)) {
+				--resf;
+			}
+			else {
+				if (resf == _chuncks.end()) {
+					resf = _chuncks.begin();
+				}
+			}
+			if ((rest != _chuncks.end()) && (rest->first != to)) {
+				++rest;
+			}
+			for(auto it=resf;it!=rest;it++){
+				auto ch = it->second;
 				if (ch->is_dropped) {
 					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
 				}
@@ -333,7 +371,8 @@ public:
         if(!_chuncks.empty()){
 			std::lock_guard<std::mutex> lg(_locker_chunks);
             //TODO check
-            for(auto &cur_chunk:_chuncks){
+            for(auto &kv:_chuncks){
+				auto cur_chunk = kv.second;
 				if (cur_chunk->minTime > timePoint) {
 					break;
 				}
@@ -375,7 +414,7 @@ public:
 protected:
 	size_t _size;
 
-    ChunksByTimeSet _chuncks;
+	ChunkMaxTimeMap _chuncks;
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
