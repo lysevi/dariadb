@@ -116,10 +116,11 @@ public:
 		}
 		
 		assert(chunk->last.time == value.time);
-
-		_min_time = std::min(_min_time, value.time);
-		_max_time = std::max(_max_time, value.time);
-
+		{
+			std::lock_guard<std::mutex> lg(_locker_min_max);
+			_min_time = std::min(_min_time, value.time);
+			_max_time = std::max(_max_time, value.time);
+		}
 		_subscribe_notify->on_append(value);
 
 		return dariadb::append_result(1, 0);
@@ -263,7 +264,7 @@ public:
         for (auto& kv : _chuncks) {
             new_min = std::min(kv.second->minTime, new_min);
 		}
-		std::lock_guard<std::mutex> lg_drop(_locker_free_chunks);
+		std::lock_guard<std::mutex> lg(_locker_min_max);
 		_min_time = new_min;
 	}
 
@@ -328,7 +329,7 @@ public:
 			if ((rest != _chuncks.end()) && (rest->first != to)) {
 				++rest;
 			}
-			for(auto it=resf;it!=rest;it++){
+			for(auto it=resf;it!=rest;++it){
 				auto ch = it->second;
 				if (ch->is_dropped) {
 					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
@@ -368,21 +369,25 @@ public:
 				}
 			}
 		}
-        if(!_chuncks.empty()){
+		if (!_chuncks.empty()) {
 			std::lock_guard<std::mutex> lg(_locker_chunks);
-            //TODO check
-            for(auto &kv:_chuncks){
-				auto cur_chunk = kv.second;
+			//TODO move to method
+			auto rest = _chuncks.upper_bound(timePoint);
+			if (rest != _chuncks.end()) {
+				rest++;
+			}
+			for (auto it = _chuncks.begin(); it != rest; ++it) {
+				auto cur_chunk = it->second;
 				if (cur_chunk->minTime > timePoint) {
 					break;
 				}
-                if(!check_chunk_to_qyery(ids,flag,cur_chunk)){
-                    continue;
-                }
-				if (cur_chunk->minTime <= timePoint) {
-					result[cur_chunk->first.id] = cur_chunk;
+				if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
+					if (cur_chunk->minTime <= timePoint) {
+						result[cur_chunk->first.id] = cur_chunk;
+					}
 				}
-            }
+			}
+
 		}
 		return result;
 	}
@@ -419,7 +424,7 @@ protected:
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
     mutable std::mutex _subscribe_locker;
-    mutable std::mutex _locker_free_chunks, _locker_chunks,_locker_drop;
+    mutable std::mutex _locker_free_chunks, _locker_chunks,_locker_drop, _locker_min_max;
 	std::atomic<int64_t> _chunks_count;
 };
 
