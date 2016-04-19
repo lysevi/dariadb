@@ -7,17 +7,17 @@
 #include "chunk.h"
 #include "cursor.h"
 #include "inner_readers.h"
+#include "chunk_by_time_map.h"
 #include <limits>
 #include <algorithm>
 #include <assert.h>
-#include <stx/btree_multimap.h>
+
 
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChuncksList> ChunkMap;
-typedef stx::btree_multimap<dariadb::Time, Chunk_Ptr> ChunkMaxTimeMap;
 
 class MemstorageCursor : public Cursor {
 public:
@@ -183,26 +183,11 @@ public:
         }
 		if (result.size() > size_t(0)){
 			std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-			//TODO refact! move to method
-			auto dropped = true;
-			while (dropped) {
-				dropped = false;
-				for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
-					if ((*i).second->is_dropped) {
-						_chuncks.erase(i++);
-						dropped = true;
-						break;
-						//i = _chuncks.erase( i ); // more modern, typically accepted as C++03
-					}
-					else {
-						++i; // do not include ++ i inside for ( )
-					}
-				}
-			}
-            //this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
-			update_min_after_drop();
-		}
-		_chunks_count= _chunks_count -long(result.size());
+            _chuncks.remove_droped();
+            update_min_after_drop();
+        }
+        _chunks_count= _chunks_count -long(result.size());
+
 		return result;
 	}
 	
@@ -235,24 +220,8 @@ public:
                 }
             }
 			if (result.size() > size_t(0)) {
-				//TODO refact! move to method
 				std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-				auto dropped = true;
-				while (dropped) {
-					dropped = false;
-					for (auto i = _chuncks.begin(); i != _chuncks.end(); ) {
-						if ((*i).second->is_dropped) {
-							_chuncks.erase(i++);
-							dropped = true;
-							break;
-							//i = _chuncks.erase( i ); // more modern, typically accepted as C++03
-						}
-						else {
-							++i; // do not include ++ i inside for ( )
-						}
-					}
-				}
-                //this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
+                _chuncks.remove_droped();
 				update_min_after_drop();
 			}
 		}
@@ -308,28 +277,16 @@ public:
 		return false;
 	}
 
-	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+    Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
         
 		ChuncksList result{};
 
 		{
 			std::lock_guard<std::mutex> lg(_locker_chunks);
-            //for(auto &kv:_chuncks)
-			//TODO move to method
-			auto resf = _chuncks.lower_bound(from);
-			auto rest = _chuncks.upper_bound(to);
-			if ((resf != _chuncks.begin()) && (resf->first != from)) {
-				--resf;
-			}
-			else {
-				if (resf == _chuncks.end()) {
-					resf = _chuncks.begin();
-				}
-			}
-			if ((rest != _chuncks.end()) && (rest->first != to)) {
-				++rest;
-			}
-			for(auto it=resf;it!=rest;++it){
+            auto resf = _chuncks.get_lower_bound(from);
+            auto rest = _chuncks.get_upper_bound(to);
+
+            for(auto it=resf;it!=rest;++it){
 				auto ch = it->second;
 				if (ch->is_dropped) {
 					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
@@ -371,11 +328,8 @@ public:
 		}
 		if (!_chuncks.empty()) {
 			std::lock_guard<std::mutex> lg(_locker_chunks);
-			//TODO move to method
-			auto rest = _chuncks.upper_bound(timePoint);
-			if (rest != _chuncks.end()) {
-				rest++;
-			}
+            auto rest = _chuncks.get_upper_bound(timePoint);
+
 			for (auto it = _chuncks.begin(); it != rest; ++it) {
 				auto cur_chunk = it->second;
 				if (cur_chunk->minTime > timePoint) {
@@ -419,7 +373,7 @@ public:
 protected:
 	size_t _size;
 
-	ChunkMaxTimeMap _chuncks;
+    ChunkByTimeMap _chuncks;
 	IdToChunkMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;

@@ -55,14 +55,6 @@ namespace dariadb {
         typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
         typedef std::map<Id, ChuncksList> ChunkMap;
 
-        struct chunk_max_time_compare {
-            bool operator() (const Chunk_Ptr& lhs, const Chunk_Ptr& rhs) const {
-                return lhs->maxTime < rhs->maxTime;
-            }
-        };
-
-        typedef std::multiset<Chunk_Ptr, chunk_max_time_compare> ChunksByTimeSet;
-
 		const size_t ChunkPool_default_max_size = 200;
 
         class ChunkPool{
