@@ -19,7 +19,7 @@ void ChunkByTimeMap::remove_droped(){
     }
 }
 
-stxMap::const_iterator ChunkByTimeMap::get_upper_bound(Time to)const{
+stxMap::const_iterator ChunkByTimeMap::get_upper_bound(dariadb::Time to)const{
     auto rest = upper_bound(to);
 
     if ((rest != end()) && (rest->first != to)) {
@@ -28,7 +28,7 @@ stxMap::const_iterator ChunkByTimeMap::get_upper_bound(Time to)const{
     return rest;
 }
 
-stxMap::iterator ChunkByTimeMap::get_upper_bound(Time to){
+stxMap::iterator ChunkByTimeMap::get_upper_bound(dariadb::Time to){
     auto rest = upper_bound(to);
 
     if ((rest != end()) && (rest->first != to)) {
@@ -37,7 +37,7 @@ stxMap::iterator ChunkByTimeMap::get_upper_bound(Time to){
     return rest;
 }
 
-stxMap::const_iterator ChunkByTimeMap::get_lower_bound(Time from)const{
+stxMap::const_iterator ChunkByTimeMap::get_lower_bound(dariadb::Time from)const{
     auto resf = lower_bound(from);
     if ((resf != begin()) && (resf->first != from)) {
         --resf;
@@ -50,7 +50,7 @@ stxMap::const_iterator ChunkByTimeMap::get_lower_bound(Time from)const{
     return resf;
 }
 
-stxMap::iterator ChunkByTimeMap::get_lower_bound(Time from){
+stxMap::iterator ChunkByTimeMap::get_lower_bound(dariadb::Time from){
     auto resf = lower_bound(from);
     if ((resf != begin()) && (resf->first != from)) {
         --resf;
