@@ -78,7 +78,16 @@ public:
 
 	void reset_pos() override { //start read from begining;
 		_is_end = false;
-		_index_end = link->index + link->header->chunk_per_storage;
+
+		//TODO lock this;
+		auto sz = this->link->_itree.size();
+		auto it=this->link->_itree.upper_bound(this->_to);
+		uint32_t upPos = link->header->chunk_per_storage;
+		if (it != this->link->_itree.end()) {
+			upPos = (*it).second;
+		}
+
+		_index_end = link->index + upPos;
 		_index_it = link->index;
 
 		//move to data begining
@@ -145,6 +154,14 @@ Page* Page::open(std::string file_name) {
 	if (res->header->chunk_size == 0) {
 		throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
 	}
+
+	for (size_t i = 0; i < res->header->chunk_per_storage; ++i) {
+		auto irec = &res->index[i];
+		if (!irec->is_init) {
+			break;
+		}
+		res->_itree.insert2(irec->info.maxTime, i);
+	}
 	return res;
 }
 
@@ -203,13 +220,21 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
         index[header->pos_index].offset = header->pos_chunks;
         header->pos_chunks += header->chunk_size;
         header->addeded_chunks++;
-    }
+		_itree.insert2(index_rec->maxTime, header->pos_index);
+	}
+	else {
+		for (auto it = _itree.begin(); it != _itree.end();++it) {
+			if (it->second == header->pos_index) {
+				_itree.erase(it);
+			}
+		}
+		_itree.insert2(index_rec->maxTime, header->pos_index);
+	}
 	memcpy(this->chunks + index[header->pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
 
 	header->pos_index++;
 	header->minTime = std::min(header->minTime,ch->minTime);
 	header->maxTime = std::max(header->maxTime, ch->maxTime);
-
 	return true;
 }
 
