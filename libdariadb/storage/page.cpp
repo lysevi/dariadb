@@ -33,34 +33,33 @@ public:
 
 	void readNext(Cursor::Callback*cbk)  override {
 		std::lock_guard<std::mutex> lg(_locker);
-		for (; !_is_end; _index_it++) {
-			if (_index_it == _index_end) {
+        if(read_poses.empty()){
+            _is_end=true;
+            return;
+        }
+        auto _index_it=this->link->index[read_poses.front()];
+        read_poses.pop_front();
+        for (; !_is_end; ) {
+            if (_is_end) {
 				Chunk_Ptr empty;
 				cbk->call(empty);
 				_is_end = true;
 				break;
 			}
-			if (!_index_it->is_init) {
-				Chunk_Ptr empty;
-				cbk->call(empty);
-				_is_end = true;
+
+            if ((_ids.size() != 0) && (std::find(_ids.begin(), _ids.end(), _index_it.info.first.id) == _ids.end())) {
 				continue;
 			}
 
-			if ((_ids.size() != 0) && (std::find(_ids.begin(), _ids.end(), _index_it->info.first.id) == _ids.end())) {
-				continue;
-			}
-
-			if (!dariadb::storage::bloom_check(_index_it->info.flag_bloom, _flag)) {
+            if (!dariadb::storage::bloom_check(_index_it.info.flag_bloom, _flag)) {
 				continue;
 			}
 
 			if (check_index_rec(_index_it)) {
-				auto ptr = new Chunk(_index_it->info, link->chunks + _index_it->offset, link->header->chunk_size);
+                auto ptr = new Chunk(_index_it.info, link->chunks + _index_it.offset, link->header->chunk_size);
 				Chunk_Ptr c{ ptr };
 				assert(c->last.time != 0);
 				cbk->call(c);
-				_index_it++;
 				break;
 			}
 			else {//end of data;
@@ -72,46 +71,46 @@ public:
 		}
 	}
 	
-	bool check_index_rec(Page_ChunkIndex*it) const{
-		return ((dariadb::utils::inInterval(_from, _to, it->info.minTime)) || (dariadb::utils::inInterval(_from, _to, it->info.maxTime)));
+    bool check_index_rec(Page_ChunkIndex&it) const{
+        return ((dariadb::utils::inInterval(_from, _to, it.info.minTime)) || (dariadb::utils::inInterval(_from, _to, it.info.maxTime)));
 	}
 
 	void reset_pos() override { //start read from begining;
 		_is_end = false; 
-
-		uint32_t upPos = link->header->chunk_per_storage;
-		
+        this->read_poses.clear();
 		auto sz = this->link->_itree.size();
 		if (sz != 0) {
-			auto it = this->link->_itree.upper_bound(this->_to);
+            auto it_to = this->link->_itree.upper_bound(this->_to);
+            auto it_from = this->link->_itree.lower_bound(this->_from);
 
-			if (it != this->link->_itree.end()) {
-				upPos = (*it).second;
-			}
-		}
-
-		_index_end = link->index + upPos;
-		_index_it = link->index;
-
-		//move to data begining
-		for (; !_is_end; _index_it++) {
-			if (_index_it == _index_end) {
-				_is_end = true;
-				break;
-			}
-			if (check_index_rec(_index_it)) {
-				break;
-			}
-		}
+            if(it_from!= this->link->_itree.begin()){
+                if(it_from->first!=this->_from){
+                    --it_from;
+                }
+            }
+            for(auto it=it_from;it!=this->link->_itree.end();++it){
+                this->read_poses.push_back(it->second);
+                if(it==it_to){
+                    break;
+                }
+            }
+            if(read_poses.empty()){
+                _is_end=true;
+                return;
+            }
+        }else{
+            _is_end=true;
+            return;
+        }
 	}
 protected:
 	Page* link;
 	bool _is_end;
-	Page_ChunkIndex *_index_it, *_index_end;
 	dariadb::IdArray _ids;
 	dariadb::Time _from, _to;
 	dariadb::Flag _flag;
 	std::mutex _locker;
+    std::list<uint32_t> read_poses;
 };
 
 

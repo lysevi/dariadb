@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 			dariadb::Time end_time (t / 2);
 			dariadb::storage::ChuncksList chunk_list;
 			PageManager::instance()->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), start_time, end_time)->readAll(&chunk_list);
-			BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2))); //TODO +1?
+            BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2)+1));
 			
 			for (auto&v : chunk_list) {
 				BOOST_CHECK(v->minTime <= end_time);
