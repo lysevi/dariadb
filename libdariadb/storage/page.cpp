@@ -79,12 +79,15 @@ public:
 	void reset_pos() override { //start read from begining;
 		_is_end = false;
 
+		uint32_t upPos = link->header->chunk_per_storage;
 		//TODO lock this;
 		auto sz = this->link->_itree.size();
-		auto it=this->link->_itree.upper_bound(this->_to);
-		uint32_t upPos = link->header->chunk_per_storage;
-		if (it != this->link->_itree.end()) {
-			upPos = (*it).second;
+		if (sz != 0) {
+			auto it = this->link->_itree.upper_bound(this->_to);
+
+			if (it != this->link->_itree.end()) {
+				upPos = (*it).second;
+			}
 		}
 
 		_index_end = link->index + upPos;
