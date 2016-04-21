@@ -78,6 +78,7 @@ public:
 	void reset_pos() override { //start read from begining;
 		_is_end = false; 
         this->read_poses.clear();
+		//TODO lock this->link; does'n need when call from ctor.
 		auto sz = this->link->_itree.size();
 		if (sz != 0) {
             auto it_to = this->link->_itree.upper_bound(this->_to);
