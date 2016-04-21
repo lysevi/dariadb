@@ -32,9 +32,11 @@ public:
 	}
 	~Private() {
 		this->flush();
+		if (_limits.max_mem_chunks != 0) {
 		auto all_chunks = this->mem_storage_raw->drop_all();
-		for (auto c : all_chunks) {
-			PageManager::instance()->append_chunk(c);
+			for (auto c : all_chunks) {
+				PageManager::instance()->append_chunk(c);
+			}
 		}
 		delete mem_cap;
 		PageManager::stop();
@@ -66,6 +68,7 @@ public:
 		//std::lock_guard<std::mutex> lg(_locker);
 		append_result result{};
         if (!mem_cap->append(value)){
+		//if(mem_storage_raw->append(value).writed!=1){
 			result.ignored++;
 		}
 		else {
