@@ -3,6 +3,7 @@
 #include "../meas.h"
 #include "../utils/locker.h"
 #include <memory>
+#include <stx/btree_set.h>
 
 namespace dariadb {
 	namespace storage {
@@ -14,7 +15,8 @@ namespace dariadb {
 		};
 
 		class TimeOrderedSet {
-			typedef std::set<dariadb::Meas, meas_time_compare> MeasSet;
+			//typedef std::set<dariadb::Meas, meas_time_compare> MeasSet;
+			typedef stx::btree_set<dariadb::Meas, meas_time_compare> MeasSet;
 		public:
 			TimeOrderedSet();
 			~TimeOrderedSet();
