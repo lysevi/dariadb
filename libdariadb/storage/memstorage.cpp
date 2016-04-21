@@ -101,14 +101,8 @@ public:
 			chunk=make_chunk(value);
 		}
 		else {
-            //std::cout<<"append new "<<chunk->count<< " chunks: "<<this->chunks_total_size()<<std::endl;
 			if (!chunk->append(value)) {
-				//TODO can be async
-				{
-					std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-                    this->_chuncks.insert(std::make_pair(chunk->maxTime,chunk));
-					assert(chunk->is_full());
-				}
+                chunks_append(chunk);
 				chunk = make_chunk(value);
 			}
 		}
@@ -124,6 +118,12 @@ public:
 		return dariadb::append_result(1, 0);
 	}
 
+    //TODO can be async
+    void chunks_append(Chunk_Ptr chunk){
+        std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+        this->_chuncks.insert(std::make_pair(chunk->maxTime,chunk));
+        assert(chunk->is_full());
+    }
 
 	append_result append(const Meas::PMeas begin, const size_t size) {
 		dariadb::append_result result{};
