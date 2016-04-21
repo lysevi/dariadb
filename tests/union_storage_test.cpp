@@ -77,13 +77,13 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
         ms->flush();
         ms->readInterval(start_time, t)->readAll(&output);
         BOOST_CHECK(output.size() >0);
-        /*
-		//TODO resolve it.
-		dariadb::Value tst_val = 1;
-        for (auto v : output) {
-            BOOST_CHECK_EQUAL(v.value, tst_val);
-            tst_val++;
-        }*/
+        
+		////partial flush (not all chuncks drops to page storage) works fine.
+		//dariadb::Value tst_val = 1;
+  //      for (auto v : output) {
+  //          BOOST_CHECK_EQUAL(v.value, tst_val);
+  //          tst_val++;
+  //      }
 
 
     }
