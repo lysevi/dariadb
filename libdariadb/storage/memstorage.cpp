@@ -321,18 +321,18 @@ public:
 			std::lock_guard<std::mutex> lg(_locker_chunks);
             auto rest = _chuncks.get_upper_bound(timePoint);
 
-			for (auto it = _chuncks.begin(); it != rest; ++it) {
+			for (auto it = _chuncks.begin(); it != _chuncks.end(); ++it) {
 				auto cur_chunk = it->second;
-				if (cur_chunk->minTime > timePoint) {
-					break;
-				}
+
 				if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
 					if (cur_chunk->minTime <= timePoint) {
 						result[cur_chunk->first.id] = cur_chunk;
 					}
 				}
+				if (it == rest) {
+					break;
+				}
 			}
-
 		}
 		return result;
 	}
