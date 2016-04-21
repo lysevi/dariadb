@@ -41,6 +41,10 @@ namespace dariadb_test {
 	{
 		dariadb::Meas::MeasList all{};
 		reader->readAll(&all);
+		/*std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
+		for (auto&v : all) {
+			_dict[v.id].push_back(v);
+		}*/
 		if (all.size() != total_count) {
 			throw MAKE_EXCEPTION("(all.size() != total_count)");
 		}
@@ -91,12 +95,12 @@ namespace dariadb_test {
 
 		as->flush();
 
-		auto reader = as->readInterval(from, to+ copies_count);
-		check_reader_of_all(reader, from, to, step, id_val,total_count, "readAll error: ");
+		auto reader = as->readInterval(from, to + copies_count);
+		check_reader_of_all(reader, from, to, step, id_val, total_count, "readAll error: ");
 
 		auto cloned_reader = reader->clone();
 		cloned_reader->reset();
-		check_reader_of_all(cloned_reader, from, to , step, id_val, total_count, "cloned readAll error: ");
+		check_reader_of_all(cloned_reader, from, to, step, id_val, total_count, "cloned readAll error: ");
 
 		dariadb::IdArray ids{};
 		dariadb::Meas::MeasList all{};

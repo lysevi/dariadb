@@ -60,8 +60,7 @@ public:
 		_size(size),
 		_min_time(std::numeric_limits<dariadb::Time>::max()),
 		_max_time(std::numeric_limits<dariadb::Time>::min()),
-		_subscribe_notify(new SubscribeNotificator),
-		_chunks_count(0)
+		_subscribe_notify(new SubscribeNotificator)
 	{
 		_subscribe_notify->start();
 		
@@ -90,7 +89,6 @@ public:
 		auto ptr = new Chunk(_size, first);
 		auto chunk = Chunk_Ptr{ ptr };
 		this->_free_chunks[first.id] = chunk;
-		_chunks_count++;
 		return chunk;
 	}
 
@@ -117,7 +115,7 @@ public:
 		
 		assert(chunk->last.time == value.time);
 		{
-			std::lock_guard<std::mutex> lg(_locker_min_max);
+			std::lock_guard<std::mutex> lg_minmax(_locker_min_max);
 			_min_time = std::min(_min_time, value.time);
 			_max_time = std::max(_max_time, value.time);
 		}
@@ -140,7 +138,7 @@ public:
 	size_t chunks_size()const { return _chuncks.size()+_free_chunks.size(); }
 
 	size_t chunks_total_size()const {
-		return _chunks_count.load();
+		return this->_chuncks.size();
 	}
 
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
@@ -186,7 +184,6 @@ public:
             _chuncks.remove_droped();
             update_min_after_drop();
         }
-        _chunks_count= _chunks_count -long(result.size());
 
 		return result;
 	}
@@ -196,7 +193,7 @@ public:
         std::lock_guard<std::mutex> lg_drop(_locker_drop);
 		ChuncksList result{};
 
-		if (chunks_total_size() > max_limit) {
+		if (chunks_total_size() >= max_limit) {
 
 			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
@@ -207,11 +204,6 @@ public:
 				auto chunk = kv.second;
                 if (chunk->is_readonly) {
                     result.push_back(chunk);
-
-                    if (this->_free_chunks[chunk->first.id] == chunk) {
-                        this->_free_chunks.erase(chunk->first.id);
-                    }
-                    _chunks_count--;
                     chunk->is_dropped=true;
                 }
 
@@ -251,7 +243,6 @@ public:
 		}
 		this->_free_chunks.clear();
 		this->_chuncks.clear();
-		_chunks_count = 0;
 		//update min max
 		this->_min_time = std::numeric_limits<dariadb::Time>::max();
 		this->_max_time = std::numeric_limits<dariadb::Time>::min();
@@ -305,7 +296,7 @@ public:
 			}
 		}
 
-		if (result.size() > this->chunks_total_size()) {
+		if (result.size() > (this->chunks_total_size()+ _free_chunks.size())) {
 			throw MAKE_EXCEPTION("result.size() > this->chunksBeforeTimePoint()");
 		}
 		MemstorageCursor *raw = new MemstorageCursor{ result };
@@ -379,7 +370,6 @@ protected:
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
     mutable std::mutex _subscribe_locker;
     mutable std::mutex _locker_free_chunks, _locker_chunks,_locker_drop, _locker_min_max;
-	std::atomic<int64_t> _chunks_count;
 };
 
 MemoryStorage::MemoryStorage(size_t size)

@@ -32,9 +32,10 @@ public:
 	}
 
 	void readNext(Cursor::Callback*cbk)  override {
+		//TODO refact this
 		std::lock_guard<std::mutex> lg(_locker);
         if(read_poses.empty()){
-            _is_end=true;
+			_is_end = true;
             return;
         }
         auto _index_it=this->link->index[read_poses.front()];
@@ -46,12 +47,22 @@ public:
 				_is_end = true;
 				break;
 			}
-
+		
             if ((_ids.size() != 0) && (std::find(_ids.begin(), _ids.end(), _index_it.info.first.id) == _ids.end())) {
+				if (!read_poses.empty()) {
+					_index_it = this->link->index[read_poses.front()];
+					read_poses.pop_front();
+				}
+				else { break; }
 				continue;
 			}
 
             if (!dariadb::storage::bloom_check(_index_it.info.flag_bloom, _flag)) {
+				if (!read_poses.empty()) {
+					_index_it = this->link->index[read_poses.front()];
+					read_poses.pop_front();
+				}
+				else { break; }
 				continue;
 			}
 
@@ -69,6 +80,10 @@ public:
 				break;
 			}
 		}
+		if (read_poses.empty()) {
+			_is_end = true;
+			return;
+		}
 	}
 	
     bool check_index_rec(Page_ChunkIndex&it) const{
@@ -81,14 +96,14 @@ public:
 		//TODO lock this->link; does'n need when call from ctor.
 		auto sz = this->link->_itree.size();
 		if (sz != 0) {
-            auto it_to = this->link->_itree.upper_bound(this->_to);
-            auto it_from = this->link->_itree.lower_bound(this->_from);
+			auto it_to = this->link->_itree.end();// this->link->_itree.upper_bound(this->_to);
+			auto it_from = this->link->_itree.begin();//this->link->_itree.lower_bound(this->_from);
 
-            if(it_from!= this->link->_itree.begin()){
+            /*if(it_from!= this->link->_itree.begin()){
                 if(it_from->first!=this->_from){
                     --it_from;
                 }
-            }
+            }*/
             for(auto it=it_from;it!=this->link->_itree.end();++it){
                 this->read_poses.push_back(it->second);
                 if(it==it_to){
@@ -163,7 +178,7 @@ Page* Page::open(std::string file_name) {
 		if (!irec->is_init) {
 			break;
 		}
-		res->_itree.insert2(irec->info.maxTime, i);
+		res->_itree.insert(std::make_pair(irec->info.maxTime, i));
 	}
 	return res;
 }
@@ -223,15 +238,16 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
         index[header->pos_index].offset = header->pos_chunks;
         header->pos_chunks += header->chunk_size;
         header->addeded_chunks++;
-		_itree.insert2(index_rec->maxTime, header->pos_index);
+		_itree.insert(std::make_pair(index_rec->maxTime, header->pos_index));
 	}
 	else {
 		for (auto it = _itree.begin(); it != _itree.end();++it) {
 			if (it->second == header->pos_index) {
 				_itree.erase(it);
+				break;
 			}
 		}
-		_itree.insert2(index_rec->maxTime, header->pos_index);
+		_itree.insert(std::make_pair(index_rec->maxTime, header->pos_index));
 	}
 	memcpy(this->chunks + index[header->pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
 

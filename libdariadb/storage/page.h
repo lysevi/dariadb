@@ -7,6 +7,7 @@
 #include "../utils/locker.h"
 
 #include "stx/btree_multimap.h"
+#include <map>
 
 namespace dariadb {
 	namespace storage {
@@ -34,6 +35,7 @@ namespace dariadb {
 #pragma pack(pop) 
 
 		// maxtime => pos index rec in page;
+		//typedef std::multimap<dariadb::Time, uint32_t> indexTree;
 		typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 
 		class Page:public ChunkContainer {

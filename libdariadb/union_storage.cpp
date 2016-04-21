@@ -32,6 +32,10 @@ public:
 	}
 	~Private() {
 		this->flush();
+		auto all_chunks = this->mem_storage_raw->drop_all();
+		for (auto c : all_chunks) {
+			PageManager::instance()->append_chunk(c);
+		}
 		delete mem_cap;
 		PageManager::stop();
 		
@@ -100,10 +104,7 @@ public:
 	void flush() {
         std::lock_guard<std::mutex> lg(_locker);
 		this->mem_cap->flush();
-		auto all_chunks = this->mem_storage_raw->drop_all();
-		for (auto c : all_chunks) {
-			PageManager::instance()->append_chunk(c);
-		}
+		this->drop_old_chunks();
 	}
 
 	class UnionCursor : public Cursor {
@@ -138,6 +139,7 @@ public:
 				{
 					if ((_mem_cursor!=nullptr)&&(!_mem_cursor->is_end())) {
 						_mem_cursor->readNext(cbk);
+						return;
 					}
 				}
 			}
