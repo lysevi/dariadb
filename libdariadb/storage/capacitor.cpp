@@ -9,7 +9,7 @@
 #include <map>
 #include <limits>
 #include <utility>
-
+#include <unordered_map>
 using namespace dariadb;
 using namespace dariadb::storage;
 
@@ -18,8 +18,8 @@ class Capacitor::Private
 public:
     typedef std::shared_ptr<TimeOrderedSet>   tos_ptr;
     typedef std::list<tos_ptr>                container;
-    typedef std::map<dariadb::Id,container>   dict;
-    typedef std::map<dariadb::Id, tos_ptr>    dict_last;
+    typedef std::unordered_map<dariadb::Id, container>  dict;
+    typedef std::unordered_map<dariadb::Id, tos_ptr>    dict_last;
 	typedef std::unordered_map<dariadb::Id, dariadb::utils::Locker> dict_locks;
 
 	Private(const BaseStorage_ptr stor, const  Capacitor::Params&params):
