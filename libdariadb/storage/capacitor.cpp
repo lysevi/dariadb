@@ -20,7 +20,7 @@ public:
     typedef std::list<tos_ptr>                container;
     typedef std::unordered_map<dariadb::Id, container>  dict;
     typedef std::unordered_map<dariadb::Id, tos_ptr>    dict_last;
-	typedef std::unordered_map<dariadb::Id, dariadb::utils::Locker> dict_locks;
+	typedef std::unordered_map<dariadb::Id, std::shared_ptr<dariadb::utils::Locker>> dict_locks;
 
 	Private(const BaseStorage_ptr stor, const  Capacitor::Params&params):
 		_minTime(std::numeric_limits<dariadb::Time>::max()),
@@ -86,11 +86,20 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-		_locker.lock();
-		_locks[m.id].lock();
-		_locker.unlock();
+		//TODO refact this
+		_dict_locker.lock();
+		auto it = _locks.find(m.id);
+		if (it == _locks.end()) {
+			auto sl = std::make_shared<dariadb::utils::Locker>();
+			_locks.insert(std::make_pair(m.id, sl));
+			it = _locks.find(m.id);
+		}
+		else {
+			it->second->lock();
+		}
+		_dict_locker.unlock();
 		auto res = check_and_append(m);
-		_locks[m.id].unlock();
+		it->second->unlock();
         return res;
     }
 
@@ -127,7 +136,7 @@ public:
         if(last_it ==_last.end()){
 			_locker.lock();
             auto n=alloc_new();
-            _last[m.id]=n;
+			_last.insert(std::make_pair(m.id, n));
             _bucks[m.id].push_back(n);
 			_locker.unlock();
             return n;
@@ -224,6 +233,7 @@ protected:
     std::mutex _locker;
 	Capacitor::Params _params;
 	dict_locks  _locks;
+	std::mutex _dict_locker;
 };
 
 Capacitor::~Capacitor(){
