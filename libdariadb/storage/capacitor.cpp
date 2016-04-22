@@ -104,7 +104,7 @@ public:
     }
 
 	void flush_old_sets() {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
 		for (auto &kv : _bucks) {
 			bool flushed = false;
 			//while (kv.second.size()>0) 
@@ -194,7 +194,7 @@ public:
     }
 
     bool flush(){
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
 
 		for (auto &kv : _bucks) {
             for(auto &v:kv.second){
@@ -233,10 +233,10 @@ protected:
     dict_last   _last;
     BaseStorage_ptr _stor;
     size_t _writed_count;
-    std::mutex _locker;
+    dariadb::utils::Locker _locker;
 	Capacitor::Params _params;
 	dict_locks  _locks;
-	std::mutex _dict_locker;
+    dariadb::utils::Locker _dict_locker;
 };
 
 Capacitor::~Capacitor(){
