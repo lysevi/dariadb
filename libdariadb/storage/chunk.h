@@ -8,7 +8,7 @@
 
 #include <map>
 #include <set>
-
+#include <unordered_map>
 namespace dariadb {
 	namespace storage {
 
@@ -54,6 +54,7 @@ namespace dariadb {
         typedef std::list<Chunk_Ptr>      ChuncksList;
         typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
         typedef std::map<Id, ChuncksList> ChunkMap;
+		typedef std::unordered_map<Id, Chunk_Ptr>   IdToChunkUMap;
 
 		const size_t ChunkPool_default_max_size = 200;
 

@@ -364,7 +364,7 @@ protected:
 	size_t _size;
 
     ChunkByTimeMap _chuncks;
-	IdToChunkMap _free_chunks;
+	IdToChunkUMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
     mutable std::mutex _subscribe_locker;
