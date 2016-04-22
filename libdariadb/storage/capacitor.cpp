@@ -132,7 +132,9 @@ public:
 	}
 
     tos_ptr get_target_to_write(const Meas&m) {
+        _locker.lock();
         auto last_it=_last.find(m.id);
+        _locker.unlock();
         if(last_it ==_last.end()){
 			_locker.lock();
             auto n=alloc_new();
@@ -143,14 +145,15 @@ public:
         }
 
         if ((maxTime() <= m.time) || (last_it->second->inInterval(m))) {
-            if (last_it->second->is_full()) {
+            auto res=last_it->second;
+            if (res->is_full()) {
 				_locker.lock();
-                auto n=alloc_new();
-                _last[m.id]=n;
-                _bucks[m.id].push_back(n);
+                res=alloc_new();
+                _last[m.id]=res;
+                _bucks[m.id].push_back(res);
 				_locker.unlock();
             }
-            return _last[m.id];
+            return res;
         }
         else {
             auto it = _bucks[m.id].rbegin();
