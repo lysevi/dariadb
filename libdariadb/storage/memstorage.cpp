@@ -194,6 +194,7 @@ public:
 
 		if (chunks_total_size() >= max_limit) {
 			std::lock_guard<std::mutex> lg_drop(_locker_drop);
+
 			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
 				return result;
