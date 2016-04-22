@@ -20,6 +20,7 @@ public:
     typedef std::list<tos_ptr>                container;
     typedef std::map<dariadb::Id,container>   dict;
     typedef std::map<dariadb::Id, tos_ptr>    dict_last;
+	typedef std::map<dariadb::Id, dariadb::utils::Locker> dict_locks;
 
 	Private(const BaseStorage_ptr stor, const  Capacitor::Params&params):
 		_minTime(std::numeric_limits<dariadb::Time>::max()),
@@ -85,9 +86,11 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-        std::lock_guard<std::mutex> lg(_locker);
-
+		//_locker.lock();
+		_locks[m.id].lock();
+		//_locker.unlock();
 		auto res = check_and_append(m);
+		_locks[m.id].unlock();
         return res;
     }
 
@@ -120,13 +123,13 @@ public:
 	}
 
     tos_ptr get_target_to_write(const Meas&m) {
-//		std::lock_guard<std::mutex> lg(_locker);
         auto last_it=_last.find(m.id);
         if(last_it ==_last.end()){
-			
+			_locker.lock();
             auto n=alloc_new();
             _last[m.id]=n;
             _bucks[m.id].push_back(n);
+			_locker.unlock();
             return n;
         }
 
@@ -218,6 +221,7 @@ protected:
     size_t _writed_count;
     std::mutex _locker;
 	Capacitor::Params _params;
+	dict_locks  _locks;
 };
 
 Capacitor::~Capacitor(){
