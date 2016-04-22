@@ -20,7 +20,7 @@ public:
     typedef std::list<tos_ptr>                container;
     typedef std::map<dariadb::Id,container>   dict;
     typedef std::map<dariadb::Id, tos_ptr>    dict_last;
-	typedef std::map<dariadb::Id, dariadb::utils::Locker> dict_locks;
+	typedef std::unordered_map<dariadb::Id, dariadb::utils::Locker> dict_locks;
 
 	Private(const BaseStorage_ptr stor, const  Capacitor::Params&params):
 		_minTime(std::numeric_limits<dariadb::Time>::max()),
