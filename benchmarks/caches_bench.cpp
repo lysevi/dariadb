@@ -52,7 +52,7 @@ void show_info() {
 		auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 		//auto read_per_sec = read_all_times.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 		std::cout << "\rwrites: " << writes_per_sec
-			<< "/sec progress:" << (100 * append_count) / all_writes
+			<< "/sec progress:" << (int64_t(100) * append_count) / all_writes
 			<< "%     ";
 		/*if (!stop_read_all) {
 			std::cout << " read_all_times: " << read_per_sec <<"/sec             ";

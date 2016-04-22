@@ -45,7 +45,7 @@ void show_info(dariadb::storage::UnionStorage *storage) {
             << " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
 			<< " writes: "<<append_count
 			<< " speed: "<< writes_per_sec << "/sec progress:" 
-			<< (100 * append_count) / all_writes << "%                ";
+			<< (int64_t(100) * append_count) / all_writes << "%                ";
 		std::cout.flush();
 		if (stop_info) {
 			std::cout.flush();
