@@ -86,9 +86,9 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-		//_locker.lock();
+		_locker.lock();
 		_locks[m.id].lock();
-		//_locker.unlock();
+		_locker.unlock();
 		auto res = check_and_append(m);
 		_locks[m.id].unlock();
         return res;
@@ -135,9 +135,11 @@ public:
 
         if ((maxTime() <= m.time) || (last_it->second->inInterval(m))) {
             if (last_it->second->is_full()) {
+				_locker.lock();
                 auto n=alloc_new();
                 _last[m.id]=n;
                 _bucks[m.id].push_back(n);
+				_locker.unlock();
             }
             return _last[m.id];
         }
