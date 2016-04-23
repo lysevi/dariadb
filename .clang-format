@@ -22,18 +22,18 @@ BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
-#BraceWrapping:   
-#  AfterClass:      false
-#  AfterControlStatement: true 
-#  AfterEnum:       true
-#  AfterFunction:   true
-#  AfterNamespace:  false
-#  AfterObjCDeclaration: false
-#  AfterStruct:     true
-#  AfterUnion:      true
-#  BeforeCatch:     true
-#  BeforeElse:      false
-#  IndentBraces:    false
+#BraceWrapping:
+#AfterClass:      false
+#AfterControlStatement: true
+#AfterEnum:       true
+#AfterFunction:   true
+#AfterNamespace:  false
+#AfterObjCDeclaration: false
+#AfterStruct:     true
+#AfterUnion:      true
+#BeforeCatch:     true
+#BeforeElse:      false
+#IndentBraces:    false
 ColumnLimit:     80
 CommentPragmas:  '^ IWYU pragma:'
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
@@ -51,7 +51,7 @@ KeepEmptyLinesAtTheStartOfBlocks: true
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: None
+NamespaceIndentation: All
 ObjCBlockIndentWidth: 2
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
