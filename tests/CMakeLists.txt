@@ -9,7 +9,7 @@ MESSAGE(STATUS "Test: " ${name})
 macro(TEST_CASE name src)
 	MESSAGE(STATUS " +" ${name})
 	add_executable(${name} ${src})
-	TARGET_LINK_LIBRARIES(${name} libcommon_test libdariadb ${Boost_LIBRARIES})
+        TARGET_LINK_LIBRARIES(${name} libcommon_test libdariadb ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
 	add_test(${name} ${name})
 
     set_target_properties(${name} PROPERTIES FOLDER Tests)

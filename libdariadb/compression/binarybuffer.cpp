@@ -55,7 +55,7 @@ BinaryBuffer &BinaryBuffer::operator=(const BinaryBuffer &&other){
     return *this;
 }
 
-void BinaryBuffer::swap(BinaryBuffer & other) throw(){
+void BinaryBuffer::swap(BinaryBuffer & other) noexcept{
     std::swap(_pos, other._pos);
     std::swap(_cap, other._cap);
     std::swap(_begin, other._begin);

@@ -53,7 +53,9 @@ IF(WIN32)
   endif(MSVC)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
+  set(CMAKE_CXX_FLAGS_DEBUG "/Od")
   set(CMAKE_CXX_FLAGS_RELEASE "/Ox /GT /Ot -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Oy") #-fno-omit-frame-pointer analog
 else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
   
@@ -87,6 +89,8 @@ else(Boost_FOUND)
   MESSAGE(FATAL_ERROR "boost not found")
   EXIT()
 ENDIF(Boost_FOUND)
+
+find_package (Threads)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   MESSAGE(STATUS "gcc compiller")

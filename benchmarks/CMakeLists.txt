@@ -6,6 +6,7 @@ macro(ADD_BENCHARK name src)
         add_executable(${name} ${src} bench_common.h)
 
         target_link_libraries(${name}
+                                ${CMAKE_THREAD_LIBS_INIT}
                                 ${Boost_LIBRARIES}
                                 libdariadb)
 
