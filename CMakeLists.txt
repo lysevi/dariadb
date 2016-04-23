@@ -90,6 +90,8 @@ else(Boost_FOUND)
   EXIT()
 ENDIF(Boost_FOUND)
 
+find_package (Threads)
+
 if(CMAKE_COMPILER_IS_GNUCXX)
   MESSAGE(STATUS "gcc compiller")
   add_definitions(-DGNU_CPP)
