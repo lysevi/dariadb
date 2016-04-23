@@ -64,12 +64,6 @@ namespace dariadb {
                 begin=_begin;
                 end=_end;
             }
-
-            Range(const Range&other)=default;
-            ~Range()
-            {
-
-            }
         };
     }
 }

@@ -13,7 +13,7 @@ public:
         _a=a;
         _b=b;
     }
-	dariadb::Value result()const {
+    dariadb::Value result()const override{
 		return dariadb::Value();
 	}
     dariadb::Meas _a;
