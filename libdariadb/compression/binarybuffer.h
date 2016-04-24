@@ -49,7 +49,6 @@ namespace dariadb {
             void write(uint64_t v, int8_t count);
             uint64_t read(int8_t count);
 
-            //TODO move to cpp
             dariadb::utils::Range get_range()const {return  dariadb::utils::Range{_begin,_end};}
         protected:
             inline void move_pos(int8_t count) {

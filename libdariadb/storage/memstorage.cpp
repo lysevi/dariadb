@@ -7,22 +7,24 @@
 #include "chunk.h"
 #include "cursor.h"
 #include "inner_readers.h"
+#include "chunk_by_time_map.h"
 #include <limits>
 #include <algorithm>
 #include <assert.h>
+
 
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
-typedef std::map<Id, ChuncksList> ChunkMap;
+typedef std::map<Id, ChunksList> ChunkMap;
 
 class MemstorageCursor : public Cursor {
 public:
-	ChuncksList _chunks;
-	ChuncksList::iterator it;
-	MemstorageCursor(ChuncksList &chunks)
-		:_chunks{ chunks.begin(),chunks.end() }
+	ChunksList _chunks;
+	ChunksList::iterator it;
+	MemstorageCursor(ChunksList &chunks)
+		:_chunks(chunks.begin(),chunks.end())
 	{
 		this->reset_pos();
 	}
@@ -58,8 +60,7 @@ public:
 		_size(size),
 		_min_time(std::numeric_limits<dariadb::Time>::max()),
 		_max_time(std::numeric_limits<dariadb::Time>::min()),
-		_subscribe_notify(new SubscribeNotificator),
-		_chunks_count(0)
+		_subscribe_notify(new SubscribeNotificator)
 	{
 		_subscribe_notify->start();
 		
@@ -67,7 +68,7 @@ public:
 
 	~Private() {
 		_subscribe_notify->stop();
-		_chuncks.clear();
+		_chunks.clear();
 	}
 
 	Time minTime() { return _min_time; }
@@ -87,14 +88,12 @@ public:
 	Chunk_Ptr make_chunk(dariadb::Meas first) {
 		auto ptr = new Chunk(_size, first);
 		auto chunk = Chunk_Ptr{ ptr };
-        this->_chuncks.push_back(chunk);
 		this->_free_chunks[first.id] = chunk;
-		_chunks_count++;
 		return chunk;
 	}
 
 	append_result append(const Meas& value) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker_free_chunks);
 
 		Chunk_Ptr chunk = this->getFreeChunk(value.id);
 
@@ -102,23 +101,29 @@ public:
 			chunk=make_chunk(value);
 		}
 		else {
-            //std::cout<<"append new "<<chunk->count<< " chunks: "<<this->chunks_total_size()<<std::endl;
 			if (!chunk->append(value)) {
-				assert(chunk->is_full());
+                chunks_append(chunk);
 				chunk = make_chunk(value);
 			}
 		}
 		
 		assert(chunk->last.time == value.time);
-
-		_min_time = std::min(_min_time, value.time);
-		_max_time = std::max(_max_time, value.time);
-
+		{
+			std::lock_guard<std::mutex> lg_minmax(_locker_min_max);
+			_min_time = std::min(_min_time, value.time);
+			_max_time = std::max(_max_time, value.time);
+		}
 		_subscribe_notify->on_append(value);
 
 		return dariadb::append_result(1, 0);
 	}
 
+    //TODO can be async
+    void chunks_append(Chunk_Ptr chunk){
+        std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+        this->_chunks.insert(std::make_pair(chunk->maxTime,chunk));
+        assert(chunk->is_full());
+    }
 
 	append_result append(const Meas::PMeas begin, const size_t size) {
 		dariadb::append_result result{};
@@ -130,20 +135,20 @@ public:
 	}
 
     size_t size()const { return _size; }
-	size_t chunks_size()const { return _chuncks.size(); }
+	size_t chunks_size()const { return _chunks.size()+_free_chunks.size(); }
 
 	size_t chunks_total_size()const {
-		return _chunks_count.load();
+		return this->_chunks.size();
 	}
 
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
-        std::lock_guard<dariadb::utils::Locker> lg(_subscribe_locker);
+        std::lock_guard<std::mutex> lg(_subscribe_locker);
 		auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
 		_subscribe_notify->add(new_s);
 	}
 
 	Reader_ptr currentValue(const IdArray&ids, const Flag& flag) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker_free_chunks);
 		auto res_raw = new InnerCurrentValuesReader();
 		Reader_ptr res{ res_raw };
 		for (auto &kv : _free_chunks) {
@@ -158,51 +163,47 @@ public:
 		return res;
 	}
 
-	dariadb::storage::ChuncksList drop_old_chunks(const dariadb::Time min_time) {
-        std::lock_guard<dariadb::utils::Locker> lg_drop(_locker_drop);
-		ChuncksList result;
+	dariadb::storage::ChunksList drop_old_chunks(const dariadb::Time min_time) {
+        std::lock_guard<std::mutex> lg_drop(_locker_drop);
+		ChunksList result;
         auto now = dariadb::timeutil::current_time();
 
-        for (auto& chunk : _chuncks) {
-                auto past = (now - min_time);
-                if ((chunk->maxTime < past)&&(chunk->is_full())) {
-                    result.push_back(chunk);
-                    chunk->is_dropped=true;
-                    if (this->_free_chunks[chunk->first.id] == chunk) {
-                        this->_free_chunks.erase(chunk->first.id);
-                    }
+        for (auto& kv: _chunks) {
+			auto chunk = kv.second;
+            auto past = (now - min_time);
+            if ((chunk->maxTime < past)&&(chunk->is_full())) {
+                result.push_back(chunk);
+                chunk->is_dropped=true;
+                if (this->_free_chunks[chunk->first.id] == chunk) {
+                    this->_free_chunks.erase(chunk->first.id);
                 }
+            }
         }
 		if (result.size() > size_t(0)){
-            std::lock_guard<dariadb::utils::Locker> lg(_locker);
-            this->_chuncks.remove_if([](const Chunk_Ptr &c){return c->is_dropped;});
-			update_max_min_after_drop();
-		}
-		_chunks_count= _chunks_count -long(result.size());
+			std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+            _chunks.remove_droped();
+            update_min_after_drop();
+        }
+
 		return result;
 	}
 	
 	//by memory limit
-	ChuncksList drop_old_chunks_by_limit(const size_t max_limit) {
-        std::lock_guard<dariadb::utils::Locker> lg_drop(_locker_drop);
-		ChuncksList result{};
+	ChunksList drop_old_chunks_by_limit(const size_t max_limit) {
+		ChunksList result{};
 
-		if (chunks_total_size() > max_limit) {
+		if (chunks_total_size() >= max_limit) {
+			std::lock_guard<std::mutex> lg_drop(_locker_drop);
 
 			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
 				return result;
 			}
 
-            for (auto& chunk : _chuncks) {
-
+            for (auto& kv : _chunks) {
+				auto chunk = kv.second;
                 if (chunk->is_readonly) {
                     result.push_back(chunk);
-
-                    if (this->_free_chunks[chunk->first.id] == chunk) {
-                        this->_free_chunks.erase(chunk->first.id);
-                    }
-                    _chunks_count--;
                     chunk->is_dropped=true;
                 }
 
@@ -211,37 +212,37 @@ public:
                 }
             }
 			if (result.size() > size_t(0)) {
-                std::lock_guard<dariadb::utils::Locker> lg(_locker);
-				this->_chuncks.remove_if([](const Chunk_Ptr &c) {return c->is_dropped; });
-
-				update_max_min_after_drop();
+				std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+                _chunks.remove_droped();
+				update_min_after_drop();
 			}
 		}
 		return result;
 	}
 
-	void update_max_min_after_drop() {
-		this->_min_time = std::numeric_limits<dariadb::Time>::max();
-		this->_max_time = std::numeric_limits<dariadb::Time>::min();
-        for (auto& c : _chuncks) {
-
-				_min_time = std::min(c->minTime, _min_time);
-				_max_time = std::max(c->maxTime, _max_time);
-
+	void update_min_after_drop() {
+		auto new_min = std::numeric_limits<dariadb::Time>::max();
+        for (auto& kv : _chunks) {
+            new_min = std::min(kv.second->minTime, new_min);
 		}
+		std::lock_guard<std::mutex> lg(_locker_min_max);
+		_min_time = new_min;
 	}
 
-	dariadb::storage::ChuncksList drop_all() {
-        std::lock_guard<dariadb::utils::Locker> lg_drop(_locker_drop);
-		ChuncksList result;
+	dariadb::storage::ChunksList drop_all() {
+        std::lock_guard<std::mutex> lg_drop(_locker_drop);
+		std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+		ChunksList result;
 		
-        for (auto& chunk : _chuncks) {
-				result.push_back(chunk);
+        for (auto& kv : _chunks) {
+            result.push_back(kv.second);
 		}
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+		//drops after, becase page storage can be in 'overwrite mode'
+		for (auto& kv : _free_chunks) {
+			result.push_back(kv.second);
+		}
 		this->_free_chunks.clear();
-		this->_chuncks.clear();
-		_chunks_count = 0;
+		this->_chunks.clear();
 		//update min max
 		this->_min_time = std::numeric_limits<dariadb::Time>::max();
 		this->_max_time = std::numeric_limits<dariadb::Time>::min();
@@ -249,26 +250,53 @@ public:
 		return result;
 	}
 
-	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
-		ChuncksList result{};
+    bool check_chunk_to_qyery(const IdArray &ids, Flag flag, const Chunk_Ptr&ch)
+    {
+        if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
+            if ((flag == 0) || (!ch->check_flag(flag))) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-		for (auto ch : _chuncks) {
-			if (ch->is_dropped) {
-				throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
-			}
-			if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
-				if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
-					if (flag != 0) {
-						if (!ch->check_flag(flag)) {
-							continue;
-						}
-					}
+    bool check_chunk_to_interval(Time from, Time to, const Chunk_Ptr&ch)
+	{
+		if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
+            return true;
+		}
+		return false;
+	}
+
+    Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
+        
+		ChunksList result{};
+
+		{
+			std::lock_guard<std::mutex> lg(_locker_chunks);
+            auto resf = _chunks.get_lower_bound(from);
+            auto rest = _chunks.get_upper_bound(to);
+
+            for(auto it=resf;it!=rest;++it){
+				auto ch = it->second;
+				if (ch->is_dropped) {
+					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
+				}
+                if ((check_chunk_to_qyery(ids, flag, ch)) && (check_chunk_to_interval(from, to, ch))){
 					result.push_back(ch);
 				}
 			}
 		}
-		if (result.size() > this->chunks_total_size()) {
+		{
+			std::lock_guard<std::mutex> lg(_locker_free_chunks);
+			for (auto kv : _free_chunks) {
+                if ((check_chunk_to_qyery(ids, flag, kv.second)) && (check_chunk_to_interval(from, to, kv.second))){
+                    result.push_back(kv.second);
+                }
+			}
+		}
+
+		if (result.size() > (this->chunks_total_size()+ _free_chunks.size())) {
 			throw MAKE_EXCEPTION("result.size() > this->chunksBeforeTimePoint()");
 		}
 		MemstorageCursor *raw = new MemstorageCursor{ result };
@@ -277,29 +305,41 @@ public:
 
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
 		IdToChunkMap result;
-        for (auto cur_chunk : _chuncks) {
-            if (cur_chunk->minTime > timePoint){
-                break;
-            }
-            if ((ids.size() != 0) && (std::find(ids.begin(), ids.end(), cur_chunk->first.id) == ids.end())) {
-				continue;
-            }
 
-            if (!cur_chunk->check_flag(flag)) {
-                continue;
-            }
-            if (cur_chunk->minTime <= timePoint) {
-                result[cur_chunk->first.id] = cur_chunk;
-                break;
-            }
+		{
+			std::lock_guard<std::mutex> lg(_locker_free_chunks);
+			for (auto kv : _free_chunks) {
+                if(!check_chunk_to_qyery(ids,flag,kv.second)){
+                    continue;
+                }
+				if (kv.second->minTime <= timePoint) {
+					result[kv.second->first.id] = kv.second;
+				}
+			}
+		}
+		if (!_chunks.empty()) {
+			std::lock_guard<std::mutex> lg(_locker_chunks);
+            auto rest = _chunks.get_upper_bound(timePoint);
 
+			for (auto it = _chunks.begin(); it != _chunks.end(); ++it) {
+				auto cur_chunk = it->second;
+
+				if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
+					if (cur_chunk->minTime <= timePoint) {
+						result[cur_chunk->first.id] = cur_chunk;
+					}
+				}
+				if (it == rest) {
+					break;
+				}
+			}
 		}
 		return result;
 	}
 
 	dariadb::IdArray getIds() {
 		dariadb::IdArray result;
-		result.resize(_chuncks.size());
+		result.resize(_free_chunks.size());
 		size_t pos = 0;
         for (auto&kv : _free_chunks) {
 			result[pos] = kv.first;
@@ -308,29 +348,36 @@ public:
 		return result;
 	}
 
-	void add_chunks(const ChuncksList&clist) {
+    bool append(const ChunksList&clist) {
 		for (auto c : clist) {
-            _chuncks.push_back(c);
-			auto search_res = _free_chunks.find(c->first.id);
-			if (search_res == _free_chunks.end()) {
-				_free_chunks[c->first.id] = c;
-			}
-			else {
-				assert(false);
-			}
+           if(!this->append(c)){
+               return false;
+           }
 		}
+        return true;
 	}
 
+    bool append(const Chunk_Ptr&c) {
+        std::make_pair(c->maxTime, c);
+        auto search_res = _free_chunks.find(c->first.id);
+        if (search_res == _free_chunks.end()) {
+            _free_chunks[c->first.id] = c;
+        }
+        else {
+            assert(false);
+            return false;
+        }
+        return true;
+    }
 protected:
 	size_t _size;
 
-    ChuncksList _chuncks;
-	IdToChunkMap _free_chunks;
+    ChunkByTimeMap _chunks;
+	IdToChunkUMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
-    mutable dariadb::utils::Locker _subscribe_locker;
-    mutable dariadb::utils::Locker _locker,_locker_drop;
-	std::atomic<int64_t> _chunks_count;
+    mutable std::mutex _subscribe_locker;
+    mutable std::mutex _locker_free_chunks, _locker_chunks,_locker_drop, _locker_min_max;
 };
 
 MemoryStorage::MemoryStorage(size_t size)
@@ -381,14 +428,14 @@ void MemoryStorage::flush()
 {
 }
 
-dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time){
+dariadb::storage::ChunksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time){
 	return _Impl->drop_old_chunks(min_time);
 }
 
-dariadb::storage::ChuncksList MemoryStorage::drop_old_chunks_by_limit(const size_t max_limit) {
+dariadb::storage::ChunksList MemoryStorage::drop_old_chunks_by_limit(const size_t max_limit) {
 	return _Impl->drop_old_chunks_by_limit(max_limit);
 }
-dariadb::storage::ChuncksList MemoryStorage::drop_all()
+dariadb::storage::ChunksList MemoryStorage::drop_all()
 {
 	return _Impl->drop_all();
 }
@@ -405,6 +452,10 @@ dariadb::IdArray MemoryStorage::getIds() {
 	return _Impl->getIds();
 }
 
-void MemoryStorage::add_chunks(const ChuncksList&clist) {
-	return _Impl->add_chunks(clist);
+bool MemoryStorage::append(const ChunksList&clist) {
+    return _Impl->append(clist);
+}
+
+bool MemoryStorage::append(const Chunk_Ptr&c) {
+    return _Impl->append(c);
 }

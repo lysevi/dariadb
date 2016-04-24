@@ -22,7 +22,7 @@ namespace dariadb {
 		struct SubscribeNotificator {
 			std::list<SubscribeInfo_ptr> _subscribes;
 			bool is_stoped;
-            dariadb::utils::Locker _locker;
+            std::mutex _locker;
 
 			SubscribeNotificator() = default;
 			~SubscribeNotificator();

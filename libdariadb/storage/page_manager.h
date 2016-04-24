@@ -11,7 +11,7 @@
 namespace dariadb{
     namespace storage{
 
-        class PageManager:public utils::NonCopy, public ChunkContainer {
+        class PageManager:public utils::NonCopy, public ChunkContainer, public ChunkWriter {
 		public:
 			struct Params {
 				std::string path;
@@ -35,18 +35,16 @@ namespace dariadb{
             static void start(const Params&param);
             static void stop();
             static PageManager* instance();
-			
-			bool append_chunk(const Chunk_Ptr&ch);
-		
-			/*/// thread unsafe method
-			Cursor_ptr get_chunks(const IdArray&ids, Time from, Time to, Flag flag);*/
+
+            bool append(const Chunk_Ptr&c)override;
+            bool append(const ChunksList&lst)override;
 
 			//ChunkContainer
             Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
             IdArray getIds() override;
 			
-			dariadb::storage::ChuncksList get_open_chunks();
+			dariadb::storage::ChunksList get_open_chunks();
 			size_t chunks_in_cur_page()const;
 
             dariadb::Time minTime();

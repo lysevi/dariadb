@@ -10,7 +10,7 @@
 
 namespace dariadb {
 	namespace storage {
-		class UnionStorage :public BaseStorage{
+        class UnionStorage :public BaseStorage{
 		public:
 			struct Limits {
 				dariadb::Time old_mem_chunks; // old_mem_chunks - time when drop old chunks to page (MemStorage)

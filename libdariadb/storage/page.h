@@ -6,6 +6,9 @@
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 
+#include "stx/btree_multimap.h"
+#include <map>
+
 namespace dariadb {
 	namespace storage {
 #pragma pack(push, 1)
@@ -22,6 +25,7 @@ namespace dariadb {
 			dariadb::Time maxTime;
             uint64_t addeded_chunks;
             uint8_t  is_overwrite;
+            MODE     mode;
 		};
 
 		struct Page_ChunkIndex {
@@ -31,18 +35,23 @@ namespace dariadb {
 		};
 #pragma pack(pop) 
 
-		class Page:public ChunkContainer {
+		// maxtime => pos index rec in page;
+		//typedef std::multimap<dariadb::Time, uint32_t> indexTree;
+		typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
+
+        class Page:public ChunkContainer, public ChunkWriter {
 			Page() = default;
 		public:
-			static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size);
-			static Page* open(std::string file_name);
+            static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size, MODE mode);
+            static Page* open(std::string file_name);
 			static PageHeader readHeader(std::string file_name);
 			~Page();
-            bool append(const Chunk_Ptr&ch, MODE mode);
+            bool append(const Chunk_Ptr&ch)override;
+            bool append(const ChunksList&ch)override;
 			bool is_full()const;
             uint32_t get_oldes_index();
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
-			ChuncksList get_open_chunks();
+			ChunksList get_open_chunks();
 			void dec_reader();
 
 			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) override;
@@ -53,8 +62,9 @@ namespace dariadb {
 			PageHeader     *header;
 			Page_ChunkIndex*index;
 			uint8_t        *chunks;
+			indexTree      _itree;
 		protected:
-            mutable dariadb::utils::Locker   _locker;
+            mutable std::mutex   _locker;
             mutable utils::fs::MappedFile::MapperFile_ptr mmap;
 		};
 

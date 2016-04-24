@@ -53,7 +53,9 @@ IF(WIN32)
   endif(MSVC)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
+  set(CMAKE_CXX_FLAGS_DEBUG "/Od")
   set(CMAKE_CXX_FLAGS_RELEASE "/Ox /GT /Ot -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Oy") #-fno-omit-frame-pointer analog
 else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
   
@@ -88,9 +90,12 @@ else(Boost_FOUND)
   EXIT()
 ENDIF(Boost_FOUND)
 
+find_package (Threads)
+
 if(CMAKE_COMPILER_IS_GNUCXX)
   MESSAGE(STATUS "gcc compiller")
   add_definitions(-DGNU_CPP)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -ftemplate-backtrace-limit=0")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Werror -pedantic-errors")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
@@ -106,9 +111,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_LOG_DYN_LINK=1")
   set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline -g3 -fstack-protector-all")
   set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
-  #set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} -pg")
-  #set(CMAKE_MODULE_LINKER_FLAGS "-pg")
-  #set(CMAKE_SHARED_LINKER_FLAGS "-pg")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
 endif(CMAKE_COMPILER_IS_GNUCXX)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -132,15 +135,9 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
 endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
-option(ENABLE_TESTING "Enable testing of the dariadb." ON)
-option(USE_MUTEX "use mutex or Locker (OFF value)" ON)
+include_directories(extern)
 
-if(USE_MUTEX)
-   MESSAGE(STATUS "def USE_MUTEX")
-   add_definitions(-DUSE_MUTEX)
-else(USE_MUTEX)
-   MESSAGE(STATUS "undef USE_MUTEX")
-endif(USE_MUTEX)
+option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 
 add_subdirectory (libdariadb)
 

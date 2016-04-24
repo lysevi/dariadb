@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 
         BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
 
-		dariadb::storage::ChuncksList all_chunks;
+		dariadb::storage::ChunksList all_chunks;
 		ms->chunksByIterval(dariadb::IdArray{}, 0, start_time, t)->readAll(&all_chunks);
         auto min_time = std::numeric_limits<dariadb::Time>::max();
         auto max_time = std::numeric_limits<dariadb::Time>::min();
@@ -77,13 +77,13 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
         ms->flush();
         ms->readInterval(start_time, t)->readAll(&output);
         BOOST_CHECK(output.size() >0);
-        /*
-		//TODO resolve it.
-		dariadb::Value tst_val = 1;
-        for (auto v : output) {
-            BOOST_CHECK_EQUAL(v.value, tst_val);
-            tst_val++;
-        }*/
+        
+		////partial flush (not all chunks drops to page storage) works fine.
+		//dariadb::Value tst_val = 1;
+  //      for (auto v : output) {
+  //          BOOST_CHECK_EQUAL(v.value, tst_val);
+  //          tst_val++;
+  //      }
 
 
     }
@@ -96,13 +96,13 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 	const std::string storage_path = "testStorage";
 	const size_t chunk_per_storage = 10000;
-	const size_t chunk_size = 1024;
+	const size_t chunk_size = 256;
 	const size_t cap_max_size = 500;
-	const dariadb::Time write_window_deep = 2000;
+	const dariadb::Time write_window_deep = 100;
     const dariadb::Time whaitwrite_window_deep = 3000;
 
 	const dariadb::Time from = dariadb::timeutil::current_time();
-	const dariadb::Time to = from + 20000;
+	const dariadb::Time to = from + 1000;
 	const dariadb::Time step = 100;
 
 	{
@@ -115,13 +115,13 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 			new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage,chunk_size),
 				dariadb::storage::Capacitor::Params(cap_max_size,write_window_deep),
-				dariadb::storage::UnionStorage::Limits(0, 0)) };
+				dariadb::storage::UnionStorage::Limits(0, 10)) };
 
 	
 
         dariadb_test::storage_test_check(ms.get(), from, to, step, dariadb::Time(whaitwrite_window_deep));
-
-		BOOST_CHECK(dariadb::utils::fs::path_exists(storage_path));
+		
+		BOOST_CHECK(dariadb::storage::PageManager::instance()->chunks_in_cur_page()>0);
 	}
 	{
 		dariadb::storage::BaseStorage_ptr ms{

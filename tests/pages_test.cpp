@@ -33,7 +33,7 @@ dariadb::Time add_chunk(dariadb::Id id, dariadb::Time t, size_t chunks_size){
         }
     }
 
-    auto res = PageManager::instance()->append_chunk(ch);
+    auto res = PageManager::instance()->append(ch);
     BOOST_CHECK(res);
     return t;
 }
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     dariadb::Time minTime(t);
     {// Chunks load
         //must return all of appended chunks;
-        dariadb::storage::ChuncksList all_chunks;
+        dariadb::storage::ChunksList all_chunks;
         PageManager::instance()->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), 0, t)->readAll(&all_chunks);
         auto readed_t = dariadb::Time(0);
 
@@ -83,9 +83,9 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
 		{
 			dariadb::Time end_time (t / 2);
-			dariadb::storage::ChuncksList chunk_list;
+			dariadb::storage::ChunksList chunk_list;
 			PageManager::instance()->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), start_time, end_time)->readAll(&chunk_list);
-			BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2)+1));
+            BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2)+1));
 			
 			for (auto&v : chunk_list) {
 				BOOST_CHECK(v->minTime <= end_time);
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         t=add_chunk(dariadb::Id(1), t,chunks_size);
 
 		auto cursor = PageManager::instance()->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0),0, t);
-        dariadb::storage::ChuncksList all_chunks;
+        dariadb::storage::ChunksList all_chunks;
         cursor->readAll(&all_chunks);
         BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
 
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 				assert(false);
 			}
 		}
-		auto res = PageManager::instance()->append_chunk(ch);
+        auto res = PageManager::instance()->append(ch);
 		BOOST_CHECK(res);
 	}
 	PageManager::stop();
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
     PageManager::start(PageManager::Params(storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size));
 
-    dariadb::storage::ChuncksList all_chunks;
+    dariadb::storage::ChunksList all_chunks;
 	all_chunks=PageManager::instance()->get_open_chunks();
     BOOST_CHECK_EQUAL(all_chunks.size(), size_t(1));
 	if (all_chunks.size() != 0) {

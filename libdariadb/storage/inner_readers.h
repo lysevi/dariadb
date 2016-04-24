@@ -9,7 +9,7 @@
 namespace dariadb {
 	namespace storage {
 
-        typedef std::map<Id, dariadb::storage::ChuncksList> ReadChunkMap;
+        typedef std::map<Id, dariadb::storage::ChunksList> ReadChunkMap;
 
 		class InnerReader : public Reader {
 		public:
@@ -45,7 +45,7 @@ namespace dariadb {
 			typedef std::tuple<dariadb::Id, dariadb::Time> IdTime;
 			std::set<IdTime> _tp_readed_times;
 
-            dariadb::utils::Locker _locker, _locker_tp;
+            std::mutex _locker, _locker_tp;
 
 
 		};
@@ -66,7 +66,7 @@ namespace dariadb {
             void reset() override;
 
 			bool end;
-            dariadb::utils::Locker _locker;
+            std::mutex _locker;
 			dariadb::Meas::MeasList _cur_values;
 		};
 

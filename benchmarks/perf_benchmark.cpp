@@ -45,7 +45,7 @@ void show_info(dariadb::storage::UnionStorage *storage) {
             << " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
 			<< " writes: "<<append_count
 			<< " speed: "<< writes_per_sec << "/sec progress:" 
-			<< (100 * append_count) / all_writes << "%                ";
+			<< (int64_t(100) * append_count) / all_writes << "%                ";
 		std::cout.flush();
 		if (stop_info) {
 			std::cout.flush();
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 		const size_t chunk_per_storage = 1024*1024;
 		const size_t chunk_size = 256;
 		const size_t cap_max_size = 100;
-		const dariadb::Time write_window_deep = 500;
+		const dariadb::Time write_window_deep = 200;
         const dariadb::Time old_mem_chunks = 0;
         const size_t max_mem_chunks = 100;
 
@@ -101,6 +101,14 @@ int main(int argc, char *argv[]) {
 		}
 		stop_info = true;
 		info_thread.join();
+		raw_ptr->flush();
+
+		std::cout
+			<< "in memory chunks: " << raw_ptr->chunks_in_memory()
+			<< " in disk chunks: " << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
+			<< " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
+			<< std::endl;
+
         {
             std::cout<<"time point reads..."<<std::endl;
             std::random_device r;
@@ -142,7 +150,8 @@ int main(int argc, char *argv[]) {
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
             std::cout << "time: " << elapsed << std::endl;
         }
-        std::cout << "stoping storage...\n";
+
+		std::cout << "stoping storage...\n";
 		ms = nullptr;
 
 	}

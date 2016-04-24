@@ -28,17 +28,21 @@ public:
 		PageManager::start(_page_manager_params);
 
 		auto open_chunks = PageManager::instance()->get_open_chunks();
-		mem_storage_raw->add_chunks(open_chunks);
+        mem_storage_raw->append(open_chunks);
 	}
 	~Private() {
 		this->flush();
+        if (_limits.max_mem_chunks != 0) {
+            auto all_chunks = this->mem_storage_raw->drop_all();
+            PageManager::instance()->append(all_chunks); //use specified in ctor
+        }
 		delete mem_cap;
 		PageManager::stop();
 		
 	}
 
 	Time minTime() {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
         if(PageManager::instance()->chunks_in_cur_page()>0){
             return PageManager::instance()->minTime();
         }else{
@@ -59,9 +63,10 @@ public:
 	}
 
 	append_result append(const Meas &value) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+		//std::lock_guard<std::mutex> lg(_locker);
 		append_result result{};
         if (!mem_cap->append(value)){
+        //if(mem_storage_raw->append(value).writed!=1){
 			result.ignored++;
 		}
 		else {
@@ -75,17 +80,15 @@ public:
 	void drop_old_chunks() {
 		if (_limits.max_mem_chunks == 0) {
 			if (_limits.old_mem_chunks != 0) {
+                std::lock_guard<std::mutex> lg(_drop_locker);
 				auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
-				for (auto&c : old_chunks) {
-					PageManager::instance()->append_chunk(c);
-				}
+                PageManager::instance()->append(old_chunks);
 			}
 		}
 		else {
+            std::lock_guard<std::mutex> lg(_drop_locker);
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
-			for (auto&c : old_chunks) {
-				PageManager::instance()->append_chunk(c);
-			}
+            PageManager::instance()->append(old_chunks);
 		}
 	}
 
@@ -98,12 +101,9 @@ public:
 	}
 
 	void flush() {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		this->mem_cap->flush();
-		auto all_chunks = this->mem_storage_raw->drop_all();
-		for (auto c : all_chunks) {
-			PageManager::instance()->append_chunk(c);
-		}
+		this->drop_old_chunks();
 	}
 
 	class UnionCursor : public Cursor {
@@ -138,6 +138,7 @@ public:
 				{
 					if ((_mem_cursor!=nullptr)&&(!_mem_cursor->is_end())) {
 						_mem_cursor->readNext(cbk);
+						return;
 					}
 				}
 			}
@@ -156,7 +157,7 @@ public:
 	};
 
 	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		Cursor_ptr page_chunks, mem_chunks;
 		if (from < mem_storage_raw->minTime()) {
 			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
@@ -172,7 +173,7 @@ public:
 	}
 
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		if (timePoint < mem_storage_raw->minTime()) {
 			return PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
 		}
@@ -181,7 +182,7 @@ public:
 		}
 	}
 	IdArray getIds() {
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
 		auto page_ids = PageManager::instance()->getIds();
 		auto mem_ids = mem_storage_raw->getIds();
 		dariadb::IdSet s;
@@ -195,7 +196,7 @@ public:
 	}
 
     size_t chunks_in_memory()const{
-        std::lock_guard<dariadb::utils::Locker> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
         return mem_storage_raw->chunks_total_size();
     }
 
@@ -206,12 +207,12 @@ public:
 	storage::PageManager::Params _page_manager_params;
 	dariadb::storage::Capacitor::Params _cap_params;
 	dariadb::storage::UnionStorage::Limits _limits;
-    mutable dariadb::utils::Locker _locker;
+    mutable std::mutex _locker, _drop_locker;
 };
 
 UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,
 	dariadb::storage::Capacitor::Params cap_params,
-	const dariadb::storage::UnionStorage::Limits&limits) :
+    const dariadb::storage::UnionStorage::Limits&limits):
 	_impl{ new UnionStorage::Private(page_manager_params,
 									cap_params, limits) }
 {

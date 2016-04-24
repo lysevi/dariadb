@@ -29,12 +29,12 @@ InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time t
 }
 
 void InnerReader::add(Cursor_ptr c) {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     this->_chunks.push_back(c);
 }
 
 void InnerReader::add_tp(Chunk_Ptr c) {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     this->_tp_chunks[c->first.id].push_back(c);
 }
 
@@ -47,7 +47,7 @@ dariadb::IdArray InnerReader::getIds()const {
 	dariadb::IdSet idset;
 	for (auto &v : _chunks) {
 		//TODO optimise
-		dariadb::storage::ChuncksList out;
+		dariadb::storage::ChunksList out;
 		v->readAll(&out);
 		for (auto &c : out) {
 			idset.insert(c->first.id);
@@ -58,7 +58,7 @@ dariadb::IdArray InnerReader::getIds()const {
 }
 
 void InnerReader::readNext(storage::ReaderClb*clb) {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
 	if (!_tp_readed) {
         this->readTimePoint(clb);
@@ -101,7 +101,7 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 }
 
 void InnerReader::readTimePoint(storage::ReaderClb*clb) {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker_tp);
+    std::lock_guard<std::mutex> lg(_locker_tp);
     std::list<Chunk_Ptr> to_read_chunks{};
 	for (auto cand_ch : _tp_chunks) {
 		auto candidate = cand_ch.second.front();
@@ -204,7 +204,7 @@ void InnerCurrentValuesReader::readCurVals(storage::ReaderClb*clb) {
 }
 
 void InnerCurrentValuesReader::readNext(storage::ReaderClb*clb) {
-    std::lock_guard<dariadb::utils::Locker> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	readCurVals(clb);
 	this->end = true;
 }

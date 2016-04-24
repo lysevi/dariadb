@@ -6,7 +6,7 @@
 namespace dariadb {
     namespace storage {
 
-        class MemoryStorage : public BaseStorage{
+        class MemoryStorage : public BaseStorage, public ChunkWriter{
         public:
             MemoryStorage(size_t size);
             virtual ~MemoryStorage();
@@ -29,15 +29,16 @@ namespace dariadb {
             size_t chunks_total_size()const;
 
 			//drop old fulled chunks.
-			ChuncksList drop_old_chunks(const dariadb::Time min_time);
-			ChuncksList drop_old_chunks_by_limit(const size_t max_limit);
-			dariadb::storage::ChuncksList drop_all();
+			ChunksList drop_old_chunks(const dariadb::Time min_time);
+			ChunksList drop_old_chunks_by_limit(const size_t max_limit);
+			dariadb::storage::ChunksList drop_all();
 
 			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
 			IdArray getIds() override;
 
-			void add_chunks(const ChuncksList&clist);
+            bool append(const ChunksList&clist)override;
+            bool append(const Chunk_Ptr&c)override;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;
