@@ -157,6 +157,9 @@ public:
 		return static_cast<uint8_t*>(m_region->get_address());
 	}
 
+    void flush(std::size_t offset=0,std::size_t bytes=0){
+        this->m_region->flush(offset,bytes);
+    }
 protected:
 	bool _closed;
 
@@ -190,4 +193,8 @@ void MappedFile::close() {
 
 uint8_t* MappedFile::data() {
 	return _impl->data();
+}
+
+void MappedFile::flush(std::size_t offset,std::size_t bytes){
+    _impl->flush(offset,bytes);
 }
