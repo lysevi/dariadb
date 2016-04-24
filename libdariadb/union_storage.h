@@ -10,7 +10,7 @@
 
 namespace dariadb {
 	namespace storage {
-		class UnionStorage :public BaseStorage{
+        class UnionStorage :public BaseStorage{
 		public:
 			struct Limits {
 				dariadb::Time old_mem_chunks; // old_mem_chunks - time when drop old chunks to page (MemStorage)
@@ -48,9 +48,6 @@ namespace dariadb {
 			IdArray getIds() override;
 
             size_t chunks_in_memory()const;
-
-            bool append(const Chunk_Ptr&ch)override;
-            bool append(const ChuncksList&ch)override;
 		protected:
 			class Private;
 			std::unique_ptr<Private> _impl;

@@ -11,7 +11,7 @@
 namespace dariadb{
     namespace storage{
 
-        class PageManager:public utils::NonCopy, public ChunkContainer {
+        class PageManager:public utils::NonCopy, public ChunkContainer, public ChunkWriter {
 		public:
 			struct Params {
 				std::string path;

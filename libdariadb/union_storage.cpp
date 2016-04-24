@@ -263,13 +263,3 @@ IdArray UnionStorage::getIds() {
 size_t UnionStorage::chunks_in_memory()const{
     return _impl->chunks_in_memory();
 }
-
-
-bool UnionStorage::append(const Chunk_Ptr&){
-    NOT_IMPLEMENTED;
-    return false;
-}
-bool UnionStorage::append(const ChuncksList&){
-    NOT_IMPLEMENTED;
-    return false;
-}

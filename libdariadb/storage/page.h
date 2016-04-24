@@ -39,7 +39,7 @@ namespace dariadb {
 		//typedef std::multimap<dariadb::Time, uint32_t> indexTree;
 		typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 
-		class Page:public ChunkContainer {
+        class Page:public ChunkContainer, public ChunkWriter {
 			Page() = default;
 		public:
             static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size, MODE mode);
