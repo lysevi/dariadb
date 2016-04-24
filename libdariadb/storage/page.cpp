@@ -131,6 +131,18 @@ Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 	return res;
 }
 
+size_t get_header_offset(){
+    return 0;
+}
+
+size_t get_index_offset(){
+    return sizeof(PageHeader);
+}
+
+size_t get_chunks_offset(uint32_t chunk_per_storage){
+    return sizeof(PageHeader) + sizeof(Page_ChunkIndex)*chunk_per_storage;
+}
+
 Page* Page::open(std::string file_name) {
 	auto res = new Page;
 	auto mmap = utils::fs::MappedFile::open(file_name);
@@ -139,14 +151,16 @@ Page* Page::open(std::string file_name) {
 
 	res->mmap = mmap;
 	res->region = region;
-	res->header = reinterpret_cast<PageHeader*>(region);
-	res->index = reinterpret_cast<Page_ChunkIndex*>(region + sizeof(PageHeader));
-	res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader) + sizeof(Page_ChunkIndex)*res->header->chunk_per_storage);
+    res->header = reinterpret_cast<PageHeader*>(region)+get_header_offset();
+    res->index = reinterpret_cast<Page_ChunkIndex*>(region + get_index_offset());
+    res->chunks = reinterpret_cast<uint8_t*>(region + get_chunks_offset(res->header->chunk_per_storage));
 	if (res->header->chunk_size == 0) {
 		throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
 	}
 	return res;
 }
+
+
 
 PageHeader Page::readHeader(std::string file_name) {
 	std::ifstream istream;
@@ -206,11 +220,18 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
     }
 	memcpy(this->chunks + index[header->pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
 
-	header->pos_index++;
+
 	header->minTime = std::min(header->minTime,ch->minTime);
 	header->maxTime = std::max(header->maxTime, ch->maxTime);
 
-	return true;
+
+    this->mmap->flush(get_header_offset(),sizeof(PageHeader));
+    this->mmap->flush(get_index_offset()+sizeof(Page_ChunkIndex),sizeof(Page_ChunkIndex));
+    auto offset=get_chunks_offset(header->chunk_per_storage)+size_t(this->chunks - index[header->pos_index].offset);
+    this->mmap->flush(offset,sizeof(header->chunk_size));
+
+    header->pos_index++;
+    return true;
 }
 
 bool Page::is_full()const {

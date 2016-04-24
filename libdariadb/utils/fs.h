@@ -29,6 +29,8 @@ namespace dariadb{
                 void close();
                 uint8_t* data();
 
+                void flush(std::size_t offset=0,std::size_t bytes=0);
+
                 static MapperFile_ptr open(const std::string&path);
                 static MapperFile_ptr touch(const std::string&path, uint64_t size);
             private:
