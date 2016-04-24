@@ -138,7 +138,7 @@ Page::~Page() {
 	mmap->close();
 }
 
-Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size) {
+Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size, MODE mode) {
 	auto res = new Page;
 	auto mmap = utils::fs::MappedFile::touch(file_name, sz);
 	auto region = mmap->data();
@@ -155,6 +155,7 @@ Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 	res->header->maxTime = dariadb::Time(0);
 	res->header->minTime = std::numeric_limits<dariadb::Time>::max();
     res->header->is_overwrite=false;
+    res->header->mode=mode;
 	return res;
 }
 
@@ -212,8 +213,15 @@ uint32_t Page::get_oldes_index() {
     }
     return pos;
 }
-
-bool Page::append(const Chunk_Ptr&ch, MODE mode) {
+bool Page::append(const ChuncksList&ch){
+    for(auto &c:ch){
+        if(!this->append(c)){
+            return false;
+        }
+    }
+    return true;
+}
+bool Page::append(const Chunk_Ptr&ch) {
     std::lock_guard<std::mutex> lg(_locker);
 	auto index_rec = (ChunkIndexInfo*)ch.get();
 	auto buffer = ch->_buffer_t.data();
@@ -221,7 +229,7 @@ bool Page::append(const Chunk_Ptr&ch, MODE mode) {
 	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());
 	if (is_full()) {
-        if (mode == MODE::SINGLE) {
+        if (header->mode == MODE::SINGLE) {
             header->is_overwrite=true;
             header->pos_index=0;
         }

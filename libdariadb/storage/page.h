@@ -25,6 +25,7 @@ namespace dariadb {
 			dariadb::Time maxTime;
             uint64_t addeded_chunks;
             uint8_t  is_overwrite;
+            MODE     mode;
 		};
 
 		struct Page_ChunkIndex {
@@ -41,11 +42,12 @@ namespace dariadb {
 		class Page:public ChunkContainer {
 			Page() = default;
 		public:
-			static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size);
-			static Page* open(std::string file_name);
+            static Page* create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage, uint32_t chunk_size, MODE mode);
+            static Page* open(std::string file_name);
 			static PageHeader readHeader(std::string file_name);
 			~Page();
-            bool append(const Chunk_Ptr&ch, MODE mode);
+            bool append(const Chunk_Ptr&ch)override;
+            bool append(const ChuncksList&ch)override;
 			bool is_full()const;
             uint32_t get_oldes_index();
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);

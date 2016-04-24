@@ -49,6 +49,8 @@ public:
 		return dariadb::storage::IdToChunkMap{};
 	}
     dariadb::IdArray getIds() override { return dariadb::IdArray{}; }
+    bool append(const dariadb::storage::Chunk_Ptr&)override{NOT_IMPLEMENTED}
+    bool append(const dariadb::storage::ChuncksList&)override{NOT_IMPLEMENTED}
 };
 
 BOOST_AUTO_TEST_CASE(TimeOrderedSetTest)

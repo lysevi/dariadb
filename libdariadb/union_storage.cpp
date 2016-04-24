@@ -28,16 +28,14 @@ public:
 		PageManager::start(_page_manager_params);
 
 		auto open_chunks = PageManager::instance()->get_open_chunks();
-		mem_storage_raw->add_chunks(open_chunks);
+        mem_storage_raw->append(open_chunks);
 	}
 	~Private() {
 		this->flush();
-		if (_limits.max_mem_chunks != 0) {
-		auto all_chunks = this->mem_storage_raw->drop_all();
-			for (auto c : all_chunks) {
-				PageManager::instance()->append_chunk(c);
-			}
-		}
+        if (_limits.max_mem_chunks != 0) {
+            auto all_chunks = this->mem_storage_raw->drop_all();
+            PageManager::instance()->append(all_chunks); //use specified in ctor
+        }
 		delete mem_cap;
 		PageManager::stop();
 		
@@ -83,16 +81,12 @@ public:
 		if (_limits.max_mem_chunks == 0) {
 			if (_limits.old_mem_chunks != 0) {
 				auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
-				for (auto&c : old_chunks) {
-					PageManager::instance()->append_chunk(c);
-				}
+                PageManager::instance()->append(old_chunks);
 			}
 		}
 		else {
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
-			for (auto&c : old_chunks) {
-				PageManager::instance()->append_chunk(c);
-			}
+            PageManager::instance()->append(old_chunks);
 		}
 	}
 
@@ -216,7 +210,7 @@ public:
 
 UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,
 	dariadb::storage::Capacitor::Params cap_params,
-	const dariadb::storage::UnionStorage::Limits&limits) :
+    const dariadb::storage::UnionStorage::Limits&limits):
 	_impl{ new UnionStorage::Private(page_manager_params,
 									cap_params, limits) }
 {
@@ -268,4 +262,14 @@ IdArray UnionStorage::getIds() {
 
 size_t UnionStorage::chunks_in_memory()const{
     return _impl->chunks_in_memory();
+}
+
+
+bool UnionStorage::append(const Chunk_Ptr&){
+    NOT_IMPLEMENTED;
+    return false;
+}
+bool UnionStorage::append(const ChuncksList&){
+    NOT_IMPLEMENTED;
+    return false;
 }

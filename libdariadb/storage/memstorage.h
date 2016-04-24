@@ -37,7 +37,8 @@ namespace dariadb {
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
 			IdArray getIds() override;
 
-			void add_chunks(const ChuncksList&clist);
+            bool append(const ChuncksList&clist)override;
+            bool append(const Chunk_Ptr&c)override;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

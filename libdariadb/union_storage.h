@@ -48,6 +48,9 @@ namespace dariadb {
 			IdArray getIds() override;
 
             size_t chunks_in_memory()const;
+
+            bool append(const Chunk_Ptr&ch)override;
+            bool append(const ChuncksList&ch)override;
 		protected:
 			class Private;
 			std::unique_ptr<Private> _impl;

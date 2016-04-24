@@ -44,7 +44,7 @@ public:
 
         if (!utils::fs::path_exists(file_name)) {
             auto sz = calc_page_size();
-            res = Page::create(file_name, sz,_param.chunk_per_storage,_param.chunk_size);
+            res = Page::create(file_name, sz,_param.chunk_per_storage,_param.chunk_size,_param.mode);
         }
         else {
             res = Page::open(file_name);
@@ -59,10 +59,19 @@ public:
         return _cur_page;
     }
 
-    bool append_chunk(const Chunk_Ptr&ch) {
+    bool append(const Chunk_Ptr&ch) {
         std::lock_guard<std::mutex> lg(_locker);
         auto pg=get_cur_page();
-        return pg->append(ch,_param.mode);
+        return pg->append(ch);
+    }
+
+    bool append(const ChuncksList&lst) {
+        for(auto &c:lst){
+            if(!append(c)){
+                return false;
+            }
+        }
+        return true;
     }
 
     Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to){
@@ -150,8 +159,12 @@ PageManager* PageManager::instance(){
     return _instance;
 }
 
-bool PageManager::append_chunk(const Chunk_Ptr&ch) {
-    return impl->append_chunk(ch);
+bool PageManager::append(const Chunk_Ptr&c){
+    return impl->append(c);
+}
+
+bool PageManager::append(const ChuncksList&c){
+    return impl->append(c);
 }
 
 //Cursor_ptr PageManager::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {

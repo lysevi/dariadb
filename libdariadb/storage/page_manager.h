@@ -35,11 +35,9 @@ namespace dariadb{
             static void start(const Params&param);
             static void stop();
             static PageManager* instance();
-			
-			bool append_chunk(const Chunk_Ptr&ch);
-		
-			/*/// thread unsafe method
-			Cursor_ptr get_chunks(const IdArray&ids, Time from, Time to, Flag flag);*/
+
+            bool append(const Chunk_Ptr&c)override;
+            bool append(const ChuncksList&lst)override;
 
 			//ChunkContainer
             Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;

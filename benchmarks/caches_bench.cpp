@@ -57,6 +57,8 @@ public:
 		return dariadb::storage::IdToChunkMap{};
 	}
 	dariadb::IdArray getIds() { return dariadb::IdArray{}; }
+    bool append(const dariadb::storage::Chunk_Ptr&)override{NOT_IMPLEMENTED}
+    bool append(const dariadb::storage::ChuncksList&)override{NOT_IMPLEMENTED}
 };
 
 std::atomic_long append_count{ 0 }, read_all_times{ 0 };

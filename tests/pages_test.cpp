@@ -33,7 +33,7 @@ dariadb::Time add_chunk(dariadb::Id id, dariadb::Time t, size_t chunks_size){
         }
     }
 
-    auto res = PageManager::instance()->append_chunk(ch);
+    auto res = PageManager::instance()->append(ch);
     BOOST_CHECK(res);
     return t;
 }
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 				assert(false);
 			}
 		}
-		auto res = PageManager::instance()->append_chunk(ch);
+        auto res = PageManager::instance()->append(ch);
 		BOOST_CHECK(res);
 	}
 	PageManager::stop();

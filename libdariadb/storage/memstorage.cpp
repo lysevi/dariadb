@@ -348,19 +348,27 @@ public:
 		return result;
 	}
 
-	void add_chunks(const ChuncksList&clist) {
+    bool append(const ChuncksList&clist) {
 		for (auto c : clist) {
-            std::make_pair(c->maxTime, c);
-			auto search_res = _free_chunks.find(c->first.id);
-			if (search_res == _free_chunks.end()) {
-				_free_chunks[c->first.id] = c;
-			}
-			else {
-				assert(false);
-			}
+           if(!this->append(c)){
+               return false;
+           }
 		}
+        return true;
 	}
 
+    bool append(const Chunk_Ptr&c) {
+        std::make_pair(c->maxTime, c);
+        auto search_res = _free_chunks.find(c->first.id);
+        if (search_res == _free_chunks.end()) {
+            _free_chunks[c->first.id] = c;
+        }
+        else {
+            assert(false);
+            return false;
+        }
+        return true;
+    }
 protected:
 	size_t _size;
 
@@ -444,6 +452,10 @@ dariadb::IdArray MemoryStorage::getIds() {
 	return _Impl->getIds();
 }
 
-void MemoryStorage::add_chunks(const ChuncksList&clist) {
-	return _Impl->add_chunks(clist);
+bool MemoryStorage::append(const ChuncksList&clist) {
+    return _Impl->append(clist);
+}
+
+bool MemoryStorage::append(const Chunk_Ptr&c) {
+    return _Impl->append(c);
 }

@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 		auto start = clock();
 
 		for (size_t i = 0; i < chunks_count; ++i) {
-			dariadb::storage::PageManager::instance()->append_chunk(ch);
+            dariadb::storage::PageManager::instance()->append(ch);
 			ch->maxTime += dariadb::Time(chunks_size);
 			ch->minTime += dariadb::Time(chunks_size);
 		}
