@@ -65,7 +65,7 @@ public:
         return pg->append(ch);
     }
 
-    bool append(const ChuncksList&lst) {
+    bool append(const ChunksList&lst) {
         for(auto &c:lst){
             if(!append(c)){
                 return false;
@@ -98,9 +98,9 @@ public:
 		return cur_page->getIds();
     }
 
-	dariadb::storage::ChuncksList get_open_chunks() {
+	dariadb::storage::ChunksList get_open_chunks() {
 		if(!dariadb::utils::fs::path_exists(_param.path)) {
-			return ChuncksList{};
+			return ChunksList{};
 		}
 		return this->get_cur_page()->get_open_chunks();
 	}
@@ -163,7 +163,7 @@ bool PageManager::append(const Chunk_Ptr&c){
     return impl->append(c);
 }
 
-bool PageManager::append(const ChuncksList&c){
+bool PageManager::append(const ChunksList&c){
     return impl->append(c);
 }
 
@@ -183,7 +183,7 @@ dariadb::IdArray PageManager::getIds() {
     return impl->getIds();
 }
 
-dariadb::storage::ChuncksList PageManager::get_open_chunks() {
+dariadb::storage::ChunksList PageManager::get_open_chunks() {
 	return impl->get_open_chunks();
 }
 

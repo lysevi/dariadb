@@ -10,7 +10,7 @@ namespace dariadb {
         {
         public:
             virtual bool append(const Chunk_Ptr&c)=0;
-            virtual bool append(const ChuncksList&lst)=0;
+            virtual bool append(const ChunksList&lst)=0;
         };
 
 		class ChunkContainer

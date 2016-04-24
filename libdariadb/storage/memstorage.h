@@ -29,15 +29,15 @@ namespace dariadb {
             size_t chunks_total_size()const;
 
 			//drop old fulled chunks.
-			ChuncksList drop_old_chunks(const dariadb::Time min_time);
-			ChuncksList drop_old_chunks_by_limit(const size_t max_limit);
-			dariadb::storage::ChuncksList drop_all();
+			ChunksList drop_old_chunks(const dariadb::Time min_time);
+			ChunksList drop_old_chunks_by_limit(const size_t max_limit);
+			dariadb::storage::ChunksList drop_all();
 
 			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
 			IdArray getIds() override;
 
-            bool append(const ChuncksList&clist)override;
+            bool append(const ChunksList&clist)override;
             bool append(const Chunk_Ptr&c)override;
         protected:
             class Private;

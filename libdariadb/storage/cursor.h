@@ -19,7 +19,7 @@ namespace dariadb {
 			virtual void readNext(Callback*cbk)=0;
 			virtual void reset_pos() = 0;//start read from begining;
 			void readAll(Callback*cbk);
-			void readAll(ChuncksList*output);
+			void readAll(ChunksList*output);
 			
 		};
 

@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
 
         BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
 
-		dariadb::storage::ChuncksList all_chunks;
+		dariadb::storage::ChunksList all_chunks;
 		ms->chunksByIterval(dariadb::IdArray{}, 0, start_time, t)->readAll(&all_chunks);
         auto min_time = std::numeric_limits<dariadb::Time>::max();
         auto max_time = std::numeric_limits<dariadb::Time>::min();
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
         ms->readInterval(start_time, t)->readAll(&output);
         BOOST_CHECK(output.size() >0);
         
-		////partial flush (not all chuncks drops to page storage) works fine.
+		////partial flush (not all chunks drops to page storage) works fine.
 		//dariadb::Value tst_val = 1;
   //      for (auto v : output) {
   //          BOOST_CHECK_EQUAL(v.value, tst_val);

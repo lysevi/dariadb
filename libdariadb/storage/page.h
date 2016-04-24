@@ -47,11 +47,11 @@ namespace dariadb {
 			static PageHeader readHeader(std::string file_name);
 			~Page();
             bool append(const Chunk_Ptr&ch)override;
-            bool append(const ChuncksList&ch)override;
+            bool append(const ChunksList&ch)override;
 			bool is_full()const;
             uint32_t get_oldes_index();
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
-			ChuncksList get_open_chunks();
+			ChunksList get_open_chunks();
 			void dec_reader();
 
 			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) override;

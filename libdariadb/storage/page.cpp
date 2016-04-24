@@ -213,7 +213,7 @@ uint32_t Page::get_oldes_index() {
     }
     return pos;
 }
-bool Page::append(const ChuncksList&ch){
+bool Page::append(const ChunksList&ch){
     for(auto &c:ch){
         if(!this->append(c)){
             return false;
@@ -280,11 +280,11 @@ Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dari
 	return result;
 }
 
-ChuncksList Page::get_open_chunks() {
+ChunksList Page::get_open_chunks() {
     std::lock_guard<std::mutex> lg(_locker);
 	auto index_end = this->index + this->header->pos_index;
 	auto index_it = this->index;
-	ChuncksList result;
+	ChunksList result;
 	for (; index_it != index_end; index_it++) {
 		if (!index_it->is_init) {
 			continue;
@@ -313,7 +313,7 @@ IdToChunkMap dariadb::storage::Page::chunksBeforeTimePoint(const IdArray & ids, 
 {
 	IdToChunkMap result;
 
-	ChuncksList ch_list;
+	ChunksList ch_list;
 	auto cursor = this->get_chunks(ids, header->minTime, timePoint, flag);
 	if (cursor == nullptr) {
 		return result;

@@ -47,7 +47,7 @@ dariadb::IdArray InnerReader::getIds()const {
 	dariadb::IdSet idset;
 	for (auto &v : _chunks) {
 		//TODO optimise
-		dariadb::storage::ChuncksList out;
+		dariadb::storage::ChunksList out;
 		v->readAll(&out);
 		for (auto &c : out) {
 			idset.insert(c->first.id);

@@ -9,7 +9,7 @@
 namespace dariadb {
 	namespace storage {
 
-        typedef std::map<Id, dariadb::storage::ChuncksList> ReadChunkMap;
+        typedef std::map<Id, dariadb::storage::ChunksList> ReadChunkMap;
 
 		class InnerReader : public Reader {
 		public:
