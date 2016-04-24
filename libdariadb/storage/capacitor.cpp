@@ -9,7 +9,7 @@
 #include <map>
 #include <limits>
 #include <utility>
-
+#include <unordered_map>
 using namespace dariadb;
 using namespace dariadb::storage;
 
@@ -18,8 +18,9 @@ class Capacitor::Private
 public:
     typedef std::shared_ptr<TimeOrderedSet>   tos_ptr;
     typedef std::list<tos_ptr>                container;
-    typedef std::map<dariadb::Id,container>   dict;
-    typedef std::map<dariadb::Id, tos_ptr>    dict_last;
+    typedef std::unordered_map<dariadb::Id, container>  dict;
+    typedef std::unordered_map<dariadb::Id, tos_ptr>    dict_last;
+	typedef std::unordered_map<dariadb::Id, std::shared_ptr<dariadb::utils::Locker>> dict_locks;
 
 	Private(const BaseStorage_ptr stor, const  Capacitor::Params&params):
 		_minTime(std::numeric_limits<dariadb::Time>::max()),
@@ -85,14 +86,30 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-        std::lock_guard<std::mutex> lg(_locker);
-
+        auto unlocker=lock_id(m.id);
 		auto res = check_and_append(m);
+        unlocker->unlock();
         return res;
     }
 
+    dariadb::utils::Locker_ptr lock_id(const dariadb::Id& id){
+        std::lock_guard<dariadb::utils::Locker> dlg(_dict_locker);
+        dariadb::utils::Locker_ptr result=nullptr;
+        auto it = _locks.find(id);
+        if (it == _locks.end()) {
+            result = std::make_shared<dariadb::utils::Locker>();
+            _locks.insert(std::make_pair(id, result));
+            result->lock();
+        }
+        else {
+            it->second->lock();
+            result=it->second;
+        }
+        return result;
+    }
+
 	void flush_old_sets() {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
 		for (auto &kv : _bucks) {
 			bool flushed = false;
 			//while (kv.second.size()>0) 
@@ -120,23 +137,28 @@ public:
 	}
 
     tos_ptr get_target_to_write(const Meas&m) {
-//		std::lock_guard<std::mutex> lg(_locker);
+        _locker.lock();
         auto last_it=_last.find(m.id);
+        _locker.unlock();
         if(last_it ==_last.end()){
-			
+			_locker.lock();
             auto n=alloc_new();
-            _last[m.id]=n;
+			_last.insert(std::make_pair(m.id, n));
             _bucks[m.id].push_back(n);
+			_locker.unlock();
             return n;
         }
 
         if ((maxTime() <= m.time) || (last_it->second->inInterval(m))) {
-            if (last_it->second->is_full()) {
-                auto n=alloc_new();
-                _last[m.id]=n;
-                _bucks[m.id].push_back(n);
+            auto res=last_it->second;
+            if (res->is_full()) {
+				_locker.lock();
+                res=alloc_new();
+                _last[m.id]=res;
+                _bucks[m.id].push_back(res);
+				_locker.unlock();
             }
-            return _last[m.id];
+            return res;
         }
         else {
             auto it = _bucks[m.id].rbegin();
@@ -177,7 +199,7 @@ public:
     }
 
     bool flush(){
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<dariadb::utils::Locker> lg(_locker);
 
 		for (auto &kv : _bucks) {
             for(auto &v:kv.second){
@@ -216,8 +238,10 @@ protected:
     dict_last   _last;
     BaseStorage_ptr _stor;
     size_t _writed_count;
-    std::mutex _locker;
+    dariadb::utils::Locker _locker;
 	Capacitor::Params _params;
+	dict_locks  _locks;
+    dariadb::utils::Locker _dict_locker;
 };
 
 Capacitor::~Capacitor(){

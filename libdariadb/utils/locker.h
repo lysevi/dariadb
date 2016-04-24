@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <mutex> //for lock_guard
+#include <memory>
 
 namespace dariadb{
     namespace utils{
@@ -15,5 +16,7 @@ namespace dariadb{
                 locked.clear(std::memory_order_release);
             }
         };
+
+        using Locker_ptr=std::shared_ptr<dariadb::utils::Locker>;
     }
 }
