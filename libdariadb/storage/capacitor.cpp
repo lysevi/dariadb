@@ -86,21 +86,26 @@ public:
 	}
 
     bool append(const dariadb::Meas&m) {
-		//TODO refact this
-		_dict_locker.lock();
-		auto it = _locks.find(m.id);
-		if (it == _locks.end()) {
-			auto sl = std::make_shared<dariadb::utils::Locker>();
-			_locks.insert(std::make_pair(m.id, sl));
-			it = _locks.find(m.id);
-		}
-		else {
-			it->second->lock();
-		}
-		_dict_locker.unlock();
+        auto unlocker=lock_id(m.id);
 		auto res = check_and_append(m);
-		it->second->unlock();
+        unlocker->unlock();
         return res;
+    }
+
+    dariadb::utils::Locker_ptr lock_id(const dariadb::Id& id){
+        std::lock_guard<dariadb::utils::Locker> dlg(_dict_locker);
+        dariadb::utils::Locker_ptr result=nullptr;
+        auto it = _locks.find(id);
+        if (it == _locks.end()) {
+            result = std::make_shared<dariadb::utils::Locker>();
+            _locks.insert(std::make_pair(id, result));
+            result->lock();
+        }
+        else {
+            it->second->lock();
+            result=it->second;
+        }
+        return result;
     }
 
 	void flush_old_sets() {
