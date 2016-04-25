@@ -96,7 +96,7 @@ public:
 	}
 
     bool append(const Chunk_Ptr&ch) {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::unique_lock<std::mutex> lg(_locker);
 		_in_queue.push(ch);
 		_data_cond.notify_one();
         return true;
