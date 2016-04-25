@@ -64,6 +64,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     {// Chunks load
         //must return all of appended chunks;
         dariadb::storage::ChunksList all_chunks;
+		PageManager::instance()->flush();
         PageManager::instance()->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), 0, t)->readAll(&all_chunks);
         auto readed_t = dariadb::Time(0);
 

@@ -24,12 +24,14 @@ public:
 	
 	
     ~Private() {
-        if (_cur_page != nullptr) {
-            delete _cur_page;
-            _cur_page = nullptr;
-        }
 		_write_thread_stop = true;
+		_data_cond.notify_one();
 		_write_thread_handle.join();
+
+		if (_cur_page != nullptr) {
+			delete _cur_page;
+			_cur_page = nullptr;
+		}
     }
 
     uint64_t calc_page_size()const {
@@ -60,17 +62,21 @@ public:
         return res;
     }
 	void  flush() {
-		while (!this->_in_queue.empty()) {}
+		const std::chrono::milliseconds sleep_time = std::chrono::milliseconds(100);
+		while (!this->_in_queue.empty()) {
+			std::this_thread::sleep_for(sleep_time);
+		}
 	}
 	void write_thread() {
 		while (!_write_thread_stop) {
-			std::unique_lock<std::mutex> lk(_data_locker);
-			auto ref = &_in_queue;
-			_data_cond.wait(lk, [&ref] {return !ref->empty(); });
-			auto ch = ref->front();
-			ref->front();
-			lk.unlock();
-			write_to_page(ch);
+			std::unique_lock<std::mutex> lk(_locker);
+			_data_cond.wait(lk, [&] {return !_in_queue.empty() || _write_thread_stop; });
+			while (!_in_queue.empty()) {
+				auto ch = _in_queue.front();
+				_in_queue.pop();
+			
+				write_to_page(ch);
+			}
 		}
 	}
 
@@ -83,7 +89,7 @@ public:
     }
 
 	bool write_to_page(const Chunk_Ptr&ch) {
-		std::lock_guard<std::mutex> lg(_locker);
+		std::lock_guard<std::mutex> lg(_locker_write);
 		auto pg = get_cur_page();
 		return pg->append(ch);
 	}
@@ -165,12 +171,11 @@ public:
 protected:
     Page*  _cur_page;
 	PageManager::Params _param;
-    std::mutex _locker;
+    std::mutex _locker,_locker_write;
 
 	std::queue<Chunk_Ptr> _in_queue;
 	bool        _write_thread_stop;
 	std::thread _write_thread_handle;
-	std::mutex  _data_locker;
 	std::condition_variable _data_cond;
 };
 
