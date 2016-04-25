@@ -104,6 +104,7 @@ public:
         std::lock_guard<std::mutex> lg(_locker);
 		this->mem_cap->flush();
 		this->drop_old_chunks();
+		PageManager::instance()->flush();
 	}
 
 	class UnionCursor : public Cursor {

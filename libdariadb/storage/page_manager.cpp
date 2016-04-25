@@ -5,6 +5,8 @@
 #include "../utils/locker.h"
 
 #include <cstring>
+#include <queue>
+#include <thread>
 
 using namespace dariadb::storage;
 dariadb::storage::PageManager* PageManager::_instance = nullptr;
@@ -15,13 +17,19 @@ public:
     Private(const PageManager::Params&param) :
         _cur_page(nullptr),
 		_param(param)
-    {}
-
+    {
+		_write_thread_stop = false;
+		_write_thread_handle = std::move(std::thread{ &PageManager::Private::write_thread,this });
+	}
+	
+	
     ~Private() {
         if (_cur_page != nullptr) {
             delete _cur_page;
             _cur_page = nullptr;
         }
+		_write_thread_stop = true;
+		_write_thread_handle.join();
     }
 
     uint64_t calc_page_size()const {
@@ -51,6 +59,21 @@ public:
         }
         return res;
     }
+	void  flush() {
+		while (!this->_in_queue.empty()) {}
+	}
+	void write_thread() {
+		while (!_write_thread_stop) {
+			std::unique_lock<std::mutex> lk(_data_locker);
+			auto ref = &_in_queue;
+			_data_cond.wait(lk, [&ref] {return !ref->empty(); });
+			auto ch = ref->front();
+			ref->front();
+			lk.unlock();
+			write_to_page(ch);
+		}
+	}
+
 
     Page* get_cur_page() {
         if (_cur_page == nullptr) {
@@ -59,13 +82,20 @@ public:
         return _cur_page;
     }
 
+	bool write_to_page(const Chunk_Ptr&ch) {
+		std::lock_guard<std::mutex> lg(_locker);
+		auto pg = get_cur_page();
+		return pg->append(ch);
+	}
+
     bool append(const Chunk_Ptr&ch) {
         std::lock_guard<std::mutex> lg(_locker);
-        auto pg=get_cur_page();
-        return pg->append(ch);
+		_in_queue.push(ch);
+		_data_cond.notify_one();
+        return true;
     }
 
-    bool append(const ChunksList&lst) {
+	bool append(const ChunksList&lst) {
         for(auto &c:lst){
             if(!append(c)){
                 return false;
@@ -105,11 +135,14 @@ public:
 		return this->get_cur_page()->get_open_chunks();
 	}
 
-	size_t chunks_in_cur_page() {
+	size_t chunks_in_cur_page() const {
 		if (_cur_page == nullptr) {
 			return 0;
 		}
         return _cur_page->header->addeded_chunks;
+	}
+	size_t  in_queue_size()const {
+		return _in_queue.size();
 	}
 
     dariadb::Time minTime(){
@@ -133,6 +166,12 @@ protected:
     Page*  _cur_page;
 	PageManager::Params _param;
     std::mutex _locker;
+
+	std::queue<Chunk_Ptr> _in_queue;
+	bool        _write_thread_stop;
+	std::thread _write_thread_handle;
+	std::mutex  _data_locker;
+	std::condition_variable _data_cond;
 };
 
 PageManager::PageManager(const PageManager::Params&param):
@@ -153,6 +192,10 @@ void PageManager::stop(){
         delete PageManager::_instance;
         _instance = nullptr;
     }
+}
+
+void  PageManager::flush() {
+	this->impl->flush();
 }
 
 PageManager* PageManager::instance(){
@@ -187,9 +230,12 @@ dariadb::storage::ChunksList PageManager::get_open_chunks() {
 	return impl->get_open_chunks();
 }
 
-size_t PageManager::chunks_in_cur_page() const
-{
+size_t PageManager::chunks_in_cur_page() const{
 	return impl->chunks_in_cur_page();
+}
+
+size_t PageManager::in_queue_size()const{
+	return impl->in_queue_size();
 }
 
 dariadb::Time PageManager::minTime(){

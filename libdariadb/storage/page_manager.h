@@ -34,11 +34,12 @@ namespace dariadb{
 			typedef uint32_t handle;
             static void start(const Params&param);
             static void stop();
-            static PageManager* instance();
+			void flush();
+			static PageManager* instance();
 
             bool append(const Chunk_Ptr&c)override;
             bool append(const ChunksList&lst)override;
-
+			
 			//ChunkContainer
             Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
@@ -46,6 +47,7 @@ namespace dariadb{
 			
 			dariadb::storage::ChunksList get_open_chunks();
 			size_t chunks_in_cur_page()const;
+			size_t in_queue_size()const;
 
             dariadb::Time minTime();
             dariadb::Time maxTime();
