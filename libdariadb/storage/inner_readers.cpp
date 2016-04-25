@@ -74,6 +74,7 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 				break;
 			}
 			auto cur_ch = reader_clbk->readed;
+			reader_clbk->readed = nullptr;
             auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
             bw->reset_pos();
             CopmressedReader crr(bw, cur_ch->first);
