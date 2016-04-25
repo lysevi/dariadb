@@ -80,13 +80,13 @@ public:
 	void drop_old_chunks() {
 		if (_limits.max_mem_chunks == 0) {
 			if (_limits.old_mem_chunks != 0) {
-                std::lock_guard<std::mutex> lg(_drop_locker);
+                //std::lock_guard<std::mutex> lg(_drop_locker);
 				auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
                 PageManager::instance()->append(old_chunks);
 			}
 		}
 		else {
-            std::lock_guard<std::mutex> lg(_drop_locker);
+            //std::lock_guard<std::mutex> lg(_drop_locker);
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
             PageManager::instance()->append(old_chunks);
 		}
