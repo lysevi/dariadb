@@ -7,6 +7,7 @@
 #include <cstring>
 #include <queue>
 #include <thread>
+#include <condition_variable>
 
 using namespace dariadb::storage;
 dariadb::storage::PageManager* PageManager::_instance = nullptr;
