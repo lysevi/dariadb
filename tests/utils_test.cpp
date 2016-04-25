@@ -4,6 +4,7 @@
 #include <utils/utils.h>
 #include <utils/fs.h>
 #include <utils/period_worker.h>
+#include <utils/asyncworker.h>
 #include <chrono>
 #include <thread>
 
@@ -81,3 +82,34 @@ BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
     worker->stop_worker();
 	BOOST_CHECK(worker->call_count > 1);
 }
+
+class TestWorker : public dariadb::utils::AsyncWorker<int> {
+public:
+  int value;
+  TestWorker() : value(0) {}
+  void call_async(const int &data) override { value += data; }
+};
+
+BOOST_AUTO_TEST_CASE(Worker) {
+
+  TestWorker worker;
+
+  worker.start_async();
+
+  BOOST_CHECK(!worker.is_busy());
+
+
+  worker.add_async_data(1);
+  worker.add_async_data(2);
+  worker.add_async_data(3);
+  worker.add_async_data(4);
+
+  worker.flush_async();
+
+  BOOST_CHECK(!worker.is_busy());
+
+  worker.stop_async();
+  BOOST_CHECK(worker.stoped());
+  BOOST_CHECK_EQUAL(worker.value, (int)1 + 2 + 3 + 4);
+}
+

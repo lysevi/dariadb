@@ -3,6 +3,7 @@
 #include "page.h"
 #include "../utils/fs.h"
 #include "../utils/locker.h"
+#include "../utils/asyncworker.h"
 
 #include <cstring>
 #include <queue>
@@ -12,27 +13,23 @@
 using namespace dariadb::storage;
 dariadb::storage::PageManager* PageManager::_instance = nullptr;
 
-class PageManager::Private
+class PageManager::Private: public dariadb::utils::AsyncWorker<Chunk_Ptr>
 {
 public:
     Private(const PageManager::Params&param) :
         _cur_page(nullptr),
 		_param(param)
     {
-		_write_thread_stop = false;
-		_write_thread_handle = std::move(std::thread{ &PageManager::Private::write_thread,this });
+        this->start_async();
 	}
 	
-	
     ~Private() {
-		_write_thread_stop = true;
-		_data_cond.notify_one();
-		_write_thread_handle.join();
+        this->stop_async();
 
-		if (_cur_page != nullptr) {
-			delete _cur_page;
-			_cur_page = nullptr;
-		}
+        if (_cur_page != nullptr) {
+            delete _cur_page;
+            _cur_page = nullptr;
+        }
     }
 
     uint64_t calc_page_size()const {
@@ -63,22 +60,10 @@ public:
         return res;
     }
 	void  flush() {
-		const std::chrono::milliseconds sleep_time = std::chrono::milliseconds(100);
-		while (!this->_in_queue.empty()) {
-			std::this_thread::sleep_for(sleep_time);
-		}
+        this->flush_async();
 	}
-	void write_thread() {
-		while (!_write_thread_stop) {
-			std::unique_lock<std::mutex> lk(_locker);
-			_data_cond.wait(lk, [&] {return !_in_queue.empty() || _write_thread_stop; });
-			while (!_in_queue.empty()) {
-				auto ch = _in_queue.front();
-				_in_queue.pop();
-			
-				write_to_page(ch);
-			}
-		}
+    void call_async(const Chunk_Ptr&ch)override {
+        write_to_page(ch);
 	}
 
 
@@ -97,8 +82,7 @@ public:
 
     bool append(const Chunk_Ptr&ch) {
         std::unique_lock<std::mutex> lg(_locker);
-		_in_queue.push(ch);
-		_data_cond.notify_one();
+        this->add_async_data(ch);
         return true;
     }
 
@@ -148,8 +132,9 @@ public:
 		}
         return _cur_page->header->addeded_chunks;
 	}
+
 	size_t  in_queue_size()const {
-		return _in_queue.size();
+        return this->async_queue_size();
 	}
 
     dariadb::Time minTime(){
@@ -173,11 +158,6 @@ protected:
     Page*  _cur_page;
 	PageManager::Params _param;
     std::mutex _locker,_locker_write;
-
-	std::queue<Chunk_Ptr> _in_queue;
-	bool        _write_thread_stop;
-	std::thread _write_thread_handle;
-	std::condition_variable _data_cond;
 };
 
 PageManager::PageManager(const PageManager::Params&param):

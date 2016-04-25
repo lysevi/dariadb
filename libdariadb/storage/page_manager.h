@@ -53,7 +53,7 @@ namespace dariadb{
             dariadb::Time maxTime();
 		private:
             static PageManager*_instance;
-			class Private;
+            class Private;
 			std::unique_ptr<Private> impl;
         };
     }
