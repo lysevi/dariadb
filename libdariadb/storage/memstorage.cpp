@@ -121,7 +121,7 @@ public:
 	}
 
 	void call_async(const Chunk_Ptr&chunk)override {
-		std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+		std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
 		this->_chunks.insert(std::make_pair(chunk->maxTime, chunk));
 		assert(chunk->is_full());
 	}
@@ -189,7 +189,7 @@ public:
             }
         }
 		if (result.size() > size_t(0)){
-			std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+			std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
             _chunks.remove_droped();
             update_min_after_drop();
         }
@@ -221,7 +221,7 @@ public:
                 }
             }
 			if (result.size() > size_t(0)) {
-				std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+				std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
                 _chunks.remove_droped();
 				update_min_after_drop();
 			}
@@ -240,7 +240,7 @@ public:
 
 	dariadb::storage::ChunksList drop_all() {
         std::lock_guard<std::mutex> lg_drop(_locker_drop);
-		std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+		std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
 		ChunksList result;
 		
         for (auto& kv : _chunks) {
@@ -282,7 +282,7 @@ public:
 		ChunksList result{};
 
 		{
-			std::lock_guard<std::mutex> lg(_locker_chunks);
+			std::lock_guard<utils::Locker> lg(_locker_chunks);
             auto resf = _chunks.get_lower_bound(from);
             auto rest = _chunks.get_upper_bound(to);
 
@@ -327,7 +327,7 @@ public:
 			}
 		}
 		if (!_chunks.empty()) {
-			std::lock_guard<std::mutex> lg(_locker_chunks);
+			std::lock_guard<utils::Locker> lg(_locker_chunks);
             auto rest = _chunks.get_upper_bound(timePoint);
 
 			for (auto it = _chunks.begin(); it != _chunks.end(); ++it) {
@@ -386,7 +386,8 @@ protected:
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
     mutable std::mutex _subscribe_locker;
-    mutable std::mutex _locker_free_chunks, _locker_chunks,_locker_drop, _locker_min_max;
+    mutable std::mutex _locker_free_chunks, _locker_drop, _locker_min_max;
+	mutable utils::Locker _locker_chunks;
 };
 
 MemoryStorage::MemoryStorage(size_t size)
