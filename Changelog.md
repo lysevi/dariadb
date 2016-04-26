@@ -1,6 +1,7 @@
 v0.0.5
 ======
 - Asynchronous writes to disk.
+- Asynchronous memory storage.
 
 v0.0.4
 ======

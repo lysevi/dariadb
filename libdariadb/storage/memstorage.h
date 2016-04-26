@@ -39,6 +39,8 @@ namespace dariadb {
 
             bool append(const ChunksList&clist)override;
             bool append(const Chunk_Ptr&c)override;
+
+			size_t queue_size()const;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

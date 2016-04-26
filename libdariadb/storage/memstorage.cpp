@@ -2,6 +2,7 @@
 #include "../utils/utils.h"
 #include "../flags.h"
 #include "../utils/locker.h"
+#include "../utils/asyncworker.h"
 #include "../timeutil.h"
 #include "subscribe.h"
 #include "chunk.h"
@@ -53,7 +54,7 @@ public:
 	}
 };
 
-class MemoryStorage::Private
+class MemoryStorage::Private: protected dariadb::utils::AsyncWorker<Chunk_Ptr>
 {
 public:
 	Private(size_t size) :
@@ -63,10 +64,11 @@ public:
 		_subscribe_notify(new SubscribeNotificator)
 	{
 		_subscribe_notify->start();
-		
+		this->start_async();
 	}
 
 	~Private() {
+		this->stop_async();
 		_subscribe_notify->stop();
 		_chunks.clear();
 	}
@@ -102,7 +104,7 @@ public:
 		}
 		else {
 			if (!chunk->append(value)) {
-                chunks_append(chunk);
+                this->add_async_data(chunk);
 				chunk = make_chunk(value);
 			}
 		}
@@ -118,12 +120,19 @@ public:
 		return dariadb::append_result(1, 0);
 	}
 
-    //TODO can be async
-    void chunks_append(Chunk_Ptr chunk){
-        std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-        this->_chunks.insert(std::make_pair(chunk->maxTime,chunk));
-        assert(chunk->is_full());
-    }
+	void call_async(const Chunk_Ptr&chunk)override {
+		std::lock_guard<std::mutex> lg_ch(_locker_chunks);
+		this->_chunks.insert(std::make_pair(chunk->maxTime, chunk));
+		assert(chunk->is_full());
+	}
+
+	void flush() {
+		this->flush_async();
+	}
+
+	size_t queue_size()const {
+		return this->async_queue_size();
+	}
 
 	append_result append(const Meas::PMeas begin, const size_t size) {
 		dariadb::append_result result{};
@@ -424,8 +433,12 @@ Reader_ptr MemoryStorage::currentValue(const IdArray&ids, const Flag& flag) {
 	return  _Impl->currentValue(ids, flag);
 }
 
-void MemoryStorage::flush()
-{
+void MemoryStorage::flush(){
+	_Impl->flush();
+}
+
+size_t MemoryStorage::queue_size()const {
+	return _Impl->queue_size();
 }
 
 dariadb::storage::ChunksList MemoryStorage::drop_old_chunks(const dariadb::Time min_time){

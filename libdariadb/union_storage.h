@@ -12,6 +12,10 @@ namespace dariadb {
 	namespace storage {
         class UnionStorage :public BaseStorage{
 		public:
+			struct QueueSizes {
+				size_t page;
+				size_t mem;
+			};
 			struct Limits {
 				dariadb::Time old_mem_chunks; // old_mem_chunks - time when drop old chunks to page (MemStorage)
 				size_t max_mem_chunks;        // max_mem_chunks - maximum chunks in memory.zero - by old_mem_chunks(MemStorage)
@@ -48,6 +52,8 @@ namespace dariadb {
 			IdArray getIds() override;
 
             size_t chunks_in_memory()const;
+
+			QueueSizes queue_size()const;
 		protected:
 			class Private;
 			std::unique_ptr<Private> _impl;

@@ -107,6 +107,13 @@ public:
 		PageManager::instance()->flush();
 	}
 
+	UnionStorage::QueueSizes queue_size() const {
+		QueueSizes result;
+		result.page = PageManager::instance()->in_queue_size();
+		result.mem = this->mem_storage_raw->queue_size();
+		return result;
+	}
+
 	class UnionCursor : public Cursor {
 	public:
 		Cursor_ptr _page_cursor;
@@ -265,4 +272,8 @@ IdArray UnionStorage::getIds() {
 
 size_t UnionStorage::chunks_in_memory()const{
     return _impl->chunks_in_memory();
+}
+
+UnionStorage::QueueSizes UnionStorage::queue_size() const{
+	return  _impl->queue_size();
 }
