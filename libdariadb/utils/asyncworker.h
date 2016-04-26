@@ -26,8 +26,9 @@ namespace dariadb{
                 _data_cond.notify_one();
             }
 
-            /// wiat, while have data
+            /// wait, while have data
             void  flush_async() {
+		//TODO refact this (use conditinal varables or mutexes)
                 const std::chrono::milliseconds sleep_time = std::chrono::milliseconds(100);
                 while (!this->_in_queue.empty()) {
                     std::this_thread::sleep_for(sleep_time);
