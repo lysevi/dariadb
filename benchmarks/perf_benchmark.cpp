@@ -144,7 +144,9 @@ int main(int argc, char *argv[]) {
             for (size_t i = 0; i<reads_count; i++) {
                 auto time_point1 = uniform_dist(e1);
                 auto time_point2 = uniform_dist(e1);
-                ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
+                auto from=std::min(time_point1,time_point2);
+                auto to=std::max(time_point1,time_point2);
+                ms->readInterval(from, to)->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
             std::cout << "time: " << elapsed << std::endl;
