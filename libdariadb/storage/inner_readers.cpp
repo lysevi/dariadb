@@ -67,7 +67,7 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
 		while(!ch->is_end()){
 			ch->readNext(reader_clbk.get());
 			if (reader_clbk->readed == nullptr) {
-				break;
+				continue;
 			}
 			auto cur_ch = reader_clbk->readed;
 			reader_clbk->readed = nullptr;

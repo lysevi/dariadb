@@ -42,7 +42,7 @@ public:
 	}
 
 	Time minTime() {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<std::recursive_mutex> lg(_locker);
         if(PageManager::instance()->chunks_in_cur_page()>0){
             return PageManager::instance()->minTime();
         }else{
@@ -101,7 +101,7 @@ public:
 	}
 
 	void flush() {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<std::recursive_mutex> lg(_locker);
 		this->mem_cap->flush();
 		this->drop_old_chunks();
 		PageManager::instance()->flush();
@@ -150,8 +150,6 @@ public:
 					}
 				}
 			}
-            Chunk_Ptr empty;
-            cbk->call(empty);
 		}
 
 		void reset_pos() override {
@@ -164,24 +162,94 @@ public:
 		}
 	};
 
+	class UnionCursorSet : public Cursor {
+	public:
+		CursorList _cursors;
+		CursorList::iterator it;
+		bool _is_end;
+		UnionCursorSet() {
+		}
+		~UnionCursorSet() {
+			_cursors.clear();
+		}
+
+		void add_cursor(const Cursor_ptr &cptr) {
+			_cursors.push_back(cptr);
+			reset_pos();
+		}
+
+		bool is_end()const override {
+			return _is_end;
+		}
+
+		void readNext(Cursor::Callback*cbk)  override {
+			if (it == _cursors.end()) {
+				_is_end = true;
+			}
+			else {
+				Cursor_ptr c = *it;
+				if (c->is_end()) {//TODO refact.
+					if (it == _cursors.end()) {
+						_is_end = true;
+						Chunk_Ptr empty;
+						cbk->call(empty);
+						return;
+					}
+					else {
+						++it;
+						if (it == _cursors.end()) {
+							_is_end = true;
+							Chunk_Ptr empty;
+							cbk->call(empty);
+							return;
+						}
+					}
+				}
+				c = *it;
+				c->readNext(cbk);
+			}
+			if (_is_end) {
+				Chunk_Ptr empty;
+				cbk->call(empty);
+			}
+		}
+
+		void reset_pos() override {
+			it = _cursors.begin();
+			_is_end = false;
+			for (auto&c : _cursors) {
+				c->reset_pos();
+			}
+		}
+	};
+
 	Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {
-        std::lock_guard<std::mutex> lg(_locker);
-		Cursor_ptr page_chunks, mem_chunks;
-		if (from < mem_storage_raw->minTime()) {
-			page_chunks = PageManager::instance()->chunksByIterval(ids, flag, from, to);
+        std::lock_guard<std::recursive_mutex> lg(_locker);
+		IdArray id_a = ids;
+		if (id_a.empty()) {
+			id_a = getIds();
 		}
-        if (to > mem_storage_raw->minTime())
-        {
-			mem_chunks = mem_storage_raw->chunksByIterval(ids, flag, from, to);
+		UnionCursorSet *raw_result = new UnionCursorSet();
+		Cursor_ptr result{ raw_result };
+		for (auto id : id_a) {
+			IdArray cur_ids(1);
+			cur_ids[0] = id;
+			Cursor_ptr page_chunks, mem_chunks;
+			if (from < mem_storage_raw->minTime()) {
+				page_chunks = PageManager::instance()->chunksByIterval(cur_ids, flag, from, to);
+			}
+			if (to > mem_storage_raw->minTime()){
+				mem_chunks = mem_storage_raw->chunksByIterval(cur_ids, flag, from, to);
+			}
+
+			Cursor_ptr sub_result{ new UnionCursor{page_chunks,mem_chunks} };
+			raw_result->add_cursor(sub_result);
 		}
-
-		Cursor_ptr result{ new UnionCursor{page_chunks,mem_chunks} };
-
 		return result;
 	}
 
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<std::recursive_mutex> lg(_locker);
 		if (timePoint < mem_storage_raw->minTime()) {
 			return PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
 		}
@@ -190,7 +258,7 @@ public:
 		}
 	}
 	IdArray getIds() {
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<std::recursive_mutex> lg(_locker);
 		auto page_ids = PageManager::instance()->getIds();
 		auto mem_ids = mem_storage_raw->getIds();
 		dariadb::IdSet s;
@@ -204,7 +272,7 @@ public:
 	}
 
     size_t chunks_in_memory()const{
-        std::lock_guard<std::mutex> lg(_locker);
+        std::lock_guard<std::recursive_mutex> lg(_locker);
         return mem_storage_raw->chunks_total_size();
     }
 
@@ -215,7 +283,7 @@ public:
 	storage::PageManager::Params _page_manager_params;
 	dariadb::storage::Capacitor::Params _cap_params;
 	dariadb::storage::UnionStorage::Limits _limits;
-    mutable std::mutex _locker, _drop_locker;
+    mutable std::recursive_mutex _locker, _drop_locker;
 };
 
 UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,
