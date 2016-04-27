@@ -156,6 +156,12 @@ Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 	res->header->minTime = std::numeric_limits<dariadb::Time>::max();
     res->header->is_overwrite=false;
     res->header->mode=mode;
+
+	for (size_t i = 0; i < res->header->chunk_per_storage; ++i) {
+		auto irec = &res->index[i];
+		assert(!irec->is_init);
+		res->_free_poses.push_back(i);
+	}
 	return res;
 }
 
@@ -189,9 +195,11 @@ Page* Page::open(std::string file_name) {
 	for (size_t i = 0; i < res->header->chunk_per_storage; ++i) {
 		auto irec = &res->index[i];
 		if (!irec->is_init) {
-			break;
+			res->_free_poses.push_back(i);
 		}
-		res->_itree.insert(std::make_pair(irec->info.maxTime, i));
+		else {
+			res->_itree.insert(std::make_pair(irec->info.maxTime, i));
+		}
 	}
 	return res;
 }
@@ -227,6 +235,7 @@ uint32_t Page::get_oldes_index() {
     }
     return pos;
 }
+
 bool Page::append(const ChunksList&ch){
     for(auto &c:ch){
         if(!this->append(c)){
@@ -242,52 +251,50 @@ bool Page::append(const Chunk_Ptr&ch) {
 
 	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());
+	uint32_t pos_index=0;
 	if (is_full()) {
         if (header->mode == MODE::SINGLE) {
             header->is_overwrite=true;
-            header->pos_index=0;
+			pos_index = this->_itree.begin()->second;
         }
 		else {
 			return false;
 		}
 	}
-	index[header->pos_index].info = *index_rec;
-
-    index[header->pos_index].is_init = true;
+	else {
+		pos_index = _free_poses.front();
+		_free_poses.pop_front();
+	}	
+	index[pos_index].info = *index_rec;
+    index[pos_index].is_init = true;
 	
 
     if(!header->is_overwrite){
-        index[header->pos_index].offset = header->pos_chunks;
+        index[pos_index].offset = header->pos_chunks;
         header->pos_chunks += header->chunk_size;
         header->addeded_chunks++;
-		_itree.insert(std::make_pair(index_rec->maxTime, header->pos_index));
+		_itree.insert(std::make_pair(index_rec->maxTime, pos_index));
 	}
 	else {
-		for (auto it = _itree.begin(); it != _itree.end();++it) {
-			if (it->second == header->pos_index) {
-				_itree.erase(it);
-				break;
-			}
-		}
-		_itree.insert(std::make_pair(index_rec->maxTime, header->pos_index));
+		auto it = this->_itree.begin();
+		auto min_time = it->first;
+		_itree.erase(it);
+		_itree.insert(std::make_pair(index_rec->maxTime, pos_index));
 	}
-	memcpy(this->chunks + index[header->pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
-
+	memcpy(this->chunks + index[pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
 
 	header->minTime = std::min(header->minTime,ch->minTime);
 	header->maxTime = std::max(header->maxTime, ch->maxTime);
 
     this->mmap->flush(get_header_offset(),sizeof(PageHeader));
     this->mmap->flush(get_index_offset()+sizeof(Page_ChunkIndex),sizeof(Page_ChunkIndex));
-    auto offset=get_chunks_offset(header->chunk_per_storage)+size_t(this->chunks - index[header->pos_index].offset);
+    auto offset=get_chunks_offset(header->chunk_per_storage)+size_t(this->chunks - index[pos_index].offset);
     this->mmap->flush(offset,sizeof(header->chunk_size));
-
-    header->pos_index++;
     return true;
 }
 
 bool Page::is_full()const {
-	return !(header->pos_index < header->chunk_per_storage);
+	return this->_free_poses.empty();
 }
 
 Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
@@ -303,10 +310,10 @@ Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dari
 
 ChunksList Page::get_open_chunks() {
     std::lock_guard<std::mutex> lg(_locker);
-	auto index_end = this->index + this->header->pos_index;
+	auto index_end = this->index + this->header->chunk_per_storage;
 	auto index_it = this->index;
 	ChunksList result;
-	for (; index_it != index_end; index_it++) {
+	for (uint32_t pos = 0; index_it != index_end; ++index_it, ++pos) {
 		if (!index_it->is_init) {
 			continue;
 		}
@@ -317,6 +324,7 @@ ChunksList Page::get_open_chunks() {
 			result.push_back(c);
 			index_it->is_init = false;
 			this->header->addeded_chunks--;
+			_free_poses.push_back(pos);
 		}
 	}
 	return result;

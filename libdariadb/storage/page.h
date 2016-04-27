@@ -16,7 +16,7 @@ namespace dariadb {
 			uint32_t chunk_per_storage;
 			uint32_t chunk_size;
 
-			uint32_t pos_index;
+			//uint32_t pos_index;
 			uint32_t pos_chunks;
 
 			uint32_t count_readers;
@@ -63,6 +63,7 @@ namespace dariadb {
 			Page_ChunkIndex*index;
 			uint8_t        *chunks;
 			indexTree      _itree;
+			std::list<uint32_t> _free_poses;
 		protected:
             mutable std::mutex   _locker;
             mutable utils::fs::MappedFile::MapperFile_ptr mmap;
