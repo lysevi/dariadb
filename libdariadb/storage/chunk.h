@@ -44,7 +44,7 @@ namespace dariadb {
             utils::Range range;
             compression::CopmressedWriter c_writer;
 
-            std::mutex _locker;
+            utils::Locker _locker;
             compression::BinaryBuffer_Ptr bw;
             static void* operator new(std::size_t sz);
             static void operator delete(void* ptr, std::size_t sz);
@@ -74,7 +74,7 @@ namespace dariadb {
             static std::unique_ptr<ChunkPool> _instance;
             std::list<void*> _ptrs;
 			size_t _max_size;
-            std::mutex _locker;
+            utils::Locker _locker;
         };
 	}
 }
