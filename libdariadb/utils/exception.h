@@ -37,7 +37,7 @@ namespace dariadb {
 			}
 
 		public:
-			virtual const char *what() const override { return _msg.c_str(); }
+			virtual const char *what() const noexcept { return _msg.c_str(); }
 			const std::string &message() const { return _msg; }
 
 		protected:
