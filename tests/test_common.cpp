@@ -41,6 +41,26 @@ namespace dariadb_test {
 	{
 		dariadb::Meas::MeasList all{};
 		reader->readAll(&all);
+
+		dariadb::Id cur_id = all.front().id;
+		dariadb::Value cur_val = all.front().value;
+		auto it = all.cbegin();
+		++it;
+		for (; it != all.cend(); ++it) {
+			if (it->id != cur_id) {
+				if (it->id < cur_id) {
+					throw MAKE_EXCEPTION("(it->id < cur_id)");
+				}
+				else {
+					cur_id = it->id;
+					cur_val = it->value;
+					continue;
+				}
+			}
+			if (it->value <= cur_val) {
+				throw MAKE_EXCEPTION("(it->value <= cur_val)");
+			}
+		}
 		/*std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
 		for (auto&v : all) {
 			_dict[v.id].push_back(v);
