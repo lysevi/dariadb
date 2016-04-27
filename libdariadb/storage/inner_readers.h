@@ -33,7 +33,7 @@ namespace dariadb {
 		
 			bool is_time_point_reader;
 
-			CursorList _chunks;
+			CursorList _cursors;
 			ReadChunkMap _tp_chunks;
 			dariadb::Flag _flag;
 			dariadb::Time _from;

@@ -18,7 +18,7 @@ public:
 };
 
 InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to) :
-	_chunks{},
+	_cursors{},
 	_flag(flag),
 	_from(from),
 	_to(to),
@@ -30,7 +30,7 @@ InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time t
 
 void InnerReader::add(Cursor_ptr c) {
     std::lock_guard<std::mutex> lg(_locker);
-    this->_chunks.push_back(c);
+    this->_cursors.push_back(c);
 }
 
 void InnerReader::add_tp(Chunk_Ptr c) {
@@ -43,9 +43,8 @@ bool InnerReader::isEnd() const {
 }
 
 dariadb::IdArray InnerReader::getIds()const {
-
 	dariadb::IdSet idset;
-	for (auto &v : _chunks) {
+	for (auto &v : _cursors) {
 		//TODO optimise
 		dariadb::storage::ChunksList out;
 		v->readAll(&out);
@@ -64,11 +63,8 @@ void InnerReader::readNext(storage::ReaderClb*clb) {
         this->readTimePoint(clb);
 	}
 	std::shared_ptr<CursorReader> reader_clbk{ new CursorReader };
-    for (auto ch : _chunks) {
-
-        //for (Chunk_Ptr cur_ch:ch.second) 
-		while(!ch->is_end())
-		{
+    for (auto ch : _cursors) {
+		while(!ch->is_end()){
 			ch->readNext(reader_clbk.get());
 			if (reader_clbk->readed == nullptr) {
 				break;
@@ -169,7 +165,7 @@ bool InnerReader::check_meas(const Meas&m)const {
 
 Reader_ptr InnerReader::clone()const {
 	auto res = std::make_shared<InnerReader>(_flag, _from, _to);
-	res->_chunks = _chunks;
+	res->_cursors = _cursors;
 	res->_tp_chunks = _tp_chunks;
 	res->_flag = _flag;
 	res->_from = _from;
@@ -184,7 +180,7 @@ void InnerReader::reset() {
 	end = false;
 	_tp_readed = false;
 	_tp_readed_times.clear();
-	for (auto ch : _chunks) {
+	for (auto ch : _cursors) {
 		ch->reset_pos();
 	}
 }
