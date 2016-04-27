@@ -158,7 +158,6 @@ Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
     res->header->mode=mode;
 
 	for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
-		auto irec = &res->index[i];
 		assert(!irec->is_init);
 		res->_free_poses.push_back(i);
 	}
