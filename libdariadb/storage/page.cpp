@@ -157,7 +157,7 @@ Page* Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
     res->header->is_overwrite=false;
     res->header->mode=mode;
 
-	for (size_t i = 0; i < res->header->chunk_per_storage; ++i) {
+	for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
 		auto irec = &res->index[i];
 		assert(!irec->is_init);
 		res->_free_poses.push_back(i);
@@ -192,7 +192,7 @@ Page* Page::open(std::string file_name) {
 		throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
 	}
 
-	for (size_t i = 0; i < res->header->chunk_per_storage; ++i) {
+	for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
 		auto irec = &res->index[i];
 		if (!irec->is_init) {
 			res->_free_poses.push_back(i);
@@ -277,7 +277,6 @@ bool Page::append(const Chunk_Ptr&ch) {
 	}
 	else {
 		auto it = this->_itree.begin();
-		auto min_time = it->first;
 		_itree.erase(it);
 		_itree.insert(std::make_pair(index_rec->maxTime, pos_index));
 	}
