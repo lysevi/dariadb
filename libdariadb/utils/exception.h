@@ -4,35 +4,32 @@
 #include <stdexcept>
 #include <sstream>
 
-#define POSITION (dariadb::utils::CodePosition(__FILE__, __LINE__, __FUNCTION__))
+#define CODE_POS (dariadb::utils::CodePos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg) dariadb::utils::Exception::CreateAndLog(POSITION, msg)
+#define MAKE_EXCEPTION(msg) dariadb::utils::Exception::create_and_log(CODE_POS, msg)
 
 namespace dariadb {
 	namespace utils {
 
-		struct CodePosition {
-			CodePosition(const char *file, int line, const char *function)
-				: File(file), Line(line), Function(function) {}
-			const char *File;
-			const int Line;
-			const char *Function;
+		struct CodePos {
+			const char *_file;
+			const int _line;
+			const char *_func;
+
+			CodePos(const char *file, int line, const char *function)
+				: _file(file), _line(line), _func(function) {}
+
 			std::string toString() const {
 				std::stringstream ss;
-				ss << File << " line" << Line << " function: " << Function << std::endl;
+				ss << _file << " line: " << _line << " function: " << _func << std::endl;
 				return ss.str();
 			}
-			CodePosition&operator=(const CodePosition&) = delete;
+			CodePos&operator=(const CodePos&) = delete;
 		};
 
 		class Exception : public std::exception {
 		public:
-			inline static Exception CreateAndLog(const CodePosition &pos) {
-				logger_fatal("FATAL ERROR. The Exception will be thrown! "
-					<< pos.toString());
-				return Exception();
-			}
-			inline static Exception CreateAndLog(const CodePosition &pos,
+			static Exception create_and_log(const CodePos &pos,
 				const std::string &message) {
 				logger_fatal("FATAL ERROR. The Exception will be thrown! "
 					<< pos.toString() << " Message: " << message);
@@ -40,16 +37,16 @@ namespace dariadb {
 			}
 
 		public:
-            virtual const char *what() const noexcept { return _message.c_str(); }
-			const std::string &GetErrorMessage() const { return _message; }
+			virtual const char *what() const override { return _msg.c_str(); }
+			const std::string &message() const { return _msg; }
 
 		protected:
 			Exception() {}
-			Exception(const char *&message) : _message(std::string(message)) {}
-			Exception(const std::string &message) : _message(message) {}
+			Exception(const char *&message) : _msg(std::string(message)) {}
+			Exception(const std::string &message) : _msg(message) {}
 
 		private:
-			std::string _message;
+			std::string _msg;
 		};
 	}
 }
