@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
 
             auto start = clock();
 
-            const size_t reads_count=100;
+            const size_t reads_count=10;
             for(size_t i=0;i<reads_count;i++){
                 auto time_point = uniform_dist(e1);
                 ms->readInTimePoint(time_point)->readAll(clbk.get());
@@ -140,14 +140,10 @@ int main(int argc, char *argv[]) {
 
             auto start = clock();
 
-            const size_t reads_count = 100;
+            const size_t reads_count = 10;
             for (size_t i = 0; i<reads_count; i++) {
                 auto time_point1 = uniform_dist(e1);
                 auto time_point2 = uniform_dist(e1);
-//                std::cout
-//                        <<" i:"<<i
-//                        <<" from: "<<std::min(time_point1, time_point2)
-//                        <<" to: "<<std::max(time_point1, time_point2)<<std::endl;
                 ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
