@@ -35,7 +35,7 @@ namespace dariadb{
                 }
             }
 
-            virtual void call_async(const T&) { assert(false); }
+			virtual void call_async(const T&) = 0;
 
             ///worker start
             void start_async() {
@@ -69,8 +69,8 @@ namespace dariadb{
 					std::unique_lock<std::mutex> lk(local_lock);
                     _data_cond.wait(lk, [&] {return !_in_queue.empty() || _write_thread_stop; });
                     while (!_in_queue.empty()) {
-                        auto d = _in_queue.front();
 						_locker.lock();
+						auto d = _in_queue.front();
                         _in_queue.pop();
 						_locker.unlock();
                         this->call_async(d);
@@ -82,7 +82,7 @@ namespace dariadb{
             bool _is_stoped;
             mutable  Locker  _locker;
             std::queue<T> _in_queue;
-            bool        _write_thread_stop;
+			volatile bool _write_thread_stop;
             std::thread _write_thread_handle;
             std::condition_variable _data_cond;
         };
