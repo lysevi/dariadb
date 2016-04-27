@@ -315,6 +315,8 @@ ChunksList Page::get_open_chunks() {
             auto ptr=new Chunk(index_it->info, this->chunks + index_it->offset, this->header->chunk_size);
             Chunk_Ptr c = Chunk_Ptr(ptr);
 			result.push_back(c);
+			index_it->is_init = false;
+			this->header->addeded_chunks--;
 		}
 	}
 	return result;

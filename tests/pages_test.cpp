@@ -177,9 +177,18 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
     BOOST_CHECK_EQUAL(header.count_readers, size_t(0));
 
     PageManager::start(PageManager::Params(storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size));
+	
+	//need to load current page;
+	auto mintime_chunks=PageManager::instance()->chunksBeforeTimePoint(dariadb::IdArray{},0, PageManager::instance()->minTime());
+	BOOST_CHECK_GE(mintime_chunks.size(), size_t(0));
 
+	auto chunks_before = PageManager::instance()->chunks_in_cur_page();
     dariadb::storage::ChunksList all_chunks;
 	all_chunks=PageManager::instance()->get_open_chunks();
+	auto chunks_after = PageManager::instance()->chunks_in_cur_page();
+	BOOST_CHECK_LT(chunks_after, chunks_before);
+
+	BOOST_CHECK_EQUAL(chunks_before-chunks_after, all_chunks.size());
     BOOST_CHECK_EQUAL(all_chunks.size(), size_t(1));
 	if (all_chunks.size() != 0) {
 		auto c = all_chunks.front();
