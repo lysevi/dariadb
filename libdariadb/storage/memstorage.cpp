@@ -259,12 +259,18 @@ public:
 		return result;
 	}
 
+    bool check_chunk_flag( Flag flag, const Chunk_Ptr&ch)
+    {
+        if ((flag == 0) || (!ch->check_flag(flag))) {
+            return true;
+        }
+        return false;
+    }
+
     bool check_chunk_to_qyery(const IdArray &ids, Flag flag, const Chunk_Ptr&ch)
     {
         if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
-            if ((flag == 0) || (!ch->check_flag(flag))) {
-                return true;
-            }
+            return check_chunk_flag(flag,ch);
         }
         return false;
     }
@@ -281,30 +287,39 @@ public:
         
 		ChunksList result{};
 
-		{
-			std::lock_guard<utils::Locker> lg(_locker_chunks);
-            auto resf = _chunks.get_lower_bound(from);
-            auto rest = _chunks.get_upper_bound(to);
+        IdArray id_a=ids;
+        if(id_a.empty()){
+            id_a=this->getIds();
+        }
+        for(auto i:id_a){
+            {
+                std::lock_guard<utils::Locker> lg(_locker_chunks);
+                auto resf = _chunks.get_lower_bound(from);
+                auto rest = _chunks.get_upper_bound(to);
 
-            for(auto it=resf;it!=rest;++it){
-				auto ch = it->second;
-				if (ch->is_dropped) {
-					throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
-				}
-                if ((check_chunk_to_qyery(ids, flag, ch)) && (check_chunk_to_interval(from, to, ch))){
-					result.push_back(ch);
-				}
-			}
-		}
-		{
-			std::lock_guard<std::mutex> lg(_locker_free_chunks);
-			for (auto kv : _free_chunks) {
-                if ((check_chunk_to_qyery(ids, flag, kv.second)) && (check_chunk_to_interval(from, to, kv.second))){
-                    result.push_back(kv.second);
+                for(auto it=resf;it!=rest;++it){
+                    auto ch = it->second;
+                    if (ch->is_dropped) {
+                        throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
+                    }
+                    if(ch->first.id!=i){
+                        continue;
+                    }
+                    if ((check_chunk_flag(flag, ch)) && (check_chunk_to_interval(from, to, ch))){
+                        result.push_back(ch);
+                    }
                 }
-			}
-		}
+            }
+            _locker_free_chunks.lock();
+            auto fres=_free_chunks.find(i);
+            _locker_free_chunks.unlock();
 
+            if(fres!=_free_chunks.end()){
+                if ((check_chunk_flag(flag, fres->second)) && (check_chunk_to_interval(from, to, fres->second))){
+                    result.push_back(fres->second);
+                }
+            }
+        }
 		if (result.size() > (this->chunks_total_size()+ _free_chunks.size())) {
 			throw MAKE_EXCEPTION("result.size() > this->chunksBeforeTimePoint()");
 		}
@@ -354,6 +369,7 @@ public:
 			result[pos] = kv.first;
 			pos++;
 		}
+        std::sort(result.begin(),result.end());
 		return result;
 	}
 
