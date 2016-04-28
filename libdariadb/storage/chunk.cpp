@@ -13,12 +13,18 @@ std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
 ChunkPool::ChunkPool(){
 	_max_size = ChunkPool_default_max_size;
+	_size = 0;
 }
 
 ChunkPool::~ChunkPool(){
-    for(auto p:_ptrs){
-        :: operator delete(p);
-    }
+	while (_size != 0) {
+		void* out = nullptr;
+		_ptrs.pop(out);
+		if(out!=nullptr){
+			:: operator delete(out);
+			--_size;
+		}
+	}
 }
 
 void ChunkPool::start(size_t max_size){
@@ -39,29 +45,27 @@ ChunkPool*ChunkPool::instance(){
 }
 
 size_t ChunkPool::polled(){
-    return _ptrs.size();
+	return _size.load();
 }
 
-void* ChunkPool::alloc(std::size_t sz){
-    void*result=nullptr;
-    {
-        std::lock_guard<utils::Locker> lg(_locker);
-
-        if(this->_ptrs.size()!=0){
-            result= this->_ptrs.back();
-            this->_ptrs.pop_back();
-        }else{
-            result=::operator new(sz);
-        }
-    }
-    memset(result,0,sz);
-    return result;
+void* ChunkPool::alloc(std::size_t sz) {
+	void*result = nullptr;
+	this->_ptrs.pop(result);
+	
+	if (result == nullptr) {
+		result = ::operator new(sz);
+	}else {
+		--_size;
+	}
+	
+	memset(result, 0, sz);
+	return result;
 }
 
 void ChunkPool::free(void* ptr, std::size_t){
-    if (_ptrs.size() < _max_size) {
-        std::lock_guard<utils::Locker> lg(_locker);
-        _ptrs.push_front(ptr);
+    if (_size.load() < _max_size) {
+        _ptrs.push(ptr);
+		++_size;
     }
     else {
 		::operator delete(ptr);

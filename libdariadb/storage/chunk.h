@@ -5,6 +5,7 @@
 #include "../utils/locker.h"
 #include "../compression.h"
 #include "../compression/binarybuffer.h"
+#include <boost/lockfree/queue.hpp>
 
 #include <map>
 #include <set>
@@ -58,6 +59,7 @@ namespace dariadb {
 
 		const size_t ChunkPool_default_max_size = 200;
 
+		//TODO need unit test.
         class ChunkPool{
         private:
             ChunkPool();
@@ -72,9 +74,9 @@ namespace dariadb {
             size_t polled();
         private:
             static std::unique_ptr<ChunkPool> _instance;
-            std::list<void*> _ptrs;
+            boost::lockfree::queue<void*> _ptrs;
+			std::atomic_size_t            _size;
 			size_t _max_size;
-            utils::Locker _locker;
         };
 	}
 }
