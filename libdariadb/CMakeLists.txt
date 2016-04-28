@@ -13,12 +13,7 @@ FILE(GLOB SRC "*.cpp"
 	      "math/*.cpp"
               "storage/*.cpp" ${HDRS})
 
-if(MSVC)
-        add_library(libdariadb STATIC ${SRC})
-else(MSVC)
-	add_library(libdariadb SHARED ${SRC})
-	TARGET_LINK_LIBRARIES(libdariadb ${Boost_LIBRARIES})
-endif(MSVC)
+add_library(libdariadb STATIC ${SRC})
 
 export(PACKAGE libdariadb)
 
