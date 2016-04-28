@@ -75,7 +75,7 @@ namespace dariadb {
             size_t polled();
         private:
             static std::unique_ptr<ChunkPool> _instance;
-            boost::lockfree::queue<void*> _ptrs;
+            boost::lockfree::queue<void*, boost::lockfree::capacity<100>> _ptrs;
 			std::atomic_size_t            _size;
 			size_t _max_size;
         };
