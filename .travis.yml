@@ -12,7 +12,7 @@ install:
   - cd ${TRAVIS_BUILD_DIR}
 
 before_script:
-   - cmake .
+   - cmake -DCMAKE_BUILD_TYPE=Release .
 
 script: 
    - make -j2
