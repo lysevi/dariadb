@@ -38,8 +38,8 @@ set(Boost_USE_STATIC_LIBS        OFF)
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     OFF)
 set(BOOST_ALL_DYN_LINK           ON)
-
-find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem)
+#1.57.0
+find_package(Boost 1.54.0 REQUIRED unit_test_framework system  filesystem)
 
 IF(Boost_FOUND)
   INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
