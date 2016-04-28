@@ -21,7 +21,7 @@ else()
   set(DEF_INSTALL_CMAKE_DIR lib/CMake/dariadb)
 endif()
 set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH "Installation directory for CMake files")
-  
+
 # Make relative paths absolute (needed later on)
 foreach(p LIB BIN INCLUDE CMAKE)
   set(var INSTALL_${p}_DIR)
@@ -30,41 +30,36 @@ foreach(p LIB BIN INCLUDE CMAKE)
   endif()
 endforeach()
 
-if(NOT MSVC)
-   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-endif(NOT MSVC)
-
 set(Boost_USE_STATIC_LIBS        OFF)
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     OFF)
 set(BOOST_ALL_DYN_LINK           ON)
-#1.57.0
-find_package(Boost 1.54.0 REQUIRED unit_test_framework system  filesystem)
 
-IF(Boost_FOUND)
-  INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
-  LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
-else(Boost_FOUND)
-  MESSAGE(FATAL_ERROR "boost not found")
-  EXIT()
-ENDIF(Boost_FOUND)
-
-find_package (Threads)
+if(NOT MSVC)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif(NOT MSVC)
 
 IF(WIN32)
   MESSAGE(STATUS "WIN32:")
   MESSAGE(STATUS "+ boost root: " ${BOOST_ROOT})
 
   if(MSVC)
+    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  /EHsc")
     add_cxx_compiler_flag(-W4)
     add_definitions(-DMSVC)
+  else(MSVC)
+    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem)
   endif(MSVC)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
   set(CMAKE_CXX_FLAGS_RELEASE "/Ox /GT /Ot -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Oy") #-fno-omit-frame-pointer analog
 else(WIN32)
+  set(BoostUSESTATIC_LIBS OFF)
+
+  find_package(Boost  REQUIRED unit_test_framework system  filesystem)
+
   set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
     "Flags used by the C++ compiler during coverage builds."
     FORCE)
@@ -85,6 +80,16 @@ else(WIN32)
     FORCE)
   add_cxx_compiler_flag(--coverage COVERAGE)
 ENDIF(WIN32)
+
+IF(Boost_FOUND)
+  INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
+  LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+else(Boost_FOUND)
+  MESSAGE(FATAL_ERROR "boost not found")
+  EXIT()
+ENDIF(Boost_FOUND)
+
+find_package (Threads)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   MESSAGE(STATUS "gcc compiller")
