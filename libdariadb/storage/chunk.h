@@ -32,6 +32,7 @@ namespace dariadb {
         struct Chunk:public ChunkIndexInfo
         {
         public:
+			using u8vector=std::vector<uint8_t>;
             Chunk(size_t size, Meas first_m);
             Chunk(const ChunkIndexInfo&index, const uint8_t* buffer,const size_t buffer_length);
             ~Chunk();
@@ -41,7 +42,7 @@ namespace dariadb {
             bool check_flag(const Flag& f);
             void lock() { _locker.lock(); }
             void unlock() { _locker.unlock(); }
-            std::vector<uint8_t> _buffer_t;
+			u8vector *_buffer_t;
             utils::Range range;
             compression::CopmressedWriter c_writer;
 

@@ -245,7 +245,7 @@ bool Page::append(const ChunksList&ch){
 bool Page::append(const Chunk_Ptr&ch) {
     std::lock_guard<std::mutex> lg(_locker);
 	auto index_rec = (ChunkIndexInfo*)ch.get();
-	auto buffer = ch->_buffer_t.data();
+	auto buffer = ch->_buffer_t->data();
 
 	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());

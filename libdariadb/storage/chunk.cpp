@@ -81,7 +81,7 @@ void Chunk::operator delete(void* ptr, std::size_t sz){
 }
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
-	_buffer_t(buffer_length),
+	_buffer_t(new u8vector(buffer_length)),
     _locker{}
 {
 	count = index.count;
@@ -96,10 +96,10 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	is_dropped = index.is_dropped;
 
 	for (size_t i = 0; i < buffer_length; i++) {
-		_buffer_t[i] = buffer[i];
+		(*_buffer_t)[i] = buffer[i];
 	}
 
-	range = Range{ _buffer_t.data(),_buffer_t.data() + buffer_length };
+	range = Range{ _buffer_t->data(),_buffer_t->data() + buffer_length };
 	assert(size_t(range.end - range.begin)==buffer_length);
 	bw = std::make_shared<BinaryBuffer>(range);
 	bw->set_bitnum(bw_bit_num);
@@ -110,7 +110,7 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 }
 
 Chunk::Chunk(size_t size, Meas first_m) :
-	_buffer_t(size),
+	_buffer_t(new u8vector(size)),
     _locker()
 {
 	is_readonly = false;
@@ -121,10 +121,10 @@ Chunk::Chunk(size_t size, Meas first_m) :
 	minTime = std::numeric_limits<Time>::max();
 	maxTime = std::numeric_limits<Time>::min();
 
-	std::fill(_buffer_t.begin(), _buffer_t.end(), 0);
+	std::fill(_buffer_t->begin(), _buffer_t->end(), 0);
 
 	using compression::BinaryBuffer;
-	range = Range{ _buffer_t.data(),_buffer_t.data() + size };
+	range = Range{ _buffer_t->data(),_buffer_t->data() + size };
 	bw = std::make_shared<BinaryBuffer>(range);
 
 	c_writer = compression::CopmressedWriter(bw);
@@ -136,7 +136,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 Chunk::~Chunk() {
 	this->bw = nullptr;
-	_buffer_t.clear();
+	_buffer_t->clear();
 }
 
 bool Chunk::append(const Meas&m)
