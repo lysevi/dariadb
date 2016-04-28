@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iterator>
 
+#include <algorithm>
 #include <dariadb.h>
 #include <utils/fs.h>
 #include <storage/page_manager.h>
