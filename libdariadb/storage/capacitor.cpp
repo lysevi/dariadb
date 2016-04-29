@@ -10,6 +10,7 @@
 #include <limits>
 #include <utility>
 #include <unordered_map>
+
 using namespace dariadb;
 using namespace dariadb::storage;
 
@@ -184,7 +185,11 @@ public:
     }
 
     size_t size()const {
-        return _bucks.size();
+		size_t result = 0;
+		std::for_each(_bucks.cbegin(), _bucks.cend(), 
+			[&result](const std::pair<dariadb::Id,container>&c) {result += c.second.size(); });
+		
+		return result;
     }
 
     dariadb::Time minTime()const {
