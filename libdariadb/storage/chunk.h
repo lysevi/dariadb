@@ -5,7 +5,7 @@
 #include "../utils/locker.h"
 #include "../compression.h"
 #include "../compression/binarybuffer.h"
-#include <queue>
+#include <boost/lockfree/queue.hpp>
 
 #include <map>
 #include <set>
@@ -75,9 +75,9 @@ namespace dariadb {
             size_t polled();
         private:
             static std::unique_ptr<ChunkPool> _instance;
-            std::queue<void*> _ptrs;
-			utils::Locker                 _locker;
+            boost::lockfree::queue<void*> _ptrs;
 			size_t _max_size;
+			std::atomic_size_t _size;
         };
 	}
 }

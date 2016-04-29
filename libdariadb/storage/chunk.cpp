@@ -11,18 +11,23 @@ using namespace dariadb::compression;
 
 std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
-ChunkPool::ChunkPool(){
+ChunkPool::ChunkPool():_ptrs(ChunkPool_default_max_size){
 	_max_size = ChunkPool_default_max_size;
+	_size = 0;
 }
 
 ChunkPool::~ChunkPool(){
 	while (!_ptrs.empty()) {
-		auto out = _ptrs.front();		
-		_ptrs.pop();
+		void *out=nullptr;
+		if (!_ptrs.pop(out)) {
+			break;
+		}
 		if(out!=nullptr){
 			:: operator delete(out);
+			--_size;
 		}
 	}
+	assert(_size==0);
 }
 
 void ChunkPool::start(size_t max_size){
@@ -43,39 +48,30 @@ ChunkPool*ChunkPool::instance(){
 }
 
 size_t ChunkPool::polled(){
-	_locker.lock();
-	auto result = _ptrs.size();
-	_locker.unlock();
-	return result;
+	return _size;
 }
 
 void* ChunkPool::alloc(std::size_t sz) {
 	void*result = nullptr;
-	_locker.lock();
-	if (!_ptrs.empty()) {
-		result = _ptrs.front();
-		_ptrs.pop();
-	}
-	_locker.unlock();
-	if (result == nullptr) {
+	if(!_ptrs.pop(result)){
 		result = ::operator new(sz);
-	}	
+	}
+	else {
+		--_size;
+	}
 	memset(result, 0, sz);
 	return result;
 }
 
 void ChunkPool::free(void* ptr, std::size_t){
-	_locker.lock();
-    if (_ptrs.size() < _max_size) {
-        _ptrs.push(ptr);
-		_locker.unlock();
+    if (_ptrs.push(ptr)) {
+		++_size;
 		return;
     }
     else {
-		_locker.unlock();
+
 		::operator delete(ptr);
 	}
-	
 }
 
 void* Chunk::operator new(std::size_t sz){
