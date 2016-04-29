@@ -22,6 +22,9 @@ bool stop_info = false;
 
 class BenchCallback:public dariadb::storage::ReaderClb{
 public:
+    BenchCallback(){
+        count=0;
+    }
     void call(const dariadb::Meas&){
         count++;
     }
@@ -43,7 +46,7 @@ void show_info(dariadb::storage::UnionStorage *storage) {
 		std::cout 
 			<<"\rin memory chunks: "<<storage->chunks_in_memory()
 			<< " in disk chunks: " << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
-			<< " in queue: (p:" << queue_sizes.page<<" m:"<<queue_sizes.mem<<")"
+			<< " in queue: (p:" << queue_sizes.page<<" m:"<<queue_sizes.mem<<" cap:"<<queue_sizes.cap<<")"
             << " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
 			<< " writes: "<<append_count
 			<< " speed: "<< writes_per_sec << "/sec progress:" 
@@ -76,6 +79,8 @@ int main(int argc, char *argv[]) {
 			dariadb::utils::fs::rm(storage_path);
 		}
 
+        auto start_time=dariadb::timeutil::current_time();
+
 		auto raw_ptr = new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
 			dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
@@ -101,14 +106,24 @@ int main(int argc, char *argv[]) {
 			std::thread t = std::move(writers[pos++]);
 			t.join();
 		}
+
 		stop_info = true;
 		info_thread.join();
-		raw_ptr->flush();
+
+        {
+            std::cout<<"full flush..."<<std::endl;
+            auto start = clock();
+            raw_ptr->flush();
+            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+            std::cout << "flush time: " << elapsed << std::endl;
+        }
+
+		
 		auto queue_sizes = raw_ptr->queue_size();
 		std::cout
 			<< "\rin memory chunks: " << raw_ptr->chunks_in_memory()
 			<< " in disk chunks: " << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
-			<< " in queue: (p:" << queue_sizes.page << " m:" << queue_sizes.mem << ")"
+			<< " in queue: (p:" << queue_sizes.page << " m:" << queue_sizes.mem << " cap:" << queue_sizes.cap << ")"
 			<< " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
 			<< std::endl;
 
@@ -122,7 +137,7 @@ int main(int argc, char *argv[]) {
 
             auto start = clock();
 
-            const size_t reads_count=100;
+            const size_t reads_count=10;
             for(size_t i=0;i<reads_count;i++){
                 auto time_point = uniform_dist(e1);
                 ms->readInTimePoint(time_point)->readAll(clbk.get());
@@ -140,20 +155,31 @@ int main(int argc, char *argv[]) {
 
             auto start = clock();
 
-            const size_t reads_count = 100;
+            const size_t reads_count = 10;
             for (size_t i = 0; i<reads_count; i++) {
                 auto time_point1 = uniform_dist(e1);
                 auto time_point2 = uniform_dist(e1);
-//                std::cout
-//                        <<" i:"<<i
-//                        <<" from: "<<std::min(time_point1, time_point2)
-//                        <<" to: "<<std::max(time_point1, time_point2)<<std::endl;
-                ms->readInterval(std::min(time_point1, time_point2), std::max(time_point1, time_point2))->readAll(clbk.get());
+                auto from=std::min(time_point1,time_point2);
+                auto to=std::max(time_point1,time_point2);
+                ms->readInterval(from, to)->readAll(clbk.get());
             }
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
             std::cout << "time: " << elapsed << std::endl;
         }
+        {
+            std::cout << "read all..." << std::endl;
+            std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
+            auto start = clock();
+            dariadb::Meas::MeasList out;
+            ms->readInterval(start_time,ms->maxTime())->readAll(clbk.get());
 
+            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+            std::cout << "readed: " << clbk->count << std::endl;
+            std::cout << "time: " << elapsed << std::endl;
+            if(clbk->count!=(dariadb_bench::iteration_count*dariadb_bench::total_threads_count)){
+                throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
+            }
+        }
 		std::cout << "stoping storage...\n";
 		ms = nullptr;
 

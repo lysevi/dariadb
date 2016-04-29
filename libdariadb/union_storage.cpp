@@ -111,6 +111,7 @@ public:
 		QueueSizes result;
 		result.page = PageManager::instance()->in_queue_size();
 		result.mem = this->mem_storage_raw->queue_size();
+		result.cap = this->mem_cap->size();
 		return result;
 	}
 

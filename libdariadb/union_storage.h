@@ -13,8 +13,9 @@ namespace dariadb {
         class UnionStorage :public BaseStorage{
 		public:
 			struct QueueSizes {
-				size_t page;
-				size_t mem;
+				size_t page; ///queue length in PageManager
+				size_t mem;  ///queue length in MemoryStorage
+				size_t cap;  ///measurements in Capacitor
 			};
 			struct Limits {
 				dariadb::Time old_mem_chunks; // old_mem_chunks - time when drop old chunks to page (MemStorage)
