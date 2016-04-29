@@ -13,16 +13,14 @@ std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
 ChunkPool::ChunkPool(){
 	_max_size = ChunkPool_default_max_size;
-	_size = 0;
 }
 
 ChunkPool::~ChunkPool(){
-	while (_size != 0) {
-		void* out = nullptr;
-		_ptrs.pop(out);
+	while (!_ptrs.empty()) {
+		auto out = _ptrs.front();		
+		_ptrs.pop();
 		if(out!=nullptr){
 			:: operator delete(out);
-			--_size;
 		}
 	}
 }
@@ -45,31 +43,39 @@ ChunkPool*ChunkPool::instance(){
 }
 
 size_t ChunkPool::polled(){
-	return _size.load();
+	_locker.lock();
+	auto result = _ptrs.size();
+	_locker.unlock();
+	return result;
 }
 
 void* ChunkPool::alloc(std::size_t sz) {
 	void*result = nullptr;
-	this->_ptrs.pop(result);
-	
+	_locker.lock();
+	if (!_ptrs.empty()) {
+		result = _ptrs.front();
+		_ptrs.pop();
+	}
+	_locker.unlock();
 	if (result == nullptr) {
 		result = ::operator new(sz);
-	}else {
-		--_size;
-	}
-	
+	}	
 	memset(result, 0, sz);
 	return result;
 }
 
 void ChunkPool::free(void* ptr, std::size_t){
-    if (_size.load() < _max_size) {
+	_locker.lock();
+    if (_ptrs.size() < _max_size) {
         _ptrs.push(ptr);
-		++_size;
+		_locker.unlock();
+		return;
     }
     else {
+		_locker.unlock();
 		::operator delete(ptr);
 	}
+	
 }
 
 void* Chunk::operator new(std::size_t sz){
@@ -137,6 +143,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 Chunk::~Chunk() {
 	this->bw = nullptr;
 	_buffer_t->clear();
+	delete _buffer_t;
 }
 
 bool Chunk::append(const Meas&m)
