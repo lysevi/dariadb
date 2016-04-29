@@ -259,12 +259,29 @@ public:
 
 	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
         std::lock_guard<std::recursive_mutex> lg(_locker);
-		if (timePoint < mem_storage_raw->minTime()) {
-			return PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
-		}
-		else {
-			return mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
-		}
+        IdArray id_a = ids;
+        if (id_a.empty()) {
+            id_a = getIds();
+        }
+        IdToChunkMap result;
+        for(auto id:id_a){
+            dariadb::Time minT, maxT;
+            IdToChunkMap subRes;
+            if (!mem_storage_raw->minMaxTime(id, &minT, &maxT)) {
+                subRes = PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
+            }else{
+                if (minT >= timePoint) {
+                    subRes = mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
+                }
+                else {
+                    subRes=PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
+                }
+            }
+            for(auto kv:subRes){
+                result[kv.first]=kv.second;
+            }
+        }
+        return result;
 	}
 	
 	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
