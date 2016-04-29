@@ -10,35 +10,22 @@ using namespace dariadb::storage;
 using namespace dariadb::compression;
 
 std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
+std::unique_ptr<ChunkBufferPool> ChunkBufferPool::_instance=nullptr;
 
-ChunkPool::ChunkPool():_ptrs(ChunkPool_default_max_size){
-	_max_size = ChunkPool_default_max_size;
-	_size = 0;
+ChunkPool::ChunkPool():utils::Pool(ChunkPool_default_max_size){
 }
 
 ChunkPool::~ChunkPool(){
-	while (!_ptrs.empty()) {
-		void *out=nullptr;
-		if (!_ptrs.pop(out)) {
-			break;
-		}
-		if(out!=nullptr){
-			:: operator delete(out);
-			--_size;
-		}
-	}
-	assert(_size==0);
 }
 
-void ChunkPool::start(size_t max_size){
-	if (max_size != 0) {
-		ChunkPool::instance()->_max_size = max_size;
-	}
+void ChunkPool::start(){
+    ChunkPool::instance();
 }
 
 void ChunkPool::stop(){
     ChunkPool::_instance=nullptr;
 }
+
 
 ChunkPool*ChunkPool::instance(){
     if(_instance==nullptr){
@@ -47,31 +34,25 @@ ChunkPool*ChunkPool::instance(){
     return _instance.get();
 }
 
-size_t ChunkPool::polled(){
-	return _size;
+ChunkBufferPool::ChunkBufferPool():utils::Pool(ChunkPool_default_max_size){
 }
 
-void* ChunkPool::alloc(std::size_t sz) {
-	void*result = nullptr;
-	if(!_ptrs.pop(result)){
-		result = ::operator new(sz);
-	}
-	else {
-		--_size;
-	}
-	memset(result, 0, sz);
-	return result;
+ChunkBufferPool::~ChunkBufferPool(){
 }
 
-void ChunkPool::free(void* ptr, std::size_t){
-    if (_ptrs.push(ptr)) {
-		++_size;
-		return;
+void ChunkBufferPool::start(){
+    ChunkBufferPool::instance();
+}
+
+void ChunkBufferPool::stop(){
+    ChunkBufferPool::_instance=nullptr;
+}
+
+ChunkBufferPool*ChunkBufferPool::instance(){
+    if(_instance==nullptr){
+        _instance=std::unique_ptr<ChunkBufferPool>{new ChunkBufferPool};
     }
-    else {
-
-		::operator delete(ptr);
-	}
+    return _instance.get();
 }
 
 void* Chunk::operator new(std::size_t sz){
@@ -83,9 +64,11 @@ void Chunk::operator delete(void* ptr, std::size_t sz){
 }
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
-	_buffer_t(new u8vector(buffer_length)),
+    _buffer_t(nullptr),
+    _size(buffer_length),
     _locker{}
 {
+    _buffer_t = static_cast<u8vector>(ChunkBufferPool::instance()->alloc(buffer_length));
 	count = index.count;
 	first = index.first;
 	flag_bloom = index.flag_bloom;
@@ -98,10 +81,10 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	is_dropped = index.is_dropped;
 
 	for (size_t i = 0; i < buffer_length; i++) {
-		(*_buffer_t)[i] = buffer[i];
+        _buffer_t[i] = buffer[i];
 	}
 
-	range = Range{ _buffer_t->data(),_buffer_t->data() + buffer_length };
+    range = Range{ _buffer_t,_buffer_t + buffer_length };
 	assert(size_t(range.end - range.begin)==buffer_length);
 	bw = std::make_shared<BinaryBuffer>(range);
 	bw->set_bitnum(bw_bit_num);
@@ -112,9 +95,11 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 }
 
 Chunk::Chunk(size_t size, Meas first_m) :
-	_buffer_t(new u8vector(size)),
+    _buffer_t(nullptr),
+    _size(size),
     _locker()
 {
+    _buffer_t = static_cast<u8vector>(ChunkBufferPool::instance()->alloc(size));
 	is_readonly = false;
     is_dropped=false;
 	count = 0;
@@ -123,10 +108,10 @@ Chunk::Chunk(size_t size, Meas first_m) :
 	minTime = std::numeric_limits<Time>::max();
 	maxTime = std::numeric_limits<Time>::min();
 
-	std::fill(_buffer_t->begin(), _buffer_t->end(), 0);
+    std::fill(_buffer_t, _buffer_t+size, 0);
 
 	using compression::BinaryBuffer;
-	range = Range{ _buffer_t->data(),_buffer_t->data() + size };
+    range = Range{ _buffer_t,_buffer_t + size };
 	bw = std::make_shared<BinaryBuffer>(range);
 
 	c_writer = compression::CopmressedWriter(bw);
@@ -138,12 +123,10 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 Chunk::~Chunk() {
 	this->bw = nullptr;
-	_buffer_t->clear();
-	delete _buffer_t;
+    ChunkBufferPool::instance()->free(_buffer_t,_size);
 }
 
-bool Chunk::append(const Meas&m)
-{
+bool Chunk::append(const Meas&m){
 	if (is_dropped || is_readonly) {
 		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
 	}
