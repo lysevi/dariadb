@@ -21,7 +21,7 @@ else()
   set(DEF_INSTALL_CMAKE_DIR lib/CMake/dariadb)
 endif()
 set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH "Installation directory for CMake files")
-  
+
 # Make relative paths absolute (needed later on)
 foreach(p LIB BIN INCLUDE CMAKE)
   set(var INSTALL_${p}_DIR)
@@ -58,7 +58,7 @@ IF(WIN32)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Oy") #-fno-omit-frame-pointer analog
 else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
-  
+
   find_package(Boost  REQUIRED unit_test_framework system  filesystem)
 
   set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING

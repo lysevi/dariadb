@@ -120,6 +120,7 @@ public:
 		return dariadb::append_result(1, 0);
 	}
 
+	//TODO _chunks.size() can be great than max_limit.
 	void call_async(const Chunk_Ptr&chunk)override {
 		std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
 		this->_chunks.insert(std::make_pair(chunk->maxTime, chunk));
