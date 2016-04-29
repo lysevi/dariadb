@@ -10,9 +10,10 @@ using namespace dariadb::storage;
 using namespace dariadb::compression;
 
 std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
-std::unique_ptr<ChunkBufferPool> ChunkBufferPool::_instance=nullptr;
 
-ChunkPool::ChunkPool():utils::Pool(ChunkPool_default_max_size){
+ChunkPool::ChunkPool():
+    _chunks(ChunkPool_default_max_size),
+    _buffers(ChunkPool_default_max_size){
 }
 
 ChunkPool::~ChunkPool(){
@@ -34,33 +35,36 @@ ChunkPool*ChunkPool::instance(){
     return _instance.get();
 }
 
-ChunkBufferPool::ChunkBufferPool():utils::Pool(ChunkPool_default_max_size){
+void*ChunkPool::alloc_chunk(std::size_t sz){
+    return _chunks.alloc(sz);
 }
 
-ChunkBufferPool::~ChunkBufferPool(){
+void ChunkPool::free_chunk(void* ptr, std::size_t sz){
+    return _chunks.free(ptr,sz);
 }
 
-void ChunkBufferPool::start(){
-    ChunkBufferPool::instance();
+size_t ChunkPool::polled_chunks(){
+    return _chunks.polled();
 }
 
-void ChunkBufferPool::stop(){
-    ChunkBufferPool::_instance=nullptr;
+void*ChunkPool::alloc_buffer(std::size_t sz){
+    return _buffers.alloc(sz);
 }
 
-ChunkBufferPool*ChunkBufferPool::instance(){
-    if(_instance==nullptr){
-        _instance=std::unique_ptr<ChunkBufferPool>{new ChunkBufferPool};
-    }
-    return _instance.get();
+void ChunkPool::free_buffer(void* ptr, std::size_t sz){
+    return _buffers.free(ptr,sz);
+}
+
+size_t ChunkPool::polled_buffers(){
+    return _buffers.polled();
 }
 
 void* Chunk::operator new(std::size_t sz){
-    return ChunkPool::instance()->alloc(sz);
+    return ChunkPool::instance()->alloc_chunk(sz);
 }
 
 void Chunk::operator delete(void* ptr, std::size_t sz){
-    ChunkPool::instance()->free(ptr,sz);
+    ChunkPool::instance()->free_chunk(ptr,sz);
 }
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
@@ -68,7 +72,7 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
     _size(buffer_length),
     _locker{}
 {
-    _buffer_t = static_cast<u8vector>(ChunkBufferPool::instance()->alloc(buffer_length));
+    _buffer_t = static_cast<u8vector>(ChunkPool::instance()->alloc_buffer(buffer_length));
 	count = index.count;
 	first = index.first;
 	flag_bloom = index.flag_bloom;
@@ -99,7 +103,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
     _size(size),
     _locker()
 {
-    _buffer_t = static_cast<u8vector>(ChunkBufferPool::instance()->alloc(size));
+    _buffer_t = static_cast<u8vector>(ChunkPool::instance()->alloc_buffer(size));
 	is_readonly = false;
     is_dropped=false;
 	count = 0;
@@ -123,7 +127,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 Chunk::~Chunk() {
 	this->bw = nullptr;
-    ChunkBufferPool::instance()->free(_buffer_t,_size);
+    ChunkPool::instance()->free_buffer(_buffer_t,_size);
 }
 
 bool Chunk::append(const Meas&m){

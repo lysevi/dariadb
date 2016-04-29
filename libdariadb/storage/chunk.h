@@ -63,7 +63,7 @@ namespace dariadb {
         const size_t ChunkPool_default_max_size = 100;
 
 		//TODO need unit test.
-        class ChunkPool:public utils::Pool{
+        class ChunkPool{
         private:
             ChunkPool();
         public:
@@ -71,21 +71,18 @@ namespace dariadb {
             static void start();
             static void stop();
             static ChunkPool*instance();
+
+            void*alloc_chunk(std::size_t sz);
+            void free_chunk(void* ptr, std::size_t sz);
+            size_t polled_chunks();
+
+            void*alloc_buffer(std::size_t sz);
+            void free_buffer(void* ptr, std::size_t sz);
+            size_t polled_buffers();
         private:
             static std::unique_ptr<ChunkPool> _instance;
+            utils::Pool _chunks;
+            utils::Pool _buffers;
         };
-
-        class ChunkBufferPool:public utils::Pool{
-        private:
-            ChunkBufferPool();
-        public:
-            ~ChunkBufferPool();
-            static void start();
-            static void stop();
-            static ChunkBufferPool*instance();
-        private:
-            static std::unique_ptr<ChunkBufferPool> _instance;
-        };
-
 	}
 }
