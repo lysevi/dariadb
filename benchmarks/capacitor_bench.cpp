@@ -25,6 +25,11 @@ public:
 		return 0;
 	}
 
+	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) override {
+		return 0;
+	}
+
+
     void subscribe(const dariadb::IdArray&,const dariadb::Flag& , const dariadb::storage::ReaderClb_ptr &) override {
 	}
     dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray&, const dariadb::Flag&) override{

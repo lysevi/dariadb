@@ -32,7 +32,8 @@ namespace dariadb {
 			ChunksList drop_old_chunks(const dariadb::Time min_time);
 			ChunksList drop_old_chunks_by_limit(const size_t max_limit);
 			dariadb::storage::ChunksList drop_all();
-
+			//ChunkContainer
+			bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult)override;
 			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
 			IdArray getIds() override;

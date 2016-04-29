@@ -5,6 +5,7 @@
 #include "utils/locker.h"
 #include "storage/page_manager.h"
 #include <cassert>
+#include <algorithm>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -236,11 +237,18 @@ public:
 			IdArray cur_ids(1);
 			cur_ids[0] = id;
 			Cursor_ptr page_chunks, mem_chunks;
-			if (from < mem_storage_raw->minTime()) {
+			dariadb::Time minT, maxT;
+			if (!mem_storage_raw->minMaxTime(id, &minT, &maxT)) {
 				page_chunks = PageManager::instance()->chunksByIterval(cur_ids, flag, from, to);
 			}
-			if (to > mem_storage_raw->minTime()){
-				mem_chunks = mem_storage_raw->chunksByIterval(cur_ids, flag, from, to);
+			else {
+				if (minT <= from && maxT >= to) {
+					mem_chunks = mem_storage_raw->chunksByIterval(cur_ids, flag, from, to);
+				}
+				else {
+					page_chunks = PageManager::instance()->chunksByIterval(cur_ids, flag, from, PageManager::instance()->maxTime());
+					mem_chunks = mem_storage_raw->chunksByIterval(cur_ids, flag, minT, to);
+				}
 			}
 
 			Cursor_ptr sub_result{ new UnionCursor{page_chunks,mem_chunks} };
@@ -258,6 +266,28 @@ public:
 			return mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
 		}
 	}
+	
+	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
+		dariadb::Time subMin1, subMax1;
+		auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
+		dariadb::Time subMin2, subMax2;
+		auto mr = mem_storage_raw->minMaxTime(id, &subMin2, &subMax2);
+
+		if (!pr) {
+			*minResult = subMin2;
+			*maxResult = subMax2;
+			return mr;
+		}
+		if (!mr) {
+			*minResult = subMin1;
+			*maxResult = subMax1;
+			return pr;
+		}
+		*minResult = std::min(subMin1, subMin2);
+		*maxResult = std::max(subMax1, subMax2);
+		return true;
+	}
+
 	IdArray getIds() {
         std::lock_guard<std::recursive_mutex> lg(_locker);
 		auto page_ids = PageManager::instance()->getIds();
@@ -325,6 +355,10 @@ Reader_ptr UnionStorage::currentValue(const IdArray&ids, const Flag& flag) {
 
 void  UnionStorage::flush() {
 	_impl->flush();
+}
+
+bool UnionStorage::minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
+	return _impl->minMaxTime(id, minResult, maxResult);
 }
 
 Cursor_ptr UnionStorage::chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) {

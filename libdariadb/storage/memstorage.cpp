@@ -76,6 +76,40 @@ public:
 	Time minTime() { return _min_time; }
 	Time maxTime() { return _max_time; }
 
+	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
+		bool result = false;
+		*minResult = std::numeric_limits<dariadb::Time>::max();
+		*maxResult = std::numeric_limits<dariadb::Time>::min();
+		{
+			std::lock_guard<utils::Locker> lg(_locker_chunks);
+			auto resf = _chunks.begin();
+			auto rest = _chunks.end();
+
+			for (auto it = resf; it != rest; ++it) {
+				if (it->second->first.id == id) {
+					*minResult = std::min(it->second->minTime, *minResult);
+					*maxResult = std::max(it->second->maxTime, *maxResult);
+					result = true;
+				}
+			}
+		}
+		{
+			_locker_free_chunks.lock();
+			auto it = _free_chunks.find(id);
+			_locker_free_chunks.unlock();
+			if (it != _free_chunks.end()) {
+				*minResult = std::min(it->second->minTime, *minResult);
+				*maxResult = std::max(it->second->maxTime, *maxResult);
+				result = true;
+			}
+		}
+		return result;
+	}
+	
+	bool maxTime(dariadb::Id id, dariadb::Time*out){
+		return 0;
+	}
+	
 	Chunk_Ptr getFreeChunk(dariadb::Id id) {
 		Chunk_Ptr resulted_chunk = nullptr;
 		auto ch_iter = _free_chunks.find(id);
@@ -422,6 +456,11 @@ Time MemoryStorage::minTime() {
 Time MemoryStorage::maxTime() {
 	return _Impl->maxTime();
 }
+
+bool MemoryStorage::minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
+	return _Impl->minMaxTime(id, minResult,maxResult);
+}
+
 
 append_result MemoryStorage::append(const dariadb::Meas &value) {
 	return _Impl->append(value);

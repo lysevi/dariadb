@@ -53,7 +53,8 @@ namespace dariadb {
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			ChunksList get_open_chunks();
 			void dec_reader();
-
+			//ChunkContainer
+			bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult)override;
 			Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) override;
 			IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) override;
 			IdArray getIds() override;

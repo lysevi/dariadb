@@ -41,6 +41,7 @@ namespace dariadb{
             bool append(const ChunksList&lst)override;
 			
 			//ChunkContainer
+			bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult)override;
             Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to)override;
             IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint)override;
             IdArray getIds() override;

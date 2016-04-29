@@ -32,13 +32,18 @@ public:
 		return dariadb::append_result(1, 0);
 	}
 
-	dariadb::Time minTime() {
+	dariadb::Time minTime()override {
 		return 0;
 	}
 	/// max time of writed meas
-	dariadb::Time maxTime() {
+	dariadb::Time maxTime() override {
 		return 0;
 	}
+	
+	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) override {
+		return 0;
+	}
+
 
 	void subscribe(const dariadb::IdArray&, const dariadb::Flag&, const dariadb::storage::ReaderClb_ptr &) override {
 	}
@@ -57,6 +62,7 @@ public:
 		return dariadb::storage::IdToChunkMap{};
 	}
 	dariadb::IdArray getIds() { return dariadb::IdArray{}; }
+
 };
 
 std::atomic_long append_count{ 0 }, read_all_times{ 0 };

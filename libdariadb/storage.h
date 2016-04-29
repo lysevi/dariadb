@@ -37,9 +37,8 @@ namespace dariadb {
         class BaseStorage: public utils::NonCopy, public ChunkContainer {
         public:
             virtual ~BaseStorage() = default;
-            /// min time of writed meas
+
             virtual Time minTime() = 0;
-            /// max time of writed meas
             virtual Time maxTime() = 0;
 
             virtual append_result append(const Meas::MeasArray &ma);

@@ -24,6 +24,10 @@ public:
 		writed_count += 1;
 		return dariadb::append_result(1,0);
 	}
+	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) override {
+		return 0;
+	}
+	
 
     dariadb::Time minTime() override{
 		return 0;

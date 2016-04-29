@@ -332,8 +332,29 @@ void Page::dec_reader(){
 	header->count_readers--;
 }
 
-Cursor_ptr dariadb::storage::Page::chunksByIterval(const IdArray & ids, Flag flag, Time from, Time to)
-{
+bool  dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
+	bool result = false;
+	*minResult = std::numeric_limits<dariadb::Time>::max();
+	*maxResult = std::numeric_limits<dariadb::Time>::min();
+
+	std::lock_guard<std::mutex> lg(_locker);
+	auto it_to = _itree.end();
+	auto it_from = _itree.begin();
+	for (; it_from != it_to; ++it_from) {
+		auto index_rec = this->index[it_from->second];
+		if (!index_rec.is_init) {
+			continue;
+		}
+		if (!index_rec.info.first.id==id) {
+			result = true;
+			*minResult = std::min(index_rec.info.minTime, *minResult);
+			*maxResult = std::max(index_rec.info.maxTime, *maxResult);
+		}
+	}
+	return result;
+}
+
+Cursor_ptr dariadb::storage::Page::chunksByIterval(const IdArray & ids, Flag flag, Time from, Time to){
 	return get_chunks(ids, from, to, flag);
 }
 
