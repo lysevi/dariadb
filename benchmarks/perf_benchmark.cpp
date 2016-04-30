@@ -170,7 +170,6 @@ int main(int argc, char *argv[]) {
             std::cout << "read all..." << std::endl;
             std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
             auto start = clock();
-            dariadb::Meas::MeasList out;
             ms->readInterval(start_time,ms->maxTime())->readAll(clbk.get());
 
             auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
