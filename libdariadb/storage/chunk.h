@@ -51,9 +51,10 @@ namespace dariadb {
         };
 
         typedef std::shared_ptr<Chunk>    Chunk_Ptr;
+        typedef std::weak_ptr<Chunk>      Chunk_Weak;
         typedef std::list<Chunk_Ptr>      ChunksList;
         typedef std::map<Id, Chunk_Ptr>   IdToChunkMap;
-        typedef std::map<Id, ChunksList> ChunkMap;
+        typedef std::map<Id, ChunksList>  ChunkMap;
 		typedef std::unordered_map<Id, Chunk_Ptr>   IdToChunkUMap;
 
 		const size_t ChunkPool_default_max_size = 200;

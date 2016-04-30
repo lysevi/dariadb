@@ -12,13 +12,17 @@
 #include <limits>
 #include <algorithm>
 #include <assert.h>
+#include <unordered_map>
 
+#include <stx/btree_map>
 
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChunksList> ChunkMap;
+typedef ChunkByTimeMap<Chunk_Weak, typename stx::btree_map<dariadb::Time, Chunk_Weak>> ChunkWeaksMap;
+typedef std::unordered_map<dariadb::Id, ChunkWeaksMap> MultiTree;
 
 class MemstorageCursor : public Cursor {
 public:
@@ -71,27 +75,33 @@ public:
 		this->stop_async();
 		_subscribe_notify->stop();
 		_chunks.clear();
+        _multitree.clear();
 	}
 
 	Time minTime() { return _min_time; }
 	Time maxTime() { return _max_time; }
 
-	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
+    bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
 		bool result = false;
 		*minResult = std::numeric_limits<dariadb::Time>::max();
 		*maxResult = std::numeric_limits<dariadb::Time>::min();
 		{
-			std::lock_guard<utils::Locker> lg(_locker_chunks);
-			auto resf = _chunks.begin();
-			auto rest = _chunks.end();
+            std::lock_guard<utils::Locker> lg(_locker_chunks);
+            auto mt_iter=_multitree.find(id);
+            if(mt_iter!=_multitree.end()){
+                auto resf = mt_iter->second.begin();
+                auto rest = mt_iter->second.end();
 
-			for (auto it = resf; it != rest; ++it) {
-				if (it->second->first.id == id) {
-					*minResult = std::min(it->second->minTime, *minResult);
-					*maxResult = std::max(it->second->maxTime, *maxResult);
-					result = true;
-				}
-			}
+                for (auto it = resf; it != rest; ++it) {
+                    if(auto v=it->second.lock()){
+                        if (v->first.id == id) {
+                            *minResult = std::min(v->minTime, *minResult);
+                            *maxResult = std::max(v->maxTime, *maxResult);
+                            result = true;
+                        }
+                    }
+                }
+            }
 		}
 		{
 			_locker_free_chunks.lock();
@@ -432,7 +442,8 @@ public:
 protected:
 	size_t _size;
 
-    ChunkByTimeMap _chunks;
+    ChunkByTimeMap<Chunk_Ptr> _chunks;
+    MultiTree _multitree;
 	IdToChunkUMap _free_chunks;
 	Time _min_time, _max_time;
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
