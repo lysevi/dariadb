@@ -82,10 +82,10 @@ public:
 	Time maxTime() { return _max_time; }
 
     bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
-		bool result = false;
-		*minResult = std::numeric_limits<dariadb::Time>::max();
-		*maxResult = std::numeric_limits<dariadb::Time>::min();
-		{
+        bool result = false;
+        *minResult = std::numeric_limits<dariadb::Time>::max();
+        *maxResult = std::numeric_limits<dariadb::Time>::min();
+        {//TODO multilock per id
             std::lock_guard<utils::Locker> lg(_locker_chunks);
             auto mt_iter=_multitree.find(id);
             if(mt_iter!=_multitree.end()){
@@ -95,27 +95,24 @@ public:
                 for (auto it = resf; it != rest; ++it) {
                     auto v=it->second;
 
-                    if (v->first.id == id) {
-                        *minResult = std::min(v->minTime, *minResult);
-                        *maxResult = std::max(v->maxTime, *maxResult);
-                        result = true;
-                    }
-
+                    *minResult = std::min(v->minTime, *minResult);
+                    *maxResult = std::max(v->maxTime, *maxResult);
+                    result = true;
                 }
             }
-		}
-		{
-			_locker_free_chunks.lock();
-			auto it = _free_chunks.find(id);
-			_locker_free_chunks.unlock();
-			if (it != _free_chunks.end()) {
-				*minResult = std::min(it->second->minTime, *minResult);
-				*maxResult = std::max(it->second->maxTime, *maxResult);
-				result = true;
-			}
-		}
-		return result;
-	}
+        }
+        {
+            _locker_free_chunks.lock();
+            auto it = _free_chunks.find(id);
+            _locker_free_chunks.unlock();
+            if (it != _free_chunks.end()) {
+                *minResult = std::min(it->second->minTime, *minResult);
+                *maxResult = std::max(it->second->maxTime, *maxResult);
+                result = true;
+            }
+        }
+        return result;
+    }
 	
 	bool maxTime(dariadb::Id id, dariadb::Time*out){
 		return 0;
