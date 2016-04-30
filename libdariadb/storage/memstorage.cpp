@@ -21,7 +21,7 @@ using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChunksList> ChunkMap;
-typedef ChunkByTimeMap<Chunk_Weak, typename stx::btree_map<dariadb::Time, Chunk_Weak>> ChunkWeaksMap;
+typedef ChunkByTimeMap<Chunk_Weak, typename std::map<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
 typedef std::unordered_map<dariadb::Id, ChunkWeaksMap> MultiTree;
 
 class MemstorageCursor : public Cursor {
@@ -93,13 +93,14 @@ public:
                 auto rest = mt_iter->second.end();
 
                 for (auto it = resf; it != rest; ++it) {
-                    if(auto v=it->second.lock()){
-                        if (v->first.id == id) {
-                            *minResult = std::min(v->minTime, *minResult);
-                            *maxResult = std::max(v->maxTime, *maxResult);
-                            result = true;
-                        }
+                    auto v=it->second;
+
+                    if (v->first.id == id) {
+                        *minResult = std::min(v->minTime, *minResult);
+                        *maxResult = std::max(v->maxTime, *maxResult);
+                        result = true;
                     }
+
                 }
             }
 		}
@@ -168,6 +169,13 @@ public:
 	void call_async(const Chunk_Ptr&chunk)override {
 		std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
 		this->_chunks.insert(std::make_pair(chunk->maxTime, chunk));
+
+        auto mt_iter=_multitree.find(chunk->first.id);
+        if(mt_iter!=_multitree.end()){
+            mt_iter->second.insert(std::make_pair(chunk->maxTime, chunk));
+        }else{
+            _multitree[chunk->first.id].insert(std::make_pair(chunk->maxTime, chunk));
+        }
 		assert(chunk->is_full());
 	}
 
@@ -235,6 +243,9 @@ public:
         }
 		if (result.size() > size_t(0)){
 			std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
+            for(auto&kv:_multitree){
+                kv.second.remove_droped();
+            }
             _chunks.remove_droped();
             update_min_after_drop();
         }
@@ -267,6 +278,10 @@ public:
             }
 			if (result.size() > size_t(0)) {
 				std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
+
+                for(auto&kv:_multitree){
+                    kv.second.remove_droped();
+                }
                 _chunks.remove_droped();
 				update_min_after_drop();
 			}
@@ -297,6 +312,7 @@ public:
 		}
 		this->_free_chunks.clear();
 		this->_chunks.clear();
+        this->_multitree.clear();
 		//update min max
 		this->_min_time = std::numeric_limits<dariadb::Time>::max();
 		this->_max_time = std::numeric_limits<dariadb::Time>::min();
@@ -339,19 +355,23 @@ public:
         for(auto i:id_a){
             {
                 std::lock_guard<utils::Locker> lg(_locker_chunks);
-                auto resf = _chunks.get_lower_bound(from);
-                auto rest = _chunks.get_upper_bound(to);
+                auto mt_iter=_multitree.find(i);
+                if(mt_iter!=_multitree.end()){
+                    auto resf =  mt_iter->second.get_lower_bound(from);
+                    auto rest = mt_iter->second.get_upper_bound(to);
 
-                for(auto it=resf;it!=rest;++it){
-                    auto ch = it->second;
-                    if (ch->is_dropped) {
-                        throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
-                    }
-                    if(ch->first.id!=i){
-                        continue;
-                    }
-                    if ((check_chunk_flag(flag, ch)) && (check_chunk_to_interval(from, to, ch))){
-                        result.push_back(ch);
+                    for(auto it=resf;it!=rest;++it){
+                        auto ch=it->second;
+                        if (ch->is_dropped) {
+                            throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
+                        }
+                        if(ch->first.id!=i){
+                            continue;
+                        }
+                        if ((check_chunk_flag(flag, ch)) && (check_chunk_to_interval(from, to, ch))){
+                            result.push_back(ch);
+                        }
+
                     }
                 }
             }
@@ -388,20 +408,24 @@ public:
 		}
 		if (!_chunks.empty()) {
 			std::lock_guard<utils::Locker> lg(_locker_chunks);
-            auto rest = _chunks.get_upper_bound(timePoint);
+            for(auto &kv:_multitree){
 
-			for (auto it = _chunks.begin(); it != _chunks.end(); ++it) {
-				auto cur_chunk = it->second;
+                auto rest = kv.second.get_upper_bound(timePoint);
 
-				if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
-					if (cur_chunk->minTime <= timePoint) {
-						result[cur_chunk->first.id] = cur_chunk;
-					}
-				}
-				if (it == rest) {
-					break;
-				}
-			}
+                for (auto it = kv.second.begin(); it != kv.second.end(); ++it) {
+                    auto cur_chunk = it->second;
+
+                    if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
+                        if (cur_chunk->minTime <= timePoint) {
+                            result[cur_chunk->first.id] = cur_chunk;
+                        }
+                    }
+                    if (it == rest) {
+                        break;
+                    }
+
+                }
+            }
 		}
 		return result;
 	}
