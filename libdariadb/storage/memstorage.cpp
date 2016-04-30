@@ -328,16 +328,14 @@ public:
         return false;
     }
 
-    bool check_chunk_to_qyery(const IdArray &ids, Flag flag, const Chunk_Ptr&ch)
-    {
+    bool check_chunk_to_qyery(const IdArray &ids, Flag flag, const Chunk_Ptr&ch)    {
         if ((ids.size() == 0) || (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
             return check_chunk_flag(flag,ch);
         }
         return false;
     }
 
-    bool check_chunk_to_interval(Time from, Time to, const Chunk_Ptr&ch)
-	{
+    bool check_chunk_to_interval(Time from, Time to, const Chunk_Ptr&ch)	{
 		if ((utils::inInterval(from, to, ch->minTime)) || (utils::inInterval(from, to, ch->maxTime))) {
             return true;
 		}
@@ -353,28 +351,28 @@ public:
             id_a=this->getIds();
         }
         for(auto i:id_a){
-            {
-                std::lock_guard<utils::Locker> lg(_locker_chunks);
-                auto mt_iter=_multitree.find(i);
-                if(mt_iter!=_multitree.end()){
-                    auto resf =  mt_iter->second.get_lower_bound(from);
-                    auto rest = mt_iter->second.get_upper_bound(to);
+            _locker_chunks.lock();
+            auto mt_iter=_multitree.find(i);
+            if(mt_iter!=_multitree.end()){
+                auto resf =  mt_iter->second.get_lower_bound(from);
+                auto rest = mt_iter->second.get_upper_bound(to);
 
-                    for(auto it=resf;it!=rest;++it){
-                        auto ch=it->second;
-                        if (ch->is_dropped) {
-                            throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
-                        }
-                        if(ch->first.id!=i){
-                            continue;
-                        }
-                        if ((check_chunk_flag(flag, ch)) && (check_chunk_to_interval(from, to, ch))){
-                            result.push_back(ch);
-                        }
-
+                for(auto it=resf;it!=rest;++it){
+                    auto ch=it->second;
+                    if (ch->is_dropped) {
+                        throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
                     }
+                    if(ch->first.id!=i){
+                        continue;
+                    }
+                    if ((check_chunk_flag(flag, ch)) && (check_chunk_to_interval(from, to, ch))){
+                        result.push_back(ch);
+                    }
+
                 }
             }
+            _locker_chunks.unlock();
+
             _locker_free_chunks.lock();
             auto fres=_free_chunks.find(i);
             _locker_free_chunks.unlock();
@@ -406,27 +404,28 @@ public:
 				}
 			}
 		}
-		if (!_chunks.empty()) {
-			std::lock_guard<utils::Locker> lg(_locker_chunks);
+        if (!_chunks.empty()) {
+            std::lock_guard<utils::Locker> lg(_locker_chunks);
             for(auto &kv:_multitree){
+                if((ids.size()==0) || (std::find(ids.cbegin(),ids.cend(),kv.first))!=ids.cend()){
+                    auto rest = kv.second.get_upper_bound(timePoint);
 
-                auto rest = kv.second.get_upper_bound(timePoint);
+                    for (auto it = kv.second.begin(); it != kv.second.end(); ++it) {
+                        auto cur_chunk = it->second;
 
-                for (auto it = kv.second.begin(); it != kv.second.end(); ++it) {
-                    auto cur_chunk = it->second;
-
-                    if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
-                        if (cur_chunk->minTime <= timePoint) {
-                            result[cur_chunk->first.id] = cur_chunk;
+                        if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
+                            if (cur_chunk->minTime <= timePoint) {
+                                result[cur_chunk->first.id] = cur_chunk;
+                            }
                         }
-                    }
-                    if (it == rest) {
-                        break;
-                    }
+                        if (it == rest) {
+                            break;
+                        }
 
+                    }
                 }
             }
-		}
+        }
 		return result;
 	}
 
