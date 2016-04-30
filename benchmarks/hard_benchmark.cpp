@@ -14,8 +14,6 @@
 #include <cstdlib>
 #include <atomic>
 
-dariadb::Time startTime = dariadb::timeutil::current_time();
-
 class BenchCallback :public dariadb::storage::ReaderClb {
 public:
 	void call(const dariadb::Meas&m) {
@@ -55,15 +53,14 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread, dariadb::storage::BaseS
 
     size_t max_id=(id_from + id_per_thread);
    
-
     for (dariadb::Id i = id_from; i < max_id; i += 1) {
 		dariadb::Value v = 1.0;
+        m.id = i;
+        m.flag = dariadb::Flag(0);
         auto max_rnd = uniform_dist(e1);
-		dariadb::Time t = startTime;
+        m.time = dariadb::timeutil::current_time();
 		for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
-			m.id = i;
-			m.flag = dariadb::Flag(0);
-			m.time = t++;
+            m.time+=10;
 			m.value = v;
 			ms->append(m);
 			writen++;
@@ -88,23 +85,23 @@ int main(int argc, char *argv[]) {
 	const dariadb::Time old_mem_chunks = 0;
 	const size_t max_mem_chunks = 0;
 	
-	{// 1.
-		if (dariadb::utils::fs::path_exists(storage_path)) {
-			dariadb::utils::fs::rm(storage_path);
-		}
+//    {// 1.
+//        if (dariadb::utils::fs::path_exists(storage_path)) {
+//            dariadb::utils::fs::rm(storage_path);
+//        }
 
-		auto raw_ptr = new dariadb::storage::UnionStorage(
-			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
-			dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
-			dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
-        dariadb::storage::BaseStorage_ptr ms{ raw_ptr };
-		auto start = clock();
+//        auto raw_ptr = new dariadb::storage::UnionStorage(
+//            dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
+//            dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+//            dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+//        dariadb::storage::BaseStorage_ptr ms{ raw_ptr };
+//        auto start = clock();
 
-		writer_1(ms);
+//        writer_1(ms);
 
-		auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-		std::cout << "1. insert : " << elapsed << std::endl;
-	}
+//        auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+//        std::cout << "1. insert : " << elapsed << std::endl;
+//    }
 	
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
@@ -117,16 +114,14 @@ int main(int argc, char *argv[]) {
 	dariadb::storage::BaseStorage_ptr ms{ raw_ptr_ds };
 
 	{// 2.
-		const size_t threads_count = 16;
+        const size_t threads_count = 16;
 		const size_t id_per_thread = size_t(32768 / threads_count);
-
-		startTime = dariadb::timeutil::current_time();
 
 		auto start = clock();
 		std::vector<std::thread> writers(threads_count);
 		size_t pos = 0;
-		for (size_t i = 0; i < threads_count; i++) {
-			std::thread t{ writer_2, id_per_thread*i+1, id_per_thread, ms };
+        for (size_t i = 0; i < threads_count; i++) {
+            std::thread t{ writer_2, id_per_thread*i+1, id_per_thread, ms};
 			writers[pos++] = std::move(t);
 		}
 
@@ -140,13 +135,28 @@ int main(int argc, char *argv[]) {
 		std::cout << "2. insert : " << elapsed << std::endl;
 		raw_ptr_ds->flush();
 	}
+    auto queue_sizes = raw_ptr_ds->queue_size();
+    std::cout
+        << "\rin memory chunks: " << raw_ptr_ds->chunks_in_memory()
+        << " in disk chunks: " << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
+        << " in queue: (p:" << queue_sizes.page << " m:" << queue_sizes.mem << " cap:" << queue_sizes.cap << ")"
+        << " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
+        << std::endl;
+
+    std::cout << "read all..." << std::endl;
+    std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
+    auto start = clock();
+    ms->readInterval(0,ms->maxTime())->readAll(clbk.get());
+
+    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+    std::cout << "readed: " << clbk->count << std::endl;
+    std::cout << "time: " << elapsed << std::endl;
 	{//3
-		raw_ptr_ds->flush();
+
 		std::random_device r;
 		std::default_random_engine e1(r());
 		std::uniform_int_distribution<dariadb::Id> uniform_dist(1, 32767);
-		auto stopTime = dariadb::timeutil::current_time() - 1;
-		std::uniform_int_distribution<dariadb::Time> uniform_dist_t(startTime, stopTime);
+        std::uniform_int_distribution<dariadb::Time> uniform_dist_t(raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
 		dariadb::IdArray ids;
 		ids.resize(1);
 
@@ -164,7 +174,7 @@ int main(int argc, char *argv[]) {
 		auto start = clock();
 		
 		for (size_t i = 0; i < queries_count; i++) {
-            ids[0]= rnd_ids[i];
+            ids[0]= 1;
             auto t = rnd_time[i];
 			auto rdr=ms->readInTimePoint(ids,0,t);
 			rdr->readAll(clbk.get());
@@ -173,11 +183,10 @@ int main(int argc, char *argv[]) {
 		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ queries_count;
 		std::cout << "3. time point: " << elapsed<< " readed: "<< raw_ptr->count << std::endl;
 	}
-
 	{//4
 		std::random_device r;
 		std::default_random_engine e1(r());
-		std::uniform_int_distribution<dariadb::Id> uniform_dist(startTime, dariadb::timeutil::current_time());
+        std::uniform_int_distribution<dariadb::Id> uniform_dist(raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
 
         const size_t queries_count = 32;
 
@@ -205,7 +214,7 @@ int main(int argc, char *argv[]) {
 	{//5
 		std::random_device r;
 		std::default_random_engine e1(r());
-		std::uniform_int_distribution<dariadb::Time> uniform_dist(startTime, dariadb::timeutil::current_time());
+        std::uniform_int_distribution<dariadb::Time> uniform_dist(raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
 
 		auto raw_ptr = new BenchCallback();
 		dariadb::storage::ReaderClb_ptr clbk{ raw_ptr };
@@ -234,7 +243,7 @@ int main(int argc, char *argv[]) {
 	{//6
 		std::random_device r;
 		std::default_random_engine e1(r());
-		std::uniform_int_distribution<dariadb::Time> uniform_dist(startTime, dariadb::timeutil::current_time());
+        std::uniform_int_distribution<dariadb::Time> uniform_dist(raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
 		std::uniform_int_distribution<dariadb::Id> uniform_dist_id(1, 32767);
 
 		const size_t ids_count = size_t(32768 * 0.1);
