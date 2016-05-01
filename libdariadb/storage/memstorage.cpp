@@ -21,7 +21,7 @@ using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChunksList> ChunkMap;
-typedef ChunkByTimeMap<Chunk_Ptr, typename std::map<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
+typedef ChunkByTimeMap<Chunk_Ptr, typename stx::btree_multimap<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
 typedef std::unordered_map<dariadb::Id, ChunkWeaksMap> MultiTree;
 
 class MemstorageCursor : public Cursor {
@@ -86,7 +86,7 @@ public:
         *minResult = std::numeric_limits<dariadb::Time>::max();
         *maxResult = std::numeric_limits<dariadb::Time>::min();
         {//TODO multilock per id
-            std::lock_guard<utils::Locker> lg(_locker_chunks);
+            std::lock_guard<std::mutex> lg(_locker_chunks);
             auto mt_iter=_multitree.find(id);
             if(mt_iter!=_multitree.end()){
                 auto resf = mt_iter->second.begin();
@@ -164,7 +164,7 @@ public:
 
 	//TODO _chunks.size() can be great than max_limit.
 	void call_async(const Chunk_Ptr&chunk)override {
-		std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
+        std::lock_guard<std::mutex> lg_ch(_locker_chunks);
 		this->_chunks.insert(std::make_pair(chunk->maxTime, chunk));
 
         auto mt_iter=_multitree.find(chunk->first.id);
@@ -223,7 +223,9 @@ public:
 	}
 
 	dariadb::storage::ChunksList drop_old_chunks(const dariadb::Time min_time) {
-        std::lock_guard<std::mutex> lg_drop(_locker_drop);
+        std::unique_lock<std::mutex> lg_drop(_locker_drop,  std::defer_lock);
+        std::unique_lock<std::mutex> lg_ch(_locker_chunks, std::defer_lock);
+        std::lock(lg_drop,lg_ch);
 		ChunksList result;
         auto now = dariadb::timeutil::current_time();
 
@@ -239,7 +241,6 @@ public:
             }
         }
 		if (result.size() > size_t(0)){
-			std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
             for(auto&kv:_multitree){
                 kv.second.remove_droped();
             }
@@ -255,17 +256,22 @@ public:
 		ChunksList result{};
 
 		if (chunks_total_size() >= max_limit) {
-			std::lock_guard<std::mutex> lg_drop(_locker_drop);
+            std::unique_lock<std::mutex> lg_drop(_locker_drop,  std::defer_lock);
+            std::unique_lock<std::mutex> lg_ch(_locker_chunks, std::defer_lock);
+            std::lock(lg_drop,lg_ch);
 
-			int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
+            int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
 				return result;
 			}
 
             for (auto& kv : _chunks) {
 				auto chunk = kv.second;
+                assert(chunk!=nullptr);
+                assert(chunk->_buffer_t.size()!=0);
                 if (chunk->is_readonly) {
                     result.push_back(chunk);
+                    assert(chunk->_buffer_t.size()!=0);
                     chunk->is_dropped=true;
                 }
 
@@ -274,14 +280,22 @@ public:
                 }
             }
 			if (result.size() > size_t(0)) {
-				std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
-
                 for(auto&kv:_multitree){
                     kv.second.remove_droped();
                 }
+
+#ifdef DEBUG
+                for(auto kv:_chunks){
+                    assert(kv.second->_buffer_t.size()!=0);
+                }
+                for(auto v:result){
+                    assert(v->_buffer_t.size()!=0);
+                }
+#endif
                 _chunks.remove_droped();
-				update_min_after_drop();
+                update_min_after_drop();
 			}
+
 		}
 		return result;
 	}
@@ -297,7 +311,7 @@ public:
 
 	dariadb::storage::ChunksList drop_all() {
         std::lock_guard<std::mutex> lg_drop(_locker_drop);
-		std::lock_guard<utils::Locker> lg_ch(_locker_chunks);
+        std::lock_guard<std::mutex> lg_ch(_locker_chunks);
 		ChunksList result;
 		
         for (auto& kv : _chunks) {
@@ -402,7 +416,7 @@ public:
 			}
 		}
         if (!_chunks.empty()) {
-            std::lock_guard<utils::Locker> lg(_locker_chunks);
+            std::lock_guard<std::mutex> lg(_locker_chunks);
             for(auto &kv:_multitree){
                 if((ids.size()==0) || (std::find(ids.cbegin(),ids.cend(),kv.first))!=ids.cend()){
                     auto rest = kv.second.get_upper_bound(timePoint);
@@ -469,7 +483,7 @@ protected:
 	std::unique_ptr<SubscribeNotificator> _subscribe_notify;
     mutable std::mutex _subscribe_locker;
     mutable std::mutex _locker_free_chunks, _locker_drop, _locker_min_max;
-	mutable utils::Locker _locker_chunks;
+    mutable std::mutex _locker_chunks;
 };
 
 MemoryStorage::MemoryStorage(size_t size)

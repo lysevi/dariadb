@@ -68,6 +68,7 @@ public:
 		append_result result{};
         if (!mem_cap->append(value)){
         //if(mem_storage_raw->append(value).writed!=1){
+            assert(false);
 			result.ignored++;
 		}
 		else {
@@ -89,6 +90,11 @@ public:
 		else {
             //std::lock_guard<std::mutex> lg(_drop_locker);
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
+#ifdef DEBUG
+            for(auto c:old_chunks){
+                assert(c->_buffer_t.size()!=0);
+            }
+#endif
             PageManager::instance()->append(old_chunks);
 		}
 	}

@@ -81,14 +81,15 @@ public:
 	}
 
     bool append(const Chunk_Ptr&ch) {
-        std::unique_lock<std::mutex> lg(_locker);
+        std::lock_guard<std::mutex> lg(_locker);
+        assert(ch->_buffer_t.size()!=0);
         this->add_async_data(ch);
         return true;
     }
 
 	bool append(const ChunksList&lst) {
         for(auto &c:lst){
-            assert(c!=nullptr);
+            assert(c->_buffer_t.size()!=0);
             if(!append(c)){
                 return false;
             }
