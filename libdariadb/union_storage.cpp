@@ -276,7 +276,7 @@ public:
             if (!mem_storage_raw->minMaxTime(id, &minT, &maxT)) {
                 subRes = PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
             }else{
-                if (minT >= timePoint) {
+                if (minT <= timePoint) {
                     subRes = mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
                 }
                 else {
