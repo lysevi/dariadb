@@ -88,6 +88,7 @@ public:
 
 	bool append(const ChunksList&lst) {
         for(auto &c:lst){
+            assert(c!=nullptr);
             if(!append(c)){
                 return false;
             }
