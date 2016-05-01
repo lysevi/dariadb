@@ -21,7 +21,7 @@ using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChunksList> ChunkMap;
-typedef ChunkByTimeMap<Chunk_Ptr, typename stx::btree_map<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
+typedef ChunkByTimeMap<Chunk_Ptr, typename std::map<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
 typedef std::unordered_map<dariadb::Id, ChunkWeaksMap> MultiTree;
 
 class MemstorageCursor : public Cursor {
@@ -89,19 +89,14 @@ public:
             std::lock_guard<std::mutex> lg(_locker_chunks);
             auto mt_iter=_multitree.find(id);
             if(mt_iter!=_multitree.end()){
-                auto resf = mt_iter->second.begin();
-                auto rest = mt_iter->second.end();
-                rest--;
-                *minResult = resf->second->minTime;
-                *maxResult = rest->second->maxTime;
-                result = true;
-//                for (auto it = resf; it != rest; ++it) {
-//                    auto v=it->second;
-
-//                    *minResult = std::min(v->minTime, *minResult);
-//                    *maxResult = std::max(v->maxTime, *maxResult);
-//                    result = true;
-//                }
+                if(mt_iter->second.size()!=0){
+                    auto resf = mt_iter->second.begin();
+                    auto rest = mt_iter->second.end();
+                    rest--;
+                    *minResult = resf->second->minTime;
+                    *maxResult = rest->second->maxTime;
+                    result = true;
+                }
             }
         }
         {
@@ -368,21 +363,23 @@ public:
             _locker_chunks.lock();
             auto mt_iter=_multitree.find(i);
             if(mt_iter!=_multitree.end()){
-                auto resf =  mt_iter->second.get_lower_bound(from);
-                auto rest = mt_iter->second.get_upper_bound(to);
+                if(mt_iter->second.size()!=0){
+                    auto resf =  mt_iter->second.get_lower_bound(from);
+                    auto rest = mt_iter->second.get_upper_bound(to);
 
-                for(auto it=resf;it!=rest;++it){
-                    auto ch=it->second;
-                    if (ch->is_dropped) {
-                        throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
-                    }
-                    if(ch->first.id!=i){
-                        continue;
-                    }
-                    if ((check_chunk_flag(flag, ch)) && (check_chunk_to_interval(from, to, ch))){
-                        result.push_back(ch);
-                    }
+                    for(auto it=resf;it!=rest;++it){
+                        auto ch=it->second;
+                        if (ch->is_dropped) {
+                            throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
+                        }
+                        if(ch->first.id!=i){
+                            continue;
+                        }
+                        if ((check_chunk_flag(flag, ch)) && (check_chunk_to_interval(from, to, ch))){
+                            result.push_back(ch);
+                        }
 
+                    }
                 }
             }
             _locker_chunks.unlock();
@@ -418,6 +415,7 @@ public:
                 if(fc_res!=_free_chunks.end()){
                     if (fc_res->second->minTime <= timePoint) {
                         result[fc_res->second->first.id] = fc_res->second;
+                        continue;
                     }
                 }
             }
@@ -425,27 +423,28 @@ public:
                 std::lock_guard<std::mutex> lg(_locker_chunks);
                 auto mt_res=_multitree.find(i);
                 if(mt_res!=_multitree.end()){
-                    auto rest = mt_res->second.get_upper_bound(timePoint);
-                    auto resf= mt_res->second.begin();
-                    if(rest!=mt_res->second.begin()){
-                        resf=rest;
-                        --resf;
-                    }else{
-                        rest=resf;
-                        ++rest;
-                    }
-                    for (auto it = resf; it != rest; ++it) {
-                        auto cur_chunk = it->second;
+                    if(mt_res->second.size()>size_t(0)){
+                        auto rest = mt_res->second.get_upper_bound(timePoint);
+                        auto resf= mt_res->second.begin();
+                        if(rest!=mt_res->second.begin()){
+                            resf=rest;
+                            --resf;
+                        }else{
+                            rest=mt_res->second.end();
+                        }
+                        for (auto it = resf; it != rest; ++it) {
+                            auto cur_chunk = it->second;
 
-                        if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
-                            if (cur_chunk->minTime <= timePoint) {
-                                result[cur_chunk->first.id] = cur_chunk;
+                            if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
+                                if (cur_chunk->minTime <= timePoint) {
+                                    result[cur_chunk->first.id] = cur_chunk;
+                                }
                             }
-                        }
-                        if (it == rest) {
-                            break;
-                        }
+                            if (it == rest) {
+                                break;
+                            }
 
+                        }
                     }
                 }
             }
