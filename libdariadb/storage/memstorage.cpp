@@ -21,7 +21,7 @@ using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChunksList> ChunkMap;
-typedef ChunkByTimeMap<Chunk_Ptr, typename stx::btree_multimap<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
+typedef ChunkByTimeMap<Chunk_Ptr, typename stx::btree_map<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
 typedef std::unordered_map<dariadb::Id, ChunkWeaksMap> MultiTree;
 
 class MemstorageCursor : public Cursor {
@@ -91,14 +91,17 @@ public:
             if(mt_iter!=_multitree.end()){
                 auto resf = mt_iter->second.begin();
                 auto rest = mt_iter->second.end();
+                rest--;
+                *minResult = resf->second->minTime;
+                *maxResult = rest->second->maxTime;
+                result = true;
+//                for (auto it = resf; it != rest; ++it) {
+//                    auto v=it->second;
 
-                for (auto it = resf; it != rest; ++it) {
-                    auto v=it->second;
-
-                    *minResult = std::min(v->minTime, *minResult);
-                    *maxResult = std::max(v->maxTime, *maxResult);
-                    result = true;
-                }
+//                    *minResult = std::min(v->minTime, *minResult);
+//                    *maxResult = std::max(v->maxTime, *maxResult);
+//                    result = true;
+//                }
             }
         }
         {
@@ -401,27 +404,37 @@ public:
 		return Cursor_ptr{raw};
 	}
 
-	IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
-		IdToChunkMap result;
+    IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) {
+        IdToChunkMap result;
 
-		{
-			std::lock_guard<std::mutex> lg(_locker_free_chunks);
-			for (auto kv : _free_chunks) {
-                if(!check_chunk_to_qyery(ids,flag,kv.second)){
-                    continue;
+        IdArray id_a=ids;
+        if(id_a.empty()){
+            id_a=this->getIds();
+        }
+        for(auto i:id_a){
+            {
+                std::lock_guard<std::mutex> lg(_locker_free_chunks);
+                auto fc_res=_free_chunks.find(i);
+                if(fc_res!=_free_chunks.end()){
+                    if (fc_res->second->minTime <= timePoint) {
+                        result[fc_res->second->first.id] = fc_res->second;
+                    }
                 }
-				if (kv.second->minTime <= timePoint) {
-					result[kv.second->first.id] = kv.second;
-				}
-			}
-		}
-        if (!_chunks.empty()) {
-            std::lock_guard<std::mutex> lg(_locker_chunks);
-            for(auto &kv:_multitree){
-                if((ids.size()==0) || (std::find(ids.cbegin(),ids.cend(),kv.first))!=ids.cend()){
-                    auto rest = kv.second.get_upper_bound(timePoint);
-
-                    for (auto it = kv.second.begin(); it != kv.second.end(); ++it) {
+            }
+            if (!_chunks.empty()) {
+                std::lock_guard<std::mutex> lg(_locker_chunks);
+                auto mt_res=_multitree.find(i);
+                if(mt_res!=_multitree.end()){
+                    auto rest = mt_res->second.get_upper_bound(timePoint);
+                    auto resf= mt_res->second.begin();
+                    if(rest!=mt_res->second.begin()){
+                        resf=rest;
+                        --resf;
+                    }else{
+                        rest=resf;
+                        ++rest;
+                    }
+                    for (auto it = resf; it != rest; ++it) {
                         auto cur_chunk = it->second;
 
                         if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
@@ -437,8 +450,8 @@ public:
                 }
             }
         }
-		return result;
-	}
+        return result;
+    }
 
 	dariadb::IdArray getIds() {
 		dariadb::IdArray result;
