@@ -270,17 +270,19 @@ public:
             id_a = getIds();
         }
         IdToChunkMap result;
+        IdArray cur_ids{1};
         for(auto id:id_a){
+            cur_ids[0]=id;
             dariadb::Time minT, maxT;
             IdToChunkMap subRes;
             if (!mem_storage_raw->minMaxTime(id, &minT, &maxT)) {
-                subRes = PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
+                subRes = PageManager::instance()->chunksBeforeTimePoint(cur_ids, flag, timePoint);
             }else{
                 if (minT <= timePoint) {
-                    subRes = mem_storage_raw->chunksBeforeTimePoint(ids, flag, timePoint);
+                    subRes = mem_storage_raw->chunksBeforeTimePoint(cur_ids, flag, timePoint);
                 }
                 else {
-                    subRes=PageManager::instance()->chunksBeforeTimePoint(ids, flag, timePoint);
+                    subRes=PageManager::instance()->chunksBeforeTimePoint(cur_ids, flag, timePoint);
                 }
             }
             for(auto kv:subRes){
