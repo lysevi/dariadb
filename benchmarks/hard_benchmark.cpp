@@ -17,6 +17,7 @@
 
 class BenchCallback :public dariadb::storage::ReaderClb {
 public:
+    BenchCallback()=default;
 	void call(const dariadb::Meas&m) {
 		if (m.flag != dariadb::Flags::NO_DATA) {
 			count++;
