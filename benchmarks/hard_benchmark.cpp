@@ -13,6 +13,7 @@
 #include <random>
 #include <cstdlib>
 #include <atomic>
+#include <cassert>
 
 class BenchCallback :public dariadb::storage::ReaderClb {
 public:
@@ -142,53 +143,58 @@ int main(int argc, char *argv[]) {
         << " in queue: (p:" << queue_sizes.page << " m:" << queue_sizes.mem << " cap:" << queue_sizes.cap << ")"
         << " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
         << std::endl;
+//    {
+//        auto ids=ms->getIds();
+//        std::cout << "ids.size:"<<ids.size() << std::endl;
+//        std::cout << "read all..." << std::endl;
+//        std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
+//        auto start = clock();
+//        ms->readInterval(0,ms->maxTime())->readAll(clbk.get());
 
-    std::cout << "read all..." << std::endl;
-    std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
-    auto start = clock();
-    ms->readInterval(0,ms->maxTime())->readAll(clbk.get());
+//        auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+//        std::cout << "readed: " << clbk->count << std::endl;
+//        std::cout << "time: " << elapsed << std::endl;
+//    }
+    {//3
 
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-    std::cout << "readed: " << clbk->count << std::endl;
-    std::cout << "time: " << elapsed << std::endl;
-	{//3
+        std::random_device r;
+        std::default_random_engine e1(r());
+        std::uniform_int_distribution<dariadb::Id> uniform_dist(1, 32767);
+        dariadb::IdArray ids;
+        ids.resize(1);
 
-		std::random_device r;
-		std::default_random_engine e1(r());
-		std::uniform_int_distribution<dariadb::Id> uniform_dist(1, 32767);
-        std::uniform_int_distribution<dariadb::Time> uniform_dist_t(raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
-		dariadb::IdArray ids;
-		ids.resize(1);
-
-        const size_t queries_count = 32768;
+        const size_t queries_count = 10;
 
         dariadb::IdArray rnd_ids(queries_count);
         std::vector<dariadb::Time> rnd_time(queries_count);
-		for (size_t i = 0; i < queries_count; i++) {
-			rnd_ids[i] = uniform_dist(e1);
-			rnd_time[i] = uniform_dist_t(e1);
-		}
-		auto raw_ptr = new BenchCallback();
-		dariadb::storage::ReaderClb_ptr clbk{ raw_ptr };
+        for (size_t i = 0; i < queries_count; i++) {
+            rnd_ids[i] = uniform_dist(e1);
+            dariadb::Time minT,maxT;
+            assert(raw_ptr_ds->minMaxTime(rnd_ids[i],&minT,&maxT));
+            std::uniform_int_distribution<dariadb::Time> uniform_dist_tmp(minT,maxT);
+            rnd_time[i] = uniform_dist_tmp(e1);
+        }
+        auto raw_ptr = new BenchCallback();
+        dariadb::storage::ReaderClb_ptr clbk{ raw_ptr };
 
-		auto start = clock();
+        auto start = clock();
 		
-		for (size_t i = 0; i < queries_count; i++) {
-            ids[0]= 1;
+        for (size_t i = 0; i < queries_count; i++) {
+            ids[0]= rnd_ids[i];
             auto t = rnd_time[i];
-			auto rdr=ms->readInTimePoint(ids,0,t);
-			rdr->readAll(clbk.get());
-		}
+            auto rdr=ms->readInTimePoint(ids,0,t);
+            rdr->readAll(clbk.get());
+        }
 
-		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ queries_count;
-		std::cout << "3. time point: " << elapsed<< " readed: "<< raw_ptr->count << std::endl;
-	}
+        auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC)/ queries_count;
+        std::cout << "3. time point: " << elapsed<< " readed: "<< raw_ptr->count << std::endl;
+    }
 	{//4
 		std::random_device r;
 		std::default_random_engine e1(r());
         std::uniform_int_distribution<dariadb::Id> uniform_dist(raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
 
-        const size_t queries_count = 32;
+        const size_t queries_count = 10;//32768;
 
 		dariadb::IdArray ids;
         std::vector<dariadb::Time> rnd_time(queries_count);
@@ -229,8 +235,8 @@ int main(int argc, char *argv[]) {
 		auto start = clock();
 
 		for (size_t i = 0; i < queries_count; i++) {
-            auto f = rnd_time_from[i];
-            auto t = rnd_time_to[i];
+            auto f = std::min(rnd_time_from[i],rnd_time_to[i]);
+            auto t = std::max(rnd_time_from[i],rnd_time_to[i]);
 			auto rdr = ms->readInterval(f, t+f);
 			rdr->readAll(clbk.get());
 		}
@@ -266,8 +272,8 @@ int main(int argc, char *argv[]) {
 			for (size_t j = 0; j < ids_count; j++) {
 				ids[j] = uniform_dist_id(e1);
 			}
-            auto f = rnd_time_from[i];
-            auto t = rnd_time_to[i];
+            auto f = std::min(rnd_time_from[i],rnd_time_to[i]);
+            auto t = std::max(rnd_time_from[i],rnd_time_to[i]);
 			auto rdr = ms->readInterval(ids,0, f, t + f);
 			rdr->readAll(clbk.get());
 		}
