@@ -21,7 +21,7 @@ using namespace dariadb::compression;
 using namespace dariadb::storage;
 
 typedef std::map<Id, ChunksList> ChunkMap;
-typedef ChunkByTimeMap<Chunk_Ptr, typename std::map<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
+typedef ChunkByTimeMap<Chunk_Ptr, typename stx::btree_map<dariadb::Time, Chunk_Ptr>> ChunkWeaksMap;
 typedef std::unordered_map<dariadb::Id, ChunkWeaksMap> MultiTree;
 
 class MemstorageCursor : public Cursor {
