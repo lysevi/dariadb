@@ -6,8 +6,8 @@
 
 namespace dariadb{
     namespace utils{
-        using Locker=std::mutex;
-        /*
+        //using Locker=std::mutex;
+
         class Locker {
             std::atomic_flag locked = ATOMIC_FLAG_INIT ;
         public:
@@ -18,7 +18,7 @@ namespace dariadb{
                 locked.clear(std::memory_order_release);
             }
         };
-*/
+
         using Locker_ptr=std::shared_ptr<dariadb::utils::Locker>;
     }
 }
