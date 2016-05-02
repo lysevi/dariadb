@@ -56,7 +56,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 	dariadb::Id id(0);
 	const dariadb::Id id_count(2);
 	for (size_t cur_chunk_num = 0; cur_chunk_num < chunks_count; cur_chunk_num++) {
-        t=add_chunk(id%id_count,t,chunks_size);
+        auto cur_id=id%id_count;
+        t=add_chunk(cur_id,t,chunks_size);
 		id++;
     }
 	
@@ -71,30 +72,33 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
         BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
         for (auto ch : all_chunks) {
-            //BOOST_CHECK(ch->is_readonly);
+            BOOST_CHECK(ch->is_readonly);
 
             minTime=std::min(minTime,ch->minTime);
             ch->bw->reset_pos();
             dariadb::compression::CopmressedReader crr(ch->bw, ch->first);
             for (uint32_t i = 0; i < ch->count; i++) {
                 auto m = crr.read();
-                BOOST_CHECK_EQUAL(m.time, readed_t);
+                BOOST_CHECK_EQUAL(m.value, dariadb::Value(i));
                 readed_t++;
             }
         }
+        dariadb::Time minT=std::numeric_limits<dariadb::Time>::max(),maxT=std::numeric_limits<dariadb::Time>::min();
+        BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0),&minT,&maxT));
+        BOOST_CHECK_EQUAL(minT,dariadb::Time(0));
 
 		{
 			dariadb::Time end_time (t / 2);
 			dariadb::storage::ChunksList chunk_list;
 			PageManager::instance()->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), start_time, end_time)->readAll(&chunk_list);
-            BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2)+1));
+            BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2)));
 			
 			for (auto&v : chunk_list) {
 				BOOST_CHECK(v->minTime <= end_time);
 			}
 			
 			auto chunks_map = PageManager::instance()->chunksBeforeTimePoint(dariadb::IdArray{}, 0, end_time);
-			BOOST_CHECK(chunks_map.size() == size_t(id_count));
+            BOOST_CHECK_EQUAL(chunks_map.size(), size_t(id_count));
 
 			for (auto&kv : chunks_map) {
 				auto chunk = kv.second;

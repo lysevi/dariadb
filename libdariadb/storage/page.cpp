@@ -48,15 +48,6 @@ public:
 				break;
 			}
 		
-            if ((_ids.size() != 0) && (std::find(_ids.begin(), _ids.end(), _index_it.info.first.id) == _ids.end())) {
-				if (!read_poses.empty()) {
-					_index_it = this->link->index[read_poses.front()];
-					read_poses.pop_front();
-				}
-				else { break; }
-				continue;
-			}
-
             if (!dariadb::storage::bloom_check(_index_it.info.flag_bloom, _flag)) {
 				if (!read_poses.empty()) {
 					_index_it = this->link->index[read_poses.front()];
@@ -94,29 +85,31 @@ public:
 		_is_end = false; 
         this->read_poses.clear();
 		//TODO lock this->link; does'n need when call from ctor.
-		auto sz = this->link->_itree.size();
-		if (sz != 0) {
-			auto it_to = this->link->_itree.end();// this->link->_itree.upper_bound(this->_to);
-			auto it_from = this->link->_itree.begin();//this->link->_itree.lower_bound(this->_from);
+        for(auto i:_ids){
+            auto fres=this->link->_mtree.find(i);
+            if(fres==this->link->_mtree.end()){
+                continue;
+            }
+            auto sz = fres->second.size();
+            if(sz==size_t(0)){
+                continue;
+            }
 
-            /*if(it_from!= this->link->_itree.begin()){
+            auto it_to =  fres->second.upper_bound(this->_to);
+            auto it_from = fres->second.lower_bound(this->_from);
+
+            if(it_from!= fres->second.begin()){
                 if(it_from->first!=this->_from){
                     --it_from;
                 }
-            }*/
-            for(auto it=it_from;it!=this->link->_itree.end();++it){
+            }
+            for(auto it=it_from;it!=it_to;++it){
                 this->read_poses.push_back(it->second);
-                if(it==it_to){
-                    break;
-                }
             }
-            if(read_poses.empty()){
-                _is_end=true;
-                return;
-            }
-        }else{
+
+        }
+        if(read_poses.empty()){
             _is_end=true;
-            return;
         }
 	}
 protected:
@@ -131,6 +124,8 @@ protected:
 
 
 Page::~Page() {
+    _mtree.clear();
+    _itree.clear();
 	region=nullptr;
 	header=nullptr;
 	index=nullptr;
@@ -186,7 +181,7 @@ Page* Page::open(std::string file_name) {
     res->header = reinterpret_cast<PageHeader*>(region)+get_header_offset();
     res->index = reinterpret_cast<Page_ChunkIndex*>(region + get_index_offset());
     res->chunks = reinterpret_cast<uint8_t*>(region + get_chunks_offset(res->header->chunk_per_storage));
-	if (res->header->chunk_size == 0) {
+    if (res->header->chunk_size == 0) {
 		throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
 	}
 
@@ -196,7 +191,9 @@ Page* Page::open(std::string file_name) {
 			res->_free_poses.push_back(i);
 		}
 		else {
-			res->_itree.insert(std::make_pair(irec->info.maxTime, i));
+            auto kv=std::make_pair(irec->info.maxTime, i);
+            res->_itree.insert(kv);
+            res->_mtree[irec->info.first.id].insert(kv);
 		}
 	}
 	return res;
@@ -250,10 +247,12 @@ bool Page::append(const Chunk_Ptr&ch) {
 	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());
 	uint32_t pos_index=0;
+    dariadb::Id removedId{0};//need to save overwriten rec;
 	if (is_full()) {
         if (header->mode == MODE::SINGLE) {
             header->is_overwrite=true;
 			pos_index = this->_itree.begin()->second;
+            removedId=index[pos_index].info.first.id;
         }
 		else {
 			return false;
@@ -271,12 +270,24 @@ bool Page::append(const Chunk_Ptr&ch) {
         index[pos_index].offset = header->pos_chunks;
         header->pos_chunks += header->chunk_size;
         header->addeded_chunks++;
-		_itree.insert(std::make_pair(index_rec->maxTime, pos_index));
+        auto kv=std::make_pair(index_rec->maxTime, pos_index);
+        _itree.insert(kv);
+        _mtree[index_rec->first.id].insert(kv);
 	}
 	else {
 		auto it = this->_itree.begin();
-		_itree.erase(it);
-		_itree.insert(std::make_pair(index_rec->maxTime, pos_index));
+        auto removedTime=it->first;
+        ///remove from tree and multitree;
+        auto fres=_mtree.find(removedId);
+//        assert(fres!=_mtree.end());
+        auto mtr_it=fres->second.find(removedTime);
+        _itree.erase(it);
+        fres->second.erase(mtr_it);
+        ///insert new {key,value}
+        auto kv=std::make_pair(index_rec->maxTime, pos_index);
+        _itree.insert(kv);
+        _mtree[index_rec->first.id].insert(kv);
+
 	}
 	memcpy(this->chunks + index[pos_index].offset, buffer, sizeof(uint8_t)*header->chunk_size);
 
@@ -297,7 +308,7 @@ bool Page::is_full()const {
 Cursor_ptr Page::get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag) {
     std::lock_guard<std::mutex> lg(_locker);
 
-	auto raw_ptr = new PageCursor(this,ids,from,to,flag );
+    auto raw_ptr = new PageCursor(this,ids,from,to,flag );
 	Cursor_ptr result{ raw_ptr };
 
 	header->count_readers++;
@@ -333,37 +344,49 @@ void Page::dec_reader(){
 }
 
 bool  dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) {
-	bool result = false;
-	*minResult = std::numeric_limits<dariadb::Time>::max();
-	*maxResult = std::numeric_limits<dariadb::Time>::min();
-
 	std::lock_guard<std::mutex> lg(_locker);
-	auto it_to = _itree.end();
-	auto it_from = _itree.begin();
-	for (; it_from != it_to; ++it_from) {
-		auto index_rec = this->index[it_from->second];
-		if (!index_rec.is_init) {
-			continue;
-		}
-		if (!index_rec.info.first.id==id) {
-			result = true;
-			*minResult = std::min(index_rec.info.minTime, *minResult);
-			*maxResult = std::max(index_rec.info.maxTime, *maxResult);
-		}
-	}
-	return result;
+    auto fres=_mtree.find(id);
+    if(fres==_mtree.end()){
+        return false;
+    }
+
+    if(fres->second.size()==size_t(0)){
+        return false;
+    }
+
+    auto it_to = fres->second.end();
+    auto it_from = fres->second.begin();
+    if(fres->second.size()==size_t(1)){
+        it_to=it_from;
+    }else{
+        --it_to;
+    }
+    auto index_rec = this->index[it_from->second];
+    *minResult = index_rec.info.minTime;
+    index_rec = this->index[it_to->second];
+    *maxResult = index_rec.info.maxTime;
+    return true;
 }
 
 Cursor_ptr dariadb::storage::Page::chunksByIterval(const IdArray & ids, Flag flag, Time from, Time to){
-	return get_chunks(ids, from, to, flag);
+    IdArray id_a=ids;
+    if(id_a.empty()){
+        id_a=this->getIds();
+    }
+    return get_chunks(id_a, from, to, flag);
 }
 
 IdToChunkMap dariadb::storage::Page::chunksBeforeTimePoint(const IdArray & ids, Flag flag, Time timePoint)
 {
 	IdToChunkMap result;
 
+    IdArray id_a=ids;
+    if(id_a.empty()){
+        id_a=getIds();
+    }
+
 	ChunksList ch_list;
-	auto cursor = this->get_chunks(ids, header->minTime, timePoint, flag);
+    auto cursor = this->get_chunks(id_a, header->minTime, timePoint, flag);
 	if (cursor == nullptr) {
 		return result;
 	}
@@ -400,12 +423,9 @@ public:
 
 dariadb::IdArray dariadb::storage::Page::getIds() 
 {
-	auto cursor = get_chunks(dariadb::IdArray{}, header->minTime, header->maxTime, 0);
-
-	CountOfIdCallback*clbk_raw = new CountOfIdCallback;
-	std::unique_ptr<Cursor::Callback> clbk{ clbk_raw };
-
-	cursor->readAll(clbk.get());
-
-	return dariadb::IdArray{ clbk_raw->ids.begin(),clbk_raw->ids.end() };
+    dariadb::IdSet ss;
+    for(auto kv:_mtree){
+        ss.insert(kv.first);
+    }
+    return dariadb::IdArray{ ss.begin(), ss.end() };
 }

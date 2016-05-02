@@ -8,6 +8,7 @@
 
 #include "stx/btree_multimap.h"
 #include <map>
+#include <unordered_map>
 
 namespace dariadb {
 	namespace storage {
@@ -36,9 +37,9 @@ namespace dariadb {
 #pragma pack(pop) 
 
 		// maxtime => pos index rec in page;
-		//typedef std::multimap<dariadb::Time, uint32_t> indexTree;
-		typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
-
+        //typedef std::multimap<dariadb::Time, uint32_t> indexTree;
+        typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
+        typedef std::unordered_map<dariadb::Id, std::map<dariadb::Time, uint32_t>> PageMultiTree;
         class Page:public ChunkContainer, public ChunkWriter {
 			Page() = default;
 		public:
@@ -64,6 +65,7 @@ namespace dariadb {
 			Page_ChunkIndex*index;
 			uint8_t        *chunks;
 			indexTree      _itree;
+            PageMultiTree  _mtree;
 			std::list<uint32_t> _free_poses;
 		protected:
             mutable std::mutex   _locker;
