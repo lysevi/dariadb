@@ -64,7 +64,6 @@ public:
 	}
 
 	append_result append(const Meas &value) {
-		//std::lock_guard<std::mutex> lg(_locker);
 		append_result result{};
         if (!mem_cap->append(value)){
         //if(mem_storage_raw->append(value).writed!=1){
@@ -82,13 +81,11 @@ public:
 	void drop_old_chunks() {
 		if (_limits.max_mem_chunks == 0) {
 			if (_limits.old_mem_chunks != 0) {
-                //std::lock_guard<std::mutex> lg(_drop_locker);
 				auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
                 PageManager::instance()->append(old_chunks);
 			}
 		}
 		else {
-            //std::lock_guard<std::mutex> lg(_drop_locker);
 			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
 #ifdef DEBUG
             for(auto c:old_chunks){
@@ -193,6 +190,9 @@ public:
 		void readNext(Cursor::Callback*cbk)  override {
 			if (it == _cursors.end()) {
 				_is_end = true;
+                Chunk_Ptr empty;
+                cbk->call(empty);
+                return;
 			}
 			else {
 				Cursor_ptr c = *it;
@@ -205,16 +205,12 @@ public:
 					}
 					else {
 						++it;
-						if (it == _cursors.end()) {
-							_is_end = true;
-							Chunk_Ptr empty;
-							cbk->call(empty);
-							return;
-						}
 					}
 				}
-				c = *it;
-				c->readNext(cbk);
+                if(it!=_cursors.end()){
+                    c = *it;
+                    c->readNext(cbk);
+                }
 			}
 			if (_is_end) {
 				Chunk_Ptr empty;
@@ -324,7 +320,7 @@ public:
 		for (auto v : mem_ids) {
 			s.insert(v);
 		}
-		return dariadb::IdArray{ s.begin(),s.end() };
+        return dariadb::IdArray{ s.begin(),s.end() };
 	}
 
     size_t chunks_in_memory()const{
@@ -339,7 +335,7 @@ public:
 	storage::PageManager::Params _page_manager_params;
 	dariadb::storage::Capacitor::Params _cap_params;
 	dariadb::storage::UnionStorage::Limits _limits;
-    mutable std::recursive_mutex _locker, _drop_locker;
+    mutable std::recursive_mutex _locker;
 };
 
 UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,

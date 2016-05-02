@@ -41,8 +41,7 @@ public:
 		return it == _chunks.end();
 	}
 
-	void readNext(Cursor::Callback*cbk)  override
-	{
+    void readNext(Cursor::Callback*cbk)  override {
 		if (!is_end()) {
 			cbk->call(*it);
 			++it;
@@ -85,7 +84,7 @@ public:
         bool result = false;
         *minResult = std::numeric_limits<dariadb::Time>::max();
         *maxResult = std::numeric_limits<dariadb::Time>::min();
-        {//TODO multilock per id
+        {
             std::lock_guard<std::mutex> lg(_locker_chunks);
             auto mt_iter=_multitree.find(id);
             if(mt_iter!=_multitree.end()){
