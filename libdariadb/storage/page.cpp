@@ -32,7 +32,6 @@ public:
 	}
 
 	void readNext(Cursor::Callback*cbk)  override {
-		//TODO refact this
 		std::lock_guard<std::mutex> lg(_locker);
         if(read_poses.empty()){
 			_is_end = true;
@@ -217,20 +216,6 @@ PageHeader Page::readHeader(std::string file_name) {
 
 }
 
-uint32_t Page::get_oldes_index() {
-    auto min_time = std::numeric_limits<dariadb::Time>::max();
-    uint32_t pos = 0;
-    auto index_end = index + header->chunk_per_storage;
-    uint32_t i = 0;
-    for (auto index_it = index; index_it != index_end; ++index_it, ++i) {
-        if (index_it->info.minTime<min_time) {
-            pos = i;
-            min_time = index_it->info.minTime;
-        }
-    }
-    return pos;
-}
-
 bool Page::append(const ChunksList&ch){
     for(auto &c:ch){
         if(!this->append(c)){
@@ -247,9 +232,10 @@ bool Page::append(const Chunk_Ptr&ch) {
 	assert(ch->last.time != 0);
 	assert(header->chunk_size == ch->_buffer_t.size());
 	uint32_t pos_index=0;
-    dariadb::Id removedId{0};//need to save overwriten rec;
+    dariadb::Id removedId{0};///need to save overwriten reccord;
 	if (is_full()) {
         if (header->mode == MODE::SINGLE) {
+            ///get oldes index reccord.
             header->is_overwrite=true;
 			pos_index = this->_itree.begin()->second;
             removedId=index[pos_index].info.first.id;
@@ -277,9 +263,10 @@ bool Page::append(const Chunk_Ptr&ch) {
 	else {
 		auto it = this->_itree.begin();
         auto removedTime=it->first;
+
         ///remove from tree and multitree;
         auto fres=_mtree.find(removedId);
-//        assert(fres!=_mtree.end());
+        assert(fres!=_mtree.end());
         auto mtr_it=fres->second.find(removedTime);
         _itree.erase(it);
         fres->second.erase(mtr_it);
@@ -405,6 +392,7 @@ IdToChunkMap dariadb::storage::Page::chunksBeforeTimePoint(const IdArray & ids, 
 	}
 	return result;
 }
+
 class CountOfIdCallback :public Cursor::Callback {
 public:
 	dariadb::IdSet ids;

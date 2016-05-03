@@ -50,7 +50,6 @@ namespace dariadb {
             bool append(const Chunk_Ptr&ch)override;
             bool append(const ChunksList&ch)override;
 			bool is_full()const;
-            uint32_t get_oldes_index();
 			Cursor_ptr get_chunks(const dariadb::IdArray&ids, dariadb::Time from, dariadb::Time to, dariadb::Flag flag);
 			ChunksList get_open_chunks();
 			void dec_reader();
