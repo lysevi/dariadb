@@ -68,6 +68,7 @@ public:
 	{
 		_subscribe_notify->start();
 		this->start_async();
+        _cw=nullptr;
 	}
 
 	~Private() {
@@ -171,6 +172,9 @@ public:
             _multitree[chunk->first.id].insert(std::make_pair(chunk->maxTime, chunk));
         }
 		assert(chunk->is_full());
+        if(_cw!=nullptr){
+            _cw->append(chunk);
+        }
 	}
 
 	void flush() {
@@ -484,6 +488,10 @@ public:
         }
         return true;
     }
+
+    void set_chunkWriter(ChunkWriter*cw){
+        _cw=cw;
+    }
 protected:
 	size_t _size;
 
@@ -495,6 +503,7 @@ protected:
     mutable std::mutex _subscribe_locker;
     mutable std::mutex _locker_free_chunks, _locker_drop, _locker_min_max;
     mutable std::mutex _locker_chunks;
+    ChunkWriter*_cw;
 };
 
 MemoryStorage::MemoryStorage(size_t size)
@@ -584,4 +593,8 @@ bool MemoryStorage::append(const ChunksList&clist) {
 
 bool MemoryStorage::append(const Chunk_Ptr&c) {
     return _Impl->append(c);
+}
+
+void MemoryStorage::set_chunkWriter(ChunkWriter*cw){
+    _Impl->set_chunkWriter(cw);
 }

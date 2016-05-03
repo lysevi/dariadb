@@ -42,6 +42,8 @@ namespace dariadb {
             bool append(const Chunk_Ptr&c)override;
 
 			size_t queue_size()const;
+
+            void set_chunkWriter(ChunkWriter*cw);
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

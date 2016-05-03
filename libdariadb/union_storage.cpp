@@ -30,6 +30,7 @@ public:
 
 		auto open_chunks = PageManager::instance()->get_open_chunks();
         mem_storage_raw->append(open_chunks);
+        mem_storage_raw->set_chunkWriter(PageManager::instance());
 	}
 	~Private() {
 		this->flush();
@@ -74,7 +75,7 @@ public:
 			result.writed++;
 		}
 
-        drop_old_chunks();
+        //drop_old_chunks();
 		return result;
 	}
 
@@ -248,7 +249,7 @@ public:
 					mem_chunks = mem_storage_raw->chunksByIterval(cur_ids, flag, from, to);
 				}
 				else {
-					page_chunks = PageManager::instance()->chunksByIterval(cur_ids, flag, from, PageManager::instance()->maxTime());
+                    page_chunks = PageManager::instance()->chunksByIterval(cur_ids, flag, from, minT);
 					mem_chunks = mem_storage_raw->chunksByIterval(cur_ids, flag, minT, to);
 				}
 			}
