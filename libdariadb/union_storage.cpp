@@ -75,7 +75,7 @@ public:
 			result.writed++;
 		}
 
-        //drop_old_chunks();
+        drop_old_chunks();
 		return result;
 	}
 
@@ -83,7 +83,7 @@ public:
 		if (_limits.max_mem_chunks == 0) {
 			if (_limits.old_mem_chunks != 0) {
 				auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
-                PageManager::instance()->append(old_chunks);
+                //PageManager::instance()->append(old_chunks);
 			}
 		}
 		else {
@@ -93,7 +93,7 @@ public:
                 assert(c->_buffer_t.size()!=0);
             }
 #endif
-            PageManager::instance()->append(old_chunks);
+            //PageManager::instance()->append(old_chunks);
 		}
 	}
 
