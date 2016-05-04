@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <atomic>
 #include <cassert>
+#include <algorithm>
 
 class BenchCallback :public dariadb::storage::ReaderClb {
 public:
