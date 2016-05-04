@@ -75,14 +75,9 @@ namespace dariadb {
             void*alloc_chunk(std::size_t sz);
             void free_chunk(void* ptr, std::size_t sz);
             size_t polled_chunks();
-
-            void*alloc_buffer(std::size_t sz);
-            void free_buffer(void* ptr, std::size_t sz);
-            size_t polled_buffers();
         private:
             static std::unique_ptr<ChunkPool> _instance;
             utils::Pool _chunks;
-            utils::Pool _buffers;
         };
 	}
 }

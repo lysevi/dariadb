@@ -12,8 +12,7 @@ using namespace dariadb::compression;
 std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
 ChunkPool::ChunkPool():
-    _chunks(ChunkPool_default_max_size),
-    _buffers(ChunkPool_default_max_size){
+    _chunks(ChunkPool_default_max_size){
 }
 
 ChunkPool::~ChunkPool(){
@@ -47,18 +46,6 @@ size_t ChunkPool::polled_chunks(){
     return _chunks.polled();
 }
 
-void*ChunkPool::alloc_buffer(std::size_t sz){
-    return _buffers.alloc(sz);
-}
-
-void ChunkPool::free_buffer(void* ptr, std::size_t sz){
-    return _buffers.free(ptr,sz);
-}
-
-size_t ChunkPool::polled_buffers(){
-    return _buffers.polled();
-}
-
 void* Chunk::operator new(std::size_t sz){
     return ChunkPool::instance()->alloc_chunk(sz);
 }
@@ -68,11 +55,10 @@ void Chunk::operator delete(void* ptr, std::size_t sz){
 }
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
-    _buffer_t(nullptr),
+    _buffer_t(new uint8_t[buffer_length]),
     _size(buffer_length),
     _locker{}
 {
-    _buffer_t = static_cast<u8vector>(ChunkPool::instance()->alloc_buffer(buffer_length));
 	count = index.count;
 	first = index.first;
 	flag_bloom = index.flag_bloom;
@@ -99,11 +85,10 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 }
 
 Chunk::Chunk(size_t size, Meas first_m) :
-    _buffer_t(nullptr),
+    _buffer_t(new uint8_t[size]),
     _size(size),
     _locker()
 {
-    _buffer_t = static_cast<u8vector>(ChunkPool::instance()->alloc_buffer(size));
 	is_readonly = false;
     is_dropped=false;
 	count = 0;
@@ -127,7 +112,7 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 Chunk::~Chunk() {
 	this->bw = nullptr;
-    ChunkPool::instance()->free_buffer(_buffer_t,_size);
+	delete[] this->_buffer_t;
 }
 
 bool Chunk::append(const Meas&m){
