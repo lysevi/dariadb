@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace dariadb {
 struct append_result {
   static append_result empty() { return append_result(); }
