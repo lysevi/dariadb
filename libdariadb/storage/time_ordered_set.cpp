@@ -64,7 +64,7 @@ bool TimeOrderedSet::append(const Meas & m, bool force){
 }
 
 bool TimeOrderedSet::is_full() const{
-	return _count >= _max_size;
+	return _count >= _max_size || is_dropped;
 }
 
 dariadb::Meas::MeasArray TimeOrderedSet::as_array()const {
