@@ -112,7 +112,7 @@ public:
         return result;
     }
 	
-	bool maxTime(dariadb::Id id, dariadb::Time*out){
+	bool maxTime(dariadb::Id, dariadb::Time*){
 		return 0;
 	}
 	

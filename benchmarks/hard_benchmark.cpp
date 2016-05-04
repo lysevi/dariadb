@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
         << "\rin memory chunks: " << raw_ptr_ds->chunks_in_memory()
         << " in disk chunks: " << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
         << " in queue: (p:" << queue_sizes.page << " m:" << queue_sizes.mem << " cap:" << queue_sizes.cap << ")"
-        << " pooled: " << dariadb::storage::ChunkPool::instance()->polled()
+        << " pooled: " << dariadb::storage::ChunkPool::instance()->polled_chunks()
         << std::endl;
     {
         auto ids=ms->getIds();

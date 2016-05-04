@@ -25,7 +25,7 @@ public:
 		return 0;
 	}
 
-	bool minMaxTime(dariadb::Id id, dariadb::Time*minResult, dariadb::Time*maxResult) override {
+	bool minMaxTime(dariadb::Id , dariadb::Time*, dariadb::Time*) override {
 		return 0;
 	}
 
