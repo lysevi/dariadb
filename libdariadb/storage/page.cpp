@@ -246,10 +246,10 @@ bool Page::append(const ChunksList&ch){
 bool Page::append(const Chunk_Ptr&ch) {
     std::lock_guard<std::mutex> lg(_locker);
 	auto index_rec = (ChunkIndexInfo*)ch.get();
-	auto buffer = ch->_buffer_t->data();
+    auto buffer = ch->_buffer_t;
 
 	assert(ch->last.time != 0);
-	assert(header->chunk_size == ch->_buffer_t->size());
+    assert(header->chunk_size == ch->_size);
 	uint32_t pos_index=0;
 	if (is_full()) {
         if (header->mode == MODE::SINGLE) {

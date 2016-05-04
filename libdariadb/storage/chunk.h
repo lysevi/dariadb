@@ -3,6 +3,7 @@
 #include "../meas.h"
 #include "../utils/utils.h"
 #include "../utils/locker.h"
+#include "../utils/pool.h"
 #include "../compression.h"
 #include "../compression/binarybuffer.h"
 #include <boost/lockfree/queue.hpp>
@@ -32,7 +33,7 @@ namespace dariadb {
         struct Chunk:public ChunkIndexInfo
         {
         public:
-			using u8vector=std::vector<uint8_t>;
+            typedef uint8_t* u8vector;
             Chunk(size_t size, Meas first_m);
             Chunk(const ChunkIndexInfo&index, const uint8_t* buffer,const size_t buffer_length);
             ~Chunk();
@@ -42,7 +43,8 @@ namespace dariadb {
             bool check_flag(const Flag& f);
             void lock() { _locker.lock(); }
             void unlock() { _locker.unlock(); }
-			u8vector *_buffer_t;
+            u8vector _buffer_t;
+            size_t   _size;
             utils::Range range;
             compression::CopmressedWriter c_writer;
 
@@ -58,7 +60,7 @@ namespace dariadb {
         typedef std::map<Id, ChunksList> ChunkMap;
 		typedef std::unordered_map<Id, Chunk_Ptr>   IdToChunkUMap;
 
-		const size_t ChunkPool_default_max_size = 200;
+        const size_t ChunkPool_default_max_size = 100;
 
 		//TODO need unit test.
         class ChunkPool{
@@ -66,18 +68,16 @@ namespace dariadb {
             ChunkPool();
         public:
             ~ChunkPool();
-            static void start(size_t max_size);
+            static void start();
             static void stop();
             static ChunkPool*instance();
 
-            void*alloc(std::size_t sz);
-            void free(void* ptr, std::size_t sz);
-            size_t polled();
+            void*alloc_chunk(std::size_t sz);
+            void free_chunk(void* ptr, std::size_t sz);
+            size_t polled_chunks();
         private:
             static std::unique_ptr<ChunkPool> _instance;
-            boost::lockfree::queue<void*> _ptrs;
-			size_t _max_size;
-			std::atomic_size_t _size;
+            utils::Pool _chunks;
         };
 	}
 }

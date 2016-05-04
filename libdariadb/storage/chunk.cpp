@@ -11,34 +11,21 @@ using namespace dariadb::compression;
 
 std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
-ChunkPool::ChunkPool():_ptrs(ChunkPool_default_max_size){
-	_max_size = ChunkPool_default_max_size;
-	_size = 0;
+ChunkPool::ChunkPool():
+    _chunks(ChunkPool_default_max_size){
 }
 
 ChunkPool::~ChunkPool(){
-	while (!_ptrs.empty()) {
-		void *out=nullptr;
-		if (!_ptrs.pop(out)) {
-			break;
-		}
-		if(out!=nullptr){
-			:: operator delete(out);
-			--_size;
-		}
-	}
-	assert(_size==0);
 }
 
-void ChunkPool::start(size_t max_size){
-	if (max_size != 0) {
-		ChunkPool::instance()->_max_size = max_size;
-	}
+void ChunkPool::start(){
+    ChunkPool::instance();
 }
 
 void ChunkPool::stop(){
     ChunkPool::_instance=nullptr;
 }
+
 
 ChunkPool*ChunkPool::instance(){
     if(_instance==nullptr){
@@ -47,43 +34,29 @@ ChunkPool*ChunkPool::instance(){
     return _instance.get();
 }
 
-size_t ChunkPool::polled(){
-	return _size;
+void*ChunkPool::alloc_chunk(std::size_t sz){
+    return _chunks.alloc(sz);
 }
 
-void* ChunkPool::alloc(std::size_t sz) {
-	void*result = nullptr;
-	if(!_ptrs.pop(result)){
-		result = ::operator new(sz);
-	}
-	else {
-		--_size;
-	}
-	memset(result, 0, sz);
-	return result;
+void ChunkPool::free_chunk(void* ptr, std::size_t sz){
+    return _chunks.free(ptr,sz);
 }
 
-void ChunkPool::free(void* ptr, std::size_t){
-    if (_ptrs.push(ptr)) {
-		++_size;
-		return;
-    }
-    else {
-
-		::operator delete(ptr);
-	}
+size_t ChunkPool::polled_chunks(){
+    return _chunks.polled();
 }
 
 void* Chunk::operator new(std::size_t sz){
-    return ChunkPool::instance()->alloc(sz);
+    return ChunkPool::instance()->alloc_chunk(sz);
 }
 
 void Chunk::operator delete(void* ptr, std::size_t sz){
-    ChunkPool::instance()->free(ptr,sz);
+    ChunkPool::instance()->free_chunk(ptr,sz);
 }
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
-	_buffer_t(new u8vector(buffer_length)),
+    _buffer_t(new uint8_t[buffer_length]),
+    _size(buffer_length),
     _locker{}
 {
 	count = index.count;
@@ -98,10 +71,10 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	is_dropped = index.is_dropped;
 
 	for (size_t i = 0; i < buffer_length; i++) {
-		(*_buffer_t)[i] = buffer[i];
+        _buffer_t[i] = buffer[i];
 	}
 
-	range = Range{ _buffer_t->data(),_buffer_t->data() + buffer_length };
+    range = Range{ _buffer_t,_buffer_t + buffer_length };
 	assert(size_t(range.end - range.begin)==buffer_length);
 	bw = std::make_shared<BinaryBuffer>(range);
 	bw->set_bitnum(bw_bit_num);
@@ -112,7 +85,8 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 }
 
 Chunk::Chunk(size_t size, Meas first_m) :
-	_buffer_t(new u8vector(size)),
+    _buffer_t(new uint8_t[size]),
+    _size(size),
     _locker()
 {
 	is_readonly = false;
@@ -123,10 +97,10 @@ Chunk::Chunk(size_t size, Meas first_m) :
 	minTime = std::numeric_limits<Time>::max();
 	maxTime = std::numeric_limits<Time>::min();
 
-	std::fill(_buffer_t->begin(), _buffer_t->end(), 0);
+    std::fill(_buffer_t, _buffer_t+size, 0);
 
 	using compression::BinaryBuffer;
-	range = Range{ _buffer_t->data(),_buffer_t->data() + size };
+    range = Range{ _buffer_t,_buffer_t + size };
 	bw = std::make_shared<BinaryBuffer>(range);
 
 	c_writer = compression::CopmressedWriter(bw);
@@ -138,12 +112,10 @@ Chunk::Chunk(size_t size, Meas first_m) :
 
 Chunk::~Chunk() {
 	this->bw = nullptr;
-	_buffer_t->clear();
-	delete _buffer_t;
+	delete[] this->_buffer_t;
 }
 
-bool Chunk::append(const Meas&m)
-{
+bool Chunk::append(const Meas&m){
 	if (is_dropped || is_readonly) {
 		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
 	}
