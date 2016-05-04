@@ -5,6 +5,7 @@
 #include "storage/capacitor.h"
 #include "storage/page_manager.h"
 #include "storage/chunk_container.h"
+#include "storage/memstorage.h"
 #include "utils/utils.h"
 #include <memory>
 
@@ -16,15 +17,6 @@ namespace dariadb {
 				size_t page; ///queue length in PageManager
 				size_t mem;  ///queue length in MemoryStorage
 				size_t cap;  ///measurements in Capacitor
-			};
-			struct Limits {
-				dariadb::Time old_mem_chunks; // old_mem_chunks - time when drop old chunks to page (MemStorage)
-				size_t max_mem_chunks;        // max_mem_chunks - maximum chunks in memory.zero - by old_mem_chunks(MemStorage)
-				
-				Limits(const dariadb::Time old_time, const size_t max_mem) {
-					old_mem_chunks = old_time;
-					max_mem_chunks = max_mem;
-				}
 			};
 			UnionStorage() = delete;
 			UnionStorage(const UnionStorage&) = delete;
@@ -38,7 +30,7 @@ namespace dariadb {
             /// \param cap_params - capacitor params  (Capacitor)
             UnionStorage(storage::PageManager::Params page_manager_params,
 					     dariadb::storage::Capacitor::Params cap_params,
-						 const Limits&limits);
+						 const dariadb::storage::MemoryStorage::Limits&limits);
 
 			Time minTime() override;
 			Time maxTime() override;

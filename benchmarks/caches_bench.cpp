@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
 			new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
 				dariadb::storage::Capacitor::Params(cap_max_size,write_window_deep),
-				dariadb::storage::UnionStorage::Limits(max_mem_chunks, old_mem_chunks)) };
+				dariadb::storage::MemoryStorage::Limits(max_mem_chunks, old_mem_chunks)) };
 
 		append_count = 0;
 		stop_info = false;
