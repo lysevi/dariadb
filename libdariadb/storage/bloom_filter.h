@@ -1,20 +1,15 @@
 #pragma once
 
 namespace dariadb {
-    namespace storage{
-        template<typename T>
-        static T bloom_empty() {
-            return T{};
-        }
+namespace storage {
+template <typename T> static T bloom_empty() { return T{}; }
 
-        template<typename T>
-        static T  bloom_add(const T&fltr, const T&val) {
-            return fltr|val;
-        }
+template <typename T> static T bloom_add(const T &fltr, const T &val) {
+  return fltr | val;
+}
 
-        template<typename T>
-        static bool bloom_check(const T&fltr, const T&val) {
-            return (fltr&val)==val;
-        }
-    }
+template <typename T> static bool bloom_check(const T &fltr, const T &val) {
+  return (fltr & val) == val;
+}
+}
 }

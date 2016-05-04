@@ -4,38 +4,39 @@
 #include "positions.h"
 
 namespace dariadb {
-    namespace compression {
+namespace compression {
 
-        class DeltaCompressor:public BaseCompressor {
-        public:
-            DeltaCompressor() = default;
-            DeltaCompressor(const BinaryBuffer_Ptr &bw);
+class DeltaCompressor : public BaseCompressor {
+public:
+  DeltaCompressor() = default;
+  DeltaCompressor(const BinaryBuffer_Ptr &bw);
 
-            bool append(Time t);
+  bool append(Time t);
 
-            DeltaCompressionPosition get_position()const;
-            void restore_position(const DeltaCompressionPosition&pos);
+  DeltaCompressionPosition get_position() const;
+  void restore_position(const DeltaCompressionPosition &pos);
 
-            static uint16_t get_delta_64(int64_t D);
-            static uint16_t get_delta_256(int64_t D);
-            static uint16_t get_delta_2048(int64_t D);
-            static uint64_t get_delta_big(int64_t D);
+  static uint16_t get_delta_64(int64_t D);
+  static uint16_t get_delta_256(int64_t D);
+  static uint16_t get_delta_2048(int64_t D);
+  static uint64_t get_delta_big(int64_t D);
 
-        protected:
-            bool _is_first;
-            Time _first;
-            int64_t _prev_delta;
-            Time _prev_time;
-        };
+protected:
+  bool _is_first;
+  Time _first;
+  int64_t _prev_delta;
+  Time _prev_time;
+};
 
-        class DeltaDeCompressor:public BaseCompressor {
-        public:
-            DeltaDeCompressor(const BinaryBuffer_Ptr &bw, Time first);
+class DeltaDeCompressor : public BaseCompressor {
+public:
+  DeltaDeCompressor(const BinaryBuffer_Ptr &bw, Time first);
 
-            Time read();
-        protected:
-            int64_t _prev_delta;
-            Time _prev_time;
-        };
-    }
+  Time read();
+
+protected:
+  int64_t _prev_delta;
+  Time _prev_time;
+};
+}
 }

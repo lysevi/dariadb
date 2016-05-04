@@ -6,42 +6,44 @@
 #include <stx/btree_set.h>
 
 namespace dariadb {
-	namespace storage {
+namespace storage {
 
-		struct meas_time_compare {
-			bool operator() (const dariadb::Meas& lhs, const dariadb::Meas& rhs) const {
-				return lhs.time < rhs.time;
-			}
-		};
+struct meas_time_compare {
+  bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+    return lhs.time < rhs.time;
+  }
+};
 
-		class TimeOrderedSet {
-			//typedef std::set<dariadb::Meas, meas_time_compare> MeasSet;
-			typedef stx::btree_set<dariadb::Meas, meas_time_compare> MeasSet;
-		public:
-			TimeOrderedSet();
-			~TimeOrderedSet();
-			TimeOrderedSet(const size_t max_size);
-			TimeOrderedSet(const TimeOrderedSet&other);
-			TimeOrderedSet& operator=(const TimeOrderedSet&other);
+class TimeOrderedSet {
+  // typedef std::set<dariadb::Meas, meas_time_compare> MeasSet;
+  typedef stx::btree_set<dariadb::Meas, meas_time_compare> MeasSet;
 
-            bool append(const Meas&m, bool force=false);
-			bool is_full() const;
-			//TODO must return ref or write to param (pointer to array)
-			dariadb::Meas::MeasArray as_array()const;
-			size_t size()const;
-			dariadb::Time minTime()const;
-			dariadb::Time maxTime()const;
-			bool inInterval(const dariadb::Meas&m)const;
+public:
+  TimeOrderedSet();
+  ~TimeOrderedSet();
+  TimeOrderedSet(const size_t max_size);
+  TimeOrderedSet(const TimeOrderedSet &other);
+  TimeOrderedSet &operator=(const TimeOrderedSet &other);
 
-			bool is_dropped;
-		protected:
-			size_t _max_size;
-			size_t _count;
-			MeasSet _set;
+  bool append(const Meas &m, bool force = false);
+  bool is_full() const;
+  // TODO must return ref or write to param (pointer to array)
+  dariadb::Meas::MeasArray as_array() const;
+  size_t size() const;
+  dariadb::Time minTime() const;
+  dariadb::Time maxTime() const;
+  bool inInterval(const dariadb::Meas &m) const;
 
-			dariadb::Time _minTime;
-			dariadb::Time _maxTime;
-            mutable std::mutex _locker;
-		};
-	}
+  bool is_dropped;
+
+protected:
+  size_t _max_size;
+  size_t _count;
+  MeasSet _set;
+
+  dariadb::Time _minTime;
+  dariadb::Time _maxTime;
+  mutable std::mutex _locker;
+};
+}
 }

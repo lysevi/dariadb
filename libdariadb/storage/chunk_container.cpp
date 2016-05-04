@@ -1,4 +1,3 @@
 #include "chunk_container.h"
 
-dariadb::storage::ChunkContainer::~ChunkContainer() {
-}
+dariadb::storage::ChunkContainer::~ChunkContainer() {}
