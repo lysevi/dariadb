@@ -60,12 +60,11 @@ public:
 class MemoryStorage::Private: protected dariadb::utils::AsyncWorker<Chunk_Ptr>
 {
 public:
-	Private(size_t size, MemoryStorage::Limits lmts) :
+	Private(size_t size) :
 		_size(size),
 		_min_time(std::numeric_limits<dariadb::Time>::max()),
 		_max_time(std::numeric_limits<dariadb::Time>::min()),
-		_subscribe_notify(new SubscribeNotificator),
-		_limits(lmts)
+		_subscribe_notify(new SubscribeNotificator)
 	{
 		_subscribe_notify->start();
 		this->start_async();
@@ -175,16 +174,6 @@ public:
 		assert(chunk->is_full());
         if(_cw!=nullptr){
             _cw->append(chunk);
-			if (_limits.max_mem_chunks == 0) {
-				if (_limits.old_mem_chunks != 0) {
-					auto old_chunks = drop_old_chunks(_limits.old_mem_chunks);
-					_cw->append(old_chunks);
-				}
-			}
-			else {
-				auto old_chunks = drop_old_chunks_by_limit(_limits.max_mem_chunks);
-				_cw->append(old_chunks);
-			}
         }
 	}
 
@@ -268,10 +257,9 @@ public:
 		ChunksList result{};
 
 		if (chunks_total_size() >= max_limit) {
-            std::lock_guard<std::mutex> lg_drop(_locker_drop);
-			
-            //std::unique_lock<std::mutex> lg_ch(_locker_chunks, std::defer_lock);
-            //std::lock(lg_drop,lg_ch);
+            std::unique_lock<std::mutex> lg_drop(_locker_drop,  std::defer_lock);
+            std::unique_lock<std::mutex> lg_ch(_locker_chunks, std::defer_lock);
+            std::lock(lg_drop,lg_ch);
 
             int64_t iterations = (int64_t(chunks_total_size()) - (max_limit - size_t(max_limit / 3)));
 			if (iterations < 0) {
@@ -506,11 +494,10 @@ protected:
     mutable std::mutex _locker_free_chunks, _locker_drop, _locker_min_max;
     mutable std::mutex _locker_chunks;
     ChunkWriter*_cw;
-	MemoryStorage::Limits _limits;
 };
 
-MemoryStorage::MemoryStorage(size_t size, MemoryStorage::Limits lmts)
-	:_Impl(new MemoryStorage::Private(size,lmts)) {
+MemoryStorage::MemoryStorage(size_t size)
+	:_Impl(new MemoryStorage::Private(size)) {
 }
 
 

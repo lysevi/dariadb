@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 		auto raw_ptr = new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
 			dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
-			dariadb::storage::MemoryStorage::Limits(old_mem_chunks, max_mem_chunks));
+			dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
 		
 		dariadb::storage::BaseStorage_ptr ms{raw_ptr};
 

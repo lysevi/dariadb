@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
             new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
 				dariadb::storage::Capacitor::Params(cap_max_size,write_window_deep),
-				dariadb::storage::MemoryStorage::Limits(old_mem_chunks,0)) };
+				dariadb::storage::UnionStorage::Limits(old_mem_chunks,0)) };
 
         auto e = dariadb::Meas::empty();
         //max time always
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 			new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage,chunk_size),
 				dariadb::storage::Capacitor::Params(cap_max_size,write_window_deep),
-				dariadb::storage::MemoryStorage::Limits(0, 10)) };
+				dariadb::storage::UnionStorage::Limits(0, 10)) };
 
 	
 
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 			new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage, chunk_size),
 				dariadb::storage::Capacitor::Params(cap_max_size,write_window_deep),
-				dariadb::storage::MemoryStorage::Limits(0,0)) };
+				dariadb::storage::UnionStorage::Limits(0,0)) };
 
 		dariadb::Meas::MeasList mlist;
 		ms->currentValue(dariadb::IdArray{},0)->readAll(&mlist);
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
 		auto raw_ptr = new dariadb::storage::UnionStorage(
 			dariadb::storage::PageManager::Params(storage_path, dariadb::storage::MODE::SINGLE, chunk_per_storage,chunk_size),
 			dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
-			dariadb::storage::MemoryStorage::Limits(0, max_mem_chunks));
+			dariadb::storage::UnionStorage::Limits(0, max_mem_chunks));
         
 		dariadb::storage::BaseStorage_ptr ms{raw_ptr};
 

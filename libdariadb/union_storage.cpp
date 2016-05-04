@@ -14,10 +14,11 @@ class UnionStorage::Private {
 public:
 	Private(const PageManager::Params&page_storage_params,
 		dariadb::storage::Capacitor::Params cap_params,
-		dariadb::storage::MemoryStorage::Limits limits) :
-		mem_storage{ new MemoryStorage(page_storage_params.chunk_size,limits) },
+		dariadb::storage::UnionStorage::Limits limits) :
+		mem_storage{ new MemoryStorage(page_storage_params.chunk_size) },
 		_page_manager_params(page_storage_params),
-		_cap_params(cap_params)
+		_cap_params(cap_params),
+       _limits(limits)
 	{
         dariadb::storage::ChunkPool::instance()->start();
 
@@ -29,10 +30,14 @@ public:
 
 		auto open_chunks = PageManager::instance()->get_open_chunks();
         mem_storage_raw->append(open_chunks);
-        mem_storage_raw->set_chunkWriter(PageManager::instance());
+        //mem_storage_raw->set_chunkWriter(PageManager::instance());
 	}
 	~Private() {
 		this->flush();
+        if (_limits.max_mem_chunks != 0) {
+            auto all_chunks = this->mem_storage_raw->drop_all();
+            PageManager::instance()->append(all_chunks); //use specified in ctor
+        }
 		delete mem_cap;
 		PageManager::stop();
 		
@@ -69,9 +74,23 @@ public:
 		else {
 			result.writed++;
 		}
+
+        drop_old_chunks();
 		return result;
 	}
 
+	void drop_old_chunks() {
+		if (_limits.max_mem_chunks == 0) {
+			if (_limits.old_mem_chunks != 0) {
+				auto old_chunks = mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
+                PageManager::instance()->append(old_chunks);
+			}
+		}
+		else {
+			auto old_chunks = mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
+            PageManager::instance()->append(old_chunks);
+		}
+	}
 
 	void subscribe(const IdArray&ids, const Flag& flag, const ReaderClb_ptr &clbk) {
 		mem_storage->subscribe(ids, flag, clbk);
@@ -84,7 +103,7 @@ public:
 	void flush() {
         std::lock_guard<std::recursive_mutex> lg(_locker);
 		this->mem_cap->flush();
-		this->mem_storage_raw->flush();
+		this->drop_old_chunks();
 		PageManager::instance()->flush();
 	}
 
@@ -311,12 +330,13 @@ public:
 
 	storage::PageManager::Params _page_manager_params;
 	dariadb::storage::Capacitor::Params _cap_params;
+	dariadb::storage::UnionStorage::Limits _limits;
     mutable std::recursive_mutex _locker;
 };
 
 UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,
 	dariadb::storage::Capacitor::Params cap_params,
-    const dariadb::storage::MemoryStorage::Limits&limits):
+    const dariadb::storage::UnionStorage::Limits&limits):
 	_impl{ new UnionStorage::Private(page_manager_params,
 									cap_params, limits) }
 {

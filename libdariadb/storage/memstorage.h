@@ -8,20 +8,7 @@ namespace dariadb {
 
         class MemoryStorage : public BaseStorage, public ChunkWriter{
         public:
-			struct Limits {
-				dariadb::Time old_mem_chunks; // old_mem_chunks - time when drop old chunks to page (MemStorage)
-				size_t max_mem_chunks;        // max_mem_chunks - maximum chunks in memory.zero - by old_mem_chunks(MemStorage)
-
-				Limits(const dariadb::Time old_time, const size_t max_mem) {
-					old_mem_chunks = old_time;
-					max_mem_chunks = max_mem;
-				}
-				Limits() {
-					old_mem_chunks = dariadb::Time(0);
-					max_mem_chunks = size_t(0);
-				}
-			};
-            MemoryStorage(size_t size, Limits lmts=Limits());
+            MemoryStorage(size_t size);
             virtual ~MemoryStorage();
 
             using BaseStorage::append;
