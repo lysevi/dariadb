@@ -4,6 +4,7 @@ v0.0.5
 - Asynchronous memory storage.
 - PageManager: drop loaded chunks (on get_open_chunks) and dec chunks_in_cur_page() counter.
 - PageManager: page fragmentation support.
+- Chunk memory pool.
 
 v0.0.4
 ======

@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
             auto time_point2 = uniform_dist(e1);
             auto from=std::min(time_point1,time_point2);
             auto to=std::max(time_point1,time_point2);
-            auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(dariadb::IdArray{}, from, to, 0);
+            auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), from, to);
             cursor->readAll(clbk);
             cursor = nullptr;
         }

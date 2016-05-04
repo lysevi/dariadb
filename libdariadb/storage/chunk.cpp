@@ -11,25 +11,21 @@ using namespace dariadb::compression;
 
 std::unique_ptr<ChunkPool> ChunkPool::_instance=nullptr;
 
-ChunkPool::ChunkPool(){
-	_max_size = ChunkPool_default_max_size;
+ChunkPool::ChunkPool():
+    _chunks(ChunkPool_default_max_size){
 }
 
 ChunkPool::~ChunkPool(){
-    for(auto p:_ptrs){
-        :: operator delete(p);
-    }
 }
 
-void ChunkPool::start(size_t max_size){
-	if (max_size != 0) {
-		ChunkPool::instance()->_max_size = max_size;
-	}
+void ChunkPool::start(){
+    ChunkPool::instance();
 }
 
 void ChunkPool::stop(){
     ChunkPool::_instance=nullptr;
 }
+
 
 ChunkPool*ChunkPool::instance(){
     if(_instance==nullptr){
@@ -38,43 +34,29 @@ ChunkPool*ChunkPool::instance(){
     return _instance.get();
 }
 
-size_t ChunkPool::polled(){
-    return _ptrs.size();
+void*ChunkPool::alloc_chunk(std::size_t sz){
+    return _chunks.alloc(sz);
 }
 
-void* ChunkPool::alloc(std::size_t sz){
-    std::lock_guard<std::mutex> lg(_locker);
-    void*result=nullptr;
-    if(this->_ptrs.size()!=0){
-        result= this->_ptrs.back();
-        this->_ptrs.pop_back();
-    }else{
-        result=::operator new(sz);
-    }
-    memset(result,0,sz);
-    return result;
+void ChunkPool::free_chunk(void* ptr, std::size_t sz){
+    return _chunks.free(ptr,sz);
 }
 
-void ChunkPool::free(void* ptr, std::size_t){
-    std::lock_guard<std::mutex> lg(_locker);
-    if (_ptrs.size() < _max_size) {
-        _ptrs.push_front(ptr);
-    }
-    else {
-		::operator delete(ptr);
-	}
+size_t ChunkPool::polled_chunks(){
+    return _chunks.polled();
 }
 
 void* Chunk::operator new(std::size_t sz){
-    return ChunkPool::instance()->alloc(sz);
+    return ChunkPool::instance()->alloc_chunk(sz);
 }
 
 void Chunk::operator delete(void* ptr, std::size_t sz){
-    ChunkPool::instance()->free(ptr,sz);
+    ChunkPool::instance()->free_chunk(ptr,sz);
 }
 
 Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buffer_length) :
-	_buffer_t(buffer_length),
+    _buffer_t(new uint8_t[buffer_length]),
+    _size(buffer_length),
     _locker{}
 {
 	count = index.count;
@@ -89,10 +71,10 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 	is_dropped = index.is_dropped;
 
 	for (size_t i = 0; i < buffer_length; i++) {
-		_buffer_t[i] = buffer[i];
+        _buffer_t[i] = buffer[i];
 	}
 
-	range = Range{ _buffer_t.data(),_buffer_t.data() + buffer_length };
+    range = Range{ _buffer_t,_buffer_t + buffer_length };
 	assert(size_t(range.end - range.begin)==buffer_length);
 	bw = std::make_shared<BinaryBuffer>(range);
 	bw->set_bitnum(bw_bit_num);
@@ -103,7 +85,8 @@ Chunk::Chunk(const ChunkIndexInfo&index, const uint8_t* buffer, const size_t buf
 }
 
 Chunk::Chunk(size_t size, Meas first_m) :
-	_buffer_t(size),
+    _buffer_t(new uint8_t[size]),
+    _size(size),
     _locker()
 {
 	is_readonly = false;
@@ -114,10 +97,10 @@ Chunk::Chunk(size_t size, Meas first_m) :
 	minTime = std::numeric_limits<Time>::max();
 	maxTime = std::numeric_limits<Time>::min();
 
-	std::fill(_buffer_t.begin(), _buffer_t.end(), 0);
+    std::fill(_buffer_t, _buffer_t+size, 0);
 
 	using compression::BinaryBuffer;
-	range = Range{ _buffer_t.data(),_buffer_t.data() + size };
+    range = Range{ _buffer_t,_buffer_t + size };
 	bw = std::make_shared<BinaryBuffer>(range);
 
 	c_writer = compression::CopmressedWriter(bw);
@@ -128,18 +111,16 @@ Chunk::Chunk(size_t size, Meas first_m) :
 }
 
 Chunk::~Chunk() {
-    std::lock_guard<std::mutex> lg(_locker);
 	this->bw = nullptr;
-	_buffer_t.clear();
+	delete[] this->_buffer_t;
 }
 
-bool Chunk::append(const Meas&m)
-{
+bool Chunk::append(const Meas&m){
 	if (is_dropped || is_readonly) {
 		throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
 	}
 
-    std::lock_guard<std::mutex> lg(_locker);
+    std::lock_guard<utils::Locker> lg(_locker);
 	auto t_f = this->c_writer.append(m);
 	writer_position = c_writer.get_position();
 
@@ -148,7 +129,7 @@ bool Chunk::append(const Meas&m)
 		assert(c_writer.is_full());
 		return false;
 	}
-	else {
+    else {
 		bw_pos = uint32_t(bw->pos());
 		bw_bit_num = bw->bitnum();
 
@@ -157,7 +138,7 @@ bool Chunk::append(const Meas&m)
 		minTime = std::min(minTime, m.time);
 		maxTime = std::max(maxTime, m.time);
         flag_bloom = dariadb::storage::bloom_add(flag_bloom, m.flag);
-		last = m;
+        last = m;
 		return true;
 	}
 }

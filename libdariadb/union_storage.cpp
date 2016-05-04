@@ -20,7 +20,7 @@ public:
 		_cap_params(cap_params),
        _limits(limits)
 	{
-		dariadb::storage::ChunkPool::instance()->start(_limits.max_mem_chunks);
+        dariadb::storage::ChunkPool::instance()->start();
 
 		mem_cap = new Capacitor(mem_storage, _cap_params);
 		mem_storage_raw = dynamic_cast<MemoryStorage*>(mem_storage.get());
