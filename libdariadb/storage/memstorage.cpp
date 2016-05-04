@@ -269,10 +269,8 @@ public:
             for (auto& kv : _chunks) {
 				auto chunk = kv.second;
                 assert(chunk!=nullptr);
-                assert(chunk->_buffer_t.size()!=0);
                 if (chunk->is_readonly) {
                     result.push_back(chunk);
-                    assert(chunk->_buffer_t.size()!=0);
                     chunk->is_dropped=true;
                 }
 
@@ -285,14 +283,6 @@ public:
                     kv.second.remove_droped();
                 }
 
-#ifdef DEBUG
-                for(auto kv:_chunks){
-                    assert(kv.second->_buffer_t.size()!=0);
-                }
-                for(auto v:result){
-                    assert(v->_buffer_t.size()!=0);
-                }
-#endif
                 _chunks.remove_droped();
                 update_min_after_drop();
 			}
