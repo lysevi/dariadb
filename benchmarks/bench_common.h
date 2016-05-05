@@ -1,6 +1,6 @@
 #pragma once
-#include <atomic>
 #include <dariadb.h>
+#include <atomic>
 
 namespace dariadb_bench {
 // TODO use cmd line params
