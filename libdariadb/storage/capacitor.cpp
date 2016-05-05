@@ -225,7 +225,7 @@ protected:
   mutable dariadb::utils::Locker _locker;
   Capacitor::Params _params;
   dict_locks _locks;
-  dariadb::utils::Locker _dict_locker;
+  dariadb::utils::Locker _dict_locker; //striped lock
 };
 
 Capacitor::~Capacitor() { this->stop_worker(); }
