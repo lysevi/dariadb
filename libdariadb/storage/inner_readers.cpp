@@ -63,24 +63,13 @@ void InnerReader::readNext(storage::ReaderClb *clb) {
       }
       auto cur_ch = reader_clbk->readed;
       reader_clbk->readed = nullptr;
-      auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
-      bw->reset_pos();
-      CopmressedReader crr(bw, cur_ch->first);
 
-      if (check_meas(cur_ch->first)) {
-        auto sub = cur_ch->first;
-        clb->call(sub);
-      }
-
-      for (size_t j = 0; j < cur_ch->count; j++) {
-        auto sub = crr.read();
+      auto ch_reader = cur_ch->get_reader();
+      while (!ch_reader->is_end()) {
+        auto sub = ch_reader->readNext();
         sub.id = cur_ch->first.id;
         if (check_meas(sub)) {
           clb->call(sub);
-        } else {
-          if (sub.time > _to) {
-            break;
-          }
         }
       }
     }

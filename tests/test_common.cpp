@@ -57,12 +57,14 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader,
         continue;
       }
     }
-    if (cur_m.value <= cur_val) {
-      throw MAKE_EXCEPTION("(it->value <= cur_val)");
+    if (cur_m.value < cur_val) {
+      std::cout << cur_m.value << " => " << cur_val << std::endl;
+      throw MAKE_EXCEPTION("(it->value < cur_val)");
     }
   }
 
-  if (all.size() != total_count) {
+  auto all_sz = all.size();
+  if (all_sz != total_count) {
     throw MAKE_EXCEPTION("(all.size() != total_count)");
   }
   // TODO reset is sucks

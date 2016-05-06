@@ -152,3 +152,39 @@ bool ZippedChunk::append(const Meas &m) {
     return true;
   }
 }
+
+class ZippedChunkReader : public Chunk::Reader {
+public:
+  virtual Meas readNext() {
+    assert(!is_end());
+
+    if (_is_first) {
+      _is_first = false;
+      return _chunk->first;
+    }
+    --count;
+    return _reader->read();
+  }
+
+  bool is_end() const override { return count == 0 && !_is_first; }
+
+  size_t count;
+  bool _is_first = true;
+  Chunk_Ptr _chunk;
+  std::shared_ptr<BinaryBuffer> bw;
+  std::shared_ptr<CopmressedReader> _reader;
+};
+
+Chunk::Reader_Ptr ZippedChunk::get_reader() {
+  auto raw_res = new ZippedChunkReader;
+  raw_res->count = this->count;
+  raw_res->_chunk = this->shared_from_this();
+  raw_res->_is_first = true;
+  raw_res->bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
+  raw_res->bw->reset_pos();
+  raw_res->_reader =
+      std::make_shared<CopmressedReader>(raw_res->bw, this->first);
+
+  Chunk::Reader_Ptr result{raw_res};
+  return result;
+}

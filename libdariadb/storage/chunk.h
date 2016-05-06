@@ -33,6 +33,14 @@ struct ChunkIndexInfo {
 
 class Chunk : public ChunkIndexInfo {
 public:
+  class Reader {
+  public:
+    virtual Meas readNext() = 0;
+    virtual bool is_end() const = 0;
+  };
+
+  using Reader_Ptr = std::shared_ptr<Chunk::Reader>;
+
   typedef uint8_t *u8vector;
   Chunk(size_t size, Meas first_m);
   Chunk(const ChunkIndexInfo &index, const uint8_t *buffer,
@@ -41,6 +49,7 @@ public:
 
   virtual bool append(const Meas &m) = 0;
   virtual bool is_full() const = 0;
+  virtual Reader_Ptr get_reader() = 0;
   bool check_flag(const Flag &f);
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
@@ -54,7 +63,7 @@ public:
   static void operator delete(void *ptr, std::size_t sz);
 };
 
-class ZippedChunk : public Chunk {
+class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
 public:
   ZippedChunk(size_t size, Meas first_m);
   ZippedChunk(const ChunkIndexInfo &index, const uint8_t *buffer,
@@ -62,6 +71,7 @@ public:
   ~ZippedChunk();
   bool is_full() const override { return c_writer.is_full(); }
   bool append(const Meas &m) override;
+  Reader_Ptr get_reader() override;
   utils::Range range;
   compression::CopmressedWriter c_writer;
 };

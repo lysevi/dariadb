@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(ReadInterval) {
     dariadb::Meas::MeasList output{};
     reader->readAll(&output);
     BOOST_CHECK_EQUAL(output.size(), size_t(7));
-
+    //{1,8} {2,8} {4,8} {55,8} {4,9} {5,10}
     if (output.size() != size_t(7)) {
       std::cout << " ERROR!!!!" << std::endl;
       // reader->readNext(nullptr);
