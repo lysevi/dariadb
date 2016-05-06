@@ -59,15 +59,6 @@ Chunk::Chunk(const ChunkIndexInfo &index, const uint8_t *buffer,
   for (size_t i = 0; i < buffer_length; i++) {
     _buffer_t[i] = buffer[i];
   }
-
-  range = Range{_buffer_t, _buffer_t + buffer_length};
-  assert(size_t(range.end - range.begin) == buffer_length);
-  bw = std::make_shared<BinaryBuffer>(range);
-  bw->set_bitnum(bw_bit_num);
-  bw->set_pos(bw_pos);
-
-  c_writer = compression::CopmressedWriter(bw);
-  c_writer.restore_position(index.writer_position);
 }
 
 Chunk::Chunk(size_t size, Meas first_m)
@@ -82,12 +73,6 @@ Chunk::Chunk(size_t size, Meas first_m)
 
   std::fill(_buffer_t, _buffer_t + size, 0);
 
-  using compression::BinaryBuffer;
-  range = Range{_buffer_t, _buffer_t + size};
-  bw = std::make_shared<BinaryBuffer>(range);
-
-  c_writer = compression::CopmressedWriter(bw);
-  c_writer.append(first);
   minTime = first_m.time;
   maxTime = first_m.time;
   flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
@@ -98,7 +83,43 @@ Chunk::~Chunk() {
   delete[] this->_buffer_t;
 }
 
-bool Chunk::append(const Meas &m) {
+bool Chunk::check_flag(const Flag &f) {
+  if (f != 0) {
+    if (!dariadb::storage::bloom_check(flag_bloom, f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+ZippedChunk::ZippedChunk(size_t size, Meas first_m):Chunk(size,first_m){
+    is_zipped=true;
+    using compression::BinaryBuffer;
+    range = Range{_buffer_t, _buffer_t + size};
+    bw = std::make_shared<BinaryBuffer>(range);
+
+    c_writer = compression::CopmressedWriter(bw);
+    c_writer.append(first);
+}
+
+ZippedChunk::ZippedChunk(const ChunkIndexInfo &index, const uint8_t *buffer,
+             const size_t buffer_length): Chunk(index,buffer,buffer_length){
+    assert(index.is_zipped);
+    range = Range{_buffer_t, _buffer_t + buffer_length};
+    assert(size_t(range.end - range.begin) == buffer_length);
+    bw = std::make_shared<BinaryBuffer>(range);
+    bw->set_bitnum(bw_bit_num);
+    bw->set_pos(bw_pos);
+
+    c_writer = compression::CopmressedWriter(bw);
+    c_writer.restore_position(index.writer_position);
+}
+
+ZippedChunk::~ZippedChunk(){
+
+}
+
+bool ZippedChunk::append(const Meas &m) {
   if (is_dropped || is_readonly) {
     throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
   }
@@ -125,11 +146,3 @@ bool Chunk::append(const Meas &m) {
   }
 }
 
-bool Chunk::check_flag(const Flag &f) {
-  if (f != 0) {
-    if (!dariadb::storage::bloom_check(flag_bloom, f)) {
-      return false;
-    }
-  }
-  return true;
-}

@@ -27,31 +27,44 @@ struct ChunkIndexInfo {
   compression::CopmressedWriter::Position writer_position;
 
   bool is_dropped;
+  bool is_zipped;
 };
 #pragma pack(pop)
 
-struct Chunk : public ChunkIndexInfo {
+class Chunk : public ChunkIndexInfo {
 public:
   typedef uint8_t *u8vector;
   Chunk(size_t size, Meas first_m);
   Chunk(const ChunkIndexInfo &index, const uint8_t *buffer,
         const size_t buffer_length);
-  ~Chunk();
+  virtual ~Chunk();
 
-  bool append(const Meas &m);
-  bool is_full() const { return c_writer.is_full(); }
+  virtual bool append(const Meas &m)=0;
+  virtual bool is_full() const=0;
   bool check_flag(const Flag &f);
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
+
   u8vector _buffer_t;
   size_t _size;
-  utils::Range range;
-  compression::CopmressedWriter c_writer;
+
 
   utils::Locker _locker;
   compression::BinaryBuffer_Ptr bw;
   static void *operator new(std::size_t sz);
   static void operator delete(void *ptr, std::size_t sz);
+};
+
+class ZippedChunk: public Chunk{
+public:
+    ZippedChunk(size_t size, Meas first_m);
+    ZippedChunk(const ChunkIndexInfo &index, const uint8_t *buffer,
+          const size_t buffer_length);
+    ~ZippedChunk();
+    bool is_full() const override { return c_writer.is_full(); }
+    bool append(const Meas &m)override;
+    utils::Range range;
+    compression::CopmressedWriter c_writer;
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;

@@ -51,8 +51,14 @@ public:
       }
 
       if (check_index_rec(_index_it)) {
-        auto ptr = new Chunk(_index_it.info, link->chunks + _index_it.offset,
-                             link->header->chunk_size);
+          Chunk_Ptr ptr=nullptr;
+          if(_index_it.info.is_zipped){
+          ptr = Chunk_Ptr{new ZippedChunk(_index_it.info, link->chunks + _index_it.offset,
+                             link->header->chunk_size)};
+          }else{
+              //TODO implement not zipped page.
+              assert(false);
+          }
         Chunk_Ptr c{ptr};
         assert(c->last.time != 0);
         cbk->call(c);
@@ -302,8 +308,14 @@ ChunksList Page::get_open_chunks() {
     }
     if (!index_it->info.is_readonly) {
       index_it->is_init = false;
-      auto ptr = new Chunk(index_it->info, this->chunks + index_it->offset,
+      Chunk* ptr=nullptr;
+      if(index_it->info.is_zipped){
+      ptr = new ZippedChunk(index_it->info, this->chunks + index_it->offset,
                            this->header->chunk_size);
+      }else{
+          //TODO implement not zipped chunk
+          assert(false);
+      }
       Chunk_Ptr c = Chunk_Ptr(ptr);
       result.push_back(c);
       index_it->is_init = false;

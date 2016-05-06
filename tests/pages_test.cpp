@@ -24,7 +24,7 @@ dariadb::Time add_chunk(dariadb::Id id, dariadb::Time t, size_t chunks_size) {
   first.id = id;
   first.time = t;
   dariadb::storage::Chunk_Ptr ch =
-      std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
+      std::make_shared<dariadb::storage::ZippedChunk>(chunks_size, first);
 
   for (int i = 0;; i++, t++) {
     first.flag = dariadb::Flag(i);
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   first.time = t;
   {
     dariadb::storage::Chunk_Ptr ch =
-        std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
+        std::make_shared<dariadb::storage::ZippedChunk>(chunks_size, first);
 
     for (size_t i = 0; i < (chunks_size / 10); i++, t++) {
       first.flag = dariadb::Flag(i);

@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     first.time = t;
 
     dariadb::storage::Chunk_Ptr ch =
-        std::make_shared<dariadb::storage::Chunk>(chunks_size, first);
+        std::make_shared<dariadb::storage::ZippedChunk>(chunks_size, first);
     for (int i = 0;; i++, t++) {
       first.flag = dariadb::Flag(i);
       first.time = t;

@@ -118,7 +118,7 @@ public:
   }
 
   Chunk_Ptr make_chunk(dariadb::Meas first) {
-    auto ptr = new Chunk(_size, first);
+    auto ptr = new ZippedChunk(_size, first);
     auto chunk = Chunk_Ptr{ptr};
     this->_free_chunks[first.id] = chunk;
     return chunk;
