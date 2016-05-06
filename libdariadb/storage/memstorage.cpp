@@ -487,9 +487,13 @@ MemoryStorage::MemoryStorage(size_t size)
 
 MemoryStorage::~MemoryStorage() {}
 
-Time MemoryStorage::minTime() { return _Impl->minTime(); }
+Time MemoryStorage::minTime() {
+  return _Impl->minTime();
+}
 
-Time MemoryStorage::maxTime() { return _Impl->maxTime(); }
+Time MemoryStorage::maxTime() {
+  return _Impl->maxTime();
+}
 
 bool MemoryStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                dariadb::Time *maxResult) {
@@ -505,9 +509,13 @@ append_result MemoryStorage::append(const dariadb::Meas::PMeas begin,
   return _Impl->append(begin, size);
 }
 
-size_t MemoryStorage::size() const { return _Impl->size(); }
+size_t MemoryStorage::size() const {
+  return _Impl->size();
+}
 
-size_t MemoryStorage::chunks_size() const { return _Impl->chunks_size(); }
+size_t MemoryStorage::chunks_size() const {
+  return _Impl->chunks_size();
+}
 
 size_t MemoryStorage::chunks_total_size() const {
   return _Impl->chunks_total_size();
@@ -522,9 +530,13 @@ Reader_ptr MemoryStorage::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-void MemoryStorage::flush() { _Impl->flush(); }
+void MemoryStorage::flush() {
+  _Impl->flush();
+}
 
-size_t MemoryStorage::queue_size() const { return _Impl->queue_size(); }
+size_t MemoryStorage::queue_size() const {
+  return _Impl->queue_size();
+}
 
 dariadb::storage::ChunksList
 MemoryStorage::drop_old_chunks(const dariadb::Time min_time) {
@@ -549,13 +561,17 @@ IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
   return _Impl->chunksBeforeTimePoint(ids, flag, timePoint);
 }
 
-dariadb::IdArray MemoryStorage::getIds() { return _Impl->getIds(); }
+dariadb::IdArray MemoryStorage::getIds() {
+  return _Impl->getIds();
+}
 
 bool MemoryStorage::append(const ChunksList &clist) {
   return _Impl->append(clist);
 }
 
-bool MemoryStorage::append(const Chunk_Ptr &c) { return _Impl->append(c); }
+bool MemoryStorage::append(const Chunk_Ptr &c) {
+  return _Impl->append(c);
+}
 
 void MemoryStorage::set_chunkWriter(ChunkWriter *cw) {
   _Impl->set_chunkWriter(cw);

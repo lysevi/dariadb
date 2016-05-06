@@ -15,9 +15,13 @@ ChunkPool::ChunkPool() : _chunks(ChunkPool_default_max_size) {}
 
 ChunkPool::~ChunkPool() {}
 
-void ChunkPool::start() { ChunkPool::instance(); }
+void ChunkPool::start() {
+  ChunkPool::instance();
+}
 
-void ChunkPool::stop() { ChunkPool::_instance = nullptr; }
+void ChunkPool::stop() {
+  ChunkPool::_instance = nullptr;
+}
 
 ChunkPool *ChunkPool::instance() {
   if (_instance == nullptr) {
@@ -26,13 +30,17 @@ ChunkPool *ChunkPool::instance() {
   return _instance.get();
 }
 
-void *ChunkPool::alloc_chunk(std::size_t sz) { return _chunks.alloc(sz); }
+void *ChunkPool::alloc_chunk(std::size_t sz) {
+  return _chunks.alloc(sz);
+}
 
 void ChunkPool::free_chunk(void *ptr, std::size_t sz) {
   return _chunks.free(ptr, sz);
 }
 
-size_t ChunkPool::polled_chunks() { return _chunks.polled(); }
+size_t ChunkPool::polled_chunks() {
+  return _chunks.polled();
+}
 
 void *Chunk::operator new(std::size_t sz) {
   return ChunkPool::instance()->alloc_chunk(sz);
@@ -92,32 +100,31 @@ bool Chunk::check_flag(const Flag &f) {
   return true;
 }
 
-ZippedChunk::ZippedChunk(size_t size, Meas first_m):Chunk(size,first_m){
-    is_zipped=true;
-    using compression::BinaryBuffer;
-    range = Range{_buffer_t, _buffer_t + size};
-    bw = std::make_shared<BinaryBuffer>(range);
+ZippedChunk::ZippedChunk(size_t size, Meas first_m) : Chunk(size, first_m) {
+  is_zipped = true;
+  using compression::BinaryBuffer;
+  range = Range{_buffer_t, _buffer_t + size};
+  bw = std::make_shared<BinaryBuffer>(range);
 
-    c_writer = compression::CopmressedWriter(bw);
-    c_writer.append(first);
+  c_writer = compression::CopmressedWriter(bw);
+  c_writer.append(first);
 }
 
 ZippedChunk::ZippedChunk(const ChunkIndexInfo &index, const uint8_t *buffer,
-             const size_t buffer_length): Chunk(index,buffer,buffer_length){
-    assert(index.is_zipped);
-    range = Range{_buffer_t, _buffer_t + buffer_length};
-    assert(size_t(range.end - range.begin) == buffer_length);
-    bw = std::make_shared<BinaryBuffer>(range);
-    bw->set_bitnum(bw_bit_num);
-    bw->set_pos(bw_pos);
+                         const size_t buffer_length)
+    : Chunk(index, buffer, buffer_length) {
+  assert(index.is_zipped);
+  range = Range{_buffer_t, _buffer_t + buffer_length};
+  assert(size_t(range.end - range.begin) == buffer_length);
+  bw = std::make_shared<BinaryBuffer>(range);
+  bw->set_bitnum(bw_bit_num);
+  bw->set_pos(bw_pos);
 
-    c_writer = compression::CopmressedWriter(bw);
-    c_writer.restore_position(index.writer_position);
+  c_writer = compression::CopmressedWriter(bw);
+  c_writer.restore_position(index.writer_position);
 }
 
-ZippedChunk::~ZippedChunk(){
-
-}
+ZippedChunk::~ZippedChunk() {}
 
 bool ZippedChunk::append(const Meas &m) {
   if (is_dropped || is_readonly) {
@@ -145,4 +152,3 @@ bool ZippedChunk::append(const Meas &m) {
     return true;
   }
 }
-

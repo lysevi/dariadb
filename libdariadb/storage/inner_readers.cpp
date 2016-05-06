@@ -30,7 +30,9 @@ void InnerReader::add_tp(Chunk_Ptr c) {
   this->_tp_chunks[c->first.id].push_back(c);
 }
 
-bool InnerReader::isEnd() const { return this->end && this->_tp_readed; }
+bool InnerReader::isEnd() const {
+  return this->end && this->_tp_readed;
+}
 
 dariadb::IdArray InnerReader::getIds() const {
   dariadb::IdSet idset;
@@ -174,10 +176,14 @@ void InnerReader::reset() {
   }
 }
 
-InnerCurrentValuesReader::InnerCurrentValuesReader() { this->end = false; }
+InnerCurrentValuesReader::InnerCurrentValuesReader() {
+  this->end = false;
+}
 InnerCurrentValuesReader::~InnerCurrentValuesReader() {}
 
-bool InnerCurrentValuesReader::isEnd() const { return this->end; }
+bool InnerCurrentValuesReader::isEnd() const {
+  return this->end;
+}
 
 void InnerCurrentValuesReader::readCurVals(storage::ReaderClb *clb) {
   for (auto v : _cur_values) {
@@ -207,4 +213,6 @@ Reader_ptr InnerCurrentValuesReader::clone() const {
   raw_reader->_cur_values = _cur_values;
   return result;
 }
-void InnerCurrentValuesReader::reset() { end = false; }
+void InnerCurrentValuesReader::reset() {
+  end = false;
+}

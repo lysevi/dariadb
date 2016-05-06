@@ -39,8 +39,8 @@ public:
         const size_t buffer_length);
   virtual ~Chunk();
 
-  virtual bool append(const Meas &m)=0;
-  virtual bool is_full() const=0;
+  virtual bool append(const Meas &m) = 0;
+  virtual bool is_full() const = 0;
   bool check_flag(const Flag &f);
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
@@ -48,23 +48,22 @@ public:
   u8vector _buffer_t;
   size_t _size;
 
-
   utils::Locker _locker;
   compression::BinaryBuffer_Ptr bw;
   static void *operator new(std::size_t sz);
   static void operator delete(void *ptr, std::size_t sz);
 };
 
-class ZippedChunk: public Chunk{
+class ZippedChunk : public Chunk {
 public:
-    ZippedChunk(size_t size, Meas first_m);
-    ZippedChunk(const ChunkIndexInfo &index, const uint8_t *buffer,
-          const size_t buffer_length);
-    ~ZippedChunk();
-    bool is_full() const override { return c_writer.is_full(); }
-    bool append(const Meas &m)override;
-    utils::Range range;
-    compression::CopmressedWriter c_writer;
+  ZippedChunk(size_t size, Meas first_m);
+  ZippedChunk(const ChunkIndexInfo &index, const uint8_t *buffer,
+              const size_t buffer_length);
+  ~ZippedChunk();
+  bool is_full() const override { return c_writer.is_full(); }
+  bool append(const Meas &m) override;
+  utils::Range range;
+  compression::CopmressedWriter c_writer;
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;

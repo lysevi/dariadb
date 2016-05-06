@@ -330,11 +330,17 @@ UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,
     : _impl{
           new UnionStorage::Private(page_manager_params, cap_params, limits)} {}
 
-UnionStorage::~UnionStorage() { _impl = nullptr; }
+UnionStorage::~UnionStorage() {
+  _impl = nullptr;
+}
 
-Time UnionStorage::minTime() { return _impl->minTime(); }
+Time UnionStorage::minTime() {
+  return _impl->minTime();
+}
 
-Time UnionStorage::maxTime() { return _impl->maxTime(); }
+Time UnionStorage::maxTime() {
+  return _impl->maxTime();
+}
 
 append_result UnionStorage::append(const Meas::PMeas begin, const size_t size) {
   return _impl->append(begin, size);
@@ -353,7 +359,9 @@ Reader_ptr UnionStorage::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
-void UnionStorage::flush() { _impl->flush(); }
+void UnionStorage::flush() {
+  _impl->flush();
+}
 
 bool UnionStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                               dariadb::Time *maxResult) {
@@ -370,7 +378,9 @@ IdToChunkMap UnionStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
   return _impl->chunksBeforeTimePoint(ids, flag, timePoint);
 }
 
-IdArray UnionStorage::getIds() { return _impl->getIds(); }
+IdArray UnionStorage::getIds() {
+  return _impl->getIds();
+}
 
 size_t UnionStorage::chunks_in_memory() const {
   return _impl->chunks_in_memory();

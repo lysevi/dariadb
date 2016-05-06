@@ -173,9 +173,13 @@ MappedFile::MapperFile_ptr MappedFile::touch(const std::string &path,
   return result;
 }
 
-void MappedFile::close() { _impl->close(); }
+void MappedFile::close() {
+  _impl->close();
+}
 
-uint8_t *MappedFile::data() { return _impl->data(); }
+uint8_t *MappedFile::data() {
+  return _impl->data();
+}
 
 void MappedFile::flush(std::size_t offset, std::size_t bytes) {
   _impl->flush(offset, bytes);

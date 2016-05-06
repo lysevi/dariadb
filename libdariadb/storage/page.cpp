@@ -51,14 +51,15 @@ public:
       }
 
       if (check_index_rec(_index_it)) {
-          Chunk_Ptr ptr=nullptr;
-          if(_index_it.info.is_zipped){
-          ptr = Chunk_Ptr{new ZippedChunk(_index_it.info, link->chunks + _index_it.offset,
-                             link->header->chunk_size)};
-          }else{
-              //TODO implement not zipped page.
-              assert(false);
-          }
+        Chunk_Ptr ptr = nullptr;
+        if (_index_it.info.is_zipped) {
+          ptr = Chunk_Ptr{new ZippedChunk(_index_it.info,
+                                          link->chunks + _index_it.offset,
+                                          link->header->chunk_size)};
+        } else {
+          // TODO implement not zipped page.
+          assert(false);
+        }
         Chunk_Ptr c{ptr};
         assert(c->last.time != 0);
         cbk->call(c);
@@ -160,9 +161,13 @@ Page *Page::create(std::string file_name, uint64_t sz,
   return res;
 }
 
-size_t get_header_offset() { return 0; }
+size_t get_header_offset() {
+  return 0;
+}
 
-size_t get_index_offset() { return sizeof(PageHeader); }
+size_t get_index_offset() {
+  return sizeof(PageHeader);
+}
 
 size_t get_chunks_offset(uint32_t chunk_per_storage) {
   return sizeof(PageHeader) + sizeof(Page_ChunkIndex) * chunk_per_storage;
@@ -283,7 +288,9 @@ bool Page::append(const Chunk_Ptr &ch) {
   return true;
 }
 
-bool Page::is_full() const { return this->_free_poses.empty(); }
+bool Page::is_full() const {
+  return this->_free_poses.empty();
+}
 
 Cursor_ptr Page::get_chunks(const dariadb::IdArray &ids, dariadb::Time from,
                             dariadb::Time to, dariadb::Flag flag) {
@@ -308,13 +315,13 @@ ChunksList Page::get_open_chunks() {
     }
     if (!index_it->info.is_readonly) {
       index_it->is_init = false;
-      Chunk* ptr=nullptr;
-      if(index_it->info.is_zipped){
-      ptr = new ZippedChunk(index_it->info, this->chunks + index_it->offset,
-                           this->header->chunk_size);
-      }else{
-          //TODO implement not zipped chunk
-          assert(false);
+      Chunk *ptr = nullptr;
+      if (index_it->info.is_zipped) {
+        ptr = new ZippedChunk(index_it->info, this->chunks + index_it->offset,
+                              this->header->chunk_size);
+      } else {
+        // TODO implement not zipped chunk
+        assert(false);
       }
       Chunk_Ptr c = Chunk_Ptr(ptr);
       result.push_back(c);

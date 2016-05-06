@@ -10,7 +10,9 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-TimeOrderedSet::TimeOrderedSet() : TimeOrderedSet(0) { is_dropped = false; }
+TimeOrderedSet::TimeOrderedSet() : TimeOrderedSet(0) {
+  is_dropped = false;
+}
 
 TimeOrderedSet::~TimeOrderedSet() {}
 
@@ -65,10 +67,16 @@ dariadb::Meas::MeasArray TimeOrderedSet::as_array() const {
   return result;
 }
 
-size_t TimeOrderedSet::size() const { return _set.size(); }
-dariadb::Time TimeOrderedSet::minTime() const { return _minTime; }
+size_t TimeOrderedSet::size() const {
+  return _set.size();
+}
+dariadb::Time TimeOrderedSet::minTime() const {
+  return _minTime;
+}
 
-dariadb::Time TimeOrderedSet::maxTime() const { return _maxTime; }
+dariadb::Time TimeOrderedSet::maxTime() const {
+  return _maxTime;
+}
 
 bool TimeOrderedSet::inInterval(const dariadb::Meas &m) const {
   return (utils::inInterval(_minTime, _maxTime, m.time)) || (_maxTime < m.time);

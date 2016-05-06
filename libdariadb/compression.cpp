@@ -120,7 +120,9 @@ protected:
   FlagDeCompressor src_dcomp;
 };
 
-CopmressedWriter::CopmressedWriter() { this->_Impl = nullptr; }
+CopmressedWriter::CopmressedWriter() {
+  this->_Impl = nullptr;
+}
 
 CopmressedWriter::CopmressedWriter(const BinaryBuffer_Ptr &bw)
     : _Impl(new CopmressedWriter::Private(bw)) {}
@@ -151,11 +153,17 @@ CopmressedWriter &CopmressedWriter::operator=(CopmressedWriter &&other) {
   return *this;
 }
 
-bool CopmressedWriter::append(const Meas &m) { return _Impl->append(m); }
+bool CopmressedWriter::append(const Meas &m) {
+  return _Impl->append(m);
+}
 
-bool CopmressedWriter::is_full() const { return _Impl->is_full(); }
+bool CopmressedWriter::is_full() const {
+  return _Impl->is_full();
+}
 
-size_t CopmressedWriter::used_space() const { return _Impl->used_space(); }
+size_t CopmressedWriter::used_space() const {
+  return _Impl->used_space();
+}
 
 CopmressedWriter::Position CopmressedWriter::get_position() const {
   return _Impl->get_position();
@@ -165,7 +173,9 @@ void CopmressedWriter::restore_position(const CopmressedWriter::Position &pos) {
   _Impl->restore_postion(pos);
 }
 
-CopmressedReader::CopmressedReader() { this->_Impl = nullptr; }
+CopmressedReader::CopmressedReader() {
+  this->_Impl = nullptr;
+}
 
 CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw,
                                    const Meas &first)
@@ -173,9 +183,13 @@ CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw,
 
 CopmressedReader::~CopmressedReader() {}
 
-dariadb::Meas CopmressedReader::read() { return _Impl->read(); }
+dariadb::Meas CopmressedReader::read() {
+  return _Impl->read();
+}
 
-bool CopmressedReader::is_full() const { return _Impl->is_full(); }
+bool CopmressedReader::is_full() const {
+  return _Impl->is_full();
+}
 
 CopmressedReader::CopmressedReader(const CopmressedReader &other)
     : _Impl(new CopmressedReader::Private(*other._Impl)) {}

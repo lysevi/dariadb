@@ -228,7 +228,9 @@ protected:
   dariadb::utils::Locker _dict_locker; // striped lock
 };
 
-Capacitor::~Capacitor() { this->stop_worker(); }
+Capacitor::~Capacitor() {
+  this->stop_worker();
+}
 
 Capacitor::Capacitor(const BaseStorage_ptr stor, const Params &params)
     : dariadb::utils::PeriodWorker(std::chrono::milliseconds(
@@ -237,20 +239,34 @@ Capacitor::Capacitor(const BaseStorage_ptr stor, const Params &params)
   this->start_worker();
 }
 
-bool Capacitor::append(const Meas &m) { return _Impl->append(m); }
+bool Capacitor::append(const Meas &m) {
+  return _Impl->append(m);
+}
 
-size_t Capacitor::size() const { return _Impl->size(); }
+size_t Capacitor::size() const {
+  return _Impl->size();
+}
 
-dariadb::Time Capacitor::minTime() const { return _Impl->minTime(); }
+dariadb::Time Capacitor::minTime() const {
+  return _Impl->minTime();
+}
 
-dariadb::Time Capacitor::maxTime() const { return _Impl->maxTime(); }
+dariadb::Time Capacitor::maxTime() const {
+  return _Impl->maxTime();
+}
 
-size_t Capacitor::writed_count() const { return _Impl->writed_count(); }
+size_t Capacitor::writed_count() const {
+  return _Impl->writed_count();
+}
 
 bool Capacitor::flush() { // write all to storage;
   return _Impl->flush();
 }
 
-void Capacitor::clear() { return _Impl->clear(); }
+void Capacitor::clear() {
+  return _Impl->clear();
+}
 
-void Capacitor::call() { this->_Impl->flush_old_sets(); }
+void Capacitor::call() {
+  this->_Impl->flush_old_sets();
+}

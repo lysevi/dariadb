@@ -2,7 +2,9 @@
 
 namespace dariadb {
 namespace storage {
-template <typename T> static T bloom_empty() { return T{}; }
+template <typename T> static T bloom_empty() {
+  return T{};
+}
 
 template <typename T> static T bloom_add(const T &fltr, const T &val) {
   return fltr | val;
