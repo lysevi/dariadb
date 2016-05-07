@@ -10,6 +10,9 @@
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
+    BenchCallback(){
+        count=0;
+    }
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };

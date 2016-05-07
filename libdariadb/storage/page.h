@@ -34,6 +34,7 @@ struct IndexHeader{
 
   uint32_t chunk_per_storage;
   uint32_t chunk_size;
+  bool is_sorted;
 };
 
 struct Page_ChunkIndex {
@@ -57,6 +58,7 @@ public:
                       MODE mode);
   static Page *open(std::string file_name);
   static PageHeader readHeader(std::string file_name);
+  static IndexHeader readIndexHeader(std::string page_file_name);
   ~Page();
   bool append(const Chunk_Ptr &ch) override;
   bool append(const ChunksList &ch) override;

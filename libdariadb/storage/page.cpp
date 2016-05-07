@@ -124,6 +124,19 @@ protected:
 };
 
 Page::~Page() {
+
+    if(!iheader->is_sorted){
+        size_t pos=0;//TODO crash safety
+        Page_ChunkIndex* new_index=new Page_ChunkIndex[iheader->chunk_per_storage];
+        memset(new_index,0,sizeof(Page_ChunkIndex)*iheader->chunk_per_storage);
+
+        for(auto it=_itree.begin();it!=_itree.end();++it,++pos){
+            new_index[pos]=index[it->second];
+        }
+        memcpy(index,new_index,sizeof(Page_ChunkIndex)*iheader->chunk_per_storage);
+        delete[] new_index;
+        iheader->is_sorted=true;
+    }
   _mtree.clear();
   _itree.clear();
   region = nullptr;
@@ -169,6 +182,7 @@ Page *Page::create(std::string file_name, uint64_t sz,
   res->iheader->minTime = std::numeric_limits<dariadb::Time>::max();
   res->iheader->chunk_per_storage = chunk_per_storage;
   res->iheader->chunk_size = chunk_size;
+  res->iheader->is_sorted=false;
 
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
@@ -237,6 +251,21 @@ PageHeader Page::readHeader(std::string file_name) {
   istream.read((char *)&result, sizeof(PageHeader));
   istream.close();
   return result;
+}
+
+IndexHeader Page::readIndexHeader(std::string ifile){
+    std::ifstream istream;
+    istream.open(ifile, std::fstream::in | std::fstream::binary);
+    if (!istream.is_open()) {
+      std::stringstream ss;
+      ss << "can't open file. filename=" << ifile;
+      throw MAKE_EXCEPTION(ss.str());
+    }
+    IndexHeader result;
+    memset(&result, 0, sizeof(IndexHeader));
+    istream.read((char *)&result, sizeof(IndexHeader));
+    istream.close();
+    return result;
 }
 
 bool Page::append(const ChunksList &ch) {

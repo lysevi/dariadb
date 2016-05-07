@@ -198,6 +198,12 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   BOOST_CHECK_EQUAL(header.chunk_size, chunks_size);
   BOOST_CHECK_EQUAL(header.count_readers, size_t(0));
 
+  auto iheader = dariadb::storage::Page::readIndexHeader(
+      dariadb::utils::fs::append_path(storagePath, "single.pagei"));
+  BOOST_CHECK_EQUAL(iheader.chunk_per_storage, chunks_count);
+  BOOST_CHECK_EQUAL(iheader.chunk_size, chunks_size);
+  BOOST_CHECK(iheader.is_sorted);
+
   PageManager::start(PageManager::Params(
       storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size));
 
