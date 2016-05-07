@@ -30,8 +30,9 @@ public:
   }
 
   uint64_t calc_page_size() const {
+    auto sz_info = _param.chunk_per_storage * sizeof(ChunkIndexInfo);
     auto sz_buffers = _param.chunk_per_storage * _param.chunk_size;
-    return sizeof(PageHeader) +  sz_buffers;
+    return sizeof(PageHeader) + sz_buffers + sz_info;
   }
 
   Page *create_page() {

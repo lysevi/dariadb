@@ -24,14 +24,15 @@ struct ChunkIndexInfo {
   uint32_t bw_pos;
   uint8_t bw_bit_num;
   bool is_readonly;
-  compression::CopmressedWriter::Position writer_position;
+  compression::CopmressedWriter::Position
+      writer_position; // TODO move from this.
 
   bool is_dropped;
   bool is_zipped;
 };
 #pragma pack(pop)
 
-class Chunk : public ChunkIndexInfo {
+class Chunk {
 public:
   class Reader {
   public:
@@ -54,6 +55,7 @@ public:
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
 
+  ChunkIndexInfo info;
   u8vector _buffer_t;
   size_t _size;
 

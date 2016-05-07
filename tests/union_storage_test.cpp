@@ -10,9 +10,7 @@
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
-    BenchCallback(){
-        count=0;
-    }
+  BenchCallback() { count = 0; }
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };
@@ -61,8 +59,8 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
     auto min_time = std::numeric_limits<dariadb::Time>::max();
     auto max_time = std::numeric_limits<dariadb::Time>::min();
     for (auto c : all_chunks) {
-      min_time = std::min(c->minTime, min_time);
-      max_time = std::max(c->maxTime, max_time);
+      min_time = std::min(c->info.minTime, min_time);
+      max_time = std::max(c->info.maxTime, max_time);
     }
 
     BOOST_CHECK(min_time == start_time);

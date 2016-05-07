@@ -449,7 +449,7 @@ BOOST_AUTO_TEST_CASE(DropOldChunks) {
   auto now = dariadb::timeutil::current_time();
   BOOST_CHECK(chunks.size() > 0);
   for (auto c : chunks) {
-    auto flg = c->maxTime <= (now - min_time);
+    auto flg = c->info.maxTime <= (now - min_time);
     BOOST_CHECK(flg);
   }
   auto after_size = ms->chunks_total_size();

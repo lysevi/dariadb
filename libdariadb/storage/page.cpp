@@ -40,7 +40,7 @@ public:
         break;
       }
 
-      if (!dariadb::storage::bloom_check(_index_it.info.flag_bloom, _flag)) {
+      if (!dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
         if (!read_poses.empty()) {
           _index_it = this->link->index[read_poses.front()];
           read_poses.pop_front();
@@ -51,17 +51,20 @@ public:
       }
 
       if (check_index_rec(_index_it)) {
+        auto ptr_to_begin = link->chunks + _index_it.offset;
+        auto ptr_to_chunk_info =
+            reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
+        auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
         Chunk_Ptr ptr = nullptr;
-        if (_index_it.info.is_zipped) {
-          ptr = Chunk_Ptr{new ZippedChunk(_index_it.info,
-                                          link->chunks + _index_it.offset,
+        if (ptr_to_chunk_info->is_zipped) {
+          ptr = Chunk_Ptr{new ZippedChunk(*ptr_to_chunk_info, ptr_to_buffer,
                                           link->header->chunk_size)};
         } else {
           // TODO implement not zipped page.
           assert(false);
         }
         Chunk_Ptr c{ptr};
-        assert(c->last.time != 0);
+        assert(c->info.last.time != 0);
         cbk->call(c);
         break;
       } else { // end of data;
@@ -78,8 +81,8 @@ public:
   }
 
   bool check_index_rec(Page_ChunkIndex &it) const {
-    return ((dariadb::utils::inInterval(_from, _to, it.info.minTime)) ||
-            (dariadb::utils::inInterval(_from, _to, it.info.maxTime)));
+    return ((dariadb::utils::inInterval(_from, _to, it.minTime)) ||
+            (dariadb::utils::inInterval(_from, _to, it.maxTime)));
   }
 
   void reset_pos() override { // start read from begining;
@@ -124,19 +127,20 @@ protected:
 };
 
 Page::~Page() {
+  if (!iheader->is_sorted) {
+    size_t pos = 0; // TODO crash safety
+    Page_ChunkIndex *new_index =
+        new Page_ChunkIndex[iheader->chunk_per_storage];
+    memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
 
-    if(!iheader->is_sorted){
-        size_t pos=0;//TODO crash safety
-        Page_ChunkIndex* new_index=new Page_ChunkIndex[iheader->chunk_per_storage];
-        memset(new_index,0,sizeof(Page_ChunkIndex)*iheader->chunk_per_storage);
-
-        for(auto it=_itree.begin();it!=_itree.end();++it,++pos){
-            new_index[pos]=index[it->second];
-        }
-        memcpy(index,new_index,sizeof(Page_ChunkIndex)*iheader->chunk_per_storage);
-        delete[] new_index;
-        iheader->is_sorted=true;
+    for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
+      new_index[pos] = index[it->second];
     }
+    memcpy(index, new_index,
+           sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
+    delete[] new_index;
+    iheader->is_sorted = true;
+  }
   _mtree.clear();
   _itree.clear();
   region = nullptr;
@@ -147,8 +151,8 @@ Page::~Page() {
   index_mmap->close();
 }
 
-uint64_t index_file_size(uint32_t chunk_per_storage){
-    return chunk_per_storage*sizeof(Page_ChunkIndex)+sizeof(IndexHeader);
+uint64_t index_file_size(uint32_t chunk_per_storage) {
+  return chunk_per_storage * sizeof(Page_ChunkIndex) + sizeof(IndexHeader);
 }
 
 Page *Page::create(std::string file_name, uint64_t sz,
@@ -158,7 +162,8 @@ Page *Page::create(std::string file_name, uint64_t sz,
   auto region = mmap->data();
   std::fill(region, region + sz, 0);
 
-  auto immap = utils::fs::MappedFile::touch(file_name+"i", index_file_size(chunk_per_storage));
+  auto immap = utils::fs::MappedFile::touch(file_name + "i",
+                                            index_file_size(chunk_per_storage));
   auto iregion = immap->data();
   std::fill(iregion, iregion + index_file_size(chunk_per_storage), 0);
 
@@ -167,22 +172,23 @@ Page *Page::create(std::string file_name, uint64_t sz,
   res->region = region;
   res->iregion = iregion;
 
-  res->header = reinterpret_cast<PageHeader*>(region);
-  res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader));
+  res->header = reinterpret_cast<PageHeader *>(region);
+  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
 
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
   res->header->is_overwrite = false;
   res->header->mode = mode;
 
-  res->iheader = reinterpret_cast<IndexHeader*>(iregion);
-  res->index = reinterpret_cast<Page_ChunkIndex*>(iregion + sizeof(IndexHeader));
+  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
+  res->index =
+      reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
 
   res->iheader->maxTime = std::numeric_limits<dariadb::Time>::min();
   res->iheader->minTime = std::numeric_limits<dariadb::Time>::max();
   res->iheader->chunk_per_storage = chunk_per_storage;
   res->iheader->chunk_size = chunk_size;
-  res->iheader->is_sorted=false;
+  res->iheader->is_sorted = false;
 
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
@@ -207,7 +213,7 @@ Page *Page::open(std::string file_name) {
   auto mmap = utils::fs::MappedFile::open(file_name);
   auto region = mmap->data();
 
-  auto immap = utils::fs::MappedFile::open(file_name+"i");
+  auto immap = utils::fs::MappedFile::open(file_name + "i");
   auto iregion = immap->data();
 
   res->page_mmap = mmap;
@@ -215,11 +221,12 @@ Page *Page::open(std::string file_name) {
   res->region = region;
   res->iregion = iregion;
 
-  res->header = reinterpret_cast<PageHeader*>(region);
-  res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader));
+  res->header = reinterpret_cast<PageHeader *>(region);
+  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
 
-  res->iheader = reinterpret_cast<IndexHeader*>(iregion);
-  res->index = reinterpret_cast<Page_ChunkIndex*>(iregion + sizeof(IndexHeader));
+  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
+  res->index =
+      reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
 
   if (res->header->chunk_size == 0) {
     throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
@@ -230,9 +237,9 @@ Page *Page::open(std::string file_name) {
     if (!irec->is_init) {
       res->_free_poses.push_back(i);
     } else {
-      auto kv = std::make_pair(irec->info.maxTime, i);
+      auto kv = std::make_pair(irec->maxTime, i);
       res->_itree.insert(kv);
-      res->_mtree[irec->info.first.id].insert(kv);
+      res->_mtree[irec->first.id].insert(kv);
     }
   }
   return res;
@@ -253,19 +260,19 @@ PageHeader Page::readHeader(std::string file_name) {
   return result;
 }
 
-IndexHeader Page::readIndexHeader(std::string ifile){
-    std::ifstream istream;
-    istream.open(ifile, std::fstream::in | std::fstream::binary);
-    if (!istream.is_open()) {
-      std::stringstream ss;
-      ss << "can't open file. filename=" << ifile;
-      throw MAKE_EXCEPTION(ss.str());
-    }
-    IndexHeader result;
-    memset(&result, 0, sizeof(IndexHeader));
-    istream.read((char *)&result, sizeof(IndexHeader));
-    istream.close();
-    return result;
+IndexHeader Page::readIndexHeader(std::string ifile) {
+  std::ifstream istream;
+  istream.open(ifile, std::fstream::in | std::fstream::binary);
+  if (!istream.is_open()) {
+    std::stringstream ss;
+    ss << "can't open file. filename=" << ifile;
+    throw MAKE_EXCEPTION(ss.str());
+  }
+  IndexHeader result;
+  memset(&result, 0, sizeof(IndexHeader));
+  istream.read((char *)&result, sizeof(IndexHeader));
+  istream.close();
+  return result;
 }
 
 bool Page::append(const ChunksList &ch) {
@@ -278,20 +285,25 @@ bool Page::append(const ChunksList &ch) {
 }
 
 bool Page::append(const Chunk_Ptr &ch) {
+  if (!ch->info.is_zipped) {
+    throw MAKE_EXCEPTION("!is_zipped");
+  }
   std::lock_guard<std::mutex> lg(_locker);
-  auto index_rec = (ChunkIndexInfo *)ch.get();
+  auto index_rec = ch->info;
   auto buffer = ch->_buffer_t;
 
-  assert(ch->last.time != 0);
+  assert(ch->info.last.time != 0);
   assert(header->chunk_size == ch->_size);
+
   uint32_t pos_index = 0;
   dariadb::Id removedId{0}; /// need to save overwriten reccord;
+
   if (is_full()) {
     if (header->mode == MODE::SINGLE) {
       /// get oldes index reccord.
       header->is_overwrite = true;
       pos_index = this->_itree.begin()->second;
-      removedId = index[pos_index].info.first.id;
+      removedId = index[pos_index].first.id;
     } else {
       return false;
     }
@@ -299,16 +311,22 @@ bool Page::append(const Chunk_Ptr &ch) {
     pos_index = _free_poses.front();
     _free_poses.pop_front();
   }
-  index[pos_index].info = *index_rec;
-  index[pos_index].is_init = true;
+
+  auto cur_index = &index[pos_index];
+  cur_index->first = ch->info.first;
+  cur_index->last = ch->info.last;
+
+  cur_index->flag_bloom = ch->info.flag_bloom;
+  cur_index->is_readonly = ch->info.is_readonly;
+  cur_index->is_init = true;
 
   if (!header->is_overwrite) {
-    index[pos_index].offset = header->pos;
-    header->pos += header->chunk_size;
+    cur_index->offset = header->pos;
+    header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
     header->addeded_chunks++;
-    auto kv = std::make_pair(index_rec->maxTime, pos_index);
+    auto kv = std::make_pair(index_rec.maxTime, pos_index);
     _itree.insert(kv);
-    _mtree[index_rec->first.id].insert(kv);
+    _mtree[index_rec.first.id].insert(kv);
   } else {
     auto it = this->_itree.begin();
     auto removedTime = it->first;
@@ -320,23 +338,30 @@ bool Page::append(const Chunk_Ptr &ch) {
     _itree.erase(it);
     fres->second.erase(mtr_it);
     /// insert new {key,value}
-    auto kv = std::make_pair(index_rec->maxTime, pos_index);
+    auto kv = std::make_pair(index_rec.maxTime, pos_index);
     _itree.insert(kv);
-    _mtree[index_rec->first.id].insert(kv);
+    _mtree[index_rec.first.id].insert(kv);
   }
-  memcpy(this->chunks + index[pos_index].offset, buffer,
-         sizeof(uint8_t) * header->chunk_size);
+  // info,buffer,...
+  auto target_ptr = this->chunks + cur_index->offset;
+  ChunkIndexInfo *info = (ChunkIndexInfo *)target_ptr;
+  *info = index_rec;
+  // memcpy(target_ptr, &index_rec, sizeof(ChunkIndexInfo));
+  target_ptr += sizeof(ChunkIndexInfo);
+  memcpy(target_ptr, buffer, sizeof(uint8_t) * header->chunk_size);
 
-  iheader->minTime = std::min(iheader->minTime, ch->minTime);
-  iheader->maxTime = std::max(iheader->maxTime, ch->maxTime);
+  iheader->minTime = std::min(iheader->minTime, ch->info.minTime);
+  iheader->maxTime = std::max(iheader->maxTime, ch->info.maxTime);
+  cur_index->minTime = std::min(cur_index->minTime, ch->info.minTime);
+  cur_index->maxTime = std::max(cur_index->maxTime, ch->info.maxTime);
 
-  //TODO uncomment this
-//  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
-//  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
-//                    sizeof(Page_ChunkIndex));
-//  auto offset = get_chunks_offset(header->chunk_per_storage) +
-//                size_t(this->chunks - index[pos_index].offset);
-//  this->mmap->flush(offset, sizeof(header->chunk_size));
+  // TODO uncomment this
+  //  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
+  //  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
+  //                    sizeof(Page_ChunkIndex));
+  //  auto offset = get_chunks_offset(header->chunk_per_storage) +
+  //                size_t(this->chunks - index[pos_index].offset);
+  //  this->mmap->flush(offset, sizeof(header->chunk_size));
   return true;
 }
 
@@ -365,18 +390,21 @@ ChunksList Page::get_open_chunks() {
     if (!index_it->is_init) {
       continue;
     }
-    if (!index_it->info.is_readonly) {
+    if (!index_it->is_readonly) {
       index_it->is_init = false;
-      Chunk *ptr = nullptr;
-      if (index_it->info.is_zipped) {
-        ptr = new ZippedChunk(index_it->info, this->chunks + index_it->offset,
-                              this->header->chunk_size);
+      auto ptr_to_begin = this->chunks + index_it->offset;
+      auto ptr_to_chunk_info = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
+      auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
+      Chunk_Ptr ptr = nullptr;
+      if (ptr_to_chunk_info->is_zipped) {
+        ptr = Chunk_Ptr{new ZippedChunk(*ptr_to_chunk_info, ptr_to_buffer,
+                                        header->chunk_size)};
       } else {
-        // TODO implement not zipped chunk
+        // TODO implement not zipped page.
         assert(false);
       }
-      Chunk_Ptr c = Chunk_Ptr(ptr);
-      result.push_back(c);
+
+      result.push_back(ptr);
       index_it->is_init = false;
       this->header->addeded_chunks--;
       _free_poses.push_back(pos);
@@ -411,9 +439,9 @@ bool dariadb::storage::Page::minMaxTime(dariadb::Id id,
     --it_to;
   }
   auto index_rec = this->index[it_from->second];
-  *minResult = index_rec.info.minTime;
+  *minResult = index_rec.minTime;
   index_rec = this->index[it_to->second];
-  *maxResult = index_rec.info.maxTime;
+  *maxResult = index_rec.maxTime;
   return true;
 }
 
@@ -445,12 +473,12 @@ IdToChunkMap dariadb::storage::Page::chunksBeforeTimePoint(const IdArray &ids,
   cursor->readAll(&ch_list);
 
   for (auto &v : ch_list) {
-    auto find_res = result.find(v->first.id);
+    auto find_res = result.find(v->info.first.id);
     if (find_res == result.end()) {
-      result.insert(std::make_pair(v->first.id, v));
+      result.insert(std::make_pair(v->info.first.id, v));
     } else {
-      if (find_res->second->maxTime < v->maxTime) {
-        result[v->first.id] = v;
+      if (find_res->second->info.maxTime < v->info.maxTime) {
+        result[v->info.first.id] = v;
       }
     }
   }
@@ -465,7 +493,7 @@ public:
 
   virtual void call(Chunk_Ptr &ptr) override {
     if (ptr != nullptr) {
-      ids.insert(ptr->first.id);
+      ids.insert(ptr->info.first.id);
     }
   }
 };

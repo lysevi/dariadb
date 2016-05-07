@@ -25,7 +25,7 @@ struct PageHeader {
   uint32_t chunk_size;
 };
 
-struct IndexHeader{
+struct IndexHeader {
   uint32_t count;
   uint32_t pos;
 
@@ -38,7 +38,10 @@ struct IndexHeader{
 };
 
 struct Page_ChunkIndex {
-  ChunkIndexInfo info;
+  Time minTime, maxTime;
+  dariadb::Meas first, last;
+  dariadb::Flag flag_bloom;
+  bool is_readonly;
   uint64_t offset;
   bool is_init;
 };
@@ -77,8 +80,8 @@ public:
   IdArray getIds() override;
 
 public:
-  uint8_t *region;  //page  file mapp region
-  uint8_t *iregion; //index file mapp region
+  uint8_t *region;  // page  file mapp region
+  uint8_t *iregion; // index file mapp region
   PageHeader *header;
   IndexHeader *iheader;
 
