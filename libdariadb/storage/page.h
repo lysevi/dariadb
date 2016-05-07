@@ -14,19 +14,26 @@ namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
 struct PageHeader {
-  uint32_t chunk_per_storage;
-  uint32_t chunk_size;
-
-  // uint32_t pos_index;
-  uint32_t pos_chunks;
+  uint32_t pos;
 
   uint32_t count_readers;
 
-  dariadb::Time minTime;
-  dariadb::Time maxTime;
   uint64_t addeded_chunks;
   uint8_t is_overwrite;
   MODE mode;
+  uint32_t chunk_per_storage;
+  uint32_t chunk_size;
+};
+
+struct IndexHeader{
+  uint32_t count;
+  uint32_t pos;
+
+  dariadb::Time minTime;
+  dariadb::Time maxTime;
+
+  uint32_t chunk_per_storage;
+  uint32_t chunk_size;
 };
 
 struct Page_ChunkIndex {
@@ -68,17 +75,22 @@ public:
   IdArray getIds() override;
 
 public:
-  uint8_t *region;
+  uint8_t *region;  //page  file mapp region
+  uint8_t *iregion; //index file mapp region
   PageHeader *header;
+  IndexHeader *iheader;
+
   Page_ChunkIndex *index;
   uint8_t *chunks;
+
   indexTree _itree;
   PageMultiTree _mtree;
   std::list<uint32_t> _free_poses;
 
 protected:
   mutable std::mutex _locker;
-  mutable utils::fs::MappedFile::MapperFile_ptr mmap;
+  mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
+  mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 };
 }
 }

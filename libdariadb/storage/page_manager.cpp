@@ -30,9 +30,8 @@ public:
   }
 
   uint64_t calc_page_size() const {
-    auto sz_index = sizeof(Page_ChunkIndex) * _param.chunk_per_storage;
     auto sz_buffers = _param.chunk_per_storage * _param.chunk_size;
-    return sizeof(PageHeader) + sz_index + sz_buffers;
+    return sizeof(PageHeader) +  sz_buffers;
   }
 
   Page *create_page() {
@@ -140,7 +139,7 @@ public:
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
-      return _cur_page->header->minTime;
+      return _cur_page->iheader->minTime;
     }
   }
 
@@ -149,7 +148,7 @@ public:
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
-      return _cur_page->header->maxTime;
+      return _cur_page->iheader->maxTime;
     }
   }
 

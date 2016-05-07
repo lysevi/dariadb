@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     }
   }
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
-  BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size() == 1);
+  BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size() == 2); //page +index
 
   { // rewrite oldes chunk
     dariadb::Time minTime_replaced(t);

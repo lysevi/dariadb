@@ -130,7 +130,12 @@ Page::~Page() {
   header = nullptr;
   index = nullptr;
   chunks = nullptr;
-  mmap->close();
+  page_mmap->close();
+  index_mmap->close();
+}
+
+uint64_t index_file_size(uint32_t chunk_per_storage){
+    return chunk_per_storage*sizeof(Page_ChunkIndex)+sizeof(IndexHeader);
 }
 
 Page *Page::create(std::string file_name, uint64_t sz,
@@ -140,20 +145,30 @@ Page *Page::create(std::string file_name, uint64_t sz,
   auto region = mmap->data();
   std::fill(region, region + sz, 0);
 
-  res->mmap = mmap;
+  auto immap = utils::fs::MappedFile::touch(file_name+"i", index_file_size(chunk_per_storage));
+  auto iregion = immap->data();
+  std::fill(iregion, iregion + index_file_size(chunk_per_storage), 0);
+
+  res->page_mmap = mmap;
+  res->index_mmap = immap;
   res->region = region;
-  res->header = reinterpret_cast<PageHeader *>(region);
-  res->index = reinterpret_cast<Page_ChunkIndex *>(region + sizeof(PageHeader));
-  res->chunks =
-      reinterpret_cast<uint8_t *>(region + sizeof(PageHeader) +
-                                  sizeof(Page_ChunkIndex) * chunk_per_storage);
+  res->iregion = iregion;
+
+  res->header = reinterpret_cast<PageHeader*>(region);
+  res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader));
 
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
-  res->header->maxTime = dariadb::Time(0);
-  res->header->minTime = std::numeric_limits<dariadb::Time>::max();
   res->header->is_overwrite = false;
   res->header->mode = mode;
+
+  res->iheader = reinterpret_cast<IndexHeader*>(iregion);
+  res->index = reinterpret_cast<Page_ChunkIndex*>(iregion + sizeof(IndexHeader));
+
+  res->iheader->maxTime = std::numeric_limits<dariadb::Time>::min();
+  res->iheader->minTime = std::numeric_limits<dariadb::Time>::max();
+  res->iheader->chunk_per_storage = chunk_per_storage;
+  res->iheader->chunk_size = chunk_size;
 
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
@@ -169,22 +184,29 @@ size_t get_index_offset() {
   return sizeof(PageHeader);
 }
 
-size_t get_chunks_offset(uint32_t chunk_per_storage) {
-  return sizeof(PageHeader) + sizeof(Page_ChunkIndex) * chunk_per_storage;
+size_t get_chunks_offset() {
+  return sizeof(PageHeader);
 }
 
 Page *Page::open(std::string file_name) {
   auto res = new Page;
   auto mmap = utils::fs::MappedFile::open(file_name);
-
   auto region = mmap->data();
 
-  res->mmap = mmap;
+  auto immap = utils::fs::MappedFile::open(file_name+"i");
+  auto iregion = immap->data();
+
+  res->page_mmap = mmap;
+  res->index_mmap = immap;
   res->region = region;
-  res->header = reinterpret_cast<PageHeader *>(region) + get_header_offset();
-  res->index = reinterpret_cast<Page_ChunkIndex *>(region + get_index_offset());
-  res->chunks = reinterpret_cast<uint8_t *>(
-      region + get_chunks_offset(res->header->chunk_per_storage));
+  res->iregion = iregion;
+
+  res->header = reinterpret_cast<PageHeader*>(region);
+  res->chunks = reinterpret_cast<uint8_t*>(region + sizeof(PageHeader));
+
+  res->iheader = reinterpret_cast<IndexHeader*>(iregion);
+  res->index = reinterpret_cast<Page_ChunkIndex*>(iregion + sizeof(IndexHeader));
+
   if (res->header->chunk_size == 0) {
     throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
   }
@@ -252,8 +274,8 @@ bool Page::append(const Chunk_Ptr &ch) {
   index[pos_index].is_init = true;
 
   if (!header->is_overwrite) {
-    index[pos_index].offset = header->pos_chunks;
-    header->pos_chunks += header->chunk_size;
+    index[pos_index].offset = header->pos;
+    header->pos += header->chunk_size;
     header->addeded_chunks++;
     auto kv = std::make_pair(index_rec->maxTime, pos_index);
     _itree.insert(kv);
@@ -276,15 +298,16 @@ bool Page::append(const Chunk_Ptr &ch) {
   memcpy(this->chunks + index[pos_index].offset, buffer,
          sizeof(uint8_t) * header->chunk_size);
 
-  header->minTime = std::min(header->minTime, ch->minTime);
-  header->maxTime = std::max(header->maxTime, ch->maxTime);
+  iheader->minTime = std::min(iheader->minTime, ch->minTime);
+  iheader->maxTime = std::max(iheader->maxTime, ch->maxTime);
 
-  this->mmap->flush(get_header_offset(), sizeof(PageHeader));
-  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
-                    sizeof(Page_ChunkIndex));
-  auto offset = get_chunks_offset(header->chunk_per_storage) +
-                size_t(this->chunks - index[pos_index].offset);
-  this->mmap->flush(offset, sizeof(header->chunk_size));
+  //TODO uncomment this
+//  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
+//  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
+//                    sizeof(Page_ChunkIndex));
+//  auto offset = get_chunks_offset(header->chunk_per_storage) +
+//                size_t(this->chunks - index[pos_index].offset);
+//  this->mmap->flush(offset, sizeof(header->chunk_size));
   return true;
 }
 
@@ -386,7 +409,7 @@ IdToChunkMap dariadb::storage::Page::chunksBeforeTimePoint(const IdArray &ids,
   }
 
   ChunksList ch_list;
-  auto cursor = this->get_chunks(id_a, header->minTime, timePoint, flag);
+  auto cursor = this->get_chunks(id_a, iheader->minTime, timePoint, flag);
   if (cursor == nullptr) {
     return result;
   }
