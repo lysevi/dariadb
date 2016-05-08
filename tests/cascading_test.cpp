@@ -7,6 +7,8 @@
 #include <tuple>
 #include <cassert>
 
+#include <compression/cz.h>
+
 const size_t B=2;
 
 class cascading{
@@ -84,75 +86,60 @@ class cascading{
             }
         }
 
-        void insert(std::vector<item> new_values){
-            assert(new_values.size()==size);
-            for(;pos<size;pos++){
-                values[pos]=new_values[pos];
-            }
-        }
+        void merge_with(std::vector<level*> new_values){
 
-        void insert(std::vector<item> &a,std::vector<item> &b){
-            assert(a.size()==b.size());
-            assert((a.size()+b.size())==size);
-            size_t aPos,bPos;
-            aPos=bPos=0;
-
-            for(pos=0;pos<size;++pos){
-                if(a[aPos]<b[bPos]){
-                    values[pos]=a[aPos];
-                    aPos++;
-                }else{
-                    values[pos]=b[bPos];
-                    bPos++;
-                }
-            }
         }
     };
 public:
-    cascading():_memory(B,0){
+    cascading():_items_count(0),_next_level(0){
 
     }
 
     void push(int v){
-        if(_memory.pos<B){
-            _memory.insert(item(v));
-        }else{
-            std::sort(_memory.values.begin(),_memory.values.end());
-            if(_levels.empty()){
-                _levels.push_back(level(_memory.size,1));
-            }
-            if(_levels[0].free()){
-                _levels[0].insert(_memory.values);
+        size_t new_items_count=_items_count+1;
+        size_t outlvl=dariadb::compression::ctz(~_items_count&new_items_count);
+        size_t mrg_k=outlvl+1; //k-way merge: k factor
+        std::cout<<"outlvl: "<<uint32_t(outlvl)<<" k:"<<mrg_k <<std::endl;
 
-                _memory.clear();
-            }else{
-                _levels.push_back(level(B*_levels.back().size,_levels.size()+1));
-                for(size_t i=_levels.size()-1;;--i){
-                    auto prev=&_levels[i-1];
-                    auto pprev= (i==1)? &_memory: &_levels[i-1];
-                    _levels[i].insert(pprev->values,prev->values);
-                    if(i==1){
-                        break;
-                    }
-                }
-                _levels[0].insert(_memory.values);
-                _memory.clear();
-            }
-            _memory.insert(item(v));
+        if(new_items_count == size_t(1<<_next_level)){
+            std::cout<<"allocate new level: "<<_next_level<<std::endl;
+            auto nr_ent = size_t(1 << _next_level);
+            _levels.push_back(level(nr_ent,_next_level));
+            _next_level++;
         }
+
+
+        std::vector<level*> to_merge(mrg_k);
+        level tmp(1,0);
+        tmp.insert(v);
+        to_merge[0]=&tmp;
+
+        for(size_t i=1;i<=outlvl;++i){
+            to_merge[i]=&_levels[i-1];
+        }
+
+        auto merge_target=&_levels[outlvl];
+        merge_target->merge_with(to_merge);
+        //auto target=&_levels[outlvl];
+//        while(mrg_k){
+
+//            std::cout<<"> "<<_levels[mrg_k-1].to_string()<<std::endl;
+//            mrg_k--;
+//        }
+        ++_items_count;
     }
 
     void print(){
-        std::cout<<"mem:\n "<<_memory.to_string()<<std::endl;
-        std::cout<<"ext:\n";
+        std::cout<<"==:\n";
         for(size_t i=0;i<_levels.size();++i){
-            std::cout<<_levels[i].to_string()<<"\n";
+            std::cout<<_levels[i].to_string()<<std::endl;
         }
-        std::cout<<"\n";
+        std::cout<<std::endl;
     }
 protected:
-    level _memory;
     std::vector<level> _levels;
+    size_t _items_count;
+    size_t _next_level;
 };
 
 int main(){
@@ -163,9 +150,10 @@ int main(){
     c.push(2);
     c.push(4);
     c.print();
-    c.push(7);
-    c.push(11);
-    c.print();
-    c.push(5);
-    c.print();
+//    c.push(7);
+//    c.push(11);
+//    c.print();
+//    c.push(5);
+//    c.push(15);
+//    c.print();
 }
