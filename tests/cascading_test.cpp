@@ -29,7 +29,7 @@ class cascading{
             return ss.str();
         }
 
-        bool operator<(const item&other){
+        bool operator<(const item&other)const{
             if(is_init && !other.is_init){
                 return true;
             }
