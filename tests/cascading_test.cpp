@@ -1,4 +1,9 @@
+#define BOOST_TEST_DYN_LINK
+#define BOOST_TEST_MODULE Main
+#include <boost/test/unit_test.hpp>
+
 #include <iostream>
+
 #include <vector>
 #include <list>
 #include <cstddef>
@@ -6,7 +11,7 @@
 #include <algorithm>
 #include <tuple>
 #include <cassert>
-
+#include <set>
 #include <compression/cz.h>
 
 const size_t B=2;
@@ -127,10 +132,10 @@ public:
         size_t new_items_count=_items_count+1;
         size_t outlvl=dariadb::compression::ctz(~_items_count&new_items_count);
         size_t mrg_k=outlvl+1; //k-way merge: k factor
-        std::cout<<"outlvl: "<<uint32_t(outlvl)<<" k:"<<mrg_k <<std::endl;
+        //std::cout<<"outlvl: "<<uint32_t(outlvl)<<" k:"<<mrg_k <<std::endl;
 
         if(new_items_count == size_t(1<<_next_level)){
-            std::cout<<"allocate new level: "<<_next_level<<std::endl;
+            //std::cout<<"allocate new level: "<<_next_level<<std::endl;
             auto nr_ent = size_t(1 << _next_level);
             _levels.push_back(level(nr_ent,_next_level));
             _next_level++;
@@ -151,12 +156,6 @@ public:
         for(auto l:to_merge){
             l->clear();
         }
-        //auto target=&_levels[outlvl];
-//        while(mrg_k){
-
-//            std::cout<<"> "<<_levels[mrg_k-1].to_string()<<std::endl;
-//            mrg_k--;
-//        }
         ++_items_count;
     }
 
@@ -167,13 +166,14 @@ public:
         }
         std::cout<<std::endl;
     }
+    size_t levels_count()const{return _levels.size();}
 protected:
     std::vector<level> _levels;
     size_t _items_count;
     size_t _next_level;
 };
 
-int main(){
+BOOST_AUTO_TEST_CASE(Cascading_insert) {
     cascading c;
     c.push(3);
     c.push(1);
@@ -185,7 +185,48 @@ int main(){
     c.push(7);
     c.push(11);
     c.print();
-//    c.push(5);
-//    c.push(15);
-//    c.print();
+    c.push(5);
+    c.push(15);
+    c.print();
+}
+
+
+BOOST_AUTO_TEST_CASE(Cascading_insert_big) {
+
+
+    {
+        cascading c;
+        auto start = clock();
+        for(int i=0;i<1000000;i++){
+            c.push(i);
+        }
+        auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+        std::cout<<"lvls: "<<c.levels_count()<<std::endl;
+        std::cout << "cascading insert : " << elapsed << std::endl;
+
+        start = clock();
+        for(int i=0;i<1000000;i++){
+            c.push(i+1000001);
+        }
+        elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+        std::cout<<"lvls: "<<c.levels_count()<<std::endl;
+        std::cout << "cascading  insert : " << elapsed << std::endl;
+    }
+
+    {
+        std::set<int> c;
+        auto start = clock();
+        for(int i=0;i<1000000;i++){
+            c.insert(i);
+        }
+        auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+        std::cout << "set insert : " << elapsed << std::endl;
+
+        start = clock();
+        for(int i=0;i<1000000;i++){
+            c.insert(i+1000001);
+        }
+        elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+        std::cout << "set insert : " << elapsed << std::endl;
+    }
 }
