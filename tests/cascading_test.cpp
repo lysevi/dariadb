@@ -12,6 +12,8 @@
 #include <tuple>
 #include <cassert>
 #include <set>
+#include <ctime>
+#include <random>
 #include <compression/cz.h>
 
 const size_t B=2;
@@ -67,9 +69,9 @@ class cascading{
         }
 
         void clear(){
-            for(size_t i=0;i<values.size();i++){
-                values[i]=item();
-            }
+//            for(size_t i=0;i<values.size();i++){
+//                values[i]=item();
+//            }
             pos=0;
         }
 
@@ -202,41 +204,32 @@ BOOST_AUTO_TEST_CASE(Cascading_insert) {
 
 BOOST_AUTO_TEST_CASE(Cascading_insert_big) {
 
+    const size_t insertion_count=1000000;
+    std::vector<int> keys(insertion_count);
+    std::uniform_int_distribution<int> distribution(0, insertion_count * 10);
+    std::mt19937 engine;
+    auto generator = std::bind(distribution, engine);
+    std::generate_n(keys.begin(), insertion_count, generator);
 
     {
         cascading c;
         c.resize(16);
         auto start = clock();
-        for(int i=0;i<1000000;i++){
-            c.push(i);
+        for(size_t i=0;i<insertion_count;i++){
+            c.push(keys[i]);
         }
         auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout<<"lvls: "<<c.levels_count()<<std::endl;
         std::cout << "cascading insert : " << elapsed << std::endl;
-
-        start = clock();
-        for(int i=0;i<1000000;i++){
-            c.push(i+1000001);
-        }
-        elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-        std::cout<<"lvls: "<<c.levels_count()<<std::endl;
-        std::cout << "cascading  insert : " << elapsed << std::endl;
     }
 
     {
         std::set<int> c;
         auto start = clock();
-        for(int i=0;i<1000000;i++){
-            c.insert(i);
+        for(size_t i=0;i<insertion_count;i++){
+            c.insert(keys[i]);
         }
         auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-        std::cout << "set insert : " << elapsed << std::endl;
-
-        start = clock();
-        for(int i=0;i<1000000;i++){
-            c.insert(i+1000001);
-        }
-        elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
         std::cout << "set insert : " << elapsed << std::endl;
     }
 }
