@@ -37,6 +37,13 @@ class cascading{
             }
             return value<other.value;
         }
+
+        bool operator>(const item&other)const{
+            if(is_init && !other.is_init){
+                return true;
+            }
+            return value>other.value;
+        }
     };
 
     struct level{
@@ -87,7 +94,28 @@ class cascading{
         }
 
         void merge_with(std::vector<level*> new_values){
+            std::vector<size_t> poses(new_values.size());
+            std::fill(poses.begin(),poses.end(),size_t(0));
+            while(!new_values.empty()){
 
+                //get cur max;
+                size_t with_max_index=0;
+                item max_val=new_values[0]->values[0];
+                for(size_t i=0;i<poses.size();i++){
+                    if(max_val>new_values[i]->values[poses[i]]){
+                          with_max_index=i;
+                          max_val=new_values[i]->values[poses[i]];
+                    }
+                }
+
+                this->insert(new_values[with_max_index]->values[poses[with_max_index]]);
+                //remove ended in-list
+                poses[with_max_index]++;
+                if(poses[with_max_index]>=new_values[with_max_index]->size){
+                    poses.erase(poses.begin()+with_max_index);
+                    new_values.erase(new_values.begin()+with_max_index);
+                }
+            }
         }
     };
 public:
@@ -120,6 +148,9 @@ public:
 
         auto merge_target=&_levels[outlvl];
         merge_target->merge_with(to_merge);
+        for(auto l:to_merge){
+            l->clear();
+        }
         //auto target=&_levels[outlvl];
 //        while(mrg_k){
 
@@ -148,11 +179,12 @@ int main(){
     c.push(1);
     c.print();
     c.push(2);
+    c.print();
     c.push(4);
     c.print();
-//    c.push(7);
-//    c.push(11);
-//    c.print();
+    c.push(7);
+    c.push(11);
+    c.print();
 //    c.push(5);
 //    c.push(15);
 //    c.print();
