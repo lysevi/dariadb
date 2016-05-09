@@ -123,9 +123,20 @@ class cascading{
             }
         }
     };
+    void alloc_level(size_t num){
+        auto nr_ent = size_t(1 << num);
+        _levels.push_back(level(nr_ent,num));
+        _next_level++;
+    }
 public:
     cascading():_items_count(0),_next_level(0){
 
+    }
+
+    void resize(size_t levels_count){
+        for(size_t i=0;i<levels_count;++i){
+            alloc_level(i);
+        }
     }
 
     void push(int v){
@@ -136,9 +147,7 @@ public:
 
         if(new_items_count == size_t(1<<_next_level)){
             //std::cout<<"allocate new level: "<<_next_level<<std::endl;
-            auto nr_ent = size_t(1 << _next_level);
-            _levels.push_back(level(nr_ent,_next_level));
-            _next_level++;
+            alloc_level(_next_level);
         }
 
 
@@ -196,6 +205,7 @@ BOOST_AUTO_TEST_CASE(Cascading_insert_big) {
 
     {
         cascading c;
+        c.resize(16);
         auto start = clock();
         for(int i=0;i<1000000;i++){
             c.push(i);
