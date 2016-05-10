@@ -37,7 +37,7 @@ namespace dariadb{
                 bool is_full();
                 std::string to_string()const;
                 void insert(item val);
-                void merge_with(std::vector<level*> new_values);
+                void merge_with(std::list<level*> new_values);
             };
             void alloc_level(size_t num);
         public:

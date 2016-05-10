@@ -73,27 +73,30 @@ void cascading::level::insert(item val){
     }
 }
 
-void cascading::level::merge_with(std::vector<level*> new_values){
+void cascading::level::merge_with(std::list<level*> new_values){
     std::vector<size_t> poses(new_values.size());
     std::fill(poses.begin(),poses.end(),size_t(0));
     while(!new_values.empty()){
 
         //get cur max;
         size_t with_max_index=0;
-        item max_val=new_values[0]->values[0];
-        for(size_t i=0;i<poses.size();i++){
-            if(max_val>new_values[i]->values[poses[i]]){
+        item max_val=new_values.front()->values[0];
+        auto it=new_values.begin();
+        auto with_max_index_it=it;
+        for(size_t i=0;i<poses.size();i++,++it){
+            if(max_val>(*it)->values[poses[i]]){
                   with_max_index=i;
-                  max_val=new_values[i]->values[poses[i]];
+                  max_val=(*it)->values[poses[i]];
+                  with_max_index_it=it;
             }
         }
 
-        this->insert(new_values[with_max_index]->values[poses[with_max_index]]);
+        this->insert((*with_max_index_it)->values[poses[with_max_index]]);
         //remove ended in-list
         poses[with_max_index]++;
-        if(poses[with_max_index]>=new_values[with_max_index]->size){
+        if(poses[with_max_index]>=(*with_max_index_it)->size){
             poses.erase(poses.begin()+with_max_index);
-            new_values.erase(new_values.begin()+with_max_index);
+            new_values.erase(with_max_index_it);
         }
     }
 }
@@ -113,7 +116,7 @@ void cascading::resize(size_t levels_count){
 void cascading::push(int v){
     size_t new_items_count=_items_count+1;
     size_t outlvl=dariadb::compression::ctz(~_items_count&new_items_count);
-    size_t mrg_k=outlvl+1; //k-way merge: k factor
+    //size_t mrg_k=outlvl+1; //k-way merge: k factor
     //std::cout<<"outlvl: "<<uint32_t(outlvl)<<" k:"<<mrg_k <<std::endl;
 
     if(new_items_count == size_t(1<<_next_level)){
@@ -122,13 +125,13 @@ void cascading::push(int v){
     }
 
 
-    std::vector<level*> to_merge(mrg_k);
+    std::list<level*> to_merge;
     level tmp(1,0);
     tmp.insert(v);
-    to_merge[0]=&tmp;
+    to_merge.push_back(&tmp);
 
     for(size_t i=1;i<=outlvl;++i){
-        to_merge[i]=&_levels[i-1];
+        to_merge.push_back(&_levels[i-1]);
     }
 
     auto merge_target=&_levels[outlvl];
