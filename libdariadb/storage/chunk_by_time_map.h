@@ -18,7 +18,7 @@ public:
     while (dropped) {
       dropped = false;
       for (auto i = this->begin(); i != this->end(); ++i) {
-        if ((*i).second->is_dropped) {
+        if ((*i).second->info.is_dropped) {
           this->erase(i);
           dropped = true;
           break;

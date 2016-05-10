@@ -75,9 +75,13 @@ BinaryBuffer &BinaryBuffer::incpos() {
   return *this;
 }
 
-void BinaryBuffer::set_bitnum(int8_t num) { this->_bitnum = num; }
+void BinaryBuffer::set_bitnum(int8_t num) {
+  this->_bitnum = num;
+}
 
-void BinaryBuffer::set_pos(size_t pos) { this->_pos = pos; }
+void BinaryBuffer::set_pos(size_t pos) {
+  this->_pos = pos;
+}
 
 void BinaryBuffer::reset_pos() {
   this->set_pos(_cap - 1);

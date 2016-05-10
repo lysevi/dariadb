@@ -85,8 +85,8 @@ public:
           auto resf = mt_iter->second.begin();
           auto rest = mt_iter->second.end();
           rest--;
-          *minResult = resf->second->minTime;
-          *maxResult = rest->second->maxTime;
+          *minResult = resf->second->info.minTime;
+          *maxResult = rest->second->info.maxTime;
           result = true;
         }
       }
@@ -96,8 +96,8 @@ public:
       auto it = _free_chunks.find(id);
       _locker_free_chunks.unlock();
       if (it != _free_chunks.end()) {
-        *minResult = std::min(it->second->minTime, *minResult);
-        *maxResult = std::max(it->second->maxTime, *maxResult);
+        *minResult = std::min(it->second->info.minTime, *minResult);
+        *maxResult = std::max(it->second->info.maxTime, *maxResult);
         result = true;
       }
     }
@@ -118,7 +118,7 @@ public:
   }
 
   Chunk_Ptr make_chunk(dariadb::Meas first) {
-    auto ptr = new Chunk(_size, first);
+    auto ptr = new ZippedChunk(_size, first);
     auto chunk = Chunk_Ptr{ptr};
     this->_free_chunks[first.id] = chunk;
     return chunk;
@@ -138,7 +138,7 @@ public:
       }
     }
 
-    assert(chunk->last.time == value.time);
+    assert(chunk->info.last.time == value.time);
     {
       std::lock_guard<std::mutex> lg_minmax(_locker_min_max);
       _min_time = std::min(_min_time, value.time);
@@ -152,13 +152,14 @@ public:
   // TODO _chunks.size() can be great than max_limit.
   void call_async(const Chunk_Ptr &chunk) override {
     std::lock_guard<std::mutex> lg_ch(_locker_chunks);
-    this->_chunks.insert(std::make_pair(chunk->maxTime, chunk));
+    this->_chunks.insert(std::make_pair(chunk->info.maxTime, chunk));
 
-    auto mt_iter = _multitree.find(chunk->first.id);
+    auto mt_iter = _multitree.find(chunk->info.first.id);
     if (mt_iter != _multitree.end()) {
-      mt_iter->second.insert(std::make_pair(chunk->maxTime, chunk));
+      mt_iter->second.insert(std::make_pair(chunk->info.maxTime, chunk));
     } else {
-      _multitree[chunk->first.id].insert(std::make_pair(chunk->maxTime, chunk));
+      _multitree[chunk->info.first.id].insert(
+          std::make_pair(chunk->info.maxTime, chunk));
     }
     assert(chunk->is_full());
     if (_cw != nullptr) {
@@ -195,7 +196,7 @@ public:
     auto res_raw = new InnerCurrentValuesReader();
     Reader_ptr res{res_raw};
     for (auto &kv : _free_chunks) {
-      auto l = kv.second->last;
+      auto l = kv.second->info.last;
       if ((ids.size() != 0) &&
           (std::find(ids.begin(), ids.end(), l.id) == ids.end())) {
         continue;
@@ -217,11 +218,11 @@ public:
     for (auto &kv : _chunks) {
       auto chunk = kv.second;
       auto past = (now - min_time);
-      if ((chunk->maxTime < past) && (chunk->is_full())) {
+      if ((chunk->info.maxTime < past) && (chunk->is_full())) {
         result.push_back(chunk);
-        chunk->is_dropped = true;
-        if (this->_free_chunks[chunk->first.id] == chunk) {
-          this->_free_chunks.erase(chunk->first.id);
+        chunk->info.is_dropped = true;
+        if (this->_free_chunks[chunk->info.first.id] == chunk) {
+          this->_free_chunks.erase(chunk->info.first.id);
         }
       }
     }
@@ -254,9 +255,9 @@ public:
       for (auto &kv : _chunks) {
         auto chunk = kv.second;
         assert(chunk != nullptr);
-        if (chunk->is_readonly) {
+        if (chunk->info.is_readonly) {
           result.push_back(chunk);
-          chunk->is_dropped = true;
+          chunk->info.is_dropped = true;
         }
 
         if (int64_t(result.size()) >= iterations) {
@@ -278,7 +279,7 @@ public:
   void update_min_after_drop() {
     auto new_min = std::numeric_limits<dariadb::Time>::max();
     for (auto &kv : _chunks) {
-      new_min = std::min(kv.second->minTime, new_min);
+      new_min = std::min(kv.second->info.minTime, new_min);
     }
     std::lock_guard<std::mutex> lg(_locker_min_max);
     _min_time = new_min;
@@ -316,15 +317,15 @@ public:
   bool check_chunk_to_qyery(const IdArray &ids, Flag flag,
                             const Chunk_Ptr &ch) {
     if ((ids.size() == 0) ||
-        (std::find(ids.begin(), ids.end(), ch->first.id) != ids.end())) {
+        (std::find(ids.begin(), ids.end(), ch->info.first.id) != ids.end())) {
       return check_chunk_flag(flag, ch);
     }
     return false;
   }
 
   bool check_chunk_to_interval(Time from, Time to, const Chunk_Ptr &ch) {
-    if ((utils::inInterval(from, to, ch->minTime)) ||
-        (utils::inInterval(from, to, ch->maxTime))) {
+    if ((utils::inInterval(from, to, ch->info.minTime)) ||
+        (utils::inInterval(from, to, ch->info.maxTime))) {
       return true;
     }
     return false;
@@ -349,10 +350,10 @@ public:
 
           for (auto it = resf; it != rest; ++it) {
             auto ch = it->second;
-            if (ch->is_dropped) {
+            if (ch->info.is_dropped) {
               throw MAKE_EXCEPTION("MemStorage::ch->is_dropped");
             }
-            if (ch->first.id != i) {
+            if (ch->info.first.id != i) {
               continue;
             }
             if ((check_chunk_flag(flag, ch)) &&
@@ -395,8 +396,8 @@ public:
         std::lock_guard<std::mutex> lg(_locker_free_chunks);
         auto fc_res = _free_chunks.find(i);
         if (fc_res != _free_chunks.end()) {
-          if (fc_res->second->minTime <= timePoint) {
-            result[fc_res->second->first.id] = fc_res->second;
+          if (fc_res->second->info.minTime <= timePoint) {
+            result[fc_res->second->info.first.id] = fc_res->second;
             continue;
           }
         }
@@ -418,8 +419,8 @@ public:
               auto cur_chunk = it->second;
 
               if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
-                if (cur_chunk->minTime <= timePoint) {
-                  result[cur_chunk->first.id] = cur_chunk;
+                if (cur_chunk->info.minTime <= timePoint) {
+                  result[cur_chunk->info.first.id] = cur_chunk;
                 }
               }
               if (it == rest) {
@@ -455,10 +456,10 @@ public:
   }
 
   bool append(const Chunk_Ptr &c) {
-    std::make_pair(c->maxTime, c);
-    auto search_res = _free_chunks.find(c->first.id);
+    std::make_pair(c->info.maxTime, c);
+    auto search_res = _free_chunks.find(c->info.first.id);
     if (search_res == _free_chunks.end()) {
-      _free_chunks[c->first.id] = c;
+      _free_chunks[c->info.first.id] = c;
     } else {
       assert(false);
       return false;
@@ -487,9 +488,13 @@ MemoryStorage::MemoryStorage(size_t size)
 
 MemoryStorage::~MemoryStorage() {}
 
-Time MemoryStorage::minTime() { return _Impl->minTime(); }
+Time MemoryStorage::minTime() {
+  return _Impl->minTime();
+}
 
-Time MemoryStorage::maxTime() { return _Impl->maxTime(); }
+Time MemoryStorage::maxTime() {
+  return _Impl->maxTime();
+}
 
 bool MemoryStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                dariadb::Time *maxResult) {
@@ -505,9 +510,13 @@ append_result MemoryStorage::append(const dariadb::Meas::PMeas begin,
   return _Impl->append(begin, size);
 }
 
-size_t MemoryStorage::size() const { return _Impl->size(); }
+size_t MemoryStorage::size() const {
+  return _Impl->size();
+}
 
-size_t MemoryStorage::chunks_size() const { return _Impl->chunks_size(); }
+size_t MemoryStorage::chunks_size() const {
+  return _Impl->chunks_size();
+}
 
 size_t MemoryStorage::chunks_total_size() const {
   return _Impl->chunks_total_size();
@@ -522,9 +531,13 @@ Reader_ptr MemoryStorage::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-void MemoryStorage::flush() { _Impl->flush(); }
+void MemoryStorage::flush() {
+  _Impl->flush();
+}
 
-size_t MemoryStorage::queue_size() const { return _Impl->queue_size(); }
+size_t MemoryStorage::queue_size() const {
+  return _Impl->queue_size();
+}
 
 dariadb::storage::ChunksList
 MemoryStorage::drop_old_chunks(const dariadb::Time min_time) {
@@ -549,13 +562,17 @@ IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
   return _Impl->chunksBeforeTimePoint(ids, flag, timePoint);
 }
 
-dariadb::IdArray MemoryStorage::getIds() { return _Impl->getIds(); }
+dariadb::IdArray MemoryStorage::getIds() {
+  return _Impl->getIds();
+}
 
 bool MemoryStorage::append(const ChunksList &clist) {
   return _Impl->append(clist);
 }
 
-bool MemoryStorage::append(const Chunk_Ptr &c) { return _Impl->append(c); }
+bool MemoryStorage::append(const Chunk_Ptr &c) {
+  return _Impl->append(c);
+}
 
 void MemoryStorage::set_chunkWriter(ChunkWriter *cw) {
   _Impl->set_chunkWriter(cw);

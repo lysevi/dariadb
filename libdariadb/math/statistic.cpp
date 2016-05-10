@@ -32,7 +32,9 @@ void BaseMethod::call(const dariadb::Meas &m) {
   }
 }
 
-dariadb::Value BaseMethod::result() const { return _result; }
+dariadb::Value BaseMethod::result() const {
+  return _result;
+}
 
 void BaseMethod::fromReader(dariadb::storage::Reader_ptr &ptr,
                             dariadb::Time from, dariadb::Time to,
@@ -59,7 +61,9 @@ void RectangleMethod::calc(const dariadb::Meas &a, const dariadb::Meas &b) {
         assert(false);*/
   }
 }
-Average::Average() : BaseMethod() { _count = 0; }
+Average::Average() : BaseMethod() {
+  _count = 0;
+}
 
 void Average::call(const dariadb::Meas &a) {
   _result += a.value;

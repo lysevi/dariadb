@@ -27,10 +27,12 @@ void InnerReader::add(Cursor_ptr c) {
 
 void InnerReader::add_tp(Chunk_Ptr c) {
   std::lock_guard<std::mutex> lg(_locker);
-  this->_tp_chunks[c->first.id].push_back(c);
+  this->_tp_chunks[c->info.first.id].push_back(c);
 }
 
-bool InnerReader::isEnd() const { return this->end && this->_tp_readed; }
+bool InnerReader::isEnd() const {
+  return this->end && this->_tp_readed;
+}
 
 dariadb::IdArray InnerReader::getIds() const {
   dariadb::IdSet idset;
@@ -39,7 +41,7 @@ dariadb::IdArray InnerReader::getIds() const {
     dariadb::storage::ChunksList out;
     v->readAll(&out);
     for (auto &c : out) {
-      idset.insert(c->first.id);
+      idset.insert(c->info.first.id);
     }
   }
   dariadb::IdArray result{idset.begin(), idset.end()};
@@ -61,24 +63,13 @@ void InnerReader::readNext(storage::ReaderClb *clb) {
       }
       auto cur_ch = reader_clbk->readed;
       reader_clbk->readed = nullptr;
-      auto bw = std::make_shared<BinaryBuffer>(cur_ch->bw->get_range());
-      bw->reset_pos();
-      CopmressedReader crr(bw, cur_ch->first);
 
-      if (check_meas(cur_ch->first)) {
-        auto sub = cur_ch->first;
-        clb->call(sub);
-      }
-
-      for (size_t j = 0; j < cur_ch->count; j++) {
-        auto sub = crr.read();
-        sub.id = cur_ch->first.id;
+      auto ch_reader = cur_ch->get_reader();
+      while (!ch_reader->is_end()) {
+        auto sub = ch_reader->readNext();
+        sub.id = cur_ch->info.first.id;
         if (check_meas(sub)) {
           clb->call(sub);
-        } else {
-          if (sub.time > _to) {
-            break;
-          }
         }
       }
     }
@@ -93,7 +84,7 @@ void InnerReader::readTimePoint(storage::ReaderClb *clb) {
     auto candidate = cand_ch.second.front();
 
     for (auto cur_chunk : cand_ch.second) {
-      if (candidate->first.time < cur_chunk->first.time) {
+      if (candidate->info.first.time < cur_chunk->info.first.time) {
         candidate = cur_chunk;
       }
     }
@@ -104,15 +95,15 @@ void InnerReader::readTimePoint(storage::ReaderClb *clb) {
 
     auto bw = std::make_shared<BinaryBuffer>(ch->bw->get_range());
     bw->reset_pos();
-    CopmressedReader crr(bw, ch->first);
+    CopmressedReader crr(bw, ch->info.first);
 
     Meas candidate;
-    candidate = ch->first;
+    candidate = ch->info.first;
     ch->lock();
-    for (size_t i = 0; i < ch->count; i++) {
+    for (size_t i = 0; i < ch->info.count; i++) {
 
       auto sub = crr.read();
-      sub.id = ch->first.id;
+      sub.id = ch->info.first.id;
       if ((sub.time <= _from) && (sub.time >= candidate.time)) {
         candidate = sub;
       }
@@ -174,10 +165,14 @@ void InnerReader::reset() {
   }
 }
 
-InnerCurrentValuesReader::InnerCurrentValuesReader() { this->end = false; }
+InnerCurrentValuesReader::InnerCurrentValuesReader() {
+  this->end = false;
+}
 InnerCurrentValuesReader::~InnerCurrentValuesReader() {}
 
-bool InnerCurrentValuesReader::isEnd() const { return this->end; }
+bool InnerCurrentValuesReader::isEnd() const {
+  return this->end;
+}
 
 void InnerCurrentValuesReader::readCurVals(storage::ReaderClb *clb) {
   for (auto v : _cur_values) {
@@ -207,4 +202,6 @@ Reader_ptr InnerCurrentValuesReader::clone() const {
   raw_reader->_cur_values = _cur_values;
   return result;
 }
-void InnerCurrentValuesReader::reset() { end = false; }
+void InnerCurrentValuesReader::reset() {
+  end = false;
+}

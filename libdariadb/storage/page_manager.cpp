@@ -30,9 +30,9 @@ public:
   }
 
   uint64_t calc_page_size() const {
-    auto sz_index = sizeof(Page_ChunkIndex) * _param.chunk_per_storage;
+    auto sz_info = _param.chunk_per_storage * sizeof(ChunkIndexInfo);
     auto sz_buffers = _param.chunk_per_storage * _param.chunk_size;
-    return sizeof(PageHeader) + sz_index + sz_buffers;
+    return sizeof(PageHeader) + sz_buffers + sz_info;
   }
 
   Page *create_page() {
@@ -140,7 +140,7 @@ public:
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
-      return _cur_page->header->minTime;
+      return _cur_page->iheader->minTime;
     }
   }
 
@@ -149,7 +149,7 @@ public:
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
-      return _cur_page->header->maxTime;
+      return _cur_page->iheader->maxTime;
     }
   }
 
@@ -177,13 +177,21 @@ void PageManager::stop() {
   }
 }
 
-void PageManager::flush() { this->impl->flush(); }
+void PageManager::flush() {
+  this->impl->flush();
+}
 
-PageManager *PageManager::instance() { return _instance; }
+PageManager *PageManager::instance() {
+  return _instance;
+}
 
-bool PageManager::append(const Chunk_Ptr &c) { return impl->append(c); }
+bool PageManager::append(const Chunk_Ptr &c) {
+  return impl->append(c);
+}
 
-bool PageManager::append(const ChunksList &c) { return impl->append(c); }
+bool PageManager::append(const ChunksList &c) {
+  return impl->append(c);
+}
 
 // Cursor_ptr PageManager::get_chunks(const dariadb::IdArray&ids, dariadb::Time
 // from, dariadb::Time to, dariadb::Flag flag) {
@@ -206,7 +214,9 @@ dariadb::storage::IdToChunkMap PageManager::chunksBeforeTimePoint(
   return impl->chunksBeforeTimePoint(ids, flag, timePoint);
 }
 
-dariadb::IdArray PageManager::getIds() { return impl->getIds(); }
+dariadb::IdArray PageManager::getIds() {
+  return impl->getIds();
+}
 
 dariadb::storage::ChunksList PageManager::get_open_chunks() {
   return impl->get_open_chunks();
@@ -216,8 +226,14 @@ size_t PageManager::chunks_in_cur_page() const {
   return impl->chunks_in_cur_page();
 }
 
-size_t PageManager::in_queue_size() const { return impl->in_queue_size(); }
+size_t PageManager::in_queue_size() const {
+  return impl->in_queue_size();
+}
 
-dariadb::Time PageManager::minTime() { return impl->minTime(); }
+dariadb::Time PageManager::minTime() {
+  return impl->minTime();
+}
 
-dariadb::Time PageManager::maxTime() { return impl->maxTime(); }
+dariadb::Time PageManager::maxTime() {
+  return impl->maxTime();
+}
