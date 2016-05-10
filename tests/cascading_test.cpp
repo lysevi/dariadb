@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(Cascading_insert) {
 
 BOOST_AUTO_TEST_CASE(Cascading_insert_big) {
 
-    const size_t insertion_count=50000;
+    const size_t insertion_count=1000000;
     std::vector<int> keys(insertion_count);
     std::uniform_int_distribution<int> distribution(0, insertion_count * 10);
     std::mt19937 engine;
@@ -54,7 +54,6 @@ BOOST_AUTO_TEST_CASE(Cascading_insert_big) {
 
     {
         cascading c;
-        c.resize(16);
         auto start = clock();
         for(size_t i=0;i<insertion_count;i++){
             c.push(keys[i]);
@@ -67,7 +66,10 @@ BOOST_AUTO_TEST_CASE(Cascading_insert_big) {
         for(size_t i=0;i<insertion_count;i++){
             cascading::item res;
             if(!c.find(keys[i],&res)){
-                throw MAKE_EXCEPTION("!c.find(keys[i],&res)");
+                c.print();
+                std::stringstream ss;
+                ss<<"!c.find(keys[i],&res): "<<keys[i];
+                throw MAKE_EXCEPTION(ss.str());
             }
         }
         elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;

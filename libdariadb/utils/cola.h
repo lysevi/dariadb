@@ -19,12 +19,17 @@ public:
     int value;
     item();
     item(int v);
+    item&operator=(const item&o){
+        is_init=o.is_init;
+        value=o.value;
+        return *this;
+    }
     std::string to_string() const;
     bool operator<(const item &other) const;
     bool operator>(const item &other) const;
 
     bool operator==(const item &other) const{
-        return std::tie(this->is_init,this->value)==std::tie(other.is_init,other.value);
+        return this->value==other.value;
     }
   };
 

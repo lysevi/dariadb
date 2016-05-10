@@ -20,16 +20,10 @@ std::string cascading::item::to_string() const {
 }
 
 bool cascading::item::operator<(const item &other) const {
-  if (is_init && !other.is_init) {
-    return true;
-  }
   return value < other.value;
 }
 
 bool cascading::item::operator>(const item &other) const {
-  if (is_init && !other.is_init) {
-    return true;
-  }
   return value > other.value;
 }
 
@@ -85,10 +79,9 @@ void cascading::level::merge_with(std::list<level *> new_values) {
   std::vector<size_t> poses(new_values.size());
   std::fill(poses.begin(), poses.end(), size_t(0));
   while (!new_values.empty()) {
-
     // get cur max;
     size_t with_max_index = 0;
-    item max_val = new_values.front()->values[0];
+    item max_val = new_values.front()->values[poses[0]];
     auto it = new_values.begin();
     auto with_max_index_it = it;
     for (size_t i = 0; i < poses.size(); i++, ++it) {
@@ -102,7 +95,7 @@ void cascading::level::merge_with(std::list<level *> new_values) {
     this->insert((*with_max_index_it)->values[poses[with_max_index]]);
     // remove ended in-list
     poses[with_max_index]++;
-    if (poses[with_max_index] >= (*with_max_index_it)->size) {
+    if (poses[with_max_index] >= (*with_max_index_it)->values.size()) {
       poses.erase(poses.begin() + with_max_index);
       new_values.erase(with_max_index_it);
     }
@@ -110,12 +103,17 @@ void cascading::level::merge_with(std::list<level *> new_values) {
 }
 
 bool cascading::level::find(int v, item *i) {
-  auto res = std::find(this->values.begin(), this->values.end(), v);
-  if (res != this->values.end()) {
-    *i = *res;
-    return true;
-  }
-  return false;
+    auto res = std::lower_bound(this->values.begin(), this->values.end(), item(v));
+    if (res != this->values.end()) {
+        if((res->value>v) &&(res!=values.begin())){
+            --res;
+        }
+        if(res->value==v){
+            *i = *res;
+            return true;
+        }
+    }
+    return false;
 }
 
 void cascading::alloc_level(size_t num) {
@@ -159,9 +157,9 @@ void cascading::push(int v) {
 }
 
 bool cascading::find(int v, item *res) {
-  for (size_t i = 0; i < _levels.size(); ++i) {
-    if ((v >= _levels[i].minItem.value) && (v <= _levels[i].maxItem.value)) {
-      if(_levels[i].find(v, res)){
+  for (auto it=_levels.begin();it!=_levels.end();++it) {
+    if ((v >= it->minItem.value) && (v <= it->maxItem.value)) {
+      if(it->find(v, res)){
           return true;
       }
     }
