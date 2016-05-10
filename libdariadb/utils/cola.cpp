@@ -1,5 +1,5 @@
 #include "cola.h"
-#include "../compression/cz.h"
+#include "cz.h"
 
 using namespace dariadb::utils;
 
@@ -115,7 +115,7 @@ void cascading::resize(size_t levels_count){
 
 void cascading::push(int v){
     size_t new_items_count=_items_count+1;
-    size_t outlvl=dariadb::compression::ctz(~_items_count&new_items_count);
+    size_t outlvl=ctz(~_items_count&new_items_count);
     //size_t mrg_k=outlvl+1; //k-way merge: k factor
     //std::cout<<"outlvl: "<<uint32_t(outlvl)<<" k:"<<mrg_k <<std::endl;
 
