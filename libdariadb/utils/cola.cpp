@@ -45,13 +45,9 @@ void cascading::level::clear() {
   maxItem.value = std::numeric_limits<int>::min();
 }
 
-bool cascading::level::free() {
-  return (size - pos) != 0;
-}
+bool cascading::level::free() { return (size - pos) != 0; }
 
-bool cascading::level::is_full() {
-  return !free();
-}
+bool cascading::level::is_full() { return !free(); }
 
 std::string cascading::level::to_string() const {
   std::stringstream ss;
@@ -163,6 +159,9 @@ void cascading::push(int v) {
 
 bool cascading::find(int v, item *res) {
   for (auto it = _levels.begin(); it != _levels.end(); ++it) {
+    if (it->free()) {
+      continue;
+    }
     if ((v >= it->minItem.value) && (v <= it->maxItem.value)) {
       if (it->find(v, res)) {
         return true;
