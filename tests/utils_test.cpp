@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(SkipListCheck) {
     lst.insert(i, i * 10);
     sum_before += i + i + 2 + i + 1;
   }
-  //lst.print();
+  // lst.print();
   BOOST_CHECK_EQUAL(lst.size(), size_t(33));
   for (auto &kv : lst) {
     kv.second = kv.first * 11;
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(SkipListCheck) {
   BOOST_CHECK_EQUAL(sum, sum_before);
 
   lst.remove(size_t(3));
-  //lst.print();
+  // lst.print();
   BOOST_CHECK(lst.find(size_t(3)) == lst.end());
 
   auto ub = lst.upper_bound(size_t(4));
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(SkipListCheck) {
   for (auto it : lst) {
     BOOST_CHECK(it.first >= 20);
   }
-  //lst.print();
+  // lst.print();
 }
 
 BOOST_AUTO_TEST_CASE(CountZero) {

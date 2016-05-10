@@ -63,10 +63,9 @@ void kv_linear_benchmark(T &cont, std::function<void(T *)> rm_func) {
   std::cout << " remove: " << elapsed << std::endl;
 }
 
-template <typename T>
-void kv_linear_benchmark_rev(T &cont) {
+template <typename T> void kv_linear_benchmark_rev(T &cont) {
   auto start = clock();
-  for (size_t i = insertion_count; i >0 ; i--) {
+  for (size_t i = insertion_count; i > 0; i--) {
     cont.insert(std::make_pair(i, i + 1));
   }
   auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);

@@ -45,9 +45,13 @@ void cascading::level::clear() {
   maxItem.value = std::numeric_limits<int>::min();
 }
 
-bool cascading::level::free() { return (size - pos) != 0; }
+bool cascading::level::free() {
+  return (size - pos) != 0;
+}
 
-bool cascading::level::is_full() { return !free(); }
+bool cascading::level::is_full() {
+  return !free();
+}
 
 std::string cascading::level::to_string() const {
   std::stringstream ss;
@@ -103,17 +107,18 @@ void cascading::level::merge_with(std::list<level *> new_values) {
 }
 
 bool cascading::level::find(int v, item *i) {
-    auto res = std::lower_bound(this->values.begin(), this->values.end(), item(v));
-    if (res != this->values.end()) {
-        if((res->value>v) &&(res!=values.begin())){
-            --res;
-        }
-        if(res->value==v){
-            *i = *res;
-            return true;
-        }
+  auto res =
+      std::lower_bound(this->values.begin(), this->values.end(), item(v));
+  if (res != this->values.end()) {
+    if ((res->value > v) && (res != values.begin())) {
+      --res;
     }
-    return false;
+    if (res->value == v) {
+      *i = *res;
+      return true;
+    }
+  }
+  return false;
 }
 
 void cascading::alloc_level(size_t num) {
@@ -157,10 +162,10 @@ void cascading::push(int v) {
 }
 
 bool cascading::find(int v, item *res) {
-  for (auto it=_levels.begin();it!=_levels.end();++it) {
+  for (auto it = _levels.begin(); it != _levels.end(); ++it) {
     if ((v >= it->minItem.value) && (v <= it->maxItem.value)) {
-      if(it->find(v, res)){
-          return true;
+      if (it->find(v, res)) {
+        return true;
       }
     }
   }

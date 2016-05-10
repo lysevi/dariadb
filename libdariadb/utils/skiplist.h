@@ -13,8 +13,8 @@
 namespace dariadb {
 namespace utils {
 
-template <typename Key, typename Value,
-          typename _Compare = std::less<Key>, typename RndEngine = std::mt19937>
+template <typename Key, typename Value, typename _Compare = std::less<Key>,
+          typename RndEngine = std::mt19937>
 class skiplist {
 public:
   using key_type = Key;
@@ -24,7 +24,7 @@ public:
 
   struct _node_t;
   using _node_t_ptr = _node_t *;
-  using _node_frwd_vector=std::vector<_node_t_ptr>;
+  using _node_frwd_vector = std::vector<_node_t_ptr>;
   struct _node_t {
     _node_frwd_vector frwd;
     pair_type kv;
@@ -134,9 +134,9 @@ public:
   };
 
 public:
-  skiplist(size_t maxLevel) : _size(0), dist(0, 1.0),_maxLevel(maxLevel) {
-      _head.frwd.resize(_maxLevel);
-      _tail.frwd.resize(_maxLevel);
+  skiplist(size_t maxLevel) : _size(0), dist(0, 1.0), _maxLevel(maxLevel) {
+    _head.frwd.resize(_maxLevel);
+    _tail.frwd.resize(_maxLevel);
     for (size_t i = 0; i < _maxLevel; ++i) {
       _head.frwd[i] = &_tail;
       _tail.frwd[i] = nullptr;
@@ -145,8 +145,7 @@ public:
     _tail.kv.first = std::numeric_limits<key_type>::max();
   }
 
-  skiplist():skiplist(32){
-  }
+  skiplist() : skiplist(32) {}
 
   ~skiplist() {
     _node_t_ptr x = _head.frwd[0];
@@ -263,7 +262,7 @@ public:
 
   const_iterator upper_bound(const key_type &key) const {
     _node_frwd_vector update(_maxLevel);
-    _node_t_ptr x = search(key,&update);
+    _node_t_ptr x = search(key, &update);
     const_iterator res(x);
     if (res->first == key) {
       ++res;
@@ -273,7 +272,7 @@ public:
 
   iterator lower_bound(const key_type &key) {
     _node_frwd_vector update(_maxLevel);
-    _node_t_ptr x = search_before(key,&update);
+    _node_t_ptr x = search_before(key, &update);
     iterator res(x);
     return res;
   }
@@ -285,7 +284,7 @@ public:
   }
 
 private:
-  _node_t_ptr search_before(const key_type &key, _node_frwd_vector* update) {
+  _node_t_ptr search_before(const key_type &key, _node_frwd_vector *update) {
     _node_t_ptr x = &_head;
     for (size_t i = _head.level;; --i) {
       while (_cmp(x->frwd[i]->kv.first, key)) {
@@ -300,7 +299,7 @@ private:
     return x;
   }
 
-  _node_t_ptr search(const key_type &key, _node_frwd_vector* update) {
+  _node_t_ptr search(const key_type &key, _node_frwd_vector *update) {
     auto x = search_before(key, update);
     x = x->frwd[0];
     return x;

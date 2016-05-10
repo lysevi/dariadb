@@ -8,7 +8,6 @@
 #include <list>
 #include <sstream>
 #include <vector>
-#include <tuple>
 namespace dariadb {
 namespace utils {
 
@@ -19,17 +18,17 @@ public:
     int value;
     item();
     item(int v);
-    item&operator=(const item&o){
-        is_init=o.is_init;
-        value=o.value;
-        return *this;
+    item &operator=(const item &o) {
+      is_init = o.is_init;
+      value = o.value;
+      return *this;
     }
     std::string to_string() const;
     bool operator<(const item &other) const;
     bool operator>(const item &other) const;
 
-    bool operator==(const item &other) const{
-        return this->value==other.value;
+    bool operator==(const item &other) const {
+      return this->value == other.value;
     }
   };
 
@@ -39,7 +38,7 @@ public:
     size_t pos;
     size_t size;
     size_t lvl;
-    item minItem,maxItem;
+    item minItem, maxItem;
 
     level() = default;
 
@@ -50,7 +49,7 @@ public:
     std::string to_string() const;
     void insert(item val);
     void merge_with(std::list<level *> new_values);
-    bool find(int v, item*i);
+    bool find(int v, item *i);
   };
   void alloc_level(size_t num);
 
@@ -69,7 +68,8 @@ public:
     std::cout << std::endl;
   }
   size_t levels_count() const { return _levels.size(); }
-  bool find(int v, item*res);
+  bool find(int v, item *res);
+
 protected:
   std::vector<level> _levels;
   size_t _items_count;
