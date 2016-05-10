@@ -2,11 +2,86 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 #include <chrono>
+#include <ctime>
 #include <thread>
 #include <utils/asyncworker.h>
 #include <utils/fs.h>
 #include <utils/period_worker.h>
+#include <utils/skiplist.h>
 #include <utils/utils.h>
+
+BOOST_AUTO_TEST_CASE(SkipListCheck) {
+  using int_lst = dariadb::utils::skiplist<size_t, size_t>;
+
+  int_lst lst;
+  const size_t insertions = 33;
+  size_t sum_before = 0;
+  for (size_t i = 0; i < insertions; i += 3) {
+    lst.insert(i, i * 5);
+    lst.insert(i + 2, (i + 2) * 10);
+    lst.insert(i + 1, (i + 1) * 10);
+    lst.insert(i, i * 10);
+    sum_before += i + i + 2 + i + 1;
+  }
+  lst.print();
+  BOOST_CHECK_EQUAL(lst.size(), size_t(33));
+  for (auto &kv : lst) {
+    kv.second = kv.first * 11;
+  }
+  lst.remove(0);
+  BOOST_CHECK_EQUAL(lst.size(), size_t(32));
+  for (size_t i = 0; i < 33; ++i) {
+    auto fpos = lst.find(i);
+    if (fpos != lst.end()) {
+      auto kv = *fpos;
+      BOOST_CHECK_EQUAL(kv.second, i * 11);
+    } else {
+      if (i != 0) { // we remove 0;
+        BOOST_CHECK(fpos != lst.end());
+      }
+    }
+  }
+  size_t sum = 0;
+  for (auto it = lst.begin(); it != lst.end(); ++it) {
+    sum += it->first;
+  }
+  BOOST_CHECK_EQUAL(sum, sum_before);
+
+  sum = 0;
+  for (auto it = lst.cbegin(); it != lst.cend(); ++it) {
+    sum += it->first;
+  }
+  BOOST_CHECK_EQUAL(sum, sum_before);
+
+  lst.remove(size_t(3));
+  lst.print();
+  BOOST_CHECK(lst.find(size_t(3)) == lst.end());
+
+  auto ub = lst.upper_bound(size_t(4));
+  BOOST_CHECK_EQUAL(ub->first, size_t(5));
+
+  auto lb = lst.lower_bound(size_t(4));
+  BOOST_CHECK_EQUAL(lb->first, size_t(2));
+
+  lb = lst.lower_bound(size_t(3));
+  BOOST_CHECK_EQUAL(lb->first, size_t(2));
+
+  lst.remove_if(lst.begin(), lst.end(),
+                [](const int_lst::pair_type &kv) { return kv.first < 20; });
+  for (auto it : lst) {
+    BOOST_CHECK(it.first >= 20);
+  }
+  lst.print();
+}
+
+BOOST_AUTO_TEST_CASE(CountZero) {
+  BOOST_CHECK_EQUAL(dariadb::utils::clz(67553994410557440), 8);
+  BOOST_CHECK_EQUAL(dariadb::utils::clz(3458764513820540928), 2);
+  BOOST_CHECK_EQUAL(dariadb::utils::clz(15), 60);
+
+  BOOST_CHECK_EQUAL(dariadb::utils::ctz(240), 4);
+  BOOST_CHECK_EQUAL(dariadb::utils::ctz(3840), 8);
+}
 
 BOOST_AUTO_TEST_CASE(InInterval) {
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 1));

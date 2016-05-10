@@ -6,7 +6,6 @@
 #include "../utils/locker.h"
 #include "../utils/pool.h"
 #include "../utils/utils.h"
-#include <boost/lockfree/queue.hpp>
 
 #include <map>
 #include <set>

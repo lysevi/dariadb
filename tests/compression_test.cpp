@@ -3,7 +3,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include <compression.h>
-#include <compression/cz.h>
 #include <compression/delta.h>
 #include <compression/flag.h>
 #include <compression/xor.h>
@@ -380,14 +379,6 @@ BOOST_AUTO_TEST_CASE(flat_converters) {
 }
 
 BOOST_AUTO_TEST_CASE(XorCompressor) {
-  {
-    BOOST_CHECK_EQUAL(dariadb::compression::clz(67553994410557440), 8);
-    BOOST_CHECK_EQUAL(dariadb::compression::clz(3458764513820540928), 2);
-    BOOST_CHECK_EQUAL(dariadb::compression::clz(15), 60);
-
-    BOOST_CHECK_EQUAL(dariadb::compression::ctz(240), 4);
-    BOOST_CHECK_EQUAL(dariadb::compression::ctz(3840), 8);
-  }
   const size_t test_buffer_size = 1000;
 
   const dariadb::Value t1 = 240;

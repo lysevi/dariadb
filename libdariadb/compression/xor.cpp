@@ -1,7 +1,7 @@
 #include "xor.h"
 #include "../utils/utils.h"
 #include "binarybuffer.h"
-#include "cz.h"
+#include "../utils/cz.h"
 #include <cassert>
 #include <limits>
 #include <sstream>
@@ -37,8 +37,8 @@ bool XorCompressor::append(Value v) {
 
   _bw->setbit().incbit();
 
-  auto lead = dariadb::compression::clz(xor_val);
-  auto tail = dariadb::compression::ctz(xor_val);
+  auto lead = dariadb::utils::clz(xor_val);
+  auto tail = dariadb::utils::ctz(xor_val);
 
   if ((_prev_lead == lead) && (_prev_tail == tail)) {
     _bw->clrbit().incbit();

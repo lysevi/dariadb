@@ -8,7 +8,7 @@
 #endif
 
 namespace dariadb {
-namespace compression {
+namespace utils {
 #ifdef MSVC
 uint8_t __inline ctz(uint64_t value) {
   DWORD trailing_zero = 0;
