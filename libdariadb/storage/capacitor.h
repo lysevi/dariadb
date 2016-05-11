@@ -8,7 +8,7 @@
 namespace dariadb {
 namespace storage {
 
-const std::string CAP_FILE_EXT = ".aof";
+const std::string CAP_FILE_EXT = ".aof"; //append-only-file
 const size_t CAP_DEFAULT_MAX_LEVELS = 10;
 
 class Capacitor : public utils::NonCopy, public MeasStorage {

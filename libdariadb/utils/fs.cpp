@@ -7,6 +7,10 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
+#include <boost/uuid/uuid.hpp>            // uuid class
+#include <boost/uuid/uuid_generators.hpp> // generators
+#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
+
 using namespace dariadb::utils::fs;
 
 namespace bi = boost::interprocess;
@@ -78,6 +82,13 @@ bool rm(const std::string &rm_path) {
 std::string filename(const std::string &fname) { // without ex
   boost::filesystem::path p(fname);
   return p.stem().string();
+}
+
+std::string random_file_name(const std::string ext) {
+  boost::uuids::uuid uuid = boost::uuids::random_generator()();
+  std::stringstream ss;
+  ss << uuid << ext;
+  return ss.str();
 }
 
 std::string parent_path(const std::string &fname) {

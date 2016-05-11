@@ -51,7 +51,7 @@ public:
   dariadb::IdArray getIds() override { return dariadb::IdArray{}; }
 };
 
-BOOST_AUTO_TEST_CASE(CapacitorTest) {
+BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
   stor->writed_count = 0;
   const size_t max_size = 10;

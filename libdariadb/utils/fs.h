@@ -12,12 +12,17 @@ std::list<std::string> ls(const std::string &path);
 std::list<std::string> ls(const std::string &path, const std::string &ext);
 
 bool rm(const std::string &rm_path);
+
 std::string filename(const std::string &fname); // without ex
+std::string random_file_name(const std::string ext);
+
 std::string parent_path(const std::string &fname);
 std::string append_path(const std::string &p1, const std::string &p2);
 
 bool path_exists(const std::string &path);
 void mkdir(const std::string &path);
+
+/// ext - ".ext"
 
 class MappedFile : public utils::NonCopy {
   class Private;

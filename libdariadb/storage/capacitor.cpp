@@ -1,15 +1,20 @@
+/*
+FileName:
+GUID.aof
+File struct:
+   CapHeader| LevelHeader | Meas0 | Meas1|....| LevelHeader|Meas0 |Meas1...
+Alg:
+	1. Measurements save to COLA file struct
+	2. When the append-only-file is fulle, 
+	it is converted to a sorted table (*.page) and a new log file is created for future updates.
+*/
+
 #include "capacitor.h"
-#include "../timeutil.h"
 #include "../utils/fs.h"
-#include "../utils/locker.h"
 #include "../utils/utils.h"
-#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <list>
-#include <map>
-#include <unordered_map>
-#include <utility>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -51,13 +56,19 @@ public:
     if (!dariadb::utils::fs::path_exists(_params.path)) {
       create();
     } else {
-      open();
+		auto logs=dariadb::utils::fs::ls(_params.path, CAP_FILE_EXT);
+		if (logs.empty()) {
+			create(); 
+		}
+		else {
+			open(logs.front());
+		}
     }
   }
 
   size_t one_block_size(size_t B) const { return sizeof(Meas) * B; }
 
-  size_t block_in_level(size_t lev_num) const { return (1 << lev_num); }
+  size_t block_in_level(size_t lev_num) const { return (size_t(1) << lev_num); }
 
   size_t meases_in_level(size_t B, size_t lvl) const {
     return one_block_size(B) * block_in_level(lvl);
@@ -65,14 +76,16 @@ public:
 
   uint64_t cap_size() const {
     uint64_t result = 0;
-    auto block_sz = one_block_size(_params.B);
+    
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
       result += sizeof(level_header) + meases_in_level(_params.B, lvl); // 2^lvl
     }
     return result + sizeof(Header);
   }
 
-  std::string file_name() { return "1" + CAP_FILE_EXT; }
+  std::string file_name() { 
+	  return dariadb::utils::fs::random_file_name(CAP_FILE_EXT);
+  }
 
   void create() {
     dariadb::utils::fs::mkdir(_params.path);
@@ -112,9 +125,8 @@ public:
     }
   }
 
-  void open() {
-    mmap = utils::fs::MappedFile::open(
-        utils::fs::append_path(_params.path, file_name()));
+  void open(const std::string &fname) {
+    mmap = utils::fs::MappedFile::open(fname);
 
     _header = reinterpret_cast<Header *>(mmap->data());
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
