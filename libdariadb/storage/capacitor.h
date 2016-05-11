@@ -7,17 +7,20 @@
 
 namespace dariadb {
 namespace storage {
-/// used as added period in PeriodWorker
-	const std::string CAP_FILE_EXT=".aof";
+
+const std::string CAP_FILE_EXT = ".aof";
+const size_t CAP_DEFAULT_MAX_LEVELS = 10;
+
 class Capacitor : public utils::NonCopy, public MeasStorage {
 public:
-	
   struct Params {
-    size_t B;
-	std::string path;
+    size_t B; // measurements count in one datra block
+    std::string path;
+    size_t max_levels;
     Params(const size_t _B, const std::string _path) {
       B = _B;
-      path=_path;
+      path = _path;
+      max_levels = CAP_DEFAULT_MAX_LEVELS;
     }
   };
   virtual ~Capacitor();
@@ -36,7 +39,9 @@ public:
 
   bool flush(); // write all to storage;
 
-  size_t in_queue_size()const;
+  size_t in_queue_size() const;
+  size_t levels_count() const;
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
