@@ -43,9 +43,13 @@ void cascading::level::clear() {
   maxItem.value = std::numeric_limits<int>::min();
 }
 
-bool cascading::level::free() { return (_size - pos) != 0; }
+bool cascading::level::free() {
+  return (_size - pos) != 0;
+}
 
-bool cascading::level::is_full() { return !free(); }
+bool cascading::level::is_full() {
+  return !free();
+}
 
 std::string cascading::level::to_string() const {
   std::stringstream ss;
@@ -74,11 +78,11 @@ void cascading::level::push_back(item val) {
 }
 
 void cascading::level::merge_with(std::list<level *> new_values) {
-	k_merge(new_values, *this);
+  k_merge(new_values, *this);
 }
 
-cascading::item cascading::level::at(size_t i)const {
-	return this->values.at(i);
+cascading::item cascading::level::at(size_t i) const {
+  return this->values.at(i);
 }
 
 bool cascading::level::find(int v, item *i) {
