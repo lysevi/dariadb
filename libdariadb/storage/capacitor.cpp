@@ -46,27 +46,22 @@ struct level {
 
 class CapReader : public storage::Reader {
 public:
-  bool isEnd() const override{
-      return _values.empty();
+  bool isEnd() const override { return _values.empty(); }
+  dariadb::IdArray getIds() const override {
+    dariadb::IdSet res;
+    for (auto v : _values) {
+      res.insert(v.id);
+    }
+    return dariadb::IdArray(res.begin(), res.end());
   }
-  dariadb::IdArray getIds() const override{
-dariadb::IdSet res;
-for(auto v:_values){
-    res.insert(v.id);
-}
-return dariadb::IdArray(res.begin(),res.end());
+  void readNext(dariadb::storage::ReaderClb *clb) override {
+    clb->call(_values.front());
+    _values.pop_front();
   }
-  void readNext(dariadb::storage::ReaderClb *clb) override{
-clb->call(_values.front());
-_values.pop_front();
-  }
-  Reader_ptr clone() const override{
-      return nullptr;
-  }
-  void reset() override{
-  }
+  Reader_ptr clone() const override { return nullptr; }
+  void reset() override {}
   dariadb::Meas::MeasList _values;
-   ~CapReader() {}
+  ~CapReader() {}
 };
 
 class Capacitor::Private {
@@ -185,13 +180,17 @@ public:
 
   append_result append(const Meas &value) {
     if (_memvalues_pos < _header->B) {
-      _memvalues[_memvalues_pos] = value;
-      _memvalues_pos++;
-      ++_header->_writed;
-      return append_result(1, 0);
+      return append_to_mem(value);
     } else {
       return append_to_levels(value);
     }
+  }
+
+  append_result append_to_mem(const Meas &value) {
+    _memvalues[_memvalues_pos] = value;
+    _memvalues_pos++;
+    ++_header->_writed;
+    return append_result(1, 0);
   }
 
   append_result append_to_levels(const Meas &value) {
@@ -200,7 +199,7 @@ public:
     _memvalues_pos = 0;
     size_t new_items_count = _header->_size_B + 1;
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
-    //std::cout<<"outlvl: "<<outlvl<<std::endl;
+    // std::cout<<"outlvl: "<<outlvl<<std::endl;
     if (outlvl >= _header->levels_count) {
 
       return append_result(0, 1);
@@ -259,27 +258,33 @@ public:
       _levels[i - 1].clear();
     }
     ++_header->_size_B;
-    ++_header->_writed;
-    return append_result(1, 0);
+    return append_to_mem(value);
   }
   Reader_ptr readInterval(Time from, Time to) { return nullptr; }
   virtual Reader_ptr readInTimePoint(Time time_point) { return nullptr; }
 
   virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
                                   Time to) {
-      CapReader *raw=new CapReader;
-      for(size_t j=0;j<_memvalues.size();++j){
-          raw->_values.push_back(_memvalues[j]);
-      }
+    CapReader *raw = new CapReader;
+    for (size_t j = 0; j < _memvalues_pos; ++j) {
+        auto m=_memvalues[j];
+        //TODO refact. move to utils libs or meas::static.
+        if((in_filter(flag,m.flag)) && ((ids.size()==0) || (std::find(ids.begin(),ids.end(),m.id)!=ids.end()))){
+            raw->_values.push_back(_memvalues[j]);
+        }
+    }
 
-      for(size_t i=0;i<this->_levels.size();++i){
-          if(_levels[i].empty()){
-              continue;
-          }
-          for(size_t j=0;j<_levels[i].hdr->pos;++j){
-              raw->_values.push_back(_levels[i].at(j));
+    for (size_t i = 0; i < this->_levels.size(); ++i) {
+      if (_levels[i].empty()) {
+        continue;
+      }
+      for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
+          auto m=_levels[i].at(j);
+          if((in_filter(flag,m.flag)) && ((ids.size()==0) || (std::find(ids.begin(),ids.end(),m.id)!=ids.end()))){
+              raw->_values.push_back(m);
           }
       }
+    }
     return Reader_ptr(raw);
   }
 
