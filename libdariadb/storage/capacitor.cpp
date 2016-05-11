@@ -44,6 +44,31 @@ struct level {
   bool empty() const { return hdr->pos == 0; }
 };
 
+class CapReader : public storage::Reader {
+public:
+  bool isEnd() const override{
+      return _values.empty();
+  }
+  dariadb::IdArray getIds() const override{
+dariadb::IdSet res;
+for(auto v:_values){
+    res.insert(v.id);
+}
+return dariadb::IdArray(res.begin(),res.end());
+  }
+  void readNext(dariadb::storage::ReaderClb *clb) override{
+clb->call(_values.front());
+_values.pop_front();
+  }
+  Reader_ptr clone() const override{
+      return nullptr;
+  }
+  void reset() override{
+  }
+  dariadb::Meas::MeasList _values;
+   ~CapReader() {}
+};
+
 class Capacitor::Private {
 public:
   struct meas_time_compare {
@@ -173,11 +198,11 @@ public:
     meas_time_compare less_by_time;
     std::sort(_memvalues.begin(), _memvalues.end(), less_by_time);
     _memvalues_pos = 0;
-    size_t new_items_count = _size + 1;
+    size_t new_items_count = _header->_size_B + 1;
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
-
+    //std::cout<<"outlvl: "<<outlvl<<std::endl;
     if (outlvl >= _header->levels_count) {
-      // std::cout<<"allocate new level: "<<_next_level<<std::endl;
+
       return append_result(0, 1);
     }
 
@@ -242,7 +267,20 @@ public:
 
   virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
                                   Time to) {
-    return nullptr;
+      CapReader *raw=new CapReader;
+      for(size_t j=0;j<_memvalues.size();++j){
+          raw->_values.push_back(_memvalues[j]);
+      }
+
+      for(size_t i=0;i<this->_levels.size();++i){
+          if(_levels[i].empty()){
+              continue;
+          }
+          for(size_t j=0;j<_levels[i].hdr->pos;++j){
+              raw->_values.push_back(_levels[i].at(j));
+          }
+      }
+    return Reader_ptr(raw);
   }
 
   virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
