@@ -42,7 +42,7 @@ public:
   Private(const BaseStorage_ptr stor, const Capacitor::Params &params)
       : _minTime(std::numeric_limits<dariadb::Time>::max()),
         _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor),
-        _params(params), mmap(nullptr) {
+        _params(params), mmap(nullptr),_size(0) {
     open_or_create();
   }
 
@@ -158,6 +158,9 @@ public:
 
   size_t levels_count() const { return _levels.size(); }
 
+  size_t size()const{
+      return _size;
+  }
 protected:
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
@@ -168,6 +171,7 @@ protected:
   Header *_header;
   uint8_t *_raw_data;
   std::vector<level> _levels;
+  size_t _size;
 };
 
 Capacitor::~Capacitor() {}
@@ -217,4 +221,8 @@ size_t dariadb::storage::Capacitor::in_queue_size() const {
 
 size_t dariadb::storage::Capacitor::levels_count() const {
   return _Impl->levels_count();
+}
+
+size_t dariadb::storage::Capacitor::size()const{
+    return _Impl->size();
 }

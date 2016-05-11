@@ -41,7 +41,7 @@ public:
 
   size_t in_queue_size() const;
   size_t levels_count() const;
-
+size_t size()const;
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
