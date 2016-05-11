@@ -54,7 +54,7 @@ public:
 BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
   stor->writed_count = 0;
-  const size_t max_size = 10;
+  const size_t block_size = 10;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
 	  dariadb::utils::fs::rm(storage_path);
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 
   auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
   assert(cap_files.size() == 0);
-  auto p = dariadb::storage::Capacitor::Params(max_size, storage_path);
+  auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
   p.max_levels = 11;
   {
 	  
