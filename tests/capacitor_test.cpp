@@ -74,17 +74,24 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 	  BOOST_CHECK_EQUAL(cap.levels_count(), size_t(p.max_levels));
 
       auto e = dariadb::Meas::empty();
-      dariadb::Time t = dariadb::timeutil::current_time();
+
       size_t writes_count=10000;
+      dariadb::Time t = writes_count;
       size_t id_count=10;
       for (size_t i = 0; i < writes_count; i++) {
         e.id=i%id_count;
         e.time = t;
         e.value=i;
-        t += 1;
+        t -= 1;
         BOOST_CHECK(cap.append(e).writed==1);
       }
       BOOST_CHECK_EQUAL(cap.size(),writes_count);
+
+      dariadb::Meas::MeasList out;
+      auto reader=cap.readInterval(dariadb::IdArray{},0,0,writes_count);
+      BOOST_CHECK(reader!=nullptr);
+      reader->readAll(&out);
+      BOOST_CHECK_EQUAL(out.size(),cap.size());
   }
   {
 	  p.max_levels = 12;

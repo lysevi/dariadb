@@ -4,14 +4,17 @@ GUID.aof
 File struct:
    CapHeader| LevelHeader | Meas0 | Meas1|....| LevelHeader|Meas0 |Meas1...
 Alg:
-	1. Measurements save to COLA file struct
-	2. When the append-only-file is fulle, 
-	it is converted to a sorted table (*.page) and a new log file is created for future updates.
+        1. Measurements save to COLA file struct
+        2. When the append-only-file is fulle,
+        it is converted to a sorted table (*.page) and a new log file is created
+for future updates.
 */
 
 #include "capacitor.h"
+#include "../utils/cz.h"
 #include "../utils/fs.h"
 #include "../utils/utils.h"
+#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <list>
@@ -22,19 +25,38 @@ using namespace dariadb::storage;
 struct level_header {
   size_t lvl;
   size_t count;
+  size_t pos;
 };
 
 struct level {
   level_header *hdr;
   Meas *begin;
+
+  Meas at(size_t _pos) const { return begin[_pos]; }
+
+  void push_back(const Meas &m) {
+    begin[hdr->pos] = m;
+    ++hdr->pos;
+  }
+
+  void clear() { hdr->pos = 0; }
+
+  bool empty() const { return hdr->pos == 0; }
 };
 
 class Capacitor::Private {
 public:
+  struct meas_time_compare {
+    bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+      return lhs.time < rhs.time;
+    }
+  };
+
   struct Header {
     bool is_dropped;
     size_t B;
-    size_t size;
+    size_t size;    // sizeof file in bytes
+    size_t _size_B; // how many block (sizeof(B)) addeded.
     size_t levels_count;
     size_t _writed;
   };
@@ -42,8 +64,10 @@ public:
   Private(const BaseStorage_ptr stor, const Capacitor::Params &params)
       : _minTime(std::numeric_limits<dariadb::Time>::max()),
         _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor),
-        _params(params), mmap(nullptr),_size(0) {
+        _params(params), mmap(nullptr), _size(0) {
     open_or_create();
+    _memvalues.resize(_header->B);
+    _memvalues_pos = 0;
   }
 
   ~Private() {
@@ -56,13 +80,12 @@ public:
     if (!dariadb::utils::fs::path_exists(_params.path)) {
       create();
     } else {
-		auto logs=dariadb::utils::fs::ls(_params.path, CAP_FILE_EXT);
-		if (logs.empty()) {
-			create(); 
-		}
-		else {
-			open(logs.front());
-		}
+      auto logs = dariadb::utils::fs::ls(_params.path, CAP_FILE_EXT);
+      if (logs.empty()) {
+        create();
+      } else {
+        open(logs.front());
+      }
     }
   }
 
@@ -76,15 +99,15 @@ public:
 
   uint64_t cap_size() const {
     uint64_t result = 0;
-    
+
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
       result += sizeof(level_header) + meases_in_level(_params.B, lvl); // 2^lvl
     }
     return result + sizeof(Header);
   }
 
-  std::string file_name() { 
-	  return dariadb::utils::fs::random_file_name(CAP_FILE_EXT);
+  std::string file_name() {
+    return dariadb::utils::fs::random_file_name(CAP_FILE_EXT);
   }
 
   void create() {
@@ -106,6 +129,7 @@ public:
       auto it = reinterpret_cast<level_header *>(pos);
       it->lvl = lvl;
       it->count = block_in_level(lvl) * _params.B;
+      it->pos = 0;
       pos += sizeof(level_header) + meases_in_level(_header->B, lvl);
     }
     load();
@@ -134,8 +158,85 @@ public:
     load();
   }
 
-  append_result append(const Meas &value) { return append_result(0, 0); }
+  append_result append(const Meas &value) {
+    if (_memvalues_pos < _header->B) {
+      _memvalues[_memvalues_pos] = value;
+      _memvalues_pos++;
+      ++_header->_writed;
+      return append_result(1, 0);
+    } else {
+      return append_to_levels(value);
+    }
+  }
 
+  append_result append_to_levels(const Meas &value) {
+    meas_time_compare less_by_time;
+    std::sort(_memvalues.begin(), _memvalues.end(), less_by_time);
+    _memvalues_pos = 0;
+    size_t new_items_count = _size + 1;
+    size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
+
+    if (outlvl >= _header->levels_count) {
+      // std::cout<<"allocate new level: "<<_next_level<<std::endl;
+      return append_result(0, 1);
+    }
+
+    std::list<level *> to_merge;
+    level tmp;
+    level_header tmp_hdr;
+    tmp.hdr = &tmp_hdr;
+    tmp.hdr->lvl = 0;
+    tmp.hdr->count = _memvalues.size();
+    tmp.hdr->pos = _memvalues.size();
+    tmp.begin = _memvalues.data();
+    to_merge.push_back(&tmp);
+
+    for (size_t i = 1; i <= outlvl; ++i) {
+      to_merge.push_back(&_levels[i - 1]);
+    }
+
+    auto merge_target = _levels[outlvl];
+
+    { // merge
+      auto vals_size = to_merge.size();
+      std::list<size_t> poses;
+      for (size_t i = 0; i < vals_size; ++i) {
+        poses.push_back(0);
+      }
+      while (!to_merge.empty()) {
+        vals_size = to_merge.size();
+        // get cur max;
+        auto with_max_index = poses.begin();
+        auto max_val = to_merge.front()->at(*with_max_index);
+        auto it = to_merge.begin();
+        auto with_max_index_it = it;
+        for (auto pos_it = poses.begin(); pos_it != poses.end(); ++pos_it) {
+          if (!less_by_time(max_val, (*it)->at(*pos_it))) {
+            with_max_index = pos_it;
+            max_val = (*it)->at(*pos_it);
+            with_max_index_it = it;
+          }
+          ++it;
+        }
+
+        auto val = (*with_max_index_it)->at(*with_max_index);
+        merge_target.push_back(val);
+        // remove ended in-list
+        (*with_max_index)++;
+        auto cur_src = (*with_max_index_it);
+        if ((*with_max_index) >= cur_src->hdr->count) {
+          poses.erase(with_max_index);
+          to_merge.erase(with_max_index_it);
+        }
+      }
+    }
+    for (size_t i = 1; i <= outlvl; ++i) {
+      _levels[i - 1].clear();
+    }
+    ++_header->_size_B;
+    ++_header->_writed;
+    return append_result(1, 0);
+  }
   Reader_ptr readInterval(Time from, Time to) { return nullptr; }
   virtual Reader_ptr readInTimePoint(Time time_point) { return nullptr; }
 
@@ -158,9 +259,8 @@ public:
 
   size_t levels_count() const { return _levels.size(); }
 
-  size_t size()const{
-      return _size;
-  }
+  size_t size() const { return _header->_writed; }
+
 protected:
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
@@ -172,6 +272,8 @@ protected:
   uint8_t *_raw_data;
   std::vector<level> _levels;
   size_t _size;
+  std::vector<Meas> _memvalues;
+  size_t _memvalues_pos;
 };
 
 Capacitor::~Capacitor() {}
@@ -179,13 +281,9 @@ Capacitor::~Capacitor() {}
 Capacitor::Capacitor(const BaseStorage_ptr stor, const Params &params)
     : _Impl(new Capacitor::Private(stor, params)) {}
 
-dariadb::Time Capacitor::minTime() {
-  return _Impl->minTime();
-}
+dariadb::Time Capacitor::minTime() { return _Impl->minTime(); }
 
-dariadb::Time Capacitor::maxTime() {
-  return _Impl->maxTime();
-}
+dariadb::Time Capacitor::maxTime() { return _Impl->maxTime(); }
 
 bool Capacitor::flush() { // write all to storage;
   return _Impl->flush();
@@ -223,6 +321,4 @@ size_t dariadb::storage::Capacitor::levels_count() const {
   return _Impl->levels_count();
 }
 
-size_t dariadb::storage::Capacitor::size()const{
-    return _Impl->size();
-}
+size_t dariadb::storage::Capacitor::size() const { return _Impl->size(); }
