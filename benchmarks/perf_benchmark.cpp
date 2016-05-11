@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
     const size_t chunk_per_storage = 1024 * 1024;
     const size_t chunk_size = 256;
-    const size_t cap_max_size = 100;
+	const size_t cap_B = 128 * 1024 / chunk_size;
     const dariadb::Time write_window_deep = 200;
     const dariadb::Time old_mem_chunks = 0;
     const size_t max_mem_chunks = 100;
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-        dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
 
     dariadb::storage::BaseStorage_ptr ms{raw_ptr};

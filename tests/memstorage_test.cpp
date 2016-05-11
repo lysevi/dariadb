@@ -5,7 +5,6 @@
 #include <meas.h>
 #include <storage/bloom_filter.h>
 #include <storage/memstorage.h>
-#include <storage/time_ordered_set.h>
 #include <timeutil.h>
 #include <union_storage.h>
 

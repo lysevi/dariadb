@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
   { // All values must be placed in the page. Without overwriting the old.
     const size_t chunk_per_storage = 10000;
     const size_t chunk_size = 256;
-    const size_t cap_max_size = 100;
+    const size_t cap_B = 1024;
     const dariadb::Time write_window_deep = 500;
     const dariadb::Time old_mem_chunks = 500;
 
@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-        dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::UnionStorage::Limits(old_mem_chunks, 0))};
 
     auto e = dariadb::Meas::empty();
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
-  const size_t cap_max_size = 500;
+  const size_t cap_B = 1024;
   const dariadb::Time write_window_deep = 100;
   const dariadb::Time whaitwrite_window_deep = 3000;
 
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-        dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+		dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::UnionStorage::Limits(0, 10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step,
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-        dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+		dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::UnionStorage::Limits(0, 0))};
 
     dariadb::Meas::MeasList mlist;
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 1000;
   const size_t chunk_size = 100;
-  const size_t cap_max_size = 10;
+  const size_t cap_B = 100;
   const dariadb::Time write_window_deep = 1000;
 
   {
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-        dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+		dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::UnionStorage::Limits(0, max_mem_chunks));
 
     dariadb::storage::BaseStorage_ptr ms{raw_ptr};

@@ -5,8 +5,8 @@
 
 #include <ctime>
 #include <storage/capacitor.h>
-#include <storage/time_ordered_set.h>
 #include <timeutil.h>
+#include <utils/fs.h>
 
 class Moc_Storage : public dariadb::storage::BaseStorage {
 public:
@@ -50,41 +50,20 @@ int main(int argc, char *argv[]) {
   (void)argv;
 
   const size_t K = 1;
-
   {
-    const size_t max_size = K * 100000;
-    auto tos = dariadb::storage::TimeOrderedSet{max_size};
-    auto m = dariadb::Meas::empty();
-
-    auto start = clock();
-
-    for (size_t i = 0; i < max_size; i++) {
-      m.id = 1;
-      m.flag = 0xff;
-      m.time = i;
-      m.value = dariadb::Value(i);
-      tos.append(m);
+    const std::string storage_path = "testStorage";
+    const size_t chunk_size = 256;
+    const size_t cap_B = 128 * 1024 / chunk_size;
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
     }
 
-    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "TimeOrderedSet insert : " << elapsed << std::endl;
-
-    start = clock();
-    auto reader = tos.as_array();
-
-    elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "TimeOrderedSet as_array: " << elapsed << std::endl;
-    std::cout << "readed: " << reader.size() << std::endl;
-  }
-
-  {
-    const size_t max_size = 10000;
     const size_t id_count = 10;
-    const dariadb::Time write_window_deep = 2000;
 
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     dariadb::storage::Capacitor tos{
-        stor, dariadb::storage::Capacitor::Params(max_size, write_window_deep)};
+        stor, dariadb::storage::Capacitor::Params(cap_B, storage_path)};
+
     auto m = dariadb::Meas::empty();
 
     auto start = clock();
@@ -98,7 +77,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "Bucket insert : " << elapsed << std::endl;
-    std::cout << "size : " << tos.size() << std::endl;
+    std::cout << "Capacitor insert : " << elapsed << std::endl;
+
   }
 }

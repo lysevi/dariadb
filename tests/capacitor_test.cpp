@@ -7,9 +7,9 @@
 #include <thread>
 
 #include <storage/capacitor.h>
-#include <storage/time_ordered_set.h>
 #include <timeutil.h>
 #include <utils/logger.h>
+#include <utils/fs.h>
 
 class Moc_Storage : public dariadb::storage::BaseStorage {
 public:
@@ -50,56 +50,19 @@ public:
   }
   dariadb::IdArray getIds() override { return dariadb::IdArray{}; }
 };
-
-BOOST_AUTO_TEST_CASE(TimeOrderedSetTest) {
-  const size_t max_size = 10;
-  auto base = dariadb::storage::TimeOrderedSet{max_size};
-
-  // with move ctor check
-  dariadb::storage::TimeOrderedSet tos(std::move(base));
-  auto e = dariadb::Meas::empty();
-  for (size_t i = 0; i < max_size; i++) {
-    e.id = i % 3;
-    e.time = max_size - i;
-    BOOST_CHECK(!tos.is_full());
-    BOOST_CHECK(tos.append(e));
-  }
-
-  e.time = max_size;
-  BOOST_CHECK(!tos.append(e)); // is_full
-  BOOST_CHECK(tos.is_full());
-
-  { // check copy ctor and operator=
-    dariadb::storage::TimeOrderedSet copy_tos{tos};
-    BOOST_CHECK_EQUAL(copy_tos.size(), max_size);
-
-    dariadb::storage::TimeOrderedSet copy_assign{};
-    copy_assign = copy_tos;
-
-    auto a = copy_assign.as_array();
-    BOOST_CHECK_EQUAL(a.size(), max_size);
-    for (size_t i = 1; i <= max_size; i++) {
-      e = a[i - 1];
-      BOOST_CHECK_EQUAL(e.time, i);
-    }
-    BOOST_CHECK_EQUAL(copy_assign.minTime(), dariadb::Time(1));
-    BOOST_CHECK_EQUAL(copy_assign.maxTime(), dariadb::Time(max_size));
-  }
-  BOOST_CHECK(tos.is_full());
-  e.time = max_size + 1;
-  BOOST_CHECK(tos.append(e, true));
-  BOOST_CHECK_EQUAL(tos.size(), max_size + 1);
-}
-
-BOOST_AUTO_TEST_CASE(BucketTest) {
+BOOST_AUTO_TEST_CASE(CapacitorTest) {
   std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
   stor->writed_count = 0;
   const size_t max_size = 10;
   const dariadb::Time write_window_deep = 1000;
+  auto storage_path = "testStorage";
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+	  dariadb::utils::fs::rm(storage_path);
+  }
 
   // with move ctor check
   dariadb::storage::Capacitor mbucket(
-      stor, dariadb::storage::Capacitor::Params(max_size, write_window_deep));
+      stor, dariadb::storage::Capacitor::Params(max_size, storage_path));
   auto e = dariadb::Meas::empty();
 
   // max time always
@@ -108,68 +71,7 @@ BOOST_AUTO_TEST_CASE(BucketTest) {
   for (size_t i = 0; i < max_size; i++) {
     e.time = t_2;
     t_2 += 1;
-    BOOST_CHECK(mbucket.append(e));
-  }
-
-  // past
-  for (size_t i = 0; i < 5; i++) {
-    e.time = t;
-    t += 1;
-    BOOST_CHECK(mbucket.append(e));
-  }
-
-  // cur time
-  t = t_2;
-  for (size_t i = 0; i < 5; i++) {
-    e.time = t++;
-    BOOST_CHECK(mbucket.append(e));
-  }
-
-  // buckets count;
-  BOOST_CHECK(mbucket.size() > 0);
-
-  e.time = dariadb::timeutil::current_time() - write_window_deep * 2;
-  BOOST_CHECK(!mbucket.append(e));
-
-  // future
-  t = dariadb::timeutil::current_time();
-  t += 20;
-  for (size_t i = 0; i < max_size; i++) {
-    e.time = t;
-    t++;
-    BOOST_CHECK(mbucket.append(e));
-  }
-
-  stor->meases.clear();
-  stor->writed_count = 0;
-  mbucket.flush();
-
-  // time should be increased
-  for (auto kv : stor->meases) {
-    for (size_t i = 0; i < kv.second.size() - 1; i++) {
-      BOOST_CHECK(kv.second[i].time <= kv.second[i + 1].time);
-      if (kv.second[i].time > kv.second[i + 1].time) {
-        logger("i: " << i << " lhs: " << kv.second[i].time
-                     << " rhs: " << kv.second[i + 1].time);
-        assert(false);
-      }
-    }
-  }
-
-  // check write data with time less than write_window_deep;
-  stor->meases.clear();
-  stor->writed_count = 0;
-  t = dariadb::timeutil::current_time() - write_window_deep;
-  for (size_t i = 0; i < 100; i++) {
-    e.time = t;
-    t++;
-    BOOST_CHECK(mbucket.append(e));
-  }
-
-  stor->meases.clear();
-  while (stor->meases.size() == 0) {
-    e.time = dariadb::timeutil::current_time();
-    BOOST_CHECK(mbucket.append(e));
+    BOOST_CHECK(mbucket.append(e).writed==1);
   }
 }
 
@@ -193,13 +95,19 @@ void thread_writer(dariadb::Id id, dariadb::Time from, dariadb::Time to,
   }
 }
 
+//TODO uncomment
+/*
 BOOST_AUTO_TEST_CASE(MultiThread) {
   std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
   stor->writed_count = 0;
+  const std::string storage_path = "testStorage";
   const size_t max_size = 10;
   const dariadb::Time write_window_deep = 10000;
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+	  dariadb::utils::fs::rm(storage_path);
+  }
   dariadb::storage::Capacitor mbucket{
-      stor, dariadb::storage::Capacitor::Params(max_size, write_window_deep)};
+      stor, dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
   std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
   std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);
@@ -226,4 +134,9 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
     }
   }
   BOOST_CHECK_EQUAL(cnt, size_t(append_count.load()));
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+	  dariadb::utils::fs::rm(storage_path);
+  }
 }
+*/

@@ -53,7 +53,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    if (!mem_cap->append(value)) {
+    if (!mem_cap->append(value).writed!=1) {
       // if(mem_storage_raw->append(value).writed!=1){
       assert(false);
       result.ignored++;
@@ -99,7 +99,7 @@ public:
     QueueSizes result;
     result.page = PageManager::instance()->in_queue_size();
     result.mem = this->mem_storage_raw->queue_size();
-    result.cap = this->mem_cap->size();
+    result.cap = this->mem_cap->in_queue_size();
     return result;
   }
 

@@ -112,6 +112,8 @@ void show_info() {
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
+  
+
   {
     std::cout << "MemStorage" << std::endl;
     dariadb::storage::BaseStorage_ptr ms{
@@ -139,10 +141,17 @@ int main(int argc, char *argv[]) {
   }
   {
     std::cout << "Capacitor" << std::endl;
+	const std::string storage_path = "testStorage";
+	const size_t chunk_size = 256;
+	const size_t cap_B = 128 * 1024 / chunk_size;
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+
     dariadb::storage::BaseStorage_ptr ms{new Moc_Storage()};
     std::unique_ptr<dariadb::storage::Capacitor> cp{
         new dariadb::storage::Capacitor(
-            ms, dariadb::storage::Capacitor::Params(1000, 1000))};
+            ms, dariadb::storage::Capacitor::Params(cap_B, storage_path))};
 
     append_count = 0;
     stop_info = false;
@@ -171,7 +180,7 @@ int main(int argc, char *argv[]) {
     const std::string storage_path = "testStorage";
     const size_t chunk_per_storage = 1024;
     const size_t chunk_size = 512;
-    const size_t cap_max_size = 10000;
+    const size_t cap_B = 1024;
     const dariadb::Time write_window_deep = 2000;
     const dariadb::Time old_mem_chunks = 0;
     const size_t max_mem_chunks = 0;
@@ -184,7 +193,7 @@ int main(int argc, char *argv[]) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-        dariadb::storage::Capacitor::Params(cap_max_size, write_window_deep),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::UnionStorage::Limits(max_mem_chunks,
                                                old_mem_chunks))};
 
