@@ -78,8 +78,7 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader,
 }
 
 void storage_test_check(dariadb::storage::BaseStorage *as, dariadb::Time from,
-                        dariadb::Time to, dariadb::Time step,
-                        dariadb::Time write_window_size) {
+                        dariadb::Time to, dariadb::Time step) {
   auto m = dariadb::Meas::empty();
   size_t total_count = 0;
 
@@ -104,8 +103,7 @@ void storage_test_check(dariadb::storage::BaseStorage *as, dariadb::Time from,
       m.time++;
     }
   }
-  std::this_thread::sleep_for(
-      std::chrono::milliseconds(dariadb::Time(write_window_size)));
+
   dariadb::Meas::MeasList current_mlist;
   as->currentValue(dariadb::IdArray{}, 0)->readAll(&current_mlist);
   if (current_mlist.size() == 0) {

@@ -68,7 +68,6 @@ int main(int argc, char *argv[]) {
     const size_t chunk_per_storage = 1024 * 1024;
     const size_t chunk_size = 256;
 	const size_t cap_B = 128 * 1024 / chunk_size;
-    const dariadb::Time write_window_deep = 200;
     const dariadb::Time old_mem_chunks = 0;
     const size_t max_mem_chunks = 100;
 

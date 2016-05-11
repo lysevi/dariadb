@@ -125,8 +125,7 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
   stor->writed_count = 0;
   const std::string storage_path = "testStorage";
   const size_t max_size = 10;
-  const dariadb::Time write_window_deep = 10000;
-  if (dariadb::utils::fs::path_exists(storage_path)) {
+    if (dariadb::utils::fs::path_exists(storage_path)) {
 	  dariadb::utils::fs::rm(storage_path);
   }
   dariadb::storage::Capacitor mbucket{

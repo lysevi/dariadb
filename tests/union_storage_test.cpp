@@ -21,7 +21,6 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
     const size_t chunk_per_storage = 10000;
     const size_t chunk_size = 256;
     const size_t cap_B = 1024;
-    const dariadb::Time write_window_deep = 500;
     const dariadb::Time old_mem_chunks = 500;
 
     if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -96,8 +95,6 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
   const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 1024;
-  const dariadb::Time write_window_deep = 100;
-  const dariadb::Time whaitwrite_window_deep = 3000;
 
   const dariadb::Time from = dariadb::timeutil::current_time();
   const dariadb::Time to = from + 1000;
@@ -115,8 +112,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
 		dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::UnionStorage::Limits(0, 10))};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step,
-                                     dariadb::Time(whaitwrite_window_deep));
+    dariadb_test::storage_test_check(ms.get(), from, to, step);
 
     BOOST_CHECK(
         dariadb::storage::PageManager::instance()->chunks_in_cur_page() > 0);
@@ -143,7 +139,6 @@ BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
   const size_t chunk_per_storage = 1000;
   const size_t chunk_size = 100;
   const size_t cap_B = 100;
-  const dariadb::Time write_window_deep = 1000;
 
   {
     if (dariadb::utils::fs::path_exists(storage_path)) {

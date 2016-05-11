@@ -18,6 +18,5 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader,
                          size_t total_count, std::string message);
 
 void storage_test_check(dariadb::storage::BaseStorage *as, dariadb::Time from,
-                        dariadb::Time to, dariadb::Time step,
-                        dariadb::Time write_window_size = 0);
+                        dariadb::Time to, dariadb::Time step);
 }
