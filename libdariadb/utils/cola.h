@@ -11,6 +11,7 @@
 namespace dariadb {
 namespace utils {
 
+
 class cascading {
 public:
   struct item {
@@ -36,7 +37,7 @@ public:
     std::vector<item> values;
     bool is_clean;
     size_t pos;
-    size_t size;
+    size_t _size;
     size_t lvl;
     item minItem, maxItem;
 
@@ -46,10 +47,14 @@ public:
     void clear();
     bool free();
     bool is_full();
+	size_t size()const {
+		return _size;
+	}
     std::string to_string() const;
-    void insert(item val);
+    void push_back(item val);
     void merge_with(std::list<level *> new_values);
     bool find(int v, item *i);
+	item at(size_t i)const;
   };
   void alloc_level(size_t num);
 

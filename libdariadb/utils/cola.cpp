@@ -1,5 +1,6 @@
 #include "cola.h"
 #include "cz.h"
+#include "kmerge.h"
 
 using namespace dariadb::utils;
 
@@ -27,17 +28,14 @@ bool cascading::item::operator>(const item &other) const {
   return value > other.value;
 }
 
-cascading::level::level(size_t _size, size_t lvl_num) {
-  size = _size;
-  values.resize(size);
+cascading::level::level(size_t _sz, size_t lvl_num) {
+  _size = _sz;
+  values.resize(_size);
   lvl = lvl_num;
   this->clear();
 }
 
 void cascading::level::clear() {
-  //            for(size_t i=0;i<values.size();i++){
-  //                values[i]=item();
-  //            }
   is_clean = true;
   pos = 0;
 
@@ -45,22 +43,22 @@ void cascading::level::clear() {
   maxItem.value = std::numeric_limits<int>::min();
 }
 
-bool cascading::level::free() { return (size - pos) != 0; }
+bool cascading::level::free() { return (_size - pos) != 0; }
 
 bool cascading::level::is_full() { return !free(); }
 
 std::string cascading::level::to_string() const {
   std::stringstream ss;
   ss << lvl << ": [";
-  for (size_t j = 0; j < size; ++j) {
+  for (size_t j = 0; j < _size; ++j) {
     ss << values[j].to_string() << " ";
   }
   ss << "]";
   return ss.str();
 }
 
-void cascading::level::insert(item val) {
-  if (pos < size) {
+void cascading::level::push_back(item val) {
+  if (pos < _size) {
     values[pos] = val;
     pos++;
 
@@ -76,30 +74,11 @@ void cascading::level::insert(item val) {
 }
 
 void cascading::level::merge_with(std::list<level *> new_values) {
-  std::vector<size_t> poses(new_values.size());
-  std::fill(poses.begin(), poses.end(), size_t(0));
-  while (!new_values.empty()) {
-    // get cur max;
-    size_t with_max_index = 0;
-    item max_val = new_values.front()->values[poses[0]];
-    auto it = new_values.begin();
-    auto with_max_index_it = it;
-    for (size_t i = 0; i < poses.size(); i++, ++it) {
-      if (max_val > (*it)->values[poses[i]]) {
-        with_max_index = i;
-        max_val = (*it)->values[poses[i]];
-        with_max_index_it = it;
-      }
-    }
+	k_merge(new_values, *this);
+}
 
-    this->insert((*with_max_index_it)->values[poses[with_max_index]]);
-    // remove ended in-list
-    poses[with_max_index]++;
-    if (poses[with_max_index] >= (*with_max_index_it)->values.size()) {
-      poses.erase(poses.begin() + with_max_index);
-      new_values.erase(with_max_index_it);
-    }
-  }
+cascading::item cascading::level::at(size_t i)const {
+	return this->values.at(i);
 }
 
 bool cascading::level::find(int v, item *i) {
@@ -142,7 +121,7 @@ void cascading::push(int v) {
 
   std::list<level *> to_merge;
   level tmp(1, 0);
-  tmp.insert(v);
+  tmp.push_back(v);
   to_merge.push_back(&tmp);
 
   for (size_t i = 1; i <= outlvl; ++i) {
