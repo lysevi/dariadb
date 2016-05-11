@@ -171,14 +171,6 @@ public:
 
   size_t queue_size() const { return this->async_queue_size(); }
 
-  append_result append(const Meas::PMeas begin, const size_t size) {
-    dariadb::append_result result{};
-    for (size_t i = 0; i < size; i++) {
-      result = result + append(begin[i]);
-    }
-    return result;
-  }
-
   size_t size() const { return _size; }
   size_t chunks_size() const { return _chunks.size() + _free_chunks.size(); }
 
@@ -503,11 +495,6 @@ bool MemoryStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 
 append_result MemoryStorage::append(const dariadb::Meas &value) {
   return _Impl->append(value);
-}
-
-append_result MemoryStorage::append(const dariadb::Meas::PMeas begin,
-                                    const size_t size) {
-  return _Impl->append(begin, size);
 }
 
 size_t MemoryStorage::size() const {

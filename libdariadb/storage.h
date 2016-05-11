@@ -15,6 +15,7 @@ public:
   virtual void call(const Meas &m) = 0;
   virtual ~ReaderClb() {}
 };
+
 typedef std::shared_ptr<ReaderClb> ReaderClb_ptr;
 class Reader;
 typedef std::shared_ptr<Reader> Reader_ptr;
@@ -37,34 +38,39 @@ public:
   virtual ~Reader() {}
 };
 
-class BaseStorage : public utils::NonCopy, public ChunkContainer {
+class MeasStorage {
+public:
+	virtual Time minTime() = 0;
+	virtual Time maxTime() = 0;
+
+	virtual append_result append(const Meas::MeasArray &ma);
+	virtual append_result append(const Meas::MeasList &ml);
+	virtual append_result append(const Meas &value) = 0;
+
+	virtual Reader_ptr readInterval(Time from, Time to)=0;
+	virtual Reader_ptr readInTimePoint(Time time_point) = 0;
+	virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to) = 0;
+	virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point) = 0;
+};
+
+class BaseStorage : public utils::NonCopy, public ChunkContainer, public MeasStorage {
 public:
   virtual ~BaseStorage() = default;
-
-  virtual Time minTime() = 0;
-  virtual Time maxTime() = 0;
-
-  virtual append_result append(const Meas::MeasArray &ma);
-  virtual append_result append(const Meas::MeasList &ml);
-  virtual append_result append(const Meas::PMeas begin, const size_t size) = 0;
-  virtual append_result append(const Meas &value) = 0;
+  
+  virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) = 0;
 
   /// return data in [from + to].
   /// if 'from'> minTime return data readInTimePoint('from') +
   /// readInterval(from,to)
-  virtual Reader_ptr readInterval(Time from, Time to);
-  virtual Reader_ptr readInTimePoint(Time time_point);
-  virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
-                                  Time to);
-  virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
-                                     Time time_point);
-  virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) = 0;
-
-  virtual void subscribe(const IdArray &ids, const Flag &flag,
-                         const ReaderClb_ptr &clbk) = 0;
-
+  Reader_ptr readInterval(Time from, Time to) override;
+  Reader_ptr readInTimePoint(Time time_point) override;
+  Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to)  override;
+  Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point) override;
+  
+  virtual void subscribe(const IdArray &ids, const Flag &flag,  const ReaderClb_ptr &clbk) = 0;
   virtual void flush() = 0;
 };
+
 typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
 }
 }

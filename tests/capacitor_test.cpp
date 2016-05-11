@@ -15,11 +15,6 @@ class Moc_Storage : public dariadb::storage::BaseStorage {
 public:
   size_t writed_count;
   std::map<dariadb::Id, std::vector<dariadb::Meas>> meases;
-  dariadb::append_result append(const dariadb::Meas::PMeas,
-                                const size_t size) override {
-    writed_count += size;
-    return dariadb::append_result(size, 0);
-  }
   dariadb::append_result append(const dariadb::Meas &value) override {
     meases[value.id].push_back(value);
     writed_count += 1;

@@ -43,7 +43,7 @@ public:
 
   Time minTime() override;
   Time maxTime() override;
-  append_result append(const Meas::PMeas begin, const size_t size) override;
+
   append_result append(const Meas &value) override;
   void subscribe(const IdArray &ids, const Flag &flag,
                  const ReaderClb_ptr &clbk) override;

@@ -51,14 +51,6 @@ public:
 
   Time maxTime() { return mem_storage->maxTime(); }
 
-  append_result append(const Meas::PMeas begin, const size_t size) {
-    append_result result{};
-    for (size_t i = 0; i < size; i++) {
-      result = result + this->append(begin[i]);
-    }
-    return result;
-  }
-
   append_result append(const Meas &value) {
     append_result result{};
     if (!mem_cap->append(value)) {
@@ -340,10 +332,6 @@ Time UnionStorage::minTime() {
 
 Time UnionStorage::maxTime() {
   return _impl->maxTime();
-}
-
-append_result UnionStorage::append(const Meas::PMeas begin, const size_t size) {
-  return _impl->append(begin, size);
 }
 
 append_result UnionStorage::append(const Meas &value) {

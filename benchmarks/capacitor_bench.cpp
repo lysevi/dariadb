@@ -10,10 +10,6 @@
 
 class Moc_Storage : public dariadb::storage::BaseStorage {
 public:
-  dariadb::append_result append(const dariadb::Meas::PMeas,
-                                const size_t size) override {
-    return dariadb::append_result(size, 0);
-  }
   dariadb::append_result append(const dariadb::Meas &) override {
     return dariadb::append_result(1, 0);
   }

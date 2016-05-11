@@ -147,7 +147,7 @@ void Reader::readByStep(Meas::MeasList *output, dariadb::Time from,
   this->readByStep(clb.get(), from, to, step);
 }
 
-append_result BaseStorage::append(const Meas::MeasArray &ma) {
+append_result MeasStorage::append(const Meas::MeasArray &ma) {
   dariadb::append_result ar{};
   for (auto &m : ma) {
     ar = ar + this->append(m);
@@ -155,7 +155,7 @@ append_result BaseStorage::append(const Meas::MeasArray &ma) {
   return ar;
 }
 
-append_result BaseStorage::append(const Meas::MeasList &ml) {
+append_result MeasStorage::append(const Meas::MeasList &ml) {
   dariadb::append_result ar{};
   for (auto &m : ml) {
     ar = ar + this->append(m);
