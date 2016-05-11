@@ -8,9 +8,10 @@
 namespace dariadb {
 namespace storage {
 /// used as added period in PeriodWorker
-
+	const std::string CAP_FILE_EXT=".aof";
 class Capacitor : public utils::NonCopy, public MeasStorage {
 public:
+	
   struct Params {
     size_t B;
 	std::string path;
@@ -19,7 +20,7 @@ public:
       path=_path;
     }
   };
-  ~Capacitor();
+  virtual ~Capacitor();
   Capacitor(const BaseStorage_ptr stor, const Params &param);
 
   append_result append(const Meas &value) override;

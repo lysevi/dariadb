@@ -50,6 +50,7 @@ public:
   }
   dariadb::IdArray getIds() override { return dariadb::IdArray{}; }
 };
+
 BOOST_AUTO_TEST_CASE(CapacitorTest) {
   std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
   stor->writed_count = 0;
@@ -60,18 +61,35 @@ BOOST_AUTO_TEST_CASE(CapacitorTest) {
 	  dariadb::utils::fs::rm(storage_path);
   }
 
-  // with move ctor check
-  dariadb::storage::Capacitor mbucket(
-      stor, dariadb::storage::Capacitor::Params(max_size, storage_path));
-  auto e = dariadb::Meas::empty();
+  auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+  assert(cap_files.size() == 0);
+  {
+	  dariadb::storage::Capacitor mbucket(
+		  stor, dariadb::storage::Capacitor::Params(max_size, storage_path));
 
-  // max time always
-  dariadb::Time t = dariadb::timeutil::current_time();
-  auto t_2 = t + 10;
-  for (size_t i = 0; i < max_size; i++) {
-    e.time = t_2;
-    t_2 += 1;
-    BOOST_CHECK(mbucket.append(e).writed==1);
+	  cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+	  BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
+  }
+  {
+	  dariadb::storage::Capacitor cap(
+		  stor, dariadb::storage::Capacitor::Params(max_size, storage_path));
+
+	  cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+	  BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
+  }
+  //auto e = dariadb::Meas::empty();
+
+  //// max time always
+  //dariadb::Time t = dariadb::timeutil::current_time();
+  //auto t_2 = t + 10;
+  //for (size_t i = 0; i < max_size; i++) {
+  //  e.time = t_2;
+  //  t_2 += 1;
+  //  BOOST_CHECK(mbucket.append(e).writed==1);
+  //}
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+	  dariadb::utils::fs::rm(storage_path);
   }
 }
 

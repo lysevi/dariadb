@@ -15,8 +15,12 @@ namespace dariadb {
 namespace utils {
 namespace fs {
 std::list<std::string> ls(const std::string &path) {
-  std::list<boost::filesystem::path> result;
+
   std::list<std::string> s_result;
+  if (!path_exists(path)) {
+    return s_result;
+  }
+  std::list<boost::filesystem::path> result;
   std::copy(boost::filesystem::directory_iterator(path),
             boost::filesystem::directory_iterator(),
             std::back_inserter(result));
@@ -28,9 +32,12 @@ std::list<std::string> ls(const std::string &path) {
 }
 
 std::list<std::string> ls(const std::string &path, const std::string &ext) {
-  std::list<boost::filesystem::path> result;
   std::list<std::string> s_result;
+  if (!path_exists(path)) {
+    return s_result;
+  }
 
+  std::list<boost::filesystem::path> result;
   std::copy(boost::filesystem::directory_iterator(path),
             boost::filesystem::directory_iterator(),
             std::back_inserter(result));
@@ -96,6 +103,7 @@ void mkdir(const std::string &path) {
 }
 }
 }
+
 class MappedFile::Private {
 public:
   Private() {
