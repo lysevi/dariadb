@@ -273,7 +273,6 @@ public:
     CapReader *raw = new CapReader;
     for (size_t j = 0; j < _memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      // TODO refact. move to utils libs or meas::static.
       if(m.inQuery(ids,flag,from,to)) {
         raw->_values.push_back(_memvalues[j]);
       }
@@ -285,6 +284,9 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
+		if (m.time > to) {
+			break;
+		}
 		if (m.inQuery(ids, flag, from, to)) {
           raw->_values.push_back(m);
         }

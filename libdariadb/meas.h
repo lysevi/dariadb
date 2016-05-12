@@ -5,6 +5,7 @@
 #include <set>
 #include <stdint.h>
 #include <vector>
+#include <algorithm>
 #include "utils/in_interval.h"
 
 namespace dariadb {
