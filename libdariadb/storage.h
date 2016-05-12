@@ -38,40 +38,56 @@ public:
   virtual ~Reader() {}
 };
 
-class MeasStorage {
+class MeasSource {
 public:
-	virtual Time minTime() = 0;
-	virtual Time maxTime() = 0;
+  virtual Time minTime() = 0;
+  virtual Time maxTime() = 0;
 
-	virtual append_result append(const Meas::MeasArray &ma);
-	virtual append_result append(const Meas::MeasList &ml);
-	virtual append_result append(const Meas &value) = 0;
+  virtual Reader_ptr readInterval(Time from, Time to) = 0;
+  virtual Reader_ptr readInTimePoint(Time time_point) = 0;
+  virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
+                                  Time to) = 0;
+  virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
+                                     Time time_point) = 0;
 
-	virtual Reader_ptr readInterval(Time from, Time to)=0;
-	virtual Reader_ptr readInTimePoint(Time time_point) = 0;
-	virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to) = 0;
-	virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point) = 0;
-	
-	virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) = 0;
-	virtual void flush() = 0;
+  virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) = 0;
 };
 
-class BaseStorage : public utils::NonCopy, public ChunkContainer, public MeasStorage {
+class MeasWriter {
+public:
+  virtual append_result append(const Meas::MeasArray &ma);
+  virtual append_result append(const Meas::MeasList &ml);
+  virtual append_result append(const Meas &value) = 0;
+
+  virtual void flush() = 0;
+};
+
+class MeasStorage: public MeasSource, public MeasWriter{
+public:
+};
+
+class BaseStorage : public utils::NonCopy,
+                    public ChunkContainer,
+                    public MeasStorage {
 public:
   virtual ~BaseStorage() = default;
-  
+
   /// return data in [from + to].
   /// if 'from'> minTime return data readInTimePoint('from') +
   /// readInterval(from,to)
   Reader_ptr readInterval(Time from, Time to) override;
   Reader_ptr readInTimePoint(Time time_point) override;
-  Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from, Time to)  override;
-  Reader_ptr readInTimePoint(const IdArray &ids, Flag flag, Time time_point) override;
-  
-  virtual void subscribe(const IdArray &ids, const Flag &flag,  const ReaderClb_ptr &clbk) = 0;
-  
+  Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
+                          Time to) override;
+  Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
+                             Time time_point) override;
+
+  virtual void subscribe(const IdArray &ids, const Flag &flag,
+                         const ReaderClb_ptr &clbk) = 0;
 };
 
+typedef std::shared_ptr<MeasSource> MeasSource_ptr;
+typedef std::shared_ptr<MeasWriter> MeasWriter_ptr;
 typedef std::shared_ptr<MeasStorage> MeasStorage_ptr;
 typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
 }

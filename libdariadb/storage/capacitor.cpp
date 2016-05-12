@@ -27,11 +27,13 @@ for future updates.
 using namespace dariadb;
 using namespace dariadb::storage;
 
+#pragma pack(push, 1)
 struct level_header {
   size_t lvl;
   size_t count;
   size_t pos;
 };
+#pragma pack(pop)
 
 struct level {
   level_header *hdr;
@@ -90,6 +92,7 @@ public:
 
 class Capacitor::Private {
 public:
+#pragma pack(push, 1)
   struct Header {
     bool is_dropped;
     size_t B;
@@ -99,8 +102,8 @@ public:
     size_t _writed;
     size_t _memvalues_pos;
   };
-
-  Private(const MeasStorage_ptr stor, const Capacitor::Params &params)
+#pragma pack(pop)
+  Private(const MeasWriter_ptr stor, const Capacitor::Params &params)
       : _minTime(std::numeric_limits<dariadb::Time>::max()),
         _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor),
         _params(params), mmap(nullptr), _size(0) {
@@ -358,7 +361,7 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-      boost::shared_lock<boost::shared_mutex> lock(_mutex);
+    boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return readInTimePoint(ids, flag, this->maxTime());
   }
 
@@ -434,7 +437,7 @@ public:
 protected:
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
-  MeasStorage_ptr _stor;
+  MeasWriter_ptr _stor;
   Capacitor::Params _params;
 
   dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
@@ -450,7 +453,7 @@ protected:
 
 Capacitor::~Capacitor() {}
 
-Capacitor::Capacitor(const MeasStorage_ptr stor, const Params &params)
+Capacitor::Capacitor(const MeasWriter_ptr stor, const Params &params)
     : _Impl(new Capacitor::Private(stor, params)) {}
 
 dariadb::Time Capacitor::minTime() { return _Impl->minTime(); }

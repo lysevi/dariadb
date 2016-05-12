@@ -24,7 +24,7 @@ public:
     }
   };
   virtual ~Capacitor();
-  Capacitor(const MeasStorage_ptr stor, const Params &param);
+  Capacitor(const MeasWriter_ptr stor, const Params &param);
 
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(Time from, Time to) override;

@@ -44,13 +44,13 @@ IF(WIN32)
   MESSAGE(STATUS "+ boost root: " ${BOOST_ROOT})
 
   if(MSVC)
-    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem thread)
+    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  /EHsc")
     add_cxx_compiler_flag(-W4)
     add_definitions(-DMSVC)
 	add_definitions(-D_ENABLE_ATOMIC_ALIGNMENT_FIX)
   else(MSVC)
-    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem thread)
+    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem)
   endif(MSVC)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
@@ -60,7 +60,7 @@ IF(WIN32)
 else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
 
-  find_package(Boost  REQUIRED unit_test_framework system  filesystem thread)
+  find_package(Boost  REQUIRED unit_test_framework system  filesystem)
 
   set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
     "Flags used by the C++ compiler during coverage builds."
