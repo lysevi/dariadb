@@ -1,10 +1,11 @@
 #pragma once
 
+
 namespace dariadb {
 namespace utils {
 
-template <class T, class Out>
-void k_merge(std::list<T *> new_values, Out &out) {
+template <class T, class Out, class comparer_t>
+void k_merge(std::list<T *> new_values, Out &out, comparer_t comparer) {
   auto vals_size = new_values.size();
   std::list<size_t> poses;
   for (size_t i = 0; i < vals_size; ++i) {
@@ -18,7 +19,7 @@ void k_merge(std::list<T *> new_values, Out &out) {
     auto it = new_values.begin();
     auto with_max_index_it = it;
     for (auto pos_it = poses.begin(); pos_it != poses.end(); ++pos_it) {
-      if (max_val > (*it)->at(*pos_it)) {
+      if (comparer(max_val, (*it)->at(*pos_it))) {
         with_max_index = pos_it;
         max_val = (*it)->at(*pos_it);
         with_max_index_it = it;

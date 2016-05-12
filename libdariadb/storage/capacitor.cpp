@@ -16,6 +16,7 @@ for future updates.
 #include "../utils/cz.h"
 #include "../utils/fs.h"
 #include "../utils/utils.h"
+#include "../utils/kmerge.h"
 #include <algorithm>
 #include <cassert>
 #include <limits>
@@ -44,6 +45,8 @@ struct level {
   void clear() { hdr->pos = 0; }
 
   bool empty() const { return hdr->pos == 0; }
+
+  size_t size()const { return hdr->count; }
 };
 
 class CapReader : public storage::Reader {
@@ -221,26 +224,7 @@ public:
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
     if (outlvl >= _header->levels_count) {
-		size_t union_size = _memvalues_size;
-		for (auto l : _levels) {
-			union_size += l.hdr->count;
-		}
-		std::vector<dariadb::Meas> all_meases{ union_size };
-		size_t write_pos = 0;
-		for (size_t i = 0; i < _memvalues_size; ++i, ++write_pos) {
-			all_meases[write_pos] = _memvalues[i];
-		}
-		
-		for (auto l : _levels) {
-			assert(!l.empty());
-			for (size_t i = 0; i < l.hdr->pos; ++i, ++write_pos) {
-				all_meases[write_pos] = l.begin[i];
-			}
-			l.clear();
-		}
-		std::sort(all_meases.begin(), all_meases.end(), less_by_time);
-		_stor->append(all_meases);
-		
+		drop_to_stor();
 		return append(value);
     }
 
@@ -260,45 +244,36 @@ public:
 
     auto merge_target = _levels[outlvl];
 
-    { // TODO refact.
-      // merge
-      auto vals_size = to_merge.size();
-      std::list<size_t> poses;
-      for (size_t i = 0; i < vals_size; ++i) {
-        poses.push_back(0);
-      }
-      while (!to_merge.empty()) {
-        vals_size = to_merge.size();
-        // get cur max;
-        auto with_max_index = poses.begin();
-        auto max_val = to_merge.front()->at(*with_max_index);
-        auto it = to_merge.begin();
-        auto with_max_index_it = it;
-        for (auto pos_it = poses.begin(); pos_it != poses.end(); ++pos_it) {
-          if (!less_by_time(max_val, (*it)->at(*pos_it))) {
-            with_max_index = pos_it;
-            max_val = (*it)->at(*pos_it);
-            with_max_index_it = it;
-          }
-          ++it;
-        }
-
-        auto val = (*with_max_index_it)->at(*with_max_index);
-        merge_target.push_back(val);
-        // remove ended in-list
-        (*with_max_index)++;
-        auto cur_src = (*with_max_index_it);
-        if ((*with_max_index) >= cur_src->hdr->count) {
-          poses.erase(with_max_index);
-          to_merge.erase(with_max_index_it);
-        }
-      }
-    }
+  	dariadb::utils::k_merge(to_merge, merge_target, less_by_time);
+  
     for (size_t i = 1; i <= outlvl; ++i) {
       _levels[i - 1].clear();
     }
     ++_header->_size_B;
     return append_to_mem(value);
+  }
+
+  void drop_to_stor() {
+	  //TODO use k-merge
+	  size_t union_size = _memvalues_size;
+	  for (auto l : _levels) {
+		  union_size += l.hdr->count;
+	  }
+	  std::vector<dariadb::Meas> all_meases{ union_size };
+	  size_t write_pos = 0;
+	  for (size_t i = 0; i < _memvalues_size; ++i, ++write_pos) {
+		  all_meases[write_pos] = _memvalues[i];
+	  }
+
+	  for (auto l : _levels) {
+		  assert(!l.empty());
+		  for (size_t i = 0; i < l.hdr->pos; ++i, ++write_pos) {
+			  all_meases[write_pos] = l.begin[i];
+		  }
+		  l.clear();
+	  }
+	  std::sort(all_meases.begin(), all_meases.end(), meas_time_compare());
+	  _stor->append(all_meases);
   }
 
   Reader_ptr readInterval(Time from, Time to) {

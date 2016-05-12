@@ -1,7 +1,7 @@
 #include "cola.h"
 #include "cz.h"
 #include "kmerge.h"
-
+#include <functional>
 using namespace dariadb::utils;
 
 cascading::item::item() {
@@ -78,7 +78,7 @@ void cascading::level::push_back(item val) {
 }
 
 void cascading::level::merge_with(std::list<level *> new_values) {
-  k_merge(new_values, *this);
+  k_merge(new_values, *this, std::greater<item>());
 }
 
 cascading::item cascading::level::at(size_t i) const {
