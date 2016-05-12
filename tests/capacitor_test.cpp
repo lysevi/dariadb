@@ -66,6 +66,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   assert(cap_files.size() == 0);
   auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
   p.max_levels = 11;
+  size_t writes_count = 10000;
   {
 
     dariadb::storage::Capacitor cap(stor, p);
@@ -78,7 +79,6 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 
     auto e = dariadb::Meas::empty();
 
-    size_t writes_count = 10000;
     dariadb::Time t = writes_count;
     size_t id_count = 10;
     for (size_t i = 0; i < writes_count; i++) {
@@ -105,6 +105,21 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
     // level count must be reade from file header.
     BOOST_CHECK(cap.levels_count() != size_t(p.max_levels));
+
+	BOOST_CHECK_EQUAL(cap.size(), writes_count);
+	auto e = dariadb::Meas::empty();
+
+	dariadb::Time t = writes_count;
+	size_t id_count = 10;
+	e.id = writes_count;
+	e.time = writes_count-1;
+	BOOST_CHECK(cap.append(e).writed == 1);
+
+	dariadb::Meas::MeasList out;
+	auto reader = cap.readInterval(dariadb::IdArray{}, 0, 0, writes_count);
+	BOOST_CHECK(reader != nullptr);
+	reader->readAll(&out);
+	BOOST_CHECK_EQUAL(out.size(), cap.size());
   }
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
