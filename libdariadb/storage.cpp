@@ -28,8 +28,8 @@ public:
     for (auto id : ids) {
       _last[id].id = id;
       _last[id].time = _from;
-      _last[id].flag = dariadb::Flags::NO_DATA;
-      _last[id].src = dariadb::Flags::NO_DATA;
+      _last[id].flag = dariadb::Flags::_NO_DATA;
+      _last[id].src = dariadb::Flags::_NO_DATA;
       _last[id].value = 0;
 
       _isFirst[id] = true;
