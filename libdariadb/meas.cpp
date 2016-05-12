@@ -14,6 +14,12 @@ Meas Meas::empty() {
   return Meas{};
 }
 
+Meas Meas::empty(Id id) {
+	auto res = empty();
+	res.id = id;
+	return res;
+}
+
 void Meas::readFrom(const Meas::PMeas m) {
   memcpy(this, m, sizeof(Meas));
 }

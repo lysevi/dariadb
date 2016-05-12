@@ -27,6 +27,7 @@ struct Meas {
   typedef std::map<Id, Meas> Id2Meas;
   typedef std::set<Meas> MeasSet;
   static Meas empty();
+  static Meas empty(Id id);
 
   Meas();
   void readFrom(const Meas::PMeas m);

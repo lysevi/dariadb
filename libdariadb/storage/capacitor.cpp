@@ -11,10 +11,10 @@ for future updates.
 */
 
 #include "capacitor.h"
+#include "../flags.h"
 #include "../utils/cz.h"
 #include "../utils/fs.h"
 #include "../utils/utils.h"
-#include "../flags.h"
 #include <algorithm>
 #include <cassert>
 #include <limits>
@@ -47,24 +47,14 @@ struct level {
 
 class CapReader : public storage::Reader {
 public:
-  CapReader() {
-    _values_iterator = this->_values.end();
-    _time_point_values_iterator = _time_point_values.end();
-  }
+  CapReader() { _values_iterator = this->_values.end(); }
 
-  bool isEnd() const override {
-    return _values_iterator == _values.end() &&
-           _time_point_values_iterator == _time_point_values.end() &&
-           _no_data_id_iterator == _no_data_id.end();
-  }
+  bool isEnd() const override { return _values_iterator == _values.end(); }
 
   dariadb::IdArray getIds() const override {
     dariadb::IdSet res;
     for (auto v : _values) {
       res.insert(v.id);
-    }
-    for (auto kv : _time_point_values) {
-      res.insert(kv.first);
     }
     return dariadb::IdArray(res.begin(), res.end());
   }
@@ -75,57 +65,21 @@ public:
       ++_values_iterator;
       return;
     }
-
-    if (_time_point_values_iterator != _time_point_values.end()) {
-      clb->call(_time_point_values_iterator->second);
-      ++_time_point_values_iterator;
-      return;
-    }
-
-    if (_no_data_id_iterator != _no_data_id.end()) {
-      auto e = Meas::empty();
-      e.id = *_no_data_id_iterator;
-      e.flag = dariadb::Flags::_NO_DATA;
-      clb->call(e);
-      ++_no_data_id_iterator;
-    }
   }
 
-  Reader_ptr clone() const override { 
-	  CapReader*raw = new CapReader;
-	  raw->_values = _values;
-	  raw->_time_point_values = _time_point_values;
-	  raw->_no_data_id = _no_data_id;
-	  raw->reset();
-	  return Reader_ptr(raw);
+  Reader_ptr clone() const override {
+    CapReader *raw = new CapReader;
+    raw->_values = _values;
+    raw->reset();
+    return Reader_ptr(raw);
   }
 
-  void reset() override {
-    _values_iterator = _values.begin();
-    _time_point_values_iterator = _time_point_values.begin();
-	_no_data_id_iterator = _no_data_id.begin();
-  }
+  void reset() override { _values_iterator = _values.begin(); }
 
   ~CapReader() {}
 
-  void insert_time_point_meas(const Meas &m) {
-    auto fres = _time_point_values.find(m.id);
-    if (fres == _time_point_values.end()) {
-      _time_point_values.insert(std::make_pair(m.id, m));
-    } else {
-      if (fres->second.time < m.time) {
-        _time_point_values.insert(std::make_pair(m.id, m));
-      }
-    }
-  }
-
   dariadb::Meas::MeasList _values;
   dariadb::Meas::MeasList::iterator _values_iterator;
-  dariadb::Meas::Id2Meas _time_point_values;
-  dariadb::Meas::Id2Meas::iterator _time_point_values_iterator;
-
-  dariadb::IdSet _no_data_id;
-  dariadb::IdSet::iterator _no_data_id_iterator;
 };
 
 class Capacitor::Private {
@@ -248,8 +202,8 @@ public:
     _memvalues[_memvalues_pos] = value;
     _memvalues_pos++;
     ++_header->_writed;
-	this->_minTime = std::min(this->_minTime, value.time);
-	this->_maxTime = std::max(this->_maxTime, value.time);
+    this->_minTime = std::min(this->_minTime, value.time);
+    this->_maxTime = std::max(this->_maxTime, value.time);
     return append_result(1, 0);
   }
 
@@ -333,7 +287,7 @@ public:
                                   Time to) {
     CapReader *raw = new CapReader;
 
-	std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
+    std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
 
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
@@ -345,64 +299,50 @@ public:
           break;
         }
         if (m.inQuery(ids, flag, from, to)) {
-			sub_result[m.id].insert(m);
-          //raw->_values.push_back(m);
+          sub_result[m.id].insert(m);
         }
       }
     }
 
-	for (size_t j = 0; j < _memvalues_pos; ++j) {
-		auto m = _memvalues[j];
-		if (m.inQuery(ids, flag, from, to)) {
-			sub_result[m.id].insert(m);
-			//raw->_values.push_back(_memvalues[j]);
-		}
-	}
-	
-	for (auto &kv : sub_result) {
-		for (auto&m : kv.second) {
-			raw->_values.push_back(m);
-		}
-	}
-	raw->reset();
+    for (size_t j = 0; j < _memvalues_pos; ++j) {
+      auto m = _memvalues[j];
+      if (m.inQuery(ids, flag, from, to)) {
+        sub_result[m.id].insert(m);
+      }
+    }
+
+    for (auto &kv : sub_result) {
+      for (auto &m : kv.second) {
+        raw->_values.push_back(m);
+      }
+    }
+    raw->reset();
     return Reader_ptr(raw);
+  }
+
+  void insert_if_older(dariadb::Meas::Id2Meas &s,
+                       const dariadb::Meas &m) const {
+    auto fres = s.find(m.id);
+    if (fres == s.end()) {
+      s.insert(std::make_pair(m.id, m));
+    } else {
+      if (fres->second.time < m.time) {
+        s.insert(std::make_pair(m.id, m));
+      }
+    }
   }
 
   virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
                                      Time time_point) {
     CapReader *raw = new CapReader;
-	dariadb::IdSet readed_ids;
-    for (size_t j = 0; j < _memvalues_pos; ++j) {
-      auto m = _memvalues[j];
-      if (m.inQuery(ids, flag) && (m.time <= time_point)) {
-        raw->insert_time_point_meas(m);
-		readed_ids.insert(m.id);
-      }
-    }
+    dariadb::IdSet readed_ids;
+	dariadb::Meas::Id2Meas sub_res = timePointValues(ids, flag, time_point);
 
-    for (size_t i = 0; i < this->_levels.size(); ++i) {
-      if (_levels[i].empty()) {
-        continue;
-      }
-      for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-        auto m = _levels[i].at(j);
-        if (m.time > time_point) {
-          break;
-        }
-        if (m.inQuery(ids, flag) && (m.time <= time_point)) {
-          raw->insert_time_point_meas(m);
-		  readed_ids.insert(m.id);
-        }
-      }
+    for (auto kv : sub_res) {
+      raw->_values.push_back(kv.second);
     }
-	if (!ids.empty() && readed_ids.size()!=ids.size()) {
-		for (auto id : ids) {
-			if (readed_ids.find(id) == readed_ids.end()) {
-				raw->_no_data_id.insert(id);
-			}
-		}
-	}
-	raw->reset();
+    
+    raw->reset();
     return Reader_ptr(raw);
   }
 
@@ -421,6 +361,45 @@ public:
 
   size_t size() const { return _header->_writed; }
 
+  dariadb::Meas::Id2Meas timePointValues(const IdArray &ids, Flag flag, Time time_point) {
+	  dariadb::IdSet readed_ids;
+	  dariadb::Meas::Id2Meas sub_res;
+
+	  for (size_t j = 0; j < _memvalues_pos; ++j) {
+		  auto m = _memvalues[j];
+		  if (m.inQuery(ids, flag) && (m.time <= time_point)) {
+			  insert_if_older(sub_res, m);
+			  readed_ids.insert(m.id);
+		  }
+	  }
+
+	  for (size_t i = 0; i < this->_levels.size(); ++i) {
+		  if (_levels[i].empty()) {
+			  continue;
+		  }
+		  for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
+			  auto m = _levels[i].at(j);
+			  if (m.time > time_point) {
+				  break;
+			  }
+			  if (m.inQuery(ids, flag) && (m.time <= time_point)) {
+				  insert_if_older(sub_res, m);
+				  readed_ids.insert(m.id);
+			  }
+		  }
+	  }
+
+	  if (!ids.empty() && readed_ids.size() != ids.size()) {
+		  for (auto id : ids) {
+			  if (readed_ids.find(id) == readed_ids.end()) {
+				  auto e = Meas::empty(id);
+				  e.flag = Flags::_NO_DATA;
+				  sub_res[id] = e;
+			  }
+		  }
+	  }
+	  return sub_res;
+  }
 protected:
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
