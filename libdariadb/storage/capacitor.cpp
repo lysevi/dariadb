@@ -2,7 +2,8 @@
 FileName:
 GUID.aof
 File struct:
-   CapHeader| LevelHeader | Meas0 | Meas1|....| LevelHeader|Meas0 |Meas1...
+   CapHeader|memvalues(sizeof(B)*sizeof(Meas)| LevelHeader | Meas0 | Meas1|....|
+LevelHeader|Meas0 |Meas1...
 Alg:
         1. Measurements save to COLA file struct
         2. When the append-only-file is fulle,
@@ -91,6 +92,7 @@ public:
     size_t _size_B; // how many block (sizeof(B)) addeded.
     size_t levels_count;
     size_t _writed;
+    size_t _memvalues_pos;
   };
 
   Private(const BaseStorage_ptr stor, const Capacitor::Params &params)
@@ -98,8 +100,6 @@ public:
         _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor),
         _params(params), mmap(nullptr), _size(0) {
     open_or_create();
-    _memvalues.resize(_header->B);
-    _memvalues_pos = 0;
   }
 
   ~Private() {
@@ -132,6 +132,8 @@ public:
   uint64_t cap_size() const {
     uint64_t result = 0;
 
+    result += _params.B * sizeof(Meas); // space to _memvalues
+                                        // TODO shame!
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
       result += sizeof(level_header) + meases_in_level(_params.B, lvl); // 2^lvl
     }
@@ -156,7 +158,7 @@ public:
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
 
-    auto pos = _raw_data;
+    auto pos = _raw_data + _header->B * sizeof(Meas); // move to levels position
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = reinterpret_cast<level_header *>(pos);
       it->lvl = lvl;
@@ -169,7 +171,11 @@ public:
 
   void load() {
     _levels.resize(_header->levels_count);
-    auto pos = _raw_data;
+    _memvalues_size = _header->B;
+    _memvalues = reinterpret_cast<Meas *>(_raw_data);
+
+    auto pos = _raw_data + _memvalues_size * sizeof(Meas);
+
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto h = reinterpret_cast<level_header *>(pos);
       auto m = reinterpret_cast<Meas *>(pos + sizeof(level_header));
@@ -191,7 +197,7 @@ public:
   }
 
   append_result append(const Meas &value) {
-    if (_memvalues_pos < _header->B) {
+    if (_header->_memvalues_pos < _header->B) {
       return append_to_mem(value);
     } else {
       return append_to_levels(value);
@@ -199,8 +205,8 @@ public:
   }
 
   append_result append_to_mem(const Meas &value) {
-    _memvalues[_memvalues_pos] = value;
-    _memvalues_pos++;
+    _memvalues[_header->_memvalues_pos] = value;
+    _header->_memvalues_pos++;
     ++_header->_writed;
     this->_minTime = std::min(this->_minTime, value.time);
     this->_maxTime = std::max(this->_maxTime, value.time);
@@ -209,8 +215,8 @@ public:
 
   append_result append_to_levels(const Meas &value) {
     meas_time_compare less_by_time;
-    std::sort(_memvalues.begin(), _memvalues.end(), less_by_time);
-    _memvalues_pos = 0;
+    std::sort(_memvalues, _memvalues + _memvalues_size, less_by_time);
+    _header->_memvalues_pos = 0;
     size_t new_items_count = _header->_size_B + 1;
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
@@ -224,9 +230,9 @@ public:
     level_header tmp_hdr;
     tmp.hdr = &tmp_hdr;
     tmp.hdr->lvl = 0;
-    tmp.hdr->count = _memvalues.size();
-    tmp.hdr->pos = _memvalues.size();
-    tmp.begin = _memvalues.data();
+    tmp.hdr->count = _memvalues_size;
+    tmp.hdr->pos = _memvalues_size;
+    tmp.begin = _memvalues;
     to_merge.push_back(&tmp);
 
     for (size_t i = 1; i <= outlvl; ++i) {
@@ -235,7 +241,8 @@ public:
 
     auto merge_target = _levels[outlvl];
 
-    { // merge
+    { // TODO refact.
+      // merge
       auto vals_size = to_merge.size();
       std::list<size_t> poses;
       for (size_t i = 0; i < vals_size; ++i) {
@@ -286,15 +293,14 @@ public:
   virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
                                   Time to) {
     CapReader *raw = new CapReader;
-	std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
-	
-	if (from > this->_minTime) {
-		auto tp_read_data = this->timePointValues(ids, flag, from);
-		for (auto kv : tp_read_data) {
-			sub_result[kv.first].insert(kv.second);
-		}
-	}
-    
+    std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
+
+    if (from > this->_minTime) {
+      auto tp_read_data = this->timePointValues(ids, flag, from);
+      for (auto kv : tp_read_data) {
+        sub_result[kv.first].insert(kv.second);
+      }
+    }
 
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
@@ -311,7 +317,7 @@ public:
       }
     }
 
-    for (size_t j = 0; j < _memvalues_pos; ++j) {
+    for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
       if (m.inQuery(ids, flag, from, to)) {
         sub_result[m.id].insert(m);
@@ -342,12 +348,12 @@ public:
   virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
                                      Time time_point) {
     CapReader *raw = new CapReader;
-	dariadb::Meas::Id2Meas sub_res = timePointValues(ids, flag, time_point);
+    dariadb::Meas::Id2Meas sub_res = timePointValues(ids, flag, time_point);
 
     for (auto kv : sub_res) {
       raw->_values.push_back(kv.second);
     }
-    
+
     raw->reset();
     return Reader_ptr(raw);
   }
@@ -367,62 +373,64 @@ public:
 
   size_t size() const { return _header->_writed; }
 
-  dariadb::Meas::Id2Meas timePointValues(const IdArray &ids, Flag flag, Time time_point) {
-	  dariadb::IdSet readed_ids;
-	  dariadb::IdSet unreaded_ids;
-	  dariadb::Meas::Id2Meas sub_res;
+  dariadb::Meas::Id2Meas timePointValues(const IdArray &ids, Flag flag,
+                                         Time time_point) {
+    dariadb::IdSet readed_ids;
+    dariadb::IdSet unreaded_ids;
+    dariadb::Meas::Id2Meas sub_res;
 
-	  for (size_t j = 0; j < _memvalues_pos; ++j) {
-		  auto m = _memvalues[j];
-		  if (m.inQuery(ids, flag) && (m.time <= time_point)) {
-			  insert_if_older(sub_res, m);
-			  readed_ids.insert(m.id);
-		  }else {
-			  unreaded_ids.insert(m.id);
-		  }
-	  }
+    for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+      auto m = _memvalues[j];
+      if (m.inQuery(ids, flag) && (m.time <= time_point)) {
+        insert_if_older(sub_res, m);
+        readed_ids.insert(m.id);
+      } else {
+        unreaded_ids.insert(m.id);
+      }
+    }
 
-	  for (size_t i = 0; i < this->_levels.size(); ++i) {
-		  if (_levels[i].empty()) {
-			  continue;
-		  }
-		  for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-			  auto m = _levels[i].at(j);
-			  if (m.time > time_point) {
-				  break;
-			  }
-			  if (m.inQuery(ids, flag) && (m.time <= time_point)) {
-				  insert_if_older(sub_res, m);
-				  readed_ids.insert(m.id);
-			  }else {
-				  unreaded_ids.insert(m.id);
-			  }
-		  }
-	  }
+    for (size_t i = 0; i < this->_levels.size(); ++i) {
+      if (_levels[i].empty()) {
+        continue;
+      }
+      for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
+        auto m = _levels[i].at(j);
+        if (m.time > time_point) {
+          break;
+        }
+        if (m.inQuery(ids, flag) && (m.time <= time_point)) {
+          insert_if_older(sub_res, m);
+          readed_ids.insert(m.id);
+        } else {
+          unreaded_ids.insert(m.id);
+        }
+      }
+    }
 
-	  if (!ids.empty() && readed_ids.size() != ids.size()) {
-		  for (auto id : ids) {
-			  if (readed_ids.find(id) == readed_ids.end()) {
-				  auto e = Meas::empty(id);
-				  e.flag = Flags::_NO_DATA;
-				  e.time = time_point;
-				  sub_res[id] = e;
-			  }
-		  }
-	  }
+    if (!ids.empty() && readed_ids.size() != ids.size()) {
+      for (auto id : ids) {
+        if (readed_ids.find(id) == readed_ids.end()) {
+          auto e = Meas::empty(id);
+          e.flag = Flags::_NO_DATA;
+          e.time = time_point;
+          sub_res[id] = e;
+        }
+      }
+    }
 
-	  if (ids.empty()) {
-		  for (auto id : unreaded_ids) {
-			  if (readed_ids.find(id) == readed_ids.end()) {
-				  auto e = Meas::empty(id);
-				  e.flag = Flags::_NO_DATA;
-				  e.time = time_point;
-				  sub_res[id] = e;
-			  }
-		  }
-	  }
-	  return sub_res;
+    if (ids.empty()) {
+      for (auto id : unreaded_ids) {
+        if (readed_ids.find(id) == readed_ids.end()) {
+          auto e = Meas::empty(id);
+          e.flag = Flags::_NO_DATA;
+          e.time = time_point;
+          sub_res[id] = e;
+        }
+      }
+    }
+    return sub_res;
   }
+
 protected:
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
@@ -434,8 +442,8 @@ protected:
   uint8_t *_raw_data;
   std::vector<level> _levels;
   size_t _size;
-  std::vector<Meas> _memvalues;
-  size_t _memvalues_pos;
+  Meas *_memvalues;
+  size_t _memvalues_size;
 };
 
 Capacitor::~Capacitor() {}
