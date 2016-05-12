@@ -109,9 +109,6 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 	BOOST_CHECK_EQUAL(cap.size(), writes_count);
 	auto e = dariadb::Meas::empty();
 
-	dariadb::Time t = writes_count;
-	size_t id_count = 10;
-	e.id = writes_count;
 	e.time = writes_count-1;
 	BOOST_CHECK(cap.append(e).writed == 1);
 

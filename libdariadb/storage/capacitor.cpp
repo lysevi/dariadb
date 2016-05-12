@@ -15,9 +15,11 @@ for future updates.
 #include "../flags.h"
 #include "../utils/cz.h"
 #include "../utils/fs.h"
-#include "../utils/utils.h"
 #include "../utils/kmerge.h"
+#include "../utils/utils.h"
 #include <algorithm>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <cassert>
 #include <limits>
 #include <list>
@@ -46,7 +48,7 @@ struct level {
 
   bool empty() const { return hdr->pos == 0; }
 
-  size_t size()const { return hdr->count; }
+  size_t size() const { return hdr->count; }
 };
 
 class CapReader : public storage::Reader {
@@ -200,6 +202,7 @@ public:
   }
 
   append_result append(const Meas &value) {
+    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
     if (_header->_memvalues_pos < _header->B) {
       return append_to_mem(value);
     } else {
@@ -224,8 +227,8 @@ public:
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
     if (outlvl >= _header->levels_count) {
-		drop_to_stor();
-		return append(value);
+      drop_to_stor();
+      return append_to_mem(value);
     }
 
     std::list<level *> to_merge;
@@ -244,8 +247,8 @@ public:
 
     auto merge_target = _levels[outlvl];
 
-  	dariadb::utils::k_merge(to_merge, merge_target, less_by_time);
-  
+    dariadb::utils::k_merge(to_merge, merge_target, less_by_time);
+
     for (size_t i = 1; i <= outlvl; ++i) {
       _levels[i - 1].clear();
     }
@@ -254,26 +257,26 @@ public:
   }
 
   void drop_to_stor() {
-	  //TODO use k-merge
-	  size_t union_size = _memvalues_size;
-	  for (auto l : _levels) {
-		  union_size += l.hdr->count;
-	  }
-	  std::vector<dariadb::Meas> all_meases{ union_size };
-	  size_t write_pos = 0;
-	  for (size_t i = 0; i < _memvalues_size; ++i, ++write_pos) {
-		  all_meases[write_pos] = _memvalues[i];
-	  }
+    // TODO use k-merge
+    size_t union_size = _memvalues_size;
+    for (auto l : _levels) {
+      union_size += l.hdr->count;
+    }
+    std::vector<dariadb::Meas> all_meases{union_size};
+    size_t write_pos = 0;
+    for (size_t i = 0; i < _memvalues_size; ++i, ++write_pos) {
+      all_meases[write_pos] = _memvalues[i];
+    }
 
-	  for (auto l : _levels) {
-		  assert(!l.empty());
-		  for (size_t i = 0; i < l.hdr->pos; ++i, ++write_pos) {
-			  all_meases[write_pos] = l.begin[i];
-		  }
-		  l.clear();
-	  }
-	  std::sort(all_meases.begin(), all_meases.end(), meas_time_compare());
-	  _stor->append(all_meases);
+    for (auto l : _levels) {
+      assert(!l.empty());
+      for (size_t i = 0; i < l.hdr->pos; ++i, ++write_pos) {
+        all_meases[write_pos] = l.begin[i];
+      }
+      l.clear();
+    }
+    std::sort(all_meases.begin(), all_meases.end(), meas_time_compare());
+    _stor->append(all_meases);
   }
 
   Reader_ptr readInterval(Time from, Time to) {
@@ -286,6 +289,7 @@ public:
 
   virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
                                   Time to) {
+    boost::shared_lock<boost::shared_mutex> lock(_mutex);
     CapReader *raw = new CapReader;
     std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
 
@@ -341,6 +345,7 @@ public:
 
   virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
                                      Time time_point) {
+    boost::shared_lock<boost::shared_mutex> lock(_mutex);
     CapReader *raw = new CapReader;
     dariadb::Meas::Id2Meas sub_res = timePointValues(ids, flag, time_point);
 
@@ -353,6 +358,7 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
+      boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return readInTimePoint(ids, flag, this->maxTime());
   }
 
@@ -438,6 +444,8 @@ protected:
   size_t _size;
   Meas *_memvalues;
   size_t _memvalues_size;
+
+  boost::shared_mutex _mutex;
 };
 
 Capacitor::~Capacitor() {}
@@ -445,13 +453,9 @@ Capacitor::~Capacitor() {}
 Capacitor::Capacitor(const MeasStorage_ptr stor, const Params &params)
     : _Impl(new Capacitor::Private(stor, params)) {}
 
-dariadb::Time Capacitor::minTime() {
-  return _Impl->minTime();
-}
+dariadb::Time Capacitor::minTime() { return _Impl->minTime(); }
 
-dariadb::Time Capacitor::maxTime() {
-  return _Impl->maxTime();
-}
+dariadb::Time Capacitor::maxTime() { return _Impl->maxTime(); }
 
 void Capacitor::flush() { // write all to storage;
   _Impl->flush();
@@ -494,6 +498,4 @@ size_t dariadb::storage::Capacitor::levels_count() const {
   return _Impl->levels_count();
 }
 
-size_t dariadb::storage::Capacitor::size() const {
-  return _Impl->size();
-}
+size_t dariadb::storage::Capacitor::size() const { return _Impl->size(); }
