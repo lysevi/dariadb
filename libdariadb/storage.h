@@ -72,6 +72,7 @@ public:
   
 };
 
+typedef std::shared_ptr<MeasStorage> MeasStorage_ptr;
 typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
 }
 }

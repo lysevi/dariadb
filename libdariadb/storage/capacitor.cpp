@@ -95,7 +95,7 @@ public:
     size_t _memvalues_pos;
   };
 
-  Private(const BaseStorage_ptr stor, const Capacitor::Params &params)
+  Private(const MeasStorage_ptr stor, const Capacitor::Params &params)
       : _minTime(std::numeric_limits<dariadb::Time>::max()),
         _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor),
         _params(params), mmap(nullptr), _size(0) {
@@ -434,7 +434,7 @@ public:
 protected:
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
-  BaseStorage_ptr _stor;
+  MeasStorage_ptr _stor;
   Capacitor::Params _params;
 
   dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
@@ -448,7 +448,7 @@ protected:
 
 Capacitor::~Capacitor() {}
 
-Capacitor::Capacitor(const BaseStorage_ptr stor, const Params &params)
+Capacitor::Capacitor(const MeasStorage_ptr stor, const Params &params)
     : _Impl(new Capacitor::Private(stor, params)) {}
 
 dariadb::Time Capacitor::minTime() {
