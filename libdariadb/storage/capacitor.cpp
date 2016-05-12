@@ -221,8 +221,27 @@ public:
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
     if (outlvl >= _header->levels_count) {
-
-      return append_result(0, 1);
+		size_t union_size = _memvalues_size;
+		for (auto l : _levels) {
+			union_size += l.hdr->count;
+		}
+		std::vector<dariadb::Meas> all_meases{ union_size };
+		size_t write_pos = 0;
+		for (size_t i = 0; i < _memvalues_size; ++i, ++write_pos) {
+			all_meases[write_pos] = _memvalues[i];
+		}
+		
+		for (auto l : _levels) {
+			assert(!l.empty());
+			for (size_t i = 0; i < l.hdr->pos; ++i, ++write_pos) {
+				all_meases[write_pos] = l.begin[i];
+			}
+			l.clear();
+		}
+		std::sort(all_meases.begin(), all_meases.end(), less_by_time);
+		_stor->append(all_meases);
+		
+		return append(value);
     }
 
     std::list<level *> to_merge;

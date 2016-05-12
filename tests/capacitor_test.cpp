@@ -128,23 +128,65 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 }
 
 BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
-  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-  stor->writed_count = 0;
-  const size_t block_size = 10;
-  auto storage_path = "testStorage";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
+	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+	stor->writed_count = 0;
+	const size_t block_size = 10;
+	auto storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	{
+		auto cap_files =
+			dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+		assert(cap_files.size() == 0);
+		auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
+		p.max_levels = 11;
 
-  auto cap_files =
-      dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
-  assert(cap_files.size() == 0);
-  auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
-  p.max_levels = 11;
+		dariadb::storage::Capacitor cap(stor, p);
 
-  dariadb::storage::Capacitor cap(stor, p);
+		dariadb_test::storage_test_check(&cap, 0, 100, 1);
+	}
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}
 
-  dariadb_test::storage_test_check(&cap, 0, 100, 1);
+BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
+	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+	stor->writed_count = 0;
+	const size_t block_size = 10;
+	auto storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	{
+		auto cap_files =
+			dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+		assert(cap_files.size() == 0);
+		auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
+		p.max_levels = 11;
+
+		dariadb::storage::Capacitor cap(stor, p);
+
+
+		auto e = dariadb::Meas::empty();
+
+		size_t id_count = 10;
+		for (size_t i = 0; ; i++) {
+			e.id = i % id_count;
+			e.time++;
+			e.value = i;
+			BOOST_CHECK(cap.append(e).writed == 1);
+
+			if (stor->writed_count != 0) {
+				break;
+			}
+		}
+		
+	}
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
 }
 
 std::atomic_long append_count{0};
