@@ -16,8 +16,10 @@ class Moc_Storage : public dariadb::storage::MeasWriter {
 public:
   size_t writed_count;
   std::map<dariadb::Id, std::vector<dariadb::Meas>> meases;
+  std::list<dariadb::Meas> mlist;
   dariadb::append_result append(const dariadb::Meas &value) override {
     meases[value.id].push_back(value);
+    mlist.push_back(value);
     writed_count += 1;
     return dariadb::append_result(1, 0);
   }
@@ -150,6 +152,15 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
       if (stor->writed_count != 0) {
         break;
       }
+    }
+    for(auto it=stor->mlist.cbegin();it!=stor->mlist.cend();++it){
+        auto next=it;
+        ++next;
+        if(next==stor->mlist.cend()){
+            break;
+        }
+
+        BOOST_CHECK_GE(next->time,it->time);
     }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
