@@ -52,8 +52,7 @@ int main(int argc, char *argv[]) {
   const size_t K = 1;
   {
     const std::string storage_path = "testStorage";
-    const size_t chunk_size = 256;
-    const size_t cap_B = 128 * 1024 / chunk_size;
+    const size_t cap_B = 128*1024 / sizeof(dariadb::Meas);
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
