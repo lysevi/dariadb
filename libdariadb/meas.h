@@ -3,6 +3,7 @@
 #include <list>
 #include <memory>
 #include <set>
+#include <map>
 #include <stdint.h>
 #include <vector>
 #include <algorithm>
@@ -16,13 +17,15 @@ typedef double Value;
 typedef std::vector<Id> IdArray;
 typedef std::set<Id> IdSet;
 
+
 bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 
 struct Meas {
   typedef Meas *PMeas;
   typedef std::vector<Meas> MeasArray;
   typedef std::list<Meas> MeasList;
-
+  typedef std::map<Id, Meas> Id2Meas;
+  typedef std::set<Meas> MeasSet;
   static Meas empty();
 
   Meas();
@@ -58,4 +61,9 @@ struct Meas {
   Flag src;
 };
 
+struct meas_time_compare {
+	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+		return lhs.time < rhs.time;
+	}
+};
 }

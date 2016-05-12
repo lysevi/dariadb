@@ -16,8 +16,8 @@ void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
     size_t count = 0;
     for (auto &m : res) {
       if ((m.id == id_val) &&
-          ((m.flag == flg_val) || (m.flag == dariadb::Flags::NO_DATA)) &&
-          ((m.src == flg_val) || (m.src == dariadb::Flags::NO_DATA))) {
+          ((m.flag == flg_val) || (m.flag == dariadb::Flags::_NO_DATA)) &&
+          ((m.src == flg_val) || (m.src == dariadb::Flags::_NO_DATA))) {
         count++;
       }
     }
@@ -155,11 +155,11 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   dariadb::IdArray notExstsIDs{9999};
   fltr_res.clear();
   as->readInTimePoint(notExstsIDs, 0, to - 1)->readAll(&fltr_res);
-  if (fltr_res.size() != size_t(1)) {
+  if (fltr_res.size() != size_t(1)) { //must return NO_DATA
     throw MAKE_EXCEPTION("fltr_res.size() != size_t(1)");
   }
 
-  if (fltr_res.front().flag != dariadb::Flags::NO_DATA) {
+  if (fltr_res.front().flag != dariadb::Flags::_NO_DATA) {
     throw MAKE_EXCEPTION("fltr_res.front().flag != dariadb::Flags::NO_DATA");
   }
 }

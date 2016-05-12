@@ -122,7 +122,7 @@ void InnerReader::readTimePoint(storage::ReaderClb *clb) {
   }
   auto m = dariadb::Meas::empty();
   m.time = _from;
-  m.flag = dariadb::Flags::NO_DATA;
+  m.flag = dariadb::Flags::_NO_DATA;
   for (auto id : _not_exist) {
     m.id = id;
     clb->call(m);

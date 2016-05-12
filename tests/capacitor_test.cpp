@@ -130,6 +130,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
 
 	dariadb_test::storage_test_check(&cap, 0, 100, 1);
 }
+
 std::atomic_long append_count{0};
 
 void thread_writer(dariadb::Id id, dariadb::Time from, dariadb::Time to,
