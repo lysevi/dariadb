@@ -6,7 +6,7 @@ compiler:
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev cmake
+  - sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-thread-dev cmake 
 
 install:
   - cd ${TRAVIS_BUILD_DIR}
