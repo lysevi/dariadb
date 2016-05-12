@@ -5,6 +5,7 @@
 #include <set>
 #include <stdint.h>
 #include <vector>
+#include "utils/in_interval.h"
 
 namespace dariadb {
 typedef uint64_t Time;
@@ -30,6 +31,25 @@ struct Meas {
            areSame(value, other.value);
   }
 
+  bool inFlag(Flag f) const { return (f == 0) || (f == flag); }
+
+  bool inIds(const IdArray &ids) const {
+    return (ids.size() == 0) ||
+           (std::find(ids.begin(), ids.end(), id) != ids.end());
+  }
+
+  bool inQuery(const IdArray &ids, const Flag f) const {
+    return inFlag(f) && inIds(ids);
+  }
+
+  bool inInterval(Time from, Time to) const {
+	  return utils::inInterval(from, to, time);
+  }
+
+  bool inQuery(const IdArray &ids, const Flag f, Time from, Time to) const {
+	  return inQuery(ids,f) && inInterval(from,to);
+  }
+
   Id id;
   Time time;
   Value value;
@@ -37,5 +57,4 @@ struct Meas {
   Flag src;
 };
 
-bool in_filter(Flag filter, Flag flg);
 }

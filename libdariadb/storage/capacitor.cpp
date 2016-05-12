@@ -260,18 +260,23 @@ public:
     ++_header->_size_B;
     return append_to_mem(value);
   }
-  Reader_ptr readInterval(Time from, Time to) { return nullptr; }
-  virtual Reader_ptr readInTimePoint(Time time_point) { return nullptr; }
+  Reader_ptr readInterval(Time from, Time to) {
+    return readInterval(dariadb::IdArray{}, 0, from, to);
+  }
+
+  Reader_ptr readInTimePoint(Time time_point) {
+    return readInTimePoint(dariadb::IdArray{}, 0, time_point);
+  }
 
   virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
                                   Time to) {
     CapReader *raw = new CapReader;
     for (size_t j = 0; j < _memvalues_pos; ++j) {
-        auto m=_memvalues[j];
-        //TODO refact. move to utils libs or meas::static.
-        if((in_filter(flag,m.flag)) && ((ids.size()==0) || (std::find(ids.begin(),ids.end(),m.id)!=ids.end()))){
-            raw->_values.push_back(_memvalues[j]);
-        }
+      auto m = _memvalues[j];
+      // TODO refact. move to utils libs or meas::static.
+      if(m.inQuery(ids,flag,from,to)) {
+        raw->_values.push_back(_memvalues[j]);
+      }
     }
 
     for (size_t i = 0; i < this->_levels.size(); ++i) {
@@ -279,10 +284,10 @@ public:
         continue;
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-          auto m=_levels[i].at(j);
-          if((in_filter(flag,m.flag)) && ((ids.size()==0) || (std::find(ids.begin(),ids.end(),m.id)!=ids.end()))){
-              raw->_values.push_back(m);
-          }
+        auto m = _levels[i].at(j);
+		if (m.inQuery(ids, flag, from, to)) {
+          raw->_values.push_back(m);
+        }
       }
     }
     return Reader_ptr(raw);
@@ -293,10 +298,13 @@ public:
     return nullptr;
   }
 
+  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
+    return nullptr;
+  }
   dariadb::Time minTime() const { return _minTime; }
   dariadb::Time maxTime() const { return _maxTime; }
 
-  bool flush() { return false; }
+  void flush() {}
 
   size_t in_queue_size() const { return 0; }
 
@@ -324,12 +332,16 @@ Capacitor::~Capacitor() {}
 Capacitor::Capacitor(const BaseStorage_ptr stor, const Params &params)
     : _Impl(new Capacitor::Private(stor, params)) {}
 
-dariadb::Time Capacitor::minTime() { return _Impl->minTime(); }
+dariadb::Time Capacitor::minTime() {
+  return _Impl->minTime();
+}
 
-dariadb::Time Capacitor::maxTime() { return _Impl->maxTime(); }
+dariadb::Time Capacitor::maxTime() {
+  return _Impl->maxTime();
+}
 
-bool Capacitor::flush() { // write all to storage;
-  return _Impl->flush();
+void Capacitor::flush() { // write all to storage;
+  _Impl->flush();
 }
 
 append_result dariadb::storage::Capacitor::append(const Meas &value) {
@@ -356,6 +368,11 @@ Reader_ptr dariadb::storage::Capacitor::readInTimePoint(const IdArray &ids,
   return _Impl->readInTimePoint(ids, flag, time_point);
 }
 
+Reader_ptr dariadb::storage::Capacitor::currentValue(const IdArray &ids,
+                                                     const Flag &flag) {
+  return _Impl->currentValue(ids, flag);
+}
+
 size_t dariadb::storage::Capacitor::in_queue_size() const {
   return _Impl->in_queue_size();
 }
@@ -364,4 +381,6 @@ size_t dariadb::storage::Capacitor::levels_count() const {
   return _Impl->levels_count();
 }
 
-size_t dariadb::storage::Capacitor::size() const { return _Impl->size(); }
+size_t dariadb::storage::Capacitor::size() const {
+  return _Impl->size();
+}

@@ -10,6 +10,7 @@
 #include <timeutil.h>
 #include <utils/logger.h>
 #include <utils/fs.h>
+#include "test_common.h"
 
 class Moc_Storage : public dariadb::storage::BaseStorage {
 public:
@@ -109,6 +110,26 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   }
 }
 
+
+BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
+	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+	stor->writed_count = 0;
+	const size_t block_size = 10;
+	auto storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+
+	auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+	assert(cap_files.size() == 0);
+	auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
+	p.max_levels = 11;
+
+
+	dariadb::storage::Capacitor cap(stor, p);
+
+	dariadb_test::storage_test_check(&cap, 0, 100, 1);
+}
 std::atomic_long append_count{0};
 
 void thread_writer(dariadb::Id id, dariadb::Time from, dariadb::Time to,

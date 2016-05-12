@@ -36,8 +36,11 @@ BOOST_AUTO_TEST_CASE(BloomTest) {
 
 BOOST_AUTO_TEST_CASE(inFilter) {
   {
-    BOOST_CHECK(dariadb::in_filter(0, 100));
-    BOOST_CHECK(!dariadb::in_filter(1, 100));
+	  auto m = dariadb::Meas::empty();
+	  m.flag = 100;
+    BOOST_CHECK(m.inFlag(0));
+	BOOST_CHECK(m.inFlag(100));
+    BOOST_CHECK(!m.inFlag(10));
   }
 }
 

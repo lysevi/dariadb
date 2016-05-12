@@ -48,10 +48,6 @@ protected:
   NonCopy() = default;
 };
 
-template <typename T> bool inInterval(T from, T to, T value) {
-  return value >= from && value <= to;
-}
-
 struct Range {
   uint8_t *begin;
   uint8_t *end;

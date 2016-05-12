@@ -8,6 +8,7 @@
 #include <utils/fs.h>
 #include <utils/period_worker.h>
 #include <utils/skiplist.h>
+#include <utils/in_interval.h>
 #include <utils/utils.h>
 
 BOOST_AUTO_TEST_CASE(SkipListCheck) {

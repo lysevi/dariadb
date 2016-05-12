@@ -137,7 +137,7 @@ bool InnerReader::check_meas(const Meas &m) const {
   }
   using utils::inInterval;
 
-  if ((in_filter(_flag, m.flag)) && (inInterval(_from, _to, m.time))) {
+  if (m.inFlag(_flag) && (m.inInterval(_from, _to))) {
     return true;
   }
   return false;

@@ -27,17 +27,17 @@ public:
   Capacitor(const BaseStorage_ptr stor, const Params &param);
 
   append_result append(const Meas &value) override;
-  virtual Reader_ptr readInterval(Time from, Time to) override;
-  virtual Reader_ptr readInTimePoint(Time time_point) override;
-  virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
+  Reader_ptr readInterval(Time from, Time to) override;
+  Reader_ptr readInTimePoint(Time time_point) override;
+  Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
                                   Time to) override;
-  virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
+  Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
                                      Time time_point) override;
-
+  Reader_ptr currentValue(const IdArray &ids, const Flag &flag)override;
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;
 
-  bool flush(); // write all to storage;
+  void flush()override; // write all to storage;
 
   size_t in_queue_size() const;
   size_t levels_count() const;
