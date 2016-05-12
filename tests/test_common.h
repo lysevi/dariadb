@@ -19,4 +19,6 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader,
 
 void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
                         dariadb::Time to, dariadb::Time step);
+
+void readIntervalCommonTest(dariadb::storage::MeasStorage *ds);
 }

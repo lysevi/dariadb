@@ -286,8 +286,15 @@ public:
   virtual Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
                                   Time to) {
     CapReader *raw = new CapReader;
-
-    std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
+	std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
+	
+	if (from > this->_minTime) {
+		auto tp_read_data = this->timePointValues(ids, flag, from);
+		for (auto kv : tp_read_data) {
+			sub_result[kv.first].insert(kv.second);
+		}
+	}
+    
 
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
@@ -335,7 +342,6 @@ public:
   virtual Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
                                      Time time_point) {
     CapReader *raw = new CapReader;
-    dariadb::IdSet readed_ids;
 	dariadb::Meas::Id2Meas sub_res = timePointValues(ids, flag, time_point);
 
     for (auto kv : sub_res) {
@@ -363,6 +369,7 @@ public:
 
   dariadb::Meas::Id2Meas timePointValues(const IdArray &ids, Flag flag, Time time_point) {
 	  dariadb::IdSet readed_ids;
+	  dariadb::IdSet unreaded_ids;
 	  dariadb::Meas::Id2Meas sub_res;
 
 	  for (size_t j = 0; j < _memvalues_pos; ++j) {
@@ -370,6 +377,8 @@ public:
 		  if (m.inQuery(ids, flag) && (m.time <= time_point)) {
 			  insert_if_older(sub_res, m);
 			  readed_ids.insert(m.id);
+		  }else {
+			  unreaded_ids.insert(m.id);
 		  }
 	  }
 
@@ -385,6 +394,8 @@ public:
 			  if (m.inQuery(ids, flag) && (m.time <= time_point)) {
 				  insert_if_older(sub_res, m);
 				  readed_ids.insert(m.id);
+			  }else {
+				  unreaded_ids.insert(m.id);
 			  }
 		  }
 	  }
@@ -394,6 +405,18 @@ public:
 			  if (readed_ids.find(id) == readed_ids.end()) {
 				  auto e = Meas::empty(id);
 				  e.flag = Flags::_NO_DATA;
+				  e.time = time_point;
+				  sub_res[id] = e;
+			  }
+		  }
+	  }
+
+	  if (ids.empty()) {
+		  for (auto id : unreaded_ids) {
+			  if (readed_ids.find(id) == readed_ids.end()) {
+				  auto e = Meas::empty(id);
+				  e.flag = Flags::_NO_DATA;
+				  e.time = time_point;
 				  sub_res[id] = e;
 			  }
 		  }

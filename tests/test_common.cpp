@@ -155,12 +155,125 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   dariadb::IdArray notExstsIDs{9999};
   fltr_res.clear();
   as->readInTimePoint(notExstsIDs, 0, to - 1)->readAll(&fltr_res);
-  if (fltr_res.size() != size_t(1)) { //must return NO_DATA
+  if (fltr_res.size() != size_t(1)) { // must return NO_DATA
     throw MAKE_EXCEPTION("fltr_res.size() != size_t(1)");
   }
 
   if (fltr_res.front().flag != dariadb::Flags::_NO_DATA) {
     throw MAKE_EXCEPTION("fltr_res.front().flag != dariadb::Flags::NO_DATA");
+  }
+}
+
+void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
+  dariadb::Meas m;
+  {
+    m.id = 1;
+    m.time = 1;
+    ds->append(m);
+    m.id = 2;
+    m.time = 2;
+    ds->append(m);
+
+    m.id = 4;
+    m.time = 4;
+    ds->append(m);
+    m.id = 5;
+    m.time = 5;
+    ds->append(m);
+    m.id = 55;
+    m.time = 5;
+    ds->append(m);
+
+    {
+      auto tp_reader = ds->readInTimePoint(6);
+      dariadb::Meas::MeasList output_in_point{};
+      tp_reader->readAll(&output_in_point);
+
+      if (output_in_point.size() != size_t(5)) {
+        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5))");
+      }
+
+      auto rdr = ds->readInterval(0, 6);
+      output_in_point.clear();
+      rdr->readAll(&output_in_point);
+      if (output_in_point.size() != size_t(5)) {
+        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5))");
+      }
+    }
+    {
+
+      auto tp_reader = ds->readInTimePoint(3);
+      dariadb::Meas::MeasList output_in_point{};
+      tp_reader->readAll(&output_in_point);
+
+	  ///+ timepoint(3) with no_data
+      if (output_in_point.size() != size_t(2 + 3)) { 
+        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(2 + 3))");
+      }
+      for (auto v : output_in_point) {
+        if (!(v.time <= 3)) {
+          throw MAKE_EXCEPTION("!(v.time <= 3)");
+        }
+      }
+    }
+    auto reader = ds->readInterval(3, 5);
+    dariadb::Meas::MeasList output{};
+    reader->readAll(&output);
+    if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
+      throw MAKE_EXCEPTION("output.size() != size_t(5 + 3)");
+    }
+  }
+  // from this point read not from firsts.
+  {
+    m.id = 1;
+    m.time = 6;
+    ds->append(m);
+    m.id = 2;
+    m.time = 7;
+    ds->append(m);
+
+    m.id = 4;
+    m.time = 9;
+    ds->append(m);
+    m.id = 5;
+    m.time = 10;
+    ds->append(m);
+    m.id = 6;
+    m.time = 10;
+    ds->append(m);
+    {
+
+      auto tp_reader = ds->readInTimePoint(8);
+      dariadb::Meas::MeasList output_in_point{};
+      tp_reader->readAll(&output_in_point);
+	  
+	  ///+ timepoimt(8) with no_data
+      if (output_in_point.size() != size_t(5 + 1)) {
+        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5 + 1))");
+      }
+      for (auto v : output_in_point) {
+        if (!(v.time <= 8)) {
+          throw MAKE_EXCEPTION("!(v.time <= 8))");
+        }
+      }
+    }
+
+    auto reader = ds->readInterval(dariadb::IdArray{1, 2, 4, 5, 55}, 0, 8, 10);
+    dariadb::Meas::MeasList output{};
+    reader->readAll(&output);
+    if (output.size() != size_t(7)) {
+      throw MAKE_EXCEPTION("output.size() != size_t(7)");
+    }
+    // expect: {1,8} {2,8} {4,8} {55,8} {4,9} {5,10}
+    if (output.size() != size_t(7)) {
+      std::cout << " ERROR!!!!" << std::endl;
+
+      for (dariadb::Meas v : output) {
+        std::cout << " id:" << v.id << " flg:" << v.flag << " v:" << v.value
+                  << " t:" << v.time << std::endl;
+      }
+      throw MAKE_EXCEPTION("!!!");
+    }
   }
 }
 }

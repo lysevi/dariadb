@@ -152,6 +152,29 @@ void thread_writer(dariadb::Id id, dariadb::Time from, dariadb::Time to,
   }
 }
 
+BOOST_AUTO_TEST_CASE(CapReadIntervalTest) {
+	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+	stor->writed_count = 0;
+	const size_t block_size = 10;
+	auto storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	
+	{
+	auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
+	p.max_levels = 11;
+
+	dariadb::storage::Capacitor cap(stor, p);
+
+	dariadb_test::readIntervalCommonTest(&cap);
+	}
+	
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}
+
 // TODO uncomment
 /*
 BOOST_AUTO_TEST_CASE(MultiThread) {
