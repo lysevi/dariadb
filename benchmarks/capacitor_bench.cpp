@@ -32,7 +32,7 @@ public:
   void flush() override {}
 
   dariadb::storage::Cursor_ptr
-  chunksByIterval(const dariadb::storage::QueryInterval &query) override {
+  chunksByIterval(const dariadb::storage::QueryInterval &) override {
     return nullptr;
   }
 

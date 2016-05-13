@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     for (size_t i = 0; i < writes_count; i++) {
       e.id = i % id_count;
       e.time = t;
-      e.value = i;
+      e.value = dariadb::Value(i);
       t -= 1;
       BOOST_CHECK(cap.append(e).writed == 1);
     }
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
     for (size_t i = 0;; i++) {
       e.id = i % id_count;
       e.time++;
-      e.value = i;
+      e.value = dariadb::Value(i);
       BOOST_CHECK(cap.append(e).writed == 1);
 
       if (stor->writed_count != 0) {
