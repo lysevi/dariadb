@@ -1,6 +1,7 @@
 #pragma once
 #include "../utils/fs.h"
 #include "../utils/locker.h"
+#include "../storage.h"
 #include "chunk.h"
 #include "chunk_container.h"
 #include "cursor.h"
@@ -50,9 +51,9 @@ struct Page_ChunkIndex {
 // maxtime => pos index rec in page;
 // typedef std::multimap<dariadb::Time, uint32_t> indexTree;
 typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
-typedef std::unordered_map<dariadb::Id, std::map<dariadb::Time, uint32_t>>
-    PageMultiTree;
-class Page : public ChunkContainer, public ChunkWriter {
+typedef std::map<dariadb::Time, uint32_t> Time2Pos;
+typedef std::unordered_map<dariadb::Id, Time2Pos> PageMultiTree;
+class Page : public ChunkContainer, public MeasWriter {
   Page() = default;
 
 public:
@@ -63,8 +64,9 @@ public:
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
   ~Page();
-  bool append(const Chunk_Ptr &ch) override;
-  bool append(const ChunksList &ch) override;
+  //PM
+  /*bool append(const Chunk_Ptr &ch) override;
+  bool append(const ChunksList &ch) override;*/
   bool is_full() const;
   Cursor_ptr get_chunks(const dariadb::IdArray &ids, dariadb::Time from,
                         dariadb::Time to, dariadb::Flag flag);
@@ -77,6 +79,9 @@ public:
   IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) override;
   IdArray getIds() override;
 
+  // Inherited via MeasWriter
+  virtual append_result append(const Meas & value) override;
+  virtual void flush() override;
 public:
   uint8_t *region;  // page  file mapp region
   uint8_t *iregion; // index file mapp region

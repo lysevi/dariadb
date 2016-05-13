@@ -56,11 +56,11 @@ int main(int argc, char *argv[]) {
 
     auto start = clock();
 
-    for (size_t i = 0; i < chunks_count; ++i) {
+   /* for (size_t i = 0; i < chunks_count; ++i) {
       dariadb::storage::PageManager::instance()->append(ch);
       ch->info.maxTime += dariadb::Time(chunks_size);
       ch->info.minTime += dariadb::Time(chunks_size);
-    }
+    }*/
 
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "insert : " << elapsed << std::endl;

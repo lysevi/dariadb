@@ -34,7 +34,8 @@ public:
     this->flush();
     if (_limits.max_mem_chunks != 0) {
       auto all_chunks = this->mem_storage_raw->drop_all();
-      PageManager::instance()->append(all_chunks); // use specified in ctor
+      //PM
+	  //PageManager::instance()->append(all_chunks); // use specified in ctor
     }
     delete mem_cap;
     PageManager::stop();
@@ -68,14 +69,16 @@ public:
   void drop_old_chunks() {
     if (_limits.max_mem_chunks == 0) {
       if (_limits.old_mem_chunks != 0) {
-        auto old_chunks =
-            mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
-        PageManager::instance()->append(old_chunks);
+        // auto old_chunks =
+        mem_storage_raw->drop_old_chunks(_limits.old_mem_chunks);
+        // PM
+        /*PageManager::instance()->append(old_chunks);*/
       }
     } else {
-      auto old_chunks =
-          mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
-      PageManager::instance()->append(old_chunks);
+      //auto old_chunks =
+      mem_storage_raw->drop_old_chunks_by_limit(_limits.max_mem_chunks);
+      // PM
+      /*PageManager::instance()->append(old_chunks);*/
     }
   }
 

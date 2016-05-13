@@ -274,96 +274,96 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
   istream.close();
   return result;
 }
-
-bool Page::append(const ChunksList &ch) {
-  for (auto &c : ch) {
-    if (!this->append(c)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool Page::append(const Chunk_Ptr &ch) {
-  if (!ch->info.is_zipped) {
-    throw MAKE_EXCEPTION("!is_zipped");
-  }
-  std::lock_guard<std::mutex> lg(_locker);
-  auto index_rec = ch->info;
-  auto buffer = ch->_buffer_t;
-
-  assert(ch->info.last.time != 0);
-  assert(header->chunk_size == ch->_size);
-
-  uint32_t pos_index = 0;
-  dariadb::Id removedId{0}; /// need to save overwriten reccord;
-
-  if (is_full()) {
-    if (header->mode == MODE::SINGLE) {
-      /// get oldes index reccord.
-      header->is_overwrite = true;
-      pos_index = this->_itree.begin()->second;
-      removedId = index[pos_index].first.id;
-    } else {
-      return false;
-    }
-  } else {
-    pos_index = _free_poses.front();
-    _free_poses.pop_front();
-  }
-
-  auto cur_index = &index[pos_index];
-  cur_index->first = ch->info.first;
-  cur_index->last = ch->info.last;
-
-  cur_index->flag_bloom = ch->info.flag_bloom;
-  cur_index->is_readonly = ch->info.is_readonly;
-  cur_index->is_init = true;
-
-  if (!header->is_overwrite) {
-    cur_index->offset = header->pos;
-    header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
-    header->addeded_chunks++;
-    auto kv = std::make_pair(index_rec.maxTime, pos_index);
-    _itree.insert(kv);
-    _mtree[index_rec.first.id].insert(kv);
-  } else {
-    auto it = this->_itree.begin();
-    auto removedTime = it->first;
-
-    /// remove from tree and multitree;
-    auto fres = _mtree.find(removedId);
-    assert(fres != _mtree.end());
-    auto mtr_it = fres->second.find(removedTime);
-    _itree.erase(it);
-    fres->second.erase(mtr_it);
-    /// insert new {key,value}
-    auto kv = std::make_pair(index_rec.maxTime, pos_index);
-    _itree.insert(kv);
-    _mtree[index_rec.first.id].insert(kv);
-  }
-  // info,buffer,...
-  auto target_ptr = this->chunks + cur_index->offset;
-  ChunkIndexInfo *info = (ChunkIndexInfo *)target_ptr;
-  *info = index_rec;
-  // memcpy(target_ptr, &index_rec, sizeof(ChunkIndexInfo));
-  target_ptr += sizeof(ChunkIndexInfo);
-  memcpy(target_ptr, buffer, sizeof(uint8_t) * header->chunk_size);
-
-  iheader->minTime = std::min(iheader->minTime, ch->info.minTime);
-  iheader->maxTime = std::max(iheader->maxTime, ch->info.maxTime);
-  cur_index->minTime = std::min(cur_index->minTime, ch->info.minTime);
-  cur_index->maxTime = std::max(cur_index->maxTime, ch->info.maxTime);
-
-  // TODO uncomment this
-  //  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
-  //  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
-  //                    sizeof(Page_ChunkIndex));
-  //  auto offset = get_chunks_offset(header->chunk_per_storage) +
-  //                size_t(this->chunks - index[pos_index].offset);
-  //  this->mmap->flush(offset, sizeof(header->chunk_size));
-  return true;
-}
+//PM
+//bool Page::append(const ChunksList &ch) {
+//  for (auto &c : ch) {
+//    if (!this->append(c)) {
+//      return false;
+//    }
+//  }
+//  return true;
+//}
+//PM
+//bool Page::append(const Chunk_Ptr &ch) {
+//  if (!ch->info.is_zipped) {
+//    throw MAKE_EXCEPTION("!is_zipped");
+//  }
+//  std::lock_guard<std::mutex> lg(_locker);
+//  auto index_rec = ch->info;
+//  auto buffer = ch->_buffer_t;
+//
+//  assert(ch->info.last.time != 0);
+//  assert(header->chunk_size == ch->_size);
+//
+//  uint32_t pos_index = 0;
+//  dariadb::Id removedId{0}; /// need to save overwriten reccord;
+//
+//  if (is_full()) {
+//    if (header->mode == MODE::SINGLE) {
+//      /// get oldes index reccord.
+//      header->is_overwrite = true;
+//      pos_index = this->_itree.begin()->second;
+//      removedId = index[pos_index].first.id;
+//    } else {
+//      return false;
+//    }
+//  } else {
+//    pos_index = _free_poses.front();
+//    _free_poses.pop_front();
+//  }
+//
+//  auto cur_index = &index[pos_index];
+//  cur_index->first = ch->info.first;
+//  cur_index->last = ch->info.last;
+//
+//  cur_index->flag_bloom = ch->info.flag_bloom;
+//  cur_index->is_readonly = ch->info.is_readonly;
+//  cur_index->is_init = true;
+//
+//  if (!header->is_overwrite) {
+//    cur_index->offset = header->pos;
+//    header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
+//    header->addeded_chunks++;
+//    auto kv = std::make_pair(index_rec.maxTime, pos_index);
+//    _itree.insert(kv);
+//    _mtree[index_rec.first.id].insert(kv);
+//  } else {
+//    auto it = this->_itree.begin();
+//    auto removedTime = it->first;
+//
+//    /// remove from tree and multitree;
+//    auto fres = _mtree.find(removedId);
+//    assert(fres != _mtree.end());
+//    auto mtr_it = fres->second.find(removedTime);
+//    _itree.erase(it);
+//    fres->second.erase(mtr_it);
+//    /// insert new {key,value}
+//    auto kv = std::make_pair(index_rec.maxTime, pos_index);
+//    _itree.insert(kv);
+//    _mtree[index_rec.first.id].insert(kv);
+//  }
+//  // info,buffer,...
+//  auto target_ptr = this->chunks + cur_index->offset;
+//  ChunkIndexInfo *info = (ChunkIndexInfo *)target_ptr;
+//  *info = index_rec;
+//  // memcpy(target_ptr, &index_rec, sizeof(ChunkIndexInfo));
+//  target_ptr += sizeof(ChunkIndexInfo);
+//  memcpy(target_ptr, buffer, sizeof(uint8_t) * header->chunk_size);
+//
+//  iheader->minTime = std::min(iheader->minTime, ch->info.minTime);
+//  iheader->maxTime = std::max(iheader->maxTime, ch->info.maxTime);
+//  cur_index->minTime = std::min(cur_index->minTime, ch->info.minTime);
+//  cur_index->maxTime = std::max(cur_index->maxTime, ch->info.maxTime);
+//
+//  // TODO uncomment this
+//  //  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
+//  //  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
+//  //                    sizeof(Page_ChunkIndex));
+//  //  auto offset = get_chunks_offset(header->chunk_per_storage) +
+//  //                size_t(this->chunks - index[pos_index].offset);
+//  //  this->mmap->flush(offset, sizeof(header->chunk_size));
+//  return true;
+//}
 
 bool Page::is_full() const {
   return this->_free_poses.empty();
@@ -501,4 +501,11 @@ dariadb::IdArray dariadb::storage::Page::getIds() {
     ss.insert(kv.first);
   }
   return dariadb::IdArray{ss.begin(), ss.end()};
+}
+
+dariadb::append_result dariadb::storage::Page::append(const Meas & value){
+	return append_result();
+}
+
+void dariadb::storage::Page::flush(){
 }

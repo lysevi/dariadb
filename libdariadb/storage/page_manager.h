@@ -5,6 +5,7 @@
 #include "chunk_container.h"
 #include "cursor.h"
 #include "mode.h"
+#include "../storage.h"
 
 #include <vector>
 
@@ -12,8 +13,7 @@ namespace dariadb {
 namespace storage {
 
 class PageManager : public utils::NonCopy,
-                    public ChunkContainer,
-                    public ChunkWriter {
+                    public ChunkContainer, public MeasWriter{
 public:
   struct Params {
     std::string path;
@@ -41,8 +41,8 @@ public:
   void flush();
   static PageManager *instance();
 
-  bool append(const Chunk_Ptr &c) override;
-  bool append(const ChunksList &lst) override;
+  //bool append(const Chunk_Ptr &c) override;
+  //bool append(const ChunksList &lst) override;
 
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
@@ -58,10 +58,12 @@ public:
   dariadb::Time minTime();
   dariadb::Time maxTime();
 
+  append_result append(const Meas & value) override;
 private:
   static PageManager *_instance;
   class Private;
   std::unique_ptr<Private> impl;
+  
 };
 }
 }

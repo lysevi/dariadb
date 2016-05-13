@@ -26,16 +26,18 @@ public:
   virtual bool isEnd() const = 0;
   virtual IdArray getIds() const = 0;
   virtual void readNext(ReaderClb *clb) = 0;
+  virtual Reader_ptr clone() const = 0;
+  virtual void reset() = 0; /// need call after each read operation
+							/// (readAll, readByStep, getIds...) to reset
+							/// read pos to begining
+
   virtual void readAll(Meas::MeasList *output);
   virtual void readAll(ReaderClb *clb);
   virtual void readByStep(ReaderClb *clb, dariadb::Time from, dariadb::Time to,
                           dariadb::Time step);
   virtual void readByStep(Meas::MeasList *output, dariadb::Time from,
                           dariadb::Time to, dariadb::Time step);
-  virtual Reader_ptr clone() const = 0;
-  virtual void reset() = 0; /// need call after each read operation
-                            /// (readAll, readByStep, getIds...) to reset
-                            /// read pos to begining
+ 
   virtual ~Reader() {}
 };
 
@@ -54,10 +56,11 @@ public:
 
 class MeasWriter {
 public:
-  virtual append_result append(const Meas::MeasArray &ma);
-  virtual append_result append(const Meas::MeasList &ml);
   virtual append_result append(const Meas &value) = 0;
 
+  virtual append_result append(const Meas::MeasArray &ma);
+  virtual append_result append(const Meas::MeasList &ml);
+  
   virtual void flush() = 0;
 };
 

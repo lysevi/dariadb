@@ -12,16 +12,16 @@
 
 using namespace dariadb::storage;
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
-
-class PageManager::Private : public dariadb::utils::AsyncWorker<Chunk_Ptr> {
+//PM
+class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
 public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param) {
-    this->start_async();
+    /*this->start_async();*/
   }
 
   ~Private() {
-    this->stop_async();
+   /* this->stop_async();*/
 
     if (_cur_page != nullptr) {
       delete _cur_page;
@@ -56,8 +56,9 @@ public:
     }
     return res;
   }
-  void flush() { this->flush_async(); }
-  void call_async(const Chunk_Ptr &ch) override { write_to_page(ch); }
+  //PM
+  void flush() { /*this->flush_async();*/ }
+  //void call_async(const Chunk_Ptr &ch) override { /*write_to_page(ch);*/ }
 
   Page *get_cur_page() {
     if (_cur_page == nullptr) {
@@ -65,14 +66,14 @@ public:
     }
     return _cur_page;
   }
-
-  bool write_to_page(const Chunk_Ptr &ch) {
+  //PM
+  /*bool write_to_page(const Chunk_Ptr &ch) {
     std::lock_guard<std::mutex> lg(_locker_write);
     auto pg = get_cur_page();
     return pg->append(ch);
-  }
+  }*/
 
-  bool append(const Chunk_Ptr &ch) {
+  /*bool append(const Chunk_Ptr &ch) {
     std::lock_guard<std::mutex> lg(_locker);
     this->add_async_data(ch);
     return true;
@@ -85,7 +86,7 @@ public:
       }
     }
     return true;
-  }
+  }*/
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) {
@@ -130,8 +131,8 @@ public:
     }
     return _cur_page->header->addeded_chunks;
   }
-
-  size_t in_queue_size() const { return this->async_queue_size(); }
+  //PM
+  size_t in_queue_size() const { return 0;/*return this->async_queue_size();*/ }
 
   dariadb::Time minTime() {
     std::lock_guard<std::mutex> lg(_locker);
@@ -151,6 +152,11 @@ public:
     }
   }
 
+  append_result append(const Meas & value) {
+	  std::lock_guard<std::mutex> lg(_locker);
+	  auto cur_page = this->get_cur_page();
+	  return cur_page->append(value);
+  }
 protected:
   Page *_cur_page;
   PageManager::Params _param;
@@ -182,14 +188,14 @@ void PageManager::flush() {
 PageManager *PageManager::instance() {
   return _instance;
 }
-
-bool PageManager::append(const Chunk_Ptr &c) {
-  return impl->append(c);
-}
-
-bool PageManager::append(const ChunksList &c) {
-  return impl->append(c);
-}
+//PM
+//bool PageManager::append(const Chunk_Ptr &c) {
+//  return impl->append(c);
+//}
+//
+//bool PageManager::append(const ChunksList &c) {
+//  return impl->append(c);
+//}
 
 // Cursor_ptr PageManager::get_chunks(const dariadb::IdArray&ids, dariadb::Time
 // from, dariadb::Time to, dariadb::Flag flag) {
@@ -233,4 +239,8 @@ dariadb::Time PageManager::minTime() {
 
 dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
+}
+
+dariadb::append_result dariadb::storage::PageManager::append(const Meas & value){
+	return impl->append(value);
 }
