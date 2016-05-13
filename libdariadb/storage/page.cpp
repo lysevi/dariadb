@@ -57,14 +57,15 @@ public:
         auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
         Chunk_Ptr ptr = nullptr;
         if (ptr_to_chunk_info->is_zipped) {
-          ptr = Chunk_Ptr{new ZippedChunk(*ptr_to_chunk_info, ptr_to_buffer,
-                                          link->header->chunk_size)};
+			//PM
+          /*ptr = Chunk_Ptr{new ZippedChunk(*ptr_to_chunk_info, ptr_to_buffer,
+                                          link->header->chunk_size)};*/
         } else {
           // TODO implement not zipped page.
           assert(false);
         }
         Chunk_Ptr c{ptr};
-        assert(c->info.last.time != 0);
+        assert(c->info->last.time != 0);
         cbk->call(c);
         break;
       } else { // end of data;
@@ -396,8 +397,9 @@ ChunksList Page::get_open_chunks() {
       auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
       Chunk_Ptr ptr = nullptr;
       if (ptr_to_chunk_info->is_zipped) {
-        ptr = Chunk_Ptr{new ZippedChunk(*ptr_to_chunk_info, ptr_to_buffer,
-                                        header->chunk_size)};
+		  //PM
+        /*ptr = Chunk_Ptr{new ZippedChunk(*ptr_to_chunk_info, ptr_to_buffer,
+                                        header->chunk_size)};*/
       } else {
         // TODO implement not zipped page.
         assert(false);
@@ -469,12 +471,12 @@ dariadb::storage::Page::chunksBeforeTimePoint(const QueryTimePoint &q) {
   cursor->readAll(&ch_list);
 
   for (auto &v : ch_list) {
-    auto find_res = result.find(v->info.first.id);
+    auto find_res = result.find(v->info->first.id);
     if (find_res == result.end()) {
-      result.insert(std::make_pair(v->info.first.id, v));
+      result.insert(std::make_pair(v->info->first.id, v));
     } else {
-      if (find_res->second->info.maxTime < v->info.maxTime) {
-        result[v->info.first.id] = v;
+      if (find_res->second->info->maxTime < v->info->maxTime) {
+        result[v->info->first.id] = v;
       }
     }
   }
@@ -489,7 +491,7 @@ public:
 
   virtual void call(Chunk_Ptr &ptr) override {
     if (ptr != nullptr) {
-      ids.insert(ptr->info.first.id);
+      ids.insert(ptr->info->first.id);
     }
   }
 };

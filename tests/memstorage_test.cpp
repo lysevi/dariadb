@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(inFilter) {
     BOOST_CHECK(!m.inFlag(10));
   }
 }
-
+/*
 BOOST_AUTO_TEST_CASE(MemoryStorage) {
   {
     auto ms = new dariadb::storage::MemoryStorage{500};
@@ -397,3 +397,4 @@ BOOST_AUTO_TEST_CASE(DropByLimitChunks) {
   BOOST_CHECK(out.size() > size_t(0));
   delete ms;
 }
+*/

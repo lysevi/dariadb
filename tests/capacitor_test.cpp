@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   size_t writes_count = 10000;
   {
 
-    dariadb::storage::Capacitor cap(stor, p);
+    dariadb::storage::Capacitor cap(stor.get(), p);
 
     cap_files =
         dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   }
   {
     p.max_levels = 12;
-    dariadb::storage::Capacitor cap(stor, p);
+    dariadb::storage::Capacitor cap(stor.get(), p);
 
     cap_files =
         dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
     auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
     p.max_levels = 11;
 
-    dariadb::storage::Capacitor cap(stor, p);
+    dariadb::storage::Capacitor cap(stor.get(), p);
 
     dariadb_test::storage_test_check(&cap, 0, 100, 1);
   }
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
     auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
     p.max_levels = 11;
 
-    dariadb::storage::Capacitor cap(stor, p);
+    dariadb::storage::Capacitor cap(stor.get(), p);
 
     auto e = dariadb::Meas::empty();
 
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(CapReadIntervalTest) {
     auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
     p.max_levels = 11;
 
-    dariadb::storage::Capacitor cap(stor, p);
+    dariadb::storage::Capacitor cap(stor.get(), p);
 
     dariadb_test::readIntervalCommonTest(&cap);
   }
@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
   }
   {
     dariadb::storage::Capacitor mbucket{
-        stor, dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
     std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);

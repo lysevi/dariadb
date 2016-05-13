@@ -58,8 +58,7 @@ int main(int argc, char *argv[]) {
     const size_t id_count = 10;
 
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-    dariadb::storage::Capacitor tos{
-        stor, dariadb::storage::Capacitor::Params(cap_B, storage_path)};
+    dariadb::storage::Capacitor tos(stor.get(), dariadb::storage::Capacitor::Params(cap_B, storage_path));
 
     auto m = dariadb::Meas::empty();
 

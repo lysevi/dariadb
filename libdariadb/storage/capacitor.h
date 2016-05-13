@@ -24,7 +24,7 @@ public:
     }
   };
   virtual ~Capacitor();
-  Capacitor(const MeasWriter_ptr stor, const Params &param);
+  Capacitor(MeasWriter* stor, const Params &param);
 
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(Time from, Time to) override;
@@ -41,6 +41,9 @@ public:
   size_t levels_count() const;
   size_t size() const;
 
+  void subscribe(const IdArray &, const Flag &, const ReaderClb_ptr &) {
+	  throw MAKE_EXCEPTION("not supported");
+  }
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

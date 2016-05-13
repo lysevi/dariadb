@@ -103,7 +103,7 @@ public:
     size_t _memvalues_pos;
   };
 #pragma pack(pop)
-  Private(const MeasWriter_ptr stor, const Capacitor::Params &params)
+  Private(MeasWriter *stor, const Capacitor::Params &params)
       : _minTime(std::numeric_limits<dariadb::Time>::max()),
         _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor),
         _params(params), mmap(nullptr), _size(0) {
@@ -260,7 +260,7 @@ public:
   }
 
   struct low_level_stor_pusher {
-    MeasWriter_ptr _stor;
+    MeasWriter* _stor;
     void push_back(const Meas &m) { _stor->append(m); }
   };
 
@@ -430,7 +430,7 @@ public:
 protected:
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
-  MeasWriter_ptr _stor;
+  MeasWriter *_stor;
   Capacitor::Params _params;
 
   dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
@@ -446,7 +446,7 @@ protected:
 
 Capacitor::~Capacitor() {}
 
-Capacitor::Capacitor(const MeasWriter_ptr stor, const Params &params)
+Capacitor::Capacitor(MeasWriter *stor, const Params &params)
     : _Impl(new Capacitor::Private(stor, params)) {}
 
 dariadb::Time Capacitor::minTime() {

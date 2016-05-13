@@ -6,45 +6,22 @@
 namespace dariadb {
 namespace storage {
 
-class MemoryStorage : public BaseStorage, public ChunkWriter {
+class MemoryStorage : public MeasSource{
 public:
-  MemoryStorage(size_t size);
+  MemoryStorage();
   virtual ~MemoryStorage();
 
-  using BaseStorage::append;
-  using BaseStorage::readInterval;
-  using BaseStorage::readInTimePoint;
+  Reader_ptr readInterval(Time from, Time to) override;
+  Reader_ptr readInTimePoint(Time time_point) override;
+  Reader_ptr readInterval(const QueryInterval &q) override;
+  Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
 
+  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
+  
   Time minTime() override;
   Time maxTime() override;
-  append_result append(const Meas &value) override;
 
-  void subscribe(const IdArray &ids, const Flag &flag,
-                 const ReaderClb_ptr &clbk) override;
-  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
-  void flush() override;
-
-  size_t size() const;
-  size_t chunks_size() const;
-  size_t chunks_total_size() const;
-
-  // drop old fulled chunks.
-  ChunksList drop_old_chunks(const dariadb::Time min_time);
-  ChunksList drop_old_chunks_by_limit(const size_t max_limit);
-  dariadb::storage::ChunksList drop_all();
-  // ChunkContainer
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                  dariadb::Time *maxResult) override;
-  Cursor_ptr chunksByIterval(const QueryInterval &query) override;
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) override;
-  IdArray getIds() override;
-
-  bool append(const ChunksList &clist) override;
-  bool append(const Chunk_Ptr &c) override;
-
-  size_t queue_size() const;
-
-  void set_chunkWriter(ChunkWriter *cw);
+  void set_chunkSource(ChunkContainer *cw);
 
 protected:
   class Private;

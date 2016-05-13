@@ -38,13 +38,11 @@ void show_info(dariadb::storage::Engine *storage) {
     auto writes_per_sec =
         append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
     auto queue_sizes = storage->queue_size();
-    std::cout << "\rin memory chunks: " << storage->chunks_in_memory()
+    std::cout << "\r"
               << " in disk chunks: "
               << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
               << " in queue: (p:" << queue_sizes.page
-              << " m:" << queue_sizes.mem << " cap:" << queue_sizes.cap << ")"
-              << " pooled: "
-              << dariadb::storage::ChunkPool::instance()->polled_chunks()
+              << " cap:" << queue_sizes.cap << ")"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
@@ -83,7 +81,7 @@ int main(int argc, char *argv[]) {
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
 
-    dariadb::storage::BaseStorage_ptr ms{raw_ptr};
+    dariadb::storage::MeasStorage_ptr ms{raw_ptr};
 
     append_count = 0;
     stop_info = false;
@@ -117,13 +115,11 @@ int main(int argc, char *argv[]) {
     }
 
     auto queue_sizes = raw_ptr->queue_size();
-    std::cout << "\rin memory chunks: " << raw_ptr->chunks_in_memory()
+    std::cout << "\r"
               << " in disk chunks: "
               << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
               << " in queue: (p:" << queue_sizes.page
-              << " m:" << queue_sizes.mem << " cap:" << queue_sizes.cap << ")"
-              << " pooled: "
-              << dariadb::storage::ChunkPool::instance()->polled_chunks()
+              << " cap:" << queue_sizes.cap << ")"
               << std::endl;
 
     {

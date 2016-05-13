@@ -28,6 +28,8 @@ struct ChunkIndexInfo {
 
   bool is_dropped;
   bool is_zipped;
+
+  size_t size;
 };
 #pragma pack(pop)
 
@@ -42,9 +44,9 @@ public:
   using Reader_Ptr = std::shared_ptr<Chunk::Reader>;
 
   typedef uint8_t *u8vector;
-  Chunk(size_t size, Meas first_m);
-  Chunk(const ChunkIndexInfo &index, const uint8_t *buffer,
-        const size_t buffer_length);
+
+  Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size,  Meas first_m);
+  Chunk(ChunkIndexInfo *index, uint8_t *buffer);
   virtual ~Chunk();
 
   virtual bool append(const Meas &m) = 0;
@@ -54,21 +56,18 @@ public:
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
 
-  ChunkIndexInfo info;
+  ChunkIndexInfo *info;
   u8vector _buffer_t;
-  size_t _size;
+  
 
   utils::Locker _locker;
   compression::BinaryBuffer_Ptr bw;
-  static void *operator new(std::size_t sz);
-  static void operator delete(void *ptr, std::size_t sz);
 };
 
 class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
 public:
-  ZippedChunk(size_t size, Meas first_m);
-  ZippedChunk(const ChunkIndexInfo &index, const uint8_t *buffer,
-              const size_t buffer_length);
+  ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m);
+  ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer);
   ~ZippedChunk();
   bool is_full() const override { return c_writer.is_full(); }
   bool append(const Meas &m) override;
@@ -83,26 +82,5 @@ typedef std::map<Id, Chunk_Ptr> IdToChunkMap;
 typedef std::map<Id, ChunksList> ChunkMap;
 typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
 
-const size_t ChunkPool_default_max_size = 100;
-
-// TODO need unit test.
-class ChunkPool {
-private:
-  ChunkPool();
-
-public:
-  ~ChunkPool();
-  static void start();
-  static void stop();
-  static ChunkPool *instance();
-
-  void *alloc_chunk(std::size_t sz);
-  void free_chunk(void *ptr, std::size_t sz);
-  size_t polled_chunks();
-
-private:
-  static std::unique_ptr<ChunkPool> _instance;
-  utils::Pool _chunks;
-};
 }
 }

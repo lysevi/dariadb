@@ -30,7 +30,7 @@ public:
   size_t count_ig;
 };
 
-void writer_1(dariadb::storage::BaseStorage_ptr ms) {
+void writer_1(dariadb::storage::MeasStorage_ptr ms) {
   auto m = dariadb::Meas::empty();
   dariadb::Time t = dariadb::timeutil::current_time();
   for (dariadb::Id i = 0; i < 32768; i += 1) {
@@ -46,7 +46,7 @@ void writer_1(dariadb::storage::BaseStorage_ptr ms) {
 std::atomic_long writen{0};
 
 void writer_2(dariadb::Id id_from, size_t id_per_thread,
-              dariadb::storage::BaseStorage_ptr ms) {
+              dariadb::storage::MeasStorage_ptr ms) {
   auto m = dariadb::Meas::empty();
   std::random_device r;
   std::default_random_engine e1(r());
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
-    dariadb::storage::BaseStorage_ptr ms{raw_ptr};
+    dariadb::storage::MeasStorage_ptr ms{raw_ptr};
     auto start = clock();
 
     writer_1(ms);
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
                                             chunk_per_storage, chunk_size),
       dariadb::storage::Capacitor::Params(cap_B, storage_path),
       dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
-  dariadb::storage::BaseStorage_ptr ms{raw_ptr_ds};
+  dariadb::storage::MeasStorage_ptr ms{raw_ptr_ds};
 
   { // 2.
     const size_t threads_count = 16;
@@ -137,13 +137,11 @@ int main(int argc, char *argv[]) {
     raw_ptr_ds->flush();
   }
   auto queue_sizes = raw_ptr_ds->queue_size();
-  std::cout << "\rin memory chunks: " << raw_ptr_ds->chunks_in_memory()
+  std::cout << "\r"
             << " in disk chunks: "
             << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
-            << " in queue: (p:" << queue_sizes.page << " m:" << queue_sizes.mem
+            << " in queue: (p:" << queue_sizes.page
             << " cap:" << queue_sizes.cap << ")"
-            << " pooled: "
-            << dariadb::storage::ChunkPool::instance()->polled_chunks()
             << std::endl;
   /* {
        auto ids=ms->getIds();
@@ -157,7 +155,7 @@ int main(int argc, char *argv[]) {
        std::cout << "readed: " << clbk->count << std::endl;
        std::cout << "time: " << elapsed << std::endl;
    }*/
-  { // 3
+  /*{ // 3
 
     std::random_device r;
     std::default_random_engine e1(r());
@@ -195,7 +193,7 @@ int main(int argc, char *argv[]) {
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / queries_count;
     std::cout << "3. time point: " << elapsed << " readed: " << raw_ptr->count
               << " ignored: " << raw_ptr->count_ig << std::endl;
-  }
+  }*/
   { // 4
     std::random_device r;
     std::default_random_engine e1(r());

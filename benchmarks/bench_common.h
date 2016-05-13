@@ -9,7 +9,7 @@ const size_t iteration_count = 3000000;
 
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             std::atomic_long *append_count,
-                            dariadb::storage::BaseStorage_ptr ms) {
+                            dariadb::storage::MeasStorage_ptr ms) {
   auto m = dariadb::Meas::empty();
   m.time = dariadb::timeutil::current_time();
   for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
