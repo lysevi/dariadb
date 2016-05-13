@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
       auto from = std::min(time_point1, time_point2);
       auto to = std::max(time_point1, time_point2);
       auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(
-          dariadb::IdArray{}, dariadb::Flag(0), from, to);
+		  dariadb::storage::QueryInterval(from, to));
       cursor->readAll(clbk);
       cursor = nullptr;
     }
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < size_t(100); i++) {
       auto time_point = uniform_dist(e1);
       dariadb::storage::PageManager::instance()->chunksBeforeTimePoint(
-          dariadb::IdArray{}, 0, time_point);
+		  dariadb::storage::QueryTimePoint(time_point));
     }
 
     elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;

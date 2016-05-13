@@ -31,15 +31,11 @@ public:
 
   void flush() override {}
 
-  dariadb::storage::Cursor_ptr chunksByIterval(const dariadb::IdArray &,
-                                               dariadb::Flag, dariadb::Time,
-                                               dariadb::Time) override {
+  dariadb::storage::Cursor_ptr chunksByIterval(const dariadb::storage::QueryInterval&query) override {
     return nullptr;
   }
 
-  dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::IdArray &,
-                                                       dariadb::Flag,
-                                                       dariadb::Time) override {
+  dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::storage::QueryTimePoint&) override {
     return dariadb::storage::IdToChunkMap{};
   }
   dariadb::IdArray getIds() override { return dariadb::IdArray{}; }

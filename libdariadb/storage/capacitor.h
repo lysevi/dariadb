@@ -29,10 +29,8 @@ public:
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(Time from, Time to) override;
   Reader_ptr readInTimePoint(Time time_point) override;
-  Reader_ptr readInterval(const IdArray &ids, Flag flag, Time from,
-                                  Time to) override;
-  Reader_ptr readInTimePoint(const IdArray &ids, Flag flag,
-                                     Time time_point) override;
+  Reader_ptr readInterval(const QueryInterval&q) override;
+  Reader_ptr readInTimePoint(const QueryTimePoint&q) override;
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag)override;
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;

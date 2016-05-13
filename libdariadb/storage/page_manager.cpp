@@ -94,20 +94,18 @@ public:
     return p->minMaxTime(id, minResult, maxResult);
   }
 
-  Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from,
-                             Time to) {
+  Cursor_ptr chunksByIterval(const QueryInterval&query) {
     std::lock_guard<std::mutex> lg(_locker);
     auto p = get_cur_page();
-    return p->chunksByIterval(ids, flag, from, to);
+    return p->chunksByIterval(query);
   }
 
-  IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag,
-                                     Time timePoint) {
+  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) {
     std::lock_guard<std::mutex> lg(_locker);
 
     auto cur_page = this->get_cur_page();
 
-    return cur_page->chunksBeforeTimePoint(ids, flag, timePoint);
+    return cur_page->chunksBeforeTimePoint(q);
   }
 
   dariadb::IdArray getIds() {
@@ -204,14 +202,13 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 }
 
 dariadb::storage::Cursor_ptr
-PageManager::chunksByIterval(const dariadb::IdArray &ids, dariadb::Flag flag,
-                             dariadb::Time from, dariadb::Time to) {
-  return impl->chunksByIterval(ids, flag, from, to);
+PageManager::chunksByIterval(const QueryInterval&query) {
+  return impl->chunksByIterval(query);
 }
 
 dariadb::storage::IdToChunkMap PageManager::chunksBeforeTimePoint(
-    const dariadb::IdArray &ids, dariadb::Flag flag, dariadb::Time timePoint) {
-  return impl->chunksBeforeTimePoint(ids, flag, timePoint);
+	const QueryTimePoint&q) {
+  return impl->chunksBeforeTimePoint(q);
 }
 
 dariadb::IdArray PageManager::getIds() {

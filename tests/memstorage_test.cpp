@@ -89,13 +89,13 @@ void thread_reader(dariadb::Id id, dariadb::Time from, dariadb::Time to,
   }
 
   if (to == 0) {
-    auto rdr = ms->readInTimePoint(ids, 0, from);
+    auto rdr = ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, from));
     dariadb::Meas::MeasList out;
     rdr->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), expected);
     assert(out.size() == expected);
   } else {
-    auto rdr = ms->readInterval(ids, 0, from, to);
+    auto rdr = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to));
     dariadb::Meas::MeasList out;
     rdr->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), expected);

@@ -4,6 +4,7 @@
 #include "chunk.h"
 #include "cursor.h"
 #include "mode.h"
+#include "query_param.h"
 namespace dariadb {
 namespace storage {
 
@@ -16,8 +17,8 @@ public:
 class ChunkContainer {
 public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) = 0;
-  virtual Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from, Time to) = 0;
-  virtual IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag, Time timePoint) = 0;
+  virtual Cursor_ptr chunksByIterval(const QueryInterval&query) = 0;
+  virtual IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) = 0;
   virtual IdArray getIds() = 0;
   virtual ~ChunkContainer();
 };

@@ -164,43 +164,40 @@ append_result MeasWriter::append(const Meas::MeasList &ml) {
 }
 
 Reader_ptr BaseStorage::readInterval(Time from, Time to) {
-  static dariadb::IdArray empty_id{};
-  return this->readInterval(empty_id, 0, from, to);
+  return this->readInterval(QueryInterval(from, to));
 }
 
 Reader_ptr BaseStorage::readInTimePoint(Time time_point) {
   static dariadb::IdArray empty_id{};
-  return this->readInTimePoint(empty_id, 0, time_point);
+  return this->readInTimePoint(QueryTimePoint(time_point));
 }
 
-Reader_ptr BaseStorage::readInterval(const IdArray &ids, Flag flag, Time from,
-                                     Time to) {
+Reader_ptr BaseStorage::readInterval(const QueryInterval&q) {
   Reader_ptr res;
   InnerReader *res_raw = nullptr;
-  if (from > this->minTime()) {
-    res = this->readInTimePoint(ids, flag, from);
+  if (q.from > this->minTime()) {
+    res = this->readInTimePoint(QueryTimePoint(q.ids, q.flag, q.from));
     res_raw = dynamic_cast<InnerReader *>(res.get());
-    res_raw->_from = from;
-    res_raw->_to = to;
-    res_raw->_flag = flag;
+    res_raw->_from = q.from;
+    res_raw->_to = q.to;
+    res_raw->_flag = q.flag;
   } else {
-    res = std::make_shared<InnerReader>(flag, from, to);
+    res = std::make_shared<InnerReader>(q.flag, q.from, q.to);
     res_raw = dynamic_cast<InnerReader *>(res.get());
   }
 
-  auto cursor = chunksByIterval(ids, flag, from, to);
+  auto cursor = chunksByIterval(q);
   res_raw->add(cursor);
   res_raw->is_time_point_reader = false;
   return res;
 }
 
-Reader_ptr BaseStorage::readInTimePoint(const IdArray &ids, Flag flag,
-                                        Time time_point) {
-  auto res = std::make_shared<InnerReader>(flag, time_point, 0);
+Reader_ptr BaseStorage::readInTimePoint(const QueryTimePoint&q) {
+  auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
   res->is_time_point_reader = true;
 
-  auto chunks_before = chunksBeforeTimePoint(ids, flag, time_point);
-  IdArray target_ids{ids};
+  auto chunks_before = chunksBeforeTimePoint(q);
+  IdArray target_ids{q.ids};
   if (target_ids.size() == 0) {
     target_ids = getIds();
   }

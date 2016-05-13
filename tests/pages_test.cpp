@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
     PageManager::instance()->flush();
     PageManager::instance()
-        ->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), 0, t)
+        ->chunksByIterval(dariadb::storage::QueryInterval(0, t))
         ->readAll(&all_chunks);
     auto readed_t = dariadb::Time(0);
 
@@ -99,8 +99,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       dariadb::Time end_time(t / 2);
       dariadb::storage::ChunksList chunk_list;
       PageManager::instance()
-          ->chunksByIterval(dariadb::IdArray{}, dariadb::Flag(0), start_time,
-                            end_time)
+          ->chunksByIterval(dariadb::storage::QueryInterval(start_time,end_time))
           ->readAll(&chunk_list);
       BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2)));
 
@@ -109,7 +108,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       }
 
       auto chunks_map = PageManager::instance()->chunksBeforeTimePoint(
-          dariadb::IdArray{}, 0, end_time);
+		  dariadb::storage::QueryTimePoint(end_time));
       BOOST_CHECK_EQUAL(chunks_map.size(), size_t(id_count));
 
       for (auto &kv : chunks_map) {
@@ -135,8 +134,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     t = add_chunk(dariadb::Id(1), t, chunks_size);
 
     PageManager::instance()->flush();
-    auto cursor = PageManager::instance()->chunksByIterval(
-        dariadb::IdArray{}, dariadb::Flag(0), 0, t);
+    auto cursor = PageManager::instance()->chunksByIterval(dariadb::storage::QueryInterval(0, t));
     dariadb::storage::ChunksList all_chunks;
     cursor->readAll(&all_chunks);
     BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
@@ -209,7 +207,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
   // need to load current page;
   auto mintime_chunks = PageManager::instance()->chunksBeforeTimePoint(
-      dariadb::IdArray{}, 0, PageManager::instance()->minTime());
+	  dariadb::storage::QueryTimePoint(PageManager::instance()->minTime()));
   BOOST_CHECK_GE(mintime_chunks.size(), size_t(0));
 
   auto chunks_before = PageManager::instance()->chunks_in_cur_page();

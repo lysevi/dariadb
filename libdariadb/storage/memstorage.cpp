@@ -323,12 +323,11 @@ public:
     return false;
   }
 
-  Cursor_ptr chunksByIterval(const IdArray &ids, Flag flag, Time from,
-                             Time to) {
+  Cursor_ptr chunksByIterval(const QueryInterval&q) {
 
     ChunksList result{};
 
-    IdArray id_a = ids;
+    IdArray id_a = q.ids;
     if (id_a.empty()) {
       id_a = this->getIds();
     }
@@ -337,8 +336,8 @@ public:
       auto mt_iter = _multitree.find(i);
       if (mt_iter != _multitree.end()) {
         if (mt_iter->second.size() != 0) {
-          auto resf = mt_iter->second.get_lower_bound(from);
-          auto rest = mt_iter->second.get_upper_bound(to);
+          auto resf = mt_iter->second.get_lower_bound(q.from);
+          auto rest = mt_iter->second.get_upper_bound(q.to);
 
           for (auto it = resf; it != rest; ++it) {
             auto ch = it->second;
@@ -348,8 +347,8 @@ public:
             if (ch->info.first.id != i) {
               continue;
             }
-            if ((check_chunk_flag(flag, ch)) &&
-                (check_chunk_to_interval(from, to, ch))) {
+            if ((check_chunk_flag(q.flag, ch)) &&
+                (check_chunk_to_interval(q.from, q.to, ch))) {
               result.push_back(ch);
             }
           }
@@ -362,8 +361,8 @@ public:
       _locker_free_chunks.unlock();
 
       if (fres != _free_chunks.end()) {
-        if ((check_chunk_flag(flag, fres->second)) &&
-            (check_chunk_to_interval(from, to, fres->second))) {
+        if ((check_chunk_flag(q.flag, fres->second)) &&
+            (check_chunk_to_interval(q.from, q.to, fres->second))) {
           result.push_back(fres->second);
         }
       }
@@ -375,11 +374,10 @@ public:
     return Cursor_ptr{raw};
   }
 
-  IdToChunkMap chunksBeforeTimePoint(const IdArray &ids, Flag flag,
-                                     Time timePoint) {
+  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) {
     IdToChunkMap result;
 
-    IdArray id_a = ids;
+    IdArray id_a = q.ids;
     if (id_a.empty()) {
       id_a = this->getIds();
     }
@@ -388,7 +386,7 @@ public:
         std::lock_guard<std::mutex> lg(_locker_free_chunks);
         auto fc_res = _free_chunks.find(i);
         if (fc_res != _free_chunks.end()) {
-          if (fc_res->second->info.minTime <= timePoint) {
+          if (fc_res->second->info.minTime <= q.time_point) {
             result[fc_res->second->info.first.id] = fc_res->second;
             continue;
           }
@@ -399,7 +397,7 @@ public:
         auto mt_res = _multitree.find(i);
         if (mt_res != _multitree.end()) {
           if (mt_res->second.size() > size_t(0)) {
-            auto rest = mt_res->second.get_upper_bound(timePoint);
+            auto rest = mt_res->second.get_upper_bound(q.time_point);
             auto resf = mt_res->second.begin();
             if (rest != mt_res->second.begin()) {
               resf = rest;
@@ -410,8 +408,8 @@ public:
             for (auto it = resf; it != rest; ++it) {
               auto cur_chunk = it->second;
 
-              if (check_chunk_to_qyery(ids, flag, cur_chunk)) {
-                if (cur_chunk->info.minTime <= timePoint) {
+              if (check_chunk_to_qyery(q.ids, q.flag, cur_chunk)) {
+                if (cur_chunk->info.minTime <= q.time_point) {
                   result[cur_chunk->info.first.id] = cur_chunk;
                 }
               }
@@ -539,14 +537,12 @@ dariadb::storage::ChunksList MemoryStorage::drop_all() {
   return _Impl->drop_all();
 }
 
-Cursor_ptr MemoryStorage::chunksByIterval(const IdArray &ids, Flag flag,
-                                          Time from, Time to) {
-  return _Impl->chunksByIterval(ids, flag, from, to);
+Cursor_ptr MemoryStorage::chunksByIterval(const QueryInterval&query) {
+  return _Impl->chunksByIterval(query);
 }
 
-IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
-                                                  Time timePoint) {
-  return _Impl->chunksBeforeTimePoint(ids, flag, timePoint);
+IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const QueryTimePoint&q) {
+  return _Impl->chunksBeforeTimePoint(q);
 }
 
 dariadb::IdArray MemoryStorage::getIds() {
