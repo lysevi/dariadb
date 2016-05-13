@@ -1,4 +1,4 @@
-#include "union_storage.h"
+#include "engine.h"
 #include "storage/capacitor.h"
 #include "storage/memstorage.h"
 #include "storage/page_manager.h"
@@ -10,11 +10,11 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-class UnionStorage::Private {
+class Engine::Private {
 public:
   Private(const PageManager::Params &page_storage_params,
           dariadb::storage::Capacitor::Params cap_params,
-          dariadb::storage::UnionStorage::Limits limits)
+          dariadb::storage::Engine::Limits limits)
       : mem_storage{new MemoryStorage(page_storage_params.chunk_size)},
         _page_manager_params(page_storage_params), _cap_params(cap_params),
         _limits(limits) {
@@ -53,7 +53,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    if (!mem_cap->append(value).writed!=1) {
+    if (mem_cap->append(value).writed!=1) {
       // if(mem_storage_raw->append(value).writed!=1){
       assert(false);
       result.ignored++;
@@ -95,7 +95,7 @@ public:
     PageManager::instance()->flush();
   }
 
-  UnionStorage::QueueSizes queue_size() const {
+  Engine::QueueSizes queue_size() const {
     QueueSizes result;
     result.page = PageManager::instance()->in_queue_size();
     result.mem = this->mem_storage_raw->queue_size();
@@ -312,68 +312,68 @@ public:
 
   storage::PageManager::Params _page_manager_params;
   dariadb::storage::Capacitor::Params _cap_params;
-  dariadb::storage::UnionStorage::Limits _limits;
+  dariadb::storage::Engine::Limits _limits;
   mutable std::recursive_mutex _locker;
 };
 
-UnionStorage::UnionStorage(storage::PageManager::Params page_manager_params,
+Engine::Engine(storage::PageManager::Params page_manager_params,
                            dariadb::storage::Capacitor::Params cap_params,
-                           const dariadb::storage::UnionStorage::Limits &limits)
+                           const dariadb::storage::Engine::Limits &limits)
     : _impl{
-          new UnionStorage::Private(page_manager_params, cap_params, limits)} {}
+          new Engine::Private(page_manager_params, cap_params, limits)} {}
 
-UnionStorage::~UnionStorage() {
+Engine::~Engine() {
   _impl = nullptr;
 }
 
-Time UnionStorage::minTime() {
+Time Engine::minTime() {
   return _impl->minTime();
 }
 
-Time UnionStorage::maxTime() {
+Time Engine::maxTime() {
   return _impl->maxTime();
 }
 
-append_result UnionStorage::append(const Meas &value) {
+append_result Engine::append(const Meas &value) {
   return _impl->append(value);
 }
 
-void UnionStorage::subscribe(const IdArray &ids, const Flag &flag,
+void Engine::subscribe(const IdArray &ids, const Flag &flag,
                              const ReaderClb_ptr &clbk) {
   _impl->subscribe(ids, flag, clbk);
 }
 
-Reader_ptr UnionStorage::currentValue(const IdArray &ids, const Flag &flag) {
+Reader_ptr Engine::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
-void UnionStorage::flush() {
+void Engine::flush() {
   _impl->flush();
 }
 
-bool UnionStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                               dariadb::Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-Cursor_ptr UnionStorage::chunksByIterval(const IdArray &ids, Flag flag,
+Cursor_ptr Engine::chunksByIterval(const IdArray &ids, Flag flag,
                                          Time from, Time to) {
   return _impl->chunksByIterval(ids, flag, from, to);
 }
 
-IdToChunkMap UnionStorage::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
+IdToChunkMap Engine::chunksBeforeTimePoint(const IdArray &ids, Flag flag,
                                                  Time timePoint) {
   return _impl->chunksBeforeTimePoint(ids, flag, timePoint);
 }
 
-IdArray UnionStorage::getIds() {
+IdArray Engine::getIds() {
   return _impl->getIds();
 }
 
-size_t UnionStorage::chunks_in_memory() const {
+size_t Engine::chunks_in_memory() const {
   return _impl->chunks_in_memory();
 }
 
-UnionStorage::QueueSizes UnionStorage::queue_size() const {
+Engine::QueueSizes Engine::queue_size() const {
   return _impl->queue_size();
 }

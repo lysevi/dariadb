@@ -27,7 +27,7 @@ public:
   size_t count;
 };
 
-void show_info(dariadb::storage::UnionStorage *storage) {
+void show_info(dariadb::storage::Engine *storage) {
   clock_t t0 = clock();
   auto all_writes =
       dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
@@ -77,12 +77,12 @@ int main(int argc, char *argv[]) {
 
     auto start_time = dariadb::timeutil::current_time();
 
-    auto raw_ptr = new dariadb::storage::UnionStorage(
+    auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+        dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
 
     dariadb::storage::BaseStorage_ptr ms{raw_ptr};
 

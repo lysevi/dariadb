@@ -4,7 +4,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <timeutil.h>
-#include <union_storage.h>
+#include <engine.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
 
@@ -15,7 +15,7 @@ public:
   size_t count;
 };
 
-BOOST_AUTO_TEST_CASE(UnionStorage) {
+BOOST_AUTO_TEST_CASE(Engine) {
   const std::string storage_path = "testStorage";
   { // All values must be placed in the page. Without overwriting the old.
     const size_t chunk_per_storage = 10000;
@@ -27,12 +27,12 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::UnionStorage(
+    dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::UnionStorage::Limits(old_mem_chunks, 0))};
+        dariadb::storage::Engine::Limits(old_mem_chunks, 0))};
 
     auto e = dariadb::Meas::empty();
     // max time always
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
+BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
@@ -105,12 +105,12 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::UnionStorage(
+    dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
 		dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::UnionStorage::Limits(0, 10))};
+        dariadb::storage::Engine::Limits(0, 10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
 
@@ -118,12 +118,12 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
         dariadb::storage::PageManager::instance()->chunks_in_cur_page() > 0);
   }
   {
-    dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::UnionStorage(
+    dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
 		dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::UnionStorage::Limits(0, 0))};
+        dariadb::storage::Engine::Limits(0, 0))};
 
     dariadb::Meas::MeasList mlist;
     ms->currentValue(dariadb::IdArray{}, 0)->readAll(&mlist);
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(UnionStorage_common_test) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
+BOOST_AUTO_TEST_CASE(Engine_drop_chunks) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 1000;
   const size_t chunk_size = 100;
@@ -146,12 +146,12 @@ BOOST_AUTO_TEST_CASE(UnionStorage_drop_chunks) {
     }
 
     const size_t max_mem_chunks = 5;
-    auto raw_ptr = new dariadb::storage::UnionStorage(
+    auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
 		dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::UnionStorage::Limits(0, max_mem_chunks));
+        dariadb::storage::Engine::Limits(0, max_mem_chunks));
 
     dariadb::storage::BaseStorage_ptr ms{raw_ptr};
 

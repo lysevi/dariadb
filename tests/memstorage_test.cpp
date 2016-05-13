@@ -6,7 +6,7 @@
 #include <storage/bloom_filter.h>
 #include <storage/memstorage.h>
 #include <timeutil.h>
-#include <union_storage.h>
+#include <engine.h>
 
 #include <flags.h>
 

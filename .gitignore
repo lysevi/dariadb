@@ -3,6 +3,7 @@ packages.config
 .vs
 *.aof
 *.page
+*.pagei
 *.dll
 *.lib
 *-prefix

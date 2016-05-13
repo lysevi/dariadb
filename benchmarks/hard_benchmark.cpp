@@ -89,12 +89,12 @@ int main(int argc, char *argv[]) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    auto raw_ptr = new dariadb::storage::UnionStorage(
+    auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+        dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
     dariadb::storage::BaseStorage_ptr ms{raw_ptr};
     auto start = clock();
 
@@ -108,12 +108,12 @@ int main(int argc, char *argv[]) {
     dariadb::utils::fs::rm(storage_path);
   }
 
-  auto raw_ptr_ds = new dariadb::storage::UnionStorage(
+  auto raw_ptr_ds = new dariadb::storage::Engine(
       dariadb::storage::PageManager::Params(storage_path,
                                             dariadb::storage::MODE::SINGLE,
                                             chunk_per_storage, chunk_size),
       dariadb::storage::Capacitor::Params(cap_B, storage_path),
-      dariadb::storage::UnionStorage::Limits(old_mem_chunks, max_mem_chunks));
+      dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
   dariadb::storage::BaseStorage_ptr ms{raw_ptr_ds};
 
   { // 2.

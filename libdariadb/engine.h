@@ -10,7 +10,7 @@
 
 namespace dariadb {
 namespace storage {
-class UnionStorage : public BaseStorage {
+class Engine : public BaseStorage {
 public:
   struct QueueSizes {
     size_t page; /// queue length in PageManager
@@ -28,16 +28,16 @@ public:
       max_mem_chunks = max_mem;
     }
   };
-  UnionStorage() = delete;
-  UnionStorage(const UnionStorage &) = delete;
-  UnionStorage &operator=(const UnionStorage &) = delete;
-  virtual ~UnionStorage();
+  Engine() = delete;
+  Engine(const Engine &) = delete;
+  Engine &operator=(const Engine &) = delete;
+  virtual ~Engine();
 
   ///
-  /// \brief UnionStorage
+  /// \brief Engine
   /// \param page_manager_params - params of page manager (PageManager)
   /// \param cap_params - capacitor params  (Capacitor)
-  UnionStorage(storage::PageManager::Params page_manager_params,
+  Engine(storage::PageManager::Params page_manager_params,
                dariadb::storage::Capacitor::Params cap_params,
                const Limits &limits);
 
