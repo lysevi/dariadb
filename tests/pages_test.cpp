@@ -19,24 +19,20 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   PageManager::stop();
 }
 
-dariadb::Time add_chunk(dariadb::Id id, dariadb::Time t, size_t chunks_size) {
+dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count) {
   dariadb::Meas first;
   first.id = id;
   first.time = t;
-  dariadb::storage::Chunk_Ptr ch =
-      std::make_shared<dariadb::storage::ZippedChunk>(chunks_size, first);
 
-  for (int i = 0;; i++, t++) {
+  for (int i = 0;i<count; i++, t++) {
     first.flag = dariadb::Flag(i);
     first.time = t;
     first.value = dariadb::Value(i);
-    if (!ch->append(first)) {
-      break;
-    }
+	
+	auto res = PageManager::instance()->append(first);
+	BOOST_CHECK(res.writed==1);
   }
 
-  //auto res = PageManager::instance()->append(ch);
-  //BOOST_CHECK(res);
   return t;
 }
 
@@ -58,10 +54,9 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
   dariadb::Id id(0);
   const dariadb::Id id_count(2);
-  for (size_t cur_chunk_num = 0; cur_chunk_num < chunks_count;
-       cur_chunk_num++) {
+  for (size_t i = 0; i < chunks_count; i++) {
     auto cur_id = id % id_count;
-    t = add_chunk(cur_id, t, chunks_size);
+    t = add_meases(cur_id, t, chunks_size);
     id++;
   }
 
@@ -130,29 +125,6 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
   BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size() == 2); // page +index
 
-  { // rewrite oldes chunk
-    dariadb::Time minTime_replaced(t);
-    t = add_chunk(dariadb::Id(1), t, chunks_size);
-
-    PageManager::instance()->flush();
-    auto cursor = PageManager::instance()->chunksByIterval(
-        dariadb::storage::QueryInterval(0, t));
-    dariadb::storage::ChunksList all_chunks;
-    cursor->readAll(&all_chunks);
-    BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
-
-    for (dariadb::storage::Chunk_Ptr ch : all_chunks) {
-      minTime_replaced = std::min(minTime_replaced, ch->info.minTime);
-    }
-
-    BOOST_CHECK(minTime_replaced > minTime);
-
-    // reset_pos test.
-    cursor->reset_pos();
-    all_chunks.clear();
-    cursor->readAll(&all_chunks);
-    BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
-  }
   PageManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
