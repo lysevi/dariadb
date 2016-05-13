@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
       dariadb::utils::fs::rm(storagePath);
     }
     dariadb::storage::PageManager::start(dariadb::storage::PageManager::Params(
-        storagePath, dariadb::storage::MODE::SINGLE, chunks_count,
+        storagePath, chunks_count,
         chunks_size));
 
     auto start = clock();

@@ -40,8 +40,7 @@ public:
       dariadb::utils::fs::mkdir(_param.path);
     }
 
-    std::string page_name =
-        ((_param.mode == MODE::SINGLE) ? "single.page" : "_.page");
+    std::string page_name = "single.page";
     std::string file_name =
         dariadb::utils::fs::append_path(_param.path, page_name);
 
@@ -50,7 +49,7 @@ public:
     if (!utils::fs::path_exists(file_name)) {
       auto sz = calc_page_size();
       res = Page::create(file_name, sz, _param.chunk_per_storage,
-                         _param.chunk_size, _param.mode);
+                         _param.chunk_size);
     } else {
       res = Page::open(file_name);
     }

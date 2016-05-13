@@ -17,13 +17,11 @@ class PageManager : public utils::NonCopy,
 public:
   struct Params {
     std::string path;
-    MODE mode;
     uint32_t chunk_per_storage;
     uint32_t chunk_size;
-    Params(const std::string storage_path, MODE write_mode,
-           size_t chunks_per_storage, size_t one_chunk_size) {
+    Params(const std::string storage_path, size_t chunks_per_storage,
+           size_t one_chunk_size) {
       path = storage_path;
-      mode = write_mode;
       chunk_per_storage = uint32_t(chunks_per_storage);
       chunk_size = uint32_t(one_chunk_size);
     }

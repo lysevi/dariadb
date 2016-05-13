@@ -79,7 +79,6 @@ int main(int argc, char *argv[]) {
 
     auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
-                                              dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));

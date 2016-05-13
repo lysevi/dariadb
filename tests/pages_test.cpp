@@ -14,7 +14,7 @@ using dariadb::storage::PageManager;
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   const std::string storagePath = "testStorage";
   PageManager::start(
-      PageManager::Params(storagePath, dariadb::storage::MODE::SINGLE, 1, 1));
+      PageManager::Params(storagePath, 1, 1));
   BOOST_CHECK(PageManager::instance() != nullptr);
   PageManager::stop();
 }
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
   }
 
   PageManager::start(PageManager::Params(
-      storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size));
+      storagePath, chunks_count, chunks_size));
   BOOST_CHECK(PageManager::instance() != nullptr);
 
   auto start_time = dariadb::Time(0);
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   }
 
   PageManager::start(PageManager::Params(
-      storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size));
+      storagePath, chunks_count, chunks_size));
   dariadb::Meas first;
   first.id = 1;
   first.time = t;
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   BOOST_CHECK(iheader.is_sorted);
 
   PageManager::start(PageManager::Params(
-      storagePath, dariadb::storage::MODE::SINGLE, chunks_count, chunks_size));
+      storagePath, chunks_count, chunks_size));
 
   // need to load current page;
   auto mintime_chunks = PageManager::instance()->chunksBeforeTimePoint(

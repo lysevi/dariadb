@@ -29,7 +29,6 @@ BOOST_AUTO_TEST_CASE(Engine) {
 
     dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
-                                              dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(old_mem_chunks, 0))};
@@ -107,7 +106,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
-                                              dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, 10))};
@@ -120,7 +118,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   {
     dariadb::storage::BaseStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
-                                              dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, 0))};
@@ -148,7 +145,6 @@ BOOST_AUTO_TEST_CASE(Engine_drop_chunks) {
     const size_t max_mem_chunks = 5;
     auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path,
-                                              dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, max_mem_chunks));

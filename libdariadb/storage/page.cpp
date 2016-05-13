@@ -156,7 +156,7 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
 }
 
 Page *Page::create(std::string file_name, uint64_t sz,
-                   uint32_t chunk_per_storage, uint32_t chunk_size, MODE mode) {
+                   uint32_t chunk_per_storage, uint32_t chunk_size) {
   auto res = new Page;
   auto mmap = utils::fs::MappedFile::touch(file_name, sz);
   auto region = mmap->data();
@@ -178,7 +178,6 @@ Page *Page::create(std::string file_name, uint64_t sz,
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
   res->header->is_overwrite = false;
-  res->header->mode = mode;
 
   res->iheader = reinterpret_cast<IndexHeader *>(iregion);
   res->index =
