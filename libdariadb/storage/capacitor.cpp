@@ -223,7 +223,7 @@ public:
   }
 
   append_result append_to_levels(const Meas &value) {
-    meas_time_compare less_by_time;
+    meas_time_compare_less less_by_time;
     std::sort(_memvalues, _memvalues + _memvalues_size, less_by_time);
     _header->_memvalues_pos = 0;
     size_t new_items_count = _header->_size_B + 1;
@@ -244,42 +244,38 @@ public:
     tmp.begin = _memvalues;
     to_merge.push_back(&tmp);
 
-    for (size_t i = 1; i <= outlvl; ++i) {
-      to_merge.push_back(&_levels[i - 1]);
+    for (size_t i = 0; i < outlvl; ++i) {
+      to_merge.push_back(&_levels[i]);
     }
 
     auto merge_target = _levels[outlvl];
 
     dariadb::utils::k_merge(to_merge, merge_target, less_by_time);
 
-    for (size_t i = 1; i <= outlvl; ++i) {
-      _levels[i - 1].clear();
+    for (size_t i = 0; i < outlvl; ++i) {
+      _levels[i].clear();
     }
     ++_header->_size_B;
     return append_to_mem(value);
   }
 
-  void drop_to_stor() {
-    // TODO use k-merge
-    size_t union_size = _memvalues_size;
-    for (auto l : _levels) {
-      union_size += l.hdr->count;
-    }
-    std::vector<dariadb::Meas> all_meases{union_size};
-    size_t write_pos = 0;
-    for (size_t i = 0; i < _memvalues_size; ++i, ++write_pos) {
-      all_meases[write_pos] = _memvalues[i];
-    }
+  struct low_level_stor_pusher {
+	  MeasWriter_ptr _stor;
+	  void push_back(const Meas&m) {
+		  _stor->append(m);
+	  }
+  };
 
-    for (auto l : _levels) {
-      assert(!l.empty());
-      for (size_t i = 0; i < l.hdr->pos; ++i, ++write_pos) {
-        all_meases[write_pos] = l.begin[i];
-      }
-      l.clear();
-    }
-    std::sort(all_meases.begin(), all_meases.end(), meas_time_compare());
-    _stor->append(all_meases);
+  void drop_to_stor() {
+	  std::list<level *> to_merge;
+
+	  for (size_t i = 0; i <_levels.size(); ++i) {
+		  to_merge.push_back(&_levels[i]);
+	  }
+	  low_level_stor_pusher merge_target;
+	  merge_target._stor = _stor;
+
+	  dariadb::utils::k_merge(to_merge, merge_target, meas_time_compare_less());
   }
 
   Reader_ptr readInterval(Time from, Time to) {
@@ -294,7 +290,7 @@ public:
                                   Time to) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     CapReader *raw = new CapReader;
-    std::map<dariadb::Id, std::set<Meas, meas_time_compare>> sub_result;
+    std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
     if (from > this->_minTime) {
       auto tp_read_data = this->timePointValues(ids, flag, from);

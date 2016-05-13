@@ -62,9 +62,15 @@ struct Meas {
   Flag src;
 };
 
-struct meas_time_compare {
+struct meas_time_compare_less {
 	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
 		return lhs.time < rhs.time;
+	}
+};
+
+struct meas_time_compare_greater {
+	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+		return lhs.time > rhs.time;
 	}
 };
 }
