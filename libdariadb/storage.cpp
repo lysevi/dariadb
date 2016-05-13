@@ -162,55 +162,55 @@ append_result MeasWriter::append(const Meas::MeasList &ml) {
   }
   return ar;
 }
-
-Reader_ptr BaseStorage::readInterval(Time from, Time to) {
-  return this->readInterval(QueryInterval(from, to));
-}
-
-Reader_ptr BaseStorage::readInTimePoint(Time time_point) {
-  static dariadb::IdArray empty_id{};
-  return this->readInTimePoint(QueryTimePoint(time_point));
-}
-
-Reader_ptr BaseStorage::readInterval(const QueryInterval &q) {
-  Reader_ptr res;
-  InnerReader *res_raw = nullptr;
-  if (q.from > this->minTime()) {
-    res = this->readInTimePoint(QueryTimePoint(q.ids, q.flag, q.from));
-    res_raw = dynamic_cast<InnerReader *>(res.get());
-    res_raw->_from = q.from;
-    res_raw->_to = q.to;
-    res_raw->_flag = q.flag;
-  } else {
-    res = std::make_shared<InnerReader>(q.flag, q.from, q.to);
-    res_raw = dynamic_cast<InnerReader *>(res.get());
-  }
-
-  auto cursor = chunksByIterval(q);
-  res_raw->add(cursor);
-  res_raw->is_time_point_reader = false;
-  return res;
-}
-
-Reader_ptr BaseStorage::readInTimePoint(const QueryTimePoint &q) {
-  auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
-  res->is_time_point_reader = true;
-
-  auto chunks_before = chunksBeforeTimePoint(q);
-  IdArray target_ids{q.ids};
-  if (target_ids.size() == 0) {
-    target_ids = getIds();
-  }
-
-  for (auto id : target_ids) {
-    auto search_res = chunks_before.find(id);
-    if (search_res == chunks_before.end()) {
-      res->_not_exist.push_back(id);
-    } else {
-      auto ch = search_res->second;
-      res->add_tp(ch);
-    }
-  }
-
-  return res;
-}
+//
+//Reader_ptr BaseStorage::readInterval(Time from, Time to) {
+//  return this->readInterval(QueryInterval(from, to));
+//}
+//
+//Reader_ptr BaseStorage::readInTimePoint(Time time_point) {
+//  static dariadb::IdArray empty_id{};
+//  return this->readInTimePoint(QueryTimePoint(time_point));
+//}
+//
+//Reader_ptr BaseStorage::readInterval(const QueryInterval &q) {
+//  Reader_ptr res;
+//  InnerReader *res_raw = nullptr;
+//  if (q.from > this->minTime()) {
+//    res = this->readInTimePoint(QueryTimePoint(q.ids, q.flag, q.from));
+//    res_raw = dynamic_cast<InnerReader *>(res.get());
+//    res_raw->_from = q.from;
+//    res_raw->_to = q.to;
+//    res_raw->_flag = q.flag;
+//  } else {
+//    res = std::make_shared<InnerReader>(q.flag, q.from, q.to);
+//    res_raw = dynamic_cast<InnerReader *>(res.get());
+//  }
+//
+//  auto cursor = chunksByIterval(q);
+//  res_raw->add(cursor);
+//  res_raw->is_time_point_reader = false;
+//  return res;
+//}
+//
+//Reader_ptr BaseStorage::readInTimePoint(const QueryTimePoint &q) {
+//  auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
+//  res->is_time_point_reader = true;
+//
+//  auto chunks_before = chunksBeforeTimePoint(q);
+//  IdArray target_ids{q.ids};
+//  if (target_ids.size() == 0) {
+//    target_ids = getIds();
+//  }
+//
+//  for (auto id : target_ids) {
+//    auto search_res = chunks_before.find(id);
+//    if (search_res == chunks_before.end()) {
+//      res->_not_exist.push_back(id);
+//    } else {
+//      auto ch = search_res->second;
+//      res->add_tp(ch);
+//    }
+//  }
+//
+//  return res;
+//}

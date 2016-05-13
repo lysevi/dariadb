@@ -21,7 +21,7 @@ public:
   size_t count;
 };
 
-class Moc_Storage : public dariadb::storage::BaseStorage {
+class Moc_Storage : public dariadb::storage::MeasStorage {
 public:
   dariadb::append_result append(const dariadb::Meas::PMeas, const size_t size) {
     return dariadb::append_result(size, 0);
@@ -34,10 +34,7 @@ public:
   /// max time of writed meas
   dariadb::Time maxTime() override { return 0; }
 
-  bool minMaxTime(dariadb::Id, dariadb::Time *, dariadb::Time *) override {
-    return 0;
-  }
-
+  
   void subscribe(const dariadb::IdArray &, const dariadb::Flag &,
                  const dariadb::storage::ReaderClb_ptr &) override {}
   dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray &,
@@ -58,6 +55,20 @@ public:
   }
 
   dariadb::IdArray getIds() { return dariadb::IdArray{}; }
+
+  // Inherited via MeasStorage
+  virtual dariadb::storage::Reader_ptr readInterval(dariadb::Time, dariadb::Time) override{
+	  return nullptr;
+  }
+  virtual dariadb::storage::Reader_ptr readInTimePoint(dariadb::Time) override{
+	  return nullptr;
+  }
+  virtual dariadb::storage::Reader_ptr readInterval(const dariadb::storage::QueryInterval & q) override{
+	  return nullptr;
+  }
+  virtual dariadb::storage::Reader_ptr readInTimePoint(const dariadb::storage::QueryTimePoint & q) override{
+	  return nullptr;
+  }
 };
 
 std::atomic_long append_count{0}, read_all_times{0};
@@ -66,7 +77,7 @@ bool stop_info = false;
 bool stop_read_all{false};
 
 void thread_read_all(dariadb::Time from, dariadb::Time to,
-                     dariadb::storage::BaseStorage_ptr ms) {
+                     dariadb::storage::MeasStorage_ptr ms) {
   auto clb = std::make_shared<BenchCallback>();
   while (!stop_read_all) {
     auto rdr = ms->readInterval(from, to);
@@ -121,7 +132,7 @@ int main(int argc, char *argv[]) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::BaseStorage_ptr ms{new Moc_Storage()};
+    dariadb::storage::MeasStorage_ptr ms{new Moc_Storage()};
     std::unique_ptr<dariadb::storage::Capacitor> cp{
         new dariadb::storage::Capacitor(
             ms.get(), dariadb::storage::Capacitor::Params(cap_B, storage_path))};

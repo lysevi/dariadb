@@ -8,39 +8,14 @@
 #include <timeutil.h>
 #include <utils/fs.h>
 
-class Moc_Storage : public dariadb::storage::BaseStorage {
+class Moc_Storage : public dariadb::storage::MeasWriter {
 public:
   dariadb::append_result append(const dariadb::Meas &) override {
     return dariadb::append_result(1, 0);
   }
-
-  dariadb::Time minTime() override { return 0; }
-  /// max time of writed meas
-  dariadb::Time maxTime() override { return 0; }
-
-  bool minMaxTime(dariadb::Id, dariadb::Time *, dariadb::Time *) override {
-    return 0;
-  }
-
-  void subscribe(const dariadb::IdArray &, const dariadb::Flag &,
-                 const dariadb::storage::ReaderClb_ptr &) override {}
-  dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray &,
-                                            const dariadb::Flag &) override {
-    return nullptr;
-  }
+    
 
   void flush() override {}
-
-  dariadb::storage::Cursor_ptr
-  chunksByIterval(const dariadb::storage::QueryInterval &) override {
-    return nullptr;
-  }
-
-  dariadb::storage::IdToChunkMap
-  chunksBeforeTimePoint(const dariadb::storage::QueryTimePoint &) override {
-    return dariadb::storage::IdToChunkMap{};
-  }
-  dariadb::IdArray getIds() override { return dariadb::IdArray{}; }
 };
 
 int main(int argc, char *argv[]) {

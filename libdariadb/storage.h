@@ -28,8 +28,8 @@ public:
   virtual void readNext(ReaderClb *clb) = 0;
   virtual Reader_ptr clone() const = 0;
   virtual void reset() = 0; /// need call after each read operation
-							/// (readAll, readByStep, getIds...) to reset
-							/// read pos to begining
+                            /// (readAll, readByStep, getIds...) to reset
+                            /// read pos to begining
 
   virtual void readAll(Meas::MeasList *output);
   virtual void readAll(ReaderClb *clb);
@@ -37,7 +37,7 @@ public:
                           dariadb::Time step);
   virtual void readByStep(Meas::MeasList *output, dariadb::Time from,
                           dariadb::Time to, dariadb::Time step);
- 
+
   virtual ~Reader() {}
 };
 
@@ -60,34 +60,36 @@ public:
 
   virtual append_result append(const Meas::MeasArray &ma);
   virtual append_result append(const Meas::MeasList &ml);
-  
+
   virtual void flush() = 0;
 };
 
-class MeasStorage : public MeasSource, public MeasWriter {
+class MeasStorage : public utils::NonCopy,
+                    public MeasSource,
+                    public MeasWriter {
 public:
-	virtual void subscribe(const IdArray &ids, const Flag &flag,
-		const ReaderClb_ptr &clbk) = 0;
+  virtual void subscribe(const IdArray &ids, const Flag &flag,
+                         const ReaderClb_ptr &clbk) = 0;
 };
-
-class BaseStorage : public utils::NonCopy,
-                    public ChunkContainer,
-                    public MeasStorage {
-public:
-  virtual ~BaseStorage() = default;
-
-  /// return data in [from + to].
-  /// if 'from'> minTime return data readInTimePoint('from') +
-  /// readInterval(from,to)
-  Reader_ptr readInterval(Time from, Time to) override;
-  Reader_ptr readInTimePoint(Time time_point) override;
-  Reader_ptr readInterval(const QueryInterval &q) override;
-  Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
-};
+//
+// class BaseStorage : public utils::NonCopy,
+//                    public ChunkContainer,
+//                    public MeasStorage {
+// public:
+//  virtual ~BaseStorage() = default;
+//
+//  /// return data in [from + to].
+//  /// if 'from'> minTime return data readInTimePoint('from') +
+//  /// readInterval(from,to)
+//  Reader_ptr readInterval(Time from, Time to) override;
+//  Reader_ptr readInTimePoint(Time time_point) override;
+//  Reader_ptr readInterval(const QueryInterval &q) override;
+//  Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
+//};
 
 typedef std::shared_ptr<MeasSource> MeasSource_ptr;
 typedef std::shared_ptr<MeasWriter> MeasWriter_ptr;
 typedef std::shared_ptr<MeasStorage> MeasStorage_ptr;
-typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
+// typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
 }
 }
