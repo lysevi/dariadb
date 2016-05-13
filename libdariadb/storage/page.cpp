@@ -394,7 +394,7 @@ ChunksList Page::get_open_chunks() {
       index_it->is_init = false;
       auto ptr_to_begin = this->chunks + index_it->offset;
       auto ptr_to_chunk_info = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
-      auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
+      //auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
       Chunk_Ptr ptr = nullptr;
       if (ptr_to_chunk_info->is_zipped) {
 		  //PM
