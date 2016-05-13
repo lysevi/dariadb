@@ -24,7 +24,7 @@ dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count) {
   first.id = id;
   first.time = t;
 
-  for (int i = 0;i<count; i++, t++) {
+  for (size_t i = 0;i<count; i++, t++) {
     first.flag = dariadb::Flag(i);
     first.time = t;
     first.value = dariadb::Value(i);
@@ -38,7 +38,7 @@ dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count) {
 
 BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
   const std::string storagePath = "testStorage/";
-  const size_t chunks_count = 10;
+  const size_t writes_count = 10;
   const size_t chunks_size = 100;
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
   }
 
   PageManager::start(PageManager::Params(
-      storagePath, chunks_count, chunks_size));
+      storagePath, writes_count, chunks_size));
   BOOST_CHECK(PageManager::instance() != nullptr);
 
   auto start_time = dariadb::Time(0);
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
   dariadb::Id id(0);
   const dariadb::Id id_count(2);
-  for (size_t i = 0; i < chunks_count; i++) {
+  for (size_t i = 0; i < writes_count; i++) {
     auto cur_id = id % id_count;
     t = add_meases(cur_id, t, chunks_size);
     id++;
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         ->readAll(&all_chunks);
     auto readed_t = dariadb::Time(0);
 
-    BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chunks_count));
+    BOOST_CHECK_EQUAL(all_chunks.size(), size_t(writes_count));
     for (auto ch : all_chunks) {
       BOOST_CHECK(ch->info->is_readonly);
 
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
           ->chunksByIterval(
               dariadb::storage::QueryInterval(start_time, end_time))
           ->readAll(&chunk_list);
-      BOOST_CHECK(chunk_list.size() == size_t((chunks_count / 2)));
+      BOOST_CHECK(chunk_list.size() == size_t((writes_count / 2)));
 
       for (auto &v : chunk_list) {
         BOOST_CHECK(v->info->minTime <= end_time);
