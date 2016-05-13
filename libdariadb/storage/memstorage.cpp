@@ -323,7 +323,7 @@ public:
     return false;
   }
 
-  Cursor_ptr chunksByIterval(const QueryInterval&q) {
+  Cursor_ptr chunksByIterval(const QueryInterval &q) {
 
     ChunksList result{};
 
@@ -374,7 +374,7 @@ public:
     return Cursor_ptr{raw};
   }
 
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) {
+  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) {
     IdToChunkMap result;
 
     IdArray id_a = q.ids;
@@ -537,11 +537,11 @@ dariadb::storage::ChunksList MemoryStorage::drop_all() {
   return _Impl->drop_all();
 }
 
-Cursor_ptr MemoryStorage::chunksByIterval(const QueryInterval&query) {
+Cursor_ptr MemoryStorage::chunksByIterval(const QueryInterval &query) {
   return _Impl->chunksByIterval(query);
 }
 
-IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const QueryTimePoint&q) {
+IdToChunkMap MemoryStorage::chunksBeforeTimePoint(const QueryTimePoint &q) {
   return _Impl->chunksBeforeTimePoint(q);
 }
 

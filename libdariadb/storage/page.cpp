@@ -445,7 +445,7 @@ bool dariadb::storage::Page::minMaxTime(dariadb::Id id,
   return true;
 }
 
-Cursor_ptr dariadb::storage::Page::chunksByIterval(const QueryInterval&query) {
+Cursor_ptr dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
   IdArray id_a = query.ids;
   if (id_a.empty()) {
     id_a = this->getIds();
@@ -453,7 +453,8 @@ Cursor_ptr dariadb::storage::Page::chunksByIterval(const QueryInterval&query) {
   return get_chunks(id_a, query.from, query.to, query.flag);
 }
 
-IdToChunkMap dariadb::storage::Page::chunksBeforeTimePoint(const QueryTimePoint&q) {
+IdToChunkMap
+dariadb::storage::Page::chunksBeforeTimePoint(const QueryTimePoint &q) {
   IdToChunkMap result;
 
   IdArray id_a = q.ids;

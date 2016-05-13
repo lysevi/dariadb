@@ -66,7 +66,8 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     BOOST_CHECK_EQUAL(cap.size(), writes_count);
 
     dariadb::Meas::MeasList out;
-    auto reader = cap.readInterval(dariadb::storage::QueryInterval(0, writes_count));
+    auto reader =
+        cap.readInterval(dariadb::storage::QueryInterval(0, writes_count));
     BOOST_CHECK(reader != nullptr);
     reader->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), cap.size());
@@ -88,7 +89,8 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     BOOST_CHECK(cap.append(e).writed == 1);
 
     dariadb::Meas::MeasList out;
-    auto reader = cap.readInterval(dariadb::storage::QueryInterval(0, writes_count));
+    auto reader =
+        cap.readInterval(dariadb::storage::QueryInterval(0, writes_count));
     BOOST_CHECK(reader != nullptr);
     reader->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), cap.size());
@@ -153,14 +155,14 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
         break;
       }
     }
-    for(auto it=stor->mlist.cbegin();it!=stor->mlist.cend();++it){
-        auto next=it;
-        ++next;
-        if(next==stor->mlist.cend()){
-            break;
-        }
+    for (auto it = stor->mlist.cbegin(); it != stor->mlist.cend(); ++it) {
+      auto next = it;
+      ++next;
+      if (next == stor->mlist.cend()) {
+        break;
+      }
 
-        BOOST_CHECK_GE(next->time,it->time);
+      BOOST_CHECK_GE(next->time, it->time);
     }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {

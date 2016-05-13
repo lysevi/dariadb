@@ -4,8 +4,8 @@
 #include "meas.h"
 #include "storage/chunk.h"
 #include "storage/chunk_container.h"
-#include "utils/utils.h"
 #include "storage/query_param.h"
+#include "utils/utils.h"
 #include <memory>
 
 namespace dariadb {
@@ -46,8 +46,8 @@ public:
 
   virtual Reader_ptr readInterval(Time from, Time to) = 0;
   virtual Reader_ptr readInTimePoint(Time time_point) = 0;
-  virtual Reader_ptr readInterval(const QueryInterval&q) = 0;
-  virtual Reader_ptr readInTimePoint(const QueryTimePoint&q) = 0;
+  virtual Reader_ptr readInterval(const QueryInterval &q) = 0;
+  virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) = 0;
 
   virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) = 0;
 };
@@ -61,7 +61,7 @@ public:
   virtual void flush() = 0;
 };
 
-class MeasStorage: public MeasSource, public MeasWriter{
+class MeasStorage : public MeasSource, public MeasWriter {
 public:
 };
 
@@ -76,8 +76,8 @@ public:
   /// readInterval(from,to)
   Reader_ptr readInterval(Time from, Time to) override;
   Reader_ptr readInTimePoint(Time time_point) override;
-  Reader_ptr readInterval(const QueryInterval&q) override;
-  Reader_ptr readInTimePoint(const QueryTimePoint&q) override;
+  Reader_ptr readInterval(const QueryInterval &q) override;
+  Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
 
   virtual void subscribe(const IdArray &ids, const Flag &flag,
                          const ReaderClb_ptr &clbk) = 0;

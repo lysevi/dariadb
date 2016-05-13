@@ -47,11 +47,13 @@ public:
 
   void flush() override {}
 
-  dariadb::storage::Cursor_ptr chunksByIterval(const dariadb::storage::QueryInterval&query) {
+  dariadb::storage::Cursor_ptr
+  chunksByIterval(const dariadb::storage::QueryInterval &query) {
     return nullptr;
   }
 
-  dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::storage::QueryTimePoint&) {
+  dariadb::storage::IdToChunkMap
+  chunksBeforeTimePoint(const dariadb::storage::QueryTimePoint &) {
     return dariadb::storage::IdToChunkMap{};
   }
 
@@ -109,7 +111,6 @@ void show_info() {
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-  
 
   {
     std::cout << "MemStorage" << std::endl;
@@ -138,12 +139,12 @@ int main(int argc, char *argv[]) {
   }
   {
     std::cout << "Capacitor" << std::endl;
-	const std::string storage_path = "testStorage";
-	const size_t chunk_size = 256;
-	const size_t cap_B = 128 * 1024 / chunk_size;
-	if (dariadb::utils::fs::path_exists(storage_path)) {
-		dariadb::utils::fs::rm(storage_path);
-	}
+    const std::string storage_path = "testStorage";
+    const size_t chunk_size = 256;
+    const size_t cap_B = 128 * 1024 / chunk_size;
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
+    }
 
     dariadb::storage::BaseStorage_ptr ms{new Moc_Storage()};
     std::unique_ptr<dariadb::storage::Capacitor> cp{
@@ -190,8 +191,7 @@ int main(int argc, char *argv[]) {
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::Engine::Limits(max_mem_chunks,
-                                               old_mem_chunks))};
+        dariadb::storage::Engine::Limits(max_mem_chunks, old_mem_chunks))};
 
     append_count = 0;
     stop_info = false;

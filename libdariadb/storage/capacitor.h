@@ -8,7 +8,7 @@
 namespace dariadb {
 namespace storage {
 
-const std::string CAP_FILE_EXT = ".aof"; //append-only-file
+const std::string CAP_FILE_EXT = ".aof"; // append-only-file
 const size_t CAP_DEFAULT_MAX_LEVELS = 10;
 
 class Capacitor : public utils::NonCopy, public MeasStorage {
@@ -29,17 +29,18 @@ public:
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(Time from, Time to) override;
   Reader_ptr readInTimePoint(Time time_point) override;
-  Reader_ptr readInterval(const QueryInterval&q) override;
-  Reader_ptr readInTimePoint(const QueryTimePoint&q) override;
-  Reader_ptr currentValue(const IdArray &ids, const Flag &flag)override;
+  Reader_ptr readInterval(const QueryInterval &q) override;
+  Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
+  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;
 
-  void flush()override; // write all to storage;
+  void flush() override; // write all to storage;
 
   size_t in_queue_size() const;
   size_t levels_count() const;
-size_t size()const;
+  size_t size() const;
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

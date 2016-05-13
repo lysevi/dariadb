@@ -172,7 +172,7 @@ Reader_ptr BaseStorage::readInTimePoint(Time time_point) {
   return this->readInTimePoint(QueryTimePoint(time_point));
 }
 
-Reader_ptr BaseStorage::readInterval(const QueryInterval&q) {
+Reader_ptr BaseStorage::readInterval(const QueryInterval &q) {
   Reader_ptr res;
   InnerReader *res_raw = nullptr;
   if (q.from > this->minTime()) {
@@ -192,7 +192,7 @@ Reader_ptr BaseStorage::readInterval(const QueryInterval&q) {
   return res;
 }
 
-Reader_ptr BaseStorage::readInTimePoint(const QueryTimePoint&q) {
+Reader_ptr BaseStorage::readInTimePoint(const QueryTimePoint &q) {
   auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
   res->is_time_point_reader = true;
 

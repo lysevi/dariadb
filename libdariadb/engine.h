@@ -38,8 +38,7 @@ public:
   /// \param page_manager_params - params of page manager (PageManager)
   /// \param cap_params - capacitor params  (Capacitor)
   Engine(storage::PageManager::Params page_manager_params,
-               dariadb::storage::Capacitor::Params cap_params,
-               const Limits &limits);
+         dariadb::storage::Capacitor::Params cap_params, const Limits &limits);
 
   Time minTime() override;
   Time maxTime() override;
@@ -53,8 +52,8 @@ public:
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  Cursor_ptr chunksByIterval(const QueryInterval&query) override;
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) override;
+  Cursor_ptr chunksByIterval(const QueryInterval &query) override;
+  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) override;
   IdArray getIds() override;
 
   size_t chunks_in_memory() const;

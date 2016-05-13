@@ -15,9 +15,9 @@ Meas Meas::empty() {
 }
 
 Meas Meas::empty(Id id) {
-	auto res = empty();
-	res.id = id;
-	return res;
+  auto res = empty();
+  res.id = id;
+  return res;
 }
 
 void Meas::readFrom(const Meas::PMeas m) {

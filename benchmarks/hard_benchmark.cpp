@@ -189,7 +189,8 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < queries_count; i++) {
       ids[0] = rnd_ids[i];
       auto t = rnd_time[i];
-      auto rdr = ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
+      auto rdr =
+          ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
       rdr->readAll(clbk.get());
     }
 
@@ -217,7 +218,8 @@ int main(int argc, char *argv[]) {
 
     for (size_t i = 0; i < queries_count; i++) {
       auto t = rnd_time[i];
-      auto rdr = ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
+      auto rdr =
+          ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
       rdr->readAll(clbk.get());
     }
 
@@ -287,7 +289,8 @@ int main(int argc, char *argv[]) {
       }
       auto f = std::min(rnd_time_from[i], rnd_time_to[i]);
       auto t = std::max(rnd_time_from[i], rnd_time_to[i]);
-      auto rdr = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, f, t));
+      auto rdr =
+          ms->readInterval(dariadb::storage::QueryInterval(ids, 0, f, t));
       rdr->readAll(clbk.get());
     }
 

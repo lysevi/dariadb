@@ -3,8 +3,8 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
-#include <timeutil.h>
 #include <engine.h>
+#include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
 
@@ -53,7 +53,8 @@ BOOST_AUTO_TEST_CASE(Engine) {
     BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
 
     dariadb::storage::ChunksList all_chunks;
-    ms->chunksByIterval(dariadb::storage::QueryInterval(start_time, t))->readAll(&all_chunks);
+    ms->chunksByIterval(dariadb::storage::QueryInterval(start_time, t))
+        ->readAll(&all_chunks);
     auto min_time = std::numeric_limits<dariadb::Time>::max();
     auto max_time = std::numeric_limits<dariadb::Time>::min();
     for (auto c : all_chunks) {
@@ -108,7 +109,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-		dariadb::storage::Capacitor::Params(cap_B, storage_path),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, 10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
@@ -121,7 +122,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-		dariadb::storage::Capacitor::Params(cap_B, storage_path),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, 0))};
 
     dariadb::Meas::MeasList mlist;
@@ -149,7 +150,7 @@ BOOST_AUTO_TEST_CASE(Engine_drop_chunks) {
         dariadb::storage::PageManager::Params(storage_path,
                                               dariadb::storage::MODE::SINGLE,
                                               chunk_per_storage, chunk_size),
-		dariadb::storage::Capacitor::Params(cap_B, storage_path),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, max_mem_chunks));
 
     dariadb::storage::BaseStorage_ptr ms{raw_ptr};

@@ -260,22 +260,20 @@ public:
   }
 
   struct low_level_stor_pusher {
-	  MeasWriter_ptr _stor;
-	  void push_back(const Meas&m) {
-		  _stor->append(m);
-	  }
+    MeasWriter_ptr _stor;
+    void push_back(const Meas &m) { _stor->append(m); }
   };
 
   void drop_to_stor() {
-	  std::list<level *> to_merge;
+    std::list<level *> to_merge;
 
-	  for (size_t i = 0; i <_levels.size(); ++i) {
-		  to_merge.push_back(&_levels[i]);
-	  }
-	  low_level_stor_pusher merge_target;
-	  merge_target._stor = _stor;
+    for (size_t i = 0; i < _levels.size(); ++i) {
+      to_merge.push_back(&_levels[i]);
+    }
+    low_level_stor_pusher merge_target;
+    merge_target._stor = _stor;
 
-	  dariadb::utils::k_merge(to_merge, merge_target, meas_time_compare_less());
+    dariadb::utils::k_merge(to_merge, merge_target, meas_time_compare_less());
   }
 
   Reader_ptr readInterval(Time from, Time to) {
@@ -286,13 +284,14 @@ public:
     return readInTimePoint(QueryTimePoint(time_point));
   }
 
-  virtual Reader_ptr readInterval(const QueryInterval&q) {
+  virtual Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     CapReader *raw = new CapReader;
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
     if (q.from > this->_minTime) {
-      auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
+      auto tp_read_data =
+          this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
       for (auto kv : tp_read_data) {
         sub_result[kv.first].insert(kv.second);
       }
@@ -341,7 +340,7 @@ public:
     }
   }
 
-  virtual Reader_ptr readInTimePoint(const QueryTimePoint&q) {
+  virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     CapReader *raw = new CapReader;
     dariadb::Meas::Id2Meas sub_res = timePointValues(q);
@@ -355,7 +354,7 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-	  //TODO optimize;
+    // TODO optimize;
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return readInTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
@@ -371,7 +370,7 @@ public:
 
   size_t size() const { return _header->_writed; }
 
-  dariadb::Meas::Id2Meas timePointValues(const QueryTimePoint&q) {
+  dariadb::Meas::Id2Meas timePointValues(const QueryTimePoint &q) {
     dariadb::IdSet readed_ids;
     dariadb::IdSet unreaded_ids;
     dariadb::Meas::Id2Meas sub_res;
@@ -450,9 +449,13 @@ Capacitor::~Capacitor() {}
 Capacitor::Capacitor(const MeasWriter_ptr stor, const Params &params)
     : _Impl(new Capacitor::Private(stor, params)) {}
 
-dariadb::Time Capacitor::minTime() { return _Impl->minTime(); }
+dariadb::Time Capacitor::minTime() {
+  return _Impl->minTime();
+}
 
-dariadb::Time Capacitor::maxTime() { return _Impl->maxTime(); }
+dariadb::Time Capacitor::maxTime() {
+  return _Impl->maxTime();
+}
 
 void Capacitor::flush() { // write all to storage;
   _Impl->flush();
@@ -470,11 +473,12 @@ Reader_ptr dariadb::storage::Capacitor::readInTimePoint(Time time_point) {
   return _Impl->readInTimePoint(time_point);
 }
 
-Reader_ptr dariadb::storage::Capacitor::readInterval(const QueryInterval&q) {
+Reader_ptr dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
 }
 
-Reader_ptr dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint&q) {
+Reader_ptr
+dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
 
@@ -491,4 +495,6 @@ size_t dariadb::storage::Capacitor::levels_count() const {
   return _Impl->levels_count();
 }
 
-size_t dariadb::storage::Capacitor::size() const { return _Impl->size(); }
+size_t dariadb::storage::Capacitor::size() const {
+  return _Impl->size();
+}

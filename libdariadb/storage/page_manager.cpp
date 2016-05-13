@@ -94,13 +94,13 @@ public:
     return p->minMaxTime(id, minResult, maxResult);
   }
 
-  Cursor_ptr chunksByIterval(const QueryInterval&query) {
+  Cursor_ptr chunksByIterval(const QueryInterval &query) {
     std::lock_guard<std::mutex> lg(_locker);
     auto p = get_cur_page();
     return p->chunksByIterval(query);
   }
 
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) {
+  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) {
     std::lock_guard<std::mutex> lg(_locker);
 
     auto cur_page = this->get_cur_page();
@@ -202,12 +202,12 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 }
 
 dariadb::storage::Cursor_ptr
-PageManager::chunksByIterval(const QueryInterval&query) {
+PageManager::chunksByIterval(const QueryInterval &query) {
   return impl->chunksByIterval(query);
 }
 
-dariadb::storage::IdToChunkMap PageManager::chunksBeforeTimePoint(
-	const QueryTimePoint&q) {
+dariadb::storage::IdToChunkMap
+PageManager::chunksBeforeTimePoint(const QueryTimePoint &q) {
   return impl->chunksBeforeTimePoint(q);
 }
 

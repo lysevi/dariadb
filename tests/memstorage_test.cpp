@@ -2,11 +2,11 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 
+#include <engine.h>
 #include <meas.h>
 #include <storage/bloom_filter.h>
 #include <storage/memstorage.h>
 #include <timeutil.h>
-#include <engine.h>
 
 #include <flags.h>
 
@@ -36,10 +36,10 @@ BOOST_AUTO_TEST_CASE(BloomTest) {
 
 BOOST_AUTO_TEST_CASE(inFilter) {
   {
-	  auto m = dariadb::Meas::empty();
-	  m.flag = 100;
+    auto m = dariadb::Meas::empty();
+    m.flag = 100;
     BOOST_CHECK(m.inFlag(0));
-	BOOST_CHECK(m.inFlag(100));
+    BOOST_CHECK(m.inFlag(100));
     BOOST_CHECK(!m.inFlag(10));
   }
 }
@@ -89,13 +89,15 @@ void thread_reader(dariadb::Id id, dariadb::Time from, dariadb::Time to,
   }
 
   if (to == 0) {
-    auto rdr = ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, from));
+    auto rdr =
+        ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, from));
     dariadb::Meas::MeasList out;
     rdr->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), expected);
     assert(out.size() == expected);
   } else {
-    auto rdr = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to));
+    auto rdr =
+        ms->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to));
     dariadb::Meas::MeasList out;
     rdr->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), expected);

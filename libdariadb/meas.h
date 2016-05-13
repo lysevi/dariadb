@@ -1,13 +1,13 @@
 #pragma once
 
+#include "utils/in_interval.h"
+#include <algorithm>
 #include <list>
+#include <map>
 #include <memory>
 #include <set>
-#include <map>
 #include <stdint.h>
 #include <vector>
-#include <algorithm>
-#include "utils/in_interval.h"
 
 namespace dariadb {
 typedef uint64_t Time;
@@ -16,7 +16,6 @@ typedef uint32_t Flag;
 typedef double Value;
 typedef std::vector<Id> IdArray;
 typedef std::set<Id> IdSet;
-
 
 bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 
@@ -48,11 +47,11 @@ struct Meas {
   }
 
   bool inInterval(Time from, Time to) const {
-	  return utils::inInterval(from, to, time);
+    return utils::inInterval(from, to, time);
   }
 
   bool inQuery(const IdArray &ids, const Flag f, Time from, Time to) const {
-	  return inQuery(ids,f) && inInterval(from,to);
+    return inQuery(ids, f) && inInterval(from, to);
   }
 
   Id id;
@@ -63,14 +62,14 @@ struct Meas {
 };
 
 struct meas_time_compare_less {
-	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
-		return lhs.time < rhs.time;
-	}
+  bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+    return lhs.time < rhs.time;
+  }
 };
 
 struct meas_time_compare_greater {
-	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
-		return lhs.time > rhs.time;
-	}
+  bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+    return lhs.time > rhs.time;
+  }
 };
 }

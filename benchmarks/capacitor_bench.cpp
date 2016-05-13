@@ -31,11 +31,13 @@ public:
 
   void flush() override {}
 
-  dariadb::storage::Cursor_ptr chunksByIterval(const dariadb::storage::QueryInterval&query) override {
+  dariadb::storage::Cursor_ptr
+  chunksByIterval(const dariadb::storage::QueryInterval &query) override {
     return nullptr;
   }
 
-  dariadb::storage::IdToChunkMap chunksBeforeTimePoint(const dariadb::storage::QueryTimePoint&) override {
+  dariadb::storage::IdToChunkMap
+  chunksBeforeTimePoint(const dariadb::storage::QueryTimePoint &) override {
     return dariadb::storage::IdToChunkMap{};
   }
   dariadb::IdArray getIds() override { return dariadb::IdArray{}; }
@@ -48,7 +50,7 @@ int main(int argc, char *argv[]) {
   const size_t K = 1;
   {
     const std::string storage_path = "testStorage";
-    const size_t cap_B = 128*1024 / sizeof(dariadb::Meas);
+    const size_t cap_B = 128 * 1024 / sizeof(dariadb::Meas);
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
@@ -73,6 +75,5 @@ int main(int argc, char *argv[]) {
 
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "Capacitor insert : " << elapsed << std::endl;
-
   }
 }

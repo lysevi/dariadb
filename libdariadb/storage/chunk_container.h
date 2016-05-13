@@ -16,12 +16,12 @@ public:
 
 class ChunkContainer {
 public:
-  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) = 0;
-  virtual Cursor_ptr chunksByIterval(const QueryInterval&query) = 0;
-  virtual IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) = 0;
+  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+                          dariadb::Time *maxResult) = 0;
+  virtual Cursor_ptr chunksByIterval(const QueryInterval &query) = 0;
+  virtual IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) = 0;
   virtual IdArray getIds() = 0;
   virtual ~ChunkContainer();
 };
-
 }
 }

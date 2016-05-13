@@ -1,12 +1,11 @@
 #pragma once
 
-
 namespace dariadb {
 namespace utils {
-	/**
-	T - at(size_t)
-	Out - push_back(T)
-	*/
+/**
+T - at(size_t)
+Out - push_back(T)
+*/
 template <class T, class Out, class comparer_t>
 void k_merge(std::list<T *> new_values, Out &out, comparer_t comparer) {
   auto vals_size = new_values.size();

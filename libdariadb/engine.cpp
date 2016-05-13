@@ -53,7 +53,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    if (mem_cap->append(value).writed!=1) {
+    if (mem_cap->append(value).writed != 1) {
       // if(mem_storage_raw->append(value).writed!=1){
       assert(false);
       result.ignored++;
@@ -198,7 +198,7 @@ public:
     }
   };
 
-  Cursor_ptr chunksByIterval(const QueryInterval&query) {
+  Cursor_ptr chunksByIterval(const QueryInterval &query) {
     std::lock_guard<std::recursive_mutex> lg(_locker);
     IdArray id_a = query.ids;
     if (id_a.empty()) {
@@ -212,16 +212,15 @@ public:
       Cursor_ptr page_chunks, mem_chunks;
       dariadb::Time minT, maxT;
       if (!mem_storage_raw->minMaxTime(id, &minT, &maxT)) {
-        page_chunks =
-            PageManager::instance()->chunksByIterval(query);
+        page_chunks = PageManager::instance()->chunksByIterval(query);
       } else {
         if (minT <= query.from && maxT >= query.to) {
-          mem_chunks =
-              mem_storage_raw->chunksByIterval(query);
+          mem_chunks = mem_storage_raw->chunksByIterval(query);
         } else {
-          page_chunks = PageManager::instance()->chunksByIterval(QueryInterval(cur_ids, query.flag, query.from, minT));
-          mem_chunks =
-              mem_storage_raw->chunksByIterval(QueryInterval(cur_ids, query.flag, minT, query.to));
+          page_chunks = PageManager::instance()->chunksByIterval(
+              QueryInterval(cur_ids, query.flag, query.from, minT));
+          mem_chunks = mem_storage_raw->chunksByIterval(
+              QueryInterval(cur_ids, query.flag, minT, query.to));
         }
       }
 
@@ -231,7 +230,7 @@ public:
     return result;
   }
 
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint&q) {
+  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) {
     std::lock_guard<std::recursive_mutex> lg(_locker);
     IdArray id_a = q.ids;
     if (id_a.empty()) {
@@ -244,13 +243,15 @@ public:
       dariadb::Time minT, maxT;
       IdToChunkMap subRes;
       if (!mem_storage_raw->minMaxTime(id, &minT, &maxT)) {
-        subRes = PageManager::instance()->chunksBeforeTimePoint(QueryTimePoint(cur_ids, q.flag, q.time_point));
+        subRes = PageManager::instance()->chunksBeforeTimePoint(
+            QueryTimePoint(cur_ids, q.flag, q.time_point));
       } else {
         if (minT <= q.time_point) {
-          subRes =
-              mem_storage_raw->chunksBeforeTimePoint(QueryTimePoint(cur_ids, q.flag, q.time_point));
+          subRes = mem_storage_raw->chunksBeforeTimePoint(
+              QueryTimePoint(cur_ids, q.flag, q.time_point));
         } else {
-          subRes = PageManager::instance()->chunksBeforeTimePoint(QueryTimePoint(cur_ids, q.flag,q.time_point));
+          subRes = PageManager::instance()->chunksBeforeTimePoint(
+              QueryTimePoint(cur_ids, q.flag, q.time_point));
         }
       }
       for (auto kv : subRes) {
@@ -312,10 +313,9 @@ public:
 };
 
 Engine::Engine(storage::PageManager::Params page_manager_params,
-                           dariadb::storage::Capacitor::Params cap_params,
-                           const dariadb::storage::Engine::Limits &limits)
-    : _impl{
-          new Engine::Private(page_manager_params, cap_params, limits)} {}
+               dariadb::storage::Capacitor::Params cap_params,
+               const dariadb::storage::Engine::Limits &limits)
+    : _impl{new Engine::Private(page_manager_params, cap_params, limits)} {}
 
 Engine::~Engine() {
   _impl = nullptr;
@@ -334,7 +334,7 @@ append_result Engine::append(const Meas &value) {
 }
 
 void Engine::subscribe(const IdArray &ids, const Flag &flag,
-                             const ReaderClb_ptr &clbk) {
+                       const ReaderClb_ptr &clbk) {
   _impl->subscribe(ids, flag, clbk);
 }
 
@@ -347,15 +347,15 @@ void Engine::flush() {
 }
 
 bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                              dariadb::Time *maxResult) {
+                        dariadb::Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-Cursor_ptr Engine::chunksByIterval(const QueryInterval&query) {
+Cursor_ptr Engine::chunksByIterval(const QueryInterval &query) {
   return _impl->chunksByIterval(query);
 }
 
-IdToChunkMap Engine::chunksBeforeTimePoint(const QueryTimePoint&q) {
+IdToChunkMap Engine::chunksBeforeTimePoint(const QueryTimePoint &q) {
   return _impl->chunksBeforeTimePoint(q);
 }
 
