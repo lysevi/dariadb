@@ -117,12 +117,12 @@ public:
     return cur_page->getIds();
   }
 
-  dariadb::storage::ChunksList get_open_chunks() {
-    if (!dariadb::utils::fs::path_exists(_param.path)) {
-      return ChunksList{};
-    }
-    return this->get_cur_page()->get_open_chunks();
-  }
+//  dariadb::storage::ChunksList get_open_chunks() {
+//    if (!dariadb::utils::fs::path_exists(_param.path)) {
+//      return ChunksList{};
+//    }
+//    return this->get_cur_page()->get_open_chunks();
+//  }
 
   size_t chunks_in_cur_page() const {
     if (_cur_page == nullptr) {
@@ -220,9 +220,9 @@ dariadb::IdArray PageManager::getIds() {
   return impl->getIds();
 }
 
-dariadb::storage::ChunksList PageManager::get_open_chunks() {
-  return impl->get_open_chunks();
-}
+//dariadb::storage::ChunksList PageManager::get_open_chunks() {
+//  return impl->get_open_chunks();
+//}
 
 size_t PageManager::chunks_in_cur_page() const {
   return impl->chunks_in_cur_page();

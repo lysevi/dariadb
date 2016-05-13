@@ -15,7 +15,8 @@ namespace storage {
 
 #pragma pack(push, 1)
 struct ChunkIndexInfo {
-  //!!! check ctor of Chunk when change this struct.
+  bool is_not_free;
+  bool is_zipped;
   Meas first, last;
   Time minTime, maxTime;
   dariadb::Flag flag_bloom;
@@ -23,11 +24,7 @@ struct ChunkIndexInfo {
   uint32_t bw_pos;
   uint8_t bw_bit_num;
   bool is_readonly;
-  compression::CopmressedWriter::Position
-      writer_position; // TODO move from this.
-
-  bool is_dropped;
-  bool is_zipped;
+  compression::CopmressedWriter::Position writer_position; // TODO move from this.
 
   size_t size;
 };

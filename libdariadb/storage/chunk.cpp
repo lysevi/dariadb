@@ -9,32 +9,30 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
-Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer):_locker{} {
+Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer) : _locker{} {
   info = index;
   _buffer_t = buffer;
 }
 
 Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m)
     : _locker() {
-	_buffer_t = buffer;
-	info = index;
-	info->size = _size;
+  index->is_not_free = true;
+  _buffer_t = buffer;
+  info = index;
+  info->size = _size;
 
-	info->is_readonly = false;
-	info->is_dropped = false;
-	info->count = 0;
-	info->first = first_m;
-	info->last = first_m;
-	info->minTime = first_m.time;
-	info->maxTime = first_m.time;
-	info->flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
+  info->is_readonly = false;
+  info->count = 0;
+  info->first = first_m;
+  info->last = first_m;
+  info->minTime = first_m.time;
+  info->maxTime = first_m.time;
+  info->flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
 
   std::fill(_buffer_t, _buffer_t + info->size, 0);
 }
 
-Chunk::~Chunk() {
-  this->bw = nullptr;
-}
+Chunk::~Chunk() { this->bw = nullptr; }
 
 bool Chunk::check_flag(const Flag &f) {
   if (f != 0) {
@@ -45,14 +43,21 @@ bool Chunk::check_flag(const Flag &f) {
   return true;
 }
 
-ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m) : Chunk(index,buffer, _size, first_m) {
+ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size,
+                         Meas first_m)
+    : Chunk(index, buffer, _size, first_m) {
   info->is_zipped = true;
   using compression::BinaryBuffer;
   range = Range{_buffer_t, _buffer_t + index->size};
   bw = std::make_shared<BinaryBuffer>(range);
+  bw->reset_pos();
+
+  info->bw_pos = uint32_t(bw->pos());
+  info->bw_bit_num = bw->bitnum();
 
   c_writer = compression::CopmressedWriter(bw);
   c_writer.append(info->first);
+  info->writer_position = c_writer.get_position();
 }
 
 ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer)
@@ -71,8 +76,8 @@ ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer)
 ZippedChunk::~ZippedChunk() {}
 
 bool ZippedChunk::append(const Meas &m) {
-  if (info->is_dropped || info->is_readonly) {
-    throw MAKE_EXCEPTION("(is_dropped || is_readonly)");
+  if (!info->is_not_free || info->is_readonly) {
+    throw MAKE_EXCEPTION("(!is_not_free || is_readonly)");
   }
 
   std::lock_guard<utils::Locker> lg(_locker);

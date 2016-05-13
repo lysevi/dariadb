@@ -49,7 +49,7 @@ public:
   IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) override;
   IdArray getIds() override;
 
-  dariadb::storage::ChunksList get_open_chunks();
+  //dariadb::storage::ChunksList get_open_chunks();
   size_t chunks_in_cur_page() const;
   size_t in_queue_size() const; // TODO rename to queue_size
 
