@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   PageManager::stop();
 }
 
-dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count) {
+dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count, dariadb::Meas::MeasList&addeded) {
   dariadb::Meas first;
   first.id = id;
   first.time = t;
@@ -30,6 +30,7 @@ dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count) {
     first.value = dariadb::Value(i);
 	
 	auto res = PageManager::instance()->append(first);
+    addeded.push_back(first);
 	BOOST_CHECK(res.writed==1);
   }
 
@@ -51,11 +52,11 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
   auto start_time = dariadb::Time(0);
   auto t = dariadb::Time(0);
-
+  dariadb::Meas::MeasList addeded;
   const dariadb::Id id_count(2);
   for (size_t i = 0; i < 3; i++) {
     auto cur_id = dariadb::Id(i % id_count);
-    t = add_meases(cur_id, t, chinks_count);
+    t = add_meases(cur_id, t, chinks_count,addeded);
   }
 
   dariadb::Time minTime(t);
@@ -71,14 +72,19 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
     BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chinks_count));
     for (auto ch : all_chunks) {
-      BOOST_CHECK(ch->info->is_readonly);
 
       minTime = std::min(minTime, ch->info->minTime);
       ch->bw->reset_pos();
+
+
       dariadb::compression::CopmressedReader crr(ch->bw, ch->info->first);
+      BOOST_CHECK_EQUAL(ch->info->first.value, addeded.front().value);
+      addeded.pop_front();
       for (uint32_t i = 0; i < ch->info->count; i++) {
         auto m = crr.read();
-        BOOST_CHECK_EQUAL(m.value, dariadb::Value(i));
+        auto a=addeded.front();
+        BOOST_CHECK_EQUAL(m.value, a.value);
+        addeded.pop_front();
         readed_t++;
       }
     }
@@ -139,14 +145,14 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-
+  dariadb::Meas::MeasList addeded;
   PageManager::start(PageManager::Params(
       storagePath, chunks_count, chunks_size));
   dariadb::Meas first;
   first.id = 1;
   first.time = t;
   {
-	  add_meases(1, t, chunks_size / 10);
+      add_meases(1, t, chunks_size / 10,addeded);
     
   }
   PageManager::stop();

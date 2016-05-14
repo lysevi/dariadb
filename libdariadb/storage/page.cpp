@@ -54,12 +54,11 @@ public:
         auto ptr_to_begin = link->chunks + _index_it.offset;
         auto ptr_to_chunk_info =
             reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
-        // auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
+        auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
         Chunk_Ptr ptr = nullptr;
         if (ptr_to_chunk_info->is_zipped) {
           // PM
-          /*ptr = Chunk_Ptr{new ZippedChunk(*ptr_to_chunk_info, ptr_to_buffer,
-                                          link->header->chunk_size)};*/
+          ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info, ptr_to_buffer)};
         } else {
           // TODO implement not zipped page.
           assert(false);
@@ -287,7 +286,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{
           new ZippedChunk(info, ptr_to_buffer, header->chunk_size, m)};
-      alloc_chunk(ptr, ptr_to_begin);
+      init_chunk_index_rec(ptr, ptr_to_begin);
       return true;
     } else {
       if ((info->first.id == m.id)&&(!info->is_readonly)) {
@@ -297,6 +296,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         if (info->is_zipped) {
           ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
           if (ptr->append(m)) {
+              update_chunk_index_rec(ptr);
             return true;
           }
         } else {
@@ -306,10 +306,20 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
     }
     byte_it+=step;
   }
-  return nullptr;
+  return false;
+}
+void Page::update_chunk_index_rec(const Chunk_Ptr& ptr){
+    for(size_t i=0;i<header->addeded_chunks;++i){
+        auto cur_index = &index[i];
+        if(cur_index->first.id == ptr->info->first.id){
+            cur_index->last=ptr->info->last;
+            return;
+        }
+    }
+    assert(false);
 }
 
-void Page::alloc_chunk(Chunk_Ptr ch, uint8_t *addr) {
+void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   auto index_rec = ch->info;
   //auto buffer = ch->_buffer_t;
 
@@ -320,15 +330,15 @@ void Page::alloc_chunk(Chunk_Ptr ch, uint8_t *addr) {
   pos_index = _free_poses.front();
   _free_poses.pop_front();
 
-  //  auto cur_index = &index[pos_index];
-  //  cur_index->first = ch->info->first;
-  //  cur_index->last = ch->info.last;
+  auto cur_index = &index[pos_index];
+  cur_index->first = ch->info->first;
+  cur_index->last = ch->info->last;
 
-  //  cur_index->flag_bloom = ch->info.flag_bloom;
-  //  cur_index->is_readonly = ch->info.is_readonly;
-  //  cur_index->is_init = true;
+  cur_index->flag_bloom = ch->info->flag_bloom;
+  cur_index->is_readonly = ch->info->is_readonly;
+  cur_index->is_init = true;
 
-  //cur_index->offset = header->pos;
+  cur_index->offset = header->pos;
   header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
   header->addeded_chunks++;
   auto kv = std::make_pair(index_rec->maxTime, pos_index);
@@ -337,10 +347,10 @@ void Page::alloc_chunk(Chunk_Ptr ch, uint8_t *addr) {
 
   iheader->minTime = std::min(iheader->minTime, ch->info->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ch->info->maxTime);
-//  cur_index->minTime = std::min(cur_index->minTime, ch->info->minTime);
-//  cur_index->maxTime = std::max(cur_index->maxTime, ch->info->maxTime);
+  cur_index->minTime = std::min(cur_index->minTime, ch->info->minTime);
+  cur_index->maxTime = std::max(cur_index->maxTime, ch->info->maxTime);
 
-  // TODO uncomment this
+  // TODO restore this (flush)
   //  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
   //  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
   //                    sizeof(Page_ChunkIndex));

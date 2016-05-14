@@ -50,6 +50,7 @@ public:
   virtual bool is_full() const = 0;
   virtual Reader_Ptr get_reader() = 0;
   bool check_flag(const Flag &f);
+  //TODO remove?
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
 

@@ -82,7 +82,8 @@ public:
   virtual append_result append(const Meas & value) override;
   virtual void flush() override;
 private:
-  void alloc_chunk(Chunk_Ptr ch,uint8_t *addr);
+  void init_chunk_index_rec(Chunk_Ptr ch,uint8_t *addr);
+  void update_chunk_index_rec(const Chunk_Ptr& ch);
 public:
   uint8_t *region;  // page  file mapp region
   uint8_t *iregion; // index file mapp region
