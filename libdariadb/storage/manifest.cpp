@@ -5,19 +5,20 @@
 
 dariadb::storage::Manifest::Manifest(const std::string &fname):_filename(fname){
     if(!utils::fs::path_exists(_filename)){
-        std::filebuf fbuf;
-        fbuf.open(_filename, std::ios_base::in | std::ios_base::out |
-                  std::ios_base::trunc);
-        fbuf.close();
+        std::fstream fs;
+        fs.open(_filename, std::ios::out);
+        fs.close();
     }
 }
 
-std::list<std::string> dariadb::storage::Manifest::list()
+std::list<std::string> dariadb::storage::Manifest::page_list()
 {
     std::list<std::string> result;
     std::ifstream fs;
     fs.open(_filename);
-    assert(fs.is_open());
+    if(!fs.is_open()){
+        return result;
+    }
     std::string line;
     while( std::getline (fs,line)){
         result.push_back(line);
@@ -26,7 +27,7 @@ std::list<std::string> dariadb::storage::Manifest::list()
     return result;
 }
 
-void dariadb::storage::Manifest::append(const std::string &rec){
+void dariadb::storage::Manifest::page_append(const std::string &rec){
     std::ofstream fs;
     fs.open(_filename,std::ios_base::out|std::ios_base::app );
     assert(fs.is_open());

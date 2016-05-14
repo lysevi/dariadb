@@ -24,6 +24,8 @@ struct PageHeader {
 
   uint32_t chunk_per_storage;
   uint32_t chunk_size;
+
+  bool is_full;
 };
 
 struct IndexHeader {

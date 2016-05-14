@@ -3,6 +3,7 @@
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 #include "../utils/utils.h"
+#include "manifest.h"
 #include "page.h"
 
 #include <condition_variable>
@@ -10,13 +11,15 @@
 #include <queue>
 #include <thread>
 
+const std::string MANIFEST_FILE_NAME="Manifest";
+
 using namespace dariadb::storage;
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
 //PM
 class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
 public:
   Private(const PageManager::Params &param)
-      : _cur_page(nullptr), _param(param) {
+      : _cur_page(nullptr), _param(param),_manifest(utils::fs::append_path(param.path,MANIFEST_FILE_NAME)) {
     /*this->start_async();*/
   }
 
@@ -36,24 +39,32 @@ public:
   }
 
   Page *create_page() {
-    if (!dariadb::utils::fs::path_exists(_param.path)) {
-      dariadb::utils::fs::mkdir(_param.path);
-    }
+      if (!dariadb::utils::fs::path_exists(_param.path)) {
+          dariadb::utils::fs::mkdir(_param.path);
+      }
 
-    std::string page_name = "single.page";
-    std::string file_name =
-        dariadb::utils::fs::append_path(_param.path, page_name);
+      Page *res = nullptr;
 
-    Page *res = nullptr;
+      auto names=_manifest.page_list();
+      for(auto n:names){
+          auto file_name =
+                  utils::fs::append_path(_param.path,n);
+          auto hdr=Page::readHeader(file_name);
+          if(!hdr.is_full){
+              res = Page::open(file_name);
+          }
+      }
+      if(res==nullptr){
+          std::string page_name = utils::fs::random_file_name(".page");
+          std::string file_name =
+                  dariadb::utils::fs::append_path(_param.path, page_name);
+          auto sz = calc_page_size();
+          res = Page::create(file_name, sz, _param.chunk_per_storage,
+                             _param.chunk_size);
+          _manifest.page_append(page_name);
+      }
 
-    if (!utils::fs::path_exists(file_name)) {
-      auto sz = calc_page_size();
-      res = Page::create(file_name, sz, _param.chunk_per_storage,
-                         _param.chunk_size);
-    } else {
-      res = Page::open(file_name);
-    }
-    return res;
+      return res;
   }
   //PM
   void flush() { /*this->flush_async();*/ }
@@ -153,12 +164,20 @@ public:
 
   append_result append(const Meas & value) {
 	  std::lock_guard<std::mutex> lg(_locker);
-	  auto cur_page = this->get_cur_page();
-	  return cur_page->append(value);
+      while(true){
+          auto cur_page = this->get_cur_page();
+          auto res=cur_page->append(value);
+          if(res.writed!=1){
+              cur_page=nullptr;
+          }else{
+              return res;
+          }
+      }
   }
 protected:
   Page *_cur_page;
   PageManager::Params _param;
+  Manifest _manifest;
   std::mutex _locker, _locker_write;
 };
 

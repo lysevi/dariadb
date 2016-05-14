@@ -277,6 +277,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   auto end = this->chunks + this->header->chunk_per_storage * step;
   while (true) {
     if (byte_it == end) {
+      header->is_full=true;
       break;
     }
     ChunkIndexInfo *info = reinterpret_cast<ChunkIndexInfo *>(byte_it);

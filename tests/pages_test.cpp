@@ -22,11 +22,15 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest){
     Manifest m(fname);
     std::list<std::string> names{"1","2","3"};
     for(auto n:names){
-        m.append(n);
+        m.page_append(n);
     }
-    auto lst=m.list();
+    auto lst=m.page_list();
     BOOST_CHECK_EQUAL(lst.size(),names.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(lst.begin(),lst.end(),names.begin(),names.end());
+
+    if (dariadb::utils::fs::path_exists(fname)) {
+      dariadb::utils::fs::rm(fname);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
@@ -143,7 +147,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     }
   }
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
-  BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size() == 2); // page +index
+  BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size() == 3); // page +index+manifest
 
   PageManager::stop();
 
@@ -173,14 +177,13 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   }
   PageManager::stop();
 
-  auto header = dariadb::storage::Page::readHeader(
-      dariadb::utils::fs::append_path(storagePath, "single.page"));
+  auto fname=dariadb::utils::fs::ls(storagePath,".page").front();
+  auto header = dariadb::storage::Page::readHeader(fname);
   BOOST_CHECK_EQUAL(header.chunk_per_storage, chunks_count);
   BOOST_CHECK_EQUAL(header.chunk_size, chunks_size);
   BOOST_CHECK_EQUAL(header.count_readers, size_t(0));
 
-  auto iheader = dariadb::storage::Page::readIndexHeader(
-      dariadb::utils::fs::append_path(storagePath, "single.pagei"));
+  auto iheader = dariadb::storage::Page::readIndexHeader(fname+"i");
   BOOST_CHECK_EQUAL(iheader.chunk_per_storage, chunks_count);
   BOOST_CHECK_EQUAL(iheader.chunk_size, chunks_size);
   BOOST_CHECK(iheader.is_sorted);
