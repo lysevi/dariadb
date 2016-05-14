@@ -6,10 +6,28 @@
 #include <compression.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
+#include <storage/manifest.h>
 #include <utils/fs.h>
 #include <utils/utils.h>
 
 using dariadb::storage::PageManager;
+using dariadb::storage::Manifest;
+
+BOOST_AUTO_TEST_CASE(ManifestFileTest){
+    const std::string fname = "manifest";
+    if (dariadb::utils::fs::path_exists(fname)) {
+      dariadb::utils::fs::rm(fname);
+    }
+
+    Manifest m(fname);
+    std::list<std::string> names{"1","2","3"};
+    for(auto n:names){
+        m.append(n);
+    }
+    auto lst=m.list();
+    BOOST_CHECK_EQUAL(lst.size(),names.size());
+    BOOST_CHECK_EQUAL_COLLECTIONS(lst.begin(),lst.end(),names.begin(),names.end());
+}
 
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   const std::string storagePath = "testStorage";
