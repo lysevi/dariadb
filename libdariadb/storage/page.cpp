@@ -270,6 +270,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   std::lock_guard<std::mutex> lg(_locker);
   if (is_full()) {
+      header->is_full=true;
     return false;
   }
   auto byte_it = this->chunks;
@@ -307,6 +308,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
     }
     byte_it+=step;
   }
+  header->is_full=true;
   return false;
 }
 void Page::update_chunk_index_rec(const Chunk_Ptr& ptr){

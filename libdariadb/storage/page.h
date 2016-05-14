@@ -26,6 +26,9 @@ struct PageHeader {
   uint32_t chunk_size;
 
   bool is_full;
+
+  dariadb::Time minTime;
+  dariadb::Time maxTime;
 };
 
 struct IndexHeader {

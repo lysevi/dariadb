@@ -112,7 +112,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
   as->flush();
 
-  auto reader = as->readInterval(from, to + copies_count);
+  auto reader = as->readInterval(dariadb::storage::QueryInterval(from, to + copies_count));
   check_reader_of_all(reader, from, to, step, id_val, total_count,
                       "readAll error: ");
 
@@ -198,7 +198,7 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
         throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5))");
       }
 
-      auto rdr = ds->readInterval(0, 6);
+      auto rdr = ds->readInterval(dariadb::storage::QueryInterval(0, 6));
       output_in_point.clear();
       rdr->readAll(&output_in_point);
       if (output_in_point.size() != size_t(5)) {
@@ -221,7 +221,7 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
         }
       }
     }
-    auto reader = ds->readInterval(3, 5);
+    auto reader = ds->readInterval(dariadb::storage::QueryInterval(3, 5));
     dariadb::Meas::MeasList output{};
     reader->readAll(&output);
     if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data

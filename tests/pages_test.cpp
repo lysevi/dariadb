@@ -203,3 +203,30 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
+
+
+BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
+  const std::string storagePath = "testStorage";
+  const size_t chunks_count = 10;
+  const size_t chunks_size = 200;
+  auto t = dariadb::Time(0);
+
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+    dariadb::utils::fs::rm(storagePath);
+  }
+  dariadb::Meas::MeasList addeded;
+  PageManager::start(PageManager::Params(
+      storagePath, chunks_count, chunks_size));
+  dariadb::Meas first;
+  first.id = 1;
+  first.time = t;
+  const size_t page_count=4;
+  while(dariadb::utils::fs::ls(storagePath,".page").size()<=page_count){
+      add_meases(1, t, chunks_size / 10,addeded);
+  }
+
+  dariadb::storage::QueryInterval qi(addeded.front().time,addeded.back().time);
+  dariadb::storage::ChunksList chlist;
+  PageManager::instance()->chunksByIterval(qi)->readAll(&chlist);
+  BOOST_CHECK_GE(chlist.size(),page_count);
+}

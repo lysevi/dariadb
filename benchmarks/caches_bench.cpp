@@ -57,12 +57,6 @@ public:
   dariadb::IdArray getIds() { return dariadb::IdArray{}; }
 
   // Inherited via MeasStorage
-  virtual dariadb::storage::Reader_ptr readInterval(dariadb::Time, dariadb::Time) override{
-	  return nullptr;
-  }
-  virtual dariadb::storage::Reader_ptr readInTimePoint(dariadb::Time) override{
-	  return nullptr;
-  }
   virtual dariadb::storage::Reader_ptr readInterval(const dariadb::storage::QueryInterval & q) override{
 	  return nullptr;
   }
@@ -80,7 +74,7 @@ void thread_read_all(dariadb::Time from, dariadb::Time to,
                      dariadb::storage::MeasStorage_ptr ms) {
   auto clb = std::make_shared<BenchCallback>();
   while (!stop_read_all) {
-    auto rdr = ms->readInterval(from, to);
+    auto rdr = ms->readInterval(dariadb::storage::QueryInterval(from, to));
     rdr->readAll(clb.get());
     read_all_times++;
   }

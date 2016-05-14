@@ -46,8 +46,8 @@ public:
   virtual Time minTime() = 0;
   virtual Time maxTime() = 0;
 
-  virtual Reader_ptr readInterval(Time from, Time to) = 0;
-  virtual Reader_ptr readInTimePoint(Time time_point) = 0;
+//  virtual Reader_ptr readInterval(Time from, Time to) = 0;
+//  virtual Reader_ptr readInTimePoint(Time time_point) = 0;
   virtual Reader_ptr readInterval(const QueryInterval &q) = 0;
   virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) = 0;
 

@@ -237,7 +237,7 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
 
     mbucket.flush();
     dariadb::Meas::MeasList out;
-    mbucket.readInterval(0, 100)->readAll(&out);
+    mbucket.readInterval(dariadb::storage::QueryInterval(0, 100))->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), append_count);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {

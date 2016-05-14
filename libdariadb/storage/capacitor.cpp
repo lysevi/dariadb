@@ -276,13 +276,13 @@ public:
     dariadb::utils::k_merge(to_merge, merge_target, meas_time_compare_less());
   }
 
-  Reader_ptr readInterval(Time from, Time to) {
-    return readInterval(QueryInterval(from, to));
-  }
+//  Reader_ptr readInterval(Time from, Time to) {
+//    return readInterval(QueryInterval(from, to));
+//  }
 
-  Reader_ptr readInTimePoint(Time time_point) {
-    return readInTimePoint(QueryTimePoint(time_point));
-  }
+//  Reader_ptr readInTimePoint(Time time_point) {
+//    return readInTimePoint(QueryTimePoint(time_point));
+//  }
 
   virtual Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
@@ -465,13 +465,13 @@ append_result dariadb::storage::Capacitor::append(const Meas &value) {
   return _Impl->append(value);
 }
 
-Reader_ptr dariadb::storage::Capacitor::readInterval(Time from, Time to) {
-  return _Impl->readInterval(from, to);
-}
+//Reader_ptr dariadb::storage::Capacitor::readInterval(Time from, Time to) {
+//  return _Impl->readInterval(from, to);
+//}
 
-Reader_ptr dariadb::storage::Capacitor::readInTimePoint(Time time_point) {
-  return _Impl->readInTimePoint(time_point);
-}
+//Reader_ptr dariadb::storage::Capacitor::readInTimePoint(Time time_point) {
+//  return _Impl->readInTimePoint(time_point);
+//}
 
 Reader_ptr dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);

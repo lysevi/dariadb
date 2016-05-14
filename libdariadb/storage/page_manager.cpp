@@ -107,6 +107,16 @@ public:
 
   Cursor_ptr chunksByIterval(const QueryInterval &query) {
     std::lock_guard<std::mutex> lg(_locker);
+    std::list<Page*> candidates;
+    auto names=_manifest.page_list();
+    for(auto n:names){
+        auto file_name =
+                utils::fs::append_path(_param.path,n+"i");
+        auto hdr=Page::readIndexHeader(file_name);
+        if(hdr.minTime>=query.from || hdr.maxTime<query.to){
+
+        }
+    }
     auto p = get_cur_page();
     return p->chunksByIterval(query);
   }
@@ -168,7 +178,7 @@ public:
           auto cur_page = this->get_cur_page();
           auto res=cur_page->append(value);
           if(res.writed!=1){
-              cur_page=nullptr;
+              _cur_page=nullptr;
           }else{
               return res;
           }

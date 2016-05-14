@@ -134,13 +134,13 @@ void MemoryStorage::set_chunkSource(ChunkContainer *cw) {
 }
 
 
-Reader_ptr MemoryStorage::readInterval(Time from, Time to){
-	return _Impl->readInterval(from, to);
-}
+//Reader_ptr MemoryStorage::readInterval(Time from, Time to){
+//	return _Impl->readInterval(from, to);
+//}
 
-Reader_ptr MemoryStorage::readInTimePoint(Time time_point) {
-	return _Impl->readInTimePoint(time_point);
-}
+//Reader_ptr MemoryStorage::readInTimePoint(Time time_point) {
+//	return _Impl->readInTimePoint(time_point);
+//}
 
 Reader_ptr MemoryStorage::readInterval(const QueryInterval &q) {
 	return _Impl->readInterval(q);

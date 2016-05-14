@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < queries_count; i++) {
       auto f = std::min(rnd_time_from[i], rnd_time_to[i]);
       auto t = std::max(rnd_time_from[i], rnd_time_to[i]);
-      auto rdr = ms->readInterval(f, t);
+      auto rdr = ms->readInterval(dariadb::storage::QueryInterval(f, t));
       rdr->readAll(clbk.get());
     }
 

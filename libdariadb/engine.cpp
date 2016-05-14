@@ -160,13 +160,13 @@ Engine::QueueSizes Engine::queue_size() const {
   return _impl->queue_size();
 }
 
-Reader_ptr dariadb::storage::Engine::readInterval(Time from, Time to){
-	return _impl->readInterval(from, to);
-}
+//Reader_ptr dariadb::storage::Engine::readInterval(Time from, Time to){
+//	return _impl->readInterval(from, to);
+//}
 
-Reader_ptr dariadb::storage::Engine::readInTimePoint(Time time_point) {
-	return _impl->readInTimePoint(time_point);
-}
+//Reader_ptr dariadb::storage::Engine::readInTimePoint(Time time_point) {
+//	return _impl->readInTimePoint(time_point);
+//}
 
 Reader_ptr dariadb::storage::Engine::readInterval(const QueryInterval & q) {
 	return _impl->readInterval(q);

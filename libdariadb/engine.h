@@ -51,8 +51,8 @@ public:
   QueueSizes queue_size() const;
 
   // Inherited via MeasStorage
-  virtual Reader_ptr readInterval(Time from, Time to) override;
-  virtual Reader_ptr readInTimePoint(Time time_point) override;
+//  virtual Reader_ptr readInterval(Time from, Time to) override;
+//  virtual Reader_ptr readInTimePoint(Time time_point) override;
   virtual Reader_ptr readInterval(const QueryInterval & q) override;
   virtual Reader_ptr readInTimePoint(const QueryTimePoint & q) override;
 
