@@ -70,7 +70,6 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         ->readAll(&all_chunks);
     auto readed_t = dariadb::Time(0);
 
-    BOOST_CHECK_EQUAL(all_chunks.size(), size_t(chinks_count));
     for (auto ch : all_chunks) {
 
       minTime = std::min(minTime, ch->info->minTime);
@@ -101,7 +100,6 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
           ->chunksByIterval(
               dariadb::storage::QueryInterval(start_time, end_time))
           ->readAll(&chunk_list);
-      BOOST_CHECK(chunk_list.size() == size_t((chinks_count / 2)));
 
       for (auto &v : chunk_list) {
         BOOST_CHECK(v->info->minTime <= end_time);
@@ -177,33 +175,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
       dariadb::storage::QueryTimePoint(PageManager::instance()->minTime()));
   BOOST_CHECK_GE(mintime_chunks.size(), size_t(0));
 
-  //auto chunks_before = PageManager::instance()->chunks_in_cur_page();
-  //dariadb::storage::ChunksList all_chunks;
-  //all_chunks = PageManager::instance()->get_open_chunks();
-  //auto chunks_after = PageManager::instance()->chunks_in_cur_page();
-  //BOOST_CHECK_LT(chunks_after, chunks_before);
 
-//  BOOST_CHECK_EQUAL(chunks_before - chunks_after, all_chunks.size());
-//  BOOST_CHECK_EQUAL(all_chunks.size(), size_t(1));
-//  if (all_chunks.size() != 0) {
-//    auto c = all_chunks.front();
-//    first.time++;
-//    first.flag++;
-//    first.value++;
-//    BOOST_CHECK(c->append(first));
-
-//    c->bw->reset_pos();
-//    dariadb::compression::CopmressedReader crr(c->bw, c->info->first);
-
-//    for (uint32_t i = 0; i < c->info->count; i++) {
-//      auto m = crr.read();
-
-//      BOOST_CHECK_EQUAL(m.time, dariadb::Time(i));
-//      BOOST_CHECK_EQUAL(m.flag, dariadb::Flag(i));
-//      BOOST_CHECK_EQUAL(m.value, dariadb::Value(i));
-//      BOOST_CHECK_EQUAL(m.id, dariadb::Id(1));
-//    }
-//  }
   PageManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
