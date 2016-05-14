@@ -29,83 +29,73 @@ const size_t chunks_size = 1024;
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-  //{
-  //  dariadb::Time t = 0;
+    const size_t K = 1;
+    const size_t id_count=4;
+  {
 
-  //  dariadb::Meas first;
-  //  first.id = 1;
-  //  first.time = t;
+    if (dariadb::utils::fs::path_exists(storagePath)) {
+      dariadb::utils::fs::rm(storagePath);
+    }
+    dariadb::storage::PageManager::start(dariadb::storage::PageManager::Params(
+        storagePath, chunks_count,
+        chunks_size));
 
-  //  dariadb::storage::Chunk_Ptr ch =
-  //      std::make_shared<dariadb::storage::ZippedChunk>(chunks_size, first);
-  //  for (int i = 0;; i++, t++) {
-  //    first.flag = dariadb::Flag(i);
-  //    first.time = t;
-  //    first.value = dariadb::Value(i);
-  //    if (!ch->append(first)) {
-  //      break;
-  //    }
-  //  }
+    auto start = clock();
+    auto m = dariadb::Meas::empty();
 
-  //  if (dariadb::utils::fs::path_exists(storagePath)) {
-  //    dariadb::utils::fs::rm(storagePath);
-  //  }
-  //  dariadb::storage::PageManager::start(dariadb::storage::PageManager::Params(
-  //      storagePath, chunks_count,
-  //      chunks_size));
+    for (size_t i = 0; i < K * 1000000; i++) {
+      m.id = i % id_count;
+      m.flag = 0xff;
+      m.time = dariadb::timeutil::current_time();
+      m.value = dariadb::Value(i);
+      dariadb::storage::PageManager::instance()->append(m);
+    }
 
-  //  auto start = clock();
+    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "insert : " << elapsed << std::endl;
+    dariadb::storage::PageManager::instance()->flush();
 
-  // /* for (size_t i = 0; i < chunks_count; ++i) {
-  //    dariadb::storage::PageManager::instance()->append(ch);
-  //    ch->info.maxTime += dariadb::Time(chunks_size);
-  //    ch->info.minTime += dariadb::Time(chunks_size);
-  //  }*/
+    std::random_device r;
+    std::default_random_engine e1(r());
+    std::uniform_int_distribution<dariadb::Id> uniform_dist(
+        dariadb::storage::PageManager::instance()->minTime(),
+        dariadb::storage::PageManager::instance()->maxTime());
 
-  //  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-  //  std::cout << "insert : " << elapsed << std::endl;
-  //  dariadb::storage::PageManager::instance()->flush();
-  //  std::random_device r;
-  //  std::default_random_engine e1(r());
-  //  std::uniform_int_distribution<dariadb::Id> uniform_dist(
-  //      dariadb::storage::PageManager::instance()->minTime(),
-  //      dariadb::storage::PageManager::instance()->maxTime());
+    BenchCallback *clbk = new BenchCallback;
 
-  //  BenchCallback *clbk = new BenchCallback;
+    start = clock();
 
-  //  start = clock();
+    for (size_t i = 0; i < size_t(100); i++) {
+      auto time_point1 = uniform_dist(e1);
+      auto time_point2 = uniform_dist(e1);
+      auto from = std::min(time_point1, time_point2);
+      auto to = std::max(time_point1, time_point2);
+      auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(
+          dariadb::storage::QueryInterval(from, to));
+      cursor->readAll(clbk);
+      cursor = nullptr;
+    }
 
-  //  for (size_t i = 0; i < size_t(100); i++) {
-  //    auto time_point1 = uniform_dist(e1);
-  //    auto time_point2 = uniform_dist(e1);
-  //    auto from = std::min(time_point1, time_point2);
-  //    auto to = std::max(time_point1, time_point2);
-  //    auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(
-  //        dariadb::storage::QueryInterval(from, to));
-  //    cursor->readAll(clbk);
-  //    cursor = nullptr;
-  //  }
+    elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "interval: " << elapsed << std::endl;
 
-  //  elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-  //  std::cout << "interval: " << elapsed << std::endl;
+    start = clock();
 
-  //  start = clock();
+    for (size_t i = 0; i < size_t(100); i++) {
+      auto time_point = uniform_dist(e1);
+      dariadb::storage::PageManager::instance()->chunksBeforeTimePoint(
+          dariadb::storage::QueryTimePoint(time_point));
+    }
 
-  //  for (size_t i = 0; i < size_t(100); i++) {
-  //    auto time_point = uniform_dist(e1);
-  //    dariadb::storage::PageManager::instance()->chunksBeforeTimePoint(
-  //        dariadb::storage::QueryTimePoint(time_point));
-  //  }
+    elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "timePoint: " << elapsed << std::endl;
 
-  //  elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-  //  std::cout << "timePoint: " << elapsed << std::endl;
+    delete clbk;
 
-  //  delete clbk;
+    dariadb::storage::PageManager::stop();
+    if (dariadb::utils::fs::path_exists(storagePath)) {
+      dariadb::utils::fs::rm(storagePath);
+    }
 
-  //  dariadb::storage::PageManager::stop();
-  //  if (dariadb::utils::fs::path_exists(storagePath)) {
-  //    dariadb::utils::fs::rm(storagePath);
-  //  }
-  //  ch = nullptr;
-  //}
+  }
 }
