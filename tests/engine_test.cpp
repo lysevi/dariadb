@@ -65,16 +65,16 @@ BOOST_AUTO_TEST_CASE(Engine) {
     BOOST_CHECK(min_time == start_time);*/
 
     dariadb::Meas::MeasList output;
-    ms->readInterval(dariadb::storage::QueryInterval(start_time, t))->readAll(&output);
+    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0},0, start_time, t))->readAll(&output);
     BOOST_CHECK(output.size() <= count);
 
     std::shared_ptr<BenchCallback> clbk{new BenchCallback};
-    ms->readInterval(dariadb::storage::QueryInterval(start_time, e.time))->readAll(clbk.get());
+    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0},0,start_time, e.time))->readAll(clbk.get());
     BOOST_CHECK_GT(clbk->count, size_t(0));
 
     output.clear();
     ms->flush();
-    ms->readInterval(dariadb::storage::QueryInterval(start_time, t))->readAll(&output);
+    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0},0,start_time, t))->readAll(&output);
     BOOST_CHECK(output.size() > 0);
 
     ////partial flush (not all chunks drops to page storage) works fine.

@@ -360,7 +360,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   //  auto offset = get_chunks_offset(header->chunk_per_storage) +
   //                size_t(this->chunks - index[pos_index].offset);
   //  this->mmap->flush(offset, sizeof(header->chunk_size));
-  return true;
 }
 
 bool Page::is_full() const { return this->_free_poses.empty(); }

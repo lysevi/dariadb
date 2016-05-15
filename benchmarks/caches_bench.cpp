@@ -65,20 +65,8 @@ public:
   }
 };
 
-std::atomic_long append_count{0}, read_all_times{0};
+std::atomic_long append_count{0};
 bool stop_info = false;
-
-bool stop_read_all{false};
-
-void thread_read_all(dariadb::Time from, dariadb::Time to,
-                     dariadb::storage::MeasStorage_ptr ms) {
-  auto clb = std::make_shared<BenchCallback>();
-  while (!stop_read_all) {
-    auto rdr = ms->readInterval(dariadb::storage::QueryInterval(from, to));
-    rdr->readAll(clb.get());
-    read_all_times++;
-  }
-}
 
 void show_info() {
   clock_t t0 = clock();
@@ -174,7 +162,6 @@ int main(int argc, char *argv[]) {
 
     append_count = 0;
     stop_info = false;
-    stop_read_all = false;
 
     std::thread info_thread(show_info);
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
@@ -185,8 +172,6 @@ int main(int argc, char *argv[]) {
                     &append_count, ms};
       writers[pos++] = std::move(t);
     }
-    // std::thread read_all_t{ thread_read_all, 0,
-    // dariadb::Time(iteration_count), ms };
 
     pos = 0;
     for (size_t i = 0; i < dariadb_bench::total_threads_count; i++) {
@@ -194,7 +179,6 @@ int main(int argc, char *argv[]) {
       t.join();
     }
     stop_info = true;
-    stop_read_all = true;
     info_thread.join();
     // read_all_t.join();
     ms = nullptr;

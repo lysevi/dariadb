@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::storage::MeasStorage_ptr ms{raw_ptr};
 
+    dariadb::IdSet all_id_set;
     append_count = 0;
     stop_info = false;
 
@@ -92,6 +93,7 @@ int main(int argc, char *argv[]) {
 
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
+        all_id_set.insert(pos);
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
                     dariadb::Time(i), &append_count, ms};
       writers[pos++] = std::move(t);
@@ -136,7 +138,8 @@ int main(int argc, char *argv[]) {
       const size_t reads_count = 10;
       for (size_t i = 0; i < reads_count; i++) {
         auto time_point = uniform_dist(e1);
-        ms->readInTimePoint(time_point)->readAll(clbk.get());
+        dariadb::storage::QueryTimePoint qp{dariadb::IdArray(all_id_set.begin(),all_id_set.end()),0, time_point};
+        ms->readInTimePoint(qp)->readAll(clbk.get());
       }
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
       std::cout << "time: " << elapsed << std::endl;
@@ -158,7 +161,9 @@ int main(int argc, char *argv[]) {
         auto time_point2 = uniform_dist(e1);
         auto from = std::min(time_point1, time_point2);
         auto to = std::max(time_point1, time_point2);
-        ms->readInterval(dariadb::storage::QueryInterval(from, to))->readAll(clbk.get());
+        auto qi=dariadb::storage::QueryInterval(dariadb::IdArray(all_id_set.begin(),all_id_set.end()),0,from, to);
+        ms->readInterval(qi)
+                ->readAll(clbk.get());
       }
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
       std::cout << "time: " << elapsed << std::endl;
@@ -167,7 +172,8 @@ int main(int argc, char *argv[]) {
       std::cout << "read all..." << std::endl;
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
       auto start = clock();
-      ms->readInterval(dariadb::storage::QueryInterval(start_time, ms->maxTime()))->readAll(clbk.get());
+      dariadb::storage::QueryInterval qi{dariadb::IdArray(all_id_set.begin(),all_id_set.end()),0, start_time, ms->maxTime()};
+      ms->readInterval(qi)->readAll(clbk.get());
 
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "readed: " << clbk->count << std::endl;

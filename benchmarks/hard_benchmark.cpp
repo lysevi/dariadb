@@ -44,7 +44,8 @@ void writer_1(dariadb::storage::MeasStorage_ptr ms) {
 }
 
 std::atomic_long writen{0};
-
+dariadb::IdSet _all_id;
+std::mutex     _id_lock;
 void writer_2(dariadb::Id id_from, size_t id_per_thread,
               dariadb::storage::MeasStorage_ptr ms) {
   auto m = dariadb::Meas::empty();
@@ -55,6 +56,8 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread,
   size_t max_id = (id_from + id_per_thread);
 
   for (dariadb::Id i = id_from; i < max_id; i += 1) {
+      _id_lock.lock();
+      _all_id.insert(i);
     dariadb::Value v = 1.0;
     m.id = i;
     m.flag = dariadb::Flag(0);
@@ -241,12 +244,14 @@ int main(int argc, char *argv[]) {
       rnd_time_to[i] = uniform_dist(e1);
     }
 
+    dariadb::IdArray all_ids(_all_id.begin(),_all_id.end());
+
     auto start = clock();
 
     for (size_t i = 0; i < queries_count; i++) {
       auto f = std::min(rnd_time_from[i], rnd_time_to[i]);
       auto t = std::max(rnd_time_from[i], rnd_time_to[i]);
-      auto rdr = ms->readInterval(dariadb::storage::QueryInterval(f, t));
+      auto rdr = ms->readInterval(dariadb::storage::QueryInterval(all_ids,0,f, t));
       rdr->readAll(clbk.get());
     }
 

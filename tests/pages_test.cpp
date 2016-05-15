@@ -76,19 +76,22 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
   auto t = dariadb::Time(0);
   dariadb::Meas::MeasList addeded;
   const dariadb::Id id_count(2);
+  dariadb::IdSet all_id_set;
   for (size_t i = 0; i < 3; i++) {
     auto cur_id = dariadb::Id(i % id_count);
+    all_id_set.insert(cur_id);
     t = add_meases(cur_id, t, chinks_count,addeded);
   }
 
   dariadb::Time minTime(t);
+  dariadb::IdArray all_id_array{all_id_set.begin(),all_id_set.end()};
   { // Chunks load
     // must return all of appended chunks;
     dariadb::storage::ChunksList all_chunks;
 
     PageManager::instance()->flush();
     PageManager::instance()
-        ->chunksByIterval(dariadb::storage::QueryInterval(0, t))
+        ->chunksByIterval(dariadb::storage::QueryInterval(all_id_array,0, 0, t))
         ->readAll(&all_chunks);
     auto readed_t = dariadb::Time(0);
 
@@ -120,7 +123,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       dariadb::storage::ChunksList chunk_list;
       PageManager::instance()
           ->chunksByIterval(
-              dariadb::storage::QueryInterval(start_time, end_time))
+              dariadb::storage::QueryInterval(all_id_array,0, start_time, end_time))
           ->readAll(&chunk_list);
 
       for (auto &v : chunk_list) {
@@ -128,7 +131,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       }
 
       auto chunks_map = PageManager::instance()->chunksBeforeTimePoint(
-          dariadb::storage::QueryTimePoint(end_time));
+          dariadb::storage::QueryTimePoint(all_id_array,0, end_time));
       BOOST_CHECK_EQUAL(chunks_map.size(), size_t(id_count));
 
       for (auto &kv : chunks_map) {
@@ -193,7 +196,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
   // need to load current page;
   auto mintime_chunks = PageManager::instance()->chunksBeforeTimePoint(
-      dariadb::storage::QueryTimePoint(PageManager::instance()->minTime()));
+      dariadb::storage::QueryTimePoint(dariadb::IdArray{1},0, PageManager::instance()->minTime()));
   BOOST_CHECK_GE(mintime_chunks.size(), size_t(0));
 
 
@@ -225,7 +228,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
       add_meases(1, t, chunks_size / 10,addeded);
   }
 
-  dariadb::storage::QueryInterval qi(addeded.front().time,addeded.back().time);
+  dariadb::storage::QueryInterval qi(dariadb::IdArray{1},0, addeded.front().time,addeded.back().time);
   dariadb::storage::ChunksList chlist;
   PageManager::instance()->chunksByIterval(qi)->readAll(&chlist);
   BOOST_CHECK_GE(chlist.size(),page_count);
