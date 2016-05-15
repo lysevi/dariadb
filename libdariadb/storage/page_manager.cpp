@@ -120,20 +120,12 @@ public:
           for(auto id:query.ids){
               if(storage::bloom_check(hdr.id_bloom,id)){
                   auto page_file_name = utils::fs::append_path(_param.path, n);
-                  Page *cand=nullptr;
-                  bool should_close=false;
-                  if(_cur_page!=nullptr && _cur_page->filename==page_file_name){
-                          cand=_cur_page;
-                  }else{
-                      cand=Page::open(page_file_name);
-                      should_close=true;
-                  }
+
+                  Page *cand=Page::open(page_file_name,true);
                   auto qi=query;
                   qi.ids=dariadb::IdArray{id};
                   cand->chunksByIterval(qi)->readAll(&chunks[id]);
-                  if(should_close){
-                      delete cand;
-                  }
+                  delete cand;
               }
           }
 
@@ -166,13 +158,6 @@ public:
     auto cur_page = this->get_cur_page();
     return cur_page->getIds();
   }
-
-  //  dariadb::storage::ChunksList get_open_chunks() {
-  //    if (!dariadb::utils::fs::path_exists(_param.path)) {
-  //      return ChunksList{};
-  //    }
-  //    return this->get_cur_page()->get_open_chunks();
-  //  }
 
   size_t chunks_in_cur_page() const {
     if (_cur_page == nullptr) {

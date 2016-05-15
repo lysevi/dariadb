@@ -129,10 +129,11 @@ public:
     }
   }
 
-  static Private *open(const std::string &path) {
+  static Private *open(const std::string &path, bool read_only) {
     auto result = new Private();
-    result->m_file = new bi::file_mapping(path.c_str(), bi::read_write);
-    result->m_region = new bi::mapped_region(*(result->m_file), bi::read_write);
+    auto open_flag=read_only?bi::read_only:bi::read_write;
+    result->m_file = new bi::file_mapping(path.c_str(), open_flag);
+    result->m_region = new bi::mapped_region(*(result->m_file), open_flag);
     return result;
   }
 
@@ -146,7 +147,7 @@ public:
       fbuf.pubseekoff(size - 1, std::ios_base::beg);
       fbuf.sputc(0);
       fbuf.close();
-      return Private::open(path);
+      return Private::open(path, false);
     } catch (std::runtime_error &ex) {
       std::string what = ex.what();
       throw MAKE_EXCEPTION(ex.what());
@@ -179,8 +180,8 @@ MappedFile::MappedFile(Private *im) : _impl(im) {}
 
 MappedFile::~MappedFile() {}
 
-MappedFile::MapperFile_ptr MappedFile::open(const std::string &path) {
-  auto impl_res = MappedFile::Private::open(path);
+MappedFile::MapperFile_ptr MappedFile::open(const std::string &path, bool read_only) {
+  auto impl_res = MappedFile::Private::open(path,read_only);
   MappedFile::MapperFile_ptr result{new MappedFile{impl_res}};
   return result;
 }

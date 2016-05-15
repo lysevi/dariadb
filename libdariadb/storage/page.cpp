@@ -215,7 +215,7 @@ size_t get_chunks_offset() {
   return sizeof(PageHeader);
 }
 
-Page *Page::open(std::string file_name) {
+Page *Page::open(std::string file_name, bool read_only) {
   auto res = new Page;
   auto mmap = utils::fs::MappedFile::open(file_name);
   res->filename=file_name;

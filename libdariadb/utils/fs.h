@@ -37,7 +37,7 @@ public:
 
   void flush(std::size_t offset = 0, std::size_t bytes = 0);
 
-  static MapperFile_ptr open(const std::string &path);
+  static MapperFile_ptr open(const std::string &path, bool read_only=false);
   static MapperFile_ptr touch(const std::string &path, uint64_t size);
 
 private:

@@ -67,7 +67,7 @@ class Page : public ChunkContainer, public MeasWriter {
 public:
   static Page *create(std::string file_name, uint64_t sz,
                       uint32_t chunk_per_storage, uint32_t chunk_size);
-  static Page *open(std::string file_name);
+  static Page *open(std::string file_name, bool read_only=false);
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
   ~Page();
