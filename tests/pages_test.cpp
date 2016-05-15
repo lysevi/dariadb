@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   const size_t page_count = 4;
 
   while (dariadb::utils::fs::ls(storagePath, ".page").size() <= page_count) {
-    add_meases(1, t, chunks_size / 10, addeded);
+    t=add_meases(1, t, chunks_size / 10, addeded);
   }
 
   dariadb::storage::QueryInterval qi(dariadb::IdArray{1}, 0,

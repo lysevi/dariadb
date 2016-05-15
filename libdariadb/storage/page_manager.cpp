@@ -107,6 +107,7 @@ public:
   Cursor_ptr chunksByIterval(const QueryInterval &query) {
     std::lock_guard<std::mutex> lg(_locker);
     PageManagerCursor*raw_cursor=new PageManagerCursor;
+    ChunkMap chunks;
 
     auto names = _manifest.page_list();
     for (auto n : names) {
@@ -129,7 +130,7 @@ public:
                   }
                   auto qi=query;
                   qi.ids=dariadb::IdArray{id};
-                  cand->chunksByIterval(qi)->readAll(&raw_cursor->chunks);
+                  cand->chunksByIterval(qi)->readAll(&chunks[id]);
                   if(should_close){
                       delete cand;
                   }
@@ -137,6 +138,11 @@ public:
           }
 
       }
+    }
+    for(auto&kv:chunks){
+        for(auto&ch:kv.second){
+            raw_cursor->chunks.push_back(ch);
+        }
     }
     raw_cursor->reset_pos();
     //auto p = get_cur_page();
