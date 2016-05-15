@@ -70,7 +70,8 @@ public:
           assert(false);
         }
         Chunk_Ptr c{ptr};
-        assert(c->info->last.time != 0);
+        //TODO replace by some check;
+        //assert(c->info->last.time != 0);
         cbk->call(c);
         break;
       } else { // end of data;

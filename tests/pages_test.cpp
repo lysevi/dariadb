@@ -222,6 +222,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   first.id = 1;
   first.time = t;
   const size_t page_count = 4;
+
   while (dariadb::utils::fs::ls(storagePath, ".page").size() <= page_count) {
     add_meases(1, t, chunks_size / 10, addeded);
   }
@@ -230,5 +231,5 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
                                      addeded.front().time, addeded.back().time);
   dariadb::storage::ChunksList chlist;
   PageManager::instance()->chunksByIterval(qi)->readAll(&chlist);
-  BOOST_CHECK_GE(chlist.size(), page_count);
+  BOOST_CHECK_GE(chlist.size(), page_count*chunks_count);
 }
