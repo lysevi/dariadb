@@ -52,13 +52,19 @@ public:
 
       if (check_index_rec(_index_it)) {
         auto ptr_to_begin = link->chunks + _index_it.offset;
-        auto ptr_to_chunk_info =
+        auto ptr_to_chunk_info_raw =
             reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
-        auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
+        auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkIndexInfo);
+
+        auto info=new ChunkIndexInfo;
+        memcpy(info,ptr_to_chunk_info_raw,sizeof(ChunkIndexInfo));
+        auto buf=new uint8_t[info->size];
+        memcpy(buf,ptr_to_buffer_raw,info->size);
         Chunk_Ptr ptr = nullptr;
-        if (ptr_to_chunk_info->is_zipped) {
+        if (info->is_zipped) {
           // PM
-          ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info, ptr_to_buffer)};
+          ptr = Chunk_Ptr{new ZippedChunk(info, buf)};
+          ptr->should_free=true;
         } else {
           // TODO implement not zipped page.
           assert(false);
@@ -159,6 +165,7 @@ Page *Page::create(std::string file_name, uint64_t sz,
                    uint32_t chunk_per_storage, uint32_t chunk_size) {
   auto res = new Page;
   auto mmap = utils::fs::MappedFile::touch(file_name, sz);
+  res->filename=file_name;
   auto region = mmap->data();
   std::fill(region, region + sz, 0);
 
@@ -210,6 +217,7 @@ size_t get_chunks_offset() {
 Page *Page::open(std::string file_name) {
   auto res = new Page;
   auto mmap = utils::fs::MappedFile::open(file_name);
+  res->filename=file_name;
   auto region = mmap->data();
 
   auto immap = utils::fs::MappedFile::open(file_name + "i");

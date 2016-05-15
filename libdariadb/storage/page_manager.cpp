@@ -85,28 +85,63 @@ public:
     return p->minMaxTime(id, minResult, maxResult);
   }
 
+  class PageManagerCursor:public Cursor{
+  public:
+      bool is_end() const override{
+          return _chunk_iterator==chunks.end();
+      }
+      void readNext(Callback *cbk)  override{
+          if(!is_end()){
+              cbk->call(*_chunk_iterator);
+              ++_chunk_iterator;
+          }
+      }
+      void reset_pos()  override{
+          _chunk_iterator=chunks.begin();
+      }
+
+      ChunksList chunks;
+      ChunksList::iterator _chunk_iterator;
+  };
+
   Cursor_ptr chunksByIterval(const QueryInterval &query) {
     std::lock_guard<std::mutex> lg(_locker);
-    std::list<Page *> candidates;
+    PageManagerCursor*raw_cursor=new PageManagerCursor;
+
     auto names = _manifest.page_list();
     for (auto n : names) {
-      auto file_name = utils::fs::append_path(_param.path, n + "i");
-      auto hdr = Page::readIndexHeader(file_name);
+      auto index_file_name = utils::fs::append_path(_param.path, n + "i");
+      auto hdr = Page::readIndexHeader(index_file_name);
       if ((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
            (utils::inInterval(query.from, query.to, hdr.minTime)) ||
             (utils::inInterval(query.from, query.to, hdr.maxTime))){
 
           for(auto id:query.ids){
               if(storage::bloom_check(hdr.id_bloom,id)){
-                  auto cand=Page::open(n);
-                  candidates.push_back(cand);
+                  auto page_file_name = utils::fs::append_path(_param.path, n);
+                  Page *cand=nullptr;
+                  bool should_close=false;
+                  if(_cur_page!=nullptr && _cur_page->filename==page_file_name){
+                          cand=_cur_page;
+                  }else{
+                      cand=Page::open(page_file_name);
+                      should_close=true;
+                  }
+                  auto qi=query;
+                  qi.ids=dariadb::IdArray{id};
+                  cand->chunksByIterval(qi)->readAll(&raw_cursor->chunks);
+                  if(should_close){
+                      delete cand;
+                  }
               }
           }
 
       }
     }
-    auto p = get_cur_page();
-    return p->chunksByIterval(query);
+    raw_cursor->reset_pos();
+    //auto p = get_cur_page();
+    //return p->chunksByIterval(query);
+    return Cursor_ptr{raw_cursor};
   }
 
   IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) {

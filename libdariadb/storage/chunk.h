@@ -61,6 +61,8 @@ public:
 
   utils::Locker _locker;
   compression::BinaryBuffer_Ptr bw;
+
+  bool should_free; // chunk dtor must delete[] resource.
 };
 
 class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {

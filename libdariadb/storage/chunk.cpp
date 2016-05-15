@@ -33,6 +33,10 @@ Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m)
 }
 
 Chunk::~Chunk() {
+    if(should_free){
+        delete info;
+        delete[]_buffer_t;
+    }
   this->bw = nullptr;
 }
 
