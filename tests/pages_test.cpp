@@ -231,5 +231,19 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
                                      addeded.front().time, addeded.back().time);
   dariadb::storage::ChunksList chlist;
   PageManager::instance()->chunksByIterval(qi)->readAll(&chlist);
-  BOOST_CHECK_GE(chlist.size(), page_count*chunks_count);
+  //BOOST_CHECK_GE(chlist.size(), page_count*chunks_count);
+
+  for (auto ch : chlist) {
+    ch->bw->reset_pos();
+
+    dariadb::compression::CopmressedReader crr(ch->bw, ch->info->first);
+    BOOST_CHECK_EQUAL(ch->info->first.value, addeded.front().value);
+    addeded.pop_front();
+    for (uint32_t i = 0; i < ch->info->count; i++) {
+      auto m = crr.read();
+      auto a = addeded.front();
+      BOOST_CHECK_EQUAL(m.value, a.value);
+      addeded.pop_front();
+    }
+  }
 }
