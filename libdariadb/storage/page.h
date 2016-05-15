@@ -1,7 +1,7 @@
 #pragma once
+#include "../storage.h"
 #include "../utils/fs.h"
 #include "../utils/locker.h"
-#include "../storage.h"
 #include "chunk.h"
 #include "chunk_container.h"
 #include "cursor.h"
@@ -20,7 +20,7 @@ struct PageHeader {
   uint32_t count_readers;
 
   uint64_t addeded_chunks;
-  //uint8_t is_overwrite;
+  // uint8_t is_overwrite;
 
   uint32_t chunk_per_storage;
   uint32_t chunk_size;
@@ -68,13 +68,13 @@ public:
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
   ~Page();
-  //PM
-  bool add_to_target_chunk(const dariadb::Meas&m);
+  // PM
+  bool add_to_target_chunk(const dariadb::Meas &m);
   /*bool append(const ChunksList &ch) override;*/
   bool is_full() const;
   Cursor_ptr get_chunks(const dariadb::IdArray &ids, dariadb::Time from,
                         dariadb::Time to, dariadb::Flag flag);
-  //ChunksList get_open_chunks();
+  // ChunksList get_open_chunks();
   void dec_reader();
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
@@ -84,11 +84,13 @@ public:
   IdArray getIds() override;
 
   // Inherited via MeasWriter
-  virtual append_result append(const Meas & value) override;
+  virtual append_result append(const Meas &value) override;
   virtual void flush() override;
+
 private:
-  void init_chunk_index_rec(Chunk_Ptr ch,uint8_t *addr);
-  void update_chunk_index_rec(const Chunk_Ptr& ch);
+  void init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr);
+  void update_chunk_index_rec(const Chunk_Ptr &ch);
+
 public:
   uint8_t *region;  // page  file mapp region
   uint8_t *iregion; // index file mapp region

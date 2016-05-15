@@ -4,8 +4,8 @@
 #include <math/statistic.h>
 #include <storage/memstorage.h>
 //
-//class Moc_I1 : public dariadb::statistic::BaseMethod {
-//public:
+// class Moc_I1 : public dariadb::statistic::BaseMethod {
+// public:
 //  Moc_I1() { _a = _b = dariadb::Meas::empty(); }
 //  void calc(const dariadb::Meas &a, const dariadb::Meas &b) override {
 //    _a = a;
@@ -16,7 +16,7 @@
 //  dariadb::Meas _b;
 //};
 //
-//BOOST_AUTO_TEST_CASE(CallCalc) {
+// BOOST_AUTO_TEST_CASE(CallCalc) {
 //  std::unique_ptr<Moc_I1> p{new Moc_I1};
 //  auto m = dariadb::Meas::empty();
 //  m.time = 1;
@@ -59,7 +59,7 @@
 //  }
 //}
 //
-//BOOST_AUTO_TEST_CASE(RectangleMethod) {
+// BOOST_AUTO_TEST_CASE(RectangleMethod) {
 //  { // left
 //    using dariadb::statistic::integral::RectangleMethod;
 //    std::unique_ptr<RectangleMethod> p{
@@ -126,7 +126,7 @@
 //    BOOST_CHECK_CLOSE(p->result(), dariadb::Value(2), 0.01);
 //  }
 //}
-//BOOST_AUTO_TEST_CASE(Average) {
+// BOOST_AUTO_TEST_CASE(Average) {
 //  { // midle
 //    using dariadb::statistic::average::Average;
 //    std::unique_ptr<Average> p{new Average()};

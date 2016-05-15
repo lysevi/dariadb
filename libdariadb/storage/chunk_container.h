@@ -12,6 +12,7 @@ class ChunkWriter {
 public:
   virtual bool append(const Chunk_Ptr &c) = 0;
   virtual bool append(const ChunksList &lst) = 0;
+  virtual ~ChunkWriter(){}
 };
 
 class ChunkContainer {

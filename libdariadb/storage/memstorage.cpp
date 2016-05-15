@@ -51,67 +51,62 @@ public:
 };
 
 class MemoryStorage::Private
-   /* : protected dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
+/* : protected dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
 public:
-  Private()
-  {
-    _cc = nullptr;
-  }
+  Private() { _cc = nullptr; }
 
-  ~Private() {
-    
-  }
+  ~Private() {}
 
   dariadb::storage::Reader_ptr readInterval(Time from, Time to) {
-	  NOT_IMPLEMENTED;
-	  return nullptr;
+    NOT_IMPLEMENTED;
+    //return nullptr;
   }
   dariadb::storage::Reader_ptr readInTimePoint(Time time_point) {
-	  NOT_IMPLEMENTED;
-	  return nullptr;
+    NOT_IMPLEMENTED;
+    //return nullptr;
   }
   dariadb::storage::Reader_ptr readInterval(const QueryInterval &q) {
-	  NOT_IMPLEMENTED;
-	  return nullptr;
+    NOT_IMPLEMENTED;
+    //return nullptr;
   }
   dariadb::storage::Reader_ptr readInTimePoint(const QueryTimePoint &q) {
-	  NOT_IMPLEMENTED;
-	  return nullptr;
+    NOT_IMPLEMENTED;
+    //return nullptr;
   }
 
-  dariadb::storage::Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-	  NOT_IMPLEMENTED;
-	  return nullptr;
+  dariadb::storage::Reader_ptr currentValue(const IdArray &ids,
+                                            const Flag &flag) {
+    NOT_IMPLEMENTED;
+    //return nullptr;
   }
 
   Time minTime() {
-	  NOT_IMPLEMENTED;
-	  return 0;
+    NOT_IMPLEMENTED;
+    //return 0;
   }
   Time maxTime() {
-	  NOT_IMPLEMENTED;
-	  return 0;
+    NOT_IMPLEMENTED;
+    //return 0;
   }
 
   void set_chunkSource(ChunkContainer *cw) { _cc = cw; }
 
 protected:
-  //size_t _size;
+  // size_t _size;
 
-  //ChunkByTimeMap<Chunk_Ptr> _chunks;
-  //MultiTree _multitree;
-  //IdToChunkUMap _free_chunks;
-  //Time _min_time, _max_time;
+  // ChunkByTimeMap<Chunk_Ptr> _chunks;
+  // MultiTree _multitree;
+  // IdToChunkUMap _free_chunks;
+  // Time _min_time, _max_time;
   ////PM
   ////std::unique_ptr<SubscribeNotificator> _subscribe_notify;
-  //mutable std::mutex _subscribe_locker;
-  //mutable std::mutex _locker_free_chunks, _locker_drop, _locker_min_max;
-  //mutable std::mutex _locker_chunks;
+  // mutable std::mutex _subscribe_locker;
+  // mutable std::mutex _locker_free_chunks, _locker_drop, _locker_min_max;
+  // mutable std::mutex _locker_chunks;
   ChunkContainer *_cc;
 };
 
-MemoryStorage::MemoryStorage()
-	: _Impl(new MemoryStorage::Private{}) {}
+MemoryStorage::MemoryStorage() : _Impl(new MemoryStorage::Private{}) {}
 
 MemoryStorage::~MemoryStorage() {}
 
@@ -123,29 +118,26 @@ Time MemoryStorage::maxTime() {
   return _Impl->maxTime();
 }
 
-
 Reader_ptr MemoryStorage::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
-
 
 void MemoryStorage::set_chunkSource(ChunkContainer *cw) {
   _Impl->set_chunkSource(cw);
 }
 
-
-//Reader_ptr MemoryStorage::readInterval(Time from, Time to){
+// Reader_ptr MemoryStorage::readInterval(Time from, Time to){
 //	return _Impl->readInterval(from, to);
 //}
 
-//Reader_ptr MemoryStorage::readInTimePoint(Time time_point) {
+// Reader_ptr MemoryStorage::readInTimePoint(Time time_point) {
 //	return _Impl->readInTimePoint(time_point);
 //}
 
 Reader_ptr MemoryStorage::readInterval(const QueryInterval &q) {
-	return _Impl->readInterval(q);
+  return _Impl->readInterval(q);
 }
 
 Reader_ptr MemoryStorage::readInTimePoint(const QueryTimePoint &q) {
-	return _Impl->readInTimePoint(q);
+  return _Impl->readInTimePoint(q);
 }

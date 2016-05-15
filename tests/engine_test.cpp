@@ -28,8 +28,8 @@ BOOST_AUTO_TEST_CASE(Engine) {
     }
 
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path,
-                                              chunk_per_storage, chunk_size),
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                              chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(old_mem_chunks, 0))};
 
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(Engine) {
 
     BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
 
-	//PM
+    // PM
     /*dariadb::storage::ChunksList all_chunks;
     ms->chunksByIterval(dariadb::storage::QueryInterval(start_time, t))
         ->readAll(&all_chunks);
@@ -65,16 +65,22 @@ BOOST_AUTO_TEST_CASE(Engine) {
     BOOST_CHECK(min_time == start_time);*/
 
     dariadb::Meas::MeasList output;
-    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0},0, start_time, t))->readAll(&output);
+    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0}, 0,
+                                                     start_time, t))
+        ->readAll(&output);
     BOOST_CHECK(output.size() <= count);
 
     std::shared_ptr<BenchCallback> clbk{new BenchCallback};
-    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0},0,start_time, e.time))->readAll(clbk.get());
+    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0}, 0,
+                                                     start_time, e.time))
+        ->readAll(clbk.get());
     BOOST_CHECK_GT(clbk->count, size_t(0));
 
     output.clear();
     ms->flush();
-    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0},0,start_time, t))->readAll(&output);
+    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0}, 0,
+                                                     start_time, t))
+        ->readAll(&output);
     BOOST_CHECK(output.size() > 0);
 
     ////partial flush (not all chunks drops to page storage) works fine.
@@ -106,8 +112,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     }
 
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path,
-                                              chunk_per_storage, chunk_size),
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                              chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, 10))};
 
@@ -118,8 +124,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   }
   {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path,
-                                              chunk_per_storage, chunk_size),
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                              chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(0, 0))};
 

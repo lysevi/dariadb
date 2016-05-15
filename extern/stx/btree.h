@@ -1587,7 +1587,7 @@ public:
 
     int slot = find_lower(leaf, key);
     return (slot < leaf->slotuse && key_equal(key, leaf->slotkey[slot]))
-               ? iterator(leaf, slot)
+               ? iterator(leaf, (unsigned short)slot)
                : end();
   }
 
@@ -2053,7 +2053,7 @@ private:
 
       if (!allow_duplicates && slot < leaf->slotuse &&
           key_equal(key, leaf->slotkey[slot])) {
-        return std::pair<iterator, bool>(iterator(leaf, slot), false);
+        return std::pair<iterator, bool>(iterator(leaf, bool(slot)), false);
       }
 
       if (leaf->isfull()) {
@@ -2086,7 +2086,7 @@ private:
         *splitkey = key;
       }
 
-      return std::pair<iterator, bool>(iterator(leaf, slot), true);
+      return std::pair<iterator, bool>(iterator(leaf, bool(slot)), true);
     }
   }
 
@@ -2101,7 +2101,7 @@ private:
 
     leaf_node *newleaf = allocate_leaf();
 
-    newleaf->slotuse = leaf->slotuse - mid;
+    newleaf->slotuse = (unsigned short)(leaf->slotuse - mid);
 
     newleaf->nextleaf = leaf->nextleaf;
     if (newleaf->nextleaf == NULL) {
@@ -2116,7 +2116,7 @@ private:
     data_copy(leaf->slotdata + mid, leaf->slotdata + leaf->slotuse,
               newleaf->slotdata);
 
-    leaf->slotuse = mid;
+    leaf->slotuse = (unsigned short)mid;
     leaf->nextleaf = newleaf;
     newleaf->prevleaf = leaf;
 
@@ -2149,14 +2149,14 @@ private:
 
     inner_node *newinner = allocate_inner(inner->level);
 
-    newinner->slotuse = inner->slotuse - (mid + 1);
+    newinner->slotuse = inner->slotuse - (unsigned short)(mid + 1);
 
     std::copy(inner->slotkey + mid + 1, inner->slotkey + inner->slotuse,
               newinner->slotkey);
     std::copy(inner->childid + mid + 1, inner->childid + inner->slotuse + 1,
               newinner->childid);
 
-    inner->slotuse = mid;
+    inner->slotuse = (unsigned short)mid;
 
     *_newkey = inner->slotkey[mid];
     *_newinner = newinner;

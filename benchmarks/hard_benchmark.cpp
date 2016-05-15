@@ -45,7 +45,7 @@ void writer_1(dariadb::storage::MeasStorage_ptr ms) {
 
 std::atomic_long writen{0};
 dariadb::IdSet _all_id;
-std::mutex     _id_lock;
+std::mutex _id_lock;
 void writer_2(dariadb::Id id_from, size_t id_per_thread,
               dariadb::storage::MeasStorage_ptr ms) {
   auto m = dariadb::Meas::empty();
@@ -56,8 +56,8 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread,
   size_t max_id = (id_from + id_per_thread);
 
   for (dariadb::Id i = id_from; i < max_id; i += 1) {
-      _id_lock.lock();
-      _all_id.insert(i);
+    _id_lock.lock();
+    _all_id.insert(i);
     dariadb::Value v = 1.0;
     m.id = i;
     m.flag = dariadb::Flag(0);
@@ -68,7 +68,7 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread,
       m.value = v;
       ms->append(m);
       writen++;
-      auto rnd = rand() / float(RAND_MAX);
+      auto rnd = rand() / double(RAND_MAX);
 
       v += rnd;
     }
@@ -93,8 +93,8 @@ int main(int argc, char *argv[]) {
     }
 
     auto raw_ptr = new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path,
-                                              chunk_per_storage, chunk_size),
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                              chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
     dariadb::storage::MeasStorage_ptr ms{raw_ptr};
@@ -111,8 +111,8 @@ int main(int argc, char *argv[]) {
   }
 
   auto raw_ptr_ds = new dariadb::storage::Engine(
-      dariadb::storage::PageManager::Params(storage_path,
-                                            chunk_per_storage, chunk_size),
+      dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                            chunk_size),
       dariadb::storage::Capacitor::Params(cap_B, storage_path),
       dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
   dariadb::storage::MeasStorage_ptr ms{raw_ptr_ds};
@@ -144,8 +144,7 @@ int main(int argc, char *argv[]) {
             << " in disk chunks: "
             << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
             << " in queue: (p:" << queue_sizes.page
-            << " cap:" << queue_sizes.cap << ")"
-            << std::endl;
+            << " cap:" << queue_sizes.cap << ")" << std::endl;
   /* {
        auto ids=ms->getIds();
        std::cout << "ids.size:"<<ids.size() << std::endl;
@@ -244,14 +243,15 @@ int main(int argc, char *argv[]) {
       rnd_time_to[i] = uniform_dist(e1);
     }
 
-    dariadb::IdArray all_ids(_all_id.begin(),_all_id.end());
+    dariadb::IdArray all_ids(_all_id.begin(), _all_id.end());
 
     auto start = clock();
 
     for (size_t i = 0; i < queries_count; i++) {
       auto f = std::min(rnd_time_from[i], rnd_time_to[i]);
       auto t = std::max(rnd_time_from[i], rnd_time_to[i]);
-      auto rdr = ms->readInterval(dariadb::storage::QueryInterval(all_ids,0,f, t));
+      auto rdr =
+          ms->readInterval(dariadb::storage::QueryInterval(all_ids, 0, f, t));
       rdr->readAll(clbk.get());
     }
 

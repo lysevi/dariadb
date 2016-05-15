@@ -32,7 +32,9 @@ Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m)
   std::fill(_buffer_t, _buffer_t + info->size, 0);
 }
 
-Chunk::~Chunk() { this->bw = nullptr; }
+Chunk::~Chunk() {
+  this->bw = nullptr;
+}
 
 bool Chunk::check_flag(const Flag &f) {
   if (f != 0) {
@@ -104,7 +106,7 @@ bool ZippedChunk::append(const Meas &m) {
 
 class ZippedChunkReader : public Chunk::Reader {
 public:
-  virtual Meas readNext() {
+  virtual Meas readNext() override{
     assert(!is_end());
 
     if (_is_first) {

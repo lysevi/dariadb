@@ -61,7 +61,8 @@ int main(int argc, char *argv[]) {
   //  std::cout << "raded: " << clbk->count << std::endl;
 
   //  start = clock();
-  //  auto reader_int = ms->readInterval(dariadb::timeutil::from_chrono(now), t);
+  //  auto reader_int = ms->readInterval(dariadb::timeutil::from_chrono(now),
+  //  t);
 
   //  clbk->count = 0;
   //  reader_int->readAll(clbk);

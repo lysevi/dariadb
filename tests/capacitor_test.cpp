@@ -71,8 +71,8 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 
     dariadb::Meas::MeasList out;
 
-    auto reader =
-        cap.readInterval(dariadb::storage::QueryInterval(dariadb::IdArray(id_set.begin(),id_set.end()),0, 0, writes_count));
+    auto reader = cap.readInterval(dariadb::storage::QueryInterval(
+        dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
     BOOST_CHECK(reader != nullptr);
     reader->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), cap.size());
@@ -94,8 +94,8 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     BOOST_CHECK(cap.append(e).writed == 1);
 
     dariadb::Meas::MeasList out;
-    auto ids=dariadb::IdArray(id_set.begin(),id_set.end());
-    dariadb::storage::QueryInterval qi{ids,0, 0, writes_count};
+    auto ids = dariadb::IdArray(id_set.begin(), id_set.end());
+    dariadb::storage::QueryInterval qi{ids, 0, 0, writes_count};
     auto reader = cap.readInterval(qi);
     BOOST_CHECK(reader != nullptr);
     reader->readAll(&out);
@@ -229,7 +229,8 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
   }
   {
     dariadb::storage::Capacitor mbucket{
-        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        stor.get(),
+        dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
     std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);
@@ -243,8 +244,8 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
 
     mbucket.flush();
     dariadb::Meas::MeasList out;
-    dariadb::IdArray all_id{0,1,2,3};
-    dariadb::storage::QueryInterval qi(all_id,0,0,100);
+    dariadb::IdArray all_id{0, 1, 2, 3};
+    dariadb::storage::QueryInterval qi(all_id, 0, 0, 100);
     mbucket.readInterval(qi)->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), append_count);
   }

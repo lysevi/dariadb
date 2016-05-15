@@ -23,10 +23,7 @@ public:
 
 class Moc_Storage : public dariadb::storage::MeasStorage {
 public:
-  dariadb::append_result append(const dariadb::Meas::PMeas, const size_t size) {
-    return dariadb::append_result(size, 0);
-  }
-  dariadb::append_result append(const dariadb::Meas &) {
+  dariadb::append_result append(const dariadb::Meas &) override{
     return dariadb::append_result(1, 0);
   }
 
@@ -34,34 +31,26 @@ public:
   /// max time of writed meas
   dariadb::Time maxTime() override { return 0; }
 
-  
   void subscribe(const dariadb::IdArray &, const dariadb::Flag &,
                  const dariadb::storage::ReaderClb_ptr &) override {}
   dariadb::storage::Reader_ptr currentValue(const dariadb::IdArray &,
-                                            const dariadb::Flag &) {
+                                            const dariadb::Flag &)override {
     return nullptr;
   }
 
   void flush() override {}
 
-  dariadb::storage::Cursor_ptr
-  chunksByIterval(const dariadb::storage::QueryInterval &) {
-    return nullptr;
-  }
-
-  dariadb::storage::IdToChunkMap
-  chunksBeforeTimePoint(const dariadb::storage::QueryTimePoint &) {
-    return dariadb::storage::IdToChunkMap{};
-  }
 
   dariadb::IdArray getIds() { return dariadb::IdArray{}; }
 
   // Inherited via MeasStorage
-  virtual dariadb::storage::Reader_ptr readInterval(const dariadb::storage::QueryInterval & q) override{
-	  return nullptr;
+  virtual dariadb::storage::Reader_ptr
+  readInterval(const dariadb::storage::QueryInterval &q) override {
+    return nullptr;
   }
-  virtual dariadb::storage::Reader_ptr readInTimePoint(const dariadb::storage::QueryTimePoint & q) override{
-	  return nullptr;
+  virtual dariadb::storage::Reader_ptr
+  readInTimePoint(const dariadb::storage::QueryTimePoint &q) override {
+    return nullptr;
   }
 };
 
@@ -117,7 +106,8 @@ int main(int argc, char *argv[]) {
     dariadb::storage::MeasStorage_ptr ms{new Moc_Storage()};
     std::unique_ptr<dariadb::storage::Capacitor> cp{
         new dariadb::storage::Capacitor(
-            ms.get(), dariadb::storage::Capacitor::Params(cap_B, storage_path))};
+            ms.get(),
+            dariadb::storage::Capacitor::Params(cap_B, storage_path))};
 
     append_count = 0;
     stop_info = false;
@@ -155,8 +145,8 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path,
-                                              chunk_per_storage, chunk_size),
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                              chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
         dariadb::storage::Engine::Limits(max_mem_chunks, old_mem_chunks))};
 

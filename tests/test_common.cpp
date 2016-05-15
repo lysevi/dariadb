@@ -87,7 +87,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   dariadb::Flag flg_val(0);
   dariadb::IdSet _all_ids_set;
   for (auto i = from; i < to; i += step) {
-      _all_ids_set.insert(id_val);
+    _all_ids_set.insert(id_val);
     m.id = id_val;
     m.flag = flg_val;
     m.src = flg_val;
@@ -113,9 +113,9 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
   as->flush();
 
-  auto reader = as->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray(_all_ids_set.begin(),_all_ids_set.end()),
-                                                                 0,
-                                                                 from, to + copies_count));
+  auto reader = as->readInterval(dariadb::storage::QueryInterval(
+      dariadb::IdArray(_all_ids_set.begin(), _all_ids_set.end()), 0, from,
+      to + copies_count));
   check_reader_of_all(reader, from, to, step, id_val, total_count,
                       "readAll error: ");
 
@@ -146,7 +146,9 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
 
   all.clear();
-  auto qp=dariadb::storage::QueryTimePoint(dariadb::IdArray(_all_ids_set.begin(),_all_ids_set.end()),0, to + copies_count);
+  auto qp = dariadb::storage::QueryTimePoint(
+      dariadb::IdArray(_all_ids_set.begin(), _all_ids_set.end()), 0,
+      to + copies_count);
   as->readInTimePoint(qp)->readAll(&all);
   size_t ids_count = (size_t)((to - from) / step);
   if (all.size() != ids_count) {
@@ -154,7 +156,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
 
   fltr_res.clear();
-  qp.time_point=to + copies_count;
+  qp.time_point = to + copies_count;
   as->readInTimePoint(qp)->readAll(&fltr_res);
   if (fltr_res.size() != ids_count) {
     throw MAKE_EXCEPTION("fltr_res.size() != ids_count");
@@ -162,10 +164,9 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
   dariadb::IdArray notExstsIDs{9999};
   fltr_res.clear();
-  qp.ids=notExstsIDs;
-  qp.time_point=to - 1;
-  as->readInTimePoint(qp)
-      ->readAll(&fltr_res);
+  qp.ids = notExstsIDs;
+  qp.time_point = to - 1;
+  as->readInTimePoint(qp)->readAll(&fltr_res);
   if (fltr_res.size() != size_t(1)) { // must return NO_DATA
     throw MAKE_EXCEPTION("fltr_res.size() != size_t(1)");
   }
@@ -195,9 +196,9 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
     m.time = 5;
     ds->append(m);
 
-    dariadb::IdArray all_id={1,2,4,5,55};
+    dariadb::IdArray all_id = {1, 2, 4, 5, 55};
     {
-      auto tp_reader = ds->readInTimePoint({all_id,0, 6});
+      auto tp_reader = ds->readInTimePoint({all_id, 0, 6});
       dariadb::Meas::MeasList output_in_point{};
       tp_reader->readAll(&output_in_point);
 
@@ -205,7 +206,8 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
         throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5))");
       }
 
-      auto rdr = ds->readInterval(dariadb::storage::QueryInterval(all_id,0,0, 6));
+      auto rdr =
+          ds->readInterval(dariadb::storage::QueryInterval(all_id, 0, 0, 6));
       output_in_point.clear();
       rdr->readAll(&output_in_point);
       if (output_in_point.size() != size_t(5)) {
@@ -214,7 +216,7 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
     }
     {
 
-      auto tp_reader = ds->readInTimePoint({all_id,0, 3});
+      auto tp_reader = ds->readInTimePoint({all_id, 0, 3});
       dariadb::Meas::MeasList output_in_point{};
       tp_reader->readAll(&output_in_point);
 
@@ -228,7 +230,8 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
         }
       }
     }
-    auto reader = ds->readInterval(dariadb::storage::QueryInterval(all_id,0,3, 5));
+    auto reader =
+        ds->readInterval(dariadb::storage::QueryInterval(all_id, 0, 3, 5));
     dariadb::Meas::MeasList output{};
     reader->readAll(&output);
     if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
@@ -253,10 +256,10 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
     m.id = 6;
     m.time = 10;
     ds->append(m);
-    dariadb::IdArray second_all_id={1,2,4,5,6,55};
+    dariadb::IdArray second_all_id = {1, 2, 4, 5, 6, 55};
     {
 
-      auto tp_reader = ds->readInTimePoint({second_all_id,0,8});
+      auto tp_reader = ds->readInTimePoint({second_all_id, 0, 8});
       dariadb::Meas::MeasList output_in_point{};
       tp_reader->readAll(&output_in_point);
 

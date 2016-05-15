@@ -11,20 +11,21 @@
 #include <queue>
 #include <thread>
 
-const std::string MANIFEST_FILE_NAME="Manifest";
+const std::string MANIFEST_FILE_NAME = "Manifest";
 
 using namespace dariadb::storage;
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
-//PM
+// PM
 class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
 public:
   Private(const PageManager::Params &param)
-      : _cur_page(nullptr), _param(param),_manifest(utils::fs::append_path(param.path,MANIFEST_FILE_NAME)) {
+      : _cur_page(nullptr), _param(param),
+        _manifest(utils::fs::append_path(param.path, MANIFEST_FILE_NAME)) {
     /*this->start_async();*/
   }
 
   ~Private() {
-   /* this->stop_async();*/
+    /* this->stop_async();*/
 
     if (_cur_page != nullptr) {
       delete _cur_page;
@@ -39,36 +40,36 @@ public:
   }
 
   Page *create_page() {
-      if (!dariadb::utils::fs::path_exists(_param.path)) {
-          dariadb::utils::fs::mkdir(_param.path);
-      }
+    if (!dariadb::utils::fs::path_exists(_param.path)) {
+      dariadb::utils::fs::mkdir(_param.path);
+    }
 
-      Page *res = nullptr;
+    Page *res = nullptr;
 
-      auto names=_manifest.page_list();
-      for(auto n:names){
-          auto file_name =
-                  utils::fs::append_path(_param.path,n);
-          auto hdr=Page::readHeader(file_name);
-          if(!hdr.is_full){
-              res = Page::open(file_name);
-          }
+    auto names = _manifest.page_list();
+    for (auto n : names) {
+      auto file_name = utils::fs::append_path(_param.path, n);
+      auto hdr = Page::readHeader(file_name);
+      if (!hdr.is_full) {
+        res = Page::open(file_name);
       }
-      if(res==nullptr){
-          std::string page_name = utils::fs::random_file_name(".page");
-          std::string file_name =
-                  dariadb::utils::fs::append_path(_param.path, page_name);
-          auto sz = calc_page_size();
-          res = Page::create(file_name, sz, _param.chunk_per_storage,
-                             _param.chunk_size);
-          _manifest.page_append(page_name);
-      }
+    }
+    if (res == nullptr) {
+      std::string page_name = utils::fs::random_file_name(".page");
+      std::string file_name =
+          dariadb::utils::fs::append_path(_param.path, page_name);
+      auto sz = calc_page_size();
+      res = Page::create(file_name, sz, _param.chunk_per_storage,
+                         _param.chunk_size);
+      _manifest.page_append(page_name);
+    }
 
-      return res;
+    return res;
   }
-  //PM
-  void flush() { /*this->flush_async();*/ }
-  //void call_async(const Chunk_Ptr &ch) override { /*write_to_page(ch);*/ }
+  // PM
+  void flush() { /*this->flush_async();*/
+  }
+  // void call_async(const Chunk_Ptr &ch) override { /*write_to_page(ch);*/ }
 
   Page *get_cur_page() {
     if (_cur_page == nullptr) {
@@ -76,7 +77,7 @@ public:
     }
     return _cur_page;
   }
-  //PM
+  // PM
   /*bool write_to_page(const Chunk_Ptr &ch) {
     std::lock_guard<std::mutex> lg(_locker_write);
     auto pg = get_cur_page();
@@ -107,15 +108,13 @@ public:
 
   Cursor_ptr chunksByIterval(const QueryInterval &query) {
     std::lock_guard<std::mutex> lg(_locker);
-    std::list<Page*> candidates;
-    auto names=_manifest.page_list();
-    for(auto n:names){
-        auto file_name =
-                utils::fs::append_path(_param.path,n+"i");
-        auto hdr=Page::readIndexHeader(file_name);
-        if(hdr.minTime>=query.from || hdr.maxTime<query.to){
-
-        }
+    std::list<Page *> candidates;
+    auto names = _manifest.page_list();
+    for (auto n : names) {
+      auto file_name = utils::fs::append_path(_param.path, n + "i");
+      auto hdr = Page::readIndexHeader(file_name);
+      if (hdr.minTime >= query.from || hdr.maxTime < query.to) {
+      }
     }
     auto p = get_cur_page();
     return p->chunksByIterval(query);
@@ -138,12 +137,12 @@ public:
     return cur_page->getIds();
   }
 
-//  dariadb::storage::ChunksList get_open_chunks() {
-//    if (!dariadb::utils::fs::path_exists(_param.path)) {
-//      return ChunksList{};
-//    }
-//    return this->get_cur_page()->get_open_chunks();
-//  }
+  //  dariadb::storage::ChunksList get_open_chunks() {
+  //    if (!dariadb::utils::fs::path_exists(_param.path)) {
+  //      return ChunksList{};
+  //    }
+  //    return this->get_cur_page()->get_open_chunks();
+  //  }
 
   size_t chunks_in_cur_page() const {
     if (_cur_page == nullptr) {
@@ -151,8 +150,10 @@ public:
     }
     return _cur_page->header->addeded_chunks;
   }
-  //PM
-  size_t in_queue_size() const { return 0;/*return this->async_queue_size();*/ }
+  // PM
+  size_t in_queue_size() const {
+    return 0; /*return this->async_queue_size();*/
+  }
 
   dariadb::Time minTime() {
     std::lock_guard<std::mutex> lg(_locker);
@@ -172,18 +173,19 @@ public:
     }
   }
 
-  append_result append(const Meas & value) {
-	  std::lock_guard<std::mutex> lg(_locker);
-      while(true){
-          auto cur_page = this->get_cur_page();
-          auto res=cur_page->append(value);
-          if(res.writed!=1){
-              _cur_page=nullptr;
-          }else{
-              return res;
-          }
+  append_result append(const Meas &value) {
+    std::lock_guard<std::mutex> lg(_locker);
+    while (true) {
+      auto cur_page = this->get_cur_page();
+      auto res = cur_page->append(value);
+      if (res.writed != 1) {
+        _cur_page = nullptr;
+      } else {
+        return res;
       }
+    }
   }
+
 protected:
   Page *_cur_page;
   PageManager::Params _param;
@@ -216,12 +218,12 @@ void PageManager::flush() {
 PageManager *PageManager::instance() {
   return _instance;
 }
-//PM
-//bool PageManager::append(const Chunk_Ptr &c) {
+// PM
+// bool PageManager::append(const Chunk_Ptr &c) {
 //  return impl->append(c);
 //}
 //
-//bool PageManager::append(const ChunksList &c) {
+// bool PageManager::append(const ChunksList &c) {
 //  return impl->append(c);
 //}
 
@@ -249,7 +251,7 @@ dariadb::IdArray PageManager::getIds() {
   return impl->getIds();
 }
 
-//dariadb::storage::ChunksList PageManager::get_open_chunks() {
+// dariadb::storage::ChunksList PageManager::get_open_chunks() {
 //  return impl->get_open_chunks();
 //}
 
@@ -269,6 +271,7 @@ dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
 }
 
-dariadb::append_result dariadb::storage::PageManager::append(const Meas & value){
-	return impl->append(value);
+dariadb::append_result
+dariadb::storage::PageManager::append(const Meas &value) {
+  return impl->append(value);
 }

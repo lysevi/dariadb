@@ -24,7 +24,8 @@ struct ChunkIndexInfo {
   uint32_t bw_pos;
   uint8_t bw_bit_num;
   bool is_readonly;
-  compression::CopmressedWriter::Position writer_position; // TODO move from this.
+  compression::CopmressedWriter::Position
+      writer_position; // TODO move from this.
 
   size_t size;
 };
@@ -36,13 +37,14 @@ public:
   public:
     virtual Meas readNext() = 0;
     virtual bool is_end() const = 0;
+    virtual ~Reader(){}
   };
 
   using Reader_Ptr = std::shared_ptr<Chunk::Reader>;
 
   typedef uint8_t *u8vector;
 
-  Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size,  Meas first_m);
+  Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m);
   Chunk(ChunkIndexInfo *index, uint8_t *buffer);
   virtual ~Chunk();
 
@@ -50,13 +52,12 @@ public:
   virtual bool is_full() const = 0;
   virtual Reader_Ptr get_reader() = 0;
   bool check_flag(const Flag &f);
-  //TODO remove?
+  // TODO remove?
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
 
   ChunkIndexInfo *info;
   u8vector _buffer_t;
-  
 
   utils::Locker _locker;
   compression::BinaryBuffer_Ptr bw;
@@ -64,7 +65,8 @@ public:
 
 class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
 public:
-  ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m);
+  ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size,
+              Meas first_m);
   ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer);
   ~ZippedChunk();
   bool is_full() const override { return c_writer.is_full(); }
@@ -79,6 +81,5 @@ typedef std::list<Chunk_Ptr> ChunksList;
 typedef std::map<Id, Chunk_Ptr> IdToChunkMap;
 typedef std::map<Id, ChunksList> ChunkMap;
 typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
-
 }
 }

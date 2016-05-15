@@ -194,11 +194,17 @@ Page *Page::create(std::string file_name, uint64_t sz,
   return res;
 }
 
-size_t get_header_offset() { return 0; }
+size_t get_header_offset() {
+  return 0;
+}
 
-size_t get_index_offset() { return sizeof(PageHeader); }
+size_t get_index_offset() {
+  return sizeof(PageHeader);
+}
 
-size_t get_chunks_offset() { return sizeof(PageHeader); }
+size_t get_chunks_offset() {
+  return sizeof(PageHeader);
+}
 
 Page *Page::open(std::string file_name) {
   auto res = new Page;
@@ -270,7 +276,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   std::lock_guard<std::mutex> lg(_locker);
   if (is_full()) {
-      header->is_full=true;
+    header->is_full = true;
     return false;
   }
   auto byte_it = this->chunks;
@@ -278,11 +284,11 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   auto end = this->chunks + this->header->chunk_per_storage * step;
   while (true) {
     if (byte_it == end) {
-      header->is_full=true;
+      header->is_full = true;
       break;
     }
     ChunkIndexInfo *info = reinterpret_cast<ChunkIndexInfo *>(byte_it);
-    if (!info->is_not_free){
+    if (!info->is_not_free) {
       auto ptr_to_begin = byte_it;
       auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
       Chunk_Ptr ptr = nullptr;
@@ -291,14 +297,14 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       init_chunk_index_rec(ptr, ptr_to_begin);
       return true;
     } else {
-      if ((info->first.id == m.id)&&(!info->is_readonly)) {
+      if ((info->first.id == m.id) && (!info->is_readonly)) {
         auto ptr_to_begin = byte_it;
         auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
         Chunk_Ptr ptr = nullptr;
         if (info->is_zipped) {
           ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
           if (ptr->append(m)) {
-              update_chunk_index_rec(ptr);
+            update_chunk_index_rec(ptr);
             return true;
           }
         } else {
@@ -306,25 +312,25 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         }
       }
     }
-    byte_it+=step;
+    byte_it += step;
   }
-  header->is_full=true;
+  header->is_full = true;
   return false;
 }
-void Page::update_chunk_index_rec(const Chunk_Ptr& ptr){
-    for(size_t i=0;i<header->addeded_chunks;++i){
-        auto cur_index = &index[i];
-        if(cur_index->first.id == ptr->info->first.id){
-            cur_index->last=ptr->info->last;
-            return;
-        }
+void Page::update_chunk_index_rec(const Chunk_Ptr &ptr) {
+  for (size_t i = 0; i < header->addeded_chunks; ++i) {
+    auto cur_index = &index[i];
+    if (cur_index->first.id == ptr->info->first.id) {
+      cur_index->last = ptr->info->last;
+      return;
     }
-    assert(false);
+  }
+  assert(false);
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   auto index_rec = ch->info;
-  //auto buffer = ch->_buffer_t;
+  // auto buffer = ch->_buffer_t;
 
   assert(header->chunk_size == ch->info->size);
 
@@ -362,7 +368,9 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   //  this->mmap->flush(offset, sizeof(header->chunk_size));
 }
 
-bool Page::is_full() const { return this->_free_poses.empty(); }
+bool Page::is_full() const {
+  return this->_free_poses.empty();
+}
 
 Cursor_ptr Page::get_chunks(const dariadb::IdArray &ids, dariadb::Time from,
                             dariadb::Time to, dariadb::Flag flag) {

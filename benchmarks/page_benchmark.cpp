@@ -29,16 +29,15 @@ const size_t chunks_size = 1024;
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-    const size_t K = 1;
-    const size_t id_count=4;
+  const size_t K = 1;
+  const size_t id_count = 4;
   {
 
     if (dariadb::utils::fs::path_exists(storagePath)) {
       dariadb::utils::fs::rm(storagePath);
     }
     dariadb::storage::PageManager::start(dariadb::storage::PageManager::Params(
-        storagePath, chunks_count,
-        chunks_size));
+        storagePath, chunks_count, chunks_size));
 
     auto start = clock();
     auto m = dariadb::Meas::empty();
@@ -63,8 +62,8 @@ int main(int argc, char *argv[]) {
 
     BenchCallback *clbk = new BenchCallback;
     dariadb::IdArray ids(id_count);
-    for(size_t i=0;i<id_count;++i){
-        ids[i]=i;
+    for (size_t i = 0; i < id_count; ++i) {
+      ids[i] = i;
     }
 
     start = clock();
@@ -75,10 +74,10 @@ int main(int argc, char *argv[]) {
       auto from = std::min(time_point1, time_point2);
       auto to = std::max(time_point1, time_point2);
       auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(
-          dariadb::storage::QueryInterval(ids,0, from, to));
+          dariadb::storage::QueryInterval(ids, 0, from, to));
       cursor->readAll(clbk);
-      assert(clbk->count!=0);
-      clbk->count=0;
+      assert(clbk->count != 0);
+      clbk->count = 0;
       cursor = nullptr;
     }
 
@@ -90,7 +89,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < size_t(100); i++) {
       auto time_point = uniform_dist(e1);
       dariadb::storage::PageManager::instance()->chunksBeforeTimePoint(
-          dariadb::storage::QueryTimePoint(ids,0,time_point));
+          dariadb::storage::QueryTimePoint(ids, 0, time_point));
     }
 
     elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
@@ -102,6 +101,5 @@ int main(int argc, char *argv[]) {
     if (dariadb::utils::fs::path_exists(storagePath)) {
       dariadb::utils::fs::rm(storagePath);
     }
-
   }
 }
