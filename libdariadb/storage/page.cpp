@@ -187,6 +187,7 @@ Page *Page::create(std::string file_name, uint64_t sz,
   res->iheader->chunk_per_storage = chunk_per_storage;
   res->iheader->chunk_size = chunk_size;
   res->iheader->is_sorted = false;
+  res->iheader->id_bloom=storage::bloom_empty<dariadb::Id>();
 
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
@@ -356,6 +357,8 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
 
   iheader->minTime = std::min(iheader->minTime, ch->info->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ch->info->maxTime);
+  iheader->id_bloom=storage::bloom_add(iheader->id_bloom,ch->info->first.id);
+
   cur_index->minTime = std::min(cur_index->minTime, ch->info->minTime);
   cur_index->maxTime = std::max(cur_index->maxTime, ch->info->maxTime);
 

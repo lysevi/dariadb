@@ -10,6 +10,7 @@
 #include "stx/btree_multimap.h"
 #include <map>
 #include <unordered_map>
+#include "bloom_filter.h"
 
 namespace dariadb {
 namespace storage {
@@ -41,6 +42,8 @@ struct IndexHeader {
   uint32_t chunk_per_storage;
   uint32_t chunk_size;
   bool is_sorted;
+
+  dariadb::Id id_bloom;
 };
 
 struct Page_ChunkIndex {

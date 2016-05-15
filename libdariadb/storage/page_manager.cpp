@@ -77,27 +77,6 @@ public:
     }
     return _cur_page;
   }
-  // PM
-  /*bool write_to_page(const Chunk_Ptr &ch) {
-    std::lock_guard<std::mutex> lg(_locker_write);
-    auto pg = get_cur_page();
-    return pg->append(ch);
-  }*/
-
-  /*bool append(const Chunk_Ptr &ch) {
-    std::lock_guard<std::mutex> lg(_locker);
-    this->add_async_data(ch);
-    return true;
-  }
-
-  bool append(const ChunksList &lst) {
-    for (auto &c : lst) {
-      if (!append(c)) {
-        return false;
-      }
-    }
-    return true;
-  }*/
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) {
@@ -113,7 +92,17 @@ public:
     for (auto n : names) {
       auto file_name = utils::fs::append_path(_param.path, n + "i");
       auto hdr = Page::readIndexHeader(file_name);
-      if (hdr.minTime >= query.from || hdr.maxTime < query.to) {
+      if ((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
+           (utils::inInterval(query.from, query.to, hdr.minTime)) ||
+            (utils::inInterval(query.from, query.to, hdr.maxTime))){
+
+          for(auto id:query.ids){
+              if(storage::bloom_check(hdr.id_bloom,id)){
+                  auto cand=Page::open(n);
+                  candidates.push_back(cand);
+              }
+          }
+
       }
     }
     auto p = get_cur_page();
