@@ -12,6 +12,8 @@
 #include <thread>
 #include <functional>
 #include <memory>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 const std::string MANIFEST_FILE_NAME = "Manifest";
 
@@ -82,7 +84,7 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) {
-    std::lock_guard<std::mutex> lg(_locker);
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
     auto p = get_cur_page();
     return p->minMaxTime(id, minResult, maxResult);
   }
@@ -118,7 +120,7 @@ public:
   };
 
   Cursor_ptr chunksByIterval(const QueryInterval &query) {
-    std::lock_guard<std::mutex> lg(_locker);
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
     PageManagerCursor*raw_cursor=new PageManagerCursor;
     ChunkMap chunks;
 
@@ -170,7 +172,7 @@ public:
   }
 
   IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &query) {
-	  std::lock_guard<std::mutex> lg(_locker);
+	  boost::shared_lock<boost::shared_mutex> lg(_locker);
 	  
 	  IdToChunkMap chunks;
 
@@ -203,7 +205,7 @@ public:
   }
 
   dariadb::IdArray getIds() {
-    std::lock_guard<std::mutex> lg(_locker);
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
     if (_cur_page == nullptr) {
       return dariadb::IdArray{};
     }
@@ -223,7 +225,7 @@ public:
   }
 
   dariadb::Time minTime() {
-    std::lock_guard<std::mutex> lg(_locker);
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
@@ -232,7 +234,7 @@ public:
   }
 
   dariadb::Time maxTime() {
-    std::lock_guard<std::mutex> lg(_locker);
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
@@ -241,7 +243,7 @@ public:
   }
 
   append_result append(const Meas &value) {
-    std::lock_guard<std::mutex> lg(_locker);
+	boost::upgrade_lock<boost::shared_mutex> lg(_locker);
     while (true) {
       auto cur_page = this->get_cur_page();
       auto res = cur_page->append(value);
@@ -258,7 +260,7 @@ protected:
   Page *_cur_page;
   PageManager::Params _param;
   Manifest _manifest;
-  std::mutex _locker, _locker_write;
+  boost::shared_mutex _locker;
 };
 
 PageManager::PageManager(const PageManager::Params &param)
