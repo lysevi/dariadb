@@ -109,7 +109,9 @@ public:
   class AddCursorClbk:public Cursor::Callback{
     public:
       void call(dariadb::storage::Chunk_Ptr &ptr){
-          (*out)[ptr->info->first.id].push_back(ptr);
+		  if (ptr != nullptr) {
+			  (*out)[ptr->info->first.id].push_back(ptr);
+		  }
       }
 
       ChunkMap*out;
@@ -120,7 +122,7 @@ public:
     PageManagerCursor*raw_cursor=new PageManagerCursor;
     ChunkMap chunks;
 
-    auto pred=[query](IndexHeader hdr){
+    auto pred=[query](const IndexHeader &hdr){
         auto in_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
                    (utils::inInterval(query.from, query.to, hdr.minTime)) ||
                     (utils::inInterval(query.from, query.to, hdr.maxTime)));
@@ -133,7 +135,7 @@ public:
         }
         return false;
     };
-    auto page_list=pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list=pages_by_filter(std::function<bool(const IndexHeader&)>(pred));
 
     std::unique_ptr<AddCursorClbk> clbk{new AddCursorClbk};
     clbk->out=&chunks;
@@ -153,7 +155,7 @@ public:
     return Cursor_ptr{raw_cursor};
   }
 
-  std::list<std::string> pages_by_filter(std::function<bool(IndexHeader)>pred){
+  std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader&)>pred){
       std::list<std::string> result;
       auto names = _manifest.page_list();
       for (auto n : names) {
@@ -167,12 +169,37 @@ public:
       return result;
   }
 
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) {
-    std::lock_guard<std::mutex> lg(_locker);
+  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &query) {
+	  std::lock_guard<std::mutex> lg(_locker);
+	  
+	  IdToChunkMap chunks;
 
-    auto cur_page = this->get_cur_page();
+	  auto pred = [query](const IndexHeader&hdr) {
+		  auto in_check=utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point);
+		  if (in_check) {
+			  for (auto id : query.ids) {
+				  if (storage::bloom_check(hdr.id_bloom, id)) {
+					  return true;
+				  }
+			  }
+		  }
+		  return false;
+	  };
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-    return cur_page->chunksBeforeTimePoint(q);
+	  for (auto pname : page_list) {
+		  Page *pg = Page::open(pname, true);
+
+		  auto chMap=pg->chunksBeforeTimePoint(query);
+		  for (auto kv : chMap) {
+			  if (kv.second != nullptr) {
+				  chunks[kv.first] = kv.second;
+			  }
+		  }
+		  delete pg;
+	  }
+
+	  return chunks;
   }
 
   dariadb::IdArray getIds() {

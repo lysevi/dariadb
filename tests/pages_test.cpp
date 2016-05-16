@@ -229,6 +229,10 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   dariadb::storage::QueryInterval qi(dariadb::IdArray{1}, 0,
                                      addeded.front().time, addeded.back().time);
+
+  dariadb::storage::QueryTimePoint qt(dariadb::IdArray{ 1 }, 0,
+	  addeded.front().time + (addeded.back().time - addeded.front().time) / 2);
+
   dariadb::storage::ChunksList chlist;
   PageManager::instance()->chunksByIterval(qi)->readAll(&chlist);
   //BOOST_CHECK_GE(chlist.size(), page_count*chunks_count);
@@ -251,7 +255,12 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     }
   }
   BOOST_CHECK_EQUAL(readed,writed);
+
   
+  auto tp_chunks=PageManager::instance()->chunksBeforeTimePoint(qt);
+  BOOST_CHECK_EQUAL(tp_chunks.size(), size_t(1));
+  BOOST_CHECK_LE(tp_chunks[1]->info->minTime, qt.time_point);
+  BOOST_CHECK_GE(tp_chunks[1]->info->maxTime, qt.time_point);
   PageManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
