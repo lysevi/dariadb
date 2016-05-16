@@ -85,8 +85,24 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) {
 	boost::shared_lock<boost::shared_mutex> lg(_locker);
-    auto p = get_cur_page();
-    return p->minMaxTime(id, minResult, maxResult);
+
+	auto pages = pages_by_filter([id](const IndexHeader&ih) {
+		return (storage::bloom_check(ih.id_bloom, id));
+	});
+	*minResult = std::numeric_limits<dariadb::Time>::max();
+	*maxResult = std::numeric_limits<dariadb::Time>::min();
+	auto res = false;
+	for (auto pname : pages) {
+		auto p = Page::open(pname);
+		dariadb::Time local_min, local_max;
+		if (p->minMaxTime(id, &local_min, &local_max)) {
+			*minResult = std::min(local_min, *minResult);
+			*maxResult = std::max(local_max, *maxResult);
+			res = true;
+		}
+		delete p;
+	}
+	return res;
   }
 
   class PageManagerCursor:public Cursor{
@@ -125,10 +141,10 @@ public:
     ChunkMap chunks;
 
     auto pred=[query](const IndexHeader &hdr){
-        auto in_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
+        auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
                    (utils::inInterval(query.from, query.to, hdr.minTime)) ||
                     (utils::inInterval(query.from, query.to, hdr.maxTime)));
-        if(in_check){
+        if(interval_check){
             for(auto id:query.ids){
                 if(storage::bloom_check(hdr.id_bloom,id)){
                     return true;

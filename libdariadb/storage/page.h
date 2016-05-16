@@ -92,7 +92,7 @@ public:
 
 private:
   void init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr);
-  void update_chunk_index_rec(const Chunk_Ptr &ch);
+  void update_chunk_index_rec(const Chunk_Ptr &ptr, const Meas&m);
 
 public:
   uint8_t *region;  // page  file mapp region

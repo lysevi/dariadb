@@ -88,8 +88,8 @@ public:
   }
 
   bool check_index_rec(Page_ChunkIndex &it) const {
-    return ((dariadb::utils::inInterval(_from, _to, it.minTime)) ||
-            (dariadb::utils::inInterval(_from, _to, it.maxTime)));
+	  return ((dariadb::utils::inInterval(_from, _to, it.minTime)) || (dariadb::utils::inInterval(_from, _to, it.maxTime)))
+		  || (dariadb::utils::inInterval(it.minTime, it.maxTime, _from) || dariadb::utils::inInterval(it.minTime, it.maxTime, _to));
   }
 
   void reset_pos() override { // start read from begining;
@@ -114,6 +114,9 @@ public:
           --it_from;
         }
       }
+	  if ((it_to == it_from)&& (it_to != fres->second.end())) {
+		  it_to++;
+	  }
       for (auto it = it_from; it != it_to; ++it) {
         this->read_poses.push_back(it->second);
       }
@@ -317,7 +320,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         if (info->is_zipped) {
           ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
           if (ptr->append(m)) {
-            update_chunk_index_rec(ptr);
+            update_chunk_index_rec(ptr,m);
             return true;
           }
         } else {
@@ -330,11 +333,36 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   header->is_full = true;
   return false;
 }
-void Page::update_chunk_index_rec(const Chunk_Ptr &ptr) {
+void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas&m) {
   for (size_t i = 0; i < header->addeded_chunks; ++i) {
     auto cur_index = &index[i];
-    if (cur_index->first.id == ptr->info->first.id) {
+    if ((cur_index->first.id == ptr->info->first.id)
+	&& (cur_index->first.time == ptr->info->first.time)){
       cur_index->last = ptr->info->last;
+	  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ptr->info->first.id);
+	  iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
+	  iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
+
+	  for (auto it = _itree.begin(); it != _itree.end(); ++it) {
+		  if ((it->first == cur_index->maxTime) && (it->second == i)) {
+			  _itree.erase(it);
+			  break;
+		  }
+	  }
+	  
+	  auto tree = &_mtree[cur_index->first.id];
+	  for (auto it = tree->begin(); it != tree->end();++it) {
+		  if ((it->second == i) && (it->first==cur_index->maxTime)) {
+			  tree->erase(it);
+			  break;
+		  }
+	  }
+
+	  cur_index->minTime = std::min(cur_index->minTime, m.time);
+	  cur_index->maxTime = std::max(cur_index->maxTime, m.time);
+	  auto kv = std::make_pair(cur_index->maxTime, i);
+	  _itree.insert(kv);
+	  tree->insert(kv);
       return;
     }
   }

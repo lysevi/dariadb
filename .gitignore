@@ -4,6 +4,7 @@ packages.config
 *.aof
 *.page
 *.pagei
+Manifest
 *.dll
 *.lib
 *-prefix

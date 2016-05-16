@@ -193,11 +193,10 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   PageManager::start(
       PageManager::Params(storagePath, chunks_count, chunks_size));
 
-  // need to load current page;
   auto mintime_chunks = PageManager::instance()->chunksBeforeTimePoint(
       dariadb::storage::QueryTimePoint(dariadb::IdArray{1}, 0,
                                        PageManager::instance()->minTime()));
-  BOOST_CHECK_GE(mintime_chunks.size(), size_t(0));
+  BOOST_CHECK_GE(mintime_chunks.size(), size_t(1));
 
   PageManager::stop();
 
@@ -261,6 +260,16 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   BOOST_CHECK_EQUAL(tp_chunks.size(), size_t(1));
   BOOST_CHECK_LE(tp_chunks[1]->info->minTime, qt.time_point);
   BOOST_CHECK_GE(tp_chunks[1]->info->maxTime, qt.time_point);
+
+  dariadb::Time minTime, maxTime;
+  if (PageManager::instance()->minMaxTime(1, &minTime, &maxTime)) {
+	  BOOST_CHECK_EQUAL(minTime, qi.from);
+	  BOOST_CHECK_EQUAL(maxTime, qi.to);
+  }
+  else {
+	  BOOST_ERROR("PageManager::instance()->minMaxTime error!");
+  }
+
   PageManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
