@@ -6,14 +6,14 @@
 #include "manifest.h"
 #include "page.h"
 
-#include <condition_variable>
-#include <cstring>
-#include <queue>
-#include <thread>
-#include <functional>
-#include <memory>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
+#include <condition_variable>
+#include <cstring>
+#include <functional>
+#include <memory>
+#include <queue>
+#include <thread>
 
 const std::string MANIFEST_FILE_NAME = "Manifest";
 
@@ -25,7 +25,32 @@ public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param),
         _manifest(utils::fs::append_path(param.path, MANIFEST_FILE_NAME)) {
+    update_id = false;
+    last_id = 0;
+
+    _cur_page = open_last_openned();
     /*this->start_async();*/
+  }
+
+  Page *open_last_openned() {
+    if (!utils::fs::path_exists(_param.path)) {
+      return nullptr;
+    }
+    auto pages = _manifest.page_list();
+
+    for (auto n : pages) {
+      auto file_name = utils::fs::append_path(_param.path, n);
+      auto hdr = Page::readHeader(file_name);
+      if (!hdr.is_full) {
+        auto res = Page::open(file_name);
+        update_id = false;
+        return res;
+      } else {
+        last_id = std::max(last_id, hdr.max_chunk_id);
+        update_id = true;
+      }
+    }
+    return nullptr;
   }
 
   ~Private() {
@@ -48,25 +73,20 @@ public:
       dariadb::utils::fs::mkdir(_param.path);
     }
 
-    Page *res = nullptr;
+    Page *res = nullptr; // open_last_openned();
 
-    auto names = _manifest.page_list();
-    for (auto n : names) {
-      auto file_name = utils::fs::append_path(_param.path, n);
-      auto hdr = Page::readHeader(file_name);
-      if (!hdr.is_full) {
-        res = Page::open(file_name);
-      }
+    // if (res == nullptr) {
+    std::string page_name = utils::fs::random_file_name(".page");
+    std::string file_name =
+        dariadb::utils::fs::append_path(_param.path, page_name);
+    auto sz = calc_page_size();
+    res = Page::create(file_name, sz, _param.chunk_per_storage,
+                       _param.chunk_size);
+    _manifest.page_append(page_name);
+    if (update_id) {
+      res->header->max_chunk_id = last_id;
     }
-    if (res == nullptr) {
-      std::string page_name = utils::fs::random_file_name(".page");
-      std::string file_name =
-          dariadb::utils::fs::append_path(_param.path, page_name);
-      auto sz = calc_page_size();
-      res = Page::create(file_name, sz, _param.chunk_per_storage,
-                         _param.chunk_size);
-      _manifest.page_append(page_name);
-    }
+    //}
 
     return res;
   }
@@ -84,159 +104,157 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) {
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-	auto pages = pages_by_filter([id](const IndexHeader&ih) {
-		return (storage::bloom_check(ih.id_bloom, id));
-	});
-	*minResult = std::numeric_limits<dariadb::Time>::max();
-	*maxResult = std::numeric_limits<dariadb::Time>::min();
-	auto res = false;
-	for (auto pname : pages) {
-		auto p = Page::open(pname);
-		dariadb::Time local_min, local_max;
-		if (p->minMaxTime(id, &local_min, &local_max)) {
-			*minResult = std::min(local_min, *minResult);
-			*maxResult = std::max(local_max, *maxResult);
-			res = true;
-		}
-		delete p;
-	}
-	return res;
+    auto pages = pages_by_filter([id](const IndexHeader &ih) {
+      return (storage::bloom_check(ih.id_bloom, id));
+    });
+    *minResult = std::numeric_limits<dariadb::Time>::max();
+    *maxResult = std::numeric_limits<dariadb::Time>::min();
+    auto res = false;
+    for (auto pname : pages) {
+      auto p = Page::open(pname);
+      dariadb::Time local_min, local_max;
+      if (p->minMaxTime(id, &local_min, &local_max)) {
+        *minResult = std::min(local_min, *minResult);
+        *maxResult = std::max(local_max, *maxResult);
+        res = true;
+      }
+      delete p;
+    }
+    return res;
   }
 
-  class PageManagerCursor:public Cursor{
+  class PageManagerCursor : public Cursor {
   public:
-      bool is_end() const override{
-          return _chunk_iterator==chunks.end();
+    bool is_end() const override { return _chunk_iterator == chunks.end(); }
+    void readNext(Callback *cbk) override {
+      if (!is_end()) {
+        cbk->call(*_chunk_iterator);
+        ++_chunk_iterator;
       }
-      void readNext(Callback *cbk)  override{
-          if(!is_end()){
-              cbk->call(*_chunk_iterator);
-              ++_chunk_iterator;
-          }
-      }
-      void reset_pos()  override{
-          _chunk_iterator=chunks.begin();
-      }
+    }
+    void reset_pos() override { _chunk_iterator = chunks.begin(); }
 
-      ChunksList chunks;
-      ChunksList::iterator _chunk_iterator;
+    ChunksList chunks;
+    ChunksList::iterator _chunk_iterator;
   };
 
-  class AddCursorClbk:public Cursor::Callback{
-    public:
-      void call(dariadb::storage::Chunk_Ptr &ptr){
-		  if (ptr != nullptr) {
-			  (*out)[ptr->info->first.id].push_back(ptr);
-		  }
+  class AddCursorClbk : public Cursor::Callback {
+  public:
+    void call(dariadb::storage::Chunk_Ptr &ptr) {
+      if (ptr != nullptr) {
+        (*out)[ptr->info->first.id].push_back(ptr);
       }
+    }
 
-      ChunkMap*out;
+    ChunkMap *out;
   };
 
   Cursor_ptr chunksByIterval(const QueryInterval &query) {
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
-    PageManagerCursor*raw_cursor=new PageManagerCursor;
+    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    PageManagerCursor *raw_cursor = new PageManagerCursor;
     ChunkMap chunks;
 
-    auto pred=[query](const IndexHeader &hdr){
-        auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
-                   (utils::inInterval(query.from, query.to, hdr.minTime)) ||
-                    (utils::inInterval(query.from, query.to, hdr.maxTime)));
-        if(interval_check){
-            for(auto id:query.ids){
-                if(storage::bloom_check(hdr.id_bloom,id)){
-                    return true;
-                }
-            }
+    auto pred = [query](const IndexHeader &hdr) {
+      auto interval_check(
+          (hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
+          (utils::inInterval(query.from, query.to, hdr.minTime)) ||
+          (utils::inInterval(query.from, query.to, hdr.maxTime)));
+      if (interval_check) {
+        for (auto id : query.ids) {
+          if (storage::bloom_check(hdr.id_bloom, id)) {
+            return true;
+          }
         }
-        return false;
+      }
+      return false;
     };
-    auto page_list=pages_by_filter(std::function<bool(const IndexHeader&)>(pred));
+    auto page_list =
+        pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
 
     std::unique_ptr<AddCursorClbk> clbk{new AddCursorClbk};
-    clbk->out=&chunks;
-    for(auto pname:page_list){
-        Page *cand=Page::open(pname,true);
+    clbk->out = &chunks;
+    for (auto pname : page_list) {
+      Page *cand = Page::open(pname, true);
 
-        cand->chunksByIterval(query)->readAll(clbk.get());
-        delete cand;
+      cand->chunksByIterval(query)->readAll(clbk.get());
+      delete cand;
     }
 
-    for(auto&kv:chunks){
-        for(auto&ch:kv.second){
-            raw_cursor->chunks.push_back(ch);
-        }
+    for (auto &kv : chunks) {
+      for (auto &ch : kv.second) {
+        raw_cursor->chunks.push_back(ch);
+      }
     }
     raw_cursor->reset_pos();
     return Cursor_ptr{raw_cursor};
   }
 
-  std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader&)>pred){
-      std::list<std::string> result;
-      auto names = _manifest.page_list();
-      for (auto n : names) {
-        auto index_file_name = utils::fs::append_path(_param.path, n + "i");
-        auto hdr = Page::readIndexHeader(index_file_name);
-        if(pred(hdr)){
-            auto page_file_name = utils::fs::append_path(_param.path, n);
-            result.push_back(page_file_name);
-        }
+  std::list<std::string>
+  pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
+    std::list<std::string> result;
+    auto names = _manifest.page_list();
+    for (auto n : names) {
+      auto index_file_name = utils::fs::append_path(_param.path, n + "i");
+      auto hdr = Page::readIndexHeader(index_file_name);
+      if (pred(hdr)) {
+        auto page_file_name = utils::fs::append_path(_param.path, n);
+        result.push_back(page_file_name);
       }
-      return result;
+    }
+    return result;
   }
 
   IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &query) {
-	  boost::shared_lock<boost::shared_mutex> lg(_locker);
-	  
-	  IdToChunkMap chunks;
+    boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-	  auto pred = [query](const IndexHeader&hdr) {
-		  auto in_check=utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point);
-		  if (in_check) {
-			  for (auto id : query.ids) {
-				  if (storage::bloom_check(hdr.id_bloom, id)) {
-					  return true;
-				  }
-			  }
-		  }
-		  return false;
-	  };
-	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    IdToChunkMap chunks;
 
-	  for (auto pname : page_list) {
-		  Page *pg = Page::open(pname, true);
+    auto pred = [query](const IndexHeader &hdr) {
+      auto in_check =
+          utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point);
+      if (in_check) {
+        for (auto id : query.ids) {
+          if (storage::bloom_check(hdr.id_bloom, id)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-		  auto chMap=pg->chunksBeforeTimePoint(query);
-		  for (auto kv : chMap) {
-			  if (kv.second != nullptr) {
-				  chunks[kv.first] = kv.second;
-			  }
-		  }
-		  delete pg;
-	  }
+    for (auto pname : page_list) {
+      Page *pg = Page::open(pname, true);
 
-	  return chunks;
+      auto chMap = pg->chunksBeforeTimePoint(query);
+      for (auto kv : chMap) {
+        if (kv.second != nullptr) {
+          chunks[kv.first] = kv.second;
+        }
+      }
+      delete pg;
+    }
+
+    return chunks;
   }
 
   dariadb::IdArray getIds() {
-	  boost::shared_lock<boost::shared_mutex> lg(_locker);
+    boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-	  auto pred = [](const IndexHeader&) {
-		  return true;
-	  };
+    auto pred = [](const IndexHeader &) { return true; };
 
-	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-	  dariadb::IdSet s;
-	  for (auto pname : page_list) {
-		  Page *pg = Page::open(pname, true);
-		  auto subres=pg->getIds();
-		  s.insert(subres.begin(), subres.end());
-		  delete pg;
-	  }
+    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    dariadb::IdSet s;
+    for (auto pname : page_list) {
+      Page *pg = Page::open(pname, true);
+      auto subres = pg->getIds();
+      s.insert(subres.begin(), subres.end());
+      delete pg;
+    }
 
-	  return dariadb::IdArray(s.begin(), s.end());
+    return dariadb::IdArray(s.begin(), s.end());
   }
 
   size_t chunks_in_cur_page() const {
@@ -251,7 +269,7 @@ public:
   }
 
   dariadb::Time minTime() {
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    boost::shared_lock<boost::shared_mutex> lg(_locker);
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
@@ -260,7 +278,7 @@ public:
   }
 
   dariadb::Time maxTime() {
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    boost::shared_lock<boost::shared_mutex> lg(_locker);
     if (_cur_page == nullptr) {
       return dariadb::Time(0);
     } else {
@@ -269,20 +287,19 @@ public:
   }
 
   append_result append(const Meas &value) {
-	boost::upgrade_lock<boost::shared_mutex> lg(_locker);
-	uint64_t last_id = 0;
-	bool update_id = false;
+    boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+
     while (true) {
       auto cur_page = this->get_cur_page();
-	  if (update_id) {
-		  _cur_page->header->max_chunk_id= last_id;
-		  update_id = false;
-	  }
+      if (update_id) {
+        //_cur_page->header->max_chunk_id= last_id;
+        update_id = false;
+      }
       auto res = cur_page->append(value);
       if (res.writed != 1) {
-		  last_id = _cur_page->header->max_chunk_id;
-		  update_id = true;
-		  delete _cur_page;
+        last_id = _cur_page->header->max_chunk_id;
+        update_id = true;
+        delete _cur_page;
         _cur_page = nullptr;
       } else {
         return res;
@@ -295,6 +312,9 @@ protected:
   PageManager::Params _param;
   Manifest _manifest;
   boost::shared_mutex _locker;
+
+  uint64_t last_id;
+  bool update_id;
 };
 
 PageManager::PageManager(const PageManager::Params &param)
