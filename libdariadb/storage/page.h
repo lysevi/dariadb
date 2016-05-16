@@ -108,6 +108,7 @@ public:
   std::list<uint32_t> _free_poses;
 
   std::string filename;
+  bool readonly;
 protected:
   mutable std::mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;

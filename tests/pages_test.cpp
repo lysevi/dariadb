@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     all_id_set.insert(cur_id);
     t = add_meases(cur_id, t, chinks_count, addeded);
   }
-
+  
   dariadb::Time minTime(t);
   dariadb::IdArray all_id_array{all_id_set.begin(), all_id_set.end()};
   { // Chunks load
@@ -251,4 +251,10 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     }
   }
   BOOST_CHECK_EQUAL(readed,writed);
+  
+  PageManager::stop();
+
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+	  dariadb::utils::fs::rm(storagePath);
+  }
 }

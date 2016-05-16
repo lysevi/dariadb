@@ -10,12 +10,14 @@ using namespace dariadb::storage;
 using namespace dariadb::compression;
 
 Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer) : _locker{} {
+  should_free = false;
   info = index;
   _buffer_t = buffer;
 }
 
 Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m)
     : _locker() {
+  should_free = false;
   index->is_not_free = true;
   _buffer_t = buffer;
   info = index;
@@ -33,10 +35,10 @@ Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m)
 }
 
 Chunk::~Chunk() {
-    if(should_free){
-        delete info;
-        delete[]_buffer_t;
-    }
+  if (should_free) {
+    delete info;
+    delete[] _buffer_t;
+  }
   this->bw = nullptr;
 }
 
@@ -110,7 +112,7 @@ bool ZippedChunk::append(const Meas &m) {
 
 class ZippedChunkReader : public Chunk::Reader {
 public:
-  virtual Meas readNext() override{
+  virtual Meas readNext() override {
     assert(!is_end());
 
     if (_is_first) {

@@ -134,7 +134,7 @@ protected:
 };
 
 Page::~Page() {
-  if (!iheader->is_sorted) {
+  if (!readonly && !iheader->is_sorted) {
     size_t pos = 0; // TODO crash safety
     Page_ChunkIndex *new_index =
         new Page_ChunkIndex[iheader->chunk_per_storage];
@@ -165,6 +165,7 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
 Page *Page::create(std::string file_name, uint64_t sz,
                    uint32_t chunk_per_storage, uint32_t chunk_size) {
   auto res = new Page;
+  res->readonly = false;
   auto mmap = utils::fs::MappedFile::touch(file_name, sz);
   res->filename=file_name;
   auto region = mmap->data();
@@ -217,6 +218,7 @@ size_t get_chunks_offset() {
 
 Page *Page::open(std::string file_name, bool read_only) {
   auto res = new Page;
+  res->readonly = read_only;
   auto mmap = utils::fs::MappedFile::open(file_name);
   res->filename=file_name;
   auto region = mmap->data();
@@ -284,6 +286,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
+	assert(!this->readonly);
   std::lock_guard<std::mutex> lg(_locker);
   if (is_full()) {
     header->is_full = true;

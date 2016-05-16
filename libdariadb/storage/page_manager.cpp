@@ -219,6 +219,7 @@ public:
       auto cur_page = this->get_cur_page();
       auto res = cur_page->append(value);
       if (res.writed != 1) {
+		  delete _cur_page;
         _cur_page = nullptr;
       } else {
         return res;
