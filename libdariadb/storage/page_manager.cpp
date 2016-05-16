@@ -221,12 +221,22 @@ public:
   }
 
   dariadb::IdArray getIds() {
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
-    if (_cur_page == nullptr) {
-      return dariadb::IdArray{};
-    }
-    auto cur_page = this->get_cur_page();
-    return cur_page->getIds();
+	  boost::shared_lock<boost::shared_mutex> lg(_locker);
+
+	  auto pred = [](const IndexHeader&) {
+		  return true;
+	  };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+	  dariadb::IdSet s;
+	  for (auto pname : page_list) {
+		  Page *pg = Page::open(pname, true);
+		  auto subres=pg->getIds();
+		  s.insert(subres.begin(), subres.end());
+		  delete pg;
+	  }
+
+	  return dariadb::IdArray(s.begin(), s.end());
   }
 
   size_t chunks_in_cur_page() const {
@@ -260,10 +270,18 @@ public:
 
   append_result append(const Meas &value) {
 	boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+	uint64_t last_id = 0;
+	bool update_id = false;
     while (true) {
       auto cur_page = this->get_cur_page();
+	  if (update_id) {
+		  _cur_page->header->max_chunk_id= last_id;
+		  update_id = false;
+	  }
       auto res = cur_page->append(value);
       if (res.writed != 1) {
+		  last_id = _cur_page->header->max_chunk_id;
+		  update_id = true;
 		  delete _cur_page;
         _cur_page = nullptr;
       } else {

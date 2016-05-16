@@ -15,6 +15,7 @@ namespace storage {
 
 #pragma pack(push, 1)
 struct ChunkIndexInfo {
+  uint64_t id;
   bool is_not_free;
   bool is_zipped;
   Meas first, last;

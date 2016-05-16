@@ -238,7 +238,9 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   size_t writed=addeded.size();
   size_t readed=0;
+  std::map<uint64_t, size_t> chunk_id_to_count;
   for (auto ch : chlist) {
+    chunk_id_to_count[ch->info->id]++;
     ch->bw->reset_pos();
 
     dariadb::compression::CopmressedReader crr(ch->bw, ch->info->first);
@@ -252,6 +254,9 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
       BOOST_CHECK_EQUAL(m.value, a.value);
       addeded.pop_front();
     }
+  }
+  for (auto kv : chunk_id_to_count) {
+	  BOOST_CHECK_EQUAL(kv.second, size_t(1));
   }
   BOOST_CHECK_EQUAL(readed,writed);
 
@@ -269,6 +274,9 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   else {
 	  BOOST_ERROR("PageManager::instance()->minMaxTime error!");
   }
+
+  auto ids = PageManager::instance()->getIds();
+  BOOST_CHECK_EQUAL(ids.size(), size_t(1));
 
   PageManager::stop();
 

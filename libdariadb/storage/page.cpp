@@ -289,7 +289,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
-	assert(!this->readonly);
+  assert(!this->readonly);
   std::lock_guard<std::mutex> lg(_locker);
   if (is_full()) {
     header->is_full = true;
@@ -310,6 +310,8 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{
           new ZippedChunk(info, ptr_to_buffer, header->chunk_size, m)};
+	  this->header->max_chunk_id++;
+	  ptr->info->id = this->header->max_chunk_id;
       init_chunk_index_rec(ptr, ptr_to_begin);
       return true;
     } else {
@@ -381,6 +383,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   _free_poses.pop_front();
 
   auto cur_index = &index[pos_index];
+  cur_index->chunk_id = ch->info->id;
   cur_index->first = ch->info->first;
   cur_index->last = ch->info->last;
 

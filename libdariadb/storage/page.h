@@ -30,6 +30,8 @@ struct PageHeader {
 
   dariadb::Time minTime;
   dariadb::Time maxTime;
+
+  uint64_t max_chunk_id;
 };
 
 struct IndexHeader {
@@ -52,6 +54,7 @@ struct Page_ChunkIndex {
   dariadb::Flag flag_bloom;
   bool is_readonly;
   uint64_t offset;
+  uint64_t chunk_id;
   bool is_init;
 };
 #pragma pack(pop)
