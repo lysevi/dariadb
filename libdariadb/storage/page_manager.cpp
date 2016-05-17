@@ -151,10 +151,8 @@ public:
     ChunkMap *out;
   };
 
-  Cursor_ptr chunksByIterval(const QueryInterval &query) {
+  ChunksLinks chunksByIterval(const QueryInterval &query) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
-    PageManagerCursor *raw_cursor = new PageManagerCursor;
-    ChunkMap chunks;
 
     auto pred = [query](const IndexHeader &hdr) {
       auto interval_check(
@@ -173,24 +171,69 @@ public:
     auto page_list =
         pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
 
-    std::unique_ptr<AddCursorClbk> clbk{new AddCursorClbk};
-    clbk->out = &chunks;
+	ChunksLinks result;
     for (auto pname : page_list) {
       Page *cand = Page::open(pname, true);
 
-      cand->chunksByIterval(query)->readAll(clbk.get());
+      auto sub_result=cand->chunksByIterval(query);
+	  for (auto s:sub_result) {
+		  s.page_name = pname;
+		  result.push_back(s);
+	  }
       delete cand;
     }
 
-    for (auto &kv : chunks) {
-      for (auto &ch : kv.second) {
-        raw_cursor->chunks.push_back(ch);
-      }
-    }
-    raw_cursor->reset_pos();
-    return Cursor_ptr{raw_cursor};
+	return result;
   }
 
+  Cursor_ptr  readLinks(const ChunksLinks&links) {
+	  boost::shared_lock<boost::shared_mutex> lg(_locker);
+	  
+	  
+	  PageManagerCursor *raw_cursor = new PageManagerCursor;
+	  ChunkMap chunks;
+	  
+	  std::unique_ptr<AddCursorClbk> clbk{ new AddCursorClbk };
+	  clbk->out = &chunks;
+
+	  ChunksLinks to_read;
+
+	  for (auto l : links) {
+		  if (to_read.empty()) {
+			  to_read.push_back(l);
+		  }else {
+			  if (l.page_name == to_read.front().page_name) {
+				  to_read.push_back(l);
+			  }else {
+				  auto p = Page::open(to_read.front().page_name);
+				  p->readLinks(to_read)->readAll(clbk.get());
+				  delete p;
+				  to_read.clear();
+				  to_read.push_back(l);
+			  }
+		  }
+	  }
+	  if (!to_read.empty()) {
+		  auto p = Page::open(to_read.front().page_name);
+		  p->readLinks(to_read)->readAll(clbk.get());
+		  delete p;
+		  to_read.clear();
+	  }
+
+	  /*for (auto kv : page2links) {
+		  auto p = Page::open(kv.first);
+		  p->readLinks(kv.second)->readAll(clbk.get());
+		  delete p;
+	  }*/
+
+	  for (auto &kv : chunks) {
+		  for (auto &ch : kv.second) {
+			  raw_cursor->chunks.push_back(ch);
+		  }
+	  }
+	  raw_cursor->reset_pos();
+	  return Cursor_ptr{ raw_cursor };
+  }
   std::list<std::string>
   pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
     std::list<std::string> result;
@@ -206,10 +249,10 @@ public:
     return result;
   }
 
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &query) {
+  ChunksLinks chunksBeforeTimePoint(const QueryTimePoint &query) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-    IdToChunkMap chunks;
+	ChunksLinks result;
 
     auto pred = [query](const IndexHeader &hdr) {
       auto in_check =
@@ -228,16 +271,15 @@ public:
     for (auto pname : page_list) {
       Page *pg = Page::open(pname, true);
 
-      auto chMap = pg->chunksBeforeTimePoint(query);
-      for (auto kv : chMap) {
-        if (kv.second != nullptr) {
-          chunks[kv.first] = kv.second;
-        }
+      auto subres = pg->chunksBeforeTimePoint(query);
+      for (auto s : subres) {
+		  s.page_name = pname;
+		  result.push_back(s);
       }
       delete pg;
     }
 
-    return chunks;
+    return result;
   }
 
   dariadb::IdArray getIds() {
@@ -361,14 +403,19 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return impl->minMaxTime(id, minResult, maxResult);
 }
 
-dariadb::storage::Cursor_ptr
+dariadb::storage::ChunksLinks
 PageManager::chunksByIterval(const QueryInterval &query) {
   return impl->chunksByIterval(query);
 }
 
-dariadb::storage::IdToChunkMap
+dariadb::storage::ChunksLinks
 PageManager::chunksBeforeTimePoint(const QueryTimePoint &q) {
   return impl->chunksBeforeTimePoint(q);
+}
+
+dariadb::storage::Cursor_ptr  
+PageManager::readLinks(const ChunksLinks&links) {
+	return impl->readLinks(links);
 }
 
 dariadb::IdArray PageManager::getIds() {

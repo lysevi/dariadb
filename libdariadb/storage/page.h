@@ -78,15 +78,16 @@ public:
   bool add_to_target_chunk(const dariadb::Meas &m);
   /*bool append(const ChunksList &ch) override;*/
   bool is_full() const;
-  Cursor_ptr get_chunks(const dariadb::IdArray &ids, dariadb::Time from,
+  ChunksLinks get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                         dariadb::Time to, dariadb::Flag flag);
   // ChunksList get_open_chunks();
   void dec_reader();
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  Cursor_ptr chunksByIterval(const QueryInterval &query) override;
-  IdToChunkMap chunksBeforeTimePoint(const QueryTimePoint &q) override;
+  ChunksLinks chunksByIterval(const QueryInterval &query) override;
+  ChunksLinks chunksBeforeTimePoint(const QueryTimePoint &q) override;
+  Cursor_ptr  readLinks(const ChunksLinks&links) override;
   IdArray getIds() override;
 
   // Inherited via MeasWriter

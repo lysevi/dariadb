@@ -73,8 +73,9 @@ int main(int argc, char *argv[]) {
       auto time_point2 = uniform_dist(e1);
       auto from = std::min(time_point1, time_point2);
       auto to = std::max(time_point1, time_point2);
-      auto cursor = dariadb::storage::PageManager::instance()->chunksByIterval(
+      auto link_list = dariadb::storage::PageManager::instance()->chunksByIterval(
           dariadb::storage::QueryInterval(ids, 0, from, to));
+	  auto cursor = dariadb::storage::PageManager::instance()->readLinks(link_list);
       cursor->readAll(clbk);
       assert(clbk->count != 0);
       clbk->count = 0;
