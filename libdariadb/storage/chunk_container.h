@@ -23,15 +23,15 @@ struct ChunkLink {
 	dariadb::Time maxTime;
 };
 
-using ChunksLinks = std::list<ChunkLink>;
+using ChunkLinkList = std::list<ChunkLink>;
 
 class ChunkContainer {
 public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;
-  virtual ChunksLinks chunksByIterval(const QueryInterval &query) = 0;
-  virtual ChunksLinks chunksBeforeTimePoint(const QueryTimePoint &q) = 0;
-  virtual Cursor_ptr  readLinks(const ChunksLinks&links)=0;
+  virtual ChunkLinkList chunksByIterval(const QueryInterval &query) = 0;
+  virtual ChunkLinkList chunksBeforeTimePoint(const QueryTimePoint &q) = 0;
+  virtual Cursor_ptr  readLinks(const ChunkLinkList&links)=0;
   virtual IdArray getIds() = 0;
   virtual ~ChunkContainer();
 };

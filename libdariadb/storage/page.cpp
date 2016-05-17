@@ -109,7 +109,7 @@ public:
 		}
 	}
 
-	ChunksLinks resulted_links;
+	ChunkLinkList resulted_links;
 
 protected:
 	Page *link;
@@ -122,7 +122,7 @@ protected:
 
 class PageCursor : public dariadb::storage::Cursor {
 public:
-  PageCursor(Page *page,const ChunksLinks&chlinks)
+  PageCursor(Page *page,const ChunkLinkList&chlinks)
       : link(page), _ch_links(chlinks) {
     reset_pos();
   }
@@ -195,7 +195,7 @@ protected:
   Page *link;
   bool _is_end;
   std::mutex _locker;
-  ChunksLinks _ch_links;
+  ChunkLinkList _ch_links;
   ChunksLinks::const_iterator _ch_links_iterator;
 };
 
@@ -481,7 +481,7 @@ bool Page::is_full() const {
   return this->_free_poses.empty();
 }
 
-ChunksLinks Page::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
+ChunkLinkList Page::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                             dariadb::Time to, dariadb::Flag flag) {
   std::lock_guard<std::mutex> lg(_locker);
 
@@ -527,12 +527,12 @@ bool dariadb::storage::Page::minMaxTime(dariadb::Id id,
   return true;
 }
 
-ChunksLinks dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
+ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
   return get_chunks_links(query.ids, query.from, query.to, query.flag);
 }
 
-ChunksLinks Page::chunksBeforeTimePoint(const QueryTimePoint &q) {
-  ChunksLinks result;
+ChunkLinkList Page::chunksBeforeTimePoint(const QueryTimePoint &q) {
+  ChunkLinkList result;
   auto raw_links = this->get_chunks_links(q.ids, iheader->minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
@@ -556,7 +556,7 @@ ChunksLinks Page::chunksBeforeTimePoint(const QueryTimePoint &q) {
   return result;
 }
 
-Cursor_ptr Page::readLinks(const ChunksLinks&links) {
+Cursor_ptr Page::readLinks(const ChunkLinkList&links) {
 	auto raw_ptr = new PageCursor(this, links);
 	Cursor_ptr result{ raw_ptr };
 

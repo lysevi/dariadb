@@ -151,7 +151,7 @@ public:
     ChunkMap *out;
   };
 
-  ChunksLinks chunksByIterval(const QueryInterval &query) {
+  ChunkLinkList chunksByIterval(const QueryInterval &query) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
 
     auto pred = [query](const IndexHeader &hdr) {
@@ -171,7 +171,7 @@ public:
     auto page_list =
         pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
 
-	ChunksLinks result;
+	ChunkLinkList result;
     for (auto pname : page_list) {
       Page *cand = Page::open(pname, true);
 
@@ -186,7 +186,7 @@ public:
 	return result;
   }
 
-  Cursor_ptr  readLinks(const ChunksLinks&links) {
+  Cursor_ptr  readLinks(const ChunkLinkList&links) {
 	  boost::shared_lock<boost::shared_mutex> lg(_locker);
 	  
 	  
@@ -196,7 +196,7 @@ public:
 	  std::unique_ptr<AddCursorClbk> clbk{ new AddCursorClbk };
 	  clbk->out = &chunks;
 
-	  ChunksLinks to_read;
+	  ChunkLinkList to_read;
 
 	  for (auto l : links) {
 		  if (to_read.empty()) {
@@ -249,10 +249,10 @@ public:
     return result;
   }
 
-  ChunksLinks chunksBeforeTimePoint(const QueryTimePoint &query) {
+  ChunkLinkList chunksBeforeTimePoint(const QueryTimePoint &query) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-	ChunksLinks result;
+	ChunkLinkList result;
 
     auto pred = [query](const IndexHeader &hdr) {
       auto in_check =
@@ -403,18 +403,18 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return impl->minMaxTime(id, minResult, maxResult);
 }
 
-dariadb::storage::ChunksLinks
+dariadb::storage::ChunkLinkList
 PageManager::chunksByIterval(const QueryInterval &query) {
   return impl->chunksByIterval(query);
 }
 
-dariadb::storage::ChunksLinks
+dariadb::storage::ChunkLinkList
 PageManager::chunksBeforeTimePoint(const QueryTimePoint &q) {
   return impl->chunksBeforeTimePoint(q);
 }
 
 dariadb::storage::Cursor_ptr  
-PageManager::readLinks(const ChunksLinks&links) {
+PageManager::readLinks(const ChunkLinkList&links) {
 	return impl->readLinks(links);
 }
 

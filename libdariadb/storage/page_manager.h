@@ -46,9 +46,9 @@ public:
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  ChunksLinks chunksByIterval(const QueryInterval &query) override;
-  ChunksLinks chunksBeforeTimePoint(const QueryTimePoint &q) override;
-  Cursor_ptr  readLinks(const ChunksLinks&links) override;
+  ChunkLinkList chunksByIterval(const QueryInterval &query) override;
+  ChunkLinkList chunksBeforeTimePoint(const QueryTimePoint &q) override;
+  Cursor_ptr  readLinks(const ChunkLinkList&links) override;
   IdArray getIds() override;
 
   // dariadb::storage::ChunksList get_open_chunks();
