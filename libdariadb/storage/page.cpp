@@ -196,7 +196,7 @@ protected:
   bool _is_end;
   std::mutex _locker;
   ChunkLinkList _ch_links;
-  ChunksLinks::const_iterator _ch_links_iterator;
+  ChunkLinkList::const_iterator _ch_links_iterator;
 };
 
 Page::~Page() {
