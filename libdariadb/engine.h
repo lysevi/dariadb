@@ -1,10 +1,9 @@
 #pragma once
 
 #include "storage.h"
-#include "storage/capacitor.h"
 #include "storage/chunk_container.h"
-#include "storage/mode.h"
 #include "storage/page_manager.h"
+#include "storage/capacitor.h"
 #include "utils/utils.h"
 #include <memory>
 
@@ -51,8 +50,6 @@ public:
   QueueSizes queue_size() const;
 
   // Inherited via MeasStorage
-  //  virtual Reader_ptr readInterval(Time from, Time to) override;
-  //  virtual Reader_ptr readInTimePoint(Time time_point) override;
   virtual Reader_ptr readInterval(const QueryInterval &q) override;
   virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
 

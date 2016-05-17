@@ -1,30 +1,16 @@
 #include "memstorage.h"
-#include "../flags.h"
-#include "../timeutil.h"
-#include "../utils/asyncworker.h"
 #include "../utils/locker.h"
-#include "../utils/utils.h"
+//#include "../utils/utils.h"
 #include "chunk.h"
-#include "chunk_by_time_map.h"
 #include "cursor.h"
-#include "inner_readers.h"
-#include "subscribe.h"
 #include <algorithm>
 #include <assert.h>
-#include <limits>
 #include <unordered_map>
 
-#include <stx/btree_map>
 
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
-
-typedef std::map<Id, ChunksList> ChunkMap;
-typedef ChunkByTimeMap<Chunk_Ptr,
-                       typename stx::btree_map<dariadb::Time, Chunk_Ptr>>
-    ChunkWeaksMap;
-typedef std::unordered_map<dariadb::Id, ChunkWeaksMap> MultiTree;
 
 class MemstorageCursor : public Cursor {
 public:
@@ -93,16 +79,6 @@ public:
 
 protected:
   // size_t _size;
-
-  // ChunkByTimeMap<Chunk_Ptr> _chunks;
-  // MultiTree _multitree;
-  // IdToChunkUMap _free_chunks;
-  // Time _min_time, _max_time;
-  ////PM
-  ////std::unique_ptr<SubscribeNotificator> _subscribe_notify;
-  // mutable std::mutex _subscribe_locker;
-  // mutable std::mutex _locker_free_chunks, _locker_drop, _locker_min_max;
-  // mutable std::mutex _locker_chunks;
   ChunkContainer *_cc;
 };
 
@@ -125,14 +101,6 @@ Reader_ptr MemoryStorage::currentValue(const IdArray &ids, const Flag &flag) {
 void MemoryStorage::set_chunkSource(ChunkContainer *cw) {
   _Impl->set_chunkSource(cw);
 }
-
-// Reader_ptr MemoryStorage::readInterval(Time from, Time to){
-//	return _Impl->readInterval(from, to);
-//}
-
-// Reader_ptr MemoryStorage::readInTimePoint(Time time_point) {
-//	return _Impl->readInTimePoint(time_point);
-//}
 
 Reader_ptr MemoryStorage::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);

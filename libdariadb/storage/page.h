@@ -5,7 +5,6 @@
 #include "chunk.h"
 #include "chunk_container.h"
 #include "cursor.h"
-#include "mode.h"
 
 #include "stx/btree_multimap.h"
 #include <map>
@@ -21,7 +20,6 @@ struct PageHeader {
   uint32_t count_readers;
 
   uint64_t addeded_chunks;
-  // uint8_t is_overwrite;
 
   uint32_t chunk_per_storage;
   uint32_t chunk_size;

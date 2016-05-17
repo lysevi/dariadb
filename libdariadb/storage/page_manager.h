@@ -5,7 +5,6 @@
 #include "chunk.h"
 #include "chunk_container.h"
 #include "cursor.h"
-#include "mode.h"
 
 #include <vector>
 

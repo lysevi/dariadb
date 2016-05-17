@@ -3,8 +3,8 @@
 #include "../meas.h"
 #include "chunk.h"
 #include "cursor.h"
-#include "mode.h"
 #include "query_param.h"
+
 namespace dariadb {
 namespace storage {
 
