@@ -141,8 +141,6 @@ int main(int argc, char *argv[]) {
   }
   auto queue_sizes = raw_ptr_ds->queue_size();
   std::cout << "\r"
-            << " in disk chunks: "
-            << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
             << " in queue: (p:" << queue_sizes.page
             << " cap:" << queue_sizes.cap << ")" << std::endl;
   /* {

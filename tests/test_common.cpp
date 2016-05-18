@@ -105,11 +105,11 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     }
   }
 
-  dariadb::Meas::MeasList current_mlist;
+  /*dariadb::Meas::MeasList current_mlist;
   as->currentValue(dariadb::IdArray{}, 0)->readAll(&current_mlist);
   if (current_mlist.size() == 0) {
     throw MAKE_EXCEPTION("current_mlist.size()>0");
-  }
+  }*/
 
   as->flush();
 
@@ -124,7 +124,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   check_reader_of_all(cloned_reader, from, to, step, id_val, total_count,
                       "cloned readAll error: ");
 
-  dariadb::IdArray ids{};
+  dariadb::IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
   dariadb::Meas::MeasList all{};
   as->readInterval(
         dariadb::storage::QueryInterval(ids, 0, from, to + copies_count))
@@ -135,6 +135,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
   checkAll(all, "read error: ", from, to, step);
 
+  ids.clear();
   ids.push_back(2);
   dariadb::Meas::MeasList fltr_res{};
   as->readInterval(

@@ -39,8 +39,6 @@ void show_info(dariadb::storage::Engine *storage) {
         append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
-              << " in disk chunks: "
-              << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
               << " in queue: (p:" << queue_sizes.page
               << " cap:" << queue_sizes.cap << ")"
               << " writes: " << append_count << " speed: " << writes_per_sec
@@ -118,8 +116,6 @@ int main(int argc, char *argv[]) {
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
-              << " in disk chunks: "
-              << dariadb::storage::PageManager::instance()->chunks_in_cur_page()
               << " in queue: (p:" << queue_sizes.page
               << " cap:" << queue_sizes.cap << ")" << std::endl;
 

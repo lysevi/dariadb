@@ -255,8 +255,9 @@ public:
 	ChunkLinkList result;
 
     auto pred = [query](const IndexHeader &hdr) {
-      auto in_check =
-          utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point);
+		auto in_check =
+			utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point)
+			|| (hdr.maxTime < query.time_point);
       if (in_check) {
         for (auto id : query.ids) {
           if (storage::bloom_check(hdr.id_bloom, id)) {
@@ -420,14 +421,6 @@ PageManager::readLinks(const ChunkLinkList&links) {
 
 dariadb::IdArray PageManager::getIds() {
   return impl->getIds();
-}
-
-// dariadb::storage::ChunksList PageManager::get_open_chunks() {
-//  return impl->get_open_chunks();
-//}
-
-size_t PageManager::chunks_in_cur_page() const {
-  return impl->chunks_in_cur_page();
 }
 
 size_t PageManager::in_queue_size() const {

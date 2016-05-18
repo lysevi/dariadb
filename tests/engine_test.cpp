@@ -15,94 +15,13 @@ public:
   size_t count;
 };
 
-BOOST_AUTO_TEST_CASE(Engine) {
-  const std::string storage_path = "testStorage";
-  { // All values must be placed in the page. Without overwriting the old.
-    const size_t chunk_per_storage = 10000;
-    const size_t chunk_size = 256;
-    const size_t cap_B = 1024;
-    const dariadb::Time old_mem_chunks = 500;
-
-    if (dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path);
-    }
-
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::Engine::Limits(old_mem_chunks, 0))};
-
-    auto e = dariadb::Meas::empty();
-    // max time always
-    dariadb::Time t = dariadb::timeutil::current_time();
-    dariadb::Time start_time = t;
-    size_t count = 0;
-    for (size_t i = 0;; i++) {
-      count++;
-      e.time = t;
-      e.value++;
-      t += 10;
-      BOOST_CHECK(ms->append(e).writed == 1);
-      if (dariadb::storage::PageManager::instance()->chunks_in_cur_page() > 0) {
-        break;
-      }
-    }
-
-    BOOST_CHECK(dariadb::utils::fs::ls(storage_path, ".page").size() == 1);
-
-    // PM
-    /*dariadb::storage::ChunksList all_chunks;
-    ms->chunksByIterval(dariadb::storage::QueryInterval(start_time, t))
-        ->readAll(&all_chunks);
-    auto min_time = std::numeric_limits<dariadb::Time>::max();
-    auto max_time = std::numeric_limits<dariadb::Time>::min();
-    for (auto c : all_chunks) {
-      min_time = std::min(c->info.minTime, min_time);
-      max_time = std::max(c->info.maxTime, max_time);
-    }
-
-    BOOST_CHECK(min_time == start_time);*/
-
-    dariadb::Meas::MeasList output;
-    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0}, 0,
-                                                     start_time, t))
-        ->readAll(&output);
-    BOOST_CHECK(output.size() <= count);
-
-    std::shared_ptr<BenchCallback> clbk{new BenchCallback};
-    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0}, 0,
-                                                     start_time, e.time))
-        ->readAll(clbk.get());
-    BOOST_CHECK_GT(clbk->count, size_t(0));
-
-    output.clear();
-    ms->flush();
-    ms->readInterval(dariadb::storage::QueryInterval(dariadb::IdArray{0}, 0,
-                                                     start_time, t))
-        ->readAll(&output);
-    BOOST_CHECK(output.size() > 0);
-
-    ////partial flush (not all chunks drops to page storage) works fine.
-    // dariadb::Value tst_val = 1;
-    //      for (auto v : output) {
-    //          BOOST_CHECK_EQUAL(v.value, tst_val);
-    //          tst_val++;
-    //      }
-  }
-
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
-
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 1024;
 
-  const dariadb::Time from = dariadb::timeutil::current_time();
+  const dariadb::Time from = 0;
   const dariadb::Time to = from + 1000;
   const dariadb::Time step = 100;
 
@@ -118,9 +37,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         dariadb::storage::Engine::Limits(0, 10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
-
-    BOOST_CHECK(
-        dariadb::storage::PageManager::instance()->chunks_in_cur_page() > 0);
   }
   {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(

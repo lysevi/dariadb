@@ -269,11 +269,10 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   dariadb::storage::ChunksList tp_chunks;
   PageManager::instance()->readLinks(link_list)->readAll(&tp_chunks);
   
-  BOOST_CHECK_EQUAL(tp_chunks.size(), size_t(1));
+  BOOST_CHECK_EQUAL(tp_chunks.size(), size_t(3));
   BOOST_CHECK_LE(tp_chunks.front()->info->first.id, dariadb::Id{ 1 });
   BOOST_CHECK_LE(tp_chunks.front()->info->minTime, qt.time_point);
-  BOOST_CHECK_GE(tp_chunks.front()->info->maxTime, qt.time_point);
-
+  
   dariadb::Time minTime, maxTime;
   if (PageManager::instance()->minMaxTime(1, &minTime, &maxTime)) {
 	  BOOST_CHECK_EQUAL(minTime, qi.from);

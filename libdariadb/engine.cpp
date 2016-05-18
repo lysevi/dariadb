@@ -5,6 +5,7 @@
 #include "storage/subscribe.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
+#include "storage/inner_readers.h"
 #include <algorithm>
 #include <cassert>
 
@@ -26,42 +27,26 @@ public:
 
     PageManager::start(_page_manager_params);
 
-    // auto open_chunks = PageManager::instance()->get_open_chunks();
-    // mem_storage_raw->append(open_chunks);
-    // mem_storage_raw->set_chunkWriter(PageManager::instance());
   }
   ~Private() {
     _subscribe_notify.stop();
     this->flush();
-    // if (_limits.max_mem_chunks != 0) {
-    //   auto all_chunks = this->mem_storage_raw->drop_all();
-    //   //PM
-    ////PageManager::instance()->append(all_chunks); // use specified in ctor
-    // }
     delete mem_cap;
     PageManager::stop();
   }
 
   Time minTime() {
     std::lock_guard<std::recursive_mutex> lg(_locker);
-    if (PageManager::instance()->chunks_in_cur_page() > 0) {
-      return PageManager::instance()->minTime();
-    } else {
-      return mem_storage->minTime();
-    }
+    return PageManager::instance()->minTime();
   }
 
-  Time maxTime() { return mem_storage->maxTime(); }
+  Time maxTime() { return PageManager::instance()->minTime(); }
 
   append_result append(const Meas &value) {
     append_result result{};
-    if (mem_cap->append(value).writed != 1) {
-      // if(mem_storage_raw->append(value).writed!=1){
-      assert(false);
-      result.ignored++;
-    } else {
+	result = PageManager::instance()->append(value);
+    if (result.writed == 1) {
       _subscribe_notify.on_append(value);
-      result.writed++;
     }
 
     return result;
@@ -91,13 +76,39 @@ public:
   }
 
   // Inherited via MeasStorage
-  Reader_ptr readInterval(Time from, Time to) { NOT_IMPLEMENTED }
+  Reader_ptr readInterval(const QueryInterval &q) { 
+	  auto chunkLinks = PageManager::instance()->chunksByIterval(q);
+	  auto cursor = PageManager::instance()->readLinks(chunkLinks);
+	  InnerReader *raw_res = new InnerReader(q.flag, q.from, q.to);
+	  raw_res->add(cursor);
+	  return Reader_ptr(raw_res);
+  }
 
-  Reader_ptr readInTimePoint(Time time_point) { NOT_IMPLEMENTED }
+  Reader_ptr readInTimePoint(const QueryTimePoint &q) { 
+	  auto chunkLinks = PageManager::instance()->chunksBeforeTimePoint(q);
+	  auto cursor = PageManager::instance()->readLinks(chunkLinks);
+	  ChunksList clist;
+	  cursor->readAll(&clist);
+	  IdToChunkMap  chunks_before;
+	  for (auto ch : clist) {
+		  chunks_before[ch->info->first.id] = ch;
+	  }
+	  auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
+	  res->is_time_point_reader = true;
 
-  Reader_ptr readInterval(const QueryInterval &q) { NOT_IMPLEMENTED }
+	  for (auto id : q.ids) {
+		  auto search_res = chunks_before.find(id);
+		  if (search_res == chunks_before.end()) {
+			  res->_not_exist.push_back(id);
+		  }
+		  else {
+			  auto ch = search_res->second;
+			  res->add_tp(ch);
+		  }
+	  }
 
-  Reader_ptr readInTimePoint(const QueryTimePoint &q) { NOT_IMPLEMENTED }
+	  return res;
+  }
 
 protected:
   std::shared_ptr<MemoryStorage> mem_storage;
