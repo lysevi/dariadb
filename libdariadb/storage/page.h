@@ -95,7 +95,14 @@ public:
 private:
   void init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr);
   void update_chunk_index_rec(const Chunk_Ptr &ptr, const Meas&m);
-
+  void update_index_info(Page_ChunkIndex*cur_index, const uint32_t pos, const Chunk_Ptr &ptr, const Meas&m);
+  struct ChunkWithIndex {
+	  Chunk_Ptr ch;           ///ptr to chunk in page
+	  Page_ChunkIndex*index;  ///ptr to index reccord
+	  uint32_t pos;           ///position number of 'index' field in index file.
+  };
+  ///cache of openned chunks. before search chunk in page, we search in cache.
+  std::map<dariadb::Id, ChunkWithIndex> _openned_chunks;
 public:
   uint8_t *region;  // page  file mapp region
   uint8_t *iregion; // index file mapp region

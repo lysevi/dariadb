@@ -358,6 +358,15 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
     header->is_full = true;
     return false;
   }
+
+  auto fres = _openned_chunks.find(m.id);
+  if (fres != _openned_chunks.end()) {
+	  if (fres->second.ch->append(m)) {
+		  update_index_info(fres->second.index, fres->second.pos, fres->second.ch, m);
+		  return true;
+	  }
+  }
+
   auto byte_it = this->chunks;
   auto step = this->header->chunk_size + sizeof(ChunkIndexInfo);
   auto end = this->chunks + this->header->chunk_per_storage * step;
@@ -371,10 +380,11 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       auto ptr_to_begin = byte_it;
       auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
       Chunk_Ptr ptr = nullptr;
-      ptr = Chunk_Ptr{
-          new ZippedChunk(info, ptr_to_buffer, header->chunk_size, m)};
+      ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer, header->chunk_size, m)};
 	  this->header->max_chunk_id++;
 	  ptr->info->id = this->header->max_chunk_id;
+	  _openned_chunks[m.id].ch = ptr;
+
       init_chunk_index_rec(ptr, ptr_to_begin);
       return true;
     } else {
@@ -385,9 +395,10 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         if (info->is_zipped) {
           ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
           if (ptr->append(m)) {
+			_openned_chunks[m.id].ch = ptr;
             update_chunk_index_rec(ptr,m);
             return true;
-          }
+		  }
         } else {
           assert(false);
         }
@@ -398,40 +409,45 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   header->is_full = true;
   return false;
 }
+
 void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas&m) {
   for (size_t i = 0; i < header->addeded_chunks; ++i) {
     auto cur_index = &index[i];
     if ((cur_index->first.id == ptr->info->first.id)
 	&& (cur_index->first.time == ptr->info->first.time)){
-      cur_index->last = ptr->info->last;
-	  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ptr->info->first.id);
-	  iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
-	  iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
-
-	  for (auto it = _itree.begin(); it != _itree.end(); ++it) {
-		  if ((it->first == cur_index->maxTime) && (it->second == i)) {
-			  _itree.erase(it);
-			  break;
-		  }
-	  }
-	  
-	  auto tree = &_mtree[cur_index->first.id];
-	  for (auto it = tree->begin(); it != tree->end();++it) {
-		  if ((it->second == i) && (it->first==cur_index->maxTime)) {
-			  tree->erase(it);
-			  break;
-		  }
-	  }
-
-	  cur_index->minTime = std::min(cur_index->minTime, m.time);
-	  cur_index->maxTime = std::max(cur_index->maxTime, m.time);
-	  auto kv = std::make_pair(cur_index->maxTime, i);
-	  _itree.insert(kv);
-	  tree->insert(kv);
+		update_index_info(cur_index, i, ptr, m);
       return;
     }
   }
   assert(false);
+}
+
+void Page::update_index_info(Page_ChunkIndex*cur_index, const uint32_t pos, const Chunk_Ptr &ptr, const dariadb::Meas&m) {
+	cur_index->last = ptr->info->last;
+	iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ptr->info->first.id);
+	iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
+	iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
+
+	for (auto it = _itree.begin(); it != _itree.end(); ++it) {
+		if ((it->first == cur_index->maxTime) && (it->second == pos)) {
+			_itree.erase(it);
+			break;
+		}
+	}
+
+	auto tree = &_mtree[cur_index->first.id];
+	for (auto it = tree->begin(); it != tree->end(); ++it) {
+		if ((it->second == pos) && (it->first == cur_index->maxTime)) {
+			tree->erase(it);
+			break;
+		}
+	}
+
+	cur_index->minTime = std::min(cur_index->minTime, m.time);
+	cur_index->maxTime = std::max(cur_index->maxTime, m.time);
+	auto kv = std::make_pair(cur_index->maxTime, pos);
+	_itree.insert(kv);
+	tree->insert(kv);
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
@@ -468,6 +484,8 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   cur_index->minTime = std::min(cur_index->minTime, ch->info->minTime);
   cur_index->maxTime = std::max(cur_index->maxTime, ch->info->maxTime);
 
+  _openned_chunks[ch->info->first.id].index = cur_index;
+  _openned_chunks[ch->info->first.id].pos = pos_index;
   // TODO restore this (flush)
   //  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
   //  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
