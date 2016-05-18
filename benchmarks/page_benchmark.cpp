@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < K * 1000000; i++) {
       m.id = i % id_count;
       m.flag = 0xff;
-      m.time = dariadb::timeutil::current_time();
+      m.time = i;
       m.value = dariadb::Value(i);
       dariadb::storage::PageManager::instance()->append(m);
     }
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "insert : " << elapsed << std::endl;
     dariadb::storage::PageManager::instance()->flush();
-
+	
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Id> uniform_dist(

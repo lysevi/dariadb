@@ -158,7 +158,9 @@ public:
       auto interval_check(
           (hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
           (utils::inInterval(query.from, query.to, hdr.minTime)) ||
-          (utils::inInterval(query.from, query.to, hdr.maxTime)));
+          (utils::inInterval(query.from, query.to, hdr.maxTime)) ||
+		  (utils::inInterval(hdr.minTime, hdr.maxTime, query.from)) ||
+		  (utils::inInterval(hdr.minTime, hdr.maxTime, query.to)));
       if (interval_check) {
         for (auto id : query.ids) {
           if (storage::bloom_check(hdr.id_bloom, id)) {
