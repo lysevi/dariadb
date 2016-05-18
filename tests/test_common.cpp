@@ -37,10 +37,10 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader,
   dariadb::Meas::MeasList all{};
   reader->readAll(&all);
 
-  //        std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
-  //        for (auto&v : all) {
-  //            _dict[v.id].push_back(v);
-  //        }
+ /* std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
+  for (auto &v : all) {
+    _dict[v.id].push_back(v);
+  }*/
 
   dariadb::Id cur_id = all.front().id;
   dariadb::Value cur_val = all.front().value;
@@ -152,15 +152,15 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
       to + copies_count);
   as->readInTimePoint(qp)->readAll(&all);
   size_t ids_count = (size_t)((to - from) / step);
-  if (all.size() != ids_count) {
-    throw MAKE_EXCEPTION("all.size() != ids_count");
+  if (all.size() < ids_count) {
+    throw MAKE_EXCEPTION("all.size() < ids_count. must be GE");
   }
 
   fltr_res.clear();
   qp.time_point = to + copies_count;
   as->readInTimePoint(qp)->readAll(&fltr_res);
-  if (fltr_res.size() != ids_count) {
-    throw MAKE_EXCEPTION("fltr_res.size() != ids_count");
+  if (fltr_res.size() < ids_count) {
+    throw MAKE_EXCEPTION("fltr_res.size() < ids_count. must be GE");
   }
 
   dariadb::IdArray notExstsIDs{9999};

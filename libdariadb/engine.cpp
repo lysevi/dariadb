@@ -21,12 +21,9 @@ public:
         _page_manager_params(page_storage_params), _cap_params(cap_params),
         _limits(limits) {
     _subscribe_notify.start();
+	PageManager::start(_page_manager_params);
     mem_cap = new Capacitor(PageManager::instance(), _cap_params);
     mem_storage_raw = dynamic_cast<MemoryStorage *>(mem_storage.get());
-    assert(mem_storage_raw != nullptr);
-
-    PageManager::start(_page_manager_params);
-
   }
   ~Private() {
     _subscribe_notify.stop();
@@ -44,7 +41,8 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-	result = PageManager::instance()->append(value);
+	//result = PageManager::instance()->append(value);
+	result = mem_cap->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -75,39 +73,109 @@ public:
     return result;
   }
 
+  class UnionReader :public Reader {
+  public:
+	  UnionReader() {
+		  cap_reader = page_reader = nullptr;
+	  }
+	  // Inherited via Reader
+    bool isEnd() const override {
+      return (page_reader == nullptr || page_reader->isEnd()) &&
+             (cap_reader == nullptr || cap_reader->isEnd());
+    }
+
+    IdArray getIds() const override {
+      dariadb::IdSet idset;
+      if (page_reader != nullptr && !page_reader->isEnd()) {
+        auto sub_res = page_reader->getIds();
+        for (auto id : sub_res) {
+          idset.insert(id);
+        }
+      } else {
+        if (cap_reader != nullptr && !cap_reader->isEnd()) {
+          auto sub_res = cap_reader->getIds();
+          for (auto id : sub_res) {
+            idset.insert(id);
+          }
+        }
+      }
+      return dariadb::IdArray{idset.begin(), idset.end()};
+	  }
+	  
+	  void readNext(ReaderClb * clb) override{
+		  if (page_reader != nullptr && !page_reader->isEnd()) {
+			  page_reader->readNext(clb);
+		  }
+		  else {
+			  if (cap_reader != nullptr && !cap_reader->isEnd()) {
+				  cap_reader->readNext(clb);
+			  }
+		  }
+	  }
+	  Reader_ptr clone() const override{
+		  UnionReader*raw_res = new UnionReader();
+		  raw_res->page_reader = this->page_reader;
+		  raw_res->cap_reader = this->cap_reader;
+		  return Reader_ptr(raw_res);
+	  }
+
+	  void reset() override{
+		  if (page_reader != nullptr) {
+			  page_reader->reset();
+		  }
+		  if (cap_reader != nullptr) {
+			  cap_reader->reset();
+		  }
+	  }
+
+	  Reader_ptr page_reader;
+	  Reader_ptr cap_reader;
+  };
+
   // Inherited via MeasStorage
   Reader_ptr readInterval(const QueryInterval &q) { 
 	  auto chunkLinks = PageManager::instance()->chunksByIterval(q);
 	  auto cursor = PageManager::instance()->readLinks(chunkLinks);
-	  InnerReader *raw_res = new InnerReader(q.flag, q.from, q.to);
-	  raw_res->add(cursor);
+	  InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
+	  raw_rdr->add(cursor);
+
+	  UnionReader* raw_res = new UnionReader();
+	  raw_res->page_reader = Reader_ptr{ raw_rdr };
+	  if (mem_cap->minTime() <= q.from) {
+		  auto mc_reader=mem_cap->readInterval(q);
+		  raw_res->cap_reader = Reader_ptr{ mc_reader };
+	  }
 	  return Reader_ptr(raw_res);
   }
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) { 
-	  auto chunkLinks = PageManager::instance()->chunksBeforeTimePoint(q);
-	  auto cursor = PageManager::instance()->readLinks(chunkLinks);
-	  ChunksList clist;
-	  cursor->readAll(&clist);
-	  IdToChunkMap  chunks_before;
-	  for (auto ch : clist) {
-		  chunks_before[ch->info->first.id] = ch;
-	  }
-	  auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
-	  res->is_time_point_reader = true;
-
-	  for (auto id : q.ids) {
-		  auto search_res = chunks_before.find(id);
-		  if (search_res == chunks_before.end()) {
-			  res->_not_exist.push_back(id);
+	  if (q.time_point < mem_cap->minTime()) {
+		  auto chunkLinks = PageManager::instance()->chunksBeforeTimePoint(q);
+		  auto cursor = PageManager::instance()->readLinks(chunkLinks);
+		  ChunksList clist;
+		  cursor->readAll(&clist);
+		  IdToChunkMap  chunks_before;
+		  for (auto ch : clist) {
+			  chunks_before[ch->info->first.id] = ch;
 		  }
-		  else {
-			  auto ch = search_res->second;
-			  res->add_tp(ch);
-		  }
-	  }
+		  auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
+		  res->is_time_point_reader = true;
 
-	  return res;
+		  for (auto id : q.ids) {
+			  auto search_res = chunks_before.find(id);
+			  if (search_res == chunks_before.end()) {
+				  res->_not_exist.push_back(id);
+			  }
+			  else {
+				  auto ch = search_res->second;
+				  res->add_tp(ch);
+			  }
+		  }
+		  return res;
+	  }
+	  else {
+		  return mem_cap->readInTimePoint(q);
+	  }
   }
 
 protected:

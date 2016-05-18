@@ -161,6 +161,9 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
         break;
       }
     }
+	
+	BOOST_CHECK_EQUAL(cap.size(), size_t(1));
+
     for (auto it = stor->mlist.cbegin(); it != stor->mlist.cend(); ++it) {
       auto next = it;
       ++next;
