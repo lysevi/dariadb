@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    auto start_time = dariadb::timeutil::current_time();
+    dariadb::Time start_time = dariadb::timeutil::current_time();
 
     auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,

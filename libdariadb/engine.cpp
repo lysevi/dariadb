@@ -34,10 +34,17 @@ public:
 
   Time minTime() {
     std::lock_guard<std::recursive_mutex> lg(_locker);
-    return PageManager::instance()->minTime();
+    auto pmin=PageManager::instance()->minTime();
+	auto cmin = mem_cap->minTime();
+	return std::min(pmin, cmin);
   }
 
-  Time maxTime() { return PageManager::instance()->minTime(); }
+  Time maxTime() { 
+	  std::lock_guard<std::recursive_mutex> lg(_locker);
+	  auto pmax = PageManager::instance()->maxTime();
+	  auto cmax = mem_cap->maxTime();
+	  return std::min(pmax, cmax);
+  }
 
   append_result append(const Meas &value) {
     append_result result{};
@@ -141,7 +148,8 @@ public:
 
 	  UnionReader* raw_res = new UnionReader();
 	  raw_res->page_reader = Reader_ptr{ raw_rdr };
-	  if (mem_cap->minTime() <= q.from) {
+	  auto cap_min = mem_cap->minTime();
+	  if (cap_min >= q.from) {
 		  auto mc_reader=mem_cap->readInterval(q);
 		  raw_res->cap_reader = Reader_ptr{ mc_reader };
 	  }

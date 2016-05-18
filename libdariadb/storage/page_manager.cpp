@@ -314,21 +314,34 @@ public:
   }
 
   dariadb::Time minTime() {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
-    if (_cur_page == nullptr) {
-      return dariadb::Time(0);
-    } else {
-      return _cur_page->iheader->minTime;
-    }
-  }
+	  boost::shared_lock<boost::shared_mutex> lg(_locker);
 
+	  auto pred = [](const IndexHeader &) { return true; };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+
+	  dariadb::Time res = std::numeric_limits<dariadb::Time>::max();
+	  for (auto pname : page_list) {
+		  auto ih = Page::readIndexHeader(pname + "i");
+		  res = std::min(ih.minTime, res);
+	  }
+
+	  return res;
+  }
   dariadb::Time maxTime() {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
-    if (_cur_page == nullptr) {
-      return dariadb::Time(0);
-    } else {
-      return _cur_page->iheader->maxTime;
-    }
+	  boost::shared_lock<boost::shared_mutex> lg(_locker);
+
+	  auto pred = [](const IndexHeader &) { return true; };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+
+	  dariadb::Time res = std::numeric_limits<dariadb::Time>::max();
+	  for (auto pname : page_list) {
+		  auto ih = Page::readIndexHeader(pname + "i");
+		  res = std::max(ih.maxTime, res);
+	  }
+
+	  return res;
   }
 
   append_result append(const Meas &value) {
