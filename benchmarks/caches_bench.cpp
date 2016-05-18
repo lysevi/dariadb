@@ -45,11 +45,11 @@ public:
 
   // Inherited via MeasStorage
   virtual dariadb::storage::Reader_ptr
-  readInterval(const dariadb::storage::QueryInterval &q) override {
+  readInterval(const dariadb::storage::QueryInterval &) override {
     return nullptr;
   }
   virtual dariadb::storage::Reader_ptr
-  readInTimePoint(const dariadb::storage::QueryTimePoint &q) override {
+  readInTimePoint(const dariadb::storage::QueryTimePoint &) override {
     return nullptr;
   }
 };
