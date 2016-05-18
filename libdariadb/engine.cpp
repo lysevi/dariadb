@@ -57,7 +57,7 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-    return mem_storage->currentValue(ids, flag);
+	  return mem_cap->currentValue(ids, flag);
   }
 
   void flush() {

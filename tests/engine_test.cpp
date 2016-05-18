@@ -47,7 +47,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     dariadb::Meas::MeasList mlist;
     ms->currentValue(dariadb::IdArray{}, 0)->readAll(&mlist);
-    BOOST_CHECK(mlist.size() == size_t((to - from) / step));
+    BOOST_CHECK(mlist.size() == size_t(1));
+	BOOST_CHECK_EQUAL(mlist.front().flag, dariadb::Flags::_NO_DATA);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
