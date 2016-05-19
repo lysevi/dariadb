@@ -88,24 +88,24 @@ int main(int argc, char *argv[]) {
   const size_t cap_B = 10;
   const size_t max_mem_chunks = 0;
 
-  { // 1.
-    if (dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path);
-    }
+  //{ // 1.
+  //  if (dariadb::utils::fs::path_exists(storage_path)) {
+  //    dariadb::utils::fs::rm(storage_path);
+  //  }
 
-    auto raw_ptr = new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
-    dariadb::storage::MeasStorage_ptr ms{raw_ptr};
-    auto start = clock();
+  //  auto raw_ptr = new dariadb::storage::Engine(
+  //      dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+  //                                            chunk_size),
+  //      dariadb::storage::Capacitor::Params(cap_B, storage_path),
+  //      dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
+  //  dariadb::storage::MeasStorage_ptr ms{raw_ptr};
+  //  auto start = clock();
 
-    writer_1(ms);
+  //  writer_1(ms);
 
-    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "1. insert : " << elapsed << std::endl;
-  }
+  //  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+  //  std::cout << "1. insert : " << elapsed << std::endl;
+  //}
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

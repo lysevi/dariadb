@@ -162,21 +162,99 @@ public:
 	  Reader_ptr cap_reader;
   };
 
+  class UnionReaderSet : public Reader {
+  public:
+
+	  std::list<Reader_ptr> _readers;
+	  std::list<Reader_ptr>::iterator it;
+	  bool _is_end;
+	  UnionReaderSet() {}
+	  ~UnionReaderSet() { _readers.clear(); }
+
+	  void add_rdr(const Reader_ptr &cptr) {
+		  _readers.push_back(cptr);
+		  reset();
+	  }
+
+	  IdArray getIds() const override {
+		  IdSet subresult;
+		  for (auto r : _readers) {
+			  IdArray ids = r->getIds();
+			  for (auto id : ids) {
+				  subresult.insert(id);
+			  }
+		  }
+		  return IdArray{ subresult.begin(),subresult.end() };
+	  }
+
+	  bool isEnd() const override { return _is_end; }
+
+	  void readNext(ReaderClb *clb) override {
+		  (*it)->readNext(clb);
+		  if ((*it)->isEnd()) {
+			  ++it;
+			  if (it == _readers.end()) {
+				  _is_end = true;
+			  }
+		  }
+	  }
+
+	  Reader_ptr clone() const override {
+		  UnionReaderSet*res = new UnionReaderSet;
+		  for (auto r : _readers) {
+			  res->add_rdr(r->clone());
+		  }
+		  return Reader_ptr{ res };
+	  }
+	  void reset() override {
+		  it = _readers.begin();
+		  _is_end = false;
+		  for (auto &c : _readers) {
+			  c->reset();
+		  }
+	  }
+  };
+
   // Inherited via MeasStorage
   Reader_ptr readInterval(const QueryInterval &q) { 
-	  auto chunkLinks = PageManager::instance()->chunksByIterval(q);
-	  auto cursor = PageManager::instance()->readLinks(chunkLinks);
-	  InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
-	  raw_rdr->add(cursor);
+	  UnionReaderSet *raw_result = new UnionReaderSet();
 
-	  UnionReader* raw_res = new UnionReader();
-	  raw_res->page_reader = Reader_ptr{ raw_rdr };
-	  auto cap_min = mem_cap->minTime();
-	  if (cap_min >= q.from) {
-		  auto mc_reader=mem_cap->readInterval(q);
-		  raw_res->cap_reader = Reader_ptr{ mc_reader };
+	  for (auto id : q.ids) {
+		  InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
+		  UnionReader* raw_res = new UnionReader();
+		  raw_res->page_reader = Reader_ptr{ raw_rdr };
+
+		  dariadb::Time minT, maxT;
+		  QueryInterval local_q = q;
+		  local_q.ids.clear();
+		  local_q.ids.push_back(id);
+		  if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
+			  auto chunkLinks = PageManager::instance()->chunksByIterval(q);
+			  auto page_cursor = PageManager::instance()->readLinks(chunkLinks);
+			  raw_rdr->add(page_cursor);
+		  }
+		  else {
+			 
+
+			  if (minT <= q.from && maxT >= q.to) {
+				  auto mc_reader = mem_cap->readInterval(q);
+				  raw_res->cap_reader = Reader_ptr{ mc_reader };
+			  }
+			  else {
+				  local_q.to = minT;
+				  auto chunkLinks = PageManager::instance()->chunksByIterval(q);
+				  auto page_cursor = PageManager::instance()->readLinks(chunkLinks);
+				  raw_rdr->add(page_cursor);
+				  local_q.from = minT;
+				  local_q.to = q.to;
+
+				  auto mc_reader = mem_cap->readInterval(q);
+				  raw_res->cap_reader = Reader_ptr{ mc_reader };
+			  }
+		  }
+		  raw_result->add_rdr(Reader_ptr{ raw_rdr });
 	  }
-	  return Reader_ptr(raw_res);
+	  return Reader_ptr(raw_result);
   }
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) { 
