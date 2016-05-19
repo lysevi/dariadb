@@ -144,21 +144,21 @@ int main(int argc, char *argv[]) {
   std::cout << "\r"
             << " in queue: (p:" << queue_sizes.page
             << " cap:" << queue_sizes.cap << ")" << std::endl;
-   {
-      /* auto ids=ms->getIds();
-       std::cout << "ids.size:"<<ids.size() << std::endl;*/
-       std::cout << "read all..." << std::endl;
-       std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
-       auto start = clock();
-	   dariadb::storage::QueryInterval qi(
-		   dariadb::IdArray{ _all_id.begin(),_all_id.end() }, 
-		   0, ms->minTime(), ms->maxTime());
-       ms->readInterval(qi)->readAll(clbk.get());
+   //{
+   //   /* auto ids=ms->getIds();
+   //    std::cout << "ids.size:"<<ids.size() << std::endl;*/
+   //    std::cout << "read all..." << std::endl;
+   //    std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
+   //    auto start = clock();
+	  // dariadb::storage::QueryInterval qi(
+		 //  dariadb::IdArray{ _all_id.begin(),_all_id.end() }, 
+		 //  0, ms->minTime(), ms->maxTime());
+   //    ms->readInterval(qi)->readAll(clbk.get());
 
-       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-       std::cout << "readed: " << clbk->count << std::endl;
-       std::cout << "time: " << elapsed << std::endl;
-   }
+   //    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+   //    std::cout << "readed: " << clbk->count << std::endl;
+   //    std::cout << "time: " << elapsed << std::endl;
+   //}
   { // 3
 
     std::random_device r;
