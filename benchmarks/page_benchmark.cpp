@@ -101,10 +101,10 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < id_count; ++i) {
       ids[i] = i;
     }
-
+	const size_t runs_count = 100;
     auto start = clock();
 
-    for (size_t i = 0; i < size_t(100); i++) {
+    for (size_t i = 0; i < runs_count; i++) {
       auto time_point1 = uniform_dist(e1);
       auto time_point2 = uniform_dist(e1);
       auto from = std::min(time_point1, time_point2);
@@ -119,18 +119,18 @@ int main(int argc, char *argv[]) {
     }
 
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "interval: " << elapsed << std::endl;
+    std::cout << "interval: " << elapsed/ runs_count << std::endl;
 
     start = clock();
 
-    for (size_t i = 0; i < size_t(100); i++) {
+    for (size_t i = 0; i < runs_count; i++) {
       auto time_point = uniform_dist(e1);
       dariadb::storage::PageManager::instance()->chunksBeforeTimePoint(
           dariadb::storage::QueryTimePoint(ids, 0, time_point));
     }
 
     elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "timePoint: " << elapsed << std::endl;
+    std::cout << "timePoint: " << elapsed / runs_count << std::endl;
 
     delete clbk;
 
