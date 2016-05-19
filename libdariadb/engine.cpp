@@ -229,7 +229,7 @@ public:
 		  local_q.ids.clear();
 		  local_q.ids.push_back(id);
 		  if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
-			  auto chunkLinks = PageManager::instance()->chunksByIterval(q);
+			  auto chunkLinks = PageManager::instance()->chunksByIterval(local_q);
 			  auto page_cursor = PageManager::instance()->readLinks(chunkLinks);
 			  raw_rdr->add(page_cursor);
 		  }
@@ -237,18 +237,18 @@ public:
 			 
 
 			  if (minT <= q.from && maxT >= q.to) {
-				  auto mc_reader = mem_cap->readInterval(q);
+				  auto mc_reader = mem_cap->readInterval(local_q);
 				  raw_res->cap_reader = Reader_ptr{ mc_reader };
 			  }
 			  else {
 				  local_q.to = minT;
-				  auto chunkLinks = PageManager::instance()->chunksByIterval(q);
+				  auto chunkLinks = PageManager::instance()->chunksByIterval(local_q);
 				  auto page_cursor = PageManager::instance()->readLinks(chunkLinks);
 				  raw_rdr->add(page_cursor);
 				  local_q.from = minT;
 				  local_q.to = q.to;
 
-				  auto mc_reader = mem_cap->readInterval(q);
+				  auto mc_reader = mem_cap->readInterval(local_q);
 				  raw_res->cap_reader = Reader_ptr{ mc_reader };
 			  }
 		  }
