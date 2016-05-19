@@ -60,7 +60,7 @@ const size_t chunks_size = 1024;
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-  const size_t K = 1;
+  
   const size_t id_count = 4;
   {
 
