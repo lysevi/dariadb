@@ -113,14 +113,24 @@ public:
     *maxResult = std::numeric_limits<dariadb::Time>::min();
     auto res = false;
     for (auto pname : pages) {
-      auto p = Page::open(pname);
+        Page *pg = nullptr;
+        bool close_page=true;
+        if(_cur_page!=nullptr && pname==_cur_page->filename){
+                pg=_cur_page;
+                close_page=false;
+
+        }else{
+            pg=Page::open(pname, true);
+        }
       dariadb::Time local_min, local_max;
-      if (p->minMaxTime(id, &local_min, &local_max)) {
+      if (pg->minMaxTime(id, &local_min, &local_max)) {
         *minResult = std::min(local_min, *minResult);
         *maxResult = std::max(local_max, *maxResult);
         res = true;
       }
-      delete p;
+      if(close_page){
+          delete pg;
+      }
     }
     return res;
   }
@@ -175,14 +185,24 @@ public:
 
 	ChunkLinkList result;
     for (auto pname : page_list) {
-      Page *cand = Page::open(pname, true);
+        Page *pg = nullptr;
+        bool close_page=true;
+        if(_cur_page!=nullptr && pname==_cur_page->filename){
+                pg=_cur_page;
+                close_page=false;
 
-      auto sub_result=cand->chunksByIterval(query);
+        }else{
+            pg=Page::open(pname, true);
+        }
+
+      auto sub_result=pg->chunksByIterval(query);
 	  for (auto s:sub_result) {
 		  s.page_name = pname;
 		  result.push_back(s);
 	  }
-      delete cand;
+      if(close_page){
+          delete pg;
+      }
     }
 
 	return result;
@@ -207,18 +227,42 @@ public:
 			  if (l.page_name == to_read.front().page_name) {
 				  to_read.push_back(l);
 			  }else {
-				  auto p = Page::open(to_read.front().page_name);
-				  p->readLinks(to_read)->readAll(clbk.get());
-				  delete p;
+                  auto pname=to_read.front().page_name;
+                  Page *pg = nullptr;
+                  bool close_page=true;
+                  if(_cur_page!=nullptr && pname==_cur_page->filename){
+                          pg=_cur_page;
+                          close_page=false;
+
+                  }else{
+                      pg=Page::open(pname, true);
+                  }
+
+                  pg->readLinks(to_read)->readAll(clbk.get());
+                  if(close_page){
+                      delete pg;
+                  }
 				  to_read.clear();
 				  to_read.push_back(l);
 			  }
 		  }
 	  }
 	  if (!to_read.empty()) {
-		  auto p = Page::open(to_read.front().page_name);
-		  p->readLinks(to_read)->readAll(clbk.get());
-		  delete p;
+          auto pname=to_read.front().page_name;
+          Page *pg = nullptr;
+          bool close_page=true;
+          if(_cur_page!=nullptr && pname==_cur_page->filename){
+                  pg=_cur_page;
+                  close_page=false;
+          }else{
+              pg=Page::open(pname, true);
+          }
+
+
+          pg->readLinks(to_read)->readAll(clbk.get());
+          if(close_page){
+              delete pg;
+          }
 		  to_read.clear();
 	  }
 
@@ -272,14 +316,23 @@ public:
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
     for (auto pname : page_list) {
-      Page *pg = Page::open(pname, true);
+      Page *pg = nullptr;
+      bool close_page=true;
+      if(_cur_page!=nullptr && pname==_cur_page->filename){
+              pg=_cur_page;
+              close_page=false;
+      }else{
+          pg=Page::open(pname, true);
+      }
 
       auto subres = pg->chunksBeforeTimePoint(query);
       for (auto s : subres) {
 		  s.page_name = pname;
 		  result.push_back(s);
       }
-      delete pg;
+      if(close_page){
+          delete pg;
+      }
     }
 
     return result;
@@ -293,10 +346,19 @@ public:
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
     dariadb::IdSet s;
     for (auto pname : page_list) {
-      Page *pg = Page::open(pname, true);
-      auto subres = pg->getIds();
-      s.insert(subres.begin(), subres.end());
-      delete pg;
+        Page *pg = nullptr;
+        bool close_page=true;
+        if(_cur_page!=nullptr && pname==_cur_page->filename){
+                pg=_cur_page;
+                close_page=false;
+        }else{
+            pg=Page::open(pname, true);
+        }
+        auto subres = pg->getIds();
+        s.insert(subres.begin(), subres.end());
+        if(close_page){
+            delete pg;
+        }
     }
 
     return dariadb::IdArray(s.begin(), s.end());
