@@ -62,8 +62,8 @@ int main(int argc, char *argv[]) {
     std::cout << "write..." << std::endl;
 
     const size_t chunk_per_storage = 1024 * 1024;
-    const size_t chunk_size = 512;
-    const size_t cap_B = 256;
+    const size_t chunk_size = 1024;
+    const size_t cap_B = 10;
     const dariadb::Time old_mem_chunks = 0;
     const size_t max_mem_chunks = 100;
 
@@ -72,11 +72,12 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
-
+	dariadb::storage::Capacitor::Params cap_param(cap_B, storage_path);
+	cap_param.max_levels = 20;
     auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+		cap_param,
         dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
 
     dariadb::storage::MeasStorage_ptr ms{raw_ptr};
@@ -178,8 +179,9 @@ int main(int argc, char *argv[]) {
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "readed: " << clbk->count << std::endl;
       std::cout << "time: " << elapsed << std::endl;
-      if (clbk->count != (dariadb_bench::iteration_count *
-                          dariadb_bench::total_threads_count)) {
+	  auto expected = (dariadb_bench::iteration_count * dariadb_bench::total_threads_count);
+      if (clbk->count != expected) {
+		  std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
         throw MAKE_EXCEPTION(
             "(clbk->count!=(iteration_count*total_threads_count))");
       }

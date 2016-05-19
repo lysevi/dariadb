@@ -23,6 +23,7 @@ for future updates.
 #include <cassert>
 #include <limits>
 #include <list>
+#include <future>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -50,7 +51,7 @@ struct flagged_meas_time_compare_less {
 struct level {
   level_header *hdr;
   FlaggedMeas *begin;
-
+  
   FlaggedMeas at(size_t _pos) const { return begin[_pos]; }
 
   void push_back(const Meas &m) {
@@ -58,10 +59,8 @@ struct level {
     ++hdr->pos;
   }
 
-  ///need for k-merge
-  void push_back(const FlaggedMeas &m) {
-	  this->push_back(m.value);
-  }
+  /// need for k-merge
+  void push_back(const FlaggedMeas &m) { this->push_back(m.value); }
 
   void clear() { hdr->pos = 0; }
 
@@ -150,8 +149,10 @@ public:
 
   size_t block_in_level(size_t lev_num) const { return (size_t(1) << lev_num); }
 
-  size_t meases_in_level(size_t B, size_t lvl) const {
-    return one_block_size(B) * block_in_level(lvl);
+  size_t bytes_in_level(size_t B, size_t lvl) const {
+	  auto blocks_count = block_in_level(lvl);
+	  auto res = one_block_size(B) * blocks_count;
+    return res;
   }
 
   uint64_t cap_size() const {
@@ -160,7 +161,7 @@ public:
     result += _params.B * sizeof(FlaggedMeas); /// space to _memvalues
     // TODO shame!
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
-      result += sizeof(level_header) + meases_in_level(_params.B, lvl); /// 2^lvl
+      result += sizeof(level_header) + bytes_in_level(_params.B, lvl); /// 2^lvl
     }
     return result + sizeof(Header);
   }
@@ -189,7 +190,7 @@ public:
       it->lvl = lvl;
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
-      pos += sizeof(level_header) + meases_in_level(_header->B, lvl);
+      pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
     }
     load();
   }
@@ -208,7 +209,7 @@ public:
       new_l.begin = m;
       new_l.hdr = h;
       _levels[lvl] = new_l;
-      pos += sizeof(level_header) + meases_in_level(_header->B, lvl);
+      pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
     }
   }
 
@@ -247,10 +248,17 @@ public:
     size_t new_items_count = _header->_size_B + 1;
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
+	
     if (outlvl >= _header->levels_count) {
       drop_to_stor();
       return append_to_mem(value);
     }
+
+	if (outlvl == (_header->levels_count - 1)) {
+		if (drop_future.valid()) {
+			drop_future.wait();
+		}
+	}
 
     std::list<level *> to_merge;
     level tmp;
@@ -274,7 +282,24 @@ public:
       _levels[i].clear();
     }
     ++_header->_size_B;
+	if (outlvl == (_header->levels_count - 1)) {
+		auto target = &_levels[_header->levels_count - 1];
+		_header->_size_B -= target->size() / _header->B;
+		_header->_writed -= target->size();
+		drop_future = std::async(std::launch::async, &Capacitor::Private::drop_one_level, this,target);
+	}
     return append_to_mem(value);
+  }
+  std::future<void> drop_future;
+  void drop_one_level(level*target) {
+	  if (_stor == nullptr) {
+		  return;
+	  }
+	  for (auto i = 0; i < target->size(); ++i) {
+		  _stor->append(target->at(i).value);
+	  }
+	  
+	  target->clear();
   }
 
   struct low_level_stor_pusher {
@@ -395,7 +420,11 @@ public:
   dariadb::Time minTime() const { return _minTime; }
   dariadb::Time maxTime() const { return _maxTime; }
 
-  void flush() {}
+  void flush() {
+	  if (drop_future.valid()) {
+		  drop_future.wait();
+	  }
+  }
 
   size_t in_queue_size() const { return 0; }
 
