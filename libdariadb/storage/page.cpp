@@ -428,7 +428,8 @@ void Page::update_index_info(Page_ChunkIndex*cur_index, const uint32_t pos, cons
 	iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
 	iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
 
-	for (auto it = _itree.begin(); it != _itree.end(); ++it) {
+
+	for (auto it = _itree.lower_bound(cur_index->maxTime); it != _itree.upper_bound(cur_index->maxTime); ++it) {
 		if ((it->first == cur_index->maxTime) && (it->second == pos)) {
 			_itree.erase(it);
 			break;
@@ -436,7 +437,9 @@ void Page::update_index_info(Page_ChunkIndex*cur_index, const uint32_t pos, cons
 	}
 
 	auto tree = &_mtree[cur_index->first.id];
-	for (auto it = tree->begin(); it != tree->end(); ++it) {
+	auto from = tree->lower_bound(cur_index->maxTime);
+	auto to = tree->upper_bound(cur_index->maxTime);
+	for (auto it = from; it != to; ++it) {
 		if ((it->second == pos) && (it->first == cur_index->maxTime)) {
 			tree->erase(it);
 			break;
@@ -473,6 +476,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   cur_index->offset = header->pos;
   header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
   header->addeded_chunks++;
+  
   auto kv = std::make_pair(index_rec->maxTime, pos_index);
   _itree.insert(kv);
   _mtree[index_rec->first.id].insert(kv);
