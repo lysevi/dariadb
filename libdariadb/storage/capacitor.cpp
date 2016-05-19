@@ -24,15 +24,16 @@ for future updates.
 #include <limits>
 #include <list>
 #include <future>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 
 #pragma pack(push, 1)
 struct level_header {
-  size_t lvl;
-  size_t count;
-  size_t pos;
+  uint8_t  lvl;
+  uint64_t count;
+  uint64_t pos;
 };
 #pragma pack(pop)
 
@@ -159,12 +160,21 @@ public:
   uint64_t cap_size() const {
     uint64_t result = 0;
 
+    result += sizeof(Header);
     result += _params.B * sizeof(FlaggedMeas); /// space to _memvalues
-    // TODO shame!
+
+
+    auto prev_level_size = _params.B * sizeof(FlaggedMeas);
+// TODO shame!
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
-      result += sizeof(level_header) + bytes_in_level(_params.B, lvl); /// 2^lvl
+      auto cur_level_meases = bytes_in_level(_params.B, lvl); /// 2^lvl
+      if (cur_level_meases < prev_level_size) {
+        throw MAKE_EXCEPTION("size calculation error");
+      }
+      prev_level_size = cur_level_meases;
+      result += sizeof(level_header) + cur_level_meases;
     }
-    return result + sizeof(Header);
+    return result;
   }
 
   std::string file_name() {
@@ -191,6 +201,10 @@ public:
       it->lvl = lvl;
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
+      auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
+      for(size_t i=0;i<it->count;++i){
+          std::memset(&m[i],0,sizeof(FlaggedMeas));
+      }
       pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
     }
     load();
@@ -362,6 +376,9 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
+        if(m.drop_end){
+            continue;
+        }
         if (m.value.time > q.to) {
           break;
         }
@@ -373,6 +390,9 @@ public:
 
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
+      if(m.drop_end){
+          continue;
+      }
       if (m.value.inQuery(q.ids, q.flag, q.from, q.to)) {
         sub_result[m.value.id].insert(m.value);
       }
@@ -472,6 +492,9 @@ public:
 
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
+      if(m.drop_end){
+          continue;
+      }
       if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
         insert_if_older(sub_res, m.value);
         readed_ids.insert(m.value.id);
@@ -486,6 +509,9 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
+        if(m.drop_end){
+            continue;
+        }
         if (m.value.time > q.time_point) {
           break;
         }
