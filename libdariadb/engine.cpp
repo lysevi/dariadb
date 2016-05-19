@@ -43,7 +43,7 @@ public:
 	  std::lock_guard<std::recursive_mutex> lg(_locker);
 	  auto pmax = PageManager::instance()->maxTime();
 	  auto cmax = mem_cap->maxTime();
-	  return std::min(pmax, cmax);
+	  return std::max(pmax, cmax);
   }
 
   append_result append(const Meas &value) {
