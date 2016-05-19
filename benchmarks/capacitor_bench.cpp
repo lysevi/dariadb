@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
-                    dariadb::Time(i), &append_count, meas_stor};
+                    dariadb::Time(i), &append_count, tos };
       writers[pos++] = std::move(t);
     }
 

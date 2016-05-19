@@ -15,12 +15,43 @@
 #include <storage/page_manager.h>
 #include <thread>
 #include <utils/fs.h>
+#include "bench_common.h"
+
+
+std::atomic_long append_count{ 0 };
+bool stop_info = false;
+
 
 class BenchCallback : public dariadb::storage::Cursor::Callback {
 public:
   void call(dariadb::storage::Chunk_Ptr &) { count++; }
   size_t count;
 };
+
+
+void show_info() {
+	clock_t t0 = clock();
+	auto all_writes =
+		dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
+	while (true) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		clock_t t1 = clock();
+		auto writes_per_sec =
+			append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
+
+		std::cout << "\r"
+			<< " writes: " << append_count << " speed: " << writes_per_sec
+			<< "/sec progress:" << (int64_t(100) * append_count) / all_writes
+			<< "%                ";
+		std::cout.flush();
+		if (stop_info) {
+			std::cout.flush();
+			break;
+		}
+	}
+	std::cout << "\n";
+}
 
 const std::string storagePath = "benchStorage/";
 const size_t chunks_count = 1024;
@@ -36,23 +67,28 @@ int main(int argc, char *argv[]) {
     if (dariadb::utils::fs::path_exists(storagePath)) {
       dariadb::utils::fs::rm(storagePath);
     }
+	std::thread info_thread(show_info);
+
     dariadb::storage::PageManager::start(dariadb::storage::PageManager::Params(
         storagePath, chunks_count, chunks_size));
 
-    auto start = clock();
-    auto m = dariadb::Meas::empty();
+	std::vector<std::thread> writers(dariadb_bench::total_threads_count);
+	
+	size_t pos = 0;
+	for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
+		std::thread t{ dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
+			dariadb::Time(i), &append_count, dariadb::storage::PageManager::instance() };
+		writers[pos++] = std::move(t);
+	}
 
-    for (size_t i = 0; i < K * 1000000; i++) {
-      m.id = i % id_count;
-      m.flag = 0xff;
-      m.time = i;
-      m.value = dariadb::Value(i);
-      dariadb::storage::PageManager::instance()->append(m);
-    }
+	pos = 0;
+	for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
+		std::thread t = std::move(writers[pos++]);
+		t.join();
+	}
 
-    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "insert : " << elapsed << std::endl;
-    dariadb::storage::PageManager::instance()->flush();
+	stop_info = true;
+	info_thread.join();
 	
     std::random_device r;
     std::default_random_engine e1(r());
@@ -66,7 +102,7 @@ int main(int argc, char *argv[]) {
       ids[i] = i;
     }
 
-    start = clock();
+    auto start = clock();
 
     for (size_t i = 0; i < size_t(100); i++) {
       auto time_point1 = uniform_dist(e1);
@@ -82,7 +118,7 @@ int main(int argc, char *argv[]) {
       cursor = nullptr;
     }
 
-    elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "interval: " << elapsed << std::endl;
 
     start = clock();

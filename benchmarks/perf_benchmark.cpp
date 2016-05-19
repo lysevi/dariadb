@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
-                    dariadb::Time(i), &append_count, ms};
+                    dariadb::Time(i), &append_count, raw_ptr };
       writers[pos++] = std::move(t);
     }
 
