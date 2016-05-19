@@ -61,7 +61,9 @@ public:
 
   void set_chunkSource(ChunkContainer *cw);
 
-protected:
+  virtual bool minMaxTime(dariadb::Id,dariadb::Time *,dariadb::Time *) override{
+	  NOT_IMPLEMENTED;
+  };protected:
   class Private;
   std::unique_ptr<Private> _Impl;
 };

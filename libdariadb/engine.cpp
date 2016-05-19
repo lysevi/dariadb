@@ -46,6 +46,29 @@ public:
 	  return std::max(pmax, cmax);
   }
 
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+	  dariadb::Time *maxResult) {
+	  std::lock_guard<std::recursive_mutex> lg(_locker);
+	  dariadb::Time subMin1, subMax1;
+	  auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
+	  dariadb::Time subMin2, subMax2;
+	  auto mr = mem_cap->minMaxTime(id, &subMin2, &subMax2);
+
+	  if (!pr) {
+		  *minResult = subMin2;
+		  *maxResult = subMax2;
+		  return mr;
+	  }
+	  if (!mr) {
+		  *minResult = subMin1;
+		  *maxResult = subMax1;
+		  return pr;
+	  }
+	  *minResult = std::min(subMin1, subMin2);
+	  *maxResult = std::max(subMax1, subMax2);
+	  return true;
+  }
+
   append_result append(const Meas &value) {
     append_result result{};
 	//result = PageManager::instance()->append(value);
@@ -214,6 +237,10 @@ Time Engine::minTime() {
 
 Time Engine::maxTime() {
   return _impl->maxTime();
+}
+bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+	dariadb::Time *maxResult) {
+	return _impl->minMaxTime(id, minResult, maxResult);
 }
 
 append_result Engine::append(const Meas &value) {

@@ -127,6 +127,7 @@ public:
   }
 
   ~Private() {
+	  this->flush();
     if (mmap != nullptr) {
       mmap->close();
     }
@@ -419,6 +420,38 @@ public:
 
   dariadb::Time minTime() const { return _minTime; }
   dariadb::Time maxTime() const { return _maxTime; }
+  
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+	  dariadb::Time *maxResult) {
+	  boost::shared_lock<boost::shared_mutex> lock(_mutex);
+
+	  *minResult = std::numeric_limits<dariadb::Time>::max();
+	  *maxResult = std::numeric_limits<dariadb::Time>::min();
+	  bool result = false;
+	  for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+		  auto m = _memvalues[j];
+		  if (m.value.id == id) {
+			  *minResult = std::min(*minResult,m.value.time);
+			  *maxResult = std::max(*maxResult, m.value.time);
+			  result = true;
+		  }
+	  }
+
+	  for (size_t i = 0; i < this->_levels.size(); ++i) {
+		  if (_levels[i].empty()) {
+			  continue;
+		  }
+		  for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
+			  auto m = _levels[i].at(j);
+			  if (m.value.id == id) {
+				  *minResult = std::min(*minResult, m.value.time);
+				  *maxResult = std::max(*maxResult, m.value.time);
+				  result = true;
+			  }
+		  }
+	  }
+	  return result;
+  }
 
   void flush() {
 	  if (drop_future.valid()) {
@@ -519,6 +552,10 @@ dariadb::Time Capacitor::maxTime() {
   return _Impl->maxTime();
 }
 
+bool Capacitor::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+	dariadb::Time *maxResult) {
+	return _Impl->minMaxTime(id, minResult, maxResult);
+}
 void Capacitor::flush() { // write all to storage;
   _Impl->flush();
 }

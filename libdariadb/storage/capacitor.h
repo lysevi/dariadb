@@ -27,14 +27,13 @@ public:
   Capacitor(MeasWriter *stor, const Params &param);
 
   append_result append(const Meas &value) override;
-  //  Reader_ptr readInterval(Time from, Time to) override;
-  //  Reader_ptr readInTimePoint(Time time_point) override;
   Reader_ptr readInterval(const QueryInterval &q) override;
   Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;
-
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+	  dariadb::Time *maxResult)override;
   void flush() override; // write all to storage;
 
   size_t in_queue_size() const;

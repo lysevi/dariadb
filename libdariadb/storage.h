@@ -45,6 +45,9 @@ class MeasSource {
 public:
   virtual Time minTime() = 0;
   virtual Time maxTime() = 0;
+  
+  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+	  dariadb::Time *maxResult) = 0;
 
   //  virtual Reader_ptr readInterval(Time from, Time to) = 0;
   //  virtual Reader_ptr readInTimePoint(Time time_point) = 0;
@@ -73,25 +76,10 @@ public:
   virtual void subscribe(const IdArray &ids, const Flag &flag,
                          const ReaderClb_ptr &clbk) = 0;
 };
-//
-// class BaseStorage : public utils::NonCopy,
-//                    public ChunkContainer,
-//                    public MeasStorage {
-// public:
-//  virtual ~BaseStorage() = default;
-//
-//  /// return data in [from + to].
-//  /// if 'from'> minTime return data readInTimePoint('from') +
-//  /// readInterval(from,to)
-//  Reader_ptr readInterval(Time from, Time to) override;
-//  Reader_ptr readInTimePoint(Time time_point) override;
-//  Reader_ptr readInterval(const QueryInterval &q) override;
-//  Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
-//};
 
 typedef std::shared_ptr<MeasSource> MeasSource_ptr;
 typedef std::shared_ptr<MeasWriter> MeasWriter_ptr;
 typedef std::shared_ptr<MeasStorage> MeasStorage_ptr;
-// typedef std::shared_ptr<BaseStorage> BaseStorage_ptr;
+
 }
 }

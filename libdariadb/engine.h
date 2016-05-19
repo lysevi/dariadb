@@ -55,7 +55,8 @@ public:
 
   Time minTime() override;
   Time maxTime() override;
-
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+	  dariadb::Time *maxResult)override;
 protected:
   class Private;
   std::unique_ptr<Private> _impl;
