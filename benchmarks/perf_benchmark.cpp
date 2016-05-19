@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 
     const size_t chunk_per_storage = 1024 * 1024;
     const size_t chunk_size = 1024;
-    const size_t cap_B = 10;
+    const size_t cap_B = 5;
     const dariadb::Time old_mem_chunks = 0;
     const size_t max_mem_chunks = 100;
 
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
 	dariadb::storage::Capacitor::Params cap_param(cap_B, storage_path);
-	cap_param.max_levels = 20;
+    cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
