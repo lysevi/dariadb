@@ -252,39 +252,48 @@ public:
 				  raw_res->cap_reader = Reader_ptr{ mc_reader };
 			  }
 		  }
-		  raw_result->add_rdr(Reader_ptr{ raw_rdr });
+          raw_result->add_rdr(Reader_ptr{ raw_res });
 	  }
 	  return Reader_ptr(raw_result);
   }
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) { 
-	  if (q.time_point < mem_cap->minTime()) {
-		  auto chunkLinks = PageManager::instance()->chunksBeforeTimePoint(q);
-		  auto cursor = PageManager::instance()->readLinks(chunkLinks);
-		  ChunksList clist;
-		  cursor->readAll(&clist);
-		  IdToChunkMap  chunks_before;
-		  for (auto ch : clist) {
-			  chunks_before[ch->info->first.id] = ch;
-		  }
-		  auto res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
-		  res->is_time_point_reader = true;
+      UnionReaderSet *raw_result = new UnionReaderSet();
+      for (auto id : q.ids) {
+          dariadb::Time minT, maxT;
+          QueryTimePoint local_q = q;
+          local_q.ids.clear();
+          local_q.ids.push_back(id);
 
-		  for (auto id : q.ids) {
-			  auto search_res = chunks_before.find(id);
-			  if (search_res == chunks_before.end()) {
-				  res->_not_exist.push_back(id);
-			  }
-			  else {
-				  auto ch = search_res->second;
-				  res->add_tp(ch);
-			  }
-		  }
-		  return res;
-	  }
-	  else {
-		  return mem_cap->readInTimePoint(q);
-	  }
+          if (mem_cap->minMaxTime(id, &minT, &maxT) && utils::inInterval(minT,maxT,local_q.time_point)) {
+              auto subres=mem_cap->readInTimePoint(local_q);
+              raw_result->add_rdr(subres);
+          }else{
+              auto chunkLinks = PageManager::instance()->chunksBeforeTimePoint(q);
+              auto cursor = PageManager::instance()->readLinks(chunkLinks);
+              ChunksList clist;
+              cursor->readAll(&clist);
+              IdToChunkMap  chunks_before;
+              for (auto ch : clist) {
+                  chunks_before[ch->info->first.id] = ch;
+              }
+              auto sub_res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
+              sub_res->is_time_point_reader = true;
+
+              for (auto id : q.ids) {
+                  auto search_res = chunks_before.find(id);
+                  if (search_res == chunks_before.end()) {
+                      sub_res->_not_exist.push_back(id);
+                  }
+                  else {
+                      auto ch = search_res->second;
+                      sub_res->add_tp(ch);
+                  }
+              }
+              raw_result->add_rdr(sub_res);
+          }
+      }
+     return Reader_ptr(raw_result);
   }
 
 protected:
