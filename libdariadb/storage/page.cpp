@@ -474,6 +474,10 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   cur_index->is_init = true;
 
   cur_index->offset = header->pos;
+
+  cur_index->minTime = std::numeric_limits<dariadb::Time>::max();
+  cur_index->maxTime = std::numeric_limits<dariadb::Time>::min();
+
   header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
   header->addeded_chunks++;
   
