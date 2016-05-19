@@ -63,7 +63,7 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread,
     m.id = i;
     m.flag = dariadb::Flag(0);
     auto max_rnd = uniform_dist(e1);
-    m.time = dariadb::timeutil::current_time();
+    m.time = 0;//dariadb::timeutil::current_time();
     for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
       m.time += 10;
       m.value = v;
@@ -88,24 +88,24 @@ int main(int argc, char *argv[]) {
   const size_t cap_B = 10;
   const size_t max_mem_chunks = 0;
 
-  //{ // 1.
-  //  if (dariadb::utils::fs::path_exists(storage_path)) {
-  //    dariadb::utils::fs::rm(storage_path);
-  //  }
+  { // 1.
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
+    }
 
-  //  auto raw_ptr = new dariadb::storage::Engine(
-  //      dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-  //                                            chunk_size),
-  //      dariadb::storage::Capacitor::Params(cap_B, storage_path),
-  //      dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
-  //  dariadb::storage::MeasStorage_ptr ms{raw_ptr};
-  //  auto start = clock();
+    auto raw_ptr = new dariadb::storage::Engine(
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                              chunk_size),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+        dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
+    dariadb::storage::MeasStorage_ptr ms{raw_ptr};
+    auto start = clock();
 
-  //  writer_1(ms);
+    writer_1(ms);
 
-  //  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-  //  std::cout << "1. insert : " << elapsed << std::endl;
-  //}
+    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "1. insert : " << elapsed << std::endl;
+  }
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
   dariadb::storage::MeasStorage_ptr ms{raw_ptr_ds};
 
   { // 2.
-    const size_t threads_count = 2;
+    const size_t threads_count = 1;
     const size_t id_per_thread = size_t(32768 / threads_count);
 
     auto start = clock();
@@ -202,11 +202,11 @@ int main(int argc, char *argv[]) {
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Id> uniform_dist(
-        raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
+        dariadb::Time(10), dariadb::Time(32));
 
     const size_t queries_count = 10;//32;
 
-    dariadb::IdArray ids;
+    dariadb::IdArray ids(_all_id.begin(),_all_id.end());
     std::vector<dariadb::Time> rnd_time(queries_count);
     for (size_t i = 0; i < queries_count; i++) {
       rnd_time[i] = uniform_dist(e1);
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Time> uniform_dist(
-        raw_ptr_ds->minTime(), dariadb::timeutil::current_time());
+        dariadb::Time(10), dariadb::Time(32));
 
     auto raw_ptr = new BenchCallback();
     dariadb::storage::ReaderClb_ptr clbk{raw_ptr};
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
 
     auto raw_ptr = new BenchCallback();
     dariadb::storage::ReaderClb_ptr clbk{raw_ptr};
-    const size_t queries_count = 10;//32;
+    const size_t queries_count = 2;//32;
 
     std::vector<dariadb::Time> rnd_time_from(queries_count),
         rnd_time_to(queries_count);
