@@ -353,7 +353,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   assert(!this->readonly);
-  std::lock_guard<std::mutex> lg(_locker);
+  boost::upgrade_lock<boost::shared_mutex> lg(_locker);
   if (is_full()) {
     header->is_full = true;
     return false;
@@ -501,7 +501,7 @@ bool Page::is_full() const {
 
 ChunkLinkList Page::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                             dariadb::Time to, dariadb::Flag flag) {
-  std::lock_guard<std::mutex> lg(_locker);
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
 
   PageLinksCursor c(this, ids, from, to, flag);
   c.reset_pos();
@@ -514,14 +514,14 @@ ChunkLinkList Page::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time 
 }
 
 void Page::dec_reader() {
-  std::lock_guard<std::mutex> lg(_locker);
+	boost::upgrade_lock<boost::shared_mutex>  lg(_locker);
   header->count_readers--;
 }
 
 bool dariadb::storage::Page::minMaxTime(dariadb::Id id,
                                         dariadb::Time *minResult,
                                         dariadb::Time *maxResult) {
-  std::lock_guard<std::mutex> lg(_locker);
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
   auto fres = _mtree.find(id);
   if (fres == _mtree.end()) {
     return false;

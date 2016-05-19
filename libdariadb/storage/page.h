@@ -5,11 +5,14 @@
 #include "chunk.h"
 #include "chunk_container.h"
 #include "cursor.h"
+#include "bloom_filter.h"
 
 #include "stx/btree_multimap.h"
 #include <map>
 #include <unordered_map>
-#include "bloom_filter.h"
+
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 namespace dariadb {
 namespace storage {
@@ -119,7 +122,7 @@ public:
   std::string filename;
   bool readonly;
 protected:
-  mutable std::mutex _locker;
+  mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
   mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 };
