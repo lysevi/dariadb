@@ -295,7 +295,7 @@ public:
 	  if (_stor == nullptr) {
 		  return;
 	  }
-	  for (auto i = 0; i < target->size(); ++i) {
+	  for (size_t i = 0; i < target->size(); ++i) {
 		  _stor->append(target->at(i).value);
 	  }
 	  
