@@ -386,6 +386,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer, header->chunk_size, m)};
+	  
 	  this->header->max_chunk_id++;
 	  ptr->info->id = this->header->max_chunk_id;
 	  _openned_chunks[m.id].ch = ptr;
@@ -394,25 +395,31 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       return true;
     } else {
       if ((info->first.id == m.id) && (!info->is_readonly)) {
-        auto ptr_to_begin = byte_it;
-        auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
-        Chunk_Ptr ptr = nullptr;
-        if (info->is_zipped) {
-          ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-          if (ptr->append(m)) {
+		Chunk_Ptr ptr = read_chunk_from_ptr(byte_it);
+        if (ptr->append(m)) {
 			_openned_chunks[m.id].ch = ptr;
             update_chunk_index_rec(ptr,m);
             return true;
 		  }
-        } else {
-          assert(false);
-        }
       }
     }
     byte_it += step;
   }
   header->is_full = true;
   return false;
+}
+
+Chunk_Ptr Page::read_chunk_from_ptr(const uint8_t*ptr)const {
+	auto non_const_ptr = const_cast<uint8_t*>(ptr);
+	ChunkIndexInfo *info = reinterpret_cast<ChunkIndexInfo *>(non_const_ptr);
+	auto ptr_to_begin = non_const_ptr;
+	auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
+	if (info->is_zipped) {
+		return Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
+	}
+	else {
+		assert(false);
+	}
 }
 
 void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas&m) {

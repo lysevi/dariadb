@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <iostream> //TODO remove;
 #include <iterator>
 #include <limits>
 #include <random>
@@ -160,14 +159,13 @@ public:
 
   void insert(const Key &k, const Value &v) { insert(std::make_pair(k, v)); }
 
-  // TODO remove.
-  void print() {
-    for (auto it = cbegin(); it != cend(); ++it) {
-      std::cout << " {" << it->first << ':' << it->second << ":"
-                << it._node->level << "}";
-    }
-    std::cout << "\n";
-  }
+  //void print() {
+  //  for (auto it = cbegin(); it != cend(); ++it) {
+  //    std::cout << " {" << it->first << ':' << it->second << ":"
+  //              << it._node->level << "}";
+  //  }
+  //  std::cout << "\n";
+  //}
 
   void insert(const pair_type &kv) {
 

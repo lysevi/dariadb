@@ -198,7 +198,7 @@ public:
     auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = reinterpret_cast<level_header *>(pos);
-      it->lvl = lvl;
+      it->lvl = uint8_t(lvl);
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));

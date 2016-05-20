@@ -37,7 +37,6 @@ bool InnerReader::isEnd() const {
 dariadb::IdArray InnerReader::getIds() const {
   dariadb::IdSet idset;
   for (auto &v : _cursors) {
-    // TODO optimise
     dariadb::storage::ChunksList out;
     v->readAll(&out);
     for (auto &c : out) {
