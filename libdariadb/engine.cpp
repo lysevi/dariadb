@@ -269,7 +269,7 @@ public:
               auto subres=mem_cap->readInTimePoint(local_q);
               raw_result->add_rdr(subres);
           }else{
-              auto chunkLinks = PageManager::instance()->chunksBeforeTimePoint(q);
+              auto chunkLinks = PageManager::instance()->chunksBeforeTimePoint(local_q);
               auto cursor = PageManager::instance()->readLinks(chunkLinks);
               ChunksList clist;
               cursor->readAll(&clist);
@@ -280,10 +280,10 @@ public:
               auto sub_res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
               sub_res->is_time_point_reader = true;
 
-              for (auto id : q.ids) {
-                  auto search_res = chunks_before.find(id);
+              for (auto i : local_q.ids) {
+                  auto search_res = chunks_before.find(i);
                   if (search_res == chunks_before.end()) {
-                      sub_res->_not_exist.push_back(id);
+                      sub_res->_not_exist.push_back(i);
                   }
                   else {
                       auto ch = search_res->second;
