@@ -21,8 +21,7 @@ const uint64_t delta_big_mask_inv =
     0xFFFFFFFF; // 0000 1111 1111 1111 1111 1111 1111   1111 1111
 
 DeltaCompressor::DeltaCompressor(const BinaryBuffer_Ptr &bw)
-    : BaseCompressor(bw), _is_first(true), _first(0), _prev_delta(0),
-      _prev_time(0) {}
+    : BaseCompressor(bw), _is_first(true), _first(0), _prev_delta(0), _prev_time(0) {}
 
 bool DeltaCompressor::append(dariadb::Time t) {
   if (_is_first) {
@@ -108,8 +107,7 @@ uint64_t DeltaCompressor::get_delta_big(int64_t D) {
   return delta_big_mask | (delta_big_mask_inv & D);
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer_Ptr &bw,
-                                     dariadb::Time first)
+DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Time first)
     : BaseCompressor(bw), _prev_delta(0), _prev_time(first) {}
 
 dariadb::Time DeltaDeCompressor::read() {

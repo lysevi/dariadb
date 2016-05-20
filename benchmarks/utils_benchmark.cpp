@@ -111,8 +111,7 @@ int main(int argc, char *argv[]) {
     }
     {
       std::map<int, int> lst;
-      std::function<void(std::map<int, int> *)> f =
-          &remove_map_less<std::map<int, int>>;
+      std::function<void(std::map<int, int> *)> f = &remove_map_less<std::map<int, int>>;
       kv_linear_benchmark(lst, f);
     }
     {

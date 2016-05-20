@@ -36,8 +36,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     dariadb::utils::fs::rm(storage_path);
   }
 
-  auto cap_files =
-      dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+  auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
   assert(cap_files.size() == 0);
   auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
   p.max_levels = 11;
@@ -48,8 +47,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 
     dariadb::storage::Capacitor cap(stor.get(), p);
 
-    cap_files =
-        dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+    cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
 
     BOOST_CHECK_EQUAL(cap.levels_count(), size_t(p.max_levels));
@@ -81,8 +79,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     p.max_levels = 12;
     dariadb::storage::Capacitor cap(stor.get(), p);
 
-    cap_files =
-        dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+    cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
     // level count must be reade from file header.
     BOOST_CHECK(cap.levels_count() != size_t(p.max_levels));
@@ -116,8 +113,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
     dariadb::utils::fs::rm(storage_path);
   }
   {
-    auto cap_files =
-        dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+    auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     assert(cap_files.size() == 0);
     auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
     p.max_levels = 11;
@@ -140,8 +136,7 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
     dariadb::utils::fs::rm(storage_path);
   }
   {
-    auto cap_files =
-        dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+    auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     assert(cap_files.size() == 0);
     auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
     p.max_levels = 11;
@@ -161,10 +156,10 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
         break;
       }
     }
-	cap.flush();
-	
-	//TODO add check: check count of dropped values
-	//BOOST_CHECK_EQUAL(cap.size(), size_t(1));
+    cap.flush();
+
+    // TODO add check: check count of dropped values
+    // BOOST_CHECK_EQUAL(cap.size(), size_t(1));
 
     for (auto it = stor->mlist.cbegin(); it != stor->mlist.cend(); ++it) {
       auto next = it;
@@ -234,8 +229,7 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
   }
   {
     dariadb::storage::Capacitor mbucket{
-        stor.get(),
-        dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
     std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);

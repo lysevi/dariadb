@@ -7,9 +7,9 @@
 #include <utils/asyncworker.h>
 #include <utils/fs.h>
 #include <utils/in_interval.h>
+#include <utils/lru.h>
 #include <utils/period_worker.h>
 #include <utils/skiplist.h>
-#include <utils/lru.h>
 #include <utils/utils.h>
 
 BOOST_AUTO_TEST_CASE(LRUCheck) {
@@ -35,9 +35,9 @@ BOOST_AUTO_TEST_CASE(LRUCheck) {
   BOOST_CHECK_EQUAL(out_val, 50);
 
   ilru.set_max_size(10);
-  for (auto i = ilru.size()+1; i < size_t(11); ++i) {
-	  auto sub_res = ilru.put(int(i), int(i * 10), &out_val);
-	  BOOST_CHECK(!sub_res);
+  for (auto i = ilru.size() + 1; i < size_t(11); ++i) {
+    auto sub_res = ilru.put(int(i), int(i * 10), &out_val);
+    BOOST_CHECK(!sub_res);
   }
 
   BOOST_CHECK(ilru.put(55, 550, &out_val));

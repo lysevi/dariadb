@@ -18,8 +18,8 @@ public:
 
 class ByStepClbk : public dariadb::storage::ReaderClb {
 public:
-  ByStepClbk(dariadb::storage::ReaderClb *clb, dariadb::IdArray ids,
-             dariadb::Time from, dariadb::Time to, dariadb::Time step) {
+  ByStepClbk(dariadb::storage::ReaderClb *clb, dariadb::IdArray ids, dariadb::Time from,
+             dariadb::Time to, dariadb::Time step) {
     _out_clbk = clb;
     _step = step;
     _from = from;
@@ -141,8 +141,8 @@ void Reader::readByStep(ReaderClb *clb, dariadb::Time from, dariadb::Time to,
   }
 }
 
-void Reader::readByStep(Meas::MeasList *output, dariadb::Time from,
-                        dariadb::Time to, dariadb::Time step) {
+void Reader::readByStep(Meas::MeasList *output, dariadb::Time from, dariadb::Time to,
+                        dariadb::Time step) {
   std::unique_ptr<InnerCallback> clb(new InnerCallback(output));
   this->readByStep(clb.get(), from, to, step);
 }

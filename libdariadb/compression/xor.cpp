@@ -85,8 +85,8 @@ void XorCompressor::restore_position(const XorCompressionPosition &pos) {
 }
 
 XorDeCompressor::XorDeCompressor(const BinaryBuffer_Ptr &bw, Value first)
-    : BaseCompressor(bw), _prev_value(inner::flat_double_to_int(first)),
-      _prev_lead(0), _prev_tail(0) {}
+    : BaseCompressor(bw), _prev_value(inner::flat_double_to_int(first)), _prev_lead(0),
+      _prev_tail(0) {}
 
 dariadb::Value XorDeCompressor::read() {
   static_assert(sizeof(dariadb::Value) == 8, "Value no x64 value");

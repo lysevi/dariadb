@@ -32,8 +32,8 @@ public:
          << " id:" << m.id << " first.id:" << _first.id;
       throw MAKE_EXCEPTION(ss.str().c_str());
     }
-    if (_is_full || time_comp.is_full() || value_comp.is_full() ||
-        flag_comp.is_full() || src_comp.is_full()) {
+    if (_is_full || time_comp.is_full() || value_comp.is_full() || flag_comp.is_full() ||
+        src_comp.is_full()) {
       _is_full = true;
       return false;
     }
@@ -177,8 +177,7 @@ CopmressedReader::CopmressedReader() {
   this->_Impl = nullptr;
 }
 
-CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw,
-                                   const Meas &first)
+CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw, const Meas &first)
     : _Impl(new CopmressedReader::Private(bw, first)) {}
 
 CopmressedReader::~CopmressedReader() {}

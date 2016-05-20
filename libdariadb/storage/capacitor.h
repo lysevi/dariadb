@@ -33,7 +33,7 @@ public:
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-	  dariadb::Time *maxResult)override;
+                  dariadb::Time *maxResult) override;
   void flush() override; // write all to storage;
 
   size_t in_queue_size() const;

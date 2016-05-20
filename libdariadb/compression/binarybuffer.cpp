@@ -172,8 +172,7 @@ uint64_t BinaryBuffer::read(int8_t count) {
 
 std::ostream &dariadb::compression::operator<<(std::ostream &stream,
                                                const BinaryBuffer &b) {
-  stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum()
-         << " [";
+  stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum() << " [";
   for (size_t i = 0; i <= b.pos(); i++) {
     for (int bit = int(max_bit_pos); bit >= 0; bit--) {
       auto is_cur = ((bit == b.bitnum()) && (i == b.pos()));

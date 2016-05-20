@@ -6,8 +6,7 @@
 
 #define CODE_POS (dariadb::utils::CodePos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg)                                                    \
-  dariadb::utils::Exception::create_and_log(CODE_POS, msg)
+#define MAKE_EXCEPTION(msg) dariadb::utils::Exception::create_and_log(CODE_POS, msg)
 
 namespace dariadb {
 namespace utils {
@@ -30,8 +29,7 @@ struct CodePos {
 
 class Exception : public std::exception {
 public:
-  static Exception create_and_log(const CodePos &pos,
-                                  const std::string &message) {
+  static Exception create_and_log(const CodePos &pos, const std::string &message) {
     logger_fatal("FATAL ERROR. The Exception will be thrown! "
                  << pos.toString() << " Message: " << message);
     return Exception(message);

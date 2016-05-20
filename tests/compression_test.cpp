@@ -27,8 +27,7 @@ public:
   bool is_first() const { return this->_is_first; }
 };
 
-class Testable_DeltaDeCompressor
-    : public dariadb::compression::DeltaDeCompressor {
+class Testable_DeltaDeCompressor : public dariadb::compression::DeltaDeCompressor {
 public:
   Testable_DeltaDeCompressor(const BinaryBuffer_Ptr &buf, dariadb::Time first)
       : dariadb::compression::DeltaDeCompressor(buf, first) {}
@@ -182,14 +181,10 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor_deltas) {
   BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_2048(257), 57601);
   BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_2048(1500), 58844);
 
-  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(2049),
-                    uint64_t(64424511489));
-  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(65535),
-                    uint64_t(64424574975));
-  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(4095),
-                    uint64_t(64424513535));
-  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(4294967295),
-                    uint64_t(68719476735));
+  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(2049), uint64_t(64424511489));
+  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(65535), uint64_t(64424574975));
+  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(4095), uint64_t(64424513535));
+  BOOST_CHECK_EQUAL(DeltaCompressor::get_delta_big(4294967295), uint64_t(68719476735));
 }
 
 BOOST_AUTO_TEST_CASE(DeltaCompressor) {
@@ -216,8 +211,7 @@ BOOST_AUTO_TEST_CASE(DeltaCompressor) {
     BOOST_CHECK_EQUAL(dc.get_prev_time(), t1);
 
     dc.append(t1);
-    BOOST_CHECK_EQUAL(dc.get_bw()->bitnum(),
-                      dariadb::compression::max_bit_pos - 1);
+    BOOST_CHECK_EQUAL(dc.get_bw()->bitnum(), dariadb::compression::max_bit_pos - 1);
     BOOST_CHECK_EQUAL(buffer[0], 0);
   }
   {

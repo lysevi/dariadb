@@ -47,8 +47,7 @@ void FlagCompressor::restore_position(const FlagCompressionPosition &pos) {
   _is_first = pos._is_first;
 }
 
-FlagDeCompressor::FlagDeCompressor(const BinaryBuffer_Ptr &bw,
-                                   dariadb::Flag first)
+FlagDeCompressor::FlagDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Flag first)
     : BaseCompressor(bw), _prev_value(first) {}
 
 dariadb::Flag FlagDeCompressor::read() {

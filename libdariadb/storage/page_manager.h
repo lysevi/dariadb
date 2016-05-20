@@ -10,22 +10,21 @@
 
 namespace dariadb {
 namespace storage {
-	const uint16_t OPENNED_PAGE_CACHE_SIZE = 10;
-class PageManager : public utils::NonCopy,
-                    public ChunkContainer,
-                    public MeasWriter {
+const uint16_t OPENNED_PAGE_CACHE_SIZE = 10;
+class PageManager : public utils::NonCopy, public ChunkContainer, public MeasWriter {
 public:
   struct Params {
     std::string path;
     uint32_t chunk_per_storage;
     uint32_t chunk_size;
-	uint16_t openned_page_chache_size; ///max oppend pages in cache(readonly pages stored).
+    uint16_t openned_page_chache_size; /// max oppend pages in cache(readonly
+                                       /// pages stored).
     Params(const std::string storage_path, size_t chunks_per_storage,
            size_t one_chunk_size) {
       path = storage_path;
       chunk_per_storage = uint32_t(chunks_per_storage);
       chunk_size = uint32_t(one_chunk_size);
-	  openned_page_chache_size = OPENNED_PAGE_CACHE_SIZE;
+      openned_page_chache_size = OPENNED_PAGE_CACHE_SIZE;
     }
   };
 
@@ -38,7 +37,7 @@ public:
   typedef uint32_t handle;
   static void start(const Params &param);
   static void stop();
-  void flush()override;
+  void flush() override;
   static PageManager *instance();
 
   // bool append(const Chunk_Ptr &c) override;
@@ -49,7 +48,7 @@ public:
                   dariadb::Time *maxResult) override;
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
   ChunkLinkList chunksBeforeTimePoint(const QueryTimePoint &q) override;
-  Cursor_ptr  readLinks(const ChunkLinkList&links) override;
+  Cursor_ptr readLinks(const ChunkLinkList &links) override;
   IdArray getIds() override;
 
   // dariadb::storage::ChunksList get_open_chunks();

@@ -25,8 +25,7 @@ struct ChunkIndexInfo {
   uint32_t bw_pos;
   uint8_t bw_bit_num;
   bool is_readonly;
-  compression::CopmressedWriter::Position
-      writer_position; // TODO move from this.
+  compression::CopmressedWriter::Position writer_position; // TODO move from this.
 
   size_t size;
 };
@@ -38,7 +37,7 @@ public:
   public:
     virtual Meas readNext() = 0;
     virtual bool is_end() const = 0;
-    virtual ~Reader(){}
+    virtual ~Reader() {}
   };
 
   using Reader_Ptr = std::shared_ptr<Chunk::Reader>;
@@ -68,8 +67,7 @@ public:
 
 class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
 public:
-  ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size,
-              Meas first_m);
+  ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m);
   ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer);
   ~ZippedChunk();
   bool is_full() const override { return c_writer.is_full(); }

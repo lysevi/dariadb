@@ -58,12 +58,12 @@ void writer_2(dariadb::Id id_from, size_t id_per_thread,
   for (dariadb::Id i = id_from; i < max_id; i += 1) {
     _id_lock.lock();
     _all_id.insert(i);
-	_id_lock.unlock();
+    _id_lock.unlock();
     dariadb::Value v = 1.0;
     m.id = i;
     m.flag = dariadb::Flag(0);
     auto max_rnd = uniform_dist(e1);
-    m.time = 0;//dariadb::timeutil::current_time();
+    m.time = 0; // dariadb::timeutil::current_time();
     for (dariadb::Time p = 0; p < dariadb::Time(max_rnd); p++) {
       m.time += 10;
       m.value = v;
@@ -111,8 +111,7 @@ int main(int argc, char *argv[]) {
   }
 
   auto raw_ptr_ds = new dariadb::storage::Engine(
-      dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                            chunk_size),
+      dariadb::storage::PageManager::Params(storage_path, chunk_per_storage, chunk_size),
       dariadb::storage::Capacitor::Params(cap_B, storage_path),
       dariadb::storage::Engine::Limits(max_mem_chunks));
   dariadb::storage::MeasStorage_ptr ms{raw_ptr_ds};
@@ -141,23 +140,23 @@ int main(int argc, char *argv[]) {
   }
   auto queue_sizes = raw_ptr_ds->queue_size();
   std::cout << "\r"
-            << " in queue: (p:" << queue_sizes.page
-            << " cap:" << queue_sizes.cap << ")" << std::endl;
-   //{
-   //   /* auto ids=ms->getIds();
-   //    std::cout << "ids.size:"<<ids.size() << std::endl;*/
-   //    std::cout << "read all..." << std::endl;
-   //    std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
-   //    auto start = clock();
-	  // dariadb::storage::QueryInterval qi(
-		 //  dariadb::IdArray{ _all_id.begin(),_all_id.end() }, 
-		 //  0, ms->minTime(), ms->maxTime());
-   //    ms->readInterval(qi)->readAll(clbk.get());
+            << " in queue: (p:" << queue_sizes.page << " cap:" << queue_sizes.cap << ")"
+            << std::endl;
+  //{
+  //   /* auto ids=ms->getIds();
+  //    std::cout << "ids.size:"<<ids.size() << std::endl;*/
+  //    std::cout << "read all..." << std::endl;
+  //    std::shared_ptr<BenchCallback> clbk{ new BenchCallback() };
+  //    auto start = clock();
+  // dariadb::storage::QueryInterval qi(
+  //  dariadb::IdArray{ _all_id.begin(),_all_id.end() },
+  //  0, ms->minTime(), ms->maxTime());
+  //    ms->readInterval(qi)->readAll(clbk.get());
 
-   //    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-   //    std::cout << "readed: " << clbk->count << std::endl;
-   //    std::cout << "time: " << elapsed << std::endl;
-   //}
+  //    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+  //    std::cout << "readed: " << clbk->count << std::endl;
+  //    std::cout << "time: " << elapsed << std::endl;
+  //}
   { // 3
 
     std::random_device r;
@@ -166,7 +165,7 @@ int main(int argc, char *argv[]) {
     dariadb::IdArray ids;
     ids.resize(1);
 
-	const size_t queries_count = 32768;
+    const size_t queries_count = 32768;
 
     dariadb::IdArray rnd_ids(queries_count);
     std::vector<dariadb::Time> rnd_time(queries_count);
@@ -188,8 +187,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < queries_count; i++) {
       ids[0] = rnd_ids[i];
       auto t = rnd_time[i];
-      auto rdr =
-          ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
+      auto rdr = ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
       rdr->readAll(clbk.get());
     }
 
@@ -200,12 +198,12 @@ int main(int argc, char *argv[]) {
   { // 4
     std::random_device r;
     std::default_random_engine e1(r());
-    std::uniform_int_distribution<dariadb::Id> uniform_dist(
-        dariadb::Time(10), dariadb::Time(32));
+    std::uniform_int_distribution<dariadb::Id> uniform_dist(dariadb::Time(10),
+                                                            dariadb::Time(32));
 
-    const size_t queries_count = 1;//32;
+    const size_t queries_count = 1; // 32;
 
-    dariadb::IdArray ids(_all_id.begin(),_all_id.end());
+    dariadb::IdArray ids(_all_id.begin(), _all_id.end());
     std::vector<dariadb::Time> rnd_time(queries_count);
     for (size_t i = 0; i < queries_count; i++) {
       rnd_time[i] = uniform_dist(e1);
@@ -217,8 +215,7 @@ int main(int argc, char *argv[]) {
 
     for (size_t i = 0; i < queries_count; i++) {
       auto t = rnd_time[i];
-      auto rdr =
-          ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
+      auto rdr = ms->readInTimePoint(dariadb::storage::QueryTimePoint(ids, 0, t));
       rdr->readAll(clbk.get());
     }
 
@@ -230,15 +227,14 @@ int main(int argc, char *argv[]) {
   { // 5
     std::random_device r;
     std::default_random_engine e1(r());
-    std::uniform_int_distribution<dariadb::Time> uniform_dist(
-        dariadb::Time(10), dariadb::Time(32));
+    std::uniform_int_distribution<dariadb::Time> uniform_dist(dariadb::Time(10),
+                                                              dariadb::Time(32));
 
     auto raw_ptr = new BenchCallback();
     dariadb::storage::ReaderClb_ptr clbk{raw_ptr};
     const size_t queries_count = 1;
 
-    std::vector<dariadb::Time> rnd_time_from(queries_count),
-        rnd_time_to(queries_count);
+    std::vector<dariadb::Time> rnd_time_from(queries_count), rnd_time_to(queries_count);
     for (size_t i = 0; i < queries_count; i++) {
       rnd_time_from[i] = uniform_dist(e1);
       rnd_time_to[i] = uniform_dist(e1);
@@ -251,14 +247,12 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < queries_count; i++) {
       auto f = std::min(rnd_time_from[i], rnd_time_to[i]);
       auto t = std::max(rnd_time_from[i], rnd_time_to[i]);
-      auto rdr =
-          ms->readInterval(dariadb::storage::QueryInterval(all_ids, 0, f, t));
+      auto rdr = ms->readInterval(dariadb::storage::QueryInterval(all_ids, 0, f, t));
       rdr->readAll(clbk.get());
     }
 
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / queries_count;
-    std::cout << "5. interval: " << elapsed << " readed: " << raw_ptr->count
-              << std::endl;
+    std::cout << "5. interval: " << elapsed << " readed: " << raw_ptr->count << std::endl;
   }
 
   { // 6
@@ -274,10 +268,9 @@ int main(int argc, char *argv[]) {
 
     auto raw_ptr = new BenchCallback();
     dariadb::storage::ReaderClb_ptr clbk{raw_ptr};
-    const size_t queries_count = 2;//32;
+    const size_t queries_count = 2; // 32;
 
-    std::vector<dariadb::Time> rnd_time_from(queries_count),
-        rnd_time_to(queries_count);
+    std::vector<dariadb::Time> rnd_time_from(queries_count), rnd_time_to(queries_count);
     for (size_t i = 0; i < queries_count; i++) {
       rnd_time_from[i] = uniform_dist(e1);
       rnd_time_to[i] = uniform_dist(e1);
@@ -291,14 +284,12 @@ int main(int argc, char *argv[]) {
       }
       auto f = std::min(rnd_time_from[i], rnd_time_to[i]);
       auto t = std::max(rnd_time_from[i], rnd_time_to[i]);
-      auto rdr =
-          ms->readInterval(dariadb::storage::QueryInterval(ids, 0, f, t));
+      auto rdr = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, f, t));
       rdr->readAll(clbk.get());
     }
 
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / queries_count;
-    std::cout << "6. interval: " << elapsed << " readed: " << raw_ptr->count
-              << std::endl;
+    std::cout << "6. interval: " << elapsed << " readed: " << raw_ptr->count << std::endl;
   }
 
   ms = nullptr;

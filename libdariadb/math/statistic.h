@@ -13,8 +13,8 @@ public:
   virtual void calc(const dariadb::Meas &a, const dariadb::Meas &b) = 0;
   virtual dariadb::Value result() const;
 
-  void fromReader(dariadb::storage::Reader_ptr &ptr, dariadb::Time from,
-                  dariadb::Time to, dariadb::Time step);
+  void fromReader(dariadb::storage::Reader_ptr &ptr, dariadb::Time from, dariadb::Time to,
+                  dariadb::Time step);
 
 protected:
   dariadb::Meas _last;

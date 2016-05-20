@@ -1,9 +1,9 @@
 #pragma once
 
 #include "storage.h"
+#include "storage/capacitor.h"
 #include "storage/chunk_container.h"
 #include "storage/page_manager.h"
-#include "storage/capacitor.h"
 #include "utils/utils.h"
 #include <memory>
 
@@ -21,9 +21,7 @@ public:
     size_t max_mem_chunks; // max_mem_chunks - maximum chunks in memory.zero
                            // - by old_mem_chunks(MemStorage)
 
-    Limits(const size_t max_mem) {
-      max_mem_chunks = max_mem;
-    }
+    Limits(const size_t max_mem) { max_mem_chunks = max_mem; }
   };
 
   Engine() = delete;
@@ -53,7 +51,8 @@ public:
   Time minTime() override;
   Time maxTime() override;
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-	  dariadb::Time *maxResult)override;
+                  dariadb::Time *maxResult) override;
+
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

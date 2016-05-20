@@ -13,8 +13,7 @@ public:
   void call(dariadb::storage::Chunk_Ptr &ptr) override { readed = ptr; }
 };
 
-InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from,
-                         dariadb::Time to)
+InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to)
     : _cursors{}, _flag(flag), _from(from), _to(to), _tp_readed(false) {
   is_time_point_reader = false;
   end = false;

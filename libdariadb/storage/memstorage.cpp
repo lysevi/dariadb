@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <unordered_map>
 
-
 using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
@@ -45,34 +44,33 @@ public:
 
   dariadb::storage::Reader_ptr readInterval(Time from, Time to) {
     NOT_IMPLEMENTED;
-    //return nullptr;
+    // return nullptr;
   }
   dariadb::storage::Reader_ptr readInTimePoint(Time time_point) {
     NOT_IMPLEMENTED;
-    //return nullptr;
+    // return nullptr;
   }
   dariadb::storage::Reader_ptr readInterval(const QueryInterval &q) {
     NOT_IMPLEMENTED;
-    //return nullptr;
+    // return nullptr;
   }
   dariadb::storage::Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     NOT_IMPLEMENTED;
-    //return nullptr;
+    // return nullptr;
   }
 
-  dariadb::storage::Reader_ptr currentValue(const IdArray &ids,
-                                            const Flag &flag) {
+  dariadb::storage::Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
     NOT_IMPLEMENTED;
-    //return nullptr;
+    // return nullptr;
   }
 
   Time minTime() {
     NOT_IMPLEMENTED;
-    //return 0;
+    // return 0;
   }
   Time maxTime() {
     NOT_IMPLEMENTED;
-    //return 0;
+    // return 0;
   }
 
   void set_chunkSource(ChunkContainer *cw) { _cc = cw; }

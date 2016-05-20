@@ -41,8 +41,7 @@ public:
   void start_async() {
     _is_stoped = false;
     _write_thread_stop = false;
-    _write_thread_handle =
-        std::move(std::thread{&AsyncWorker<T>::_thread_func, this});
+    _write_thread_handle = std::move(std::thread{&AsyncWorker<T>::_thread_func, this});
   }
 
   /// whait, while all works done and stop thread.
@@ -69,8 +68,7 @@ protected:
 
     while (!_write_thread_stop) {
       std::unique_lock<std::mutex> lk(local_lock);
-      _data_cond.wait(lk,
-                      [&] { return !_in_queue.empty() || _write_thread_stop; });
+      _data_cond.wait(lk, [&] { return !_in_queue.empty() || _write_thread_stop; });
       while (!_in_queue.empty()) {
         _locker.lock();
         auto d = _in_queue.front();

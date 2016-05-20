@@ -45,55 +45,55 @@ BOOST_AUTO_TEST_CASE(inFilter) {
 }
 
 BOOST_AUTO_TEST_CASE(QueryHashTest) {
-	dariadb::IdArray ids1{ dariadb::Id(0),dariadb::Id(1),dariadb::Id(2) ,dariadb::Id(3) };
-	{
-		dariadb::storage::IdArrayHasher hasher;
-		auto h1 = hasher(ids1);
-		BOOST_CHECK(h1 != 0);
-		
-		auto h1_2 = hasher(ids1);
-		BOOST_CHECK_EQUAL(h1, h1_2);
+  dariadb::IdArray ids1{dariadb::Id(0), dariadb::Id(1), dariadb::Id(2), dariadb::Id(3)};
+  {
+    dariadb::storage::IdArrayHasher hasher;
+    auto h1 = hasher(ids1);
+    BOOST_CHECK(h1 != 0);
 
-		std::swap(ids1[0], ids1[3]);
-		auto h2 = hasher(ids1);
-		BOOST_CHECK(h2 != 0);
-		BOOST_CHECK(h1 != h2);
-	}
-	{
-		dariadb::storage::QueryInterval qi1(ids1, 1, 0, 10);
-		dariadb::storage::QueryInterval qi2(ids1, 1, 0, 10);
+    auto h1_2 = hasher(ids1);
+    BOOST_CHECK_EQUAL(h1, h1_2);
 
-		dariadb::storage::QueryIntervalHasher hasher;
-		BOOST_CHECK_EQUAL(hasher(qi1),hasher(qi2));
+    std::swap(ids1[0], ids1[3]);
+    auto h2 = hasher(ids1);
+    BOOST_CHECK(h2 != 0);
+    BOOST_CHECK(h1 != h2);
+  }
+  {
+    dariadb::storage::QueryInterval qi1(ids1, 1, 0, 10);
+    dariadb::storage::QueryInterval qi2(ids1, 1, 0, 10);
 
-		qi2.flag++;
-		BOOST_CHECK(hasher(qi1)!=hasher(qi2));
-		qi2.flag--;
-		BOOST_CHECK_EQUAL(hasher(qi1), hasher(qi2));
-		qi2.from++;
-		BOOST_CHECK(hasher(qi1) != hasher(qi2));
-		qi2.from--;
-		BOOST_CHECK_EQUAL(hasher(qi1), hasher(qi2));
-		qi2.to++;
-		BOOST_CHECK(hasher(qi1) != hasher(qi2));
-	}
+    dariadb::storage::QueryIntervalHasher hasher;
+    BOOST_CHECK_EQUAL(hasher(qi1), hasher(qi2));
 
-	{
-		dariadb::storage::QueryTimePoint q1(ids1, 1, 10);
-		dariadb::storage::QueryTimePoint q2(ids1, 1, 10);
+    qi2.flag++;
+    BOOST_CHECK(hasher(qi1) != hasher(qi2));
+    qi2.flag--;
+    BOOST_CHECK_EQUAL(hasher(qi1), hasher(qi2));
+    qi2.from++;
+    BOOST_CHECK(hasher(qi1) != hasher(qi2));
+    qi2.from--;
+    BOOST_CHECK_EQUAL(hasher(qi1), hasher(qi2));
+    qi2.to++;
+    BOOST_CHECK(hasher(qi1) != hasher(qi2));
+  }
 
-		dariadb::storage::QueryTimePointHasher hasher;
-		BOOST_CHECK_EQUAL(hasher(q1), hasher(q2));
+  {
+    dariadb::storage::QueryTimePoint q1(ids1, 1, 10);
+    dariadb::storage::QueryTimePoint q2(ids1, 1, 10);
 
-		q2.flag++;
-		BOOST_CHECK(hasher(q1) != hasher(q2));
-		q2.flag--;
-		BOOST_CHECK_EQUAL(hasher(q1), hasher(q2));
-		q2.time_point++;
-		BOOST_CHECK(hasher(q1) != hasher(q2));
-		q2.time_point--;
-		BOOST_CHECK_EQUAL(hasher(q1), hasher(q2));
-	}
+    dariadb::storage::QueryTimePointHasher hasher;
+    BOOST_CHECK_EQUAL(hasher(q1), hasher(q2));
+
+    q2.flag++;
+    BOOST_CHECK(hasher(q1) != hasher(q2));
+    q2.flag--;
+    BOOST_CHECK_EQUAL(hasher(q1), hasher(q2));
+    q2.time_point++;
+    BOOST_CHECK(hasher(q1) != hasher(q2));
+    q2.time_point--;
+    BOOST_CHECK_EQUAL(hasher(q1), hasher(q2));
+  }
 }
 
 /*

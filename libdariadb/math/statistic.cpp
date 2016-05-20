@@ -36,9 +36,8 @@ dariadb::Value BaseMethod::result() const {
   return _result;
 }
 
-void BaseMethod::fromReader(dariadb::storage::Reader_ptr &ptr,
-                            dariadb::Time from, dariadb::Time to,
-                            dariadb::Time step) {
+void BaseMethod::fromReader(dariadb::storage::Reader_ptr &ptr, dariadb::Time from,
+                            dariadb::Time to, dariadb::Time step) {
   std::unique_ptr<StatisticReadClbk> c{new StatisticReadClbk{this}};
   ptr->readByStep(c.get(), from, to, step);
 }

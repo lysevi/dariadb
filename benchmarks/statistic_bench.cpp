@@ -27,22 +27,19 @@ int main(int argc, char *argv[]) {
   (void)argv;
   using dariadb::statistic::integral::RectangleMethod;
   {
-    std::unique_ptr<RectangleMethod> p{
-        new RectangleMethod(RectangleMethod::Kind::LEFT)};
+    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::LEFT)};
 
     auto elapsed = bench_method(p.get());
     std::cout << "rectangle left: " << elapsed << std::endl;
   }
   {
-    std::unique_ptr<RectangleMethod> p{
-        new RectangleMethod(RectangleMethod::Kind::RIGHT)};
+    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::RIGHT)};
 
     auto elapsed = bench_method(p.get());
     std::cout << "rectangle right: " << elapsed << std::endl;
   }
   {
-    std::unique_ptr<RectangleMethod> p{
-        new RectangleMethod(RectangleMethod::Kind::MIDLE)};
+    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::MIDLE)};
 
     auto elapsed = bench_method(p.get());
     std::cout << "rectangle midle: " << elapsed << std::endl;

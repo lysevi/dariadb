@@ -3,8 +3,7 @@
 #include <cassert>
 #include <fstream>
 
-dariadb::storage::Manifest::Manifest(const std::string &fname)
-    : _filename(fname) {
+dariadb::storage::Manifest::Manifest(const std::string &fname) : _filename(fname) {
   if (!utils::fs::path_exists(_filename)) {
     std::fstream fs;
     fs.open(_filename, std::ios::out);

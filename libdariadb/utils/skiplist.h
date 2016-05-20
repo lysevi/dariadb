@@ -56,13 +56,9 @@ public:
     reference &operator*() { return _node->kv; }
     pointer operator->() const { return &_node->kv; }
 
-    bool operator==(const iterator &other) const {
-      return _node == other._node;
-    }
+    bool operator==(const iterator &other) const { return _node == other._node; }
 
-    inline bool operator!=(const iterator &other) const {
-      return _node != other._node;
-    }
+    inline bool operator!=(const iterator &other) const { return _node != other._node; }
 
     /// ++Prefix
     inline self_type &operator++() {
@@ -106,9 +102,7 @@ public:
     reference &operator*() { return _node->kv; }
     pointer operator->() const { return &_node->kv; }
 
-    bool operator==(const const_iterator &other) const {
-      return _node == other._node;
-    }
+    bool operator==(const const_iterator &other) const { return _node == other._node; }
 
     inline bool operator!=(const const_iterator &other) const {
       return _node != other._node;
@@ -159,7 +153,7 @@ public:
 
   void insert(const Key &k, const Value &v) { insert(std::make_pair(k, v)); }
 
-  //void print() {
+  // void print() {
   //  for (auto it = cbegin(); it != cend(); ++it) {
   //    std::cout << " {" << it->first << ':' << it->second << ":"
   //              << it._node->level << "}";
@@ -209,8 +203,7 @@ public:
     }
   }
 
-  template <class IterT, class PredT>
-  void remove_if(IterT from, IterT to, PredT pred) {
+  template <class IterT, class PredT> void remove_if(IterT from, IterT to, PredT pred) {
     for (auto it = from; it != to;) {
       if (pred(it._node->kv)) {
         auto next = it++;

@@ -68,8 +68,7 @@ ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size,
   info->writer_position = c_writer.get_position();
 }
 
-ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer)
-    : Chunk(index, buffer) {
+ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer) : Chunk(index, buffer) {
   assert(index->is_zipped);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
@@ -139,8 +138,7 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
   raw_res->_is_first = true;
   raw_res->bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
   raw_res->bw->reset_pos();
-  raw_res->_reader =
-      std::make_shared<CopmressedReader>(raw_res->bw, this->info->first);
+  raw_res->_reader = std::make_shared<CopmressedReader>(raw_res->bw, this->info->first);
 
   Chunk::Reader_Ptr result{raw_res};
   return result;

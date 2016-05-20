@@ -11,7 +11,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             std::atomic_long *append_count,
                             dariadb::storage::MeasWriter *ms) {
   auto m = dariadb::Meas::empty();
-  m.time = dariadb::timeutil::current_time();;
+  m.time = dariadb::timeutil::current_time();
   for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
     m.id = id;
     m.flag = dariadb::Flag(id);
@@ -20,7 +20,6 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     m.value = dariadb::Value(i);
     ms->append(m);
     (*append_count)++;
-    // std::this_thread::sleep_for(sleep_duration);
   }
 }
 }

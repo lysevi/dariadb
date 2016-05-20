@@ -26,8 +26,7 @@ std::list<std::string> ls(const std::string &path) {
   }
   std::list<boost::filesystem::path> result;
   std::copy(boost::filesystem::directory_iterator(path),
-            boost::filesystem::directory_iterator(),
-            std::back_inserter(result));
+            boost::filesystem::directory_iterator(), std::back_inserter(result));
 
   for (boost::filesystem::path &it : result) {
     s_result.push_back(it.string());
@@ -43,13 +42,11 @@ std::list<std::string> ls(const std::string &path, const std::string &ext) {
 
   std::list<boost::filesystem::path> result;
   std::copy(boost::filesystem::directory_iterator(path),
-            boost::filesystem::directory_iterator(),
-            std::back_inserter(result));
+            boost::filesystem::directory_iterator(), std::back_inserter(result));
 
   // ext filter
-  result.remove_if([&ext](boost::filesystem::path p) {
-    return p.extension().string() != ext;
-  });
+  result.remove_if(
+      [&ext](boost::filesystem::path p) { return p.extension().string() != ext; });
 
   for (boost::filesystem::path &it : result) {
     s_result.push_back(it.string());
@@ -131,7 +128,7 @@ public:
 
   static Private *open(const std::string &path, bool read_only) {
     auto result = new Private();
-    auto open_flag=read_only?bi::read_only:bi::read_write;
+    auto open_flag = read_only ? bi::read_only : bi::read_write;
     result->m_file = new bi::file_mapping(path.c_str(), open_flag);
     result->m_region = new bi::mapped_region(*(result->m_file), open_flag);
     return result;
@@ -141,8 +138,8 @@ public:
     try {
       bi::file_mapping::remove(path.c_str());
       std::filebuf fbuf;
-      fbuf.open(path, std::ios_base::in | std::ios_base::out |
-                          std::ios_base::trunc | std::ios_base::binary);
+      fbuf.open(path, std::ios_base::in | std::ios_base::out | std::ios_base::trunc |
+                          std::ios_base::binary);
       // Set the size
       fbuf.pubseekoff(size - 1, std::ios_base::beg);
       fbuf.sputc(0);
@@ -181,13 +178,12 @@ MappedFile::MappedFile(Private *im) : _impl(im) {}
 MappedFile::~MappedFile() {}
 
 MappedFile::MapperFile_ptr MappedFile::open(const std::string &path, bool read_only) {
-  auto impl_res = MappedFile::Private::open(path,read_only);
+  auto impl_res = MappedFile::Private::open(path, read_only);
   MappedFile::MapperFile_ptr result{new MappedFile{impl_res}};
   return result;
 }
 
-MappedFile::MapperFile_ptr MappedFile::touch(const std::string &path,
-                                             uint64_t size) {
+MappedFile::MapperFile_ptr MappedFile::touch(const std::string &path, uint64_t size) {
   auto impl_res = MappedFile::Private::touch(path, size);
   MappedFile::MapperFile_ptr result{new MappedFile{impl_res}};
   return result;

@@ -4,8 +4,8 @@
 #include <math/statistic.h>
 #include <storage/memstorage.h>
 
- class Moc_I1 : public dariadb::statistic::BaseMethod {
- public:
+class Moc_I1 : public dariadb::statistic::BaseMethod {
+public:
   Moc_I1() { _a = _b = dariadb::Meas::empty(); }
   void calc(const dariadb::Meas &a, const dariadb::Meas &b) override {
     _a = a;
@@ -59,11 +59,10 @@
 //  }
 //}
 //
- BOOST_AUTO_TEST_CASE(RectangleMethod) {
+BOOST_AUTO_TEST_CASE(RectangleMethod) {
   { // left
     using dariadb::statistic::integral::RectangleMethod;
-    std::unique_ptr<RectangleMethod> p{
-        new RectangleMethod(RectangleMethod::Kind::LEFT)};
+    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::LEFT)};
 
     auto m = dariadb::Meas::empty();
     m.id = 1;
@@ -84,8 +83,7 @@
 
   { // right
     using dariadb::statistic::integral::RectangleMethod;
-    std::unique_ptr<RectangleMethod> p{
-        new RectangleMethod(RectangleMethod::Kind::RIGHT)};
+    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::RIGHT)};
 
     auto m = dariadb::Meas::empty();
     m.id = 1;
@@ -106,8 +104,7 @@
 
   { // midle
     using dariadb::statistic::integral::RectangleMethod;
-    std::unique_ptr<RectangleMethod> p{
-        new RectangleMethod(RectangleMethod::Kind::MIDLE)};
+    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::MIDLE)};
 
     auto m = dariadb::Meas::empty();
     m.id = 1;
@@ -126,7 +123,7 @@
     BOOST_CHECK_CLOSE(p->result(), dariadb::Value(2), 0.01);
   }
 }
- BOOST_AUTO_TEST_CASE(Average) {
+BOOST_AUTO_TEST_CASE(Average) {
   { // midle
     using dariadb::statistic::average::Average;
     std::unique_ptr<Average> p{new Average()};

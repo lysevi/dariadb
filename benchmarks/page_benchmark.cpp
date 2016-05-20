@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iterator>
 
+#include "bench_common.h"
 #include <dariadb.h>
 #include <algorithm>
 #include <atomic>
@@ -15,12 +16,9 @@
 #include <storage/page_manager.h>
 #include <thread>
 #include <utils/fs.h>
-#include "bench_common.h"
 
-
-std::atomic_long append_count{ 0 };
+std::atomic_long append_count{0};
 bool stop_info = false;
-
 
 class BenchCallback : public dariadb::storage::Cursor::Callback {
 public:
@@ -28,29 +26,26 @@ public:
   size_t count;
 };
 
-
 void show_info() {
-	clock_t t0 = clock();
-	auto all_writes =
-		dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
-	while (true) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  clock_t t0 = clock();
+  auto all_writes = dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-		clock_t t1 = clock();
-		auto writes_per_sec =
-			append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
+    clock_t t1 = clock();
+    auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
-		std::cout << "\r"
-			<< " writes: " << append_count << " speed: " << writes_per_sec
-			<< "/sec progress:" << (int64_t(100) * append_count) / all_writes
-			<< "%                ";
-		std::cout.flush();
-		if (stop_info) {
-			std::cout.flush();
-			break;
-		}
-	}
-	std::cout << "\n";
+    std::cout << "\r"
+              << " writes: " << append_count << " speed: " << writes_per_sec
+              << "/sec progress:" << (int64_t(100) * append_count) / all_writes
+              << "%                ";
+    std::cout.flush();
+    if (stop_info) {
+      std::cout.flush();
+      break;
+    }
+  }
+  std::cout << "\n";
 }
 
 const std::string storagePath = "benchStorage/";
@@ -60,36 +55,37 @@ const size_t chunks_size = 1024;
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-  
+
   const size_t id_count = 4;
   {
 
     if (dariadb::utils::fs::path_exists(storagePath)) {
       dariadb::utils::fs::rm(storagePath);
     }
-	std::thread info_thread(show_info);
+    std::thread info_thread(show_info);
 
-    dariadb::storage::PageManager::start(dariadb::storage::PageManager::Params(
-        storagePath, chunks_count, chunks_size));
+    dariadb::storage::PageManager::start(
+        dariadb::storage::PageManager::Params(storagePath, chunks_count, chunks_size));
 
-	std::vector<std::thread> writers(dariadb_bench::total_threads_count);
-	
-	size_t pos = 0;
-	for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
-		std::thread t{ dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
-			dariadb::Time(i), &append_count, dariadb::storage::PageManager::instance() };
-		writers[pos++] = std::move(t);
-	}
+    std::vector<std::thread> writers(dariadb_bench::total_threads_count);
 
-	pos = 0;
-	for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
-		std::thread t = std::move(writers[pos++]);
-		t.join();
-	}
+    size_t pos = 0;
+    for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
+      std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
+                    dariadb::Time(i), &append_count,
+                    dariadb::storage::PageManager::instance()};
+      writers[pos++] = std::move(t);
+    }
 
-	stop_info = true;
-	info_thread.join();
-	
+    pos = 0;
+    for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
+      std::thread t = std::move(writers[pos++]);
+      t.join();
+    }
+
+    stop_info = true;
+    info_thread.join();
+
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Id> uniform_dist(
@@ -101,7 +97,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < id_count; ++i) {
       ids[i] = i;
     }
-	const size_t runs_count = 100;
+    const size_t runs_count = 100;
     auto start = clock();
 
     for (size_t i = 0; i < runs_count; i++) {
@@ -111,7 +107,7 @@ int main(int argc, char *argv[]) {
       auto to = std::max(time_point1, time_point2);
       auto link_list = dariadb::storage::PageManager::instance()->chunksByIterval(
           dariadb::storage::QueryInterval(ids, 0, from, to));
-	  auto cursor = dariadb::storage::PageManager::instance()->readLinks(link_list);
+      auto cursor = dariadb::storage::PageManager::instance()->readLinks(link_list);
       cursor->readAll(clbk);
       assert(clbk->count != 0);
       clbk->count = 0;
@@ -119,7 +115,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
-    std::cout << "interval: " << elapsed/ runs_count << std::endl;
+    std::cout << "interval: " << elapsed / runs_count << std::endl;
 
     start = clock();
 

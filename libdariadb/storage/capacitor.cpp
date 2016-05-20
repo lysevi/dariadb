@@ -21,38 +21,39 @@ for future updates.
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <cassert>
+#include <cstring>
+#include <future>
 #include <limits>
 #include <list>
-#include <future>
-#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::storage;
+using namespace dariadb::utils;
 
 #pragma pack(push, 1)
 struct level_header {
-  uint8_t  lvl;
+  uint8_t lvl;
   uint64_t count;
   uint64_t pos;
 };
 #pragma pack(pop)
 
 struct FlaggedMeas {
-	uint8_t drop_start : 1;
-	uint8_t drop_end : 1;
-	Meas value;
+  uint8_t drop_start : 1;
+  uint8_t drop_end : 1;
+  Meas value;
 };
 
 struct flagged_meas_time_compare_less {
-	bool operator()(const FlaggedMeas &lhs, const FlaggedMeas &rhs) const {
-		return meas_time_compare_less()(lhs.value,rhs.value);
-	}
+  bool operator()(const FlaggedMeas &lhs, const FlaggedMeas &rhs) const {
+    return meas_time_compare_less()(lhs.value, rhs.value);
+  }
 };
 
 struct level {
   level_header *hdr;
   FlaggedMeas *begin;
-  
+
   FlaggedMeas at(size_t _pos) const { return begin[_pos]; }
 
   void push_back(const Meas &m) {
@@ -122,23 +123,23 @@ public:
 #pragma pack(pop)
   Private(MeasWriter *stor, const Capacitor::Params &params)
       : _minTime(std::numeric_limits<dariadb::Time>::max()),
-        _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor),
-        _params(params), mmap(nullptr), _size(0) {
+        _maxTime(std::numeric_limits<dariadb::Time>::min()), _stor(stor), _params(params),
+        mmap(nullptr), _size(0) {
     open_or_create();
   }
 
   ~Private() {
-	  this->flush();
+    this->flush();
     if (mmap != nullptr) {
       mmap->close();
     }
   }
 
   void open_or_create() {
-    if (!dariadb::utils::fs::path_exists(_params.path)) {
+    if (!fs::path_exists(_params.path)) {
       create();
     } else {
-      auto logs = dariadb::utils::fs::ls(_params.path, CAP_FILE_EXT);
+      auto logs = fs::ls(_params.path, CAP_FILE_EXT);
       if (logs.empty()) {
         create();
       } else {
@@ -152,8 +153,8 @@ public:
   size_t block_in_level(size_t lev_num) const { return (size_t(1) << lev_num); }
 
   size_t bytes_in_level(size_t B, size_t lvl) const {
-	  auto blocks_count = block_in_level(lvl);
-	  auto res = one_block_size(B) * blocks_count;
+    auto blocks_count = block_in_level(lvl);
+    auto res = one_block_size(B) * blocks_count;
     return res;
   }
 
@@ -163,9 +164,8 @@ public:
     result += sizeof(Header);
     result += _params.B * sizeof(FlaggedMeas); /// space to _memvalues
 
-
     auto prev_level_size = _params.B * sizeof(FlaggedMeas);
-// TODO shame!
+    // TODO shame!
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
       auto cur_level_meases = bytes_in_level(_params.B, lvl); /// 2^lvl
       if (cur_level_meases < prev_level_size) {
@@ -177,16 +177,13 @@ public:
     return result;
   }
 
-  std::string file_name() {
-    return dariadb::utils::fs::random_file_name(CAP_FILE_EXT);
-  }
+  std::string file_name() { return fs::random_file_name(CAP_FILE_EXT); }
 
   void create() {
-    dariadb::utils::fs::mkdir(_params.path);
-    utils::fs::mkdir(_params.path);
+    fs::mkdir(_params.path);
+    fs::mkdir(_params.path);
     auto sz = cap_size();
-    mmap = utils::fs::MappedFile::touch(
-        utils::fs::append_path(_params.path, file_name()), sz);
+    mmap = fs::MappedFile::touch(fs::append_path(_params.path, file_name()), sz);
 
     _header = reinterpret_cast<Header *>(mmap->data());
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
@@ -202,8 +199,8 @@ public:
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
-      for(size_t i=0;i<it->count;++i){
-          std::memset(&m[i],0,sizeof(FlaggedMeas));
+      for (size_t i = 0; i < it->count; ++i) {
+        std::memset(&m[i], 0, sizeof(FlaggedMeas));
       }
       pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
     }
@@ -229,7 +226,7 @@ public:
   }
 
   void open(const std::string &fname) {
-    mmap = utils::fs::MappedFile::open(fname);
+    mmap = fs::MappedFile::open(fname);
 
     _header = reinterpret_cast<Header *>(mmap->data());
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
@@ -254,26 +251,26 @@ public:
     this->_maxTime = std::max(this->_maxTime, value.time);
     return append_result(1, 0);
   }
-  
+
   append_result append_to_levels(const Meas &value) {
     flagged_meas_time_compare_less flg_less_by_time;
-	
+
     std::sort(_memvalues, _memvalues + _memvalues_size, flg_less_by_time);
     _header->_memvalues_pos = 0;
     size_t new_items_count = _header->_size_B + 1;
     size_t outlvl = dariadb::utils::ctz(~_size & new_items_count);
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
-	
+
     if (outlvl >= _header->levels_count) {
       drop_to_stor();
       return append_to_mem(value);
     }
 
-	if (outlvl == (_header->levels_count - 1)) {
-		if (drop_future.valid()) {
-			drop_future.wait();
-		}
-	}
+    if (outlvl == (_header->levels_count - 1)) {
+      if (drop_future.valid()) {
+        drop_future.wait();
+      }
+    }
 
     std::list<level *> to_merge;
     level tmp;
@@ -297,64 +294,65 @@ public:
       _levels[i].clear();
     }
     ++_header->_size_B;
-	if (outlvl == (_header->levels_count - 1)) {
-		auto target = &_levels[_header->levels_count - 1];
-		_header->_size_B -= target->size() / _header->B;
-		_header->_writed -= target->size();
-		drop_future = std::async(std::launch::async, &Capacitor::Private::drop_one_level, this,target);
-	}
+    if (outlvl == (_header->levels_count - 1)) {
+      auto target = &_levels[_header->levels_count - 1];
+      _header->_size_B -= target->size() / _header->B;
+      _header->_writed -= target->size();
+      drop_future = std::async(std::launch::async, &Capacitor::Private::drop_one_level,
+                               this, target);
+    }
     return append_to_mem(value);
   }
   std::future<void> drop_future;
-  void drop_one_level(level*target) {
-	  if (_stor == nullptr) {
-		  return;
-	  }
-	  for (size_t i = 0; i < target->size(); ++i) {
-		  _stor->append(target->at(i).value);
-	  }
-	  
-	  target->clear();
+  void drop_one_level(level *target) {
+    if (_stor == nullptr) {
+      return;
+    }
+    for (size_t i = 0; i < target->size(); ++i) {
+      _stor->append(target->at(i).value);
+    }
+
+    target->clear();
   }
 
   struct low_level_stor_pusher {
     MeasWriter *_stor;
-	void push_back(FlaggedMeas &m) {
-		if (m.drop_end) {
-			return;
-		}
-		++m.drop_start;
-		_stor->append(m.value);
-		++m.drop_end;
-	}
+    void push_back(FlaggedMeas &m) {
+      if (m.drop_end) {
+        return;
+      }
+      ++m.drop_start;
+      _stor->append(m.value);
+      ++m.drop_end;
+    }
   };
 
   void drop_to_stor() {
     std::list<level *> to_merge;
-	level tmp;
-	level_header tmp_hdr;
-	tmp.hdr = &tmp_hdr;
-	tmp.hdr->lvl = 0;
-	tmp.hdr->count = _memvalues_size;
-	tmp.hdr->pos = _memvalues_size;
-	tmp.begin = _memvalues;
-	to_merge.push_back(&tmp);
+    level tmp;
+    level_header tmp_hdr;
+    tmp.hdr = &tmp_hdr;
+    tmp.hdr->lvl = 0;
+    tmp.hdr->count = _memvalues_size;
+    tmp.hdr->pos = _memvalues_size;
+    tmp.begin = _memvalues;
+    to_merge.push_back(&tmp);
 
     for (size_t i = 0; i < _levels.size(); ++i) {
-		if (!_levels[i].empty()) {
-			to_merge.push_back(&_levels[i]);
-		}
+      if (!_levels[i].empty()) {
+        to_merge.push_back(&_levels[i]);
+      }
     }
     low_level_stor_pusher merge_target;
     merge_target._stor = _stor;
 
     dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());
-	for (size_t i = 0; i < _levels.size(); ++i) {
-		_levels[i].clear();
-	}
-	_header->_memvalues_pos = 0;
-	_header->_size_B = 0;
-	_header->_writed = 0;
+    for (size_t i = 0; i < _levels.size(); ++i) {
+      _levels[i].clear();
+    }
+    _header->_memvalues_pos = 0;
+    _header->_size_B = 0;
+    _header->_writed = 0;
   }
 
   Reader_ptr readInterval(const QueryInterval &q) {
@@ -363,8 +361,7 @@ public:
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
     if (q.from > this->_minTime) {
-      auto tp_read_data =
-          this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
+      auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
       for (auto kv : tp_read_data) {
         sub_result[kv.first].insert(kv.second);
       }
@@ -376,8 +373,8 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
-        if(m.drop_end){
-            continue;
+        if (m.drop_end) {
+          continue;
         }
         if (m.value.time > q.to) {
           break;
@@ -390,8 +387,8 @@ public:
 
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      if(m.drop_end){
-          continue;
+      if (m.drop_end) {
+        continue;
       }
       if (m.value.inQuery(q.ids, q.flag, q.from, q.to)) {
         sub_result[m.value.id].insert(m.value);
@@ -407,8 +404,7 @@ public:
     return Reader_ptr(raw);
   }
 
-  void insert_if_older(dariadb::Meas::Id2Meas &s,
-                       const dariadb::Meas &m) const {
+  void insert_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
     auto fres = s.find(m.id);
     if (fres == s.end()) {
       s.insert(std::make_pair(m.id, m));
@@ -440,43 +436,42 @@ public:
 
   dariadb::Time minTime() const { return _minTime; }
   dariadb::Time maxTime() const { return _maxTime; }
-  
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-	  dariadb::Time *maxResult) {
-	  boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
-	  *minResult = std::numeric_limits<dariadb::Time>::max();
-	  *maxResult = std::numeric_limits<dariadb::Time>::min();
-	  bool result = false;
-	  for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
-		  auto m = _memvalues[j];
-		  if (m.value.id == id) {
-			  *minResult = std::min(*minResult,m.value.time);
-			  *maxResult = std::max(*maxResult, m.value.time);
-			  result = true;
-		  }
-	  }
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+    boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
-	  for (size_t i = 0; i < this->_levels.size(); ++i) {
-		  if (_levels[i].empty()) {
-			  continue;
-		  }
-		  for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-			  auto m = _levels[i].at(j);
-			  if (m.value.id == id) {
-				  *minResult = std::min(*minResult, m.value.time);
-				  *maxResult = std::max(*maxResult, m.value.time);
-				  result = true;
-			  }
-		  }
-	  }
-	  return result;
+    *minResult = std::numeric_limits<dariadb::Time>::max();
+    *maxResult = std::numeric_limits<dariadb::Time>::min();
+    bool result = false;
+    for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+      auto m = _memvalues[j];
+      if (m.value.id == id) {
+        *minResult = std::min(*minResult, m.value.time);
+        *maxResult = std::max(*maxResult, m.value.time);
+        result = true;
+      }
+    }
+
+    for (size_t i = 0; i < this->_levels.size(); ++i) {
+      if (_levels[i].empty()) {
+        continue;
+      }
+      for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
+        auto m = _levels[i].at(j);
+        if (m.value.id == id) {
+          *minResult = std::min(*minResult, m.value.time);
+          *maxResult = std::max(*maxResult, m.value.time);
+          result = true;
+        }
+      }
+    }
+    return result;
   }
 
   void flush() {
-	  if (drop_future.valid()) {
-		  drop_future.wait();
-	  }
+    if (drop_future.valid()) {
+      drop_future.wait();
+    }
   }
 
   size_t in_queue_size() const { return 0; }
@@ -492,8 +487,8 @@ public:
 
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      if(m.drop_end){
-          continue;
+      if (m.drop_end) {
+        continue;
       }
       if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
         insert_if_older(sub_res, m.value);
@@ -509,8 +504,8 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
-        if(m.drop_end){
-            continue;
+        if (m.drop_end) {
+          continue;
         }
         if (m.value.time > q.time_point) {
           break;
@@ -579,8 +574,8 @@ dariadb::Time Capacitor::maxTime() {
 }
 
 bool Capacitor::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-	dariadb::Time *maxResult) {
-	return _Impl->minMaxTime(id, minResult, maxResult);
+                           dariadb::Time *maxResult) {
+  return _Impl->minMaxTime(id, minResult, maxResult);
 }
 void Capacitor::flush() { // write all to storage;
   _Impl->flush();
@@ -602,8 +597,7 @@ Reader_ptr dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
 }
 
-Reader_ptr
-dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
+Reader_ptr dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
 
