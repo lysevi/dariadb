@@ -30,7 +30,7 @@ public:
 
   /// return true, if write to dropped value;
   bool put(const Key &k, const Value &v, Value*dropped) {
-    _deq.push_front(std::make_pair(k, v));
+	  inner_put(k, v);
 	if (_deq.size() > _max_size) {
 		*dropped = _deq.back().second;
 		_deq.pop_back();
@@ -39,7 +39,7 @@ public:
 	return false;
   }
 
-  bool find(const Key &k, Value *out) const {
+  bool find(const Key &k, Value *out)  {
     auto fres = std::find_if(_deq.begin(), _deq.end(), [&k](const pair_t &p) {
       return EqualPred()(p.first, k);
     });
@@ -47,11 +47,17 @@ public:
       return false;
     } else {
       *out = (*fres).second;
+	  _deq.erase(fres);
+	  inner_put(k, *out);
       return true;
     }
   }
 
   size_t size()const { return _deq.size(); }
+protected:
+	inline void inner_put(const Key&k, const Value &v){
+          _deq.push_front(std::make_pair(k, v));
+    }
 protected:
   std::deque<pair_t> _deq;
   size_t _max_size;
