@@ -412,6 +412,7 @@ Chunk_Ptr Page::read_chunk_from_ptr(const uint8_t *ptr) const {
   } else {
     assert(false);
   }
+  return nullptr;
 }
 
 void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas &m) {
