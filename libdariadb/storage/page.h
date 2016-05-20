@@ -18,45 +18,39 @@ namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
 struct PageHeader {
-  uint32_t pos;
-
-  uint32_t count_readers;
-
-  uint64_t addeded_chunks;
-
-  uint32_t chunk_per_storage;
-  uint32_t chunk_size;
-
-  bool is_full;
-
+  uint64_t pos;           //next write pos (bytes)
+  uint32_t count_readers; //readers count. on close must be zero.
+  uint64_t addeded_chunks; //total count of chunks in page
+  uint32_t chunk_per_storage; //max chunks count
+  uint32_t chunk_size;        //each chunks size in bytes
+  bool is_full;               //is full :)
   dariadb::Time minTime;
   dariadb::Time maxTime;
-
-  uint64_t max_chunk_id;
+  uint64_t max_chunk_id;      //max(chunk->id)
 };
 
 struct IndexHeader {
-  uint32_t count;
-  uint32_t pos;
+  uint32_t count;           //count of values
+  uint64_t pos;             //next write pos(bytes)
 
   dariadb::Time minTime;
   dariadb::Time maxTime;
 
-  uint32_t chunk_per_storage;
-  uint32_t chunk_size;
-  bool is_sorted;
+  uint32_t chunk_per_storage; //max chunks count
+  uint32_t chunk_size;        //each chunks size in bytes
+  bool is_sorted;             //items sorted by time
 
-  dariadb::Id id_bloom;
+  dariadb::Id id_bloom;       //bloom filter of Meas.id
 };
 
 struct Page_ChunkIndex {
-  Time minTime, maxTime;
-  dariadb::Id   meas_id;
-  dariadb::Flag flag_bloom;
-  uint64_t chunk_id;
-  bool is_readonly;
-  uint64_t offset;
-  bool is_init;
+  Time minTime, maxTime;    //min max time of linked chunk
+  dariadb::Id   meas_id;    //chunk->info->first.id
+  dariadb::Flag flag_bloom; //bloom filter of writed meases
+  uint64_t chunk_id;        //chunk->id
+  bool is_readonly;         //chunk is full?
+  uint64_t offset;          //offset in bytes of chunk in page
+  bool is_init;             //is init :)
 };
 #pragma pack(pop)
 
@@ -65,6 +59,7 @@ struct Page_ChunkIndex {
 typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 typedef std::map<dariadb::Time, uint32_t> Time2Pos;
 typedef std::unordered_map<dariadb::Id, Time2Pos> PageMultiTree;
+
 class Page : public ChunkContainer, public MeasWriter {
   Page() = default;
 
@@ -115,7 +110,7 @@ public:
   Page_ChunkIndex *index;
   uint8_t *chunks;
 
-  indexTree _itree;
+  indexTree _itree; //needed to sort index reccord on page closing. for fast search
   PageMultiTree _mtree;
   std::list<uint32_t> _free_poses;
 
