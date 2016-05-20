@@ -54,6 +54,10 @@ public:
   }
 
   size_t size()const { return _deq.size(); }
+
+  void clear() {
+	  _deq.clear();
+  }
 protected:
 	inline void inner_put(const Key&k, const Value &v){
           _deq.push_front(std::make_pair(k, v));

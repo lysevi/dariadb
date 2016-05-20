@@ -3,6 +3,7 @@
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 #include "../utils/utils.h"
+#include "../utils/lru.h"
 #include "manifest.h"
 #include "page.h"
 
@@ -23,8 +24,10 @@ dariadb::storage::PageManager *PageManager::_instance = nullptr;
 class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
 public:
   Private(const PageManager::Params &param)
-      : _cur_page(nullptr), _param(param),
-        _manifest(utils::fs::append_path(param.path, MANIFEST_FILE_NAME)) {
+      : _cur_page(nullptr), 
+	    _param(param),
+        _manifest(utils::fs::append_path(param.path, MANIFEST_FILE_NAME)),
+		_openned_pages(param.openned_page_chache_size){
     update_id = false;
     last_id = 0;
 
@@ -32,7 +35,7 @@ public:
     /*this->start_async();*/
   }
 
-  Page *open_last_openned() {
+  Page_Ptr open_last_openned() {
     if (!utils::fs::path_exists(_param.path)) {
       return nullptr;
     }
@@ -42,7 +45,7 @@ public:
       auto file_name = utils::fs::append_path(_param.path, n);
       auto hdr = Page::readHeader(file_name);
       if (!hdr.is_full) {
-        auto res = Page::open(file_name);
+		auto res = Page_Ptr{ Page::open(file_name) };
         update_id = false;
         return res;
       } else {
@@ -57,9 +60,9 @@ public:
     /* this->stop_async();*/
 
     if (_cur_page != nullptr) {
-      delete _cur_page;
       _cur_page = nullptr;
     }
+	_openned_pages.clear();
   }
 
   uint64_t calc_page_size() const {
@@ -68,14 +71,13 @@ public:
     return sizeof(PageHeader) + sz_buffers + sz_info;
   }
 
-  Page *create_page() {
+  Page_Ptr create_page() {
     if (!dariadb::utils::fs::path_exists(_param.path)) {
       dariadb::utils::fs::mkdir(_param.path);
     }
 
-    Page *res = nullptr; // open_last_openned();
+    Page *res = nullptr; 
 
-    // if (res == nullptr) {
     std::string page_name = utils::fs::random_file_name(".page");
     std::string file_name =
         dariadb::utils::fs::append_path(_param.path, page_name);
@@ -86,16 +88,16 @@ public:
     if (update_id) {
       res->header->max_chunk_id = last_id;
     }
-    //}
+    
 
-    return res;
+	return Page_Ptr{ res };
   }
   // PM
   void flush() { /*this->flush_async();*/
   }
   // void call_async(const Chunk_Ptr &ch) override { /*write_to_page(ch);*/ }
 
-  Page *get_cur_page() {
+  Page_Ptr get_cur_page() {
     if (_cur_page == nullptr) {
       _cur_page = create_page();
     }
@@ -113,26 +115,34 @@ public:
     *maxResult = std::numeric_limits<dariadb::Time>::min();
     auto res = false;
     for (auto pname : pages) {
-        Page *pg = nullptr;
-        bool close_page=true;
-        if(_cur_page!=nullptr && pname==_cur_page->filename){
-                pg=_cur_page;
-                close_page=false;
-
-        }else{
-            pg=Page::open(pname, true);
-        }
+		Page_Ptr pg = open_page_to_read(pname);
       dariadb::Time local_min, local_max;
       if (pg->minMaxTime(id, &local_min, &local_max)) {
         *minResult = std::min(local_min, *minResult);
         *maxResult = std::max(local_max, *maxResult);
         res = true;
       }
-      if(close_page){
-          delete pg;
-      }
     }
     return res;
+  }
+
+  Page_Ptr open_page_to_read(const std::string &pname) {
+	  Page_Ptr pg = nullptr;
+	  if (_cur_page != nullptr && pname == _cur_page->filename) {
+		  pg = _cur_page;
+	  }
+	  else {
+		  if (_openned_pages.find(pname, &pg)) {
+			  return pg;
+		  }
+		  else {
+			  pg = Page_Ptr{ Page::open(pname, true) };
+			  Page_Ptr dropped;
+			  _openned_pages.put(pname, pg, &dropped);
+			  dropped = nullptr;
+		  }
+	  }
+	  return pg;
   }
 
   class PageManagerCursor : public Cursor {
@@ -185,24 +195,13 @@ public:
 
 	ChunkLinkList result;
     for (auto pname : page_list) {
-        Page *pg = nullptr;
-        bool close_page=true;
-        if(_cur_page!=nullptr && pname==_cur_page->filename){
-                pg=_cur_page;
-                close_page=false;
+		auto pg = open_page_to_read(pname);
 
-        }else{
-            pg=Page::open(pname, true);
-        }
-
-      auto sub_result=pg->chunksByIterval(query);
+		auto sub_result=pg->chunksByIterval(query);
 	  for (auto s:sub_result) {
 		  s.page_name = pname;
 		  result.push_back(s);
 	  }
-      if(close_page){
-          delete pg;
-      }
     }
 
 	return result;
@@ -228,20 +227,8 @@ public:
 				  to_read.push_back(l);
 			  }else {
                   auto pname=to_read.front().page_name;
-                  Page *pg = nullptr;
-                  bool close_page=true;
-                  if(_cur_page!=nullptr && pname==_cur_page->filename){
-                          pg=_cur_page;
-                          close_page=false;
-
-                  }else{
-                      pg=Page::open(pname, true);
-                  }
-
+				  Page_Ptr pg = open_page_to_read(pname);
                   pg->readLinks(to_read)->readAll(clbk.get());
-                  if(close_page){
-                      delete pg;
-                  }
 				  to_read.clear();
 				  to_read.push_back(l);
 			  }
@@ -249,20 +236,9 @@ public:
 	  }
 	  if (!to_read.empty()) {
           auto pname=to_read.front().page_name;
-          Page *pg = nullptr;
-          bool close_page=true;
-          if(_cur_page!=nullptr && pname==_cur_page->filename){
-                  pg=_cur_page;
-                  close_page=false;
-          }else{
-              pg=Page::open(pname, true);
-          }
-
-
+		  auto pg = open_page_to_read(pname);
           pg->readLinks(to_read)->readAll(clbk.get());
-          if(close_page){
-              delete pg;
-          }
+          
 		  to_read.clear();
 	  }
 
@@ -316,22 +292,12 @@ public:
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
     for (auto pname : page_list) {
-      Page *pg = nullptr;
-      bool close_page=true;
-      if(_cur_page!=nullptr && pname==_cur_page->filename){
-              pg=_cur_page;
-              close_page=false;
-      }else{
-          pg=Page::open(pname, true);
-      }
+		auto pg = open_page_to_read(pname);
 
       auto subres = pg->chunksBeforeTimePoint(query);
       for (auto s : subres) {
 		  s.page_name = pname;
 		  result.push_back(s);
-      }
-      if(close_page){
-          delete pg;
       }
     }
 
@@ -346,19 +312,9 @@ public:
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
     dariadb::IdSet s;
     for (auto pname : page_list) {
-        Page *pg = nullptr;
-        bool close_page=true;
-        if(_cur_page!=nullptr && pname==_cur_page->filename){
-                pg=_cur_page;
-                close_page=false;
-        }else{
-            pg=Page::open(pname, true);
-        }
+		auto pg = open_page_to_read(pname);
         auto subres = pg->getIds();
         s.insert(subres.begin(), subres.end());
-        if(close_page){
-            delete pg;
-        }
     }
 
     return dariadb::IdArray(s.begin(), s.end());
@@ -412,14 +368,12 @@ public:
     while (true) {
       auto cur_page = this->get_cur_page();
       if (update_id) {
-        //_cur_page->header->max_chunk_id= last_id;
         update_id = false;
       }
       auto res = cur_page->append(value);
       if (res.writed != 1) {
         last_id = _cur_page->header->max_chunk_id;
         update_id = true;
-        delete _cur_page;
         _cur_page = nullptr;
       } else {
         return res;
@@ -428,13 +382,14 @@ public:
   }
 
 protected:
-  Page *_cur_page;
+  Page_Ptr _cur_page;
   PageManager::Params _param;
   Manifest _manifest;
   boost::shared_mutex _locker;
 
   uint64_t last_id;
   bool update_id;
+  utils::LRU<std::string, Page_Ptr> _openned_pages;
 };
 
 PageManager::PageManager(const PageManager::Params &param)

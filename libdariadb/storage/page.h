@@ -126,5 +126,7 @@ protected:
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
   mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 };
+
+typedef std::shared_ptr<Page> Page_Ptr;
 }
 }
