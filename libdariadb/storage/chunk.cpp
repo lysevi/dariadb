@@ -18,7 +18,7 @@ Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer) : _locker{} {
 Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m)
     : _locker() {
   should_free = false;
-  index->is_not_free = true;
+  index->is_init = true;
   _buffer_t = buffer;
   info = index;
   info->size = _size;
@@ -83,7 +83,7 @@ ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer) : Chunk(index, 
 ZippedChunk::~ZippedChunk() {}
 
 bool ZippedChunk::append(const Meas &m) {
-  if (!info->is_not_free || info->is_readonly) {
+  if (!info->is_init || info->is_readonly) {
     throw MAKE_EXCEPTION("(!is_not_free || is_readonly)");
   }
 

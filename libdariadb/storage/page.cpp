@@ -374,7 +374,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       break;
     }
     ChunkIndexInfo *info = reinterpret_cast<ChunkIndexInfo *>(byte_it);
-    if (!info->is_not_free) {
+    if (!info->is_init) {
       auto ptr_to_begin = byte_it;
       auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
       Chunk_Ptr ptr = nullptr;
