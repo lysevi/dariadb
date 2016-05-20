@@ -6,7 +6,6 @@
 #include "chunk.h"
 #include "chunk_container.h"
 #include "cursor.h"
-#include "index.h"
 
 #include "stx/btree_multimap.h"
 #include <map>
@@ -30,10 +29,34 @@ struct PageHeader {
   uint64_t max_chunk_id; // max(chunk->id)
 };
 
+struct IndexHeader {
+  uint32_t count; // count of values
+  uint64_t pos;   // next write pos(bytes)
+
+  dariadb::Time minTime;
+  dariadb::Time maxTime;
+
+  uint32_t chunk_per_storage; // max chunks count
+  uint32_t chunk_size;        // each chunks size in bytes
+  bool is_sorted;             // items sorted by time
+
+  dariadb::Id id_bloom; // bloom filter of Meas.id
+};
+
+struct Page_ChunkIndex {
+  Time minTime, maxTime;    // min max time of linked chunk
+  dariadb::Id meas_id;      // chunk->info->first.id
+  dariadb::Flag flag_bloom; // bloom filter of writed meases
+  uint64_t chunk_id;        // chunk->id
+  bool is_readonly;         // chunk is full?
+  uint64_t offset;          // offset in bytes of chunk in page
+  bool is_init;             // is init :)
+};
 #pragma pack(pop)
 
 // maxtime => pos index rec in page;
 // typedef std::multimap<dariadb::Time, uint32_t> indexTree;
+typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 typedef std::map<dariadb::Time, uint32_t> Time2Pos;
 typedef std::unordered_map<dariadb::Id, Time2Pos> PageMultiTree;
 
@@ -83,10 +106,14 @@ private:
 
 public:
   uint8_t *region;  // page  file mapp region
+  uint8_t *iregion; // index file mapp region
   PageHeader *header;
+  IndexHeader *iheader;
 
+  Page_ChunkIndex *index;
   uint8_t *chunks;
 
+  indexTree _itree; // needed to sort index reccord on page closing. for fast search
   PageMultiTree _mtree;
   std::list<uint32_t> _free_poses;
 
@@ -94,9 +121,9 @@ public:
   bool readonly;
 
 protected:
-  IndexFile_Ptr *index_file;
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
+  mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 };
 
 typedef std::shared_ptr<Page> Page_Ptr;
