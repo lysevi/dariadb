@@ -3,20 +3,7 @@ dist: trusty
 language: cpp
 compiler:
   - gcc
-env:
-  global:
-   - secure: "Ct+LgwEGvb3wtPj5ByMnbE9EKGte8xZsj/7VWXqTosfz5yDHtzF5O4gz633ouynhGutm+CIzpP/F1MwKbWf6gVNNoaYcZXNOYoIPltQZBXuUL8POUz/NTVX0x7X3eBqE+3wXvObuHIH03Dn6Pnq6xUEZOy9SywlpM8Kkvjyt1OWYipHB0zMGMQhaHFlnTSPB548qNw6xZvT8XVvU4F9S/7tMBASoamFha+k5Zk4XzEX4sgx1n356j4sX8OO5siK8quCBNXHfkPDvttVxiC2/XU86r5sdAJr8sAULrAnB9fB5PYiBiyOdDfZYWY52XGTPExyP2mIdy0GTCOTRumG+R1y/PCtatogG7BjearWdAYLLIjgC+/Gd4kcGDww5hf/vweOCzxwNoAaj8EFPmYw5N1IDBcoVtXQyFMj7s9nQQshVs2vehxpp1EDcf23+ebqmAOoQvaQgczVshdN5mK3nyb48EDuSoQOHTcBjdffNpq5cBkc3bghZ4tieDqXL/OZtGjvovWOCE9RR8sxWm0ia3XyT0XBDyDXJoQl/gvCwQr9PUTQ86q7NWeAoMaTvrx8qDzcYjN4Fq49n1z/aFaZrMIh/lp9JC6Jb8JeDpDaNxN8+gjWfnqruEh9PjlZBvAXudJo4Nj3Y1x0Id7YPKN5SmnNTYW1Ixv2JzYucUv8WZms="
 
-addons:
-  coverity_scan:
-    project:
-      name: "lysevi/dariadb"
-      description: "<Your project description here>"
-    notification_email: lysevi@gmail.com
-    build_command_prepend: "cmake -DCMAKE_BUILD_TYPE=Release ."
-    build_command:   "make -j2"
-    branch_pattern: coverity_scan
-    
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-thread-dev cmake 
