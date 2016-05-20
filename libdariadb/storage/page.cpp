@@ -315,7 +315,7 @@ Page *Page::open(std::string file_name, bool read_only) {
     } else {
       auto kv = std::make_pair(irec->maxTime, i);
       res->_itree.insert(kv);
-      res->_mtree[irec->first.id].insert(kv);
+      res->_mtree[irec->meas_id].insert(kv);
     }
   }
   return res;
@@ -413,8 +413,8 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas&m) {
   for (size_t i = 0; i < header->addeded_chunks; ++i) {
     auto cur_index = &index[i];
-    if ((cur_index->first.id == ptr->info->first.id)
-	&& (cur_index->first.time == ptr->info->first.time)){
+    if ((cur_index->meas_id == ptr->info->first.id)
+	&& (cur_index->meas_id == ptr->info->first.time)){
 		update_index_info(cur_index, i, ptr, m);
       return;
     }
@@ -423,7 +423,7 @@ void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas&m) {
 }
 
 void Page::update_index_info(Page_ChunkIndex*cur_index, const uint32_t pos, const Chunk_Ptr &ptr, const dariadb::Meas&m) {
-	cur_index->last = ptr->info->last;
+	//cur_index->last = ptr->info->last;
 	iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ptr->info->first.id);
 	iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
 	iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
@@ -436,7 +436,7 @@ void Page::update_index_info(Page_ChunkIndex*cur_index, const uint32_t pos, cons
 		}
 	}
 
-	auto tree = &_mtree[cur_index->first.id];
+	auto tree = &_mtree[cur_index->meas_id];
 	auto from = tree->lower_bound(cur_index->maxTime);
 	auto to = tree->upper_bound(cur_index->maxTime);
 	for (auto it = from; it != to; ++it) {
@@ -466,8 +466,8 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
 
   auto cur_index = &index[pos_index];
   cur_index->chunk_id = ch->info->id;
-  cur_index->first = ch->info->first;
-  cur_index->last = ch->info->last;
+  cur_index->meas_id = ch->info->first.id;
+  //cur_index->last = ch->info->last;
 
   cur_index->flag_bloom = ch->info->flag_bloom;
   cur_index->is_readonly = ch->info->is_readonly;

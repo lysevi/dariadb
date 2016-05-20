@@ -51,11 +51,11 @@ struct IndexHeader {
 
 struct Page_ChunkIndex {
   Time minTime, maxTime;
-  dariadb::Meas first, last;
+  dariadb::Id   meas_id;
   dariadb::Flag flag_bloom;
+  uint64_t chunk_id;
   bool is_readonly;
   uint64_t offset;
-  uint64_t chunk_id;
   bool is_init;
 };
 #pragma pack(pop)
