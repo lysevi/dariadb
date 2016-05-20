@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
     dariadb::IdArray ids;
     ids.resize(1);
 
-	const size_t queries_count = 10;// 32768;
+	const size_t queries_count = 32768;
 
     dariadb::IdArray rnd_ids(queries_count);
     std::vector<dariadb::Time> rnd_time(queries_count);
