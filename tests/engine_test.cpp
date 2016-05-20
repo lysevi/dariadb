@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::Engine::Limits(0, 10))};
+        dariadb::storage::Engine::Limits(10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
   }
@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::Engine::Limits(0, 0))};
+        dariadb::storage::Engine::Limits(0))};
 
     dariadb::Meas::MeasList mlist;
     ms->currentValue(dariadb::IdArray{}, 0)->readAll(&mlist);

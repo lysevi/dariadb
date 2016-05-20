@@ -84,7 +84,6 @@ int main(int argc, char *argv[]) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 1024 * 1024;
   const size_t chunk_size = 256;
-  const dariadb::Time old_mem_chunks = 0;
   const size_t cap_B = 10;
   const size_t max_mem_chunks = 0;
 
@@ -97,7 +96,7 @@ int main(int argc, char *argv[]) {
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
         dariadb::storage::Capacitor::Params(cap_B, storage_path),
-        dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
+        dariadb::storage::Engine::Limits(max_mem_chunks));
     dariadb::storage::MeasStorage_ptr ms{raw_ptr};
     auto start = clock();
 
@@ -115,7 +114,7 @@ int main(int argc, char *argv[]) {
       dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                             chunk_size),
       dariadb::storage::Capacitor::Params(cap_B, storage_path),
-      dariadb::storage::Engine::Limits(old_mem_chunks, max_mem_chunks));
+      dariadb::storage::Engine::Limits(max_mem_chunks));
   dariadb::storage::MeasStorage_ptr ms{raw_ptr_ds};
 
   { // 2.
