@@ -37,7 +37,7 @@ public:
 				break;
 			}
 
-			if (!dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
+			/*if (!dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
 				if (!read_poses.empty()) {
 					_index_it = this->link->index[read_poses.front()];
 					current_pos = read_poses.front();
@@ -49,7 +49,8 @@ public:
 				continue;
 			}
 
-			if (check_index_rec(_index_it)) {
+			if (check_index_rec(_index_it)) */
+			{
 				auto ptr_to_begin = link->chunks + _index_it.offset;
 				auto ptr_to_chunk_info_raw =
 					reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
@@ -62,7 +63,7 @@ public:
 				this->resulted_links.push_back(sub_result);
 				break;
 			}
-			else { break; }
+			/*else { break; }*/
 		}
 		if (read_poses.empty()) {
 			_is_end = true;
@@ -101,7 +102,12 @@ public:
 				it_to++;
 			}
 			for (auto it = it_from; it != it_to; ++it) {
-				this->read_poses.push_back(it->second);
+				auto _index_it = link->index[it->second];
+				if (dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
+					if (check_index_rec(_index_it)) {
+						this->read_poses.push_back(it->second);
+					}
+				}
 			}
 		}
 		if (read_poses.empty()) {
@@ -165,7 +171,6 @@ public:
         memcpy(buf,ptr_to_buffer_raw,info->size);
         Chunk_Ptr ptr = nullptr;
         if (info->is_zipped) {
-          // PM
           ptr = Chunk_Ptr{new ZippedChunk(info, buf)};
           ptr->should_free=true;
         } else {
@@ -314,7 +319,7 @@ Page *Page::open(std::string file_name, bool read_only) {
       res->_free_poses.push_back(i);
     } else {
       auto kv = std::make_pair(irec->maxTime, i);
-      res->_itree.insert(kv);
+	  res->_itree.insert(kv);
       res->_mtree[irec->meas_id].insert(kv);
     }
   }
