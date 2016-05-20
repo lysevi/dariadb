@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
     std::uniform_int_distribution<dariadb::Id> uniform_dist(
         dariadb::Time(10), dariadb::Time(32));
 
-    const size_t queries_count = 10;//32;
+    const size_t queries_count = 1;//32;
 
     dariadb::IdArray ids(_all_id.begin(),_all_id.end());
     std::vector<dariadb::Time> rnd_time(queries_count);
