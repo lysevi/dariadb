@@ -32,7 +32,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 }
 
 void readBenchark(const dariadb::IdSet &all_id_set,
-                  dariadb::storage::MeasStorage_ptr stor) {
+                  dariadb::storage::MeasStorage_ptr stor, size_t reads_count) {
   {
     std::cout << "time point reads..." << std::endl;
     std::random_device r;
@@ -44,7 +44,6 @@ void readBenchark(const dariadb::IdSet &all_id_set,
 
     auto start = clock();
 
-    const size_t reads_count = 10;
     for (size_t i = 0; i < reads_count; i++) {
       auto time_point = uniform_dist(e1);
       dariadb::storage::QueryTimePoint qp{
@@ -66,7 +65,6 @@ void readBenchark(const dariadb::IdSet &all_id_set,
 
     auto start = clock();
 
-    const size_t reads_count = 10;
     for (size_t i = 0; i < reads_count; i++) {
       auto time_point1 = uniform_dist(e1);
       auto time_point2 = uniform_dist(e1);
