@@ -105,8 +105,8 @@ public:
 
     auto pages = pages_by_filter(
         [id](const IndexHeader &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
-    *minResult = std::numeric_limits<dariadb::Time>::max();
-    *maxResult = std::numeric_limits<dariadb::Time>::min();
+    *minResult = dariadb::MAX_TIME;
+    *maxResult = dariadb::MIN_TIME;
     auto res = false;
     for (auto pname : pages) {
       Page_Ptr pg = open_page_to_read(pname);
@@ -323,7 +323,7 @@ public:
 
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-    dariadb::Time res = std::numeric_limits<dariadb::Time>::max();
+    dariadb::Time res = dariadb::MAX_TIME;
     for (auto pname : page_list) {
       auto ih = Page::readIndexHeader(pname + "i");
       res = std::min(ih.minTime, res);
@@ -338,7 +338,7 @@ public:
 
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-    dariadb::Time res = std::numeric_limits<dariadb::Time>::max();
+    dariadb::Time res = dariadb::MAX_TIME;
     for (auto pname : page_list) {
       auto ih = Page::readIndexHeader(pname + "i");
       res = std::max(ih.maxTime, res);

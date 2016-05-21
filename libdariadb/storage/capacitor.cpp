@@ -74,8 +74,8 @@ struct level {
 
   void clear() {
       hdr->pos = 0;
-      hdr->_maxTime=std::numeric_limits<dariadb::Time>::min();
-      hdr->_minTime=std::numeric_limits<dariadb::Time>::max();
+      hdr->_maxTime=dariadb::MIN_TIME;
+      hdr->_minTime=dariadb::MAX_TIME;
   }
 
   bool empty() const { return hdr->pos == 0; }
@@ -136,8 +136,8 @@ public:
   Private(MeasWriter *stor, const Capacitor::Params &params)
       : _stor(stor), _params(params),
         mmap(nullptr), _size(0) {
-      _maxTime=std::numeric_limits<dariadb::Time>::min();
-      _minTime=std::numeric_limits<dariadb::Time>::max();
+      _maxTime=dariadb::MIN_TIME;
+      _minTime=dariadb::MAX_TIME;
     open_or_create();
   }
 
@@ -211,8 +211,8 @@ public:
       it->lvl = uint8_t(lvl);
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
-      it->_minTime=std::numeric_limits<dariadb::Time>::max();
-      it->_maxTime=std::numeric_limits<dariadb::Time>::min();
+      it->_minTime=dariadb::MAX_TIME;
+      it->_maxTime=dariadb::MIN_TIME;
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
       for (size_t i = 0; i < it->count; ++i) {
         std::memset(&m[i], 0, sizeof(FlaggedMeas));
@@ -484,8 +484,8 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
-    *minResult = std::numeric_limits<dariadb::Time>::max();
-    *maxResult = std::numeric_limits<dariadb::Time>::min();
+    *minResult = dariadb::MAX_TIME;
+    *maxResult = dariadb::MIN_TIME;
     bool result = false;
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];

@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < count; i++) {
       dc.append(t);
       t += deltas[i % deltas.size()];
-      if (t > std::numeric_limits<dariadb::Time>::max()) {
+      if (t > dariadb::MAX_TIME) {
         t = 0;
       }
     }

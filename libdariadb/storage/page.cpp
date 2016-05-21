@@ -256,8 +256,8 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   res->iheader = reinterpret_cast<IndexHeader *>(iregion);
   res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
 
-  res->iheader->maxTime = std::numeric_limits<dariadb::Time>::min();
-  res->iheader->minTime = std::numeric_limits<dariadb::Time>::max();
+  res->iheader->maxTime = dariadb::MIN_TIME;
+  res->iheader->minTime = dariadb::MAX_TIME;
   res->iheader->chunk_per_storage = chunk_per_storage;
   res->iheader->chunk_size = chunk_size;
   res->iheader->is_sorted = false;
@@ -481,8 +481,8 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
 
   cur_index->offset = header->pos;
 
-  cur_index->minTime = std::numeric_limits<dariadb::Time>::max();
-  cur_index->maxTime = std::numeric_limits<dariadb::Time>::min();
+  cur_index->minTime = dariadb::MAX_TIME;
+  cur_index->maxTime = dariadb::MIN_TIME;
 
   header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
   header->addeded_chunks++;

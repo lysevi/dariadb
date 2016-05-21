@@ -110,8 +110,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         readed_t++;
       }
     }
-    dariadb::Time minT = std::numeric_limits<dariadb::Time>::max(),
-                  maxT = std::numeric_limits<dariadb::Time>::min();
+    dariadb::Time minT = dariadb::MAX_TIME,
+                  maxT = dariadb::MIN_TIME;
     BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
     BOOST_CHECK_EQUAL(minT, dariadb::Time(0));
 
