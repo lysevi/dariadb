@@ -1661,7 +1661,7 @@ public:
     leaf_node *leaf = static_cast<leaf_node *>(n);
 
     int slot = find_lower(leaf, key);
-    return iterator(leaf, slot);
+    return iterator(leaf, (unsigned short)(slot));
   }
 
   /// Searches the B+ tree and returns a constant iterator to the
@@ -1702,7 +1702,7 @@ public:
     leaf_node *leaf = static_cast<leaf_node *>(n);
 
     int slot = find_upper(leaf, key);
-    return iterator(leaf, slot);
+    return iterator(leaf, (unsigned short)(slot));
   }
 
   /// Searches the B+ tree and returns a constant iterator to the
