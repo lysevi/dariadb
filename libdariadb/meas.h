@@ -8,7 +8,7 @@
 #include <set>
 #include <stdint.h>
 #include <vector>
-
+#include <limits>
 namespace dariadb {
 typedef uint64_t Time;
 typedef uint64_t Id;
@@ -16,6 +16,9 @@ typedef uint32_t Flag;
 typedef double Value;
 typedef std::vector<Id> IdArray;
 typedef std::set<Id> IdSet;
+
+    const Time MIN_TIME=std::numeric_limits<dariadb::Time>::min();
+    const Time MAX_TIME=std::numeric_limits<dariadb::Time>::max();
 
 bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 

@@ -35,6 +35,8 @@ struct level_header {
   uint8_t lvl;
   uint64_t count;
   uint64_t pos;
+  dariadb::Time _minTime;
+  dariadb::Time _maxTime;
 };
 #pragma pack(pop)
 
@@ -59,12 +61,22 @@ struct level {
   void push_back(const Meas &m) {
     begin[hdr->pos].value = m;
     ++hdr->pos;
+    hdr->_minTime=std::min(hdr->_minTime,m.time);
+    hdr->_maxTime=std::max(hdr->_maxTime,m.time);
   }
 
   /// need for k-merge
-  void push_back(const FlaggedMeas &m) { this->push_back(m.value); }
+  void push_back(const FlaggedMeas &m) {
+      this->push_back(m.value);
+      hdr->_minTime=std::min(hdr->_minTime,m.value.time);
+      hdr->_maxTime=std::max(hdr->_maxTime,m.value.time);
+  }
 
-  void clear() { hdr->pos = 0; }
+  void clear() {
+      hdr->pos = 0;
+      hdr->_maxTime=std::numeric_limits<dariadb::Time>::min();
+      hdr->_minTime=std::numeric_limits<dariadb::Time>::max();
+  }
 
   bool empty() const { return hdr->pos == 0; }
 
@@ -119,13 +131,13 @@ public:
     size_t levels_count;
     size_t _writed;
     size_t _memvalues_pos;
-    dariadb::Time _minTime;
-    dariadb::Time _maxTime;
   };
 #pragma pack(pop)
   Private(MeasWriter *stor, const Capacitor::Params &params)
       : _stor(stor), _params(params),
         mmap(nullptr), _size(0) {
+      _maxTime=std::numeric_limits<dariadb::Time>::min();
+      _minTime=std::numeric_limits<dariadb::Time>::max();
     open_or_create();
   }
 
@@ -192,14 +204,15 @@ public:
     _header->B = _params.B;
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
-    _header->_minTime=std::numeric_limits<dariadb::Time>::max();
-    _header-> _maxTime=std::numeric_limits<dariadb::Time>::min();
+
     auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = reinterpret_cast<level_header *>(pos);
       it->lvl = uint8_t(lvl);
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
+      it->_minTime=std::numeric_limits<dariadb::Time>::max();
+      it->_maxTime=std::numeric_limits<dariadb::Time>::min();
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
       for (size_t i = 0; i < it->count; ++i) {
         std::memset(&m[i], 0, sizeof(FlaggedMeas));
@@ -213,6 +226,10 @@ public:
     _levels.resize(_header->levels_count);
     _memvalues_size = _header->B;
     _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
+    for(size_t i=0;i<_header->_memvalues_pos;++i){
+        _minTime = std::min(_minTime, _memvalues[i].value.time);
+        _maxTime = std::max(_maxTime, _memvalues[i].value.time);
+    }
 
     auto pos = _raw_data + _memvalues_size * sizeof(FlaggedMeas);
 
@@ -249,8 +266,8 @@ public:
     _memvalues[_header->_memvalues_pos].value = value;
     _header->_memvalues_pos++;
     ++_header->_writed;
-    _header->_minTime = std::min(_header->_minTime, value.time);
-    _header->_maxTime = std::max(_header->_maxTime, value.time);
+    _minTime = std::min(_minTime, value.time);
+    _maxTime = std::max(_maxTime, value.time);
     return append_result(1, 0);
   }
 
@@ -315,29 +332,6 @@ public:
     }
 
     target->clear();
-    //TODO thread safe?
-    _header->_minTime=std::numeric_limits<dariadb::Time>::max();
-    _header-> _maxTime=std::numeric_limits<dariadb::Time>::min();
-
-    for (size_t i = 0; i < this->_levels.size(); ++i) {
-      if (_levels[i].empty()) {
-        continue;
-      }
-      for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-          auto m = _levels[i].at(j);
-          if (m.drop_end) {
-            continue;
-          }
-          if(_header->_minTime>m.value.time){
-              _header->_minTime=m.value.time;
-          }else{
-              if(_header->_maxTime<m.value.time){
-                  _header->_maxTime=m.value.time;
-              }
-          }
-
-      }
-    }
   }
 
   struct low_level_stor_pusher {
@@ -378,8 +372,6 @@ public:
     _header->_memvalues_pos = 0;
     _header->_size_B = 0;
     _header->_writed = 0;
-    _header->_minTime=std::numeric_limits<dariadb::Time>::max();
-    _header-> _maxTime=std::numeric_limits<dariadb::Time>::min();
   }
 
   Reader_ptr readInterval(const QueryInterval &q) {
@@ -387,7 +379,8 @@ public:
     CapReader *raw = new CapReader;
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
-    if (q.from > _header->_minTime) {
+
+    if (q.from > this->minTime()) {
       auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
       for (auto kv : tp_read_data) {
         sub_result[kv.first].insert(kv.second);
@@ -397,6 +390,12 @@ public:
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
         continue;
+      }
+      if(!inInterval(q.from,q.to,_levels[i].hdr->_minTime)
+              && !inInterval(q.from,q.to,_levels[i].hdr->_maxTime)
+              && !inInterval(_levels[i].hdr->_minTime,_levels[i].hdr->_maxTime,q.from)
+              && !inInterval(_levels[i].hdr->_minTime,_levels[i].hdr->_maxTime,q.to)){
+          continue;
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
@@ -461,8 +460,26 @@ public:
     return readInTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
 
-  dariadb::Time minTime() const { return _header->_minTime; }
-  dariadb::Time maxTime() const { return _header->_maxTime; }
+  dariadb::Time minTime() const {
+      boost::shared_lock<boost::shared_mutex> lock(_mutex);
+      dariadb::Time result=dariadb::MAX_TIME;
+      for(size_t i=0;i<_levels.size();++i){
+          if(!_levels[i].empty()){
+              result=std::min(result,_levels[i].hdr->_minTime);
+          }
+      }
+      return std::min(result,_minTime);
+  }
+  dariadb::Time maxTime() const {
+      boost::shared_lock<boost::shared_mutex> lock(_mutex);
+      dariadb::Time result=dariadb::MIN_TIME;
+      for(size_t i=0;i<_levels.size();++i){
+          if(!_levels[i].empty()){
+              result=std::max(result,_levels[i].hdr->_maxTime);
+          }
+      }
+      return std::max(result,_maxTime);
+  }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
@@ -472,6 +489,9 @@ public:
     bool result = false;
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
+      if (m.drop_end) {
+        continue;
+      }
       if (m.value.id == id) {
         *minResult = std::min(*minResult, m.value.time);
         *maxResult = std::max(*maxResult, m.value.time);
@@ -512,28 +532,33 @@ public:
     dariadb::IdSet unreaded_ids;
     dariadb::Meas::Id2Meas sub_res;
 
-    for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
-      auto m = _memvalues[j];
-      if (m.drop_end) {
-        continue;
-      }
-      if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
-        insert_if_older(sub_res, m.value);
-        readed_ids.insert(m.value.id);
-      } else {
-        unreaded_ids.insert(m.value.id);
-      }
+    if(inInterval(_minTime,_maxTime,q.time_point)){
+        for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+            auto m = _memvalues[j];
+            if (m.drop_end) {
+                continue;
+            }
+            if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
+                insert_if_older(sub_res, m.value);
+                readed_ids.insert(m.value.id);
+            } else {
+                unreaded_ids.insert(m.value.id);
+            }
+        }
     }
-
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
         continue;
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
+          if(!inInterval(_levels[i].hdr->_minTime,_levels[i].hdr->_maxTime,q.time_point)){
+              continue;
+          }
         auto m = _levels[i].at(j);
         if (m.drop_end) {
           continue;
         }
+
         if (m.value.time > q.time_point) {
           break;
         }
@@ -582,7 +607,9 @@ protected:
   FlaggedMeas *_memvalues;
   size_t _memvalues_size;
 
-  boost::shared_mutex _mutex;
+  mutable boost::shared_mutex _mutex;
+  dariadb::Time _minTime;
+  dariadb::Time _maxTime;
 };
 
 Capacitor::~Capacitor() {}
