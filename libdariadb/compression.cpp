@@ -1,4 +1,5 @@
 #include "compression.h"
+#include "compression/id.h"
 #include "compression/delta.h"
 #include "compression/flag.h"
 #include "compression/xor.h"
@@ -15,7 +16,7 @@ using namespace dariadb::compression;
 class CopmressedWriter::Private {
 public:
   Private(const BinaryBuffer_Ptr &bw)
-      : time_comp(bw), value_comp(bw), flag_comp(bw), src_comp(bw) {
+      :id_comp(bw), time_comp(bw), value_comp(bw), flag_comp(bw), src_comp(bw) {
     _is_first = true;
     _is_full = false;
   }
@@ -25,25 +26,23 @@ public:
       _first = m;
       _is_first = false;
     }
-
-    if (_first.id != m.id) {
-      std::stringstream ss{};
-      ss << "(_first.id != m.id)"
-         << " id:" << m.id << " first.id:" << _first.id;
-      throw MAKE_EXCEPTION(ss.str().c_str());
-    }
-    if (_is_full || time_comp.is_full() || value_comp.is_full() || flag_comp.is_full() ||
-        src_comp.is_full()) {
+    if (_is_full
+            || id_comp.is_full()
+            || time_comp.is_full()
+            || value_comp.is_full()
+            || flag_comp.is_full()
+            || src_comp.is_full()) {
       _is_full = true;
       return false;
     }
 
+    auto i_f = id_comp.append(m.id);
     auto t_f = time_comp.append(m.time);
     auto f_f = value_comp.append(m.value);
     auto v_f = flag_comp.append(m.flag);
     auto s_f = src_comp.append(m.src);
 
-    if (!t_f || !f_f || !v_f || !s_f) {
+    if (!t_f || !f_f || !v_f || !s_f ||!i_f) {
       _is_full = true;
       return false;
     } else {
@@ -58,6 +57,7 @@ public:
   CopmressedWriter::Position get_position() const {
     CopmressedWriter::Position result;
     result.first = _first;
+    result.id_pos = id_comp.get_position();
     result.time_pos = time_comp.get_position();
     result.value_pos = value_comp.get_position();
     result.flag_pos = flag_comp.get_position();
@@ -72,6 +72,7 @@ public:
     _is_first = pos.is_first;
     _is_full = pos.is_full;
 
+    id_comp.restore_position(pos.id_pos);
     time_comp.restore_position(pos.time_pos);
     value_comp.restore_position(pos.value_pos);
     flag_comp.restore_position(pos.flag_pos);
@@ -82,6 +83,7 @@ protected:
   Meas _first;
   bool _is_first;
   bool _is_full;
+  IdCompressor id_comp;
   DeltaCompressor time_comp;
   XorCompressor value_comp;
   FlagCompressor flag_comp;
@@ -91,29 +93,32 @@ protected:
 class CopmressedReader::Private {
 public:
   Private(const BinaryBuffer_Ptr &bw, const Meas &first)
-      : time_dcomp(bw, first.time), value_dcomp(bw, first.value),
+      : id_dcomp(bw,first.id),
+        time_dcomp(bw, first.time), value_dcomp(bw, first.value),
         flag_dcomp(bw, first.flag), src_dcomp(bw, first.src) {
     _first = first;
   }
 
   Meas read() {
     Meas result{};
+    result.id = id_dcomp.read();
     result.time = time_dcomp.read();
     result.value = value_dcomp.read();
     result.flag = flag_dcomp.read();
     result.src = src_dcomp.read();
-    result.id = _first.id;
     return result;
   }
 
   bool is_full() const {
-    return this->time_dcomp.is_full() || this->value_dcomp.is_full() ||
+    return this->id_dcomp.is_full() ||
+           this->time_dcomp.is_full() || this->value_dcomp.is_full() ||
            this->flag_dcomp.is_full() || this->src_dcomp.is_full();
   }
 
 protected:
   dariadb::Meas _first;
 
+  IdDeCompressor id_dcomp;
   DeltaDeCompressor time_dcomp;
   XorDeCompressor value_dcomp;
   FlagDeCompressor flag_dcomp;

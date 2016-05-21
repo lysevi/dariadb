@@ -618,6 +618,7 @@ BOOST_AUTO_TEST_CASE(CompressedBlock) {
   auto zer_t = dariadb::timeutil::current_time();
   for (int i = 0;; i++) {
     auto m = dariadb::Meas::empty();
+    m.id=dariadb::Id(i);
     m.time = zer_t++;
     m.flag = i;
     m.src = i;
