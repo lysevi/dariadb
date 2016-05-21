@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <compression.h>
+#include <compression/id.h>
 #include <compression/delta.h>
 #include <compression/flag.h>
 #include <compression/xor.h>
@@ -560,6 +561,35 @@ BOOST_AUTO_TEST_CASE(FlagCompressor) {
     }
     bw->reset_pos();
     FlagDeCompressor fd(bw, flags.front());
+    flags.pop_front();
+    for (auto f : flags) {
+      auto v = fd.read();
+      BOOST_CHECK_EQUAL(v, f);
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(IdCompressor) {
+  { // 1,2,3,4,5...
+    const size_t test_buffer_size = 1000;
+    uint8_t buffer[test_buffer_size];
+    std::fill(std::begin(buffer), std::end(buffer), 0);
+    using dariadb::compression::IdCompressor;
+    using dariadb::compression::IdDeCompressor;
+
+    dariadb::utils::Range rng{std::begin(buffer), std::end(buffer)};
+    auto bw = std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+    IdCompressor fc(bw);
+
+    std::list<dariadb::Flag> flags{};
+    dariadb::Id delta = 1;
+    for (int i = 0; i < 10; i++) {
+      fc.append(delta);
+      flags.push_back(delta);
+      delta++;
+    }
+    bw->reset_pos();
+    IdDeCompressor fd(bw, flags.front());
     flags.pop_front();
     for (auto f : flags) {
       auto v = fd.read();

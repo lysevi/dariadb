@@ -20,6 +20,9 @@ typedef std::set<Id> IdSet;
     const Time MIN_TIME=std::numeric_limits<dariadb::Time>::min();
     const Time MAX_TIME=std::numeric_limits<dariadb::Time>::max();
 
+    const Id MIN_ID=std::numeric_limits<dariadb::Id>::min();
+    const Id MAX_ID=std::numeric_limits<dariadb::Id>::max();
+
 bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 
 struct Meas {
