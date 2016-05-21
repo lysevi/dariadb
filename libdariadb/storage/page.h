@@ -102,7 +102,7 @@ private:
     uint32_t pos;           /// position number of 'index' field in index file.
   };
   /// cache of openned chunks. before search chunk in page, we search in cache.
-  std::map<dariadb::Id, ChunkWithIndex> _openned_chunks;
+  ChunkWithIndex _openned_chunk;
 
 public:
   uint8_t *region;  // page  file mapp region

@@ -24,7 +24,7 @@ bool IdCompressor::append(dariadb::Id v) {
     }
     _bw->clrbit().incbit();
   } else {
-    if (_bw->free_size() < 8) {
+    if (_bw->free_size() < 9) {
       return false;
     }
     _bw->setbit().incbit();

@@ -357,10 +357,10 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
     return false;
   }
 
-  auto fres = _openned_chunks.find(m.id);
-  if (fres != _openned_chunks.end()) {
-    if (fres->second.ch->append(m)) {
-      update_index_info(fres->second.index, fres->second.pos, fres->second.ch, m);
+
+  if (_openned_chunk.ch!=nullptr && !_openned_chunk.ch->is_full()) {
+    if (_openned_chunk.ch->append(m)) {
+      update_index_info(_openned_chunk.index, _openned_chunk.pos, _openned_chunk.ch, m);
       return true;
     }
   }
@@ -382,16 +382,16 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       this->header->max_chunk_id++;
       ptr->info->id = this->header->max_chunk_id;
-      _openned_chunks[m.id].ch = ptr;
+      _openned_chunk.ch = ptr;
 
       init_chunk_index_rec(ptr, ptr_to_begin);
       return true;
     } else {
-      if ((info->first.id == m.id) && (!info->is_readonly)) {
+      if ((!info->is_readonly)) {
         Chunk_Ptr ptr = read_chunk_from_ptr(byte_it);
         if (ptr->append(m)) {
-          _openned_chunks[m.id].ch = ptr;
-          update_chunk_index_rec(ptr, m);
+          _openned_chunk.ch = ptr;
+          //update_chunk_index_rec(ptr, m);
           return true;
         }
       }
@@ -498,8 +498,8 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   cur_index->minTime = std::min(cur_index->minTime, ch->info->minTime);
   cur_index->maxTime = std::max(cur_index->maxTime, ch->info->maxTime);
 
-  _openned_chunks[ch->info->first.id].index = cur_index;
-  _openned_chunks[ch->info->first.id].pos = pos_index;
+  _openned_chunk.index = cur_index;
+  _openned_chunk.pos = pos_index;
   // TODO restore this (flush)
   //  this->page_mmap->flush(get_header_offset(), sizeof(PageHeader));
   //  this->mmap->flush(get_index_offset() + sizeof(Page_ChunkIndex),
