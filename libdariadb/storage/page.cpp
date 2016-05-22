@@ -91,6 +91,7 @@ public:
         continue;
       }
 
+
       auto it_to = fres->second.upper_bound(this->_to);
       auto it_from = fres->second.lower_bound(this->_from);
 
@@ -104,7 +105,10 @@ public:
       }
       for (auto it = it_from; it != it_to; ++it) {
         auto _index_it = link->index[it->second];
-        if (dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
+
+        auto bloom_result=check_blooms(_index_it);
+
+        if (bloom_result) {
           if (check_index_rec(_index_it)) {
             this->read_poses.push_back(it->second);
           }
@@ -114,6 +118,21 @@ public:
     if (read_poses.empty()) {
       _is_end = true;
     }
+  }
+
+  bool check_blooms(const Page_ChunkIndex&_index_it)const{
+      auto id_bloom_result=false;
+      for(size_t i=0;i<_ids.size();++i){
+          if(dariadb::storage::bloom_check(_index_it.id_bloom, _ids[i])){
+              id_bloom_result=true;
+              break;
+          }
+      }
+      auto flag_bloom_result=false;
+      if (dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
+          flag_bloom_result=true;
+      }
+      return id_bloom_result&&flag_bloom_result;
   }
 
   ChunkLinkList resulted_links;
@@ -391,7 +410,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         Chunk_Ptr ptr = read_chunk_from_ptr(byte_it);
         if (ptr->append(m)) {
           _openned_chunk.ch = ptr;
-          //update_chunk_index_rec(ptr, m);
+          update_chunk_index_rec(ptr, m);
           return true;
         }
       }
@@ -454,6 +473,8 @@ void Page::update_index_info(Page_ChunkIndex *cur_index, const uint32_t pos,
 
   cur_index->minTime = std::min(cur_index->minTime, m.time);
   cur_index->maxTime = std::max(cur_index->maxTime, m.time);
+  cur_index->flag_bloom = ptr->info->flag_bloom;
+  cur_index->id_bloom = ptr->info->id_bloom;
   auto kv = std::make_pair(cur_index->maxTime, pos);
   _itree.insert(kv);
   tree->insert(kv);
@@ -476,6 +497,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   // cur_index->last = ch->info->last;
 
   cur_index->flag_bloom = ch->info->flag_bloom;
+  cur_index->id_bloom = ch->info->id_bloom;
   cur_index->is_readonly = ch->info->is_readonly;
   cur_index->is_init = true;
 

@@ -30,6 +30,7 @@ Chunk::Chunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size, Meas first_m)
   info->minTime = first_m.time;
   info->maxTime = first_m.time;
   info->flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
+  info->id_bloom = dariadb::storage::bloom_empty<dariadb::Id>();
 
   std::fill(_buffer_t, _buffer_t + info->size, 0);
 }
@@ -40,6 +41,13 @@ Chunk::~Chunk() {
     delete[] _buffer_t;
   }
   this->bw = nullptr;
+}
+
+bool Chunk::check_id(const Id &id) {
+    if (!dariadb::storage::bloom_check(info->id_bloom, id)) {
+        return false;
+    }
+    return true;
 }
 
 bool Chunk::check_flag(const Flag &f) {
@@ -104,6 +112,7 @@ bool ZippedChunk::append(const Meas &m) {
     info->minTime = std::min(info->minTime, m.time);
     info->maxTime = std::max(info->maxTime, m.time);
     info->flag_bloom = dariadb::storage::bloom_add(info->flag_bloom, m.flag);
+    info->id_bloom = dariadb::storage::bloom_add(info->id_bloom, m.id);
     info->last = m;
     return true;
   }

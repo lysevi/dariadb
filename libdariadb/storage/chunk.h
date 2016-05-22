@@ -20,6 +20,7 @@ struct ChunkIndexInfo {
   bool is_zipped;
   Meas first, last;
   Time minTime, maxTime;
+  dariadb::Id id_bloom;
   dariadb::Flag flag_bloom;
   uint32_t count;
   uint32_t bw_pos;
@@ -52,6 +53,7 @@ public:
   virtual bool is_full() const = 0;
   virtual Reader_Ptr get_reader() = 0;
   bool check_flag(const Flag &f);
+  bool check_id(const Id &id);
   // TODO remove?
   void lock() { _locker.lock(); }
   void unlock() { _locker.unlock(); }
