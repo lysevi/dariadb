@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
   const dariadb::Time from = 0;
   const dariadb::Time to = from + 1021;
-  const dariadb::Time step = 1;
+  const dariadb::Time step = 10;
 
   {
     if (dariadb::utils::fs::path_exists(storage_path)) {

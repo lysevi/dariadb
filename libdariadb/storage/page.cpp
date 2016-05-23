@@ -82,36 +82,17 @@ public:
     this->read_poses.clear();
 
     for (auto i : _ids) {
+		if (i == 47) {
+			std::cout << "!\n";
+		}
 		for (size_t pos = 0; pos < this->link->iheader->count; ++pos) {
-			/*auto fres = this->link->_mtree.find(i);
-			if (fres == this->link->_mtree.end()) {
-				continue;
-			}
-			auto sz = fres->second.size();
-			if (sz == size_t(0)) {
-				continue;
-			}
-
-
-			auto it_to = fres->second.upper_bound(this->_to);
-			auto it_from = fres->second.lower_bound(this->_from);
-
-			if (it_from != fres->second.begin()) {
-				if (it_from->first != this->_from) {
-					--it_from;
-				}
-			}
-			if ((it_to == it_from) && (it_to != fres->second.end())) {
-				it_to++;
-			}*/
-			//for (auto it = it_from; it != it_to; ++it) 
 			{
 				auto _index_it = link->index[pos];
 				if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, this->_from)
 					|| dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, this->_to)
 					|| dariadb::utils::inInterval(_from, _to, _index_it.minTime)
 					|| dariadb::utils::inInterval(_from, _to, _index_it.maxTime)) {
-					auto bloom_result = check_blooms(_index_it);
+					auto bloom_result = check_blooms(_index_it,i);
 
 					if (bloom_result) {
 						if (check_index_rec(_index_it)) {
@@ -127,13 +108,10 @@ public:
     }
   }
 
-  bool check_blooms(const Page_ChunkIndex&_index_it)const{
+  bool check_blooms(const Page_ChunkIndex&_index_it, dariadb::Id id)const{
       auto id_bloom_result=false;
-      for(size_t i=0;i<_ids.size();++i){
-          if(dariadb::storage::bloom_check(_index_it.id_bloom, _ids[i])){
+      if(dariadb::storage::bloom_check(_index_it.id_bloom, id)){
               id_bloom_result=true;
-              break;
-          }
       }
       auto flag_bloom_result=false;
       if (dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {

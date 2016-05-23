@@ -70,7 +70,7 @@ public:
   append_result append(const Meas &value) {
     append_result result{};
     result = PageManager::instance()->append(value);
-    //result = mem_cap->append(value);
+    result = mem_cap->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -213,6 +213,9 @@ public:
     UnionReaderSet *raw_result = new UnionReaderSet();
 
     for (auto id : q.ids) {
+		if (id == 47) {
+			std::cout << "!\n";
+		}
       InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader();
       raw_res->page_reader = Reader_ptr{raw_rdr};

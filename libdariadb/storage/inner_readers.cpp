@@ -54,6 +54,10 @@ void InnerReader::readNext(storage::ReaderClb *clb) {
   }
   std::shared_ptr<CursorReader> reader_clbk{new CursorReader};
   for (auto id : this->_ids) {
+	  if (id == 47) {
+		  std::cout << "!\n";
+	  }
+
 	  for (auto ch : _cursors) {
 		  while (!ch->is_end()) {
 			  ch->readNext(reader_clbk.get());
