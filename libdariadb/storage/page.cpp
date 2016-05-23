@@ -81,7 +81,7 @@ public:
     this->read_poses.clear();
 
     for (auto i : _ids) {
-		for (size_t pos = 0; pos < this->link->iheader->count; ++pos) {
+		for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
 			{
 				auto _index_it = link->index[pos];
 				if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, this->_from)
@@ -360,7 +360,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
   if (_openned_chunk.ch!=nullptr && !_openned_chunk.ch->is_full()) {
     if (_openned_chunk.ch->append(m)) {
-      update_index_info(_openned_chunk.index, _openned_chunk.pos, _openned_chunk.ch, m);
+      update_index_info(_openned_chunk.index, _openned_chunk.ch, m);
       return true;
     }
   }
@@ -384,7 +384,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       ptr->info->id = this->header->max_chunk_id;
       _openned_chunk.ch = ptr;
 
-      init_chunk_index_rec(ptr, ptr_to_begin);
+      init_chunk_index_rec(ptr);
       return true;
     } else {
       if ((!info->is_readonly)) {
@@ -420,14 +420,14 @@ void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas &m) 
     auto cur_index = &index[i];
     if ((cur_index->meas_id == ptr->info->first.id) &&
         (cur_index->meas_id == ptr->info->first.time)) {
-      update_index_info(cur_index, i, ptr, m);
+      update_index_info(cur_index, ptr, m);
       return;
     }
   }
   assert(false);
 }
 
-void Page::update_index_info(Page_ChunkIndex *cur_index, const uint32_t pos,
+void Page::update_index_info(Page_ChunkIndex *cur_index,
                              const Chunk_Ptr &ptr, const dariadb::Meas &m) {
   // cur_index->last = ptr->info->last;
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
@@ -461,10 +461,7 @@ void Page::update_index_info(Page_ChunkIndex *cur_index, const uint32_t pos,
   tree->insert(kv);*/
 }
 
-void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
-  auto index_rec = ch->info;
-  // auto buffer = ch->_buffer_t;
-
+void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   assert(header->chunk_size == ch->info->size);
 
   uint32_t pos_index = 0;
@@ -536,8 +533,7 @@ void Page::dec_reader() {
   header->count_readers--;
 }
 
-bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                                        dariadb::Time *maxResult) {
+bool dariadb::storage::Page::minMaxTime(dariadb::Id, dariadb::Time*,dariadb::Time*) {
   return false;
 }
 
