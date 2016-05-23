@@ -418,8 +418,7 @@ Chunk_Ptr Page::read_chunk_from_ptr(const uint8_t *ptr) const {
 void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas &m) {
   for (size_t i = 0; i < header->addeded_chunks; ++i) {
     auto cur_index = &index[i];
-    if ((cur_index->meas_id == ptr->info->first.id) &&
-        (cur_index->meas_id == ptr->info->first.time)) {
+    if (cur_index->chunk_id == ptr->info->id) {
       update_index_info(cur_index, ptr, m);
       return;
     }
@@ -471,11 +470,11 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
 
   auto cur_index = &index[pos_index];
   cur_index->chunk_id = ch->info->id;
-  cur_index->meas_id = ch->info->first.id;
+  //cur_index->meas_id = ch->info->first.id;
   // cur_index->last = ch->info->last;
 
   cur_index->flag_bloom = ch->info->flag_bloom;
-  cur_index->is_readonly = ch->info->is_readonly;
+//  cur_index->is_readonly = ch->info->is_readonly;
   cur_index->is_init = true;
 
   cur_index->offset = header->pos;

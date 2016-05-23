@@ -45,11 +45,11 @@ struct IndexHeader {
 
 struct Page_ChunkIndex {
   Time minTime, maxTime;    // min max time of linked chunk
-  dariadb::Id meas_id;      // chunk->info->first.id
+  //dariadb::Id meas_id;      // chunk->info->first.id
   dariadb::Flag flag_bloom; // bloom filters of writed meases
   dariadb::Id   id_bloom;
   uint64_t chunk_id;        // chunk->id
-  bool is_readonly;         // chunk is full?
+  //bool is_readonly;         // chunk is full?
   uint64_t offset;          // offset in bytes of chunk in page
   bool is_init;             // is init :)
 };
