@@ -489,7 +489,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
   header->addeded_chunks++;
 
-  auto kv = std::make_pair(index_rec->maxTime, pos_index);
+  //auto kv = std::make_pair(index_rec->maxTime, pos_index);
   //_itree.insert(kv);
   //_mtree[index_rec->first.id].insert(kv);
 
