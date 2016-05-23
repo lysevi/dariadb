@@ -532,7 +532,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
 }
 
 bool Page::is_full() const {
-  return this->_free_poses.empty();
+  return this->_free_poses.empty() && (_openned_chunk.ch==nullptr || _openned_chunk.ch->is_full());
 }
 
 ChunkLinkList Page::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,

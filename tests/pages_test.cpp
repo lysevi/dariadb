@@ -7,6 +7,7 @@
 #include <storage/manifest.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
+#include <storage/bloom_filter.h>
 #include <utils/fs.h>
 #include <utils/utils.h>
 
@@ -50,7 +51,9 @@ dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count,
     first.flag = dariadb::Flag(i);
     first.time = t;
     first.value = dariadb::Value(i);
-
+	if (first.time == 240) {
+		first.time = 240;
+	}
     auto res = PageManager::instance()->append(first);
     addeded.push_back(first);
     BOOST_CHECK(res.writed == 1);
@@ -92,24 +95,46 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     auto links_list = PageManager::instance()->chunksByIterval(
         dariadb::storage::QueryInterval(all_id_array, 0, 0, t));
     PageManager::instance()->readLinks(links_list)->readAll(&all_chunks);
-    auto readed_t = dariadb::Time(0);
 
-    for (auto ch : all_chunks) {
+	std::map<dariadb::Id, dariadb::Meas::MeasList> id2meas;
+	for (auto add : addeded) {
+		id2meas[add.id].push_back(add);
+	}
+	/*std::sort(all_chunks.begin(), all_chunks.end(), 
+		[](const dariadb::storage::Chunk_Ptr&l, const dariadb::storage::Chunk_Ptr&r) 
+		{
+			return l->info->last.time < r->info->last.time;
+		}
+	);*/
+	for (auto id : all_id_array) {
+		dariadb::Meas::MeasList mlist;
+		for (auto ch : all_chunks) {
+			if (!dariadb::storage::bloom_check(ch->info->id_bloom, id)) { 
+				continue; 
+			}
+			minTime = std::min(minTime, ch->info->minTime);
+			ch->bw->reset_pos();
 
-      minTime = std::min(minTime, ch->info->minTime);
-      ch->bw->reset_pos();
-
-      dariadb::compression::CopmressedReader crr(ch->bw, ch->info->first);
-      BOOST_CHECK_EQUAL(ch->info->first.value, addeded.front().value);
-      addeded.pop_front();
-      for (uint32_t i = 0; i < ch->info->count; i++) {
-        auto m = crr.read();
-        auto a = addeded.front();
-        BOOST_CHECK_EQUAL(m.value, a.value);
-        addeded.pop_front();
-        readed_t++;
-      }
-    }
+			dariadb::compression::CopmressedReader crr(ch->bw, ch->info->first);
+			if (ch->info->first.id == id) {
+				mlist.push_back(ch->info->first);
+			}
+			for (uint32_t i = 0; i < ch->info->count; i++) {
+				auto m = crr.read();
+				if (m.id != id) {
+					continue;
+				}
+				mlist.push_back(m);
+			}
+		}
+		auto addeded_lst = id2meas[id];
+		auto addeded_iter = addeded_lst.cbegin();
+		for (auto &m : mlist) {
+			BOOST_CHECK_EQUAL(m.time, addeded_iter->time);
+			BOOST_CHECK_EQUAL(m.value, addeded_iter->value);
+			++addeded_iter;
+		}
+	}
     dariadb::Time minT = dariadb::MAX_TIME,
                   maxT = dariadb::MIN_TIME;
     BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
