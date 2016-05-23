@@ -69,8 +69,8 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    // result = PageManager::instance()->append(value);
-    result = mem_cap->append(value);
+    result = PageManager::instance()->append(value);
+    //result = mem_cap->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -216,6 +216,7 @@ public:
       InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader();
       raw_res->page_reader = Reader_ptr{raw_rdr};
+	  raw_rdr->_ids.push_back(id);
 
       dariadb::Time minT, maxT;
       QueryInterval local_q = q;

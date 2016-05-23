@@ -36,10 +36,10 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader, dariadb::Time from
   dariadb::Meas::MeasList all{};
   reader->readAll(&all);
 
-  /* std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
+   std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
    for (auto &v : all) {
      _dict[v.id].push_back(v);
-   }*/
+   }
 
   dariadb::Id cur_id = all.front().id;
   dariadb::Value cur_val = all.front().value;

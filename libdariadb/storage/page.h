@@ -31,7 +31,7 @@ struct PageHeader {
 
 struct IndexHeader {
   uint32_t count; // count of values
-  uint64_t pos;   // next write pos(bytes)
+  //uint64_t pos;   // next write pos(bytes)
 
   dariadb::Time minTime;
   dariadb::Time maxTime;
@@ -114,8 +114,8 @@ public:
   Page_ChunkIndex *index;
   uint8_t *chunks;
 
-  indexTree _itree; // needed to sort index reccord on page closing. for fast search
-  PageMultiTree _mtree;
+  //indexTree _itree; // needed to sort index reccord on page closing. for fast search
+  //PageMultiTree _mtree;
   std::list<uint32_t> _free_poses;
 
   std::string filename;

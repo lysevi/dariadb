@@ -194,15 +194,15 @@ public:
       }
     }
 
-	std::vector<ChunkLink> forSort{ result.begin(),result.end() };
+	/*std::vector<ChunkLink> forSort{ result.begin(),result.end() };
 	std::sort(forSort.begin(), forSort.end(),
 		[](const dariadb::storage::ChunkLink&l, const dariadb::storage::ChunkLink&r)
 	{
 		return l.maxTime < r.maxTime;
 	}
-	);
+	);*/
 
-	return ChunkLinkList(forSort.begin(), forSort.end());
+	return result;// ChunkLinkList(forSort.begin(), forSort.end());
   }
 
   Cursor_ptr readLinks(const ChunkLinkList &links) {

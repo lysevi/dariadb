@@ -36,6 +36,7 @@ public:
   dariadb::Flag _flag;
   dariadb::Time _from;
   dariadb::Time _to;
+  dariadb::IdArray _ids;
   bool _tp_readed;
   bool end;
   IdArray _not_exist;
