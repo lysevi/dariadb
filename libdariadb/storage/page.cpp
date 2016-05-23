@@ -53,7 +53,9 @@ public:
       {
         auto ptr_to_begin = link->chunks + _index_it.offset;
         auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
-
+		if (ptr_to_chunk_info_raw->id == 388) {
+			std::cout << "!";
+		}
         ChunkLink sub_result;
         sub_result.id = ptr_to_chunk_info_raw->id;
         sub_result.pos = current_pos;
@@ -88,6 +90,9 @@ public:
 		for (size_t pos = 0; pos < this->link->iheader->count; ++pos) {
 			{
 				auto _index_it = link->index[pos];
+				if (_index_it.chunk_id == 388) {
+					std::cout << "!\n";
+				}
 				if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, this->_from)
 					|| dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, this->_to)
 					|| dariadb::utils::inInterval(_from, _to, _index_it.minTime)
@@ -354,6 +359,9 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
+	if (m.id == 47 && m.value == 99) {
+		std::cout << "!";
+	}
   assert(!this->readonly);
   boost::upgrade_lock<boost::shared_mutex> lg(_locker);
   if (is_full()) {
@@ -434,7 +442,7 @@ void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas &m) 
 void Page::update_index_info(Page_ChunkIndex *cur_index, const uint32_t pos,
                              const Chunk_Ptr &ptr, const dariadb::Meas &m) {
   // cur_index->last = ptr->info->last;
-  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ptr->info->first.id);
+  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
 
@@ -482,7 +490,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   // cur_index->last = ch->info->last;
 
   cur_index->flag_bloom = ch->info->flag_bloom;
-  cur_index->id_bloom = ch->info->id_bloom;
   cur_index->is_readonly = ch->info->is_readonly;
   cur_index->is_init = true;
 
@@ -502,8 +509,10 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint8_t *addr) {
   iheader->maxTime = std::max(iheader->maxTime, ch->info->maxTime);
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ch->info->first.id);
   iheader->count++;
+  
   cur_index->minTime = std::min(cur_index->minTime, ch->info->minTime);
   cur_index->maxTime = std::max(cur_index->maxTime, ch->info->maxTime);
+  cur_index->id_bloom = storage::bloom_add(cur_index->id_bloom, ch->info->first.id);
 
   _openned_chunk.index = cur_index;
   _openned_chunk.pos = pos_index;

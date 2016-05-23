@@ -51,7 +51,7 @@ IdDeCompressor::IdDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Flag first)
     : BaseCompressor(bw), _prev_value(first) {}
 
 dariadb::Id IdDeCompressor::read() {
-  static_assert(sizeof(dariadb::Id) == 8, "Flag no x64 value");
+  static_assert(sizeof(dariadb::Id) == 8, "Id no x64 value");
   dariadb::Id result(0);
   if (_bw->getbit() == 0) {
     _bw->incbit();

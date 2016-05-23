@@ -69,7 +69,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    result = PageManager::instance()->append(value);
+    //result = PageManager::instance()->append(value);
     result = mem_cap->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);

@@ -74,6 +74,8 @@ ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer, size_t _size,
   c_writer = compression::CopmressedWriter(bw);
   c_writer.append(info->first);
   info->writer_position = c_writer.get_position();
+  
+  info->id_bloom = dariadb::storage::bloom_add(info->id_bloom, first_m.id);
 }
 
 ZippedChunk::ZippedChunk(ChunkIndexInfo *index, uint8_t *buffer) : Chunk(index, buffer) {
