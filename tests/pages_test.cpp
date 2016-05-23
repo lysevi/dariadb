@@ -51,9 +51,6 @@ dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count,
     first.flag = dariadb::Flag(i);
     first.time = t;
     first.value = dariadb::Value(i);
-	if (first.time == 240) {
-		first.time = 240;
-	}
     auto res = PageManager::instance()->append(first);
     addeded.push_back(first);
     BOOST_CHECK(res.writed == 1);
