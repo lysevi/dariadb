@@ -22,7 +22,7 @@ protected:
 
 class IdDeCompressor : public BaseCompressor {
 public:
-  IdDeCompressor(const BinaryBuffer_Ptr &bw, Flag first);
+  IdDeCompressor(const BinaryBuffer_Ptr &bw, Id first);
 
   Id read();
 

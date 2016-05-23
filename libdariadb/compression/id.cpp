@@ -47,7 +47,7 @@ void IdCompressor::restore_position(const IdCompressionPosition &pos) {
   _is_first = pos._is_first;
 }
 
-IdDeCompressor::IdDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Flag first)
+IdDeCompressor::IdDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Id first)
     : BaseCompressor(bw), _prev_value(first) {}
 
 dariadb::Id IdDeCompressor::read() {
