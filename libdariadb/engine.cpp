@@ -213,9 +213,6 @@ public:
     UnionReaderSet *raw_result = new UnionReaderSet();
 
     for (auto id : q.ids) {
-		if (id == 47) {
-			std::cout << "!\n";
-		}
       InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader();
       raw_res->page_reader = Reader_ptr{raw_rdr};

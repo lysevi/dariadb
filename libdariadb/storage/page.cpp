@@ -53,9 +53,6 @@ public:
       {
         auto ptr_to_begin = link->chunks + _index_it.offset;
         auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
-		if (ptr_to_chunk_info_raw->id == 388) {
-			std::cout << "!";
-		}
         ChunkLink sub_result;
         sub_result.id = ptr_to_chunk_info_raw->id;
         sub_result.pos = current_pos;
@@ -84,15 +81,9 @@ public:
     this->read_poses.clear();
 
     for (auto i : _ids) {
-		if (i == 47) {
-			std::cout << "!\n";
-		}
 		for (size_t pos = 0; pos < this->link->iheader->count; ++pos) {
 			{
 				auto _index_it = link->index[pos];
-				if (_index_it.chunk_id == 388) {
-					std::cout << "!\n";
-				}
 				if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, this->_from)
 					|| dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, this->_to)
 					|| dariadb::utils::inInterval(_from, _to, _index_it.minTime)
@@ -359,9 +350,6 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
-	if (m.id == 47 && m.value == 99) {
-		std::cout << "!";
-	}
   assert(!this->readonly);
   boost::upgrade_lock<boost::shared_mutex> lg(_locker);
   if (is_full()) {
