@@ -1,6 +1,8 @@
 v0.0.6
 =====
-- LEB128 compression for Id.
+- base-COLA for sort new measurements.
+- LEB128 compression for Id and Flag.
+
 v0.0.5
 ======
 - Asynchronous writes to disk.
