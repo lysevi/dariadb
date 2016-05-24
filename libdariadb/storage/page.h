@@ -31,7 +31,7 @@ struct PageHeader {
 
 struct IndexHeader {
   uint32_t count; // count of values
-  //uint64_t pos;   // next write pos(bytes)
+  // uint64_t pos;   // next write pos(bytes)
 
   dariadb::Time minTime;
   dariadb::Time maxTime;
@@ -44,14 +44,14 @@ struct IndexHeader {
 };
 
 struct Page_ChunkIndex {
-  Time minTime, maxTime;    // min max time of linked chunk
-  //dariadb::Id meas_id;      // chunk->info->first.id
+  Time minTime, maxTime; // min max time of linked chunk
+  // dariadb::Id meas_id;      // chunk->info->first.id
   dariadb::Flag flag_bloom; // bloom filters of writed meases
-  dariadb::Id   id_bloom;
-  uint64_t chunk_id;        // chunk->id
-  //bool is_readonly;         // chunk is full?
-  uint64_t offset;          // offset in bytes of chunk in page
-  bool is_init;             // is init :)
+  dariadb::Id id_bloom;
+  uint64_t chunk_id; // chunk->id
+  // bool is_readonly;         // chunk is full?
+  uint64_t offset; // offset in bytes of chunk in page
+  bool is_init;    // is init :)
 };
 #pragma pack(pop)
 
@@ -95,8 +95,7 @@ private:
   Chunk_Ptr read_chunk_from_ptr(const uint8_t *ptr) const;
   void init_chunk_index_rec(Chunk_Ptr ch);
   void update_chunk_index_rec(const Chunk_Ptr &ptr, const Meas &m);
-  void update_index_info(Page_ChunkIndex *cur_index,
-                         const Chunk_Ptr &ptr, const Meas &m);
+  void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m);
   struct ChunkWithIndex {
     Chunk_Ptr ch;           /// ptr to chunk in page
     Page_ChunkIndex *index; /// ptr to index reccord
@@ -114,8 +113,8 @@ public:
   Page_ChunkIndex *index;
   uint8_t *chunks;
 
-  //indexTree _itree; // needed to sort index reccord on page closing. for fast search
-  //PageMultiTree _mtree;
+  // indexTree _itree; // needed to sort index reccord on page closing. for fast search
+  // PageMultiTree _mtree;
   std::list<uint32_t> _free_poses;
 
   std::string filename;

@@ -1,7 +1,7 @@
 #include "compression.h"
-#include "compression/id.h"
 #include "compression/delta.h"
 #include "compression/flag.h"
+#include "compression/id.h"
 #include "compression/xor.h"
 #include "utils/exception.h"
 #include "utils/utils.h"
@@ -16,7 +16,7 @@ using namespace dariadb::compression;
 class CopmressedWriter::Private {
 public:
   Private(const BinaryBuffer_Ptr &bw)
-      :id_comp(bw), time_comp(bw), value_comp(bw), flag_comp(bw), src_comp(bw) {
+      : id_comp(bw), time_comp(bw), value_comp(bw), flag_comp(bw), src_comp(bw) {
     _is_first = true;
     _is_full = false;
   }
@@ -26,12 +26,8 @@ public:
       _first = m;
       _is_first = false;
     }
-    if (_is_full
-            || id_comp.is_full()
-            || time_comp.is_full()
-            || value_comp.is_full()
-            || flag_comp.is_full()
-            || src_comp.is_full()) {
+    if (_is_full || id_comp.is_full() || time_comp.is_full() || value_comp.is_full() ||
+        flag_comp.is_full() || src_comp.is_full()) {
       _is_full = true;
       return false;
     }
@@ -42,7 +38,7 @@ public:
     auto v_f = flag_comp.append(m.flag);
     auto s_f = src_comp.append(m.src);
 
-    if (!t_f || !f_f || !v_f || !s_f ||!i_f) {
+    if (!t_f || !f_f || !v_f || !s_f || !i_f) {
       _is_full = true;
       return false;
     } else {
@@ -93,8 +89,7 @@ protected:
 class CopmressedReader::Private {
 public:
   Private(const BinaryBuffer_Ptr &bw, const Meas &first)
-      : id_dcomp(bw,first.id),
-        time_dcomp(bw, first.time), value_dcomp(bw, first.value),
+      : id_dcomp(bw, first.id), time_dcomp(bw, first.time), value_dcomp(bw, first.value),
         flag_dcomp(bw, first.flag), src_dcomp(bw, first.src) {
     _first = first;
   }
@@ -110,9 +105,9 @@ public:
   }
 
   bool is_full() const {
-    return this->id_dcomp.is_full() ||
-           this->time_dcomp.is_full() || this->value_dcomp.is_full() ||
-           this->flag_dcomp.is_full() || this->src_dcomp.is_full();
+    return this->id_dcomp.is_full() || this->time_dcomp.is_full() ||
+           this->value_dcomp.is_full() || this->flag_dcomp.is_full() ||
+           this->src_dcomp.is_full();
   }
 
 protected:

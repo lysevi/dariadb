@@ -3,9 +3,9 @@
 #include <boost/test/unit_test.hpp>
 
 #include <compression.h>
-#include <compression/id.h>
 #include <compression/delta.h>
 #include <compression/flag.h>
+#include <compression/id.h>
 #include <compression/xor.h>
 #include <timeutil.h>
 
@@ -585,12 +585,12 @@ BOOST_AUTO_TEST_CASE(IdCompressor) {
     dariadb::Id delta = 1;
     for (int i = 0; i < 10; i++) {
       fc.append(delta);
-	  ids.push_back(delta);
+      ids.push_back(delta);
       delta++;
     }
     bw->reset_pos();
     IdDeCompressor fd(bw, ids.front());
-	ids.pop_front();
+    ids.pop_front();
     for (auto f : ids) {
       auto v = fd.read();
       BOOST_CHECK_EQUAL(v, f);
@@ -618,7 +618,7 @@ BOOST_AUTO_TEST_CASE(CompressedBlock) {
   auto zer_t = dariadb::timeutil::current_time();
   for (int i = 0;; i++) {
     auto m = dariadb::Meas::empty();
-    m.id=dariadb::Id(i);
+    m.id = dariadb::Id(i);
     m.time = zer_t++;
     m.flag = i;
     m.src = i;

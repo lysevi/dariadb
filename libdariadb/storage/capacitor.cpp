@@ -61,21 +61,21 @@ struct level {
   void push_back(const Meas &m) {
     begin[hdr->pos].value = m;
     ++hdr->pos;
-    hdr->_minTime=std::min(hdr->_minTime,m.time);
-    hdr->_maxTime=std::max(hdr->_maxTime,m.time);
+    hdr->_minTime = std::min(hdr->_minTime, m.time);
+    hdr->_maxTime = std::max(hdr->_maxTime, m.time);
   }
 
   /// need for k-merge
   void push_back(const FlaggedMeas &m) {
-      this->push_back(m.value);
-      hdr->_minTime=std::min(hdr->_minTime,m.value.time);
-      hdr->_maxTime=std::max(hdr->_maxTime,m.value.time);
+    this->push_back(m.value);
+    hdr->_minTime = std::min(hdr->_minTime, m.value.time);
+    hdr->_maxTime = std::max(hdr->_maxTime, m.value.time);
   }
 
   void clear() {
-      hdr->pos = 0;
-      hdr->_maxTime=dariadb::MIN_TIME;
-      hdr->_minTime=dariadb::MAX_TIME;
+    hdr->pos = 0;
+    hdr->_maxTime = dariadb::MIN_TIME;
+    hdr->_minTime = dariadb::MAX_TIME;
   }
 
   bool empty() const { return hdr->pos == 0; }
@@ -134,10 +134,9 @@ public:
   };
 #pragma pack(pop)
   Private(MeasWriter *stor, const Capacitor::Params &params)
-      : _stor(stor), _params(params),
-        mmap(nullptr), _size(0) {
-      _maxTime=dariadb::MIN_TIME;
-      _minTime=dariadb::MAX_TIME;
+      : _stor(stor), _params(params), mmap(nullptr), _size(0) {
+    _maxTime = dariadb::MIN_TIME;
+    _minTime = dariadb::MAX_TIME;
     open_or_create();
   }
 
@@ -211,8 +210,8 @@ public:
       it->lvl = uint8_t(lvl);
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
-      it->_minTime=dariadb::MAX_TIME;
-      it->_maxTime=dariadb::MIN_TIME;
+      it->_minTime = dariadb::MAX_TIME;
+      it->_maxTime = dariadb::MIN_TIME;
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
       for (size_t i = 0; i < it->count; ++i) {
         std::memset(&m[i], 0, sizeof(FlaggedMeas));
@@ -226,9 +225,9 @@ public:
     _levels.resize(_header->levels_count);
     _memvalues_size = _header->B;
     _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
-    for(size_t i=0;i<_header->_memvalues_pos;++i){
-        _minTime = std::min(_minTime, _memvalues[i].value.time);
-        _maxTime = std::max(_maxTime, _memvalues[i].value.time);
+    for (size_t i = 0; i < _header->_memvalues_pos; ++i) {
+      _minTime = std::min(_minTime, _memvalues[i].value.time);
+      _maxTime = std::max(_maxTime, _memvalues[i].value.time);
     }
 
     auto pos = _raw_data + _memvalues_size * sizeof(FlaggedMeas);
@@ -379,7 +378,6 @@ public:
     CapReader *raw = new CapReader;
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
-
     if (q.from > this->minTime()) {
       auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
       for (auto kv : tp_read_data) {
@@ -391,11 +389,11 @@ public:
       if (_levels[i].empty()) {
         continue;
       }
-      if(!inInterval(q.from,q.to,_levels[i].hdr->_minTime)
-              && !inInterval(q.from,q.to,_levels[i].hdr->_maxTime)
-              && !inInterval(_levels[i].hdr->_minTime,_levels[i].hdr->_maxTime,q.from)
-              && !inInterval(_levels[i].hdr->_minTime,_levels[i].hdr->_maxTime,q.to)){
-          continue;
+      if (!inInterval(q.from, q.to, _levels[i].hdr->_minTime) &&
+          !inInterval(q.from, q.to, _levels[i].hdr->_maxTime) &&
+          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.from) &&
+          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
+        continue;
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
@@ -461,24 +459,24 @@ public:
   }
 
   dariadb::Time minTime() const {
-      boost::shared_lock<boost::shared_mutex> lock(_mutex);
-      dariadb::Time result=dariadb::MAX_TIME;
-      for(size_t i=0;i<_levels.size();++i){
-          if(!_levels[i].empty()){
-              result=std::min(result,_levels[i].hdr->_minTime);
-          }
+    boost::shared_lock<boost::shared_mutex> lock(_mutex);
+    dariadb::Time result = dariadb::MAX_TIME;
+    for (size_t i = 0; i < _levels.size(); ++i) {
+      if (!_levels[i].empty()) {
+        result = std::min(result, _levels[i].hdr->_minTime);
       }
-      return std::min(result,_minTime);
+    }
+    return std::min(result, _minTime);
   }
   dariadb::Time maxTime() const {
-      boost::shared_lock<boost::shared_mutex> lock(_mutex);
-      dariadb::Time result=dariadb::MIN_TIME;
-      for(size_t i=0;i<_levels.size();++i){
-          if(!_levels[i].empty()){
-              result=std::max(result,_levels[i].hdr->_maxTime);
-          }
+    boost::shared_lock<boost::shared_mutex> lock(_mutex);
+    dariadb::Time result = dariadb::MIN_TIME;
+    for (size_t i = 0; i < _levels.size(); ++i) {
+      if (!_levels[i].empty()) {
+        result = std::max(result, _levels[i].hdr->_maxTime);
       }
-      return std::max(result,_maxTime);
+    }
+    return std::max(result, _maxTime);
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
@@ -532,28 +530,29 @@ public:
     dariadb::IdSet unreaded_ids;
     dariadb::Meas::Id2Meas sub_res;
 
-    if(inInterval(_minTime,_maxTime,q.time_point)){
-        for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
-            auto m = _memvalues[j];
-            if (m.drop_end) {
-                continue;
-            }
-            if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
-                insert_if_older(sub_res, m.value);
-                readed_ids.insert(m.value.id);
-            } else {
-                unreaded_ids.insert(m.value.id);
-            }
+    if (inInterval(_minTime, _maxTime, q.time_point)) {
+      for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+        auto m = _memvalues[j];
+        if (m.drop_end) {
+          continue;
         }
+        if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
+          insert_if_older(sub_res, m.value);
+          readed_ids.insert(m.value.id);
+        } else {
+          unreaded_ids.insert(m.value.id);
+        }
+      }
     }
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
         continue;
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-          if(!inInterval(_levels[i].hdr->_minTime,_levels[i].hdr->_maxTime,q.time_point)){
-              continue;
-          }
+        if (!inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime,
+                        q.time_point)) {
+          continue;
+        }
         auto m = _levels[i].at(j);
         if (m.drop_end) {
           continue;

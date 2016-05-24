@@ -194,22 +194,22 @@ public:
       }
     }
 
-	/*std::vector<ChunkLink> forSort{ result.begin(),result.end() };
-	std::sort(forSort.begin(), forSort.end(),
-		[](const dariadb::storage::ChunkLink&l, const dariadb::storage::ChunkLink&r)
-	{
-		return l.maxTime < r.maxTime;
-	}
-	);*/
+    /*std::vector<ChunkLink> forSort{ result.begin(),result.end() };
+    std::sort(forSort.begin(), forSort.end(),
+            [](const dariadb::storage::ChunkLink&l, const dariadb::storage::ChunkLink&r)
+    {
+            return l.maxTime < r.maxTime;
+    }
+    );*/
 
-	return result;// ChunkLinkList(forSort.begin(), forSort.end());
+    return result; // ChunkLinkList(forSort.begin(), forSort.end());
   }
 
   Cursor_ptr readLinks(const ChunkLinkList &links) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
 
     PageManagerCursor *raw_cursor = new PageManagerCursor;
-	dariadb::storage::ChunksList chunks;
+    dariadb::storage::ChunksList chunks;
 
     std::unique_ptr<AddCursorClbk> clbk{new AddCursorClbk};
     clbk->out = &chunks;
@@ -246,7 +246,7 @@ public:
     }*/
 
     for (auto &ch : chunks) {
-		raw_cursor->chunks.push_back(ch);
+      raw_cursor->chunks.push_back(ch);
     }
     raw_cursor->reset_pos();
     return Cursor_ptr{raw_cursor};

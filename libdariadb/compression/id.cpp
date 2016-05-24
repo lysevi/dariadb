@@ -28,12 +28,13 @@ bool IdCompressor::append(dariadb::Id v) {
       return false;
     }
     _bw->setbit().incbit();
-	auto x = v;
-	do {
-		auto sub_res = x & 0x7fU;
-		if (x >>= 7) sub_res |= 0x80U;
-		_bw->write(uint16_t(sub_res), 8);
-	} while (x);
+    auto x = v;
+    do {
+      auto sub_res = x & 0x7fU;
+      if (x >>= 7)
+        sub_res |= 0x80U;
+      _bw->write(uint16_t(sub_res), 8);
+    } while (x);
     //_bw->write(uint64_t(v), 64);
 
     _first = v;
@@ -64,13 +65,14 @@ dariadb::Id IdDeCompressor::read() {
     result = _prev_value;
   } else {
     _bw->incbit();
-	size_t bytes = 0;
-	while (true) {
-		auto readed = _bw->read(8);
-		result |= (readed & 0x7fULL) << (7 * bytes++);
-		if (!(readed & 0x80U)) break;
-	}
-    //result = (dariadb::Id)_bw->read(64);
+    size_t bytes = 0;
+    while (true) {
+      auto readed = _bw->read(8);
+      result |= (readed & 0x7fULL) << (7 * bytes++);
+      if (!(readed & 0x80U))
+        break;
+    }
+    // result = (dariadb::Id)_bw->read(64);
   }
   _prev_value = result;
   return result;

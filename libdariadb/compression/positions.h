@@ -4,10 +4,10 @@
 namespace dariadb {
 namespace compression {
 
-    struct IdCompressionPosition {
-      bool _is_first;
-      Id _first;
-    };
+struct IdCompressionPosition {
+  bool _is_first;
+  Id _first;
+};
 
 struct FlagCompressionPosition {
   bool _is_first;

@@ -21,7 +21,6 @@ struct ChunkLink {
   dariadb::Time maxTime;
   std::string page_name;
   uint32_t pos;
-  
 };
 
 using ChunkLinkList = std::list<ChunkLink>;

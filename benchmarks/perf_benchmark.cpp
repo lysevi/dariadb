@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
               << " in queue: (p:" << queue_sizes.page << " cap:" << queue_sizes.cap << ")"
               << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set,ms,10);
+    dariadb_bench::readBenchark(all_id_set, ms, 10);
 
     {
       std::cout << "read all..." << std::endl;

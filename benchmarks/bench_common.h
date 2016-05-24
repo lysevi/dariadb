@@ -1,6 +1,6 @@
 #pragma once
-#include <atomic>
 #include <dariadb.h>
+#include <atomic>
 #include <random>
 
 namespace dariadb_bench {
@@ -47,8 +47,7 @@ void readBenchark(const dariadb::IdSet &all_id_set,
     for (size_t i = 0; i < reads_count; i++) {
       auto time_point = uniform_dist(e1);
       dariadb::storage::QueryTimePoint qp{
-          dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0,
-          time_point};
+          dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, time_point};
       stor->readInTimePoint(qp)->readAll(clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;

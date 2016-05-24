@@ -81,6 +81,6 @@ int main(int argc, char *argv[]) {
     stop_info = true;
     info_thread.join();
 
-    dariadb_bench::readBenchark(all_id_set,meas_stor,100);
+    dariadb_bench::readBenchark(all_id_set, meas_stor, 100);
   }
 }

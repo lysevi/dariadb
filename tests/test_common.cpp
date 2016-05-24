@@ -31,8 +31,8 @@ void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
 }
 
 void check_reader_of_all(dariadb::storage::Reader_ptr reader, dariadb::Time from,
-                         dariadb::Time to, dariadb::Time step, size_t ,
-                         size_t total_count, std::string message) {
+                         dariadb::Time to, dariadb::Time step, size_t, size_t total_count,
+                         std::string message) {
   dariadb::Meas::MeasList all{};
   reader->readAll(&all);
 

@@ -4,10 +4,10 @@
 #include <boost/test/unit_test.hpp>
 
 #include <compression.h>
+#include <storage/bloom_filter.h>
 #include <storage/manifest.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
-#include <storage/bloom_filter.h>
 #include <utils/fs.h>
 #include <utils/utils.h>
 
@@ -93,50 +93,50 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         dariadb::storage::QueryInterval(all_id_array, 0, 0, t));
     PageManager::instance()->readLinks(links_list)->readAll(&all_chunks);
 
-	std::map<dariadb::Id, dariadb::Meas::MeasList> id2meas;
-	for (auto add : addeded) {
-		id2meas[add.id].push_back(add);
-	}
-	/*std::sort(all_chunks.begin(), all_chunks.end(), 
-		[](const dariadb::storage::Chunk_Ptr&l, const dariadb::storage::Chunk_Ptr&r) 
-		{
-			return l->info->last.time < r->info->last.time;
-		}
-	);*/
-	for (auto id : all_id_array) {
-		std::set<uint64_t> visited_chunks{};
-		dariadb::Meas::MeasList mlist;
-		for (auto ch : all_chunks) {
-			if (visited_chunks.find(ch->info->id)!=visited_chunks.end()) {
-				continue;
-			}
-			visited_chunks.insert(ch->info->id);
-			if (!dariadb::storage::bloom_check(ch->info->id_bloom, id)) { 
-				continue; 
-			}
-			minTime = std::min(minTime, ch->info->minTime);
-			ch->bw->reset_pos();
+    std::map<dariadb::Id, dariadb::Meas::MeasList> id2meas;
+    for (auto add : addeded) {
+      id2meas[add.id].push_back(add);
+    }
+    /*std::sort(all_chunks.begin(), all_chunks.end(),
+            [](const dariadb::storage::Chunk_Ptr&l, const dariadb::storage::Chunk_Ptr&r)
+            {
+                    return l->info->last.time < r->info->last.time;
+            }
+    );*/
+    for (auto id : all_id_array) {
+      std::set<uint64_t> visited_chunks{};
+      dariadb::Meas::MeasList mlist;
+      for (auto ch : all_chunks) {
+        if (visited_chunks.find(ch->info->id) != visited_chunks.end()) {
+          continue;
+        }
+        visited_chunks.insert(ch->info->id);
+        if (!dariadb::storage::bloom_check(ch->info->id_bloom, id)) {
+          continue;
+        }
+        minTime = std::min(minTime, ch->info->minTime);
+        ch->bw->reset_pos();
 
-			dariadb::compression::CopmressedReader crr(ch->bw, ch->info->first);
-			if (ch->info->first.id == id) {
-				mlist.push_back(ch->info->first);
-			}
-			for (uint32_t i = 0; i < ch->info->count; i++) {
-				auto m = crr.read();
-				if (m.id != id) {
-					continue;
-				}
-				mlist.push_back(m);
-			}
-		}
-		auto addeded_lst = id2meas[id];
-		auto addeded_iter = addeded_lst.cbegin();
-		for (auto &m : mlist) {
-			BOOST_CHECK_EQUAL(m.time, addeded_iter->time);
-			BOOST_CHECK_EQUAL(m.value, addeded_iter->value);
-			++addeded_iter;
-		}
-	}
+        dariadb::compression::CopmressedReader crr(ch->bw, ch->info->first);
+        if (ch->info->first.id == id) {
+          mlist.push_back(ch->info->first);
+        }
+        for (uint32_t i = 0; i < ch->info->count; i++) {
+          auto m = crr.read();
+          if (m.id != id) {
+            continue;
+          }
+          mlist.push_back(m);
+        }
+      }
+      auto addeded_lst = id2meas[id];
+      auto addeded_iter = addeded_lst.cbegin();
+      for (auto &m : mlist) {
+        BOOST_CHECK_EQUAL(m.time, addeded_iter->time);
+        BOOST_CHECK_EQUAL(m.value, addeded_iter->value);
+        ++addeded_iter;
+      }
+    }
     /*dariadb::Time minT = dariadb::MAX_TIME,
                   maxT = dariadb::MIN_TIME;
     BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       for (auto c : ch_list) {
         chunks_map[c->info->first.id] = c;
       }
-	  BOOST_CHECK(chunks_map.size()>size_t(0));
+      BOOST_CHECK(chunks_map.size() > size_t(0));
       BOOST_CHECK_LE(chunks_map.size(), size_t(id_count));
 
       for (auto &kv : chunks_map) {
@@ -171,12 +171,12 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         BOOST_CHECK(is_in_interval || chunk->info->maxTime < end_time);
       }
 
-     /* auto ids_array = PageManager::instance()->getIds();
-      BOOST_CHECK_EQUAL(ids_array.size(), size_t(2));
-      BOOST_CHECK(std::find(ids_array.begin(), ids_array.end(), dariadb::Id(0)) !=
-                  ids_array.end());
-      BOOST_CHECK(std::find(ids_array.begin(), ids_array.end(), dariadb::Id(1)) !=
-                  ids_array.end());*/
+      /* auto ids_array = PageManager::instance()->getIds();
+       BOOST_CHECK_EQUAL(ids_array.size(), size_t(2));
+       BOOST_CHECK(std::find(ids_array.begin(), ids_array.end(), dariadb::Id(0)) !=
+                   ids_array.end());
+       BOOST_CHECK(std::find(ids_array.begin(), ids_array.end(), dariadb::Id(1)) !=
+                   ids_array.end());*/
     }
   }
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
@@ -215,8 +215,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   auto iheader = dariadb::storage::Page::readIndexHeader(fname + "i");
   BOOST_CHECK_EQUAL(iheader.chunk_per_storage, chunks_count);
   BOOST_CHECK_EQUAL(iheader.chunk_size, chunks_size);
-  //TODO restore
-  //BOOST_CHECK(iheader.is_sorted);
+  // TODO restore
+  // BOOST_CHECK(iheader.is_sorted);
 
   PageManager::start(PageManager::Params(storagePath, chunks_count, chunks_size));
 
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   BOOST_CHECK_LE(tp_chunks.front()->info->first.id, dariadb::Id{1});
   BOOST_CHECK_LE(tp_chunks.front()->info->minTime, qt.time_point);
 
-  //TODO restore
+  // TODO restore
   /*dariadb::Time minTime, maxTime;
   if (PageManager::instance()->minMaxTime(1, &minTime, &maxTime)) {
     BOOST_CHECK_EQUAL(minTime, qi.from);
@@ -306,8 +306,8 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     BOOST_ERROR("PageManager::instance()->minMaxTime error!");
   }*/
 
-  //auto ids = PageManager::instance()->getIds();
-  //BOOST_CHECK_EQUAL(ids.size(), size_t(1));
+  // auto ids = PageManager::instance()->getIds();
+  // BOOST_CHECK_EQUAL(ids.size(), size_t(1));
 
   PageManager::stop();
 
