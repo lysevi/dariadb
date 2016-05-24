@@ -364,7 +364,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       return true;
     }
   }
-
+  //search no full chunk.
   auto byte_it = this->chunks;
   auto step = this->header->chunk_size + sizeof(ChunkIndexInfo);
   auto end = this->chunks + this->header->chunk_per_storage * step;
@@ -386,7 +386,8 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       init_chunk_index_rec(ptr);
       return true;
-    } else {
+    } /*else {
+		assert(false);
       if ((!info->is_readonly)) {
         Chunk_Ptr ptr = read_chunk_from_ptr(byte_it);
         if (ptr->append(m)) {
@@ -395,7 +396,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
           return true;
         }
       }
-    }
+    }*/
     byte_it += step;
   }
   header->is_full = true;

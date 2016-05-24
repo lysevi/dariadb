@@ -31,15 +31,15 @@ void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
 }
 
 void check_reader_of_all(dariadb::storage::Reader_ptr reader, dariadb::Time from,
-                         dariadb::Time to, dariadb::Time step, size_t id_count,
+                         dariadb::Time to, dariadb::Time step, size_t ,
                          size_t total_count, std::string message) {
   dariadb::Meas::MeasList all{};
   reader->readAll(&all);
 
-   std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
+  /* std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
    for (auto &v : all) {
      _dict[v.id].push_back(v);
-   }
+   }*/
 
   dariadb::Id cur_id = all.front().id;
   dariadb::Value cur_val = all.front().value;
@@ -67,11 +67,11 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader, dariadb::Time from
     throw MAKE_EXCEPTION("(all.size() != total_count)");
   }
   // TODO reset is sucks
-  reader->reset();
+  /*reader->reset();
   auto readed_ids = reader->getIds();
   if (readed_ids.size() != id_count) {
     throw MAKE_EXCEPTION("(readed_ids.size() != size_t((to - from) / step))");
-  }
+  }*/
 
   checkAll(all, message, from, to, step);
 }
