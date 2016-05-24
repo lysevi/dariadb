@@ -581,17 +581,17 @@ BOOST_AUTO_TEST_CASE(IdCompressor) {
     auto bw = std::make_shared<dariadb::compression::BinaryBuffer>(rng);
     IdCompressor fc(bw);
 
-    std::list<dariadb::Flag> flags{};
+    std::list<dariadb::Id> ids{};
     dariadb::Id delta = 1;
     for (int i = 0; i < 10; i++) {
       fc.append(delta);
-      flags.push_back(delta);
+	  ids.push_back(delta);
       delta++;
     }
     bw->reset_pos();
-    IdDeCompressor fd(bw, flags.front());
-    flags.pop_front();
-    for (auto f : flags) {
+    IdDeCompressor fd(bw, ids.front());
+	ids.pop_front();
+    for (auto f : ids) {
       auto v = fd.read();
       BOOST_CHECK_EQUAL(v, f);
     }
