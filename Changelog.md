@@ -1,3 +1,6 @@
+v0.0.6
+=====
+- LEB128 compression for Id.
 v0.0.5
 ======
 - Asynchronous writes to disk.
