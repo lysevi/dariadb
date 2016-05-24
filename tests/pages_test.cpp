@@ -161,7 +161,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       for (auto c : ch_list) {
         chunks_map[c->info->first.id] = c;
       }
-      BOOST_CHECK_EQUAL(chunks_map.size(), size_t(id_count));
+	  BOOST_CHECK(chunks_map.size()>size_t(0));
+      BOOST_CHECK_LE(chunks_map.size(), size_t(id_count));
 
       for (auto &kv : chunks_map) {
         auto chunk = kv.second;
