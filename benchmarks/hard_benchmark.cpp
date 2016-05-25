@@ -171,12 +171,12 @@ int main(int argc, char *argv[]) {
     std::vector<dariadb::Time> rnd_time(queries_count);
     for (size_t i = 0; i < queries_count; i++) {
       rnd_ids[i] = uniform_dist(e1);
-      dariadb::Time minT, maxT;
+      /*dariadb::Time minT, maxT;
       bool exists = raw_ptr_ds->minMaxTime(rnd_ids[i], &minT, &maxT);
       if (!exists) {
         throw MAKE_EXCEPTION("!exists");
-      }
-      std::uniform_int_distribution<dariadb::Time> uniform_dist_tmp(minT, maxT);
+      }*/
+      std::uniform_int_distribution<dariadb::Time> uniform_dist_tmp(10, 32);
       rnd_time[i] = uniform_dist_tmp(e1);
     }
     auto raw_ptr = new BenchCallback();
