@@ -265,7 +265,7 @@ public:
     return result;
   }
 
-  Meas::Id2Meas chunksBeforeTimePoint(const QueryTimePoint &query) {
+  Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
 
     Meas::Id2Meas result;
@@ -288,7 +288,7 @@ public:
         auto pname=*it;
       auto pg = open_page_to_read(pname);
 
-      auto subres = pg->chunksBeforeTimePoint(query);
+      auto subres = pg->valuesBeforeTimePoint(query);
       for(auto kv:subres){
           result.insert(kv);
       }
@@ -435,8 +435,8 @@ dariadb::storage::ChunkLinkList PageManager::chunksByIterval(const QueryInterval
 }
 
 dariadb::Meas::Id2Meas
-PageManager::chunksBeforeTimePoint(const QueryTimePoint &q) {
-  return impl->chunksBeforeTimePoint(q);
+PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
+  return impl->valuesBeforeTimePoint(q);
 }
 
 dariadb::storage::Cursor_ptr PageManager::readLinks(const ChunkLinkList &links) {

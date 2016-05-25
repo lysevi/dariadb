@@ -81,7 +81,7 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
-  Meas::Id2Meas chunksBeforeTimePoint(const QueryTimePoint &q) override;
+  Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   Cursor_ptr readLinks(const ChunkLinkList &links) override;
   IdArray getIds() override;
 

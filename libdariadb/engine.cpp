@@ -300,7 +300,7 @@ public:
         auto subres = mem_cap->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else {
-        auto id2meas = PageManager::instance()->chunksBeforeTimePoint(local_q);
+        auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
 
         TP_Reader*raw_tp_reader=new TP_Reader;
         for(auto kv:id2meas){

@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
         BOOST_CHECK(v->info->minTime <= end_time);
       }
 
-      auto id2meas = PageManager::instance()->chunksBeforeTimePoint(
+      auto id2meas = PageManager::instance()->valuesBeforeTimePoint(
           dariadb::storage::QueryTimePoint(all_id_array, 0, end_time));
       BOOST_CHECK_EQUAL(id2meas.size(),all_id_array.size());
 
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   PageManager::start(PageManager::Params(storagePath, chunks_count, chunks_size));
 
   auto mintime_chunks =
-      PageManager::instance()->chunksBeforeTimePoint(dariadb::storage::QueryTimePoint(
+      PageManager::instance()->valuesBeforeTimePoint(dariadb::storage::QueryTimePoint(
           dariadb::IdArray{1}, 0, PageManager::instance()->minTime()));
   BOOST_CHECK_GE(mintime_chunks.size(), size_t(1));
 
@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   }
   BOOST_CHECK_EQUAL(readed, writed);
 
-  auto id2meas = PageManager::instance()->chunksBeforeTimePoint(qt);
+  auto id2meas = PageManager::instance()->valuesBeforeTimePoint(qt);
 
   BOOST_CHECK_EQUAL(id2meas.size(), qt.ids.size());
   for(auto kv:id2meas){

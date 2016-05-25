@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 
     for (size_t i = 0; i < runs_count; i++) {
       auto time_point = uniform_dist(e1);
-      dariadb::storage::PageManager::instance()->chunksBeforeTimePoint(
+      dariadb::storage::PageManager::instance()->valuesBeforeTimePoint(
           dariadb::storage::QueryTimePoint(ids, 0, time_point));
     }
 
