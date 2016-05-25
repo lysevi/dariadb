@@ -366,8 +366,8 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
     }
   }
   // search no full chunk.
-  auto byte_it = this->chunks;
   auto step = this->header->chunk_size + sizeof(ChunkIndexInfo);
+  auto byte_it = this->chunks + step*this->header->addeded_chunks;
   auto end = this->chunks + this->header->chunk_per_storage * step;
   while (true) {
     if (byte_it == end) {
