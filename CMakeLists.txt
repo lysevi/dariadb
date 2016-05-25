@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.1)
 project (dariadb)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -10,25 +10,6 @@ set(dariadb_MINOR_VERSION 0)
 set(dariadb_PATCH_VERSION 5)
 set(dariadb_VERSION${dariadb_MAJOR_VERSION}.${dariadb_MINOR_VERSION}.${dariadb_PATCH_VERSION})
 
-# Offer the user the choice of overriding the installation directories
-set(INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
-set(INSTALL_BIN_DIR bin CACHE PATH "Installation directory for executables")
-set(INSTALL_INCLUDE_DIR include CACHE PATH "Installation directory for header files")
-
-if(WIN32 AND NOT CYGWIN)
-  set(DEF_INSTALL_CMAKE_DIR CMake)
-else()
-  set(DEF_INSTALL_CMAKE_DIR lib/CMake/dariadb)
-endif()
-set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH "Installation directory for CMake files")
-
-# Make relative paths absolute (needed later on)
-foreach(p LIB BIN INCLUDE CMAKE)
-  set(var INSTALL_${p}_DIR)
-  if(NOT IS_ABSOLUTE "${${var}}")
-    set(${var} "${CMAKE_INSTALL_PREFIX}/${${var}}")
-  endif()
-endforeach()
 
 set(Boost_USE_STATIC_LIBS        OFF)
 set(Boost_USE_MULTITHREADED      ON)
@@ -142,6 +123,8 @@ endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 include_directories(extern)
 
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
+MESSAGE(STATUS "Options: ")
+MESSAGE(STATUS "ENABLE_TESTING - " ${ENABLE_TESTING})
 
 add_subdirectory (libdariadb)
 
