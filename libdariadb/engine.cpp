@@ -271,8 +271,15 @@ public:
         }
         auto sub_res = std::make_shared<InnerReader>(q.flag, q.time_point, 0);
         sub_res->is_time_point_reader = true;
-
-        for (auto i : local_q.ids) {
+		if (clist.empty()) {
+			sub_res->_not_exist.push_back(id);
+		}else {
+			for (auto ch : clist) {
+				sub_res->add_tp(ch);
+			}
+		}
+		sub_res->_ids.push_back(id);
+       /* for (auto i : local_q.ids) {
           auto search_res = chunks_before.find(i);
           if (search_res == chunks_before.end()) {
             sub_res->_not_exist.push_back(i);
@@ -280,7 +287,7 @@ public:
             auto ch = search_res->second;
             sub_res->add_tp(ch);
           }
-        }
+        }*/
         raw_result->add_rdr(sub_res);
       }
     }

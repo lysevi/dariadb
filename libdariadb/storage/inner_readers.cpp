@@ -99,22 +99,24 @@ void InnerReader::readTimePoint(storage::ReaderClb *clb) {
     bw->reset_pos();
     CopmressedReader crr(bw, ch->info->first);
 
-    Meas candidate;
-    candidate = ch->info->first;
+	Meas candidate = Meas::empty();
+	bool found = false;
+    //candidate = ch->info->first;
     ch->lock();
     for (size_t i = 0; i < ch->info->count; i++) {
 
       auto sub = crr.read();
       sub.id = ch->info->first.id;
-      if ((sub.time <= _from) && (sub.time >= candidate.time)) {
+      if ((sub.time <= _from) && (sub.time >= candidate.time) && (sub.id==_ids.front())) {
         candidate = sub;
+		found = true;
       }
       if (sub.time > _from) {
         break;
       }
     }
     ch->unlock();
-    if (candidate.time <= _from) {
+    if (found && candidate.time <= _from) {
       // TODO make as options
       candidate.time = _from;
 
