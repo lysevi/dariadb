@@ -37,20 +37,6 @@ public:
         break;
       }
 
-      /*if (!dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
-              if (!read_poses.empty()) {
-                      _index_it = this->link->index[read_poses.front()];
-                      current_pos = read_poses.front();
-                      read_poses.pop_front();
-              }
-              else {
-                      break;
-              }
-              continue;
-      }
-
-      if (check_index_rec(_index_it)) */
-      {
         auto ptr_to_begin = link->chunks + _index_it.offset;
         auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
         ChunkLink sub_result;
@@ -60,8 +46,6 @@ public:
         sub_result.first_id = ptr_to_chunk_info_raw->first.id;
         this->resulted_links.push_back(sub_result);
         break;
-      }
-      /*else { break; }*/
     }
     if (read_poses.empty()) {
       _is_end = true;
@@ -84,10 +68,9 @@ public:
       for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
         {
           auto _index_it = link->index[pos];
-          if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime,
-                                         this->_from) ||
-              dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime,
-                                         this->_to) ||
+          if (
+			  dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||
+              dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _to) ||
               dariadb::utils::inInterval(_from, _to, _index_it.minTime) ||
               dariadb::utils::inInterval(_from, _to, _index_it.maxTime)) {
             auto bloom_result = check_blooms(_index_it, i);
@@ -204,20 +187,20 @@ protected:
 };
 
 Page::~Page() {
-  // if (!readonly && !iheader->is_sorted) {
-  //  size_t pos = 0; // TODO crash safety
-  //  Page_ChunkIndex *new_index = new Page_ChunkIndex[iheader->chunk_per_storage];
-  //  memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
+   if (!readonly && !iheader->is_sorted) {
+    size_t pos = 0; // TODO crash safety
+    Page_ChunkIndex *new_index = new Page_ChunkIndex[iheader->chunk_per_storage];
+    memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
 
-  //  for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
-  //    new_index[pos] = index[it->second];
-  //  }
-  //  memcpy(index, new_index, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
-  //  delete[] new_index;
-  //  iheader->is_sorted = true;
-  //}
+    for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
+      new_index[pos] = index[it->second];
+    }
+    memcpy(index, new_index, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
+    delete[] new_index;
+    iheader->is_sorted = true;
+  }
   //_mtree.clear();
-  //_itree.clear();
+  _itree.clear();
   region = nullptr;
   header = nullptr;
   index = nullptr;
@@ -312,11 +295,11 @@ Page *Page::open(std::string file_name, bool read_only) {
     auto irec = &res->index[i];
     if (!irec->is_init) {
       res->_free_poses.push_back(i);
-    } /*else {
+    }else {
       auto kv = std::make_pair(irec->maxTime, i);
       res->_itree.insert(kv);
-      res->_mtree[irec->meas_id].insert(kv);
-    }*/
+      //res->_mtree[irec->meas_id].insert(kv);
+    }
   }
   return res;
 }
@@ -361,7 +344,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
   if (_openned_chunk.ch != nullptr && !_openned_chunk.ch->is_full()) {
     if (_openned_chunk.ch->append(m)) {
-      update_index_info(_openned_chunk.index, _openned_chunk.ch, m);
+      update_index_info(_openned_chunk.index, _openned_chunk.ch, m, _openned_chunk.pos);
       return true;
     }
   }
@@ -387,61 +370,27 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       init_chunk_index_rec(ptr);
       return true;
-    } /*else {
-                assert(false);
-      if ((!info->is_readonly)) {
-        Chunk_Ptr ptr = read_chunk_from_ptr(byte_it);
-        if (ptr->append(m)) {
-          _openned_chunk.ch = ptr;
-          update_chunk_index_rec(ptr, m);
-          return true;
-        }
-      }
-    }*/
+    } 
     byte_it += step;
   }
   header->is_full = true;
   return false;
 }
 
-Chunk_Ptr Page::read_chunk_from_ptr(const uint8_t *ptr) const {
-  auto non_const_ptr = const_cast<uint8_t *>(ptr);
-  ChunkIndexInfo *info = reinterpret_cast<ChunkIndexInfo *>(non_const_ptr);
-  auto ptr_to_begin = non_const_ptr;
-  auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkIndexInfo);
-  if (info->is_zipped) {
-    return Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-  } else {
-    assert(false);
-  }
-  return nullptr;
-}
-
-void Page::update_chunk_index_rec(const Chunk_Ptr &ptr, const dariadb::Meas &m) {
-  for (size_t i = 0; i < header->addeded_chunks; ++i) {
-    auto cur_index = &index[i];
-    if (cur_index->chunk_id == ptr->info->id) {
-      update_index_info(cur_index, ptr, m);
-      return;
-    }
-  }
-  assert(false);
-}
-
 void Page::update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr,
-                             const dariadb::Meas &m) {
+                             const dariadb::Meas &m, uint16_t pos) {
   // cur_index->last = ptr->info->last;
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
 
-  // for (auto it = _itree.lower_bound(cur_index->maxTime);
-  //     it != _itree.upper_bound(cur_index->maxTime); ++it) {
-  //  if ((it->first == cur_index->maxTime) && (it->second == pos)) {
-  //    _itree.erase(it);
-  //    break;
-  //  }
-  //}
+   for (auto it = _itree.lower_bound(cur_index->maxTime);
+       it != _itree.upper_bound(cur_index->maxTime); ++it) {
+    if ((it->first == cur_index->maxTime) && (it->second == pos)) {
+      _itree.erase(it);
+      break;
+    }
+  }
 
   // auto tree = &_mtree[cur_index->meas_id];
   // auto from = tree->lower_bound(cur_index->maxTime);
@@ -457,9 +406,9 @@ void Page::update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr,
   cur_index->maxTime = std::max(cur_index->maxTime, m.time);
   cur_index->flag_bloom = ptr->info->flag_bloom;
   cur_index->id_bloom = ptr->info->id_bloom;
-  /*auto kv = std::make_pair(cur_index->maxTime, pos);
+  auto kv = std::make_pair(cur_index->maxTime, pos);
   _itree.insert(kv);
-  tree->insert(kv);*/
+  /*tree->insert(kv);*/
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch) {
