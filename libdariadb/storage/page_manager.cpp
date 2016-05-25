@@ -265,10 +265,10 @@ public:
     return result;
   }
 
-  ChunkLinkList chunksBeforeTimePoint(const QueryTimePoint &query) {
+  Meas::Id2Meas chunksBeforeTimePoint(const QueryTimePoint &query) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-    ChunkLinkList result;
+    Meas::Id2Meas result;
 
     auto pred = [query](const IndexHeader &hdr) {
       auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
@@ -284,13 +284,16 @@ public:
     };
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-    for (auto pname : page_list) {
+    for(auto it=page_list.rbegin();it!=page_list.rend();++it){
+        auto pname=*it;
       auto pg = open_page_to_read(pname);
 
       auto subres = pg->chunksBeforeTimePoint(query);
-      for (auto s : subres) {
-        s.page_name = pname;
-        result.push_back(s);
+      for(auto kv:subres){
+          result.insert(kv);
+      }
+      if(subres.size()==query.ids.size()){
+          break;
       }
     }
 
@@ -431,7 +434,7 @@ dariadb::storage::ChunkLinkList PageManager::chunksByIterval(const QueryInterval
   return impl->chunksByIterval(query);
 }
 
-dariadb::storage::ChunkLinkList
+dariadb::Meas::Id2Meas
 PageManager::chunksBeforeTimePoint(const QueryTimePoint &q) {
   return impl->chunksBeforeTimePoint(q);
 }

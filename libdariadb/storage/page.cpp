@@ -475,28 +475,52 @@ ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query
   return get_chunks_links(query.ids, query.from, query.to, query.flag);
 }
 
-ChunkLinkList Page::chunksBeforeTimePoint(const QueryTimePoint &q) {
-  ChunkLinkList result;
+dariadb::Meas::Id2Meas Page::chunksBeforeTimePoint(const QueryTimePoint &q) {
+  dariadb::Meas::Id2Meas result;
   auto raw_links = this->get_chunks_links(q.ids, iheader->minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }
-  std::map<dariadb::Id, ChunkLink> id2link;
-  for (auto &v : raw_links) {
-    auto find_res = id2link.find(v.first_id);
-    if (find_res == id2link.end()) {
-      id2link.insert(std::make_pair(v.first_id, v));
-    } else {
-      if (find_res->second.maxTime < v.maxTime) {
-        id2link[v.first_id] = v;
+
+  dariadb::IdSet to_read{q.ids.begin(),q.ids.end()};
+  for(auto it=raw_links.rbegin();it!=raw_links.rend();++it){
+      if(to_read.empty()){
+          break;
       }
-    }
-  }
+      auto _index_it = this->index[it->pos];
+      auto ptr_to_begin = this->chunks + _index_it.offset;
+      auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
+      auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkIndexInfo);
 
-  for (auto kv : id2link) {
-    result.push_back(kv.second);
+      auto info = new ChunkIndexInfo;
+      memcpy(info, ptr_to_chunk_info_raw, sizeof(ChunkIndexInfo));
+      auto buf = new uint8_t[info->size];
+      memcpy(buf, ptr_to_buffer_raw, info->size);
+      Chunk_Ptr ptr = nullptr;
+      if (info->is_zipped) {
+          ptr = Chunk_Ptr{new ZippedChunk(info, buf)};
+          ptr->should_free = true;
+      } else {
+          // TODO implement not zipped page.
+          assert(false);
+      }
+      Chunk_Ptr c{ptr};
+      auto reader=c->get_reader();
+      while(!reader->is_end()){
+        auto m=reader->readNext();
+        if(m.time<=q.time_point && m.inQuery(q.ids,q.flag)){
+            auto f_res=result.find(m.id);
+            if(f_res==result.end()){
+                to_read.erase(m.id);
+                result[m.id]=m;
+            }else{
+                if(m.time>f_res->first){
+                    result[m.id]=m;
+                }
+            }
+        }
+      }
   }
-
   return result;
 }
 
