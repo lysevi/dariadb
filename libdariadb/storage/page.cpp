@@ -199,7 +199,6 @@ Page::~Page() {
     delete[] new_index;
     iheader->is_sorted = true;
   }
-  //_mtree.clear();
   _itree.clear();
   region = nullptr;
   header = nullptr;
@@ -298,7 +297,6 @@ Page *Page::open(std::string file_name, bool read_only) {
     }else {
       auto kv = std::make_pair(irec->maxTime, i);
       res->_itree.insert(kv);
-      //res->_mtree[irec->meas_id].insert(kv);
     }
   }
   return res;
@@ -392,23 +390,12 @@ void Page::update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr,
     }
   }
 
-  // auto tree = &_mtree[cur_index->meas_id];
-  // auto from = tree->lower_bound(cur_index->maxTime);
-  // auto to = tree->upper_bound(cur_index->maxTime);
-  // for (auto it = from; it != to; ++it) {
-  //  if ((it->second == pos) && (it->first == cur_index->maxTime)) {
-  //    tree->erase(it);
-  //    break;
-  //  }
-  //}
-
   cur_index->minTime = std::min(cur_index->minTime, m.time);
   cur_index->maxTime = std::max(cur_index->maxTime, m.time);
   cur_index->flag_bloom = ptr->info->flag_bloom;
   cur_index->id_bloom = ptr->info->id_bloom;
   auto kv = std::make_pair(cur_index->maxTime, pos);
   _itree.insert(kv);
-  /*tree->insert(kv);*/
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch) {
@@ -430,24 +417,20 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
 
   cur_index->offset = header->pos;
 
-  cur_index->minTime = dariadb::MAX_TIME;
-  cur_index->maxTime = dariadb::MIN_TIME;
-
   header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
   header->addeded_chunks++;
-
-  // auto kv = std::make_pair(index_rec->maxTime, pos_index);
-  //_itree.insert(kv);
-  //_mtree[index_rec->first.id].insert(kv);
 
   iheader->minTime = std::min(iheader->minTime, ch->info->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ch->info->maxTime);
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ch->info->first.id);
   iheader->count++;
 
-  cur_index->minTime = std::min(cur_index->minTime, ch->info->minTime);
-  cur_index->maxTime = std::max(cur_index->maxTime, ch->info->maxTime);
+  cur_index->minTime = ch->info->minTime;
+  cur_index->maxTime = cur_index->maxTime;
   cur_index->id_bloom = storage::bloom_add(cur_index->id_bloom, ch->info->first.id);
+
+  auto kv = std::make_pair(cur_index->maxTime, pos_index);
+  _itree.insert(kv);
 
   _openned_chunk.index = cur_index;
   _openned_chunk.pos = pos_index;
@@ -526,24 +509,20 @@ Cursor_ptr Page::readLinks(const ChunkLinkList &links) {
   return result;
 }
 
-class CountOfIdCallback : public Cursor::Callback {
-public:
-  dariadb::IdSet ids;
-  CountOfIdCallback() {}
-  ~CountOfIdCallback() {}
-
-  virtual void call(Chunk_Ptr &ptr) override {
-    if (ptr != nullptr) {
-      ids.insert(ptr->info->first.id);
-    }
-  }
-};
+//class CountOfIdCallback : public Cursor::Callback {
+//public:
+//  dariadb::IdSet ids;
+//  CountOfIdCallback() {}
+//  ~CountOfIdCallback() {}
+//
+//  virtual void call(Chunk_Ptr &ptr) override {
+//    if (ptr != nullptr) {
+//      ids.insert(ptr->info->first.id);
+//    }
+//  }
+//};
 
 dariadb::IdArray dariadb::storage::Page::getIds() {
-  /*dariadb::IdSet ss;
-for (auto kv : _mtree) {
-ss.insert(kv.first);
-}*/
   // TODO restore
   assert(false);
   return dariadb::IdArray{}; // {ss.begin(), ss.end()};

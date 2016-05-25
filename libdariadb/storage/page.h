@@ -58,8 +58,6 @@ struct Page_ChunkIndex {
 // maxtime => pos index rec in page;
 // typedef std::multimap<dariadb::Time, uint32_t> indexTree;
 typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
-typedef std::map<dariadb::Time, uint32_t> Time2Pos;
-typedef std::unordered_map<dariadb::Id, Time2Pos> PageMultiTree;
 
 class Page : public ChunkContainer, public MeasWriter {
   Page() = default;
@@ -112,7 +110,6 @@ public:
   uint8_t *chunks;
 
   indexTree _itree; // needed to sort index reccord on page closing. for fast search
-  // PageMultiTree _mtree;
   std::list<uint32_t> _free_poses;
 
   std::string filename;
