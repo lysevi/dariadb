@@ -76,7 +76,9 @@ Reader_ptr InnerReader::clone() const {
   res->_flag = _flag;
   res->_from = _from;
   res->_to = _to;
+  res->_ids = _ids;
   res->end = end;
+  res->reset();
   return res;
 }
 void InnerReader::reset() {

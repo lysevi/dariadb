@@ -112,13 +112,14 @@ public:
 
     IdArray getIds() const override {
       dariadb::IdSet idset;
-      if (page_reader != nullptr && !page_reader->isEnd()) {
+      if (page_reader != nullptr) {
         auto sub_res = page_reader->getIds();
         for (auto id : sub_res) {
           idset.insert(id);
         }
-      } else {
-        if (cap_reader != nullptr && !cap_reader->isEnd()) {
+      } 
+	  {
+        if (cap_reader != nullptr) {
           auto sub_res = cap_reader->getIds();
           for (auto id : sub_res) {
             idset.insert(id);
@@ -139,8 +140,12 @@ public:
     }
     Reader_ptr clone() const override {
       UnionReader *raw_res = new UnionReader();
-      raw_res->page_reader = this->page_reader;
-      raw_res->cap_reader = this->cap_reader;
+	  if (this->page_reader != nullptr) {
+		  raw_res->page_reader = this->page_reader->clone();
+	  }
+	  if (this->cap_reader != nullptr) {
+		  raw_res->cap_reader = this->cap_reader->clone();
+	  }
       return Reader_ptr(raw_res);
     }
 

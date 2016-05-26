@@ -36,10 +36,10 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader, dariadb::Time from
   dariadb::Meas::MeasList all{};
   reader->readAll(&all);
 
-  /* std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
+   std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
    for (auto &v : all) {
      _dict[v.id].push_back(v);
-   }*/
+   }
 
   dariadb::Id cur_id = all.front().id;
   dariadb::Value cur_val = all.front().value;
@@ -112,7 +112,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
 
   as->flush();
-
+  
   auto reader = as->readInterval(
       dariadb::storage::QueryInterval(_all_ids_array, 0, from, to + copies_count));
   check_reader_of_all(reader, from, to, step, id_val, total_count, "readAll error: ");
@@ -145,10 +145,17 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   all.clear();
   auto qp = dariadb::storage::QueryTimePoint(
       dariadb::IdArray(_all_ids_set.begin(), _all_ids_set.end()), 0, to + copies_count);
-  as->readInTimePoint(qp)->readAll(&all);
+  auto tp_reader = as->readInTimePoint(qp);
+  tp_reader->readAll(&all);
   size_t ids_count = (size_t)((to - from) / step);
   if (all.size() < ids_count) {
     throw MAKE_EXCEPTION("all.size() < ids_count. must be GE");
+  }
+
+  tp_reader->reset();
+  auto readed_ids = reader->getIds();
+  if (readed_ids.size() != _all_ids_set.size()) {
+	  throw MAKE_EXCEPTION("(eaded_ids.size() != _all_ids_set.size())");
   }
 
   fltr_res.clear();
