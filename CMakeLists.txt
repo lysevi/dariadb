@@ -62,6 +62,7 @@ else(WIN32)
     "Choose the type of build, options are: None Debug Release Coverage."
     FORCE)
   add_cxx_compiler_flag(--coverage COVERAGE)
+  add_cxx_compiler_flag(--enable-gcov)
 ENDIF(WIN32)
 
 IF(Boost_FOUND)
