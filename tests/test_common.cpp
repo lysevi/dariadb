@@ -158,7 +158,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
 
   tp_reader->reset();
-  auto readed_ids = reader->getIds();
+  auto readed_ids = tp_reader->getIds();
   if (readed_ids.size() != _all_ids_set.size()) {
 	  throw MAKE_EXCEPTION("(eaded_ids.size() != _all_ids_set.size())");
   }
