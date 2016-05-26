@@ -15,8 +15,6 @@ public:
 
   void start_worker();
 
-  void kill_worker();
-
   /// whait, while all works done and stop thread.
   void stop_worker();
   bool stoped() const { return m_stop_flag; }

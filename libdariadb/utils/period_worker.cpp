@@ -9,7 +9,7 @@ PeriodWorker::PeriodWorker(const std::chrono::milliseconds sleep_time) {
 
 PeriodWorker::~PeriodWorker() {
   if (m_thread_work) {
-    this->kill_worker();
+    this->stop_worker();
   }
 }
 
@@ -17,11 +17,6 @@ void PeriodWorker::start_worker() {
   m_stop_flag = false;
   m_thread = std::thread(&PeriodWorker::_thread_func, this);
   assert(m_thread.joinable());
-}
-
-void PeriodWorker::kill_worker() {
-  m_stop_flag = true;
-  m_thread.join();
 }
 
 /// whait, while all works done and stop thread.
