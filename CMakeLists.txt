@@ -62,9 +62,7 @@ else(WIN32)
     "Choose the type of build, options are: None Debug Release Coverage."
     FORCE)
   add_cxx_compiler_flag(--coverage COVERAGE)
-  SET(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
-  SET(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_COVERAGE} -lgcov")
-  SET(CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${CMAKE_SHARED_LINKER_FLAGS_COVERAGE} -lgcov")
+  SET(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} --coverage -O0")
 ENDIF(WIN32)
 
 IF(Boost_FOUND)
