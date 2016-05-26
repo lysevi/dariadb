@@ -23,9 +23,7 @@ before_script:
 
 script: 
    - make -j2
-   - ls
-   - cd bin
-   - ctest -VV ..
+   - ctest -VV .
 
 after_success:
    - cd ${TRAVIS_BUILD_DIR}
