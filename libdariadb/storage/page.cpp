@@ -252,18 +252,6 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   return res;
 }
 
-size_t get_header_offset() {
-  return 0;
-}
-
-size_t get_index_offset() {
-  return sizeof(PageHeader);
-}
-
-size_t get_chunks_offset() {
-  return sizeof(PageHeader);
-}
-
 Page *Page::open(std::string file_name, bool read_only) {
   auto res = new Page;
   res->readonly = read_only;
