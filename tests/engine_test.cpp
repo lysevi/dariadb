@@ -78,10 +78,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
-  const dariadb::Time from = 0;
-  const dariadb::Time to = from + 1021;
-  const dariadb::Time step = 10;
-
+ 
   {
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
