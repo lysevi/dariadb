@@ -17,10 +17,11 @@ before_script:
 
 script: 
    - make -j2
-   ls
-   cd bin
-   ./utils_test
-   ls
+   - ls
+   - cd bin
+   - ./utils_test
+   - ls
 
 after_success:
-  - coveralls --exclude lib --exclude tests --gcov-options '\-lp'
+   - ls
+   - coveralls --exclude lib --exclude tests --gcov-options '\-lp'
