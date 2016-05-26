@@ -139,6 +139,12 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   checkAll(all, "read error: ", from, to, step);
   all.clear();
 
+  as->readInterval(dariadb::storage::QueryInterval(ids, 0, to + copies_count-copies_count/3, to + copies_count))
+        ->readAll(&all);
+    if (all.size() == size_t(0)) {
+      throw MAKE_EXCEPTION("all.size() != == size_t(0)");
+    }
+
   ids.clear();
   ids.push_back(2);
   dariadb::Meas::MeasList fltr_res{};
