@@ -16,9 +16,9 @@ set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     OFF)
 set(BOOST_ALL_DYN_LINK           ON)
 
-if(NOT MSVC)
+#if(NOT MSVC)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-endif(NOT MSVC)
+#endif(NOT MSVC)
 
 IF(WIN32)
   MESSAGE(STATUS "WIN32:")
@@ -61,8 +61,8 @@ else(WIN32)
   set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
     "Choose the type of build, options are: None Debug Release Coverage."
     FORCE)
-  add_cxx_compiler_flag(--coverage COVERAGE)
-  SET(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} --coverage -O0")
+  #add_cxx_compiler_flag(--coverage COVERAGE)
+  #SET(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} --coverage -O0")
 ENDIF(WIN32)
 
 IF(Boost_FOUND)

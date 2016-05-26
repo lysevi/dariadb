@@ -7,12 +7,11 @@ set_target_properties(libcommon_test PROPERTIES FOLDER Tests)
 MESSAGE(STATUS "Test: " ${name})
 
 macro(TEST_CASE name src)
-	MESSAGE(STATUS " +" ${name})
+	MESSAGE(STATUS " +" ${name} ": " "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}")
 	add_executable(${name} ${src})
         TARGET_LINK_LIBRARIES(${name} libcommon_test libdariadb ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
-	add_test(${name} ${name})
-
-    set_target_properties(${name} PROPERTIES FOLDER Tests)
+	add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name})
+        set_target_properties(${name} PROPERTIES FOLDER Tests)
 endmacro(TEST_CASE)
 
 TEST_CASE(utils_test utils_test.cpp)
