@@ -586,7 +586,7 @@ BOOST_AUTO_TEST_CASE(IdCompressor) {
     for (int i = 0; i < 10; i++) {
       fc.append(delta);
       ids.push_back(delta);
-      delta++;
+      delta+=1000;
     }
     bw->reset_pos();
     IdDeCompressor fd(bw, ids.front());
