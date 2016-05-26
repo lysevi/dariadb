@@ -19,8 +19,6 @@ public:
   ~BinaryBuffer();
   BinaryBuffer(const BinaryBuffer &other);
   BinaryBuffer(BinaryBuffer &&other);
-  BinaryBuffer &operator=(const BinaryBuffer &other);
-  BinaryBuffer &operator=(const BinaryBuffer &&other);
 
   void swap(BinaryBuffer &other) noexcept;
 

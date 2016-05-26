@@ -26,7 +26,7 @@ public:
       _first = m;
       _is_first = false;
     }
-    if (_is_full || id_comp.is_full() || time_comp.is_full() || value_comp.is_full() ||
+    if (id_comp.is_full() || time_comp.is_full() || value_comp.is_full() ||
         flag_comp.is_full() || src_comp.is_full()) {
       _is_full = true;
       return false;
@@ -167,9 +167,6 @@ void CopmressedWriter::restore_position(const CopmressedWriter::Position &pos) {
   _Impl->restore_postion(pos);
 }
 
-CopmressedReader::CopmressedReader() {
-  this->_Impl = nullptr;
-}
 
 CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw, const Meas &first)
     : _Impl(new CopmressedReader::Private(bw, first)) {}

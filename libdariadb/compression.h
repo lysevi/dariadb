@@ -44,7 +44,6 @@ protected:
 
 class CopmressedReader {
 public:
-  CopmressedReader();
   CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
   ~CopmressedReader();
   CopmressedReader(const CopmressedReader &other);

@@ -20,10 +20,6 @@ Meas Meas::empty(Id id) {
   return res;
 }
 
-void Meas::readFrom(const Meas::PMeas m) {
-  memcpy(this, m, sizeof(Meas));
-}
-
 bool dariadb::areSame(Value a, Value b, const Value EPSILON) {
   return std::fabs(a - b) < EPSILON;
 }

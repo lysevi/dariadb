@@ -34,29 +34,6 @@ BinaryBuffer::BinaryBuffer(BinaryBuffer &&other) {
 
 BinaryBuffer::~BinaryBuffer() {}
 
-BinaryBuffer &BinaryBuffer::operator=(const BinaryBuffer &other) {
-  if (this != &other) {
-    BinaryBuffer tmp(other);
-    tmp.swap(*this);
-  }
-  return *this;
-}
-
-BinaryBuffer &BinaryBuffer::operator=(const BinaryBuffer &&other) {
-  if (this != &other) {
-    BinaryBuffer tmp(other);
-    tmp.swap(*this);
-  }
-  return *this;
-}
-
-void BinaryBuffer::swap(BinaryBuffer &other) noexcept {
-  std::swap(_pos, other._pos);
-  std::swap(_cap, other._cap);
-  std::swap(_begin, other._begin);
-  std::swap(_end, other._end);
-  std::swap(_bitnum, other._bitnum);
-}
 
 BinaryBuffer &BinaryBuffer::incbit() {
   _bitnum--;

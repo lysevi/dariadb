@@ -244,7 +244,8 @@ public:
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
 
     if (outlvl >= _header->levels_count) {
-      drop_to_stor();
+        assert(false);
+      //drop_to_stor();
       return append_to_mem(value);
     }
 
@@ -309,7 +310,7 @@ public:
     }
   };
 
-  void drop_to_stor() {
+ /*void drop_to_stor() {
     std::list<level *> to_merge;
     level tmp;
     level_header tmp_hdr;
@@ -336,7 +337,7 @@ public:
     _header->_size_B = 0;
     _header->_writed = 0;
   }
-
+*/
   Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
@@ -493,7 +494,6 @@ public:
 
   dariadb::Meas::Id2Meas timePointValues(const QueryTimePoint &q) {
     dariadb::IdSet readed_ids;
-    dariadb::IdSet unreaded_ids;
     dariadb::Meas::Id2Meas sub_res;
 
     if (inInterval(_minTime, _maxTime, q.time_point)) {
@@ -505,8 +505,6 @@ public:
         if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
           insert_if_older(sub_res, m.value);
           readed_ids.insert(m.value.id);
-        } else {
-          unreaded_ids.insert(m.value.id);
         }
       }
     }
@@ -530,8 +528,6 @@ public:
         if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
           insert_if_older(sub_res, m.value);
           readed_ids.insert(m.value.id);
-        } else {
-          unreaded_ids.insert(m.value.id);
         }
       }
     }
@@ -547,16 +543,6 @@ public:
       }
     }
 
-    if (q.ids.empty()) {
-      for (auto id : unreaded_ids) {
-        if (readed_ids.find(id) == readed_ids.end()) {
-          auto e = Meas::empty(id);
-          e.flag = Flags::_NO_DATA;
-          e.time = q.time_point;
-          sub_res[id] = e;
-        }
-      }
-    }
     return sub_res;
   }
 
