@@ -284,16 +284,16 @@ public:
     };
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-    for(auto it=page_list.rbegin();it!=page_list.rend();++it){
-        auto pname=*it;
+    for (auto it = page_list.rbegin(); it != page_list.rend(); ++it) {
+      auto pname = *it;
       auto pg = open_page_to_read(pname);
 
       auto subres = pg->valuesBeforeTimePoint(query);
-      for(auto kv:subres){
-          result.insert(kv);
+      for (auto kv : subres) {
+        result.insert(kv);
       }
-      if(subres.size()==query.ids.size()){
-          break;
+      if (subres.size() == query.ids.size()) {
+        break;
       }
     }
 
@@ -418,8 +418,7 @@ dariadb::storage::ChunkLinkList PageManager::chunksByIterval(const QueryInterval
   return impl->chunksByIterval(query);
 }
 
-dariadb::Meas::Id2Meas
-PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
+dariadb::Meas::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
   return impl->valuesBeforeTimePoint(q);
 }
 

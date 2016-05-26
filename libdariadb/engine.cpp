@@ -249,8 +249,6 @@ public:
     return Reader_ptr(raw_result);
   }
 
- 
-
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
     for (auto id : q.ids) {
@@ -266,24 +264,23 @@ public:
       } else {
         auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
 
-        TP_Reader*raw_tp_reader=new TP_Reader;
-		if (!id2meas.empty()) {
-			raw_tp_reader->_ids.resize(id2meas.size());
-			for (auto kv : id2meas) {
-				raw_tp_reader->_values.push_back(kv.second);
-				raw_tp_reader->_ids.push_back(kv.first);
-			}
-		}
-		else {
-			if (id2meas.empty()) {
-				raw_tp_reader->_ids.resize(size_t(1));
-				auto e = Meas::empty(id);
-				e.flag = Flags::_NO_DATA;
-				e.time = q.time_point;
-				raw_tp_reader->_values.push_back(e);
-				raw_tp_reader->_ids.push_back(id);
-			}
-		}
+        TP_Reader *raw_tp_reader = new TP_Reader;
+        if (!id2meas.empty()) {
+          raw_tp_reader->_ids.resize(id2meas.size());
+          for (auto kv : id2meas) {
+            raw_tp_reader->_values.push_back(kv.second);
+            raw_tp_reader->_ids.push_back(kv.first);
+          }
+        } else {
+          if (id2meas.empty()) {
+            raw_tp_reader->_ids.resize(size_t(1));
+            auto e = Meas::empty(id);
+            e.flag = Flags::_NO_DATA;
+            e.time = q.time_point;
+            raw_tp_reader->_values.push_back(e);
+            raw_tp_reader->_ids.push_back(id);
+          }
+        }
         raw_tp_reader->reset();
         Reader_ptr subres{raw_tp_reader};
         raw_result->add_rdr(subres);

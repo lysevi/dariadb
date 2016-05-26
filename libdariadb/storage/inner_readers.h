@@ -40,25 +40,22 @@ public:
 
 class TP_Reader : public storage::Reader {
 public:
-	TP_Reader();
-	~TP_Reader();
+  TP_Reader();
+  ~TP_Reader();
 
-	bool isEnd() const;
+  bool isEnd() const;
 
-	dariadb::IdArray getIds() const;
+  dariadb::IdArray getIds() const;
 
-	void readNext(dariadb::storage::ReaderClb *clb) override;
+  void readNext(dariadb::storage::ReaderClb *clb) override;
 
-	Reader_ptr clone() const override;
+  Reader_ptr clone() const override;
 
-	void reset() override;
+  void reset() override;
 
-
-
-	dariadb::Meas::MeasList _values;
-	dariadb::Meas::MeasList::iterator _values_iterator;
-	dariadb::IdArray _ids;
+  dariadb::Meas::MeasList _values;
+  dariadb::Meas::MeasList::iterator _values_iterator;
+  dariadb::IdArray _ids;
 };
-
 }
 }

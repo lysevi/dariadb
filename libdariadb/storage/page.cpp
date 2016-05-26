@@ -37,15 +37,15 @@ public:
         break;
       }
 
-        auto ptr_to_begin = link->chunks + _index_it.offset;
-        auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
-        ChunkLink sub_result;
-        sub_result.id = ptr_to_chunk_info_raw->id;
-        sub_result.pos = current_pos;
-        sub_result.maxTime = ptr_to_chunk_info_raw->maxTime;
-        sub_result.first_id = ptr_to_chunk_info_raw->first.id;
-        this->resulted_links.push_back(sub_result);
-        break;
+      auto ptr_to_begin = link->chunks + _index_it.offset;
+      auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
+      ChunkLink sub_result;
+      sub_result.id = ptr_to_chunk_info_raw->id;
+      sub_result.pos = current_pos;
+      sub_result.maxTime = ptr_to_chunk_info_raw->maxTime;
+      sub_result.first_id = ptr_to_chunk_info_raw->first.id;
+      this->resulted_links.push_back(sub_result);
+      break;
     }
     if (read_poses.empty()) {
       _is_end = true;
@@ -68,8 +68,7 @@ public:
       for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
         {
           auto _index_it = link->index[pos];
-          if (
-			  dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||
+          if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||
               dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _to) ||
               dariadb::utils::inInterval(_from, _to, _index_it.minTime) ||
               dariadb::utils::inInterval(_from, _to, _index_it.maxTime)) {
@@ -187,7 +186,7 @@ protected:
 };
 
 Page::~Page() {
-   if (!readonly && !iheader->is_sorted) {
+  if (!readonly && !iheader->is_sorted) {
     size_t pos = 0; // TODO crash safety
     Page_ChunkIndex *new_index = new Page_ChunkIndex[iheader->chunk_per_storage];
     memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
@@ -294,7 +293,7 @@ Page *Page::open(std::string file_name, bool read_only) {
     auto irec = &res->index[i];
     if (!irec->is_init) {
       res->_free_poses.push_back(i);
-    }else {
+    } else {
       auto kv = std::make_pair(irec->maxTime, i);
       res->_itree.insert(kv);
     }
@@ -348,7 +347,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   }
   // search no full chunk.
   auto step = this->header->chunk_size + sizeof(ChunkIndexInfo);
-  auto byte_it = this->chunks + step*this->header->addeded_chunks;
+  auto byte_it = this->chunks + step * this->header->addeded_chunks;
   auto end = this->chunks + this->header->chunk_per_storage * step;
   while (true) {
     if (byte_it == end) {
@@ -368,7 +367,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       init_chunk_index_rec(ptr);
       return true;
-    } 
+    }
     byte_it += step;
   }
   header->is_full = true;
@@ -382,7 +381,7 @@ void Page::update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr,
   iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
 
-   for (auto it = _itree.lower_bound(cur_index->maxTime);
+  for (auto it = _itree.lower_bound(cur_index->maxTime);
        it != _itree.upper_bound(cur_index->maxTime); ++it) {
     if ((it->first == cur_index->maxTime) && (it->second == pos)) {
       _itree.erase(it);
@@ -482,39 +481,39 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     return result;
   }
 
-  dariadb::IdSet to_read{q.ids.begin(),q.ids.end()};
-  for(auto it=raw_links.rbegin();it!=raw_links.rend();++it){
-      if(to_read.empty()){
-          break;
-      }
-      auto _index_it = this->index[it->pos];
-      auto ptr_to_begin = this->chunks + _index_it.offset;
-      auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
-      auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkIndexInfo);
+  dariadb::IdSet to_read{q.ids.begin(), q.ids.end()};
+  for (auto it = raw_links.rbegin(); it != raw_links.rend(); ++it) {
+    if (to_read.empty()) {
+      break;
+    }
+    auto _index_it = this->index[it->pos];
+    auto ptr_to_begin = this->chunks + _index_it.offset;
+    auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
+    auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkIndexInfo);
 
-      Chunk_Ptr ptr = nullptr;
-      if (ptr_to_chunk_info_raw->is_zipped) {
-          ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
-      } else {
-          // TODO implement not zipped page.
-          assert(false);
-      }
-      Chunk_Ptr c{ptr};
-      auto reader=c->get_reader();
-      while(!reader->is_end()){
-        auto m=reader->readNext();
-        if(m.time<=q.time_point && m.inQuery(q.ids,q.flag)){
-            auto f_res=result.find(m.id);
-            if(f_res==result.end()){
-                to_read.erase(m.id);
-                result[m.id]=m;
-            }else{
-                if(m.time>f_res->first){
-                    result[m.id]=m;
-                }
-            }
+    Chunk_Ptr ptr = nullptr;
+    if (ptr_to_chunk_info_raw->is_zipped) {
+      ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
+    } else {
+      // TODO implement not zipped page.
+      assert(false);
+    }
+    Chunk_Ptr c{ptr};
+    auto reader = c->get_reader();
+    while (!reader->is_end()) {
+      auto m = reader->readNext();
+      if (m.time <= q.time_point && m.inQuery(q.ids, q.flag)) {
+        auto f_res = result.find(m.id);
+        if (f_res == result.end()) {
+          to_read.erase(m.id);
+          result[m.id] = m;
+        } else {
+          if (m.time > f_res->first) {
+            result[m.id] = m;
+          }
         }
       }
+    }
   }
   return result;
 }
@@ -528,8 +527,8 @@ Cursor_ptr Page::readLinks(const ChunkLinkList &links) {
   return result;
 }
 
-//class CountOfIdCallback : public Cursor::Callback {
-//public:
+// class CountOfIdCallback : public Cursor::Callback {
+// public:
 //  dariadb::IdSet ids;
 //  CountOfIdCallback() {}
 //  ~CountOfIdCallback() {}

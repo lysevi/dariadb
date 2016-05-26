@@ -28,7 +28,7 @@ bool FlagCompressor::append(dariadb::Flag v) {
       return false;
     }
     _bw->setbit().incbit();
-    //LEB128
+    // LEB128
     auto x = v;
     do {
       auto sub_res = x & 0x7fU;

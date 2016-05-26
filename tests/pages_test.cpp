@@ -155,10 +155,10 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
       auto id2meas = PageManager::instance()->valuesBeforeTimePoint(
           dariadb::storage::QueryTimePoint(all_id_array, 0, end_time));
-      BOOST_CHECK_EQUAL(id2meas.size(),all_id_array.size());
+      BOOST_CHECK_EQUAL(id2meas.size(), all_id_array.size());
 
       for (auto &kv : id2meas) {
-        BOOST_CHECK(kv.second.time<=end_time);
+        BOOST_CHECK(kv.second.time <= end_time);
       }
 
       /* auto ids_array = PageManager::instance()->getIds();
@@ -281,8 +281,8 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   auto id2meas = PageManager::instance()->valuesBeforeTimePoint(qt);
 
   BOOST_CHECK_EQUAL(id2meas.size(), qt.ids.size());
-  for(auto kv:id2meas){
-      BOOST_CHECK_LE(kv.second.time, qt.time_point);
+  for (auto kv : id2meas) {
+    BOOST_CHECK_LE(kv.second.time, qt.time_point);
   }
 
   // TODO restore

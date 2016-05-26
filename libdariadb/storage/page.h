@@ -90,7 +90,8 @@ public:
 
 private:
   void init_chunk_index_rec(Chunk_Ptr ch);
-  void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m, uint16_t pos);
+  void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
+                         uint16_t pos);
   struct ChunkWithIndex {
     Chunk_Ptr ch;           /// ptr to chunk in page
     Page_ChunkIndex *index; /// ptr to index reccord
