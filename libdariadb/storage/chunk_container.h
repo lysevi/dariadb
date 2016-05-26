@@ -32,7 +32,6 @@ public:
   virtual ChunkLinkList chunksByIterval(const QueryInterval &query) = 0;
   virtual Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) = 0;
   virtual Cursor_ptr readLinks(const ChunkLinkList &links) = 0;
-  virtual IdArray getIds() = 0;
   virtual ~ChunkContainer();
 };
 }

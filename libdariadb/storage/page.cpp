@@ -541,12 +541,6 @@ Cursor_ptr Page::readLinks(const ChunkLinkList &links) {
 //  }
 //};
 
-dariadb::IdArray dariadb::storage::Page::getIds() {
-  // TODO restore
-  assert(false);
-  return dariadb::IdArray{}; // {ss.begin(), ss.end()};
-}
-
 dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
   if (add_to_target_chunk(value)) {
     return dariadb::append_result(1, 0);

@@ -300,22 +300,6 @@ public:
     return result;
   }
 
-  dariadb::IdArray getIds() {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
-
-    auto pred = [](const IndexHeader &) { return true; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-    dariadb::IdSet s;
-    for (auto pname : page_list) {
-      auto pg = open_page_to_read(pname);
-      auto subres = pg->getIds();
-      s.insert(subres.begin(), subres.end());
-    }
-
-    return dariadb::IdArray(s.begin(), s.end());
-  }
-
   size_t chunks_in_cur_page() const {
     if (_cur_page == nullptr) {
       return 0;
@@ -441,10 +425,6 @@ PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
 dariadb::storage::Cursor_ptr PageManager::readLinks(const ChunkLinkList &links) {
   return impl->readLinks(links);
-}
-
-dariadb::IdArray PageManager::getIds() {
-  return impl->getIds();
 }
 
 size_t PageManager::in_queue_size() const {

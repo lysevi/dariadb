@@ -17,6 +17,7 @@ for future updates.
 #include "../utils/fs.h"
 #include "../utils/kmerge.h"
 #include "../utils/utils.h"
+#include "inner_readers.h"
 #include <algorithm>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -81,43 +82,6 @@ struct level {
   bool empty() const { return hdr->pos == 0; }
 
   size_t size() const { return hdr->count; }
-};
-
-class CapReader : public storage::Reader {
-public:
-  CapReader() { _values_iterator = this->_values.end(); }
-
-  bool isEnd() const override { return _values_iterator == _values.end(); }
-
-  dariadb::IdArray getIds() const override {
-    dariadb::IdSet res;
-    for (auto v : _values) {
-      res.insert(v.id);
-    }
-    return dariadb::IdArray(res.begin(), res.end());
-  }
-
-  void readNext(dariadb::storage::ReaderClb *clb) override {
-    if (_values_iterator != _values.end()) {
-      clb->call(*_values_iterator);
-      ++_values_iterator;
-      return;
-    }
-  }
-
-  Reader_ptr clone() const override {
-    CapReader *raw = new CapReader;
-    raw->_values = _values;
-    raw->reset();
-    return Reader_ptr(raw);
-  }
-
-  void reset() override { _values_iterator = _values.begin(); }
-
-  ~CapReader() {}
-
-  dariadb::Meas::MeasList _values;
-  dariadb::Meas::MeasList::iterator _values_iterator;
 };
 
 class Capacitor::Private {
@@ -375,7 +339,7 @@ public:
 
   Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    CapReader *raw = new CapReader;
+    TP_Reader *raw = new TP_Reader;
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
     if (q.from > this->minTime()) {
@@ -422,6 +386,7 @@ public:
     for (auto &kv : sub_result) {
       for (auto &m : kv.second) {
         raw->_values.push_back(m);
+		raw->_ids.push_back(m.id);
       }
     }
     raw->reset();
@@ -441,11 +406,12 @@ public:
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    CapReader *raw = new CapReader;
+    TP_Reader *raw = new TP_Reader;
     dariadb::Meas::Id2Meas sub_res = timePointValues(q);
 
     for (auto kv : sub_res) {
       raw->_values.push_back(kv.second);
+	  raw->_ids.push_back(kv.first);
     }
 
     raw->reset();

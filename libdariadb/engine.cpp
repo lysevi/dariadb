@@ -249,43 +249,7 @@ public:
     return Reader_ptr(raw_result);
   }
 
-  class TP_Reader : public storage::Reader {
-  public:
-    TP_Reader() { _values_iterator = this->_values.end(); }
-    ~TP_Reader() {}
-
-    bool isEnd() const override { return _values_iterator == _values.end(); }
-
-    dariadb::IdArray getIds() const override {
-      dariadb::IdSet res;
-      for (auto v : _values) {
-        res.insert(v.id);
-      }
-      return dariadb::IdArray(res.begin(), res.end());
-    }
-
-    void readNext(dariadb::storage::ReaderClb *clb) override {
-      if (_values_iterator != _values.end()) {
-        clb->call(*_values_iterator);
-        ++_values_iterator;
-        return;
-      }
-    }
-
-    Reader_ptr clone() const override {
-      TP_Reader *raw = new TP_Reader;
-      raw->_values = _values;
-      raw->reset();
-      return Reader_ptr(raw);
-    }
-
-    void reset() override { _values_iterator = _values.begin(); }
-
-
-
-    dariadb::Meas::MeasList _values;
-    dariadb::Meas::MeasList::iterator _values_iterator;
-  };
+ 
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
@@ -303,15 +267,23 @@ public:
         auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
 
         TP_Reader*raw_tp_reader=new TP_Reader;
-        for(auto kv:id2meas){
-            raw_tp_reader->_values.push_back(kv.second);
-        }
-        if(id2meas.empty()){
-            auto e = Meas::empty(id);
-            e.flag = Flags::_NO_DATA;
-            e.time = q.time_point;
-            raw_tp_reader->_values.push_back(e);
-        }
+		if (!id2meas.empty()) {
+			raw_tp_reader->_ids.resize(id2meas.size());
+			for (auto kv : id2meas) {
+				raw_tp_reader->_values.push_back(kv.second);
+				raw_tp_reader->_ids.push_back(kv.first);
+			}
+		}
+		else {
+			if (id2meas.empty()) {
+				raw_tp_reader->_ids.resize(size_t(1));
+				auto e = Meas::empty(id);
+				e.flag = Flags::_NO_DATA;
+				e.time = q.time_point;
+				raw_tp_reader->_values.push_back(e);
+				raw_tp_reader->_ids.push_back(id);
+			}
+		}
         raw_tp_reader->reset();
         Reader_ptr subres{raw_tp_reader};
         raw_result->add_rdr(subres);
@@ -382,10 +354,10 @@ Engine::QueueSizes Engine::queue_size() const {
 //	return _impl->readInTimePoint(time_point);
 //}
 
-Reader_ptr dariadb::storage::Engine::readInterval(const QueryInterval &q) {
+Reader_ptr Engine::readInterval(const QueryInterval &q) {
   return _impl->readInterval(q);
 }
 
-Reader_ptr dariadb::storage::Engine::readInTimePoint(const QueryTimePoint &q) {
+Reader_ptr Engine::readInTimePoint(const QueryTimePoint &q) {
   return _impl->readInTimePoint(q);
 }

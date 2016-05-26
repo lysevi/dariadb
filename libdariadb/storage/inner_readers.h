@@ -47,24 +47,27 @@ public:
   std::mutex _locker, _locker_tp;
 };
 
-class InnerCurrentValuesReader : public Reader {
+class TP_Reader : public storage::Reader {
 public:
-  InnerCurrentValuesReader();
-  ~InnerCurrentValuesReader();
+	TP_Reader();
+	~TP_Reader();
 
-  bool isEnd() const override;
+	bool isEnd() const;
 
-  void readCurVals(storage::ReaderClb *clb);
+	dariadb::IdArray getIds() const;
 
-  void readNext(storage::ReaderClb *clb) override;
+	void readNext(dariadb::storage::ReaderClb *clb) override;
 
-  IdArray getIds() const override;
-  Reader_ptr clone() const override;
-  void reset() override;
+	Reader_ptr clone() const override;
 
-  bool end;
-  std::mutex _locker;
-  dariadb::Meas::MeasList _cur_values;
+	void reset() override;
+
+
+
+	dariadb::Meas::MeasList _values;
+	dariadb::Meas::MeasList::iterator _values_iterator;
+	dariadb::IdArray _ids;
 };
+
 }
 }

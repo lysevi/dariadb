@@ -83,7 +83,6 @@ public:
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   Cursor_ptr readLinks(const ChunkLinkList &links) override;
-  IdArray getIds() override;
 
   // Inherited via MeasWriter
   virtual append_result append(const Meas &value) override;

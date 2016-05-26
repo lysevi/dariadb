@@ -34,16 +34,7 @@ bool InnerReader::isEnd() const {
 }
 
 dariadb::IdArray InnerReader::getIds() const {
-  dariadb::IdSet idset;
-  for (auto &v : _cursors) {
-    dariadb::storage::ChunksList out;
-    v->readAll(&out);
-    for (auto &c : out) {
-      idset.insert(c->info->first.id);
-    }
-  }
-  dariadb::IdArray result{idset.begin(), idset.end()};
-  return result;
+  return _ids;
 }
 
 void InnerReader::readNext(storage::ReaderClb *clb) {
@@ -99,17 +90,18 @@ void InnerReader::readTimePoint(storage::ReaderClb *clb) {
     bw->reset_pos();
     CopmressedReader crr(bw, ch->info->first);
 
-	Meas candidate = Meas::empty();
-	bool found = false;
-    //candidate = ch->info->first;
+    Meas candidate = Meas::empty();
+    bool found = false;
+    // candidate = ch->info->first;
     ch->lock();
     for (size_t i = 0; i < ch->info->count; i++) {
 
       auto sub = crr.read();
       sub.id = ch->info->first.id;
-      if ((sub.time <= _from) && (sub.time >= candidate.time) && (sub.id==_ids.front())) {
+      if ((sub.time <= _from) && (sub.time >= candidate.time) &&
+          (sub.id == _ids.front())) {
         candidate = sub;
-		found = true;
+        found = true;
       }
       if (sub.time > _from) {
         break;
@@ -169,43 +161,35 @@ void InnerReader::reset() {
   }
 }
 
-InnerCurrentValuesReader::InnerCurrentValuesReader() {
-  this->end = false;
-}
-InnerCurrentValuesReader::~InnerCurrentValuesReader() {}
-
-bool InnerCurrentValuesReader::isEnd() const {
-  return this->end;
+TP_Reader::TP_Reader() {
+  _values_iterator = this->_values.end();
 }
 
-void InnerCurrentValuesReader::readCurVals(storage::ReaderClb *clb) {
-  for (auto v : _cur_values) {
-    clb->call(v);
+TP_Reader::~TP_Reader() {}
+
+bool TP_Reader::isEnd() const {
+  return _values_iterator == _values.end();
+}
+
+dariadb::IdArray TP_Reader::getIds() const {
+  return _ids;
+}
+
+void TP_Reader::readNext(dariadb::storage::ReaderClb *clb) {
+  if (_values_iterator != _values.end()) {
+    clb->call(*_values_iterator);
+    ++_values_iterator;
+    return;
   }
 }
 
-void InnerCurrentValuesReader::readNext(storage::ReaderClb *clb) {
-  std::lock_guard<std::mutex> lg(_locker);
-  readCurVals(clb);
-  this->end = true;
+Reader_ptr TP_Reader::clone() const {
+  TP_Reader *raw = new TP_Reader;
+  raw->_values = _values;
+  raw->reset();
+  return Reader_ptr(raw);
 }
 
-IdArray InnerCurrentValuesReader::getIds() const {
-  dariadb::IdArray result;
-  result.resize(_cur_values.size());
-  size_t pos = 0;
-  for (auto v : _cur_values) {
-    result[pos] = v.id;
-    pos++;
-  }
-  return result;
-}
-Reader_ptr InnerCurrentValuesReader::clone() const {
-  auto raw_reader = new InnerCurrentValuesReader();
-  Reader_ptr result{raw_reader};
-  raw_reader->_cur_values = _cur_values;
-  return result;
-}
-void InnerCurrentValuesReader::reset() {
-  end = false;
+void TP_Reader::reset() {
+  _values_iterator = _values.begin();
 }
