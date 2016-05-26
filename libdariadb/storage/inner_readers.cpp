@@ -62,8 +62,6 @@ void InnerReader::readNext(storage::ReaderClb *clb) {
 }
 
 bool InnerReader::check_meas(const Meas &m) const {
-  auto tmp = std::make_tuple(m.id, m.time);
-  
   using utils::inInterval;
 
   if (m.inFlag(_flag) && (m.inInterval(_from, _to))) {
