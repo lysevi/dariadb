@@ -16,6 +16,7 @@ before_install:
 
 install:
   - cd ${TRAVIS_BUILD_DIR}
+  - lcov --directory . --zerocounters
 
 before_script:
    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} --coverage -O0"  .
