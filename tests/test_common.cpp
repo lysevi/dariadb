@@ -112,7 +112,12 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
 
   as->flush();
-  
+  if (as->minTime() != from) {
+	  throw MAKE_EXCEPTION("as->minTime() != from");
+  }
+  if (as->maxTime() < to) {
+	  throw MAKE_EXCEPTION("as->maxTime() < to");
+  }
   auto reader = as->readInterval(
       dariadb::storage::QueryInterval(_all_ids_array, 0, from, to + copies_count));
   check_reader_of_all(reader, from, to, step, id_val, total_count, "readAll error: ");
