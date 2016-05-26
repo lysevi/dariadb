@@ -492,14 +492,9 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
       auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
       auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkIndexInfo);
 
-      auto info = new ChunkIndexInfo;
-      memcpy(info, ptr_to_chunk_info_raw, sizeof(ChunkIndexInfo));
-      auto buf = new uint8_t[info->size];
-      memcpy(buf, ptr_to_buffer_raw, info->size);
       Chunk_Ptr ptr = nullptr;
-      if (info->is_zipped) {
-          ptr = Chunk_Ptr{new ZippedChunk(info, buf)};
-          ptr->should_free = true;
+      if (ptr_to_chunk_info_raw->is_zipped) {
+          ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
       } else {
           // TODO implement not zipped page.
           assert(false);
