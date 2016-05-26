@@ -20,6 +20,7 @@ script:
    - ls
    - cd bin
    - ./utils_test
+   - find ./ -type f -iname '*.gcda'
    - ls
 
 after_success:
