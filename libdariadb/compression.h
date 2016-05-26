@@ -53,8 +53,6 @@ public:
   CopmressedReader &operator=(CopmressedReader &&other);
 
   Meas read();
-  bool is_full() const;
-
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

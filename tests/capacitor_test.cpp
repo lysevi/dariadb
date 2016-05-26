@@ -252,3 +252,158 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
+
+BOOST_AUTO_TEST_CASE(byStep) {
+    std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+    stor->writed_count = 0;
+    const size_t max_size = 10;
+    auto storage_path = "testStorage";
+
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
+    }
+
+  const size_t id_count = 1;
+  { // equal step
+      dariadb::storage::Capacitor ms{
+          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+
+    auto m = dariadb::Meas::empty();
+    const size_t total_count = 100;
+    const dariadb::Time time_step = 1;
+    dariadb::IdSet all_id;
+    for (size_t i = 0; i < total_count; i += time_step) {
+      m.id = i % id_count;
+      all_id.insert(m.id);
+      m.flag = dariadb::Flag(i);
+      m.time = i;
+      m.value = 0;
+      ms.append(m);
+    }
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
+                                                     0,
+                                                     0, total_count);
+    auto rdr = ms.readInterval(q_all);
+
+    dariadb::Meas::MeasList allByStep;
+    rdr = ms.readInterval(q_all);
+    rdr->readByStep(&allByStep, 0, total_count, time_step);
+    auto expected = size_t(total_count / time_step) * id_count; //+ timepoint
+    BOOST_CHECK_EQUAL(allByStep.size(), expected);
+  }
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+
+  { // less step
+      dariadb::storage::Capacitor ms{
+          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+
+    auto m = dariadb::Meas::empty();
+    const size_t total_count = 100;
+    const dariadb::Time time_step = 10;
+    dariadb::IdSet all_id;
+    for (size_t i = 0; i < total_count; i += time_step) {
+      m.id = i % id_count;
+      all_id.insert(m.id);
+      m.flag = dariadb::Flag(i);
+      m.time = i;
+      m.value = 0;
+      ms.append(m);
+    }
+
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
+                                                     0,
+                                                     0, total_count);
+    auto rdr = ms.readInterval(q_all);
+
+    dariadb::Time query_step = 11;
+    dariadb::Meas::MeasList allByStep;
+    rdr = ms.readInterval(q_all);
+    rdr->readByStep(&allByStep, 0, total_count, query_step);
+    auto expected =
+        size_t(total_count / query_step) * id_count + id_count; //+ timepoint;
+    BOOST_CHECK_EQUAL(allByStep.size(), expected);
+  }
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+
+  { // great step
+      dariadb::storage::Capacitor ms{
+          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+
+    auto m = dariadb::Meas::empty();
+    const size_t total_count = 100;
+    const dariadb::Time time_step = 10;
+    dariadb::IdSet all_id;
+
+    for (size_t i = 0; i < total_count; i += time_step) {
+      m.id = i % id_count;
+      all_id.insert(m.id);
+      m.flag = dariadb::Flag(i);
+      m.time = i;
+      m.value = 0;
+      ms.append(m);
+    }
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
+                                                     0,
+                                                     0, total_count);
+    auto rdr = ms.readInterval(q_all);
+    dariadb::Meas::MeasList all;
+    rdr->readAll(&all);
+
+    dariadb::Time query_step = 5;
+    dariadb::Meas::MeasList allByStep;
+    rdr = ms.readInterval(q_all);
+    rdr->readByStep(&allByStep, 0, total_count, query_step);
+    auto expected = size_t(total_count / time_step) * 2 * id_count +
+                    id_count; //+ timepoint;
+    BOOST_CHECK_EQUAL(allByStep.size(), expected);
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+  { // from before data
+      dariadb::storage::Capacitor ms{
+          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+
+    auto m = dariadb::Meas::empty();
+    const size_t total_count = 100;
+    const dariadb::Time time_step = 10;
+    dariadb::IdSet all_id;
+    for (size_t i = time_step; i < total_count; i += time_step) {
+      m.id = i % id_count;
+      all_id.insert(m.id);
+      m.flag = dariadb::Flag(i);
+      m.time = i;
+      m.value = 0;
+      ms.append(m);
+    }
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
+                                                     0,
+                                                     time_step, total_count);
+    auto rdr = ms.readInterval(q_all);
+    dariadb::Meas::MeasList all;
+    rdr->readAll(&all);
+
+    dariadb::Time query_step = 5;
+    dariadb::Meas::MeasList allByStep;
+    rdr = ms.readInterval(q_all);
+
+    rdr->readByStep(&allByStep, 0, total_count, query_step);
+
+    dariadb::Time expected =
+        dariadb::Time((total_count - time_step) / time_step) * 2;
+    expected = expected * id_count;
+    expected += id_count * (time_step / query_step); //+ before first value
+    expected += id_count;                            // one after last  value
+
+    BOOST_CHECK_EQUAL(allByStep.size(), expected);
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+}

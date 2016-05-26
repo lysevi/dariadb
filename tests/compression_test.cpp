@@ -624,10 +624,12 @@ BOOST_AUTO_TEST_CASE(CompressedBlock) {
     m.src = i;
     m.value = i;
     if (!cwr.append(m)) {
+        BOOST_CHECK(cwr.is_full());
       break;
     }
     meases.push_back(m);
   }
+  BOOST_CHECK_LT(cwr.used_space(),test_buffer_size);
 
   bw->reset_pos();
   CopmressedReader crr(bw, meases.front());

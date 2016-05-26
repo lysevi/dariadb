@@ -104,12 +104,6 @@ public:
     return result;
   }
 
-  bool is_full() const {
-    return this->id_dcomp.is_full() || this->time_dcomp.is_full() ||
-           this->value_dcomp.is_full() || this->flag_dcomp.is_full() ||
-           this->src_dcomp.is_full();
-  }
-
 protected:
   dariadb::Meas _first;
 
@@ -184,10 +178,6 @@ CopmressedReader::~CopmressedReader() {}
 
 dariadb::Meas CopmressedReader::read() {
   return _Impl->read();
-}
-
-bool CopmressedReader::is_full() const {
-  return _Impl->is_full();
 }
 
 CopmressedReader::CopmressedReader(const CopmressedReader &other)
