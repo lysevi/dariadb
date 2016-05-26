@@ -26,11 +26,6 @@ public:
       _first = m;
       _is_first = false;
     }
-    if (id_comp.is_full() || time_comp.is_full() || value_comp.is_full() ||
-        flag_comp.is_full() || src_comp.is_full()) {
-      _is_full = true;
-      return false;
-    }
 
     auto i_f = id_comp.append(m.id);
     auto t_f = time_comp.append(m.time);

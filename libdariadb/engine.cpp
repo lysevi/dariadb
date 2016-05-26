@@ -117,8 +117,8 @@ public:
         for (auto id : sub_res) {
           idset.insert(id);
         }
-      } 
-	  {
+      }
+      {
         if (cap_reader != nullptr) {
           auto sub_res = cap_reader->getIds();
           for (auto id : sub_res) {

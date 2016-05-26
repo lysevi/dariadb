@@ -127,6 +127,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   check_reader_of_all(cloned_reader, from, to, step, id_val, total_count,
                       "cloned readAll error: ");
 
+
   dariadb::IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
   dariadb::Meas::MeasList all{};
   as->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to + copies_count))
@@ -136,6 +137,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
 
   checkAll(all, "read error: ", from, to, step);
+  all.clear();
 
   ids.clear();
   ids.push_back(2);
