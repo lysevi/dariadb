@@ -6,6 +6,7 @@
 #include "../utils/utils.h"
 #include "manifest.h"
 #include "page.h"
+#include "bloom_filter.h"
 
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
