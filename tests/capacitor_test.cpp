@@ -440,7 +440,6 @@ public:
 	  dariadb::utils::fs::rm(storage_path);
   }
 
-  const size_t id_count = 1;
   { // equal step
 	  dariadb::storage::Capacitor ms{
 		  stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path) };
