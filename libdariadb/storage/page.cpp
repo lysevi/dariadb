@@ -9,7 +9,7 @@ using namespace dariadb::storage;
 
 class PageLinksCursor {
 public:
-  PageLinksCursor(PageIndex_ptr page, const dariadb::IdArray &ids, dariadb::Time from,
+  PageLinksCursor(PageIndex* page, const dariadb::IdArray &ids, dariadb::Time from,
                   dariadb::Time to, dariadb::Flag flag)
       : link(page), _ids(ids), _from(from), _to(to), _flag(flag) {
     reset_pos();
@@ -100,7 +100,7 @@ public:
   ChunkLinkList resulted_links;
 
 protected:
-	PageIndex_ptr link;
+	PageIndex* link;
   bool _is_end;
   dariadb::IdArray _ids;
   dariadb::Time _from, _to;
@@ -201,7 +201,7 @@ PageIndex::~PageIndex() {
 	index_mmap->close();
 }
 
-PageIndex_ptr PageIndex::create(std::string filename, uint64_t size, uint32_t chunk_per_storage, uint32_t chunk_size) {
+PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size, uint32_t chunk_per_storage, uint32_t chunk_size) {
 	PageIndex_ptr res = std::make_shared<PageIndex>();
 	auto immap =
 		utils::fs::MappedFile::touch(filename, size);
@@ -221,6 +221,21 @@ PageIndex_ptr PageIndex::create(std::string filename, uint64_t size, uint32_t ch
 	res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
 	return res;
 }
+
+ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
+	dariadb::Time to, dariadb::Flag flag) {
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
+
+	PageLinksCursor c(this, ids, from, to, flag);
+	c.reset_pos();
+
+	while (!c.is_end()) {
+		c.readNext();
+	}
+
+	return c.resulted_links;
+}
+
 Page::~Page() {
   
   region = nullptr;
@@ -245,7 +260,7 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   std::fill(region, region + sz, 0);
 
   res->page_mmap = mmap;
-  res->_index = PageIndex::create(file_name + "i", index_file_size(chunk_per_storage), chunk_per_storage, chunk_size);
+  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name), index_file_size(chunk_per_storage), chunk_per_storage, chunk_size);
   res->region = region;
 
   res->header = reinterpret_cast<PageHeader *>(region);
@@ -261,7 +276,7 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   return res;
 }
 
-PageIndex_ptr PageIndex::open(std::string filename, bool read_only) {
+PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
 	PageIndex_ptr res = std::make_shared<PageIndex>();
 	res->readonly = read_only;
 	auto immap = utils::fs::MappedFile::open(filename);
@@ -304,15 +319,10 @@ Page *Page::open(std::string file_name, bool read_only) {
   res->filename = file_name;
   auto region = mmap->data();
 
-  auto immap = utils::fs::MappedFile::open(file_name + "i");
-  auto iregion = immap->data();
-
   res->page_mmap = mmap;
-  res->_index = PageIndex::open(file_name + "i",read_only);
+  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name),read_only);
   
   res->region = region;
-  
-
   res->header = reinterpret_cast<PageHeader *>(region);
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
 
@@ -456,19 +466,6 @@ bool Page::is_full() const {
          (_openned_chunk.ch == nullptr || _openned_chunk.ch->is_full());
 }
 
-ChunkLinkList Page::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
-                                     dariadb::Time to, dariadb::Flag flag) {
-  boost::shared_lock<boost::shared_mutex> lg(_locker);
-
-  PageLinksCursor c(this->_index, ids, from, to, flag);
-  c.reset_pos();
-
-  while (!c.is_end()) {
-    c.readNext();
-  }
-
-  return c.resulted_links;
-}
 
 void Page::dec_reader() {
   boost::upgrade_lock<boost::shared_mutex> lg(_locker);
@@ -480,12 +477,12 @@ bool dariadb::storage::Page::minMaxTime(dariadb::Id, dariadb::Time *, dariadb::T
 }
 
 ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
-  return get_chunks_links(query.ids, query.from, query.to, query.flag);
+  return _index->get_chunks_links(query.ids, query.from, query.to, query.flag);
 }
 
 dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   dariadb::Meas::Id2Meas result;
-  auto raw_links = this->get_chunks_links(q.ids, _index->iheader->minTime, q.time_point, q.flag);
+  auto raw_links = _index->get_chunks_links(q.ids, _index->iheader->minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }

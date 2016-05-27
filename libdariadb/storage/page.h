@@ -61,7 +61,7 @@ typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 
 class PageIndex;
 typedef std::shared_ptr<PageIndex> PageIndex_ptr;
-class PageIndex {
+class PageIndex:std::enable_shared_from_this<PageIndex> {
 public:
 	bool readonly;
 	IndexHeader *iheader;
@@ -73,11 +73,18 @@ public:
 	mutable boost::shared_mutex _locker;
 	mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 	~PageIndex();
-	static PageIndex_ptr create(std::string filename, uint64_t size, uint32_t chunk_per_storage,uint32_t chunk_size);
-	static PageIndex_ptr open(std::string filename, bool read_only);
+	static PageIndex_ptr create(const std::string &filename, uint64_t size, uint32_t chunk_per_storage,uint32_t chunk_size);
+	static PageIndex_ptr open(const std::string &filename, bool read_only);
 
 	void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
 		uint16_t pos);
+
+	ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
+		dariadb::Time to, dariadb::Flag flag);
+
+	static std::string index_name_from_page_name(const std::string&page_name) {
+		return page_name + "i";
+	}
 };
 
 class Page : public ChunkContainer, public MeasWriter {
@@ -94,8 +101,7 @@ public:
   bool add_to_target_chunk(const dariadb::Meas &m);
   /*bool append(const ChunksList &ch) override;*/
   bool is_full() const;
-  ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
-                                 dariadb::Time to, dariadb::Flag flag);
+  
   // ChunksList get_open_chunks();
   void dec_reader();
   // ChunkContainer
