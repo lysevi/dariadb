@@ -18,12 +18,12 @@ public:
   Private(const PageManager::Params &page_storage_params,
           dariadb::storage::Capacitor::Params cap_params,
           dariadb::storage::Engine::Limits limits)
-      : mem_storage{new MemoryStorage()}, _page_manager_params(page_storage_params),
+      : /*mem_storage{new MemoryStorage()},*/ _page_manager_params(page_storage_params),
         _cap_params(cap_params), _limits(limits) {
     _subscribe_notify.start();
     PageManager::start(_page_manager_params);
     mem_cap = new Capacitor(PageManager::instance(), _cap_params);
-    mem_storage_raw = dynamic_cast<MemoryStorage *>(mem_storage.get());
+    //mem_storage_raw = dynamic_cast<MemoryStorage *>(mem_storage.get());
   }
   ~Private() {
     _subscribe_notify.stop();
@@ -295,8 +295,8 @@ public:
   }
 
 protected:
-  std::shared_ptr<MemoryStorage> mem_storage;
-  storage::MemoryStorage *mem_storage_raw;
+//  std::shared_ptr<MemoryStorage> mem_storage;
+  //storage::MemoryStorage *mem_storage_raw;
   storage::Capacitor *mem_cap;
 
   storage::PageManager::Params _page_manager_params;

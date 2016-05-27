@@ -46,6 +46,7 @@ struct QueryTimePointHasher {
     return result;
   }
 };
+/*
 class MemoryStorage : public MeasSource {
 public:
   MemoryStorage();
@@ -68,6 +69,6 @@ public:
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
-};
+};*/
 }
 }

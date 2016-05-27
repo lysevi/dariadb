@@ -2,7 +2,7 @@
 
 #include <flags.h>
 #include <meas.h>
-#include <storage/memstorage.h>
+#include <storage.h>
 #include <string>
 
 namespace dariadb_test {

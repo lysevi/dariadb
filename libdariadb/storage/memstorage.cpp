@@ -1,4 +1,5 @@
 #include "memstorage.h"
+/*
 #include "../utils/locker.h"
 //#include "../utils/utils.h"
 #include "chunk.h"
@@ -36,7 +37,7 @@ public:
 };
 
 class MemoryStorage::Private
-/* : protected dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
+ : protected dariadb::utils::AsyncWorker<Chunk_Ptr> {
 public:
   Private() { _cc = nullptr; }
 
@@ -107,3 +108,4 @@ Reader_ptr MemoryStorage::readInterval(const QueryInterval &q) {
 Reader_ptr MemoryStorage::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
+*/

@@ -7,6 +7,7 @@
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
+#include <storage/bloom_filter.h>
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -14,6 +15,34 @@ public:
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };
+
+
+BOOST_AUTO_TEST_CASE(BloomTest) {
+	typedef uint8_t u8_fltr_t;
+
+	auto u8_fltr = dariadb::storage::bloom_empty<u8_fltr_t>();
+
+	BOOST_CHECK_EQUAL(u8_fltr, uint8_t{ 0 });
+
+	u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{ 1 });
+	u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{ 2 });
+
+	BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 1 }));
+	BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 2 }));
+	BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{ 3 }));
+	BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{ 4 }));
+	BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{ 5 }));
+}
+
+BOOST_AUTO_TEST_CASE(inFilter) {
+	{
+		auto m = dariadb::Meas::empty();
+		m.flag = 100;
+		BOOST_CHECK(m.inFlag(0));
+		BOOST_CHECK(m.inFlag(100));
+		BOOST_CHECK(!m.inFlag(10));
+	}
+}
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
