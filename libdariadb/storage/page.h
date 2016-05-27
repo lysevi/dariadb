@@ -61,7 +61,7 @@ typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 
 class PageIndex;
 typedef std::shared_ptr<PageIndex> PageIndex_ptr;
-class PageIndex:std::enable_shared_from_this<PageIndex> {
+class PageIndex {
 public:
 	bool readonly;
 	IndexHeader *iheader;
