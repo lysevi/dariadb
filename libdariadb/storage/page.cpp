@@ -9,7 +9,7 @@ using namespace dariadb::storage;
 
 class PageLinksCursor {
 public:
-  PageLinksCursor(Page *page, const dariadb::IdArray &ids, dariadb::Time from,
+  PageLinksCursor(PageIndex_ptr page, const dariadb::IdArray &ids, dariadb::Time from,
                   dariadb::Time to, dariadb::Flag flag)
       : link(page), _ids(ids), _from(from), _to(to), _flag(flag) {
     reset_pos();
@@ -37,13 +37,10 @@ public:
         break;
       }
 
-      auto ptr_to_begin = link->chunks + _index_it.offset;
-      auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
       ChunkLink sub_result;
-      sub_result.id = ptr_to_chunk_info_raw->id;
+      sub_result.id = _index_it.chunk_id;
       sub_result.pos = current_pos;
-      sub_result.maxTime = ptr_to_chunk_info_raw->maxTime;
-      sub_result.first_id = ptr_to_chunk_info_raw->first.id;
+      sub_result.maxTime = _index_it.maxTime;
       this->resulted_links.push_back(sub_result);
       break;
     }
@@ -103,7 +100,7 @@ public:
   ChunkLinkList resulted_links;
 
 protected:
-  Page *link;
+	PageIndex_ptr link;
   bool _is_end;
   dariadb::IdArray _ids;
   dariadb::Time _from, _to;
@@ -132,7 +129,7 @@ public:
       _is_end = true;
       return;
     }
-    auto _index_it = this->link->index[_ch_links_iterator->pos];
+    auto _index_it = this->link->_index->index[_ch_links_iterator->pos];
     ++_ch_links_iterator;
     for (; !_is_end;) {
       if (_is_end) {
@@ -185,26 +182,53 @@ protected:
   ChunkLinkList::const_iterator _ch_links_iterator;
 };
 
-Page::~Page() {
-  if (!readonly && !iheader->is_sorted) {
-    size_t pos = 0; // TODO crash safety
-    Page_ChunkIndex *new_index = new Page_ChunkIndex[iheader->chunk_per_storage];
-    memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
 
-    for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
-      new_index[pos] = index[it->second];
-    }
-    memcpy(index, new_index, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
-    delete[] new_index;
-    iheader->is_sorted = true;
-  }
-  _itree.clear();
+PageIndex::~PageIndex() {
+	if (!readonly && !iheader->is_sorted) {
+		size_t pos = 0; // TODO crash safety
+		Page_ChunkIndex *new_index = new Page_ChunkIndex[iheader->chunk_per_storage];
+		memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
+
+		for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
+			new_index[pos] = index[it->second];
+		}
+		memcpy(index, new_index, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
+		delete[] new_index;
+		iheader->is_sorted = true;
+	}
+	_itree.clear();
+	index = nullptr;
+	index_mmap->close();
+}
+
+PageIndex_ptr PageIndex::create(std::string filename, uint64_t size, uint32_t chunk_per_storage, uint32_t chunk_size) {
+	PageIndex_ptr res = std::make_shared<PageIndex>();
+	auto immap =
+		utils::fs::MappedFile::touch(filename, size);
+	auto iregion = immap->data();
+	std::fill(iregion, iregion + size, 0);
+	res->index_mmap = immap;
+	res->iregion = iregion;
+
+	res->iheader = reinterpret_cast<IndexHeader *>(iregion);
+	res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
+
+	res->iheader->maxTime = dariadb::MIN_TIME;
+	res->iheader->minTime = dariadb::MAX_TIME;
+	res->iheader->chunk_per_storage = chunk_per_storage;
+	res->iheader->chunk_size = chunk_size;
+	res->iheader->is_sorted = false;
+	res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
+	return res;
+}
+Page::~Page() {
+  
   region = nullptr;
   header = nullptr;
-  index = nullptr;
+  _index = nullptr;
   chunks = nullptr;
   page_mmap->close();
-  index_mmap->close();
+ 
 }
 
 uint64_t index_file_size(uint32_t chunk_per_storage) {
@@ -220,15 +244,9 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   auto region = mmap->data();
   std::fill(region, region + sz, 0);
 
-  auto immap =
-      utils::fs::MappedFile::touch(file_name + "i", index_file_size(chunk_per_storage));
-  auto iregion = immap->data();
-  std::fill(iregion, iregion + index_file_size(chunk_per_storage), 0);
-
   res->page_mmap = mmap;
-  res->index_mmap = immap;
+  res->_index = PageIndex::create(file_name + "i", index_file_size(chunk_per_storage), chunk_per_storage, chunk_size);
   res->region = region;
-  res->iregion = iregion;
 
   res->header = reinterpret_cast<PageHeader *>(region);
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
@@ -236,20 +254,47 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
 
-  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
-  res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
-
-  res->iheader->maxTime = dariadb::MIN_TIME;
-  res->iheader->minTime = dariadb::MAX_TIME;
-  res->iheader->chunk_per_storage = chunk_per_storage;
-  res->iheader->chunk_size = chunk_size;
-  res->iheader->is_sorted = false;
-  res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
 
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
   }
   return res;
+}
+
+PageIndex_ptr PageIndex::open(std::string filename, bool read_only) {
+	PageIndex_ptr res = std::make_shared<PageIndex>();
+	res->readonly = read_only;
+	auto immap = utils::fs::MappedFile::open(filename);
+	auto iregion = immap->data();
+	res->index_mmap = immap;
+	res->iregion = iregion;
+	res->iheader = reinterpret_cast<IndexHeader *>(iregion);
+	res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
+	return res;
+}
+
+
+void PageIndex::update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr,
+	const dariadb::Meas &m, uint16_t pos) {
+	// cur_index->last = ptr->info->last;
+	iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
+	iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
+	iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
+
+	for (auto it = _itree.lower_bound(cur_index->maxTime);
+		it != _itree.upper_bound(cur_index->maxTime); ++it) {
+		if ((it->first == cur_index->maxTime) && (it->second == pos)) {
+			_itree.erase(it);
+			break;
+		}
+	}
+
+	cur_index->minTime = std::min(cur_index->minTime, m.time);
+	cur_index->maxTime = std::max(cur_index->maxTime, m.time);
+	cur_index->flag_bloom = ptr->info->flag_bloom;
+	cur_index->id_bloom = ptr->info->id_bloom;
+	auto kv = std::make_pair(cur_index->maxTime, pos);
+	_itree.insert(kv);
 }
 
 Page *Page::open(std::string file_name, bool read_only) {
@@ -263,27 +308,25 @@ Page *Page::open(std::string file_name, bool read_only) {
   auto iregion = immap->data();
 
   res->page_mmap = mmap;
-  res->index_mmap = immap;
+  res->_index = PageIndex::open(file_name + "i",read_only);
+  
   res->region = region;
-  res->iregion = iregion;
+  
 
   res->header = reinterpret_cast<PageHeader *>(region);
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-
-  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
-  res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
 
   if (res->header->chunk_size == 0) {
     throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
   }
 
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
-    auto irec = &res->index[i];
+    auto irec = &res->_index->index[i];
     if (!irec->is_init) {
       res->_free_poses.push_back(i);
     } else {
       auto kv = std::make_pair(irec->maxTime, i);
-      res->_itree.insert(kv);
+      res->_index->_itree.insert(kv);
     }
   }
   return res;
@@ -329,7 +372,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
   if (_openned_chunk.ch != nullptr && !_openned_chunk.ch->is_full()) {
     if (_openned_chunk.ch->append(m)) {
-      update_index_info(_openned_chunk.index, _openned_chunk.ch, m, _openned_chunk.pos);
+      _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m, _openned_chunk.pos);
       return true;
     }
   }
@@ -362,28 +405,6 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   return false;
 }
 
-void Page::update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr,
-                             const dariadb::Meas &m, uint16_t pos) {
-  // cur_index->last = ptr->info->last;
-  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
-  iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
-  iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
-
-  for (auto it = _itree.lower_bound(cur_index->maxTime);
-       it != _itree.upper_bound(cur_index->maxTime); ++it) {
-    if ((it->first == cur_index->maxTime) && (it->second == pos)) {
-      _itree.erase(it);
-      break;
-    }
-  }
-
-  cur_index->minTime = std::min(cur_index->minTime, m.time);
-  cur_index->maxTime = std::max(cur_index->maxTime, m.time);
-  cur_index->flag_bloom = ptr->info->flag_bloom;
-  cur_index->id_bloom = ptr->info->id_bloom;
-  auto kv = std::make_pair(cur_index->maxTime, pos);
-  _itree.insert(kv);
-}
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   assert(header->chunk_size == ch->info->size);
@@ -393,7 +414,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   pos_index = _free_poses.front();
   _free_poses.pop_front();
 
-  auto cur_index = &index[pos_index];
+  auto cur_index = &_index->index[pos_index];
   cur_index->chunk_id = ch->info->id;
   // cur_index->meas_id = ch->info->first.id;
   // cur_index->last = ch->info->last;
@@ -407,17 +428,17 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   header->pos += header->chunk_size + sizeof(ChunkIndexInfo);
   header->addeded_chunks++;
 
-  iheader->minTime = std::min(iheader->minTime, ch->info->minTime);
-  iheader->maxTime = std::max(iheader->maxTime, ch->info->maxTime);
-  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, ch->info->first.id);
-  iheader->count++;
+  _index->iheader->minTime = std::min(_index->iheader->minTime, ch->info->minTime);
+  _index->iheader->maxTime = std::max(_index->iheader->maxTime, ch->info->maxTime);
+  _index->iheader->id_bloom = storage::bloom_add(_index->iheader->id_bloom, ch->info->first.id);
+  _index->iheader->count++;
 
   cur_index->minTime = ch->info->minTime;
   cur_index->maxTime = cur_index->maxTime;
   cur_index->id_bloom = storage::bloom_add(cur_index->id_bloom, ch->info->first.id);
 
   auto kv = std::make_pair(cur_index->maxTime, pos_index);
-  _itree.insert(kv);
+  _index->_itree.insert(kv);
 
   _openned_chunk.index = cur_index;
   _openned_chunk.pos = pos_index;
@@ -439,7 +460,7 @@ ChunkLinkList Page::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time 
                                      dariadb::Time to, dariadb::Flag flag) {
   boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-  PageLinksCursor c(this, ids, from, to, flag);
+  PageLinksCursor c(this->_index, ids, from, to, flag);
   c.reset_pos();
 
   while (!c.is_end()) {
@@ -464,7 +485,7 @@ ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query
 
 dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   dariadb::Meas::Id2Meas result;
-  auto raw_links = this->get_chunks_links(q.ids, iheader->minTime, q.time_point, q.flag);
+  auto raw_links = this->get_chunks_links(q.ids, _index->iheader->minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }
@@ -474,7 +495,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     if (to_read.empty()) {
       break;
     }
-    auto _index_it = this->index[it->pos];
+    auto _index_it = this->_index->index[it->pos];
     auto ptr_to_begin = this->chunks + _index_it.offset;
     auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
     auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkIndexInfo);

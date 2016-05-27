@@ -59,6 +59,27 @@ struct Page_ChunkIndex {
 // typedef std::multimap<dariadb::Time, uint32_t> indexTree;
 typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 
+class PageIndex;
+typedef std::shared_ptr<PageIndex> PageIndex_ptr;
+class PageIndex {
+public:
+	bool readonly;
+	IndexHeader *iheader;
+	uint8_t *iregion; // index file mapp region
+	Page_ChunkIndex *index;
+
+	indexTree _itree; // needed to sort index reccord on page closing. for fast search
+	std::string filename;
+	mutable boost::shared_mutex _locker;
+	mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
+	~PageIndex();
+	static PageIndex_ptr create(std::string filename, uint64_t size, uint32_t chunk_per_storage,uint32_t chunk_size);
+	static PageIndex_ptr open(std::string filename, bool read_only);
+
+	void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
+		uint16_t pos);
+};
+
 class Page : public ChunkContainer, public MeasWriter {
   Page() = default;
 
@@ -90,8 +111,7 @@ public:
 
 private:
   void init_chunk_index_rec(Chunk_Ptr ch);
-  void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
-                         uint16_t pos);
+  
   struct ChunkWithIndex {
     Chunk_Ptr ch;           /// ptr to chunk in page
     Page_ChunkIndex *index; /// ptr to index reccord
@@ -102,23 +122,20 @@ private:
 
 public:
   uint8_t *region;  // page  file mapp region
-  uint8_t *iregion; // index file mapp region
+ 
   PageHeader *header;
-  IndexHeader *iheader;
-
-  Page_ChunkIndex *index;
+  
   uint8_t *chunks;
 
-  indexTree _itree; // needed to sort index reccord on page closing. for fast search
+  
   std::list<uint32_t> _free_poses;
 
   std::string filename;
   bool readonly;
-
+  PageIndex_ptr _index;
 protected:
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
-  mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 };
 
 typedef std::shared_ptr<Page> Page_Ptr;

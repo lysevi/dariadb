@@ -17,7 +17,6 @@ public:
 
 struct ChunkLink {
   uint64_t id;
-  dariadb::Id first_id;
   dariadb::Time maxTime;
   std::string page_name;
   uint32_t pos;
