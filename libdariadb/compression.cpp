@@ -162,7 +162,6 @@ void CopmressedWriter::restore_position(const CopmressedWriter::Position &pos) {
   _Impl->restore_postion(pos);
 }
 
-
 CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw, const Meas &first)
     : _Impl(new CopmressedReader::Private(bw, first)) {}
 

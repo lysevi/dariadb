@@ -52,6 +52,7 @@ public:
   CopmressedReader &operator=(CopmressedReader &&other);
 
   Meas read();
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

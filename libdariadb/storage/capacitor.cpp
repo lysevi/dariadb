@@ -244,8 +244,8 @@ public:
     // std::cout<<"outlvl: "<<outlvl<<std::endl;
 
     if (outlvl >= _header->levels_count) {
-        assert(false);
-      //drop_to_stor();
+      assert(false);
+      // drop_to_stor();
       return append_to_mem(value);
     }
 
@@ -310,34 +310,34 @@ public:
     }
   };
 
- /*void drop_to_stor() {
-    std::list<level *> to_merge;
-    level tmp;
-    level_header tmp_hdr;
-    tmp.hdr = &tmp_hdr;
-    tmp.hdr->lvl = 0;
-    tmp.hdr->count = _memvalues_size;
-    tmp.hdr->pos = _memvalues_size;
-    tmp.begin = _memvalues;
-    to_merge.push_back(&tmp);
+  /*void drop_to_stor() {
+     std::list<level *> to_merge;
+     level tmp;
+     level_header tmp_hdr;
+     tmp.hdr = &tmp_hdr;
+     tmp.hdr->lvl = 0;
+     tmp.hdr->count = _memvalues_size;
+     tmp.hdr->pos = _memvalues_size;
+     tmp.begin = _memvalues;
+     to_merge.push_back(&tmp);
 
-    for (size_t i = 0; i < _levels.size(); ++i) {
-      if (!_levels[i].empty()) {
-        to_merge.push_back(&_levels[i]);
-      }
-    }
-    low_level_stor_pusher merge_target;
-    merge_target._stor = _stor;
+     for (size_t i = 0; i < _levels.size(); ++i) {
+       if (!_levels[i].empty()) {
+         to_merge.push_back(&_levels[i]);
+       }
+     }
+     low_level_stor_pusher merge_target;
+     merge_target._stor = _stor;
 
-    dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());
-    for (size_t i = 0; i < _levels.size(); ++i) {
-      _levels[i].clear();
-    }
-    _header->_memvalues_pos = 0;
-    _header->_size_B = 0;
-    _header->_writed = 0;
-  }
-*/
+     dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());
+     for (size_t i = 0; i < _levels.size(); ++i) {
+       _levels[i].clear();
+     }
+     _header->_memvalues_pos = 0;
+     _header->_size_B = 0;
+     _header->_writed = 0;
+   }
+ */
   Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;

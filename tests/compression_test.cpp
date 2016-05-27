@@ -586,7 +586,7 @@ BOOST_AUTO_TEST_CASE(IdCompressor) {
     for (int i = 0; i < 10; i++) {
       fc.append(delta);
       ids.push_back(delta);
-      delta+=1000;
+      delta += 1000;
     }
     bw->reset_pos();
     IdDeCompressor fd(bw, ids.front());
@@ -624,12 +624,12 @@ BOOST_AUTO_TEST_CASE(CompressedBlock) {
     m.src = i;
     m.value = i;
     if (!cwr.append(m)) {
-        BOOST_CHECK(cwr.is_full());
+      BOOST_CHECK(cwr.is_full());
       break;
     }
     meases.push_back(m);
   }
-  BOOST_CHECK_LT(cwr.used_space(),test_buffer_size);
+  BOOST_CHECK_LT(cwr.used_space(), test_buffer_size);
 
   bw->reset_pos();
   CopmressedReader crr(bw, meases.front());

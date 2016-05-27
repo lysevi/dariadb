@@ -140,12 +140,12 @@ public:
     }
     Reader_ptr clone() const override {
       UnionReader *raw_res = new UnionReader();
-	  if (this->page_reader != nullptr) {
-		  raw_res->page_reader = this->page_reader->clone();
-	  }
-	  if (this->cap_reader != nullptr) {
-		  raw_res->cap_reader = this->cap_reader->clone();
-	  }
+      if (this->page_reader != nullptr) {
+        raw_res->page_reader = this->page_reader->clone();
+      }
+      if (this->cap_reader != nullptr) {
+        raw_res->cap_reader = this->cap_reader->clone();
+      }
       return Reader_ptr(raw_res);
     }
 

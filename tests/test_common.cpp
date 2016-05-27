@@ -36,10 +36,10 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader, dariadb::Time from
   dariadb::Meas::MeasList all{};
   reader->readAll(&all);
 
-   std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
-   for (auto &v : all) {
-     _dict[v.id].push_back(v);
-   }
+  std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
+  for (auto &v : all) {
+    _dict[v.id].push_back(v);
+  }
 
   dariadb::Id cur_id = all.front().id;
   dariadb::Value cur_val = all.front().value;
@@ -113,10 +113,10 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
   as->flush();
   if (as->minTime() != from) {
-	  throw MAKE_EXCEPTION("as->minTime() != from");
+    throw MAKE_EXCEPTION("as->minTime() != from");
   }
   if (as->maxTime() < to) {
-	  throw MAKE_EXCEPTION("as->maxTime() < to");
+    throw MAKE_EXCEPTION("as->maxTime() < to");
   }
   auto reader = as->readInterval(
       dariadb::storage::QueryInterval(_all_ids_array, 0, from, to + copies_count));
@@ -126,7 +126,6 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   cloned_reader->reset();
   check_reader_of_all(cloned_reader, from, to, step, id_val, total_count,
                       "cloned readAll error: ");
-
 
   dariadb::IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
   dariadb::Meas::MeasList all{};
@@ -139,11 +138,12 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   checkAll(all, "read error: ", from, to, step);
   all.clear();
 
-  as->readInterval(dariadb::storage::QueryInterval(ids, 0, to + copies_count-copies_count/3, to + copies_count))
-        ->readAll(&all);
-    if (all.size() == size_t(0)) {
-      throw MAKE_EXCEPTION("all.size() != == size_t(0)");
-    }
+  as->readInterval(dariadb::storage::QueryInterval(
+                       ids, 0, to + copies_count - copies_count / 3, to + copies_count))
+      ->readAll(&all);
+  if (all.size() == size_t(0)) {
+    throw MAKE_EXCEPTION("all.size() != == size_t(0)");
+  }
 
   ids.clear();
   ids.push_back(2);
@@ -168,7 +168,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   tp_reader->reset();
   auto readed_ids = tp_reader->getIds();
   if (readed_ids.size() != _all_ids_set.size()) {
-	  throw MAKE_EXCEPTION("(eaded_ids.size() != _all_ids_set.size())");
+    throw MAKE_EXCEPTION("(eaded_ids.size() != _all_ids_set.size())");
   }
 
   fltr_res.clear();

@@ -254,19 +254,19 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
 }
 
 BOOST_AUTO_TEST_CASE(byStep) {
-    std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-    stor->writed_count = 0;
-    const size_t max_size = 10;
-    auto storage_path = "testStorage";
+  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+  stor->writed_count = 0;
+  const size_t max_size = 10;
+  auto storage_path = "testStorage";
 
-    if (dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path);
-    }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
 
   const size_t id_count = 1;
   { // equal step
-      dariadb::storage::Capacitor ms{
-          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+    dariadb::storage::Capacitor ms{
+        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -280,9 +280,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
       m.value = 0;
       ms.append(m);
     }
-    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
-                                                     0,
-                                                     0, total_count);
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(), all_id.end()},
+                                          0, 0, total_count);
     auto rdr = ms.readInterval(q_all);
 
     dariadb::Meas::MeasList allByStep;
@@ -297,8 +296,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
   }
 
   { // less step
-      dariadb::storage::Capacitor ms{
-          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+    dariadb::storage::Capacitor ms{
+        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -313,17 +312,15 @@ BOOST_AUTO_TEST_CASE(byStep) {
       ms.append(m);
     }
 
-    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
-                                                     0,
-                                                     0, total_count);
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(), all_id.end()},
+                                          0, 0, total_count);
     auto rdr = ms.readInterval(q_all);
 
     dariadb::Time query_step = 11;
     dariadb::Meas::MeasList allByStep;
     rdr = ms.readInterval(q_all);
     rdr->readByStep(&allByStep, 0, total_count, query_step);
-    auto expected =
-        size_t(total_count / query_step) * id_count + id_count; //+ timepoint;
+    auto expected = size_t(total_count / query_step) * id_count + id_count; //+ timepoint;
     BOOST_CHECK_EQUAL(allByStep.size(), expected);
   }
 
@@ -332,8 +329,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
   }
 
   { // great step
-      dariadb::storage::Capacitor ms{
-          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+    dariadb::storage::Capacitor ms{
+        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -348,9 +345,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
       m.value = 0;
       ms.append(m);
     }
-    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
-                                                     0,
-                                                     0, total_count);
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(), all_id.end()},
+                                          0, 0, total_count);
     auto rdr = ms.readInterval(q_all);
     dariadb::Meas::MeasList all;
     rdr->readAll(&all);
@@ -359,16 +355,16 @@ BOOST_AUTO_TEST_CASE(byStep) {
     dariadb::Meas::MeasList allByStep;
     rdr = ms.readInterval(q_all);
     rdr->readByStep(&allByStep, 0, total_count, query_step);
-    auto expected = size_t(total_count / time_step) * 2 * id_count +
-                    id_count; //+ timepoint;
+    auto expected =
+        size_t(total_count / time_step) * 2 * id_count + id_count; //+ timepoint;
     BOOST_CHECK_EQUAL(allByStep.size(), expected);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
   { // from before data
-      dariadb::storage::Capacitor ms{
-          stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
+    dariadb::storage::Capacitor ms{
+        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -382,9 +378,8 @@ BOOST_AUTO_TEST_CASE(byStep) {
       m.value = 0;
       ms.append(m);
     }
-    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(),all_id.end()},
-                                                     0,
-                                                     time_step, total_count);
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(), all_id.end()},
+                                          0, time_step, total_count);
     auto rdr = ms.readInterval(q_all);
     dariadb::Meas::MeasList all;
     rdr->readAll(&all);
@@ -395,8 +390,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
 
     rdr->readByStep(&allByStep, 0, total_count, query_step);
 
-    dariadb::Time expected =
-        dariadb::Time((total_count - time_step) / time_step) * 2;
+    dariadb::Time expected = dariadb::Time((total_count - time_step) / time_step) * 2;
     expected = expected * id_count;
     expected += id_count * (time_step / query_step); //+ before first value
     expected += id_count;                            // one after last  value

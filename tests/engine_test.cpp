@@ -15,8 +15,6 @@ public:
   size_t count;
 };
 
-
-
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 10000;
@@ -57,13 +55,11 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   }
 }
 
-
-
 class Moc_SubscribeClbk : public dariadb::storage::ReaderClb {
 public:
-	std::list<dariadb::Meas> values;
-	void call(const dariadb::Meas &m) override { values.push_back(m); }
-	~Moc_SubscribeClbk() {}
+  std::list<dariadb::Meas> values;
+  void call(const dariadb::Meas &m) override { values.push_back(m); }
+  ~Moc_SubscribeClbk() {}
 };
 
 BOOST_AUTO_TEST_CASE(Subscribe) {
@@ -78,7 +74,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
- 
   {
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
@@ -122,6 +117,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     BOOST_CHECK_EQUAL(c4->values.front().flag, dariadb::Flag(1));
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
-	  dariadb::utils::fs::rm(storage_path);
+    dariadb::utils::fs::rm(storage_path);
   }
 }

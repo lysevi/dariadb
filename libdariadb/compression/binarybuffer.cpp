@@ -34,7 +34,6 @@ BinaryBuffer::BinaryBuffer(BinaryBuffer &&other) {
 
 BinaryBuffer::~BinaryBuffer() {}
 
-
 BinaryBuffer &BinaryBuffer::incbit() {
   _bitnum--;
   if (_bitnum < 0) {
