@@ -4,7 +4,6 @@
 #include "../compression/binarybuffer.h"
 #include "../meas.h"
 #include "../utils/locker.h"
-#include "../utils/pool.h"
 #include "../utils/utils.h"
 
 #include <map>
