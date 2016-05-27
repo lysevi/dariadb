@@ -171,26 +171,3 @@ dariadb::Meas CopmressedReader::read() {
   return _Impl->read();
 }
 
-CopmressedReader::CopmressedReader(const CopmressedReader &other)
-    : _Impl(new CopmressedReader::Private(*other._Impl)) {}
-
-void CopmressedReader::swap(CopmressedReader &other) {
-  std::swap(_Impl, other._Impl);
-}
-
-CopmressedReader &CopmressedReader::operator=(const CopmressedReader &other) {
-  if (this == &other) {
-    return *this;
-  }
-  CopmressedReader temp(other);
-  std::swap(this->_Impl, temp._Impl);
-  return *this;
-}
-
-CopmressedReader &CopmressedReader::operator=(CopmressedReader &&other) {
-  if (this == &other) {
-    return *this;
-  }
-  std::swap(_Impl, other._Impl);
-  return *this;
-}

@@ -46,10 +46,6 @@ class CopmressedReader {
 public:
   CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
   ~CopmressedReader();
-  CopmressedReader(const CopmressedReader &other);
-  void swap(CopmressedReader &other);
-  CopmressedReader &operator=(const CopmressedReader &other);
-  CopmressedReader &operator=(CopmressedReader &&other);
 
   Meas read();
 

@@ -11,6 +11,7 @@
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
+#include <math/statistic.h>
 
 class Moc_Storage : public dariadb::storage::MeasWriter {
 public:
@@ -399,5 +400,80 @@ BOOST_AUTO_TEST_CASE(byStep) {
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
+  }
+}
+
+class Moc_I1 : public dariadb::statistic::BaseMethod {
+public:
+	Moc_I1() { _a = _b = dariadb::Meas::empty(); }
+	void calc(const dariadb::Meas &a, const dariadb::Meas &b) override {
+		_a = a;
+		_b = b;
+	}
+	dariadb::Value result() const override { return dariadb::Value(); }
+	dariadb::Meas _a;
+	dariadb::Meas _b;
+};
+
+ BOOST_AUTO_TEST_CASE(CallCalc) {
+  std::unique_ptr<Moc_I1> p{new Moc_I1};
+  auto m = dariadb::Meas::empty();
+  m.time = 1;
+  p->call(m);
+  BOOST_CHECK_EQUAL(p->_a.time, dariadb::Time(0));
+  m.time = 2;
+
+  p->call(m);
+  BOOST_CHECK_EQUAL(p->_a.time, dariadb::Time(1));
+  BOOST_CHECK_EQUAL(p->_b.time, dariadb::Time(2));
+
+  m.time = 3;
+  p->call(m);
+  BOOST_CHECK_EQUAL(p->_a.time, dariadb::Time(2));
+  BOOST_CHECK_EQUAL(p->_b.time, dariadb::Time(3));
+  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+  stor->writed_count = 0;
+  const size_t max_size = 10;
+  auto storage_path = "testStorage";
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+	  dariadb::utils::fs::rm(storage_path);
+  }
+
+  const size_t id_count = 1;
+  { // equal step
+	  dariadb::storage::Capacitor ms{
+		  stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path) };
+
+    using dariadb::statistic::average::Average;
+
+    m = dariadb::Meas::empty();
+    const size_t total_count = 100;
+    const dariadb::Time time_step = 1;
+	dariadb::IdSet all_id;
+    for (size_t i = 0; i < total_count; i += time_step) {
+      m.id = 1;
+	  all_id.insert(m.id);
+      m.flag = dariadb::Flag(i);
+      m.time = i;
+      m.value = 5;
+      ms.append(m);
+    }
+
+    ms.flush();
+    std::unique_ptr<Average> p_average{new Average()};
+
+	dariadb::storage::QueryInterval q_all(dariadb::IdArray{ all_id.begin(), all_id.end() },
+		0, 0, total_count);
+
+    auto rdr = ms.readInterval(q_all);
+    /*dariadb::Meas::MeasList ml;
+    rdr->readAll(&ml);*/
+    p_average->fromReader(rdr, 0, total_count, 1);
+    BOOST_CHECK_CLOSE(p_average->result(), dariadb::Value(5), 0.1);
+  }
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+	  dariadb::utils::fs::rm(storage_path);
   }
 }
