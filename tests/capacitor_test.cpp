@@ -7,11 +7,11 @@
 #include <thread>
 
 #include "test_common.h"
+#include <math/statistic.h>
 #include <storage/capacitor.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
-#include <math/statistic.h>
 
 class Moc_Storage : public dariadb::storage::MeasWriter {
 public:
@@ -405,17 +405,17 @@ BOOST_AUTO_TEST_CASE(byStep) {
 
 class Moc_I1 : public dariadb::statistic::BaseMethod {
 public:
-	Moc_I1() { _a = _b = dariadb::Meas::empty(); }
-	void calc(const dariadb::Meas &a, const dariadb::Meas &b) override {
-		_a = a;
-		_b = b;
-	}
-	dariadb::Value result() const override { return dariadb::Value(); }
-	dariadb::Meas _a;
-	dariadb::Meas _b;
+  Moc_I1() { _a = _b = dariadb::Meas::empty(); }
+  void calc(const dariadb::Meas &a, const dariadb::Meas &b) override {
+    _a = a;
+    _b = b;
+  }
+  dariadb::Value result() const override { return dariadb::Value(); }
+  dariadb::Meas _a;
+  dariadb::Meas _b;
 };
 
- BOOST_AUTO_TEST_CASE(CallCalc) {
+BOOST_AUTO_TEST_CASE(CallCalc) {
   std::unique_ptr<Moc_I1> p{new Moc_I1};
   auto m = dariadb::Meas::empty();
   m.time = 1;
@@ -437,22 +437,22 @@ public:
   auto storage_path = "testStorage";
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
-	  dariadb::utils::fs::rm(storage_path);
+    dariadb::utils::fs::rm(storage_path);
   }
 
   { // equal step
-	  dariadb::storage::Capacitor ms{
-		  stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path) };
+    dariadb::storage::Capacitor ms{
+        stor.get(), dariadb::storage::Capacitor::Params(max_size, storage_path)};
 
     using dariadb::statistic::average::Average;
 
     m = dariadb::Meas::empty();
     const size_t total_count = 100;
     const dariadb::Time time_step = 1;
-	dariadb::IdSet all_id;
+    dariadb::IdSet all_id;
     for (size_t i = 0; i < total_count; i += time_step) {
       m.id = 1;
-	  all_id.insert(m.id);
+      all_id.insert(m.id);
       m.flag = dariadb::Flag(i);
       m.time = i;
       m.value = 5;
@@ -462,8 +462,8 @@ public:
     ms.flush();
     std::unique_ptr<Average> p_average{new Average()};
 
-	dariadb::storage::QueryInterval q_all(dariadb::IdArray{ all_id.begin(), all_id.end() },
-		0, 0, total_count);
+    dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(), all_id.end()},
+                                          0, 0, total_count);
 
     auto rdr = ms.readInterval(q_all);
     /*dariadb::Meas::MeasList ml;
@@ -473,6 +473,6 @@ public:
   }
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
-	  dariadb::utils::fs::rm(storage_path);
+    dariadb::utils::fs::rm(storage_path);
   }
 }

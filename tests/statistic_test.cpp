@@ -4,8 +4,6 @@
 #include <math/statistic.h>
 #include <storage/memstorage.h>
 
-
-
 BOOST_AUTO_TEST_CASE(RectangleMethod) {
   { // left
     using dariadb::statistic::integral::RectangleMethod;

@@ -42,28 +42,29 @@ class PageIndex;
 typedef std::shared_ptr<PageIndex> PageIndex_ptr;
 class PageIndex {
 public:
-    bool readonly;
-    IndexHeader *iheader;
-    uint8_t *iregion; // index file mapp region
-    Page_ChunkIndex *index;
+  bool readonly;
+  IndexHeader *iheader;
+  uint8_t *iregion; // index file mapp region
+  Page_ChunkIndex *index;
 
-    indexTree _itree; // needed to sort index reccord on page closing. for fast search
-    std::string filename;
-    mutable boost::shared_mutex _locker;
-    mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
-    ~PageIndex();
-    static PageIndex_ptr create(const std::string &filename, uint64_t size, uint32_t chunk_per_storage,uint32_t chunk_size);
-    static PageIndex_ptr open(const std::string &filename, bool read_only);
+  indexTree _itree; // needed to sort index reccord on page closing. for fast search
+  std::string filename;
+  mutable boost::shared_mutex _locker;
+  mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
+  ~PageIndex();
+  static PageIndex_ptr create(const std::string &filename, uint64_t size,
+                              uint32_t chunk_per_storage, uint32_t chunk_size);
+  static PageIndex_ptr open(const std::string &filename, bool read_only);
 
-    void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
-        uint16_t pos);
+  void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
+                         uint16_t pos);
 
-    ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
-        dariadb::Time to, dariadb::Flag flag);
+  ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
+                                 dariadb::Time to, dariadb::Flag flag);
 
-    static std::string index_name_from_page_name(const std::string&page_name) {
-        return page_name + "i";
-    }
+  static std::string index_name_from_page_name(const std::string &page_name) {
+    return page_name + "i";
+  }
 };
 }
 }

@@ -12,7 +12,7 @@ using namespace dariadb::storage;
 
 class PageLinksCursor {
 public:
-  PageLinksCursor(PageIndex* page, const dariadb::IdArray &ids, dariadb::Time from,
+  PageLinksCursor(PageIndex *page, const dariadb::IdArray &ids, dariadb::Time from,
                   dariadb::Time to, dariadb::Flag flag)
       : link(page), _ids(ids), _from(from), _to(to), _flag(flag) {
     reset_pos();
@@ -103,7 +103,7 @@ public:
   ChunkLinkList resulted_links;
 
 protected:
-    PageIndex* link;
+  PageIndex *link;
   bool _is_end;
   dariadb::IdArray _ids;
   dariadb::Time _from, _to;
@@ -111,57 +111,55 @@ protected:
   std::list<uint32_t> read_poses;
 };
 
-
-
 PageIndex::~PageIndex() {
-    if (!readonly && !iheader->is_sorted) {
-        size_t pos = 0; // TODO crash safety
-        Page_ChunkIndex *new_index = new Page_ChunkIndex[iheader->chunk_per_storage];
-        memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
+  if (!readonly && !iheader->is_sorted) {
+    size_t pos = 0; // TODO crash safety
+    Page_ChunkIndex *new_index = new Page_ChunkIndex[iheader->chunk_per_storage];
+    memset(new_index, 0, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
 
-        for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
-            new_index[pos] = index[it->second];
-        }
-        memcpy(index, new_index, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
-        delete[] new_index;
-        iheader->is_sorted = true;
+    for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
+      new_index[pos] = index[it->second];
     }
-    _itree.clear();
-    index = nullptr;
-    index_mmap->close();
+    memcpy(index, new_index, sizeof(Page_ChunkIndex) * iheader->chunk_per_storage);
+    delete[] new_index;
+    iheader->is_sorted = true;
+  }
+  _itree.clear();
+  index = nullptr;
+  index_mmap->close();
 }
 
-PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size, uint32_t chunk_per_storage, uint32_t chunk_size) {
-    PageIndex_ptr res = std::make_shared<PageIndex>();
-    auto immap =
-        utils::fs::MappedFile::touch(filename, size);
-    auto iregion = immap->data();
-    std::fill(iregion, iregion + size, 0);
-    res->index_mmap = immap;
-    res->iregion = iregion;
+PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size,
+                                uint32_t chunk_per_storage, uint32_t chunk_size) {
+  PageIndex_ptr res = std::make_shared<PageIndex>();
+  auto immap = utils::fs::MappedFile::touch(filename, size);
+  auto iregion = immap->data();
+  std::fill(iregion, iregion + size, 0);
+  res->index_mmap = immap;
+  res->iregion = iregion;
 
-    res->iheader = reinterpret_cast<IndexHeader *>(iregion);
-    res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
+  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
+  res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
 
-    res->iheader->maxTime = dariadb::MIN_TIME;
-    res->iheader->minTime = dariadb::MAX_TIME;
-    res->iheader->chunk_per_storage = chunk_per_storage;
-    res->iheader->chunk_size = chunk_size;
-    res->iheader->is_sorted = false;
-    res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
-    return res;
+  res->iheader->maxTime = dariadb::MIN_TIME;
+  res->iheader->minTime = dariadb::MAX_TIME;
+  res->iheader->chunk_per_storage = chunk_per_storage;
+  res->iheader->chunk_size = chunk_size;
+  res->iheader->is_sorted = false;
+  res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
+  return res;
 }
 
 ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
-    dariadb::Time to, dariadb::Flag flag) {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+                                          dariadb::Time to, dariadb::Flag flag) {
+  boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-    PageLinksCursor c(this, ids, from, to, flag);
-    c.reset_pos();
+  PageLinksCursor c(this, ids, from, to, flag);
+  c.reset_pos();
 
-    while (!c.is_end()) {
-        c.readNext();
-    }
+  while (!c.is_end()) {
+    c.readNext();
+  }
 
-    return c.resulted_links;
+  return c.resulted_links;
 }

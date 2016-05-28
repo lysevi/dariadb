@@ -38,7 +38,7 @@ public:
   bool add_to_target_chunk(const dariadb::Meas &m);
   /*bool append(const ChunksList &ch) override;*/
   bool is_full() const;
-  
+
   // ChunksList get_open_chunks();
   void dec_reader();
   // ChunkContainer
@@ -54,7 +54,7 @@ public:
 
 private:
   void init_chunk_index_rec(Chunk_Ptr ch);
-  
+
   struct ChunkWithIndex {
     Chunk_Ptr ch;           /// ptr to chunk in page
     Page_ChunkIndex *index; /// ptr to index reccord
@@ -64,18 +64,18 @@ private:
   ChunkWithIndex _openned_chunk;
 
 public:
-  uint8_t *region;  // page  file mapp region
- 
+  uint8_t *region; // page  file mapp region
+
   PageHeader *header;
-  
+
   uint8_t *chunks;
 
-  
   std::list<uint32_t> _free_poses;
 
   std::string filename;
   bool readonly;
   PageIndex_ptr _index;
+
 protected:
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;

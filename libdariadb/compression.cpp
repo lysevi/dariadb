@@ -170,4 +170,3 @@ CopmressedReader::~CopmressedReader() {}
 dariadb::Meas CopmressedReader::read() {
   return _Impl->read();
 }
-

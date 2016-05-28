@@ -4,9 +4,9 @@
 #include "../utils/locker.h"
 #include "../utils/lru.h"
 #include "../utils/utils.h"
+#include "bloom_filter.h"
 #include "manifest.h"
 #include "page.h"
-#include "bloom_filter.h"
 
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -186,11 +186,11 @@ public:
 
     ChunkLinkList result;
     for (auto pname : page_list) {
-     /* auto pg = open_page_to_read(pname);
+      /* auto pg = open_page_to_read(pname);
 
-      auto sub_result = pg->chunksByIterval(query);*/
-		auto pi=PageIndex::open(PageIndex::index_name_from_page_name(pname),true);
-		auto sub_result = pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
+       auto sub_result = pg->chunksByIterval(query);*/
+      auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname), true);
+      auto sub_result = pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
       for (auto s : sub_result) {
         s.page_name = pname;
         result.push_back(s);
