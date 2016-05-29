@@ -43,9 +43,9 @@ public:
   TP_Reader();
   ~TP_Reader();
 
-  bool isEnd() const;
+  bool isEnd()  const override;
 
-  dariadb::IdArray getIds() const;
+  dariadb::IdArray getIds() const override;
 
   void readNext(dariadb::storage::ReaderClb *clb) override;
 

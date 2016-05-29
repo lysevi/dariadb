@@ -13,7 +13,6 @@
 #include <limits>
 #include <random>
 #include <storage/capacitor.h>
-#include <storage/memstorage.h>
 #include <thread>
 #include <utils/fs.h>
 

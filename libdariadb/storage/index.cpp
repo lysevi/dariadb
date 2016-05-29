@@ -163,3 +163,26 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
 
   return c.resulted_links;
 }
+
+void PageIndex::update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr,
+                                  const dariadb::Meas &m, uint32_t pos) {
+  // cur_index->last = ptr->info->last;
+  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
+  iheader->minTime = std::min(iheader->minTime, ptr->info->minTime);
+  iheader->maxTime = std::max(iheader->maxTime, ptr->info->maxTime);
+
+  for (auto it = _itree.lower_bound(cur_index->maxTime);
+       it != _itree.upper_bound(cur_index->maxTime); ++it) {
+    if ((it->first == cur_index->maxTime) && (it->second == pos)) {
+      _itree.erase(it);
+      break;
+    }
+  }
+
+  cur_index->minTime = std::min(cur_index->minTime, m.time);
+  cur_index->maxTime = std::max(cur_index->maxTime, m.time);
+  cur_index->flag_bloom = ptr->info->flag_bloom;
+  cur_index->id_bloom = ptr->info->id_bloom;
+  auto kv = std::make_pair(cur_index->maxTime, pos);
+  _itree.insert(kv);
+}

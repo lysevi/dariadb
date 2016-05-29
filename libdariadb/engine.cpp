@@ -2,7 +2,6 @@
 #include "flags.h"
 #include "storage/capacitor.h"
 #include "storage/inner_readers.h"
-#include "storage/memstorage.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
 #include "utils/exception.h"

@@ -57,7 +57,7 @@ public:
   static PageIndex_ptr open(const std::string &filename, bool read_only);
 
   void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
-                         uint16_t pos);
+                         uint32_t pos);
 
   ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                                  dariadb::Time to, dariadb::Flag flag);

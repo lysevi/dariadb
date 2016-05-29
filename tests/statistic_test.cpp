@@ -2,7 +2,6 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 #include <math/statistic.h>
-#include <storage/memstorage.h>
 
 BOOST_AUTO_TEST_CASE(RectangleMethod) {
   { // left
