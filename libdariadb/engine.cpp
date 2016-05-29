@@ -133,7 +133,9 @@ public:
       : /*mem_storage{new MemoryStorage()},*/ _page_manager_params(page_storage_params),
         _cap_params(cap_params), _limits(limits) {
     _subscribe_notify.start();
+
     PageManager::start(_page_manager_params);
+
     mem_cap = new Capacitor(PageManager::instance(), _cap_params);
     // mem_storage_raw = dynamic_cast<MemoryStorage *>(mem_storage.get());
   }

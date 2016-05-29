@@ -5,6 +5,7 @@
 #include "../meas.h"
 #include "../utils/locker.h"
 #include "../utils/utils.h"
+#include "../utils/lru.h"
 
 #include <map>
 #include <set>
@@ -83,5 +84,21 @@ typedef std::list<Chunk_Ptr> ChunksList;
 typedef std::map<Id, Chunk_Ptr> IdToChunkMap;
 typedef std::map<Id, ChunksList> ChunkMap;
 typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
+
+class ChunkCache{
+    ChunkCache(size_t size);
+public:
+static void start(size_t size);
+static void stop();
+static ChunkCache* instance();
+void append(const Chunk_Ptr&chptr);
+bool find(const uint64_t id, Chunk_Ptr&chptr)const;
+protected:
+static std::unique_ptr<ChunkCache> _instance;
+mutable std::mutex _locker;
+size_t _size;
+mutable utils::LRU<uint64_t, Chunk_Ptr> _chunks;
+};
+
 }
 }

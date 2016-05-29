@@ -380,12 +380,14 @@ PageManager::~PageManager() {}
 
 void PageManager::start(const PageManager::Params &param) {
   if (PageManager::_instance == nullptr) {
+      ChunkCache::start(param.chunk_cache_size);
     PageManager::_instance = new PageManager(param);
   }
 }
 
 void PageManager::stop() {
   if (_instance != nullptr) {
+      ChunkCache::stop();
     delete PageManager::_instance;
     _instance = nullptr;
   }

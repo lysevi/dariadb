@@ -84,6 +84,7 @@ int main(int argc, char *argv[]) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 1024 * 1024;
   const size_t chunk_size = 256;
+  const size_t chunk_cache_size = 20000;
   const size_t cap_B = 10;
   const size_t max_mem_chunks = 0;
 
@@ -110,8 +111,10 @@ int main(int argc, char *argv[]) {
     dariadb::utils::fs::rm(storage_path);
   }
 
+  dariadb::storage::PageManager::Params pg_params(storage_path, chunk_per_storage, chunk_size);
+  pg_params.chunk_cache_size=chunk_cache_size;
   auto raw_ptr_ds = new dariadb::storage::Engine(
-      dariadb::storage::PageManager::Params(storage_path, chunk_per_storage, chunk_size),
+      pg_params,
       dariadb::storage::Capacitor::Params(cap_B, storage_path),
       dariadb::storage::Engine::Limits(max_mem_chunks));
   dariadb::storage::MeasStorage_ptr ms{raw_ptr_ds};
@@ -171,11 +174,6 @@ int main(int argc, char *argv[]) {
     std::vector<dariadb::Time> rnd_time(queries_count);
     for (size_t i = 0; i < queries_count; i++) {
       rnd_ids[i] = uniform_dist(e1);
-      /*dariadb::Time minT, maxT;
-      bool exists = raw_ptr_ds->minMaxTime(rnd_ids[i], &minT, &maxT);
-      if (!exists) {
-        throw MAKE_EXCEPTION("!exists");
-      }*/
       std::uniform_int_distribution<dariadb::Time> uniform_dist_tmp(10, 32);
       rnd_time[i] = uniform_dist_tmp(e1);
     }
@@ -223,8 +221,8 @@ int main(int argc, char *argv[]) {
     std::cout << "4. time point: " << elapsed << " readed: " << raw_ptr->count
               << std::endl;
   }
-
   { // 5
+      std::cout << "5. interval:"<<std::endl;
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Time> uniform_dist(dariadb::Time(10),
