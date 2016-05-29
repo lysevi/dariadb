@@ -26,7 +26,7 @@ bool XorCompressor::append(Value v) {
   if (_bw->free_size() < 9) {
     return false;
   }
-  auto xor_val = _prev_value ^ flat;
+  uint64_t xor_val = _prev_value ^ flat;
   if (xor_val == 0) {
     if (_bw->free_size() < 1) {
       return false;
