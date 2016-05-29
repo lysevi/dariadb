@@ -132,7 +132,16 @@ public:
         pg = Page_Ptr{Page::open(pname, true)};
         Page_Ptr dropped;
         _openned_pages.put(pname, pg, &dropped);
-        dropped = nullptr;
+        if(dropped==nullptr || dropped->header->count_readers==0){
+            dropped = nullptr;
+        }else{
+            _openned_pages.set_max_size(_openned_pages.size()+1);
+            Page_Ptr should_be_null;
+            if(_openned_pages.put(dropped->filename,dropped,&should_be_null)){
+                throw MAKE_EXCEPTION("LRU cache logic wrong.");
+            }
+
+        }
       }
     }
     return pg;
