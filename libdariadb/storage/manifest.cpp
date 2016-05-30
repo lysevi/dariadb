@@ -14,9 +14,7 @@ dariadb::storage::Manifest::Manifest(const std::string &fname)
 
 void dariadb::storage::Manifest::touch(){
     if (!utils::fs::path_exists(_filename)) {
-        json js;
-        js["pages"] = json::array();
-        js["cola"] = json::array();
+        json js=json::parse("{ \"cola\": [], \"pages\": [] }");
 
         write_file(_filename,js.dump());
     }

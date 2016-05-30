@@ -37,8 +37,7 @@ protected:
   PageManager(const Params &param);
 
 public:
-  typedef uint32_t handle;
-  static void start(const Params &param);
+    static void start(const Params &param);
   static void stop();
   void flush() override;
   static PageManager *instance();

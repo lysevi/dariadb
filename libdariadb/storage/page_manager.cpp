@@ -319,7 +319,10 @@ public:
     return _cur_page->header->addeded_chunks;
   }
   // PM
-  size_t in_queue_size() const { return 0; /*return this->async_queue_size();*/ }
+  size_t in_queue_size() const {
+      boost::shared_lock<boost::shared_mutex> lg(_locker);
+      return this->_manifest.page_list().size();
+  }
 
   dariadb::Time minTime() {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
@@ -374,8 +377,8 @@ public:
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
-  Manifest _manifest;
-  boost::shared_mutex _locker;
+  mutable Manifest _manifest;
+  mutable boost::shared_mutex _locker;
 
   uint64_t last_id;
   bool update_id;
