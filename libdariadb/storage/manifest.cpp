@@ -1,35 +1,72 @@
 #include "manifest.h"
 #include "../utils/fs.h"
+#include "../utils/exception.h"
 #include <cassert>
 #include <fstream>
+#include <json/json.hpp>
 
-dariadb::storage::Manifest::Manifest(const std::string &fname) : _filename(fname) {
-  if (!utils::fs::path_exists(_filename)) {
-    std::fstream fs;
-    fs.open(_filename, std::ios::out);
+using json = nlohmann::json;
+
+dariadb::storage::Manifest::Manifest(const std::string &fname)
+    : _filename(fname) {
+}
+
+
+void dariadb::storage::Manifest::touch(){
+    if (!utils::fs::path_exists(_filename)) {
+        json js;
+        js["pages"] = json::array();
+        js["cola"] = json::array();
+
+        write_file(_filename,js.dump());
+    }
+}
+
+std::string dariadb::storage::Manifest::read_file(const std::string&fname){
+    std::ifstream fs;
+    fs.open(fname);
+    if (!fs.is_open()) {
+        this->touch();
+        fs.open(fname);
+        if (!fs.is_open()) {
+            throw MAKE_EXCEPTION("(!fs.is_open())");
+        }
+    }
+
+  std::stringstream ss;
+    std::string line;
+    while (std::getline(fs, line)) {
+      ss<<line;
+    }
     fs.close();
-  }
+    return ss.str();
+}
+
+void dariadb::storage::Manifest::write_file(const std::string &fname,const std::string &content){
+    std::fstream fs;
+    fs.open(fname, std::ios::out);
+    fs << content;
+    fs.close();
 }
 
 std::list<std::string> dariadb::storage::Manifest::page_list() {
-  std::list<std::string> result;
-  std::ifstream fs;
-  fs.open(_filename);
-  if (!fs.is_open()) {
-    return result;
+    std::list<std::string> result{};
+  json js=json::parse(read_file(_filename));
+  for(auto v:js["pages"]){
+      result.push_back(v);
   }
-  std::string line;
-  while (std::getline(fs, line)) {
-    result.push_back(line);
-  }
-  fs.close();
   return result;
 }
 
 void dariadb::storage::Manifest::page_append(const std::string &rec) {
-  std::ofstream fs;
-  fs.open(_filename, std::ios_base::out | std::ios_base::app);
-  assert(fs.is_open());
-  fs << rec << std::endl;
-  fs.close();
+  json js=json::parse(read_file(_filename));
+
+  std::list<std::string> page_list{};
+  auto pages_json=js["pages"];
+  for(auto v:pages_json){
+      page_list.push_back(v);
+  }
+  page_list.push_back(rec);
+  js["pages"]=page_list;
+  write_file(_filename,js.dump());
 }
