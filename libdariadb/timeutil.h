@@ -5,7 +5,7 @@
 
 namespace dariadb {
 namespace timeutil {
-Time from_chrono(const std::chrono::system_clock::time_point &t);
+Time from_chrono(const std::chrono::high_resolution_clock::time_point &t);
 Time current_time();
 }
 }
