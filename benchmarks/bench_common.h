@@ -32,7 +32,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 }
 
 void readBenchark(const dariadb::IdSet &all_id_set,
-                  dariadb::storage::MeasStorage_ptr stor, size_t reads_count) {
+                  dariadb::storage::MeasStorage_ptr stor, size_t reads_count, dariadb::Time from, dariadb::Time to) {
   {
     std::cout << "time point reads..." << std::endl;
     std::random_device r;

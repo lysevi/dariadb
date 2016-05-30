@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
   dariadb::IdSet all_id_set;
-
+  auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "testStorage";
     const size_t cap_B = 10;
@@ -81,6 +81,6 @@ int main(int argc, char *argv[]) {
     stop_info = true;
     info_thread.join();
 
-    dariadb_bench::readBenchark(all_id_set, meas_stor, 100);
+    dariadb_bench::readBenchark(all_id_set, meas_stor, 100, startTime, dariadb::timeutil::current_time());
   }
 }

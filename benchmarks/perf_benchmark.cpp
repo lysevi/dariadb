@@ -54,10 +54,11 @@ int main(int argc, char *argv[]) {
   (void)argv;
   std::cout << "Performance benchmark" << std::endl;
   const std::string storage_path = "testStorage";
+  
   {
     std::cout << "write..." << std::endl;
 
-    const size_t chunk_per_storage = 1024 * 1024;
+    const size_t chunk_per_storage = 1024 * 10;
     const size_t chunk_size = 1024;
     const size_t cap_B = 5;
     const size_t max_mem_chunks = 100;
@@ -114,7 +115,7 @@ int main(int argc, char *argv[]) {
               << " in queue: (p:" << queue_sizes.page << " cap:" << queue_sizes.cap << ")"
               << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set, ms, 10);
+    dariadb_bench::readBenchark(all_id_set, ms, 10,start_time, dariadb::timeutil::current_time());
 
     {
       std::cout << "read all..." << std::endl;
@@ -122,7 +123,7 @@ int main(int argc, char *argv[]) {
       auto start = clock();
       dariadb::storage::QueryInterval qi{
           dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
-          ms->maxTime()};
+         ms->maxTime() };
       ms->readInterval(qi)->readAll(clbk.get());
 
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
