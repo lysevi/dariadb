@@ -402,9 +402,10 @@ public:
     }
 
     for (auto &kv : sub_result) {
+        raw->_ids.push_back(kv.first);
       for (auto &m : kv.second) {
         raw->_values.push_back(m);
-        raw->_ids.push_back(m.id);
+
       }
     }
     raw->reset();
