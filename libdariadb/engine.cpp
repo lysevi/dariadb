@@ -211,8 +211,8 @@ public:
 
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
-    result.page = PageManager::instance()->in_queue_size();
-    result.cap = this->mem_cap->in_queue_size();
+    result.pages_count = PageManager::instance()->files_count();
+    result.cola_count = this->mem_cap->files_count();
     return result;
   }
 

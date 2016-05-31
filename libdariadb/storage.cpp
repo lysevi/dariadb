@@ -127,7 +127,7 @@ void Reader::readByStep(ReaderClb *clb, dariadb::Time from, dariadb::Time to,
                         dariadb::Time step) {
   std::unique_ptr<ByStepClbk> inner_clb(
       new ByStepClbk(clb, this->getIds(), from, to, step));
-  // TODO reset is sucks
+
   this->reset();
   while (!isEnd()) {
     readNext(inner_clb.get());

@@ -425,7 +425,6 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-    // TODO optimize;
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return readInTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
@@ -491,7 +490,7 @@ public:
     }
   }
 
-  size_t in_queue_size() const { return Manifest::instance()->cola_list().size(); }
+  size_t files_count() const { return Manifest::instance()->cola_list().size(); }
 
   size_t levels_count() const { return _levels.size(); }
 
@@ -614,8 +613,8 @@ Reader_ptr dariadb::storage::Capacitor::currentValue(const IdArray &ids,
   return _Impl->currentValue(ids, flag);
 }
 
-size_t dariadb::storage::Capacitor::in_queue_size() const {
-  return _Impl->in_queue_size();
+size_t dariadb::storage::Capacitor::files_count() const {
+  return _Impl->files_count();
 }
 
 size_t dariadb::storage::Capacitor::levels_count() const {

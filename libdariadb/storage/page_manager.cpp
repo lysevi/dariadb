@@ -306,7 +306,7 @@ public:
     return _cur_page->header->addeded_chunks;
   }
   // PM
-  size_t in_queue_size() const {
+  size_t files_count() const {
       boost::shared_lock<boost::shared_mutex> lg(_locker);
       return Manifest::instance()->page_list().size();
   }
@@ -430,8 +430,8 @@ dariadb::storage::Cursor_ptr PageManager::readLinks(const ChunkLinkList &links) 
   return impl->readLinks(links);
 }
 
-size_t PageManager::in_queue_size() const {
-  return impl->in_queue_size();
+size_t PageManager::files_count() const {
+  return impl->files_count();
 }
 
 dariadb::Time PageManager::minTime() {

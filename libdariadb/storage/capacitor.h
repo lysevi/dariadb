@@ -36,7 +36,7 @@ public:
                   dariadb::Time *maxResult) override;
   void flush() override; // write all to storage;
 
-  size_t in_queue_size() const;
+  size_t files_count() const;
   size_t levels_count() const;
   size_t size() const;
 

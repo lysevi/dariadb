@@ -13,8 +13,8 @@ namespace storage {
 class Engine : public MeasStorage {
 public:
   struct QueueSizes {
-    size_t page; /// queue length in PageManager
-    size_t cap;  /// measurements in Capacitor
+    size_t pages_count; /// pages count
+    size_t cola_count;  /// COLA files count.
   };
 
   struct Limits {

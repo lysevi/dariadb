@@ -55,7 +55,7 @@ public:
   Cursor_ptr readLinks(const ChunkLinkList &links) override;
 
   // dariadb::storage::ChunksList get_open_chunks();
-  size_t in_queue_size() const; // TODO rename to queue_size
+  size_t files_count() const;
 
   dariadb::Time minTime();
   dariadb::Time maxTime();

@@ -36,7 +36,7 @@ void show_info(dariadb::storage::Engine *storage) {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
-              << " in queue: (p:" << queue_sizes.page << " cap:" << queue_sizes.cap << ")"
+              << " in queue: (p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count << ")"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
-              << " in queue: (p:" << queue_sizes.page << " cap:" << queue_sizes.cap << ")"
+              << " in queue: (p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count << ")"
               << std::endl;
 
     dariadb_bench::readBenchark(all_id_set, ms, 10,start_time, dariadb::timeutil::current_time());
