@@ -18,6 +18,7 @@ for future updates.
 #include "../utils/kmerge.h"
 #include "../utils/utils.h"
 #include "inner_readers.h"
+#include "manifest.h"
 #include <algorithm>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -115,7 +116,7 @@ public:
     if (!fs::path_exists(_params.path)) {
       create();
     } else {
-      auto logs = fs::ls(_params.path, CAP_FILE_EXT);
+      auto logs = Manifest::instance()->cola_list();
       if (logs.empty()) {
         create();
       } else {
@@ -159,7 +160,8 @@ public:
     fs::mkdir(_params.path);
     fs::mkdir(_params.path);
     auto sz = cap_size();
-    mmap = fs::MappedFile::touch(fs::append_path(_params.path, file_name()), sz);
+    auto fname = file_name();
+    mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);
 
     _header = reinterpret_cast<Header *>(mmap->data());
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
@@ -182,6 +184,8 @@ public:
       }
       pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
     }
+
+    Manifest::instance()->cola_append(fname);
     load();
   }
 
@@ -208,7 +212,8 @@ public:
   }
 
   void open(const std::string &fname) {
-    mmap = fs::MappedFile::open(fname);
+    auto aof_file = fs::append_path(_params.path, fname);
+    mmap = fs::MappedFile::open(aof_file);
 
     _header = reinterpret_cast<Header *>(mmap->data());
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
@@ -486,7 +491,7 @@ public:
     }
   }
 
-  size_t in_queue_size() const { return 0; }
+  size_t in_queue_size() const { return Manifest::instance()->cola_list().size(); }
 
   size_t levels_count() const { return _levels.size(); }
 
