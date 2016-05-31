@@ -3,6 +3,7 @@
 #include <list>
 #include <memory>
 #include <string>
+#include "../utils/locker.h"
 
 namespace dariadb {
 namespace storage {
@@ -14,6 +15,7 @@ public:
   static void start(const std::string &fname);
   static void stop();
   static Manifest *instance();
+
   std::list<std::string> page_list();
   void page_append(const std::string &rec);
 
@@ -29,6 +31,7 @@ private:
 protected:
   std::string _filename;
   static std::unique_ptr<Manifest> _instance;
+  utils::Locker _locker;
 };
 }
 }

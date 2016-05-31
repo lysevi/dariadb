@@ -20,13 +20,11 @@ void Manifest::start(const std::string &fname) {
 
 void Manifest::stop() {}
 
-Manifest *Manifest::instance() {
-  return Manifest::_instance.get();
-}
+Manifest *Manifest::instance() { return Manifest::_instance.get(); }
 void dariadb::storage::Manifest::touch() {
   if (!utils::fs::path_exists(_filename)) {
-    json js = json::parse(std::string("{ \"") + COLA_JS_KEY + "\": [], \"" + PAGE_JS_KEY +
-                          "\": [] }");
+    json js = json::parse(std::string("{ \"") + COLA_JS_KEY + "\": [], \"" +
+                          PAGE_JS_KEY + "\": [] }");
 
     write_file(_filename, js.dump());
   }
@@ -61,6 +59,8 @@ void dariadb::storage::Manifest::write_file(const std::string &fname,
 }
 
 std::list<std::string> dariadb::storage::Manifest::page_list() {
+  std::lock_guard<utils::Locker> lg(_locker);
+
   std::list<std::string> result{};
   json js = json::parse(read_file(_filename));
   for (auto v : js[PAGE_JS_KEY]) {
@@ -70,6 +70,8 @@ std::list<std::string> dariadb::storage::Manifest::page_list() {
 }
 
 void dariadb::storage::Manifest::page_append(const std::string &rec) {
+  std::lock_guard<utils::Locker> lg(_locker);
+
   json js = json::parse(read_file(_filename));
 
   std::list<std::string> page_list{};
@@ -83,6 +85,8 @@ void dariadb::storage::Manifest::page_append(const std::string &rec) {
 }
 
 std::list<std::string> dariadb::storage::Manifest::cola_list() {
+  std::lock_guard<utils::Locker> lg(_locker);
+
   std::list<std::string> result{};
   json js = json::parse(read_file(_filename));
   for (auto v : js[COLA_JS_KEY]) {
@@ -92,6 +96,8 @@ std::list<std::string> dariadb::storage::Manifest::cola_list() {
 }
 
 void dariadb::storage::Manifest::cola_append(const std::string &rec) {
+  std::lock_guard<utils::Locker> lg(_locker);
+
   json js = json::parse(read_file(_filename));
 
   std::list<std::string> cola_list{};
