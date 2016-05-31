@@ -81,9 +81,7 @@ public:
         if (bloom_result) {
           if (check_index_rec(_index_it)) {
             this->read_poses.push_back(pos);
-            if (this->read_poses.size() > pos) {
-              std::cout << "1";
-            }
+			assert(this->read_poses.size() <= this->link->iheader->count);
           }
         }
       }

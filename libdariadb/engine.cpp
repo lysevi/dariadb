@@ -4,6 +4,7 @@
 #include "storage/inner_readers.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
+#include "storage/bloom_filter.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include <algorithm>
@@ -215,9 +216,30 @@ public:
     return result;
   }
 
+  class ChunkCursor : public Cursor {
+  public:
+	  bool is_end() const override { return _chunk_iterator == chunks.end(); }
+	  void readNext(Callback *cbk) override {
+		  if (!is_end()) {
+			  cbk->call(*_chunk_iterator);
+			  ++_chunk_iterator;
+		  }
+	  }
+	  void reset_pos() override { _chunk_iterator = chunks.begin(); }
+
+	  ChunksList chunks;
+	  ChunksList::iterator _chunk_iterator;
+  };
+
   // Inherited via MeasStorage
   Reader_ptr readInterval(const QueryInterval &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
+
+	auto tmp_chunkLinks = PageManager::instance()->chunksByIterval(q);
+	auto tmp_page_cursor = PageManager::instance()->readLinks(tmp_chunkLinks);
+	ChunksList all_chunks_lst;
+	tmp_page_cursor->readAll(&all_chunks_lst);
+	tmp_page_cursor = nullptr;
 
     for (auto id : q.ids) {
       InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
@@ -230,9 +252,13 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
       if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
-        auto chunkLinks = PageManager::instance()->chunksByIterval(local_q);
-        auto page_cursor = PageManager::instance()->readLinks(chunkLinks);
-        raw_rdr->add(page_cursor);
+		  ChunkCursor* page_cursor_raw = new ChunkCursor;
+		  for (auto &c : all_chunks_lst) {
+			  if (bloom_check(c->info->id_bloom, id)) {
+				  page_cursor_raw->chunks.push_back(c);
+			  }
+		  }
+		  raw_rdr->add(Cursor_ptr{ page_cursor_raw });
       } else {
 
         if (minT <= q.from && maxT >= q.to) {
@@ -241,8 +267,13 @@ public:
         } else {
           local_q.to = minT;
           auto chunkLinks = PageManager::instance()->chunksByIterval(local_q);
-          auto page_cursor = PageManager::instance()->readLinks(chunkLinks);
-          raw_rdr->add(page_cursor);
+		  ChunkCursor* page_cursor_raw = new ChunkCursor;
+		  for (auto &c : all_chunks_lst) {
+			  if (bloom_check(c->info->id_bloom, id) && c->info->minTime<=local_q.to) {
+				  page_cursor_raw->chunks.push_back(c);
+			  }
+		  }
+		  raw_rdr->add(Cursor_ptr{ page_cursor_raw });
           local_q.from = minT;
           local_q.to = q.to;
 
