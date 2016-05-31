@@ -143,8 +143,8 @@ int main(int argc, char *argv[]) {
   }
   auto queue_sizes = raw_ptr_ds->queue_size();
   std::cout << "\r"
-            << " in queue: (p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count << ")"
-            << std::endl;
+            << " in queue: (p:" << queue_sizes.pages_count
+            << " cap:" << queue_sizes.cola_count << ")" << std::endl;
   //{
   //  /* auto ids=ms->getIds();
   //   std::cout << "ids.size:"<<ids.size() << std::endl;*/

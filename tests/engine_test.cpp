@@ -43,7 +43,6 @@ BOOST_AUTO_TEST_CASE(inFilter) {
   }
 }
 
-
 BOOST_AUTO_TEST_CASE(QueryHashTest) {
   dariadb::IdArray ids1{dariadb::Id(0), dariadb::Id(1), dariadb::Id(2), dariadb::Id(3)};
   {
@@ -118,8 +117,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         dariadb::storage::Engine::Limits(10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
-
-
   }
   {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(

@@ -36,7 +36,8 @@ void show_info(dariadb::storage::Engine *storage) {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
-              << " in queue: (p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count << ")"
+              << " in queue: (p:" << queue_sizes.pages_count
+              << " cap:" << queue_sizes.cola_count << ")"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
@@ -54,7 +55,7 @@ int main(int argc, char *argv[]) {
   (void)argv;
   std::cout << "Performance benchmark" << std::endl;
   const std::string storage_path = "testStorage";
-  
+
   {
     std::cout << "write..." << std::endl;
 
@@ -112,10 +113,11 @@ int main(int argc, char *argv[]) {
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
-              << " in queue: (p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count << ")"
-              << std::endl;
+              << " in queue: (p:" << queue_sizes.pages_count
+              << " cap:" << queue_sizes.cola_count << ")" << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set, ms, 10,start_time, dariadb::timeutil::current_time());
+    dariadb_bench::readBenchark(all_id_set, ms, 10, start_time,
+                                dariadb::timeutil::current_time());
 
     {
       std::cout << "read all..." << std::endl;
@@ -123,7 +125,7 @@ int main(int argc, char *argv[]) {
       auto start = clock();
       dariadb::storage::QueryInterval qi{
           dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
-         ms->maxTime() };
+          ms->maxTime()};
       ms->readInterval(qi)->readAll(clbk.get());
 
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);

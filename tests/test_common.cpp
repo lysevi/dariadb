@@ -103,12 +103,12 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
       m.time++;
     }
   }
-  dariadb::Time minTime,maxTime;
-  if(!(as->minMaxTime(dariadb::Id(id_val-1),&minTime,&maxTime))){
-      throw MAKE_EXCEPTION("!(as->minMaxTime)");
+  dariadb::Time minTime, maxTime;
+  if (!(as->minMaxTime(dariadb::Id(id_val - 1), &minTime, &maxTime))) {
+    throw MAKE_EXCEPTION("!(as->minMaxTime)");
   }
-  if(minTime==dariadb::MAX_TIME || minTime==dariadb::MIN_TIME){
-      throw MAKE_EXCEPTION("minTime==dariadb::MAX_TIME || maxTime<(from+copies_count)");
+  if (minTime == dariadb::MAX_TIME || minTime == dariadb::MIN_TIME) {
+    throw MAKE_EXCEPTION("minTime==dariadb::MAX_TIME || maxTime<(from+copies_count)");
   }
   dariadb::Meas::MeasList current_mlist;
   dariadb::IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());

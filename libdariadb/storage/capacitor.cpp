@@ -48,12 +48,11 @@ struct FlaggedMeas {
   uint8_t drop_end : 1;
   Meas value;
 
-  bool operator==(const FlaggedMeas&other)const{
-      return std::tie(drop_start,drop_end,value) == std::tie(other.drop_start,other.drop_end,other.value);
+  bool operator==(const FlaggedMeas &other) const {
+    return std::tie(drop_start, drop_end, value) ==
+           std::tie(other.drop_start, other.drop_end, other.value);
   }
-  bool operator!=(const FlaggedMeas&other)const{
-      return !(*this==other);
-  }
+  bool operator!=(const FlaggedMeas &other) const { return !(*this == other); }
 };
 
 struct flagged_meas_time_compare_less {
@@ -82,9 +81,7 @@ struct level {
     hdr->_maxTime = std::max(hdr->_maxTime, m.value.time);
   }
 
-  FlaggedMeas back()const{
-      return begin[hdr->pos-1];
-  }
+  FlaggedMeas back() const { return begin[hdr->pos - 1]; }
 
   void clear() {
     hdr->pos = 0;
@@ -402,10 +399,9 @@ public:
     }
 
     for (auto &kv : sub_result) {
-        raw->_ids.push_back(kv.first);
+      raw->_ids.push_back(kv.first);
       for (auto &m : kv.second) {
         raw->_values.push_back(m);
-
       }
     }
     raw->reset();

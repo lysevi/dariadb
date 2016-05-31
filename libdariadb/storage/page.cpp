@@ -39,10 +39,10 @@ public:
       }
 
       Chunk_Ptr search_res;
-      if(ChunkCache::instance()->find(_index_it.chunk_id,search_res)){
-          cbk->call(search_res);
-          break;
-      }else{
+      if (ChunkCache::instance()->find(_index_it.chunk_id, search_res)) {
+        cbk->call(search_res);
+        break;
+      } else {
         auto ptr_to_begin = link->chunks + _index_it.offset;
         auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkIndexInfo *>(ptr_to_begin);
         auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkIndexInfo);
@@ -62,8 +62,8 @@ public:
         Chunk_Ptr c{ptr};
         // TODO replace by some check;
         // assert(c->info->last.time != 0);
-        if(c->info->is_readonly){
-            ChunkCache::instance()->append(c);
+        if (c->info->is_readonly) {
+          ChunkCache::instance()->append(c);
         }
         cbk->call(c);
         break;
@@ -139,7 +139,6 @@ PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
   res->index = reinterpret_cast<Page_ChunkIndex *>(iregion + sizeof(IndexHeader));
   return res;
 }
-
 
 Page *Page::open(std::string file_name, bool read_only) {
   auto res = new Page;

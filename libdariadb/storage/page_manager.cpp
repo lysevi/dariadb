@@ -27,7 +27,7 @@ public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
-	  Manifest::start(utils::fs::append_path(param.path, MANIFEST_FILE_NAME));
+    Manifest::start(utils::fs::append_path(param.path, MANIFEST_FILE_NAME));
     update_id = false;
     last_id = 0;
 
@@ -82,7 +82,7 @@ public:
     std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
     auto sz = calc_page_size();
     res = Page::create(file_name, sz, _param.chunk_per_storage, _param.chunk_size);
-	Manifest::instance()->page_append(page_name);
+    Manifest::instance()->page_append(page_name);
     if (update_id) {
       res->header->max_chunk_id = last_id;
     }
@@ -132,22 +132,20 @@ public:
         pg = Page_Ptr{Page::open(pname, true)};
         Page_Ptr dropped;
         _openned_pages.put(pname, pg, &dropped);
-        if(dropped==nullptr || dropped->header->count_readers==0){
-            dropped = nullptr;
-        }else{
-            _openned_pages.set_max_size(_openned_pages.size()+1);
-            Page_Ptr should_be_null;
-            if(_openned_pages.put(dropped->filename,dropped,&should_be_null)){
-                throw MAKE_EXCEPTION("LRU cache logic wrong.");
-            }
-
+        if (dropped == nullptr || dropped->header->count_readers == 0) {
+          dropped = nullptr;
+        } else {
+          _openned_pages.set_max_size(_openned_pages.size() + 1);
+          Page_Ptr should_be_null;
+          if (_openned_pages.put(dropped->filename, dropped, &should_be_null)) {
+            throw MAKE_EXCEPTION("LRU cache logic wrong.");
+          }
         }
       }
     }
     return pg;
   }
 
-  
   class AddCursorClbk : public Cursor::Callback {
   public:
     void call(dariadb::storage::Chunk_Ptr &ptr) {
@@ -307,8 +305,8 @@ public:
   }
   // PM
   size_t files_count() const {
-      boost::shared_lock<boost::shared_mutex> lg(_locker);
-      return Manifest::instance()->page_list().size();
+    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    return Manifest::instance()->page_list().size();
   }
 
   dariadb::Time minTime() {
@@ -378,14 +376,14 @@ PageManager::~PageManager() {}
 
 void PageManager::start(const PageManager::Params &param) {
   if (PageManager::_instance == nullptr) {
-      ChunkCache::start(param.chunk_cache_size);
+    ChunkCache::start(param.chunk_cache_size);
     PageManager::_instance = new PageManager(param);
   }
 }
 
 void PageManager::stop() {
   if (_instance != nullptr) {
-      ChunkCache::stop();
+    ChunkCache::stop();
     delete PageManager::_instance;
     _instance = nullptr;
   }

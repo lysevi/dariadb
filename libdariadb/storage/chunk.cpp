@@ -155,33 +155,29 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
   return result;
 }
 
-std::unique_ptr<ChunkCache> ChunkCache::_instance=nullptr;
+std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
-ChunkCache::ChunkCache(size_t size):_chunks(size){
-    _size=size;
+ChunkCache::ChunkCache(size_t size) : _chunks(size) {
+  _size = size;
 }
 
-void ChunkCache::start(size_t size){
-    ChunkCache::_instance=std::unique_ptr<ChunkCache>{new ChunkCache(size)};
+void ChunkCache::start(size_t size) {
+  ChunkCache::_instance = std::unique_ptr<ChunkCache>{new ChunkCache(size)};
 }
 
-void ChunkCache::stop(){
+void ChunkCache::stop() {}
 
+ChunkCache *ChunkCache::instance() {
+  return _instance.get();
 }
 
-ChunkCache* ChunkCache::instance(){
-return _instance.get();
+void ChunkCache::append(const Chunk_Ptr &chptr) {
+  std::lock_guard<std::mutex> lg(_locker);
+  Chunk_Ptr dropped;
+  _chunks.put(chptr->info->id, chptr, &dropped);
 }
 
-
-void ChunkCache::append(const Chunk_Ptr&chptr){
-    std::lock_guard<std::mutex> lg(_locker);
-    Chunk_Ptr dropped;
-    _chunks.put(chptr->info->id,chptr,&dropped);
-
-}
-
-bool ChunkCache::find(const uint64_t id, Chunk_Ptr&chptr)const{
-    std::lock_guard<std::mutex> lg(_locker);
-    return this->_chunks.find(id,&chptr);
+bool ChunkCache::find(const uint64_t id, Chunk_Ptr &chptr) const {
+  std::lock_guard<std::mutex> lg(_locker);
+  return this->_chunks.find(id, &chptr);
 }

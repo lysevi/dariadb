@@ -113,7 +113,7 @@ void TP_Reader::readNext(dariadb::storage::ReaderClb *clb) {
 Reader_ptr TP_Reader::clone() const {
   TP_Reader *raw = new TP_Reader;
   raw->_values = _values;
-  raw->_ids=_ids;
+  raw->_ids = _ids;
   raw->reset();
   return Reader_ptr(raw);
 }

@@ -1,10 +1,10 @@
 #include "engine.h"
 #include "flags.h"
+#include "storage/bloom_filter.h"
 #include "storage/capacitor.h"
 #include "storage/inner_readers.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
-#include "storage/bloom_filter.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include <algorithm>
@@ -216,16 +216,15 @@ public:
     return result;
   }
 
- 
   // Inherited via MeasStorage
   Reader_ptr readInterval(const QueryInterval &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
 
-	auto tmp_chunkLinks = PageManager::instance()->chunksByIterval(q);
-	auto tmp_page_cursor = PageManager::instance()->readLinks(tmp_chunkLinks);
-	ChunksList all_chunks_lst;
-	tmp_page_cursor->readAll(&all_chunks_lst);
-	tmp_page_cursor = nullptr;
+    auto tmp_chunkLinks = PageManager::instance()->chunksByIterval(q);
+    auto tmp_page_cursor = PageManager::instance()->readLinks(tmp_chunkLinks);
+    ChunksList all_chunks_lst;
+    tmp_page_cursor->readAll(&all_chunks_lst);
+    tmp_page_cursor = nullptr;
 
     for (auto id : q.ids) {
       InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
@@ -238,13 +237,13 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
       if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
-		  ChunkCursor* page_cursor_raw = new ChunkCursor;
-		  for (auto &c : all_chunks_lst) {
-			  if (bloom_check(c->info->id_bloom, id)) {
-				  page_cursor_raw->chunks.push_back(c);
-			  }
-		  }
-		  raw_rdr->add(Cursor_ptr{ page_cursor_raw });
+        ChunkCursor *page_cursor_raw = new ChunkCursor;
+        for (auto &c : all_chunks_lst) {
+          if (bloom_check(c->info->id_bloom, id)) {
+            page_cursor_raw->chunks.push_back(c);
+          }
+        }
+        raw_rdr->add(Cursor_ptr{page_cursor_raw});
       } else {
 
         if (minT <= q.from && maxT >= q.to) {
@@ -252,13 +251,13 @@ public:
           raw_res->cap_reader = Reader_ptr{mc_reader};
         } else {
           local_q.to = minT;
-		  ChunkCursor* page_cursor_raw = new ChunkCursor;
-		  for (auto &c : all_chunks_lst) {
-			  if (bloom_check(c->info->id_bloom, id) && c->info->minTime<=local_q.to) {
-				  page_cursor_raw->chunks.push_back(c);
-			  }
-		  }
-		  raw_rdr->add(Cursor_ptr{ page_cursor_raw });
+          ChunkCursor *page_cursor_raw = new ChunkCursor;
+          for (auto &c : all_chunks_lst) {
+            if (bloom_check(c->info->id_bloom, id) && c->info->minTime <= local_q.to) {
+              page_cursor_raw->chunks.push_back(c);
+            }
+          }
+          raw_rdr->add(Cursor_ptr{page_cursor_raw});
           local_q.from = minT;
           local_q.to = q.to;
 
@@ -273,7 +272,7 @@ public:
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
-	auto id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
+    auto id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
 
     for (auto id : q.ids) {
       dariadb::Time minT, maxT;
@@ -287,10 +286,10 @@ public:
         raw_result->add_rdr(subres);
       } else {
         TP_Reader *raw_tp_reader = new TP_Reader;
-		raw_tp_reader->_ids.resize(size_t(1));
-		raw_tp_reader->_ids[0] = id;
-		auto fres = id2meas.find(id);
-        if (fres!=id2meas.end()) {
+        raw_tp_reader->_ids.resize(size_t(1));
+        raw_tp_reader->_ids[0] = id;
+        auto fres = id2meas.find(id);
+        if (fres != id2meas.end()) {
           raw_tp_reader->_values.push_back(fres->second);
         } else {
           if (id2meas.empty()) {
