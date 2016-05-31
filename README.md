@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb)
-[![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=dev)](https://coveralls.io/github/lysevi/dariadb?branch=dev)
+[![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=master)](https://coveralls.io/github/lysevi/dariadb?branch=master)
 
 # dariadb
 
