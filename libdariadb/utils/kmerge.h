@@ -30,7 +30,9 @@ void k_merge(std::list<T *> new_values, Out &out, comparer_t comparer) {
     }
 
     auto val = (*with_max_index_it)->at(*with_max_index);
-    out.push_back(val);
+    if(out.size()== 0 || out.back()!=val){
+        out.push_back(val);
+    }
     // remove ended in-list
     (*with_max_index)++;
     if ((*with_max_index) >= (*with_max_index_it)->size()) {

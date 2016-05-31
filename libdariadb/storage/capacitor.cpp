@@ -27,6 +27,7 @@ for future updates.
 #include <future>
 #include <limits>
 #include <list>
+#include <tuple>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -46,6 +47,13 @@ struct FlaggedMeas {
   uint8_t drop_start : 1;
   uint8_t drop_end : 1;
   Meas value;
+
+  bool operator==(const FlaggedMeas&other)const{
+      return std::tie(drop_start,drop_end,value) == std::tie(other.drop_start,other.drop_end,other.value);
+  }
+  bool operator!=(const FlaggedMeas&other)const{
+      return !(*this==other);
+  }
 };
 
 struct flagged_meas_time_compare_less {
@@ -72,6 +80,10 @@ struct level {
     this->push_back(m.value);
     hdr->_minTime = std::min(hdr->_minTime, m.value.time);
     hdr->_maxTime = std::max(hdr->_maxTime, m.value.time);
+  }
+
+  FlaggedMeas back()const{
+      return begin[hdr->pos-1];
   }
 
   void clear() {

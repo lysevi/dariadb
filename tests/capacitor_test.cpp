@@ -134,14 +134,16 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
 }
 
 BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
-  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-  stor->writed_count = 0;
+
   const size_t block_size = 10;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
   {
+      std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+      stor->writed_count = 0;
+
     auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     assert(cap_files.size() == 0);
     auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
@@ -178,6 +180,46 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
       BOOST_CHECK_GE(next->time, it->time);
 	  dariadb::storage::Manifest::stop();
     }
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+
+  {
+      std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+      stor->writed_count = 0;
+    auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
+    p.max_levels = 11;
+
+    dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storage_path, "manifeset"));
+    dariadb::storage::Capacitor cap(stor.get(), p);
+
+    auto e = dariadb::Meas::empty();
+
+    size_t id_count = 10;
+    size_t i = 0;
+    for (;; i++) {
+      e.id = i % id_count;
+      e.time++;
+      e.value = dariadb::Value(i);
+      BOOST_CHECK(cap.append(e).writed == 1);
+
+      if (stor->writed_count != 0) {
+        break;
+      }
+
+      BOOST_CHECK(cap.append(e).writed == 1);
+
+      if (stor->writed_count != 0) {
+        break;
+      }
+    }
+    cap.flush();
+
+    // TODO add check: check count of dropped values
+    // BOOST_CHECK_EQUAL(cap.size(), size_t(1));
+
+   BOOST_CHECK_LT(stor->mlist.size(),i*2);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
