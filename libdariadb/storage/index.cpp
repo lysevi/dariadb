@@ -64,20 +64,25 @@ public:
     _is_end = false;
     this->read_poses.clear();
 
-    for (auto i : _ids) {
-      for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
-        {
-          auto _index_it = link->index[pos];
-          if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||
-              dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _to) ||
-              dariadb::utils::inInterval(_from, _to, _index_it.minTime) ||
-              dariadb::utils::inInterval(_from, _to, _index_it.maxTime)) {
-            auto bloom_result = check_blooms(_index_it, i);
+    for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
 
-            if (bloom_result) {
-              if (check_index_rec(_index_it)) {
-                this->read_poses.push_back(pos);
-              }
+      auto _index_it = link->index[pos];
+      if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||
+          dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _to) ||
+          dariadb::utils::inInterval(_from, _to, _index_it.minTime) ||
+          dariadb::utils::inInterval(_from, _to, _index_it.maxTime)) {
+        bool bloom_result = false;
+        for (auto i : _ids) {
+          bloom_result = check_blooms(_index_it, i);
+          if (bloom_result) {
+            break;
+          }
+        }
+        if (bloom_result) {
+          if (check_index_rec(_index_it)) {
+            this->read_poses.push_back(pos);
+            if (this->read_poses.size() > pos) {
+              std::cout << "1";
             }
           }
         }
