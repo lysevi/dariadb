@@ -216,21 +216,7 @@ public:
     return result;
   }
 
-  class ChunkCursor : public Cursor {
-  public:
-	  bool is_end() const override { return _chunk_iterator == chunks.end(); }
-	  void readNext(Callback *cbk) override {
-		  if (!is_end()) {
-			  cbk->call(*_chunk_iterator);
-			  ++_chunk_iterator;
-		  }
-	  }
-	  void reset_pos() override { _chunk_iterator = chunks.begin(); }
-
-	  ChunksList chunks;
-	  ChunksList::iterator _chunk_iterator;
-  };
-
+ 
   // Inherited via MeasStorage
   Reader_ptr readInterval(const QueryInterval &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();

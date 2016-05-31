@@ -147,21 +147,7 @@ public:
     return pg;
   }
 
-  class PageManagerCursor : public Cursor {
-  public:
-    bool is_end() const override { return _chunk_iterator == chunks.end(); }
-    void readNext(Callback *cbk) override {
-      if (!is_end()) {
-        cbk->call(*_chunk_iterator);
-        ++_chunk_iterator;
-      }
-    }
-    void reset_pos() override { _chunk_iterator = chunks.begin(); }
-
-    ChunksList chunks;
-    ChunksList::iterator _chunk_iterator;
-  };
-
+  
   class AddCursorClbk : public Cursor::Callback {
   public:
     void call(dariadb::storage::Chunk_Ptr &ptr) {
@@ -220,7 +206,7 @@ public:
   Cursor_ptr readLinks(const ChunkLinkList &links) {
     boost::shared_lock<boost::shared_mutex> lg(_locker);
 
-    PageManagerCursor *raw_cursor = new PageManagerCursor;
+    ChunkCursor *raw_cursor = new ChunkCursor;
     dariadb::storage::ChunksList chunks;
 
     std::unique_ptr<AddCursorClbk> clbk{new AddCursorClbk};
@@ -263,6 +249,7 @@ public:
     raw_cursor->reset_pos();
     return Cursor_ptr{raw_cursor};
   }
+
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
     std::list<std::string> result;
     auto names = Manifest::instance()->page_list();
