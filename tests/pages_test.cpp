@@ -20,15 +20,16 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     dariadb::utils::fs::rm(fname);
   }
 
-  Manifest m(fname);
+  Manifest::start(fname);
   std::list<std::string> names{"1", "2", "3"};
   for (auto n : names) {
-    m.page_append(n);
+	  Manifest::instance()->page_append(n);
   }
-  auto lst = m.page_list();
+  auto lst = Manifest::instance()->page_list();
   BOOST_CHECK_EQUAL(lst.size(), names.size());
   BOOST_CHECK_EQUAL_COLLECTIONS(lst.begin(), lst.end(), names.begin(), names.end());
 
+  Manifest::stop();
   if (dariadb::utils::fs::path_exists(fname)) {
     dariadb::utils::fs::rm(fname);
   }

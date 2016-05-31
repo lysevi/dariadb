@@ -2,12 +2,17 @@
 
 #include <list>
 #include <string>
+#include <memory>
 
 namespace dariadb {
 namespace storage {
 class Manifest {
+	Manifest(const std::string &fname);
 public:
-  Manifest(const std::string &fname);
+	Manifest() = delete;
+	static void start(const std::string &fname);
+	static void stop();
+	static Manifest*instance();
   std::list<std::string> page_list();
   void page_append(const std::string &rec);
 
@@ -17,6 +22,7 @@ private:
   void touch();
 protected:
   std::string _filename;
+  static std::unique_ptr<Manifest> _instance;
 };
 }
 }

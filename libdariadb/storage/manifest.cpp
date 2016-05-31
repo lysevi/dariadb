@@ -6,12 +6,23 @@
 #include <json/json.hpp>
 
 using json = nlohmann::json;
+using namespace dariadb::storage;
+std::unique_ptr<Manifest> Manifest::_instance;
 
-dariadb::storage::Manifest::Manifest(const std::string &fname)
+Manifest::Manifest(const std::string &fname)
     : _filename(fname) {
 }
 
+void Manifest::start(const std::string & fname){
+	_instance = std::unique_ptr<Manifest>{ new Manifest(fname) };
+}
 
+void Manifest::stop(){
+}
+
+Manifest *Manifest::instance(){
+	return Manifest::_instance.get();
+}
 void dariadb::storage::Manifest::touch(){
     if (!utils::fs::path_exists(_filename)) {
         json js=json::parse("{ \"cola\": [], \"pages\": [] }");

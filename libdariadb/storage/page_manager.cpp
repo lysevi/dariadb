@@ -26,8 +26,8 @@ class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
 public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param),
-        _manifest(utils::fs::append_path(param.path, MANIFEST_FILE_NAME)),
         _openned_pages(param.openned_page_chache_size) {
+	  Manifest::start(utils::fs::append_path(param.path, MANIFEST_FILE_NAME));
     update_id = false;
     last_id = 0;
 
@@ -39,7 +39,7 @@ public:
     if (!utils::fs::path_exists(_param.path)) {
       return nullptr;
     }
-    auto pages = _manifest.page_list();
+    auto pages = Manifest::instance()->page_list();
 
     for (auto n : pages) {
       auto file_name = utils::fs::append_path(_param.path, n);
@@ -82,7 +82,7 @@ public:
     std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
     auto sz = calc_page_size();
     res = Page::create(file_name, sz, _param.chunk_per_storage, _param.chunk_size);
-    _manifest.page_append(page_name);
+	Manifest::instance()->page_append(page_name);
     if (update_id) {
       res->header->max_chunk_id = last_id;
     }
@@ -265,7 +265,7 @@ public:
   }
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
     std::list<std::string> result;
-    auto names = _manifest.page_list();
+    auto names = Manifest::instance()->page_list();
     for (auto n : names) {
       auto index_file_name = utils::fs::append_path(_param.path, n + "i");
       auto hdr = Page::readIndexHeader(index_file_name);
@@ -321,7 +321,7 @@ public:
   // PM
   size_t in_queue_size() const {
       boost::shared_lock<boost::shared_mutex> lg(_locker);
-      return this->_manifest.page_list().size();
+      return Manifest::instance()->page_list().size();
   }
 
   dariadb::Time minTime() {
@@ -377,7 +377,6 @@ public:
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
-  mutable Manifest _manifest;
   mutable boost::shared_mutex _locker;
 
   uint64_t last_id;
@@ -403,6 +402,7 @@ void PageManager::stop() {
     delete PageManager::_instance;
     _instance = nullptr;
   }
+  Manifest::stop();
 }
 
 void PageManager::flush() {
