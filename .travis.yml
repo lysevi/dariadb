@@ -8,12 +8,11 @@ before_install:
    - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
    - sudo apt-get update
    - sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-thread-dev cmake  g++-4.9  g++-4.9 cpp-4.9
-   - sudo update-alternatives --set gcc /usr/bin/gcc-4.9
-   - sudo update-alternatives --config gcc
-   - sudo update-alternatives --set cpp /usr/bin/cpp-4.9
-   - sudo update-alternatives --config cpp
-   - sudo update-alternatives --set g++ /usr/bin/g++-4.9
-   - sudo update-alternatives --config g++
+   - cd /usr/bin
+   - sudo rm gcc g++ cpp
+   - sudo ln -s gcc-4.9 gcc
+   - sudo ln -s g++-4.9 g++
+   - sudo ln -s cpp-4.9 cpp
    - pip install --user cpp-coveralls
    - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
    - tar xf lcov_1.11.orig.tar.gz
