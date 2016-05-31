@@ -67,6 +67,9 @@ public:
     for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
 
       auto _index_it = link->index[pos];
+	  if (!_index_it.is_init) {
+		  continue;
+	  }
       if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||
           dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _to) ||
           dariadb::utils::inInterval(_from, _to, _index_it.minTime) ||

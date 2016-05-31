@@ -252,7 +252,6 @@ public:
           raw_res->cap_reader = Reader_ptr{mc_reader};
         } else {
           local_q.to = minT;
-          auto chunkLinks = PageManager::instance()->chunksByIterval(local_q);
 		  ChunkCursor* page_cursor_raw = new ChunkCursor;
 		  for (auto &c : all_chunks_lst) {
 			  if (bloom_check(c->info->id_bloom, id) && c->info->minTime<=local_q.to) {
@@ -274,6 +273,8 @@ public:
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
+	auto id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
+
     for (auto id : q.ids) {
       dariadb::Time minT, maxT;
       QueryTimePoint local_q = q;
@@ -285,23 +286,18 @@ public:
         auto subres = mem_cap->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else {
-        auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
-
         TP_Reader *raw_tp_reader = new TP_Reader;
-        if (!id2meas.empty()) {
-          raw_tp_reader->_ids.resize(id2meas.size());
-          for (auto kv : id2meas) {
-            raw_tp_reader->_values.push_back(kv.second);
-            raw_tp_reader->_ids.push_back(kv.first);
-          }
+		raw_tp_reader->_ids.resize(size_t(1));
+		raw_tp_reader->_ids[0] = id;
+		auto fres = id2meas.find(id);
+        if (fres!=id2meas.end()) {
+          raw_tp_reader->_values.push_back(fres->second);
         } else {
           if (id2meas.empty()) {
-            raw_tp_reader->_ids.resize(size_t(1));
             auto e = Meas::empty(id);
             e.flag = Flags::_NO_DATA;
             e.time = q.time_point;
             raw_tp_reader->_values.push_back(e);
-            raw_tp_reader->_ids.push_back(id);
           }
         }
         raw_tp_reader->reset();

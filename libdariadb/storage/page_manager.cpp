@@ -320,7 +320,7 @@ public:
 
     dariadb::Time res = dariadb::MAX_TIME;
     for (auto pname : page_list) {
-      auto ih = Page::readIndexHeader(pname + "i");
+      auto ih = Page::readIndexHeader(PageIndex::index_name_from_page_name(pname));
       res = std::min(ih.minTime, res);
     }
 
@@ -333,9 +333,9 @@ public:
 
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-    dariadb::Time res = dariadb::MAX_TIME;
+    dariadb::Time res = dariadb::MIN_TIME;
     for (auto pname : page_list) {
-      auto ih = Page::readIndexHeader(pname + "i");
+      auto ih = Page::readIndexHeader(PageIndex::index_name_from_page_name(pname));
       res = std::max(ih.maxTime, res);
     }
 
