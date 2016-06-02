@@ -5,6 +5,7 @@ packages.config
 *.page
 *.pagei
 Manifest
+manifest
 *.dll
 *.lib
 *-prefix

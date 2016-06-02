@@ -8,6 +8,7 @@
 #include <storage/manifest.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
+#include <storage/chunk.h>
 #include <utils/fs.h>
 #include <utils/utils.h>
 
@@ -45,6 +46,34 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   if (dariadb::utils::fs::path_exists(fname)) {
     dariadb::utils::fs::rm(fname);
   }
+}
+
+BOOST_AUTO_TEST_CASE(ChunkSorted) {
+	uint8_t buffer[1024];
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	dariadb::storage::ChunkIndexInfo info;
+	auto v=dariadb::Meas::empty(0);
+	v.time = 5;
+	dariadb::storage::Chunk_Ptr zch{ new dariadb::storage::ZippedChunk(&info, buffer, 1024, v) };
+	BOOST_CHECK(zch->info->is_sorted);
+	v.time++;
+	BOOST_CHECK(zch->append(v));
+	v.time++;
+	BOOST_CHECK(zch->append(v));
+	v.time=4;
+	BOOST_CHECK(zch->append(v));
+	BOOST_CHECK(!zch->info->is_sorted);
+	v.time = 10;
+	BOOST_CHECK(zch->append(v));
+	BOOST_CHECK(!zch->info->is_sorted);
+
+	auto reader = zch->get_reader();
+	auto prev_value = reader->readNext();
+	while (!reader->is_end()) {
+		auto new_value = reader->readNext();
+		BOOST_CHECK_LE(prev_value.time,new_value.time);
+		prev_value = new_value;
+	}
 }
 
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
@@ -312,6 +341,92 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   PageManager::stop();
 
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+    dariadb::utils::fs::rm(storagePath);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(PageManagerPastReadWrite) {
+  const std::string storagePath = "testStorage/";
+  const size_t chinks_count = 30;
+  const size_t chunks_size = 256;
+
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+    dariadb::utils::fs::rm(storagePath);
+  }
+
+  PageManager::start(PageManager::Params(storagePath, chinks_count, chunks_size));
+  BOOST_CHECK(PageManager::instance() != nullptr);
+
+  auto t = dariadb::Time(0);
+  dariadb::Meas::MeasList addeded;
+
+  dariadb::Meas first;
+  first.id = 0;
+  first.time = t;
+
+  size_t i = 0;
+  for (; i < 10; i++, t++) {
+    if (t == 7 || t == 8) {
+      continue;
+    }
+    first.flag = dariadb::Flag(i);
+    first.time = t;
+    first.value = dariadb::Value(i);
+
+    auto res = PageManager::instance()->append(first);
+    addeded.push_back(first);
+    BOOST_CHECK(res.writed == 1);
+  }
+  first.id = 1;
+  first.time = t;
+  while (PageManager::instance()->chunks_in_cur_page() != 2) {
+    first.flag = dariadb::Flag(i);
+    first.time++;
+    first.value = dariadb::Value(i);
+
+    auto res = PageManager::instance()->append(first);
+    addeded.push_back(first);
+    BOOST_CHECK(res.writed == 1);
+    ++i;
+  }
+
+  first.id = 0;
+  first.time = 7;
+
+  auto res = PageManager::instance()->append(first);
+  addeded.push_back(first);
+  BOOST_CHECK(res.writed == 1);
+
+  first.time = 8;
+  res = PageManager::instance()->append(first);
+  addeded.push_back(first);
+  BOOST_CHECK(res.writed == 1);
+
+  first.time = 12;
+
+  res = PageManager::instance()->append(first);
+  addeded.push_back(first);
+  BOOST_CHECK(res.writed == 1);
+
+  auto links = PageManager::instance()->chunksByIterval(
+      dariadb::storage::QueryInterval(dariadb::IdArray{0, 1}, 0, 0, 12));
+  auto chunks_cursor = PageManager::instance()->readLinks(links);
+  dariadb::storage::ChunksList chunks;
+  chunks_cursor->readAll(&chunks);
+  //chunks.back()->info->is_past_write = true;
+  auto crossed = dariadb::storage::chunk_intercross(chunks);
+  BOOST_CHECK_EQUAL(crossed.size(), size_t(2));
+
+  auto reader = crossed.front()->get_reader();
+  auto prev_value = reader->readNext();
+  while (!reader->is_end()) {
+    auto new_value = reader->readNext();
+    BOOST_CHECK_LE(prev_value.time, new_value.time);
+    prev_value = new_value;
+  }
+
+  PageManager::stop();
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }

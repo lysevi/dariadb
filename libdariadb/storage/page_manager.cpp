@@ -432,6 +432,10 @@ size_t PageManager::files_count() const {
   return impl->files_count();
 }
 
+size_t  PageManager::chunks_in_cur_page()const {
+	return impl->chunks_in_cur_page();
+}
+
 dariadb::Time PageManager::minTime() {
   return impl->minTime();
 }

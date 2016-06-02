@@ -17,7 +17,7 @@ struct IndexHeader {
 
   uint32_t chunk_per_storage; // max chunks count
   uint32_t chunk_size;        // each chunks size in bytes
-  bool is_sorted;             // items sorted by time
+  bool is_sorted;             // items in index file sorted by time
 
   dariadb::Id id_bloom; // bloom filter of Meas.id
 };

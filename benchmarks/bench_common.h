@@ -38,8 +38,8 @@ void readBenchark(const dariadb::IdSet &all_id_set,
     std::cout << "time point reads..." << std::endl;
     std::random_device r;
     std::default_random_engine e1(r());
-    std::uniform_int_distribution<dariadb::Id> uniform_dist(stor->minTime(),
-                                                            stor->maxTime());
+    std::uniform_int_distribution<dariadb::Id> uniform_dist(from,
+                                                            to);
 
     std::shared_ptr<BenchCallback> clbk{new BenchCallback};
 

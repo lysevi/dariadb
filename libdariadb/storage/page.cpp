@@ -210,11 +210,15 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   }
 
   if (_openned_chunk.ch != nullptr && !_openned_chunk.ch->is_full()) {
-    if (_openned_chunk.ch->append(m)) {
-      _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
-                                _openned_chunk.pos);
-      return true;
-    }
+      if(_openned_chunk.ch->info->last.id!=m.id){
+          _openned_chunk.ch->close();
+      }else{
+          if (_openned_chunk.ch->append(m)) {
+              _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
+                                        _openned_chunk.pos);
+              return true;
+          }
+      }
   }
   // search no full chunk.
   auto step = this->header->chunk_size + sizeof(ChunkIndexInfo);

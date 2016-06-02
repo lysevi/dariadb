@@ -18,8 +18,7 @@ public:
   UnionReader() { cap_reader = page_reader = nullptr; }
   // Inherited via Reader
   bool isEnd() const override {
-    return (page_reader == nullptr || page_reader->isEnd()) &&
-           (cap_reader == nullptr || cap_reader->isEnd());
+    return res_it==local_res.end();
   }
 
   IdArray getIds() const override {
@@ -42,14 +41,10 @@ public:
   }
 
   void readNext(ReaderClb *clb) override {
-    if (page_reader != nullptr && !page_reader->isEnd()) {
-      page_reader->readNext(clb);
-    } else {
-      if (cap_reader != nullptr && !cap_reader->isEnd()) {
-        cap_reader->readNext(clb);
-      }
-    }
+    clb->call(*res_it);
+    ++res_it;
   }
+
   Reader_ptr clone() const override {
     UnionReader *raw_res = new UnionReader();
     if (this->page_reader != nullptr) {
@@ -62,14 +57,25 @@ public:
   }
 
   void reset() override {
+      dariadb::Meas::MeasList tmp;
     if (page_reader != nullptr) {
       page_reader->reset();
+      page_reader->readAll(&tmp);
     }
     if (cap_reader != nullptr) {
       cap_reader->reset();
+      cap_reader->readAll(&tmp);
     }
-  }
 
+    std::vector<Meas> for_srt(tmp.begin(),tmp.end());
+    std::sort(for_srt.begin(),for_srt.end(),
+              [](Meas l,Meas r){return l.time<r.time;});
+
+    local_res=dariadb::Meas::MeasList(for_srt.begin(),for_srt.end());
+    res_it=local_res.begin();
+  }
+  dariadb::Meas::MeasList local_res;
+  dariadb::Meas::MeasList::const_iterator res_it;
   Reader_ptr page_reader;
   Reader_ptr cap_reader;
 };
@@ -225,12 +231,31 @@ public:
     ChunksList all_chunks_lst;
     tmp_page_cursor->readAll(&all_chunks_lst);
     tmp_page_cursor = nullptr;
+	
+	//auto crossed_chunks = dariadb::storage::chunk_intercross(all_chunks_lst);
+#ifdef DEBUG
+	//// check.
+	//std::set<uint64_t> all_chunks_ids;
+	//for (auto c : crossed_chunks) {
+	//	auto cc = dynamic_cast<dariadb::storage::CrossedChunk*>(c.get());
+	//	if (cc != nullptr) {
+	//		for (auto sub_c : cc->_chunks) {
+	//			assert(all_chunks_ids.find(sub_c->info->id) == all_chunks_ids.end());
+	//			all_chunks_ids.insert(sub_c->info->id);
+	//		}
+	//	}
+	//}
+#endif // DEBUG
+	//all_chunks_lst.clear();
 
     for (auto id : q.ids) {
-      InnerReader *raw_rdr = new InnerReader(q.flag, q.from, q.to);
+		/*if (id == 5) {
+			std::cout << "1";
+		}*/
+      InnerReader *page_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader();
-      raw_res->page_reader = Reader_ptr{raw_rdr};
-      raw_rdr->_ids.push_back(id);
+      raw_res->page_reader = Reader_ptr{page_rdr};
+      page_rdr->_ids.push_back(id);
 
       dariadb::Time minT, maxT;
       QueryInterval local_q = q;
@@ -238,12 +263,14 @@ public:
       local_q.ids.push_back(id);
       if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
         ChunkCursor *page_cursor_raw = new ChunkCursor;
+		ChunksList chunks_for_id;
         for (auto &c : all_chunks_lst) {
-          if (bloom_check(c->info->id_bloom, id)) {
-            page_cursor_raw->chunks.push_back(c);
+          if (c->check_id(id)) {
+            chunks_for_id.push_back(c);
           }
         }
-        raw_rdr->add(Cursor_ptr{page_cursor_raw});
+		page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
+        page_rdr->add(Cursor_ptr{page_cursor_raw});
       } else {
 
         if (minT <= q.from && maxT >= q.to) {
@@ -252,17 +279,19 @@ public:
         } else {
           local_q.to = minT;
           ChunkCursor *page_cursor_raw = new ChunkCursor;
-          for (auto &c : all_chunks_lst) {
-            if (bloom_check(c->info->id_bloom, id) && c->info->minTime <= local_q.to) {
-              page_cursor_raw->chunks.push_back(c);
-            }
-          }
-          raw_rdr->add(Cursor_ptr{page_cursor_raw});
+		  ChunksList chunks_for_id;
+		  for (auto &c : all_chunks_lst) {
+			  if (c->check_id(id)) {
+				  chunks_for_id.push_back(c);
+			  }
+		  }
+		  page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
+          page_rdr->add(Cursor_ptr{page_cursor_raw});
           local_q.from = minT;
           local_q.to = q.to;
 
-          auto mc_reader = mem_cap->readInterval(local_q);
-          raw_res->cap_reader = Reader_ptr{mc_reader};
+         auto mc_reader = mem_cap->readInterval(local_q);
+         raw_res->cap_reader = Reader_ptr{mc_reader};
         }
       }
       raw_result->add_rdr(Reader_ptr{raw_res});

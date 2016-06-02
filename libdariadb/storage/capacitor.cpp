@@ -66,6 +66,7 @@ struct level {
   FlaggedMeas *begin;
 
   FlaggedMeas at(size_t _pos) const { return begin[_pos]; }
+  FlaggedMeas &at(size_t _pos) { return begin[_pos]; }
 
   void push_back(const Meas &m) {
     begin[hdr->pos].value = m;
@@ -84,6 +85,10 @@ struct level {
   FlaggedMeas back() const { return begin[hdr->pos - 1]; }
 
   void clear() {
+    for (size_t i = 0; i < hdr->pos; ++i) {
+      this->begin[i].drop_end = 0;
+      this->begin[i].drop_start = 0;
+    }
     hdr->pos = 0;
     hdr->_maxTime = dariadb::MIN_TIME;
     hdr->_minTime = dariadb::MAX_TIME;
@@ -300,14 +305,34 @@ public:
     }
     return append_to_mem(value);
   }
+
   std::future<void> drop_future;
   void drop_one_level(level *target) {
     if (_stor == nullptr) {
       return;
     }
+	
+	//std::map<Id, std::set<Meas, meas_time_compare_less>> id2meas;
+	
     for (size_t i = 0; i < target->size(); ++i) {
-      _stor->append(target->at(i).value);
+      if (target->at(i).drop_end) {
+        continue;
+      }
+      target->at(i).drop_start = 1;
+	  for (size_t j = 0; j < target->size(); ++j) {
+		  if (target->at(i).value.id == target->at(j).value.id) {
+			  _stor->append(target->at(j).value);
+			  target->at(j).drop_end = 1;
+		  }
+	  }
+	  //id2meas[target->at(i).value.id].insert(target->at(i).value);
+	  
     }
+	/*for (auto &id2set : id2meas) {
+		for (auto &m : id2set.second) {
+			_stor->append(m);
+		}
+	}*/
 
     target->clear();
   }
@@ -483,6 +508,9 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
+		if (m.drop_end) {
+			continue;
+		}
         if (m.value.id == id) {
           *minResult = std::min(*minResult, m.value.time);
           *maxResult = std::max(*maxResult, m.value.time);

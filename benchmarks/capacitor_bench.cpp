@@ -6,6 +6,7 @@
 #include "bench_common.h"
 #include <ctime>
 #include <storage/capacitor.h>
+#include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 
@@ -56,6 +57,7 @@ int main(int argc, char *argv[]) {
     }
 
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+	dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storage_path, "Manifest"));
     auto *tos = new dariadb::storage::Capacitor(
         stor.get(), dariadb::storage::Capacitor::Params(cap_B, storage_path));
 
