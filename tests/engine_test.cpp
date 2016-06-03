@@ -10,6 +10,8 @@
 #include <utils/fs.h>
 #include <utils/logger.h>
 
+#include <random>
+
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
   BenchCallback() { count = 0; }
