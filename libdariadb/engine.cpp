@@ -18,7 +18,7 @@ public:
   UnionReader() { cap_reader = page_reader = nullptr; }
   // Inherited via Reader
   bool isEnd() const override {
-    return res_it==local_res.end();
+    return local_res.empty() || res_it==local_res.end();
   }
 
   IdArray getIds() const override {
@@ -41,6 +41,9 @@ public:
   }
 
   void readNext(ReaderClb *clb) override {
+	  if (isEnd()) {
+		  return;
+	  }
     clb->call(*res_it);
     ++res_it;
   }
