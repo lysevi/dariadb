@@ -22,7 +22,7 @@ struct IndexHeader {
   dariadb::Id id_bloom; // bloom filter of Meas.id
 };
 
-struct Page_ChunkIndex {
+struct IndexReccord {
   Time minTime, maxTime; // min max time of linked chunk
   // dariadb::Id meas_id;      // chunk->info->first.id
   dariadb::Flag flag_bloom; // bloom filters of writed meases
@@ -45,7 +45,7 @@ public:
   bool readonly;
   IndexHeader *iheader;
   uint8_t *iregion; // index file mapp region
-  Page_ChunkIndex *index;
+  IndexReccord *index;
 
   indexTree _itree; // needed to sort index reccord on page closing. for fast search
   std::string filename;
@@ -56,7 +56,7 @@ public:
                               uint32_t chunk_per_storage, uint32_t chunk_size);
   static PageIndex_ptr open(const std::string &filename, bool read_only);
 
-  void update_index_info(Page_ChunkIndex *cur_index, const Chunk_Ptr &ptr, const Meas &m,
+  void update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr, const Meas &m,
                          uint32_t pos);
 
   ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,

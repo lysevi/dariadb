@@ -56,9 +56,9 @@ private:
   void init_chunk_index_rec(Chunk_Ptr ch);
 
   struct ChunkWithIndex {
-    Chunk_Ptr ch;           /// ptr to chunk in page
-    Page_ChunkIndex *index; /// ptr to index reccord
-    uint32_t pos;           /// position number of 'index' field in index file.
+    Chunk_Ptr ch;        /// ptr to chunk in page
+    IndexReccord *index; /// ptr to index reccord
+    uint32_t pos;        /// position number of 'index' field in index file.
   };
   /// cache of openned chunks. before search chunk in page, we search in cache.
   ChunkWithIndex _openned_chunk;

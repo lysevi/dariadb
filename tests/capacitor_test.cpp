@@ -87,17 +87,17 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
 
     cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
-	if (cap_files.size() != size_t(1)) {
-		for (auto f : cap_files) {
-			std::cout << ">> " << f << std::endl;
-		}
-		auto cl = dariadb::storage::Manifest::instance()->cola_list();
-		for (auto f : cl) {
-			std::cout << "** " << f << std::endl;
-		}
-	}
+    if (cap_files.size() != size_t(1)) {
+      for (auto f : cap_files) {
+        std::cout << ">> " << f << std::endl;
+      }
+      auto cl = dariadb::storage::Manifest::instance()->cola_list();
+      for (auto f : cl) {
+        std::cout << "** " << f << std::endl;
+      }
+    }
     // level count must be read from file header.
-	BOOST_CHECK_LE(cap.levels_count() , size_t(p.max_levels));
+    BOOST_CHECK_LE(cap.levels_count(), size_t(p.max_levels));
 
     BOOST_CHECK_EQUAL(cap.size(), writes_count);
     auto e = dariadb::Meas::empty();
@@ -189,9 +189,9 @@ BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {
       if (next == stor->mlist.cend()) {
         break;
       }
-	  if (next->id == it->id) {
-		  BOOST_CHECK_GE(next->time, it->time);
-	  }
+      if (next->id == it->id) {
+        BOOST_CHECK_GE(next->time, it->time);
+      }
       dariadb::storage::Manifest::stop();
     }
   }

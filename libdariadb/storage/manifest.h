@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../utils/locker.h"
 #include <list>
 #include <memory>
 #include <string>
-#include "../utils/locker.h"
 
 namespace dariadb {
 namespace storage {

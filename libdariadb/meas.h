@@ -28,11 +28,10 @@ bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 struct Meas {
   typedef Meas *PMeas;
   struct meas_id_compare_less {
-	  bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
-		  return lhs.time < rhs.time;
-	  }
+    bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+      return lhs.time < rhs.time;
+    }
   };
-
 
   typedef std::vector<Meas> MeasArray;
   typedef std::list<Meas> MeasList;
@@ -40,7 +39,6 @@ struct Meas {
   typedef std::set<Meas, meas_id_compare_less> MeasSet;
   static Meas empty();
   static Meas empty(Id id);
-
 
   Meas();
   void readFrom(const Meas::PMeas m);

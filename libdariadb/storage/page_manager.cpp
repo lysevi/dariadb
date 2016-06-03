@@ -66,7 +66,7 @@ public:
   }
 
   uint64_t calc_page_size() const {
-    auto sz_info = _param.chunk_per_storage * sizeof(ChunkIndexInfo);
+    auto sz_info = _param.chunk_per_storage * sizeof(ChunkHeader);
     auto sz_buffers = _param.chunk_per_storage * _param.chunk_size;
     return sizeof(PageHeader) + sz_buffers + sz_info;
   }
@@ -432,8 +432,8 @@ size_t PageManager::files_count() const {
   return impl->files_count();
 }
 
-size_t  PageManager::chunks_in_cur_page()const {
-	return impl->chunks_in_cur_page();
+size_t PageManager::chunks_in_cur_page() const {
+  return impl->chunks_in_cur_page();
 }
 
 dariadb::Time PageManager::minTime() {

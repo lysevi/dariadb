@@ -56,12 +56,12 @@ public:
 
   // dariadb::storage::ChunksList get_open_chunks();
   size_t files_count() const;
-  size_t chunks_in_cur_page()const;
+  size_t chunks_in_cur_page() const;
   dariadb::Time minTime();
   dariadb::Time maxTime();
 
   append_result append(const Meas &value) override;
-  
+
 private:
   static PageManager *_instance;
   class Private;

@@ -19,7 +19,7 @@ void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
           ((m.flag == flg_val) || (m.flag == dariadb::Flags::_NO_DATA)) &&
           ((m.src == flg_val) || (m.src == dariadb::Flags::_NO_DATA))) {
         count++;
-	  }
+      }
     }
 
     if (count < copies_count) {
@@ -92,9 +92,9 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     m.src = flg_val;
     m.time = i;
     m.value = 0;
-   
-	auto copies_for_id = (id_val == 0 ? copies_count / 2 : copies_count);
-    for (size_t j = 1; j < copies_for_id +1; j++) {
+
+    auto copies_for_id = (id_val == 0 ? copies_count / 2 : copies_count);
+    for (size_t j = 1; j < copies_for_id + 1; j++) {
       if (as->append(m).writed != 1) {
         throw MAKE_EXCEPTION("->append(m).writed != 1");
       }
@@ -102,28 +102,28 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
       m.value = dariadb::Value(j);
       m.time++;
     }
-	++id_val;
-	++flg_val;
+    ++id_val;
+    ++flg_val;
   }
   {
-	  auto new_from = copies_count / 2 + 1;
-	  id_val = 0;
-	  _all_ids_set.insert(id_val);
-	  m.id = id_val;
-	  m.flag = 0;
-	  m.src = 0;
-	  m.time = new_from;
-	  m.value = 0;
-	  ++id_val;
-	  ++flg_val;
-	  for (size_t j = new_from; j < copies_count + 1; j++) {
-		  m.value = dariadb::Value(j);
-		  if (as->append(m).writed != 1) {
-			  throw MAKE_EXCEPTION("->append(m).writed != 1");
-		  }
-		  total_count++;
-		  m.time++;
-	  }
+    auto new_from = copies_count / 2 + 1;
+    id_val = 0;
+    _all_ids_set.insert(id_val);
+    m.id = id_val;
+    m.flag = 0;
+    m.src = 0;
+    m.time = new_from;
+    m.value = 0;
+    ++id_val;
+    ++flg_val;
+    for (size_t j = new_from; j < copies_count + 1; j++) {
+      m.value = dariadb::Value(j);
+      if (as->append(m).writed != 1) {
+        throw MAKE_EXCEPTION("->append(m).writed != 1");
+      }
+      total_count++;
+      m.time++;
+    }
   }
   dariadb::Time minTime, maxTime;
   if (!(as->minMaxTime(dariadb::Id(id_val - 1), &minTime, &maxTime))) {

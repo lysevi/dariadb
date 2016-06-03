@@ -311,28 +311,27 @@ public:
     if (_stor == nullptr) {
       return;
     }
-	
-	//std::map<Id, std::set<Meas, meas_time_compare_less>> id2meas;
-	
+
+    // std::map<Id, std::set<Meas, meas_time_compare_less>> id2meas;
+
     for (size_t i = 0; i < target->size(); ++i) {
       if (target->at(i).drop_end) {
         continue;
       }
       target->at(i).drop_start = 1;
-	  for (size_t j = 0; j < target->size(); ++j) {
-		  if (target->at(i).value.id == target->at(j).value.id) {
-			  _stor->append(target->at(j).value);
-			  target->at(j).drop_end = 1;
-		  }
-	  }
-	  //id2meas[target->at(i).value.id].insert(target->at(i).value);
-	  
+      for (size_t j = 0; j < target->size(); ++j) {
+        if (target->at(i).value.id == target->at(j).value.id) {
+          _stor->append(target->at(j).value);
+          target->at(j).drop_end = 1;
+        }
+      }
+      // id2meas[target->at(i).value.id].insert(target->at(i).value);
     }
-	/*for (auto &id2set : id2meas) {
-		for (auto &m : id2set.second) {
-			_stor->append(m);
-		}
-	}*/
+    /*for (auto &id2set : id2meas) {
+            for (auto &m : id2set.second) {
+                    _stor->append(m);
+            }
+    }*/
 
     target->clear();
   }
@@ -508,9 +507,9 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
-		if (m.drop_end) {
-			continue;
-		}
+        if (m.drop_end) {
+          continue;
+        }
         if (m.value.id == id) {
           *minResult = std::min(*minResult, m.value.time);
           *maxResult = std::max(*maxResult, m.value.time);

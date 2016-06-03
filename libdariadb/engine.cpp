@@ -17,9 +17,7 @@ class UnionReader : public Reader {
 public:
   UnionReader() { cap_reader = page_reader = nullptr; }
   // Inherited via Reader
-  bool isEnd() const override {
-    return local_res.empty() || res_it==local_res.end();
-  }
+  bool isEnd() const override { return local_res.empty() || res_it == local_res.end(); }
 
   IdArray getIds() const override {
     dariadb::IdSet idset;
@@ -41,9 +39,9 @@ public:
   }
 
   void readNext(ReaderClb *clb) override {
-	  if (isEnd()) {
-		  return;
-	  }
+    if (isEnd()) {
+      return;
+    }
     clb->call(*res_it);
     ++res_it;
   }
@@ -60,7 +58,7 @@ public:
   }
 
   void reset() override {
-      dariadb::Meas::MeasList tmp;
+    dariadb::Meas::MeasList tmp;
     if (page_reader != nullptr) {
       page_reader->reset();
       page_reader->readAll(&tmp);
@@ -70,12 +68,12 @@ public:
       cap_reader->readAll(&tmp);
     }
 
-    std::vector<Meas> for_srt(tmp.begin(),tmp.end());
-    std::sort(for_srt.begin(),for_srt.end(),
-              [](Meas l,Meas r){return l.time<r.time;});
+    std::vector<Meas> for_srt(tmp.begin(), tmp.end());
+    std::sort(for_srt.begin(), for_srt.end(),
+              [](Meas l, Meas r) { return l.time < r.time; });
 
-    local_res=dariadb::Meas::MeasList(for_srt.begin(),for_srt.end());
-    res_it=local_res.begin();
+    local_res = dariadb::Meas::MeasList(for_srt.begin(), for_srt.end());
+    res_it = local_res.begin();
   }
   dariadb::Meas::MeasList local_res;
   dariadb::Meas::MeasList::const_iterator res_it;
@@ -91,10 +89,7 @@ public:
   UnionReaderSet() {}
   ~UnionReaderSet() { _readers.clear(); }
 
-  void add_rdr(const Reader_ptr &cptr) {
-    _readers.push_back(cptr);
-    reset();
-  }
+  void add_rdr(const Reader_ptr &cptr) { _readers.push_back(cptr); }
 
   IdArray getIds() const override {
     IdSet subresult;
@@ -234,27 +229,28 @@ public:
     ChunksList all_chunks_lst;
     tmp_page_cursor->readAll(&all_chunks_lst);
     tmp_page_cursor = nullptr;
-	
-	//auto crossed_chunks = dariadb::storage::chunk_intercross(all_chunks_lst);
+
+// auto crossed_chunks = dariadb::storage::chunk_intercross(all_chunks_lst);
 #ifdef DEBUG
-	//// check.
-	//std::set<uint64_t> all_chunks_ids;
-	//for (auto c : crossed_chunks) {
-	//	auto cc = dynamic_cast<dariadb::storage::CrossedChunk*>(c.get());
-	//	if (cc != nullptr) {
-	//		for (auto sub_c : cc->_chunks) {
-	//			assert(all_chunks_ids.find(sub_c->info->id) == all_chunks_ids.end());
-	//			all_chunks_ids.insert(sub_c->info->id);
-	//		}
-	//	}
-	//}
+//// check.
+// std::set<uint64_t> all_chunks_ids;
+// for (auto c : crossed_chunks) {
+//	auto cc = dynamic_cast<dariadb::storage::CrossedChunk*>(c.get());
+//	if (cc != nullptr) {
+//		for (auto sub_c : cc->_chunks) {
+//			assert(all_chunks_ids.find(sub_c->info->id) ==
+//all_chunks_ids.end());
+//			all_chunks_ids.insert(sub_c->info->id);
+//		}
+//	}
+//}
 #endif // DEBUG
-	//all_chunks_lst.clear();
+       // all_chunks_lst.clear();
 
     for (auto id : q.ids) {
-		/*if (id == 5) {
-			std::cout << "1";
-		}*/
+      /*if (id == 5) {
+              std::cout << "1";
+      }*/
       InnerReader *page_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader();
       raw_res->page_reader = Reader_ptr{page_rdr};
@@ -266,13 +262,13 @@ public:
       local_q.ids.push_back(id);
       if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
         ChunkCursor *page_cursor_raw = new ChunkCursor;
-		ChunksList chunks_for_id;
+        ChunksList chunks_for_id;
         for (auto &c : all_chunks_lst) {
           if (c->check_id(id)) {
             chunks_for_id.push_back(c);
           }
         }
-		page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
+        page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
         page_rdr->add(Cursor_ptr{page_cursor_raw});
       } else {
 
@@ -282,23 +278,24 @@ public:
         } else {
           local_q.to = minT;
           ChunkCursor *page_cursor_raw = new ChunkCursor;
-		  ChunksList chunks_for_id;
-		  for (auto &c : all_chunks_lst) {
-			  if (c->check_id(id)) {
-				  chunks_for_id.push_back(c);
-			  }
-		  }
-		  page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
+          ChunksList chunks_for_id;
+          for (auto &c : all_chunks_lst) {
+            if (c->check_id(id)) {
+              chunks_for_id.push_back(c);
+            }
+          }
+          page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
           page_rdr->add(Cursor_ptr{page_cursor_raw});
           local_q.from = minT;
           local_q.to = q.to;
 
-         auto mc_reader = mem_cap->readInterval(local_q);
-         raw_res->cap_reader = Reader_ptr{mc_reader};
+          auto mc_reader = mem_cap->readInterval(local_q);
+          raw_res->cap_reader = Reader_ptr{mc_reader};
         }
       }
       raw_result->add_rdr(Reader_ptr{raw_res});
     }
+    raw_result->reset();
     return Reader_ptr(raw_result);
   }
 
@@ -336,6 +333,7 @@ public:
         raw_result->add_rdr(subres);
       }
     }
+    raw_result->reset();
     return Reader_ptr(raw_result);
   }
 

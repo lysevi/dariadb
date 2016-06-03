@@ -38,8 +38,7 @@ void readBenchark(const dariadb::IdSet &all_id_set,
     std::cout << "time point reads..." << std::endl;
     std::random_device r;
     std::default_random_engine e1(r());
-    std::uniform_int_distribution<dariadb::Id> uniform_dist(from,
-                                                            to);
+    std::uniform_int_distribution<dariadb::Id> uniform_dist(from, to);
 
     std::shared_ptr<BenchCallback> clbk{new BenchCallback};
 
@@ -68,14 +67,15 @@ void readBenchark(const dariadb::IdSet &all_id_set,
     for (size_t i = 0; i < reads_count; i++) {
       auto time_point1 = uniform_dist(e1);
       auto time_point2 = uniform_dist(e1);
-      auto from = std::min(time_point1, time_point2);
-      auto to = std::max(time_point1, time_point2);
+      auto f = std::min(time_point1, time_point2);
+      auto t = std::max(time_point1, time_point2);
       auto qi = dariadb::storage::QueryInterval(
-          dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, from, to);
+          dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
       stor->readInterval(qi)->readAll(clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-    std::cout << "time: " << elapsed << std::endl;
+    std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
+              << std::endl;
   }
 }
 }
