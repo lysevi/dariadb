@@ -247,11 +247,11 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 }
 
 void Page::flush_current_chunk(){
-    if(addeded_meases%PAGE_FLUSH_PERIOD==0){
+    /*if(addeded_meases%PAGE_FLUSH_PERIOD==0){
         auto offset=(uint8_t*)_openned_chunk.ch->header-this->region;
         page_mmap->flush(offset,_openned_chunk.ch->header->size);
         page_mmap->flush(0,sizeof(PageHeader));
-    }
+    }*/
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch) {

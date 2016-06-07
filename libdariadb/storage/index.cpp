@@ -206,9 +206,9 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   auto kv = std::make_pair(cur_index->maxTime, pos);
   _itree.insert(kv);
   updates++;
-  if(updates>=INDEX_FLUSH_PERIOD){
+ /* if(updates>=INDEX_FLUSH_PERIOD){
       this->index_mmap->flush((uint8_t*)cur_index-this->iregion,sizeof(IndexReccord));
       this->index_mmap->flush(0,sizeof(IndexHeader));
 	  updates = 0;
-  }
+  }*/
 }

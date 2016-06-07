@@ -258,13 +258,13 @@ public:
     _minTime = std::min(_minTime, value.time);
     _maxTime = std::max(_maxTime, value.time);
 
-    if(call_num>=_params.flush_period){
+  /*  if(call_num>=_params.flush_period){
         auto addr=(_memvalues+(_header->_memvalues_pos));
         assert(addr->value==_memvalues[_header->_memvalues_pos].value);
         mmap->flush((char*)addr-(char*)_header,sizeof(FlaggedMeas));
         mmap->flush(0,sizeof(Header));
         call_num=0;
-    }
+    }*/
     return append_result(1, 0);
   }
 
