@@ -341,14 +341,14 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       ++id_val;
       ++flg_val;
     }
-
+    size_t total_readed=0;
     for (dariadb::Id cur_id = 0; cur_id < id_val; ++cur_id) {
       dariadb::IdArray ids;
       ids.push_back(cur_id);
       auto reader = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to));
       dariadb::Meas::MeasList mlist;
       reader->readAll(&mlist);
-
+      total_readed+=mlist.size();
       for (auto it = mlist.begin(); it != mlist.end(); ++it) {
         auto next = ++it;
         if (next == mlist.end()) {
@@ -357,6 +357,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
         BOOST_CHECK_LE(it->time, next->time);
       }
     }
+    BOOST_CHECK_GE(total_count,total_readed);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
