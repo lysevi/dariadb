@@ -58,6 +58,7 @@ public:
   }
 
   void reset() override {
+      local_res.clear();
 	  //TOOD opt. use Reader::size for alloc.
     dariadb::Meas::MeasList tmp_p;
     if (page_reader != nullptr) {
@@ -81,8 +82,13 @@ public:
     }
     if (need_sort) {
       std::vector<Meas> for_srt(tmp_p.size() + tmp_c.size());
-      std::copy(std::begin(tmp_p), std::end(tmp_p), std::back_inserter(for_srt));
-      std::copy(std::begin(tmp_c), std::end(tmp_c), std::back_inserter(for_srt));
+      size_t pos=0;
+      for(auto v:tmp_p){
+          for_srt[pos++]=v;
+      }
+      for(auto v:tmp_c){
+          for_srt[pos++]=v;
+      }
 
       std::sort(for_srt.begin(), for_srt.end(),
                 [](Meas l, Meas r) { return l.time < r.time; });
@@ -301,7 +307,7 @@ public:
           std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
           callback->out = &subRes;
           PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
-          page_rdr->_values = subRes;
+          page_rdr->_values = std::move(subRes);
           local_q.from = minT;
           local_q.to = q.to;
 
