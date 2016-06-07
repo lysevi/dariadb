@@ -3,7 +3,6 @@
 #include "../utils/fs.h"
 #include "chunk.h"
 
-#include "stx/btree_multimap.h"
 #include <boost/thread/shared_mutex.hpp>
 namespace dariadb {
 namespace storage {
@@ -34,9 +33,11 @@ struct IndexReccord {
 };
 #pragma pack(pop)
 
+const size_t INDEX_FLUSH_PERIOD = 1000;
+
 // maxtime => pos index rec in page;
-// typedef std::multimap<dariadb::Time, uint32_t> indexTree;
-typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
+typedef std::multimap<dariadb::Time, uint32_t> indexTree;
+// typedef stx::btree_multimap<dariadb::Time, uint32_t> indexTree;
 
 class PageIndex;
 typedef std::shared_ptr<PageIndex> PageIndex_ptr;
@@ -51,6 +52,8 @@ public:
   std::string filename;
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
+
+  size_t updates;//nedd for flush
   ~PageIndex();
   static PageIndex_ptr create(const std::string &filename, uint64_t size,
                               uint32_t chunk_per_storage, uint32_t chunk_size);

@@ -117,6 +117,7 @@ public:
     _maxTime = dariadb::MIN_TIME;
     _minTime = dariadb::MAX_TIME;
     open_or_create();
+    call_num=0;
   }
 
   ~Private() {
@@ -235,21 +236,35 @@ public:
     load();
   }
 
+  size_t call_num;
   append_result append(const Meas &value) {
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
+    call_num++;
+
     if (_header->_memvalues_pos < _header->B) {
       return append_to_mem(value);
     } else {
+
       return append_to_levels(value);
     }
   }
 
   append_result append_to_mem(const Meas &value) {
     _memvalues[_header->_memvalues_pos].value = value;
+
+
     _header->_memvalues_pos++;
     ++_header->_writed;
     _minTime = std::min(_minTime, value.time);
     _maxTime = std::max(_maxTime, value.time);
+
+    if(call_num>=_params.flush_period){
+        auto addr=(_memvalues+(_header->_memvalues_pos));
+        assert(addr->value==_memvalues[_header->_memvalues_pos].value);
+        mmap->flush((char*)addr-(char*)_header,sizeof(FlaggedMeas));
+        mmap->flush(0,sizeof(Header));
+        call_num=0;
+    }
     return append_result(1, 0);
   }
 
@@ -320,6 +335,9 @@ public:
       }
       target->at(i).drop_start = 1;
       for (size_t j = 0; j < target->size(); ++j) {
+        if (target->at(j).drop_end) {
+          continue;
+        }
         if (target->at(i).value.id == target->at(j).value.id) {
           _stor->append(target->at(j).value);
           target->at(j).drop_end = 1;
@@ -472,6 +490,7 @@ public:
     }
     return std::min(result, _minTime);
   }
+
   dariadb::Time maxTime() const {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     dariadb::Time result = dariadb::MIN_TIME;

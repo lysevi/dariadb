@@ -6,21 +6,9 @@ using namespace dariadb;
 using namespace dariadb::compression;
 using namespace dariadb::storage;
 
-class CursorReader : public dariadb::storage::Cursor::Callback {
-public:
-  Chunk_Ptr readed;
-  CursorReader() { readed = nullptr; }
-  void call(dariadb::storage::Chunk_Ptr &ptr) override { readed = ptr; }
-};
-
 InnerReader::InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to)
-    : _cursors{}, _flag(flag), _from(from), _to(to) {
+    : _values{}, _flag(flag), _from(from), _to(to) {
   end = false;
-}
-
-void InnerReader::add(Cursor_ptr c) {
-  std::lock_guard<std::mutex> lg(_locker);
-  this->_cursors.push_back(c);
 }
 
 bool InnerReader::isEnd() const {
@@ -34,29 +22,11 @@ dariadb::IdArray InnerReader::getIds() const {
 void InnerReader::readNext(storage::ReaderClb *clb) {
   std::lock_guard<std::mutex> lg(_locker);
 
-  std::shared_ptr<CursorReader> reader_clbk{new CursorReader};
   for (auto id : this->_ids) {
-    /* if (id == 5) {
-             std::cout << "1";
-     }*/
-    for (auto ch : _cursors) {
-      while (!ch->is_end()) {
-        ch->readNext(reader_clbk.get());
-        if (reader_clbk->readed == nullptr) {
-          continue;
-        }
-        auto cur_ch = reader_clbk->readed;
-        reader_clbk->readed = nullptr;
-        auto ch_reader = cur_ch->get_reader();
-        size_t read_count = 0;
-        while (!ch_reader->is_end()) {
-          auto sub = ch_reader->readNext();
-          read_count++;
-          if (sub.id == id) {
-            if (check_meas(sub)) {
-              clb->call(sub);
-            }
-          }
+    for (auto sub : _values) {
+      if (sub.id == id) {
+        if (check_meas(sub)) {
+          clb->call(sub);
         }
       }
     }
@@ -75,7 +45,7 @@ bool InnerReader::check_meas(const Meas &m) const {
 
 Reader_ptr InnerReader::clone() const {
   auto res = std::make_shared<InnerReader>(_flag, _from, _to);
-  res->_cursors = _cursors;
+  res->_values = _values;
   res->_flag = _flag;
   res->_from = _from;
   res->_to = _to;
@@ -86,9 +56,10 @@ Reader_ptr InnerReader::clone() const {
 }
 void InnerReader::reset() {
   end = false;
-  for (auto ch : _cursors) {
-    ch->reset_pos();
-  }
+}
+
+size_t InnerReader::size() {
+	return _values.size();
 }
 
 TP_Reader::TP_Reader() {
@@ -123,4 +94,8 @@ Reader_ptr TP_Reader::clone() const {
 
 void TP_Reader::reset() {
   _values_iterator = _values.begin();
+}
+
+size_t TP_Reader::size() {
+	return this->_values.size();
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../meas.h"
+#include <algorithm>
 #include <functional>
 
 namespace dariadb {
@@ -11,6 +12,11 @@ struct QueryParam {
   Flag flag;
 
   QueryParam(const IdArray &_ids, Flag _flag) : ids(_ids), flag(_flag) {}
+
+  //  bool in_query(const Meas&m)const{
+  //      return m.flag==flag
+  //             && std::find(this->ids.cbegin(),this->ids.cend(),m.id)!=ids.end();
+  //  }
 };
 
 struct QueryInterval : public QueryParam {
@@ -19,6 +25,11 @@ struct QueryInterval : public QueryParam {
 
   QueryInterval(const IdArray &_ids, Flag _flag, Time _from, Time _to)
       : QueryParam(_ids, _flag), from(_from), to(_to) {}
+
+  //  bool in_query(const Meas&m)const{
+  //      return QueryParam::in_query(m) &&
+  //              utils::inInterval(from,to,m.time);
+  //  }
 };
 
 struct QueryTimePoint : public QueryParam {
@@ -26,6 +37,11 @@ struct QueryTimePoint : public QueryParam {
 
   QueryTimePoint(const IdArray &_ids, Flag _flag, Time _time_point)
       : QueryParam(_ids, _flag), time_point(_time_point) {}
+
+  //  bool in_query(const Meas&m)const{
+  //      return QueryParam::in_query(m) &&
+  //             m.time<=time_point;
+  //  }
 };
 
 struct IdArrayHasher {

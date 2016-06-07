@@ -14,9 +14,7 @@ class PageLinksCursor {
 public:
   PageLinksCursor(PageIndex *page, const dariadb::IdArray &ids, dariadb::Time from,
                   dariadb::Time to, dariadb::Flag flag)
-      : link(page), _ids(ids), _from(from), _to(to), _flag(flag) {
-    reset_pos();
-  }
+      : link(page), _ids(ids), _from(from), _to(to), _flag(flag) {}
 
   ~PageLinksCursor() {
     if (link != nullptr) {
@@ -44,6 +42,7 @@ public:
       sub_result.id = _index_it.chunk_id;
       sub_result.pos = current_pos;
       sub_result.maxTime = _index_it.maxTime;
+      sub_result.id_bloom = _index_it.id_bloom;
       this->resulted_links.push_back(sub_result);
       break;
     }
@@ -153,8 +152,23 @@ PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size,
   res->iheader->chunk_size = chunk_size;
   res->iheader->is_sorted = false;
   res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
+  res->updates = 0;
   return res;
 }
+
+PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
+	PageIndex_ptr res = std::make_shared<PageIndex>();
+	res->readonly = read_only;
+	auto immap = utils::fs::MappedFile::open(filename);
+	auto iregion = immap->data();
+	res->index_mmap = immap;
+	res->iregion = iregion;
+	res->iheader = reinterpret_cast<IndexHeader *>(iregion);
+	res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
+	res->updates = 0;
+	return res;
+}
+
 
 ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                                           dariadb::Time to, dariadb::Flag flag) {
@@ -191,4 +205,10 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   cur_index->id_bloom = ptr->header->id_bloom;
   auto kv = std::make_pair(cur_index->maxTime, pos);
   _itree.insert(kv);
+  updates++;
+  if(updates>=INDEX_FLUSH_PERIOD){
+      this->index_mmap->flush((uint8_t*)cur_index-this->iregion,sizeof(IndexReccord));
+      this->index_mmap->flush(0,sizeof(IndexHeader));
+	  updates = 0;
+  }
 }

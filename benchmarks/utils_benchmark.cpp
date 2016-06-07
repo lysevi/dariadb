@@ -4,7 +4,6 @@
 #include <iostream>
 #include <map>
 #include <random>
-#include <stx/btree_map.h>
 #include <utils/exception.h>
 #include <utils/skiplist.h>
 #include <vector>
@@ -116,24 +115,6 @@ int main(int argc, char *argv[]) {
     }
     {
       std::map<int, int> lst;
-      kv_linear_benchmark_rev(lst);
-    }
-  }
-
-  {
-    std::cout << "\nstx::btree_map " << std::endl;
-    {
-      stx::btree_map<int, int> lst;
-      kv_rnd_benchmark(lst, keys);
-    }
-    {
-      stx::btree_map<int, int> lst;
-      std::function<void(stx::btree_map<int, int> *)> f =
-          &remove_map_less<stx::btree_map<int, int>>;
-      kv_linear_benchmark(lst, f);
-    }
-    {
-      stx::btree_map<int, int> lst;
       kv_linear_benchmark_rev(lst);
     }
   }

@@ -53,6 +53,9 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
 
+  Id load(const QueryInterval&qi);
+  Id load(const QueryTimePoint&qt);
+  Meas::MeasList getResult(Id);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

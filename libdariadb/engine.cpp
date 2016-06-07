@@ -58,22 +58,44 @@ public:
   }
 
   void reset() override {
-    dariadb::Meas::MeasList tmp;
+	  //TOOD opt. use Reader::size for alloc.
+    dariadb::Meas::MeasList tmp_p;
     if (page_reader != nullptr) {
       page_reader->reset();
-      page_reader->readAll(&tmp);
+      page_reader->readAll(&tmp_p);
     }
+    dariadb::Meas::MeasList tmp_c;
     if (cap_reader != nullptr) {
       cap_reader->reset();
-      cap_reader->readAll(&tmp);
+      cap_reader->readAll(&tmp_c);
     }
 
-    std::vector<Meas> for_srt(tmp.begin(), tmp.end());
-    std::sort(for_srt.begin(), for_srt.end(),
-              [](Meas l, Meas r) { return l.time < r.time; });
+    bool need_sort = false;
+    if (!tmp_p.empty() && !tmp_c.empty()) {
+      if ((tmp_p.front().time < tmp_c.front().time) &&
+          (tmp_p.back().time < tmp_c.front().time)) {
+        need_sort = false;
+      } else {
+        need_sort = true;
+      }
+    }
+    if (need_sort) {
+      std::vector<Meas> for_srt(tmp_p.size() + tmp_c.size());
+      std::copy(std::begin(tmp_p), std::end(tmp_p), std::back_inserter(for_srt));
+      std::copy(std::begin(tmp_c), std::end(tmp_c), std::back_inserter(for_srt));
 
-    local_res = dariadb::Meas::MeasList(for_srt.begin(), for_srt.end());
+      std::sort(for_srt.begin(), for_srt.end(),
+                [](Meas l, Meas r) { return l.time < r.time; });
+      local_res = dariadb::Meas::MeasList(for_srt.begin(), for_srt.end());
+    } else {
+      std::copy(std::begin(tmp_p), std::end(tmp_p), std::back_inserter(local_res));
+      std::copy(std::begin(tmp_c), std::end(tmp_c), std::back_inserter(local_res));
+    }
+
     res_it = local_res.begin();
+  }
+  size_t size() {
+	  return local_res.size();
   }
   dariadb::Meas::MeasList local_res;
   dariadb::Meas::MeasList::const_iterator res_it;
@@ -128,6 +150,13 @@ public:
       c->reset();
     }
   }
+  size_t size() override {
+	  size_t result = 0;
+	  for (auto &c : _readers) {
+		  result += c->size();
+	  }
+	  return result;
+  }
 };
 
 class Engine::Private {
@@ -142,6 +171,7 @@ public:
     PageManager::start(_page_manager_params);
 
     mem_cap = new Capacitor(PageManager::instance(), _cap_params);
+	_next_query_id = Id();
     // mem_storage_raw = dynamic_cast<MemoryStorage *>(mem_storage.get());
   }
   ~Private() {
@@ -152,21 +182,21 @@ public:
   }
 
   Time minTime() {
-    std::lock_guard<std::recursive_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     auto pmin = PageManager::instance()->minTime();
     auto cmin = mem_cap->minTime();
     return std::min(pmin, cmin);
   }
 
   Time maxTime() {
-    std::lock_guard<std::recursive_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     auto pmax = PageManager::instance()->maxTime();
     auto cmax = mem_cap->maxTime();
     return std::max(pmax, cmax);
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    std::lock_guard<std::recursive_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     dariadb::Time subMin1, subMax1;
     auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
     dariadb::Time subMin2, subMax2;
@@ -208,10 +238,16 @@ public:
   }
 
   void flush() {
-    std::lock_guard<std::recursive_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     this->mem_cap->flush();
     PageManager::instance()->flush();
   }
+
+  class ChunkReadCallback : public ReaderClb {
+  public:
+    virtual void call(const Meas &m) override { out->push_back(m); }
+    Meas::MeasList *out;
+  };
 
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
@@ -224,33 +260,10 @@ public:
   Reader_ptr readInterval(const QueryInterval &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
 
-    auto tmp_chunkLinks = PageManager::instance()->chunksByIterval(q);
-    auto tmp_page_cursor = PageManager::instance()->readLinks(tmp_chunkLinks);
-    ChunksList all_chunks_lst;
-    tmp_page_cursor->readAll(&all_chunks_lst);
-    tmp_page_cursor = nullptr;
-
-// auto crossed_chunks = dariadb::storage::chunk_intercross(all_chunks_lst);
-#ifdef DEBUG
-//// check.
-// std::set<uint64_t> all_chunks_ids;
-// for (auto c : crossed_chunks) {
-//	auto cc = dynamic_cast<dariadb::storage::CrossedChunk*>(c.get());
-//	if (cc != nullptr) {
-//		for (auto sub_c : cc->_chunks) {
-//			assert(all_chunks_ids.find(sub_c->info->id) ==
-//all_chunks_ids.end());
-//			all_chunks_ids.insert(sub_c->info->id);
-//		}
-//	}
-//}
-#endif // DEBUG
-       // all_chunks_lst.clear();
+    auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
     for (auto id : q.ids) {
-      /*if (id == 5) {
-              std::cout << "1";
-      }*/
+
       InnerReader *page_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader();
       raw_res->page_reader = Reader_ptr{page_rdr};
@@ -261,31 +274,34 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
       if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
-        ChunkCursor *page_cursor_raw = new ChunkCursor;
-        ChunksList chunks_for_id;
-        for (auto &c : all_chunks_lst) {
-          if (c->check_id(id)) {
+        ChunkLinkList chunks_for_id;
+        for (auto &c : all_chunkLinks) {
+          if (c.id_bloom == id) {
             chunks_for_id.push_back(c);
           }
         }
-        page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
-        page_rdr->add(Cursor_ptr{page_cursor_raw});
+        Meas::MeasList subRes;
+        std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
+        callback->out = &subRes;
+        PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
+        page_rdr->_values = subRes;
       } else {
 
         if (minT <= q.from && maxT >= q.to) {
           auto mc_reader = mem_cap->readInterval(local_q);
           raw_res->cap_reader = Reader_ptr{mc_reader};
         } else {
-          local_q.to = minT;
-          ChunkCursor *page_cursor_raw = new ChunkCursor;
-          ChunksList chunks_for_id;
-          for (auto &c : all_chunks_lst) {
-            if (c->check_id(id)) {
+          ChunkLinkList chunks_for_id;
+          for (auto &c : all_chunkLinks) {
+            if (c.id_bloom == id) {
               chunks_for_id.push_back(c);
             }
           }
-          page_cursor_raw->chunks = chunk_intercross(chunks_for_id);
-          page_rdr->add(Cursor_ptr{page_cursor_raw});
+          Meas::MeasList subRes;
+          std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
+          callback->out = &subRes;
+          PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
+          page_rdr->_values = subRes;
           local_q.from = minT;
           local_q.to = q.to;
 
@@ -337,6 +353,41 @@ public:
     return Reader_ptr(raw_result);
   }
 
+  Id load(const QueryInterval&qi) {
+	  std::lock_guard<std::mutex> lg(_locker);
+	  Id result = _next_query_id++;
+
+	  auto reader=this->readInterval(qi);
+	  std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
+	  reader->readAll(reader_values.get());
+	  _load_results[result] = reader_values;
+	  return result;
+  }
+  
+  Id load(const QueryTimePoint&qt) {
+	  std::lock_guard<std::mutex> lg(_locker);
+	  Id result = _next_query_id++;
+
+	  auto reader = this->readInTimePoint(qt);
+	  std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
+	  reader->readAll(reader_values.get());
+	  _load_results[result] = reader_values;
+	  return result;
+  }
+
+  Meas::MeasList getResult(Id id) {
+	  //TODO  return ref/ptr.
+	  Meas::MeasList result;
+	  auto fres=_load_results.find(id);
+	  if (fres == _load_results.end()) {
+		  return result;
+	  }else {
+		  for (auto&v : *(fres->second)) {
+			  result.push_back(v);
+		  }
+		  return result;
+	  }
+  }
 protected:
   //  std::shared_ptr<MemoryStorage> mem_storage;
   // storage::MemoryStorage *mem_storage_raw;
@@ -346,8 +397,10 @@ protected:
   dariadb::storage::Capacitor::Params _cap_params;
   dariadb::storage::Engine::Limits _limits;
 
-  mutable std::recursive_mutex _locker;
+  mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
+  Id _next_query_id;
+  std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
 };
 
 Engine::Engine(storage::PageManager::Params page_manager_params,
@@ -369,6 +422,18 @@ Time Engine::maxTime() {
 bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                         dariadb::Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
+}
+
+Id dariadb::storage::Engine::load(const QueryInterval & qi){
+	return _impl->load(qi);
+}
+
+Id dariadb::storage::Engine::load(const QueryTimePoint & qt){
+	return _impl->load(qt);
+}
+
+Meas::MeasList dariadb::storage::Engine::getResult(Id id) {
+	return _impl->getResult(id);
 }
 
 append_result Engine::append(const Meas &value) {

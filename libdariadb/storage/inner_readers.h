@@ -15,8 +15,6 @@ class InnerReader : public Reader {
 public:
   InnerReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to);
 
-  void add(Cursor_ptr c);
-
   bool isEnd() const override;
 
   dariadb::IdArray getIds() const override;
@@ -26,15 +24,14 @@ public:
 
   Reader_ptr clone() const override;
   void reset() override;
-
-  CursorList _cursors;
+  size_t size()override;
+  Meas::MeasList _values;
   dariadb::Flag _flag;
   dariadb::Time _from;
   dariadb::Time _to;
   dariadb::IdArray _ids;
   bool end;
 
-  typedef std::tuple<dariadb::Id, dariadb::Time> IdTime;
   std::mutex _locker, _locker_tp;
 };
 
@@ -52,7 +49,7 @@ public:
   Reader_ptr clone() const override;
 
   void reset() override;
-
+  size_t size()override;
   dariadb::Meas::MeasList _values;
   dariadb::Meas::MeasList::iterator _values_iterator;
   dariadb::IdArray _ids;

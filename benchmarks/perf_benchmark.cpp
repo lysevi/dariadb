@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     const size_t chunk_per_storage = 1024 * 10;
     const size_t chunk_size = 1024;
-    const size_t cap_B = 5;
+    const size_t cap_B = 10;
     const size_t max_mem_chunks = 100;
 
     if (dariadb::utils::fs::path_exists(storage_path)) {

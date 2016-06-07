@@ -91,36 +91,36 @@ public:
   compression::CopmressedWriter c_writer;
 };
 
-class CrossedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
-public:
-  CrossedChunk(ChunksList &clist);
-  ~CrossedChunk();
-  void close() override { NOT_IMPLEMENTED; }
-  bool is_full() const override { return true; }
-  bool append(const Meas &) override { NOT_IMPLEMENTED; }
+// class CrossedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
+// public:
+//  CrossedChunk(ChunksList &clist);
+//  ~CrossedChunk();
+//  void close() override { NOT_IMPLEMENTED; }
+//  bool is_full() const override { return true; }
+//  bool append(const Meas &) override { NOT_IMPLEMENTED; }
 
-  bool check_id(const Id &id) override;
-  Reader_Ptr get_reader() override;
-  ChunksList _chunks;
-};
+//  bool check_id(const Id &id) override;
+//  Reader_Ptr get_reader() override;
+//  ChunksList _chunks;
+//};
 
-ChunksList chunk_intercross(const ChunksList &chunks);
+// ChunksList chunk_intercross(const ChunksList &chunks);
 
-class ChunkCache {
-  ChunkCache(size_t size);
+// class ChunkCache {
+//  ChunkCache(size_t size);
 
-public:
-  static void start(size_t size);
-  static void stop();
-  static ChunkCache *instance();
-  void append(const Chunk_Ptr &chptr);
-  bool find(const uint64_t id, Chunk_Ptr &chptr) const;
+// public:
+//  static void start(size_t size);
+//  static void stop();
+//  static ChunkCache *instance();
+//  void append(const Chunk_Ptr &chptr);
+//  bool find(const uint64_t id, Chunk_Ptr &chptr) const;
 
-protected:
-  static std::unique_ptr<ChunkCache> _instance;
-  mutable std::mutex _locker;
-  size_t _size;
-  mutable utils::LRU<uint64_t, Chunk_Ptr> _chunks;
-};
+// protected:
+//  static std::unique_ptr<ChunkCache> _instance;
+//  mutable std::mutex _locker;
+//  size_t _size;
+//  mutable utils::LRU<uint64_t, Chunk_Ptr> _chunks;
+//};
 }
 }

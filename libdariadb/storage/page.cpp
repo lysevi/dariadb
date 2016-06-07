@@ -7,86 +7,89 @@
 
 using namespace dariadb::storage;
 
-class PageCursor : public dariadb::storage::Cursor {
-public:
-  PageCursor(Page *page, const ChunkLinkList &chlinks) : link(page), _ch_links(chlinks) {
-    reset_pos();
-  }
+// class PageCursor : public dariadb::storage::Cursor {
+// public:
+//  PageCursor(Page *page, const ChunkLinkList &chlinks) : link(page), _ch_links(chlinks)
+//  {
+//    reset_pos();
+//  }
 
-  ~PageCursor() {
-    if (link != nullptr) {
-      link->dec_reader();
-      link = nullptr;
-    }
-  }
+//  ~PageCursor() {
+//    if (link != nullptr) {
+//      link->dec_reader();
+//      link = nullptr;
+//    }
+//  }
 
-  bool is_end() const override { return _is_end; }
+//  bool is_end() const override { return _is_end; }
 
-  void readNext(Cursor::Callback *cbk) override {
-    std::lock_guard<std::mutex> lg(_locker);
-    if (_ch_links_iterator == _ch_links.cend()) {
-      _is_end = true;
-      return;
-    }
-    auto _index_it = this->link->_index->index[_ch_links_iterator->pos];
-    ++_ch_links_iterator;
-    for (; !_is_end;) {
-      if (_is_end) {
-        Chunk_Ptr empty;
-        cbk->call(empty);
-        _is_end = true;
-        break;
-      }
+//  void readNext(Cursor::Callback *cbk) override {
+//    std::lock_guard<std::mutex> lg(_locker);
+//    if (_ch_links_iterator == _ch_links.cend()) {
+//      _is_end = true;
+//      return;
+//    }
+//    auto _index_it = this->link->_index->index[_ch_links_iterator->pos];
+//    ++_ch_links_iterator;
+//    for (; !_is_end;) {
+//      if (_is_end) {
+//        Chunk_Ptr empty;
+//        cbk->call(empty);
+//        _is_end = true;
+//        break;
+//      }
 
-      Chunk_Ptr search_res;
-      if (ChunkCache::instance()->find(_index_it.chunk_id, search_res)) {
-        cbk->call(search_res);
-        break;
-      } else {
-        auto ptr_to_begin = link->chunks + _index_it.offset;
-        auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
-        auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
+//      Chunk_Ptr search_res;
+//      if (ChunkCache::instance()->find(_index_it.chunk_id, search_res))
+//      {
+//        cbk->call(search_res);
+//        break;
+//      } else
+//      {
+//        auto ptr_to_begin = link->chunks + _index_it.offset;
+//        auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
+//        auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
 
-        auto info = new ChunkHeader;
-        memcpy(info, ptr_to_chunk_info_raw, sizeof(ChunkHeader));
-        auto buf = new uint8_t[info->size];
-        memcpy(buf, ptr_to_buffer_raw, info->size);
-        Chunk_Ptr ptr = nullptr;
-        if (info->is_zipped) {
-          ptr = Chunk_Ptr{new ZippedChunk(info, buf)};
-          ptr->should_free = true;
-        } else {
-          // TODO implement not zipped page.
-          assert(false);
-        }
-        Chunk_Ptr c{ptr};
-        // TODO replace by some check;
-        // assert(c->info->last.time != 0);
-        if (c->header->is_readonly) {
-          ChunkCache::instance()->append(c);
-        }
-        cbk->call(c);
-        break;
-      }
-    }
-    if (_ch_links_iterator == _ch_links.cend()) {
-      _is_end = true;
-      return;
-    }
-  }
+//        auto info = new ChunkHeader;
+//        memcpy(info, ptr_to_chunk_info_raw, sizeof(ChunkHeader));
+//        auto buf = new uint8_t[info->size];
+//        memcpy(buf, ptr_to_buffer_raw, info->size);
+//        Chunk_Ptr ptr = nullptr;
+//        if (info->is_zipped) {
+//          ptr = Chunk_Ptr{new ZippedChunk(info, buf)};
+//          ptr->should_free = true;
+//        } else {
+//          // TODO implement not zipped page.
+//          assert(false);
+//        }
+//        Chunk_Ptr c{ptr};
+//        // TODO replace by some check;
+//        // assert(c->info->last.time != 0);
+////        if (c->header->is_readonly) {
+////          ChunkCache::instance()->append(c);
+////        }
+//        cbk->call(c);
+//        break;
+//      }
+//    }
+//    if (_ch_links_iterator == _ch_links.cend()) {
+//      _is_end = true;
+//      return;
+//    }
+//  }
 
-  void reset_pos() override { // start read from begining;
-    _is_end = false;
-    _ch_links_iterator = _ch_links.begin();
-  }
+//  void reset_pos() override { // start read from begining;
+//    _is_end = false;
+//    _ch_links_iterator = _ch_links.begin();
+//  }
 
-protected:
-  Page *link;
-  bool _is_end;
-  std::mutex _locker;
-  ChunkLinkList _ch_links;
-  ChunkLinkList::const_iterator _ch_links_iterator;
-};
+// protected:
+//  Page *link;
+//  bool _is_end;
+//  std::mutex _locker;
+//  ChunkLinkList _ch_links;
+//  ChunkLinkList::const_iterator _ch_links_iterator;
+//};
 
 Page::~Page() {
 
@@ -125,20 +128,11 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
   }
+
+  res->addeded_meases=0;
   return res;
 }
 
-PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
-  PageIndex_ptr res = std::make_shared<PageIndex>();
-  res->readonly = read_only;
-  auto immap = utils::fs::MappedFile::open(filename);
-  auto iregion = immap->data();
-  res->index_mmap = immap;
-  res->iregion = iregion;
-  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
-  res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
-  return res;
-}
 
 Page *Page::open(std::string file_name, bool read_only) {
   auto res = new Page;
@@ -168,6 +162,7 @@ Page *Page::open(std::string file_name, bool read_only) {
       res->_index->_itree.insert(kv);
     }
   }
+  res->addeded_meases=0;
   return res;
 }
 
@@ -202,6 +197,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
+    addeded_meases++;
   assert(!this->readonly);
   boost::upgrade_lock<boost::shared_mutex> lg(_locker);
   if (is_full()) {
@@ -214,6 +210,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       _openned_chunk.ch->close();
     } else {
       if (_openned_chunk.ch->append(m)) {
+         flush_current_chunk();
         _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
                                   _openned_chunk.pos);
         return true;
@@ -239,7 +236,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       this->header->max_chunk_id++;
       ptr->header->id = this->header->max_chunk_id;
       _openned_chunk.ch = ptr;
-
+      flush_current_chunk();
       init_chunk_index_rec(ptr);
       return true;
     }
@@ -247,6 +244,14 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
   }
   header->is_full = true;
   return false;
+}
+
+void Page::flush_current_chunk(){
+    if(addeded_meases%PAGE_FLUSH_PERIOD==0){
+        auto offset=(uint8_t*)_openned_chunk.ch->header-this->region;
+        page_mmap->flush(offset,_openned_chunk.ch->header->size);
+        page_mmap->flush(0,sizeof(PageHeader));
+    }
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch) {
@@ -359,27 +364,54 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   return result;
 }
 
-Cursor_ptr Page::readLinks(const ChunkLinkList &links) {
-  auto raw_ptr = new PageCursor(this, links);
-  Cursor_ptr result{raw_ptr};
+void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
+                     ReaderClb *clb) {
+  auto _ch_links_iterator = links.cbegin();
+  if (_ch_links_iterator == links.cend()) {
+    return;
+  }
 
-  header->count_readers++;
+  for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
+    auto _index_it = this->_index->index[_ch_links_iterator->pos];
+    Chunk_Ptr search_res;
+    // if (!ChunkCache::instance()->find(_index_it.chunk_id, search_res))
+    {
+      auto ptr_to_begin = this->chunks + _index_it.offset;
+      auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
+      auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
 
-  return result;
+      //      auto info = new ChunkHeader;
+      //      memcpy(info, ptr_to_chunk_info_raw, sizeof(ChunkHeader));
+      //      auto buf = new uint8_t[info->size];
+      //      memcpy(buf, ptr_to_buffer_raw, info->size);
+      Chunk_Ptr ptr = nullptr;
+      if (ptr_to_chunk_info_raw->is_zipped) {
+        ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
+        // ptr->should_free = true;
+      } else {
+        // TODO implement not zipped page.
+        assert(false);
+      }
+      Chunk_Ptr c{ptr};
+      // TODO replace by some check;
+      // assert(c->info->last.time != 0);
+      //      if (c->header->is_readonly) {
+      //        ChunkCache::instance()->append(c);
+      //      }
+      search_res = c;
+    }
+    auto rdr = search_res->get_reader();
+    while (!rdr->is_end()) {
+      auto subres = rdr->readNext();
+      if (search_res->header->is_sorted && subres.time > query.to) {
+        break;
+      }
+      if (subres.inQuery(query.ids, query.flag, query.from, query.to)) {
+        clb->call(subres);
+      }
+    }
+  }
 }
-
-// class CountOfIdCallback : public Cursor::Callback {
-// public:
-//  dariadb::IdSet ids;
-//  CountOfIdCallback() {}
-//  ~CountOfIdCallback() {}
-//
-//  virtual void call(Chunk_Ptr &ptr) override {
-//    if (ptr != nullptr) {
-//      ids.insert(ptr->info->first.id);
-//    }
-//  }
-//};
 
 dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
   if (add_to_target_chunk(value)) {

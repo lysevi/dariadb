@@ -24,6 +24,8 @@ struct PageHeader {
 };
 #pragma pack(pop)
 
+const size_t PAGE_FLUSH_PERIOD = 1000;
+
 class Page : public ChunkContainer, public MeasWriter {
   Page() = default;
 
@@ -46,13 +48,15 @@ public:
                   dariadb::Time *maxResult) override;
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  Cursor_ptr readLinks(const ChunkLinkList &links) override;
+  void readLinks(const QueryInterval &query, const ChunkLinkList &links,
+                 ReaderClb *clb) override;
 
   // Inherited via MeasWriter
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
 
 private:
+  void flush_current_chunk();
   void init_chunk_index_rec(Chunk_Ptr ch);
 
   struct ChunkWithIndex {
@@ -75,7 +79,7 @@ public:
   std::string filename;
   bool readonly;
   PageIndex_ptr _index;
-
+size_t addeded_meases;
 protected:
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;

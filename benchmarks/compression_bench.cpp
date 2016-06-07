@@ -9,6 +9,7 @@
 #include <compression.h>
 #include <compression/delta.h>
 #include <compression/flag.h>
+#include <compression/id.h>
 #include <compression/xor.h>
 #include <ctime>
 #include <limits>
@@ -89,6 +90,70 @@ int main(int argc, char *argv[]) {
     std::cout << "xor decompressor : " << elapsed << std::endl;
   }
 
+  // flag compression
+  std::fill(buffer, buffer + test_buffer_size, 0);
+  {
+    const size_t count = 1000000;
+    auto bw = std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+    dariadb::compression::FlagCompressor dc(bw);
+
+    dariadb::Flag t = 1;
+    auto start = clock();
+    for (size_t i = 0; i < count / 2; i++) {
+      dc.append(t);
+      dc.append(t);
+      t++;
+    }
+    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "\nflag compressor : " << elapsed << std::endl;
+    auto w = dc.used_space();
+    auto sz = sizeof(dariadb::Time) * count;
+    std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
+  }
+  {
+    auto bw = std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+    dariadb::compression::FlagDeCompressor dc(bw, 0);
+
+    auto start = clock();
+    for (size_t i = 1; i < 1000000; i++) {
+      dc.read();
+    }
+    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "flag decompressor : " << elapsed << std::endl;
+  }
+
+  // id compression
+  std::fill(buffer, buffer + test_buffer_size, 0);
+  {
+    const size_t count = 1000000;
+    auto bw = std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+    dariadb::compression::FlagCompressor dc(bw);
+
+    dariadb::Id t = 1;
+    auto start = clock();
+    for (size_t i = 0; i < count / 2; i++) {
+      dc.append(t);
+      dc.append(t);
+      t++;
+    }
+    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "\nid compressor : " << elapsed << std::endl;
+    auto w = dc.used_space();
+    auto sz = sizeof(dariadb::Time) * count;
+    std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
+  }
+  {
+    auto bw = std::make_shared<dariadb::compression::BinaryBuffer>(rng);
+    dariadb::compression::IdDeCompressor dc(bw, 0);
+
+    auto start = clock();
+    for (size_t i = 1; i < 1000000; i++) {
+      dc.read();
+    }
+    auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+    std::cout << "id decompressor : " << elapsed << std::endl;
+  }
+
   {
     const size_t count = 1000000;
     auto start = clock();
@@ -117,6 +182,7 @@ int main(int argc, char *argv[]) {
     auto start = clock();
     for (size_t i = 0; i < count; i++) {
       auto m = dariadb::Meas::empty();
+      m.id++;
       m.time = static_cast<dariadb::Time>(dariadb::timeutil::current_time());
       m.flag = dariadb::Flag(i);
       m.value = dariadb::Value(i);

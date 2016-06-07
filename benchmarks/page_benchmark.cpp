@@ -20,12 +20,6 @@
 std::atomic_long append_count{0};
 bool stop_info = false;
 
-class BenchCallback : public dariadb::storage::Cursor::Callback {
-public:
-  void call(dariadb::storage::Chunk_Ptr &) { count++; }
-  size_t count;
-};
-
 void show_info() {
   clock_t t0 = clock();
   auto all_writes = dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
@@ -51,6 +45,12 @@ void show_info() {
 const std::string storagePath = "benchStorage/";
 const size_t chunks_count = 1024;
 const size_t chunks_size = 1024;
+
+class ReadCallback : public dariadb::storage::ReaderClb {
+public:
+  virtual void call(const dariadb::Meas &) override { ++count; }
+  size_t count;
+};
 
 int main(int argc, char *argv[]) {
   (void)argc;
@@ -92,12 +92,12 @@ int main(int argc, char *argv[]) {
         dariadb::storage::PageManager::instance()->minTime(),
         dariadb::storage::PageManager::instance()->maxTime());
 
-    BenchCallback *clbk = new BenchCallback;
     dariadb::IdArray ids(id_count);
     for (size_t i = 0; i < id_count; ++i) {
       ids[i] = i;
     }
     const size_t runs_count = 100;
+    ReadCallback *clb = new ReadCallback;
     auto start = clock();
 
     for (size_t i = 0; i < runs_count; i++) {
@@ -105,18 +105,17 @@ int main(int argc, char *argv[]) {
       auto time_point2 = uniform_dist(e1);
       auto from = std::min(time_point1, time_point2);
       auto to = std::max(time_point1, time_point2);
-      auto link_list = dariadb::storage::PageManager::instance()->chunksByIterval(
-          dariadb::storage::QueryInterval(ids, 0, from, to));
-      auto cursor = dariadb::storage::PageManager::instance()->readLinks(link_list);
-      cursor->readAll(clbk);
-      assert(clbk->count != 0);
-      clbk->count = 0;
-      cursor = nullptr;
+      auto qi = dariadb::storage::QueryInterval(ids, 0, from, to);
+      auto link_list = dariadb::storage::PageManager::instance()->chunksByIterval(qi);
+
+      dariadb::storage::PageManager::instance()->readLinks(qi, link_list, clb);
+      assert(clb->count != 0);
+      clb->count = 0;
     }
 
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "interval: " << elapsed / runs_count << std::endl;
-
+    delete clb;
     start = clock();
 
     for (size_t i = 0; i < runs_count; i++) {
@@ -127,8 +126,6 @@ int main(int argc, char *argv[]) {
 
     elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "timePoint: " << elapsed / runs_count << std::endl;
-
-    delete clbk;
 
     dariadb::storage::PageManager::stop();
     if (dariadb::utils::fs::path_exists(storagePath)) {

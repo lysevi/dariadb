@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "meas.h"
+#include "storage/callbacks.h"
 #include "storage/chunk.h"
 #include "storage/chunk_container.h"
 #include "storage/query_param.h"
@@ -11,13 +12,6 @@
 namespace dariadb {
 namespace storage {
 
-class ReaderClb {
-public:
-  virtual void call(const Meas &m) = 0;
-  virtual ~ReaderClb() {}
-};
-
-typedef std::shared_ptr<ReaderClb> ReaderClb_ptr;
 class Reader;
 typedef std::shared_ptr<Reader> Reader_ptr;
 
@@ -37,7 +31,7 @@ public:
                           dariadb::Time step);
   virtual void readByStep(Meas::MeasList *output, dariadb::Time from, dariadb::Time to,
                           dariadb::Time step);
-
+  virtual size_t size() = 0;
   virtual ~Reader() {}
 };
 
