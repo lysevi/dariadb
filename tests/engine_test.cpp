@@ -349,6 +349,9 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       dariadb::Meas::MeasList mlist;
       reader->readAll(&mlist);
       total_readed+=mlist.size();
+//      if(mlist.size()!=copies_for_id){
+//          BOOST_CHECK(mlist.size()==copies_for_id);
+//      }
       for (auto it = mlist.begin(); it != mlist.end(); ++it) {
         auto next = ++it;
         if (next == mlist.end()) {
