@@ -10,7 +10,7 @@
 #include <utils/fs.h>
 #include <utils/logger.h>
 
-#include <random>
+#include <algorithm>
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -317,26 +317,32 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
 
     dariadb::Id id_val(0);
 
-    std::random_device r;
-    std::default_random_engine e1(r());
-    std::uniform_int_distribution<dariadb::Time> uniform_dist{dariadb::Time(from),
-                                                              dariadb::Time(to)};
-
     dariadb::Flag flg_val(0);
     dariadb::IdSet _all_ids_set;
+    std::vector<dariadb::Time> rnd_times;
+    rnd_times.resize(copies_for_id+2);
+    dariadb::Time t=0;
+    for(size_t i=0;i<rnd_times.size();++i){
+        rnd_times[i]=t;
+        ++t;
+    }
+    size_t t_pos=0;
     for (auto i = from; i < to; i += step) {
+        std::random_shuffle(rnd_times.begin(),rnd_times.end());
+         t_pos=0;
       _all_ids_set.insert(id_val);
       m.id = id_val;
       m.flag = flg_val;
       m.src = flg_val;
-      m.time = uniform_dist(e1);
+      m.time = rnd_times[t_pos++];
       m.value = 0;
 
       for (size_t j = 0; j < copies_for_id; j++) {
         BOOST_CHECK(ms->append(m).writed == 1);
         total_count++;
         m.value = dariadb::Value(j);
-        m.time = uniform_dist(e1);
+        m.time = rnd_times[t_pos++];
+
       }
       ++id_val;
       ++flg_val;
@@ -349,9 +355,9 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       dariadb::Meas::MeasList mlist;
       reader->readAll(&mlist);
       total_readed+=mlist.size();
-//      if(mlist.size()!=copies_for_id){
-//          BOOST_CHECK(mlist.size()==copies_for_id);
-//      }
+      if(mlist.size()!=copies_for_id){
+          BOOST_CHECK(mlist.size()==copies_for_id);
+      }
       for (auto it = mlist.begin(); it != mlist.end(); ++it) {
         auto next = ++it;
         if (next == mlist.end()) {
