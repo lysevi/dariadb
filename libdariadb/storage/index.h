@@ -17,7 +17,7 @@ struct IndexHeader {
   uint32_t chunk_per_storage; // max chunks count
   uint32_t chunk_size;        // each chunks size in bytes
   bool is_sorted;             // items in index file sorted by time
-
+  bool is_closed;
   dariadb::Id id_bloom; // bloom filter of Meas.id
 };
 
@@ -53,7 +53,6 @@ public:
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 
-  size_t updates;//nedd for flush
   ~PageIndex();
   static PageIndex_ptr create(const std::string &filename, uint64_t size,
                               uint32_t chunk_per_storage, uint32_t chunk_size);

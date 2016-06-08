@@ -18,6 +18,7 @@ struct PageHeader {
   uint32_t chunk_per_storage; // max chunks count
   uint32_t chunk_size;        // each chunks size in bytes
   bool is_full;               // is full :)
+  bool is_closed;
   dariadb::Time minTime;
   dariadb::Time maxTime;
   uint64_t max_chunk_id; // max(chunk->id)

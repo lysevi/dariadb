@@ -129,6 +129,7 @@ PageIndex::~PageIndex() {
     delete[] new_index;
     iheader->is_sorted = true;
   }
+  iheader->is_closed = true;
   _itree.clear();
   index = nullptr;
   index_mmap->close();
@@ -152,7 +153,7 @@ PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size,
   res->iheader->chunk_size = chunk_size;
   res->iheader->is_sorted = false;
   res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
-  res->updates = 0;
+  res->iheader->is_closed = false;
   return res;
 }
 
@@ -165,7 +166,8 @@ PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
 	res->iregion = iregion;
 	res->iheader = reinterpret_cast<IndexHeader *>(iregion);
 	res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
-	res->updates = 0;
+	assert(res->iheader->is_closed);
+	res->iheader->is_closed = false;
 	return res;
 }
 
@@ -205,10 +207,5 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   cur_index->id_bloom = ptr->header->id_bloom;
   auto kv = std::make_pair(cur_index->maxTime, pos);
   _itree.insert(kv);
-  updates++;
- /* if(updates>=INDEX_FLUSH_PERIOD){
-      this->index_mmap->flush((uint8_t*)cur_index-this->iregion,sizeof(IndexReccord));
-      this->index_mmap->flush(0,sizeof(IndexHeader));
-	  updates = 0;
-  }*/
+
 }
