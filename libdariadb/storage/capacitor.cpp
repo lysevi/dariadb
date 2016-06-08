@@ -103,7 +103,8 @@ class Capacitor::Private {
 public:
 #pragma pack(push, 1)
   struct Header {
-    bool is_dropped;
+    bool is_dropped:1;
+	bool is_closed : 1;
     size_t B;
     size_t size;    // sizeof file in bytes
     size_t _size_B; // how many block (sizeof(B)) addeded.
@@ -123,6 +124,7 @@ public:
   ~Private() {
     this->flush();
     if (mmap != nullptr) {
+		_header->is_closed = true;
       mmap->close();
     }
   }
@@ -184,7 +186,7 @@ public:
     _header->B = _params.B;
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
-
+	_header->is_closed = false;
     auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = reinterpret_cast<level_header *>(pos);
@@ -231,6 +233,7 @@ public:
     mmap = fs::MappedFile::open(aof_file);
 
     _header = reinterpret_cast<Header *>(mmap->data());
+	_header->is_closed = false;
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
 
     load();
