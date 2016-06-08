@@ -96,10 +96,12 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
         std::cout << "** " << f << std::endl;
       }
     }
+	auto cap_size = cap.size();
     // level count must be read from file header.
     BOOST_CHECK_LE(cap.levels_count(), size_t(p.max_levels));
-
-    BOOST_CHECK_EQUAL(cap.size(), writes_count);
+	
+    BOOST_CHECK_EQUAL(cap_size, writes_count);
+	BOOST_CHECK(cap.size() != 0);
     auto e = dariadb::Meas::empty();
 
     e.time = writes_count - 1;
@@ -112,6 +114,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     BOOST_CHECK(reader != nullptr);
     reader->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), cap.size());
+	BOOST_CHECK_LT(cap_size, cap.size());
     dariadb::storage::Manifest::stop();
   }
 
