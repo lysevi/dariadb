@@ -91,10 +91,6 @@ int main(int argc, char *argv[]) {
     auto *tos = new dariadb::storage::Capacitor(
         stor.get(), dariadb::storage::Capacitor::Params(cap_B, storage_path));
 
-	if (dont_clean) {
-		std::cout << "status: is_closed - " << tos->is_closed() << std::endl;
-	}
-
     dariadb::storage::MeasStorage_ptr meas_stor(tos);
     std::thread info_thread(show_info);
 
