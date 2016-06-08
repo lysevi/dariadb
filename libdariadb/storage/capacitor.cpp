@@ -236,17 +236,25 @@ public:
     load();
   }
 
+
   size_t call_num;
+  append_result append_unsafe(const Meas &value) {
+	  call_num++;
+
+	  if (_header->_memvalues_pos < _header->B) {
+		  return append_to_mem(value);
+	  }
+	  else {
+
+		  return append_to_levels(value);
+	  }
+  }
+
   append_result append(const Meas &value) {
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
-    call_num++;
-
-    if (_header->_memvalues_pos < _header->B) {
-      return append_to_mem(value);
-    } else {
-
-      return append_to_levels(value);
-    }
+	auto result = append_unsafe(value);
+	//mmap->flush();
+	return result;
   }
 
   append_result append_to_mem(const Meas &value) {
@@ -540,9 +548,11 @@ public:
   }
 
   void flush() {
+	  boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
     if (drop_future.valid()) {
       drop_future.wait();
     }
+	mmap->flush();
   }
 
   size_t files_count() const { return Manifest::instance()->cola_list().size(); }
