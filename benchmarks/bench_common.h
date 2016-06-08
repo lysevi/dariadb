@@ -7,6 +7,7 @@ namespace dariadb_bench {
 // TODO use cmd line params
 const size_t total_threads_count = 5;
 const size_t iteration_count = 3000000;
+const size_t total_readers_count = 1;
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -33,9 +34,11 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 
 void readBenchark(const dariadb::IdSet &all_id_set,
                   dariadb::storage::MeasStorage_ptr stor, size_t reads_count,
-                  dariadb::Time from, dariadb::Time to) {
+                  dariadb::Time from, dariadb::Time to, bool quiet=false) {
   {
-    std::cout << "time point reads..." << std::endl;
+	  if (!quiet) {
+		  std::cout << "time point reads..." << std::endl;
+	  }
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Id> uniform_dist(from, to);
@@ -51,10 +54,14 @@ void readBenchark(const dariadb::IdSet &all_id_set,
       stor->readInTimePoint(qp)->readAll(clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-    std::cout << "time: " << elapsed << std::endl;
+	if (!quiet) {
+		std::cout << "time: " << elapsed << std::endl;
+	}
   }
   {
-    std::cout << "intervals reads..." << std::endl;
+	  if (!quiet) {
+		  std::cout << "intervals reads..." << std::endl;
+	  }
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Id> uniform_dist(stor->minTime(),
@@ -74,8 +81,10 @@ void readBenchark(const dariadb::IdSet &all_id_set,
       stor->readInterval(qi)->readAll(clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-    std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
-              << std::endl;
+	if (!quiet) {
+		std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
+			<< std::endl;
+	}
   }
 }
 }

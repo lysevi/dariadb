@@ -4,7 +4,7 @@
 # dariadb
 
 # Dependencies
-* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), thread, unit_test_framework(to build tests)
+* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), thread, unit_test_framework(to build tests), program_options
 * cmake 2.8 or higher
 * c++ 11/14 compiler (MSVC 2015, gcc 4.9, clang 3.6)
 

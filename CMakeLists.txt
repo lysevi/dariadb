@@ -20,18 +20,21 @@ set(BOOST_ALL_DYN_LINK           ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 #endif(NOT MSVC)
 
+set(BOOST_DEP unit_test_framework system filesystem thread)
+
 IF(WIN32)
   MESSAGE(STATUS "WIN32:")
   MESSAGE(STATUS "+ boost root: " ${BOOST_ROOT})
 
   if(MSVC)
-    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem thread)
+    find_package(Boost 1.57.0 REQUIRED ${BOOST_DEP})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  /EHsc")
     add_cxx_compiler_flag(-W4)
     add_definitions(-DMSVC)
 	add_definitions(-D_ENABLE_ATOMIC_ALIGNMENT_FIX)
   else(MSVC)
-    find_package(Boost 1.57.0 REQUIRED unit_test_framework system  filesystem thread)
+    set(BOOST_DEP ${BOOST_DEP} program_options)
+    find_package(Boost 1.57.0 REQUIRED ${BOOST_DEP})
   endif(MSVC)
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
@@ -40,8 +43,8 @@ IF(WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 else(WIN32)
   set(BoostUSESTATIC_LIBS OFF)
-
-  find_package(Boost  REQUIRED unit_test_framework system  filesystem thread)
+  set(BOOST_DEP ${BOOST_DEP} program_options)
+  find_package(Boost  REQUIRED ${BOOST_DEP})
 
   set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
     "Flags used by the C++ compiler during coverage builds."

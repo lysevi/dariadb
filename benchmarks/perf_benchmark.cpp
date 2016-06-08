@@ -16,8 +16,14 @@
 #include <thread>
 #include <utils/fs.h>
 
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
+
 std::atomic_long append_count{0};
+std::atomic_long reads_count{0};
 bool stop_info = false;
+bool stop_readers = false;
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -34,10 +40,12 @@ void show_info(dariadb::storage::Engine *storage) {
 
     clock_t t1 = clock();
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
+    auto reads_per_sec = reads_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << ")"
+              << " reads: " << reads_count << " speed:" << reads_per_sec << "/sec"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
@@ -50,11 +58,63 @@ void show_info(dariadb::storage::Engine *storage) {
   std::cout << "\n";
 }
 
+void reader(dariadb::storage::MeasStorage_ptr ms, dariadb::IdSet all_id_set,
+            dariadb::Time from, dariadb::Time to) {
+  std::random_device r;
+  std::default_random_engine e1(r());
+  std::uniform_int_distribution<dariadb::Id> uniform_dist(from, to);
+  std::shared_ptr<BenchCallback> clbk{new BenchCallback};
+
+  while (true) {
+    clbk->count = 0;
+    auto time_point1 = uniform_dist(e1);
+    auto time_point2 = uniform_dist(e1);
+    auto f = std::min(time_point1, time_point2);
+    auto t = std::max(time_point1, time_point2);
+
+    auto qi = dariadb::storage::QueryInterval(
+        dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
+    ms->readInterval(qi)->readAll(clbk.get());
+
+    reads_count += clbk->count;
+    if (stop_readers) {
+      break;
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
   std::cout << "Performance benchmark" << std::endl;
+  std::cout << "Writers count:" << dariadb_bench::total_threads_count << std::endl;
+  
   const std::string storage_path = "testStorage";
+  bool readers_enable = false;
+
+  po::options_description desc("Allowed options");
+  desc.add_options()
+	  ("help", "produce help message")
+	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
+   "enable readers threads");
+
+  po::variables_map vm;
+  try {
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+  } catch (std::exception &ex) {
+    logger("Error: " << ex.what());
+    exit(1);
+  }
+  po::notify(vm);
+
+  if (vm.count("help")) {
+    std::cout << desc << std::endl;
+    return 1;
+  }
+
+  if (readers_enable) {
+    std::cout << "Readers enable. count: "<<dariadb_bench::total_readers_count << std::endl;
+  }
 
   {
     std::cout << "write..." << std::endl;
@@ -85,6 +145,7 @@ int main(int argc, char *argv[]) {
     std::thread info_thread(show_info, raw_ptr);
 
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
+    std::vector<std::thread> readers(dariadb_bench::total_readers_count);
 
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
@@ -93,11 +154,27 @@ int main(int argc, char *argv[]) {
                     dariadb::Time(i), &append_count, raw_ptr};
       writers[pos++] = std::move(t);
     }
+    if (readers_enable) {
+      pos = 0;
+      for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
+        std::thread t{reader, ms, all_id_set, dariadb::Time(0),
+                      dariadb::timeutil::current_time()};
+        readers[pos++] = std::move(t);
+      }
+    }
 
     pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       std::thread t = std::move(writers[pos++]);
       t.join();
+    }
+    stop_readers = true;
+    if (readers_enable) {
+      pos = 0;
+      for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
+        std::thread t = std::move(readers[pos++]);
+        t.join();
+      }
     }
 
     stop_info = true;
