@@ -79,6 +79,9 @@ BOOST_AUTO_TEST_CASE(ChunkSorted) {
 
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   const std::string storagePath = "testStorage";
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+	  dariadb::utils::fs::rm(storagePath);
+  }
   PageManager::start(PageManager::Params(storagePath, 1, 1));
   BOOST_CHECK(PageManager::instance() != nullptr);
   PageManager::stop();

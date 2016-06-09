@@ -166,7 +166,7 @@ PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
 	res->iregion = iregion;
 	res->iheader = reinterpret_cast<IndexHeader *>(iregion);
 	res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
-	assert(res->iheader->is_closed);
+	//assert(res->iheader->is_closed);
 	res->iheader->is_closed = false;
 	return res;
 }

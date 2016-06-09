@@ -93,6 +93,9 @@ using namespace dariadb::storage;
 
 Page::~Page() {
 	header->is_closed = true;
+	if (this->_openned_chunk.ch != nullptr) {
+		this->_openned_chunk.ch->close();
+	}
   region = nullptr;
   header = nullptr;
   _index = nullptr;
@@ -125,11 +128,13 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
   res->header->is_closed = false;
+  
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
   }
 
   res->addeded_meases=0;
+  res->page_mmap->flush(0, sizeof(PageHeader));
   return res;
 }
 
@@ -147,10 +152,9 @@ Page *Page::open(std::string file_name, bool read_only) {
 
   res->region = region;
   res->header = reinterpret_cast<PageHeader *>(region);
-  assert(res->header->is_closed);
-  res->header->is_closed = false;
+  
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-
+  res->page_mmap->flush(0,sizeof(PageHeader));
   if (res->header->chunk_size == 0) {
     throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
   }
@@ -165,6 +169,8 @@ Page *Page::open(std::string file_name, bool read_only) {
     }
   }
   res->addeded_meases=0;
+  /*assert(res->header->is_closed);*/
+  res->header->is_closed = false;
   return res;
 }
 
@@ -198,6 +204,30 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
   return result;
 }
 
+void Page::restore() {
+	logger_info("Page: restore after crash "<<this->filename);
+
+	auto step = this->header->chunk_size + sizeof(ChunkHeader);
+	auto byte_it = this->chunks + step * this->header->addeded_chunks;
+	auto end = this->chunks + this->header->chunk_per_storage * step;
+	while (true) {
+		if (byte_it == end) {
+			break;
+		}
+		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+		auto ptr_to_begin = byte_it;
+		auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
+		if (info->is_init) {
+			Chunk_Ptr ptr = nullptr;
+			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
+			if (!ptr->check()) {
+				logger_info("Page: broken chunk " << ptr->header->id << ". remove");
+				ptr->header->is_init = false;
+			}
+		}
+		byte_it += step;
+	}
+}
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
     addeded_meases++;
   assert(!this->readonly);
@@ -216,7 +246,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
                                   _openned_chunk.pos);
         return true;
-      }
+	  }
     }
   }
   // search no full chunk.
@@ -381,7 +411,10 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
       auto ptr_to_begin = this->chunks + _index_it.offset;
       auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
       auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
-
+	  if (!ptr_to_chunk_info_raw->is_init) {
+		  logger_info("Try to read not_init chunk (" << ptr_to_chunk_info_raw->id << "). maybe broken");
+		  continue;
+	  }
       //      auto info = new ChunkHeader;
       //      memcpy(info, ptr_to_chunk_info_raw, sizeof(ChunkHeader));
       //      auto buf = new uint8_t[info->size];
@@ -395,6 +428,9 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
         assert(false);
       }
       Chunk_Ptr c{ptr};
+	  if (!c->check()) {
+		  logger("page: "<<this->filename<<": "<<"wrong chunk checksum. chunkId="<<c->header->id);
+	  }
       // TODO replace by some check;
       // assert(c->info->last.time != 0);
       //      if (c->header->is_readonly) {

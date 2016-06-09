@@ -33,6 +33,7 @@ struct ChunkHeader {
   compression::CopmressedWriter::Position writer_position; // TODO move from this.
 
   size_t size;
+  uint32_t crc;
 };
 #pragma pack(pop)
 
@@ -58,6 +59,8 @@ public:
   virtual Reader_Ptr get_reader() = 0;
   virtual bool check_id(const Id &id);
   virtual void close() = 0;
+  virtual uint32_t checksum() = 0;
+  virtual bool check() = 0;
   bool check_flag(const Flag &f);
   // TODO remove?
   void lock() { _locker.lock(); }
@@ -86,6 +89,8 @@ public:
   bool is_full() const override { return c_writer.is_full(); }
   bool append(const Meas &m) override;
   void close() override;
+  bool check()override;
+  uint32_t checksum()override;
   Reader_Ptr get_reader() override;
   utils::Range range;
   compression::CopmressedWriter c_writer;

@@ -4,6 +4,10 @@
 #include <cassert>
 #include <cstring>
 
+
+#include <boost/crc.hpp>
+
+
 using namespace dariadb;
 using namespace dariadb::utils;
 using namespace dariadb::storage;
@@ -97,6 +101,26 @@ ZippedChunk::~ZippedChunk() {}
 
 void ZippedChunk::close() {
   header->is_readonly = true;
+
+  header->crc = this->checksum();
+  assert(header->crc != 0);
+}
+
+bool ZippedChunk::check(){
+	if (!header->is_readonly) {
+		return true;
+	}
+	else {
+		return header->crc != 0 && header->crc == checksum();
+	}
+}
+
+uint32_t ZippedChunk::checksum(){
+	boost::crc_32_type  result;
+	for (size_t i = 0; i < this->header->size; ++i) {
+		result.process_byte(this->_buffer_t[i]);
+	}
+	return result.checksum();
 }
 
 bool ZippedChunk::append(const Meas &m) {

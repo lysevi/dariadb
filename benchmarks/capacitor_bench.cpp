@@ -80,7 +80,8 @@ int main(int argc, char *argv[]) {
   auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "testStorage";
-    const size_t cap_B = 10;
+    const size_t cap_B = 11;
+//dont_clean=true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path); 
     }

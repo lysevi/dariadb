@@ -1,3 +1,8 @@
+v0.0.7
+=====
+- Restore after crash.
+- CRC32 checksum for chunks.
+
 v0.0.6
 =====
 - base-COLA for sort new measurements.

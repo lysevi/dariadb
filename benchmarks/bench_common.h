@@ -27,7 +27,9 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     m.src = dariadb::Flag(id);
     m.time += sleep_time;
     m.value = dariadb::Value(i);
-    ms->append(m);
+    if(ms->append(m).writed!=1){
+     return;
+    }
     (*append_count)++;
   }
 }
