@@ -320,16 +320,16 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     dariadb::Flag flg_val(0);
     dariadb::IdSet _all_ids_set;
     std::vector<dariadb::Time> rnd_times;
-    rnd_times.resize(copies_for_id+2);
-    dariadb::Time t=0;
-    for(size_t i=0;i<rnd_times.size();++i){
-        rnd_times[i]=t;
-        ++t;
+    rnd_times.resize(copies_for_id + 2);
+    dariadb::Time t = 0;
+    for (size_t i = 0; i < rnd_times.size(); ++i) {
+      rnd_times[i] = t;
+      ++t;
     }
-    size_t t_pos=0;
+    size_t t_pos = 0;
     for (auto i = from; i < to; i += step) {
-        std::random_shuffle(rnd_times.begin(),rnd_times.end());
-         t_pos=0;
+      std::random_shuffle(rnd_times.begin(), rnd_times.end());
+      t_pos = 0;
       _all_ids_set.insert(id_val);
       m.id = id_val;
       m.flag = flg_val;
@@ -342,21 +342,20 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
         total_count++;
         m.value = dariadb::Value(j);
         m.time = rnd_times[t_pos++];
-
       }
       ++id_val;
       ++flg_val;
     }
-    size_t total_readed=0;
+    size_t total_readed = 0;
     for (dariadb::Id cur_id = 0; cur_id < id_val; ++cur_id) {
       dariadb::IdArray ids;
       ids.push_back(cur_id);
       auto reader = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to));
       dariadb::Meas::MeasList mlist;
       reader->readAll(&mlist);
-      total_readed+=mlist.size();
-      if(mlist.size()!=copies_for_id){
-          BOOST_CHECK(mlist.size()==copies_for_id);
+      total_readed += mlist.size();
+      if (mlist.size() != copies_for_id) {
+        BOOST_CHECK(mlist.size() == copies_for_id);
       }
       for (auto it = mlist.begin(); it != mlist.end(); ++it) {
         auto next = ++it;
@@ -366,81 +365,79 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
         BOOST_CHECK_LE(it->time, next->time);
       }
     }
-    BOOST_CHECK_GE(total_count,total_readed);
+    BOOST_CHECK_GE(total_count, total_readed);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
 
-
-
 BOOST_AUTO_TEST_CASE(Engine_memvalues) {
-	const std::string storage_path = "testStorage";
-	const size_t chunk_per_storage = 10000;
-	const size_t chunk_size = 256;
-	const size_t cap_B = 5;
+  const std::string storage_path = "testStorage";
+  const size_t chunk_per_storage = 10000;
+  const size_t chunk_size = 256;
+  const size_t cap_B = 5;
 
-	const dariadb::Time from = 0;
-	const dariadb::Time to = 1000;
-	const dariadb::Time step = 10;
-	{
-		if (dariadb::utils::fs::path_exists(storage_path)) {
-			dariadb::utils::fs::rm(storage_path);
-		}
+  const dariadb::Time from = 0;
+  const dariadb::Time to = 1000;
+  const dariadb::Time step = 10;
+  {
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
+    }
 
-		std::unique_ptr<dariadb::storage::Engine> ms{ new dariadb::storage::Engine(
-			dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-				chunk_size),
-			dariadb::storage::Capacitor::Params(cap_B, storage_path),
-			dariadb::storage::Engine::Limits(10)) };
+    std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
+                                              chunk_size),
+        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+        dariadb::storage::Engine::Limits(10))};
 
-		auto m = dariadb::Meas::empty();
+    auto m = dariadb::Meas::empty();
 
-		dariadb::Id id_val(0);
+    dariadb::Id id_val(0);
 
-		dariadb::Flag flg_val(0);
-		dariadb::IdSet _all_ids_set;
-		for (auto i = from; i < to; i += step) {
-			_all_ids_set.insert(id_val);
-			m.id = id_val;
-			m.flag = flg_val;
-			m.src = flg_val;
-			m.time = i;
-			m.value = 0;
-			BOOST_CHECK_EQUAL(ms->append(m).writed, size_t(1));
-			++id_val;
-			++flg_val;
-		}
-		dariadb::IdArray ids{ _all_ids_set.begin(),_all_ids_set.end() };
-		{
-			dariadb::storage::QueryInterval qi(ids, 0, from, to);
-			auto query_id1 = ms->load(qi);
-			auto query_id2 = ms->load(qi);
+    dariadb::Flag flg_val(0);
+    dariadb::IdSet _all_ids_set;
+    for (auto i = from; i < to; i += step) {
+      _all_ids_set.insert(id_val);
+      m.id = id_val;
+      m.flag = flg_val;
+      m.src = flg_val;
+      m.time = i;
+      m.value = 0;
+      BOOST_CHECK_EQUAL(ms->append(m).writed, size_t(1));
+      ++id_val;
+      ++flg_val;
+    }
+    dariadb::IdArray ids{_all_ids_set.begin(), _all_ids_set.end()};
+    {
+      dariadb::storage::QueryInterval qi(ids, 0, from, to);
+      auto query_id1 = ms->load(qi);
+      auto query_id2 = ms->load(qi);
 
-			BOOST_CHECK(query_id1 != query_id2);
+      BOOST_CHECK(query_id1 != query_id2);
 
-			dariadb::Meas::MeasList all1, all2;
-			all1=ms->getResult(query_id1);
-			all2=ms->getResult(query_id2);
-			BOOST_CHECK_EQUAL(all1.size(), all2.size());
-			BOOST_CHECK(all1.size()!=size_t(0));
-		}
-		{
-			dariadb::storage::QueryTimePoint qt(ids, 0, from+(to-from)/2);
-			auto query_id1 = ms->load(qt);
-			auto query_id2 = ms->load(qt);
+      dariadb::Meas::MeasList all1, all2;
+      all1 = ms->getResult(query_id1);
+      all2 = ms->getResult(query_id2);
+      BOOST_CHECK_EQUAL(all1.size(), all2.size());
+      BOOST_CHECK(all1.size() != size_t(0));
+    }
+    {
+      dariadb::storage::QueryTimePoint qt(ids, 0, from + (to - from) / 2);
+      auto query_id1 = ms->load(qt);
+      auto query_id2 = ms->load(qt);
 
-			BOOST_CHECK(query_id1 != query_id2);
+      BOOST_CHECK(query_id1 != query_id2);
 
-			dariadb::Meas::MeasList all1, all2;
-			all1 = ms->getResult(query_id1);
-			all2 = ms->getResult(query_id2);
-			BOOST_CHECK_EQUAL(all1.size(), all2.size());
-			BOOST_CHECK(all1.size() != size_t(0));
-		}
-	}
-	if (dariadb::utils::fs::path_exists(storage_path)) {
-		dariadb::utils::fs::rm(storage_path);
-	}
+      dariadb::Meas::MeasList all1, all2;
+      all1 = ms->getResult(query_id1);
+      all2 = ms->getResult(query_id2);
+      BOOST_CHECK_EQUAL(all1.size(), all2.size());
+      BOOST_CHECK(all1.size() != size_t(0));
+    }
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
 }

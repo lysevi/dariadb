@@ -27,8 +27,8 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     m.src = dariadb::Flag(id);
     m.time += sleep_time;
     m.value = dariadb::Value(i);
-    if(ms->append(m).writed!=1){
-     return;
+    if (ms->append(m).writed != 1) {
+      return;
     }
     (*append_count)++;
   }
@@ -36,11 +36,11 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 
 void readBenchark(const dariadb::IdSet &all_id_set,
                   dariadb::storage::MeasStorage_ptr stor, size_t reads_count,
-                  dariadb::Time from, dariadb::Time to, bool quiet=false) {
+                  dariadb::Time from, dariadb::Time to, bool quiet = false) {
   {
-	  if (!quiet) {
-		  std::cout << "time point reads..." << std::endl;
-	  }
+    if (!quiet) {
+      std::cout << "time point reads..." << std::endl;
+    }
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Id> uniform_dist(from, to);
@@ -56,14 +56,14 @@ void readBenchark(const dariadb::IdSet &all_id_set,
       stor->readInTimePoint(qp)->readAll(clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-	if (!quiet) {
-		std::cout << "time: " << elapsed << std::endl;
-	}
+    if (!quiet) {
+      std::cout << "time: " << elapsed << std::endl;
+    }
   }
   {
-	  if (!quiet) {
-		  std::cout << "intervals reads..." << std::endl;
-	  }
+    if (!quiet) {
+      std::cout << "intervals reads..." << std::endl;
+    }
     std::random_device r;
     std::default_random_engine e1(r());
     std::uniform_int_distribution<dariadb::Id> uniform_dist(stor->minTime(),
@@ -83,10 +83,10 @@ void readBenchark(const dariadb::IdSet &all_id_set,
       stor->readInterval(qi)->readAll(clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-	if (!quiet) {
-		std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
-			<< std::endl;
-	}
+    if (!quiet) {
+      std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
+                << std::endl;
+    }
   }
 }
 }

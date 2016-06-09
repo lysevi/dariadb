@@ -58,8 +58,8 @@ public:
   }
 
   void reset() override {
-      local_res.clear();
-	  //TOOD opt. use Reader::size for alloc.
+    local_res.clear();
+    // TOOD opt. use Reader::size for alloc.
     dariadb::Meas::MeasList tmp_p;
     if (page_reader != nullptr) {
       page_reader->reset();
@@ -82,12 +82,12 @@ public:
     }
     if (need_sort) {
       std::vector<Meas> for_srt(tmp_p.size() + tmp_c.size());
-      size_t pos=0;
-      for(auto v:tmp_p){
-          for_srt[pos++]=v;
+      size_t pos = 0;
+      for (auto v : tmp_p) {
+        for_srt[pos++] = v;
       }
-      for(auto v:tmp_c){
-          for_srt[pos++]=v;
+      for (auto v : tmp_c) {
+        for_srt[pos++] = v;
       }
 
       std::sort(for_srt.begin(), for_srt.end(),
@@ -100,9 +100,7 @@ public:
 
     res_it = local_res.begin();
   }
-  size_t size() {
-	  return local_res.size();
-  }
+  size_t size() { return local_res.size(); }
   dariadb::Meas::MeasList local_res;
   dariadb::Meas::MeasList::const_iterator res_it;
   Reader_ptr page_reader;
@@ -157,11 +155,11 @@ public:
     }
   }
   size_t size() override {
-	  size_t result = 0;
-	  for (auto &c : _readers) {
-		  result += c->size();
-	  }
-	  return result;
+    size_t result = 0;
+    for (auto &c : _readers) {
+      result += c->size();
+    }
+    return result;
   }
 };
 
@@ -177,7 +175,7 @@ public:
     PageManager::start(_page_manager_params);
 
     mem_cap = new Capacitor(PageManager::instance(), _cap_params);
-	_next_query_id = Id();
+    _next_query_id = Id();
     // mem_storage_raw = dynamic_cast<MemoryStorage *>(mem_storage.get());
   }
   ~Private() {
@@ -359,41 +357,42 @@ public:
     return Reader_ptr(raw_result);
   }
 
-  Id load(const QueryInterval&qi) {
-	  std::lock_guard<std::mutex> lg(_locker);
-	  Id result = _next_query_id++;
+  Id load(const QueryInterval &qi) {
+    std::lock_guard<std::mutex> lg(_locker);
+    Id result = _next_query_id++;
 
-	  auto reader=this->readInterval(qi);
-	  std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
-	  reader->readAll(reader_values.get());
-	  _load_results[result] = reader_values;
-	  return result;
+    auto reader = this->readInterval(qi);
+    std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
+    reader->readAll(reader_values.get());
+    _load_results[result] = reader_values;
+    return result;
   }
-  
-  Id load(const QueryTimePoint&qt) {
-	  std::lock_guard<std::mutex> lg(_locker);
-	  Id result = _next_query_id++;
 
-	  auto reader = this->readInTimePoint(qt);
-	  std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
-	  reader->readAll(reader_values.get());
-	  _load_results[result] = reader_values;
-	  return result;
+  Id load(const QueryTimePoint &qt) {
+    std::lock_guard<std::mutex> lg(_locker);
+    Id result = _next_query_id++;
+
+    auto reader = this->readInTimePoint(qt);
+    std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
+    reader->readAll(reader_values.get());
+    _load_results[result] = reader_values;
+    return result;
   }
 
   Meas::MeasList getResult(Id id) {
-	  //TODO  return ref/ptr.
-	  Meas::MeasList result;
-	  auto fres=_load_results.find(id);
-	  if (fres == _load_results.end()) {
-		  return result;
-	  }else {
-		  for (auto&v : *(fres->second)) {
-			  result.push_back(v);
-		  }
-		  return result;
-	  }
+    // TODO  return ref/ptr.
+    Meas::MeasList result;
+    auto fres = _load_results.find(id);
+    if (fres == _load_results.end()) {
+      return result;
+    } else {
+      for (auto &v : *(fres->second)) {
+        result.push_back(v);
+      }
+      return result;
+    }
   }
+
 protected:
   //  std::shared_ptr<MemoryStorage> mem_storage;
   // storage::MemoryStorage *mem_storage_raw;
@@ -430,16 +429,16 @@ bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-Id dariadb::storage::Engine::load(const QueryInterval & qi){
-	return _impl->load(qi);
+Id dariadb::storage::Engine::load(const QueryInterval &qi) {
+  return _impl->load(qi);
 }
 
-Id dariadb::storage::Engine::load(const QueryTimePoint & qt){
-	return _impl->load(qt);
+Id dariadb::storage::Engine::load(const QueryTimePoint &qt) {
+  return _impl->load(qt);
 }
 
 Meas::MeasList dariadb::storage::Engine::getResult(Id id) {
-	return _impl->getResult(id);
+  return _impl->getResult(id);
 }
 
 append_result Engine::append(const Meas &value) {

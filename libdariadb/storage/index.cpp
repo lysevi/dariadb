@@ -159,20 +159,19 @@ PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size,
 }
 
 PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
-	PageIndex_ptr res = std::make_shared<PageIndex>();
-	res->readonly = read_only;
-	auto immap = utils::fs::MappedFile::open(filename);
-	auto iregion = immap->data();
-	res->index_mmap = immap;
-	res->iregion = iregion;
-	res->iheader = reinterpret_cast<IndexHeader *>(iregion);
-	res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
-	//assert(res->iheader->is_closed);
-	res->iheader->is_closed = false;
-	res->index_mmap->flush();
-	return res;
+  PageIndex_ptr res = std::make_shared<PageIndex>();
+  res->readonly = read_only;
+  auto immap = utils::fs::MappedFile::open(filename);
+  auto iregion = immap->data();
+  res->index_mmap = immap;
+  res->iregion = iregion;
+  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
+  res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
+  // assert(res->iheader->is_closed);
+  res->iheader->is_closed = false;
+  res->index_mmap->flush();
+  return res;
 }
-
 
 ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                                           dariadb::Time to, dariadb::Flag flag) {
@@ -209,5 +208,4 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   cur_index->id_bloom = ptr->header->id_bloom;
   auto kv = std::make_pair(cur_index->maxTime, pos);
   _itree.insert(kv);
-  
 }

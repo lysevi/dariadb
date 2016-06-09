@@ -59,7 +59,7 @@ void InnerReader::reset() {
 }
 
 size_t InnerReader::size() {
-	return _values.size();
+  return _values.size();
 }
 
 TP_Reader::TP_Reader() {
@@ -97,5 +97,5 @@ void TP_Reader::reset() {
 }
 
 size_t TP_Reader::size() {
-	return this->_values.size();
+  return this->_values.size();
 }

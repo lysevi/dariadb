@@ -10,11 +10,9 @@
 #include <timeutil.h>
 #include <utils/fs.h>
 
-
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
-
 
 std::atomic_long append_count{0};
 bool stop_info = false;
@@ -56,24 +54,22 @@ int main(int argc, char *argv[]) {
 
   po::options_description desc("Allowed options");
   bool dont_clean = false;
-  desc.add_options()
-	  ("help", "produce help message")
-	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),
-		  "enable readers threads");
+  desc.add_options()("help", "produce help message")(
+      "dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),
+      "enable readers threads");
 
   po::variables_map vm;
   try {
-	  po::store(po::parse_command_line(argc, argv, desc), vm);
-  }
-  catch (std::exception &ex) {
-	  logger("Error: " << ex.what());
-	  exit(1);
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+  } catch (std::exception &ex) {
+    logger("Error: " << ex.what());
+    exit(1);
   }
   po::notify(vm);
 
   if (vm.count("help")) {
-	  std::cout << desc << std::endl;
-	  return 1;
+    std::cout << desc << std::endl;
+    return 1;
   }
 
   dariadb::IdSet all_id_set;
@@ -81,9 +77,9 @@ int main(int argc, char *argv[]) {
   {
     const std::string storage_path = "testStorage";
     const size_t cap_B = 11;
-//dont_clean=true;
+    // dont_clean=true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path); 
+      dariadb::utils::fs::rm(storage_path);
     }
 
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);

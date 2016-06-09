@@ -81,7 +81,8 @@ public:
   std::string filename;
   bool readonly;
   PageIndex_ptr _index;
-size_t addeded_meases;
+  size_t addeded_meases;
+
 protected:
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;

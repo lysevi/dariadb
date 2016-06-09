@@ -29,7 +29,7 @@ for future updates.
 #include <list>
 #include <tuple>
 
-const std::string LOG_MSG_PREFIX = "capacitor: ";
+const std::string LOG_MSG_PREFIX = "Capacitor: ";
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -71,7 +71,7 @@ struct level {
   FlaggedMeas &at(size_t _pos) { return begin[_pos]; }
 
   void push_back(const Meas &m) {
-      assert(hdr->pos<hdr->count);
+    assert(hdr->pos < hdr->count);
     begin[hdr->pos].value = m;
     ++hdr->pos;
     hdr->_minTime = std::min(hdr->_minTime, m.time);
@@ -104,18 +104,18 @@ struct level {
 
 class Capacitor::Private {
 public:
-    enum class STATE: uint8_t{
-        DONE,  //all works done. caps is ready.
-        CLEAN, //begin cleaning
-        MERGE,  //merge begin but not end
+  enum class STATE : uint8_t {
+    DONE,  // all works done. caps is ready.
+    CLEAN, // begin cleaning
+    MERGE, // merge begin but not end
 
-        DROP //drop start but not end
+    DROP // drop start but not end
 
-    };
+  };
 #pragma pack(push, 1)
   struct Header {
-    bool is_dropped:1;
-	bool is_closed : 1;
+    bool is_dropped : 1;
+    bool is_closed : 1;
     STATE state;
     size_t B;
     size_t size;    // sizeof file in bytes
@@ -135,7 +135,7 @@ public:
   ~Private() {
     this->flush();
     if (mmap != nullptr) {
-		_header->is_closed = true;
+      _header->is_closed = true;
       mmap->close();
     }
   }
@@ -197,7 +197,7 @@ public:
     _header->B = _params.B;
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
-	_header->is_closed = false;
+    _header->is_closed = false;
     auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = reinterpret_cast<level_header *>(pos);
@@ -248,66 +248,64 @@ public:
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
 
     load();
-    if(!_header->is_closed){
-        restore();
+    if (!_header->is_closed) {
+      restore();
     }
     _header->is_closed = false;
   }
 
-  void restore(){
-      logger_info(LOG_MSG_PREFIX<<"restore after crash");
-      switch (_header->state){
-      case STATE::DONE:{
-          logger_info(LOG_MSG_PREFIX << "storage is DONE.");
-          break;
-      }
-      case STATE::CLEAN:{
-          logger(LOG_MSG_PREFIX << "cleaning not end");
-          break;
-      }
-      case STATE::MERGE:{
-          logger_info(LOG_MSG_PREFIX << "merge begin but not end");
-          merge_levels();
-          break;
-      }
-      case STATE::DROP:{
-          logger_info(LOG_MSG_PREFIX << "drop begin but not end");
-          break;
-      }
-      };
+  void restore() {
+    logger_info(LOG_MSG_PREFIX << "restore after crash");
+    switch (_header->state) {
+    case STATE::DONE: {
+      logger_info(LOG_MSG_PREFIX << "storage is DONE.");
+      break;
+    }
+    case STATE::CLEAN: {
+      logger_info(LOG_MSG_PREFIX << "cleaning not end");
+      break;
+    }
+    case STATE::MERGE: {
+      logger_info(LOG_MSG_PREFIX << "merge not end");
+      merge_levels();
+      break;
+    }
+    case STATE::DROP: {
+      logger_info(LOG_MSG_PREFIX << "drop not end");
+      break;
+    }
+    };
   }
 
   append_result append_unsafe(const Meas &value) {
-	  if (_header->_memvalues_pos < _header->B) {
-		  return append_to_mem(value);
-	  }
-	  else {
+    if (_header->_memvalues_pos < _header->B) {
+      return append_to_mem(value);
+    } else {
 
-		  return append_to_levels(value);
-	  }
+      return append_to_levels(value);
+    }
   }
 
   append_result append(const Meas &value) {
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
-	auto result = append_unsafe(value);
-	//mmap->flush();
-	return result;
+    auto result = append_unsafe(value);
+    // mmap->flush();
+    return result;
   }
 
   append_result append_to_mem(const Meas &value) {
     _memvalues[_header->_memvalues_pos].value = value;
-
 
     _header->_memvalues_pos++;
     ++_header->_writed;
     _minTime = std::min(_minTime, value.time);
     _maxTime = std::max(_maxTime, value.time);
 
-   /* auto addr=(_memvalues+(_header->_memvalues_pos-1));
-    assert(addr->value==_memvalues[_header->_memvalues_pos-1].value);
-    mmap->flush((char*)addr-(char*)_header,sizeof(FlaggedMeas));
-    flush_header();*/
+    /* auto addr=(_memvalues+(_header->_memvalues_pos-1));
+     assert(addr->value==_memvalues[_header->_memvalues_pos-1].value);
+     mmap->flush((char*)addr-(char*)_header,sizeof(FlaggedMeas));
+     flush_header();*/
 
     return append_result(1, 0);
   }
@@ -316,8 +314,8 @@ public:
     size_t outlvl = merge_levels();
     auto merge_target = _levels[outlvl];
     if (outlvl == (_header->levels_count - 1)) {
-        _header->state = STATE::DROP;
-        //flush_header();
+      _header->state = STATE::DROP;
+      // flush_header();
       auto target = &_levels[_header->levels_count - 1];
       _header->_size_B -= target->size() / _header->B;
       _header->_writed -= target->size();
@@ -326,81 +324,81 @@ public:
       drop_future = std::async(std::launch::async, &Capacitor::Private::drop_one_level,
                                this, target);
     }
-	//flush_header();
-    //mmap->flush(0, 0);
+    // flush_header();
+    // mmap->flush(0, 0);
     return append_to_mem(value);
   }
 
-  size_t calc_outlevel_num(){
-      size_t new_items_count = _header->_size_B + 1;
-       return dariadb::utils::ctz(~_size & new_items_count);
+  size_t calc_outlevel_num() {
+    size_t new_items_count = _header->_size_B + 1;
+    return dariadb::utils::ctz(~_size & new_items_count);
   }
 
-  size_t merge_levels(){
-      flagged_meas_time_compare_less flg_less_by_time;
-     /* mmap->flush();*/
-	  //flush_header();
-      std::sort(_memvalues, _memvalues + _memvalues_size, flg_less_by_time);
+  size_t merge_levels() {
+    flagged_meas_time_compare_less flg_less_by_time;
+    /* mmap->flush();*/
+    // flush_header();
+    std::sort(_memvalues, _memvalues + _memvalues_size, flg_less_by_time);
 
-      size_t outlvl = calc_outlevel_num();
-      // std::cout<<"outlvl: "<<outlvl<<std::endl;
+    size_t outlvl = calc_outlevel_num();
+    // std::cout<<"outlvl: "<<outlvl<<std::endl;
 
-      if (outlvl >= _header->levels_count) {
-        assert(false);
-        // drop_to_stor();
-        return 0;
+    if (outlvl >= _header->levels_count) {
+      assert(false);
+      // drop_to_stor();
+      return 0;
+    }
+
+    if (outlvl == (_header->levels_count - 1)) {
+      if (drop_future.valid()) {
+        drop_future.wait();
       }
+    }
 
-      if (outlvl == (_header->levels_count - 1)) {
-        if (drop_future.valid()) {
-          drop_future.wait();
-        }
-      }
+    std::list<level *> to_merge;
+    level tmp;
+    level_header tmp_hdr;
+    tmp.hdr = &tmp_hdr;
+    tmp.hdr->lvl = 0;
+    tmp.hdr->count = _memvalues_size;
+    tmp.hdr->pos = _memvalues_size;
+    tmp.begin = _memvalues;
+    to_merge.push_back(&tmp);
 
-      std::list<level *> to_merge;
-      level tmp;
-      level_header tmp_hdr;
-      tmp.hdr = &tmp_hdr;
-      tmp.hdr->lvl = 0;
-      tmp.hdr->count = _memvalues_size;
-      tmp.hdr->pos = _memvalues_size;
-      tmp.begin = _memvalues;
-      to_merge.push_back(&tmp);
+    for (size_t i = 0; i < outlvl; ++i) {
+      to_merge.push_back(&_levels[i]);
+    }
 
-      for (size_t i = 0; i < outlvl; ++i) {
-        to_merge.push_back(&_levels[i]);
-      }
+    auto merge_target = _levels[outlvl];
 
-      auto merge_target = _levels[outlvl];
+    _header->state = STATE::MERGE;
+    // flush_header();
+    if (!merge_target.empty()) {
+      logger_info(LOG_MSG_PREFIX << "merge target not empty.");
+      merge_target.clear();
+      logger_info(LOG_MSG_PREFIX << "clear done.");
+    }
+    dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
 
-      _header->state = STATE::MERGE;
-     // flush_header();
-	  if (!merge_target.empty()) {
-		  logger_info(LOG_MSG_PREFIX << "merge target not empty.");
-		  merge_target.clear();
-		  logger_info(LOG_MSG_PREFIX << "clear done.");
-	  }
-      dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
+    /*mmap->flush(0, 0);*/
+    _header->state = STATE::CLEAN;
+    // flush_header();
 
-      /*mmap->flush(0, 0);*/
-      _header->state = STATE::CLEAN;
-     // flush_header();
-
-      clean_merged_levels(outlvl);
-	  /*mmap->flush(0, 0);*/
-      return outlvl;
+    clean_merged_levels(outlvl);
+    /*mmap->flush(0, 0);*/
+    return outlvl;
   }
 
-  void clean_merged_levels(size_t outlvl){
-      for (size_t i = 0; i < outlvl; ++i) {
-        _levels[i].clear();
-      }
-      ++_header->_size_B;
+  void clean_merged_levels(size_t outlvl) {
+    for (size_t i = 0; i < outlvl; ++i) {
+      _levels[i].clear();
+    }
+    ++_header->_size_B;
 
-      _header->state = STATE::DONE;
-      _header->_memvalues_pos = 0;
+    _header->state = STATE::DONE;
+    _header->_memvalues_pos = 0;
 
-      //mmap->flush(0, 0);
+    // mmap->flush(0, 0);
   }
 
   std::future<void> drop_future;
@@ -438,9 +436,7 @@ public:
     flush_header();
   }
 
-  void flush_header(){
-       mmap->flush(0,sizeof(Header));
-  }
+  void flush_header() { mmap->flush(0, sizeof(Header)); }
   struct low_level_stor_pusher {
     MeasWriter *_stor;
     void push_back(FlaggedMeas &m) {
@@ -627,11 +623,11 @@ public:
   }
 
   void flush() {
-	  boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
+    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
     if (drop_future.valid()) {
       drop_future.wait();
     }
-	mmap->flush();
+    mmap->flush();
   }
 
   size_t files_count() const { return Manifest::instance()->cola_list().size(); }

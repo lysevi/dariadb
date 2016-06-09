@@ -24,7 +24,7 @@ public:
 
   Reader_ptr clone() const override;
   void reset() override;
-  size_t size()override;
+  size_t size() override;
   Meas::MeasList _values;
   dariadb::Flag _flag;
   dariadb::Time _from;
@@ -49,7 +49,7 @@ public:
   Reader_ptr clone() const override;
 
   void reset() override;
-  size_t size()override;
+  size_t size() override;
   dariadb::Meas::MeasList _values;
   dariadb::Meas::MeasList::iterator _values_iterator;
   dariadb::IdArray _ids;

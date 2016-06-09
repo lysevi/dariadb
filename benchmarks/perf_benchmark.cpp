@@ -21,7 +21,7 @@
 namespace po = boost::program_options;
 
 std::atomic_long append_count{0};
-std::atomic_long reads_count{0};
+std::atomic_size_t reads_count{0};
 bool stop_info = false;
 bool stop_readers = false;
 
@@ -88,16 +88,16 @@ int main(int argc, char *argv[]) {
   (void)argv;
   std::cout << "Performance benchmark" << std::endl;
   std::cout << "Writers count:" << dariadb_bench::total_threads_count << std::endl;
-  
+
   const std::string storage_path = "testStorage";
   bool readers_enable = false;
   bool dont_clean = false;
   po::options_description desc("Allowed options");
-  desc.add_options()
-	  ("help", "produce help message")
-	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
-	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),
-		  "enable readers threads");
+  desc.add_options()("help", "produce help message")(
+      "enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
+      "enable readers threads")("dont-clean",
+                                po::value<bool>(&dont_clean)->default_value(dont_clean),
+                                "enable readers threads");
 
   po::variables_map vm;
   try {
@@ -114,7 +114,8 @@ int main(int argc, char *argv[]) {
   }
 
   if (readers_enable) {
-    std::cout << "Readers enable. count: "<<dariadb_bench::total_readers_count << std::endl;
+    std::cout << "Readers enable. count: " << dariadb_bench::total_readers_count
+              << std::endl;
   }
 
   {
@@ -125,10 +126,10 @@ int main(int argc, char *argv[]) {
     const size_t cap_B = 10;
     const size_t max_mem_chunks = 100;
 
-	//dont_clean = true;
-	if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
-		dariadb::utils::fs::rm(storage_path);
-	}
+    // dont_clean = true;
+    if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
+    }
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
     dariadb::storage::Capacitor::Params cap_param(cap_B, storage_path);
@@ -215,12 +216,12 @@ int main(int argc, char *argv[]) {
       if (!dont_clean && clbk->count != expected) {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
         throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
-	  }else {
-		  if (dont_clean && clbk->count < expected) {
-			  std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
-			  throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
-		  }
-	  }
+      } else {
+        if (dont_clean && clbk->count < expected) {
+          std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
+          throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
+        }
+      }
     }
     std::cout << "stoping storage...\n";
     ms = nullptr;

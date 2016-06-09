@@ -28,7 +28,7 @@ public:
       : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
     Manifest::start(utils::fs::append_path(param.path, MANIFEST_FILE_NAME));
-	check_storage();
+    check_storage();
     update_id = false;
     last_id = 0;
 
@@ -37,21 +37,21 @@ public:
   }
 
   void check_storage() {
-	  if (!utils::fs::path_exists(_param.path)) {
-		  return;
-	  }
-	  
-	  auto pages = Manifest::instance()->page_list();
+    if (!utils::fs::path_exists(_param.path)) {
+      return;
+    }
 
-	  for (auto n : pages) {
-		  auto file_name = utils::fs::append_path(_param.path, n);
-		  auto hdr = Page::readHeader(file_name);
-		  if (!hdr.is_closed) {
-			  auto res = Page_Ptr{ Page::open(file_name) };
-			  res->restore();
-			  res = nullptr;
-		  }
-	  }
+    auto pages = Manifest::instance()->page_list();
+
+    for (auto n : pages) {
+      auto file_name = utils::fs::append_path(_param.path, n);
+      auto hdr = Page::readHeader(file_name);
+      if (!hdr.is_closed) {
+        auto res = Page_Ptr{Page::open(file_name)};
+        res->restore();
+        res = nullptr;
+      }
+    }
   }
 
   Page_Ptr open_last_openned() {

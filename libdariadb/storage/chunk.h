@@ -89,8 +89,8 @@ public:
   bool is_full() const override { return c_writer.is_full(); }
   bool append(const Meas &m) override;
   void close() override;
-  bool check()override;
-  uint32_t checksum()override;
+  bool check() override;
+  uint32_t checksum() override;
   Reader_Ptr get_reader() override;
   utils::Range range;
   compression::CopmressedWriter c_writer;

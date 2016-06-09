@@ -163,12 +163,12 @@ public:
   uint8_t *data() { return static_cast<uint8_t *>(m_region->get_address()); }
 
   void flush(std::size_t offset = 0, std::size_t bytes = 0) {
-#ifdef  DEBUG
-	  //in debug sync flush is very slow.
-	  auto flush_res=this->m_region->flush(offset, bytes, true);
-	  assert(flush_res);
+#ifdef DEBUG
+    // in debug sync flush is very slow.
+    auto flush_res = this->m_region->flush(offset, bytes, true);
+    assert(flush_res);
 #else
-	  this->m_region->flush(offset, bytes, true);
+    this->m_region->flush(offset, bytes, true);
 #endif
   }
 

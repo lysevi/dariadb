@@ -18,12 +18,12 @@ public:
     size_t B; // measurements count in one datra block
     std::string path;
     size_t max_levels;
-	size_t flush_period;
+    size_t flush_period;
     Params(const size_t _B, const std::string _path) {
       B = _B;
       path = _path;
       max_levels = CAP_DEFAULT_MAX_LEVELS;
-	  flush_period = CAP_DEFAULT_FLUSH_PERIOD;
+      flush_period = CAP_DEFAULT_FLUSH_PERIOD;
     }
   };
   virtual ~Capacitor();
