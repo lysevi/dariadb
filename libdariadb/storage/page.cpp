@@ -210,6 +210,7 @@ void Page::restore() {
 	auto step = this->header->chunk_size + sizeof(ChunkHeader);
 	auto byte_it = this->chunks + step * this->header->addeded_chunks;
 	auto end = this->chunks + this->header->chunk_per_storage * step;
+	size_t pos = 0;
 	while (true) {
 		if (byte_it == end) {
 			break;
@@ -224,7 +225,10 @@ void Page::restore() {
 				logger_info("Page: broken chunk " << ptr->header->id << ". remove");
 				ptr->header->is_init = false;
 			}
+			_index->iheader->is_sorted = false;
+			_index->index[pos].is_init = false;
 		}
+		++pos;
 		byte_it += step;
 	}
 }
