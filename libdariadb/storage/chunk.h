@@ -59,8 +59,9 @@ public:
   virtual Reader_Ptr get_reader() = 0;
   virtual bool check_id(const Id &id);
   virtual void close() = 0;
-  virtual uint32_t checksum() = 0;
-  virtual bool check() = 0;
+  virtual uint32_t calc_checksum() = 0;
+  virtual uint32_t get_checksum() = 0;
+  virtual bool check_checksum();
   bool check_flag(const Flag &f);
   // TODO remove?
   void lock() { _locker.lock(); }
@@ -89,8 +90,9 @@ public:
   bool is_full() const override { return c_writer.is_full(); }
   bool append(const Meas &m) override;
   void close() override;
-  bool check() override;
-  uint32_t checksum() override;
+
+  uint32_t calc_checksum() override;
+  uint32_t get_checksum()override;
   Reader_Ptr get_reader() override;
   utils::Range range;
   compression::CopmressedWriter c_writer;

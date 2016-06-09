@@ -1,10 +1,9 @@
 #include "chunk.h"
 #include "bloom_filter.h"
+#include "../utils/crc.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
-
-#include <boost/crc.hpp>
 
 using namespace dariadb;
 using namespace dariadb::utils;
@@ -65,6 +64,12 @@ bool Chunk::check_flag(const Flag &f) {
   return true;
 }
 
+bool Chunk::check_checksum() {
+	auto exists = get_checksum();
+	return  exists != 0 && exists == calc_checksum();
+}
+
+
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
     : Chunk(index, buffer, _size, first_m) {
   header->is_zipped = true;
@@ -100,20 +105,16 @@ ZippedChunk::~ZippedChunk() {}
 void ZippedChunk::close() {
   header->is_readonly = true;
 
-  header->crc = this->checksum();
+  header->crc = this->calc_checksum();
   assert(header->crc != 0);
 }
 
-bool ZippedChunk::check() {
-    return header->crc != 0 && header->crc == checksum();
+uint32_t ZippedChunk::calc_checksum() {
+  return utils::crc32(this->_buffer_t, this->header->size);
 }
 
-uint32_t ZippedChunk::checksum() {
-  boost::crc_32_type result;
-  for (size_t i = 0; i < this->header->size; ++i) {
-    result.process_byte(this->_buffer_t[i]);
-  }
-  return result.checksum();
+uint32_t dariadb::storage::ZippedChunk::get_checksum(){
+	return header->crc;
 }
 
 bool ZippedChunk::append(const Meas &m) {

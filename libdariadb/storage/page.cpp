@@ -220,8 +220,8 @@ void Page::restore() {
     if (info->is_init) {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-      if (!ptr->check()) {
-        logger_info("Page: remove broken chunk #" << ptr->header->id);
+      if (!ptr->check_checksum()) {
+        logger_fatal("Page: remove broken chunk #" << ptr->header->id);
         ptr->header->is_init = false;
 		_index->iheader->is_sorted = false;
 		_index->index[pos].is_init = false;
@@ -433,7 +433,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
         assert(false);
       }
       Chunk_Ptr c{ptr};
-      if (!c->check()) {
+      if (!c->check_checksum()) {
         logger("page: " << this->filename << ": "
                         << "wrong chunk checksum. chunkId=" << c->header->id);
       }

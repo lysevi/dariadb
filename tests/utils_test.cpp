@@ -11,6 +11,19 @@
 #include <utils/period_worker.h>
 #include <utils/skiplist.h>
 #include <utils/utils.h>
+#include <utils/crc.h>
+
+BOOST_AUTO_TEST_CASE(CRC32Test){
+    uint64_t data;
+    char* pdata=(char*)&data;
+    data=1;
+    auto res1=dariadb::utils::crc32(pdata,sizeof(data));
+    auto res2=dariadb::utils::crc32(pdata,sizeof(data));
+    data++;
+    auto res3=dariadb::utils::crc32(pdata,sizeof(data));
+    BOOST_CHECK_EQUAL(res1,res2);
+    BOOST_CHECK(res1!=res3);
+}
 
 BOOST_AUTO_TEST_CASE(LRUCheck) {
   dariadb::utils::LRU<int, int> ilru(4);
