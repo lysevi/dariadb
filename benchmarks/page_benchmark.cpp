@@ -82,14 +82,18 @@ int main(int argc, char *argv[]) {
 
   const size_t id_count = 4;
   {
-    /*dont_clean = true;*/
+	  if (dont_clean) {
+		  std::cout << "open run results." << std::endl;
+	  }
     if (!dont_clean && dariadb::utils::fs::path_exists(storagePath)) {
+      std::cout << "clean last run results." << std::endl;
       dariadb::utils::fs::rm(storagePath);
     }
-    std::thread info_thread(show_info);
 
     dariadb::storage::PageManager::start(
         dariadb::storage::PageManager::Params(storagePath, chunks_count, chunks_size));
+
+	std::thread info_thread(show_info);
 
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
 

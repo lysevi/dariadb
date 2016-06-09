@@ -105,11 +105,7 @@ void ZippedChunk::close() {
 }
 
 bool ZippedChunk::check() {
-  if (!header->is_readonly) {
-    return true;
-  } else {
     return header->crc != 0 && header->crc == checksum();
-  }
 }
 
 uint32_t ZippedChunk::checksum() {

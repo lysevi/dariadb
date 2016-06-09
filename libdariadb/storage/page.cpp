@@ -207,7 +207,7 @@ void Page::restore() {
   logger_info("Page: restore after crash " << this->filename);
 
   auto step = this->header->chunk_size + sizeof(ChunkHeader);
-  auto byte_it = this->chunks + step * this->header->addeded_chunks;
+  auto byte_it = this->chunks;
   auto end = this->chunks + this->header->chunk_per_storage * step;
   size_t pos = 0;
   while (true) {
@@ -221,11 +221,11 @@ void Page::restore() {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
       if (!ptr->check()) {
-        logger_info("Page: broken chunk " << ptr->header->id << ". remove");
+        logger_info("Page: remove broken chunk #" << ptr->header->id);
         ptr->header->is_init = false;
-      }
-      _index->iheader->is_sorted = false;
-      _index->index[pos].is_init = false;
+		_index->iheader->is_sorted = false;
+		_index->index[pos].is_init = false;
+	  }      
     }
     ++pos;
     byte_it += step;
