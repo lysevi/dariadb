@@ -18,6 +18,7 @@ for future updates.
 #include "../utils/fs.h"
 #include "../utils/kmerge.h"
 #include "../utils/utils.h"
+#include "../timeutil.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <algorithm>
@@ -259,16 +260,19 @@ public:
   }
 
   void restore() {
+    using dariadb::timeutil::to_string;
+
     logger_info(LOG_MSG_PREFIX << "restore after crash");
     Meas::MeasList readed;
     size_t dropped = 0;
-
+	
     for (size_t i = 0; i < _header->levels_count; ++i) {
       auto current = &_levels[i];
       if (!current->check_checksum()) {
-        logger_fatal(LOG_MSG_PREFIX << "level #" << i
-                                    << " (cap: " << current->hdr->count
-                                    << " size: " << current->hdr->pos << ")"
+        logger_fatal(LOG_MSG_PREFIX << "level #" << i << " (cap: " << current->hdr->count
+                                    << " size: " << current->hdr->pos << " time: ["
+                                    << to_string(current->hdr->_minTime) << " : "
+                                    << to_string(current->hdr->_maxTime) << "])"
                                     << " checksum error.");
         dropped += current->hdr->pos;
         _levels[i].clear();

@@ -1,5 +1,6 @@
 #include "page.h"
 #include "bloom_filter.h"
+#include "../timeutil.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -204,6 +205,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 }
 
 void Page::restore() {
+  using dariadb::timeutil::to_string;
   logger_info("Page: restore after crash " << this->filename);
 
   auto step = this->header->chunk_size + sizeof(ChunkHeader);
@@ -221,7 +223,9 @@ void Page::restore() {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
       if (!ptr->check_checksum()) {
-        logger_fatal("Page: remove broken chunk #" << ptr->header->id);
+        logger_fatal("Page: remove broken chunk #"
+                     << ptr->header->id << " time: [" << to_string(ptr->header->minTime)
+                     << " : " << to_string(ptr->header->maxTime) << "]");
         ptr->header->is_init = false;
 		_index->iheader->is_sorted = false;
 		_index->index[pos].is_init = false;

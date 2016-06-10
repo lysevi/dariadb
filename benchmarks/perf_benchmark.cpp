@@ -132,6 +132,7 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
+	std::cout << " start time: "<<dariadb::timeutil::to_string(start_time) << std::endl;
     dariadb::storage::Capacitor::Params cap_param(cap_B, storage_path);
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(
