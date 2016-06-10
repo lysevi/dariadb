@@ -433,9 +433,10 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
         assert(false);
       }
       Chunk_Ptr c{ptr};
-      if (!c->check_checksum()) {
+      if (c->header->is_readonly && !c->check_checksum()) {
         logger("page: " << this->filename << ": "
                         << "wrong chunk checksum. chunkId=" << c->header->id);
+		continue;
       }
       // TODO replace by some check;
       // assert(c->info->last.time != 0);
