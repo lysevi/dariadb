@@ -66,7 +66,7 @@ bool Chunk::check_flag(const Flag &f) {
 
 bool Chunk::check_checksum() {
 	auto exists = get_checksum();
-	return  exists != 0 && exists == calc_checksum();
+    return exists == calc_checksum();
 }
 
 
