@@ -243,6 +243,9 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
   if (_openned_chunk.ch != nullptr && !_openned_chunk.ch->is_full()) {
     if (_openned_chunk.ch->header->last.id != m.id) {
+      flush_current_chunk();
+      _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
+                                _openned_chunk.pos);
       _openned_chunk.ch->close();
     } else {
       if (_openned_chunk.ch->append(m)) {
