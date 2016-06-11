@@ -1,6 +1,6 @@
 #include "chunk.h"
-#include "bloom_filter.h"
 #include "../utils/crc.h"
+#include "bloom_filter.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -18,7 +18,8 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) : _locker{} {
   _buffer_t = buffer;
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m) : _locker() {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m)
+    : _locker() {
   should_free = false;
   hdr->is_init = true;
   _buffer_t = buffer;
@@ -65,12 +66,12 @@ bool Chunk::check_flag(const Flag &f) {
 }
 
 bool Chunk::check_checksum() {
-	auto exists = get_checksum();
-    return exists == calc_checksum();
+  auto exists = get_checksum();
+  return exists == calc_checksum();
 }
 
-
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
+ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size,
+                         Meas first_m)
     : Chunk(index, buffer, _size, first_m) {
   header->is_zipped = true;
   using compression::BinaryBuffer;
@@ -88,7 +89,8 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
   header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, first_m.id);
 }
 
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
+ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer)
+    : Chunk(index, buffer) {
   assert(index->is_zipped);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
@@ -113,9 +115,7 @@ uint32_t ZippedChunk::calc_checksum() {
   return utils::crc32(this->_buffer_t, this->header->size);
 }
 
-uint32_t dariadb::storage::ZippedChunk::get_checksum(){
-	return header->crc;
-}
+uint32_t dariadb::storage::ZippedChunk::get_checksum() { return header->crc; }
 
 bool ZippedChunk::append(const Meas &m) {
   if (!header->is_init || header->is_readonly) {
@@ -142,7 +142,8 @@ bool ZippedChunk::append(const Meas &m) {
     header->maxTime = std::max(header->maxTime, m.time);
     header->minId = std::min(header->minId, m.id);
     header->maxId = std::max(header->maxId, m.id);
-    header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, m.flag);
+    header->flag_bloom =
+        dariadb::storage::bloom_add(header->flag_bloom, m.flag);
     header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, m.id);
     header->last = m;
 
@@ -204,7 +205,8 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
     Meas::MeasList res_set;
     auto cp_bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
     cp_bw->reset_pos();
-    auto c_reader = std::make_shared<CopmressedReader>(cp_bw, this->header->first);
+    auto c_reader =
+        std::make_shared<CopmressedReader>(cp_bw, this->header->first);
     res_set.push_back(header->first);
     for (size_t i = 0; i < header->count; ++i) {
       res_set.push_back(c_reader->read());
@@ -219,116 +221,3 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
     return result;
   }
 }
-
-// CrossedChunk::CrossedChunk(ChunksList &clist) : Chunk(nullptr, nullptr), _chunks(clist)
-// {}
-
-// CrossedChunk::~CrossedChunk() {}
-
-// Chunk::Reader_Ptr CrossedChunk::get_reader() {
-//  Meas::MeasList res_set;
-//  for (auto c : _chunks) {
-//    auto cp_bw = std::make_shared<BinaryBuffer>(c->bw->get_range());
-//    cp_bw->reset_pos();
-//    auto c_reader = std::make_shared<CopmressedReader>(cp_bw, c->header->first);
-//    res_set.push_back(c->header->first);
-//    for (size_t i = 0; i < c->header->count; ++i) {
-//      res_set.push_back(c_reader->read());
-//    }
-//  }
-//  auto raw_res = new SortedReader;
-//  raw_res->values = dariadb::Meas::MeasArray{res_set.begin(), res_set.end()};
-//  std::sort(raw_res->values.begin(), raw_res->values.end(),
-//            dariadb::meas_time_compare_less());
-//  raw_res->_iter = raw_res->values.begin();
-//  Chunk::Reader_Ptr result{raw_res};
-//  return result;
-//}
-
-// bool CrossedChunk::check_id(const Id &id) {
-//  for (auto c : _chunks) {
-//    if (c->check_id(id)) {
-//      return true;
-//    }
-//  }
-//  return false;
-//}
-
-// ChunkCache::ChunkCache(size_t size) : _chunks(size) {
-//  _size = size;
-//}
-
-// void ChunkCache::start(size_t size) {
-//  ChunkCache::_instance = std::unique_ptr<ChunkCache>{new ChunkCache(size)};
-//}
-
-// void ChunkCache::stop() {}
-
-// ChunkCache *ChunkCache::instance() {
-//  return _instance.get();
-//}
-
-// void ChunkCache::append(const Chunk_Ptr &chptr) {
-//  std::lock_guard<std::mutex> lg(_locker);
-//  Chunk_Ptr dropped;
-//  _chunks.put(chptr->header->id, chptr, &dropped);
-//}
-
-// bool ChunkCache::find(const uint64_t id, Chunk_Ptr &chptr) const {
-//  std::lock_guard<std::mutex> lg(_locker);
-//  return this->_chunks.find(id, &chptr);
-//}
-
-// namespace dariadb {
-// namespace storage {
-// using namespace dariadb::utils;
-
-// ChunksList chunk_intercross(const ChunksList &chunks) {
-//  ChunksList result;
-//  std::set<uint64_t> in_cross;
-//  std::vector<Chunk_Ptr> ch_vector{chunks.begin(), chunks.end()};
-//  std::sort(ch_vector.begin(), ch_vector.end(), [](Chunk_Ptr &l, Chunk_Ptr &r) {
-//    return l->header->minTime < r->header->minTime;
-//  });
-//  for (auto it = ch_vector.begin(); it != ch_vector.end(); ++it) {
-//    auto c = *it;
-//    if (in_cross.find(c->header->id) != in_cross.end()) {
-//      continue;
-//    }
-//    dariadb::storage::ChunksList cross;
-//    bool cur_intercross = false;
-//    for (auto other_it = it; other_it != ch_vector.end(); ++other_it) {
-//      auto other = *other_it;
-//      if (other->header->id == c->header->id) {
-//        continue;
-//      }
-//      if (in_cross.find(other->header->id) != in_cross.end()) {
-//        continue;
-//      }
-
-//      auto id_cross =
-//          (inInterval(c->header->minId, c->header->maxId, other->header->minId) ||
-//           inInterval(c->header->minId, c->header->maxId, other->header->maxId));
-//      auto in_time_interval =
-//          inInterval(c->header->minTime, c->header->maxTime, other->header->minTime);
-//      auto bloom_eq = c->header->id_bloom == other->header->id_bloom;
-//      auto time_cross =
-//          inInterval(c->header->minTime, c->header->maxTime, other->header->minTime);
-//      if (id_cross && in_time_interval && time_cross && bloom_eq) {
-//        cur_intercross = true;
-//        cross.push_back(other);
-//        in_cross.insert(other->header->id);
-//      }
-//    }
-//    if (cur_intercross) {
-//      cross.push_front(c);
-//      dariadb::storage::Chunk_Ptr ch{new dariadb::storage::CrossedChunk(cross)};
-//      result.push_back(ch);
-//    } else {
-//      result.push_back(c);
-//    }
-//  }
-//  return result;
-//}
-//}
-//}

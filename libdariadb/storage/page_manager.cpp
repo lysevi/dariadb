@@ -377,20 +377,7 @@ void PageManager::flush() {
 PageManager *PageManager::instance() {
   return _instance;
 }
-// PM
-// bool PageManager::append(const Chunk_Ptr &c) {
-//  return impl->append(c);
-//}
-//
-// bool PageManager::append(const ChunksList &c) {
-//  return impl->append(c);
-//}
 
-// Cursor_ptr PageManager::get_chunks(const dariadb::IdArray&ids, dariadb::Time
-// from, dariadb::Time to, dariadb::Flag flag) {
-//    return impl->get_chunks(ids, from, to, flag);
-//}
-// ChunkContainer
 bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                              dariadb::Time *maxResult) {
   return impl->minMaxTime(id, minResult, maxResult);

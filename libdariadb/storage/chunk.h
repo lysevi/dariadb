@@ -20,7 +20,6 @@ struct ChunkHeader {
   bool is_zipped : 1;
   bool is_sorted : 1;
   bool is_readonly : 1;
-  // bool is_past_write:1; //if true- have data with time from past.
   Meas first, last;
   Time minTime, maxTime;
   Id minId, maxId;
@@ -30,7 +29,8 @@ struct ChunkHeader {
   uint32_t bw_pos;
   uint8_t bw_bit_num;
 
-  compression::CopmressedWriter::Position writer_position; // TODO move from this.
+  compression::CopmressedWriter::Position
+      writer_position; // TODO move from this.
 
   size_t size;
   uint32_t crc;
@@ -92,42 +92,10 @@ public:
   void close() override;
 
   uint32_t calc_checksum() override;
-  uint32_t get_checksum()override;
+  uint32_t get_checksum() override;
   Reader_Ptr get_reader() override;
   utils::Range range;
   compression::CopmressedWriter c_writer;
 };
-
-// class CrossedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
-// public:
-//  CrossedChunk(ChunksList &clist);
-//  ~CrossedChunk();
-//  void close() override { NOT_IMPLEMENTED; }
-//  bool is_full() const override { return true; }
-//  bool append(const Meas &) override { NOT_IMPLEMENTED; }
-
-//  bool check_id(const Id &id) override;
-//  Reader_Ptr get_reader() override;
-//  ChunksList _chunks;
-//};
-
-// ChunksList chunk_intercross(const ChunksList &chunks);
-
-// class ChunkCache {
-//  ChunkCache(size_t size);
-
-// public:
-//  static void start(size_t size);
-//  static void stop();
-//  static ChunkCache *instance();
-//  void append(const Chunk_Ptr &chptr);
-//  bool find(const uint64_t id, Chunk_Ptr &chptr) const;
-
-// protected:
-//  static std::unique_ptr<ChunkCache> _instance;
-//  mutable std::mutex _locker;
-//  size_t _size;
-//  mutable utils::LRU<uint64_t, Chunk_Ptr> _chunks;
-//};
 }
 }
