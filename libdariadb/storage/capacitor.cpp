@@ -409,8 +409,6 @@ public:
       return;
     }
 
-    // std::map<Id, std::set<Meas, meas_time_compare_less>> id2meas;
-
     for (size_t i = 0; i < target->size(); ++i) {
       if (target->at(i).drop_end) {
         continue;
@@ -425,16 +423,9 @@ public:
           target->at(j).drop_end = 1;
         }
       }
-      // id2meas[target->at(i).value.id].insert(target->at(i).value);
     }
-    /*for (auto &id2set : id2meas) {
-            for (auto &m : id2set.second) {
-                    _stor->append(m);
-            }
-    }*/
 
     target->clear();
-    //    flush_header();
   }
 
   void flush_header() { mmap->flush(0, sizeof(Header)); }
