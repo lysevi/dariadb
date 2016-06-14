@@ -24,8 +24,8 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
   return chunk_per_storage * sizeof(IndexReccord) + sizeof(IndexHeader);
 }
 
-Page *Page::create(std::string file_name, uint64_t sz,
-                   uint32_t chunk_per_storage, uint32_t chunk_size) {
+Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage,
+                   uint32_t chunk_size) {
   auto res = new Page;
   res->readonly = false;
   auto mmap = utils::fs::MappedFile::touch(file_name, sz);
@@ -34,9 +34,9 @@ Page *Page::create(std::string file_name, uint64_t sz,
   std::fill(region, region + sz, 0);
 
   res->page_mmap = mmap;
-  res->_index = PageIndex::create(
-      PageIndex::index_name_from_page_name(file_name),
-      index_file_size(chunk_per_storage), chunk_per_storage, chunk_size);
+  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+                                  index_file_size(chunk_per_storage), chunk_per_storage,
+                                  chunk_size);
   res->region = region;
 
   res->header = reinterpret_cast<PageHeader *>(region);
@@ -63,8 +63,8 @@ Page *Page::open(std::string file_name, bool read_only) {
   auto region = mmap->data();
 
   res->page_mmap = mmap;
-  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name),
-                                read_only);
+  res->_index =
+      PageIndex::open(PageIndex::index_name_from_page_name(file_name), read_only);
 
   res->region = region;
   res->header = reinterpret_cast<PageHeader *>(region);
@@ -140,9 +140,7 @@ void Page::restore() {
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
       if (!ptr->check_checksum()) {
         logger_fatal("Page: remove broken chunk #"
-                     << ptr->header->id
-                     << " id:"<<ptr->header->first.id
-                     << " time: ["
+                     << ptr->header->id << " id:" << ptr->header->first.id << " time: ["
                      << to_string(ptr->header->minTime) << " : "
                      << to_string(ptr->header->maxTime) << "]");
         ptr->header->is_init = false;
@@ -193,8 +191,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       auto ptr_to_begin = byte_it;
       auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
       Chunk_Ptr ptr = nullptr;
-      ptr = Chunk_Ptr{
-          new ZippedChunk(info, ptr_to_buffer, header->chunk_size, m)};
+      ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer, header->chunk_size, m)};
 
       this->header->max_chunk_id++;
       ptr->header->id = this->header->max_chunk_id;
@@ -234,18 +231,15 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   header->pos += header->chunk_size + sizeof(ChunkHeader);
   header->addeded_chunks++;
 
-  _index->iheader->minTime =
-      std::min(_index->iheader->minTime, ch->header->minTime);
-  _index->iheader->maxTime =
-      std::max(_index->iheader->maxTime, ch->header->maxTime);
+  _index->iheader->minTime = std::min(_index->iheader->minTime, ch->header->minTime);
+  _index->iheader->maxTime = std::max(_index->iheader->maxTime, ch->header->maxTime);
   _index->iheader->id_bloom =
       storage::bloom_add(_index->iheader->id_bloom, ch->header->first.id);
   _index->iheader->count++;
 
   cur_index->minTime = ch->header->minTime;
   cur_index->maxTime = cur_index->maxTime;
-  cur_index->id_bloom =
-      storage::bloom_add(cur_index->id_bloom, ch->header->first.id);
+  cur_index->id_bloom = storage::bloom_add(cur_index->id_bloom, ch->header->first.id);
 
   auto kv = std::make_pair(cur_index->maxTime, pos_index);
   _index->_itree.insert(kv);
@@ -264,20 +258,18 @@ void Page::dec_reader() {
   header->count_readers--;
 }
 
-bool dariadb::storage::Page::minMaxTime(dariadb::Id, dariadb::Time *,
-                                        dariadb::Time *) {
+bool dariadb::storage::Page::minMaxTime(dariadb::Id, dariadb::Time *, dariadb::Time *) {
   return false;
 }
 
-ChunkLinkList
-dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
+ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
   return _index->get_chunks_links(query.ids, query.from, query.to, query.flag);
 }
 
 dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   dariadb::Meas::Id2Meas result;
-  auto raw_links = _index->get_chunks_links(q.ids, _index->iheader->minTime,
-                                            q.time_point, q.flag);
+  auto raw_links =
+      _index->get_chunks_links(q.ids, _index->iheader->minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }
@@ -294,8 +286,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
     Chunk_Ptr ptr = nullptr;
     if (ptr_to_chunk_info_raw->is_zipped) {
-      ptr =
-          Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
+      ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
       // TODO implement not zipped page.
       assert(false);
@@ -333,8 +324,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     // if (!ChunkCache::instance()->find(_index_it.chunk_id, search_res))
     {
       auto ptr_to_begin = this->chunks + _index_it.offset;
-      auto ptr_to_chunk_info_raw =
-          reinterpret_cast<ChunkHeader *>(ptr_to_begin);
+      auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
       auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
       if (!ptr_to_chunk_info_raw->is_init) {
         logger_info("Try to read not_init chunk (" << ptr_to_chunk_info_raw->id
@@ -344,8 +334,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
 
       Chunk_Ptr ptr = nullptr;
       if (ptr_to_chunk_info_raw->is_zipped) {
-        ptr = Chunk_Ptr{
-            new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
+        ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
         // ptr->should_free = true;
       } else {
         // TODO implement not zipped page.

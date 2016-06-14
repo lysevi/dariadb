@@ -29,8 +29,7 @@ struct ChunkHeader {
   uint32_t bw_pos;
   uint8_t bw_bit_num;
 
-  compression::CopmressedWriter::Position
-      writer_position; // TODO move from this.
+  compression::CopmressedWriter::Position writer_position; // TODO move from this.
 
   size_t size;
   uint32_t crc;

@@ -18,8 +18,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) : _locker{} {
   _buffer_t = buffer;
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m)
-    : _locker() {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m) : _locker() {
   should_free = false;
   hdr->is_init = true;
   _buffer_t = buffer;
@@ -70,8 +69,7 @@ bool Chunk::check_checksum() {
   return exists == calc_checksum();
 }
 
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size,
-                         Meas first_m)
+ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
     : Chunk(index, buffer, _size, first_m) {
   header->is_zipped = true;
   using compression::BinaryBuffer;
@@ -89,8 +87,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size,
   header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, first_m.id);
 }
 
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer)
-    : Chunk(index, buffer) {
+ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
   assert(index->is_zipped);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
@@ -115,7 +112,9 @@ uint32_t ZippedChunk::calc_checksum() {
   return utils::crc32(this->_buffer_t, this->header->size);
 }
 
-uint32_t dariadb::storage::ZippedChunk::get_checksum() { return header->crc; }
+uint32_t dariadb::storage::ZippedChunk::get_checksum() {
+  return header->crc;
+}
 
 bool ZippedChunk::append(const Meas &m) {
   if (!header->is_init || header->is_readonly) {
@@ -142,8 +141,7 @@ bool ZippedChunk::append(const Meas &m) {
     header->maxTime = std::max(header->maxTime, m.time);
     header->minId = std::min(header->minId, m.id);
     header->maxId = std::max(header->maxId, m.id);
-    header->flag_bloom =
-        dariadb::storage::bloom_add(header->flag_bloom, m.flag);
+    header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, m.flag);
     header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, m.id);
     header->last = m;
 
@@ -205,8 +203,7 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
     Meas::MeasList res_set;
     auto cp_bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
     cp_bw->reset_pos();
-    auto c_reader =
-        std::make_shared<CopmressedReader>(cp_bw, this->header->first);
+    auto c_reader = std::make_shared<CopmressedReader>(cp_bw, this->header->first);
     res_set.push_back(header->first);
     for (size_t i = 0; i < header->count; ++i) {
       res_set.push_back(c_reader->read());

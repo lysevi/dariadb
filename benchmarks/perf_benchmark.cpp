@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
-	std::cout << " start time: "<<dariadb::timeutil::to_string(start_time) << std::endl;
+    std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
     dariadb::storage::Capacitor::Params cap_param(cap_B, storage_path);
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(
@@ -203,8 +203,8 @@ int main(int argc, char *argv[]) {
     {
       std::cout << "read all..." << std::endl;
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
-      auto max_time=ms->maxTime();
-      std::cout << " end time: "<<dariadb::timeutil::to_string(max_time) << std::endl;
+      auto max_time = ms->maxTime();
+      std::cout << " end time: " << dariadb::timeutil::to_string(max_time) << std::endl;
 
       auto start = clock();
 

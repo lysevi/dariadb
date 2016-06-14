@@ -168,8 +168,8 @@ public:
   Private(const PageManager::Params &page_storage_params,
           dariadb::storage::Capacitor::Params cap_params,
           dariadb::storage::Engine::Limits limits)
-      : _page_manager_params(page_storage_params),
-        _cap_params(cap_params), _limits(limits) {
+      : _page_manager_params(page_storage_params), _cap_params(cap_params),
+        _limits(limits) {
     _subscribe_notify.start();
 
     PageManager::start(_page_manager_params);
@@ -282,11 +282,11 @@ public:
             chunks_for_id.push_back(c);
           }
         }
-        Meas::MeasList subRes;
+        
         std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-        callback->out = &subRes;
+        callback->out =&(page_rdr->_values);
         PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
-        page_rdr->_values = subRes;
+        
       } else {
 
         if (minT <= q.from && maxT >= q.to) {
@@ -299,11 +299,11 @@ public:
               chunks_for_id.push_back(c);
             }
           }
-          Meas::MeasList subRes;
+          
           std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-          callback->out = &subRes;
+          callback->out = &(page_rdr->_values);
           PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
-          page_rdr->_values = std::move(subRes);
+          
           local_q.from = minT;
           local_q.to = q.to;
 
