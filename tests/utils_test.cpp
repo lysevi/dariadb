@@ -12,6 +12,14 @@
 #include <utils/period_worker.h>
 #include <utils/skiplist.h>
 #include <utils/utils.h>
+#include <timeutil.h>
+
+BOOST_AUTO_TEST_CASE(Time) {
+	auto ct=dariadb::timeutil::current_time();
+	BOOST_CHECK(ct != dariadb::Time(0));
+	auto ct_str = dariadb::timeutil::to_string(ct);
+	BOOST_CHECK(ct_str.size() != 0);
+}
 
 BOOST_AUTO_TEST_CASE(CRC32Test) {
   uint64_t data;
