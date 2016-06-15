@@ -8,9 +8,8 @@
 namespace dariadb {
 namespace storage {
 
-const std::string CAP_FILE_EXT = ".aof"; // append-only-file
+const std::string CAP_FILE_EXT = ".cap"; // append-only-file
 const size_t CAP_DEFAULT_MAX_LEVELS = 10;
-const size_t CAP_DEFAULT_FLUSH_PERIOD = 1000;
 
 class Capacitor : public MeasStorage {
 public:
@@ -18,12 +17,10 @@ public:
     size_t B; // measurements count in one datra block
     std::string path;
     size_t max_levels;
-    size_t flush_period;
     Params(const size_t _B, const std::string _path) {
       B = _B;
       path = _path;
       max_levels = CAP_DEFAULT_MAX_LEVELS;
-      flush_period = CAP_DEFAULT_FLUSH_PERIOD;
     }
   };
   virtual ~Capacitor();

@@ -9,6 +9,7 @@
 #include "test_common.h"
 #include <math/statistic.h>
 #include <storage/capacitor.h>
+#include <storage/capacitor_manager.h>
 #include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
@@ -562,4 +563,15 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+}
+
+BOOST_AUTO_TEST_CASE(CapManager_Instance) {
+	const std::string storagePath = "testStorage";
+	const size_t max_size = 10;
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+	dariadb::storage::CapacitorManager::start(dariadb::storage::CapacitorManager::Params(storagePath, max_size));
+	BOOST_CHECK(dariadb::storage::CapacitorManager::instance() != nullptr);
+	dariadb::storage::CapacitorManager::stop();
 }
