@@ -24,6 +24,7 @@ void CapacitorManager::start(const Params & param){
 
 void CapacitorManager::stop(){
 	delete CapacitorManager::_instance;
+	CapacitorManager::_instance = nullptr;
 }
 
 CapacitorManager * dariadb::storage::CapacitorManager::instance(){
