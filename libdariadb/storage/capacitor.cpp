@@ -318,7 +318,8 @@ public:
   }
 
   append_result append_to_levels(const Meas &value) {
-    size_t outlvl = merge_levels();
+    /*size_t outlvl = */
+	merge_levels();
 	if (this->_header->is_full) {
 		return append_result(0, 1);
 	}
