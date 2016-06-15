@@ -15,27 +15,13 @@ using namespace dariadb::storage;
 
 class UnionReader : public Reader {
 public:
-  UnionReader() { cap_reader = page_reader = nullptr; }
+  UnionReader(dariadb::Flag flag, dariadb::Time from, dariadb::Time to) 
+	  : _flag(flag), _from(from), _to(to) { }
   // Inherited via Reader
   bool isEnd() const override { return local_res.empty() || res_it == local_res.end(); }
 
   IdArray getIds() const override {
-    dariadb::IdSet idset;
-    if (page_reader != nullptr) {
-      auto sub_res = page_reader->getIds();
-      for (auto id : sub_res) {
-        idset.insert(id);
-      }
-    }
-    {
-      if (cap_reader != nullptr) {
-        auto sub_res = cap_reader->getIds();
-        for (auto id : sub_res) {
-          idset.insert(id);
-        }
-      }
-    }
-    return dariadb::IdArray{idset.begin(), idset.end()};
+	  return _ids;
   }
 
   void readNext(ReaderClb *clb) override {
@@ -47,46 +33,32 @@ public:
   }
 
   Reader_ptr clone() const override {
-    UnionReader *raw_res = new UnionReader();
-    if (this->page_reader != nullptr) {
-      raw_res->page_reader = this->page_reader->clone();
-    }
-    if (this->cap_reader != nullptr) {
-      raw_res->cap_reader = this->cap_reader->clone();
-    }
+    UnionReader *raw_res = new UnionReader(_flag,_from,_to);
+	raw_res->_ids = this->_ids;
+    raw_res->page_result = this->page_result;
+    raw_res->cap_result = this->cap_result;
     return Reader_ptr(raw_res);
   }
 
   void reset() override {
     local_res.clear();
     // TOOD opt. use Reader::size for alloc.
-    dariadb::Meas::MeasList tmp_p;
-    if (page_reader != nullptr) {
-      page_reader->reset();
-      page_reader->readAll(&tmp_p);
-    }
-    dariadb::Meas::MeasList tmp_c;
-    if (cap_reader != nullptr) {
-      cap_reader->reset();
-      cap_reader->readAll(&tmp_c);
-    }
-
     bool need_sort = false;
-    if (!tmp_p.empty() && !tmp_c.empty()) {
-      if ((tmp_p.front().time < tmp_c.front().time) &&
-          (tmp_p.back().time < tmp_c.front().time)) {
+    if (!page_result.empty() && !cap_result.empty()) {
+      if ((page_result.front().time < cap_result.front().time) &&
+          (page_result.back().time < cap_result.front().time)) {
         need_sort = false;
       } else {
         need_sort = true;
       }
     }
     if (need_sort) {
-      std::vector<Meas> for_srt(tmp_p.size() + tmp_c.size());
+      std::vector<Meas> for_srt(page_result.size() + cap_result.size());
       size_t pos = 0;
-      for (auto v : tmp_p) {
+      for (auto v : page_result) {
         for_srt[pos++] = v;
       }
-      for (auto v : tmp_c) {
+      for (auto v : cap_result) {
         for_srt[pos++] = v;
       }
 
@@ -94,8 +66,8 @@ public:
                 [](Meas l, Meas r) { return l.time < r.time; });
       local_res = dariadb::Meas::MeasList(for_srt.begin(), for_srt.end());
     } else {
-      std::copy(std::begin(tmp_p), std::end(tmp_p), std::back_inserter(local_res));
-      std::copy(std::begin(tmp_c), std::end(tmp_c), std::back_inserter(local_res));
+      std::copy(std::begin(page_result), std::end(page_result), std::back_inserter(local_res));
+      std::copy(std::begin(cap_result), std::end(cap_result), std::back_inserter(local_res));
     }
 
     res_it = local_res.begin();
@@ -103,8 +75,13 @@ public:
   size_t size() { return local_res.size(); }
   dariadb::Meas::MeasList local_res;
   dariadb::Meas::MeasList::const_iterator res_it;
-  Reader_ptr page_reader;
-  Reader_ptr cap_reader;
+  dariadb::Meas::MeasList page_result;
+  dariadb::Meas::MeasList cap_result;
+
+  dariadb::Flag _flag;
+  dariadb::Time _from;
+  dariadb::Time _to;
+  dariadb::IdArray _ids;
 };
 
 class UnionReaderSet : public Reader {
@@ -267,8 +244,9 @@ public:
     for (auto id : q.ids) {
 
       InnerReader *page_rdr = new InnerReader(q.flag, q.from, q.to);
-      UnionReader *raw_res = new UnionReader();
-      raw_res->page_reader = Reader_ptr{page_rdr};
+      UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
+	  raw_res->_ids.resize(1);
+	  raw_res->_ids[0]=id;
       page_rdr->_ids.push_back(id);
 
       dariadb::Time minT, maxT;
@@ -284,14 +262,15 @@ public:
         }
         
         std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-        callback->out =&(page_rdr->_values);
+        callback->out =&(raw_res->page_result);
         PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
         
       } else {
 
         if (minT <= q.from && maxT >= q.to) {
           auto mc_reader = mem_cap->readInterval(local_q);
-          raw_res->cap_reader = Reader_ptr{mc_reader};
+		  mc_reader->readAll(&raw_res->cap_result);
+		  
         } else {
           ChunkLinkList chunks_for_id;
           for (auto &c : all_chunkLinks) {
@@ -301,14 +280,14 @@ public:
           }
           
           std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-          callback->out = &(page_rdr->_values);
+		  callback->out = &(raw_res->page_result);
           PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
           
           local_q.from = minT;
           local_q.to = q.to;
 
           auto mc_reader = mem_cap->readInterval(local_q);
-          raw_res->cap_reader = Reader_ptr{mc_reader};
+		  mc_reader->readAll(&raw_res->cap_result);
         }
       }
       raw_result->add_rdr(Reader_ptr{raw_res});
