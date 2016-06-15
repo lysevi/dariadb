@@ -39,6 +39,7 @@ public:
 #pragma pack(pop)
   virtual ~Capacitor();
   Capacitor(const Params &param);
+  Capacitor(const Capacitor::Params &params, const std::string &fname);
   static Header readHeader(std::string file_name);
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(const QueryInterval &q) override;

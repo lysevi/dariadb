@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     p.max_levels = 12;
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(p);
+    dariadb::storage::Capacitor cap(p, dariadb::storage::Manifest::instance()->cola_list().front());
 
     cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));

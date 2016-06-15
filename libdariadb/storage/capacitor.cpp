@@ -123,7 +123,14 @@ public:
       : _params(params), mmap(nullptr), _size(0) {
     _maxTime = dariadb::MIN_TIME;
     _minTime = dariadb::MAX_TIME;
-    open_or_create();
+    create();
+  }
+
+  Private(const Capacitor::Params &params, const std::string &fname)
+	  : _params(params), mmap(nullptr), _size(0) {
+	  _maxTime = dariadb::MIN_TIME;
+	  _minTime = dariadb::MAX_TIME;
+	  open(fname);
   }
 
   ~Private() {
@@ -697,6 +704,10 @@ Capacitor::~Capacitor() {}
 
 Capacitor::Capacitor(const Params &params)
     : _Impl(new Capacitor::Private(params)) {}
+
+Capacitor::Capacitor(const Capacitor::Params &params, const std::string &fname)
+	: _Impl(new Capacitor::Private(params, fname)) {
+}
 
 Capacitor::Header Capacitor::readHeader(std::string file_name) {
 	std::ifstream istream;
