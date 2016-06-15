@@ -37,11 +37,11 @@ public:
 	raw_res->_ids = this->_ids;
     raw_res->page_result = this->page_result;
     raw_res->cap_result = this->cap_result;
+	raw_res->local_res = this->local_res;
     return Reader_ptr(raw_res);
   }
 
   void reset() override {
-    local_res.clear();
     // TOOD opt. use Reader::size for alloc.
     bool need_sort = false;
     if (!page_result.empty() && !cap_result.empty()) {
@@ -69,10 +69,14 @@ public:
       std::copy(std::begin(page_result), std::end(page_result), std::back_inserter(local_res));
       std::copy(std::begin(cap_result), std::end(cap_result), std::back_inserter(local_res));
     }
+	page_result.clear();
+	cap_result.clear();
 
     res_it = local_res.begin();
   }
+  
   size_t size() { return local_res.size(); }
+
   dariadb::Meas::MeasList local_res;
   dariadb::Meas::MeasList::const_iterator res_it;
   dariadb::Meas::MeasList page_result;
