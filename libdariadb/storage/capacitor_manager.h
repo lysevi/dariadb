@@ -46,7 +46,8 @@ namespace dariadb {
 			virtual append_result append(const Meas & value) override;
 			virtual void flush() override;
 			virtual void subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk) override;
-
+        protected:
+            void create_new();
 		private:
 			static CapacitorManager *_instance;
 

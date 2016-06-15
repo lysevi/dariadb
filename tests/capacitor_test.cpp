@@ -600,14 +600,27 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
 	if (dariadb::utils::fs::path_exists(storagePath)) {
 		dariadb::utils::fs::rm(storagePath);
 	}
+    dariadb::storage::Manifest::start(
+        dariadb::utils::fs::append_path(storagePath, "Manifest"));
+
 	dariadb::storage::CapacitorManager::start(dariadb::storage::CapacitorManager::Params(storagePath, max_size));
-	BOOST_CHECK(dariadb::storage::CapacitorManager::instance() != nullptr);
-	dariadb::storage::CapacitorManager::stop();
+
+    BOOST_CHECK(dariadb::storage::CapacitorManager::instance() != nullptr);
+
+    auto cap_files = dariadb::utils::fs::ls(storagePath, dariadb::storage::CAP_FILE_EXT);
+    BOOST_CHECK_EQUAL(cap_files.size(),size_t(1));
+
+    dariadb::storage::CapacitorManager::stop();
+    dariadb::storage::Manifest::stop();
+
+    if (dariadb::utils::fs::path_exists(storagePath)) {
+      dariadb::utils::fs::rm(storagePath);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
 	const std::string storagePath = "testStorage";
-	const size_t max_size = 10;
+    const size_t max_size = 5;
 	const dariadb::Time from = 0;
 	const dariadb::Time to = from + 1021;
 	const dariadb::Time step = 10;
@@ -615,8 +628,15 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
 	if (dariadb::utils::fs::path_exists(storagePath)) {
 		dariadb::utils::fs::rm(storagePath);
 	}
+    dariadb::storage::Manifest::start(
+        dariadb::utils::fs::append_path(storagePath, "Manifest"));
 	dariadb::storage::CapacitorManager::start(dariadb::storage::CapacitorManager::Params(storagePath, max_size));
 	BOOST_CHECK(dariadb::storage::CapacitorManager::instance() != nullptr);
 	dariadb_test::storage_test_check(dariadb::storage::CapacitorManager::instance(), from, to, step);
-	dariadb::storage::CapacitorManager::stop();
+
+    dariadb::storage::Manifest::stop();
+
+    if (dariadb::utils::fs::path_exists(storagePath)) {
+      dariadb::utils::fs::rm(storagePath);
+    }
 }

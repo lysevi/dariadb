@@ -1,5 +1,7 @@
 #include "capacitor_manager.h"
+#include "manifest.h"
 #include "../utils/exception.h"
+#include "../utils/fs.h"
 #include <cassert>
 
 using namespace dariadb::storage;
@@ -11,6 +13,23 @@ CapacitorManager::~CapacitorManager(){
 }
 
 CapacitorManager::CapacitorManager(const Params & param):_params(param){
+    if (!dariadb::utils::fs::path_exists(_params.path)) {
+      dariadb::utils::fs::mkdir(_params.path);
+    }
+
+    auto files=Manifest::instance()->cola_list();
+    for(auto f:files){
+        auto full_path=utils::fs::append_path(_params.path,f);
+        auto hdr=Capacitor::readHeader(full_path);
+        if(!hdr.is_full){
+             auto p=Capacitor::Params(_params.B,_params.path);
+            _cap=Capacitor_Ptr{new Capacitor(p,full_path)};
+            break;
+        }
+    }
+    if(_cap==nullptr){
+        create_new();
+    }
 }
 
 void CapacitorManager::start(const Params & param){
@@ -29,6 +48,12 @@ void CapacitorManager::stop(){
 
 CapacitorManager * dariadb::storage::CapacitorManager::instance(){
 	return CapacitorManager::_instance;
+}
+
+void CapacitorManager::create_new(){
+    _cap=nullptr;
+     auto p=Capacitor::Params(_params.B,_params.path);
+    _cap=Capacitor_Ptr{new Capacitor(p)};
 }
 
 dariadb::Time CapacitorManager::minTime(){
@@ -57,7 +82,13 @@ Reader_ptr CapacitorManager::currentValue(const IdArray & ids, const Flag & flag
 }
 
 dariadb::append_result CapacitorManager::append(const Meas & value){
-	return append_result();
+    auto res=_cap->append(value);
+    if(res.writed!=1){
+        create_new();
+        return _cap->append(value);
+    }else{
+        return res;
+    }
 }
 
 void CapacitorManager::flush(){
