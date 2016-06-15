@@ -27,8 +27,8 @@ install:
 before_script:
    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} --coverage -O0"  .
 
-#script: 
-#   - make -j2
+script: 
+   - make -j2
 #   - ctest -VV .
 
 #after_success:
