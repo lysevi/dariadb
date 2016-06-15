@@ -24,7 +24,7 @@ public:
     }
   };
   virtual ~Capacitor();
-  Capacitor(MeasWriter *stor, const Params &param);
+  Capacitor(const Params &param);
 
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(const QueryInterval &q) override;
@@ -50,5 +50,7 @@ protected:
 
   // Inherited via MeasStorage
 };
+
+typedef std::shared_ptr<Capacitor> Capacitor_Ptr;
 }
 }

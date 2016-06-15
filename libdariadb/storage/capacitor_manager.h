@@ -3,13 +3,13 @@
 #include "../storage.h"
 #include "../utils/utils.h"
 #include "chunk_container.h"
-
+#include "capacitor.h"
 #include <vector>
 
 namespace dariadb {
 	namespace storage {
 
-		class CapacitorManager : public utils::NonCopy{
+		class CapacitorManager : public utils::NonCopy, public MeasStorage {
 		public:
 			struct Params {
 				std::string path;
@@ -35,10 +35,24 @@ namespace dariadb {
 			static void start(const Params &param);
 			static void stop();
 			static CapacitorManager *instance();
+
+			// Inherited via MeasStorage
+			virtual Time minTime() override;
+			virtual Time maxTime() override;
+			virtual bool minMaxTime(dariadb::Id id, dariadb::Time * minResult, dariadb::Time * maxResult) override;
+			virtual Reader_ptr readInterval(const QueryInterval & q) override;
+			virtual Reader_ptr readInTimePoint(const QueryTimePoint & q) override;
+			virtual Reader_ptr currentValue(const IdArray & ids, const Flag & flag) override;
+			virtual append_result append(const Meas & value) override;
+			virtual void flush() override;
+			virtual void subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk) override;
+
 		private:
 			static CapacitorManager *_instance;
 
 			Params _params;
+			Capacitor_Ptr _cap;
+			
 		};
 	}
 }

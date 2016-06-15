@@ -121,6 +121,7 @@ public:
   struct Header {
     bool is_dropped : 1;
     bool is_closed : 1;
+	bool is_full : 1;
     size_t B;
     size_t size;    // sizeof file in bytes
     size_t _size_B; // how many block (sizeof(B)) addeded.
@@ -129,8 +130,8 @@ public:
     size_t _memvalues_pos;
   };
 #pragma pack(pop)
-  Private(MeasWriter *stor, const Capacitor::Params &params)
-      : _stor(stor), _params(params), mmap(nullptr), _size(0) {
+  Private( const Capacitor::Params &params)
+      : _params(params), mmap(nullptr), _size(0) {
     _maxTime = dariadb::MIN_TIME;
     _minTime = dariadb::MAX_TIME;
     open_or_create();
@@ -322,16 +323,19 @@ public:
 
   append_result append_to_levels(const Meas &value) {
     size_t outlvl = merge_levels();
-    auto merge_target = _levels[outlvl];
-    if (outlvl == (_header->levels_count - 1)) {
-      auto target = &_levels[_header->levels_count - 1];
-      _header->_size_B -= target->size() / _header->B;
-      _header->_writed -= target->size();
+	if (this->_header->is_full) {
+		return append_result(0, 1);
+	}
+    //auto merge_target = _levels[outlvl];
+    //if (outlvl == (_header->levels_count - 1)) {
+    //  //auto target = &_levels[_header->levels_count - 1];
+    //  /*_header->_size_B -= target->size() / _header->B;
+    //  _header->_writed -= target->size();
 
-      merge_target.clear();
-      drop_future = std::async(std::launch::async, &Capacitor::Private::drop_one_level,
-                               this, target);
-    }
+    //  merge_target.clear();
+    //  drop_future = std::async(std::launch::async, &Capacitor::Private::drop_one_level,
+    //                           this, target);*/
+    //}
     return append_to_mem(value);
   }
 
@@ -352,10 +356,16 @@ public:
       return 0;
     }
 
+	auto merge_target = _levels[outlvl];
+
     if (outlvl == (_header->levels_count - 1)) {
-      if (drop_future.valid()) {
+		if (!merge_target.empty()) {
+			this->_header->is_full = true;
+			return outlvl;
+		}
+      /*if (drop_future.valid()) {
         drop_future.wait();
-      }
+      }*/
     }
 
     std::list<level *> to_merge;
@@ -372,7 +382,7 @@ public:
       to_merge.push_back(&_levels[i]);
     }
 
-    auto merge_target = _levels[outlvl];
+   
 
     if (!merge_target.empty()) {
       logger_info(LOG_MSG_PREFIX << "merge target not empty.");
@@ -398,7 +408,7 @@ public:
     // mmap->flush(0, 0);
   }
 
-  std::future<void> drop_future;
+  /*std::future<void> drop_future;
   void drop_one_level(level *target) {
     if (_stor == nullptr) {
       return;
@@ -421,7 +431,7 @@ public:
     }
 
     target->clear();
-  }
+  }*/
 
   void flush_header() { mmap->flush(0, sizeof(Header)); }
 
@@ -613,9 +623,9 @@ public:
 
   void flush() {
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
-    if (drop_future.valid()) {
-      drop_future.wait();
-    }
+    //if (drop_future.valid()) {
+    //  drop_future.wait();
+    //}
     mmap->flush();
   }
 
@@ -680,7 +690,6 @@ public:
   }
 
 protected:
-  MeasWriter *_stor;
   Capacitor::Params _params;
 
   dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
@@ -698,8 +707,8 @@ protected:
 
 Capacitor::~Capacitor() {}
 
-Capacitor::Capacitor(MeasWriter *stor, const Params &params)
-    : _Impl(new Capacitor::Private(stor, params)) {}
+Capacitor::Capacitor(const Params &params)
+    : _Impl(new Capacitor::Private(params)) {}
 
 dariadb::Time Capacitor::minTime() {
   return _Impl->minTime();
@@ -720,14 +729,6 @@ void Capacitor::flush() { // write all to storage;
 append_result dariadb::storage::Capacitor::append(const Meas &value) {
   return _Impl->append(value);
 }
-
-// Reader_ptr dariadb::storage::Capacitor::readInterval(Time from, Time to) {
-//  return _Impl->readInterval(from, to);
-//}
-
-// Reader_ptr dariadb::storage::Capacitor::readInTimePoint(Time time_point) {
-//  return _Impl->readInTimePoint(time_point);
-//}
 
 Reader_ptr dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);

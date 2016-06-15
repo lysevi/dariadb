@@ -1,7 +1,7 @@
 tmp
 packages.config
 .vs
-*.aof
+*.cap
 *.page
 *.pagei
 Manifest

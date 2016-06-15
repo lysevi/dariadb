@@ -155,7 +155,7 @@ public:
 
     PageManager::start(_page_manager_params);
 
-    mem_cap = new Capacitor(PageManager::instance(), _cap_params);
+    //mem_cap = new Capacitor(PageManager::instance(), _cap_params);
     _next_query_id = Id();
   }
   ~Private() {
