@@ -351,9 +351,8 @@ public:
     size_t outlvl = calc_outlevel_num();
 
     if (outlvl >= _header->levels_count) {
-      assert(false);
-      // drop_to_stor();
-      return 0;
+		this->_header->is_full = true;
+		return outlvl;
     }
 
 	auto merge_target = _levels[outlvl];
