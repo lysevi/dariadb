@@ -55,6 +55,9 @@ CapacitorManager * dariadb::storage::CapacitorManager::instance(){
 void CapacitorManager::create_new(){
     _cap=nullptr;
      auto p=Capacitor::Params(_params.B,_params.path);
+     if(_params.max_levels!=0){
+         p.max_levels=_params.max_levels;
+     }
     _cap=Capacitor_Ptr{new Capacitor(p)};
 }
 

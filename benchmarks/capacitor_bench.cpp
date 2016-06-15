@@ -5,7 +5,7 @@
 
 #include "bench_common.h"
 #include <ctime>
-#include <storage/capacitor.h>
+#include <storage/capacitor_manager.h>
 #include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
@@ -36,6 +36,7 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
+              << " caps:"<<dariadb::storage::Manifest::instance()->cola_list().size()
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
@@ -51,7 +52,7 @@ void show_info() {
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-  /*
+
   po::options_description desc("Allowed options");
   bool dont_clean = false;
   desc.add_options()("help", "produce help message")(
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]) {
   }
 
   dariadb::IdSet all_id_set;
-  auto startTime = dariadb::timeutil::current_time();
+  //auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "testStorage";
     const size_t cap_B = 11;
@@ -85,10 +86,11 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    auto *tos = new dariadb::storage::Capacitor(
-        stor.get(), dariadb::storage::Capacitor::Params(cap_B, storage_path));
+    dariadb::storage::CapacitorManager::Params p(storage_path, cap_B);
+    //p.max_levels=14;
+    dariadb::storage::CapacitorManager::start(p);
+    auto tos = dariadb::storage::CapacitorManager::instance();
 
-    dariadb::storage::MeasStorage_ptr meas_stor(tos);
     std::thread info_thread(show_info);
 
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
@@ -109,9 +111,9 @@ int main(int argc, char *argv[]) {
 
     stop_info = true;
     info_thread.join();
-
+/*
     dariadb_bench::readBenchark(all_id_set, meas_stor, 100, startTime,
-                                dariadb::timeutil::current_time());
+                                dariadb::timeutil::current_time());*/
   }
-  */
+
 }
