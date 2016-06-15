@@ -134,7 +134,11 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
   dariadb::Meas::MeasList current_mlist;
   dariadb::IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
-  as->currentValue(_all_ids_array, 0)->readAll(&current_mlist);
+  auto current_vals_rdr=as->currentValue(_all_ids_array, 0);
+  if (current_vals_rdr == nullptr) {
+    throw MAKE_EXCEPTION("current_vals_rdr == nullptr");
+  }
+  current_vals_rdr->readAll(&current_mlist);
   if (current_mlist.size() == 0) {
     throw MAKE_EXCEPTION("current_mlist.size()>0");
   }

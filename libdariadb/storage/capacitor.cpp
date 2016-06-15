@@ -126,19 +126,22 @@ public:
     create();
   }
 
-  Private(const Capacitor::Params &params, const std::string &fname)
+  Private(const Capacitor::Params &params, const std::string &fname, bool readonly)
 	  : _params(params), mmap(nullptr), _size(0) {
 	  _maxTime = dariadb::MIN_TIME;
 	  _minTime = dariadb::MAX_TIME;
+      _is_readonly=readonly;
 	  open(fname);
   }
 
   ~Private() {
-    this->flush();
-    if (mmap != nullptr) {
-      _header->is_closed = true;
-      mmap->close();
-    }
+      this->flush();
+      if(!_is_readonly){
+          if (mmap != nullptr) {
+              _header->is_closed = true;
+              mmap->close();
+          }
+      }
   }
 
   void open_or_create() {
@@ -241,18 +244,19 @@ public:
   }
 
   void open(const std::string &fname) {
-    auto aof_file = fs::append_path(_params.path, fname);
-    mmap = fs::MappedFile::open(aof_file);
+    mmap = fs::MappedFile::open(fname,_is_readonly);
 
     _header = reinterpret_cast<Header *>(mmap->data());
 
     _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
 
     load();
-    if (!_header->is_closed) {
-      restore();
+    if(!_is_readonly){
+        if (!_header->is_closed) {
+            restore();
+        }
+        _header->is_closed = false;
     }
-    _header->is_closed = false;
   }
 
   void restore() {
@@ -299,6 +303,7 @@ public:
   }
 
   append_result append(const Meas &value) {
+      assert(!_is_readonly);
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
     auto result = append_unsafe(value);
@@ -699,6 +704,7 @@ protected:
   mutable boost::shared_mutex _mutex;
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
+  bool _is_readonly;
 };
 
 Capacitor::~Capacitor() {}
@@ -706,8 +712,8 @@ Capacitor::~Capacitor() {}
 Capacitor::Capacitor(const Params &params)
     : _Impl(new Capacitor::Private(params)) {}
 
-Capacitor::Capacitor(const Capacitor::Params &params, const std::string &fname)
-	: _Impl(new Capacitor::Private(params, fname)) {
+Capacitor::Capacitor(const Capacitor::Params &params, const std::string &fname, bool readonly)
+    : _Impl(new Capacitor::Private(params, fname, readonly)) {
 }
 
 Capacitor::Header Capacitor::readHeader(std::string file_name) {

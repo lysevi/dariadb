@@ -6,6 +6,8 @@
 #include "capacitor.h"
 #include <vector>
 
+#include <boost/thread/shared_mutex.hpp>
+
 namespace dariadb {
 	namespace storage {
 
@@ -53,6 +55,7 @@ namespace dariadb {
 
 			Params _params;
 			Capacitor_Ptr _cap;
+            boost::shared_mutex _locker;
 			
 		};
 	}
