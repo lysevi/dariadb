@@ -153,7 +153,12 @@ int main(int argc, char *argv[]) {
 
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
-      all_id_set.insert(pos);
+		auto id_from = dariadb_bench::get_id_from(pos);
+		auto id_to = dariadb_bench::get_id_to(pos);
+		for (size_t j = id_from; j < id_to; j++) {
+			all_id_set.insert(j);
+		}
+		
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
                     dariadb::Time(i), &append_count, raw_ptr};
       writers[pos++] = std::move(t);
@@ -183,7 +188,7 @@ int main(int argc, char *argv[]) {
 
     stop_info = true;
     info_thread.join();
-
+	std::cout << " total id:" << all_id_set.size() << std::endl;
     {
       std::cout << "full flush..." << std::endl;
       auto start = clock();
@@ -217,7 +222,7 @@ int main(int argc, char *argv[]) {
       std::cout << "readed: " << clbk->count << std::endl;
       std::cout << "time: " << elapsed << std::endl;
       auto expected =
-          (dariadb_bench::iteration_count * dariadb_bench::total_threads_count);
+          (dariadb_bench::iteration_count * dariadb_bench::total_threads_count*dariadb_bench::id_per_thread);
       if (!dont_clean && clbk->count != expected) {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
         throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");

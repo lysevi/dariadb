@@ -8,6 +8,7 @@ namespace dariadb_bench {
 const size_t total_threads_count = 5;
 const size_t iteration_count = 3000000;
 const size_t total_readers_count = 1;
+const size_t id_per_thread = 1;
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -16,20 +17,31 @@ public:
   size_t count;
 };
 
+dariadb::Id get_id_from(dariadb::Id id) {
+	return (id + 1)*id_per_thread - id_per_thread;
+}
+
+dariadb::Id get_id_to(dariadb::Id id) {
+	return (id + 1)*id_per_thread;
+}
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             std::atomic_long *append_count,
                             dariadb::storage::MeasWriter *ms) {
   auto m = dariadb::Meas::empty();
   m.time = dariadb::timeutil::current_time();
+  auto id_from = get_id_from(id);
+  auto id_to = get_id_to(id);
   for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
-    m.id = id;
     m.flag = dariadb::Flag(id);
     m.src = dariadb::Flag(id);
     m.time += sleep_time;
     m.value = dariadb::Value(i);
-    if (ms->append(m).writed != 1) {
-      return;
-    }
+	for (size_t j = id_from; j < id_to; j++) {
+		m.id = j;
+		if (ms->append(m).writed != 1) {
+			return;
+		}
+	}
     (*append_count)++;
   }
 }
