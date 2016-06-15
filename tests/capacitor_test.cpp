@@ -146,37 +146,44 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
 }
 
 BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
-  const size_t block_size = 10;
-  auto storage_path = "testStorage";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-  stor->writed_count = 0;
+	const size_t block_size = 10;
+	auto storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+	stor->writed_count = 0;
 
-  auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
-  assert(cap_files.size() == 0);
-  auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
-  p.max_levels = 11;
+	auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+	assert(cap_files.size() == 0);
+	auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
+	p.max_levels = 11;
+	{
+		dariadb::storage::Manifest::start(
+			dariadb::utils::fs::append_path(storage_path, "Manifest"));
+		dariadb::storage::Capacitor cap(p);
 
-  dariadb::storage::Manifest::start(
-      dariadb::utils::fs::append_path(storage_path, "Manifest"));
-  dariadb::storage::Capacitor cap(p);
+		auto e = dariadb::Meas::empty();
 
-  auto e = dariadb::Meas::empty();
-
-  size_t id_count = 10;
-  size_t addeded = 0;
-  for (size_t i = 0;; i++) {
-    e.id = i % id_count;
-    e.time++;
-    e.value = dariadb::Value(i);
-    if (cap.append(e).ignored != 0) {
-      break;
-    }
-    addeded++;
-  }
-  BOOST_CHECK_GT(addeded, size_t(0));
+		size_t id_count = 10;
+		size_t addeded = 0;
+		for (size_t i = 0;; i++) {
+			e.id = i % id_count;
+			e.time++;
+			e.value = dariadb::Value(i);
+			if (cap.append(e).ignored != 0) {
+				break;
+			}
+			addeded++;
+		}
+		BOOST_CHECK_GT(addeded, size_t(0));
+	}
+	auto clist = dariadb::storage::Manifest::instance()->cola_list();
+	BOOST_CHECK_EQUAL(clist.size(), size_t(1));
+	auto hdr = dariadb::storage::Capacitor::readHeader(dariadb::utils::fs::append_path(storage_path, clist.front()));
+	BOOST_CHECK(hdr.is_closed = true);
+	BOOST_CHECK(hdr.is_full = true);
+	dariadb::storage::Manifest::stop();
 }
 //
 //BOOST_AUTO_TEST_CASE(CapacitorDropMeasTest) {

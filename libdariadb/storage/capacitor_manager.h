@@ -9,7 +9,7 @@
 namespace dariadb {
 	namespace storage {
 
-		class CapacitorManager : public utils::NonCopy, public MeasStorage {
+		class CapacitorManager : public MeasStorage {
 		public:
 			struct Params {
 				std::string path;

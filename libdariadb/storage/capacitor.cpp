@@ -30,6 +30,7 @@ for future updates.
 #include <limits>
 #include <list>
 #include <tuple>
+#include <fstream>
 
 const std::string LOG_MSG_PREFIX = "Capacitor: ";
 
@@ -117,19 +118,7 @@ struct level {
 
 class Capacitor::Private {
 public:
-#pragma pack(push, 1)
-  struct Header {
-    bool is_dropped : 1;
-    bool is_closed : 1;
-	bool is_full : 1;
-    size_t B;
-    size_t size;    // sizeof file in bytes
-    size_t _size_B; // how many block (sizeof(B)) addeded.
-    size_t levels_count;
-    size_t _writed;
-    size_t _memvalues_pos;
-  };
-#pragma pack(pop)
+
   Private( const Capacitor::Params &params)
       : _params(params), mmap(nullptr), _size(0) {
     _maxTime = dariadb::MIN_TIME;
@@ -709,6 +698,20 @@ Capacitor::~Capacitor() {}
 Capacitor::Capacitor(const Params &params)
     : _Impl(new Capacitor::Private(params)) {}
 
+Capacitor::Header Capacitor::readHeader(std::string file_name) {
+	std::ifstream istream;
+	istream.open(file_name, std::fstream::in | std::fstream::binary);
+	if (!istream.is_open()) {
+		std::stringstream ss;
+		ss << "can't open file. filename=" << file_name;
+		throw MAKE_EXCEPTION(ss.str());
+	}
+	Capacitor::Header result;
+	memset(&result, 0, sizeof(Capacitor::Header));
+	istream.read((char *)&result, sizeof(Capacitor::Header));
+	istream.close();
+	return result;
+}
 dariadb::Time Capacitor::minTime() {
   return _Impl->minTime();
 }

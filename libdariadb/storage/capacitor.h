@@ -13,6 +13,7 @@ const size_t CAP_DEFAULT_MAX_LEVELS = 10;
 
 class Capacitor : public MeasStorage {
 public:
+
   struct Params {
     size_t B; // measurements count in one datra block
     std::string path;
@@ -23,9 +24,22 @@ public:
       max_levels = CAP_DEFAULT_MAX_LEVELS;
     }
   };
+#pragma pack(push, 1)
+  struct Header {
+	  bool is_dropped : 1;
+	  bool is_closed : 1;
+	  bool is_full : 1;
+	  size_t B;
+	  size_t size;    // sizeof file in bytes
+	  size_t _size_B; // how many block (sizeof(B)) addeded.
+	  size_t levels_count;
+	  size_t _writed;
+	  size_t _memvalues_pos;
+  };
+#pragma pack(pop)
   virtual ~Capacitor();
   Capacitor(const Params &param);
-
+  static Header readHeader(std::string file_name);
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(const QueryInterval &q) override;
   Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
