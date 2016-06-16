@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
   }
 
   dariadb::IdSet all_id_set;
-  //auto startTime = dariadb::timeutil::current_time();
+  auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "testStorage";
     const size_t cap_B = 11;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::CapacitorManager::Params p(storage_path, cap_B);
-    //p.max_levels=14;
+    p.max_levels=14;
     dariadb::storage::CapacitorManager::start(p);
     auto tos = dariadb::storage::CapacitorManager::instance();
 
@@ -111,9 +111,9 @@ int main(int argc, char *argv[]) {
 
     stop_info = true;
     info_thread.join();
-/*
-    dariadb_bench::readBenchark(all_id_set, meas_stor, 100, startTime,
-                                dariadb::timeutil::current_time());*/
+
+    dariadb_bench::readBenchark(all_id_set, tos, 100, startTime,
+                                dariadb::timeutil::current_time());
   }
 
 }
