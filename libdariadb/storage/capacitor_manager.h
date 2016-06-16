@@ -50,12 +50,13 @@ namespace dariadb {
 			virtual void subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk) override;
         protected:
             void create_new();
+			std::list<std::string> cap_files()const;
 		private:
 			static CapacitorManager *_instance;
 
 			Params _params;
 			Capacitor_Ptr _cap;
-            boost::shared_mutex _locker;
+            mutable boost::shared_mutex _locker;
 			
 		};
 	}

@@ -123,6 +123,7 @@ public:
       : _params(params), mmap(nullptr), _size(0) {
     _maxTime = dariadb::MIN_TIME;
     _minTime = dariadb::MAX_TIME;
+	_is_readonly = false;
     create();
   }
 

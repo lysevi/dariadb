@@ -2,6 +2,8 @@
 #include "manifest.h"
 #include "../utils/exception.h"
 #include "../utils/fs.h"
+#include "../flags.h"
+#include "inner_readers.h"
 #include <cassert>
 
 #include <boost/thread/locks.hpp>
@@ -19,13 +21,12 @@ CapacitorManager::CapacitorManager(const Params & param):_params(param){
       dariadb::utils::fs::mkdir(_params.path);
     }
 
-    auto files=Manifest::instance()->cola_list();
+	auto files = cap_files();
     for(auto f:files){
-        auto full_path=utils::fs::append_path(_params.path,f);
-        auto hdr=Capacitor::readHeader(full_path);
+        auto hdr=Capacitor::readHeader(f);
         if(!hdr.is_full){
              auto p=Capacitor::Params(_params.B,_params.path);
-            _cap=Capacitor_Ptr{new Capacitor(p,full_path)};
+            _cap=Capacitor_Ptr{new Capacitor(p,f)};
             break;
         }
     }
@@ -59,6 +60,17 @@ void CapacitorManager::create_new(){
          p.max_levels=_params.max_levels;
      }
     _cap=Capacitor_Ptr{new Capacitor(p)};
+}
+
+std::list<std::string> CapacitorManager::cap_files() const
+{
+	std::list<std::string> res;
+	auto files = Manifest::instance()->cola_list();
+	for (auto f : files) {
+		auto full_path = utils::fs::append_path(_params.path, f);
+		res.push_back(full_path);
+	}
+	return res;
 }
 
 dariadb::Time CapacitorManager::minTime(){
@@ -102,7 +114,35 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint & q){
 }
 
 Reader_ptr CapacitorManager::currentValue(const IdArray & ids, const Flag & flag){
-	return Reader_ptr();
+	TP_Reader *raw = new TP_Reader;
+	auto files = cap_files();
+	
+	auto p = Capacitor::Params(_params.B, _params.path);
+	dariadb::Meas::Id2Meas meases;
+	for (const auto &f : files) {
+		auto c = Capacitor_Ptr{ new Capacitor(p,f) };
+		auto sub_rdr=c->currentValue(ids, flag);
+		Meas::MeasList out;
+		sub_rdr->readAll(&out);
+
+		for (auto &m : out) {
+			auto it = meases.find(m.id);
+			if (it == meases.end()) {
+				meases.insert(std::make_pair(m.id, m));
+			}
+			else {
+				if (it->second.flag == Flags::_NO_DATA) {
+					meases[m.id] = m;
+				}
+			}
+		}
+	}
+	for (auto &kv : meases) {
+		raw->_values.push_back(kv.second);
+		raw->_ids.push_back(kv.first);
+	}
+	raw->reset();
+	return Reader_ptr(raw);
 }
 
 dariadb::append_result CapacitorManager::append(const Meas & value){
