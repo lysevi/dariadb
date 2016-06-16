@@ -111,3 +111,20 @@ void dariadb::storage::Manifest::cola_append(const std::string &rec) {
   js[COLA_JS_KEY] = cola_list;
   write_file(_filename, js.dump());
 }
+
+void Manifest::cola_rm(const std::string & rec){
+	std::lock_guard<utils::Locker> lg(_locker);
+
+	json js = json::parse(read_file(_filename));
+
+	std::list<std::string> cola_list{};
+	auto pages_json = js[COLA_JS_KEY];
+	for (auto v : pages_json) {
+		std::string str_val = v;
+		if (rec != str_val) {
+			cola_list.push_back(str_val);
+		}
+	}
+	js[COLA_JS_KEY] = cola_list;
+	write_file(_filename, js.dump());
+}

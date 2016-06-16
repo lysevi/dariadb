@@ -246,6 +246,7 @@ public:
 
     load();
     if(!_is_readonly){
+		//assert(!_header->is_full);
         if (!_header->is_closed) {
             restore();
         }
@@ -434,7 +435,7 @@ public:
   void flush_header() { mmap->flush(0, sizeof(Header)); }
 
   struct low_level_stor_pusher {
-    MeasWriter *_stor;
+    MeasWriter_ptr _stor;
     void push_back(FlaggedMeas &m) {
       if (m.drop_end) {
         return;
@@ -442,10 +443,19 @@ public:
       ++m.drop_start;
       _stor->append(m.value);
       ++m.drop_end;
+	  _back = m;
     }
+
+	size_t size()const {
+		return 0;
+	}
+	FlaggedMeas _back;
+	FlaggedMeas back() {
+		return _back;
+	}
   };
 
-  /*void drop_to_stor() {
+  void drop_to_stor(MeasWriter_ptr stor) {
      std::list<level *> to_merge;
      level tmp;
      level_header tmp_hdr;
@@ -462,18 +472,12 @@ public:
        }
      }
      low_level_stor_pusher merge_target;
-     merge_target._stor = _stor;
+     merge_target._stor = stor;
 
-     dariadb::utils::k_merge(to_merge, merge_target,
-   flagged_meas_time_compare_less());
-     for (size_t i = 0; i < _levels.size(); ++i) {
-       _levels[i].clear();
-     }
-     _header->_memvalues_pos = 0;
-     _header->_size_B = 0;
-     _header->_writed = 0;
+     dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());
+	 _header->is_dropped = true;
    }
- */
+ 
   Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
@@ -756,4 +760,8 @@ size_t dariadb::storage::Capacitor::levels_count() const {
 
 size_t dariadb::storage::Capacitor::size() const {
   return _Impl->size();
+}
+
+void dariadb::storage::Capacitor::drop_to_stor(MeasWriter_ptr stor){
+	_Impl->drop_to_stor(stor);
 }

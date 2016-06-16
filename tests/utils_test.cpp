@@ -179,6 +179,7 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
   std::string filename = "foo/bar/test.txt";
   BOOST_CHECK_EQUAL(dariadb::utils::fs::filename(filename), "test");
   BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(filename), "foo/bar");
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::extract_filename(filename), "test.txt");
 
   auto ls_res = dariadb::utils::fs::ls(".");
   BOOST_CHECK(ls_res.size() > 0);

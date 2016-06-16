@@ -594,8 +594,6 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
 }
 
 BOOST_AUTO_TEST_CASE(CapManager_Instance) {
-	/*std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-	stor->writed_count = 0;*/
 	const std::string storagePath = "testStorage";
 	const size_t max_size = 10;
 	if (dariadb::utils::fs::path_exists(storagePath)) {
@@ -640,6 +638,8 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
         dariadb::storage::Manifest::stop();
     }
     {
+		std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+		stor->writed_count = 0;
         dariadb::storage::Manifest::start(
                     dariadb::utils::fs::append_path(storagePath, "Manifest"));
         dariadb::storage::CapacitorManager::start(dariadb::storage::CapacitorManager::Params(storagePath, max_size));
@@ -648,6 +648,18 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
         dariadb::Meas::MeasList out;
         dariadb::storage::CapacitorManager::instance()->readInterval(qi)->readAll(&out);
         BOOST_CHECK_EQUAL(out.size(),dariadb_test::copies_count);
+
+
+		auto closed=dariadb::storage::CapacitorManager::instance()->closed_chunks();
+		BOOST_CHECK(closed.size() != size_t(0));
+
+		for (auto fname : closed) {
+			dariadb::storage::CapacitorManager::instance()->drop_cap(fname, stor);
+		}
+		BOOST_CHECK(stor->writed_count != size_t(0));
+		
+		closed = dariadb::storage::CapacitorManager::instance()->closed_chunks();
+		BOOST_CHECK_EQUAL(closed.size(),size_t(0));
 
         dariadb::storage::CapacitorManager::stop();
         dariadb::storage::Manifest::stop();

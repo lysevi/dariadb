@@ -48,6 +48,9 @@ namespace dariadb {
 			virtual append_result append(const Meas & value) override;
 			virtual void flush() override;
 			virtual void subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk) override;
+
+			std::list<std::string> closed_chunks();
+			void drop_cap(const std::string&fname, MeasWriter_ptr storage);
         protected:
             void create_new();
 			std::list<std::string> cap_files()const;

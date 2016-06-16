@@ -81,6 +81,12 @@ std::string filename(const std::string &fname) { // without ex
   return p.stem().string();
 }
 
+std::string extract_filename(const std::string &fname) {
+	boost::filesystem::path p(fname);
+	return p.filename().string();
+}
+
+
 std::string random_file_name(const std::string ext) {
   boost::uuids::uuid uuid = boost::uuids::random_generator()();
   std::stringstream ss;

@@ -14,6 +14,7 @@ std::list<std::string> ls(const std::string &path, const std::string &ext);
 bool rm(const std::string &rm_path);
 
 std::string filename(const std::string &fname); // without ex
+std::string extract_filename(const std::string &fname);
 std::string random_file_name(const std::string ext);
 
 std::string parent_path(const std::string &fname);

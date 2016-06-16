@@ -62,8 +62,7 @@ void CapacitorManager::create_new(){
     _cap=Capacitor_Ptr{new Capacitor(p)};
 }
 
-std::list<std::string> CapacitorManager::cap_files() const
-{
+std::list<std::string> CapacitorManager::cap_files() const{
 	std::list<std::string> res;
 	auto files = Manifest::instance()->cola_list();
 	for (auto f : files) {
@@ -83,6 +82,27 @@ std::list<std::string>  CapacitorManager::caps_by_filter(std::function<bool(cons
 		}
 	}
 	return result;
+}
+
+std::list<std::string> CapacitorManager::closed_chunks() {
+	auto pred = [](const Capacitor::Header &hdr) {
+		return hdr.is_full;
+	};
+
+	auto files = caps_by_filter(pred);
+	return files;
+}
+
+void dariadb::storage::CapacitorManager::drop_cap(const std::string & fname, MeasWriter_ptr storage){
+	boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+
+	auto p = Capacitor::Params(_params.B, _params.path);
+	auto cap = Capacitor_Ptr{ new Capacitor{p,fname, false} };
+	cap->drop_to_stor(storage);
+	cap = nullptr;
+	utils::fs::rm(fname);
+	auto without_path = utils::fs::extract_filename(fname);
+	Manifest::instance()->cola_rm(without_path);
 }
 
 
@@ -258,3 +278,4 @@ void CapacitorManager::flush(){
 void CapacitorManager::subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk){
 	NOT_IMPLEMENTED;
 }
+

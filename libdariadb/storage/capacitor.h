@@ -61,6 +61,7 @@ public:
     throw MAKE_EXCEPTION("not supported");
   }
 
+  void drop_to_stor(MeasWriter_ptr stor);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
