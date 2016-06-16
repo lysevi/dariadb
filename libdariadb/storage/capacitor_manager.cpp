@@ -74,25 +74,37 @@ std::list<std::string> CapacitorManager::cap_files() const
 }
 
 dariadb::Time CapacitorManager::minTime(){
-	return Time();
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
+	auto files = cap_files();
+	dariadb::Time result = dariadb::MAX_TIME;
+	for (auto filename : files) {
+		auto local = Capacitor::readHeader(filename).minTime;
+		result = std::min(local, result);
+	}
+	return result;
 }
 
-dariadb::Time CapacitorManager::maxTime()
-{
-	return Time();
+dariadb::Time CapacitorManager::maxTime(){
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
+	auto files = cap_files();
+	dariadb::Time result = dariadb::MIN_TIME;
+	for (auto filename : files) {
+		auto local = Capacitor::readHeader(filename).maxTime;
+		result = std::max(local, result);
+	}
+	return result;
 }
 
 bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time * minResult, dariadb::Time * maxResult){
     boost::shared_lock<boost::shared_mutex> lg(_locker);
-    auto files=Manifest::instance()->cola_list();
+	auto files = cap_files();
     auto p=Capacitor::Params(_params.B,_params.path);
 
     bool res=false;
     *minResult=dariadb::MAX_TIME;
     *maxResult=dariadb::MIN_TIME;
 
-    for(auto f:files){
-        auto filename=utils::fs::append_path(_params.path,f);
+    for(auto filename :files){
         auto raw=new Capacitor(p,filename,true);
         Capacitor_Ptr cptr{raw};
         dariadb::Time lmin=dariadb::MAX_TIME, lmax=dariadb::MIN_TIME;

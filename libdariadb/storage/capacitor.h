@@ -26,6 +26,8 @@ public:
   };
 #pragma pack(push, 1)
   struct Header {
+	  dariadb::Time minTime;
+	  dariadb::Time maxTime;
 	  bool is_dropped : 1;
 	  bool is_closed : 1;
 	  bool is_full : 1;

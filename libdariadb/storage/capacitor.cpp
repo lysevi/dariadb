@@ -1,13 +1,11 @@
 /*
 FileName:
-GUID.aof
+GUID.cap
+Measurements saves to COLA file struct
 File struct:
    CapHeader|memvalues(sizeof(B)*sizeof(Meas)| LevelHeader | Meas0 | Meas1|....|
 LevelHeader|Meas0 |Meas1...
-Alg:
-        1. Measurements save to COLA file struct
-        2. When the append-only-file is fulle,
-        it is converted to a sorted table (*.page) and a new log file is created
+
 for future updates.
 */
 
@@ -121,16 +119,12 @@ public:
 
   Private( const Capacitor::Params &params)
       : _params(params), mmap(nullptr), _size(0) {
-    _maxTime = dariadb::MIN_TIME;
-    _minTime = dariadb::MAX_TIME;
 	_is_readonly = false;
     create();
   }
 
   Private(const Capacitor::Params &params, const std::string &fname, bool readonly)
 	  : _params(params), mmap(nullptr), _size(0) {
-	  _maxTime = dariadb::MIN_TIME;
-	  _minTime = dariadb::MAX_TIME;
       _is_readonly=readonly;
 	  open(fname);
   }
@@ -197,13 +191,15 @@ public:
     mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);
 
     _header = reinterpret_cast<Header *>(mmap->data());
-    _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
+    _raw_data = reinterpret_cast<uint8_t *>(mmap->data() + sizeof(Header));
     _header->size = sz;
     _header->B = _params.B;
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
     _header->is_closed = false;
-    auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
+	_header->minTime = dariadb::MAX_TIME;
+	_header->maxTime = dariadb::MIN_TIME;
+	auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = reinterpret_cast<level_header *>(pos);
       it->lvl = uint8_t(lvl);
@@ -213,6 +209,7 @@ public:
       it->_maxTime = dariadb::MIN_TIME;
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
       for (size_t i = 0; i < it->count; ++i) {
+		  assert(((uint8_t*)&m[i] - mmap->data()) < sz);
         std::memset(&m[i], 0, sizeof(FlaggedMeas));
       }
       pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
@@ -226,10 +223,6 @@ public:
     _levels.resize(_header->levels_count);
     _memvalues_size = _header->B;
     _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
-    for (size_t i = 0; i < _header->_memvalues_pos; ++i) {
-      _minTime = std::min(_minTime, _memvalues[i].value.time);
-      _maxTime = std::max(_maxTime, _memvalues[i].value.time);
-    }
 
     auto pos = _raw_data + _memvalues_size * sizeof(FlaggedMeas);
 
@@ -249,7 +242,7 @@ public:
 
     _header = reinterpret_cast<Header *>(mmap->data());
 
-    _raw_data = reinterpret_cast<uint8_t *>(_header + sizeof(Header));
+    _raw_data = reinterpret_cast<uint8_t *>(mmap->data() + sizeof(Header));
 
     load();
     if(!_is_readonly){
@@ -317,8 +310,8 @@ public:
 
     _header->_memvalues_pos++;
     ++_header->_writed;
-    _minTime = std::min(_minTime, value.time);
-    _maxTime = std::max(_maxTime, value.time);
+    _header->minTime = std::min(_header->minTime, value.time);
+	_header->maxTime = std::max(_header->maxTime, value.time);
 
     return append_result(1, 0);
   }
@@ -566,24 +559,12 @@ public:
 
   dariadb::Time minTime() const {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    dariadb::Time result = dariadb::MAX_TIME;
-    for (size_t i = 0; i < _levels.size(); ++i) {
-      if (!_levels[i].empty()) {
-        result = std::min(result, _levels[i].hdr->_minTime);
-      }
-    }
-    return std::min(result, _minTime);
+	return _header->minTime;
   }
 
   dariadb::Time maxTime() const {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    dariadb::Time result = dariadb::MIN_TIME;
-    for (size_t i = 0; i < _levels.size(); ++i) {
-      if (!_levels[i].empty()) {
-        result = std::max(result, _levels[i].hdr->_maxTime);
-      }
-    }
-    return std::max(result, _maxTime);
+	return _header->maxTime;
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
@@ -641,7 +622,7 @@ public:
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
 
-    if (inInterval(_minTime, _maxTime, q.time_point)) {
+    if (inInterval(_header->minTime, _header->maxTime, q.time_point)) {
       for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
         auto m = _memvalues[j];
         if (m.drop_end) {
@@ -703,8 +684,6 @@ protected:
   size_t _memvalues_size;
 
   mutable boost::shared_mutex _mutex;
-  dariadb::Time _minTime;
-  dariadb::Time _maxTime;
   bool _is_readonly;
 };
 
