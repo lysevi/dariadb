@@ -185,19 +185,19 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint & query){
 		auto raw = new Capacitor(p, filename, true);
 		Meas::MeasList out;
 		raw->readInTimePoint(query)->readAll(&out);
-		for (auto m : out) {
-			for (auto &m : out) {
-				auto it = sub_result.find(m.id);
-				if (it == sub_result.end()) {
-					sub_result.insert(std::make_pair(m.id, m));
-				}
-				else {
-					if (it->second.flag == Flags::_NO_DATA) {
-						sub_result[m.id] = m;
-					}
+
+		for (auto &m : out) {
+			auto it = sub_result.find(m.id);
+			if (it == sub_result.end()) {
+				sub_result.insert(std::make_pair(m.id, m));
+			}
+			else {
+				if (it->second.flag == Flags::_NO_DATA) {
+					sub_result[m.id] = m;
 				}
 			}
 		}
+
 		delete raw;
 	}
 

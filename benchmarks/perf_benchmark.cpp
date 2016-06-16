@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << ")" << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set, ms, 10, start_time,
+    dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
 
     {

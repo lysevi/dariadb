@@ -254,9 +254,9 @@ public:
   }
 
   void restore() {
-	  if (_is_readonly) {
+	 /* if (_is_readonly) {
 		  return;
-	  }
+	  }*/
     using dariadb::timeutil::to_string;
 
     logger_info(LOG_MSG_PREFIX << "restore after crash");
