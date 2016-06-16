@@ -1,8 +1,7 @@
 #pragma once
 
 #include "storage.h"
-#include "storage/capacitor.h"
-#include "storage/chunk_container.h"
+#include "storage/capacitor_manager.h"
 #include "storage/page_manager.h"
 #include "utils/utils.h"
 #include <memory>
@@ -34,7 +33,7 @@ public:
   /// \param page_manager_params - params of page manager (PageManager)
   /// \param cap_params - capacitor params  (Capacitor)
   Engine(storage::PageManager::Params page_manager_params,
-         dariadb::storage::Capacitor::Params cap_params, const Limits &limits);
+         dariadb::storage::CapacitorManager::Params cap_params, const Limits &limits);
 
   append_result append(const Meas &value) override;
   void subscribe(const IdArray &ids, const Flag &flag,

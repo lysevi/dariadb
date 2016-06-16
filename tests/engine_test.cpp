@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+        dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
         dariadb::storage::Engine::Limits(10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
         dariadb::storage::Engine::Limits(0))};
 
     dariadb::Meas::MeasList mlist;
@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
         dariadb::storage::Engine::Limits(10))};
 
     dariadb::IdArray ids{};
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
         dariadb::storage::Engine::Limits(10))};
 
     /*
@@ -309,7 +309,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
         dariadb::storage::Engine::Limits(10))};
 
     auto m = dariadb::Meas::empty();
@@ -389,7 +389,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
     std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
-        dariadb::storage::Capacitor::Params(cap_B, storage_path),
+		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
         dariadb::storage::Engine::Limits(10))};
 
     auto m = dariadb::Meas::empty();

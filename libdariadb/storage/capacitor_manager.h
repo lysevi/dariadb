@@ -51,6 +51,8 @@ namespace dariadb {
 
 			std::list<std::string> closed_chunks();
 			void drop_cap(const std::string&fname, MeasWriter_ptr storage);
+
+			size_t files_count() const;
         protected:
             void create_new();
 			std::list<std::string> cap_files()const;

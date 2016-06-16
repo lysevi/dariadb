@@ -1,10 +1,11 @@
 #include "engine.h"
 #include "flags.h"
 #include "storage/bloom_filter.h"
-#include "storage/capacitor.h"
+#include "storage/capacitor_manager.h"
 #include "storage/inner_readers.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
+#include "storage/manifest.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include <algorithm>
@@ -147,35 +148,36 @@ public:
 class Engine::Private {
 public:
   Private(const PageManager::Params &page_storage_params,
-          dariadb::storage::Capacitor::Params cap_params,
+          dariadb::storage::CapacitorManager::Params cap_params,
           dariadb::storage::Engine::Limits limits)
       : _page_manager_params(page_storage_params), _cap_params(cap_params),
         _limits(limits) {
     _subscribe_notify.start();
 
     PageManager::start(_page_manager_params);
+	CapacitorManager::start(_cap_params);
 
-    //mem_cap = new Capacitor(PageManager::instance(), _cap_params);
+    
     _next_query_id = Id();
   }
   ~Private() {
     _subscribe_notify.stop();
     this->flush();
-    delete mem_cap;
+	CapacitorManager::stop();
     PageManager::stop();
   }
 
   Time minTime() {
     std::lock_guard<std::mutex> lg(_locker);
     auto pmin = PageManager::instance()->minTime();
-    auto cmin = mem_cap->minTime();
+    auto cmin = CapacitorManager::instance()->minTime();
     return std::min(pmin, cmin);
   }
 
   Time maxTime() {
     std::lock_guard<std::mutex> lg(_locker);
     auto pmax = PageManager::instance()->maxTime();
-    auto cmax = mem_cap->maxTime();
+    auto cmax = CapacitorManager::instance()->maxTime();
     return std::max(pmax, cmax);
   }
 
@@ -184,7 +186,7 @@ public:
     dariadb::Time subMin1, subMax1;
     auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
     dariadb::Time subMin2, subMax2;
-    auto mr = mem_cap->minMaxTime(id, &subMin2, &subMax2);
+    auto mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
 
     if (!pr) {
       *minResult = subMin2;
@@ -203,7 +205,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    result = mem_cap->append(value);
+    result = CapacitorManager::instance()->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -217,12 +219,12 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-    return mem_cap->currentValue(ids, flag);
+    return CapacitorManager::instance()->currentValue(ids, flag);
   }
 
   void flush() {
     std::lock_guard<std::mutex> lg(_locker);
-    this->mem_cap->flush();
+    CapacitorManager::instance()->flush();
     PageManager::instance()->flush();
   }
 
@@ -235,7 +237,7 @@ public:
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
     result.pages_count = PageManager::instance()->files_count();
-    result.cola_count = this->mem_cap->files_count();
+    result.cola_count = CapacitorManager::instance()->files_count();
     return result;
   }
 
@@ -246,7 +248,9 @@ public:
     auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
     for (auto id : q.ids) {
-
+		if (id == 52) {
+			std::cout << 1;
+		}
       InnerReader *page_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
 	  raw_res->_ids.resize(1);
@@ -257,7 +261,7 @@ public:
       QueryInterval local_q = q;
       local_q.ids.clear();
       local_q.ids.push_back(id);
-      if (!mem_cap->minMaxTime(id, &minT, &maxT)) {
+      if (!CapacitorManager::instance()->minMaxTime(id, &minT, &maxT)) {
         ChunkLinkList chunks_for_id;
         for (auto &c : all_chunkLinks) {
           if (c.id_bloom == id) {
@@ -272,7 +276,7 @@ public:
       } else {
 
         if (minT <= q.from && maxT >= q.to) {
-          auto mc_reader = mem_cap->readInterval(local_q);
+          auto mc_reader = CapacitorManager::instance()->readInterval(local_q);
 		  mc_reader->readAll(&raw_res->cap_result);
 		  
         } else {
@@ -290,7 +294,7 @@ public:
           local_q.from = minT;
           local_q.to = q.to;
 
-          auto mc_reader = mem_cap->readInterval(local_q);
+          auto mc_reader = CapacitorManager::instance()->readInterval(local_q);
 		  mc_reader->readAll(&raw_res->cap_result);
         }
       }
@@ -310,9 +314,9 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
 
-      if (mem_cap->minMaxTime(id, &minT, &maxT) &&
+      if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
           utils::inInterval(minT, maxT, local_q.time_point)) {
-        auto subres = mem_cap->readInTimePoint(local_q);
+        auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else {
         TP_Reader *raw_tp_reader = new TP_Reader;
@@ -375,10 +379,8 @@ public:
   }
 
 protected:
-  storage::Capacitor *mem_cap;
-
   storage::PageManager::Params _page_manager_params;
-  dariadb::storage::Capacitor::Params _cap_params;
+  dariadb::storage::CapacitorManager::Params _cap_params;
   dariadb::storage::Engine::Limits _limits;
 
   mutable std::mutex _locker;
@@ -388,7 +390,7 @@ protected:
 };
 
 Engine::Engine(storage::PageManager::Params page_manager_params,
-               dariadb::storage::Capacitor::Params cap_params,
+               dariadb::storage::CapacitorManager::Params cap_params,
                const dariadb::storage::Engine::Limits &limits)
     : _impl{new Engine::Private(page_manager_params, cap_params, limits)} {}
 

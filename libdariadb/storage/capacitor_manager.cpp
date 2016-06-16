@@ -172,6 +172,10 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval & query){
 		Meas::MeasList out;
 		raw->readInterval(query)->readAll(&out);
 		for (auto m : out) {
+			//TODO check!
+			if (m.flag == Flags::_NO_DATA) {
+				continue;
+			}
 			sub_result[m.id].insert(m);
 		}
 		delete raw;
@@ -279,3 +283,7 @@ void CapacitorManager::subscribe(const IdArray & ids, const Flag & flag, const R
 	NOT_IMPLEMENTED;
 }
 
+size_t CapacitorManager::files_count() const {
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
+	return cap_files().size();
+}

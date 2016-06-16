@@ -19,7 +19,12 @@ void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
           ((m.flag == flg_val) || (m.flag == dariadb::Flags::_NO_DATA)) &&
           ((m.src == flg_val) || (m.src == dariadb::Flags::_NO_DATA))) {
         count++;
-      }
+	  }
+	 /* if ((m.id == id_val) &&
+		  (((m.flag != flg_val)) ||
+		  ((m.src != flg_val)))) {
+		  std::cout<<1;
+	  }*/
     }
 
     if (count < copies_count) {
