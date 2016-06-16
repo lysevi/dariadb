@@ -222,8 +222,6 @@ public:
       auto pname = to_read.front().page_name;
       auto pg = open_page_to_read(pname);
       pg->readLinks(query, to_read, clb);
-      ;
-
       to_read.clear();
     }
   }

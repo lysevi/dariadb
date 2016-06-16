@@ -73,6 +73,19 @@ std::list<std::string> CapacitorManager::cap_files() const
 	return res;
 }
 
+std::list<std::string>  CapacitorManager::caps_by_filter(std::function<bool(const Capacitor::Header &)> pred) {
+	std::list<std::string> result;
+	auto names = cap_files();
+	for (auto file_name : names) {
+		auto hdr = Capacitor::readHeader(file_name);
+		if (pred(hdr)) {
+			result.push_back(file_name);
+		}
+	}
+	return result;
+}
+
+
 dariadb::Time CapacitorManager::minTime(){
 	boost::shared_lock<boost::shared_mutex> lg(_locker);
 	auto files = cap_files();
@@ -117,12 +130,83 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time * minResult, dar
     return res;
 }
 
-Reader_ptr CapacitorManager::readInterval(const QueryInterval & q){
-	return Reader_ptr();
+
+Reader_ptr CapacitorManager::readInterval(const QueryInterval & query){
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
+	auto pred = [query](const Capacitor::Header &hdr) {
+		auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
+			(utils::inInterval(query.from, query.to, hdr.minTime)) ||
+			(utils::inInterval(query.from, query.to, hdr.maxTime)) ||
+			(utils::inInterval(hdr.minTime, hdr.maxTime, query.from)) ||
+			(utils::inInterval(hdr.minTime, hdr.maxTime, query.to)));
+		return interval_check;
+	};
+
+	auto files = caps_by_filter(pred);
+	auto p = Capacitor::Params(_params.B, _params.path);
+	TP_Reader *raw = new TP_Reader;
+	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+
+	for (auto filename : files) {
+		auto raw = new Capacitor(p, filename, true);
+		Meas::MeasList out;
+		raw->readInterval(query)->readAll(&out);
+		for (auto m : out) {
+			sub_result[m.id].insert(m);
+		}
+		delete raw;
+	}
+
+	for (auto &kv : sub_result) {
+		raw->_ids.push_back(kv.first);
+		for (auto &m : kv.second) {
+			raw->_values.push_back(m);
+		}
+	}
+	raw->reset();
+	return Reader_ptr(raw);
 }
 
-Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint & q){
-	return Reader_ptr();
+Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint & query){
+	boost::shared_lock<boost::shared_mutex> lg(_locker);
+	auto pred = [query](const Capacitor::Header &hdr) {
+		auto interval_check = hdr.maxTime < query.time_point;
+		//TODO check this.
+			//(utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point));
+		return interval_check;
+	};
+
+	auto files = caps_by_filter(pred);
+	auto p = Capacitor::Params(_params.B, _params.path);
+	TP_Reader *raw = new TP_Reader;
+	dariadb::Meas::Id2Meas sub_result;
+
+	for (auto filename : files) {
+		auto raw = new Capacitor(p, filename, true);
+		Meas::MeasList out;
+		raw->readInTimePoint(query)->readAll(&out);
+		for (auto m : out) {
+			for (auto &m : out) {
+				auto it = sub_result.find(m.id);
+				if (it == sub_result.end()) {
+					sub_result.insert(std::make_pair(m.id, m));
+				}
+				else {
+					if (it->second.flag == Flags::_NO_DATA) {
+						sub_result[m.id] = m;
+					}
+				}
+			}
+		}
+		delete raw;
+	}
+
+	for (auto &kv : sub_result) {
+		raw->_ids.push_back(kv.first);
+		raw->_values.push_back(kv.second);
+	}
+	raw->reset();
+	return Reader_ptr(raw);
 }
 
 Reader_ptr CapacitorManager::currentValue(const IdArray & ids, const Flag & flag){
@@ -132,7 +216,7 @@ Reader_ptr CapacitorManager::currentValue(const IdArray & ids, const Flag & flag
 	auto p = Capacitor::Params(_params.B, _params.path);
 	dariadb::Meas::Id2Meas meases;
 	for (const auto &f : files) {
-		auto c = Capacitor_Ptr{ new Capacitor(p,f) };
+		auto c = Capacitor_Ptr{ new Capacitor(p,f, true) };
 		auto sub_rdr=c->currentValue(ids, flag);
 		Meas::MeasList out;
 		sub_rdr->readAll(&out);

@@ -51,6 +51,7 @@ namespace dariadb {
         protected:
             void create_new();
 			std::list<std::string> cap_files()const;
+			std::list<std::string> caps_by_filter(std::function<bool(const Capacitor::Header &)> pred);
 		private:
 			static CapacitorManager *_instance;
 
