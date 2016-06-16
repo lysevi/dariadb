@@ -49,10 +49,11 @@ namespace dariadb {
 			virtual void flush() override;
 			virtual void subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk) override;
 
-			std::list<std::string> closed_chunks();
-			void drop_cap(const std::string&fname, MeasWriter_ptr storage);
+            std::list<std::string> closed_caps();
+            void drop_cap(const std::string&fname, MeasWriter* storage);
 
 			size_t files_count() const;
+            void set_downlevel(MeasWriter* down){_down=down;}
         protected:
             void create_new();
 			std::list<std::string> cap_files()const;
@@ -63,7 +64,7 @@ namespace dariadb {
 			Params _params;
 			Capacitor_Ptr _cap;
             mutable boost::shared_mutex _locker;
-			
+            MeasWriter* _down;
 		};
 	}
 }

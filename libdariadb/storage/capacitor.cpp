@@ -209,7 +209,7 @@ public:
       it->_maxTime = dariadb::MIN_TIME;
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
       for (size_t i = 0; i < it->count; ++i) {
-		  assert(((uint8_t*)&m[i] - mmap->data()) < sz);
+          assert(size_t((uint8_t*)&m[i] - mmap->data()) < sz);
         std::memset(&m[i], 0, sizeof(FlaggedMeas));
       }
       pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
@@ -435,7 +435,7 @@ public:
   void flush_header() { mmap->flush(0, sizeof(Header)); }
 
   struct low_level_stor_pusher {
-    MeasWriter_ptr _stor;
+    MeasWriter* _stor;
     void push_back(FlaggedMeas &m) {
       if (m.drop_end) {
         return;
@@ -455,7 +455,7 @@ public:
 	}
   };
 
-  void drop_to_stor(MeasWriter_ptr stor) {
+  void drop_to_stor(MeasWriter* stor) {
      std::list<level *> to_merge;
      level tmp;
      level_header tmp_hdr;
@@ -762,6 +762,6 @@ size_t dariadb::storage::Capacitor::size() const {
   return _Impl->size();
 }
 
-void dariadb::storage::Capacitor::drop_to_stor(MeasWriter_ptr stor){
+void dariadb::storage::Capacitor::drop_to_stor(MeasWriter* stor){
 	_Impl->drop_to_stor(stor);
 }

@@ -59,6 +59,17 @@ void CapacitorManager::create_new(){
      if(_params.max_levels!=0){
          p.max_levels=_params.max_levels;
      }
+     if(_down!=nullptr){
+         auto closed=this->closed_caps();
+         if(closed.size()>4){
+             size_t to_drop=closed.size()-4;
+             for(size_t i=0;i<to_drop;++i){
+                 auto f=closed.front();
+                 closed.pop_front();
+                 this->drop_cap(f,_down);
+             }
+         }
+     }
     _cap=Capacitor_Ptr{new Capacitor(p)};
 }
 
@@ -84,7 +95,7 @@ std::list<std::string>  CapacitorManager::caps_by_filter(std::function<bool(cons
 	return result;
 }
 
-std::list<std::string> CapacitorManager::closed_chunks() {
+std::list<std::string> CapacitorManager::closed_caps() {
 	auto pred = [](const Capacitor::Header &hdr) {
 		return hdr.is_full;
 	};
@@ -93,8 +104,8 @@ std::list<std::string> CapacitorManager::closed_chunks() {
 	return files;
 }
 
-void dariadb::storage::CapacitorManager::drop_cap(const std::string & fname, MeasWriter_ptr storage){
-	boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+void dariadb::storage::CapacitorManager::drop_cap(const std::string & fname, MeasWriter* storage){
+    //boost::upgrade_lock<boost::shared_mutex> lg(_locker);
 
 	auto p = Capacitor::Params(_params.B, _params.path);
 	auto cap = Capacitor_Ptr{ new Capacitor{p,fname, false} };

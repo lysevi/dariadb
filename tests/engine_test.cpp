@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
     }
     m.id++;
     ++t;
-    while (dariadb::storage::PageManager::instance()->chunks_in_cur_page() <= 80) {
+    while (dariadb::storage::PageManager::instance()->chunks_in_cur_page() <= size_t(last_chunks_count*1.5)) {
       m.time = t;
       m.value = dariadb::Value(t);
       t++;

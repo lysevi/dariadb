@@ -157,7 +157,7 @@ public:
     PageManager::start(_page_manager_params);
 	CapacitorManager::start(_cap_params);
 
-    
+    CapacitorManager::instance()->set_downlevel(PageManager::instance());
     _next_query_id = Id();
   }
   ~Private() {
@@ -248,9 +248,6 @@ public:
     auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
     for (auto id : q.ids) {
-		if (id == 52) {
-			std::cout << 1;
-		}
       InnerReader *page_rdr = new InnerReader(q.flag, q.from, q.to);
       UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
 	  raw_res->_ids.resize(1);

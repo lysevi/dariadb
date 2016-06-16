@@ -650,15 +650,15 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
         BOOST_CHECK_EQUAL(out.size(),dariadb_test::copies_count);
 
 
-		auto closed=dariadb::storage::CapacitorManager::instance()->closed_chunks();
+        auto closed=dariadb::storage::CapacitorManager::instance()->closed_caps();
 		BOOST_CHECK(closed.size() != size_t(0));
 
 		for (auto fname : closed) {
-			dariadb::storage::CapacitorManager::instance()->drop_cap(fname, stor);
+            dariadb::storage::CapacitorManager::instance()->drop_cap(fname, stor.get());
 		}
 		BOOST_CHECK(stor->writed_count != size_t(0));
 		
-		closed = dariadb::storage::CapacitorManager::instance()->closed_chunks();
+        closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
 		BOOST_CHECK_EQUAL(closed.size(),size_t(0));
 
         dariadb::storage::CapacitorManager::stop();
