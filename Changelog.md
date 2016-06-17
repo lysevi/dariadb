@@ -2,6 +2,7 @@ v0.0.7
 =====
 - Restore after crash.
 - CRC32 checksum for chunks.
+- COLA layer.
 
 v0.0.6
 =====
