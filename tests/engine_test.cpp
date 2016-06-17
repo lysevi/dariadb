@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
-  const size_t cap_B = 5;
+  const size_t cap_B = 2;
 
   const dariadb::Time from = 0;
   const dariadb::Time to = from + 1021;
@@ -113,13 +113,17 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
       dariadb::utils::fs::rm(storage_path);
     }
 
+	dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
+	cap_pam.max_levels = 5;
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
-        dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
+        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,chunk_size),
+		cap_pam,
         dariadb::storage::Engine::Limits(10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
+
+	auto pages_count = dariadb::storage::PageManager::instance()->files_count();
+	BOOST_CHECK_GE(pages_count, size_t(1));
   }
   {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
@@ -221,10 +225,10 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
 		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
         dariadb::storage::Engine::Limits(10))};
 
-    /*
-    storage: id=0: 10,11,....30 id=1: 0,1,2,3,4,5
-    cap: id=0: 6,7,8,9
-    */
+    
+    //storage: id=0: 10,11,....30 id=1: 0,1,2,3,4,5
+    //cap: id=0: 6,7,8,9
+    
     auto m = dariadb::Meas::empty(0);
     dariadb::Time t = 10;
     // all must be in first chunk.

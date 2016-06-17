@@ -156,8 +156,8 @@ public:
 
     PageManager::start(_page_manager_params);
 	CapacitorManager::start(_cap_params);
-
-    CapacitorManager::instance()->set_downlevel(PageManager::instance());
+	auto pm = PageManager::instance();
+    CapacitorManager::instance()->set_downlevel(pm);
     _next_query_id = Id();
   }
   ~Private() {
@@ -248,11 +248,10 @@ public:
     auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
     for (auto id : q.ids) {
-      InnerReader *page_rdr = new InnerReader(q.flag, q.from, q.to);
+     
       UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
 	  raw_res->_ids.resize(1);
 	  raw_res->_ids[0]=id;
-      page_rdr->_ids.push_back(id);
 
       dariadb::Time minT, maxT;
       QueryInterval local_q = q;
@@ -311,8 +310,10 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
 
-      if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
-          utils::inInterval(minT, maxT, local_q.time_point)) {
+      if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT)
+		  && (minT < q.time_point || maxT<q.time_point)
+		  /* &&
+          utils::inInterval(minT, maxT, local_q.time_point)*/) {
         auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else {

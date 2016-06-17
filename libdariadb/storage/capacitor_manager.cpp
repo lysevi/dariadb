@@ -17,6 +17,7 @@ CapacitorManager::~CapacitorManager(){
 }
 
 CapacitorManager::CapacitorManager(const Params & param):_params(param){
+	_down = nullptr;
     if (!dariadb::utils::fs::path_exists(_params.path)) {
       dariadb::utils::fs::mkdir(_params.path);
     }

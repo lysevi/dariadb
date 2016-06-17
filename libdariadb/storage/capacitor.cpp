@@ -48,13 +48,10 @@ struct level_header {
 #pragma pack(pop)
 
 struct FlaggedMeas {
-  uint8_t drop_start : 1;
-  uint8_t drop_end : 1;
   Meas value;
 
   bool operator==(const FlaggedMeas &other) const {
-    return std::tie(drop_start, drop_end, value) ==
-           std::tie(other.drop_start, other.drop_end, other.value);
+    return std::tie(value) == std::tie(other.value);
   }
   bool operator!=(const FlaggedMeas &other) const { return !(*this == other); }
 };
@@ -99,10 +96,6 @@ struct level {
   FlaggedMeas back() const { return begin[hdr->pos - 1]; }
 
   void clear() {
-    for (size_t i = 0; i < hdr->pos; ++i) {
-      this->begin[i].drop_end = 0;
-      this->begin[i].drop_start = 0;
-    }
     hdr->crc = 0;
     hdr->pos = 0;
     hdr->_maxTime = dariadb::MIN_TIME;
@@ -437,12 +430,7 @@ public:
   struct low_level_stor_pusher {
     MeasWriter* _stor;
     void push_back(FlaggedMeas &m) {
-      if (m.drop_end) {
-        return;
-      }
-      ++m.drop_start;
       _stor->append(m.value);
-      ++m.drop_end;
 	  _back = m;
     }
 
@@ -502,9 +490,6 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
-        if (m.drop_end) {
-          continue;
-        }
         if (m.value.time > q.to) {
           break;
         }
@@ -516,9 +501,6 @@ public:
 
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      if (m.drop_end) {
-        continue;
-      }
       if (m.value.inQuery(q.ids, q.flag, q.from, q.to)) {
         sub_result[m.value.id].insert(m.value);
       }
@@ -582,9 +564,6 @@ public:
     bool result = false;
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      if (m.drop_end) {
-        continue;
-      }
       if (m.value.id == id) {
         *minResult = std::min(*minResult, m.value.time);
         *maxResult = std::max(*maxResult, m.value.time);
@@ -598,9 +577,6 @@ public:
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
-        if (m.drop_end) {
-          continue;
-        }
         if (m.value.id == id) {
           *minResult = std::min(*minResult, m.value.time);
           *maxResult = std::max(*maxResult, m.value.time);
@@ -632,9 +608,6 @@ public:
     if (inInterval(_header->minTime, _header->maxTime, q.time_point)) {
       for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
         auto m = _memvalues[j];
-        if (m.drop_end) {
-          continue;
-        }
         if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
           insert_if_older(sub_res, m.value);
           readed_ids.insert(m.value.id);
@@ -651,10 +624,6 @@ public:
           continue;
         }
         auto m = _levels[i].at(j);
-        if (m.drop_end) {
-          continue;
-        }
-
         if (m.value.time > q.time_point) {
           break;
         }

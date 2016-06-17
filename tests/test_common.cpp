@@ -147,7 +147,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (current_mlist.size() == 0) {
     throw MAKE_EXCEPTION("current_mlist.size()>0");
   }
-
+  
   as->flush();
   if (as->minTime() != from) {
     throw MAKE_EXCEPTION("as->minTime() != from");
@@ -155,15 +155,17 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (as->maxTime() < to) {
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
+  
   auto reader = as->readInterval(
       dariadb::storage::QueryInterval(_all_ids_array, 0, from, to + copies_count));
-  check_reader_of_all(reader, from, to, step, id_val, total_count, "readAll error: ");
 
+  check_reader_of_all(reader, from, to, step, id_val, total_count, "readAll error: ");
+  
   auto cloned_reader = reader->clone();
   cloned_reader->reset();
   check_reader_of_all(cloned_reader, from, to, step, id_val, total_count,
                       "cloned readAll error: ");
-
+  
   cloned_reader->reset();
   auto cl_readed_ids = cloned_reader->getIds();
   if (cl_readed_ids.size() != _all_ids_set.size()) {
