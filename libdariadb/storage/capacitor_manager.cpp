@@ -61,8 +61,9 @@ void CapacitorManager::create_new(){
      }
      if(_down!=nullptr){
          auto closed=this->closed_caps();
-         if(closed.size()>4){
-             size_t to_drop=closed.size()-4;
+		 const size_t MAX_CLOSED_CAPS = 10;
+         if(closed.size()>MAX_CLOSED_CAPS){
+             size_t to_drop=closed.size()/2;
              for(size_t i=0;i<to_drop;++i){
                  auto f=closed.front();
                  closed.pop_front();
