@@ -2,7 +2,6 @@
 
 #include "../meas.h"
 #include "../storage.h"
-#include "../utils/period_worker.h"
 #include <memory>
 
 namespace dariadb {

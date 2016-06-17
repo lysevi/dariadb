@@ -178,7 +178,6 @@ public:
 
   void create() {
     fs::mkdir(_params.path);
-    fs::mkdir(_params.path);
     auto sz = cap_size();
     auto fname = file_name();
     mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);

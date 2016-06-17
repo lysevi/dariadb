@@ -2,6 +2,7 @@
 #include <ctime>
 #include <iostream>
 #include <iterator>
+#include <thread>
 
 #include "bench_common.h"
 #include <ctime>
