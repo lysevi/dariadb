@@ -6,8 +6,6 @@
 #include "inner_readers.h"
 #include <cassert>
 
-#include <boost/thread/locks.hpp>
-
 using namespace dariadb::storage;
 using namespace dariadb;
 
@@ -120,7 +118,7 @@ void dariadb::storage::CapacitorManager::drop_cap(const std::string & fname, Mea
 
 
 dariadb::Time CapacitorManager::minTime(){
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	auto files = cap_files();
 	dariadb::Time result = dariadb::MAX_TIME;
 	for (auto filename : files) {
@@ -131,7 +129,7 @@ dariadb::Time CapacitorManager::minTime(){
 }
 
 dariadb::Time CapacitorManager::maxTime(){
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	auto files = cap_files();
 	dariadb::Time result = dariadb::MIN_TIME;
 	for (auto filename : files) {
@@ -142,7 +140,7 @@ dariadb::Time CapacitorManager::maxTime(){
 }
 
 bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time * minResult, dariadb::Time * maxResult){
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	auto files = cap_files();
     auto p=Capacitor::Params(_params.B,_params.path);
 
@@ -165,7 +163,7 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time * minResult, dar
 
 
 Reader_ptr CapacitorManager::readInterval(const QueryInterval & query){
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	auto pred = [query](const Capacitor::Header &hdr) {
 		auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
 			(utils::inInterval(query.from, query.to, hdr.minTime)) ||
@@ -205,7 +203,7 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval & query){
 }
 
 Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint & query){
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	auto pred = [query](const Capacitor::Header &hdr) {
 		auto interval_check = hdr.maxTime < query.time_point;
 		//TODO check this.
@@ -279,7 +277,7 @@ Reader_ptr CapacitorManager::currentValue(const IdArray & ids, const Flag & flag
 }
 
 dariadb::append_result CapacitorManager::append(const Meas & value){
-    boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     auto res=_cap->append(value);
     if(res.writed!=1){
         create_new();
@@ -297,6 +295,6 @@ void CapacitorManager::subscribe(const IdArray & ids, const Flag & flag, const R
 }
 
 size_t CapacitorManager::files_count() const {
-	boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 	return cap_files().size();
 }
