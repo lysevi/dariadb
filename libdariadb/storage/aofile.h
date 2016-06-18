@@ -33,7 +33,7 @@ public:
     virtual ~AOFile();
     AOFile(const Params &param);
     AOFile(const AOFile::Params &params, const std::string &fname, bool readonly=false);
-    static Header readHeader(std::string file_name);
+    //static Header readHeader(std::string file_name);
     append_result append(const Meas &value) override;
     Reader_ptr readInterval(const QueryInterval &q) override;
     Reader_ptr readInTimePoint(const QueryTimePoint &q) override;

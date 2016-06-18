@@ -8,7 +8,6 @@
 
 #include "test_common.h"
 #include <storage/aofile.h>
-#include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 
@@ -37,31 +36,31 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
   dariadb::utils::fs::mkdir(storage_path);
   auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
   assert(aof_files.size() == 0);
-  auto p = dariadb::storage::AOFile::Params(block_size, storage_path);
+  auto p = dariadb::storage::AOFile::Params(block_size, dariadb::utils::fs::append_path(storage_path, "test.aof"));
   size_t writes_count = block_size;
 
   dariadb::IdSet id_set;
   {
-    dariadb::storage::Manifest::start(
-        dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::AOFile aof{p};
 
     aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
-    BOOST_CHECK_EQUAL(aof_files.size(), size_t(1));
+    BOOST_CHECK_EQUAL(aof_files.size(), size_t(0));
 
     auto e = dariadb::Meas::empty();
 
-    dariadb::Time t = writes_count;
     size_t id_count = 10;
 
-    for (size_t i = 0; i < writes_count; i++) {
+    size_t i = 0;
+    for (; i < writes_count; i++) {
       e.id = i % id_count;
       id_set.insert(e.id);
-      e.time = t;
+      e.time = dariadb::Time(i);
       e.value = dariadb::Value(i);
-      t -= 1;
       BOOST_CHECK(aof.append(e).writed == 1);
     }
+
+    aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
+    BOOST_CHECK_EQUAL(aof_files.size(), size_t(1));
 
     dariadb::Meas::MeasList out;
 
@@ -71,51 +70,12 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
     reader->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), writes_count);
   }
- /* {
-    p.max_levels = 12;
-    dariadb::storage::Manifest::start(
-        dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    auto fname=dariadb::utils::fs::append_path(storage_path, dariadb::storage::Manifest::instance()->cola_list().front());
-    dariadb::storage::Capacitor cap(p, fname);
 
-    cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
-    BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
-    if (cap_files.size() != size_t(1)) {
-      for (auto f : cap_files) {
-        std::cout << ">> " << f << std::endl;
-      }
-      auto cl = dariadb::storage::Manifest::instance()->cola_list();
-      for (auto f : cl) {
-        std::cout << "** " << f << std::endl;
-      }
-    }
-    auto cap_size = cap.size();
-    // level count must be read from file header.
-    BOOST_CHECK_LE(cap.levels_count(), size_t(p.max_levels));
-
-    BOOST_CHECK_EQUAL(cap_size, writes_count);
-    BOOST_CHECK(cap.size() != 0);
-    auto e = dariadb::Meas::empty();
-
-    e.time = writes_count - 1;
-    BOOST_CHECK(cap.append(e).writed == 1);
-
-    dariadb::Meas::MeasList out;
-    auto ids = dariadb::IdArray(id_set.begin(), id_set.end());
-    dariadb::storage::QueryInterval qi{ids, 0, 0, writes_count};
-    auto reader = cap.readInterval(qi);
-    BOOST_CHECK(reader != nullptr);
-    reader->readAll(&out);
-    BOOST_CHECK_EQUAL(out.size(), cap.size());
-    BOOST_CHECK_LT(cap_size, cap.size());
-    dariadb::storage::Manifest::stop();
-  }
-*/
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
-/*
+
 BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
   const size_t block_size = 10;
   auto storage_path = "testStorage";
@@ -123,22 +83,19 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
     dariadb::utils::fs::rm(storage_path);
   }
   {
-    auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
-    assert(cap_files.size() == 0);
-    auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
-    p.max_levels = 11;
-    dariadb::storage::Manifest::start(
-        dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(p);
+    dariadb::utils::fs::mkdir(storage_path);
+    auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
+    assert(aof_files.size() == 0);
+    auto p = dariadb::storage::AOFile::Params(block_size, dariadb::utils::fs::append_path(storage_path, "test.aof"));
+    dariadb::storage::AOFile aof(p);
 
-    dariadb_test::storage_test_check(&cap, 0, 100, 1);
-    dariadb::storage::Manifest::stop();
+    dariadb_test::storage_test_check(&aof, 0, 100, 1);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
-
+/*
 BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
 	const size_t block_size = 10;
 	auto storage_path = "testStorage";
