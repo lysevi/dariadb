@@ -26,19 +26,44 @@ public:
     this->flush();
   }
 
-  Meas::MeasList appended;
   append_result append(const Meas &value) {
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
     auto file=std::fopen(_params.path.c_str(), "ab");
     if(file!=nullptr){
         std::fwrite(&value,sizeof(Meas),size_t(1),file);
-        appended.push_back(value);
         std::fclose(file);
         return append_result(1, 0);
     }else{
         throw MAKE_EXCEPTION("aofile: append error.");
     }
+  }
+
+  append_result append(const Meas::MeasArray &ma){
+      assert(!_is_readonly);
+      std::lock_guard<std::mutex> lock(_mutex);
+      auto file=std::fopen(_params.path.c_str(), "ab");
+      if(file!=nullptr){
+          std::fwrite(ma.data(),sizeof(Meas),ma.size(),file);
+          std::fclose(file);
+          return append_result(ma.size(), 0);
+      }else{
+          throw MAKE_EXCEPTION("aofile: append error.");
+      }
+  }
+
+  append_result append(const Meas::MeasList &ml){
+      assert(!_is_readonly);
+      std::lock_guard<std::mutex> lock(_mutex);
+      auto file=std::fopen(_params.path.c_str(), "ab");
+      if(file!=nullptr){
+          Meas::MeasArray ma{ml.begin(),ml.end()};
+          std::fwrite(ma.data(),sizeof(Meas),ma.size(),file);
+          std::fclose(file);
+          return append_result(ma.size(), 0);
+      }else{
+          throw MAKE_EXCEPTION("aofile: append error.");
+      }
   }
 
   Reader_ptr readInterval(const QueryInterval &q) {
@@ -286,6 +311,8 @@ void AOFile::flush() { // write all to storage;
 }
 
 append_result AOFile::append(const Meas &value) { return _Impl->append(value); }
+append_result AOFile::append(const Meas::MeasArray &ma) { return _Impl->append(ma); }
+append_result AOFile::append(const Meas::MeasList &ml) { return _Impl->append(ml); }
 
 Reader_ptr AOFile::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);

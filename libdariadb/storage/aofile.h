@@ -35,6 +35,8 @@ public:
     AOFile(const AOFile::Params &params, const std::string &fname, bool readonly=false);
     //static Header readHeader(std::string file_name);
     append_result append(const Meas &value) override;
+    append_result append(const Meas::MeasArray &ma)override;
+    append_result append(const Meas::MeasList &ml)override;
     Reader_ptr readInterval(const QueryInterval &q) override;
     Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
     Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;

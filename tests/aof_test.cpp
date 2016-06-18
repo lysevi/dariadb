@@ -51,14 +51,34 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
     size_t id_count = 10;
 
     size_t i = 0;
+    e.id = i % id_count;
+    id_set.insert(e.id);
+    e.time = dariadb::Time(i);
+    e.value = dariadb::Value(i);
+    BOOST_CHECK(aof.append(e).writed == 1);
+    i++;
+    dariadb::Meas::MeasList ml;
+    for (; i < writes_count/2; i++) {
+      e.id = i % id_count;
+      id_set.insert(e.id);
+      e.time = dariadb::Time(i);
+      e.value = dariadb::Value(i);
+      ml.push_back(e);
+    }
+    aof.append(ml);
+
+    dariadb::Meas::MeasArray ma;
+    ma.resize(writes_count-i);
+    size_t pos=0;
     for (; i < writes_count; i++) {
       e.id = i % id_count;
       id_set.insert(e.id);
       e.time = dariadb::Time(i);
       e.value = dariadb::Value(i);
-      BOOST_CHECK(aof.append(e).writed == 1);
+      ma[pos]=e;
+      pos++;
     }
-
+    aof.append(ma);
     aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
     BOOST_CHECK_EQUAL(aof_files.size(), size_t(1));
 
