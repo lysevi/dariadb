@@ -76,7 +76,7 @@ public:
     res_it = local_res.begin();
   }
   
-  size_t size() { return local_res.size(); }
+  size_t size() override { return local_res.size(); }
 
   dariadb::Meas::MeasList local_res;
   dariadb::Meas::MeasList::const_iterator res_it;

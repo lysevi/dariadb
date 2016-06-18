@@ -85,7 +85,9 @@ public:
     mmap->flush();
   }
 
-  void drop_to_stor(MeasWriter *stor) { NOT_IMPLEMENTED; }
+
+  void drop_to_stor(MeasWriter *stor) {
+  }
 
 protected:
   AOFile::Params _params;
