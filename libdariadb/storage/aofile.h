@@ -56,6 +56,6 @@ protected:
     std::unique_ptr<Private> _Impl;
 };
 
-typedef std::shared_ptr<AOFile> AOfile_Ptr;
+typedef std::shared_ptr<AOFile> AOFile_Ptr;
 }
 }

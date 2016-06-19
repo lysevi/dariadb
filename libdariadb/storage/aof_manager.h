@@ -2,7 +2,7 @@
 
 #include "../storage.h"
 #include "../utils/utils.h"
-#include "capacitor.h"
+#include "aofile.h"
 #include <vector>
 
 #include <mutex>
@@ -10,32 +10,29 @@
 namespace dariadb {
 	namespace storage {
 
-		class CapacitorManager : public MeasStorage {
+        class AOFManager : public MeasStorage {
 		public:
 			struct Params {
 				std::string path;
-				size_t max_levels;
-				size_t B; // measurements count in one datra block
+                size_t max_size; // measurements count in one datra block
 				Params() {
-					max_levels = 0;
-					B = 0;
+                    max_size = 0;
 				}
-				Params(const std::string storage_path, const size_t _B) {
+                Params(const std::string storage_path, const size_t _max_size) {
 					path = storage_path;
-					B = _B;
-					max_levels = 0;
+                    max_size = _max_size;
 				}
 			};
 
 		protected:
-			virtual ~CapacitorManager();
+            virtual ~AOFManager();
 
-			CapacitorManager(const Params &param);
+            AOFManager(const Params &param);
 
 		public:
 			static void start(const Params &param);
 			static void stop();
-			static CapacitorManager *instance();
+            static AOFManager *instance();
 
 			// Inherited via MeasStorage
 			virtual Time minTime() override;
@@ -49,19 +46,18 @@ namespace dariadb {
 			virtual void subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk) override;
 
             std::list<std::string> closed_caps();
-            void drop_cap(const std::string&fname, MeasWriter* storage);
+            void drop_aof(const std::string&fname, MeasWriter* storage);
 
 			size_t files_count() const;
             void set_downlevel(MeasWriter* down){_down=down;}
         protected:
             void create_new();
-			std::list<std::string> cap_files()const;
-			std::list<std::string> caps_by_filter(std::function<bool(const Capacitor::Header &)> pred);
+            std::list<std::string> aof_files()const;
 		private:
-			static CapacitorManager *_instance;
+            static AOFManager *_instance;
 
 			Params _params;
-			Capacitor_Ptr _cap;
+            AOFile_Ptr _cap;
             mutable std::mutex _locker;
             MeasWriter* _down;
 		};
