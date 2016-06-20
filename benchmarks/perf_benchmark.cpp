@@ -44,7 +44,8 @@ void show_info(dariadb::storage::Engine *storage) {
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count << ")"
+              << " cap:" << queue_sizes.cola_count
+              << " a:"<<queue_sizes.aofs_count<< ")"
               << " reads: " << reads_count << " speed:" << reads_per_sec << "/sec"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes

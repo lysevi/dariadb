@@ -210,7 +210,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    result = CapacitorManager::instance()->append(value);
+    result = AOFManager::instance()->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -224,7 +224,7 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-    return CapacitorManager::instance()->currentValue(ids, flag);
+    return AOFManager::instance()->currentValue(ids, flag);
   }
 
   void flush() {
@@ -242,6 +242,7 @@ public:
 
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
+    result.aofs_count = AOFManager::instance()->files_count();
     result.pages_count = PageManager::instance()->files_count();
     result.cola_count = CapacitorManager::instance()->files_count();
     return result;

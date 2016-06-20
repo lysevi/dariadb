@@ -13,6 +13,7 @@ namespace storage {
 class Engine : public MeasStorage {
 public:
   struct QueueSizes {
+    size_t aofs_count; ///  AOF count
     size_t pages_count; /// pages count
     size_t cola_count;  /// COLA files count.
   };
