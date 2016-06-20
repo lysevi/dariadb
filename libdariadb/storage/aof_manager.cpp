@@ -86,164 +86,200 @@ void dariadb::storage::AOFManager::drop_aof(const std::string & fname, MeasWrite
 
 dariadb::Time AOFManager::minTime(){
     std::lock_guard<std::mutex> lg(_locker);
-    //auto files = cap_files();
+    auto files = aof_files();
 	dariadb::Time result = dariadb::MAX_TIME;
-//	for (auto filename : files) {
-//		auto local = Capacitor::readHeader(filename).minTime;
-//		result = std::min(local, result);
-//	}
+    for (auto filename : files) {
+        auto p=AOFile::Params(_params.max_size,_params.path);
+        AOFile aof(p,filename,true);
+        auto local =aof.minTime();
+        result = std::min(local, result);
+    }
+    size_t pos=0;
+    for(auto v:_buffer){
+       result = std::min(v.time, result);
+       ++pos;
+       if(pos>_buffer_pos){
+           break;
+       }
+    }
 	return result;
 }
 
 dariadb::Time AOFManager::maxTime(){
     std::lock_guard<std::mutex> lg(_locker);
-//	auto files = cap_files();
-	dariadb::Time result = dariadb::MIN_TIME;
-//	for (auto filename : files) {
-//		auto local = Capacitor::readHeader(filename).maxTime;
-//		result = std::max(local, result);
-//	}
+    auto files = aof_files();
+    dariadb::Time result = dariadb::MIN_TIME;
+    for (auto filename : files) {
+        auto p=AOFile::Params(_params.max_size,_params.path);
+        AOFile aof(p,filename,true);
+        auto local =aof.maxTime();
+        result = std::max(local, result);
+    }
+    for(auto v:_buffer){
+       result = std::max(v.time, result);
+    }
 	return result;
 }
 
 bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time * minResult, dariadb::Time * maxResult){
     std::lock_guard<std::mutex> lg(_locker);
-//	auto files = cap_files();
-//    auto p=Capacitor::Params(_params.B,_params.path);
+    auto files = aof_files();
+    auto p=AOFile::Params(_params.max_size,_params.path);
 
     bool res=false;
     *minResult=dariadb::MAX_TIME;
     *maxResult=dariadb::MIN_TIME;
 
-//    for(auto filename :files){
-//        auto raw=new Capacitor(p,filename,true);
-//        Capacitor_Ptr cptr{raw};
-//        dariadb::Time lmin=dariadb::MAX_TIME, lmax=dariadb::MIN_TIME;
-//        if(cptr->minMaxTime(id,&lmin,&lmax)){
-//            res=true;
-//            *minResult=std::min(lmin,*minResult);
-//            *maxResult=std::max(lmax,*maxResult);
-//        }
-//    }
+    for(auto filename :files){
+        AOFile aof(p,filename,true);
+        dariadb::Time lmin=dariadb::MAX_TIME, lmax=dariadb::MIN_TIME;
+        if(aof.minMaxTime(id,&lmin,&lmax)){
+            res=true;
+            *minResult=std::min(lmin,*minResult);
+            *maxResult=std::max(lmax,*maxResult);
+        }
+    }
+
+    size_t pos=0;
+    for(auto v:_buffer){
+        if(v.id==id){
+            res=true;
+            *minResult=std::min(v.time,*minResult);
+            *maxResult=std::max(v.time,*maxResult);
+        }
+        ++pos;
+        if(pos>_buffer_pos){
+            break;
+        }
+    }
     return res;
 }
 
 
 Reader_ptr AOFManager::readInterval(const QueryInterval & query){
     std::lock_guard<std::mutex> lg(_locker);
-//	auto pred = [query](const Capacitor::Header &hdr) {
-//		auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
-//			(utils::inInterval(query.from, query.to, hdr.minTime)) ||
-//			(utils::inInterval(query.from, query.to, hdr.maxTime)) ||
-//			(utils::inInterval(hdr.minTime, hdr.maxTime, query.from)) ||
-//			(utils::inInterval(hdr.minTime, hdr.maxTime, query.to)));
-//		return interval_check;
-//	};
 
-//	auto files = caps_by_filter(pred);
-//	auto p = Capacitor::Params(_params.B, _params.path);
-//	TP_Reader *raw = new TP_Reader;
-//	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+    auto files = aof_files();
+    auto p = AOFile::Params(_params.max_size, _params.path);
+    TP_Reader *raw = new TP_Reader;
+    std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
-//	for (auto filename : files) {
-//		auto raw = new Capacitor(p, filename, true);
-//		Meas::MeasList out;
-//		raw->readInterval(query)->readAll(&out);
-//		for (auto m : out) {
-//			//TODO check!
-//			if (m.flag == Flags::_NO_DATA) {
-//				continue;
-//			}
-//			sub_result[m.id].insert(m);
-//		}
-//		delete raw;
-//	}
+    for (auto filename : files) {
+        AOFile aof(p, filename, true);
+        Meas::MeasList out;
+        aof.readInterval(query)->readAll(&out);
+        for (auto m : out) {
+            //TODO check!
+            if (m.flag == Flags::_NO_DATA) {
+                continue;
+            }
+            sub_result[m.id].insert(m);
+        }
+    }
+    size_t pos=0;
+    for(auto v:_buffer){
+       if(v.inQuery(query.ids,query.flag,query.from,query.to)){
+           sub_result[v.id].insert(v);
+       }
+       ++pos;
+       if(pos>_buffer_pos){
+           break;
+       }
+    }
 
-//	for (auto &kv : sub_result) {
-//		raw->_ids.push_back(kv.first);
-//		for (auto &m : kv.second) {
-//			raw->_values.push_back(m);
-//		}
-//	}
-//	raw->reset();
-//	return Reader_ptr(raw);
-    return nullptr;
+    for (auto &kv : sub_result) {
+        raw->_ids.push_back(kv.first);
+        for (auto &m : kv.second) {
+            raw->_values.push_back(m);
+        }
+    }
+    raw->reset();
+    return Reader_ptr(raw);
 }
 
 Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint & query){
     std::lock_guard<std::mutex> lg(_locker);
-//	auto pred = [query](const Capacitor::Header &hdr) {
-//		auto interval_check = hdr.maxTime < query.time_point;
-//		//TODO check this.
-//			//(utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point));
-//		return interval_check;
-//	};
 
-//	auto files = caps_by_filter(pred);
-//	auto p = Capacitor::Params(_params.B, _params.path);
-//	TP_Reader *raw = new TP_Reader;
-//	dariadb::Meas::Id2Meas sub_result;
+    auto files = aof_files();
+    auto p = AOFile::Params(_params.max_size, _params.path);
+    TP_Reader *raw = new TP_Reader;
+    dariadb::Meas::Id2Meas sub_result;
 
-//	for (auto filename : files) {
-//		auto raw = new Capacitor(p, filename, true);
-//		Meas::MeasList out;
-//		raw->readInTimePoint(query)->readAll(&out);
+    for (auto filename : files) {
+        AOFile aof(p, filename, true);
+        Meas::MeasList out;
+        aof.readInTimePoint(query)->readAll(&out);
 
-//		for (auto &m : out) {
-//			auto it = sub_result.find(m.id);
-//			if (it == sub_result.end()) {
-//				sub_result.insert(std::make_pair(m.id, m));
-//			}
-//			else {
-//				if (it->second.flag == Flags::_NO_DATA) {
-//					sub_result[m.id] = m;
-//				}
-//			}
-//		}
+        for (auto &m : out) {
+            auto it = sub_result.find(m.id);
+            if (it == sub_result.end()) {
+                sub_result.insert(std::make_pair(m.id, m));
+            }
+            else {
+                if (it->second.flag == Flags::_NO_DATA) {
+                    sub_result[m.id] = m;
+                }
+            }
+        }
+    }
 
-//		delete raw;
-//	}
+    size_t pos=0;
+    for(auto v:_buffer){
+        if(v.inQuery(query.ids,query.flag)){
+            auto it = sub_result.find(v.id);
+            if (it == sub_result.end()) {
+                sub_result.insert(std::make_pair(v.id, v));
+            }
+            else {
+                if((v.time>it->second.time) && (v.time<=query.time_point)){
+                    sub_result[v.id] = v;
+                }
+            }
+        }
+        ++pos;
+        if(pos>_buffer_pos){
+            break;
+        }
+    }
 
-//	for (auto &kv : sub_result) {
-//		raw->_ids.push_back(kv.first);
-//		raw->_values.push_back(kv.second);
-//	}
-//	raw->reset();
-//	return Reader_ptr(raw);
-    return nullptr;
+    for (auto &kv : sub_result) {
+        raw->_ids.push_back(kv.first);
+        raw->_values.push_back(kv.second);
+    }
+    raw->reset();
+    return Reader_ptr(raw);
 }
 
 Reader_ptr AOFManager::currentValue(const IdArray & ids, const Flag & flag){
-//	TP_Reader *raw = new TP_Reader;
-//	auto files = cap_files();
+    TP_Reader *raw = new TP_Reader;
+    auto files = aof_files();
 	
-//	auto p = Capacitor::Params(_params.B, _params.path);
-//	dariadb::Meas::Id2Meas meases;
-//	for (const auto &f : files) {
-//		auto c = Capacitor_Ptr{ new Capacitor(p,f, true) };
-//		auto sub_rdr=c->currentValue(ids, flag);
-//		Meas::MeasList out;
-//		sub_rdr->readAll(&out);
+    auto p = AOFile::Params(_params.max_size, _params.path);
+    dariadb::Meas::Id2Meas meases;
+    for (const auto &f : files) {
+        AOFile c(p,f, true);
+        auto sub_rdr=c.currentValue(ids, flag);
+        Meas::MeasList out;
+        sub_rdr->readAll(&out);
 
-//		for (auto &m : out) {
-//			auto it = meases.find(m.id);
-//			if (it == meases.end()) {
-//				meases.insert(std::make_pair(m.id, m));
-//			}
-//			else {
-//				if (it->second.flag == Flags::_NO_DATA) {
-//					meases[m.id] = m;
-//				}
-//			}
-//		}
-//	}
-//	for (auto &kv : meases) {
-//		raw->_values.push_back(kv.second);
-//		raw->_ids.push_back(kv.first);
-//	}
-//	raw->reset();
-//	return Reader_ptr(raw);
-    return nullptr;
+        for (auto &m : out) {
+            auto it = meases.find(m.id);
+            if (it == meases.end()) {
+                meases.insert(std::make_pair(m.id, m));
+            }
+            else {
+                if (it->second.flag == Flags::_NO_DATA) {
+                    meases[m.id] = m;
+                }
+            }
+        }
+    }
+    for (auto &kv : meases) {
+        raw->_values.push_back(kv.second);
+        raw->_ids.push_back(kv.first);
+    }
+    raw->reset();
+    return Reader_ptr(raw);
 }
 
 dariadb::append_result AOFManager::append(const Meas & value){

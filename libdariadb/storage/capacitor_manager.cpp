@@ -179,9 +179,9 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval & query){
 	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
 	for (auto filename : files) {
-		auto raw = new Capacitor(p, filename, true);
+        auto raw_cap = new Capacitor(p, filename, true);
 		Meas::MeasList out;
-		raw->readInterval(query)->readAll(&out);
+        raw_cap->readInterval(query)->readAll(&out);
 		for (auto m : out) {
 			//TODO check!
 			if (m.flag == Flags::_NO_DATA) {
@@ -189,7 +189,7 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval & query){
 			}
 			sub_result[m.id].insert(m);
 		}
-		delete raw;
+        delete raw_cap;
 	}
 
 	for (auto &kv : sub_result) {
@@ -217,9 +217,9 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint & query){
 	dariadb::Meas::Id2Meas sub_result;
 
 	for (auto filename : files) {
-		auto raw = new Capacitor(p, filename, true);
+        auto raw_cap = new Capacitor(p, filename, true);
 		Meas::MeasList out;
-		raw->readInTimePoint(query)->readAll(&out);
+        raw_cap->readInTimePoint(query)->readAll(&out);
 
 		for (auto &m : out) {
 			auto it = sub_result.find(m.id);
@@ -233,7 +233,7 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint & query){
 			}
 		}
 
-		delete raw;
+        delete raw_cap;
 	}
 
 	for (auto &kv : sub_result) {
