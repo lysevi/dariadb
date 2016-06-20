@@ -46,18 +46,18 @@ AOFManager * dariadb::storage::AOFManager::instance(){
 void AOFManager::create_new(){
     _aof=nullptr;
      auto p=AOFile::Params(_params.max_size, _params.path);
-     /*if(_down!=nullptr){
-         auto closed=this->closed_caps();
+     if(_down!=nullptr){
+         auto closed=this->closed_aofs();
 		 const size_t MAX_CLOSED_CAPS = 10;
          if(closed.size()>MAX_CLOSED_CAPS){
              size_t to_drop=closed.size()/2;
              for(size_t i=0;i<to_drop;++i){
                  auto f=closed.front();
                  closed.pop_front();
-                 this->drop_cap(f,_down);
+                 this->drop_aof(f,_down);
              }
          }
-     }*/
+     }
     _aof=AOFile_Ptr{new AOFile(p)};
 }
 
