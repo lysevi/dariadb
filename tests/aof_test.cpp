@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
+BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
   const size_t block_size = 10;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {

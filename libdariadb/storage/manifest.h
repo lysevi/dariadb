@@ -23,6 +23,10 @@ public:
   void cola_append(const std::string &rec);
   void cola_rm(const std::string &rec);
 
+  std::list<std::string> aof_list();
+  void aof_append(const std::string &rec);
+  void aof_rm(const std::string &rec);
+
   std::string read_file(const std::string &fname);
   void write_file(const std::string &fname, const std::string &content);
 
