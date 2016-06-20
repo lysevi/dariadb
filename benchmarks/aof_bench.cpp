@@ -7,6 +7,7 @@
 #include "bench_common.h"
 #include <ctime>
 #include <storage/aofile.h>
+#include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]) {
   auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "testStorage";
+	dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storage_path, "Manifest"));
     // dont_clean=true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
@@ -83,7 +85,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::utils::fs::mkdir(storage_path);
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-    auto p = dariadb::storage::AOFile::Params(0, dariadb::utils::fs::append_path(storage_path, "test.aof"));
+    auto p = dariadb::storage::AOFile::Params(0, storage_path);
     dariadb::storage::AOFile aof(p);
 
     std::thread info_thread(show_info);
@@ -109,6 +111,8 @@ int main(int argc, char *argv[]) {
 
     dariadb_bench::readBenchark(all_id_set, &aof, 100, startTime,
                                 dariadb::timeutil::current_time());
+
+	dariadb::storage::Manifest::stop();
   }
 
 }

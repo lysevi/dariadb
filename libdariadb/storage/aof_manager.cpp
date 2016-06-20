@@ -62,11 +62,11 @@ void AOFManager::create_new(){
 
 std::list<std::string> AOFManager::aof_files() const{
 	std::list<std::string> res;
-//	auto files = Manifest::instance()->cola_list();
-//	for (auto f : files) {
-//		auto full_path = utils::fs::append_path(_params.path, f);
-//		res.push_back(full_path);
-//	}
+	auto files = Manifest::instance()->aof_list();
+	for (auto f : files) {
+		auto full_path = utils::fs::append_path(_params.path, f);
+		res.push_back(full_path);
+	}
 	return res;
 }
 
