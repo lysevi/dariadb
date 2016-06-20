@@ -15,16 +15,20 @@ using namespace dariadb::storage;
 class AOFile::Private {
 public:
   Private(const AOFile::Params &params) : _params(params){
+	  _writed = 0;
     _is_readonly = false;
 	auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
 	_filename = utils::fs::append_path(_params.path, rnd_fname);
 	Manifest::instance()->aof_append(rnd_fname);
+	is_full = false;
   }
 
   Private(const AOFile::Params &params, const std::string &fname, bool readonly)
       : _params(params) {
+	  _writed = 0;
     _is_readonly = readonly;
 	_filename = fname;
+	is_full = false;
   }
 
   ~Private() {
@@ -34,10 +38,14 @@ public:
   append_result append(const Meas &value) {
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
+	if (_writed > _params.size) {
+		return append_result(0, 1);
+	}
     auto file=std::fopen(_filename.c_str(), "ab");
     if(file!=nullptr){
         std::fwrite(&value,sizeof(Meas),size_t(1),file);
         std::fclose(file);
+		_writed++;
         return append_result(1, 0);
     }else{
         throw MAKE_EXCEPTION("aofile: append error.");
@@ -47,11 +55,16 @@ public:
   append_result append(const Meas::MeasArray &ma){
       assert(!_is_readonly);
       std::lock_guard<std::mutex> lock(_mutex);
+	  if (is_full) {
+		  return append_result(0, ma.size());
+	  }
       auto file=std::fopen(_filename.c_str(), "ab");
       if(file!=nullptr){
-          std::fwrite(ma.data(),sizeof(Meas),ma.size(),file);
+		  auto write_size = (ma.size() + _writed) > _params.size ? (_params.size - _writed) : ma.size();
+          std::fwrite(ma.data(),sizeof(Meas),write_size,file);
           std::fclose(file);
-          return append_result(ma.size(), 0);
+		  _writed += write_size;
+          return append_result(write_size, 0);
       }else{
           throw MAKE_EXCEPTION("aofile: append error.");
       }
@@ -60,11 +73,17 @@ public:
   append_result append(const Meas::MeasList &ml){
       assert(!_is_readonly);
       std::lock_guard<std::mutex> lock(_mutex);
+	  if (is_full) {
+		  return append_result(0, ml.size());
+	  }
       auto file=std::fopen(_filename.c_str(), "ab");
       if(file!=nullptr){
+		  auto list_size = ml.size();
+		  auto write_size = (list_size + _writed) > _params.size ? (_params.size - _writed) : list_size;
           Meas::MeasArray ma{ml.begin(),ml.end()};
-          std::fwrite(ma.data(),sizeof(Meas),ma.size(),file);
+          std::fwrite(ma.data(),sizeof(Meas), write_size,file);
           std::fclose(file);
+		  _writed += write_size;
           return append_result(ma.size(), 0);
       }else{
           throw MAKE_EXCEPTION("aofile: append error.");
@@ -279,6 +298,8 @@ protected:
 
   mutable std::mutex _mutex;
   bool _is_readonly;
+  size_t _writed;
+  bool is_full;
 };
 
 AOFile::~AOFile() {}
