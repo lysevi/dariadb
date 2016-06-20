@@ -61,6 +61,7 @@ namespace dariadb {
         protected:
             void create_new();
             std::list<std::string> aof_files()const;
+            void flush_buffer();
 		private:
             static AOFManager *_instance;
 

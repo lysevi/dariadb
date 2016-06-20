@@ -35,6 +35,7 @@ void AOFManager::start(const Params & param){
 }
 
 void AOFManager::stop(){
+    _instance->flush();
     delete AOFManager::_instance;
     AOFManager::_instance = nullptr;
 }
@@ -300,29 +301,34 @@ dariadb::append_result AOFManager::append(const Meas & value){
 	_buffer_pos++;
 	
 	if (_buffer_pos >= _params.buffer_size) {
-		Meas::MeasList ml{ _buffer.begin(),_buffer.end() };
-		if (_aof == nullptr) {
-			create_new();
-		}
-		while (1) {
-			auto res = _aof->append(ml);
-			if (res.writed != ml.size()) {
-				create_new();
-				auto it = ml.begin();
-				std::advance(it, res.writed);
-				ml.erase(ml.begin(), it);
-			}
-			else {
-				break;
-			}
-		}
-		_buffer_pos = 0;
+        flush_buffer();
 	}
     return dariadb::append_result(1,0);
 
 }
 
+void AOFManager::flush_buffer(){
+    Meas::MeasList ml{ _buffer.begin(),_buffer.begin()+_buffer_pos };
+    if (_aof == nullptr) {
+        create_new();
+    }
+    while (1) {
+        auto res = _aof->append(ml);
+        if (res.writed != ml.size()) {
+            create_new();
+            auto it = ml.begin();
+            std::advance(it, res.writed);
+            ml.erase(ml.begin(), it);
+        }
+        else {
+            break;
+        }
+    }
+    _buffer_pos = 0;
+}
+
 void AOFManager::flush(){
+    flush_buffer();
 }
 
 void AOFManager::subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk){

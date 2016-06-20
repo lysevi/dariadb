@@ -173,10 +173,10 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
         dariadb::storage::AOFManager::start(dariadb::storage::AOFManager::Params(storagePath, max_size));
 
         //TODO check.
-//        dariadb::storage::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
-//        dariadb::Meas::MeasList out;
-//        dariadb::storage::AOFManager::instance()->readInterval(qi)->readAll(&out);
-//        BOOST_CHECK_EQUAL(out.size(),dariadb_test::copies_count);
+        dariadb::storage::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
+        dariadb::Meas::MeasList out;
+        dariadb::storage::AOFManager::instance()->readInterval(qi)->readAll(&out);
+        BOOST_CHECK_EQUAL(out.size(),dariadb_test::copies_count);
 
 
         auto closed=dariadb::storage::AOFManager::instance()->closed_aofs();
