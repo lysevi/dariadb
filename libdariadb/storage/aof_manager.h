@@ -9,18 +9,26 @@
 
 namespace dariadb {
 	namespace storage {
-
+		const size_t AOF_BUFFER_SIZE = 1000;
         class AOFManager : public MeasStorage {
 		public:
 			struct Params {
 				std::string path;
                 size_t max_size; // measurements count in one datra block
+				size_t buffer_size;
 				Params() {
                     max_size = 0;
+					buffer_size = AOF_BUFFER_SIZE;
 				}
                 Params(const std::string storage_path, const size_t _max_size) {
 					path = storage_path;
                     max_size = _max_size;
+					buffer_size = AOF_BUFFER_SIZE;
+				}
+				Params(const std::string storage_path, const size_t _max_size, const size_t bufsize) {
+					path = storage_path;
+					max_size = _max_size;
+					buffer_size = bufsize;
 				}
 			};
 
@@ -57,9 +65,12 @@ namespace dariadb {
             static AOFManager *_instance;
 
 			Params _params;
-            AOFile_Ptr _cap;
+            AOFile_Ptr _aof;
             mutable std::mutex _locker;
             MeasWriter* _down;
+
+			Meas::MeasArray _buffer;
+			size_t _buffer_pos;
 		};
 	}
 }

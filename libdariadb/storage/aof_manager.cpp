@@ -5,6 +5,7 @@
 #include "../flags.h"
 #include "inner_readers.h"
 #include <cassert>
+#include <iterator>
 
 using namespace dariadb::storage;
 using namespace dariadb;
@@ -12,6 +13,7 @@ using namespace dariadb;
 AOFManager *AOFManager::_instance = nullptr;
 
 AOFManager::~AOFManager(){
+	this->flush();
 }
 
 AOFManager::AOFManager(const Params & param):_params(param){
@@ -19,6 +21,8 @@ AOFManager::AOFManager(const Params & param):_params(param){
     if (!dariadb::utils::fs::path_exists(_params.path)) {
       dariadb::utils::fs::mkdir(_params.path);
     }
+	_buffer.resize(_params.buffer_size);
+	_buffer_pos = 0;
 }
 
 void AOFManager::start(const Params & param){
@@ -40,24 +44,21 @@ AOFManager * dariadb::storage::AOFManager::instance(){
 }
 
 void AOFManager::create_new(){
-//    _cap=nullptr;
-//     auto p=AOFManager::Params(_params.max_size,_params.path);
-//     if(_params.max_levels!=0){
-//         p.max_levels=_params.max_levels;
-//     }
-//     if(_down!=nullptr){
-//         auto closed=this->closed_caps();
-//		 const size_t MAX_CLOSED_CAPS = 10;
-//         if(closed.size()>MAX_CLOSED_CAPS){
-//             size_t to_drop=closed.size()/2;
-//             for(size_t i=0;i<to_drop;++i){
-//                 auto f=closed.front();
-//                 closed.pop_front();
-//                 this->drop_cap(f,_down);
-//             }
-//         }
-//     }
-//    _cap=Capacitor_Ptr{new Capacitor(p)};
+    _aof=nullptr;
+     auto p=AOFile::Params(_params.max_size, _params.path);
+     /*if(_down!=nullptr){
+         auto closed=this->closed_caps();
+		 const size_t MAX_CLOSED_CAPS = 10;
+         if(closed.size()>MAX_CLOSED_CAPS){
+             size_t to_drop=closed.size()/2;
+             for(size_t i=0;i<to_drop;++i){
+                 auto f=closed.front();
+                 closed.pop_front();
+                 this->drop_cap(f,_down);
+             }
+         }
+     }*/
+    _aof=AOFile_Ptr{new AOFile(p)};
 }
 
 std::list<std::string> AOFManager::aof_files() const{
@@ -246,15 +247,31 @@ Reader_ptr AOFManager::currentValue(const IdArray & ids, const Flag & flag){
 }
 
 dariadb::append_result AOFManager::append(const Meas & value){
-//    std::lock_guard<std::mutex> lg(_locker);
-//    auto res=_cap->append(value);
-//    if(res.writed!=1){
-//        create_new();
-//        return _cap->append(value);
-//    }else{
-//        return res;
-//    }
-    return dariadb::append_result(0,1);
+    std::lock_guard<std::mutex> lg(_locker);
+	_buffer[_buffer_pos] = value;
+	_buffer_pos++;
+	
+	if (_buffer_pos >= _params.buffer_size) {
+		Meas::MeasList ml{ _buffer.begin(),_buffer.end() };
+		if (_aof == nullptr) {
+			create_new();
+		}
+		while (1) {
+			auto res = _aof->append(ml);
+			if (res.writed != ml.size()) {
+				create_new();
+				auto it = ml.begin();
+				std::advance(it, res.writed);
+				ml.erase(ml.begin(), it);
+			}
+			else {
+				break;
+			}
+		}
+		_buffer_pos = 0;
+	}
+    return dariadb::append_result(1,0);
+
 }
 
 void AOFManager::flush(){

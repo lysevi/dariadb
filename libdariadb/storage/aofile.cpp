@@ -84,7 +84,7 @@ public:
           std::fwrite(ma.data(),sizeof(Meas), write_size,file);
           std::fclose(file);
 		  _writed += write_size;
-          return append_result(ma.size(), 0);
+          return append_result(write_size, 0);
       }else{
           throw MAKE_EXCEPTION("aofile: append error.");
       }
