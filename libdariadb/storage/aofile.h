@@ -51,6 +51,8 @@ public:
         NOT_IMPLEMENTED;
     }
     void drop_to_stor(MeasWriter *stor);
+
+    std::string filename()const;
 protected:
     class Private;
     std::unique_ptr<Private> _Impl;

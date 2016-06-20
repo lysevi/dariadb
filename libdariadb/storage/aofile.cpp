@@ -287,8 +287,24 @@ public:
 
 
   void drop_to_stor(MeasWriter *stor) {
+      auto file=std::fopen(_filename.c_str(), "rb");
+      if(file==nullptr){
+          throw MAKE_EXCEPTION("aof: file open error");
+      }
+
+      while(1){
+          Meas val=Meas::empty();
+          if(fread(&val,sizeof(Meas),size_t(1),file)==0){
+              break;
+          }
+         stor->append(val);
+      }
+      std::fclose(file);
   }
 
+  std::string filename()const{
+      return _filename;
+  }
 protected:
   AOFile::Params _params;
   std::string    _filename;
@@ -353,3 +369,7 @@ Reader_ptr AOFile::currentValue(const IdArray &ids, const Flag &flag) {
 }
 
 void AOFile::drop_to_stor(MeasWriter *stor) { _Impl->drop_to_stor(stor); }
+
+std::string AOFile::filename()const{
+  return _Impl->filename();
+}

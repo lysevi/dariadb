@@ -53,7 +53,7 @@ namespace dariadb {
 			virtual void flush() override;
 			virtual void subscribe(const IdArray & ids, const Flag & flag, const ReaderClb_ptr & clbk) override;
 
-            std::list<std::string> closed_caps();
+            std::list<std::string> closed_aofs();
             void drop_aof(const std::string&fname, MeasWriter* storage);
 
 			size_t files_count() const;

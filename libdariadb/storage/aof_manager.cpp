@@ -71,16 +71,28 @@ std::list<std::string> AOFManager::aof_files() const{
 	return res;
 }
 
-void dariadb::storage::AOFManager::drop_aof(const std::string & fname, MeasWriter* storage){
-    //boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+std::list<std::string> dariadb::storage::AOFManager::closed_aofs(){
+    auto all_files=aof_files();
+    std::list<std::string> result;
+    for(auto fn:all_files){
+        if(_aof==nullptr){
+            result.push_back(fn);
+        }else{
+            if(fn!=this->_aof->filename()){
+                result.push_back(fn);
+            }
+        }
+    }
+    return result;
+}
 
-//	auto p = Capacitor::Params(_params.B, _params.path);
-//	auto cap = Capacitor_Ptr{ new Capacitor{p,fname, false} };
-//	cap->drop_to_stor(storage);
-//	cap = nullptr;
-//	utils::fs::rm(fname);
-//	auto without_path = utils::fs::extract_filename(fname);
-//	Manifest::instance()->cola_rm(without_path);
+void dariadb::storage::AOFManager::drop_aof(const std::string & fname, MeasWriter* storage){
+    auto p=AOFile::Params(_params.max_size,_params.path);
+    AOFile aof{p,fname, false};
+    aof.drop_to_stor(storage);
+    utils::fs::rm(fname);
+    auto without_path = utils::fs::extract_filename(fname);
+    Manifest::instance()->aof_rm(without_path);
 }
 
 
