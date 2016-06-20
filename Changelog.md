@@ -3,6 +3,7 @@ v0.0.7
 - Restore after crash.
 - CRC32 checksum for chunks.
 - COLA layer.
+- Append-only files layer.
 
 v0.0.6
 =====
