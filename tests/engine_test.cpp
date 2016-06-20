@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const size_t cap_B = 2;
 
   const dariadb::Time from = 0;
-  const dariadb::Time to = from + 1021;
+  const dariadb::Time to = from + 1500;
   const dariadb::Time step = 10;
 
   {
@@ -115,8 +115,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
 	dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
 	cap_pam.max_levels = 5;
+    dariadb::storage::AOFManager::Params aofp(storage_path,chunk_size);
+    aofp.max_closed_aofs=20;
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-                    dariadb::storage::AOFManager::Params(storage_path,chunk_size),
+                    aofp,
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,chunk_size),
 		cap_pam,
         dariadb::storage::Engine::Limits(10))};

@@ -49,8 +49,7 @@ void AOFManager::create_new(){
      auto p=AOFile::Params(_params.max_size, _params.path);
      if(_down!=nullptr){
          auto closed=this->closed_aofs();
-         const size_t MAX_CLOSED_AOFS = 50;
-         if(closed.size()>MAX_CLOSED_AOFS){
+         if(closed.size()>_params.max_closed_aofs){
              size_t to_drop=closed.size()/2;
              for(size_t i=0;i<to_drop;++i){
                  auto f=closed.front();

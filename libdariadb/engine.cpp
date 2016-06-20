@@ -176,14 +176,16 @@ public:
     std::lock_guard<std::mutex> lg(_locker);
     auto pmin = PageManager::instance()->minTime();
     auto cmin = CapacitorManager::instance()->minTime();
-    return std::min(pmin, cmin);
+    auto amin = AOFManager::instance()->minTime();
+    return std::min(std::min(pmin, cmin), amin);
   }
 
   Time maxTime() {
     std::lock_guard<std::mutex> lg(_locker);
     auto pmax = PageManager::instance()->maxTime();
     auto cmax = CapacitorManager::instance()->maxTime();
-    return std::max(pmax, cmax);
+    auto amax = AOFManager::instance()->maxTime();
+    return std::max(std::min(pmax, cmax), amax);
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
@@ -192,20 +194,17 @@ public:
     auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
     dariadb::Time subMin2, subMax2;
     auto mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
+    dariadb::Time subMin3, subMax3;
+    auto ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
 
-    if (!pr) {
-      *minResult = subMin2;
-      *maxResult = subMax2;
-      return mr;
-    }
-    if (!mr) {
-      *minResult = subMin1;
-      *maxResult = subMax1;
-      return pr;
-    }
+    *minResult=dariadb::MAX_TIME;
+    *maxResult=dariadb::MIN_TIME;
+
     *minResult = std::min(subMin1, subMin2);
+    *minResult = std::min(*minResult, subMin3);
     *maxResult = std::max(subMax1, subMax2);
-    return true;
+    *maxResult = std::max(*maxResult, subMax3);
+    return pr||mr||ar;
   }
 
   append_result append(const Meas &value) {
@@ -260,47 +259,26 @@ public:
 	  raw_res->_ids.resize(1);
 	  raw_res->_ids[0]=id;
 
-      dariadb::Time minT, maxT;
       QueryInterval local_q = q;
       local_q.ids.clear();
       local_q.ids.push_back(id);
-      if (!CapacitorManager::instance()->minMaxTime(id, &minT, &maxT)) {
-        ChunkLinkList chunks_for_id;
-        for (auto &c : all_chunkLinks) {
+
+      ChunkLinkList chunks_for_id;
+      for (auto &c : all_chunkLinks) {
           if (c.id_bloom == id) {
-            chunks_for_id.push_back(c);
-          }
-        }
-        
-        std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-        callback->out =&(raw_res->page_result);
-        PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
-        
-      } else {
-
-        if (minT <= q.from && maxT >= q.to) {
-          auto mc_reader = CapacitorManager::instance()->readInterval(local_q);
-		  mc_reader->readAll(&raw_res->cap_result);
-		  
-        } else {
-          ChunkLinkList chunks_for_id;
-          for (auto &c : all_chunkLinks) {
-            if (c.id_bloom == id) {
               chunks_for_id.push_back(c);
-            }
           }
-          
-          std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-		  callback->out = &(raw_res->page_result);
-          PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
-          
-          local_q.from = minT;
-          local_q.to = q.to;
-
-          auto mc_reader = CapacitorManager::instance()->readInterval(local_q);
-		  mc_reader->readAll(&raw_res->cap_result);
-        }
       }
+          
+      std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
+      callback->out = &(raw_res->page_result);
+      PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
+          
+      auto mc_reader = CapacitorManager::instance()->readInterval(local_q);
+      mc_reader->readAll(&raw_res->cap_result);
+
+      auto ardr=AOFManager::instance()->readInterval(local_q);
+      ardr->readAll(&raw_res->cap_result); //TODO spec result for aof.
       raw_result->add_rdr(Reader_ptr{raw_res});
     }
     raw_result->reset();
@@ -309,8 +287,8 @@ public:
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
-    auto id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
 
+    //TODO check this.
     for (auto id : q.ids) {
       dariadb::Time minT, maxT;
       QueryTimePoint local_q = q;
@@ -318,29 +296,37 @@ public:
       local_q.ids.push_back(id);
 
       if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT)
-		  && (minT < q.time_point || maxT<q.time_point)
-		  /* &&
-          utils::inInterval(minT, maxT, local_q.time_point)*/) {
-        auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
-        raw_result->add_rdr(subres);
-      } else {
-        TP_Reader *raw_tp_reader = new TP_Reader;
-        raw_tp_reader->_ids.resize(size_t(1));
-        raw_tp_reader->_ids[0] = id;
-        auto fres = id2meas.find(id);
-        if (fres != id2meas.end()) {
-          raw_tp_reader->_values.push_back(fres->second);
-        } else {
-          if (id2meas.empty()) {
-            auto e = Meas::empty(id);
-            e.flag = Flags::_NO_DATA;
-            e.time = q.time_point;
-            raw_tp_reader->_values.push_back(e);
+              && (minT < q.time_point || maxT<q.time_point)
+              /* &&
+                  utils::inInterval(minT, maxT, local_q.time_point)*/) {
+          auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
+          raw_result->add_rdr(subres);
+      } else if (AOFManager::instance()->minMaxTime(id, &minT, &maxT)
+                 && (minT < q.time_point || maxT<q.time_point)
+                 /* &&
+                           utils::inInterval(minT, maxT, local_q.time_point)*/) {
+          auto subres = AOFManager::instance()->readInTimePoint(local_q);
+          raw_result->add_rdr(subres);
+      }
+      else {
+          auto id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
+          TP_Reader *raw_tp_reader = new TP_Reader;
+          raw_tp_reader->_ids.resize(size_t(1));
+          raw_tp_reader->_ids[0] = id;
+          auto fres = id2meas.find(id);
+          if (fres != id2meas.end()) {
+              raw_tp_reader->_values.push_back(fres->second);
+          } else {
+              if (id2meas.empty()) {
+                  auto e = Meas::empty(id);
+                  e.flag = Flags::_NO_DATA;
+                  e.time = q.time_point;
+                  raw_tp_reader->_values.push_back(e);
+              }
           }
-        }
-        raw_tp_reader->reset();
-        Reader_ptr subres{raw_tp_reader};
-        raw_result->add_rdr(subres);
+          raw_tp_reader->reset();
+          Reader_ptr subres{raw_tp_reader};
+          raw_result->add_rdr(subres);
       }
     }
     raw_result->reset();
