@@ -1,6 +1,7 @@
 #include "aofile.h"
 #include "../flags.h"
 #include "../utils/fs.h"
+#include "manifest.h"
 #include "inner_readers.h"
 #include <algorithm>
 #include <cassert>
@@ -15,11 +16,15 @@ class AOFile::Private {
 public:
   Private(const AOFile::Params &params) : _params(params){
     _is_readonly = false;
+	auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
+	_filename = utils::fs::append_path(_params.path, rnd_fname);
+	Manifest::instance()->aof_append(rnd_fname);
   }
 
   Private(const AOFile::Params &params, const std::string &fname, bool readonly)
       : _params(params) {
     _is_readonly = readonly;
+	_filename = fname;
   }
 
   ~Private() {
@@ -29,7 +34,7 @@ public:
   append_result append(const Meas &value) {
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
-    auto file=std::fopen(_params.path.c_str(), "ab");
+    auto file=std::fopen(_filename.c_str(), "ab");
     if(file!=nullptr){
         std::fwrite(&value,sizeof(Meas),size_t(1),file);
         std::fclose(file);
@@ -42,7 +47,7 @@ public:
   append_result append(const Meas::MeasArray &ma){
       assert(!_is_readonly);
       std::lock_guard<std::mutex> lock(_mutex);
-      auto file=std::fopen(_params.path.c_str(), "ab");
+      auto file=std::fopen(_filename.c_str(), "ab");
       if(file!=nullptr){
           std::fwrite(ma.data(),sizeof(Meas),ma.size(),file);
           std::fclose(file);
@@ -55,7 +60,7 @@ public:
   append_result append(const Meas::MeasList &ml){
       assert(!_is_readonly);
       std::lock_guard<std::mutex> lock(_mutex);
-      auto file=std::fopen(_params.path.c_str(), "ab");
+      auto file=std::fopen(_filename.c_str(), "ab");
       if(file!=nullptr){
           Meas::MeasArray ma{ml.begin(),ml.end()};
           std::fwrite(ma.data(),sizeof(Meas),ma.size(),file);
@@ -69,7 +74,7 @@ public:
   Reader_ptr readInterval(const QueryInterval &q) {
     std::lock_guard<std::mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
-    auto file=std::fopen(_params.path.c_str(), "rb");
+    auto file=std::fopen(_filename.c_str(), "rb");
     if(file==nullptr){
         throw MAKE_EXCEPTION("aof: file open error");
     }
@@ -101,7 +106,7 @@ public:
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
 
-    auto file=std::fopen(_params.path.c_str(), "rb");
+    auto file=std::fopen(_filename.c_str(), "rb");
     if(file==nullptr){
         throw MAKE_EXCEPTION("aof: file open error");
     }
@@ -154,7 +159,7 @@ public:
     std::lock_guard<std::mutex> lock(_mutex);
     dariadb::Meas::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
-    auto file=std::fopen(_params.path.c_str(), "rb");
+    auto file=std::fopen(_filename.c_str(), "rb");
     if(file==nullptr){
         throw MAKE_EXCEPTION("aof: file open error");
     }
@@ -192,7 +197,7 @@ public:
 
   dariadb::Time minTime() const {
     std::lock_guard<std::mutex> lock(_mutex);
-    auto file=std::fopen(_params.path.c_str(), "rb");
+    auto file=std::fopen(_filename.c_str(), "rb");
     if(file==nullptr){
         throw MAKE_EXCEPTION("aof: file open error");
     }
@@ -211,7 +216,7 @@ public:
   }
 
   dariadb::Time maxTime() const {
-    auto file=std::fopen(_params.path.c_str(), "rb");
+    auto file=std::fopen(_filename.c_str(), "rb");
     if(file==nullptr){
         throw MAKE_EXCEPTION("aof: file open error");
     }
@@ -231,7 +236,7 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) {
-    auto file=std::fopen(_params.path.c_str(), "rb");
+    auto file=std::fopen(_filename.c_str(), "rb");
     if(file==nullptr){
         throw MAKE_EXCEPTION("aof: file open error");
     }
@@ -267,7 +272,7 @@ public:
 
 protected:
   AOFile::Params _params;
-
+  std::string    _filename;
 //  dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
 //  AOFile::Header *_header;
 //  uint8_t *_raw_data;
