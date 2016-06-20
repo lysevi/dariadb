@@ -1,6 +1,7 @@
 #pragma once
 
 #include "storage.h"
+#include "storage/aof_manager.h"
 #include "storage/capacitor_manager.h"
 #include "storage/page_manager.h"
 #include "utils/utils.h"
@@ -32,7 +33,8 @@ public:
   /// \brief Engine
   /// \param page_manager_params - params of page manager (PageManager)
   /// \param cap_params - capacitor params  (Capacitor)
-  Engine(storage::PageManager::Params page_manager_params,
+  Engine(storage::AOFManager::Params aof_params,
+          storage::PageManager::Params page_manager_params,
          dariadb::storage::CapacitorManager::Params cap_params, const Limits &limits);
 
   append_result append(const Meas &value) override;

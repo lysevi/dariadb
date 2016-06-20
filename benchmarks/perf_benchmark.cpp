@@ -136,6 +136,7 @@ int main(int argc, char *argv[]) {
 	dariadb::storage::CapacitorManager::Params cap_param(storage_path,cap_B);
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(
+                dariadb::storage::AOFManager::Params(storage_path,chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
         cap_param, dariadb::storage::Engine::Limits(max_mem_chunks));

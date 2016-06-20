@@ -147,14 +147,16 @@ public:
 
 class Engine::Private {
 public:
-  Private(const PageManager::Params &page_storage_params,
-          dariadb::storage::CapacitorManager::Params cap_params,
+  Private(storage::AOFManager::Params &aof_params,
+          const PageManager::Params &page_storage_params,
+          dariadb::storage::CapacitorManager::Params &cap_params,
           dariadb::storage::Engine::Limits limits)
       : _page_manager_params(page_storage_params), _cap_params(cap_params),
         _limits(limits) {
     _subscribe_notify.start();
 
     PageManager::start(_page_manager_params);
+    AOFManager::start(aof_params);
 	CapacitorManager::start(_cap_params);
 	auto pm = PageManager::instance();
     CapacitorManager::instance()->set_downlevel(pm);
@@ -163,6 +165,7 @@ public:
   ~Private() {
     _subscribe_notify.stop();
     this->flush();
+    AOFManager::stop();
 	CapacitorManager::stop();
     PageManager::stop();
   }
@@ -224,6 +227,7 @@ public:
 
   void flush() {
     std::lock_guard<std::mutex> lg(_locker);
+    AOFManager::instance()->flush();
     CapacitorManager::instance()->flush();
     PageManager::instance()->flush();
   }
@@ -387,10 +391,12 @@ protected:
   std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
 };
 
-Engine::Engine(storage::PageManager::Params page_manager_params,
+Engine::Engine(
+        storage::AOFManager::Params aof_params,
+        storage::PageManager::Params page_manager_params,
                dariadb::storage::CapacitorManager::Params cap_params,
                const dariadb::storage::Engine::Limits &limits)
-    : _impl{new Engine::Private(page_manager_params, cap_params, limits)} {}
+    : _impl{new Engine::Private(aof_params,page_manager_params, cap_params, limits)} {}
 
 Engine::~Engine() {
   _impl = nullptr;

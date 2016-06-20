@@ -116,6 +116,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 	dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
 	cap_pam.max_levels = 5;
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+                    dariadb::storage::AOFManager::Params(storage_path,chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,chunk_size),
 		cap_pam,
         dariadb::storage::Engine::Limits(10))};
@@ -127,6 +128,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   }
   {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+                    dariadb::storage::AOFManager::Params(storage_path,chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
 		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
@@ -167,6 +169,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     }
 
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+                    dariadb::storage::AOFManager::Params(storage_path,chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
 		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
@@ -220,6 +223,7 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
     }
 
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+                    dariadb::storage::AOFManager::Params(storage_path,chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
 		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
@@ -311,6 +315,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     }
 
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+                    dariadb::storage::AOFManager::Params(storage_path,chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
 		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),
@@ -391,6 +396,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
     }
 
     std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
+                    dariadb::storage::AOFManager::Params(storage_path,chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
 		dariadb::storage::CapacitorManager::Params(storage_path,cap_B),

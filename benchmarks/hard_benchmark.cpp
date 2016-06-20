@@ -94,6 +94,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto raw_ptr = new dariadb::storage::Engine(
+                dariadb::storage::AOFManager::Params(storage_path,cap_B),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
 		dariadb::storage::CapacitorManager::Params(storage_path, cap_B),
@@ -115,6 +116,7 @@ int main(int argc, char *argv[]) {
                                                   chunk_size);
   pg_params.chunk_cache_size = chunk_cache_size;
   auto raw_ptr_ds = new dariadb::storage::Engine(
+              dariadb::storage::AOFManager::Params(storage_path,cap_B),
       pg_params, dariadb::storage::CapacitorManager::Params(storage_path, cap_B),
       dariadb::storage::Engine::Limits(max_mem_chunks));
   dariadb::storage::MeasStorage_ptr ms{raw_ptr_ds};
