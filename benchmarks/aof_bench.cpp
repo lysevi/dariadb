@@ -37,6 +37,7 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
+			  <<" aofs: "<<dariadb::storage::AOFManager::instance()->files_count()
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
