@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
   {
     std::cout << "write..." << std::endl;
 
-    const size_t chunk_per_storage = 1024 * 10;
+    const size_t chunk_per_storage = 1024 * 100;
     const size_t chunk_size = 1024;
     const size_t cap_B = 50;
     const size_t max_mem_chunks = 100;
