@@ -330,6 +330,5 @@ void AOFManager::subscribe(const IdArray &ids, const Flag &flag,
 }
 
 size_t AOFManager::files_count() const {
-  std::lock_guard<std::mutex> lg(_locker);
   return aof_files().size();
 }

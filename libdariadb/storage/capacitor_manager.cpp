@@ -290,6 +290,5 @@ void CapacitorManager::subscribe(const IdArray &ids, const Flag &flag,
 }
 
 size_t CapacitorManager::files_count() const {
-  std::lock_guard<std::mutex> lg(_locker);
   return cap_files().size();
 }
