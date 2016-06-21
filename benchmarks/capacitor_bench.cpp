@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "testStorage";
-    const size_t cap_B = 11;
+    const size_t cap_B = 50;
     // dont_clean=true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
@@ -87,9 +87,9 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::CapacitorManager::Params p(storage_path, cap_B);
-    p.max_levels = 14;
-    dariadb::storage::CapacitorManager::start(p);
+	dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
+	cap_param.max_levels = 11;
+    dariadb::storage::CapacitorManager::start(cap_param);
     auto tos = dariadb::storage::CapacitorManager::instance();
 
     std::thread info_thread(show_info);

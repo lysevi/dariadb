@@ -88,7 +88,8 @@ int main(int argc, char *argv[]) {
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     auto p = dariadb::storage::AOFManager::Params(storage_path, size_t(1000));
-    p.buffer_size = 10000;
+    p.buffer_size = 1000;
+	p.max_size = (1024 * 1024) * 3 / sizeof(dariadb::Meas);
     dariadb::storage::AOFManager::start(p);
     auto aof = dariadb::storage::AOFManager::instance();
     std::thread info_thread(show_info);

@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
 
     const size_t chunk_per_storage = 1024 * 10;
     const size_t chunk_size = 1024;
-    const size_t cap_B = 10;
+    const size_t cap_B = 50;
     const size_t max_mem_chunks = 100;
 
     // dont_clean = true;
@@ -135,9 +135,15 @@ int main(int argc, char *argv[]) {
     dariadb::Time start_time = dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
+	cap_param.max_levels = 11;
+	
+	dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
+	aof_param.buffer_size = 1000;
+	aof_param.max_size = (1024 * 1024) * 3 / sizeof(dariadb::Meas);
+
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(
-        dariadb::storage::AOFManager::Params(storage_path, chunk_size),
+        aof_param,
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
         cap_param, dariadb::storage::Engine::Limits(max_mem_chunks));
