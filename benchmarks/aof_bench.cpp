@@ -77,19 +77,20 @@ int main(int argc, char *argv[]) {
   auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "testStorage";
-	
+
     // dont_clean=true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
 
     dariadb::utils::fs::mkdir(storage_path);
-	dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storage_path, "Manifest"));
+    dariadb::storage::Manifest::start(
+        dariadb::utils::fs::append_path(storage_path, "Manifest"));
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-    auto p = dariadb::storage::AOFManager::Params(storage_path,size_t(1000));
-	p.buffer_size = 10000;
-	dariadb::storage::AOFManager::start(p);
-	auto aof = dariadb::storage::AOFManager::instance();
+    auto p = dariadb::storage::AOFManager::Params(storage_path, size_t(1000));
+    p.buffer_size = 10000;
+    dariadb::storage::AOFManager::start(p);
+    auto aof = dariadb::storage::AOFManager::instance();
     std::thread info_thread(show_info);
 
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
@@ -98,7 +99,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
-                    dariadb::Time(i), &append_count, aof };
+                    dariadb::Time(i), &append_count, aof};
       writers[pos++] = std::move(t);
     }
 
@@ -114,7 +115,6 @@ int main(int argc, char *argv[]) {
     dariadb_bench::readBenchark(all_id_set, aof, 100, startTime,
                                 dariadb::timeutil::current_time());
 
-	dariadb::storage::Manifest::stop();
+    dariadb::storage::Manifest::stop();
   }
-
 }

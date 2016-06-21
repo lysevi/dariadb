@@ -113,63 +113,62 @@ void dariadb::storage::Manifest::cola_append(const std::string &rec) {
   write_file(_filename, js.dump());
 }
 
-void Manifest::cola_rm(const std::string & rec){
-	std::lock_guard<utils::Locker> lg(_locker);
+void Manifest::cola_rm(const std::string &rec) {
+  std::lock_guard<utils::Locker> lg(_locker);
 
-	json js = json::parse(read_file(_filename));
+  json js = json::parse(read_file(_filename));
 
-	std::list<std::string> cola_list{};
-	auto pages_json = js[COLA_JS_KEY];
-	for (auto v : pages_json) {
-		std::string str_val = v;
-		if (rec != str_val) {
-			cola_list.push_back(str_val);
-		}
-	}
-	js[COLA_JS_KEY] = cola_list;
-	write_file(_filename, js.dump());
+  std::list<std::string> cola_list{};
+  auto pages_json = js[COLA_JS_KEY];
+  for (auto v : pages_json) {
+    std::string str_val = v;
+    if (rec != str_val) {
+      cola_list.push_back(str_val);
+    }
+  }
+  js[COLA_JS_KEY] = cola_list;
+  write_file(_filename, js.dump());
 }
 
-
 std::list<std::string> dariadb::storage::Manifest::aof_list() {
-	std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
 
-	std::list<std::string> result{};
-	json js = json::parse(read_file(_filename));
-	for (auto v : js[AOF_JS_KEY]) {
-		result.push_back(v);
-	}
-	return result;
+  std::list<std::string> result{};
+  json js = json::parse(read_file(_filename));
+  for (auto v : js[AOF_JS_KEY]) {
+    result.push_back(v);
+  }
+  return result;
 }
 
 void dariadb::storage::Manifest::aof_append(const std::string &rec) {
-	std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
 
-	json js = json::parse(read_file(_filename));
+  json js = json::parse(read_file(_filename));
 
-	std::list<std::string> aof_list{};
-	auto pages_json = js[AOF_JS_KEY];
-	for (auto v : pages_json) {
-		aof_list.push_back(v);
-	}
-	aof_list.push_back(rec);
-	js[AOF_JS_KEY] = aof_list;
-	write_file(_filename, js.dump());
+  std::list<std::string> aof_list{};
+  auto pages_json = js[AOF_JS_KEY];
+  for (auto v : pages_json) {
+    aof_list.push_back(v);
+  }
+  aof_list.push_back(rec);
+  js[AOF_JS_KEY] = aof_list;
+  write_file(_filename, js.dump());
 }
 
-void Manifest::aof_rm(const std::string & rec) {
-	std::lock_guard<utils::Locker> lg(_locker);
+void Manifest::aof_rm(const std::string &rec) {
+  std::lock_guard<utils::Locker> lg(_locker);
 
-	json js = json::parse(read_file(_filename));
+  json js = json::parse(read_file(_filename));
 
-	std::list<std::string> aof_list{};
-	auto aof_json = js[AOF_JS_KEY];
-	for (auto v : aof_json) {
-		std::string str_val = v;
-		if (rec != str_val) {
-			aof_list.push_back(str_val);
-		}
-	}
-	js[AOF_JS_KEY] = aof_list;
-	write_file(_filename, js.dump());
+  std::list<std::string> aof_list{};
+  auto aof_json = js[AOF_JS_KEY];
+  for (auto v : aof_json) {
+    std::string str_val = v;
+    if (rec != str_val) {
+      aof_list.push_back(str_val);
+    }
+  }
+  js[AOF_JS_KEY] = aof_list;
+  write_file(_filename, js.dump());
 }

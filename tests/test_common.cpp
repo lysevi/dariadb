@@ -19,12 +19,12 @@ void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
           ((m.flag == flg_val) || (m.flag == dariadb::Flags::_NO_DATA)) &&
           ((m.src == flg_val) || (m.src == dariadb::Flags::_NO_DATA))) {
         count++;
-	  }
-	 /* if ((m.id == id_val) &&
-		  (((m.flag != flg_val)) ||
-		  ((m.src != flg_val)))) {
-		  std::cout<<1;
-	  }*/
+      }
+      /* if ((m.id == id_val) &&
+               (((m.flag != flg_val)) ||
+               ((m.src != flg_val)))) {
+               std::cout<<1;
+       }*/
     }
 
     if (count < copies_count) {
@@ -139,7 +139,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
   dariadb::Meas::MeasList current_mlist;
   dariadb::IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
-  auto current_vals_rdr=as->currentValue(_all_ids_array, 0);
+  auto current_vals_rdr = as->currentValue(_all_ids_array, 0);
   if (current_vals_rdr == nullptr) {
     throw MAKE_EXCEPTION("current_vals_rdr == nullptr");
   }
@@ -147,7 +147,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (current_mlist.size() == 0) {
     throw MAKE_EXCEPTION("current_mlist.size()>0");
   }
-  
+
   as->flush();
   if (as->minTime() != from) {
     throw MAKE_EXCEPTION("as->minTime() != from");
@@ -155,17 +155,17 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (as->maxTime() < to) {
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
-  
+
   auto reader = as->readInterval(
       dariadb::storage::QueryInterval(_all_ids_array, 0, from, to + copies_count));
 
   check_reader_of_all(reader, from, to, step, id_val, total_count, "readAll error: ");
-  
+
   auto cloned_reader = reader->clone();
   cloned_reader->reset();
   check_reader_of_all(cloned_reader, from, to, step, id_val, total_count,
                       "cloned readAll error: ");
-  
+
   cloned_reader->reset();
   auto cl_readed_ids = cloned_reader->getIds();
   if (cl_readed_ids.size() != _all_ids_set.size()) {

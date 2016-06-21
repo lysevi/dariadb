@@ -32,9 +32,9 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     Manifest::instance()->cola_append(n);
   }
 
-  std::list<std::string> aof_names{ "111", "222", "333" };
+  std::list<std::string> aof_names{"111", "222", "333"};
   for (auto n : aof_names) {
-	  Manifest::instance()->aof_append(n);
+    Manifest::instance()->aof_append(n);
   }
 
   auto page_lst = Manifest::instance()->page_list();
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   auto aof_lst = Manifest::instance()->aof_list();
   BOOST_CHECK_EQUAL(aof_lst.size(), aof_names.size());
   BOOST_CHECK_EQUAL_COLLECTIONS(aof_lst.begin(), aof_lst.end(), aof_names.begin(),
-	  aof_names.end());
+                                aof_names.end());
 
   Manifest::stop();
   if (dariadb::utils::fs::path_exists(fname)) {

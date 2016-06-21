@@ -37,7 +37,7 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
-              << " caps:"<<dariadb::storage::Manifest::instance()->cola_list().size()
+              << " caps:" << dariadb::storage::Manifest::instance()->cola_list().size()
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::CapacitorManager::Params p(storage_path, cap_B);
-    p.max_levels=14;
+    p.max_levels = 14;
     dariadb::storage::CapacitorManager::start(p);
     auto tos = dariadb::storage::CapacitorManager::instance();
 
@@ -116,5 +116,4 @@ int main(int argc, char *argv[]) {
     dariadb_bench::readBenchark(all_id_set, tos, 100, startTime,
                                 dariadb::timeutil::current_time());
   }
-
 }

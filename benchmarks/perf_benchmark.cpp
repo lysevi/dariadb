@@ -44,8 +44,8 @@ void show_info(dariadb::storage::Engine *storage) {
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count
-              << " a:"<<queue_sizes.aofs_count<< ")"
+              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+              << ")"
               << " reads: " << reads_count << " speed:" << reads_per_sec << "/sec"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
@@ -134,10 +134,10 @@ int main(int argc, char *argv[]) {
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
-	dariadb::storage::CapacitorManager::Params cap_param(storage_path,cap_B);
+    dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(
-                dariadb::storage::AOFManager::Params(storage_path,chunk_size),
+        dariadb::storage::AOFManager::Params(storage_path, chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
         cap_param, dariadb::storage::Engine::Limits(max_mem_chunks));
@@ -155,12 +155,12 @@ int main(int argc, char *argv[]) {
 
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
-		auto id_from = dariadb_bench::get_id_from(pos);
-		auto id_to = dariadb_bench::get_id_to(pos);
-		for (size_t j = id_from; j < id_to; j++) {
-			all_id_set.insert(j);
-		}
-		
+      auto id_from = dariadb_bench::get_id_from(pos);
+      auto id_to = dariadb_bench::get_id_to(pos);
+      for (size_t j = id_from; j < id_to; j++) {
+        all_id_set.insert(j);
+      }
+
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
                     dariadb::Time(i), &append_count, raw_ptr};
       writers[pos++] = std::move(t);
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
 
     stop_info = true;
     info_thread.join();
-	std::cout << " total id:" << all_id_set.size() << std::endl;
+    std::cout << " total id:" << all_id_set.size() << std::endl;
     {
       std::cout << "full flush..." << std::endl;
       auto start = clock();
@@ -223,8 +223,8 @@ int main(int argc, char *argv[]) {
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "readed: " << clbk->count << std::endl;
       std::cout << "time: " << elapsed << std::endl;
-      auto expected =
-          (dariadb_bench::iteration_count * dariadb_bench::total_threads_count*dariadb_bench::id_per_thread);
+      auto expected = (dariadb_bench::iteration_count *
+                       dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
       if (!dont_clean && clbk->count != expected) {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
         throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");

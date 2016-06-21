@@ -1,12 +1,12 @@
 #include "aofile.h"
 #include "../flags.h"
 #include "../utils/fs.h"
-#include "manifest.h"
 #include "inner_readers.h"
+#include "manifest.h"
 #include <algorithm>
 #include <cassert>
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 
 using namespace dariadb;
@@ -14,99 +14,99 @@ using namespace dariadb::storage;
 
 class AOFile::Private {
 public:
-  Private(const AOFile::Params &params) : _params(params){
-	  _writed = 0;
+  Private(const AOFile::Params &params) : _params(params) {
+    _writed = 0;
     _is_readonly = false;
-	auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
-	_filename = utils::fs::append_path(_params.path, rnd_fname);
-	Manifest::instance()->aof_append(rnd_fname);
-	is_full = false;
+    auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
+    _filename = utils::fs::append_path(_params.path, rnd_fname);
+    Manifest::instance()->aof_append(rnd_fname);
+    is_full = false;
   }
 
   Private(const AOFile::Params &params, const std::string &fname, bool readonly)
       : _params(params) {
-	  _writed = 0;
+    _writed = 0;
     _is_readonly = readonly;
-	_filename = fname;
-	is_full = false;
+    _filename = fname;
+    is_full = false;
   }
 
-  ~Private() {
-    this->flush();
-  }
+  ~Private() { this->flush(); }
 
   append_result append(const Meas &value) {
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
-	if (_writed > _params.size) {
-		return append_result(0, 1);
-	}
-    auto file=std::fopen(_filename.c_str(), "ab");
-    if(file!=nullptr){
-        std::fwrite(&value,sizeof(Meas),size_t(1),file);
-        std::fclose(file);
-		_writed++;
-        return append_result(1, 0);
-    }else{
-        throw MAKE_EXCEPTION("aofile: append error.");
+    if (_writed > _params.size) {
+      return append_result(0, 1);
+    }
+    auto file = std::fopen(_filename.c_str(), "ab");
+    if (file != nullptr) {
+      std::fwrite(&value, sizeof(Meas), size_t(1), file);
+      std::fclose(file);
+      _writed++;
+      return append_result(1, 0);
+    } else {
+      throw MAKE_EXCEPTION("aofile: append error.");
     }
   }
 
-  append_result append(const Meas::MeasArray &ma){
-      assert(!_is_readonly);
-      std::lock_guard<std::mutex> lock(_mutex);
-	  if (is_full) {
-		  return append_result(0, ma.size());
-	  }
-      auto file=std::fopen(_filename.c_str(), "ab");
-      if(file!=nullptr){
-		  auto write_size = (ma.size() + _writed) > _params.size ? (_params.size - _writed) : ma.size();
-          std::fwrite(ma.data(),sizeof(Meas),write_size,file);
-          std::fclose(file);
-		  _writed += write_size;
-          return append_result(write_size, 0);
-      }else{
-          throw MAKE_EXCEPTION("aofile: append error.");
-      }
+  append_result append(const Meas::MeasArray &ma) {
+    assert(!_is_readonly);
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (is_full) {
+      return append_result(0, ma.size());
+    }
+    auto file = std::fopen(_filename.c_str(), "ab");
+    if (file != nullptr) {
+      auto write_size =
+          (ma.size() + _writed) > _params.size ? (_params.size - _writed) : ma.size();
+      std::fwrite(ma.data(), sizeof(Meas), write_size, file);
+      std::fclose(file);
+      _writed += write_size;
+      return append_result(write_size, 0);
+    } else {
+      throw MAKE_EXCEPTION("aofile: append error.");
+    }
   }
 
-  append_result append(const Meas::MeasList &ml){
-      assert(!_is_readonly);
-      std::lock_guard<std::mutex> lock(_mutex);
-	  if (is_full) {
-		  return append_result(0, ml.size());
-	  }
-      auto file=std::fopen(_filename.c_str(), "ab");
-      if(file!=nullptr){
-		  auto list_size = ml.size();
-		  auto write_size = (list_size + _writed) > _params.size ? (_params.size - _writed) : list_size;
-          Meas::MeasArray ma{ml.begin(),ml.end()};
-          std::fwrite(ma.data(),sizeof(Meas), write_size,file);
-          std::fclose(file);
-		  _writed += write_size;
-          return append_result(write_size, 0);
-      }else{
-          throw MAKE_EXCEPTION("aofile: append error.");
-      }
+  append_result append(const Meas::MeasList &ml) {
+    assert(!_is_readonly);
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (is_full) {
+      return append_result(0, ml.size());
+    }
+    auto file = std::fopen(_filename.c_str(), "ab");
+    if (file != nullptr) {
+      auto list_size = ml.size();
+      auto write_size =
+          (list_size + _writed) > _params.size ? (_params.size - _writed) : list_size;
+      Meas::MeasArray ma{ml.begin(), ml.end()};
+      std::fwrite(ma.data(), sizeof(Meas), write_size, file);
+      std::fclose(file);
+      _writed += write_size;
+      return append_result(write_size, 0);
+    } else {
+      throw MAKE_EXCEPTION("aofile: append error.");
+    }
   }
 
   Reader_ptr readInterval(const QueryInterval &q) {
     std::lock_guard<std::mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
-    auto file=std::fopen(_filename.c_str(), "rb");
-    if(file==nullptr){
-        throw MAKE_EXCEPTION("aof: file open error");
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aof: file open error");
     }
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
-    while(1){
-        Meas val=Meas::empty();
-        if(fread(&val,sizeof(Meas),size_t(1),file)==0){
-            break;
-        }
-        if(val.inQuery(q.ids,q.flag,q.from,q.to)){
-            sub_result[val.id].insert(val);
-        }
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
+      }
+      if (val.inQuery(q.ids, q.flag, q.from, q.to)) {
+        sub_result[val.id].insert(val);
+      }
     }
     std::fclose(file);
 
@@ -125,19 +125,19 @@ public:
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
 
-    auto file=std::fopen(_filename.c_str(), "rb");
-    if(file==nullptr){
-        throw MAKE_EXCEPTION("aof: file open error");
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aof: file open error");
     }
-     while(1){
-        Meas val=Meas::empty();
-        if(fread(&val,sizeof(Meas),size_t(1),file)==0){
-            break;
-        }
-        if (val.inQuery(q.ids, q.flag) && (val.time <= q.time_point)) {
-          replace_if_older(sub_res, val);
-          readed_ids.insert(val.id);
-        }
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
+      }
+      if (val.inQuery(q.ids, q.flag) && (val.time <= q.time_point)) {
+        replace_if_older(sub_res, val);
+        readed_ids.insert(val.id);
+      }
     }
     std::fclose(file);
 
@@ -160,7 +160,6 @@ public:
 
     raw->reset();
     return Reader_ptr(raw);
-
   }
 
   void replace_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
@@ -178,17 +177,17 @@ public:
     std::lock_guard<std::mutex> lock(_mutex);
     dariadb::Meas::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
-    auto file=std::fopen(_filename.c_str(), "rb");
-    if(file==nullptr){
-        throw MAKE_EXCEPTION("aof: file open error");
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aof: file open error");
     }
-     while(1){
-        Meas val=Meas::empty();
-        if(fread(&val,sizeof(Meas),size_t(1),file)==0){
-            break;
-        }
-        replace_if_older(sub_res, val);
-        readed_ids.insert(val.id);
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
+      }
+      replace_if_older(sub_res, val);
+      readed_ids.insert(val.id);
     }
     std::fclose(file);
 
@@ -211,68 +210,66 @@ public:
 
     raw->reset();
     return Reader_ptr(raw);
-
   }
 
   dariadb::Time minTime() const {
     std::lock_guard<std::mutex> lock(_mutex);
-    auto file=std::fopen(_filename.c_str(), "rb");
-    if(file==nullptr){
-        throw MAKE_EXCEPTION("aof: file open error");
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aof: file open error");
     }
 
-    dariadb::Time result=dariadb::MAX_TIME;
+    dariadb::Time result = dariadb::MAX_TIME;
 
-    while(1){
-        Meas val=Meas::empty();
-        if(fread(&val,sizeof(Meas),size_t(1),file)==0){
-            break;
-        }
-       result=std::min(val.time,result);
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
+      }
+      result = std::min(val.time, result);
     }
     std::fclose(file);
     return result;
   }
 
   dariadb::Time maxTime() const {
-    auto file=std::fopen(_filename.c_str(), "rb");
-    if(file==nullptr){
-        throw MAKE_EXCEPTION("aof: file open error");
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aof: file open error");
     }
 
-    dariadb::Time result=dariadb::MIN_TIME;
+    dariadb::Time result = dariadb::MIN_TIME;
 
-    while(1){
-        Meas val=Meas::empty();
-        if(fread(&val,sizeof(Meas),size_t(1),file)==0){
-            break;
-        }
-       result=std::max(val.time,result);
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
+      }
+      result = std::max(val.time, result);
     }
     std::fclose(file);
-     return result;
+    return result;
   }
 
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                  dariadb::Time *maxResult) {
-    auto file=std::fopen(_filename.c_str(), "rb");
-    if(file==nullptr){
-        throw MAKE_EXCEPTION("aof: file open error");
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aof: file open error");
     }
 
-    *minResult=dariadb::MAX_TIME;
-    *maxResult=dariadb::MIN_TIME;
-    bool result=false;
-    while(1){
-        Meas val=Meas::empty();
-        if(fread(&val,sizeof(Meas),size_t(1),file)==0){
-            break;
-        }
-       if(val.id==id){
-           result=true;
-           *minResult=std::min(*minResult,val.time);
-           *maxResult=std::max(*maxResult,val.time);
-       }
+    *minResult = dariadb::MAX_TIME;
+    *maxResult = dariadb::MIN_TIME;
+    bool result = false;
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
+      }
+      if (val.id == id) {
+        result = true;
+        *minResult = std::min(*minResult, val.time);
+        *maxResult = std::max(*maxResult, val.time);
+      }
     }
     std::fclose(file);
     return result;
@@ -285,32 +282,30 @@ public:
     //}
   }
 
-
   void drop_to_stor(MeasWriter *stor) {
-      auto file=std::fopen(_filename.c_str(), "rb");
-      if(file==nullptr){
-          throw MAKE_EXCEPTION("aof: file open error");
-      }
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aof: file open error");
+    }
 
-      while(1){
-          Meas val=Meas::empty();
-          if(fread(&val,sizeof(Meas),size_t(1),file)==0){
-              break;
-          }
-         stor->append(val);
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
       }
-      std::fclose(file);
+      stor->append(val);
+    }
+    std::fclose(file);
   }
 
-  std::string filename()const{
-      return _filename;
-  }
+  std::string filename() const { return _filename; }
+
 protected:
   AOFile::Params _params;
-  std::string    _filename;
-//  dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
-//  AOFile::Header *_header;
-//  uint8_t *_raw_data;
+  std::string _filename;
+  //  dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
+  //  AOFile::Header *_header;
+  //  uint8_t *_raw_data;
 
   mutable std::mutex _mutex;
   bool _is_readonly;
@@ -322,11 +317,10 @@ AOFile::~AOFile() {}
 
 AOFile::AOFile(const Params &params) : _Impl(new AOFile::Private(params)) {}
 
-AOFile::AOFile(const AOFile::Params &params, const std::string &fname,
-               bool readonly)
+AOFile::AOFile(const AOFile::Params &params, const std::string &fname, bool readonly)
     : _Impl(new AOFile::Private(params, fname, readonly)) {}
 
-//AOFile::Header AOFile::readHeader(std::string file_name) {
+// AOFile::Header AOFile::readHeader(std::string file_name) {
 //  std::ifstream istream;
 //  istream.open(file_name, std::fstream::in | std::fstream::binary);
 //  if (!istream.is_open()) {
@@ -340,9 +334,13 @@ AOFile::AOFile(const AOFile::Params &params, const std::string &fname,
 //  istream.close();
 //  return result;
 //}
-dariadb::Time AOFile::minTime() { return _Impl->minTime(); }
+dariadb::Time AOFile::minTime() {
+  return _Impl->minTime();
+}
 
-dariadb::Time AOFile::maxTime() { return _Impl->maxTime(); }
+dariadb::Time AOFile::maxTime() {
+  return _Impl->maxTime();
+}
 
 bool AOFile::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                         dariadb::Time *maxResult) {
@@ -352,9 +350,15 @@ void AOFile::flush() { // write all to storage;
   _Impl->flush();
 }
 
-append_result AOFile::append(const Meas &value) { return _Impl->append(value); }
-append_result AOFile::append(const Meas::MeasArray &ma) { return _Impl->append(ma); }
-append_result AOFile::append(const Meas::MeasList &ml) { return _Impl->append(ml); }
+append_result AOFile::append(const Meas &value) {
+  return _Impl->append(value);
+}
+append_result AOFile::append(const Meas::MeasArray &ma) {
+  return _Impl->append(ma);
+}
+append_result AOFile::append(const Meas::MeasList &ml) {
+  return _Impl->append(ml);
+}
 
 Reader_ptr AOFile::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
@@ -368,8 +372,10 @@ Reader_ptr AOFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-void AOFile::drop_to_stor(MeasWriter *stor) { _Impl->drop_to_stor(stor); }
+void AOFile::drop_to_stor(MeasWriter *stor) {
+  _Impl->drop_to_stor(stor);
+}
 
-std::string AOFile::filename()const{
+std::string AOFile::filename() const {
   return _Impl->filename();
 }

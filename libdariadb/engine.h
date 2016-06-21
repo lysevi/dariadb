@@ -13,7 +13,7 @@ namespace storage {
 class Engine : public MeasStorage {
 public:
   struct QueueSizes {
-    size_t aofs_count; ///  AOF count
+    size_t aofs_count;  ///  AOF count
     size_t pages_count; /// pages count
     size_t cola_count;  /// COLA files count.
   };
@@ -35,7 +35,7 @@ public:
   /// \param page_manager_params - params of page manager (PageManager)
   /// \param cap_params - capacitor params  (Capacitor)
   Engine(storage::AOFManager::Params aof_params,
-          storage::PageManager::Params page_manager_params,
+         storage::PageManager::Params page_manager_params,
          dariadb::storage::CapacitorManager::Params cap_params, const Limits &limits);
 
   append_result append(const Meas &value) override;

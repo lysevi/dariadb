@@ -18,42 +18,41 @@ public:
 };
 
 dariadb::Id get_id_from(dariadb::Id id) {
-	return (id + 1)*id_per_thread - id_per_thread;
+  return (id + 1) * id_per_thread - id_per_thread;
 }
 
 dariadb::Id get_id_to(dariadb::Id id) {
-	return (id + 1)*id_per_thread;
+  return (id + 1) * id_per_thread;
 }
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             std::atomic_long *append_count,
                             dariadb::storage::MeasWriter *ms) {
-    try{
-        auto m = dariadb::Meas::empty();
-        m.time = dariadb::timeutil::current_time();
-        auto id_from = get_id_from(id);
-        auto id_to = get_id_to(id);
-        for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
-            m.flag = dariadb::Flag(id);
-            m.src = dariadb::Flag(id);
-            m.time += sleep_time;
-            m.value = dariadb::Value(i);
-            for (size_t j = id_from; j < id_to; j++) {
-                m.id = j;
-                if (ms->append(m).writed != 1) {
-                    return;
-                }
-            }
-            (*append_count)++;
+  try {
+    auto m = dariadb::Meas::empty();
+    m.time = dariadb::timeutil::current_time();
+    auto id_from = get_id_from(id);
+    auto id_to = get_id_to(id);
+    for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
+      m.flag = dariadb::Flag(id);
+      m.src = dariadb::Flag(id);
+      m.time += sleep_time;
+      m.value = dariadb::Value(i);
+      for (size_t j = id_from; j < id_to; j++) {
+        m.id = j;
+        if (ms->append(m).writed != 1) {
+          return;
         }
+      }
+      (*append_count)++;
     }
-    catch(...){
-        std::cerr<<"thread id=#"<<id<<" catch error!!!!"<<std::endl;
-    }
+  } catch (...) {
+    std::cerr << "thread id=#" << id << " catch error!!!!" << std::endl;
+  }
 }
 
-void readBenchark(const dariadb::IdSet &all_id_set,
-                  dariadb::storage::MeasStorage* stor, size_t reads_count,
-                  dariadb::Time from, dariadb::Time to, bool quiet = false) {
+void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorage *stor,
+                  size_t reads_count, dariadb::Time from, dariadb::Time to,
+                  bool quiet = false) {
   {
     if (!quiet) {
       std::cout << "time point reads..." << std::endl;
