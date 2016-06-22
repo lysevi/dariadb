@@ -419,7 +419,8 @@ public:
   Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
-    std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+    std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+	sub_result.reserve(q.ids.size());
 
     if (q.from > this->minTime()) {
       auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
@@ -462,9 +463,10 @@ public:
       }
     }
 
-    for (auto &kv : sub_result) {
-      raw->_ids.push_back(kv.first);
-      for (auto &m : kv.second) {
+    for (auto id:q.ids) {
+      raw->_ids.push_back(id);
+	  auto values = &sub_result[id];
+      for (auto &m : *values) {
         raw->_values.push_back(m);
       }
     }

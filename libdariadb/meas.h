@@ -9,6 +9,8 @@
 #include <set>
 #include <stdint.h>
 #include <vector>
+#include <unordered_map>
+
 namespace dariadb {
 typedef uint64_t Time;
 typedef uint64_t Id;
@@ -35,7 +37,7 @@ struct Meas {
 
   typedef std::vector<Meas> MeasArray;
   typedef std::list<Meas> MeasList;
-  typedef std::map<Id, Meas> Id2Meas;
+  typedef std::unordered_map<Id, Meas> Id2Meas;
   typedef std::set<Meas, meas_id_compare_less> MeasSet;
   static Meas empty();
   static Meas empty(Id id);
