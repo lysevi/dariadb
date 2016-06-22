@@ -19,17 +19,6 @@ public:
       path = _path;
     }
   };
-#pragma pack(push, 1)
-  struct Header {
-    dariadb::Time minTime;
-    dariadb::Time maxTime;
-    bool is_closed : 1;
-    bool is_full : 1;
-    size_t size; // sizeof file in bytes
-    size_t _writed;
-    size_t _memvalues_pos;
-  };
-#pragma pack(pop)
   virtual ~AOFile();
   AOFile(const Params &param);
   AOFile(const AOFile::Params &params, const std::string &fname, bool readonly = false);
