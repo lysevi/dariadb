@@ -311,21 +311,10 @@ public:
   }
 
   append_result append_to_levels(const Meas &value) {
-    /*size_t outlvl = */
     merge_levels();
     if (this->_header->is_full) {
       return append_result(0, 1);
     }
-    // auto merge_target = _levels[outlvl];
-    // if (outlvl == (_header->levels_count - 1)) {
-    //  //auto target = &_levels[_header->levels_count - 1];
-    //  /*_header->_size_B -= target->size() / _header->B;
-    //  _header->_writed -= target->size();
-
-    //  merge_target.clear();
-    //  drop_future = std::async(std::launch::async, &Capacitor::Private::drop_one_level,
-    //                           this, target);*/
-    //}
     return append_to_mem(value);
   }
 
@@ -352,9 +341,6 @@ public:
         this->_header->is_full = true;
         return outlvl;
       }
-      /*if (drop_future.valid()) {
-        drop_future.wait();
-      }*/
     }
 
     std::list<level *> to_merge;
@@ -391,34 +377,7 @@ public:
     ++_header->_size_B;
 
     _header->_memvalues_pos = 0;
-
-    // mmap->flush(0, 0);
   }
-
-  /*std::future<void> drop_future;
-  void drop_one_level(level *target) {
-    if (_stor == nullptr) {
-      return;
-    }
-
-    for (size_t i = 0; i < target->size(); ++i) {
-      if (target->at(i).drop_end) {
-        continue;
-      }
-      target->at(i).drop_start = 1;
-      for (size_t j = 0; j < target->size(); ++j) {
-        if (target->at(j).drop_end) {
-          continue;
-        }
-        if (target->at(i).value.id == target->at(j).value.id) {
-          _stor->append(target->at(j).value);
-          target->at(j).drop_end = 1;
-        }
-      }
-    }
-
-    target->clear();
-  }*/
 
   void flush_header() { mmap->flush(0, sizeof(Header)); }
 
@@ -479,8 +438,14 @@ public:
           !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
         continue;
       }
-      for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-        auto m = _levels[i].at(j);
+	  FlaggedMeas empty;
+	  empty.value.time = q.from;
+	  auto begin = _levels[i].begin;
+	  auto end = _levels[i].begin+ _levels[i].hdr->pos;
+	  auto start=std::lower_bound(begin, end , empty,
+		  [](const FlaggedMeas&left, const FlaggedMeas&right) {return left.value.time<right.value.time; });
+      for (auto it=start; it!=end; ++it) {
+        auto m = *it;
         if (m.value.time > q.to) {
           break;
         }
@@ -609,12 +574,18 @@ public:
       if (_levels[i].empty()) {
         continue;
       }
-      for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
-        if (!inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime,
-                        q.time_point)) {
-          continue;
-        }
-        auto m = _levels[i].at(j);
+	  if (!inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.time_point)) {
+		  continue;
+	  }
+	  FlaggedMeas empty;
+	  empty.value.time = q.time_point;
+	  auto begin = _levels[i].begin;
+	  auto end = _levels[i].begin + _levels[i].hdr->pos;
+	  auto start = std::lower_bound(begin, end, empty,
+		  [](const FlaggedMeas&left, const FlaggedMeas&right) {return left.value.time<right.value.time; });
+
+      for (auto it=start; it!=end; ++it) {
+        auto m = *it;
         if (m.value.time > q.time_point) {
           break;
         }
