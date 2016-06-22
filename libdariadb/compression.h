@@ -11,7 +11,6 @@ namespace compression {
 class CopmressedWriter {
 public:
   struct Position {
-    IdCompressionPosition id_pos;
     DeltaCompressionPosition time_pos;
     XorCompressionPosition value_pos;
     FlagCompressionPosition flag_pos, src_pos;
