@@ -8,8 +8,7 @@
 #include "manifest.h"
 #include "page.h"
 
-#include <boost/thread/locks.hpp>
-#include <boost/thread/shared_mutex.hpp>
+#include <mutex>
 #include <condition_variable>
 #include <cstring>
 #include <functional>
@@ -121,7 +120,7 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
     auto pages = pages_by_filter(
         [id](const IndexHeader &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
@@ -166,7 +165,7 @@ public:
   }
 
   ChunkLinkList chunksByIterval(const QueryInterval &query) {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [query](const IndexHeader &hdr) {
       auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
@@ -199,7 +198,7 @@ public:
   }
 
   void readLinks(const QueryInterval &query, const ChunkLinkList &links, ReaderClb *clb) {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
     ChunkLinkList to_read;
 
@@ -241,7 +240,7 @@ public:
   }
 
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
     Meas::Id2Meas result;
 
@@ -283,12 +282,12 @@ public:
   }
   // PM
   size_t files_count() const {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     return Manifest::instance()->page_list().size();
   }
 
   dariadb::Time minTime() {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [](const IndexHeader &) { return true; };
 
@@ -303,7 +302,7 @@ public:
     return res;
   }
   dariadb::Time maxTime() {
-    boost::shared_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [](const IndexHeader &) { return true; };
 
@@ -319,7 +318,7 @@ public:
   }
 
   append_result append(const Meas &value) {
-    boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
     while (true) {
       auto cur_page = this->get_cur_page();
@@ -340,7 +339,7 @@ public:
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
-  mutable boost::shared_mutex _locker;
+  mutable std::mutex _locker;
 
   uint64_t last_id;
   bool update_id;

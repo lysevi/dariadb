@@ -5,9 +5,6 @@
 #include "chunk_container.h"
 #include "index.h"
 
-#include <boost/thread/locks.hpp>
-#include <boost/thread/shared_mutex.hpp>
-
 namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
@@ -81,10 +78,8 @@ public:
   std::string filename;
   bool readonly;
   PageIndex_ptr _index;
-  size_t addeded_meases;
-
 protected:
-  mutable boost::shared_mutex _locker;
+  mutable  std::mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
 };
 

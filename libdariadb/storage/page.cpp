@@ -50,7 +50,6 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
     res->_free_poses.push_back(i);
   }
 
-  res->addeded_meases = 0;
   res->page_mmap->flush(0, sizeof(PageHeader));
   return res;
 }
@@ -84,7 +83,6 @@ Page *Page::open(std::string file_name, bool read_only) {
       res->_index->_itree.insert(kv);
     }
   }
-  res->addeded_meases = 0;
   /*assert(res->header->is_closed);*/
   res->header->is_closed = false;
   return res;
@@ -154,9 +152,9 @@ void Page::restore() {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
-  addeded_meases++;
+
   assert(!this->readonly);
-  boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   if (is_full()) {
     header->is_full = true;
     return false;
@@ -254,7 +252,7 @@ bool Page::is_full() const {
 }
 
 void Page::dec_reader() {
-  boost::upgrade_lock<boost::shared_mutex> lg(_locker);
+ std::lock_guard<std::mutex> lg(_locker);
   header->count_readers--;
 }
 
@@ -313,6 +311,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
                      ReaderClb *clb) {
+    std::lock_guard<std::mutex> lg(_locker);
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
     return;
