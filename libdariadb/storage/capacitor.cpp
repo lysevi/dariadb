@@ -44,6 +44,8 @@ struct level_header {
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
   uint32_t crc;
+  size_t id_bloom;
+  size_t flag_bloom;
 };
 #pragma pack(pop)
 
@@ -75,6 +77,8 @@ struct level {
     ++hdr->pos;
     hdr->_minTime = std::min(hdr->_minTime, m.time);
     hdr->_maxTime = std::max(hdr->_maxTime, m.time);
+	hdr->id_bloom = bloom_add(hdr->id_bloom, m.id);
+	hdr->flag_bloom = bloom_add(hdr->flag_bloom, m.flag);
   }
 
   uint32_t calc_checksum() {
@@ -189,6 +193,9 @@ public:
     _header->is_closed = false;
     _header->minTime = dariadb::MAX_TIME;
     _header->maxTime = dariadb::MIN_TIME;
+	_header->id_bloom = bloom_empty<dariadb::Id>();
+	_header->flag_bloom = bloom_empty<dariadb::Flag>();
+
     auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = reinterpret_cast<level_header *>(pos);
@@ -197,6 +204,8 @@ public:
       it->pos = 0;
       it->_minTime = dariadb::MAX_TIME;
       it->_maxTime = dariadb::MIN_TIME;
+	  it->id_bloom = bloom_empty<dariadb::Id>();
+	  it->flag_bloom = bloom_empty<dariadb::Flag>();
       auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
       for (size_t i = 0; i < it->count; ++i) {
         assert(size_t((uint8_t *)&m[i] - mmap->data()) < sz);
@@ -306,7 +315,8 @@ public:
     ++_header->_writed;
     _header->minTime = std::min(_header->minTime, value.time);
     _header->maxTime = std::max(_header->maxTime, value.time);
-
+	_header->id_bloom = bloom_add(_header->id_bloom, value.id);
+	_header->flag_bloom = bloom_add(_header->flag_bloom, value.flag);
     return append_result(1, 0);
   }
 
@@ -419,9 +429,26 @@ public:
   Reader_ptr readInterval(const QueryInterval &q) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
-    std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
-	sub_result.reserve(q.ids.size());
+    
 
+	bool id_exists = false;
+	for (auto id : q.ids) {
+		if (bloom_check(_header->id_bloom, id)) {
+			id_exists = true;
+			break;
+		}
+	}
+	bool flag_exists = false;
+	if (q.flag == Flag(0) || bloom_check(_header->flag_bloom, q.flag)) {
+		flag_exists = true;
+	}
+	if (!id_exists || !flag_exists) {
+		raw->reset();
+		return Reader_ptr(raw);
+	}
+
+	std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+	sub_result.reserve(q.ids.size());
     if (q.from > this->minTime()) {
       auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
       for (auto kv : tp_read_data) {
@@ -433,6 +460,16 @@ public:
       if (_levels[i].empty()) {
         continue;
       }
+	  id_exists = false;
+	  for (auto id : q.ids) {
+		  if (bloom_check(_header->id_bloom, id)) {
+			  id_exists = true;
+			  break;
+		  }
+	  }
+	  if (!id_exists) {
+		  continue;
+	  }
       if (!inInterval(q.from, q.to, _levels[i].hdr->_minTime) &&
           !inInterval(q.from, q.to, _levels[i].hdr->_maxTime) &&
           !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.from) &&
@@ -517,6 +554,10 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
+	if (!bloom_check(_header->id_bloom, id)) {
+		return false;
+	}
+
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
     bool result = false;
@@ -533,6 +574,10 @@ public:
       if (_levels[i].empty()) {
         continue;
       }
+	  
+	  if (!bloom_check(_levels[i].hdr->id_bloom, id)) {
+		  continue;
+	  }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
         if (m.value.id == id) {
@@ -562,6 +607,30 @@ public:
   dariadb::Meas::Id2Meas timePointValues(const QueryTimePoint &q) {
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
+	bool id_exists = false;
+	for (auto id : q.ids) {
+		if (bloom_check(_header->id_bloom, id)) {
+			id_exists = true;
+			break;
+		}
+	}
+	bool flag_exists = false;
+	if (q.flag == Flag(0) || bloom_check(_header->flag_bloom, q.flag)) {
+		flag_exists = true;
+	}
+	if (!id_exists || !flag_exists) {
+		if (!q.ids.empty() && readed_ids.size() != q.ids.size()) {
+			for (auto id : q.ids) {
+				if (readed_ids.find(id) == readed_ids.end()) {
+					auto e = Meas::empty(id);
+					e.flag = Flags::_NO_DATA;
+					e.time = q.time_point;
+					sub_res[id] = e;
+				}
+			}
+		}
+		return sub_res;
+	}
 
     if (inInterval(_header->minTime, _header->maxTime, q.time_point)) {
       for (size_t j = 0; j < _header->_memvalues_pos; ++j) {

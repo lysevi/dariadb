@@ -2,6 +2,7 @@
 
 #include "../meas.h"
 #include "../storage.h"
+#include "bloom_filter.h"
 #include <memory>
 
 namespace dariadb {
@@ -35,6 +36,8 @@ public:
     size_t levels_count;
     size_t _writed;
     size_t _memvalues_pos;
+	size_t id_bloom;
+	size_t flag_bloom;
   };
 #pragma pack(pop)
   virtual ~Capacitor();

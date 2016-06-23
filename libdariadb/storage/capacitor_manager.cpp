@@ -162,12 +162,29 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
   std::lock_guard<std::mutex> lg(_locker);
   auto pred = [query](const Capacitor::Header &hdr) {
+	  if (query.flag != Flag(0)) {
+		  bool flag_exists = bloom_check(hdr.flag_bloom, query.flag);
+		  if (!flag_exists) {
+			  return false;
+		  }
+	  }
+
     auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
                         (utils::inInterval(query.from, query.to, hdr.minTime)) ||
                         (utils::inInterval(query.from, query.to, hdr.maxTime)) ||
                         (utils::inInterval(hdr.minTime, hdr.maxTime, query.from)) ||
                         (utils::inInterval(hdr.minTime, hdr.maxTime, query.to)));
-    return interval_check;
+
+    if (!interval_check) {
+      return false;
+    }
+
+    for (auto id : query.ids) {
+      if (bloom_check(hdr.id_bloom, id)) {
+		  return true;
+      }
+    }
+	return false;
   };
 
   auto files = caps_by_filter(pred);
@@ -202,10 +219,26 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
 Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   std::lock_guard<std::mutex> lg(_locker);
   auto pred = [query](const Capacitor::Header &hdr) {
+	  if (query.flag != Flag(0)) {
+		  bool flag_exists = bloom_check(hdr.flag_bloom, query.flag);
+		  if (!flag_exists) {
+			  return false;
+		  }
+	  }
+
     auto interval_check = hdr.maxTime < query.time_point;
     // TODO check this.
     //(utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point));
-    return interval_check;
+	if (!interval_check) {
+		return false;
+	}
+
+	for (auto id : query.ids) {
+		if (bloom_check(hdr.id_bloom, id)) {
+			return true;
+		}
+	}
+	return false;
   };
 
   auto files = caps_by_filter(pred);
