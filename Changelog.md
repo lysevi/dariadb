@@ -4,6 +4,7 @@ v0.0.7
 - CRC32 checksum for chunks.
 - COLA layer.
 - Append-only files layer.
+- Bloom filter based on std::hash.
 
 v0.0.6
 =====
