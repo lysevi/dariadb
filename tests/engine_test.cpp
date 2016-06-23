@@ -26,11 +26,11 @@ BOOST_AUTO_TEST_CASE(BloomTest) {
 
   u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{1});
   u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{2});
+  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{3});
 
   BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{1}));
   BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{2}));
-  BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{3}));
-  BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{4}));
+  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{3}));
 }
 
 BOOST_AUTO_TEST_CASE(inFilter) {
