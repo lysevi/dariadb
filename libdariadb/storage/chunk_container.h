@@ -10,7 +10,7 @@ namespace storage {
 
 struct ChunkLink {
   uint64_t id;
-  Id id_bloom;
+  size_t id_bloom;
   dariadb::Time maxTime;
   std::string page_name;
   uint32_t pos;

@@ -18,14 +18,15 @@ struct IndexHeader {
   uint32_t chunk_size;        // each chunks size in bytes
   bool is_sorted;             // items in index file sorted by time
   bool is_closed;
-  dariadb::Id id_bloom; // bloom filter of Meas.id
+  size_t id_bloom; // bloom filter of Meas.id
+  size_t flag_bloom; // bloom filter of Meas.flag
 };
 
 struct IndexReccord {
   Time minTime, maxTime; // min max time of linked chunk
   // dariadb::Id meas_id;      // chunk->info->first.id
-  dariadb::Flag flag_bloom; // bloom filters of writed meases
-  dariadb::Id id_bloom;
+  size_t flag_bloom; // bloom filters of writed meases
+  size_t id_bloom;
   uint64_t chunk_id; // chunk->id
   // bool is_readonly;         // chunk is full?
   uint64_t offset; // offset in bytes of chunk in page

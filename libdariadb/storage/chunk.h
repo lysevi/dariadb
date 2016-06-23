@@ -23,8 +23,8 @@ struct ChunkHeader {
   Meas first, last;
   Time minTime, maxTime;
   Id minId, maxId;
-  dariadb::Id id_bloom; // TODO remove. one chunk to one id.
-  dariadb::Flag flag_bloom;
+  size_t id_bloom; // TODO remove. one chunk to one id.
+  size_t flag_bloom;
   uint32_t count;
   uint32_t bw_pos;
   uint8_t bw_bit_num;

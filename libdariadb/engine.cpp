@@ -265,7 +265,7 @@ public:
 
       ChunkLinkList chunks_for_id;
       for (auto &c : all_chunkLinks) {
-        if (c.id_bloom == id) {
+        if (storage::bloom_check(c.id_bloom,id)) {
           chunks_for_id.push_back(c);
         }
       }

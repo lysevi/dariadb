@@ -175,7 +175,7 @@ public:
                           (utils::inInterval(hdr.minTime, hdr.maxTime, query.to)));
       if (interval_check) {
         for (auto id : query.ids) {
-          if (storage::bloom_check(hdr.id_bloom, id)) {
+          if (storage::bloom_check(hdr.id_bloom, id) && (query.flag==Flag(0) || storage::bloom_check(hdr.flag_bloom, query.flag))) {
             return true;
           }
         }

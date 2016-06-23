@@ -222,7 +222,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
 
   auto cur_index = &_index->index[pos_index];
   cur_index->chunk_id = ch->header->id;
-  cur_index->flag_bloom = ch->header->flag_bloom;
   cur_index->is_init = true;
   cur_index->offset = header->pos;
 
@@ -233,11 +232,14 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   _index->iheader->maxTime = std::max(_index->iheader->maxTime, ch->header->maxTime);
   _index->iheader->id_bloom =
       storage::bloom_add(_index->iheader->id_bloom, ch->header->first.id);
+  _index->iheader->flag_bloom =
+	  storage::bloom_add(_index->iheader->flag_bloom, ch->header->first.flag);
   _index->iheader->count++;
 
   cur_index->minTime = ch->header->minTime;
   cur_index->maxTime = cur_index->maxTime;
-  cur_index->id_bloom = storage::bloom_add(cur_index->id_bloom, ch->header->first.id);
+  cur_index->id_bloom = ch->header->id_bloom;
+  cur_index->flag_bloom = ch->header->flag_bloom;
 
   auto kv = std::make_pair(cur_index->maxTime, pos_index);
   _index->_itree.insert(kv);

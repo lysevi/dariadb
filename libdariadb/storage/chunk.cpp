@@ -85,6 +85,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
   header->writer_position = c_writer.get_position();
 
   header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, first_m.id);
+  header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
 }
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
