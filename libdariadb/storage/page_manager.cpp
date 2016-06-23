@@ -4,6 +4,7 @@
 #include "../utils/locker.h"
 #include "../utils/lru.h"
 #include "../utils/utils.h"
+#include "../flags.h"
 #include "bloom_filter.h"
 #include "manifest.h"
 #include "page.h"
@@ -244,6 +245,11 @@ public:
 
     Meas::Id2Meas result;
 
+    for(auto id:query.ids){
+        result[id].flag=Flags::_NO_DATA;
+        result[id].time=query.time_point;
+    }
+
     auto pred = [query](const IndexHeader &hdr) {
       auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
                       (hdr.maxTime < query.time_point);
@@ -264,7 +270,7 @@ public:
 
       auto subres = pg->valuesBeforeTimePoint(query);
       for (auto kv : subres) {
-        result.insert(kv);
+        result[kv.first]=kv.second;
       }
       if (subres.size() == query.ids.size()) {
         break;

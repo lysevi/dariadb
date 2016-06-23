@@ -246,21 +246,21 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   TP_Reader *raw = new TP_Reader;
   dariadb::Meas::Id2Meas sub_result;
 
+  for(auto id:query.ids){
+      sub_result[id].flag=Flags::_NO_DATA;
+      sub_result[id].time=query.time_point;
+  }
+
   for (auto filename : files) {
     auto raw_cap = new Capacitor(p, filename, true);
     Meas::MeasList out;
     raw_cap->readInTimePoint(query)->readAll(&out);
 
     for (auto &m : out) {
-      auto it = sub_result.find(m.id);
-      if (it == sub_result.end()) {
-        sub_result.insert(std::make_pair(m.id, m));
-      } else {
-        if (it->second.flag == Flags::_NO_DATA) {
+        if (sub_result[m.id].flag == Flags::_NO_DATA) {
           sub_result[m.id] = m;
         }
-      }
-    }
+     }
 
     delete raw_cap;
   }

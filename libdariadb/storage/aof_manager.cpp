@@ -216,6 +216,11 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
   TP_Reader *raw = new TP_Reader;
   dariadb::Meas::Id2Meas sub_result;
 
+  for(auto id:query.ids){
+      sub_result[id].flag=Flags::_NO_DATA;
+      sub_result[id].time=query.time_point;
+  }
+
   for (auto filename : files) {
     AOFile aof(p, filename, true);
     Meas::MeasList out;
