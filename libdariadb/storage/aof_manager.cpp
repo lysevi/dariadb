@@ -329,8 +329,8 @@ void AOFManager::flush() {
   flush_buffer();
 }
 
-void AOFManager::subscribe(const IdArray &ids, const Flag &flag,
-                           const ReaderClb_ptr &clbk) {
+void AOFManager::subscribe(const IdArray &, const Flag &,
+                           const ReaderClb_ptr &) {
   NOT_IMPLEMENTED;
 }
 

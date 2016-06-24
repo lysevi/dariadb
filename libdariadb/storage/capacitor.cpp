@@ -109,6 +109,23 @@ struct level {
   bool empty() const { return hdr->pos == 0; }
 
   size_t size() const { return hdr->count; }
+
+  bool check_id(const dariadb::Id id) const{
+	  return bloom_check(hdr->id_bloom, id);
+  }
+
+  bool check_id(const dariadb::IdArray& ids) const {
+	  for (auto id : ids) {
+		  if (check_id(id)) {
+			  return true;
+		  }
+	  }
+	  return false;
+  }
+
+  bool check_flag(const dariadb::Flag flag)  const {
+	  return bloom_check(hdr->flag_bloom, flag);
+  }
 };
 
 class Capacitor::Private {
@@ -431,15 +448,9 @@ public:
     TP_Reader *raw = new TP_Reader;
     
 
-	bool id_exists = false;
-	for (auto id : q.ids) {
-		if (bloom_check(_header->id_bloom, id)) {
-			id_exists = true;
-			break;
-		}
-	}
+	bool id_exists = _header->check_id(q.ids);
 	bool flag_exists = false;
-	if (q.flag == Flag(0) || bloom_check(_header->flag_bloom, q.flag)) {
+	if (_header->check_flag(q.flag)) {
 		flag_exists = true;
 	}
 	if (!id_exists || !flag_exists) {
@@ -460,13 +471,7 @@ public:
       if (_levels[i].empty()) {
         continue;
       }
-	  id_exists = false;
-	  for (auto id : q.ids) {
-		  if (bloom_check(_header->id_bloom, id)) {
-			  id_exists = true;
-			  break;
-		  }
-	  }
+	  id_exists = _levels[i].check_id(q.ids);
 	  if (!id_exists) {
 		  continue;
 	  }
@@ -554,7 +559,7 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
-	if (!bloom_check(_header->id_bloom, id)) {
+	if (!_header->check_id(id)) {
 		return false;
 	}
 
@@ -575,7 +580,7 @@ public:
         continue;
       }
 	  
-	  if (!bloom_check(_levels[i].hdr->id_bloom, id)) {
+	  if (!_levels[i].check_id(id)) {
 		  continue;
 	  }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
@@ -607,15 +612,9 @@ public:
   dariadb::Meas::Id2Meas timePointValues(const QueryTimePoint &q) {
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
-	bool id_exists = false;
-	for (auto id : q.ids) {
-		if (bloom_check(_header->id_bloom, id)) {
-			id_exists = true;
-			break;
-		}
-	}
+	bool id_exists = _header->check_id(q.ids);
 	bool flag_exists = false;
-	if (q.flag == Flag(0) || bloom_check(_header->flag_bloom, q.flag)) {
+	if (q.flag == Flag(0) || _header->check_flag(q.flag)) {
 		flag_exists = true;
 	}
 	if (!id_exists || !flag_exists) {
@@ -648,6 +647,12 @@ public:
 	  if (!inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.time_point)) {
 		  continue;
 	  }
+
+	  id_exists = _levels[i].check_id(q.ids);
+	  if (!id_exists) {
+		  continue;
+	  }
+
 	  FlaggedMeas empty;
 	  empty.value.time = q.time_point;
 	  auto begin = _levels[i].begin;

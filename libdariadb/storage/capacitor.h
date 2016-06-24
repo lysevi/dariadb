@@ -36,8 +36,27 @@ public:
     size_t levels_count;
     size_t _writed;
     size_t _memvalues_pos;
-	size_t id_bloom;
-	size_t flag_bloom;
+    size_t id_bloom;
+    size_t flag_bloom;
+
+    bool check_id(const dariadb::Id id) const{ return bloom_check(id_bloom, id); }
+
+    bool check_id(const dariadb::IdArray &ids)const {
+      for (auto id : ids) {
+        if (check_id(id)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    bool check_flag(const dariadb::Flag flag)const {
+      if (flag == 0) {
+        return true;
+      } else {
+        return bloom_check(flag_bloom, flag);
+      }
+    }
   };
 #pragma pack(pop)
   virtual ~Capacitor();
