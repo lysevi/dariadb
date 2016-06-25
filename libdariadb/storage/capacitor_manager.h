@@ -15,7 +15,7 @@ public:
   struct Params {
     std::string path;
     size_t max_levels;
-    size_t B; // measurements count in one datra block
+    size_t B; // measurements count in one data block
     Params() {
       max_levels = 0;
       B = 0;
