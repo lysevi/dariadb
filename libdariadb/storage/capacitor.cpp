@@ -3,10 +3,8 @@ FileName:
 GUID.cap
 Measurements saves to COLA file struct
 File struct:
-   CapHeader|memvalues(sizeof(B)*sizeof(Meas)| LevelHeader | Meas0 | Meas1|....|
-LevelHeader|Meas0 |Meas1...
+   CapHeader|memvalues(sizeof(B)*sizeof(Meas)|LevelHeader0| LevelHeader1| ... | Meas0_0 | Meas0_1|....|Meas1_0 |Meas1_1...
 
-for future updates.
 */
 
 #include "capacitor.h"
@@ -213,9 +211,11 @@ public:
 	_header->id_bloom = bloom_empty<dariadb::Id>();
 	_header->flag_bloom = bloom_empty<dariadb::Flag>();
 
-    auto pos = _raw_data + _header->B * sizeof(FlaggedMeas); // move to levels position
+    auto pos_after_unsorded=_raw_data + _header->B * sizeof(FlaggedMeas);
+    auto headers_pos = reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
+    auto pos=(pos_after_unsorded+sizeof(level_header)*_header->levels_count);
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
-      auto it = reinterpret_cast<level_header *>(pos);
+      auto it = &headers_pos[lvl];
       it->lvl = uint8_t(lvl);
       it->count = block_in_level(lvl) * _params.B;
       it->pos = 0;
@@ -223,12 +223,12 @@ public:
       it->_maxTime = dariadb::MIN_TIME;
 	  it->id_bloom = bloom_empty<dariadb::Id>();
 	  it->flag_bloom = bloom_empty<dariadb::Flag>();
-      auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
+      auto m = reinterpret_cast<FlaggedMeas *>(pos);
       for (size_t i = 0; i < it->count; ++i) {
         assert(size_t((uint8_t *)&m[i] - mmap->data()) < sz);
         std::memset(&m[i], 0, sizeof(FlaggedMeas));
       }
-      pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
+      pos += bytes_in_level(_header->B, lvl);
     }
 
     Manifest::instance()->cola_append(fname);
@@ -240,16 +240,18 @@ public:
     _memvalues_size = _header->B;
     _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
 
-    auto pos = _raw_data + _memvalues_size * sizeof(FlaggedMeas);
+    auto pos_after_unsorded=_raw_data + _header->B * sizeof(FlaggedMeas);
+    auto headers_pos = reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
+    auto pos=(pos_after_unsorded+sizeof(level_header)*_header->levels_count);
 
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
-      auto h = reinterpret_cast<level_header *>(pos);
-      auto m = reinterpret_cast<FlaggedMeas *>(pos + sizeof(level_header));
+      auto h = &headers_pos[lvl];
+      auto m = reinterpret_cast<FlaggedMeas *>(pos);
       level new_l;
       new_l.begin = m;
       new_l.hdr = h;
       _levels[lvl] = new_l;
-      pos += sizeof(level_header) + bytes_in_level(_header->B, lvl);
+      pos += bytes_in_level(_header->B, lvl);
     }
   }
 
