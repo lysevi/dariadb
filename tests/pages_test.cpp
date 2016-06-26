@@ -21,38 +21,47 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     dariadb::utils::fs::rm(fname);
   }
 
-  Manifest::start(fname);
-  std::list<std::string> pages_names{"1", "2", "3"};
-  for (auto n : pages_names) {
-    Manifest::instance()->page_append(n);
+  {
+      Manifest::start(fname);
+      std::list<std::string> pages_names{"1", "2", "3"};
+      for (auto n : pages_names) {
+          Manifest::instance()->page_append(n);
+      }
+
+      std::list<std::string> cola_names{"11", "22", "33"};
+      for (auto n : cola_names) {
+          Manifest::instance()->cola_append(n);
+      }
+
+      std::list<std::string> aof_names{"111", "222", "333"};
+      for (auto n : aof_names) {
+          Manifest::instance()->aof_append(n);
+      }
+
+      auto page_lst = Manifest::instance()->page_list();
+      BOOST_CHECK_EQUAL(page_lst.size(), pages_names.size());
+      BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
+                                    pages_names.end());
+
+      auto cola_lst = Manifest::instance()->cola_list();
+      BOOST_CHECK_EQUAL(cola_lst.size(), cola_names.size());
+      BOOST_CHECK_EQUAL_COLLECTIONS(cola_lst.begin(), cola_lst.end(), cola_names.begin(),
+                                    cola_names.end());
+
+      auto aof_lst = Manifest::instance()->aof_list();
+      BOOST_CHECK_EQUAL(aof_lst.size(), aof_names.size());
+      BOOST_CHECK_EQUAL_COLLECTIONS(aof_lst.begin(), aof_lst.end(), aof_names.begin(),
+                                    aof_names.end());
+
+      Manifest::stop();
   }
-
-  std::list<std::string> cola_names{"11", "22", "33"};
-  for (auto n : cola_names) {
-    Manifest::instance()->cola_append(n);
+  {//reopen. restore method must remove all records from manifest.
+      Manifest::start(fname);
+      BOOST_CHECK_EQUAL(Manifest::instance()->page_list().size(),size_t(0));
+      BOOST_CHECK_EQUAL(Manifest::instance()->cola_list().size(),size_t(0));
+      BOOST_CHECK_EQUAL(Manifest::instance()->aof_list().size(),size_t(0));
+      Manifest::stop();
   }
-
-  std::list<std::string> aof_names{"111", "222", "333"};
-  for (auto n : aof_names) {
-    Manifest::instance()->aof_append(n);
-  }
-
-  auto page_lst = Manifest::instance()->page_list();
-  BOOST_CHECK_EQUAL(page_lst.size(), pages_names.size());
-  BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
-                                pages_names.end());
-
-  auto cola_lst = Manifest::instance()->cola_list();
-  BOOST_CHECK_EQUAL(cola_lst.size(), cola_names.size());
-  BOOST_CHECK_EQUAL_COLLECTIONS(cola_lst.begin(), cola_lst.end(), cola_names.begin(),
-                                cola_names.end());
-
-  auto aof_lst = Manifest::instance()->aof_list();
-  BOOST_CHECK_EQUAL(aof_lst.size(), aof_names.size());
-  BOOST_CHECK_EQUAL_COLLECTIONS(aof_lst.begin(), aof_lst.end(), aof_names.begin(),
-                                aof_names.end());
-
-  Manifest::stop();
   if (dariadb::utils::fs::path_exists(fname)) {
     dariadb::utils::fs::rm(fname);
   }

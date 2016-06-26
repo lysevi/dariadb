@@ -15,6 +15,7 @@ public:
   static void start(const std::string &fname);
   static void stop();
   static Manifest *instance();
+  void restore();
 
   std::list<std::string> page_list();
   void page_append(const std::string &rec);
@@ -33,6 +34,7 @@ public:
 private:
   void touch();
 
+  void clear_field_values(std::string field_name);
 protected:
   std::string _filename;
   static std::unique_ptr<Manifest> _instance;

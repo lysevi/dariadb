@@ -3,6 +3,7 @@
 #include "../utils/fs.h"
 #include <cassert>
 #include <fstream>
+#include <algorithm>
 #include <json/json.hpp>
 
 using json = nlohmann::json;
@@ -13,7 +14,11 @@ const std::string PAGE_JS_KEY = "pages";
 const std::string COLA_JS_KEY = "cola";
 const std::string AOF_JS_KEY = "aof";
 
-Manifest::Manifest(const std::string &fname) : _filename(fname) {}
+Manifest::Manifest(const std::string &fname) : _filename(fname) {
+     if (utils::fs::path_exists(_filename)) {
+         this->restore();
+     }
+}
 
 void Manifest::start(const std::string &fname) {
   _instance = std::unique_ptr<Manifest>{new Manifest(fname)};
@@ -24,12 +29,56 @@ void Manifest::stop() {}
 Manifest *Manifest::instance() {
   return Manifest::_instance.get();
 }
+
 void dariadb::storage::Manifest::touch() {
   if (!utils::fs::path_exists(_filename)) {
     json js = json::parse(std::string("{ \"") + COLA_JS_KEY + "\": [], \"" + PAGE_JS_KEY +
                           "\": [] }");
 
     write_file(_filename, js.dump());
+  }
+}
+
+void dariadb::storage::Manifest::restore(){
+  std::string storage_path = utils::fs::parent_path(this->_filename);
+
+  auto aofs = this->aof_list();
+  aofs.erase(std::remove_if(aofs.begin(), aofs.end(),
+                            [this, storage_path](std::string fname) {
+                              auto full_file_name =
+                                  utils::fs::append_path(storage_path, fname);
+                              return !utils::fs::path_exists(full_file_name);
+                            }),
+             aofs.end());
+  clear_field_values(AOF_JS_KEY);
+  for (auto fname : aofs) {
+    this->aof_append(fname);
+  }
+
+  auto caps = this->cola_list();
+  caps.erase(std::remove_if(caps.begin(), caps.end(),
+                            [this, storage_path](std::string fname) {
+                              auto full_file_name =
+                                  utils::fs::append_path(storage_path, fname);
+                              return !utils::fs::path_exists(full_file_name);
+                            }),
+             caps.end());
+  clear_field_values(COLA_JS_KEY);
+  for (auto fname : caps) {
+    this->cola_append(fname);
+  }
+
+  auto pages = this->page_list();
+  pages.erase(std::remove_if(pages.begin(), pages.end(),
+                             [this, storage_path](std::string fname) {
+                               auto full_file_name =
+                                   utils::fs::append_path(storage_path, fname);
+                               return !utils::fs::path_exists(full_file_name);
+                             }),
+              pages.end());
+  clear_field_values(PAGE_JS_KEY);
+  for (auto fname : pages) {
+    this->page_append(fname);
   }
 }
 
@@ -139,6 +188,14 @@ std::list<std::string> dariadb::storage::Manifest::aof_list() {
     result.push_back(v);
   }
   return result;
+}
+
+void dariadb::storage::Manifest::clear_field_values(std::string field_name){
+    json js = json::parse(read_file(_filename));
+
+    std::list<std::string> empty_list{};
+    js[field_name] = empty_list;
+    write_file(_filename, js.dump());
 }
 
 void dariadb::storage::Manifest::aof_append(const std::string &rec) {
