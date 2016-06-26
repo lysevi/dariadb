@@ -8,7 +8,7 @@
 namespace dariadb {
 namespace storage {
 
-const std::string CAP_FILE_EXT = ".cap"; // append-only-file
+const std::string CAP_FILE_EXT = ".cap"; // cola-file extension
 const size_t CAP_DEFAULT_MAX_LEVELS = 10;
 
 class Capacitor : public MeasStorage {

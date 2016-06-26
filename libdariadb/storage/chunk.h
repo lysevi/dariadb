@@ -29,7 +29,7 @@ struct ChunkHeader {
   uint32_t bw_pos;
   uint8_t bw_bit_num;
 
-  compression::CopmressedWriter::Position writer_position; // TODO move from this.
+  compression::CopmressedWriter::Position writer_position;
 
   size_t size;
   uint32_t crc;
@@ -72,7 +72,7 @@ public:
   utils::Locker _locker;
   compression::BinaryBuffer_Ptr bw;
 
-  bool should_free; // chunk dtor must delete[] resource.
+  bool should_free; // chunk dtor must (delete[]) resource.
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;

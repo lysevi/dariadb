@@ -15,8 +15,8 @@ class AOFManager : public MeasStorage {
 public:
   struct Params {
     std::string path;
-    size_t max_size; // measurements count in one datra block
-    size_t buffer_size;
+    size_t max_size;    // measurements count in one datra block
+    size_t buffer_size; // inner buffer size
     size_t max_closed_aofs;
     Params() {
       max_size = 0;
