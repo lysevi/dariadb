@@ -134,19 +134,20 @@ int main(int argc, char *argv[]) {
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
+	dariadb::storage::PageManager::Params page_param(storage_path, chunk_per_storage, chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
 	cap_param.max_levels = 11;
 	
 	dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
 	aof_param.buffer_size = 1000;
-	aof_param.max_size = (1024 * 1024) * 3 / sizeof(dariadb::Meas);
+	aof_param.max_size = cap_param.measurements_count();
 
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(
         aof_param,
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
-        cap_param, dariadb::storage::Engine::Limits(max_mem_chunks));
+        page_param,
+        cap_param,
+		dariadb::storage::Engine::Limits(max_mem_chunks));
 
     dariadb::storage::MeasStorage_ptr ms{raw_ptr};
 

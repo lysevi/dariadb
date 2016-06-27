@@ -22,6 +22,7 @@ public:
       path = _path;
       max_levels = CAP_DEFAULT_MAX_LEVELS;
     }
+
   };
 #pragma pack(push, 1)
   struct Header {

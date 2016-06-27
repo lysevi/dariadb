@@ -25,6 +25,15 @@ public:
       B = _B;
       max_levels = 0;
     }
+
+
+	size_t measurements_count()const {
+		size_t result=0;
+		for (size_t i = 0; i < max_levels; ++i) {
+			result += B*(size_t(1) << i);
+		}
+		return result;
+	}
   };
 
 protected:
