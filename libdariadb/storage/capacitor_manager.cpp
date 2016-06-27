@@ -28,9 +28,9 @@ CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
       break;
     }
   }
-  if (_cap == nullptr) {
+  /*if (_cap == nullptr) {
     create_new();
-  }
+  }*/
 }
 
 void CapacitorManager::start(const Params &param) {
@@ -298,6 +298,9 @@ Reader_ptr CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) 
 
 dariadb::append_result CapacitorManager::append(const Meas &value) {
   std::lock_guard<std::mutex> lg(_locker);
+  if (_cap == nullptr) {
+	  create_new();
+  }
   auto res = _cap->append(value);
   if (res.writed != 1) {
     create_new();

@@ -617,7 +617,7 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
   BOOST_CHECK(dariadb::storage::CapacitorManager::instance() != nullptr);
 
   auto cap_files = dariadb::utils::fs::ls(storagePath, dariadb::storage::CAP_FILE_EXT);
-  BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
+  BOOST_CHECK_EQUAL(cap_files.size(), size_t(0));
 
   dariadb::storage::CapacitorManager::stop();
   dariadb::storage::Manifest::stop();
