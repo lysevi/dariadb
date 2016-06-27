@@ -22,7 +22,7 @@ public:
   virtual void readNext(ReaderClb *clb) = 0;
   virtual Reader_ptr clone() const = 0;
   virtual void reset() = 0; /// need call after each read operation
-                            /// (readAll, readByStep, getIds...) to reset
+                            /// (readAll, readByStep...) to reset
                             /// read pos to begining
 
   virtual void readAll(Meas::MeasList *output);
@@ -43,8 +43,6 @@ public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;
 
-  //  virtual Reader_ptr readInterval(Time from, Time to) = 0;
-  //  virtual Reader_ptr readInTimePoint(Time time_point) = 0;
   virtual Reader_ptr readInterval(const QueryInterval &q) = 0;
   virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) = 0;
 
@@ -55,7 +53,6 @@ public:
 class MeasWriter {
 public:
   virtual append_result append(const Meas &value) = 0;
-
   virtual append_result append(const Meas::MeasArray &ma);
   virtual append_result append(const Meas::MeasList &ml);
 

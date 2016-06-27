@@ -2,6 +2,7 @@
 
 #include "../meas.h"
 #include "../storage.h"
+#include "../utils/fs.h"
 #include "bloom_filter.h"
 #include <memory>
 
@@ -22,7 +23,6 @@ public:
       path = _path;
       max_levels = CAP_DEFAULT_MAX_LEVELS;
     }
-
   };
 #pragma pack(push, 1)
   struct Header {
@@ -61,7 +61,6 @@ public:
   };
 #pragma pack(pop)
   virtual ~Capacitor();
-  Capacitor(const Params &param);
   Capacitor(const Capacitor::Params &params, const std::string &fname,
             bool readonly = false);
   static Header readHeader(std::string file_name);
@@ -85,6 +84,7 @@ public:
 
   void drop_to_stor(MeasWriter *stor);
 
+  static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

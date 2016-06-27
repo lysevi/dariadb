@@ -36,7 +36,9 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-
+  
+  dariadb::utils::fs::mkdir(storage_path);
+  
   auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
   assert(cap_files.size() == 0);
   auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
@@ -47,7 +49,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(p);
+    dariadb::storage::Capacitor cap(p, dariadb::storage::Capacitor::file_name());
 
     cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
@@ -130,6 +132,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+  dariadb::utils::fs::mkdir(storage_path);
   {
     auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     assert(cap_files.size() == 0);
@@ -137,7 +140,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
     p.max_levels = 11;
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(p);
+    dariadb::storage::Capacitor cap(p, dariadb::storage::Capacitor::file_name());
 
     dariadb_test::storage_test_check(&cap, 0, 100, 1);
     dariadb::storage::Manifest::stop();
@@ -153,6 +156,7 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+  dariadb::utils::fs::mkdir(storage_path);
   std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
   stor->writed_count = 0;
 
@@ -163,7 +167,7 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(p);
+    dariadb::storage::Capacitor cap(p, dariadb::storage::Capacitor::file_name());
 
     auto e = dariadb::Meas::empty();
 
@@ -294,13 +298,13 @@ BOOST_AUTO_TEST_CASE(CapReadIntervalTest) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-
+  dariadb::utils::fs::mkdir(storage_path);
   {
     auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
     p.max_levels = 11;
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(p);
+    dariadb::storage::Capacitor cap(p, dariadb::storage::Capacitor::file_name());
 
     dariadb_test::readIntervalCommonTest(&cap);
     dariadb::storage::Manifest::stop();
@@ -337,11 +341,13 @@ BOOST_AUTO_TEST_CASE(MultiThread) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+  dariadb::utils::fs::mkdir(storage_path);
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Capacitor mbucket{
-        dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        dariadb::storage::Capacitor::Params(max_size, storage_path), 
+		dariadb::storage::Capacitor::file_name()};
 
     std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
     std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);
@@ -374,12 +380,14 @@ BOOST_AUTO_TEST_CASE(byStep) {
     dariadb::utils::fs::rm(storage_path);
   }
 
+  dariadb::utils::fs::mkdir(storage_path);
   const size_t id_count = 1;
   { // equal step
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Capacitor ms{
-        dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        dariadb::storage::Capacitor::Params(max_size, storage_path),
+		dariadb::storage::Capacitor::file_name() };
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -408,12 +416,13 @@ BOOST_AUTO_TEST_CASE(byStep) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-
+  dariadb::utils::fs::mkdir(storage_path);
   { // less step
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Capacitor ms{
-        dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        dariadb::storage::Capacitor::Params(max_size, storage_path), 
+		dariadb::storage::Capacitor::file_name()};
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -444,12 +453,13 @@ BOOST_AUTO_TEST_CASE(byStep) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-
+  dariadb::utils::fs::mkdir(storage_path);
   { // great step
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Capacitor ms{
-        dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        dariadb::storage::Capacitor::Params(max_size, storage_path), 
+		dariadb::storage::Capacitor::file_name()};
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -482,11 +492,13 @@ BOOST_AUTO_TEST_CASE(byStep) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+  dariadb::utils::fs::mkdir(storage_path);
   { // from before data
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Capacitor ms{
-        dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        dariadb::storage::Capacitor::Params(max_size, storage_path), 
+		dariadb::storage::Capacitor::file_name()};
 
     auto m = dariadb::Meas::empty();
     const size_t total_count = 100;
@@ -561,12 +573,13 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-
+  dariadb::utils::fs::mkdir(storage_path);
   { // equal step
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Capacitor ms{
-        dariadb::storage::Capacitor::Params(max_size, storage_path)};
+        dariadb::storage::Capacitor::Params(max_size, storage_path), 
+		dariadb::storage::Capacitor::file_name()};
 
     using dariadb::statistic::average::Average;
 
@@ -608,6 +621,7 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
+  dariadb::utils::fs::mkdir(storagePath);
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
@@ -637,6 +651,7 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
+  dariadb::utils::fs::mkdir(storagePath);
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));

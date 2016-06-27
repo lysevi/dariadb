@@ -68,7 +68,7 @@ void CapacitorManager::create_new() {
       }
     }
   }
-  _cap = Capacitor_Ptr{new Capacitor(p)};
+  _cap = Capacitor_Ptr{new Capacitor(p, Capacitor::file_name())};
 }
 
 std::list<std::string> CapacitorManager::cap_files() const {

@@ -130,17 +130,16 @@ struct level {
 
 class Capacitor::Private {
 public:
-  Private(const Capacitor::Params &params)
-      : _params(params), mmap(nullptr), _size(0) {
-    _is_readonly = false;
-    create();
-  }
-
   Private(const Capacitor::Params &params, const std::string &fname,
           bool readonly)
       : _params(params), mmap(nullptr), _size(0) {
     _is_readonly = readonly;
-    open(fname);
+	if (utils::fs::path_exists(fname)) {
+		open(fname);
+	}
+	else {
+		create(fname);
+	}
   }
 
   ~Private() {
@@ -153,18 +152,7 @@ public:
     }
   }
 
-  void open_or_create() {
-    if (!fs::path_exists(_params.path)) {
-      create();
-    } else {
-      auto logs = Manifest::instance()->cola_list();
-      if (logs.empty()) {
-        create();
-      } else {
-        open(logs.front());
-      }
-    }
-  }
+ 
 
   size_t one_block_size(size_t B) const { return sizeof(FlaggedMeas) * B; }
 
@@ -195,12 +183,9 @@ public:
     return result;
   }
 
-  std::string file_name() { return fs::random_file_name(CAP_FILE_EXT); }
-
-  void create() {
-    fs::mkdir(_params.path);
-    auto sz = cap_size();
-    auto fname = file_name();
+ 
+  void create(std::string fname) {
+	auto sz = cap_size();
     mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);
 
     _header = reinterpret_cast<Header *>(mmap->data());
@@ -728,9 +713,6 @@ protected:
 };
 
 Capacitor::~Capacitor() {}
-
-Capacitor::Capacitor(const Params &params)
-    : _Impl(new Capacitor::Private(params)) {}
 
 Capacitor::Capacitor(const Capacitor::Params &params, const std::string &fname,
                      bool readonly)
