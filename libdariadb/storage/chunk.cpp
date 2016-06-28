@@ -12,13 +12,13 @@ using namespace dariadb::compression;
 
 // std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) : _locker{} {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer){
   should_free = false;
   header = hdr;
   _buffer_t = buffer;
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m) : _locker() {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m){
   should_free = false;
   hdr->is_init = true;
   _buffer_t = buffer;
@@ -122,7 +122,6 @@ bool ZippedChunk::append(const Meas &m) {
     throw MAKE_EXCEPTION("(!is_not_free || is_readonly)");
   }
 
-  std::lock_guard<utils::Locker> lg(_locker);
   auto t_f = this->c_writer.append(m);
   header->writer_position = c_writer.get_position();
 

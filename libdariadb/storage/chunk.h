@@ -62,14 +62,10 @@ public:
   virtual uint32_t get_checksum() = 0;
   virtual bool check_checksum();
   bool check_flag(const Flag &f);
-  // TODO remove?
-  void lock() { _locker.lock(); }
-  void unlock() { _locker.unlock(); }
 
   ChunkHeader *header;
   u8vector _buffer_t;
 
-  utils::Locker _locker;
   compression::BinaryBuffer_Ptr bw;
 
   bool should_free; // chunk dtor must (delete[]) resource.

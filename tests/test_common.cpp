@@ -71,7 +71,7 @@ void check_reader_of_all(dariadb::storage::Reader_ptr reader, dariadb::Time from
   if (all_sz != total_count) {
     throw MAKE_EXCEPTION("(all.size() != total_count)");
   }
-  // TODO reset is sucks
+
   reader->reset();
   auto readed_ids = reader->getIds();
   if (readed_ids.size() != _dict.size()) {

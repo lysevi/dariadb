@@ -278,7 +278,7 @@ public:
       mc_reader->readAll(&raw_res->cap_result);
 
       auto ardr = AOFManager::instance()->readInterval(local_q);
-      ardr->readAll(&raw_res->cap_result); // TODO spec result for aof.
+      ardr->readAll(&raw_res->cap_result);
       raw_result->add_rdr(Reader_ptr{raw_res});
     }
     raw_result->reset();
@@ -288,7 +288,6 @@ public:
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
     UnionReaderSet *raw_result = new UnionReaderSet();
 
-    // TODO check this.
     for (auto id : q.ids) {
       dariadb::Time minT, maxT;
       QueryTimePoint local_q = q;
@@ -296,24 +295,26 @@ public:
       local_q.ids.push_back(id);
 
       if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
-          (minT < q.time_point || maxT < q.time_point)
-          /* &&
-                  utils::inInterval(minT, maxT, local_q.time_point)*/) {
+          (minT < q.time_point || maxT < q.time_point) ){
         auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
-                 (minT < q.time_point || maxT < q.time_point)
-                 /* &&
-                           utils::inInterval(minT, maxT, local_q.time_point)*/) {
+                 (minT < q.time_point || maxT < q.time_point)) {
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else {
-        auto id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
-        TP_Reader *raw_tp_reader = new TP_Reader;
+		  auto local_q = q;
+		  local_q.ids.resize(1);
+		  local_q.ids[0] = id;
+
+        auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
+        
+		TP_Reader *raw_tp_reader = new TP_Reader;
         raw_tp_reader->_ids.resize(size_t(1));
         raw_tp_reader->_ids[0] = id;
         auto fres = id2meas.find(id);
-        if (fres != id2meas.end()) {
+        
+		if (fres != id2meas.end()) {
           raw_tp_reader->_values.push_back(fres->second);
         } else {
           if (id2meas.empty()) {
@@ -355,7 +356,6 @@ public:
   }
 
   Meas::MeasList getResult(Id id) {
-    // TODO  return ref/ptr.
     Meas::MeasList result;
     auto fres = _load_results.find(id);
     if (fres == _load_results.end()) {
@@ -432,14 +432,6 @@ void Engine::flush() {
 Engine::QueueSizes Engine::queue_size() const {
   return _impl->queue_size();
 }
-
-// Reader_ptr dariadb::storage::Engine::readInterval(Time from, Time to){
-//	return _impl->readInterval(from, to);
-//}
-
-// Reader_ptr dariadb::storage::Engine::readInTimePoint(Time time_point) {
-//	return _impl->readInTimePoint(time_point);
-//}
 
 Reader_ptr Engine::readInterval(const QueryInterval &q) {
   return _impl->readInterval(q);

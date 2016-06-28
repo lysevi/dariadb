@@ -180,7 +180,6 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
     Meas::MeasList out;
     aof.readInterval(query)->readAll(&out);
     for (auto m : out) {
-      // TODO check!
       if (m.flag == Flags::_NO_DATA) {
         continue;
       }

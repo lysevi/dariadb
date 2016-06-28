@@ -181,10 +181,9 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
       BOOST_CHECK_GT(mlist.size(), size_t(0));
 
-      // TODO uncomment.
-      //      for (auto &m : mlist) {
-      //        BOOST_CHECK(m.time <= end_time);
-      //      }
+	  for (auto &m : mlist) {
+		  BOOST_CHECK(m.time <= end_time);
+	  }
 
       auto id2meas_res = PageManager::instance()->valuesBeforeTimePoint(
           dariadb::storage::QueryTimePoint(all_id_array, 0, end_time));

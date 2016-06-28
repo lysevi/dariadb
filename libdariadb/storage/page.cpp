@@ -288,7 +288,6 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     if (ptr_to_chunk_info_raw->is_zipped) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      // TODO implement not zipped page.
       assert(false);
     }
     Chunk_Ptr c{ptr};
@@ -338,7 +337,6 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
         ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
         // ptr->should_free = true;
       } else {
-        // TODO implement not zipped page.
         assert(false);
       }
       Chunk_Ptr c{ptr};

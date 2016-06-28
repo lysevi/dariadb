@@ -171,7 +171,7 @@ public:
     result += _params.B * sizeof(FlaggedMeas); /// space to _memvalues
 
     auto prev_level_size = _params.B * sizeof(FlaggedMeas);
-    // TODO shame!
+
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
       auto cur_level_meases = bytes_in_level(_params.B, lvl); /// 2^lvl
       if (cur_level_meases < prev_level_size) {

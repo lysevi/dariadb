@@ -194,7 +194,6 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
     Meas::MeasList out;
     raw_cap->readInterval(query)->readAll(&out);
     for (auto m : out) {
-      // TODO check!
       if (m.flag == Flags::_NO_DATA) {
         continue;
       }
@@ -221,8 +220,6 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
 	  }
 
     auto interval_check = hdr.maxTime < query.time_point;
-    // TODO check this.
-    //(utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point));
 	if (!interval_check) {
 		return false;
 	}
