@@ -31,7 +31,7 @@ public:
       for (size_t i = 0; i < max_levels; ++i) {
         result += B * (size_t(1) << i);
       }
-      return result;
+      return result+B; //+ memvalues size;
     }
   };
 
