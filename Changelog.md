@@ -1,9 +1,9 @@
 v0.0.7
 =====
+- Accept unordered data.
 - Restore after crash.
 - CRC32 checksum for chunks.
-- COLA layer.
-- Append-only files layer.
+- LSM-like struct: COLA layer, Append-only files layer, Compressed layer.
 - Bloom filter based on std::hash.
 
 v0.0.6
