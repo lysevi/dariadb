@@ -303,10 +303,6 @@ public:
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else {
-        auto local_q = q;
-        local_q.ids.resize(1);
-        local_q.ids[0] = id;
-
         auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
 
         TP_Reader *raw_tp_reader = new TP_Reader;
