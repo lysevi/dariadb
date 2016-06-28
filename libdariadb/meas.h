@@ -8,8 +8,8 @@
 #include <memory>
 #include <set>
 #include <stdint.h>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace dariadb {
 typedef uint64_t Time;

@@ -87,8 +87,8 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-	dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
-	cap_param.max_levels = 11;
+    dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
+    cap_param.max_levels = 11;
     dariadb::storage::CapacitorManager::start(cap_param);
     auto tos = dariadb::storage::CapacitorManager::instance();
 

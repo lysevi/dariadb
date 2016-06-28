@@ -78,8 +78,9 @@ public:
   std::string filename;
   bool readonly;
   PageIndex_ptr _index;
+
 protected:
-  mutable  std::mutex _locker;
+  mutable std::mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
 };
 

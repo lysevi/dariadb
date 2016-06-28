@@ -233,7 +233,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   _index->iheader->id_bloom =
       storage::bloom_add(_index->iheader->id_bloom, ch->header->first.id);
   _index->iheader->flag_bloom =
-	  storage::bloom_add(_index->iheader->flag_bloom, ch->header->first.flag);
+      storage::bloom_add(_index->iheader->flag_bloom, ch->header->first.flag);
   _index->iheader->count++;
 
   cur_index->minTime = ch->header->minTime;
@@ -254,7 +254,7 @@ bool Page::is_full() const {
 }
 
 void Page::dec_reader() {
- std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   header->count_readers--;
 }
 
@@ -312,7 +312,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
                      ReaderClb *clb) {
-    std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
     return;

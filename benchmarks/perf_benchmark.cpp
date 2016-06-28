@@ -134,20 +134,19 @@ int main(int argc, char *argv[]) {
 
     dariadb::Time start_time = dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
-	dariadb::storage::PageManager::Params page_param(storage_path, chunk_per_storage, chunk_size);
+    dariadb::storage::PageManager::Params page_param(storage_path, chunk_per_storage,
+                                                     chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
-	cap_param.max_levels = 11;
-	
-	dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
-	aof_param.buffer_size = 1000;
-	aof_param.max_size = cap_param.measurements_count();
+    cap_param.max_levels = 11;
+
+    dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
+    aof_param.buffer_size = 1000;
+    aof_param.max_size = cap_param.measurements_count();
 
     cap_param.max_levels = 11;
-    auto raw_ptr = new dariadb::storage::Engine(
-        aof_param,
-        page_param,
-        cap_param,
-		dariadb::storage::Engine::Limits(max_mem_chunks));
+    auto raw_ptr =
+        new dariadb::storage::Engine(aof_param, page_param, cap_param,
+                                     dariadb::storage::Engine::Limits(max_mem_chunks));
 
     dariadb::storage::MeasStorage_ptr ms{raw_ptr};
 
@@ -209,8 +208,8 @@ int main(int argc, char *argv[]) {
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count 
-	      << " a:" << queue_sizes.aofs_count << ")" << std::endl;
+              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+              << ")" << std::endl;
 
     dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());

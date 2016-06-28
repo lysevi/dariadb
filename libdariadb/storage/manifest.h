@@ -35,6 +35,7 @@ private:
   void touch();
 
   void clear_field_values(std::string field_name);
+
 protected:
   std::string _filename;
   static std::unique_ptr<Manifest> _instance;

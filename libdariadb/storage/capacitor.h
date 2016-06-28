@@ -40,9 +40,9 @@ public:
     size_t id_bloom;
     size_t flag_bloom;
 
-    bool check_id(const dariadb::Id id) const{ return bloom_check(id_bloom, id); }
+    bool check_id(const dariadb::Id id) const { return bloom_check(id_bloom, id); }
 
-    bool check_id(const dariadb::IdArray &ids)const {
+    bool check_id(const dariadb::IdArray &ids) const {
       for (auto id : ids) {
         if (check_id(id)) {
           return true;
@@ -51,7 +51,7 @@ public:
       return false;
     }
 
-    bool check_flag(const dariadb::Flag flag)const {
+    bool check_flag(const dariadb::Flag flag) const {
       if (flag == 0) {
         return true;
       } else {
@@ -85,6 +85,7 @@ public:
   void drop_to_stor(MeasWriter *stor);
 
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

@@ -37,7 +37,7 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
-			  <<" aofs: "<<dariadb::storage::AOFManager::instance()->files_count()
+              << " aofs: " << dariadb::storage::AOFManager::instance()->files_count()
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:" << (int64_t(100) * append_count) / all_writes
               << "%                ";
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     auto p = dariadb::storage::AOFManager::Params(storage_path, size_t(1000));
     p.buffer_size = 1000;
-	p.max_size = (1024 * 1024) * 3 / sizeof(dariadb::Meas);
+    p.max_size = (1024 * 1024) * 3 / sizeof(dariadb::Meas);
     dariadb::storage::AOFManager::start(p);
     auto aof = dariadb::storage::AOFManager::instance();
     std::thread info_thread(show_info);

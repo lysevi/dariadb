@@ -1,9 +1,9 @@
 #include "manifest.h"
 #include "../utils/exception.h"
 #include "../utils/fs.h"
+#include <algorithm>
 #include <cassert>
 #include <fstream>
-#include <algorithm>
 #include <json/json.hpp>
 
 using json = nlohmann::json;
@@ -15,9 +15,9 @@ const std::string COLA_JS_KEY = "cola";
 const std::string AOF_JS_KEY = "aof";
 
 Manifest::Manifest(const std::string &fname) : _filename(fname) {
-     if (utils::fs::path_exists(_filename)) {
-         this->restore();
-     }
+  if (utils::fs::path_exists(_filename)) {
+    this->restore();
+  }
 }
 
 void Manifest::start(const std::string &fname) {
@@ -39,7 +39,7 @@ void dariadb::storage::Manifest::touch() {
   }
 }
 
-void dariadb::storage::Manifest::restore(){
+void dariadb::storage::Manifest::restore() {
   std::string storage_path = utils::fs::parent_path(this->_filename);
 
   auto aofs = this->aof_list();
@@ -190,12 +190,12 @@ std::list<std::string> dariadb::storage::Manifest::aof_list() {
   return result;
 }
 
-void dariadb::storage::Manifest::clear_field_values(std::string field_name){
-    json js = json::parse(read_file(_filename));
+void dariadb::storage::Manifest::clear_field_values(std::string field_name) {
+  json js = json::parse(read_file(_filename));
 
-    std::list<std::string> empty_list{};
-    js[field_name] = empty_list;
-    write_file(_filename, js.dump());
+  std::list<std::string> empty_list{};
+  js[field_name] = empty_list;
+  write_file(_filename, js.dump());
 }
 
 void dariadb::storage::Manifest::aof_append(const std::string &rec) {

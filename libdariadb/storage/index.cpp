@@ -99,12 +99,13 @@ public:
       id_bloom_result = true;
     }
     auto flag_bloom_result = false;
-    if (_flag==dariadb::Flag(0) || dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
+    if (_flag == dariadb::Flag(0) ||
+        dariadb::storage::bloom_check(_index_it.flag_bloom, _flag)) {
       flag_bloom_result = true;
     }
-	if (id_bloom_result && !flag_bloom_result) {
-		std::cout << 1;
-	}
+    if (id_bloom_result && !flag_bloom_result) {
+      std::cout << 1;
+    }
     return id_bloom_result && flag_bloom_result;
   }
 

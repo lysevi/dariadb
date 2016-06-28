@@ -265,7 +265,7 @@ public:
 
       ChunkLinkList chunks_for_id;
       for (auto &c : all_chunkLinks) {
-        if (storage::bloom_check(c.id_bloom,id)) {
+        if (storage::bloom_check(c.id_bloom, id)) {
           chunks_for_id.push_back(c);
         }
       }
@@ -295,7 +295,7 @@ public:
       local_q.ids.push_back(id);
 
       if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
-          (minT < q.time_point || maxT < q.time_point) ){
+          (minT < q.time_point || maxT < q.time_point)) {
         auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
@@ -303,18 +303,18 @@ public:
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
       } else {
-		  auto local_q = q;
-		  local_q.ids.resize(1);
-		  local_q.ids[0] = id;
+        auto local_q = q;
+        local_q.ids.resize(1);
+        local_q.ids[0] = id;
 
         auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
-        
-		TP_Reader *raw_tp_reader = new TP_Reader;
+
+        TP_Reader *raw_tp_reader = new TP_Reader;
         raw_tp_reader->_ids.resize(size_t(1));
         raw_tp_reader->_ids[0] = id;
         auto fres = id2meas.find(id);
-        
-		if (fres != id2meas.end()) {
+
+        if (fres != id2meas.end()) {
           raw_tp_reader->_values.push_back(fres->second);
         } else {
           if (id2meas.empty()) {

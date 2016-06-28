@@ -215,19 +215,19 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
 Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   std::lock_guard<std::mutex> lg(_locker);
   auto pred = [query](const Capacitor::Header &hdr) {
-	 if(!hdr.check_flag(query.flag)){
-			  return false;
-	  }
+    if (!hdr.check_flag(query.flag)) {
+      return false;
+    }
 
     auto interval_check = hdr.maxTime < query.time_point;
-	if (!interval_check) {
-		return false;
-	}
+    if (!interval_check) {
+      return false;
+    }
 
-	if (!hdr.check_id(query.ids)) {
-		return false;
-	}
-	return true;
+    if (!hdr.check_id(query.ids)) {
+      return false;
+    }
+    return true;
   };
 
   auto files = caps_by_filter(pred);
@@ -235,9 +235,9 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   TP_Reader *raw = new TP_Reader;
   dariadb::Meas::Id2Meas sub_result;
 
-  for(auto id:query.ids){
-      sub_result[id].flag=Flags::_NO_DATA;
-      sub_result[id].time=query.time_point;
+  for (auto id : query.ids) {
+    sub_result[id].flag = Flags::_NO_DATA;
+    sub_result[id].time = query.time_point;
   }
 
   for (auto filename : files) {
@@ -246,10 +246,10 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
     raw_cap->readInTimePoint(query)->readAll(&out);
 
     for (auto &m : out) {
-        if (sub_result[m.id].flag == Flags::_NO_DATA) {
-          sub_result[m.id] = m;
-        }
-     }
+      if (sub_result[m.id].flag == Flags::_NO_DATA) {
+        sub_result[m.id] = m;
+      }
+    }
 
     delete raw_cap;
   }
@@ -296,7 +296,7 @@ Reader_ptr CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) 
 dariadb::append_result CapacitorManager::append(const Meas &value) {
   std::lock_guard<std::mutex> lg(_locker);
   if (_cap == nullptr) {
-	  create_new();
+    create_new();
   }
   auto res = _cap->append(value);
   if (res.writed != 1) {
@@ -309,8 +309,7 @@ dariadb::append_result CapacitorManager::append(const Meas &value) {
 
 void CapacitorManager::flush() {}
 
-void CapacitorManager::subscribe(const IdArray &, const Flag &,
-                                 const ReaderClb_ptr &) {
+void CapacitorManager::subscribe(const IdArray &, const Flag &, const ReaderClb_ptr &) {
   NOT_IMPLEMENTED;
 }
 

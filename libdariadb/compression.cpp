@@ -86,7 +86,7 @@ public:
 
   Meas read() {
     Meas result{};
-    result.id=_first.id;
+    result.id = _first.id;
     result.time = time_dcomp.read();
     result.value = value_dcomp.read();
     result.flag = flag_dcomp.read();

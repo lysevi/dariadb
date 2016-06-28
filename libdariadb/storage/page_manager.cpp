@@ -1,19 +1,19 @@
 #include "page_manager.h"
+#include "../flags.h"
 #include "../utils/asyncworker.h"
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 #include "../utils/lru.h"
 #include "../utils/utils.h"
-#include "../flags.h"
 #include "bloom_filter.h"
 #include "manifest.h"
 #include "page.h"
 
-#include <mutex>
 #include <condition_variable>
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <thread>
 
@@ -176,7 +176,9 @@ public:
                           (utils::inInterval(hdr.minTime, hdr.maxTime, query.to)));
       if (interval_check) {
         for (auto id : query.ids) {
-          if (storage::bloom_check(hdr.id_bloom, id) && (query.flag==Flag(0) || storage::bloom_check(hdr.flag_bloom, query.flag))) {
+          if (storage::bloom_check(hdr.id_bloom, id) &&
+              (query.flag == Flag(0) ||
+               storage::bloom_check(hdr.flag_bloom, query.flag))) {
             return true;
           }
         }
@@ -245,9 +247,9 @@ public:
 
     Meas::Id2Meas result;
 
-    for(auto id:query.ids){
-        result[id].flag=Flags::_NO_DATA;
-        result[id].time=query.time_point;
+    for (auto id : query.ids) {
+      result[id].flag = Flags::_NO_DATA;
+      result[id].time = query.time_point;
     }
 
     auto pred = [query](const IndexHeader &hdr) {
@@ -270,7 +272,7 @@ public:
 
       auto subres = pg->valuesBeforeTimePoint(query);
       for (auto kv : subres) {
-        result[kv.first]=kv.second;
+        result[kv.first] = kv.second;
       }
       if (subres.size() == query.ids.size()) {
         break;

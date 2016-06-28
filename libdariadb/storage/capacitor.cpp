@@ -110,9 +110,7 @@ struct level {
 
   size_t size() const { return hdr->count; }
 
-  bool check_id(const dariadb::Id id) const {
-    return bloom_check(hdr->id_bloom, id);
-  }
+  bool check_id(const dariadb::Id id) const { return bloom_check(hdr->id_bloom, id); }
 
   bool check_id(const dariadb::IdArray &ids) const {
     for (auto id : ids) {
@@ -130,16 +128,14 @@ struct level {
 
 class Capacitor::Private {
 public:
-  Private(const Capacitor::Params &params, const std::string &fname,
-          bool readonly)
+  Private(const Capacitor::Params &params, const std::string &fname, bool readonly)
       : _params(params), mmap(nullptr), _size(0) {
     _is_readonly = readonly;
-	if (utils::fs::path_exists(fname)) {
-		open(fname);
-	}
-	else {
-		create(fname);
-	}
+    if (utils::fs::path_exists(fname)) {
+      open(fname);
+    } else {
+      create(fname);
+    }
   }
 
   ~Private() {
@@ -151,8 +147,6 @@ public:
       }
     }
   }
-
- 
 
   size_t one_block_size(size_t B) const { return sizeof(FlaggedMeas) * B; }
 
@@ -183,9 +177,8 @@ public:
     return result;
   }
 
- 
   void create(std::string fname) {
-	auto sz = cap_size();
+    auto sz = cap_size();
     mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);
 
     _header = reinterpret_cast<Header *>(mmap->data());
@@ -201,10 +194,9 @@ public:
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
 
     auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
-    auto headers_pos = reinterpret_cast<level_header *>(
-        pos_after_unsorded); // move to levels position
-    auto pos =
-        (pos_after_unsorded + sizeof(level_header) * _header->levels_count);
+    auto headers_pos =
+        reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
+    auto pos = (pos_after_unsorded + sizeof(level_header) * _header->levels_count);
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = &headers_pos[lvl];
       it->lvl = uint8_t(lvl);
@@ -232,10 +224,9 @@ public:
     _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
 
     auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
-    auto headers_pos = reinterpret_cast<level_header *>(
-        pos_after_unsorded); // move to levels position
-    auto pos =
-        (pos_after_unsorded + sizeof(level_header) * _header->levels_count);
+    auto headers_pos =
+        reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
+    auto pos = (pos_after_unsorded + sizeof(level_header) * _header->levels_count);
 
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto h = &headers_pos[lvl];
@@ -278,12 +269,11 @@ public:
     for (size_t i = 0; i < _header->levels_count; ++i) {
       auto current = &_levels[i];
       if (!current->check_checksum()) {
-        logger_fatal(LOG_MSG_PREFIX
-                     << "level #" << i << " (cap: " << current->hdr->count
-                     << " size: " << current->hdr->pos << " time: ["
-                     << to_string(current->hdr->_minTime) << " : "
-                     << to_string(current->hdr->_maxTime) << "])"
-                     << " checksum error.");
+        logger_fatal(LOG_MSG_PREFIX << "level #" << i << " (cap: " << current->hdr->count
+                                    << " size: " << current->hdr->pos << " time: ["
+                                    << to_string(current->hdr->_minTime) << " : "
+                                    << to_string(current->hdr->_maxTime) << "])"
+                                    << " checksum error.");
         dropped += current->hdr->pos;
         _levels[i].clear();
       } else {
@@ -435,8 +425,7 @@ public:
     low_level_stor_pusher merge_target;
     merge_target._stor = stor;
 
-    dariadb::utils::k_merge(to_merge, merge_target,
-                            flagged_meas_time_compare_less());
+    dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());
     _header->is_dropped = true;
   }
 
@@ -454,12 +443,10 @@ public:
       return Reader_ptr(raw);
     }
 
-    std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>>
-        sub_result;
+    std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
     sub_result.reserve(q.ids.size());
     if (q.from > this->minTime()) {
-      auto tp_read_data =
-          this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
+      auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
       for (auto kv : tp_read_data) {
         sub_result[kv.first].insert(kv.second);
       }
@@ -475,19 +462,16 @@ public:
       }
       if (!inInterval(q.from, q.to, _levels[i].hdr->_minTime) &&
           !inInterval(q.from, q.to, _levels[i].hdr->_maxTime) &&
-          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime,
-                      q.from) &&
-          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime,
-                      q.to)) {
+          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.from) &&
+          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
         continue;
       }
       FlaggedMeas empty;
       empty.value.time = q.from;
       auto begin = _levels[i].begin;
       auto end = _levels[i].begin + _levels[i].hdr->pos;
-      auto start =
-          std::lower_bound(begin, end, empty, [](const FlaggedMeas &left,
-                                                 const FlaggedMeas &right) {
+      auto start = std::lower_bound(
+          begin, end, empty, [](const FlaggedMeas &left, const FlaggedMeas &right) {
             return left.value.time < right.value.time;
           });
       for (auto it = start; it != end; ++it) {
@@ -519,8 +503,7 @@ public:
     return Reader_ptr(raw);
   }
 
-  void insert_if_older(dariadb::Meas::Id2Meas &s,
-                       const dariadb::Meas &m) const {
+  void insert_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
     auto fres = s.find(m.id);
     if (fres == s.end()) {
       s.insert(std::make_pair(m.id, m));
@@ -560,8 +543,7 @@ public:
     return _header->maxTime;
   }
 
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                  dariadb::Time *maxResult) {
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
     if (!_header->check_id(id)) {
@@ -608,9 +590,7 @@ public:
     mmap->flush();
   }
 
-  size_t files_count() const {
-    return Manifest::instance()->cola_list().size();
-  }
+  size_t files_count() const { return Manifest::instance()->cola_list().size(); }
 
   size_t levels_count() const { return _levels.size(); }
 
@@ -651,8 +631,7 @@ public:
       if (_levels[i].empty()) {
         continue;
       }
-      if (!inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime,
-                      q.time_point)) {
+      if (!inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.time_point)) {
         continue;
       }
 
@@ -665,9 +644,8 @@ public:
       empty.value.time = q.time_point;
       auto begin = _levels[i].begin;
       auto end = _levels[i].begin + _levels[i].hdr->pos;
-      auto start =
-          std::lower_bound(begin, end, empty, [](const FlaggedMeas &left,
-                                                 const FlaggedMeas &right) {
+      auto start = std::lower_bound(
+          begin, end, empty, [](const FlaggedMeas &left, const FlaggedMeas &right) {
             return left.value.time < right.value.time;
           });
 
@@ -732,9 +710,13 @@ Capacitor::Header Capacitor::readHeader(std::string file_name) {
   istream.close();
   return result;
 }
-dariadb::Time Capacitor::minTime() { return _Impl->minTime(); }
+dariadb::Time Capacitor::minTime() {
+  return _Impl->minTime();
+}
 
-dariadb::Time Capacitor::maxTime() { return _Impl->maxTime(); }
+dariadb::Time Capacitor::maxTime() {
+  return _Impl->maxTime();
+}
 
 bool Capacitor::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                            dariadb::Time *maxResult) {
@@ -752,8 +734,7 @@ Reader_ptr dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
 }
 
-Reader_ptr
-dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
+Reader_ptr dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
 
@@ -770,7 +751,9 @@ size_t dariadb::storage::Capacitor::levels_count() const {
   return _Impl->levels_count();
 }
 
-size_t dariadb::storage::Capacitor::size() const { return _Impl->size(); }
+size_t dariadb::storage::Capacitor::size() const {
+  return _Impl->size();
+}
 
 void dariadb::storage::Capacitor::drop_to_stor(MeasWriter *stor) {
   _Impl->drop_to_stor(stor);

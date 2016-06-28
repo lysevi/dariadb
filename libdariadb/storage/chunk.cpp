@@ -12,13 +12,13 @@ using namespace dariadb::compression;
 
 // std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer){
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
   should_free = false;
   header = hdr;
   _buffer_t = buffer;
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m){
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m) {
   should_free = false;
   hdr->is_init = true;
   _buffer_t = buffer;
