@@ -29,13 +29,13 @@ using Metric_Ptr = std::shared_ptr<Metric>;
 class Metric {
 public:
   virtual void add(const Metric_Ptr &other) = 0;
-  virtual inline std::string to_string() const = 0;
+  virtual std::string to_string() const = 0;
 };
 
 template <class T> class TemplateMetric : public Metric {
 public:
   TemplateMetric(const T &value)
-      : _value(value), _average(value), _min(value), _max(value), _count(1){};
+      : _value(value), _average(value), _min(value), _max(value), _count(1){}
 
   // Inherited via Metric
   virtual void add(const Metric_Ptr &other) override {
