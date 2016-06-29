@@ -276,7 +276,7 @@ ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query
 }
 
 dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
-  TIMECODE_METRICS(ctmd, "read", "Page::valuesBeforeTimePoint");
+  TIMECODE_METRICS(ctmd, "readInTimePoint", "Page::valuesBeforeTimePoint");
   dariadb::Meas::Id2Meas result;
   auto raw_links =
       _index->get_chunks_links(q.ids, _index->iheader->minTime, q.time_point, q.flag);

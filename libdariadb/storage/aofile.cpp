@@ -1,6 +1,7 @@
 #include "aofile.h"
 #include "../flags.h"
 #include "../utils/fs.h"
+#include "../utils/metrics.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <algorithm>
@@ -34,6 +35,7 @@ public:
   ~Private() { this->flush(); }
 
   append_result append(const Meas &value) {
+    TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
     if (_writed > _params.size) {
@@ -51,6 +53,7 @@ public:
   }
 
   append_result append(const Meas::MeasArray &ma) {
+    TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
     if (is_full) {
@@ -70,6 +73,7 @@ public:
   }
 
   append_result append(const Meas::MeasList &ml) {
+    TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
     if (is_full) {
@@ -91,6 +95,7 @@ public:
   }
 
   Reader_ptr readInterval(const QueryInterval &q) {
+    TIMECODE_METRICS(ctmd, "readInterval", "AOFile::readInterval");
     std::lock_guard<std::mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
     auto file = std::fopen(_filename.c_str(), "rb");
@@ -121,6 +126,7 @@ public:
   }
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
+    TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFile::readInTimePoint");
     std::lock_guard<std::mutex> lock(_mutex);
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
@@ -252,6 +258,7 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+    TIMECODE_METRICS(ctmd, "minMaxTime", "AOFile::minMaxTime");
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
       throw MAKE_EXCEPTION("aof: file open error");
@@ -276,6 +283,7 @@ public:
   }
 
   void flush() {
+    TIMECODE_METRICS(ctmd, "flush", "AOFile::flush");
     std::lock_guard<std::mutex> lock(_mutex);
     // if (drop_future.valid()) {
     //  drop_future.wait();
@@ -283,6 +291,7 @@ public:
   }
 
   void drop_to_stor(MeasWriter *stor) {
+    TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
       throw MAKE_EXCEPTION("aof: file open error");

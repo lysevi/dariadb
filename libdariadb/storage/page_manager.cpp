@@ -144,6 +144,7 @@ public:
   }
 
   Page_Ptr open_page_to_read(const std::string &pname) {
+    TIMECODE_METRICS(ctmd, "open", "PageManager::open_page_to_read");
     Page_Ptr pg = nullptr;
     if (_cur_page != nullptr && pname == _cur_page->filename) {
       pg = _cur_page;
@@ -249,7 +250,7 @@ public:
   }
 
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
-    TIMECODE_METRICS(ctmd, "read", "PageManager::valuesBeforeTimePoint");
+    TIMECODE_METRICS(ctmd, "readInTimePoint", "PageManager::valuesBeforeTimePoint");
     std::lock_guard<std::mutex> lg(_locker);
 
     Meas::Id2Meas result;
