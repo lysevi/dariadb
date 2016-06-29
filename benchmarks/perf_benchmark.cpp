@@ -15,7 +15,7 @@
 #include <storage/capacitor.h>
 #include <thread>
 #include <utils/fs.h>
-
+#include <utils/metrics.h>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
@@ -92,13 +92,13 @@ int main(int argc, char *argv[]) {
 
   const std::string storage_path = "testStorage";
   bool readers_enable = false;
+  bool metrics_enable = false;
   bool dont_clean = false;
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")(
-      "enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
-      "enable readers threads")("dont-clean",
-                                po::value<bool>(&dont_clean)->default_value(dont_clean),
-                                "enable readers threads");
+  desc.add_options()("help", "produce help message")
+	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
+	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))
+	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),"dont clean storage path before start.");
 
   po::variables_map vm;
   try {
@@ -248,5 +248,8 @@ int main(int argc, char *argv[]) {
   std::cout << "cleaning...\n";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
+  }
+  if (metrics_enable) {
+	  std::cout << "metrics:\n" << dariadb::utils::MetricsManager::instance()->to_string() << std::endl;
   }
 }

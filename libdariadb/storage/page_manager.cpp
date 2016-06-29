@@ -5,6 +5,7 @@
 #include "../utils/locker.h"
 #include "../utils/lru.h"
 #include "../utils/utils.h"
+#include "../utils/metrics.h"
 #include "bloom_filter.h"
 #include "manifest.h"
 #include "page.h"
@@ -91,6 +92,7 @@ public:
   }
 
   Page_Ptr create_page() {
+    TIMECODE_METRICS(ctmd, "write", "PageManager::create_page");
     if (!dariadb::utils::fs::path_exists(_param.path)) {
       dariadb::utils::fs::mkdir(_param.path);
     }
@@ -121,6 +123,7 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+    TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
     std::lock_guard<std::mutex> lg(_locker);
 
     auto pages = pages_by_filter(
@@ -166,6 +169,7 @@ public:
   }
 
   ChunkLinkList chunksByIterval(const QueryInterval &query) {
+    TIMECODE_METRICS(ctmd, "read", "PageManager::chunksByIterval");
     std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [query](const IndexHeader &hdr) {
@@ -201,6 +205,7 @@ public:
   }
 
   void readLinks(const QueryInterval &query, const ChunkLinkList &links, ReaderClb *clb) {
+    TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
     std::lock_guard<std::mutex> lg(_locker);
 
     ChunkLinkList to_read;
@@ -229,6 +234,7 @@ public:
   }
 
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
+    TIMECODE_METRICS(ctmd, "read", "PageManager::pages_by_filter");
     std::list<std::string> result;
     auto names = Manifest::instance()->page_list();
     for (auto n : names) {
@@ -243,6 +249,7 @@ public:
   }
 
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
+    TIMECODE_METRICS(ctmd, "read", "PageManager::valuesBeforeTimePoint");
     std::lock_guard<std::mutex> lg(_locker);
 
     Meas::Id2Meas result;
@@ -326,6 +333,7 @@ public:
   }
 
   append_result append(const Meas &value) {
+    TIMECODE_METRICS(ctmd, "write", "PageManager::append");
     std::lock_guard<std::mutex> lg(_locker);
 
     while (true) {
@@ -376,6 +384,7 @@ void PageManager::stop() {
 }
 
 void PageManager::flush() {
+  TIMECODE_METRICS(ctmd, "flush", "PageManager::flush");
   this->impl->flush();
 }
 

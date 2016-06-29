@@ -10,7 +10,7 @@
 #include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
-
+#include <utils/metrics.h>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
@@ -56,9 +56,11 @@ int main(int argc, char *argv[]) {
 
   po::options_description desc("Allowed options");
   bool dont_clean = false;
+  bool metrics_enable = false;
   desc.add_options()("help", "produce help message")(
       "dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),
-      "enable readers threads");
+      "enable readers threads")
+	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {
@@ -113,7 +115,11 @@ int main(int argc, char *argv[]) {
     stop_info = true;
     info_thread.join();
 
-    dariadb_bench::readBenchark(all_id_set, tos, 20, startTime,
+    dariadb_bench::readBenchark(all_id_set, tos, 10, startTime,
                                 dariadb::timeutil::current_time());
+	
+	if (metrics_enable) {
+		std::cout << "metrics:\n" << dariadb::utils::MetricsManager::instance()->to_string() << std::endl;
+	}
   }
 }

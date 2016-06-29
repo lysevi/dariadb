@@ -4,15 +4,19 @@
 #include <chrono>
 #include <ctime>
 #include <thread>
+#include <ctime>
+#include <iostream>
 #include <timeutil.h>
 #include <utils/asyncworker.h>
 #include <utils/crc.h>
 #include <utils/fs.h>
 #include <utils/in_interval.h>
 #include <utils/lru.h>
+#include <utils/metrics.h>
 #include <utils/period_worker.h>
 #include <utils/skiplist.h>
 #include <utils/utils.h>
+
 
 BOOST_AUTO_TEST_CASE(Time) {
   auto ct = dariadb::timeutil::current_time();
@@ -253,4 +257,22 @@ BOOST_AUTO_TEST_CASE(Worker) {
   worker.stop_async();
   BOOST_CHECK(worker.stoped());
   BOOST_CHECK_EQUAL(worker.value, (int)1 + 2 + 3 + 4);
+}
+
+BOOST_AUTO_TEST_CASE(Metrics) {
+  BOOST_CHECK(dariadb::utils::MetricsManager::instance() != nullptr);
+  {
+    dariadb::utils::RAI_TimeMetric("group1", "metric2");
+    {
+      dariadb::utils::RAI_TimeMetric("group1", "metric1");
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    {
+      dariadb::utils::RAI_TimeMetric("group1", "metric1");
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+  }
+  auto dump=dariadb::utils::MetricsManager::instance()->to_string();
+  BOOST_CHECK(dump.size() > size_t(0));
 }

@@ -2,6 +2,7 @@
 #include "../flags.h"
 #include "../utils/exception.h"
 #include "../utils/fs.h"
+#include "../utils/metrics.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <cassert>
@@ -51,6 +52,7 @@ CapacitorManager *dariadb::storage::CapacitorManager::instance() {
 }
 
 void CapacitorManager::create_new() {
+  TIMECODE_METRICS(ctm, "write", "CapacitorManager::create_new");
   _cap = nullptr;
   auto p = Capacitor::Params(_params.B, _params.path);
   if (_params.max_levels != 0) {
@@ -60,6 +62,7 @@ void CapacitorManager::create_new() {
     auto closed = this->closed_caps();
     const size_t MAX_CLOSED_CAPS = 10;
     if (closed.size() > MAX_CLOSED_CAPS) {
+      TIMECODE_METRICS(ctmd, "write", "CapacitorManager::create_new::drop");
       size_t to_drop = closed.size() / 2;
       for (size_t i = 0; i < to_drop; ++i) {
         auto f = closed.front();
@@ -138,6 +141,7 @@ dariadb::Time CapacitorManager::maxTime() {
 
 bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                   dariadb::Time *maxResult) {
+  TIMECODE_METRICS(ctmd, "read", "CapacitorManager::minMaxTime");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = cap_files();
   auto p = Capacitor::Params(_params.B, _params.path);
@@ -160,6 +164,7 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 }
 
 Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
+  TIMECODE_METRICS(ctmd, "readInterval", "CapacitorManager::readInterval");
   std::lock_guard<std::mutex> lg(_locker);
   auto pred = [query](const Capacitor::Header &hdr) {
 
@@ -213,6 +218,7 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
 }
 
 Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
+  TIMECODE_METRICS(ctmd, "readInTimePoint", "CapacitorManager::readInTimePoint");
   std::lock_guard<std::mutex> lg(_locker);
   auto pred = [query](const Capacitor::Header &hdr) {
     if (!hdr.check_flag(query.flag)) {
@@ -294,6 +300,7 @@ Reader_ptr CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) 
 }
 
 dariadb::append_result CapacitorManager::append(const Meas &value) {
+  TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append");
   std::lock_guard<std::mutex> lg(_locker);
   if (_cap == nullptr) {
     create_new();
@@ -307,7 +314,9 @@ dariadb::append_result CapacitorManager::append(const Meas &value) {
   }
 }
 
-void CapacitorManager::flush() {}
+void CapacitorManager::flush() {
+	TIMECODE_METRICS(ctmd, "flush", "CapacitorManager::flush");
+}
 
 void CapacitorManager::subscribe(const IdArray &, const Flag &, const ReaderClb_ptr &) {
   NOT_IMPLEMENTED;

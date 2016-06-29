@@ -8,6 +8,7 @@
 #include "storage/subscribe.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
+#include "utils/metrics.h"
 #include <algorithm>
 #include <cassert>
 
@@ -41,6 +42,7 @@ public:
   }
 
   void reset() override {
+    TIMECODE_METRICS(ctmd, "read", "UnionReader::reset");
     // TOOD opt. use Reader::size for alloc.
     bool need_sort = false;
     if (!page_result.empty() && !cap_result.empty()) {
@@ -189,6 +191,7 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+    TIMECODE_METRICS(ctmd, "minMaxTime", "Engine::minMaxTime");
     std::lock_guard<std::mutex> lg(_locker);
     dariadb::Time subMin1, subMax1;
     auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
@@ -227,6 +230,7 @@ public:
   }
 
   void flush() {
+    TIMECODE_METRICS(ctmd, "flush", "Engine::flush");
     std::lock_guard<std::mutex> lg(_locker);
     AOFManager::instance()->flush();
     CapacitorManager::instance()->flush();
@@ -249,6 +253,7 @@ public:
 
   // Inherited via MeasStorage
   Reader_ptr readInterval(const QueryInterval &q) {
+    TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
     UnionReaderSet *raw_result = new UnionReaderSet();
 
     auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
@@ -286,6 +291,7 @@ public:
   }
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
+    TIMECODE_METRICS(ctmd, "readInTimePoint", "Engine::readInTimePoint");
     UnionReaderSet *raw_result = new UnionReaderSet();
 
     for (auto id : q.ids) {

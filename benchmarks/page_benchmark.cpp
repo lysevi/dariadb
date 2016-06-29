@@ -16,6 +16,7 @@
 #include <storage/page_manager.h>
 #include <thread>
 #include <utils/fs.h>
+#include <utils/metrics.h>
 
 #include <boost/program_options.hpp>
 
@@ -63,9 +64,10 @@ int main(int argc, char *argv[]) {
 
   po::options_description desc("Allowed options");
   bool dont_clean = false;
-  desc.add_options()("help", "produce help message")(
-      "dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),
-      "enable readers threads");
+  bool metrics_enable = false;
+  desc.add_options()("help", "produce help message")
+	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean), "enable readers threads")
+	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {
@@ -125,7 +127,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < id_count; ++i) {
       ids[i] = i;
     }
-    const size_t runs_count = 100;
+    const size_t runs_count = 10;
     ReadCallback *clb = new ReadCallback;
     auto start = clock();
 
@@ -160,5 +162,8 @@ int main(int argc, char *argv[]) {
     if (dariadb::utils::fs::path_exists(storagePath)) {
       dariadb::utils::fs::rm(storagePath);
     }
+	if (metrics_enable) {
+		std::cout << "metrics:\n" << dariadb::utils::MetricsManager::instance()->to_string() << std::endl;
+	}
   }
 }

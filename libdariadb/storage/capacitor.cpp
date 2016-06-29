@@ -17,6 +17,7 @@ File struct:
 #include "../utils/fs.h"
 #include "../utils/kmerge.h"
 #include "../utils/utils.h"
+#include "../utils/metrics.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <algorithm>
@@ -178,6 +179,7 @@ public:
   }
 
   void create(std::string fname) {
+    TIMECODE_METRICS(ctmd, "write", "Capacitor::create");
     auto sz = cap_size();
     mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);
 
@@ -219,6 +221,7 @@ public:
   }
 
   void load() {
+    TIMECODE_METRICS(ctmd, "read", "Capacitor::load");
     _levels.resize(_header->levels_count);
     _memvalues_size = _header->B;
     _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
@@ -303,6 +306,7 @@ public:
   }
 
   append_result append(const Meas &value) {
+    TIMECODE_METRICS(ctmd, "write", "Capacitor::append");
     assert(!_is_readonly);
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
@@ -337,6 +341,7 @@ public:
   }
 
   size_t merge_levels() {
+    TIMECODE_METRICS(ctmd, "write", "Capacitor::merge_levels");
     flagged_meas_time_compare_less flg_less_by_time;
     std::sort(_memvalues, _memvalues + _memvalues_size, flg_less_by_time);
 
@@ -407,6 +412,7 @@ public:
   };
 
   void drop_to_stor(MeasWriter *stor) {
+    TIMECODE_METRICS(ctmd, "write", "Capacitor::drop_to_stor");
     std::list<level *> to_merge;
     level tmp;
     level_header tmp_hdr;
@@ -430,6 +436,7 @@ public:
   }
 
   Reader_ptr readInterval(const QueryInterval &q) {
+    TIMECODE_METRICS(ctmd, "readInterval", "Capacitor::readInterval");
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
 
@@ -515,6 +522,7 @@ public:
   }
 
   Reader_ptr readInTimePoint(const QueryTimePoint &q) {
+    TIMECODE_METRICS(ctmd, "readInTimePoint", "Capacitor::readInTimePoint");
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     TP_Reader *raw = new TP_Reader;
     dariadb::Meas::Id2Meas sub_res = timePointValues(q);
@@ -544,6 +552,7 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+    TIMECODE_METRICS(ctmd, "minMaxTime", "Capacitor::minMaxTime");
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
     if (!_header->check_id(id)) {

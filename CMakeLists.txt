@@ -129,8 +129,14 @@ endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 include_directories(extern)
 
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
+option(ENABLE_METRICS "Enable code metrics." ON)
 MESSAGE(STATUS "Options: ")
 MESSAGE(STATUS "ENABLE_TESTING - " ${ENABLE_TESTING})
+MESSAGE(STATUS "ENABLE_METRICS - " ${ENABLE_METRICS})
+
+if (ENABLE_METRICS)
+  add_definitions(-DENABLE_METRICS)
+endif(ENABLE_METRICS)
 
 add_subdirectory (libdariadb)
 

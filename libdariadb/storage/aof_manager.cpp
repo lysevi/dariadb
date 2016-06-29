@@ -2,6 +2,7 @@
 #include "../flags.h"
 #include "../utils/exception.h"
 #include "../utils/fs.h"
+#include "../utils/metrics.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <cassert>
@@ -44,11 +45,13 @@ AOFManager *dariadb::storage::AOFManager::instance() {
 }
 
 void AOFManager::create_new() {
+  TIMECODE_METRICS(ctm, "write", "AOFManager::create_new");
   _aof = nullptr;
   auto p = AOFile::Params(_params.max_size, _params.path);
   if (_down != nullptr) {
     auto closed = this->closed_aofs();
     if (closed.size() > _params.max_closed_aofs) {
+      TIMECODE_METRICS(ctmd, "write", "AOFManager::create_new::dump");
       size_t to_drop = closed.size() / 2;
       for (size_t i = 0; i < to_drop; ++i) {
         auto f = closed.front();
@@ -134,6 +137,7 @@ dariadb::Time AOFManager::maxTime() {
 
 bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
+  TIMECODE_METRICS(ctmd, "minMaxTime", "AOFManager::minMaxTime");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
@@ -168,8 +172,8 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 }
 
 Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
+  TIMECODE_METRICS(ctmd, "readInterval", "AOFManager::readInterval");
   std::lock_guard<std::mutex> lg(_locker);
-
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
   TP_Reader *raw = new TP_Reader;
@@ -208,8 +212,8 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
 }
 
 Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
+  TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFManager::readInTimePoint");
   std::lock_guard<std::mutex> lg(_locker);
-
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
   TP_Reader *raw = new TP_Reader;
@@ -295,6 +299,7 @@ Reader_ptr AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
 }
 
 dariadb::append_result AOFManager::append(const Meas &value) {
+  TIMECODE_METRICS(ctmd, "append", "AOFManager::append");
   std::lock_guard<std::mutex> lg(_locker);
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
@@ -325,6 +330,7 @@ void AOFManager::flush_buffer() {
 }
 
 void AOFManager::flush() {
+  TIMECODE_METRICS(ctmd, "flush", "AOFManager::flush");
   flush_buffer();
 }
 

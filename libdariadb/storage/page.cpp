@@ -1,5 +1,6 @@
 #include "page.h"
 #include "../timeutil.h"
+#include "../utils/metrics.h"
 #include "bloom_filter.h"
 #include <algorithm>
 #include <cassert>
@@ -26,6 +27,7 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
 
 Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage,
                    uint32_t chunk_size) {
+  TIMECODE_METRICS(ctmd, "write", "Page::create");
   auto res = new Page;
   res->readonly = false;
   auto mmap = utils::fs::MappedFile::touch(file_name, sz);
@@ -55,6 +57,7 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 }
 
 Page *Page::open(std::string file_name, bool read_only) {
+  TIMECODE_METRICS(ctmd, "read", "Page::open");
   auto res = new Page;
   res->readonly = read_only;
   auto mmap = utils::fs::MappedFile::open(file_name);
@@ -152,7 +155,7 @@ void Page::restore() {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
-
+  TIMECODE_METRICS(ctmd, "write", "Page::add_to_target_chunk");
   assert(!this->readonly);
   std::lock_guard<std::mutex> lg(_locker);
   if (is_full()) {
@@ -166,6 +169,11 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
                                 _openned_chunk.pos);
       _openned_chunk.ch->close();
+#if ENABLE_METRICS
+	  //calc perscent of free space in closed chunks
+	  auto percent = _openned_chunk.ch->header->bw_pos*float(100.0)/ _openned_chunk.ch->header->size;
+	  ADD_METRICS("write", "Page::add_to_target_chunk::chunk_free", dariadb::utils::Metric_Ptr{ new dariadb::utils::FloatMetric(percent) });
+#endif
     } else {
       if (_openned_chunk.ch->append(m)) {
         flush_current_chunk();
@@ -213,6 +221,7 @@ void Page::flush_current_chunk() {
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch) {
+  TIMECODE_METRICS(ctmd, "write", "Page::init_chunk_index_rec");
   assert(header->chunk_size == ch->header->size);
 
   uint32_t pos_index = 0;
@@ -267,6 +276,7 @@ ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query
 }
 
 dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
+  TIMECODE_METRICS(ctmd, "read", "Page::valuesBeforeTimePoint");
   dariadb::Meas::Id2Meas result;
   auto raw_links =
       _index->get_chunks_links(q.ids, _index->iheader->minTime, q.time_point, q.flag);
@@ -312,6 +322,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
                      ReaderClb *clb) {
+  TIMECODE_METRICS(ctmd, "read", "Page::readLinks");
   std::lock_guard<std::mutex> lg(_locker);
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
@@ -340,11 +351,11 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
         assert(false);
       }
       Chunk_Ptr c{ptr};
-      if (c->header->is_readonly && !c->check_checksum()) {
+     /* if (c->header->is_readonly && !c->check_checksum()) {
         logger("page: " << this->filename << ": "
                         << "wrong chunk checksum. chunkId=" << c->header->id);
         continue;
-      }
+      }*/
       search_res = c;
     }
     auto rdr = search_res->get_reader();
@@ -361,6 +372,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
 }
 
 dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
+  TIMECODE_METRICS(ctmd, "append", "Page::append");
   if (add_to_target_chunk(value)) {
     return dariadb::append_result(1, 0);
   } else {
