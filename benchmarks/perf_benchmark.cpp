@@ -93,13 +93,13 @@ int main(int argc, char *argv[]) {
   const std::string storage_path = "testStorage";
   bool readers_enable = false;
   bool metrics_enable = false;
-  bool write_enable = true;
+  bool readonly = false;
   bool dont_clean = false;
   po::options_description desc("Allowed options");
   desc.add_options()("help", "produce help message")
+          ("readonly", "readonly mode")
 	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
 	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))
-      ("enable-write", po::value<bool>(&write_enable)->default_value(write_enable))
 	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),"dont clean storage path before start.");
 
   po::variables_map vm;
@@ -114,6 +114,11 @@ int main(int argc, char *argv[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     return 1;
+  }
+
+  if (vm.count("readonly")) {
+      std::cout << "Readonly mode." << std::endl;
+    readonly=true;
   }
 
   if (readers_enable) {
@@ -131,7 +136,7 @@ int main(int argc, char *argv[]) {
 
     // dont_clean = true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
-        if(write_enable){
+        if(!readonly){
             std::cout<<" remove "<<storage_path<<std::endl;
             dariadb::utils::fs::rm(storage_path);
         }
@@ -171,7 +176,7 @@ int main(int argc, char *argv[]) {
       for (size_t j = id_from; j < id_to; j++) {
         all_id_set.insert(j);
       }
-      if(write_enable){
+      if(!readonly){
           std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
                       dariadb::Time(i), &append_count, raw_ptr};
           writers[pos++] = std::move(t);
@@ -186,7 +191,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    if(write_enable){
+    if(!readonly){
         pos = 0;
         for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
             std::thread t = std::move(writers[pos++]);
@@ -244,11 +249,11 @@ int main(int argc, char *argv[]) {
       auto expected = (dariadb_bench::iteration_count *
                        dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
 
-      if (write_enable && (!dont_clean && clbk->count != expected))  {
+      if (!readonly && (!dont_clean && clbk->count != expected))  {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
         throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
       } else {
-        if (write_enable && (dont_clean && clbk->count < expected)) {
+        if (!readonly && (dont_clean && clbk->count < expected)) {
           std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
           throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
         }
