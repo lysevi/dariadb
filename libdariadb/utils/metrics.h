@@ -49,7 +49,7 @@ public:
     _count++;
   }
 
-  virtual inline std::string to_string() const override {
+  virtual std::string to_string() const override {
     std::stringstream ss{};
 
 	{
