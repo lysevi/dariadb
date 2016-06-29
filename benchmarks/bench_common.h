@@ -1,6 +1,6 @@
 #pragma once
-#include <dariadb.h>
 #include <atomic>
+#include <dariadb.h>
 #include <random>
 
 namespace dariadb_bench {
@@ -21,9 +21,7 @@ dariadb::Id get_id_from(dariadb::Id id) {
   return (id + 1) * id_per_thread - id_per_thread;
 }
 
-dariadb::Id get_id_to(dariadb::Id id) {
-  return (id + 1) * id_per_thread;
-}
+dariadb::Id get_id_to(dariadb::Id id) { return (id + 1) * id_per_thread; }
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             std::atomic_long *append_count,
                             dariadb::storage::MeasWriter *ms) {
@@ -37,22 +35,25 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
       m.src = dariadb::Flag(id);
       m.time += sleep_time;
       m.value = dariadb::Value(i);
-      for (size_t j = id_from; j < id_to; j++) {
+      for (size_t j = id_from; j < id_to; j++, i++) {
+        if (i >= dariadb_bench::iteration_count) {
+          break;
+        }
         m.id = j;
         if (ms->append(m).writed != 1) {
           return;
         }
+        (*append_count)++;
       }
-      (*append_count)++;
     }
   } catch (...) {
     std::cerr << "thread id=#" << id << " catch error!!!!" << std::endl;
   }
 }
 
-void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorage *stor,
-                  size_t reads_count, dariadb::Time from, dariadb::Time to,
-                  bool quiet = false) {
+void readBenchark(const dariadb::IdSet &all_id_set,
+                  dariadb::storage::MeasStorage *stor, size_t reads_count,
+                  dariadb::Time from, dariadb::Time to, bool quiet = false) {
   {
     if (!quiet) {
       std::cout << "time point reads..." << std::endl;
@@ -68,7 +69,8 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
     for (size_t i = 0; i < reads_count; i++) {
       auto time_point = uniform_dist(e1);
       dariadb::storage::QueryTimePoint qp{
-          dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, time_point};
+          dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0,
+          time_point};
       stor->readInTimePoint(qp)->readAll(clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
@@ -100,8 +102,8 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     if (!quiet) {
-      std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
-                << std::endl;
+      std::cout << "time: " << elapsed
+                << " average count: " << clbk->count / reads_count << std::endl;
     }
   }
 }

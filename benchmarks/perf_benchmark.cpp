@@ -209,7 +209,10 @@ int main(int argc, char *argv[]) {
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
-              << ")" << std::endl;
+              << ")"
+              << " reads: " << reads_count
+              << " writes: " << append_count
+              << std::endl;
 
     dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
