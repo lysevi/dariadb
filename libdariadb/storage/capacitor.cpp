@@ -179,7 +179,7 @@ public:
   }
 
   void create(std::string fname) {
-    TIMECODE_METRICS(ctmd, "write", "Capacitor::create");
+    TIMECODE_METRICS(ctmd, "create", "Capacitor::create");
     auto sz = cap_size();
     mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);
 
@@ -221,7 +221,7 @@ public:
   }
 
   void load() {
-    TIMECODE_METRICS(ctmd, "read", "Capacitor::load");
+    TIMECODE_METRICS(ctmd, "open", "Capacitor::load");
     _levels.resize(_header->levels_count);
     _memvalues_size = _header->B;
     _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
@@ -306,7 +306,7 @@ public:
   }
 
   append_result append(const Meas &value) {
-    TIMECODE_METRICS(ctmd, "write", "Capacitor::append");
+    TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
     assert(!_is_readonly);
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
@@ -412,7 +412,7 @@ public:
   };
 
   void drop_to_stor(MeasWriter *stor) {
-    TIMECODE_METRICS(ctmd, "write", "Capacitor::drop_to_stor");
+    TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
     std::list<level *> to_merge;
     level tmp;
     level_header tmp_hdr;

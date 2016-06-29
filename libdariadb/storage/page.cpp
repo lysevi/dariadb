@@ -27,7 +27,7 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
 
 Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage,
                    uint32_t chunk_size) {
-  TIMECODE_METRICS(ctmd, "write", "Page::create");
+  TIMECODE_METRICS(ctmd, "create", "Page::create");
   auto res = new Page;
   res->readonly = false;
   auto mmap = utils::fs::MappedFile::touch(file_name, sz);
@@ -57,7 +57,7 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 }
 
 Page *Page::open(std::string file_name, bool read_only) {
-  TIMECODE_METRICS(ctmd, "read", "Page::open");
+  TIMECODE_METRICS(ctmd, "open", "Page::open");
   auto res = new Page;
   res->readonly = read_only;
   auto mmap = utils::fs::MappedFile::open(file_name);
@@ -155,7 +155,7 @@ void Page::restore() {
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
-  TIMECODE_METRICS(ctmd, "write", "Page::add_to_target_chunk");
+  TIMECODE_METRICS(ctmd, "append", "Page::add_to_target_chunk");
   assert(!this->readonly);
   std::lock_guard<std::mutex> lg(_locker);
   if (is_full()) {
@@ -322,7 +322,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
                      ReaderClb *clb) {
-  TIMECODE_METRICS(ctmd, "read", "Page::readLinks");
+  TIMECODE_METRICS(ctmd, "readLinks", "Page::readLinks");
   std::lock_guard<std::mutex> lg(_locker);
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {

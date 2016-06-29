@@ -45,13 +45,13 @@ AOFManager *dariadb::storage::AOFManager::instance() {
 }
 
 void AOFManager::create_new() {
-  TIMECODE_METRICS(ctm, "write", "AOFManager::create_new");
+  TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
   auto p = AOFile::Params(_params.max_size, _params.path);
   if (_down != nullptr) {
     auto closed = this->closed_aofs();
     if (closed.size() > _params.max_closed_aofs) {
-      TIMECODE_METRICS(ctmd, "write", "AOFManager::create_new::dump");
+      TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
       size_t to_drop = closed.size() / 2;
       for (size_t i = 0; i < to_drop; ++i) {
         auto f = closed.front();

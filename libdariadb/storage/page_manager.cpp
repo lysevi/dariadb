@@ -92,7 +92,7 @@ public:
   }
 
   Page_Ptr create_page() {
-    TIMECODE_METRICS(ctmd, "write", "PageManager::create_page");
+    TIMECODE_METRICS(ctmd, "create", "PageManager::create_page");
     if (!dariadb::utils::fs::path_exists(_param.path)) {
       dariadb::utils::fs::mkdir(_param.path);
     }
@@ -205,7 +205,7 @@ public:
   }
 
   void readLinks(const QueryInterval &query, const ChunkLinkList &links, ReaderClb *clb) {
-    TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
+    TIMECODE_METRICS(ctmd, "readLinks", "PageManager::readLinks");
     std::lock_guard<std::mutex> lg(_locker);
 
     ChunkLinkList to_read;
@@ -333,7 +333,7 @@ public:
   }
 
   append_result append(const Meas &value) {
-    TIMECODE_METRICS(ctmd, "write", "PageManager::append");
+    TIMECODE_METRICS(ctmd, "append", "PageManager::append");
     std::lock_guard<std::mutex> lg(_locker);
 
     while (true) {

@@ -52,7 +52,7 @@ CapacitorManager *dariadb::storage::CapacitorManager::instance() {
 }
 
 void CapacitorManager::create_new() {
-  TIMECODE_METRICS(ctm, "write", "CapacitorManager::create_new");
+  TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
   _cap = nullptr;
   auto p = Capacitor::Params(_params.B, _params.path);
   if (_params.max_levels != 0) {
@@ -62,7 +62,7 @@ void CapacitorManager::create_new() {
     auto closed = this->closed_caps();
     const size_t MAX_CLOSED_CAPS = 10;
     if (closed.size() > MAX_CLOSED_CAPS) {
-      TIMECODE_METRICS(ctmd, "write", "CapacitorManager::create_new::drop");
+      TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::create_new::drop");
       size_t to_drop = closed.size() / 2;
       for (size_t i = 0; i < to_drop; ++i) {
         auto f = closed.front();
@@ -141,7 +141,7 @@ dariadb::Time CapacitorManager::maxTime() {
 
 bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                   dariadb::Time *maxResult) {
-  TIMECODE_METRICS(ctmd, "read", "CapacitorManager::minMaxTime");
+  TIMECODE_METRICS(ctmd, "minMaxTime", "CapacitorManager::minMaxTime");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = cap_files();
   auto p = Capacitor::Params(_params.B, _params.path);
