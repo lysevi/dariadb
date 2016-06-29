@@ -300,36 +300,41 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
 
-      if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
+      if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
           (minT < q.time_point || maxT < q.time_point)) {
-        auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
-        raw_result->add_rdr(subres);
-      } else if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
-                 (minT < q.time_point || maxT < q.time_point)) {
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
         raw_result->add_rdr(subres);
-      } else {
-        auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
+	  }
+	  else {
+		  if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
+			  (utils::inInterval(minT, maxT, q.time_point))) {
+			  auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
+			  raw_result->add_rdr(subres);
+		  }
+		  else {
+			  auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
 
-        TP_Reader *raw_tp_reader = new TP_Reader;
-        raw_tp_reader->_ids.resize(size_t(1));
-        raw_tp_reader->_ids[0] = id;
-        auto fres = id2meas.find(id);
+			  TP_Reader *raw_tp_reader = new TP_Reader;
+			  raw_tp_reader->_ids.resize(size_t(1));
+			  raw_tp_reader->_ids[0] = id;
+			  auto fres = id2meas.find(id);
 
-        if (fres != id2meas.end()) {
-          raw_tp_reader->_values.push_back(fres->second);
-        } else {
-          if (id2meas.empty()) {
-            auto e = Meas::empty(id);
-            e.flag = Flags::_NO_DATA;
-            e.time = q.time_point;
-            raw_tp_reader->_values.push_back(e);
-          }
-        }
-        raw_tp_reader->reset();
-        Reader_ptr subres{raw_tp_reader};
-        raw_result->add_rdr(subres);
-      }
+			  if (fres != id2meas.end()) {
+				  raw_tp_reader->_values.push_back(fres->second);
+			  }
+			  else {
+				  if (id2meas.empty()) {
+					  auto e = Meas::empty(id);
+					  e.flag = Flags::_NO_DATA;
+					  e.time = q.time_point;
+					  raw_tp_reader->_values.push_back(e);
+				  }
+			  }
+			  raw_tp_reader->reset();
+			  Reader_ptr subres{ raw_tp_reader };
+			  raw_result->add_rdr(subres);
+		  }
+	  }
     }
     raw_result->reset();
     return Reader_ptr(raw_result);
