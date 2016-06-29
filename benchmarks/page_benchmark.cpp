@@ -83,7 +83,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  const size_t id_count = 4;
   {
     if (dont_clean) {
       std::cout << "open run results." << std::endl;
@@ -101,7 +100,13 @@ int main(int argc, char *argv[]) {
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
 
     size_t pos = 0;
+    dariadb::IdSet all_id_set;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
+        auto id_from = dariadb_bench::get_id_from(pos);
+        auto id_to = dariadb_bench::get_id_to(pos);
+        for (size_t j = id_from; j < id_to; j++) {
+          all_id_set.insert(j);
+        }
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
                     dariadb::Time(i), &append_count,
                     dariadb::storage::PageManager::instance()};
@@ -123,10 +128,7 @@ int main(int argc, char *argv[]) {
         dariadb::storage::PageManager::instance()->minTime(),
         dariadb::storage::PageManager::instance()->maxTime());
 
-    dariadb::IdArray ids(id_count);
-    for (size_t i = 0; i < id_count; ++i) {
-      ids[i] = i;
-    }
+    dariadb::IdArray ids{all_id_set.begin(),all_id_set.end()};
     const size_t runs_count = 10;
     ReadCallback *clb = new ReadCallback;
     auto start = clock();
