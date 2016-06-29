@@ -29,7 +29,7 @@ using Metric_Ptr = std::shared_ptr<Metric>;
 class Metric {
 public:
   virtual void add(const Metric_Ptr &other) = 0;
-  virtual std::string to_string() const = 0;
+  virtual inline std::string to_string() const = 0;
 };
 
 template <class T> class TemplateMetric : public Metric {
@@ -49,7 +49,7 @@ public:
     _count++;
   }
 
-  virtual std::string to_string() const override {
+  virtual inline std::string to_string() const override {
     std::stringstream ss{};
 
 	{
