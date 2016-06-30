@@ -1,7 +1,23 @@
 [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=dev)](https://travis-ci.org/lysevi/dariadb)
 [![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=dev)](https://coveralls.io/github/lysevi/dariadb?branch=dev)
 
-# dariadb
+# dariadb - numeric time-series storage engine.
+
+# Features
+* Each measurement contains:
+  - Id - x64 unsigned integer value.
+  - Time - x64 timestamp.
+  - Value - x64 float.
+  - Flag - x32 unsigned integer.
+  - Source - x32 unsigned integer.
+* Accept unordered data.
+* LSM-like storage struct with three layers:
+  - Append-only files layer, for fast write speed and crash-safety.
+  - For better read speed, data stored in cache oblivious lookahead arrays.
+  - Old values stored in compressed block for better disk space usage.
+* High write speed(1.5 - 2.5 millions values per second).
+* Crash recovery.
+* CRC32 for all values.
 
 # Dependencies
 * Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), thread, unit_test_framework(to build tests), program_options
