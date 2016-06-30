@@ -57,9 +57,8 @@ int main(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   bool dont_clean = false;
   bool metrics_enable = false;
-  desc.add_options()("help", "produce help message")(
-      "dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),
-      "enable readers threads")
+  desc.add_options()("help", "produce help message")
+      ("dont-clean", "enable readers threads")
 	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
@@ -75,6 +74,12 @@ int main(int argc, char *argv[]) {
     std::cout << desc << std::endl;
     return 1;
   }
+
+  if(vm.count("dont-clean")){
+      std::cout << "Dont clean storage." << std::endl;
+      dont_clean=true;
+  }
+
   if (metrics_enable) {
 	  std::cout << "enable metrics." << std::endl;
   }

@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
   bool dont_clean = false;
   bool metrics_enable = false;
   desc.add_options()("help", "produce help message")
-	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean), "dont clean storage path before start.")
+      ("dont-clean", "dont clean storage path before start.")
 	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
@@ -78,6 +78,11 @@ int main(int argc, char *argv[]) {
 
   if (metrics_enable) {
 	  std::cout << "enable metrics." << std::endl;
+  }
+
+  if(vm.count("dont-clean")){
+      std::cout << "Dont clean storage." << std::endl;
+      dont_clean=true;
   }
 
   dariadb::IdSet all_id_set;

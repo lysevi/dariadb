@@ -100,9 +100,9 @@ int main(int argc, char *argv[]) {
   desc.add_options()("help", "produce help message")
           ("readonly", "readonly mode")
 	  ("readall", "read all benchmark enable.")
+      ("dont-clean","dont clean storage path before start.")
 	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
-	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))
-	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),"dont clean storage path before start.");
+      ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {
@@ -130,6 +130,11 @@ int main(int argc, char *argv[]) {
   if (vm.count("readall")) {
 	  std::cout << "Read all benchmark enabled." << std::endl;
 	  readall_enabled = true;
+  }
+
+  if(vm.count("dont-clean")){
+      std::cout << "Dont clean storage." << std::endl;
+      dont_clean=true;
   }
 
   if (readers_enable) {
