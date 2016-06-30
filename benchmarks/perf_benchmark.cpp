@@ -273,10 +273,12 @@ int main(int argc, char *argv[]) {
     std::cout << "stoping storage...\n";
     ms = nullptr;
   }
-  std::cout << "cleaning...\n";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
+ 
+  if(!(dont_clean || readonly) && (dariadb::utils::fs::path_exists(storage_path)) ){
+    std::cout << "cleaning...\n";
     dariadb::utils::fs::rm(storage_path);
   }
+ 
   if (metrics_enable) {
 	  std::cout << "metrics:\n" << dariadb::utils::MetricsManager::instance()->to_string() << std::endl;
   }
