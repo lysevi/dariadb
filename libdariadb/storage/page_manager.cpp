@@ -297,7 +297,6 @@ public:
   }
   // PM
   size_t files_count() const {
-    std::lock_guard<std::mutex> lg(_locker);
     return Manifest::instance()->page_list().size();
   }
 
