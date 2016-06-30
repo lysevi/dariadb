@@ -144,6 +144,7 @@ public:
     if (!_is_readonly) {
       if (mmap != nullptr) {
         _header->is_closed = true;
+		_header->is_open_to_write = false;
         mmap->close();
       }
     }
@@ -190,11 +191,12 @@ public:
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
     _header->is_closed = false;
-    _header->minTime = dariadb::MAX_TIME;
+	_header->is_open_to_write = true;
+	_header->minTime = dariadb::MAX_TIME;
     _header->maxTime = dariadb::MIN_TIME;
     _header->id_bloom = bloom_empty<dariadb::Id>();
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
-
+	
     auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
     auto headers_pos =
         reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
@@ -246,17 +248,20 @@ public:
     mmap = fs::MappedFile::open(fname, _is_readonly);
 
     _header = reinterpret_cast<Header *>(mmap->data());
+	
 
     _raw_data = reinterpret_cast<uint8_t *>(mmap->data() + sizeof(Header));
 
     load();
     if (!_is_readonly) {
       // assert(!_header->is_full);
-      if (!_header->is_closed) {
+      if (!_header->is_closed && _header->is_open_to_write) {
         restore();
       }
       _header->is_closed = false;
     }
+
+	_header->is_open_to_write = _is_readonly;
   }
 
   void restore() {

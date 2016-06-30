@@ -47,7 +47,7 @@ public:
     for (auto n : pages) {
       auto file_name = utils::fs::append_path(_param.path, n);
       auto hdr = Page::readHeader(file_name);
-      if (!hdr.is_closed) {
+      if (!hdr.is_closed && hdr.is_open_to_write) {
         auto res = Page_Ptr{Page::open(file_name)};
         res->restore();
         res = nullptr;
