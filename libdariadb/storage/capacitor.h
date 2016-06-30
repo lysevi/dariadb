@@ -38,8 +38,8 @@ public:
     size_t levels_count;
     size_t _writed;
     size_t _memvalues_pos;
-    size_t id_bloom;
-    size_t flag_bloom;
+    uint64_t id_bloom;
+    uint64_t flag_bloom;
 
     bool check_id(const dariadb::Id id) const { return bloom_check(id_bloom, id); }
 

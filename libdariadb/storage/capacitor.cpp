@@ -45,8 +45,8 @@ struct level_header {
   dariadb::Time _minTime;
   dariadb::Time _maxTime;
   uint32_t crc;
-  size_t id_bloom;
-  size_t flag_bloom;
+  uint64_t id_bloom;
+  uint64_t flag_bloom;
 };
 #pragma pack(pop)
 
