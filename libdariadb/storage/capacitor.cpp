@@ -259,9 +259,8 @@ public:
         restore();
       }
       _header->is_closed = false;
+	  _header->is_open_to_write = _is_readonly;
     }
-
-	_header->is_open_to_write = _is_readonly;
   }
 
   void restore() {

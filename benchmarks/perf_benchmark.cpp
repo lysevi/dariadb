@@ -116,6 +116,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  if (metrics_enable) {
+	  std::cout << "enable metrics." << std::endl;
+  }
+
   if (vm.count("readonly")) {
       std::cout << "Readonly mode." << std::endl;
     readonly=true;

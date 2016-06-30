@@ -83,6 +83,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  if (metrics_enable) {
+	  std::cout << "enable metrics." << std::endl;
+  }
+
   {
     if (dont_clean) {
       std::cout << "open run results." << std::endl;

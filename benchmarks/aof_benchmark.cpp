@@ -76,6 +76,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  if (metrics_enable) {
+	  std::cout << "enable metrics." << std::endl;
+  }
+
   dariadb::IdSet all_id_set;
   auto startTime = dariadb::timeutil::current_time();
   {
