@@ -11,6 +11,7 @@
 #include "utils/metrics.h"
 #include <algorithm>
 #include <cassert>
+#include <future>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -200,12 +201,23 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "Engine::minMaxTime");
     std::lock_guard<std::mutex> lg(_locker);
-    dariadb::Time subMin1=dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
-    auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
-    dariadb::Time subMin2 = dariadb::MAX_TIME, subMax2 = dariadb::MIN_TIME;
-    auto mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
-    dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
-    auto ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
+	dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
+	dariadb::Time subMin2 = dariadb::MAX_TIME, subMax2 = dariadb::MIN_TIME;
+	dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
+	bool pr, mr, ar;
+	pr = mr = ar = false;
+	auto pm_asr = std::async(std::launch::async, [&pr, &subMin1, &subMax1, id]() {
+		pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
+	});
+	auto cm_asr = std::async(std::launch::async, [&mr, &subMin2, &subMax2, id]() {
+		mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
+	});
+	auto am_asr = std::async(std::launch::async, [&ar, &subMin3, &subMax3, id]() {
+		ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
+	});
+	pm_asr.wait();
+	cm_asr.wait();
+	am_asr.wait();
 
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
@@ -263,7 +275,31 @@ public:
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
     UnionReaderSet *raw_result = new UnionReaderSet();
 
-    auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
+	Meas::MeasList pm_all;
+	Meas::MeasList cap_result;
+	Meas::MeasList aof_result;
+
+	auto pm_async = std::async(std::launch::async, [&pm_all,&q]() {
+		auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
+
+		std::unique_ptr<ChunkReadCallback> callback{ new ChunkReadCallback };
+		callback->out = &(pm_all);
+		PageManager::instance()->readLinks(q, all_chunkLinks, callback.get());
+		all_chunkLinks.clear();
+	});
+	auto cm_async = std::async(std::launch::async, [&cap_result, &q]() {
+		auto mc_reader = CapacitorManager::instance()->readInterval(q);
+
+		mc_reader->readAll(&cap_result);
+	});
+	auto am_async = std::async(std::launch::async, [&aof_result, &q]() {
+		auto ardr = AOFManager::instance()->readInterval(q);
+		ardr->readAll(&aof_result);
+	});
+	
+	pm_async.wait();
+	cm_async.wait();
+	am_async.wait();
 
     for (auto id : q.ids) {
 
@@ -271,26 +307,34 @@ public:
       raw_res->_ids.resize(1);
       raw_res->_ids[0] = id;
 
-      QueryInterval local_q = q;
-      local_q.ids.clear();
-      local_q.ids.push_back(id);
-
-      ChunkLinkList chunks_for_id;
-      for (auto &c : all_chunkLinks) {
-        if (storage::bloom_check(c.id_bloom, id)) {
-          chunks_for_id.push_back(c);
+      for (auto &m : pm_all) {
+        if (m.id == id) {
+          raw_res->page_result.push_back(m);
         }
       }
 
-      std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-      callback->out = &(raw_res->page_result);
-      PageManager::instance()->readLinks(local_q, chunks_for_id, callback.get());
+      pm_all.erase(std::remove_if(pm_all.begin(), pm_all.end(),
+                                  [id](const Meas &m) { return m.id == id; }),
+                   pm_all.end());
+      for (auto &m : cap_result) {
+        if (m.id == id) {
+          raw_res->cap_result.push_back(m);
+        }
+      }
 
-      auto mc_reader = CapacitorManager::instance()->readInterval(local_q);
-      mc_reader->readAll(&raw_res->cap_result);
+	  cap_result.erase(std::remove_if(cap_result.begin(), cap_result.end(),
+		  [id](const Meas &m) { return m.id == id; }),
+		  cap_result.end());
 
-      auto ardr = AOFManager::instance()->readInterval(local_q);
-      ardr->readAll(&raw_res->cap_result);
+      for (auto &m : aof_result) {
+        if (m.id == id) {
+          raw_res->cap_result.push_back(m);
+        }
+	  }
+	  aof_result.erase(std::remove_if(aof_result.begin(), aof_result.end(),
+		  [id](const Meas &m) { return m.id == id; }),
+		  aof_result.end());
+
       raw_result->add_rdr(Reader_ptr{raw_res});
     }
     raw_result->reset();
@@ -301,49 +345,85 @@ public:
     TIMECODE_METRICS(ctmd, "readInTimePoint", "Engine::readInTimePoint");
     UnionReaderSet *raw_result = new UnionReaderSet();
 
-    for (auto id : q.ids) {
-      dariadb::Time minT, maxT;
-      QueryTimePoint local_q = q;
-      local_q.ids.clear();
-      local_q.ids.push_back(id);
+	/*auto pm_id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
+	Meas::MeasList aof_values;
+	AOFManager::instance()->readInTimePoint(q)->readAll(&aof_values);
+	Meas::MeasList cap_values;
+	CapacitorManager::instance()->readInTimePoint(q)->readAll(&cap_values);
 
-      if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
-          (minT < q.time_point || maxT < q.time_point)) {
-        auto subres = AOFManager::instance()->readInTimePoint(local_q);
-        raw_result->add_rdr(subres);
-	  }
-	  else {
-		  if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
-			  (utils::inInterval(minT, maxT, q.time_point))) {
-			  auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
-			  raw_result->add_rdr(subres);
-		  }
-		  else {
-			  auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
+	for (auto id : q.ids) {
+		TP_Reader *raw_tp_reader = new TP_Reader;
+		raw_tp_reader->_ids.resize(size_t(1));
+		raw_tp_reader->_ids[0] = id;
 
-			  TP_Reader *raw_tp_reader = new TP_Reader;
-			  raw_tp_reader->_ids.resize(size_t(1));
-			  raw_tp_reader->_ids[0] = id;
-			  auto fres = id2meas.find(id);
+		Meas result_value=pm_id2meas[id];
+		for (auto&m : aof_values) {
+			if (m.id == id) {
+				if (m.flag != Flags::_NO_DATA && m.time > result_value.time) {
+					result_value = m;
+				}
+				break;
+			}
+		}
+		
+		for (auto&m : cap_values) {
+			if (m.id == id) {
+				if (m.flag != Flags::_NO_DATA && m.time > result_value.time) {
+					result_value = m;
+				}
+				break;
+			}
+		}
+		raw_tp_reader->_values.push_back(result_value);
+		raw_tp_reader->reset();
+		Reader_ptr subres{ raw_tp_reader };
+		raw_result->add_rdr(subres);
 
-			  if (fres != id2meas.end()) {
-				  raw_tp_reader->_values.push_back(fres->second);
-			  }
-			  else {
-				  if (id2meas.empty()) {
-					  auto e = Meas::empty(id);
-					  e.flag = Flags::_NO_DATA;
-					  e.time = q.time_point;
-					  raw_tp_reader->_values.push_back(e);
-				  }
-			  }
-			  raw_tp_reader->reset();
-			  Reader_ptr subres{ raw_tp_reader };
-			  raw_result->add_rdr(subres);
-		  }
-	  }
-    }
-    raw_result->reset();
+	}*/
+	for (auto id : q.ids) {
+		dariadb::Time minT, maxT;
+		QueryTimePoint local_q = q;
+		local_q.ids.clear();
+		local_q.ids.push_back(id);
+
+		if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
+			(minT < q.time_point || maxT < q.time_point)) {
+			auto subres = AOFManager::instance()->readInTimePoint(local_q);
+			raw_result->add_rdr(subres);
+		}
+		else {
+			if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
+				(utils::inInterval(minT, maxT, q.time_point))) {
+				auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
+				raw_result->add_rdr(subres);
+			}
+			else {
+				auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
+
+				TP_Reader *raw_tp_reader = new TP_Reader;
+				raw_tp_reader->_ids.resize(size_t(1));
+				raw_tp_reader->_ids[0] = id;
+				auto fres = id2meas.find(id);
+
+				if (fres != id2meas.end()) {
+					raw_tp_reader->_values.push_back(fres->second);
+				}
+				else {
+					if (id2meas.empty()) {
+						auto e = Meas::empty(id);
+						e.flag = Flags::_NO_DATA;
+						e.time = q.time_point;
+						raw_tp_reader->_values.push_back(e);
+					}
+				}
+				raw_tp_reader->reset();
+				Reader_ptr subres{ raw_tp_reader };
+				raw_result->add_rdr(subres);
+			}
+		}
+	}
+
+	raw_result->reset();
     return Reader_ptr(raw_result);
   }
 
