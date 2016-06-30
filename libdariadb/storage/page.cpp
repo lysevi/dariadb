@@ -10,10 +10,11 @@
 using namespace dariadb::storage;
 
 Page::~Page() {
-  header->is_closed = true;
   if (this->_openned_chunk.ch != nullptr) {
     this->_openned_chunk.ch->close();
   }
+  header->is_closed = true;
+  header->is_open_to_write = false;
   region = nullptr;
   header = nullptr;
   _index = nullptr;
@@ -47,7 +48,7 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
   res->header->is_closed = false;
-
+  res->header->is_open_to_write = true;
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     res->_free_poses.push_back(i);
   }
@@ -88,6 +89,7 @@ Page *Page::open(std::string file_name, bool read_only) {
   }
   /*assert(res->header->is_closed);*/
   res->header->is_closed = false;
+  res->header->is_open_to_write = read_only;
   return res;
 }
 

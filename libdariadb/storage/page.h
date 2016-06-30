@@ -14,8 +14,9 @@ struct PageHeader {
   uint64_t addeded_chunks;    // total count of chunks in page
   uint32_t chunk_per_storage; // max chunks count
   uint32_t chunk_size;        // each chunks size in bytes
-  bool is_full;               // is full :)
-  bool is_closed;
+  bool is_full:1;               // is full :)
+  bool is_closed:1;
+  bool is_open_to_write:1;      // true if oppened to write.
   dariadb::Time minTime;
   dariadb::Time maxTime;
   uint64_t max_chunk_id; // max(chunk->id)
