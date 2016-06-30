@@ -490,7 +490,7 @@ public:
         if (m.value.time > q.to) {
           break;
         }
-        if (m.value.inQuery(q.ids, q.flag, q.from, q.to)) {
+        if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
           sub_result[m.value.id].insert(m.value);
         }
       }
@@ -498,7 +498,7 @@ public:
 
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      if (m.value.inQuery(q.ids, q.flag, q.from, q.to)) {
+      if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
         sub_result[m.value.id].insert(m.value);
       }
     }
@@ -634,7 +634,7 @@ public:
     if (inInterval(_header->minTime, _header->maxTime, q.time_point)) {
       for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
         auto m = _memvalues[j];
-        if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
+        if (m.value.inQuery(q.ids, q.flag, q.source) && (m.value.time <= q.time_point)) {
           insert_if_older(sub_res, m.value);
           readed_ids.insert(m.value.id);
         }
@@ -667,7 +667,7 @@ public:
         if (m.value.time > q.time_point) {
           break;
         }
-        if (m.value.inQuery(q.ids, q.flag) && (m.value.time <= q.time_point)) {
+        if (m.value.inQuery(q.ids, q.flag, q.source) && (m.value.time <= q.time_point)) {
           insert_if_older(sub_res, m.value);
           readed_ids.insert(m.value.id);
         }

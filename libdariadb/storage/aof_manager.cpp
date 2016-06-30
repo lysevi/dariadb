@@ -192,7 +192,7 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
   }
   size_t pos = 0;
   for (auto v : _buffer) {
-    if (v.inQuery(query.ids, query.flag, query.from, query.to)) {
+    if (v.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {
       sub_result[v.id].insert(v);
     }
     ++pos;
@@ -243,7 +243,7 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
 
   size_t pos = 0;
   for (auto v : _buffer) {
-    if (v.inQuery(query.ids, query.flag)) {
+    if (v.inQuery(query.ids, query.flag, query.source)) {
       auto it = sub_result.find(v.id);
       if (it == sub_result.end()) {
         sub_result.insert(std::make_pair(v.id, v));

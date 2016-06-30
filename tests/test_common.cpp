@@ -199,7 +199,22 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (fltr_res.size() != copies_count) {
     throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
   }
+  //check filter by source;
+  {
+	  fltr_res.clear();
+	  as->readInterval(dariadb::storage::QueryInterval(
+		  dariadb::IdArray{ _all_ids_set.begin(), _all_ids_set.end() }, 0, dariadb::Flag{ 2 }, from, to + copies_count))
+		  ->readAll(&fltr_res);
 
+	  if (fltr_res.size() != copies_count) {
+		  throw MAKE_EXCEPTION("(fltr_res.size() != copies_count)");
+	  }
+	  for (auto v : fltr_res) {
+		  if (v.src != dariadb::Flag{ 2 }) {
+			  throw MAKE_EXCEPTION("(m.src != dariadb::Flag{ 2 })");
+		  }
+	  }
+  }
   all.clear();
   auto qp = dariadb::storage::QueryTimePoint(
       dariadb::IdArray(_all_ids_set.begin(), _all_ids_set.end()), 0, to + copies_count);
@@ -235,6 +250,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (fltr_res.front().flag != dariadb::Flags::_NO_DATA) {
     throw MAKE_EXCEPTION("fltr_res.front().flag != dariadb::Flags::NO_DATA");
   }
+
 }
 
 void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {

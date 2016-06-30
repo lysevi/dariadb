@@ -1,3 +1,7 @@
+v0.1.0
+=====
+- Enable filtration by measurement source in interval queries.
+
 v0.0.7
 =====
 - Accept unordered data.

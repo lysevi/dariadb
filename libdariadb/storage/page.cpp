@@ -311,7 +311,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     auto reader = c->get_reader();
     while (!reader->is_end()) {
       auto m = reader->readNext();
-      if (m.time <= q.time_point && m.inQuery(q.ids, q.flag)) {
+      if (m.time <= q.time_point && m.inQuery(q.ids, q.flag, q.source)) {
         auto f_res = result.find(m.id);
         if (f_res == result.end()) {
           to_read.erase(m.id);
@@ -371,7 +371,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
       if (search_res->header->is_sorted && subres.time > query.to) {
         break;
       }
-      if (subres.inQuery(query.ids, query.flag, query.from, query.to)) {
+      if (subres.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {
         clb->call(subres);
       }
     }
