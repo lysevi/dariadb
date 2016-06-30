@@ -74,7 +74,7 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
   void flush() override; // write all to storage;
-
+  
   size_t files_count() const;
   size_t levels_count() const;
   size_t size() const;
@@ -86,7 +86,7 @@ public:
   void drop_to_stor(MeasWriter *stor);
 
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
-
+  void restore();
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

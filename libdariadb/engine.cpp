@@ -155,7 +155,12 @@ public:
           dariadb::storage::Engine::Limits limits)
       : _page_manager_params(page_storage_params), _cap_params(cap_params),
         _limits(limits) {
+	  if (!dariadb::utils::fs::path_exists(aof_params.path)) {
+		  dariadb::utils::fs::mkdir(aof_params.path);
+	  }
     _subscribe_notify.start();
+	
+	Manifest::start(utils::fs::append_path(aof_params.path, MANIFEST_FILE_NAME));
 
     PageManager::start(_page_manager_params);
     AOFManager::start(aof_params);
@@ -169,9 +174,11 @@ public:
   ~Private() {
     _subscribe_notify.stop();
     this->flush();
+
     AOFManager::stop();
     CapacitorManager::stop();
     PageManager::stop();
+	Manifest::stop();
   }
 
   Time minTime() {

@@ -64,6 +64,7 @@ public:
   size_t files_count() const;
   void set_downlevel(MeasWriter *down) { _down = down; }
 
+  void restore();
 protected:
   void create_new();
   std::list<std::string> cap_files() const;

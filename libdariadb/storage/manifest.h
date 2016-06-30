@@ -7,6 +7,9 @@
 
 namespace dariadb {
 namespace storage {
+
+const std::string MANIFEST_FILE_NAME = "Manifest";
+
 class Manifest {
   Manifest(const std::string &fname);
 

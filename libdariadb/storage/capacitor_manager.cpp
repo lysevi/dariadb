@@ -16,9 +16,11 @@ CapacitorManager::~CapacitorManager() {}
 
 CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
   _down = nullptr;
-  if (!dariadb::utils::fs::path_exists(_params.path)) {
+ /* if (!dariadb::utils::fs::path_exists(_params.path)) {
     dariadb::utils::fs::mkdir(_params.path);
-  }
+  }*/
+
+  this->restore();
 
   auto files = cap_files();
   for (auto f : files) {
@@ -32,6 +34,18 @@ CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
   /*if (_cap == nullptr) {
     create_new();
   }*/
+}
+
+void CapacitorManager::restore() {
+	auto files = cap_files();
+	for (auto f : files) {
+		auto hdr = Capacitor::readHeader(f);
+		if (!hdr.is_closed && hdr.is_open_to_write) {
+			auto p = Capacitor::Params(_params.B, _params.path);
+			auto c = Capacitor_Ptr{ new Capacitor(p, f) };
+			c->restore();
+		}
+	}
 }
 
 void CapacitorManager::start(const Params &param) {

@@ -19,9 +19,9 @@ AOFManager::~AOFManager() {
 
 AOFManager::AOFManager(const Params &param) : _params(param) {
   _down = nullptr;
-  if (!dariadb::utils::fs::path_exists(_params.path)) {
+ /* if (!dariadb::utils::fs::path_exists(_params.path)) {
     dariadb::utils::fs::mkdir(_params.path);
-  }
+  }*/
   _buffer.resize(_params.buffer_size);
   _buffer_pos = 0;
 }

@@ -10,11 +10,14 @@
 using namespace dariadb::storage;
 
 Page::~Page() {
-  if (this->_openned_chunk.ch != nullptr) {
-    this->_openned_chunk.ch->close();
+  if (!this->readonly) {
+    if (this->_openned_chunk.ch != nullptr) {
+      this->_openned_chunk.ch->close();
+    }
+
+    header->is_closed = true;
+    header->is_open_to_write = false;
   }
-  header->is_closed = true;
-  header->is_open_to_write = false;
   region = nullptr;
   header = nullptr;
   _index = nullptr;
@@ -61,7 +64,7 @@ Page *Page::open(std::string file_name, bool read_only) {
   TIMECODE_METRICS(ctmd, "open", "Page::open");
   auto res = new Page;
   res->readonly = read_only;
-  auto mmap = utils::fs::MappedFile::open(file_name);
+  auto mmap = utils::fs::MappedFile::open(file_name,read_only);
   res->filename = file_name;
   auto region = mmap->data();
 
@@ -71,7 +74,10 @@ Page *Page::open(std::string file_name, bool read_only) {
 
   res->region = region;
   res->header = reinterpret_cast<PageHeader *>(region);
-
+  if (!res->readonly) {
+	  res->header->is_open_to_write = true;
+	  res->header->is_closed = false;
+  }
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
   res->page_mmap->flush(0, sizeof(PageHeader));
   if (res->header->chunk_size == 0) {
@@ -88,8 +94,7 @@ Page *Page::open(std::string file_name, bool read_only) {
     }
   }
   /*assert(res->header->is_closed);*/
-  res->header->is_closed = false;
-  res->header->is_open_to_write = read_only;
+
   return res;
 }
 

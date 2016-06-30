@@ -253,14 +253,14 @@ public:
     _raw_data = reinterpret_cast<uint8_t *>(mmap->data() + sizeof(Header));
 
     load();
-    if (!_is_readonly) {
-      // assert(!_header->is_full);
-      if (!_header->is_closed && _header->is_open_to_write) {
-        restore();
-      }
-      _header->is_closed = false;
-	  _header->is_open_to_write = _is_readonly;
-    }
+   // if (!_is_readonly) {
+   //   // assert(!_header->is_full);
+   //   if (!_header->is_closed && _header->is_open_to_write) {
+   //     restore();
+   //   }
+   //   _header->is_closed = false;
+	  //_header->is_open_to_write = _is_readonly;
+   // }
   }
 
   void restore() {
@@ -770,4 +770,8 @@ size_t dariadb::storage::Capacitor::size() const {
 
 void dariadb::storage::Capacitor::drop_to_stor(MeasWriter *stor) {
   _Impl->drop_to_stor(stor);
+}
+
+void dariadb::storage::Capacitor::restore() {
+	_Impl->restore();
 }

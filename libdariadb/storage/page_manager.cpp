@@ -18,7 +18,7 @@
 #include <queue>
 #include <thread>
 
-const std::string MANIFEST_FILE_NAME = "Manifest";
+
 
 using namespace dariadb::storage;
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
@@ -28,7 +28,6 @@ public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
-    Manifest::start(utils::fs::append_path(param.path, MANIFEST_FILE_NAME));
     check_storage();
     update_id = false;
     last_id = 0;
@@ -381,7 +380,6 @@ void PageManager::stop() {
     delete PageManager::_instance;
     _instance = nullptr;
   }
-  Manifest::stop();
 }
 
 void PageManager::flush() {

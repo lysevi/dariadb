@@ -101,9 +101,15 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
+
+  dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
   PageManager::start(PageManager::Params(storagePath, 1, 1));
   BOOST_CHECK(PageManager::instance() != nullptr);
   PageManager::stop();
+  dariadb::storage::Manifest::stop();
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+	  dariadb::utils::fs::rm(storagePath);
+  }
 }
 
 dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count,
@@ -125,13 +131,14 @@ dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count,
 }
 
 BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
-  const std::string storagePath = "testStorage/";
+  const std::string storagePath = "testStorage";
   const size_t chinks_count = 30;
   const size_t chunks_size = 256;
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
+  dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
 
   PageManager::start(PageManager::Params(storagePath, chinks_count, chunks_size));
   BOOST_CHECK(PageManager::instance() != nullptr);
@@ -205,6 +212,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
   BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size() == 3); // page +index+manifest
 
   PageManager::stop();
+  dariadb::storage::Manifest::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
@@ -221,6 +229,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
     dariadb::utils::fs::rm(storagePath);
   }
   dariadb::Meas::MeasList addeded;
+  dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
+
   PageManager::start(PageManager::Params(storagePath, chunks_count, chunks_size));
   dariadb::Meas first;
   first.id = 1;
@@ -247,7 +257,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   BOOST_CHECK_GE(mintime_chunks.size(), size_t(1));
 
   PageManager::stop();
-
+  dariadb::storage::Manifest::stop();
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
@@ -263,6 +273,8 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     dariadb::utils::fs::rm(storagePath);
   }
   dariadb::Meas::MeasList addeded;
+
+  dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
   PageManager::start(PageManager::Params(storagePath, chunks_count, chunks_size));
   dariadb::Meas first;
   first.id = 1;
@@ -312,7 +324,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   // BOOST_CHECK_EQUAL(ids.size(), size_t(1));
 
   PageManager::stop();
-
+  dariadb::storage::Manifest::stop();
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
