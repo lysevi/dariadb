@@ -81,8 +81,40 @@ protected:
   size_t _count;
 };
 
+#ifndef MSVC
 template <> std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const;
+#else
+template <>
+std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
+	std::stringstream ss{};
 
+	auto minc = std::chrono::duration<double, std::milli>(_min).count();
+	auto maxc = std::chrono::duration<double, std::milli>(_max).count();
+	auto avc = std::chrono::duration<double, std::milli>(_average).count();
+
+	{
+		std::stringstream subss{};
+		subss << "| cnt:" << _count;
+		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+	}
+	{
+		std::stringstream subss{};
+		subss << "| min:" << minc << "ms";
+		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+	}
+	{
+		std::stringstream subss{};
+		subss << "| max:" << maxc << "ms";
+		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+	}
+	{
+		std::stringstream subss{};
+		subss << "| aver:" << avc << "ms";
+		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+	}
+	return ss.str();
+}
+#endif
 using FloatMetric = TemplateMetric<float>;
 using TimeMetric = TemplateMetric<std::chrono::nanoseconds>;
 

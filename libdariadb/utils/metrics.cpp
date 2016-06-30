@@ -4,7 +4,7 @@
 using namespace dariadb::utils;
 
 std::unique_ptr<MetricsManager> MetricsManager::_instance = nullptr;
-
+#ifndef  MSVC
 template <> 
 std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
 	std::stringstream ss{};
@@ -35,7 +35,7 @@ std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
 	}
 	return ss.str();
 }
-
+#endif
 
 dariadb::utils::MetricsManager::~MetricsManager() {}
 
