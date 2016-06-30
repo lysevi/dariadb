@@ -309,9 +309,12 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
     auto reader = ds->readInterval(dariadb::storage::QueryInterval(all_id, 0, 3, 5));
     dariadb::Meas::MeasList output{};
     reader->readAll(&output);
-    if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
-      throw MAKE_EXCEPTION("output.size() != size_t(5 + 3)");
-    }
+    //if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
+    //  throw MAKE_EXCEPTION("output.size() != size_t(5 + 3)");
+    //}
+	if (output.size() != size_t(5)) { //+ timepoint(3) with no_data
+		throw MAKE_EXCEPTION("output.size() != size_t(5)");
+	}
   }
   // from this point read not from firsts.
   {

@@ -456,12 +456,12 @@ public:
 
     std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
     sub_result.reserve(q.ids.size());
-    if (q.from > this->minTime()) {
+    /*if (q.from > this->minTime()) {
       auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
       for (auto kv : tp_read_data) {
         sub_result[kv.first].insert(kv.second);
       }
-    }
+    }*/
 
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
