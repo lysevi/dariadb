@@ -190,8 +190,9 @@ int main(int argc, char *argv[]) {
       if(!readonly){
           std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
                       dariadb::Time(i), &append_count, raw_ptr};
-          writers[pos++] = std::move(t);
+          writers[pos] = std::move(t);
       }
+	  pos++;
     }
     if (readers_enable) {
       pos = 0;
