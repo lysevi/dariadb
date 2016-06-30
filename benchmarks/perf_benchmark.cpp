@@ -94,10 +94,12 @@ int main(int argc, char *argv[]) {
   bool readers_enable = false;
   bool metrics_enable = false;
   bool readonly = false;
+  bool readall_enabled = false;
   bool dont_clean = false;
   po::options_description desc("Allowed options");
   desc.add_options()("help", "produce help message")
           ("readonly", "readonly mode")
+	  ("readall", "read all benchmark enable.")
 	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
 	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))
 	  ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),"dont clean storage path before start.");
@@ -123,6 +125,11 @@ int main(int argc, char *argv[]) {
   if (vm.count("readonly")) {
       std::cout << "Readonly mode." << std::endl;
     readonly=true;
+  }
+
+  if (vm.count("readall")) {
+	  std::cout << "Read all benchmark enabled." << std::endl;
+	  readall_enabled = true;
   }
 
   if (readers_enable) {
@@ -233,8 +240,7 @@ int main(int argc, char *argv[]) {
 
     dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
-
-    {
+	if(readall_enabled){
       std::cout << "read all..." << std::endl;
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
       auto max_time = ms->maxTime();

@@ -14,6 +14,7 @@
 #include <limits>
 #include <random>
 #include <storage/page_manager.h>
+#include <storage/manifest.h>
 #include <thread>
 #include <utils/fs.h>
 #include <utils/metrics.h>
@@ -95,7 +96,11 @@ int main(int argc, char *argv[]) {
       std::cout << "clean last run results." << std::endl;
       dariadb::utils::fs::rm(storagePath);
     }
-
+	if (!dont_clean) {
+		dariadb::utils::fs::mkdir(storagePath);
+	}
+	dariadb::storage::Manifest::start(
+		dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::PageManager::start(
         dariadb::storage::PageManager::Params(storagePath, chunks_count, chunks_size));
 

@@ -200,11 +200,11 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "Engine::minMaxTime");
     std::lock_guard<std::mutex> lg(_locker);
-    dariadb::Time subMin1, subMax1;
+    dariadb::Time subMin1=dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
     auto pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
-    dariadb::Time subMin2, subMax2;
+    dariadb::Time subMin2 = dariadb::MAX_TIME, subMax2 = dariadb::MIN_TIME;
     auto mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
-    dariadb::Time subMin3, subMax3;
+    dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
     auto ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
 
     *minResult = dariadb::MAX_TIME;

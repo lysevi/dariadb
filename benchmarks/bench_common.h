@@ -10,7 +10,7 @@ namespace dariadb_bench {
 const size_t total_threads_count = 5;
 const size_t iteration_count = 3000000;
 const size_t total_readers_count = 1;
-const size_t id_per_thread = 10000;
+const size_t id_per_thread = 1;
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -34,15 +34,13 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     m.time = dariadb::timeutil::current_time();
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
-    for (size_t i = 0; i < dariadb_bench::iteration_count; i++) {
+	size_t i = 0;
+    while(i<iteration_count){
       m.flag = dariadb::Flag(id);
       m.src = dariadb::Flag(id);
       m.time += sleep_time;
       m.value = dariadb::Value(i);
-      for (size_t j = id_from; j < id_to; j++, i++) {
-        if (i >= dariadb_bench::iteration_count) {
-          break;
-        }
+      for (size_t j = id_from; j < id_to && i < dariadb_bench::iteration_count; j++, i++) {
         m.id = j;
         if (ms->append(m).writed != 1) {
           return;

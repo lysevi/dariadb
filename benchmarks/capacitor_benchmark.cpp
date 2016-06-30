@@ -88,6 +88,9 @@ int main(int argc, char *argv[]) {
       dariadb::utils::fs::rm(storage_path);
     }
 
+	if (!dont_clean) {
+		dariadb::utils::fs::mkdir(storage_path);
+	}
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
