@@ -14,6 +14,7 @@
 #include <utils/lru.h>
 #include <utils/metrics.h>
 #include <utils/period_worker.h>
+#include <utils/thread_pool.h>
 #include <utils/thread_manager.h>
 #include <utils/skiplist.h>
 #include <utils/utils.h>
@@ -284,7 +285,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
 	const ThreadKind tk=1;
 	{
 		const size_t threads_count = 2;
-		ThreadPool tp(threads_count, tk);
+		ThreadPool tp(ThreadPool::Params(threads_count, tk));
 
 		BOOST_CHECK_EQUAL(tp.threads_count(), threads_count);
 		BOOST_CHECK(!tp.is_stoped());
@@ -293,8 +294,8 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
 	}
 
 	{
-		const size_t threads_count = 100;
-		ThreadPool tp(threads_count, tk);
+		const size_t threads_count = 10;
+		ThreadPool tp(ThreadPool::Params(threads_count, tk));
 		const size_t tasks_count = 100;
 		AsyncTask at = [tk](const ThreadInfo&ti) {
 			if (tk != ti.kind) {
@@ -313,5 +314,50 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
 
 		
 		tp.stop();
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE(ThreadsManager) {
+	using namespace dariadb::utils::async;
+
+	const ThreadKind tk1 = 1;
+	const ThreadKind tk2 = 2;
+	size_t threads_count = 10;
+	ThreadPool::Params tp1(threads_count,tk1);
+	ThreadPool::Params tp2(threads_count,tk2);
+	
+	ThreadManager::Params tpm_params(std::vector<ThreadPool::Params>{tp1, tp2});
+	{
+		BOOST_CHECK(ThreadManager::instance() == nullptr);
+		ThreadManager::start(tpm_params);
+		BOOST_CHECK(ThreadManager::instance() != nullptr);
+		ThreadManager::stop();
+		BOOST_CHECK(ThreadManager::instance() == nullptr);
+	}
+
+	{
+		const size_t tasks_count = 10;
+		ThreadManager::start(tpm_params);
+		AsyncTask at1 = [tk1](const ThreadInfo&ti) {
+			if (tk1 != ti.kind) {
+				BOOST_TEST_MESSAGE("(tk1 != ti.kind)");
+				throw MAKE_EXCEPTION("(tk1 != ti.kind)");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		};
+		AsyncTask at2 = [tk2](const ThreadInfo&ti) {
+			if (tk2 != ti.kind) {
+				BOOST_TEST_MESSAGE("(tk2 != ti.kind)");
+				throw MAKE_EXCEPTION("(tk2 != ti.kind)");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		};
+		for (size_t i = 0; i < tasks_count; ++i) {
+			ThreadManager::instance()->post(tk1, at1);
+			ThreadManager::instance()->post(tk2, at2);
+		}
+		ThreadManager::instance()->flush();
+		ThreadManager::instance()->stop();
 	}
 }
