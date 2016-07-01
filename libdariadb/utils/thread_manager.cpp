@@ -27,6 +27,7 @@ ThreadManager::ThreadManager(const ThreadManager::Params &params):_params(params
 	for (auto kv : _params.pools) {
 		_pools[kv.kind] = std::make_shared<ThreadPool>(kv);
 	}
+    _stoped=false;
 }
 
 void ThreadManager::flush() {
@@ -46,10 +47,12 @@ TaskResult_Ptr dariadb::utils::async::ThreadManager::post(const ThreadKind kind,
 
 ThreadManager::~ThreadManager() {
     logger("tm ~ThreadManager begin");
-	for (auto&kv : _pools) {
-		kv.second->flush();
-		kv.second->stop();
-	}
-	_pools.clear();
+    if(!_stoped){
+        for (auto&kv : _pools) {
+            kv.second->flush();
+            kv.second->stop();
+        }
+        _pools.clear();
+    }
     logger("tm ~ThreadManager end");
 }

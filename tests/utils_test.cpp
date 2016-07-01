@@ -18,7 +18,7 @@
 #include <utils/thread_manager.h>
 #include <utils/skiplist.h>
 #include <utils/utils.h>
-/*
+
 
 BOOST_AUTO_TEST_CASE(Time) {
   auto ct = dariadb::timeutil::current_time();
@@ -316,7 +316,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
     }
 }
 
-*/
+
 
 BOOST_AUTO_TEST_CASE(ThreadsManager) {
 	using namespace dariadb::utils::async;
@@ -336,6 +336,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
 		BOOST_CHECK(ThreadManager::instance() == nullptr);
 	}
 
+    //while(1)
     {
         const size_t tasks_count = 10;
         ThreadManager::start(tpm_params);
@@ -353,7 +354,9 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         };
+        logger("test mark0");
         for (size_t i = 0; i < tasks_count; ++i) {
+//            logger("test #"<<i);
             ThreadManager::instance()->post(tk1, at1);
             ThreadManager::instance()->post(tk2, at2);
         }

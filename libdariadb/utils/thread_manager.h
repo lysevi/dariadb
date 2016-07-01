@@ -37,6 +37,7 @@ private:
 
 private:
   static ThreadManager* _instance;
+  bool _stoped;
   Params _params;
   std::unordered_map<ThreadKind, std::shared_ptr<ThreadPool>> _pools;
 };

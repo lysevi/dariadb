@@ -24,7 +24,7 @@ ThreadPool::~ThreadPool() {
 
 TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
   std::unique_lock<std::mutex> lg(_locker);
-
+  logger("tp post begin");
   TaskResult_Ptr res = std::make_shared<TaskResult>();
   AsyncTask inner_task = [=](const ThreadInfo &ti) {
     try {
@@ -49,6 +49,7 @@ void ThreadPool::stop() {
   _stop_flag = true;
   _data_cond.notify_all();
   for (auto &t : _threads) {
+      _data_cond.notify_all();
     t.join();
   }
   _is_stoped = true;
@@ -70,6 +71,7 @@ void ThreadPool::_thread_func(size_t num) {
   ThreadInfo ti{};
   ti.kind = _params.kind;
   ti.thread_number = num;
+
   while (!_stop_flag) {
     std::unique_lock<std::mutex> lk(local_lock);
     _data_cond.wait(lk, [&] { return !_in_queue.empty() || _stop_flag; });
@@ -87,8 +89,6 @@ void ThreadPool::_thread_func(size_t num) {
             task = _in_queue.front();
             _in_queue.pop_front();
         }
-        _flush_cond.notify_one();
-
 
         try {
             task(ti);
@@ -96,8 +96,8 @@ void ThreadPool::_thread_func(size_t num) {
             logger_fatal("thread pool kind=" << _params.kind << " #" << num
                          << " task error: " << ex.what());
         }
-
     }
+    _flush_cond.notify_one();
   }
   logger("thread #"<<num<<" stoped");
 }
