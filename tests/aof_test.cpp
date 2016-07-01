@@ -111,13 +111,14 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
-    assert(aof_files.size() == 0);
-    auto p = dariadb::storage::AOFile::Params(block_size, storage_path);
-    dariadb::storage::AOFile aof(p);
+    BOOST_CHECK(aof_files.size() == size_t(0));
+	auto p = dariadb::storage::AOFile::Params(block_size, storage_path);
+	dariadb::storage::AOFile aof(p);
 
-    dariadb_test::storage_test_check(&aof, 0, 100, 1);
+	dariadb_test::storage_test_check(&aof, 0, 100, 1);
+	dariadb::storage::Manifest::stop();
   }
-  dariadb::storage::Manifest::stop();
+ 
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
