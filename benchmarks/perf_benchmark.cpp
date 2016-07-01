@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Performance benchmark" << std::endl;
   std::cout << "Writers count:" << dariadb_bench::total_threads_count << std::endl;
 
-  const std::string storage_path = "testStorage";
+  const std::string storage_path = "perf_benchmark_storage";
   bool readers_enable = false;
   bool metrics_enable = false;
   bool readonly = false;

@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   (void)argv;
   srand(static_cast<unsigned int>(time(NULL)));
 
-  const std::string storage_path = "testStorage";
+  const std::string storage_path = "hard_benchmark_storage";
   const size_t chunk_per_storage = 1024 * 1024;
   const size_t chunk_size = 256;
   const size_t chunk_cache_size = 20000;

@@ -49,7 +49,7 @@ void show_info() {
   std::cout << "\n";
 }
 
-const std::string storagePath = "benchStorage/";
+const std::string storagePath = "page_benchmark_storage";
 const size_t chunks_count = 1024;
 const size_t chunks_size = 1024;
 
