@@ -11,9 +11,7 @@ ThreadPool::ThreadPool(const Params &p) : _params(p) {
   _is_stoped = false;
 
   _threads.resize(_params.threads_count);
-  _runned_threads=0;
   for (size_t i = 0; i < _params.threads_count; ++i) {
-      _runned_threads++;
     _threads[i] = std::move(std::thread{&ThreadPool::_thread_func, this, i});
   }
 }
@@ -25,9 +23,10 @@ ThreadPool::~ThreadPool() {
 }
 
 TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
-  std::unique_lock<std::mutex> lg(_locker);
-  logger("tp post begin");
+  std::unique_lock<std::mutex> lg(_queue_mutex);
+  logger("tp post begin 1");
   TaskResult_Ptr res = std::make_shared<TaskResult>();
+  logger("tp post begin 2");
   AsyncTask inner_task = [=](const ThreadInfo &ti) {
     try {
       task(ti);
@@ -37,32 +36,23 @@ TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
       throw;
     }
   };
-
+logger("tp post begin 3");
   _in_queue.push_back(inner_task);
-  _data_cond.notify_all();
+  logger("tp post begin 4");
+  _condition.notify_one();
+  logger("tp post begin 5");
   return res;
 }
 
 void ThreadPool::stop() {
-    logger("TP::stop 1");
-    if(_is_stoped){
-        logger("TP::stop 2");
-        return;
+    {
+        std::unique_lock<std::mutex> lock(_queue_mutex);
+        _stop_flag = true;
     }
-  this->flush();
-    logger("TP::stop 3");
-  _stop_flag = true;
-  _data_cond.notify_all();
-  while(_runned_threads.load()!=0){
-      logger("runned threads "<<_runned_threads);
-      _data_cond.notify_all();
-  }
-  logger("join?");
-  for(auto&t:_threads){
-      t.join();
-  }
-  logger("TP::stop 6");
-  _is_stoped = true;
+    _condition.notify_all();
+    for(std::thread &worker: _threads)
+        worker.join();
+    _is_stoped = true;
 }
 
 void ThreadPool::flush() {
@@ -76,37 +66,23 @@ void ThreadPool::flush() {
 }
 
 void ThreadPool::_thread_func(size_t num) {
-  std::mutex local_lock;
   ThreadInfo ti{};
   ti.kind = _params.kind;
   ti.thread_number = num;
 
   while (!_stop_flag) {
-    std::unique_lock<std::mutex> lk(local_lock);
-    _data_cond.wait(lk, [&] { return !_in_queue.empty() || _stop_flag; });
-    if(_stop_flag){
-        break;
-    }
+      AsyncTask task;
 
-    if (!_in_queue.empty()) {
-        AsyncTask task;
-        {
-            std::lock_guard<std::mutex> lg(_locker);
-            if(_in_queue.empty()){
-                continue;
-            }
-            task = _in_queue.front();
-            _in_queue.pop_front();
-        }
-
-        try {
-            task(ti);
-        } catch (std::exception &ex) {
-            logger_fatal("thread pool kind=" << _params.kind << " #" << num
-                         << " task error: " << ex.what());
-        }
-    }
+      {
+          std::unique_lock<std::mutex> lock(_queue_mutex);
+          this->_condition.wait(lock,
+                               [this]{ return this->_stop_flag || !this->_in_queue.empty(); });
+          if(this->_stop_flag)
+              return;
+          task = std::move(this->_in_queue.front());
+          this->_in_queue.pop_front();
+      }
+      task(ti);
   }
-  logger("thread #"<<num<<" stoped "<<_runned_threads);
-  --_runned_threads;
+  logger("thread #"<<num<<" stoped ");
 }

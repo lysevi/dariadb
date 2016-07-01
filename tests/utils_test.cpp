@@ -308,8 +308,9 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
         tp.flush();
 
         auto lock=tp.post(at);
+        logger("before wait");
         lock->wait();
-
+        logger("after wait");
 		
         tp.stop();
     }

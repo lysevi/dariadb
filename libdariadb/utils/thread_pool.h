@@ -82,11 +82,10 @@ protected:
 protected:
   Params _params;
   std::vector<std::thread> _threads;
-  std::mutex _locker;
   TaskQueue _in_queue;
-  std::condition_variable _data_cond;
+  std::mutex _queue_mutex;
+  std::condition_variable _condition;
   bool _stop_flag, _is_stoped;
-  std::atomic_char16_t _runned_threads;
 };
 }
 }
