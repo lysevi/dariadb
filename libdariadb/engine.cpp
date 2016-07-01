@@ -12,7 +12,6 @@
 #include "utils/thread_manager.h"
 #include <algorithm>
 #include <cassert>
-#include <future>
 
 using namespace dariadb;
 using namespace dariadb::storage;

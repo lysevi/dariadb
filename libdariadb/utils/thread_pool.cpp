@@ -68,18 +68,20 @@ void ThreadPool::_thread_func(size_t num) {
     _data_cond.wait(lk, [&] { return !_in_queue.empty() || _stop_flag; });
     _locker.lock();
     if (!_in_queue.empty()) {
-      TaskQueue local_queue{_in_queue.begin(), _in_queue.end()};
-      _in_queue.clear();
+      /*TaskQueue local_queue{_in_queue.begin(), _in_queue.end()};
+      _in_queue.clear();*/
+      auto task = _in_queue.front();
+      _in_queue.pop_front();
       _locker.unlock();
 
-      for (auto &task : local_queue) {
+      
         try {
           task(ti);
         } catch (std::exception &ex) {
           logger_fatal("thread pool kind=" << _params.kind << " #" << num
                                            << " task error: " << ex.what());
         }
-      }
+      
     } else {
       _locker.unlock();
     }
