@@ -14,6 +14,7 @@
 #include <utils/lru.h>
 #include <utils/metrics.h>
 #include <utils/period_worker.h>
+#include <utils/thread_manager.h>
 #include <utils/skiplist.h>
 #include <utils/utils.h>
 
@@ -275,4 +276,37 @@ BOOST_AUTO_TEST_CASE(Metrics) {
   }
   auto dump=dariadb::utils::MetricsManager::instance()->to_string();
   BOOST_CHECK(dump.size() > size_t(0));
+}
+
+BOOST_AUTO_TEST_CASE(ThreadsPool) {
+	using namespace dariadb::utils::async;
+	
+	const ThreadKind tk=1;
+	{
+		const size_t threads_count = 2;
+		ThreadPool tp(threads_count, tk);
+
+		BOOST_CHECK_EQUAL(tp.threads_count(), threads_count);
+		BOOST_CHECK(!tp.is_stoped());
+		tp.stop();
+		BOOST_CHECK(tp.is_stoped());
+	}
+
+	{
+		const size_t threads_count = 100;
+		ThreadPool tp(threads_count, tk);
+		const size_t tasks_count = 100;
+		AsyncTask at = [tk](const ThreadInfo&ti) {
+			if (tk != ti.kind) {
+				BOOST_TEST_MESSAGE("(tk != ti.kind)");
+				throw MAKE_EXCEPTION("(tk != ti.kind)");
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		};
+		for (size_t i = 0; i < tasks_count; ++i) {
+			tp.post(at);
+		}
+		tp.flush();
+		tp.stop();
+	}
 }
