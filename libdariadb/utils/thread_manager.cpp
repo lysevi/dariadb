@@ -22,10 +22,25 @@ ThreadPool::~ThreadPool() {
   }
 }
 
-void ThreadPool::post(const AsyncTask task) {
+TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
 	std::unique_lock<utils::Locker> lg(_locker);
-	_in_queue.push_back(task);
+	
+	TaskResult_Ptr res = std::make_shared<TaskResult>();
+	AsyncTask inner_task = [=](const ThreadInfo&ti) {
+		try 
+		{
+			task(ti);
+			res->unlock();
+		}
+		catch (...) {
+			res->unlock();
+			throw;
+		}
+	};
+
+	_in_queue.push_back(inner_task);
 	_data_cond.notify_all();
+	return res;
 }
 
 void ThreadPool::stop() {

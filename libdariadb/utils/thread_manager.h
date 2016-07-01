@@ -24,6 +24,28 @@ struct ThreadInfo {
 using AsyncTask = std::function<void(const ThreadInfo &)>;
 using TaskQueue = std::deque<AsyncTask>;
 
+struct TaskResult{
+  bool runned;
+  std::condition_variable _cv;
+
+  TaskResult() {
+	  runned = true;
+  }
+  void wait() { 
+	  std::mutex _mutex;
+	  
+
+	  std::unique_lock<std::mutex> ul(_mutex);
+	  _cv.wait(ul, [&] { return !runned; });
+  }
+
+  void unlock() {
+	  runned = false;
+	  _cv.notify_one();
+  }
+};
+using TaskResult_Ptr = std::shared_ptr<TaskResult>;
+
 class ThreadPool : public utils::NonCopy {
 public:
   ThreadPool(size_t threads_count, ThreadKind kind);
@@ -31,7 +53,7 @@ public:
   size_t threads_count() const { return _threads_count; }
   bool is_stoped() const { return _is_stoped; }
 
-  void post(const AsyncTask task);
+  TaskResult_Ptr post(const AsyncTask task);
   void flush();
   void stop();
 
