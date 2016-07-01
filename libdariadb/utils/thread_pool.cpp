@@ -1,12 +1,11 @@
-#include "logger.h"
 #include "thread_pool.h"
+#include "logger.h"
 #include <cassert>
 
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-ThreadPool::ThreadPool(const Params&p)
-    : _params(p) {
+ThreadPool::ThreadPool(const Params &p) : _params(p) {
   assert(_params.threads_count > 0);
   _stop_flag = false;
   _is_stoped = false;
@@ -43,7 +42,7 @@ TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
 }
 
 void ThreadPool::stop() {
-	this->flush();
+  this->flush();
   _stop_flag = true;
   _data_cond.notify_all();
   for (auto &t : _threads) {
@@ -53,9 +52,12 @@ void ThreadPool::stop() {
 }
 
 void ThreadPool::flush() {
-  while (!this->_in_queue.empty()) {
-    std::this_thread::yield();
+  std::mutex local_lock;
+  std::unique_lock<std::mutex> lk(local_lock);
+  if (_in_queue.empty()) {
+    return;
   }
+  _flush_cond.wait(lk, [&] { return _in_queue.empty(); });
 }
 
 void ThreadPool::_thread_func(size_t num) {
@@ -72,16 +74,16 @@ void ThreadPool::_thread_func(size_t num) {
       _in_queue.clear();*/
       auto task = _in_queue.front();
       _in_queue.pop_front();
+	  _flush_cond.notify_one();
       _locker.unlock();
 
-      
-        try {
-          task(ti);
-        } catch (std::exception &ex) {
-          logger_fatal("thread pool kind=" << _params.kind << " #" << num
-                                           << " task error: " << ex.what());
-        }
-      
+      try {
+        task(ti);
+      } catch (std::exception &ex) {
+        logger_fatal("thread pool kind=" << _params.kind << " #" << num
+                                         << " task error: " << ex.what());
+      }
+
     } else {
       _locker.unlock();
     }
