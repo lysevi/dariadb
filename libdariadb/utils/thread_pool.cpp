@@ -58,6 +58,7 @@ void ThreadPool::stop() {
 void ThreadPool::flush() {
   logger("TP::flush 1");
   while(true)  {
+      _condition.notify_one();
       if(_in_queue.empty()){
           break;
       }

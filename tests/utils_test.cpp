@@ -293,7 +293,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
 	}
 
     {
-        const size_t threads_count = 3;
+        const size_t threads_count = 2;
         ThreadPool tp(ThreadPool::Params(threads_count, tk));
         const size_t tasks_count = 100;
         AsyncTask at = [tk](const ThreadInfo&ti) {
@@ -323,7 +323,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
 
 	const ThreadKind tk1 = 1;
 	const ThreadKind tk2 = 2;
-    size_t threads_count = 4;
+    size_t threads_count = 2;
 	ThreadPool::Params tp1(threads_count,tk1);
 	ThreadPool::Params tp2(threads_count,tk2);
 	
