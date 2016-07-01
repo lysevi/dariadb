@@ -54,8 +54,10 @@ void ThreadPool::stop() {
   _stop_flag = true;
   _data_cond.notify_all();
   while(_runned_threads.load()!=0){
+      logger("runned threads "<<_runned_threads);
       _data_cond.notify_all();
   }
+  logger("join?");
   for(auto&t:_threads){
       t.join();
   }
