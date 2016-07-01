@@ -12,7 +12,7 @@ namespace async {
 	};
 
 	const std::vector<ThreadPool::Params> THREAD_MANAGER_COMMON_PARAMS{
-		ThreadPool::Params{size_t(3), (ThreadKind)THREAD_COMMON_KINDS::READ}
+		ThreadPool::Params{size_t(5), (ThreadKind)THREAD_COMMON_KINDS::READ}
 	};
 
 class ThreadManager : public utils::NonCopy {

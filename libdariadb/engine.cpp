@@ -9,12 +9,14 @@
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include "utils/metrics.h"
+#include "utils/thread_manager.h"
 #include <algorithm>
 #include <cassert>
 #include <future>
 
 using namespace dariadb;
 using namespace dariadb::storage;
+using namespace dariadb::utils::async;
 
 class UnionReader : public Reader {
 public:
@@ -161,6 +163,9 @@ public:
 	  }
     _subscribe_notify.start();
 	
+	ThreadManager::Params tpm_params(THREAD_MANAGER_COMMON_PARAMS);
+	ThreadManager::start(tpm_params);
+
 	Manifest::start(utils::fs::append_path(aof_params.path, MANIFEST_FILE_NAME));
 
     PageManager::start(_page_manager_params);
@@ -180,6 +185,7 @@ public:
     CapacitorManager::stop();
     PageManager::stop();
 	Manifest::stop();
+	ThreadManager::stop();
   }
 
   Time minTime() {
@@ -279,27 +285,36 @@ public:
 	Meas::MeasList cap_result;
 	Meas::MeasList aof_result;
 
-	auto pm_async = std::async(std::launch::async, [&pm_all,&q]() {
+	AsyncTask pm_at= [&pm_all, &q](const ThreadInfo&ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
 		auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
 		std::unique_ptr<ChunkReadCallback> callback{ new ChunkReadCallback };
 		callback->out = &(pm_all);
 		PageManager::instance()->readLinks(q, all_chunkLinks, callback.get());
 		all_chunkLinks.clear();
-	});
-	auto cm_async = std::async(std::launch::async, [&cap_result, &q]() {
-		auto mc_reader = CapacitorManager::instance()->readInterval(q);
+	};
 
+	AsyncTask cm_at= [&cap_result, &q](const ThreadInfo&ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		auto mc_reader = CapacitorManager::instance()->readInterval(q);
 		mc_reader->readAll(&cap_result);
-	});
-	auto am_async = std::async(std::launch::async, [&aof_result, &q]() {
+	};
+
+	AsyncTask am_at = [&aof_result, &q](const ThreadInfo&ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
 		auto ardr = AOFManager::instance()->readInterval(q);
 		ardr->readAll(&aof_result);
-	});
+	};
 	
-	pm_async.wait();
-	cm_async.wait();
-	am_async.wait();
+
+	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, pm_at);
+	auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, cm_at);
+	auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, am_at);
+
+	pm_async->wait();
+	cm_async->wait();
+	am_async->wait();
 
     for (auto id : q.ids) {
 
