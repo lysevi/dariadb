@@ -314,6 +314,23 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
 		
         tp.stop();
     }
+
+    {//without flush
+        const size_t threads_count = 2;
+        ThreadPool tp(ThreadPool::Params(threads_count, tk));
+        const size_t tasks_count = 100;
+        AsyncTask at = [tk](const ThreadInfo&ti) {
+            if (tk != ti.kind) {
+                BOOST_TEST_MESSAGE("(tk != ti.kind)");
+                throw MAKE_EXCEPTION("(tk != ti.kind)");
+            }
+        };
+        for (size_t i = 0; i < tasks_count; ++i) {
+            tp.post(at);
+        }
+
+        tp.stop();
+    }
 }
 
 
