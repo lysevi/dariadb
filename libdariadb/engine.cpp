@@ -212,18 +212,26 @@ public:
 	dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
 	bool pr, mr, ar;
 	pr = mr = ar = false;
-	auto pm_asr = std::async(std::launch::async, [&pr, &subMin1, &subMax1, id]() {
+	AsyncTask  pm_at = [&pr, &subMin1, &subMax1, id](const ThreadInfo&ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
 		pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
-	});
-	auto cm_asr = std::async(std::launch::async, [&mr, &subMin2, &subMax2, id]() {
+	};
+	AsyncTask cm_at = [&mr, &subMin2, &subMax2, id](const ThreadInfo&ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
 		mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
-	});
-	auto am_asr = std::async(std::launch::async, [&ar, &subMin3, &subMax3, id]() {
+	};
+	AsyncTask am_at = [&ar, &subMin3, &subMax3, id](const ThreadInfo&ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
 		ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
-	});
-	pm_asr.wait();
-	cm_asr.wait();
-	am_asr.wait();
+	};
+
+	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, pm_at);
+	auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, cm_at);
+	auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, am_at);
+
+	pm_async->wait();
+	cm_async->wait();
+	am_async->wait();
 
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
