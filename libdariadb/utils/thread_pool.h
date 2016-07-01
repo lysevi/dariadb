@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <atomic>
 
 namespace dariadb {
 namespace utils {
@@ -85,6 +86,7 @@ protected:
   TaskQueue _in_queue;
   std::condition_variable _data_cond;
   bool _stop_flag, _is_stoped;
+  std::atomic_char16_t _runned_threads;
 };
 }
 }

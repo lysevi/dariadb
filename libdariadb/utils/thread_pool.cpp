@@ -11,7 +11,9 @@ ThreadPool::ThreadPool(const Params &p) : _params(p) {
   _is_stoped = false;
 
   _threads.resize(_params.threads_count);
+  _runned_threads=0;
   for (size_t i = 0; i < _params.threads_count; ++i) {
+      _runned_threads++;
     _threads[i] = std::move(std::thread{&ThreadPool::_thread_func, this, i});
   }
 }
@@ -42,16 +44,22 @@ TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
 }
 
 void ThreadPool::stop() {
+    logger("TP::stop 1");
     if(_is_stoped){
+        logger("TP::stop 2");
         return;
     }
   this->flush();
+    logger("TP::stop 3");
   _stop_flag = true;
   _data_cond.notify_all();
-  for (auto &t : _threads) {
+  while(_runned_threads.load()!=0){
       _data_cond.notify_all();
-    t.join();
   }
+  for(auto&t:_threads){
+      t.join();
+  }
+  logger("TP::stop 6");
   _is_stoped = true;
 }
 
@@ -97,5 +105,6 @@ void ThreadPool::_thread_func(size_t num) {
         }
     }
   }
-  logger("thread #"<<num<<" stoped");
+  logger("thread #"<<num<<" stoped "<<_runned_threads);
+  --_runned_threads;
 }
