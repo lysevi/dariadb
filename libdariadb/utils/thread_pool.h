@@ -16,6 +16,17 @@ namespace async {
 
 using ThreadKind = uint16_t;
 
+#ifdef DEBUG
+#define TKIND_CHECK(expected, exists)                                                    \
+  if (expected != exists) {                                                              \
+    throw MAKE_EXCEPTION("wrong thread kind");                                           \
+  }
+#else //  DEBUG
+#define TKIND_CHECK(expected, exists)                                                    \
+  (void)(expected);                                                                      \
+  (void)(exists);
+#endif
+
 struct ThreadInfo {
   ThreadKind kind;
   size_t thread_number;
@@ -45,15 +56,15 @@ using TaskResult_Ptr = std::shared_ptr<TaskResult>;
 
 class ThreadPool : public utils::NonCopy {
 public:
-	struct Params {
-		size_t threads_count;
-		ThreadKind kind;
-		Params(size_t _threads_count, ThreadKind _kind) {
-			threads_count = _threads_count;
-			kind = _kind;
-		}
-	};
-  ThreadPool(const Params&p);
+  struct Params {
+    size_t threads_count;
+    ThreadKind kind;
+    Params(size_t _threads_count, ThreadKind _kind) {
+      threads_count = _threads_count;
+      kind = _kind;
+    }
+  };
+  ThreadPool(const Params &p);
   ~ThreadPool();
   size_t threads_count() const { return _params.threads_count; }
   ThreadKind kind() const { return _params.kind; }
@@ -68,7 +79,7 @@ protected:
   void _thread_func(size_t num);
 
 protected:
-	Params _params;
+  Params _params;
   std::vector<std::thread> _threads;
   mutable Locker _locker;
   TaskQueue _in_queue;

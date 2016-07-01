@@ -7,6 +7,13 @@
 namespace dariadb {
 namespace utils {
 namespace async {
+	enum class THREAD_COMMON_KINDS : ThreadKind {
+		READ = 1
+	};
+
+	const std::vector<ThreadPool::Params> THREAD_MANAGER_COMMON_PARAMS{
+		ThreadPool::Params{size_t(3), (ThreadKind)THREAD_COMMON_KINDS::READ}
+	};
 
 class ThreadManager : public utils::NonCopy {
 
@@ -21,6 +28,9 @@ public:
 
   ~ThreadManager();
   void flush();
+  TaskResult_Ptr post(const THREAD_COMMON_KINDS kind, const AsyncTask task) {
+	  return this->post((ThreadKind)kind, task);
+  }
   TaskResult_Ptr post(const ThreadKind kind, const AsyncTask task);
 private:
   ThreadManager(const Params &params);
