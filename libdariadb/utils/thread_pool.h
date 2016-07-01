@@ -83,7 +83,7 @@ protected:
   std::vector<std::thread> _threads;
   std::mutex _locker;
   TaskQueue _in_queue;
-  std::condition_variable _data_cond, _flush_cond;
+  std::condition_variable _data_cond;
   bool _stop_flag, _is_stoped;
 };
 }

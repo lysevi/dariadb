@@ -56,13 +56,12 @@ void ThreadPool::stop() {
 }
 
 void ThreadPool::flush() {
-  if (_in_queue.empty()) {
-    return;
-  }
-  std::mutex local_lock;
-  std::unique_lock<std::mutex> lk(local_lock);
   logger("TP::flush 1");
-  _flush_cond.wait(lk, [&] { return _in_queue.empty(); });
+  while(true)  {
+      if(_in_queue.empty()){
+          break;
+      }
+  }
   logger("TP::flush 2");
 }
 
@@ -97,7 +96,6 @@ void ThreadPool::_thread_func(size_t num) {
                          << " task error: " << ex.what());
         }
     }
-    _flush_cond.notify_one();
   }
   logger("thread #"<<num<<" stoped");
 }
