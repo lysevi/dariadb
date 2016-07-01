@@ -1,6 +1,5 @@
 #pragma once
 
-#include "locker.h"
 #include "utils.h"
 #include <condition_variable>
 #include <cstdint>
@@ -18,7 +17,7 @@ using ThreadKind = uint16_t;
 
 #ifdef DEBUG
 #define TKIND_CHECK(expected, exists)                                                    \
-  if (expected != exists) {                                                              \
+  if ((ThreadKind)expected != exists) {                                                              \
     throw MAKE_EXCEPTION("wrong thread kind");                                           \
   }
 #else //  DEBUG
@@ -40,6 +39,7 @@ struct TaskResult {
   std::condition_variable _cv;
 
   TaskResult() { runned = true; }
+  ~TaskResult() {}
   void wait() {
     std::mutex _mutex;
 
@@ -81,7 +81,7 @@ protected:
 protected:
   Params _params;
   std::vector<std::thread> _threads;
-  mutable Locker _locker;
+  std::mutex _locker;
   TaskQueue _in_queue;
   std::condition_variable _data_cond, _flush_cond;
   bool _stop_flag, _is_stoped;

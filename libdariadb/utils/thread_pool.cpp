@@ -23,7 +23,7 @@ ThreadPool::~ThreadPool() {
 }
 
 TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
-  std::unique_lock<utils::Locker> lg(_locker);
+  std::unique_lock<std::mutex> lg(_locker);
 
   TaskResult_Ptr res = std::make_shared<TaskResult>();
   AsyncTask inner_task = [=](const ThreadInfo &ti) {
@@ -42,6 +42,9 @@ TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
 }
 
 void ThreadPool::stop() {
+    if(_is_stoped){
+        return;
+    }
   this->flush();
   _stop_flag = true;
   _data_cond.notify_all();
@@ -52,12 +55,14 @@ void ThreadPool::stop() {
 }
 
 void ThreadPool::flush() {
-  std::mutex local_lock;
-  std::unique_lock<std::mutex> lk(local_lock);
   if (_in_queue.empty()) {
     return;
   }
+  std::mutex local_lock;
+  std::unique_lock<std::mutex> lk(local_lock);
+  logger("TP::flush 1");
   _flush_cond.wait(lk, [&] { return _in_queue.empty(); });
+  logger("TP::flush 2");
 }
 
 void ThreadPool::_thread_func(size_t num) {
@@ -68,24 +73,31 @@ void ThreadPool::_thread_func(size_t num) {
   while (!_stop_flag) {
     std::unique_lock<std::mutex> lk(local_lock);
     _data_cond.wait(lk, [&] { return !_in_queue.empty() || _stop_flag; });
-    _locker.lock();
+    if(_stop_flag){
+        break;
+    }
+
     if (!_in_queue.empty()) {
-      /*TaskQueue local_queue{_in_queue.begin(), _in_queue.end()};
-      _in_queue.clear();*/
-      auto task = _in_queue.front();
-      _in_queue.pop_front();
-	  _flush_cond.notify_one();
-      _locker.unlock();
+        AsyncTask task;
+        {
+            std::lock_guard<std::mutex> lg(_locker);
+            if(_in_queue.empty()){
+                continue;
+            }
+            task = _in_queue.front();
+            _in_queue.pop_front();
+        }
+        _flush_cond.notify_one();
 
-      try {
-        task(ti);
-      } catch (std::exception &ex) {
-        logger_fatal("thread pool kind=" << _params.kind << " #" << num
-                                         << " task error: " << ex.what());
-      }
 
-    } else {
-      _locker.unlock();
+        try {
+            task(ti);
+        } catch (std::exception &ex) {
+            logger_fatal("thread pool kind=" << _params.kind << " #" << num
+                         << " task error: " << ex.what());
+        }
+
     }
   }
+  logger("thread #"<<num<<" stoped");
 }
