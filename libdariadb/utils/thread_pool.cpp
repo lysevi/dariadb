@@ -78,8 +78,8 @@ void ThreadPool::_thread_func(size_t num) {
           task = std::move(this->_in_queue.front());
           this->_in_queue.pop_front();
       }
-      logger("run: "<<task.parent_function<<" file:"<<task.code_file);
+      //logger("run: "<<task.parent_function<<" file:"<<task.code_file);
       task.task(ti);
-      logger("run: "<<task.parent_function<<" file:"<<task.code_file <<" ok");
+      //logger("run: "<<task.parent_function<<" file:"<<task.code_file <<" ok");
   }
 }
