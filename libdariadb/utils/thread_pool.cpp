@@ -12,7 +12,7 @@ ThreadPool::ThreadPool(const Params &p) : _params(p) {
 
   _threads.resize(_params.threads_count);
   for (size_t i = 0; i < _params.threads_count; ++i) {
-    _threads[i] = std::move(std::thread{&ThreadPool::_thread_func, this, i});
+    _threads[i] = std::thread{&ThreadPool::_thread_func, this, i};
   }
 }
 
@@ -24,9 +24,7 @@ ThreadPool::~ThreadPool() {
 
 TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
   std::unique_lock<std::mutex> lg(_queue_mutex);
-  logger("tp post begin 1");
   TaskResult_Ptr res = std::make_shared<TaskResult>();
-  logger("tp post begin 2");
   AsyncTask inner_task = [=](const ThreadInfo &ti) {
     try {
       task(ti);
@@ -36,11 +34,8 @@ TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
       throw;
     }
   };
-logger("tp post begin 3");
   _in_queue.push_back(inner_task);
-  logger("tp post begin 4");
   _condition.notify_one();
-  logger("tp post begin 5");
   return res;
 }
 
@@ -56,14 +51,12 @@ void ThreadPool::stop() {
 }
 
 void ThreadPool::flush() {
-  logger("TP::flush 1");
   while(true)  {
       _condition.notify_one();
       if(_in_queue.empty()){
           break;
       }
   }
-  logger("TP::flush 2");
 }
 
 void ThreadPool::_thread_func(size_t num) {
@@ -85,5 +78,4 @@ void ThreadPool::_thread_func(size_t num) {
       }
       task(ti);
   }
-  logger("thread #"<<num<<" stoped ");
 }

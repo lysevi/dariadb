@@ -7,16 +7,13 @@ ThreadManager* ThreadManager::_instance = nullptr;
 
 void ThreadManager::start(const ThreadManager::Params &params) {
 	if (_instance == nullptr) {
-        logger("tm start");
 		_instance = new ThreadManager(params);
 	}
 }
 
 void ThreadManager::stop() {
-    logger("tm stop begin");
 	delete _instance;
 	_instance = nullptr;
-    logger("tm stoped");
 }
 
 ThreadManager* ThreadManager::instance() {
@@ -31,11 +28,9 @@ ThreadManager::ThreadManager(const ThreadManager::Params &params):_params(params
 }
 
 void ThreadManager::flush() {
-    logger("tm flush begin");
 	for (auto&kv : _pools) {
 		kv.second->flush();
 	}
-    logger("tm flush end");
 }
 TaskResult_Ptr dariadb::utils::async::ThreadManager::post(const ThreadKind kind, const AsyncTask task){
 	auto target = _pools.find(kind);
@@ -46,7 +41,6 @@ TaskResult_Ptr dariadb::utils::async::ThreadManager::post(const ThreadKind kind,
 }
 
 ThreadManager::~ThreadManager() {
-    logger("tm ~ThreadManager begin");
     if(!_stoped){
         for (auto&kv : _pools) {
             kv.second->flush();
@@ -54,5 +48,4 @@ ThreadManager::~ThreadManager() {
         }
         _pools.clear();
     }
-    logger("tm ~ThreadManager end");
 }

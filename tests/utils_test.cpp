@@ -308,9 +308,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
         tp.flush();
 
         auto lock=tp.post(at);
-        logger("before wait");
         lock->wait();
-        logger("after wait");
 		
         tp.stop();
     }
@@ -369,13 +367,11 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
                 throw MAKE_EXCEPTION("(tk2 != ti.kind)");
             }
         };
-        logger("test mark0");
         for (size_t i = 0; i < tasks_count; ++i) {
 //            logger("test #"<<i);
             ThreadManager::instance()->post(tk1, at1);
             ThreadManager::instance()->post(tk2, at2);
         }
-        logger("test mark1");
         ThreadManager::instance()->flush();
         ThreadManager::instance()->stop();
     }

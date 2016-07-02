@@ -30,13 +30,14 @@ class Metric {
 public:
   virtual void add(const Metric_Ptr &other) = 0;
   virtual std::string to_string() const = 0;
+  virtual ~Metric(){}
 };
 
 template <class T> class TemplateMetric : public Metric {
 public:
   TemplateMetric(const T &value)
       : _value(value), _average(value), _min(value), _max(value), _count(1){}
-
+  ~TemplateMetric(){}
   // Inherited via Metric
   virtual void add(const Metric_Ptr &other) override {
     auto other_raw = dynamic_cast<TemplateMetric *>(other.get());
