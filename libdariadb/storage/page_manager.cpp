@@ -6,6 +6,7 @@
 #include "../utils/lru.h"
 #include "../utils/utils.h"
 #include "../utils/metrics.h"
+#include "../utils/thread_manager.h"
 #include "bloom_filter.h"
 #include "manifest.h"
 #include "page.h"
@@ -21,6 +22,8 @@
 
 
 using namespace dariadb::storage;
+using namespace dariadb::utils::async;
+
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
 // PM
 class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
@@ -127,23 +130,49 @@ public:
 
     auto pages = pages_by_filter(
         [id](const IndexHeader &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
-    *minResult = dariadb::MAX_TIME;
-    *maxResult = dariadb::MIN_TIME;
-    auto res = false;
+
+    using MMRes=std::tuple<bool,dariadb::Time, dariadb::Time>;
+    std::vector<MMRes> results{pages.size()};
+    std::vector<TaskResult_Ptr> task_res{pages.size()};
+    size_t num=0;
+
     for (auto pname : pages) {
-      Page_Ptr pg = open_page_to_read(pname);
-      dariadb::Time local_min, local_max;
-      if (pg->minMaxTime(id, &local_min, &local_max)) {
-        *minResult = std::min(local_min, *minResult);
-        *maxResult = std::max(local_max, *maxResult);
-        res = true;
-      }
+        AsyncTask at=[pname, &results, num, this,id](const ThreadInfo&ti){
+            TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+            Page_Ptr pg = open_page_to_read(pname);
+            dariadb::Time lmin, lmax;
+            if (pg->minMaxTime(id, &lmin, &lmax)) {
+                results[num]=MMRes(true,lmin,lmax);
+            }else{
+                results[num]=MMRes(false,lmin,lmax);
+            }
+        };
+        task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+        num++;
     }
+
+  for(auto&tw:task_res){
+      tw->wait();
+  }
+
+  bool res = false;
+
+  *minResult = dariadb::MAX_TIME;
+  *maxResult = dariadb::MIN_TIME;
+  for(auto&subRes:results){
+      if (std::get<0>(subRes)) {
+            res = true;
+            *minResult = std::min(std::get<1>(subRes), *minResult);
+            *maxResult = std::max(std::get<2>(subRes), *maxResult);
+          }
+  }
+
     return res;
   }
 
   Page_Ptr open_page_to_read(const std::string &pname) {
     TIMECODE_METRICS(ctmd, "open", "PageManager::open_page_to_read");
+    std::lock_guard<std::mutex> lg(_page_open_lock);
     Page_Ptr pg = nullptr;
     if (_cur_page != nullptr && pname == _cur_page->filename) {
       pg = _cur_page;
@@ -354,7 +383,7 @@ public:
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
-  mutable std::mutex _locker;
+  mutable std::mutex _locker, _page_open_lock;
 
   uint64_t last_id;
   bool update_id;
