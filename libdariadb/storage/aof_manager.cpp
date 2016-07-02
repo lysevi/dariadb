@@ -9,6 +9,7 @@
 #include "manifest.h"
 #include <cassert>
 #include <iterator>
+#include <tuple>
 
 using namespace dariadb::storage;
 using namespace dariadb;
@@ -145,18 +146,42 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
 
-  bool res = false;
-  *minResult = dariadb::MAX_TIME;
-  *maxResult = dariadb::MIN_TIME;
+
+
+  using MMRes=std::tuple<bool,dariadb::Time, dariadb::Time>;
+  std::vector<MMRes> results{files.size()};
+  std::vector<TaskResult_Ptr> task_res{files.size()};
+  size_t num=0;
 
   for (auto filename : files) {
-    AOFile aof(p, filename, true);
-    dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
-    if (aof.minMaxTime(id, &lmin, &lmax)) {
-      res = true;
-      *minResult = std::min(lmin, *minResult);
-      *maxResult = std::max(lmax, *maxResult);
-    }
+      AsyncTask at=[filename, &results, num, &p, id](const ThreadInfo&ti){
+          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+          AOFile aof(p, filename, true);
+          dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
+          if (aof.minMaxTime(id, &lmin, &lmax)) {
+              results[num]=MMRes(true,lmin,lmax);
+          }else{
+              results[num]=MMRes(false,lmin,lmax);
+          }
+      };
+      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+      num++;
+  }
+
+  for(auto&tw:task_res){
+      tw->wait();
+  }
+
+  bool res = false;
+
+  *minResult = dariadb::MAX_TIME;
+  *maxResult = dariadb::MIN_TIME;
+  for(auto&subRes:results){
+      if (std::get<0>(subRes)) {
+            res = true;
+            *minResult = std::min(std::get<1>(subRes), *minResult);
+            *maxResult = std::max(std::get<2>(subRes), *maxResult);
+          }
   }
 
   size_t pos = 0;
