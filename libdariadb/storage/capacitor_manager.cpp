@@ -5,10 +5,12 @@
 #include "../utils/metrics.h"
 #include "inner_readers.h"
 #include "manifest.h"
+#include "../utils/thread_manager.h"
 #include <cassert>
 
 using namespace dariadb::storage;
 using namespace dariadb;
+using namespace dariadb::utils::async;
 
 CapacitorManager *CapacitorManager::_instance = nullptr;
 
@@ -208,17 +210,31 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
   TP_Reader *raw = new TP_Reader;
   std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
+  std::vector<Meas::MeasList> results{files.size()};
+  std::vector<TaskResult_Ptr> task_res{files.size()};
+  size_t num=0;
   for (auto filename : files) {
-    auto raw_cap = new Capacitor(p, filename, true);
-    Meas::MeasList out;
-    raw_cap->readInterval(query)->readAll(&out);
-    for (auto m : out) {
-      if (m.flag == Flags::_NO_DATA) {
-        continue;
+      AsyncTask at=[filename,&query, &results, num,&p](const ThreadInfo&ti){
+          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+          auto raw_cap = new Capacitor(p, filename, true);
+          raw_cap->readInterval(query)->readAll(&results[num]);
+          delete raw_cap;
+      };
+      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+      num++;
+  }
+
+  for(auto&tw:task_res){
+      tw->wait();
+  }
+
+  for(auto&out:results){
+      for (auto m : out) {
+          if (m.flag == Flags::_NO_DATA) {
+              continue;
+          }
+          sub_result[m.id].insert(m);
       }
-      sub_result[m.id].insert(m);
-    }
-    delete raw_cap;
   }
 
   for (auto &kv : sub_result) {
@@ -260,18 +276,31 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
     sub_result[id].time = query.time_point;
   }
 
+  std::vector<Meas::MeasList> results{files.size()};
+  std::vector<TaskResult_Ptr> task_res{files.size()};
+
+  size_t num=0;
   for (auto filename : files) {
-    auto raw_cap = new Capacitor(p, filename, true);
-    Meas::MeasList out;
-    raw_cap->readInTimePoint(query)->readAll(&out);
+      AsyncTask at=[filename,&p,&query,num,&results](const ThreadInfo&ti){
+          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+          auto raw_cap = new Capacitor(p, filename, true);
+          raw_cap->readInTimePoint(query)->readAll(&results[num]);
+          delete raw_cap;
+      };
+      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+      num++;
+  }
 
-    for (auto &m : out) {
-      if (sub_result[m.id].flag == Flags::_NO_DATA) {
-        sub_result[m.id] = m;
+  for(auto&tw:task_res){
+      tw->wait();
+  }
+
+  for(auto&out:results){
+      for (auto &m : out) {
+          if (sub_result[m.id].flag == Flags::_NO_DATA) {
+              sub_result[m.id] = m;
+          }
       }
-    }
-
-    delete raw_cap;
   }
 
   for (auto &kv : sub_result) {

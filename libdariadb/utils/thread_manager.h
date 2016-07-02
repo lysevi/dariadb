@@ -8,11 +8,13 @@ namespace dariadb {
 namespace utils {
 namespace async {
 	enum class THREAD_COMMON_KINDS : ThreadKind {
-		READ = 1
+        READ = 1,
+        FILE_READ
 	};
 
 	const std::vector<ThreadPool::Params> THREAD_MANAGER_COMMON_PARAMS{
-		ThreadPool::Params{size_t(5), (ThreadKind)THREAD_COMMON_KINDS::READ}
+        ThreadPool::Params{size_t(4), (ThreadKind)THREAD_COMMON_KINDS::READ},
+        ThreadPool::Params{size_t(3), (ThreadKind)THREAD_COMMON_KINDS::FILE_READ}
 	};
 
 class ThreadManager : public utils::NonCopy {

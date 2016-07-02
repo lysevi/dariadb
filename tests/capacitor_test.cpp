@@ -14,6 +14,7 @@
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
+#include <utils/thread_manager.h>
 
 class Moc_Storage : public dariadb::storage::MeasWriter {
 public:
@@ -531,7 +532,7 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
   dariadb::utils::fs::mkdir(storagePath);
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
-
+  dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
   dariadb::storage::CapacitorManager::start(
       dariadb::storage::CapacitorManager::Params(storagePath, max_size));
 
@@ -542,6 +543,7 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
 
   dariadb::storage::CapacitorManager::stop();
   dariadb::storage::Manifest::stop();
+  dariadb::utils::async::ThreadManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
@@ -560,6 +562,7 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
+    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::CapacitorManager::start(
@@ -570,10 +573,12 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
 
     dariadb::storage::CapacitorManager::stop();
     dariadb::storage::Manifest::stop();
+    dariadb::utils::async::ThreadManager::stop();
   }
   {
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     stor->writed_count = 0;
+    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::CapacitorManager::start(
@@ -597,6 +602,7 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
 
     dariadb::storage::CapacitorManager::stop();
     dariadb::storage::Manifest::stop();
+    dariadb::utils::async::ThreadManager::stop();
   }
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);

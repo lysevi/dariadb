@@ -12,6 +12,7 @@
 #include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
+#include <utils/thread_manager.h>
 
 class Moc_Storage : public dariadb::storage::MeasWriter {
 public:
@@ -132,6 +133,7 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
   }
   dariadb::utils::fs::mkdir(storagePath);
 
+  dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
@@ -145,6 +147,7 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
 
   dariadb::storage::AOFManager::stop();
   dariadb::storage::Manifest::stop();
+  dariadb::utils::async::ThreadManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
@@ -163,6 +166,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
+      dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::AOFManager::start(
@@ -173,10 +177,12 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
 
     dariadb::storage::AOFManager::stop();
     dariadb::storage::Manifest::stop();
+    dariadb::utils::async::ThreadManager::stop();
   }
   {
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
     stor->writed_count = 0;
+    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::AOFManager::start(
@@ -200,6 +206,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
 
     dariadb::storage::AOFManager::stop();
     dariadb::storage::Manifest::stop();
+    dariadb::utils::async::ThreadManager::stop();
   }
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
