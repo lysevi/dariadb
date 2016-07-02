@@ -176,7 +176,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
                                 _openned_chunk.pos);
       _openned_chunk.ch->close();
-#if ENABLE_METRICS
+#ifdef ENABLE_METRICS
 	  //calc perscent of free space in closed chunks
 	  auto percent = _openned_chunk.ch->header->bw_pos*float(100.0)/ _openned_chunk.ch->header->size;
 	  ADD_METRICS("write", "Page::add_to_target_chunk::chunk_free", dariadb::utils::Metric_Ptr{ new dariadb::utils::FloatMetric(percent) });
