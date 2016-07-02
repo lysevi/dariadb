@@ -4,6 +4,7 @@
 #include "../utils/fs.h"
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
+#include "../utils/logger.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <cassert>
@@ -250,18 +251,16 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
       AsyncTask at=[filename,&p,&query,num,&results](const ThreadInfo&ti){
           TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
           AOFile aof(p, filename, true);
-          Meas::MeasList out;
-          aof.readInTimePoint(query)->readAll(&out);
+          auto rdr=aof.readInTimePoint(query);
+          rdr->readAll(&results[num]);
       };
       task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
       num++;
-
   }
 
   for(auto&tw:task_res){
       tw->wait();
   }
-
   for(auto&out:results){
       for (auto &m : out) {
           auto it = sub_result.find(m.id);
@@ -274,7 +273,6 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
           }
       }
   }
-
   size_t pos = 0;
   for (auto v : _buffer) {
     if (v.inQuery(query.ids, query.flag, query.source)) {

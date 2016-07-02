@@ -29,13 +29,15 @@ TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap&task) {
     try {
       task.task(ti);
       res->unlock();
-    } catch (...) {
+    } catch (std::exception&ex) {
+      logger("*** async task exception:"<<task.parent_function<<" file:"<<task.code_file<<" line:"<<task.code_line);
+      logger("*** what:"<<ex.what());
       res->unlock();
       throw;
     }
   };
   _in_queue.push_back(AsyncTaskWrap(inner_task, task.parent_function, task.code_file, task.code_line));
-  _condition.notify_one();
+  _condition.notify_all();
   return res;
 }
 
@@ -76,6 +78,8 @@ void ThreadPool::_thread_func(size_t num) {
           task = std::move(this->_in_queue.front());
           this->_in_queue.pop_front();
       }
+      logger("run: "<<task.parent_function<<" file:"<<task.code_file);
       task.task(ti);
+      logger("run: "<<task.parent_function<<" file:"<<task.code_file <<" ok");
   }
 }

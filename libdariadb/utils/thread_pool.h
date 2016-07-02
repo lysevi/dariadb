@@ -54,20 +54,16 @@ using TaskQueue = std::deque<AsyncTaskWrap>;
 
 struct TaskResult {
   bool runned;
-  std::condition_variable _cv;
-
-  TaskResult() { runned = true; }
+  std::mutex m;
+  TaskResult() { runned = true; m.lock();}
   ~TaskResult() {}
   void wait() {
-    std::mutex _mutex;
-
-    std::unique_lock<std::mutex> ul(_mutex);
-    _cv.wait(ul, [&] { return !runned; });
+    std::lock_guard<std::mutex> lg(m);
   }
 
   void unlock() {
     runned = false;
-    _cv.notify_one();
+    m.unlock();
   }
 };
 using TaskResult_Ptr = std::shared_ptr<TaskResult>;
