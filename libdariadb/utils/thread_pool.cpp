@@ -22,19 +22,19 @@ ThreadPool::~ThreadPool() {
   }
 }
 
-TaskResult_Ptr ThreadPool::post(const AsyncTask task) {
+TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap&task) {
   std::unique_lock<std::mutex> lg(_queue_mutex);
   TaskResult_Ptr res = std::make_shared<TaskResult>();
   AsyncTask inner_task = [=](const ThreadInfo &ti) {
     try {
-      task(ti);
+      task.task(ti);
       res->unlock();
     } catch (...) {
       res->unlock();
       throw;
     }
   };
-  _in_queue.push_back(inner_task);
+  _in_queue.push_back(AsyncTaskWrap(inner_task, task.parent_function, task.code_file, task.code_line));
   _condition.notify_one();
   return res;
 }
@@ -65,7 +65,7 @@ void ThreadPool::_thread_func(size_t num) {
   ti.thread_number = num;
 
   while (!_stop_flag) {
-      AsyncTask task;
+      AsyncTaskWrap task;
 
       {
           std::unique_lock<std::mutex> lock(_queue_mutex);
@@ -76,6 +76,6 @@ void ThreadPool::_thread_func(size_t num) {
           task = std::move(this->_in_queue.front());
           this->_in_queue.pop_front();
       }
-      task(ti);
+      task.task(ti);
   }
 }

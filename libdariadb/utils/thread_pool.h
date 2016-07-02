@@ -33,7 +33,24 @@ struct ThreadInfo {
 };
 
 using AsyncTask = std::function<void(const ThreadInfo &)>;
-using TaskQueue = std::deque<AsyncTask>;
+
+struct AsyncTaskWrap{
+  AsyncTask task;
+  std::string parent_function;
+  std::string code_file;
+  int code_line;
+  AsyncTaskWrap()=default;
+  AsyncTaskWrap(AsyncTask&t, std::string _function,std::string file, int line){
+      task=t;
+      parent_function=_function;
+      code_file=file;
+      code_line=line;
+  }
+};
+
+#define AT(task) AsyncTaskWrap(task, std::string(__FUNCTION__),std::string(__FILE__),__LINE__)
+
+using TaskQueue = std::deque<AsyncTaskWrap>;
 
 struct TaskResult {
   bool runned;
@@ -72,7 +89,7 @@ public:
 
   bool is_stoped() const { return _is_stoped; }
 
-  TaskResult_Ptr post(const AsyncTask task);
+  TaskResult_Ptr post(const AsyncTaskWrap&task);
   void flush();
   void stop();
 

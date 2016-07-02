@@ -28,10 +28,10 @@ public:
 
   ~ThreadManager();
   void flush();
-  TaskResult_Ptr post(const THREAD_COMMON_KINDS kind, const AsyncTask task) {
+  TaskResult_Ptr post(const THREAD_COMMON_KINDS kind, const AsyncTaskWrap& task) {
 	  return this->post((ThreadKind)kind, task);
   }
-  TaskResult_Ptr post(const ThreadKind kind, const AsyncTask task);
+  TaskResult_Ptr post(const ThreadKind kind, const AsyncTaskWrap& task);
 private:
   ThreadManager(const Params &params);
 

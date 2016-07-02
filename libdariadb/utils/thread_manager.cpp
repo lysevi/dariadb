@@ -32,7 +32,8 @@ void ThreadManager::flush() {
 		kv.second->flush();
 	}
 }
-TaskResult_Ptr dariadb::utils::async::ThreadManager::post(const ThreadKind kind, const AsyncTask task){
+
+TaskResult_Ptr dariadb::utils::async::ThreadManager::post(const ThreadKind kind, const AsyncTaskWrap&task){
 	auto target = _pools.find(kind);
 	if (target == _pools.end()) {
 		throw MAKE_EXCEPTION("unknow kind.");

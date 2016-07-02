@@ -224,9 +224,9 @@ public:
 		ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
 	};
 
-	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, pm_at);
-	auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, cm_at);
-	auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, am_at);
+    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
+    auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
 	pm_async->wait();
 	cm_async->wait();
@@ -315,9 +315,9 @@ public:
 	};
 	
 
-	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, pm_at);
-	auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, cm_at);
-	auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, am_at);
+    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
+    auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
 	pm_async->wait();
 	cm_async->wait();

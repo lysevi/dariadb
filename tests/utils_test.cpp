@@ -303,11 +303,11 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
             }
         };
         for (size_t i = 0; i < tasks_count; ++i) {
-            tp.post(at);
+            tp.post(AT(at));
         }
         tp.flush();
 
-        auto lock=tp.post(at);
+        auto lock=tp.post(AT(at));
         lock->wait();
 		
         tp.stop();
@@ -324,7 +324,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
             }
         };
         for (size_t i = 0; i < tasks_count; ++i) {
-            tp.post(at);
+            tp.post(AT(at));
         }
 
         tp.stop();
@@ -369,8 +369,8 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
         };
         for (size_t i = 0; i < tasks_count; ++i) {
 //            logger("test #"<<i);
-            ThreadManager::instance()->post(tk1, at1);
-            ThreadManager::instance()->post(tk2, at2);
+            ThreadManager::instance()->post(tk1, AT(at1));
+            ThreadManager::instance()->post(tk2, AT(at2));
         }
         ThreadManager::instance()->flush();
         ThreadManager::instance()->stop();
