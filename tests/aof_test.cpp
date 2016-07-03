@@ -14,19 +14,15 @@
 #include <utils/fs.h>
 #include <utils/thread_manager.h>
 
-class Moc_Storage : public dariadb::storage::MeasWriter {
+class Moc_Dropper : public dariadb::storage::AofFileDropper {
 public:
   size_t writed_count;
-  std::map<dariadb::Id, std::vector<dariadb::Meas>> meases;
-  std::list<dariadb::Meas> mlist;
-  dariadb::append_result append(const dariadb::Meas &value) override {
-    meases[value.id].push_back(value);
-    mlist.push_back(value);
-    writed_count += 1;
-    return dariadb::append_result(1, 0);
+  std::set<std::string> files;
+  Moc_Dropper(){writed_count=0;}
+  void drop(std::string filename,const dariadb::Meas::MeasArray&ma) override {
+    writed_count+=ma.size();
+    files.insert(filename);
   }
-
-  void flush() override {}
 };
 
 BOOST_AUTO_TEST_CASE(AofInitTest) {
@@ -187,7 +183,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::utils::async::ThreadManager::stop();
   }
   {
-    std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
     stor->writed_count = 0;
     dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
@@ -202,16 +198,17 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
 
     auto closed = dariadb::storage::AOFManager::instance()->closed_aofs();
     BOOST_CHECK(closed.size() != size_t(0));
-    //TODO check.
-    /*for (auto fname : closed) {
+
+    for (auto fname : closed) {
       dariadb::storage::AOFManager::instance()->drop_aof(fname, stor.get());
     }
 
     BOOST_CHECK(stor->writed_count != size_t(0));
+    BOOST_CHECK_EQUAL(stor->files.size(),closed.size());
 
     closed = dariadb::storage::AOFManager::instance()->closed_aofs();
     BOOST_CHECK_EQUAL(closed.size(), size_t(0));
-*/
+
     dariadb::storage::AOFManager::stop();
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();
