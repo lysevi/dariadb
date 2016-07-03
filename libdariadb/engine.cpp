@@ -155,10 +155,10 @@ public:
     class AofDropper : public dariadb::storage::AofFileDropper {
     public:
       void drop(std::string filename,const dariadb::Meas::MeasArray&ma) override {
-        //CapacitorManager::instance()->append(filename+CAP_FILE_EXT, ma);
-          for(auto m:ma){
-              CapacitorManager::instance()->append(m);
-          }
+        CapacitorManager::instance()->append(filename+CAP_FILE_EXT, ma);
+//          for(auto m:ma){
+//              CapacitorManager::instance()->append(m);
+//          }
       }
     };
 

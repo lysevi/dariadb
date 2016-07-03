@@ -378,8 +378,11 @@ void CapacitorManager::append(std::string filename,const Meas::MeasArray& ma){
 
     auto target=create_new(filename);
     for(auto v:ma){
-        target->append(v);
+        if(target->append(v).writed==0){
+            throw MAKE_EXCEPTION("target size to small.");
+        }
     }
+    target=nullptr;
 }
 
 dariadb::append_result CapacitorManager::append(const Meas &value) {
