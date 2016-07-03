@@ -18,7 +18,7 @@
 #include <thread>
 #include <utils/fs.h>
 #include <utils/metrics.h>
-
+#include <utils/thread_manager.h>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
@@ -104,6 +104,7 @@ int main(int argc, char *argv[]) {
 	if (!dont_clean) {
 		dariadb::utils::fs::mkdir(storagePath);
 	}
+    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
 	dariadb::storage::Manifest::start(
 		dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::PageManager::start(
@@ -175,6 +176,8 @@ int main(int argc, char *argv[]) {
     std::cout << "timePoint: " << elapsed / runs_count << std::endl;
 
     dariadb::storage::PageManager::stop();
+    dariadb::storage::Manifest::stop();
+    dariadb::utils::async::ThreadManager::stop();
     if (dariadb::utils::fs::path_exists(storagePath)) {
       dariadb::utils::fs::rm(storagePath);
     }

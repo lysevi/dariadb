@@ -11,7 +11,7 @@
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/metrics.h>
-
+#include <utils/thread_manager.h>
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
@@ -96,6 +96,7 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::utils::fs::mkdir(storage_path);
+    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
@@ -129,7 +130,7 @@ int main(int argc, char *argv[]) {
                                 dariadb::timeutil::current_time());
 
     dariadb::storage::Manifest::stop();
-
+    dariadb::utils::async::ThreadManager::stop();
 	if (metrics_enable) {
 		std::cout << "metrics:\n" << dariadb::utils::MetricsManager::instance()->to_string() << std::endl;
 	}
