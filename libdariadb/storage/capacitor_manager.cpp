@@ -67,27 +67,31 @@ CapacitorManager *dariadb::storage::CapacitorManager::instance() {
   return CapacitorManager::_instance;
 }
 
-void CapacitorManager::create_new() {
-  TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
-  _cap = nullptr;
-  auto p = Capacitor::Params(_params.B, _params.path);
-  if (_params.max_levels != 0) {
-    p.max_levels = _params.max_levels;
-  }
-  if (_down != nullptr) {
-    auto closed = this->closed_caps();
-    const size_t MAX_CLOSED_CAPS = 10;
-    if (closed.size() > MAX_CLOSED_CAPS) {
-      TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::create_new::drop");
-      size_t to_drop = closed.size() / 2;
-      for (size_t i = 0; i < to_drop; ++i) {
-        auto f = closed.front();
-        closed.pop_front();
-        this->drop_cap(f, _down);
+Capacitor_Ptr CapacitorManager::create_new(std::string filename){
+    TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
+    _cap = nullptr;
+    auto p = Capacitor::Params(_params.B, _params.path);
+    if (_params.max_levels != 0) {
+      p.max_levels = _params.max_levels;
+    }
+    if (_down != nullptr) {
+      auto closed = this->closed_caps();
+      const size_t MAX_CLOSED_CAPS = 10;
+      if (closed.size() > MAX_CLOSED_CAPS) {
+        TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::create_new::drop");
+        size_t to_drop = closed.size() / 2;
+        for (size_t i = 0; i < to_drop; ++i) {
+          auto f = closed.front();
+          closed.pop_front();
+          this->drop_cap(f, _down);
+        }
       }
     }
-  }
-  _cap = Capacitor_Ptr{new Capacitor(p, Capacitor::file_name())};
+   return Capacitor_Ptr{new Capacitor(p, filename)};
+}
+
+Capacitor_Ptr CapacitorManager::create_new() {
+  return create_new(Capacitor::file_name());
 }
 
 std::list<std::string> CapacitorManager::cap_files() const {
@@ -368,15 +372,25 @@ Reader_ptr CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) 
   return Reader_ptr(raw);
 }
 
+void CapacitorManager::append(std::string filename,const Meas::MeasArray& ma){
+    TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append(std::string filename)");
+    std::lock_guard<std::mutex> lg(_locker);
+
+    auto target=create_new(filename);
+    for(auto v:ma){
+        target->append(v);
+    }
+}
+
 dariadb::append_result CapacitorManager::append(const Meas &value) {
   TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append");
   std::lock_guard<std::mutex> lg(_locker);
   if (_cap == nullptr) {
-    create_new();
+    _cap=create_new();
   }
   auto res = _cap->append(value);
   if (res.writed != 1) {
-    create_new();
+    _cap=create_new();
     return _cap->append(value);
   } else {
     return res;

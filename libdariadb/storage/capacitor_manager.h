@@ -58,6 +58,7 @@ public:
   virtual void subscribe(const IdArray &ids, const Flag &flag,
                          const ReaderClb_ptr &clbk) override;
 
+  void append(std::string filename,const Meas::MeasArray& ma);
   std::list<std::string> closed_caps();
   void drop_cap(const std::string &fname, MeasWriter *storage);
 
@@ -66,7 +67,8 @@ public:
 
   void restore();
 protected:
-  void create_new();
+  Capacitor_Ptr create_new();
+  Capacitor_Ptr create_new(std::string filename);
   std::list<std::string> cap_files() const;
   std::list<std::string>
   caps_by_filter(std::function<bool(const Capacitor::Header &)> pred);

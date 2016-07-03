@@ -9,6 +9,10 @@
 
 namespace dariadb {
 namespace storage {
+    class AofFileDropper{
+      public:
+        virtual void drop(std::string filename,const Meas::MeasArray&ma)=0;
+    };
 const size_t AOF_BUFFER_SIZE = 1000;
 const size_t MAX_CLOSED_AOFS = 50;
 class AOFManager : public MeasStorage {
@@ -60,10 +64,10 @@ public:
                          const ReaderClb_ptr &clbk) override;
 
   std::list<std::string> closed_aofs();
-  void drop_aof(const std::string &fname, MeasWriter *storage);
+  void drop_aof(const std::string &fname, AofFileDropper *storage);
 
   size_t files_count() const;
-  void set_downlevel(MeasWriter *down) { _down = down; }
+  void set_downlevel(AofFileDropper *down) { _down = down; }
 
 protected:
   void create_new();
@@ -76,7 +80,7 @@ private:
   Params _params;
   AOFile_Ptr _aof;
   mutable std::mutex _locker;
-  MeasWriter *_down;
+  AofFileDropper *_down;
 
   Meas::MeasArray _buffer;
   size_t _buffer_pos;

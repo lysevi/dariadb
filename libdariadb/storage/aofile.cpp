@@ -309,6 +309,26 @@ public:
 
   std::string filename() const { return _filename; }
 
+  Meas::MeasArray readAll(){
+      TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
+      auto file = std::fopen(_filename.c_str(), "rb");
+      if (file == nullptr) {
+        throw MAKE_EXCEPTION("aof: file open error");
+      }
+
+      Meas::MeasArray ma{_params.size};
+      size_t pos=0;
+      while (1) {
+        Meas val = Meas::empty();
+        if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+          break;
+        }
+        ma[pos]=val;
+        pos++;
+      }
+      std::fclose(file);
+      return ma;
+  }
 protected:
   AOFile::Params _params;
   std::string _filename;
@@ -387,4 +407,8 @@ void AOFile::drop_to_stor(MeasWriter *stor) {
 
 std::string AOFile::filename() const {
   return _Impl->filename();
+}
+
+Meas::MeasArray AOFile::readAll(){
+    return _Impl->readAll();
 }

@@ -42,6 +42,7 @@ public:
 
   std::string filename() const;
 
+  Meas::MeasArray readAll();
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

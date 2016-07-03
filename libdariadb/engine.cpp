@@ -171,9 +171,9 @@ public:
     PageManager::start(_page_manager_params);
     AOFManager::start(aof_params);
     CapacitorManager::start(_cap_params);
-    auto cm = CapacitorManager::instance();
+    //auto cm = CapacitorManager::instance();
     auto pm = PageManager::instance();
-    AOFManager::instance()->set_downlevel(cm);
+    //AOFManager::instance()->set_downlevel(cm);
     CapacitorManager::instance()->set_downlevel(pm);
     _next_query_id = Id();
   }

@@ -93,10 +93,11 @@ std::list<std::string> dariadb::storage::AOFManager::closed_aofs() {
 }
 
 void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
-                                            MeasWriter *storage) {
+                                            AofFileDropper *storage) {
   auto p = AOFile::Params(_params.max_size, _params.path);
   AOFile aof{p, fname, false};
-  aof.drop_to_stor(storage);
+  auto all=aof.readAll();
+  storage->drop(fname, all);
   utils::fs::rm(fname);
   auto without_path = utils::fs::extract_filename(fname);
   Manifest::instance()->aof_rm(without_path);
