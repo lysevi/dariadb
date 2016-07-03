@@ -99,9 +99,8 @@ void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
   auto without_path = utils::fs::extract_filename(fname);
   auto all=aof.readAll();
   storage->drop(without_path, all);
-  utils::fs::rm(fname);
-
   Manifest::instance()->aof_rm(without_path);
+  utils::fs::rm(fname);
 }
 
 dariadb::Time AOFManager::minTime() {
