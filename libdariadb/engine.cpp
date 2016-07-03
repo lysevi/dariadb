@@ -152,6 +152,16 @@ public:
 
 class Engine::Private {
 public:
+    class AofDropper : public dariadb::storage::AofFileDropper {
+    public:
+      void drop(std::string filename,const dariadb::Meas::MeasArray&ma) override {
+        //CapacitorManager::instance()->append(filename+CAP_FILE_EXT, ma);
+          for(auto m:ma){
+              CapacitorManager::instance()->append(m);
+          }
+      }
+    };
+
   Private(storage::AOFManager::Params &aof_params,
           const PageManager::Params &page_storage_params,
           dariadb::storage::CapacitorManager::Params &cap_params,
@@ -171,9 +181,9 @@ public:
     PageManager::start(_page_manager_params);
     AOFManager::start(aof_params);
     CapacitorManager::start(_cap_params);
-    //auto cm = CapacitorManager::instance();
+    _aof_dropper=std::unique_ptr<AofDropper>(new AofDropper);
     auto pm = PageManager::instance();
-    //AOFManager::instance()->set_downlevel(cm);
+    AOFManager::instance()->set_downlevel(_aof_dropper.get());
     CapacitorManager::instance()->set_downlevel(pm);
     _next_query_id = Id();
   }
@@ -504,6 +514,7 @@ protected:
   SubscribeNotificator _subscribe_notify;
   Id _next_query_id;
   std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
+  std::unique_ptr<AofDropper> _aof_dropper;
 };
 
 Engine::Engine(storage::AOFManager::Params aof_params,

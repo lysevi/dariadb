@@ -96,10 +96,11 @@ void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
                                             AofFileDropper *storage) {
   auto p = AOFile::Params(_params.max_size, _params.path);
   AOFile aof{p, fname, false};
-  auto all=aof.readAll();
-  storage->drop(fname, all);
-  utils::fs::rm(fname);
   auto without_path = utils::fs::extract_filename(fname);
+  auto all=aof.readAll();
+  storage->drop(without_path, all);
+  utils::fs::rm(fname);
+
   Manifest::instance()->aof_rm(without_path);
 }
 
