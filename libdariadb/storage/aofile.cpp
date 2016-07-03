@@ -110,9 +110,6 @@ public:
         break;
       }
       if (val.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-          if(val.id==140){
-              logger("1");
-          }
         sub_result[val.id].insert(val);
       }
     }

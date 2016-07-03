@@ -237,13 +237,15 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
 
   size_t pos = 0;
   for (auto v : _buffer) {
-    if (v.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {
-      sub_result[v.id].insert(v);
-    }
-    ++pos;
-    if (pos > _buffer_pos) {
-      break;
-    }
+      if (pos >= _buffer_pos) {
+          break;
+      }
+
+      if (v.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {
+          sub_result[v.id].insert(v);
+      }
+      ++pos;
+
   }
 
   for (auto &kv : sub_result) {

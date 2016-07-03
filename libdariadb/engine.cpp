@@ -344,9 +344,6 @@ public:
 	am_async->wait();
     logger("engine: interval: wait all and.");
     for (auto id : q.ids) {
-if(id==140){
-    logger("1");
-}
       UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
       raw_res->_ids.resize(1);
       raw_res->_ids[0] = id;
