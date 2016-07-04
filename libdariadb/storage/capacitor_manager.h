@@ -72,6 +72,7 @@ public:
   void restore();
   void drop_part(size_t count);
 protected:
+  void drop_part_unsafe(size_t count);
   Capacitor_Ptr create_new();
   Capacitor_Ptr create_new(std::string filename);
   std::list<std::string> cap_files() const;

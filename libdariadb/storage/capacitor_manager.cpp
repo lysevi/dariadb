@@ -79,7 +79,7 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename){
 
         if (closed.size() > _params.max_closed_caps && _params.max_closed_caps>0) {
           size_t to_drop = closed.size() / 4;
-          drop_part(to_drop);
+          drop_part_unsafe(to_drop);
         }
     }
    return Capacitor_Ptr{new Capacitor(p, filename)};
@@ -130,18 +130,22 @@ void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname,
   Manifest::instance()->cola_rm(without_path);
 }
 
+void CapacitorManager::drop_part_unsafe(size_t count) {
+    TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
+    auto closed = this->closed_caps();
+
+    auto drop_count = std::min(closed.size(), count);
+
+    for (size_t i = 0; i < drop_count; ++i) {
+      auto f = closed.front();
+      closed.pop_front();
+      this->drop_cap(f, _down);
+    }
+}
+
 void CapacitorManager::drop_part(size_t count) {
-  TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
   std::lock_guard<std::mutex> lg(_locker);
-  auto closed = this->closed_caps();
-
-  auto drop_count = std::min(closed.size(), count);
-
-  for (size_t i = 0; i < drop_count; ++i) {
-    auto f = closed.front();
-    closed.pop_front();
-    this->drop_cap(f, _down);
-  }
+  drop_part_unsafe(count);
 }
 
 dariadb::Time CapacitorManager::minTime() {
