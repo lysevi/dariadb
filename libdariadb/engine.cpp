@@ -167,10 +167,10 @@ public:
 				  return;
 			  }
 			 
-			  if (!dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, fname))) {
-				  //file dropped to COLA and COLA dropped to page.
-				  return;
-			  }
+			  //if (!dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, fname))) {
+				 // //file dropped to COLA and COLA dropped to page.
+				 // return;
+			  //}
 			  auto ma = aof->readAll();
 			  CapacitorManager::instance()->append(target_name, ma);
 			  Manifest::instance()->aof_rm(fname);
