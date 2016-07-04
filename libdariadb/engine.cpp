@@ -162,7 +162,7 @@ public:
 		  AsyncTask at = [fname,aof, this](const ThreadInfo&ti) {
 			  TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
 			  TKIND_CHECK(THREAD_COMMON_KINDS::CAP_DROP, ti.kind);
-			  auto target_name = fname + CAP_FILE_EXT;
+			  auto target_name = utils::fs::filename(fname) + CAP_FILE_EXT;
 			  if (dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, target_name))) {
 				  return;
 			  }
