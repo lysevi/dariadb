@@ -234,7 +234,7 @@ public:
   }
 
   void readLinks(const QueryInterval &query, const ChunkLinkList &links, ReaderClb *clb) {
-    TIMECODE_METRICS(ctmd, "readLinks", "PageManager::readLinks");
+    TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
     std::lock_guard<std::mutex> lg(_locker);
 
     ChunkLinkList to_read;

@@ -30,7 +30,7 @@ public:
 
 void show_info() {
   clock_t t0 = clock();
-  auto all_writes = dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
+  
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
