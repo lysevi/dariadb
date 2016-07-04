@@ -75,17 +75,12 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename){
       p.max_levels = _params.max_levels;
     }
     if (_down != nullptr) {
-      auto closed = this->closed_caps();
-      
-      if (closed.size() > _params.max_closed_caps) {
-        TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::create_new::drop");
-        size_t to_drop = closed.size() / 4;
-        for (size_t i = 0; i < to_drop; ++i) {
-          auto f = closed.front();
-          closed.pop_front();
-          this->drop_cap(f, _down);
+        auto closed = this->closed_caps();
+
+        if (closed.size() > _params.max_closed_caps && _params.max_closed_caps>0) {
+          size_t to_drop = closed.size() / 4;
+          drop_part(to_drop);
         }
-      }
     }
    return Capacitor_Ptr{new Capacitor(p, filename)};
 }
@@ -126,8 +121,6 @@ std::list<std::string> CapacitorManager::closed_caps() {
 
 void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname,
                                                   MeasWriter *storage) {
-  // boost::upgrade_lock<boost::shared_mutex> lg(_locker);
-
   auto p = Capacitor::Params(_params.B, _params.path);
   auto cap = Capacitor_Ptr{new Capacitor{p, fname, false}};
   cap->drop_to_stor(storage);
@@ -135,6 +128,20 @@ void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname,
   utils::fs::rm(fname);
   auto without_path = utils::fs::extract_filename(fname);
   Manifest::instance()->cola_rm(without_path);
+}
+
+void CapacitorManager::drop_part(size_t count) {
+  TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
+  std::lock_guard<std::mutex> lg(_locker);
+  auto closed = this->closed_caps();
+
+  auto drop_count = std::min(closed.size(), count);
+
+  for (size_t i = 0; i < drop_count; ++i) {
+    auto f = closed.front();
+    closed.pop_front();
+    this->drop_cap(f, _down);
+  }
 }
 
 dariadb::Time CapacitorManager::minTime() {

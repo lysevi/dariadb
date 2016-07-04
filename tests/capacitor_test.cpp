@@ -158,8 +158,6 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
     dariadb::utils::fs::rm(storage_path);
   }
   dariadb::utils::fs::mkdir(storage_path);
-  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-  stor->writed_count = 0;
 
   auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
   assert(cap_files.size() == 0);

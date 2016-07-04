@@ -524,6 +524,9 @@ public:
     }
   }
 
+  void drop_part_caps(size_t count){
+      CapacitorManager::instance()->drop_part(count);
+  }
 protected:
   storage::PageManager::Params _page_manager_params;
   dariadb::storage::CapacitorManager::Params _cap_params;
@@ -596,4 +599,8 @@ Reader_ptr Engine::readInterval(const QueryInterval &q) {
 
 Reader_ptr Engine::readInTimePoint(const QueryTimePoint &q) {
   return _impl->readInTimePoint(q);
+}
+
+void Engine::drop_part_caps(size_t count){
+    return _impl->drop_part_caps(count);
 }

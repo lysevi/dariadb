@@ -59,6 +59,7 @@ public:
   Id load(const QueryTimePoint &qt);
   Meas::MeasList getResult(Id);
 
+  void drop_part_caps(size_t count);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

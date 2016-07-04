@@ -17,7 +17,7 @@ public:
   struct Params {
     std::string path;
     size_t max_levels;
-	size_t max_closed_caps;
+    size_t max_closed_caps; //if not eq 0, auto drop part of files to down-level storage
     size_t B; // measurements count in one data block
     Params() {
       max_levels = 0;
@@ -70,6 +70,7 @@ public:
   void set_downlevel(MeasWriter *down) { _down = down; }
 
   void restore();
+  void drop_part(size_t count);
 protected:
   Capacitor_Ptr create_new();
   Capacitor_Ptr create_new(std::string filename);
