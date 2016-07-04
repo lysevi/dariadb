@@ -79,7 +79,7 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename){
       
       if (closed.size() > _params.max_closed_caps) {
         TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::create_new::drop");
-        size_t to_drop = closed.size() / 2;
+        size_t to_drop = closed.size() / 4;
         for (size_t i = 0; i < to_drop; ++i) {
           auto f = closed.front();
           closed.pop_front();
