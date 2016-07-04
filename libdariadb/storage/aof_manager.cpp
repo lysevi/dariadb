@@ -54,13 +54,16 @@ void AOFManager::create_new() {
   auto p = AOFile::Params(_params.max_size, _params.path);
   if (_down != nullptr) {
     auto closed = this->closed_aofs();
-    if (closed.size() > _params.max_closed_aofs) {
+    //if (closed.size() > _params.max_closed_aofs) 
+	{
       TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
-      size_t to_drop = closed.size() / 2;
+      size_t to_drop = closed.size();
       for (size_t i = 0; i < to_drop; ++i) {
         auto f = closed.front();
-        closed.pop_front();
-        this->drop_aof(f, _down);
+		closed.pop_front();
+		if (_files_send_to_drop.find(f) == _files_send_to_drop.end()) {
+			this->drop_aof(f, _down);
+		}
       }
     }
   }
@@ -99,8 +102,7 @@ void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
   auto without_path = utils::fs::extract_filename(fname);
   auto all=aof.readAll();
   storage->drop(without_path, all);
-  Manifest::instance()->aof_rm(without_path);
-  utils::fs::rm(fname);
+  _files_send_to_drop.insert(without_path);
 }
 
 dariadb::Time AOFManager::minTime() {

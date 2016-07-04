@@ -153,12 +153,24 @@ public:
 class Engine::Private {
 public:
     class AofDropper : public dariadb::storage::AofFileDropper {
+		std::string _storage_path;
     public:
+		AofDropper(std::string storage_path) {
+			_storage_path = storage_path;
+		}
       void drop(std::string filename,const dariadb::Meas::MeasArray&ma) override {
-        CapacitorManager::instance()->append(filename+CAP_FILE_EXT, ma);
-//          for(auto m:ma){
-//              CapacitorManager::instance()->append(m);
-//          }
+		  AsyncTask at = [filename,ma, this](const ThreadInfo&ti) {
+			  TKIND_CHECK(THREAD_COMMON_KINDS::CAP_DROP, ti.kind);
+			  auto target_name = filename + CAP_FILE_EXT;
+			  if (dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, target_name))) {
+				  return;
+			  }
+			  CapacitorManager::instance()->append(target_name, ma);
+			  Manifest::instance()->aof_rm(filename);
+			  utils::fs::rm(utils::fs::append_path(_storage_path, filename));
+		  };
+
+		  ThreadManager::instance()->post(THREAD_COMMON_KINDS::CAP_DROP, AT(at));
       }
     };
 
@@ -181,7 +193,7 @@ public:
     PageManager::start(_page_manager_params);
     AOFManager::start(aof_params);
     CapacitorManager::start(_cap_params);
-    _aof_dropper=std::unique_ptr<AofDropper>(new AofDropper);
+    _aof_dropper=std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));
     auto pm = PageManager::instance();
     AOFManager::instance()->set_downlevel(_aof_dropper.get());
     CapacitorManager::instance()->set_downlevel(pm);
@@ -278,6 +290,7 @@ public:
     AOFManager::instance()->flush();
     CapacitorManager::instance()->flush();
     PageManager::instance()->flush();
+	ThreadManager::instance()->flush();
   }
 
   class ChunkReadCallback : public ReaderClb {

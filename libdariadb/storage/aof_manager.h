@@ -84,6 +84,7 @@ private:
 
   Meas::MeasArray _buffer;
   size_t _buffer_pos;
+  std::set<std::string> _files_send_to_drop;
 };
 }
 }

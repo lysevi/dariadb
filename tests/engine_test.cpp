@@ -359,6 +359,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       ++id_val;
       ++flg_val;
     }
+	ms->flush();
     size_t total_readed = 0;
     for (dariadb::Id cur_id = 0; cur_id < id_val; ++cur_id) {
       dariadb::IdArray ids;

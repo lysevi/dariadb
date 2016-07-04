@@ -99,7 +99,9 @@ protected:
   TaskQueue _in_queue;
   std::mutex _queue_mutex;
   std::condition_variable _condition;
-  bool _stop_flag, _is_stoped;
+  bool _stop_flag; //true - pool under stop.
+  bool _is_stoped; //true - already stopped.
+  std::atomic_size_t _task_runned; //count of runned tasks.
 };
 }
 }

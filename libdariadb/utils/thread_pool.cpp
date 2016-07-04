@@ -9,7 +9,7 @@ ThreadPool::ThreadPool(const Params &p) : _params(p) {
   assert(_params.threads_count > 0);
   _stop_flag = false;
   _is_stoped = false;
-
+  _task_runned = size_t(0);
   _threads.resize(_params.threads_count);
   for (size_t i = 0; i < _params.threads_count; ++i) {
     _threads[i] = std::thread{&ThreadPool::_thread_func, this, i};
@@ -55,7 +55,7 @@ void ThreadPool::stop() {
 void ThreadPool::flush() {
   while(true)  {
       _condition.notify_one();
-      if(_in_queue.empty()){
+      if(_in_queue.empty() && (_task_runned.load()==size_t(0))){
           break;
       }
   }
@@ -75,11 +75,13 @@ void ThreadPool::_thread_func(size_t num) {
                                [this]{ return this->_stop_flag || !this->_in_queue.empty(); });
           if(this->_stop_flag)
               return;
+		  _task_runned++;
           task = std::move(this->_in_queue.front());
           this->_in_queue.pop_front();
       }
       //logger("run: "<<task.parent_function<<" file:"<<task.code_file);
       task.task(ti);
+	  --_task_runned;
       //logger("run: "<<task.parent_function<<" file:"<<task.code_file <<" ok");
   }
 }

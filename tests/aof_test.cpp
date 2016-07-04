@@ -15,13 +15,16 @@
 #include <utils/thread_manager.h>
 
 class Moc_Dropper : public dariadb::storage::AofFileDropper {
+	std::string _storage_path;
 public:
   size_t writed_count;
   std::set<std::string> files;
-  Moc_Dropper(){writed_count=0;}
+  Moc_Dropper(std::string storage_path) { writed_count = 0; _storage_path = storage_path; }
   void drop(std::string filename,const dariadb::Meas::MeasArray&ma) override {
     writed_count+=ma.size();
     files.insert(filename);
+	dariadb::storage::Manifest::instance()->aof_rm(filename);
+	dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_storage_path, filename));
   }
 };
 
@@ -183,7 +186,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::utils::async::ThreadManager::stop();
   }
   {
-    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
+    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper(storagePath));
     stor->writed_count = 0;
     dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
