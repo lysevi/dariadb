@@ -166,7 +166,9 @@ public:
 			  if (dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, target_name))) {
 				  return;
 			  }
+			 
 			  if (!dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, fname))) {
+				  //file dropped to COLA and COLA dropped to page.
 				  return;
 			  }
 			  auto ma = aof->readAll();
