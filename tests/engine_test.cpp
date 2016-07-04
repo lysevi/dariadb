@@ -9,7 +9,7 @@
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
-
+#include <storage/lock_manager.h>
 #include <algorithm>
 
 class BenchCallback : public dariadb::storage::ReaderClb {
@@ -93,6 +93,14 @@ BOOST_AUTO_TEST_CASE(QueryHashTest) {
     q2.time_point--;
     BOOST_CHECK_EQUAL(hasher(q1), hasher(q2));
   }
+}
+
+BOOST_AUTO_TEST_CASE(LockManager_Instance) {
+  BOOST_CHECK(dariadb::storage::LockManager::instance() == nullptr);
+  dariadb::storage::LockManager::start(dariadb::storage::LockManager::Params());
+  BOOST_CHECK(dariadb::storage::LockManager::instance() != nullptr);
+  dariadb::storage::LockManager::stop();
+  BOOST_CHECK(dariadb::storage::LockManager::instance() == nullptr);
 }
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
