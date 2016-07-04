@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils.h"
+#include "locker.h"
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -54,16 +55,16 @@ using TaskQueue = std::deque<AsyncTaskWrap>;
 
 struct TaskResult {
   bool runned;
-  std::mutex m;
+  Locker m;
   TaskResult() { runned = true; m.lock();}
   ~TaskResult() {}
   void wait() {
-    std::lock_guard<std::mutex> lg(m);
+    std::lock_guard<Locker> lg(m);
   }
 
   void unlock() {
     runned = false;
-    m.unlock();
+	m.unlock();
   }
 };
 using TaskResult_Ptr = std::shared_ptr<TaskResult>;

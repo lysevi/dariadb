@@ -305,30 +305,30 @@ public:
 
 	AsyncTask pm_at= [&pm_all, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-        logger("engine: pm readinterval...");
+        /*logger("engine: pm readinterval...");*/
 		auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
 		std::unique_ptr<ChunkReadCallback> callback{ new ChunkReadCallback };
 		callback->out = &(pm_all);
 		PageManager::instance()->readLinks(q, all_chunkLinks, callback.get());
 		all_chunkLinks.clear();
-        logger("engine: pm readinterval end");
+        /*logger("engine: pm readinterval end");*/
 	};
 
 	AsyncTask cm_at= [&cap_result, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-        logger("engine: cm readinterval...");
+        /*logger("engine: cm readinterval...");*/
 		auto mc_reader = CapacitorManager::instance()->readInterval(q);
 		mc_reader->readAll(&cap_result);
-        logger("engine: cm readinterval end");
+        /*logger("engine: cm readinterval end");*/
 	};
 
 	AsyncTask am_at = [&aof_result, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-        logger("engine: am readinterval...");
+        /*logger("engine: am readinterval...");*/
 		auto ardr = AOFManager::instance()->readInterval(q);
 		ardr->readAll(&aof_result);
-        logger("engine: am readinterval end");
+        /*logger("engine: am readinterval end");*/
 	};
 	
 
@@ -336,13 +336,13 @@ public:
     auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
     auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
-    logger("engine: interval: wait pm.");
+    /*logger("engine: interval: wait pm.");*/
 	pm_async->wait();
-    logger("engine: interval: wait cm.");
+    /*logger("engine: interval: wait cm.");*/
     cm_async->wait();
-    logger("engine: interval: wait am.");
+    /*logger("engine: interval: wait am.");*/
 	am_async->wait();
-    logger("engine: interval: wait all and.");
+    /*logger("engine: interval: wait all and.");*/
     for (auto id : q.ids) {
       UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
       raw_res->_ids.resize(1);
@@ -379,7 +379,7 @@ public:
       raw_result->add_rdr(Reader_ptr{raw_res});
     }
     raw_result->reset();
-    logger("engine: interval end.");
+    /*logger("engine: interval end.");*/
     return Reader_ptr(raw_result);
   }
 

@@ -87,6 +87,7 @@ public:
 
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
   void restore();
+  void close();
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

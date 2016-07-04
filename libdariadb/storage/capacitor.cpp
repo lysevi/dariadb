@@ -150,6 +150,9 @@ public:
     }
   }
 
+  void close() {
+	  _header->is_full = true;
+  }
   size_t one_block_size(size_t B) const { return sizeof(FlaggedMeas) * B; }
 
   size_t block_in_level(size_t lev_num) const { return (size_t(1) << lev_num); }
@@ -774,4 +777,8 @@ void dariadb::storage::Capacitor::drop_to_stor(MeasWriter *stor) {
 
 void dariadb::storage::Capacitor::restore() {
 	_Impl->restore();
+}
+
+void dariadb::storage::Capacitor::close() {
+	_Impl->close();
 }

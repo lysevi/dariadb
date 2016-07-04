@@ -382,6 +382,7 @@ void CapacitorManager::append(std::string filename,const Meas::MeasArray& ma){
             throw MAKE_EXCEPTION("target size to small.");
         }
     }
+	target->close();
     target=nullptr;
 }
 
