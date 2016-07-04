@@ -20,7 +20,8 @@ public:
   size_t writed_count;
   std::set<std::string> files;
   Moc_Dropper(std::string storage_path) { writed_count = 0; _storage_path = storage_path; }
-  void drop(std::string filename,const dariadb::Meas::MeasArray&ma) override {
+  void drop(dariadb::storage::AOFile_Ptr aof, std::string filename) override {
+	  auto ma = aof->readAll();
     writed_count+=ma.size();
     files.insert(filename);
 	dariadb::storage::Manifest::instance()->aof_rm(filename);

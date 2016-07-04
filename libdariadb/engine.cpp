@@ -158,16 +158,21 @@ public:
 		AofDropper(std::string storage_path) {
 			_storage_path = storage_path;
 		}
-      void drop(std::string filename,const dariadb::Meas::MeasArray&ma) override {
-		  AsyncTask at = [filename,ma, this](const ThreadInfo&ti) {
+      void drop(AOFile_Ptr aof, std::string fname) override {
+		  AsyncTask at = [fname,aof, this](const ThreadInfo&ti) {
+			  TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
 			  TKIND_CHECK(THREAD_COMMON_KINDS::CAP_DROP, ti.kind);
-			  auto target_name = filename + CAP_FILE_EXT;
+			  auto target_name = fname + CAP_FILE_EXT;
 			  if (dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, target_name))) {
 				  return;
 			  }
+			  if (!dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, fname))) {
+				  return;
+			  }
+			  auto ma = aof->readAll();
 			  CapacitorManager::instance()->append(target_name, ma);
-			  Manifest::instance()->aof_rm(filename);
-			  utils::fs::rm(utils::fs::append_path(_storage_path, filename));
+			  Manifest::instance()->aof_rm(fname);
+			  utils::fs::rm(utils::fs::append_path(_storage_path, fname));
 		  };
 
 		  ThreadManager::instance()->post(THREAD_COMMON_KINDS::CAP_DROP, AT(at));

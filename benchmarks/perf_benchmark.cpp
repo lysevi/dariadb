@@ -228,10 +228,14 @@ int main(int argc, char *argv[]) {
     info_thread.join();
     std::cout << " total id:" << all_id_set.size() << std::endl;
     {
+		stop_info = false;
+		std::thread flush_info_thread(show_info, raw_ptr);
       std::cout << "full flush..." << std::endl;
       auto start = clock();
       raw_ptr->flush();
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+	  stop_info = true;
+	  flush_info_thread.join();
       std::cout << "flush time: " << elapsed << std::endl;
     }
 

@@ -65,6 +65,16 @@ void AOFManager::create_new() {
 			this->drop_aof(f, _down);
 		}
       }
+	  //clean set of sended to drop files.
+	  auto aofs_exists=Manifest::instance()->aof_list();
+	  std::set<std::string> aof_exists_set{ aofs_exists.begin(),aofs_exists.end() };
+	  std::set<std::string> new_sended_files;
+	  for (auto&v : _files_send_to_drop) {
+		  if (aof_exists_set.find(v) != aof_exists_set.end()) {
+			  new_sended_files.insert(v);
+		  }
+	  }
+	  _files_send_to_drop = new_sended_files;
     }
   }
   _aof = AOFile_Ptr{new AOFile(p)};
@@ -98,11 +108,10 @@ std::list<std::string> dariadb::storage::AOFManager::closed_aofs() {
 void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
                                             AofFileDropper *storage) {
   auto p = AOFile::Params(_params.max_size, _params.path);
-  AOFile aof{p, fname, false};
+  AOFile_Ptr ptr = AOFile_Ptr{ new AOFile{p, fname, false} };
   auto without_path = utils::fs::extract_filename(fname);
-  auto all=aof.readAll();
-  storage->drop(without_path, all);
   _files_send_to_drop.insert(without_path);
+  storage->drop(ptr, without_path);
 }
 
 dariadb::Time AOFManager::minTime() {
