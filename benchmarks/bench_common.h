@@ -8,9 +8,10 @@
 namespace dariadb_bench {
 
 const size_t total_threads_count = 5;
-const size_t iteration_count = 3000000;
+const size_t iteration_count = 3500;
 const size_t total_readers_count = 1;
-const size_t id_per_thread = 10000;
+const size_t id_per_thread = 100;
+const size_t all_writes = total_threads_count * iteration_count* id_per_thread;
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -31,21 +32,21 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             dariadb::storage::MeasWriter *ms) {
   try {
     auto m = dariadb::Meas::empty();
-    m.time = dariadb::timeutil::current_time();
+    m.time = 0;
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
-	size_t i = 0;
-    while(i<iteration_count){
+	
+	for (size_t i = 0; i < iteration_count;++i) {
       m.flag = dariadb::Flag(id);
       m.src = dariadb::Flag(id);
       m.time += sleep_time;
       m.value = dariadb::Value(i);
-      for (size_t j = id_from; j < id_to && i < dariadb_bench::iteration_count; j++, i++) {
+      for (size_t j = id_from; j < id_to && i < dariadb_bench::iteration_count; j++) {
         m.id = j;
         if (ms->append(m).writed != 1) {
           return;
         }
-        (*append_count)++;
+		(*append_count)++;
       }
     }
   } catch (...) {
@@ -73,8 +74,14 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
       auto id = random_ids[cur_id];
       cur_id = (cur_id + 1) % random_ids.size();
       dariadb::Time minT, maxT;
+	  
       if (!stor->minMaxTime(id, &minT, &maxT)) {
-        throw MAKE_EXCEPTION("id not found");
+		  std::stringstream ss;
+		  ss << "id " << id << " not found";
+		  std::cout << ss.str() << std::endl;
+		  --i;
+		  continue;
+        //throw MAKE_EXCEPTION(ss.str());
       }
       interval_queries[i] = std::tie(id, minT, maxT);
     }

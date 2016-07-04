@@ -9,12 +9,15 @@
 
 namespace dariadb {
 namespace storage {
+	const size_t MAX_CLOSED_CAPS = 10;
 
 class CapacitorManager : public MeasStorage {
 public:
+	
   struct Params {
     std::string path;
     size_t max_levels;
+	size_t max_closed_caps;
     size_t B; // measurements count in one data block
     Params() {
       max_levels = 0;
@@ -24,6 +27,7 @@ public:
       path = storage_path;
       B = _B;
       max_levels = 0;
+	  max_closed_caps = MAX_CLOSED_CAPS;
     }
 
     size_t measurements_count() const {

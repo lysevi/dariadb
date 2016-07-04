@@ -40,7 +40,7 @@ void show_info() {
     std::cout << "\r"
               << " caps:" << dariadb::storage::Manifest::instance()->cola_list().size()
               << " writes: " << append_count << " speed: " << writes_per_sec
-              << "/sec progress:" << (int64_t(100) * append_count) / all_writes
+              << "/sec progress:" << (int64_t(100) * append_count) / dariadb_bench::all_writes
               << "%                ";
     std::cout.flush();
     if (stop_info) {

@@ -76,8 +76,8 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename){
     }
     if (_down != nullptr) {
       auto closed = this->closed_caps();
-      const size_t MAX_CLOSED_CAPS = 10;
-      if (closed.size() > MAX_CLOSED_CAPS) {
+      
+      if (closed.size() > _params.max_closed_caps) {
         TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::create_new::drop");
         size_t to_drop = closed.size() / 2;
         for (size_t i = 0; i < to_drop; ++i) {

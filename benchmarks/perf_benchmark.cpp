@@ -34,7 +34,6 @@ public:
 
 void show_info(dariadb::storage::Engine *storage) {
   clock_t t0 = clock();
-  auto all_writes = dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -48,7 +47,7 @@ void show_info(dariadb::storage::Engine *storage) {
               << ")"
               << " reads: " << reads_count << " speed:" << reads_per_sec << "/sec"
               << " writes: " << append_count << " speed: " << writes_per_sec
-              << "/sec progress:" << (int64_t(100) * append_count) / all_writes
+              << "/sec progress:" << (int64_t(100) * append_count) / dariadb_bench::all_writes
               << "%                ";
     std::cout.flush();
     if (stop_info) {
@@ -158,13 +157,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    dariadb::Time start_time = dariadb::timeutil::current_time();
+	dariadb::Time start_time = dariadb::Time(0);// dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
     dariadb::storage::PageManager::Params page_param(storage_path, chunk_per_storage,
                                                      chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
     cap_param.max_levels = 11;
-
+	cap_param.max_closed_caps = 15;
     dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
     aof_param.buffer_size = 1000;
     aof_param.max_size = cap_param.measurements_count();
@@ -250,6 +249,7 @@ int main(int argc, char *argv[]) {
 
     dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
+
 	if(readall_enabled){
       std::cout << "read all..." << std::endl;
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
       std::cout << "readed: " << clbk->count << std::endl;
       std::cout << "time: " << elapsed << std::endl;
       auto expected = (dariadb_bench::iteration_count *
-                       dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
+                       dariadb_bench::total_threads_count* dariadb_bench::id_per_thread);
 
       if (!readonly && (!dont_clean && clbk->count != expected))  {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;

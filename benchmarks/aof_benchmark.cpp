@@ -30,7 +30,7 @@ public:
 
 void show_info() {
   clock_t t0 = clock();
-  auto all_writes = dariadb_bench::total_threads_count * dariadb_bench::iteration_count;
+
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -40,7 +40,7 @@ void show_info() {
     std::cout << "\r"
               << " aofs: " << dariadb::storage::AOFManager::instance()->files_count()
               << " writes: " << append_count << " speed: " << writes_per_sec
-              << "/sec progress:" << (int64_t(100) * append_count) / all_writes
+              << "/sec progress:" << (int64_t(100) * append_count) / dariadb_bench::all_writes
               << "%                ";
     std::cout.flush();
     if (stop_info) {
