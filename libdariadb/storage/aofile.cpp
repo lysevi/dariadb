@@ -100,7 +100,9 @@ public:
     TP_Reader *raw = new TP_Reader;
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aof: file open error");
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
     }
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
@@ -133,7 +135,9 @@ public:
 
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aof: file open error");
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
     }
     while (1) {
       Meas val = Meas::empty();
@@ -185,7 +189,9 @@ public:
     dariadb::IdSet readed_ids;
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aof: file open error");
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
     }
     while (1) {
       Meas val = Meas::empty();
@@ -222,7 +228,9 @@ public:
     std::lock_guard<std::mutex> lock(_mutex);
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aof: file open error");
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
     }
 
     dariadb::Time result = dariadb::MAX_TIME;
@@ -241,7 +249,9 @@ public:
   dariadb::Time maxTime() const {
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aof: file open error");
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
     }
 
     dariadb::Time result = dariadb::MIN_TIME;
@@ -261,7 +271,9 @@ public:
     TIMECODE_METRICS(ctmd, "minMaxTime", "AOFile::minMaxTime");
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aof: file open error");
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
     }
 
     *minResult = dariadb::MAX_TIME;
@@ -294,7 +306,9 @@ public:
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aof: file open error");
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
     }
 
     while (1) {
@@ -309,26 +323,29 @@ public:
 
   std::string filename() const { return _filename; }
 
-  Meas::MeasArray readAll(){
-      TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
-      auto file = std::fopen(_filename.c_str(), "rb");
-      if (file == nullptr) {
-        throw MAKE_EXCEPTION("aof: file open error");
-      }
+  Meas::MeasArray readAll() {
+    TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      std::stringstream ss;
+      ss << "aof: file open error " << _filename;
+      throw MAKE_EXCEPTION(ss.str());
+    }
 
-      Meas::MeasArray ma{_params.size};
-      size_t pos=0;
-      while (1) {
-        Meas val = Meas::empty();
-        if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
-          break;
-        }
-        ma[pos]=val;
-        pos++;
+    Meas::MeasArray ma{_params.size};
+    size_t pos = 0;
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
       }
-      std::fclose(file);
-      return ma;
+      ma[pos] = val;
+      pos++;
+    }
+    std::fclose(file);
+    return ma;
   }
+
 protected:
   AOFile::Params _params;
   std::string _filename;
@@ -409,6 +426,6 @@ std::string AOFile::filename() const {
   return _Impl->filename();
 }
 
-Meas::MeasArray AOFile::readAll(){
-    return _Impl->readAll();
+Meas::MeasArray AOFile::readAll() {
+  return _Impl->readAll();
 }

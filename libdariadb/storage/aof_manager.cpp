@@ -61,7 +61,8 @@ void AOFManager::create_new() {
       for (size_t i = 0; i < to_drop; ++i) {
         auto f = closed.front();
 		closed.pop_front();
-		if (_files_send_to_drop.find(f) == _files_send_to_drop.end()) {
+		auto without_path = utils::fs::extract_filename(f);
+		if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
 			this->drop_aof(f, _down);
 		}
       }
