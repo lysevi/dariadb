@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (metrics_enable) {
-    std::cout << "enable metrics." << std::endl;
+    std::cout << "Enable metrics." << std::endl;
   }
 
   if (vm.count("readonly")) {
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
   }
 
   {
-    std::cout << "write..." << std::endl;
+    std::cout << "Write..." << std::endl;
 
     const size_t chunk_per_storage = 1024 * 100;
     const size_t chunk_size = 1024;
@@ -247,7 +247,7 @@ int main(int argc, char *argv[]) {
       std::cout << "flush time: " << elapsed << std::endl;
     }
 
-    {
+    if(!readonly){
 	  auto ccount =size_t(raw_ptr->queue_size().cola_count * 0.5);
       std::cout << "drop part caps to "<<ccount<<"..." << std::endl;
       stop_info = false;
