@@ -464,7 +464,9 @@ public:
 		if (!it->dropped) {
 			stor->append(it->value);
 			it->dropped = true;
-		}
+        }else{
+            continue;
+        }
 		for (auto sub_it = std::begin(all_meases); sub_it != std::end(all_meases); ++sub_it) {
 			if (!sub_it->dropped && (sub_it->value.id == it->value.id)) {
 				stor->append(sub_it->value);
