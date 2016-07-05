@@ -434,6 +434,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
       ++id_val;
       ++flg_val;
     }
+	ms->flush();
     dariadb::IdArray ids{_all_ids_set.begin(), _all_ids_set.end()};
     {
       dariadb::storage::QueryInterval qi(ids, 0, from, to);
