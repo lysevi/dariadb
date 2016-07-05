@@ -102,6 +102,15 @@ public:
     if (file == nullptr) {
       std::stringstream ss;
       ss << "aof: file open error " << _filename;
+      auto aofs_manifest = Manifest::instance()->aof_list();
+      ss << "Manifest:";
+      for (auto f : aofs_manifest) {
+        ss << f << std::endl;
+      }
+      auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+      for (auto f : aofs_exists) {
+        ss << f << std::endl;
+      }
       throw MAKE_EXCEPTION(ss.str());
     }
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
@@ -137,6 +146,15 @@ public:
     if (file == nullptr) {
       std::stringstream ss;
       ss << "aof: file open error " << _filename;
+      auto aofs_manifest = Manifest::instance()->aof_list();
+      ss << "Manifest:";
+      for (auto f : aofs_manifest) {
+        ss << f << std::endl;
+      }
+      auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+      for (auto f : aofs_exists) {
+        ss << f << std::endl;
+      }
       throw MAKE_EXCEPTION(ss.str());
     }
     while (1) {
@@ -191,6 +209,15 @@ public:
     if (file == nullptr) {
       std::stringstream ss;
       ss << "aof: file open error " << _filename;
+      auto aofs_manifest = Manifest::instance()->aof_list();
+      ss << "Manifest:";
+      for (auto f : aofs_manifest) {
+        ss << f << std::endl;
+      }
+      auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+      for (auto f : aofs_exists) {
+        ss << f << std::endl;
+      }
       throw MAKE_EXCEPTION(ss.str());
     }
     while (1) {
@@ -230,6 +257,15 @@ public:
     if (file == nullptr) {
       std::stringstream ss;
       ss << "aof: file open error " << _filename;
+      auto aofs_manifest = Manifest::instance()->aof_list();
+      ss << "Manifest:";
+      for (auto f : aofs_manifest) {
+        ss << f << std::endl;
+      }
+      auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+      for (auto f : aofs_exists) {
+        ss << f << std::endl;
+      }
       throw MAKE_EXCEPTION(ss.str());
     }
 
@@ -273,6 +309,15 @@ public:
     if (file == nullptr) {
       std::stringstream ss;
       ss << "aof: file open error " << _filename;
+      auto aofs_manifest = Manifest::instance()->aof_list();
+      ss << "Manifest:";
+      for (auto f : aofs_manifest) {
+        ss << f << std::endl;
+      }
+      auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+      for (auto f : aofs_exists) {
+        ss << f << std::endl;
+      }
       throw MAKE_EXCEPTION(ss.str());
     }
 
