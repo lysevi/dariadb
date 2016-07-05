@@ -164,41 +164,9 @@ void LockManager::lock_by_kind(const LockKind &lk, const LockObjects &lo) {
 }
 
 void LockManager::lock_drop_aof() {
-  bool success = false;
-  auto aof_locker = get_or_create_lock_object(LockObjects::AOF);
-  auto cap_locker = get_or_create_lock_object(LockObjects::CAP);
-  while (!success) {
-    if (!aof_locker->mutex.try_lock_upgrade()) {
-      continue;
-    }
-
-    if (!cap_locker->mutex.try_lock_upgrade()) {
-      aof_locker->mutex.unlock_and_lock_upgrade();
-      continue;
-    }
-
-    aof_locker->kind = LockKind::EXCLUSIVE;
-    cap_locker->kind = LockKind::EXCLUSIVE;
-    success = true;
-  }
+	lock(LockKind::EXCLUSIVE, { LockObjects::AOF, LockObjects::CAP });
 }
 
 void LockManager::lock_drop_cap() {
-  bool success = false;
-  auto page_locker = get_or_create_lock_object(LockObjects::PAGE);
-  auto cap_locker = get_or_create_lock_object(LockObjects::CAP);
-  while (!success) {
-    if (!page_locker->mutex.try_lock_upgrade()) {
-      continue;
-    }
-
-    if (!cap_locker->mutex.try_lock_upgrade()) {
-      page_locker->mutex.unlock_and_lock_upgrade();
-      continue;
-    }
-
-    page_locker->kind = LockKind::EXCLUSIVE;
-    cap_locker->kind = LockKind::EXCLUSIVE;
-    success = true;
-  }
+	lock(LockKind::EXCLUSIVE, { LockObjects::PAGE, LockObjects::CAP });
 }
