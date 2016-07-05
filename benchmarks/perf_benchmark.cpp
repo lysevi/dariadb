@@ -17,6 +17,7 @@
 #include <thread>
 #include <utils/fs.h>
 #include <utils/metrics.h>
+#include <utils/thread_manager.h>
 
 namespace po = boost::program_options;
 
@@ -28,8 +29,9 @@ bool stop_readers = false;
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
   BenchCallback() { count = 0; }
-  void call(const dariadb::Meas &) { count++; }
+  void call(const dariadb::Meas &v) { count++; all.push_back(v);}
   size_t count;
+  dariadb::Meas::MeasList all;
 };
 
 void show_info(dariadb::storage::Engine *storage) {
@@ -256,6 +258,7 @@ int main(int argc, char *argv[]) {
 
       auto start = clock();
       raw_ptr->drop_part_caps(ccount);
+      raw_ptr->flush();
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       stop_info = true;
       flush_info_thread.join();
@@ -273,6 +276,10 @@ int main(int argc, char *argv[]) {
     dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
 
+    std::cout
+        << "Active threads: "
+        << dariadb::utils::async::ThreadManager::instance()->active_works()
+        << std::endl;
     if (readall_enabled) {
       std::cout << "read all..." << std::endl;
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
@@ -294,9 +301,18 @@ int main(int argc, char *argv[]) {
           (dariadb_bench::iteration_count * dariadb_bench::total_threads_count *
            dariadb_bench::id_per_thread);
 
+      std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
+      for (auto &v : clbk->all) {
+        _dict[v.id].push_back(v);
+      }
+
       if (!readonly && (!dont_clean && clbk->count != expected)) {
         std::cout << "expected: " << expected << " get:" << clbk->count
                   << std::endl;
+
+        for(auto&kv:_dict){
+            std::cout<<" "<<kv.first<<" -> "<<kv.second.size()<<std::endl;
+        }
         throw MAKE_EXCEPTION(
             "(clbk->count!=(iteration_count*total_threads_count))");
       } else {
