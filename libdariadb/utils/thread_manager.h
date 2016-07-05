@@ -36,6 +36,14 @@ public:
 	  return this->post((ThreadKind)kind, task);
   }
   TaskResult_Ptr post(const ThreadKind kind, const AsyncTaskWrap& task);
+
+  size_t active_works(){
+      size_t res=0;
+      for(auto&kv:_pools){
+          res+=kv.second->active_works();
+      }
+      return res;
+  }
 private:
   ThreadManager(const Params &params);
 

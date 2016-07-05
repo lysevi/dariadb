@@ -90,6 +90,11 @@ public:
   void flush();
   void stop();
 
+  size_t active_works(){
+      std::lock_guard<std::mutex> lg(_queue_mutex);
+      size_t res=_in_queue.size();
+      return res+(_task_runned);
+  }
 protected:
   void _thread_func(size_t num);
 
