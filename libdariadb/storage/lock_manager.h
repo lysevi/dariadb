@@ -5,29 +5,33 @@
 #include "aofile.h"
 #include <vector>
 
-#include <mutex>
 #include <map>
+#include <mutex>
 
 #include <boost/thread/shared_mutex.hpp>
 
 namespace dariadb {
 namespace storage {
 
-    enum class LockKind:uint8_t
-    {
-		READ,
-		EXCLUSIVE
-    };
+enum class LockKind : uint8_t { READ, EXCLUSIVE };
 
-	enum class LockObjects :uint8_t
-	{
-		AOF,
-		CAP,
-		PAGE,
-		DROP_AOF,
-		DROP_CAP,
-	};
-	using RWMutex_Ptr = std::shared_ptr<boost::shared_mutex>;
+enum class LockObjects : uint8_t {
+  AOF,
+  CAP,
+  PAGE,
+  DROP_AOF,
+  DROP_CAP,
+};
+
+struct MutexWrap {
+  boost::shared_mutex mutex;
+  LockKind kind;
+  MutexWrap():mutex(), kind(LockKind::READ) {
+  }
+};
+
+using RWMutex_Ptr = std::shared_ptr<MutexWrap>;
+
 class LockManager : public utils::NonCopy {
 public:
   struct Params {};
@@ -41,10 +45,14 @@ public:
   static void stop();
   static LockManager *instance();
 
-  void lock(const LockKind&lk, const LockObjects&lo);
-  void unlock(const LockObjects&lo);
+  void lock(const LockKind &lk, const LockObjects &lo);
+  void unlock(const LockObjects &lo);
+
 protected:
-	RWMutex_Ptr get_lock_object(const LockObjects&lo);
+  RWMutex_Ptr get_or_create_lock_object(const LockObjects &lo);
+  RWMutex_Ptr get_lock_object(const LockObjects &lo);
+  void lock_by_kind(const LockKind &lk, const LockObjects &lo);
+
 private:
   static LockManager *_instance;
 
