@@ -162,6 +162,7 @@ public:
       void drop(AOFile_Ptr aof, std::string fname) override {
 		  AsyncTask at = [fname,aof, this](const ThreadInfo&ti) {
 			  TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
+			  LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
 			  TKIND_CHECK(THREAD_COMMON_KINDS::CAP_DROP, ti.kind);
 			  auto target_name = utils::fs::filename(fname) + CAP_FILE_EXT;
 			  if (dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, target_name))) {
@@ -176,6 +177,7 @@ public:
 			  CapacitorManager::instance()->append(target_name, ma);
 			  Manifest::instance()->aof_rm(fname);
 			  utils::fs::rm(utils::fs::append_path(_storage_path, fname));
+			  LockManager::instance()->unlock(LockObjects::DROP_AOF);
 		  };
 
 		  ThreadManager::instance()->post(THREAD_COMMON_KINDS::CAP_DROP, AT(at));
@@ -276,11 +278,12 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
+	LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::AOF);
     result = AOFManager::instance()->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
-
+	LockManager::instance()->unlock(LockObjects::AOF);
     return result;
   }
 
@@ -290,7 +293,10 @@ public:
   }
 
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
-    return AOFManager::instance()->currentValue(ids, flag);
+    LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::AOF);
+    auto result=AOFManager::instance()->currentValue(ids, flag);
+	LockManager::instance()->unlock(LockObjects::AOF);
+	return result;
   }
 
   void flush() {
@@ -327,6 +333,7 @@ public:
 
 	AsyncTask pm_at= [&pm_all, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
         /*logger("engine: pm readinterval...");*/
 		auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
@@ -334,22 +341,27 @@ public:
 		callback->out = &(pm_all);
 		PageManager::instance()->readLinks(q, all_chunkLinks, callback.get());
 		all_chunkLinks.clear();
+		LockManager::instance()->unlock(LockObjects::PAGE);
         /*logger("engine: pm readinterval end");*/
 	};
 
 	AsyncTask cm_at= [&cap_result, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);
         /*logger("engine: cm readinterval...");*/
 		auto mc_reader = CapacitorManager::instance()->readInterval(q);
 		mc_reader->readAll(&cap_result);
+		LockManager::instance()->unlock(LockObjects::CAP);
         /*logger("engine: cm readinterval end");*/
 	};
 
 	AsyncTask am_at = [&aof_result, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);
         /*logger("engine: am readinterval...");*/
 		auto ardr = AOFManager::instance()->readInterval(q);
 		ardr->readAll(&aof_result);
+		LockManager::instance()->unlock(LockObjects::AOF);
         /*logger("engine: am readinterval end");*/
 	};
 	
@@ -444,6 +456,9 @@ public:
 		raw_result->add_rdr(subres);
 
 	}*/
+	LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
+	LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);
+	LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);
 	for (auto id : q.ids) {
 		dariadb::Time minT, maxT;
 		QueryTimePoint local_q = q;
@@ -486,7 +501,9 @@ public:
 			}
 		}
 	}
-
+	LockManager::instance()->unlock(LockObjects::PAGE);
+	LockManager::instance()->unlock(LockObjects::AOF);
+	LockManager::instance()->unlock(LockObjects::CAP);
 	raw_result->reset();
     return Reader_ptr(raw_result);
   }
@@ -527,7 +544,9 @@ public:
   }
 
   void drop_part_caps(size_t count){
+	  LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
       CapacitorManager::instance()->drop_part(count);
+	  LockManager::instance()->unlock(LockObjects::DROP_CAP);
   }
 protected:
   storage::PageManager::Params _page_manager_params;

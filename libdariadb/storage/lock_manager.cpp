@@ -57,7 +57,7 @@ void dariadb::storage::LockManager::lock(const LockKind&lk, const LockObjects&lo
 	}
 }
 
-void dariadb::storage::LockManager::unlock(LockObjects&lo) {
+void dariadb::storage::LockManager::unlock(const LockObjects&lo) {
 	std::lock_guard<std::mutex> lg(_mutex);
 	auto lock_target = _lockers.find(lo);
 	if (lock_target == _lockers.end()) {

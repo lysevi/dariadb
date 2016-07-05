@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <mutex>
-#include <unordered_map>
+#include <map>
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -42,13 +42,13 @@ public:
   static LockManager *instance();
 
   void lock(const LockKind&lk, const LockObjects&lo);
-  void unlock(LockObjects&lo);
+  void unlock(const LockObjects&lo);
 protected:
 	RWMutex_Ptr get_lock_object(const LockObjects&lo);
 private:
   static LockManager *_instance;
 
-  std::unordered_map<LockObjects, RWMutex_Ptr> _lockers;
+  std::map<LockObjects, RWMutex_Ptr> _lockers;
   std::mutex _mutex;
 };
 }
