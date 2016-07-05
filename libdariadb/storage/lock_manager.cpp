@@ -39,7 +39,7 @@ RWMutex_Ptr dariadb::storage::LockManager::get_lock_object(const LockObjects&lo)
 
 void dariadb::storage::LockManager::lock(const LockKind&lk, const LockObjects&lo) {
 	std::lock_guard<std::mutex> lg(_mutex);
-	
+	auto lock_target = get_lock_object(lo);
 	switch (lo)
 	{
 	case LockObjects::AOF:
@@ -62,6 +62,7 @@ void dariadb::storage::LockManager::unlock(const LockObjects&lo) {
 	auto lock_target = _lockers.find(lo);
 	if (lock_target == _lockers.end()) {
 		logger("unlock unknow lock.");
+		return;
 	}
 	else {
 		switch (lock_target->first)
