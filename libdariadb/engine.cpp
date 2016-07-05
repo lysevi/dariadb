@@ -6,6 +6,7 @@
 #include "storage/manifest.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
+#include "storage/lock_manager.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include "utils/logger.h"
@@ -194,7 +195,7 @@ public:
 	
 	ThreadManager::Params tpm_params(THREAD_MANAGER_COMMON_PARAMS);
 	ThreadManager::start(tpm_params);
-
+	LockManager::start(LockManager::Params());
 	Manifest::start(utils::fs::append_path(aof_params.path, MANIFEST_FILE_NAME));
 
     PageManager::start(_page_manager_params);
@@ -215,6 +216,7 @@ public:
     PageManager::stop();
 	Manifest::stop();
 	ThreadManager::stop();
+	LockManager::stop();
   }
 
   Time minTime() {
