@@ -249,13 +249,14 @@ int main(int argc, char *argv[]) {
     }
 
     {
-      std::cout << "drop part caps..." << std::endl;
+	  auto ccount =size_t(raw_ptr->queue_size().cola_count * 0.5);
+      std::cout << "drop part caps to "<<ccount<<"..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_info, raw_ptr);
-      auto ccount=raw_ptr->queue_size().cola_count;
+      
 
       auto start = clock();
-      raw_ptr->drop_part_caps(ccount*0.5);
+      raw_ptr->drop_part_caps(ccount);
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       stop_info = true;
       flush_info_thread.join();
