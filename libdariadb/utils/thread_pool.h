@@ -55,11 +55,11 @@ using TaskQueue = std::deque<AsyncTaskWrap>;
 
 struct TaskResult {
   bool runned;
-  Locker m;
+  Locker m;  // dont use mutex. mutex::lock() requires that the calling thread owns the mutex.
   TaskResult() { runned = true; m.lock();}
   ~TaskResult() {}
   void wait() {
-    std::lock_guard<Locker> lg(m);
+	  m.lock();
   }
 
   void unlock() {

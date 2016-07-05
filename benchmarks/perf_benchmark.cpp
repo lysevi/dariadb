@@ -72,9 +72,8 @@ void reader(dariadb::storage::MeasStorage_ptr ms, dariadb::IdSet all_id_set,
   while (true) {
     clbk->count = 0;
     auto time_point1 = uniform_dist(e1);
-    auto time_point2 = uniform_dist(e1);
-    auto f = std::min(time_point1, time_point2);
-    auto t = std::max(time_point1, time_point2);
+    auto f = 0;
+    auto t = time_point1;
 
     auto qi = dariadb::storage::QueryInterval(
         dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);

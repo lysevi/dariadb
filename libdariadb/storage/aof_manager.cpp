@@ -216,6 +216,11 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
   TIMECODE_METRICS(ctmd, "readInterval", "AOFManager::readInterval");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
+  if (files.empty()) {
+	  TP_Reader *raw = new TP_Reader;
+	  raw->reset();
+	  return Reader_ptr(raw);
+  }
   auto p = AOFile::Params(_params.max_size, _params.path);
   TP_Reader *raw = new TP_Reader;
   std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;

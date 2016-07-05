@@ -178,6 +178,7 @@ public:
 			  Manifest::instance()->aof_rm(fname);
 			  utils::fs::rm(utils::fs::append_path(_storage_path, fname));
 			  LockManager::instance()->unlock(LockObjects::DROP_AOF);
+			 ;
 		  };
 
 		  ThreadManager::instance()->post(THREAD_COMMON_KINDS::CAP_DROP, AT(at));
@@ -247,15 +248,21 @@ public:
 	pr = mr = ar = false;
 	AsyncTask  pm_at = [&pr, &subMin1, &subMax1, id](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
 		pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
+		LockManager::instance()->unlock(LockObjects::PAGE);
 	};
 	AsyncTask cm_at = [&mr, &subMin2, &subMax2, id](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);
 		mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
+		LockManager::instance()->unlock(LockObjects::CAP);
 	};
 	AsyncTask am_at = [&ar, &subMin3, &subMax3, id](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);
 		ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
+		LockManager::instance()->unlock(LockObjects::AOF);
 	};
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
@@ -280,10 +287,11 @@ public:
     append_result result{};
 	LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::AOF);
     result = AOFManager::instance()->append(value);
+	LockManager::instance()->unlock(LockObjects::AOF);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
-	LockManager::instance()->unlock(LockObjects::AOF);
+	
     return result;
   }
 
@@ -330,10 +338,10 @@ public:
 	Meas::MeasList pm_all;
 	Meas::MeasList cap_result;
 	Meas::MeasList aof_result;
-
+	
 	AsyncTask pm_at= [&pm_all, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
+		//LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
         /*logger("engine: pm readinterval...");*/
 		auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
@@ -341,30 +349,31 @@ public:
 		callback->out = &(pm_all);
 		PageManager::instance()->readLinks(q, all_chunkLinks, callback.get());
 		all_chunkLinks.clear();
-		LockManager::instance()->unlock(LockObjects::PAGE);
+		//LockManager::instance()->unlock(LockObjects::PAGE);
         /*logger("engine: pm readinterval end");*/
 	};
 
 	AsyncTask cm_at= [&cap_result, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);
+		/*LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);*/
         /*logger("engine: cm readinterval...");*/
 		auto mc_reader = CapacitorManager::instance()->readInterval(q);
 		mc_reader->readAll(&cap_result);
-		LockManager::instance()->unlock(LockObjects::CAP);
+		/*LockManager::instance()->unlock(LockObjects::CAP);*/
         /*logger("engine: cm readinterval end");*/
 	};
 
 	AsyncTask am_at = [&aof_result, &q](const ThreadInfo&ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);
+		/*LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);*/
         /*logger("engine: am readinterval...");*/
 		auto ardr = AOFManager::instance()->readInterval(q);
 		ardr->readAll(&aof_result);
-		LockManager::instance()->unlock(LockObjects::AOF);
+		/*LockManager::instance()->unlock(LockObjects::AOF);*/
         /*logger("engine: am readinterval end");*/
 	};
 	
+	LockManager::instance()->lock(LockKind::READ, { LockObjects::PAGE, LockObjects::CAP,LockObjects::AOF });
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
     auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
@@ -377,6 +386,10 @@ public:
     /*logger("engine: interval: wait am.");*/
 	am_async->wait();
     /*logger("engine: interval: wait all and.");*/
+
+	LockManager::instance()->unlock(LockObjects::PAGE);
+	LockManager::instance()->unlock(LockObjects::CAP);
+	LockManager::instance()->unlock(LockObjects::AOF);
     for (auto id : q.ids) {
       UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
       raw_res->_ids.resize(1);
@@ -456,9 +469,9 @@ public:
 		raw_result->add_rdr(subres);
 
 	}*/
-	LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
-	LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);
-	LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);
+
+	LockManager::instance()->lock(LockKind::READ, { LockObjects::PAGE, LockObjects::CAP,LockObjects::AOF });
+
 	for (auto id : q.ids) {
 		dariadb::Time minT, maxT;
 		QueryTimePoint local_q = q;

@@ -46,6 +46,7 @@ public:
   static LockManager *instance();
 
   void lock(const LockKind &lk, const LockObjects &lo);
+  void lock(const LockKind&lk, const std::vector<LockObjects>&los); ///Only simple locks support (non drop_)
   void unlock(const LockObjects &lo);
 
 protected:
@@ -53,6 +54,8 @@ protected:
   RWMutex_Ptr get_lock_object(const LockObjects &lo);
   void lock_by_kind(const LockKind &lk, const LockObjects &lo);
 
+  void lock_drop_aof();
+  void lock_drop_cap();
 private:
   static LockManager *_instance;
 
