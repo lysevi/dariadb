@@ -51,6 +51,7 @@ struct level_header {
 #pragma pack(pop)
 
 struct FlaggedMeas {
+	bool dropped;
   Meas value;
 
   bool operator==(const FlaggedMeas &other) const {
@@ -101,6 +102,9 @@ struct level {
   FlaggedMeas back() const { return begin[hdr->pos - 1]; }
 
   void clear() {
+	  for (size_t i = 0; i < hdr->pos; ++i) {
+		  this->begin[i].dropped = false;
+	  }
     hdr->crc = 0;
     hdr->pos = 0;
     hdr->_maxTime = dariadb::MIN_TIME;
@@ -419,8 +423,9 @@ public:
   };
 
   void drop_to_stor(MeasWriter *stor) {
+	  //TODO use more smarter method. witout copy.
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
-    std::list<level *> to_merge;
+	/*std::list<level *> to_merge;
     level tmp;
     level_header tmp_hdr;
     tmp.hdr = &tmp_hdr;
@@ -438,7 +443,35 @@ public:
     low_level_stor_pusher merge_target;
     merge_target._stor = stor;
 
-    dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());
+    dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());*/
+	auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
+	auto begin = (FlaggedMeas*)(pos_after_unsorded + sizeof(level_header) * _header->levels_count);
+	auto end = (FlaggedMeas*)(begin + _header->_writed - _header->B);
+
+	
+	
+	std::vector<FlaggedMeas> all_meases{ _header->_writed };
+	auto pos = 0;
+	for (auto it = begin; it != end; ++it, ++pos) {
+		all_meases[pos] = *it;
+	}
+	for (size_t i = 0; i < _header->B; ++i, ++pos) {
+		all_meases[pos] = _memvalues[i];
+	}
+	std::sort(std::begin(all_meases), std::end(all_meases), flagged_meas_time_compare_less());
+	
+	for (auto it = std::begin(all_meases); it != std::end(all_meases); ++it) {
+		if (!it->dropped) {
+			stor->append(it->value);
+			it->dropped = true;
+		}
+		for (auto sub_it = std::begin(all_meases); sub_it != std::end(all_meases); ++sub_it) {
+			if (!sub_it->dropped && (sub_it->value.id == it->value.id)) {
+				stor->append(sub_it->value);
+				sub_it->dropped = true;
+			}
+		}
+	}
     _header->is_dropped = true;
   }
 
