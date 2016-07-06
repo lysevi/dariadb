@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <fstream>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -477,20 +478,6 @@ Meas::MeasArray AOFile::readAll() {
 
 size_t AOFile::writed(std::string fname) {
 	TIMECODE_METRICS(ctmd, "read", "AOFile::writed");
-	auto file = std::fopen(fname.c_str(), "rb");
-	if (file == nullptr) {
-		std::stringstream ss;
-		ss << "aof: file open error " << fname;
-		throw MAKE_EXCEPTION(ss.str());
-	}
-	struct stat buff;
-	size_t result = 0;
-	if (fstat(fileno(file), &buff) == 0) {
-		result=buff.st_size / sizeof(Meas);
-	}
-	else {
-		throw MAKE_EXCEPTION("stat error");
-	}
-	std::fclose(file);
-	return result;
+	std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
+	return in.tellg()/sizeof(Meas);
 }
