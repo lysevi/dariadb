@@ -235,7 +235,7 @@ public:
     auto pmax = PageManager::instance()->maxTime();
     auto cmax = CapacitorManager::instance()->maxTime();
     auto amax = AOFManager::instance()->maxTime();
-    return std::max(std::min(pmax, cmax), amax);
+    return std::max(std::max(pmax, cmax), amax);
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
