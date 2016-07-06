@@ -11,7 +11,7 @@ namespace dariadb {
 namespace storage {
     class AofFileDropper{
       public:
-        virtual void drop(AOFile_Ptr aof, std::string filename)=0;
+        virtual void drop(const AOFile_Ptr aof, const std::string fname)=0;
     };
 const size_t AOF_BUFFER_SIZE = 1000;
 const size_t MAX_CLOSED_AOFS = 50;

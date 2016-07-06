@@ -169,30 +169,55 @@ public:
 		AofDropper(std::string storage_path) {
 			_storage_path = storage_path;
 		}
-      void drop(AOFile_Ptr aof, std::string fname) override {
+		static void drop(const AOFile_Ptr aof, const std::string&fname,const std::string&storage_path) {
+			auto target_name = utils::fs::filename(fname) + CAP_FILE_EXT;
+			if (dariadb::utils::fs::path_exists(utils::fs::append_path(storage_path, target_name))) {
+				return;
+			}
+
+			auto ma = aof->readAll();
+			CapacitorManager::instance()->append(target_name, ma);
+			Manifest::instance()->aof_rm(fname);
+			utils::fs::rm(utils::fs::append_path(storage_path, fname));
+		}
+      void drop(const AOFile_Ptr aof, const std::string fname) override {
 		  AsyncTask at = [fname,aof, this](const ThreadInfo&ti) {
+			  TKIND_CHECK(THREAD_COMMON_KINDS::CAP_DROP, ti.kind);
 			  TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
 			  LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
-			  TKIND_CHECK(THREAD_COMMON_KINDS::CAP_DROP, ti.kind);
-			  auto target_name = utils::fs::filename(fname) + CAP_FILE_EXT;
-			  if (dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, target_name))) {
-				  return;
-			  }
-			 
-			  //if (!dariadb::utils::fs::path_exists(utils::fs::append_path(_storage_path, fname))) {
-				 // //file dropped to COLA and COLA dropped to page.
-				 // return;
-			  //}
-			  auto ma = aof->readAll();
-			  CapacitorManager::instance()->append(target_name, ma);
-			  Manifest::instance()->aof_rm(fname);
-			  utils::fs::rm(utils::fs::append_path(_storage_path, fname));
+			  AofDropper::drop(aof, fname, _storage_path);
 			  LockManager::instance()->unlock(LockObjects::DROP_AOF);
 			 ;
 		  };
 
 		  ThreadManager::instance()->post(THREAD_COMMON_KINDS::CAP_DROP, AT(at));
       }
+
+	  // on start, rm COLA files with name exists AOF file.
+	  static void cleanStorage(std::string storagePath) {
+		  auto aofs_lst = utils::fs::ls(storagePath, AOF_FILE_EXT);
+		  auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
+
+		  for (auto&aof : aofs_lst) {
+			  auto aof_fname = utils::fs::filename(aof);
+			  for (auto&capf : caps_lst) {
+				  auto cap_fname= utils::fs::filename(capf);
+				  if (cap_fname == aof_fname) {
+					  logger_info("aof drop not finished: " << aof << "=>" << capf);
+					  logger_info("rm " << capf);
+					  utils::fs::rm(capf);
+					  Manifest::instance()->cola_rm(utils::fs::extract_filename(capf));
+					 /* logger_info("open " << aof);
+					  AOFile::Params aof_param(0,storagePath);
+					  
+					  AOFile_Ptr aof_ptr{ new AOFile(aof_param,aof, true) };
+					  logger_info("try to drop.");
+					  AofDropper::drop(aof_ptr, aof, storagePath);
+					  logger_info("dropped");*/
+				  }
+			  }
+		  }
+	  }
     };
 
   Private(storage::AOFManager::Params &aof_params,
@@ -201,8 +226,12 @@ public:
           dariadb::storage::Engine::Limits limits)
       : _page_manager_params(page_storage_params), _cap_params(cap_params),
         _limits(limits) {
+	  bool is_exists = false;
 	  if (!dariadb::utils::fs::path_exists(aof_params.path)) {
 		  dariadb::utils::fs::mkdir(aof_params.path);
+	  }
+	  else {
+		  is_exists = true;
 	  }
     _subscribe_notify.start();
 	
@@ -211,10 +240,18 @@ public:
 	LockManager::start(LockManager::Params());
 	Manifest::start(utils::fs::append_path(aof_params.path, MANIFEST_FILE_NAME));
 
-    PageManager::start(_page_manager_params);
-    AOFManager::start(aof_params);
-    CapacitorManager::start(_cap_params);
-    _aof_dropper=std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));
+	if (is_exists) {
+		AofDropper::cleanStorage(aof_params.path);
+	}
+
+	PageManager::start(_page_manager_params);
+	AOFManager::start(aof_params);
+	CapacitorManager::start(_cap_params);
+	if (is_exists) {
+		CapacitorManager::instance()->restore();
+	}
+
+	_aof_dropper=std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));
     auto pm = PageManager::instance();
     AOFManager::instance()->set_downlevel(_aof_dropper.get());
     CapacitorManager::instance()->set_downlevel(pm);

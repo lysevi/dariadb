@@ -22,8 +22,6 @@ CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
     dariadb::utils::fs::mkdir(_params.path);
   }*/
 
-  this->restore();
-
   auto files = cap_files();
   for (auto f : files) {
     auto hdr = Capacitor::readHeader(f);
