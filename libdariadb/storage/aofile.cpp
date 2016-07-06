@@ -26,7 +26,7 @@ public:
 
   Private(const AOFile::Params &params, const std::string &fname, bool readonly)
       : _params(params) {
-    _writed = 0;
+    _writed = AOFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
     is_full = false;
@@ -473,4 +473,24 @@ std::string AOFile::filename() const {
 
 Meas::MeasArray AOFile::readAll() {
   return _Impl->readAll();
+}
+
+size_t AOFile::writed(std::string fname) {
+	TIMECODE_METRICS(ctmd, "read", "AOFile::writed");
+	auto file = std::fopen(fname.c_str(), "rb");
+	if (file == nullptr) {
+		std::stringstream ss;
+		ss << "aof: file open error " << fname;
+		throw MAKE_EXCEPTION(ss.str());
+	}
+	struct stat buff;
+	size_t result = 0;
+	if (fstat(fileno(file), &buff) == 0) {
+		result=buff.st_size / sizeof(Meas);
+	}
+	else {
+		throw MAKE_EXCEPTION("stat error");
+	}
+	std::fclose(file);
+	return result;
 }

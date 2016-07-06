@@ -23,9 +23,18 @@ AOFManager::~AOFManager() {
 
 AOFManager::AOFManager(const Params &param) : _params(param) {
   _down = nullptr;
- /* if (!dariadb::utils::fs::path_exists(_params.path)) {
-    dariadb::utils::fs::mkdir(_params.path);
-  }*/
+  if (dariadb::utils::fs::path_exists(_params.path)) {
+	  auto aofs = Manifest::instance()->aof_list();
+	  for (auto f : aofs) {
+		  auto full_filename = utils::fs::append_path(param.path, f);
+		  if (AOFile::writed(full_filename) != param.max_size) {
+			  logger_info("AofManager: open exist file " << f);
+			  AOFile::Params params(_params.max_size, param.path);
+			  AOFile_Ptr p{ new AOFile(params, full_filename) };
+			  _aof = p;
+		  }
+	  }
+  }
   _buffer.resize(_params.buffer_size);
   _buffer_pos = 0;
 }
