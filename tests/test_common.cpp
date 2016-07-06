@@ -90,6 +90,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
   dariadb::Flag flg_val(0);
   dariadb::IdSet _all_ids_set;
+  dariadb::Time maxWritedTime = dariadb::MIN_TIME;
   for (auto i = from; i < to; i += step) {
     _all_ids_set.insert(id_val);
     m.id = id_val;
@@ -100,6 +101,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
     auto copies_for_id = (id_val == 0 ? copies_count / 2 : copies_count);
     for (size_t j = 1; j < copies_for_id + 1; j++) {
+		maxWritedTime = std::max(maxWritedTime, m.time);
       if (as->append(m).writed != 1) {
         throw MAKE_EXCEPTION("->append(m).writed != 1");
       }
@@ -123,6 +125,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     ++flg_val;
     for (size_t j = new_from; j < copies_count + 1; j++) {
       m.value = dariadb::Value(j);
+	  maxWritedTime = std::max(maxWritedTime, m.time);
       if (as->append(m).writed != 1) {
         throw MAKE_EXCEPTION("->append(m).writed != 1");
       }
@@ -136,6 +139,15 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   }
   if (minTime == dariadb::MAX_TIME && maxTime == dariadb::MIN_TIME) {
     throw MAKE_EXCEPTION("minTime == dariadb::MAX_TIME && maxTime == dariadb::MIN_TIME");
+  }
+  auto max_res = as->maxTime();
+  if ( max_res != maxWritedTime) {
+	  throw MAKE_EXCEPTION("max_res != maxWritedTime");
+  }
+
+  auto min_res = as->minTime();
+  if (min_res != from) {
+	  throw MAKE_EXCEPTION("(min_res != from)");
   }
   dariadb::Meas::MeasList current_mlist;
   dariadb::IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
