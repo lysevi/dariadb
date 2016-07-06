@@ -262,22 +262,25 @@ BOOST_AUTO_TEST_CASE(Worker) {
 }
 
 BOOST_AUTO_TEST_CASE(Metrics) {
-  BOOST_CHECK(dariadb::utils::MetricsManager::instance() != nullptr);
+  BOOST_CHECK(dariadb::utils::metrics::MetricsManager::instance() != nullptr);
   {
-    dariadb::utils::RAI_TimeMetric("group1", "metric2");
+    dariadb::utils::metrics::RAI_TimeMetric("group1", "metric2");
     {
-      dariadb::utils::RAI_TimeMetric("group1", "metric1");
+      dariadb::utils::metrics::RAI_TimeMetric("group1", "metric1");
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     {
-      dariadb::utils::RAI_TimeMetric("group1", "metric1");
+      dariadb::utils::metrics::RAI_TimeMetric("group1", "metric1");
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
+    using dariadb::utils::metrics::FloatMetric;
+    ADD_METRICS("group2", "template", dariadb::utils::metrics::Metric_Ptr{new FloatMetric(float(3.14))});
   }
-  auto dump=dariadb::utils::MetricsManager::instance()->to_string();
+  auto dump=dariadb::utils::metrics::MetricsManager::instance()->to_string();
   BOOST_CHECK(dump.size() > size_t(0));
 }
+
 BOOST_AUTO_TEST_CASE(ThreadsPool) {
 	using namespace dariadb::utils::async;
 	

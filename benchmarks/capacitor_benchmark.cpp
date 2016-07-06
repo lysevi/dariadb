@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
                                 dariadb::timeutil::current_time());
 	
 	if (metrics_enable) {
-		std::cout << "metrics:\n" << dariadb::utils::MetricsManager::instance()->to_string() << std::endl;
+        std::cout << "metrics:\n" << dariadb::utils::metrics::MetricsManager::instance()->to_string() << std::endl;
 	}
   }
   dariadb::storage::CapacitorManager::stop();

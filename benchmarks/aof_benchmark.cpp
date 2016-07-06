@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();
 	if (metrics_enable) {
-		std::cout << "metrics:\n" << dariadb::utils::MetricsManager::instance()->to_string() << std::endl;
+        std::cout << "metrics:\n" << dariadb::utils::metrics::MetricsManager::instance()->to_string() << std::endl;
 	}
   }
 }

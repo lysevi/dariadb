@@ -12,9 +12,9 @@
 #include <unordered_map>
 
 #ifdef ENABLE_METRICS
-#define TIMECODE_METRICS(var, grp, name) dariadb::utils::RAI_TimeMetric var(grp, name);
+#define TIMECODE_METRICS(var, grp, name) dariadb::utils::metrics::RAI_TimeMetric var(grp, name);
 #define ADD_METRICS(grp, name, m)                                                        \
-  dariadb::utils::MetricsManager::instance()->add(grp, name, m);
+  dariadb::utils::metrics::MetricsManager::instance()->add(grp, name, m);
 #else
 #define TIMECODE_METRICS(var, grp, name)
 #define ADD_METRICS(grp, name, m)
@@ -22,6 +22,8 @@
 
 namespace dariadb {
 namespace utils {
+namespace metrics{
+
 	const char METRIC_FIELD_SEPARATOR = ' ';
 	const int  METRIC_PARAM_WIDTH = 15;
 class Metric;
@@ -155,5 +157,6 @@ protected:
   std::string _group;
   std::string _name;
 };
+}
 }
 }

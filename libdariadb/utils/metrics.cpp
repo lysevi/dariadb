@@ -2,6 +2,7 @@
 #include <iomanip>
 
 using namespace dariadb::utils;
+using namespace dariadb::utils::metrics;
 
 std::unique_ptr<MetricsManager> MetricsManager::_instance = nullptr;
 #ifndef  MSVC
@@ -37,7 +38,7 @@ std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
 }
 #endif
 
-dariadb::utils::MetricsManager::~MetricsManager() {}
+MetricsManager::~MetricsManager() {}
 
 MetricsManager *MetricsManager::instance() {
   if (MetricsManager::_instance == nullptr) {

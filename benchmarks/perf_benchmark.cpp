@@ -336,7 +336,7 @@ int main(int argc, char *argv[]) {
 
   if (metrics_enable) {
     std::cout << "metrics:\n"
-              << dariadb::utils::MetricsManager::instance()->to_string()
+              << dariadb::utils::metrics::MetricsManager::instance()->to_string()
               << std::endl;
   }
 }
