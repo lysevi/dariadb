@@ -41,14 +41,19 @@ public:
     raw_res->_ids = this->_ids;
     raw_res->page_result = this->page_result;
     raw_res->cap_result = this->cap_result;
+	raw_res->aof_result = this->aof_result;
     raw_res->local_res = this->local_res;
     return Reader_ptr(raw_res);
   }
 
   void reset() override {
     TIMECODE_METRICS(ctmd, "read", "UnionReader::reset");
+	if (!local_res.empty()) {
+		res_it = local_res.begin();
+		return;
+	}
     // TOOD opt. use Reader::size for alloc.
-    bool need_sort = false;
+    /*bool need_sort = false;
     if (!page_result.empty() && !cap_result.empty()) {
       if ((page_result.front().time < cap_result.front().time) &&
           (page_result.back().time < cap_result.front().time)) {
@@ -57,8 +62,8 @@ public:
         need_sort = true;
       }
     }
-    if (need_sort) {
-      std::vector<Meas> for_srt(page_result.size() + cap_result.size());
+    if (need_sort)*/ {
+      std::vector<Meas> for_srt(page_result.size() + cap_result.size()+aof_result.size());
       size_t pos = 0;
       for (auto v : page_result) {
         for_srt[pos++] = v;
@@ -66,18 +71,22 @@ public:
       for (auto v : cap_result) {
         for_srt[pos++] = v;
       }
+	  for (auto v : aof_result) {
+		  for_srt[pos++] = v;
+	  }
 
       std::sort(for_srt.begin(), for_srt.end(),
                 [](Meas l, Meas r) { return l.time < r.time; });
       local_res = dariadb::Meas::MeasList(for_srt.begin(), for_srt.end());
-    } else {
+    } /*else {
       std::copy(std::begin(page_result), std::end(page_result),
                 std::back_inserter(local_res));
       std::copy(std::begin(cap_result), std::end(cap_result),
                 std::back_inserter(local_res));
-    }
+    }*/
     page_result.clear();
     cap_result.clear();
+	aof_result.clear();
 
     res_it = local_res.begin();
   }
@@ -88,6 +97,7 @@ public:
   dariadb::Meas::MeasList::const_iterator res_it;
   dariadb::Meas::MeasList page_result;
   dariadb::Meas::MeasList cap_result;
+  dariadb::Meas::MeasList aof_result;
 
   dariadb::Flag _flag;
   dariadb::Time _from;
@@ -416,13 +426,12 @@ public:
 
       for (auto &m : aof_result) {
         if (m.id == id) {
-          raw_res->cap_result.push_back(m);
+          raw_res->aof_result.push_back(m);
         }
 	  }
 	  aof_result.erase(std::remove_if(aof_result.begin(), aof_result.end(),
 		  [id](const Meas &m) { return m.id == id; }),
 		  aof_result.end());
-
       raw_result->add_rdr(Reader_ptr{raw_res});
     }
     raw_result->reset();
