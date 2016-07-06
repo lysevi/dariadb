@@ -133,12 +133,23 @@ void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname,
 void CapacitorManager::drop_part_unsafe(size_t count) {
     TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
     auto closed = this->closed_caps();
+	using File2Header = std::tuple<std::string, Capacitor::Header>;
+	std::vector<File2Header> file2headers{ closed.size() };
 
+	size_t pos = 0;
+	for (auto f : closed) {
+		auto cheader = Capacitor::readHeader(f);
+		file2headers[pos] = std::tie(f, cheader);
+		++pos;
+	}
+	std::sort(file2headers.begin(), file2headers.end(), 
+		[](const File2Header&l, const File2Header&r) {
+		return std::get<1>(l).minTime < std::get<1>(r).minTime;
+	});
     auto drop_count = std::min(closed.size(), count);
-
+	
     for (size_t i = 0; i < drop_count; ++i) {
-      auto f = closed.front();
-      closed.pop_front();
+		std::string f = std::get<0>(file2headers[i]);
       this->drop_cap(f, _down);
     }
 }
