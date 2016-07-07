@@ -810,7 +810,7 @@ void dariadb::storage::Capacitor::drop_to_stor(MeasWriter *stor) {
   _Impl->drop_to_stor(stor);
 }
 
-void dariadb::storage::Capacitor::restore() {
+void dariadb::storage::Capacitor::fsck() {
 	_Impl->restore();
 }
 

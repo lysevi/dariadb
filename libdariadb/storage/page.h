@@ -35,7 +35,7 @@ public:
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
   ~Page();
-  void restore();
+  void fsck();
   // PM
   bool add_to_target_chunk(const dariadb::Meas &m);
   /*bool append(const ChunksList &ch) override;*/

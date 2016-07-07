@@ -62,6 +62,7 @@ public:
 
   append_result append(const Meas &value) override;
 
+  void fsck();
 private:
   static PageManager *_instance;
   class Private;

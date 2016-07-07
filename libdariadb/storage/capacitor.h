@@ -86,7 +86,7 @@ public:
   void drop_to_stor(MeasWriter *stor);
 
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
-  void restore();
+  void fsck();
   void close();
 protected:
   class Private;

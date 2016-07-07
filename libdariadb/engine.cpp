@@ -248,7 +248,7 @@ public:
 	AOFManager::start(aof_params);
 	CapacitorManager::start(_cap_params);
 	if (is_exists) {
-		CapacitorManager::instance()->restore();
+		CapacitorManager::instance()->fsck();
 	}
 
 	_aof_dropper=std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));

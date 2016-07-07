@@ -36,14 +36,14 @@ CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
   }*/
 }
 
-void CapacitorManager::restore() {
+void CapacitorManager::fsck() {
 	auto files = cap_files();
 	for (auto f : files) {
 		auto hdr = Capacitor::readHeader(f);
 		if (!hdr.is_closed && hdr.is_open_to_write) {
 			auto p = Capacitor::Params(_params.B, _params.path);
 			auto c = Capacitor_Ptr{ new Capacitor(p, f) };
-			c->restore();
+			c->fsck();
 		}
 	}
 }

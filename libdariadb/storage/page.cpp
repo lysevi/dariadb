@@ -128,7 +128,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
   return result;
 }
 
-void Page::restore() {
+void Page::fsck() {
   using dariadb::timeutil::to_string;
   logger_info("Page: restore after crash " << this->filename);
 
