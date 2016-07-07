@@ -30,8 +30,8 @@ TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap&task) {
       task.task(ti);
       res->unlock();
     } catch (std::exception&ex) {
-      logger("*** async task exception:"<<task.parent_function<<" file:"<<task.code_file<<" line:"<<task.code_line);
-      logger("*** what:"<<ex.what());
+      logger_fatal("*** async task exception:"<<task.parent_function<<" file:"<<task.code_file<<" line:"<<task.code_line);
+      logger_fatal("*** what:"<<ex.what());
       res->unlock();
       throw;
     }
