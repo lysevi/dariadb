@@ -48,5 +48,6 @@ ThreadManager::~ThreadManager() {
             kv.second->stop();
         }
         _pools.clear();
+        _stoped=true;
     }
 }
