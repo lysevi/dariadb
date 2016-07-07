@@ -36,6 +36,7 @@ public:
     last_id = 0;
 
     _cur_page = open_last_openned();
+    _under_transaction=false;
 	if (_cur_page != nullptr) {
 		_transaction_next_number = _cur_page->header->transaction+1;
 	}
@@ -392,6 +393,7 @@ public:
 
   uint32_t begin_transaction() {
 	  std::lock_guard<std::mutex> lg(_locker);
+
 	  if (_under_transaction) {
 		  throw MAKE_EXCEPTION("transaction already openned");
 	  }
