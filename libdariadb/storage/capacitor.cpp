@@ -203,7 +203,8 @@ public:
     _header->maxTime = dariadb::MIN_TIME;
     _header->id_bloom = bloom_empty<dariadb::Id>();
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
-	
+	_header->transaction_number = uint32_t(0);
+
     auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
     auto headers_pos =
         reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
@@ -728,6 +729,9 @@ public:
     return sub_res;
   }
 
+  Header* header() {
+	  return _header;
+  }
 protected:
   Capacitor::Params _params;
 
@@ -763,6 +767,11 @@ Capacitor::Header Capacitor::readHeader(std::string file_name) {
   istream.close();
   return result;
 }
+
+Capacitor::Header*Capacitor::header() {
+	return _Impl->header();
+}
+
 dariadb::Time Capacitor::minTime() {
   return _Impl->minTime();
 }

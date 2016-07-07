@@ -430,8 +430,7 @@ void dariadb::storage::Page::commit_transaction(uint32_t num) {
 		++pos;
 		byte_it += step;
 	}
-	header->transaction = 0;
-	_index->iheader->transaction = 0;
+	
 	this->page_mmap->flush();
 	this->_index->index_mmap->flush();
 
@@ -469,8 +468,7 @@ void dariadb::storage::Page::rollback_transaction(uint32_t num) {
 		++pos;
 		byte_it += step;
 	}
-	header->transaction = 0;
-	_index->iheader->transaction = 0;
+	
 	this->page_mmap->flush();
 	this->_index->index_mmap->flush();
 

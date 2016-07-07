@@ -249,7 +249,8 @@ int main(int argc, char *argv[]) {
       std::cout << "flush time: " << elapsed << std::endl;
     }
 
-    if(!readonly){
+    //if(!readonly)
+	{
 	  auto ccount =size_t(raw_ptr->queue_size().cola_count * 0.5);
       std::cout << "drop part caps to "<<ccount<<"..." << std::endl;
       stop_info = false;

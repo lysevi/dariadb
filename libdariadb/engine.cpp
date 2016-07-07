@@ -233,8 +233,15 @@ public:
 				LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
 				auto p = Capacitor::Params(0, "");
 				auto cap = Capacitor_Ptr{ new Capacitor{ p, fname, false } };
+				
+				auto trans=PageManager::instance()->begin_transaction();
+				auto cap_header = cap->header();
+				cap_header->transaction_number = trans;
+				cap->flush();
+
 				cap->drop_to_stor(PageManager::instance());
 				cap = nullptr;
+				PageManager::instance()->commit_transaction(trans);
 				auto without_path = utils::fs::extract_filename(fname);
 				Manifest::instance()->cola_rm(without_path);
 				utils::fs::rm(fname);
@@ -242,6 +249,18 @@ public:
 				LockManager::instance()->unlock(LockObjects::DROP_CAP);
 			};
 			ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+		}
+
+		static void cleanStorage(std::string storagePath) {
+			auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
+			for (auto c : caps_lst) {
+				auto ch=Capacitor::readHeader(c);
+				if (ch.transaction_number != 0) {
+					auto cap_fname = utils::fs::filename(c);
+					logger_info("fsck: rollback #" << ch.transaction_number<<" for "<<cap_fname);
+					PageManager::instance()->rollback_transaction(ch.transaction_number);
+				}
+			}
 		}
 	};
   Private(storage::AOFManager::Params &aof_params,
@@ -269,6 +288,9 @@ public:
 	}
 
 	PageManager::start(_page_manager_params);
+	if (is_exists) {
+		CapDrooper::cleanStorage(aof_params.path);
+	}
 	AOFManager::start(aof_params);
 	CapacitorManager::start(_cap_params);
 	if (is_exists) {

@@ -66,6 +66,7 @@ public:
   Capacitor(const Capacitor::Params &params, const std::string &fname,
             bool readonly = false);
   static Header readHeader(std::string file_name);
+  Header*header();
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(const QueryInterval &q) override;
   Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
@@ -89,6 +90,7 @@ public:
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
   void fsck();
   void close();
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

@@ -36,6 +36,9 @@ public:
     last_id = 0;
 
     _cur_page = open_last_openned();
+	if (_cur_page != nullptr) {
+		_transaction_next_number = _cur_page->header->transaction+1;
+	}
     /*this->start_async();*/
   }
 
@@ -366,7 +369,9 @@ public:
 
     while (true) {
       auto cur_page = this->get_cur_page();
-	  cur_page->header->transaction = _transaction_next_number;
+	  if (_under_transaction) {
+		  cur_page->header->transaction = _transaction_next_number;
+	  }
       if (update_id) {
         update_id = false;
       }
@@ -430,7 +435,7 @@ protected:
   uint64_t last_id;
   bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
-  std::atomic_uint32_t _transaction_next_number;
+  std::atomic<uint32_t> _transaction_next_number;
   bool _under_transaction;
 };
 
