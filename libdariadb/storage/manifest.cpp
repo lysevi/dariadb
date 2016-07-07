@@ -107,6 +107,7 @@ void dariadb::storage::Manifest::write_file(const std::string &fname,
   std::fstream fs;
   fs.open(fname, std::ios::out);
   fs << content;
+  fs.flush();
   fs.close();
 }
 

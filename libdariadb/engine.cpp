@@ -180,15 +180,14 @@ public:
 	}
 	void drop(const AOFile_Ptr aof, const std::string fname) override {
 		AsyncTask at = [fname, aof, this](const ThreadInfo&ti) {
-			TKIND_CHECK(THREAD_COMMON_KINDS::CAP_DROP, ti.kind);
+			TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
 			TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
 			LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
 			AofDropper::drop(aof, fname, _storage_path);
 			LockManager::instance()->unlock(LockObjects::DROP_AOF);
-			;
 		};
 
-		ThreadManager::instance()->post(THREAD_COMMON_KINDS::CAP_DROP, AT(at));
+		ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
 	}
 
 
@@ -223,16 +222,26 @@ public:
 
 class Engine::Private {
 public:
-	class CapDroop : public CapacitorManager::CapDropper {
+	class CapDrooper : public CapacitorManager::CapDropper {
 	public:
+		
 		void drop(const std::string&fname) override {
-			auto p = Capacitor::Params(0, "");
-			auto cap = Capacitor_Ptr{ new Capacitor{ p, fname, false } };
-			cap->drop_to_stor(PageManager::instance());
-			cap = nullptr;
-			utils::fs::rm(fname);
-			auto without_path = utils::fs::extract_filename(fname);
-			Manifest::instance()->cola_rm(without_path);
+			AsyncTask at = [fname, this](const ThreadInfo&ti) {
+				TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+				TIMECODE_METRICS(ctmd, "drop", "CapDrooper::drop");
+				//logger_info("cap:drop: begin dropping " << fname);
+				LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
+				auto p = Capacitor::Params(0, "");
+				auto cap = Capacitor_Ptr{ new Capacitor{ p, fname, false } };
+				cap->drop_to_stor(PageManager::instance());
+				cap = nullptr;
+				auto without_path = utils::fs::extract_filename(fname);
+				Manifest::instance()->cola_rm(without_path);
+				utils::fs::rm(fname);
+				//logger_info("cap:drop: end.");
+				LockManager::instance()->unlock(LockObjects::DROP_CAP);
+			};
+			ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
 		}
 	};
   Private(storage::AOFManager::Params &aof_params,
@@ -268,8 +277,8 @@ public:
 	}
 
 	_aof_dropper=std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));
-	_cap_dropper = std::unique_ptr<CapDroop>(new CapDroop());
-    auto pm = PageManager::instance();
+	_cap_dropper = std::unique_ptr<CapDrooper>(new CapDrooper());
+    
     AOFManager::instance()->set_downlevel(_aof_dropper.get());
     CapacitorManager::instance()->set_downlevel(_cap_dropper.get());
     _next_query_id = Id();
@@ -634,7 +643,7 @@ protected:
   Id _next_query_id;
   std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
   std::unique_ptr<AofDropper> _aof_dropper;
-  std::unique_ptr<CapDroop> _cap_dropper;
+  std::unique_ptr<CapDrooper> _cap_dropper;
 };
 
 Engine::Engine(storage::AOFManager::Params aof_params,

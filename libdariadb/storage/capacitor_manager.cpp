@@ -118,6 +118,8 @@ std::list<std::string> CapacitorManager::closed_caps() {
 }
 
 void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname) {
+	auto without_path = utils::fs::extract_filename(fname);
+	_files_send_to_drop.insert(without_path);
   _down->drop(fname);
 }
 
@@ -129,20 +131,34 @@ void CapacitorManager::drop_part_unsafe(size_t count) {
 
 	size_t pos = 0;
 	for (auto f : closed) {
-		auto cheader = Capacitor::readHeader(f);
-		file2headers[pos] = std::tie(f, cheader);
-		++pos;
+		auto without_path = utils::fs::extract_filename(f);
+		if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+			auto cheader = Capacitor::readHeader(f);
+			file2headers[pos] = std::tie(f, cheader);
+			++pos;
+		}
 	}
-	std::sort(file2headers.begin(), file2headers.end(), 
+	std::sort(file2headers.begin(), file2headers.begin()+pos, 
 		[](const File2Header&l, const File2Header&r) {
 		return std::get<1>(l).minTime < std::get<1>(r).minTime;
 	});
-    auto drop_count = std::min(closed.size(), count);
+    auto drop_count = std::min(pos, count);
 	
     for (size_t i = 0; i < drop_count; ++i) {
 		std::string f = std::get<0>(file2headers[i]);
       this->drop_cap(f);
     }
+
+	//clean set of sended to drop files.
+	auto caps_exists = Manifest::instance()->cola_list();
+	std::set<std::string> caps_exists_set{ caps_exists.begin(),caps_exists.end() };
+	std::set<std::string> new_sended_files;
+	for (auto&v : _files_send_to_drop) {
+		if (caps_exists_set.find(v) != caps_exists_set.end()) {
+			new_sended_files.insert(v);
+		}
+	}
+	_files_send_to_drop = new_sended_files;
 }
 
 void CapacitorManager::drop_part(size_t count) {

@@ -19,6 +19,9 @@
 class Moc_Dropper : public dariadb::storage::CapacitorManager::CapDropper {
 public:
 	size_t calls;
+	Moc_Dropper() {
+		calls = 0;
+	}
   virtual void drop(const std::string &) override{
 	  calls++;
   }
