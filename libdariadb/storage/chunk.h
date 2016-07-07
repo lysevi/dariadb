@@ -20,7 +20,6 @@ struct ChunkHeader {
   bool is_zipped : 1;
   bool is_sorted : 1;
   bool is_readonly : 1;
-  bool is_transaction_closed : 1;
   Meas first, last;
   Time minTime, maxTime;
   Id minId, maxId;

@@ -22,6 +22,7 @@ struct PageHeader {
   uint64_t max_chunk_id; // max(chunk->id)
 
   uint32_t transaction;
+  bool _under_transaction;
 };
 #pragma pack(pop)
 

@@ -106,9 +106,6 @@ void ZippedChunk::close() {
   header->is_readonly = true;
 
   header->crc = this->calc_checksum();
-  if (header->transaction != 0) {
-	  header->is_transaction_closed = false;
-  }
   assert(header->crc != 0);
 }
 

@@ -39,6 +39,9 @@ public:
 	if (_cur_page != nullptr) {
 		_transaction_next_number = _cur_page->header->transaction+1;
 	}
+	else {
+		_transaction_next_number = 0;
+	}
     /*this->start_async();*/
   }
 
@@ -372,6 +375,7 @@ public:
 	  if (_under_transaction) {
 		  cur_page->header->transaction = _transaction_next_number;
 	  }
+	  cur_page->header->_under_transaction = _under_transaction;
       if (update_id) {
         update_id = false;
       }

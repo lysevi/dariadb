@@ -66,7 +66,7 @@ public:
     for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
 
       auto _index_it = link->index[pos];
-      if (!_index_it.is_init || !_index_it.is_transaction_closed) {
+      if (!_index_it.is_init || _index_it.transaction!=0) {
         continue;
       }
       if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||

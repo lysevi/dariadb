@@ -210,12 +210,8 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       this->header->max_chunk_id++;
       ptr->header->id = this->header->max_chunk_id;
-	  ptr->header->transaction = header->transaction;
-	  if (header->transaction != 0) {
-		  ptr->header->is_transaction_closed = false;
-	  }
-	  else {
-		  ptr->header->is_transaction_closed = true;
+	  if (header->_under_transaction) {
+		  ptr->header->transaction = header->transaction;
 	  }
       _openned_chunk.ch = ptr;
       flush_current_chunk();
@@ -267,7 +263,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   cur_index->id_bloom = ch->header->id_bloom;
   cur_index->flag_bloom = ch->header->flag_bloom;
   cur_index->transaction = ch->header->transaction;
-  cur_index->is_transaction_closed = ch->header->is_transaction_closed;
 
   auto kv = std::make_pair(cur_index->maxTime, pos_index);
   _index->_itree.insert(kv);
@@ -402,13 +397,13 @@ dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
 void dariadb::storage::Page::flush() {}
 
 void dariadb::storage::Page::commit_transaction(uint32_t num) {
-	logger_info("page: commit transaction " << num << " " << this->filename);
+	//logger_info("page: commit transaction " << num << " " << this->filename);
 
 	auto step = this->header->chunk_size + sizeof(ChunkHeader);
 	auto byte_it = this->chunks;
-	auto end = this->chunks + this->header->chunk_per_storage * step;
+	auto end = this->chunks + this->header->addeded_chunks * step;
 	size_t pos = 0;
-	size_t chunks_count = 0;
+	//size_t chunks_count = 0;
 	while (true) {
 		if (byte_it == end) {
 			break;
@@ -420,28 +415,28 @@ void dariadb::storage::Page::commit_transaction(uint32_t num) {
 			Chunk_Ptr ptr = nullptr;
 			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
 			if (ptr->header->transaction == num) {
-				ptr->header->is_transaction_closed = true;
-				_index->index[pos].is_transaction_closed= true;
+				ptr->header->transaction = 0;
+				_index->index[pos].transaction = 0;
 				this->page_mmap->flush();
 				this->_index->index_mmap->flush();
-				++chunks_count;
+				//++chunks_count;
 			}
 		}
 		++pos;
 		byte_it += step;
 	}
-	
+	header->_under_transaction = false;
 	this->page_mmap->flush();
 	this->_index->index_mmap->flush();
 
-	logger_info("commit in " << chunks_count << " chunks.");
+	//logger_info("commit in " << chunks_count << " chunks.");
 }
 
 void dariadb::storage::Page::rollback_transaction(uint32_t num) {
 	logger_info("page: rollback transaction " << num<<" "<<this->filename);
 	auto step = this->header->chunk_size + sizeof(ChunkHeader);
 	auto byte_it = this->chunks;
-	auto end = this->chunks + this->header->chunk_per_storage * step;
+	auto end = this->chunks + this->header->addeded_chunks * step;
 	size_t pos = 0;
 	size_t chunks_count = 0;
 	while (true) {
@@ -468,7 +463,7 @@ void dariadb::storage::Page::rollback_transaction(uint32_t num) {
 		++pos;
 		byte_it += step;
 	}
-	
+	header->_under_transaction = false;
 	this->page_mmap->flush();
 	this->_index->index_mmap->flush();
 
