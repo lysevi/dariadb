@@ -151,6 +151,12 @@ void LockManager::unlock(const LockObjects &lo) {
   }
 }
 
+void LockManager::unlock(const std::vector<LockObjects>&los){
+    for(auto lo:los){
+        this->unlock(lo);
+    }
+}
+
 void LockManager::lock_by_kind(const LockKind &lk, const LockObjects &lo) {
   auto lock_target = get_or_create_lock_object(lo);
   switch (lk) {
