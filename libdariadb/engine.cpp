@@ -651,9 +651,9 @@ public:
   }
 
   void drop_part_caps(size_t count){
-	  LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
+
       CapacitorManager::instance()->drop_part(count);
-	  LockManager::instance()->unlock(LockObjects::DROP_CAP);
+
   }
 protected:
   storage::PageManager::Params _page_manager_params;
