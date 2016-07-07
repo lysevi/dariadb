@@ -403,7 +403,6 @@ public:
 
 	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-	  dariadb::Time res = dariadb::MIN_TIME;
 	  for (auto pname : page_list) {
 		  auto p = Page::open(pname, false);
 		  p->commit_transaction(num);
@@ -419,7 +418,6 @@ public:
 
 	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-	  dariadb::Time res = dariadb::MIN_TIME;
 	  for (auto pname : page_list) {
 		  auto p = Page::open(pname, false);
 		  p->rollback_transaction(num);
