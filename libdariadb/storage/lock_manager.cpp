@@ -104,11 +104,12 @@ void LockManager::lock(const LockKind &lk, const std::vector<LockObjects> &los) 
             break;
           }
           case LockKind::READ: {
-            rw_mtx[i]->mutex.unlock_shared();
+            rw_mtx[j]->mutex.unlock_shared();
             break;
           }
           };
         }
+		success = false;
         break;
       } else {
         success = true;
