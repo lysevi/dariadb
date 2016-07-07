@@ -359,7 +359,7 @@ BOOST_AUTO_TEST_CASE(PageManagerTransactions) {
 	const size_t page_count = 2;
 
 	auto trans_num = PageManager::instance()->begin_transaction();
-	BOOST_CHECK_NE(trans_num, int32_t(0));
+    BOOST_CHECK_NE(trans_num, uint32_t(0));
 
 	while (dariadb::utils::fs::ls(storagePath, ".page").size() <= page_count) {
 		t = add_meases(1, t, chunks_size / 10, addeded);
