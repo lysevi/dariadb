@@ -62,7 +62,7 @@ public:
 
   append_result append(const Meas &value) override;
 
-  void fsck();
+  void fsck(bool force_check = true); //if false - check files openned for write-only
 private:
   static PageManager *_instance;
   class Private;

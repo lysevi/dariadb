@@ -31,7 +31,7 @@ File struct:
 #include <list>
 #include <tuple>
 
-const std::string LOG_MSG_PREFIX = "Capacitor: ";
+const std::string LOG_MSG_PREFIX = "fsck: capacitor ";
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -270,13 +270,13 @@ public:
    // }
   }
 
-  void restore() {
+  void fsck() {
     /* if (_is_readonly) {
              return;
      }*/
     using dariadb::timeutil::to_string;
 
-    logger_info(LOG_MSG_PREFIX << "restore after crash");
+    
     Meas::MeasList readed;
     size_t dropped = 0;
 
@@ -296,15 +296,17 @@ public:
         }
       }
     }
-    logger_info(LOG_MSG_PREFIX << "dropped " << dropped << " values.");
-    if (!readed.empty()) {
-      logger_info(LOG_MSG_PREFIX << "rewrite " << readed.size() << " values.");
-      this->_header->_memvalues_pos = 0;
-      this->_header->_writed = 0;
-      for (auto &m : readed) {
-        this->append(m);
-      }
-    }
+	if (dropped != 0) {
+		logger_info(LOG_MSG_PREFIX << "dropped " << dropped << " values.");
+		if (!readed.empty()) {
+			logger_info(LOG_MSG_PREFIX << "rewrite " << readed.size() << " values.");
+			this->_header->_memvalues_pos = 0;
+			this->_header->_writed = 0;
+			for (auto &m : readed) {
+				this->append(m);
+			}
+		}
+	}
   }
 
   append_result append_unsafe(const Meas &value) {
@@ -811,7 +813,7 @@ void dariadb::storage::Capacitor::drop_to_stor(MeasWriter *stor) {
 }
 
 void dariadb::storage::Capacitor::fsck() {
-	_Impl->restore();
+	_Impl->fsck();
 }
 
 void dariadb::storage::Capacitor::close() {

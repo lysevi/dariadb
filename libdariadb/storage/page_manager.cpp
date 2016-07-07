@@ -31,7 +31,6 @@ public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
-    fsck();
     update_id = false;
     last_id = 0;
 
@@ -39,7 +38,7 @@ public:
     /*this->start_async();*/
   }
 
-  void fsck() {
+  void fsck(bool force_check) {
     if (!utils::fs::path_exists(_param.path)) {
       return;
     }
@@ -49,7 +48,7 @@ public:
     for (auto n : pages) {
       auto file_name = utils::fs::append_path(_param.path, n);
       auto hdr = Page::readHeader(file_name);
-      if (!hdr.is_closed && hdr.is_open_to_write) {
+      if(force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
         auto res = Page_Ptr{Page::open(file_name)};
         res->fsck();
         res = nullptr;
@@ -457,6 +456,6 @@ dariadb::append_result dariadb::storage::PageManager::append(const Meas &value) 
   return impl->append(value);
 }
 
-void PageManager::fsck() {
-	return impl->fsck();
+void PageManager::fsck(bool force_check) {
+	return impl->fsck(force_check);
 }

@@ -69,7 +69,7 @@ public:
   size_t files_count() const;
   void set_downlevel(MeasWriter *down) { _down = down; }
 
-  void fsck();
+  void fsck(bool force_check=true); //if false - check files openned for write-only
   void drop_part(size_t count);
 protected:
   void drop_part_unsafe(size_t count);

@@ -130,7 +130,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 
 void Page::fsck() {
   using dariadb::timeutil::to_string;
-  logger_info("Page: restore after crash " << this->filename);
+  logger_info("fsck: restore page after crash " << this->filename);
 
   auto step = this->header->chunk_size + sizeof(ChunkHeader);
   auto byte_it = this->chunks;
@@ -147,7 +147,7 @@ void Page::fsck() {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
       if (!ptr->check_checksum()) {
-        logger_fatal("Page: remove broken chunk #"
+        logger_fatal("fsck: page remove broken chunk #"
                      << ptr->header->id << " id:" << ptr->header->first.id << " time: ["
                      << to_string(ptr->header->minTime) << " : "
                      << to_string(ptr->header->maxTime) << "]");

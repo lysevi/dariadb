@@ -8,7 +8,7 @@
 namespace dariadb_bench {
 
 const size_t total_threads_count = 5;
-const size_t iteration_count = 10000;
+const size_t iteration_count = 5000;
 const size_t total_readers_count = 1;
 const size_t id_per_thread = 100;
 const size_t all_writes = total_threads_count * iteration_count* id_per_thread;
