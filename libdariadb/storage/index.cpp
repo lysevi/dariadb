@@ -66,7 +66,7 @@ public:
     for (uint32_t pos = 0; pos < this->link->iheader->count; ++pos) {
 
       auto _index_it = link->index[pos];
-      if (!_index_it.is_init) {
+      if (!_index_it.is_init || !_index_it.is_transaction_closed) {
         continue;
       }
       if (dariadb::utils::inInterval(_index_it.minTime, _index_it.maxTime, _from) ||
@@ -194,7 +194,8 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->header->maxTime);
-
+  iheader->transaction = std::max(iheader->transaction, ptr->header->transaction);
+  
   for (auto it = _itree.lower_bound(cur_index->maxTime);
        it != _itree.upper_bound(cur_index->maxTime); ++it) {
     if ((it->first == cur_index->maxTime) && (it->second == pos)) {

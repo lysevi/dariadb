@@ -63,6 +63,10 @@ public:
   append_result append(const Meas &value) override;
 
   void fsck(bool force_check = true); //if false - check files openned for write-only
+
+  uint32_t begin_transaction();
+  void commit_transaction(uint32_t num);
+  void rollback_transaction(uint32_t num);
 private:
   static PageManager *_instance;
   class Private;

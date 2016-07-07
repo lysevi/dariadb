@@ -20,6 +20,7 @@ struct IndexHeader {
   bool is_closed;
   uint64_t id_bloom;   // bloom filter of Meas.id
   uint64_t flag_bloom; // bloom filter of Meas.flag
+  uint32_t transaction; 
 };
 
 struct IndexReccord {
@@ -31,6 +32,8 @@ struct IndexReccord {
   // bool is_readonly;         // chunk is full?
   uint64_t offset; // offset in bytes of chunk in page
   bool is_init;    // is init :)
+  bool  is_transaction_closed : 1;
+  uint32_t transaction; 
 };
 #pragma pack(pop)
 

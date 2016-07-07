@@ -31,6 +31,7 @@ public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
+	  _transaction_next_number = 0;
     update_id = false;
     last_id = 0;
 
@@ -365,6 +366,7 @@ public:
 
     while (true) {
       auto cur_page = this->get_cur_page();
+	  cur_page->header->transaction = _transaction_next_number;
       if (update_id) {
         update_id = false;
       }
@@ -379,6 +381,47 @@ public:
     }
   }
 
+  uint32_t begin_transaction() {
+	  std::lock_guard<std::mutex> lg(_locker);
+	  if (_under_transaction) {
+		  throw MAKE_EXCEPTION("transaction already openned");
+	  }
+	  _transaction_next_number++;
+	  _under_transaction = true;
+	  return _transaction_next_number;
+  }
+
+  void commit_transaction(uint32_t num) {
+	  std::lock_guard<std::mutex> lg(_locker);
+
+	  auto pred = [num](const IndexHeader &h) { return h.transaction==num; };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+
+	  dariadb::Time res = dariadb::MIN_TIME;
+	  for (auto pname : page_list) {
+		  auto p = Page::open(pname, false);
+		  p->commit_transaction(num);
+		  delete p;
+	  }
+	  _under_transaction = false;
+  }
+
+  void rollback_transaction(uint32_t num) {
+	  std::lock_guard<std::mutex> lg(_locker);
+
+	  auto pred = [num](const IndexHeader &h) { return true; };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+
+	  dariadb::Time res = dariadb::MIN_TIME;
+	  for (auto pname : page_list) {
+		  auto p = Page::open(pname, false);
+		  p->rollback_transaction(num);
+		  delete p;
+	  }
+	  _under_transaction = false;
+  }
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
@@ -387,6 +430,8 @@ protected:
   uint64_t last_id;
   bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
+  std::atomic_uint32_t _transaction_next_number;
+  bool _under_transaction;
 };
 
 PageManager::PageManager(const PageManager::Params &param)
@@ -458,4 +503,16 @@ dariadb::append_result dariadb::storage::PageManager::append(const Meas &value) 
 
 void PageManager::fsck(bool force_check) {
 	return impl->fsck(force_check);
+}
+
+uint32_t  PageManager::begin_transaction() {
+	return impl->begin_transaction();
+}
+
+void  PageManager::commit_transaction(uint32_t num) {
+	impl->commit_transaction(num);
+}
+
+void  PageManager::rollback_transaction(uint32_t num) {
+	impl->rollback_transaction(num);
 }

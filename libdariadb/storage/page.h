@@ -20,6 +20,8 @@ struct PageHeader {
   dariadb::Time minTime;
   dariadb::Time maxTime;
   uint64_t max_chunk_id; // max(chunk->id)
+
+  uint32_t transaction;
 };
 #pragma pack(pop)
 
@@ -55,6 +57,8 @@ public:
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
 
+  void commit_transaction(uint32_t num);
+  void rollback_transaction(uint32_t num);
 private:
   void flush_current_chunk();
   void init_chunk_index_rec(Chunk_Ptr ch);

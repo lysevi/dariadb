@@ -130,7 +130,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 
 void Page::fsck() {
   using dariadb::timeutil::to_string;
-  logger_info("fsck: restore page after crash " << this->filename);
+  logger_info("fsck: page " << this->filename);
 
   auto step = this->header->chunk_size + sizeof(ChunkHeader);
   auto byte_it = this->chunks;
@@ -146,8 +146,8 @@ void Page::fsck() {
     if (info->is_init) {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-      if (!ptr->check_checksum()) {
-        logger_fatal("fsck: page remove broken chunk #"
+      if (ptr->header->transaction!=0 || !ptr->check_checksum()) {
+        logger_fatal("fsck: remove broken chunk #"
                      << ptr->header->id << " id:" << ptr->header->first.id << " time: ["
                      << to_string(ptr->header->minTime) << " : "
                      << to_string(ptr->header->maxTime) << "]");
@@ -159,6 +159,8 @@ void Page::fsck() {
     ++pos;
     byte_it += step;
   }
+  header->transaction = 0;
+  _index->iheader->transaction = 0;
 }
 
 bool Page::add_to_target_chunk(const dariadb::Meas &m) {
@@ -208,6 +210,13 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       this->header->max_chunk_id++;
       ptr->header->id = this->header->max_chunk_id;
+	  ptr->header->transaction = header->transaction;
+	  if (header->transaction != 0) {
+		  ptr->header->is_transaction_closed = false;
+	  }
+	  else {
+		  ptr->header->is_transaction_closed = true;
+	  }
       _openned_chunk.ch = ptr;
       flush_current_chunk();
       init_chunk_index_rec(ptr);
@@ -243,6 +252,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
 
   header->pos += header->chunk_size + sizeof(ChunkHeader);
   header->addeded_chunks++;
+  header->transaction = std::max(header->transaction, ch->header->transaction);
 
   _index->iheader->minTime = std::min(_index->iheader->minTime, ch->header->minTime);
   _index->iheader->maxTime = std::max(_index->iheader->maxTime, ch->header->maxTime);
@@ -256,6 +266,8 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   cur_index->maxTime = cur_index->maxTime;
   cur_index->id_bloom = ch->header->id_bloom;
   cur_index->flag_bloom = ch->header->flag_bloom;
+  cur_index->transaction = ch->header->transaction;
+  cur_index->is_transaction_closed = ch->header->is_transaction_closed;
 
   auto kv = std::make_pair(cur_index->maxTime, pos_index);
   _index->_itree.insert(kv);
@@ -388,3 +400,79 @@ dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
 }
 
 void dariadb::storage::Page::flush() {}
+
+void dariadb::storage::Page::commit_transaction(uint32_t num) {
+	logger_info("page: commit transaction " << num << " " << this->filename);
+
+	auto step = this->header->chunk_size + sizeof(ChunkHeader);
+	auto byte_it = this->chunks;
+	auto end = this->chunks + this->header->chunk_per_storage * step;
+	size_t pos = 0;
+	size_t chunks_count = 0;
+	while (true) {
+		if (byte_it == end) {
+			break;
+		}
+		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+		auto ptr_to_begin = byte_it;
+		auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
+		if (info->is_init) {
+			Chunk_Ptr ptr = nullptr;
+			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
+			if (ptr->header->transaction == num) {
+				ptr->header->is_transaction_closed = true;
+				_index->index[pos].is_transaction_closed= true;
+				this->page_mmap->flush();
+				this->_index->index_mmap->flush();
+				++chunks_count;
+			}
+		}
+		++pos;
+		byte_it += step;
+	}
+	header->transaction = 0;
+	_index->iheader->transaction = 0;
+	this->page_mmap->flush();
+	this->_index->index_mmap->flush();
+
+	logger_info("commit in " << chunks_count << " chunks.");
+}
+
+void dariadb::storage::Page::rollback_transaction(uint32_t num) {
+	logger_info("page: rollback transaction " << num<<" "<<this->filename);
+	auto step = this->header->chunk_size + sizeof(ChunkHeader);
+	auto byte_it = this->chunks;
+	auto end = this->chunks + this->header->chunk_per_storage * step;
+	size_t pos = 0;
+	size_t chunks_count = 0;
+	while (true) {
+		if (byte_it == end) {
+			break;
+		}
+		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+		auto ptr_to_begin = byte_it;
+		auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
+		if (info->is_init) {
+			Chunk_Ptr ptr = nullptr;
+			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
+			if (ptr->header->transaction == num) {
+				ptr->header->is_init = false;
+				ptr->header->transaction = 0;
+				_index->iheader->is_sorted = false;
+				_index->index[pos].is_init = false;
+				_index->index[pos].transaction = 0;
+				this->page_mmap->flush();
+				this->_index->index_mmap->flush();
+				++chunks_count;
+			}
+		}
+		++pos;
+		byte_it += step;
+	}
+	header->transaction = 0;
+	_index->iheader->transaction = 0;
+	this->page_mmap->flush();
+	this->_index->index_mmap->flush();
+
+	logger_info("rollback in " << chunks_count << " chunks.");
+}

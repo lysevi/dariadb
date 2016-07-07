@@ -9,6 +9,7 @@
 #include <storage/manifest.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
+#include <flags.h>
 #include <utils/fs.h>
 #include <utils/utils.h>
 #include <utils/thread_manager.h>
@@ -335,3 +336,78 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
+
+
+
+BOOST_AUTO_TEST_CASE(PageManagerTransactions) {
+	const std::string storagePath = "testStorage";
+	const size_t chunks_count = 10;
+	const size_t chunks_size = 200;
+	auto t = dariadb::Time(0);
+
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+	dariadb::Meas::MeasList addeded;
+	dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+	dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
+	PageManager::start(PageManager::Params(storagePath, chunks_count, chunks_size));
+	
+	dariadb::Meas first;
+	first.id = 1;
+	first.time = t;
+	const size_t page_count = 2;
+
+	auto trans_num = PageManager::instance()->begin_transaction();
+	BOOST_CHECK_NE(trans_num, int32_t(0));
+
+	while (dariadb::utils::fs::ls(storagePath, ".page").size() <= page_count) {
+		t = add_meases(1, t, chunks_size / 10, addeded);
+	}
+	PageManager::instance()->commit_transaction(trans_num);
+	
+	auto sec_trans_num=PageManager::instance()->begin_transaction();
+	BOOST_CHECK_GT(sec_trans_num, trans_num);
+
+	while (dariadb::utils::fs::ls(storagePath, ".page").size() <= page_count*2) {
+		t = add_meases(2, t, chunks_size / 10, addeded);
+	}
+	PageManager::instance()->rollback_transaction(sec_trans_num);
+
+
+	dariadb::storage::QueryInterval qi({ dariadb::Id(1), dariadb::Id(2) }, 0, addeded.front().time,
+		addeded.back().time);
+
+	dariadb::storage::QueryTimePoint qt(
+	    { dariadb::Id(1), dariadb::Id(2) }, 0,
+		addeded.back().time);
+	
+	auto link_list = PageManager::instance()->chunksByIterval(qi);
+	dariadb::Meas::MeasList mlist;
+	dariadb::storage::MList_ReaderClb *clb = new dariadb::storage::MList_ReaderClb;
+	clb->mlist = &mlist;
+	PageManager::instance()->readLinks(qi, link_list, clb);
+	delete clb;
+
+	size_t writed = addeded.size();
+	size_t readed = mlist.size();
+
+	BOOST_CHECK_GT(writed, readed);
+	for (auto m : mlist) {
+		BOOST_CHECK(m.id != dariadb::Id(2));
+	}
+	auto id2meas = PageManager::instance()->valuesBeforeTimePoint(qt);
+
+	BOOST_CHECK_EQUAL(id2meas.size(), qt.ids.size());
+	BOOST_CHECK_NE(id2meas[dariadb::Id(1)].flag, dariadb::Flags::_NO_DATA);
+	BOOST_CHECK_EQUAL(id2meas[dariadb::Id(2)].flag, dariadb::Flags::_NO_DATA);
+
+	PageManager::stop();
+	dariadb::storage::Manifest::stop();
+	dariadb::utils::async::ThreadManager::stop();
+
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+}
+
