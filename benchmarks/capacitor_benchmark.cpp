@@ -19,7 +19,7 @@ namespace po = boost::program_options;
 std::atomic_long append_count{0};
 bool stop_info = false;
 
-class Moc_Storage : public dariadb::storage::MeasWriter {
+class Moc_Dropper : public dariadb::storage::MeasWriter {
 public:
   dariadb::append_result append(const dariadb::Meas &) override {
     return dariadb::append_result(1, 0);
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 	if (!dont_clean) {
 		dariadb::utils::fs::mkdir(storage_path);
 	}
-    std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
+    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
     dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));

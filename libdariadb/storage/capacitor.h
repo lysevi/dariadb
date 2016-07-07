@@ -40,6 +40,7 @@ public:
     size_t _memvalues_pos;
     uint64_t id_bloom;
     uint64_t flag_bloom;
+	uint32_t transaction_number; //when drop to downlevel storage is non zero.
 
     bool check_id(const dariadb::Id id) const { return bloom_check(id_bloom, id); }
 

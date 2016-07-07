@@ -18,7 +18,7 @@
 #include <mutex>
 #include <queue>
 #include <thread>
-
+#include <atomic>
 
 
 using namespace dariadb::storage;

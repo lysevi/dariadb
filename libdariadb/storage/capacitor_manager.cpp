@@ -117,15 +117,8 @@ std::list<std::string> CapacitorManager::closed_caps() {
   return files;
 }
 
-void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname,
-                                                  MeasWriter *storage) {
-  auto p = Capacitor::Params(_params.B, _params.path);
-  auto cap = Capacitor_Ptr{new Capacitor{p, fname, false}};
-  cap->drop_to_stor(storage);
-  cap = nullptr;
-  utils::fs::rm(fname);
-  auto without_path = utils::fs::extract_filename(fname);
-  Manifest::instance()->cola_rm(without_path);
+void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname) {
+  _down->drop(fname);
 }
 
 void CapacitorManager::drop_part_unsafe(size_t count) {
@@ -148,7 +141,7 @@ void CapacitorManager::drop_part_unsafe(size_t count) {
 	
     for (size_t i = 0; i < drop_count; ++i) {
 		std::string f = std::get<0>(file2headers[i]);
-      this->drop_cap(f, _down);
+      this->drop_cap(f);
     }
 }
 

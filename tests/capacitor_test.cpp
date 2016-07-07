@@ -16,19 +16,12 @@
 #include <utils/logger.h>
 #include <utils/thread_manager.h>
 
-class Moc_Storage : public dariadb::storage::MeasWriter {
+class Moc_Dropper : public dariadb::storage::CapacitorManager::CapDropper {
 public:
-  size_t writed_count;
-  std::map<dariadb::Id, std::vector<dariadb::Meas>> meases;
-  std::list<dariadb::Meas> mlist;
-  dariadb::append_result append(const dariadb::Meas &value) override {
-    meases[value.id].push_back(value);
-    mlist.push_back(value);
-    writed_count += 1;
-    return dariadb::append_result(1, 0);
+	size_t calls;
+  virtual void drop(const std::string &) override{
+	  calls++;
   }
-
-  void flush() override {}
 };
 
 BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
@@ -471,8 +464,7 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
   p->call(m);
   BOOST_CHECK_EQUAL(p->_a.time, dariadb::Time(2));
   BOOST_CHECK_EQUAL(p->_b.time, dariadb::Time(3));
-  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-  stor->writed_count = 0;
+  
   const size_t max_size = 10;
   auto storage_path = "testStorage";
 
@@ -574,8 +566,8 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
     dariadb::utils::async::ThreadManager::stop();
   }
   {
-    std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
-    stor->writed_count = 0;
+    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
+    
     dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
@@ -589,15 +581,15 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
 
     auto closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
     BOOST_CHECK(closed.size() != size_t(0));
+	dariadb::storage::CapacitorManager::instance()->set_downlevel(stor.get());
 
     for (auto fname : closed) {
-      dariadb::storage::CapacitorManager::instance()->drop_cap(fname, stor.get());
+      dariadb::storage::CapacitorManager::instance()->drop_cap(fname);
     }
-    BOOST_CHECK(stor->writed_count != size_t(0));
-
-    closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
+	BOOST_CHECK_EQUAL(stor.get()->calls, closed.size());
+   /* closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
     BOOST_CHECK_EQUAL(closed.size(), size_t(0));
-
+*/
     dariadb::storage::CapacitorManager::stop();
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();

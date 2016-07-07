@@ -219,9 +219,22 @@ public:
 		}
 	}
 };
+
+
 class Engine::Private {
 public:
-
+	class CapDroop : public CapacitorManager::CapDropper {
+	public:
+		void drop(const std::string&fname) override {
+			auto p = Capacitor::Params(0, "");
+			auto cap = Capacitor_Ptr{ new Capacitor{ p, fname, false } };
+			cap->drop_to_stor(PageManager::instance());
+			cap = nullptr;
+			utils::fs::rm(fname);
+			auto without_path = utils::fs::extract_filename(fname);
+			Manifest::instance()->cola_rm(without_path);
+		}
+	};
   Private(storage::AOFManager::Params &aof_params,
           const PageManager::Params &page_storage_params,
           dariadb::storage::CapacitorManager::Params &cap_params,
@@ -255,9 +268,10 @@ public:
 	}
 
 	_aof_dropper=std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));
+	_cap_dropper = std::unique_ptr<CapDroop>(new CapDroop());
     auto pm = PageManager::instance();
     AOFManager::instance()->set_downlevel(_aof_dropper.get());
-    CapacitorManager::instance()->set_downlevel(pm);
+    CapacitorManager::instance()->set_downlevel(_cap_dropper.get());
     _next_query_id = Id();
   }
   ~Private() {
@@ -620,6 +634,7 @@ protected:
   Id _next_query_id;
   std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
   std::unique_ptr<AofDropper> _aof_dropper;
+  std::unique_ptr<CapDroop> _cap_dropper;
 };
 
 Engine::Engine(storage::AOFManager::Params aof_params,
