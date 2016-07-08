@@ -84,6 +84,16 @@ struct level {
     hdr->flag_bloom = bloom_add(hdr->flag_bloom, m.flag);
   }
 
+  void update_header() {
+	  for (size_t i = 0; i < hdr->pos; ++i) {
+		  auto m = begin[i].value;
+		  hdr->_minTime = std::min(hdr->_minTime, m.time);
+		  hdr->_maxTime = std::max(hdr->_maxTime, m.time);
+		  hdr->id_bloom = bloom_add(hdr->id_bloom, m.id);
+		  hdr->flag_bloom = bloom_add(hdr->flag_bloom, m.flag);
+	  }
+  }
+
   uint32_t calc_checksum() {
     uint8_t *char_array = (uint8_t *)begin;
     return utils::crc32(char_array, sizeof(FlaggedMeas) * hdr->count);
@@ -396,20 +406,31 @@ public:
       logger_info(LOG_MSG_PREFIX << "clear done.");
     }
 	
-	//bool is_sorted = true;
-	//for (auto it = to_merge.begin(); it != to_merge.end(); ++it) {
-	//	auto next = std::next(it);
-	//	if (next == to_merge.end()) {
-	//		break;
-	//	}
-	//	if (((*it)->back()) > (*(*next)->begin)) {
-	//	is_sorted = false;
-	//	breal
-	//	}
-	//}
-	dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
-
-    merge_target.update_checksum();
+	bool is_sorted = true;
+	for (auto it = to_merge.begin(); it != to_merge.end(); ++it) {
+		auto next = std::next(it);
+		if (next == to_merge.end()) {
+			break;
+		}
+		if (((*it)->back().value.time) < (*next)->begin->value.time) {
+			is_sorted = false;
+			break;
+		}
+	}
+	if (is_sorted) {
+		size_t offset = 0;
+		for (auto&l : to_merge) {
+			size_t current_size = l->hdr->pos;
+			memcpy(merge_target.begin + offset, l->begin, sizeof(FlaggedMeas)*current_size);
+			offset += current_size;
+		}
+		merge_target.hdr->pos = merge_target.hdr->count;
+		merge_target.update_header();
+	}
+	else {
+		dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
+	}
+	merge_target.update_checksum();
 
     clean_merged_levels(outlvl);
     return outlvl;
