@@ -122,14 +122,14 @@ int main(int argc, char *argv[]) {
     std::cout << "flag decompressor : " << elapsed << std::endl;
   }
 
-  // id compression
+  // flag compression
   std::fill(buffer, buffer + test_buffer_size, 0);
   {
     const size_t count = 1000000;
     auto bw = std::make_shared<dariadb::compression::BinaryBuffer>(rng);
     dariadb::compression::FlagCompressor dc(bw);
 
-    dariadb::Id t = 1;
+    dariadb::Flag t = 1;
     auto start = clock();
     for (size_t i = 0; i < count / 2; i++) {
       dc.append(t);

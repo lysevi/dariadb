@@ -226,8 +226,10 @@ public:
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
         break;
       }
-      replace_if_older(sub_res, val);
-      readed_ids.insert(val.id);
+	  if (val.inFlag(flag)) {
+		  replace_if_older(sub_res, val);
+		  readed_ids.insert(val.id);
+	  }
     }
     std::fclose(file);
 
