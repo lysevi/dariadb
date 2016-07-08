@@ -410,7 +410,7 @@ dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
 
 void dariadb::storage::Page::flush() {}
 
-void dariadb::storage::Page::begin_transaction(uint32_t num) {
+void dariadb::storage::Page::begin_transaction(uint64_t) {
 	if (_openned_chunk.ch != nullptr) {
 		close_corrent_chunk();
 		this->page_mmap->flush();
@@ -418,7 +418,7 @@ void dariadb::storage::Page::begin_transaction(uint32_t num) {
 	}
 }
 
-void dariadb::storage::Page::commit_transaction(uint32_t num) {
+void dariadb::storage::Page::commit_transaction(uint64_t num) {
 	//logger_info("page: commit transaction " << num << " " << this->filename);
 	
 	close_corrent_chunk();
@@ -455,7 +455,7 @@ void dariadb::storage::Page::commit_transaction(uint32_t num) {
 	//logger_info("commit in " << chunks_count << " chunks.");
 }
 
-void dariadb::storage::Page::rollback_transaction(uint32_t num) {
+void dariadb::storage::Page::rollback_transaction(uint64_t num) {
 	logger_info("page: rollback transaction " << num<<" "<<this->filename);
 	auto step = this->header->chunk_size + sizeof(ChunkHeader);
 	auto byte_it = this->chunks;

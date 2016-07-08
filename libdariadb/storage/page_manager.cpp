@@ -391,7 +391,7 @@ public:
     }
   }
 
-  uint32_t begin_transaction() {
+  uint64_t begin_transaction() {
 	  std::lock_guard<std::mutex> lg(_locker);
 
 	  if (_under_transaction) {
@@ -405,7 +405,7 @@ public:
 	  return _transaction_next_number;
   }
 
-  void commit_transaction(uint32_t num) {
+  void commit_transaction(uint64_t num) {
 	  std::lock_guard<std::mutex> lg(_locker);
 
 	  auto pred = [num](const IndexHeader &h) { return h.transaction==num; };
@@ -420,10 +420,10 @@ public:
 	  _under_transaction = false;
   }
 
-  void rollback_transaction(uint32_t num) {
+  void rollback_transaction(uint64_t num) {
 	  std::lock_guard<std::mutex> lg(_locker);
 
-	  auto pred = [num](const IndexHeader &h) { return true; };
+	  auto pred = [num](const IndexHeader &) { return true; };
 
 	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
@@ -442,7 +442,7 @@ protected:
   uint64_t last_id;
   bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
-  std::atomic<uint32_t> _transaction_next_number;
+  std::atomic<uint64_t> _transaction_next_number;
   bool _under_transaction;
 };
 
@@ -517,14 +517,14 @@ void PageManager::fsck(bool force_check) {
 	return impl->fsck(force_check);
 }
 
-uint32_t  PageManager::begin_transaction() {
+uint64_t  PageManager::begin_transaction() {
 	return impl->begin_transaction();
 }
 
-void  PageManager::commit_transaction(uint32_t num) {
+void  PageManager::commit_transaction(uint64_t num) {
 	impl->commit_transaction(num);
 }
 
-void  PageManager::rollback_transaction(uint32_t num) {
+void  PageManager::rollback_transaction(uint64_t num) {
 	impl->rollback_transaction(num);
 }
