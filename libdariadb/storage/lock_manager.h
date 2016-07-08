@@ -7,8 +7,8 @@
 
 #include <map>
 #include <mutex>
-
-#include <boost/thread/shared_mutex.hpp>
+//
+//#include <boost/thread/shared_mutex.hpp>
 
 namespace dariadb {
 namespace storage {
@@ -24,7 +24,7 @@ enum class LockObjects : uint8_t {
 };
 
 struct MutexWrap {
-  boost::shared_mutex mutex;
+  std::mutex mutex;
   LockKind kind;
   MutexWrap():mutex(), kind(LockKind::READ) {
   }
