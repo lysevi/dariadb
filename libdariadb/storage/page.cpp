@@ -47,7 +47,8 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 
   res->header = reinterpret_cast<PageHeader *>(region);
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-
+  res->header->minTime = dariadb::MAX_TIME;
+  res->header->maxTime = dariadb::MIN_TIME;
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
   res->header->is_closed = false;
@@ -178,6 +179,8 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 	}
 	else {
 		if (_openned_chunk.ch->append(m)) {
+			this->header->minTime = std::min(m.time, this->header->minTime);
+			this->header->maxTime = std::max(m.time, this->header->maxTime);
 			flush_current_chunk();
 			_index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
 				_openned_chunk.pos);
@@ -262,6 +265,8 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   header->pos += header->chunk_size + sizeof(ChunkHeader);
   header->addeded_chunks++;
   header->transaction = std::max(header->transaction, ch->header->transaction);
+  header->minTime= std::min(header->minTime, ch->header->minTime);
+  header->maxTime = std::max(header->minTime, ch->header->maxTime);
 
   _index->iheader->minTime = std::min(_index->iheader->minTime, ch->header->minTime);
   _index->iheader->maxTime = std::max(_index->iheader->maxTime, ch->header->maxTime);
@@ -295,8 +300,32 @@ void Page::dec_reader() {
   header->count_readers--;
 }
 
-bool dariadb::storage::Page::minMaxTime(dariadb::Id, dariadb::Time *, dariadb::Time *) {
-  return false;
+class MinMaxCallback : public ReaderClb {
+public:
+	bool result;
+	dariadb::Time minTime;
+	dariadb::Time maxTime;
+	MinMaxCallback() {
+		result = false;
+		minTime = dariadb::MAX_TIME;
+		maxTime = dariadb::MIN_TIME;
+	}
+	// Inherited via ReaderClb
+	void call(const dariadb::Meas & m) override{
+		result = true;
+		minTime=std::min(this->minTime, m.time);
+		maxTime = std::max(this->maxTime, m.time);
+	}
+};
+
+bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
+	QueryInterval qi{ dariadb::IdArray{id},0, this->header->minTime, this->header->maxTime };
+	auto all_chunks=this->chunksByIterval(qi);
+	std::unique_ptr<MinMaxCallback> calb{ new MinMaxCallback{} };
+	this->readLinks(qi, all_chunks, calb.get());
+	*minTime = calb->minTime;
+	*maxTime = calb->maxTime;
+	return calb->result;
 }
 
 ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
