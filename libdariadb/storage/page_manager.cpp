@@ -399,6 +399,9 @@ public:
 	  }
 	  _transaction_next_number++;
 	  _under_transaction = true;
+	  if (_cur_page != nullptr) {
+		  _cur_page->begin_transaction(_transaction_next_number);
+	  }
 	  return _transaction_next_number;
   }
 

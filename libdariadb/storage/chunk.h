@@ -35,6 +35,7 @@ struct ChunkHeader {
   uint32_t crc;
 
   uint32_t transaction; 
+  bool commit : 1;
 };
 #pragma pack(pop)
 

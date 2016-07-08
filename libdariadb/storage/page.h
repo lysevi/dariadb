@@ -58,12 +58,13 @@ public:
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
 
+  void begin_transaction(uint32_t num);
   void commit_transaction(uint32_t num);
   void rollback_transaction(uint32_t num);
 private:
   void flush_current_chunk();
   void init_chunk_index_rec(Chunk_Ptr ch);
-
+  void close_corrent_chunk();
   struct ChunkWithIndex {
     Chunk_Ptr ch;        /// ptr to chunk in page
     IndexReccord *index; /// ptr to index reccord

@@ -146,7 +146,7 @@ void Page::fsck() {
     if (info->is_init) {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-      if (ptr->header->transaction!=0 || !ptr->check_checksum()) {
+      if ((!ptr->header->commit) || !ptr->check_checksum()) {
         logger_fatal("fsck: remove broken chunk #"
                      << ptr->header->id << " id:" << ptr->header->first.id << " time: ["
                      << to_string(ptr->header->minTime) << " : "
@@ -174,23 +174,16 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
   if (_openned_chunk.ch != nullptr && !_openned_chunk.ch->is_full()) {
     if (_openned_chunk.ch->header->last.id != m.id) {
-      flush_current_chunk();
-      _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
-                                _openned_chunk.pos);
-      _openned_chunk.ch->close();
-#ifdef ENABLE_METRICS
-	  //calc perscent of free space in closed chunks
-	  auto percent = _openned_chunk.ch->header->bw_pos*float(100.0)/ _openned_chunk.ch->header->size;
-      ADD_METRICS("write", "Page::add_to_target_chunk::chunk_free", dariadb::utils::metrics::Metric_Ptr{ new dariadb::utils::metrics::FloatMetric(percent) });
-#endif
-    } else {
-      if (_openned_chunk.ch->append(m)) {
-        flush_current_chunk();
-        _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
-                                  _openned_chunk.pos);
-        return true;
-      }
-    }
+		close_corrent_chunk();
+	}
+	else {
+		if (_openned_chunk.ch->append(m)) {
+			flush_current_chunk();
+			_index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
+				_openned_chunk.pos);
+			return true;
+		}
+	}
   }
   // search no full chunk.
   auto step = this->header->chunk_size + sizeof(ChunkHeader);
@@ -212,6 +205,10 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
       ptr->header->id = this->header->max_chunk_id;
 	  if (header->_under_transaction) {
 		  ptr->header->transaction = header->transaction;
+		  ptr->header->commit = false;
+	  }
+	  else {
+		  ptr->header->commit = true;
 	  }
       _openned_chunk.ch = ptr;
       flush_current_chunk();
@@ -230,6 +227,22 @@ void Page::flush_current_chunk() {
       page_mmap->flush(offset,_openned_chunk.ch->header->size);
       page_mmap->flush(0,sizeof(PageHeader));
   }*/
+}
+
+void Page::close_corrent_chunk() {
+  if (_openned_chunk.ch != nullptr) {
+    flush_current_chunk();
+    _openned_chunk.ch->close();
+#ifdef ENABLE_METRICS
+    // calc perscent of free space in closed chunks
+    auto percent = _openned_chunk.ch->header->bw_pos * float(100.0) /
+                   _openned_chunk.ch->header->size;
+    ADD_METRICS("write", "Page::add_to_target_chunk::chunk_free",
+                dariadb::utils::metrics::Metric_Ptr{
+                    new dariadb::utils::metrics::FloatMetric(percent)});
+#endif
+	_openned_chunk.ch = nullptr;
+  }
 }
 
 void Page::init_chunk_index_rec(Chunk_Ptr ch) {
@@ -263,6 +276,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   cur_index->id_bloom = ch->header->id_bloom;
   cur_index->flag_bloom = ch->header->flag_bloom;
   cur_index->transaction = ch->header->transaction;
+  cur_index->commit = ch->header->commit;
 
   auto kv = std::make_pair(cur_index->maxTime, pos_index);
   _index->_itree.insert(kv);
@@ -396,9 +410,18 @@ dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
 
 void dariadb::storage::Page::flush() {}
 
+void dariadb::storage::Page::begin_transaction(uint32_t num) {
+	if (_openned_chunk.ch != nullptr) {
+		close_corrent_chunk();
+		this->page_mmap->flush();
+		this->_index->index_mmap->flush();
+	}
+}
+
 void dariadb::storage::Page::commit_transaction(uint32_t num) {
 	//logger_info("page: commit transaction " << num << " " << this->filename);
-
+	
+	close_corrent_chunk();
 	auto step = this->header->chunk_size + sizeof(ChunkHeader);
 	auto byte_it = this->chunks;
 	auto end = this->chunks + this->header->addeded_chunks * step;
@@ -415,8 +438,8 @@ void dariadb::storage::Page::commit_transaction(uint32_t num) {
 			Chunk_Ptr ptr = nullptr;
 			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
 			if (ptr->header->transaction == num) {
-				ptr->header->transaction = 0;
-				_index->index[pos].transaction = 0;
+				ptr->header->commit=true;
+				_index->index[pos].commit = true;
 				this->page_mmap->flush();
 				this->_index->index_mmap->flush();
 				//++chunks_count;
@@ -451,10 +474,10 @@ void dariadb::storage::Page::rollback_transaction(uint32_t num) {
 			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
 			if (ptr->header->transaction == num) {
 				ptr->header->is_init = false;
-				ptr->header->transaction = 0;
+				ptr->header->commit = true;
+				_index->index[pos].commit = true;
 				_index->iheader->is_sorted = false;
 				_index->index[pos].is_init = false;
-				_index->index[pos].transaction = 0;
 				this->page_mmap->flush();
 				this->_index->index_mmap->flush();
 				++chunks_count;

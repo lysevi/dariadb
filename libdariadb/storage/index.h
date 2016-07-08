@@ -34,6 +34,7 @@ struct IndexReccord {
   bool is_init;    // is init :)
   bool  is_transaction_closed : 1;
   uint32_t transaction; 
+  bool commit : 1;
 };
 #pragma pack(pop)
 
