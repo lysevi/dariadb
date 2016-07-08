@@ -32,7 +32,6 @@ struct IndexReccord {
   // bool is_readonly;         // chunk is full?
   uint64_t offset; // offset in bytes of chunk in page
   bool is_init;    // is init :)
-  bool  is_transaction_closed : 1;
   uint64_t transaction;
   bool commit : 1;
 };
