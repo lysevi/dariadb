@@ -420,10 +420,6 @@ void AOFManager::flush() {
   flush_buffer();
 }
 
-void AOFManager::subscribe(const IdArray &, const Flag &, const ReaderClb_ptr &) {
-  NOT_IMPLEMENTED;
-}
-
 size_t AOFManager::files_count() const {
   return aof_files().size();
 }

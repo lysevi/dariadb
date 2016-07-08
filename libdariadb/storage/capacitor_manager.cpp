@@ -434,10 +434,6 @@ void CapacitorManager::flush() {
 	TIMECODE_METRICS(ctmd, "flush", "CapacitorManager::flush");
 }
 
-void CapacitorManager::subscribe(const IdArray &, const Flag &, const ReaderClb_ptr &) {
-  NOT_IMPLEMENTED;
-}
-
 size_t CapacitorManager::files_count() const {
   return cap_files().size();
 }

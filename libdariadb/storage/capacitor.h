@@ -81,10 +81,6 @@ public:
   size_t levels_count() const;
   size_t size() const;
 
-  void subscribe(const IdArray &, const Flag &, const ReaderClb_ptr &) override {
-    throw MAKE_EXCEPTION("not supported");
-  }
-
   void drop_to_stor(MeasWriter *stor);
 
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }

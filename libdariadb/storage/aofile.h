@@ -35,10 +35,7 @@ public:
                   dariadb::Time *maxResult) override;
   void flush() override; // write all to storage;
 
-  void subscribe(const IdArray &, const Flag &, const ReaderClb_ptr &) override {
-    NOT_IMPLEMENTED;
-  }
-  void drop_to_stor(MeasWriter *stor);
+   void drop_to_stor(MeasWriter *stor);
 
   std::string filename() const;
 

@@ -39,8 +39,6 @@ public:
          dariadb::storage::CapacitorManager::Params cap_params, const Limits &limits);
 
   append_result append(const Meas &value) override;
-  void subscribe(const IdArray &ids, const Flag &flag,
-                 const ReaderClb_ptr &clbk) override;
   Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
   void flush() override;
 
@@ -60,6 +58,8 @@ public:
   Meas::MeasList getResult(Id);
 
   void drop_part_caps(size_t count);
+
+  void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

@@ -62,8 +62,6 @@ public:
   virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
-  virtual void subscribe(const IdArray &ids, const Flag &flag,
-                         const ReaderClb_ptr &clbk) override;
 
   void append(std::string filename,const Meas::MeasArray& ma);
   std::list<std::string> closed_caps();

@@ -62,8 +62,6 @@ public:
 
 class MeasStorage : public utils::NonCopy, public MeasSource, public MeasWriter {
 public:
-  virtual void subscribe(const IdArray &ids, const Flag &flag,
-                         const ReaderClb_ptr &clbk) = 0;
 };
 
 typedef std::shared_ptr<MeasSource> MeasSource_ptr;

@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
         dariadb::storage::AOFManager::Params(storage_path, chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
