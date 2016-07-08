@@ -30,6 +30,7 @@ File struct:
 #include <limits>
 #include <list>
 #include <tuple>
+#include <iterator>
 
 const std::string LOG_MSG_PREFIX = "fsck: capacitor ";
 
@@ -394,7 +395,19 @@ public:
       merge_target.clear();
       logger_info(LOG_MSG_PREFIX << "clear done.");
     }
-    dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
+	
+	//bool is_sorted = true;
+	//for (auto it = to_merge.begin(); it != to_merge.end(); ++it) {
+	//	auto next = std::next(it);
+	//	if (next == to_merge.end()) {
+	//		break;
+	//	}
+	//	if (((*it)->back()) > (*(*next)->begin)) {
+	//	is_sorted = false;
+	//	breal
+	//	}
+	//}
+	dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
 
     merge_target.update_checksum();
 
