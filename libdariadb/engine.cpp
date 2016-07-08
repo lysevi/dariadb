@@ -380,9 +380,9 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-	LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::AOF);
+	//LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::AOF);
     result = AOFManager::instance()->append(value);
-	LockManager::instance()->unlock(LockObjects::AOF);
+	//LockManager::instance()->unlock(LockObjects::AOF);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
