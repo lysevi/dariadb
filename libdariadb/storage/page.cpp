@@ -65,7 +65,7 @@ Page *Page::open(std::string file_name, bool read_only) {
   TIMECODE_METRICS(ctmd, "open", "Page::open");
   auto res = new Page;
   res->readonly = read_only;
-  auto mmap = utils::fs::MappedFile::open(file_name,read_only);
+  auto mmap = utils::fs::MappedFile::open(file_name, read_only);
   res->filename = file_name;
   auto region = mmap->data();
 
@@ -76,8 +76,8 @@ Page *Page::open(std::string file_name, bool read_only) {
   res->region = region;
   res->header = reinterpret_cast<PageHeader *>(region);
   if (!res->readonly) {
-	  res->header->is_open_to_write = true;
-	  res->header->is_closed = false;
+    res->header->is_open_to_write = true;
+    res->header->is_closed = false;
   }
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
   res->page_mmap->flush(0, sizeof(PageHeader));
@@ -175,18 +175,17 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
   if (_openned_chunk.ch != nullptr && !_openned_chunk.ch->is_full()) {
     if (_openned_chunk.ch->header->last.id != m.id) {
-		close_corrent_chunk();
-	}
-	else {
-		if (_openned_chunk.ch->append(m)) {
-			this->header->minTime = std::min(m.time, this->header->minTime);
-			this->header->maxTime = std::max(m.time, this->header->maxTime);
-			flush_current_chunk();
-			_index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
-				_openned_chunk.pos);
-			return true;
-		}
-	}
+      close_corrent_chunk();
+    } else {
+      if (_openned_chunk.ch->append(m)) {
+        this->header->minTime = std::min(m.time, this->header->minTime);
+        this->header->maxTime = std::max(m.time, this->header->maxTime);
+        flush_current_chunk();
+        _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
+                                  _openned_chunk.pos);
+        return true;
+      }
+    }
   }
   // search no full chunk.
   auto step = this->header->chunk_size + sizeof(ChunkHeader);
@@ -206,13 +205,12 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       this->header->max_chunk_id++;
       ptr->header->id = this->header->max_chunk_id;
-	  if (header->_under_transaction) {
-		  ptr->header->transaction = header->transaction;
-		  ptr->header->commit = false;
-	  }
-	  else {
-		  ptr->header->commit = true;
-	  }
+      if (header->_under_transaction) {
+        ptr->header->transaction = header->transaction;
+        ptr->header->commit = false;
+      } else {
+        ptr->header->commit = true;
+      }
       _openned_chunk.ch = ptr;
       flush_current_chunk();
       init_chunk_index_rec(ptr);
@@ -244,7 +242,7 @@ void Page::close_corrent_chunk() {
                 dariadb::utils::metrics::Metric_Ptr{
                     new dariadb::utils::metrics::FloatMetric(percent)});
 #endif
-	_openned_chunk.ch = nullptr;
+    _openned_chunk.ch = nullptr;
   }
 }
 
@@ -265,7 +263,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   header->pos += header->chunk_size + sizeof(ChunkHeader);
   header->addeded_chunks++;
   header->transaction = std::max(header->transaction, ch->header->transaction);
-  header->minTime= std::min(header->minTime, ch->header->minTime);
+  header->minTime = std::min(header->minTime, ch->header->minTime);
   header->maxTime = std::max(header->minTime, ch->header->maxTime);
 
   _index->iheader->minTime = std::min(_index->iheader->minTime, ch->header->minTime);
@@ -302,30 +300,31 @@ void Page::dec_reader() {
 
 class MinMaxCallback : public ReaderClb {
 public:
-	bool result;
-	dariadb::Time minTime;
-	dariadb::Time maxTime;
-	MinMaxCallback() {
-		result = false;
-		minTime = dariadb::MAX_TIME;
-		maxTime = dariadb::MIN_TIME;
-	}
-	// Inherited via ReaderClb
-	void call(const dariadb::Meas & m) override{
-		result = true;
-		minTime=std::min(this->minTime, m.time);
-		maxTime = std::max(this->maxTime, m.time);
-	}
+  bool result;
+  dariadb::Time minTime;
+  dariadb::Time maxTime;
+  MinMaxCallback() {
+    result = false;
+    minTime = dariadb::MAX_TIME;
+    maxTime = dariadb::MIN_TIME;
+  }
+  // Inherited via ReaderClb
+  void call(const dariadb::Meas &m) override {
+    result = true;
+    minTime = std::min(this->minTime, m.time);
+    maxTime = std::max(this->maxTime, m.time);
+  }
 };
 
-bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
-	QueryInterval qi{ dariadb::IdArray{id},0, this->header->minTime, this->header->maxTime };
-	auto all_chunks=this->chunksByIterval(qi);
-	std::unique_ptr<MinMaxCallback> calb{ new MinMaxCallback{} };
-	this->readLinks(qi, all_chunks, calb.get());
-	*minTime = calb->minTime;
-	*maxTime = calb->maxTime;
-	return calb->result;
+bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
+                                        dariadb::Time *maxTime) {
+  QueryInterval qi{dariadb::IdArray{id}, 0, this->header->minTime, this->header->maxTime};
+  auto all_chunks = this->chunksByIterval(qi);
+  std::unique_ptr<MinMaxCallback> calb{new MinMaxCallback{}};
+  this->readLinks(qi, all_chunks, calb.get());
+  *minTime = calb->minTime;
+  *maxTime = calb->maxTime;
+  return calb->result;
 }
 
 ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
@@ -408,11 +407,11 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
         assert(false);
       }
       Chunk_Ptr c{ptr};
-     /* if (c->header->is_readonly && !c->check_checksum()) {
-        logger("page: " << this->filename << ": "
-                        << "wrong chunk checksum. chunkId=" << c->header->id);
-        continue;
-      }*/
+      /* if (c->header->is_readonly && !c->check_checksum()) {
+         logger("page: " << this->filename << ": "
+                         << "wrong chunk checksum. chunkId=" << c->header->id);
+         continue;
+       }*/
       search_res = c;
     }
     auto rdr = search_res->get_reader();
@@ -440,84 +439,84 @@ dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
 void dariadb::storage::Page::flush() {}
 
 void dariadb::storage::Page::begin_transaction(uint64_t) {
-	if (_openned_chunk.ch != nullptr) {
-		close_corrent_chunk();
-		this->page_mmap->flush();
-		this->_index->index_mmap->flush();
-	}
+  if (_openned_chunk.ch != nullptr) {
+    close_corrent_chunk();
+    this->page_mmap->flush();
+    this->_index->index_mmap->flush();
+  }
 }
 
 void dariadb::storage::Page::commit_transaction(uint64_t num) {
-	//logger_info("page: commit transaction " << num << " " << this->filename);
-	
-	close_corrent_chunk();
-	auto step = this->header->chunk_size + sizeof(ChunkHeader);
-	auto byte_it = this->chunks;
-	auto end = this->chunks + this->header->addeded_chunks * step;
-	size_t pos = 0;
-	//size_t chunks_count = 0;
-	while (true) {
-		if (byte_it == end) {
-			break;
-		}
-		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
-		auto ptr_to_begin = byte_it;
-		auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
-		if (info->is_init) {
-			Chunk_Ptr ptr = nullptr;
-			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
-			if (ptr->header->transaction == num) {
-				ptr->header->commit=true;
-				_index->index[pos].commit = true;
-				this->page_mmap->flush();
-				this->_index->index_mmap->flush();
-				//++chunks_count;
-			}
-		}
-		++pos;
-		byte_it += step;
-	}
-	header->_under_transaction = false;
-	this->page_mmap->flush();
-	this->_index->index_mmap->flush();
+  // logger_info("page: commit transaction " << num << " " << this->filename);
 
-	//logger_info("commit in " << chunks_count << " chunks.");
+  close_corrent_chunk();
+  auto step = this->header->chunk_size + sizeof(ChunkHeader);
+  auto byte_it = this->chunks;
+  auto end = this->chunks + this->header->addeded_chunks * step;
+  size_t pos = 0;
+  // size_t chunks_count = 0;
+  while (true) {
+    if (byte_it == end) {
+      break;
+    }
+    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+    auto ptr_to_begin = byte_it;
+    auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
+    if (info->is_init) {
+      Chunk_Ptr ptr = nullptr;
+      ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
+      if (ptr->header->transaction == num) {
+        ptr->header->commit = true;
+        _index->index[pos].commit = true;
+        this->page_mmap->flush();
+        this->_index->index_mmap->flush();
+        //++chunks_count;
+      }
+    }
+    ++pos;
+    byte_it += step;
+  }
+  header->_under_transaction = false;
+  this->page_mmap->flush();
+  this->_index->index_mmap->flush();
+
+  // logger_info("commit in " << chunks_count << " chunks.");
 }
 
 void dariadb::storage::Page::rollback_transaction(uint64_t num) {
-	logger_info("page: rollback transaction " << num<<" "<<this->filename);
-	auto step = this->header->chunk_size + sizeof(ChunkHeader);
-	auto byte_it = this->chunks;
-	auto end = this->chunks + this->header->addeded_chunks * step;
-	size_t pos = 0;
-	size_t chunks_count = 0;
-	while (true) {
-		if (byte_it == end) {
-			break;
-		}
-		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
-		auto ptr_to_begin = byte_it;
-		auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
-		if (info->is_init) {
-			Chunk_Ptr ptr = nullptr;
-			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
-			if (ptr->header->transaction == num) {
-				ptr->header->is_init = false;
-				ptr->header->commit = true;
-				_index->index[pos].commit = true;
-				_index->iheader->is_sorted = false;
-				_index->index[pos].is_init = false;
-				this->page_mmap->flush();
-				this->_index->index_mmap->flush();
-				++chunks_count;
-			}
-		}
-		++pos;
-		byte_it += step;
-	}
-	header->_under_transaction = false;
-	this->page_mmap->flush();
-	this->_index->index_mmap->flush();
+  logger_info("page: rollback transaction " << num << " " << this->filename);
+  auto step = this->header->chunk_size + sizeof(ChunkHeader);
+  auto byte_it = this->chunks;
+  auto end = this->chunks + this->header->addeded_chunks * step;
+  size_t pos = 0;
+  size_t chunks_count = 0;
+  while (true) {
+    if (byte_it == end) {
+      break;
+    }
+    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+    auto ptr_to_begin = byte_it;
+    auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
+    if (info->is_init) {
+      Chunk_Ptr ptr = nullptr;
+      ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
+      if (ptr->header->transaction == num) {
+        ptr->header->is_init = false;
+        ptr->header->commit = true;
+        _index->index[pos].commit = true;
+        _index->iheader->is_sorted = false;
+        _index->index[pos].is_init = false;
+        this->page_mmap->flush();
+        this->_index->index_mmap->flush();
+        ++chunks_count;
+      }
+    }
+    ++pos;
+    byte_it += step;
+  }
+  header->_under_transaction = false;
+  this->page_mmap->flush();
+  this->_index->index_mmap->flush();
 
-	logger_info("rollback in " << chunks_count << " chunks.");
+  logger_info("rollback in " << chunks_count << " chunks.");
 }

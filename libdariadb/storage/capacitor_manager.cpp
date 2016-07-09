@@ -3,9 +3,9 @@
 #include "../utils/exception.h"
 #include "../utils/fs.h"
 #include "../utils/metrics.h"
+#include "../utils/thread_manager.h"
 #include "inner_readers.h"
 #include "manifest.h"
-#include "../utils/thread_manager.h"
 #include <cassert>
 
 using namespace dariadb::storage;
@@ -18,9 +18,9 @@ CapacitorManager::~CapacitorManager() {}
 
 CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
   _down = nullptr;
- /* if (!dariadb::utils::fs::path_exists(_params.path)) {
-    dariadb::utils::fs::mkdir(_params.path);
-  }*/
+  /* if (!dariadb::utils::fs::path_exists(_params.path)) {
+     dariadb::utils::fs::mkdir(_params.path);
+   }*/
 
   auto files = cap_files();
   for (auto f : files) {
@@ -37,15 +37,15 @@ CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
 }
 
 void CapacitorManager::fsck(bool force_check) {
-	auto files = cap_files();
-	for (auto f : files) {
-		auto hdr = Capacitor::readHeader(f);
-		if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
-			auto p = Capacitor::Params(_params.B, _params.path);
-			auto c = Capacitor_Ptr{ new Capacitor(p, f) };
-			c->fsck();
-		}
-	}
+  auto files = cap_files();
+  for (auto f : files) {
+    auto hdr = Capacitor::readHeader(f);
+    if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
+      auto p = Capacitor::Params(_params.B, _params.path);
+      auto c = Capacitor_Ptr{new Capacitor(p, f)};
+      c->fsck();
+    }
+  }
 }
 
 void CapacitorManager::start(const Params &param) {
@@ -65,22 +65,22 @@ CapacitorManager *dariadb::storage::CapacitorManager::instance() {
   return CapacitorManager::_instance;
 }
 
-Capacitor_Ptr CapacitorManager::create_new(std::string filename){
-    TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
-    _cap = nullptr;
-    auto p = Capacitor::Params(_params.B, _params.path);
-    if (_params.max_levels != 0) {
-      p.max_levels = _params.max_levels;
-    }
-    if (_down != nullptr) {
-        auto closed = this->closed_caps();
+Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
+  TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
+  _cap = nullptr;
+  auto p = Capacitor::Params(_params.B, _params.path);
+  if (_params.max_levels != 0) {
+    p.max_levels = _params.max_levels;
+  }
+  if (_down != nullptr) {
+    auto closed = this->closed_caps();
 
-        if (closed.size() > _params.max_closed_caps && _params.max_closed_caps>0) {
-          size_t to_drop = closed.size() / 4;
-          drop_part_unsafe(to_drop);
-        }
+    if (closed.size() > _params.max_closed_caps && _params.max_closed_caps > 0) {
+      size_t to_drop = closed.size() / 4;
+      drop_part_unsafe(to_drop);
     }
-   return Capacitor_Ptr{new Capacitor(p, filename)};
+  }
+  return Capacitor_Ptr{new Capacitor(p, filename)};
 }
 
 Capacitor_Ptr CapacitorManager::create_new() {
@@ -118,47 +118,47 @@ std::list<std::string> CapacitorManager::closed_caps() {
 }
 
 void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname) {
-	auto without_path = utils::fs::extract_filename(fname);
-	_files_send_to_drop.insert(without_path);
+  auto without_path = utils::fs::extract_filename(fname);
+  _files_send_to_drop.insert(without_path);
   _down->drop(fname);
 }
 
 void CapacitorManager::drop_part_unsafe(size_t count) {
-    TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
-    auto closed = this->closed_caps();
-	using File2Header = std::tuple<std::string, Capacitor::Header>;
-	std::vector<File2Header> file2headers{ closed.size() };
+  TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
+  auto closed = this->closed_caps();
+  using File2Header = std::tuple<std::string, Capacitor::Header>;
+  std::vector<File2Header> file2headers{closed.size()};
 
-	size_t pos = 0;
-	for (auto f : closed) {
-		auto without_path = utils::fs::extract_filename(f);
-		if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-			auto cheader = Capacitor::readHeader(f);
-			file2headers[pos] = std::tie(f, cheader);
-			++pos;
-		}
-	}
-	std::sort(file2headers.begin(), file2headers.begin()+pos, 
-		[](const File2Header&l, const File2Header&r) {
-		return std::get<1>(l).minTime < std::get<1>(r).minTime;
-	});
-    auto drop_count = std::min(pos, count);
-	
-    for (size_t i = 0; i < drop_count; ++i) {
-		std::string f = std::get<0>(file2headers[i]);
-      this->drop_cap(f);
+  size_t pos = 0;
+  for (auto f : closed) {
+    auto without_path = utils::fs::extract_filename(f);
+    if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+      auto cheader = Capacitor::readHeader(f);
+      file2headers[pos] = std::tie(f, cheader);
+      ++pos;
     }
+  }
+  std::sort(file2headers.begin(), file2headers.begin() + pos,
+            [](const File2Header &l, const File2Header &r) {
+              return std::get<1>(l).minTime < std::get<1>(r).minTime;
+            });
+  auto drop_count = std::min(pos, count);
 
-	//clean set of sended to drop files.
-	auto caps_exists = Manifest::instance()->cola_list();
-	std::set<std::string> caps_exists_set{ caps_exists.begin(),caps_exists.end() };
-	std::set<std::string> new_sended_files;
-	for (auto&v : _files_send_to_drop) {
-		if (caps_exists_set.find(v) != caps_exists_set.end()) {
-			new_sended_files.insert(v);
-		}
-	}
-	_files_send_to_drop = new_sended_files;
+  for (size_t i = 0; i < drop_count; ++i) {
+    std::string f = std::get<0>(file2headers[i]);
+    this->drop_cap(f);
+  }
+
+  // clean set of sended to drop files.
+  auto caps_exists = Manifest::instance()->cola_list();
+  std::set<std::string> caps_exists_set{caps_exists.begin(), caps_exists.end()};
+  std::set<std::string> new_sended_files;
+  for (auto &v : _files_send_to_drop) {
+    if (caps_exists_set.find(v) != caps_exists_set.end()) {
+      new_sended_files.insert(v);
+    }
+  }
+  _files_send_to_drop = new_sended_files;
 }
 
 void CapacitorManager::drop_part(size_t count) {
@@ -195,44 +195,42 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   auto files = cap_files();
   auto p = Capacitor::Params(_params.B, _params.path);
 
-
-
-  using MMRes=std::tuple<bool,dariadb::Time, dariadb::Time>;
+  using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
   std::vector<MMRes> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
-  size_t num=0;
+  size_t num = 0;
 
   for (auto filename : files) {
-      AsyncTask at=[filename, &results, num, &p, id](const ThreadInfo&ti){
-          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-          auto raw = new Capacitor(p, filename, true);
-          Capacitor_Ptr cptr{raw};
-          dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
-          if (cptr->minMaxTime(id, &lmin, &lmax)){
-              results[num]=MMRes(true,lmin,lmax);
-          }else{
-              results[num]=MMRes(false,lmin,lmax);
-          }
-      };
-      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-      num++;
+    AsyncTask at = [filename, &results, num, &p, id](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+      auto raw = new Capacitor(p, filename, true);
+      Capacitor_Ptr cptr{raw};
+      dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
+      if (cptr->minMaxTime(id, &lmin, &lmax)) {
+        results[num] = MMRes(true, lmin, lmax);
+      } else {
+        results[num] = MMRes(false, lmin, lmax);
+      }
+    };
+    task_res[num] =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+    num++;
   }
 
-
-  for(auto&tw:task_res){
-      tw->wait();
+  for (auto &tw : task_res) {
+    tw->wait();
   }
 
   bool res = false;
 
   *minResult = dariadb::MAX_TIME;
   *maxResult = dariadb::MIN_TIME;
-  for(auto&subRes:results){
-      if (std::get<0>(subRes)) {
-            res = true;
-            *minResult = std::min(std::get<1>(subRes), *minResult);
-            *maxResult = std::max(std::get<2>(subRes), *maxResult);
-          }
+  for (auto &subRes : results) {
+    if (std::get<0>(subRes)) {
+      res = true;
+      *minResult = std::min(std::get<1>(subRes), *minResult);
+      *maxResult = std::max(std::get<2>(subRes), *maxResult);
+    }
   }
 
   return res;
@@ -271,29 +269,30 @@ Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
 
   std::vector<Meas::MeasList> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
-  size_t num=0;
+  size_t num = 0;
   for (auto filename : files) {
-      AsyncTask at=[filename,&query, &results, num,&p](const ThreadInfo&ti){
-          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-          auto raw_cap = new Capacitor(p, filename, true);
-          raw_cap->readInterval(query)->readAll(&results[num]);
-          delete raw_cap;
-      };
-      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-      num++;
+    AsyncTask at = [filename, &query, &results, num, &p](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+      auto raw_cap = new Capacitor(p, filename, true);
+      raw_cap->readInterval(query)->readAll(&results[num]);
+      delete raw_cap;
+    };
+    task_res[num] =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+    num++;
   }
 
-  for(auto&tw:task_res){
-      tw->wait();
+  for (auto &tw : task_res) {
+    tw->wait();
   }
 
-  for(auto&out:results){
-      for (auto m : out) {
-          if (m.flag == Flags::_NO_DATA) {
-              continue;
-          }
-          sub_result[m.id].insert(m);
+  for (auto &out : results) {
+    for (auto m : out) {
+      if (m.flag == Flags::_NO_DATA) {
+        continue;
       }
+      sub_result[m.id].insert(m);
+    }
   }
 
   for (auto &kv : sub_result) {
@@ -338,28 +337,29 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   std::vector<Meas::MeasList> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
 
-  size_t num=0;
+  size_t num = 0;
   for (auto filename : files) {
-      AsyncTask at=[filename,&p,&query,num,&results](const ThreadInfo&ti){
-          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-          auto raw_cap = new Capacitor(p, filename, true);
-          raw_cap->readInTimePoint(query)->readAll(&results[num]);
-          delete raw_cap;
-      };
-      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-      num++;
+    AsyncTask at = [filename, &p, &query, num, &results](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+      auto raw_cap = new Capacitor(p, filename, true);
+      raw_cap->readInTimePoint(query)->readAll(&results[num]);
+      delete raw_cap;
+    };
+    task_res[num] =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+    num++;
   }
 
-  for(auto&tw:task_res){
-      tw->wait();
+  for (auto &tw : task_res) {
+    tw->wait();
   }
 
-  for(auto&out:results){
-      for (auto &m : out) {
-          if (sub_result[m.id].flag == Flags::_NO_DATA) {
-              sub_result[m.id] = m;
-          }
+  for (auto &out : results) {
+    for (auto &m : out) {
+      if (sub_result[m.id].flag == Flags::_NO_DATA) {
+        sub_result[m.id] = m;
       }
+    }
   }
 
   for (auto &kv : sub_result) {
@@ -401,29 +401,29 @@ Reader_ptr CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) 
   return Reader_ptr(raw);
 }
 
-void CapacitorManager::append(std::string filename,const Meas::MeasArray& ma){
-    TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append(std::string filename)");
-    std::lock_guard<std::mutex> lg(_locker);
+void CapacitorManager::append(std::string filename, const Meas::MeasArray &ma) {
+  TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append(std::string filename)");
+  std::lock_guard<std::mutex> lg(_locker);
 
-    auto target=create_new(filename);
-    for(auto v:ma){
-        if(target->append(v).writed==0){
-            throw MAKE_EXCEPTION("target size to small.");
-        }
+  auto target = create_new(filename);
+  for (auto v : ma) {
+    if (target->append(v).writed == 0) {
+      throw MAKE_EXCEPTION("target size to small.");
     }
-	target->close();
-    target=nullptr;
+  }
+  target->close();
+  target = nullptr;
 }
 
 dariadb::append_result CapacitorManager::append(const Meas &value) {
   TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append");
   std::lock_guard<std::mutex> lg(_locker);
   if (_cap == nullptr) {
-    _cap=create_new();
+    _cap = create_new();
   }
   auto res = _cap->append(value);
   if (res.writed != 1) {
-    _cap=create_new();
+    _cap = create_new();
     return _cap->append(value);
   } else {
     return res;
@@ -431,7 +431,7 @@ dariadb::append_result CapacitorManager::append(const Meas &value) {
 }
 
 void CapacitorManager::flush() {
-	TIMECODE_METRICS(ctmd, "flush", "CapacitorManager::flush");
+  TIMECODE_METRICS(ctmd, "flush", "CapacitorManager::flush");
 }
 
 size_t CapacitorManager::files_count() const {

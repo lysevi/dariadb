@@ -26,8 +26,7 @@ enum class LockObjects : uint8_t {
 struct MutexWrap {
   std::mutex mutex;
   LockKind kind;
-  MutexWrap():mutex(), kind(LockKind::READ) {
-  }
+  MutexWrap() : mutex(), kind(LockKind::READ) {}
 };
 
 using RWMutex_Ptr = std::shared_ptr<MutexWrap>;
@@ -46,9 +45,11 @@ public:
   static LockManager *instance();
 
   void lock(const LockKind &lk, const LockObjects &lo);
-  void lock(const LockKind&lk, const std::vector<LockObjects>&los); ///Only simple locks support (non drop_)
+  void
+  lock(const LockKind &lk,
+       const std::vector<LockObjects> &los); /// Only simple locks support (non drop_)
   void unlock(const LockObjects &lo);
-  void unlock(const std::vector<LockObjects>&los);
+  void unlock(const std::vector<LockObjects> &los);
 
 protected:
   RWMutex_Ptr get_or_create_lock_object(const LockObjects &lo);
@@ -57,6 +58,7 @@ protected:
 
   void lock_drop_aof();
   void lock_drop_cap();
+
 private:
   static LockManager *_instance;
 

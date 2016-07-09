@@ -101,7 +101,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
     auto copies_for_id = (id_val == 0 ? copies_count / 2 : copies_count);
     for (size_t j = 1; j < copies_for_id + 1; j++) {
-		maxWritedTime = std::max(maxWritedTime, m.time);
+      maxWritedTime = std::max(maxWritedTime, m.time);
       if (as->append(m).writed != 1) {
         throw MAKE_EXCEPTION("->append(m).writed != 1");
       }
@@ -125,7 +125,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     ++flg_val;
     for (size_t j = new_from; j < copies_count + 1; j++) {
       m.value = dariadb::Value(j);
-	  maxWritedTime = std::max(maxWritedTime, m.time);
+      maxWritedTime = std::max(maxWritedTime, m.time);
       if (as->append(m).writed != 1) {
         throw MAKE_EXCEPTION("->append(m).writed != 1");
       }
@@ -141,13 +141,13 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     throw MAKE_EXCEPTION("minTime == dariadb::MAX_TIME && maxTime == dariadb::MIN_TIME");
   }
   auto max_res = as->maxTime();
-  if ( max_res != maxWritedTime) {
-	  throw MAKE_EXCEPTION("max_res != maxWritedTime");
+  if (max_res != maxWritedTime) {
+    throw MAKE_EXCEPTION("max_res != maxWritedTime");
   }
 
   auto min_res = as->minTime();
   if (min_res != from) {
-	  throw MAKE_EXCEPTION("(min_res != from)");
+    throw MAKE_EXCEPTION("(min_res != from)");
   }
   dariadb::Meas::MeasList current_mlist;
   dariadb::IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
@@ -211,21 +211,22 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (fltr_res.size() != copies_count) {
     throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
   }
-  //check filter by source;
+  // check filter by source;
   {
-	  fltr_res.clear();
-	  as->readInterval(dariadb::storage::QueryInterval(
-		  dariadb::IdArray{ _all_ids_set.begin(), _all_ids_set.end() }, 0, dariadb::Flag{ 2 }, from, to + copies_count))
-		  ->readAll(&fltr_res);
+    fltr_res.clear();
+    as->readInterval(dariadb::storage::QueryInterval(
+                         dariadb::IdArray{_all_ids_set.begin(), _all_ids_set.end()}, 0,
+                         dariadb::Flag{2}, from, to + copies_count))
+        ->readAll(&fltr_res);
 
-	  if (fltr_res.size() != copies_count) {
-		  throw MAKE_EXCEPTION("(fltr_res.size() != copies_count)");
-	  }
-	  for (auto v : fltr_res) {
-		  if (v.src != dariadb::Flag{ 2 }) {
-			  throw MAKE_EXCEPTION("(m.src != dariadb::Flag{ 2 })");
-		  }
-	  }
+    if (fltr_res.size() != copies_count) {
+      throw MAKE_EXCEPTION("(fltr_res.size() != copies_count)");
+    }
+    for (auto v : fltr_res) {
+      if (v.src != dariadb::Flag{2}) {
+        throw MAKE_EXCEPTION("(m.src != dariadb::Flag{ 2 })");
+      }
+    }
   }
   all.clear();
   auto qp = dariadb::storage::QueryTimePoint(
@@ -262,7 +263,6 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   if (fltr_res.front().flag != dariadb::Flags::_NO_DATA) {
     throw MAKE_EXCEPTION("fltr_res.front().flag != dariadb::Flags::NO_DATA");
   }
-
 }
 
 void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
@@ -321,12 +321,12 @@ void readIntervalCommonTest(dariadb::storage::MeasStorage *ds) {
     auto reader = ds->readInterval(dariadb::storage::QueryInterval(all_id, 0, 3, 5));
     dariadb::Meas::MeasList output{};
     reader->readAll(&output);
-    //if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
+    // if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
     //  throw MAKE_EXCEPTION("output.size() != size_t(5 + 3)");
     //}
-	if (output.size() != size_t(5)) { //+ timepoint(3) with no_data
-		throw MAKE_EXCEPTION("output.size() != size_t(5)");
-	}
+    if (output.size() != size_t(5)) { //+ timepoint(3) with no_data
+      throw MAKE_EXCEPTION("output.size() != size_t(5)");
+    }
   }
   // from this point read not from firsts.
   {

@@ -31,7 +31,7 @@ public:
     bool is_dropped : 1;
     bool is_closed : 1;
     bool is_full : 1;
-	bool is_open_to_write : 1;      // true if oppened to write.
+    bool is_open_to_write : 1; // true if oppened to write.
     size_t B;
     size_t size;    // sizeof file in bytes
     size_t _size_B; // how many block (sizeof(B)) addeded.
@@ -40,7 +40,7 @@ public:
     size_t _memvalues_pos;
     uint64_t id_bloom;
     uint64_t flag_bloom;
-	uint64_t transaction_number; //when drop to downlevel storage is non zero.
+    uint64_t transaction_number; // when drop to downlevel storage is non zero.
 
     bool check_id(const dariadb::Id id) const { return bloom_check(id_bloom, id); }
 
@@ -66,7 +66,7 @@ public:
   Capacitor(const Capacitor::Params &params, const std::string &fname,
             bool readonly = false);
   static Header readHeader(std::string file_name);
-  Header*header();
+  Header *header();
   append_result append(const Meas &value) override;
   Reader_ptr readInterval(const QueryInterval &q) override;
   Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
@@ -76,7 +76,7 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
   void flush() override; // write all to storage;
-  
+
   size_t files_count() const;
   size_t levels_count() const;
   size_t size() const;

@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "bench_common.h"
+#include <boost/program_options.hpp>
 #include <ctime>
 #include <storage/aof_manager.h>
 #include <storage/manifest.h>
@@ -12,7 +13,6 @@
 #include <utils/fs.h>
 #include <utils/metrics.h>
 #include <utils/thread_manager.h>
-#include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
@@ -40,7 +40,8 @@ void show_info() {
     std::cout << "\r"
               << " aofs: " << dariadb::storage::AOFManager::instance()->files_count()
               << " writes: " << append_count << " speed: " << writes_per_sec
-              << "/sec progress:" << (int64_t(100) * append_count) / dariadb_bench::all_writes
+              << "/sec progress:"
+              << (int64_t(100) * append_count) / dariadb_bench::all_writes
               << "%                ";
     std::cout.flush();
     if (stop_info) {
@@ -58,9 +59,9 @@ int main(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   bool dont_clean = false;
   bool metrics_enable = false;
-  desc.add_options()("help", "produce help message")
-      ("dont-clean", "dont clean storage path before start.")
-	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+  desc.add_options()("help", "produce help message")(
+      "dont-clean", "dont clean storage path before start.")(
+      "enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {
@@ -77,12 +78,12 @@ int main(int argc, char *argv[]) {
   }
 
   if (metrics_enable) {
-	  std::cout << "enable metrics." << std::endl;
+    std::cout << "enable metrics." << std::endl;
   }
 
-  if(vm.count("dont-clean")){
-      std::cout << "Dont clean storage." << std::endl;
-      dont_clean=true;
+  if (vm.count("dont-clean")) {
+    std::cout << "Dont clean storage." << std::endl;
+    dont_clean = true;
   }
 
   dariadb::IdSet all_id_set;
@@ -96,7 +97,8 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::utils::fs::mkdir(storage_path);
-    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
@@ -131,8 +133,10 @@ int main(int argc, char *argv[]) {
 
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();
-	if (metrics_enable) {
-        std::cout << "metrics:\n" << dariadb::utils::metrics::MetricsManager::instance()->to_string() << std::endl;
-	}
+    if (metrics_enable) {
+      std::cout << "metrics:\n"
+                << dariadb::utils::metrics::MetricsManager::instance()->to_string()
+                << std::endl;
+    }
   }
 }

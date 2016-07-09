@@ -18,13 +18,9 @@
 
 class Moc_Dropper : public dariadb::storage::CapacitorManager::CapDropper {
 public:
-	size_t calls;
-	Moc_Dropper() {
-		calls = 0;
-	}
-  virtual void drop(const std::string &) override{
-	  calls++;
-  }
+  size_t calls;
+  Moc_Dropper() { calls = 0; }
+  virtual void drop(const std::string &) override { calls++; }
 };
 
 BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
@@ -178,10 +174,10 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
       addeded++;
     }
     BOOST_CHECK_GT(addeded, size_t(0));
-	dariadb::storage::CapacitorManager::Params pparams{ p.path,p.B };
-	pparams.max_levels = p.max_levels;
-	auto mc = pparams.measurements_count();
-	BOOST_CHECK_EQUAL(addeded, mc);
+    dariadb::storage::CapacitorManager::Params pparams{p.path, p.B};
+    pparams.max_levels = p.max_levels;
+    auto mc = pparams.measurements_count();
+    BOOST_CHECK_EQUAL(addeded, mc);
   }
   auto clist = dariadb::storage::Manifest::instance()->cola_list();
   BOOST_CHECK_EQUAL(clist.size(), size_t(1));
@@ -192,7 +188,7 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
   dariadb::storage::Manifest::stop();
 }
 
-//BOOST_AUTO_TEST_CASE(CapReadIntervalTest) {
+// BOOST_AUTO_TEST_CASE(CapReadIntervalTest) {
 //  std::shared_ptr<Moc_Storage> stor(new Moc_Storage);
 //  stor->writed_count = 0;
 //  const size_t block_size = 10;
@@ -467,7 +463,7 @@ BOOST_AUTO_TEST_CASE(CallCalc) {
   p->call(m);
   BOOST_CHECK_EQUAL(p->_a.time, dariadb::Time(2));
   BOOST_CHECK_EQUAL(p->_b.time, dariadb::Time(3));
-  
+
   const size_t max_size = 10;
   auto storage_path = "testStorage";
 
@@ -525,7 +521,8 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
   dariadb::utils::fs::mkdir(storagePath);
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
-  dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
   dariadb::storage::CapacitorManager::start(
       dariadb::storage::CapacitorManager::Params(storagePath, max_size));
 
@@ -555,7 +552,8 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
-    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::CapacitorManager::start(
@@ -570,8 +568,9 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
   }
   {
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
-    
-    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::CapacitorManager::start(
@@ -584,15 +583,15 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
 
     auto closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
     BOOST_CHECK(closed.size() != size_t(0));
-	dariadb::storage::CapacitorManager::instance()->set_downlevel(stor.get());
+    dariadb::storage::CapacitorManager::instance()->set_downlevel(stor.get());
 
     for (auto fname : closed) {
       dariadb::storage::CapacitorManager::instance()->drop_cap(fname);
     }
-	BOOST_CHECK_EQUAL(stor.get()->calls, closed.size());
-   /* closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
-    BOOST_CHECK_EQUAL(closed.size(), size_t(0));
-*/
+    BOOST_CHECK_EQUAL(stor.get()->calls, closed.size());
+    /* closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
+     BOOST_CHECK_EQUAL(closed.size(), size_t(0));
+ */
     dariadb::storage::CapacitorManager::stop();
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();

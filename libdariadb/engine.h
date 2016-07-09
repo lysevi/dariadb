@@ -60,6 +60,7 @@ public:
   void drop_part_caps(size_t count);
 
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
+
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

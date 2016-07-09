@@ -3,9 +3,9 @@
 #include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <ctime>
-#include <thread>
 #include <ctime>
 #include <iostream>
+#include <thread>
 #include <timeutil.h>
 #include <utils/asyncworker.h>
 #include <utils/crc.h>
@@ -14,11 +14,10 @@
 #include <utils/lru.h>
 #include <utils/metrics.h>
 #include <utils/period_worker.h>
-#include <utils/thread_pool.h>
-#include <utils/thread_manager.h>
 #include <utils/skiplist.h>
+#include <utils/thread_manager.h>
+#include <utils/thread_pool.h>
 #include <utils/utils.h>
-
 
 BOOST_AUTO_TEST_CASE(Time) {
   auto ct = dariadb::timeutil::current_time();
@@ -275,108 +274,106 @@ BOOST_AUTO_TEST_CASE(Metrics) {
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     using dariadb::utils::metrics::FloatMetric;
-    ADD_METRICS("group2", "template", dariadb::utils::metrics::Metric_Ptr{new FloatMetric(float(3.14))});
+    ADD_METRICS("group2", "template",
+                dariadb::utils::metrics::Metric_Ptr{new FloatMetric(float(3.14))});
   }
-  auto dump=dariadb::utils::metrics::MetricsManager::instance()->to_string();
+  auto dump = dariadb::utils::metrics::MetricsManager::instance()->to_string();
   BOOST_CHECK(dump.size() > size_t(0));
 }
 
 BOOST_AUTO_TEST_CASE(ThreadsPool) {
-	using namespace dariadb::utils::async;
-	
-	const ThreadKind tk=1;
-	{
-		const size_t threads_count = 2;
-		ThreadPool tp(ThreadPool::Params(threads_count, tk));
+  using namespace dariadb::utils::async;
 
-		BOOST_CHECK_EQUAL(tp.threads_count(), threads_count);
-		BOOST_CHECK(!tp.is_stoped());
-		tp.stop();
-		BOOST_CHECK(tp.is_stoped());
-	}
+  const ThreadKind tk = 1;
+  {
+    const size_t threads_count = 2;
+    ThreadPool tp(ThreadPool::Params(threads_count, tk));
 
-    {
-        const size_t threads_count = 2;
-        ThreadPool tp(ThreadPool::Params(threads_count, tk));
-        const size_t tasks_count = 100;
-        AsyncTask at = [tk](const ThreadInfo&ti) {
-            if (tk != ti.kind) {
-                BOOST_TEST_MESSAGE("(tk != ti.kind)");
-                throw MAKE_EXCEPTION("(tk != ti.kind)");
-            }
-        };
-        for (size_t i = 0; i < tasks_count; ++i) {
-            tp.post(AT(at));
-        }
-        tp.flush();
+    BOOST_CHECK_EQUAL(tp.threads_count(), threads_count);
+    BOOST_CHECK(!tp.is_stoped());
+    tp.stop();
+    BOOST_CHECK(tp.is_stoped());
+  }
 
-        auto lock=tp.post(AT(at));
-        lock->wait();
-		
-        tp.stop();
+  {
+    const size_t threads_count = 2;
+    ThreadPool tp(ThreadPool::Params(threads_count, tk));
+    const size_t tasks_count = 100;
+    AsyncTask at = [tk](const ThreadInfo &ti) {
+      if (tk != ti.kind) {
+        BOOST_TEST_MESSAGE("(tk != ti.kind)");
+        throw MAKE_EXCEPTION("(tk != ti.kind)");
+      }
+    };
+    for (size_t i = 0; i < tasks_count; ++i) {
+      tp.post(AT(at));
+    }
+    tp.flush();
+
+    auto lock = tp.post(AT(at));
+    lock->wait();
+
+    tp.stop();
+  }
+
+  { // without flush
+    const size_t threads_count = 2;
+    ThreadPool tp(ThreadPool::Params(threads_count, tk));
+    const size_t tasks_count = 100;
+    AsyncTask at = [tk](const ThreadInfo &ti) {
+      if (tk != ti.kind) {
+        BOOST_TEST_MESSAGE("(tk != ti.kind)");
+        throw MAKE_EXCEPTION("(tk != ti.kind)");
+      }
+    };
+    for (size_t i = 0; i < tasks_count; ++i) {
+      tp.post(AT(at));
     }
 
-    {//without flush
-        const size_t threads_count = 2;
-        ThreadPool tp(ThreadPool::Params(threads_count, tk));
-        const size_t tasks_count = 100;
-        AsyncTask at = [tk](const ThreadInfo&ti) {
-            if (tk != ti.kind) {
-                BOOST_TEST_MESSAGE("(tk != ti.kind)");
-                throw MAKE_EXCEPTION("(tk != ti.kind)");
-            }
-        };
-        for (size_t i = 0; i < tasks_count; ++i) {
-            tp.post(AT(at));
-        }
-
-        tp.stop();
-    }
+    tp.stop();
+  }
 }
-
-
 
 BOOST_AUTO_TEST_CASE(ThreadsManager) {
-	using namespace dariadb::utils::async;
+  using namespace dariadb::utils::async;
 
-	const ThreadKind tk1 = 1;
-	const ThreadKind tk2 = 2;
-    size_t threads_count = 2;
-	ThreadPool::Params tp1(threads_count,tk1);
-	ThreadPool::Params tp2(threads_count,tk2);
-	
-	ThreadManager::Params tpm_params(std::vector<ThreadPool::Params>{tp1, tp2});
-	{
-		BOOST_CHECK(ThreadManager::instance() == nullptr);
-		ThreadManager::start(tpm_params);
-		BOOST_CHECK(ThreadManager::instance() != nullptr);
-		ThreadManager::stop();
-		BOOST_CHECK(ThreadManager::instance() == nullptr);
-	}
+  const ThreadKind tk1 = 1;
+  const ThreadKind tk2 = 2;
+  size_t threads_count = 2;
+  ThreadPool::Params tp1(threads_count, tk1);
+  ThreadPool::Params tp2(threads_count, tk2);
 
-    //while(1)
-    {
-        const size_t tasks_count = 10;
-        ThreadManager::start(tpm_params);
-        AsyncTask at1 = [tk1](const ThreadInfo&ti) {
-            if (tk1 != ti.kind) {
-                BOOST_TEST_MESSAGE("(tk1 != ti.kind)");
-                throw MAKE_EXCEPTION("(tk1 != ti.kind)");
-            }
-        };
-        AsyncTask at2 = [tk2](const ThreadInfo&ti) {
-            if (tk2 != ti.kind) {
-                BOOST_TEST_MESSAGE("(tk2 != ti.kind)");
-                throw MAKE_EXCEPTION("(tk2 != ti.kind)");
-            }
-        };
-        for (size_t i = 0; i < tasks_count; ++i) {
-//            logger("test #"<<i);
-            ThreadManager::instance()->post(tk1, AT(at1));
-            ThreadManager::instance()->post(tk2, AT(at2));
-        }
-        ThreadManager::instance()->flush();
-        ThreadManager::instance()->stop();
+  ThreadManager::Params tpm_params(std::vector<ThreadPool::Params>{tp1, tp2});
+  {
+    BOOST_CHECK(ThreadManager::instance() == nullptr);
+    ThreadManager::start(tpm_params);
+    BOOST_CHECK(ThreadManager::instance() != nullptr);
+    ThreadManager::stop();
+    BOOST_CHECK(ThreadManager::instance() == nullptr);
+  }
+
+  // while(1)
+  {
+    const size_t tasks_count = 10;
+    ThreadManager::start(tpm_params);
+    AsyncTask at1 = [tk1](const ThreadInfo &ti) {
+      if (tk1 != ti.kind) {
+        BOOST_TEST_MESSAGE("(tk1 != ti.kind)");
+        throw MAKE_EXCEPTION("(tk1 != ti.kind)");
+      }
+    };
+    AsyncTask at2 = [tk2](const ThreadInfo &ti) {
+      if (tk2 != ti.kind) {
+        BOOST_TEST_MESSAGE("(tk2 != ti.kind)");
+        throw MAKE_EXCEPTION("(tk2 != ti.kind)");
+      }
+    };
+    for (size_t i = 0; i < tasks_count; ++i) {
+      //            logger("test #"<<i);
+      ThreadManager::instance()->post(tk1, AT(at1));
+      ThreadManager::instance()->post(tk2, AT(at2));
     }
+    ThreadManager::instance()->flush();
+    ThreadManager::instance()->stop();
+  }
 }
-

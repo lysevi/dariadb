@@ -35,12 +35,13 @@ public:
                   dariadb::Time *maxResult) override;
   void flush() override; // write all to storage;
 
-   void drop_to_stor(MeasWriter *stor);
+  void drop_to_stor(MeasWriter *stor);
 
   std::string filename() const;
 
   Meas::MeasArray readAll();
   static size_t writed(std::string fname);
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

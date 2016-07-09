@@ -88,13 +88,13 @@ void LockManager::lock(const LockKind &lk, const std::vector<LockObjects> &los) 
     for (size_t i = 0; i < los.size(); ++i) {
       switch (lk) {
       case LockKind::EXCLUSIVE: {
-        //local_status = rw_mtx[i]->mutex.try_lock_upgrade();
-		  local_status = rw_mtx[i]->mutex.try_lock();
+        // local_status = rw_mtx[i]->mutex.try_lock_upgrade();
+        local_status = rw_mtx[i]->mutex.try_lock();
         break;
       }
       case LockKind::READ: {
-        //local_status = rw_mtx[i]->mutex.try_lock_shared();
-		  local_status = rw_mtx[i]->mutex.try_lock();
+        // local_status = rw_mtx[i]->mutex.try_lock_shared();
+        local_status = rw_mtx[i]->mutex.try_lock();
         break;
       }
       };
@@ -102,18 +102,18 @@ void LockManager::lock(const LockKind &lk, const std::vector<LockObjects> &los) 
         for (size_t j = 0; j < i; ++j) {
           switch (lk) {
           case LockKind::EXCLUSIVE: {
-            //rw_mtx[j]->mutex.unlock_and_lock_upgrade();
-			  rw_mtx[j]->mutex.unlock();
+            // rw_mtx[j]->mutex.unlock_and_lock_upgrade();
+            rw_mtx[j]->mutex.unlock();
             break;
           }
           case LockKind::READ: {
-            //rw_mtx[j]->mutex.unlock_shared();
-			  rw_mtx[j]->mutex.unlock();
+            // rw_mtx[j]->mutex.unlock_shared();
+            rw_mtx[j]->mutex.unlock();
             break;
           }
           };
         }
-		success = false;
+        success = false;
         break;
       } else {
         success = true;
@@ -128,25 +128,25 @@ void LockManager::unlock(const LockObjects &lo) {
   case LockObjects::CAP:
   case LockObjects::PAGE: {
     auto lock_target = get_lock_object(lo);
-    //switch (lock_target->kind) {
-    //case LockKind::EXCLUSIVE:
+    // switch (lock_target->kind) {
+    // case LockKind::EXCLUSIVE:
     //  lock_target->mutex.unlock_upgrade();
     //  break;
-    //case LockKind::READ:
+    // case LockKind::READ:
     //  lock_target->mutex.unlock_shared();
     //  break;
     //};
-		lock_target->mutex.unlock();
+    lock_target->mutex.unlock();
     break;
   }
   case LockObjects::DROP_AOF: {
     auto aof_locker = get_lock_object(LockObjects::AOF);
     auto cap_locker = get_lock_object(LockObjects::CAP);
-   /* aof_locker->mutex.unlock_upgrade();
-    cap_locker->mutex.unlock_upgrade();*/
+    /* aof_locker->mutex.unlock_upgrade();
+     cap_locker->mutex.unlock_upgrade();*/
 
-	aof_locker->mutex.unlock();
-	cap_locker->mutex.unlock();
+    aof_locker->mutex.unlock();
+    cap_locker->mutex.unlock();
     break;
   }
   case LockObjects::DROP_CAP: {
@@ -154,17 +154,17 @@ void LockManager::unlock(const LockObjects &lo) {
     auto cap_locker = get_lock_object(LockObjects::CAP);
     /*page_locker->mutex.unlock_upgrade();
     cap_locker->mutex.unlock_upgrade();*/
-	page_locker->mutex.unlock();
-	cap_locker->mutex.unlock();
+    page_locker->mutex.unlock();
+    cap_locker->mutex.unlock();
     break;
   }
   }
 }
 
-void LockManager::unlock(const std::vector<LockObjects>&los){
-    for(auto lo:los){
-        this->unlock(lo);
-    }
+void LockManager::unlock(const std::vector<LockObjects> &los) {
+  for (auto lo : los) {
+    this->unlock(lo);
+  }
 }
 
 void LockManager::lock_by_kind(const LockKind &lk, const LockObjects &lo) {
@@ -177,14 +177,14 @@ void LockManager::lock_by_kind(const LockKind &lk, const LockObjects &lo) {
     lock_target->mutex.lock_shared();
     break;
   };*/
-	  lock_target->mutex.lock();
+  lock_target->mutex.lock();
   lock_target->kind = lk;
 }
 
 void LockManager::lock_drop_aof() {
-	lock(LockKind::EXCLUSIVE, { LockObjects::AOF, LockObjects::CAP });
+  lock(LockKind::EXCLUSIVE, {LockObjects::AOF, LockObjects::CAP});
 }
 
 void LockManager::lock_drop_cap() {
-	lock(LockKind::EXCLUSIVE, { LockObjects::PAGE, LockObjects::CAP });
+  lock(LockKind::EXCLUSIVE, {LockObjects::PAGE, LockObjects::CAP});
 }

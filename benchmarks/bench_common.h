@@ -11,7 +11,7 @@ const size_t total_threads_count = 5;
 const size_t iteration_count = 5000;
 const size_t total_readers_count = 1;
 const size_t id_per_thread = 100;
-const size_t all_writes = total_threads_count * iteration_count* id_per_thread;
+const size_t all_writes = total_threads_count * iteration_count * id_per_thread;
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -35,8 +35,8 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     m.time = 0;
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
-	
-	for (size_t i = 0; i < iteration_count;++i) {
+
+    for (size_t i = 0; i < iteration_count; ++i) {
       m.flag = dariadb::Flag(id);
       m.src = dariadb::Flag(id);
       m.time += sleep_time;
@@ -46,7 +46,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
         if (ms->append(m).writed != 1) {
           return;
         }
-		(*append_count)++;
+        (*append_count)++;
       }
     }
   } catch (...) {
@@ -61,9 +61,9 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
   dariadb::IdArray random_ids{all_id_set.begin(), all_id_set.end()};
   std::random_shuffle(random_ids.begin(), random_ids.end());
   dariadb::IdArray current_ids{1};
-  
+
   using Id2Times = std::tuple<dariadb::Id, dariadb::Time, dariadb::Time>;
-  std::vector<Id2Times> interval_queries{ reads_count };
+  std::vector<Id2Times> interval_queries{reads_count};
   size_t cur_id = 0;
 
   std::cout << "init random intervals...." << std::endl;
@@ -74,22 +74,22 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
       auto id = random_ids[cur_id];
       cur_id = (cur_id + 1) % random_ids.size();
       dariadb::Time minT, maxT;
-	  
+
       if (!stor->minMaxTime(id, &minT, &maxT)) {
-		  std::stringstream ss;
-		  ss << "id " << id << " not found";
-		  std::cout << ss.str() << std::endl;
-		  --i;
-		  continue;
-        //throw MAKE_EXCEPTION(ss.str());
+        std::stringstream ss;
+        ss << "id " << id << " not found";
+        std::cout << ss.str() << std::endl;
+        --i;
+        continue;
+        // throw MAKE_EXCEPTION(ss.str());
       }
       interval_queries[i] = std::tie(id, minT, maxT);
     }
 
-	auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-	if (!quiet) {
-		std::cout << "time: " << elapsed << std::endl;
-	}
+    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    if (!quiet) {
+      std::cout << "time: " << elapsed << std::endl;
+    }
   }
   std::random_device r;
   std::default_random_engine e1(r());
@@ -108,7 +108,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
       std::uniform_int_distribution<dariadb::Time> uniform_dist(std::get<1>(curval),
                                                                 std::get<2>(curval));
       auto time_point = uniform_dist(e1);
-	  current_ids[0] = std::get<0>(curval);
+      current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
 
       dariadb::storage::QueryTimePoint qp{current_ids, 0, time_point};
@@ -137,7 +137,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
       auto f = std::min(time_point1, time_point2);
       auto t = std::max(time_point1, time_point2);
 
-	  current_ids[0] = std::get<0>(curval);
+      current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
       auto qi = dariadb::storage::QueryInterval(current_ids, 0, f, t);
       stor->readInterval(qi)->readAll(clbk.get());

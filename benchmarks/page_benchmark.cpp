@@ -7,19 +7,19 @@
 #include <dariadb.h>
 #include <algorithm>
 #include <atomic>
+#include <boost/program_options.hpp>
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <ctime>
 #include <limits>
 #include <random>
-#include <storage/page_manager.h>
 #include <storage/manifest.h>
+#include <storage/page_manager.h>
 #include <thread>
 #include <utils/fs.h>
 #include <utils/metrics.h>
 #include <utils/thread_manager.h>
-#include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
@@ -38,7 +38,8 @@ void show_info() {
     std::cout << "\r"
               << " pages:" << dariadb::storage::PageManager::instance()->files_count()
               << " writes: " << append_count << " speed: " << writes_per_sec
-              << "/sec progress:" << (int64_t(100) * append_count) / dariadb_bench::all_writes
+              << "/sec progress:"
+              << (int64_t(100) * append_count) / dariadb_bench::all_writes
               << "%                ";
     std::cout.flush();
     if (stop_info) {
@@ -66,9 +67,9 @@ int main(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   bool dont_clean = false;
   bool metrics_enable = false;
-  desc.add_options()("help", "produce help message")
-      ("dont-clean", "enable readers threads")
-	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+  desc.add_options()("help", "produce help message")("dont-clean",
+                                                     "enable readers threads")(
+      "enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {
@@ -84,13 +85,13 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  if(vm.count("dont-clean")){
-      std::cout << "Dont clean storage." << std::endl;
-      dont_clean=true;
+  if (vm.count("dont-clean")) {
+    std::cout << "Dont clean storage." << std::endl;
+    dont_clean = true;
   }
 
   if (metrics_enable) {
-	  std::cout << "enable metrics." << std::endl;
+    std::cout << "enable metrics." << std::endl;
   }
 
   {
@@ -101,12 +102,13 @@ int main(int argc, char *argv[]) {
       std::cout << "clean last run results." << std::endl;
       dariadb::utils::fs::rm(storagePath);
     }
-	if (!dont_clean) {
-		dariadb::utils::fs::mkdir(storagePath);
-	}
-    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
-	dariadb::storage::Manifest::start(
-		dariadb::utils::fs::append_path(storagePath, "Manifest"));
+    if (!dont_clean) {
+      dariadb::utils::fs::mkdir(storagePath);
+    }
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+    dariadb::storage::Manifest::start(
+        dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::PageManager::start(
         dariadb::storage::PageManager::Params(storagePath, chunks_count, chunks_size));
 
@@ -117,11 +119,11 @@ int main(int argc, char *argv[]) {
     size_t pos = 0;
     dariadb::IdSet all_id_set;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
-        auto id_from = dariadb_bench::get_id_from(pos);
-        auto id_to = dariadb_bench::get_id_to(pos);
-        for (size_t j = id_from; j < id_to; j++) {
-          all_id_set.insert(j);
-        }
+      auto id_from = dariadb_bench::get_id_from(pos);
+      auto id_to = dariadb_bench::get_id_to(pos);
+      for (size_t j = id_from; j < id_to; j++) {
+        all_id_set.insert(j);
+      }
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
                     dariadb::Time(i), &append_count,
                     dariadb::storage::PageManager::instance()};
@@ -143,7 +145,7 @@ int main(int argc, char *argv[]) {
         dariadb::storage::PageManager::instance()->minTime(),
         dariadb::storage::PageManager::instance()->maxTime());
 
-    dariadb::IdArray ids{all_id_set.begin(),all_id_set.end()};
+    dariadb::IdArray ids{all_id_set.begin(), all_id_set.end()};
     const size_t runs_count = 10;
     ReadCallback *clb = new ReadCallback;
     auto start = clock();
@@ -181,8 +183,10 @@ int main(int argc, char *argv[]) {
     if (dariadb::utils::fs::path_exists(storagePath)) {
       dariadb::utils::fs::rm(storagePath);
     }
-	if (metrics_enable) {
-        std::cout << "metrics:\n" << dariadb::utils::metrics::MetricsManager::instance()->to_string() << std::endl;
-	}
+    if (metrics_enable) {
+      std::cout << "metrics:\n"
+                << dariadb::utils::metrics::MetricsManager::instance()->to_string()
+                << std::endl;
+    }
   }
 }

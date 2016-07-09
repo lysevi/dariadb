@@ -195,7 +195,7 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->header->maxTime);
   iheader->transaction = std::max(iheader->transaction, ptr->header->transaction);
-  
+
   for (auto it = _itree.lower_bound(cur_index->maxTime);
        it != _itree.upper_bound(cur_index->maxTime); ++it) {
     if ((it->first == cur_index->maxTime) && (it->second == pos)) {

@@ -3,14 +3,14 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
 #include <engine.h>
 #include <storage/bloom_filter.h>
+#include <storage/lock_manager.h>
 #include <storage/page_manager.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/logger.h>
-#include <storage/lock_manager.h>
-#include <algorithm>
 
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     cap_pam.max_levels = 4;
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     aofp.max_closed_aofs = 20;
-    aofp.max_size=cap_pam.measurements_count();
+    aofp.max_size = cap_pam.measurements_count();
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                                     chunk_size),
@@ -231,13 +231,11 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
 
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     dariadb::storage::PageManager::Params pmp(storage_path, chunk_per_storage,
-                                                  chunk_size);
+                                              chunk_size);
     dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
-    aofp.max_size=cap_pam.measurements_count();
+    aofp.max_size = cap_pam.measurements_count();
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-                    aofp,
-        pmp,cap_pam,
-        dariadb::storage::Engine::Limits(10))};
+        aofp, pmp, cap_pam, dariadb::storage::Engine::Limits(10))};
 
     // storage: id=0: 10,11,....30 id=1: 0,1,2,3,4,5
     // cap: id=0: 6,7,8,9
@@ -328,7 +326,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     cap_pam.max_levels = 4;
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     aofp.max_closed_aofs = 20;
-    aofp.max_size=cap_pam.measurements_count();
+    aofp.max_size = cap_pam.measurements_count();
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                                     chunk_size),
@@ -367,7 +365,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       ++id_val;
       ++flg_val;
     }
-	ms->flush();
+    ms->flush();
     size_t total_readed = 0;
     for (dariadb::Id cur_id = 0; cur_id < id_val; ++cur_id) {
       dariadb::IdArray ids;
@@ -410,12 +408,11 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
 
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     dariadb::storage::PageManager::Params pamp(storage_path, chunk_per_storage,
-                                          chunk_size);
+                                               chunk_size);
     dariadb::storage::CapacitorManager::Params capm(storage_path, cap_B);
-    aofp.max_size=capm.measurements_count();
+    aofp.max_size = capm.measurements_count();
     std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-       aofp,pamp,capm,
-        dariadb::storage::Engine::Limits(10))};
+        aofp, pamp, capm, dariadb::storage::Engine::Limits(10))};
 
     auto m = dariadb::Meas::empty();
 
@@ -434,7 +431,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
       ++id_val;
       ++flg_val;
     }
-	ms->flush();
+    ms->flush();
     dariadb::IdArray ids{_all_ids_set.begin(), _all_ids_set.end()};
     {
       dariadb::storage::QueryInterval qi(ids, 0, from, to);

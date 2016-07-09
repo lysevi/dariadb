@@ -12,7 +12,8 @@
 #include <unordered_map>
 
 #ifdef ENABLE_METRICS
-#define TIMECODE_METRICS(var, grp, name) dariadb::utils::metrics::RAI_TimeMetric var(grp, name);
+#define TIMECODE_METRICS(var, grp, name)                                                 \
+  dariadb::utils::metrics::RAI_TimeMetric var(grp, name);
 #define ADD_METRICS(grp, name, m)                                                        \
   dariadb::utils::metrics::MetricsManager::instance()->add(grp, name, m);
 #else
@@ -22,24 +23,24 @@
 
 namespace dariadb {
 namespace utils {
-namespace metrics{
+namespace metrics {
 
-	const char METRIC_FIELD_SEPARATOR = ' ';
-	const int  METRIC_PARAM_WIDTH = 15;
+const char METRIC_FIELD_SEPARATOR = ' ';
+const int METRIC_PARAM_WIDTH = 15;
 class Metric;
 using Metric_Ptr = std::shared_ptr<Metric>;
 class Metric {
 public:
   virtual void add(const Metric_Ptr &other) = 0;
   virtual std::string to_string() const = 0;
-  virtual ~Metric(){}
+  virtual ~Metric() {}
 };
 
 template <class T> class TemplateMetric : public Metric {
 public:
   TemplateMetric(const T &value)
-      : _value(value), _average(value), _min(value), _max(value), _count(1){}
-  ~TemplateMetric(){}
+      : _value(value), _average(value), _min(value), _max(value), _count(1) {}
+  ~TemplateMetric() {}
   // Inherited via Metric
   virtual void add(const Metric_Ptr &other) override {
     auto other_raw = dynamic_cast<TemplateMetric *>(other.get());
@@ -55,26 +56,30 @@ public:
   virtual std::string to_string() const override {
     std::stringstream ss{};
 
-	{
-		std::stringstream subss{};
-		subss << "| cnt:" << _count;
-		ss  << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| min:" << _min;
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| max:" << _max;
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| aver:" << _average;
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
+    {
+      std::stringstream subss{};
+      subss << "| cnt:" << _count;
+      ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+         << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+    }
+    {
+      std::stringstream subss{};
+      subss << "| min:" << _min;
+      ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+         << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+    }
+    {
+      std::stringstream subss{};
+      subss << "| max:" << _max;
+      ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+         << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+    }
+    {
+      std::stringstream subss{};
+      subss << "| aver:" << _average;
+      ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+         << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+    }
     return ss.str();
   }
 
@@ -87,35 +92,38 @@ protected:
 #ifndef MSVC
 template <> std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const;
 #else
-template <>
-std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
-	std::stringstream ss{};
+template <> std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
+  std::stringstream ss{};
 
-	auto minc = std::chrono::duration<double, std::milli>(_min).count();
-	auto maxc = std::chrono::duration<double, std::milli>(_max).count();
-	auto avc = std::chrono::duration<double, std::milli>(_average).count();
+  auto minc = std::chrono::duration<double, std::milli>(_min).count();
+  auto maxc = std::chrono::duration<double, std::milli>(_max).count();
+  auto avc = std::chrono::duration<double, std::milli>(_average).count();
 
-	{
-		std::stringstream subss{};
-		subss << "| cnt:" << _count;
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| min:" << minc << "ms";
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| max:" << maxc << "ms";
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| aver:" << avc << "ms";
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	return ss.str();
+  {
+    std::stringstream subss{};
+    subss << "| cnt:" << _count;
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  {
+    std::stringstream subss{};
+    subss << "| min:" << minc << "ms";
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  {
+    std::stringstream subss{};
+    subss << "| max:" << maxc << "ms";
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  {
+    std::stringstream subss{};
+    subss << "| aver:" << avc << "ms";
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  return ss.str();
 }
 #endif
 using FloatMetric = TemplateMetric<float>;

@@ -8,8 +8,8 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
-#include <mutex>
 #include <fstream>
+#include <mutex>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -101,7 +101,7 @@ public:
     TP_Reader *raw = new TP_Reader;
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		throw_open_error_exception();
+      throw_open_error_exception();
     }
     std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
@@ -134,7 +134,7 @@ public:
 
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		this->throw_open_error_exception();
+      this->throw_open_error_exception();
     }
     while (1) {
       Meas val = Meas::empty();
@@ -186,17 +186,17 @@ public:
     dariadb::IdSet readed_ids;
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		throw_open_error_exception();
+      throw_open_error_exception();
     }
     while (1) {
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
         break;
       }
-	  if (val.inFlag(flag)) {
-		  replace_if_older(sub_res, val);
-		  readed_ids.insert(val.id);
-	  }
+      if (val.inFlag(flag)) {
+        replace_if_older(sub_res, val);
+        readed_ids.insert(val.id);
+      }
     }
     std::fclose(file);
 
@@ -225,7 +225,7 @@ public:
     std::lock_guard<std::mutex> lock(_mutex);
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		throw_open_error_exception();
+      throw_open_error_exception();
     }
 
     dariadb::Time result = dariadb::MAX_TIME;
@@ -244,7 +244,7 @@ public:
   dariadb::Time maxTime() const {
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		throw_open_error_exception();
+      throw_open_error_exception();
     }
 
     dariadb::Time result = dariadb::MIN_TIME;
@@ -264,7 +264,7 @@ public:
     TIMECODE_METRICS(ctmd, "minMaxTime", "AOFile::minMaxTime");
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		throw_open_error_exception();
+      throw_open_error_exception();
     }
 
     *minResult = dariadb::MAX_TIME;
@@ -297,7 +297,7 @@ public:
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		throw_open_error_exception();
+      throw_open_error_exception();
     }
 
     while (1) {
@@ -316,7 +316,7 @@ public:
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
-		throw_open_error_exception();
+      throw_open_error_exception();
     }
 
     Meas::MeasArray ma{_params.size};
@@ -333,19 +333,19 @@ public:
     return ma;
   }
 
-  void throw_open_error_exception()const {
-	  std::stringstream ss;
-	  ss << "aof: file open error " << _filename;
-	  auto aofs_manifest = Manifest::instance()->aof_list();
-	  ss << "Manifest:";
-	  for (auto f : aofs_manifest) {
-		  ss << f << std::endl;
-	  }
-	  auto aofs_exists = utils::fs::ls(_params.path, ".aof");
-	  for (auto f : aofs_exists) {
-		  ss << f << std::endl;
-	  }
-	  throw MAKE_EXCEPTION(ss.str());
+  void throw_open_error_exception() const {
+    std::stringstream ss;
+    ss << "aof: file open error " << _filename;
+    auto aofs_manifest = Manifest::instance()->aof_list();
+    ss << "Manifest:";
+    for (auto f : aofs_manifest) {
+      ss << f << std::endl;
+    }
+    auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+    for (auto f : aofs_exists) {
+      ss << f << std::endl;
+    }
+    throw MAKE_EXCEPTION(ss.str());
   }
 
 protected:
@@ -433,7 +433,7 @@ Meas::MeasArray AOFile::readAll() {
 }
 
 size_t AOFile::writed(std::string fname) {
-	TIMECODE_METRICS(ctmd, "read", "AOFile::writed");
-	std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
-	return in.tellg()/sizeof(Meas);
+  TIMECODE_METRICS(ctmd, "read", "AOFile::writed");
+  std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
+  return in.tellg() / sizeof(Meas);
 }

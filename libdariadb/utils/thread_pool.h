@@ -1,7 +1,8 @@
 #pragma once
 
-#include "utils.h"
 #include "locker.h"
+#include "utils.h"
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -9,7 +10,6 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 namespace dariadb {
 namespace utils {
@@ -19,7 +19,7 @@ using ThreadKind = uint16_t;
 
 #ifdef DEBUG
 #define TKIND_CHECK(expected, exists)                                                    \
-  if ((ThreadKind)expected != exists) {                                                              \
+  if ((ThreadKind)expected != exists) {                                                  \
     throw MAKE_EXCEPTION("wrong thread kind");                                           \
   }
 #else //  DEBUG
@@ -35,36 +35,39 @@ struct ThreadInfo {
 
 using AsyncTask = std::function<void(const ThreadInfo &)>;
 
-struct AsyncTaskWrap{
+struct AsyncTaskWrap {
   AsyncTask task;
   std::string parent_function;
   std::string code_file;
   int code_line;
-  AsyncTaskWrap()=default;
-  AsyncTaskWrap(AsyncTask&t, std::string _function,std::string file, int line){
-      task=t;
-      parent_function=_function;
-      code_file=file;
-      code_line=line;
+  AsyncTaskWrap() = default;
+  AsyncTaskWrap(AsyncTask &t, std::string _function, std::string file, int line) {
+    task = t;
+    parent_function = _function;
+    code_file = file;
+    code_line = line;
   }
 };
 
-#define AT(task) AsyncTaskWrap(task, std::string(__FUNCTION__),std::string(__FILE__),__LINE__)
+#define AT(task)                                                                         \
+  AsyncTaskWrap(task, std::string(__FUNCTION__), std::string(__FILE__), __LINE__)
 
 using TaskQueue = std::deque<AsyncTaskWrap>;
 
 struct TaskResult {
   bool runned;
-  Locker m;  // dont use mutex. mutex::lock() requires that the calling thread owns the mutex.
-  TaskResult() { runned = true; m.lock();}
-  ~TaskResult() {}
-  void wait() {
-	  m.lock();
+  Locker
+      m; // dont use mutex. mutex::lock() requires that the calling thread owns the mutex.
+  TaskResult() {
+    runned = true;
+    m.lock();
   }
+  ~TaskResult() {}
+  void wait() { m.lock(); }
 
   void unlock() {
     runned = false;
-	m.unlock();
+    m.unlock();
   }
 };
 using TaskResult_Ptr = std::shared_ptr<TaskResult>;
@@ -86,15 +89,16 @@ public:
 
   bool is_stoped() const { return _is_stoped; }
 
-  TaskResult_Ptr post(const AsyncTaskWrap&task);
+  TaskResult_Ptr post(const AsyncTaskWrap &task);
   void flush();
   void stop();
 
-  size_t active_works(){
-      std::lock_guard<std::mutex> lg(_queue_mutex);
-      size_t res=_in_queue.size();
-      return res+(_task_runned);
+  size_t active_works() {
+    std::lock_guard<std::mutex> lg(_queue_mutex);
+    size_t res = _in_queue.size();
+    return res + (_task_runned);
   }
+
 protected:
   void _thread_func(size_t num);
 
@@ -104,9 +108,9 @@ protected:
   TaskQueue _in_queue;
   std::mutex _queue_mutex;
   std::condition_variable _condition;
-  bool _stop_flag; //true - pool under stop.
-  bool _is_stoped; //true - already stopped.
-  std::atomic_size_t _task_runned; //count of runned tasks.
+  bool _stop_flag;                 // true - pool under stop.
+  bool _is_stoped;                 // true - already stopped.
+  std::atomic_size_t _task_runned; // count of runned tasks.
 };
 }
 }

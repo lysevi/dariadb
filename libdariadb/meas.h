@@ -57,12 +57,14 @@ struct Meas {
     return (ids.size() == 0) || (std::find(ids.begin(), ids.end(), id) != ids.end());
   }
 
-  bool inQuery(const IdArray &ids, const Flag f, const Flag s) const { return inFlag(f) && inSrc(s) && inIds(ids); }
+  bool inQuery(const IdArray &ids, const Flag f, const Flag s) const {
+    return inFlag(f) && inSrc(s) && inIds(ids);
+  }
 
   bool inInterval(Time from, Time to) const { return utils::inInterval(from, to, time); }
 
   bool inQuery(const IdArray &ids, const Flag f, const Flag s, Time from, Time to) const {
-    return inQuery(ids, f,s) && inInterval(from, to);
+    return inQuery(ids, f, s) && inInterval(from, to);
   }
 
   Id id;

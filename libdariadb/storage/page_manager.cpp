@@ -4,13 +4,14 @@
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 #include "../utils/lru.h"
-#include "../utils/utils.h"
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
+#include "../utils/utils.h"
 #include "bloom_filter.h"
 #include "manifest.h"
 #include "page.h"
 
+#include <atomic>
 #include <condition_variable>
 #include <cstring>
 #include <functional>
@@ -18,8 +19,6 @@
 #include <mutex>
 #include <queue>
 #include <thread>
-#include <atomic>
-
 
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
@@ -31,18 +30,17 @@ public:
   Private(const PageManager::Params &param)
       : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
-	  _transaction_next_number = 0;
+    _transaction_next_number = 0;
     update_id = false;
     last_id = 0;
 
     _cur_page = open_last_openned();
-    _under_transaction=false;
-	if (_cur_page != nullptr) {
-		_transaction_next_number = _cur_page->header->transaction+1;
-	}
-	else {
-		_transaction_next_number = 0;
-	}
+    _under_transaction = false;
+    if (_cur_page != nullptr) {
+      _transaction_next_number = _cur_page->header->transaction + 1;
+    } else {
+      _transaction_next_number = 0;
+    }
     /*this->start_async();*/
   }
 
@@ -56,7 +54,7 @@ public:
     for (auto n : pages) {
       auto file_name = utils::fs::append_path(_param.path, n);
       auto hdr = Page::readHeader(file_name);
-      if(force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
+      if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
         auto res = Page_Ptr{Page::open(file_name)};
         res->fsck();
         res = nullptr;
@@ -138,41 +136,42 @@ public:
     auto pages = pages_by_filter(
         [id](const IndexHeader &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
 
-    using MMRes=std::tuple<bool,dariadb::Time, dariadb::Time>;
+    using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
     std::vector<MMRes> results{pages.size()};
     std::vector<TaskResult_Ptr> task_res{pages.size()};
-    size_t num=0;
+    size_t num = 0;
 
     for (auto pname : pages) {
-        AsyncTask at=[pname, &results, num, this,id](const ThreadInfo&ti){
-            TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-            Page_Ptr pg = open_page_to_read(pname);
-            dariadb::Time lmin, lmax;
-            if (pg->minMaxTime(id, &lmin, &lmax)) {
-                results[num]=MMRes(true,lmin,lmax);
-            }else{
-                results[num]=MMRes(false,lmin,lmax);
-            }
-        };
-        task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-        num++;
+      AsyncTask at = [pname, &results, num, this, id](const ThreadInfo &ti) {
+        TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+        Page_Ptr pg = open_page_to_read(pname);
+        dariadb::Time lmin, lmax;
+        if (pg->minMaxTime(id, &lmin, &lmax)) {
+          results[num] = MMRes(true, lmin, lmax);
+        } else {
+          results[num] = MMRes(false, lmin, lmax);
+        }
+      };
+      task_res[num] =
+          ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+      num++;
     }
 
-  for(auto&tw:task_res){
+    for (auto &tw : task_res) {
       tw->wait();
-  }
+    }
 
-  bool res = false;
+    bool res = false;
 
-  *minResult = dariadb::MAX_TIME;
-  *maxResult = dariadb::MIN_TIME;
-  for(auto&subRes:results){
+    *minResult = dariadb::MAX_TIME;
+    *maxResult = dariadb::MIN_TIME;
+    for (auto &subRes : results) {
       if (std::get<0>(subRes)) {
-            res = true;
-            *minResult = std::min(std::get<1>(subRes), *minResult);
-            *maxResult = std::max(std::get<2>(subRes), *maxResult);
-          }
-  }
+        res = true;
+        *minResult = std::min(std::get<1>(subRes), *minResult);
+        *maxResult = std::max(std::get<2>(subRes), *maxResult);
+      }
+    }
 
     return res;
   }
@@ -332,9 +331,7 @@ public:
     return _cur_page->header->addeded_chunks;
   }
   // PM
-  size_t files_count() const {
-    return Manifest::instance()->page_list().size();
-  }
+  size_t files_count() const { return Manifest::instance()->page_list().size(); }
 
   dariadb::Time minTime() {
     std::lock_guard<std::mutex> lg(_locker);
@@ -373,10 +370,10 @@ public:
 
     while (true) {
       auto cur_page = this->get_cur_page();
-	  if (_under_transaction) {
-		  cur_page->header->transaction = _transaction_next_number;
-	  }
-	  cur_page->header->_under_transaction = _under_transaction;
+      if (_under_transaction) {
+        cur_page->header->transaction = _transaction_next_number;
+      }
+      cur_page->header->_under_transaction = _under_transaction;
       if (update_id) {
         update_id = false;
       }
@@ -392,48 +389,49 @@ public:
   }
 
   uint64_t begin_transaction() {
-	  std::lock_guard<std::mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
-	  if (_under_transaction) {
-		  throw MAKE_EXCEPTION("transaction already openned");
-	  }
-	  _transaction_next_number++;
-	  _under_transaction = true;
-	  if (_cur_page != nullptr) {
-		  _cur_page->begin_transaction(_transaction_next_number);
-	  }
-	  return _transaction_next_number;
+    if (_under_transaction) {
+      throw MAKE_EXCEPTION("transaction already openned");
+    }
+    _transaction_next_number++;
+    _under_transaction = true;
+    if (_cur_page != nullptr) {
+      _cur_page->begin_transaction(_transaction_next_number);
+    }
+    return _transaction_next_number;
   }
 
   void commit_transaction(uint64_t num) {
-	  std::lock_guard<std::mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
-	  auto pred = [num](const IndexHeader &h) { return h.transaction==num; };
+    auto pred = [num](const IndexHeader &h) { return h.transaction == num; };
 
-	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-	  for (auto pname : page_list) {
-		  auto p = Page::open(pname, false);
-		  p->commit_transaction(num);
-		  delete p;
-	  }
-	  _under_transaction = false;
+    for (auto pname : page_list) {
+      auto p = Page::open(pname, false);
+      p->commit_transaction(num);
+      delete p;
+    }
+    _under_transaction = false;
   }
 
   void rollback_transaction(uint64_t num) {
-	  std::lock_guard<std::mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
 
-	  auto pred = [num](const IndexHeader &) { return true; };
+    auto pred = [num](const IndexHeader &) { return true; };
 
-	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-	  for (auto pname : page_list) {
-		  auto p = Page::open(pname, false);
-		  p->rollback_transaction(num);
-		  delete p;
-	  }
-	  _under_transaction = false;
+    for (auto pname : page_list) {
+      auto p = Page::open(pname, false);
+      p->rollback_transaction(num);
+      delete p;
+    }
+    _under_transaction = false;
   }
+
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
@@ -514,17 +512,17 @@ dariadb::append_result dariadb::storage::PageManager::append(const Meas &value) 
 }
 
 void PageManager::fsck(bool force_check) {
-	return impl->fsck(force_check);
+  return impl->fsck(force_check);
 }
 
-uint64_t  PageManager::begin_transaction() {
-	return impl->begin_transaction();
+uint64_t PageManager::begin_transaction() {
+  return impl->begin_transaction();
 }
 
-void  PageManager::commit_transaction(uint64_t num) {
-	impl->commit_transaction(num);
+void PageManager::commit_transaction(uint64_t num) {
+  impl->commit_transaction(num);
 }
 
-void  PageManager::rollback_transaction(uint64_t num) {
-	impl->rollback_transaction(num);
+void PageManager::rollback_transaction(uint64_t num) {
+  impl->rollback_transaction(num);
 }

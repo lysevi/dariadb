@@ -2,9 +2,9 @@
 #include "../flags.h"
 #include "../utils/exception.h"
 #include "../utils/fs.h"
+#include "../utils/logger.h"
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
-#include "../utils/logger.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <cassert>
@@ -24,16 +24,16 @@ AOFManager::~AOFManager() {
 AOFManager::AOFManager(const Params &param) : _params(param) {
   _down = nullptr;
   if (dariadb::utils::fs::path_exists(_params.path)) {
-	  auto aofs = Manifest::instance()->aof_list();
-	  for (auto f : aofs) {
-		  auto full_filename = utils::fs::append_path(param.path, f);
-		  if (AOFile::writed(full_filename) != param.max_size) {
-			  logger_info("AofManager: open exist file " << f);
-			  AOFile::Params params(_params.max_size, param.path);
-			  AOFile_Ptr p{ new AOFile(params, full_filename) };
-			  _aof = p;
-		  }
-	  }
+    auto aofs = Manifest::instance()->aof_list();
+    for (auto f : aofs) {
+      auto full_filename = utils::fs::append_path(param.path, f);
+      if (AOFile::writed(full_filename) != param.max_size) {
+        logger_info("AofManager: open exist file " << f);
+        AOFile::Params params(_params.max_size, param.path);
+        AOFile_Ptr p{new AOFile(params, full_filename)};
+        _aof = p;
+      }
+    }
   }
   _buffer.resize(_params.buffer_size);
   _buffer_pos = 0;
@@ -63,28 +63,28 @@ void AOFManager::create_new() {
   auto p = AOFile::Params(_params.max_size, _params.path);
   if (_down != nullptr) {
     auto closed = this->closed_aofs();
-    //if (closed.size() > _params.max_closed_aofs) 
-	{
+    // if (closed.size() > _params.max_closed_aofs)
+    {
       TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
       size_t to_drop = closed.size();
       for (size_t i = 0; i < to_drop; ++i) {
         auto f = closed.front();
-		closed.pop_front();
-		auto without_path = utils::fs::extract_filename(f);
-		if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-			this->drop_aof(f, _down);
-		}
+        closed.pop_front();
+        auto without_path = utils::fs::extract_filename(f);
+        if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+          this->drop_aof(f, _down);
+        }
       }
-	  //clean set of sended to drop files.
-	  auto aofs_exists=Manifest::instance()->aof_list();
-	  std::set<std::string> aof_exists_set{ aofs_exists.begin(),aofs_exists.end() };
-	  std::set<std::string> new_sended_files;
-	  for (auto&v : _files_send_to_drop) {
-		  if (aof_exists_set.find(v) != aof_exists_set.end()) {
-			  new_sended_files.insert(v);
-		  }
-	  }
-	  _files_send_to_drop = new_sended_files;
+      // clean set of sended to drop files.
+      auto aofs_exists = Manifest::instance()->aof_list();
+      std::set<std::string> aof_exists_set{aofs_exists.begin(), aofs_exists.end()};
+      std::set<std::string> new_sended_files;
+      for (auto &v : _files_send_to_drop) {
+        if (aof_exists_set.find(v) != aof_exists_set.end()) {
+          new_sended_files.insert(v);
+        }
+      }
+      _files_send_to_drop = new_sended_files;
     }
   }
   _aof = AOFile_Ptr{new AOFile(p)};
@@ -118,7 +118,7 @@ std::list<std::string> dariadb::storage::AOFManager::closed_aofs() {
 void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
                                             AofFileDropper *storage) {
   auto p = AOFile::Params(_params.max_size, _params.path);
-  AOFile_Ptr ptr = AOFile_Ptr{ new AOFile{p, fname, false} };
+  AOFile_Ptr ptr = AOFile_Ptr{new AOFile{p, fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
   storage->drop(ptr, without_path);
@@ -168,42 +168,41 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
 
-
-
-  using MMRes=std::tuple<bool,dariadb::Time, dariadb::Time>;
+  using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
   std::vector<MMRes> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
-  size_t num=0;
+  size_t num = 0;
 
   for (auto filename : files) {
-      AsyncTask at=[filename, &results, num, &p, id](const ThreadInfo&ti){
-          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-          AOFile aof(p, filename, true);
-          dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
-          if (aof.minMaxTime(id, &lmin, &lmax)) {
-              results[num]=MMRes(true,lmin,lmax);
-          }else{
-              results[num]=MMRes(false,lmin,lmax);
-          }
-      };
-      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-      num++;
+    AsyncTask at = [filename, &results, num, &p, id](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+      AOFile aof(p, filename, true);
+      dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
+      if (aof.minMaxTime(id, &lmin, &lmax)) {
+        results[num] = MMRes(true, lmin, lmax);
+      } else {
+        results[num] = MMRes(false, lmin, lmax);
+      }
+    };
+    task_res[num] =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+    num++;
   }
 
-  for(auto&tw:task_res){
-      tw->wait();
+  for (auto &tw : task_res) {
+    tw->wait();
   }
 
   bool res = false;
 
   *minResult = dariadb::MAX_TIME;
   *maxResult = dariadb::MIN_TIME;
-  for(auto&subRes:results){
-      if (std::get<0>(subRes)) {
-            res = true;
-            *minResult = std::min(std::get<1>(subRes), *minResult);
-            *maxResult = std::max(std::get<2>(subRes), *maxResult);
-          }
+  for (auto &subRes : results) {
+    if (std::get<0>(subRes)) {
+      res = true;
+      *minResult = std::min(std::get<1>(subRes), *minResult);
+      *maxResult = std::max(std::get<2>(subRes), *maxResult);
+    }
   }
 
   size_t pos = 0;
@@ -226,9 +225,9 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
   std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   if (files.empty()) {
-	  TP_Reader *raw = new TP_Reader;
-	  raw->reset();
-	  return Reader_ptr(raw);
+    TP_Reader *raw = new TP_Reader;
+    raw->reset();
+    return Reader_ptr(raw);
   }
   auto p = AOFile::Params(_params.max_size, _params.path);
   TP_Reader *raw = new TP_Reader;
@@ -236,42 +235,42 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
 
   std::vector<Meas::MeasList> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
-  size_t num=0;
+  size_t num = 0;
 
   for (auto filename : files) {
-      AsyncTask at=[filename,&query, &results, num,&p](const ThreadInfo&ti){
-          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-          AOFile aof(p, filename, true);
-          aof.readInterval(query)->readAll(&results[num]);
-      };
-      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-      num++;
+    AsyncTask at = [filename, &query, &results, num, &p](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+      AOFile aof(p, filename, true);
+      aof.readInterval(query)->readAll(&results[num]);
+    };
+    task_res[num] =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+    num++;
   }
 
-  for(auto&tw:task_res){
-      tw->wait();
+  for (auto &tw : task_res) {
+    tw->wait();
   }
 
-  for(auto&out:results){
-      for (auto m : out) {
-          if (m.flag == Flags::_NO_DATA) {
-              continue;
-          }
-          sub_result[m.id].insert(m);
+  for (auto &out : results) {
+    for (auto m : out) {
+      if (m.flag == Flags::_NO_DATA) {
+        continue;
       }
+      sub_result[m.id].insert(m);
+    }
   }
 
   size_t pos = 0;
   for (auto v : _buffer) {
-      if (pos >= _buffer_pos) {
-          break;
-      }
+    if (pos >= _buffer_pos) {
+      break;
+    }
 
-      if (v.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {
-          sub_result[v.id].insert(v);
-      }
-      ++pos;
-
+    if (v.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {
+      sub_result[v.id].insert(v);
+    }
+    ++pos;
   }
 
   for (auto &kv : sub_result) {
@@ -300,32 +299,33 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
   std::vector<Meas::MeasList> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
 
-  size_t num=0;
+  size_t num = 0;
   for (auto filename : files) {
-      AsyncTask at=[filename,&p,&query,num,&results](const ThreadInfo&ti){
-          TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-          AOFile aof(p, filename, true);
-          auto rdr=aof.readInTimePoint(query);
-          rdr->readAll(&results[num]);
-      };
-      task_res[num]=ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-      num++;
+    AsyncTask at = [filename, &p, &query, num, &results](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+      AOFile aof(p, filename, true);
+      auto rdr = aof.readInTimePoint(query);
+      rdr->readAll(&results[num]);
+    };
+    task_res[num] =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+    num++;
   }
 
-  for(auto&tw:task_res){
-      tw->wait();
+  for (auto &tw : task_res) {
+    tw->wait();
   }
-  for(auto&out:results){
-      for (auto &m : out) {
-          auto it = sub_result.find(m.id);
-          if (it == sub_result.end()) {
-              sub_result.insert(std::make_pair(m.id, m));
-          } else {
-              if (it->second.flag == Flags::_NO_DATA) {
-                  sub_result[m.id] = m;
-              }
-          }
+  for (auto &out : results) {
+    for (auto &m : out) {
+      auto it = sub_result.find(m.id);
+      if (it == sub_result.end()) {
+        sub_result.insert(std::make_pair(m.id, m));
+      } else {
+        if (it->second.flag == Flags::_NO_DATA) {
+          sub_result[m.id] = m;
+        }
       }
+    }
   }
   size_t pos = 0;
   for (auto v : _buffer) {

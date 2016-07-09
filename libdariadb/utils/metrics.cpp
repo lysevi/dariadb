@@ -5,36 +5,39 @@ using namespace dariadb::utils;
 using namespace dariadb::utils::metrics;
 
 std::unique_ptr<MetricsManager> MetricsManager::_instance = nullptr;
-#ifndef  MSVC
-template <> 
-std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
-	std::stringstream ss{};
+#ifndef MSVC
+template <> std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
+  std::stringstream ss{};
 
-	auto minc = std::chrono::duration<double, std::milli>(_min).count();
-	auto maxc = std::chrono::duration<double, std::milli>(_max).count();
-	auto avc = std::chrono::duration<double, std::milli>(_average).count();
+  auto minc = std::chrono::duration<double, std::milli>(_min).count();
+  auto maxc = std::chrono::duration<double, std::milli>(_max).count();
+  auto avc = std::chrono::duration<double, std::milli>(_average).count();
 
-	{
-		std::stringstream subss{};
-		subss << "| cnt:" << _count;
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| min:" << minc << "ms";
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| max:" << maxc << "ms";
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	{
-		std::stringstream subss{};
-		subss << "| aver:" << avc << "ms";
-		ss << std::left << std::setw(METRIC_PARAM_WIDTH) << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
-	}
-	return ss.str();
+  {
+    std::stringstream subss{};
+    subss << "| cnt:" << _count;
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  {
+    std::stringstream subss{};
+    subss << "| min:" << minc << "ms";
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  {
+    std::stringstream subss{};
+    subss << "| max:" << maxc << "ms";
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  {
+    std::stringstream subss{};
+    subss << "| aver:" << avc << "ms";
+    ss << std::left << std::setw(METRIC_PARAM_WIDTH)
+       << std::setfill(METRIC_FIELD_SEPARATOR) << subss.str();
+  }
+  return ss.str();
 }
 #endif
 
@@ -71,10 +74,10 @@ std::string MetricsManager::to_string() const {
   for (auto &grp_kv : _values) {
     ss << grp_kv.first << ":" << std::endl;
     for (auto &name_kv : grp_kv.second) {
-      ss << std::left << std::setw(nameWidth) << std::setfill(METRIC_FIELD_SEPARATOR) << name_kv.first + ":"
-		  << name_kv.second->to_string() << std::endl;
+      ss << std::left << std::setw(nameWidth) << std::setfill(METRIC_FIELD_SEPARATOR)
+         << name_kv.first + ":" << name_kv.second->to_string() << std::endl;
     }
-	ss << std::endl;
+    ss << std::endl;
   }
   return ss.str();
 }

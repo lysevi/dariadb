@@ -15,17 +15,21 @@
 #include <utils/thread_manager.h>
 
 class Moc_Dropper : public dariadb::storage::AofFileDropper {
-	std::string _storage_path;
+  std::string _storage_path;
+
 public:
   size_t writed_count;
   std::set<std::string> files;
-  Moc_Dropper(std::string storage_path) { writed_count = 0; _storage_path = storage_path; }
+  Moc_Dropper(std::string storage_path) {
+    writed_count = 0;
+    _storage_path = storage_path;
+  }
   void drop(dariadb::storage::AOFile_Ptr aof, std::string filename) override {
-	  auto ma = aof->readAll();
-    writed_count+=ma.size();
+    auto ma = aof->readAll();
+    writed_count += ma.size();
     files.insert(filename);
-	dariadb::storage::Manifest::instance()->aof_rm(filename);
-	dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_storage_path, filename));
+    dariadb::storage::Manifest::instance()->aof_rm(filename);
+    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_storage_path, filename));
   }
 };
 
@@ -96,11 +100,11 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
     BOOST_CHECK_EQUAL(out.size(), writes_count);
   }
   {
-      auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
-      BOOST_CHECK(aof_files.size()==size_t(1));
-      dariadb::storage::AOFile aof(p,aof_files.front(),true);
-      auto all=aof.readAll();
-      BOOST_CHECK_EQUAL(all.size(), writes_count);
+    auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
+    BOOST_CHECK(aof_files.size() == size_t(1));
+    dariadb::storage::AOFile aof(p, aof_files.front(), true);
+    auto all = aof.readAll();
+    BOOST_CHECK_EQUAL(all.size(), writes_count);
   }
   dariadb::storage::Manifest::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -120,13 +124,13 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
     BOOST_CHECK(aof_files.size() == size_t(0));
-	auto p = dariadb::storage::AOFile::Params(block_size, storage_path);
-	dariadb::storage::AOFile aof(p);
+    auto p = dariadb::storage::AOFile::Params(block_size, storage_path);
+    dariadb::storage::AOFile aof(p);
 
-	dariadb_test::storage_test_check(&aof, 0, 100, 1);
-	dariadb::storage::Manifest::stop();
+    dariadb_test::storage_test_check(&aof, 0, 100, 1);
+    dariadb::storage::Manifest::stop();
   }
- 
+
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -140,7 +144,8 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
   }
   dariadb::utils::fs::mkdir(storagePath);
 
-  dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
@@ -173,7 +178,8 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
-      dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::AOFManager::start(
@@ -189,7 +195,8 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   {
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper(storagePath));
     stor->writed_count = 0;
-    dariadb::utils::async::ThreadManager::start(dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::AOFManager::start(
@@ -208,7 +215,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     }
 
     BOOST_CHECK(stor->writed_count != size_t(0));
-    BOOST_CHECK_EQUAL(stor->files.size(),closed.size());
+    BOOST_CHECK_EQUAL(stor->files.size(), closed.size());
 
     closed = dariadb::storage::AOFManager::instance()->closed_aofs();
     BOOST_CHECK_EQUAL(closed.size(), size_t(0));

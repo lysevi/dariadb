@@ -16,8 +16,8 @@ File struct:
 #include "../utils/cz.h"
 #include "../utils/fs.h"
 #include "../utils/kmerge.h"
-#include "../utils/utils.h"
 #include "../utils/metrics.h"
+#include "../utils/utils.h"
 #include "inner_readers.h"
 #include "manifest.h"
 #include <algorithm>
@@ -27,10 +27,10 @@ File struct:
 #include <cstring>
 #include <fstream>
 #include <future>
+#include <iterator>
 #include <limits>
 #include <list>
 #include <tuple>
-#include <iterator>
 
 const std::string LOG_MSG_PREFIX = "fsck: capacitor ";
 
@@ -52,7 +52,7 @@ struct level_header {
 #pragma pack(pop)
 
 struct FlaggedMeas {
-	bool dropped;
+  bool dropped;
   Meas value;
 
   bool operator==(const FlaggedMeas &other) const {
@@ -85,13 +85,13 @@ struct level {
   }
 
   void update_header() {
-	  for (size_t i = 0; i < hdr->pos; ++i) {
-		  auto m = begin[i].value;
-		  hdr->_minTime = std::min(hdr->_minTime, m.time);
-		  hdr->_maxTime = std::max(hdr->_maxTime, m.time);
-		  hdr->id_bloom = bloom_add(hdr->id_bloom, m.id);
-		  hdr->flag_bloom = bloom_add(hdr->flag_bloom, m.flag);
-	  }
+    for (size_t i = 0; i < hdr->pos; ++i) {
+      auto m = begin[i].value;
+      hdr->_minTime = std::min(hdr->_minTime, m.time);
+      hdr->_maxTime = std::max(hdr->_maxTime, m.time);
+      hdr->id_bloom = bloom_add(hdr->id_bloom, m.id);
+      hdr->flag_bloom = bloom_add(hdr->flag_bloom, m.flag);
+    }
   }
 
   uint32_t calc_checksum() {
@@ -113,9 +113,9 @@ struct level {
   FlaggedMeas back() const { return begin[hdr->pos - 1]; }
 
   void clear() {
-	  for (size_t i = 0; i < hdr->pos; ++i) {
-		  this->begin[i].dropped = false;
-	  }
+    for (size_t i = 0; i < hdr->pos; ++i) {
+      this->begin[i].dropped = false;
+    }
     hdr->crc = 0;
     hdr->pos = 0;
     hdr->_maxTime = dariadb::MIN_TIME;
@@ -159,15 +159,13 @@ public:
     if (!_is_readonly) {
       if (mmap != nullptr) {
         _header->is_closed = true;
-		_header->is_open_to_write = false;
+        _header->is_open_to_write = false;
         mmap->close();
       }
     }
   }
 
-  void close() {
-	  _header->is_full = true;
-  }
+  void close() { _header->is_full = true; }
   size_t one_block_size(size_t B) const { return sizeof(FlaggedMeas) * B; }
 
   size_t block_in_level(size_t lev_num) const { return (size_t(1) << lev_num); }
@@ -209,12 +207,12 @@ public:
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
     _header->is_closed = false;
-	_header->is_open_to_write = true;
-	_header->minTime = dariadb::MAX_TIME;
+    _header->is_open_to_write = true;
+    _header->minTime = dariadb::MAX_TIME;
     _header->maxTime = dariadb::MIN_TIME;
     _header->id_bloom = bloom_empty<dariadb::Id>();
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
-	_header->transaction_number = uint32_t(0);
+    _header->transaction_number = uint32_t(0);
 
     auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
     auto headers_pos =
@@ -267,19 +265,18 @@ public:
     mmap = fs::MappedFile::open(fname, _is_readonly);
 
     _header = reinterpret_cast<Header *>(mmap->data());
-	
 
     _raw_data = reinterpret_cast<uint8_t *>(mmap->data() + sizeof(Header));
 
     load();
-   // if (!_is_readonly) {
-   //   // assert(!_header->is_full);
-   //   if (!_header->is_closed && _header->is_open_to_write) {
-   //     restore();
-   //   }
-   //   _header->is_closed = false;
-	  //_header->is_open_to_write = _is_readonly;
-   // }
+    // if (!_is_readonly) {
+    //   // assert(!_header->is_full);
+    //   if (!_header->is_closed && _header->is_open_to_write) {
+    //     restore();
+    //   }
+    //   _header->is_closed = false;
+    //_header->is_open_to_write = _is_readonly;
+    // }
   }
 
   void fsck() {
@@ -288,7 +285,6 @@ public:
      }*/
     using dariadb::timeutil::to_string;
 
-    
     Meas::MeasList readed;
     size_t dropped = 0;
 
@@ -308,17 +304,17 @@ public:
         }
       }
     }
-	if (dropped != 0) {
-		logger_info(LOG_MSG_PREFIX << "dropped " << dropped << " values.");
-		if (!readed.empty()) {
-			logger_info(LOG_MSG_PREFIX << "rewrite " << readed.size() << " values.");
-			this->_header->_memvalues_pos = 0;
-			this->_header->_writed = 0;
-			for (auto &m : readed) {
-				this->append(m);
-			}
-		}
-	}
+    if (dropped != 0) {
+      logger_info(LOG_MSG_PREFIX << "dropped " << dropped << " values.");
+      if (!readed.empty()) {
+        logger_info(LOG_MSG_PREFIX << "rewrite " << readed.size() << " values.");
+        this->_header->_memvalues_pos = 0;
+        this->_header->_writed = 0;
+        for (auto &m : readed) {
+          this->append(m);
+        }
+      }
+    }
   }
 
   append_result append_unsafe(const Meas &value) {
@@ -405,32 +401,31 @@ public:
       merge_target.clear();
       logger_info(LOG_MSG_PREFIX << "clear done.");
     }
-	
-	bool is_sorted = true;
-	for (auto it = to_merge.begin(); it != to_merge.end(); ++it) {
-		auto next = std::next(it);
-		if (next == to_merge.end()) {
-			break;
-		}
-		if (((*it)->back().value.time) < (*next)->begin->value.time) {
-			is_sorted = false;
-			break;
-		}
-	}
-	if (is_sorted) {
-		size_t offset = 0;
-		for (auto&l : to_merge) {
-			size_t current_size = l->hdr->pos;
-			memcpy(merge_target.begin + offset, l->begin, sizeof(FlaggedMeas)*current_size);
-			offset += current_size;
-		}
-		merge_target.hdr->pos = merge_target.hdr->count;
-		merge_target.update_header();
-	}
-	else {
-		dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
-	}
-	merge_target.update_checksum();
+
+    bool is_sorted = true;
+    for (auto it = to_merge.begin(); it != to_merge.end(); ++it) {
+      auto next = std::next(it);
+      if (next == to_merge.end()) {
+        break;
+      }
+      if (((*it)->back().value.time) < (*next)->begin->value.time) {
+        is_sorted = false;
+        break;
+      }
+    }
+    if (is_sorted) {
+      size_t offset = 0;
+      for (auto &l : to_merge) {
+        size_t current_size = l->hdr->pos;
+        memcpy(merge_target.begin + offset, l->begin, sizeof(FlaggedMeas) * current_size);
+        offset += current_size;
+      }
+      merge_target.hdr->pos = merge_target.hdr->count;
+      merge_target.update_header();
+    } else {
+      dariadb::utils::k_merge(to_merge, merge_target, flg_less_by_time);
+    }
+    merge_target.update_checksum();
 
     clean_merged_levels(outlvl);
     return outlvl;
@@ -460,57 +455,58 @@ public:
   };
 
   void drop_to_stor(MeasWriter *stor) {
-	  //TODO use more smarter method. witout copy.
+    // TODO use more smarter method. witout copy.
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
-	/*std::list<level *> to_merge;
-    level tmp;
-    level_header tmp_hdr;
-    tmp.hdr = &tmp_hdr;
-    tmp.hdr->lvl = 0;
-    tmp.hdr->count = _memvalues_size;
-    tmp.hdr->pos = _memvalues_size;
-    tmp.begin = _memvalues;
-    to_merge.push_back(&tmp);
+    /*std::list<level *> to_merge;
+level tmp;
+level_header tmp_hdr;
+tmp.hdr = &tmp_hdr;
+tmp.hdr->lvl = 0;
+tmp.hdr->count = _memvalues_size;
+tmp.hdr->pos = _memvalues_size;
+tmp.begin = _memvalues;
+to_merge.push_back(&tmp);
 
-    for (size_t i = 0; i < _levels.size(); ++i) {
-      if (!_levels[i].empty()) {
-        to_merge.push_back(&_levels[i]);
+for (size_t i = 0; i < _levels.size(); ++i) {
+  if (!_levels[i].empty()) {
+    to_merge.push_back(&_levels[i]);
+  }
+}
+low_level_stor_pusher merge_target;
+merge_target._stor = stor;
+
+dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());*/
+    auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
+    auto begin = (FlaggedMeas *)(pos_after_unsorded +
+                                 sizeof(level_header) * _header->levels_count);
+    auto end = (FlaggedMeas *)(begin + _header->_writed - _header->B);
+
+    std::vector<FlaggedMeas> all_meases{_header->_writed};
+    auto pos = 0;
+    for (auto it = begin; it != end; ++it, ++pos) {
+      all_meases[pos] = *it;
+    }
+    for (size_t i = 0; i < _header->B; ++i, ++pos) {
+      all_meases[pos] = _memvalues[i];
+    }
+    std::sort(std::begin(all_meases), std::end(all_meases),
+              flagged_meas_time_compare_less());
+
+    for (auto it = std::begin(all_meases); it != std::end(all_meases); ++it) {
+      if (!it->dropped) {
+        stor->append(it->value);
+        it->dropped = true;
+      } else {
+        continue;
+      }
+      for (auto sub_it = std::begin(all_meases); sub_it != std::end(all_meases);
+           ++sub_it) {
+        if (!sub_it->dropped && (sub_it->value.id == it->value.id)) {
+          stor->append(sub_it->value);
+          sub_it->dropped = true;
+        }
       }
     }
-    low_level_stor_pusher merge_target;
-    merge_target._stor = stor;
-
-    dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());*/
-	auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
-	auto begin = (FlaggedMeas*)(pos_after_unsorded + sizeof(level_header) * _header->levels_count);
-	auto end = (FlaggedMeas*)(begin + _header->_writed - _header->B);
-
-	
-	
-	std::vector<FlaggedMeas> all_meases{ _header->_writed };
-	auto pos = 0;
-	for (auto it = begin; it != end; ++it, ++pos) {
-		all_meases[pos] = *it;
-	}
-	for (size_t i = 0; i < _header->B; ++i, ++pos) {
-		all_meases[pos] = _memvalues[i];
-	}
-	std::sort(std::begin(all_meases), std::end(all_meases), flagged_meas_time_compare_less());
-	
-	for (auto it = std::begin(all_meases); it != std::end(all_meases); ++it) {
-		if (!it->dropped) {
-			stor->append(it->value);
-			it->dropped = true;
-        }else{
-            continue;
-        }
-		for (auto sub_it = std::begin(all_meases); sub_it != std::end(all_meases); ++sub_it) {
-			if (!sub_it->dropped && (sub_it->value.id == it->value.id)) {
-				stor->append(sub_it->value);
-				sub_it->dropped = true;
-			}
-		}
-	}
     _header->is_dropped = true;
   }
 
@@ -763,9 +759,8 @@ public:
     return sub_res;
   }
 
-  Header* header() {
-	  return _header;
-  }
+  Header *header() { return _header; }
+
 protected:
   Capacitor::Params _params;
 
@@ -802,8 +797,8 @@ Capacitor::Header Capacitor::readHeader(std::string file_name) {
   return result;
 }
 
-Capacitor::Header*Capacitor::header() {
-	return _Impl->header();
+Capacitor::Header *Capacitor::header() {
+  return _Impl->header();
 }
 
 dariadb::Time Capacitor::minTime() {
@@ -856,9 +851,9 @@ void dariadb::storage::Capacitor::drop_to_stor(MeasWriter *stor) {
 }
 
 void dariadb::storage::Capacitor::fsck() {
-	_Impl->fsck();
+  _Impl->fsck();
 }
 
 void dariadb::storage::Capacitor::close() {
-	_Impl->close();
+  _Impl->close();
 }
