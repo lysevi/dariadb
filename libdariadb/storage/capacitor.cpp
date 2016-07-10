@@ -423,11 +423,6 @@ public:
       auto end= to_merge.back()->begin+to_merge.back()->hdr->pos;
       auto sz=(end-begin);
       memcpy(merge_target.begin,begin, sz*sizeof(FlaggedMeas));
-      /*for (auto &l : to_merge) {
-        size_t current_size = l->hdr->pos;
-        memcpy(merge_target.begin + offset, l->begin, sizeof(FlaggedMeas) * current_size);
-        offset += current_size;
-      }*/
       merge_target.hdr->pos = merge_target.hdr->count;
       merge_target.update_header();
     } else {
