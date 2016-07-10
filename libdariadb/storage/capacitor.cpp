@@ -3,8 +3,9 @@ FileName:
 GUID.cap
 Measurements saves to COLA file struct
 File struct:
-   CapHeader|memvalues(sizeof(B)*sizeof(Meas)
+   CapHeader
    |LevelHeader0| LevelHeader1| ...
+   | memvalues(sizeof(B)*sizeof(Meas))
    | Meas0_0 | Meas0_1|....
    |Meas1_0 |Meas1_1...
 */
@@ -214,10 +215,13 @@ public:
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
     _header->transaction_number = uint32_t(0);
 
-    auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
-    auto headers_pos =
-        reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
-    auto pos = (pos_after_unsorded + sizeof(level_header) * _header->levels_count);
+
+    level_header *headers_pos =
+        reinterpret_cast<level_header *>(_raw_data);
+
+    FlaggedMeas* pos_after_headers = reinterpret_cast<FlaggedMeas*>(headers_pos + _header->levels_count);
+
+    FlaggedMeas* pos = (pos_after_headers + _header->B);
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = &headers_pos[lvl];
       it->lvl = uint8_t(lvl);
@@ -232,7 +236,7 @@ public:
         assert(size_t((uint8_t *)&m[i] - mmap->data()) < sz);
         std::memset(&m[i], 0, sizeof(FlaggedMeas));
       }
-      pos += bytes_in_level(_header->B, lvl);
+      pos += it->count;//bytes_in_level(_header->B, lvl);
     }
 
     Manifest::instance()->cola_append(fname);
@@ -243,12 +247,13 @@ public:
     TIMECODE_METRICS(ctmd, "open", "Capacitor::load");
     _levels.resize(_header->levels_count);
     _memvalues_size = _header->B;
-    _memvalues = reinterpret_cast<FlaggedMeas *>(_raw_data);
 
-    auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
-    auto headers_pos =
-        reinterpret_cast<level_header *>(pos_after_unsorded); // move to levels position
-    auto pos = (pos_after_unsorded + sizeof(level_header) * _header->levels_count);
+    level_header *headers_pos =
+        reinterpret_cast<level_header *>(_raw_data);
+
+    _memvalues = reinterpret_cast<FlaggedMeas*>(headers_pos + _header->levels_count);;
+
+    FlaggedMeas* pos = (_memvalues + _header->B);
 
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto h = &headers_pos[lvl];
@@ -257,7 +262,8 @@ public:
       new_l.begin = m;
       new_l.hdr = h;
       _levels[lvl] = new_l;
-      pos += bytes_in_level(_header->B, lvl);
+      //pos += bytes_in_level(_header->B, lvl);
+      pos += h->count;//bytes_in_level(_header->B, lvl);
     }
   }
 
@@ -397,9 +403,7 @@ public:
     }
 
     if (!merge_target.empty()) {
-      logger_info(LOG_MSG_PREFIX << "merge target not empty.");
-      merge_target.clear();
-      logger_info(LOG_MSG_PREFIX << "clear done.");
+        throw MAKE_EXCEPTION("merge target not empty.");
     }
 
     bool is_sorted = true;
@@ -476,19 +480,20 @@ low_level_stor_pusher merge_target;
 merge_target._stor = stor;
 
 dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());*/
-    auto pos_after_unsorded = _raw_data + _header->B * sizeof(FlaggedMeas);
-    auto begin = (FlaggedMeas *)(pos_after_unsorded +
-                                 sizeof(level_header) * _header->levels_count);
-    auto end = (FlaggedMeas *)(begin + _header->_writed - _header->B);
+    level_header *headers_pos =
+        reinterpret_cast<level_header *>(_raw_data);
+
+    FlaggedMeas* pos_after_headers = reinterpret_cast<FlaggedMeas*>(headers_pos + _header->levels_count);
+
+    auto begin = pos_after_headers;
+    auto end = (FlaggedMeas *)(begin + _header->_writed);
 
     std::vector<FlaggedMeas> all_meases{_header->_writed};
     auto pos = 0;
     for (auto it = begin; it != end; ++it, ++pos) {
       all_meases[pos] = *it;
     }
-    for (size_t i = 0; i < _header->B; ++i, ++pos) {
-      all_meases[pos] = _memvalues[i];
-    }
+
     std::sort(std::begin(all_meases), std::end(all_meases),
               flagged_meas_time_compare_less());
 
