@@ -16,6 +16,7 @@ public:
     size_t aofs_count;  ///  AOF count
     size_t pages_count; /// pages count
     size_t cola_count;  /// COLA files count.
+    size_t active_works; /// async tasks runned.
   };
 
   struct Limits {

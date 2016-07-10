@@ -94,7 +94,6 @@ public:
   void stop();
 
   size_t active_works() {
-    std::lock_guard<std::mutex> lg(_queue_mutex);
     size_t res = _in_queue.size();
     return res + (_task_runned);
   }

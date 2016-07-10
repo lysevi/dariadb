@@ -422,6 +422,7 @@ public:
     result.aofs_count = AOFManager::instance()->files_count();
     result.pages_count = PageManager::instance()->files_count();
     result.cola_count = CapacitorManager::instance()->files_count();
+    result.active_works= ThreadManager::instance()->active_works();
     return result;
   }
 
