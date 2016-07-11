@@ -42,9 +42,9 @@ public:
 
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;
-
-  virtual Reader_ptr readInterval(const QueryInterval &q) = 0;
-  virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) = 0;
+  virtual void foreach(const QueryInterval&q, const ReaderClb*clbk) = 0;
+  virtual Meas::MeasList readInterval(const QueryInterval &q) = 0;
+  virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) = 0;
 
   virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) = 0;
   virtual ~MeasSource() {}
