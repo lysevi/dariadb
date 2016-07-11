@@ -569,6 +569,8 @@ public:
         }
       }
     }
+
+    LockManager::instance()->unlock({LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 	return result;
   }
 
@@ -577,10 +579,7 @@ public:
     Id result = _next_query_id++;
 
 	auto vals = this->readInterval(qi);
-	for (auto&v : vals) {
-		_load_results[result]->push_back(v);
-	}
-	return result;
+    _load_results.insert(std::make_pair(result,std::make_shared<Meas::MeasList>(vals)));
     return result;
   }
 
@@ -589,6 +588,7 @@ public:
     Id result = _next_query_id++;
 
     auto id2m = this->readInTimePoint(qt);
+    _load_results.insert(std::make_pair(result,std::make_shared<Meas::MeasList>()));
 	for (auto&kv : id2m) {
 		_load_results[result]->push_back(kv.second);
 	}
