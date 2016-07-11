@@ -288,21 +288,35 @@ int main(int argc, char *argv[]) {
               << dariadb::utils::async::ThreadManager::instance()->active_works()
               << std::endl;
     if (readall_enabled) {
-      std::cout << "read all..." << std::endl;
+
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
       auto max_time = ms->maxTime();
-      std::cout << " end time: " << dariadb::timeutil::to_string(max_time) << std::endl;
-
-      auto start = clock();
+      std::cout << " interval end time: " << dariadb::timeutil::to_string(max_time) << std::endl;
 
       dariadb::storage::QueryInterval qi{
           dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
           max_time};
+
+      std::cout << "foreach all..." << std::endl;
+
+      auto start = clock();
+
       ms->foreach(qi, clbk.get());
 
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "readed: " << clbk->count << std::endl;
       std::cout << "time: " << elapsed << std::endl;
+
+      std::cout << "rad all..." << std::endl;
+
+      start = clock();
+
+      auto readed=ms->readInterval(qi);
+
+      elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+      std::cout << "readed: " << readed.size() << std::endl;
+      std::cout << "time: " << elapsed << std::endl;
+
       auto expected = (dariadb_bench::iteration_count *
                        dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
 
@@ -311,7 +325,7 @@ int main(int argc, char *argv[]) {
         _dict[v.id].push_back(v);
       }
 
-      if (!readonly && (!dont_clean && clbk->count != expected)) {
+      if (!readonly && (!dont_clean && readed.size() != expected)) {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
 
         for (auto &kv : _dict) {

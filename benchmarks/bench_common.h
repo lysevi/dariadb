@@ -121,7 +121,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
   }
   {
     if (!quiet) {
-      std::cout << "intervals reads..." << std::endl;
+      std::cout << "intervals foreach..." << std::endl;
     }
 
     std::shared_ptr<BenchCallback> clbk{new BenchCallback};
@@ -145,6 +145,35 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     if (!quiet) {
       std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
+                << std::endl;
+    }
+  }
+
+  {
+    if (!quiet) {
+      std::cout << "intervals reads..." << std::endl;
+    }
+
+    auto start = clock();
+    size_t count=0;
+    cur_id = 0;
+    for (size_t i = 0; i < reads_count; i++) {
+      Id2Times curval = interval_queries[i];
+      std::uniform_int_distribution<dariadb::Time> uniform_dist(std::get<1>(curval),
+                                                                std::get<2>(curval));
+      auto time_point1 = uniform_dist(e1);
+      auto time_point2 = uniform_dist(e1);
+      auto f = std::min(time_point1, time_point2);
+      auto t = std::max(time_point1, time_point2);
+
+      current_ids[0] = std::get<0>(curval);
+      cur_id = (cur_id + 1) % random_ids.size();
+      auto qi = dariadb::storage::QueryInterval(current_ids, 0, f, t);
+      count+=stor->readInterval(qi).size();
+    }
+    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    if (!quiet) {
+      std::cout << "time: " << elapsed << " average count: " << count / reads_count
                 << std::endl;
     }
   }
