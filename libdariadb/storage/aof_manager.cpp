@@ -253,7 +253,6 @@ void AOFManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
 
 Meas::MeasList AOFManager::readInterval(const QueryInterval &query) {
   TIMECODE_METRICS(ctmd, "readInterval", "AOFManager::readInterval");
-  std::lock_guard<std::mutex> lg(_locker);
   Meas::MeasList result;
   
   std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;

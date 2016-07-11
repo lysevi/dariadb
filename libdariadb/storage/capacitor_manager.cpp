@@ -288,7 +288,7 @@ void CapacitorManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
 
 Meas::MeasList CapacitorManager::readInterval(const QueryInterval &query) {
   TIMECODE_METRICS(ctmd, "readInterval", "CapacitorManager::readInterval");
-  std::lock_guard<std::mutex> lg(_locker);
+
   Meas::MeasList result;
   std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
