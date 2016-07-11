@@ -68,9 +68,10 @@ public:
   static Header readHeader(std::string file_name);
   Header *header();
   append_result append(const Meas &value) override;
-  Reader_ptr readInterval(const QueryInterval &q) override;
-  Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
-  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
+  void foreach(const QueryInterval&q, ReaderClb*clbk)override;
+  Meas::MeasList readInterval(const QueryInterval &q) override;
+  Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
+  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,

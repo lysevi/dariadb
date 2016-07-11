@@ -40,14 +40,15 @@ public:
          dariadb::storage::CapacitorManager::Params cap_params, const Limits &limits);
 
   append_result append(const Meas &value) override;
-  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
+  
   void flush() override;
 
   QueueSizes queue_size() const;
 
-  // Inherited via MeasStorage
-  virtual Reader_ptr readInterval(const QueryInterval &q) override;
-  virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
+  virtual void foreach(const QueryInterval&q, ReaderClb*clbk);
+  virtual Meas::MeasList readInterval(const QueryInterval &q) override;
+  virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
+  virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
 
   Time minTime() override;
   Time maxTime() override;

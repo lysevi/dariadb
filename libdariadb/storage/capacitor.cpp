@@ -514,79 +514,83 @@ dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less()
     _header->is_dropped = true;
   }
 
-  Reader_ptr readInterval(const QueryInterval &q) {
-    TIMECODE_METRICS(ctmd, "readInterval", "Capacitor::readInterval");
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    TP_Reader *raw = new TP_Reader;
+  void foreach(const QueryInterval&q, ReaderClb*clbk) {
+	  TIMECODE_METRICS(ctmd, "foreach", "Capacitor::foreach");
+	  boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
-    bool id_exists = _header->check_id(q.ids);
-    bool flag_exists = false;
-    if (_header->check_flag(q.flag)) {
-      flag_exists = true;
-    }
-    if (!id_exists || !flag_exists) {
-      raw->reset();
-      return Reader_ptr(raw);
-    }
+	  bool id_exists = _header->check_id(q.ids);
+	  bool flag_exists = false;
+	  if (_header->check_flag(q.flag)) {
+		  flag_exists = true;
+	  }
+	  if (!id_exists || !flag_exists) {
+		  return;
+	  }
+
+	  for (size_t i = 0; i < this->_levels.size(); ++i) {
+		  if (_levels[i].empty()) {
+			  continue;
+		  }
+		  id_exists = _levels[i].check_id(q.ids);
+		  if (!id_exists) {
+			  continue;
+		  }
+		  if (!inInterval(q.from, q.to, _levels[i].hdr->_minTime) &&
+			  !inInterval(q.from, q.to, _levels[i].hdr->_maxTime) &&
+			  !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.from) &&
+			  !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
+			  continue;
+		  }
+		  FlaggedMeas empty;
+		  empty.value.time = q.from;
+		  auto begin = _levels[i].begin;
+		  auto end = _levels[i].begin + _levels[i].hdr->pos;
+		  auto start = std::lower_bound(
+			  begin, end, empty, [](const FlaggedMeas &left, const FlaggedMeas &right) {
+			  return left.value.time < right.value.time;
+		  });
+		  for (auto it = start; it != end; ++it) {
+			  auto m = *it;
+			  if (m.value.time > q.to) {
+				  break;
+			  }
+			  if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+				  clbk->call(m.value);
+			  }
+		  }
+	  }
+
+	  for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+		  auto m = _memvalues[j];
+		  if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+			  clbk->call(m.value);
+		  }
+	  }
+  }
+
+  Meas::MeasList readInterval(const QueryInterval &q) {
+    TIMECODE_METRICS(ctmd, "readInterval", "Capacitor::readInterval");
+	Meas::MeasList result;
 
     std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
     sub_result.reserve(q.ids.size());
-    /*if (q.from > this->minTime()) {
-      auto tp_read_data = this->timePointValues(QueryTimePoint(q.ids, q.flag, q.from));
-      for (auto kv : tp_read_data) {
-        sub_result[kv.first].insert(kv.second);
-      }
-    }*/
 
-    for (size_t i = 0; i < this->_levels.size(); ++i) {
-      if (_levels[i].empty()) {
-        continue;
-      }
-      id_exists = _levels[i].check_id(q.ids);
-      if (!id_exists) {
-        continue;
-      }
-      if (!inInterval(q.from, q.to, _levels[i].hdr->_minTime) &&
-          !inInterval(q.from, q.to, _levels[i].hdr->_maxTime) &&
-          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.from) &&
-          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
-        continue;
-      }
-      FlaggedMeas empty;
-      empty.value.time = q.from;
-      auto begin = _levels[i].begin;
-      auto end = _levels[i].begin + _levels[i].hdr->pos;
-      auto start = std::lower_bound(
-          begin, end, empty, [](const FlaggedMeas &left, const FlaggedMeas &right) {
-            return left.value.time < right.value.time;
-          });
-      for (auto it = start; it != end; ++it) {
-        auto m = *it;
-        if (m.value.time > q.to) {
-          break;
-        }
-        if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-          sub_result[m.value.id].insert(m.value);
-        }
-      }
-    }
+	std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
+	this->foreach(q, clbk.get());
+	for (auto &v : clbk->mlist) {
+		sub_result[v.id].insert(v);
+	}
 
-    for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
-      auto m = _memvalues[j];
-      if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-        sub_result[m.value.id].insert(m.value);
-      }
-    }
-
-    for (auto id : q.ids) {
-      raw->_ids.push_back(id);
-      auto values = &sub_result[id];
-      for (auto &m : *values) {
-        raw->_values.push_back(m);
-      }
-    }
-    raw->reset();
-    return Reader_ptr(raw);
+	for (auto id : q.ids) {
+		auto sublist = sub_result.find(id);
+		if (sublist == sub_result.end()) {
+			continue;
+		}
+		for (auto v : sublist->second) {
+			result.push_back(v);
+		}
+	}
+	return result;
   }
 
   void insert_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
@@ -600,22 +604,15 @@ dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less()
     }
   }
 
-  Reader_ptr readInTimePoint(const QueryTimePoint &q) {
+  Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "Capacitor::readInTimePoint");
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
-    TP_Reader *raw = new TP_Reader;
     dariadb::Meas::Id2Meas sub_res = timePointValues(q);
 
-    for (auto kv : sub_res) {
-      raw->_values.push_back(kv.second);
-      raw->_ids.push_back(kv.first);
-    }
-
-    raw->reset();
-    return Reader_ptr(raw);
+	return sub_res;
   }
 
-  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
+  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return readInTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
@@ -825,15 +822,19 @@ append_result dariadb::storage::Capacitor::append(const Meas &value) {
   return _Impl->append(value);
 }
 
-Reader_ptr dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
+void dariadb::storage::Capacitor::foreach(const QueryInterval&q, ReaderClb*clbk) {
+	return _Impl->foreach(q, clbk);
+}
+
+Meas::MeasList dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
 }
 
-Reader_ptr dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
+Meas::Id2Meas dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
 
-Reader_ptr dariadb::storage::Capacitor::currentValue(const IdArray &ids,
+Meas::Id2Meas dariadb::storage::Capacitor::currentValue(const IdArray &ids,
                                                      const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }

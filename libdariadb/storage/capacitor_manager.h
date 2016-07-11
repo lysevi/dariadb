@@ -57,9 +57,10 @@ public:
   virtual Time maxTime() override;
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  virtual Reader_ptr readInterval(const QueryInterval &q) override;
-  virtual Reader_ptr readInTimePoint(const QueryTimePoint &q) override;
-  virtual Reader_ptr currentValue(const IdArray &ids, const Flag &flag) override;
+  virtual void foreach(const QueryInterval&q, ReaderClb*clbk) override;
+  virtual Meas::MeasList readInterval(const QueryInterval &q) override;
+  virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
+  virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
 

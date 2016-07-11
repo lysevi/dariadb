@@ -236,76 +236,86 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
-Reader_ptr CapacitorManager::readInterval(const QueryInterval &query) {
-  TIMECODE_METRICS(ctmd, "readInterval", "CapacitorManager::readInterval");
-  std::lock_guard<std::mutex> lg(_locker);
-  auto pred = [query](const Capacitor::Header &hdr) {
+void CapacitorManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
+	TIMECODE_METRICS(ctmd, "foreach", "CapacitorManager::foreach");
+	std::lock_guard<std::mutex> lg(_locker);
+	auto pred = [q](const Capacitor::Header &hdr) {
 
-    bool flag_exists = hdr.check_flag(query.flag);
-    if (!flag_exists) {
-      return false;
-    }
+		bool flag_exists = hdr.check_flag(q.flag);
+		if (!flag_exists) {
+			return false;
+		}
 
-    auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
-                        (utils::inInterval(query.from, query.to, hdr.minTime)) ||
-                        (utils::inInterval(query.from, query.to, hdr.maxTime)) ||
-                        (utils::inInterval(hdr.minTime, hdr.maxTime, query.from)) ||
-                        (utils::inInterval(hdr.minTime, hdr.maxTime, query.to)));
+		auto interval_check((hdr.minTime >= q.from && hdr.maxTime <= q.to) ||
+			(utils::inInterval(q.from, q.to, hdr.minTime)) ||
+			(utils::inInterval(q.from, q.to, hdr.maxTime)) ||
+			(utils::inInterval(hdr.minTime, hdr.maxTime, q.from)) ||
+			(utils::inInterval(hdr.minTime, hdr.maxTime, q.to)));
 
-    if (!interval_check) {
-      return false;
-    }
-    if (!hdr.check_id(query.ids)) {
-      return false;
-    } else {
-      return true;
-    }
-  };
+		if (!interval_check) {
+			return false;
+		}
+		if (!hdr.check_id(q.ids)) {
+			return false;
+		}
+		else {
+			return true;
+		}
+	};
 
-  auto files = caps_by_filter(pred);
-  auto p = Capacitor::Params(_params.B, _params.path);
-  TP_Reader *raw = new TP_Reader;
-  std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+	auto files = caps_by_filter(pred);
+	auto p = Capacitor::Params(_params.B, _params.path);
+	TP_Reader *raw = new TP_Reader;
+	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
-  std::vector<Meas::MeasList> results{files.size()};
-  std::vector<TaskResult_Ptr> task_res{files.size()};
-  size_t num = 0;
-  for (auto filename : files) {
-    AsyncTask at = [filename, &query, &results, num, &p](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-      auto raw_cap = new Capacitor(p, filename, true);
-      raw_cap->readInterval(query)->readAll(&results[num]);
-      delete raw_cap;
-    };
-    task_res[num] =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-    num++;
-  }
+	std::vector<TaskResult_Ptr> task_res{ files.size() };
+	size_t num = 0;
+	for (auto filename : files) {
+		AsyncTask at = [filename, &q, &clbk,  &p](const ThreadInfo &ti) {
+			TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+			auto raw_cap = new Capacitor(p, filename, true);
+			raw_cap->foreach(q, clbk);
+			delete raw_cap;
+		};
+		task_res[num] =
+			ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+		num++;
+	}
 
-  for (auto &tw : task_res) {
-    tw->wait();
-  }
-
-  for (auto &out : results) {
-    for (auto m : out) {
-      if (m.flag == Flags::_NO_DATA) {
-        continue;
-      }
-      sub_result[m.id].insert(m);
-    }
-  }
-
-  for (auto &kv : sub_result) {
-    raw->_ids.push_back(kv.first);
-    for (auto &m : kv.second) {
-      raw->_values.push_back(m);
-    }
-  }
-  raw->reset();
-  return Reader_ptr(raw);
+	for (auto &tw : task_res) {
+		tw->wait();
+	}
 }
 
-Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
+Meas::MeasList CapacitorManager::readInterval(const QueryInterval &query) {
+  TIMECODE_METRICS(ctmd, "readInterval", "CapacitorManager::readInterval");
+  std::lock_guard<std::mutex> lg(_locker);
+  Meas::MeasList result;
+  std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+
+  std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
+  this->foreach(query, clbk.get());
+
+  for (auto m : clbk->mlist) {
+    if (m.flag == Flags::_NO_DATA) {
+      continue;
+    }
+    sub_result[m.id].insert(m);
+  }
+
+  for (auto id : query.ids) {
+	  auto sublist = sub_result.find(id);
+	  if (sublist == sub_result.end()) {
+		  continue;
+	  }
+	  for (auto v : sublist->second) {
+		  result.push_back(v);
+	  }
+  }
+  return result;
+}
+
+Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readInTimePoint", "CapacitorManager::readInTimePoint");
   std::lock_guard<std::mutex> lg(_locker);
   auto pred = [query](const Capacitor::Header &hdr) {
@@ -334,7 +344,7 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
     sub_result[id].time = query.time_point;
   }
 
-  std::vector<Meas::MeasList> results{files.size()};
+  std::vector<Meas::Id2Meas> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
 
   size_t num = 0;
@@ -342,7 +352,7 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
     AsyncTask at = [filename, &p, &query, num, &results](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
       auto raw_cap = new Capacitor(p, filename, true);
-      raw_cap->readInTimePoint(query)->readAll(&results[num]);
+	  results[num]=raw_cap->readInTimePoint(query);
       delete raw_cap;
     };
     task_res[num] =
@@ -355,22 +365,22 @@ Reader_ptr CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   }
 
   for (auto &out : results) {
-    for (auto &m : out) {
-      if (sub_result[m.id].flag == Flags::_NO_DATA) {
-        sub_result[m.id] = m;
-      }
-    }
+	  for (auto &kv : out) {
+		  auto it = sub_result.find(kv.first);
+		  if (it == sub_result.end()) {
+			  sub_result.insert(std::make_pair(kv.first, kv.second));
+		  }
+		  else {
+			  if (it->second.flag == Flags::_NO_DATA) {
+				  sub_result[kv.first] = kv.second;
+			  }
+		  }
+	  }
   }
-
-  for (auto &kv : sub_result) {
-    raw->_ids.push_back(kv.first);
-    raw->_values.push_back(kv.second);
-  }
-  raw->reset();
-  return Reader_ptr(raw);
+  sub_result;
 }
 
-Reader_ptr CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) {
+Meas::Id2Meas CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) {
   TP_Reader *raw = new TP_Reader;
   auto files = cap_files();
 
@@ -378,27 +388,20 @@ Reader_ptr CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) 
   dariadb::Meas::Id2Meas meases;
   for (const auto &f : files) {
     auto c = Capacitor_Ptr{new Capacitor(p, f, true)};
-    auto sub_rdr = c->currentValue(ids, flag);
-    Meas::MeasList out;
-    sub_rdr->readAll(&out);
+    auto out = c->currentValue(ids, flag);
 
-    for (auto &m : out) {
-      auto it = meases.find(m.id);
+    for (auto &kv : out) {
+      auto it = meases.find(kv.first);
       if (it == meases.end()) {
-        meases.insert(std::make_pair(m.id, m));
+        meases.insert(std::make_pair(kv.first, kv.second));
       } else {
         if (it->second.flag == Flags::_NO_DATA) {
-          meases[m.id] = m;
+          meases[kv.first] = kv.second;
         }
       }
     }
   }
-  for (auto &kv : meases) {
-    raw->_values.push_back(kv.second);
-    raw->_ids.push_back(kv.first);
-  }
-  raw->reset();
-  return Reader_ptr(raw);
+  return meases;
 }
 
 void CapacitorManager::append(std::string filename, const Meas::MeasArray &ma) {

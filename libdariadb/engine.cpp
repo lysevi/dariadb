@@ -395,7 +395,7 @@ public:
     _subscribe_notify.add(new_s);
   }
 
-  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
+  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);
     auto result = AOFManager::instance()->currentValue(ids, flag);
     LockManager::instance()->unlock(LockObjects::AOF);
@@ -429,149 +429,94 @@ public:
     result.active_works= ThreadManager::instance()->active_works();
     return result;
   }
-
+  
   // Inherited via MeasStorage
-  Reader_ptr readInterval(const QueryInterval &q) {
+  void foreach(const QueryInterval&q, ReaderClb*clbk) {
+	  TIMECODE_METRICS(ctmd, "foreach", "Engine::foreach");
+	  UnionReaderSet *raw_result = new UnionReaderSet();
+
+	  AsyncTask pm_at = [&clbk, &q](const ThreadInfo &ti) {
+		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		  // LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
+		  /*logger("engine: pm readinterval...");*/
+		  auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
+
+		  PageManager::instance()->readLinks(q, all_chunkLinks, clbk);
+		  all_chunkLinks.clear();
+		  // LockManager::instance()->unlock(LockObjects::PAGE);
+		  /*logger("engine: pm readinterval end");*/
+	  };
+
+	  AsyncTask cm_at = [&clbk, &q](const ThreadInfo &ti) {
+		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		  /*LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);*/
+		  /*logger("engine: cm readinterval...");*/
+		  CapacitorManager::instance()->foreach(q, clbk);
+		  /*LockManager::instance()->unlock(LockObjects::CAP);*/
+		  /*logger("engine: cm readinterval end");*/
+	  };
+
+	  AsyncTask am_at = [&clbk, &q](const ThreadInfo &ti) {
+		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+		  /*LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);*/
+		  /*logger("engine: am readinterval...");*/
+		  AOFManager::instance()->foreach(q, clbk);
+		  /*LockManager::instance()->unlock(LockObjects::AOF);*/
+		  /*logger("engine: am readinterval end");*/
+	  };
+
+	  LockManager::instance()->lock(
+		  LockKind::READ, { LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF });
+
+	  auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
+	  auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
+	  auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
+
+	  /*logger("engine: interval: wait pm.");*/
+	  pm_async->wait();
+	  /*logger("engine: interval: wait cm.");*/
+	  cm_async->wait();
+	  /*logger("engine: interval: wait am.");*/
+	  am_async->wait();
+	  /*logger("engine: interval: wait all and.");*/
+
+	  LockManager::instance()->unlock(
+	  { LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF });
+  }
+  
+  
+  Meas::MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
-    UnionReaderSet *raw_result = new UnionReaderSet();
-
-    Meas::MeasList pm_all;
-    Meas::MeasList cap_result;
-    Meas::MeasList aof_result;
-
-    AsyncTask pm_at = [&pm_all, &q](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      // LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
-      /*logger("engine: pm readinterval...");*/
-      auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
-
-      std::unique_ptr<ChunkReadCallback> callback{new ChunkReadCallback};
-      callback->out = &(pm_all);
-      PageManager::instance()->readLinks(q, all_chunkLinks, callback.get());
-      all_chunkLinks.clear();
-      // LockManager::instance()->unlock(LockObjects::PAGE);
-      /*logger("engine: pm readinterval end");*/
-    };
-
-    AsyncTask cm_at = [&cap_result, &q](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      /*LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);*/
-      /*logger("engine: cm readinterval...");*/
-      auto mc_reader = CapacitorManager::instance()->readInterval(q);
-      mc_reader->readAll(&cap_result);
-      /*LockManager::instance()->unlock(LockObjects::CAP);*/
-      /*logger("engine: cm readinterval end");*/
-    };
-
-    AsyncTask am_at = [&aof_result, &q](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      /*LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);*/
-      /*logger("engine: am readinterval...");*/
-      auto ardr = AOFManager::instance()->readInterval(q);
-      ardr->readAll(&aof_result);
-      /*LockManager::instance()->unlock(LockObjects::AOF);*/
-      /*logger("engine: am readinterval end");*/
-    };
-
-    LockManager::instance()->lock(
-        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
-
-    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
-    auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
-    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
-
-    /*logger("engine: interval: wait pm.");*/
-    pm_async->wait();
-    /*logger("engine: interval: wait cm.");*/
-    cm_async->wait();
-    /*logger("engine: interval: wait am.");*/
-    am_async->wait();
-    /*logger("engine: interval: wait all and.");*/
-
-    LockManager::instance()->unlock(
-        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
-
-    for (auto id : q.ids) {
-      UnionReader *raw_res = new UnionReader(q.flag, q.from, q.to);
-      raw_res->_ids.resize(1);
-      raw_res->_ids[0] = id;
-
-      for (auto &m : pm_all) {
-        if (m.id == id) {
-          raw_res->page_result.push_back(m);
-        }
-      }
-
-      pm_all.erase(std::remove_if(pm_all.begin(), pm_all.end(),
-                                  [id](const Meas &m) { return m.id == id; }),
-                   pm_all.end());
-      for (auto &m : cap_result) {
-        if (m.id == id) {
-          raw_res->cap_result.push_back(m);
-        }
-      }
-
-      cap_result.erase(std::remove_if(cap_result.begin(), cap_result.end(),
-                                      [id](const Meas &m) { return m.id == id; }),
-                       cap_result.end());
-
-      for (auto &m : aof_result) {
-        if (m.id == id) {
-          raw_res->aof_result.push_back(m);
-        }
-      }
-      aof_result.erase(std::remove_if(aof_result.begin(), aof_result.end(),
-                                      [id](const Meas &m) { return m.id == id; }),
-                       aof_result.end());
-      raw_result->add_rdr(Reader_ptr{raw_res});
-    }
-    raw_result->reset();
-    /*logger("engine: interval end.");*/
-    return Reader_ptr(raw_result);
+	std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
+	this->foreach(q, clbk.get());
+	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+	for (auto m : clbk->mlist) {
+		if (m.flag == Flags::_NO_DATA) {
+			continue;
+		}
+		sub_result[m.id].insert(m);
+	}
+	Meas::MeasList result;
+	for (auto id : q.ids) {
+		auto sublist = sub_result.find(id);
+		if (sublist == sub_result.end()) {
+			continue;
+		}
+		for (auto v : sublist->second) {
+			result.push_back(v);
+		}
+	}
+	return result;
   }
 
-  Reader_ptr readInTimePoint(const QueryTimePoint &q) {
+  Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "Engine::readInTimePoint");
-    UnionReaderSet *raw_result = new UnionReaderSet();
-
-    /*auto pm_id2meas = PageManager::instance()->valuesBeforeTimePoint(q);
-    Meas::MeasList aof_values;
-    AOFManager::instance()->readInTimePoint(q)->readAll(&aof_values);
-    Meas::MeasList cap_values;
-    CapacitorManager::instance()->readInTimePoint(q)->readAll(&cap_values);
-
-    for (auto id : q.ids) {
-            TP_Reader *raw_tp_reader = new TP_Reader;
-            raw_tp_reader->_ids.resize(size_t(1));
-            raw_tp_reader->_ids[0] = id;
-
-            Meas result_value=pm_id2meas[id];
-            for (auto&m : aof_values) {
-                    if (m.id == id) {
-                            if (m.flag != Flags::_NO_DATA && m.time > result_value.time) {
-                                    result_value = m;
-                            }
-                            break;
-                    }
-            }
-
-            for (auto&m : cap_values) {
-                    if (m.id == id) {
-                            if (m.flag != Flags::_NO_DATA && m.time > result_value.time) {
-                                    result_value = m;
-                            }
-                            break;
-                    }
-            }
-            raw_tp_reader->_values.push_back(result_value);
-            raw_tp_reader->reset();
-            Reader_ptr subres{ raw_tp_reader };
-            raw_result->add_rdr(subres);
-
-    }*/
+    
 
     LockManager::instance()->lock(
         LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+	
+	Meas::Id2Meas result;
 
     for (auto id : q.ids) {
       dariadb::Time minT, maxT;
@@ -582,50 +527,61 @@ public:
       if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
           (minT < q.time_point || maxT < q.time_point)) {
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
-        raw_result->add_rdr(subres);
+		for (auto &kv : subres) {
+			auto it = result.find(kv.first);
+			if (it == result.end()) {
+				result.insert(std::make_pair(kv.first, kv.second));
+			}
+			else {
+				if((it->second.flag == Flags::_NO_DATA)|| (it->second.time<kv.second.time)) {
+					result[kv.first] = kv.second;
+				}
+			}
+		}
       } else {
         if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
             (utils::inInterval(minT, maxT, q.time_point))) {
           auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
-          raw_result->add_rdr(subres);
+		  for (auto &kv : subres) {
+			  auto it = result.find(kv.first);
+			  if (it == result.end()) {
+				  result.insert(std::make_pair(kv.first, kv.second));
+			  }
+			  else {
+				  if ((it->second.flag == Flags::_NO_DATA) || (it->second.time<kv.second.time)) {
+					  result[kv.first] = kv.second;
+				  }
+			  }
+		  }
         } else {
           auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
-
-          TP_Reader *raw_tp_reader = new TP_Reader;
-          raw_tp_reader->_ids.resize(size_t(1));
-          raw_tp_reader->_ids[0] = id;
-          auto fres = id2meas.find(id);
-
-          if (fres != id2meas.end()) {
-            raw_tp_reader->_values.push_back(fres->second);
-          } else {
-            if (id2meas.empty()) {
-              auto e = Meas::empty(id);
-              e.flag = Flags::_NO_DATA;
-              e.time = q.time_point;
-              raw_tp_reader->_values.push_back(e);
-            }
-          }
-          raw_tp_reader->reset();
-          Reader_ptr subres{raw_tp_reader};
-          raw_result->add_rdr(subres);
+		  
+		  for (auto &kv : id2meas) {
+			  auto it = result.find(kv.first);
+			  if (it == result.end()) {
+				  result.insert(std::make_pair(kv.first, kv.second));
+			  }
+			  else {
+				  if ((it->second.flag == Flags::_NO_DATA) || (it->second.time<kv.second.time)) {
+					  result[kv.first] = kv.second;
+				  }
+			  }
+		  }
         }
       }
     }
-    LockManager::instance()->unlock(
-        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
-    raw_result->reset();
-    return Reader_ptr(raw_result);
+	return result;
   }
 
   Id load(const QueryInterval &qi) {
     std::lock_guard<std::mutex> lg(_locker);
     Id result = _next_query_id++;
 
-    auto reader = this->readInterval(qi);
-    std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
-    reader->readAll(reader_values.get());
-    _load_results[result] = reader_values;
+	auto vals = this->readInterval(qi);
+	for (auto&v : vals) {
+		_load_results[result]->push_back(v);
+	}
+	return result;
     return result;
   }
 
@@ -633,10 +589,10 @@ public:
     std::lock_guard<std::mutex> lg(_locker);
     Id result = _next_query_id++;
 
-    auto reader = this->readInTimePoint(qt);
-    std::shared_ptr<Meas::MeasList> reader_values = std::make_shared<Meas::MeasList>();
-    reader->readAll(reader_values.get());
-    _load_results[result] = reader_values;
+    auto id2m = this->readInTimePoint(qt);
+	for (auto&kv : id2m) {
+		_load_results[result]->push_back(kv.second);
+	}
     return result;
   }
 
@@ -710,7 +666,7 @@ void Engine::subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr
   _impl->subscribe(ids, flag, clbk);
 }
 
-Reader_ptr Engine::currentValue(const IdArray &ids, const Flag &flag) {
+Meas::Id2Meas Engine::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
@@ -722,11 +678,15 @@ Engine::QueueSizes Engine::queue_size() const {
   return _impl->queue_size();
 }
 
-Reader_ptr Engine::readInterval(const QueryInterval &q) {
+void Engine::foreach(const QueryInterval &q, ReaderClb*clbk) {
+	return _impl->foreach(q, clbk);
+}
+
+Meas::MeasList Engine::readInterval(const QueryInterval &q) {
   return _impl->readInterval(q);
 }
 
-Reader_ptr Engine::readInTimePoint(const QueryTimePoint &q) {
+Meas::Id2Meas Engine::readInTimePoint(const QueryTimePoint &q) {
   return _impl->readInTimePoint(q);
 }
 
