@@ -39,7 +39,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
     for (size_t i = 0; i < iteration_count; ++i) {
       m.flag = dariadb::Flag(id);
       m.src = dariadb::Flag(id);
-      m.time += sleep_time;
+      m.time += sleep_time*100;
       m.value = dariadb::Value(i);
       for (size_t j = id_from; j < id_to && i < dariadb_bench::iteration_count; j++) {
         m.id = j;

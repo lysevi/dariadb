@@ -102,10 +102,13 @@ int main(int argc, char *argv[]) {
   bool readonly = false;
   bool readall_enabled = false;
   bool dont_clean = false;
+  bool full_flush = false;
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")("readonly", "readonly mode")(
-      "readall", "read all benchmark enable.")("dont-clean",
-                                               "dont clean storage path before start.")(
+  desc.add_options()("help", "produce help message")
+	  ("readonly", "readonly mode")
+	  ("readall", "read all benchmark enable.")
+	  ("full-flush", "wait end of all async tasks.")
+	  ("dont-clean","dont clean storage path before start.")(
       "enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
       "enable readers threads")(
       "enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
@@ -141,6 +144,11 @@ int main(int argc, char *argv[]) {
   if (vm.count("dont-clean")) {
     std::cout << "Dont clean storage." << std::endl;
     dont_clean = true;
+  }
+
+  if (vm.count("full-flush")) {
+	  std::cout << "full-flush." << std::endl;
+	  full_flush = true;
   }
 
   if (readers_enable) {
@@ -240,6 +248,9 @@ int main(int argc, char *argv[]) {
 
       auto start = clock();
       raw_ptr->flush();
+	  if (full_flush) {
+		  raw_ptr->wait_all_asyncs();
+	  }
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       stop_info = true;
       flush_info_thread.join();
@@ -256,6 +267,7 @@ int main(int argc, char *argv[]) {
       auto start = clock();
       raw_ptr->drop_part_caps(ccount);
       raw_ptr->flush();
+	  raw_ptr->wait_all_asyncs();
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       stop_info = true;
       flush_info_thread.join();

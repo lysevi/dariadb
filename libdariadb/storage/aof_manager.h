@@ -71,7 +71,7 @@ protected:
   void create_new();
   std::list<std::string> aof_files() const;
   void flush_buffer();
-
+  void drop_old_if_needed();
 private:
   static AOFManager *_instance;
 

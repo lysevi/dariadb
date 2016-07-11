@@ -23,6 +23,7 @@ AOFManager::~AOFManager() {
 
 AOFManager::AOFManager(const Params &param) : _params(param) {
   _down = nullptr;
+  
   if (dariadb::utils::fs::path_exists(_params.path)) {
     auto aofs = Manifest::instance()->aof_list();
     for (auto f : aofs) {
@@ -32,9 +33,11 @@ AOFManager::AOFManager(const Params &param) : _params(param) {
         AOFile::Params params(_params.max_size, param.path);
         AOFile_Ptr p{new AOFile(params, full_filename)};
         _aof = p;
-      }
+		break;
+	  }
     }
   }
+  drop_old_if_needed();
   _buffer.resize(_params.buffer_size);
   _buffer_pos = 0;
 }
@@ -61,33 +64,37 @@ void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
   auto p = AOFile::Params(_params.max_size, _params.path);
-  if (_down != nullptr) {
-    auto closed = this->closed_aofs();
-    // if (closed.size() > _params.max_closed_aofs)
-    {
-      TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
-      size_t to_drop = closed.size();
-      for (size_t i = 0; i < to_drop; ++i) {
-        auto f = closed.front();
-        closed.pop_front();
-        auto without_path = utils::fs::extract_filename(f);
-        if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-          this->drop_aof(f, _down);
-        }
-      }
-      // clean set of sended to drop files.
-      auto aofs_exists = Manifest::instance()->aof_list();
-      std::set<std::string> aof_exists_set{aofs_exists.begin(), aofs_exists.end()};
-      std::set<std::string> new_sended_files;
-      for (auto &v : _files_send_to_drop) {
-        if (aof_exists_set.find(v) != aof_exists_set.end()) {
-          new_sended_files.insert(v);
-        }
-      }
-      _files_send_to_drop = new_sended_files;
-    }
-  }
+  drop_old_if_needed();
   _aof = AOFile_Ptr{new AOFile(p)};
+}
+
+void AOFManager::drop_old_if_needed() {
+	if (_down != nullptr) {
+		auto closed = this->closed_aofs();
+		// if (closed.size() > _params.max_closed_aofs)
+		{
+			TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
+			size_t to_drop = closed.size();
+			for (size_t i = 0; i < to_drop; ++i) {
+				auto f = closed.front();
+				closed.pop_front();
+				auto without_path = utils::fs::extract_filename(f);
+				if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+					this->drop_aof(f, _down);
+				}
+			}
+			// clean set of sended to drop files.
+			auto aofs_exists = Manifest::instance()->aof_list();
+			std::set<std::string> aof_exists_set{ aofs_exists.begin(), aofs_exists.end() };
+			std::set<std::string> new_sended_files;
+			for (auto &v : _files_send_to_drop) {
+				if (aof_exists_set.find(v) != aof_exists_set.end()) {
+					new_sended_files.insert(v);
+				}
+			}
+			_files_send_to_drop = new_sended_files;
+		}
+	}
 }
 
 std::list<std::string> AOFManager::aof_files() const {

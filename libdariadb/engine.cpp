@@ -307,11 +307,11 @@ public:
     _subscribe_notify.stop();
     this->flush();
 
+	ThreadManager::stop();
     AOFManager::stop();
     CapacitorManager::stop();
     PageManager::stop();
     Manifest::stop();
-    ThreadManager::stop();
     LockManager::stop();
   }
 
@@ -408,7 +408,11 @@ public:
     AOFManager::instance()->flush();
     CapacitorManager::instance()->flush();
     PageManager::instance()->flush();
-    ThreadManager::instance()->flush();
+    //ThreadManager::instance()->flush();
+  }
+
+  void wait_all_asyncs() {
+	  ThreadManager::instance()->flush();
   }
 
   class ChunkReadCallback : public ReaderClb {
@@ -728,4 +732,8 @@ Reader_ptr Engine::readInTimePoint(const QueryTimePoint &q) {
 
 void Engine::drop_part_caps(size_t count) {
   return _impl->drop_part_caps(count);
+}
+
+void Engine::wait_all_asyncs() {
+	return _impl->wait_all_asyncs();
 }

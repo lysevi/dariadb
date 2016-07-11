@@ -45,7 +45,6 @@ TaskResult_Ptr dariadb::utils::async::ThreadManager::post(const ThreadKind kind,
 ThreadManager::~ThreadManager() {
   if (!_stoped) {
     for (auto &kv : _pools) {
-      kv.second->flush();
       kv.second->stop();
     }
     _pools.clear();
