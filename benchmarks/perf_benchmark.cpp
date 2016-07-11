@@ -81,7 +81,7 @@ void reader(dariadb::storage::MeasStorage_ptr ms, dariadb::IdSet all_id_set,
 
     auto qi = dariadb::storage::QueryInterval(
         dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
-    ms->readInterval(qi)->readAll(clbk.get());
+    ms->foreach(qi,clbk.get());
 
     reads_count += clbk->count;
     if (stop_readers) {
@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
       dariadb::storage::QueryInterval qi{
           dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
           max_time};
-      ms->readInterval(qi)->readAll(clbk.get());
+      ms->foreach(qi, clbk.get());
 
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "readed: " << clbk->count << std::endl;

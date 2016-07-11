@@ -98,7 +98,7 @@ public:
   void foreach(const QueryInterval&q, ReaderClb*clbk) {
 	  TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
 	  std::lock_guard<std::mutex> lock(_mutex);
-	  TP_Reader *raw = new TP_Reader;
+
 	  auto file = std::fopen(_filename.c_str(), "rb");
 	  if (file == nullptr) {
 		  throw_open_error_exception();
@@ -136,6 +136,7 @@ public:
 			  result.push_back(v);
 		  }
 	  }
+      return result;
   }
 
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
@@ -171,7 +172,7 @@ public:
       }
     }
 
-	sub_res;
+    return sub_res;
   }
 
   void replace_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {

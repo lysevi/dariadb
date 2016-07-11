@@ -112,7 +112,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
       cur_id = (cur_id + 1) % random_ids.size();
 
       dariadb::storage::QueryTimePoint qp{current_ids, 0, time_point};
-      stor->readInTimePoint(qp)->readAll(clbk.get());
+      stor->readInTimePoint(qp);
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     if (!quiet) {
@@ -140,7 +140,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
       auto qi = dariadb::storage::QueryInterval(current_ids, 0, f, t);
-      stor->readInterval(qi)->readAll(clbk.get());
+      stor->foreach(qi,clbk.get());
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     if (!quiet) {

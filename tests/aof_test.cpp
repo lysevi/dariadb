@@ -93,10 +93,8 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
 
     dariadb::Meas::MeasList out;
 
-    auto reader = aof.readInterval(dariadb::storage::QueryInterval(
+    out = aof.readInterval(dariadb::storage::QueryInterval(
         dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
-    BOOST_CHECK(reader != nullptr);
-    reader->readAll(&out);
     BOOST_CHECK_EQUAL(out.size(), writes_count);
   }
   {
@@ -203,8 +201,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
         dariadb::storage::AOFManager::Params(storagePath, max_size));
 
     dariadb::storage::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
-    dariadb::Meas::MeasList out;
-    dariadb::storage::AOFManager::instance()->readInterval(qi)->readAll(&out);
+    auto out= dariadb::storage::AOFManager::instance()->readInterval(qi);
     BOOST_CHECK_EQUAL(out.size(), dariadb_test::copies_count);
 
     auto closed = dariadb::storage::AOFManager::instance()->closed_aofs();

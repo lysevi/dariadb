@@ -433,7 +433,6 @@ public:
   // Inherited via MeasStorage
   void foreach(const QueryInterval&q, ReaderClb*clbk) {
 	  TIMECODE_METRICS(ctmd, "foreach", "Engine::foreach");
-	  UnionReaderSet *raw_result = new UnionReaderSet();
 
 	  AsyncTask pm_at = [&clbk, &q](const ThreadInfo &ti) {
 		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);

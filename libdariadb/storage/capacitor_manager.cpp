@@ -265,7 +265,6 @@ void CapacitorManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
 
 	auto files = caps_by_filter(pred);
 	auto p = Capacitor::Params(_params.B, _params.path);
-	TP_Reader *raw = new TP_Reader;
 	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
 	std::vector<TaskResult_Ptr> task_res{ files.size() };
@@ -336,7 +335,7 @@ Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
 
   auto files = caps_by_filter(pred);
   auto p = Capacitor::Params(_params.B, _params.path);
-  TP_Reader *raw = new TP_Reader;
+
   dariadb::Meas::Id2Meas sub_result;
 
   for (auto id : query.ids) {
@@ -377,11 +376,12 @@ Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
 		  }
 	  }
   }
-  sub_result;
+  return sub_result;
 }
 
 Meas::Id2Meas CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) {
-  TP_Reader *raw = new TP_Reader;
+    TIMECODE_METRICS(ctmd, "currentValue", "CapacitorManager::currentValue");
+    std::lock_guard<std::mutex> lg(_locker);
   auto files = cap_files();
 
   auto p = Capacitor::Params(_params.B, _params.path);
