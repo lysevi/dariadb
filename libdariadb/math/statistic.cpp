@@ -2,7 +2,7 @@
 #include <cassert>
 
 using namespace dariadb::statistic;
-using namespace dariadb::statistic::integral;
+/*using namespace dariadb::statistic::integral;
 using namespace dariadb::statistic::average;
 
 class StatisticReadClbk : public dariadb::storage::ReaderClb {
@@ -56,8 +56,7 @@ void RectangleMethod::calc(const dariadb::Meas &a, const dariadb::Meas &b) {
   case Kind::MIDLE:
     _result += ((a.value + b.value) / 2.0) * (b.time - a.time);
     break;
-    /*default:
-        assert(false);*/
+
   }
 }
 Average::Average() : BaseMethod() {
@@ -74,4 +73,4 @@ void Average::calc(const dariadb::Meas &, const dariadb::Meas &) {}
 dariadb::Value Average::result() const {
   assert(_count != 0);
   return _result / _count;
-}
+}*/

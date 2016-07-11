@@ -4,7 +4,6 @@
 #include "../utils/fs.h"
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
-#include "inner_readers.h"
 #include "manifest.h"
 #include <cassert>
 

@@ -12,29 +12,6 @@
 namespace dariadb {
 namespace storage {
 
-class Reader;
-typedef std::shared_ptr<Reader> Reader_ptr;
-
-class Reader : public utils::NonCopy {
-public:
-  virtual bool isEnd() const = 0;
-  virtual IdArray getIds() const = 0;
-  virtual void readNext(ReaderClb *clb) = 0;
-  virtual Reader_ptr clone() const = 0;
-  virtual void reset() = 0; /// need call after each read operation
-                            /// (readAll, readByStep...) to reset
-                            /// read pos to begining
-
-  virtual void readAll(Meas::MeasList *output);
-  virtual void readAll(ReaderClb *clb);
-  virtual void readByStep(ReaderClb *clb, dariadb::Time from, dariadb::Time to,
-                          dariadb::Time step);
-  virtual void readByStep(Meas::MeasList *output, dariadb::Time from, dariadb::Time to,
-                          dariadb::Time step);
-  virtual size_t size() = 0;
-  virtual ~Reader() {}
-};
-
 class MeasSource {
 public:
   virtual Time minTime() = 0;

@@ -2,7 +2,6 @@
 #include "../flags.h"
 #include "../utils/fs.h"
 #include "../utils/metrics.h"
-#include "inner_readers.h"
 #include "manifest.h"
 #include <algorithm>
 #include <cassert>

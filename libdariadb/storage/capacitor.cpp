@@ -19,7 +19,6 @@ File struct:
 #include "../utils/kmerge.h"
 #include "../utils/metrics.h"
 #include "../utils/utils.h"
-#include "inner_readers.h"
 #include "manifest.h"
 #include <algorithm>
 #include <boost/thread/locks.hpp>

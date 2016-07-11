@@ -5,6 +5,7 @@
 
 namespace dariadb {
 namespace statistic {
+    /*
 class BaseMethod {
 public:
   BaseMethod();
@@ -44,6 +45,6 @@ public:
 protected:
   size_t _count;
 };
-}
+}*/
 }
 }

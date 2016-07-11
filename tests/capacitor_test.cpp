@@ -432,7 +432,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
-*/
+
 class Moc_I1 : public dariadb::statistic::BaseMethod {
 public:
   Moc_I1() { _a = _b = dariadb::Meas::empty(); }
@@ -444,7 +444,7 @@ public:
   dariadb::Meas _a;
   dariadb::Meas _b;
 };
-/*
+
 BOOST_AUTO_TEST_CASE(CallCalc) {
   std::unique_ptr<Moc_I1> p{new Moc_I1};
   auto m = dariadb::Meas::empty();
