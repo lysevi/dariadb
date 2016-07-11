@@ -249,6 +249,9 @@ void AOFManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
 			ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
 		num++;
 	}
+    for(auto&t:task_res){
+        t->wait();
+    }
 }
 
 Meas::MeasList AOFManager::readInterval(const QueryInterval &query) {
