@@ -252,6 +252,17 @@ void AOFManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
     for(auto&t:task_res){
         t->wait();
     }
+
+    size_t pos = 0;
+    for (auto v : _buffer) {
+      if (pos >= _buffer_pos) {
+        break;
+      }
+      if (v.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+        clbk->call(v);
+      }
+      ++pos;
+    }
 }
 
 Meas::MeasList AOFManager::readInterval(const QueryInterval &query) {
@@ -270,17 +281,6 @@ Meas::MeasList AOFManager::readInterval(const QueryInterval &query) {
 	sub_result[m.id].insert(m);
   }
 
-  size_t pos = 0;
-  for (auto v : _buffer) {
-    if (pos >= _buffer_pos) {
-      break;
-    }
-
-    if (v.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {
-      sub_result[v.id].insert(v);
-    }
-    ++pos;
-  }
 
   for (auto id : query.ids) {
 	  auto sublist = sub_result.find(id);

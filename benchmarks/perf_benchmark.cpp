@@ -307,7 +307,7 @@ int main(int argc, char *argv[]) {
       std::cout << "readed: " << clbk->count << std::endl;
       std::cout << "time: " << elapsed << std::endl;
 
-      std::cout << "rad all..." << std::endl;
+      std::cout << "read all..." << std::endl;
 
       start = clock();
 
