@@ -227,45 +227,45 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
-Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
+void AOFManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
+	TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
+	std::lock_guard<std::mutex> lg(_locker);
+	auto files = aof_files();
+	if (files.empty()) {
+		return;
+	}
+	auto p = AOFile::Params(_params.max_size, _params.path);
+
+	std::vector<TaskResult_Ptr> task_res{ files.size() };
+	size_t num = 0;
+
+	for (auto filename : files) {
+		AsyncTask at = [filename, &q, &clbk, &p](const ThreadInfo &ti) {
+			TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+			AOFile aof(p, filename, true);
+			aof.foreach(q, clbk);
+		};
+		task_res[num] =
+			ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+		num++;
+	}
+}
+
+Meas::MeasList AOFManager::readInterval(const QueryInterval &query) {
   TIMECODE_METRICS(ctmd, "readInterval", "AOFManager::readInterval");
   std::lock_guard<std::mutex> lg(_locker);
-  auto files = aof_files();
-  if (files.empty()) {
-    TP_Reader *raw = new TP_Reader;
-    raw->reset();
-    return Reader_ptr(raw);
-  }
-  auto p = AOFile::Params(_params.max_size, _params.path);
-  TP_Reader *raw = new TP_Reader;
+  Meas::MeasList result;
+  
   std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
-  std::vector<Meas::MeasList> results{files.size()};
-  std::vector<TaskResult_Ptr> task_res{files.size()};
-  size_t num = 0;
+  std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
+  this->foreach(query, clbk.get());
 
-  for (auto filename : files) {
-    AsyncTask at = [filename, &query, &results, num, &p](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-      AOFile aof(p, filename, true);
-      aof.readInterval(query)->readAll(&results[num]);
-    };
-    task_res[num] =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-    num++;
-  }
-
-  for (auto &tw : task_res) {
-    tw->wait();
-  }
-
-  for (auto &out : results) {
-    for (auto m : out) {
-      if (m.flag == Flags::_NO_DATA) {
-        continue;
-      }
-      sub_result[m.id].insert(m);
-    }
+  for (auto m : clbk->mlist) {
+     if (m.flag == Flags::_NO_DATA) {
+       continue;
+     }
+	sub_result[m.id].insert(m);
   }
 
   size_t pos = 0;
@@ -280,22 +280,23 @@ Reader_ptr AOFManager::readInterval(const QueryInterval &query) {
     ++pos;
   }
 
-  for (auto &kv : sub_result) {
-    raw->_ids.push_back(kv.first);
-    for (auto &m : kv.second) {
-      raw->_values.push_back(m);
-    }
+  for (auto id : query.ids) {
+	  auto sublist = sub_result.find(id);
+	  if (sublist == sub_result.end()) {
+		  continue;
+	  }
+	  for (auto v : sublist->second) {
+		  result.push_back(v);
+	  }
   }
-  raw->reset();
-  return Reader_ptr(raw);
+  return result;
 }
 
-Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
+Meas::Id2Meas AOFManager::readInTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFManager::readInTimePoint");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
-  TP_Reader *raw = new TP_Reader;
   dariadb::Meas::Id2Meas sub_result;
 
   for (auto id : query.ids) {
@@ -303,7 +304,7 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
     sub_result[id].time = query.time_point;
   }
 
-  std::vector<Meas::MeasList> results{files.size()};
+  std::vector<Meas::Id2Meas> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
 
   size_t num = 0;
@@ -311,8 +312,7 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
     AsyncTask at = [filename, &p, &query, num, &results](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
       AOFile aof(p, filename, true);
-      auto rdr = aof.readInTimePoint(query);
-      rdr->readAll(&results[num]);
+	  results[num] = aof.readInTimePoint(query);
     };
     task_res[num] =
         ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
@@ -322,14 +322,15 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
   for (auto &tw : task_res) {
     tw->wait();
   }
+
   for (auto &out : results) {
-    for (auto &m : out) {
-      auto it = sub_result.find(m.id);
+    for (auto &kv : out) {
+      auto it = sub_result.find(kv.first);
       if (it == sub_result.end()) {
-        sub_result.insert(std::make_pair(m.id, m));
+        sub_result.insert(std::make_pair(kv.first, kv.second));
       } else {
         if (it->second.flag == Flags::_NO_DATA) {
-          sub_result[m.id] = m;
+          sub_result[kv.first] = kv.second;
         }
       }
     }
@@ -352,16 +353,10 @@ Reader_ptr AOFManager::readInTimePoint(const QueryTimePoint &query) {
     }
   }
 
-  for (auto &kv : sub_result) {
-    raw->_ids.push_back(kv.first);
-    raw->_values.push_back(kv.second);
-  }
-  raw->reset();
-  return Reader_ptr(raw);
+  return sub_result;
 }
 
-Reader_ptr AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
-  TP_Reader *raw = new TP_Reader;
+Meas::Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
   auto files = aof_files();
 
   auto p = AOFile::Params(_params.max_size, _params.path);
@@ -369,26 +364,19 @@ Reader_ptr AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
   for (const auto &f : files) {
     AOFile c(p, f, true);
     auto sub_rdr = c.currentValue(ids, flag);
-    Meas::MeasList out;
-    sub_rdr->readAll(&out);
 
-    for (auto &m : out) {
-      auto it = meases.find(m.id);
+    for (auto &kv : sub_rdr) {
+      auto it = meases.find(kv.first);
       if (it == meases.end()) {
-        meases.insert(std::make_pair(m.id, m));
+        meases.insert(std::make_pair(kv.first, kv.second));
       } else {
         if (it->second.flag == Flags::_NO_DATA) {
-          meases[m.id] = m;
+          meases[kv.first] = kv.second;
         }
       }
     }
   }
-  for (auto &kv : meases) {
-    raw->_values.push_back(kv.second);
-    raw->_ids.push_back(kv.first);
-  }
-  raw->reset();
-  return Reader_ptr(raw);
+  return meases;
 }
 
 dariadb::append_result AOFManager::append(const Meas &value) {

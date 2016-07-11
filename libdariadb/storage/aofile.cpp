@@ -95,38 +95,50 @@ public:
     }
   }
 
-  Reader_ptr readInterval(const QueryInterval &q) {
-    TIMECODE_METRICS(ctmd, "readInterval", "AOFile::readInterval");
-    std::lock_guard<std::mutex> lock(_mutex);
-    TP_Reader *raw = new TP_Reader;
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
-    std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+  void foreach(const QueryInterval&q, ReaderClb*clbk) {
+	  TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
+	  std::lock_guard<std::mutex> lock(_mutex);
+	  TP_Reader *raw = new TP_Reader;
+	  auto file = std::fopen(_filename.c_str(), "rb");
+	  if (file == nullptr) {
+		  throw_open_error_exception();
+	  }
+	  
 
-    while (1) {
-      Meas val = Meas::empty();
-      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
-        break;
-      }
-      if (val.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-        sub_result[val.id].insert(val);
-      }
-    }
-    std::fclose(file);
+	  while (1) {
+		  Meas val = Meas::empty();
+		  if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+			  break;
+		  }
+		  if (val.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+			  clbk->call(val);
+		  }
+	  }
+	  std::fclose(file);
+  }
+  
+  Meas::MeasList readInterval(const QueryInterval &q) {
+	  TIMECODE_METRICS(ctmd, "readInterval", "AOFile::readInterval");
+	  std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
+	  this->foreach(q, clbk.get());
 
-    for (auto &kv : sub_result) {
-      raw->_ids.push_back(kv.first);
-      for (auto &m : kv.second) {
-        raw->_values.push_back(m);
-      }
-    }
-    raw->reset();
-    return Reader_ptr(raw);
+	  std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+	  for (auto v : clbk->mlist) {
+		  sub_result[v.id].insert(v);
+	  }
+	  Meas::MeasList result;
+	  for (auto id : q.ids) {
+		  auto sublist=sub_result.find(id);
+		  if (sublist == sub_result.end()) {
+			  continue;
+		  }
+		  for (auto v : sublist->second) {
+			  result.push_back(v);
+		  }
+	  }
   }
 
-  Reader_ptr readInTimePoint(const QueryTimePoint &q) {
+  Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFile::readInTimePoint");
     std::lock_guard<std::mutex> lock(_mutex);
     dariadb::IdSet readed_ids;
@@ -159,14 +171,7 @@ public:
       }
     }
 
-    TP_Reader *raw = new TP_Reader;
-    for (auto kv : sub_res) {
-      raw->_values.push_back(kv.second);
-      raw->_ids.push_back(kv.first);
-    }
-
-    raw->reset();
-    return Reader_ptr(raw);
+	sub_res;
   }
 
   void replace_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
@@ -180,7 +185,7 @@ public:
     }
   }
 
-  Reader_ptr currentValue(const IdArray &ids, const Flag &flag) {
+  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     std::lock_guard<std::mutex> lock(_mutex);
     dariadb::Meas::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
@@ -211,14 +216,7 @@ public:
       }
     }
 
-    TP_Reader *raw = new TP_Reader;
-    for (auto kv : sub_res) {
-      raw->_values.push_back(kv.second);
-      raw->_ids.push_back(kv.first);
-    }
-
-    raw->reset();
-    return Reader_ptr(raw);
+	return sub_res;
   }
 
   dariadb::Time minTime() const {
@@ -408,15 +406,19 @@ append_result AOFile::append(const Meas::MeasList &ml) {
   return _Impl->append(ml);
 }
 
-Reader_ptr AOFile::readInterval(const QueryInterval &q) {
+void AOFile::foreach(const QueryInterval&q, ReaderClb*clbk) {
+	return _Impl->foreach(q, clbk);
+}
+
+Meas::MeasList AOFile::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
 }
 
-Reader_ptr AOFile::readInTimePoint(const QueryTimePoint &q) {
+Meas::Id2Meas AOFile::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
 
-Reader_ptr AOFile::currentValue(const IdArray &ids, const Flag &flag) {
+Meas::Id2Meas AOFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 

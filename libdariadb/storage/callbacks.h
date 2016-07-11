@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../meas.h"
-#include <cassert>
 #include <memory>
+#include "../utils/locker.h"
 
 namespace dariadb {
 namespace storage {
@@ -17,11 +17,14 @@ typedef std::shared_ptr<ReaderClb> ReaderClb_ptr;
 
 class MList_ReaderClb : public ReaderClb {
 public:
+	MList_ReaderClb():mlist() {
+	}
   void call(const Meas &m) override {
-    assert(mlist != nullptr);
-    mlist->push_back(m);
+	std::lock_guard<utils::Locker> lg(_locker);
+    mlist.push_back(m);
   }
-  Meas::MeasList *mlist;
+  Meas::MeasList mlist;
+  utils::Locker _locker;
 };
 }
 }
