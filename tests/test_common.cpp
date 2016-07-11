@@ -7,6 +7,17 @@
 namespace dariadb_test {
 #undef NO_DATA
 
+    class Callback : public dariadb::storage::ReaderClb {
+    public:
+        Callback() { count = 0; }
+        void call(const dariadb::Meas &v) {
+            count++;
+            all.push_back(v);
+        }
+        size_t count;
+        dariadb::Meas::MeasList all;
+    };
+
 void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
               dariadb::Time to, dariadb::Time step) {
 
@@ -157,14 +168,22 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
 
-  dariadb::Meas::MeasList all = as->readInterval(
-      dariadb::storage::QueryInterval(_all_ids_array, 0, from, to + copies_count));
+  dariadb::storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
+  dariadb::Meas::MeasList all = as->readInterval(qi_all);
 
   check_reader_of_all(all, from, to, step, id_val, total_count, "readAll error: ");
+  std::unique_ptr<Callback> clbk{new Callback};
+  as->foreach(qi_all,clbk.get());
 
+  if(all.size()!=clbk->count){
+      std::stringstream ss;
+      ss<<"all.size()!=clbk->count: "<<all.size()<<"!="<<clbk->count;
+      throw MAKE_EXCEPTION(ss.str());
+  }
   dariadb::IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
   all= as->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to + copies_count));
   if (all.size() != total_count) {
+
     throw MAKE_EXCEPTION("all.size() != total_count");
   }
 
