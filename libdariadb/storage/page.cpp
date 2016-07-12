@@ -315,11 +315,8 @@ bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
   *maxTime = dariadb::MIN_TIME;
   for (auto&link : all_chunks) {
 	  auto _index_it = this->_index->index[link.pos];
-	  auto ptr_to_begin = this->chunks + _index_it.offset;
-	  auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
-	  assert(ptr_to_chunk_info_raw->first.id == id);
-	  *minTime = std::min(*minTime, ptr_to_chunk_info_raw->minTime);
-	  *maxTime = std::max(*maxTime, ptr_to_chunk_info_raw->maxTime);
+	  *minTime = std::min(*minTime, _index_it.minTime);
+	  *maxTime = std::max(*maxTime, _index_it.maxTime);
   }
   return result;
 }
