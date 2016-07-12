@@ -302,33 +302,26 @@ void Page::dec_reader() {
   header->count_readers--;
 }
 
-class MinMaxCallback : public ReaderClb {
-public:
-  bool result;
-  dariadb::Time minTime;
-  dariadb::Time maxTime;
-  MinMaxCallback() {
-    result = false;
-    minTime = dariadb::MAX_TIME;
-    maxTime = dariadb::MIN_TIME;
-  }
-  // Inherited via ReaderClb
-  void call(const dariadb::Meas &m) override {
-    result = true;
-    minTime = std::min(this->minTime, m.time);
-    maxTime = std::max(this->maxTime, m.time);
-  }
-};
-
 bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
                                         dariadb::Time *maxTime) {
   QueryInterval qi{dariadb::IdArray{id}, 0, this->header->minTime, this->header->maxTime};
   auto all_chunks = this->chunksByIterval(qi);
-  std::unique_ptr<MinMaxCallback> calb{new MinMaxCallback{}};
-  this->readLinks(qi, all_chunks, calb.get());
-  *minTime = calb->minTime;
-  *maxTime = calb->maxTime;
-  return calb->result;
+
+  bool result = false;
+  if (!all_chunks.empty()) {
+	  result = true;
+  }
+  *minTime = dariadb::MAX_TIME;
+  *maxTime = dariadb::MIN_TIME;
+  for (auto&link : all_chunks) {
+	  auto _index_it = this->_index->index[link.pos];
+	  auto ptr_to_begin = this->chunks + _index_it.offset;
+	  auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
+	  assert(ptr_to_chunk_info_raw->first.id == id);
+	  *minTime = std::min(*minTime, ptr_to_chunk_info_raw->minTime);
+	  *maxTime = std::max(*maxTime, ptr_to_chunk_info_raw->maxTime);
+  }
+  return result;
 }
 
 ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
