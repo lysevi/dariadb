@@ -184,7 +184,10 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
                                   _openned_chunk.pos);
         return true;
-      }
+	  }
+	  else {
+		  close_corrent_chunk();
+	  }
     }
   }
   // search no full chunk.
@@ -236,9 +239,10 @@ void Page::close_corrent_chunk() {
     _openned_chunk.ch->close();
 #ifdef ENABLE_METRICS
     // calc perscent of free space in closed chunks
-    auto percent = _openned_chunk.ch->header->bw_pos * float(100.0) /
-                   _openned_chunk.ch->header->size;
-    ADD_METRICS("write", "Page::add_to_target_chunk::chunk_free",
+	auto used_space = _openned_chunk.ch->header->size - _openned_chunk.ch->header->bw_pos;
+	auto size = _openned_chunk.ch->header->size;
+    auto percent = used_space * float(100.0) / size;
+    ADD_METRICS("write", "chunk_free",
                 dariadb::utils::metrics::Metric_Ptr{
                     new dariadb::utils::metrics::FloatMetric(percent)});
 #endif
