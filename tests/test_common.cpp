@@ -224,6 +224,11 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     throw MAKE_EXCEPTION("all.size() < ids_count. must be GE");
   }
 
+  std::unique_ptr<Callback> qpoint_clbk{ new Callback };
+  as->foreach(qp, qpoint_clbk.get());
+  if (qpoint_clbk->count != all_id2meas.size()) {
+	  throw MAKE_EXCEPTION("qpoint_clbk->count != all_id2meas.size()");
+  }
   
   qp.time_point = to + copies_count;
   auto fltr_res_tp=as->readInTimePoint(qp);
