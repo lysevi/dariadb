@@ -66,7 +66,7 @@ public:
   void drop_aof(const std::string &fname, AofFileDropper *storage);
 
   size_t files_count() const;
-  void set_downlevel(AofFileDropper *down) { _down = down; }
+  void set_downlevel(AofFileDropper *down);
 
 protected:
   void create_new();

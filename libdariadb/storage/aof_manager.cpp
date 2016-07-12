@@ -36,7 +36,7 @@ AOFManager::AOFManager(const Params &param) : _params(param) {
 	  }
     }
   }
-  drop_old_if_needed();
+  
   _buffer.resize(_params.buffer_size);
   _buffer_pos = 0;
 }
@@ -128,6 +128,11 @@ void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
   storage->drop(ptr, without_path);
+}
+
+void AOFManager::set_downlevel(AofFileDropper *down) {
+	_down = down;
+	this->drop_old_if_needed();
 }
 
 dariadb::Time AOFManager::minTime() {
