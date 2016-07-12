@@ -291,22 +291,6 @@ public:
     //}
   }
 
-  void drop_to_stor(MeasWriter *stor) {
-    TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
-
-    while (1) {
-      Meas val = Meas::empty();
-      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
-        break;
-      }
-      stor->append(val);
-    }
-    std::fclose(file);
-  }
 
   std::string filename() const { return _filename; }
 
@@ -422,11 +406,7 @@ Meas::Id2Meas AOFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-void AOFile::drop_to_stor(MeasWriter *stor) {
-  _Impl->drop_to_stor(stor);
-}
-
-std::string AOFile::filename() const {
+std::string AOFile::filename() const { 
   return _Impl->filename();
 }
 
