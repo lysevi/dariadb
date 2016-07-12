@@ -9,7 +9,7 @@ namespace storage {
 
 class ReaderClb {
 public:
-  virtual void call(const Meas &m) = 0;
+  virtual void call(const Meas &m) = 0; //must be thread safety.
   virtual ~ReaderClb() {}
 };
 
