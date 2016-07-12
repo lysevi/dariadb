@@ -1,6 +1,12 @@
 v0.1.0
 =====
+- Async storage.
 - Enable filtration by measurement source in interval queries.
+- Better restore after crash.
+- Two variants of API:
+  - Functor API -  engine apply given function to each measurement in the incoming request.
+  - Standard API - You can Query interval as list or values in time point as dictionary.
+- Speed up read/write .
 
 v0.0.7
 =====
