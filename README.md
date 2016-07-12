@@ -18,6 +18,9 @@
 * High write speed(1.5 - 2.5 millions values per second).
 * Crash recovery.
 * CRC32 for all values.
+* Two variants of API:
+  - Functor API -  engine apply given function to each measurement in the incoming request.
+  - Standard API - You can Query interval as list or values in time point as dictionary.
 
 # Dependencies
 * Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), thread, unit_test_framework(to build tests), program_options
