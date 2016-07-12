@@ -31,10 +31,8 @@ public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &v) {
     count++;
-    all.push_back(v);
   }
-  size_t count;
-  dariadb::Meas::MeasList all;
+  std::atomic<size_t> count;
 };
 
 void show_info(dariadb::storage::Engine *storage) {
@@ -321,7 +319,7 @@ int main(int argc, char *argv[]) {
                        dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
 
       std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;
-      for (auto &v : clbk->all) {
+      for (auto &v : readed) {
         _dict[v.id].push_back(v);
       }
 

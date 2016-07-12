@@ -11,11 +11,13 @@ namespace dariadb_test {
     public:
         Callback() { count = 0; }
         void call(const dariadb::Meas &v) {
+			std::lock_guard<std::mutex> lg(_locker);
             count++;
             all.push_back(v);
         }
         size_t count;
         dariadb::Meas::MeasList all;
+		std::mutex _locker;
     };
 
 void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
