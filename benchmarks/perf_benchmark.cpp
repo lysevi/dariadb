@@ -100,12 +100,12 @@ int main(int argc, char *argv[]) {
   bool readonly = false;
   bool readall_enabled = false;
   bool dont_clean = false;
-  bool full_flush = false;
+  //bool full_flush = false;
   po::options_description desc("Allowed options");
   desc.add_options()("help", "produce help message")
 	  ("readonly", "readonly mode")
 	  ("readall", "read all benchmark enable.")
-	  ("full-flush", "wait end of all async tasks.")
+	  //("full-flush", "wait end of all async tasks.")
 	  ("dont-clean","dont clean storage path before start.")(
       "enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
       "enable readers threads")(
@@ -144,10 +144,10 @@ int main(int argc, char *argv[]) {
     dont_clean = true;
   }
 
-  if (vm.count("full-flush")) {
+  /*if (vm.count("full-flush")) {
 	  std::cout << "full-flush." << std::endl;
 	  full_flush = true;
-  }
+  }*/
 
   if (readers_enable) {
     std::cout << "Readers enable. count: " << dariadb_bench::total_readers_count
@@ -246,7 +246,8 @@ int main(int argc, char *argv[]) {
 
       auto start = clock();
       raw_ptr->flush();
-	  if (full_flush) {
+	  //if (full_flush) 
+	  {
 		  raw_ptr->wait_all_asyncs();
 	  }
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
