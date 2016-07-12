@@ -279,23 +279,24 @@ int main(int argc, char *argv[]) {
               << ")"
               << " reads: " << reads_count << " writes: " << append_count << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
+	std::cout << "Active threads: "
+		<< dariadb::utils::async::ThreadManager::instance()->active_works()
+		<< std::endl;
+
+	dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
 
-    std::cout << "Active threads: "
-              << dariadb::utils::async::ThreadManager::instance()->active_works()
-              << std::endl;
     if (readall_enabled) {
 
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
       auto max_time = ms->maxTime();
-      std::cout << " interval end time: " << dariadb::timeutil::to_string(max_time) << std::endl;
+      std::cout << "==> interval end time: " << dariadb::timeutil::to_string(max_time) << std::endl;
 
       dariadb::storage::QueryInterval qi{
           dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
           max_time};
 
-      std::cout << "foreach all..." << std::endl;
+      std::cout << "==> foreach all..." << std::endl;
 
       auto start = clock();
 
@@ -305,7 +306,7 @@ int main(int argc, char *argv[]) {
       std::cout << "readed: " << clbk->count << std::endl;
       std::cout << "time: " << elapsed << std::endl;
 
-      std::cout << "read all..." << std::endl;
+      std::cout << "==> read all..." << std::endl;
 
       start = clock();
 

@@ -57,7 +57,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorage *stor,
                   size_t reads_count, dariadb::Time from, dariadb::Time to,
                   bool quiet = false) {
-  std::cout << "init random ids...." << std::endl;
+  std::cout << "==> init random ids...." << std::endl;
   dariadb::IdArray random_ids{all_id_set.begin(), all_id_set.end()};
   std::random_shuffle(random_ids.begin(), random_ids.end());
   dariadb::IdArray current_ids{1};
@@ -66,7 +66,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
   std::vector<Id2Times> interval_queries{reads_count};
   size_t cur_id = 0;
 
-  std::cout << "init random intervals...." << std::endl;
+  std::cout << "==> init random intervals...." << std::endl;
   {
     auto start = clock();
 
@@ -96,7 +96,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
 
   {
     if (!quiet) {
-      std::cout << "time point reads..." << std::endl;
+      std::cout << "==> time point reads..." << std::endl;
     }
 
     std::shared_ptr<BenchCallback> clbk{new BenchCallback};
@@ -121,7 +121,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
   }
   {
     if (!quiet) {
-      std::cout << "intervals foreach..." << std::endl;
+      std::cout << "==> intervals foreach..." << std::endl;
     }
 
     std::shared_ptr<BenchCallback> clbk{new BenchCallback};
@@ -151,7 +151,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorag
 
   {
     if (!quiet) {
-      std::cout << "intervals reads..." << std::endl;
+      std::cout << "==> intervals reads..." << std::endl;
     }
 
     auto start = clock();
