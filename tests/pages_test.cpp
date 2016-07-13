@@ -318,18 +318,16 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   }
 
   delete clb;
-  // TODO restore
-  /*dariadb::Time minTime, maxTime;
+  
+  dariadb::Time minTime, maxTime;
   if (PageManager::instance()->minMaxTime(1, &minTime, &maxTime)) {
     BOOST_CHECK_EQUAL(minTime, qi.from);
     BOOST_CHECK_EQUAL(maxTime, qi.to);
   } else {
     BOOST_ERROR("PageManager::instance()->minMaxTime error!");
-  }*/
+  }
 
-  // auto ids = PageManager::instance()->getIds();
-  // BOOST_CHECK_EQUAL(ids.size(), size_t(1));
-
+  
   PageManager::stop();
   dariadb::storage::Manifest::stop();
   dariadb::utils::async::ThreadManager::stop();
