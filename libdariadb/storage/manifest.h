@@ -22,6 +22,7 @@ public:
 
   std::list<std::string> page_list();
   void page_append(const std::string &rec);
+  void page_rm(const std::string &rec);
 
   std::list<std::string> cola_list();
   void cola_append(const std::string &rec);

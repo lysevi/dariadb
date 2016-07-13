@@ -11,7 +11,8 @@ namespace storage {
 struct PageHeader {
   uint64_t pos;               // next write pos (bytes)
   uint32_t count_readers;     // readers count. on close must be zero.
-  uint64_t addeded_chunks;    // total count of chunks in page
+  uint64_t addeded_chunks;    // total count of chunks in page.
+  uint64_t removed_chunks;    // total chunks marked as not init in rollbacks or fsck.
   uint32_t chunk_per_storage; // max chunks count
   uint32_t chunk_size;        // each chunks size in bytes
   bool is_full : 1;           // is full :)
@@ -62,6 +63,8 @@ public:
   void commit_transaction(uint64_t num);
   void rollback_transaction(uint64_t num);
 
+  std::list<Chunk_Ptr> get_not_full_chunks(); //list of not full chunks
+  void mark_as_non_init(Chunk_Ptr&ch);
 private:
   void flush_current_chunk();
   void init_chunk_index_rec(Chunk_Ptr ch);

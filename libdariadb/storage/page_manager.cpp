@@ -364,28 +364,31 @@ public:
     return res;
   }
 
+  append_result append_unsafe(const Meas &value) {
+	  while (true) {
+		  auto cur_page = this->get_cur_page();
+		  if (_under_transaction) {
+			  cur_page->header->transaction = _transaction_next_number;
+		  }
+		  cur_page->header->_under_transaction = _under_transaction;
+		  if (update_id) {
+			  update_id = false;
+		  }
+		  auto res = cur_page->append(value);
+		  if (res.writed != 1) {
+			  last_id = _cur_page->header->max_chunk_id;
+			  update_id = true;
+			  _cur_page = nullptr;
+		  }
+		  else {
+			  return res;
+		  }
+	  }
+  }
   append_result append(const Meas &value) {
     TIMECODE_METRICS(ctmd, "append", "PageManager::append");
     std::lock_guard<std::mutex> lg(_locker);
-
-    while (true) {
-      auto cur_page = this->get_cur_page();
-      if (_under_transaction) {
-        cur_page->header->transaction = _transaction_next_number;
-      }
-      cur_page->header->_under_transaction = _under_transaction;
-      if (update_id) {
-        update_id = false;
-      }
-      auto res = cur_page->append(value);
-      if (res.writed != 1) {
-        last_id = _cur_page->header->max_chunk_id;
-        update_id = true;
-        _cur_page = nullptr;
-      } else {
-        return res;
-      }
-    }
+	return append_unsafe(value);
   }
 
   uint64_t begin_transaction() {
@@ -432,7 +435,62 @@ public:
     _under_transaction = false;
   }
 
+  struct ChunkById {
+	  bool operator()(const std::tuple<Chunk_Ptr, Page_Ptr>&left, const std::tuple<Chunk_Ptr, Page_Ptr>&right)const {
+		  return std::get<0>(left)->header->id < std::get<0>(right)->header->id;
+	  }
+  };
+
   void merge_non_full_chunks() {
+	  std::lock_guard<std::mutex> lg(_locker);
+	  auto pred = [](const IndexHeader &h) { return h.is_full; };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+	  
+	  std::list<Page_Ptr> openned_pages;
+	  std::map<dariadb::Id, std::set<std::tuple<Chunk_Ptr, Page_Ptr>, ChunkById>> id2chunks;
+	  for (auto&pname : page_list) {
+		  auto raw_ptr = Page::open(pname, false);
+		  Page_Ptr p{ raw_ptr };
+		  openned_pages.push_back(p);
+
+		  auto not_full_chunks = p->get_not_full_chunks();
+		  
+		  for (auto&ch : not_full_chunks) {
+			  id2chunks[ch->header->first.id].insert(std::tie(ch,p));
+		  }
+	  }
+
+	  for (auto&kv : id2chunks) {
+		  for (auto&ch_pg : kv.second) {
+			  auto ch_ptr = std::get<0>(ch_pg);
+			  auto pg_ptr = std::get<1>(ch_pg);
+
+			  auto rdr = ch_ptr->get_reader();
+			  while (!rdr->is_end()) {
+				  auto subres = rdr->readNext();
+				  this->append_unsafe(subres);
+			  }
+			  pg_ptr->mark_as_non_init(ch_ptr);
+		  }
+	  }
+
+	  std::list<std::string> to_remove;
+	  for (auto&pg_ptr : openned_pages) {
+		  if (pg_ptr->header->removed_chunks == pg_ptr->header->addeded_chunks) {
+			  auto fname = pg_ptr->filename;
+			  to_remove.push_back(fname);
+			  _openned_pages.erase(fname);
+		  }
+	  }
+	  openned_pages.clear();
+	  id2chunks.clear();
+	  for (auto&fname : to_remove) {
+		  auto target_name = utils::fs::extract_filename(fname);
+		  
+		  Manifest::instance()->page_rm(target_name);
+		  utils::fs::rm(fname);
+	  }
   }
 protected:
   Page_Ptr _cur_page;

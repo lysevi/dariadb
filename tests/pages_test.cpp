@@ -36,7 +36,7 @@ dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count,
 	return t;
 }
 
-/*
+
 BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   const std::string fname = "manifest";
   if (dariadb::utils::fs::path_exists(fname)) {
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     dariadb::utils::fs::rm(fname);
   }
 }
-
+/*
 BOOST_AUTO_TEST_CASE(ChunkSorted) {
   uint8_t buffer[1024];
   std::fill(std::begin(buffer), std::end(buffer), 0);
@@ -457,14 +457,17 @@ BOOST_AUTO_TEST_CASE(PageManagerGarbageCollector) {
 	size_t chunks_size_before = link_list.size();
 	dariadb::Meas::MeasList values_before = std::move(clb->mlist);
 	BOOST_CHECK(clb->mlist.empty());
+	auto page_count_before = dariadb::utils::fs::ls(storagePath, ".page").size();
 
 	PageManager::instance()->merge_non_full_chunks();
 
 	link_list = PageManager::instance()->chunksByIterval(qi);
 	PageManager::instance()->readLinks(qi, link_list, clb.get());
+	auto page_count_after = dariadb::utils::fs::ls(storagePath, ".page").size();
 
 	BOOST_CHECK(link_list.size() < chunks_size_before);
 	BOOST_CHECK_EQUAL(clb->mlist.size(), values_before.size());
+	BOOST_CHECK_GE(page_count_before, page_count_after);
 
 	PageManager::stop();
 	dariadb::storage::Manifest::stop();

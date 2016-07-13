@@ -36,6 +36,7 @@ struct ChunkHeader {
 
   uint64_t transaction;
   bool commit : 1;
+  uint32_t pos_in_page;
 };
 #pragma pack(pop)
 

@@ -18,6 +18,7 @@ struct IndexHeader {
   uint32_t chunk_size;        // each chunks size in bytes
   bool is_sorted;             // items in index file sorted by time
   bool is_closed;
+  bool is_full;
   uint64_t id_bloom;   // bloom filter of Meas.id
   uint64_t flag_bloom; // bloom filter of Meas.flag
   uint64_t transaction;
