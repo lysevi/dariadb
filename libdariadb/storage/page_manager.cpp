@@ -443,6 +443,10 @@ public:
 
   void merge_non_full_chunks() {
 	  std::lock_guard<std::mutex> lg(_locker);
+	  auto all_pages=Manifest::instance()->page_list();
+	  if (all_pages.size() < size_t(2)) {
+		  return;
+	  }
 	  auto pred = [](const IndexHeader &h) { return h.is_full; };
 
 	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
@@ -485,11 +489,13 @@ public:
 	  }
 	  openned_pages.clear();
 	  id2chunks.clear();
+	  logger_info("remove pages count: " << to_remove.size());
 	  for (auto&fname : to_remove) {
 		  auto target_name = utils::fs::extract_filename(fname);
 		  
 		  Manifest::instance()->page_rm(target_name);
 		  utils::fs::rm(fname);
+		  utils::fs::rm(fname+"i");
 	  }
   }
 protected:
