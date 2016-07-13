@@ -24,8 +24,8 @@ public:
   AOFile(const AOFile::Params &params, const std::string &fname, bool readonly = false);
   // static Header readHeader(std::string file_name);
   append_result append(const Meas &value) override;
-  append_result append(const Meas::MeasArray &ma) override;
-  append_result append(const Meas::MeasList &ml) override;
+  append_result append(const Meas::MeasArray::const_iterator &begin,const Meas::MeasArray::const_iterator &end) override;
+  append_result append(const Meas::MeasList::const_iterator&begin,const Meas::MeasList::const_iterator&end) override;
   void foreach(const QueryInterval&q, ReaderClb*clbk) override;
   Meas::MeasList readInterval(const QueryInterval &q) override;
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;

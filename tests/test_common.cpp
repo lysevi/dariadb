@@ -115,7 +115,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
       m.time++;
 	  pos++;
     }
-	if (as->append(values).writed != values.size()) {
+    if (as->append(values.begin(),values.end()).writed != values.size()) {
 		throw MAKE_EXCEPTION("->append(m).writed != values.size()");
 	}
     ++id_val;
@@ -141,7 +141,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
       m.time++;
     }
 
-	if (as->append(mlist).writed != mlist.size()) {
+    if (as->append(mlist.begin(),mlist.end()).writed != mlist.size()) {
 		throw MAKE_EXCEPTION("->append(m).writed != mlist.size()");
 	}
   }

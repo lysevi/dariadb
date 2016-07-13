@@ -52,18 +52,20 @@ public:
     }
   }
 
-  append_result append(const Meas::MeasArray &ma) {
+  append_result append(const Meas::MeasArray::const_iterator &begin,const Meas::MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
+    auto sz=std::distance(begin,end);
     if (is_full) {
-      return append_result(0, ma.size());
+      return append_result(0, sz);
     }
     auto file = std::fopen(_filename.c_str(), "ab");
     if (file != nullptr) {
+
       auto write_size =
-          (ma.size() + _writed) > _params.size ? (_params.size - _writed) : ma.size();
-      std::fwrite(ma.data(), sizeof(Meas), write_size, file);
+          (sz + _writed) > _params.size ? (_params.size - _writed) : sz;
+      std::fwrite(&(*begin), sizeof(Meas), write_size, file);
       std::fclose(file);
       _writed += write_size;
       return append_result(write_size, 0);
@@ -72,19 +74,20 @@ public:
     }
   }
 
-  append_result append(const Meas::MeasList &ml) {
+  append_result append(const Meas::MeasList::const_iterator &begin,const Meas::MeasList::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
+    auto list_size = std::distance(begin,end);
     if (is_full) {
-      return append_result(0, ml.size());
+      return append_result(0, list_size);
     }
     auto file = std::fopen(_filename.c_str(), "ab");
     if (file != nullptr) {
-      auto list_size = ml.size();
+
       auto write_size =
           (list_size + _writed) > _params.size ? (_params.size - _writed) : list_size;
-      Meas::MeasArray ma{ml.begin(), ml.end()};
+      Meas::MeasArray ma{begin, end};
       std::fwrite(ma.data(), sizeof(Meas), write_size, file);
       std::fclose(file);
       _writed += write_size;
@@ -383,11 +386,11 @@ void AOFile::flush() { // write all to storage;
 append_result AOFile::append(const Meas &value) {
   return _Impl->append(value);
 }
-append_result AOFile::append(const Meas::MeasArray &ma) {
-  return _Impl->append(ma);
+append_result AOFile::append(const Meas::MeasArray::const_iterator &begin,const Meas::MeasArray::const_iterator &end) {
+  return _Impl->append(begin,end);
 }
-append_result AOFile::append(const Meas::MeasList &ml) {
-  return _Impl->append(ml);
+append_result AOFile::append(const Meas::MeasList::const_iterator&begin,const Meas::MeasList::const_iterator&end) {
+  return _Impl->append(begin,end);
 }
 
 void AOFile::foreach(const QueryInterval&q, ReaderClb*clbk) {

@@ -398,17 +398,20 @@ dariadb::append_result AOFManager::append(const Meas &value) {
 }
 
 void AOFManager::flush_buffer() {
-  Meas::MeasList ml{_buffer.begin(), _buffer.begin() + _buffer_pos};
+    if(_buffer_pos==size_t(0)){
+        return;
+    }
   if (_aof == nullptr) {
     create_new();
   }
+  size_t pos=0;
+  size_t total_writed=0;
   while (1) {
-    auto res = _aof->append(ml);
-    if (res.writed != ml.size()) {
+    auto res = _aof->append(_buffer.begin()+pos, _buffer.begin() + _buffer_pos);
+    total_writed+=res.writed;
+    if (total_writed != _buffer_pos) {
       create_new();
-      auto it = ml.begin();
-      std::advance(it, res.writed);
-      ml.erase(ml.begin(), it);
+     pos+=res.writed;
     } else {
       break;
     }

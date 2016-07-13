@@ -13,18 +13,19 @@ void MeasSource::foreach(const QueryTimePoint&q, ReaderClb*clbk) {
 	}
 }
 
-append_result MeasWriter::append(const Meas::MeasArray &ma) {
+append_result MeasWriter::append(const Meas::MeasArray::const_iterator &begin,const Meas::MeasArray::const_iterator &end) {
   dariadb::append_result ar{};
-  for (auto &m : ma) {
-    ar = ar + this->append(m);
+
+  for(auto it=begin;it!=end;++it){
+    ar = ar + this->append(*it);
   }
   return ar;
 }
 
-append_result MeasWriter::append(const Meas::MeasList &ml) {
+append_result MeasWriter::append(const Meas::MeasList::const_iterator&begin,const Meas::MeasList::const_iterator&end) {
   dariadb::append_result ar{};
-  for (auto &m : ml) {
-    ar = ar + this->append(m);
+  for(auto it=begin;it!=end;++it){
+    ar = ar + this->append(*it);
   }
   return ar;
 }

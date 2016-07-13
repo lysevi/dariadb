@@ -30,8 +30,8 @@ public:
 class MeasWriter {
 public:
   virtual append_result append(const Meas &value) = 0;
-  virtual append_result append(const Meas::MeasArray &ma);
-  virtual append_result append(const Meas::MeasList &ml);
+  virtual append_result append(const Meas::MeasArray::const_iterator &begin,const Meas::MeasArray::const_iterator &end);
+  virtual append_result append(const Meas::MeasList::const_iterator&begin,const Meas::MeasList::const_iterator&end);
 
   virtual void flush() = 0;
   virtual ~MeasWriter() {}
