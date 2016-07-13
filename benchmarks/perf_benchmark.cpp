@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
   {
     std::cout << "Write..." << std::endl;
 
-    const size_t chunk_per_storage = 1024 * 100;
+    const size_t chunk_per_storage = 512 * 10;
     const size_t chunk_size = 512;
     const size_t cap_B = 50;
     const size_t max_mem_chunks = 100;
@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
     info_thread.join();
     std::cout << " total id:" << all_id_set.size() << std::endl;
     {
-      std::cout << "full flush..." << std::endl;
+      std::cout << "==> full flush..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_info, raw_ptr);
 
@@ -258,8 +258,8 @@ int main(int argc, char *argv[]) {
 
     // if(!readonly)
     {
-      auto ccount = size_t(raw_ptr->queue_size().cola_count * 0.5);
-      std::cout << "drop part caps to " << ccount << "..." << std::endl;
+		size_t ccount = size_t(raw_ptr->queue_size().cola_count *0.75);
+      std::cout << "==> drop part caps to " << ccount << "..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_info, raw_ptr);
 
@@ -272,6 +272,20 @@ int main(int argc, char *argv[]) {
       flush_info_thread.join();
       std::cout << "drop time: " << elapsed << std::endl;
     }
+
+
+	{
+		std::cout << "==> gc... " << std::endl;
+		stop_info = false;
+		std::thread flush_info_thread(show_info, raw_ptr);
+
+		auto start = clock();
+		raw_ptr->gc();
+		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+		stop_info = true;
+		flush_info_thread.join();
+		std::cout << "gc time: " << elapsed << std::endl;
+	}
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
