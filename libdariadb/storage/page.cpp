@@ -537,7 +537,7 @@ std::list<Chunk_Ptr> dariadb::storage::Page::get_not_full_chunks() {
 		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
 		auto ptr_to_begin = byte_it;
 		auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
-		if (info->is_init) {
+		if (info->is_init && (info->bw_pos>1)) {
 			Chunk_Ptr ptr = nullptr;
 			ptr = Chunk_Ptr{ new ZippedChunk(info, ptr_to_buffer) };
 			result.push_back(ptr);
