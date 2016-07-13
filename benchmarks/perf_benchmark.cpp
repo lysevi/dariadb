@@ -256,9 +256,8 @@ int main(int argc, char *argv[]) {
       std::cout << "flush time: " << elapsed << std::endl;
     }
 
-    // if(!readonly)
-    {
-		size_t ccount = size_t(raw_ptr->queue_size().cola_count *0.75);
+    if(!readonly){
+		size_t ccount = size_t(raw_ptr->queue_size().cola_count);
       std::cout << "==> drop part caps to " << ccount << "..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_info, raw_ptr);
@@ -274,7 +273,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-	{
+	if (!readonly) {
 		std::cout << "==> gc... " << std::endl;
 		stop_info = false;
 		std::thread flush_info_thread(show_info, raw_ptr);
