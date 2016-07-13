@@ -68,6 +68,7 @@ public:
   void commit_transaction(uint64_t num);
   void rollback_transaction(uint64_t num);
 
+  void merge_non_full_chunks();
 private:
   static PageManager *_instance;
   class Private;

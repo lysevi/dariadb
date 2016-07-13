@@ -432,6 +432,8 @@ public:
     _under_transaction = false;
   }
 
+  void merge_non_full_chunks() {
+  }
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
@@ -525,4 +527,8 @@ void PageManager::commit_transaction(uint64_t num) {
 
 void PageManager::rollback_transaction(uint64_t num) {
   impl->rollback_transaction(num);
+}
+
+void PageManager::merge_non_full_chunks() {
+	impl->merge_non_full_chunks();
 }
