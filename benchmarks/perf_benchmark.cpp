@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
     }
 
     if(!readonly){
-		size_t ccount = size_t(raw_ptr->queue_size().cola_count);
+		size_t ccount = size_t(raw_ptr->queue_size().cola_count*0.5);
       std::cout << "==> drop part caps to " << ccount << "..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_info, raw_ptr);
