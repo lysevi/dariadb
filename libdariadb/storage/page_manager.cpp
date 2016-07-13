@@ -460,10 +460,13 @@ public:
 	  for (auto&pname : page_list) {
 		  auto raw_ptr = Page::open(pname, false);
 		  Page_Ptr p{ raw_ptr };
-		  openned_pages.push_back(p);
+
 
 		  auto not_full_chunks = p->get_not_full_chunks();
-		  
+          if(not_full_chunks.empty()){
+              continue;
+          }
+          openned_pages.push_back(p);
 		  for (auto&ch : not_full_chunks) {
 			  id2chunks[ch->header->first.id].insert(std::tie(ch,p));
 			  result.chunks_merged++;
