@@ -176,10 +176,10 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
 
     BOOST_CHECK_EQUAL(addeded.size(), clb->mlist.size());
     delete clb;
-    /*dariadb::Time minT = dariadb::MAX_TIME,
+    dariadb::Time minT = dariadb::MAX_TIME,
                   maxT = dariadb::MIN_TIME;
     BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
-    BOOST_CHECK_EQUAL(minT, dariadb::Time(0));*/
+    BOOST_CHECK_EQUAL(minT, dariadb::Time(0));
 
     {
       dariadb::Time end_time(t / 2);
@@ -205,13 +205,6 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       for (auto &kv : id2meas_res) {
         BOOST_CHECK(kv.second.time <= end_time);
       }
-
-      /* auto ids_array = PageManager::instance()->getIds();
-       BOOST_CHECK_EQUAL(ids_array.size(), size_t(2));
-       BOOST_CHECK(std::find(ids_array.begin(), ids_array.end(), dariadb::Id(0)) !=
-                   ids_array.end());
-       BOOST_CHECK(std::find(ids_array.begin(), ids_array.end(), dariadb::Id(1)) !=
-                   ids_array.end());*/
 
       delete clb;
     }
