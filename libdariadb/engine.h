@@ -18,7 +18,9 @@ public:
     size_t cola_count;  /// COLA files count.
     size_t active_works; /// async tasks runned.
   };
-
+  struct GCResult {
+	  PageManager::GCResult page_result;
+  };
   struct Limits {
     size_t max_mem_chunks; // max_mem_chunks - maximum chunks in memory.zero
                            // - by old_mem_chunks(MemStorage)
@@ -60,7 +62,7 @@ public:
   Meas::MeasList getResult(Id);
 
   void drop_part_caps(size_t count);
-  void gc();
+  GCResult gc();
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
   void wait_all_asyncs();
 protected:

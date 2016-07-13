@@ -7,6 +7,7 @@ v0.1.0
   - Functor API -  engine apply given function to each measurement in the incoming request.
   - Standard API - You can Query interval as list or values in time point as dictionary.
 - Speed up read/write .
+- API to merge non filled chunks.
 
 v0.0.7
 =====

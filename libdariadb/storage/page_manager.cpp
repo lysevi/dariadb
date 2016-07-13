@@ -440,15 +440,16 @@ public:
 
   struct ChunkById {
 	  bool operator()(const std::tuple<Chunk_Ptr, Page_Ptr>&left, const std::tuple<Chunk_Ptr, Page_Ptr>&right)const {
-		  return std::get<0>(left)->header->id < std::get<0>(right)->header->id;
+		  return std::get<0>(left)->header->maxTime < std::get<0>(right)->header->maxTime;
 	  }
   };
 
-  void merge_non_full_chunks() {
+  PageManager::GCResult merge_non_full_chunks() {
 	  std::lock_guard<std::mutex> lg(_locker);
+	  GCResult result;
 	  auto all_pages=Manifest::instance()->page_list();
 	  if (all_pages.size() < size_t(2)) {
-		  return;
+		  return result;
 	  }
 	  auto pred = [](const IndexHeader &h) { return h.is_full; };
 
@@ -465,6 +466,7 @@ public:
 		  
 		  for (auto&ch : not_full_chunks) {
 			  id2chunks[ch->header->first.id].insert(std::tie(ch,p));
+			  result.chunks_merged++;
 		  }
 	  }
 
@@ -488,11 +490,12 @@ public:
 			  auto fname = pg_ptr->filename;
 			  to_remove.push_back(fname);
 			  _openned_pages.erase(fname);
+			  result.page_removed++;
 		  }
 	  }
 	  openned_pages.clear();
 	  id2chunks.clear();
-	  logger_info("remove pages count: " << to_remove.size());
+	  
 	  for (auto&fname : to_remove) {
 		  auto target_name = utils::fs::extract_filename(fname);
 		  
@@ -500,6 +503,7 @@ public:
 		  utils::fs::rm(fname);
 		  utils::fs::rm(fname+"i");
 	  }
+	  return result;
   }
 protected:
   Page_Ptr _cur_page;
@@ -596,6 +600,6 @@ void PageManager::rollback_transaction(uint64_t num) {
   impl->rollback_transaction(num);
 }
 
-void PageManager::merge_non_full_chunks() {
-	impl->merge_non_full_chunks();
+PageManager::GCResult PageManager::merge_non_full_chunks() {
+	return impl->merge_non_full_chunks();
 }

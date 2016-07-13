@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(LockManager_Instance) {
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
+  const size_t chunk_per_storage = 100;
   const size_t chunk_size = 256;
   const size_t cap_B = 2;
 
@@ -123,15 +123,23 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     aofp.max_closed_aofs = 20;
     aofp.max_size = cap_pam.measurements_count();
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+    std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
         aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                                     chunk_size),
         cap_pam, dariadb::storage::Engine::Limits(10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
+	ms->wait_all_asyncs();
+	auto pages_count = dariadb::storage::PageManager::instance()->files_count();
+    BOOST_CHECK_GE(pages_count, size_t(2));
+	auto gc_res=ms->gc();
+	pages_count = dariadb::storage::PageManager::instance()->files_count();
+	BOOST_CHECK_GE(pages_count, size_t(2));
 
-    auto pages_count = dariadb::storage::PageManager::instance()->files_count();
-    BOOST_CHECK_GE(pages_count, size_t(1));
+
+	BOOST_CHECK(gc_res.page_result.page_removed != size_t(0));
+	BOOST_CHECK(gc_res.page_result.chunks_merged != size_t(0));
+
   }
   {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
@@ -235,7 +243,7 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
                                               chunk_size);
     dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
     aofp.max_size = cap_pam.measurements_count();
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
         aofp, pmp, cap_pam, dariadb::storage::Engine::Limits(10))};
 
     // storage: id=0: 10,11,....30 id=1: 0,1,2,3,4,5
@@ -258,6 +266,7 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
       t++;
       BOOST_CHECK(ms->append(m).writed == 1);
     }
+	
     auto last_chunks_count =
         dariadb::storage::PageManager::instance()->chunks_in_cur_page();
     m.id = 0;

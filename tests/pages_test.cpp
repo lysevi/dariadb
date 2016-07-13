@@ -458,7 +458,10 @@ BOOST_AUTO_TEST_CASE(PageManagerGarbageCollector) {
 	BOOST_CHECK(clb->mlist.empty());
 	auto page_count_before = dariadb::utils::fs::ls(storagePath, ".page").size();
 
-	PageManager::instance()->merge_non_full_chunks();
+	auto mrg_res=PageManager::instance()->merge_non_full_chunks();
+	
+	BOOST_CHECK(mrg_res.page_removed != size_t(0));
+	BOOST_CHECK(mrg_res.chunks_merged != size_t(0));
 
 	link_list = PageManager::instance()->chunksByIterval(qi);
 	PageManager::instance()->readLinks(qi, link_list, clb.get());

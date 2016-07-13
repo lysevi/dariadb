@@ -465,8 +465,13 @@ public:
   }
 
   void drop_part_caps(size_t count) { CapacitorManager::instance()->drop_part(count); }
-  void gc() {
-	  PageManager::instance()->merge_non_full_chunks();
+  Engine::GCResult gc() {
+	  Engine::GCResult result;
+	  result.page_result=PageManager::instance()->merge_non_full_chunks();
+	  
+	  logger_info("Engine::GC: removed pages count: " << result.page_result.page_removed);
+	  logger_info("Engine::GC: chunks merged: " << result.page_result.chunks_merged);
+	  return result;
   }
 protected:
   storage::PageManager::Params _page_manager_params;
@@ -551,7 +556,7 @@ void Engine::drop_part_caps(size_t count) {
   return _impl->drop_part_caps(count);
 }
 
-void Engine::gc() {
+Engine::GCResult Engine::gc() {
 	return _impl->gc();
 }
 

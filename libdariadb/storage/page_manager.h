@@ -32,6 +32,14 @@ public:
     }
   };
 
+  struct GCResult {
+	  size_t page_removed;
+	  size_t chunks_merged;
+	  GCResult() {
+		  page_removed = 0;
+		  chunks_merged = 0;
+	  }
+  };
 protected:
   virtual ~PageManager();
 
@@ -68,7 +76,7 @@ public:
   void commit_transaction(uint64_t num);
   void rollback_transaction(uint64_t num);
 
-  void merge_non_full_chunks();
+  GCResult merge_non_full_chunks();
 private:
   static PageManager *_instance;
   class Private;
