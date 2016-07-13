@@ -45,6 +45,9 @@ public:
   }
 
   void fsck(bool force_check) {
+	  if (force_check) {
+		  logger_info("PageManager: fsck force");
+	  }
     if (!utils::fs::path_exists(_param.path)) {
       return;
     }
