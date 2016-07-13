@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     dariadb::utils::fs::rm(fname);
   }
 }
-/*
+
 BOOST_AUTO_TEST_CASE(ChunkSorted) {
   uint8_t buffer[1024];
   std::fill(std::begin(buffer), std::end(buffer), 0);
@@ -412,7 +412,6 @@ BOOST_AUTO_TEST_CASE(PageManagerTransactions) {
   }
 }
 
-*/
 BOOST_AUTO_TEST_CASE(PageManagerGarbageCollector) {
 	const std::string storagePath = "testStorage";
 	const size_t chunks_count = 10;
