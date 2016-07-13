@@ -465,7 +465,9 @@ public:
   }
 
   void drop_part_caps(size_t count) { CapacitorManager::instance()->drop_part(count); }
-
+  void gc() {
+	  PageManager::instance()->merge_non_full_chunks();
+  }
 protected:
   storage::PageManager::Params _page_manager_params;
   dariadb::storage::CapacitorManager::Params _cap_params;
@@ -547,6 +549,10 @@ Meas::Id2Meas Engine::readInTimePoint(const QueryTimePoint &q) {
 
 void Engine::drop_part_caps(size_t count) {
   return _impl->drop_part_caps(count);
+}
+
+void Engine::gc() {
+	return _impl->gc();
 }
 
 void Engine::wait_all_asyncs() {
