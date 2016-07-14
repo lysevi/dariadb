@@ -49,6 +49,10 @@ struct Meas {
            areSame(value, other.value);
   }
 
+  bool operator!=(const Meas &other) const {
+    return !(*this==other);
+  }
+
   bool inFlag(Flag f) const { return (f == 0) || (f == flag); }
 
   bool inSrc(Flag s) const { return (s == 0) || (s == this->src); }

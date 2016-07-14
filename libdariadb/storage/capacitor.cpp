@@ -51,32 +51,16 @@ struct level_header {
 };
 #pragma pack(pop)
 
-struct FlaggedMeas {
-  bool dropped;
-  Meas value;
-
-  bool operator==(const FlaggedMeas &other) const {
-    return std::tie(value) == std::tie(other.value);
-  }
-  bool operator!=(const FlaggedMeas &other) const { return !(*this == other); }
-};
-
-struct flagged_meas_time_compare_less {
-  bool operator()(const FlaggedMeas &lhs, const FlaggedMeas &rhs) const {
-    return meas_time_compare_less()(lhs.value, rhs.value);
-  }
-};
-
 struct level {
   level_header *hdr;
-  FlaggedMeas *begin;
+  Meas *begin;
 
-  FlaggedMeas at(size_t _pos) const { return begin[_pos]; }
-  FlaggedMeas &at(size_t _pos) { return begin[_pos]; }
+  Meas at(size_t _pos) const { return begin[_pos]; }
+  Meas &at(size_t _pos) { return begin[_pos]; }
 
   void push_back(const Meas &m) {
     assert(hdr->pos < hdr->count);
-    begin[hdr->pos].value = m;
+    begin[hdr->pos] = m;
     ++hdr->pos;
     hdr->_minTime = std::min(hdr->_minTime, m.time);
     hdr->_maxTime = std::max(hdr->_maxTime, m.time);
@@ -86,7 +70,7 @@ struct level {
 
   void update_header() {
     for (size_t i = 0; i < hdr->pos; ++i) {
-      auto m = begin[i].value;
+      auto m = begin[i];
       hdr->_minTime = std::min(hdr->_minTime, m.time);
       hdr->_maxTime = std::max(hdr->_maxTime, m.time);
       hdr->id_bloom = bloom_add(hdr->id_bloom, m.id);
@@ -96,26 +80,16 @@ struct level {
 
   uint32_t calc_checksum() {
     uint8_t *char_array = (uint8_t *)begin;
-    return utils::crc32(char_array, sizeof(FlaggedMeas) * hdr->count);
+    return utils::crc32(char_array, sizeof(Meas) * hdr->count);
   }
 
   void update_checksum() { hdr->crc = calc_checksum(); }
 
   bool check_checksum() { return hdr->crc != 0 && hdr->crc == calc_checksum(); }
 
-  /// need for k-merge
-  void push_back(const FlaggedMeas &m) {
-    this->push_back(m.value);
-    hdr->_minTime = std::min(hdr->_minTime, m.value.time);
-    hdr->_maxTime = std::max(hdr->_maxTime, m.value.time);
-  }
-
-  FlaggedMeas back() const { return begin[hdr->pos - 1]; }
+  Meas back() const { return begin[hdr->pos - 1]; }
 
   void clear() {
-    for (size_t i = 0; i < hdr->pos; ++i) {
-      this->begin[i].dropped = false;
-    }
     hdr->crc = 0;
     hdr->pos = 0;
     hdr->_maxTime = dariadb::MIN_TIME;
@@ -166,7 +140,7 @@ public:
   }
 
   void close() { _header->is_full = true; }
-  size_t one_block_size(size_t B) const { return sizeof(FlaggedMeas) * B; }
+  size_t one_block_size(size_t B) const { return sizeof(Meas) * B; }
 
   size_t block_in_level(size_t lev_num) const { return (size_t(1) << lev_num); }
 
@@ -180,9 +154,9 @@ public:
     uint64_t result = 0;
 
     result += sizeof(Header);
-    result += _params.B * sizeof(FlaggedMeas); /// space to _memvalues
+    result += _params.B * sizeof(Meas); /// space to _memvalues
 
-    auto prev_level_size = _params.B * sizeof(FlaggedMeas);
+    auto prev_level_size = _params.B * sizeof(Meas);
 
     for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
       auto cur_level_meases = bytes_in_level(_params.B, lvl); /// 2^lvl
@@ -218,9 +192,9 @@ public:
     level_header *headers_pos =
         reinterpret_cast<level_header *>(_raw_data);
 
-    FlaggedMeas* pos_after_headers = reinterpret_cast<FlaggedMeas*>(headers_pos + _header->levels_count);
+    Meas* pos_after_headers = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);
 
-    FlaggedMeas* pos = (pos_after_headers + _header->B);
+    Meas* pos = (pos_after_headers + _header->B);
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = &headers_pos[lvl];
       it->lvl = uint8_t(lvl);
@@ -230,10 +204,10 @@ public:
       it->_maxTime = dariadb::MIN_TIME;
       it->id_bloom = bloom_empty<dariadb::Id>();
       it->flag_bloom = bloom_empty<dariadb::Flag>();
-      auto m = reinterpret_cast<FlaggedMeas *>(pos);
+      auto m = reinterpret_cast<Meas *>(pos);
       for (size_t i = 0; i < it->count; ++i) {
         assert(size_t((uint8_t *)&m[i] - mmap->data()) < sz);
-        std::memset(&m[i], 0, sizeof(FlaggedMeas));
+        std::memset(&m[i], 0, sizeof(Meas));
       }
       pos += it->count;//bytes_in_level(_header->B, lvl);
     }
@@ -250,13 +224,13 @@ public:
     level_header *headers_pos =
         reinterpret_cast<level_header *>(_raw_data);
 
-    _memvalues = reinterpret_cast<FlaggedMeas*>(headers_pos + _header->levels_count);;
+    _memvalues = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);;
 
-    FlaggedMeas* pos = (_memvalues + _header->B);
+    Meas* pos = (_memvalues + _header->B);
 
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto h = &headers_pos[lvl];
-      auto m = reinterpret_cast<FlaggedMeas *>(pos);
+      auto m = reinterpret_cast<Meas *>(pos);
       level new_l;
       new_l.begin = m;
       new_l.hdr = h;
@@ -305,7 +279,7 @@ public:
         _levels[i].clear();
       } else {
         for (size_t pos = 0; pos < current->hdr->pos; ++pos) {
-          readed.push_back(current->begin[pos].value);
+          readed.push_back(current->begin[pos]);
         }
       }
     }
@@ -342,7 +316,7 @@ public:
   }
 
   append_result append_to_mem(const Meas &value) {
-    _memvalues[_header->_memvalues_pos].value = value;
+    _memvalues[_header->_memvalues_pos] = value;
 
     _header->_memvalues_pos++;
     ++_header->_writed;
@@ -368,7 +342,7 @@ public:
 
   size_t merge_levels() {
     TIMECODE_METRICS(ctmd, "write", "Capacitor::merge_levels");
-    flagged_meas_time_compare_less flg_less_by_time;
+    meas_time_compare_less flg_less_by_time;
     std::sort(_memvalues, _memvalues + _memvalues_size, flg_less_by_time);
 
     size_t outlvl = calc_outlevel_num();
@@ -411,7 +385,7 @@ public:
       if (next == to_merge.end()) {
         break;
       }
-      if (((*it)->back().value.time) < (*next)->begin->value.time) {
+      if (((*it)->back().time) < (*next)->begin->time) {
         is_sorted = false;
         break;
       }
@@ -421,7 +395,7 @@ public:
       auto begin= to_merge.front()->begin;
       auto end= to_merge.back()->begin+to_merge.back()->hdr->pos;
       auto sz=(end-begin);
-      memcpy(merge_target.begin,begin, sz*sizeof(FlaggedMeas));
+      memcpy(merge_target.begin,begin, sz*sizeof(Meas));
       merge_target.hdr->pos = merge_target.hdr->count;
       merge_target.update_header();
     } else {
@@ -446,70 +420,61 @@ public:
 
   struct low_level_stor_pusher {
     MeasWriter *_stor;
-    void push_back(FlaggedMeas &m) {
-      _stor->append(m.value);
+    void push_back(Meas &m) {
+      _stor->append(m);
       _back = m;
     }
 
     size_t size() const { return 0; }
-    FlaggedMeas _back;
-    FlaggedMeas back() { return _back; }
+    Meas _back;
+    Meas back() { return _back; }
   };
 
   void drop_to_stor(MeasWriter *stor) {
     // TODO use more smarter method. witout copy.
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
-    /*std::list<level *> to_merge;
-level tmp;
-level_header tmp_hdr;
-tmp.hdr = &tmp_hdr;
-tmp.hdr->lvl = 0;
-tmp.hdr->count = _memvalues_size;
-tmp.hdr->pos = _memvalues_size;
-tmp.begin = _memvalues;
-to_merge.push_back(&tmp);
 
-for (size_t i = 0; i < _levels.size(); ++i) {
-  if (!_levels[i].empty()) {
-    to_merge.push_back(&_levels[i]);
-  }
-}
-low_level_stor_pusher merge_target;
-merge_target._stor = stor;
-
-dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less());*/
     level_header *headers_pos =
         reinterpret_cast<level_header *>(_raw_data);
 
-    FlaggedMeas* pos_after_headers = reinterpret_cast<FlaggedMeas*>(headers_pos + _header->levels_count);
+    Meas* pos_after_headers = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);
 
     auto begin = pos_after_headers;
-    auto end = (FlaggedMeas *)(begin + _header->_writed);
+    auto end = (Meas *)(begin + _header->_writed);
+	size_t count = std::distance(begin, end);
 
-    std::vector<FlaggedMeas> all_meases{_header->_writed};
-    auto pos = 0;
+    std::vector<Meas> all_meases{_header->_writed};
+    size_t pos = 0;
     for (auto it = begin; it != end; ++it, ++pos) {
       all_meases[pos] = *it;
     }
 
-    std::sort(std::begin(all_meases), std::end(all_meases),
-              flagged_meas_time_compare_less());
-
-    for (auto it = std::begin(all_meases); it != std::end(all_meases); ++it) {
-      if (!it->dropped) {
-        stor->append(it->value);
-        it->dropped = true;
-      } else {
-        continue;
-      }
-      for (auto sub_it = std::begin(all_meases); sub_it != std::end(all_meases);
-           ++sub_it) {
-        if (!sub_it->dropped && (sub_it->value.id == it->value.id)) {
-          stor->append(sub_it->value);
-          sub_it->dropped = true;
-        }
-      }
-    }
+    std::sort(std::begin(all_meases), std::end(all_meases),meas_time_compare_less());
+	dariadb::IdSet dropped;
+	std::vector<bool> visited(count);
+	
+	size_t i = 0;
+	for (auto it = std::begin(all_meases); it != std::end(all_meases); ++it, ++i) {
+		if (visited[i]) {
+			continue;
+		}
+		if (dropped.find(it->id) != dropped.end()) {
+			continue;
+		}
+		visited[i] = true;
+		stor->append(*it);
+		pos = 0;
+		for (auto sub_it = std::begin(all_meases); sub_it != std::end(all_meases); ++sub_it, ++pos) {
+			if (visited[pos]) {
+				continue;
+			}
+			if ((sub_it->id == it->id)) {
+				stor->append(*sub_it);
+				visited[pos] = true;
+			}
+		}
+		dropped.insert(it->id);
+	}
     _header->is_dropped = true;
   }
 
@@ -540,29 +505,29 @@ dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less()
 			  !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
 			  continue;
 		  }
-		  FlaggedMeas empty;
-		  empty.value.time = q.from;
+		  Meas empty;
+		  empty.time = q.from;
 		  auto begin = _levels[i].begin;
 		  auto end = _levels[i].begin + _levels[i].hdr->pos;
 		  auto start = std::lower_bound(
-			  begin, end, empty, [](const FlaggedMeas &left, const FlaggedMeas &right) {
-			  return left.value.time < right.value.time;
+			  begin, end, empty, [](const Meas &left, const Meas &right) {
+			  return left.time < right.time;
 		  });
 		  for (auto it = start; it != end; ++it) {
 			  auto m = *it;
-			  if (m.value.time > q.to) {
+			  if (m.time > q.to) {
 				  break;
 			  }
-			  if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-				  clbk->call(m.value);
+			  if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+				  clbk->call(m);
 			  }
 		  }
 	  }
 
 	  for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
 		  auto m = _memvalues[j];
-		  if (m.value.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-			  clbk->call(m.value);
+		  if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+			  clbk->call(m);
 		  }
 	  }
   }
@@ -639,9 +604,9 @@ dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less()
     bool result = false;
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      if (m.value.id == id) {
-        *minResult = std::min(*minResult, m.value.time);
-        *maxResult = std::max(*maxResult, m.value.time);
+      if (m.id == id) {
+        *minResult = std::min(*minResult, m.time);
+        *maxResult = std::max(*maxResult, m.time);
         result = true;
       }
     }
@@ -656,9 +621,9 @@ dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less()
       }
       for (size_t j = 0; j < _levels[i].hdr->pos; ++j) {
         auto m = _levels[i].at(j);
-        if (m.value.id == id) {
-          *minResult = std::min(*minResult, m.value.time);
-          *maxResult = std::max(*maxResult, m.value.time);
+        if (m.id == id) {
+          *minResult = std::min(*minResult, m.time);
+          *maxResult = std::max(*maxResult, m.time);
           result = true;
         }
       }
@@ -705,9 +670,9 @@ dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less()
     if (inInterval(_header->minTime, _header->maxTime, q.time_point)) {
       for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
         auto m = _memvalues[j];
-        if (m.value.inQuery(q.ids, q.flag, q.source) && (m.value.time <= q.time_point)) {
-          insert_if_older(sub_res, m.value);
-          readed_ids.insert(m.value.id);
+        if (m.inQuery(q.ids, q.flag, q.source) && (m.time <= q.time_point)) {
+          insert_if_older(sub_res, m);
+          readed_ids.insert(m.id);
         }
       }
     }
@@ -724,23 +689,23 @@ dariadb::utils::k_merge(to_merge, merge_target, flagged_meas_time_compare_less()
         continue;
       }
 
-      FlaggedMeas empty;
-      empty.value.time = q.time_point;
+      Meas empty;
+      empty.time = q.time_point;
       auto begin = _levels[i].begin;
       auto end = _levels[i].begin + _levels[i].hdr->pos;
       auto start = std::lower_bound(
-          begin, end, empty, [](const FlaggedMeas &left, const FlaggedMeas &right) {
-            return left.value.time < right.value.time;
+          begin, end, empty, [](const Meas &left, const Meas &right) {
+            return left.time < right.time;
           });
 
       for (auto it = start; it != end; ++it) {
         auto m = *it;
-        if (m.value.time > q.time_point) {
+        if (m.time > q.time_point) {
           break;
         }
-        if (m.value.inQuery(q.ids, q.flag, q.source) && (m.value.time <= q.time_point)) {
-          insert_if_older(sub_res, m.value);
-          readed_ids.insert(m.value.id);
+        if (m.inQuery(q.ids, q.flag, q.source) && (m.time <= q.time_point)) {
+          insert_if_older(sub_res, m);
+          readed_ids.insert(m.id);
         }
       }
     }
@@ -769,7 +734,7 @@ protected:
   uint8_t *_raw_data;
   std::vector<level> _levels;
   size_t _size;
-  FlaggedMeas *_memvalues;
+  Meas *_memvalues;
   size_t _memvalues_size;
 
   mutable boost::shared_mutex _mutex;
