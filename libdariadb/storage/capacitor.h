@@ -23,6 +23,18 @@ public:
       path = _path;
       max_levels = CAP_DEFAULT_MAX_LEVELS;
     }
+	
+	size_t measurements_count() const {
+		return Params::measurements_count(max_levels, B);
+	}
+
+	static size_t measurements_count(size_t levels, size_t B) {
+		size_t result = 0;
+		for (size_t i = 0; i < levels; ++i) {
+			result += B * (size_t(1) << i);
+		}
+		return result + B; //+ memvalues size;
+	}
   };
 #pragma pack(push, 1)
   struct Header {
@@ -36,6 +48,7 @@ public:
     size_t size;    // sizeof file in bytes
     size_t _size_B; // how many block (sizeof(B)) addeded.
     size_t levels_count;
+	size_t max_values_count;
     size_t _writed;
     size_t _memvalues_pos;
     uint64_t id_bloom;
@@ -68,6 +81,7 @@ public:
   static Header readHeader(std::string file_name);
   Header *header();
   append_result append(const Meas &value) override;
+  append_result append(const Meas::MeasArray::const_iterator &begin, const Meas::MeasArray::const_iterator &end) override;
   void foreach(const QueryInterval&q, ReaderClb*clbk)override;
   Meas::MeasList readInterval(const QueryInterval &q) override;
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;

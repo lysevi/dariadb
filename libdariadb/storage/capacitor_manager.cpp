@@ -408,11 +408,7 @@ void CapacitorManager::append(std::string filename, const Meas::MeasArray &ma) {
   std::lock_guard<std::mutex> lg(_locker);
 
   auto target = create_new(filename);
-  for (auto v : ma) {
-    if (target->append(v).writed == 0) {
-      throw MAKE_EXCEPTION("target size to small.");
-    }
-  }
+  target->append(ma.begin(), ma.end());
   target->close();
   target = nullptr;
 }

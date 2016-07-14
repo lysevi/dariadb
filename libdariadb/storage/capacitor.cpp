@@ -180,14 +180,15 @@ public:
     _header->B = _params.B;
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
-    _header->is_closed = false;
+	_header->max_values_count = this->_params.measurements_count();
+	_header->is_closed = false;
     _header->is_open_to_write = true;
     _header->minTime = dariadb::MAX_TIME;
     _header->maxTime = dariadb::MIN_TIME;
     _header->id_bloom = bloom_empty<dariadb::Id>();
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
     _header->transaction_number = uint32_t(0);
-
+	
 
     level_header *headers_pos =
         reinterpret_cast<level_header *>(_raw_data);
@@ -313,6 +314,60 @@ public:
     auto result = append_unsafe(value);
     // mmap->flush();
     return result;
+  }
+
+  append_result bulk(const Meas::MeasArray::const_iterator &begin, const Meas::MeasArray::const_iterator &end) {
+	  level_header *headers_pos =
+		  reinterpret_cast<level_header *>(_raw_data);
+	  Meas* pos_after_headers = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);
+	  
+	  auto src_size = std::distance(begin, end);
+	  auto dst_begin = pos_after_headers;
+	  auto dst_end = (Meas *)(&dst_begin + _header->max_values_count-1);
+	  
+	  _header->_memvalues_pos = _header->B;
+	  _header->_writed = src_size;
+	  _header->minTime = begin->time;
+	  _header->maxTime = (begin + src_size-1)->time;
+
+	  auto src_it = begin;
+	  auto it = dst_begin;
+	  for (; src_it != end; ++it, ++src_it) {
+		  *it = *src_it;
+		  auto value = *it;
+		 
+		  _header->id_bloom = bloom_add(_header->id_bloom, value.id);
+		  _header->flag_bloom = bloom_add(_header->flag_bloom, value.flag);
+		 
+	  }
+	  for (auto&lvl : this->_levels) {
+		  lvl.hdr->pos = lvl.hdr->count;
+		  lvl.update_header();
+		  lvl.update_checksum();
+	  }
+	  return append_result(src_size,0);
+  }
+  append_result append(const Meas::MeasArray::const_iterator &begin, const Meas::MeasArray::const_iterator &end) {
+	  TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
+	  assert(!_is_readonly);
+	  boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
+
+	  if (std::distance(begin, end) == (_header->max_values_count)) {
+		  return bulk(begin, end);
+	  }
+	  else {
+		  append_result result;
+		  for (auto it = begin; it != end; ++it) {
+			  auto v = *it;
+			  auto local_res = append_unsafe(v);
+			  if (local_res.writed == 0) {
+				  return result;
+			  }
+			  result = result + local_res;
+		  }
+
+		  return result;
+	  }
   }
 
   append_result append_to_mem(const Meas &value) {
@@ -779,6 +834,10 @@ void Capacitor::flush() { // write all to storage;
 
 append_result dariadb::storage::Capacitor::append(const Meas &value) {
   return _Impl->append(value);
+}
+
+append_result dariadb::storage::Capacitor::append(const Meas::MeasArray::const_iterator &begin, const Meas::MeasArray::const_iterator &end) {
+	return _Impl->append(begin, end);
 }
 
 void dariadb::storage::Capacitor::foreach(const QueryInterval&q, ReaderClb*clbk) {

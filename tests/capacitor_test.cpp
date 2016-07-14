@@ -184,6 +184,48 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
   BOOST_CHECK(hdr.is_closed = true);
   BOOST_CHECK(hdr.is_full = true);
   dariadb::storage::Manifest::stop();
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+	  dariadb::utils::fs::rm(storage_path);
+  }
+}
+
+
+BOOST_AUTO_TEST_CASE(CapacitorBulk) {
+	const size_t block_size = 10;
+	auto storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	dariadb::utils::fs::mkdir(storage_path);
+
+	auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
+	assert(cap_files.size() == 0);
+	auto p = dariadb::storage::Capacitor::Params(block_size, storage_path);
+	p.max_levels = 11;
+	{
+		dariadb::storage::Manifest::start(
+			dariadb::utils::fs::append_path(storage_path, "Manifest"));
+		dariadb::storage::Capacitor cap(p, dariadb::storage::Capacitor::file_name());
+
+		auto e = dariadb::Meas::empty();
+		size_t count = p.measurements_count();
+		dariadb::Meas::MeasArray a(count);
+		for (size_t i = 0;i<count; i++) {
+			e.id = 0;
+			e.time++;
+			e.value = dariadb::Value(i);
+			a[i] = e;
+		}
+		cap.append(a.begin(), a.end());
+		
+		auto values=cap.readInterval(dariadb::storage::QueryInterval({ 0 }, 0, 0, e.time));
+		BOOST_CHECK(values.size(), count);
+	}
+	
+	dariadb::storage::Manifest::stop();
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
 }
 
 // BOOST_AUTO_TEST_CASE(CapReadIntervalTest) {

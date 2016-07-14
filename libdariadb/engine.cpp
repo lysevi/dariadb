@@ -32,6 +32,7 @@ public:
     }
 
     auto ma = aof->readAll();
+	std::sort(ma.begin(), ma.end(), meas_time_compare_less());
     CapacitorManager::instance()->append(target_name, ma);
     Manifest::instance()->aof_rm(fname);
     utils::fs::rm(utils::fs::append_path(storage_path, fname));
