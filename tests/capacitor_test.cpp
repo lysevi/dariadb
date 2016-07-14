@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(CapacitorBulk) {
 		cap.append(a.begin(), a.end());
 		
 		auto values=cap.readInterval(dariadb::storage::QueryInterval({ 0 }, 0, 0, e.time));
-		BOOST_CHECK(values.size(), count);
+		BOOST_CHECK_EQUAL(values.size(), count);
 	}
 	
 	dariadb::storage::Manifest::stop();
