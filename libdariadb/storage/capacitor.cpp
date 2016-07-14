@@ -431,7 +431,6 @@ public:
   };
 
   void drop_to_stor(MeasWriter *stor) {
-    // TODO use more smarter method. witout copy.
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
 
     level_header *headers_pos =
@@ -443,18 +442,14 @@ public:
     auto end = (Meas *)(begin + _header->_writed);
 	size_t count = std::distance(begin, end);
 
-    std::vector<Meas> all_meases{_header->_writed};
     size_t pos = 0;
-    for (auto it = begin; it != end; ++it, ++pos) {
-      all_meases[pos] = *it;
-    }
 
-    std::sort(std::begin(all_meases), std::end(all_meases),meas_time_compare_less());
+    std::sort(begin, end,meas_time_compare_less());
 	dariadb::IdSet dropped;
 	std::vector<bool> visited(count);
 	
 	size_t i = 0;
-	for (auto it = std::begin(all_meases); it != std::end(all_meases); ++it, ++i) {
+	for (auto it = begin; it != end; ++it, ++i) {
 		if (visited[i]) {
 			continue;
 		}
@@ -464,7 +459,7 @@ public:
 		visited[i] = true;
 		stor->append(*it);
 		pos = 0;
-		for (auto sub_it = std::begin(all_meases); sub_it != std::end(all_meases); ++sub_it, ++pos) {
+		for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
 			if (visited[pos]) {
 				continue;
 			}
