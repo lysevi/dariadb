@@ -323,7 +323,6 @@ public:
 	  
 	  auto src_size = std::distance(begin, end);
 	  auto dst_begin = pos_after_headers;
-	  auto dst_end = (Meas *)(&dst_begin + _header->max_values_count-1);
 	  
 	  _header->_memvalues_pos = _header->B;
 	  _header->_writed = src_size;
@@ -352,7 +351,7 @@ public:
 	  assert(!_is_readonly);
 	  boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
-	  if (std::distance(begin, end) == (_header->max_values_count)) {
+	  if (size_t(std::distance(begin, end)) == (_header->max_values_count)) {
 		  return bulk(begin, end);
 	  }
 	  else {

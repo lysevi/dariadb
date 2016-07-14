@@ -24,12 +24,12 @@ public:
     writed_count = 0;
     _storage_path = storage_path;
   }
-  void drop(dariadb::storage::AOFile_Ptr aof, std::string filename) override {
+  void drop(const dariadb::storage::AOFile_Ptr aof, const std::string fname) override {
     auto ma = aof->readAll();
     writed_count += ma.size();
-    files.insert(filename);
-    dariadb::storage::Manifest::instance()->aof_rm(filename);
-    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_storage_path, filename));
+    files.insert(fname);
+    dariadb::storage::Manifest::instance()->aof_rm(fname);
+    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_storage_path, fname));
   }
 };
 
