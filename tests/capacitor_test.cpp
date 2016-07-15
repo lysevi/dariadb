@@ -680,7 +680,6 @@ BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
 			m.value = 0;
 
 			dariadb::Meas::MeasArray values{ copies_count };
-			size_t pos = 0;
 			for (size_t j = 1; j < copies_count + 1; j++) {
 				m.time++;
 				if (dariadb::storage::CapacitorManager::instance()->append(m).ignored != 0) {
