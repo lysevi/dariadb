@@ -450,7 +450,10 @@ dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
   }
 }
 
-void dariadb::storage::Page::flush() {}
+void dariadb::storage::Page::flush() {
+	this->page_mmap->flush();
+	this->_index->index_mmap->flush();
+}
 
 void dariadb::storage::Page::begin_transaction(uint64_t) {
   if (_openned_chunk.ch != nullptr) {
@@ -534,6 +537,14 @@ void dariadb::storage::Page::rollback_transaction(uint64_t num) {
   this->_index->index_mmap->flush();
 
   logger_info("rollback in " << chunks_count << " chunks.");
+}
+
+void dariadb::storage::Page::mark_as_init(Chunk_Ptr&ptr) {
+	ptr->header->is_init = true;
+	auto pos = ptr->header->pos_in_page;
+	_index->index[pos].commit = true;
+	_index->index[pos].is_init = true;
+	this->header->removed_chunks--;
 }
 
 void dariadb::storage::Page::mark_as_non_init(Chunk_Ptr&ptr) {

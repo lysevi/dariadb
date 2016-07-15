@@ -338,18 +338,14 @@ int main(int argc, char *argv[]) {
         _dict[v.id].push_back(v);
       }
 
-      if (!readonly && (!dont_clean && readed.size() != expected)) {
+	 
+      if (readed.size() != expected) {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
 
         for (auto &kv : _dict) {
           std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
         }
         throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
-      } else {
-        if (!readonly && (dont_clean && clbk->count < expected)) {
-          std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
-          throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
-        }
       }
     }
     std::cout << "stoping storage...\n";

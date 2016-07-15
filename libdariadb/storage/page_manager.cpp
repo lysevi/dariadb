@@ -491,11 +491,7 @@ public:
 	  GCResult result;
 
 	  if (in_fsck) {
-		  gc_wall_ifs.close();
 		  this->rollback_transaction(transaction_num);
-		  logger_info("rm gc_wall.");
-		  utils::fs::rm(gc_file);
-		  return result;
 	  }
 	  
 	  std::list<Page_Ptr> openned_pages;
@@ -534,21 +530,34 @@ public:
 		  }
 	  }
 	  gc_wall_ifs.close();
-
+	  size_t unmarked = 0;
 	  for (auto&kv : id2chunks) {
 		  for (auto&ch_pg : kv.second) {
 			  auto ch_ptr = std::get<0>(ch_pg);
 			  auto pg_ptr = std::get<1>(ch_pg);
-
-			  auto rdr = ch_ptr->get_reader();
-			  while (!rdr->is_end()) {
-				  auto subres = rdr->readNext();
-				  this->append_unsafe(subres);
+			  if (in_fsck) {
+				  pg_ptr->mark_as_init(ch_ptr);
+				  unmarked++;
 			  }
-			  pg_ptr->mark_as_non_init(ch_ptr);
+			  else {
+				  auto rdr = ch_ptr->get_reader();
+				  while (!rdr->is_end()) {
+					  auto subres = rdr->readNext();
+					  this->append_unsafe(subres);
+				  }
+				  pg_ptr->mark_as_non_init(ch_ptr);
+				  unmarked++;
+				  pg_ptr->flush();
+			  }
 		  }
 	  }
-
+	 
+	  if (in_fsck) {
+		  logger_info("unmakrked: " << unmarked);
+		  logger_info("rm gc_wall.");
+		  utils::fs::rm(gc_file);
+		  return result;
+	  }
 	  std::list<std::string> to_remove;
 	  for (auto&pg_ptr : openned_pages) {
 		  if (pg_ptr->header->removed_chunks == pg_ptr->header->addeded_chunks) {
@@ -561,6 +570,7 @@ public:
 	  openned_pages.clear();
 	  id2chunks.clear();
 	  this->commit_transaction_unsafe(transaction_num);
+	  utils::fs::rm(gc_file);
 	  for (auto&fname : to_remove) {
 		  auto target_name = utils::fs::extract_filename(fname);
 
@@ -569,7 +579,7 @@ public:
 		  utils::fs::rm(fname + "i");
 	  }
 	 
-	  utils::fs::rm(gc_file);
+	 
 	  return result;
 	  
 

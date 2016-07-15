@@ -66,6 +66,7 @@ public:
   std::list<Chunk_Ptr> get_not_full_chunks(); //list of not full chunks
   std::list<Chunk_Ptr> chunks_by_pos(std::vector<uint32_t> poses);
   void mark_as_non_init(Chunk_Ptr&ch);
+  void mark_as_init(Chunk_Ptr&ch);
 private:
   void flush_current_chunk();
   void init_chunk_index_rec(Chunk_Ptr ch);
