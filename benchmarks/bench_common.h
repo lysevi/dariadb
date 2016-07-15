@@ -32,7 +32,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             dariadb::storage::MeasWriter *ms) {
   try {
     auto m = dariadb::Meas::empty();
-    m.time = 0;
+	m.time = dariadb::timeutil::current_time();
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
 

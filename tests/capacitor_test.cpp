@@ -19,8 +19,13 @@
 class Moc_Dropper : public dariadb::storage::CapacitorManager::CapDropper {
 public:
   size_t calls;
-  Moc_Dropper() { calls = 0; }
-  virtual void drop(const std::string &) override { calls++; }
+  Moc_Dropper() { calls = 0; max_time = dariadb::MIN_TIME; }
+  virtual void drop(const std::string &f) override { 
+	  calls++;
+	  auto hdr = dariadb::storage::Capacitor::readHeader(f);
+	  max_time = std::max(hdr.maxTime, max_time);
+  }
+  dariadb::Time max_time;
 };
 
 BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
@@ -638,4 +643,59 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
+}
+
+
+BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
+	const std::string storagePath = "testStorage";
+	const size_t max_size = 5;
+	const dariadb::Time from = dariadb::timeutil::current_time();
+	const dariadb::Time to = from + 1021;
+	const dariadb::Time step = 10;
+	const size_t copies_count = 100;
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+	dariadb::utils::fs::mkdir(storagePath);
+	{
+		std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
+
+		dariadb::utils::async::ThreadManager::start(
+			dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
+		dariadb::storage::Manifest::start(
+			dariadb::utils::fs::append_path(storagePath, "Manifest"));
+		dariadb::storage::CapacitorManager::Params cap_params(storagePath, max_size);
+		cap_params.max_closed_caps = 0;
+		cap_params.store_period = 1000;
+		dariadb::storage::CapacitorManager::start(cap_params);
+		
+		dariadb::storage::CapacitorManager::instance()->set_downlevel(stor.get());
+
+		auto m = dariadb::Meas::empty();
+		for (auto i = from; i < to; i += step) {
+			m.id = 1;
+			m.flag = 1;
+			m.src = 1;
+			m.time = i;
+			m.value = 0;
+
+			dariadb::Meas::MeasArray values{ copies_count };
+			size_t pos = 0;
+			for (size_t j = 1; j < copies_count + 1; j++) {
+				m.time++;
+				if (dariadb::storage::CapacitorManager::instance()->append(m).ignored != 0) {
+					throw MAKE_EXCEPTION("->append(m).writed != values.size()");
+				}
+			}
+		}
+
+		auto current = dariadb::timeutil::current_time();
+		BOOST_CHECK(stor->max_time < current);
+		dariadb::storage::CapacitorManager::stop();
+		dariadb::storage::Manifest::stop();
+		dariadb::utils::async::ThreadManager::stop();
+	}
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
 }

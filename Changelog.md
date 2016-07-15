@@ -8,6 +8,7 @@ v0.1.0
   - Standard API - You can Query interval as list or values in time point as dictionary.
 - Speed up read/write .
 - API to merge non filled chunks.
+- Drop to compressed stored by stored period.
 
 v0.0.7
 =====

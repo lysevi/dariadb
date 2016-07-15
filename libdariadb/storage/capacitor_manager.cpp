@@ -6,6 +6,7 @@
 #include "../utils/thread_manager.h"
 #include "manifest.h"
 #include <cassert>
+#include "../timeutil.h"
 
 using namespace dariadb::storage;
 using namespace dariadb;
@@ -73,11 +74,22 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   }
   if (_down != nullptr) {
     auto closed = this->closed_caps();
-
+	
     if (closed.size() > _params.max_closed_caps && _params.max_closed_caps > 0) {
-      size_t to_drop = closed.size() / 4;
+      size_t to_drop = closed.size() - _params.max_closed_caps;
       drop_part_unsafe(to_drop);
-    }
+	}
+	else {
+		if (_params.store_period != 0) {
+			auto max_hdr_time = dariadb::timeutil::current_time() - _params.store_period;
+			for (auto&fname : closed) {
+				Capacitor::Header hdr = Capacitor::readHeader(fname);
+				if (hdr.maxTime < max_hdr_time) {
+					this->drop_cap(fname);
+				}
+			}
+		}
+	}
   }
   return Capacitor_Ptr{new Capacitor(p, filename)};
 }

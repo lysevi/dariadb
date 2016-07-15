@@ -22,15 +22,18 @@ public:
     size_t max_levels;
     size_t max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
     size_t B;               // measurements count in one data block
+	dariadb::Time store_period;
     Params() {
       max_levels = 0;
       B = 0;
+	  store_period = 0;
     }
     Params(const std::string storage_path, const size_t _B) {
       path = storage_path;
       B = _B;
       max_levels = 0;
       max_closed_caps = MAX_CLOSED_CAPS;
+	  store_period = 0;
     }
 
     size_t measurements_count() const {
