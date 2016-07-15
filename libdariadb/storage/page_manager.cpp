@@ -26,6 +26,8 @@
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
+const std::string GC_WAL_FILENAME = "gc_wall";
+
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
 // PM
 class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
@@ -54,6 +56,11 @@ public:
     if (!utils::fs::path_exists(_param.path)) {
       return;
     }
+
+	if (utils::fs::path_exists(utils::fs::append_path(_param.path, GC_WAL_FILENAME))) {
+		logger_info("found " << utils::fs::append_path(_param.path, GC_WAL_FILENAME));
+		this->play_gcwall(true);
+	}
 
     auto pages = Manifest::instance()->page_list();
 
@@ -465,9 +472,8 @@ public:
 		  return std::get<0>(left)->header->maxTime < std::get<0>(right)->header->maxTime;
 	  }
   };
-  const std::string GC_WAL_FILENAME = "gc_wall";
   
-  PageManager::GCResult play_gcwall() {
+  PageManager::GCResult play_gcwall(bool in_fsck) {
 	  auto gc_file = utils::fs::append_path(this->_param.path, GC_WAL_FILENAME);
 	  std::ifstream gc_wall_ifs;
 	  gc_wall_ifs.open(gc_file, std::ifstream::in);
@@ -483,6 +489,15 @@ public:
 		  transaction_num = std::atoll(transaction_num_txt.c_str());
 	  }
 	  GCResult result;
+
+	  if (in_fsck) {
+		  gc_wall_ifs.close();
+		  this->rollback_transaction(transaction_num);
+		  logger_info("rm gc_wall.");
+		  utils::fs::rm(gc_file);
+		  return result;
+	  }
+	  
 	  std::list<Page_Ptr> openned_pages;
 	  std::map<dariadb::Id, std::set<std::tuple<Chunk_Ptr, Page_Ptr>, ChunkById>> id2chunks;
 
@@ -602,7 +617,7 @@ public:
 	  ofs << transaction_num<<std::endl;
 	  ofs << gc_wal_txt;
 	  ofs.close();
-	  return play_gcwall();
+	  return play_gcwall(false);
   }
 protected:
   Page_Ptr _cur_page;
