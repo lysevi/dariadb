@@ -503,6 +503,7 @@ void dariadb::storage::Page::rollback_transaction(uint64_t num) {
         this->page_mmap->flush();
         this->_index->index_mmap->flush();
         ++chunks_count;
+		this->header->removed_chunks++;
       }
     }
     ++pos;

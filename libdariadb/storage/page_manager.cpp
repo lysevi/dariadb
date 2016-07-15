@@ -57,11 +57,23 @@ public:
     for (auto n : pages) {
       auto file_name = utils::fs::append_path(_param.path, n);
       auto hdr = Page::readHeader(file_name);
-      if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
-        auto res = Page_Ptr{Page::open(file_name)};
-        res->fsck();
-        res = nullptr;
-      }
+	  if (hdr.removed_chunks == hdr.addeded_chunks) {
+		  auto target_name = utils::fs::extract_filename(file_name);
+		  logger_info("page: " << target_name << " is empty. removing...");
+		  //TODO move page removing to method.
+		  _openned_pages.erase(file_name);
+
+		  Manifest::instance()->page_rm(target_name);
+		  utils::fs::rm(file_name);
+		  utils::fs::rm(file_name + "i");
+	  }
+	  else {
+		  if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
+			  auto res = Page_Ptr{ Page::open(file_name) };
+			  res->fsck();
+			  res = nullptr;
+		  }
+	  }
     }
   }
 
