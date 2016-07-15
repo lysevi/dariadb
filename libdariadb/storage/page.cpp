@@ -53,9 +53,6 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   res->header->chunk_size = chunk_size;
   res->header->is_closed = false;
   res->header->is_open_to_write = true;
-  for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
-    res->_free_poses.push_back(i);
-  }
 
   res->page_mmap->flush(0, sizeof(PageHeader));
   return res;
@@ -87,9 +84,7 @@ Page *Page::open(std::string file_name, bool read_only) {
 
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     auto irec = &res->_index->index[i];
-    if (!irec->is_init) {
-      res->_free_poses.push_back(i);
-    } else {
+    if (irec->is_init) {
       auto kv = std::make_pair(irec->maxTime, i);
       res->_index->_itree.insert(kv);
     }
@@ -255,12 +250,11 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   TIMECODE_METRICS(ctmd, "write", "Page::init_chunk_index_rec");
   assert(header->chunk_size == ch->header->size);
 
-  uint32_t pos_index = 0;
-
-  pos_index = _free_poses.front();
-  _free_poses.pop_front();
+  uint32_t pos_index = this->header->addeded_chunks;
 
   auto cur_index = &_index->index[pos_index];
+  assert(cur_index->chunk_id == 0);
+  assert(cur_index->is_init == false);
   ch->header->pos_in_page = pos_index;
   cur_index->chunk_id = ch->header->id;
   cur_index->is_init = true;
@@ -295,7 +289,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
 }
 
 bool Page::is_full() const {
-  return this->_free_poses.empty() &&
+  return this->header->addeded_chunks== this->header->chunk_per_storage &&
          (_openned_chunk.ch == nullptr || _openned_chunk.ch->is_full());
 }
 
