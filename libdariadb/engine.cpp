@@ -468,7 +468,7 @@ public:
   void drop_part_caps(size_t count) { CapacitorManager::instance()->drop_part(count); }
   Engine::GCResult gc() {
 	  Engine::GCResult result;
-	  result.page_result=PageManager::instance()->merge_non_full_chunks();
+	  result.page_result=PageManager::instance()->gc();
 	  
 	  logger_info("Engine::GC: removed pages count: " << result.page_result.page_removed);
 	  logger_info("Engine::GC: chunks merged: " << result.page_result.chunks_merged);

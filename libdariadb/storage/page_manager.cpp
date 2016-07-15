@@ -615,6 +615,6 @@ void PageManager::rollback_transaction(uint64_t num) {
   impl->rollback_transaction(num);
 }
 
-PageManager::GCResult PageManager::merge_non_full_chunks() {
+PageManager::GCResult PageManager::gc() {
 	return impl->merge_non_full_chunks();
 }

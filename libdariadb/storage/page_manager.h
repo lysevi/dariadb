@@ -76,7 +76,7 @@ public:
   void commit_transaction(uint64_t num);
   void rollback_transaction(uint64_t num);
 
-  GCResult merge_non_full_chunks();
+  GCResult gc();
 private:
   static PageManager *_instance;
   class Private;
