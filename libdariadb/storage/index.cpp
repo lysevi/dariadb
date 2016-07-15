@@ -118,18 +118,6 @@ protected:
 };
 
 PageIndex::~PageIndex() {
-  if (!readonly && !iheader->is_sorted) {
-    size_t pos = 0; // TODO crash safety
-    IndexReccord *new_index = new IndexReccord[iheader->chunk_per_storage];
-    memset(new_index, 0, sizeof(IndexReccord) * iheader->chunk_per_storage);
-
-    for (auto it = _itree.begin(); it != _itree.end(); ++it, ++pos) {
-      new_index[pos] = index[it->second];
-    }
-    memcpy(index, new_index, sizeof(IndexReccord) * iheader->chunk_per_storage);
-    delete[] new_index;
-    iheader->is_sorted = true;
-  }
   iheader->is_closed = true;
   _itree.clear();
   index = nullptr;
@@ -190,6 +178,8 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
 
 void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
                                   const dariadb::Meas &m, uint32_t pos) {
+	assert(cur_index->chunk_id == ptr->header->id);
+	assert(ptr->header->pos_in_page == pos);
   // cur_index->last = ptr->info->last;
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);
