@@ -506,6 +506,12 @@ public:
 		  if (!std::getline(gc_wall_ifs, chunks_poses)) {
 			  throw MAKE_EXCEPTION("gc_wall is broken");
 		  }
+		  bool file_is_exists = utils::fs::path_exists(page_name);
+		  if (!file_is_exists) {
+			  if (!in_fsck) {
+				  throw MAKE_EXCEPTION("file not found: " + page_name);
+			  }
+		  }
 		  //TODO move split to utils.
 		  std::vector<std::string> tokens;
 		  std::istringstream iss(chunks_poses);
@@ -517,6 +523,9 @@ public:
 		  size_t pos = 0;
 		  for (auto&t : tokens) {
 			  poses[pos++] = atoi(t.c_str());
+		  }
+		  if (!file_is_exists) {
+			  continue;
 		  }
 		  auto raw_ptr = Page::open(page_name, false);
 		  Page_Ptr p{ raw_ptr };
