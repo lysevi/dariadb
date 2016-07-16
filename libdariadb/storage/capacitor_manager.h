@@ -2,6 +2,7 @@
 
 #include "../storage.h"
 #include "../utils/utils.h"
+#include "../utils/period_worker.h"
 #include "capacitor.h"
 #include <vector>
 
@@ -11,7 +12,7 @@ namespace dariadb {
 namespace storage {
 const size_t MAX_CLOSED_CAPS = 10;
 
-class CapacitorManager : public MeasStorage {
+class CapacitorManager : public MeasStorage, protected utils::PeriodWorker {
 public:
   class CapDropper {
   public:
@@ -81,6 +82,7 @@ protected:
   std::list<std::string>
   caps_by_filter(std::function<bool(const Capacitor::Header &)> pred);
 
+  void call()override;
 private:
   static CapacitorManager *_instance;
 

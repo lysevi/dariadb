@@ -14,9 +14,13 @@ using namespace dariadb::utils::async;
 
 CapacitorManager *CapacitorManager::_instance = nullptr;
 
-CapacitorManager::~CapacitorManager() {}
+CapacitorManager::~CapacitorManager() {
+    if(_params.store_period!=0){
+        this->stop_worker();
+    }
+}
 
-CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
+CapacitorManager::CapacitorManager(const Params &param) : utils::PeriodWorker(std::chrono::milliseconds(5*1000)), _params(param) {
   _down = nullptr;
   /* if (!dariadb::utils::fs::path_exists(_params.path)) {
      dariadb::utils::fs::mkdir(_params.path);
@@ -30,6 +34,9 @@ CapacitorManager::CapacitorManager(const Params &param) : _params(param) {
       _cap = Capacitor_Ptr{new Capacitor(p, f)};
       break;
     }
+  }
+  if(_params.store_period!=0){
+      this->start_worker();
   }
   /*if (_cap == nullptr) {
     create_new();
@@ -65,6 +72,17 @@ CapacitorManager *dariadb::storage::CapacitorManager::instance() {
   return CapacitorManager::_instance;
 }
 
+void CapacitorManager::call(){
+     auto closed = this->closed_caps();
+    auto max_hdr_time = dariadb::timeutil::current_time() - _params.store_period;
+    for (auto&fname : closed) {
+        Capacitor::Header hdr = Capacitor::readHeader(fname);
+        if (hdr.maxTime < max_hdr_time) {
+            this->drop_cap(fname);
+        }
+    }
+}
+
 Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
   _cap = nullptr;
@@ -80,15 +98,6 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
       drop_part_unsafe(to_drop);
 	}
 	else {
-		if (_params.store_period != 0) {
-			auto max_hdr_time = dariadb::timeutil::current_time() - _params.store_period;
-			for (auto&fname : closed) {
-				Capacitor::Header hdr = Capacitor::readHeader(fname);
-				if (hdr.maxTime < max_hdr_time) {
-					this->drop_cap(fname);
-				}
-			}
-		}
 	}
   }
   return Capacitor_Ptr{new Capacitor(p, filename)};
