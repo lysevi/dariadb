@@ -52,19 +52,19 @@ public:
     }
   }
 
-  append_result append(const Meas::MeasArray::const_iterator &begin,const Meas::MeasArray::const_iterator &end) {
+  append_result append(const Meas::MeasArray::const_iterator &begin,
+                       const Meas::MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
-    auto sz=std::distance(begin,end);
+    auto sz = std::distance(begin, end);
     if (is_full) {
       return append_result(0, sz);
     }
     auto file = std::fopen(_filename.c_str(), "ab");
     if (file != nullptr) {
 
-      auto write_size =
-          (sz + _writed) > _params.size ? (_params.size - _writed) : sz;
+      auto write_size = (sz + _writed) > _params.size ? (_params.size - _writed) : sz;
       std::fwrite(&(*begin), sizeof(Meas), write_size, file);
       std::fclose(file);
       _writed += write_size;
@@ -74,11 +74,12 @@ public:
     }
   }
 
-  append_result append(const Meas::MeasList::const_iterator &begin,const Meas::MeasList::const_iterator &end) {
+  append_result append(const Meas::MeasList::const_iterator &begin,
+                       const Meas::MeasList::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
     std::lock_guard<std::mutex> lock(_mutex);
-    auto list_size = std::distance(begin,end);
+    auto list_size = std::distance(begin, end);
     if (is_full) {
       return append_result(0, list_size);
     }
@@ -97,48 +98,47 @@ public:
     }
   }
 
-  void foreach(const QueryInterval&q, ReaderClb*clbk) {
-	  TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
-	  std::lock_guard<std::mutex> lock(_mutex);
+  void foreach (const QueryInterval &q, ReaderClb * clbk) {
+    TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
+    std::lock_guard<std::mutex> lock(_mutex);
 
-	  auto file = std::fopen(_filename.c_str(), "rb");
-	  if (file == nullptr) {
-		  throw_open_error_exception();
-	  }
-	  
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw_open_error_exception();
+    }
 
-	  while (1) {
-		  Meas val = Meas::empty();
-		  if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
-			  break;
-		  }
-		  if (val.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-			  clbk->call(val);
-		  }
-	  }
-	  std::fclose(file);
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+        break;
+      }
+      if (val.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+        clbk->call(val);
+      }
+    }
+    std::fclose(file);
   }
-  
-  Meas::MeasList readInterval(const QueryInterval &q) {
-	  TIMECODE_METRICS(ctmd, "readInterval", "AOFile::readInterval");
-	  std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
-	  this->foreach(q, clbk.get());
 
-	  std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
-	  for (auto v : clbk->mlist) {
-		  sub_result[v.id].insert(v);
-	  }
-	  Meas::MeasList result;
-	  for (auto id : q.ids) {
-		  auto sublist=sub_result.find(id);
-		  if (sublist == sub_result.end()) {
-			  continue;
-		  }
-		  for (auto v : sublist->second) {
-			  result.push_back(v);
-		  }
-	  }
-      return result;
+  Meas::MeasList readInterval(const QueryInterval &q) {
+    TIMECODE_METRICS(ctmd, "readInterval", "AOFile::readInterval");
+    std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
+    this->foreach (q, clbk.get());
+
+    std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+    for (auto v : clbk->mlist) {
+      sub_result[v.id].insert(v);
+    }
+    Meas::MeasList result;
+    for (auto id : q.ids) {
+      auto sublist = sub_result.find(id);
+      if (sublist == sub_result.end()) {
+        continue;
+      }
+      for (auto v : sublist->second) {
+        result.push_back(v);
+      }
+    }
+    return result;
   }
 
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
@@ -219,7 +219,7 @@ public:
       }
     }
 
-	return sub_res;
+    return sub_res;
   }
 
   dariadb::Time minTime() const {
@@ -293,7 +293,6 @@ public:
     //  drop_future.wait();
     //}
   }
-
 
   std::string filename() const { return _filename; }
 
@@ -386,15 +385,17 @@ void AOFile::flush() { // write all to storage;
 append_result AOFile::append(const Meas &value) {
   return _Impl->append(value);
 }
-append_result AOFile::append(const Meas::MeasArray::const_iterator &begin,const Meas::MeasArray::const_iterator &end) {
-  return _Impl->append(begin,end);
+append_result AOFile::append(const Meas::MeasArray::const_iterator &begin,
+                             const Meas::MeasArray::const_iterator &end) {
+  return _Impl->append(begin, end);
 }
-append_result AOFile::append(const Meas::MeasList::const_iterator&begin,const Meas::MeasList::const_iterator&end) {
-  return _Impl->append(begin,end);
+append_result AOFile::append(const Meas::MeasList::const_iterator &begin,
+                             const Meas::MeasList::const_iterator &end) {
+  return _Impl->append(begin, end);
 }
 
-void AOFile::foreach(const QueryInterval&q, ReaderClb*clbk) {
-	return _Impl->foreach(q, clbk);
+void AOFile::foreach (const QueryInterval &q, ReaderClb * clbk) {
+  return _Impl->foreach (q, clbk);
 }
 
 Meas::MeasList AOFile::readInterval(const QueryInterval &q) {
@@ -409,7 +410,7 @@ Meas::Id2Meas AOFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-std::string AOFile::filename() const { 
+std::string AOFile::filename() const {
   return _Impl->filename();
 }
 

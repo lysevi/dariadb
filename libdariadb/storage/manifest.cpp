@@ -138,20 +138,20 @@ void dariadb::storage::Manifest::page_append(const std::string &rec) {
 }
 
 void dariadb::storage::Manifest::page_rm(const std::string &rec) {
-	std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
 
-	json js = json::parse(read_file(_filename));
+  json js = json::parse(read_file(_filename));
 
-	std::list<std::string> pg_list{};
-	auto pages_json = js[PAGE_JS_KEY];
-	for (auto v : pages_json) {
-		std::string str_val = v;
-		if (rec != str_val) {
-			pg_list.push_back(str_val);
-		}
-	}
-	js[PAGE_JS_KEY] = pg_list;
-	write_file(_filename, js.dump());
+  std::list<std::string> pg_list{};
+  auto pages_json = js[PAGE_JS_KEY];
+  for (auto v : pages_json) {
+    std::string str_val = v;
+    if (rec != str_val) {
+      pg_list.push_back(str_val);
+    }
+  }
+  js[PAGE_JS_KEY] = pg_list;
+  write_file(_filename, js.dump());
 }
 
 std::list<std::string> dariadb::storage::Manifest::cola_list() {

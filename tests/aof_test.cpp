@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
       e.value = dariadb::Value(i);
       ml.push_back(e);
     }
-    aof.append(ml.begin(),ml.end());
+    aof.append(ml.begin(), ml.end());
 
     dariadb::Meas::MeasArray ma;
     ma.resize(writes_count - i);
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
       ma[pos] = e;
       pos++;
     }
-    aof.append(ma.begin(),ma.end());
+    aof.append(ma.begin(), ma.end());
     aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
     BOOST_CHECK_EQUAL(aof_files.size(), size_t(1));
 
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
         dariadb::storage::AOFManager::Params(storagePath, max_size));
 
     dariadb::storage::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
-    auto out= dariadb::storage::AOFManager::instance()->readInterval(qi);
+    auto out = dariadb::storage::AOFManager::instance()->readInterval(qi);
     BOOST_CHECK_EQUAL(out.size(), dariadb_test::copies_count);
 
     auto closed = dariadb::storage::AOFManager::instance()->closed_aofs();

@@ -178,8 +178,8 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
 
 void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
                                   const dariadb::Meas &m, uint32_t pos) {
-	assert(cur_index->chunk_id == ptr->header->id);
-	assert(ptr->header->pos_in_page == pos);
+  assert(cur_index->chunk_id == ptr->header->id);
+  assert(ptr->header->pos_in_page == pos);
   // cur_index->last = ptr->info->last;
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);

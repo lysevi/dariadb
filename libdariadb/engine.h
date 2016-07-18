@@ -13,13 +13,13 @@ namespace storage {
 class Engine : public MeasStorage {
 public:
   struct QueueSizes {
-    size_t aofs_count;  ///  AOF count
-    size_t pages_count; /// pages count
-    size_t cola_count;  /// COLA files count.
+    size_t aofs_count;   ///  AOF count
+    size_t pages_count;  /// pages count
+    size_t cola_count;   /// COLA files count.
     size_t active_works; /// async tasks runned.
   };
   struct GCResult {
-	  PageManager::GCResult page_result;
+    PageManager::GCResult page_result;
   };
   struct Limits {
     size_t max_mem_chunks; // max_mem_chunks - maximum chunks in memory.zero
@@ -42,12 +42,12 @@ public:
          dariadb::storage::CapacitorManager::Params cap_params, const Limits &limits);
 
   append_result append(const Meas &value) override;
-  
+
   void flush() override;
 
   QueueSizes queue_size() const;
 
-  virtual void foreach(const QueryInterval&q, ReaderClb*clbk);
+  virtual void foreach (const QueryInterval &q, ReaderClb * clbk);
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
@@ -65,6 +65,7 @@ public:
   GCResult gc();
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
   void wait_all_asyncs();
+
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

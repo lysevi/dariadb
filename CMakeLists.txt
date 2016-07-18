@@ -6,8 +6,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(AddCXXCompilerFlag)
 
 set(dariadb_MAJOR_VERSION 0)
-set(dariadb_MINOR_VERSION 0)
-set(dariadb_PATCH_VERSION 7)
+set(dariadb_MINOR_VERSION 1)
+set(dariadb_PATCH_VERSION 0)
 set(dariadb_VERSION${dariadb_MAJOR_VERSION}.${dariadb_MINOR_VERSION}.${dariadb_PATCH_VERSION})
 
 

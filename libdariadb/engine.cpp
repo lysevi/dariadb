@@ -32,7 +32,7 @@ public:
     }
 
     auto ma = aof->readAll();
-	std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+    std::sort(ma.begin(), ma.end(), meas_time_compare_less());
     CapacitorManager::instance()->append(target_name, ma);
     Manifest::instance()->aof_rm(fname);
     utils::fs::rm(utils::fs::append_path(storage_path, fname));
@@ -164,7 +164,7 @@ public:
     _subscribe_notify.stop();
     this->flush();
 
-	ThreadManager::stop();
+    ThreadManager::stop();
     AOFManager::stop();
     CapacitorManager::stop();
     PageManager::stop();
@@ -265,12 +265,10 @@ public:
     AOFManager::instance()->flush();
     CapacitorManager::instance()->flush();
     PageManager::instance()->flush();
-    //ThreadManager::instance()->flush();
+    // ThreadManager::instance()->flush();
   }
 
-  void wait_all_asyncs() {
-	  ThreadManager::instance()->flush();
-  }
+  void wait_all_asyncs() { ThreadManager::instance()->flush(); }
 
   class ChunkReadCallback : public ReaderClb {
   public:
@@ -283,96 +281,94 @@ public:
     result.aofs_count = AOFManager::instance()->files_count();
     result.pages_count = PageManager::instance()->files_count();
     result.cola_count = CapacitorManager::instance()->files_count();
-    result.active_works= ThreadManager::instance()->active_works();
+    result.active_works = ThreadManager::instance()->active_works();
     return result;
   }
-  
+
   // Inherited via MeasStorage
-  void foreach(const QueryInterval&q, ReaderClb*clbk) {
-	  TIMECODE_METRICS(ctmd, "foreach", "Engine::foreach");
+  void foreach (const QueryInterval &q, ReaderClb * clbk) {
+    TIMECODE_METRICS(ctmd, "foreach", "Engine::foreach");
 
-	  AsyncTask pm_at = [&clbk, &q](const ThreadInfo &ti) {
-		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		  // LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
-		  /*logger("engine: pm readinterval...");*/
-		  auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
+    AsyncTask pm_at = [&clbk, &q](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      // LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
+      /*logger("engine: pm readinterval...");*/
+      auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
-		  PageManager::instance()->readLinks(q, all_chunkLinks, clbk);
-		  all_chunkLinks.clear();
-		  // LockManager::instance()->unlock(LockObjects::PAGE);
-		  /*logger("engine: pm readinterval end");*/
-	  };
+      PageManager::instance()->readLinks(q, all_chunkLinks, clbk);
+      all_chunkLinks.clear();
+      // LockManager::instance()->unlock(LockObjects::PAGE);
+      /*logger("engine: pm readinterval end");*/
+    };
 
-	  AsyncTask cm_at = [&clbk, &q](const ThreadInfo &ti) {
-		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		  /*LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);*/
-		  /*logger("engine: cm readinterval...");*/
-		  CapacitorManager::instance()->foreach(q, clbk);
-		  /*LockManager::instance()->unlock(LockObjects::CAP);*/
-		  /*logger("engine: cm readinterval end");*/
-	  };
+    AsyncTask cm_at = [&clbk, &q](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      /*LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);*/
+      /*logger("engine: cm readinterval...");*/
+      CapacitorManager::instance()->foreach (q, clbk);
+      /*LockManager::instance()->unlock(LockObjects::CAP);*/
+      /*logger("engine: cm readinterval end");*/
+    };
 
-	  AsyncTask am_at = [&clbk, &q](const ThreadInfo &ti) {
-		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		  /*LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);*/
-		  /*logger("engine: am readinterval...");*/
-		  AOFManager::instance()->foreach(q, clbk);
-		  /*LockManager::instance()->unlock(LockObjects::AOF);*/
-		  /*logger("engine: am readinterval end");*/
-	  };
+    AsyncTask am_at = [&clbk, &q](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      /*LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);*/
+      /*logger("engine: am readinterval...");*/
+      AOFManager::instance()->foreach (q, clbk);
+      /*LockManager::instance()->unlock(LockObjects::AOF);*/
+      /*logger("engine: am readinterval end");*/
+    };
 
-	  LockManager::instance()->lock(
-		  LockKind::READ, { LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF });
+    LockManager::instance()->lock(
+        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
-	  auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
-	  auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
-	  auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
+    auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
-	  /*logger("engine: interval: wait pm.");*/
-	  pm_async->wait();
-	  /*logger("engine: interval: wait cm.");*/
-	  cm_async->wait();
-	  /*logger("engine: interval: wait am.");*/
-	  am_async->wait();
-	  /*logger("engine: interval: wait all and.");*/
+    /*logger("engine: interval: wait pm.");*/
+    pm_async->wait();
+    /*logger("engine: interval: wait cm.");*/
+    cm_async->wait();
+    /*logger("engine: interval: wait am.");*/
+    am_async->wait();
+    /*logger("engine: interval: wait all and.");*/
 
-	  LockManager::instance()->unlock(
-	  { LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF });
+    LockManager::instance()->unlock(
+        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
   }
-  
-  
+
   Meas::MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
-	std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
-	this->foreach(q, clbk.get());
-	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
-	for (auto m : clbk->mlist) {
-		if (m.flag == Flags::_NO_DATA) {
-			continue;
-		}
-		sub_result[m.id].insert(m);
-	}
-	Meas::MeasList result;
-	for (auto id : q.ids) {
-		auto sublist = sub_result.find(id);
-		if (sublist == sub_result.end()) {
-			continue;
-		}
-		for (auto v : sublist->second) {
-			result.push_back(v);
-		}
-	}
-	return result;
+    std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
+    this->foreach (q, clbk.get());
+    std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+    for (auto m : clbk->mlist) {
+      if (m.flag == Flags::_NO_DATA) {
+        continue;
+      }
+      sub_result[m.id].insert(m);
+    }
+    Meas::MeasList result;
+    for (auto id : q.ids) {
+      auto sublist = sub_result.find(id);
+      if (sublist == sub_result.end()) {
+        continue;
+      }
+      for (auto v : sublist->second) {
+        result.push_back(v);
+      }
+    }
+    return result;
   }
 
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "Engine::readInTimePoint");
-    
 
     LockManager::instance()->lock(
         LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
-	
-	Meas::Id2Meas result;
+
+    Meas::Id2Meas result;
 
     for (auto id : q.ids) {
       dariadb::Time minT, maxT;
@@ -383,60 +379,61 @@ public:
       if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
           (minT < q.time_point || maxT < q.time_point)) {
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
-		for (auto &kv : subres) {
-			auto it = result.find(kv.first);
-			if (it == result.end()) {
-				result.insert(std::make_pair(kv.first, kv.second));
-			}
-			else {
-				if((it->second.flag == Flags::_NO_DATA)|| (it->second.time<kv.second.time)) {
-					result[kv.first] = kv.second;
-				}
-			}
-		}
+        for (auto &kv : subres) {
+          auto it = result.find(kv.first);
+          if (it == result.end()) {
+            result.insert(std::make_pair(kv.first, kv.second));
+          } else {
+            if ((it->second.flag == Flags::_NO_DATA) ||
+                (it->second.time < kv.second.time)) {
+              result[kv.first] = kv.second;
+            }
+          }
+        }
       } else {
         if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
             (utils::inInterval(minT, maxT, q.time_point))) {
           auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
-		  for (auto &kv : subres) {
-			  auto it = result.find(kv.first);
-			  if (it == result.end()) {
-				  result.insert(std::make_pair(kv.first, kv.second));
-			  }
-			  else {
-				  if ((it->second.flag == Flags::_NO_DATA) || (it->second.time<kv.second.time)) {
-					  result[kv.first] = kv.second;
-				  }
-			  }
-		  }
+          for (auto &kv : subres) {
+            auto it = result.find(kv.first);
+            if (it == result.end()) {
+              result.insert(std::make_pair(kv.first, kv.second));
+            } else {
+              if ((it->second.flag == Flags::_NO_DATA) ||
+                  (it->second.time < kv.second.time)) {
+                result[kv.first] = kv.second;
+              }
+            }
+          }
         } else {
           auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
-		  
-		  for (auto &kv : id2meas) {
-			  auto it = result.find(kv.first);
-			  if (it == result.end()) {
-				  result.insert(std::make_pair(kv.first, kv.second));
-			  }
-			  else {
-				  if ((it->second.flag == Flags::_NO_DATA) || (it->second.time<kv.second.time)) {
-					  result[kv.first] = kv.second;
-				  }
-			  }
-		  }
+
+          for (auto &kv : id2meas) {
+            auto it = result.find(kv.first);
+            if (it == result.end()) {
+              result.insert(std::make_pair(kv.first, kv.second));
+            } else {
+              if ((it->second.flag == Flags::_NO_DATA) ||
+                  (it->second.time < kv.second.time)) {
+                result[kv.first] = kv.second;
+              }
+            }
+          }
         }
       }
     }
 
-    LockManager::instance()->unlock({LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
-	return result;
+    LockManager::instance()->unlock(
+        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+    return result;
   }
 
   Id load(const QueryInterval &qi) {
     std::lock_guard<std::mutex> lg(_locker);
     Id result = _next_query_id++;
 
-	auto vals = this->readInterval(qi);
-    _load_results.insert(std::make_pair(result,std::make_shared<Meas::MeasList>(vals)));
+    auto vals = this->readInterval(qi);
+    _load_results.insert(std::make_pair(result, std::make_shared<Meas::MeasList>(vals)));
     return result;
   }
 
@@ -445,10 +442,10 @@ public:
     Id result = _next_query_id++;
 
     auto id2m = this->readInTimePoint(qt);
-    _load_results.insert(std::make_pair(result,std::make_shared<Meas::MeasList>()));
-	for (auto&kv : id2m) {
-		_load_results[result]->push_back(kv.second);
-	}
+    _load_results.insert(std::make_pair(result, std::make_shared<Meas::MeasList>()));
+    for (auto &kv : id2m) {
+      _load_results[result]->push_back(kv.second);
+    }
     return result;
   }
 
@@ -467,13 +464,14 @@ public:
 
   void drop_part_caps(size_t count) { CapacitorManager::instance()->drop_part(count); }
   Engine::GCResult gc() {
-	  Engine::GCResult result;
-	  result.page_result=PageManager::instance()->gc();
-	  
-	  logger_info("Engine::GC: removed pages count: " << result.page_result.page_removed);
-	  logger_info("Engine::GC: chunks merged: " << result.page_result.chunks_merged);
-	  return result;
+    Engine::GCResult result;
+    result.page_result = PageManager::instance()->gc();
+
+    logger_info("Engine::GC: removed pages count: " << result.page_result.page_removed);
+    logger_info("Engine::GC: chunks merged: " << result.page_result.chunks_merged);
+    return result;
   }
+
 protected:
   storage::PageManager::Params _page_manager_params;
   dariadb::storage::CapacitorManager::Params _cap_params;
@@ -541,8 +539,8 @@ Engine::QueueSizes Engine::queue_size() const {
   return _impl->queue_size();
 }
 
-void Engine::foreach(const QueryInterval &q, ReaderClb*clbk) {
-	return _impl->foreach(q, clbk);
+void Engine::foreach (const QueryInterval &q, ReaderClb * clbk) {
+  return _impl->foreach (q, clbk);
 }
 
 Meas::MeasList Engine::readInterval(const QueryInterval &q) {
@@ -558,9 +556,9 @@ void Engine::drop_part_caps(size_t count) {
 }
 
 Engine::GCResult Engine::gc() {
-	return _impl->gc();
+  return _impl->gc();
 }
 
 void Engine::wait_all_asyncs() {
-	return _impl->wait_all_asyncs();
+  return _impl->wait_all_asyncs();
 }

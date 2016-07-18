@@ -180,22 +180,21 @@ public:
     _header->B = _params.B;
     _header->is_dropped = false;
     _header->levels_count = _params.max_levels;
-	_header->max_values_count = this->_params.measurements_count();
-	_header->is_closed = false;
+    _header->max_values_count = this->_params.measurements_count();
+    _header->is_closed = false;
     _header->is_open_to_write = true;
     _header->minTime = dariadb::MAX_TIME;
     _header->maxTime = dariadb::MIN_TIME;
     _header->id_bloom = bloom_empty<dariadb::Id>();
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
     _header->transaction_number = uint32_t(0);
-	
 
-    level_header *headers_pos =
-        reinterpret_cast<level_header *>(_raw_data);
+    level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
 
-    Meas* pos_after_headers = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);
+    Meas *pos_after_headers =
+        reinterpret_cast<Meas *>(headers_pos + _header->levels_count);
 
-    Meas* pos = (pos_after_headers + _header->B);
+    Meas *pos = (pos_after_headers + _header->B);
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = &headers_pos[lvl];
       it->lvl = uint8_t(lvl);
@@ -210,7 +209,7 @@ public:
         assert(size_t((uint8_t *)&m[i] - mmap->data()) < sz);
         std::memset(&m[i], 0, sizeof(Meas));
       }
-      pos += it->count;//bytes_in_level(_header->B, lvl);
+      pos += it->count; // bytes_in_level(_header->B, lvl);
     }
 
     Manifest::instance()->cola_append(fname);
@@ -222,12 +221,12 @@ public:
     _levels.resize(_header->levels_count);
     _memvalues_size = _header->B;
 
-    level_header *headers_pos =
-        reinterpret_cast<level_header *>(_raw_data);
+    level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
 
-    _memvalues = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);;
+    _memvalues = reinterpret_cast<Meas *>(headers_pos + _header->levels_count);
+    ;
 
-    Meas* pos = (_memvalues + _header->B);
+    Meas *pos = (_memvalues + _header->B);
 
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto h = &headers_pos[lvl];
@@ -236,8 +235,8 @@ public:
       new_l.begin = m;
       new_l.hdr = h;
       _levels[lvl] = new_l;
-      //pos += bytes_in_level(_header->B, lvl);
-      pos += h->count;//bytes_in_level(_header->B, lvl);
+      // pos += bytes_in_level(_header->B, lvl);
+      pos += h->count; // bytes_in_level(_header->B, lvl);
     }
   }
 
@@ -316,57 +315,57 @@ public:
     return result;
   }
 
-  append_result bulk(const Meas::MeasArray::const_iterator &begin, const Meas::MeasArray::const_iterator &end) {
-	  level_header *headers_pos =
-		  reinterpret_cast<level_header *>(_raw_data);
-	  Meas* pos_after_headers = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);
-	  
-	  auto src_size = std::distance(begin, end);
-	  auto dst_begin = pos_after_headers;
-	  
-	  _header->_memvalues_pos = _header->B;
-	  _header->_writed = src_size;
-	  _header->minTime = begin->time;
-	  _header->maxTime = (begin + src_size-1)->time;
+  append_result bulk(const Meas::MeasArray::const_iterator &begin,
+                     const Meas::MeasArray::const_iterator &end) {
+    level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
+    Meas *pos_after_headers =
+        reinterpret_cast<Meas *>(headers_pos + _header->levels_count);
 
-	  auto src_it = begin;
-	  auto it = dst_begin;
-	  for (; src_it != end; ++it, ++src_it) {
-		  *it = *src_it;
-		  auto value = *it;
-		 
-		  _header->id_bloom = bloom_add(_header->id_bloom, value.id);
-		  _header->flag_bloom = bloom_add(_header->flag_bloom, value.flag);
-		 
-	  }
-	  for (auto&lvl : this->_levels) {
-		  lvl.hdr->pos = lvl.hdr->count;
-		  lvl.update_header();
-		  lvl.update_checksum();
-	  }
-	  return append_result(src_size,0);
+    auto src_size = std::distance(begin, end);
+    auto dst_begin = pos_after_headers;
+
+    _header->_memvalues_pos = _header->B;
+    _header->_writed = src_size;
+    _header->minTime = begin->time;
+    _header->maxTime = (begin + src_size - 1)->time;
+
+    auto src_it = begin;
+    auto it = dst_begin;
+    for (; src_it != end; ++it, ++src_it) {
+      *it = *src_it;
+      auto value = *it;
+
+      _header->id_bloom = bloom_add(_header->id_bloom, value.id);
+      _header->flag_bloom = bloom_add(_header->flag_bloom, value.flag);
+    }
+    for (auto &lvl : this->_levels) {
+      lvl.hdr->pos = lvl.hdr->count;
+      lvl.update_header();
+      lvl.update_checksum();
+    }
+    return append_result(src_size, 0);
   }
-  append_result append(const Meas::MeasArray::const_iterator &begin, const Meas::MeasArray::const_iterator &end) {
-	  TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
-	  assert(!_is_readonly);
-	  boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
+  append_result append(const Meas::MeasArray::const_iterator &begin,
+                       const Meas::MeasArray::const_iterator &end) {
+    TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
+    assert(!_is_readonly);
+    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
-	  if (size_t(std::distance(begin, end)) == (_header->max_values_count)) {
-		  return bulk(begin, end);
-	  }
-	  else {
-		  append_result result;
-		  for (auto it = begin; it != end; ++it) {
-			  auto v = *it;
-			  auto local_res = append_unsafe(v);
-			  if (local_res.writed == 0) {
-				  return result;
-			  }
-			  result = result + local_res;
-		  }
+    if (size_t(std::distance(begin, end)) == (_header->max_values_count)) {
+      return bulk(begin, end);
+    } else {
+      append_result result;
+      for (auto it = begin; it != end; ++it) {
+        auto v = *it;
+        auto local_res = append_unsafe(v);
+        if (local_res.writed == 0) {
+          return result;
+        }
+        result = result + local_res;
+      }
 
-		  return result;
-	  }
+      return result;
+    }
   }
 
   append_result append_to_mem(const Meas &value) {
@@ -430,7 +429,7 @@ public:
     }
 
     if (!merge_target.empty()) {
-        throw MAKE_EXCEPTION("merge target not empty.");
+      throw MAKE_EXCEPTION("merge target not empty.");
     }
 
     bool is_sorted = true;
@@ -445,11 +444,11 @@ public:
       }
     }
     if (is_sorted) {
-      //size_t offset = 0;
-      auto begin= to_merge.front()->begin;
-      auto end= to_merge.back()->begin+to_merge.back()->hdr->pos;
-      auto sz=(end-begin);
-      memcpy(merge_target.begin,begin, sz*sizeof(Meas));
+      // size_t offset = 0;
+      auto begin = to_merge.front()->begin;
+      auto end = to_merge.back()->begin + to_merge.back()->hdr->pos;
+      auto sz = (end - begin);
+      memcpy(merge_target.begin, begin, sz * sizeof(Meas));
       merge_target.hdr->pos = merge_target.hdr->count;
       merge_target.update_header();
     } else {
@@ -487,123 +486,123 @@ public:
   void drop_to_stor(MeasWriter *stor) {
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
 
-    level_header *headers_pos =
-        reinterpret_cast<level_header *>(_raw_data);
+    level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
 
-    Meas* pos_after_headers = reinterpret_cast<Meas*>(headers_pos + _header->levels_count);
+    Meas *pos_after_headers =
+        reinterpret_cast<Meas *>(headers_pos + _header->levels_count);
 
     auto begin = pos_after_headers;
     auto end = (Meas *)(begin + _header->_writed);
-	size_t count = std::distance(begin, end);
+    size_t count = std::distance(begin, end);
 
     size_t pos = 0;
 
-    std::sort(begin, end,meas_time_compare_less());
-	dariadb::IdSet dropped;
-	std::vector<bool> visited(count);
-	
-	size_t i = 0;
-	for (auto it = begin; it != end; ++it, ++i) {
-		if (visited[i]) {
-			continue;
-		}
-		if (dropped.find(it->id) != dropped.end()) {
-			continue;
-		}
-		visited[i] = true;
-		stor->append(*it);
-		pos = 0;
-		for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
-			if (visited[pos]) {
-				continue;
-			}
-			if ((sub_it->id == it->id)) {
-				stor->append(*sub_it);
-				visited[pos] = true;
-			}
-		}
-		dropped.insert(it->id);
-	}
+    std::sort(begin, end, meas_time_compare_less());
+    dariadb::IdSet dropped;
+    std::vector<bool> visited(count);
+
+    size_t i = 0;
+    for (auto it = begin; it != end; ++it, ++i) {
+      if (visited[i]) {
+        continue;
+      }
+      if (dropped.find(it->id) != dropped.end()) {
+        continue;
+      }
+      visited[i] = true;
+      stor->append(*it);
+      pos = 0;
+      for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
+        if (visited[pos]) {
+          continue;
+        }
+        if ((sub_it->id == it->id)) {
+          stor->append(*sub_it);
+          visited[pos] = true;
+        }
+      }
+      dropped.insert(it->id);
+    }
     _header->is_dropped = true;
   }
 
-  void foreach(const QueryInterval&q, ReaderClb*clbk) {
-	  TIMECODE_METRICS(ctmd, "foreach", "Capacitor::foreach");
-	  boost::shared_lock<boost::shared_mutex> lock(_mutex);
+  void foreach (const QueryInterval &q, ReaderClb * clbk) {
+    TIMECODE_METRICS(ctmd, "foreach", "Capacitor::foreach");
+    boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
-	  bool id_exists = _header->check_id(q.ids);
-	  bool flag_exists = false;
-	  if (_header->check_flag(q.flag)) {
-		  flag_exists = true;
-	  }
-	  if (!id_exists || !flag_exists) {
-		  return;
-	  }
+    bool id_exists = _header->check_id(q.ids);
+    bool flag_exists = false;
+    if (_header->check_flag(q.flag)) {
+      flag_exists = true;
+    }
+    if (!id_exists || !flag_exists) {
+      return;
+    }
 
-	  for (size_t i = 0; i < this->_levels.size(); ++i) {
-		  if (_levels[i].empty()) {
-			  continue;
-		  }
-		  id_exists = _levels[i].check_id(q.ids);
-		  if (!id_exists) {
-			  continue;
-		  }
-		  if (!inInterval(q.from, q.to, _levels[i].hdr->_minTime) &&
-			  !inInterval(q.from, q.to, _levels[i].hdr->_maxTime) &&
-			  !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.from) &&
-			  !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
-			  continue;
-		  }
-		  Meas empty;
-		  empty.time = q.from;
-		  auto begin = _levels[i].begin;
-		  auto end = _levels[i].begin + _levels[i].hdr->pos;
-		  auto start = std::lower_bound(
-			  begin, end, empty, [](const Meas &left, const Meas &right) {
-			  return left.time < right.time;
-		  });
-		  for (auto it = start; it != end; ++it) {
-			  auto m = *it;
-			  if (m.time > q.to) {
-				  break;
-			  }
-			  if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-				  clbk->call(m);
-			  }
-		  }
-	  }
+    for (size_t i = 0; i < this->_levels.size(); ++i) {
+      if (_levels[i].empty()) {
+        continue;
+      }
+      id_exists = _levels[i].check_id(q.ids);
+      if (!id_exists) {
+        continue;
+      }
+      if (!inInterval(q.from, q.to, _levels[i].hdr->_minTime) &&
+          !inInterval(q.from, q.to, _levels[i].hdr->_maxTime) &&
+          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.from) &&
+          !inInterval(_levels[i].hdr->_minTime, _levels[i].hdr->_maxTime, q.to)) {
+        continue;
+      }
+      Meas empty;
+      empty.time = q.from;
+      auto begin = _levels[i].begin;
+      auto end = _levels[i].begin + _levels[i].hdr->pos;
+      auto start =
+          std::lower_bound(begin, end, empty, [](const Meas &left, const Meas &right) {
+            return left.time < right.time;
+          });
+      for (auto it = start; it != end; ++it) {
+        auto m = *it;
+        if (m.time > q.to) {
+          break;
+        }
+        if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+          clbk->call(m);
+        }
+      }
+    }
 
-	  for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
-		  auto m = _memvalues[j];
-		  if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-			  clbk->call(m);
-		  }
-	  }
+    for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+      auto m = _memvalues[j];
+      if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+        clbk->call(m);
+      }
+    }
   }
 
   Meas::MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Capacitor::readInterval");
-	Meas::MeasList result;
+    Meas::MeasList result;
 
     std::unordered_map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
     sub_result.reserve(q.ids.size());
 
-	std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
-	this->foreach(q, clbk.get());
-	for (auto &v : clbk->mlist) {
-		sub_result[v.id].insert(v);
-	}
+    std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
+    this->foreach (q, clbk.get());
+    for (auto &v : clbk->mlist) {
+      sub_result[v.id].insert(v);
+    }
 
-	for (auto id : q.ids) {
-		auto sublist = sub_result.find(id);
-		if (sublist == sub_result.end()) {
-			continue;
-		}
-		for (auto v : sublist->second) {
-			result.push_back(v);
-		}
-	}
-	return result;
+    for (auto id : q.ids) {
+      auto sublist = sub_result.find(id);
+      if (sublist == sub_result.end()) {
+        continue;
+      }
+      for (auto v : sublist->second) {
+        result.push_back(v);
+      }
+    }
+    return result;
   }
 
   void insert_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
@@ -622,7 +621,7 @@ public:
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
     dariadb::Meas::Id2Meas sub_res = timePointValues(q);
 
-	return sub_res;
+    return sub_res;
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
@@ -742,8 +741,8 @@ public:
       empty.time = q.time_point;
       auto begin = _levels[i].begin;
       auto end = _levels[i].begin + _levels[i].hdr->pos;
-      auto start = std::lower_bound(
-          begin, end, empty, [](const Meas &left, const Meas &right) {
+      auto start =
+          std::lower_bound(begin, end, empty, [](const Meas &left, const Meas &right) {
             return left.time < right.time;
           });
 
@@ -835,12 +834,14 @@ append_result dariadb::storage::Capacitor::append(const Meas &value) {
   return _Impl->append(value);
 }
 
-append_result dariadb::storage::Capacitor::append(const Meas::MeasArray::const_iterator &begin, const Meas::MeasArray::const_iterator &end) {
-	return _Impl->append(begin, end);
+append_result
+dariadb::storage::Capacitor::append(const Meas::MeasArray::const_iterator &begin,
+                                    const Meas::MeasArray::const_iterator &end) {
+  return _Impl->append(begin, end);
 }
 
-void dariadb::storage::Capacitor::foreach(const QueryInterval&q, ReaderClb*clbk) {
-	return _Impl->foreach(q, clbk);
+void dariadb::storage::Capacitor::foreach (const QueryInterval &q, ReaderClb * clbk) {
+  return _Impl->foreach (q, clbk);
 }
 
 Meas::MeasList dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
@@ -852,7 +853,7 @@ Meas::Id2Meas dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint 
 }
 
 Meas::Id2Meas dariadb::storage::Capacitor::currentValue(const IdArray &ids,
-                                                     const Flag &flag) {
+                                                        const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 

@@ -11,7 +11,7 @@
 
 const size_t K = 5;
 
-//float bench_method(dariadb::statistic::BaseMethod *bi) {
+// float bench_method(dariadb::statistic::BaseMethod *bi) {
 //  auto start = clock();
 //  auto m = dariadb::Meas::empty();
 //  for (size_t i = 1; i < K * 1000000; i++) {
@@ -25,30 +25,33 @@ const size_t K = 5;
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-//  using dariadb::statistic::integral::RectangleMethod;
-//  {
-//    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::LEFT)};
+  //  using dariadb::statistic::integral::RectangleMethod;
+  //  {
+  //    std::unique_ptr<RectangleMethod> p{new
+  //    RectangleMethod(RectangleMethod::Kind::LEFT)};
 
-//    auto elapsed = bench_method(p.get());
-//    std::cout << "rectangle left: " << elapsed << std::endl;
-//  }
-//  {
-//    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::RIGHT)};
+  //    auto elapsed = bench_method(p.get());
+  //    std::cout << "rectangle left: " << elapsed << std::endl;
+  //  }
+  //  {
+  //    std::unique_ptr<RectangleMethod> p{new
+  //    RectangleMethod(RectangleMethod::Kind::RIGHT)};
 
-//    auto elapsed = bench_method(p.get());
-//    std::cout << "rectangle right: " << elapsed << std::endl;
-//  }
-//  {
-//    std::unique_ptr<RectangleMethod> p{new RectangleMethod(RectangleMethod::Kind::MIDLE)};
+  //    auto elapsed = bench_method(p.get());
+  //    std::cout << "rectangle right: " << elapsed << std::endl;
+  //  }
+  //  {
+  //    std::unique_ptr<RectangleMethod> p{new
+  //    RectangleMethod(RectangleMethod::Kind::MIDLE)};
 
-//    auto elapsed = bench_method(p.get());
-//    std::cout << "rectangle midle: " << elapsed << std::endl;
-//  }
-//  using dariadb::statistic::average::Average;
-//  {
-//    std::unique_ptr<Average> p{new Average()};
+  //    auto elapsed = bench_method(p.get());
+  //    std::cout << "rectangle midle: " << elapsed << std::endl;
+  //  }
+  //  using dariadb::statistic::average::Average;
+  //  {
+  //    std::unique_ptr<Average> p{new Average()};
 
-//    auto elapsed = bench_method(p.get());
-//    std::cout << "average: " << elapsed << std::endl;
-//  }
+  //    auto elapsed = bench_method(p.get());
+  //    std::cout << "average: " << elapsed << std::endl;
+  //  }
 }

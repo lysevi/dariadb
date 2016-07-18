@@ -29,9 +29,7 @@ bool stop_readers = false;
 class BenchCallback : public dariadb::storage::ReaderClb {
 public:
   BenchCallback() { count = 0; }
-  void call(const dariadb::Meas &v) {
-    count++;
-  }
+  void call(const dariadb::Meas &v) { count++; }
   std::atomic<size_t> count;
 };
 
@@ -46,10 +44,8 @@ void show_info(dariadb::storage::Engine *storage) {
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count
-              << " a:" << queue_sizes.aofs_count
-              << " T:" << queue_sizes.active_works
-              << ")"
+              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+              << " T:" << queue_sizes.active_works << ")"
               << " reads: " << reads_count << " speed:" << reads_per_sec << "/sec"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:"
@@ -79,7 +75,7 @@ void reader(dariadb::storage::MeasStorage_ptr ms, dariadb::IdSet all_id_set,
 
     auto qi = dariadb::storage::QueryInterval(
         dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
-    ms->foreach(qi,clbk.get());
+    ms->foreach (qi, clbk.get());
 
     reads_count += clbk->count;
     if (stop_readers) {
@@ -100,16 +96,17 @@ int main(int argc, char *argv[]) {
   bool readonly = false;
   bool readall_enabled = false;
   bool dont_clean = false;
-  //bool full_flush = false;
+  // bool full_flush = false;
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")
-	  ("readonly", "readonly mode")
-	  ("readall", "read all benchmark enable.")
-	  //("full-flush", "wait end of all async tasks.")
-	  ("dont-clean","dont clean storage path before start.")(
-      "enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
-      "enable readers threads")(
-      "enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+  desc.add_options()("help", "produce help message")("readonly", "readonly mode")(
+      "readall", "read all benchmark enable.")
+      //("full-flush", "wait end of all async tasks.")
+      ("dont-clean", "dont clean storage path before start.")(
+          "enable-readers",
+          po::value<bool>(&readers_enable)->default_value(readers_enable),
+          "enable readers threads")(
+          "enable-metrics",
+          po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {
@@ -145,8 +142,8 @@ int main(int argc, char *argv[]) {
   }
 
   /*if (vm.count("full-flush")) {
-	  std::cout << "full-flush." << std::endl;
-	  full_flush = true;
+          std::cout << "full-flush." << std::endl;
+          full_flush = true;
   }*/
 
   if (readers_enable) {
@@ -177,7 +174,7 @@ int main(int argc, char *argv[]) {
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
     cap_param.store_period = 1000 * 2;
     cap_param.max_levels = 11;
-    //cap_param.max_closed_caps = 5;
+    // cap_param.max_closed_caps = 5;
     dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
     aof_param.buffer_size = 1000;
     aof_param.max_size = cap_param.measurements_count();
@@ -247,10 +244,8 @@ int main(int argc, char *argv[]) {
 
       auto start = clock();
       raw_ptr->flush();
-	  //if (full_flush) 
-	  {
-		  raw_ptr->wait_all_asyncs();
-	  }
+      // if (full_flush)
+      { raw_ptr->wait_all_asyncs(); }
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       stop_info = true;
       flush_info_thread.join();
@@ -258,7 +253,7 @@ int main(int argc, char *argv[]) {
     }
 
     /*if(!readonly){
-		size_t ccount = size_t(raw_ptr->queue_size().cola_count*0.5);
+                size_t ccount = size_t(raw_ptr->queue_size().cola_count*0.5);
       std::cout << "==> drop part caps to " << ccount << "..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_info, raw_ptr);
@@ -266,26 +261,25 @@ int main(int argc, char *argv[]) {
       auto start = clock();
       raw_ptr->drop_part_caps(ccount);
       raw_ptr->flush();
-	  raw_ptr->wait_all_asyncs();
+          raw_ptr->wait_all_asyncs();
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       stop_info = true;
       flush_info_thread.join();
       std::cout << "drop time: " << elapsed << std::endl;
     }*/
 
+    if (!readonly) {
+      std::cout << "==> gc... " << std::endl;
+      stop_info = false;
+      std::thread flush_info_thread(show_info, raw_ptr);
 
-	if (!readonly) {
-		std::cout << "==> gc... " << std::endl;
-		stop_info = false;
-		std::thread flush_info_thread(show_info, raw_ptr);
-
-		auto start = clock();
-		raw_ptr->gc();
-		auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-		stop_info = true;
-		flush_info_thread.join();
-		std::cout << "gc time: " << elapsed << std::endl;
-	}
+      auto start = clock();
+      raw_ptr->gc();
+      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+      stop_info = true;
+      flush_info_thread.join();
+      std::cout << "gc time: " << elapsed << std::endl;
+    }
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
@@ -294,18 +288,19 @@ int main(int argc, char *argv[]) {
               << ")"
               << " reads: " << reads_count << " writes: " << append_count << std::endl;
 
-	std::cout << "Active threads: "
-		<< dariadb::utils::async::ThreadManager::instance()->active_works()
-		<< std::endl;
+    std::cout << "Active threads: "
+              << dariadb::utils::async::ThreadManager::instance()->active_works()
+              << std::endl;
 
-	dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
+    dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
 
     if (readall_enabled) {
 
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
       auto max_time = ms->maxTime();
-      std::cout << "==> interval end time: " << dariadb::timeutil::to_string(max_time) << std::endl;
+      std::cout << "==> interval end time: " << dariadb::timeutil::to_string(max_time)
+                << std::endl;
 
       dariadb::storage::QueryInterval qi{
           dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
@@ -315,7 +310,7 @@ int main(int argc, char *argv[]) {
 
       auto start = clock();
 
-      ms->foreach(qi, clbk.get());
+      ms->foreach (qi, clbk.get());
 
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "readed: " << clbk->count << std::endl;
@@ -325,7 +320,7 @@ int main(int argc, char *argv[]) {
 
       start = clock();
 
-      auto readed=ms->readInterval(qi);
+      auto readed = ms->readInterval(qi);
 
       elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "readed: " << readed.size() << std::endl;
@@ -339,7 +334,6 @@ int main(int argc, char *argv[]) {
         _dict[v.id].push_back(v);
       }
 
-	 
       if (readed.size() != expected) {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
 

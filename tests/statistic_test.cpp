@@ -2,8 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 #include <math/statistic.h>
-BOOST_AUTO_TEST_CASE(EmptyTest) {
-}
+BOOST_AUTO_TEST_CASE(EmptyTest) {}
 
 /*
 BOOST_AUTO_TEST_CASE(RectangleMethod) {

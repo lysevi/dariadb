@@ -55,7 +55,7 @@ public:
   virtual Time maxTime() override;
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  virtual void foreach(const QueryInterval&q, ReaderClb*clbk) override;
+  virtual void foreach (const QueryInterval &q, ReaderClb * clbk) override;
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
@@ -73,6 +73,7 @@ protected:
   std::list<std::string> aof_files() const;
   void flush_buffer();
   void drop_old_if_needed();
+
 private:
   static AOFManager *_instance;
 

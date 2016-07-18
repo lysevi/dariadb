@@ -22,7 +22,7 @@ AOFManager::~AOFManager() {
 
 AOFManager::AOFManager(const Params &param) : _params(param) {
   _down = nullptr;
-  
+
   if (dariadb::utils::fs::path_exists(_params.path)) {
     auto aofs = Manifest::instance()->aof_list();
     for (auto f : aofs) {
@@ -32,11 +32,11 @@ AOFManager::AOFManager(const Params &param) : _params(param) {
         AOFile::Params params(_params.max_size, param.path);
         AOFile_Ptr p{new AOFile(params, full_filename)};
         _aof = p;
-		break;
-	  }
+        break;
+      }
     }
   }
-  
+
   _buffer.resize(_params.buffer_size);
   _buffer_pos = 0;
 }
@@ -68,32 +68,32 @@ void AOFManager::create_new() {
 }
 
 void AOFManager::drop_old_if_needed() {
-	if (_down != nullptr) {
-		auto closed = this->closed_aofs();
-		// if (closed.size() > _params.max_closed_aofs)
-		{
-			TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
-			size_t to_drop = closed.size();
-			for (size_t i = 0; i < to_drop; ++i) {
-				auto f = closed.front();
-				closed.pop_front();
-				auto without_path = utils::fs::extract_filename(f);
-				if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-					this->drop_aof(f, _down);
-				}
-			}
-			// clean set of sended to drop files.
-			auto aofs_exists = Manifest::instance()->aof_list();
-			std::set<std::string> aof_exists_set{ aofs_exists.begin(), aofs_exists.end() };
-			std::set<std::string> new_sended_files;
-			for (auto &v : _files_send_to_drop) {
-				if (aof_exists_set.find(v) != aof_exists_set.end()) {
-					new_sended_files.insert(v);
-				}
-			}
-			_files_send_to_drop = new_sended_files;
-		}
-	}
+  if (_down != nullptr) {
+    auto closed = this->closed_aofs();
+    // if (closed.size() > _params.max_closed_aofs)
+    {
+      TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
+      size_t to_drop = closed.size();
+      for (size_t i = 0; i < to_drop; ++i) {
+        auto f = closed.front();
+        closed.pop_front();
+        auto without_path = utils::fs::extract_filename(f);
+        if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+          this->drop_aof(f, _down);
+        }
+      }
+      // clean set of sended to drop files.
+      auto aofs_exists = Manifest::instance()->aof_list();
+      std::set<std::string> aof_exists_set{aofs_exists.begin(), aofs_exists.end()};
+      std::set<std::string> new_sended_files;
+      for (auto &v : _files_send_to_drop) {
+        if (aof_exists_set.find(v) != aof_exists_set.end()) {
+          new_sended_files.insert(v);
+        }
+      }
+      _files_send_to_drop = new_sended_files;
+    }
+  }
 }
 
 std::list<std::string> AOFManager::aof_files() const {
@@ -131,8 +131,8 @@ void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
 }
 
 void AOFManager::set_downlevel(AofFileDropper *down) {
-	_down = down;
-	this->drop_old_if_needed();
+  _down = down;
+  this->drop_old_if_needed();
 }
 
 dariadb::Time AOFManager::minTime() {
@@ -231,69 +231,68 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
-void AOFManager::foreach(const QueryInterval&q, ReaderClb*clbk) {
-	TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
-	std::lock_guard<std::mutex> lg(_locker);
-	auto files = aof_files();
-	if (files.empty()) {
-		return;
-	}
-	auto p = AOFile::Params(_params.max_size, _params.path);
+void AOFManager::foreach (const QueryInterval &q, ReaderClb * clbk) {
+  TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
+  std::lock_guard<std::mutex> lg(_locker);
+  auto files = aof_files();
+  if (files.empty()) {
+    return;
+  }
+  auto p = AOFile::Params(_params.max_size, _params.path);
 
-	std::vector<TaskResult_Ptr> task_res{ files.size() };
-	size_t num = 0;
+  std::vector<TaskResult_Ptr> task_res{files.size()};
+  size_t num = 0;
 
-	for (auto filename : files) {
-		AsyncTask at = [filename, &q, &clbk, &p](const ThreadInfo &ti) {
-			TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-			AOFile aof(p, filename, true);
-			aof.foreach(q, clbk);
-		};
-		task_res[num] =
-			ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
-		num++;
-	}
-    for(auto&t:task_res){
-        t->wait();
+  for (auto filename : files) {
+    AsyncTask at = [filename, &q, &clbk, &p](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+      AOFile aof(p, filename, true);
+      aof.foreach (q, clbk);
+    };
+    task_res[num] =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+    num++;
+  }
+  for (auto &t : task_res) {
+    t->wait();
+  }
+
+  size_t pos = 0;
+  for (auto v : _buffer) {
+    if (pos >= _buffer_pos) {
+      break;
     }
-
-    size_t pos = 0;
-    for (auto v : _buffer) {
-      if (pos >= _buffer_pos) {
-        break;
-      }
-      if (v.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
-        clbk->call(v);
-      }
-      ++pos;
+    if (v.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+      clbk->call(v);
     }
+    ++pos;
+  }
 }
 
 Meas::MeasList AOFManager::readInterval(const QueryInterval &query) {
   TIMECODE_METRICS(ctmd, "readInterval", "AOFManager::readInterval");
   Meas::MeasList result;
-  
+
   std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
 
-  std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
-  this->foreach(query, clbk.get());
+  std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
+  this->foreach (query, clbk.get());
 
   for (auto m : clbk->mlist) {
-     if (m.flag == Flags::_NO_DATA) {
-       continue;
-     }
-	sub_result[m.id].insert(m);
+    if (m.flag == Flags::_NO_DATA) {
+      continue;
+    }
+    sub_result[m.id].insert(m);
   }
 
-
   for (auto id : query.ids) {
-	  auto sublist = sub_result.find(id);
-	  if (sublist == sub_result.end()) {
-		  continue;
-	  }
-	  for (auto v : sublist->second) {
-		  result.push_back(v);
-	  }
+    auto sublist = sub_result.find(id);
+    if (sublist == sub_result.end()) {
+      continue;
+    }
+    for (auto v : sublist->second) {
+      result.push_back(v);
+    }
   }
   return result;
 }
@@ -318,7 +317,7 @@ Meas::Id2Meas AOFManager::readInTimePoint(const QueryTimePoint &query) {
     AsyncTask at = [filename, &p, &query, num, &results](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
       AOFile aof(p, filename, true);
-	  results[num] = aof.readInTimePoint(query);
+      results[num] = aof.readInTimePoint(query);
     };
     task_res[num] =
         ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
@@ -398,20 +397,20 @@ dariadb::append_result AOFManager::append(const Meas &value) {
 }
 
 void AOFManager::flush_buffer() {
-    if(_buffer_pos==size_t(0)){
-        return;
-    }
+  if (_buffer_pos == size_t(0)) {
+    return;
+  }
   if (_aof == nullptr) {
     create_new();
   }
-  size_t pos=0;
-  size_t total_writed=0;
+  size_t pos = 0;
+  size_t total_writed = 0;
   while (1) {
-    auto res = _aof->append(_buffer.begin()+pos, _buffer.begin() + _buffer_pos);
-    total_writed+=res.writed;
+    auto res = _aof->append(_buffer.begin() + pos, _buffer.begin() + _buffer_pos);
+    total_writed += res.writed;
     if (total_writed != _buffer_pos) {
       create_new();
-     pos+=res.writed;
+      pos += res.writed;
     } else {
       break;
     }

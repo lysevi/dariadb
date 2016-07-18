@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../storage.h"
-#include "../utils/utils.h"
 #include "../utils/period_worker.h"
+#include "../utils/utils.h"
 #include "capacitor.h"
 #include <vector>
 
@@ -23,22 +23,22 @@ public:
     size_t max_levels;
     size_t max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
     size_t B;               // measurements count in one data block
-	dariadb::Time store_period;
+    dariadb::Time store_period;
     Params() {
       max_levels = 0;
       B = 0;
-	  store_period = 0;
+      store_period = 0;
     }
     Params(const std::string storage_path, const size_t _B) {
       path = storage_path;
       B = _B;
       max_levels = 0;
       max_closed_caps = MAX_CLOSED_CAPS;
-	  store_period = 0;
+      store_period = 0;
     }
 
     size_t measurements_count() const {
-		return Capacitor::Params::measurements_count(max_levels, B);
+      return Capacitor::Params::measurements_count(max_levels, B);
     }
   };
 
@@ -57,7 +57,7 @@ public:
   virtual Time maxTime() override;
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  virtual void foreach(const QueryInterval&q, ReaderClb*clbk) override;
+  virtual void foreach (const QueryInterval &q, ReaderClb * clbk) override;
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
@@ -82,7 +82,8 @@ protected:
   std::list<std::string>
   caps_by_filter(std::function<bool(const Capacitor::Header &)> pred);
 
-  void call()override;
+  void call() override;
+
 private:
   static CapacitorManager *_instance;
 

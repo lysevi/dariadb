@@ -7,18 +7,18 @@
 namespace dariadb_test {
 #undef NO_DATA
 
-    class Callback : public dariadb::storage::ReaderClb {
-    public:
-        Callback() { count = 0; }
-        void call(const dariadb::Meas &v) {
-			std::lock_guard<std::mutex> lg(_locker);
-            count++;
-            all.push_back(v);
-        }
-        size_t count;
-        dariadb::Meas::MeasList all;
-		std::mutex _locker;
-    };
+class Callback : public dariadb::storage::ReaderClb {
+public:
+  Callback() { count = 0; }
+  void call(const dariadb::Meas &v) {
+    std::lock_guard<std::mutex> lg(_locker);
+    count++;
+    all.push_back(v);
+  }
+  size_t count;
+  dariadb::Meas::MeasList all;
+  std::mutex _locker;
+};
 
 void checkAll(dariadb::Meas::MeasList res, std::string msg, dariadb::Time from,
               dariadb::Time to, dariadb::Time step) {
@@ -105,19 +105,19 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     m.value = 0;
 
     auto copies_for_id = (id_val == 0 ? copies_count / 2 : copies_count);
-	dariadb::Meas::MeasArray values{ copies_for_id };
-	size_t pos = 0;
+    dariadb::Meas::MeasArray values{copies_for_id};
+    size_t pos = 0;
     for (size_t j = 1; j < copies_for_id + 1; j++) {
       maxWritedTime = std::max(maxWritedTime, m.time);
-	  values[pos] = m;
+      values[pos] = m;
       total_count++;
       m.value = dariadb::Value(j);
       m.time++;
-	  pos++;
+      pos++;
     }
-    if (as->append(values.begin(),values.end()).writed != values.size()) {
-		throw MAKE_EXCEPTION("->append(m).writed != values.size()");
-	}
+    if (as->append(values.begin(), values.end()).writed != values.size()) {
+      throw MAKE_EXCEPTION("->append(m).writed != values.size()");
+    }
     ++id_val;
     ++flg_val;
   }
@@ -132,18 +132,18 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
     m.value = 0;
     ++id_val;
     ++flg_val;
-	dariadb::Meas::MeasList mlist;
+    dariadb::Meas::MeasList mlist;
     for (size_t j = new_from; j < copies_count + 1; j++) {
       m.value = dariadb::Value(j);
       maxWritedTime = std::max(maxWritedTime, m.time);
-	  mlist.push_back(m);
+      mlist.push_back(m);
       total_count++;
       m.time++;
     }
 
-    if (as->append(mlist.begin(),mlist.end()).writed != mlist.size()) {
-		throw MAKE_EXCEPTION("->append(m).writed != mlist.size()");
-	}
+    if (as->append(mlist.begin(), mlist.end()).writed != mlist.size()) {
+      throw MAKE_EXCEPTION("->append(m).writed != mlist.size()");
+    }
   }
   dariadb::Time minTime, maxTime;
   if (!(as->minMaxTime(dariadb::Id(id_val - 1), &minTime, &maxTime))) {
@@ -164,7 +164,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   dariadb::Meas::Id2Meas current_mlist;
   dariadb::IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
   current_mlist = as->currentValue(_all_ids_array, 0);
-  
+
   if (current_mlist.size() == 0) {
     throw MAKE_EXCEPTION("current_mlist.size()>0");
   }
@@ -182,17 +182,17 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
 
   check_reader_of_all(all, from, to, step, id_val, total_count, "readAll error: ");
   std::unique_ptr<Callback> clbk{new Callback};
-  as->foreach(qi_all,clbk.get());
+  as->foreach (qi_all, clbk.get());
 
-  if(all.size()!=clbk->count){
-      std::stringstream ss;
-      ss<<"all.size()!=clbk->count: "<<all.size()<<"!="<<clbk->count;
-      throw MAKE_EXCEPTION(ss.str());
+  if (all.size() != clbk->count) {
+    std::stringstream ss;
+    ss << "all.size()!=clbk->count: " << all.size() << "!=" << clbk->count;
+    throw MAKE_EXCEPTION(ss.str());
   }
   dariadb::IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 
-  all=as->readInterval(dariadb::storage::QueryInterval(
-                       ids, 0, to + copies_count - copies_count / 3, to + copies_count));
+  all = as->readInterval(dariadb::storage::QueryInterval(
+      ids, 0, to + copies_count - copies_count / 3, to + copies_count));
   if (all.size() == size_t(0)) {
     throw MAKE_EXCEPTION("all.size() != == size_t(0)");
   }
@@ -200,7 +200,8 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   ids.clear();
   ids.push_back(2);
   dariadb::Meas::MeasList fltr_res{};
-  fltr_res=as->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to + copies_count));
+  fltr_res =
+      as->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to + copies_count));
 
   if (fltr_res.size() != copies_count) {
     throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
@@ -208,9 +209,9 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   // check filter by source;
   {
     fltr_res.clear();
-	fltr_res=as->readInterval(dariadb::storage::QueryInterval(
-                         dariadb::IdArray{_all_ids_set.begin(), _all_ids_set.end()}, 0,
-                         dariadb::Flag{2}, from, to + copies_count));
+    fltr_res = as->readInterval(dariadb::storage::QueryInterval(
+        dariadb::IdArray{_all_ids_set.begin(), _all_ids_set.end()}, 0, dariadb::Flag{2},
+        from, to + copies_count));
 
     if (fltr_res.size() != copies_count) {
       throw MAKE_EXCEPTION("(fltr_res.size() != copies_count)");
@@ -225,20 +226,20 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   auto qp = dariadb::storage::QueryTimePoint(
       dariadb::IdArray(_all_ids_set.begin(), _all_ids_set.end()), 0, to + copies_count);
   auto all_id2meas = as->readInTimePoint(qp);
-  
+
   size_t ids_count = (size_t)((to - from) / step);
   if (all_id2meas.size() < ids_count) {
     throw MAKE_EXCEPTION("all.size() < ids_count. must be GE");
   }
 
-  std::unique_ptr<Callback> qpoint_clbk{ new Callback };
-  as->foreach(qp, qpoint_clbk.get());
+  std::unique_ptr<Callback> qpoint_clbk{new Callback};
+  as->foreach (qp, qpoint_clbk.get());
   if (qpoint_clbk->count != all_id2meas.size()) {
-	  throw MAKE_EXCEPTION("qpoint_clbk->count != all_id2meas.size()");
+    throw MAKE_EXCEPTION("qpoint_clbk->count != all_id2meas.size()");
   }
-  
+
   qp.time_point = to + copies_count;
-  auto fltr_res_tp=as->readInTimePoint(qp);
+  auto fltr_res_tp = as->readInTimePoint(qp);
   if (fltr_res_tp.size() < ids_count) {
     throw MAKE_EXCEPTION("fltr_res.size() < ids_count. must be GE");
   }
@@ -247,7 +248,7 @@ void storage_test_check(dariadb::storage::MeasStorage *as, dariadb::Time from,
   fltr_res.clear();
   qp.ids = notExstsIDs;
   qp.time_point = to - 1;
-  fltr_res_tp=as->readInTimePoint(qp);
+  fltr_res_tp = as->readInTimePoint(qp);
   if (fltr_res_tp.size() != size_t(1)) { // must return NO_DATA
     throw MAKE_EXCEPTION("fltr_res.size() != size_t(1)");
   }

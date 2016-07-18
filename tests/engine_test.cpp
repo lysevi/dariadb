@@ -129,17 +129,15 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         cap_pam, dariadb::storage::Engine::Limits(10))};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
-	ms->wait_all_asyncs();
-	auto pages_count = dariadb::storage::PageManager::instance()->files_count();
+    ms->wait_all_asyncs();
+    auto pages_count = dariadb::storage::PageManager::instance()->files_count();
     BOOST_CHECK_GE(pages_count, size_t(2));
-	auto gc_res=ms->gc();
-	pages_count = dariadb::storage::PageManager::instance()->files_count();
-	BOOST_CHECK_GE(pages_count, size_t(2));
+    auto gc_res = ms->gc();
+    pages_count = dariadb::storage::PageManager::instance()->files_count();
+    BOOST_CHECK_GE(pages_count, size_t(2));
 
-
-	BOOST_CHECK(gc_res.page_result.page_removed != size_t(0));
-	BOOST_CHECK(gc_res.page_result.chunks_merged != size_t(0));
-
+    BOOST_CHECK(gc_res.page_result.page_removed != size_t(0));
+    BOOST_CHECK(gc_res.page_result.chunks_merged != size_t(0));
   }
   {
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
@@ -149,11 +147,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         dariadb::storage::CapacitorManager::Params(storage_path, cap_B),
         dariadb::storage::Engine::Limits(0))};
 
-
-    auto current=ms->currentValue(dariadb::IdArray{}, 0);
+    auto current = ms->currentValue(dariadb::IdArray{}, 0);
     BOOST_CHECK(current.size() != size_t(0));
-    //TODO check
-    //BOOST_CHECK(mlist.front().flag != dariadb::Flags::_NO_DATA);
+    // TODO check
+    // BOOST_CHECK(mlist.front().flag != dariadb::Flags::_NO_DATA);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -266,7 +263,7 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
       t++;
       BOOST_CHECK(ms->append(m).writed == 1);
     }
-	
+
     auto last_chunks_count =
         dariadb::storage::PageManager::instance()->chunks_in_cur_page();
     m.id = 0;

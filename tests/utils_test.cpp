@@ -359,14 +359,14 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {
       if (tk1 != ti.kind) {
         BOOST_TEST_MESSAGE("(tk1 != ti.kind)");
-		std::this_thread::sleep_for(std::chrono::milliseconds(400));
+        std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
     };
     AsyncTask at2 = [tk2](const ThreadInfo &ti) {
       if (tk2 != ti.kind) {
         BOOST_TEST_MESSAGE("(tk2 != ti.kind)");
-		std::this_thread::sleep_for(std::chrono::milliseconds(400));
+        std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
     };
@@ -375,7 +375,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
       ThreadManager::instance()->post(tk1, AT(at1));
       ThreadManager::instance()->post(tk2, AT(at2));
     }
-	BOOST_CHECK_GT(ThreadManager::instance()->active_works(), size_t(0));
+    BOOST_CHECK_GT(ThreadManager::instance()->active_works(), size_t(0));
     ThreadManager::instance()->flush();
     ThreadManager::instance()->stop();
   }
