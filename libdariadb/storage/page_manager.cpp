@@ -438,9 +438,8 @@ public:
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
     for (auto pname : page_list) {
-      auto p = Page::open(pname, false);
+      Page_Ptr p{Page::open(pname, false)};
       p->commit_transaction(num);
-      delete p;
     }
     _under_transaction = false;
   }
@@ -458,9 +457,8 @@ public:
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
     for (auto pname : page_list) {
-      auto p = Page::open(pname, false);
+      Page_Ptr p{Page::open(pname, false)};
       p->rollback_transaction(num);
-      delete p;
     }
     _under_transaction = false;
   }

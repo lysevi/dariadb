@@ -291,9 +291,8 @@ void CapacitorManager::foreach (const QueryInterval &q, ReaderClb * clbk) {
   for (auto filename : files) {
     AsyncTask at = [filename, &q, &clbk, &p](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-      auto raw_cap = new Capacitor(p, filename, true);
-      raw_cap->foreach (q, clbk);
-      delete raw_cap;
+      std::unique_ptr<Capacitor> cap{new Capacitor(p, filename, true)};
+      cap->foreach (q, clbk);
     };
     task_res[num] =
         ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
@@ -369,9 +368,8 @@ Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   for (auto filename : files) {
     AsyncTask at = [filename, &p, &query, num, &results](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
-      auto raw_cap = new Capacitor(p, filename, true);
-      results[num] = raw_cap->readInTimePoint(query);
-      delete raw_cap;
+      std::unique_ptr<Capacitor> cap{new Capacitor(p, filename, true)};
+      results[num] = cap->readInTimePoint(query);
     };
     task_res[num] =
         ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));

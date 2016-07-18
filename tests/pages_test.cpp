@@ -170,12 +170,11 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     dariadb::storage::QueryInterval qi(all_id_array, 0, 0, t);
     auto links_list = PageManager::instance()->chunksByIterval(qi);
 
-    dariadb::storage::MList_ReaderClb *clb = new dariadb::storage::MList_ReaderClb;
+    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
 
-    PageManager::instance()->readLinks(qi, links_list, clb);
+    PageManager::instance()->readLinks(qi, links_list, clb.get());
 
     BOOST_CHECK_EQUAL(addeded.size(), clb->mlist.size());
-    delete clb;
     dariadb::Time minT = dariadb::MAX_TIME, maxT = dariadb::MIN_TIME;
     BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
     BOOST_CHECK_EQUAL(minT, dariadb::Time(0));
@@ -186,9 +185,9 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       dariadb::storage::QueryInterval qi(all_id_array, 0, start_time, end_time);
       auto link_list = PageManager::instance()->chunksByIterval(qi);
 
-      dariadb::storage::MList_ReaderClb *clb = new dariadb::storage::MList_ReaderClb;
+      auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
 
-      PageManager::instance()->readLinks(qi, links_list, clb);
+      PageManager::instance()->readLinks(qi, links_list, clb.get());
 
       BOOST_CHECK_GT(clb->mlist.size(), size_t(0));
 
@@ -203,8 +202,6 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       for (auto &kv : id2meas_res) {
         BOOST_CHECK(kv.second.time <= end_time);
       }
-
-      delete clb;
     }
   }
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
@@ -298,8 +295,8 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   auto link_list = PageManager::instance()->chunksByIterval(qi);
 
-  dariadb::storage::MList_ReaderClb *clb = new dariadb::storage::MList_ReaderClb;
-  PageManager::instance()->readLinks(qi, link_list, clb);
+  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
+  PageManager::instance()->readLinks(qi, link_list, clb.get());
 
   size_t writed = addeded.size();
   size_t readed = clb->mlist.size();
@@ -312,8 +309,6 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   for (auto kv : id2meas) {
     BOOST_CHECK_LE(kv.second.time, qt.time_point);
   }
-
-  delete clb;
 
   dariadb::Time minTime, maxTime;
   if (PageManager::instance()->minMaxTime(1, &minTime, &maxTime)) {
@@ -376,9 +371,9 @@ BOOST_AUTO_TEST_CASE(PageManagerTransactions) {
 
   auto link_list = PageManager::instance()->chunksByIterval(qi);
 
-  dariadb::storage::MList_ReaderClb *clb = new dariadb::storage::MList_ReaderClb;
+  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
 
-  PageManager::instance()->readLinks(qi, link_list, clb);
+  PageManager::instance()->readLinks(qi, link_list, clb.get());
 
   size_t writed = addeded.size();
   size_t readed = clb->mlist.size();
@@ -387,7 +382,7 @@ BOOST_AUTO_TEST_CASE(PageManagerTransactions) {
   for (auto m : clb->mlist) {
     BOOST_CHECK(m.id != dariadb::Id(2));
   }
-  delete clb;
+
   auto id2meas = PageManager::instance()->valuesBeforeTimePoint(qt);
 
   BOOST_CHECK_EQUAL(id2meas.size(), qt.ids.size());

@@ -147,7 +147,9 @@ int main(int argc, char *argv[]) {
 
     dariadb::IdArray ids{all_id_set.begin(), all_id_set.end()};
     const size_t runs_count = 10;
-    ReadCallback *clb = new ReadCallback;
+
+    auto clb=new ReadCallback;
+    dariadb::storage::ReaderClb_ptr clb_sptr {clb};
     auto start = clock();
 
     for (size_t i = 0; i < runs_count; i++) {
@@ -165,7 +167,7 @@ int main(int argc, char *argv[]) {
 
     auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
     std::cout << "interval: " << elapsed / runs_count << std::endl;
-    delete clb;
+
     start = clock();
 
     for (size_t i = 0; i < runs_count; i++) {
