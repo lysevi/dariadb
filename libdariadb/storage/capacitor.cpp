@@ -40,13 +40,13 @@ using namespace dariadb::utils;
 
 #pragma pack(push, 1)
 struct level_header {
-  uint8_t lvl;
-  uint64_t count;
-  uint64_t pos;
-  dariadb::Time _minTime;
+  uint8_t lvl;            //level num
+  uint64_t count;         //values count
+  uint64_t pos;           //values addeded
+  dariadb::Time _minTime; //minMax time
   dariadb::Time _maxTime;
-  uint32_t crc;
-  uint64_t id_bloom;
+  uint32_t crc;           //checksum
+  uint64_t id_bloom;      //blooms
   uint64_t flag_bloom;
 };
 #pragma pack(pop)
@@ -137,9 +137,11 @@ public:
         mmap->close();
       }
     }
+    mmap=nullptr;
   }
 
   void close() { _header->is_full = true; }
+
   size_t one_block_size(size_t B) const { return sizeof(Meas) * B; }
 
   size_t block_in_level(size_t lev_num) const { return (size_t(1) << lev_num); }
@@ -154,7 +156,7 @@ public:
     uint64_t result = 0;
 
     result += sizeof(Header);
-    result += _params.B * sizeof(Meas); /// space to _memvalues
+    result += _params.B * sizeof(Meas); /// add space to _memvalues
 
     auto prev_level_size = _params.B * sizeof(Meas);
 
@@ -224,19 +226,17 @@ public:
     level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
 
     _memvalues = reinterpret_cast<Meas *>(headers_pos + _header->levels_count);
-    ;
 
     Meas *pos = (_memvalues + _header->B);
 
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
-      auto h = &headers_pos[lvl];
+      auto lvl_hdr = &headers_pos[lvl];
       auto m = reinterpret_cast<Meas *>(pos);
       level new_l;
       new_l.begin = m;
-      new_l.hdr = h;
+      new_l.hdr = lvl_hdr;
       _levels[lvl] = new_l;
-      // pos += bytes_in_level(_header->B, lvl);
-      pos += h->count; // bytes_in_level(_header->B, lvl);
+      pos += lvl_hdr->count;
     }
   }
 
@@ -248,20 +248,9 @@ public:
     _raw_data = reinterpret_cast<uint8_t *>(mmap->data() + sizeof(Header));
 
     load();
-    // if (!_is_readonly) {
-    //   // assert(!_header->is_full);
-    //   if (!_header->is_closed && _header->is_open_to_write) {
-    //     restore();
-    //   }
-    //   _header->is_closed = false;
-    //_header->is_open_to_write = _is_readonly;
-    // }
   }
 
   void fsck() {
-    /* if (_is_readonly) {
-             return;
-     }*/
     using dariadb::timeutil::to_string;
 
     Meas::MeasList readed;
@@ -300,7 +289,6 @@ public:
     if (_header->_memvalues_pos < _header->B) {
       return append_to_mem(value);
     } else {
-
       return append_to_levels(value);
     }
   }
@@ -311,10 +299,10 @@ public:
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
     auto result = append_unsafe(value);
-    // mmap->flush();
     return result;
   }
 
+  ///bulk loading. values should ve sorted by time.
   append_result bulk(const Meas::MeasArray::const_iterator &begin,
                      const Meas::MeasArray::const_iterator &end) {
     level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
@@ -345,6 +333,7 @@ public:
     }
     return append_result(src_size, 0);
   }
+
   append_result append(const Meas::MeasArray::const_iterator &begin,
                        const Meas::MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
@@ -368,6 +357,7 @@ public:
     }
   }
 
+  ///add values to zero level
   append_result append_to_mem(const Meas &value) {
     _memvalues[_header->_memvalues_pos] = value;
 
@@ -398,7 +388,7 @@ public:
     meas_time_compare_less flg_less_by_time;
     std::sort(_memvalues, _memvalues + _memvalues_size, flg_less_by_time);
 
-    size_t outlvl = calc_outlevel_num();
+    uint8_t outlvl = calc_outlevel_num();
 
     if (outlvl >= _header->levels_count) {
       this->_header->is_full = true;
@@ -443,8 +433,8 @@ public:
         break;
       }
     }
+    //if values in levels sorted, merge dont needed.
     if (is_sorted) {
-      // size_t offset = 0;
       auto begin = to_merge.front()->begin;
       auto end = to_merge.back()->begin + to_merge.back()->hdr->pos;
       auto sz = (end - begin);
@@ -483,6 +473,7 @@ public:
     Meas back() { return _back; }
   };
 
+  ///values dropped to down-level storage. grouped by id.
   void drop_to_stor(MeasWriter *stor) {
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
 
@@ -681,9 +672,6 @@ public:
 
   void flush() {
     boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
-    // if (drop_future.valid()) {
-    //  drop_future.wait();
-    //}
     mmap->flush();
   }
 
@@ -693,15 +681,16 @@ public:
 
   size_t size() const { return _header->_writed; }
 
-  dariadb::Meas::Id2Meas timePointValues(const QueryTimePoint &q) {
-    dariadb::IdSet readed_ids;
-    dariadb::Meas::Id2Meas sub_res;
+  Meas::Id2Meas timePointValues(const QueryTimePoint &q) {
+    IdSet readed_ids;
+    Meas::Id2Meas sub_res;
     bool id_exists = _header->check_id(q.ids);
     bool flag_exists = false;
     if (q.flag == Flag(0) || _header->check_flag(q.flag)) {
       flag_exists = true;
     }
     if (!id_exists || !flag_exists) {
+        ///no values for query. return no_data for each id.
       if (!q.ids.empty() && readed_ids.size() != q.ids.size()) {
         for (auto id : q.ids) {
           if (readed_ids.find(id) == readed_ids.end()) {
@@ -724,6 +713,7 @@ public:
         }
       }
     }
+
     for (size_t i = 0; i < this->_levels.size(); ++i) {
       if (_levels[i].empty()) {
         continue;
@@ -814,69 +804,69 @@ Capacitor::Header *Capacitor::header() {
   return _Impl->header();
 }
 
-dariadb::Time Capacitor::minTime() {
+Time Capacitor::minTime() {
   return _Impl->minTime();
 }
 
-dariadb::Time Capacitor::maxTime() {
+Time Capacitor::maxTime() {
   return _Impl->maxTime();
 }
 
-bool Capacitor::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                           dariadb::Time *maxResult) {
+bool Capacitor::minMaxTime(Id id, Time *minResult,
+                           Time *maxResult) {
   return _Impl->minMaxTime(id, minResult, maxResult);
 }
-void Capacitor::flush() { // write all to storage;
+void Capacitor::flush() {
   _Impl->flush();
 }
 
-append_result dariadb::storage::Capacitor::append(const Meas &value) {
+append_result Capacitor::append(const Meas &value) {
   return _Impl->append(value);
 }
 
 append_result
-dariadb::storage::Capacitor::append(const Meas::MeasArray::const_iterator &begin,
+Capacitor::append(const Meas::MeasArray::const_iterator &begin,
                                     const Meas::MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
-void dariadb::storage::Capacitor::foreach (const QueryInterval &q, ReaderClb * clbk) {
+void Capacitor::foreach (const QueryInterval &q, ReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 
-Meas::MeasList dariadb::storage::Capacitor::readInterval(const QueryInterval &q) {
+Meas::MeasList Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
 }
 
-Meas::Id2Meas dariadb::storage::Capacitor::readInTimePoint(const QueryTimePoint &q) {
+Meas::Id2Meas Capacitor::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
 
-Meas::Id2Meas dariadb::storage::Capacitor::currentValue(const IdArray &ids,
+Meas::Id2Meas Capacitor::currentValue(const IdArray &ids,
                                                         const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-size_t dariadb::storage::Capacitor::files_count() const {
+size_t Capacitor::files_count() const {
   return _Impl->files_count();
 }
 
-size_t dariadb::storage::Capacitor::levels_count() const {
+size_t Capacitor::levels_count() const {
   return _Impl->levels_count();
 }
 
-size_t dariadb::storage::Capacitor::size() const {
+size_t Capacitor::size() const {
   return _Impl->size();
 }
 
-void dariadb::storage::Capacitor::drop_to_stor(MeasWriter *stor) {
+void Capacitor::drop_to_stor(MeasWriter *stor) {
   _Impl->drop_to_stor(stor);
 }
 
-void dariadb::storage::Capacitor::fsck() {
+void Capacitor::fsck() {
   _Impl->fsck();
 }
 
-void dariadb::storage::Capacitor::close() {
+void Capacitor::close() {
   _Impl->close();
 }
