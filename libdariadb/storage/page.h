@@ -9,25 +9,23 @@ namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
 struct PageHeader {
-  uint64_t pos;               // next write pos (bytes)
+  uint64_t write_offset;      // next write pos (bytes)
   uint32_t count_readers;     // readers count. on close must be zero.
-  uint64_t addeded_chunks;    // total count of chunks in page.
-  uint64_t removed_chunks;    // total chunks marked as not init in rollbacks or fsck.
+  uint32_t addeded_chunks;    // total count of chunks in page.
+  uint32_t removed_chunks;    // total chunks marked as not init in rollbacks or fsck.
   uint32_t chunk_per_storage; // max chunks count
   uint32_t chunk_size;        // each chunks size in bytes
   bool is_full : 1;           // is full :)
-  bool is_closed : 1;
-  bool is_open_to_write : 1; // true if oppened to write.
-  dariadb::Time minTime;
-  dariadb::Time maxTime;
-  uint64_t max_chunk_id; // max(chunk->id)
+  bool is_closed : 1;         // is correctly closed.
+  bool is_open_to_write : 1;  // true if oppened to write.
+  bool _under_transaction:1;
+  dariadb::Time minTime;      // minimal stored time
+  dariadb::Time maxTime;      // maximum stored time
+  uint64_t max_chunk_id;      // max(chunk->id)
 
-  uint64_t transaction;
-  bool _under_transaction;
+  uint64_t transaction;       // maximum transaction number.
 };
 #pragma pack(pop)
-
-const size_t PAGE_FLUSH_PERIOD = 1000;
 
 class Page : public ChunkContainer, public MeasWriter {
   Page() = default;
@@ -69,7 +67,6 @@ public:
   void mark_as_init(Chunk_Ptr &ch);
 
 private:
-  void flush_current_chunk();
   void init_chunk_index_rec(Chunk_Ptr ch);
   void close_corrent_chunk();
   struct ChunkWithIndex {

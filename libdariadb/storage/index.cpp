@@ -124,8 +124,7 @@ PageIndex::~PageIndex() {
   index_mmap->close();
 }
 
-PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size,
-                                uint32_t chunk_per_storage, uint32_t chunk_size) {
+PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size) {
   PageIndex_ptr res = std::make_shared<PageIndex>();
   auto immap = utils::fs::MappedFile::touch(filename, size);
   auto iregion = immap->data();
@@ -138,8 +137,6 @@ PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size,
 
   res->iheader->maxTime = dariadb::MIN_TIME;
   res->iheader->minTime = dariadb::MAX_TIME;
-  res->iheader->chunk_per_storage = chunk_per_storage;
-  res->iheader->chunk_size = chunk_size;
   res->iheader->is_sorted = false;
   res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
   res->iheader->is_closed = false;
@@ -156,7 +153,6 @@ PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
   res->iregion = iregion;
   res->iheader = reinterpret_cast<IndexHeader *>(iregion);
   res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
-  // assert(res->iheader->is_closed);
   res->iheader->is_closed = false;
   res->index_mmap->flush();
   return res;
@@ -176,11 +172,26 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
   return c.resulted_links;
 }
 
+IndexHeader PageIndex::readIndexHeader(std::string ifile) {
+  std::ifstream istream;
+  istream.open(ifile, std::fstream::in | std::fstream::binary);
+  if (!istream.is_open()) {
+    std::stringstream ss;
+    ss << "can't open file. filename=" << ifile;
+    throw MAKE_EXCEPTION(ss.str());
+  }
+  IndexHeader result;
+  memset(&result, 0, sizeof(IndexHeader));
+  istream.read((char *)&result, sizeof(IndexHeader));
+  istream.close();
+  return result;
+}
+
 void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
                                   const dariadb::Meas &m, uint32_t pos) {
   assert(cur_index->chunk_id == ptr->header->id);
   assert(ptr->header->pos_in_page == pos);
-  // cur_index->last = ptr->info->last;
+  
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->header->maxTime);

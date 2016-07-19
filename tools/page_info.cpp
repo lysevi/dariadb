@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
       std::cout << "addeded_chunks:    " << p.addeded_chunks << std::endl;
       std::cout << "chunk_per_storage: " << p.chunk_per_storage << std::endl;
       std::cout << "is_closed:         " << p.is_closed << std::endl;
-      std::cout << "pos:               " << p.pos << std::endl;
+      std::cout << "write_offset:      " << p.write_offset << std::endl;
     }
   } catch (std::exception &ex) {
     std::cout << "exception: " << ex.what() << std::endl;
