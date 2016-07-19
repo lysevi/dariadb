@@ -4,6 +4,7 @@
 #include <iterator>
 #include <list>
 #include <string>
+#include <vector>
 
 #define NOT_IMPLEMENTED throw std::logic_error("Not implemented");
 
@@ -56,5 +57,8 @@ struct Range {
     end = _end;
   }
 };
+
+///split string by space.
+std::vector<std::string> tokens(const std::string&str);
 }
 }
