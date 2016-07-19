@@ -267,8 +267,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   cur_index->transaction = ch->header->transaction;
   cur_index->commit = ch->header->commit;
 
-  auto kv = std::make_pair(cur_index->maxTime, pos_index);
-
   _openned_chunk.index = cur_index;
   _openned_chunk.pos = pos_index;
 }
