@@ -34,9 +34,6 @@ struct IndexReccord {
 };
 #pragma pack(pop)
 
-// maxtime => pos index rec in page;
-typedef std::multimap<dariadb::Time, uint32_t> indexTree;
-
 class PageIndex;
 typedef std::shared_ptr<PageIndex> PageIndex_ptr;
 class PageIndex {
@@ -46,7 +43,6 @@ public:
   uint8_t *iregion; // index file mapp region
   IndexReccord *index;
 
-  indexTree _itree; // needed to sort index reccord on page closing. for fast search
   std::string filename;
   mutable boost::shared_mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;

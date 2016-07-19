@@ -32,7 +32,6 @@ inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id, dariadb:
 
 PageIndex::~PageIndex() {
   iheader->is_closed = true;
-  _itree.clear();
   index = nullptr;
   index_mmap->close();
 }
@@ -128,18 +127,8 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   iheader->maxTime = std::max(iheader->maxTime, ptr->header->maxTime);
   iheader->transaction = std::max(iheader->transaction, ptr->header->transaction);
 
-  for (auto it = _itree.lower_bound(cur_index->maxTime);
-       it != _itree.upper_bound(cur_index->maxTime); ++it) {
-    if ((it->first == cur_index->maxTime) && (it->second == pos)) {
-      _itree.erase(it);
-      break;
-    }
-  }
-
   cur_index->minTime = std::min(cur_index->minTime, m.time);
   cur_index->maxTime = std::max(cur_index->maxTime, m.time);
   cur_index->flag_bloom = ptr->header->flag_bloom;
   cur_index->id_bloom = ptr->header->id_bloom;
-  auto kv = std::make_pair(cur_index->maxTime, pos);
-  _itree.insert(kv);
 }

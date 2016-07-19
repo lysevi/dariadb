@@ -80,12 +80,11 @@ Page *Page::open(std::string file_name, bool read_only) {
     throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
   }
 
+#ifdef DEBUG
   for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
     auto irec = &res->_index->index[i];
     if (irec->is_init) {
-      auto kv = std::make_pair(irec->maxTime, i);
-      res->_index->_itree.insert(kv);
-#ifdef DEBUG
+
       ChunkHeader *info = reinterpret_cast<ChunkHeader *>(res->chunks + irec->offset);
       if (info->id != irec->chunk_id) {
         throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
@@ -93,10 +92,9 @@ Page *Page::open(std::string file_name, bool read_only) {
       if (info->pos_in_page != i) {
         throw MAKE_EXCEPTION("(info->pos_in_page != i)");
       }
-#endif
     }
   }
-
+#endif
   return res;
 }
 
@@ -270,7 +268,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   cur_index->commit = ch->header->commit;
 
   auto kv = std::make_pair(cur_index->maxTime, pos_index);
-  _index->_itree.insert(kv);
 
   _openned_chunk.index = cur_index;
   _openned_chunk.pos = pos_index;
