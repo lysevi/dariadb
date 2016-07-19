@@ -12,9 +12,9 @@ using namespace dariadb::storage;
 using dariadb::utils::inInterval;
 
 inline bool check_index_rec(IndexReccord &it, dariadb::Time from, dariadb::Time to) {
-  return (inInterval(from, to, it.minTime) || inInterval(from, to, it.maxTime)) ||
-         (inInterval(it.minTime, it.maxTime, from) ||
-          inInterval(it.minTime, it.maxTime, to));
+  return inInterval(from, to, it.minTime) || inInterval(from, to, it.maxTime) ||
+         inInterval(it.minTime, it.maxTime, from) ||
+         inInterval(it.minTime, it.maxTime, to);
 }
 
 inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id, dariadb::Flag flag) {

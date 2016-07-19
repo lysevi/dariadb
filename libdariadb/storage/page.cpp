@@ -79,25 +79,27 @@ Page *Page::open(std::string file_name, bool read_only) {
   if (res->header->chunk_size == 0) {
     throw MAKE_EXCEPTION("(res->header->chunk_size == 0)");
   }
-
-#ifdef DEBUG
-  for (uint32_t i = 0; i < res->header->chunk_per_storage; ++i) {
-    auto irec = &res->_index->index[i];
-    if (irec->is_init) {
-
-      ChunkHeader *info = reinterpret_cast<ChunkHeader *>(res->chunks + irec->offset);
-      if (info->id != irec->chunk_id) {
-        throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
-      }
-      if (info->pos_in_page != i) {
-        throw MAKE_EXCEPTION("(info->pos_in_page != i)");
-      }
-    }
-  }
-#endif
+  res->check_page_struct();
   return res;
 }
 
+void Page::check_page_struct() {
+#ifdef DEBUG
+	for (uint32_t i = 0; i < header->chunk_per_storage; ++i) {
+		auto irec = &_index->index[i];
+		if (irec->is_init) {
+
+			ChunkHeader *info = reinterpret_cast<ChunkHeader *>(chunks + irec->offset);
+			if (info->id != irec->chunk_id) {
+				throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
+			}
+			if (info->pos_in_page != i) {
+				throw MAKE_EXCEPTION("(info->pos_in_page != i)");
+}
+	}
+  }
+#endif
+}
 PageHeader Page::readHeader(std::string file_name) {
   std::ifstream istream;
   istream.open(file_name, std::fstream::in | std::fstream::binary);

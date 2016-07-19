@@ -77,18 +77,17 @@ private:
   /// cache of openned chunks. before search chunk in page, we search in cache.
   ChunkWithIndex _openned_chunk;
 
+  void check_page_struct();
 public:
-  uint8_t *region; // page  file mapp region
-
+  uint8_t    *region;      // page  file mapp region
   PageHeader *header;
+  uint8_t    *chunks;
 
-  uint8_t *chunks;
-
-  std::string filename;
-  bool readonly;
-  PageIndex_ptr _index;
+  std::string   filename;
+  bool          readonly;
 
 protected:
+  PageIndex_ptr _index;
   mutable std::mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
 };
