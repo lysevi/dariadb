@@ -92,7 +92,7 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   if (_down != nullptr) {
     auto closed = this->closed_caps();
 
-    if (closed.size() > _params.max_closed_caps && _params.max_closed_caps > 0) {
+    if (closed.size() > _params.max_closed_caps && _params.max_closed_caps > 0 && _params.store_period==0) {
       size_t to_drop = closed.size() - _params.max_closed_caps;
       drop_closed_unsafe(to_drop);
     } else {
