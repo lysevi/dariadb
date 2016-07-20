@@ -11,7 +11,7 @@
 namespace dariadb {
 namespace storage {
 const size_t MAX_CLOSED_CAPS = 10;
-
+const uint8_t COLA_MAX_LEVELS = 11;
 class CapacitorManager : public MeasStorage, protected utils::PeriodWorker {
 public:
   class CapDropper {
@@ -20,24 +20,24 @@ public:
   };
   struct Params {
     std::string path;
-    size_t max_levels;
+	uint8_t max_levels;
     size_t max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
-    size_t B;               // measurements count in one data block
+    uint32_t B;               // measurements count in one data block
     dariadb::Time store_period;
     Params() {
-      max_levels = 0;
+      max_levels = COLA_MAX_LEVELS;
       B = 0;
       store_period = 0;
     }
-    Params(const std::string storage_path, const size_t _B) {
+    Params(const std::string storage_path, const uint32_t _B) {
       path = storage_path;
       B = _B;
-      max_levels = 0;
+      max_levels = COLA_MAX_LEVELS;
       max_closed_caps = MAX_CLOSED_CAPS;
       store_period = 0;
     }
 
-    size_t measurements_count() const {
+	uint64_t measurements_count() const {
       return Capacitor::Params::measurements_count(max_levels, B);
     }
   };
@@ -72,10 +72,10 @@ public:
   void set_downlevel(CapDropper *down) { _down = down; }
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
-  void drop_part(size_t count);
+  void drop_closed_files(size_t count); //drop 'count' closed files to down-level storage.
 
 protected:
-  void drop_part_unsafe(size_t count);
+  void drop_closed_unsafe(size_t count);
   Capacitor_Ptr create_new();
   Capacitor_Ptr create_new(std::string filename);
   std::list<std::string> cap_files() const;

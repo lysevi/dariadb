@@ -23,10 +23,9 @@ CapacitorManager::~CapacitorManager() {
 CapacitorManager::CapacitorManager(const Params &param)
     : utils::PeriodWorker(std::chrono::milliseconds(5 * 1000)), _params(param) {
   _down = nullptr;
-  /* if (!dariadb::utils::fs::path_exists(_params.path)) {
-     dariadb::utils::fs::mkdir(_params.path);
-   }*/
 
+  ///open last not closed file.normally do nothing,
+  ///because engine use bulk loading and file or not exists or full.
   auto files = cap_files();
   for (auto f : files) {
     auto hdr = Capacitor::readHeader(f);
@@ -39,9 +38,7 @@ CapacitorManager::CapacitorManager(const Params &param)
   if (_params.store_period != 0) {
     this->start_worker();
   }
-  /*if (_cap == nullptr) {
-    create_new();
-  }*/
+
 }
 
 void CapacitorManager::fsck(bool force_check) {
@@ -73,6 +70,7 @@ CapacitorManager *dariadb::storage::CapacitorManager::instance() {
   return CapacitorManager::_instance;
 }
 
+///perid_worker callback
 void CapacitorManager::call() {
   auto closed = this->closed_caps();
   auto max_hdr_time = dariadb::timeutil::current_time() - _params.store_period;
@@ -96,7 +94,7 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
 
     if (closed.size() > _params.max_closed_caps && _params.max_closed_caps > 0) {
       size_t to_drop = closed.size() - _params.max_closed_caps;
-      drop_part_unsafe(to_drop);
+      drop_closed_unsafe(to_drop);
     } else {
     }
   }
@@ -143,7 +141,7 @@ void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname) {
   _down->drop(fname);
 }
 
-void CapacitorManager::drop_part_unsafe(size_t count) {
+void CapacitorManager::drop_closed_unsafe(size_t count) {
   TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
   auto closed = this->closed_caps();
   using File2Header = std::tuple<std::string, Capacitor::Header>;
@@ -181,9 +179,9 @@ void CapacitorManager::drop_part_unsafe(size_t count) {
   _files_send_to_drop = new_sended_files;
 }
 
-void CapacitorManager::drop_part(size_t count) {
+void CapacitorManager::drop_closed_files(size_t count) {
   std::lock_guard<std::mutex> lg(_locker);
-  drop_part_unsafe(count);
+  drop_closed_unsafe(count);
 }
 
 dariadb::Time CapacitorManager::minTime() {

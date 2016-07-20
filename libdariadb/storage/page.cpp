@@ -295,7 +295,7 @@ bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
   *minTime = dariadb::MAX_TIME;
   *maxTime = dariadb::MIN_TIME;
   for (auto &link : all_chunks) {
-    auto _index_it = this->_index->index[link.pos];
+    auto _index_it = this->_index->index[link.offset];
     *minTime = std::min(*minTime, _index_it.minTime);
     *maxTime = std::max(*maxTime, _index_it.maxTime);
   }
@@ -320,7 +320,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     if (to_read.empty()) {
       break;
     }
-    auto _index_it = this->_index->index[it->pos];
+    auto _index_it = this->_index->index[it->offset];
     auto ptr_to_begin = this->chunks + _index_it.offset;
     auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
     auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
@@ -361,7 +361,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
   }
 
   for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
-    auto _index_it = this->_index->index[_ch_links_iterator->pos];
+    auto _index_it = this->_index->index[_ch_links_iterator->offset];
     Chunk_Ptr search_res;
 
     auto ptr_to_begin = this->chunks + _index_it.offset;

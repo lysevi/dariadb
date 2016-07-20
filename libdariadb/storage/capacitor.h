@@ -17,8 +17,8 @@ public:
   struct Params {
     uint32_t B; // measurements count in one datra block
     std::string path;
-    size_t max_levels;
-    Params(const size_t _B, const std::string _path) {
+    uint8_t max_levels;
+    Params(const uint32_t _B, const std::string _path) {
       B = _B;
       path = _path;
       max_levels = CAP_DEFAULT_MAX_LEVELS;
@@ -45,7 +45,7 @@ public:
     bool is_full : 1;           //is full. normaly is true
     bool is_open_to_write : 1;  //true if oppened to write.
     uint32_t B;                 //one block size. block contains B measurements.
-    uint32_t size;              //sizeof file in bytes
+    uint64_t size;              //sizeof file in bytes
     uint32_t _size_B;           //how many block (sizeof(B)) addeded.
     uint8_t  levels_count;      //currently cola levels count
     uint64_t max_values_count;  //maxumim levels

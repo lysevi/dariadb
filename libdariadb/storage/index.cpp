@@ -91,7 +91,7 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
       if (bloom_result) {
         ChunkLink sub_result;
         sub_result.id = _index_it.chunk_id;
-        sub_result.pos = pos;
+        sub_result.offset = pos;
         sub_result.maxTime = _index_it.maxTime;
         sub_result.id_bloom = _index_it.id_bloom;
         result.push_back(sub_result);

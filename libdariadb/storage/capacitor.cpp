@@ -378,7 +378,7 @@ public:
     return append_to_mem(value);
   }
 
-  size_t calc_outlevel_num() {
+  uint8_t calc_outlevel_num() {
     size_t new_items_count = _header->_size_B + 1;
     return dariadb::utils::ctz(~_size & new_items_count);
   }

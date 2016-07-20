@@ -462,7 +462,7 @@ public:
     }
   }
 
-  void drop_part_caps(size_t count) { CapacitorManager::instance()->drop_part(count); }
+  void drop_part_caps(size_t count) { CapacitorManager::instance()->drop_closed_files(count); }
   Engine::GCResult gc() {
     Engine::GCResult result;
     result.page_result = PageManager::instance()->gc();
