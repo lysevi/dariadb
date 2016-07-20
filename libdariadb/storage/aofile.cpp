@@ -288,10 +288,6 @@ public:
 
   void flush() {
     TIMECODE_METRICS(ctmd, "flush", "AOFile::flush");
-    std::lock_guard<std::mutex> lock(_mutex);
-    // if (drop_future.valid()) {
-    //  drop_future.wait();
-    //}
   }
 
   std::string filename() const { return _filename; }
@@ -303,7 +299,7 @@ public:
       throw_open_error_exception();
     }
 
-    Meas::MeasArray ma{_params.size};
+    Meas::MeasArray ma(_params.size);
     size_t pos = 0;
     while (1) {
       Meas val = Meas::empty();
@@ -335,9 +331,6 @@ public:
 protected:
   AOFile::Params _params;
   std::string _filename;
-  //  dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
-  //  AOFile::Header *_header;
-  //  uint8_t *_raw_data;
 
   mutable std::mutex _mutex;
   bool _is_readonly;
@@ -352,20 +345,7 @@ AOFile::AOFile(const Params &params) : _Impl(new AOFile::Private(params)) {}
 AOFile::AOFile(const AOFile::Params &params, const std::string &fname, bool readonly)
     : _Impl(new AOFile::Private(params, fname, readonly)) {}
 
-// AOFile::Header AOFile::readHeader(std::string file_name) {
-//  std::ifstream istream;
-//  istream.open(file_name, std::fstream::in | std::fstream::binary);
-//  if (!istream.is_open()) {
-//    std::stringstream ss;
-//    ss << "can't open file. filename=" << file_name;
-//    throw MAKE_EXCEPTION(ss.str());
-//  }
-//  AOFile::Header result;
-//  memset(&result, 0, sizeof(AOFile::Header));
-//  istream.read((char *)&result, sizeof(AOFile::Header));
-//  istream.close();
-//  return result;
-//}
+
 dariadb::Time AOFile::minTime() {
   return _Impl->minTime();
 }

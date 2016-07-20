@@ -12,9 +12,9 @@ const std::string AOF_FILE_EXT = ".aof"; // append-only-file
 class AOFile : public MeasStorage {
 public:
   struct Params {
-    size_t size; // measurements count
+    uint64_t size; // measurements count
     std::string path;
-    Params(const size_t _size, const std::string _path) {
+    Params(const uint64_t _size, const std::string _path) {
       size = _size;
       path = _path;
     }
@@ -22,7 +22,7 @@ public:
   virtual ~AOFile();
   AOFile(const Params &param);
   AOFile(const AOFile::Params &params, const std::string &fname, bool readonly = false);
-  // static Header readHeader(std::string file_name);
+
   append_result append(const Meas &value) override;
   append_result append(const Meas::MeasArray::const_iterator &begin,
                        const Meas::MeasArray::const_iterator &end) override;
@@ -36,7 +36,7 @@ public:
   dariadb::Time maxTime() override;
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  void flush() override; // write all to storage;
+  void flush() override;
 
   std::string filename() const;
 
