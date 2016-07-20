@@ -14,26 +14,23 @@ public:
   virtual void drop(const AOFile_Ptr aof, const std::string fname) = 0;
 };
 const size_t AOF_BUFFER_SIZE = 1000;
-const size_t MAX_CLOSED_AOFS = 50;
+
 class AOFManager : public MeasStorage {
 public:
   struct Params {
     std::string path;
-    size_t max_size;    // measurements count in one datra block
+    uint64_t max_size;    // measurements count in one file
     size_t buffer_size; // inner buffer size
-    size_t max_closed_aofs;
     Params() {
       max_size = 0;
       buffer_size = AOF_BUFFER_SIZE;
-      max_closed_aofs = MAX_CLOSED_AOFS;
     }
-    Params(const std::string storage_path, const size_t _max_size) {
+    Params(const std::string storage_path, const uint64_t _max_size) {
       path = storage_path;
       max_size = _max_size;
       buffer_size = AOF_BUFFER_SIZE;
-      max_closed_aofs = MAX_CLOSED_AOFS;
     }
-    Params(const std::string storage_path, const size_t _max_size, const size_t bufsize) {
+    Params(const std::string storage_path, const uint64_t _max_size, const size_t bufsize) {
       path = storage_path;
       max_size = _max_size;
       buffer_size = bufsize;

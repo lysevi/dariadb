@@ -10,8 +10,8 @@
 #include <iterator>
 #include <tuple>
 
-using namespace dariadb::storage;
 using namespace dariadb;
+using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
 AOFManager *AOFManager::_instance = nullptr;

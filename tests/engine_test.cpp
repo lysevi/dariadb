@@ -121,7 +121,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
     cap_pam.max_levels = 4;
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
-    aofp.max_closed_aofs = 20;
     aofp.max_size = cap_pam.measurements_count();
     std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
         aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
@@ -330,7 +329,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
     cap_pam.max_levels = 4;
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
-    aofp.max_closed_aofs = 20;
     aofp.max_size = cap_pam.measurements_count();
     dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
         aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
