@@ -1,3 +1,7 @@
+v0.1.1
+=====
+- Code refactoring.
+
 v0.1.0
 =====
 - Async storage.
