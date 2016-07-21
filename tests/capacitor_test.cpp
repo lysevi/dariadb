@@ -635,9 +635,7 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
       dariadb::storage::CapacitorManager::instance()->drop_cap(fname);
     }
     BOOST_CHECK_EQUAL(stor.get()->calls, closed.size());
-    /* closed = dariadb::storage::CapacitorManager::instance()->closed_caps();
-     BOOST_CHECK_EQUAL(closed.size(), size_t(0));
- */
+
     dariadb::storage::CapacitorManager::stop();
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();

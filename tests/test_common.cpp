@@ -247,7 +247,6 @@ void readTimePointCheck(storage::MeasStorage *as, Time from, Time to, Time step,
 }
 
 void storage_test_check(storage::MeasStorage *as, Time from, Time to, Time step) {
-  auto m = Meas::empty();
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   size_t total_count =
