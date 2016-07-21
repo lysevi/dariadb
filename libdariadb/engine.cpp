@@ -282,32 +282,20 @@ public:
 
     AsyncTask pm_at = [&clbk, &q](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      // LockManager::instance()->lock(LockKind::READ, LockObjects::PAGE);
-      /*logger("engine: pm readinterval...");*/
       auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
 
       PageManager::instance()->readLinks(q, all_chunkLinks, clbk);
       all_chunkLinks.clear();
-      // LockManager::instance()->unlock(LockObjects::PAGE);
-      /*logger("engine: pm readinterval end");*/
     };
 
     AsyncTask cm_at = [&clbk, &q](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      /*LockManager::instance()->lock(LockKind::READ, LockObjects::CAP);*/
-      /*logger("engine: cm readinterval...");*/
       CapacitorManager::instance()->foreach (q, clbk);
-      /*LockManager::instance()->unlock(LockObjects::CAP);*/
-      /*logger("engine: cm readinterval end");*/
     };
 
     AsyncTask am_at = [&clbk, &q](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      /*LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);*/
-      /*logger("engine: am readinterval...");*/
       AOFManager::instance()->foreach (q, clbk);
-      /*LockManager::instance()->unlock(LockObjects::AOF);*/
-      /*logger("engine: am readinterval end");*/
     };
 
     LockManager::instance()->lock(
