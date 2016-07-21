@@ -69,9 +69,9 @@ void reader(dariadb::storage::MeasStorage_ptr ms, dariadb::IdSet all_id_set,
 
   while (true) {
     clbk->count = 0;
-    auto time_point1 = uniform_dist(e1);
-    auto f = 0;
-    auto t = time_point1;
+    //auto time_point1 = uniform_dist(e1);
+    auto f = from;
+    auto t = dariadb::timeutil::current_time();
 
     auto qi = dariadb::storage::QueryInterval(
         dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
     if (readers_enable) {
       pos = 0;
       for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
-        std::thread t{reader, ms, all_id_set, dariadb::Time(0),
+        std::thread t{reader, ms, all_id_set, start_time,
                       dariadb::timeutil::current_time()};
         readers[pos++] = std::move(t);
       }
