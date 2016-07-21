@@ -147,8 +147,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     BOOST_CHECK(current.size() != size_t(0));
-    // TODO check
-    // BOOST_CHECK(mlist.front().flag != dariadb::Flags::_NO_DATA);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
