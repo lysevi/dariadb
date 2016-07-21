@@ -63,68 +63,62 @@ public:
           logger_info("fsck: rm " << capf);
           utils::fs::rm(capf);
           Manifest::instance()->cola_rm(utils::fs::extract_filename(capf));
-          /* logger_info("open " << aof);
-          AOFile::Params aof_param(0,storagePath);
-
-          AOFile_Ptr aof_ptr{ new AOFile(aof_param,aof, true) };
-          logger_info("try to drop.");
-          AofDropper::drop(aof_ptr, aof, storagePath);
-          logger_info("dropped");*/
         }
       }
     }
   }
 };
 
+
+class CapDrooper : public CapacitorManager::CapDropper {
+public:
+	void drop(const std::string &fname) override {
+		AsyncTask at = [fname, this](const ThreadInfo &ti) {
+			TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+			TIMECODE_METRICS(ctmd, "drop", "CapDrooper::drop");
+
+			LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
+			auto p = Capacitor::Params(0, "");
+			auto cap = Capacitor_Ptr{ new Capacitor{ p, fname, false } };
+
+			auto trans = PageManager::instance()->begin_transaction();
+			auto cap_header = cap->header();
+			cap_header->transaction_number = trans;
+			cap->flush();
+
+			cap->drop_to_stor(PageManager::instance());
+			cap = nullptr;
+			PageManager::instance()->commit_transaction(trans);
+			auto without_path = utils::fs::extract_filename(fname);
+			Manifest::instance()->cola_rm(without_path);
+			utils::fs::rm(fname);
+
+			LockManager::instance()->unlock(LockObjects::DROP_CAP);
+		};
+		ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+	}
+
+	static void cleanStorage(std::string storagePath) {
+		auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
+		for (auto c : caps_lst) {
+			auto ch = Capacitor::readHeader(c);
+			if (ch.transaction_number != 0) {
+				auto cap_fname = utils::fs::filename(c);
+				logger_info("fsck: rollback #" << ch.transaction_number << " for "
+					<< cap_fname);
+				PageManager::instance()->rollback_transaction(ch.transaction_number);
+			}
+		}
+	}
+};
+
 class Engine::Private {
 public:
-  class CapDrooper : public CapacitorManager::CapDropper {
-  public:
-    void drop(const std::string &fname) override {
-      AsyncTask at = [fname, this](const ThreadInfo &ti) {
-        TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
-        TIMECODE_METRICS(ctmd, "drop", "CapDrooper::drop");
-        // logger_info("cap:drop: begin dropping " << fname);
-        LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
-        auto p = Capacitor::Params(0, "");
-        auto cap = Capacitor_Ptr{new Capacitor{p, fname, false}};
-
-        auto trans = PageManager::instance()->begin_transaction();
-        auto cap_header = cap->header();
-        cap_header->transaction_number = trans;
-        cap->flush();
-
-        cap->drop_to_stor(PageManager::instance());
-        cap = nullptr;
-        PageManager::instance()->commit_transaction(trans);
-        auto without_path = utils::fs::extract_filename(fname);
-        Manifest::instance()->cola_rm(without_path);
-        utils::fs::rm(fname);
-        // logger_info("cap:drop: end.");
-        LockManager::instance()->unlock(LockObjects::DROP_CAP);
-      };
-      ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
-    }
-
-    static void cleanStorage(std::string storagePath) {
-      auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
-      for (auto c : caps_lst) {
-        auto ch = Capacitor::readHeader(c);
-        if (ch.transaction_number != 0) {
-          auto cap_fname = utils::fs::filename(c);
-          logger_info("fsck: rollback #" << ch.transaction_number << " for "
-                                         << cap_fname);
-          PageManager::instance()->rollback_transaction(ch.transaction_number);
-        }
-      }
-    }
-  };
+ 
   Private(storage::AOFManager::Params &aof_params,
           const PageManager::Params &page_storage_params,
-          dariadb::storage::CapacitorManager::Params &cap_params,
-          dariadb::storage::Engine::Limits limits)
-      : _page_manager_params(page_storage_params), _cap_params(cap_params),
-        _limits(limits) {
+          dariadb::storage::CapacitorManager::Params &cap_params)
+      : _page_manager_params(page_storage_params), _cap_params(cap_params) {
     bool is_exists = false;
     if (!dariadb::utils::fs::path_exists(aof_params.path)) {
       dariadb::utils::fs::mkdir(aof_params.path);
@@ -237,9 +231,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    // LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::AOF);
     result = AOFManager::instance()->append(value);
-    // LockManager::instance()->unlock(LockObjects::AOF);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -265,7 +257,6 @@ public:
     AOFManager::instance()->flush();
     CapacitorManager::instance()->flush();
     PageManager::instance()->flush();
-    // ThreadManager::instance()->flush();
   }
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
@@ -326,13 +317,9 @@ public:
     auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
     auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
-    /*logger("engine: interval: wait pm.");*/
     pm_async->wait();
-    /*logger("engine: interval: wait cm.");*/
     cm_async->wait();
-    /*logger("engine: interval: wait am.");*/
     am_async->wait();
-    /*logger("engine: interval: wait all and.");*/
 
     LockManager::instance()->unlock(
         {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
@@ -369,6 +356,10 @@ public:
         LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
     Meas::Id2Meas result;
+	result.reserve(q.ids.size());
+	for (auto id : q.ids) {
+		result[id].flag = Flags::_NO_DATA;
+	}
 
     for (auto id : q.ids) {
       dariadb::Time minT, maxT;
@@ -379,46 +370,14 @@ public:
       if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
           (minT < q.time_point || maxT < q.time_point)) {
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
-        for (auto &kv : subres) {
-          auto it = result.find(kv.first);
-          if (it == result.end()) {
-            result.insert(std::make_pair(kv.first, kv.second));
-          } else {
-            if ((it->second.flag == Flags::_NO_DATA) ||
-                (it->second.time < kv.second.time)) {
-              result[kv.first] = kv.second;
-            }
-          }
-        }
+		result[id] = subres[id];
       } else {
-        if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
-            (utils::inInterval(minT, maxT, q.time_point))) {
+        if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) && (utils::inInterval(minT, maxT, q.time_point))) {
           auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
-          for (auto &kv : subres) {
-            auto it = result.find(kv.first);
-            if (it == result.end()) {
-              result.insert(std::make_pair(kv.first, kv.second));
-            } else {
-              if ((it->second.flag == Flags::_NO_DATA) ||
-                  (it->second.time < kv.second.time)) {
-                result[kv.first] = kv.second;
-              }
-            }
-          }
+		  result[id] = subres[id];
         } else {
-          auto id2meas = PageManager::instance()->valuesBeforeTimePoint(local_q);
-
-          for (auto &kv : id2meas) {
-            auto it = result.find(kv.first);
-            if (it == result.end()) {
-              result.insert(std::make_pair(kv.first, kv.second));
-            } else {
-              if ((it->second.flag == Flags::_NO_DATA) ||
-                  (it->second.time < kv.second.time)) {
-                result[kv.first] = kv.second;
-              }
-            }
-          }
+          auto subres = PageManager::instance()->valuesBeforeTimePoint(local_q);
+		  result[id] = subres[id];
         }
       }
     }
@@ -475,7 +434,6 @@ public:
 protected:
   storage::PageManager::Params _page_manager_params;
   dariadb::storage::CapacitorManager::Params _cap_params;
-  dariadb::storage::Engine::Limits _limits;
 
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
@@ -487,9 +445,8 @@ protected:
 
 Engine::Engine(storage::AOFManager::Params aof_params,
                storage::PageManager::Params page_manager_params,
-               dariadb::storage::CapacitorManager::Params cap_params,
-               const dariadb::storage::Engine::Limits &limits)
-    : _impl{new Engine::Private(aof_params, page_manager_params, cap_params, limits)} {}
+               dariadb::storage::CapacitorManager::Params cap_params)
+    : _impl{new Engine::Private(aof_params, page_manager_params, cap_params)} {}
 
 Engine::~Engine() {
   _impl = nullptr;

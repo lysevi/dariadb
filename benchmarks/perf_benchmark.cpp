@@ -157,7 +157,6 @@ int main(int argc, char *argv[]) {
     const size_t chunk_per_storage = 512 * 10;
     const size_t chunk_size = 512;
     const size_t cap_B = 50;
-    const size_t max_mem_chunks = 100;
 
     // dont_clean = true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
@@ -180,9 +179,7 @@ int main(int argc, char *argv[]) {
     aof_param.max_size = cap_param.measurements_count();
 
     cap_param.max_levels = 11;
-    auto raw_ptr =
-        new dariadb::storage::Engine(aof_param, page_param, cap_param,
-                                     dariadb::storage::Engine::Limits(max_mem_chunks));
+    auto raw_ptr = new dariadb::storage::Engine(aof_param, page_param, cap_param);
 
     dariadb::storage::MeasStorage_ptr ms{raw_ptr};
 
