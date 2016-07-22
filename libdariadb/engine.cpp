@@ -18,7 +18,7 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-class AofDropper : public dariadb::storage::AofFileDropper {
+class AofDropper : public dariadb::storage::IAofFileDropper {
   std::string _storage_path;
 
 public:
@@ -70,7 +70,7 @@ public:
 };
 
 
-class CapDrooper : public CapacitorManager::CapDropper {
+class CapDrooper : public CapacitorManager::ICapDropper {
 public:
 	void drop(const std::string &fname) override {
 		AsyncTask at = [fname, this](const ThreadInfo &ti) {
@@ -261,7 +261,7 @@ public:
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
 
-  class ChunkReadCallback : public ReaderClb {
+  class ChunkReadCallback : public IReaderClb {
   public:
     virtual void call(const Meas &m) override { out->push_back(m); }
     Meas::MeasList *out;
@@ -277,7 +277,7 @@ public:
   }
 
   // Inherited via MeasStorage
-  void foreach (const QueryInterval &q, ReaderClb * clbk) {
+  void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::foreach");
 
     AsyncTask pm_at = [&clbk, &q](const ThreadInfo &ti) {
@@ -484,7 +484,7 @@ Engine::QueueSizes Engine::queue_size() const {
   return _impl->queue_size();
 }
 
-void Engine::foreach (const QueryInterval &q, ReaderClb * clbk) {
+void Engine::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _impl->foreach (q, clbk);
 }
 

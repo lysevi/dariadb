@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../storage.h"
+#include "../interfaces/imeasstorage.h"
 #include "../utils/period_worker.h"
 #include "../utils/utils.h"
 #include "capacitor.h"
@@ -12,9 +12,9 @@ namespace dariadb {
 namespace storage {
 const size_t MAX_CLOSED_CAPS = 10;
 const uint8_t COLA_MAX_LEVELS = 11;
-class CapacitorManager : public MeasStorage, protected utils::PeriodWorker {
+class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
 public:
-  class CapDropper {
+  class ICapDropper {
   public:
     virtual void drop(const std::string &fname) = 0;
   };
@@ -57,7 +57,7 @@ public:
   virtual Time maxTime() override;
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  virtual void foreach (const QueryInterval &q, ReaderClb * clbk) override;
+  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
@@ -69,7 +69,7 @@ public:
   void drop_cap(const std::string &fname);
 
   size_t files_count() const;
-  void set_downlevel(CapDropper *down) { _down = down; }
+  void set_downlevel(ICapDropper *down) { _down = down; }
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
   void drop_closed_files(size_t count); //drop 'count' closed files to down-level storage.
@@ -90,7 +90,7 @@ private:
   Params _params;
   Capacitor_Ptr _cap;
   mutable std::mutex _locker;
-  CapDropper *_down;
+  ICapDropper *_down;
   std::set<std::string> _files_send_to_drop;
 };
 }

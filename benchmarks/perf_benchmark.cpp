@@ -14,7 +14,7 @@ std::atomic_size_t reads_count{0};
 bool stop_info = false;
 bool stop_readers = false;
 
-class BenchCallback : public dariadb::storage::ReaderClb {
+class BenchCallback : public dariadb::storage::IReaderClb {
 public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &v) { count++; }
@@ -66,7 +66,7 @@ void show_drop_info(dariadb::storage::Engine *storage) {
 	std::cout << "\n";
 }
 
-void reader(dariadb::storage::MeasStorage_ptr ms, dariadb::IdSet all_id_set,
+void reader(dariadb::storage::IMeasStorage_ptr ms, dariadb::IdSet all_id_set,
             dariadb::Time from, dariadb::Time to) {
   std::random_device r;
   std::default_random_engine e1(r());
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(aof_param, page_param, cap_param);
 
-    dariadb::storage::MeasStorage_ptr ms{raw_ptr};
+    dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
 
     dariadb::IdSet all_id_set;
     append_count = 0;

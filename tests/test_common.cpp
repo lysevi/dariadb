@@ -9,7 +9,7 @@ namespace dariadb_test {
 using namespace dariadb;
 using namespace dariadb::storage;
 
-class Callback : public storage::ReaderClb {
+class Callback : public storage::IReaderClb {
 public:
   Callback() { count = 0; }
   void call(const Meas &v) {
@@ -81,7 +81,7 @@ void check_reader_of_all(Meas::MeasList all, Time from, Time to, Time step,
   checkAll(all, message, from, to, step);
 }
 
-size_t fill_storage_for_test(storage::MeasStorage *as, Time from, Time to, Time step,
+size_t fill_storage_for_test(storage::IMeasStorage *as, Time from, Time to, Time step,
                              IdSet *_all_ids_set, Time *maxWritedTime) {
   auto m = Meas::empty();
   size_t total_count = 0;
@@ -141,7 +141,7 @@ size_t fill_storage_for_test(storage::MeasStorage *as, Time from, Time to, Time 
   return total_count;
 }
 
-void minMaxCheck(storage::MeasStorage *as, Time from, Time maxWritedTime) {
+void minMaxCheck(storage::IMeasStorage *as, Time from, Time maxWritedTime) {
   Time minTime, maxTime;
   if (!(as->minMaxTime(Id(0), &minTime, &maxTime))) {
     throw MAKE_EXCEPTION("!(as->minMaxTime)");
@@ -160,7 +160,7 @@ void minMaxCheck(storage::MeasStorage *as, Time from, Time maxWritedTime) {
   }
 }
 
-void readIntervalCheck(storage::MeasStorage *as, Time from, Time to, Time step,
+void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                        const IdSet &_all_ids_set, const IdArray &_all_ids_array,
                        size_t total_count) {
   storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
@@ -209,7 +209,7 @@ void readIntervalCheck(storage::MeasStorage *as, Time from, Time to, Time step,
   }
 }
 
-void readTimePointCheck(storage::MeasStorage *as, Time from, Time to, Time step,
+void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                         const IdArray &_all_ids_array) {
   auto qp = storage::QueryTimePoint(_all_ids_array, 0, to + copies_count);
   auto all_id2meas = as->readInTimePoint(qp);
@@ -246,7 +246,7 @@ void readTimePointCheck(storage::MeasStorage *as, Time from, Time to, Time step,
   }
 }
 
-void storage_test_check(storage::MeasStorage *as, Time from, Time to, Time step) {
+void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   size_t total_count =

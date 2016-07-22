@@ -1,8 +1,8 @@
 #pragma once
-#include "../storage.h"
+#include "../interfaces/imeaswriter.h"
 #include "../utils/fs.h"
 #include "chunk.h"
-#include "chunk_container.h"
+#include "../interfaces/ichunkcontainer.h"
 #include "index.h"
 
 namespace dariadb {
@@ -27,7 +27,7 @@ struct PageHeader {
 };
 #pragma pack(pop)
 
-class Page : public ChunkContainer, public MeasWriter {
+class Page : public IChunkContainer, public IMeasWriter {
   Page() = default;
 
 public:
@@ -51,7 +51,7 @@ public:
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                 ReaderClb *clb) override;
+                 IReaderClb *clb) override;
 
   // Inherited via MeasWriter
   virtual append_result append(const Meas &value) override;

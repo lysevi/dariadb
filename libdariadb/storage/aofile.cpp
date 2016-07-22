@@ -98,7 +98,7 @@ public:
     }
   }
 
-  void foreach (const QueryInterval &q, ReaderClb * clbk) {
+  void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
     std::lock_guard<std::mutex> lock(_mutex);
 
@@ -374,7 +374,7 @@ append_result AOFile::append(const Meas::MeasList::const_iterator &begin,
   return _Impl->append(begin, end);
 }
 
-void AOFile::foreach (const QueryInterval &q, ReaderClb * clbk) {
+void AOFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 

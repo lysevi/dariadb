@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../meas.h"
-#include "../storage.h"
+#include "../interfaces/imeasstorage.h"
 #include "../utils/fs.h"
 #include "bloom_filter.h"
 #include <memory>
@@ -12,7 +12,7 @@ namespace storage {
 const std::string CAP_FILE_EXT = ".cap"; // cola-file extension
 const uint32_t CAP_DEFAULT_MAX_LEVELS = 10;
 
-class Capacitor : public MeasStorage {
+class Capacitor : public IMeasStorage {
 public:
   struct Params {
     uint32_t B; // measurements count in one datra block
@@ -83,7 +83,7 @@ public:
   append_result append(const Meas &value) override;
   append_result append(const Meas::MeasArray::const_iterator &begin,
                        const Meas::MeasArray::const_iterator &end) override;
-  void foreach (const QueryInterval &q, ReaderClb * clbk) override;
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override;
 
   Meas::MeasList readInterval(const QueryInterval &q) override;
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
@@ -99,7 +99,7 @@ public:
   size_t levels_count() const;
   size_t size() const;
 
-  void drop_to_stor(MeasWriter *stor);
+  void drop_to_stor(IMeasWriter *stor);
 
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
   void fsck();

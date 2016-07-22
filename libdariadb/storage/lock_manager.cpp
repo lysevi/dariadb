@@ -1,5 +1,6 @@
 #include "lock_manager.h"
 #include "../utils/logger.h"
+#include "../utils/exception.h"
 #include <sstream>
 using namespace dariadb;
 using namespace dariadb::storage;

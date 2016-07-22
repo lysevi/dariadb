@@ -1,8 +1,8 @@
 #pragma once
-#include "../storage.h"
+
 #include "../utils/fs.h"
 #include "chunk.h"
-
+#include "../interfaces/ichunkcontainer.h"
 #include <boost/thread/shared_mutex.hpp>
 namespace dariadb {
 namespace storage {

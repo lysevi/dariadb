@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../storage.h"
+#include "../interfaces/imeasstorage.h"
+#include "../interfaces/ichunkcontainer.h"
 #include "../utils/utils.h"
 #include "chunk.h"
-#include "chunk_container.h"
 
 #include <vector>
 
@@ -12,7 +12,7 @@ namespace storage {
 
 const uint16_t OPENNED_PAGE_CACHE_SIZE = 10;
 
-class PageManager : public utils::NonCopy, public ChunkContainer, public MeasWriter {
+class PageManager : public utils::NonCopy, public IChunkContainer, public IMeasWriter {
 public:
   struct Params {
     std::string path;
@@ -55,7 +55,7 @@ public:
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                 ReaderClb *clb) override;
+                 IReaderClb *clb) override;
 
   size_t files_count() const;
   size_t chunks_in_cur_page() const;

@@ -42,14 +42,14 @@ struct ChunkHeader {
 
 class Chunk {
 public:
-  class Reader {
+  class IChunkReader {
   public:
     virtual Meas readNext() = 0;
     virtual bool is_end() const = 0;
-    virtual ~Reader() {}
+    virtual ~IChunkReader() {}
   };
 
-  using Reader_Ptr = std::shared_ptr<Chunk::Reader>;
+  using ChunkReader_Ptr = std::shared_ptr<Chunk::IChunkReader>;
 
   typedef uint8_t *u8vector;
 
@@ -59,7 +59,7 @@ public:
 
   virtual bool append(const Meas &m) = 0;
   virtual bool is_full() const = 0;
-  virtual Reader_Ptr get_reader() = 0;
+  virtual ChunkReader_Ptr get_reader() = 0;
   virtual bool check_id(const Id &id);
   virtual void close() = 0;
   virtual uint32_t calc_checksum() = 0;
@@ -92,7 +92,7 @@ public:
 
   uint32_t calc_checksum() override;
   uint32_t get_checksum() override;
-  Reader_Ptr get_reader() override;
+  ChunkReader_Ptr get_reader() override;
   utils::Range range;
   compression::CopmressedWriter c_writer;
 };

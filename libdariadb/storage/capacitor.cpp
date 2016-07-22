@@ -462,7 +462,7 @@ public:
   void flush_header() { mmap->flush(0, sizeof(Header)); }
 
   struct low_level_stor_pusher {
-    MeasWriter *_stor;
+    IMeasWriter *_stor;
     void push_back(Meas &m) {
       _stor->append(m);
       _back = m;
@@ -474,7 +474,7 @@ public:
   };
 
   ///values dropped to down-level storage. grouped by id.
-  void drop_to_stor(MeasWriter *stor) {
+  void drop_to_stor(IMeasWriter *stor) {
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
 
     level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
@@ -517,7 +517,7 @@ public:
     _header->is_dropped = true;
   }
 
-  void foreach (const QueryInterval &q, ReaderClb * clbk) {
+  void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Capacitor::foreach");
     boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
@@ -830,7 +830,7 @@ Capacitor::append(const Meas::MeasArray::const_iterator &begin,
   return _Impl->append(begin, end);
 }
 
-void Capacitor::foreach (const QueryInterval &q, ReaderClb * clbk) {
+void Capacitor::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 
@@ -859,7 +859,7 @@ size_t Capacitor::size() const {
   return _Impl->size();
 }
 
-void Capacitor::drop_to_stor(MeasWriter *stor) {
+void Capacitor::drop_to_stor(IMeasWriter *stor) {
   _Impl->drop_to_stor(stor);
 }
 

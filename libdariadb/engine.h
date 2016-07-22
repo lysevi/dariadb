@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage.h"
+#include "interfaces/imeasstorage.h"
 #include "storage/aof_manager.h"
 #include "storage/capacitor_manager.h"
 #include "storage/page_manager.h"
@@ -10,7 +10,7 @@
 namespace dariadb {
 namespace storage {
 
-class Engine : public MeasStorage {
+class Engine : public IMeasStorage {
 public:
   struct QueueSizes {
     size_t aofs_count;   ///  AOF count
@@ -36,7 +36,7 @@ public:
 
   QueueSizes queue_size() const;
 
-  virtual void foreach (const QueryInterval &q, ReaderClb * clbk);
+  virtual void foreach (const QueryInterval &q, IReaderClb * clbk);
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;

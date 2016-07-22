@@ -12,7 +12,7 @@
 #include <utils/fs.h>
 #include <utils/logger.h>
 
-class BenchCallback : public dariadb::storage::ReaderClb {
+class BenchCallback : public dariadb::storage::IReaderClb {
 public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &) { count++; }
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     BOOST_CHECK(gc_res.page_result.chunks_merged != size_t(0));
   }
   {
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+    dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::AOFManager::Params(storage_path, chunk_size),
         dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                               chunk_size),
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   }
 }
 
-class Moc_SubscribeClbk : public dariadb::storage::ReaderClb {
+class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
 public:
   std::list<dariadb::Meas> values;
   void call(const dariadb::Meas &m) override { values.push_back(m); }
@@ -326,7 +326,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     cap_pam.max_levels = 4;
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     aofp.max_size = cap_pam.measurements_count();
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
+    dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine(
         aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
                                                     chunk_size),
         cap_pam)};

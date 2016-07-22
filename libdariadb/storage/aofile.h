@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../meas.h"
-#include "../storage.h"
+#include "../interfaces/imeasstorage.h"
 #include <memory>
 
 namespace dariadb {
@@ -9,7 +9,7 @@ namespace storage {
 
 const std::string AOF_FILE_EXT = ".aof"; // append-only-file
 
-class AOFile : public MeasStorage {
+class AOFile : public IMeasStorage {
 public:
   struct Params {
     uint64_t size; // measurements count
@@ -28,7 +28,7 @@ public:
                        const Meas::MeasArray::const_iterator &end) override;
   append_result append(const Meas::MeasList::const_iterator &begin,
                        const Meas::MeasList::const_iterator &end) override;
-  void foreach (const QueryInterval &q, ReaderClb * clbk) override;
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   Meas::MeasList readInterval(const QueryInterval &q) override;
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;

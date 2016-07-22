@@ -254,7 +254,7 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
-void CapacitorManager::foreach (const QueryInterval &q, ReaderClb * clbk) {
+void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   TIMECODE_METRICS(ctmd, "foreach", "CapacitorManager::foreach");
   std::lock_guard<std::mutex> lg(_locker);
   auto pred = [q](const Capacitor::Header &hdr) {

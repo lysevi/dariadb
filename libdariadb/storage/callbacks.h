@@ -7,15 +7,15 @@
 namespace dariadb {
 namespace storage {
 
-class ReaderClb {
+class IReaderClb {
 public:
   virtual void call(const Meas &m) = 0; // must be thread safety.
-  virtual ~ReaderClb() {}
+  virtual ~IReaderClb() {}
 };
 
-typedef std::shared_ptr<ReaderClb> ReaderClb_ptr;
+typedef std::shared_ptr<IReaderClb> ReaderClb_ptr;
 
-class MList_ReaderClb : public ReaderClb {
+class MList_ReaderClb : public IReaderClb {
 public:
   MList_ReaderClb() : mlist() {}
   void call(const Meas &m) override {

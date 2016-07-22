@@ -226,9 +226,9 @@ void Page::close_corrent_chunk() {
     auto used_space = _openned_chunk.ch->header->size - _openned_chunk.ch->header->bw_pos;
     auto size = _openned_chunk.ch->header->size;
     auto percent = used_space * float(100.0) / size;
+	auto raw_metric_ptr = new dariadb::utils::metrics::FloatMetric(percent);
     ADD_METRICS("write", "chunk_free",
-                dariadb::utils::metrics::Metric_Ptr{
-                    new dariadb::utils::metrics::FloatMetric(percent)});
+                dariadb::utils::metrics::IMetric_Ptr{ raw_metric_ptr });
 #endif
     _openned_chunk.ch = nullptr;
   }
@@ -352,7 +352,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 }
 
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                     ReaderClb *clb) {
+                     IReaderClb *clb) {
   TIMECODE_METRICS(ctmd, "readLinks", "Page::readLinks");
   std::lock_guard<std::mutex> lg(_locker);
   auto _ch_links_iterator = links.cbegin();

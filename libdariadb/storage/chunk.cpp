@@ -149,7 +149,7 @@ bool ZippedChunk::append(const Meas &m) {
   }
 }
 
-class ZippedChunkReader : public Chunk::Reader {
+class ZippedChunkReader : public Chunk::IChunkReader {
 public:
   virtual Meas readNext() override {
     assert(!is_end());
@@ -171,7 +171,7 @@ public:
   std::shared_ptr<CopmressedReader> _reader;
 };
 
-class SortedReader : public Chunk::Reader {
+class SortedReader : public Chunk::IChunkReader {
 public:
   virtual Meas readNext() override {
     assert(!is_end());
@@ -186,7 +186,7 @@ public:
   dariadb::Meas::MeasArray::const_iterator _iter;
 };
 
-Chunk::Reader_Ptr ZippedChunk::get_reader() {
+Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
   if (header->is_sorted) {
     auto raw_res = new ZippedChunkReader;
     raw_res->count = this->header->count;
@@ -197,7 +197,7 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
     raw_res->_reader =
         std::make_shared<CopmressedReader>(raw_res->bw, this->header->first);
 
-    Chunk::Reader_Ptr result{raw_res};
+    Chunk::ChunkReader_Ptr result{raw_res};
     return result;
   } else {
     Meas::MeasList res_set;
@@ -214,7 +214,7 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
     std::sort(raw_res->values.begin(), raw_res->values.end(),
               dariadb::meas_time_compare_less());
     raw_res->_iter = raw_res->values.begin();
-    Chunk::Reader_Ptr result{raw_res};
+    Chunk::ChunkReader_Ptr result{raw_res};
     return result;
   }
 }

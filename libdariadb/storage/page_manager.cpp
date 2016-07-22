@@ -268,7 +268,7 @@ public:
     return result;
   }
 
-  void readLinks(const QueryInterval &query, const ChunkLinkList &links, ReaderClb *clb) {
+  void readLinks(const QueryInterval &query, const ChunkLinkList &links, IReaderClb *clb) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
     std::lock_guard<std::mutex> lg(_locker);
 
@@ -688,7 +688,7 @@ dariadb::Meas::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &
 }
 
 void PageManager::readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                            ReaderClb *clb) {
+                            IReaderClb *clb) {
   impl->readLinks(query, links, clb);
 }
 

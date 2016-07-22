@@ -14,7 +14,7 @@
 #include <utils/fs.h>
 #include <utils/thread_manager.h>
 
-class Moc_Dropper : public dariadb::storage::AofFileDropper {
+class Moc_Dropper : public dariadb::storage::IAofFileDropper {
   std::string _storage_path;
 
 public:

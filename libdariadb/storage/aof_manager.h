@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../storage.h"
+#include "../interfaces/imeasstorage.h"
 #include "../utils/utils.h"
 #include "aofile.h"
 #include <vector>
@@ -9,13 +9,13 @@
 
 namespace dariadb {
 namespace storage {
-class AofFileDropper {
+class IAofFileDropper {
 public:
   virtual void drop(const AOFile_Ptr aof, const std::string fname) = 0;
 };
 const size_t AOF_BUFFER_SIZE = 1000;
 
-class AOFManager : public MeasStorage {
+class AOFManager : public IMeasStorage {
 public:
   struct Params {
     std::string path;
@@ -52,7 +52,7 @@ public:
   virtual Time maxTime() override;
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  virtual void foreach (const QueryInterval &q, ReaderClb * clbk) override;
+  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
@@ -60,10 +60,10 @@ public:
   virtual void flush() override;
 
   std::list<std::string> closed_aofs();
-  void drop_aof(const std::string &fname, AofFileDropper *storage);
+  void drop_aof(const std::string &fname, IAofFileDropper *storage);
 
   size_t files_count() const;
-  void set_downlevel(AofFileDropper *down);
+  void set_downlevel(IAofFileDropper *down);
 
 protected:
   void create_new();
@@ -77,7 +77,7 @@ private:
   Params _params;
   AOFile_Ptr _aof;
   mutable std::mutex _locker;
-  AofFileDropper *_down;
+  IAofFileDropper *_down;
 
   Meas::MeasArray _buffer;
   size_t _buffer_pos;

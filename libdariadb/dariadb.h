@@ -3,7 +3,7 @@
 #include "common.h"
 #include "engine.h"
 #include "flags.h"
-#include "storage.h"
+#include "interfaces/imeasstorage.h"
 #include "storage/aof_manager.h"
 #include "storage/capacitor.h"
 #include "storage/capacitor_manager.h"

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "../meas.h"
-#include "../storage.h"
 
 namespace dariadb {
 namespace statistic {
 /*
+//TODO add suffix I. is a interface.
 class BaseMethod {
 public:
 BaseMethod();

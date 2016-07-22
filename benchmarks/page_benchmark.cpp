@@ -42,7 +42,7 @@ const std::string storagePath = "page_benchmark_storage";
 const size_t chunks_count = 1024;
 const size_t chunks_size = 1024;
 
-class ReadCallback : public dariadb::storage::ReaderClb {
+class ReadCallback : public dariadb::storage::IReaderClb {
 public:
   virtual void call(const dariadb::Meas &) override { ++count; }
   size_t count;

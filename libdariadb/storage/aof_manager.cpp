@@ -122,7 +122,7 @@ std::list<std::string> dariadb::storage::AOFManager::closed_aofs() {
 }
 
 void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
-                                            AofFileDropper *storage) {
+                                            IAofFileDropper *storage) {
   auto p = AOFile::Params(_params.max_size, _params.path);
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{p, fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
@@ -130,7 +130,7 @@ void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
   storage->drop(ptr, without_path);
 }
 
-void AOFManager::set_downlevel(AofFileDropper *down) {
+void AOFManager::set_downlevel(IAofFileDropper *down) {
   _down = down;
   this->drop_old_if_needed();
 }
@@ -231,7 +231,7 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
-void AOFManager::foreach (const QueryInterval &q, ReaderClb * clbk) {
+void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();

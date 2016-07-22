@@ -15,8 +15,9 @@
 #include <utils/fs.h>
 #include <utils/logger.h>
 #include <utils/thread_manager.h>
+#include <utils/exception.h>
 
-class Moc_Dropper : public dariadb::storage::CapacitorManager::CapDropper {
+class Moc_Dropper : public dariadb::storage::CapacitorManager::ICapDropper {
 public:
   size_t calls;
   Moc_Dropper() {

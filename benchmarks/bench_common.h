@@ -15,7 +15,7 @@ const size_t total_readers_count = 1;
 const size_t id_per_thread = 100;
 const size_t all_writes = total_threads_count * write_per_id_count * id_per_thread;
 
-class BenchCallback : public dariadb::storage::ReaderClb {
+class BenchCallback : public dariadb::storage::IReaderClb {
 public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &) { count++; }
@@ -31,7 +31,7 @@ dariadb::Id get_id_to(dariadb::Id id) {
 }
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
                             std::atomic_long *append_count,
-                            dariadb::storage::MeasWriter *ms) {
+                            dariadb::storage::IMeasWriter *ms) {
   try {
     auto m = dariadb::Meas::empty();
     m.time = dariadb::timeutil::current_time();
@@ -56,7 +56,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
   }
 }
 
-void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::MeasStorage *stor,
+void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStorage *stor,
                   size_t reads_count, dariadb::Time from, dariadb::Time to,
                   bool quiet = false) {
   std::cout << "==> init random ids...." << std::endl;
