@@ -26,6 +26,7 @@ public:
   Engine &operator=(const Engine &) = delete;
   virtual ~Engine();
 
+
   Engine(storage::AOFManager::Params aof_params,
          storage::PageManager::Params page_manager_params,
          dariadb::storage::CapacitorManager::Params cap_params);
@@ -33,7 +34,7 @@ public:
   append_result append(const Meas &value) override;
 
   void flush() override;
-
+  void stop();
   QueueSizes queue_size() const;
 
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk);
