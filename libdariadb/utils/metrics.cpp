@@ -51,7 +51,7 @@ MetricsManager *MetricsManager::instance() {
 }
 
 void MetricsManager::add(const std::string &group, const std::string &name,
-                         const Metric_Ptr &value) {
+                         const IMetric_Ptr &value) {
   std::lock_guard<Locker> lg(_locker);
 
   auto group_it = this->_values.find(group);

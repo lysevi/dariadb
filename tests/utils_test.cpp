@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(Metrics) {
     }
     using dariadb::utils::metrics::FloatMetric;
     ADD_METRICS("group2", "template",
-                dariadb::utils::metrics::Metric_Ptr{new FloatMetric(float(3.14))});
+                dariadb::utils::metrics::IMetric_Ptr{new FloatMetric(float(3.14))});
   }
   auto dump = dariadb::utils::metrics::MetricsManager::instance()->to_string();
   BOOST_CHECK(dump.size() > size_t(0));
