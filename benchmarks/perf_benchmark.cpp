@@ -1,23 +1,11 @@
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <iterator>
-
 #include "bench_common.h"
 #include <dariadb.h>
-#include <algorithm>
-#include <atomic>
-#include <boost/program_options.hpp>
-#include <chrono>
-#include <cmath>
-#include <ctime>
-#include <limits>
-#include <random>
 #include <storage/capacitor.h>
-#include <thread>
 #include <utils/fs.h>
 #include <utils/metrics.h>
 #include <utils/thread_manager.h>
+
+#include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
@@ -45,8 +33,8 @@ void show_info(dariadb::storage::Engine *storage) {
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
-              << " T:" << queue_sizes.active_works << ")"
-              << " reads: " << reads_count << " speed:" << reads_per_sec << "/sec"
+              << " T:" << queue_sizes.active_works << ") reads: " << reads_count
+              << " speed:" << reads_per_sec << "/sec"
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:"
               << (int64_t(100) * append_count) / dariadb_bench::all_writes
@@ -58,6 +46,24 @@ void show_info(dariadb::storage::Engine *storage) {
     }
   }
   std::cout << "\n";
+}
+
+void show_drop_info(dariadb::storage::Engine *storage) {
+	while (true) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		auto queue_sizes = storage->queue_size();
+		std::cout << "\r"
+			<< " in queue: (p:" << queue_sizes.pages_count
+			<< " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+			<< " T:" << queue_sizes.active_works << ")          ";
+		std::cout.flush();
+		if (stop_info) {
+			std::cout.flush();
+			break;
+		}
+	}
+	std::cout << "\n";
 }
 
 void reader(dariadb::storage::MeasStorage_ptr ms, dariadb::IdSet all_id_set,
@@ -166,14 +172,14 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    dariadb::Time start_time = dariadb::Time(0); // dariadb::timeutil::current_time();
+    dariadb::Time start_time =  dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
     dariadb::storage::PageManager::Params page_param(storage_path, chunk_per_storage,
                                                      chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
-    //cap_param.store_period = 1000 * 2;
+	cap_param.store_period = 0;// 1000 * 2;
     cap_param.max_levels = 11;
-    // cap_param.max_closed_caps = 5;
+	cap_param.max_closed_caps = 0;// 5;
     dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
     aof_param.buffer_size = 1000;
     aof_param.max_size = cap_param.measurements_count();
@@ -237,7 +243,7 @@ int main(int argc, char *argv[]) {
     {
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
-      std::thread flush_info_thread(show_info, raw_ptr);
+      std::thread flush_info_thread(show_drop_info, raw_ptr);
 
       auto start = clock();
       raw_ptr->flush();
@@ -249,11 +255,11 @@ int main(int argc, char *argv[]) {
       std::cout << "flush time: " << elapsed << std::endl;
     }
 
-    /*if(!readonly){
-                size_t ccount = size_t(raw_ptr->queue_size().cola_count*0.5);
+    if(!readonly){
+      size_t ccount = size_t(raw_ptr->queue_size().cola_count);
       std::cout << "==> drop part caps to " << ccount << "..." << std::endl;
       stop_info = false;
-      std::thread flush_info_thread(show_info, raw_ptr);
+      std::thread flush_info_thread(show_drop_info, raw_ptr);
 
       auto start = clock();
       raw_ptr->drop_part_caps(ccount);
@@ -263,12 +269,12 @@ int main(int argc, char *argv[]) {
       stop_info = true;
       flush_info_thread.join();
       std::cout << "drop time: " << elapsed << std::endl;
-    }*/
+    }
 
-    if (!readonly) {
+    /*if (!readonly) {
       std::cout << "==> gc... " << std::endl;
       stop_info = false;
-      std::thread flush_info_thread(show_info, raw_ptr);
+      std::thread flush_info_thread(show_drop_info, raw_ptr);
 
       auto start = clock();
       raw_ptr->gc();
@@ -276,14 +282,13 @@ int main(int argc, char *argv[]) {
       stop_info = true;
       flush_info_thread.join();
       std::cout << "gc time: " << elapsed << std::endl;
-    }
+    }*/
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
-              << ")"
-              << " reads: " << reads_count << " writes: " << append_count << std::endl;
+              << ") reads: " << reads_count << " writes: " << append_count << std::endl;
 
     std::cout << "Active threads: "
               << dariadb::utils::async::ThreadManager::instance()->active_works()
@@ -323,7 +328,7 @@ int main(int argc, char *argv[]) {
       std::cout << "readed: " << readed.size() << std::endl;
       std::cout << "time: " << elapsed << std::endl;
 
-      auto expected = (dariadb_bench::iteration_count *
+      auto expected = (dariadb_bench::write_per_id_count *
                        dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
 
       std::map<dariadb::Id, dariadb::Meas::MeasList> _dict;

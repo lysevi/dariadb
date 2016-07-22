@@ -1,18 +1,12 @@
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <iterator>
-#include <thread>
-
 #include "bench_common.h"
-#include <boost/program_options.hpp>
-#include <ctime>
 #include <storage/aof_manager.h>
 #include <storage/manifest.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/metrics.h>
 #include <utils/thread_manager.h>
+
+#include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
@@ -91,7 +85,6 @@ int main(int argc, char *argv[]) {
   {
     const std::string storage_path = "aof_benchmark_storage";
 
-    // dont_clean=true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }

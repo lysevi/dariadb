@@ -1,25 +1,13 @@
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <iterator>
-
 #include "bench_common.h"
 #include <dariadb.h>
-#include <algorithm>
-#include <atomic>
-#include <boost/program_options.hpp>
-#include <cassert>
-#include <chrono>
-#include <cmath>
-#include <ctime>
-#include <limits>
-#include <random>
 #include <storage/manifest.h>
 #include <storage/page_manager.h>
 #include <thread>
 #include <utils/fs.h>
 #include <utils/metrics.h>
 #include <utils/thread_manager.h>
+
+#include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
