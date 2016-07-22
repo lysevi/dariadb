@@ -174,6 +174,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::Time start_time =  dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
+
     dariadb::storage::PageManager::Params page_param(storage_path, chunk_per_storage,
                                                      chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
@@ -240,6 +241,7 @@ int main(int argc, char *argv[]) {
     stop_info = true;
     info_thread.join();
     std::cout << " total id:" << all_id_set.size() << std::endl;
+
     {
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
@@ -298,7 +300,10 @@ int main(int argc, char *argv[]) {
                                 dariadb::timeutil::current_time());
 
     if (readall_enabled) {
-
+		if (readonly) {
+			start_time = dariadb::Time(0);
+		}
+		
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
       auto max_time = ms->maxTime();
       std::cout << "==> interval end time: " << dariadb::timeutil::to_string(max_time)
