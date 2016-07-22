@@ -2,7 +2,6 @@
 
 #include "../meas.h"
 #include "icallbacks.h"
-#include "../storage/chunk.h"
 #include "../storage/query_param.h"
 
 namespace dariadb {
