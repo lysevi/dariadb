@@ -3,6 +3,8 @@
 #include <thread>
 #include <utils/exception.h>
 #include <utils/utils.h>
+#include <thread>
+#include <mutex>
 
 namespace dariadb_test {
 #undef NO_DATA

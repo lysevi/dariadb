@@ -2,6 +2,7 @@
 #include "../flags.h"
 #include "../utils/fs.h"
 #include "../utils/metrics.h"
+#include "callbacks.h"
 #include "manifest.h"
 #include <algorithm>
 #include <cassert>

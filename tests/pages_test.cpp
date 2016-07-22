@@ -10,6 +10,7 @@
 #include <storage/manifest.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
+#include <storage/callbacks.h>
 #include <utils/fs.h>
 #include <utils/thread_manager.h>
 #include <utils/utils.h>

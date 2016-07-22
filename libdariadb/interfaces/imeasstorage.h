@@ -2,6 +2,7 @@
 
 #include "imeaswriter.h"
 #include "imeassource.h"
+#include "../utils/utils.h"
 
 namespace dariadb {
 	namespace storage {

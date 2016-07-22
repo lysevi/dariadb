@@ -6,6 +6,7 @@
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
 #include "manifest.h"
+#include "callbacks.h"
 #include <cassert>
 
 using namespace dariadb::storage;

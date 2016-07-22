@@ -2,9 +2,8 @@
 
 #include "../common.h"
 #include "../meas.h"
-#include "../storage/callbacks.h"
+#include "icallbacks.h"
 #include "../storage/query_param.h"
-#include "../utils/utils.h"
 #include <memory>
 
 namespace dariadb {

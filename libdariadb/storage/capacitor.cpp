@@ -20,6 +20,7 @@ File struct:
 #include "../utils/metrics.h"
 #include "../utils/utils.h"
 #include "manifest.h"
+#include "callbacks.h"
 #include <algorithm>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
