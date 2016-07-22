@@ -1,9 +1,9 @@
 #pragma once
 
 #include "../meas.h"
-#include "callbacks.h"
-#include "chunk.h"
-#include "query_param.h"
+#include "icallbacks.h"
+#include "../storage/chunk.h"
+#include "../storage/query_param.h"
 
 namespace dariadb {
 namespace storage {
