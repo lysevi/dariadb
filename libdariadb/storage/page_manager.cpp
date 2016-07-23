@@ -382,6 +382,10 @@ public:
     return append_unsafe(value);
   }
 
+  void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
+      NOT_IMPLEMENTED;
+  }
+
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
@@ -457,6 +461,9 @@ dariadb::append_result dariadb::storage::PageManager::append(const Meas &value) 
   return impl->append(value);
 }
 
+void dariadb::storage::PageManager::append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
+    return impl->append(file_prefix, ma);
+}
 void PageManager::fsck(bool force_check) {
   return impl->fsck(force_check);
 }

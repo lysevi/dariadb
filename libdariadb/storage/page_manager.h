@@ -63,8 +63,10 @@ public:
   dariadb::Time maxTime();
 
   append_result append(const Meas &value) override;
+  void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma);
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
+
 
 private:
   static PageManager *_instance;
