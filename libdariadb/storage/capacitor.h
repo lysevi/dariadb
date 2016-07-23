@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../meas.h"
 #include "../interfaces/imeasstorage.h"
+#include "../meas.h"
 #include "../utils/fs.h"
 #include "bloom_filter.h"
 #include <memory>
@@ -41,17 +41,17 @@ public:
     dariadb::Time minTime;
     dariadb::Time maxTime;
     bool is_dropped : 1;
-    bool is_closed : 1;         //is correctly closed
-    bool is_full : 1;           //is full. normaly is true
-    bool is_open_to_write : 1;  //true if oppened to write.
-    uint32_t B;                 //one block size. block contains B measurements.
-    uint64_t size;              //sizeof file in bytes
-    uint32_t _size_B;           //how many block (sizeof(B)) addeded.
-    uint8_t  levels_count;      //currently cola levels count
-    uint64_t max_values_count;  //maxumim levels
-    uint64_t _writed;           //levels addeded
-    uint32_t _memvalues_pos;    //values in zero level.
-    uint64_t id_bloom;          //bloom filters.
+    bool is_closed : 1;        // is correctly closed
+    bool is_full : 1;          // is full. normaly is true
+    bool is_open_to_write : 1; // true if oppened to write.
+    uint32_t B;                // one block size. block contains B measurements.
+    uint64_t size;             // sizeof file in bytes
+    uint32_t _size_B;          // how many block (sizeof(B)) addeded.
+    uint8_t levels_count;      // currently cola levels count
+    uint64_t max_values_count; // maxumim levels
+    uint64_t _writed;          // levels addeded
+    uint32_t _memvalues_pos;   // values in zero level.
+    uint64_t id_bloom;         // bloom filters.
     uint64_t flag_bloom;
     uint64_t transaction_number; // when drop to downlevel storage is non zero.
 

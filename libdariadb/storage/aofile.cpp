@@ -287,9 +287,7 @@ public:
     return result;
   }
 
-  void flush() {
-    TIMECODE_METRICS(ctmd, "flush", "AOFile::flush");
-  }
+  void flush() { TIMECODE_METRICS(ctmd, "flush", "AOFile::flush"); }
 
   std::string filename() const { return _filename; }
 
@@ -345,7 +343,6 @@ AOFile::AOFile(const Params &params) : _Impl(new AOFile::Private(params)) {}
 
 AOFile::AOFile(const AOFile::Params &params, const std::string &fname, bool readonly)
     : _Impl(new AOFile::Private(params, fname, readonly)) {}
-
 
 dariadb::Time AOFile::minTime() {
   return _Impl->minTime();

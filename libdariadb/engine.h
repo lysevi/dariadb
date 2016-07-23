@@ -26,7 +26,6 @@ public:
   Engine &operator=(const Engine &) = delete;
   virtual ~Engine();
 
-
   Engine(storage::AOFManager::Params aof_params,
          storage::PageManager::Params page_manager_params,
          dariadb::storage::CapacitorManager::Params cap_params);

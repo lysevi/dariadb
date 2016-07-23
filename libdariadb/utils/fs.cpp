@@ -134,8 +134,10 @@ public:
   static Private *open(const std::string &path, bool read_only) {
     auto result = new Private();
     auto open_flag = read_only ? bi::read_only : bi::read_write;
-    result->m_file = std::unique_ptr<bi::file_mapping>{new bi::file_mapping(path.c_str(), open_flag)};
-    result->m_region = std::unique_ptr<bi::mapped_region> {new bi::mapped_region(*(result->m_file), open_flag)};
+    result->m_file =
+        std::unique_ptr<bi::file_mapping>{new bi::file_mapping(path.c_str(), open_flag)};
+    result->m_region = std::unique_ptr<bi::mapped_region>{
+        new bi::mapped_region(*(result->m_file), open_flag)};
     return result;
   }
 

@@ -1,16 +1,16 @@
 #pragma once
 
-#include "imeaswriter.h"
-#include "imeassource.h"
 #include "../utils/utils.h"
+#include "imeassource.h"
+#include "imeaswriter.h"
 
 namespace dariadb {
-	namespace storage {
+namespace storage {
 
-		class IMeasStorage : public utils::NonCopy, public IMeasSource, public IMeasWriter {
-		public:
-		};
+class IMeasStorage : public utils::NonCopy, public IMeasSource, public IMeasWriter {
+public:
+};
 
-		typedef std::shared_ptr<IMeasStorage> IMeasStorage_ptr;
-	}
+typedef std::shared_ptr<IMeasStorage> IMeasStorage_ptr;
+}
 }

@@ -5,8 +5,8 @@
 #include "../utils/fs.h"
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
-#include "manifest.h"
 #include "callbacks.h"
+#include "manifest.h"
 #include <cassert>
 
 using namespace dariadb::storage;
@@ -25,8 +25,8 @@ CapacitorManager::CapacitorManager(const Params &param)
     : utils::PeriodWorker(std::chrono::milliseconds(5 * 1000)), _params(param) {
   _down = nullptr;
 
-  ///open last not closed file.normally do nothing,
-  ///because engine use bulk loading and file or not exists or full.
+  /// open last not closed file.normally do nothing,
+  /// because engine use bulk loading and file or not exists or full.
   auto files = cap_files();
   for (auto f : files) {
     auto hdr = Capacitor::readHeader(f);
@@ -39,7 +39,6 @@ CapacitorManager::CapacitorManager(const Params &param)
   if (_params.store_period != 0) {
     this->start_worker();
   }
-
 }
 
 void CapacitorManager::fsck(bool force_check) {
@@ -71,7 +70,7 @@ CapacitorManager *dariadb::storage::CapacitorManager::instance() {
   return CapacitorManager::_instance;
 }
 
-///perid_worker callback
+/// perid_worker callback
 void CapacitorManager::call() {
   auto closed = this->closed_caps();
   auto max_hdr_time = dariadb::timeutil::current_time() - _params.store_period;
@@ -93,7 +92,8 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   if (_down != nullptr) {
     auto closed = this->closed_caps();
 
-    if (closed.size() > _params.max_closed_caps && _params.max_closed_caps > 0 && _params.store_period==0) {
+    if (closed.size() > _params.max_closed_caps && _params.max_closed_caps > 0 &&
+        _params.store_period == 0) {
       size_t to_drop = closed.size() - _params.max_closed_caps;
       drop_closed_unsafe(to_drop);
     } else {

@@ -58,7 +58,7 @@ struct Range {
   }
 };
 
-///split string by space.
-std::vector<std::string> tokens(const std::string&str);
+/// split string by space.
+std::vector<std::string> tokens(const std::string &str);
 }
 }

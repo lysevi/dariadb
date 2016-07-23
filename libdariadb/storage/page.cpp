@@ -40,7 +40,8 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   std::fill(region, region + sz, 0);
 
   res->page_mmap = mmap;
-  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name), index_file_size(chunk_per_storage));
+  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+                                  index_file_size(chunk_per_storage));
   res->region = region;
 
   res->header = reinterpret_cast<PageHeader *>(region);
@@ -85,18 +86,18 @@ Page *Page::open(std::string file_name, bool read_only) {
 
 void Page::check_page_struct() {
 #ifdef DEBUG
-	for (uint32_t i = 0; i < header->chunk_per_storage; ++i) {
-		auto irec = &_index->index[i];
-		if (irec->is_init) {
+  for (uint32_t i = 0; i < header->chunk_per_storage; ++i) {
+    auto irec = &_index->index[i];
+    if (irec->is_init) {
 
-			ChunkHeader *info = reinterpret_cast<ChunkHeader *>(chunks + irec->offset);
-			if (info->id != irec->chunk_id) {
-				throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
-			}
-			if (info->pos_in_page != i) {
-				throw MAKE_EXCEPTION("(info->pos_in_page != i)");
-}
-	}
+      ChunkHeader *info = reinterpret_cast<ChunkHeader *>(chunks + irec->offset);
+      if (info->id != irec->chunk_id) {
+        throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
+      }
+      if (info->pos_in_page != i) {
+        throw MAKE_EXCEPTION("(info->pos_in_page != i)");
+      }
+    }
   }
 #endif
 }
@@ -171,7 +172,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         assert(_openned_chunk.ch->header->id == _openned_chunk.index->chunk_id);
         this->header->minTime = std::min(m.time, this->header->minTime);
         this->header->maxTime = std::max(m.time, this->header->maxTime);
-        
+
         _index->update_index_info(_openned_chunk.index, _openned_chunk.ch, m,
                                   _openned_chunk.pos);
         return true;
@@ -206,7 +207,7 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
         ptr->header->commit = true;
       }
       _openned_chunk.ch = ptr;
-      
+
       init_chunk_index_rec(ptr);
       return true;
     }
@@ -219,16 +220,16 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
 void Page::close_corrent_chunk() {
   if (_openned_chunk.ch != nullptr) {
-    
+
     _openned_chunk.ch->close();
 #ifdef ENABLE_METRICS
     // calc perscent of free space in closed chunks
     auto used_space = _openned_chunk.ch->header->size - _openned_chunk.ch->header->bw_pos;
     auto size = _openned_chunk.ch->header->size;
     auto percent = used_space * float(100.0) / size;
-	auto raw_metric_ptr = new dariadb::utils::metrics::FloatMetric(percent);
+    auto raw_metric_ptr = new dariadb::utils::metrics::FloatMetric(percent);
     ADD_METRICS("write", "chunk_free",
-                dariadb::utils::metrics::IMetric_Ptr{ raw_metric_ptr });
+                dariadb::utils::metrics::IMetric_Ptr{raw_metric_ptr});
 #endif
     _openned_chunk.ch = nullptr;
   }

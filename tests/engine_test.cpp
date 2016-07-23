@@ -235,8 +235,8 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
                                               chunk_size);
     dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
     aofp.max_size = cap_pam.measurements_count();
-    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        aofp, pmp, cap_pam)};
+    std::shared_ptr<dariadb::storage::Engine> ms{
+        new dariadb::storage::Engine(aofp, pmp, cap_pam)};
 
     // storage: id=0: 10,11,....30 id=1: 0,1,2,3,4,5
     // cap: id=0: 6,7,8,9
@@ -408,8 +408,8 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
                                                chunk_size);
     dariadb::storage::CapacitorManager::Params capm(storage_path, cap_B);
     aofp.max_size = capm.measurements_count();
-    std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        aofp, pamp, capm)};
+    std::unique_ptr<dariadb::storage::Engine> ms{
+        new dariadb::storage::Engine(aofp, pamp, capm)};
 
     auto m = dariadb::Meas::empty();
 

@@ -1,8 +1,8 @@
 #pragma once
+#include "../interfaces/ichunkcontainer.h"
 #include "../interfaces/imeaswriter.h"
 #include "../utils/fs.h"
 #include "chunk.h"
-#include "../interfaces/ichunkcontainer.h"
 #include "index.h"
 
 namespace dariadb {
@@ -18,12 +18,12 @@ struct PageHeader {
   bool is_full : 1;           // is full :)
   bool is_closed : 1;         // is correctly closed.
   bool is_open_to_write : 1;  // true if oppened to write.
-  bool _under_transaction:1;
-  dariadb::Time minTime;      // minimal stored time
-  dariadb::Time maxTime;      // maximum stored time
-  uint64_t max_chunk_id;      // max(chunk->id)
+  bool _under_transaction : 1;
+  dariadb::Time minTime; // minimal stored time
+  dariadb::Time maxTime; // maximum stored time
+  uint64_t max_chunk_id; // max(chunk->id)
 
-  uint64_t transaction;       // maximum transaction number.
+  uint64_t transaction; // maximum transaction number.
 };
 #pragma pack(pop)
 
@@ -78,13 +78,14 @@ private:
   ChunkWithIndex _openned_chunk;
 
   void check_page_struct();
-public:
-  uint8_t    *region;      // page  file mapp region
-  PageHeader *header;
-  uint8_t    *chunks;
 
-  std::string   filename;
-  bool          readonly;
+public:
+  uint8_t *region; // page  file mapp region
+  PageHeader *header;
+  uint8_t *chunks;
+
+  std::string filename;
+  bool readonly;
 
 protected:
   PageIndex_ptr _index;

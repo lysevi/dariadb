@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../interfaces/ichunkcontainer.h"
 #include "../utils/fs.h"
 #include "chunk.h"
-#include "../interfaces/ichunkcontainer.h"
 #include <boost/thread/shared_mutex.hpp>
 namespace dariadb {
 namespace storage {
@@ -13,7 +13,7 @@ struct IndexHeader {
   dariadb::Time minTime;
   dariadb::Time maxTime;
 
-  bool is_sorted;             // items in index file sorted by time
+  bool is_sorted; // items in index file sorted by time
   bool is_closed;
   bool is_full;
   uint64_t id_bloom;   // bloom filter of Meas.id
@@ -25,12 +25,11 @@ struct IndexReccord {
   Time minTime, maxTime; // min max time of linked chunk
   size_t flag_bloom;     // bloom filters of writed meases
   size_t id_bloom;
-  uint64_t chunk_id;     // chunk->id
-  uint64_t offset;       // offset in bytes of chunk in page
-  bool is_init : 1;      // is init :)
+  uint64_t chunk_id; // chunk->id
+  uint64_t offset;   // offset in bytes of chunk in page
+  bool is_init : 1;  // is init :)
   bool commit : 1;
   uint64_t transaction;
-  
 };
 #pragma pack(pop)
 

@@ -13,6 +13,5 @@ public:
 };
 
 typedef std::shared_ptr<IReaderClb> ReaderClb_ptr;
-
 }
 }

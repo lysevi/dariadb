@@ -17,17 +17,18 @@ inline bool check_index_rec(IndexReccord &it, dariadb::Time from, dariadb::Time 
          inInterval(it.minTime, it.maxTime, to);
 }
 
-inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id, dariadb::Flag flag) {
-	auto id_bloom_result = false;
-	if (dariadb::storage::bloom_check(_index_it.id_bloom, id)) {
-		id_bloom_result = true;
-	}
-	auto flag_bloom_result = false;
-	if (flag == dariadb::Flag(0) ||
-		dariadb::storage::bloom_check(_index_it.flag_bloom, flag)) {
-		flag_bloom_result = true;
-	}
-	return id_bloom_result && flag_bloom_result;
+inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id,
+                         dariadb::Flag flag) {
+  auto id_bloom_result = false;
+  if (dariadb::storage::bloom_check(_index_it.id_bloom, id)) {
+    id_bloom_result = true;
+  }
+  auto flag_bloom_result = false;
+  if (flag == dariadb::Flag(0) ||
+      dariadb::storage::bloom_check(_index_it.flag_bloom, flag)) {
+    flag_bloom_result = true;
+  }
+  return id_bloom_result && flag_bloom_result;
 }
 
 PageIndex::~PageIndex() {
@@ -121,7 +122,7 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
                                   const dariadb::Meas &m, uint32_t pos) {
   assert(cur_index->chunk_id == ptr->header->id);
   assert(ptr->header->pos_in_page == pos);
-  
+
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->header->maxTime);

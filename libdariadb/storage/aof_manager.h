@@ -19,7 +19,7 @@ class AOFManager : public IMeasStorage {
 public:
   struct Params {
     std::string path;
-    uint64_t max_size;    // measurements count in one file
+    uint64_t max_size;  // measurements count in one file
     size_t buffer_size; // inner buffer size
     Params() {
       max_size = 0;
@@ -30,7 +30,8 @@ public:
       max_size = _max_size;
       buffer_size = AOF_BUFFER_SIZE;
     }
-    Params(const std::string storage_path, const uint64_t _max_size, const size_t bufsize) {
+    Params(const std::string storage_path, const uint64_t _max_size,
+           const size_t bufsize) {
       path = storage_path;
       max_size = _max_size;
       buffer_size = bufsize;

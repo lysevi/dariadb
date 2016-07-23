@@ -19,8 +19,8 @@ File struct:
 #include "../utils/kmerge.h"
 #include "../utils/metrics.h"
 #include "../utils/utils.h"
-#include "manifest.h"
 #include "callbacks.h"
+#include "manifest.h"
 #include <algorithm>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
@@ -41,13 +41,13 @@ using namespace dariadb::utils;
 
 #pragma pack(push, 1)
 struct level_header {
-  uint8_t lvl;            //level num
-  uint64_t count;         //values count
-  uint64_t pos;           //values addeded
-  dariadb::Time _minTime; //minMax time
+  uint8_t lvl;            // level num
+  uint64_t count;         // values count
+  uint64_t pos;           // values addeded
+  dariadb::Time _minTime; // minMax time
   dariadb::Time _maxTime;
-  uint32_t crc;           //checksum
-  uint64_t id_bloom;      //blooms
+  uint32_t crc;      // checksum
+  uint64_t id_bloom; // blooms
   uint64_t flag_bloom;
 };
 #pragma pack(pop)
@@ -138,7 +138,7 @@ public:
         mmap->close();
       }
     }
-    mmap=nullptr;
+    mmap = nullptr;
   }
 
   void close() { _header->is_full = true; }
@@ -303,7 +303,7 @@ public:
     return result;
   }
 
-  ///bulk loading. values should ve sorted by time.
+  /// bulk loading. values should ve sorted by time.
   append_result bulk(const Meas::MeasArray::const_iterator &begin,
                      const Meas::MeasArray::const_iterator &end) {
     level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
@@ -358,7 +358,7 @@ public:
     }
   }
 
-  ///add values to zero level
+  /// add values to zero level
   append_result append_to_mem(const Meas &value) {
     _memvalues[_header->_memvalues_pos] = value;
 
@@ -434,7 +434,7 @@ public:
         break;
       }
     }
-    //if values in levels sorted, merge dont needed.
+    // if values in levels sorted, merge dont needed.
     if (is_sorted) {
       auto begin = to_merge.front()->begin;
       auto end = to_merge.back()->begin + to_merge.back()->hdr->pos;
@@ -474,7 +474,7 @@ public:
     Meas back() { return _back; }
   };
 
-  ///values dropped to down-level storage. grouped by id.
+  /// values dropped to down-level storage. grouped by id.
   void drop_to_stor(IMeasWriter *stor) {
     TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
 
@@ -691,7 +691,7 @@ public:
       flag_exists = true;
     }
     if (!id_exists || !flag_exists) {
-        ///no values for query. return no_data for each id.
+      /// no values for query. return no_data for each id.
       if (!q.ids.empty() && readed_ids.size() != q.ids.size()) {
         for (auto id : q.ids) {
           if (readed_ids.find(id) == readed_ids.end()) {
@@ -813,8 +813,7 @@ Time Capacitor::maxTime() {
   return _Impl->maxTime();
 }
 
-bool Capacitor::minMaxTime(Id id, Time *minResult,
-                           Time *maxResult) {
+bool Capacitor::minMaxTime(Id id, Time *minResult, Time *maxResult) {
   return _Impl->minMaxTime(id, minResult, maxResult);
 }
 void Capacitor::flush() {
@@ -825,9 +824,8 @@ append_result Capacitor::append(const Meas &value) {
   return _Impl->append(value);
 }
 
-append_result
-Capacitor::append(const Meas::MeasArray::const_iterator &begin,
-                                    const Meas::MeasArray::const_iterator &end) {
+append_result Capacitor::append(const Meas::MeasArray::const_iterator &begin,
+                                const Meas::MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
@@ -843,8 +841,7 @@ Meas::Id2Meas Capacitor::readInTimePoint(const QueryTimePoint &q) {
   return _Impl->readInTimePoint(q);
 }
 
-Meas::Id2Meas Capacitor::currentValue(const IdArray &ids,
-                                                        const Flag &flag) {
+Meas::Id2Meas Capacitor::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 

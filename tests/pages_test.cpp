@@ -6,11 +6,11 @@
 #include <compression.h>
 #include <flags.h>
 #include <storage/bloom_filter.h>
+#include <storage/callbacks.h>
 #include <storage/chunk.h>
 #include <storage/manifest.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
-#include <storage/callbacks.h>
 #include <utils/fs.h>
 #include <utils/thread_manager.h>
 #include <utils/utils.h>
@@ -171,7 +171,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
     dariadb::storage::QueryInterval qi(all_id_array, 0, 0, t);
     auto links_list = PageManager::instance()->chunksByIterval(qi);
 
-    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
+    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+        new dariadb::storage::MList_ReaderClb};
 
     PageManager::instance()->readLinks(qi, links_list, clb.get());
 
@@ -186,7 +187,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
       dariadb::storage::QueryInterval qi(all_id_array, 0, start_time, end_time);
       auto link_list = PageManager::instance()->chunksByIterval(qi);
 
-      auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
+      auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+          new dariadb::storage::MList_ReaderClb};
 
       PageManager::instance()->readLinks(qi, links_list, clb.get());
 
@@ -245,7 +247,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   BOOST_CHECK_EQUAL(header.count_readers, size_t(0));
 
   auto iheader = dariadb::storage::Page::readIndexHeader(fname + "i");
-  BOOST_CHECK(iheader.count!=0);
+  BOOST_CHECK(iheader.count != 0);
 
   PageManager::start(PageManager::Params(storagePath, chunks_count, chunks_size));
 
@@ -295,7 +297,8 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   auto link_list = PageManager::instance()->chunksByIterval(qi);
 
-  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
+  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+      new dariadb::storage::MList_ReaderClb};
   PageManager::instance()->readLinks(qi, link_list, clb.get());
 
   size_t writed = addeded.size();
@@ -371,7 +374,8 @@ BOOST_AUTO_TEST_CASE(PageManagerTransactions) {
 
   auto link_list = PageManager::instance()->chunksByIterval(qi);
 
-  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{new dariadb::storage::MList_ReaderClb};
+  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+      new dariadb::storage::MList_ReaderClb};
 
   PageManager::instance()->readLinks(qi, link_list, clb.get());
 

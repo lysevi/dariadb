@@ -20,9 +20,9 @@ public:
   };
   struct Params {
     std::string path;
-	uint8_t max_levels;
+    uint8_t max_levels;
     size_t max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
-    uint32_t B;               // measurements count in one data block
+    uint32_t B;             // measurements count in one data block
     dariadb::Time store_period;
     Params() {
       max_levels = COLA_MAX_LEVELS;
@@ -37,7 +37,7 @@ public:
       store_period = 0;
     }
 
-	uint64_t measurements_count() const {
+    uint64_t measurements_count() const {
       return Capacitor::Params::measurements_count(max_levels, B);
     }
   };
@@ -71,8 +71,9 @@ public:
   size_t files_count() const;
   void set_downlevel(ICapDropper *down) { _down = down; }
 
-  void fsck(bool force_check = true); // if false - check files openned for write-only
-  void drop_closed_files(size_t count); //drop 'count' closed files to down-level storage.
+  void fsck(bool force_check = true);   // if false - check files openned for write-only
+  void drop_closed_files(size_t count); // drop 'count' closed files to down-level
+                                        // storage.
 
 protected:
   void drop_closed_unsafe(size_t count);

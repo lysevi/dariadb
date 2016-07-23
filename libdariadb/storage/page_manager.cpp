@@ -1,12 +1,12 @@
 #include "page_manager.h"
 #include "../flags.h"
-#include "../utils/utils.h"
 #include "../utils/asyncworker.h"
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 #include "../utils/lru.h"
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
+#include "../utils/utils.h"
 #include "../utils/utils.h"
 #include "bloom_filter.h"
 #include "manifest.h"
@@ -31,14 +31,13 @@ const std::string GC_WAL_FILENAME = "gc_wall";
 
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
 
-class PageManager::Private{
+class PageManager::Private {
 public:
   Private(const PageManager::Params &param)
-      : _cur_page(nullptr), 
-	    _param(param),
+      : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
-    
-	_transaction_next_number = 0;
+
+    _transaction_next_number = 0;
     update_id = false;
     last_id = 0;
 
@@ -51,12 +50,12 @@ public:
     }
     /*this->start_async();*/
   }
-  
+
   ~Private() {
-	  if (_cur_page != nullptr) {
-		  _cur_page = nullptr;
-	  }
-	  _openned_pages.clear();
+    if (_cur_page != nullptr) {
+      _cur_page = nullptr;
+    }
+    _openned_pages.clear();
   }
 
   void fsck(bool force_check) {
@@ -67,7 +66,7 @@ public:
       return;
     }
 
-	auto gc_wall_full_path = utils::fs::append_path(_param.path, GC_WAL_FILENAME);
+    auto gc_wall_full_path = utils::fs::append_path(_param.path, GC_WAL_FILENAME);
     if (utils::fs::path_exists(gc_wall_full_path)) {
       logger_info("found " << gc_wall_full_path);
       this->play_gcwall(true);
@@ -79,8 +78,8 @@ public:
       auto file_name = utils::fs::append_path(_param.path, n);
       auto hdr = Page::readHeader(file_name);
       if (hdr.removed_chunks == hdr.addeded_chunks) {
-		logger_info("page: " << file_name << " is empty.");
-		erase_page(file_name);
+        logger_info("page: " << file_name << " is empty.");
+        erase_page(file_name);
       } else {
         if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
           auto res = Page_Ptr{Page::open(file_name)};
@@ -92,14 +91,14 @@ public:
   }
 
   /// file_name - full path.
-  void erase_page(const std::string& file_name) {
-	  auto target_name = utils::fs::extract_filename(file_name);
-	  logger_info("page: " << file_name << " removing...");
-	  _openned_pages.erase(file_name);
+  void erase_page(const std::string &file_name) {
+    auto target_name = utils::fs::extract_filename(file_name);
+    logger_info("page: " << file_name << " removing...");
+    _openned_pages.erase(file_name);
 
-	  Manifest::instance()->page_rm(target_name);
-	  utils::fs::rm(file_name);
-	  utils::fs::rm(file_name + "i");
+    Manifest::instance()->page_rm(target_name);
+    utils::fs::rm(file_name);
+    utils::fs::rm(file_name + "i");
   }
 
   Page_Ptr open_last_openned() {
@@ -149,8 +148,8 @@ public:
     return Page_Ptr{res};
   }
   // PM
-  void flush() { }
-  
+  void flush() {}
+
   Page_Ptr get_cur_page() {
     if (_cur_page == nullptr) {
       _cur_page = create_page();
@@ -268,7 +267,8 @@ public:
     return result;
   }
 
-  void readLinks(const QueryInterval &query, const ChunkLinkList &links, IReaderClb *clb) {
+  void readLinks(const QueryInterval &query, const ChunkLinkList &links,
+                 IReaderClb *clb) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
     std::lock_guard<std::mutex> lg(_locker);
 
@@ -316,18 +316,18 @@ public:
     TIMECODE_METRICS(ctmd, "readInTimePoint", "PageManager::valuesBeforeTimePoint");
     std::lock_guard<std::mutex> lg(_locker);
 
-	auto pred = [query](const IndexHeader &hdr) {
-		auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
-			(hdr.maxTime < query.time_point);
-		if (in_check) {
-			for (auto id : query.ids) {
-				if (storage::bloom_check(hdr.id_bloom, id)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	};
+    auto pred = [query](const IndexHeader &hdr) {
+      auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
+                      (hdr.maxTime < query.time_point);
+      if (in_check) {
+        for (auto id : query.ids) {
+          if (storage::bloom_check(hdr.id_bloom, id)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
 
     Meas::Id2Meas result;
 
@@ -336,7 +336,6 @@ public:
       result[id].time = query.time_point;
     }
 
-   
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
     for (auto it = page_list.rbegin(); it != page_list.rend(); ++it) {
@@ -515,8 +514,8 @@ public:
           throw MAKE_EXCEPTION("file not found: " + page_name);
         }
       }
-      
-	  std::vector<std::string> tokens = utils::tokens(chunks_poses);
+
+      std::vector<std::string> tokens = utils::tokens(chunks_poses);
 
       std::vector<uint32_t> poses(tokens.size());
       size_t pos = 0;
@@ -539,7 +538,7 @@ public:
     }
     gc_wall_ifs.close();
     size_t unmarked = 0;
-	//mark as init (or non init, if whe in called from fsck.
+    // mark as init (or non init, if whe in called from fsck.
     for (auto &kv : id2chunks) {
       for (auto &ch_pg : kv.second) {
         auto ch_ptr = std::get<0>(ch_pg);

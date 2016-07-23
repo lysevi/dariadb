@@ -1,9 +1,9 @@
 #pragma once
 
 #include <flags.h>
+#include <interfaces/imeasstorage.h>
 #include <meas.h>
 #include <string>
-#include <interfaces/imeasstorage.h>
 
 namespace dariadb_test {
 const size_t copies_count = 100;
