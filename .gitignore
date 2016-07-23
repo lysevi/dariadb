@@ -1,7 +1,6 @@
 tmp
 packages.config
 .vs
-gc_wall
 *.aof
 *.cap
 *.page

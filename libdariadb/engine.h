@@ -51,7 +51,7 @@ public:
   Meas::MeasList getResult(Id);
 
   void drop_part_caps(size_t count);
-  GCResult gc();
+
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
   void wait_all_asyncs();
 

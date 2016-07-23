@@ -131,12 +131,9 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     ms->wait_all_asyncs();
     auto pages_count = dariadb::storage::PageManager::instance()->files_count();
     BOOST_CHECK_GE(pages_count, size_t(2));
-    auto gc_res = ms->gc();
+
     pages_count = dariadb::storage::PageManager::instance()->files_count();
     BOOST_CHECK_GE(pages_count, size_t(2));
-
-    BOOST_CHECK(gc_res.page_result.page_removed != size_t(0));
-    BOOST_CHECK(gc_res.page_result.chunks_merged != size_t(0));
   }
   {
     dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine(

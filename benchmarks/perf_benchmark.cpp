@@ -273,19 +273,6 @@ int main(int argc, char *argv[]) {
       std::cout << "drop time: " << elapsed << std::endl;
     }
 
-    /*if (!readonly) {
-      std::cout << "==> gc... " << std::endl;
-      stop_info = false;
-      std::thread flush_info_thread(show_drop_info, raw_ptr);
-
-      auto start = clock();
-      raw_ptr->gc();
-      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-      stop_info = true;
-      flush_info_thread.join();
-      std::cout << "gc time: " << elapsed << std::endl;
-    }*/
-
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count

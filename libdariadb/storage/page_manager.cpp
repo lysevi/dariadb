@@ -27,7 +27,6 @@
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-const std::string GC_WAL_FILENAME = "gc_wall";
 
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
 
@@ -37,18 +36,9 @@ public:
       : _cur_page(nullptr), _param(param),
         _openned_pages(param.openned_page_chache_size) {
 
-    _transaction_next_number = 0;
     update_id = false;
     last_id = 0;
 
-    _cur_page = open_last_openned();
-    _under_transaction = false;
-    if (_cur_page != nullptr) {
-      _transaction_next_number = _cur_page->header->transaction + 1;
-    } else {
-      _transaction_next_number = 0;
-    }
-    /*this->start_async();*/
   }
 
   ~Private() {
@@ -64,12 +54,6 @@ public:
     }
     if (!utils::fs::path_exists(_param.path)) {
       return;
-    }
-
-    auto gc_wall_full_path = utils::fs::append_path(_param.path, GC_WAL_FILENAME);
-    if (utils::fs::path_exists(gc_wall_full_path)) {
-      logger_info("found " << gc_wall_full_path);
-      this->play_gcwall(true);
     }
 
     auto pages = Manifest::instance()->page_list();
@@ -101,26 +85,7 @@ public:
     utils::fs::rm(file_name + "i");
   }
 
-  Page_Ptr open_last_openned() {
-    if (!utils::fs::path_exists(_param.path)) {
-      return nullptr;
-    }
-    auto pages = Manifest::instance()->page_list();
 
-    for (auto n : pages) {
-      auto file_name = utils::fs::append_path(_param.path, n);
-      auto hdr = Page::readHeader(file_name);
-      if (!hdr.is_full) {
-        auto res = Page_Ptr{Page::open(file_name)};
-        update_id = false;
-        return res;
-      } else {
-        last_id = std::max(last_id, hdr.max_chunk_id);
-        update_id = true;
-      }
-    }
-    return nullptr;
-  }
 
   uint64_t calc_page_size() const {
     auto sz_info = _param.chunk_per_storage * sizeof(ChunkHeader);
@@ -397,10 +362,7 @@ public:
   append_result append_unsafe(const Meas &value) {
     while (true) {
       auto cur_page = this->get_cur_page();
-      if (_under_transaction) {
-        cur_page->header->transaction = _transaction_next_number;
-      }
-      cur_page->header->_under_transaction = _under_transaction;
+
       if (update_id) {
         update_id = false;
       }
@@ -420,220 +382,6 @@ public:
     return append_unsafe(value);
   }
 
-  uint64_t begin_transaction_unsafe() {
-    if (_under_transaction) {
-      throw MAKE_EXCEPTION("transaction already openned");
-    }
-    _transaction_next_number++;
-    _under_transaction = true;
-    if (_cur_page != nullptr) {
-      _cur_page->begin_transaction(_transaction_next_number);
-    }
-    return _transaction_next_number;
-  }
-
-  uint64_t begin_transaction() {
-    std::lock_guard<std::mutex> lg(_locker);
-
-    return begin_transaction_unsafe();
-  }
-
-  void commit_transaction_unsafe(uint64_t num) {
-    auto pred = [num](const IndexHeader &h) { return h.transaction == num; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-
-    for (auto pname : page_list) {
-      Page_Ptr p{Page::open(pname, false)};
-      p->commit_transaction(num);
-    }
-    _under_transaction = false;
-  }
-
-  void commit_transaction(uint64_t num) {
-    std::lock_guard<std::mutex> lg(_locker);
-    commit_transaction_unsafe(num);
-  }
-
-  void rollback_transaction(uint64_t num) {
-    std::lock_guard<std::mutex> lg(_locker);
-
-    auto pred = [num](const IndexHeader &) { return true; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-
-    for (auto pname : page_list) {
-      Page_Ptr p{Page::open(pname, false)};
-      p->rollback_transaction(num);
-    }
-    _under_transaction = false;
-  }
-
-  struct ChunkById {
-    bool operator()(const std::tuple<Chunk_Ptr, Page_Ptr> &left,
-                    const std::tuple<Chunk_Ptr, Page_Ptr> &right) const {
-      return std::get<0>(left)->header->maxTime < std::get<0>(right)->header->maxTime;
-    }
-  };
-
-  PageManager::GCResult play_gcwall(bool in_fsck) {
-    auto gc_file = utils::fs::append_path(this->_param.path, GC_WAL_FILENAME);
-    std::ifstream gc_wall_ifs;
-    gc_wall_ifs.open(gc_file, std::ifstream::in);
-    if (!gc_wall_ifs.is_open()) {
-      throw MAKE_EXCEPTION("can open gc_wall file in " + this->_param.path);
-    }
-    std::string transaction_num_txt;
-    uint64_t transaction_num = 0;
-    if (!std::getline(gc_wall_ifs, transaction_num_txt)) {
-      throw MAKE_EXCEPTION("gc_wall is broken: transaction num.");
-    } else {
-      transaction_num = std::atoll(transaction_num_txt.c_str());
-    }
-    GCResult result;
-
-    if (in_fsck) {
-      this->rollback_transaction(transaction_num);
-    }
-
-    std::list<Page_Ptr> openned_pages;
-    std::map<dariadb::Id, std::set<std::tuple<Chunk_Ptr, Page_Ptr>, ChunkById>> id2chunks;
-
-    while (1) {
-      std::string page_name;
-      if (!std::getline(gc_wall_ifs, page_name)) {
-        break;
-      }
-      std::string chunks_poses;
-      if (!std::getline(gc_wall_ifs, chunks_poses)) {
-        throw MAKE_EXCEPTION("gc_wall is broken");
-      }
-      bool file_is_exists = utils::fs::path_exists(page_name);
-      if (!file_is_exists) {
-        if (!in_fsck) {
-          throw MAKE_EXCEPTION("file not found: " + page_name);
-        }
-      }
-
-      std::vector<std::string> tokens = utils::tokens(chunks_poses);
-
-      std::vector<uint32_t> poses(tokens.size());
-      size_t pos = 0;
-      for (auto &t : tokens) {
-        poses[pos++] = atoi(t.c_str());
-      }
-      if (!file_is_exists) {
-        continue;
-      }
-      auto raw_ptr = Page::open(page_name, false);
-      Page_Ptr p{raw_ptr};
-      auto not_full_chunks = p->chunks_by_pos(poses);
-      assert(not_full_chunks.size() == poses.size());
-
-      openned_pages.push_back(p);
-      for (auto &ch : not_full_chunks) {
-        id2chunks[ch->header->first.id].insert(std::tie(ch, p));
-        result.chunks_merged++;
-      }
-    }
-    gc_wall_ifs.close();
-    size_t unmarked = 0;
-    // mark as init (or non init, if whe in called from fsck.
-    for (auto &kv : id2chunks) {
-      for (auto &ch_pg : kv.second) {
-        auto ch_ptr = std::get<0>(ch_pg);
-        auto pg_ptr = std::get<1>(ch_pg);
-        if (in_fsck) {
-          pg_ptr->mark_as_init(ch_ptr);
-          unmarked++;
-        } else {
-          auto rdr = ch_ptr->get_reader();
-          while (!rdr->is_end()) {
-            auto subres = rdr->readNext();
-            this->append_unsafe(subres);
-          }
-          pg_ptr->mark_as_non_init(ch_ptr);
-          unmarked++;
-          pg_ptr->flush();
-        }
-      }
-    }
-
-    if (in_fsck) {
-      logger_info("unmakrked: " << unmarked);
-      logger_info("rm gc_wall.");
-      utils::fs::rm(gc_file);
-      return result;
-    }
-    std::list<std::string> to_remove;
-    for (auto &pg_ptr : openned_pages) {
-      if (pg_ptr->header->removed_chunks == pg_ptr->header->addeded_chunks) {
-        auto fname = pg_ptr->filename;
-        to_remove.push_back(fname);
-        _openned_pages.erase(fname);
-        result.page_removed++;
-      }
-    }
-    openned_pages.clear();
-    id2chunks.clear();
-    this->commit_transaction_unsafe(transaction_num);
-    utils::fs::rm(gc_file);
-    for (auto &fname : to_remove) {
-      auto target_name = utils::fs::extract_filename(fname);
-
-      Manifest::instance()->page_rm(target_name);
-      utils::fs::rm(fname);
-      utils::fs::rm(fname + "i");
-    }
-
-    return result;
-  }
-
-  PageManager::GCResult merge_non_full_chunks() {
-    std::lock_guard<std::mutex> lg(_locker);
-    GCResult result;
-    auto all_pages = Manifest::instance()->page_list();
-    if (all_pages.size() < size_t(2)) {
-      return result;
-    }
-    auto pred = [](const IndexHeader &h) { return h.is_full; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-
-    std::stringstream ss{};
-    for (auto &pname : page_list) {
-      auto raw_ptr = Page::open(pname, false);
-      Page_Ptr p{raw_ptr};
-
-      auto not_full_chunks = p->get_not_full_chunks();
-      if (not_full_chunks.empty()) {
-        continue;
-      }
-      ss << pname << std::endl;
-      for (auto &ch : not_full_chunks) {
-        result.chunks_merged++;
-        ss << ch->header->pos_in_page << " ";
-      }
-      ss << std::endl;
-    }
-
-    std::string gc_wal_txt = ss.str();
-    if (gc_wal_txt.empty()) {
-      return result;
-    }
-    std::ofstream ofs;
-    ofs.open(utils::fs::append_path(this->_param.path, GC_WAL_FILENAME),
-             std::ios::out | std::ios::app);
-    if (!ofs.is_open()) {
-      throw MAKE_EXCEPTION("can create gc_wall file in " + this->_param.path);
-    }
-    auto transaction_num = this->begin_transaction_unsafe();
-    ofs << transaction_num << std::endl;
-    ofs << gc_wal_txt;
-    ofs.close();
-    return play_gcwall(false);
-  }
-
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
@@ -642,8 +390,6 @@ protected:
   uint64_t last_id;
   bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
-  std::atomic<uint64_t> _transaction_next_number;
-  bool _under_transaction;
 };
 
 PageManager::PageManager(const PageManager::Params &param)
@@ -713,20 +459,4 @@ dariadb::append_result dariadb::storage::PageManager::append(const Meas &value) 
 
 void PageManager::fsck(bool force_check) {
   return impl->fsck(force_check);
-}
-
-uint64_t PageManager::begin_transaction() {
-  return impl->begin_transaction();
-}
-
-void PageManager::commit_transaction(uint64_t num) {
-  impl->commit_transaction(num);
-}
-
-void PageManager::rollback_transaction(uint64_t num) {
-  impl->rollback_transaction(num);
-}
-
-PageManager::GCResult PageManager::gc() {
-  return impl->merge_non_full_chunks();
 }

@@ -18,12 +18,9 @@ struct PageHeader {
   bool is_full : 1;           // is full :)
   bool is_closed : 1;         // is correctly closed.
   bool is_open_to_write : 1;  // true if oppened to write.
-  bool _under_transaction : 1;
   dariadb::Time minTime; // minimal stored time
   dariadb::Time maxTime; // maximum stored time
   uint64_t max_chunk_id; // max(chunk->id)
-
-  uint64_t transaction; // maximum transaction number.
 };
 #pragma pack(pop)
 
@@ -56,10 +53,6 @@ public:
   // Inherited via MeasWriter
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
-
-  void begin_transaction(uint64_t num);
-  void commit_transaction(uint64_t num);
-  void rollback_transaction(uint64_t num);
 
   std::list<Chunk_Ptr> get_not_full_chunks(); // list of not full chunks
   std::list<Chunk_Ptr> chunks_by_pos(std::vector<uint32_t> poses);

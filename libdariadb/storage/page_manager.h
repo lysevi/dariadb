@@ -66,12 +66,6 @@ public:
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
 
-  uint64_t begin_transaction();
-  void commit_transaction(uint64_t num);
-  void rollback_transaction(uint64_t num);
-
-  GCResult gc();
-
 private:
   static PageManager *_instance;
   class Private;

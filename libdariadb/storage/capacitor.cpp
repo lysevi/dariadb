@@ -190,7 +190,6 @@ public:
     _header->maxTime = dariadb::MIN_TIME;
     _header->id_bloom = bloom_empty<dariadb::Id>();
     _header->flag_bloom = bloom_empty<dariadb::Flag>();
-    _header->transaction_number = uint32_t(0);
 
     level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
 

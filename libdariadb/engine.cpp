@@ -80,14 +80,8 @@ public:
       auto p = Capacitor::Params(0, "");
       auto cap = Capacitor_Ptr{new Capacitor{p, fname, false}};
 
-      auto trans = PageManager::instance()->begin_transaction();
-      auto cap_header = cap->header();
-      cap_header->transaction_number = trans;
-      cap->flush();
-
       cap->drop_to_stor(PageManager::instance());
       cap = nullptr;
-      PageManager::instance()->commit_transaction(trans);
       auto without_path = utils::fs::extract_filename(fname);
       Manifest::instance()->cola_rm(without_path);
       utils::fs::rm(fname);
@@ -100,12 +94,8 @@ public:
   static void cleanStorage(std::string storagePath) {
     auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
     for (auto c : caps_lst) {
-      auto ch = Capacitor::readHeader(c);
-      if (ch.transaction_number != 0) {
-        auto cap_fname = utils::fs::filename(c);
-        logger_info("fsck: rollback #" << ch.transaction_number << " for " << cap_fname);
-        PageManager::instance()->rollback_transaction(ch.transaction_number);
-      }
+     // auto ch = Capacitor::readHeader(c);
+     //TODO remove pages with name==ch.filename
     }
   }
 };
@@ -418,14 +408,6 @@ public:
   void drop_part_caps(size_t count) {
     CapacitorManager::instance()->drop_closed_files(count);
   }
-  Engine::GCResult gc() {
-    Engine::GCResult result;
-    result.page_result = PageManager::instance()->gc();
-
-    logger_info("Engine::GC: removed pages count: " << result.page_result.page_removed);
-    logger_info("Engine::GC: chunks merged: " << result.page_result.chunks_merged);
-    return result;
-  }
 
 protected:
   storage::PageManager::Params _page_manager_params;
@@ -510,10 +492,6 @@ Meas::Id2Meas Engine::readInTimePoint(const QueryTimePoint &q) {
 
 void Engine::drop_part_caps(size_t count) {
   return _impl->drop_part_caps(count);
-}
-
-Engine::GCResult Engine::gc() {
-  return _impl->gc();
 }
 
 void Engine::wait_all_asyncs() {

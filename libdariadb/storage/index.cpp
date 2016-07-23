@@ -78,7 +78,7 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
   for (uint32_t pos = 0; pos < this->iheader->count; ++pos) {
 
     auto _index_it = this->index[pos];
-    if (!_index_it.is_init || !_index_it.commit) {
+    if (!_index_it.is_init) {
       continue;
     }
     if (check_index_rec(_index_it, from, to)) {
@@ -126,7 +126,6 @@ void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
   iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);
   iheader->maxTime = std::max(iheader->maxTime, ptr->header->maxTime);
-  iheader->transaction = std::max(iheader->transaction, ptr->header->transaction);
 
   cur_index->minTime = std::min(cur_index->minTime, m.time);
   cur_index->maxTime = std::max(cur_index->maxTime, m.time);
