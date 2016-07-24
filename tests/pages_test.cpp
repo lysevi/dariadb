@@ -378,6 +378,13 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     PageManager::instance()->readLinks(qi, links_list, clb.get());
 
     BOOST_CHECK_EQUAL(addeded.size(), clb->mlist.size());
+    auto addeded_pos=addeded.cbegin();
+    auto readed_pos=clb->mlist.cbegin();
+    while(addeded_pos!=addeded.cend()){
+        BOOST_CHECK_EQUAL(addeded_pos->time,readed_pos->time);
+        ++addeded_pos;
+        ++readed_pos;
+    }
     dariadb::Time minT = dariadb::MAX_TIME, maxT = dariadb::MIN_TIME;
     BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
     BOOST_CHECK_EQUAL(minT, dariadb::Time(1));

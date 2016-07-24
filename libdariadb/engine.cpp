@@ -83,6 +83,7 @@ public:
       auto without_path =  utils::fs::extract_filename(fname);
       auto page_fname =  utils::fs::filename(without_path);
       auto all=cap->readAll();
+      assert(all.size()==cap->size());
       PageManager::instance()->append(page_fname,all);
       Manifest::instance()->cola_rm(without_path);
       cap=nullptr;
