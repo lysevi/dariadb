@@ -383,7 +383,20 @@ public:
   }
 
   void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
-      NOT_IMPLEMENTED;
+      TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
+      if (!dariadb::utils::fs::path_exists(_param.path)) {
+        dariadb::utils::fs::mkdir(_param.path);
+      }
+
+      Page *res = nullptr;
+
+      std::string page_name = file_prefix+".page";
+      std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
+      res = Page::create(file_name, _param.chunk_size, ma);
+      Manifest::instance()->page_append(page_name);
+      if (update_id) {
+        res->header->max_chunk_id = last_id;
+      }
   }
 
 protected:

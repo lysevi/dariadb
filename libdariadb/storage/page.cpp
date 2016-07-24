@@ -29,6 +29,14 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
   return chunk_per_storage * sizeof(IndexReccord) + sizeof(IndexHeader);
 }
 
+void Page::init_header() {
+  this->readonly = false;
+  this->header->minTime = dariadb::MAX_TIME;
+  this->header->maxTime = dariadb::MIN_TIME;
+  this->header->is_closed = false;
+  this->header->is_open_to_write = true;
+}
+
 Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage,
                    uint32_t chunk_size) {
   TIMECODE_METRICS(ctmd, "create", "Page::create");
@@ -46,15 +54,47 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
 
   res->header = reinterpret_cast<PageHeader *>(region);
   res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-  res->header->minTime = dariadb::MAX_TIME;
-  res->header->maxTime = dariadb::MIN_TIME;
+  res->init_header();
   res->header->chunk_per_storage = chunk_per_storage;
   res->header->chunk_size = chunk_size;
-  res->header->is_closed = false;
-  res->header->is_open_to_write = true;
-
   res->page_mmap->flush(0, sizeof(PageHeader));
   return res;
+}
+
+Page *Page::create(std::string file_name, uint32_t max_chunk_size, const Meas::MeasArray &ma){
+    TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
+
+    dariadb::IdSet dropped;
+    auto count=ma.size();
+    std::vector<bool> visited(count);
+    auto begin=ma.cbegin();
+    auto end=ma.cbegin();
+    size_t i = 0;
+    std::list<Meas::MeasList> to_compress;
+    for (auto it = begin; it != end; ++it, ++i) {
+      if (visited[i]) {
+        continue;
+      }
+      if (dropped.find(it->id) != dropped.end()) {
+        continue;
+      }
+      Meas::MeasList current_id_values;
+      visited[i] = true;
+      current_id_values.push_back(*it);
+      size_t pos = 0;
+      for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
+        if (visited[pos]) {
+          continue;
+        }
+        if ((sub_it->id == it->id)) {
+          current_id_values.push_back(*sub_it);
+          visited[pos] = true;
+        }
+      }
+      dropped.insert(it->id);
+      to_compress.push_back(std::move(current_id_values));
+    }
+    return nullptr;
 }
 
 Page *Page::open(std::string file_name, bool read_only) {

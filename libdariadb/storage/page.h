@@ -30,6 +30,7 @@ class Page : public IChunkContainer, public IMeasWriter {
 public:
   static Page *create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage,
                       uint32_t chunk_size);
+  static Page *create(std::string file_name, uint32_t max_chunk_size, const Meas::MeasArray &ma);
   static Page *open(std::string file_name, bool read_only = false);
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
@@ -72,6 +73,7 @@ private:
 
   void check_page_struct();
 
+  void init_header();
 public:
   uint8_t *region; // page  file mapp region
   PageHeader *header;
