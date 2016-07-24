@@ -61,14 +61,14 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   return res;
 }
 
-Page *Page::create(std::string file_name, uint32_t max_chunk_size, const Meas::MeasArray &ma){
+Page *Page::create(std::string file_name, uint64_t chunk_id, uint32_t max_chunk_size, const Meas::MeasArray &ma){
     TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
 
     dariadb::IdSet dropped;
     auto count=ma.size();
     std::vector<bool> visited(count);
     auto begin=ma.cbegin();
-    auto end=ma.cbegin();
+    auto end=ma.cend();
     size_t i = 0;
     std::list<Meas::MeasList> to_compress;
     for (auto it = begin; it != end; ++it, ++i) {
@@ -94,7 +94,92 @@ Page *Page::create(std::string file_name, uint32_t max_chunk_size, const Meas::M
       dropped.insert(it->id);
       to_compress.push_back(std::move(current_id_values));
     }
-    return nullptr;
+
+
+    PageHeader phdr;
+    memset(&phdr, 0,sizeof(PageHeader));
+    phdr.maxTime=dariadb::MIN_TIME;
+    phdr.minTime=dariadb::MAX_TIME;
+    phdr.max_chunk_id=chunk_id;
+
+    using HdrAndBuffer=std::tuple<ChunkHeader,std::shared_ptr<uint8_t>>;
+    std::list<HdrAndBuffer> results;
+
+    for(auto&lst:to_compress){
+        ChunkHeader hdr;
+        memset(&hdr,0,sizeof(ChunkHeader));
+        auto lst_size=lst.size();
+        auto buff_size=lst_size*sizeof(Meas);
+        std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[buff_size]};
+        ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size,lst.front());
+        lst.pop_front();
+        for(auto&v:lst){
+            ch.append(v);
+        }
+        ch.close();
+
+        phdr.max_chunk_id++;
+        phdr.minTime=std::min(phdr.minTime,ch.header->minTime);
+        phdr.maxTime=std::max(phdr.maxTime,ch.header->maxTime);
+        ch.header->id = phdr.max_chunk_id;
+
+        HdrAndBuffer subres= std::make_tuple(hdr,buffer_ptr);
+        results.push_back(subres);
+    }
+
+    auto file = std::fopen(file_name.c_str(), "ab");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aofile: append error.");
+    }
+
+    std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+    uint64_t offset=0;
+
+    for(auto hb:results){
+        ChunkHeader chunk_header=std::get<0>(hb);
+        std::shared_ptr<uint8_t> chunk_buffer_ptr=std::get<1>(hb);
+
+        chunk_header.pos_in_page=phdr.addeded_chunks;
+        phdr.addeded_chunks++;
+        auto cur_chunk_buf_size=chunk_header.size - chunk_header.bw_pos+1;
+
+        chunk_header.size=cur_chunk_buf_size;
+        chunk_header.offset_in_page=offset;
+        std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
+        std::fwrite(chunk_buffer_ptr.get()+(chunk_header.size-cur_chunk_buf_size),
+                    sizeof(uint8_t),
+                    cur_chunk_buf_size, file);
+
+
+        offset+=sizeof(ChunkHeader) + cur_chunk_buf_size;
+
+    }
+    auto page_size=offset+sizeof(PageHeader);
+    phdr.write_offset=offset;
+    phdr.chunk_size=1;
+    phdr.filesize=page_size;
+    std::fclose(file);
+
+    auto res = new Page;
+    res->readonly = false;
+    auto mmap = utils::fs::MappedFile::open(file_name, false);
+    res->filename = file_name;
+    auto region = mmap->data();
+
+    res->page_mmap = mmap;
+    res->_index =PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+                                   index_file_size(phdr.addeded_chunks));
+    res->region = region;
+
+    res->header = reinterpret_cast<PageHeader *>(region);
+    *(res->header)=phdr;
+    res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+    res->readonly = false;
+    res->header->is_closed = true;
+    res->header->is_open_to_write = false;
+    res->page_mmap->flush(0, sizeof(PageHeader));
+    res->update_index_recs();
+    return res;
 }
 
 Page *Page::open(std::string file_name, bool read_only) {
@@ -240,7 +325,8 @@ bool Page::add_to_target_chunk(const dariadb::Meas &m) {
 
       _openned_chunk.ch = ptr;
 
-      init_chunk_index_rec(ptr);
+      ptr->header->offset_in_page=header->write_offset;
+      init_chunk_index_rec(ptr,this->header->addeded_chunks);
       return true;
     }
     byte_it += step;
@@ -267,11 +353,34 @@ void Page::close_corrent_chunk() {
   }
 }
 
-void Page::init_chunk_index_rec(Chunk_Ptr ch) {
-  TIMECODE_METRICS(ctmd, "write", "Page::init_chunk_index_rec");
-  assert(header->chunk_size == ch->header->size);
+void Page::update_index_recs(){
+    auto byte_it = this->chunks;
+    auto end = this->region + this->header->filesize;
+    while (true) {
+      if (byte_it == end) {
+        header->is_full = true;
+        break;
+      }
+      ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+      if (info->is_init) {
+        auto ptr_to_begin = byte_it;
+        auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
+        Chunk_Ptr ptr = nullptr;
+        ptr = Chunk_Ptr{new ZippedChunk(info,ptr_to_buffer)};
 
-  uint32_t pos_index = this->header->addeded_chunks;
+        this->header->max_chunk_id++;
+        ptr->header->id = this->header->max_chunk_id;
+
+        init_chunk_index_rec(ptr, ptr->header->pos_in_page);
+      }
+      byte_it += sizeof(ChunkHeader)+info->size;
+    }
+    header->is_full = true;
+    _index->iheader->is_full = true;
+}
+
+void Page::init_chunk_index_rec(Chunk_Ptr ch,uint32_t pos_index) {
+  TIMECODE_METRICS(ctmd, "write", "Page::init_chunk_index_rec");
 
   auto cur_index = &_index->index[pos_index];
   assert(cur_index->chunk_id == 0);
@@ -279,7 +388,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch) {
   ch->header->pos_in_page = pos_index;
   cur_index->chunk_id = ch->header->id;
   cur_index->is_init = true;
-  cur_index->offset = header->write_offset;
+  cur_index->offset = ch->header->offset_in_page;// header->write_offset;
 
   header->write_offset += header->chunk_size + sizeof(ChunkHeader);
   header->addeded_chunks++;
@@ -314,7 +423,7 @@ void Page::dec_reader() {
   header->count_readers--;
 }
 
-bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
+bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
                                         dariadb::Time *maxTime) {
   QueryInterval qi{dariadb::IdArray{id}, 0, this->header->minTime, this->header->maxTime};
   auto all_chunks = this->chunksByIterval(qi);
@@ -333,7 +442,7 @@ bool dariadb::storage::Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
   return result;
 }
 
-ChunkLinkList dariadb::storage::Page::chunksByIterval(const QueryInterval &query) {
+ChunkLinkList Page::chunksByIterval(const QueryInterval &query) {
   return _index->get_chunks_links(query.ids, query.from, query.to, query.flag);
 }
 
@@ -426,7 +535,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
   }
 }
 
-dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
+dariadb::append_result Page::append(const Meas &value) {
   TIMECODE_METRICS(ctmd, "append", "Page::append");
   if (add_to_target_chunk(value)) {
     return dariadb::append_result(1, 0);
@@ -435,19 +544,19 @@ dariadb::append_result dariadb::storage::Page::append(const Meas &value) {
   }
 }
 
-void dariadb::storage::Page::flush() {
+void Page::flush() {
   this->page_mmap->flush();
   this->_index->index_mmap->flush();
 }
 
-void dariadb::storage::Page::mark_as_init(Chunk_Ptr &ptr) {
+void Page::mark_as_init(Chunk_Ptr &ptr) {
   ptr->header->is_init = true;
   auto pos = ptr->header->pos_in_page;
   _index->index[pos].is_init = true;
   this->header->removed_chunks--;
 }
 
-void dariadb::storage::Page::mark_as_non_init(Chunk_Ptr &ptr) {
+void Page::mark_as_non_init(Chunk_Ptr &ptr) {
   ptr->header->is_init = false;
   auto pos = ptr->header->pos_in_page;
   _index->iheader->is_sorted = false;
@@ -455,7 +564,7 @@ void dariadb::storage::Page::mark_as_non_init(Chunk_Ptr &ptr) {
   this->header->removed_chunks++;
 }
 
-std::list<Chunk_Ptr> dariadb::storage::Page::get_not_full_chunks() {
+std::list<Chunk_Ptr> Page::get_not_full_chunks() {
   auto step = this->header->chunk_size + sizeof(ChunkHeader);
   auto byte_it = this->chunks;
   auto end = this->chunks + this->header->addeded_chunks * step;
@@ -479,7 +588,7 @@ std::list<Chunk_Ptr> dariadb::storage::Page::get_not_full_chunks() {
   return result;
 }
 
-std::list<Chunk_Ptr> dariadb::storage::Page::chunks_by_pos(std::vector<uint32_t> poses) {
+std::list<Chunk_Ptr> Page::chunks_by_pos(std::vector<uint32_t> poses) {
   std::list<Chunk_Ptr> result;
   for (auto &p : poses) {
     auto irec = this->_index->index[p];

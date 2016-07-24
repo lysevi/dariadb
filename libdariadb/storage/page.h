@@ -15,6 +15,7 @@ struct PageHeader {
   uint32_t removed_chunks;    // total chunks marked as not init in rollbacks or fsck.
   uint32_t chunk_per_storage; // max chunks count
   uint32_t chunk_size;        // each chunks size in bytes
+  uint64_t filesize;
   bool is_full : 1;           // is full :)
   bool is_closed : 1;         // is correctly closed.
   bool is_open_to_write : 1;  // true if oppened to write.
@@ -30,7 +31,7 @@ class Page : public IChunkContainer, public IMeasWriter {
 public:
   static Page *create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage,
                       uint32_t chunk_size);
-  static Page *create(std::string file_name, uint32_t max_chunk_size, const Meas::MeasArray &ma);
+  static Page *create(std::string file_name,uint64_t chunk_id, uint32_t max_chunk_size, const Meas::MeasArray &ma);
   static Page *open(std::string file_name, bool read_only = false);
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
@@ -61,7 +62,8 @@ public:
   void mark_as_init(Chunk_Ptr &ch);
 
 private:
-  void init_chunk_index_rec(Chunk_Ptr ch);
+  void update_index_recs();
+  void init_chunk_index_rec(Chunk_Ptr ch,uint32_t pos_index);
   void close_corrent_chunk();
   struct ChunkWithIndex {
     Chunk_Ptr ch;        /// ptr to chunk in page

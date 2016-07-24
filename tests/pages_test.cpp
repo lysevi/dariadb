@@ -347,7 +347,6 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   BOOST_CHECK(PageManager::instance() != nullptr);
 
   auto start_time = dariadb::Time(0);
-  auto t = dariadb::Time(0);
   dariadb::Meas::MeasList addeded;
   const dariadb::Id id_count(5);
   dariadb::IdSet all_id_set;
@@ -370,7 +369,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     // must return all of appended chunks;
 
     PageManager::instance()->flush();
-    dariadb::storage::QueryInterval qi(all_id_array, 0, 0, t);
+    dariadb::storage::QueryInterval qi(all_id_array, 0, 0, e.time);
     auto links_list = PageManager::instance()->chunksByIterval(qi);
 
     auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
@@ -381,10 +380,10 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     BOOST_CHECK_EQUAL(addeded.size(), clb->mlist.size());
     dariadb::Time minT = dariadb::MAX_TIME, maxT = dariadb::MIN_TIME;
     BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
-    BOOST_CHECK_EQUAL(minT, dariadb::Time(0));
+    BOOST_CHECK_EQUAL(minT, dariadb::Time(1));
 
     {
-      dariadb::Time end_time(t / 2);
+      dariadb::Time end_time(e.time / 2);
       dariadb::storage::ChunksList chunk_list;
       dariadb::storage::QueryInterval qi(all_id_array, 0, start_time, end_time);
       auto link_list = PageManager::instance()->chunksByIterval(qi);
