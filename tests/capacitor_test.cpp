@@ -79,6 +79,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
         dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
 
     BOOST_CHECK_EQUAL(out.size(), cap.size());
+
     dariadb::storage::Manifest::stop();
   }
   {
@@ -185,6 +186,8 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
     pparams.max_levels = p.max_levels;
     auto mc = pparams.measurements_count();
     BOOST_CHECK_EQUAL(addeded, mc);
+    auto all=cap.readAll();
+    BOOST_CHECK_EQUAL(addeded, all.size());
   }
   auto clist = dariadb::storage::Manifest::instance()->cola_list();
   BOOST_CHECK_EQUAL(clist.size(), size_t(1));

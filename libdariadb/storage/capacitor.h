@@ -104,6 +104,7 @@ public:
   void fsck();
   void close();
 
+  Meas::MeasArray readAll()const;
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

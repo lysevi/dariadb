@@ -571,6 +571,34 @@ public:
     }
   }
 
+  Meas::MeasArray readAll() const {
+      TIMECODE_METRICS(ctmd, "foreach", "Capacitor::readall");
+      boost::shared_lock<boost::shared_mutex> lock(_mutex);
+
+      Meas::MeasArray result;
+      result.resize(this->_header->_writed);
+      size_t pos=0;
+
+      for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+        auto m = _memvalues[j];
+        result[pos++]=m;
+      }
+
+      for (size_t i = 0; i < this->_levels.size(); ++i) {
+        if (_levels[i].empty()) {
+          continue;
+        }
+        auto begin = _levels[i].begin;
+        auto end = _levels[i].begin + _levels[i].hdr->pos;
+        for (auto it = begin; it != end; ++it) {
+          auto m = *it;
+          result[pos++]=m;
+        }
+      }
+      std::sort(result.begin(),result.end(), meas_time_compare_less());
+      return result;
+  }
+
   Meas::MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Capacitor::readInterval");
     Meas::MeasList result;
@@ -834,6 +862,10 @@ void Capacitor::foreach (const QueryInterval &q, IReaderClb * clbk) {
 
 Meas::MeasList Capacitor::readInterval(const QueryInterval &q) {
   return _Impl->readInterval(q);
+}
+
+Meas::MeasArray Capacitor::readAll()const{
+    return _Impl->readAll();
 }
 
 Meas::Id2Meas Capacitor::readInTimePoint(const QueryTimePoint &q) {

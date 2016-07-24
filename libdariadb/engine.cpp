@@ -80,10 +80,12 @@ public:
       auto p = Capacitor::Params(0, "");
       auto cap = Capacitor_Ptr{new Capacitor{p, fname, false}};
 
-      cap->drop_to_stor(PageManager::instance());
-      cap = nullptr;
-      auto without_path = utils::fs::extract_filename(fname);
+      auto without_path =  utils::fs::extract_filename(fname);
+      auto page_fname =  utils::fs::filename(without_path);
+      auto all=cap->readAll();
+      PageManager::instance()->append(page_fname,all);
       Manifest::instance()->cola_rm(without_path);
+      cap=nullptr;
       utils::fs::rm(fname);
 
       LockManager::instance()->unlock(LockObjects::DROP_CAP);
@@ -255,12 +257,6 @@ public:
   }
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
-
-  class ChunkReadCallback : public IReaderClb {
-  public:
-    virtual void call(const Meas &m) override { out->push_back(m); }
-    Meas::MeasList *out;
-  };
 
   Engine::QueueSizes queue_size() const {
     QueueSizes result;

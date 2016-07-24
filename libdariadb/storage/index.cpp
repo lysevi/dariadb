@@ -97,6 +97,8 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
         sub_result.id_bloom = _index_it.id_bloom;
         result.push_back(sub_result);
       }
+    }else{
+        logger("1");
     }
   }
 
