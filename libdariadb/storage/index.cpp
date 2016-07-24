@@ -20,7 +20,7 @@ inline bool check_index_rec(IndexReccord &it, dariadb::Time from, dariadb::Time 
 inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id,
                          dariadb::Flag flag) {
   auto id_bloom_result = false;
-  if (dariadb::storage::bloom_check(_index_it.id_bloom, id)) {
+  if (_index_it.id_bloom== id) {
     id_bloom_result = true;
   }
   auto flag_bloom_result = false;
@@ -92,13 +92,11 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
       if (bloom_result) {
         ChunkLink sub_result;
         sub_result.id = _index_it.chunk_id;
-        sub_result.offset = pos;
+        sub_result.index_rec_number = pos;
         sub_result.maxTime = _index_it.maxTime;
         sub_result.id_bloom = _index_it.id_bloom;
         result.push_back(sub_result);
       }
-    }else{
-        logger("1");
     }
   }
 

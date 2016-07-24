@@ -12,7 +12,7 @@ struct ChunkLink {
   uint64_t id_bloom;
   dariadb::Time maxTime;
   std::string page_name;
-  uint32_t offset;
+  uint64_t index_rec_number;
 };
 
 using ChunkLinkList = std::list<ChunkLink>;

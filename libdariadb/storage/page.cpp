@@ -111,12 +111,13 @@ Page *Page::create(std::string file_name, uint64_t chunk_id, uint32_t max_chunk_
         auto lst_size=lst.size();
         auto buff_size=lst_size*sizeof(Meas);
         std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[buff_size]};
+        memset(buffer_ptr.get(), 0,buff_size);
         ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size,lst.front());
         lst.pop_front();
         for(auto&v:lst){
             ch.append(v);
         }
-        ch.close();//TODO update here sizes. otherwise, checksum may be wrong.
+        ch.close();
 
         phdr.max_chunk_id++;
         phdr.minTime=std::min(phdr.minTime,ch.header->minTime);
@@ -142,11 +143,15 @@ Page *Page::create(std::string file_name, uint64_t chunk_id, uint32_t max_chunk_
         chunk_header.pos_in_page=phdr.addeded_chunks;
         phdr.addeded_chunks++;
         auto cur_chunk_buf_size=chunk_header.size - chunk_header.bw_pos+1;
+        auto skip_count=chunk_header.size-cur_chunk_buf_size;
 
         chunk_header.size=cur_chunk_buf_size;
         chunk_header.offset_in_page=offset;
+
+        ZippedChunk ch(&chunk_header, chunk_buffer_ptr.get());
+        ch.close();
         std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
-        std::fwrite(chunk_buffer_ptr.get()+(chunk_header.size-cur_chunk_buf_size),
+        std::fwrite(chunk_buffer_ptr.get()+skip_count,
                     sizeof(uint8_t),
                     cur_chunk_buf_size, file);
 
@@ -394,7 +399,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch,uint32_t pos_index) {
   header->addeded_chunks++;
 
   header->minTime = std::min(header->minTime, ch->header->minTime);
-  header->maxTime = std::max(header->minTime, ch->header->maxTime);
+  header->maxTime = std::max(header->maxTime, ch->header->maxTime);
 
   _index->iheader->minTime = std::min(_index->iheader->minTime, ch->header->minTime);
   _index->iheader->maxTime = std::max(_index->iheader->maxTime, ch->header->maxTime);
@@ -405,7 +410,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch,uint32_t pos_index) {
   _index->iheader->count++;
 
   cur_index->minTime = ch->header->minTime;
-  cur_index->maxTime = cur_index->maxTime;
+  cur_index->maxTime = ch->header->maxTime;
   cur_index->id_bloom = ch->header->id_bloom;
   cur_index->flag_bloom = ch->header->flag_bloom;
 
@@ -435,7 +440,7 @@ bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
   *minTime = dariadb::MAX_TIME;
   *maxTime = dariadb::MIN_TIME;
   for (auto &link : all_chunks) {
-    auto _index_it = this->_index->index[link.offset];
+    auto _index_it = this->_index->index[link.index_rec_number];
     *minTime = std::min(*minTime, _index_it.minTime);
     *maxTime = std::max(*maxTime, _index_it.maxTime);
   }
@@ -460,7 +465,7 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     if (to_read.empty()) {
       break;
     }
-    auto _index_it = this->_index->index[it->offset];
+    auto _index_it = this->_index->index[it->index_rec_number];
     auto ptr_to_begin = this->chunks + _index_it.offset;
     auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
     auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
@@ -501,7 +506,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
   }
 
   for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
-    auto _index_it = this->_index->index[_ch_links_iterator->offset];
+    auto _index_it = this->_index->index[_ch_links_iterator->index_rec_number];
     Chunk_Ptr search_res;
 
     auto ptr_to_begin = this->chunks + _index_it.offset;
@@ -521,7 +526,6 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     }
     Chunk_Ptr c{ptr};
     search_res = c;
-
     auto rdr = search_res->get_reader();
     while (!rdr->is_end()) {
       auto subres = rdr->readNext();
