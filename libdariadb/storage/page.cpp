@@ -116,7 +116,7 @@ Page *Page::create(std::string file_name, uint64_t chunk_id, uint32_t max_chunk_
         for(auto&v:lst){
             ch.append(v);
         }
-        ch.close();
+        ch.close();//TODO update here sizes. otherwise, checksum may be wrong.
 
         phdr.max_chunk_id++;
         phdr.minTime=std::min(phdr.minTime,ch.header->minTime);
