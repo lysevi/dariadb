@@ -8,6 +8,7 @@
 #include <fstream>
 
 using namespace dariadb::storage;
+using namespace dariadb;
 
 Page::~Page() {
   if (!this->readonly) {
@@ -61,7 +62,7 @@ Page *Page::create(std::string file_name, uint64_t sz, uint32_t chunk_per_storag
   return res;
 }
 
-Page *Page::create(std::string file_name, uint64_t chunk_id, uint32_t max_chunk_size, const Meas::MeasArray &ma){
+Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max_chunk_size, const Meas::MeasArray &ma){
     TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
 
     dariadb::IdSet dropped;
