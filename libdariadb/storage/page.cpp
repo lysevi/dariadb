@@ -153,6 +153,7 @@ Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max
     res->page_mmap->flush(0, sizeof(PageHeader));
     res->update_index_recs();
     res->flush();
+    assert(res->header->addeded_chunks==results.size());
     return res;
 }
 
@@ -283,8 +284,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch,uint32_t pos_index) {
   cur_index->chunk_id = ch->header->id;
   cur_index->is_init = true;
   cur_index->offset = ch->header->offset_in_page;// header->write_offset;
-
-  header->addeded_chunks++;
 
   header->minTime = std::min(header->minTime, ch->header->minTime);
   header->maxTime = std::max(header->maxTime, ch->header->maxTime);
