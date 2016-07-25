@@ -142,6 +142,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
                                               chunk_size),
         dariadb::storage::CapacitorManager::Params(storage_path, cap_B))};
 
+    //check first id, because that Id placed in zipper pages.
+    auto values=ms->readInterval(dariadb::storage::QueryInterval({dariadb::Id(0)},0,from,to));
+    BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
+
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     BOOST_CHECK(current.size() != size_t(0));
   }
