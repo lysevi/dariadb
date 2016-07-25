@@ -66,7 +66,8 @@ bool Chunk::check_flag(const Flag &f) {
 
 bool Chunk::check_checksum() {
   auto exists = get_checksum();
-  return exists == calc_checksum();
+  auto calculated=calc_checksum();
+  return exists == calculated;
 }
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)

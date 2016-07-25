@@ -112,7 +112,7 @@ Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max
 
         chunk_header.pos_in_page=phdr.addeded_chunks;
         phdr.addeded_chunks++;
-        auto cur_chunk_buf_size=chunk_header.size - chunk_header.bw_pos+1;
+        auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
         auto skip_count=chunk_header.size-cur_chunk_buf_size;
 
         chunk_header.size=cur_chunk_buf_size;
@@ -222,9 +222,8 @@ void Page::fsck() {
 
   auto byte_it = this->chunks;
   auto end = this->region + this->header->filesize;
-  size_t pos = 0;
   while (true) {
-    if (byte_it == end) {
+    if (byte_it >= end) {
       break;
     }
     ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
@@ -242,7 +241,6 @@ void Page::fsck() {
         mark_as_non_init(ptr);
       }
     }
-    ++pos;
     byte_it += sizeof(ChunkHeader) + info->size;
   }
 }
@@ -267,6 +265,7 @@ void Page::update_index_recs(){
         ptr->header->id = this->header->max_chunk_id;
 
         init_chunk_index_rec(ptr, ptr->header->pos_in_page);
+        ptr->close();
       }
       byte_it += sizeof(ChunkHeader)+info->size;
     }

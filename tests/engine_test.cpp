@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const size_t cap_B = 2;
 
   const dariadb::Time from = 0;
-  const dariadb::Time to = from + 1500;
+  const dariadb::Time to = from + 1000;
   const dariadb::Time step = 10;
 
   {
