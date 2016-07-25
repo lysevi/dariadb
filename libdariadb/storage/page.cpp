@@ -30,14 +30,6 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
   return chunk_per_storage * sizeof(IndexReccord) + sizeof(IndexHeader);
 }
 
-void Page::init_header() {
-  this->readonly = false;
-  this->header->minTime = dariadb::MAX_TIME;
-  this->header->maxTime = dariadb::MIN_TIME;
-  this->header->is_closed = false;
-  this->header->is_open_to_write = true;
-}
-
 
 Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max_chunk_size, const Meas::MeasArray &ma){
     TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
@@ -160,6 +152,7 @@ Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max
     res->header->is_open_to_write = false;
     res->page_mmap->flush(0, sizeof(PageHeader));
     res->update_index_recs();
+    res->flush();
     return res;
 }
 
@@ -254,22 +247,6 @@ void Page::fsck() {
   }
 }
 
-void Page::close_corrent_chunk() {
-  if (_openned_chunk.ch != nullptr) {
-
-    _openned_chunk.ch->close();
-#ifdef ENABLE_METRICS
-    // calc perscent of free space in closed chunks
-    auto used_space = _openned_chunk.ch->header->size - _openned_chunk.ch->header->bw_pos;
-    auto size = _openned_chunk.ch->header->size;
-    auto percent = used_space * float(100.0) / size;
-    auto raw_metric_ptr = new dariadb::utils::metrics::FloatMetric(percent);
-    ADD_METRICS("write", "chunk_free",
-                dariadb::utils::metrics::IMetric_Ptr{raw_metric_ptr});
-#endif
-    _openned_chunk.ch = nullptr;
-  }
-}
 
 void Page::update_index_recs(){
     auto byte_it = this->chunks;
@@ -333,11 +310,6 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch,uint32_t pos_index) {
 bool Page::is_full() const {
   return this->header->is_full &&
          (_openned_chunk.ch == nullptr || _openned_chunk.ch->is_full());
-}
-
-void Page::dec_reader() {
-  std::lock_guard<std::mutex> lg(_locker);
-  header->count_readers--;
 }
 
 bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
@@ -456,12 +428,6 @@ void Page::flush() {
   this->_index->index_mmap->flush();
 }
 
-void Page::mark_as_init(Chunk_Ptr &ptr) {
-  ptr->header->is_init = true;
-  auto pos = ptr->header->pos_in_page;
-  _index->index[pos].is_init = true;
-  this->header->removed_chunks--;
-}
 
 void Page::mark_as_non_init(Chunk_Ptr &ptr) {
   ptr->header->is_init = false;
@@ -471,41 +437,4 @@ void Page::mark_as_non_init(Chunk_Ptr &ptr) {
   this->header->removed_chunks++;
 }
 
-std::list<Chunk_Ptr> Page::get_not_full_chunks() {
-  auto byte_it = this->chunks;
-  auto end = this->region + this->header->filesize;
-  size_t pos = 0;
-  std::list<Chunk_Ptr> result;
-  while (true) {
-    if (byte_it == end) {
-      break;
-    }
-    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
-    auto ptr_to_begin = byte_it;
-    auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
-    if (info->is_init && (info->bw_pos > 1)) {
-      Chunk_Ptr ptr = nullptr;
-      ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-      result.push_back(ptr);
-    }
-    ++pos;
-    byte_it += info->size;
-  }
-  return result;
-}
 
-std::list<Chunk_Ptr> Page::chunks_by_pos(std::vector<uint32_t> poses) {
-  std::list<Chunk_Ptr> result;
-  for (auto &p : poses) {
-    auto irec = this->_index->index[p];
-
-    auto ptr_to_begin = this->chunks + irec.offset;
-    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
-    auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
-    Chunk_Ptr ptr = nullptr;
-    ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-    result.push_back(ptr);
-    assert(info->pos_in_page == p);
-  }
-  return result;
-}

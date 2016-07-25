@@ -10,7 +10,6 @@ namespace storage {
 #pragma pack(push, 1)
 struct PageHeader {
   //uint64_t write_offset;      // next write pos (bytes)
-  uint32_t count_readers;     // readers count. on close must be zero.
   uint32_t addeded_chunks;    // total count of chunks in page.
   uint32_t removed_chunks;    // total chunks marked as not init in rollbacks or fsck.
   uint64_t filesize;
@@ -39,7 +38,6 @@ public:
   bool is_full() const;
 
   // ChunksList get_open_chunks();
-  void dec_reader();
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
@@ -50,15 +48,11 @@ public:
 
   void flush();
 
-  std::list<Chunk_Ptr> get_not_full_chunks(); // list of not full chunks
-  std::list<Chunk_Ptr> chunks_by_pos(std::vector<uint32_t> poses);
   void mark_as_non_init(Chunk_Ptr &ch);
   void mark_as_init(Chunk_Ptr &ch);
-
 private:
   void update_index_recs();
   void init_chunk_index_rec(Chunk_Ptr ch,uint32_t pos_index);
-  void close_corrent_chunk();
   struct ChunkWithIndex {
     Chunk_Ptr ch;        /// ptr to chunk in page
     IndexReccord *index; /// ptr to index reccord
@@ -68,8 +62,6 @@ private:
   ChunkWithIndex _openned_chunk;
 
   void check_page_struct();
-
-  void init_header();
 public:
   uint8_t *region; // page  file mapp region
   PageHeader *header;

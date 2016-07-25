@@ -157,7 +157,7 @@ public:
         pg = Page_Ptr{Page::open(pname, true)};
         Page_Ptr dropped;
         _openned_pages.put(pname, pg, &dropped);
-        if (dropped == nullptr || dropped->header->count_readers == 0) {
+        if (dropped == nullptr) {
           dropped = nullptr;
         } else {
           _openned_pages.set_max_size(_openned_pages.size() + 1);

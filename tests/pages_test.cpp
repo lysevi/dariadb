@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
   auto fname = dariadb::utils::fs::ls(storagePath, ".page").front();
   auto header = dariadb::storage::Page::readHeader(fname);
-  BOOST_CHECK_EQUAL(header.count_readers, size_t(0));
+  BOOST_CHECK(header.addeded_chunks!=size_t(0));
 
   auto iheader = dariadb::storage::Page::readIndexHeader(fname + "i");
   BOOST_CHECK(iheader.count != 0);
