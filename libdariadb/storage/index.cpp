@@ -20,7 +20,7 @@ inline bool check_index_rec(IndexReccord &it, dariadb::Time from, dariadb::Time 
 inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id,
                          dariadb::Flag flag) {
   auto id_bloom_result = false;
-  if (_index_it.id_bloom== id) {
+  if (dariadb::storage::bloom_check(_index_it.id_bloom, id)) {
     id_bloom_result = true;
   }
   auto flag_bloom_result = false;
