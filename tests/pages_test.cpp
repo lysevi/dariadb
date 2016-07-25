@@ -18,24 +18,6 @@
 using dariadb::storage::PageManager;
 using dariadb::storage::Manifest;
 
-dariadb::Time add_meases(dariadb::Id id, dariadb::Time t, size_t count,
-                         dariadb::Meas::MeasList &addeded) {
-  dariadb::Meas first;
-  first.id = id;
-  first.time = t;
-
-  for (size_t i = 0; i < count; i++, t++) {
-    first.flag = dariadb::Flag(i);
-    first.time = t;
-    first.value = dariadb::Value(i);
-    auto res = PageManager::instance()->append(first);
-    addeded.push_back(first);
-    BOOST_CHECK(res.writed == 1);
-  }
-
-  return t;
-}
-
 BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   const std::string fname = "manifest";
   if (dariadb::utils::fs::path_exists(fname)) {
@@ -136,87 +118,6 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(PageManagerReadWrite) {
-  const std::string storagePath = "testStorage";
-  const size_t chinks_count = 30;
-  const size_t chunks_size = 256;
-
-  if (dariadb::utils::fs::path_exists(storagePath)) {
-    dariadb::utils::fs::rm(storagePath);
-  }
-  dariadb::utils::async::ThreadManager::start(
-      dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
-  dariadb::storage::Manifest::start(
-      dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
-
-  PageManager::start(PageManager::Params(storagePath, chinks_count, chunks_size));
-  BOOST_CHECK(PageManager::instance() != nullptr);
-
-  auto start_time = dariadb::Time(0);
-  auto t = dariadb::Time(0);
-  dariadb::Meas::MeasList addeded;
-  const dariadb::Id id_count(2);
-  dariadb::IdSet all_id_set;
-  for (size_t i = 0; i < 3; i++) {
-    auto cur_id = dariadb::Id(i % id_count);
-    all_id_set.insert(cur_id);
-    t = add_meases(cur_id, t, chinks_count, addeded);
-  }
-
-  dariadb::IdArray all_id_array{all_id_set.begin(), all_id_set.end()};
-  { // Chunks load
-    // must return all of appended chunks;
-
-    PageManager::instance()->flush();
-    dariadb::storage::QueryInterval qi(all_id_array, 0, 0, t);
-    auto links_list = PageManager::instance()->chunksByIterval(qi);
-
-    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-        new dariadb::storage::MList_ReaderClb};
-
-    PageManager::instance()->readLinks(qi, links_list, clb.get());
-
-    BOOST_CHECK_EQUAL(addeded.size(), clb->mlist.size());
-    dariadb::Time minT = dariadb::MAX_TIME, maxT = dariadb::MIN_TIME;
-    BOOST_CHECK(PageManager::instance()->minMaxTime(dariadb::Id(0), &minT, &maxT));
-    BOOST_CHECK_EQUAL(minT, dariadb::Time(0));
-
-    {
-      dariadb::Time end_time(t / 2);
-      dariadb::storage::ChunksList chunk_list;
-      dariadb::storage::QueryInterval qi(all_id_array, 0, start_time, end_time);
-      auto link_list = PageManager::instance()->chunksByIterval(qi);
-
-      auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-          new dariadb::storage::MList_ReaderClb};
-
-      PageManager::instance()->readLinks(qi, links_list, clb.get());
-
-      BOOST_CHECK_GT(clb->mlist.size(), size_t(0));
-
-      for (auto &m : clb->mlist) {
-        BOOST_CHECK(m.time <= end_time);
-      }
-
-      auto id2meas_res = PageManager::instance()->valuesBeforeTimePoint(
-          dariadb::storage::QueryTimePoint(all_id_array, 0, end_time));
-      BOOST_CHECK_EQUAL(id2meas_res.size(), all_id_array.size());
-
-      for (auto &kv : id2meas_res) {
-        BOOST_CHECK(kv.second.time <= end_time);
-      }
-    }
-  }
-  BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
-  BOOST_CHECK(dariadb::utils::fs::ls(storagePath).size() == 3); // page +index+manifest
-
-  PageManager::stop();
-  dariadb::storage::Manifest::stop();
-  dariadb::utils::async::ThreadManager::stop();
-  if (dariadb::utils::fs::path_exists(storagePath)) {
-    dariadb::utils::fs::rm(storagePath);
-  }
-}
 
 BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   const std::string storagePath = "testStorage";
@@ -237,13 +138,26 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   dariadb::Meas first;
   first.id = 1;
   first.time = t;
-  { add_meases(1, t, chunks_size / 10, addeded); }
+  {
+	  dariadb::Meas first;
+	  first.id = 1;
+	  first.time = t;
+	  auto count = chunks_size / 10;
+	  dariadb::Meas::MeasArray ma;
+	  ma.resize(count);
+	  for (size_t i = 0; i < count; i++, t++) {
+		  first.flag = dariadb::Flag(i);
+		  first.time = t;
+		  first.value = dariadb::Value(i);
+		  ma[i] = first;
+		  addeded.push_back(first);
+	  }
+	  PageManager::instance()->append("pagename", ma);
+  }
   PageManager::stop();
 
   auto fname = dariadb::utils::fs::ls(storagePath, ".page").front();
   auto header = dariadb::storage::Page::readHeader(fname);
-  BOOST_CHECK_EQUAL(header.chunk_per_storage, chunks_count);
-  BOOST_CHECK_EQUAL(header.chunk_size, chunks_size);
   BOOST_CHECK_EQUAL(header.count_readers, size_t(0));
 
   auto iheader = dariadb::storage::Page::readIndexHeader(fname + "i");
@@ -284,8 +198,24 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   first.time = t;
   const size_t page_count = 4;
 
+  size_t iteration = 0;
   while (dariadb::utils::fs::ls(storagePath, ".page").size() <= page_count) {
-    t = add_meases(1, t, chunks_size / 10, addeded);
+	dariadb::Meas first;
+	first.id = 1;
+	first.time = t;
+	auto count = chunks_size / 10;
+	dariadb::Meas::MeasArray ma;
+	ma.resize(count);
+	for (size_t i = 0; i < count; i++, t++) {
+		first.flag = dariadb::Flag(i);
+		first.time = t;
+		first.value = dariadb::Value(i);
+		ma[i] = first;
+		addeded.push_back(first);
+	}
+	std::stringstream ss;
+	ss << std::string("pagename") << iteration++;
+	PageManager::instance()->append(ss.str(), ma);
   }
 
   dariadb::storage::QueryInterval qi(dariadb::IdArray{1}, 0, addeded.front().time,

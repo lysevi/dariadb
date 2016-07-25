@@ -12,7 +12,7 @@ namespace storage {
 
 const uint16_t OPENNED_PAGE_CACHE_SIZE = 10;
 
-class PageManager : public utils::NonCopy, public IChunkContainer, public IMeasWriter {
+class PageManager : public utils::NonCopy, public IChunkContainer{
 public:
   struct Params {
     std::string path;
@@ -46,7 +46,7 @@ protected:
 public:
   static void start(const Params &param);
   static void stop();
-  void flush() override;
+  void flush();
   static PageManager *instance();
 
   // ChunkContainer
@@ -62,11 +62,9 @@ public:
   dariadb::Time minTime();
   dariadb::Time maxTime();
 
-  append_result append(const Meas &value) override;
   void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma);
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
-
 
 private:
   static PageManager *_instance;

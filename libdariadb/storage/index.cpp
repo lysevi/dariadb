@@ -117,18 +117,3 @@ IndexHeader PageIndex::readIndexHeader(std::string ifile) {
   istream.close();
   return result;
 }
-
-void PageIndex::update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr,
-                                  const dariadb::Meas &m, uint32_t pos) {
-  assert(cur_index->chunk_id == ptr->header->id);
-  assert(ptr->header->pos_in_page == pos);
-
-  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, m.id);
-  iheader->minTime = std::min(iheader->minTime, ptr->header->minTime);
-  iheader->maxTime = std::max(iheader->maxTime, ptr->header->maxTime);
-
-  cur_index->minTime = std::min(cur_index->minTime, m.time);
-  cur_index->maxTime = std::max(cur_index->maxTime, m.time);
-  cur_index->flag_bloom = ptr->header->flag_bloom;
-  cur_index->id_bloom = ptr->header->id_bloom;
-}

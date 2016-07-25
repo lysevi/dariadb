@@ -93,34 +93,9 @@ public:
     return sizeof(PageHeader) + sz_buffers + sz_info;
   }
 
-  Page_Ptr create_page() {
-    TIMECODE_METRICS(ctmd, "create", "PageManager::create_page");
-    if (!dariadb::utils::fs::path_exists(_param.path)) {
-      dariadb::utils::fs::mkdir(_param.path);
-    }
-
-    Page *res = nullptr;
-
-    std::string page_name = utils::fs::random_file_name(".page");
-    std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
-    auto sz = calc_page_size();
-    res = Page::create(file_name, sz, _param.chunk_per_storage, _param.chunk_size);
-    Manifest::instance()->page_append(page_name);
-    if (update_id) {
-      res->header->max_chunk_id = last_id;
-    }
-
-    return Page_Ptr{res};
-  }
   // PM
   void flush() {}
 
-  Page_Ptr get_cur_page() {
-    if (_cur_page == nullptr) {
-      _cur_page = create_page();
-    }
-    return _cur_page;
-  }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
@@ -359,28 +334,6 @@ public:
     return res;
   }
 
-  append_result append_unsafe(const Meas &value) {
-    while (true) {
-      auto cur_page = this->get_cur_page();
-
-      if (update_id) {
-        update_id = false;
-      }
-      auto res = cur_page->append(value);
-      if (res.writed != 1) {
-        last_id = _cur_page->header->max_chunk_id;
-        update_id = true;
-        _cur_page = nullptr;
-      } else {
-        return res;
-      }
-    }
-  }
-  append_result append(const Meas &value) {
-    TIMECODE_METRICS(ctmd, "append", "PageManager::append");
-    std::lock_guard<std::mutex> lg(_locker);
-    return append_unsafe(value);
-  }
 
   void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
       TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
@@ -469,10 +422,6 @@ dariadb::Time PageManager::minTime() {
 
 dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
-}
-
-dariadb::append_result dariadb::storage::PageManager::append(const Meas &value) {
-  return impl->append(value);
 }
 
 void dariadb::storage::PageManager::append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){

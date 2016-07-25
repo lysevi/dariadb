@@ -51,7 +51,7 @@ public:
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-
+  /*
   po::options_description desc("Allowed options");
   bool dont_clean = false;
   bool metrics_enable = false;
@@ -178,5 +178,5 @@ int main(int argc, char *argv[]) {
                 << dariadb::utils::metrics::MetricsManager::instance()->to_string()
                 << std::endl;
     }
-  }
+  }*/
 }

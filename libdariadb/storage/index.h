@@ -9,10 +9,8 @@ namespace storage {
 #pragma pack(push, 1)
 struct IndexHeader {
   uint32_t count; // count of values
-
   dariadb::Time minTime;
   dariadb::Time maxTime;
-
   bool is_sorted; // items in index file sorted by time
   bool is_closed;
   bool is_full;
@@ -46,9 +44,6 @@ public:
   ~PageIndex();
   static PageIndex_ptr create(const std::string &filename, uint64_t size);
   static PageIndex_ptr open(const std::string &filename, bool read_only);
-
-  void update_index_info(IndexReccord *cur_index, const Chunk_Ptr &ptr, const Meas &m,
-                         uint32_t pos);
 
   ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                                  dariadb::Time to, dariadb::Flag flag);
