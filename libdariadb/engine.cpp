@@ -117,6 +117,7 @@ public:
 				  logger_info("fsck: aof drop not finished: " << page_fname);
 				  logger_info("fsck: rm " << page_fname);
 				  utils::fs::rm(page_fname);
+                  utils::fs::rm(page_fname+"i");
 				  Manifest::instance()->page_rm(utils::fs::extract_filename(page));
 			  }
 		  }
