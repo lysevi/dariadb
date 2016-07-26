@@ -10,7 +10,7 @@
 
 namespace po = boost::program_options;
 
-std::atomic_uint64_t append_count{0};
+std::atomic_llong append_count{0};
 bool stop_info = false;
 
 class Moc_Dropper : public dariadb::storage::IMeasWriter {

@@ -36,7 +36,7 @@ dariadb::Id get_id_to(dariadb::Id id) {
   return (id + 1) * id_per_thread;
 }
 void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
-                            std::atomic_uint64_t *append_count,
+                            std::atomic_llong *append_count,
                             dariadb::storage::IMeasWriter *ms) {
   try {
     auto m = dariadb::Meas::empty();
