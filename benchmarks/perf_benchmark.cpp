@@ -177,10 +177,10 @@ int main(int argc, char *argv[]) {
     dariadb::storage::PageManager::Params page_param(storage_path, chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
     cap_param.store_period = 0; // 1000 * 2;
-    cap_param.max_levels = 11;
+    cap_param.max_levels = 15;
     cap_param.max_closed_caps = 0; // 5;
     dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
-    aof_param.buffer_size = 1000;
+    aof_param.buffer_size = 10000;
     aof_param.max_size = cap_param.measurements_count();
 
     cap_param.max_levels = 11;
@@ -284,15 +284,17 @@ int main(int argc, char *argv[]) {
     dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
                                 dariadb::timeutil::current_time());
 
+	auto max_time = ms->maxTime();
+	std::cout << "==> interval end time: " << dariadb::timeutil::to_string(max_time)
+		<< std::endl;
+
     if (readall_enabled) {
       if (readonly) {
         start_time = dariadb::Time(0);
       }
 
       std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
-      auto max_time = ms->maxTime();
-      std::cout << "==> interval end time: " << dariadb::timeutil::to_string(max_time)
-                << std::endl;
+      
 
       dariadb::storage::QueryInterval qi{
           dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,

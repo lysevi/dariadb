@@ -128,7 +128,7 @@ void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{p, fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
-  storage->drop(ptr, without_path);
+  storage->drop(without_path, _params.max_size);
 }
 
 void AOFManager::set_downlevel(IAofFileDropper *down) {

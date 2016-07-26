@@ -8,11 +8,11 @@
 namespace dariadb_bench {
 
 const size_t total_threads_count = 5;
-const size_t hours_write_perid = 1;
+const size_t hours_write_perid = 48*100;
 const size_t writes_per_second = 2;
 const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
 const size_t total_readers_count = 1;
-const size_t id_per_thread = 100;
+const size_t id_per_thread = 200000;
 const size_t all_writes = total_threads_count * write_per_id_count * id_per_thread;
 
 class BenchCallback : public dariadb::storage::IReaderClb {

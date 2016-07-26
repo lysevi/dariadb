@@ -23,8 +23,9 @@ class AofDropper : public dariadb::storage::IAofFileDropper {
 
 public:
   AofDropper(std::string storage_path) { _storage_path = storage_path; }
-  static void drop(const AOFile_Ptr aof, const std::string &fname,
-                   const std::string &storage_path) {
+
+  static void drop(const AOFile_Ptr aof, const std::string &fname, const std::string &storage_path) {
+
     auto target_name = utils::fs::filename(fname) + CAP_FILE_EXT;
     if (dariadb::utils::fs::path_exists(
             utils::fs::append_path(storage_path, target_name))) {
@@ -37,12 +38,22 @@ public:
     Manifest::instance()->aof_rm(fname);
     utils::fs::rm(utils::fs::append_path(storage_path, fname));
   }
-  void drop(const AOFile_Ptr aof, const std::string fname) override {
-    AsyncTask at = [fname, aof, this](const ThreadInfo &ti) {
+  
+	
+  void drop(const std::string fname, const uint64_t aof_size) override {
+    AsyncTask at = [fname, aof_size, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
       LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
+	  
+	  AOFile::Params params{ _storage_path };
+	  params.size = aof_size;
+
+	  auto full_path = dariadb::utils::fs::append_path(_storage_path, fname);
+	  
+	  AOFile_Ptr aof{ new AOFile(params, full_path,true) };
       AofDropper::drop(aof, fname, _storage_path);
+	  aof = nullptr;
       LockManager::instance()->unlock(LockObjects::DROP_AOF);
     };
 
@@ -450,15 +461,15 @@ bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-Id dariadb::storage::Engine::load(const QueryInterval &qi) {
+Id Engine::load(const QueryInterval &qi) {
   return _impl->load(qi);
 }
 
-Id dariadb::storage::Engine::load(const QueryTimePoint &qt) {
+Id Engine::load(const QueryTimePoint &qt) {
   return _impl->load(qt);
 }
 
-Meas::MeasList dariadb::storage::Engine::getResult(Id id) {
+Meas::MeasList Engine::getResult(Id id) {
   return _impl->getResult(id);
 }
 
