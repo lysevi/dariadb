@@ -94,12 +94,22 @@ public:
     ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
   }
 
+  // on start, rm PAGE files with name exists CAP file.
   static void cleanStorage(std::string storagePath) {
-    auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
-    for (auto c : caps_lst) {
-     // auto ch = Capacitor::readHeader(c);
-     //TODO remove pages with name==ch.filename
-    }
+	  auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
+	  auto page_lst = utils::fs::ls(storagePath, ".page");
+	  for (auto &cap : caps_lst) {
+		  auto cap_fname = utils::fs::filename(cap);
+		  for (auto &page : page_lst) {
+			  auto page_fname = utils::fs::filename(page);
+			  if (cap_fname == page_fname) {
+				  logger_info("fsck: aof drop not finished: " << page_fname);
+				  logger_info("fsck: rm " << page_fname);
+				  utils::fs::rm(page_fname);
+				  Manifest::instance()->page_rm(utils::fs::extract_filename(page));
+			  }
+		  }
+	  }
   }
 };
 
