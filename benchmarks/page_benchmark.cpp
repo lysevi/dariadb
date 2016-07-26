@@ -39,7 +39,6 @@ void show_info() {
 }
 
 const std::string storagePath = "page_benchmark_storage";
-const size_t chunks_count = 1024;
 const size_t chunks_size = 1024;
 
 class ReadCallback : public dariadb::storage::IReaderClb {

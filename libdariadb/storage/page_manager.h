@@ -16,15 +16,12 @@ class PageManager : public utils::NonCopy, public IChunkContainer{
 public:
   struct Params {
     std::string path;
-    uint32_t chunk_per_storage;
     uint32_t chunk_size;
     uint16_t openned_page_chache_size; /// max oppend pages in cache(readonly
                                        /// pages stored).
-    Params(const std::string storage_path, size_t chunks_per_storage,
-           size_t one_chunk_size) {
+    Params(const std::string storage_path, uint32_t one_chunk_size) {
       path = storage_path;
-      chunk_per_storage = uint32_t(chunks_per_storage);
-      chunk_size = uint32_t(one_chunk_size);
+      chunk_size = one_chunk_size;
       openned_page_chache_size = OPENNED_PAGE_CACHE_SIZE;
     }
   };

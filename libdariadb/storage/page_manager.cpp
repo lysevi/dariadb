@@ -85,14 +85,6 @@ public:
     utils::fs::rm(file_name + "i");
   }
 
-
-
-  uint64_t calc_page_size() const {
-    auto sz_info = _param.chunk_per_storage * sizeof(ChunkHeader);
-    auto sz_buffers = _param.chunk_per_storage * _param.chunk_size;
-    return sizeof(PageHeader) + sz_buffers + sz_info;
-  }
-
   // PM
   void flush() {}
 

@@ -105,7 +105,6 @@ BOOST_AUTO_TEST_CASE(LockManager_Instance) {
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 100;
   const size_t chunk_size = 256;
   const size_t cap_B = 2;
 
@@ -123,8 +122,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     aofp.max_size = cap_pam.measurements_count();
     std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                                    chunk_size),
+        aofp, dariadb::storage::PageManager::Params(storage_path, chunk_size),
         cap_pam)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
@@ -138,8 +136,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   {
     dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine(
         dariadb::storage::AOFManager::Params(storage_path, chunk_size),
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
+        dariadb::storage::PageManager::Params(storage_path, chunk_size),
         dariadb::storage::CapacitorManager::Params(storage_path, cap_B))};
 
     //check first id, because that Id placed in zipper pages.
@@ -169,7 +166,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
   std::shared_ptr<Moc_SubscribeClbk> c4(new Moc_SubscribeClbk);
 
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
@@ -180,8 +176,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 
     std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
         dariadb::storage::AOFManager::Params(storage_path, chunk_size),
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
+        dariadb::storage::PageManager::Params(storage_path, chunk_size),
         dariadb::storage::CapacitorManager::Params(storage_path, cap_B))};
 
     dariadb::IdArray ids{};
@@ -223,7 +218,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 
 BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
@@ -241,8 +235,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
     aofp.max_size = cap_pam.measurements_count();
     dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine(
-        aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                                    chunk_size),
+        aofp, dariadb::storage::PageManager::Params(storage_path, chunk_size),
         cap_pam)};
     auto m = dariadb::Meas::empty();
     size_t total_count = 0;
@@ -305,7 +298,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
 
 BOOST_AUTO_TEST_CASE(Engine_memvalues) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
@@ -318,8 +310,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
     }
 
     dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
-    dariadb::storage::PageManager::Params pamp(storage_path, chunk_per_storage,
-                                               chunk_size);
+    dariadb::storage::PageManager::Params pamp(storage_path, chunk_size);
     dariadb::storage::CapacitorManager::Params capm(storage_path, cap_B);
     aofp.max_size = capm.measurements_count();
     std::unique_ptr<dariadb::storage::Engine> ms{

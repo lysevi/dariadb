@@ -160,7 +160,6 @@ int main(int argc, char *argv[]) {
   {
     std::cout << "Write..." << std::endl;
 
-    const size_t chunk_per_storage = 512 * 10;
     const size_t chunk_size = 512;
     const size_t cap_B = 50;
 
@@ -175,8 +174,7 @@ int main(int argc, char *argv[]) {
     dariadb::Time start_time = dariadb::timeutil::current_time();
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
 
-    dariadb::storage::PageManager::Params page_param(storage_path, chunk_per_storage,
-                                                     chunk_size);
+    dariadb::storage::PageManager::Params page_param(storage_path, chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
     cap_param.store_period = 0; // 1000 * 2;
     cap_param.max_levels = 11;
