@@ -8,7 +8,7 @@ namespace dariadb {
 namespace storage {
 
 const std::string AOF_FILE_EXT = ".aof"; // append-only-file
-
+const uint64_t AOF_DEFAULT_SIZE = 1024;
 class AOFile : public IMeasStorage {
 public:
   struct Params {
@@ -18,6 +18,10 @@ public:
       size = _size;
       path = _path;
     }
+	Params(const std::string _path) {
+		path = _path;
+		size = AOF_DEFAULT_SIZE;
+	}
   };
   virtual ~AOFile();
   AOFile(const Params &param);

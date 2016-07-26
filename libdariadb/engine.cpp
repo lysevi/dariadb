@@ -46,7 +46,7 @@ public:
       TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
       LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
 	  
-	  AOFile::Params params{ _storage_path };
+	  AOFile::Params params( _storage_path );
 	  params.size = aof_size;
 
 	  auto full_path = dariadb::utils::fs::append_path(_storage_path, fname);

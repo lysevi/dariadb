@@ -9,7 +9,7 @@
 
 namespace po = boost::program_options;
 
-std::atomic_long append_count{0};
+std::atomic_uint64_t append_count{0};
 std::atomic_size_t reads_count{0};
 bool stop_info = false;
 bool stop_readers = false;
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
-              << ") reads: " << reads_count << " writes: " << append_count << std::endl;
+              << ")" << append_count << std::endl;
 
     std::cout << "Active threads: "
               << dariadb::utils::async::ThreadManager::instance()->active_works()
@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
 
       if (readed.size() != expected) {
         std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
-
+		std::cout << " all_writesL " << dariadb_bench::all_writes;
         for (auto &kv : _dict) {
           std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
         }
