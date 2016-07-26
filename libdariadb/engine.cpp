@@ -297,10 +297,7 @@ public:
 
     AsyncTask pm_at = [&clbk, &q](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      auto all_chunkLinks = PageManager::instance()->chunksByIterval(q);
-
-      PageManager::instance()->readLinks(q, all_chunkLinks, clbk);
-      all_chunkLinks.clear();
+      PageManager::instance()->foreach(q, clbk);
     };
 
     AsyncTask cm_at = [&clbk, &q](const ThreadInfo &ti) {
