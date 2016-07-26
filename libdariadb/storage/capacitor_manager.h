@@ -11,7 +11,7 @@
 namespace dariadb {
 namespace storage {
 const size_t MAX_CLOSED_CAPS = 10;
-const uint8_t COLA_MAX_LEVELS = 11;
+const uint8_t COLA_MAX_LEVELS = 11; //optimal value.
 class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
 public:
   class ICapDropper {

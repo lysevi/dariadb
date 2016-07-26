@@ -176,12 +176,12 @@ int main(int argc, char *argv[]) {
 
     dariadb::storage::PageManager::Params page_param(storage_path, chunk_size);
     dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
-    cap_param.store_period = 0; // 1000 * 2;
-    cap_param.max_levels = 15;
-    cap_param.max_closed_caps = 0; // 5;
-    dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
-    aof_param.buffer_size = 10000;
-    aof_param.max_size = cap_param.measurements_count();
+	cap_param.store_period = 0; // 1000 * 2;
+	cap_param.max_levels = 11;
+	cap_param.max_closed_caps = 0; // 5;
+	dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
+	aof_param.buffer_size = 1000;
+	aof_param.max_size = cap_param.measurements_count();
 
     cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(aof_param, page_param, cap_param);
