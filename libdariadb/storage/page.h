@@ -7,6 +7,9 @@
 
 namespace dariadb {
 namespace storage {
+
+    const std::string PAGE_FILE_EXT = ".page"; // cola-file extension
+
 #pragma pack(push, 1)
 struct PageHeader {
   //uint64_t write_offset;      // next write pos (bytes)

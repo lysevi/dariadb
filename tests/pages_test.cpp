@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   }
   PageManager::stop();
 
-  auto fname = dariadb::utils::fs::ls(storagePath, ".page").front();
+  auto fname = dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).front();
   auto header = dariadb::storage::Page::readHeader(fname);
   BOOST_CHECK(header.addeded_chunks!=size_t(0));
 
@@ -197,7 +197,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   const size_t page_count = 4;
 
   size_t iteration = 0;
-  while (dariadb::utils::fs::ls(storagePath, ".page").size() <= page_count) {
+  while (dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).size() <= page_count) {
 	dariadb::Meas first;
 	first.id = 1;
 	first.time = t;

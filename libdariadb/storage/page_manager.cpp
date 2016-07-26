@@ -335,7 +335,7 @@ public:
 
       Page *res = nullptr;
 
-      std::string page_name = file_prefix+".page";
+      std::string page_name = file_prefix+PAGE_FILE_EXT;
       std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
       res = Page::create(file_name, last_id, _param.chunk_size, ma);
       Manifest::instance()->page_append(page_name);

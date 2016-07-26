@@ -6,6 +6,7 @@
 #include "storage/manifest.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
+#include "storage/page.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include "utils/logger.h"
@@ -108,7 +109,7 @@ public:
   // on start, rm PAGE files with name exists CAP file.
   static void cleanStorage(std::string storagePath) {
 	  auto caps_lst = utils::fs::ls(storagePath, CAP_FILE_EXT);
-	  auto page_lst = utils::fs::ls(storagePath, ".page");
+      auto page_lst = utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT);
 	  for (auto &cap : caps_lst) {
 		  auto cap_fname = utils::fs::filename(cap);
 		  for (auto &page : page_lst) {
