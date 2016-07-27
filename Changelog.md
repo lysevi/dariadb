@@ -1,6 +1,7 @@
 v0.1.1
 =====
 - Code refactoring.
+- Compressed level is use "append only" idiom. More crash safety and more faster.
 
 v0.1.0
 =====
