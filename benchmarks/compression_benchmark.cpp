@@ -6,7 +6,7 @@
 #include <dariadb.h>
 #include <chrono>
 #include <cmath>
-#include <compression.h>
+#include <compression/compression.h>
 #include <compression/delta.h>
 #include <compression/flag.h>
 #include <compression/id.h>

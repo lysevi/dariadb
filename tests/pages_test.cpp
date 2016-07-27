@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <boost/test/unit_test.hpp>
 
-#include <compression.h>
+#include <compression/compression.h>
 #include <flags.h>
 #include <storage/bloom_filter.h>
 #include <storage/callbacks.h>

@@ -2,7 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 
-#include <compression.h>
+#include <compression/compression.h>
 #include <compression/delta.h>
 #include <compression/flag.h>
 #include <compression/id.h>

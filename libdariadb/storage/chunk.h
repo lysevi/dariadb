@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../compression.h"
+#include "../compression/compression.h"
 #include "../compression/binarybuffer.h"
 #include "../meas.h"
 #include "../utils/locker.h"
