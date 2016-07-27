@@ -10,6 +10,111 @@
 using namespace dariadb::storage;
 using namespace dariadb;
 
+namespace PageInner {
+	using HdrAndBuffer = std::tuple<ChunkHeader, std::shared_ptr<uint8_t>>;
+
+std::list<Meas::MeasList> splitById(const Meas::MeasArray &ma) {
+  dariadb::IdSet dropped;
+  auto count = ma.size();
+  std::vector<bool> visited(count);
+  auto begin = ma.cbegin();
+  auto end = ma.cend();
+  size_t i = 0;
+  std::list<Meas::MeasList> result;
+  for (auto it = begin; it != end; ++it, ++i) {
+    if (visited[i]) {
+      continue;
+    }
+    if (dropped.find(it->id) != dropped.end()) {
+      continue;
+    }
+    Meas::MeasList current_id_values;
+    visited[i] = true;
+    current_id_values.push_back(*it);
+    size_t pos = 0;
+    for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
+      if (visited[pos]) {
+        continue;
+      }
+      if ((sub_it->id == it->id)) {
+        current_id_values.push_back(*sub_it);
+        visited[pos] = true;
+      }
+    }
+    dropped.insert(it->id);
+    result.push_back(std::move(current_id_values));
+  }
+  return result;
+}
+
+std::list<HdrAndBuffer> compressValues(std::list<Meas::MeasList> &to_compress, PageHeader &phdr) {
+	std::list<HdrAndBuffer> results;
+
+	for (auto&lst : to_compress) {
+		ChunkHeader hdr;
+		memset(&hdr, 0, sizeof(ChunkHeader));
+		auto lst_size = lst.size();
+		auto buff_size = lst_size * sizeof(Meas);
+		std::shared_ptr<uint8_t> buffer_ptr{ new uint8_t[buff_size] };
+		memset(buffer_ptr.get(), 0, buff_size);
+		ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, lst.front());
+		lst.pop_front();
+		for (auto&v : lst) {
+			ch.append(v);
+		}
+		ch.close();
+
+		phdr.max_chunk_id++;
+		phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
+		phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
+		ch.header->id = phdr.max_chunk_id;
+
+		HdrAndBuffer subres = std::make_tuple(hdr, buffer_ptr);
+		results.push_back(subres);
+	}
+	return results;
+}
+
+///result - page file size in bytes
+uint64_t writeToFile(const std::string &file_name, PageHeader&phdr, std::list<HdrAndBuffer> &compressed_results) {
+	auto file = std::fopen(file_name.c_str(), "ab");
+	if (file == nullptr) {
+		throw MAKE_EXCEPTION("aofile: append error.");
+	}
+
+	std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+	uint64_t offset = 0;
+
+	for (auto hb : compressed_results) {
+		ChunkHeader chunk_header = std::get<0>(hb);
+		std::shared_ptr<uint8_t> chunk_buffer_ptr = std::get<1>(hb);
+
+		chunk_header.pos_in_page = phdr.addeded_chunks;
+		phdr.addeded_chunks++;
+		auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
+		auto skip_count = chunk_header.size - cur_chunk_buf_size;
+
+		chunk_header.size = cur_chunk_buf_size;
+		chunk_header.offset_in_page = offset;
+
+		ZippedChunk ch(&chunk_header, chunk_buffer_ptr.get());
+		ch.close();
+		std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
+		std::fwrite(chunk_buffer_ptr.get() + skip_count,
+			sizeof(uint8_t),
+			cur_chunk_buf_size, file);
+
+
+		offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+
+	}
+	auto page_size = offset + sizeof(PageHeader);
+	phdr.filesize = page_size;
+	std::fclose(file);
+	return page_size;
+}
+}
+
 Page::~Page() {
   if (!this->readonly) {
     if (this->_openned_chunk.ch != nullptr) {
@@ -31,107 +136,22 @@ uint64_t index_file_size(uint32_t chunk_per_storage) {
 }
 
 
+
 Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max_chunk_size, const Meas::MeasArray &ma){
     TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
 
-    dariadb::IdSet dropped;
-    auto count=ma.size();
-    std::vector<bool> visited(count);
-    auto begin=ma.cbegin();
-    auto end=ma.cend();
-    size_t i = 0;
-    std::list<Meas::MeasList> to_compress;
-    for (auto it = begin; it != end; ++it, ++i) {
-      if (visited[i]) {
-        continue;
-      }
-      if (dropped.find(it->id) != dropped.end()) {
-        continue;
-      }
-      Meas::MeasList current_id_values;
-      visited[i] = true;
-      current_id_values.push_back(*it);
-      size_t pos = 0;
-      for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
-        if (visited[pos]) {
-          continue;
-        }
-        if ((sub_it->id == it->id)) {
-          current_id_values.push_back(*sub_it);
-          visited[pos] = true;
-        }
-      }
-      dropped.insert(it->id);
-      to_compress.push_back(std::move(current_id_values));
-    }
-
+	std::list<Meas::MeasList> to_compress = PageInner::splitById(ma);
 
     PageHeader phdr;
     memset(&phdr, 0,sizeof(PageHeader));
     phdr.maxTime=dariadb::MIN_TIME;
     phdr.minTime=dariadb::MAX_TIME;
     phdr.max_chunk_id=chunk_id;
-
-    using HdrAndBuffer=std::tuple<ChunkHeader,std::shared_ptr<uint8_t>>;
-    std::list<HdrAndBuffer> results;
-
-    for(auto&lst:to_compress){
-        ChunkHeader hdr;
-        memset(&hdr,0,sizeof(ChunkHeader));
-        auto lst_size=lst.size();
-        auto buff_size=lst_size*sizeof(Meas);
-        std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[buff_size]};
-        memset(buffer_ptr.get(), 0,buff_size);
-        ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size,lst.front());
-        lst.pop_front();
-        for(auto&v:lst){
-            ch.append(v);
-        }
-        ch.close();
-
-        phdr.max_chunk_id++;
-        phdr.minTime=std::min(phdr.minTime,ch.header->minTime);
-        phdr.maxTime=std::max(phdr.maxTime,ch.header->maxTime);
-        ch.header->id = phdr.max_chunk_id;
-
-        HdrAndBuffer subres= std::make_tuple(hdr,buffer_ptr);
-        results.push_back(subres);
-    }
-
-    auto file = std::fopen(file_name.c_str(), "ab");
-    if (file == nullptr) {
-      throw MAKE_EXCEPTION("aofile: append error.");
-    }
-
-    std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
-    uint64_t offset=0;
-
-    for(auto hb:results){
-        ChunkHeader chunk_header=std::get<0>(hb);
-        std::shared_ptr<uint8_t> chunk_buffer_ptr=std::get<1>(hb);
-
-        chunk_header.pos_in_page=phdr.addeded_chunks;
-        phdr.addeded_chunks++;
-        auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
-        auto skip_count=chunk_header.size-cur_chunk_buf_size;
-
-        chunk_header.size=cur_chunk_buf_size;
-        chunk_header.offset_in_page=offset;
-
-        ZippedChunk ch(&chunk_header, chunk_buffer_ptr.get());
-        ch.close();
-        std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
-        std::fwrite(chunk_buffer_ptr.get()+skip_count,
-                    sizeof(uint8_t),
-                    cur_chunk_buf_size, file);
-
-
-        offset+=sizeof(ChunkHeader) + cur_chunk_buf_size;
-
-    }
-    auto page_size=offset+sizeof(PageHeader);
+    
+	std::list<PageInner::HdrAndBuffer> compressed_results = PageInner::compressValues(to_compress, phdr);
+  
+	auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
     phdr.filesize=page_size;
-    std::fclose(file);
 
     auto res = new Page;
     res->readonly = false;
