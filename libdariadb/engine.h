@@ -55,6 +55,7 @@ public:
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
   void wait_all_asyncs();
 
+  void fsck();
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

@@ -186,6 +186,9 @@ int main(int argc, char *argv[]) {
 	aof_param.max_size = cap_param.measurements_count();
     auto raw_ptr = new dariadb::storage::Engine(aof_param, page_param, cap_param);
 
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+        raw_ptr->fsck();
+    }
     dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
 
     dariadb::IdSet all_id_set;

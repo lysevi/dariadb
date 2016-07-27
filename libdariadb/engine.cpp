@@ -156,10 +156,6 @@ public:
     }
     AOFManager::start(aof_params);
     CapacitorManager::start(_cap_params);
-    if (is_exists) {
-      CapacitorManager::instance()->fsck();
-      PageManager::instance()->fsck();
-    }
 
     _aof_dropper = std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));
     _cap_dropper = std::unique_ptr<CapDrooper>(new CapDrooper());
@@ -426,6 +422,10 @@ public:
     CapacitorManager::instance()->drop_closed_files(count);
   }
 
+  void fsck(){
+      CapacitorManager::instance()->fsck();
+      PageManager::instance()->fsck();
+  }
 protected:
   storage::PageManager::Params _page_manager_params;
   dariadb::storage::CapacitorManager::Params _cap_params;
@@ -513,4 +513,8 @@ void Engine::drop_part_caps(size_t count) {
 
 void Engine::wait_all_asyncs() {
   return _impl->wait_all_asyncs();
+}
+
+void Engine::fsck(){
+   _impl->fsck();
 }
