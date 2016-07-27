@@ -3,6 +3,7 @@ v0.1.1
 - Code refactoring.
 - Compressed level is use "append only" idiom. More crash safety and more faster.
 - Use Jenkins hash function for bloom filter.
+- Apache License.
 
 v0.1.0
 =====
