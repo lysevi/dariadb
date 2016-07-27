@@ -173,7 +173,7 @@ Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max
     res->page_mmap->flush(0, sizeof(PageHeader));
     res->update_index_recs();
     res->flush();
-    assert(res->header->addeded_chunks==results.size());
+    assert(res->header->addeded_chunks==compressed_results.size());
     return res;
 }
 
