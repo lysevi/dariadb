@@ -23,13 +23,21 @@ public:
 
 void show_info(dariadb::storage::Engine *storage) {
   clock_t t0 = clock();
+  long long w0=append_count.load();
+  long long r0=reads_count.load();
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    long long w1=append_count.load();
+    long long r1=reads_count.load();
+
     clock_t t1 = clock();
-    auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
-    auto reads_per_sec = reads_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
+    auto step_time=double(double(t1 - t0) / (double)CLOCKS_PER_SEC);
+
+    auto writes_per_sec = (w1-w0) /step_time;
+    auto reads_per_sec = (r1-r0) / step_time;
     auto queue_sizes = storage->queue_size();
+
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
@@ -39,6 +47,8 @@ void show_info(dariadb::storage::Engine *storage) {
               << "/sec progress:"
               << (int64_t(100) * append_count) / dariadb_bench::all_writes
               << "%                ";
+    w0=w1;
+    t0=t1;
     std::cout.flush();
     if (stop_info) {
       std::cout.flush();
@@ -164,10 +174,14 @@ int main(int argc, char *argv[]) {
     const size_t cap_B = 50;
 
     // dont_clean = true;
+    bool is_exists=false;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
+
       if (!readonly) {
         std::cout << " remove " << storage_path << std::endl;
         dariadb::utils::fs::rm(storage_path);
+      }else{
+          is_exists=true;
       }
     }
 
@@ -186,7 +200,7 @@ int main(int argc, char *argv[]) {
 	aof_param.max_size = cap_param.measurements_count();
     auto raw_ptr = new dariadb::storage::Engine(aof_param, page_param, cap_param);
 
-    if (dariadb::utils::fs::path_exists(storage_path)) {
+    if (is_exists) {
         raw_ptr->fsck();
     }
     dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
@@ -245,8 +259,10 @@ int main(int argc, char *argv[]) {
 
     stop_info = true;
     info_thread.join();
-    std::cout << " total id:" << all_id_set.size() << std::endl;
-	std::cout << "write time: " << writers_elapsed << std::endl;
+    std::cout << "total id:" << all_id_set.size() << std::endl;
+
+    std::cout << "write time: " << writers_elapsed <<std::endl;
+    std::cout <<"total speed: "<<append_count /writers_elapsed<<"/s" << std::endl;
     {
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
