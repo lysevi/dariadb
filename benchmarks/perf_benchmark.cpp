@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (!readonly) {
-      size_t ccount = size_t(raw_ptr->queue_size().cola_count);
+      size_t ccount = size_t(raw_ptr->queue_size().cola_count*0.5);
       std::cout << "==> drop part caps to " << ccount << "..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_drop_info, raw_ptr);
@@ -281,7 +281,7 @@ int main(int argc, char *argv[]) {
               << dariadb::utils::async::ThreadManager::instance()->active_works()
               << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set, ms.get(), 10, start_time,
+    dariadb_bench::readBenchark(all_id_set, ms.get(), 100, start_time,
                                 dariadb::timeutil::current_time());
 
 	auto max_time = ms->maxTime();
