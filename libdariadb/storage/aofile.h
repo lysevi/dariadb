@@ -33,7 +33,6 @@ public:
   append_result append(const Meas::MeasList::const_iterator &begin,
                        const Meas::MeasList::const_iterator &end) override;
   void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  Meas::MeasList readInterval(const QueryInterval &q) override;
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   dariadb::Time minTime() override;

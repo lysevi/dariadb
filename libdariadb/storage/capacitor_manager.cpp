@@ -303,34 +303,6 @@ void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   }
 }
 
-Meas::MeasList CapacitorManager::readInterval(const QueryInterval &query) {
-  TIMECODE_METRICS(ctmd, "readInterval", "CapacitorManager::readInterval");
-
-  Meas::MeasList result;
-  std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
-
-  std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
-  this->foreach (query, clbk.get());
-
-  for (auto m : clbk->mlist) {
-    if (m.flag == Flags::_NO_DATA) {
-      continue;
-    }
-    sub_result[m.id].insert(m);
-  }
-
-  for (auto id : query.ids) {
-    auto sublist = sub_result.find(id);
-    if (sublist == sub_result.end()) {
-      continue;
-    }
-    for (auto v : sublist->second) {
-      result.push_back(v);
-    }
-  }
-  return result;
-}
-
 Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readInTimePoint", "CapacitorManager::readInTimePoint");
   std::lock_guard<std::mutex> lg(_locker);
