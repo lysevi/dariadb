@@ -175,15 +175,15 @@ int main(int argc, char *argv[]) {
     std::cout << " start time: " << dariadb::timeutil::to_string(start_time) << std::endl;
 
     dariadb::storage::PageManager::Params page_param(storage_path, chunk_size);
-    dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
-	cap_param.store_period = 0; // 1000 * 2;
+    
+	dariadb::storage::CapacitorManager::Params cap_param(storage_path, cap_B);
+	cap_param.store_period = 1000 * 60*60;
 	cap_param.max_levels = 11;
 	cap_param.max_closed_caps = 0; // 5;
+	
 	dariadb::storage::AOFManager::Params aof_param(storage_path, 0);
 	aof_param.buffer_size = 1000;
 	aof_param.max_size = cap_param.measurements_count();
-
-    cap_param.max_levels = 11;
     auto raw_ptr = new dariadb::storage::Engine(aof_param, page_param, cap_param);
 
     dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
@@ -198,6 +198,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::thread> readers(dariadb_bench::total_readers_count);
 
     size_t pos = 0;
+	auto writers_start = clock();
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       auto id_from = dariadb_bench::get_id_from(pos);
       auto id_to = dariadb_bench::get_id_to(pos);
@@ -219,6 +220,8 @@ int main(int argc, char *argv[]) {
         readers[pos++] = std::move(t);
       }
     }
+	
+	
 
     if (!readonly) {
       pos = 0;
@@ -227,6 +230,7 @@ int main(int argc, char *argv[]) {
         t.join();
       }
     }
+	auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
     stop_readers = true;
     if (readers_enable) {
       pos = 0;
@@ -239,7 +243,7 @@ int main(int argc, char *argv[]) {
     stop_info = true;
     info_thread.join();
     std::cout << " total id:" << all_id_set.size() << std::endl;
-
+	std::cout << "write time: " << writers_elapsed << std::endl;
     {
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
@@ -275,7 +279,7 @@ int main(int argc, char *argv[]) {
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
-              << ")" << append_count << std::endl;
+              << ")" << std::endl;
 
     std::cout << "Active threads: "
               << dariadb::utils::async::ThreadManager::instance()->active_works()
