@@ -112,35 +112,41 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const dariadb::Time to = from + 1000;
   const dariadb::Time step = 10;
 
+  using namespace dariadb::storage;
+
   {
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
+    CapacitorManager::Params cap_pam(storage_path, cap_B);
     cap_pam.max_levels = 4;
-    dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
+    AOFManager::Params aofp(storage_path, chunk_size);
     aofp.max_size = cap_pam.measurements_count();
-    std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        aofp, dariadb::storage::PageManager::Params(storage_path, chunk_size),
+    std::unique_ptr<Engine> ms{new Engine(
+        aofp, PageManager::Params(storage_path, chunk_size),
         cap_pam)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
     ms->wait_all_asyncs();
-    auto pages_count = dariadb::storage::PageManager::instance()->files_count();
+    auto pages_count = PageManager::instance()->files_count();
     BOOST_CHECK_GE(pages_count, size_t(2));
 
     pages_count = dariadb::storage::PageManager::instance()->files_count();
     BOOST_CHECK_GE(pages_count, size_t(2));
   }
   {
-    dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::AOFManager::Params(storage_path, chunk_size),
-        dariadb::storage::PageManager::Params(storage_path, chunk_size),
-        dariadb::storage::CapacitorManager::Params(storage_path, cap_B))};
+
+    auto raw_ptr = new Engine(
+        AOFManager::Params(storage_path, chunk_size),
+        PageManager::Params(storage_path, chunk_size),
+        CapacitorManager::Params(storage_path, cap_B));
+    dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
+
+    raw_ptr->fsck();
 
     //check first id, because that Id placed in zipper pages.
-    auto values=ms->readInterval(dariadb::storage::QueryInterval({dariadb::Id(0)},0,from,to));
+    auto values=ms->readInterval(QueryInterval({dariadb::Id(0)},0,from,to));
     BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
 
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
