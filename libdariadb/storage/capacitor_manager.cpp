@@ -278,8 +278,7 @@ void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
 
   auto files = caps_by_filter(pred);
   auto p = Capacitor::Params(_params.B, _params.path);
-  std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
-
+  
   std::vector<TaskResult_Ptr> task_res{files.size()};
   size_t num = 0;
   for (auto filename : files) {

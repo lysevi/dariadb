@@ -87,4 +87,7 @@ struct meas_time_compare_greater {
     return lhs.time > rhs.time;
   }
 };
+
+using  Id2MSet = std::map<Id, std::set<Meas, meas_time_compare_less>>;
+
 }

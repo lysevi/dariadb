@@ -19,7 +19,7 @@ Meas::MeasList IMeasSource::readInterval(const QueryInterval &q) {
 	std::unique_ptr<MList_ReaderClb> clbk{ new MList_ReaderClb };
 	this->foreach(q, clbk.get());
 
-	std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
+	Id2MSet sub_result;
 	for (auto v : clbk->mlist) {
 		sub_result[v.id].insert(v);
 	}
