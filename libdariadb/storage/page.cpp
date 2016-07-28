@@ -401,7 +401,6 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
                      IReaderClb *clb) {
   TIMECODE_METRICS(ctmd, "readLinks", "Page::readLinks");
-  std::lock_guard<std::mutex> lg(_locker);
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
     return;

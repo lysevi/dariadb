@@ -32,8 +32,8 @@ public:
 
 void parse_cmdline(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")(
-      "readonly", "readonly mode")("readall", "read all benchmark enable.")
+  desc.add_options()("help", "produce help message")("readonly", "readonly mode")(
+      "readall", "read all benchmark enable.")
 
       ("dont-clean", "dont clean storage path before start.")(
           "enable-readers",
@@ -95,8 +95,7 @@ void show_info(Engine *storage) {
 
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count
-              << " a:" << queue_sizes.aofs_count
+              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
               << " T:" << queue_sizes.active_works << ") reads: " << reads_count
               << " speed:" << reads_per_sec << "/sec"
               << " writes: " << append_count << " speed: " << writes_per_sec
@@ -121,8 +120,7 @@ void show_drop_info(Engine *storage) {
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count
-              << " a:" << queue_sizes.aofs_count
+              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
               << " T:" << queue_sizes.active_works << ")          ";
     std::cout.flush();
     if (stop_info) {
@@ -156,8 +154,8 @@ void reader(IMeasStorage_ptr ms, IdSet all_id_set, Time from, Time to) {
   }
 }
 
-void start_rw(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
-              IdSet &all_id_set, bool readonly, bool readers_enable) {
+void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
+                  IdSet &all_id_set) {
 
   std::thread info_thread(show_info, raw_ptr);
 
@@ -182,8 +180,7 @@ void start_rw(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   if (readers_enable) {
     pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
-      std::thread t{reader, ms, all_id_set, start_time,
-                    timeutil::current_time()};
+      std::thread t{reader, ms, all_id_set, start_time, timeutil::current_time()};
       readers[pos++] = std::move(t);
     }
   }
@@ -208,7 +205,7 @@ void start_rw(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   info_thread.join();
 }
 void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
-                    IdSet &all_id_set, bool readonly) {
+                    IdSet &all_id_set) {
   if (readonly) {
     start_time = Time(0);
   }
@@ -238,9 +235,8 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
   std::cout << "readed: " << readed.size() << std::endl;
   std::cout << "time: " << elapsed << std::endl;
 
-  auto expected =
-      (dariadb_bench::write_per_id_count * dariadb_bench::total_threads_count *
-       dariadb_bench::id_per_thread);
+  auto expected = (dariadb_bench::write_per_id_count *
+                   dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
 
   std::map<Id, Meas::MeasList> _dict;
   for (auto &v : readed) {
@@ -248,26 +244,22 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
   }
 
   if (readed.size() != expected) {
-    std::cout << "expected: " << expected << " get:" << clbk->count
-              << std::endl;
+    std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
     std::cout << " all_writesL " << dariadb_bench::all_writes;
     for (auto &kv : _dict) {
       std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
     }
-    throw MAKE_EXCEPTION(
-        "(clbk->count!=(iteration_count*total_threads_count))");
+    throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
   }
 }
 
 int main(int argc, char *argv[]) {
   std::cout << "Performance benchmark" << std::endl;
-  std::cout << "Writers count:" << dariadb_bench::total_threads_count
-            << std::endl;
+  std::cout << "Writers count:" << dariadb_bench::total_threads_count << std::endl;
 
   const std::string storage_path = "perf_benchmark_storage";
 
-
-  parse_cmdline(argc,argv);
+  parse_cmdline(argc, argv);
 
   if (readers_enable) {
     std::cout << "Readers enable. count: " << dariadb_bench::total_readers_count
@@ -292,8 +284,7 @@ int main(int argc, char *argv[]) {
     }
 
     Time start_time = timeutil::current_time();
-    std::cout << " start time: " << timeutil::to_string(start_time)
-              << std::endl;
+    std::cout << " start time: " << timeutil::to_string(start_time) << std::endl;
 
     PageManager::Params page_param(storage_path, chunk_size);
 
@@ -317,7 +308,7 @@ int main(int argc, char *argv[]) {
     stop_info = false;
     auto writers_start = clock();
 
-    start_rw(ms, raw_ptr, start_time, all_id_set, readonly, readers_enable);
+    rw_benchmark(ms, raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
     stop_readers = true;
@@ -325,8 +316,7 @@ int main(int argc, char *argv[]) {
     std::cout << "total id:" << all_id_set.size() << std::endl;
 
     std::cout << "write time: " << writers_elapsed << std::endl;
-    std::cout << "total speed: " << append_count / writers_elapsed << "/s"
-              << std::endl;
+    std::cout << "total speed: " << append_count / writers_elapsed << "/s" << std::endl;
     {
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
@@ -361,22 +351,20 @@ int main(int argc, char *argv[]) {
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
               << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count
-              << " a:" << queue_sizes.aofs_count << ")" << std::endl;
+              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+              << ")" << std::endl;
 
     std::cout << "Active threads: "
-              << utils::async::ThreadManager::instance()->active_works()
-              << std::endl;
+              << utils::async::ThreadManager::instance()->active_works() << std::endl;
 
     dariadb_bench::readBenchark(all_id_set, ms.get(), 100, start_time,
                                 timeutil::current_time());
 
     auto max_time = ms->maxTime();
-    std::cout << "==> interval end time: " << timeutil::to_string(max_time)
-              << std::endl;
+    std::cout << "==> interval end time: " << timeutil::to_string(max_time) << std::endl;
 
     if (readall_enabled) {
-      read_all_bench(ms, start_time, max_time, all_id_set, readonly);
+      read_all_bench(ms, start_time, max_time, all_id_set);
     }
     std::cout << "stoping storage...\n";
     ms = nullptr;
@@ -389,7 +377,6 @@ int main(int argc, char *argv[]) {
 
   if (metrics_enable) {
     std::cout << "metrics:\n"
-              << utils::metrics::MetricsManager::instance()->to_string()
-              << std::endl;
+              << utils::metrics::MetricsManager::instance()->to_string() << std::endl;
   }
 }

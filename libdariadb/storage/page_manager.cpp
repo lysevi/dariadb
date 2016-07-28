@@ -91,7 +91,6 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pages = pages_by_filter(
         [id](const IndexHeader &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
@@ -165,7 +164,6 @@ public:
 
   ChunkLinkList chunksByIterval(const QueryInterval &query) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::chunksByIterval");
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [query](const IndexHeader &hdr) {
       auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
@@ -202,7 +200,6 @@ public:
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
-    std::lock_guard<std::mutex> lg(_locker);
 
     ChunkLinkList to_read;
 
@@ -246,7 +243,6 @@ public:
 
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "PageManager::valuesBeforeTimePoint");
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [query](const IndexHeader &hdr) {
       auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
@@ -296,7 +292,6 @@ public:
   size_t files_count() const { return Manifest::instance()->page_list().size(); }
 
   dariadb::Time minTime() {
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [](const IndexHeader &) { return true; };
 
@@ -311,7 +306,6 @@ public:
     return res;
   }
   dariadb::Time maxTime() {
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [](const IndexHeader &) { return true; };
 
@@ -348,7 +342,7 @@ public:
 protected:
   Page_Ptr _cur_page;
   PageManager::Params _param;
-  mutable std::mutex _locker, _page_open_lock;
+  mutable std::mutex _page_open_lock;
 
   uint64_t last_id;
   bool update_id;

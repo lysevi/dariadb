@@ -75,7 +75,6 @@ public:
 
 protected:
   PageIndex_ptr _index;
-  mutable std::mutex _locker;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
 };
 

@@ -137,7 +137,7 @@ void AOFManager::set_downlevel(IAofFileDropper *down) {
 }
 
 dariadb::Time AOFManager::minTime() {
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
   auto files = aof_files();
   dariadb::Time result = dariadb::MAX_TIME;
   for (auto filename : files) {
@@ -158,7 +158,7 @@ dariadb::Time AOFManager::minTime() {
 }
 
 dariadb::Time AOFManager::maxTime() {
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
   auto files = aof_files();
   dariadb::Time result = dariadb::MIN_TIME;
   for (auto filename : files) {
@@ -176,7 +176,7 @@ dariadb::Time AOFManager::maxTime() {
 bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
   TIMECODE_METRICS(ctmd, "minMaxTime", "AOFManager::minMaxTime");
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
 
@@ -234,7 +234,7 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 
 void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
   auto files = aof_files();
   if (files.empty()) {
     return;
@@ -272,7 +272,7 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
 
 Meas::Id2Meas AOFManager::readInTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFManager::readInTimePoint");
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
   auto files = aof_files();
   auto p = AOFile::Params(_params.max_size, _params.path);
   dariadb::Meas::Id2Meas sub_result;
@@ -359,7 +359,7 @@ Meas::Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
 
 dariadb::append_result AOFManager::append(const Meas &value) {
   TIMECODE_METRICS(ctmd, "append", "AOFManager::append");
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_locker);
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
 

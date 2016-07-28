@@ -89,7 +89,6 @@ private:
 
   Params _params;
   Capacitor_Ptr _cap;
-  mutable std::mutex _locker;
   ICapDropper *_down;
   std::set<std::string> _files_send_to_drop;
 };

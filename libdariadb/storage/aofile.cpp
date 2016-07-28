@@ -38,7 +38,7 @@ public:
   append_result append(const Meas &value) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
-    std::lock_guard<std::mutex> lock(_mutex);
+    
     if (_writed > _params.size) {
       return append_result(0, 1);
     }
@@ -57,7 +57,7 @@ public:
                        const Meas::MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
-    std::lock_guard<std::mutex> lock(_mutex);
+    
     auto sz = std::distance(begin, end);
     if (is_full) {
       return append_result(0, sz);
@@ -79,7 +79,7 @@ public:
                        const Meas::MeasList::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
-    std::lock_guard<std::mutex> lock(_mutex);
+    
     auto list_size = std::distance(begin, end);
     if (is_full) {
       return append_result(0, list_size);
@@ -101,7 +101,6 @@ public:
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
-    std::lock_guard<std::mutex> lock(_mutex);
 
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
@@ -123,7 +122,7 @@ public:
 
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFile::readInTimePoint");
-    std::lock_guard<std::mutex> lock(_mutex);
+    
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
 
@@ -169,7 +168,6 @@ public:
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    std::lock_guard<std::mutex> lock(_mutex);
     dariadb::Meas::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
     auto file = std::fopen(_filename.c_str(), "rb");
@@ -203,7 +201,6 @@ public:
   }
 
   dariadb::Time minTime() const {
-    std::lock_guard<std::mutex> lock(_mutex);
     auto file = std::fopen(_filename.c_str(), "rb");
     if (file == nullptr) {
       throw_open_error_exception();
@@ -309,8 +306,6 @@ public:
 protected:
   AOFile::Params _params;
   std::string _filename;
-
-  mutable std::mutex _mutex;
   bool _is_readonly;
   size_t _writed;
   bool is_full;

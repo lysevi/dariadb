@@ -2,6 +2,7 @@
 
 #include "../interfaces/imeasstorage.h"
 #include "../utils/utils.h"
+#include "../utils/locker.h"
 #include "aofile.h"
 #include <vector>
 
@@ -76,7 +77,7 @@ private:
 
   Params _params;
   AOFile_Ptr _aof;
-  mutable std::mutex _locker;
+  mutable utils::Locker _locker;
   IAofFileDropper *_down;
 
   Meas::MeasArray _buffer;

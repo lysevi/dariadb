@@ -184,7 +184,6 @@ public:
   }
 
   Time minTime() {
-    std::lock_guard<std::mutex> lg(_locker);
     auto pmin = PageManager::instance()->minTime();
     auto cmin = CapacitorManager::instance()->minTime();
     auto amin = AOFManager::instance()->minTime();
@@ -192,7 +191,6 @@ public:
   }
 
   Time maxTime() {
-    std::lock_guard<std::mutex> lg(_locker);
     auto pmax = PageManager::instance()->maxTime();
     auto cmax = CapacitorManager::instance()->maxTime();
     auto amax = AOFManager::instance()->maxTime();
@@ -201,7 +199,6 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "Engine::minMaxTime");
-    std::lock_guard<std::mutex> lg(_locker);
     dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
     dariadb::Time subMin2 = dariadb::MAX_TIME, subMax2 = dariadb::MIN_TIME;
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;

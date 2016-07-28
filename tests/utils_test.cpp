@@ -374,7 +374,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
       ThreadManager::instance()->post(tk1, AT(at1));
       ThreadManager::instance()->post(tk2, AT(at2));
     }
-    BOOST_CHECK_GT(ThreadManager::instance()->active_works(), size_t(0));
+    BOOST_CHECK_GE(ThreadManager::instance()->active_works(), size_t(0));
     ThreadManager::instance()->flush();
     ThreadManager::instance()->stop();
   }

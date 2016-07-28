@@ -22,8 +22,6 @@ File struct:
 #include "callbacks.h"
 #include "manifest.h"
 #include <algorithm>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/shared_mutex.hpp>
 #include <cassert>
 #include <cstring>
 #include <fstream>
@@ -296,7 +294,6 @@ public:
   append_result append(const Meas &value) {
     TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
     assert(!_is_readonly);
-    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
     auto result = append_unsafe(value);
     return result;
@@ -338,7 +335,6 @@ public:
                        const Meas::MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
     assert(!_is_readonly);
-    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
 
     if (size_t(std::distance(begin, end)) == (_header->max_values_count)) {
       return bulk(begin, end);
@@ -519,7 +515,6 @@ public:
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Capacitor::foreach");
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
     bool id_exists = _header->check_id(q.ids);
     bool flag_exists = false;
@@ -573,7 +568,6 @@ public:
 
   Meas::MeasArray readAll() const {
       TIMECODE_METRICS(ctmd, "foreach", "Capacitor::readall");
-      boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
       Meas::MeasArray result;
       result.resize(this->_header->_writed);
@@ -613,30 +607,25 @@ public:
 
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "Capacitor::readInTimePoint");
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
     dariadb::Meas::Id2Meas sub_res = timePointValues(q);
 
     return sub_res;
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return readInTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
 
   dariadb::Time minTime() const {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return _header->minTime;
   }
 
   dariadb::Time maxTime() const {
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
     return _header->maxTime;
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "Capacitor::minMaxTime");
-    boost::shared_lock<boost::shared_mutex> lock(_mutex);
 
     if (!_header->check_id(id)) {
       return false;
@@ -675,7 +664,6 @@ public:
   }
 
   void flush() {
-    boost::upgrade_lock<boost::shared_mutex> lock(_mutex);
     mmap->flush();
   }
 
@@ -779,7 +767,6 @@ protected:
   Meas *_memvalues;
   size_t _memvalues_size;
 
-  mutable boost::shared_mutex _mutex;
   bool _is_readonly;
 };
 

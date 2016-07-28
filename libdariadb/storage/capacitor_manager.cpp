@@ -181,12 +181,10 @@ void CapacitorManager::drop_closed_unsafe(size_t count) {
 }
 
 void CapacitorManager::drop_closed_files(size_t count) {
-  std::lock_guard<std::mutex> lg(_locker);
-  drop_closed_unsafe(count);
+    drop_closed_unsafe(count);
 }
 
 dariadb::Time CapacitorManager::minTime() {
-  std::lock_guard<std::mutex> lg(_locker);
   auto files = cap_files();
   dariadb::Time result = dariadb::MAX_TIME;
   for (auto filename : files) {
@@ -197,7 +195,6 @@ dariadb::Time CapacitorManager::minTime() {
 }
 
 dariadb::Time CapacitorManager::maxTime() {
-  std::lock_guard<std::mutex> lg(_locker);
   auto files = cap_files();
   dariadb::Time result = dariadb::MIN_TIME;
   for (auto filename : files) {
@@ -210,7 +207,6 @@ dariadb::Time CapacitorManager::maxTime() {
 bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                   dariadb::Time *maxResult) {
   TIMECODE_METRICS(ctmd, "minMaxTime", "CapacitorManager::minMaxTime");
-  std::lock_guard<std::mutex> lg(_locker);
   auto files = cap_files();
   auto p = Capacitor::Params(_params.B, _params.path);
 
@@ -257,7 +253,6 @@ bool CapacitorManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 
 void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   TIMECODE_METRICS(ctmd, "foreach", "CapacitorManager::foreach");
-  std::lock_guard<std::mutex> lg(_locker);
   auto pred = [q](const Capacitor::Header &hdr) {
 
     bool flag_exists = hdr.check_flag(q.flag);
@@ -305,7 +300,6 @@ void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
 
 Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readInTimePoint", "CapacitorManager::readInTimePoint");
-  std::lock_guard<std::mutex> lg(_locker);
   auto pred = [query](const Capacitor::Header &hdr) {
     if (!hdr.check_flag(query.flag)) {
       return false;
@@ -368,7 +362,6 @@ Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
 
 Meas::Id2Meas CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) {
   TIMECODE_METRICS(ctmd, "currentValue", "CapacitorManager::currentValue");
-  std::lock_guard<std::mutex> lg(_locker);
   auto files = cap_files();
 
   auto p = Capacitor::Params(_params.B, _params.path);
@@ -393,8 +386,6 @@ Meas::Id2Meas CapacitorManager::currentValue(const IdArray &ids, const Flag &fla
 
 void CapacitorManager::append(std::string filename, const Meas::MeasArray &ma) {
   TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append(std::string filename)");
-  std::lock_guard<std::mutex> lg(_locker);
-
   auto target = create_new(filename);
   target->append(ma.begin(), ma.end());
   target->close();
@@ -403,7 +394,6 @@ void CapacitorManager::append(std::string filename, const Meas::MeasArray &ma) {
 
 dariadb::append_result CapacitorManager::append(const Meas &value) {
   TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append");
-  std::lock_guard<std::mutex> lg(_locker);
   if (_cap == nullptr) {
     _cap = create_new();
   }
