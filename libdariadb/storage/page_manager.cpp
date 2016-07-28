@@ -1,6 +1,5 @@
 #include "page_manager.h"
 #include "../flags.h"
-#include "../utils/asyncworker.h"
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 #include "../utils/lru.h"
