@@ -264,62 +264,6 @@ BOOST_AUTO_TEST_CASE(CapacitorBulk) {
 //  }
 //}
 
-std::atomic_size_t append_count{0};
-
-void thread_writer(dariadb::Id id, dariadb::Time from, dariadb::Time to,
-                   dariadb::Time step, dariadb::storage::Capacitor *cp) {
-  const size_t copies_count = 1;
-  auto m = dariadb::Meas::empty();
-  m.time = from;
-  for (auto i = from; i < to; i += step) {
-    m.id = id;
-    m.flag = dariadb::Flag(i);
-    m.value = 0;
-    for (size_t j = 0; j < copies_count; j++) {
-      ++m.time;
-      m.value = dariadb::Value(j);
-      cp->append(m);
-      append_count++;
-    }
-  }
-}
-
-BOOST_AUTO_TEST_CASE(MultiThread) {
-  const std::string storage_path = "testStorage";
-  const size_t max_size = 10;
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-  dariadb::utils::fs::mkdir(storage_path);
-  {
-    dariadb::storage::Manifest::start(
-        dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor mbucket{
-        dariadb::storage::Capacitor::Params(max_size, storage_path),
-        dariadb::storage::Capacitor::file_name()};
-
-    std::thread t1(thread_writer, 0, 0, 10, 1, &mbucket);
-    std::thread t2(thread_writer, 1, 0, 10, 1, &mbucket);
-    std::thread t3(thread_writer, 2, 0, 100, 2, &mbucket);
-    std::thread t4(thread_writer, 3, 0, 100, 1, &mbucket);
-
-    t1.join();
-    t2.join();
-    t3.join();
-    t4.join();
-
-    mbucket.flush();
-    dariadb::Meas::MeasList out;
-    dariadb::IdArray all_id{0, 1, 2, 3};
-    dariadb::storage::QueryInterval qi(all_id, 0, 0, 100);
-    out = mbucket.readInterval(qi);
-    BOOST_CHECK_EQUAL(out.size(), append_count);
-    dariadb::storage::Manifest::stop();
-  }
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
 /*
 BOOST_AUTO_TEST_CASE(byStep) {
   const size_t max_size = 10;
