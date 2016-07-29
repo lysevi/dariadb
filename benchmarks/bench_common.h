@@ -1,9 +1,13 @@
 #pragma once
-#include <dariadb.h>
+#include <interfaces/imeasstorage.h>
+#include <timeutil.h>
+#include <utils/metrics.h>
+#include <utils/thread_manager.h>
 #include <algorithm>
 #include <atomic>
 #include <random>
 #include <tuple>
+#include <sstream>
 
 namespace dariadb_bench {
 

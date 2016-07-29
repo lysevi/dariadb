@@ -1,10 +1,6 @@
 #include "bench_common.h"
-#include <dariadb.h>
-#include <storage/capacitor.h>
-#include <utils/fs.h>
-#include <utils/metrics.h>
-#include <utils/thread_manager.h>
-
+#include <engine.h>
+#include <iostream>
 #include <boost/program_options.hpp>
 
 using namespace dariadb;

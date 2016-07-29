@@ -3,9 +3,9 @@
 #include <iostream>
 #include <iterator>
 
-#include <dariadb.h>
 #include <chrono>
 #include <cmath>
+#include <timeutil.h>
 #include <compression/compression.h>
 #include <compression/delta.h>
 #include <compression/flag.h>
