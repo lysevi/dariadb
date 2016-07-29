@@ -469,50 +469,6 @@ public:
     Meas back() { return _back; }
   };
 
-  /// values dropped to down-level storage. grouped by id.
-  void drop_to_stor(IMeasWriter *stor) {
-    TIMECODE_METRICS(ctmd, "drop", "Capacitor::drop_to_stor");
-
-    level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
-
-    Meas *pos_after_headers =
-        reinterpret_cast<Meas *>(headers_pos + _header->levels_count);
-
-    auto begin = pos_after_headers;
-    auto end = (Meas *)(begin + _header->_writed);
-    size_t count = std::distance(begin, end);
-
-    size_t pos = 0;
-
-    std::sort(begin, end, meas_time_compare_less());
-    dariadb::IdSet dropped;
-    std::vector<bool> visited(count);
-
-    size_t i = 0;
-    for (auto it = begin; it != end; ++it, ++i) {
-      if (visited[i]) {
-        continue;
-      }
-      if (dropped.find(it->id) != dropped.end()) {
-        continue;
-      }
-      visited[i] = true;
-      stor->append(*it);
-      pos = 0;
-      for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
-        if (visited[pos]) {
-          continue;
-        }
-        if ((sub_it->id == it->id)) {
-          stor->append(*sub_it);
-          visited[pos] = true;
-        }
-      }
-      dropped.insert(it->id);
-    }
-    _header->is_dropped = true;
-  }
-
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Capacitor::foreach");
 
@@ -845,10 +801,6 @@ size_t Capacitor::levels_count() const {
 
 size_t Capacitor::size() const {
   return _Impl->size();
-}
-
-void Capacitor::drop_to_stor(IMeasWriter *stor) {
-  _Impl->drop_to_stor(stor);
 }
 
 void Capacitor::fsck() {

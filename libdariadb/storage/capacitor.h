@@ -96,8 +96,6 @@ public:
   size_t levels_count() const;
   size_t size() const;
 
-  void drop_to_stor(IMeasWriter *stor);
-
   static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
   void fsck();
   void close();
