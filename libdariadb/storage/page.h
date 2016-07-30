@@ -19,8 +19,8 @@ struct PageHeader {
   bool is_full : 1;           // is full :)
   bool is_closed : 1;         // is correctly closed.
   bool is_open_to_write : 1;  // true if oppened to write.
-  dariadb::Time minTime; // minimal stored time
-  dariadb::Time maxTime; // maximum stored time
+  Time minTime; // minimal stored time
+  Time maxTime; // maximum stored time
   uint64_t max_chunk_id; // max(chunk->id)
 };
 #pragma pack(pop)
