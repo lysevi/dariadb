@@ -11,21 +11,9 @@ const std::string AOF_FILE_EXT = ".aof"; // append-only-file
 const uint64_t AOF_DEFAULT_SIZE = 1024;
 class AOFile : public IMeasStorage {
 public:
-  struct Params {
-    uint64_t size; // measurements count
-    std::string path;
-    Params(const uint64_t _size, const std::string _path) {
-      size = _size;
-      path = _path;
-    }
-	Params(const std::string _path) {
-		path = _path;
-		size = AOF_DEFAULT_SIZE;
-	}
-  };
   virtual ~AOFile();
-  AOFile(const Params &param);
-  AOFile(const AOFile::Params &params, const std::string &fname, bool readonly = false);
+  AOFile();
+  AOFile(const std::string &fname, bool readonly = false);
 
   append_result append(const Meas &value) override;
   append_result append(const Meas::MeasArray::const_iterator &begin,

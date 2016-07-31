@@ -1,6 +1,7 @@
 #include "bench_common.h"
 #include <storage/aof_manager.h>
 #include <storage/manifest.h>
+#include <storage/options.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/metrics.h>
@@ -94,11 +95,16 @@ int main(int argc, char *argv[]) {
         dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
+    dariadb::storage::Options::start();
+
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
-    auto p = dariadb::storage::AOFManager::Params(storage_path, size_t(1000));
-    p.buffer_size = 1000;
-    p.max_size = (1024 * 1024) * 3 / sizeof(dariadb::Meas);
-    dariadb::storage::AOFManager::start(p);
+
+    dariadb::storage::Options::instance()->path=storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size=1000;
+    dariadb::storage::Options::instance()->aof_max_size=(1024 * 1024) * 3 / sizeof(dariadb::Meas);
+
+    dariadb::storage::AOFManager::start();
+
     auto aof = dariadb::storage::AOFManager::instance();
     std::thread info_thread(show_info);
 
@@ -126,6 +132,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();
+     dariadb::storage::Options::stop();
     if (metrics_enable) {
       std::cout << "metrics:\n"
                 << dariadb::utils::metrics::MetricsManager::instance()->to_string()

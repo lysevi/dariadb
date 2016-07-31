@@ -14,38 +14,16 @@ class IAofFileDropper {
 public:
   virtual void drop(const std::string fname, const uint64_t values_in_file) = 0;
 };
-const size_t AOF_BUFFER_SIZE = 1000;
-
 class AOFManager : public IMeasStorage {
 public:
-  struct Params {
-    std::string path;
-    uint64_t max_size;  // measurements count in one file
-    size_t buffer_size; // inner buffer size
-    Params() {
-      max_size = 0;
-      buffer_size = AOF_BUFFER_SIZE;
-    }
-    Params(const std::string storage_path, const uint64_t _max_size) {
-      path = storage_path;
-      max_size = _max_size;
-      buffer_size = AOF_BUFFER_SIZE;
-    }
-    Params(const std::string storage_path, const uint64_t _max_size,
-           const size_t bufsize) {
-      path = storage_path;
-      max_size = _max_size;
-      buffer_size = bufsize;
-    }
-  };
 
 protected:
   virtual ~AOFManager();
 
-  AOFManager(const Params &param);
+  AOFManager();
 
 public:
-  static void start(const Params &param);
+  static void start();
   static void stop();
   static AOFManager *instance();
 
@@ -75,7 +53,6 @@ protected:
 private:
   static AOFManager *_instance;
 
-  Params _params;
   AOFile_Ptr _aof;
   mutable utils::Locker _locker;
   IAofFileDropper *_down;

@@ -4,6 +4,7 @@
 #include "../utils/metrics.h"
 #include "callbacks.h"
 #include "manifest.h"
+#include "options.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
@@ -16,17 +17,16 @@ using namespace dariadb::storage;
 
 class AOFile::Private {
 public:
-  Private(const AOFile::Params &params) : _params(params) {
+  Private(){
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
-    _filename = utils::fs::append_path(_params.path, rnd_fname);
+    _filename = utils::fs::append_path(Options::instance()->path, rnd_fname);
     Manifest::instance()->aof_append(rnd_fname);
     is_full = false;
   }
 
-  Private(const AOFile::Params &params, const std::string &fname, bool readonly)
-      : _params(params) {
+  Private(const std::string &fname, bool readonly) {
     _writed = AOFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
@@ -39,7 +39,7 @@ public:
     TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
     
-    if (_writed > _params.size) {
+    if (_writed > Options::instance()->aof_max_size) {
       return append_result(0, 1);
     }
     auto file = std::fopen(_filename.c_str(), "ab");
@@ -65,7 +65,8 @@ public:
     auto file = std::fopen(_filename.c_str(), "ab");
     if (file != nullptr) {
 
-      auto write_size = (sz + _writed) > _params.size ? (_params.size - _writed) : sz;
+        auto max_size=Options::instance()->aof_max_size;
+      auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
       std::fwrite(&(*begin), sizeof(Meas), write_size, file);
       std::fclose(file);
       _writed += write_size;
@@ -87,8 +88,10 @@ public:
     auto file = std::fopen(_filename.c_str(), "ab");
     if (file != nullptr) {
 
+        auto max_size=Options::instance()->aof_max_size;
+
       auto write_size =
-          (list_size + _writed) > _params.size ? (_params.size - _writed) : list_size;
+          (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
       Meas::MeasArray ma{begin, end};
       std::fwrite(ma.data(), sizeof(Meas), write_size, file);
       std::fclose(file);
@@ -274,7 +277,7 @@ public:
       throw_open_error_exception();
     }
 
-    Meas::MeasArray ma(_params.size);
+    Meas::MeasArray ma(Options::instance()->aof_max_size);
     size_t pos = 0;
     while (1) {
       Meas val = Meas::empty();
@@ -296,7 +299,7 @@ public:
     for (auto f : aofs_manifest) {
       ss << f << std::endl;
     }
-    auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+    auto aofs_exists = utils::fs::ls(Options::instance()->path, ".aof");
     for (auto f : aofs_exists) {
       ss << f << std::endl;
     }
@@ -304,7 +307,6 @@ public:
   }
 
 protected:
-  AOFile::Params _params;
   std::string _filename;
   bool _is_readonly;
   size_t _writed;
@@ -313,10 +315,10 @@ protected:
 
 AOFile::~AOFile() {}
 
-AOFile::AOFile(const Params &params) : _Impl(new AOFile::Private(params)) {}
+AOFile::AOFile() : _Impl(new AOFile::Private()) {}
 
-AOFile::AOFile(const AOFile::Params &params, const std::string &fname, bool readonly)
-    : _Impl(new AOFile::Private(params, fname, readonly)) {}
+AOFile::AOFile(const std::string &fname, bool readonly)
+    : _Impl(new AOFile::Private(fname, readonly)) {}
 
 dariadb::Time AOFile::minTime() {
   return _Impl->minTime();

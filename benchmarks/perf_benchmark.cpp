@@ -289,10 +289,12 @@ int main(int argc, char *argv[]) {
     cap_param.max_levels = 11;
     cap_param.max_closed_caps = 0; // 5;
 
-    AOFManager::Params aof_param(storage_path, 0);
-    aof_param.buffer_size = 1000;
-    aof_param.max_size = cap_param.measurements_count();
-    auto raw_ptr = new Engine(aof_param, page_param, cap_param);
+    dariadb::storage::Options::start();
+    dariadb::storage::Options::instance()->path=storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size=1000;
+    dariadb::storage::Options::instance()->aof_max_size=cap_param.measurements_count();
+
+    auto raw_ptr = new Engine(page_param, cap_param);
 
     if (is_exists) {
       raw_ptr->fsck();
@@ -364,6 +366,7 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "stoping storage...\n";
     ms = nullptr;
+    dariadb::storage::Options::stop();
   }
 
   if (!(dont_clean || readonly) && (utils::fs::path_exists(storage_path))) {

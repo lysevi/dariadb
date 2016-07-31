@@ -12,5 +12,6 @@ void Options::start(){
 }
 void Options::stop(){
     delete _instance;
+    _instance=nullptr;
 }
 

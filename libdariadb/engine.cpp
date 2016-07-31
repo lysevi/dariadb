@@ -20,10 +20,8 @@ using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
 class AofDropper : public dariadb::storage::IAofFileDropper {
-  std::string _storage_path;
-
 public:
-  AofDropper(std::string storage_path) { _storage_path = storage_path; }
+  AofDropper() { }
 
   static void drop(const AOFile_Ptr aof, const std::string &fname, const std::string &storage_path) {
 
@@ -47,13 +45,10 @@ public:
       TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
       LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
 	  
-	  AOFile::Params params( _storage_path );
-	  params.size = aof_size;
-
-	  auto full_path = dariadb::utils::fs::append_path(_storage_path, fname);
+      auto full_path = dariadb::utils::fs::append_path(Options::instance()->path, fname);
 	  
-	  AOFile_Ptr aof{ new AOFile(params, full_path,true) };
-      AofDropper::drop(aof, fname, _storage_path);
+      AOFile_Ptr aof{ new AOFile(full_path,true) };
+      AofDropper::drop(aof, fname, Options::instance()->path);
 	  aof = nullptr;
       LockManager::instance()->unlock(LockObjects::DROP_AOF);
     };
@@ -115,7 +110,7 @@ public:
 		  for (auto &page : page_lst) {
 			  auto page_fname = utils::fs::filename(page);
 			  if (cap_fname == page_fname) {
-				  logger_info("fsck: aof drop not finished: " << page_fname);
+                  logger_info("fsck: cap drop not finished: " << page_fname);
 				  logger_info("fsck: rm " << page_fname);
 				  utils::fs::rm(page_fname);
                   utils::fs::rm(page_fname+"i");
@@ -128,14 +123,13 @@ public:
 
 class Engine::Private {
 public:
-  Private(storage::AOFManager::Params &aof_params,
-          const PageManager::Params &page_storage_params,
+  Private(const PageManager::Params &page_storage_params,
           dariadb::storage::CapacitorManager::Params &cap_params)
       : _page_manager_params(page_storage_params), _cap_params(cap_params) {
     bool is_exists = false;
     _stoped = false;
-    if (!dariadb::utils::fs::path_exists(aof_params.path)) {
-      dariadb::utils::fs::mkdir(aof_params.path);
+    if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
+      dariadb::utils::fs::mkdir(Options::instance()->path);
     } else {
       is_exists = true;
     }
@@ -144,20 +138,20 @@ public:
     ThreadManager::Params tpm_params(THREAD_MANAGER_COMMON_PARAMS);
     ThreadManager::start(tpm_params);
     LockManager::start(LockManager::Params());
-    Manifest::start(utils::fs::append_path(aof_params.path, MANIFEST_FILE_NAME));
+    Manifest::start(utils::fs::append_path(Options::instance()->path, MANIFEST_FILE_NAME));
 
     if (is_exists) {
-      AofDropper::cleanStorage(aof_params.path);
+      AofDropper::cleanStorage(Options::instance()->path);
     }
 
     PageManager::start(_page_manager_params);
     if (is_exists) {
-      CapDrooper::cleanStorage(aof_params.path);
+      CapDrooper::cleanStorage(Options::instance()->path);
     }
-    AOFManager::start(aof_params);
+    AOFManager::start();
     CapacitorManager::start(_cap_params);
 
-    _aof_dropper = std::unique_ptr<AofDropper>(new AofDropper(aof_params.path));
+    _aof_dropper = std::unique_ptr<AofDropper>(new AofDropper());
     _cap_dropper = std::unique_ptr<CapDrooper>(new CapDrooper());
 
     AOFManager::instance()->set_downlevel(_aof_dropper.get());
@@ -451,10 +445,9 @@ protected:
   bool _stoped;
 };
 
-Engine::Engine(storage::AOFManager::Params aof_params,
-               storage::PageManager::Params page_manager_params,
+Engine::Engine(storage::PageManager::Params page_manager_params,
                dariadb::storage::CapacitorManager::Params cap_params)
-    : _impl{new Engine::Private(aof_params, page_manager_params, cap_params)} {}
+    : _impl{new Engine::Private(page_manager_params, cap_params)} {}
 
 Engine::~Engine() {
   _impl = nullptr;
