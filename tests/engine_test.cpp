@@ -132,8 +132,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     dariadb::storage::Options::instance()->cap_B = cap_B;
     dariadb::storage::Options::instance()->cap_max_levels = 4;
     dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
-
-    std::unique_ptr<Engine> ms{new Engine(PageManager::Params(storage_path, chunk_size))};
+    dariadb::storage::Options::instance()->page_chunk_size=chunk_size;
+    std::unique_ptr<Engine> ms{new Engine()};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
     ms->wait_all_asyncs();
@@ -152,8 +152,9 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
       dariadb::storage::Options::instance()->cap_B = cap_B;
       dariadb::storage::Options::instance()->cap_max_levels = 4;
       dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
+      dariadb::storage::Options::instance()->page_chunk_size=chunk_size;
 
-    auto raw_ptr = new Engine(PageManager::Params(storage_path, chunk_size));
+    auto raw_ptr = new Engine();
     dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
 
     raw_ptr->fsck();
@@ -201,9 +202,9 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     dariadb::storage::Options::instance()->cap_B = cap_B;
     dariadb::storage::Options::instance()->cap_max_levels = 4;
     dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
+    dariadb::storage::Options::instance()->page_chunk_size=chunk_size;
 
-    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        dariadb::storage::PageManager::Params(storage_path, chunk_size))};
+    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine()};
 
     dariadb::IdArray ids{};
     ms->subscribe(ids, 0, c1); // all
@@ -264,10 +265,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     dariadb::storage::Options::instance()->cap_B = cap_B;
     dariadb::storage::Options::instance()->cap_max_levels = 4;
     dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
-
+    dariadb::storage::Options::instance()->page_chunk_size=chunk_size;
 
     dariadb::storage::IMeasStorage_ptr ms{
-        new dariadb::storage::Engine( dariadb::storage::PageManager::Params(storage_path, chunk_size))};
+        new dariadb::storage::Engine( )};
     auto m = dariadb::Meas::empty();
     size_t total_count = 0;
 
@@ -347,13 +348,10 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
     dariadb::storage::Options::instance()->cap_B = cap_B;
     dariadb::storage::Options::instance()->cap_max_levels = 4;
     dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
-
-
-    dariadb::storage::PageManager::Params pamp(storage_path, chunk_size);
-
+    dariadb::storage::Options::instance()->page_chunk_size=chunk_size;
 
     std::unique_ptr<dariadb::storage::Engine> ms{
-        new dariadb::storage::Engine(pamp)};
+        new dariadb::storage::Engine()};
 
     auto m = dariadb::Meas::empty();
 

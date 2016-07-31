@@ -20,15 +20,12 @@ public:
     size_t cola_count;   /// COLA files count.
     size_t active_works; /// async tasks runned.
   };
-  struct GCResult {
-    PageManager::GCResult page_result;
-  };
-  Engine() = delete;
+
   Engine(const Engine &) = delete;
   Engine &operator=(const Engine &) = delete;
   virtual ~Engine();
 
-  Engine(storage::PageManager::Params page_manager_params);
+  Engine();
 
   append_result append(const Meas &value) override;
 

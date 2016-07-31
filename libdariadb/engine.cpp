@@ -122,8 +122,7 @@ public:
 
 class Engine::Private {
 public:
-  Private(const PageManager::Params &page_storage_params)
-      : _page_manager_params(page_storage_params){
+  Private(){
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
@@ -142,7 +141,7 @@ public:
       AofDropper::cleanStorage(Options::instance()->path);
     }
 
-    PageManager::start(_page_manager_params);
+    PageManager::start();
     if (is_exists) {
       CapDrooper::cleanStorage(Options::instance()->path);
     }
@@ -431,8 +430,6 @@ public:
       PageManager::instance()->fsck();
   }
 protected:
-  storage::PageManager::Params _page_manager_params;
-
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
   Id _next_query_id;
@@ -442,8 +439,8 @@ protected:
   bool _stoped;
 };
 
-Engine::Engine(storage::PageManager::Params page_manager_params)
-    : _impl{new Engine::Private(page_manager_params)} {}
+Engine::Engine()
+    : _impl{new Engine::Private()} {}
 
 Engine::~Engine() {
   _impl = nullptr;

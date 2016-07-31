@@ -282,9 +282,6 @@ int main(int argc, char *argv[]) {
     Time start_time = timeutil::current_time();
     std::cout << " start time: " << timeutil::to_string(start_time) << std::endl;
 
-    PageManager::Params page_param(storage_path, chunk_size);
-
-
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path=storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size=1000;
@@ -293,8 +290,9 @@ int main(int argc, char *argv[]) {
     dariadb::storage::Options::instance()->cap_max_levels = 11;
     dariadb::storage::Options::instance()->cap_max_closed_caps = 0; // 5;
     dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
+    dariadb::storage::Options::instance()->page_chunk_size=chunk_size;
 
-    auto raw_ptr = new Engine(page_param);
+    auto raw_ptr = new Engine();
 
     if (is_exists) {
       raw_ptr->fsck();

@@ -10,6 +10,7 @@ namespace storage {
 const size_t AOF_BUFFER_SIZE = 1000;
 const uint32_t CAP_DEFAULT_MAX_LEVELS = 11;
 const uint32_t CAP_MAX_CLOSED_CAPS = 10;
+const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
 
 class Options {
   Options() {
@@ -17,6 +18,7 @@ class Options {
     cap_max_levels = CAP_DEFAULT_MAX_LEVELS;
     cap_max_closed_caps=CAP_MAX_CLOSED_CAPS;
     cap_store_period=0;
+    page_openned_page_chache_size=OPENNED_PAGE_CACHE_SIZE;
   }
   ~Options() = default;
 
@@ -47,6 +49,10 @@ public:
   uint8_t  cap_max_levels;
   Time     cap_store_period;
   uint32_t cap_max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
+
+  uint32_t page_chunk_size;
+  uint32_t page_openned_page_chache_size; /// max oppend pages in cache(readonly
+                                     /// pages stored).
 private:
   static Options *_instance;
 };

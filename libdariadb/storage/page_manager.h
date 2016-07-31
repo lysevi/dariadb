@@ -10,38 +10,17 @@
 namespace dariadb {
 namespace storage {
 
-const uint16_t OPENNED_PAGE_CACHE_SIZE = 10;
+
 
 class PageManager : public utils::NonCopy, public IChunkContainer{
 public:
-  struct Params {
-    std::string path;
-    uint32_t chunk_size;
-    uint16_t openned_page_chache_size; /// max oppend pages in cache(readonly
-                                       /// pages stored).
-    Params(const std::string storage_path, uint32_t one_chunk_size) {
-      path = storage_path;
-      chunk_size = one_chunk_size;
-      openned_page_chache_size = OPENNED_PAGE_CACHE_SIZE;
-    }
-  };
-
-  struct GCResult {
-    size_t page_removed;
-    size_t chunks_merged;
-    GCResult() {
-      page_removed = 0;
-      chunks_merged = 0;
-    }
-  };
-
 protected:
   virtual ~PageManager();
 
-  PageManager(const Params &param);
+  PageManager();
 
 public:
-  static void start(const Params &param);
+  static void start();
   static void stop();
   void flush();
   static PageManager *instance();

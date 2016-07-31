@@ -10,6 +10,7 @@
 #include "bloom_filter.h"
 #include "manifest.h"
 #include "page.h"
+#include "options.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -31,9 +32,9 @@ dariadb::storage::PageManager *PageManager::_instance = nullptr;
 
 class PageManager::Private {
 public:
-  Private(const PageManager::Params &param)
-      : _cur_page(nullptr), _param(param),
-        _openned_pages(param.openned_page_chache_size) {
+  Private()
+      : _cur_page(nullptr),
+        _openned_pages(Options::instance()->page_openned_page_chache_size) {
 
     update_id = false;
     last_id = 0;
@@ -51,14 +52,14 @@ public:
     if (force_check) {
       logger_info("PageManager: fsck force");
     }
-    if (!utils::fs::path_exists(_param.path)) {
+    if (!utils::fs::path_exists(Options::instance()->path)) {
       return;
     }
 
     auto pages = Manifest::instance()->page_list();
 
     for (auto n : pages) {
-      auto file_name = utils::fs::append_path(_param.path, n);
+      auto file_name = utils::fs::append_path(Options::instance()->path, n);
       auto hdr = Page::readHeader(file_name);
       if (hdr.removed_chunks == hdr.addeded_chunks) {
         logger_info("page: " << file_name << " is empty.");
@@ -230,10 +231,10 @@ public:
     std::list<std::string> result;
     auto names = Manifest::instance()->page_list();
     for (auto n : names) {
-      auto index_file_name = utils::fs::append_path(_param.path, n + "i");
+      auto index_file_name = utils::fs::append_path(Options::instance()->path, n + "i");
       auto hdr = Page::readIndexHeader(index_file_name);
       if (pred(hdr)) {
-        auto page_file_name = utils::fs::append_path(_param.path, n);
+        auto page_file_name = utils::fs::append_path(Options::instance()->path, n);
         result.push_back(page_file_name);
       }
     }
@@ -322,15 +323,15 @@ public:
 
   void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
       TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
-      if (!dariadb::utils::fs::path_exists(_param.path)) {
-        dariadb::utils::fs::mkdir(_param.path);
+      if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
+        dariadb::utils::fs::mkdir(Options::instance()->path);
       }
 
       Page *res = nullptr;
 
       std::string page_name = file_prefix+PAGE_FILE_EXT;
-      std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
-      res = Page::create(file_name, last_id, _param.chunk_size, ma);
+      std::string file_name = dariadb::utils::fs::append_path(Options::instance()->path, page_name);
+      res = Page::create(file_name, last_id, Options::instance()->page_chunk_size, ma);
       Manifest::instance()->page_append(page_name);
       if (update_id) {
         res->header->max_chunk_id = last_id;
@@ -340,7 +341,6 @@ public:
 
 protected:
   Page_Ptr _cur_page;
-  PageManager::Params _param;
   mutable std::mutex _page_open_lock;
 
   uint64_t last_id;
@@ -348,14 +348,14 @@ protected:
   utils::LRU<std::string, Page_Ptr> _openned_pages;
 };
 
-PageManager::PageManager(const PageManager::Params &param)
-    : impl(new PageManager::Private{param}) {}
+PageManager::PageManager()
+    : impl(new PageManager::Private) {}
 
 PageManager::~PageManager() {}
 
-void PageManager::start(const PageManager::Params &param) {
+void PageManager::start() {
   if (PageManager::_instance == nullptr) {
-    PageManager::_instance = new PageManager(param);
+    PageManager::_instance = new PageManager();
   }
 }
 
