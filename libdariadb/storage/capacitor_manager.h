@@ -18,37 +18,13 @@ public:
   public:
     virtual void drop(const std::string &fname) = 0;
   };
-  struct Params {
-    std::string path;
-    uint8_t max_levels;
-    size_t max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
-    uint32_t B;             // measurements count in one data block
-    dariadb::Time store_period;
-    Params() {
-      max_levels = COLA_MAX_LEVELS;
-      B = 0;
-      store_period = 0;
-    }
-    Params(const std::string storage_path, const uint32_t _B) {
-      path = storage_path;
-      B = _B;
-      max_levels = COLA_MAX_LEVELS;
-      max_closed_caps = MAX_CLOSED_CAPS;
-      store_period = 0;
-    }
-
-    uint64_t measurements_count() const {
-      return Capacitor::Params::measurements_count(max_levels, B);
-    }
-  };
-
 protected:
   virtual ~CapacitorManager();
 
-  CapacitorManager(const Params &param);
+  CapacitorManager();
 
 public:
-  static void start(const Params &param);
+  static void start();
   static void stop();
   static CapacitorManager *instance();
 
@@ -87,7 +63,6 @@ protected:
 private:
   static CapacitorManager *_instance;
 
-  Params _params;
   Capacitor_Ptr _cap;
   ICapDropper *_down;
   std::set<std::string> _files_send_to_drop;

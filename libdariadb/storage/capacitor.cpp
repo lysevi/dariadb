@@ -21,6 +21,7 @@ File struct:
 #include "../utils/utils.h"
 #include "callbacks.h"
 #include "manifest.h"
+#include "options.h"
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -117,8 +118,8 @@ struct level {
 
 class Capacitor::Private {
 public:
-  Private(const Capacitor::Params &params, const std::string &fname, bool readonly)
-      : _params(params), mmap(nullptr), _size(0) {
+  Private(const std::string &fname, bool readonly)
+      : mmap(nullptr), _size(0) {
     _is_readonly = readonly;
     if (utils::fs::path_exists(fname)) {
       open(fname);
@@ -155,12 +156,12 @@ public:
     uint64_t result = 0;
 
     result += sizeof(Header);
-    result += _params.B * sizeof(Meas); /// add space to _memvalues
+    result += Options::instance()->cap_B * sizeof(Meas); /// add space to _memvalues
 
-    auto prev_level_size = _params.B * sizeof(Meas);
+    auto prev_level_size = Options::instance()->cap_B * sizeof(Meas);
 
-    for (size_t lvl = 0; lvl < _params.max_levels; ++lvl) {
-      auto cur_level_meases = bytes_in_level(_params.B, lvl); /// 2^lvl
+    for (size_t lvl = 0; lvl < Options::instance()->cap_max_levels; ++lvl) {
+      auto cur_level_meases = bytes_in_level(Options::instance()->cap_B, lvl); /// 2^lvl
       if (cur_level_meases < prev_level_size) {
         throw MAKE_EXCEPTION("size calculation error");
       }
@@ -173,15 +174,15 @@ public:
   void create(std::string fname) {
     TIMECODE_METRICS(ctmd, "create", "Capacitor::create");
     auto sz = cap_size();
-    mmap = fs::MappedFile::touch(fs::append_path(_params.path, fname), sz);
+    mmap = fs::MappedFile::touch(fs::append_path(Options::instance()->path, fname), sz);
 
     _header = reinterpret_cast<Header *>(mmap->data());
     _raw_data = reinterpret_cast<uint8_t *>(mmap->data() + sizeof(Header));
     _header->size = sz;
-    _header->B = _params.B;
+    _header->B = Options::instance()->cap_B;
     _header->is_dropped = false;
-    _header->levels_count = _params.max_levels;
-    _header->max_values_count = this->_params.measurements_count();
+    _header->levels_count = Options::instance()->cap_max_levels;
+    _header->max_values_count = Options::instance()->measurements_count();
     _header->is_closed = false;
     _header->is_open_to_write = true;
     _header->minTime = dariadb::MAX_TIME;
@@ -198,7 +199,7 @@ public:
     for (size_t lvl = 0; lvl < _header->levels_count; ++lvl) {
       auto it = &headers_pos[lvl];
       it->lvl = uint8_t(lvl);
-      it->count = block_in_level(lvl) * _params.B;
+      it->count = block_in_level(lvl) * Options::instance()->cap_B;
       it->pos = 0;
       it->_minTime = dariadb::MAX_TIME;
       it->_maxTime = dariadb::MIN_TIME;
@@ -713,8 +714,6 @@ public:
   Header *header() { return _header; }
 
 protected:
-  Capacitor::Params _params;
-
   dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
   Header *_header;
   uint8_t *_raw_data;
@@ -728,9 +727,8 @@ protected:
 
 Capacitor::~Capacitor() {}
 
-Capacitor::Capacitor(const Capacitor::Params &params, const std::string &fname,
-                     bool readonly)
-    : _Impl(new Capacitor::Private(params, fname, readonly)) {}
+Capacitor::Capacitor(const std::string &fname, bool readonly)
+    : _Impl(new Capacitor::Private(fname, readonly)) {}
 
 Capacitor::Header Capacitor::readHeader(std::string file_name) {
   std::ifstream istream;

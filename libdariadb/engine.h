@@ -28,8 +28,7 @@ public:
   Engine &operator=(const Engine &) = delete;
   virtual ~Engine();
 
-  Engine(storage::PageManager::Params page_manager_params,
-         dariadb::storage::CapacitorManager::Params cap_params);
+  Engine(storage::PageManager::Params page_manager_params);
 
   append_result append(const Meas &value) override;
 

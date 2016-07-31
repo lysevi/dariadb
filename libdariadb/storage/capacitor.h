@@ -10,32 +10,9 @@ namespace dariadb {
 namespace storage {
 
 const std::string CAP_FILE_EXT = ".cap"; // cola-file extension
-const uint32_t CAP_DEFAULT_MAX_LEVELS = 10;
 
 class Capacitor : public IMeasStorage {
 public:
-  struct Params {
-    uint32_t B; // measurements count in one datra block
-    std::string path;
-    uint8_t max_levels;
-    Params(const uint32_t _B, const std::string _path) {
-      B = _B;
-      path = _path;
-      max_levels = CAP_DEFAULT_MAX_LEVELS;
-    }
-
-    size_t measurements_count() const {
-      return Params::measurements_count(max_levels, B);
-    }
-
-    static uint64_t measurements_count(size_t levels, uint32_t B) {
-      uint64_t result = 0;
-      for (size_t i = 0; i < levels; ++i) {
-        result += B * (uint64_t(1) << i);
-      }
-      return result + B; //+ memvalues size;
-    }
-  };
 #pragma pack(push, 1)
   struct Header {
     dariadb::Time minTime;
@@ -75,7 +52,7 @@ public:
   };
 #pragma pack(pop)
   virtual ~Capacitor();
-  Capacitor(const Capacitor::Params &params, const std::string &fname,
+  Capacitor(const std::string &fname,
             bool readonly = false);
   static Header readHeader(std::string file_name);
   Header *header();

@@ -84,8 +84,7 @@ public:
       TIMECODE_METRICS(ctmd, "drop", "CapDrooper::drop");
 
       LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
-      auto p = Capacitor::Params(0, "");
-      auto cap = Capacitor_Ptr{new Capacitor{p, fname, false}};
+      auto cap = Capacitor_Ptr{new Capacitor{fname, false}};
 
       auto without_path =  utils::fs::extract_filename(fname);
       auto page_fname =  utils::fs::filename(without_path);
@@ -123,9 +122,8 @@ public:
 
 class Engine::Private {
 public:
-  Private(const PageManager::Params &page_storage_params,
-          dariadb::storage::CapacitorManager::Params &cap_params)
-      : _page_manager_params(page_storage_params), _cap_params(cap_params) {
+  Private(const PageManager::Params &page_storage_params)
+      : _page_manager_params(page_storage_params){
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
@@ -149,7 +147,7 @@ public:
       CapDrooper::cleanStorage(Options::instance()->path);
     }
     AOFManager::start();
-    CapacitorManager::start(_cap_params);
+    CapacitorManager::start();
 
     _aof_dropper = std::unique_ptr<AofDropper>(new AofDropper());
     _cap_dropper = std::unique_ptr<CapDrooper>(new CapDrooper());
@@ -434,7 +432,6 @@ public:
   }
 protected:
   storage::PageManager::Params _page_manager_params;
-  dariadb::storage::CapacitorManager::Params _cap_params;
 
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
@@ -445,9 +442,8 @@ protected:
   bool _stoped;
 };
 
-Engine::Engine(storage::PageManager::Params page_manager_params,
-               dariadb::storage::CapacitorManager::Params cap_params)
-    : _impl{new Engine::Private(page_manager_params, cap_params)} {}
+Engine::Engine(storage::PageManager::Params page_manager_params)
+    : _impl{new Engine::Private(page_manager_params)} {}
 
 Engine::~Engine() {
   _impl = nullptr;

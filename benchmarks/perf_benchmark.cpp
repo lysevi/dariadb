@@ -284,17 +284,17 @@ int main(int argc, char *argv[]) {
 
     PageManager::Params page_param(storage_path, chunk_size);
 
-    CapacitorManager::Params cap_param(storage_path, cap_B);
-    cap_param.store_period = 0; // 1000 * 60 * 60;
-    cap_param.max_levels = 11;
-    cap_param.max_closed_caps = 0; // 5;
 
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path=storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size=1000;
-    dariadb::storage::Options::instance()->aof_max_size=cap_param.measurements_count();
+    dariadb::storage::Options::instance()->cap_B = cap_B;
+    dariadb::storage::Options::instance()->cap_store_period = 0; // 1000 * 60 * 60;
+    dariadb::storage::Options::instance()->cap_max_levels = 11;
+    dariadb::storage::Options::instance()->cap_max_closed_caps = 0; // 5;
+    dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
 
-    auto raw_ptr = new Engine(page_param, cap_param);
+    auto raw_ptr = new Engine(page_param);
 
     if (is_exists) {
       raw_ptr->fsck();
