@@ -12,7 +12,7 @@ ThreadPool::ThreadPool(const Params &p) : _params(p) {
   _task_runned = size_t(0);
   _threads.resize(_params.threads_count);
   for (size_t i = 0; i < _params.threads_count; ++i) {
-    _threads.emplace(_threads.begin()+ i, &ThreadPool::_thread_func, this, i);
+    _threads[i] = std::thread{&ThreadPool::_thread_func, this, i};
   }
 }
 

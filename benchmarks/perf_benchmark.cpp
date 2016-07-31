@@ -167,16 +167,17 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
       all_id_set.insert(j);
     }
     if (!readonly) {
-      writers.emplace(writers.begin() + pos, dariadb_bench::thread_writer_rnd_stor, Id(pos), Time(i),
-                      &append_count, raw_ptr);
+      std::thread t{dariadb_bench::thread_writer_rnd_stor, Id(pos), Time(i),
+                    &append_count, raw_ptr};
+      writers[pos] = std::move(t);
     }
     pos++;
   }
   if (readers_enable) {
     pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
-      readers.emplace(readers.begin() + pos,reader, ms, all_id_set, start_time, timeutil::current_time());
-      pos++;
+      std::thread t{reader, ms, all_id_set, start_time, timeutil::current_time()};
+      readers[pos++] = std::move(t);
     }
   }
 
