@@ -5,6 +5,8 @@
 #include "storage/capacitor_manager.h"
 #include "storage/page_manager.h"
 #include "utils/utils.h"
+#include "storage/options.h"
+
 #include <memory>
 
 namespace dariadb {

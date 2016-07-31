@@ -103,6 +103,13 @@ BOOST_AUTO_TEST_CASE(LockManager_Instance) {
   BOOST_CHECK(dariadb::storage::LockManager::instance() == nullptr);
 }
 
+BOOST_AUTO_TEST_CASE(Options_Instance) {
+    dariadb::storage::Options::start();
+    auto instance=dariadb::storage::Options::instance();
+    BOOST_CHECK(instance!=nullptr);
+    dariadb::storage::Options::stop();
+}
+
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
