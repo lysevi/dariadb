@@ -11,6 +11,8 @@ const size_t AOF_BUFFER_SIZE = 1000;
 const uint32_t CAP_DEFAULT_MAX_LEVELS = 11;
 const uint32_t CAP_MAX_CLOSED_CAPS = 10;
 const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
+const uint32_t CHUNK_SIZE = 512;
+const uint32_t CAP_B = 50;
 
 class Options {
   Options() {
@@ -24,8 +26,12 @@ class Options {
 
 public:
   static void start();
+  static void start(const std::string&path);
   static void stop();
   static Options *instance() { return _instance; }
+
+  void set_default();
+  void calc_params();
 
   uint64_t measurements_count() const {
     return measurements_count(cap_max_levels, cap_B);

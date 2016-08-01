@@ -268,8 +268,6 @@ int main(int argc, char *argv[]) {
   {
     std::cout << "Write..." << std::endl;
 
-    const size_t chunk_size = 512;
-    const size_t cap_B = 50;
 
     bool is_exists = false;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
@@ -285,15 +283,8 @@ int main(int argc, char *argv[]) {
     Time start_time = timeutil::current_time();
     std::cout << " start time: " << timeutil::to_string(start_time) << std::endl;
 
-    dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storage_path;
-    dariadb::storage::Options::instance()->aof_buffer_size=1000;
-    dariadb::storage::Options::instance()->cap_B = cap_B;
-    dariadb::storage::Options::instance()->cap_store_period = 0; // 1000 * 60 * 60;
-    dariadb::storage::Options::instance()->cap_max_levels = 11;
-    dariadb::storage::Options::instance()->cap_max_closed_caps = 0; // 5;
-    dariadb::storage::Options::instance()->aof_max_size=dariadb::storage::Options::instance()->measurements_count();
-    dariadb::storage::Options::instance()->page_chunk_size=chunk_size;
+    Options::start(storage_path);
+	Options::instance()->set_default();
 
     auto raw_ptr = new Engine();
 
