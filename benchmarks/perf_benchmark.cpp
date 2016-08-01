@@ -200,6 +200,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   stop_info = true;
   info_thread.join();
 }
+
 void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
                     IdSet &all_id_set) {
   if (readonly) {
@@ -221,31 +222,33 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
   std::cout << "readed: " << clbk->count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
 
-  std::cout << "==> read all..." << std::endl;
+  if (readall_enabled) {
+	  std::cout << "==> read all..." << std::endl;
 
-  start = clock();
+	  start = clock();
 
-  auto readed = ms->readInterval(qi);
+	  auto readed = ms->readInterval(qi);
 
-  elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-  std::cout << "readed: " << readed.size() << std::endl;
-  std::cout << "time: " << elapsed << std::endl;
+	  elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+	  std::cout << "readed: " << readed.size() << std::endl;
+	  std::cout << "time: " << elapsed << std::endl;
 
-  auto expected = (dariadb_bench::write_per_id_count *
-                   dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
+	  auto expected = (dariadb_bench::write_per_id_count *
+		  dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
 
-  std::map<Id, Meas::MeasList> _dict;
-  for (auto &v : readed) {
-    _dict[v.id].push_back(v);
-  }
+	  std::map<Id, Meas::MeasList> _dict;
+	  for (auto &v : readed) {
+		  _dict[v.id].push_back(v);
+	  }
 
-  if (readed.size() != expected) {
-    std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
-    std::cout << " all_writesL " << dariadb_bench::all_writes;
-    for (auto &kv : _dict) {
-      std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
-    }
-    throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
+	  if (readed.size() != expected) {
+		  std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
+		  std::cout << " all_writesL " << dariadb_bench::all_writes;
+		  for (auto &kv : _dict) {
+			  std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
+		  }
+		  throw MAKE_EXCEPTION("(clbk->count!=(iteration_count*total_threads_count))");
+	  }
   }
 }
 
@@ -359,9 +362,8 @@ int main(int argc, char *argv[]) {
     auto max_time = ms->maxTime();
     std::cout << "==> interval end time: " << timeutil::to_string(max_time) << std::endl;
 
-    if (readall_enabled) {
-      read_all_bench(ms, start_time, max_time, all_id_set);
-    }
+    read_all_bench(ms, start_time, max_time, all_id_set);
+    
     std::cout << "stoping storage...\n";
     ms = nullptr;
     dariadb::storage::Options::stop();
