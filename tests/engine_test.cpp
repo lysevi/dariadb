@@ -116,10 +116,8 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
     auto instance=Options::instance();
     BOOST_CHECK(instance!=nullptr);
 	
-	Options::instance()->aof_max_size=1;
-	Options::instance()->aof_buffer_size=2;
 
-							
+	Options::instance()->aof_buffer_size = 2;
 	Options::instance()->cap_B=3;
 	Options::instance()->cap_max_levels=4;
 	Options::instance()->cap_store_period=5;
@@ -127,15 +125,15 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 
 	Options::instance()->page_chunk_size=7;
 	Options::instance()->page_openned_page_chache_size=8;
-	
-	
+
+	Options::instance()->calc_params();
+
     dariadb::storage::Options::stop();
 
 	bool file_exists=dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(storage_path, dariadb::storage::OPTIONS_FILE_NAME));
 	BOOST_CHECK(file_exists);
 
 	Options::start(storage_path);
-	BOOST_CHECK_EQUAL(Options::instance()->aof_max_size, 1);
 	BOOST_CHECK_EQUAL(Options::instance()->aof_buffer_size, 2);
 
 
