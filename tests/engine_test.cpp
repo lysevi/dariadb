@@ -134,6 +134,20 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 	bool file_exists=dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(storage_path, dariadb::storage::OPTIONS_FILE_NAME));
 	BOOST_CHECK(file_exists);
 
+	Options::start(storage_path);
+	BOOST_CHECK_EQUAL(Options::instance()->aof_max_size, 1);
+	BOOST_CHECK_EQUAL(Options::instance()->aof_buffer_size, 2);
+
+
+	BOOST_CHECK_EQUAL(Options::instance()->cap_B ,3);
+	BOOST_CHECK_EQUAL(Options::instance()->cap_max_levels , 4);
+	BOOST_CHECK_EQUAL(Options::instance()->cap_store_period, 5);
+	BOOST_CHECK_EQUAL(Options::instance()->cap_max_closed_caps , 6);
+
+	BOOST_CHECK_EQUAL(Options::instance()->page_chunk_size, 7);
+	BOOST_CHECK_EQUAL(Options::instance()->page_openned_page_chache_size, 8);
+	
+	dariadb::storage::Options::stop();
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
 	}
