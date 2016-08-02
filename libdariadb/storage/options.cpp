@@ -99,4 +99,6 @@ void  Options::load(const std::string&file) {
 
 	page_chunk_size=js["page_chunk_size"] ;
 	page_openned_page_chache_size=js["page_openned_page_chache_size"] ;
+
+	this->calc_params();
 }
