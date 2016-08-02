@@ -4,6 +4,7 @@ v0.1.1
 - Compressed level is use "append only" idiom. More crash safety and more faster.
 - Use Jenkins hash function for bloom filter.
 - Apache License.
+- Options file in storage with storage parameters.
 
 v0.1.0
 =====
