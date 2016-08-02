@@ -13,6 +13,7 @@ const uint32_t CAP_MAX_CLOSED_CAPS = 10;
 const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
 const uint32_t CHUNK_SIZE = 512;
 const uint32_t CAP_B = 50;
+const std::string OPTIONS_FILE_NAME = "Options";
 
 class Options {
   Options() {
@@ -45,6 +46,9 @@ public:
     return result + B; //+ memvalues size;
   }
 
+  void save();
+  void save(const std::string&file);
+  void load(const std::string&file);
   // aof level options;
   std::string path;
   uint64_t aof_max_size;  // measurements count in one file

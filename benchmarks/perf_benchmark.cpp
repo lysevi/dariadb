@@ -270,21 +270,25 @@ int main(int argc, char *argv[]) {
 
 
     bool is_exists = false;
-    if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
-
-      if (!readonly) {
-        std::cout << " remove " << storage_path << std::endl;
-        dariadb::utils::fs::rm(storage_path);
-      } else {
-        is_exists = true;
-      }
-    }
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		if (!dont_clean) {
+			if (!readonly) {
+				std::cout << " remove " << storage_path << std::endl;
+				dariadb::utils::fs::rm(storage_path);
+			}
+		}
+		else {
+			is_exists = true;
+		}
+	}
 
     Time start_time = timeutil::current_time();
     std::cout << " start time: " << timeutil::to_string(start_time) << std::endl;
 
     Options::start(storage_path);
-	Options::instance()->set_default();
+	if (!is_exists) {
+		Options::instance()->set_default();
+	}
 
     auto raw_ptr = new Engine();
 
@@ -292,6 +296,10 @@ int main(int argc, char *argv[]) {
       raw_ptr->fsck();
     }
     IMeasStorage_ptr ms{raw_ptr};
+
+	if (!is_exists) {
+		Options::instance()->save();
+	}
 
     dariadb::IdSet all_id_set;
     append_count = 0;

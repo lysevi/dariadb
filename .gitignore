@@ -1,5 +1,6 @@
 tmp
 packages.config
+Options
 .vs
 *.aof
 *.cap

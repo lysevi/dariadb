@@ -104,10 +104,40 @@ BOOST_AUTO_TEST_CASE(LockManager_Instance) {
 }
 
 BOOST_AUTO_TEST_CASE(Options_Instance) {
-    dariadb::storage::Options::start();
-    auto instance=dariadb::storage::Options::instance();
+	using dariadb::storage::Options;
+	const std::string storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+
+	dariadb::utils::fs::mkdir(storage_path);
+
+    Options::start(storage_path);
+    auto instance=Options::instance();
     BOOST_CHECK(instance!=nullptr);
+	
+	Options::instance()->aof_max_size=1;
+	Options::instance()->aof_buffer_size=2;
+
+							
+	Options::instance()->cap_B=3;
+	Options::instance()->cap_max_levels=4;
+	Options::instance()->cap_store_period=5;
+	Options::instance()->cap_max_closed_caps=6;
+
+	Options::instance()->page_chunk_size=7;
+	Options::instance()->page_openned_page_chache_size=8;
+	
+	
     dariadb::storage::Options::stop();
+
+	bool file_exists=dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(storage_path, dariadb::storage::OPTIONS_FILE_NAME));
+	BOOST_CHECK(file_exists);
+
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+
 }
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
@@ -237,10 +267,10 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     BOOST_CHECK_EQUAL(c4->values.size(), size_t(1));
     BOOST_CHECK_EQUAL(c4->values.front().flag, dariadb::Flag(1));
   }
+  dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-   dariadb::storage::Options::stop();
 }
 
 
@@ -323,10 +353,11 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     }
     BOOST_CHECK_GE(total_count, total_readed);
   }
+  dariadb::storage::Options::stop();
+
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-  dariadb::storage::Options::stop();
 }
 
 BOOST_AUTO_TEST_CASE(Engine_memvalues) {
@@ -399,8 +430,8 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
       BOOST_CHECK(all1.size() != size_t(0));
     }
   }
+  dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-  dariadb::storage::Options::stop();
 }

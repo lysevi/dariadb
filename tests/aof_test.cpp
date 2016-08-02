@@ -112,10 +112,10 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
     BOOST_CHECK_EQUAL(all.size(), writes_count);
   }
   dariadb::storage::Manifest::stop();
+  dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-  dariadb::storage::Options::stop();
 }
 
 BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
@@ -141,10 +141,10 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
     dariadb::storage::Manifest::stop();
   }
 
+  dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-  dariadb::storage::Options::stop();
 }
 
 BOOST_AUTO_TEST_CASE(AOFManager_Instance) {

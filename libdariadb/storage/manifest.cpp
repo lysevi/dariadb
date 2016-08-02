@@ -83,23 +83,13 @@ void dariadb::storage::Manifest::restore() {
 }
 
 std::string dariadb::storage::Manifest::read_file(const std::string &fname) {
-  std::ifstream fs;
-  fs.open(fname);
-  if (!fs.is_open()) {
-    this->touch();
-    fs.open(fname);
-    if (!fs.is_open()) {
-      throw MAKE_EXCEPTION("(!fs.is_open())");
-    }
-  }
-
-  std::stringstream ss;
-  std::string line;
-  while (std::getline(fs, line)) {
-    ss << line;
-  }
-  fs.close();
-  return ss.str();
+	if(utils::fs::path_exists(fname)){
+		return utils::fs::read_file(fname);
+	}
+	else {
+		this->touch();
+		return utils::fs::read_file(fname);
+	}
 }
 
 void dariadb::storage::Manifest::write_file(const std::string &fname,

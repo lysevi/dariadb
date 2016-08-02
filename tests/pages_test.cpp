@@ -105,6 +105,7 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
+  dariadb::utils::fs::mkdir(storagePath);
   dariadb::utils::async::ThreadManager::start(
       dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
   dariadb::storage::Manifest::start(
