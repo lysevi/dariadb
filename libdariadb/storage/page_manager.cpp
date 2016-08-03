@@ -380,7 +380,7 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return impl->minMaxTime(id, minResult, maxResult);
 }
 
-dariadb::storage::ChunkLinkList PageManager::chunksByIterval(const QueryInterval &query) {
+ChunkLinkList PageManager::chunksByIterval(const QueryInterval &query) {
   return impl->chunksByIterval(query);
 }
 
@@ -409,7 +409,7 @@ dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
 }
 
-void dariadb::storage::PageManager::append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
+void PageManager::append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
     return impl->append(file_prefix, ma);
 }
 void PageManager::fsck(bool force_check) {

@@ -43,7 +43,7 @@ struct Meas {
   static Meas empty(Id id);
 
   Meas();
-  void readFrom(const Meas::PMeas m);
+
   bool operator==(const Meas &other) const {
     return id == other.id && time == other.time && flag == other.flag &&
            areSame(value, other.value);

@@ -114,7 +114,7 @@ uint32_t ZippedChunk::calc_checksum() {
   return utils::crc32(this->_buffer_t, this->header->size);
 }
 
-uint32_t dariadb::storage::ZippedChunk::get_checksum() {
+uint32_t ZippedChunk::get_checksum() {
   return header->crc;
 }
 

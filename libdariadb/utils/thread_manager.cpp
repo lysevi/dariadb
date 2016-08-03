@@ -33,7 +33,7 @@ void ThreadManager::flush() {
   }
 }
 
-TaskResult_Ptr dariadb::utils::async::ThreadManager::post(const ThreadKind kind,
+TaskResult_Ptr ThreadManager::post(const ThreadKind kind,
                                                           const AsyncTaskWrap &task) {
   auto target = _pools.find(kind);
   if (target == _pools.end()) {

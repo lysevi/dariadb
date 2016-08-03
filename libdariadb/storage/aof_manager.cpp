@@ -57,7 +57,7 @@ void AOFManager::stop() {
   AOFManager::_instance = nullptr;
 }
 
-AOFManager *dariadb::storage::AOFManager::instance() {
+AOFManager *AOFManager::instance() {
   return AOFManager::_instance;
 }
 
@@ -107,7 +107,7 @@ std::list<std::string> AOFManager::aof_files() const {
   return res;
 }
 
-std::list<std::string> dariadb::storage::AOFManager::closed_aofs() {
+std::list<std::string> AOFManager::closed_aofs() {
   auto all_files = aof_files();
   std::list<std::string> result;
   for (auto fn : all_files) {
@@ -122,7 +122,7 @@ std::list<std::string> dariadb::storage::AOFManager::closed_aofs() {
   return result;
 }
 
-void dariadb::storage::AOFManager::drop_aof(const std::string &fname,
+void AOFManager::drop_aof(const std::string &fname,
                                             IAofFileDropper *storage) {
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{fname, false}};
   auto without_path = utils::fs::extract_filename(fname);

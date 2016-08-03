@@ -65,7 +65,7 @@ void CapacitorManager::stop() {
   CapacitorManager::_instance = nullptr;
 }
 
-CapacitorManager *dariadb::storage::CapacitorManager::instance() {
+CapacitorManager *CapacitorManager::instance() {
   return CapacitorManager::_instance;
 }
 
@@ -131,7 +131,7 @@ std::list<std::string> CapacitorManager::closed_caps() {
   return files;
 }
 
-void dariadb::storage::CapacitorManager::drop_cap(const std::string &fname) {
+void CapacitorManager::drop_cap(const std::string &fname) {
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
   _down->drop(fname);

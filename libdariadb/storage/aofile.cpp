@@ -17,7 +17,7 @@ using namespace dariadb::storage;
 
 class AOFile::Private {
 public:
-  Private(){
+  Private() {
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
@@ -35,80 +35,79 @@ public:
 
   ~Private() { this->flush(); }
 
+  FILE *open_to_append() const {
+    auto file = std::fopen(_filename.c_str(), "ab");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aofile: open_to_append error.");
+    }
+    return file;
+  }
+
+  FILE *open_to_read() const {
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw_open_error_exception();
+    }
+    return file;
+  }
+
   append_result append(const Meas &value) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
-    
+
     if (_writed > Options::instance()->aof_max_size) {
       return append_result(0, 1);
     }
-    auto file = std::fopen(_filename.c_str(), "ab");
-    if (file != nullptr) {
-      std::fwrite(&value, sizeof(Meas), size_t(1), file);
-      std::fclose(file);
-      _writed++;
-      return append_result(1, 0);
-    } else {
-      throw MAKE_EXCEPTION("aofile: append error.");
-    }
+    auto file = open_to_append();
+    std::fwrite(&value, sizeof(Meas), size_t(1), file);
+    std::fclose(file);
+    _writed++;
+    return append_result(1, 0);
   }
 
   append_result append(const Meas::MeasArray::const_iterator &begin,
                        const Meas::MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
-    
+
     auto sz = std::distance(begin, end);
     if (is_full) {
       return append_result(0, sz);
     }
-    auto file = std::fopen(_filename.c_str(), "ab");
-    if (file != nullptr) {
-
-        auto max_size=Options::instance()->aof_max_size;
-      auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
-      std::fwrite(&(*begin), sizeof(Meas), write_size, file);
-      std::fclose(file);
-      _writed += write_size;
-      return append_result(write_size, 0);
-    } else {
-      throw MAKE_EXCEPTION("aofile: append error.");
-    }
+    auto file = open_to_append();
+    auto max_size = Options::instance()->aof_max_size;
+    auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
+    std::fwrite(&(*begin), sizeof(Meas), write_size, file);
+    std::fclose(file);
+    _writed += write_size;
+    return append_result(write_size, 0);
   }
 
   append_result append(const Meas::MeasList::const_iterator &begin,
                        const Meas::MeasList::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
-    
+
     auto list_size = std::distance(begin, end);
     if (is_full) {
       return append_result(0, list_size);
     }
-    auto file = std::fopen(_filename.c_str(), "ab");
-    if (file != nullptr) {
+    auto file = open_to_append();
 
-        auto max_size=Options::instance()->aof_max_size;
+    auto max_size = Options::instance()->aof_max_size;
 
-      auto write_size =
-          (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
-      Meas::MeasArray ma{begin, end};
-      std::fwrite(ma.data(), sizeof(Meas), write_size, file);
-      std::fclose(file);
-      _writed += write_size;
-      return append_result(write_size, 0);
-    } else {
-      throw MAKE_EXCEPTION("aofile: append error.");
-    }
+    auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
+    Meas::MeasArray ma{begin, end};
+    std::fwrite(ma.data(), sizeof(Meas), write_size, file);
+    std::fclose(file);
+    _writed += write_size;
+    return append_result(write_size, 0);
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
 
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     while (1) {
       Meas val = Meas::empty();
@@ -122,17 +121,14 @@ public:
     std::fclose(file);
   }
 
-
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFile::readInTimePoint");
-    
+
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
 
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      this->throw_open_error_exception();
-    }
+    auto file = open_to_read();
+
     while (1) {
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
@@ -173,10 +169,8 @@ public:
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     dariadb::Meas::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+
+    auto file = open_to_read();
     while (1) {
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
@@ -204,10 +198,7 @@ public:
   }
 
   dariadb::Time minTime() const {
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     dariadb::Time result = dariadb::MAX_TIME;
 
@@ -223,10 +214,7 @@ public:
   }
 
   dariadb::Time maxTime() const {
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     dariadb::Time result = dariadb::MIN_TIME;
 
@@ -243,10 +231,7 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "AOFile::minMaxTime");
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
@@ -272,10 +257,7 @@ public:
 
   Meas::MeasArray readAll() {
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     Meas::MeasArray ma(Options::instance()->aof_max_size);
     size_t pos = 0;
