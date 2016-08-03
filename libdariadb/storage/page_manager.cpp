@@ -78,13 +78,17 @@ public:
   void erase_page(const std::string &file_name) {
     auto target_name = utils::fs::extract_filename(file_name);
     logger_info("page: " << file_name << " removing...");
-    _openned_pages.erase(file_name);
-
-    Manifest::instance()->page_rm(target_name);
-    utils::fs::rm(file_name);
-    utils::fs::rm(file_name + "i");
+	erase(target_name);
   }
 
+  void erase(const std::string&fname){
+	  auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+	  _openned_pages.erase(full_file_name);
+
+	  Manifest::instance()->page_rm(fname);
+	  utils::fs::rm(full_file_name);
+	  utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+  }
   // PM
   void flush() {}
 
@@ -414,4 +418,8 @@ void PageManager::append(const std::string&file_prefix, const dariadb::Meas::Mea
 }
 void PageManager::fsck(bool force_check) {
   return impl->fsck(force_check);
+}
+
+void PageManager::erase(const std::string&fname) {
+	return impl->erase(fname);
 }

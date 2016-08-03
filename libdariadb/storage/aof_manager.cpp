@@ -127,7 +127,7 @@ void AOFManager::drop_aof(const std::string &fname,
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
-  storage->drop(without_path, Options::instance()->aof_max_size);
+  storage->drop(without_path);
 }
 
 void AOFManager::set_downlevel(IAofFileDropper *down) {
@@ -390,4 +390,9 @@ void AOFManager::flush() {
 
 size_t AOFManager::files_count() const {
   return aof_files().size();
+}
+
+void AOFManager::erase(const std::string &fname) {
+  Manifest::instance()->aof_rm(fname);
+  utils::fs::rm(utils::fs::append_path(Options::instance()->path, fname));
 }

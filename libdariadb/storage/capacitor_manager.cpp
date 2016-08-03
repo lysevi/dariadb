@@ -402,3 +402,9 @@ void CapacitorManager::flush() {
 size_t CapacitorManager::files_count() const {
   return cap_files().size();
 }
+
+void CapacitorManager::erase(const std::string&fname) {
+	auto capf = utils::fs::append_path(Options::instance()->path, fname);
+	dariadb::utils::fs::rm(capf);
+	Manifest::instance()->cola_rm(fname);
+}

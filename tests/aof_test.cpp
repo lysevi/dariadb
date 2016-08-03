@@ -22,7 +22,7 @@ public:
   Moc_Dropper() {
     writed_count = 0;
   }
-  void drop(const std::string fname, const uint64_t values_in_file) override {
+  void drop(const std::string fname) override {
     auto full_path = dariadb::utils::fs::append_path(dariadb::storage::Options::instance()->path, fname);
     dariadb::storage::AOFile_Ptr aof{
         new dariadb::storage::AOFile(full_path, true)};
