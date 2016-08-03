@@ -80,6 +80,9 @@ BOOST_AUTO_TEST_CASE(LRUCheck) {
   BOOST_CHECK(ilru.put(55, 550, &out_val));
   BOOST_CHECK_EQUAL(ilru.size(), size_t(10));
   BOOST_CHECK_EQUAL(out_val, 20);
+  ilru.erase(55);
+  BOOST_CHECK_EQUAL(ilru.size(), size_t(9));
+  BOOST_CHECK(!ilru.find(55, &out_val));
 }
 
 BOOST_AUTO_TEST_CASE(SkipListCheck) {
