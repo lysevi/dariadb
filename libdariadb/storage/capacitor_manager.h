@@ -7,14 +7,13 @@
 #include "capacitor.h"
 
 #include <vector>
-#include <map>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace dariadb {
 namespace storage {
 
-	using File2Header = std::map<std::string, Capacitor::Header>;
+	using File2Header = std::unordered_map<std::string, Capacitor::Header>;
 
 class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
 public:
