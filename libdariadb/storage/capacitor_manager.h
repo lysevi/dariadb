@@ -13,7 +13,7 @@
 namespace dariadb {
 namespace storage {
 
-	using File2Header = std::unordered_map<std::string, Capacitor::Header>;
+	using File2CapHeader = std::unordered_map<std::string, Capacitor::Header>;
 
 class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
 public:
@@ -71,7 +71,7 @@ private:
   ICapDropper *_down;
   std::unordered_set<std::string> _files_send_to_drop;
 
-  File2Header _file2header;
+  File2CapHeader _file2header;
 };
 }
 }

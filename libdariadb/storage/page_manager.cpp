@@ -23,12 +23,15 @@
 #include <queue>
 #include <sstream>
 #include <thread>
+#include <unordered_map>
 
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
 
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
+
+using File2PageHeader = std::unordered_map<std::string, IndexHeader>;
 
 class PageManager::Private {
 public:
@@ -39,6 +42,15 @@ public:
     update_id = false;
     last_id = 0;
 
+	if (utils::fs::path_exists(Options::instance()->path)) {
+		auto pages = Manifest::instance()->page_list();
+
+		for (auto n : pages) {
+			auto file_name = utils::fs::append_path(Options::instance()->path, n);
+			auto hdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+			_file2header[n] = hdr;
+		}
+	}
   }
 
   ~Private() {
@@ -88,6 +100,7 @@ public:
 	  Manifest::instance()->page_rm(fname);
 	  utils::fs::rm(full_file_name);
 	  utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+	  _file2header.erase(fname);
   }
   // PM
   void flush() {}
@@ -152,6 +165,9 @@ public:
         pg = Page_Ptr{Page::open(pname, true)};
         Page_Ptr dropped;
         _openned_pages.put(pname, pg, &dropped);
+		if (dropped != nullptr) {
+			_file2header.erase(dropped->filename);
+		}
         /*if (dropped != nullptr) {
           _openned_pages.set_max_size(_openned_pages.size() + 1);
           Page_Ptr should_be_null;
@@ -231,12 +247,12 @@ public:
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::pages_by_filter");
     std::list<std::string> result;
-    auto names = Manifest::instance()->page_list();
-    for (auto n : names) {
-      auto index_file_name = utils::fs::append_path(Options::instance()->path, n + "i");
-      auto hdr = Page::readIndexHeader(index_file_name);
+    
+	
+    for (auto f2h : _file2header) {
+		auto hdr = f2h.second;
       if (pred(hdr)) {
-        auto page_file_name = utils::fs::append_path(Options::instance()->path, n);
+        auto page_file_name = utils::fs::append_path(Options::instance()->path, f2h.first);
         result.push_back(page_file_name);
       }
     }
@@ -339,6 +355,7 @@ public:
         res->header->max_chunk_id = last_id;
       }
       delete res;
+	  _file2header[page_name] = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
 
 protected:
@@ -348,6 +365,7 @@ protected:
   uint64_t last_id;
   bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
+  File2PageHeader _file2header;
 };
 
 PageManager::PageManager()
