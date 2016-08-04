@@ -82,7 +82,6 @@ int main(int argc, char *argv[]) {
   }
 
   dariadb::IdSet all_id_set;
-  auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "aof_benchmark_storage";
 
