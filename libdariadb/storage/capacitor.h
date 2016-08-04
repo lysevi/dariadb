@@ -73,7 +73,8 @@ public:
   size_t levels_count() const;
   size_t size() const;
 
-  static std::string file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
+  static std::string rnd_file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
+  std::string file_name()const;
   void fsck();
   void close();
 

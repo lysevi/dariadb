@@ -121,6 +121,7 @@ public:
   Private(const std::string &fname, bool readonly)
       : mmap(nullptr), _size(0) {
     _is_readonly = readonly;
+	_filename = fname;
     if (utils::fs::path_exists(fname)) {
       open(fname);
     } else {
@@ -129,11 +130,11 @@ public:
   }
 
   ~Private() {
-    this->flush();
     if (!_is_readonly) {
       if (mmap != nullptr) {
         _header->is_closed = true;
         _header->is_open_to_write = false;
+		this->flush();
         mmap->close();
       }
     }
@@ -713,6 +714,9 @@ public:
 
   Header *header() { return _header; }
 
+  std::string file_name()const {
+	  return _filename;
+  }
 protected:
   dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
   Header *_header;
@@ -723,6 +727,7 @@ protected:
   size_t _memvalues_size;
 
   bool _is_readonly;
+  std::string _filename;
 };
 
 Capacitor::~Capacitor() {}
@@ -807,4 +812,8 @@ void Capacitor::fsck() {
 
 void Capacitor::close() {
   _Impl->close();
+}
+
+std::string Capacitor::file_name()const {
+	return _Impl->file_name();
 }

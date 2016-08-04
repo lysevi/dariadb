@@ -33,8 +33,8 @@ CapacitorManager::CapacitorManager()
     auto hdr = Capacitor::readHeader(f);
     if (!hdr.is_full) {
       _cap = Capacitor_Ptr{new Capacitor(f)};
-      break;
     }
+	_file2header.insert(std::make_pair(utils::fs::extract_filename(f), hdr));
   }
   if (Options::instance()->cap_store_period != 0) {
 	  this->period_worker_start();
@@ -83,6 +83,9 @@ void CapacitorManager::period_call() {
 
 Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
+  if (_cap != nullptr) {
+	  _file2header[_cap->file_name()] = *_cap->header();
+  }
   _cap = nullptr;
   if (_down != nullptr) {
     auto closed = this->closed_caps();
@@ -94,11 +97,13 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
     } else {
     }
   }
-  return Capacitor_Ptr{new Capacitor(filename)};
+  auto result=Capacitor_Ptr{new Capacitor(filename)};
+  _file2header[filename] = *result->header();
+  return result;
 }
 
 Capacitor_Ptr CapacitorManager::create_new() {
-  return create_new(Capacitor::file_name());
+  return create_new(Capacitor::rnd_file_name());
 }
 
 std::list<std::string> CapacitorManager::cap_files() const {
@@ -114,13 +119,15 @@ std::list<std::string> CapacitorManager::cap_files() const {
 std::list<std::string>
 CapacitorManager::caps_by_filter(std::function<bool(const Capacitor::Header &)> pred) {
   std::list<std::string> result;
-  auto names = cap_files();
-  for (auto file_name : names) {
-    auto hdr = Capacitor::readHeader(file_name);
-    if (pred(hdr)) {
-      result.push_back(file_name);
+
+  auto mnfst = Manifest::instance()->cola_list();
+  assert(mnfst.size() == _file2header.size());
+  for (auto f2h : _file2header) {
+    if (pred(f2h.second)) {
+      result.push_back(utils::fs::append_path(Options::instance()->path, f2h.first));
     }
   }
+
   return result;
 }
 
@@ -140,8 +147,8 @@ void CapacitorManager::drop_cap(const std::string &fname) {
 void CapacitorManager::drop_closed_unsafe(size_t count) {
   TIMECODE_METRICS(ctmd, "drop", "CapacitorManager::drop_part");
   auto closed = this->closed_caps();
-  using File2Header = std::tuple<std::string, Capacitor::Header>;
-  std::vector<File2Header> file2headers{closed.size()};
+  using FileWithHeader = std::tuple<std::string, Capacitor::Header>;
+  std::vector<FileWithHeader> file2headers{closed.size()};
 
   size_t pos = 0;
   for (auto f : closed) {
@@ -153,7 +160,7 @@ void CapacitorManager::drop_closed_unsafe(size_t count) {
     }
   }
   std::sort(file2headers.begin(), file2headers.begin() + pos,
-            [](const File2Header &l, const File2Header &r) {
+            [](const FileWithHeader &l, const FileWithHeader &r) {
               return std::get<1>(l).minTime < std::get<1>(r).minTime;
             });
   auto drop_count = std::min(pos, count);
@@ -165,8 +172,8 @@ void CapacitorManager::drop_closed_unsafe(size_t count) {
 
   // clean set of sended to drop files.
   auto caps_exists = Manifest::instance()->cola_list();
-  std::set<std::string> caps_exists_set{caps_exists.begin(), caps_exists.end()};
-  std::set<std::string> new_sended_files;
+  std::unordered_set<std::string> caps_exists_set{caps_exists.begin(), caps_exists.end()};
+  std::unordered_set<std::string> new_sended_files;
   for (auto &v : _files_send_to_drop) {
     if (caps_exists_set.find(v) != caps_exists_set.end()) {
       new_sended_files.insert(v);
@@ -378,6 +385,9 @@ void CapacitorManager::append(std::string filename, const Meas::MeasArray &ma) {
   auto target = create_new(filename);
   target->append(ma.begin(), ma.end());
   target->close();
+
+  auto hdr = *(target->header());
+  _file2header[target->file_name()] = hdr;
   target = nullptr;
 }
 
@@ -389,10 +399,12 @@ dariadb::append_result CapacitorManager::append(const Meas &value) {
   auto res = _cap->append(value);
   if (res.writed != 1) {
     _cap = create_new();
-    return _cap->append(value);
-  } else {
-    return res;
+    res=_cap->append(value);
   }
+  auto mnfst = Manifest::instance()->cola_list();
+  _file2header[_cap->file_name()]= *(_cap->header());
+  assert(mnfst.size() == _file2header.size());
+  return res;
 }
 
 void CapacitorManager::flush() {
@@ -406,5 +418,6 @@ size_t CapacitorManager::files_count() const {
 void CapacitorManager::erase(const std::string&fname) {
 	auto capf = utils::fs::append_path(Options::instance()->path, fname);
 	dariadb::utils::fs::rm(capf);
+	_file2header.erase(fname);
 	Manifest::instance()->cola_rm(fname);
 }

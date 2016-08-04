@@ -3,15 +3,19 @@
 #include "../interfaces/imeasstorage.h"
 #include "../utils/period_worker.h"
 #include "../utils/utils.h"
+#include "../utils/locker.h"
 #include "capacitor.h"
-#include <vector>
 
-#include <mutex>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace dariadb {
 namespace storage {
-const size_t MAX_CLOSED_CAPS = 10;
-const uint8_t COLA_MAX_LEVELS = 11; //optimal value.
+
+	using File2Header = std::map<std::string, Capacitor::Header>;
+
 class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
 public:
   class ICapDropper {
@@ -66,7 +70,9 @@ private:
 
   Capacitor_Ptr _cap;
   ICapDropper *_down;
-  std::set<std::string> _files_send_to_drop;
+  std::unordered_set<std::string> _files_send_to_drop;
+
+  File2Header _file2header;
 };
 }
 }

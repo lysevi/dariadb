@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::file_name());
+    dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::rnd_file_name());
 
     cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
 
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::file_name());
+    dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::rnd_file_name());
 
     dariadb_test::storage_test_check(&cap, 0, 100, 1);
     dariadb::storage::Manifest::stop();
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::file_name());
+    dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::rnd_file_name());
 
     auto e = dariadb::Meas::empty();
 
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE(CapacitorBulk) {
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap( dariadb::storage::Capacitor::file_name());
+    dariadb::storage::Capacitor cap( dariadb::storage::Capacitor::rnd_file_name());
 
     auto e = dariadb::Meas::empty();
     size_t count = dariadb::storage::Options::instance()->measurements_count();
