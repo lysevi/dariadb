@@ -59,7 +59,7 @@ protected:
   std::list<std::string>
   caps_by_filter(std::function<bool(const Capacitor::Header &)> pred);
 
-  void call() override;
+  void period_call() override;
 
 private:
   static CapacitorManager *_instance;

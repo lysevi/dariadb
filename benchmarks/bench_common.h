@@ -39,7 +39,7 @@ dariadb::Id get_id_from(dariadb::Id id) {
 dariadb::Id get_id_to(dariadb::Id id) {
   return (id + 1) * id_per_thread;
 }
-void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
+void thread_writer_rnd_stor(dariadb::Id id,
                             std::atomic_llong *append_count,
                             dariadb::storage::IMeasWriter *ms) {
   try {
@@ -67,8 +67,7 @@ void thread_writer_rnd_stor(dariadb::Id id, dariadb::Time sleep_time,
 }
 
 void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStorage *stor,
-                  size_t reads_count, dariadb::Time from, dariadb::Time to,
-                  bool quiet = false) {
+                  size_t reads_count,  bool quiet = false) {
   std::cout << "==> init random ids...." << std::endl;
   dariadb::IdArray random_ids{all_id_set.begin(), all_id_set.end()};
   std::random_shuffle(random_ids.begin(), random_ids.end());

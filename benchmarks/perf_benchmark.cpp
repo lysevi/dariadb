@@ -22,7 +22,7 @@ bool dont_clean = false;
 class BenchCallback : public IReaderClb {
 public:
   BenchCallback() { count = 0; }
-  void call(const dariadb::Meas &v) { count++; }
+  void call(const dariadb::Meas &) { count++; }
   std::atomic<size_t> count;
 };
 
@@ -167,8 +167,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
       all_id_set.insert(j);
     }
     if (!readonly) {
-      std::thread t{dariadb_bench::thread_writer_rnd_stor, Id(pos), Time(i),
-                    &append_count, raw_ptr};
+      std::thread t{dariadb_bench::thread_writer_rnd_stor, Id(pos), &append_count, raw_ptr};
       writers[pos] = std::move(t);
     }
     pos++;
@@ -190,7 +189,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   }
 
   if (readers_enable) {
-    size_t pos = 0;
+    pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
       std::thread t = std::move(readers[pos++]);
       t.join();
@@ -355,8 +354,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Active threads: "
               << utils::async::ThreadManager::instance()->active_works() << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set, ms.get(), 100, start_time,
-                                timeutil::current_time());
+    dariadb_bench::readBenchark(all_id_set, ms.get(), 100);
 
     auto max_time = ms->maxTime();
     std::cout << "==> interval end time: " << timeutil::to_string(max_time) << std::endl;

@@ -18,7 +18,7 @@ CapacitorManager *CapacitorManager::_instance = nullptr;
 
 CapacitorManager::~CapacitorManager() {
   if (Options::instance()->cap_store_period != 0) {
-    this->stop_worker();
+    this->period_worker_stop();
   }
 }
 
@@ -37,7 +37,7 @@ CapacitorManager::CapacitorManager()
     }
   }
   if (Options::instance()->cap_store_period != 0) {
-    this->start_worker();
+	  this->period_worker_start();
   }
 }
 
@@ -70,7 +70,7 @@ CapacitorManager *CapacitorManager::instance() {
 }
 
 /// perid_worker callback
-void CapacitorManager::call() {
+void CapacitorManager::period_call() {
   auto closed = this->closed_caps();
   auto max_hdr_time = dariadb::timeutil::current_time() - Options::instance()->cap_store_period;
   for (auto &fname : closed) {
