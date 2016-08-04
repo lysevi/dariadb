@@ -46,9 +46,6 @@ void Options::set_default() {
 }
 
 void Options::stop(){
-	if (_instance->path != "") {
-		_instance->save();
-	}
     delete _instance;
     _instance=nullptr;
 }

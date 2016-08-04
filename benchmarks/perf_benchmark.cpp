@@ -287,6 +287,7 @@ int main(int argc, char *argv[]) {
     Options::start(storage_path);
 	if (!is_exists) {
 		Options::instance()->set_default();
+		Options::instance()->save();
 	}
 
     auto raw_ptr = new Engine();

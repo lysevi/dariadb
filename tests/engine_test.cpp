@@ -127,8 +127,9 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 	Options::instance()->page_openned_page_chache_size=8;
 
 	Options::instance()->calc_params();
+	Options::instance()->save();
 
-    dariadb::storage::Options::stop();
+    Options::stop();
 
 	bool file_exists=dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(storage_path, dariadb::storage::OPTIONS_FILE_NAME));
 	BOOST_CHECK(file_exists);
