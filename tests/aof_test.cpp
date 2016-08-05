@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
     BOOST_CHECK_EQUAL(out.size(), writes_count);
   }
   {
-    auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
+    aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
     BOOST_CHECK(aof_files.size() == size_t(1));
     dariadb::storage::AOFile aof(aof_files.front(), true);
     auto all = aof.readAll();

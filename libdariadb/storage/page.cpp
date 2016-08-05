@@ -1,6 +1,7 @@
 #include "page.h"
 #include "../timeutil.h"
 #include "../utils/metrics.h"
+#include "../utils/exception.h"
 #include "bloom_filter.h"
 #include <algorithm>
 #include <cassert>
@@ -373,11 +374,12 @@ dariadb::Meas::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
 
     Chunk_Ptr ptr = nullptr;
-    if (ptr_to_chunk_info_raw->is_zipped) {
+    if (ptr_to_chunk_info_raw->kind==ChunkKind::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      assert(false);
+		THROW_EXCEPTION_SS("Unknow ChunkKind: " << ptr_to_chunk_info_raw->kind);
     }
+
     Chunk_Ptr c{ptr};
     auto reader = c->get_reader();
     while (!reader->is_end()) {
@@ -420,11 +422,12 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     }
 
     Chunk_Ptr ptr = nullptr;
-    if (ptr_to_chunk_info_raw->is_zipped) {
+	if (ptr_to_chunk_info_raw->kind == ChunkKind::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
-    } else {
-      assert(false);
     }
+	else {
+		THROW_EXCEPTION_SS("Unknow ChunkKind: " << ptr_to_chunk_info_raw->kind);
+	}
     Chunk_Ptr c{ptr};
     search_res = c;
     auto rdr = search_res->get_reader();

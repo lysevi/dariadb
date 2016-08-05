@@ -12,14 +12,20 @@
 #include <unordered_map>
 namespace dariadb {
 namespace storage {
+	enum class ChunkKind : uint8_t
+	{
+		Simple,
+		Compressed
+	};
 
+	std::ostream &operator<<(std::ostream &stream, const ChunkKind &k);
 #pragma pack(push, 1)
 struct ChunkHeader {
   uint64_t id; // chunk id;
   bool is_init : 1;
-  bool is_zipped : 1;
   bool is_sorted : 1;
   bool is_readonly : 1;
+  ChunkKind kind;
   Meas first, last;
   Time minTime, maxTime;
   Id minId, maxId;

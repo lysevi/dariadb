@@ -149,7 +149,6 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   first.id = 1;
   first.time = t;
   {
-	  dariadb::Meas first;
 	  first.id = 1;
 	  first.time = t;
 	  auto count = chunks_size / 10;
@@ -215,7 +214,6 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   size_t iteration = 0;
   while (dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).size() <= page_count) {
-	dariadb::Meas first;
 	first.id = 1;
 	first.time = t;
 	auto count = chunks_size / 10;
@@ -318,13 +316,13 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     // must return all of appended chunks;
 
     PageManager::instance()->flush();
-    dariadb::storage::QueryInterval qi(all_id_array, 0, 0, e.time);
-    auto links_list = PageManager::instance()->chunksByIterval(qi);
+    dariadb::storage::QueryInterval qi_all(all_id_array, 0, 0, e.time);
+    auto links_list = PageManager::instance()->chunksByIterval(qi_all);
 
     auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
         new dariadb::storage::MList_ReaderClb};
 
-    PageManager::instance()->readLinks(qi, links_list, clb.get());
+    PageManager::instance()->readLinks(qi_all, links_list, clb.get());
 
     BOOST_CHECK_EQUAL(addeded.size(), clb->mlist.size());
     dariadb::Time minT = dariadb::MAX_TIME, maxT = dariadb::MIN_TIME;
