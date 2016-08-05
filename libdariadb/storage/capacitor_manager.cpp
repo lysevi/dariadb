@@ -30,11 +30,15 @@ CapacitorManager::CapacitorManager()
   /// because engine use bulk loading and file or not exists or full.
   auto files = cap_files();
   for (auto f : files) {
-    auto hdr = Capacitor::readHeader(f);
-    if (!hdr.is_full) {
-      _cap = Capacitor_Ptr{new Capacitor(f)};
-    }
-	_file2header.insert(std::make_pair(utils::fs::extract_filename(f), hdr));
+	  try {
+		  auto hdr = Capacitor::readHeader(f);
+		  if (!hdr.is_full) {
+			  _cap = Capacitor_Ptr{ new Capacitor(f) };
+		  }
+		  _file2header.insert(std::make_pair(utils::fs::extract_filename(f), hdr));
+	  }catch (utils::Exception&ex) {
+		  throw MAKE_EXCEPTION(ex.what());
+	  }
   }
   if (Options::instance()->cap_store_period != 0) {
 	  this->period_worker_start();
@@ -44,11 +48,15 @@ CapacitorManager::CapacitorManager()
 void CapacitorManager::fsck(bool force_check) {
   auto files = cap_files();
   for (auto f : files) {
-    auto hdr = Capacitor::readHeader(f);
-    if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
-      auto c = Capacitor_Ptr{new Capacitor(f)};
-      c->fsck();
-    }
+	  try {
+		  auto hdr = Capacitor::readHeader(f);
+		  if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
+			  auto c = Capacitor_Ptr{ new Capacitor(f) };
+			  c->fsck();
+		  }
+	  }catch (utils::Exception&ex) {
+		  throw MAKE_EXCEPTION(ex.what());
+	  }
   }
 }
 
@@ -74,10 +82,14 @@ void CapacitorManager::period_call() {
   auto closed = this->closed_caps();
   auto max_hdr_time = dariadb::timeutil::current_time() - Options::instance()->cap_store_period;
   for (auto &fname : closed) {
-    Capacitor::Header hdr = Capacitor::readHeader(fname);
-    if (hdr.maxTime < max_hdr_time) {
-      this->drop_cap(fname);
-    }
+	  try {
+		  Capacitor::Header hdr = Capacitor::readHeader(fname);
+		  if (hdr.maxTime < max_hdr_time) {
+			  this->drop_cap(fname);
+		  }
+	  }catch (utils::Exception&ex) {
+		  throw MAKE_EXCEPTION(ex.what());
+	  }
   }
 }
 
@@ -152,12 +164,16 @@ void CapacitorManager::drop_closed_unsafe(size_t count) {
 
   size_t pos = 0;
   for (auto f : closed) {
-    auto without_path = utils::fs::extract_filename(f);
-    if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-      auto cheader = Capacitor::readHeader(f);
-      file2headers[pos] = std::tie(f, cheader);
-      ++pos;
-    }
+	  try {
+		  auto without_path = utils::fs::extract_filename(f);
+		  if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+			  auto cheader = Capacitor::readHeader(f);
+			  file2headers[pos] = std::tie(f, cheader);
+			  ++pos;
+		  }
+	  }catch (utils::Exception&ex) {
+		  throw MAKE_EXCEPTION(ex.what());
+	  }
   }
   std::sort(file2headers.begin(), file2headers.begin() + pos,
             [](const FileWithHeader &l, const FileWithHeader &r) {
@@ -190,8 +206,12 @@ dariadb::Time CapacitorManager::minTime() {
   auto files = cap_files();
   dariadb::Time result = dariadb::MAX_TIME;
   for (auto filename : files) {
-    auto local = Capacitor::readHeader(filename).minTime;
-    result = std::min(local, result);
+	  try {
+		  auto local = Capacitor::readHeader(filename).minTime;
+		  result = std::min(local, result);
+	  }catch (utils::Exception&ex) {
+		  throw MAKE_EXCEPTION(ex.what());
+	  }
   }
   return result;
 }
@@ -200,8 +220,12 @@ dariadb::Time CapacitorManager::maxTime() {
   auto files = cap_files();
   dariadb::Time result = dariadb::MIN_TIME;
   for (auto filename : files) {
-    auto local = Capacitor::readHeader(filename).maxTime;
-    result = std::max(local, result);
+	  try {
+		  auto local = Capacitor::readHeader(filename).maxTime;
+		  result = std::max(local, result);
+	  }catch (utils::Exception&ex) {
+		  throw MAKE_EXCEPTION(ex.what());
+	  }
   }
   return result;
 }
