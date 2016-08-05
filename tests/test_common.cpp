@@ -173,9 +173,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   as->foreach (qi_all, clbk.get());
 
   if (all.size() != clbk->count) {
-    std::stringstream ss;
-    ss << "all.size()!=clbk->count: " << all.size() << "!=" << clbk->count;
-    throw MAKE_EXCEPTION(ss.str());
+	  THROW_EXCEPTION_SS("all.size()!=clbk->count: " << all.size() << "!=" << clbk->count);
   }
   IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 

@@ -223,9 +223,7 @@ PageHeader Page::readHeader(std::string file_name) {
   std::ifstream istream;
   istream.open(file_name, std::fstream::in | std::fstream::binary);
   if (!istream.is_open()) {
-    std::stringstream ss;
-    ss << "can't open file. filename=" << file_name;
-    throw MAKE_EXCEPTION(ss.str());
+    THROW_EXCEPTION_SS("can't open file. filename=" << file_name);
   }
   PageHeader result;
   memset(&result, 0, sizeof(PageHeader));

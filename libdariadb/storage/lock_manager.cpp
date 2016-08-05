@@ -67,9 +67,7 @@ void LockManager::lock(const LockKind &lk, const LockObjects &lo) {
     break;
   }
   default: {
-    std::stringstream ss;
-    ss << "Unknow LockObject:" << (uint8_t)lo;
-    throw MAKE_EXCEPTION(ss.str());
+	THROW_EXCEPTION_SS("Unknow LockObject:" << (uint8_t)lo);
     break;
   }
   }

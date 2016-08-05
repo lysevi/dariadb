@@ -107,9 +107,7 @@ IndexHeader PageIndex::readIndexHeader(std::string ifile) {
   std::ifstream istream;
   istream.open(ifile, std::fstream::in | std::fstream::binary);
   if (!istream.is_open()) {
-    std::stringstream ss;
-    ss << "can't open file. filename=" << ifile;
-    throw MAKE_EXCEPTION(ss.str());
+    THROW_EXCEPTION_SS("can't open file. filename=" << ifile);
   }
   IndexHeader result;
   memset(&result, 0, sizeof(IndexHeader));
