@@ -103,7 +103,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
 }
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
-  assert(index->is_zipped);
+  assert(index->kind==ChunkKind::Compressed);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
   bw = std::make_shared<BinaryBuffer>(range);
