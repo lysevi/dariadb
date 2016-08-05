@@ -73,16 +73,29 @@ public:
   }
 
   Time minTime() {
+    LockManager::instance()->lock(
+        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+
     auto pmin = PageManager::instance()->minTime();
     auto cmin = CapacitorManager::instance()->minTime();
     auto amin = AOFManager::instance()->minTime();
+
+    LockManager::instance()->unlock(
+        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
     return std::min(std::min(pmin, cmin), amin);
   }
 
   Time maxTime() {
+    LockManager::instance()->lock(
+        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+
     auto pmax = PageManager::instance()->maxTime();
     auto cmax = CapacitorManager::instance()->maxTime();
     auto amax = AOFManager::instance()->maxTime();
+
+    LockManager::instance()->unlock(
+        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+
     return std::max(std::max(pmax, cmax), amax);
   }
 
@@ -148,9 +161,23 @@ public:
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    LockManager::instance()->lock(LockKind::READ, LockObjects::AOF);
+	  LockManager::instance()->lock(LockKind::READ, { LockObjects::AOF, LockObjects::CAP });
     auto result = AOFManager::instance()->currentValue(ids, flag);
-    LockManager::instance()->unlock(LockObjects::AOF);
+	auto c_result = CapacitorManager::instance()->currentValue(ids, flag);
+
+    LockManager::instance()->unlock({ LockObjects::AOF, LockObjects::CAP });
+
+	for (auto&kv : c_result) {
+		auto it = result.find(kv.first);
+		if (it == result.end()) {
+			result[kv.first] = kv.second;
+		}
+		else {
+			if (it->second.time < kv.second.time) {
+				result[kv.first] = kv.second;
+			}
+		}
+	}
     return result;
   }
 
@@ -268,15 +295,16 @@ public:
           (minT < q.time_point || maxT < q.time_point)) {
         auto subres = AOFManager::instance()->readInTimePoint(local_q);
         result[id] = subres[id];
+        continue;
+      }
+      if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
+          (utils::inInterval(minT, maxT, q.time_point))) {
+        auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
+        result[id] = subres[id];
+
       } else {
-        if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
-            (utils::inInterval(minT, maxT, q.time_point))) {
-          auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
-          result[id] = subres[id];
-        } else {
-          auto subres = PageManager::instance()->valuesBeforeTimePoint(local_q);
-          result[id] = subres[id];
-        }
+        auto subres = PageManager::instance()->valuesBeforeTimePoint(local_q);
+        result[id] = subres[id];
       }
     }
 

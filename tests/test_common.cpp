@@ -251,7 +251,7 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   Time maxWritedTime = MIN_TIME;
   size_t total_count =
       fill_storage_for_test(as, from, to, step, &_all_ids_set, &maxWritedTime);
-
+  as->flush();
   minMaxCheck(as, from, maxWritedTime);
 
   Meas::Id2Meas current_mlist;
