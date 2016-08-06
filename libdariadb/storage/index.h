@@ -3,7 +3,7 @@
 #include "../interfaces/ichunkcontainer.h"
 #include "../utils/fs.h"
 #include "chunk.h"
-#include <boost/thread/shared_mutex.hpp>
+
 namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
@@ -38,7 +38,7 @@ public:
   IndexReccord *index;
 
   std::string filename;
-  mutable boost::shared_mutex _locker;
+
   mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
 
   ~PageIndex();

@@ -27,7 +27,7 @@
   - Standard API - You can Query interval as list or values in time point as dictionary.
 
 # Dependencies
-* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), thread, unit_test_framework(to build tests), program_options
+* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), unit_test_framework(to build tests), program_options
 * cmake 2.8 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 

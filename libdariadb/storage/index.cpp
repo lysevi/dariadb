@@ -5,8 +5,6 @@
 #include <cstring>
 #include <fstream>
 
-#include <boost/thread/locks.hpp>
-#include <boost/thread/shared_mutex.hpp>
 
 using namespace dariadb::storage;
 using dariadb::utils::inInterval;
@@ -73,7 +71,6 @@ PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
 
 ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                                           dariadb::Time to, dariadb::Flag flag) {
-  boost::shared_lock<boost::shared_mutex> lg(_locker);
   ChunkLinkList result;
   for (uint32_t pos = 0; pos < this->iheader->count; ++pos) {
 
