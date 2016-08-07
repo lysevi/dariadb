@@ -14,11 +14,8 @@ before_install:
    - sudo make -C lcov-1.11/ install
   # install lcov to coveralls conversion + upload tool
    - gem install coveralls-lcov
-   - cd /usr/bin
-   - sudo rm gcc g++ cpp
-   - sudo ln -s gcc-6 gcc
-   - sudo ln -s g++-6 g++
-   - sudo ln -s cpp-6 cpp
+   - export CC="gcc-6"
+   - export CXX="g++-6"
 
 install:
   - cd ${TRAVIS_BUILD_DIR}
