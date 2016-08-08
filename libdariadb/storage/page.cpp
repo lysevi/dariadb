@@ -48,31 +48,39 @@ std::list<Meas::MeasList> splitById(const Meas::MeasArray &ma) {
   return result;
 }
 
-std::list<HdrAndBuffer> compressValues(std::list<Meas::MeasList> &to_compress, PageHeader &phdr) {
+std::list<HdrAndBuffer> compressValues(std::list<Meas::MeasList> &to_compress, PageHeader &phdr, uint32_t max_chunk_size) {
 	std::list<HdrAndBuffer> results;
 
-	for (auto&lst : to_compress) {
-		ChunkHeader hdr;
-		memset(&hdr, 0, sizeof(ChunkHeader));
-		auto lst_size = lst.size();
-		auto buff_size = lst_size * sizeof(Meas);
-		std::shared_ptr<uint8_t> buffer_ptr{ new uint8_t[buff_size] };
-		memset(buffer_ptr.get(), 0, buff_size);
-		ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, lst.front());
-		lst.pop_front();
-		for (auto&v : lst) {
-			ch.append(v);
-		}
-		ch.close();
+    for (auto&lst : to_compress) {
+        auto it=lst.cbegin();
+        while(it!=lst.cend()){
+            ChunkHeader hdr;
+            memset(&hdr, 0, sizeof(ChunkHeader));
+            auto buff_size = max_chunk_size;
+            std::shared_ptr<uint8_t> buffer_ptr{ new uint8_t[buff_size] };
+            memset(buffer_ptr.get(), 0, buff_size);
+            ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, *it);
+            ++it;
+            while(true){
+                if(!ch.append(*it)){
+                    break;
+                }
+                ++it;
+                if(it==lst.cend()){
+                    break;
+                }
+            }
+            ch.close();
 
-		phdr.max_chunk_id++;
-		phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
-		phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
-		ch.header->id = phdr.max_chunk_id;
+            phdr.max_chunk_id++;
+            phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
+            phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
+            ch.header->id = phdr.max_chunk_id;
 
-		HdrAndBuffer subres = std::make_tuple(hdr, buffer_ptr);
-		results.push_back(subres);
-	}
+            HdrAndBuffer subres = std::make_tuple(hdr, buffer_ptr);
+            results.push_back(subres);
+        }
+    }
 	return results;
 }
 
@@ -149,7 +157,7 @@ Page *Page::create(const std::string& file_name, uint64_t chunk_id, uint32_t max
     phdr.minTime=dariadb::MAX_TIME;
     phdr.max_chunk_id=chunk_id;
     
-	std::list<PageInner::HdrAndBuffer> compressed_results = PageInner::compressValues(to_compress, phdr);
+    std::list<PageInner::HdrAndBuffer> compressed_results = PageInner::compressValues(to_compress, phdr, max_chunk_size);
   
 	auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
     phdr.filesize=page_size;
