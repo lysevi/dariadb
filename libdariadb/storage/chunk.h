@@ -29,7 +29,7 @@ struct ChunkHeader {
   Meas first, last;
   Time minTime, maxTime;
   Id minId, maxId;
-  uint64_t id_bloom; // TODO remove. one chunk to one id.
+  uint64_t id_bloom;
   uint64_t flag_bloom;
   uint32_t count;
   uint32_t bw_pos;
