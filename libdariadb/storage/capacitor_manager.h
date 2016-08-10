@@ -54,7 +54,7 @@ public:
   void drop_closed_files(size_t count); // drop 'count' closed files to down-level
                                         // storage.
 
-  void erase(const std::string &fname);
+  static void erase(const std::string &fname);
 
 protected:
   void drop_closed_unsafe(size_t count);

@@ -10,7 +10,7 @@
 #define THROW_EXCEPTION_SS(msg)                                                          \
   std::stringstream sstream_var;                                                         \
   sstream_var << msg;                                                                    \
-  MAKE_EXCEPTION(sstream_var.str());
+  throw MAKE_EXCEPTION(sstream_var.str());
 
 namespace dariadb {
 namespace utils {

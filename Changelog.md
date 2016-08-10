@@ -1,3 +1,7 @@
+v0.2.0
+=====
+- Engine version in manifest.
+
 v0.1.1
 =====
 - Code refactoring.

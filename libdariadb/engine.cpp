@@ -6,11 +6,13 @@
 #include "storage/manifest.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
+#include "utils/utils.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include "utils/logger.h"
 #include "utils/metrics.h"
 #include "utils/thread_manager.h"
+#include "config.h"
 #include <algorithm>
 #include <cassert>
 
@@ -18,9 +20,26 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
+std::string Engine::Version::to_string()const{
+    return version;
+}
+
+Engine::Version Engine::Version::from_string(const std::string&str){
+    std::vector<std::string> elements=utils::split(str,'.');
+    assert(elements.size()==3);
+
+    Engine::Version result;
+    result.version=str;
+    result.major=std::stoi(elements[0]);
+    result.minor=std::stoi(elements[1]);
+    result.patch=std::stoi(elements[2]);
+    return result;
+}
+
 class Engine::Private {
 public:
   Private() {
+      logger_info("version: "<<this->version().to_string());
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
@@ -44,6 +63,13 @@ public:
     if (is_exists) {
       CapDrooper::cleanStorage(Options::instance()->path);
     }
+
+    if(!is_exists){
+        Manifest::instance()->set_version(this->version().version);
+    }else{
+        check_storage_version();
+    }
+
     AOFManager::start();
     CapacitorManager::start();
 
@@ -71,6 +97,20 @@ public:
 
       _stoped = true;
     }
+  }
+
+  void check_storage_version(){
+      auto current_version=this->version().version;
+      auto storage_version=Manifest::instance()->get_version();
+      if(storage_version!=current_version){
+          logger_info("openning storage with version: "<<storage_version);
+          if(Version::from_string(storage_version)>this->version()){
+              THROW_EXCEPTION_SS("openning storage with greater version.");
+          }else{
+              logger_info("update storage version to "<<current_version);
+              Manifest::instance()->set_version(current_version);
+          }
+      }
   }
 
   Time minTime() {
@@ -352,8 +392,18 @@ public:
   }
 
   void fsck() {
+      logger_info("engine: fsck "<<Options::instance()->path);
     CapacitorManager::instance()->fsck();
     PageManager::instance()->fsck();
+  }
+
+  Engine::Version version(){
+      Version result;
+      result.version=PROJECT_VERSION;
+      result.major=PROJECT_VERSION_MAJOR;
+      result.minor=PROJECT_VERSION_MINOR;
+      result.patch=PROJECT_VERSION_PATCH;
+      return result;
   }
 
 protected:
@@ -441,4 +491,8 @@ void Engine::wait_all_asyncs() {
 
 void Engine::fsck() {
   _impl->fsck();
+}
+
+Engine::Version Engine::version(){
+    return _impl->version();
 }

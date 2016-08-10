@@ -158,6 +158,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   std::list<PageInner::HdrAndBuffer> compressed_results =
       PageInner::compressValues(to_compress, phdr, max_chunk_size);
 
+  //assert(phdr.maxTime<1480856385457);
   auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
   phdr.filesize = page_size;
 

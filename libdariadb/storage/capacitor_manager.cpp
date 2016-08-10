@@ -444,6 +444,8 @@ size_t CapacitorManager::files_count() const {
 void CapacitorManager::erase(const std::string &fname) {
   auto capf = utils::fs::append_path(Options::instance()->path, fname);
   dariadb::utils::fs::rm(capf);
-  _file2header.erase(fname);
+  if(CapacitorManager::instance()!=nullptr){
+      CapacitorManager::instance()->_file2header.erase(fname);
+  }
   Manifest::instance()->cola_rm(fname);
 }

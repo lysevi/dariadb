@@ -357,4 +357,8 @@ BOOST_AUTO_TEST_CASE(SplitString) {
   std::string str = "1 2 3 4 5 6 7 8";
   auto splitted = dariadb::utils::tokens(str);
   BOOST_CHECK_EQUAL(splitted.size(), size_t(8));
+
+  splitted = dariadb::utils::split(str, ' ');
+  BOOST_CHECK_EQUAL(splitted.size(), size_t(8));
+
 }

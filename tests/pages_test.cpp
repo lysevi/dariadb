@@ -25,6 +25,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     dariadb::utils::fs::rm(fname);
   }
 
+  std::string version="0.1.2.3.4.5";
   {
     Manifest::start(fname);
     std::list<std::string> pages_names{"1", "2", "3"};
@@ -32,6 +33,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
       Manifest::instance()->page_append(n);
     }
 
+    Manifest::instance()->set_version(version);
     std::list<std::string> cola_names{"11", "22", "33"};
     for (auto n : cola_names) {
       Manifest::instance()->cola_append(n);
@@ -64,6 +66,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     BOOST_CHECK_EQUAL(Manifest::instance()->page_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(Manifest::instance()->cola_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(Manifest::instance()->aof_list().size(), size_t(0));
+    BOOST_CHECK_EQUAL(Manifest::instance()->get_version(), version);
     Manifest::stop();
   }
   if (dariadb::utils::fs::path_exists(fname)) {

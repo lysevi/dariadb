@@ -13,6 +13,7 @@ std::unique_ptr<Manifest> Manifest::_instance;
 const std::string PAGE_JS_KEY = "pages";
 const std::string COLA_JS_KEY = "cola";
 const std::string AOF_JS_KEY = "aof";
+const std::string VERSION_JS_KEY = "version";
 
 Manifest::Manifest(const std::string &fname) : _filename(fname) {
   if (utils::fs::path_exists(_filename)) {
@@ -234,4 +235,21 @@ void Manifest::aof_rm(const std::string &rec) {
   }
   js[AOF_JS_KEY] = aof_list;
   write_file(_filename, js.dump());
+}
+
+void Manifest::set_version(const std::string &version) {
+  std::lock_guard<utils::Locker> lg(_locker);
+
+  json js = json::parse(read_file(_filename));
+
+  js[VERSION_JS_KEY] = version;
+  write_file(_filename, js.dump());
+}
+
+std::string Manifest::get_version() {
+  std::lock_guard<utils::Locker> lg(_locker);
+
+  json js = json::parse(read_file(_filename));
+
+  return js[VERSION_JS_KEY];
 }

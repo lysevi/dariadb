@@ -14,6 +14,23 @@ namespace storage {
 
 class Engine : public IMeasStorage {
 public:
+    struct Version
+    {
+        std::string version;
+        uint16_t major;
+        uint16_t minor;
+        uint16_t patch;
+
+        std::string to_string()const;
+        static Version from_string(const std::string&str);
+
+        bool operator>(const Version &other) {
+          return (major > other.major) ||
+                 (major == other.major && (minor > other.minor)) ||
+                 (major == other.major && (minor == other.minor) &&
+                  (patch > other.patch));
+        }
+    };
   struct QueueSizes {
     size_t aofs_count;   ///  AOF count
     size_t pages_count;  /// pages count
@@ -54,6 +71,7 @@ public:
 
   void fsck();
 
+  Version version();
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

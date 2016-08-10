@@ -35,6 +35,8 @@ public:
   std::string read_file(const std::string &fname);
   void write_file(const std::string &fname, const std::string &content);
 
+  void set_version(const std::string&version);
+  std::string get_version();
 private:
   void touch();
 
