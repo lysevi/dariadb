@@ -52,8 +52,7 @@ public:
   };
 #pragma pack(pop)
   virtual ~Capacitor();
-  Capacitor(const std::string &fname,
-            bool readonly = false);
+  Capacitor(const std::string &fname, bool readonly = false);
   static Header readHeader(std::string file_name);
   Header *header();
   append_result append(const Meas &value) override;
@@ -74,11 +73,12 @@ public:
   size_t size() const;
 
   static std::string rnd_file_name() { return utils::fs::random_file_name(CAP_FILE_EXT); }
-  std::string file_name()const;
+  std::string file_name() const;
   void fsck();
   void close();
 
-  Meas::MeasArray readAll()const;
+  Meas::MeasArray readAll() const;
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

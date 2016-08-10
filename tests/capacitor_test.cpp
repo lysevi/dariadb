@@ -8,10 +8,10 @@
 
 #include "test_common.h"
 #include <math/statistic.h>
-#include <storage/options.h>
 #include <storage/capacitor.h>
 #include <storage/capacitor_manager.h>
 #include <storage/manifest.h>
+#include <storage/options.h>
 #include <timeutil.h>
 #include <utils/exception.h>
 #include <utils/fs.h>
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
   assert(cap_files.size() == 0);
 
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storage_path;
+  dariadb::storage::Options::instance()->path = storage_path;
   dariadb::storage::Options::instance()->cap_B = block_size;
   dariadb::storage::Options::instance()->cap_max_levels = 11;
 
@@ -61,7 +61,8 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     BOOST_CHECK_EQUAL(cap_files.size(), size_t(1));
 
-    BOOST_CHECK_EQUAL(cap.levels_count(), dariadb::storage::Options::instance()->cap_max_levels);
+    BOOST_CHECK_EQUAL(cap.levels_count(),
+                      dariadb::storage::Options::instance()->cap_max_levels);
 
     auto e = dariadb::Meas::empty();
 
@@ -88,7 +89,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     dariadb::storage::Manifest::stop();
   }
   {
-      dariadb::storage::Options::instance()->cap_max_levels =12;
+    dariadb::storage::Options::instance()->cap_max_levels = 12;
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     auto fname = dariadb::utils::fs::append_path(
@@ -108,7 +109,8 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     }
     auto cap_size = cap.size();
     // level count must be read from file header.
-    BOOST_CHECK_LE(cap.levels_count(), dariadb::storage::Options::instance()->cap_max_levels);
+    BOOST_CHECK_LE(cap.levels_count(),
+                   dariadb::storage::Options::instance()->cap_max_levels);
 
     BOOST_CHECK_EQUAL(cap_size, writes_count);
     BOOST_CHECK(cap.size() != 0);
@@ -144,7 +146,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
     auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
     assert(cap_files.size() == 0);
     dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storage_path;
+    dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->cap_B = block_size;
     dariadb::storage::Options::instance()->cap_max_levels = 11;
 
@@ -172,7 +174,7 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
   auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
   assert(cap_files.size() == 0);
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storage_path;
+  dariadb::storage::Options::instance()->path = storage_path;
   dariadb::storage::Options::instance()->cap_B = block_size;
   dariadb::storage::Options::instance()->cap_max_levels = 11;
   {
@@ -197,7 +199,7 @@ BOOST_AUTO_TEST_CASE(CapacitorIsFull) {
 
     auto mc = dariadb::storage::Options::instance()->measurements_count();
     BOOST_CHECK_EQUAL(addeded, mc);
-    auto all=cap.readAll();
+    auto all = cap.readAll();
     BOOST_CHECK_EQUAL(addeded, all.size());
   }
   auto clist = dariadb::storage::Manifest::instance()->cola_list();
@@ -225,13 +227,13 @@ BOOST_AUTO_TEST_CASE(CapacitorBulk) {
   auto cap_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::CAP_FILE_EXT);
   assert(cap_files.size() == 0);
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storage_path;
+  dariadb::storage::Options::instance()->path = storage_path;
   dariadb::storage::Options::instance()->cap_B = block_size;
   dariadb::storage::Options::instance()->cap_max_levels = 11;
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Capacitor cap( dariadb::storage::Capacitor::rnd_file_name());
+    dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::rnd_file_name());
 
     auto e = dariadb::Meas::empty();
     size_t count = dariadb::storage::Options::instance()->measurements_count();
@@ -535,7 +537,7 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
       dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
 
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storagePath;
+  dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->cap_B = max_size;
   dariadb::storage::Options::instance()->cap_max_levels = max_size;
 
@@ -573,7 +575,7 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storagePath;
+    dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->cap_B = max_size;
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
 
@@ -595,7 +597,7 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storagePath;
+    dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->cap_B = max_size;
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
     dariadb::storage::CapacitorManager::start();
@@ -643,11 +645,11 @@ BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storagePath;
+    dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->cap_B = max_size;
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
     dariadb::storage::Options::instance()->cap_max_closed_caps = 0;
-    dariadb::storage::Options::instance()->cap_store_period=1000;
+    dariadb::storage::Options::instance()->cap_store_period = 1000;
 
     dariadb::storage::CapacitorManager::start();
 

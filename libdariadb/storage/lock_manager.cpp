@@ -67,7 +67,7 @@ void LockManager::lock(const LockKind &lk, const LockObjects &lo) {
     break;
   }
   default: {
-	THROW_EXCEPTION_SS("Unknow LockObject:" << (uint8_t)lo);
+    THROW_EXCEPTION_SS("Unknow LockObject:" << (uint8_t)lo);
     break;
   }
   }
@@ -123,11 +123,11 @@ void LockManager::unlock(const LockObjects &lo) {
   case LockObjects::CAP:
   case LockObjects::PAGE: {
     auto lock_target = get_lock_object(lo);
-     switch (lock_target->kind) {
-     case LockKind::EXCLUSIVE:
+    switch (lock_target->kind) {
+    case LockKind::EXCLUSIVE:
       lock_target->mutex.unlock();
       break;
-     case LockKind::READ:
+    case LockKind::READ:
       lock_target->mutex.unlock_shared();
       break;
     };

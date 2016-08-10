@@ -3,9 +3,9 @@
 #include "interfaces/imeasstorage.h"
 #include "storage/aof_manager.h"
 #include "storage/capacitor_manager.h"
+#include "storage/options.h"
 #include "storage/page_manager.h"
 #include "utils/utils.h"
-#include "storage/options.h"
 
 #include <memory>
 
@@ -33,7 +33,7 @@ public:
   void stop();
   QueueSizes queue_size() const;
 
-  virtual void foreach(const QueryInterval &q, IReaderClb * clbk)override;
+  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
@@ -53,6 +53,7 @@ public:
   void wait_all_asyncs();
 
   void fsck();
+
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

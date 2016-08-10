@@ -6,7 +6,7 @@ namespace dariadb {
 namespace storage {
 
 template <class T> uint32_t jenkins_one_at_a_time_hash(T &value) {
-  auto key = reinterpret_cast<const char*>(&value);
+  auto key = reinterpret_cast<const char *>(&value);
   auto len = sizeof(value);
   uint32_t hash, i;
   for (hash = i = 0; i < len; ++i) {

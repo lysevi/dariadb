@@ -98,9 +98,10 @@ int main(int argc, char *argv[]) {
 
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
 
-    dariadb::storage::Options::instance()->path=storage_path;
-    dariadb::storage::Options::instance()->aof_buffer_size=1000;
-    dariadb::storage::Options::instance()->aof_max_size=(1024 * 1024) * 3 / sizeof(dariadb::Meas);
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size = 1000;
+    dariadb::storage::Options::instance()->aof_max_size =
+        (1024 * 1024) * 3 / sizeof(dariadb::Meas);
 
     dariadb::storage::AOFManager::start();
 
@@ -112,7 +113,8 @@ int main(int argc, char *argv[]) {
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
-      std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), &append_count, aof};
+      std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
+                    &append_count, aof};
       writers[pos++] = std::move(t);
     }
 
@@ -129,7 +131,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();
-     dariadb::storage::Options::stop();
+    dariadb::storage::Options::stop();
     if (metrics_enable) {
       std::cout << "metrics:\n"
                 << dariadb::utils::metrics::MetricsManager::instance()->to_string()

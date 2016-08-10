@@ -9,8 +9,8 @@
 #include "../utils/utils.h"
 #include "bloom_filter.h"
 #include "manifest.h"
-#include "page.h"
 #include "options.h"
+#include "page.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -28,7 +28,6 @@
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
 
 using File2PageHeader = std::unordered_map<std::string, IndexHeader>;
@@ -42,15 +41,15 @@ public:
     update_id = false;
     last_id = 0;
 
-	if (utils::fs::path_exists(Options::instance()->path)) {
-		auto pages = Manifest::instance()->page_list();
+    if (utils::fs::path_exists(Options::instance()->path)) {
+      auto pages = Manifest::instance()->page_list();
 
-		for (auto n : pages) {
-			auto file_name = utils::fs::append_path(Options::instance()->path, n);
-			auto hdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
-			_file2header[n] = hdr;
-		}
-	}
+      for (auto n : pages) {
+        auto file_name = utils::fs::append_path(Options::instance()->path, n);
+        auto hdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+        _file2header[n] = hdr;
+      }
+    }
   }
 
   ~Private() {
@@ -90,21 +89,20 @@ public:
   void erase_page(const std::string &file_name) {
     auto target_name = utils::fs::extract_filename(file_name);
     logger_info("page: " << file_name << " removing...");
-	erase(target_name);
+    erase(target_name);
   }
 
-  void erase(const std::string&fname){
-	  auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
-	  _openned_pages.erase(full_file_name);
+  void erase(const std::string &fname) {
+    auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+    _openned_pages.erase(full_file_name);
 
-	  Manifest::instance()->page_rm(fname);
-	  utils::fs::rm(full_file_name);
-	  utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-	  _file2header.erase(fname);
+    Manifest::instance()->page_rm(fname);
+    utils::fs::rm(full_file_name);
+    utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+    _file2header.erase(fname);
   }
   // PM
   void flush() {}
-
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
@@ -165,9 +163,9 @@ public:
         pg = Page_Ptr{Page::open(pname, true)};
         Page_Ptr dropped;
         _openned_pages.put(pname, pg, &dropped);
-		if (dropped != nullptr) {
-			_file2header.erase(dropped->filename);
-		}
+        if (dropped != nullptr) {
+          _file2header.erase(dropped->filename);
+        }
         /*if (dropped != nullptr) {
           _openned_pages.set_max_size(_openned_pages.size() + 1);
           Page_Ptr should_be_null;
@@ -247,12 +245,12 @@ public:
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::pages_by_filter");
     std::list<std::string> result;
-    
-	
+
     for (auto f2h : _file2header) {
-		auto hdr = f2h.second;
+      auto hdr = f2h.second;
       if (pred(hdr)) {
-        auto page_file_name = utils::fs::append_path(Options::instance()->path, f2h.first);
+        auto page_file_name =
+            utils::fs::append_path(Options::instance()->path, f2h.first);
         result.push_back(page_file_name);
       }
     }
@@ -338,24 +336,25 @@ public:
     return res;
   }
 
+  void append(const std::string &file_prefix, const dariadb::Meas::MeasArray &ma) {
+    TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
+    if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
+      dariadb::utils::fs::mkdir(Options::instance()->path);
+    }
 
-  void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
-      TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
-      if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
-        dariadb::utils::fs::mkdir(Options::instance()->path);
-      }
+    Page *res = nullptr;
 
-      Page *res = nullptr;
-
-      std::string page_name = file_prefix+PAGE_FILE_EXT;
-      std::string file_name = dariadb::utils::fs::append_path(Options::instance()->path, page_name);
-      res = Page::create(file_name, last_id, Options::instance()->page_chunk_size, ma);
-      Manifest::instance()->page_append(page_name);
-      if (update_id) {
-        res->header->max_chunk_id = last_id;
-      }
-      delete res;
-	  _file2header[page_name] = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+    std::string page_name = file_prefix + PAGE_FILE_EXT;
+    std::string file_name =
+        dariadb::utils::fs::append_path(Options::instance()->path, page_name);
+    res = Page::create(file_name, last_id, Options::instance()->page_chunk_size, ma);
+    Manifest::instance()->page_append(page_name);
+    if (update_id) {
+      res->header->max_chunk_id = last_id;
+    }
+    delete res;
+    _file2header[page_name] =
+        Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
 
 protected:
@@ -368,8 +367,7 @@ protected:
   File2PageHeader _file2header;
 };
 
-PageManager::PageManager()
-    : impl(new PageManager::Private) {}
+PageManager::PageManager() : impl(new PageManager::Private) {}
 
 PageManager::~PageManager() {}
 
@@ -429,13 +427,14 @@ dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
 }
 
-void PageManager::append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma){
-    return impl->append(file_prefix, ma);
+void PageManager::append(const std::string &file_prefix,
+                         const dariadb::Meas::MeasArray &ma) {
+  return impl->append(file_prefix, ma);
 }
 void PageManager::fsck(bool force_check) {
   return impl->fsck(force_check);
 }
 
-void PageManager::erase(const std::string&fname) {
-	return impl->erase(fname);
+void PageManager::erase(const std::string &fname) {
+  return impl->erase(fname);
 }

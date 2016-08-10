@@ -1,13 +1,13 @@
 #pragma once
-#include <interfaces/imeasstorage.h>
-#include <timeutil.h>
-#include <utils/metrics.h>
-#include <utils/thread_manager.h>
 #include <algorithm>
 #include <atomic>
+#include <interfaces/imeasstorage.h>
 #include <random>
-#include <tuple>
 #include <sstream>
+#include <timeutil.h>
+#include <tuple>
+#include <utils/metrics.h>
+#include <utils/thread_manager.h>
 
 namespace dariadb_bench {
 
@@ -17,12 +17,12 @@ const size_t writes_per_second = 2;
 const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
 const size_t total_readers_count = 1;
 const size_t id_per_thread = 100;
-//const size_t total_threads_count = 5;
-//const size_t hours_write_perid = 1;
-//const size_t writes_per_second = 2;
-//const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
-//const size_t total_readers_count = 1;
-//const size_t id_per_thread = 200000;
+// const size_t total_threads_count = 5;
+// const size_t hours_write_perid = 1;
+// const size_t writes_per_second = 2;
+// const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
+// const size_t total_readers_count = 1;
+// const size_t id_per_thread = 200000;
 const uint64_t all_writes = total_threads_count * write_per_id_count * id_per_thread;
 
 class BenchCallback : public dariadb::storage::IReaderClb {
@@ -39,8 +39,7 @@ dariadb::Id get_id_from(dariadb::Id id) {
 dariadb::Id get_id_to(dariadb::Id id) {
   return (id + 1) * id_per_thread;
 }
-void thread_writer_rnd_stor(dariadb::Id id,
-                            std::atomic_llong *append_count,
+void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
                             dariadb::storage::IMeasWriter *ms) {
   try {
     auto m = dariadb::Meas::empty();
@@ -67,7 +66,7 @@ void thread_writer_rnd_stor(dariadb::Id id,
 }
 
 void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStorage *stor,
-                  size_t reads_count,  bool quiet = false) {
+                  size_t reads_count, bool quiet = false) {
   std::cout << "==> init random ids...." << std::endl;
   dariadb::IdArray random_ids{all_id_set.begin(), all_id_set.end()};
   std::random_shuffle(random_ids.begin(), random_ids.end());

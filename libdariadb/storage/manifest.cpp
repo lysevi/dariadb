@@ -83,17 +83,15 @@ void Manifest::restore() {
 }
 
 std::string Manifest::read_file(const std::string &fname) {
-	if(utils::fs::path_exists(fname)){
-		return utils::fs::read_file(fname);
-	}
-	else {
-		this->touch();
-		return utils::fs::read_file(fname);
-	}
+  if (utils::fs::path_exists(fname)) {
+    return utils::fs::read_file(fname);
+  } else {
+    this->touch();
+    return utils::fs::read_file(fname);
+  }
 }
 
-void Manifest::write_file(const std::string &fname,
-                                            const std::string &content) {
+void Manifest::write_file(const std::string &fname, const std::string &content) {
   std::fstream fs;
   fs.open(fname, std::ios::out);
   fs << content;

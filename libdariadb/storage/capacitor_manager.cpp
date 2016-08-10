@@ -30,33 +30,33 @@ CapacitorManager::CapacitorManager()
   /// because engine use bulk loading and file or not exists or full.
   auto files = cap_files();
   for (auto f : files) {
-	  try {
-		  auto hdr = Capacitor::readHeader(f);
-		  if (!hdr.is_full) {
-			  _cap = Capacitor_Ptr{ new Capacitor(f) };
-		  }
-		  _file2header.insert(std::make_pair(utils::fs::extract_filename(f), hdr));
-	  }catch (utils::Exception&ex) {
-		  throw MAKE_EXCEPTION(ex.what());
-	  }
+    try {
+      auto hdr = Capacitor::readHeader(f);
+      if (!hdr.is_full) {
+        _cap = Capacitor_Ptr{new Capacitor(f)};
+      }
+      _file2header.insert(std::make_pair(utils::fs::extract_filename(f), hdr));
+    } catch (utils::Exception &ex) {
+      throw MAKE_EXCEPTION(ex.what());
+    }
   }
   if (Options::instance()->cap_store_period != 0) {
-	  this->period_worker_start();
+    this->period_worker_start();
   }
 }
 
 void CapacitorManager::fsck(bool force_check) {
   auto files = cap_files();
   for (auto f : files) {
-	  try {
-		  auto hdr = Capacitor::readHeader(f);
-		  if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
-			  auto c = Capacitor_Ptr{ new Capacitor(f) };
-			  c->fsck();
-		  }
-	  }catch (utils::Exception&ex) {
-		  throw MAKE_EXCEPTION(ex.what());
-	  }
+    try {
+      auto hdr = Capacitor::readHeader(f);
+      if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
+        auto c = Capacitor_Ptr{new Capacitor(f)};
+        c->fsck();
+      }
+    } catch (utils::Exception &ex) {
+      throw MAKE_EXCEPTION(ex.what());
+    }
   }
 }
 
@@ -80,36 +80,38 @@ CapacitorManager *CapacitorManager::instance() {
 /// perid_worker callback
 void CapacitorManager::period_call() {
   auto closed = this->closed_caps();
-  auto max_hdr_time = dariadb::timeutil::current_time() - Options::instance()->cap_store_period;
+  auto max_hdr_time =
+      dariadb::timeutil::current_time() - Options::instance()->cap_store_period;
   for (auto &fname : closed) {
-	  try {
-		  Capacitor::Header hdr = Capacitor::readHeader(fname);
-		  if (hdr.maxTime < max_hdr_time) {
-			  this->drop_cap(fname);
-		  }
-	  }catch (utils::Exception&ex) {
-		  throw MAKE_EXCEPTION(ex.what());
-	  }
+    try {
+      Capacitor::Header hdr = Capacitor::readHeader(fname);
+      if (hdr.maxTime < max_hdr_time) {
+        this->drop_cap(fname);
+      }
+    } catch (utils::Exception &ex) {
+      throw MAKE_EXCEPTION(ex.what());
+    }
   }
 }
 
 Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
   if (_cap != nullptr) {
-	  _file2header[_cap->file_name()] = *_cap->header();
+    _file2header[_cap->file_name()] = *_cap->header();
   }
   _cap = nullptr;
   if (_down != nullptr) {
     auto closed = this->closed_caps();
 
-    if (closed.size() > Options::instance()->cap_max_closed_caps && Options::instance()->cap_max_closed_caps > 0 &&
+    if (closed.size() > Options::instance()->cap_max_closed_caps &&
+        Options::instance()->cap_max_closed_caps > 0 &&
         Options::instance()->cap_store_period == 0) {
       size_t to_drop = closed.size() - Options::instance()->cap_max_closed_caps;
       drop_closed_unsafe(to_drop);
     } else {
     }
   }
-  auto result=Capacitor_Ptr{new Capacitor(filename)};
+  auto result = Capacitor_Ptr{new Capacitor(filename)};
   _file2header[filename] = *result->header();
   return result;
 }
@@ -164,16 +166,16 @@ void CapacitorManager::drop_closed_unsafe(size_t count) {
 
   size_t pos = 0;
   for (auto f : closed) {
-	  try {
-		  auto without_path = utils::fs::extract_filename(f);
-		  if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-			  auto cheader = Capacitor::readHeader(f);
-			  file2headers[pos] = std::tie(f, cheader);
-			  ++pos;
-		  }
-	  }catch (utils::Exception&ex) {
-		  throw MAKE_EXCEPTION(ex.what());
-	  }
+    try {
+      auto without_path = utils::fs::extract_filename(f);
+      if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+        auto cheader = Capacitor::readHeader(f);
+        file2headers[pos] = std::tie(f, cheader);
+        ++pos;
+      }
+    } catch (utils::Exception &ex) {
+      throw MAKE_EXCEPTION(ex.what());
+    }
   }
   std::sort(file2headers.begin(), file2headers.begin() + pos,
             [](const FileWithHeader &l, const FileWithHeader &r) {
@@ -199,19 +201,19 @@ void CapacitorManager::drop_closed_unsafe(size_t count) {
 }
 
 void CapacitorManager::drop_closed_files(size_t count) {
-    drop_closed_unsafe(count);
+  drop_closed_unsafe(count);
 }
 
 dariadb::Time CapacitorManager::minTime() {
   auto files = cap_files();
   dariadb::Time result = dariadb::MAX_TIME;
   for (auto filename : files) {
-	  try {
-		  auto local = Capacitor::readHeader(filename).minTime;
-		  result = std::min(local, result);
-	  }catch (utils::Exception&ex) {
-		  throw MAKE_EXCEPTION(ex.what());
-	  }
+    try {
+      auto local = Capacitor::readHeader(filename).minTime;
+      result = std::min(local, result);
+    } catch (utils::Exception &ex) {
+      throw MAKE_EXCEPTION(ex.what());
+    }
   }
   return result;
 }
@@ -220,12 +222,12 @@ dariadb::Time CapacitorManager::maxTime() {
   auto files = cap_files();
   dariadb::Time result = dariadb::MIN_TIME;
   for (auto filename : files) {
-	  try {
-		  auto local = Capacitor::readHeader(filename).maxTime;
-		  result = std::max(local, result);
-	  }catch (utils::Exception&ex) {
-		  throw MAKE_EXCEPTION(ex.what());
-	  }
+    try {
+      auto local = Capacitor::readHeader(filename).maxTime;
+      result = std::max(local, result);
+    } catch (utils::Exception &ex) {
+      throw MAKE_EXCEPTION(ex.what());
+    }
   }
   return result;
 }
@@ -301,7 +303,7 @@ void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   };
 
   auto files = caps_by_filter(pred);
-  
+
   std::vector<TaskResult_Ptr> task_res{files.size()};
   size_t num = 0;
   for (auto filename : files) {
@@ -423,10 +425,10 @@ dariadb::append_result CapacitorManager::append(const Meas &value) {
   auto res = _cap->append(value);
   if (res.writed != 1) {
     _cap = create_new();
-    res=_cap->append(value);
+    res = _cap->append(value);
   }
   auto mnfst = Manifest::instance()->cola_list();
-  _file2header[_cap->file_name()]= *(_cap->header());
+  _file2header[_cap->file_name()] = *(_cap->header());
   assert(mnfst.size() == _file2header.size());
   return res;
 }
@@ -439,9 +441,9 @@ size_t CapacitorManager::files_count() const {
   return cap_files().size();
 }
 
-void CapacitorManager::erase(const std::string&fname) {
-	auto capf = utils::fs::append_path(Options::instance()->path, fname);
-	dariadb::utils::fs::rm(capf);
-	_file2header.erase(fname);
-	Manifest::instance()->cola_rm(fname);
+void CapacitorManager::erase(const std::string &fname) {
+  auto capf = utils::fs::append_path(Options::instance()->path, fname);
+  dariadb::utils::fs::rm(capf);
+  _file2header.erase(fname);
+  Manifest::instance()->cola_rm(fname);
 }

@@ -19,20 +19,19 @@ class Moc_Dropper : public dariadb::storage::IAofFileDropper {
 public:
   size_t writed_count;
   std::set<std::string> files;
-  Moc_Dropper() {
-    writed_count = 0;
-  }
+  Moc_Dropper() { writed_count = 0; }
   void drop(const std::string fname) override {
-    auto full_path = dariadb::utils::fs::append_path(dariadb::storage::Options::instance()->path, fname);
-    dariadb::storage::AOFile_Ptr aof{
-        new dariadb::storage::AOFile(full_path, true)};
+    auto full_path = dariadb::utils::fs::append_path(
+        dariadb::storage::Options::instance()->path, fname);
+    dariadb::storage::AOFile_Ptr aof{new dariadb::storage::AOFile(full_path, true)};
 
     auto ma = aof->readAll();
-	aof = nullptr;
+    aof = nullptr;
     writed_count += ma.size();
     files.insert(fname);
     dariadb::storage::Manifest::instance()->aof_rm(fname);
-    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(dariadb::storage::Options::instance()->path, fname));
+    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(
+        dariadb::storage::Options::instance()->path, fname));
   }
 };
 
@@ -49,9 +48,9 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
   auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
   assert(aof_files.size() == 0);
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storage_path;
-  dariadb::storage::Options::instance()->aof_buffer_size=block_size;
-  dariadb::storage::Options::instance()->aof_max_size=block_size;
+  dariadb::storage::Options::instance()->path = storage_path;
+  dariadb::storage::Options::instance()->aof_buffer_size = block_size;
+  dariadb::storage::Options::instance()->aof_max_size = block_size;
 
   size_t writes_count = block_size;
 
@@ -129,9 +128,9 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storage_path;
-    dariadb::storage::Options::instance()->aof_buffer_size=block_size;
-    dariadb::storage::Options::instance()->aof_max_size=block_size;
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size = block_size;
+    dariadb::storage::Options::instance()->aof_max_size = block_size;
 
     auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
     BOOST_CHECK(aof_files.size() == size_t(0));
@@ -161,8 +160,8 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storagePath;
-  dariadb::storage::Options::instance()->aof_max_size=max_size;
+  dariadb::storage::Options::instance()->path = storagePath;
+  dariadb::storage::Options::instance()->aof_max_size = max_size;
 
   dariadb::storage::AOFManager::start();
 
@@ -174,7 +173,7 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
   dariadb::storage::AOFManager::stop();
   dariadb::storage::Manifest::stop();
   dariadb::utils::async::ThreadManager::stop();
- dariadb::storage::Options::stop();
+  dariadb::storage::Options::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
@@ -199,9 +198,9 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
     dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storagePath;
-    dariadb::storage::Options::instance()->aof_max_size=max_size;
-    dariadb::storage::Options::instance()->aof_buffer_size=max_size;
+    dariadb::storage::Options::instance()->path = storagePath;
+    dariadb::storage::Options::instance()->aof_max_size = max_size;
+    dariadb::storage::Options::instance()->aof_buffer_size = max_size;
 
     dariadb::storage::AOFManager::start();
 
@@ -222,8 +221,8 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
     dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path=storagePath;
-    dariadb::storage::Options::instance()->aof_max_size=max_size;
+    dariadb::storage::Options::instance()->path = storagePath;
+    dariadb::storage::Options::instance()->aof_max_size = max_size;
 
     dariadb::storage::AOFManager::start();
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../interfaces/imeasstorage.h"
-#include "../utils/utils.h"
 #include "../utils/locker.h"
+#include "../utils/utils.h"
 #include "aofile.h"
 #include <vector>
 
@@ -16,7 +16,6 @@ public:
 };
 class AOFManager : public IMeasStorage {
 public:
-
 protected:
   virtual ~AOFManager();
 
@@ -44,7 +43,8 @@ public:
   size_t files_count() const;
   void set_downlevel(IAofFileDropper *down);
 
-  void erase(const std::string&fname);
+  void erase(const std::string &fname);
+
 protected:
   void create_new();
   std::list<std::string> aof_files() const;

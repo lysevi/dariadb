@@ -122,8 +122,7 @@ std::list<std::string> AOFManager::closed_aofs() {
   return result;
 }
 
-void AOFManager::drop_aof(const std::string &fname,
-                                            IAofFileDropper *storage) {
+void AOFManager::drop_aof(const std::string &fname, IAofFileDropper *storage) {
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
@@ -355,7 +354,7 @@ dariadb::append_result AOFManager::append(const Meas &value) {
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
 
-  if (_buffer_pos >=Options::instance()->aof_buffer_size) {
+  if (_buffer_pos >= Options::instance()->aof_buffer_size) {
     flush_buffer();
   }
   return dariadb::append_result(1, 0);

@@ -1,9 +1,9 @@
 #include "compression.h"
+#include "../utils/exception.h"
+#include "../utils/utils.h"
 #include "delta.h"
 #include "flag.h"
 #include "xor.h"
-#include "../utils/exception.h"
-#include "../utils/utils.h"
 
 #include <algorithm>
 #include <cassert>

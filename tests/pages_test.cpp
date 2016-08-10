@@ -9,9 +9,9 @@
 #include <storage/callbacks.h>
 #include <storage/chunk.h>
 #include <storage/manifest.h>
+#include <storage/options.h>
 #include <storage/page.h>
 #include <storage/page_manager.h>
-#include <storage/options.h>
 #include <utils/fs.h>
 #include <utils/thread_manager.h>
 #include <utils/utils.h>
@@ -111,8 +111,8 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storagePath;
-  dariadb::storage::Options::instance()->page_chunk_size=1;
+  dariadb::storage::Options::instance()->path = storagePath;
+  dariadb::storage::Options::instance()->page_chunk_size = 1;
   PageManager::start();
 
   BOOST_CHECK(PageManager::instance() != nullptr);
@@ -124,7 +124,6 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
-
 
 BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   const std::string storagePath = "testStorage";
@@ -141,33 +140,34 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
       dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
 
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storagePath;
-  dariadb::storage::Options::instance()->page_chunk_size=chunks_size;
+  dariadb::storage::Options::instance()->path = storagePath;
+  dariadb::storage::Options::instance()->page_chunk_size = chunks_size;
 
   PageManager::start();
   dariadb::Meas first;
   first.id = 1;
   first.time = t;
   {
-	  first.id = 1;
-	  first.time = t;
-	  auto count = chunks_size / 10;
-	  dariadb::Meas::MeasArray ma;
-	  ma.resize(count);
-	  for (size_t i = 0; i < count; i++, t++) {
-		  first.flag = dariadb::Flag(i);
-		  first.time = t;
-		  first.value = dariadb::Value(i);
-		  ma[i] = first;
-		  addeded.push_back(first);
-	  }
-	  PageManager::instance()->append("pagename", ma);
+    first.id = 1;
+    first.time = t;
+    auto count = chunks_size / 10;
+    dariadb::Meas::MeasArray ma;
+    ma.resize(count);
+    for (size_t i = 0; i < count; i++, t++) {
+      first.flag = dariadb::Flag(i);
+      first.time = t;
+      first.value = dariadb::Value(i);
+      ma[i] = first;
+      addeded.push_back(first);
+    }
+    PageManager::instance()->append("pagename", ma);
   }
   PageManager::stop();
 
-  auto fname = dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).front();
+  auto fname =
+      dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).front();
   auto header = dariadb::storage::Page::readHeader(fname);
-  BOOST_CHECK(header.addeded_chunks!=size_t(0));
+  BOOST_CHECK(header.addeded_chunks != size_t(0));
 
   auto iheader = dariadb::storage::Page::readIndexHeader(fname + "i");
   BOOST_CHECK(iheader.count != 0);
@@ -203,8 +203,8 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
       dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
 
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storagePath;
-  dariadb::storage::Options::instance()->page_chunk_size=chunks_size;
+  dariadb::storage::Options::instance()->path = storagePath;
+  dariadb::storage::Options::instance()->page_chunk_size = chunks_size;
 
   PageManager::start();
   dariadb::Meas first;
@@ -213,22 +213,23 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   const size_t page_count = 4;
 
   size_t iteration = 0;
-  while (dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).size() <= page_count) {
-	first.id = 1;
-	first.time = t;
-	auto count = chunks_size / 10;
-	dariadb::Meas::MeasArray ma;
-	ma.resize(count);
-	for (size_t i = 0; i < count; i++, t++) {
-		first.flag = dariadb::Flag(i);
-		first.time = t;
-		first.value = dariadb::Value(i);
-		ma[i] = first;
-		addeded.push_back(first);
-	}
-	std::stringstream ss;
-	ss << std::string("pagename") << iteration++;
-	PageManager::instance()->append(ss.str(), ma);
+  while (dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).size() <=
+         page_count) {
+    first.id = 1;
+    first.time = t;
+    auto count = chunks_size / 10;
+    dariadb::Meas::MeasArray ma;
+    ma.resize(count);
+    for (size_t i = 0; i < count; i++, t++) {
+      first.flag = dariadb::Flag(i);
+      first.time = t;
+      first.value = dariadb::Value(i);
+      ma[i] = first;
+      addeded.push_back(first);
+    }
+    std::stringstream ss;
+    ss << std::string("pagename") << iteration++;
+    PageManager::instance()->append(ss.str(), ma);
   }
 
   dariadb::storage::QueryInterval qi(dariadb::IdArray{1}, 0, addeded.front().time,
@@ -273,7 +274,6 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   }
 }
 
-
 BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 256;
@@ -287,8 +287,8 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
       dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
 
   dariadb::storage::Options::start();
-  dariadb::storage::Options::instance()->path=storagePath;
-  dariadb::storage::Options::instance()->page_chunk_size=chunks_size;
+  dariadb::storage::Options::instance()->path = storagePath;
+  dariadb::storage::Options::instance()->page_chunk_size = chunks_size;
 
   PageManager::start();
   BOOST_CHECK(PageManager::instance() != nullptr);
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   dariadb::IdSet all_id_set;
   size_t count = 5000;
   dariadb::Meas::MeasArray a(count);
-  auto e=dariadb::Meas::empty();
+  auto e = dariadb::Meas::empty();
   for (size_t i = 0; i < count; i++) {
     e.id = i % id_count;
     e.time++;
@@ -308,8 +308,8 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     all_id_set.insert(e.id);
     addeded.push_back(e);
   }
-  std::string page_file_prefix="page_prefix";
-  PageManager::instance()->append(page_file_prefix,a);
+  std::string page_file_prefix = "page_prefix";
+  PageManager::instance()->append(page_file_prefix, a);
 
   dariadb::IdArray all_id_array{all_id_set.begin(), all_id_set.end()};
   { // Chunks load

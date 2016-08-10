@@ -13,16 +13,15 @@ using namespace dariadb::compression;
 // std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
 std::ostream &dariadb::storage::operator<<(std::ostream &stream, const ChunkKind &b) {
-	switch (b)
-	{
-	case ChunkKind::Simple:
-		stream << "ChunkKind::Simple";
-		break;
-	case ChunkKind::Compressed:
-		stream << "ChunkKind::Compressed";
-		break;
-	}
-	return stream;
+  switch (b) {
+  case ChunkKind::Simple:
+    stream << "ChunkKind::Simple";
+    break;
+  case ChunkKind::Compressed:
+    stream << "ChunkKind::Compressed";
+    break;
+  }
+  return stream;
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
@@ -79,7 +78,7 @@ bool Chunk::check_flag(const Flag &f) {
 
 bool Chunk::check_checksum() {
   auto exists = get_checksum();
-  auto calculated=calc_checksum();
+  auto calculated = calc_checksum();
   return exists == calculated;
 }
 
@@ -103,7 +102,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
 }
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
-  assert(index->kind==ChunkKind::Compressed);
+  assert(index->kind == ChunkKind::Compressed);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
   bw = std::make_shared<BinaryBuffer>(range);

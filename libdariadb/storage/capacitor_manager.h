@@ -1,19 +1,19 @@
 #pragma once
 
 #include "../interfaces/imeasstorage.h"
+#include "../utils/locker.h"
 #include "../utils/period_worker.h"
 #include "../utils/utils.h"
-#include "../utils/locker.h"
 #include "capacitor.h"
 
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace dariadb {
 namespace storage {
 
-	using File2CapHeader = std::unordered_map<std::string, Capacitor::Header>;
+using File2CapHeader = std::unordered_map<std::string, Capacitor::Header>;
 
 class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
 public:
@@ -21,6 +21,7 @@ public:
   public:
     virtual void drop(const std::string &fname) = 0;
   };
+
 protected:
   virtual ~CapacitorManager();
 
@@ -53,7 +54,8 @@ public:
   void drop_closed_files(size_t count); // drop 'count' closed files to down-level
                                         // storage.
 
-  void erase(const std::string&fname);
+  void erase(const std::string &fname);
+
 protected:
   void drop_closed_unsafe(size_t count);
   Capacitor_Ptr create_new();

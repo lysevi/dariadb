@@ -118,10 +118,9 @@ struct level {
 
 class Capacitor::Private {
 public:
-  Private(const std::string &fname, bool readonly)
-      : mmap(nullptr), _size(0) {
+  Private(const std::string &fname, bool readonly) : mmap(nullptr), _size(0) {
     _is_readonly = readonly;
-	_filename = fname;
+    _filename = fname;
     if (utils::fs::path_exists(fname)) {
       open(fname);
     } else {
@@ -134,7 +133,7 @@ public:
       if (mmap != nullptr) {
         _header->is_closed = true;
         _header->is_open_to_write = false;
-		this->flush();
+        this->flush();
         mmap->close();
       }
     }
@@ -525,32 +524,31 @@ public:
   }
 
   Meas::MeasArray readAll() const {
-      TIMECODE_METRICS(ctmd, "foreach", "Capacitor::readall");
+    TIMECODE_METRICS(ctmd, "foreach", "Capacitor::readall");
 
-      Meas::MeasArray result;
-      result.resize(this->_header->_writed);
-      size_t pos=0;
+    Meas::MeasArray result;
+    result.resize(this->_header->_writed);
+    size_t pos = 0;
 
-      for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
-        auto m = _memvalues[j];
-        result[pos++]=m;
+    for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
+      auto m = _memvalues[j];
+      result[pos++] = m;
+    }
+
+    for (size_t i = 0; i < this->_levels.size(); ++i) {
+      if (_levels[i].empty()) {
+        continue;
       }
-
-      for (size_t i = 0; i < this->_levels.size(); ++i) {
-        if (_levels[i].empty()) {
-          continue;
-        }
-        auto begin = _levels[i].begin;
-        auto end = _levels[i].begin + _levels[i].hdr->pos;
-        for (auto it = begin; it != end; ++it) {
-          auto m = *it;
-          result[pos++]=m;
-        }
+      auto begin = _levels[i].begin;
+      auto end = _levels[i].begin + _levels[i].hdr->pos;
+      for (auto it = begin; it != end; ++it) {
+        auto m = *it;
+        result[pos++] = m;
       }
-      std::sort(result.begin(),result.end(), meas_time_compare_less());
-      return result;
+    }
+    std::sort(result.begin(), result.end(), meas_time_compare_less());
+    return result;
   }
-
 
   void insert_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
     auto fres = s.find(m.id);
@@ -574,13 +572,9 @@ public:
     return readInTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
 
-  dariadb::Time minTime() const {
-    return _header->minTime;
-  }
+  dariadb::Time minTime() const { return _header->minTime; }
 
-  dariadb::Time maxTime() const {
-    return _header->maxTime;
-  }
+  dariadb::Time maxTime() const { return _header->maxTime; }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "Capacitor::minMaxTime");
@@ -621,9 +615,7 @@ public:
     return result;
   }
 
-  void flush() {
-    mmap->flush();
-  }
+  void flush() { mmap->flush(); }
 
   size_t files_count() const { return Manifest::instance()->cola_list().size(); }
 
@@ -714,9 +706,8 @@ public:
 
   Header *header() { return _header; }
 
-  std::string file_name()const {
-	  return _filename;
-  }
+  std::string file_name() const { return _filename; }
+
 protected:
   dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
   Header *_header;
@@ -780,8 +771,8 @@ void Capacitor::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 
-Meas::MeasArray Capacitor::readAll()const{
-    return _Impl->readAll();
+Meas::MeasArray Capacitor::readAll() const {
+  return _Impl->readAll();
 }
 
 Meas::Id2Meas Capacitor::readInTimePoint(const QueryTimePoint &q) {
@@ -812,6 +803,6 @@ void Capacitor::close() {
   _Impl->close();
 }
 
-std::string Capacitor::file_name()const {
-	return _Impl->file_name();
+std::string Capacitor::file_name() const {
+  return _Impl->file_name();
 }

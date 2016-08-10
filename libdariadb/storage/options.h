@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../utils/locker.h"
 #include "../meas.h"
+#include "../utils/locker.h"
 #include <atomic>
 
 namespace dariadb {
@@ -19,15 +19,15 @@ class Options {
   Options() {
     aof_buffer_size = AOF_BUFFER_SIZE;
     cap_max_levels = CAP_DEFAULT_MAX_LEVELS;
-    cap_max_closed_caps=CAP_MAX_CLOSED_CAPS;
-    cap_store_period=0;
-    page_openned_page_chache_size=OPENNED_PAGE_CACHE_SIZE;
+    cap_max_closed_caps = CAP_MAX_CLOSED_CAPS;
+    cap_store_period = 0;
+    page_openned_page_chache_size = OPENNED_PAGE_CACHE_SIZE;
   }
   ~Options() = default;
 
 public:
   static void start();
-  static void start(const std::string&path);
+  static void start(const std::string &path);
   static void stop();
   static Options *instance() { return _instance; }
 
@@ -47,8 +47,8 @@ public:
   }
 
   void save();
-  void save(const std::string&file);
-  void load(const std::string&file);
+  void save(const std::string &file);
+  void load(const std::string &file);
   // aof level options;
   std::string path;
   uint64_t aof_max_size;  // measurements count in one file
@@ -56,13 +56,14 @@ public:
 
   // cap level options;
   uint32_t cap_B; // measurements count in one data block
-  uint8_t  cap_max_levels;
-  Time     cap_store_period;
-  uint32_t cap_max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
+  uint8_t cap_max_levels;
+  Time cap_store_period;
+  uint32_t
+      cap_max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
 
   uint32_t page_chunk_size;
   uint32_t page_openned_page_chache_size; /// max oppend pages in cache(readonly
-                                     /// pages stored).
+                                          /// pages stored).
 private:
   static Options *_instance;
 };

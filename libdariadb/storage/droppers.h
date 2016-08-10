@@ -9,8 +9,7 @@ namespace storage {
 class AofDropper : public dariadb::storage::IAofFileDropper {
 public:
   AofDropper() {}
-  static void drop(const std::string &fname,
-                   const std::string &storage_path);
+  static void drop(const std::string &fname, const std::string &storage_path);
   void drop(const std::string fname) override;
   // on start, rm COLA files with name exists AOF file.
   static void cleanStorage(std::string storagePath);

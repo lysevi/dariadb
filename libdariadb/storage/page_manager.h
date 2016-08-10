@@ -10,9 +10,7 @@
 namespace dariadb {
 namespace storage {
 
-
-
-class PageManager : public utils::NonCopy, public IChunkContainer{
+class PageManager : public utils::NonCopy, public IChunkContainer {
 public:
 protected:
   virtual ~PageManager();
@@ -38,11 +36,12 @@ public:
   dariadb::Time minTime();
   dariadb::Time maxTime();
 
-  void append(const std::string&file_prefix, const dariadb::Meas::MeasArray&ma);
+  void append(const std::string &file_prefix, const dariadb::Meas::MeasArray &ma);
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
 
-  void erase(const std::string&fname);
+  void erase(const std::string &fname);
+
 private:
   static PageManager *_instance;
   class Private;

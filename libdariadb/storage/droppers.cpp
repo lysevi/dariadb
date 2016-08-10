@@ -61,7 +61,7 @@ void AofDropper::cleanStorage(std::string storagePath) {
       if (cap_fname == aof_fname) {
         logger_info("fsck: aof drop not finished: " << aof_fname);
         logger_info("fsck: rm " << capf);
-		CapacitorManager::instance()->erase(fs::extract_filename(capf));
+        CapacitorManager::instance()->erase(fs::extract_filename(capf));
       }
     }
   }
@@ -80,9 +80,9 @@ void CapDrooper::drop(const std::string &fname) {
     auto all = cap->readAll();
     assert(all.size() == cap->size());
     PageManager::instance()->append(page_fname, all);
-	
+
     cap = nullptr;
-	CapacitorManager::instance()->erase(without_path);
+    CapacitorManager::instance()->erase(without_path);
     LockManager::instance()->unlock(LockObjects::DROP_CAP);
   };
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
@@ -99,7 +99,7 @@ void CapDrooper::cleanStorage(std::string storagePath) {
       if (cap_fname == page_fname) {
         logger_info("fsck: cap drop not finished: " << page_fname);
         logger_info("fsck: rm " << page_fname);
-		PageManager::instance()->erase(fs::extract_filename(page));
+        PageManager::instance()->erase(fs::extract_filename(page));
         /*fs::rm(page_fname);
         fs::rm(page_fname + "i");
         Manifest::instance()->page_rm(fs::extract_filename(page));*/

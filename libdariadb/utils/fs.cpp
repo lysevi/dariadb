@@ -115,19 +115,19 @@ void mkdir(const std::string &path) {
 }
 
 std::string read_file(const std::string &fname) {
-	std::ifstream fs;
-	fs.open(fname);
-	if (!fs.is_open()) {
-		throw std::runtime_error("(!fs.is_open())");
-	}
+  std::ifstream fs;
+  fs.open(fname);
+  if (!fs.is_open()) {
+    throw std::runtime_error("(!fs.is_open())");
+  }
 
-	std::stringstream ss;
-	std::string line;
-	while (std::getline(fs, line)) {
-		ss << line;
-	}
-	fs.close();
-	return ss.str();
+  std::stringstream ss;
+  std::string line;
+  while (std::getline(fs, line)) {
+    ss << line;
+  }
+  fs.close();
+  return ss.str();
 }
 }
 }

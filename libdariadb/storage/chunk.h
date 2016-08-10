@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../compression/compression.h"
 #include "../compression/binarybuffer.h"
+#include "../compression/compression.h"
 #include "../meas.h"
 #include "../utils/locker.h"
 #include "../utils/lru.h"
@@ -12,13 +12,9 @@
 #include <unordered_map>
 namespace dariadb {
 namespace storage {
-	enum class ChunkKind : uint8_t
-	{
-		Simple,
-		Compressed
-	};
+enum class ChunkKind : uint8_t { Simple, Compressed };
 
-	std::ostream &operator<<(std::ostream &stream, const ChunkKind &k);
+std::ostream &operator<<(std::ostream &stream, const ChunkKind &k);
 #pragma pack(push, 1)
 struct ChunkHeader {
   uint64_t id; // chunk id;

@@ -88,6 +88,5 @@ struct meas_time_compare_greater {
   }
 };
 
-using  Id2MSet = std::map<Id, std::set<Meas, meas_time_compare_less>>;
-
+using Id2MSet = std::map<Id, std::set<Meas, meas_time_compare_less>>;
 }

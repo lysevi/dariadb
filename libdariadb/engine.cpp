@@ -1,6 +1,7 @@
 #include "engine.h"
 #include "flags.h"
 #include "storage/capacitor_manager.h"
+#include "storage/droppers.h"
 #include "storage/lock_manager.h"
 #include "storage/manifest.h"
 #include "storage/page_manager.h"
@@ -10,7 +11,6 @@
 #include "utils/logger.h"
 #include "utils/metrics.h"
 #include "utils/thread_manager.h"
-#include "storage/droppers.h"
 #include <algorithm>
 #include <cassert>
 
@@ -20,7 +20,7 @@ using namespace dariadb::utils::async;
 
 class Engine::Private {
 public:
-  Private(){
+  Private() {
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
@@ -33,7 +33,8 @@ public:
     ThreadManager::Params tpm_params(THREAD_MANAGER_COMMON_PARAMS);
     ThreadManager::start(tpm_params);
     LockManager::start(LockManager::Params());
-    Manifest::start(utils::fs::append_path(Options::instance()->path, MANIFEST_FILE_NAME));
+    Manifest::start(
+        utils::fs::append_path(Options::instance()->path, MANIFEST_FILE_NAME));
 
     if (is_exists) {
       AofDropper::cleanStorage(Options::instance()->path);
@@ -161,23 +162,22 @@ public:
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-	  LockManager::instance()->lock(LockKind::READ, { LockObjects::AOF, LockObjects::CAP });
+    LockManager::instance()->lock(LockKind::READ, {LockObjects::AOF, LockObjects::CAP});
     auto result = AOFManager::instance()->currentValue(ids, flag);
-	auto c_result = CapacitorManager::instance()->currentValue(ids, flag);
+    auto c_result = CapacitorManager::instance()->currentValue(ids, flag);
 
-    LockManager::instance()->unlock({ LockObjects::AOF, LockObjects::CAP });
+    LockManager::instance()->unlock({LockObjects::AOF, LockObjects::CAP});
 
-	for (auto&kv : c_result) {
-		auto it = result.find(kv.first);
-		if (it == result.end()) {
-			result[kv.first] = kv.second;
-		}
-		else {
-			if (it->second.time < kv.second.time) {
-				result[kv.first] = kv.second;
-			}
-		}
-	}
+    for (auto &kv : c_result) {
+      auto it = result.find(kv.first);
+      if (it == result.end()) {
+        result[kv.first] = kv.second;
+      } else {
+        if (it->second.time < kv.second.time) {
+          result[kv.first] = kv.second;
+        }
+      }
+    }
     return result;
   }
 
@@ -200,66 +200,66 @@ public:
     return result;
   }
 
-  void foreach_internal(const QueryInterval &q, IReaderClb * p_clbk, IReaderClb * c_clbk, IReaderClb * a_clbk) {
-	  TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
+  void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *c_clbk,
+                        IReaderClb *a_clbk) {
+    TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
 
-	  AsyncTask pm_at = [&p_clbk, &q](const ThreadInfo &ti) {
-		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		  PageManager::instance()->foreach(q, p_clbk);
-	  };
+    AsyncTask pm_at = [&p_clbk, &q](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      PageManager::instance()->foreach (q, p_clbk);
+    };
 
-	  AsyncTask cm_at = [&c_clbk, &q](const ThreadInfo &ti) {
-		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		  CapacitorManager::instance()->foreach(q, c_clbk);
-	  };
+    AsyncTask cm_at = [&c_clbk, &q](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      CapacitorManager::instance()->foreach (q, c_clbk);
+    };
 
-	  AsyncTask am_at = [&a_clbk, &q](const ThreadInfo &ti) {
-		  TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-		  AOFManager::instance()->foreach(q, a_clbk);
-	  };
+    AsyncTask am_at = [&a_clbk, &q](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      AOFManager::instance()->foreach (q, a_clbk);
+    };
 
-	  LockManager::instance()->lock(
-		  LockKind::READ, { LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF });
+    LockManager::instance()->lock(
+        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
-	  auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
-	  auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
-	  auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
+    auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
-	  pm_async->wait();
-	  cm_async->wait();
-	  am_async->wait();
+    pm_async->wait();
+    cm_async->wait();
+    am_async->wait();
 
-	  LockManager::instance()->unlock(
-	  { LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF });
+    LockManager::instance()->unlock(
+        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
   }
 
   // Inherited via MeasStorage
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
-	  return foreach_internal(q, clbk, clbk, clbk);
+    return foreach_internal(q, clbk, clbk, clbk);
   }
 
-  void mlist2mset(Meas::MeasList&mlist, Id2MSet&sub_result)
-  {
-	  for (auto m : mlist) {
-		  if (m.flag == Flags::_NO_DATA) {
-			  continue;
-		  }
-		  sub_result[m.id].insert(m);
-	  }
+  void mlist2mset(Meas::MeasList &mlist, Id2MSet &sub_result) {
+    for (auto m : mlist) {
+      if (m.flag == Flags::_NO_DATA) {
+        continue;
+      }
+      sub_result[m.id].insert(m);
+    }
   }
 
   Meas::MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
     std::unique_ptr<MList_ReaderClb> p_clbk{new MList_ReaderClb};
-	std::unique_ptr<MList_ReaderClb> c_clbk{ new MList_ReaderClb };
-	std::unique_ptr<MList_ReaderClb> a_clbk{ new MList_ReaderClb };
+    std::unique_ptr<MList_ReaderClb> c_clbk{new MList_ReaderClb};
+    std::unique_ptr<MList_ReaderClb> a_clbk{new MList_ReaderClb};
     this->foreach_internal(q, p_clbk.get(), c_clbk.get(), a_clbk.get());
-	Id2MSet sub_result;
-    
-	mlist2mset(p_clbk->mlist, sub_result);
-	mlist2mset(c_clbk->mlist, sub_result);
-	mlist2mset(a_clbk->mlist, sub_result);
-	
+    Id2MSet sub_result;
+
+    mlist2mset(p_clbk->mlist, sub_result);
+    mlist2mset(c_clbk->mlist, sub_result);
+    mlist2mset(a_clbk->mlist, sub_result);
+
     Meas::MeasList result;
     for (auto id : q.ids) {
       auto sublist = sub_result.find(id);
@@ -351,10 +351,11 @@ public:
     CapacitorManager::instance()->drop_closed_files(count);
   }
 
-  void fsck(){
-      CapacitorManager::instance()->fsck();
-      PageManager::instance()->fsck();
+  void fsck() {
+    CapacitorManager::instance()->fsck();
+    PageManager::instance()->fsck();
   }
+
 protected:
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
@@ -365,8 +366,7 @@ protected:
   bool _stoped;
 };
 
-Engine::Engine()
-    : _impl{new Engine::Private()} {}
+Engine::Engine() : _impl{new Engine::Private()} {}
 
 Engine::~Engine() {
   _impl = nullptr;
@@ -439,6 +439,6 @@ void Engine::wait_all_asyncs() {
   return _impl->wait_all_asyncs();
 }
 
-void Engine::fsck(){
-   _impl->fsck();
+void Engine::fsck() {
+  _impl->fsck();
 }

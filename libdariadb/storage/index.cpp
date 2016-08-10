@@ -5,7 +5,6 @@
 #include <cstring>
 #include <fstream>
 
-
 using namespace dariadb::storage;
 using dariadb::utils::inInterval;
 

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../meas.h"
 #include "binarybuffer.h"
 #include "positions.h"
-#include "../meas.h"
 #include <memory>
 
 namespace dariadb {

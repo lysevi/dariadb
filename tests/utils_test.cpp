@@ -218,7 +218,7 @@ public:
       : dariadb::utils::PeriodWorker(sleep_time) {
     call_count = 0;
   }
-  void period_call()override { call_count++; }
+  void period_call() override { call_count++; }
   size_t call_count;
 };
 
@@ -231,7 +231,6 @@ BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
   worker->period_worker_stop();
   BOOST_CHECK_GT(worker->call_count, size_t(1));
 }
-
 
 BOOST_AUTO_TEST_CASE(Metrics) {
   BOOST_CHECK(dariadb::utils::metrics::MetricsManager::instance() != nullptr);
