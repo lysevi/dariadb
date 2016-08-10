@@ -11,12 +11,12 @@ class PeriodWorker {
 public:
   PeriodWorker(const std::chrono::milliseconds sleep_time);
   virtual ~PeriodWorker();
-  virtual void call() = 0; // TODO rename to pariod_call
+  virtual void period_call() = 0;
 
-  void start_worker(); // TODO rename to pareid_worker_start
+  void period_worker_start();
 
   /// whait, while all works done and stop thread.
-  void stop_worker(); // TODO rename to pareid_worker_stop
+  void period_worker_stop();
   bool stoped() const { return m_stop_flag; }
 
 protected:

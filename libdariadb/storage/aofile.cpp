@@ -2,7 +2,9 @@
 #include "../flags.h"
 #include "../utils/fs.h"
 #include "../utils/metrics.h"
+#include "callbacks.h"
 #include "manifest.h"
+#include "options.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
@@ -15,17 +17,16 @@ using namespace dariadb::storage;
 
 class AOFile::Private {
 public:
-  Private(const AOFile::Params &params) : _params(params) {
+  Private() {
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
-    _filename = utils::fs::append_path(_params.path, rnd_fname);
+    _filename = utils::fs::append_path(Options::instance()->path, rnd_fname);
     Manifest::instance()->aof_append(rnd_fname);
     is_full = false;
   }
 
-  Private(const AOFile::Params &params, const std::string &fname, bool readonly)
-      : _params(params) {
+  Private(const std::string &fname, bool readonly) {
     _writed = AOFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
@@ -34,78 +35,79 @@ public:
 
   ~Private() { this->flush(); }
 
+  FILE *open_to_append() const {
+    auto file = std::fopen(_filename.c_str(), "ab");
+    if (file == nullptr) {
+      throw MAKE_EXCEPTION("aofile: open_to_append error.");
+    }
+    return file;
+  }
+
+  FILE *open_to_read() const {
+    auto file = std::fopen(_filename.c_str(), "rb");
+    if (file == nullptr) {
+      throw_open_error_exception();
+    }
+    return file;
+  }
+
   append_result append(const Meas &value) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
-    std::lock_guard<std::mutex> lock(_mutex);
-    if (_writed > _params.size) {
+
+    if (_writed > Options::instance()->aof_max_size) {
       return append_result(0, 1);
     }
-    auto file = std::fopen(_filename.c_str(), "ab");
-    if (file != nullptr) {
-      std::fwrite(&value, sizeof(Meas), size_t(1), file);
-      std::fclose(file);
-      _writed++;
-      return append_result(1, 0);
-    } else {
-      throw MAKE_EXCEPTION("aofile: append error.");
-    }
+    auto file = open_to_append();
+    std::fwrite(&value, sizeof(Meas), size_t(1), file);
+    std::fclose(file);
+    _writed++;
+    return append_result(1, 0);
   }
 
   append_result append(const Meas::MeasArray::const_iterator &begin,
                        const Meas::MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
-    std::lock_guard<std::mutex> lock(_mutex);
+
     auto sz = std::distance(begin, end);
     if (is_full) {
       return append_result(0, sz);
     }
-    auto file = std::fopen(_filename.c_str(), "ab");
-    if (file != nullptr) {
-
-      auto write_size = (sz + _writed) > _params.size ? (_params.size - _writed) : sz;
-      std::fwrite(&(*begin), sizeof(Meas), write_size, file);
-      std::fclose(file);
-      _writed += write_size;
-      return append_result(write_size, 0);
-    } else {
-      throw MAKE_EXCEPTION("aofile: append error.");
-    }
+    auto file = open_to_append();
+    auto max_size = Options::instance()->aof_max_size;
+    auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
+    std::fwrite(&(*begin), sizeof(Meas), write_size, file);
+    std::fclose(file);
+    _writed += write_size;
+    return append_result(write_size, 0);
   }
 
   append_result append(const Meas::MeasList::const_iterator &begin,
                        const Meas::MeasList::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
-    std::lock_guard<std::mutex> lock(_mutex);
+
     auto list_size = std::distance(begin, end);
     if (is_full) {
       return append_result(0, list_size);
     }
-    auto file = std::fopen(_filename.c_str(), "ab");
-    if (file != nullptr) {
+    auto file = open_to_append();
 
-      auto write_size =
-          (list_size + _writed) > _params.size ? (_params.size - _writed) : list_size;
-      Meas::MeasArray ma{begin, end};
-      std::fwrite(ma.data(), sizeof(Meas), write_size, file);
-      std::fclose(file);
-      _writed += write_size;
-      return append_result(write_size, 0);
-    } else {
-      throw MAKE_EXCEPTION("aofile: append error.");
-    }
+    auto max_size = Options::instance()->aof_max_size;
+
+    auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
+    Meas::MeasArray ma{begin, end};
+    std::fwrite(ma.data(), sizeof(Meas), write_size, file);
+    std::fclose(file);
+    _writed += write_size;
+    return append_result(write_size, 0);
   }
 
-  void foreach (const QueryInterval &q, ReaderClb * clbk) {
+  void foreach (const QueryInterval &q, IReaderClb * clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
-    std::lock_guard<std::mutex> lock(_mutex);
 
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     while (1) {
       Meas val = Meas::empty();
@@ -119,38 +121,14 @@ public:
     std::fclose(file);
   }
 
-  Meas::MeasList readInterval(const QueryInterval &q) {
-    TIMECODE_METRICS(ctmd, "readInterval", "AOFile::readInterval");
-    std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
-    this->foreach (q, clbk.get());
-
-    std::map<dariadb::Id, std::set<Meas, meas_time_compare_less>> sub_result;
-    for (auto v : clbk->mlist) {
-      sub_result[v.id].insert(v);
-    }
-    Meas::MeasList result;
-    for (auto id : q.ids) {
-      auto sublist = sub_result.find(id);
-      if (sublist == sub_result.end()) {
-        continue;
-      }
-      for (auto v : sublist->second) {
-        result.push_back(v);
-      }
-    }
-    return result;
-  }
-
   Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFile::readInTimePoint");
-    std::lock_guard<std::mutex> lock(_mutex);
+
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
 
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      this->throw_open_error_exception();
-    }
+    auto file = open_to_read();
+
     while (1) {
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
@@ -189,13 +167,10 @@ public:
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    std::lock_guard<std::mutex> lock(_mutex);
     dariadb::Meas::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+
+    auto file = open_to_read();
     while (1) {
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
@@ -223,11 +198,7 @@ public:
   }
 
   dariadb::Time minTime() const {
-    std::lock_guard<std::mutex> lock(_mutex);
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     dariadb::Time result = dariadb::MAX_TIME;
 
@@ -243,10 +214,7 @@ public:
   }
 
   dariadb::Time maxTime() const {
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     dariadb::Time result = dariadb::MIN_TIME;
 
@@ -263,10 +231,7 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "AOFile::minMaxTime");
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
@@ -286,24 +251,15 @@ public:
     return result;
   }
 
-  void flush() {
-    TIMECODE_METRICS(ctmd, "flush", "AOFile::flush");
-    std::lock_guard<std::mutex> lock(_mutex);
-    // if (drop_future.valid()) {
-    //  drop_future.wait();
-    //}
-  }
+  void flush() { TIMECODE_METRICS(ctmd, "flush", "AOFile::flush"); }
 
   std::string filename() const { return _filename; }
 
   Meas::MeasArray readAll() {
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
-    auto file = std::fopen(_filename.c_str(), "rb");
-    if (file == nullptr) {
-      throw_open_error_exception();
-    }
+    auto file = open_to_read();
 
-    Meas::MeasArray ma{_params.size};
+    Meas::MeasArray ma(Options::instance()->aof_max_size);
     size_t pos = 0;
     while (1) {
       Meas val = Meas::empty();
@@ -325,7 +281,7 @@ public:
     for (auto f : aofs_manifest) {
       ss << f << std::endl;
     }
-    auto aofs_exists = utils::fs::ls(_params.path, ".aof");
+    auto aofs_exists = utils::fs::ls(Options::instance()->path, ".aof");
     for (auto f : aofs_exists) {
       ss << f << std::endl;
     }
@@ -333,13 +289,7 @@ public:
   }
 
 protected:
-  AOFile::Params _params;
   std::string _filename;
-  //  dariadb::utils::fs::MappedFile::MapperFile_ptr mmap;
-  //  AOFile::Header *_header;
-  //  uint8_t *_raw_data;
-
-  mutable std::mutex _mutex;
   bool _is_readonly;
   size_t _writed;
   bool is_full;
@@ -347,25 +297,11 @@ protected:
 
 AOFile::~AOFile() {}
 
-AOFile::AOFile(const Params &params) : _Impl(new AOFile::Private(params)) {}
+AOFile::AOFile() : _Impl(new AOFile::Private()) {}
 
-AOFile::AOFile(const AOFile::Params &params, const std::string &fname, bool readonly)
-    : _Impl(new AOFile::Private(params, fname, readonly)) {}
+AOFile::AOFile(const std::string &fname, bool readonly)
+    : _Impl(new AOFile::Private(fname, readonly)) {}
 
-// AOFile::Header AOFile::readHeader(std::string file_name) {
-//  std::ifstream istream;
-//  istream.open(file_name, std::fstream::in | std::fstream::binary);
-//  if (!istream.is_open()) {
-//    std::stringstream ss;
-//    ss << "can't open file. filename=" << file_name;
-//    throw MAKE_EXCEPTION(ss.str());
-//  }
-//  AOFile::Header result;
-//  memset(&result, 0, sizeof(AOFile::Header));
-//  istream.read((char *)&result, sizeof(AOFile::Header));
-//  istream.close();
-//  return result;
-//}
 dariadb::Time AOFile::minTime() {
   return _Impl->minTime();
 }
@@ -394,12 +330,8 @@ append_result AOFile::append(const Meas::MeasList::const_iterator &begin,
   return _Impl->append(begin, end);
 }
 
-void AOFile::foreach (const QueryInterval &q, ReaderClb * clbk) {
+void AOFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
-}
-
-Meas::MeasList AOFile::readInterval(const QueryInterval &q) {
-  return _Impl->readInterval(q);
 }
 
 Meas::Id2Meas AOFile::readInTimePoint(const QueryTimePoint &q) {

@@ -12,7 +12,7 @@
 #include <utils/fs.h>
 #include <utils/logger.h>
 
-class BenchCallback : public dariadb::storage::ReaderClb {
+class BenchCallback : public dariadb::storage::IReaderClb {
 public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &) { count++; }
@@ -103,61 +103,116 @@ BOOST_AUTO_TEST_CASE(LockManager_Instance) {
   BOOST_CHECK(dariadb::storage::LockManager::instance() == nullptr);
 }
 
+BOOST_AUTO_TEST_CASE(Options_Instance) {
+  using dariadb::storage::Options;
+  const std::string storage_path = "testStorage";
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+
+  dariadb::utils::fs::mkdir(storage_path);
+
+  Options::start(storage_path);
+  auto instance = Options::instance();
+  BOOST_CHECK(instance != nullptr);
+
+  Options::instance()->aof_buffer_size = 2;
+  Options::instance()->cap_B = 3;
+  Options::instance()->cap_max_levels = 4;
+  Options::instance()->cap_store_period = 5;
+  Options::instance()->cap_max_closed_caps = 6;
+
+  Options::instance()->page_chunk_size = 7;
+  Options::instance()->page_openned_page_chache_size = 8;
+
+  Options::instance()->calc_params();
+  Options::instance()->save();
+
+  Options::stop();
+
+  bool file_exists = dariadb::utils::fs::path_exists(
+      dariadb::utils::fs::append_path(storage_path, dariadb::storage::OPTIONS_FILE_NAME));
+  BOOST_CHECK(file_exists);
+
+  Options::start(storage_path);
+  BOOST_CHECK_EQUAL(Options::instance()->aof_buffer_size, uint64_t(2));
+  BOOST_CHECK_EQUAL(Options::instance()->cap_B, uint32_t(3));
+  BOOST_CHECK_EQUAL(Options::instance()->cap_max_levels, uint8_t(4));
+  BOOST_CHECK_EQUAL(Options::instance()->cap_store_period, dariadb::Time(5));
+  BOOST_CHECK_EQUAL(Options::instance()->cap_max_closed_caps, uint32_t(6));
+
+  BOOST_CHECK_EQUAL(Options::instance()->page_chunk_size, uint32_t(7));
+  BOOST_CHECK_EQUAL(Options::instance()->page_openned_page_chache_size, uint32_t(8));
+
+  dariadb::storage::Options::stop();
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+}
+
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 100;
   const size_t chunk_size = 256;
   const size_t cap_B = 2;
 
   const dariadb::Time from = 0;
-  const dariadb::Time to = from + 1500;
+  const dariadb::Time to = from + 1000;
   const dariadb::Time step = 10;
+
+  using namespace dariadb::storage;
 
   {
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
-    cap_pam.max_levels = 4;
-    dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
-    aofp.max_closed_aofs = 20;
-    aofp.max_size = cap_pam.measurements_count();
-    std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                                    chunk_size),
-        cap_pam, dariadb::storage::Engine::Limits(10))};
+    dariadb::storage::Options::start();
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->cap_B = cap_B;
+    dariadb::storage::Options::instance()->cap_max_levels = 4;
+    dariadb::storage::Options::instance()->aof_max_size =
+        dariadb::storage::Options::instance()->measurements_count();
+    dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
+    std::unique_ptr<Engine> ms{new Engine()};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step);
     ms->wait_all_asyncs();
-    auto pages_count = dariadb::storage::PageManager::instance()->files_count();
-    BOOST_CHECK_GE(pages_count, size_t(2));
-    auto gc_res = ms->gc();
-    pages_count = dariadb::storage::PageManager::instance()->files_count();
+    auto pages_count = PageManager::instance()->files_count();
     BOOST_CHECK_GE(pages_count, size_t(2));
 
-    BOOST_CHECK(gc_res.page_result.page_removed != size_t(0));
-    BOOST_CHECK(gc_res.page_result.chunks_merged != size_t(0));
+    pages_count = dariadb::storage::PageManager::instance()->files_count();
+    BOOST_CHECK_GE(pages_count, size_t(2));
   }
   {
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        dariadb::storage::AOFManager::Params(storage_path, chunk_size),
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
-        dariadb::storage::CapacitorManager::Params(storage_path, cap_B),
-        dariadb::storage::Engine::Limits(0))};
+    dariadb::storage::Options::stop();
+    dariadb::storage::Options::start();
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->aof_max_size = chunk_size;
+    dariadb::storage::Options::instance()->cap_B = cap_B;
+    dariadb::storage::Options::instance()->cap_max_levels = 4;
+    dariadb::storage::Options::instance()->aof_max_size =
+        dariadb::storage::Options::instance()->measurements_count();
+    dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
+
+    auto raw_ptr = new Engine();
+    dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
+
+    raw_ptr->fsck();
+
+    // check first id, because that Id placed in compressed pages.
+    auto values = ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
+    BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
 
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     BOOST_CHECK(current.size() != size_t(0));
-    // TODO check
-    // BOOST_CHECK(mlist.front().flag != dariadb::Flags::_NO_DATA);
   }
+  dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
 
-class Moc_SubscribeClbk : public dariadb::storage::ReaderClb {
+class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
 public:
   std::list<dariadb::Meas> values;
   void call(const dariadb::Meas &m) override { values.push_back(m); }
@@ -172,7 +227,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
   std::shared_ptr<Moc_SubscribeClbk> c4(new Moc_SubscribeClbk);
 
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
@@ -181,12 +235,16 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        dariadb::storage::AOFManager::Params(storage_path, chunk_size),
-        dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                              chunk_size),
-        dariadb::storage::CapacitorManager::Params(storage_path, cap_B),
-        dariadb::storage::Engine::Limits(10))};
+    dariadb::storage::Options::start();
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
+    dariadb::storage::Options::instance()->cap_B = cap_B;
+    dariadb::storage::Options::instance()->cap_max_levels = 4;
+    dariadb::storage::Options::instance()->aof_max_size =
+        dariadb::storage::Options::instance()->measurements_count();
+    dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
+
+    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine()};
 
     dariadb::IdArray ids{};
     ms->subscribe(ids, 0, c1); // all
@@ -219,94 +277,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     BOOST_CHECK_EQUAL(c4->values.size(), size_t(1));
     BOOST_CHECK_EQUAL(c4->values.front().flag, dariadb::Flag(1));
   }
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
-
-BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
-  const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
-  const size_t chunk_size = 256;
-  const size_t cap_B = 5;
-
-  {
-    if (dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path);
-    }
-
-    dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
-    dariadb::storage::PageManager::Params pmp(storage_path, chunk_per_storage,
-                                              chunk_size);
-    dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
-    aofp.max_size = cap_pam.measurements_count();
-    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        aofp, pmp, cap_pam, dariadb::storage::Engine::Limits(10))};
-
-    // storage: id=0: 10,11,....30 id=1: 0,1,2,3,4,5
-    // cap: id=0: 6,7,8,9
-
-    auto m = dariadb::Meas::empty(0);
-    dariadb::Time t = 10;
-    // all must be in first chunk.
-    for (; t <= 30; ++t) {
-      m.time = t;
-      m.value = dariadb::Value(t);
-      BOOST_CHECK(ms->append(m).writed == 1);
-    }
-    m.id++;
-    t = 0;
-    // fill capacitor, while she dont drop values to page
-    while (dariadb::storage::PageManager::instance()->chunks_in_cur_page() < 2) {
-      m.time = t;
-      m.value = dariadb::Value(t);
-      t++;
-      BOOST_CHECK(ms->append(m).writed == 1);
-    }
-
-    auto last_chunks_count =
-        dariadb::storage::PageManager::instance()->chunks_in_cur_page();
-    m.id = 0;
-    // must be in second chunk in page
-    auto new_t = dariadb::Time(0);
-    for (; new_t <= 5; ++new_t) {
-      m.time = new_t;
-      m.value = dariadb::Value(new_t);
-      BOOST_CHECK(ms->append(m).writed == 1);
-    }
-    m.id++;
-    ++t;
-    while (dariadb::storage::PageManager::instance()->chunks_in_cur_page() <=
-           size_t(last_chunks_count * 1.5)) {
-      m.time = t;
-      m.value = dariadb::Value(t);
-      t++;
-      BOOST_CHECK(ms->append(m).writed == 1);
-    }
-    auto new_chunks_count =
-        dariadb::storage::PageManager::instance()->chunks_in_cur_page();
-    BOOST_CHECK(last_chunks_count < new_chunks_count);
-
-    new_t = dariadb::Time(6);
-    m.id = 0;
-    for (; new_t <= 9; ++new_t) {
-      m.time = new_t;
-      m.value = dariadb::Value(new_t);
-      BOOST_CHECK(ms->append(m).writed == 1);
-    }
-    dariadb::IdArray ids;
-    ids.push_back(0);
-    auto mlist = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, 0, 11));
-
-    for (auto it = mlist.begin(); it != mlist.end(); ++it) {
-      auto next = ++it;
-      if (next == mlist.end()) {
-        break;
-      }
-      BOOST_CHECK_LE(it->time, next->time);
-    }
-  }
-
+  dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -314,7 +285,6 @@ BOOST_AUTO_TEST_CASE(Engine_unordered_test) {
 
 BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
@@ -327,15 +297,16 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::CapacitorManager::Params cap_pam(storage_path, cap_B);
-    cap_pam.max_levels = 4;
-    dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
-    aofp.max_closed_aofs = 20;
-    aofp.max_size = cap_pam.measurements_count();
-    dariadb::storage::MeasStorage_ptr ms{new dariadb::storage::Engine(
-        aofp, dariadb::storage::PageManager::Params(storage_path, chunk_per_storage,
-                                                    chunk_size),
-        cap_pam, dariadb::storage::Engine::Limits(10))};
+    dariadb::storage::Options::start();
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
+    dariadb::storage::Options::instance()->cap_B = cap_B;
+    dariadb::storage::Options::instance()->cap_max_levels = 4;
+    dariadb::storage::Options::instance()->aof_max_size =
+        dariadb::storage::Options::instance()->measurements_count();
+    dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
+
+    dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine()};
     auto m = dariadb::Meas::empty();
     size_t total_count = 0;
 
@@ -390,6 +361,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     }
     BOOST_CHECK_GE(total_count, total_readed);
   }
+  dariadb::storage::Options::stop();
+
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -397,7 +370,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
 
 BOOST_AUTO_TEST_CASE(Engine_memvalues) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_per_storage = 10000;
   const size_t chunk_size = 256;
   const size_t cap_B = 5;
 
@@ -409,13 +381,16 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    dariadb::storage::AOFManager::Params aofp(storage_path, chunk_size);
-    dariadb::storage::PageManager::Params pamp(storage_path, chunk_per_storage,
-                                               chunk_size);
-    dariadb::storage::CapacitorManager::Params capm(storage_path, cap_B);
-    aofp.max_size = capm.measurements_count();
-    std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine(
-        aofp, pamp, capm, dariadb::storage::Engine::Limits(10))};
+    dariadb::storage::Options::start();
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
+    dariadb::storage::Options::instance()->cap_B = cap_B;
+    dariadb::storage::Options::instance()->cap_max_levels = 4;
+    dariadb::storage::Options::instance()->aof_max_size =
+        dariadb::storage::Options::instance()->measurements_count();
+    dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
+
+    std::unique_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine()};
 
     auto m = dariadb::Meas::empty();
 
@@ -463,6 +438,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
       BOOST_CHECK(all1.size() != size_t(0));
     }
   }
+  dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }

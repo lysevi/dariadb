@@ -12,6 +12,18 @@ using namespace dariadb::compression;
 
 // std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
+std::ostream &dariadb::storage::operator<<(std::ostream &stream, const ChunkKind &b) {
+  switch (b) {
+  case ChunkKind::Simple:
+    stream << "ChunkKind::Simple";
+    break;
+  case ChunkKind::Compressed:
+    stream << "ChunkKind::Compressed";
+    break;
+  }
+  return stream;
+}
+
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
   should_free = false;
   header = hdr;
@@ -66,12 +78,13 @@ bool Chunk::check_flag(const Flag &f) {
 
 bool Chunk::check_checksum() {
   auto exists = get_checksum();
-  return exists == calc_checksum();
+  auto calculated = calc_checksum();
+  return exists == calculated;
 }
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
     : Chunk(index, buffer, _size, first_m) {
-  header->is_zipped = true;
+  header->kind = ChunkKind::Compressed;
   using compression::BinaryBuffer;
   range = Range{_buffer_t, _buffer_t + index->size};
   bw = std::make_shared<BinaryBuffer>(range);
@@ -89,7 +102,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
 }
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
-  assert(index->is_zipped);
+  assert(index->kind == ChunkKind::Compressed);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
   bw = std::make_shared<BinaryBuffer>(range);
@@ -113,7 +126,7 @@ uint32_t ZippedChunk::calc_checksum() {
   return utils::crc32(this->_buffer_t, this->header->size);
 }
 
-uint32_t dariadb::storage::ZippedChunk::get_checksum() {
+uint32_t ZippedChunk::get_checksum() {
   return header->crc;
 }
 
@@ -149,7 +162,7 @@ bool ZippedChunk::append(const Meas &m) {
   }
 }
 
-class ZippedChunkReader : public Chunk::Reader {
+class ZippedChunkReader : public Chunk::IChunkReader {
 public:
   virtual Meas readNext() override {
     assert(!is_end());
@@ -171,7 +184,7 @@ public:
   std::shared_ptr<CopmressedReader> _reader;
 };
 
-class SortedReader : public Chunk::Reader {
+class SortedReader : public Chunk::IChunkReader {
 public:
   virtual Meas readNext() override {
     assert(!is_end());
@@ -186,7 +199,7 @@ public:
   dariadb::Meas::MeasArray::const_iterator _iter;
 };
 
-Chunk::Reader_Ptr ZippedChunk::get_reader() {
+Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
   if (header->is_sorted) {
     auto raw_res = new ZippedChunkReader;
     raw_res->count = this->header->count;
@@ -197,7 +210,7 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
     raw_res->_reader =
         std::make_shared<CopmressedReader>(raw_res->bw, this->header->first);
 
-    Chunk::Reader_Ptr result{raw_res};
+    Chunk::ChunkReader_Ptr result{raw_res};
     return result;
   } else {
     Meas::MeasList res_set;
@@ -214,7 +227,7 @@ Chunk::Reader_Ptr ZippedChunk::get_reader() {
     std::sort(raw_res->values.begin(), raw_res->values.end(),
               dariadb::meas_time_compare_less());
     raw_res->_iter = raw_res->values.begin();
-    Chunk::Reader_Ptr result{raw_res};
+    Chunk::ChunkReader_Ptr result{raw_res};
     return result;
   }
 }

@@ -7,6 +7,10 @@
 #define CODE_POS (dariadb::utils::CodePos(__FILE__, __LINE__, __FUNCTION__))
 
 #define MAKE_EXCEPTION(msg) dariadb::utils::Exception::create_and_log(CODE_POS, msg)
+#define THROW_EXCEPTION_SS(msg)                                                          \
+  std::stringstream sstream_var;                                                         \
+  sstream_var << msg;                                                                    \
+  MAKE_EXCEPTION(sstream_var.str());
 
 namespace dariadb {
 namespace utils {

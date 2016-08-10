@@ -7,18 +7,15 @@ compiler:
 before_install:
    - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
    - sudo apt-get update
-   - sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-thread-dev libboost-program-options-dev cmake  g++-4.9  g++-4.9 cpp-4.9
+   - sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev cmake  g++-6  gcc-6 cpp-6
    - pip install --user cpp-coveralls
    - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
    - tar xf lcov_1.11.orig.tar.gz
    - sudo make -C lcov-1.11/ install
   # install lcov to coveralls conversion + upload tool
    - gem install coveralls-lcov
-   - cd /usr/bin
-   - sudo rm gcc g++ cpp
-   - sudo ln -s gcc-4.9 gcc
-   - sudo ln -s g++-4.9 g++
-   - sudo ln -s cpp-4.9 cpp
+   - export CC="gcc-6"
+   - export CXX="g++-6"
 
 install:
   - cd ${TRAVIS_BUILD_DIR}
@@ -34,6 +31,6 @@ script:
 after_success:
    - cd ${TRAVIS_BUILD_DIR}
    - lcov --directory . --capture --output-file coverage.info # capture coverage info
-   - lcov --remove coverage.info 'bin/*' 'tests/*' '/usr/*' --output-file coverage.info # filter out system and test code
+   - lcov --remove coverage.info 'bin/*' 'tests/*' 'extern/*' '/usr/*' --output-file coverage.info # filter out system and test code
    - lcov --list coverage.info # debug before upload
    - coveralls-lcov --repo-token '7VSWJleC3m9GKbZBakLFL5nBEib1CTFsb' coverage.info # uploads to coveralls

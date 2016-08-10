@@ -1,14 +1,13 @@
 #pragma once
 
-#include "../storage.h"
 #include "../utils/utils.h"
 #include "aofile.h"
 #include <vector>
 
 #include <map>
 #include <mutex>
-//
-//#include <boost/thread/shared_mutex.hpp>
+
+#include <shared_mutex>
 
 namespace dariadb {
 namespace storage {
@@ -24,7 +23,7 @@ enum class LockObjects : uint8_t {
 };
 
 struct MutexWrap {
-  std::mutex mutex;
+  std::shared_mutex mutex;
   LockKind kind;
   MutexWrap() : mutex(), kind(LockKind::READ) {}
 };

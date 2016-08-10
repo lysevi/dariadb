@@ -113,6 +113,22 @@ void mkdir(const std::string &path) {
     boost::filesystem::create_directory(path);
   }
 }
+
+std::string read_file(const std::string &fname) {
+  std::ifstream fs;
+  fs.open(fname);
+  if (!fs.is_open()) {
+    throw std::runtime_error("(!fs.is_open())");
+  }
+
+  std::stringstream ss;
+  std::string line;
+  while (std::getline(fs, line)) {
+    ss << line;
+  }
+  fs.close();
+  return ss.str();
+}
 }
 }
 }
@@ -134,8 +150,10 @@ public:
   static Private *open(const std::string &path, bool read_only) {
     auto result = new Private();
     auto open_flag = read_only ? bi::read_only : bi::read_write;
-    result->m_file = new bi::file_mapping(path.c_str(), open_flag);
-    result->m_region = new bi::mapped_region(*(result->m_file), open_flag);
+    result->m_file =
+        std::unique_ptr<bi::file_mapping>{new bi::file_mapping(path.c_str(), open_flag)};
+    result->m_region = std::unique_ptr<bi::mapped_region>{
+        new bi::mapped_region(*(result->m_file), open_flag)};
     return result;
   }
 
@@ -159,8 +177,6 @@ public:
   void close() {
     _closed = true;
     m_region->flush();
-    delete m_region;
-    delete m_file;
     m_region = nullptr;
     m_file = nullptr;
   }
@@ -180,8 +196,8 @@ public:
 protected:
   bool _closed;
 
-  bi::file_mapping *m_file;
-  bi::mapped_region *m_region;
+  std::unique_ptr<bi::file_mapping> m_file;
+  std::unique_ptr<bi::mapped_region> m_region;
 };
 
 MappedFile::MappedFile(Private *im) : _impl(im) {}

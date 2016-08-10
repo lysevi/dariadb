@@ -1,7 +1,11 @@
-[![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb)
-[![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=master)](https://coveralls.io/github/lysevi/dariadb?branch=master)
-
 # dariadb - numeric time-series storage engine.
+
+# Continuous Integration
+
+|  version | build & tests | test coverage |
+|---------------------|---------|----------|
+| `master`   | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb) |  [![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=master)](https://coveralls.io/github/lysevi/dariadb?branch=master) |
+| `develop` | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=dev)](https://travis-ci.org/lysevi/dariadb) | [![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=dev)](https://coveralls.io/github/lysevi/dariadb?branch=dev)
 
 # Features
 * Each measurement contains:
@@ -23,9 +27,9 @@
   - Standard API - You can Query interval as list or values in time point as dictionary.
 
 # Dependencies
-* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), thread, unit_test_framework(to build tests), program_options
+* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), unit_test_framework(to build tests), program_options
 * cmake 2.8 or higher
-* c++ 11/14 compiler (MSVC 2015, gcc 5.0, clang 3.8)
+* c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
 ##build
 ###clang

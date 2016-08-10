@@ -1,25 +1,20 @@
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <iterator>
-#include <thread>
-
 #include "bench_common.h"
-#include <boost/program_options.hpp>
-#include <ctime>
 #include <storage/aof_manager.h>
 #include <storage/manifest.h>
+#include <storage/options.h>
 #include <timeutil.h>
 #include <utils/fs.h>
 #include <utils/metrics.h>
 #include <utils/thread_manager.h>
 
+#include <boost/program_options.hpp>
+
 namespace po = boost::program_options;
 
-std::atomic_long append_count{0};
+std::atomic_llong append_count{0};
 bool stop_info = false;
 
-class Moc_Dropper : public dariadb::storage::MeasWriter {
+class Moc_Dropper : public dariadb::storage::IMeasWriter {
 public:
   dariadb::append_result append(const dariadb::Meas &) override {
     return dariadb::append_result(1, 0);
@@ -87,11 +82,9 @@ int main(int argc, char *argv[]) {
   }
 
   dariadb::IdSet all_id_set;
-  auto startTime = dariadb::timeutil::current_time();
   {
     const std::string storage_path = "aof_benchmark_storage";
 
-    // dont_clean=true;
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
@@ -101,11 +94,17 @@ int main(int argc, char *argv[]) {
         dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
+    dariadb::storage::Options::start();
+
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
-    auto p = dariadb::storage::AOFManager::Params(storage_path, size_t(1000));
-    p.buffer_size = 1000;
-    p.max_size = (1024 * 1024) * 3 / sizeof(dariadb::Meas);
-    dariadb::storage::AOFManager::start(p);
+
+    dariadb::storage::Options::instance()->path = storage_path;
+    dariadb::storage::Options::instance()->aof_buffer_size = 1000;
+    dariadb::storage::Options::instance()->aof_max_size =
+        (1024 * 1024) * 3 / sizeof(dariadb::Meas);
+
+    dariadb::storage::AOFManager::start();
+
     auto aof = dariadb::storage::AOFManager::instance();
     std::thread info_thread(show_info);
 
@@ -115,7 +114,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
-                    dariadb::Time(i), &append_count, aof};
+                    &append_count, aof};
       writers[pos++] = std::move(t);
     }
 
@@ -128,11 +127,11 @@ int main(int argc, char *argv[]) {
     stop_info = true;
     info_thread.join();
 
-    dariadb_bench::readBenchark(all_id_set, aof, 10, startTime,
-                                dariadb::timeutil::current_time());
+    dariadb_bench::readBenchark(all_id_set, aof, 10);
 
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();
+    dariadb::storage::Options::stop();
     if (metrics_enable) {
       std::cout << "metrics:\n"
                 << dariadb::utils::metrics::MetricsManager::instance()->to_string()

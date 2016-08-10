@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../storage.h"
+#include "../interfaces/imeasstorage.h"
+#include "../utils/locker.h"
 #include "../utils/utils.h"
 #include "aofile.h"
 #include <vector>
@@ -9,44 +10,19 @@
 
 namespace dariadb {
 namespace storage {
-class AofFileDropper {
+class IAofFileDropper {
 public:
-  virtual void drop(const AOFile_Ptr aof, const std::string fname) = 0;
+  virtual void drop(const std::string fname) = 0;
 };
-const size_t AOF_BUFFER_SIZE = 1000;
-const size_t MAX_CLOSED_AOFS = 50;
-class AOFManager : public MeasStorage {
+class AOFManager : public IMeasStorage {
 public:
-  struct Params {
-    std::string path;
-    size_t max_size;    // measurements count in one datra block
-    size_t buffer_size; // inner buffer size
-    size_t max_closed_aofs;
-    Params() {
-      max_size = 0;
-      buffer_size = AOF_BUFFER_SIZE;
-      max_closed_aofs = MAX_CLOSED_AOFS;
-    }
-    Params(const std::string storage_path, const size_t _max_size) {
-      path = storage_path;
-      max_size = _max_size;
-      buffer_size = AOF_BUFFER_SIZE;
-      max_closed_aofs = MAX_CLOSED_AOFS;
-    }
-    Params(const std::string storage_path, const size_t _max_size, const size_t bufsize) {
-      path = storage_path;
-      max_size = _max_size;
-      buffer_size = bufsize;
-    }
-  };
-
 protected:
   virtual ~AOFManager();
 
-  AOFManager(const Params &param);
+  AOFManager();
 
 public:
-  static void start(const Params &param);
+  static void start();
   static void stop();
   static AOFManager *instance();
 
@@ -55,18 +31,19 @@ public:
   virtual Time maxTime() override;
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  virtual void foreach (const QueryInterval &q, ReaderClb * clbk) override;
-  virtual Meas::MeasList readInterval(const QueryInterval &q) override;
+  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
 
   std::list<std::string> closed_aofs();
-  void drop_aof(const std::string &fname, AofFileDropper *storage);
+  void drop_aof(const std::string &fname, IAofFileDropper *storage);
 
   size_t files_count() const;
-  void set_downlevel(AofFileDropper *down);
+  void set_downlevel(IAofFileDropper *down);
+
+  void erase(const std::string &fname);
 
 protected:
   void create_new();
@@ -77,10 +54,9 @@ protected:
 private:
   static AOFManager *_instance;
 
-  Params _params;
   AOFile_Ptr _aof;
-  mutable std::mutex _locker;
-  AofFileDropper *_down;
+  mutable utils::Locker _locker;
+  IAofFileDropper *_down;
 
   Meas::MeasArray _buffer;
   size_t _buffer_pos;

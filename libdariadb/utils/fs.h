@@ -23,6 +23,7 @@ std::string append_path(const std::string &p1, const std::string &p2);
 bool path_exists(const std::string &path);
 void mkdir(const std::string &path);
 
+std::string read_file(const std::string &fname);
 /// ext - ".ext"
 
 class MappedFile : public utils::NonCopy {

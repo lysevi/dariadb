@@ -1,40 +1,36 @@
 #pragma once
-#include "../storage.h"
+#include "../interfaces/ichunkcontainer.h"
+#include "../interfaces/imeaswriter.h"
 #include "../utils/fs.h"
 #include "chunk.h"
-#include "chunk_container.h"
 #include "index.h"
 
 namespace dariadb {
 namespace storage {
+
+const std::string PAGE_FILE_EXT = ".page"; // cola-file extension
+
 #pragma pack(push, 1)
 struct PageHeader {
-  uint64_t pos;               // next write pos (bytes)
-  uint32_t count_readers;     // readers count. on close must be zero.
-  uint64_t addeded_chunks;    // total count of chunks in page.
-  uint64_t removed_chunks;    // total chunks marked as not init in rollbacks or fsck.
-  uint32_t chunk_per_storage; // max chunks count
-  uint32_t chunk_size;        // each chunks size in bytes
-  bool is_full : 1;           // is full :)
-  bool is_closed : 1;
+  // uint64_t write_offset;      // next write pos (bytes)
+  uint32_t addeded_chunks; // total count of chunks in page.
+  uint32_t removed_chunks; // total chunks marked as not init in rollbacks or fsck.
+  uint64_t filesize;
+  bool is_full : 1;          // is full :)
+  bool is_closed : 1;        // is correctly closed.
   bool is_open_to_write : 1; // true if oppened to write.
-  dariadb::Time minTime;
-  dariadb::Time maxTime;
-  uint64_t max_chunk_id; // max(chunk->id)
-
-  uint64_t transaction;
-  bool _under_transaction;
+  Time minTime;              // minimal stored time
+  Time maxTime;              // maximum stored time
+  uint64_t max_chunk_id;     // max(chunk->id)
 };
 #pragma pack(pop)
 
-const size_t PAGE_FLUSH_PERIOD = 1000;
-
-class Page : public ChunkContainer, public MeasWriter {
+class Page : public IChunkContainer {
   Page() = default;
 
 public:
-  static Page *create(std::string file_name, uint64_t sz, uint32_t chunk_per_storage,
-                      uint32_t chunk_size);
+  static Page *create(const std::string &file_name, uint64_t chunk_id,
+                      uint32_t max_chunk_size, const Meas::MeasArray &ma);
   static Page *open(std::string file_name, bool read_only = false);
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
@@ -46,32 +42,22 @@ public:
   bool is_full() const;
 
   // ChunksList get_open_chunks();
-  void dec_reader();
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                 ReaderClb *clb) override;
+                 IReaderClb *clb) override;
 
-  // Inherited via MeasWriter
-  virtual append_result append(const Meas &value) override;
-  virtual void flush() override;
+  void flush();
 
-  void begin_transaction(uint64_t num);
-  void commit_transaction(uint64_t num);
-  void rollback_transaction(uint64_t num);
-
-  std::list<Chunk_Ptr> get_not_full_chunks(); // list of not full chunks
-  std::list<Chunk_Ptr> chunks_by_pos(std::vector<uint32_t> poses);
   void mark_as_non_init(Chunk_Ptr &ch);
   void mark_as_init(Chunk_Ptr &ch);
 
 private:
-  void flush_current_chunk();
-  void init_chunk_index_rec(Chunk_Ptr ch);
-  void close_corrent_chunk();
+  void update_index_recs();
+  void init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index);
   struct ChunkWithIndex {
     Chunk_Ptr ch;        /// ptr to chunk in page
     IndexReccord *index; /// ptr to index reccord
@@ -80,19 +66,18 @@ private:
   /// cache of openned chunks. before search chunk in page, we search in cache.
   ChunkWithIndex _openned_chunk;
 
+  void check_page_struct();
+
 public:
   uint8_t *region; // page  file mapp region
-
   PageHeader *header;
-
   uint8_t *chunks;
 
   std::string filename;
   bool readonly;
-  PageIndex_ptr _index;
 
 protected:
-  mutable std::mutex _locker;
+  PageIndex_ptr _index;
   mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
 };
 

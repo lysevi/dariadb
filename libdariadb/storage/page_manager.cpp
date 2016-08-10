@@ -1,14 +1,15 @@
 #include "page_manager.h"
 #include "../flags.h"
-#include "../utils/asyncworker.h"
 #include "../utils/fs.h"
 #include "../utils/locker.h"
 #include "../utils/lru.h"
 #include "../utils/metrics.h"
 #include "../utils/thread_manager.h"
 #include "../utils/utils.h"
+#include "../utils/utils.h"
 #include "bloom_filter.h"
 #include "manifest.h"
+#include "options.h"
 #include "page.h"
 
 #include <atomic>
@@ -22,60 +23,58 @@
 #include <queue>
 #include <sstream>
 #include <thread>
+#include <unordered_map>
 
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-const std::string GC_WAL_FILENAME = "gc_wall";
-
 dariadb::storage::PageManager *PageManager::_instance = nullptr;
-// PM
-class PageManager::Private /*:public dariadb::utils::AsyncWorker<Chunk_Ptr>*/ {
+
+using File2PageHeader = std::unordered_map<std::string, IndexHeader>;
+
+class PageManager::Private {
 public:
-  Private(const PageManager::Params &param)
-      : _cur_page(nullptr), _param(param),
-        _openned_pages(param.openned_page_chache_size) {
-    _transaction_next_number = 0;
+  Private()
+      : _cur_page(nullptr),
+        _openned_pages(Options::instance()->page_openned_page_chache_size) {
+
     update_id = false;
     last_id = 0;
 
-    _cur_page = open_last_openned();
-    _under_transaction = false;
-    if (_cur_page != nullptr) {
-      _transaction_next_number = _cur_page->header->transaction + 1;
-    } else {
-      _transaction_next_number = 0;
+    if (utils::fs::path_exists(Options::instance()->path)) {
+      auto pages = Manifest::instance()->page_list();
+
+      for (auto n : pages) {
+        auto file_name = utils::fs::append_path(Options::instance()->path, n);
+        auto hdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+        _file2header[n] = hdr;
+      }
     }
-    /*this->start_async();*/
+  }
+
+  ~Private() {
+    if (_cur_page != nullptr) {
+      _cur_page = nullptr;
+    }
+    _openned_pages.clear();
   }
 
   void fsck(bool force_check) {
     if (force_check) {
       logger_info("PageManager: fsck force");
     }
-    if (!utils::fs::path_exists(_param.path)) {
+    if (!utils::fs::path_exists(Options::instance()->path)) {
       return;
-    }
-
-    if (utils::fs::path_exists(utils::fs::append_path(_param.path, GC_WAL_FILENAME))) {
-      logger_info("found " << utils::fs::append_path(_param.path, GC_WAL_FILENAME));
-      this->play_gcwall(true);
     }
 
     auto pages = Manifest::instance()->page_list();
 
     for (auto n : pages) {
-      auto file_name = utils::fs::append_path(_param.path, n);
+      auto file_name = utils::fs::append_path(Options::instance()->path, n);
       auto hdr = Page::readHeader(file_name);
       if (hdr.removed_chunks == hdr.addeded_chunks) {
-        auto target_name = utils::fs::extract_filename(file_name);
-        logger_info("page: " << target_name << " is empty. removing...");
-        // TODO move page removing to method.
-        _openned_pages.erase(file_name);
-
-        Manifest::instance()->page_rm(target_name);
-        utils::fs::rm(file_name);
-        utils::fs::rm(file_name + "i");
+        logger_info("page: " << file_name << " is empty.");
+        erase_page(file_name);
       } else {
         if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
           auto res = Page_Ptr{Page::open(file_name)};
@@ -86,76 +85,27 @@ public:
     }
   }
 
-  Page_Ptr open_last_openned() {
-    if (!utils::fs::path_exists(_param.path)) {
-      return nullptr;
-    }
-    auto pages = Manifest::instance()->page_list();
-
-    for (auto n : pages) {
-      auto file_name = utils::fs::append_path(_param.path, n);
-      auto hdr = Page::readHeader(file_name);
-      if (!hdr.is_full) {
-        auto res = Page_Ptr{Page::open(file_name)};
-        update_id = false;
-        return res;
-      } else {
-        last_id = std::max(last_id, hdr.max_chunk_id);
-        update_id = true;
-      }
-    }
-    return nullptr;
+  /// file_name - full path.
+  void erase_page(const std::string &file_name) {
+    auto target_name = utils::fs::extract_filename(file_name);
+    logger_info("page: " << file_name << " removing...");
+    erase(target_name);
   }
 
-  ~Private() {
-    /* this->stop_async();*/
+  void erase(const std::string &fname) {
+    auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+    _openned_pages.erase(full_file_name);
 
-    if (_cur_page != nullptr) {
-      _cur_page = nullptr;
-    }
-    _openned_pages.clear();
-  }
-
-  uint64_t calc_page_size() const {
-    auto sz_info = _param.chunk_per_storage * sizeof(ChunkHeader);
-    auto sz_buffers = _param.chunk_per_storage * _param.chunk_size;
-    return sizeof(PageHeader) + sz_buffers + sz_info;
-  }
-
-  Page_Ptr create_page() {
-    TIMECODE_METRICS(ctmd, "create", "PageManager::create_page");
-    if (!dariadb::utils::fs::path_exists(_param.path)) {
-      dariadb::utils::fs::mkdir(_param.path);
-    }
-
-    Page *res = nullptr;
-
-    std::string page_name = utils::fs::random_file_name(".page");
-    std::string file_name = dariadb::utils::fs::append_path(_param.path, page_name);
-    auto sz = calc_page_size();
-    res = Page::create(file_name, sz, _param.chunk_per_storage, _param.chunk_size);
-    Manifest::instance()->page_append(page_name);
-    if (update_id) {
-      res->header->max_chunk_id = last_id;
-    }
-
-    return Page_Ptr{res};
+    Manifest::instance()->page_rm(fname);
+    utils::fs::rm(full_file_name);
+    utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+    _file2header.erase(fname);
   }
   // PM
-  void flush() { /*this->flush_async();*/
-  }
-  // void call_async(const Chunk_Ptr &ch) override { /*write_to_page(ch);*/ }
-
-  Page_Ptr get_cur_page() {
-    if (_cur_page == nullptr) {
-      _cur_page = create_page();
-    }
-    return _cur_page;
-  }
+  void flush() {}
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pages = pages_by_filter(
         [id](const IndexHeader &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
@@ -213,15 +163,16 @@ public:
         pg = Page_Ptr{Page::open(pname, true)};
         Page_Ptr dropped;
         _openned_pages.put(pname, pg, &dropped);
-        if (dropped == nullptr || dropped->header->count_readers == 0) {
-          dropped = nullptr;
-        } else {
+        if (dropped != nullptr) {
+          _file2header.erase(dropped->filename);
+        }
+        /*if (dropped != nullptr) {
           _openned_pages.set_max_size(_openned_pages.size() + 1);
           Page_Ptr should_be_null;
           if (_openned_pages.put(dropped->filename, dropped, &should_be_null)) {
             throw MAKE_EXCEPTION("LRU cache logic wrong.");
           }
-        }
+        }*/
       }
     }
     return pg;
@@ -229,7 +180,6 @@ public:
 
   ChunkLinkList chunksByIterval(const QueryInterval &query) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::chunksByIterval");
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [query](const IndexHeader &hdr) {
       auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
@@ -263,9 +213,9 @@ public:
     return result;
   }
 
-  void readLinks(const QueryInterval &query, const ChunkLinkList &links, ReaderClb *clb) {
+  void readLinks(const QueryInterval &query, const ChunkLinkList &links,
+                 IReaderClb *clb) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
-    std::lock_guard<std::mutex> lg(_locker);
 
     ChunkLinkList to_read;
 
@@ -295,12 +245,12 @@ public:
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::pages_by_filter");
     std::list<std::string> result;
-    auto names = Manifest::instance()->page_list();
-    for (auto n : names) {
-      auto index_file_name = utils::fs::append_path(_param.path, n + "i");
-      auto hdr = Page::readIndexHeader(index_file_name);
+
+    for (auto f2h : _file2header) {
+      auto hdr = f2h.second;
       if (pred(hdr)) {
-        auto page_file_name = utils::fs::append_path(_param.path, n);
+        auto page_file_name =
+            utils::fs::append_path(Options::instance()->path, f2h.first);
         result.push_back(page_file_name);
       }
     }
@@ -309,14 +259,6 @@ public:
 
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
     TIMECODE_METRICS(ctmd, "readInTimePoint", "PageManager::valuesBeforeTimePoint");
-    std::lock_guard<std::mutex> lg(_locker);
-
-    Meas::Id2Meas result;
-
-    for (auto id : query.ids) {
-      result[id].flag = Flags::_NO_DATA;
-      result[id].time = query.time_point;
-    }
 
     auto pred = [query](const IndexHeader &hdr) {
       auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
@@ -330,6 +272,14 @@ public:
       }
       return false;
     };
+
+    Meas::Id2Meas result;
+
+    for (auto id : query.ids) {
+      result[id].flag = Flags::_NO_DATA;
+      result[id].time = query.time_point;
+    }
+
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
     for (auto it = page_list.rbegin(); it != page_list.rend(); ++it) {
@@ -358,7 +308,6 @@ public:
   size_t files_count() const { return Manifest::instance()->page_list().size(); }
 
   dariadb::Time minTime() {
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [](const IndexHeader &) { return true; };
 
@@ -373,7 +322,6 @@ public:
     return res;
   }
   dariadb::Time maxTime() {
-    std::lock_guard<std::mutex> lg(_locker);
 
     auto pred = [](const IndexHeader &) { return true; };
 
@@ -388,276 +336,49 @@ public:
     return res;
   }
 
-  append_result append_unsafe(const Meas &value) {
-    while (true) {
-      auto cur_page = this->get_cur_page();
-      if (_under_transaction) {
-        cur_page->header->transaction = _transaction_next_number;
-      }
-      cur_page->header->_under_transaction = _under_transaction;
-      if (update_id) {
-        update_id = false;
-      }
-      auto res = cur_page->append(value);
-      if (res.writed != 1) {
-        last_id = _cur_page->header->max_chunk_id;
-        update_id = true;
-        _cur_page = nullptr;
-      } else {
-        return res;
-      }
-    }
-  }
-  append_result append(const Meas &value) {
-    TIMECODE_METRICS(ctmd, "append", "PageManager::append");
-    std::lock_guard<std::mutex> lg(_locker);
-    return append_unsafe(value);
-  }
-
-  uint64_t begin_transaction_unsafe() {
-    if (_under_transaction) {
-      throw MAKE_EXCEPTION("transaction already openned");
-    }
-    _transaction_next_number++;
-    _under_transaction = true;
-    if (_cur_page != nullptr) {
-      _cur_page->begin_transaction(_transaction_next_number);
-    }
-    return _transaction_next_number;
-  }
-
-  uint64_t begin_transaction() {
-    std::lock_guard<std::mutex> lg(_locker);
-
-    return begin_transaction_unsafe();
-  }
-
-  void commit_transaction_unsafe(uint64_t num) {
-    auto pred = [num](const IndexHeader &h) { return h.transaction == num; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-
-    for (auto pname : page_list) {
-      auto p = Page::open(pname, false);
-      p->commit_transaction(num);
-      delete p;
-    }
-    _under_transaction = false;
-  }
-
-  void commit_transaction(uint64_t num) {
-    std::lock_guard<std::mutex> lg(_locker);
-    commit_transaction_unsafe(num);
-  }
-
-  void rollback_transaction(uint64_t num) {
-    std::lock_guard<std::mutex> lg(_locker);
-
-    auto pred = [num](const IndexHeader &) { return true; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-
-    for (auto pname : page_list) {
-      auto p = Page::open(pname, false);
-      p->rollback_transaction(num);
-      delete p;
-    }
-    _under_transaction = false;
-  }
-
-  struct ChunkById {
-    bool operator()(const std::tuple<Chunk_Ptr, Page_Ptr> &left,
-                    const std::tuple<Chunk_Ptr, Page_Ptr> &right) const {
-      return std::get<0>(left)->header->maxTime < std::get<0>(right)->header->maxTime;
-    }
-  };
-
-  PageManager::GCResult play_gcwall(bool in_fsck) {
-    auto gc_file = utils::fs::append_path(this->_param.path, GC_WAL_FILENAME);
-    std::ifstream gc_wall_ifs;
-    gc_wall_ifs.open(gc_file, std::ifstream::in);
-    if (!gc_wall_ifs.is_open()) {
-      throw MAKE_EXCEPTION("can open gc_wall file in " + this->_param.path);
-    }
-    std::string transaction_num_txt;
-    uint64_t transaction_num = 0;
-    if (!std::getline(gc_wall_ifs, transaction_num_txt)) {
-      throw MAKE_EXCEPTION("gc_wall is broken: transaction num.");
-    } else {
-      transaction_num = std::atoll(transaction_num_txt.c_str());
-    }
-    GCResult result;
-
-    if (in_fsck) {
-      this->rollback_transaction(transaction_num);
+  void append(const std::string &file_prefix, const dariadb::Meas::MeasArray &ma) {
+    TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
+    if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
+      dariadb::utils::fs::mkdir(Options::instance()->path);
     }
 
-    std::list<Page_Ptr> openned_pages;
-    std::map<dariadb::Id, std::set<std::tuple<Chunk_Ptr, Page_Ptr>, ChunkById>> id2chunks;
+    Page *res = nullptr;
 
-    while (1) {
-      std::string page_name;
-      if (!std::getline(gc_wall_ifs, page_name)) {
-        break;
-      }
-      std::string chunks_poses;
-      if (!std::getline(gc_wall_ifs, chunks_poses)) {
-        throw MAKE_EXCEPTION("gc_wall is broken");
-      }
-      bool file_is_exists = utils::fs::path_exists(page_name);
-      if (!file_is_exists) {
-        if (!in_fsck) {
-          throw MAKE_EXCEPTION("file not found: " + page_name);
-        }
-      }
-      // TODO move split to utils.
-      std::vector<std::string> tokens;
-      std::istringstream iss(chunks_poses);
-      std::copy(std::istream_iterator<std::string>(iss),
-                std::istream_iterator<std::string>(), std::back_inserter(tokens));
-
-      std::vector<uint32_t> poses(tokens.size());
-      size_t pos = 0;
-      for (auto &t : tokens) {
-        poses[pos++] = atoi(t.c_str());
-      }
-      if (!file_is_exists) {
-        continue;
-      }
-      auto raw_ptr = Page::open(page_name, false);
-      Page_Ptr p{raw_ptr};
-      auto not_full_chunks = p->chunks_by_pos(poses);
-      assert(not_full_chunks.size() == poses.size());
-
-      openned_pages.push_back(p);
-      for (auto &ch : not_full_chunks) {
-        id2chunks[ch->header->first.id].insert(std::tie(ch, p));
-        result.chunks_merged++;
-      }
+    std::string page_name = file_prefix + PAGE_FILE_EXT;
+    std::string file_name =
+        dariadb::utils::fs::append_path(Options::instance()->path, page_name);
+    res = Page::create(file_name, last_id, Options::instance()->page_chunk_size, ma);
+    Manifest::instance()->page_append(page_name);
+    if (update_id) {
+      res->header->max_chunk_id = last_id;
     }
-    gc_wall_ifs.close();
-    size_t unmarked = 0;
-    for (auto &kv : id2chunks) {
-      for (auto &ch_pg : kv.second) {
-        auto ch_ptr = std::get<0>(ch_pg);
-        auto pg_ptr = std::get<1>(ch_pg);
-        if (in_fsck) {
-          pg_ptr->mark_as_init(ch_ptr);
-          unmarked++;
-        } else {
-          auto rdr = ch_ptr->get_reader();
-          while (!rdr->is_end()) {
-            auto subres = rdr->readNext();
-            this->append_unsafe(subres);
-          }
-          pg_ptr->mark_as_non_init(ch_ptr);
-          unmarked++;
-          pg_ptr->flush();
-        }
-      }
-    }
-
-    if (in_fsck) {
-      logger_info("unmakrked: " << unmarked);
-      logger_info("rm gc_wall.");
-      utils::fs::rm(gc_file);
-      return result;
-    }
-    std::list<std::string> to_remove;
-    for (auto &pg_ptr : openned_pages) {
-      if (pg_ptr->header->removed_chunks == pg_ptr->header->addeded_chunks) {
-        auto fname = pg_ptr->filename;
-        to_remove.push_back(fname);
-        _openned_pages.erase(fname);
-        result.page_removed++;
-      }
-    }
-    openned_pages.clear();
-    id2chunks.clear();
-    this->commit_transaction_unsafe(transaction_num);
-    utils::fs::rm(gc_file);
-    for (auto &fname : to_remove) {
-      auto target_name = utils::fs::extract_filename(fname);
-
-      Manifest::instance()->page_rm(target_name);
-      utils::fs::rm(fname);
-      utils::fs::rm(fname + "i");
-    }
-
-    return result;
-  }
-  PageManager::GCResult merge_non_full_chunks() {
-    std::lock_guard<std::mutex> lg(_locker);
-    GCResult result;
-    auto all_pages = Manifest::instance()->page_list();
-    if (all_pages.size() < size_t(2)) {
-      return result;
-    }
-    auto pred = [](const IndexHeader &h) { return h.is_full; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-
-    std::stringstream ss{};
-    for (auto &pname : page_list) {
-      auto raw_ptr = Page::open(pname, false);
-      Page_Ptr p{raw_ptr};
-
-      auto not_full_chunks = p->get_not_full_chunks();
-      if (not_full_chunks.empty()) {
-        continue;
-      }
-      ss << pname << std::endl;
-      for (auto &ch : not_full_chunks) {
-        result.chunks_merged++;
-        ss << ch->header->pos_in_page << " ";
-      }
-      ss << std::endl;
-    }
-
-    std::string gc_wal_txt = ss.str();
-    if (gc_wal_txt.empty()) {
-      return result;
-    }
-    std::ofstream ofs;
-    ofs.open(utils::fs::append_path(this->_param.path, GC_WAL_FILENAME),
-             std::ios::out | std::ios::app);
-    if (!ofs.is_open()) {
-      throw MAKE_EXCEPTION("can create gc_wall file in " + this->_param.path);
-    }
-    auto transaction_num = this->begin_transaction_unsafe();
-    ofs << transaction_num << std::endl;
-    ofs << gc_wal_txt;
-    ofs.close();
-    return play_gcwall(false);
+    delete res;
+    _file2header[page_name] =
+        Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
 
 protected:
   Page_Ptr _cur_page;
-  PageManager::Params _param;
-  mutable std::mutex _locker, _page_open_lock;
+  mutable std::mutex _page_open_lock;
 
   uint64_t last_id;
   bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
-  std::atomic<uint64_t> _transaction_next_number;
-  bool _under_transaction;
+  File2PageHeader _file2header;
 };
 
-PageManager::PageManager(const PageManager::Params &param)
-    : impl(new PageManager::Private{param}) {}
+PageManager::PageManager() : impl(new PageManager::Private) {}
 
 PageManager::~PageManager() {}
 
-void PageManager::start(const PageManager::Params &param) {
+void PageManager::start() {
   if (PageManager::_instance == nullptr) {
-    // ChunkCache::start(param.chunk_cache_size);
-    PageManager::_instance = new PageManager(param);
+    PageManager::_instance = new PageManager();
   }
 }
 
 void PageManager::stop() {
   if (_instance != nullptr) {
-    // ChunkCache::stop();
     delete PageManager::_instance;
     _instance = nullptr;
   }
@@ -677,7 +398,7 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return impl->minMaxTime(id, minResult, maxResult);
 }
 
-dariadb::storage::ChunkLinkList PageManager::chunksByIterval(const QueryInterval &query) {
+ChunkLinkList PageManager::chunksByIterval(const QueryInterval &query) {
   return impl->chunksByIterval(query);
 }
 
@@ -686,7 +407,7 @@ dariadb::Meas::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &
 }
 
 void PageManager::readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                            ReaderClb *clb) {
+                            IReaderClb *clb) {
   impl->readLinks(query, links, clb);
 }
 
@@ -706,26 +427,14 @@ dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
 }
 
-dariadb::append_result dariadb::storage::PageManager::append(const Meas &value) {
-  return impl->append(value);
+void PageManager::append(const std::string &file_prefix,
+                         const dariadb::Meas::MeasArray &ma) {
+  return impl->append(file_prefix, ma);
 }
-
 void PageManager::fsck(bool force_check) {
   return impl->fsck(force_check);
 }
 
-uint64_t PageManager::begin_transaction() {
-  return impl->begin_transaction();
-}
-
-void PageManager::commit_transaction(uint64_t num) {
-  impl->commit_transaction(num);
-}
-
-void PageManager::rollback_transaction(uint64_t num) {
-  impl->rollback_transaction(num);
-}
-
-PageManager::GCResult PageManager::gc() {
-  return impl->merge_non_full_chunks();
+void PageManager::erase(const std::string &fname) {
+  return impl->erase(fname);
 }

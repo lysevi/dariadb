@@ -7,7 +7,6 @@
 #include <iostream>
 #include <thread>
 #include <timeutil.h>
-#include <utils/asyncworker.h>
 #include <utils/crc.h>
 #include <utils/fs.h>
 #include <utils/in_interval.h>
@@ -81,6 +80,9 @@ BOOST_AUTO_TEST_CASE(LRUCheck) {
   BOOST_CHECK(ilru.put(55, 550, &out_val));
   BOOST_CHECK_EQUAL(ilru.size(), size_t(10));
   BOOST_CHECK_EQUAL(out_val, 20);
+  ilru.erase(55);
+  BOOST_CHECK_EQUAL(ilru.size(), size_t(9));
+  BOOST_CHECK(!ilru.find(55, &out_val));
 }
 
 BOOST_AUTO_TEST_CASE(SkipListCheck) {
@@ -144,7 +146,6 @@ BOOST_AUTO_TEST_CASE(SkipListCheck) {
   for (auto it : lst) {
     BOOST_CHECK(it.first >= 20);
   }
-  // lst.print();
 }
 
 BOOST_AUTO_TEST_CASE(CountZero) {
@@ -217,7 +218,7 @@ public:
       : dariadb::utils::PeriodWorker(sleep_time) {
     call_count = 0;
   }
-  void call() { call_count++; }
+  void period_call() override { call_count++; }
   size_t call_count;
 };
 
@@ -225,39 +226,10 @@ BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
   auto secs_1 = std::chrono::milliseconds(1000);
   auto secs_3 = std::chrono::milliseconds(1300);
   std::unique_ptr<TestPeriodWorker> worker{new TestPeriodWorker(secs_1)};
-  worker->start_worker();
+  worker->period_worker_start();
   std::this_thread::sleep_for(secs_3);
-  worker->stop_worker();
-  BOOST_CHECK(worker->call_count > 1);
-}
-
-class TestWorker : public dariadb::utils::AsyncWorker<int> {
-public:
-  int value;
-  TestWorker() : value(0) {}
-  void call_async(const int &data) override { value += data; }
-};
-
-BOOST_AUTO_TEST_CASE(Worker) {
-
-  TestWorker worker;
-
-  worker.start_async();
-
-  BOOST_CHECK(!worker.is_busy());
-
-  worker.add_async_data(1);
-  worker.add_async_data(2);
-  worker.add_async_data(3);
-  worker.add_async_data(4);
-
-  worker.flush_async();
-
-  BOOST_CHECK(!worker.is_busy());
-
-  worker.stop_async();
-  BOOST_CHECK(worker.stoped());
-  BOOST_CHECK_EQUAL(worker.value, (int)1 + 2 + 3 + 4);
+  worker->period_worker_stop();
+  BOOST_CHECK_GT(worker->call_count, size_t(1));
 }
 
 BOOST_AUTO_TEST_CASE(Metrics) {
@@ -275,7 +247,7 @@ BOOST_AUTO_TEST_CASE(Metrics) {
     }
     using dariadb::utils::metrics::FloatMetric;
     ADD_METRICS("group2", "template",
-                dariadb::utils::metrics::Metric_Ptr{new FloatMetric(float(3.14))});
+                dariadb::utils::metrics::IMetric_Ptr{new FloatMetric(float(3.14))});
   }
   auto dump = dariadb::utils::metrics::MetricsManager::instance()->to_string();
   BOOST_CHECK(dump.size() > size_t(0));
@@ -375,8 +347,14 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
       ThreadManager::instance()->post(tk1, AT(at1));
       ThreadManager::instance()->post(tk2, AT(at2));
     }
-    BOOST_CHECK_GT(ThreadManager::instance()->active_works(), size_t(0));
+    BOOST_CHECK_GE(ThreadManager::instance()->active_works(), size_t(0));
     ThreadManager::instance()->flush();
     ThreadManager::instance()->stop();
   }
+}
+
+BOOST_AUTO_TEST_CASE(SplitString) {
+  std::string str = "1 2 3 4 5 6 7 8";
+  auto splitted = dariadb::utils::tokens(str);
+  BOOST_CHECK_EQUAL(splitted.size(), size_t(8));
 }

@@ -27,22 +27,22 @@ namespace metrics {
 
 const char METRIC_FIELD_SEPARATOR = ' ';
 const int METRIC_PARAM_WIDTH = 15;
-class Metric;
-using Metric_Ptr = std::shared_ptr<Metric>;
-class Metric {
+class IMetric;
+using IMetric_Ptr = std::shared_ptr<IMetric>;
+class IMetric {
 public:
-  virtual void add(const Metric_Ptr &other) = 0;
+  virtual void add(const IMetric_Ptr &other) = 0;
   virtual std::string to_string() const = 0;
-  virtual ~Metric() {}
+  virtual ~IMetric() {}
 };
 
-template <class T> class TemplateMetric : public Metric {
+template <class T> class TemplateMetric : public IMetric {
 public:
   TemplateMetric(const T &value)
       : _value(value), _average(value), _min(value), _max(value), _count(1) {}
   ~TemplateMetric() {}
   // Inherited via Metric
-  virtual void add(const Metric_Ptr &other) override {
+  virtual void add(const IMetric_Ptr &other) override {
     auto other_raw = dynamic_cast<TemplateMetric *>(other.get());
     if (other_raw == nullptr) {
       throw MAKE_EXCEPTION("other_raw == nullptr");
@@ -136,12 +136,12 @@ protected:
 public:
   static MetricsManager *instance();
   ~MetricsManager();
-  void add(const std::string &group, const std::string &name, const Metric_Ptr &value);
+  void add(const std::string &group, const std::string &name, const IMetric_Ptr &value);
   std::string to_string() const;
 
 protected:
   static std::unique_ptr<MetricsManager> _instance;
-  using NameToValue = std::map<std::string, Metric_Ptr>;
+  using NameToValue = std::map<std::string, IMetric_Ptr>;
   using GroupToName = std::unordered_map<std::string, NameToValue>;
 
   GroupToName _values;
@@ -157,7 +157,7 @@ public:
   }
   ~RAI_TimeMetric() {
     auto elapsed = std::chrono::high_resolution_clock::now() - _value;
-    MetricsManager::instance()->add(_group, _name, Metric_Ptr{new TimeMetric(elapsed)});
+    MetricsManager::instance()->add(_group, _name, IMetric_Ptr{new TimeMetric(elapsed)});
   }
 
 protected:
