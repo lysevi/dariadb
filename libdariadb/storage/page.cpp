@@ -62,17 +62,13 @@ std::list<HdrAndBuffer> compressValues(std::list<Meas::MeasList> &to_compress,
       memset(buffer_ptr.get(), 0, buff_size);
       ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, *it);
       ++it;
-      while (true) {
+      while (it != lst.cend()) {
         if (!ch.append(*it)) {
           break;
         }
         ++it;
-        if (it == lst.cend()) {
-          break;
-        }
       }
       ch.close();
-
       phdr.max_chunk_id++;
       phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
       phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
