@@ -62,17 +62,13 @@ std::list<HdrAndBuffer> compressValues(std::list<Meas::MeasList> &to_compress,
       memset(buffer_ptr.get(), 0, buff_size);
       ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, *it);
       ++it;
-      while (true) {
+      while (it != lst.cend()) {
         if (!ch.append(*it)) {
           break;
         }
         ++it;
-        if (it == lst.cend()) {
-          break;
-        }
       }
       ch.close();
-
       phdr.max_chunk_id++;
       phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
       phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
@@ -158,7 +154,6 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   std::list<PageInner::HdrAndBuffer> compressed_results =
       PageInner::compressValues(to_compress, phdr, max_chunk_size);
 
-  //assert(phdr.maxTime<1480856385457);
   auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
   phdr.filesize = page_size;
 
