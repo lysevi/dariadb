@@ -353,7 +353,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Active threads: "
               << utils::async::ThreadManager::instance()->active_works() << std::endl;
 
-    //dariadb_bench::readBenchark(all_id_set, ms.get(), 100);
+    dariadb_bench::readBenchark(all_id_set, ms.get(), 100);
 
     auto max_time = ms->maxTime();
     std::cout << "==> interval end time: " << timeutil::to_string(max_time) << std::endl;
