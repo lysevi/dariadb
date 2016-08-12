@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <clocale>
 
 std::vector<std::string> dariadb::utils::tokens(const std::string &str) {
   std::vector<std::string> tokens;
@@ -25,4 +26,14 @@ std::vector<std::string> dariadb::utils::split(const std::string &text, char sep
     std::string temp = text.substr(start);
     if (temp != "") tokens.push_back(temp);
     return tokens;
+}
+
+
+std::string dariadb::utils::to_upper(const std::string &text){
+    std::string converted=text;
+
+    for(size_t i = 0; i < converted.size(); ++i){
+        converted[i] = std::toupper(converted[i]);
+    }
+    return converted;
 }

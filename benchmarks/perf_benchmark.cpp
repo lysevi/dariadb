@@ -18,6 +18,7 @@ bool metrics_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
+STRATEGY strategy=STRATEGY::FAST_READ;
 
 class BenchCallback : public IReaderClb {
 public:
@@ -28,15 +29,14 @@ public:
 
 void parse_cmdline(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")("readonly", "readonly mode")(
-      "readall", "read all benchmark enable.")
-
-      ("dont-clean", "dont clean storage path before start.")(
-          "enable-readers",
-          po::value<bool>(&readers_enable)->default_value(readers_enable),
-          "enable readers threads")(
-          "enable-metrics",
-          po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+  desc.add_options()
+          ("help", "produce help message")
+          ("readonly", "readonly mode")
+          ("readall", "read all benchmark enable.")
+          ("dont-clean", "dont clean storage path before start.")
+          ("enable-readers",po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
+          ("enable-metrics",po::value<bool>(&metrics_enable)->default_value(metrics_enable))
+          ("strategy", po::value<STRATEGY>(&strategy)->default_value (STRATEGY::FAST_READ), "Write strategy");
 
   po::variables_map vm;
   try {
@@ -285,8 +285,7 @@ int main(int argc, char *argv[]) {
 
     Options::start(storage_path);
     if (!is_exists) {
-      Options::instance()->set_default();
-      Options::instance()->strategy = dariadb::storage::STRATEGY::FAST_READ;
+      Options::instance()->strategy = strategy;
     }
 
     auto raw_ptr = new Engine();
@@ -329,7 +328,7 @@ int main(int argc, char *argv[]) {
       std::cout << "flush time: " << elapsed << std::endl;
     }
 
-    if (!readonly) {
+    if (!readonly && Options::instance()->strategy != dariadb::storage::STRATEGY::DYNAMIC) {
       size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
       std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
       stop_info = false;

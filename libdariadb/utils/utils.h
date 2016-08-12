@@ -61,5 +61,6 @@ struct Range {
 /// split string by space.
 std::vector<std::string> tokens(const std::string &str);
 std::vector<std::string> split(const std::string &text, char sep);
+std::string to_upper(const std::string &text);
 }
 }

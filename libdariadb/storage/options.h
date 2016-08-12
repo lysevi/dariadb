@@ -2,7 +2,7 @@
 
 #include "../meas.h"
 #include "../utils/locker.h"
-#include <atomic>
+#include "strategy.h"
 
 namespace dariadb {
 namespace storage {
@@ -14,13 +14,6 @@ const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
 const uint32_t CHUNK_SIZE = 512;
 const uint32_t CAP_B = 50;
 const std::string OPTIONS_FILE_NAME = "Options";
-
-enum class STRATEGY: uint16_t{
-    DYNAMIC=0,
-    FAST_WRITE,
-    FAST_READ,
-    COMPRESSED
-};
 
 class Options {
   Options();

@@ -40,6 +40,7 @@ class Engine::Private {
 public:
   Private() {
       logger_info("version: "<<this->version().to_string());
+      logger_info("strategy: "<<Options::instance()->strategy);
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
