@@ -45,6 +45,7 @@ public:
 
   void erase(const std::string &fname);
 
+  void drop_closed_files(size_t count);
 protected:
   void create_new();
   std::list<std::string> aof_files() const;

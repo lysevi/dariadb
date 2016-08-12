@@ -286,6 +286,7 @@ int main(int argc, char *argv[]) {
     Options::start(storage_path);
     if (!is_exists) {
       Options::instance()->set_default();
+      Options::instance()->strategy = dariadb::storage::STRATEGY::FAST_READ;
     }
 
     auto raw_ptr = new Engine();
@@ -326,6 +327,22 @@ int main(int argc, char *argv[]) {
       stop_info = true;
       flush_info_thread.join();
       std::cout << "flush time: " << elapsed << std::endl;
+    }
+
+    if (!readonly) {
+      size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
+      std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
+      stop_info = false;
+      std::thread flush_info_thread(show_drop_info, raw_ptr);
+
+      auto start = clock();
+      raw_ptr->drop_part_aofs(ccount);
+      raw_ptr->flush();
+      raw_ptr->wait_all_asyncs();
+      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+      stop_info = true;
+      flush_info_thread.join();
+      std::cout << "drop time: " << elapsed << std::endl;
     }
 
     if (!readonly) {

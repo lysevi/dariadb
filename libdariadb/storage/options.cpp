@@ -15,12 +15,11 @@ std::string options_file_path(const std::string &path) {
 }
 
 Options::Options() {
-  aof_buffer_size = AOF_BUFFER_SIZE;
-  cap_max_levels = CAP_DEFAULT_MAX_LEVELS;
+  set_default();
   cap_max_closed_caps = CAP_MAX_CLOSED_CAPS;
   cap_store_period = 0;
-  page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
-  strategy=STRATEGY::DYNAMIC;
+
+  strategy = STRATEGY::DYNAMIC;
 }
 
 void Options::start() {
@@ -44,12 +43,14 @@ void Options::calc_params() {
 
 void Options::set_default() {
   logger("options: set default options");
-  aof_buffer_size = 1000;
+  aof_buffer_size = AOF_BUFFER_SIZE;
   cap_B = CAP_B;
   cap_store_period = 0; // 1000 * 60 * 60;
-  cap_max_levels = 11;
+  cap_max_levels = CAP_DEFAULT_MAX_LEVELS;
   cap_max_closed_caps = 0; // 5;
   page_chunk_size = CHUNK_SIZE;
+  page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
+
   strategy=STRATEGY::DYNAMIC;
 
   calc_params();

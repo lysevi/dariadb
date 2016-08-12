@@ -64,6 +64,7 @@ public:
   Id load(const QueryTimePoint &qt);
   Meas::MeasList getResult(Id);
 
+  void drop_part_aofs(size_t count);
   void drop_part_caps(size_t count);
 
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);

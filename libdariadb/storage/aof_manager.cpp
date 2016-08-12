@@ -70,33 +70,37 @@ void AOFManager::create_new() {
   _aof = AOFile_Ptr{new AOFile()};
 }
 
-void AOFManager::drop_old_if_needed() {
+void AOFManager::drop_closed_files(size_t count) {
   if (_down != nullptr) {
     auto closed = this->closed_aofs();
-    // if (closed.size() > _params.max_closed_aofs)
-    {
-      TIMECODE_METRICS(ctmd, "drop", "AOFManager::create_new::dump");
-      size_t to_drop = closed.size();
-      for (size_t i = 0; i < to_drop; ++i) {
-        auto f = closed.front();
-        closed.pop_front();
-        auto without_path = utils::fs::extract_filename(f);
-        if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-          this->drop_aof(f, _down);
-        }
+
+    TIMECODE_METRICS(ctmd, "drop", "AOFManager::drop_closed_files");
+    size_t to_drop = std::min(closed.size(), count);
+    for (size_t i = 0; i < to_drop; ++i) {
+      auto f = closed.front();
+      closed.pop_front();
+      auto without_path = utils::fs::extract_filename(f);
+      if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+        this->drop_aof(f, _down);
       }
-      // clean set of sended to drop files.
-      auto aofs_exists = Manifest::instance()->aof_list();
-      std::set<std::string> aof_exists_set{aofs_exists.begin(), aofs_exists.end()};
-      std::set<std::string> new_sended_files;
-      for (auto &v : _files_send_to_drop) {
-        if (aof_exists_set.find(v) != aof_exists_set.end()) {
-          new_sended_files.insert(v);
-        }
-      }
-      _files_send_to_drop = new_sended_files;
     }
+    // clean set of sended to drop files.
+    auto aofs_exists = Manifest::instance()->aof_list();
+    std::set<std::string> aof_exists_set{aofs_exists.begin(),
+                                         aofs_exists.end()};
+    std::set<std::string> new_sended_files;
+    for (auto &v : _files_send_to_drop) {
+      if (aof_exists_set.find(v) != aof_exists_set.end()) {
+        new_sended_files.insert(v);
+      }
+    }
+    _files_send_to_drop = new_sended_files;
   }
+}
+
+void AOFManager::drop_old_if_needed() {
+    auto closed = this->closed_aofs();
+    drop_closed_files(closed.size());
 }
 
 std::list<std::string> AOFManager::aof_files() const {

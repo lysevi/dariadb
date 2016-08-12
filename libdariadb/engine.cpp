@@ -391,6 +391,10 @@ public:
     CapacitorManager::instance()->drop_closed_files(count);
   }
 
+  void drop_part_aofs(size_t count){
+AOFManager::instance()->drop_closed_files(count);
+  }
+
   void fsck() {
       logger_info("engine: fsck "<<Options::instance()->path);
     CapacitorManager::instance()->fsck();
@@ -479,6 +483,10 @@ Meas::MeasList Engine::readInterval(const QueryInterval &q) {
 
 Meas::Id2Meas Engine::readInTimePoint(const QueryTimePoint &q) {
   return _impl->readInTimePoint(q);
+}
+
+void Engine::drop_part_aofs(size_t count){
+return _impl->drop_part_aofs(count);
 }
 
 void Engine::drop_part_caps(size_t count) {
