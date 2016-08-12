@@ -17,9 +17,11 @@ using namespace dariadb::utils::async;
 CapacitorManager *CapacitorManager::_instance = nullptr;
 
 CapacitorManager::~CapacitorManager() {
-  if (Options::instance()->strategy == STRATEGY::DYNAMIC) {
-    this->period_worker_stop();
-  }
+    STRATEGY strat=Options::instance()->strategy;
+    auto period=Options::instance()->cap_store_period;
+    if (strat == STRATEGY::DYNAMIC &&period!=0) {
+        this->period_worker_stop();
+    }
 }
 
 CapacitorManager::CapacitorManager()
@@ -40,7 +42,9 @@ CapacitorManager::CapacitorManager()
       throw MAKE_EXCEPTION(ex.what());
     }
   }
-  if (Options::instance()->strategy == STRATEGY::DYNAMIC) {
+  STRATEGY strat=Options::instance()->strategy;
+  auto period=Options::instance()->cap_store_period;
+  if (strat == STRATEGY::DYNAMIC &&period!=0) {
     this->period_worker_start();
   }
 }
@@ -79,9 +83,6 @@ CapacitorManager *CapacitorManager::instance() {
 
 /// perid_worker callback
 void CapacitorManager::period_call() {
-    if(_down==nullptr){
-        return;
-    }
   auto closed = this->closed_caps();
   auto max_hdr_time =
       dariadb::timeutil::current_time() - Options::instance()->cap_store_period;
