@@ -10,8 +10,17 @@ using json = nlohmann::json;
 
 Options *Options::_instance = nullptr;
 
-std::string options_file_in_path(const std::string &path) {
+std::string options_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, OPTIONS_FILE_NAME);
+}
+
+Options::Options() {
+  aof_buffer_size = AOF_BUFFER_SIZE;
+  cap_max_levels = CAP_DEFAULT_MAX_LEVELS;
+  cap_max_closed_caps = CAP_MAX_CLOSED_CAPS;
+  cap_store_period = 0;
+  page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
+  strategy=STRATEGY::DYNAMIC;
 }
 
 void Options::start() {
@@ -23,7 +32,7 @@ void Options::start() {
 void Options::start(const std::string &path) {
   Options::start();
   Options::instance()->path = path;
-  auto f = options_file_in_path(path);
+  auto f = options_file_path(path);
   if (utils::fs::path_exists(f)) {
     Options::instance()->load(f);
   }
@@ -41,6 +50,7 @@ void Options::set_default() {
   cap_max_levels = 11;
   cap_max_closed_caps = 0; // 5;
   page_chunk_size = CHUNK_SIZE;
+  strategy=STRATEGY::DYNAMIC;
 
   calc_params();
 }
@@ -51,7 +61,7 @@ void Options::stop() {
 }
 
 void Options::save() {
-  save(options_file_in_path(_instance->path));
+  save(options_file_path(_instance->path));
 }
 
 void Options::save(const std::string &file) {
@@ -67,7 +77,8 @@ void Options::save(const std::string &file) {
   js["cap_max_closed_caps"] = cap_max_closed_caps;
 
   js["page_chunk_size"] = page_chunk_size;
-  js["page_openned_page_chache_size"] = page_openned_page_chache_size;
+  js["page_openned_page_cache_size"] = page_openned_page_cache_size;
+  js["stragety"] = (uint16_t)strategy;
 
   std::fstream fs;
   fs.open(file, std::ios::out);
@@ -92,7 +103,9 @@ void Options::load(const std::string &file) {
   cap_max_closed_caps = js["cap_max_closed_caps"];
 
   page_chunk_size = js["page_chunk_size"];
-  page_openned_page_chache_size = js["page_openned_page_chache_size"];
+  page_openned_page_cache_size = js["page_openned_page_cache_size"];
+
+  strategy=(STRATEGY)(uint16_t)js["stragety"];
 
   this->calc_params();
 }

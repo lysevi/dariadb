@@ -15,14 +15,15 @@ const uint32_t CHUNK_SIZE = 512;
 const uint32_t CAP_B = 50;
 const std::string OPTIONS_FILE_NAME = "Options";
 
+enum class STRATEGY: uint16_t{
+    DYNAMIC=0,
+    FAST_WRITE,
+    FAST_READ,
+    COMPRESSED
+};
+
 class Options {
-  Options() {
-    aof_buffer_size = AOF_BUFFER_SIZE;
-    cap_max_levels = CAP_DEFAULT_MAX_LEVELS;
-    cap_max_closed_caps = CAP_MAX_CLOSED_CAPS;
-    cap_store_period = 0;
-    page_openned_page_chache_size = OPENNED_PAGE_CACHE_SIZE;
-  }
+  Options();
   ~Options() = default;
 
 public:
@@ -62,8 +63,10 @@ public:
       cap_max_closed_caps; // if not eq 0, auto drop part of files to down-level storage
 
   uint32_t page_chunk_size;
-  uint32_t page_openned_page_chache_size; /// max oppend pages in cache(readonly
+  uint32_t page_openned_page_cache_size; /// max oppend pages in cache(readonly
                                           /// pages stored).
+
+  STRATEGY strategy;
 private:
   static Options *_instance;
 };

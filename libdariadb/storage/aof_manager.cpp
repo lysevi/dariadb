@@ -64,7 +64,9 @@ AOFManager *AOFManager::instance() {
 void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
-  drop_old_if_needed();
+  if(Options::instance()->strategy!= STRATEGY::FAST_WRITE){
+      drop_old_if_needed();
+  }
   _aof = AOFile_Ptr{new AOFile()};
 }
 

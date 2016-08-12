@@ -17,7 +17,7 @@ using namespace dariadb::utils::async;
 CapacitorManager *CapacitorManager::_instance = nullptr;
 
 CapacitorManager::~CapacitorManager() {
-  if (Options::instance()->cap_store_period != 0) {
+  if (Options::instance()->strategy == STRATEGY::DYNAMIC) {
     this->period_worker_stop();
   }
 }
@@ -40,7 +40,7 @@ CapacitorManager::CapacitorManager()
       throw MAKE_EXCEPTION(ex.what());
     }
   }
-  if (Options::instance()->cap_store_period != 0) {
+  if (Options::instance()->strategy == STRATEGY::DYNAMIC) {
     this->period_worker_start();
   }
 }
@@ -79,6 +79,9 @@ CapacitorManager *CapacitorManager::instance() {
 
 /// perid_worker callback
 void CapacitorManager::period_call() {
+    if(_down==nullptr){
+        return;
+    }
   auto closed = this->closed_caps();
   auto max_hdr_time =
       dariadb::timeutil::current_time() - Options::instance()->cap_store_period;
@@ -103,13 +106,24 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   if (_down != nullptr) {
     auto closed = this->closed_caps();
 
-    if (closed.size() > Options::instance()->cap_max_closed_caps &&
-        Options::instance()->cap_max_closed_caps > 0 &&
-        Options::instance()->cap_store_period == 0) {
-      size_t to_drop = closed.size() - Options::instance()->cap_max_closed_caps;
+    switch (Options::instance()->strategy) {
+    case STRATEGY::COMPRESSED: {
+      size_t to_drop = closed.size();
       drop_closed_unsafe(to_drop);
-    } else {
+      break;
     }
+    case STRATEGY::DYNAMIC: {
+      if (closed.size() > Options::instance()->cap_max_closed_caps &&
+          Options::instance()->cap_max_closed_caps > 0) {
+        size_t to_drop =
+            closed.size() - Options::instance()->cap_max_closed_caps;
+        drop_closed_unsafe(to_drop);
+      }
+      break;
+    }
+    default:
+      break;
+    };
   }
   auto result = Capacitor_Ptr{new Capacitor(filename)};
   _file2header[filename] = *result->header();

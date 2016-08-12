@@ -36,7 +36,7 @@ class PageManager::Private {
 public:
   Private()
       : _cur_page(nullptr),
-        _openned_pages(Options::instance()->page_openned_page_chache_size) {
+        _openned_pages(Options::instance()->page_openned_page_cache_size) {
 
     update_id = false;
     last_id = 0;

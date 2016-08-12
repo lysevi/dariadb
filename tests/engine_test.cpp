@@ -124,8 +124,8 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   Options::instance()->cap_max_closed_caps = 6;
 
   Options::instance()->page_chunk_size = 7;
-  Options::instance()->page_openned_page_chache_size = 8;
-
+  Options::instance()->page_openned_page_cache_size = 8;
+  Options::instance()->strategy = dariadb::storage::STRATEGY::COMPRESSED;
   Options::instance()->calc_params();
   Options::instance()->save();
 
@@ -143,7 +143,8 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   BOOST_CHECK_EQUAL(Options::instance()->cap_max_closed_caps, uint32_t(6));
 
   BOOST_CHECK_EQUAL(Options::instance()->page_chunk_size, uint32_t(7));
-  BOOST_CHECK_EQUAL(Options::instance()->page_openned_page_chache_size, uint32_t(8));
+  BOOST_CHECK_EQUAL(Options::instance()->page_openned_page_cache_size, uint32_t(8));
+  BOOST_CHECK(Options::instance()->strategy == dariadb::storage::STRATEGY::COMPRESSED);
 
   dariadb::storage::Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
