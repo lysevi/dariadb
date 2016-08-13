@@ -25,6 +25,11 @@
 * Two variants of API:
   - Functor API -  engine apply given function to each measurement in the incoming request.
   - Standard API - You can Query interval as list or values in time point as dictionary.
+* Write strategies:
+  - fast write - optimised for big write load.
+  - fast read  - values stored in trees for fast search.
+  - compressed - all values compressed for good disk usage
+  - dynamic - values are compressed, if the level is more than a certain value, or for a certain period of time.
 
 # Dependencies
 * Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), unit_test_framework(to build tests), program_options
