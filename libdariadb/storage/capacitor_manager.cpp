@@ -25,7 +25,7 @@ CapacitorManager::~CapacitorManager() {
 }
 
 CapacitorManager::CapacitorManager()
-    : utils::PeriodWorker(std::chrono::milliseconds(5 * 1000)) {
+    : utils::PeriodWorker(std::chrono::milliseconds(1 * 1000)) {
   _down = nullptr;
 
   /// open last not closed file.normally do nothing,
@@ -115,7 +115,7 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
     }
     case STRATEGY::DYNAMIC: {
       if (closed.size() > Options::instance()->cap_max_closed_caps &&
-          Options::instance()->cap_max_closed_caps > 0) {
+          Options::instance()->cap_max_closed_caps > 0 &&Options::instance()->cap_max_closed_caps==0) {
         size_t to_drop =
             closed.size() - Options::instance()->cap_max_closed_caps;
         drop_closed_unsafe(to_drop);

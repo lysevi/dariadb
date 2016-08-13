@@ -12,7 +12,7 @@
 namespace dariadb_bench {
 
 const size_t total_threads_count = 5;
-const size_t hours_write_perid = 5;
+const size_t hours_write_perid = 24;
 const size_t writes_per_second = 2;
 const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
 const size_t total_readers_count = 1;
@@ -40,10 +40,10 @@ dariadb::Id get_id_to(dariadb::Id id) {
   return (id + 1) * id_per_thread;
 }
 void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
-                            dariadb::storage::IMeasWriter *ms) {
+                            dariadb::storage::IMeasWriter *ms, dariadb::Time start_time) {
   try {
     auto m = dariadb::Meas::empty();
-    m.time = dariadb::timeutil::current_time();
+    m.time = start_time;
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
 

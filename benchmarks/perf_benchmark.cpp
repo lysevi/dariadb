@@ -10,6 +10,8 @@ namespace po = boost::program_options;
 
 std::atomic_llong append_count{0};
 std::atomic_size_t reads_count{0};
+Time start_time;
+
 bool stop_info = false;
 bool stop_readers = false;
 
@@ -18,6 +20,7 @@ bool metrics_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
+Time cap_store_period=0;
 STRATEGY strategy=STRATEGY::FAST_READ;
 
 class BenchCallback : public IReaderClb {
@@ -36,6 +39,7 @@ void parse_cmdline(int argc, char *argv[]) {
           ("dont-clean", "dont clean storage path before start.")
           ("enable-readers",po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
           ("enable-metrics",po::value<bool>(&metrics_enable)->default_value(metrics_enable))
+          ("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period))
           ("strategy", po::value<STRATEGY>(&strategy)->default_value (STRATEGY::FAST_READ), "Write strategy");
 
   po::variables_map vm;
@@ -168,7 +172,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
     }
     if (!readonly) {
       std::thread t{dariadb_bench::thread_writer_rnd_stor, Id(pos), &append_count,
-                    raw_ptr};
+                    raw_ptr,start_time};
       writers[pos] = std::move(t);
     }
     pos++;
@@ -280,11 +284,12 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    Time start_time = timeutil::current_time();
+    start_time = timeutil::current_time()-cap_store_period*2;
     std::cout << " start time: " << timeutil::to_string(start_time) << std::endl;
 
     Options::start(storage_path);
     if (!is_exists) {
+      Options::instance()->cap_store_period=cap_store_period;
       Options::instance()->strategy = strategy;
     }
 
