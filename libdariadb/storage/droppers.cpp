@@ -37,13 +37,17 @@ void AofDropper::drop(const std::string &fname, const std::string &storage_path)
 
 void AofDropper::drop(const std::string fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
-    TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
-    TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
-    LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
+    try {
+      TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+      TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
+      LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
 
-    AofDropper::drop(fname, Options::instance()->path);
+      AofDropper::drop(fname, Options::instance()->path);
 
-    LockManager::instance()->unlock(LockObjects::DROP_AOF);
+      LockManager::instance()->unlock(LockObjects::DROP_AOF);
+    } catch (std::exception &ex) {
+      THROW_EXCEPTION_SS("AofDropper::drop: " << ex.what());
+    }
   };
 
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
@@ -69,21 +73,25 @@ void AofDropper::cleanStorage(std::string storagePath) {
 
 void CapDrooper::drop(const std::string &fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
-    TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
-    TIMECODE_METRICS(ctmd, "drop", "CapDrooper::drop");
+    try {
+      TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+      TIMECODE_METRICS(ctmd, "drop", "CapDrooper::drop");
 
-    LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
-    auto cap = Capacitor_Ptr{new Capacitor{fname, false}};
+      LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
+      auto cap = Capacitor_Ptr{new Capacitor{fname, false}};
 
-    auto without_path = fs::extract_filename(fname);
-    auto page_fname = fs::filename(without_path);
-    auto all = cap->readAll();
-    assert(all.size() == cap->size());
-    PageManager::instance()->append(page_fname, all);
+      auto without_path = fs::extract_filename(fname);
+      auto page_fname = fs::filename(without_path);
+      auto all = cap->readAll();
+      assert(all.size() == cap->size());
+      PageManager::instance()->append(page_fname, all);
 
-    cap = nullptr;
-    CapacitorManager::instance()->erase(without_path);
-    LockManager::instance()->unlock(LockObjects::DROP_CAP);
+      cap = nullptr;
+      CapacitorManager::instance()->erase(without_path);
+      LockManager::instance()->unlock(LockObjects::DROP_CAP);
+    } catch (std::exception &ex) {
+      THROW_EXCEPTION_SS("CapDrooper::drop: " << ex.what());
+    }
   };
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
 }
