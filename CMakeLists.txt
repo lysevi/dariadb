@@ -126,9 +126,12 @@ include_directories(extern)
 
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 option(ENABLE_METRICS "Enable code metrics." ON)
+option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
+
 MESSAGE(STATUS "Options: ")
 MESSAGE(STATUS "ENABLE_TESTING - " ${ENABLE_TESTING})
 MESSAGE(STATUS "ENABLE_METRICS - " ${ENABLE_METRICS})
+MESSAGE(STATUS "ENABLE_INTEGRATION_TESTS - " ${ENABLE_INTEGRATION_TESTS})
 
 if (ENABLE_METRICS)
   add_definitions(-DENABLE_METRICS)
@@ -146,3 +149,17 @@ endif(ENABLE_TESTING)
 
 add_subdirectory (benchmarks)
 add_subdirectory (tools)
+
+macro(ADD_PERF_TEST name)
+   MESSAGE(STATUS " + perf_benchmark "  ${name} " "  ${ARGN})
+   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/perf_benchmark --read-benchmark-runs=10  ${ARGN})
+endmacro(ADD_PERF_TEST)
+
+if(ENABLE_INTEGRATION_TESTS)
+   MESSAGE(STATUS "Integration tests: ")
+   ADD_PERF_TEST(DYNAMIC-TIME --strategy=DYNAMIC --store-period=3600000)
+   ADD_PERF_TEST(DYNAMIC --strategy=DYNAMIC)
+   ADD_PERF_TEST(FAST-READ --strategy=FAST_READ)
+   ADD_PERF_TEST(FAST-WRITE --strategy=FAST_WRITE)
+   ADD_PERF_TEST(COMPRESSED --strategy=COMPRESSED)
+endif(ENABLE_INTEGRATION_TESTS)

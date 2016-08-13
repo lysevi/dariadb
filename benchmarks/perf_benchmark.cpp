@@ -21,7 +21,9 @@ bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
 Time cap_store_period=0;
+size_t read_benchmark_runs=100;
 STRATEGY strategy=STRATEGY::FAST_READ;
+
 
 class BenchCallback : public IReaderClb {
 public:
@@ -40,6 +42,7 @@ void parse_cmdline(int argc, char *argv[]) {
           ("enable-readers",po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
           ("enable-metrics",po::value<bool>(&metrics_enable)->default_value(metrics_enable))
           ("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period))
+          ("read-benchmark-runs",po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs))
           ("strategy", po::value<STRATEGY>(&strategy)->default_value (STRATEGY::FAST_READ), "Write strategy");
 
   po::variables_map vm;
@@ -374,7 +377,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Active threads: "
               << utils::async::ThreadManager::instance()->active_works() << std::endl;
 
-    dariadb_bench::readBenchark(all_id_set, ms.get(), 100);
+    dariadb_bench::readBenchark(all_id_set, ms.get(), read_benchmark_runs);
 
     auto max_time = ms->maxTime();
     std::cout << "==> interval end time: " << timeutil::to_string(max_time) << std::endl;
