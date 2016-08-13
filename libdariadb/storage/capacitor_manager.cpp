@@ -115,7 +115,8 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
     }
     case STRATEGY::DYNAMIC: {
       if (closed.size() > Options::instance()->cap_max_closed_caps &&
-          Options::instance()->cap_max_closed_caps > 0 &&Options::instance()->cap_max_closed_caps==0) {
+          Options::instance()->cap_max_closed_caps > 0 &&
+          Options::instance()->cap_store_period == 0) {
         size_t to_drop =
             closed.size() - Options::instance()->cap_max_closed_caps;
         drop_closed_unsafe(to_drop);
