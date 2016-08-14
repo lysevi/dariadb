@@ -36,6 +36,9 @@ std::ostream& dariadb::storage::operator<<(std::ostream &stream, const STRATEGY 
     case STRATEGY::FAST_WRITE:
         stream<<"FAST_WRITE";
         break;
+    default:
+        stream<<"UNKNOW: ui16="<<(uint16_t)strat;
+        break;
     };
     return stream;
 }
