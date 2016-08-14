@@ -12,7 +12,7 @@ namespace dariadb {
 namespace storage {
 class IAofFileDropper {
 public:
-  virtual void drop(const std::string fname) = 0;
+  virtual void drop_aof(const std::string fname) = 0;
 };
 class AOFManager : public IMeasStorage {
 public:

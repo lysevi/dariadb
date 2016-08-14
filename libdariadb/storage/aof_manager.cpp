@@ -132,7 +132,7 @@ void AOFManager::drop_aof(const std::string &fname, IAofFileDropper *storage) {
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
-  storage->drop(without_path);
+  storage->drop_aof(without_path);
 }
 
 void AOFManager::set_downlevel(IAofFileDropper *down) {

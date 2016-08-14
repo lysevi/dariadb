@@ -181,7 +181,7 @@ std::list<std::string> CapacitorManager::closed_caps() {
 void CapacitorManager::drop_cap(const std::string &fname) {
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
-  _down->drop(fname);
+  _down->drop_cap(fname);
 }
 
 void CapacitorManager::drop_closed_unsafe(size_t count) {

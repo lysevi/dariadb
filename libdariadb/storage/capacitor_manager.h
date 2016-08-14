@@ -19,7 +19,7 @@ class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
 public:
   class ICapDropper {
   public:
-    virtual void drop(const std::string &fname) = 0;
+    virtual void drop_cap(const std::string &fname) = 0;
   };
 
 protected:

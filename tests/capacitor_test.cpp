@@ -25,7 +25,7 @@ public:
     calls = 0;
     max_time = dariadb::MIN_TIME;
   }
-  virtual void drop(const std::string &f) override {
+  virtual void drop_cap(const std::string &f) override {
     calls++;
     auto hdr = dariadb::storage::Capacitor::readHeader(f);
     max_time = std::max(hdr.maxTime, max_time);

@@ -14,7 +14,7 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-void AofDropper::drop(const std::string &fname, const std::string &storage_path) {
+void AofDropper::drop_aof(const std::string &fname, const std::string &storage_path) {
 
   auto target_name = fs::filename(fname) + CAP_FILE_EXT;
   if (fs::path_exists(fs::append_path(storage_path, target_name))) {
@@ -35,14 +35,14 @@ void AofDropper::drop(const std::string &fname, const std::string &storage_path)
   AOFManager::instance()->erase(fname);
 }
 
-void AofDropper::drop(const std::string fname) {
+void AofDropper::drop_aof(const std::string fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
       LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
 
-      AofDropper::drop(fname, Options::instance()->path);
+      AofDropper::drop_aof(fname, Options::instance()->path);
 
       LockManager::instance()->unlock(LockObjects::DROP_AOF);
     } catch (std::exception &ex) {
@@ -71,7 +71,7 @@ void AofDropper::cleanStorage(std::string storagePath) {
   }
 }
 
-void CapDrooper::drop(const std::string &fname) {
+void CapDrooper::drop_cap(const std::string &fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
