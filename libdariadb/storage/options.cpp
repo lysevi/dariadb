@@ -79,7 +79,10 @@ void Options::save(const std::string &file) {
 
   js["page_chunk_size"] = page_chunk_size;
   js["page_openned_page_cache_size"] = page_openned_page_cache_size;
-  js["stragety"] = (uint16_t)strategy;
+
+  std::stringstream ss;
+  ss<<strategy;
+  js["stragety"] = ss.str();
 
   std::fstream fs;
   fs.open(file, std::ios::out);
@@ -106,7 +109,10 @@ void Options::load(const std::string &file) {
   page_chunk_size = js["page_chunk_size"];
   page_openned_page_cache_size = js["page_openned_page_cache_size"];
 
-  strategy=(STRATEGY)(uint16_t)js["stragety"];
+  std::istringstream iss;
+  std::string strat_str=js["stragety"];
+  iss.str(strat_str);
+  iss>>strategy;
 
   this->calc_params();
 }
