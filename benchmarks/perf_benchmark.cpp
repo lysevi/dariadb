@@ -2,6 +2,7 @@
 #include <boost/program_options.hpp>
 #include <engine.h>
 #include <iostream>
+#include <iomanip>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -11,7 +12,7 @@ namespace po = boost::program_options;
 std::atomic_llong append_count{0};
 std::atomic_size_t reads_count{0};
 Time start_time;
-
+Time write_time=0;
 bool stop_info = false;
 bool stop_readers = false;
 
@@ -80,6 +81,7 @@ void parse_cmdline(int argc, char *argv[]) {
 }
 
 void show_info(Engine *storage) {
+  const auto OUT_SEP=' ';
   clock_t t0 = clock();
   long long w0 = append_count.load();
   long long r0 = reads_count.load();
@@ -96,15 +98,37 @@ void show_info(Engine *storage) {
     auto reads_per_sec = (r1 - r0) / step_time;
     auto queue_sizes = storage->queue_size();
 
+    std::stringstream time_ss;
+    time_ss<<timeutil::to_string(write_time);
+
+    std::stringstream stor_ss;
+    stor_ss<< "(p:" << queue_sizes.pages_count
+          << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+          << " T:" << queue_sizes.active_works << ")";
+
+    std::stringstream read_speed_ss;
+    read_speed_ss<<reads_per_sec << "/sec";
+
+    std::stringstream write_speed_ss;
+    write_speed_ss<<writes_per_sec << "/sec progress:";
+
+    std::stringstream persent_ss;
+    persent_ss<<(int64_t(100) * append_count) / dariadb_bench::all_writes << '%';
     std::cout << "\r"
-              << " in queue: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
-              << " T:" << queue_sizes.active_works << ") reads: " << reads_count
-              << " speed:" << reads_per_sec << "/sec"
-              << " writes: " << append_count << " speed: " << writes_per_sec
-              << "/sec progress:"
-              << (int64_t(100) * append_count) / dariadb_bench::all_writes
-              << "%                ";
+              << " time: "
+              << std::setw(20) << std::setfill(OUT_SEP)
+              << time_ss.str()
+              << " storage:"
+              << stor_ss.str()
+              <<" reads: "
+              << reads_count
+              << " speed:"
+              << read_speed_ss.str()
+              << " writes: "
+              << append_count
+              << " speed: "
+              <<write_speed_ss.str()
+              << persent_ss.str();
     w0 = w1;
     t0 = t1;
     std::cout.flush();
@@ -122,7 +146,7 @@ void show_drop_info(Engine *storage) {
 
     auto queue_sizes = storage->queue_size();
     std::cout << "\r"
-              << " in queue: (p:" << queue_sizes.pages_count
+              << " storage: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
               << " T:" << queue_sizes.active_works << ")          ";
     std::cout.flush();
@@ -175,7 +199,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
     }
     if (!readonly) {
       std::thread t{dariadb_bench::thread_writer_rnd_stor, Id(pos), &append_count,
-                    raw_ptr,start_time};
+                    raw_ptr,start_time,&write_time};
       writers[pos] = std::move(t);
     }
     pos++;
@@ -370,7 +394,7 @@ int main(int argc, char *argv[]) {
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
-              << " in queue: (p:" << queue_sizes.pages_count
+              << " storage: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
               << ")" << std::endl;
 

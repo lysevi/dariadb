@@ -12,6 +12,7 @@
 namespace po = boost::program_options;
 
 std::atomic_llong append_count{0};
+dariadb::Time write_time=0;
 bool stop_info = false;
 
 class Moc_Dropper : public dariadb::storage::IMeasWriter {
@@ -114,7 +115,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
       std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
-                    &append_count, aof, dariadb::timeutil::current_time()};
+                    &append_count, aof, dariadb::timeutil::current_time(),&write_time};
       writers[pos++] = std::move(t);
     }
 
