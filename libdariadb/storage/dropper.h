@@ -34,6 +34,9 @@ private:
   void drop_aof_internal(const std::string fname);
   void drop_cap_internal(const std::string &fname);
   void drop_aof_to_compress(const std::string &fname);
+
+  void on_period_drop_aof();
+  void on_period_drop_cap();
 private:
   std::list<std::string> _aof_files;
   std::list<std::string> _cap_files;
