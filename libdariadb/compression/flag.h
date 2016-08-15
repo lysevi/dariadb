@@ -1,7 +1,6 @@
 #pragma once
 
 #include "base_compressor.h"
-#include "positions.h"
 
 namespace dariadb {
 namespace compression {
@@ -11,10 +10,6 @@ public:
   FlagCompressor(const BinaryBuffer_Ptr &bw);
 
   bool append(Flag v);
-
-  FlagCompressionPosition get_position() const;
-  void restore_position(const FlagCompressionPosition &pos);
-
 protected:
   bool _is_first;
   Flag _first;

@@ -66,23 +66,23 @@ bool XorCompressor::append(Value v) {
   return true;
 }
 
-XorCompressionPosition XorCompressor::get_position() const {
-  XorCompressionPosition result;
-  result._first = _first;
-  result._is_first = _is_first;
-  result._prev_lead = _prev_lead;
-  result._prev_tail = _prev_tail;
-  result._prev_value = _prev_value;
-  return result;
-}
+//XorCompressionPosition XorCompressor::get_position() const {
+//  XorCompressionPosition result;
+//  result._first = _first;
+//  result._is_first = _is_first;
+//  result._prev_lead = _prev_lead;
+//  result._prev_tail = _prev_tail;
+//  result._prev_value = _prev_value;
+//  return result;
+//}
 
-void XorCompressor::restore_position(const XorCompressionPosition &pos) {
-  _first = pos._first;
-  _is_first = pos._is_first;
-  _prev_lead = pos._prev_lead;
-  _prev_tail = pos._prev_tail;
-  _prev_value = pos._prev_value;
-}
+//void XorCompressor::restore_position(const XorCompressionPosition &pos) {
+//  _first = pos._first;
+//  _is_first = pos._is_first;
+//  _prev_lead = pos._prev_lead;
+//  _prev_tail = pos._prev_tail;
+//  _prev_value = pos._prev_value;
+//}
 
 XorDeCompressor::XorDeCompressor(const BinaryBuffer_Ptr &bw, Value first)
     : BaseCompressor(bw), _prev_value(inner::flat_double_to_int(first)), _prev_lead(0),

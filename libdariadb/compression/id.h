@@ -1,7 +1,6 @@
 #pragma once
 
 #include "base_compressor.h"
-#include "positions.h"
 
 namespace dariadb {
 namespace compression {
@@ -11,9 +10,6 @@ public:
   IdCompressor(const BinaryBuffer_Ptr &bw);
 
   bool append(Id v);
-
-  IdCompressionPosition get_position() const;
-  void restore_position(const IdCompressionPosition &pos);
 
 protected:
   bool _is_first;

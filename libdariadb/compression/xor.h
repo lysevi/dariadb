@@ -1,7 +1,6 @@
 #pragma once
 
 #include "base_compressor.h"
-#include "positions.h"
 
 namespace dariadb {
 namespace compression {
@@ -32,8 +31,6 @@ public:
   XorCompressor(const BinaryBuffer_Ptr &bw);
 
   bool append(Value v);
-  XorCompressionPosition get_position() const;
-  void restore_position(const XorCompressionPosition &pos);
 
 protected:
   bool _is_first;

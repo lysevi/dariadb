@@ -43,29 +43,6 @@ public:
 
   size_t used_space() const { return time_comp.used_space(); }
 
-  CopmressedWriter::Position get_position() const {
-    CopmressedWriter::Position result;
-    result.first = _first;
-    result.time_pos = time_comp.get_position();
-    result.value_pos = value_comp.get_position();
-    result.flag_pos = flag_comp.get_position();
-    result.src_pos = src_comp.get_position();
-    result.is_first = _is_first;
-    result.is_full = _is_full;
-    return result;
-  }
-
-  void restore_postion(const CopmressedWriter::Position &pos) {
-    _first = pos.first;
-    _is_first = pos.is_first;
-    _is_full = pos.is_full;
-
-    time_comp.restore_position(pos.time_pos);
-    value_comp.restore_position(pos.value_pos);
-    flag_comp.restore_position(pos.flag_pos);
-    src_comp.restore_position(pos.src_pos);
-  }
-
 protected:
   Meas _first;
   bool _is_first;
@@ -145,14 +122,6 @@ bool CopmressedWriter::is_full() const {
 
 size_t CopmressedWriter::used_space() const {
   return _Impl->used_space();
-}
-
-CopmressedWriter::Position CopmressedWriter::get_position() const {
-  return _Impl->get_position();
-}
-
-void CopmressedWriter::restore_position(const CopmressedWriter::Position &pos) {
-  _Impl->restore_postion(pos);
 }
 
 CopmressedReader::CopmressedReader(const BinaryBuffer_Ptr &bw, const Meas &first)

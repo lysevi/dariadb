@@ -95,7 +95,6 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
 
   c_writer = compression::CopmressedWriter(bw);
   c_writer.append(header->first);
-  header->writer_position = c_writer.get_position();
 
   header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, first_m.id);
   header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
@@ -110,7 +109,6 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buf
   bw->set_pos(header->bw_pos);
 
   c_writer = compression::CopmressedWriter(bw);
-  c_writer.restore_position(index->writer_position);
 }
 
 ZippedChunk::~ZippedChunk() {}
@@ -136,7 +134,6 @@ bool ZippedChunk::append(const Meas &m) {
   }
 
   auto t_f = this->c_writer.append(m);
-  header->writer_position = c_writer.get_position();
 
   if (!t_f) {
     this->close();
