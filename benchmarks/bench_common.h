@@ -12,7 +12,7 @@
 namespace dariadb_bench {
 
 const size_t total_threads_count = 2;
-const size_t hours_write_perid = 3;
+const size_t hours_write_perid = 48;
 const size_t writes_per_second = 2;
 const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
 const size_t total_readers_count = 1;
