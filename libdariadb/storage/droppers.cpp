@@ -8,6 +8,8 @@
 #include "options.h"
 #include "page.h"
 #include "page_manager.h"
+#include "options.h"
+
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -147,18 +149,27 @@ void Dropper::drop_aof_to_compress(const std::string &fname){
         TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
         TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_to_compress");
 
-        LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
-        auto cap = Capacitor_Ptr{new Capacitor{fname, false}};
+        auto storage_path=Options::instance()->path;
+        LockManager::instance()->lock(LockKind::EXCLUSIVE, {LockObjects::AOF, LockObjects::PAGE});
+
+        auto full_path = fs::append_path(storage_path, fname);
+
+        AOFile_Ptr aof{new AOFile(full_path, true)};
+
+        auto all = aof->readAll();
+
+        std::sort(all.begin(), all.end(), meas_time_compare_less());
+
 
         auto without_path = fs::extract_filename(fname);
         auto page_fname = fs::filename(without_path);
-        auto all = cap->readAll();
-        assert(all.size() == cap->size());
         PageManager::instance()->append(page_fname, all);
 
-        cap = nullptr;
-        CapacitorManager::instance()->erase(without_path);
-        LockManager::instance()->unlock(LockObjects::DROP_CAP);
+
+        aof = nullptr;
+        AOFManager::instance()->erase(fname);
+
+        LockManager::instance()->unlock({LockObjects::AOF, LockObjects::PAGE});
       } catch (std::exception &ex) {
         THROW_EXCEPTION_SS("Dropper::drop_aof_to_compress: " << ex.what());
       }
@@ -171,6 +182,7 @@ void Dropper::flush() {
     logger_info("Dropper: wait period end...");
   std::lock_guard<std::mutex> lg(_period_locker);
   size_t iter = 0;
+  auto strat=Options::instance()->strategy;
   while (!_aof_files.empty() || !_cap_files.empty()) {
     logger("flush iter=" << iter++);
     _locker.lock();
@@ -183,13 +195,18 @@ void Dropper::flush() {
 
     logger("aof to flush:" << aof_copy.size());
     for (auto f : aof_copy) {
-      logger("drop_aof:" << f);
-      drop_aof_internal(f);
+        switch (strat) {
+        case STRATEGY::COMPRESSED:
+            drop_aof_to_compress(f);
+            break;
+        default:
+            drop_aof_internal(f);
+            break;
+        }
     }
 
     logger("cap to flush:" << cap_copy.size());
     for (auto f : cap_copy) {
-      logger("drop_cap:" << f);
       drop_cap_internal(f);
     }
   }
@@ -197,12 +214,23 @@ void Dropper::flush() {
 
 void Dropper::period_call() {
   std::lock_guard<std::mutex> lg(_period_locker);
+
+  auto strat=Options::instance()->strategy;
+
   if (!_aof_files.empty()) {
     _locker.lock();
     auto copy = _aof_files;
     _locker.unlock();
     for (auto f : copy) {
-      drop_aof_internal(f);
+        switch (strat) {
+        case STRATEGY::COMPRESSED:
+            drop_aof_to_compress(f);
+            break;
+        default:
+            drop_aof_internal(f);
+            break;
+        }
+
 
       _locker.lock();
       _aof_files.remove(f);
@@ -212,6 +240,7 @@ void Dropper::period_call() {
 
   if (!_cap_files.empty()) {
     _locker.lock();
+
     for (auto f : _cap_files) {
       drop_cap_internal(f);
     }

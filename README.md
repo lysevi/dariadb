@@ -28,7 +28,7 @@
 * Write strategies:
   - fast write - optimised for big write load.
   - fast read  - values stored in trees for fast search.
-  - compressed - all values compressed for good disk usage
+  - compressed - all values compressed for good disk usage without writing to sorted layer.
   - dynamic - values are compressed, if the level is more than a certain value, or for a certain period of time.
 
 # Dependencies

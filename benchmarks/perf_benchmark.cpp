@@ -316,7 +316,7 @@ void check_engine_state(Engine *raw_ptr) {
     }
     break;
   case dariadb::storage::STRATEGY::COMPRESSED:
-    if (files.aofs_count >= 1 && files.cola_count >= 1 &&
+    if (files.aofs_count >= 1 && files.cola_count != 0 &&
         files.pages_count == 0) {
       THROW_EXCEPTION_SS("COMPRESSED error: "
                              << "(p:" << files.pages_count << " cap:"
