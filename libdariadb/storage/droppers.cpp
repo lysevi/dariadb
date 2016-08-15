@@ -14,7 +14,24 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-void Dropper::drop_aof(const std::string &fname, const std::string &storage_path) {
+const std::chrono::milliseconds DEFALT_DROP_PERIOD(500);
+
+Dropper::Dropper()
+    : PeriodWorker(std::chrono::milliseconds(DEFALT_DROP_PERIOD)) {
+  this->period_worker_start();
+}
+
+Dropper::~Dropper() { this->period_worker_stop(); }
+
+Dropper::Queues Dropper::queues() const {
+  Dropper::Queues result;
+  result.aof = _aof_files.size();
+  result.cap = _cap_files.size();
+  return result;
+}
+
+void Dropper::drop_aof(const std::string &fname,
+                       const std::string &storage_path) {
 
   auto target_name = fs::filename(fname) + CAP_FILE_EXT;
   if (fs::path_exists(fs::append_path(storage_path, target_name))) {
@@ -36,21 +53,13 @@ void Dropper::drop_aof(const std::string &fname, const std::string &storage_path
 }
 
 void Dropper::drop_aof(const std::string fname) {
-  AsyncTask at = [fname, this](const ThreadInfo &ti) {
-    try {
-      TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
-      TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
-      LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
+  std::lock_guard<utils::Locker> lg(_locker);
+  _aof_files.push_back(fname);
+}
 
-      Dropper::drop_aof(fname, Options::instance()->path);
-
-      LockManager::instance()->unlock(LockObjects::DROP_AOF);
-    } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("AofDropper::drop: " << ex.what());
-    }
-  };
-
-  ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+void Dropper::drop_cap(const std::string &fname) {
+  std::lock_guard<utils::Locker> lg(_locker);
+  _cap_files.push_back(fname);
 }
 
 void Dropper::cleanStorage(std::string storagePath) {
@@ -87,11 +96,30 @@ void Dropper::cleanStorage(std::string storagePath) {
   }
 }
 
-void Dropper::drop_cap(const std::string &fname) {
+void Dropper::drop_aof_internal(const std::string fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
-      TIMECODE_METRICS(ctmd, "drop", "CapDrooper::drop");
+      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
+      LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
+
+      Dropper::drop_aof(fname, Options::instance()->path);
+
+      LockManager::instance()->unlock(LockObjects::DROP_AOF);
+    } catch (std::exception &ex) {
+      THROW_EXCEPTION_SS("Dropper::drop_aof_internal: " << ex.what());
+    }
+  };
+
+  auto res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+  res->wait();
+}
+
+void Dropper::drop_cap_internal(const std::string &fname) {
+  AsyncTask at = [fname, this](const ThreadInfo &ti) {
+    try {
+      TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_cap_internal");
 
       LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
       auto cap = Capacitor_Ptr{new Capacitor{fname, false}};
@@ -106,8 +134,88 @@ void Dropper::drop_cap(const std::string &fname) {
       CapacitorManager::instance()->erase(without_path);
       LockManager::instance()->unlock(LockObjects::DROP_CAP);
     } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("CapDrooper::drop: " << ex.what());
+      THROW_EXCEPTION_SS("Dropper::drop_cap_internal: " << ex.what());
     }
   };
-  ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+  auto res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+  res->wait();
+}
+
+void Dropper::drop_aof_to_compress(const std::string &fname){
+    AsyncTask at = [fname, this](const ThreadInfo &ti) {
+      try {
+        TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+        TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_to_compress");
+
+        LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
+        auto cap = Capacitor_Ptr{new Capacitor{fname, false}};
+
+        auto without_path = fs::extract_filename(fname);
+        auto page_fname = fs::filename(without_path);
+        auto all = cap->readAll();
+        assert(all.size() == cap->size());
+        PageManager::instance()->append(page_fname, all);
+
+        cap = nullptr;
+        CapacitorManager::instance()->erase(without_path);
+        LockManager::instance()->unlock(LockObjects::DROP_CAP);
+      } catch (std::exception &ex) {
+        THROW_EXCEPTION_SS("Dropper::drop_aof_to_compress: " << ex.what());
+      }
+    };
+    auto res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+    res->wait();
+}
+
+void Dropper::flush() {
+    logger_info("Dropper: wait period end...");
+  std::lock_guard<std::mutex> lg(_period_locker);
+  size_t iter = 0;
+  while (!_aof_files.empty() || !_cap_files.empty()) {
+    logger("flush iter=" << iter++);
+    _locker.lock();
+    auto aof_copy = _aof_files;
+    auto cap_copy = _cap_files;
+
+    _aof_files.clear();
+    _cap_files.clear();
+    _locker.unlock();
+
+    logger("aof to flush:" << aof_copy.size());
+    for (auto f : aof_copy) {
+      logger("drop_aof:" << f);
+      drop_aof_internal(f);
+    }
+
+    logger("cap to flush:" << cap_copy.size());
+    for (auto f : cap_copy) {
+      logger("drop_cap:" << f);
+      drop_cap_internal(f);
+    }
+  }
+}
+
+void Dropper::period_call() {
+  std::lock_guard<std::mutex> lg(_period_locker);
+  if (!_aof_files.empty()) {
+    _locker.lock();
+    auto copy = _aof_files;
+    _locker.unlock();
+    for (auto f : copy) {
+      drop_aof_internal(f);
+
+      _locker.lock();
+      _aof_files.remove(f);
+      _locker.unlock();
+    }
+  }
+
+  if (!_cap_files.empty()) {
+    _locker.lock();
+    for (auto f : _cap_files) {
+      drop_cap_internal(f);
+    }
+    _cap_files.clear();
+    _locker.unlock();
+  }
 }

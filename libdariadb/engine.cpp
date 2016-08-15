@@ -221,8 +221,11 @@ public:
   void flush() {
     TIMECODE_METRICS(ctmd, "flush", "Engine::flush");
     std::lock_guard<std::mutex> lg(_locker);
+
     AOFManager::instance()->flush();
+    _dropper->flush();
     CapacitorManager::instance()->flush();
+    _dropper->flush();
     PageManager::instance()->flush();
   }
 
@@ -234,6 +237,7 @@ public:
     result.pages_count = PageManager::instance()->files_count();
     result.cola_count = CapacitorManager::instance()->files_count();
     result.active_works = ThreadManager::instance()->active_works();
+    result.dropper_queues=_dropper->queues();
     return result;
   }
 

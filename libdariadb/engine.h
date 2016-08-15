@@ -5,6 +5,7 @@
 #include "storage/capacitor_manager.h"
 #include "storage/options.h"
 #include "storage/page_manager.h"
+#include "storage/droppers.h"
 #include "utils/utils.h"
 
 #include <memory>
@@ -36,6 +37,7 @@ public:
     size_t pages_count;  /// pages count
     size_t cola_count;   /// COLA files count.
     size_t active_works; /// async tasks runned.
+    Dropper::Queues dropper_queues;
   };
 
   Engine(const Engine &) = delete;

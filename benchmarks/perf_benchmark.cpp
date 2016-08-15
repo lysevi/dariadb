@@ -114,12 +114,18 @@ void show_info(Engine *storage) {
 
     std::stringstream persent_ss;
     persent_ss<<(int64_t(100) * append_count) / dariadb_bench::all_writes << '%';
+
+    std::stringstream drop_ss;
+    drop_ss<< "[a:" << queue_sizes.dropper_queues.aof
+          << " c:" << queue_sizes.dropper_queues.cap  << "]";
+
     std::cout << "\r"
               << " time: "
               << std::setw(20) << std::setfill(OUT_SEP)
               << time_ss.str()
               << " storage:"
               << stor_ss.str()
+              << drop_ss.str()
               <<" reads: "
               << reads_count
               << " speed:"
@@ -145,10 +151,14 @@ void show_drop_info(Engine *storage) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     auto queue_sizes = storage->queue_size();
+
+
     std::cout << "\r"
               << " storage: (p:" << queue_sizes.pages_count
               << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
-              << " T:" << queue_sizes.active_works << ")          ";
+              << " T:" << queue_sizes.active_works << ")"
+              << "[a:" << queue_sizes.dropper_queues.aof
+              << " c:" << queue_sizes.dropper_queues.cap  << "]          ";
     std::cout.flush();
     if (stop_info) {
       std::cout.flush();
@@ -274,7 +284,7 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
 
     if (readed.size() != expected) {
       std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
-      std::cout << " all_writesL " << dariadb_bench::all_writes;
+      std::cout << " all_writes: " << dariadb_bench::all_writes;
       for (auto &kv : _dict) {
         std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
       }
