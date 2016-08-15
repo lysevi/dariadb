@@ -15,10 +15,10 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-const std::chrono::milliseconds DEFALT_DROP_PERIOD(500);
+const std::chrono::milliseconds DEFAULT_DROP_PERIOD(500);
 
 Dropper::Dropper()
-    : PeriodWorker(std::chrono::milliseconds(DEFALT_DROP_PERIOD)) {
+    : PeriodWorker(std::chrono::milliseconds(DEFAULT_DROP_PERIOD)) {
   this->period_worker_start();
 }
 
@@ -86,12 +86,9 @@ void Dropper::cleanStorage(std::string storagePath) {
     for (auto &page : page_lst) {
       auto page_fname = fs::filename(page);
       if (cap_fname == page_fname) {
-        logger_info("fsck: cap drop not finished: " << page_fname);
+        logger_info("fsck: cap drop not finished: " << cap_fname);
         logger_info("fsck: rm " << page_fname);
         PageManager::erase(fs::extract_filename(page));
-        /*fs::rm(page_fname);
-        fs::rm(page_fname + "i");
-        Manifest::instance()->page_rm(fs::extract_filename(page));*/
       }
     }
   }
@@ -191,7 +188,7 @@ void Dropper::flush() {
     _cap_files.clear();
     _locker.unlock();
 
-    logger("aof to flush:" << aof_copy.size());
+    logger_info("aof to flush:" << aof_copy.size());
     for (auto f : aof_copy) {
       switch (strat) {
       case STRATEGY::COMPRESSED:
@@ -203,7 +200,7 @@ void Dropper::flush() {
       }
     }
 
-    logger("cap to flush:" << cap_copy.size());
+    logger_info("cap to flush:" << cap_copy.size());
     for (auto f : cap_copy) {
       drop_cap_internal(f);
     }
