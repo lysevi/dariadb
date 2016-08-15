@@ -8,8 +8,8 @@
 namespace dariadb {
 namespace storage {
 
-class Dropper : public dariadb::storage::IAofFileDropper,
-                public CapacitorManager::ICapDropper,
+class Dropper : public dariadb::storage::IAofDropper,
+                public dariadb::storage::ICapDropper,
                 public utils::PeriodWorker{
 public:
     struct Queues{

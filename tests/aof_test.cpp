@@ -15,7 +15,7 @@
 #include <utils/fs.h>
 #include <utils/thread_manager.h>
 
-class Moc_Dropper : public dariadb::storage::IAofFileDropper {
+class Moc_Dropper : public dariadb::storage::IAofDropper {
 public:
   size_t writed_count;
   std::set<std::string> files;

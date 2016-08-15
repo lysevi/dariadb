@@ -1,7 +1,7 @@
 #include "engine.h"
 #include "flags.h"
 #include "storage/capacitor_manager.h"
-#include "storage/droppers.h"
+#include "storage/dropper.h"
 #include "storage/lock_manager.h"
 #include "storage/manifest.h"
 #include "storage/page_manager.h"

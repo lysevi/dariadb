@@ -128,14 +128,14 @@ std::list<std::string> AOFManager::closed_aofs() {
   return result;
 }
 
-void AOFManager::drop_aof(const std::string &fname, IAofFileDropper *storage) {
+void AOFManager::drop_aof(const std::string &fname, IAofDropper *storage) {
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
   storage->drop_aof(without_path);
 }
 
-void AOFManager::set_downlevel(IAofFileDropper *down) {
+void AOFManager::set_downlevel(IAofDropper *down) {
   _down = down;
   this->drop_old_if_needed();
 }

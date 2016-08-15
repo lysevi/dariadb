@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../interfaces/imeasstorage.h"
+#include "../interfaces/idroppers.h"
 #include "../utils/locker.h"
 #include "../utils/period_worker.h"
 #include "../utils/utils.h"
@@ -16,13 +17,7 @@ namespace storage {
 using File2CapHeader = std::unordered_map<std::string, Capacitor::Header>;
 
 class CapacitorManager : public IMeasStorage, protected utils::PeriodWorker {
-public:
-  class ICapDropper {
-  public:
-    virtual void drop_cap(const std::string &fname) = 0;
-  };
-
-protected:
+private:
   virtual ~CapacitorManager();
 
   CapacitorManager();

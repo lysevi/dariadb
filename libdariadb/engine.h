@@ -5,7 +5,7 @@
 #include "storage/capacitor_manager.h"
 #include "storage/options.h"
 #include "storage/page_manager.h"
-#include "storage/droppers.h"
+#include "storage/dropper.h"
 #include "utils/utils.h"
 
 #include <memory>

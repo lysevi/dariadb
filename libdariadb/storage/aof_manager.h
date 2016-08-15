@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../interfaces/imeasstorage.h"
+#include "../interfaces/idroppers.h"
 #include "../utils/locker.h"
 #include "../utils/utils.h"
 #include "aofile.h"
@@ -10,10 +11,7 @@
 
 namespace dariadb {
 namespace storage {
-class IAofFileDropper {
-public:
-  virtual void drop_aof(const std::string fname) = 0;
-};
+
 class AOFManager : public IMeasStorage {
 public:
 protected:
@@ -38,10 +36,10 @@ public:
   virtual void flush() override;
 
   std::list<std::string> closed_aofs();
-  void drop_aof(const std::string &fname, IAofFileDropper *storage);
+  void drop_aof(const std::string &fname, IAofDropper *storage);
 
   size_t files_count() const;
-  void set_downlevel(IAofFileDropper *down);
+  void set_downlevel(IAofDropper *down);
 
   void erase(const std::string &fname);
 
@@ -57,7 +55,7 @@ private:
 
   AOFile_Ptr _aof;
   mutable utils::Locker _locker;
-  IAofFileDropper *_down;
+  IAofDropper *_down;
 
   Meas::MeasArray _buffer;
   size_t _buffer_pos;
