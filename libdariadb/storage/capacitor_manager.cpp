@@ -456,9 +456,13 @@ dariadb::append_result CapacitorManager::append(const Meas &value) {
     _cap = create_new();
     res = _cap->append(value);
   }
+#ifdef DEBUG
   auto mnfst = Manifest::instance()->cola_list();
+#endif
   _file2header[_cap->file_name()] = *(_cap->header());
+#ifdef DEBUG
   assert(mnfst.size() == _file2header.size());
+#endif
   return res;
 }
 
