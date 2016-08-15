@@ -184,7 +184,7 @@ void Dropper::flush() {
   size_t iter = 0;
   auto strat=Options::instance()->strategy;
   while (!_aof_files.empty() || !_cap_files.empty()) {
-    logger("flush iter=" << iter++);
+    logger_info("flush iter=" << iter++);
     _locker.lock();
     auto aof_copy = _aof_files;
     auto cap_copy = _cap_files;
