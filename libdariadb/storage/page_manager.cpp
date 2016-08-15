@@ -92,15 +92,7 @@ public:
     erase(target_name);
   }
 
-  void erase(const std::string &fname) {
-    auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
-    _openned_pages.erase(full_file_name);
 
-    Manifest::instance()->page_rm(fname);
-    utils::fs::rm(full_file_name);
-    utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-    _file2header.erase(fname);
-  }
   // PM
   void flush() {}
 
@@ -357,6 +349,22 @@ public:
         Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
 
+
+  static void erase(const std::string &fname) {
+      if(PageManager::instance()!=nullptr){
+          auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+          PageManager::instance()->impl->_openned_pages.erase(full_file_name);
+
+          Manifest::instance()->page_rm(fname);
+          utils::fs::rm(full_file_name);
+          utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+          PageManager::instance()->impl->_file2header.erase(fname);
+      }else{
+          auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+          utils::fs::rm(full_file_name);
+          utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+      }
+  }
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;
@@ -436,5 +444,5 @@ void PageManager::fsck(bool force_check) {
 }
 
 void PageManager::erase(const std::string &fname) {
-  return impl->erase(fname);
+  Private::erase(fname);
 }

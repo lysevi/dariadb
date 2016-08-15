@@ -14,7 +14,7 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-void AofDropper::drop_aof(const std::string &fname, const std::string &storage_path) {
+void Dropper::drop_aof(const std::string &fname, const std::string &storage_path) {
 
   auto target_name = fs::filename(fname) + CAP_FILE_EXT;
   if (fs::path_exists(fs::append_path(storage_path, target_name))) {
@@ -35,14 +35,14 @@ void AofDropper::drop_aof(const std::string &fname, const std::string &storage_p
   AOFManager::instance()->erase(fname);
 }
 
-void AofDropper::drop_aof(const std::string fname) {
+void Dropper::drop_aof(const std::string fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "AofDropper::drop");
       LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
 
-      AofDropper::drop_aof(fname, Options::instance()->path);
+      Dropper::drop_aof(fname, Options::instance()->path);
 
       LockManager::instance()->unlock(LockObjects::DROP_AOF);
     } catch (std::exception &ex) {
@@ -53,8 +53,7 @@ void AofDropper::drop_aof(const std::string fname) {
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
 }
 
-// on start, rm COLA files with name exists AOF file.
-void AofDropper::cleanStorage(std::string storagePath) {
+void Dropper::cleanStorage(std::string storagePath) {
   auto aofs_lst = fs::ls(storagePath, AOF_FILE_EXT);
   auto caps_lst = fs::ls(storagePath, CAP_FILE_EXT);
 
@@ -65,13 +64,30 @@ void AofDropper::cleanStorage(std::string storagePath) {
       if (cap_fname == aof_fname) {
         logger_info("fsck: aof drop not finished: " << aof_fname);
         logger_info("fsck: rm " << capf);
-        CapacitorManager::instance()->erase(fs::extract_filename(capf));
+        CapacitorManager::erase(fs::extract_filename(capf));
+      }
+    }
+  }
+
+  caps_lst = fs::ls(storagePath, CAP_FILE_EXT);
+  auto page_lst = fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT);
+  for (auto &cap : caps_lst) {
+    auto cap_fname = fs::filename(cap);
+    for (auto &page : page_lst) {
+      auto page_fname = fs::filename(page);
+      if (cap_fname == page_fname) {
+        logger_info("fsck: cap drop not finished: " << page_fname);
+        logger_info("fsck: rm " << page_fname);
+        PageManager::erase(fs::extract_filename(page));
+        /*fs::rm(page_fname);
+        fs::rm(page_fname + "i");
+        Manifest::instance()->page_rm(fs::extract_filename(page));*/
       }
     }
   }
 }
 
-void CapDrooper::drop_cap(const std::string &fname) {
+void Dropper::drop_cap(const std::string &fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
@@ -94,24 +110,4 @@ void CapDrooper::drop_cap(const std::string &fname) {
     }
   };
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
-}
-
-// on start, rm PAGE files with name exists CAP file.
-void CapDrooper::cleanStorage(std::string storagePath) {
-  auto caps_lst = fs::ls(storagePath, CAP_FILE_EXT);
-  auto page_lst = fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT);
-  for (auto &cap : caps_lst) {
-    auto cap_fname = fs::filename(cap);
-    for (auto &page : page_lst) {
-      auto page_fname = fs::filename(page);
-      if (cap_fname == page_fname) {
-        logger_info("fsck: cap drop not finished: " << page_fname);
-        logger_info("fsck: rm " << page_fname);
-        PageManager::instance()->erase(fs::extract_filename(page));
-        /*fs::rm(page_fname);
-        fs::rm(page_fname + "i");
-        Manifest::instance()->page_rm(fs::extract_filename(page));*/
-      }
-    }
-  }
 }

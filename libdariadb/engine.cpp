@@ -57,13 +57,10 @@ public:
         utils::fs::append_path(Options::instance()->path, MANIFEST_FILE_NAME));
 
     if (is_exists) {
-      AofDropper::cleanStorage(Options::instance()->path);
+      Dropper::cleanStorage(Options::instance()->path);
     }
 
     PageManager::start();
-    if (is_exists) {
-      CapDrooper::cleanStorage(Options::instance()->path);
-    }
 
     if(!is_exists){
         Manifest::instance()->set_version(this->version().version);
@@ -74,11 +71,10 @@ public:
     AOFManager::start();
     CapacitorManager::start();
 
-    _aof_dropper = std::unique_ptr<AofDropper>(new AofDropper());
-    _cap_dropper = std::unique_ptr<CapDrooper>(new CapDrooper());
+    _dropper = std::make_unique<Dropper>();
 
-    AOFManager::instance()->set_downlevel(_aof_dropper.get());
-    CapacitorManager::instance()->set_downlevel(_cap_dropper.get());
+    AOFManager::instance()->set_downlevel(_dropper.get());
+    CapacitorManager::instance()->set_downlevel(_dropper.get());
     _next_query_id = Id();
   }
   ~Private() { this->stop(); }
@@ -416,8 +412,7 @@ protected:
   SubscribeNotificator _subscribe_notify;
   Id _next_query_id;
   std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
-  std::unique_ptr<AofDropper> _aof_dropper;
-  std::unique_ptr<CapDrooper> _cap_dropper;
+  std::unique_ptr<Dropper> _dropper;
   bool _stoped;
 };
 

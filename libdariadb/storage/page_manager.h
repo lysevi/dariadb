@@ -40,7 +40,7 @@ public:
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
 
-  void erase(const std::string &fname);
+  static void erase(const std::string &fname);
 
 private:
   static PageManager *_instance;

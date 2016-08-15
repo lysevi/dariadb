@@ -6,21 +6,16 @@
 namespace dariadb {
 namespace storage {
 
-class AofDropper : public dariadb::storage::IAofFileDropper {
+class Dropper : public dariadb::storage::IAofFileDropper,public CapacitorManager::ICapDropper {
 public:
-  AofDropper() {}
+  Dropper() {}
   static void drop_aof(const std::string &fname, const std::string &storage_path);
   void drop_aof(const std::string fname) override;
-  // on start, rm COLA files with name exists AOF file.
-  static void cleanStorage(std::string storagePath);
-};
-
-class CapDrooper : public CapacitorManager::ICapDropper {
-public:
   void drop_cap(const std::string &fname) override;
-
-  // on start, rm PAGE files with name exists CAP file.
+  // 1. rm COLA files with name exists AOF file.
+  // 2. rm PAGE files with name exists CAP file.
   static void cleanStorage(std::string storagePath);
 };
+
 }
 }
