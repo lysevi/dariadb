@@ -40,7 +40,8 @@ private:
 private:
   std::list<std::string> _aof_files;
   std::list<std::string> _cap_files;
-  mutable utils::Locker _locker;
+  mutable utils::Locker _aof_locker;
+  mutable utils::Locker _cap_locker;
   std::mutex _period_locker;
 };
 }

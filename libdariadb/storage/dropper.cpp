@@ -54,12 +54,12 @@ void Dropper::drop_aof(const std::string &fname,
 }
 
 void Dropper::drop_aof(const std::string fname) {
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_aof_locker);
   _aof_files.push_back(fname);
 }
 
 void Dropper::drop_cap(const std::string &fname) {
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<utils::Locker> lg(_cap_locker);
   _cap_files.push_back(fname);
 }
 
@@ -180,13 +180,17 @@ void Dropper::flush() {
   auto strat = Options::instance()->strategy;
   while (!_aof_files.empty() || !_cap_files.empty()) {
     logger_info("flush iter=" << iter++);
-    _locker.lock();
+    _cap_locker.lock();
+    _aof_locker.lock();
+
     auto aof_copy = _aof_files;
     auto cap_copy = _cap_files;
 
     _aof_files.clear();
     _cap_files.clear();
-    _locker.unlock();
+
+    _cap_locker.unlock();
+    _aof_locker.unlock();
 
     logger_info("aof to flush:" << aof_copy.size());
     for (auto f : aof_copy) {
@@ -209,9 +213,9 @@ void Dropper::flush() {
 
 void Dropper::on_period_drop_aof() {
   if (!_aof_files.empty()) {
-    _locker.lock();
+    _aof_locker.lock();
     auto copy = _aof_files;
-    _locker.unlock();
+    _aof_locker.unlock();
 
     auto strat = Options::instance()->strategy;
 
@@ -225,22 +229,22 @@ void Dropper::on_period_drop_aof() {
         break;
       }
 
-      _locker.lock();
+      _aof_locker.lock();
       _aof_files.remove(f);
-      _locker.unlock();
+      _aof_locker.unlock();
     }
   }
 }
 
 void Dropper::on_period_drop_cap() {
   if (!_cap_files.empty()) {
-    _locker.lock();
+    _cap_locker.lock();
 
     for (auto f : _cap_files) {
       drop_cap_internal(f);
     }
     _cap_files.clear();
-    _locker.unlock();
+    _cap_locker.unlock();
   }
 }
 
