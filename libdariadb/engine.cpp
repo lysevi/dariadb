@@ -112,7 +112,7 @@ public:
 
   Time minTime() {
     LockManager::instance()->lock(
-        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
     auto pmin = PageManager::instance()->minTime();
     auto cmin = CapacitorManager::instance()->minTime();
@@ -125,7 +125,7 @@ public:
 
   Time maxTime() {
     LockManager::instance()->lock(
-        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
     auto pmax = PageManager::instance()->maxTime();
     auto cmax = CapacitorManager::instance()->maxTime();
@@ -160,7 +160,7 @@ public:
     };
 
     LockManager::instance()->lock(
-        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
     auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
@@ -199,7 +199,7 @@ public:
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    LockManager::instance()->lock(LockKind::READ, {LockObjects::AOF, LockObjects::CAP});
+    LockManager::instance()->lock(LOCK_KIND::READ, {LockObjects::AOF, LockObjects::CAP});
     auto result = AOFManager::instance()->currentValue(ids, flag);
     auto c_result = CapacitorManager::instance()->currentValue(ids, flag);
 
@@ -261,7 +261,7 @@ public:
     };
 
     LockManager::instance()->lock(
-        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
     auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
@@ -318,7 +318,7 @@ public:
     TIMECODE_METRICS(ctmd, "readInTimePoint", "Engine::readInTimePoint");
 
     LockManager::instance()->lock(
-        LockKind::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
     Meas::Id2Meas result;
     result.reserve(q.ids.size());

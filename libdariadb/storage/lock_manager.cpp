@@ -5,6 +5,56 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
+void lock_mutex(LOCK_KIND kind, const RWMutex_Ptr&mtx) {
+  switch (kind) {
+  case LOCK_KIND::EXCLUSIVE: {
+    mtx->mutex.lock();
+    break;
+  }
+  case LOCK_KIND::READ: {
+    mtx->mutex.lock_shared();
+    break;
+  }
+  case LOCK_KIND::UNKNOW:{
+      THROW_EXCEPTION_SS("try to lock unknow state");
+      break;
+  }
+  };
+}
+
+bool try_lock_mutex(LOCK_KIND kind, const RWMutex_Ptr&mtx) {
+  switch (kind) {
+  case LOCK_KIND::EXCLUSIVE: {
+    return mtx->mutex.try_lock();
+  }
+  case LOCK_KIND::READ: {
+    return mtx->mutex.try_lock_shared();
+  }
+  case LOCK_KIND::UNKNOW:{
+      THROW_EXCEPTION_SS("try to try-lock unknow state");
+      break;
+  }
+  };
+  return false;
+}
+
+void unlock_mutex(const RWMutex_Ptr&mtx) {
+  switch (mtx->kind) {
+  case LOCK_KIND::EXCLUSIVE: {
+    mtx->mutex.unlock();
+    break;
+  }
+  case LOCK_KIND::READ: {
+    mtx->mutex.unlock_shared();
+    break;
+  }
+  case LOCK_KIND::UNKNOW:{
+      THROW_EXCEPTION_SS("try to unlock unknow state");
+      break;
+  }
+  };
+}
+
 LockManager *LockManager::_instance = nullptr;
 
 LockManager::~LockManager() {}
@@ -50,7 +100,7 @@ RWMutex_Ptr LockManager::get_lock_object(const LockObjects &lo) {
   }
 }
 
-void LockManager::lock(const LockKind &lk, const LockObjects &lo) {
+void LockManager::lock(const LOCK_KIND &lk, const LockObjects &lo) {
 
   switch (lo) {
   case LockObjects::AOF:
@@ -73,7 +123,7 @@ void LockManager::lock(const LockKind &lk, const LockObjects &lo) {
   }
 }
 
-void LockManager::lock(const LockKind &lk, const std::vector<LockObjects> &los) {
+void LockManager::lock(const LOCK_KIND &lk, const std::vector<LockObjects> &los) {
   std::vector<RWMutex_Ptr> rw_mtx{los.size()};
   for (size_t i = 0; i < los.size(); ++i) {
     if ((los[i] == LockObjects::DROP_AOF) || (los[i] == LockObjects::DROP_CAP)) {
@@ -85,32 +135,16 @@ void LockManager::lock(const LockKind &lk, const std::vector<LockObjects> &los) 
   while (!success) {
     bool local_status = false;
     for (size_t i = 0; i < los.size(); ++i) {
-      switch (lk) {
-      case LockKind::EXCLUSIVE: {
-        local_status = rw_mtx[i]->mutex.try_lock();
-        break;
-      }
-      case LockKind::READ: {
-        local_status = rw_mtx[i]->mutex.try_lock_shared();
-        break;
-      }
-      };
+        local_status=try_lock_mutex(lk,rw_mtx[i]);
+
       if (!local_status) {
         for (size_t j = 0; j < i; ++j) {
-          switch (lk) {
-          case LockKind::EXCLUSIVE: {
-            rw_mtx[j]->mutex.unlock();
-            break;
-          }
-          case LockKind::READ: {
-            rw_mtx[j]->mutex.unlock_shared();
-            break;
-          }
-          };
+            unlock_mutex(rw_mtx[j]);
         }
         success = false;
         break;
       } else {
+        rw_mtx[i]->kind=lk;
         success = true;
       }
     }
@@ -123,14 +157,7 @@ void LockManager::unlock(const LockObjects &lo) {
   case LockObjects::CAP:
   case LockObjects::PAGE: {
     auto lock_target = get_lock_object(lo);
-    switch (lock_target->kind) {
-    case LockKind::EXCLUSIVE:
-      lock_target->mutex.unlock();
-      break;
-    case LockKind::READ:
-      lock_target->mutex.unlock_shared();
-      break;
-    };
+    unlock_mutex(lock_target);
     break;
   }
   case LockObjects::DROP_AOF: {
@@ -156,22 +183,15 @@ void LockManager::unlock(const std::vector<LockObjects> &los) {
   }
 }
 
-void LockManager::lock_by_kind(const LockKind &lk, const LockObjects &lo) {
+void LockManager::lock_by_kind(const LOCK_KIND &lk, const LockObjects &lo) {
   auto lock_target = get_or_create_lock_object(lo);
-  switch (lk) {
-  case LockKind::EXCLUSIVE:
-    lock_target->mutex.lock();
-    break;
-  case LockKind::READ:
-    lock_target->mutex.lock_shared();
-    break;
-  };
+  lock_mutex(lk,lock_target);
 }
 
 void LockManager::lock_drop_aof() {
-  lock(LockKind::EXCLUSIVE, {LockObjects::AOF, LockObjects::CAP});
+  lock(LOCK_KIND::EXCLUSIVE, {LockObjects::AOF, LockObjects::CAP});
 }
 
 void LockManager::lock_drop_cap() {
-  lock(LockKind::EXCLUSIVE, {LockObjects::PAGE, LockObjects::CAP});
+  lock(LOCK_KIND::EXCLUSIVE, {LockObjects::PAGE, LockObjects::CAP});
 }

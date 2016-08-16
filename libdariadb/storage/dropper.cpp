@@ -99,7 +99,7 @@ void Dropper::drop_aof_internal(const std::string fname) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
-      LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_AOF);
+      LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE, LockObjects::DROP_AOF);
 
       Dropper::drop_aof(fname, Options::instance()->path);
 
@@ -119,7 +119,7 @@ void Dropper::drop_cap_internal(const std::string &fname) {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_cap_internal");
 
-      LockManager::instance()->lock(LockKind::EXCLUSIVE, LockObjects::DROP_CAP);
+      LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE, LockObjects::DROP_CAP);
       auto cap = Capacitor_Ptr{new Capacitor{fname, false}};
 
       auto without_path = fs::extract_filename(fname);
@@ -146,7 +146,7 @@ void Dropper::drop_aof_to_compress(const std::string &fname) {
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_to_compress");
 
       auto storage_path = Options::instance()->path;
-      LockManager::instance()->lock(LockKind::EXCLUSIVE,
+      LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE,
                                     {LockObjects::AOF, LockObjects::PAGE});
 
       auto full_path = fs::append_path(storage_path, fname);
