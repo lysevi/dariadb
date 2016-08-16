@@ -14,14 +14,30 @@ std::chrono::system_clock::time_point to_timepoint(Time t) {
   return std::chrono::system_clock::time_point(std::chrono::milliseconds(t));
 }
 
+///value to string
+std::string v2s(int value){
+    std::stringstream ss;
+    if(value<10){
+        ss<<'0';
+    }
+    ss<<value;
+    return ss.str();
+}
+
 std::string to_string(Time t) {
   auto ns = dariadb::timeutil::to_timepoint(t);
   auto ns_c = std::chrono::system_clock::to_time_t(ns);
   auto lc = std::localtime(&ns_c);
   std::stringstream ss;
-  ss << lc->tm_hour << ":" << lc->tm_min << ":" << lc->tm_sec << " ";
-  ss << lc->tm_mday << "." << lc->tm_mon + 1 << "." << 1900 + lc->tm_year;
+  ss << v2s(lc->tm_hour) << ":" <<v2s( lc->tm_min) << ":" << v2s(lc->tm_sec) << "-";
+  ss << v2s(lc->tm_mday) << "." << v2s(lc->tm_mon + 1) << "." << 1900 + lc->tm_year;
   return ss.str();
+
+//  auto ns = dariadb::timeutil::to_timepoint(t);
+//  auto ns_c = std::chrono::system_clock::to_time_t(ns);
+//  std::string ts = std::ctime(&ns_c);
+//  ts.resize(ts.size()-1);
+//  return ts;
 }
 
 Time current_time() {
