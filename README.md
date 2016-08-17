@@ -36,7 +36,17 @@
 * cmake 2.8 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
-##build
+##Build
+### Install dependencies
+---
+```shell
+$ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+$ sudo apt-get update
+$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev cmake  g++-6  gcc-6 cpp-6
+$ export CC="gcc-6"
+$ export CXX="g++-6"
+```
+
 ###clang
 ---
 ```shell
