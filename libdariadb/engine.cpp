@@ -50,7 +50,7 @@ public:
     }
     _subscribe_notify.start();
 
-    ThreadManager::Params tpm_params(THREAD_MANAGER_COMMON_PARAMS);
+    ThreadManager::Params tpm_params(Options::instance()->thread_pools_params());
     ThreadManager::start(tpm_params);
     LockManager::start(LockManager::Params());
     Manifest::start(

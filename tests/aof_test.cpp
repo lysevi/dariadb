@@ -154,14 +154,13 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
   }
   dariadb::utils::fs::mkdir(storagePath);
 
-  dariadb::utils::async::ThreadManager::start(
-      dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
   dariadb::storage::Options::start();
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->aof_max_size = max_size;
+  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
 
   dariadb::storage::AOFManager::start();
 
@@ -192,8 +191,6 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
-    dariadb::utils::async::ThreadManager::start(
-        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
@@ -201,7 +198,8 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->aof_max_size = max_size;
     dariadb::storage::Options::instance()->aof_buffer_size = max_size;
-
+    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+    
     dariadb::storage::AOFManager::start();
 
     dariadb_test::storage_test_check(dariadb::storage::AOFManager::instance(), from, to,
@@ -215,14 +213,13 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   {
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper());
     stor->writed_count = 0;
-    dariadb::utils::async::ThreadManager::start(
-        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->aof_max_size = max_size;
+    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
 
     dariadb::storage::AOFManager::start();
 

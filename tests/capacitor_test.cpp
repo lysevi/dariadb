@@ -533,13 +533,12 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
   dariadb::utils::fs::mkdir(storagePath);
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
-  dariadb::utils::async::ThreadManager::start(
-      dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
 
   dariadb::storage::Options::start();
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->cap_B = max_size;
   dariadb::storage::Options::instance()->cap_max_levels = max_size;
+  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
 
   dariadb::storage::CapacitorManager::start();
 
@@ -570,14 +569,13 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
-    dariadb::utils::async::ThreadManager::start(
-        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->cap_B = max_size;
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
+    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
 
     dariadb::storage::CapacitorManager::start();
 
@@ -592,14 +590,13 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
   {
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
 
-    dariadb::utils::async::ThreadManager::start(
-        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->cap_B = max_size;
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
+    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
     dariadb::storage::CapacitorManager::start();
 
     dariadb::storage::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
@@ -640,8 +637,6 @@ BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
   {
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
 
-    dariadb::utils::async::ThreadManager::start(
-        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
     dariadb::storage::Options::start();
@@ -650,6 +645,7 @@ BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
     dariadb::storage::Options::instance()->cap_max_closed_caps = 0;
     dariadb::storage::Options::instance()->cap_store_period = 1000;
+    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
 
     dariadb::storage::CapacitorManager::start();
 

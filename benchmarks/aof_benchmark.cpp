@@ -91,18 +91,17 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::utils::fs::mkdir(storage_path);
-    dariadb::utils::async::ThreadManager::start(
-        dariadb::utils::async::THREAD_MANAGER_COMMON_PARAMS);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Options::start();
-
-    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
-
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size = 1000;
     dariadb::storage::Options::instance()->aof_max_size =
         (1024 * 1024) * 3 / sizeof(dariadb::Meas);
+
+    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+
+    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
 
     dariadb::storage::AOFManager::start();
 

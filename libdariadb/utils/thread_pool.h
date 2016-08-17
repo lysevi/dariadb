@@ -17,6 +17,8 @@ namespace async {
 
 using ThreadKind = uint16_t;
 
+enum class THREAD_COMMON_KINDS : ThreadKind { READ = 1, FILE_READ, DROP };
+
 #ifdef DEBUG
 #define TKIND_CHECK(expected, exists)                                                    \
   if ((ThreadKind)expected != exists) {                                                  \

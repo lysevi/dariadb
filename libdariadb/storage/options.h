@@ -2,6 +2,7 @@
 
 #include "../meas.h"
 #include "../utils/locker.h"
+#include "../utils/thread_pool.h"
 #include "strategy.h"
 
 namespace dariadb {
@@ -43,6 +44,8 @@ public:
   void save();
   void save(const std::string &file);
   void load(const std::string &file);
+  std::vector<utils::async::ThreadPool::Params> thread_pools_params();
+
   // aof level options;
   std::string path;
   uint64_t aof_max_size;  // measurements count in one file
