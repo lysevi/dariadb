@@ -40,7 +40,6 @@ class Engine::Private {
 public:
 
   Private() {
-      _stop_log=dariadb::utils::LogManager::start();
       logger_info("version: ",this->version().to_string());
       logger_info("strategy: ",Options::instance()->strategy);
     bool is_exists = false;
@@ -93,9 +92,7 @@ public:
       PageManager::stop();
       Manifest::stop();
       LockManager::stop();
-      if (_stop_log) {
-        dariadb::utils::LogManager::stop();
-      }
+
       _stoped = true;
     }
   }
@@ -422,7 +419,6 @@ protected:
   std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
   std::unique_ptr<Dropper> _dropper;
   bool _stoped;
-  bool _stop_log;
 };
 
 Engine::Engine() : _impl{new Engine::Private()} {}

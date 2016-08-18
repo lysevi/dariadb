@@ -5,6 +5,7 @@
 #include <thread>
 #include <utils/exception.h>
 #include <utils/utils.h>
+#include <iostream>
 
 namespace dariadb_test {
 #undef NO_DATA

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <sstream>
+#include <atomic>
+#include <mutex>
+#include "locker.h"
 
 namespace dariadb {
 namespace utils {
@@ -27,10 +29,8 @@ class LogManager {
   LogManager(ILogger_ptr &logger);
 
 public:
-  static bool start(); /// return false if logger was already started.
   static void start(ILogger_ptr &logger);
-  static void stop();
-  static LogManager *instance() { return _instance; }
+  static LogManager *instance();
 
   void message(LOG_MESSAGE_KIND kind, const std::string &msg);
 
@@ -59,7 +59,8 @@ public:
   }
 
 private:
-  static LogManager *_instance;
+  static std::shared_ptr<LogManager>_instance;
+  static utils::Locker _locker;
   ILogger_ptr _logger;
 };
 }

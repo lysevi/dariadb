@@ -1,27 +1,30 @@
 #include "logger.h"
+#include <iostream>
 
 using namespace dariadb::utils;
 
-LogManager *LogManager::_instance = nullptr;
+std::shared_ptr<LogManager> LogManager::_instance = nullptr;
+Locker LogManager::_locker;
 
-bool LogManager::start() {
-  if (_instance == nullptr) {
-    ILogger_ptr l{new ConsoleLogger};
-    _instance = new LogManager(l);
-    return true;
-  }
-  return false;
-}
 
 void LogManager::start(ILogger_ptr &logger) {
   if (_instance == nullptr) {
-    _instance = new LogManager(logger);
+    _instance=std::shared_ptr<LogManager>{new LogManager(logger)};
   }
 }
 
-void LogManager::stop() {
-  delete _instance;
-  _instance = nullptr;
+LogManager *LogManager::instance() {
+  auto tmp = _instance.get();
+  if (tmp == nullptr) {
+    std::lock_guard<Locker> lock(_locker);
+    tmp = _instance.get();
+    if (tmp == nullptr) {
+      ILogger_ptr l{new ConsoleLogger};
+      tmp = new LogManager(l);
+      _instance=std::shared_ptr<LogManager>{tmp};
+    }
+  }
+  return tmp;
 }
 
 LogManager::LogManager(ILogger_ptr &logger) { _logger = logger; }

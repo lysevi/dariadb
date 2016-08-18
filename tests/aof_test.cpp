@@ -44,7 +44,6 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
   }
 
   dariadb::utils::fs::mkdir(storage_path);
-  dariadb::utils::LogManager::start();
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storage_path, "Manifest"));
   auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
@@ -114,7 +113,6 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
   }
   dariadb::storage::Manifest::stop();
   dariadb::storage::Options::stop();
-  dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -128,7 +126,6 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
   }
   {
     dariadb::utils::fs::mkdir(storage_path);
-    dariadb::utils::LogManager::start();
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Options::start();
@@ -145,7 +142,6 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
   }
 
   dariadb::storage::Options::stop();
-  dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -158,7 +154,6 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
     dariadb::utils::fs::rm(storagePath);
   }
   dariadb::utils::fs::mkdir(storagePath);
-  dariadb::utils::LogManager::start();
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, "Manifest"));
 
@@ -178,7 +173,6 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
   dariadb::storage::Manifest::stop();
   dariadb::utils::async::ThreadManager::stop();
   dariadb::storage::Options::stop();
-dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
@@ -195,7 +189,6 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::utils::fs::rm(storagePath);
   }
   dariadb::utils::fs::mkdir(storagePath);
-  dariadb::utils::LogManager::start();
   {
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));
@@ -251,7 +244,6 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::utils::async::ThreadManager::stop();
     dariadb::storage::Options::stop();
   }
-  dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
