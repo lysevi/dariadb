@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../common.h"
+#include "../append_result.h"
 #include "../meas.h"
 #include "../storage/query_param.h"
 #include "icallbacks.h"
