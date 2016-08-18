@@ -113,6 +113,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 
   dariadb::utils::fs::mkdir(storage_path);
 
+  dariadb::utils::LogManager::start();
   Options::start(storage_path);
   auto instance = Options::instance();
   BOOST_CHECK(instance != nullptr);
@@ -147,6 +148,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   BOOST_CHECK(Options::instance()->strategy == dariadb::storage::STRATEGY::COMPRESSED);
 
   dariadb::storage::Options::stop();
+  dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -191,6 +193,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
       dariadb::utils::fs::rm(storage_path);
     }
 
+    dariadb::utils::LogManager::start();
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->cap_B = cap_B;
@@ -248,6 +251,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     BOOST_CHECK(current.size() != size_t(0));
   }
   dariadb::storage::Options::stop();
+  dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -276,6 +280,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
       dariadb::utils::fs::rm(storage_path);
     }
 
+    dariadb::utils::LogManager::start();
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
@@ -319,6 +324,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     BOOST_CHECK_EQUAL(c4->values.front().flag, dariadb::Flag(1));
   }
   dariadb::storage::Options::stop();
+  dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -338,6 +344,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       dariadb::utils::fs::rm(storage_path);
     }
 
+    dariadb::utils::LogManager::start();
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
@@ -403,7 +410,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     BOOST_CHECK_GE(total_count, total_readed);
   }
   dariadb::storage::Options::stop();
-
+dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -422,6 +429,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
       dariadb::utils::fs::rm(storage_path);
     }
 
+    dariadb::utils::LogManager::start();
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
@@ -480,6 +488,7 @@ BOOST_AUTO_TEST_CASE(Engine_memvalues) {
     }
   }
   dariadb::storage::Options::stop();
+  dariadb::utils::LogManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }

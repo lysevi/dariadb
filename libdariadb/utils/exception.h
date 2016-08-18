@@ -34,8 +34,10 @@ struct CodePos {
 class Exception : public std::exception {
 public:
   static Exception create_and_log(const CodePos &pos, const std::string &message) {
-    logger_fatal("FATAL ERROR. The Exception will be thrown! "
-                 << pos.toString() << " Message: " << message);
+      std::stringstream ss;
+      ss<<"FATAL ERROR. The Exception will be thrown! "
+                       << pos.toString() << " Message: " << message;
+    logger_fatal(ss.str());
     return Exception(message);
   }
 

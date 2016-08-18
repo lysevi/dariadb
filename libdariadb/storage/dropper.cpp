@@ -72,8 +72,8 @@ void Dropper::cleanStorage(std::string storagePath) {
     for (auto &capf : caps_lst) {
       auto cap_fname = fs::filename(capf);
       if (cap_fname == aof_fname) {
-        logger_info("fsck: aof drop not finished: " << aof_fname);
-        logger_info("fsck: rm " << capf);
+        logger_info("fsck: aof drop not finished: ", aof_fname);
+        logger_info("fsck: rm ", capf);
         CapacitorManager::erase(fs::extract_filename(capf));
       }
     }
@@ -86,8 +86,8 @@ void Dropper::cleanStorage(std::string storagePath) {
     for (auto &page : page_lst) {
       auto page_fname = fs::filename(page);
       if (cap_fname == page_fname) {
-        logger_info("fsck: cap drop not finished: " << cap_fname);
-        logger_info("fsck: rm " << page_fname);
+        logger_info("fsck: cap drop not finished: ", cap_fname);
+        logger_info("fsck: rm ", page_fname);
         PageManager::erase(fs::extract_filename(page));
       }
     }
@@ -179,7 +179,7 @@ void Dropper::flush() {
   size_t iter = 0;
   auto strat = Options::instance()->strategy;
   while (!_aof_files.empty() || !_cap_files.empty()) {
-    logger_info("flush iter=" << iter++);
+    logger_info("flush iter=" , iter++);
     _cap_locker.lock();
     _aof_locker.lock();
 
@@ -192,7 +192,7 @@ void Dropper::flush() {
     _cap_locker.unlock();
     _aof_locker.unlock();
 
-    logger_info("aof to flush:" << aof_copy.size());
+    logger_info("aof to flush:" , aof_copy.size());
     for (auto f : aof_copy) {
       switch (strat) {
       case STRATEGY::COMPRESSED:
@@ -204,7 +204,7 @@ void Dropper::flush() {
       }
     }
 
-    logger_info("cap to flush:" << cap_copy.size());
+    logger_info("cap to flush:" , cap_copy.size());
     for (auto f : cap_copy) {
       drop_cap_internal(f);
     }

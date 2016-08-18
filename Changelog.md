@@ -3,6 +3,7 @@ v0.2.0
 - Engine version in manifest.
 - Engine write strategies.
 - New algorithm to drop values between levels depending on the strategies.
+- New logger interface.
 
 v0.1.1
 =====

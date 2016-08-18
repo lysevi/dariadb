@@ -241,7 +241,7 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
 
 void Page::fsck() {
   using dariadb::timeutil::to_string;
-  logger_info("fsck: page " << this->filename);
+  logger_info("fsck: page ", this->filename);
 
   auto byte_it = this->chunks;
   auto end = this->region + this->header->filesize;
@@ -258,9 +258,9 @@ void Page::fsck() {
 
       if (!ptr->check_checksum()) {
         logger_fatal("fsck: remove broken chunk #"
-                     << ptr->header->id << " id:" << ptr->header->first.id << " time: ["
-                     << to_string(ptr->header->minTime) << " : "
-                     << to_string(ptr->header->maxTime) << "]");
+                     , ptr->header->id , " id:" , ptr->header->first.id , " time: ["
+                     , to_string(ptr->header->minTime) , " : "
+                     , to_string(ptr->header->maxTime) , "]");
         mark_as_non_init(ptr);
       }
     }
@@ -415,8 +415,8 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
     auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
     if (!ptr_to_chunk_info_raw->is_init) {
-      logger_info("Try to read not_init chunk (" << ptr_to_chunk_info_raw->id
-                                                 << "). maybe broken");
+      logger_info("Try to read not_init chunk (" , ptr_to_chunk_info_raw->id
+                                                 , "). maybe broken");
       continue;
     }
 

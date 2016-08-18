@@ -38,9 +38,11 @@ Engine::Version Engine::Version::from_string(const std::string&str){
 
 class Engine::Private {
 public:
+
   Private() {
-      logger_info("version: "<<this->version().to_string());
-      logger_info("strategy: "<<Options::instance()->strategy);
+      _stop_log=dariadb::utils::LogManager::start();
+      logger_info("version: ",this->version().to_string());
+      logger_info("strategy: ",Options::instance()->strategy);
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
@@ -91,7 +93,9 @@ public:
       PageManager::stop();
       Manifest::stop();
       LockManager::stop();
-
+      if (_stop_log) {
+        dariadb::utils::LogManager::stop();
+      }
       _stoped = true;
     }
   }
@@ -100,11 +104,11 @@ public:
       auto current_version=this->version().version;
       auto storage_version=Manifest::instance()->get_version();
       if(storage_version!=current_version){
-          logger_info("openning storage with version: "<<storage_version);
+          logger_info("openning storage with version: ",storage_version);
           if(Version::from_string(storage_version)>this->version()){
               THROW_EXCEPTION_SS("openning storage with greater version.");
           }else{
-              logger_info("update storage version to "<<current_version);
+              logger_info("update storage version to ",current_version);
               Manifest::instance()->set_version(current_version);
           }
       }
@@ -397,7 +401,7 @@ AOFManager::instance()->drop_closed_files(count);
   }
 
   void fsck() {
-      logger_info("engine: fsck "<<Options::instance()->path);
+      logger_info("engine: fsck ",Options::instance()->path);
     CapacitorManager::instance()->fsck();
     PageManager::instance()->fsck();
   }
@@ -418,6 +422,7 @@ protected:
   std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
   std::unique_ptr<Dropper> _dropper;
   bool _stoped;
+  bool _stop_log;
 };
 
 Engine::Engine() : _impl{new Engine::Private()} {}

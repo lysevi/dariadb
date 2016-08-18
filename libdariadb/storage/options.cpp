@@ -75,7 +75,7 @@ void Options::save() {
 }
 
 void Options::save(const std::string &file) {
-  logger("options: save to " << file);
+  logger("options: save to ", file);
   json js;
 
   js["aof_max_size"] = aof_max_size;
@@ -104,7 +104,7 @@ void Options::save(const std::string &file) {
 }
 
 void Options::load(const std::string &file) {
-  logger("options: loading " << file);
+  logger("options: loading ", file);
   std::string content = dariadb::utils::fs::read_file(file);
   json js = json::parse(content);
   aof_max_size = js["aof_max_size"];
