@@ -431,7 +431,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     auto rdr = search_res->get_reader();
     while (!rdr->is_end()) {
       auto subres = rdr->readNext();
-      if (search_res->header->is_sorted && subres.time > query.to) {
+      if (subres.time > query.to) {
         break;
       }
       if (subres.inQuery(query.ids, query.flag, query.source, query.from, query.to)) {

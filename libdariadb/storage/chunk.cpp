@@ -38,7 +38,6 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m) {
   header->size = _size;
 
   header->is_readonly = false;
-  header->is_sorted = true;
   header->count = 0;
   header->first = first_m;
   header->last = first_m;
@@ -144,9 +143,6 @@ bool ZippedChunk::append(const Meas &m) {
     header->bw_bit_num = bw->bitnum();
 
     header->count++;
-    if (m.time < header->last.time) {
-      header->is_sorted = false;
-    }
     header->minTime = std::min(header->minTime, m.time);
     header->maxTime = std::max(header->maxTime, m.time);
     header->minId = std::min(header->minId, m.id);
@@ -181,23 +177,7 @@ public:
   std::shared_ptr<CopmressedReader> _reader;
 };
 
-class SortedReader : public Chunk::IChunkReader {
-public:
-  virtual Meas readNext() override {
-    assert(!is_end());
-    auto res = *_iter;
-    ++_iter;
-    return res;
-  }
-
-  bool is_end() const override { return _iter == values.cend(); }
-
-  dariadb::Meas::MeasArray values;
-  dariadb::Meas::MeasArray::const_iterator _iter;
-};
-
 Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
-  if (header->is_sorted) {
     auto raw_res = new ZippedChunkReader;
     raw_res->count = this->header->count;
     raw_res->_chunk = this->shared_from_this();
@@ -209,22 +189,4 @@ Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
 
     Chunk::ChunkReader_Ptr result{raw_res};
     return result;
-  } else {
-    Meas::MeasList res_set;
-    auto cp_bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
-    cp_bw->reset_pos();
-    auto c_reader = std::make_shared<CopmressedReader>(cp_bw, this->header->first);
-    res_set.push_back(header->first);
-    for (size_t i = 0; i < header->count; ++i) {
-      res_set.push_back(c_reader->read());
-    }
-    assert(res_set.size() == header->count + 1); // compressed+first
-    auto raw_res = new SortedReader;
-    raw_res->values = dariadb::Meas::MeasArray{res_set.begin(), res_set.end()};
-    std::sort(raw_res->values.begin(), raw_res->values.end(),
-              dariadb::meas_time_compare_less());
-    raw_res->_iter = raw_res->values.begin();
-    Chunk::ChunkReader_Ptr result{raw_res};
-    return result;
-  }
 }

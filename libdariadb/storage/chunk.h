@@ -19,7 +19,6 @@ std::ostream &operator<<(std::ostream &stream, const ChunkKind &k);
 struct ChunkHeader {
   uint64_t id; // chunk id;
   bool is_init : 1;
-  bool is_sorted : 1;
   bool is_readonly : 1;
   ChunkKind kind;
   Meas first, last;

@@ -77,35 +77,6 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(ChunkSorted) {
-  uint8_t buffer[1024];
-  std::fill(std::begin(buffer), std::end(buffer), 0);
-  dariadb::storage::ChunkHeader info;
-  auto v = dariadb::Meas::empty(0);
-  v.time = 5;
-  dariadb::storage::Chunk_Ptr zch{
-      new dariadb::storage::ZippedChunk(&info, buffer, 1024, v)};
-  BOOST_CHECK(zch->header->is_sorted);
-  v.time++;
-  BOOST_CHECK(zch->append(v));
-  v.time++;
-  BOOST_CHECK(zch->append(v));
-  v.time = 4;
-  BOOST_CHECK(zch->append(v));
-  BOOST_CHECK(!zch->header->is_sorted);
-  v.time = 10;
-  BOOST_CHECK(zch->append(v));
-  BOOST_CHECK(!zch->header->is_sorted);
-
-  auto reader = zch->get_reader();
-  auto prev_value = reader->readNext();
-  while (!reader->is_end()) {
-    auto new_value = reader->readNext();
-    BOOST_CHECK_LE(prev_value.time, new_value.time);
-    prev_value = new_value;
-  }
-}
-
 BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   const std::string storagePath = "testStorage";
   if (dariadb::utils::fs::path_exists(storagePath)) {
