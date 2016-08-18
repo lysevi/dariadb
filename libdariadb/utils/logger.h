@@ -66,19 +66,19 @@ private:
 }
 
 template<typename...T>
-void logger(T...args){
+void logger(T&&...args){
     dariadb::utils::LogManager::instance()->variadic_message(
         dariadb::utils::LOG_MESSAGE_KIND::MESSAGE,args...);
 }
 
 template<typename...T>
-void logger_info(T...args){
+void logger_info(T&&...args){
     dariadb::utils::LogManager::instance()->variadic_message(
         dariadb::utils::LOG_MESSAGE_KIND::INFO,args...);
 }
 
 template<typename...T>
-void logger_fatal(T...args){
+void logger_fatal(T&&...args){
     dariadb::utils::LogManager::instance()->variadic_message(
         dariadb::utils::LOG_MESSAGE_KIND::FATAL,args...);
 }
