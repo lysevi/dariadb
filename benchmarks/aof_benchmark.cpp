@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
   try {
     po::store(po::parse_command_line(argc, argv, desc), vm);
   } catch (std::exception &ex) {
-    logger("Error: ", ex.what());
+    dariadb::logger("Error: ", ex.what());
     exit(1);
   }
   po::notify(vm);

@@ -6,16 +6,6 @@
 #include <string>
 #include <sstream>
 
-#define logger(...)                                                            \
-  dariadb::utils::LogManager::instance()->variadic_message(                             \
-      dariadb::utils::LOG_MESSAGE_KIND::MESSAGE, __VA_ARGS__);
-#define logger_info(...)                                                       \
-  dariadb::utils::LogManager::instance()->variadic_message(                             \
-      dariadb::utils::LOG_MESSAGE_KIND::INFO, __VA_ARGS__);
-#define logger_fatal(...)                                                      \
-  dariadb::utils::LogManager::instance()->variadic_message(                             \
-      dariadb::utils::LOG_MESSAGE_KIND::FATAL, __VA_ARGS__);
-
 namespace dariadb {
 namespace utils {
 
@@ -73,4 +63,23 @@ private:
   ILogger_ptr _logger;
 };
 }
+
+template<typename...T>
+void logger(T...args){
+    dariadb::utils::LogManager::instance()->variadic_message(
+        dariadb::utils::LOG_MESSAGE_KIND::MESSAGE,args...);
+}
+
+template<typename...T>
+void logger_info(T...args){
+    dariadb::utils::LogManager::instance()->variadic_message(
+        dariadb::utils::LOG_MESSAGE_KIND::INFO,args...);
+}
+
+template<typename...T>
+void logger_fatal(T...args){
+    dariadb::utils::LogManager::instance()->variadic_message(
+        dariadb::utils::LOG_MESSAGE_KIND::FATAL,args...);
+}
+
 }

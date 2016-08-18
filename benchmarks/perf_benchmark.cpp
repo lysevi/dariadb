@@ -378,6 +378,9 @@ void check_engine_state(Engine *raw_ptr) {
 }
 
 int main(int argc, char *argv[]) {
+    dariadb::utils::ILogger_ptr log_ptr{new BenchmarkLogger};
+    dariadb::utils::LogManager::start(log_ptr);
+
   std::cout << "Performance benchmark" << std::endl;
   std::cout << "Writers count:" << dariadb_bench::total_threads_count
             << std::endl;
@@ -405,13 +408,13 @@ int main(int argc, char *argv[]) {
         is_exists = true;
       }
     }
-    dariadb::utils::ILogger_ptr log_ptr{new BenchmarkLogger};
+
 
     start_time = timeutil::current_time() - cap_store_period * 2;
     std::cout << " start time: " << timeutil::to_string(start_time)
               << std::endl;
 
-    dariadb::utils::LogManager::start(log_ptr);
+
     Options::start(storage_path);
     if (!is_exists) {
       Options::instance()->cap_store_period = cap_store_period;
