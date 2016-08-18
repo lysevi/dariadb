@@ -25,29 +25,7 @@ Time cap_store_period = 0;
 size_t read_benchmark_runs = 100;
 STRATEGY strategy = STRATEGY::FAST_READ;
 
-class BenchmarkLogger : public dariadb::utils::ILogger {
-public:
-    std::atomic<uint64_t> _calls;
-  void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) {
-      _calls+=1;
-    auto ct = dariadb::timeutil::current_time();
-    auto ct_str = dariadb::timeutil::to_string(ct);
-    std::stringstream ss;
-    ss << ct_str << " ";
-    switch (kind) {
-    case dariadb::utils::LOG_MESSAGE_KIND::FATAL:
-      ss << "[err] " << msg << std::endl;
-      break;
-    case dariadb::utils::LOG_MESSAGE_KIND::INFO:
-      ss << "[inf] " << msg << std::endl;
-      break;
-    case dariadb::utils::LOG_MESSAGE_KIND::MESSAGE:
-      ss << "      " << msg << std::endl;
-      break;
-    }
-    std::cout << ss.str();
-  }
-};
+
 
 class BenchCallback : public IReaderClb {
 public:
@@ -378,7 +356,7 @@ void check_engine_state(Engine *raw_ptr) {
 }
 
 int main(int argc, char *argv[]) {
-    dariadb::utils::ILogger_ptr log_ptr{new BenchmarkLogger};
+    dariadb::utils::ILogger_ptr log_ptr{new dariadb_bench::BenchmarkLogger};
     dariadb::utils::LogManager::start(log_ptr);
 
   std::cout << "Performance benchmark" << std::endl;
@@ -520,7 +498,7 @@ int main(int argc, char *argv[]) {
     std::cout << "stoping storage...\n";
     ms = nullptr;
     dariadb::storage::Options::stop();
-    if(dynamic_cast<BenchmarkLogger*>(log_ptr.get())->_calls.load()==0){
+    if(dynamic_cast<dariadb_bench::BenchmarkLogger*>(log_ptr.get())->_calls.load()==0){
         throw std::logic_error("log_ptr->_calls.load()==0");
     }
   }

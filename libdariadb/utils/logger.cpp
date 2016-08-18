@@ -42,7 +42,7 @@ void ConsoleLogger::message(LOG_MESSAGE_KIND kind, const std::string &msg) {
     std::cout << "[inf] " << msg << std::endl;
     break;
   case LOG_MESSAGE_KIND::MESSAGE:
-    std::cout << "      " << msg << std::endl;
+    std::cout << "[dbg] " << msg << std::endl;
     break;
   }
 }

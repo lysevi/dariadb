@@ -26,6 +26,30 @@ const size_t id_per_thread = 100/total_threads_count;
 // const size_t id_per_thread = 200000;
 const uint64_t all_writes = total_threads_count * write_per_id_count * id_per_thread;
 
+class BenchmarkLogger : public dariadb::utils::ILogger {
+public:
+    std::atomic<uint64_t> _calls;
+  void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) {
+      _calls+=1;
+    auto ct = dariadb::timeutil::current_time();
+    auto ct_str = dariadb::timeutil::to_string(ct);
+    std::stringstream ss;
+    ss << ct_str << " ";
+    switch (kind) {
+    case dariadb::utils::LOG_MESSAGE_KIND::FATAL:
+      ss << "[err] " << msg << std::endl;
+      break;
+    case dariadb::utils::LOG_MESSAGE_KIND::INFO:
+      ss << "[inf] " << msg << std::endl;
+      break;
+    case dariadb::utils::LOG_MESSAGE_KIND::MESSAGE:
+      ss << "[dbg] " << msg << std::endl;
+      break;
+    }
+    std::cout << ss.str();
+  }
+};
+
 class BenchCallback : public dariadb::storage::IReaderClb {
 public:
   BenchCallback() { count = 0; }

@@ -49,8 +49,8 @@ void show_info() {
 }
 
 int main(int argc, char *argv[]) {
-  (void)argc;
-  (void)argv;
+    dariadb::utils::ILogger_ptr log_ptr{new dariadb_bench::BenchmarkLogger};
+    dariadb::utils::LogManager::start(log_ptr);
 
   po::options_description desc("Allowed options");
   bool dont_clean = false;
