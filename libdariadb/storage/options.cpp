@@ -8,6 +8,13 @@
 using namespace dariadb::storage;
 using json = nlohmann::json;
 
+const size_t AOF_BUFFER_SIZE = 2000;
+const uint32_t CAP_DEFAULT_MAX_LEVELS = 11;
+const uint32_t CAP_MAX_CLOSED_CAPS = 10;
+const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
+const uint32_t CHUNK_SIZE = 1024;
+const uint32_t CAP_B = 50;
+
 Options *Options::_instance = nullptr;
 
 std::string options_file_path(const std::string &path) {

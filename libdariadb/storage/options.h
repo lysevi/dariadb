@@ -8,12 +8,6 @@
 namespace dariadb {
 namespace storage {
 
-const size_t AOF_BUFFER_SIZE = 1000;
-const uint32_t CAP_DEFAULT_MAX_LEVELS = 11;
-const uint32_t CAP_MAX_CLOSED_CAPS = 10;
-const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
-const uint32_t CHUNK_SIZE = 512;
-const uint32_t CAP_B = 50;
 const std::string OPTIONS_FILE_NAME = "Options";
 
 class Options {
