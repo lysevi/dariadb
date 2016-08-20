@@ -363,7 +363,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Writers count:" << dariadb_bench::total_threads_count
             << std::endl;
 
-  const std::string storage_path = "perf_benchmark_storage";
+  const std::string storage_path = "engine_benchmark_storage";
 
   parse_cmdline(argc, argv);
 

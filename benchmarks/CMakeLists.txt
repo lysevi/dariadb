@@ -15,13 +15,13 @@ endmacro(ADD_BENCHARK)
 
 ADD_BENCHARK(compression_benchmark compression_benchmark.cpp)
 ADD_BENCHARK(aof_benchmark aof_benchmark.cpp)
-ADD_BENCHARK(perf_benchmark perf_benchmark.cpp)
+ADD_BENCHARK(engine_benchmark engine_benchmark.cpp)
 ADD_BENCHARK(statistic_benchmark statistic_benchmark.cpp)
 ADD_BENCHARK(utils_benchmark utils_benchmark.cpp)
 
 macro(ADD_PERF_TEST name)
-   MESSAGE(STATUS " + perf_benchmark "  ${name} " "  ${ARGN})
-   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/perf_benchmark --read-benchmark-runs=10  ${ARGN})
+   MESSAGE(STATUS " + engine_benchmark.cpp "  ${name} " "  ${ARGN})
+   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/engine_benchmark --read-benchmark-runs=10  ${ARGN})
 endmacro(ADD_PERF_TEST)
 
 if(ENABLE_INTEGRATION_TESTS)
