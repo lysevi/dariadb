@@ -178,15 +178,14 @@ public:
 };
 
 Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
-    auto raw_res = new ZippedChunkReader;
-    raw_res->count = this->header->count;
-    raw_res->_chunk = this->shared_from_this();
-    raw_res->_is_first = true;
-    raw_res->bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
-    raw_res->bw->reset_pos();
-    raw_res->_reader =
-        std::make_shared<CopmressedReader>(raw_res->bw, this->header->first);
+  auto raw_res = new ZippedChunkReader;
+  raw_res->count = this->header->count;
+  raw_res->_chunk = this->shared_from_this();
+  raw_res->_is_first = true;
+  raw_res->bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
+  raw_res->bw->reset_pos();
+  raw_res->_reader = std::make_shared<CopmressedReader>(raw_res->bw, this->header->first);
 
-    Chunk::ChunkReader_Ptr result{raw_res};
-    return result;
+  Chunk::ChunkReader_Ptr result{raw_res};
+  return result;
 }

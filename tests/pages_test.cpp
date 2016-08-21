@@ -13,9 +13,9 @@
 #include <storage/page.h>
 #include <storage/page_manager.h>
 #include <utils/fs.h>
+#include <utils/logger.h>
 #include <utils/thread_manager.h>
 #include <utils/utils.h>
-#include <utils/logger.h>
 
 using dariadb::storage::PageManager;
 using dariadb::storage::Manifest;
@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     dariadb::utils::fs::rm(fname);
   }
 
-  std::string version="0.1.2.3.4.5";
+  std::string version = "0.1.2.3.4.5";
 
   {
     Manifest::start(fname);
@@ -89,8 +89,9 @@ BOOST_AUTO_TEST_CASE(PageManagerInstance) {
   dariadb::storage::Options::start();
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->page_chunk_size = 1;
-  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
-  
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::storage::Options::instance()->thread_pools_params());
+
   PageManager::start();
 
   BOOST_CHECK(PageManager::instance() != nullptr);
@@ -120,7 +121,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   dariadb::storage::Options::start();
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->page_chunk_size = chunks_size;
-  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::storage::Options::instance()->thread_pools_params());
 
   PageManager::start();
   dariadb::Meas first;
@@ -184,7 +186,8 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   dariadb::storage::Options::start();
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->page_chunk_size = chunks_size;
-  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::storage::Options::instance()->thread_pools_params());
 
   PageManager::start();
   dariadb::Meas first;
@@ -268,8 +271,9 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   dariadb::storage::Options::start();
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->page_chunk_size = chunks_size;
-  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
-  
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::storage::Options::instance()->thread_pools_params());
+
   PageManager::start();
   BOOST_CHECK(PageManager::instance() != nullptr);
 

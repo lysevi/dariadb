@@ -258,11 +258,10 @@ public:
     for (size_t i = 0; i < _header->levels_count; ++i) {
       auto current = &_levels[i];
       if (!current->check_checksum()) {
-        logger_fatal(LOG_MSG_PREFIX , "level #" ,i ," (cap: " , current->hdr->count
-                                    , " size: " ,current->hdr->pos , " time: ["
-                                    , to_string(current->hdr->_minTime) , " : "
-                                    , to_string(current->hdr->_maxTime) , "])"
-                                    , " checksum error.");
+        logger_fatal(LOG_MSG_PREFIX, "level #", i, " (cap: ", current->hdr->count,
+                     " size: ", current->hdr->pos, " time: [",
+                     to_string(current->hdr->_minTime), " : ",
+                     to_string(current->hdr->_maxTime), "])", " checksum error.");
         dropped += current->hdr->pos;
         _levels[i].clear();
       } else {
@@ -272,9 +271,9 @@ public:
       }
     }
     if (dropped != 0) {
-      logger_info(LOG_MSG_PREFIX , "dropped " , dropped , " values.");
+      logger_info(LOG_MSG_PREFIX, "dropped ", dropped, " values.");
       if (!readed.empty()) {
-        logger_info(LOG_MSG_PREFIX , "rewrite ", readed.size() , " values.");
+        logger_info(LOG_MSG_PREFIX, "rewrite ", readed.size(), " values.");
         this->_header->_memvalues_pos = 0;
         this->_header->_writed = 0;
         for (auto &m : readed) {

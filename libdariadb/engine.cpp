@@ -1,4 +1,5 @@
 #include "engine.h"
+#include "config.h"
 #include "flags.h"
 #include "storage/capacitor_manager.h"
 #include "storage/dropper.h"
@@ -6,13 +7,12 @@
 #include "storage/manifest.h"
 #include "storage/page_manager.h"
 #include "storage/subscribe.h"
-#include "utils/utils.h"
 #include "utils/exception.h"
 #include "utils/locker.h"
 #include "utils/logger.h"
 #include "utils/metrics.h"
 #include "utils/thread_manager.h"
-#include "config.h"
+#include "utils/utils.h"
 #include <algorithm>
 #include <cassert>
 
@@ -20,28 +20,27 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-std::string Engine::Version::to_string()const{
-    return version;
+std::string Engine::Version::to_string() const {
+  return version;
 }
 
-Engine::Version Engine::Version::from_string(const std::string&str){
-    std::vector<std::string> elements=utils::split(str,'.');
-    assert(elements.size()==3);
+Engine::Version Engine::Version::from_string(const std::string &str) {
+  std::vector<std::string> elements = utils::split(str, '.');
+  assert(elements.size() == 3);
 
-    Engine::Version result;
-    result.version=str;
-    result.major=std::stoi(elements[0]);
-    result.minor=std::stoi(elements[1]);
-    result.patch=std::stoi(elements[2]);
-    return result;
+  Engine::Version result;
+  result.version = str;
+  result.major = std::stoi(elements[0]);
+  result.minor = std::stoi(elements[1]);
+  result.patch = std::stoi(elements[2]);
+  return result;
 }
 
 class Engine::Private {
 public:
-
   Private() {
-      logger_info("version: ",this->version().to_string());
-      logger_info("strategy: ",Options::instance()->strategy);
+    logger_info("version: ", this->version().to_string());
+    logger_info("strategy: ", Options::instance()->strategy);
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
@@ -63,10 +62,10 @@ public:
 
     PageManager::start();
 
-    if(!is_exists){
-        Manifest::instance()->set_version(this->version().version);
-    }else{
-        check_storage_version();
+    if (!is_exists) {
+      Manifest::instance()->set_version(this->version().version);
+    } else {
+      check_storage_version();
     }
 
     AOFManager::start();
@@ -97,18 +96,18 @@ public:
     }
   }
 
-  void check_storage_version(){
-      auto current_version=this->version().version;
-      auto storage_version=Manifest::instance()->get_version();
-      if(storage_version!=current_version){
-          logger_info("openning storage with version: ",storage_version);
-          if(Version::from_string(storage_version)>this->version()){
-              THROW_EXCEPTION_SS("openning storage with greater version.");
-          }else{
-              logger_info("update storage version to ",current_version);
-              Manifest::instance()->set_version(current_version);
-          }
+  void check_storage_version() {
+    auto current_version = this->version().version;
+    auto storage_version = Manifest::instance()->get_version();
+    if (storage_version != current_version) {
+      logger_info("openning storage with version: ", storage_version);
+      if (Version::from_string(storage_version) > this->version()) {
+        THROW_EXCEPTION_SS("openning storage with greater version.");
+      } else {
+        logger_info("update storage version to ", current_version);
+        Manifest::instance()->set_version(current_version);
       }
+    }
   }
 
   Time minTime() {
@@ -238,7 +237,7 @@ public:
     result.pages_count = PageManager::instance()->files_count();
     result.cola_count = CapacitorManager::instance()->files_count();
     result.active_works = ThreadManager::instance()->active_works();
-    result.dropper_queues=_dropper->queues();
+    result.dropper_queues = _dropper->queues();
     return result;
   }
 
@@ -393,23 +392,21 @@ public:
     CapacitorManager::instance()->drop_closed_files(count);
   }
 
-  void drop_part_aofs(size_t count){
-AOFManager::instance()->drop_closed_files(count);
-  }
+  void drop_part_aofs(size_t count) { AOFManager::instance()->drop_closed_files(count); }
 
   void fsck() {
-      logger_info("engine: fsck ",Options::instance()->path);
+    logger_info("engine: fsck ", Options::instance()->path);
     CapacitorManager::instance()->fsck();
     PageManager::instance()->fsck();
   }
 
-  Engine::Version version(){
-      Version result;
-      result.version=PROJECT_VERSION;
-      result.major=PROJECT_VERSION_MAJOR;
-      result.minor=PROJECT_VERSION_MINOR;
-      result.patch=PROJECT_VERSION_PATCH;
-      return result;
+  Engine::Version version() {
+    Version result;
+    result.version = PROJECT_VERSION;
+    result.major = PROJECT_VERSION_MAJOR;
+    result.minor = PROJECT_VERSION_MINOR;
+    result.patch = PROJECT_VERSION_PATCH;
+    return result;
   }
 
 protected:
@@ -486,8 +483,8 @@ Meas::Id2Meas Engine::readInTimePoint(const QueryTimePoint &q) {
   return _impl->readInTimePoint(q);
 }
 
-void Engine::drop_part_aofs(size_t count){
-return _impl->drop_part_aofs(count);
+void Engine::drop_part_aofs(size_t count) {
+  return _impl->drop_part_aofs(count);
 }
 
 void Engine::drop_part_caps(size_t count) {
@@ -502,6 +499,6 @@ void Engine::fsck() {
   _impl->fsck();
 }
 
-Engine::Version Engine::version(){
-    return _impl->version();
+Engine::Version Engine::version() {
+  return _impl->version();
 }

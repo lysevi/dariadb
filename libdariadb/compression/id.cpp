@@ -43,14 +43,14 @@ bool IdCompressor::append(dariadb::Id v) {
   return true;
 }
 
-//IdCompressionPosition IdCompressor::get_position() const {
+// IdCompressionPosition IdCompressor::get_position() const {
 //  IdCompressionPosition result;
 //  result._first = _first;
 //  result._is_first = _is_first;
 //  return result;
 //}
 
-//void IdCompressor::restore_position(const IdCompressionPosition &pos) {
+// void IdCompressor::restore_position(const IdCompressionPosition &pos) {
 //  _first = pos._first;
 //  _is_first = pos._is_first;
 //}

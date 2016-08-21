@@ -66,7 +66,7 @@ bool XorCompressor::append(Value v) {
   return true;
 }
 
-//XorCompressionPosition XorCompressor::get_position() const {
+// XorCompressionPosition XorCompressor::get_position() const {
 //  XorCompressionPosition result;
 //  result._first = _first;
 //  result._is_first = _is_first;
@@ -76,7 +76,7 @@ bool XorCompressor::append(Value v) {
 //  return result;
 //}
 
-//void XorCompressor::restore_position(const XorCompressionPosition &pos) {
+// void XorCompressor::restore_position(const XorCompressionPosition &pos) {
 //  _first = pos._first;
 //  _is_first = pos._is_first;
 //  _prev_lead = pos._prev_lead;

@@ -160,7 +160,8 @@ BOOST_AUTO_TEST_CASE(AOFManager_Instance) {
   dariadb::storage::Options::start();
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->aof_max_size = max_size;
-  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::storage::Options::instance()->thread_pools_params());
 
   dariadb::storage::AOFManager::start();
 
@@ -197,8 +198,9 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->aof_max_size = max_size;
     dariadb::storage::Options::instance()->aof_buffer_size = max_size;
-    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
-    
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::storage::Options::instance()->thread_pools_params());
+
     dariadb::storage::AOFManager::start();
 
     dariadb_test::storage_test_check(dariadb::storage::AOFManager::instance(), from, to,
@@ -218,7 +220,8 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->aof_max_size = max_size;
-    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::storage::Options::instance()->thread_pools_params());
 
     dariadb::storage::AOFManager::start();
 

@@ -65,7 +65,10 @@ struct TaskResult {
     m.lock();
   }
   ~TaskResult() {}
-  void wait() { m.lock();  m.unlock();}
+  void wait() {
+    m.lock();
+    m.unlock();
+  }
 
   void unlock() {
     runned = false;

@@ -17,12 +17,13 @@ using namespace dariadb::utils::async;
 
 const std::chrono::milliseconds DEFAULT_DROP_PERIOD(500);
 
-Dropper::Dropper()
-    : PeriodWorker(std::chrono::milliseconds(DEFAULT_DROP_PERIOD)) {
+Dropper::Dropper() : PeriodWorker(std::chrono::milliseconds(DEFAULT_DROP_PERIOD)) {
   this->period_worker_start();
 }
 
-Dropper::~Dropper() { this->period_worker_stop(); }
+Dropper::~Dropper() {
+  this->period_worker_stop();
+}
 
 Dropper::Queues Dropper::queues() const {
   Dropper::Queues result;
@@ -31,8 +32,7 @@ Dropper::Queues Dropper::queues() const {
   return result;
 }
 
-void Dropper::drop_aof(const std::string &fname,
-                       const std::string &storage_path) {
+void Dropper::drop_aof(const std::string &fname, const std::string &storage_path) {
 
   auto target_name = fs::filename(fname) + CAP_FILE_EXT;
   if (fs::path_exists(fs::append_path(storage_path, target_name))) {
@@ -179,7 +179,7 @@ void Dropper::flush() {
   size_t iter = 0;
   auto strat = Options::instance()->strategy;
   while (!_aof_files.empty() || !_cap_files.empty()) {
-    logger_info("flush iter=" , iter++);
+    logger_info("flush iter=", iter++);
     _cap_locker.lock();
     _aof_locker.lock();
 
@@ -192,7 +192,7 @@ void Dropper::flush() {
     _cap_locker.unlock();
     _aof_locker.unlock();
 
-    logger_info("aof to flush:" , aof_copy.size());
+    logger_info("aof to flush:", aof_copy.size());
     for (auto f : aof_copy) {
       switch (strat) {
       case STRATEGY::COMPRESSED:
@@ -204,7 +204,7 @@ void Dropper::flush() {
       }
     }
 
-    logger_info("cap to flush:" , cap_copy.size());
+    logger_info("cap to flush:", cap_copy.size());
     for (auto f : cap_copy) {
       drop_cap_internal(f);
     }

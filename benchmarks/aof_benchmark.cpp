@@ -12,7 +12,7 @@
 namespace po = boost::program_options;
 
 std::atomic_llong append_count{0};
-dariadb::Time write_time=0;
+dariadb::Time write_time = 0;
 bool stop_info = false;
 
 class Moc_Dropper : public dariadb::storage::IMeasWriter {
@@ -49,8 +49,8 @@ void show_info() {
 }
 
 int main(int argc, char *argv[]) {
-    dariadb::utils::ILogger_ptr log_ptr{new dariadb_bench::BenchmarkLogger};
-    dariadb::utils::LogManager::start(log_ptr);
+  dariadb::utils::ILogger_ptr log_ptr{new dariadb_bench::BenchmarkLogger};
+  dariadb::utils::LogManager::start(log_ptr);
 
   po::options_description desc("Allowed options");
   bool dont_clean = false;
@@ -99,7 +99,8 @@ int main(int argc, char *argv[]) {
     dariadb::storage::Options::instance()->aof_max_size =
         (1024 * 1024) * 3 / sizeof(dariadb::Meas);
 
-    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::storage::Options::instance()->thread_pools_params());
 
     std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
 
@@ -113,8 +114,9 @@ int main(int argc, char *argv[]) {
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
-      std::thread t{dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos),
-                    &append_count, aof, dariadb::timeutil::current_time(),&write_time};
+      std::thread t{
+          dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), &append_count, aof,
+          dariadb::timeutil::current_time(),     &write_time};
       writers[pos++] = std::move(t);
     }
 

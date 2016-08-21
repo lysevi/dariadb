@@ -1,12 +1,12 @@
 #pragma once
 #include <algorithm>
 #include <atomic>
+#include <interfaces/imeasstorage.h>
 #include <iostream>
 #include <random>
 #include <sstream>
-#include <tuple>
-#include <interfaces/imeasstorage.h>
 #include <timeutil.h>
+#include <tuple>
 #include <utils/metrics.h>
 #include <utils/thread_manager.h>
 
@@ -17,7 +17,7 @@ const size_t hours_write_perid = 48;
 const size_t writes_per_second = 2;
 const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
 const size_t total_readers_count = 1;
-const size_t id_per_thread = 100/total_threads_count;
+const size_t id_per_thread = 100 / total_threads_count;
 // const size_t total_threads_count = 5;
 // const size_t hours_write_perid = 1;
 // const size_t writes_per_second = 2;
@@ -28,9 +28,9 @@ const uint64_t all_writes = total_threads_count * write_per_id_count * id_per_th
 
 class BenchmarkLogger : public dariadb::utils::ILogger {
 public:
-    std::atomic<uint64_t> _calls;
+  std::atomic<uint64_t> _calls;
   void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) {
-      _calls+=1;
+    _calls += 1;
     auto ct = dariadb::timeutil::current_time();
     auto ct_str = dariadb::timeutil::to_string(ct);
     std::stringstream ss;
@@ -65,8 +65,8 @@ dariadb::Id get_id_to(dariadb::Id id) {
   return (id + 1) * id_per_thread;
 }
 void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
-                            dariadb::storage::IMeasWriter *ms,
-                            dariadb::Time start_time,dariadb::Time *write_time_time) {
+                            dariadb::storage::IMeasWriter *ms, dariadb::Time start_time,
+                            dariadb::Time *write_time_time) {
   try {
     auto m = dariadb::Meas::empty();
     m.time = start_time;
@@ -77,7 +77,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
       m.flag = dariadb::Flag(id);
       m.src = dariadb::Flag(id);
       m.time += 1000 / writes_per_second;
-      *write_time_time=m.time;
+      *write_time_time = m.time;
       m.value = dariadb::Value(i);
       for (size_t j = id_from; j < id_to && i < dariadb_bench::write_per_id_count; j++) {
         m.id = j;

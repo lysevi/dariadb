@@ -42,14 +42,14 @@ bool FlagCompressor::append(dariadb::Flag v) {
   return true;
 }
 
-//FlagCompressionPosition FlagCompressor::get_position() const {
+// FlagCompressionPosition FlagCompressor::get_position() const {
 //  FlagCompressionPosition result;
 //  result._first = _first;
 //  result._is_first = _is_first;
 //  return result;
 //}
 
-//void FlagCompressor::restore_position(const FlagCompressionPosition &pos) {
+// void FlagCompressor::restore_position(const FlagCompressionPosition &pos) {
 //  _first = pos._first;
 //  _is_first = pos._is_first;
 //}

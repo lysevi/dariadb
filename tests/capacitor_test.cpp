@@ -3,9 +3,9 @@
 #include <atomic>
 #include <boost/test/unit_test.hpp>
 #include <cassert>
+#include <iostream>
 #include <map>
 #include <thread>
-#include <iostream>
 
 #include "test_common.h"
 #include <math/statistic.h>
@@ -545,7 +545,8 @@ BOOST_AUTO_TEST_CASE(CapManager_Instance) {
   dariadb::storage::Options::instance()->path = storagePath;
   dariadb::storage::Options::instance()->cap_B = max_size;
   dariadb::storage::Options::instance()->cap_max_levels = max_size;
-  dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+  dariadb::utils::async::ThreadManager::start(
+      dariadb::storage::Options::instance()->thread_pools_params());
 
   dariadb::storage::CapacitorManager::start();
 
@@ -583,7 +584,8 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->cap_B = max_size;
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
-    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::storage::Options::instance()->thread_pools_params());
 
     dariadb::storage::CapacitorManager::start();
 
@@ -604,7 +606,8 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
     dariadb::storage::Options::instance()->path = storagePath;
     dariadb::storage::Options::instance()->cap_B = max_size;
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
-    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::storage::Options::instance()->thread_pools_params());
     dariadb::storage::CapacitorManager::start();
 
     dariadb::storage::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
@@ -655,7 +658,8 @@ BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
     dariadb::storage::Options::instance()->cap_max_levels = max_size;
     dariadb::storage::Options::instance()->cap_max_closed_caps = 0;
     dariadb::storage::Options::instance()->cap_store_period = 1000;
-    dariadb::utils::async::ThreadManager::start(dariadb::storage::Options::instance()->thread_pools_params());
+    dariadb::utils::async::ThreadManager::start(
+        dariadb::storage::Options::instance()->thread_pools_params());
 
     dariadb::storage::CapacitorManager::start();
 

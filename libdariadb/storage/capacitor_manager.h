@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../interfaces/imeasstorage.h"
 #include "../interfaces/idroppers.h"
+#include "../interfaces/imeasstorage.h"
 #include "../utils/locker.h"
 #include "../utils/period_worker.h"
 #include "../utils/utils.h"
@@ -61,7 +61,7 @@ protected:
 
   void period_call() override;
 
-  void clear_files_to_send();// clean set of sended to drop files.
+  void clear_files_to_send(); // clean set of sended to drop files.
 private:
   static CapacitorManager *_instance;
 
@@ -70,7 +70,7 @@ private:
   std::unordered_set<std::string> _files_send_to_drop;
 
   File2CapHeader _file2header;
-  utils::Locker  _cache_locker;
+  utils::Locker _cache_locker;
 };
 }
 }

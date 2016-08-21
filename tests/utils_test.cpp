@@ -360,5 +360,4 @@ BOOST_AUTO_TEST_CASE(SplitString) {
 
   splitted = dariadb::utils::split(str, ' ');
   BOOST_CHECK_EQUAL(splitted.size(), size_t(8));
-
 }

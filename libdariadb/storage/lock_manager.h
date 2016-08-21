@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../utils/utils.h"
 #include "../utils/exception.h"
+#include "../utils/utils.h"
 #include <vector>
 
 #include <map>

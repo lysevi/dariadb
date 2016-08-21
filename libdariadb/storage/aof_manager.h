@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../interfaces/imeasstorage.h"
 #include "../interfaces/idroppers.h"
+#include "../interfaces/imeasstorage.h"
 #include "../utils/locker.h"
 #include "../utils/utils.h"
 #include "aofile.h"
@@ -44,6 +44,7 @@ public:
   void erase(const std::string &fname);
 
   void drop_closed_files(size_t count);
+
 protected:
   void create_new();
   std::list<std::string> aof_files() const;

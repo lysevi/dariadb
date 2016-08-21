@@ -17,11 +17,11 @@ using namespace dariadb::utils::async;
 CapacitorManager *CapacitorManager::_instance = nullptr;
 
 CapacitorManager::~CapacitorManager() {
-    STRATEGY strat=Options::instance()->strategy;
-    auto period=Options::instance()->cap_store_period;
-    if (strat == STRATEGY::DYNAMIC &&period!=0) {
-        this->period_worker_stop();
-    }
+  STRATEGY strat = Options::instance()->strategy;
+  auto period = Options::instance()->cap_store_period;
+  if (strat == STRATEGY::DYNAMIC && period != 0) {
+    this->period_worker_stop();
+  }
 }
 
 CapacitorManager::CapacitorManager()
@@ -42,9 +42,9 @@ CapacitorManager::CapacitorManager()
       throw MAKE_EXCEPTION(ex.what());
     }
   }
-  STRATEGY strat=Options::instance()->strategy;
-  auto period=Options::instance()->cap_store_period;
-  if (strat == STRATEGY::DYNAMIC &&period!=0) {
+  STRATEGY strat = Options::instance()->strategy;
+  auto period = Options::instance()->cap_store_period;
+  if (strat == STRATEGY::DYNAMIC && period != 0) {
     this->period_worker_start();
   }
 }
@@ -105,7 +105,7 @@ void CapacitorManager::period_call() {
 Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
   TIMECODE_METRICS(ctm, "create", "CapacitorManager::create_new");
   if (_cap != nullptr) {
-      std::lock_guard<utils::Locker> lg(_cache_locker);
+    std::lock_guard<utils::Locker> lg(_cache_locker);
     _file2header[_cap->file_name()] = *_cap->header();
   }
   _cap = nullptr;
@@ -122,8 +122,7 @@ Capacitor_Ptr CapacitorManager::create_new(std::string filename) {
       if (closed.size() > Options::instance()->cap_max_closed_caps &&
           Options::instance()->cap_max_closed_caps > 0 &&
           Options::instance()->cap_store_period == 0) {
-        size_t to_drop =
-            closed.size() - Options::instance()->cap_max_closed_caps;
+        size_t to_drop = closed.size() - Options::instance()->cap_max_closed_caps;
         drop_closed_unsafe(to_drop);
       }
       break;
@@ -154,12 +153,13 @@ std::list<std::string> CapacitorManager::cap_files() const {
 
 std::list<std::string>
 CapacitorManager::caps_by_filter(std::function<bool(const Capacitor::Header &)> pred) {
-    std::lock_guard<utils::Locker> lg(_cache_locker);
+  std::lock_guard<utils::Locker> lg(_cache_locker);
   std::list<std::string> result;
 
   auto mnfst = Manifest::instance()->cola_list();
-  if(mnfst.size() != _file2header.size()){
-    THROW_EXCEPTION_SS("mnfst.size("<<mnfst.size()<<") != _file2header.size("<<_file2header.size()<<")");
+  if (mnfst.size() != _file2header.size()) {
+    THROW_EXCEPTION_SS("mnfst.size(" << mnfst.size() << ") != _file2header.size("
+                                     << _file2header.size() << ")");
   }
 
   for (auto f2h : _file2header) {
@@ -217,16 +217,16 @@ void CapacitorManager::drop_closed_unsafe(size_t count) {
   clear_files_to_send();
 }
 
-void CapacitorManager::clear_files_to_send(){
-    auto caps_exists = Manifest::instance()->cola_list();
-    std::unordered_set<std::string> caps_exists_set{caps_exists.begin(), caps_exists.end()};
-    std::unordered_set<std::string> new_sended_files;
-    for (auto &v : _files_send_to_drop) {
-      if (caps_exists_set.find(v) != caps_exists_set.end()) {
-        new_sended_files.insert(v);
-      }
+void CapacitorManager::clear_files_to_send() {
+  auto caps_exists = Manifest::instance()->cola_list();
+  std::unordered_set<std::string> caps_exists_set{caps_exists.begin(), caps_exists.end()};
+  std::unordered_set<std::string> new_sended_files;
+  for (auto &v : _files_send_to_drop) {
+    if (caps_exists_set.find(v) != caps_exists_set.end()) {
+      new_sended_files.insert(v);
     }
-    _files_send_to_drop = new_sended_files;
+  }
+  _files_send_to_drop = new_sended_files;
 }
 
 void CapacitorManager::drop_closed_files(size_t count) {
@@ -475,16 +475,16 @@ size_t CapacitorManager::files_count() const {
 }
 
 void CapacitorManager::erase(const std::string &fname) {
-  if(CapacitorManager::instance()!=nullptr){
-      std::lock_guard<utils::Locker> lg(CapacitorManager::instance()->_cache_locker);
-      CapacitorManager::instance()->_file2header.erase(fname);
+  if (CapacitorManager::instance() != nullptr) {
+    std::lock_guard<utils::Locker> lg(CapacitorManager::instance()->_cache_locker);
+    CapacitorManager::instance()->_file2header.erase(fname);
 
-      auto capf = utils::fs::append_path(Options::instance()->path, fname);
-      dariadb::utils::fs::rm(capf);
-      Manifest::instance()->cola_rm(fname);
-  }else{
-      auto capf = utils::fs::append_path(Options::instance()->path, fname);
-      dariadb::utils::fs::rm(capf);
-      Manifest::instance()->cola_rm(fname);
+    auto capf = utils::fs::append_path(Options::instance()->path, fname);
+    dariadb::utils::fs::rm(capf);
+    Manifest::instance()->cola_rm(fname);
+  } else {
+    auto capf = utils::fs::append_path(Options::instance()->path, fname);
+    dariadb::utils::fs::rm(capf);
+    Manifest::instance()->cola_rm(fname);
   }
 }

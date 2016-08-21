@@ -10,6 +10,7 @@ public:
   FlagCompressor(const BinaryBuffer_Ptr &bw);
 
   bool append(Flag v);
+
 protected:
   bool _is_first;
   Flag _first;

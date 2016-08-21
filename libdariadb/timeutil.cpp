@@ -19,9 +19,9 @@ int to_string(char *buffer, size_t buffer_size, Time t) {
   auto ns_c = std::chrono::system_clock::to_time_t(ns);
   auto lc = std::localtime(&ns_c);
 
-  int len = std::snprintf(buffer, buffer_size, "%02d:%02d:%02d-%02d.%02d.%d",
-                          lc->tm_hour, lc->tm_min, lc->tm_sec, lc->tm_mday,
-                          lc->tm_mon + 1, 1900 + lc->tm_year);
+  int len = std::snprintf(buffer, buffer_size, "%02d:%02d:%02d-%02d.%02d.%d", lc->tm_hour,
+                          lc->tm_min, lc->tm_sec, lc->tm_mday, lc->tm_mon + 1,
+                          1900 + lc->tm_year);
 
   return len;
 }

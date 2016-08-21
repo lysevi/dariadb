@@ -54,9 +54,10 @@ public:
 
   uint32_t page_chunk_size;
   uint32_t page_openned_page_cache_size; /// max oppend pages in cache(readonly
-                                          /// pages stored).
+                                         /// pages stored).
 
   STRATEGY strategy;
+
 private:
   static Options *_instance;
 };

@@ -58,7 +58,7 @@ void Options::set_default() {
   page_chunk_size = CHUNK_SIZE;
   page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
 
-  strategy=STRATEGY::DYNAMIC;
+  strategy = STRATEGY::DYNAMIC;
 
   calc_params();
 }
@@ -68,13 +68,13 @@ void Options::stop() {
   _instance = nullptr;
 }
 
-std::vector<dariadb::utils::async::ThreadPool::Params> Options::thread_pools_params(){
-    using namespace dariadb::utils::async;
-    std::vector<ThreadPool::Params> result{
-        ThreadPool::Params{size_t(4), (ThreadKind)THREAD_COMMON_KINDS::READ},
-        ThreadPool::Params{size_t(3), (ThreadKind)THREAD_COMMON_KINDS::FILE_READ},
-        ThreadPool::Params{size_t(1), (ThreadKind)THREAD_COMMON_KINDS::DROP}};
-    return result;
+std::vector<dariadb::utils::async::ThreadPool::Params> Options::thread_pools_params() {
+  using namespace dariadb::utils::async;
+  std::vector<ThreadPool::Params> result{
+      ThreadPool::Params{size_t(4), (ThreadKind)THREAD_COMMON_KINDS::READ},
+      ThreadPool::Params{size_t(3), (ThreadKind)THREAD_COMMON_KINDS::FILE_READ},
+      ThreadPool::Params{size_t(1), (ThreadKind)THREAD_COMMON_KINDS::DROP}};
+  return result;
 }
 
 void Options::save() {
@@ -97,7 +97,7 @@ void Options::save(const std::string &file) {
   js["page_openned_page_cache_size"] = page_openned_page_cache_size;
 
   std::stringstream ss;
-  ss<<strategy;
+  ss << strategy;
   js["stragety"] = ss.str();
 
   std::fstream fs;
@@ -126,9 +126,9 @@ void Options::load(const std::string &file) {
   page_openned_page_cache_size = js["page_openned_page_cache_size"];
 
   std::istringstream iss;
-  std::string strat_str=js["stragety"];
+  std::string strat_str = js["stragety"];
   iss.str(strat_str);
-  iss>>strategy;
+  iss >> strategy;
 
   this->calc_params();
 }

@@ -3,9 +3,9 @@
 #include "interfaces/imeasstorage.h"
 #include "storage/aof_manager.h"
 #include "storage/capacitor_manager.h"
+#include "storage/dropper.h"
 #include "storage/options.h"
 #include "storage/page_manager.h"
-#include "storage/dropper.h"
 #include "utils/utils.h"
 
 #include <memory>
@@ -15,23 +15,20 @@ namespace storage {
 
 class Engine : public IMeasStorage {
 public:
-    struct Version
-    {
-        std::string version;
-        uint16_t major;
-        uint16_t minor;
-        uint16_t patch;
+  struct Version {
+    std::string version;
+    uint16_t major;
+    uint16_t minor;
+    uint16_t patch;
 
-        std::string to_string()const;
-        static Version from_string(const std::string&str);
+    std::string to_string() const;
+    static Version from_string(const std::string &str);
 
-        bool operator>(const Version &other) {
-          return (major > other.major) ||
-                 (major == other.major && (minor > other.minor)) ||
-                 (major == other.major && (minor == other.minor) &&
-                  (patch > other.patch));
-        }
-    };
+    bool operator>(const Version &other) {
+      return (major > other.major) || (major == other.major && (minor > other.minor)) ||
+             (major == other.major && (minor == other.minor) && (patch > other.patch));
+    }
+  };
   struct QueueSizes {
     size_t aofs_count;   ///  AOF count
     size_t pages_count;  /// pages count
@@ -75,6 +72,7 @@ public:
   void fsck();
 
   Version version();
+
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

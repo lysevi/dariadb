@@ -5,7 +5,7 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-void lock_mutex(LOCK_KIND kind, const RWMutex_Ptr&mtx) {
+void lock_mutex(LOCK_KIND kind, const RWMutex_Ptr &mtx) {
   switch (kind) {
   case LOCK_KIND::EXCLUSIVE: {
     mtx->mutex.lock();
@@ -15,14 +15,14 @@ void lock_mutex(LOCK_KIND kind, const RWMutex_Ptr&mtx) {
     mtx->mutex.lock_shared();
     break;
   }
-  case LOCK_KIND::UNKNOW:{
-      THROW_EXCEPTION_SS("try to lock unknow state");
-      break;
+  case LOCK_KIND::UNKNOW: {
+    THROW_EXCEPTION_SS("try to lock unknow state");
+    break;
   }
   };
 }
 
-bool try_lock_mutex(LOCK_KIND kind, const RWMutex_Ptr&mtx) {
+bool try_lock_mutex(LOCK_KIND kind, const RWMutex_Ptr &mtx) {
   switch (kind) {
   case LOCK_KIND::EXCLUSIVE: {
     return mtx->mutex.try_lock();
@@ -30,15 +30,15 @@ bool try_lock_mutex(LOCK_KIND kind, const RWMutex_Ptr&mtx) {
   case LOCK_KIND::READ: {
     return mtx->mutex.try_lock_shared();
   }
-  case LOCK_KIND::UNKNOW:{
-      THROW_EXCEPTION_SS("try to try-lock unknow state");
-      break;
+  case LOCK_KIND::UNKNOW: {
+    THROW_EXCEPTION_SS("try to try-lock unknow state");
+    break;
   }
   };
   return false;
 }
 
-void unlock_mutex(const RWMutex_Ptr&mtx) {
+void unlock_mutex(const RWMutex_Ptr &mtx) {
   switch (mtx->kind) {
   case LOCK_KIND::EXCLUSIVE: {
     mtx->mutex.unlock();
@@ -48,9 +48,9 @@ void unlock_mutex(const RWMutex_Ptr&mtx) {
     mtx->mutex.unlock_shared();
     break;
   }
-  case LOCK_KIND::UNKNOW:{
-      THROW_EXCEPTION_SS("try to unlock unknow state");
-      break;
+  case LOCK_KIND::UNKNOW: {
+    THROW_EXCEPTION_SS("try to unlock unknow state");
+    break;
   }
   };
 }
@@ -135,16 +135,16 @@ void LockManager::lock(const LOCK_KIND &lk, const std::vector<LockObjects> &los)
   while (!success) {
     bool local_status = false;
     for (size_t i = 0; i < los.size(); ++i) {
-        local_status=try_lock_mutex(lk,rw_mtx[i]);
+      local_status = try_lock_mutex(lk, rw_mtx[i]);
 
       if (!local_status) {
         for (size_t j = 0; j < i; ++j) {
-            unlock_mutex(rw_mtx[j]);
+          unlock_mutex(rw_mtx[j]);
         }
         success = false;
         break;
       } else {
-        rw_mtx[i]->kind=lk;
+        rw_mtx[i]->kind = lk;
         success = true;
       }
     }
@@ -185,7 +185,7 @@ void LockManager::unlock(const std::vector<LockObjects> &los) {
 
 void LockManager::lock_by_kind(const LOCK_KIND &lk, const LockObjects &lo) {
   auto lock_target = get_or_create_lock_object(lo);
-  lock_mutex(lk,lock_target);
+  lock_mutex(lk, lock_target);
 }
 
 void LockManager::lock_drop_aof() {

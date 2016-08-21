@@ -73,7 +73,7 @@ public:
       auto file_name = utils::fs::append_path(Options::instance()->path, n);
       auto hdr = Page::readHeader(file_name);
       if (hdr.removed_chunks == hdr.addeded_chunks) {
-        logger_info("page: " , file_name, " is empty.");
+        logger_info("page: ", file_name, " is empty.");
         erase_page(file_name);
       } else {
         if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
@@ -88,10 +88,9 @@ public:
   /// file_name - full path.
   void erase_page(const std::string &file_name) {
     auto target_name = utils::fs::extract_filename(file_name);
-    logger_info("page: " , file_name , " removing...");
+    logger_info("page: ", file_name, " removing...");
     erase(target_name);
   }
-
 
   // PM
   void flush() {}
@@ -349,22 +348,22 @@ public:
         Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
 
-
   static void erase(const std::string &fname) {
-      if(PageManager::instance()!=nullptr){
-          auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
-          PageManager::instance()->impl->_openned_pages.erase(full_file_name);
+    if (PageManager::instance() != nullptr) {
+      auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+      PageManager::instance()->impl->_openned_pages.erase(full_file_name);
 
-          Manifest::instance()->page_rm(fname);
-          utils::fs::rm(full_file_name);
-          utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-          PageManager::instance()->impl->_file2header.erase(fname);
-      }else{
-          auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
-          utils::fs::rm(full_file_name);
-          utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-      }
+      Manifest::instance()->page_rm(fname);
+      utils::fs::rm(full_file_name);
+      utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+      PageManager::instance()->impl->_file2header.erase(fname);
+    } else {
+      auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+      utils::fs::rm(full_file_name);
+      utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+    }
   }
+
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;

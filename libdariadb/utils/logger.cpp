@@ -6,10 +6,9 @@ using namespace dariadb::utils;
 std::shared_ptr<LogManager> LogManager::_instance = nullptr;
 Locker LogManager::_locker;
 
-
 void LogManager::start(ILogger_ptr &logger) {
   if (_instance == nullptr) {
-    _instance=std::shared_ptr<LogManager>{new LogManager(logger)};
+    _instance = std::shared_ptr<LogManager>{new LogManager(logger)};
   }
 }
 
@@ -21,13 +20,15 @@ LogManager *LogManager::instance() {
     if (tmp == nullptr) {
       ILogger_ptr l{new ConsoleLogger};
       tmp = new LogManager(l);
-      _instance=std::shared_ptr<LogManager>{tmp};
+      _instance = std::shared_ptr<LogManager>{tmp};
     }
   }
   return tmp;
 }
 
-LogManager::LogManager(ILogger_ptr &logger) { _logger = logger; }
+LogManager::LogManager(ILogger_ptr &logger) {
+  _logger = logger;
+}
 
 void LogManager::message(LOG_MESSAGE_KIND kind, const std::string &msg) {
   _logger->message(kind, msg);

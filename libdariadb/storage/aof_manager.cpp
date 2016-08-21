@@ -31,7 +31,7 @@ AOFManager::AOFManager() {
     for (auto f : aofs) {
       auto full_filename = utils::fs::append_path(Options::instance()->path, f);
       if (AOFile::writed(full_filename) != Options::instance()->aof_max_size) {
-        logger_info("AofManager: open exist file " , f);
+        logger_info("AofManager: open exist file ", f);
         AOFile_Ptr p{new AOFile(full_filename)};
         _aof = p;
         break;
@@ -64,8 +64,8 @@ AOFManager *AOFManager::instance() {
 void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
-  if(Options::instance()->strategy!= STRATEGY::FAST_WRITE){
-      drop_old_if_needed();
+  if (Options::instance()->strategy != STRATEGY::FAST_WRITE) {
+    drop_old_if_needed();
   }
   _aof = AOFile_Ptr{new AOFile()};
 }
@@ -86,8 +86,7 @@ void AOFManager::drop_closed_files(size_t count) {
     }
     // clean set of sended to drop files.
     auto aofs_exists = Manifest::instance()->aof_list();
-    std::set<std::string> aof_exists_set{aofs_exists.begin(),
-                                         aofs_exists.end()};
+    std::set<std::string> aof_exists_set{aofs_exists.begin(), aofs_exists.end()};
     std::set<std::string> new_sended_files;
     for (auto &v : _files_send_to_drop) {
       if (aof_exists_set.find(v) != aof_exists_set.end()) {
@@ -99,8 +98,8 @@ void AOFManager::drop_closed_files(size_t count) {
 }
 
 void AOFManager::drop_old_if_needed() {
-    auto closed = this->closed_aofs();
-    drop_closed_files(closed.size());
+  auto closed = this->closed_aofs();
+  drop_closed_files(closed.size());
 }
 
 std::list<std::string> AOFManager::aof_files() const {
