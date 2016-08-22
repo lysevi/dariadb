@@ -16,7 +16,7 @@ set(BOOST_ALL_DYN_LINK           ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 #endif(NOT MSVC)
 
-set(BOOST_DEP unit_test_framework system filesystem)
+set(BOOST_DEP unit_test_framework system filesystem system)
 
 IF(WIN32)
   MESSAGE(STATUS "WIN32:")
