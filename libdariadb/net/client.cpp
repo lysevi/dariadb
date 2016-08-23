@@ -2,6 +2,7 @@
 #include "net_common.h"
 #include "../utils/logger.h"
 #include "../utils/locker.h"
+#include "../utils/exception.h"
 #include <boost/asio.hpp>
 #include <functional>
 
@@ -34,11 +35,15 @@ public:
   }
 
   void connect_handler(const boost::system::error_code &ec) {
+      if(ec){
+          THROW_EXCEPTION_SS("dariadb::client: error on connect - "<<ec.message());
+      }
       logger_info("client: connectection successful");
       std::lock_guard<utils::Locker> lg(_locker);
       std::stringstream ss;
       ss<<HELLO_PREFIX<<' ' <<ip::host_name()<<'\n';
       auto hello_message=ss.str();
+      logger("client: send hello ",hello_message);
       _socket->write_some(buffer(hello_message));
   }
 
