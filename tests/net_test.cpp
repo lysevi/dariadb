@@ -9,10 +9,9 @@ const dariadb::net::Client::Param client_param("127.0.0.1", 2001);
 
 BOOST_AUTO_TEST_CASE(Instance) {
   dariadb::net::Server s(server_param);
-  dariadb::net::Client c(client_param);
-
   BOOST_CHECK_EQUAL(s.connections_accepted(),size_t(0));
 
+  dariadb::net::Client c(client_param);
   c.connect();
 
   while(s.connections_accepted()!=size_t(1)){
