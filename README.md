@@ -32,7 +32,7 @@
   - dynamic - values are compressed, if the level is more than a certain value, or for a certain period of time.
 
 # Dependencies
-* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), unit_test_framework(to build tests), program_options
+* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), unit_test_framework(to build tests), program_options, asio
 * cmake 2.8 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
