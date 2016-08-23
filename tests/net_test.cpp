@@ -27,7 +27,7 @@ void server_thread_func(){
     server_instance=nullptr;
 }
 
-BOOST_AUTO_TEST_CASE(Instance) {
+BOOST_AUTO_TEST_CASE(Connect) {
     server_runned.store(false);
     std::thread server_thread{server_thread_func};
 

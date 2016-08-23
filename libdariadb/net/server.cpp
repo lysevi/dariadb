@@ -45,19 +45,17 @@ public:
             if(err){
                 THROW_EXCEPTION_SS("server: ClienIO::onHello "<<err.message());
             }
-            {
-                std::istream iss(&this->buff);
-                std::string msg;
-                std::getline(iss,msg);
-                logger("server: clientio::onHello - ",msg);
-            }
+
+            std::istream iss(&this->buff);
+            std::string msg;
+            std::getline(iss,msg);
+            logger("server: clientio::onHello - ",msg," readed_bytes: ",read_bytes);
+
 
             if(read_bytes<HELLO_PREFIX.size()){
-                boost::asio::streambuf::const_buffers_type bfs = buff.data();
-                std::string recv_data{buffers_begin(bfs),buffers_end(bfs)};
-                logger_fatal("server: bad hello - ", recv_data);
+                logger_fatal("server: bad hello size.");
             }else{
-                std::istream iss(&this->buff);
+                std::istringstream iss(msg);
                 std::string readed_str;
                 iss >> readed_str;
                 if(readed_str!=HELLO_PREFIX){
@@ -117,6 +115,7 @@ public:
 
         ClientIO_ptr new_client{new ClientIO(sock,this)};
         new_client->readHello();
+        _clients.push_back(new_client);
 
         socket_ptr new_sock(new ip::tcp::socket(_service));
         start_accept(new_sock);
