@@ -17,7 +17,7 @@ class Server::Private {
 public:
   Private(const Server::Param &p):_params(p),_stop_flag(false){
       _connections_accepted.store(0);
-      _thread_handler=std::move(std::thread{server_thread, this});
+      _thread_handler=std::thread(server_thread, this);
   }
 
   ~Private(){
