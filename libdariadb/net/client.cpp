@@ -58,7 +58,7 @@ public:
       if(msg!=OK_ANSWER){
           THROW_EXCEPTION_SS("client: no ok answer onConnect - "<<msg);
       }else{
-          logger("client: successful.");
+          logger("client: OK.");
       }
   }
 
@@ -66,7 +66,6 @@ public:
       if(ec){
           THROW_EXCEPTION_SS("dariadb::client: error on connect - "<<ec.message());
       }
-      logger_info("client: connectection successful");
       std::lock_guard<utils::Locker> lg(_locker);
       std::stringstream ss;
       ss<<HELLO_PREFIX<<' ' <<ip::host_name()<<'\n';
@@ -83,7 +82,7 @@ public:
       if(msg!=OK_ANSWER){
           THROW_EXCEPTION_SS("client: no ok answer onConnect - "<<msg);
       }else{
-          logger("client: successful.");
+          logger("client: OK.");
       }
   }
 
