@@ -7,8 +7,16 @@ namespace dariadb{
         class Server
         {
         public:
-            Server();
+            struct Param{
+              int port;
+              Param(int _port){
+                  port=_port;
+              }
+            };
+            Server(const Param&p);
             ~Server();
+
+            size_t connections_accepted()const;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

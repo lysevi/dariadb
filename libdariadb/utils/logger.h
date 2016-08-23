@@ -58,6 +58,7 @@ public:
 private:
   static std::shared_ptr<LogManager> _instance;
   static utils::Locker _locker;
+  utils::Locker _msg_locker;
   ILogger_ptr _logger;
 };
 }

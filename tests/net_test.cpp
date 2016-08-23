@@ -4,9 +4,18 @@
 #include <net/client.h>
 #include <net/server.h>
 
+const dariadb::net::Server::Param server_param(2001);
+const dariadb::net::Client::Param client_param("127.0.0.1", 2001);
+
 BOOST_AUTO_TEST_CASE(Instance) {
-  dariadb::net::Server *s=new dariadb::net::Server();
-  dariadb::net::Client *c=new dariadb::net::Client();
-  delete s;
-  delete c;
+  dariadb::net::Server s(server_param);
+  dariadb::net::Client c(client_param);
+
+  BOOST_CHECK_EQUAL(s.connections_accepted(),size_t(0));
+
+  c.connect();
+
+  while(s.connections_accepted()!=size_t(1)){
+
+  }
 }
