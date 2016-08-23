@@ -20,6 +20,7 @@ namespace dariadb{
             ~Client();
 
             void connect();
+            void disconnect();
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

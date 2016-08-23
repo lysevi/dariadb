@@ -43,6 +43,16 @@ BOOST_AUTO_TEST_CASE(Connect) {
             break;
         }
     }
+
+    c.disconnect();
+
+    while(true){
+        auto res=server_instance->connections_accepted();
+        if(res==size_t(0)){
+            break;
+        }
+    }
+
     server_stop_flag=true;
     server_thread.join();
 }

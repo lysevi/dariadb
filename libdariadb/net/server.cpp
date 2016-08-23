@@ -24,15 +24,21 @@ class Server::Private {
 public:
 
     struct ClientIO{
+        int id;
         socket_ptr sock;
         streambuf buff;
         std::string host;
 
         Server::Private *srv;
 
-        ClientIO(socket_ptr _sock, Server::Private *_srv){
+        ClientIO(int _id, socket_ptr _sock, Server::Private *_srv){
+            id=_id;
             sock=_sock;
             srv=_srv;
+        }
+
+        void read(){
+            async_read_until(*sock.get(),buff,'\n',std::bind(&ClientIO::onRead,this,_1,_2));
         }
 
         void readHello(){
@@ -49,7 +55,7 @@ public:
             std::istream iss(&this->buff);
             std::string msg;
             std::getline(iss,msg);
-            logger("server: clientio::onHello - ",msg," readed_bytes: ",read_bytes);
+            logger("server: clientio::onHello - {",msg,"} readed_bytes: ",read_bytes);
 
 
             if(read_bytes<HELLO_PREFIX.size()){
@@ -63,7 +69,27 @@ public:
                 }
                 iss >> readed_str;
                 host=readed_str;
-                this->srv->client_accept(this);
+                sock->write_some(buffer(OK_ANSWER+"\n"));
+                this->srv->client_connect(this);
+            }
+        }
+
+        void onRead(const boost::system::error_code & err, size_t read_bytes){
+            logger("server: #",this->id," onRead...");
+            if(err){
+                THROW_EXCEPTION_SS("server: ClienIO::onRead "<<err.message());
+            }
+
+            std::istream iss(&this->buff);
+            std::string msg;
+            std::getline(iss,msg);
+            logger("server: clientio::onRead - ",msg," readed_bytes: ",read_bytes);
+
+            if(msg==DISCONNECT_PREFIX){
+                logger("server: #",this->id," disconnect");
+                this->sock->write_some(buffer(OK_ANSWER+"\n"));
+                this->sock->close();
+                this->srv->client_disconnect(this);
             }
         }
     };
@@ -73,6 +99,7 @@ public:
 
 
     Private(const Server::Param &p):_params(p),_stop_flag(false),_is_runned_flag(false){
+        _next_id=0;
         _connections_accepted.store(0);
         _thread_handler=std::thread(&Server::Private::server_thread, this);
     }
@@ -86,6 +113,7 @@ public:
         _service.stop();
         _thread_handler.join();
     }
+
     void server_thread(){
         logger_info("server: start server on ", _params.port, "...");
 
@@ -113,7 +141,9 @@ public:
 
         logger_info("server: accept connection.");
 
-        ClientIO_ptr new_client{new ClientIO(sock,this)};
+        auto cur_id=_next_id.load();
+        _next_id++;
+        ClientIO_ptr new_client{new ClientIO(cur_id, sock,this)};
         new_client->readHello();
         _clients.push_back(new_client);
 
@@ -127,18 +157,21 @@ public:
         return _is_runned_flag.load();
     }
 
-    void client_accept(ClientIO*client){
+    void client_connect(ClientIO*client){
         _connections_accepted+=1;
-        logger_info("server: hello from {", client->host,'}');
+        logger_info("server: hello from {", client->host,"}, #",client->id);
+        client->read();
     }
 
     void client_disconnect(ClientIO*client){
-
+        _clients.remove_if([client](const ClientIO_ptr&it){return it->id==client->id;});
+        _connections_accepted-=1;
     }
 
     io_service _service;
     acceptor_ptr _acc;
 
+    std::atomic_int _next_id;
     std::atomic_size_t _connections_accepted;
     Server::Param _params;
     std::thread _thread_handler;

@@ -34,6 +34,27 @@ public:
     _service.run();
   }
 
+  void disconnect(){
+      std::lock_guard<utils::Locker> lg(_locker);
+      std::stringstream ss;
+      ss<<DISCONNECT_PREFIX<<'\n';
+      auto bye_message=ss.str();
+      logger("client: send bye");
+      _socket->write_some(buffer(bye_message));
+
+      streambuf buf;
+      read_until(*(_socket.get()), buf, '\n');
+      std::istream iss(&buf);
+      std::string msg;
+      std::getline(iss,msg);
+
+      if(msg!=OK_ANSWER){
+          THROW_EXCEPTION_SS("client: no ok answer onConnect - "<<msg);
+      }else{
+          logger("client: successful.");
+      }
+  }
+
   void connect_handler(const boost::system::error_code &ec) {
       if(ec){
           THROW_EXCEPTION_SS("dariadb::client: error on connect - "<<ec.message());
@@ -43,8 +64,20 @@ public:
       std::stringstream ss;
       ss<<HELLO_PREFIX<<' ' <<ip::host_name()<<'\n';
       auto hello_message=ss.str();
-      logger("client: send hello ",hello_message);
+      logger("client: send hello ",hello_message.substr(0,hello_message.size()-1));
       _socket->write_some(buffer(hello_message));
+
+      streambuf buf;
+      read_until(*(_socket.get()), buf, '\n');
+      std::istream iss(&buf);
+      std::string msg;
+      std::getline(iss,msg);
+
+      if(msg!=OK_ANSWER){
+          THROW_EXCEPTION_SS("client: no ok answer onConnect - "<<msg);
+      }else{
+          logger("client: successful.");
+      }
   }
 
   io_service _service;
@@ -58,3 +91,5 @@ Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
 Client::~Client() {}
 
 void Client::connect() { _Impl->connect(); }
+
+void Client::disconnect() {_Impl->disconnect();}
