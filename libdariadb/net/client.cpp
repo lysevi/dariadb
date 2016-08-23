@@ -5,6 +5,7 @@
 #include "../utils/exception.h"
 #include <boost/asio.hpp>
 #include <functional>
+#include <thread>
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -21,17 +22,23 @@ public:
   ~Private(){
       _socket->shutdown(ip::tcp::socket::shutdown_both);
       _socket->close();
+      _service.stop();
+      _thread_handler.join();
   }
 
   void connect() {
     logger_info("client: connecting to ", _params.host, ':', _params.port);
 
-    ip::tcp::endpoint ep(
-        ip::address::from_string(_params.host), _params.port);
-    auto raw_sock_ptr = new ip::tcp::socket(_service);
-    _socket = socket_ptr{raw_sock_ptr};
-    _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
-    _service.run();
+    _thread_handler=std::move(std::thread{&Client::Private::client_thread,this});
+  }
+
+  void client_thread(){
+      ip::tcp::endpoint ep(
+          ip::address::from_string(_params.host), _params.port);
+      auto raw_sock_ptr = new ip::tcp::socket(_service);
+      _socket = socket_ptr{raw_sock_ptr};
+      _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
+      _service.run();
   }
 
   void disconnect(){
@@ -84,6 +91,7 @@ public:
   socket_ptr _socket;
   Client::Param _params;
   utils::Locker _locker;
+  std::thread  _thread_handler;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
