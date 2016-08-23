@@ -1,17 +1,21 @@
 #include "server.h"
 #include "../utils/logger.h"
+#include "net_common.h"
 #include <atomic>
 #include <boost/asio.hpp>
 #include <functional>
 #include <thread>
+#include <sstream>
+
+using namespace std::placeholders;
+using namespace boost::asio;
 
 using namespace dariadb;
 using namespace dariadb::net;
 
-using namespace std::placeholders;
 
-typedef boost::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr;
-typedef boost::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor_ptr;
+typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
+typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
 
 class Server::Private {
 public:
@@ -30,9 +34,9 @@ public:
       logger_info("server: start server on ", _params.port);
 
 
-      boost::asio::ip::tcp::endpoint ep(boost::asio::ip::tcp::v4(), _params.port);
-      _acc = acceptor_ptr{new boost::asio::ip::tcp::acceptor(_service, ep)};
-      socket_ptr sock(new boost::asio::ip::tcp::socket(_service));
+      ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
+      _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
+      socket_ptr sock(new ip::tcp::socket(_service));
       start_accept(sock);
       _service.run();
   }
@@ -46,12 +50,26 @@ public:
       return;
     logger_info("server: accept connection.");
     _connections_accepted += 1;
-    start_accept(sock);
+
+    char buff[1024];
+    auto readed=sock->read_some(buffer(buff,1024));
+    if(readed<HELLO_PREFIX.size()){
+        logger_fatal("server: bad hello - ", buff);
+    }else{
+        std::istringstream iss(buff);
+        std::string readed_str;
+        iss >> readed_str;
+        assert(readed_str==HELLO_PREFIX);
+        iss >> readed_str;
+        logger_info("server: hello from {", readed_str,'}');
+    }
+    socket_ptr new_sock(new ip::tcp::socket(_service));
+    start_accept(new_sock);
   }
 
   size_t connections_accepted() const { return _connections_accepted.load(); }
 
-  boost::asio::io_service _service;
+  io_service _service;
   acceptor_ptr _acc;
 
   std::atomic_size_t _connections_accepted;
