@@ -17,7 +17,7 @@ class Server::Private {
 public:
   Private(const Server::Param &p):_params(p),_stop_flag(false){
       _connections_accepted.store(0);
-      _thread_handler=std::thread(server_thread, this);
+      _thread_handler=std::thread(&Server::Private::server_thread, this);
   }
 
   ~Private(){
@@ -38,7 +38,7 @@ public:
   }
 
   void start_accept(socket_ptr sock) {
-    _acc->async_accept(*sock, std::bind(handle_accept, this, sock, _1));
+    _acc->async_accept(*sock, std::bind(&Server::Private::handle_accept, this, sock, _1));
   }
 
   void handle_accept(socket_ptr sock, const boost::system::error_code &err) {

@@ -20,7 +20,7 @@ public:
         boost::asio::ip::address::from_string(_params.host), _params.port);
     auto raw_sock_ptr = new boost::asio::ip::tcp::socket(_service);
     _socket = socket_ptr{raw_sock_ptr};
-    _socket->async_connect(ep, std::bind(connect_handler, this, _1));
+    _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
     _service.run();
   }
 
