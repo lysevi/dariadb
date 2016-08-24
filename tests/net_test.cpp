@@ -4,6 +4,7 @@
 #include <boost/asio/steady_timer.hpp>
 #include <net/client.h>
 #include <net/server.h>
+#include <utils/logger.h>
 #include <thread>
 #include <atomic>
 #include <iostream>
@@ -40,7 +41,9 @@ BOOST_AUTO_TEST_CASE(Connect) {
     // 1 client
     while(true){
         auto res=server_instance->connections_accepted();
-        if(res==size_t(1) && c.state()==dariadb::net::ClientState::WORK){
+        auto st=c.state();
+        dariadb::logger("test>> ","0 count: ",res," state: ",st);
+        if(res==size_t(1) && st==dariadb::net::ClientState::WORK){
             break;
         }
     }
@@ -53,7 +56,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
         while(true){
             auto res=server_instance->connections_accepted();
             auto st=c2.state();
-            std::cout<<"1 count: "<<res<<" state: "<<st<<std::endl;
+            dariadb::logger("test>> ","1 count: ",res," state: ",st);
             if(res==size_t(2) && st==dariadb::net::ClientState::WORK){
                 break;
             }
@@ -77,7 +80,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
     while(true){
         auto res=server_instance->connections_accepted();
         auto st=c3.state();
-        std::cout<<"2 count: "<<res<<" state: "<<st<<std::endl;
+        dariadb::logger("test>> ","2 count: ",res," state: ",st);
         if(res==size_t(2)&& st==dariadb::net::ClientState::WORK){
             break;
         }
@@ -89,12 +92,18 @@ BOOST_AUTO_TEST_CASE(Connect) {
     while(true){
         auto res=server_instance->connections_accepted();
         auto st=c.state();
-        std::cout<<"3 count: "<<res<<" state: "<<st<<std::endl;
+        dariadb::logger("test>> ","3 count: ",res," state: ",st);
         if(res==size_t(1) && c.state()==dariadb::net::ClientState::DISCONNECTED){
             break;
         }
     }
     server_stop_flag=true;
     server_thread.join();
-    while(c3.state()!=dariadb::net::ClientState::DISCONNECTED){}
+    while(true){
+        auto state=c3.state();
+        dariadb::logger("test>> ","4 state: ",state);
+        if(state==dariadb::net::ClientState::DISCONNECTED){
+            break;
+        }
+    }
 }

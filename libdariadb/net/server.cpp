@@ -75,6 +75,10 @@ public:
 
     void onRead(const boost::system::error_code &err, size_t read_bytes) {
       logger("server: #", this->id, " onRead...");
+      if(this->state==ClientState::DISCONNECTED){
+          logger_info("server: #", this->id, " onRead in disconnected.");
+          return;
+      }
       if (err) {
         THROW_EXCEPTION_SS("server: ClienIO::onRead " << err.message());
       }
@@ -94,6 +98,7 @@ public:
 
     void disconnect() {
       logger("server: #", this->id, " send disconnect signal.");
+      this->state=ClientState::DISCONNECTED;
       async_write(*sock.get(), buffer(DISCONNECT_ANSWER + "\n"),
                   std::bind(&ClientIO::onDisconnectSended, this, _1, _2));
     }
