@@ -231,7 +231,7 @@ public:
     try {
       _ping_timer.expires_from_now(
           boost::posix_time::millisec(PING_TIMER_INTERVAL));
-      _ping_timer.async_wait(std::bind(Server::Private::on_check_ping, this));
+      _ping_timer.async_wait(std::bind(&Server::Private::on_check_ping, this));
     } catch (std::exception &ex) {
       THROW_EXCEPTION_SS("server: reset_ping_timer - " << ex.what());
     }
@@ -244,6 +244,7 @@ public:
     _clients_locker.lock();
     for (auto &kv : _clients) {
       if (kv.second->pings_missed > MAX_MISSED_PINGS) {
+          kv.second->state=ClientState::DISCONNECTED;
         to_remove.push_back(kv.first);
       } else {
         kv.second->ping();
@@ -254,6 +255,7 @@ public:
     _clients_locker.lock();
     for (auto &id : to_remove) {
       logger("server: remove as missed ping #", id);
+      _clients[id]->sock->close();
       _clients.erase(id);
     }
     _clients_locker.unlock();
