@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <ostream>
 
 namespace dariadb{
     namespace net{
@@ -15,5 +16,8 @@ namespace dariadb{
           WORK, //normal client.
           DISCONNECTED
         };
+
+        std::ostream &operator<<(std::ostream &stream, const ClientState &state);
+
     }
 }

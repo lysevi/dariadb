@@ -52,10 +52,11 @@ BOOST_AUTO_TEST_CASE(Connect) {
         // 2 client: c and c2
         while(true){
             auto res=server_instance->connections_accepted();
-            if(res==size_t(2) && c2.state()==dariadb::net::ClientState::WORK){
+            auto st=c2.state();
+            std::cout<<"1 count: "<<res<<" state: "<<st<<std::endl;
+            if(res==size_t(2) && st==dariadb::net::ClientState::WORK){
                 break;
             }
-            std::cout<<res<<std::endl;
         }
     }
 
@@ -75,7 +76,9 @@ BOOST_AUTO_TEST_CASE(Connect) {
     //2 client: c and c3
     while(true){
         auto res=server_instance->connections_accepted();
-        if(res==size_t(2)&& c3.state()==dariadb::net::ClientState::WORK){
+        auto st=c3.state();
+        std::cout<<"2 count: "<<res<<" state: "<<st<<std::endl;
+        if(res==size_t(2)&& st==dariadb::net::ClientState::WORK){
             break;
         }
     }
@@ -85,6 +88,8 @@ BOOST_AUTO_TEST_CASE(Connect) {
     // 1 client: c3
     while(true){
         auto res=server_instance->connections_accepted();
+        auto st=c.state();
+        std::cout<<"3 count: "<<res<<" state: "<<st<<std::endl;
         if(res==size_t(1) && c.state()==dariadb::net::ClientState::DISCONNECTED){
             break;
         }
