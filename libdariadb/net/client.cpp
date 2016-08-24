@@ -49,17 +49,7 @@ public:
       logger("client: send bye");
       _socket->write_some(buffer(bye_message));
 
-      streambuf buf;
-      read_until(*(_socket.get()), buf, '\n');
-      std::istream iss(&buf);
-      std::string msg;
-      std::getline(iss,msg);
-
-      if(msg!=OK_ANSWER){
-          THROW_EXCEPTION_SS("client: no ok answer onConnect - "<<msg);
-      }else{
-          logger("client: OK.");
-      }
+      read_ok("client: no ok answer onConnect - ");
   }
 
   void connect_handler(const boost::system::error_code &ec) {
@@ -73,6 +63,10 @@ public:
       logger("client: send hello ",hello_message.substr(0,hello_message.size()-1));
       _socket->write_some(buffer(hello_message));
 
+      read_ok("client: no ok answer onConnect - ");
+  }
+
+  void read_ok(const std::string&message_on_err){
       streambuf buf;
       read_until(*(_socket.get()), buf, '\n');
       std::istream iss(&buf);
@@ -80,7 +74,7 @@ public:
       std::getline(iss,msg);
 
       if(msg!=OK_ANSWER){
-          THROW_EXCEPTION_SS("client: no ok answer onConnect - "<<msg);
+          THROW_EXCEPTION_SS(message_on_err<<msg);
       }else{
           logger("client: OK.");
       }

@@ -6,7 +6,7 @@
 #include <boost/asio.hpp>
 #include <functional>
 #include <istream>
-#include <list>
+#include <unordered_map>
 #include <sstream>
 #include <thread>
 
@@ -19,6 +19,11 @@ using namespace dariadb::net;
 typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
 
+enum class ClientState{
+  CONNECT, //connection is beginning but a while not ended.
+  WORK, //normal client.
+};
+
 class Server::Private {
 public:
   struct ClientIO {
@@ -27,9 +32,11 @@ public:
     streambuf buff;
     std::string host;
 
+    ClientState state;
     Server::Private *srv;
 
     ClientIO(int _id, socket_ptr _sock, Server::Private *_srv) {
+        state=ClientState::CONNECT;
       id = _id;
       sock = _sock;
       srv = _srv;
@@ -141,7 +148,7 @@ public:
     new_client->readHello();
 
     _clients_locker.lock();
-    _clients.push_back(new_client);
+    _clients.insert(std::make_pair(new_client->id,new_client));
     _clients_locker.unlock();
 
     socket_ptr new_sock(new ip::tcp::socket(_service));
@@ -155,13 +162,13 @@ public:
   void client_connect(ClientIO *client) {
     _connections_accepted += 1;
     logger_info("server: hello from {", client->host, "}, #", client->id);
+    client->state=ClientState::WORK;
     client->read();
   }
 
   void client_disconnect(ClientIO *client) {
       _clients_locker.lock();
-    _clients.remove_if(
-        [client](const ClientIO_ptr &it) { return it->id == client->id; });
+      _clients.erase(client->id);
     _clients_locker.unlock();
     _connections_accepted -= 1;
   }
@@ -177,8 +184,7 @@ public:
   std::atomic_bool _stop_flag;
   std::atomic_bool _is_runned_flag;
 
-  // TODO use hashset
-  std::list<ClientIO_ptr> _clients;
+  std::unordered_map<int,ClientIO_ptr> _clients;
   utils::Locker _clients_locker;
 };
 
