@@ -9,6 +9,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_map>
+#include <list>
 
 using namespace std::placeholders;
 using namespace boost::asio;
