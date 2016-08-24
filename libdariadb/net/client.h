@@ -24,6 +24,7 @@ namespace dariadb{
             void disconnect();
 
             ClientState state()const;
+            size_t pings_answers()const;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

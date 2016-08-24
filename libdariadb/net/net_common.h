@@ -10,6 +10,8 @@ namespace dariadb{
         const std::string HELLO_PREFIX="hello";
         const std::string DISCONNECT_PREFIX="bye";
         const std::string DISCONNECT_ANSWER="bye";
+        const std::string PING_QUERY="ping";
+        const std::string PONG_ANSWER="pong";
 
         enum class ClientState{
           CONNECT, //connection is beginning but a while not ended.

@@ -19,6 +19,7 @@ class Client::Private {
 public:
   Private(const Client::Param &p) : _params(p) {
     _state = ClientState::CONNECT;
+    _pings_answers=0;
   }
 
   ~Private() noexcept(false) {
@@ -66,6 +67,9 @@ public:
 
   void onDisconnectSended(const boost::system::error_code &err,
                           size_t read_bytes) {
+    if (err) {
+      THROW_EXCEPTION_SS("server::onDisconnectSended - " << err.message());
+    }
     logger("client: send bye");
   }
 
@@ -110,6 +114,12 @@ public:
       return;
     }
 
+    if (msg == PING_QUERY) {
+      logger("client: ping.");
+      async_write(*_socket.get(), buffer(PONG_ANSWER+"\n"),
+                  std::bind(&Client::Private::onPongSended, this, _1, _2));
+    }
+
     readNext();
   }
 
@@ -127,6 +137,17 @@ public:
     }
   }
 
+  void onPongSended(const boost::system::error_code &err, size_t read_bytes) {
+    if (err) {
+      THROW_EXCEPTION_SS("server::onPongSended - " << err.message());
+    }
+    _pings_answers++;
+    logger("client: pong");
+  }
+
+  size_t pings_answers()const{
+      return _pings_answers.load();
+  }
   ClientState state() const { return _state; }
 
   io_service _service;
@@ -137,6 +158,7 @@ public:
   utils::Locker _locker;
   std::thread _thread_handler;
   ClientState _state;
+  std::atomic_size_t _pings_answers;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
@@ -148,3 +170,5 @@ void Client::connect() { _Impl->connect(); }
 void Client::disconnect() { _Impl->disconnect(); }
 
 ClientState Client::state() const { return _Impl->state(); }
+
+size_t Client::pings_answers()const{return _Impl->pings_answers();}

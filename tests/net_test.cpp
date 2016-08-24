@@ -31,6 +31,7 @@ void server_thread_func() {
 }
 
 BOOST_AUTO_TEST_CASE(Connect) {
+  dariadb::logger("********** Connect **********");
   server_runned.store(false);
   std::thread server_thread{server_thread_func};
 
@@ -115,4 +116,47 @@ BOOST_AUTO_TEST_CASE(Connect) {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
+}
+
+BOOST_AUTO_TEST_CASE(PingTest) {
+  dariadb::logger("********** PingTest **********");
+  const size_t MAX_PONGS = 2;
+  server_runned.store(false);
+  server_stop_flag = false;
+  std::thread server_thread{server_thread_func};
+
+  while (!server_runned.load()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
+
+  dariadb::net::Client c1(client_param);
+  c1.connect();
+  dariadb::net::Client c2(client_param);
+  c2.connect();
+
+  // 1 client
+  while (true) {
+    auto st1 = c1.state();
+    auto st2 = c2.state();
+    dariadb::logger("test>> ", "0  state1: ", st1, " state2: ", st2);
+    if (st1 == dariadb::net::ClientState::WORK &&
+        st2 == dariadb::net::ClientState::WORK) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
+
+  while (true) {
+    auto p1 = c1.pings_answers();
+    auto p2 = c2.pings_answers();
+    dariadb::logger("test>> p1:", p1, " p2:", p2);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    if (p1 > MAX_PONGS && p2 > MAX_PONGS) {
+      break;
+    }
+  }
+  c1.disconnect();
+  c2.disconnect();
+  server_stop_flag = true;
+  server_thread.join();
 }
