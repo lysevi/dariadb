@@ -6,9 +6,9 @@
 #include <boost/asio.hpp>
 #include <functional>
 #include <istream>
-#include <unordered_map>
 #include <sstream>
 #include <thread>
+#include <unordered_map>
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -18,8 +18,6 @@ using namespace dariadb::net;
 
 typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
-
-
 
 class Server::Private {
 public:
@@ -33,13 +31,13 @@ public:
     Server::Private *srv;
 
     ClientIO(int _id, socket_ptr _sock, Server::Private *_srv) {
-        state=ClientState::CONNECT;
+      state = ClientState::CONNECT;
       id = _id;
       sock = _sock;
       srv = _srv;
     }
 
-    void read() {
+    void readNext() {
       async_read_until(*sock.get(), buff, '\n',
                        std::bind(&ClientIO::onRead, this, _1, _2));
     }
@@ -72,6 +70,7 @@ public:
         sock->write_some(buffer(OK_ANSWER + "\n"));
         this->srv->client_connect(this);
       }
+      this->readNext();
     }
 
     void onRead(const boost::system::error_code &err, size_t read_bytes) {
@@ -83,14 +82,26 @@ public:
       std::istream iss(&this->buff);
       std::string msg;
       std::getline(iss, msg);
-      logger("server: #",this->id," clientio::onRead - {", msg, "} readed_bytes: ", read_bytes);
+      logger("server: #", this->id, " clientio::onRead - {", msg,
+             "} readed_bytes: ", read_bytes);
 
       if (msg == DISCONNECT_PREFIX) {
-        logger("server: #", this->id, " disconnect");
-        this->sock->write_some(buffer(DISCONNECT_ANSWER + "\n"));
-        this->sock->close();
-        this->srv->client_disconnect(this);
+        this->disconnect();
+        return;
       }
+      this->readNext();
+    }
+
+    void disconnect() {
+      logger("server: #", this->id, " send disconnect signal.");
+      async_write(*sock.get(), buffer(DISCONNECT_ANSWER + "\n"),
+                  std::bind(&ClientIO::onDisconnectSended, this, _1, _2));
+    }
+    void onDisconnectSended(const boost::system::error_code &err,
+                            size_t read_bytes) {
+      logger("server: #", this->id, " onDisconnectSended.");
+      this->sock->close();
+      this->srv->client_disconnect(this);
     }
   };
 
@@ -145,7 +156,7 @@ public:
     new_client->readHello();
 
     _clients_locker.lock();
-    _clients.insert(std::make_pair(new_client->id,new_client));
+    _clients.insert(std::make_pair(new_client->id, new_client));
     _clients_locker.unlock();
 
     socket_ptr new_sock(new ip::tcp::socket(_service));
@@ -159,13 +170,17 @@ public:
   void client_connect(ClientIO *client) {
     _connections_accepted += 1;
     logger_info("server: hello from {", client->host, "}, #", client->id);
-    client->state=ClientState::WORK;
-    client->read();
+    client->state = ClientState::WORK;
   }
 
   void client_disconnect(ClientIO *client) {
-      _clients_locker.lock();
-      _clients.erase(client->id);
+    _clients_locker.lock();
+    auto fres=_clients.find(client->id);
+    if(fres==_clients.end()){
+        THROW_EXCEPTION_SS("server: client_disconnect - client #"<<client->id<< " not found");
+    }
+    _clients.erase(fres);
+    logger_info("server: clients count  ", _clients.size());
     _clients_locker.unlock();
     _connections_accepted -= 1;
   }
@@ -181,7 +196,7 @@ public:
   std::atomic_bool _stop_flag;
   std::atomic_bool _is_runned_flag;
 
-  std::unordered_map<int,ClientIO_ptr> _clients;
+  std::unordered_map<int, ClientIO_ptr> _clients;
   utils::Locker _clients_locker;
 };
 
