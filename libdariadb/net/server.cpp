@@ -83,7 +83,7 @@ public:
       std::istream iss(&this->buff);
       std::string msg;
       std::getline(iss, msg);
-      logger("server: clientio::onRead - {", msg, "} readed_bytes: ", read_bytes);
+      logger("server: #",this->id," clientio::onRead - {", msg, "} readed_bytes: ", read_bytes);
 
       if (msg == DISCONNECT_PREFIX) {
         logger("server: #", this->id, " disconnect");
