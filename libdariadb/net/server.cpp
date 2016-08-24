@@ -19,10 +19,7 @@ using namespace dariadb::net;
 typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
 
-enum class ClientState{
-  CONNECT, //connection is beginning but a while not ended.
-  WORK, //normal client.
-};
+
 
 class Server::Private {
 public:
@@ -90,7 +87,7 @@ public:
 
       if (msg == DISCONNECT_PREFIX) {
         logger("server: #", this->id, " disconnect");
-        this->sock->write_some(buffer(OK_ANSWER + "\n"));
+        this->sock->write_some(buffer(DISCONNECT_ANSWER + "\n"));
         this->sock->close();
         this->srv->client_disconnect(this);
       }

@@ -44,6 +44,18 @@ BOOST_AUTO_TEST_CASE(Connect) {
         }
     }
 
+    {// this check disconnect on client::dtor.
+        dariadb::net::Client c2(client_param);
+        c2.connect();
+
+        while(true){
+            auto res=server_instance->connections_accepted();
+            if(res==size_t(2)){
+                break;
+            }
+        }
+    }
+
     c.disconnect();
 
     while(true){

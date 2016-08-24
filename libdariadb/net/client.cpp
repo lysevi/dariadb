@@ -17,13 +17,20 @@ typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 
 class Client::Private {
 public:
-  Private(const Client::Param &p) : _params(p) {}
+  Private(const Client::Param &p) : _params(p) {
+      _state=ClientState::CONNECT;
+  }
 
-  ~Private(){
-      _socket->shutdown(ip::tcp::socket::shutdown_both);
-      _socket->close();
-      _service.stop();
-      _thread_handler.join();
+  ~Private()noexcept(false){
+      try{
+          if(_state!=ClientState::DISCONNECTED && _socket!=nullptr){
+              this->disconnect();
+          }
+          _service.stop();
+          _thread_handler.join();
+      }catch(std::exception&ex){
+          THROW_EXCEPTION_SS("~Client: "<<ex.what());
+      }
   }
 
   void connect() {
@@ -49,7 +56,7 @@ public:
       logger("client: send bye");
       _socket->write_some(buffer(bye_message));
 
-      read_ok("client: no ok answer onConnect - ");
+      while(this->_state!=ClientState::DISCONNECTED){}
   }
 
   void connect_handler(const boost::system::error_code &ec) {
@@ -64,6 +71,34 @@ public:
       _socket->write_some(buffer(hello_message));
 
       read_ok("client: no ok answer onConnect - ");
+      _state=ClientState::WORK;
+      this->read();
+  }
+
+  void read() {
+    async_read_until(*_socket.get(), buff, '\n',
+                     std::bind(&Client::Private::onRead, this, _1, _2));
+  }
+
+  void onRead(const boost::system::error_code &err, size_t read_bytes) {
+    logger("client: onRead...");
+    if (err) {
+      THROW_EXCEPTION_SS("client:  " << err.message());
+    }
+
+    std::istream iss(&this->buff);
+    std::string msg;
+    std::getline(iss, msg);
+    logger("client: {", msg, "} readed_bytes: ", read_bytes);
+
+    if (msg == DISCONNECT_ANSWER) {
+      logger("client: disconnect.");
+      _state=ClientState::DISCONNECTED;
+      this->_socket->close();
+      return;
+    }
+
+    read();
   }
 
   void read_ok(const std::string&message_on_err){
@@ -82,9 +117,12 @@ public:
 
   io_service _service;
   socket_ptr _socket;
+  streambuf buff;
+
   Client::Param _params;
   utils::Locker _locker;
   std::thread  _thread_handler;
+  ClientState _state;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
