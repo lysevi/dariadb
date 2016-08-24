@@ -190,9 +190,10 @@ public:
         THROW_EXCEPTION_SS("server: client_disconnect - client #"<<client->id<< " not found");
     }
     _clients.erase(fres);
-    logger_info("server: clients count  ", _clients.size());
-    _clients_locker.unlock();
     _connections_accepted -= 1;
+    logger_info("server: clients count  ", _clients.size(), " accepted:", _connections_accepted.load());
+    _clients_locker.unlock();
+
   }
 
   io_service _service;

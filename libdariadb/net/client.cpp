@@ -59,8 +59,8 @@ public:
                 std::bind(&Client::Private::onDisconnectSended, this, _1, _2));
 
     while (this->_state != ClientState::DISCONNECTED) {
-        logger("client: wait server answer");
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      logger("client: wait server answer");
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   }
 
@@ -127,9 +127,7 @@ public:
     }
   }
 
-  ClientState state()const{
-      return _state;
-  }
+  ClientState state() const { return _state; }
 
   io_service _service;
   socket_ptr _socket;
@@ -149,4 +147,4 @@ void Client::connect() { _Impl->connect(); }
 
 void Client::disconnect() { _Impl->disconnect(); }
 
-ClientState Client::state()const{return _Impl->state(); }
+ClientState Client::state() const { return _Impl->state(); }

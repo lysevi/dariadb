@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
     // 1 client
     while(true){
         auto res=server_instance->connections_accepted();
-        if(res==size_t(1)){
+        if(res==size_t(1) && c.state()==dariadb::net::ClientState::WORK){
             break;
         }
     }
@@ -52,18 +52,21 @@ BOOST_AUTO_TEST_CASE(Connect) {
         // 2 client: c and c2
         while(true){
             auto res=server_instance->connections_accepted();
-            if(res==size_t(2)){
+            if(res==size_t(2) && c2.state()==dariadb::net::ClientState::WORK){
                 break;
             }
+            std::cout<<res<<std::endl;
         }
     }
 
     //1 client: c
     while(true){
         auto res=server_instance->connections_accepted();
+        std::cout<<"one expect: "<<res<<std::endl;
         if(res==size_t(1)){
             break;
         }
+
     }
 
     dariadb::net::Client c3(client_param);
@@ -72,7 +75,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
     //2 client: c and c3
     while(true){
         auto res=server_instance->connections_accepted();
-        if(res==size_t(2)){
+        if(res==size_t(2)&& c3.state()==dariadb::net::ClientState::WORK){
             break;
         }
     }
@@ -82,16 +85,11 @@ BOOST_AUTO_TEST_CASE(Connect) {
     // 1 client: c3
     while(true){
         auto res=server_instance->connections_accepted();
-        if(res==size_t(1)){
+        if(res==size_t(1) && c.state()==dariadb::net::ClientState::DISCONNECTED){
             break;
         }
     }
-
     server_stop_flag=true;
     server_thread.join();
-
-
-    while(c3.state()!=dariadb::net::ClientState::DISCONNECTED){
-
-    }
+    while(c3.state()!=dariadb::net::ClientState::DISCONNECTED){}
 }
