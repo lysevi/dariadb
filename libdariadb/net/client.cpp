@@ -59,6 +59,8 @@ public:
                 std::bind(&Client::Private::onDisconnectSended, this, _1, _2));
 
     while (this->_state != ClientState::DISCONNECTED) {
+        logger("client: wait server answer");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   }
 
@@ -102,7 +104,7 @@ public:
     logger("client: {", msg, "} readed_bytes: ", read_bytes);
 
     if (msg == DISCONNECT_ANSWER) {
-      logger("client: disconnect.");
+      logger("client: disconnected.");
       _state = ClientState::DISCONNECTED;
       this->_socket->close();
       return;
