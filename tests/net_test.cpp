@@ -58,6 +58,14 @@ BOOST_AUTO_TEST_CASE(Connect) {
         }
     }
 
+    //1 client: c
+    while(true){
+        auto res=server_instance->connections_accepted();
+        if(res==size_t(1)){
+            break;
+        }
+    }
+
     dariadb::net::Client c3(client_param);
     c3.connect();
 
