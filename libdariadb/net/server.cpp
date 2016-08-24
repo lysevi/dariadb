@@ -117,9 +117,19 @@ public:
   ~Private() { stop(); }
 
   void stop() {
+      logger("server: stopping...");
+      disconnect_all();
     _stop_flag = true;
     _service.stop();
     _thread_handler.join();
+  }
+
+  void disconnect_all(){
+      _clients_locker.lock();
+      for(auto&kv:_clients){
+          kv.second->disconnect();
+      }
+      _clients_locker.unlock();
   }
 
   void server_thread() {

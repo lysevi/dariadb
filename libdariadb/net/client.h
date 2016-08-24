@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include "net_common.h"
 
 namespace dariadb{
     namespace net{
@@ -21,6 +22,8 @@ namespace dariadb{
 
             void connect();
             void disconnect();
+
+            ClientState state()const;
         protected:
             class Private;
             std::unique_ptr<Private> _Impl;

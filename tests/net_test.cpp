@@ -37,6 +37,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
     dariadb::net::Client c(client_param);
     c.connect();
 
+    // 1 client
     while(true){
         auto res=server_instance->connections_accepted();
         if(res==size_t(1)){
@@ -48,6 +49,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
         dariadb::net::Client c2(client_param);
         c2.connect();
 
+        // 2 client: c and c2
         while(true){
             auto res=server_instance->connections_accepted();
             if(res==size_t(2)){
@@ -56,15 +58,32 @@ BOOST_AUTO_TEST_CASE(Connect) {
         }
     }
 
-    c.disconnect();
+    dariadb::net::Client c3(client_param);
+    c3.connect();
 
+    //2 client: c and c3
     while(true){
         auto res=server_instance->connections_accepted();
-        if(res==size_t(0)){
+        if(res==size_t(2)){
+            break;
+        }
+    }
+
+    c.disconnect();
+
+    // 1 client: c3
+    while(true){
+        auto res=server_instance->connections_accepted();
+        if(res==size_t(1)){
             break;
         }
     }
 
     server_stop_flag=true;
     server_thread.join();
+
+
+    while(c3.state()!=dariadb::net::ClientState::DISCONNECTED){
+
+    }
 }

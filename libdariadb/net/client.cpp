@@ -125,6 +125,10 @@ public:
     }
   }
 
+  ClientState state()const{
+      return _state;
+  }
+
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -142,3 +146,5 @@ Client::~Client() {}
 void Client::connect() { _Impl->connect(); }
 
 void Client::disconnect() { _Impl->disconnect(); }
+
+ClientState Client::state()const{return _Impl->state(); }
