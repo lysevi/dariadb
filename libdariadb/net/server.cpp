@@ -6,10 +6,10 @@
 #include <boost/asio.hpp>
 #include <functional>
 #include <istream>
+#include <list>
 #include <sstream>
 #include <thread>
 #include <unordered_map>
-#include <list>
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -245,7 +245,7 @@ public:
     _clients_locker.lock();
     for (auto &kv : _clients) {
       if (kv.second->pings_missed > MAX_MISSED_PINGS) {
-          kv.second->state=ClientState::DISCONNECTED;
+        kv.second->state = ClientState::DISCONNECTED;
         to_remove.push_back(kv.first);
       } else {
         kv.second->ping();
