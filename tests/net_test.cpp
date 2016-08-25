@@ -42,6 +42,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
   dariadb::net::Client c(client_param);
   c.connect();
 
+
   // 1 client
   while (true) {
     auto res = server_instance->connections_accepted();

@@ -35,6 +35,7 @@ public:
     Server::Private *srv;
 
     std::atomic_int pings_missed;
+
     ClientIO(int _id, socket_ptr _sock, Server::Private *_srv) {
       pings_missed = 0;
       state = ClientState::CONNECT;
@@ -73,8 +74,8 @@ public:
         }
         iss >> readed_str;
         host = readed_str;
-        sock->write_some(buffer(OK_ANSWER + "\n"));
         this->srv->client_connect(this);
+        sock->write_some(buffer(OK_ANSWER + " 0\n"));
       }
       this->readNext();
     }

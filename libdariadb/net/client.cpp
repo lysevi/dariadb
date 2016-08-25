@@ -18,8 +18,9 @@ typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 class Client::Private {
 public:
   Private(const Client::Param &p) : _params(p) {
+      _query_num=1;
     _state = ClientState::CONNECT;
-    _pings_answers=0;
+    _pings_answers = 0;
   }
 
   ~Private() noexcept(false) {
@@ -37,18 +38,16 @@ public:
   void connect() {
     logger_info("client: connecting to ", _params.host, ':', _params.port);
 
+    _state = ClientState::CONNECT;
     _thread_handler =
         std::move(std::thread{&Client::Private::client_thread, this});
+
+    while(this->state()!= ClientState::WORK){
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    }
+    _state = ClientState::WORK;
   }
 
-  void client_thread() {
-    ip::tcp::endpoint ep(ip::address::from_string(_params.host), _params.port);
-    auto raw_sock_ptr = new ip::tcp::socket(_service);
-    _socket = socket_ptr{raw_sock_ptr};
-    _socket->async_connect(
-        ep, std::bind(&Client::Private::connect_handler, this, _1));
-    _service.run();
-  }
 
   void disconnect() {
     std::lock_guard<utils::Locker> lg(_locker);
@@ -63,6 +62,20 @@ public:
       logger("client: wait server answer");
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
+  }
+
+  void client_thread() {
+    ip::tcp::endpoint ep(ip::address::from_string(_params.host), _params.port);
+    auto raw_sock_ptr = new ip::tcp::socket(_service);
+    _socket = socket_ptr{raw_sock_ptr};
+    _socket->async_connect(
+        ep, std::bind(&Client::Private::connect_handler, this, _1));
+    _service.run();
+  }
+
+  void readNext() {
+    async_read_until(*_socket.get(), buff, '\n',
+                     std::bind(&Client::Private::onRead, this, _1, _2));
   }
 
   void onDisconnectSended(const boost::system::error_code &err,
@@ -86,14 +99,7 @@ public:
            hello_message.substr(0, hello_message.size() - 1));
     _socket->write_some(buffer(hello_message));
 
-    read_ok("client: no ok answer onConnect - ");
-    _state = ClientState::WORK;
     this->readNext();
-  }
-
-  void readNext() {
-    async_read_until(*_socket.get(), buff, '\n',
-                     std::bind(&Client::Private::onRead, this, _1, _2));
   }
 
   void onRead(const boost::system::error_code &err, size_t read_bytes) {
@@ -107,6 +113,16 @@ public:
     std::getline(iss, msg);
     logger("client: {", msg, "} readed_bytes: ", read_bytes);
 
+    if(msg.size()> OK_ANSWER.size() && msg.substr(0,2)==OK_ANSWER){
+        auto query_num = stoi(msg.substr(3,msg.size()));
+        logger("client: query #",query_num, " accepted");
+        if(this->_state!=ClientState::CONNECT){
+
+        }else{
+            this->_state=ClientState::WORK;
+        }
+    }
+
     if (msg == DISCONNECT_ANSWER) {
       logger("client: disconnected.");
       _state = ClientState::DISCONNECTED;
@@ -116,25 +132,11 @@ public:
 
     if (msg == PING_QUERY) {
       logger("client: ping.");
-      async_write(*_socket.get(), buffer(PONG_ANSWER+"\n"),
+      async_write(*_socket.get(), buffer(PONG_ANSWER + "\n"),
                   std::bind(&Client::Private::onPongSended, this, _1, _2));
     }
 
     readNext();
-  }
-
-  void read_ok(const std::string &message_on_err) {
-    streambuf buf;
-    read_until(*(_socket.get()), buf, '\n');
-    std::istream iss(&buf);
-    std::string msg;
-    std::getline(iss, msg);
-
-    if (msg != OK_ANSWER) {
-      THROW_EXCEPTION_SS(message_on_err << msg);
-    } else {
-      logger("client: OK.");
-    }
   }
 
   void onPongSended(const boost::system::error_code &err, size_t read_bytes) {
@@ -145,9 +147,7 @@ public:
     logger("client: pong");
   }
 
-  size_t pings_answers()const{
-      return _pings_answers.load();
-  }
+  size_t pings_answers() const { return _pings_answers.load(); }
   ClientState state() const { return _state; }
 
   io_service _service;
@@ -159,6 +159,8 @@ public:
   std::thread _thread_handler;
   ClientState _state;
   std::atomic_size_t _pings_answers;
+
+  std::atomic_int _query_num;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
@@ -171,4 +173,4 @@ void Client::disconnect() { _Impl->disconnect(); }
 
 ClientState Client::state() const { return _Impl->state(); }
 
-size_t Client::pings_answers()const{return _Impl->pings_answers();}
+size_t Client::pings_answers() const { return _Impl->pings_answers(); }
