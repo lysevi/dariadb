@@ -1,7 +1,9 @@
 #include "server.h"
 #include "../utils/exception.h"
 #include "../utils/logger.h"
+#include "interfaces/iclientmanager.h"
 #include "net_common.h"
+#include "server/ioclient.h"
 #include <atomic>
 #include <boost/asio.hpp>
 #include <functional>
@@ -17,132 +19,13 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
 
 const int PING_TIMER_INTERVAL = 1000;
 const int MAX_MISSED_PINGS = 100;
 
-class Server::Private {
+class Server::Private : public IClientManager {
 public:
-  struct ClientIO {
-    int id;
-    socket_ptr sock;
-    streambuf buff;
-    std::string host;
-
-    ClientState state;
-    Server::Private *srv;
-
-    std::atomic_int pings_missed;
-
-    ClientIO(int _id, socket_ptr _sock, Server::Private *_srv) {
-      pings_missed = 0;
-      state = ClientState::CONNECT;
-      id = _id;
-      sock = _sock;
-      srv = _srv;
-    }
-
-    void readNext() {
-      async_read_until(*sock.get(), buff, '\n',
-                       std::bind(&ClientIO::onRead, this, _1, _2));
-    }
-
-    void readHello() {
-      async_read_until(*sock.get(), buff, '\n',
-                       std::bind(&ClientIO::onHello, this, _1, _2));
-    }
-
-    void onHello(const boost::system::error_code &err, size_t read_bytes) {
-      if (err) {
-        THROW_EXCEPTION_SS("server: ClienIO::onHello " << err.message());
-      }
-
-      std::istream iss(&this->buff);
-      std::string msg;
-      std::getline(iss, msg);
-
-      if (read_bytes < HELLO_PREFIX.size()) {
-        logger_fatal("server: bad hello size.");
-      } else {
-        std::istringstream iss(msg);
-        std::string readed_str;
-        iss >> readed_str;
-        if (readed_str != HELLO_PREFIX) {
-          THROW_EXCEPTION_SS("server: bad hello prefix " << readed_str);
-        }
-        iss >> readed_str;
-        host = readed_str;
-        this->srv->client_connect(this);
-        async_write(*this->sock.get(), buffer(OK_ANSWER + " 0\n"),
-                    std::bind(&ClientIO::onOkSended, this, _1, _2));
-      }
-      this->readNext();
-    }
-
-    void onRead(const boost::system::error_code &err, size_t read_bytes) {
-      logger("server: #", this->id, " onRead...");
-      if (this->state == ClientState::DISCONNECTED) {
-        logger_info("server: #", this->id, " onRead in disconnected.");
-        return;
-      }
-      if (err) {
-        THROW_EXCEPTION_SS("server: ClienIO::onRead " << err.message());
-      }
-
-      std::istream iss(&this->buff);
-      std::string msg;
-      std::getline(iss, msg);
-      logger("server: #", this->id, " clientio::onRead - {", msg,
-             "} readed_bytes: ", read_bytes);
-
-      if (msg == DISCONNECT_PREFIX) {
-        this->disconnect();
-        return;
-      }
-
-      if (msg == PONG_ANSWER) {
-        pings_missed--;
-        logger("server: #", this->id, " pings_missed: ", pings_missed.load());
-      }
-      this->readNext();
-    }
-
-    void disconnect() {
-      logger("server: #", this->id, " send disconnect signal.");
-      this->state = ClientState::DISCONNECTED;
-      async_write(*sock.get(), buffer(DISCONNECT_ANSWER + "\n"),
-                  std::bind(&ClientIO::onDisconnectSended, this, _1, _2));
-    }
-    void onDisconnectSended(const boost::system::error_code &err,
-                            size_t read_bytes) {
-      logger("server: #", this->id, " onDisconnectSended.");
-      this->sock->close();
-      this->srv->client_disconnect(this);
-    }
-
-    void ping() {
-      pings_missed++;
-      async_write(*sock.get(), buffer(PING_QUERY + "\n"),
-                  std::bind(&ClientIO::onPingSended, this, _1, _2));
-    }
-    void onPingSended(const boost::system::error_code &err, size_t read_bytes) {
-      if (err) {
-        THROW_EXCEPTION_SS("server::onPingSended - " << err.message());
-      }
-      logger("server: #", this->id, " ping.");
-    }
-
-    void onOkSended(const boost::system::error_code &err, size_t read_bytes) {
-      if (err) {
-        THROW_EXCEPTION_SS("server::onOkSended - " << err.message());
-      }
-    }
-  };
-
-  typedef std::shared_ptr<ClientIO> ClientIO_ptr;
-
   Private(const Server::Param &p)
       : _params(p), _stop_flag(false), _is_runned_flag(false),
         _ping_timer(_service) {
@@ -216,18 +99,25 @@ public:
 
   bool is_runned() { return _is_runned_flag.load(); }
 
-  void client_connect(ClientIO *client) {
+  void client_connect(int id) override {
+    std::lock_guard<utils::Locker> lg(_clients_locker);
+    auto fres_it = this->_clients.find(id);
+    if (fres_it == this->_clients.end()) {
+      THROW_EXCEPTION_SS("server: client_connect - client #" << id
+                                                             << " not found");
+    }
+    auto client = fres_it->second;
     _connections_accepted += 1;
     logger_info("server: hello from {", client->host, "}, #", client->id);
     client->state = ClientState::WORK;
   }
 
-  void client_disconnect(ClientIO *client) {
+  void client_disconnect(int id) override {
     _clients_locker.lock();
-    auto fres = _clients.find(client->id);
+    auto fres = _clients.find(id);
     if (fres == _clients.end()) {
       THROW_EXCEPTION_SS("server: client_disconnect - client #"
-                         << client->id << " not found");
+                         << id << " not found");
     }
     _clients.erase(fres);
     _connections_accepted -= 1;

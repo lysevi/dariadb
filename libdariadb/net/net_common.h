@@ -20,6 +20,5 @@ namespace dariadb{
         };
 
         std::ostream &operator<<(std::ostream &stream, const ClientState &state);
-
     }
 }
