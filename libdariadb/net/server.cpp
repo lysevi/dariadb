@@ -75,7 +75,8 @@ public:
         iss >> readed_str;
         host = readed_str;
         this->srv->client_connect(this);
-        sock->write_some(buffer(OK_ANSWER + " 0\n"));
+        async_write(*this->sock.get(), buffer(OK_ANSWER + " 0\n"),
+                    std::bind(&ClientIO::onOkSended, this, _1, _2));
       }
       this->readNext();
     }
@@ -131,6 +132,12 @@ public:
         THROW_EXCEPTION_SS("server::onPingSended - " << err.message());
       }
       logger("server: #", this->id, " ping.");
+    }
+
+    void onOkSended(const boost::system::error_code &err, size_t read_bytes) {
+      if (err) {
+        THROW_EXCEPTION_SS("server::onOkSended - " << err.message());
+      }
     }
   };
 

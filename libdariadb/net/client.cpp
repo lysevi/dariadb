@@ -141,7 +141,7 @@ public:
 
   void onPongSended(const boost::system::error_code &err, size_t read_bytes) {
     if (err) {
-      THROW_EXCEPTION_SS("server::onPongSended - " << err.message());
+      THROW_EXCEPTION_SS("client::onPongSended - " << err.message());
     }
     _pings_answers++;
     logger("client: pong");
