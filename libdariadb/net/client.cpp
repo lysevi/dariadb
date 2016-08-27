@@ -18,7 +18,7 @@ typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 class Client::Private {
 public:
   Private(const Client::Param &p) : _params(p) {
-      _query_num=1;
+    _query_num = 1;
     _state = ClientState::CONNECT;
     _pings_answers = 0;
   }
@@ -42,12 +42,11 @@ public:
     _thread_handler =
         std::move(std::thread{&Client::Private::client_thread, this});
 
-    while(this->state()!= ClientState::WORK){
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    while (this->state() != ClientState::WORK) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
     _state = ClientState::WORK;
   }
-
 
   void disconnect() {
     std::lock_guard<utils::Locker> lg(_locker);
@@ -113,14 +112,14 @@ public:
     std::getline(iss, msg);
     logger("client: {", msg, "} readed_bytes: ", read_bytes);
 
-    if(msg.size()> OK_ANSWER.size() && msg.substr(0,2)==OK_ANSWER){
-        auto query_num = stoi(msg.substr(3,msg.size()));
-        logger("client: query #",query_num, " accepted");
-        if(this->_state!=ClientState::CONNECT){
+    if (msg.size() > OK_ANSWER.size() && msg.substr(0, 2) == OK_ANSWER) {
+      auto query_num = stoi(msg.substr(3, msg.size()));
+      logger("client: query #", query_num, " accepted");
+      if (this->_state != ClientState::CONNECT) {
 
-        }else{
-            this->_state=ClientState::WORK;
-        }
+      } else {
+        this->_state = ClientState::WORK;
+      }
     }
 
     if (msg == DISCONNECT_ANSWER) {
