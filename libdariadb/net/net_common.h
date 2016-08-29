@@ -13,6 +13,7 @@ const std::string DISCONNECT_PREFIX = "bye";
 const std::string DISCONNECT_ANSWER = "bye";
 const std::string PING_QUERY = "ping";
 const std::string PONG_ANSWER = "pong";
+const std::string WRITE_QUERY = "write";
 
 enum class ClientState {
   CONNECT, // connection is beginning but a while not ended.

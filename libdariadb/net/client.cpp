@@ -112,7 +112,8 @@ public:
     std::getline(iss, msg);
     logger("client: {", msg, "} readed_bytes: ", read_bytes);
 
-    if (msg.size() > OK_ANSWER.size() && msg.substr(0, 2) == OK_ANSWER) {
+    if (msg.size() > OK_ANSWER.size() &&
+        msg.substr(0, OK_ANSWER.size()) == OK_ANSWER) {
       auto query_num = stoi(msg.substr(3, msg.size()));
       logger("client: query #", query_num, " accepted");
       if (this->_state != ClientState::CONNECT) {
@@ -149,6 +150,38 @@ public:
   size_t pings_answers() const { return _pings_answers.load(); }
   ClientState state() const { return _state; }
 
+  void write(const Meas::MeasArray &ma) {
+    logger("client: write ", ma.size());
+    utils::Locker locker;
+    locker.lock();
+    std::stringstream ss;
+    ss << WRITE_QUERY << ' ' << ma.size() << '\n';
+    std::string query = ss.str();
+    async_write(*_socket.get(), buffer(query),
+                std::bind(&Client::Private::onWriteQuerySendedconst, this,
+                          &locker, ma.size(), ma, _1, _2));
+
+    locker.lock();
+  }
+
+  void onWriteQuerySendedconst(utils::Locker *locker, size_t to_send,
+                               Meas::MeasArray &ma,
+                               const boost::system::error_code &err,
+                               size_t read_bytes) {
+    if (err) {
+      THROW_EXCEPTION_SS("client::onWriteQuerySended - " << err.message());
+    }
+
+    if (to_send != 0) {
+      logger("client: write next part ", to_send, " values.");
+      async_write(*_socket.get(), buffer(ma,to_send*sizeof(Meas)),
+                  std::bind(&Client::Private::onWriteQuerySendedconst,
+                            this,
+                            locker, size_t(0), ma, _1, _2));
+    } else {
+      locker->unlock();
+    }
+  }
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -173,3 +206,5 @@ void Client::disconnect() { _Impl->disconnect(); }
 ClientState Client::state() const { return _Impl->state(); }
 
 size_t Client::pings_answers() const { return _Impl->pings_answers(); }
+
+void Client::write(const Meas::MeasArray &ma) { _Impl->write(ma); }

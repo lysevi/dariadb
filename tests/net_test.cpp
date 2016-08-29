@@ -9,6 +9,7 @@
 #include <net/server.h>
 #include <thread>
 #include <utils/logger.h>
+#include <meas.h>
 
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::Client::Param client_param("127.0.0.1", 2001);
@@ -134,7 +135,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   dariadb::net::Client c2(client_param);
   c2.connect();
 
-  // 1 client
+  // 2 clients
   while (true) {
     auto st1 = c1.state();
     auto st2 = c2.state();
@@ -157,6 +158,47 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   }
   c1.disconnect();
   c2.disconnect();
+  server_stop_flag = true;
+  server_thread.join();
+}
+
+
+
+BOOST_AUTO_TEST_CASE(WriteTest) {
+    const size_t MEASES_SIZE=101;
+  dariadb::logger("********** WriteTest **********");
+  server_runned.store(false);
+  server_stop_flag = false;
+  std::thread server_thread{server_thread_func};
+
+  while (!server_runned.load()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
+
+  dariadb::net::Client c1(client_param);
+  c1.connect();
+
+  // 1 client
+  while (true) {
+    auto st1 = c1.state();
+    dariadb::logger("test>> ", "0  state1: ", st1);
+    if (st1 == dariadb::net::ClientState::WORK) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
+
+
+  dariadb::Meas::MeasArray ma;
+  ma.resize(MEASES_SIZE);
+  for(size_t i=0;i<MEASES_SIZE;++i){
+      ma[i].id=dariadb::Id(i);
+      ma[i].value=dariadb::Value(i);
+  }
+
+  c1.write(ma);
+  c1.disconnect();
+
   server_stop_flag = true;
   server_thread.join();
 }

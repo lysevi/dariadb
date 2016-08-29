@@ -3,7 +3,7 @@
 #include "net_common.h"
 #include <memory>
 #include <string>
-
+#include "../meas.h"
 namespace dariadb {
 namespace net {
 class Client {
@@ -25,6 +25,8 @@ public:
   ClientState state() const;
   size_t pings_answers() const;
 
+
+  void write(const Meas::MeasArray&ma);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

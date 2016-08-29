@@ -14,27 +14,28 @@ namespace net {
 struct ClientIO {
   int id;
   socket_ptr sock;
-  boost::asio::streambuf buff;
+  boost::asio::streambuf query_buff;
   std::string host;
 
   ClientState state;
   IClientManager *srv;
 
   std::atomic_int pings_missed;
+  char *in_values_buffer;
 
   ClientIO(int _id, socket_ptr _sock, IClientManager *_srv);
   void disconnect();
   void ping();
 
   void readNext();
-
   void readHello();
   void onHello(const boost::system::error_code &err, size_t read_bytes);
-  void onRead(const boost::system::error_code &err, size_t read_bytes);
+  void onReadQuery(const boost::system::error_code &err, size_t read_bytes);
   void onPingSended(const boost::system::error_code &err, size_t read_bytes);
   void onOkSended(const boost::system::error_code &err, size_t read_bytes);
   void onDisconnectSended(const boost::system::error_code &err,
                           size_t read_bytes);
+  void onReadValues(size_t values_count,const boost::system::error_code &err, size_t read_bytes);
 };
 
 typedef std::shared_ptr<ClientIO> ClientIO_ptr;
