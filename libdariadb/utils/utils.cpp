@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <ctype.h>
 
 std::vector<std::string> dariadb::utils::tokens(const std::string &str) {
   std::vector<std::string> tokens;
@@ -34,7 +35,7 @@ std::string dariadb::utils::to_upper(const std::string &text) {
   std::string converted = text;
 
   for (size_t i = 0; i < converted.size(); ++i) {
-    converted[i] = std::toupper(converted[i]);
+    converted[i] = toupper(converted[i]);
   }
   return converted;
 }
