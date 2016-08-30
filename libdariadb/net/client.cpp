@@ -151,6 +151,7 @@ public:
   ClientState state() const { return _state; }
 
   void write(const Meas::MeasArray &ma) {
+	  std::lock_guard<utils::Locker> lg(this->_locker);
     logger("client: write ", ma.size());
     utils::Locker locker;
     locker.lock();
