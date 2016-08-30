@@ -23,7 +23,7 @@ struct ClientIO {
   IClientManager *srv;
   storage::IMeasStorage*storage;
   std::atomic_int pings_missed;
-  Meas *in_values_buffer;
+  Meas::MeasArray in_values_buffer;
 
   ClientIO(int _id, socket_ptr _sock, IClientManager *_srv, storage::IMeasStorage*_storage);
   void disconnect();

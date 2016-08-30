@@ -78,8 +78,7 @@ void ClientIO::onReadQuery(const boost::system::error_code &err,
     logger("server: write query ", to_write_count);
 
     size_t buffer_size = to_write_count * sizeof(Meas);
-    this->in_values_buffer = new Meas[to_write_count];
-    memset(this->in_values_buffer, 0, buffer_size);
+    this->in_values_buffer.resize(to_write_count);
 
     this->sock->async_read_some(
         buffer(this->in_values_buffer, buffer_size),
@@ -142,17 +141,13 @@ void ClientIO::onReadValues(size_t values_count,
 
   // TODO use batch loading
   if (this->storage != nullptr) {
+	  logger("server: #", this->id, " write ", in_values_buffer.size(), " values");
 	  this->srv->write_begin();
-	  for (size_t i = 0; i < values_count; ++i) {
-		  logger("server: recived ", in_values_buffer[i].id);
-		  this->storage->append(in_values_buffer[i]);
-	  }
+	  this->storage->append(this->in_values_buffer.begin(), this->in_values_buffer.end());
 	  this->srv->write_end();
   }
   else {
 	  logger_info("clientio: storage no set.");
   }
-  this->in_values_buffer = nullptr;
-  delete[] this->in_values_buffer;
   readNextQuery();
 }
