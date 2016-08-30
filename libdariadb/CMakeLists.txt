@@ -28,9 +28,9 @@ source_group(math FILES ${MATH_HDRS} ${MATH_SRC})
 source_group(utils FILES ${UTILS_HDRS} ${UTILS_SRC})
 source_group(dariadb FILES ${GLOB_HDRS} ${GLOB_SRC})
 source_group(interfaces FILES ${INTERFACES_SRC} ${INTERFACES_HDRS})
-source_group(net FILES ${NET_SRC} ${NET_HDRS} ${NETI_HDRS})
-source_group(net/interfaces FILES  ${NETI_HDRS} ${NETI_SRC})
-source_group(net/server FILES ${NET_SERVER_HDRS} ${NET_SERVER_SRC})
+source_group("net" FILES ${NET_SRC} ${NET_HDRS} ${NETI_HDRS})
+source_group("net\\interfaces" FILES  ${NETI_HDRS} ${NETI_SRC})
+source_group("net\\server" FILES ${NET_SERVER_HDRS} ${NET_SERVER_SRC})
 
 SET(SRC  ${GLOB_HDRS} ${GLOB_SRC} 
 	 ${COMPRESSION_HDRS} ${COMPRESSION_SRC}  
