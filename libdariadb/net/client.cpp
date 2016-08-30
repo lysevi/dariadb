@@ -39,8 +39,7 @@ public:
     logger_info("client: connecting to ", _params.host, ':', _params.port);
 
     _state = ClientState::CONNECT;
-    _thread_handler =
-        std::move(std::thread{&Client::Private::client_thread, this});
+    _thread_handler = std::move(std::thread{&Client::Private::client_thread, this});
 
     while (this->state() != ClientState::WORK) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -67,8 +66,7 @@ public:
     ip::tcp::endpoint ep(ip::address::from_string(_params.host), _params.port);
     auto raw_sock_ptr = new ip::tcp::socket(_service);
     _socket = socket_ptr{raw_sock_ptr};
-    _socket->async_connect(
-        ep, std::bind(&Client::Private::connect_handler, this, _1));
+    _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
     _service.run();
   }
 
@@ -77,8 +75,7 @@ public:
                      std::bind(&Client::Private::onRead, this, _1, _2));
   }
 
-  void onDisconnectSended(const boost::system::error_code &err,
-                          size_t read_bytes) {
+  void onDisconnectSended(const boost::system::error_code &err, size_t read_bytes) {
     if (err) {
       THROW_EXCEPTION_SS("server::onDisconnectSended - " << err.message());
     }
@@ -87,15 +84,13 @@ public:
 
   void connect_handler(const boost::system::error_code &ec) {
     if (ec) {
-      THROW_EXCEPTION_SS("dariadb::client: error on connect - "
-                         << ec.message());
+      THROW_EXCEPTION_SS("dariadb::client: error on connect - " << ec.message());
     }
     std::lock_guard<utils::Locker> lg(_locker);
     std::stringstream ss;
     ss << HELLO_PREFIX << ' ' << ip::host_name() << '\n';
     auto hello_message = ss.str();
-    logger("client: send hello ",
-           hello_message.substr(0, hello_message.size() - 1));
+    logger("client: send hello ", hello_message.substr(0, hello_message.size() - 1));
     _socket->write_some(buffer(hello_message));
 
     this->readNext();
@@ -112,8 +107,7 @@ public:
     std::getline(iss, msg);
     logger("client: {", msg, "} readed_bytes: ", read_bytes);
 
-    if (msg.size() > OK_ANSWER.size() &&
-        msg.substr(0, OK_ANSWER.size()) == OK_ANSWER) {
+    if (msg.size() > OK_ANSWER.size() && msg.substr(0, OK_ANSWER.size()) == OK_ANSWER) {
       auto query_num = stoi(msg.substr(3, msg.size()));
       logger("client: query #", query_num, " accepted");
       if (this->_state != ClientState::CONNECT) {
@@ -151,7 +145,7 @@ public:
   ClientState state() const { return _state; }
 
   void write(const Meas::MeasArray &ma) {
-	  std::lock_guard<utils::Locker> lg(this->_locker);
+    std::lock_guard<utils::Locker> lg(this->_locker);
     logger("client: write ", ma.size());
     utils::Locker locker;
     locker.lock();
@@ -159,29 +153,30 @@ public:
     ss << WRITE_QUERY << ' ' << ma.size() << '\n';
     std::string query = ss.str();
     async_write(*_socket.get(), buffer(query),
-                std::bind(&Client::Private::onWriteQuerySendedconst, this,
-                          &locker, ma.size(), ma, _1, _2));
+                std::bind(&Client::Private::onWriteQuerySendedconst, this, &locker,
+                          ma.size(), ma, _1, _2));
 
     locker.lock();
   }
 
-  void onWriteQuerySendedconst(utils::Locker *locker, size_t to_send,
-                               Meas::MeasArray &ma,
-                               const boost::system::error_code &err,
-                               size_t read_bytes) {
+  void onWriteQuerySendedconst(utils::Locker *locker, size_t to_send, Meas::MeasArray &ma,
+                               const boost::system::error_code &err, size_t read_bytes) {
     if (err) {
       THROW_EXCEPTION_SS("client::onWriteQuerySended - " << err.message());
     }
 
     if (to_send != 0) {
       logger("client: write next part ", to_send, " values.");
-      async_write(*_socket.get(), buffer(ma,to_send*sizeof(Meas)),
-                  std::bind(&Client::Private::onWriteQuerySendedconst,
-                            this,
-                            locker, size_t(0), ma, _1, _2));
+      async_write(*_socket.get(), buffer(ma, to_send * sizeof(Meas)),
+                  std::bind(&Client::Private::onWriteQuerySendedconst, this, locker,
+                            size_t(0), ma, _1, _2));
     } else {
       locker->unlock();
     }
+  }
+
+  Meas::MeasList read(const storage::QueryInterval &qi) {
+	  return Meas::MeasList();
   }
   io_service _service;
   socket_ptr _socket;
@@ -200,12 +195,26 @@ Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
 
 Client::~Client() {}
 
-void Client::connect() { _Impl->connect(); }
+void Client::connect() {
+  _Impl->connect();
+}
 
-void Client::disconnect() { _Impl->disconnect(); }
+void Client::disconnect() {
+  _Impl->disconnect();
+}
 
-ClientState Client::state() const { return _Impl->state(); }
+ClientState Client::state() const {
+  return _Impl->state();
+}
 
-size_t Client::pings_answers() const { return _Impl->pings_answers(); }
+size_t Client::pings_answers() const {
+  return _Impl->pings_answers();
+}
 
-void Client::write(const Meas::MeasArray &ma) { _Impl->write(ma); }
+void Client::write(const Meas::MeasArray &ma) {
+  _Impl->write(ma);
+}
+
+Meas::MeasList Client::read(const storage::QueryInterval &qi) {
+  return _Impl->read(qi);
+}

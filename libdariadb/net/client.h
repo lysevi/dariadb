@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include "../meas.h"
+#include "../storage/query_param.h"
 namespace dariadb {
 namespace net {
 class Client {
@@ -27,6 +28,7 @@ public:
 
 
   void write(const Meas::MeasArray&ma);
+  Meas::MeasList read(const storage::QueryInterval&qi);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
