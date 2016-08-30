@@ -4,12 +4,48 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/test/unit_test.hpp>
 #include <chrono>
+#include <interfaces/imeasstorage.h>
 #include <iostream>
+#include <meas.h>
 #include <net/client.h>
 #include <net/server.h>
 #include <thread>
 #include <utils/logger.h>
-#include <meas.h>
+
+class Mock_MeasStorage : public virtual dariadb::storage::IMeasStorage {
+public:
+  Mock_MeasStorage() {
+	  writed_count.store(0);
+  }
+
+  virtual dariadb::Time minTime() override { return dariadb::Time(0); }
+  virtual dariadb::Time maxTime() override { return dariadb::Time(0); }
+
+  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+                          dariadb::Time *maxResult) {
+    return false;
+  }
+
+  virtual void foreach (const dariadb::storage::QueryInterval &,
+                        dariadb::storage::IReaderClb *) override {}
+  virtual dariadb::Meas::Id2Meas
+  readInTimePoint(const dariadb::storage::QueryTimePoint &q) override {
+    return dariadb::Meas::Id2Meas{};
+  }
+  virtual dariadb::Meas::Id2Meas currentValue(const dariadb::IdArray &ids,
+                                              const dariadb::Flag &flag) override {
+    return dariadb::Meas::Id2Meas{};
+  }
+
+  virtual dariadb::append_result append(const dariadb::Meas &value) override {
+	  writed_count++;
+	  return dariadb::append_result(1, 0);
+  }
+  virtual void flush() override {
+  }
+
+  std::atomic_int writed_count;
+};
 
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::Client::Param client_param("127.0.0.1", 2001);
@@ -101,8 +137,7 @@ BOOST_AUTO_TEST_CASE(Connect) {
     auto res = server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("test>> ", "3 count: ", res, " state: ", st);
-    if (res == size_t(1) &&
-        c.state() == dariadb::net::ClientState::DISCONNECTED) {
+    if (res == size_t(1) && c.state() == dariadb::net::ClientState::DISCONNECTED) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -162,11 +197,10 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_thread.join();
 }
 
-
-
 BOOST_AUTO_TEST_CASE(WriteTest) {
-    const size_t MEASES_SIZE=101;
+  const size_t MEASES_SIZE = 101;
   dariadb::logger("********** WriteTest **********");
+  std::shared_ptr<Mock_MeasStorage> stor{ new Mock_MeasStorage() };
   server_runned.store(false);
   server_stop_flag = false;
   std::thread server_thread{server_thread_func};
@@ -174,7 +208,7 @@ BOOST_AUTO_TEST_CASE(WriteTest) {
   while (!server_runned.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
-
+  server_instance->set_storage(stor.get());
   dariadb::net::Client c1(client_param);
   c1.connect();
 
@@ -188,17 +222,19 @@ BOOST_AUTO_TEST_CASE(WriteTest) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
-
   dariadb::Meas::MeasArray ma;
   ma.resize(MEASES_SIZE);
-  for(size_t i=0;i<MEASES_SIZE;++i){
-      ma[i].id=dariadb::Id(i);
-      ma[i].value=dariadb::Value(i);
+  for (size_t i = 0; i < MEASES_SIZE; ++i) {
+    ma[i].id = dariadb::Id(i);
+    ma[i].value = dariadb::Value(i);
   }
 
   c1.write(ma);
   c1.disconnect();
 
+  while (stor->writed_count.load() != MEASES_SIZE) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
   server_stop_flag = true;
   server_thread.join();
 }

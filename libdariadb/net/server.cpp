@@ -37,6 +37,11 @@ public:
 
   ~Private() { stop(); }
 
+  void set_storage(storage::IMeasStorage*storage) {
+	  logger("server: set setorage.");
+	  _storage = storage;
+  }
+
   void stop() {
     logger("server: stopping...");
     _ping_timer.cancel();
@@ -84,7 +89,7 @@ public:
 
     auto cur_id = _next_id.load();
     _next_id++;
-    ClientIO_ptr new_client{new ClientIO(cur_id, sock, this)};
+    ClientIO_ptr new_client{new ClientIO(cur_id, sock, this, this->_storage)};
     new_client->readHello();
 
     _clients_locker.lock();
@@ -176,6 +181,8 @@ public:
   utils::Locker _clients_locker;
 
   deadline_timer _ping_timer;
+
+  storage::IMeasStorage*_storage;
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}
@@ -189,3 +196,7 @@ size_t Server::connections_accepted() const {
 }
 
 void Server::stop() { _Impl->stop(); }
+
+void Server::set_storage(storage::IMeasStorage*storage) {
+	_Impl->set_storage(storage);
+}

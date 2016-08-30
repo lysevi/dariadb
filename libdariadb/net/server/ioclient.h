@@ -6,6 +6,8 @@
 #include <memory>
 
 #include "../interfaces/iclientmanager.h"
+#include "../../interfaces/imeasstorage.h"
+#include "../../meas.h"
 #include "../net_common.h"
 #include "common.h"
 
@@ -19,15 +21,15 @@ struct ClientIO {
 
   ClientState state;
   IClientManager *srv;
-
+  storage::IMeasStorage*storage;
   std::atomic_int pings_missed;
-  char *in_values_buffer;
+  Meas *in_values_buffer;
 
-  ClientIO(int _id, socket_ptr _sock, IClientManager *_srv);
+  ClientIO(int _id, socket_ptr _sock, IClientManager *_srv, storage::IMeasStorage*_storage;);
   void disconnect();
   void ping();
 
-  void readNext();
+  void readNextQuery();
   void readHello();
   void onHello(const boost::system::error_code &err, size_t read_bytes);
   void onReadQuery(const boost::system::error_code &err, size_t read_bytes);
