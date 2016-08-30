@@ -57,7 +57,7 @@ void ClientIO::onHello(const boost::system::error_code &err,
 
 void ClientIO::onReadQuery(const boost::system::error_code &err,
                            size_t read_bytes) {
-  logger("server: #", this->id, " onRead...");
+  logger("server: #", this->id, " onReadQuery...");
   if (this->state == ClientState::DISCONNECTED) {
     logger_info("server: #", this->id, " onRead in disconnected.");
     return;
@@ -69,7 +69,7 @@ void ClientIO::onReadQuery(const boost::system::error_code &err,
   std::istream iss(&this->query_buff);
   std::string msg;
   std::getline(iss, msg);
-  logger("server: #", this->id, " clientio::onRead - {", msg,
+  logger("server: #", this->id, " clientio::onReadQuery - {", msg,
          "} readed_bytes: ", read_bytes);
 
   if (msg.size() > WRITE_QUERY.size() &&
@@ -142,10 +142,12 @@ void ClientIO::onReadValues(size_t values_count,
 
   // TODO use batch loading
   if (this->storage != nullptr) {
+	  this->srv->write_begin();
 	  for (size_t i = 0; i < values_count; ++i) {
 		  logger("server: recived ", in_values_buffer[i].id);
 		  this->storage->append(in_values_buffer[i]);
 	  }
+	  this->srv->write_end();
   }
   else {
 	  logger_info("clientio: storage no set.");

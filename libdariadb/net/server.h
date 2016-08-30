@@ -8,8 +8,8 @@ namespace net {
 class Server {
 public:
   struct Param {
-    int port;
-    Param(int _port) { port = _port; }
+    unsigned short port;
+    Param(unsigned short _port) { port = _port; }
   };
   Server(const Param &p);
   ~Server();

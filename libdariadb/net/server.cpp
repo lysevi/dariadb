@@ -27,23 +27,27 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _params(p), _stop_flag(false), _is_runned_flag(false),
-        _ping_timer(_service) {
-    _next_id = 0;
+      : _params(p), _stop_flag(false), _is_runned_flag(false), _ping_timer(_service) {
+    _next_client_id = 0;
     _connections_accepted.store(0);
+    _writes_in_progress.store(0);
     _thread_handler = std::thread(&Server::Private::server_thread, this);
     reset_ping_timer();
   }
 
   ~Private() { stop(); }
 
-  void set_storage(storage::IMeasStorage*storage) {
-	  logger("server: set setorage.");
-	  _storage = storage;
+  void set_storage(storage::IMeasStorage *storage) {
+    logger("server: set setorage.");
+    _storage = storage;
   }
 
   void stop() {
     logger("server: stopping...");
+	while (_writes_in_progress.load() != 0) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		logger_info("server: writes in progress ", _writes_in_progress.load());
+	}
     _ping_timer.cancel();
     disconnect_all();
     _stop_flag = true;
@@ -75,20 +79,18 @@ public:
   }
 
   void start_accept(socket_ptr sock) {
-    _acc->async_accept(
-        *sock, std::bind(&Server::Private::handle_accept, this, sock, _1));
+    _acc->async_accept(*sock, std::bind(&Server::Private::handle_accept, this, sock, _1));
   }
 
   void handle_accept(socket_ptr sock, const boost::system::error_code &err) {
     if (err) {
-      THROW_EXCEPTION_SS("dariadb::server: error on accept - "
-                         << err.message());
+      THROW_EXCEPTION_SS("dariadb::server: error on accept - " << err.message());
     }
 
     logger_info("server: accept connection.");
 
-    auto cur_id = _next_id.load();
-    _next_id++;
+    auto cur_id = _next_client_id.load();
+    _next_client_id++;
     ClientIO_ptr new_client{new ClientIO(cur_id, sock, this, this->_storage)};
     new_client->readHello();
 
@@ -108,8 +110,7 @@ public:
     std::lock_guard<utils::Locker> lg(_clients_locker);
     auto fres_it = this->_clients.find(id);
     if (fres_it == this->_clients.end()) {
-      THROW_EXCEPTION_SS("server: client_connect - client #" << id
-                                                             << " not found");
+      THROW_EXCEPTION_SS("server: client_connect - client #" << id << " not found");
     }
     auto client = fres_it->second;
     _connections_accepted += 1;
@@ -121,8 +122,7 @@ public:
     _clients_locker.lock();
     auto fres = _clients.find(id);
     if (fres == _clients.end()) {
-      THROW_EXCEPTION_SS("server: client_disconnect - client #"
-                         << id << " not found");
+      THROW_EXCEPTION_SS("server: client_disconnect - client #" << id << " not found");
     }
     _clients.erase(fres);
     _connections_accepted -= 1;
@@ -131,10 +131,12 @@ public:
     _clients_locker.unlock();
   }
 
+  void write_begin() override { _writes_in_progress++; }
+  void write_end() override { _writes_in_progress--; }
+
   void reset_ping_timer() {
     try {
-      _ping_timer.expires_from_now(
-          boost::posix_time::millisec(PING_TIMER_INTERVAL));
+      _ping_timer.expires_from_now(boost::posix_time::millisec(PING_TIMER_INTERVAL));
       _ping_timer.async_wait(std::bind(&Server::Private::on_check_ping, this));
     } catch (std::exception &ex) {
       THROW_EXCEPTION_SS("server: reset_ping_timer - " << ex.what());
@@ -169,7 +171,7 @@ public:
   io_service _service;
   acceptor_ptr _acc;
 
-  std::atomic_int _next_id;
+  std::atomic_int _next_client_id;
   std::atomic_size_t _connections_accepted;
   Server::Param _params;
   std::thread _thread_handler;
@@ -182,21 +184,26 @@ public:
 
   deadline_timer _ping_timer;
 
-  storage::IMeasStorage*_storage;
+  storage::IMeasStorage *_storage;
+  std::atomic_int _writes_in_progress;
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}
 
 Server::~Server() {}
 
-bool Server::is_runned() { return _Impl->is_runned(); }
+bool Server::is_runned() {
+  return _Impl->is_runned();
+}
 
 size_t Server::connections_accepted() const {
   return _Impl->connections_accepted();
 }
 
-void Server::stop() { _Impl->stop(); }
+void Server::stop() {
+  _Impl->stop();
+}
 
-void Server::set_storage(storage::IMeasStorage*storage) {
-	_Impl->set_storage(storage);
+void Server::set_storage(storage::IMeasStorage *storage) {
+  _Impl->set_storage(storage);
 }
