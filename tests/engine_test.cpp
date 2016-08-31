@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     ss << version.major << '.' << version.minor << '.' << version.patch;
     BOOST_CHECK_EQUAL(version.to_string(), ss.str());
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true);
     ms->wait_all_asyncs();
     auto pages_count = PageManager::instance()->files_count();
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -258,6 +258,7 @@ class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
 public:
   std::list<dariadb::Meas> values;
   void call(const dariadb::Meas &m) override { values.push_back(m); }
+  void is_end()override {}
   ~Moc_SubscribeClbk() {}
 };
 

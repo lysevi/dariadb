@@ -14,37 +14,46 @@
 
 class Mock_MeasStorage : public virtual dariadb::storage::IMeasStorage {
 public:
-  Mock_MeasStorage() {
-	  writed_count.store(0);
-  }
+	Mock_MeasStorage() {
+		writed_count.store(0);
+	}
 
-  virtual dariadb::Time minTime() override { return dariadb::Time(0); }
-  virtual dariadb::Time maxTime() override { return dariadb::Time(0); }
+	dariadb::Time minTime() override { return dariadb::Time(0); }
+	dariadb::Time maxTime() override { return dariadb::Time(0); }
 
-  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                          dariadb::Time *maxResult) {
-    return false;
-  }
+	bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+		dariadb::Time *maxResult) {
+		return false;
+	}
 
-  virtual void foreach (const dariadb::storage::QueryInterval &,
-                        dariadb::storage::IReaderClb *) override {}
-  virtual dariadb::Meas::Id2Meas
-  readInTimePoint(const dariadb::storage::QueryTimePoint &q) override {
-    return dariadb::Meas::Id2Meas{};
-  }
-  virtual dariadb::Meas::Id2Meas currentValue(const dariadb::IdArray &ids,
-                                              const dariadb::Flag &flag) override {
-    return dariadb::Meas::Id2Meas{};
-  }
+	void foreach(const dariadb::storage::QueryInterval &qi,
+		dariadb::storage::IReaderClb *clbk) override {
+		for (auto&v : writed) {
+			if (v.inQuery(qi.ids, qi.flag, qi.source, qi.from, qi.to)) {
+				clbk->call(v);
+			}
+		}
+	}
 
-  virtual dariadb::append_result append(const dariadb::Meas &value) override {
-	  writed_count++;
-	  return dariadb::append_result(1, 0);
-  }
-  virtual void flush() override {
-  }
+	dariadb::Meas::Id2Meas
+		readInTimePoint(const dariadb::storage::QueryTimePoint &q) override {
+		return dariadb::Meas::Id2Meas{};
+	}
+	dariadb::Meas::Id2Meas currentValue(const dariadb::IdArray &ids,
+		const dariadb::Flag &flag) override {
+		return dariadb::Meas::Id2Meas{};
+	}
 
-  std::atomic_int writed_count;
+	dariadb::append_result append(const dariadb::Meas &value) override {
+		writed_count++;
+		writed.push_back(value);
+		return dariadb::append_result(1, 0);
+	}
+	void flush() override {
+	}
+
+	std::atomic_int writed_count;
+	dariadb::Meas::MeasList writed;
 };
 
 const dariadb::net::Server::Param server_param(2001);
@@ -197,7 +206,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_thread.join();
 }
 
-BOOST_AUTO_TEST_CASE(WriteTest) {
+BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   const size_t MEASES_SIZE = 101;
   dariadb::logger("********** WriteTest **********");
   std::shared_ptr<Mock_MeasStorage> stor{ new Mock_MeasStorage() };

@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
     BOOST_CHECK(aof_files.size() == size_t(0));
     dariadb::storage::AOFile aof;
 
-    dariadb_test::storage_test_check(&aof, 0, 100, 1);
+    dariadb_test::storage_test_check(&aof, 0, 100, 1, false);
     dariadb::storage::Manifest::stop();
   }
 
@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::storage::AOFManager::start();
 
     dariadb_test::storage_test_check(dariadb::storage::AOFManager::instance(), from, to,
-                                     step);
+                                     step, false);
 
     dariadb::storage::AOFManager::stop();
     dariadb::storage::Manifest::stop();

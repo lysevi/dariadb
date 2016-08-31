@@ -176,6 +176,7 @@ public:
   }
 
   Meas::MeasList read(const storage::QueryInterval &qi) {
+	  std::lock_guard<utils::Locker> lg(this->_locker);
 	  return Meas::MeasList();
   }
   io_service _service;

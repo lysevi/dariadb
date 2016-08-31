@@ -53,6 +53,7 @@ public:
   virtual Meas::MeasList readInterval(const QueryInterval &q) override;
   virtual Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) override;
   virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  virtual void foreach(const QueryTimePoint &q, IReaderClb * clbk)override;
 
   Time minTime() override;
   Time maxTime() override;

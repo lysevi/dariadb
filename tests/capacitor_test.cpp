@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(CapacitorCommonTest) {
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
     dariadb::storage::Capacitor cap(dariadb::storage::Capacitor::rnd_file_name());
 
-    dariadb_test::storage_test_check(&cap, 0, 100, 1);
+    dariadb_test::storage_test_check(&cap, 0, 100, 1, false);
     dariadb::storage::Manifest::stop();
   }
   dariadb::storage::Options::stop();
@@ -590,7 +590,7 @@ BOOST_AUTO_TEST_CASE(CapManager_CommonTest) {
     dariadb::storage::CapacitorManager::start();
 
     dariadb_test::storage_test_check(dariadb::storage::CapacitorManager::instance(), from,
-                                     to, step);
+                                     to, step, false);
 
     dariadb::storage::CapacitorManager::stop();
     dariadb::storage::Manifest::stop();

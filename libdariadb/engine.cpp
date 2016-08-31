@@ -273,11 +273,20 @@ public:
 
     LockManager::instance()->unlock(
         {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+	c_clbk->is_end();
   }
 
   // Inherited via MeasStorage
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     return foreach_internal(q, clbk, clbk, clbk);
+  }
+
+  void foreach(const QueryTimePoint &q, IReaderClb * clbk) {
+	  auto values = this->readInTimePoint(q);
+	  for (auto &kv : values) {
+		  clbk->call(kv.second);
+	  }
+	  clbk->is_end();
   }
 
   void mlist2mset(Meas::MeasList &mlist, Id2MSet &sub_result) {
@@ -473,6 +482,10 @@ Engine::QueueSizes Engine::queue_size() const {
 
 void Engine::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _impl->foreach (q, clbk);
+}
+
+void Engine::foreach(const QueryTimePoint &q, IReaderClb * clbk) {
+	return _impl->foreach(q, clbk);
 }
 
 Meas::MeasList Engine::readInterval(const QueryInterval &q) {

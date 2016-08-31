@@ -27,9 +27,16 @@ STRATEGY strategy = STRATEGY::FAST_READ;
 
 class BenchCallback : public IReaderClb {
 public:
-  BenchCallback() { count = 0; }
+	BenchCallback() {
+		count = 0; 
+		is_end_called= false;
+	}
   void call(const dariadb::Meas &) { count++; }
+  void is_end()override {
+	  is_end_called = true;
+  }
   std::atomic<size_t> count;
+  bool is_end_called;
 };
 
 void parse_cmdline(int argc, char *argv[]) {

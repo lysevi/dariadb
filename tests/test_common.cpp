@@ -14,15 +14,19 @@ using namespace dariadb::storage;
 
 class Callback : public storage::IReaderClb {
 public:
-  Callback() { count = 0; }
+	Callback() { count = 0; is_end_called = 0; }
   void call(const Meas &v) {
     std::lock_guard<std::mutex> lg(_locker);
     count++;
     all.push_back(v);
   }
+  void is_end()override {
+	  is_end_called++;
+  }
   size_t count;
   Meas::MeasList all;
   std::mutex _locker;
+  std::atomic_int is_end_called;
 };
 
 void checkAll(Meas::MeasList res, std::string msg, Time from, Time to, Time step) {
@@ -165,7 +169,7 @@ void minMaxCheck(storage::IMeasStorage *as, Time from, Time maxWritedTime) {
 
 void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                        const IdSet &_all_ids_set, const IdArray &_all_ids_array,
-                       size_t total_count) {
+                       size_t total_count, bool check_stop_flag) {
   storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
   Meas::MeasList all = as->readInterval(qi_all);
 
@@ -175,6 +179,9 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
 
   if (all.size() != clbk->count) {
     THROW_EXCEPTION_SS("all.size()!=clbk->count: " << all.size() << "!=" << clbk->count);
+  }
+  if (check_stop_flag && clbk->is_end_called!=1) {
+	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: ", clbk->is_end_called);
   }
   IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 
@@ -211,7 +218,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
 }
 
 void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
-                        const IdArray &_all_ids_array) {
+                        const IdArray &_all_ids_array, bool check_stop_flag) {
   auto qp = storage::QueryTimePoint(_all_ids_array, 0, to + copies_count);
   auto all_id2meas = as->readInTimePoint(qp);
 
@@ -224,6 +231,10 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
   as->foreach (qp, qpoint_clbk.get());
   if (qpoint_clbk->count != all_id2meas.size()) {
     throw MAKE_EXCEPTION("qpoint_clbk->count != all_id2meas.size()");
+  }
+
+  if (check_stop_flag && qpoint_clbk->is_end_called != 1) {
+	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: ", qpoint_clbk->is_end_called);
   }
 
   qp.time_point = to + copies_count;
@@ -247,7 +258,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
   }
 }
 
-void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step) {
+void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step, bool check_stop_flag) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   size_t total_count =
@@ -271,8 +282,8 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
 
-  readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count);
-  readTimePointCheck(as, from, to, step, _all_ids_array);
+  readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count, check_stop_flag);
+  readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
 }
 /*
 void readIntervalCommonTest(storage::MeasStorage *ds) {
