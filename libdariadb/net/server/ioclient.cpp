@@ -83,7 +83,7 @@ void ClientIO::onReadQuery(const boost::system::error_code &err, size_t read_byt
 
     this->sock->async_read_some(
         buffer(this->in_values_buffer, buffer_size),
-        std::bind(&ClientIO::onReadValues, this, to_write_count, _1, _2));
+        std::bind(&ClientIO::onRecvValues, this, to_write_count, _1, _2));
     return;
   }
 
@@ -104,11 +104,11 @@ void ClientIO::onReadQuery(const boost::system::error_code &err, size_t read_byt
                 qi.ids.size(), " values");
 
 	auto values = this->storage->readInterval(qi);
-	this->in_values_buffer=Meas::MeasArray(values.begin(), values.end());
-	logger_info("server: #", this->id, " query ", query_id, " readed ", values.size(), " values");
+    auto size_to_send=values.size();
+    logger_info("server: #", this->id, " query ", query_id, " readed ", size_to_send, " values");
 
 	std::stringstream ss;
-	ss << OK_ANSWER << ' ' << query_id << ' ' << in_values_buffer.size();
+    ss << OK_ANSWER << ' ' << query_id << ' ' << size_to_send;
 	nlohmann::json js;
 	auto js_array = nlohmann::json::array();
 	for (auto v : values) {
@@ -170,7 +170,7 @@ void ClientIO::onOkSended(const boost::system::error_code &err, size_t) {
   }
 }
 
-void ClientIO::onReadValues(size_t values_count, const boost::system::error_code &err,
+void ClientIO::onRecvValues(size_t values_count, const boost::system::error_code &err,
                             size_t read_bytes) {
   if (err) {
     THROW_EXCEPTION_SS("server::readValues - " << err.message());
@@ -196,15 +196,5 @@ void ClientIO::onReadIntervalAnswerSended(const boost::system::error_code &err, 
 	}
 	logger("server: #", this->id, " send ", in_values_buffer.size(), " values.");
 	readNextQuery();
-	/*async_write(*sock.get(), 
-		buffer(this->in_values_buffer, in_values_buffer.size() * sizeof(Meas)),
-		std::bind(&ClientIO::onReadIntervalValuesSended, this, _1, _2));*/
 }
 
-
-void  ClientIO::onReadIntervalValuesSended(const boost::system::error_code &err, size_t read_bytes) {
-	if (err) {
-		THROW_EXCEPTION_SS("server::onReadIntervalAnswerSended - " << err.message());
-	}
-	readNextQuery();
-}

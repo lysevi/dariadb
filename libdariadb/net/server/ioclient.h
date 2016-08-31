@@ -37,9 +37,8 @@ struct ClientIO {
   void onOkSended(const boost::system::error_code &err, size_t read_bytes);
   void onDisconnectSended(const boost::system::error_code &err,
                           size_t read_bytes);
-  void onReadValues(size_t values_count,const boost::system::error_code &err, size_t read_bytes);
+  void onRecvValues(size_t values_count,const boost::system::error_code &err, size_t read_bytes);
   void onReadIntervalAnswerSended(const boost::system::error_code &err, size_t read_bytes);
-  void onReadIntervalValuesSended(const boost::system::error_code &err, size_t read_bytes);
 };
 
 typedef std::shared_ptr<ClientIO> ClientIO_ptr;
