@@ -2,6 +2,7 @@
 #include "../../meas.h"
 #include "../../timeutil.h"
 #include "../../utils/exception.h"
+#include <json/json.hpp>
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -104,11 +105,24 @@ void ClientIO::onReadQuery(const boost::system::error_code &err, size_t read_byt
 
 	auto values = this->storage->readInterval(qi);
 	this->in_values_buffer=Meas::MeasArray(values.begin(), values.end());
-	logger_info("server: #", this->id, " query ", query_id, " readed ", in_values_buffer.size(), " values");
+	logger_info("server: #", this->id, " query ", query_id, " readed ", values.size(), " values");
 
 	std::stringstream ss;
-	ss << OK_ANSWER << ' ' << query_id << ' ' << in_values_buffer.size() << '\n';
-	async_write(*sock.get(), buffer(ss.str()),
+	ss << OK_ANSWER << ' ' << query_id << ' ' << in_values_buffer.size();
+	nlohmann::json js;
+	auto js_array = nlohmann::json::array();
+	for (auto v : values) {
+		nlohmann::json meas_js;
+		meas_js["id"] = v.id;
+		meas_js["flag"] = v.flag;
+		meas_js["src"] = v.src;
+		meas_js["value"] = v.value;
+		js_array.push_back(meas_js);
+	}
+	js["result"] = js_array;
+	ss << ' ' << js.dump()<<'\n';
+	auto str = ss.str();
+	async_write(*sock.get(), buffer(str),
 		std::bind(&ClientIO::onReadIntervalAnswerSended, this, _1, _2));
 
   }
@@ -181,9 +195,10 @@ void ClientIO::onReadIntervalAnswerSended(const boost::system::error_code &err, 
 		THROW_EXCEPTION_SS("server::onReadIntervalAnswerSended - " << err.message());
 	}
 	logger("server: #", this->id, " send ", in_values_buffer.size(), " values.");
-	async_write(*sock.get(), 
+	readNextQuery();
+	/*async_write(*sock.get(), 
 		buffer(this->in_values_buffer, in_values_buffer.size() * sizeof(Meas)),
-		std::bind(&ClientIO::onReadIntervalValuesSended, this, _1, _2));
+		std::bind(&ClientIO::onReadIntervalValuesSended, this, _1, _2));*/
 }
 
 

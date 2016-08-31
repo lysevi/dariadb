@@ -3,6 +3,7 @@
 #include "../utils/locker.h"
 #include "../utils/logger.h"
 #include "net_common.h"
+#include <json/json.hpp>
 #include <boost/asio.hpp>
 #include <functional>
 #include <thread>
@@ -113,17 +114,26 @@ public:
       if (this->_state == ClientState::WORK) {
 		  auto query_str = msg.substr(OK_ANSWER.size()+1, msg.size());
 		  auto delim_pos = query_str.find_first_of(' ');
-		  
 
 		  auto count_str = query_str.substr(delim_pos, query_str.size());
 		  auto count = stoi(count_str);
-		  logger("delim_pos   ", count);
+		  
 		  in_buffer_values.resize(count);
-		  auto buffer_size = sizeof(Meas)*count;
-		  /*_socket->async_read_some(
-			  buffer(this->in_buffer_values, buffer_size),
-			  std::bind(&Client::Private::onReadValues, this, _1, _2));*/
-		  return;
+
+		  delim_pos = query_str.find_first_of('{');
+		  query_str = query_str.substr(delim_pos, query_str.size());
+		  auto qjs = nlohmann::json::parse(query_str);
+		  auto result_array = qjs["result"];
+		  size_t i = 0;
+		  for (auto meas_js : result_array) {
+			  Meas v;
+			  v.id= meas_js["id"];
+			  v.flag = meas_js["flag"];
+			  v.src=meas_js["src"];
+			  v.value=meas_js["value"];
+			  this->in_buffer_values[i++] = v;
+		  }
+		  this->_query_locker->unlock();
       } else {
         this->_state = ClientState::WORK;
       }
@@ -176,7 +186,7 @@ public:
                                const boost::system::error_code &err, size_t read_bytes) {
     if (err) {
       THROW_EXCEPTION_SS("client::onWriteQuerySended - " << err.message());
-    }
+    } 
 
     if (to_send != 0) {
       logger("client: write next part ", to_send, " values.");
@@ -222,21 +232,9 @@ public:
 	  }
 
 	  logger_info("client: onReadQuerySended - nextQuery");
-	  readNext();
+	  /*readNext();*/
   }
 
-
-  void onReadValues(const boost::system::error_code &err, size_t read_bytes) {
-	  if (err) {
-		  THROW_EXCEPTION_SS("server::onReadValues - " << err.message());
-	  }
-	  else {
-		  logger_info("clientio: recv bytes ", read_bytes);
-	  }
-
-	  logger_info("client: onReadValues - nextQuery");
-	  this->readNext();
-  }
 
   io_service _service;
   socket_ptr _socket;
