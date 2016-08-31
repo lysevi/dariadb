@@ -101,6 +101,16 @@ void ClientIO::onReadQuery(const boost::system::error_code &err, size_t read_byt
     logger_info("server: #", this->id, " query ", query_id, " read interval [",
                 timeutil::to_string(qi.from), ',', timeutil::to_string(qi.to), "] ",
                 qi.ids.size(), " values");
+
+	auto values = this->storage->readInterval(qi);
+	this->in_values_buffer=Meas::MeasArray(values.begin(), values.end());
+	logger_info("server: #", this->id, " query ", query_id, " readed ", in_values_buffer.size(), " values");
+
+	std::stringstream ss;
+	ss << OK_ANSWER << ' ' << query_id << ' ' << in_values_buffer.size() << '\n';
+	async_write(*sock.get(), buffer(ss.str()),
+		std::bind(&ClientIO::onReadIntervalAnswerSended, this, _1, _2));
+
   }
 
   if (msg == DISCONNECT_PREFIX) {
@@ -121,6 +131,7 @@ void ClientIO::disconnect() {
   async_write(*sock.get(), buffer(DISCONNECT_ANSWER + "\n"),
               std::bind(&ClientIO::onDisconnectSended, this, _1, _2));
 }
+
 void ClientIO::onDisconnectSended(const boost::system::error_code &, size_t) {
   logger("server: #", this->id, " onDisconnectSended.");
   this->sock->close();
@@ -155,7 +166,7 @@ void ClientIO::onReadValues(size_t values_count, const boost::system::error_code
 
   // TODO use batch loading
   if (this->storage != nullptr) {
-    logger("server: #", this->id, " write ", in_values_buffer.size(), " values");
+    logger("server: #", this->id, " write ", in_values_buffer.size(), " values.");
     this->srv->write_begin();
     this->storage->append(this->in_values_buffer.begin(), this->in_values_buffer.end());
     this->srv->write_end();
@@ -163,4 +174,22 @@ void ClientIO::onReadValues(size_t values_count, const boost::system::error_code
     logger_info("clientio: storage no set.");
   }
   readNextQuery();
+}
+
+void ClientIO::onReadIntervalAnswerSended(const boost::system::error_code &err, size_t read_bytes) {
+	if (err) {
+		THROW_EXCEPTION_SS("server::onReadIntervalAnswerSended - " << err.message());
+	}
+	logger("server: #", this->id, " send ", in_values_buffer.size(), " values.");
+	async_write(*sock.get(), 
+		buffer(this->in_values_buffer, in_values_buffer.size() * sizeof(Meas)),
+		std::bind(&ClientIO::onReadIntervalValuesSended, this, _1, _2));
+}
+
+
+void  ClientIO::onReadIntervalValuesSended(const boost::system::error_code &err, size_t read_bytes) {
+	if (err) {
+		THROW_EXCEPTION_SS("server::onReadIntervalAnswerSended - " << err.message());
+	}
+	readNextQuery();
 }

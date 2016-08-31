@@ -256,9 +256,10 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_thread.join();
 }
 
+/*
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   const size_t MEASES_SIZE = 101;
-  dariadb::logger("********** WriteTest **********");
+  dariadb::logger("********** ReadWriteTest **********");
   std::shared_ptr<Mock_MeasStorage> stor{ new Mock_MeasStorage() };
   server_runned.store(false);
   server_stop_flag = false;
@@ -300,8 +301,9 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
   dariadb::storage::QueryInterval qi{ ids,0,dariadb::Time(0),dariadb::Time(MEASES_SIZE) };
   auto result = c1.read(qi);
-  //BOOST_CHECK_EQUAL(result.size(), ma.size());
+  BOOST_CHECK_EQUAL(result.size(), ma.size());
   c1.disconnect();
   server_stop_flag = true;
   server_thread.join();
 }
+*/

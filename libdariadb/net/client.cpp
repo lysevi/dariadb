@@ -109,9 +109,21 @@ public:
 
     if (msg.size() > OK_ANSWER.size() && msg.substr(0, OK_ANSWER.size()) == OK_ANSWER) {
       auto query_num = stoi(msg.substr(3, msg.size()));
-      logger("client: query #", query_num, " accepted");
-      if (this->_state != ClientState::CONNECT) {
+      logger("client: query #", query_num, " accepted.");
+      if (this->_state == ClientState::WORK) {
+		  auto query_str = msg.substr(OK_ANSWER.size()+1, msg.size());
+		  auto delim_pos = query_str.find_first_of(' ');
+		  
 
+		  auto count_str = query_str.substr(delim_pos, query_str.size());
+		  auto count = stoi(count_str);
+		  logger("delim_pos   ", count);
+		  in_buffer_values.resize(count);
+		  auto buffer_size = sizeof(Meas)*count;
+		  /*_socket->async_read_some(
+			  buffer(this->in_buffer_values, buffer_size),
+			  std::bind(&Client::Private::onReadValues, this, _1, _2));*/
+		  return;
       } else {
         this->_state = ClientState::WORK;
       }
@@ -130,6 +142,7 @@ public:
                   std::bind(&Client::Private::onPongSended, this, _1, _2));
     }
 
+	logger_info("client: onRead - nextQuery");
     readNext();
   }
 
@@ -192,30 +205,52 @@ public:
 
 	  utils::Locker q_locker;
 	  q_locker.lock();
+	  this->_query_locker = &q_locker;
+	  
 	  async_write(*_socket.get(), buffer(query),
-		  std::bind(&Client::Private::onReadQuerySended, this, &q_locker, _1, _2));
+		  std::bind(&Client::Private::onReadQuerySended, this, _1, _2));
 
 	  q_locker.lock();
-	  return Meas::MeasList();
+	  Meas::MeasList result(in_buffer_values.begin(), in_buffer_values.end());
+	  in_buffer_values.clear();
+	  return result;
   }
 
-  void onReadQuerySended(utils::Locker *locker, const boost::system::error_code &err, size_t read_bytes) {
+  void onReadQuerySended(const boost::system::error_code &err, size_t read_bytes) {
 	  if (err) {
 		  THROW_EXCEPTION_SS("client::onReadQuerySended - " << err.message());
 	  }
-	  locker->unlock();	 
+
+	  logger_info("client: onReadQuerySended - nextQuery");
+	  readNext();
   }
+
+
+  void onReadValues(const boost::system::error_code &err, size_t read_bytes) {
+	  if (err) {
+		  THROW_EXCEPTION_SS("server::onReadValues - " << err.message());
+	  }
+	  else {
+		  logger_info("clientio: recv bytes ", read_bytes);
+	  }
+
+	  logger_info("client: onReadValues - nextQuery");
+	  this->readNext();
+  }
+
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
 
   Client::Param _params;
   utils::Locker _locker;
+  utils::Locker *_query_locker; // lock current query.
   std::thread _thread_handler;
   ClientState _state;
   std::atomic_size_t _pings_answers;
 
   std::atomic_int _query_num;
+  Meas::MeasArray in_buffer_values;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
