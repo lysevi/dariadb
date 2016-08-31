@@ -153,13 +153,13 @@ public:
     ss << WRITE_QUERY << ' ' << ma.size() << '\n';
     std::string query = ss.str();
     async_write(*_socket.get(), buffer(query),
-                std::bind(&Client::Private::onWriteQuerySendedconst, this, &locker,
+                std::bind(&Client::Private::onWriteQuerySended, this, &locker,
                           ma.size(), ma, _1, _2));
 
     locker.lock();
   }
 
-  void onWriteQuerySendedconst(utils::Locker *locker, size_t to_send, Meas::MeasArray &ma,
+  void onWriteQuerySended(utils::Locker *locker, size_t to_send, Meas::MeasArray &ma,
                                const boost::system::error_code &err, size_t read_bytes) {
     if (err) {
       THROW_EXCEPTION_SS("client::onWriteQuerySended - " << err.message());
@@ -168,7 +168,7 @@ public:
     if (to_send != 0) {
       logger("client: write next part ", to_send, " values.");
       async_write(*_socket.get(), buffer(ma, to_send * sizeof(Meas)),
-                  std::bind(&Client::Private::onWriteQuerySendedconst, this, locker,
+                  std::bind(&Client::Private::onWriteQuerySended, this, locker,
                             size_t(0), ma, _1, _2));
     } else {
       locker->unlock();
@@ -177,7 +177,33 @@ public:
 
   Meas::MeasList read(const storage::QueryInterval &qi) {
 	  std::lock_guard<utils::Locker> lg(this->_locker);
+	  
+	  auto qid = this->_query_num.load();
+	  this->_query_num++;
+
+	  std::stringstream ss;
+	  ss << READ_INTERVAL_QUERY
+		  << ' '
+		  << qid
+		  << ' '
+		  << qi.to_string()
+		  << '\n';
+	  std::string query = ss.str();
+
+	  utils::Locker q_locker;
+	  q_locker.lock();
+	  async_write(*_socket.get(), buffer(query),
+		  std::bind(&Client::Private::onReadQuerySended, this, &q_locker, _1, _2));
+
+	  q_locker.lock();
 	  return Meas::MeasList();
+  }
+
+  void onReadQuerySended(utils::Locker *locker, const boost::system::error_code &err, size_t read_bytes) {
+	  if (err) {
+		  THROW_EXCEPTION_SS("client::onReadQuerySended - " << err.message());
+	  }
+	  locker->unlock();	 
   }
   io_service _service;
   socket_ptr _socket;

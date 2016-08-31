@@ -1,5 +1,6 @@
 #include "ioclient.h"
 #include "../../meas.h"
+#include "../../timeutil.h"
 #include "../../utils/exception.h"
 
 using namespace std::placeholders;
@@ -8,7 +9,8 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-ClientIO::ClientIO(int _id, socket_ptr _sock, IClientManager *_srv, storage::IMeasStorage*_storage) {
+ClientIO::ClientIO(int _id, socket_ptr _sock, IClientManager *_srv,
+                   storage::IMeasStorage *_storage) {
   pings_missed = 0;
   state = ClientState::CONNECT;
   id = _id;
@@ -27,8 +29,7 @@ void ClientIO::readHello() {
                    std::bind(&ClientIO::onHello, this, _1, _2));
 }
 
-void ClientIO::onHello(const boost::system::error_code &err,
-                       size_t read_bytes) {
+void ClientIO::onHello(const boost::system::error_code &err, size_t read_bytes) {
   if (err) {
     THROW_EXCEPTION_SS("server: ClienIO::onHello " << err.message());
   }
@@ -42,11 +43,11 @@ void ClientIO::onHello(const boost::system::error_code &err,
   } else {
     std::istringstream hello_iss(msg);
     std::string readed_str;
-	hello_iss >> readed_str;
+    hello_iss >> readed_str;
     if (readed_str != HELLO_PREFIX) {
       THROW_EXCEPTION_SS("server: bad hello prefix " << readed_str);
     }
-	hello_iss >> readed_str;
+    hello_iss >> readed_str;
     host = readed_str;
     this->srv->client_connect(this->id);
     async_write(*this->sock.get(), buffer(OK_ANSWER + " 0\n"),
@@ -55,8 +56,7 @@ void ClientIO::onHello(const boost::system::error_code &err,
   this->readNextQuery();
 }
 
-void ClientIO::onReadQuery(const boost::system::error_code &err,
-                           size_t read_bytes) {
+void ClientIO::onReadQuery(const boost::system::error_code &err, size_t read_bytes) {
   logger("server: #", this->id, " onReadQuery...");
   if (this->state == ClientState::DISCONNECTED) {
     logger_info("server: #", this->id, " onRead in disconnected.");
@@ -69,8 +69,8 @@ void ClientIO::onReadQuery(const boost::system::error_code &err,
   std::istream iss(&this->query_buff);
   std::string msg;
   std::getline(iss, msg);
-  logger("server: #", this->id, " clientio::onReadQuery - {", msg,
-         "} readed_bytes: ", read_bytes);
+  logger("server: #", this->id, " clientio::onReadQuery - {", msg, "} readed_bytes: ",
+         read_bytes);
 
   if (msg.size() > WRITE_QUERY.size() &&
       msg.substr(0, WRITE_QUERY.size()) == WRITE_QUERY) {
@@ -83,6 +83,24 @@ void ClientIO::onReadQuery(const boost::system::error_code &err,
     this->sock->async_read_some(
         buffer(this->in_values_buffer, buffer_size),
         std::bind(&ClientIO::onReadValues, this, to_write_count, _1, _2));
+    return;
+  }
+
+  if (msg.size() > READ_INTERVAL_QUERY.size() &&
+      msg.substr(0, READ_INTERVAL_QUERY.size()) == READ_INTERVAL_QUERY) {
+    auto query_str = msg.substr(READ_INTERVAL_QUERY.size() + 1, msg.size());
+
+    auto id_end_pos = query_str.find_first_of(' ');//position between query_id and json values
+    auto query_id = stoi(query_str.substr(0, id_end_pos));
+    
+	query_str = query_str.substr(id_end_pos, query_str.size());
+    
+	dariadb::storage::QueryInterval qi({}, 0, 0, 0);
+    qi.from_string(query_str);
+
+    logger_info("server: #", this->id, " query ", query_id, " read interval [",
+                timeutil::to_string(qi.from), ',', timeutil::to_string(qi.to), "] ",
+                qi.ids.size(), " values");
   }
 
   if (msg == DISCONNECT_PREFIX) {
@@ -103,8 +121,7 @@ void ClientIO::disconnect() {
   async_write(*sock.get(), buffer(DISCONNECT_ANSWER + "\n"),
               std::bind(&ClientIO::onDisconnectSended, this, _1, _2));
 }
-void ClientIO::onDisconnectSended(const boost::system::error_code &,
-                                  size_t) {
+void ClientIO::onDisconnectSended(const boost::system::error_code &, size_t) {
   logger("server: #", this->id, " onDisconnectSended.");
   this->sock->close();
   this->srv->client_disconnect(this->id);
@@ -115,39 +132,35 @@ void ClientIO::ping() {
   async_write(*sock.get(), buffer(PING_QUERY + "\n"),
               std::bind(&ClientIO::onPingSended, this, _1, _2));
 }
-void ClientIO::onPingSended(const boost::system::error_code &err,
-                            size_t) {
+void ClientIO::onPingSended(const boost::system::error_code &err, size_t) {
   if (err) {
     THROW_EXCEPTION_SS("server::onPingSended - " << err.message());
   }
   logger("server: #", this->id, " ping.");
 }
 
-void ClientIO::onOkSended(const boost::system::error_code &err,
-                          size_t) {
+void ClientIO::onOkSended(const boost::system::error_code &err, size_t) {
   if (err) {
     THROW_EXCEPTION_SS("server::onOkSended - " << err.message());
   }
 }
 
-void ClientIO::onReadValues(size_t values_count,
-                            const boost::system::error_code &err,
+void ClientIO::onReadValues(size_t values_count, const boost::system::error_code &err,
                             size_t read_bytes) {
   if (err) {
     THROW_EXCEPTION_SS("server::readValues - " << err.message());
-  }else{
-      logger_info("clientio: recv bytes ",read_bytes);
+  } else {
+    logger_info("clientio: recv bytes ", read_bytes);
   }
 
   // TODO use batch loading
   if (this->storage != nullptr) {
-	  logger("server: #", this->id, " write ", in_values_buffer.size(), " values");
-	  this->srv->write_begin();
-	  this->storage->append(this->in_values_buffer.begin(), this->in_values_buffer.end());
-	  this->srv->write_end();
-  }
-  else {
-	  logger_info("clientio: storage no set.");
+    logger("server: #", this->id, " write ", in_values_buffer.size(), " values");
+    this->srv->write_begin();
+    this->storage->append(this->in_values_buffer.begin(), this->in_values_buffer.end());
+    this->srv->write_end();
+  } else {
+    logger_info("clientio: storage no set.");
   }
   readNextQuery();
 }

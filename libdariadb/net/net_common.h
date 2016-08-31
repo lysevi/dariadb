@@ -14,6 +14,7 @@ const std::string DISCONNECT_ANSWER = "bye";
 const std::string PING_QUERY = "ping";
 const std::string PONG_ANSWER = "pong";
 const std::string WRITE_QUERY = "write";
+const std::string READ_INTERVAL_QUERY = "read_interval";
 
 enum class ClientState {
   CONNECT, // connection is beginning but a while not ended.
