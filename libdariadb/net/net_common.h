@@ -23,5 +23,17 @@ enum class ClientState {
 };
 
 std::ostream &operator<<(std::ostream &stream, const ClientState &state);
+
+/// before send big data, send to client "kind"' '"size"\n. then send 'data'.
+struct NetData{
+    int query_id;
+    uint64_t size;
+    std::string kind;
+    uint8_t *data;
+    ~NetData(){
+        delete[] data;
+    }
+};
+
 }
 }
