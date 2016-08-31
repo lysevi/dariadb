@@ -76,6 +76,56 @@ void server_thread_func() {
   server_instance = nullptr;
 }
 
+BOOST_AUTO_TEST_CASE(QueryToStrTest) {
+	const size_t MEASES_SIZE = 101;
+	dariadb::IdArray ids;
+	ids.resize(MEASES_SIZE);
+	for (size_t i = 0; i < MEASES_SIZE; ++i) {
+		ids[i] = i;
+	}
+	{
+		dariadb::storage::QueryParam qp{ ids, 1, 3 };
+		auto dumped = qp.to_string();
+		BOOST_CHECK_GT(dumped.size(), size_t(2));
+
+		dariadb::storage::QueryParam qp_res{ {}, 0, 0 };
+		qp_res.from_string(dumped);
+
+		BOOST_CHECK_EQUAL(qp.flag, qp_res.flag);
+		BOOST_CHECK_EQUAL(qp.source, qp_res.source);
+		BOOST_CHECK(qp.ids == qp_res.ids);
+	}
+
+	{
+		dariadb::storage::QueryInterval qi{ ids, 1, 3, 11,123 };
+		auto dumped = qi.to_string();
+		BOOST_CHECK_GT(dumped.size(), size_t(2));
+
+		dariadb::storage::QueryInterval qi_res{ {}, 0, 0,0,0 };
+		qi_res.from_string(dumped);
+
+		BOOST_CHECK_EQUAL(qi.flag, qi_res.flag);
+		BOOST_CHECK_EQUAL(qi.source, qi_res.source);
+		BOOST_CHECK(qi.ids == qi_res.ids);
+		BOOST_CHECK_EQUAL(qi.from, qi_res.from);
+		BOOST_CHECK_EQUAL(qi.to, qi_res.to);
+	}
+
+	{
+		dariadb::storage::QueryTimePoint qi{ ids, 1, 11 };
+		auto dumped = qi.to_string();
+		BOOST_CHECK_GT(dumped.size(), size_t(2));
+
+		dariadb::storage::QueryTimePoint qi_res{ {}, 0, 0 };
+		qi_res.from_string(dumped);
+
+		BOOST_CHECK_EQUAL(qi.flag, qi_res.flag);
+		BOOST_CHECK_EQUAL(qi.source, qi_res.source);
+		BOOST_CHECK(qi.ids == qi_res.ids);
+		BOOST_CHECK_EQUAL(qi.time_point, qi_res.time_point);
+	}
+}
+
 BOOST_AUTO_TEST_CASE(Connect) {
   dariadb::logger("********** Connect **********");
   server_runned.store(false);
@@ -233,17 +283,25 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
   dariadb::Meas::MeasArray ma;
   ma.resize(MEASES_SIZE);
+  dariadb::IdArray ids;
+  ids.resize(MEASES_SIZE);
   for (size_t i = 0; i < MEASES_SIZE; ++i) {
     ma[i].id = dariadb::Id(i);
     ma[i].value = dariadb::Value(i);
+	ma[i].time = i;
+	ids[i] = ma[i].id;
   }
 
   c1.write(ma);
-  c1.disconnect();
+
 
   while (stor->writed_count.load() != MEASES_SIZE) {
 	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
+  dariadb::storage::QueryInterval qi{ ids,0,dariadb::Time(0),dariadb::Time(MEASES_SIZE) };
+  auto result = c1.read(qi);
+  BOOST_CHECK_EQUAL(result.size(), ma.size());
+  c1.disconnect();
   server_stop_flag = true;
   server_thread.join();
 }
