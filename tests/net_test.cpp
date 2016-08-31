@@ -298,7 +298,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   ma.resize(MEASES_SIZE);
   dariadb::IdArray ids;
   ids.resize(MEASES_SIZE);
-  size_t max_id_size = 101;
+
   for (size_t i = 0; i < MEASES_SIZE; ++i) {
     ma[i].id = dariadb::Id(i);
     ma[i].value = dariadb::Value(i);
