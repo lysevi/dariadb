@@ -252,6 +252,18 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   }
   c1.disconnect();
   c2.disconnect();
+
+  while (true) {
+	  auto st1 = c1.state();
+	  auto st2 = c2.state();
+	  dariadb::logger("test>> ", "0  state1: ", st1, " state2: ", st2);
+	  if (st1 == dariadb::net::ClientState::DISCONNECTED &&
+		  st2 == dariadb::net::ClientState::DISCONNECTED) {
+		  break;
+	  }
+	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
+
   server_stop_flag = true;
   server_thread.join();
 }
@@ -285,14 +297,13 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   dariadb::Meas::MeasArray ma;
   ma.resize(MEASES_SIZE);
   dariadb::IdArray ids;
-  size_t max_id_size = 10;
+  ids.resize(MEASES_SIZE);
+  size_t max_id_size = 101;
   for (size_t i = 0; i < MEASES_SIZE; ++i) {
     ma[i].id = dariadb::Id(i);
     ma[i].value = dariadb::Value(i);
 	ma[i].time = i;
-	if (ids.size() < max_id_size) {
-		ids.push_back(ma[i].id);
-	}
+	ids[i]=ma[i].id;
   }
 
   c1.write(ma);
@@ -303,9 +314,20 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
   dariadb::storage::QueryInterval qi{ ids,0,dariadb::Time(0),dariadb::Time(MEASES_SIZE) };
   auto result = c1.read(qi);
-  BOOST_CHECK_EQUAL(result.size(), max_id_size);
-  //BOOST_CHECK_EQUAL(result.size(), ma.size());
+  //BOOST_CHECK_EQUAL(result.size(), max_id_size);
+  BOOST_CHECK_EQUAL(result.size(), ma.size());
+
   c1.disconnect();
+
+  while (true) {
+	  auto st1 = c1.state();
+	  dariadb::logger("test>> ", "0  state1: ", st1);
+	  if (st1 == dariadb::net::ClientState::DISCONNECTED) {
+		  break;
+	  }
+	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
+
   server_stop_flag = true;
   server_thread.join();
 }
