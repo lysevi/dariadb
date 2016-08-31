@@ -181,7 +181,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
     THROW_EXCEPTION_SS("all.size()!=clbk->count: " << all.size() << "!=" << clbk->count);
   }
   if (check_stop_flag && clbk->is_end_called!=1) {
-	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: ", clbk->is_end_called);
+	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: "<< clbk->is_end_called);
   }
   IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 
@@ -234,7 +234,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
   }
 
   if (check_stop_flag && qpoint_clbk->is_end_called != 1) {
-	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: ", qpoint_clbk->is_end_called);
+	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: "<< qpoint_clbk->is_end_called);
   }
 
   qp.time_point = to + copies_count;
