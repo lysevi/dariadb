@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <list>
 
 namespace dariadb {
 namespace net {
