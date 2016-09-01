@@ -36,14 +36,14 @@ public:
                 boost::system::error_code err;
                 _socket->cancel(err);
                 if (err) {
-                    logger("client: on socket::cancel - ", err.message());
+                    logger("client: #",id," on socket::cancel - ", err.message());
                 }
             }
 			_service.stop();
 			_thread_handler.join();
 		}
 		catch (std::exception &ex) {
-			THROW_EXCEPTION_SS("~Client: " << ex.what());
+            THROW_EXCEPTION_SS("client: #"<<id<< ex.what());
 		}
 	}
 
@@ -66,7 +66,7 @@ public:
 			this->send(nd);
 		}
 		while (this->_state != ClientState::DISCONNECTED) {
-			logger("client: wait server answer");
+            logger("client: #",id," disconnect - wait server answer");
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 	}
@@ -80,14 +80,18 @@ public:
 	}
 	void onNetworkError(const boost::system::error_code&err)override {
 		if (this->_state != ClientState::DISCONNECTED) {
-			THROW_EXCEPTION_SS("client: " << err.message());
+            THROW_EXCEPTION_SS("client: #"<<id<< err.message());
 		}
 	}
 	void onDataRecv(const NetData_ptr&d) override {
-		logger("client: dataRecv ", d->size, " bytes.");
+        if(this->_state == ClientState::WORK){
+          logger( "client: #",id," dataRecv ", d->size, " bytes.");
+        }else{
+          logger("client: dataRecv ", d->size, " bytes.");
+        }
 		if (d->size == DISCONNECT_ANSWER.size() && memcmp(d->data, DISCONNECT_ANSWER.data(), DISCONNECT_ANSWER.size()) == 0) {
 			std::string msg((char*)d->data, (char*)(d->data + d->size));
-			logger("client: disconnected.");
+            logger("client: #",id,"disconnected.");
 			_state = ClientState::DISCONNECTED;
 			this->_socket->close();
 			this->stop();
@@ -96,21 +100,27 @@ public:
 
 		if (d->size == PING_QUERY.size() && memcmp(d->data, PING_QUERY.data(), PING_QUERY.size()) == 0) {
 			std::string msg((char*)d->data, (char*)(d->data + d->size));
-			logger("client: ping.");
+            logger("client: #",id," ping.");
 			auto nd = std::make_shared<NetData>(PONG_ANSWER);
 			this->send(nd);
 			_pings_answers++;
 			return;
 		}
 
+        //hello id
+        if (d->size > HELLO_PREFIX.size() && memcmp(HELLO_PREFIX.data(), d->data, HELLO_PREFIX.size())==0) {
+            std::string msg((char*)d->data, (char*)(d->data + d->size));
+            this->id = stoi(msg.substr(HELLO_PREFIX.size(), msg.size()));
+            this->_state = ClientState::WORK;
+            logger("client: #",id," ready.");
+        }
+
 		if (d->size >= OK_ANSWER.size() && memcmp(d->data, OK_ANSWER.data(), OK_ANSWER.size()) == 0) {
 			std::string msg((char*)d->data, (char*)(d->data + d->size));
 			auto query_num = stoi(msg.substr(3, msg.size()));
-			logger("client: query #", query_num, " accepted.");
-			if (this->_state == ClientState::WORK) {
-			}
-			else {
-				this->_state = ClientState::WORK;
+            logger("client: #",id," query #", query_num, " accepted.");
+            if (this->_state != ClientState::WORK) {
+                THROW_EXCEPTION_SS("(this->_state != ClientState::WORK)"<<this->_state);
 			}
 			return;
 		}
@@ -273,6 +283,7 @@ public:
 	//}
 
 
+    int id;
 	io_service _service;
 	socket_ptr _socket;
 	streambuf buff;

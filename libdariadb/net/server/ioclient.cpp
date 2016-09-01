@@ -61,7 +61,9 @@ void ClientIO::onDataRecv(const NetData_ptr&d) {
 		hello_iss >> readed_str;
 		host = readed_str;
 		this->srv->client_connect(this->id);
-		auto nd = std::make_shared<NetData>(OK_ANSWER + " 0\n");
+        std::stringstream ss;
+        ss<<HELLO_PREFIX<<' '<<this->id<<"\n";
+        auto nd = std::make_shared<NetData>(ss.str());
 		this->send(nd);
 		return;
 	}
