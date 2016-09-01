@@ -59,7 +59,7 @@ private:
   void onReadMarker(const boost::system::error_code &err, size_t read_bytes);
   void onReadData(const boost::system::error_code &err, size_t read_bytes);
 private:
-  socket_ptr _sock;
+  socket_weak _sock;
   std::list<NetData_ptr> _queries;
   NetData_ptr _current_query;
   std::mutex _ac_locker;

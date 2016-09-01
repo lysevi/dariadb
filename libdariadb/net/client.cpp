@@ -32,6 +32,12 @@ public:
 			if (_state != ClientState::DISCONNECTED && _socket != nullptr) {
 				this->disconnect();
 			}
+			boost::system::error_code err;
+			_socket->cancel(err);
+			if (err) {
+				logger("client: on socket::cancel - ", err.message());
+			}
+
 			_service.stop();
 			_thread_handler.join();
 		}
