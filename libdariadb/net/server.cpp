@@ -151,9 +151,7 @@ public:
     if (_clients.empty() || _in_stop_logic) {
       return;
     }
-    logger_info("server: ping all.");
     std::list<int> to_remove;
-    // MAX_MISSED_PINGS
     _clients_locker.lock();
     for (auto &kv : _clients) {
       if (kv.second->state == ClientState::CONNECT) {
@@ -165,6 +163,7 @@ public:
         kv.second->state = ClientState::DISCONNECTED;
         to_remove.push_back(kv.first);
       } else {
+		  logger_info("server: ping #",kv.first);
         kv.second->ping();
       }
     }
