@@ -3,7 +3,10 @@
 #include "../utils/locker.h"
 #include "../utils/logger.h"
 #include "net_common.h"
+#include "async_connection.h"
+
 #include <json/json.hpp>
+#define BOOST_ASIO_ENABLE_HANDLER_TRACKING
 #include <boost/asio.hpp>
 #include <functional>
 #include <thread>
@@ -16,239 +19,265 @@ using namespace dariadb::net;
 
 typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 
-class Client::Private {
+class Client::Private :public AsyncConnection {
 public:
-  Private(const Client::Param &p) : _params(p) {
-    _query_num = 1;
-    _state = ClientState::CONNECT;
-    _pings_answers = 0;
-  }
+	Private(const Client::Param &p) : _params(p) {
+		_query_num = 1;
+		_state = ClientState::CONNECT;
+		_pings_answers = 0;
+	}
 
-  ~Private() noexcept(false) {
-    try {
-      if (_state != ClientState::DISCONNECTED && _socket != nullptr) {
-        this->disconnect();
-      }
-      _service.stop();
-      _thread_handler.join();
-    } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("~Client: " << ex.what());
-    }
-  }
+	~Private() noexcept(false) {
+		try {
+			if (_state != ClientState::DISCONNECTED && _socket != nullptr) {
+				this->disconnect();
+			}
+			_service.stop();
+			_thread_handler.join();
+		}
+		catch (std::exception &ex) {
+			THROW_EXCEPTION_SS("~Client: " << ex.what());
+		}
+	}
 
-  void connect() {
-    logger_info("client: connecting to ", _params.host, ':', _params.port);
+	void connect() {
+		logger_info("client: connecting to ", _params.host, ':', _params.port);
 
-    _state = ClientState::CONNECT;
-    _thread_handler = std::move(std::thread{&Client::Private::client_thread, this});
+		_state = ClientState::CONNECT;
+		_thread_handler = std::move(std::thread{ &Client::Private::client_thread, this });
 
-    while (this->state() != ClientState::WORK) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
-    _state = ClientState::WORK;
-  }
+		while (this->state() != ClientState::WORK) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		}
+		_state = ClientState::WORK;
+	}
 
-  void disconnect() {
-    std::lock_guard<utils::Locker> lg(_locker);
-    std::stringstream ss;
-    ss << DISCONNECT_PREFIX << '\n';
-    auto bye_message = ss.str();
+	void disconnect() {
+		auto nd = std::make_shared<NetData>(DISCONNECT_PREFIX);
+		queue_clear();
+		this->send(nd);
 
-    async_write(*_socket.get(), buffer(bye_message),
-                std::bind(&Client::Private::onDisconnectSended, this, _1, _2));
+		while (this->_state != ClientState::DISCONNECTED) {
+			logger("client: wait server answer");
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		}
+	}
 
-    while (this->_state != ClientState::DISCONNECTED) {
-      logger("client: wait server answer");
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    }
-  }
+	void client_thread() {
+		ip::tcp::endpoint ep(ip::address::from_string(_params.host), _params.port);
+		auto raw_sock_ptr = new ip::tcp::socket(_service);
+		_socket = socket_ptr{ raw_sock_ptr };
+		_socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
+		_service.run();
+	}
+	void onNetworkError(const boost::system::error_code&err)override {
+		if (this->_state != ClientState::DISCONNECTED) {
+			THROW_EXCEPTION_SS("client: " << err.message());
+		}
+	}
+	void onDataRecv(const NetData_ptr&d) override {
+		logger("client: dataRecv ", d->size, " bytes.");
+		if (d->size == DISCONNECT_ANSWER.size() && memcmp(d->data, DISCONNECT_ANSWER.data(), DISCONNECT_ANSWER.size()) == 0) {
+			std::string msg((char*)d->data, (char*)(d->data + d->size));
+			logger("client: disconnected.");
+			_state = ClientState::DISCONNECTED;
+			this->_socket->close();
+			this->stop();
+			return;
+		}
 
-  void client_thread() {
-    ip::tcp::endpoint ep(ip::address::from_string(_params.host), _params.port);
-    auto raw_sock_ptr = new ip::tcp::socket(_service);
-    _socket = socket_ptr{raw_sock_ptr};
-    _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
-    _service.run();
-  }
+		if (d->size == PING_QUERY.size() && memcmp(d->data, PING_QUERY.data(), PING_QUERY.size()) == 0) {
+			std::string msg((char*)d->data, (char*)(d->data + d->size));
+			logger("client: ping.");
+			auto nd = std::make_shared<NetData>(PONG_ANSWER);
+			this->send(nd);
+			_pings_answers++;
+			return;
+		}
 
-  void readNext() {
-    async_read_until(*_socket.get(), buff, '\n',
-                     std::bind(&Client::Private::onRead, this, _1, _2));
-  }
+		if (d->size >= OK_ANSWER.size() && memcmp(d->data, OK_ANSWER.data(), OK_ANSWER.size()) == 0) {
+			std::string msg((char*)d->data, (char*)(d->data + d->size));
+			auto query_num = stoi(msg.substr(3, msg.size()));
+			logger("client: query #", query_num, " accepted.");
+			if (this->_state == ClientState::WORK) {
+			}
+			else {
+				this->_state = ClientState::WORK;
+			}
+			return;
+		}
 
-  void onDisconnectSended(const boost::system::error_code &err, size_t read_bytes) {
-    if (err) {
-      THROW_EXCEPTION_SS("server::onDisconnectSended - " << err.message());
-    }
-    logger("client: send bye");
-  }
+	}
 
-  void connect_handler(const boost::system::error_code &ec) {
-    if (ec) {
-      THROW_EXCEPTION_SS("dariadb::client: error on connect - " << ec.message());
-    }
-    std::lock_guard<utils::Locker> lg(_locker);
-    std::stringstream ss;
-    ss << HELLO_PREFIX << ' ' << ip::host_name() << '\n';
-    auto hello_message = ss.str();
-    logger("client: send hello ", hello_message.substr(0, hello_message.size() - 1));
-    _socket->write_some(buffer(hello_message));
+	void connect_handler(const boost::system::error_code &ec) {
+		if (ec) {
+			THROW_EXCEPTION_SS("dariadb::client: error on connect - " << ec.message());
+		}
+		this->start(this->_socket);
+		std::lock_guard<utils::Locker> lg(_locker);
+		std::stringstream ss;
+		ss << HELLO_PREFIX << ' ' << ip::host_name();
 
-    this->readNext();
-  }
+		auto hello_message = ss.str();
+		logger("client: send hello ", hello_message.substr(0, hello_message.size() - 1));
 
-  void onRead(const boost::system::error_code &err, size_t read_bytes) {
-    logger("client: onRead...");
-    if (err) {
-      THROW_EXCEPTION_SS("client:  " << err.message());
-    }
+		auto nd = std::make_shared<NetData>(hello_message);
 
-    std::istream iss(&this->buff);
-    std::string msg;
-    std::getline(iss, msg);
-    logger("client: {", msg, "} readed_bytes: ", read_bytes);
+		this->send(nd);
+	}
 
-    if (msg.size() > OK_ANSWER.size() && msg.substr(0, OK_ANSWER.size()) == OK_ANSWER) {
-      auto query_num = stoi(msg.substr(3, msg.size()));
-      logger("client: query #", query_num, " accepted.");
-      if (this->_state == ClientState::WORK) {
-		  auto query_str = msg.substr(OK_ANSWER.size()+1, msg.size());
-		  auto delim_pos = query_str.find_first_of(' ');
+	/* void onRead(const boost::system::error_code &err, size_t read_bytes) {
+	   logger("client: onRead...");
+	   if (err) {
+		 THROW_EXCEPTION_SS("client:  " << err.message());
+	   }
 
-		  auto count_str = query_str.substr(delim_pos, query_str.size());
-		  auto count = stoi(count_str);
-		  
-		  in_buffer_values.resize(count);
+	   std::istream iss(&this->buff);
+	   std::string msg;
+	   std::getline(iss, msg);
+	   logger("client: {", msg, "} readed_bytes: ", read_bytes);
 
-		  delim_pos = query_str.find_first_of('{');
-		  query_str = query_str.substr(delim_pos, query_str.size());
-		  auto qjs = nlohmann::json::parse(query_str);
-		  auto result_array = qjs["result"];
-		  size_t i = 0;
-		  for (auto meas_js : result_array) {
-			  Meas v;
-			  v.id= meas_js["id"];
-			  v.flag = meas_js["flag"];
-			  v.src=meas_js["src"];
-			  v.value=meas_js["value"];
-			  this->in_buffer_values[i++] = v;
-		  }
-		  this->_query_locker->unlock();
-      } else {
-        this->_state = ClientState::WORK;
-      }
-    }
+	   if (msg.size() > OK_ANSWER.size() && msg.substr(0, OK_ANSWER.size()) == OK_ANSWER) {
+		 auto query_num = stoi(msg.substr(3, msg.size()));
+		 logger("client: query #", query_num, " accepted.");
+		 if (this->_state == ClientState::WORK) {
+			 auto query_str = msg.substr(OK_ANSWER.size()+1, msg.size());
+			 auto delim_pos = query_str.find_first_of(' ');
 
-    if (msg == DISCONNECT_ANSWER) {
-      logger("client: disconnected.");
-      _state = ClientState::DISCONNECTED;
-      this->_socket->close();
-      return;
-    }
+			 auto count_str = query_str.substr(delim_pos, query_str.size());
+			 auto count = stoi(count_str);
 
-    if (msg == PING_QUERY) {
-      logger("client: ping.");
-      async_write(*_socket.get(), buffer(PONG_ANSWER + "\n"),
-                  std::bind(&Client::Private::onPongSended, this, _1, _2));
-    }
+			 in_buffer_values.resize(count);
 
-	logger_info("client: onRead - nextQuery");
-    readNext();
-  }
+			 delim_pos = query_str.find_first_of('{');
+			 query_str = query_str.substr(delim_pos, query_str.size());
+			 auto qjs = nlohmann::json::parse(query_str);
+			 auto result_array = qjs["result"];
+			 size_t i = 0;
+			 for (auto meas_js : result_array) {
+				 Meas v;
+				 v.id= meas_js["id"];
+				 v.flag = meas_js["flag"];
+				 v.src=meas_js["src"];
+				 v.value=meas_js["value"];
+				 this->in_buffer_values[i++] = v;
+			 }
+			 this->_query_locker->unlock();
+		 } else {
+		   this->_state = ClientState::WORK;
+		 }
+	   }
 
-  void onPongSended(const boost::system::error_code &err, size_t read_bytes) {
-    if (err) {
-      THROW_EXCEPTION_SS("client::onPongSended - " << err.message());
-    }
-    _pings_answers++;
-    logger("client: pong");
-  }
+	   if (msg == DISCONNECT_ANSWER) {
+		 logger("client: disconnected.");
+		 _state = ClientState::DISCONNECTED;
+		 this->_socket->close();
+		 return;
+	   }
 
-  size_t pings_answers() const { return _pings_answers.load(); }
-  ClientState state() const { return _state; }
+	   if (msg == PING_QUERY) {
+		 logger("client: ping.");
+		 async_write(*_socket.get(), buffer(PONG_ANSWER + "\n"),
+					 std::bind(&Client::Private::onPongSended, this, _1, _2));
+	   }
 
-  void write(const Meas::MeasArray &ma) {
-    std::lock_guard<utils::Locker> lg(this->_locker);
-    logger("client: write ", ma.size());
-    utils::Locker locker;
-    locker.lock();
-    std::stringstream ss;
-    ss << WRITE_QUERY << ' ' << ma.size() << '\n';
-    std::string query = ss.str();
-    async_write(*_socket.get(), buffer(query),
-                std::bind(&Client::Private::onWriteQuerySended, this, &locker,
-                          ma.size(), ma, _1, _2));
+	   logger_info("client: onRead - nextQuery");
+	   readNext();
+	 }*/
 
-    locker.lock();
-  }
+	 /* void onPongSended(const boost::system::error_code &err, size_t read_bytes) {
+		if (err) {
+		  THROW_EXCEPTION_SS("client::onPongSended - " << err.message());
+		}
+		_pings_answers++;
+		logger("client: pong");
+	  }*/
 
-  void onWriteQuerySended(utils::Locker *locker, size_t to_send, Meas::MeasArray &ma,
-                               const boost::system::error_code &err, size_t read_bytes) {
-    if (err) {
-      THROW_EXCEPTION_SS("client::onWriteQuerySended - " << err.message());
-    } 
-
-    if (to_send != 0) {
-      logger("client: write next part ", to_send, " values.");
-      async_write(*_socket.get(), buffer(ma, to_send * sizeof(Meas)),
-                  std::bind(&Client::Private::onWriteQuerySended, this, locker,
-                            size_t(0), ma, _1, _2));
-    } else {
-      locker->unlock();
-    }
-  }
-
-  Meas::MeasList read(const storage::QueryInterval &qi) {
+	size_t pings_answers() const { return _pings_answers.load(); }
+	ClientState state() const { return _state; }
+	/*
+	void write(const Meas::MeasArray &ma) {
 	  std::lock_guard<utils::Locker> lg(this->_locker);
-	  
-	  auto qid = this->_query_num.load();
-	  this->_query_num++;
-
+	  logger("client: write ", ma.size());
+	  utils::Locker locker;
+	  locker.lock();
 	  std::stringstream ss;
-	  ss << READ_INTERVAL_QUERY
-		  << ' '
-		  << qid
-		  << ' '
-		  << qi.to_string()
-		  << '\n';
+	  ss << WRITE_QUERY << ' ' << ma.size() << '\n';
 	  std::string query = ss.str();
-
-	  utils::Locker q_locker;
-	  q_locker.lock();
-	  this->_query_locker = &q_locker;
-	  
 	  async_write(*_socket.get(), buffer(query),
-		  std::bind(&Client::Private::onReadQuerySended, this, _1, _2));
+				  std::bind(&Client::Private::onWriteQuerySended, this, &locker,
+							ma.size(), ma, _1, _2));
 
-	  q_locker.lock();
-	  Meas::MeasList result(in_buffer_values.begin(), in_buffer_values.end());
-	  in_buffer_values.clear();
-	  return result;
-  }
+	  locker.lock();
+	}
 
-  void onReadQuerySended(const boost::system::error_code &err, size_t read_bytes) {
+	void onWriteQuerySended(utils::Locker *locker, size_t to_send, Meas::MeasArray &ma,
+								 const boost::system::error_code &err, size_t read_bytes) {
 	  if (err) {
-		  THROW_EXCEPTION_SS("client::onReadQuerySended - " << err.message());
+		THROW_EXCEPTION_SS("client::onWriteQuerySended - " << err.message());
 	  }
 
-	  logger_info("client: onReadQuerySended - nextQuery");
-	  /*readNext();*/
-  }
+	  if (to_send != 0) {
+		logger("client: write next part ", to_send, " values.");
+		async_write(*_socket.get(), buffer(ma, to_send * sizeof(Meas)),
+					std::bind(&Client::Private::onWriteQuerySended, this, locker,
+							  size_t(0), ma, _1, _2));
+	  } else {
+		locker->unlock();
+	  }
+	}
+
+	Meas::MeasList read(const storage::QueryInterval &qi) {
+		std::lock_guard<utils::Locker> lg(this->_locker);
+
+		auto qid = this->_query_num.load();
+		this->_query_num++;
+
+		std::stringstream ss;
+		ss << READ_INTERVAL_QUERY
+			<< ' '
+			<< qid
+			<< ' '
+			<< qi.to_string()
+			<< '\n';
+		std::string query = ss.str();
+
+		utils::Locker q_locker;
+		q_locker.lock();
+		this->_query_locker = &q_locker;
+
+		async_write(*_socket.get(), buffer(query),
+			std::bind(&Client::Private::onReadQuerySended, this, _1, _2));
+
+		q_locker.lock();
+		Meas::MeasList result(in_buffer_values.begin(), in_buffer_values.end());
+		in_buffer_values.clear();
+		return result;
+	}*/
+
+	//void onReadQuerySended(const boost::system::error_code &err, size_t read_bytes) {
+	   // if (err) {
+		  //  THROW_EXCEPTION_SS("client::onReadQuerySended - " << err.message());
+	   // }
+
+	   // logger_info("client: onReadQuerySended - nextQuery");
+	   // /*readNext();*/
+	//}
 
 
-  io_service _service;
-  socket_ptr _socket;
-  streambuf buff;
+	io_service _service;
+	socket_ptr _socket;
+	streambuf buff;
 
-  Client::Param _params;
-  utils::Locker _locker;
-  utils::Locker *_query_locker; // lock current query.
-  std::thread _thread_handler;
-  ClientState _state;
-  std::atomic_size_t _pings_answers;
+	Client::Param _params;
+	utils::Locker _locker;
+	utils::Locker *_query_locker; // lock current query.
+	std::thread _thread_handler;
+	ClientState _state;
+	std::atomic_size_t _pings_answers;
 
-  std::atomic_int _query_num;
-  Meas::MeasArray in_buffer_values;
+	std::atomic_int _query_num;
+	Meas::MeasArray in_buffer_values;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
@@ -256,25 +285,25 @@ Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
 Client::~Client() {}
 
 void Client::connect() {
-  _Impl->connect();
+	_Impl->connect();
 }
 
 void Client::disconnect() {
-  _Impl->disconnect();
+	_Impl->disconnect();
 }
 
 ClientState Client::state() const {
-  return _Impl->state();
+	return _Impl->state();
 }
 
 size_t Client::pings_answers() const {
-  return _Impl->pings_answers();
+	return _Impl->pings_answers();
 }
 
-void Client::write(const Meas::MeasArray &ma) {
-  _Impl->write(ma);
-}
-
-Meas::MeasList Client::read(const storage::QueryInterval &qi) {
-  return _Impl->read(qi);
-}
+//void Client::write(const Meas::MeasArray &ma) {
+//  _Impl->write(ma);
+//}
+//
+//Meas::MeasList Client::read(const storage::QueryInterval &qi) {
+//  return _Impl->read(qi);
+//}

@@ -126,10 +126,48 @@ BOOST_AUTO_TEST_CASE(QueryToStrTest) {
 	}
 }
 
-BOOST_AUTO_TEST_CASE(Connect) {
+BOOST_AUTO_TEST_CASE(Connect1) {
+	dariadb::logger("********** Connect1 **********");
+	server_runned.store(false);
+	server_stop_flag = false;
+	std::thread server_thread{ server_thread_func };
+
+	while (!server_runned.load()) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	}
+
+	dariadb::net::Client c(client_param);
+	c.connect();
+
+	// 1 client
+	while (true) {
+		auto res = server_instance->connections_accepted();
+		auto st = c.state();
+		dariadb::logger("test>> ", "0 count: ", res, " state: ", st);
+		if (res == size_t(1) && st == dariadb::net::ClientState::WORK) {
+			break;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	}
+
+	server_stop_flag = true;
+	server_thread.join();
+	while (true) {
+		auto state = c.state();
+		dariadb::logger("test>> ", "4 state: ", state);
+		if (state == dariadb::net::ClientState::DISCONNECTED) {
+			break;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE(Connect3) {
   dariadb::logger("********** Connect **********");
   server_runned.store(false);
-  std::thread server_thread{server_thread_func};
+  server_stop_flag = false;
+  std::thread server_thread{ server_thread_func };
 
   while (!server_runned.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -268,7 +306,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_thread.join();
 }
 
-
+/*
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   const size_t MEASES_SIZE = 101;
   dariadb::logger("********** ReadWriteTest **********");
@@ -331,3 +369,4 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   server_stop_flag = true;
   server_thread.join();
 }
+*/

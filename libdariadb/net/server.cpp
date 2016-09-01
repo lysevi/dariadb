@@ -28,6 +28,7 @@ class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
       : _params(p), _stop_flag(false), _is_runned_flag(false), _ping_timer(_service) {
+    _in_stop_logic = false;
     _next_client_id = 0;
     _connections_accepted.store(0);
     _writes_in_progress.store(0);
@@ -43,24 +44,27 @@ public:
   }
 
   void stop() {
+    _in_stop_logic = true;
     logger("server: stopping...");
-	while (_writes_in_progress.load() != 0) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(300));
-		logger_info("server: writes in progress ", _writes_in_progress.load());
-	}
-    _ping_timer.cancel();
+    while (_writes_in_progress.load() != 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      logger_info("server: writes in progress ", _writes_in_progress.load());
+    }
     disconnect_all();
+    _ping_timer.cancel();
     _stop_flag = true;
     _service.stop();
     _thread_handler.join();
   }
 
   void disconnect_all() {
-    _clients_locker.lock();
     for (auto &kv : _clients) {
       kv.second->disconnect();
+      while (kv.second->queue_size() != 0) {
+        logger_info("server: wait stop of #", kv.first);
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      }
     }
-    _clients_locker.unlock();
   }
 
   void server_thread() {
@@ -92,7 +96,6 @@ public:
     auto cur_id = _next_client_id.load();
     _next_client_id++;
     ClientIO_ptr new_client{new ClientIO(cur_id, sock, this, this->_storage)};
-    new_client->readHello();
 
     _clients_locker.lock();
     _clients.insert(std::make_pair(new_client->id, new_client));
@@ -124,6 +127,7 @@ public:
     if (fres == _clients.end()) {
       THROW_EXCEPTION_SS("server: client_disconnect - client #" << id << " not found");
     }
+    fres->second->sock->close();
     _clients.erase(fres);
     _connections_accepted -= 1;
     logger_info("server: clients count  ", _clients.size(), " accepted:",
@@ -144,12 +148,20 @@ public:
   }
 
   void on_check_ping() {
+    if (_clients.empty() || _in_stop_logic) {
+      return;
+    }
     logger_info("server: ping all.");
     std::list<int> to_remove;
     // MAX_MISSED_PINGS
     _clients_locker.lock();
     for (auto &kv : _clients) {
-      if (kv.second->pings_missed > MAX_MISSED_PINGS) {
+      if (kv.second->state == ClientState::CONNECT) {
+        continue;
+      }
+      bool is_stoped =
+          (kv.second->state == ClientState::DISCONNECTED && kv.second->queue_size() == 0);
+      if (kv.second->pings_missed > MAX_MISSED_PINGS || is_stoped) {
         kv.second->state = ClientState::DISCONNECTED;
         to_remove.push_back(kv.first);
       } else {
@@ -158,13 +170,12 @@ public:
     }
     _clients_locker.unlock();
 
-    _clients_locker.lock();
     for (auto &id : to_remove) {
-      logger("server: remove as missed ping #", id);
-      _clients[id]->sock->close();
+      logger("server: remove #", id);
+      client_disconnect(id);
       _clients.erase(id);
     }
-    _clients_locker.unlock();
+
     reset_ping_timer();
   }
 
@@ -186,6 +197,8 @@ public:
 
   storage::IMeasStorage *_storage;
   std::atomic_int _writes_in_progress;
+
+  bool _in_stop_logic; // TODO union with _stop_flag
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}

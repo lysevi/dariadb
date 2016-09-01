@@ -27,8 +27,8 @@ public:
   size_t pings_answers() const;
 
 
-  void write(const Meas::MeasArray&ma);
-  Meas::MeasList read(const storage::QueryInterval&qi);
+ /* void write(const Meas::MeasArray&ma);
+  Meas::MeasList read(const storage::QueryInterval&qi);*/
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
