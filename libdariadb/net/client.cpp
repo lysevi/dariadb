@@ -59,10 +59,11 @@ public:
 	}
 
 	void disconnect() {
-		auto nd = std::make_shared<NetData>(DISCONNECT_PREFIX);
-		queue_clear();
-		this->send(nd);
-
+		if (_socket->is_open()) {
+			auto nd = std::make_shared<NetData>(DISCONNECT_PREFIX);
+			queue_clear();
+			this->send(nd);
+		}
 		while (this->_state != ClientState::DISCONNECTED) {
 			logger("client: wait server answer");
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));

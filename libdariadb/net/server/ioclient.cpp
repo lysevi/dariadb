@@ -30,8 +30,10 @@ void ClientIO::disconnect() {
 	queue_clear();
 	this->state = ClientState::DISCONNECTED;
 
-	auto nd = std::make_shared<NetData>(DISCONNECT_ANSWER);
-	this->send(nd);
+	if (sock->is_open()) {
+		auto nd = std::make_shared<NetData>(DISCONNECT_ANSWER);
+		this->send(nd);
+	}
 	this->stop();
 }
 
