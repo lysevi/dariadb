@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
 
 
 BOOST_AUTO_TEST_CASE(Connect3) {
-  dariadb::logger("********** Connect **********");
+  dariadb::logger("********** Connect3 **********");
   server_runned.store(false);
   server_stop_flag = false;
   std::thread server_thread{ server_thread_func };
