@@ -70,7 +70,7 @@ private:
   void onReadMarker(const boost::system::error_code &err, size_t read_bytes);
   void onReadData(const boost::system::error_code &err, size_t read_bytes);
 
-  //void allocate_send_buffer(MESSAGE_SI)
+  void allocate_send_buffer(NetData::MessageSize size);
 private:
   int _async_con_id; // TODO just for logging. remove after release.
   socket_weak _sock;

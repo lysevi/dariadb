@@ -13,6 +13,8 @@ using namespace dariadb::net;
 AsyncConnection::AsyncConnection() {
   _async_con_id = 0;
   _is_stoped = true;
+  data_send_buffer = nullptr;
+  data_send_buffer_size = 0;
 }
 
 AsyncConnection::~AsyncConnection() noexcept(false) {
@@ -79,8 +81,9 @@ void AsyncConnection::queue_thread() {
       _current_query = _queries.front();
       _queries.pop_front();
     }
-	data_send_buffer_size = _current_query->size + MARKER_SIZE;
-	data_send_buffer = new uint8_t[data_send_buffer_size];
+	
+	auto needed_size = _current_query->size + MARKER_SIZE;
+	allocate_send_buffer(needed_size);
 
 	memcpy(data_send_buffer, &(_current_query->size), MARKER_SIZE);
 	memcpy(data_send_buffer+MARKER_SIZE, _current_query->data, _current_query->size);
@@ -90,6 +93,26 @@ void AsyncConnection::queue_thread() {
                   std::bind(&AsyncConnection::onDataSended, this, _1, _2));
     }
   }
+}
+
+void AsyncConnection::allocate_send_buffer(NetData::MessageSize size) {
+	bool need_allocate = true;
+	if (data_send_buffer != nullptr && data_send_buffer_size != 0) {
+		if (data_send_buffer_size == size) {
+			need_allocate = false;
+		}
+	}
+	else {
+		if (data_send_buffer != nullptr) {
+			delete[] data_send_buffer;
+			data_send_buffer = nullptr;
+			data_send_buffer_size = 0;
+		}
+	}
+	if (need_allocate) {
+		data_send_buffer_size = size;
+		data_send_buffer = new uint8_t[data_send_buffer_size];
+	}
 }
 
 void AsyncConnection::onDataSended(const boost::system::error_code &err,
