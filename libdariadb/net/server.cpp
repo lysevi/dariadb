@@ -66,13 +66,16 @@ public:
 
   void disconnect_all() {
     for (auto &kv : _clients) {
-      kv.second->end_session();
-      while (kv.second->queue_size() != 0) {
-        logger_info("server: wait stop of #", kv.first);
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      if (kv.second->state != ClientState::DISCONNECTED) {
+        kv.second->end_session();
+        while (kv.second->queue_size() != 0) {
+          logger_info("server: wait stop of #", kv.first);
+          std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
       }
       kv.second->disconnect();
     }
+    _clients.clear();
   }
 
   void start() {

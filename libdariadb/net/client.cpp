@@ -78,7 +78,6 @@ public:
   }
 
   void onNetworkError(const boost::system::error_code &err) override {
-      logger_fatal("client: #" , id() , err.message());
     if (this->_state != ClientState::DISCONNECTED) {
       THROW_EXCEPTION_SS("client: #" << id() << err.message());
     }
