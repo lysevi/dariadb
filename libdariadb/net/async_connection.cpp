@@ -15,12 +15,7 @@ AsyncConnection::AsyncConnection() {
 }
 
 AsyncConnection::~AsyncConnection() noexcept(false) {
-  _cond.notify_all();
-  while (!_queries.empty()) {
-    _cond.notify_all();
-  }
-  _thread_handler.join();
-  _stoped = true;
+	full_stop();
 }
 
 void AsyncConnection::start(const socket_ptr &sock) {
@@ -42,8 +37,20 @@ void AsyncConnection::readNextAsync() {
 	}
 }
 
-void AsyncConnection::stop() {
+void AsyncConnection::mark_stoped() {
   _stop_flag = true;
+}
+
+void AsyncConnection::full_stop() {
+	mark_stoped();
+	if (!_stoped) {
+		_cond.notify_all();
+		while (queue_size() != 0) {
+			_cond.notify_all();
+		}
+		_thread_handler.join();
+		_stoped = true;
+	}
 }
 
 void AsyncConnection::send(const NetData_ptr &d) {
@@ -55,25 +62,21 @@ void AsyncConnection::send(const NetData_ptr &d) {
 }
 
 void AsyncConnection::queue_thread() {
-  std::mutex local_lock;
   while (true) {
-    std::unique_lock<std::mutex> lock(local_lock);
-	_cond.wait(lock);
+    std::unique_lock<std::mutex> lock(_ac_locker);
+	_cond.wait(lock,[&]() { return _stop_flag || (!_queries.empty() && _current_query == nullptr); });
 
 	if (_stop_flag && _queries.empty()) {
       break;
     }
 
-	_ac_locker.lock();
     if (_queries.empty() || _current_query!=nullptr) {
-		_ac_locker.unlock();
       continue;
 	}
 	else {
 		_current_query = _queries.front();
 		_queries.pop_front();
 	}
-	_ac_locker.unlock();
     memcpy(marker_buffer, &(_current_query->size), MARKER_SIZE);
 	if (auto spt = _sock.lock()) {
 		async_write(*spt.get(), buffer(marker_buffer, MARKER_SIZE),

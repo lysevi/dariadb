@@ -37,7 +37,8 @@ public:
   virtual ~AsyncConnection() noexcept(false);
   void send(const NetData_ptr &d);
   void start(const socket_ptr &sock);
-  void stop();
+  void mark_stoped();
+  void full_stop(); ///stop thread, clean queue
 
   virtual void onDataRecv(const NetData_ptr&d) = 0;
   virtual void onNetworkError(const boost::system::error_code&err) = 0;

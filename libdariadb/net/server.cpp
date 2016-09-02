@@ -45,7 +45,7 @@ public:
 
   void stop() {
     _in_stop_logic = true;
-    logger("server: stopping...");
+    logger_info("server: *** stopping ***");
     while (_writes_in_progress.load() != 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
       logger_info("server: writes in progress ", _writes_in_progress.load());

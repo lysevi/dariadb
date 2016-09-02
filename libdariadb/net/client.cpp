@@ -66,7 +66,7 @@ public:
 			this->send(nd);
 		}
 		while (this->_state != ClientState::DISCONNECTED) {
-            logger("client: #",id," disconnect - wait server answer");
+            logger("client: #",id," disconnect - wait server answer...");
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 	}
@@ -91,10 +91,12 @@ public:
         }
 		if (d->size == DISCONNECT_ANSWER.size() && memcmp(d->data, DISCONNECT_ANSWER.data(), DISCONNECT_ANSWER.size()) == 0) {
 			std::string msg((char*)d->data, (char*)(d->data + d->size));
-            logger("client: #",id,"disconnected.");
+            logger("client: #",id," disconnected.");
 			_state = ClientState::DISCONNECTED;
+			this->full_stop();
+			this->_socket->cancel();
 			this->_socket->close();
-			this->stop();
+			
 			return;
 		}
 

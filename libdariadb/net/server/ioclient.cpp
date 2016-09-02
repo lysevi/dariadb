@@ -22,19 +22,18 @@ ClientIO::ClientIO(int _id, socket_ptr& _sock, IClientManager *_srv,
 }
 
 ClientIO::~ClientIO() {
-	this->stop();
+	this->full_stop();
 }
 
 void ClientIO::disconnect() {
 	logger("server: #", this->id, " send disconnect signal.");
-	queue_clear();
 	this->state = ClientState::DISCONNECTED;
+	queue_clear();
 
 	if (sock->is_open()) {
 		auto nd = std::make_shared<NetData>(DISCONNECT_ANSWER);
 		this->send(nd);
 	}
-	this->stop();
 }
 
 void ClientIO::ping() {
@@ -44,7 +43,19 @@ void ClientIO::ping() {
 }
 
 void ClientIO::onNetworkError(const boost::system::error_code&err) {
-	//this->srv->client_disconnect(this->id);
+	logger_info("server: client #", this->id, " network error - ", err.message());
+	logger_info("server: client #", this->id, " stoping...");
+	this->mark_stoped();
+	this->sock->cancel();
+
+	full_stop();
+	/*while (queue_size() != 0) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}*/
+	
+	this->sock->close();
+	this->state = ClientState::DISCONNECTED;
+	logger_info("server: client #", this->id, " stoped.");
 }
 
 void ClientIO::onDataRecv(const NetData_ptr&d) {

@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(QueryToStrTest) {
 		BOOST_CHECK_EQUAL(qi.time_point, qi_res.time_point);
 	}
 }
-/*
+
 BOOST_AUTO_TEST_CASE(Connect1) {
 	dariadb::logger("********** Connect1 **********");
 	server_runned.store(false);
@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
 	}
 }
-*/
+
 
 BOOST_AUTO_TEST_CASE(Connect3) {
   dariadb::logger("********** Connect **********");
@@ -305,7 +305,6 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_stop_flag = true;
   server_thread.join();
 }
-
 /*
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   const size_t MEASES_SIZE = 101;
