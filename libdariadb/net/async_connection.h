@@ -61,17 +61,21 @@ private:
   void onReadData(const boost::system::error_code &err, size_t read_bytes);
 private:
   socket_weak _sock;
+  
   std::list<NetData_ptr> _queries;
   NetData_ptr _current_query;
+  
   std::mutex _ac_locker;
   std::condition_variable _cond;
-  bool _stoped;
-  std::atomic_bool _stop_flag;
   std::thread _thread_handler;
+  
   char marker_buffer[MARKER_SIZE];
   char marker_read_buffer[MARKER_SIZE];
   uint8_t *data_read_buffer;
   uint64_t data_read_buffer_size;
+
+  bool _is_stoped;
+  std::atomic_bool _begin_stoping_flag;
 };
 }
 }

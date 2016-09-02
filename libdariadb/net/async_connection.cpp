@@ -11,7 +11,7 @@ using namespace dariadb;
 using namespace dariadb::net;
 
 AsyncConnection::AsyncConnection() {
-  _stoped = true;
+	_is_stoped = true;
 }
 
 AsyncConnection::~AsyncConnection() noexcept(false) {
@@ -19,13 +19,13 @@ AsyncConnection::~AsyncConnection() noexcept(false) {
 }
 
 void AsyncConnection::start(const socket_ptr &sock) {
-  if (!_stoped) {
+  if (!_is_stoped) {
     return;
   }
   _current_query = nullptr;
   _sock = sock;
-  _stoped = false;
-  _stop_flag = false;
+  _is_stoped = false;
+  _begin_stoping_flag = false;
   _thread_handler = std::thread(&AsyncConnection::queue_thread, this);
   readNextAsync();
 }
@@ -38,23 +38,23 @@ void AsyncConnection::readNextAsync() {
 }
 
 void AsyncConnection::mark_stoped() {
-  _stop_flag = true;
+	_begin_stoping_flag = true;
 }
 
 void AsyncConnection::full_stop() {
 	mark_stoped();
-	if (!_stoped) {
+	if (!_is_stoped) {
 		_cond.notify_all();
 		while (queue_size() != 0) {
 			_cond.notify_all();
 		}
 		_thread_handler.join();
-		_stoped = true;
+		_is_stoped = true;
 	}
 }
 
 void AsyncConnection::send(const NetData_ptr &d) {
-  if (!_stop_flag) {
+  if (!_begin_stoping_flag) {
     std::unique_lock<std::mutex> lock(_ac_locker);
     _queries.push_back(d);
     _cond.notify_one();
@@ -64,9 +64,9 @@ void AsyncConnection::send(const NetData_ptr &d) {
 void AsyncConnection::queue_thread() {
   while (true) {
     std::unique_lock<std::mutex> lock(_ac_locker);
-	_cond.wait(lock,[&]() { return _stop_flag || (!_queries.empty() && _current_query == nullptr); });
+	_cond.wait(lock,[&]() { return _begin_stoping_flag || (!_queries.empty() && _current_query == nullptr); });
 
-	if (_stop_flag && _queries.empty()) {
+	if (_begin_stoping_flag && _queries.empty()) {
       break;
     }
 
