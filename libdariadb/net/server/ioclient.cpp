@@ -14,7 +14,7 @@ ClientIO::ClientIO(int _id, socket_ptr& _sock, IClientManager *_srv,
 	storage::IMeasStorage *_storage) {
 	pings_missed = 0;
 	state = ClientState::CONNECT;
-	id = _id;
+	set_id(_id);
 	sock = _sock;
 	srv = _srv;
 	storage = _storage;
@@ -26,7 +26,7 @@ ClientIO::~ClientIO() {
 }
 
 void ClientIO::disconnect() {
-	logger("server: #", this->id, " send disconnect signal.");
+	logger("server: #", this->id(), " send disconnect signal.");
 	this->state = ClientState::DISCONNECTED;
 	queue_clear();
 
@@ -43,8 +43,8 @@ void ClientIO::ping() {
 }
 
 void ClientIO::onNetworkError(const boost::system::error_code&err) {
-	logger_info("server: client #", this->id, " network error - ", err.message());
-	logger_info("server: client #", this->id, " stoping...");
+	logger_info("server: client #", this->id(), " network error - ", err.message());
+	logger_info("server: client #", this->id(), " stoping...");
 	this->mark_stoped();
 	this->sock->cancel();
 
@@ -55,11 +55,11 @@ void ClientIO::onNetworkError(const boost::system::error_code&err) {
 	
 	this->sock->close();
 	this->state = ClientState::DISCONNECTED;
-	logger_info("server: client #", this->id, " stoped.");
+	logger_info("server: client #", this->id(), " stoped.");
 }
 
 void ClientIO::onDataRecv(const NetData_ptr&d) {
-	logger("server: #", this->id, " dataRecv ", d->size, " bytes.");
+	logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
 
 	if (d->size > HELLO_PREFIX.size() && memcmp(HELLO_PREFIX.data(), d->data, HELLO_PREFIX.size())==0) {
 		std::string msg((char*)d->data, (char*)(d->data + d->size));
@@ -71,9 +71,9 @@ void ClientIO::onDataRecv(const NetData_ptr&d) {
 		}
 		hello_iss >> readed_str;
 		host = readed_str;
-		this->srv->client_connect(this->id);
+		this->srv->client_connect(this->id());
         std::stringstream ss;
-        ss<<HELLO_PREFIX<<' '<<this->id<<"\n";
+        ss<<HELLO_PREFIX<<' '<<this->id()<<"\n";
         auto nd = std::make_shared<NetData>(ss.str());
 		this->send(nd);
 		return;
@@ -81,12 +81,12 @@ void ClientIO::onDataRecv(const NetData_ptr&d) {
 
 	if (d->size >= PONG_ANSWER.size() && memcmp(PONG_ANSWER.data(), d->data, PONG_ANSWER.size()) == 0) {
 		pings_missed--;
-		logger("server: #", this->id, " pings_missed: ", pings_missed.load());
+		logger("server: #", this->id(), " pings_missed: ", pings_missed.load());
 		return;
 	}
 
 	if (d->size >= DISCONNECT_PREFIX.size() && memcmp(DISCONNECT_PREFIX.data(), d->data, DISCONNECT_PREFIX.size()) == 0) {
-		logger("server: #", this->id, " disconnection request.");
+		logger("server: #", this->id(), " disconnection request.");
 		this->disconnect();
 		//this->srv->client_disconnect(this->id);
 		return;

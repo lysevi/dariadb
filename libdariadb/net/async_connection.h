@@ -49,6 +49,8 @@ public:
 	  std::lock_guard<std::mutex> lg(_ac_locker);
 	  _queries.clear();
   }
+  void set_id(int id) { _async_con_id = id; }
+  int id()const { return _async_con_id; }
 private:
   void queue_thread();
 
@@ -60,6 +62,7 @@ private:
   void onReadMarker(const boost::system::error_code &err, size_t read_bytes);
   void onReadData(const boost::system::error_code &err, size_t read_bytes);
 private:
+  int _async_con_id; // TODO just for logging. remove after release.
   socket_weak _sock;
   
   std::list<NetData_ptr> _queries;

@@ -29,7 +29,7 @@ public:
   Private(const Server::Param &p)
       : _params(p), _stop_flag(false), _is_runned_flag(false), _ping_timer(_service) {
     _in_stop_logic = false;
-    _next_client_id = 0;
+    _next_client_id = 1;
     _connections_accepted.store(0);
     _writes_in_progress.store(0);
   }
@@ -114,9 +114,9 @@ public:
     auto cur_id = _next_client_id.load();
     _next_client_id++;
     ClientIO_ptr new_client{new ClientIO(cur_id, sock, this, this->_storage)};
-
+	
     _clients_locker.lock();
-    _clients.insert(std::make_pair(new_client->id, new_client));
+    _clients.insert(std::make_pair(new_client->id(), new_client));
     _clients_locker.unlock();
 
     socket_ptr new_sock(new ip::tcp::socket(_service));
@@ -135,7 +135,7 @@ public:
     }
     auto client = fres_it->second;
     _connections_accepted += 1;
-    logger_info("server: hello from {", client->host, "}, #", client->id);
+    logger_info("server: hello from {", client->host, "}, #", client->id());
     client->state = ClientState::WORK;
   }
 

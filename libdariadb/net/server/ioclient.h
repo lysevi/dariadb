@@ -15,7 +15,6 @@
 namespace dariadb {
 namespace net {
 struct ClientIO:public AsyncConnection {
-  int id;
   socket_ptr sock;
   std::string host;
 

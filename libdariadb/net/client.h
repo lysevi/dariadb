@@ -26,6 +26,8 @@ public:
   ClientState state() const;
   size_t pings_answers() const;
 
+  ///connection id on server
+  int id()const;
 
  /* void write(const Meas::MeasArray&ma);
   Meas::MeasList read(const storage::QueryInterval&qi);*/
