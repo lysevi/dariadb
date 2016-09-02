@@ -115,9 +115,11 @@ public:
         memcmp(d->data, DISCONNECT_ANSWER.data(), DISCONNECT_ANSWER.size()) == 0) {
       std::string msg((char *)d->data, (char *)(d->data + d->size));
       logger("client: #", id(), " disconnection.");
+      try{
       _state = ClientState::DISCONNECTED;
       this->full_stop();
       this->_socket->close();
+      }catch(...){}
       logger("client: #", id(), " disconnected.");
       return;
     }
