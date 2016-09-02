@@ -43,8 +43,12 @@ void ClientIO::ping() {
 }
 
 void ClientIO::onNetworkError(const boost::system::error_code&err) {
-	logger_info("server: client #", this->id(), " network error - ", err.message());
-	logger_info("server: client #", this->id(), " stoping...");
+	if (state != ClientState::DISCONNECTED) {
+		//TODO check this moment.
+		logger_info("server: client #", this->id(), " network error - ", err.message());
+		logger_info("server: client #", this->id(), " stoping...");
+		return;
+	}
 	this->mark_stoped();
 	this->sock->cancel();
 
