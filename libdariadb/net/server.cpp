@@ -53,8 +53,16 @@ public:
     disconnect_all();
     _ping_timer.cancel();
     _stop_flag = true;
+
+	logger_info("server: stop asio service.");
     _service.stop();
-    _thread_handler.join();
+	logger_info("server: wait io threads...");
+	_thread_handler.join();
+	for (auto&t : _io_threads) {
+		t.join();
+	}
+	logger_info("server: io_threads stoped.");
+	_is_runned_flag.store(false);
   }
 
   void disconnect_all() {
@@ -74,12 +82,21 @@ public:
     _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
     socket_ptr sock(new ip::tcp::socket(_service));
     start_accept(sock);
-    logger_info("server: OK");
-    while (!_stop_flag) {
-      _service.poll_one();
-      _is_runned_flag.store(true);
-    }
-    _is_runned_flag.store(false);
+
+	_service.poll_one();
+	_io_threads.resize(_params.io_threads);
+	for (size_t i = 0; i < _params.io_threads; ++i) {
+		logger_info("server: run io thread #", i);
+		_io_threads[i]=std::move(std::thread(std::bind(&Server::Private::handle_clients_thread, this)));
+	}
+	
+	_is_runned_flag.store(true);
+	logger_info("server: OK");
+	
+  }
+
+  void handle_clients_thread() {
+	  _service.run();
   }
 
   void start_accept(socket_ptr sock) {
@@ -185,6 +202,7 @@ public:
   std::atomic_size_t _connections_accepted;
   Server::Param _params;
   std::thread _thread_handler;
+  std::vector<std::thread> _io_threads;
 
   std::atomic_bool _stop_flag;
   std::atomic_bool _is_runned_flag;
