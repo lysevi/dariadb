@@ -78,6 +78,7 @@ public:
   }
 
   void onNetworkError(const boost::system::error_code &err) override {
+      logger_fatal("client: #" , id() , err.message());
     if (this->_state != ClientState::DISCONNECTED) {
       THROW_EXCEPTION_SS("client: #" << id() << err.message());
     }
@@ -114,10 +115,11 @@ public:
     if (d->size == DISCONNECT_ANSWER.size() &&
         memcmp(d->data, DISCONNECT_ANSWER.data(), DISCONNECT_ANSWER.size()) == 0) {
       std::string msg((char *)d->data, (char *)(d->data + d->size));
-      logger("client: #", id(), " disconnected.");
+      logger("client: #", id(), " disconnection.");
       _state = ClientState::DISCONNECTED;
       this->full_stop();
       this->_socket->close();
+      logger("client: #", id(), " disconnected.");
       return;
     }
 
