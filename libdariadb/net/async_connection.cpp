@@ -79,22 +79,14 @@ void AsyncConnection::queue_thread() {
       _current_query = _queries.front();
       _queries.pop_front();
     }
-    memcpy(marker_buffer, &(_current_query->size), MARKER_SIZE);
-    if (auto spt = _sock.lock()) {
-      async_write(*spt.get(), buffer(marker_buffer, MARKER_SIZE),
-                  std::bind(&AsyncConnection::onMarkerSended, this, _1, _2));
-    }
-  }
-}
+	data_send_buffer_size = _current_query->size + MARKER_SIZE;
+	data_send_buffer = new uint8_t[data_send_buffer_size];
 
-void AsyncConnection::onMarkerSended(const boost::system::error_code &err,
-                                     size_t read_bytes) {
-  logger_info("AsyncConnection::onMarkerSended #", _async_con_id, " readed ",read_bytes);
-  if (err) {
-    this->onNetworkError(err);
-  } else {
+	memcpy(data_send_buffer, &(_current_query->size), MARKER_SIZE);
+	memcpy(data_send_buffer+MARKER_SIZE, _current_query->data, _current_query->size);
+    
     if (auto spt = _sock.lock()) {
-      async_write(*spt.get(), buffer(_current_query->data, _current_query->size),
+      async_write(*spt.get(), buffer(data_send_buffer, data_send_buffer_size),
                   std::bind(&AsyncConnection::onDataSended, this, _1, _2));
     }
   }
@@ -108,6 +100,10 @@ void AsyncConnection::onDataSended(const boost::system::error_code &err,
   } else {
     _current_query = nullptr;
   }
+
+  data_send_buffer_size = 0;
+  delete[]data_send_buffer;
+  data_send_buffer = nullptr;
 }
 
 void AsyncConnection::onReadMarker(const boost::system::error_code &err,

@@ -66,11 +66,11 @@ private:
 
   void readNextAsync();
 
-  void onMarkerSended(const boost::system::error_code &err, size_t read_bytes);
   void onDataSended(const boost::system::error_code &err, size_t read_bytes);
-  
   void onReadMarker(const boost::system::error_code &err, size_t read_bytes);
   void onReadData(const boost::system::error_code &err, size_t read_bytes);
+
+  //void allocate_send_buffer(MESSAGE_SI)
 private:
   int _async_con_id; // TODO just for logging. remove after release.
   socket_weak _sock;
@@ -85,6 +85,9 @@ private:
   char marker_buffer[MARKER_SIZE];
   char marker_read_buffer[MARKER_SIZE];
   
+  uint8_t *data_send_buffer;
+  NetData::MessageSize data_send_buffer_size;
+
   uint8_t *data_read_buffer;
   NetData::MessageSize data_read_buffer_size;
 
