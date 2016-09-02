@@ -21,6 +21,7 @@ public:
   Server(const Param &p);
   ~Server();
 
+  void start();
   void stop();
   bool is_runned();
   size_t connections_accepted() const;

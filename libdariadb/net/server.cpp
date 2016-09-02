@@ -32,8 +32,6 @@ public:
     _next_client_id = 0;
     _connections_accepted.store(0);
     _writes_in_progress.store(0);
-    _thread_handler = std::thread(&Server::Private::server_thread, this);
-    reset_ping_timer();
   }
 
   ~Private() { stop(); }
@@ -57,10 +55,11 @@ public:
 	logger_info("server: stop asio service.");
     _service.stop();
 	logger_info("server: wait io threads...");
-	_thread_handler.join();
+
 	for (auto&t : _io_threads) {
 		t.join();
 	}
+
 	logger_info("server: io_threads stoped.");
 	_is_runned_flag.store(false);
   }
@@ -75,8 +74,10 @@ public:
     }
   }
 
-  void server_thread() {
+  void start() {
     logger_info("server: start server on ", _params.port, "...");
+	
+	reset_ping_timer();
 
     ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
     _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
@@ -200,8 +201,9 @@ public:
 
   std::atomic_int _next_client_id;
   std::atomic_size_t _connections_accepted;
+  
   Server::Param _params;
-  std::thread _thread_handler;
+
   std::vector<std::thread> _io_threads;
 
   std::atomic_bool _stop_flag;
@@ -228,6 +230,10 @@ bool Server::is_runned() {
 
 size_t Server::connections_accepted() const {
   return _Impl->connections_accepted();
+}
+
+void Server::start() {
+	_Impl->start();
 }
 
 void Server::stop() {

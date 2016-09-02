@@ -64,6 +64,10 @@ std::atomic_bool server_stop_flag;
 dariadb::net::Server *server_instance = nullptr;
 void server_thread_func() {
   dariadb::net::Server s(server_param);
+  
+  BOOST_CHECK(!s.is_runned());
+
+  s.start();
 
   while (!s.is_runned()) {
   }
