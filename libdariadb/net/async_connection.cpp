@@ -89,7 +89,7 @@ void AsyncConnection::queue_thread() {
 
 void AsyncConnection::onMarkerSended(const boost::system::error_code &err,
                                      size_t read_bytes) {
-  logger_info("AsyncConnection::onMarkerSended #", _async_con_id);
+  logger_info("AsyncConnection::onMarkerSended #", _async_con_id, " readed ",read_bytes);
   if (err) {
     this->onNetworkError(err);
   } else {
@@ -102,7 +102,7 @@ void AsyncConnection::onMarkerSended(const boost::system::error_code &err,
 
 void AsyncConnection::onDataSended(const boost::system::error_code &err,
                                    size_t read_bytes) {
-  logger_info("AsyncConnection::onDataSended #", _async_con_id);
+  logger_info("AsyncConnection::onDataSended #", _async_con_id, " readed ", read_bytes);
   if (err) {
     this->onNetworkError(err);
   } else {
@@ -112,7 +112,7 @@ void AsyncConnection::onDataSended(const boost::system::error_code &err,
 
 void AsyncConnection::onReadMarker(const boost::system::error_code &err,
                                    size_t read_bytes) {
-  logger_info("AsyncConnection::onReadMarker #", _async_con_id);
+  logger_info("AsyncConnection::onReadMarker #", _async_con_id, " readed ", read_bytes);
   if (err) {
     this->onNetworkError(err);
   } else {
@@ -121,7 +121,7 @@ void AsyncConnection::onReadMarker(const boost::system::error_code &err,
                          << _async_con_id << " - wrong marker size: expected "
                          << MARKER_SIZE << " readed " << read_bytes);
     }
-    uint64_t *data_size_ptr = reinterpret_cast<uint64_t *>(marker_read_buffer);
+	NetData::MessageSize *data_size_ptr = reinterpret_cast<NetData::MessageSize *>(marker_read_buffer);
 
     data_read_buffer_size = *data_size_ptr;
     data_read_buffer = new uint8_t[data_read_buffer_size];
@@ -134,7 +134,7 @@ void AsyncConnection::onReadMarker(const boost::system::error_code &err,
 
 void AsyncConnection::onReadData(const boost::system::error_code &err,
                                  size_t read_bytes) {
-  logger_info("AsyncConnection::onReadData #", _async_con_id);
+  logger_info("AsyncConnection::onReadData #", _async_con_id, " readed ", read_bytes);
   if (err) {
     this->onNetworkError(err);
   } else {

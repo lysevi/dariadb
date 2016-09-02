@@ -2,26 +2,36 @@
 
 #include "common.h"
 #include "../utils/locker.h"
+#include "../utils/exception.h"
 #include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <thread>
 #include <list>
-
+#include <numeric>
 namespace dariadb {
 namespace net {
+
 struct NetData {
-  uint64_t size;
+	typedef uint64_t MessageSize;
+	static const size_t MAX_MESSAGE_SIZE = std::numeric_limits<MessageSize>::max();
+  MessageSize size;
   uint8_t *data;
   NetData(const std::string&s) {
+	  if (s.size() > MAX_MESSAGE_SIZE) {
+		  THROW_EXCEPTION_SS("s.size() > MAX_MESSAGE_SIZE - " << s.size() << ' ' << MAX_MESSAGE_SIZE);
+	  }
 	  data = new uint8_t[s.size()];
 	  memset(data, 0, s.size());
 	  memcpy(data, s.data(), s.size());
-	  size = s.size();
+	  size = static_cast<MessageSize>(s.size());
   }
 
-  NetData(uint64_t s, uint8_t*d) {
+  NetData(NetData::MessageSize s, uint8_t*d) {
+	  if (s > MAX_MESSAGE_SIZE) {
+		  THROW_EXCEPTION_SS("size > MAX_MESSAGE_SIZE - " << s << ' ' << MAX_MESSAGE_SIZE);
+	  }
 	  size = s;
 	  data = d;
   }
@@ -29,7 +39,7 @@ struct NetData {
 };
 using NetData_ptr = std::shared_ptr<NetData>;
 
-const size_t MARKER_SIZE = sizeof(uint64_t);
+const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
 
 class AsyncConnection {
 public:
@@ -74,8 +84,9 @@ private:
   
   char marker_buffer[MARKER_SIZE];
   char marker_read_buffer[MARKER_SIZE];
+  
   uint8_t *data_read_buffer;
-  uint64_t data_read_buffer_size;
+  NetData::MessageSize data_read_buffer_size;
 
   bool _is_stoped;
   std::atomic_bool _begin_stoping_flag;
