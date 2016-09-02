@@ -117,9 +117,7 @@ public:
       logger("client: #", id(), " disconnected.");
       _state = ClientState::DISCONNECTED;
       this->full_stop();
-      this->_socket->cancel();
       this->_socket->close();
-
       return;
     }
 

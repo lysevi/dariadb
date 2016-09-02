@@ -48,11 +48,13 @@ void AsyncConnection::mark_stoped() { _begin_stoping_flag = true; }
 
 void AsyncConnection::full_stop() {
   mark_stoped();
-  if (auto spt = _sock.lock()) {
-    if (spt->is_open()) {
-      spt->cancel();
-    }
-  }
+  try{
+      if (auto spt = _sock.lock()) {
+          if (spt->is_open()) {
+              spt->cancel();
+          }
+      }
+  }catch(...){}
 
   if (!_is_stoped) {
     _cond.notify_all();
