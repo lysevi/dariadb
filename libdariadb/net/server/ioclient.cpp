@@ -25,15 +25,29 @@ ClientIO::~ClientIO() {
 	this->full_stop();
 }
 
-void ClientIO::disconnect() {
+void ClientIO::end_session() {
 	logger("server: #", this->id(), " send disconnect signal.");
 	this->state = ClientState::DISCONNECTED;
 	queue_clear();
 
 	if (sock->is_open()) {
+        this->sock->cancel();
 		auto nd = std::make_shared<NetData>(DISCONNECT_ANSWER);
 		this->send(nd);
 	}
+}
+
+void ClientIO::disconnect(){
+    state = ClientState::DISCONNECTED;
+    mark_stoped();
+    if(this->sock->is_open()){
+        this->sock->cancel();
+
+        full_stop();
+
+        this->sock->close();
+    }
+    logger_info("server: client #", this->id(), " stoped.");
 }
 
 void ClientIO::ping() {
@@ -49,17 +63,7 @@ void ClientIO::onNetworkError(const boost::system::error_code&err) {
 		logger_info("server: client #", this->id(), " stoping...");
 		return;
 	}
-	this->mark_stoped();
-	this->sock->cancel();
-
-	full_stop();
-	/*while (queue_size() != 0) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	}*/
-	
-	this->sock->close();
-	this->state = ClientState::DISCONNECTED;
-	logger_info("server: client #", this->id(), " stoped.");
+    this->disconnect();
 }
 
 void ClientIO::onDataRecv(const NetData_ptr&d) {
@@ -91,7 +95,7 @@ void ClientIO::onDataRecv(const NetData_ptr&d) {
 
 	if (d->size >= DISCONNECT_PREFIX.size() && memcmp(DISCONNECT_PREFIX.data(), d->data, DISCONNECT_PREFIX.size()) == 0) {
 		logger("server: #", this->id(), " disconnection request.");
-		this->disconnect();
+        this->end_session();
 		//this->srv->client_disconnect(this->id);
 		return;
 	}

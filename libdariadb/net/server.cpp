@@ -66,11 +66,12 @@ public:
 
   void disconnect_all() {
     for (auto &kv : _clients) {
-      kv.second->disconnect();
+      kv.second->end_session();
       while (kv.second->queue_size() != 0) {
         logger_info("server: wait stop of #", kv.first);
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
       }
+      kv.second->disconnect();
     }
   }
 
@@ -175,10 +176,10 @@ public:
       if (kv.second->state == ClientState::CONNECT) {
         continue;
       }
-      bool is_stoped =
-          (kv.second->state == ClientState::DISCONNECTED && kv.second->queue_size() == 0);
+
+      bool is_stoped = kv.second->state == ClientState::DISCONNECTED;
       if (kv.second->pings_missed > MAX_MISSED_PINGS || is_stoped) {
-        kv.second->state = ClientState::DISCONNECTED;
+        kv.second->disconnect();
         to_remove.push_back(kv.first);
       } else {
 		  logger_info("server: ping #",kv.first);

@@ -55,10 +55,7 @@ public:
   size_t queue_size()const {
 	  return _queries.size() + (this->_current_query!=nullptr?1:0);
   }
-  void queue_clear() {
-	  std::lock_guard<std::mutex> lg(_ac_locker);
-	  _queries.clear();
-  }
+  void queue_clear();
   void set_id(int id) { _async_con_id = id; }
   int id()const { return _async_con_id; }
 private:
