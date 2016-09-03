@@ -50,6 +50,7 @@ public:
   void mark_stoped();
   void full_stop(); ///stop thread, clean queue
 
+  ///if method set 'cancel' to true, then read loop stoping.
   virtual void onDataRecv(const NetData_ptr&d, bool&cancel) = 0;
   virtual void onNetworkError(const boost::system::error_code&err) = 0;
 

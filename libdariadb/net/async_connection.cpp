@@ -159,9 +159,13 @@ void AsyncConnection::onReadMarker(const boost::system::error_code &err,
     data_read_buffer_size = *data_size_ptr;
     data_read_buffer = new uint8_t[data_read_buffer_size];
     if (auto spt = _sock.lock()) {
-      spt->async_read_some(
-          buffer(this->data_read_buffer, data_read_buffer_size),
-          std::bind(&AsyncConnection::onReadData, this, _1, _2));
+        //TODO sync or async?. if sync - refact: rename onDataRead.
+        boost::system::error_code ec;
+        auto readed_bytes=spt->read_some(buffer(this->data_read_buffer, data_read_buffer_size),ec);
+        onReadData(ec,readed_bytes);
+//      spt->async_read_some(
+//          buffer(this->data_read_buffer, data_read_buffer_size),
+//          std::bind(&AsyncConnection::onReadData, this, _1, _2));
     }
   }
 }

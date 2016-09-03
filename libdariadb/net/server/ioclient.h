@@ -26,7 +26,7 @@ struct ClientIO:public AsyncConnection {
   ClientIO(int _id, socket_ptr&_sock, IClientManager *_srv, storage::IMeasStorage*_storage);
   ~ClientIO();
   void end_session();
-  void disconnect();
+  void close();
   void ping();
   
   void onDataRecv(const NetData_ptr&d, bool&cancel) override;

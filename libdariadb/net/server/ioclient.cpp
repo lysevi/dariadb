@@ -37,7 +37,7 @@ void ClientIO::end_session() {
 	}
 }
 
-void ClientIO::disconnect(){
+void ClientIO::close(){
     state = ClientState::DISCONNECTED;
     mark_stoped();
     if(this->sock->is_open()){
@@ -63,7 +63,7 @@ void ClientIO::onNetworkError(const boost::system::error_code&err) {
 		logger_info("server: client #", this->id(), " stoping...");
 		return;
 	}
-    this->disconnect();
+    this->close();
 }
 
 void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
