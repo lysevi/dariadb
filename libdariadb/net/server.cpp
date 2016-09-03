@@ -54,7 +54,7 @@ public:
 
 	logger_info("server: stop asio service.");
     _service.stop();
-	logger_info("server: wait io threads...");
+    logger_info("server: wait ", _io_threads.size(), " io threads...");
 
 	for (auto&t : _io_threads) {
 		t.join();
@@ -62,6 +62,7 @@ public:
 
 	logger_info("server: io_threads stoped.");
 	_is_runned_flag.store(false);
+    logger_info("server: stoped.");
   }
 
   void disconnect_all() {
@@ -70,7 +71,7 @@ public:
         kv.second->end_session();
         while (kv.second->queue_size() != 0) {
           logger_info("server: wait stop of #", kv.first);
-          std::this_thread::sleep_for(std::chrono::milliseconds(300));
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
       }
       kv.second->close();
@@ -89,9 +90,11 @@ public:
     start_accept(sock);
 
 	_service.poll_one();
+
+    logger_info("server: start ", _params.io_threads, " io threads...");
+
 	_io_threads.resize(_params.io_threads);
 	for (size_t i = 0; i < _params.io_threads; ++i) {
-		logger_info("server: run io thread #", i);
 		_io_threads[i]=std::move(std::thread(std::bind(&Server::Private::handle_clients_thread, this)));
 	}
 	
