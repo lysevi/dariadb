@@ -83,7 +83,7 @@ public:
     }
   }
 
-  void onDataRecv(const NetData_ptr &d) override {
+  void onDataRecv(const NetData_ptr &d, bool&cancel) override {
     if (this->_state == ClientState::WORK) {
       logger("client: #", id(), " dataRecv ", d->size, " bytes.");
     } else {
@@ -114,7 +114,7 @@ public:
     if (d->size == DISCONNECT_ANSWER.size() &&
         memcmp(d->data, DISCONNECT_ANSWER.data(), DISCONNECT_ANSWER.size()) ==
             0) {
-      std::string msg((char *)d->data, (char *)(d->data + d->size));
+      cancel=true;
       logger("client: #", id(), " disconnection.");
       try {
         _state = ClientState::DISCONNECTED;

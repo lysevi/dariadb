@@ -66,7 +66,7 @@ void ClientIO::onNetworkError(const boost::system::error_code&err) {
     this->disconnect();
 }
 
-void ClientIO::onDataRecv(const NetData_ptr&d) {
+void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 	logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
 
 	if (d->size > HELLO_PREFIX.size() && memcmp(HELLO_PREFIX.data(), d->data, HELLO_PREFIX.size())==0) {
@@ -95,6 +95,7 @@ void ClientIO::onDataRecv(const NetData_ptr&d) {
 
 	if (d->size >= DISCONNECT_PREFIX.size() && memcmp(DISCONNECT_PREFIX.data(), d->data, DISCONNECT_PREFIX.size()) == 0) {
 		logger("server: #", this->id(), " disconnection request.");
+        cancel=true;
         this->end_session();
 		//this->srv->client_disconnect(this->id);
 		return;

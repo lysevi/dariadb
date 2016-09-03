@@ -50,8 +50,10 @@ public:
   void mark_stoped();
   void full_stop(); ///stop thread, clean queue
 
-  virtual void onDataRecv(const NetData_ptr&d) = 0;
+  virtual void onDataRecv(const NetData_ptr&d, bool&cancel) = 0;
   virtual void onNetworkError(const boost::system::error_code&err) = 0;
+
+
   size_t queue_size()const {
 	  return _queries.size() + (this->_current_query!=nullptr?1:0);
   }

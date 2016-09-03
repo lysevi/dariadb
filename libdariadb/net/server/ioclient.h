@@ -29,7 +29,7 @@ struct ClientIO:public AsyncConnection {
   void disconnect();
   void ping();
   
-  void onDataRecv(const NetData_ptr&d) override;
+  void onDataRecv(const NetData_ptr&d, bool&cancel) override;
   void onNetworkError(const boost::system::error_code&err)override;
  /* void readNextQuery();
   void readHello();

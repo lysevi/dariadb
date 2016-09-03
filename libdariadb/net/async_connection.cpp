@@ -173,16 +173,19 @@ void AsyncConnection::onReadData(const boost::system::error_code &err,
   if (err) {
     this->onNetworkError(err);
   } else {
+      bool cancel_flag=false;
     NetData_ptr d =
         std::make_shared<NetData>(data_read_buffer_size, data_read_buffer);
     this->data_read_buffer = nullptr;
     this->data_read_buffer_size = 0;
     try {
-      this->onDataRecv(d);
+      this->onDataRecv(d,cancel_flag);
     } catch (std::exception &ex) {
       THROW_EXCEPTION_SS("exception on async readData. #"
                          << _async_con_id << " - " << ex.what());
     }
-    readNextAsync();
+    if(!cancel_flag){
+        readNextAsync();
+    }
   }
 }
