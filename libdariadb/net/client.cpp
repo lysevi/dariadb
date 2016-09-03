@@ -60,7 +60,6 @@ public:
   void disconnect() {
     if (_socket->is_open()) {
       auto nd = std::make_shared<NetData>(DISCONNECT_PREFIX);
-      queue_clear();
       this->send(nd);
     }
     while (this->_state != ClientState::DISCONNECTED) {

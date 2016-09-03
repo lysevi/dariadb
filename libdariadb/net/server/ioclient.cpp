@@ -28,7 +28,6 @@ ClientIO::~ClientIO() {
 void ClientIO::end_session() {
 	logger("server: #", this->id(), " send disconnect signal.");
 	this->state = ClientState::DISCONNECTED;
-	queue_clear();
 
 	if (sock->is_open()) {
         this->sock->cancel();
