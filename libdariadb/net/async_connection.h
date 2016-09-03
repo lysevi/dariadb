@@ -4,12 +4,10 @@
 #include "../utils/locker.h"
 #include "../utils/exception.h"
 #include <atomic>
-#include <condition_variable>
 #include <memory>
-#include <mutex>
-#include <thread>
 #include <list>
 #include <numeric>
+
 namespace dariadb {
 namespace net {
 
@@ -54,40 +52,24 @@ public:
   virtual void onDataRecv(const NetData_ptr&d, bool&cancel) = 0;
   virtual void onNetworkError(const boost::system::error_code&err) = 0;
 
-
-  size_t queue_size()const {
-	  return _queries.size() + (this->_current_query!=nullptr?1:0);
-  }
   void queue_clear();
   void set_id(int id) { _async_con_id = id; }
   int id()const { return _async_con_id; }
+  int queue_size()const{return _messages_to_send;}
 private:
-  void queue_thread();
-
   void readNextAsync();
 
-  void onDataSended(const boost::system::error_code &err, size_t read_bytes);
+  void onDataSended(uint8_t* buffer,const boost::system::error_code &err, size_t read_bytes);
   void onReadMarker(const boost::system::error_code &err, size_t read_bytes);
   void onReadData(const boost::system::error_code &err, size_t read_bytes);
-
-  void allocate_send_buffer(NetData::MessageSize size);
 private:
+  std::atomic_int _messages_to_send;
   int _async_con_id; // TODO just for logging. remove after release.
   socket_weak _sock;
-  
-  std::list<NetData_ptr> _queries;
-  NetData_ptr _current_query;
-  
-  std::mutex _ac_locker;
-  std::condition_variable _cond;
-  std::thread _thread_handler;
   
   char marker_buffer[MARKER_SIZE];
   char marker_read_buffer[MARKER_SIZE];
   
-  uint8_t *data_send_buffer;
-  NetData::MessageSize data_send_buffer_size;
-
   uint8_t *data_read_buffer;
   NetData::MessageSize data_read_buffer_size;
 
