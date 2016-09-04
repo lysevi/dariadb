@@ -5,7 +5,6 @@
 #include "../utils/exception.h"
 #include <atomic>
 #include <memory>
-#include <list>
 #include <numeric>
 #include <tuple>
 
