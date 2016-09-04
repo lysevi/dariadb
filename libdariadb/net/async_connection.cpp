@@ -10,15 +10,11 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-NetData::NetData(const std::string &s) {
-  if (s.size() > MAX_MESSAGE_SIZE) {
-    THROW_EXCEPTION_SS("s.size() > MAX_MESSAGE_SIZE - " << s.size() << ' '
-                                                        << MAX_MESSAGE_SIZE);
-  }
-  data = new uint8_t[s.size()];
-  memset(data, 0, s.size());
-  memcpy(data, s.data(), s.size());
-  size = static_cast<MessageSize>(s.size());
+NetData::NetData(const DataKinds &k){
+  size=sizeof(DataKinds);
+  data = new uint8_t[size];
+  memset(data, 0, size);
+  memcpy(data, &k, size);
 }
 
 NetData::NetData(NetData::MessageSize s, uint8_t *d) {

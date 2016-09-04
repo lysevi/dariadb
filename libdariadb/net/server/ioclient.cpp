@@ -31,7 +31,7 @@ void ClientIO::end_session() {
 
 	if (sock->is_open()) {
         this->sock->cancel();
-		auto nd = std::make_shared<NetData>(DISCONNECT_ANSWER);
+        auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT_ANSWER);
 		this->send(nd);
 	}
 }
@@ -51,7 +51,7 @@ void ClientIO::close(){
 
 void ClientIO::ping() {
 	pings_missed++;
-	auto nd = std::make_shared<NetData>(PING_QUERY);
+    auto nd = std::make_shared<NetData>(DataKinds::PING_QUERY);
 	this->send(nd);
 }
 
@@ -68,31 +68,31 @@ void ClientIO::onNetworkError(const boost::system::error_code&err) {
 void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 	logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
 
-	if (d->size > HELLO_PREFIX.size() && memcmp(HELLO_PREFIX.data(), d->data, HELLO_PREFIX.size())==0) {
-		std::string msg((char*)d->data, (char*)(d->data + d->size));
-		std::istringstream hello_iss(msg);
-		std::string readed_str;
-		hello_iss >> readed_str;
-		if (readed_str != HELLO_PREFIX) {
-			THROW_EXCEPTION_SS("server: bad hello prefix " << readed_str);
-		}
-		hello_iss >> readed_str;
-		host = readed_str;
+    if (d->data[0] == (uint8_t)DataKinds::HELLO_PREFIX) {
+        std::string msg((char*)&d->data[1], (char*)(d->data + d->size - 1));
+        host = msg;
 		this->srv->client_connect(this->id());
+
+        auto sz=sizeof(DataKinds::HELLO_PREFIX) + sizeof(uint32_t);
+        uint8_t*buffer=new uint8_t[sz];
+
+        buffer[0]=(uint8_t)DataKinds::HELLO_PREFIX;
+        auto idptr=(uint32_t*)(&buffer[1]);
+        *idptr=id();
         std::stringstream ss;
-        ss<<HELLO_PREFIX<<' '<<this->id()<<"\n";
-        auto nd = std::make_shared<NetData>(ss.str());
+
+        auto nd = std::make_shared<NetData>(sz,buffer);
 		this->send(nd);
 		return;
 	}
 
-	if (d->size >= PONG_ANSWER.size() && memcmp(PONG_ANSWER.data(), d->data, PONG_ANSWER.size()) == 0) {
+    if (d->data[0] == (uint8_t)DataKinds::PONG_ANSWER) {
 		pings_missed--;
 		logger("server: #", this->id(), " pings_missed: ", pings_missed.load());
 		return;
 	}
 
-	if (d->size >= DISCONNECT_PREFIX.size() && memcmp(DISCONNECT_PREFIX.data(), d->data, DISCONNECT_PREFIX.size()) == 0) {
+    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT_PREFIX) {
 		logger("server: #", this->id(), " disconnection request.");
         cancel=true;
         this->end_session();

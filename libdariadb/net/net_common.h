@@ -2,19 +2,22 @@
 
 #include <ostream>
 #include <string>
+#include <cstdint>
 
 namespace dariadb {
 namespace net {
 
-const std::string OK_ANSWER = "OK";
-const std::string ERROR_ANSWER = "error";
-const std::string HELLO_PREFIX = "hello";
-const std::string DISCONNECT_PREFIX = "bye";
-const std::string DISCONNECT_ANSWER = "bye";
-const std::string PING_QUERY = "ping";
-const std::string PONG_ANSWER = "pong";
-const std::string WRITE_QUERY = "write";
-const std::string READ_INTERVAL_QUERY = "read_interval";
+    enum class DataKinds:uint8_t{
+        OK_ANSWER,
+        ERROR_ANSWER,
+        HELLO_PREFIX,
+        DISCONNECT_PREFIX,
+        DISCONNECT_ANSWER,
+        PING_QUERY,
+        PONG_ANSWER,
+        WRITE_QUERY,
+        READ_INTERVAL_QUERY
+    };
 
 enum class ClientState {
   CONNECT, // connection is beginning but a while not ended.

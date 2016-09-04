@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "net_common.h"
 #include "../utils/locker.h"
 #include "../utils/exception.h"
 #include <atomic>
@@ -16,7 +17,9 @@ struct NetData {
 	static const size_t MAX_MESSAGE_SIZE = std::numeric_limits<MessageSize>::max();
   MessageSize size;
   uint8_t *data;
-  NetData(const std::string&s);
+
+
+  NetData(const DataKinds &k);
   NetData(NetData::MessageSize s, uint8_t*d);
 
   ~NetData();

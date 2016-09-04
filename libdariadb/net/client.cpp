@@ -59,7 +59,7 @@ public:
 
   void disconnect() {
     if (_socket->is_open()) {
-      auto nd = std::make_shared<NetData>(DISCONNECT_PREFIX);
+      auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT_PREFIX);
       this->send(nd);
     }
     while (this->_state != ClientState::DISCONNECTED) {
@@ -89,10 +89,8 @@ public:
       logger("client: dataRecv ", d->size, " bytes.");
     }
 
-    if (d->size >= OK_ANSWER.size() &&
-        memcmp(d->data, OK_ANSWER.data(), OK_ANSWER.size()) == 0) {
-      std::string msg((char *)d->data, (char *)(d->data + d->size));
-      auto query_num = stoi(msg.substr(3, msg.size()));
+    if (d->data[0] == (uint8_t)DataKinds::OK_ANSWER) {
+      auto query_num = *reinterpret_cast<uint32_t*>(&d->data[1]);
       logger("client: #", id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
         THROW_EXCEPTION_SS("(this->_state != ClientState::WORK)" << this->_state);
@@ -100,19 +98,15 @@ public:
       return;
     }
 
-    if (d->size == PING_QUERY.size() &&
-        memcmp(d->data, PING_QUERY.data(), PING_QUERY.size()) == 0) {
-      std::string msg((char *)d->data, (char *)(d->data + d->size));
+    if (d->data[0] == (uint8_t)DataKinds::PING_QUERY) {
       logger("client: #", id(), " ping.");
-      auto nd = std::make_shared<NetData>(PONG_ANSWER);
+      auto nd = std::make_shared<NetData>(DataKinds::PONG_ANSWER);
       this->send(nd);
       _pings_answers++;
       return;
     }
 
-    if (d->size == DISCONNECT_ANSWER.size() &&
-        memcmp(d->data, DISCONNECT_ANSWER.data(), DISCONNECT_ANSWER.size()) ==
-            0) {
+    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT_ANSWER) {
       cancel=true;
       logger("client: #", id(), " disconnection.");
       try {
@@ -126,10 +120,8 @@ public:
     }
 
     // hello id
-    if (d->size > HELLO_PREFIX.size() &&
-        memcmp(HELLO_PREFIX.data(), d->data, HELLO_PREFIX.size()) == 0) {
-      std::string msg((char *)d->data, (char *)(d->data + d->size));
-      auto id = stoi(msg.substr(HELLO_PREFIX.size(), msg.size()));
+    if (d->data[0] == (uint8_t)DataKinds::HELLO_PREFIX) {
+      auto id = *reinterpret_cast<int32_t*>(&d->data[1]);
       this->set_id(id);
       this->_state = ClientState::WORK;
       logger("client: #", id, " ready.");
@@ -142,13 +134,15 @@ public:
     }
     this->start(this->_socket);
     std::lock_guard<utils::Locker> lg(_locker);
-    std::stringstream ss;
-    ss << HELLO_PREFIX << ' ' << ip::host_name();
+    auto hn=ip::host_name();
+    auto sz=sizeof(DataKinds::HELLO_PREFIX) + hn.size();
+    uint8_t*buffer=new uint8_t[sz];
 
-    auto hello_message = ss.str();
-    logger("client: send hello ", hello_message.substr(0, hello_message.size() - 1));
+    buffer[0]=(uint8_t)DataKinds::HELLO_PREFIX;
+    memcpy(&buffer[1],hn.data(),hn.size());
+    logger("client: send hello ", hn);
 
-    auto nd = std::make_shared<NetData>(hello_message);
+    auto nd = std::make_shared<NetData>(sz,buffer);
 
     this->send(nd);
   }
