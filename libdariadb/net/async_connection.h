@@ -20,7 +20,7 @@ struct NetData {
 
 
   NetData(const DataKinds &k);
-  NetData(NetData::MessageSize s, uint8_t*d);
+  NetData(size_t s, uint8_t*d);
 
   ~NetData();
 

@@ -11,8 +11,8 @@ class Client {
 public:
   struct Param {
     std::string host;
-    int port;
-    Param(const std::string &_host, int _port) {
+    unsigned short port;
+    Param(const std::string &_host, unsigned short _port) {
       host = _host;
       port = _port;
     }

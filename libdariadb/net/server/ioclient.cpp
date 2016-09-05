@@ -31,7 +31,7 @@ void ClientIO::end_session() {
 
 	if (sock->is_open()) {
         this->sock->cancel();
-        auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT_ANSWER);
+        auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT);
 		this->send(nd);
 	}
 }
@@ -51,7 +51,7 @@ void ClientIO::close(){
 
 void ClientIO::ping() {
 	pings_missed++;
-    auto nd = std::make_shared<NetData>(DataKinds::PING_QUERY);
+    auto nd = std::make_shared<NetData>(DataKinds::PING);
 	this->send(nd);
 }
 
@@ -68,15 +68,15 @@ void ClientIO::onNetworkError(const boost::system::error_code&err) {
 void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 	logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
 
-    if (d->data[0] == (uint8_t)DataKinds::HELLO_PREFIX) {
+    if (d->data[0] == (uint8_t)DataKinds::HELLO) {
         std::string msg((char*)&d->data[1], (char*)(d->data + d->size - 1));
         host = msg;
 		this->srv->client_connect(this->id());
 
-        auto sz=sizeof(DataKinds::HELLO_PREFIX) + sizeof(uint32_t);
+        auto sz=sizeof(DataKinds::HELLO) + sizeof(uint32_t);
         uint8_t*buffer=new uint8_t[sz];
 
-        buffer[0]=(uint8_t)DataKinds::HELLO_PREFIX;
+        buffer[0]=(uint8_t)DataKinds::HELLO;
         auto idptr=(uint32_t*)(&buffer[1]);
         *idptr=id();
         std::stringstream ss;
@@ -86,13 +86,13 @@ void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 		return;
 	}
 
-    if (d->data[0] == (uint8_t)DataKinds::PONG_ANSWER) {
+    if (d->data[0] == (uint8_t)DataKinds::PONG) {
 		pings_missed--;
 		logger("server: #", this->id(), " pings_missed: ", pings_missed.load());
 		return;
 	}
 
-    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT_PREFIX) {
+    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT) {
 		logger("server: #", this->id(), " disconnection request.");
         cancel=true;
         this->end_session();

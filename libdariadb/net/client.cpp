@@ -59,7 +59,7 @@ public:
 
   void disconnect() {
     if (_socket->is_open()) {
-      auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT_PREFIX);
+      auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT);
       this->send(nd);
     }
     while (this->_state != ClientState::DISCONNECTED) {
@@ -89,7 +89,7 @@ public:
       logger("client: dataRecv ", d->size, " bytes.");
     }
 
-    if (d->data[0] == (uint8_t)DataKinds::OK_ANSWER) {
+    if (d->data[0] == (uint8_t)DataKinds::OK) {
       auto query_num = *reinterpret_cast<uint32_t*>(&d->data[1]);
       logger("client: #", id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
@@ -98,15 +98,15 @@ public:
       return;
     }
 
-    if (d->data[0] == (uint8_t)DataKinds::PING_QUERY) {
+    if (d->data[0] == (uint8_t)DataKinds::PING) {
       logger("client: #", id(), " ping.");
-      auto nd = std::make_shared<NetData>(DataKinds::PONG_ANSWER);
+      auto nd = std::make_shared<NetData>(DataKinds::PONG);
       this->send(nd);
       _pings_answers++;
       return;
     }
 
-    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT_ANSWER) {
+    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT) {
       cancel=true;
       logger("client: #", id(), " disconnection.");
       try {
@@ -120,7 +120,7 @@ public:
     }
 
     // hello id
-    if (d->data[0] == (uint8_t)DataKinds::HELLO_PREFIX) {
+    if (d->data[0] == (uint8_t)DataKinds::HELLO) {
       auto id = *reinterpret_cast<int32_t*>(&d->data[1]);
       this->set_id(id);
       this->_state = ClientState::WORK;
@@ -135,10 +135,10 @@ public:
     this->start(this->_socket);
     std::lock_guard<utils::Locker> lg(_locker);
     auto hn=ip::host_name();
-    auto sz=sizeof(DataKinds::HELLO_PREFIX) + hn.size();
+    auto sz=sizeof(DataKinds::HELLO) + hn.size();
     uint8_t*buffer=new uint8_t[sz];
 
-    buffer[0]=(uint8_t)DataKinds::HELLO_PREFIX;
+    buffer[0]=(uint8_t)DataKinds::HELLO;
     memcpy(&buffer[1],hn.data(),hn.size());
     logger("client: send hello ", hn);
 

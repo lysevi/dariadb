@@ -8,15 +8,14 @@ namespace dariadb {
 namespace net {
 
     enum class DataKinds:uint8_t{
-        OK_ANSWER,
-        ERROR_ANSWER,
-        HELLO_PREFIX,
-        DISCONNECT_PREFIX,
-        DISCONNECT_ANSWER,
-        PING_QUERY,
-        PONG_ANSWER,
-        WRITE_QUERY,
-        READ_INTERVAL_QUERY
+        OK,
+        ERR,
+        HELLO,
+        DISCONNECT,
+        PING,
+        PONG,
+        WRITE,
+        READ_INTERVAL
     };
 
 enum class ClientState {

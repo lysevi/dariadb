@@ -17,19 +17,19 @@ NetData::NetData(const DataKinds &k){
   memcpy(data, &k, size);
 }
 
-NetData::NetData(NetData::MessageSize s, uint8_t *d) {
+NetData::NetData(size_t s, uint8_t *d) {
   if (s > MAX_MESSAGE_SIZE) {
     THROW_EXCEPTION_SS("size > MAX_MESSAGE_SIZE - " << s << ' '
                                                     << MAX_MESSAGE_SIZE);
   }
-  size = s;
+  size = static_cast<MessageSize>(s);
   data = d;
 }
 
 NetData::~NetData() { delete[] data; }
 
 std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() const {
-  auto send_buffer_size = size + MARKER_SIZE;
+  auto send_buffer_size = static_cast<NetData::MessageSize>(size + MARKER_SIZE);
   uint8_t *send_buffer = new uint8_t[send_buffer_size];
 
   // TODO use boost::object_pool
