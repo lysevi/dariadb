@@ -13,7 +13,7 @@ namespace dariadb {
 namespace net {
 
 struct NetData {
-	typedef uint64_t MessageSize;
+	typedef uint16_t MessageSize;
 	static const size_t MAX_MESSAGE_SIZE = std::numeric_limits<MessageSize>::max();
   MessageSize size;
   uint8_t *data;
