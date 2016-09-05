@@ -136,14 +136,13 @@ public:
     std::lock_guard<utils::Locker> lg(_locker);
     auto hn=ip::host_name();
     auto sz=sizeof(DataKinds::HELLO) + hn.size();
-    uint8_t*buffer=new uint8_t[sz];
 
-    buffer[0]=(uint8_t)DataKinds::HELLO;
-    memcpy(&buffer[1],hn.data(),hn.size());
     logger("client: send hello ", hn);
 
-    auto nd = std::make_shared<NetData>(sz,buffer);
-
+    auto nd = std::make_shared<NetData>();
+    nd->size=sz;
+    nd->data[0]=(uint8_t)DataKinds::HELLO;
+    memcpy(&nd->data[1],hn.data(),hn.size());
     this->send(nd);
   }
 

@@ -10,32 +10,20 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-NetData::NetData(const DataKinds &k){
-  size=sizeof(DataKinds);
-  data = new uint8_t[size];
-  memset(data, 0, size);
+NetData::NetData() { memset(data, 0, MAX_MESSAGE_SIZE); }
+
+NetData::NetData(const DataKinds &k) {
+  size = sizeof(DataKinds);
+  memset(data, 0, MAX_MESSAGE_SIZE);
   memcpy(data, &k, size);
 }
 
-NetData::NetData(size_t s, uint8_t *d) {
-  if (s > MAX_MESSAGE_SIZE) {
-    THROW_EXCEPTION_SS("size > MAX_MESSAGE_SIZE - " << s << ' '
-                                                    << MAX_MESSAGE_SIZE);
-  }
-  size = static_cast<MessageSize>(s);
-  data = d;
-}
+NetData::~NetData() {}
 
-NetData::~NetData() { delete[] data; }
-
-std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() const {
-  auto send_buffer_size = static_cast<NetData::MessageSize>(size + MARKER_SIZE);
-  uint8_t *send_buffer = new uint8_t[send_buffer_size];
-
-  // TODO use boost::object_pool
-  memcpy(send_buffer, &(size), MARKER_SIZE);
-  memcpy(send_buffer + MARKER_SIZE, data, size);
-  return std::tie(send_buffer_size, send_buffer);
+std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
+  uint8_t *v = reinterpret_cast<uint8_t *>(this);
+  auto buf_size=MARKER_SIZE+size;
+  return std::tie(buf_size, v);
 }
 
 AsyncConnection::AsyncConnection() {
@@ -81,26 +69,25 @@ void AsyncConnection::full_stop() {
 void AsyncConnection::send(const NetData_ptr &d) {
   if (!_begin_stoping_flag) {
     auto ds = d->as_buffer();
-    auto send_buffer=std::get<1>(ds);
-    auto send_buffer_size=std::get<0>(ds);
+    auto send_buffer = std::get<1>(ds);
+    auto send_buffer_size = std::get<0>(ds);
 
     if (auto spt = _sock.lock()) {
       _messages_to_send++;
       async_write(
           *spt.get(), buffer(send_buffer, send_buffer_size),
-          std::bind(&AsyncConnection::onDataSended, this, send_buffer, _1, _2));
+          std::bind(&AsyncConnection::onDataSended, this, d, _1, _2));
     }
   }
 }
 
-void AsyncConnection::onDataSended(uint8_t *buffer,
+void AsyncConnection::onDataSended(NetData_ptr &d,
                                    const boost::system::error_code &err,
                                    size_t read_bytes) {
   logger_info("AsyncConnection::onDataSended #", _async_con_id, " readed ",
               read_bytes);
   _messages_to_send--;
   assert(_messages_to_send >= 0);
-  delete[] buffer;
   if (err) {
     this->onNetworkError(err);
   }
@@ -121,14 +108,14 @@ void AsyncConnection::onReadMarker(const boost::system::error_code &err,
     NetData::MessageSize *data_size_ptr =
         reinterpret_cast<NetData::MessageSize *>(marker_read_buffer);
 
-    data_read_buffer_size = *data_size_ptr;
-    data_read_buffer = new uint8_t[data_read_buffer_size];
     if (auto spt = _sock.lock()) {
+      NetData_ptr d = std::make_shared<NetData>();
+
+      d->size = *data_size_ptr;
       // TODO sync or async?. if sync - refact: rename onDataRead.
       boost::system::error_code ec;
-      auto readed_bytes = spt->read_some(
-          buffer(this->data_read_buffer, data_read_buffer_size), ec);
-      onReadData(ec, readed_bytes);
+      auto readed_bytes = spt->read_some(buffer(d->data, d->size), ec);
+      onReadData(d, ec, readed_bytes);
       //      spt->async_read_some(
       //          buffer(this->data_read_buffer, data_read_buffer_size),
       //          std::bind(&AsyncConnection::onReadData, this, _1, _2));
@@ -136,7 +123,8 @@ void AsyncConnection::onReadMarker(const boost::system::error_code &err,
   }
 }
 
-void AsyncConnection::onReadData(const boost::system::error_code &err,
+void AsyncConnection::onReadData(NetData_ptr &d,
+                                 const boost::system::error_code &err,
                                  size_t read_bytes) {
   logger_info("AsyncConnection::onReadData #", _async_con_id, " readed ",
               read_bytes);
@@ -144,10 +132,7 @@ void AsyncConnection::onReadData(const boost::system::error_code &err,
     this->onNetworkError(err);
   } else {
     bool cancel_flag = false;
-    NetData_ptr d =
-        std::make_shared<NetData>(data_read_buffer_size, data_read_buffer);
-    this->data_read_buffer = nullptr;
-    this->data_read_buffer_size = 0;
+
     try {
       this->onDataRecv(d, cancel_flag);
     } catch (std::exception &ex) {

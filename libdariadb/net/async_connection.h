@@ -12,20 +12,22 @@
 namespace dariadb {
 namespace net {
 
+#pragma pack(push, 1)
 struct NetData {
 	typedef uint16_t MessageSize;
 	static const size_t MAX_MESSAGE_SIZE = std::numeric_limits<MessageSize>::max();
   MessageSize size;
-  uint8_t *data;
+  uint8_t data[MAX_MESSAGE_SIZE];
 
-
+  NetData();
   NetData(const DataKinds &k);
-  NetData(size_t s, uint8_t*d);
 
   ~NetData();
 
-  std::tuple<MessageSize, uint8_t*> as_buffer()const;
+  std::tuple<MessageSize, uint8_t*> as_buffer();
 };
+#pragma pack(pop)
+
 using NetData_ptr = std::shared_ptr<NetData>;
 
 const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
@@ -49,20 +51,16 @@ public:
 private:
   void readNextAsync();
 
-  void onDataSended(uint8_t* buffer,const boost::system::error_code &err, size_t read_bytes);
+  void onDataSended(NetData_ptr &d,const boost::system::error_code &err, size_t read_bytes);
   void onReadMarker(const boost::system::error_code &err, size_t read_bytes);
-  void onReadData(const boost::system::error_code &err, size_t read_bytes);
+  void onReadData(NetData_ptr&d, const boost::system::error_code &err, size_t read_bytes);
 private:
   std::atomic_int _messages_to_send;
   int _async_con_id; // TODO just for logging. remove after release.
   socket_weak _sock;
   
-  char marker_buffer[MARKER_SIZE];
   char marker_read_buffer[MARKER_SIZE];
   
-  uint8_t *data_read_buffer;
-  NetData::MessageSize data_read_buffer_size;
-
   bool _is_stoped;
   std::atomic_bool _begin_stoping_flag;
 };

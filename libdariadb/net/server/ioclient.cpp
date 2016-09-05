@@ -10,111 +10,107 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-ClientIO::ClientIO(int _id, socket_ptr& _sock, IClientManager *_srv,
-	storage::IMeasStorage *_storage) {
-	pings_missed = 0;
-	state = ClientState::CONNECT;
-	set_id(_id);
-	sock = _sock;
-	srv = _srv;
-	storage = _storage;
-	this->start(sock);
+ClientIO::ClientIO(int _id, socket_ptr &_sock, IClientManager *_srv,
+                   storage::IMeasStorage *_storage) {
+  pings_missed = 0;
+  state = ClientState::CONNECT;
+  set_id(_id);
+  sock = _sock;
+  srv = _srv;
+  storage = _storage;
+  this->start(sock);
 }
 
-ClientIO::~ClientIO() {
-	this->full_stop();
-}
+ClientIO::~ClientIO() { this->full_stop(); }
 
 void ClientIO::end_session() {
-	logger("server: #", this->id(), " send disconnect signal.");
-	this->state = ClientState::DISCONNECTED;
+  logger("server: #", this->id(), " send disconnect signal.");
+  this->state = ClientState::DISCONNECTED;
 
-	if (sock->is_open()) {
-        this->sock->cancel();
-        auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT);
-		this->send(nd);
-	}
+  if (sock->is_open()) {
+    this->sock->cancel();
+    auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT);
+    this->send(nd);
+  }
 }
 
-void ClientIO::close(){
-    state = ClientState::DISCONNECTED;
-    mark_stoped();
-    if(this->sock->is_open()){
-        this->sock->cancel();
+void ClientIO::close() {
+  state = ClientState::DISCONNECTED;
+  mark_stoped();
+  if (this->sock->is_open()) {
+    this->sock->cancel();
 
-        full_stop();
+    full_stop();
 
-        this->sock->close();
-    }
-    logger_info("server: client #", this->id(), " stoped.");
+    this->sock->close();
+  }
+  logger_info("server: client #", this->id(), " stoped.");
 }
 
 void ClientIO::ping() {
-	pings_missed++;
-    auto nd = std::make_shared<NetData>(DataKinds::PING);
-	this->send(nd);
+  pings_missed++;
+  auto nd = std::make_shared<NetData>(DataKinds::PING);
+  this->send(nd);
 }
 
-void ClientIO::onNetworkError(const boost::system::error_code&err) {
-	if (state != ClientState::DISCONNECTED) {
-		//TODO check this moment.
-		logger_info("server: client #", this->id(), " network error - ", err.message());
-		logger_info("server: client #", this->id(), " stoping...");
-		return;
-	}
-    this->close();
+void ClientIO::onNetworkError(const boost::system::error_code &err) {
+  if (state != ClientState::DISCONNECTED) {
+    // TODO check this moment.
+    logger_info("server: client #", this->id(), " network error - ",
+                err.message());
+    logger_info("server: client #", this->id(), " stoping...");
+    return;
+  }
+  this->close();
 }
 
-void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
-	logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
+void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel) {
+  logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
 
-    if (d->data[0] == (uint8_t)DataKinds::HELLO) {
-        std::string msg((char*)&d->data[1], (char*)(d->data + d->size - 1));
-        host = msg;
-		this->srv->client_connect(this->id());
+  if (d->data[0] == (uint8_t)DataKinds::HELLO) {
+    std::string msg((char *)&d->data[1], (char *)(d->data + d->size - 1));
+    host = msg;
+    this->srv->client_connect(this->id());
 
-        auto sz=sizeof(DataKinds::HELLO) + sizeof(uint32_t);
-        uint8_t*buffer=new uint8_t[sz];
+    auto nd = std::make_shared<NetData>();
+    nd->size = sizeof(DataKinds::HELLO) + sizeof(uint32_t);
 
-        buffer[0]=(uint8_t)DataKinds::HELLO;
-        auto idptr=(uint32_t*)(&buffer[1]);
-        *idptr=id();
-        std::stringstream ss;
+    nd->data[0] = (uint8_t)DataKinds::HELLO;
+    auto idptr = (uint32_t *)(&nd->data[1]);
+    *idptr = id();
 
-        auto nd = std::make_shared<NetData>(sz,buffer);
-		this->send(nd);
-		return;
-	}
+    this->send(nd);
+    return;
+  }
 
-    if (d->data[0] == (uint8_t)DataKinds::PONG) {
-		pings_missed--;
-		logger("server: #", this->id(), " pings_missed: ", pings_missed.load());
-		return;
-	}
+  if (d->data[0] == (uint8_t)DataKinds::PONG) {
+    pings_missed--;
+    logger("server: #", this->id(), " pings_missed: ", pings_missed.load());
+    return;
+  }
 
-    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT) {
-		logger("server: #", this->id(), " disconnection request.");
-        cancel=true;
-        this->end_session();
-		//this->srv->client_disconnect(this->id);
-		return;
-	}
-
-
+  if (d->data[0] == (uint8_t)DataKinds::DISCONNECT) {
+    logger("server: #", this->id(), " disconnection request.");
+    cancel = true;
+    this->end_session();
+    // this->srv->client_disconnect(this->id);
+    return;
+  }
 }
 
 //
-//void ClientIO::readNextQuery() {
+// void ClientIO::readNextQuery() {
 //  async_read_until(*sock.get(), query_buff, '\n',
 //                   std::bind(&ClientIO::onReadQuery, this, _1, _2));
 //}
 //
-//void ClientIO::readHello() {
+// void ClientIO::readHello() {
 //  async_read_until(*sock.get(), query_buff, '\n',
 //                   std::bind(&ClientIO::onHello, this, _1, _2));
 //}
 //
-//void ClientIO::onHello(const boost::system::error_code &err, size_t read_bytes) {
+// void ClientIO::onHello(const boost::system::error_code &err, size_t
+// read_bytes) {
 //  if (err) {
 //    THROW_EXCEPTION_SS("server: ClienIO::onHello " << err.message());
 //  }
@@ -141,7 +137,8 @@ void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 //  this->readNextQuery();
 //}
 //
-//void ClientIO::onReadQuery(const boost::system::error_code &err, size_t read_bytes) {
+// void ClientIO::onReadQuery(const boost::system::error_code &err, size_t
+// read_bytes) {
 //  logger("server: #", this->id, " onReadQuery...");
 //  if (this->state == ClientState::DISCONNECTED) {
 //    logger_info("server: #", this->id, " onRead in disconnected.");
@@ -154,12 +151,14 @@ void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 //  std::istream iss(&this->query_buff);
 //  std::string msg;
 //  std::getline(iss, msg);
-//  logger("server: #", this->id, " clientio::onReadQuery - {", msg, "} readed_bytes: ",
+//  logger("server: #", this->id, " clientio::onReadQuery - {", msg, "}
+//  readed_bytes: ",
 //         read_bytes);
 //
 //  if (msg.size() > WRITE_QUERY.size() &&
 //      msg.substr(0, WRITE_QUERY.size()) == WRITE_QUERY) {
-//    size_t to_write_count = stoi(msg.substr(WRITE_QUERY.size() + 1, msg.size()));
+//    size_t to_write_count = stoi(msg.substr(WRITE_QUERY.size() + 1,
+//    msg.size()));
 //    logger("server: write query ", to_write_count);
 //
 //    size_t buffer_size = to_write_count * sizeof(Meas);
@@ -175,21 +174,25 @@ void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 //      msg.substr(0, READ_INTERVAL_QUERY.size()) == READ_INTERVAL_QUERY) {
 //    auto query_str = msg.substr(READ_INTERVAL_QUERY.size() + 1, msg.size());
 //
-//    auto id_end_pos = query_str.find_first_of(' ');//position between query_id and json values
+//    auto id_end_pos = query_str.find_first_of(' ');//position between query_id
+//    and json values
 //    auto query_id = stoi(query_str.substr(0, id_end_pos));
-//    
+//
 //	query_str = query_str.substr(id_end_pos, query_str.size());
-//    
+//
 //	dariadb::storage::QueryInterval qi({}, 0, 0, 0);
 //    qi.from_string(query_str);
 //
-//    logger_info("server: #", this->id, " query ", query_id, " read interval [",
-//                timeutil::to_string(qi.from), ',', timeutil::to_string(qi.to), "] ",
+//    logger_info("server: #", this->id, " query ", query_id, " read interval
+//    [",
+//                timeutil::to_string(qi.from), ',', timeutil::to_string(qi.to),
+//                "] ",
 //                qi.ids.size(), " values");
 //
 //	auto values = this->storage->readInterval(qi);
 //    auto size_to_send=values.size();
-//    logger_info("server: #", this->id, " query ", query_id, " readed ", size_to_send, " values");
+//    logger_info("server: #", this->id, " query ", query_id, " readed ",
+//    size_to_send, " values");
 //
 //	std::stringstream ss;
 //    ss << OK_ANSWER << ' ' << query_id << ' ' << size_to_send;
@@ -223,38 +226,40 @@ void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 //  this->readNextQuery();
 //}
 //
-//void ClientIO::disconnect() {
+// void ClientIO::disconnect() {
 //  logger("server: #", this->id, " send disconnect signal.");
 //  this->state = ClientState::DISCONNECTED;
 //  async_write(*sock.get(), buffer(DISCONNECT_ANSWER + "\n"),
 //              std::bind(&ClientIO::onDisconnectSended, this, _1, _2));
 //}
 //
-//void ClientIO::onDisconnectSended(const boost::system::error_code &, size_t) {
+// void ClientIO::onDisconnectSended(const boost::system::error_code &, size_t)
+// {
 //  logger("server: #", this->id, " onDisconnectSended.");
 //  this->sock->close();
 //  this->srv->client_disconnect(this->id);
 //}
 //
-//void ClientIO::ping() {
+// void ClientIO::ping() {
 //  pings_missed++;
 //  async_write(*sock.get(), buffer(PING_QUERY + "\n"),
 //              std::bind(&ClientIO::onPingSended, this, _1, _2));
 //}
-//void ClientIO::onPingSended(const boost::system::error_code &err, size_t) {
+// void ClientIO::onPingSended(const boost::system::error_code &err, size_t) {
 //  if (err) {
 //    THROW_EXCEPTION_SS("server::onPingSended - " << err.message());
 //  }
 //  logger("server: #", this->id, " ping.");
 //}
 //
-//void ClientIO::onOkSended(const boost::system::error_code &err, size_t) {
+// void ClientIO::onOkSended(const boost::system::error_code &err, size_t) {
 //  if (err) {
 //    THROW_EXCEPTION_SS("server::onOkSended - " << err.message());
 //  }
 //}
 //
-//void ClientIO::onRecvValues(size_t values_count, const boost::system::error_code &err,
+// void ClientIO::onRecvValues(size_t values_count, const
+// boost::system::error_code &err,
 //                            size_t read_bytes) {
 //  if (err) {
 //    THROW_EXCEPTION_SS("server::readValues - " << err.message());
@@ -264,9 +269,11 @@ void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 //
 //  // TODO use batch loading
 //  if (this->storage != nullptr) {
-//    logger("server: #", this->id, " write ", in_values_buffer.size(), " values.");
+//    logger("server: #", this->id, " write ", in_values_buffer.size(), "
+//    values.");
 //    this->srv->write_begin();
-//    this->storage->append(this->in_values_buffer.begin(), this->in_values_buffer.end());
+//    this->storage->append(this->in_values_buffer.begin(),
+//    this->in_values_buffer.end());
 //    this->srv->write_end();
 //  } else {
 //    logger_info("clientio: storage no set.");
@@ -274,11 +281,14 @@ void ClientIO::onDataRecv(const NetData_ptr&d, bool&cancel) {
 //  readNextQuery();
 //}
 //
-//void ClientIO::onReadIntervalAnswerSended(const boost::system::error_code &err, size_t read_bytes) {
+// void ClientIO::onReadIntervalAnswerSended(const boost::system::error_code
+// &err, size_t read_bytes) {
 //	if (err) {
-//		THROW_EXCEPTION_SS("server::onReadIntervalAnswerSended - " << err.message());
+//		THROW_EXCEPTION_SS("server::onReadIntervalAnswerSended - " <<
+//err.message());
 //	}
-//	logger("server: #", this->id, " send ", in_values_buffer.size(), " values.");
+//	logger("server: #", this->id, " send ", in_values_buffer.size(), "
+//values.");
 //	readNextQuery();
 //}
 //
