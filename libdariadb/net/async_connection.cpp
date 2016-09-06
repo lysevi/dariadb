@@ -22,7 +22,7 @@ NetData::~NetData() {}
 
 std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   uint8_t *v = reinterpret_cast<uint8_t *>(this);
-  auto buf_size=MARKER_SIZE+size;
+  auto buf_size=static_cast<MessageSize>(MARKER_SIZE+size);
   return std::tie(buf_size, v);
 }
 
@@ -46,9 +46,10 @@ void AsyncConnection::start(const socket_ptr &sock) {
 
 void AsyncConnection::readNextAsync() {
   if (auto spt = _sock.lock()) {
+	  NetData_ptr d = std::make_shared<NetData>();
     spt->async_read_some(
-        buffer(this->marker_read_buffer, MARKER_SIZE),
-        std::bind(&AsyncConnection::onReadMarker, this, _1, _2));
+        buffer(reinterpret_cast<uint8_t*>(&d->size), MARKER_SIZE),
+        std::bind(&AsyncConnection::onReadMarker, this, d, _1, _2));
   }
 }
 
@@ -93,7 +94,7 @@ void AsyncConnection::onDataSended(NetData_ptr &d,
   }
 }
 
-void AsyncConnection::onReadMarker(const boost::system::error_code &err,
+void AsyncConnection::onReadMarker(NetData_ptr&d,const boost::system::error_code &err,
                                    size_t read_bytes) {
   logger_info("AsyncConnection::onReadMarker #", _async_con_id, " readed ",
               read_bytes);
@@ -105,13 +106,8 @@ void AsyncConnection::onReadMarker(const boost::system::error_code &err,
                          << _async_con_id << " - wrong marker size: expected "
                          << MARKER_SIZE << " readed " << read_bytes);
     }
-    NetData::MessageSize *data_size_ptr =
-        reinterpret_cast<NetData::MessageSize *>(marker_read_buffer);
 
     if (auto spt = _sock.lock()) {
-      NetData_ptr d = std::make_shared<NetData>();
-
-      d->size = *data_size_ptr;
       // TODO sync or async?. if sync - refact: rename onDataRead.
       boost::system::error_code ec;
       auto readed_bytes = spt->read_some(buffer(d->data, d->size), ec);

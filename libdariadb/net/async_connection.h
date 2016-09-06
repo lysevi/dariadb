@@ -52,14 +52,12 @@ private:
   void readNextAsync();
 
   void onDataSended(NetData_ptr &d,const boost::system::error_code &err, size_t read_bytes);
-  void onReadMarker(const boost::system::error_code &err, size_t read_bytes);
+  void onReadMarker(NetData_ptr&d,const boost::system::error_code &err, size_t read_bytes);
   void onReadData(NetData_ptr&d, const boost::system::error_code &err, size_t read_bytes);
 private:
   std::atomic_int _messages_to_send;
   int _async_con_id; // TODO just for logging. remove after release.
   socket_weak _sock;
-  
-  char marker_read_buffer[MARKER_SIZE];
   
   bool _is_stoped;
   std::atomic_bool _begin_stoping_flag;
