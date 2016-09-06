@@ -188,8 +188,8 @@ public:
         kv.second->close();
         to_remove.push_back(kv.first);
       } else {
-		  logger_info("server: ping #",kv.first);
-        kv.second->ping();
+		/*  logger_info("server: ping #",kv.first);
+        kv.second->ping();*/
       }
     }
     _clients_locker.unlock();

@@ -1,10 +1,10 @@
 #pragma once
 
+#include "../meas.h"
+#include "../storage/query_param.h"
 #include "net_common.h"
 #include <memory>
 #include <string>
-#include "../meas.h"
-#include "../storage/query_param.h"
 namespace dariadb {
 namespace net {
 class Client {
@@ -26,11 +26,11 @@ public:
   ClientState state() const;
   size_t pings_answers() const;
 
-  ///connection id on server
-  int id()const;
+  /// connection id on server
+  int id() const;
 
- /* void write(const Meas::MeasArray&ma);
-  Meas::MeasList read(const storage::QueryInterval&qi);*/
+  void write(const Meas::MeasArray &ma);
+  /*  Meas::MeasList read(const storage::QueryInterval&qi);*/
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

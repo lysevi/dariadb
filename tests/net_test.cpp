@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(QueryToStrTest) {
 		BOOST_CHECK_EQUAL(qi.time_point, qi_res.time_point);
 	}
 }
-
+/*
 BOOST_AUTO_TEST_CASE(Connect1) {
 	dariadb::logger("********** Connect1 **********");
 	server_runned.store(false);
@@ -308,10 +308,10 @@ BOOST_AUTO_TEST_CASE(PingTest) {
 
   server_stop_flag = true;
   server_thread.join();
-}
-/*
+}*/
+
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
-  const size_t MEASES_SIZE = 101;
+  const size_t MEASES_SIZE = 2047*3+3;
   dariadb::logger("********** ReadWriteTest **********");
   std::shared_ptr<Mock_MeasStorage> stor{ new Mock_MeasStorage() };
   server_runned.store(false);
@@ -353,10 +353,10 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   while (stor->writed_count.load() != MEASES_SIZE) {
 	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
-  dariadb::storage::QueryInterval qi{ ids,0,dariadb::Time(0),dariadb::Time(MEASES_SIZE) };
-  auto result = c1.read(qi);
-  //BOOST_CHECK_EQUAL(result.size(), max_id_size);
-  BOOST_CHECK_EQUAL(result.size(), ma.size());
+  //dariadb::storage::QueryInterval qi{ ids,0,dariadb::Time(0),dariadb::Time(MEASES_SIZE) };
+  //auto result = c1.read(qi);
+  ////BOOST_CHECK_EQUAL(result.size(), max_id_size);
+  //BOOST_CHECK_EQUAL(result.size(), ma.size());
 
   c1.disconnect();
 
@@ -372,4 +372,3 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   server_stop_flag = true;
   server_thread.join();
 }
-*/

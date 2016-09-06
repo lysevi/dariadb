@@ -78,7 +78,7 @@ void AsyncConnection::onDataSended(NetData_ptr &d,
 void AsyncConnection::readNextAsync() {
 	if (auto spt = _sock.lock()) {
 		NetData_ptr d = this->_pool->construct();
-		spt->async_read_some(
+		async_read(*spt.get(),
 			buffer(reinterpret_cast<uint8_t*>(&d->size), MARKER_SIZE),
 			std::bind(&AsyncConnection::onReadMarker, this, d, _1, _2));
 	}
@@ -99,12 +99,12 @@ void AsyncConnection::onReadMarker(NetData_ptr&d,const boost::system::error_code
 
     if (auto spt = _sock.lock()) {
       // TODO sync or async?. if sync - refact: rename onDataRead.
-      boost::system::error_code ec;
-      auto readed_bytes = spt->read_some(buffer(d->data, d->size), ec);
-      onReadData(d, ec, readed_bytes);
-      //      spt->async_read_some(
-      //          buffer(this->data_read_buffer, data_read_buffer_size),
-      //          std::bind(&AsyncConnection::onReadData, this, _1, _2));
+      /*boost::system::error_code ec;
+      auto readed_bytes = spt->read_some(buffer(reinterpret_cast<uint8_t*>(&d->data), d->size), ec);
+      onReadData(d, ec, readed_bytes);*/
+		async_read(*spt.get(),
+			buffer(reinterpret_cast<uint8_t*>(&d->data), d->size),
+			std::bind(&AsyncConnection::onReadData, this, d, _1, _2));
     }
   }
 }

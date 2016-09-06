@@ -148,146 +148,32 @@ public:
     this->send(nd);
   }
 
-  /* void onRead(const boost::system::error_code &err, size_t read_bytes) {
-     logger("client: onRead...");
-     if (err) {
-           THROW_EXCEPTION_SS("client:  " << err.message());
-     }
-
-     std::istream iss(&this->buff);
-     std::string msg;
-     std::getline(iss, msg);
-     logger("client: {", msg, "} readed_bytes: ", read_bytes);
-
-     if (msg.size() > OK_ANSWER.size() && msg.substr(0, OK_ANSWER.size()) == OK_ANSWER) {
-           auto query_num = stoi(msg.substr(3, msg.size()));
-           logger("client: query #", query_num, " accepted.");
-           if (this->_state == ClientState::WORK) {
-                   auto query_str = msg.substr(OK_ANSWER.size()+1, msg.size());
-                   auto delim_pos = query_str.find_first_of(' ');
-
-                   auto count_str = query_str.substr(delim_pos, query_str.size());
-                   auto count = stoi(count_str);
-
-                   in_buffer_values.resize(count);
-
-                   delim_pos = query_str.find_first_of('{');
-                   query_str = query_str.substr(delim_pos, query_str.size());
-                   auto qjs = nlohmann::json::parse(query_str);
-                   auto result_array = qjs["result"];
-                   size_t i = 0;
-                   for (auto meas_js : result_array) {
-                           Meas v;
-                           v.id= meas_js["id"];
-                           v.flag = meas_js["flag"];
-                           v.src=meas_js["src"];
-                           v.value=meas_js["value"];
-                           this->in_buffer_values[i++] = v;
-                   }
-                   this->_query_locker->unlock();
-           } else {
-             this->_state = ClientState::WORK;
-           }
-     }
-
-     if (msg == DISCONNECT_ANSWER) {
-           logger("client: disconnected.");
-           _state = ClientState::DISCONNECTED;
-           this->_socket->close();
-           return;
-     }
-
-     if (msg == PING_QUERY) {
-           logger("client: ping.");
-           async_write(*_socket.get(), buffer(PONG_ANSWER + "\n"),
-                                   std::bind(&Client::Private::onPongSended, this, _1,
-   _2));
-     }
-
-     logger_info("client: onRead - nextQuery");
-     readNext();
-   }*/
-
-  /* void onPongSended(const boost::system::error_code &err, size_t read_bytes) {
-         if (err) {
-           THROW_EXCEPTION_SS("client::onPongSended - " << err.message());
-         }
-         _pings_answers++;
-         logger("client: pong");
-   }*/
 
   size_t pings_answers() const { return _pings_answers.load(); }
   ClientState state() const { return _state; }
-  /*
+  
   void write(const Meas::MeasArray &ma) {
     std::lock_guard<utils::Locker> lg(this->_locker);
-    logger("client: write ", ma.size());
-    utils::Locker locker;
-    locker.lock();
-    std::stringstream ss;
-    ss << WRITE_QUERY << ' ' << ma.size() << '\n';
-    std::string query = ss.str();
-    async_write(*_socket.get(), buffer(query),
-                            std::bind(&Client::Private::onWriteQuerySended, this, &locker,
-                                                  ma.size(), ma, _1, _2));
-
-    locker.lock();
+	logger("client: send ", ma.size());
+	size_t writed = 0;
+	while (writed!=ma.size()) {
+		auto left = (ma.size() - writed);
+		
+		//first byte for query type
+		auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1);
+		size_t count_to_write = (left*sizeof(Meas))>cur_msg_space?cur_msg_space/sizeof(Meas):left;
+		logger("client: pack count: ", count_to_write);
+		
+		auto size_to_write = count_to_write * sizeof(Meas); 
+		
+		auto nd = this->_pool.construct(DataKinds::WRITE);
+		memcpy(&nd->data[1], ma.data()+writed, size_to_write);
+		nd->size += size_to_write;
+		send(nd);
+		writed += count_to_write;
+	}
   }
 
-  void onWriteQuerySended(utils::Locker *locker, size_t to_send, Meas::MeasArray &ma,
-                                                           const boost::system::error_code
-  &err, size_t read_bytes) {
-    if (err) {
-          THROW_EXCEPTION_SS("client::onWriteQuerySended - " << err.message());
-    }
-
-    if (to_send != 0) {
-          logger("client: write next part ", to_send, " values.");
-          async_write(*_socket.get(), buffer(ma, to_send * sizeof(Meas)),
-                                  std::bind(&Client::Private::onWriteQuerySended, this,
-  locker,
-                                                    size_t(0), ma, _1, _2));
-    } else {
-          locker->unlock();
-    }
-  }
-
-  Meas::MeasList read(const storage::QueryInterval &qi) {
-          std::lock_guard<utils::Locker> lg(this->_locker);
-
-          auto qid = this->_query_num.load();
-          this->_query_num++;
-
-          std::stringstream ss;
-          ss << READ_INTERVAL_QUERY
-                  << ' '
-                  << qid
-                  << ' '
-                  << qi.to_string()
-                  << '\n';
-          std::string query = ss.str();
-
-          utils::Locker q_locker;
-          q_locker.lock();
-          this->_query_locker = &q_locker;
-
-          async_write(*_socket.get(), buffer(query),
-                  std::bind(&Client::Private::onReadQuerySended, this, _1, _2));
-
-          q_locker.lock();
-          Meas::MeasList result(in_buffer_values.begin(), in_buffer_values.end());
-          in_buffer_values.clear();
-          return result;
-  }*/
-
-  // void onReadQuerySended(const boost::system::error_code &err, size_t read_bytes) {
-  // if (err) {
-  //  THROW_EXCEPTION_SS("client::onReadQuerySended - " << err.message());
-  // }
-
-  // logger_info("client: onReadQuerySended - nextQuery");
-  // /*readNext();*/
-  //}
 
   io_service _service;
   socket_ptr _socket;
@@ -329,9 +215,9 @@ size_t Client::pings_answers() const {
   return _Impl->pings_answers();
 }
 
-// void Client::write(const Meas::MeasArray &ma) {
-//  _Impl->write(ma);
-//}
+ void Client::write(const Meas::MeasArray &ma) {
+  _Impl->write(ma);
+}
 //
 // Meas::MeasList Client::read(const storage::QueryInterval &qi) {
 //  return _Impl->read(qi);
