@@ -8,12 +8,13 @@ NetData::NetData() {
 	size = 0;
 }
 
-NetData::~NetData() {}
-
-void NetData::append(const DataKinds&k) {
-	data[size] = static_cast<uint8_t>(k);
-	size += sizeof(DataKinds);
+NetData::NetData(const DataKinds&k) {
+	memset(data, 0, MAX_MESSAGE_SIZE);
+	size = sizeof(DataKinds);
+	data[0] = static_cast<uint8_t>(k);
 }
+
+NetData::~NetData() {}
 
 std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
 	uint8_t *v = reinterpret_cast<uint8_t *>(this);

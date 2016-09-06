@@ -16,11 +16,10 @@ namespace dariadb {
 			uint8_t data[MAX_MESSAGE_SIZE];
 
 			NetData();
+			NetData(const DataKinds&k);
 			~NetData();
 
 			std::tuple<MessageSize, uint8_t*> as_buffer();
-
-			void append(const DataKinds&k);
 		};
 #pragma pack(pop)
 

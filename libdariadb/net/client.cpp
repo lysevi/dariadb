@@ -60,8 +60,7 @@ public:
 
   void disconnect() {
     if (_socket->is_open()) {
-		auto nd = _pool.construct();
-		nd->append(DataKinds::DISCONNECT);
+		auto nd = _pool.construct(DataKinds::DISCONNECT);
       this->send(nd);
     }
 
@@ -103,8 +102,7 @@ public:
 
     if (d->data[0] == (uint8_t)DataKinds::PING) {
       logger("client: #", id(), " ping.");
-	  auto nd = _pool.construct();
-	  nd->append(DataKinds::PONG);
+	  auto nd = _pool.construct(DataKinds::PONG);
       this->send(nd);
       _pings_answers++;
       return;

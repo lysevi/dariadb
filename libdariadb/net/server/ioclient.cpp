@@ -29,8 +29,7 @@ void ClientIO::end_session() {
 
   if (sock->is_open()) {
     this->sock->cancel();
-	auto nd = this->get_pool()->construct();
-	nd->append(DataKinds::DISCONNECT);
+	auto nd = this->get_pool()->construct(DataKinds::DISCONNECT);
     this->send(nd);
   }
 }
@@ -50,8 +49,7 @@ void ClientIO::close() {
 
 void ClientIO::ping() {
   pings_missed++;
-  auto nd = this->get_pool()->construct();
-  nd->append(DataKinds::PING);
+  auto nd = this->get_pool()->construct(DataKinds::PING);
   this->send(nd);
 }
 
