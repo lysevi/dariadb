@@ -9,7 +9,6 @@
 #include "../../interfaces/imeasstorage.h"
 #include "../../meas.h"
 #include "../net_common.h"
-#include "../common.h"
 #include "../async_connection.h"
 
 namespace dariadb {
