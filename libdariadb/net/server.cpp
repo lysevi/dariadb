@@ -120,7 +120,7 @@ public:
 
     auto cur_id = _next_client_id.load();
     _next_client_id++;
-    ClientIO_ptr new_client{new ClientIO(cur_id, sock, this, this->_storage)};
+    ClientIO_ptr new_client{new ClientIO(cur_id,&_net_data_pool, sock, this, this->_storage)};
 	
     _clients_locker.lock();
     _clients.insert(std::make_pair(new_client->id(), new_client));
@@ -225,6 +225,7 @@ public:
   std::atomic_int _writes_in_progress;
 
   bool _in_stop_logic; // TODO union with _stop_flag
+  NetData_Pool _net_data_pool;
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}

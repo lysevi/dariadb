@@ -10,8 +10,8 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-ClientIO::ClientIO(int _id, socket_ptr &_sock, IClientManager *_srv,
-                   storage::IMeasStorage *_storage) {
+ClientIO::ClientIO(int _id, NetData_Pool*pool, socket_ptr &_sock, IClientManager *_srv,
+                   storage::IMeasStorage *_storage):AsyncConnection(pool) {
   pings_missed = 0;
   state = ClientState::CONNECT;
   set_id(_id);
@@ -29,7 +29,8 @@ void ClientIO::end_session() {
 
   if (sock->is_open()) {
     this->sock->cancel();
-    auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT);
+	auto nd = this->get_pool()->construct();
+	nd->append(DataKinds::DISCONNECT);
     this->send(nd);
   }
 }
@@ -49,7 +50,8 @@ void ClientIO::close() {
 
 void ClientIO::ping() {
   pings_missed++;
-  auto nd = std::make_shared<NetData>(DataKinds::PING);
+  auto nd = this->get_pool()->construct();
+  nd->append(DataKinds::PING);
   this->send(nd);
 }
 
@@ -72,7 +74,7 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel) {
     host = msg;
     this->srv->client_connect(this->id());
 
-    auto nd = std::make_shared<NetData>();
+	auto nd = get_pool()->construct();
     nd->size = sizeof(DataKinds::HELLO) + sizeof(uint32_t);
 
     nd->data[0] = (uint8_t)DataKinds::HELLO;

@@ -21,10 +21,11 @@ typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 
 class Client::Private : public AsyncConnection {
 public:
-  Private(const Client::Param &p) : _params(p) {
+	Private(const Client::Param &p) :AsyncConnection(nullptr), _params(p) {
     _query_num = 1;
     _state = ClientState::CONNECT;
     _pings_answers = 0;
+	this->set_pool(&_pool);
   }
 
   ~Private() noexcept(false) {
@@ -59,9 +60,11 @@ public:
 
   void disconnect() {
     if (_socket->is_open()) {
-      auto nd = std::make_shared<NetData>(DataKinds::DISCONNECT);
+		auto nd = _pool.construct();
+		nd->append(DataKinds::DISCONNECT);
       this->send(nd);
     }
+
     while (this->_state != ClientState::DISCONNECTED) {
       logger("client: #", id(), " disconnect - wait server answer...");
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -100,7 +103,8 @@ public:
 
     if (d->data[0] == (uint8_t)DataKinds::PING) {
       logger("client: #", id(), " ping.");
-      auto nd = std::make_shared<NetData>(DataKinds::PONG);
+	  auto nd = _pool.construct();
+	  nd->append(DataKinds::PONG);
       this->send(nd);
       _pings_answers++;
       return;
@@ -139,8 +143,8 @@ public:
 
     logger("client: send hello ", hn);
 
-    auto nd = std::make_shared<NetData>();
-    nd->size=sz;
+	auto nd = _pool.construct();
+    nd->size=static_cast<NetData::MessageSize>(sz);
     nd->data[0]=(uint8_t)DataKinds::HELLO;
     memcpy(&nd->data[1],hn.data(),hn.size());
     this->send(nd);
@@ -300,6 +304,7 @@ public:
 
   std::atomic_int _query_num;
   Meas::MeasArray in_buffer_values;
+  NetData_Pool _pool;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}

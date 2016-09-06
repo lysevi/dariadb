@@ -10,15 +10,18 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-NetData::NetData() { memset(data, 0, MAX_MESSAGE_SIZE); }
-
-NetData::NetData(const DataKinds &k) {
-  size = sizeof(DataKinds);
-  memset(data, 0, MAX_MESSAGE_SIZE);
-  memcpy(data, &k, size);
+NetData::NetData() { 
+	memset(data, 0, MAX_MESSAGE_SIZE); 
+	size = 0; 
 }
 
+
 NetData::~NetData() {}
+
+void NetData::append(const DataKinds&k) {
+	data[size] = static_cast<uint8_t>(k);
+	size += sizeof(DataKinds);
+}
 
 std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   uint8_t *v = reinterpret_cast<uint8_t *>(this);
@@ -26,13 +29,18 @@ std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   return std::tie(buf_size, v);
 }
 
-AsyncConnection::AsyncConnection() {
+AsyncConnection::AsyncConnection(NetData_Pool *pool) {
+	_pool = pool;
   _async_con_id = 0;
   _messages_to_send = 0;
   _is_stoped = true;
 }
 
 AsyncConnection::~AsyncConnection() noexcept(false) { full_stop(); }
+
+void AsyncConnection::set_pool(NetData_Pool *pool) {
+	_pool = pool;
+}
 
 void AsyncConnection::start(const socket_ptr &sock) {
   if (!_is_stoped) {
@@ -42,15 +50,6 @@ void AsyncConnection::start(const socket_ptr &sock) {
   _is_stoped = false;
   _begin_stoping_flag = false;
   readNextAsync();
-}
-
-void AsyncConnection::readNextAsync() {
-  if (auto spt = _sock.lock()) {
-	  NetData_ptr d = std::make_shared<NetData>();
-    spt->async_read_some(
-        buffer(reinterpret_cast<uint8_t*>(&d->size), MARKER_SIZE),
-        std::bind(&AsyncConnection::onReadMarker, this, d, _1, _2));
-  }
 }
 
 void AsyncConnection::mark_stoped() { _begin_stoping_flag = true; }
@@ -92,6 +91,16 @@ void AsyncConnection::onDataSended(NetData_ptr &d,
   if (err) {
     this->onNetworkError(err);
   }
+  _pool->free(d);
+}
+
+void AsyncConnection::readNextAsync() {
+	if (auto spt = _sock.lock()) {
+		NetData_ptr d = this->_pool->construct();
+		spt->async_read_some(
+			buffer(reinterpret_cast<uint8_t*>(&d->size), MARKER_SIZE),
+			std::bind(&AsyncConnection::onReadMarker, this, d, _1, _2));
+	}
 }
 
 void AsyncConnection::onReadMarker(NetData_ptr&d,const boost::system::error_code &err,
@@ -135,7 +144,9 @@ void AsyncConnection::onReadData(NetData_ptr &d,
       THROW_EXCEPTION_SS("exception on async readData. #"
                          << _async_con_id << " - " << ex.what());
     }
-    if (!cancel_flag) {
+	_pool->free(d);
+
+	if (!cancel_flag) {
       readNextAsync();
     }
   }

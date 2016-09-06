@@ -23,7 +23,7 @@ struct ClientIO:public AsyncConnection {
   storage::IMeasStorage*storage;
   std::atomic_int pings_missed;
 
-  ClientIO(int _id, socket_ptr&_sock, IClientManager *_srv, storage::IMeasStorage*_storage);
+  ClientIO(int _id, NetData_Pool*pool, socket_ptr&_sock, IClientManager *_srv, storage::IMeasStorage*_storage);
   ~ClientIO();
   void end_session();
   void close();

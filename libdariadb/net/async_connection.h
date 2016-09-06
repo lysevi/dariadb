@@ -9,6 +9,8 @@
 #include <numeric>
 #include <tuple>
 
+#include <boost/pool/object_pool.hpp>
+
 namespace dariadb {
 namespace net {
 
@@ -20,22 +22,25 @@ struct NetData {
   uint8_t data[MAX_MESSAGE_SIZE];
 
   NetData();
-  NetData(const DataKinds &k);
-
   ~NetData();
 
   std::tuple<MessageSize, uint8_t*> as_buffer();
+
+  void append(const DataKinds&k);
 };
 #pragma pack(pop)
 
-using NetData_ptr = std::shared_ptr<NetData>;
+using NetData_Pool = boost::object_pool<NetData>;
+using NetData_ptr = NetData_Pool::element_type*;
 
 const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
 
 class AsyncConnection {
 public:
-  AsyncConnection();
+  AsyncConnection(NetData_Pool *pool);
   virtual ~AsyncConnection() noexcept(false);
+  void set_pool(NetData_Pool *pool);
+  NetData_Pool *get_pool() { return _pool; }
   void send(const NetData_ptr &d);
   void start(const socket_ptr &sock);
   void mark_stoped();
@@ -61,6 +66,7 @@ private:
   
   bool _is_stoped;
   std::atomic_bool _begin_stoping_flag;
+  NetData_Pool*_pool;
 };
 }
 }
