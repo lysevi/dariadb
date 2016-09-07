@@ -98,9 +98,11 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel) {
   if (d->data[0] == (uint8_t)DataKinds::WRITE) {
 	  auto count = (d->size - sizeof(DataKinds)) / sizeof(Meas);
 	  logger("server: #", this->id(), " recv ", count);
+	  this->env->srv->write_begin();
 	  Meas::MeasArray ma{ size_t(count) };
 	  memcpy(ma.data(), &d->data[1], count);
 	  auto ar=env->storage->append(ma.begin(), ma.end());
+	  this->env->srv->write_end();
 	  logger("server: #", this->id(), " writed ", ar.writed, " ignored ",ar.ignored);
   }
 }
