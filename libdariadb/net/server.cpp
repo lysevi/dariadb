@@ -32,13 +32,15 @@ public:
     _next_client_id = 1;
     _connections_accepted.store(0);
     _writes_in_progress.store(0);
+	
+	_env.srv = this;
   }
 
   ~Private() { stop(); }
 
   void set_storage(storage::IMeasStorage *storage) {
     logger("server: set setorage.");
-    _storage = storage;
+    _env.storage = storage;
   }
 
   void stop() {
@@ -120,7 +122,8 @@ public:
 
     auto cur_id = _next_client_id.load();
     _next_client_id++;
-    ClientIO_ptr new_client{new ClientIO(cur_id,&_net_data_pool, sock, this, this->_storage)};
+	
+    ClientIO_ptr new_client{new ClientIO(cur_id,&_net_data_pool, sock, &_env)};
 	
     _clients_locker.lock();
     _clients.insert(std::make_pair(new_client->id(), new_client));
@@ -221,7 +224,7 @@ public:
 
   deadline_timer _ping_timer;
 
-  storage::IMeasStorage *_storage;
+  ClientIO::Environment _env;
   std::atomic_int _writes_in_progress;
 
   bool _in_stop_logic; // TODO union with _stop_flag

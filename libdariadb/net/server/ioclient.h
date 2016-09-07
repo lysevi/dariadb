@@ -13,16 +13,25 @@
 
 namespace dariadb {
 namespace net {
+	
 struct ClientIO:public AsyncConnection {
+	struct Environment {
+		Environment() {
+			srv = nullptr;
+			storage = nullptr;
+		}
+		IClientManager *srv;
+		storage::IMeasStorage*storage;
+	};
+
   socket_ptr sock;
   std::string host;
 
   ClientState state;
-  IClientManager *srv;
-  storage::IMeasStorage*storage;
+  Environment *env;
   std::atomic_int pings_missed;
 
-  ClientIO(int _id, NetData_Pool*pool, socket_ptr&_sock, IClientManager *_srv, storage::IMeasStorage*_storage);
+  ClientIO(int _id, NetData_Pool*pool, socket_ptr&_sock, Environment *_env);
   ~ClientIO();
   void end_session();
   void close();

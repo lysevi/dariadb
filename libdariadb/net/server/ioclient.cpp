@@ -10,14 +10,12 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-ClientIO::ClientIO(int _id, NetData_Pool*pool, socket_ptr &_sock, IClientManager *_srv,
-                   storage::IMeasStorage *_storage):AsyncConnection(pool) {
+ClientIO::ClientIO(int _id, NetData_Pool*pool, socket_ptr &_sock, ClientIO::Environment *_env):AsyncConnection(pool) {
   pings_missed = 0;
   state = ClientState::CONNECT;
   set_id(_id);
   sock = _sock;
-  srv = _srv;
-  storage = _storage;
+  env = _env;
   this->start(sock);
 }
 
@@ -70,7 +68,7 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel) {
   if (d->data[0] == (uint8_t)DataKinds::HELLO) {
     std::string msg((char *)&d->data[1], (char *)(d->data + d->size - 1));
     host = msg;
-    this->srv->client_connect(this->id());
+	env->srv->client_connect(this->id());
 
 	auto nd = get_pool()->construct();
     nd->size = sizeof(DataKinds::HELLO) + sizeof(uint32_t);
@@ -102,7 +100,7 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel) {
 	  logger("server: #", this->id(), " recv ", count);
 	  Meas::MeasArray ma{ size_t(count) };
 	  memcpy(ma.data(), &d->data[1], count);
-	  auto ar=this->storage->append(ma.begin(), ma.end());
+	  auto ar=env->storage->append(ma.begin(), ma.end());
 	  logger("server: #", this->id(), " writed ", ar.writed, " ignored ",ar.ignored);
   }
 }
