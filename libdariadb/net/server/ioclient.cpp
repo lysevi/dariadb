@@ -26,7 +26,11 @@ void ClientIO::end_session() {
   this->state = ClientState::DISCONNECTED;
 
   if (sock->is_open()) {
-    this->sock->cancel();
+	/*boost::system::error_code err;
+    this->sock->cancel(err);
+	if (err) {
+		logger_fatal("server: on clientio::end_session - ", err.message());
+	}*/
 	auto nd = this->get_pool()->construct(DataKinds::DISCONNECT);
     this->send(nd);
   }
@@ -36,8 +40,11 @@ void ClientIO::close() {
   state = ClientState::DISCONNECTED;
   mark_stoped();
   if (this->sock->is_open()) {
-    this->sock->cancel();
-
+    /*boost::system::error_code err;
+    this->sock->cancel(err);
+    if (err) {
+      logger_fatal("server: on clientio::close - ", err.message());
+    }*/
     full_stop();
 
     this->sock->close();
