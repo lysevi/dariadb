@@ -1,6 +1,7 @@
 #pragma once
 
 #include "net_common.h"
+#include "../meas.h"
 #include <tuple>
 
 #include <boost/pool/object_pool.hpp>
@@ -20,6 +21,15 @@ namespace dariadb {
 			~NetData();
 
 			std::tuple<MessageSize, uint8_t*> as_buffer();
+		};
+
+		struct QueryInterval_header{
+			int32_t id;
+			Time from;
+			Time to;
+			Flag flag;
+			Flag source;
+			uint16_t ids_count;
 		};
 #pragma pack(pop)
 

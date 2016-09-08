@@ -77,10 +77,8 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
     host = msg;
 	env->srv->client_connect(this->id());
 
-	auto nd = get_pool()->construct();
-    nd->size = sizeof(DataKinds::HELLO) + sizeof(uint32_t);
-
-    nd->data[0] = (uint8_t)DataKinds::HELLO;
+	auto nd = get_pool()->construct(DataKinds::HELLO);
+    nd->size += sizeof(uint32_t);
     auto idptr = (uint32_t *)(&nd->data[1]);
     *idptr = id();
 
@@ -109,6 +107,11 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
 	  dont_free_memory = true;
 	  env->service->post(env->write_meases_strand->wrap(std::bind(&ClientIO::writeMeasurementsCall, this, d)));
   }
+
+  if (d->data[0] == (uint8_t)DataKinds::READ_INTERVAL) {
+	  dont_free_memory = true;
+	  env->service->post(env->read_meases_strand->wrap(std::bind(&ClientIO::readInterval, this, d)));
+  }
 }
 
 void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
@@ -122,6 +125,18 @@ void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
 	logger("server: #", this->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }
 
+void ClientIO::readInterval(const NetData_ptr&d) {
+	auto query_hdr = reinterpret_cast<QueryInterval_header*>(&d->data[2]);
+	
+	auto from_str = timeutil::to_string(query_hdr->from);
+	auto to_str = timeutil::to_string(query_hdr->from);
+
+	logger("server: #", this->id(), " read query #", query_hdr->id, " id(",query_hdr->ids_count,") [",from_str,',',to_str,"]");
+	auto ids_ptr = (Id*)((char*)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
+
+	env->nd_pool->free(d);
+}
 //
 // void ClientIO::readNextQuery() {
 //  async_read_until(*sock.get(), query_buff, '\n',

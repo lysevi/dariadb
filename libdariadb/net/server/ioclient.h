@@ -26,6 +26,7 @@ struct ClientIO:public AsyncConnection {
 		storage::IMeasStorage*storage;
 		NetData_Pool*nd_pool;
 		boost::asio::io_service::strand *write_meases_strand;
+		boost::asio::io_service::strand *read_meases_strand;
 		boost::asio::io_service *service;
 	};
 
@@ -46,6 +47,7 @@ struct ClientIO:public AsyncConnection {
   void onNetworkError(const boost::system::error_code&err)override;
 
   void writeMeasurementsCall(const NetData_ptr&d);
+  void readInterval(const NetData_ptr&d);
  /* void readNextQuery();
   void readHello();
   void onHello(const boost::system::error_code &err, size_t read_bytes);

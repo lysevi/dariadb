@@ -137,13 +137,11 @@ public:
     this->start(this->_socket);
     std::lock_guard<utils::Locker> lg(_locker);
     auto hn=ip::host_name();
-    auto sz=sizeof(DataKinds::HELLO) + hn.size();
 
     logger("client: send hello ", hn);
 
-	auto nd = _pool.construct();
-    nd->size=static_cast<NetData::MessageSize>(sz);
-    nd->data[0]=(uint8_t)DataKinds::HELLO;
+	auto nd = _pool.construct(DataKinds::HELLO);
+    nd->size+=static_cast<NetData::MessageSize>(hn.size());
     memcpy(&nd->data[1],hn.data(),hn.size());
     this->send(nd);
   }
@@ -174,6 +172,37 @@ public:
 	}
   }
 
+  Meas::MeasList read(const storage::QueryInterval&qi) {
+	  std::lock_guard<utils::Locker> lg(_locker);
+	  auto cur_id = _query_num.load();
+	  _query_num += 1;
+
+	  auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
+	  
+	  auto p_header = reinterpret_cast<QueryInterval_header*>(&nd->data[2]);
+	  nd->size += sizeof(QueryInterval_header);
+	  p_header->id = cur_id;
+	  p_header->flag = qi.flag;
+	  p_header->source = qi.source;
+	  p_header->from = qi.from;
+	  p_header->to = qi.to;
+	  
+	  
+	  auto id_size = sizeof(Id)*qi.ids.size();
+	  if ((id_size+nd->size) > NetData::MAX_MESSAGE_SIZE) {
+		  _pool.free(nd);
+		  THROW_EXCEPTION_SS("client: query to big");
+	  }
+	  p_header->ids_count = (uint16_t)(qi.ids.size());
+	  auto ids_ptr = ((char*)(&p_header->ids_count) + sizeof(p_header->ids_count));
+	  memcpy(ids_ptr, qi.ids.data(), id_size);
+	  /*auto id_ptr = (&nd->data[2] + sizeof(QueryInterval_header));
+	  memcpy(id_ptr, qi.ids.data(), id_size);*/
+	  nd->size += id_size;
+	  
+	  send(nd);
+	  return Meas::MeasList{};
+  }
 
   io_service _service;
   socket_ptr _socket;
@@ -181,7 +210,6 @@ public:
 
   Client::Param _params;
   utils::Locker _locker;
-  utils::Locker *_query_locker; // lock current query.
   std::thread _thread_handler;
   ClientState _state;
   std::atomic_size_t _pings_answers;
@@ -218,7 +246,7 @@ size_t Client::pings_answers() const {
  void Client::write(const Meas::MeasArray &ma) {
   _Impl->write(ma);
 }
-//
-// Meas::MeasList Client::read(const storage::QueryInterval &qi) {
-//  return _Impl->read(qi);
-//}
+
+ Meas::MeasList Client::read(const storage::QueryInterval &qi) {
+  return _Impl->read(qi);
+}

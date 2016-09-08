@@ -27,16 +27,18 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _write_meases_strand(_service), _params(p), _stop_flag(false), _is_runned_flag(false), _ping_timer(_service) {
+      : _write_meases_strand(_service), _read_meases_strand(_service), _params(p),
+        _stop_flag(false), _is_runned_flag(false), _ping_timer(_service) {
     _in_stop_logic = false;
     _next_client_id = 1;
     _connections_accepted.store(0);
     _writes_in_progress.store(0);
-	
-	_env.srv = this;
-	_env.nd_pool = &_net_data_pool;
-	_env.service = &_service;
-	_env.write_meases_strand = &_write_meases_strand;
+
+    _env.srv = this;
+    _env.nd_pool = &_net_data_pool;
+    _env.service = &_service;
+    _env.write_meases_strand = &_write_meases_strand;
+    _env.read_meases_strand = &_read_meases_strand;
   }
 
   ~Private() { stop(); }
@@ -211,6 +213,7 @@ public:
 
   io_service _service;
   io_service::strand _write_meases_strand;
+  io_service::strand _read_meases_strand;
   acceptor_ptr _acc;
 
   std::atomic_int _next_client_id;

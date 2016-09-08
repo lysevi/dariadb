@@ -14,8 +14,6 @@ struct QueryParam {
   QueryParam(const IdArray &_ids, Flag _flag) : ids(_ids), flag(_flag), source(0) {}
   QueryParam(const IdArray &_ids, Flag _flag, Flag _source)
       : ids(_ids), flag(_flag), source(_source) {}
-  std::string to_string()const;
-  void from_string(const std::string&str);
 };
 
 struct QueryInterval : public QueryParam {
@@ -27,8 +25,6 @@ struct QueryInterval : public QueryParam {
 
   QueryInterval(const IdArray &_ids, Flag _flag, Flag _source, Time _from, Time _to)
       : QueryParam(_ids, _flag, _source), from(_from), to(_to) {}
-  std::string to_string()const;
-  void from_string(const std::string&str);
 };
 
 struct QueryTimePoint : public QueryParam {
@@ -36,9 +32,6 @@ struct QueryTimePoint : public QueryParam {
 
   QueryTimePoint(const IdArray &_ids, Flag _flag, Time _time_point)
       : QueryParam(_ids, _flag), time_point(_time_point) {}
-
-  std::string to_string()const;
-  void from_string(const std::string&str);
 };
 
 struct IdArrayHasher {
