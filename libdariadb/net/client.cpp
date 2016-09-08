@@ -92,7 +92,7 @@ public:
     }
 
     if (d->data[0] == (uint8_t)DataKinds::OK) {
-      auto query_num = *reinterpret_cast<uint32_t*>(&d->data[1]);
+      auto query_num = *reinterpret_cast<uint32_t*>(&d->data[2]);
       logger("client: #", id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
         THROW_EXCEPTION_SS("(this->_state != ClientState::WORK)" << this->_state);
@@ -155,18 +155,28 @@ public:
 	logger("client: send ", ma.size());
 	size_t writed = 0;
 	while (writed!=ma.size()) {
+		auto cur_id = _query_num.load();
+		_query_num += 1;
 		auto left = (ma.size() - writed);
 		
-		//first byte for query type
-		auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1);
+		auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1-sizeof(QueryWrite_header));
 		size_t count_to_write = (left*sizeof(Meas))>cur_msg_space?cur_msg_space/sizeof(Meas):left;
 		logger("client: pack count: ", count_to_write);
+		
 		
 		auto size_to_write = count_to_write * sizeof(Meas); 
 		
 		auto nd = this->_pool.construct(DataKinds::WRITE);
-		memcpy(&nd->data[1], ma.data()+writed, size_to_write);
+		nd->size += sizeof(QueryWrite_header);
+		
+		auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data[2]);
+		hdr->id = cur_id;
+		hdr->count = count_to_write;
+
+		auto meas_ptr = ((char*)(&hdr->count) + sizeof(hdr->count));
+		memcpy(meas_ptr, ma.data()+writed, size_to_write);
 		nd->size += size_to_write;
+
 		send(nd);
 		writed += count_to_write;
 	}
@@ -196,8 +206,6 @@ public:
 	  p_header->ids_count = (uint16_t)(qi.ids.size());
 	  auto ids_ptr = ((char*)(&p_header->ids_count) + sizeof(p_header->ids_count));
 	  memcpy(ids_ptr, qi.ids.data(), id_size);
-	  /*auto id_ptr = (&nd->data[2] + sizeof(QueryInterval_header));
-	  memcpy(id_ptr, qi.ids.data(), id_size);*/
 	  nd->size += id_size;
 	  
 	  send(nd);

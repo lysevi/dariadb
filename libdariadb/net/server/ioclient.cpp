@@ -101,24 +101,38 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
   }
 
   if (d->data[0] == (uint8_t)DataKinds::WRITE) {
-	  auto count = (d->size - sizeof(DataKinds)) / sizeof(Meas);
-	  logger("server: #", this->id(), " recv ", count);
+	  auto hdr = reinterpret_cast<QueryWrite_header*>(&d->data[2]);
+	  auto count = hdr->count;
+	  logger("server: #", this->id(), " recv #",hdr->id," write ", count);
 	  this->env->srv->write_begin();
 	  dont_free_memory = true;
 	  env->service->post(env->write_meases_strand->wrap(std::bind(&ClientIO::writeMeasurementsCall, this, d)));
+	  sendOk(hdr->id);
   }
 
   if (d->data[0] == (uint8_t)DataKinds::READ_INTERVAL) {
+	  auto query_hdr = reinterpret_cast<QueryInterval_header*>(&d->data[2]);
 	  dont_free_memory = true;
 	  env->service->post(env->read_meases_strand->wrap(std::bind(&ClientIO::readInterval, this, d)));
+	  sendOk(query_hdr->id);
   }
 }
 
+void ClientIO::sendOk(int32_t query_num) {
+	auto ok_nd = env->nd_pool->construct(DataKinds::OK);
+	auto query_num_ptr = reinterpret_cast<int32_t*>(&ok_nd->data[2]);
+	*query_num_ptr = query_num;
+	ok_nd->size+=sizeof(query_num);
+	send(ok_nd);
+}
+
 void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
-	auto count = (d->size - sizeof(DataKinds)) / sizeof(Meas);
+	auto hdr = reinterpret_cast<QueryWrite_header*>(&d->data[2]);
+	auto count = hdr->count;
 	logger("server: #", this->id(), " begin async writing ", count,"...");
-	Meas::MeasArray ma{ size_t(count) };
-	memcpy(ma.data(), &d->data[1], count);
+	Meas::MeasArray ma{ size_t(hdr->count) };
+	memcpy(ma.data(), ((char*)(&hdr->count) + sizeof(hdr->count)), hdr->count);
+
 	auto ar = env->storage->append(ma.begin(), ma.end());
 	this->env->srv->write_end();
 	this->env->nd_pool->free(d);

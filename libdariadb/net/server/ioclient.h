@@ -48,6 +48,7 @@ struct ClientIO:public AsyncConnection {
 
   void writeMeasurementsCall(const NetData_ptr&d);
   void readInterval(const NetData_ptr&d);
+  void sendOk(int32_t query_num);
  /* void readNextQuery();
   void readHello();
   void onHello(const boost::system::error_code &err, size_t read_bytes);
