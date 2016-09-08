@@ -25,11 +25,21 @@ namespace dariadb {
 		struct Query_header {
 			uint8_t kind;
 		};
+		struct QueryOk_header {
+			uint8_t kind;
+			int32_t id;
+		};
+		struct QueryHelloFromServer_header {
+			uint8_t kind;
+			int32_t id;
+		};
 		struct QueryWrite_header {
+			uint8_t kind;
 			int32_t id;
 			uint32_t count;
 		};
 		struct QueryInterval_header{
+			uint8_t kind;
 			int32_t id;
 			Time from;
 			Time to;

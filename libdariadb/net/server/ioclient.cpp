@@ -71,8 +71,8 @@ void ClientIO::onNetworkError(const boost::system::error_code &err) {
 
 void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_memory) {
   logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
-
-  if (d->data[0] == (uint8_t)DataKinds::HELLO) {
+  auto qh = reinterpret_cast<Query_header*>(d->data);
+  if (qh->kind == (uint8_t)DataKinds::HELLO) {
     std::string msg((char *)&d->data[1], (char *)(d->data + d->size - 1));
     host = msg;
 	env->srv->client_connect(this->id());
@@ -86,13 +86,13 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
     return;
   }
 
-  if (d->data[0] == (uint8_t)DataKinds::PONG) {
+  if (qh->kind == (uint8_t)DataKinds::PONG) {
     pings_missed--;
     logger("server: #", this->id(), " pings_missed: ", pings_missed.load());
     return;
   }
 
-  if (d->data[0] == (uint8_t)DataKinds::DISCONNECT) {
+  if (qh->kind == (uint8_t)DataKinds::DISCONNECT) {
     logger("server: #", this->id(), " disconnection request.");
     cancel = true;
     this->end_session();
@@ -100,8 +100,8 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
     return;
   }
 
-  if (d->data[0] == (uint8_t)DataKinds::WRITE) {
-	  auto hdr = reinterpret_cast<QueryWrite_header*>(&d->data[2]);
+  if (qh->kind == (uint8_t)DataKinds::WRITE) {
+	  auto hdr = reinterpret_cast<QueryWrite_header*>(&d->data);
 	  auto count = hdr->count;
 	  logger("server: #", this->id(), " recv #",hdr->id," write ", count);
 	  this->env->srv->write_begin();
@@ -110,8 +110,8 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
 	  sendOk(hdr->id);
   }
 
-  if (d->data[0] == (uint8_t)DataKinds::READ_INTERVAL) {
-	  auto query_hdr = reinterpret_cast<QueryInterval_header*>(&d->data[2]);
+  if (qh->kind == (uint8_t)DataKinds::READ_INTERVAL) {
+	  auto query_hdr = reinterpret_cast<QueryInterval_header*>(&d->data);
 	  dont_free_memory = true;
 	  env->service->post(env->read_meases_strand->wrap(std::bind(&ClientIO::readInterval, this, d)));
 	  sendOk(query_hdr->id);
@@ -120,14 +120,14 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
 
 void ClientIO::sendOk(int32_t query_num) {
 	auto ok_nd = env->nd_pool->construct(DataKinds::OK);
-	auto query_num_ptr = reinterpret_cast<int32_t*>(&ok_nd->data[2]);
-	*query_num_ptr = query_num;
+	auto qh = reinterpret_cast<QueryOk_header*>(ok_nd->data);
+	qh->id = query_num;
 	ok_nd->size+=sizeof(query_num);
 	send(ok_nd);
 }
 
 void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
-	auto hdr = reinterpret_cast<QueryWrite_header*>(&d->data[2]);
+	auto hdr = reinterpret_cast<QueryWrite_header*>(d->data);
 	auto count = hdr->count;
 	logger("server: #", this->id(), " begin async writing ", count,"...");
 	Meas::MeasArray ma{ size_t(hdr->count) };
@@ -140,7 +140,7 @@ void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
 }
 
 void ClientIO::readInterval(const NetData_ptr&d) {
-	auto query_hdr = reinterpret_cast<QueryInterval_header*>(&d->data[2]);
+	auto query_hdr = reinterpret_cast<QueryInterval_header*>(d->data);
 	
 	auto from_str = timeutil::to_string(query_hdr->from);
 	auto to_str = timeutil::to_string(query_hdr->from);

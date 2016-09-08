@@ -91,8 +91,10 @@ public:
       logger("client: dataRecv ", d->size, " bytes.");
     }
 
-    if (d->data[0] == (uint8_t)DataKinds::OK) {
-      auto query_num = *reinterpret_cast<uint32_t*>(&d->data[2]);
+	auto qh = reinterpret_cast<Query_header*>(d->data);
+    if (qh->kind == (uint8_t)DataKinds::OK) {
+	  auto qh_ok = reinterpret_cast<QueryOk_header*>(d->data);
+      auto query_num = qh_ok->id;
       logger("client: #", id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
         THROW_EXCEPTION_SS("(this->_state != ClientState::WORK)" << this->_state);
@@ -100,7 +102,7 @@ public:
       return;
     }
 
-    if (d->data[0] == (uint8_t)DataKinds::PING) {
+    if (qh->kind == (uint8_t)DataKinds::PING) {
       logger("client: #", id(), " ping.");
 	  auto nd = _pool.construct(DataKinds::PONG);
       this->send(nd);
@@ -108,7 +110,7 @@ public:
       return;
     }
 
-    if (d->data[0] == (uint8_t)DataKinds::DISCONNECT) {
+    if (qh->kind == (uint8_t)DataKinds::DISCONNECT) {
       cancel=true;
       logger("client: #", id(), " disconnection.");
       try {
@@ -122,8 +124,9 @@ public:
     }
 
     // hello id
-    if (d->data[0] == (uint8_t)DataKinds::HELLO) {
-      auto id = *reinterpret_cast<int32_t*>(&d->data[1]);
+    if (qh->kind == (uint8_t)DataKinds::HELLO) {
+		auto qh_hello = reinterpret_cast<QueryHelloFromServer_header*>(d->data);
+		auto id = qh_hello->id;
       this->set_id(id);
       this->_state = ClientState::WORK;
       logger("client: #", id, " ready.");
@@ -169,13 +172,13 @@ public:
 		auto nd = this->_pool.construct(DataKinds::WRITE);
 		nd->size += sizeof(QueryWrite_header);
 		
-		auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data[2]);
+		auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
 		hdr->id = cur_id;
-		hdr->count = count_to_write;
+		hdr->count = static_cast<uint32_t>(count_to_write);
 
 		auto meas_ptr = ((char*)(&hdr->count) + sizeof(hdr->count));
 		memcpy(meas_ptr, ma.data()+writed, size_to_write);
-		nd->size += size_to_write;
+		nd->size += static_cast<NetData::MessageSize>(size_to_write);
 
 		send(nd);
 		writed += count_to_write;
@@ -189,7 +192,7 @@ public:
 
 	  auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
 	  
-	  auto p_header = reinterpret_cast<QueryInterval_header*>(&nd->data[2]);
+	  auto p_header = reinterpret_cast<QueryInterval_header*>(nd->data);
 	  nd->size += sizeof(QueryInterval_header);
 	  p_header->id = cur_id;
 	  p_header->flag = qi.flag;
@@ -206,7 +209,7 @@ public:
 	  p_header->ids_count = (uint16_t)(qi.ids.size());
 	  auto ids_ptr = ((char*)(&p_header->ids_count) + sizeof(p_header->ids_count));
 	  memcpy(ids_ptr, qi.ids.data(), id_size);
-	  nd->size += id_size;
+	  nd->size += static_cast<NetData::MessageSize>(id_size);
 	  
 	  send(nd);
 	  return Meas::MeasList{};
