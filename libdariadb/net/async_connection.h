@@ -24,7 +24,8 @@ public:
   void full_stop(); ///stop thread, clean queue
 
   ///if method set 'cancel' to true, then read loop stoping.
-  virtual void onDataRecv(const NetData_ptr&d, bool&cancel) = 0;
+  ///if dont_free_memory, then free NetData_ptr is in client side.
+  virtual void onDataRecv(const NetData_ptr&d, bool&cancel, bool&dont_free_memory) = 0;
   virtual void onNetworkError(const boost::system::error_code&err) = 0;
 
   void set_id(int id) { _async_con_id = id; }

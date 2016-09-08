@@ -98,10 +98,6 @@ void AsyncConnection::onReadMarker(NetData_ptr&d,const boost::system::error_code
     }
 
     if (auto spt = _sock.lock()) {
-      // TODO sync or async?. if sync - refact: rename onDataRead.
-      /*boost::system::error_code ec;
-      auto readed_bytes = spt->read_some(buffer(reinterpret_cast<uint8_t*>(&d->data), d->size), ec);
-      onReadData(d, ec, readed_bytes);*/
 		async_read(*spt.get(),
 			buffer(reinterpret_cast<uint8_t*>(&d->data), d->size),
 			std::bind(&AsyncConnection::onReadData, this, d, _1, _2));
@@ -118,14 +114,17 @@ void AsyncConnection::onReadData(NetData_ptr &d,
     this->onNetworkError(err);
   } else {
     bool cancel_flag = false;
-
+	bool dont_free_mem = false;
     try {
-      this->onDataRecv(d, cancel_flag);
+      this->onDataRecv(d, cancel_flag, dont_free_mem);
     } catch (std::exception &ex) {
       THROW_EXCEPTION_SS("exception on async readData. #"
                          << _async_con_id << " - " << ex.what());
     }
-	_pool->free(d);
+
+	if (!dont_free_mem) {
+		_pool->free(d);
+	}
 
 	if (!cancel_flag) {
       readNextAsync();

@@ -69,7 +69,7 @@ void ClientIO::onNetworkError(const boost::system::error_code &err) {
   this->close();
 }
 
-void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel) {
+void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_memory) {
   logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
 
   if (d->data[0] == (uint8_t)DataKinds::HELLO) {
