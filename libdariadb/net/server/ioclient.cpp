@@ -118,6 +118,7 @@ void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
 	memcpy(ma.data(), &d->data[1], count);
 	auto ar = env->storage->append(ma.begin(), ma.end());
 	this->env->srv->write_end();
+	this->env->nd_pool->free(d);
 	logger("server: #", this->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }
 
