@@ -34,6 +34,7 @@ public:
     _writes_in_progress.store(0);
 	
 	_env.srv = this;
+	_env.nd_pool = &this->_net_data_pool;
   }
 
   ~Private() { stop(); }
@@ -123,7 +124,7 @@ public:
     auto cur_id = _next_client_id.load();
     _next_client_id++;
 	
-    ClientIO_ptr new_client{new ClientIO(cur_id,&_net_data_pool, sock, &_env)};
+    ClientIO_ptr new_client{new ClientIO(cur_id, sock, &_env)};
 	
     _clients_locker.lock();
     _clients.insert(std::make_pair(new_client->id(), new_client));

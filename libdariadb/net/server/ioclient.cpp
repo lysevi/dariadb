@@ -10,7 +10,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-ClientIO::ClientIO(int _id, NetData_Pool*pool, socket_ptr &_sock, ClientIO::Environment *_env):AsyncConnection(pool) {
+ClientIO::ClientIO(int _id, socket_ptr &_sock, ClientIO::Environment *_env):AsyncConnection(_env->nd_pool) {
   pings_missed = 0;
   state = ClientState::CONNECT;
   set_id(_id);

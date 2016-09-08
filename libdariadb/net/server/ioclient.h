@@ -19,9 +19,11 @@ struct ClientIO:public AsyncConnection {
 		Environment() {
 			srv = nullptr;
 			storage = nullptr;
+			nd_pool = nullptr;
 		}
 		IClientManager *srv;
 		storage::IMeasStorage*storage;
+		NetData_Pool*nd_pool;
 	};
 
   socket_ptr sock;
@@ -31,7 +33,7 @@ struct ClientIO:public AsyncConnection {
   Environment *env;
   std::atomic_int pings_missed;
 
-  ClientIO(int _id, NetData_Pool*pool, socket_ptr&_sock, Environment *_env);
+  ClientIO(int _id, socket_ptr&_sock, Environment *_env);
   ~ClientIO();
   void end_session();
   void close();
