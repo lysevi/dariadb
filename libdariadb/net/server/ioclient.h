@@ -48,17 +48,7 @@ struct ClientIO:public AsyncConnection {
 
   void writeMeasurementsCall(const NetData_ptr&d);
   void readInterval(const NetData_ptr&d);
-  void sendOk(int32_t query_num);
- /* void readNextQuery();
-  void readHello();
-  void onHello(const boost::system::error_code &err, size_t read_bytes);
-  void onReadQuery(const boost::system::error_code &err, size_t read_bytes);
-  void onPingSended(const boost::system::error_code &err, size_t read_bytes);
-  void onOkSended(const boost::system::error_code &err, size_t read_bytes);
-  void onDisconnectSended(const boost::system::error_code &err,
-                          size_t read_bytes);
-  void onRecvValues(size_t values_count,const boost::system::error_code &err, size_t read_bytes);
-  void onReadIntervalAnswerSended(const boost::system::error_code &err, size_t read_bytes);*/
+  void sendOk(QueryNumber query_num);
 };
 
 typedef std::shared_ptr<ClientIO> ClientIO_ptr;

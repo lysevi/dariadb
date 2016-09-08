@@ -22,25 +22,26 @@ namespace dariadb {
 
 			std::tuple<MessageSize, uint8_t*> as_buffer();
 		};
+		typedef uint32_t QueryNumber;
 		struct Query_header {
 			uint8_t kind;
 		};
 		struct QueryOk_header {
 			uint8_t kind;
-			int32_t id;
+			QueryNumber id;
 		};
 		struct QueryHelloFromServer_header {
 			uint8_t kind;
-			int32_t id;
+			QueryNumber id;
 		};
 		struct QueryWrite_header {
 			uint8_t kind;
-			int32_t id;
+			QueryNumber id;
 			uint32_t count;
 		};
 		struct QueryInterval_header{
 			uint8_t kind;
-			int32_t id;
+			QueryNumber id;
 			Time from;
 			Time to;
 			Flag flag;

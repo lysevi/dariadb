@@ -5,8 +5,6 @@
 #include "async_connection.h"
 #include "net_common.h"
 
-#include <json/json.hpp>
-#define BOOST_ASIO_ENABLE_HANDLER_TRACKING
 #include <boost/asio.hpp>
 #include <functional>
 #include <thread>
@@ -158,7 +156,7 @@ public:
 	logger("client: send ", ma.size());
 	size_t writed = 0;
 	while (writed!=ma.size()) {
-		auto cur_id = _query_num.load();
+		auto cur_id = _query_num;
 		_query_num += 1;
 		auto left = (ma.size() - writed);
 		
@@ -186,9 +184,10 @@ public:
   }
 
   Meas::MeasList read(const storage::QueryInterval&qi) {
-	  std::lock_guard<utils::Locker> lg(_locker);
-	  auto cur_id = _query_num.load();
+	  _locker.lock();
+	  auto cur_id = _query_num;
 	  _query_num += 1;
+	  _locker.unlock();
 
 	  auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
 	  
@@ -225,7 +224,7 @@ public:
   ClientState _state;
   std::atomic_size_t _pings_answers;
 
-  std::atomic_int _query_num;
+  QueryNumber _query_num;
   Meas::MeasArray in_buffer_values;
   NetData_Pool _pool;
 };
