@@ -30,6 +30,10 @@ namespace dariadb {
 			uint8_t kind;
 			QueryNumber id;
 		};
+		struct QueryError_header {
+			uint8_t kind;
+			QueryNumber id;
+		};
 		struct QueryHelloFromServer_header {
 			uint8_t kind;
 			QueryNumber id;

@@ -124,6 +124,14 @@ void ClientIO::sendOk(QueryNumber query_num) {
 	send(ok_nd);
 }
 
+void ClientIO::sendError(QueryNumber query_num) {
+	auto err_nd = env->nd_pool->construct(DataKinds::OK);
+	auto qh = reinterpret_cast<QueryOk_header*>(err_nd->data);
+	qh->id = query_num;
+	err_nd->size += sizeof(query_num);
+	send(err_nd);
+}
+
 void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
 	auto hdr = reinterpret_cast<QueryWrite_header*>(d->data);
 	auto count = hdr->count;

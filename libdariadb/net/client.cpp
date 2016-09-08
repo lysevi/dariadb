@@ -95,7 +95,15 @@ public:
       }
       return;
     }
-
+	if (qh->kind == (uint8_t)DataKinds::ERR) {
+		auto qh_e = reinterpret_cast<QueryError_header*>(d->data);
+		auto query_num = qh_e->id;
+		logger_info("client: #", id(), " query #", query_num, " error.");
+		auto subres = this->_query_results[qh_e->id];
+		subres->locker.unlock();
+		_query_results.erase(qh_e->id);
+		return;
+	}
 	
 	if (qh->kind == (uint8_t)DataKinds::WRITE) {
 		auto qw = reinterpret_cast<QueryWrite_header*>(d->data);
@@ -103,6 +111,7 @@ public:
 		auto subres = this->_query_results[qw->id];
 		if (qw->count == 0) {
 			subres->locker.unlock();
+			_query_results.erase(qw->id);
 		}
 		else {
 			Meas::MeasArray ma = qw->read_measarray();

@@ -49,6 +49,7 @@ struct ClientIO:public AsyncConnection {
   void writeMeasurementsCall(const NetData_ptr&d);
   void readInterval(const NetData_ptr&d);
   void sendOk(QueryNumber query_num);
+  void sendError(QueryNumber query_num);
 };
 
 typedef std::shared_ptr<ClientIO> ClientIO_ptr;
