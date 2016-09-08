@@ -307,7 +307,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
   dariadb::storage::QueryInterval qi{ ids,0,dariadb::Time(0),dariadb::Time(MEASES_SIZE) };
   auto result = c1.read(qi);
-  //BOOST_CHECK_EQUAL(result.size(), ma.size());
+  BOOST_CHECK_EQUAL(result.size(), ma.size());
 
   c1.disconnect();
 

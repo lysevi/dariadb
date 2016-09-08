@@ -7,6 +7,8 @@
 
 #include <boost/asio.hpp>
 #include <functional>
+#include <map>
+#include <memory>
 #include <thread>
 
 using namespace std::placeholders;
@@ -31,13 +33,7 @@ public:
       if (_state != ClientState::DISCONNECTED && _socket != nullptr) {
         this->disconnect();
       }
-      /*if (_socket->is_open()) {
-        boost::system::error_code err;
-        _socket->cancel(err);
-        if (err) {
-          logger("client: #", id(), " on socket::cancel - ", err.message());
-        }
-      }*/
+
       _service.stop();
       _thread_handler.join();
     } catch (std::exception &ex) {
@@ -99,6 +95,24 @@ public:
       }
       return;
     }
+
+	
+	if (qh->kind == (uint8_t)DataKinds::WRITE) {
+		auto qw = reinterpret_cast<QueryWrite_header*>(d->data);
+		logger("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
+		auto subres = this->_query_results[qw->id];
+		if (qw->count == 0) {
+			subres->locker.unlock();
+		}
+		else {
+			Meas::MeasArray ma{ size_t(qw->count) };
+			memcpy(ma.data(), ((char*)(&qw->count) + sizeof(qw->count)), qw->count * sizeof(Meas));
+			for (auto&v : ma) {
+				subres->mlist->push_back(v);
+			}
+		}
+		return;
+	}
 
     if (qh->kind == (uint8_t)DataKinds::PING) {
       logger("client: #", id(), " ping.");
@@ -183,11 +197,22 @@ public:
 	}
   }
 
+  struct ReadResult {
+	  QueryNumber   id;
+	  utils::Locker locker;
+	  Meas::MeasList *mlist;
+  };
+  using ReadResult_ptr = std::shared_ptr<ReadResult>;
+
   Meas::MeasList read(const storage::QueryInterval&qi) {
 	  _locker.lock();
 	  auto cur_id = _query_num;
 	  _query_num += 1;
 	  _locker.unlock();
+
+	  auto qres=std::make_shared<ReadResult>();
+	  qres->locker.lock();
+	  qres->id = cur_id;
 
 	  auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
 	  
@@ -211,7 +236,12 @@ public:
 	  nd->size += static_cast<NetData::MessageSize>(id_size);
 	  
 	  send(nd);
-	  return Meas::MeasList{};
+
+	  Meas::MeasList result{};
+	  qres->mlist = &result;
+	  this->_query_results[qres->id] = qres;
+	  qres->locker.lock();
+	  return result;
   }
 
   io_service _service;
@@ -227,6 +257,7 @@ public:
   QueryNumber _query_num;
   Meas::MeasArray in_buffer_values;
   NetData_Pool _pool;
+  std::map<QueryNumber, ReadResult_ptr> _query_results;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
