@@ -20,10 +20,13 @@ struct ClientIO:public AsyncConnection {
 			srv = nullptr;
 			storage = nullptr;
 			nd_pool = nullptr;
+			write_meases_strand = nullptr;
 		}
 		IClientManager *srv;
 		storage::IMeasStorage*storage;
 		NetData_Pool*nd_pool;
+		boost::asio::io_service::strand *write_meases_strand;
+		boost::asio::io_service *service;
 	};
 
   socket_ptr sock;
@@ -41,6 +44,8 @@ struct ClientIO:public AsyncConnection {
   
   void onDataRecv(const NetData_ptr&d, bool&cancel, bool&dont_free_memory) override;
   void onNetworkError(const boost::system::error_code&err)override;
+
+  void writeMeasurementsCall(const NetData_ptr&d);
  /* void readNextQuery();
   void readHello();
   void onHello(const boost::system::error_code &err, size_t read_bytes);

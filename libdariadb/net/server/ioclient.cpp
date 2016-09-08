@@ -106,12 +106,19 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
 	  auto count = (d->size - sizeof(DataKinds)) / sizeof(Meas);
 	  logger("server: #", this->id(), " recv ", count);
 	  this->env->srv->write_begin();
-	  Meas::MeasArray ma{ size_t(count) };
-	  memcpy(ma.data(), &d->data[1], count);
-	  auto ar=env->storage->append(ma.begin(), ma.end());
-	  this->env->srv->write_end();
-	  logger("server: #", this->id(), " writed ", ar.writed, " ignored ",ar.ignored);
+	  dont_free_memory = true;
+	  env->service->post(env->write_meases_strand->wrap(std::bind(&ClientIO::writeMeasurementsCall, this, d)));
   }
+}
+
+void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
+	auto count = (d->size - sizeof(DataKinds)) / sizeof(Meas);
+	logger("server: #", this->id(), " begin async writing ", count,"...");
+	Meas::MeasArray ma{ size_t(count) };
+	memcpy(ma.data(), &d->data[1], count);
+	auto ar = env->storage->append(ma.begin(), ma.end());
+	this->env->srv->write_end();
+	logger("server: #", this->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }
 
 //
