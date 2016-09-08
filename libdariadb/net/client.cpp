@@ -59,7 +59,7 @@ public:
     }
 
     while (this->_state != ClientState::DISCONNECTED) {
-      logger("client: #", id(), " disconnect - wait server answer...");
+      logger_info("client: #", id(), " disconnect - wait server answer...");
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   }
@@ -89,7 +89,7 @@ public:
     if (qh->kind == (uint8_t)DataKinds::OK) {
 	  auto qh_ok = reinterpret_cast<QueryOk_header*>(d->data);
       auto query_num = qh_ok->id;
-      logger("client: #", id(), " query #", query_num, " accepted.");
+      logger_info("client: #", id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
         THROW_EXCEPTION_SS("(this->_state != ClientState::WORK)" << this->_state);
       }
@@ -99,14 +99,13 @@ public:
 	
 	if (qh->kind == (uint8_t)DataKinds::WRITE) {
 		auto qw = reinterpret_cast<QueryWrite_header*>(d->data);
-		logger("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
+		logger_info("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
 		auto subres = this->_query_results[qw->id];
 		if (qw->count == 0) {
 			subres->locker.unlock();
 		}
 		else {
-			Meas::MeasArray ma{ size_t(qw->count) };
-			memcpy(ma.data(), ((char*)(&qw->count) + sizeof(qw->count)), qw->count * sizeof(Meas));
+			Meas::MeasArray ma = qw->read_measarray();
 			for (auto&v : ma) {
 				subres->mlist->push_back(v);
 			}
@@ -115,7 +114,7 @@ public:
 	}
 
     if (qh->kind == (uint8_t)DataKinds::PING) {
-      logger("client: #", id(), " ping.");
+      logger_info("client: #", id(), " ping.");
 	  auto nd = _pool.construct(DataKinds::PONG);
       this->send(nd);
       _pings_answers++;
@@ -124,14 +123,14 @@ public:
 
     if (qh->kind == (uint8_t)DataKinds::DISCONNECT) {
       cancel=true;
-      logger("client: #", id(), " disconnection.");
+      logger_info("client: #", id(), " disconnection.");
       try {
         _state = ClientState::DISCONNECTED;
         this->full_stop();
         this->_socket->close();
       } catch (...) {
       }
-      logger("client: #", id(), " disconnected.");
+      logger_info("client: #", id(), " disconnected.");
       return;
     }
 
@@ -141,7 +140,7 @@ public:
 		auto id = qh_hello->id;
       this->set_id(id);
       this->_state = ClientState::WORK;
-      logger("client: #", id, " ready.");
+      logger_info("client: #", id, " ready.");
     }
   }
 
@@ -153,7 +152,7 @@ public:
     std::lock_guard<utils::Locker> lg(_locker);
     auto hn=ip::host_name();
 
-    logger("client: send hello ", hn);
+    logger_info("client: send hello ", hn);
 
 	auto nd = _pool.construct(DataKinds::HELLO);
     nd->size+=static_cast<NetData::MessageSize>(hn.size());
@@ -167,7 +166,7 @@ public:
   
   void write(const Meas::MeasArray &ma) {
     std::lock_guard<utils::Locker> lg(this->_locker);
-	logger("client: send ", ma.size());
+	logger_info("client: send ", ma.size());
 	size_t writed = 0;
 	while (writed!=ma.size()) {
 		auto cur_id = _query_num;
@@ -176,7 +175,7 @@ public:
 		
 		auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1-sizeof(QueryWrite_header));
 		size_t count_to_write = (left*sizeof(Meas))>cur_msg_space?cur_msg_space/sizeof(Meas):left;
-		logger("client: pack count: ", count_to_write);
+		logger_info("client: pack count: ", count_to_write);
 		
 		
 		auto size_to_write = count_to_write * sizeof(Meas); 

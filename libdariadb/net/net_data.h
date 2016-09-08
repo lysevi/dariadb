@@ -38,6 +38,8 @@ namespace dariadb {
 			uint8_t kind;
 			QueryNumber id;
 			uint32_t count;
+
+			Meas::MeasArray read_measarray()const;
 		};
 		struct QueryInterval_header{
 			uint8_t kind;

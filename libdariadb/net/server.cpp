@@ -44,7 +44,7 @@ public:
   ~Private() { stop(); }
 
   void set_storage(storage::IMeasStorage *storage) {
-    logger("server: set setorage.");
+    logger_info("server: set setorage.");
     _env.storage = storage;
   }
 
@@ -203,7 +203,7 @@ public:
     _clients_locker.unlock();
 
     for (auto &id : to_remove) {
-      logger("server: remove #", id);
+      logger_info("server: remove #", id);
       client_disconnect(id);
       _clients.erase(id);
     }

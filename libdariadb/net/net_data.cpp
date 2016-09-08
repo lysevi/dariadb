@@ -21,3 +21,10 @@ std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
 	auto buf_size = static_cast<MessageSize>(MARKER_SIZE + size);
 	return std::tie(buf_size, v);
 }
+
+
+Meas::MeasArray QueryWrite_header::read_measarray()const {
+	Meas::MeasArray ma{ size_t(count) };
+	memcpy(ma.data(), ((char*)(&count) + sizeof(count)), count * sizeof(Meas));
+	return ma;
+}
