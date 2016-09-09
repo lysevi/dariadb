@@ -16,6 +16,7 @@ using namespace boost::asio;
 
 using namespace dariadb;
 using namespace dariadb::net;
+using namespace dariadb::net::client;
 
 typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 
@@ -110,13 +111,15 @@ public:
 		logger_info("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
 		auto subres = this->_query_results[qw->id];
 		if (qw->count == 0) {
+			subres->is_closed = true;
+			subres->clbk(subres.get(), Meas::empty());
 			subres->locker.unlock();
 			_query_results.erase(qw->id);
 		}
 		else {
 			Meas::MeasArray ma = qw->read_measarray();
 			for (auto&v : ma) {
-				subres->mlist->push_back(v);
+				subres->clbk(subres.get(), v);
 			}
 		}
 		return;
@@ -205,14 +208,8 @@ public:
 	}
   }
 
-  struct ReadResult {
-	  QueryNumber   id;
-	  utils::Locker locker;
-	  Meas::MeasList *mlist;
-  };
-  using ReadResult_ptr = std::shared_ptr<ReadResult>;
 
-  Meas::MeasList read(const storage::QueryInterval&qi) {
+  ReadResult_ptr read(const storage::QueryInterval&qi, ReadResult::callback&clbk) {
 	  _locker.lock();
 	  auto cur_id = _query_num;
 	  _query_num += 1;
@@ -244,14 +241,24 @@ public:
 	  nd->size += static_cast<NetData::MessageSize>(id_size);
 	  
 	  send(nd);
-
-	  Meas::MeasList result{};
-	  qres->mlist = &result;
+	  qres->is_closed = false;
+	  qres->clbk = clbk;
 	  this->_query_results[qres->id] = qres;
-	  qres->locker.lock();
-	  return result;
+	  return qres;
   }
 
+  Meas::MeasList read(const storage::QueryInterval&qi) {
+	  Meas::MeasList result{};
+	  auto clbk_lambda = [&result](const ReadResult*parent,const Meas&m) {
+		  if (!parent->is_closed) {
+			  result.push_back(m);
+		  }
+	  };
+	  ReadResult::callback clbk = clbk_lambda;
+	  auto qres = read(qi, clbk);
+	  qres->wait();
+	  return result;
+  }
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -296,6 +303,10 @@ size_t Client::pings_answers() const {
   _Impl->write(ma);
 }
 
- Meas::MeasList Client::read(const storage::QueryInterval &qi) {
+Meas::MeasList Client::read(const storage::QueryInterval &qi) {
   return _Impl->read(qi);
 }
+
+ ReadResult_ptr Client::read(const storage::QueryInterval&qi, ReadResult::callback&clbk) {
+	 return _Impl->read(qi,clbk);
+ }

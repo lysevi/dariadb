@@ -57,7 +57,7 @@ public:
 };
 
 const dariadb::net::Server::Param server_param(2001);
-const dariadb::net::Client::Param client_param("127.0.0.1", 2001);
+const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
 
 std::atomic_bool server_runned;
 std::atomic_bool server_stop_flag;
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
 	}
 
-	dariadb::net::Client c(client_param);
+	dariadb::net::client::Client c(client_param);
 	c.connect();
 
 	// 1 client
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
-  dariadb::net::Client c(client_param);
+  dariadb::net::client::Client c(client_param);
   c.connect();
 
   // 1 client
@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
   }
 
   { // this check disconnect on client::dtor.
-    dariadb::net::Client c2(client_param);
+    dariadb::net::client::Client c2(client_param);
     c2.connect();
 
     // 2 client: c and c2
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
-  dariadb::net::Client c3(client_param);
+  dariadb::net::client::Client c3(client_param);
   c3.connect();
 
   // 2 client: c and c3
@@ -218,9 +218,9 @@ BOOST_AUTO_TEST_CASE(PingTest) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
-  dariadb::net::Client c1(client_param);
+  dariadb::net::client::Client c1(client_param);
   c1.connect();
-  dariadb::net::Client c2(client_param);
+  dariadb::net::client::Client c2(client_param);
   c2.connect();
 
   // 2 clients
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
   server_instance->set_storage(stor.get());
-  dariadb::net::Client c1(client_param);
+  dariadb::net::client::Client c1(client_param);
   c1.connect();
 
   // 1 client

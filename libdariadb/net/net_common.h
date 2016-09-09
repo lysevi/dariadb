@@ -1,22 +1,22 @@
 #pragma once
 
+#include <cstdint>
 #include <ostream>
 #include <string>
-#include <cstdint>
 
 namespace dariadb {
 namespace net {
 
-    enum class DataKinds:uint8_t{
-        OK,
-        ERR,
-        HELLO,
-        DISCONNECT,
-        PING,
-        PONG,
-        WRITE,
-        READ_INTERVAL
-    };
+enum class DataKinds : uint8_t {
+  OK,
+  ERR,
+  HELLO,
+  DISCONNECT,
+  PING,
+  PONG,
+  WRITE,
+  READ_INTERVAL
+};
 
 enum class ClientState {
   CONNECT, // connection is beginning but a while not ended.
@@ -25,5 +25,7 @@ enum class ClientState {
 };
 
 std::ostream &operator<<(std::ostream &stream, const ClientState &state);
+
+typedef uint32_t QueryNumber;
 }
 }
