@@ -259,6 +259,56 @@ public:
 	  qres->wait();
 	  return result;
   }
+
+    
+  ReadResult_ptr read(const storage::QueryTimePoint&qi, ReadResult::callback&clbk) {
+	  _locker.lock();
+	  auto cur_id = _query_num;
+	  _query_num += 1;
+	  _locker.unlock();
+
+	  auto qres = std::make_shared<ReadResult>();
+	  qres->locker.lock();
+	  qres->id = cur_id;
+
+	  auto nd = this->_pool.construct(DataKinds::READ_TIMEPOINT);
+
+	  auto p_header = reinterpret_cast<QueryTimePoint_header*>(nd->data);
+	  nd->size += sizeof(QueryTimePoint_header);
+	  p_header->id = cur_id;
+	  p_header->flag = qi.flag;
+	  p_header->tp = qi.time_point;
+
+
+	  auto id_size = sizeof(Id)*qi.ids.size();
+	  if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
+		  _pool.free(nd);
+		  THROW_EXCEPTION_SS("client: query to big");
+	  }
+	  p_header->ids_count = (uint16_t)(qi.ids.size());
+	  auto ids_ptr = ((char*)(&p_header->ids_count) + sizeof(p_header->ids_count));
+	  memcpy(ids_ptr, qi.ids.data(), id_size);
+	  nd->size += static_cast<NetData::MessageSize>(id_size);
+
+	  send(nd);
+	  qres->is_closed = false;
+	  qres->clbk = clbk;
+	  this->_query_results[qres->id] = qres;
+	  return qres;
+  }
+
+  Meas::Id2Meas read(const storage::QueryTimePoint &qi) {
+	  Meas::Id2Meas result{};
+	  auto clbk_lambda = [&result](const ReadResult*parent, const Meas&m) {
+		  if (!parent->is_closed) {
+			  result[m.id] = m;
+		  }
+	  };
+	  ReadResult::callback clbk = clbk_lambda;
+	  auto qres = read(qi, clbk);
+	  qres->wait();
+	  return result;
+  }
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -309,4 +359,12 @@ Meas::MeasList Client::read(const storage::QueryInterval &qi) {
 
  ReadResult_ptr Client::read(const storage::QueryInterval&qi, ReadResult::callback&clbk) {
 	 return _Impl->read(qi,clbk);
+ }
+
+ Meas::Id2Meas Client::read(const storage::QueryTimePoint &qi) {
+	 return _Impl->read(qi);
+ }
+
+ ReadResult_ptr Client::read(const storage::QueryTimePoint&qi, ReadResult::callback&clbk) {
+	 return _Impl->read(qi, clbk);
  }

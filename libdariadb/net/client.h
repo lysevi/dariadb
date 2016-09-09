@@ -46,6 +46,9 @@ public:
   void write(const Meas::MeasArray &ma);
   Meas::MeasList read(const storage::QueryInterval &qi);
   ReadResult_ptr read(const storage::QueryInterval&qi,  ReadResult::callback&clbk);
+
+  Meas::Id2Meas read(const storage::QueryTimePoint &qi);
+  ReadResult_ptr read(const storage::QueryTimePoint&qi, ReadResult::callback&clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

@@ -54,6 +54,13 @@ struct QueryInterval_header {
   Flag source;
   uint16_t ids_count;
 };
+struct QueryTimePoint_header {
+	uint8_t kind;
+	QueryNumber id;
+	Time tp;
+	Flag flag;
+	uint16_t ids_count;
+};
 #pragma pack(pop)
 
 using NetData_Pool = boost::object_pool<NetData>;

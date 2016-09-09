@@ -15,7 +15,8 @@ enum class DataKinds : uint8_t {
   PING,
   PONG,
   WRITE,
-  READ_INTERVAL
+  READ_INTERVAL,
+  READ_TIMEPOINT
 };
 
 enum class ClientState {
