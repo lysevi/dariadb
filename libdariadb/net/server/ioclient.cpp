@@ -104,7 +104,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
   if (qh->kind == (uint8_t)DataKinds::READ_TIMEPOINT) {
 	  auto query_hdr = reinterpret_cast<QueryTimePoint_header*>(&d->data);
 	  dont_free_memory = true;
-	  env->service->post(env->read_meases_strand->wrap(std::bind(&IOClient::readTimPoint, this, d)));
+      env->service->post(env->read_meases_strand->wrap(std::bind(&IOClient::readTimePoint, this, d)));
 	  sendOk(query_hdr->id);
 	  return;
   }
@@ -167,50 +167,14 @@ void IOClient::readInterval(const NetData_ptr&d) {
 	
 	env->nd_pool->free(d);
 
-	auto result = env->storage->readInterval(qi);
-	size_t result_size = result.size();
-	size_t writed = 0;
-	auto source_it = result.begin();
-	while (writed != result_size) {
-		auto left = (result_size - writed);
-
-		auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryWrite_header));
-		size_t count_to_write = (left * sizeof(Meas))>cur_msg_space ? cur_msg_space / sizeof(Meas) : left;
-		logger_info("server: #",id()," pack count ", count_to_write);
-
-
-		auto size_to_write = count_to_write * sizeof(Meas);
-		
-		auto nd = env->nd_pool->construct(DataKinds::WRITE);
-		nd->size += sizeof(QueryWrite_header);
-
-		auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
-		hdr->id = query_num;
-		hdr->count = static_cast<uint32_t>(count_to_write);
-
-		auto meas_ptr = (Meas*)((char*)(&hdr->count) + sizeof(hdr->count));
-		nd->size += static_cast<NetData::MessageSize>(size_to_write);
-		auto it = source_it;
-		size_t i = 0;
-		for (; it != result.end() && i<count_to_write; ++it, ++i) {
-			*meas_ptr = *it;
-			++source_it;
-			++meas_ptr;
-		}
-		send(nd);
-		writed += count_to_write;
-	}
-
-	auto nd = env->nd_pool->construct(DataKinds::WRITE);
-	nd->size += sizeof(QueryWrite_header);
-	auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
-	hdr->id = query_num;
-	hdr->count = 0;
-	send(nd);
+    //TODO use shared ptr
+    ClientDataReader *cdr=new ClientDataReader(this,query_num);
+    env->storage->foreach(qi,cdr);
+    delete cdr;
 }
 
 
-void IOClient::readTimPoint(const NetData_ptr &d) {
+void IOClient::readTimePoint(const NetData_ptr &d) {
 	auto query_hdr = reinterpret_cast<QueryTimePoint_header*>(d->data);
 
 	auto tp_str = timeutil::to_string(query_hdr->tp);
@@ -224,44 +188,10 @@ void IOClient::readTimPoint(const NetData_ptr &d) {
 
 	env->nd_pool->free(d);
 
-	auto result = env->storage->readInTimePoint(qi);
-	size_t result_size = result.size();
-	size_t writed = 0;
-	auto source_it = result.begin();
-	while (writed != result_size) {
-		auto left = (result_size - writed);
+    //TODO use shared ptr
+    ClientDataReader *cdr=new ClientDataReader(this,query_num);
+    env->storage->foreach(qi,cdr);
+    delete cdr;
+    //auto result = env->storage->readInTimePoint(qi);
 
-		auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryWrite_header));
-		size_t count_to_write = (left * sizeof(Meas))>cur_msg_space ? cur_msg_space / sizeof(Meas) : left;
-		logger_info("server: #", id(), " send pack ", count_to_write,"...");
-
-
-		auto size_to_write = count_to_write * sizeof(Meas);
-
-		auto nd = env->nd_pool->construct(DataKinds::WRITE);
-		nd->size += sizeof(QueryWrite_header);
-
-		auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
-		hdr->id = query_num;
-		hdr->count = static_cast<uint32_t>(count_to_write);
-
-		auto meas_ptr = (Meas*)((char*)(&hdr->count) + sizeof(hdr->count));
-		nd->size += static_cast<NetData::MessageSize>(size_to_write);
-		auto it = source_it;
-		size_t i = 0;
-		for (; it != result.end() && i<count_to_write; ++it, ++i) {
-			*meas_ptr = it->second;
-			++source_it;
-			++meas_ptr;
-		}
-		send(nd);
-		writed += count_to_write;
-	}
-
-	auto nd = env->nd_pool->construct(DataKinds::WRITE);
-	nd->size += sizeof(QueryWrite_header);
-	auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
-	hdr->id = query_num;
-	hdr->count = 0;
-	send(nd);
 }

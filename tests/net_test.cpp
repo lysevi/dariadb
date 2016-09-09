@@ -30,7 +30,17 @@ public:
         clbk->call(v);
       }
     }
+    clbk->is_end();
   }
+
+  void foreach (const dariadb::storage::QueryTimePoint &q, dariadb::storage::IReaderClb * clbk)override {
+    auto values = this->readInTimePoint(q);
+    for (auto &kv : values) {
+      clbk->call(kv.second);
+    }
+    clbk->is_end();
+  }
+
 
   dariadb::Meas::Id2Meas
   readInTimePoint(const dariadb::storage::QueryTimePoint &q) override {
