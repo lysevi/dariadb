@@ -128,7 +128,7 @@ public:
     auto cur_id = _next_client_id.load();
     _next_client_id++;
 	
-    ClientIO_ptr new_client{new ClientIO(cur_id, sock, &_env)};
+    ClientIO_ptr new_client{new IOClient(cur_id, sock, &_env)};
 	
     _clients_locker.lock();
     _clients.insert(std::make_pair(new_client->id(), new_client));
@@ -231,7 +231,7 @@ public:
 
   deadline_timer _ping_timer;
 
-  ClientIO::Environment _env;
+  IOClient::Environment _env;
   std::atomic_int _writes_in_progress;
 
   bool _in_stop_logic; // TODO union with _stop_flag

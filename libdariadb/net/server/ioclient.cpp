@@ -10,7 +10,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-ClientIO::ClientIO(int _id, socket_ptr &_sock, ClientIO::Environment *_env):AsyncConnection(_env->nd_pool) {
+IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env):AsyncConnection(_env->nd_pool) {
   pings_missed = 0;
   state = ClientState::CONNECT;
   set_id(_id);
@@ -19,9 +19,9 @@ ClientIO::ClientIO(int _id, socket_ptr &_sock, ClientIO::Environment *_env):Asyn
   this->start(sock);
 }
 
-ClientIO::~ClientIO() { this->full_stop(); }
+IOClient::~IOClient() { this->full_stop(); }
 
-void ClientIO::end_session() {
+void IOClient::end_session() {
   logger_info("server: #", this->id(), " send disconnect signal.");
   this->state = ClientState::DISCONNECTED;
 
@@ -36,7 +36,7 @@ void ClientIO::end_session() {
   }
 }
 
-void ClientIO::close() {
+void IOClient::close() {
   state = ClientState::DISCONNECTED;
   mark_stoped();
   if (this->sock->is_open()) {
@@ -47,13 +47,13 @@ void ClientIO::close() {
   logger_info("server: client #", this->id(), " stoped.");
 }
 
-void ClientIO::ping() {
+void IOClient::ping() {
   pings_missed++;
   auto nd = this->get_pool()->construct(DataKinds::PING);
   this->send(nd);
 }
 
-void ClientIO::onNetworkError(const boost::system::error_code &err) {
+void IOClient::onNetworkError(const boost::system::error_code &err) {
   if (state != ClientState::DISCONNECTED) {
     // TODO check this moment.
     logger_info("server: client #", this->id(), " network error - ",
@@ -64,7 +64,7 @@ void ClientIO::onNetworkError(const boost::system::error_code &err) {
   this->close();
 }
 
-void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_memory) {
+void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_memory) {
   logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
   auto qh = reinterpret_cast<Query_header*>(d->data);
 
@@ -74,7 +74,7 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
 	  logger_info("server: #", this->id(), " recv #", hdr->id, " write ", count);
 	  this->env->srv->write_begin();
 	  dont_free_memory = true;
-	  env->service->post(env->write_meases_strand->wrap(std::bind(&ClientIO::writeMeasurementsCall, this, d)));
+	  env->service->post(env->write_meases_strand->wrap(std::bind(&IOClient::writeMeasurementsCall, this, d)));
 	  sendOk(hdr->id);
 	  return;
   }
@@ -96,7 +96,7 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
   if (qh->kind == (uint8_t)DataKinds::READ_INTERVAL) {
 	  auto query_hdr = reinterpret_cast<QueryInterval_header*>(&d->data);
 	  dont_free_memory = true;
-	  env->service->post(env->read_meases_strand->wrap(std::bind(&ClientIO::readInterval, this, d)));
+	  env->service->post(env->read_meases_strand->wrap(std::bind(&IOClient::readInterval, this, d)));
 	  sendOk(query_hdr->id);
 	  return;
   }
@@ -116,7 +116,7 @@ void ClientIO::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
   }
 }
 
-void ClientIO::sendOk(QueryNumber query_num) {
+void IOClient::sendOk(QueryNumber query_num) {
 	auto ok_nd = env->nd_pool->construct(DataKinds::OK);
 	auto qh = reinterpret_cast<QueryOk_header*>(ok_nd->data);
 	qh->id = query_num;
@@ -124,7 +124,7 @@ void ClientIO::sendOk(QueryNumber query_num) {
 	send(ok_nd);
 }
 
-void ClientIO::sendError(QueryNumber query_num) {
+void IOClient::sendError(QueryNumber query_num) {
 	auto err_nd = env->nd_pool->construct(DataKinds::OK);
 	auto qh = reinterpret_cast<QueryOk_header*>(err_nd->data);
 	qh->id = query_num;
@@ -132,7 +132,7 @@ void ClientIO::sendError(QueryNumber query_num) {
 	send(err_nd);
 }
 
-void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
+void IOClient::writeMeasurementsCall(const NetData_ptr&d) {
 	auto hdr = reinterpret_cast<QueryWrite_header*>(d->data);
 	auto count = hdr->count;
 	logger_info("server: #", this->id(), " begin async writing ", count,"...");
@@ -144,7 +144,7 @@ void ClientIO::writeMeasurementsCall(const NetData_ptr&d) {
 	logger_info("server: #", this->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }
 
-void ClientIO::readInterval(const NetData_ptr&d) {
+void IOClient::readInterval(const NetData_ptr&d) {
 	auto query_hdr = reinterpret_cast<QueryInterval_header*>(d->data);
 	
 	auto from_str = timeutil::to_string(query_hdr->from);
