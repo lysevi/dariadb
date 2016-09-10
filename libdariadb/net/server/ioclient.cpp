@@ -225,10 +225,14 @@ void IOClient::readInterval(const NetData_ptr&d) {
 	
 	env->nd_pool->free(d);
 
-    //TODO use shared ptr
-    ClientDataReader *cdr=new ClientDataReader(this,query_num);
-    env->storage->foreach(qi,cdr);
-    delete cdr;
+    if(query_hdr->from>=query_hdr->to){
+        sendError(query_num,ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
+    }else{
+        //TODO use shared ptr
+        ClientDataReader *cdr=new ClientDataReader(this,query_num);
+        env->storage->foreach(qi,cdr);
+        delete cdr;
+    }
 }
 
 
