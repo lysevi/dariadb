@@ -17,6 +17,11 @@ struct ReadResult {
   utils::Locker locker;
   callback clbk;
   bool is_closed;
+  bool is_error;
+  ERRORS errc;
+  ReadResult(){
+      is_error=false;
+  }
   void wait() { locker.lock(); }
 };
 using ReadResult_ptr = std::shared_ptr<ReadResult>;

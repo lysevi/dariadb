@@ -103,6 +103,9 @@ public:
         logger_info("client: #", id(), " query #", query_num, " error:",err);
         if(this->state()==ClientState::WORK){
             auto subres = this->_query_results[qh_e->id];
+            subres->is_closed=true;
+            subres->is_error=true;
+            subres->errc=err;
             subres->locker.unlock();
             _query_results.erase(qh_e->id);
         }
