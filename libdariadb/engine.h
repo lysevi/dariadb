@@ -43,6 +43,7 @@ public:
 
   Engine();
 
+  using IMeasStorage::append;
   append_result append(const Meas &value) override;
 
   void flush() override;

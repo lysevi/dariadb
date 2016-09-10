@@ -144,7 +144,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
   if (qh->kind == (uint8_t)DataKinds::READ_INTERVAL) {
 	  auto query_hdr = reinterpret_cast<QueryInterval_header*>(&d->data);
 	  dont_free_memory = true;
-	  env->service->post(env->read_meases_strand->wrap(std::bind(&IOClient::readInterval, this, d)));
+      env->service->post(env->write_meases_strand->wrap(std::bind(&IOClient::readInterval, this, d)));
 	  sendOk(query_hdr->id);
 	  return;
   }
@@ -152,7 +152,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
   if (qh->kind == (uint8_t)DataKinds::READ_TIMEPOINT) {
 	  auto query_hdr = reinterpret_cast<QueryTimePoint_header*>(&d->data);
 	  dont_free_memory = true;
-      env->service->post(env->read_meases_strand->wrap(std::bind(&IOClient::readTimePoint, this, d)));
+      env->service->post(env->write_meases_strand->wrap(std::bind(&IOClient::readTimePoint, this, d)));
 	  sendOk(query_hdr->id);
 	  return;
   }

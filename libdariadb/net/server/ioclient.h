@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "../../interfaces/icallbacks.h"
-#include "../../interfaces/imeasstorage.h"
+#include "../../engine.h"
 #include "../../meas.h"
 #include "../async_connection.h"
 #include "../interfaces/iclientmanager.h"
@@ -25,10 +25,9 @@ struct IOClient : public AsyncConnection {
       write_meases_strand = nullptr;
     }
     IClientManager *srv;
-    storage::IMeasStorage *storage;
+    storage::Engine *storage;
     NetData_Pool *nd_pool;
     boost::asio::io_service::strand *write_meases_strand;
-    boost::asio::io_service::strand *read_meases_strand;
     boost::asio::io_service *service;
   };
 

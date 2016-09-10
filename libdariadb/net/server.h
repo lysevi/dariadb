@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../interfaces/imeasstorage.h"
+#include "../engine.h"
 #include <memory>
 
 namespace dariadb {
@@ -25,7 +26,7 @@ public:
   void stop();
   bool is_runned();
   size_t connections_accepted() const;
-  void set_storage(storage::IMeasStorage *storage);
+  void set_storage(storage::Engine *storage);
 
 protected:
   class Private;
