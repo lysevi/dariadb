@@ -96,13 +96,16 @@ public:
       }
       return;
     }
-	if (qh->kind == (uint8_t)DataKinds::ERR) {
+    if (qh->kind == (uint8_t)DataKinds::ERR) {
 		auto qh_e = reinterpret_cast<QueryError_header*>(d->data);
 		auto query_num = qh_e->id;
-		logger_info("client: #", id(), " query #", query_num, " error.");
-		auto subres = this->_query_results[qh_e->id];
-		subres->locker.unlock();
-		_query_results.erase(qh_e->id);
+        ERRORS err=(ERRORS)qh_e->error_code;
+        logger_info("client: #", id(), " query #", query_num, " error:",err);
+        if(this->state()==ClientState::WORK){
+            auto subres = this->_query_results[qh_e->id];
+            subres->locker.unlock();
+            _query_results.erase(qh_e->id);
+        }
 		return;
 	}
 	
@@ -166,9 +169,18 @@ public:
 
     logger_info("client: send hello ", hn);
 
-	auto nd = _pool.construct(DataKinds::HELLO);
+    auto nd = _pool.construct();
     nd->size+=static_cast<NetData::MessageSize>(hn.size());
-    memcpy(&nd->data[1],hn.data(),hn.size());
+    nd->size+=sizeof(QueryHello_header);
+
+    QueryHello_header*qh=reinterpret_cast<QueryHello_header*>(nd->data);
+    qh->kind=(uint8_t)DataKinds::HELLO;
+    qh->version=PROTOCOL_VERSION;
+
+    auto host_ptr = ((char*)(&qh->host_size) + sizeof(qh->host_size ));
+    qh->host_size=hn.size();
+
+    memcpy(host_ptr,hn.data(),hn.size());
     this->send(nd);
   }
 

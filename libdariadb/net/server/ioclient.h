@@ -68,7 +68,7 @@ struct IOClient : public AsyncConnection {
   void readInterval(const NetData_ptr &d);
   void readTimePoint(const NetData_ptr &d);
   void sendOk(QueryNumber query_num);
-  void sendError(QueryNumber query_num);
+  void sendError(QueryNumber query_num, const ERRORS&err);
 };
 
 typedef std::shared_ptr<IOClient> ClientIO_ptr;

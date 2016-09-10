@@ -26,6 +26,11 @@ struct NetData {
 struct Query_header {
   uint8_t kind;
 };
+struct QueryHello_header {
+  uint8_t kind;
+  uint32_t version;
+  uint32_t host_size;
+};
 struct QueryOk_header {
   uint8_t kind;
   QueryNumber id;
@@ -33,6 +38,7 @@ struct QueryOk_header {
 struct QueryError_header {
   uint8_t kind;
   QueryNumber id;
+  uint16_t error_code;
 };
 struct QueryHelloFromServer_header {
   uint8_t kind;

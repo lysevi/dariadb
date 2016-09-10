@@ -79,11 +79,6 @@ void IOClient::end_session() {
   this->state = ClientState::DISCONNECTED;
 
   if (sock->is_open()) {
-	/*boost::system::error_code err;
-    this->sock->cancel(err);
-	if (err) {
-		logger_fatal("server: on clientio::end_session - ", err.message());
-	}*/
 	auto nd = this->get_pool()->construct(DataKinds::DISCONNECT);
     this->send(nd);
   }
@@ -163,7 +158,16 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool&dont_free_mem
   }
 
   if (qh->kind == (uint8_t)DataKinds::HELLO) {
-	  std::string msg((char *)&d->data[1], (char *)(d->data + d->size - 1));
+      QueryHello_header*qh=reinterpret_cast<QueryHello_header*>(d->data);
+      if(qh->version!=PROTOCOL_VERSION){
+          logger("server: #",id(), " wrong protocol version: exp=",PROTOCOL_VERSION,", rec=",qh->version);
+          sendError(0,ERRORS::WRONG_PROTOCOL_VERSION);
+          this->state=ClientState::DISCONNECTED;
+          return;
+      }
+      auto host_ptr = ((char*)(&qh->host_size ) + sizeof(qh->host_size ));
+
+      std::string msg(host_ptr, host_ptr+qh->host_size);
 	  host = msg;
 	  env->srv->client_connect(this->id());
 
@@ -185,11 +189,12 @@ void IOClient::sendOk(QueryNumber query_num) {
 	send(ok_nd);
 }
 
-void IOClient::sendError(QueryNumber query_num) {
+void IOClient::sendError(QueryNumber query_num, const ERRORS&err) {
 	auto err_nd = env->nd_pool->construct(DataKinds::OK);
-	auto qh = reinterpret_cast<QueryOk_header*>(err_nd->data);
+    auto qh = reinterpret_cast<QueryError_header*>(err_nd->data);
 	qh->id = query_num;
-	err_nd->size += sizeof(query_num);
+    qh->error_code=(uint16_t)err;
+    err_nd->size = sizeof(QueryError_header);
 	send(err_nd);
 }
 

@@ -7,6 +7,8 @@
 namespace dariadb {
 namespace net {
 
+const uint32_t PROTOCOL_VERSION=1;
+
 enum class DataKinds : uint8_t {
   OK,
   ERR,
@@ -25,7 +27,12 @@ enum class ClientState {
   DISCONNECTED
 };
 
+enum class ERRORS: uint16_t{
+    WRONG_PROTOCOL_VERSION
+};
+
 std::ostream &operator<<(std::ostream &stream, const ClientState &state);
+std::ostream &operator<<(std::ostream &stream, const ERRORS &state);
 
 typedef uint32_t QueryNumber;
 }
