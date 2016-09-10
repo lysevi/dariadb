@@ -205,7 +205,7 @@ public:
 		auto size_to_write = count_to_write * sizeof(Meas); 
 		
 		auto nd = this->_pool.construct(DataKinds::WRITE);
-		nd->size += sizeof(QueryWrite_header);
+        nd->size = sizeof(QueryWrite_header);
 		
 		auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
 		hdr->id = cur_id;
@@ -234,7 +234,7 @@ public:
 	  auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
 	  
 	  auto p_header = reinterpret_cast<QueryInterval_header*>(nd->data);
-	  nd->size += sizeof(QueryInterval_header);
+      nd->size = sizeof(QueryInterval_header);
 	  p_header->id = cur_id;
 	  p_header->flag = qi.flag;
 	  p_header->source = qi.source;
@@ -286,7 +286,7 @@ public:
 	  auto nd = this->_pool.construct(DataKinds::READ_TIMEPOINT);
 
 	  auto p_header = reinterpret_cast<QueryTimePoint_header*>(nd->data);
-	  nd->size += sizeof(QueryTimePoint_header);
+      nd->size = sizeof(QueryTimePoint_header);
 	  p_header->id = cur_id;
 	  p_header->flag = qi.flag;
 	  p_header->tp = qi.time_point;

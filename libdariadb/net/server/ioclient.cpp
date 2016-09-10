@@ -29,7 +29,7 @@ void IOClient::ClientDataReader::is_end(){
     send_buffer();
 
     auto nd = _parent->env->nd_pool->construct(DataKinds::WRITE);
-    nd->size += sizeof(QueryWrite_header);
+    nd->size = sizeof(QueryWrite_header);
     auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
     hdr->id = _query_num;
     hdr->count = 0;
@@ -41,7 +41,7 @@ void IOClient::ClientDataReader::send_buffer(){
         return;
     }
     auto nd = _parent->env->nd_pool->construct(DataKinds::WRITE);
-    nd->size += sizeof(QueryWrite_header);
+    nd->size = sizeof(QueryWrite_header);
 
     auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
     hdr->id = _query_num;
@@ -185,7 +185,7 @@ void IOClient::sendOk(QueryNumber query_num) {
 	auto ok_nd = env->nd_pool->construct(DataKinds::OK);
 	auto qh = reinterpret_cast<QueryOk_header*>(ok_nd->data);
 	qh->id = query_num;
-	ok_nd->size+=sizeof(query_num);
+    ok_nd->size=sizeof(QueryOk_header);
 	send(ok_nd);
 }
 
