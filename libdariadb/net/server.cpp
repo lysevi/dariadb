@@ -65,8 +65,13 @@ public:
     for (auto &t : _io_threads) {
       t.join();
     }
-
     logger_info("server: io_threads stoped.");
+
+    logger_info("server: stoping storage engine...");
+    if(this->_env.storage!=nullptr){ //in some tests storage not exists
+        this->_env.storage->stop();
+    }
+
     _is_runned_flag.store(false);
     logger_info("server: stoped.");
   }
