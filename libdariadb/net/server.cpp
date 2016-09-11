@@ -27,8 +27,8 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _write_meases_strand(_service), _params(p),
-        _stop_flag(false), _is_runned_flag(false), _ping_timer(_service) {
+      : _write_meases_strand(_service), _params(p), _stop_flag(false),
+        _is_runned_flag(false), _ping_timer(_service) {
     _in_stop_logic = false;
     _next_client_id = 1;
     _connections_accepted.store(0);
@@ -42,7 +42,7 @@ public:
 
   ~Private() { stop(); }
 
-  void set_storage(storage::Engine *storage){
+  void set_storage(storage::Engine *storage) {
     logger_info("server: set setorage.");
     _env.storage = storage;
   }
@@ -58,16 +58,16 @@ public:
     _ping_timer.cancel();
     _stop_flag = true;
 
-	logger_info("server: stop asio service.");
+    logger_info("server: stop asio service.");
     _service.stop();
     logger_info("server: wait ", _io_threads.size(), " io threads...");
 
-	for (auto&t : _io_threads) {
-		t.join();
-	}
+    for (auto &t : _io_threads) {
+      t.join();
+    }
 
-	logger_info("server: io_threads stoped.");
-	_is_runned_flag.store(false);
+    logger_info("server: io_threads stoped.");
+    _is_runned_flag.store(false);
     logger_info("server: stoped.");
   }
 
@@ -87,31 +87,29 @@ public:
 
   void start() {
     logger_info("server: start server on ", _params.port, "...");
-	
-	reset_ping_timer();
+
+    reset_ping_timer();
 
     ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
     _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
     socket_ptr sock(new ip::tcp::socket(_service));
     start_accept(sock);
 
-	_service.poll_one();
+    _service.poll_one();
 
     logger_info("server: start ", _params.io_threads, " io threads...");
 
-	_io_threads.resize(_params.io_threads);
-	for (size_t i = 0; i < _params.io_threads; ++i) {
-		_io_threads[i]=std::move(std::thread(std::bind(&Server::Private::handle_clients_thread, this)));
-	}
-	
-	_is_runned_flag.store(true);
-	logger_info("server: OK");
-	
+    _io_threads.resize(_params.io_threads);
+    for (size_t i = 0; i < _params.io_threads; ++i) {
+      _io_threads[i] = std::move(
+          std::thread(std::bind(&Server::Private::handle_clients_thread, this)));
+    }
+
+    _is_runned_flag.store(true);
+    logger_info("server: OK");
   }
 
-  void handle_clients_thread() {
-	  _service.run();
-  }
+  void handle_clients_thread() { _service.run(); }
 
   void start_accept(socket_ptr sock) {
     _acc->async_accept(*sock, std::bind(&Server::Private::handle_accept, this, sock, _1));
@@ -126,9 +124,9 @@ public:
 
     auto cur_id = _next_client_id.load();
     _next_client_id++;
-	
+
     ClientIO_ptr new_client{new IOClient(cur_id, sock, &_env)};
-	
+
     _clients_locker.lock();
     _clients.insert(std::make_pair(new_client->id(), new_client));
     _clients_locker.unlock();
@@ -195,7 +193,7 @@ public:
         kv.second->close();
         to_remove.push_back(kv.first);
       } else {
-		logger_info("server: ping #",kv.first);
+        logger_info("server: ping #", kv.first);
         kv.second->ping();
       }
     }
@@ -216,7 +214,7 @@ public:
 
   std::atomic_int _next_client_id;
   std::atomic_size_t _connections_accepted;
-  
+
   Server::Param _params;
 
   std::vector<std::thread> _io_threads;
@@ -249,7 +247,7 @@ size_t Server::connections_accepted() const {
 }
 
 void Server::start() {
-	_Impl->start();
+  _Impl->start();
 }
 
 void Server::stop() {

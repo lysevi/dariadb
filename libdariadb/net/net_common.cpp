@@ -19,16 +19,16 @@ std::ostream &operator<<(std::ostream &stream, const ClientState &state) {
   return stream;
 }
 
-std::ostream &operator<<(std::ostream &stream, const ERRORS &state){
-    switch (state) {
-    case dariadb::net::ERRORS::WRONG_PROTOCOL_VERSION:
-      stream << "ERRORS::WRONG_PROTOCOL_VERSION";
-      break;
-    case dariadb::net::ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO:
-        stream << "ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO";
-        break;
-    }
-    return stream;
+std::ostream &operator<<(std::ostream &stream, const ERRORS &state) {
+  switch (state) {
+  case dariadb::net::ERRORS::WRONG_PROTOCOL_VERSION:
+    stream << "ERRORS::WRONG_PROTOCOL_VERSION";
+    break;
+  case dariadb::net::ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO:
+    stream << "ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO";
+    break;
+  }
+  return stream;
 }
 }
 }

@@ -9,7 +9,7 @@ namespace storage {
 class IReaderClb {
 public:
   virtual void call(const Meas &m) = 0; // must be thread safety.
-  virtual void is_end()=0; //called, when all data readed.
+  virtual void is_end() = 0;            // called, when all data readed.
   virtual ~IReaderClb() {}
 };
 

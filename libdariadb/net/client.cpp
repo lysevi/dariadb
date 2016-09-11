@@ -22,11 +22,11 @@ typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 
 class Client::Private : public AsyncConnection {
 public:
-	Private(const Client::Param &p) :AsyncConnection(nullptr), _params(p) {
+  Private(const Client::Param &p) : AsyncConnection(nullptr), _params(p) {
     _query_num = 1;
     _state = ClientState::CONNECT;
     _pings_answers = 0;
-	this->set_pool(&_pool);
+    this->set_pool(&_pool);
   }
 
   ~Private() noexcept(false) {
@@ -55,7 +55,7 @@ public:
 
   void disconnect() {
     if (_socket->is_open()) {
-		auto nd = _pool.construct(DataKinds::DISCONNECT);
+      auto nd = _pool.construct(DataKinds::DISCONNECT);
       this->send(nd);
     }
 
@@ -79,16 +79,16 @@ public:
     }
   }
 
-  void onDataRecv(const NetData_ptr &d, bool&cancel, bool&dont_free_memory) override {
+  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) override {
     if (this->_state == ClientState::WORK) {
       logger("client: #", id(), " dataRecv ", d->size, " bytes.");
     } else {
       logger("client: dataRecv ", d->size, " bytes.");
     }
 
-	auto qh = reinterpret_cast<Query_header*>(d->data);
+    auto qh = reinterpret_cast<Query_header *>(d->data);
     if (qh->kind == (uint8_t)DataKinds::OK) {
-	  auto qh_ok = reinterpret_cast<QueryOk_header*>(d->data);
+      auto qh_ok = reinterpret_cast<QueryOk_header *>(d->data);
       auto query_num = qh_ok->id;
       logger_info("client: #", id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
@@ -97,50 +97,49 @@ public:
       return;
     }
     if (qh->kind == (uint8_t)DataKinds::ERR) {
-		auto qh_e = reinterpret_cast<QueryError_header*>(d->data);
-		auto query_num = qh_e->id;
-        ERRORS err=(ERRORS)qh_e->error_code;
-        logger_info("client: #", id(), " query #", query_num, " error:",err);
-        if(this->state()==ClientState::WORK){
-            auto subres = this->_query_results[qh_e->id];
-            subres->is_closed=true;
-            subres->is_error=true;
-            subres->errc=err;
-            subres->locker.unlock();
-            _query_results.erase(qh_e->id);
+      auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
+      auto query_num = qh_e->id;
+      ERRORS err = (ERRORS)qh_e->error_code;
+      logger_info("client: #", id(), " query #", query_num, " error:", err);
+      if (this->state() == ClientState::WORK) {
+        auto subres = this->_query_results[qh_e->id];
+        subres->is_closed = true;
+        subres->is_error = true;
+        subres->errc = err;
+        subres->locker.unlock();
+        _query_results.erase(qh_e->id);
+      }
+      return;
+    }
+
+    if (qh->kind == (uint8_t)DataKinds::WRITE) {
+      auto qw = reinterpret_cast<QueryWrite_header *>(d->data);
+      logger_info("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
+      auto subres = this->_query_results[qw->id];
+      if (qw->count == 0) {
+        subres->is_closed = true;
+        subres->clbk(subres.get(), Meas::empty());
+        subres->locker.unlock();
+        _query_results.erase(qw->id);
+      } else {
+        Meas::MeasArray ma = qw->read_measarray();
+        for (auto &v : ma) {
+          subres->clbk(subres.get(), v);
         }
-		return;
-	}
-	
-	if (qh->kind == (uint8_t)DataKinds::WRITE) {
-		auto qw = reinterpret_cast<QueryWrite_header*>(d->data);
-		logger_info("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
-		auto subres = this->_query_results[qw->id];
-		if (qw->count == 0) {
-			subres->is_closed = true;
-			subres->clbk(subres.get(), Meas::empty());
-			subres->locker.unlock();
-			_query_results.erase(qw->id);
-		}
-		else {
-			Meas::MeasArray ma = qw->read_measarray();
-			for (auto&v : ma) {
-				subres->clbk(subres.get(), v);
-			}
-		}
-		return;
-	}
+      }
+      return;
+    }
 
     if (qh->kind == (uint8_t)DataKinds::PING) {
       logger_info("client: #", id(), " ping.");
-	  auto nd = _pool.construct(DataKinds::PONG);
+      auto nd = _pool.construct(DataKinds::PONG);
       this->send(nd);
       _pings_answers++;
       return;
     }
 
     if (qh->kind == (uint8_t)DataKinds::DISCONNECT) {
-      cancel=true;
+      cancel = true;
       logger_info("client: #", id(), " disconnection.");
       try {
         _state = ClientState::DISCONNECTED;
@@ -154,8 +153,8 @@ public:
 
     // hello id
     if (qh->kind == (uint8_t)DataKinds::HELLO) {
-		auto qh_hello = reinterpret_cast<QueryHelloFromServer_header*>(d->data);
-		auto id = qh_hello->id;
+      auto qh_hello = reinterpret_cast<QueryHelloFromServer_header *>(d->data);
+      auto id = qh_hello->id;
       this->set_id(id);
       this->_state = ClientState::WORK;
       logger_info("client: #", id, " ready.");
@@ -168,161 +167,156 @@ public:
     }
     this->start(this->_socket);
     std::lock_guard<utils::Locker> lg(_locker);
-    auto hn=ip::host_name();
+    auto hn = ip::host_name();
 
     logger_info("client: send hello ", hn);
 
     auto nd = _pool.construct();
-    nd->size+=static_cast<NetData::MessageSize>(hn.size());
-    nd->size+=sizeof(QueryHello_header);
+    nd->size += static_cast<NetData::MessageSize>(hn.size());
+    nd->size += sizeof(QueryHello_header);
 
-    QueryHello_header*qh=reinterpret_cast<QueryHello_header*>(nd->data);
-    qh->kind=(uint8_t)DataKinds::HELLO;
-    qh->version=PROTOCOL_VERSION;
+    QueryHello_header *qh = reinterpret_cast<QueryHello_header *>(nd->data);
+    qh->kind = (uint8_t)DataKinds::HELLO;
+    qh->version = PROTOCOL_VERSION;
 
-    auto host_ptr = ((char*)(&qh->host_size) + sizeof(qh->host_size ));
-    qh->host_size=hn.size();
+    auto host_ptr = ((char *)(&qh->host_size) + sizeof(qh->host_size));
+    qh->host_size = hn.size();
 
-    memcpy(host_ptr,hn.data(),hn.size());
+    memcpy(host_ptr, hn.data(), hn.size());
     this->send(nd);
   }
 
-
   size_t pings_answers() const { return _pings_answers.load(); }
   ClientState state() const { return _state; }
-  
+
   void write(const Meas::MeasArray &ma) {
     std::lock_guard<utils::Locker> lg(this->_locker);
-	logger_info("client: send ", ma.size());
-	size_t writed = 0;
-	while (writed!=ma.size()) {
-		auto cur_id = _query_num;
-		_query_num += 1;
-		auto left = (ma.size() - writed);
-		
-		auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1-sizeof(QueryWrite_header));
-		size_t count_to_write = (left*sizeof(Meas))>cur_msg_space?cur_msg_space/sizeof(Meas):left;
-		logger_info("client: pack count: ", count_to_write);
-		
-		
-		auto size_to_write = count_to_write * sizeof(Meas); 
-		
-		auto nd = this->_pool.construct(DataKinds::WRITE);
-        nd->size = sizeof(QueryWrite_header);
-		
-		auto hdr = reinterpret_cast<QueryWrite_header*>(&nd->data);
-		hdr->id = cur_id;
-		hdr->count = static_cast<uint32_t>(count_to_write);
+    logger_info("client: send ", ma.size());
+    size_t writed = 0;
+    while (writed != ma.size()) {
+      auto cur_id = _query_num;
+      _query_num += 1;
+      auto left = (ma.size() - writed);
 
-		auto meas_ptr = ((char*)(&hdr->count) + sizeof(hdr->count));
-		memcpy(meas_ptr, ma.data()+writed, size_to_write);
-		nd->size += static_cast<NetData::MessageSize>(size_to_write);
+      auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryWrite_header));
+      size_t count_to_write =
+          (left * sizeof(Meas)) > cur_msg_space ? cur_msg_space / sizeof(Meas) : left;
+      logger_info("client: pack count: ", count_to_write);
 
-		send(nd);
-		writed += count_to_write;
-	}
+      auto size_to_write = count_to_write * sizeof(Meas);
+
+      auto nd = this->_pool.construct(DataKinds::WRITE);
+      nd->size = sizeof(QueryWrite_header);
+
+      auto hdr = reinterpret_cast<QueryWrite_header *>(&nd->data);
+      hdr->id = cur_id;
+      hdr->count = static_cast<uint32_t>(count_to_write);
+
+      auto meas_ptr = ((char *)(&hdr->count) + sizeof(hdr->count));
+      memcpy(meas_ptr, ma.data() + writed, size_to_write);
+      nd->size += static_cast<NetData::MessageSize>(size_to_write);
+
+      send(nd);
+      writed += count_to_write;
+    }
   }
 
+  ReadResult_ptr read(const storage::QueryInterval &qi, ReadResult::callback &clbk) {
+    _locker.lock();
+    auto cur_id = _query_num;
+    _query_num += 1;
+    _locker.unlock();
 
-  ReadResult_ptr read(const storage::QueryInterval&qi, ReadResult::callback&clbk) {
-	  _locker.lock();
-	  auto cur_id = _query_num;
-	  _query_num += 1;
-	  _locker.unlock();
+    auto qres = std::make_shared<ReadResult>();
+    qres->locker.lock();
+    qres->id = cur_id;
 
-	  auto qres=std::make_shared<ReadResult>();
-	  qres->locker.lock();
-	  qres->id = cur_id;
+    auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
 
-	  auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
-	  
-	  auto p_header = reinterpret_cast<QueryInterval_header*>(nd->data);
-      nd->size = sizeof(QueryInterval_header);
-	  p_header->id = cur_id;
-	  p_header->flag = qi.flag;
-	  p_header->source = qi.source;
-	  p_header->from = qi.from;
-	  p_header->to = qi.to;
-	  
-	  
-	  auto id_size = sizeof(Id)*qi.ids.size();
-	  if ((id_size+nd->size) > NetData::MAX_MESSAGE_SIZE) {
-		  _pool.free(nd);
-		  THROW_EXCEPTION_SS("client: query to big");
-	  }
-	  p_header->ids_count = (uint16_t)(qi.ids.size());
-	  auto ids_ptr = ((char*)(&p_header->ids_count) + sizeof(p_header->ids_count));
-	  memcpy(ids_ptr, qi.ids.data(), id_size);
-	  nd->size += static_cast<NetData::MessageSize>(id_size);
-	  
-	  send(nd);
-	  qres->is_closed = false;
-	  qres->clbk = clbk;
-	  this->_query_results[qres->id] = qres;
-	  return qres;
+    auto p_header = reinterpret_cast<QueryInterval_header *>(nd->data);
+    nd->size = sizeof(QueryInterval_header);
+    p_header->id = cur_id;
+    p_header->flag = qi.flag;
+    p_header->source = qi.source;
+    p_header->from = qi.from;
+    p_header->to = qi.to;
+
+    auto id_size = sizeof(Id) * qi.ids.size();
+    if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
+      _pool.free(nd);
+      THROW_EXCEPTION_SS("client: query to big");
+    }
+    p_header->ids_count = (uint16_t)(qi.ids.size());
+    auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+    memcpy(ids_ptr, qi.ids.data(), id_size);
+    nd->size += static_cast<NetData::MessageSize>(id_size);
+
+    send(nd);
+    qres->is_closed = false;
+    qres->clbk = clbk;
+    this->_query_results[qres->id] = qres;
+    return qres;
   }
 
-  Meas::MeasList read(const storage::QueryInterval&qi) {
-	  Meas::MeasList result{};
-	  auto clbk_lambda = [&result](const ReadResult*parent,const Meas&m) {
-		  if (!parent->is_closed) {
-			  result.push_back(m);
-		  }
-	  };
-	  ReadResult::callback clbk = clbk_lambda;
-	  auto qres = read(qi, clbk);
-	  qres->wait();
-	  return result;
+  Meas::MeasList read(const storage::QueryInterval &qi) {
+    Meas::MeasList result{};
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+      if (!parent->is_closed) {
+        result.push_back(m);
+      }
+    };
+    ReadResult::callback clbk = clbk_lambda;
+    auto qres = read(qi, clbk);
+    qres->wait();
+    return result;
   }
 
-    
-  ReadResult_ptr read(const storage::QueryTimePoint&qi, ReadResult::callback&clbk) {
-	  _locker.lock();
-	  auto cur_id = _query_num;
-	  _query_num += 1;
-	  _locker.unlock();
+  ReadResult_ptr read(const storage::QueryTimePoint &qi, ReadResult::callback &clbk) {
+    _locker.lock();
+    auto cur_id = _query_num;
+    _query_num += 1;
+    _locker.unlock();
 
-	  auto qres = std::make_shared<ReadResult>();
-	  qres->locker.lock();
-	  qres->id = cur_id;
+    auto qres = std::make_shared<ReadResult>();
+    qres->locker.lock();
+    qres->id = cur_id;
 
-	  auto nd = this->_pool.construct(DataKinds::READ_TIMEPOINT);
+    auto nd = this->_pool.construct(DataKinds::READ_TIMEPOINT);
 
-	  auto p_header = reinterpret_cast<QueryTimePoint_header*>(nd->data);
-      nd->size = sizeof(QueryTimePoint_header);
-	  p_header->id = cur_id;
-	  p_header->flag = qi.flag;
-	  p_header->tp = qi.time_point;
+    auto p_header = reinterpret_cast<QueryTimePoint_header *>(nd->data);
+    nd->size = sizeof(QueryTimePoint_header);
+    p_header->id = cur_id;
+    p_header->flag = qi.flag;
+    p_header->tp = qi.time_point;
 
+    auto id_size = sizeof(Id) * qi.ids.size();
+    if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
+      _pool.free(nd);
+      THROW_EXCEPTION_SS("client: query to big");
+    }
+    p_header->ids_count = (uint16_t)(qi.ids.size());
+    auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+    memcpy(ids_ptr, qi.ids.data(), id_size);
+    nd->size += static_cast<NetData::MessageSize>(id_size);
 
-	  auto id_size = sizeof(Id)*qi.ids.size();
-	  if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-		  _pool.free(nd);
-		  THROW_EXCEPTION_SS("client: query to big");
-	  }
-	  p_header->ids_count = (uint16_t)(qi.ids.size());
-	  auto ids_ptr = ((char*)(&p_header->ids_count) + sizeof(p_header->ids_count));
-	  memcpy(ids_ptr, qi.ids.data(), id_size);
-	  nd->size += static_cast<NetData::MessageSize>(id_size);
-
-	  send(nd);
-	  qres->is_closed = false;
-	  qres->clbk = clbk;
-	  this->_query_results[qres->id] = qres;
-	  return qres;
+    send(nd);
+    qres->is_closed = false;
+    qres->clbk = clbk;
+    this->_query_results[qres->id] = qres;
+    return qres;
   }
 
   Meas::Id2Meas read(const storage::QueryTimePoint &qi) {
-	  Meas::Id2Meas result{};
-	  auto clbk_lambda = [&result](const ReadResult*parent, const Meas&m) {
-		  if (!parent->is_closed) {
-			  result[m.id] = m;
-		  }
-	  };
-	  ReadResult::callback clbk = clbk_lambda;
-	  auto qres = read(qi, clbk);
-	  qres->wait();
-	  return result;
+    Meas::Id2Meas result{};
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+      if (!parent->is_closed) {
+        result[m.id] = m;
+      }
+    };
+    ReadResult::callback clbk = clbk_lambda;
+    auto qres = read(qi, clbk);
+    qres->wait();
+    return result;
   }
   io_service _service;
   socket_ptr _socket;
@@ -364,7 +358,7 @@ size_t Client::pings_answers() const {
   return _Impl->pings_answers();
 }
 
- void Client::write(const Meas::MeasArray &ma) {
+void Client::write(const Meas::MeasArray &ma) {
   _Impl->write(ma);
 }
 
@@ -372,14 +366,16 @@ Meas::MeasList Client::read(const storage::QueryInterval &qi) {
   return _Impl->read(qi);
 }
 
- ReadResult_ptr Client::read(const storage::QueryInterval&qi, ReadResult::callback&clbk) {
-	 return _Impl->read(qi,clbk);
- }
+ReadResult_ptr Client::read(const storage::QueryInterval &qi,
+                            ReadResult::callback &clbk) {
+  return _Impl->read(qi, clbk);
+}
 
- Meas::Id2Meas Client::read(const storage::QueryTimePoint &qi) {
-	 return _Impl->read(qi);
- }
+Meas::Id2Meas Client::read(const storage::QueryTimePoint &qi) {
+  return _Impl->read(qi);
+}
 
- ReadResult_ptr Client::read(const storage::QueryTimePoint&qi, ReadResult::callback&clbk) {
-	 return _Impl->read(qi, clbk);
- }
+ReadResult_ptr Client::read(const storage::QueryTimePoint &qi,
+                            ReadResult::callback &clbk) {
+  return _Impl->read(qi, clbk);
+}

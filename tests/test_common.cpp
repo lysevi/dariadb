@@ -14,15 +14,16 @@ using namespace dariadb::storage;
 
 class Callback : public storage::IReaderClb {
 public:
-	Callback() { count = 0; is_end_called = 0; }
+  Callback() {
+    count = 0;
+    is_end_called = 0;
+  }
   void call(const Meas &v) {
     std::lock_guard<std::mutex> lg(_locker);
     count++;
     all.push_back(v);
   }
-  void is_end()override {
-	  is_end_called++;
-  }
+  void is_end() override { is_end_called++; }
   size_t count;
   Meas::MeasList all;
   std::mutex _locker;
@@ -180,8 +181,8 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   if (all.size() != clbk->count) {
     THROW_EXCEPTION_SS("all.size()!=clbk->count: " << all.size() << "!=" << clbk->count);
   }
-  if (check_stop_flag && clbk->is_end_called!=1) {
-	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: "<< clbk->is_end_called);
+  if (check_stop_flag && clbk->is_end_called != 1) {
+    THROW_EXCEPTION_SS("clbk->is_end_called!=1: " << clbk->is_end_called);
   }
   IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 
@@ -234,7 +235,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
   }
 
   if (check_stop_flag && qpoint_clbk->is_end_called != 1) {
-	  THROW_EXCEPTION_SS("clbk->is_end_called!=1: "<< qpoint_clbk->is_end_called);
+    THROW_EXCEPTION_SS("clbk->is_end_called!=1: " << qpoint_clbk->is_end_called);
   }
 
   qp.time_point = to + copies_count;
@@ -258,7 +259,8 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
   }
 }
 
-void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step, bool check_stop_flag) {
+void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step,
+                        bool check_stop_flag) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   size_t total_count =
@@ -282,7 +284,8 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
 
-  readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count, check_stop_flag);
+  readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
+                    check_stop_flag);
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
 }
 /*

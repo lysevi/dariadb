@@ -2,11 +2,11 @@
 #include "exception.h"
 #include <algorithm>
 #include <clocale>
+#include <ctype.h>
 #include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <ctype.h>
 
 std::vector<std::string> dariadb::utils::tokens(const std::string &str) {
   std::vector<std::string> tokens;

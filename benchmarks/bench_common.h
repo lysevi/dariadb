@@ -52,10 +52,12 @@ public:
 
 class BenchCallback : public dariadb::storage::IReaderClb {
 public:
-  BenchCallback() { count = 0; is_end_called = false;
+  BenchCallback() {
+    count = 0;
+    is_end_called = false;
   }
   void call(const dariadb::Meas &) { count++; }
-  void is_end()override { is_end_called = true; }
+  void is_end() override { is_end_called = true; }
   size_t count;
   bool is_end_called;
 };
@@ -139,7 +141,6 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       std::cout << "==> time point reads..." << std::endl;
     }
 
-
     auto start = clock();
 
     for (size_t i = 0; i < reads_count; i++) {
@@ -163,13 +164,11 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       std::cout << "==> intervals foreach..." << std::endl;
     }
 
-    
-
     auto start = clock();
     cur_id = 0;
-	std::shared_ptr<BenchCallback> clbk{ new BenchCallback };
+    std::shared_ptr<BenchCallback> clbk{new BenchCallback};
     for (size_t i = 0; i < reads_count; i++) {
-		
+
       Id2Times curval = interval_queries[i];
       std::uniform_int_distribution<dariadb::Time> uniform_dist(std::get<1>(curval),
                                                                 std::get<2>(curval));
@@ -188,9 +187,9 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
                 << std::endl;
     }
-	if (!clbk->is_end_called) {
-		THROW_EXCEPTION_SS("benchmark: logic error - !clbk->is_end_called");
-	}
+    if (!clbk->is_end_called) {
+      THROW_EXCEPTION_SS("benchmark: logic error - !clbk->is_end_called");
+    }
   }
 
   {

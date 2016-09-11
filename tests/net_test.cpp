@@ -1,19 +1,19 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 
+#include <atomic>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <iostream>
 #include <thread>
-#include <atomic>
 
+#include <engine.h>
+#include <interfaces/imeasstorage.h>
 #include <meas.h>
 #include <net/client.h>
 #include <net/server.h>
 #include <utils/logger.h>
-#include <interfaces/imeasstorage.h>
-#include <engine.h>
 
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
@@ -220,12 +220,11 @@ BOOST_AUTO_TEST_CASE(PingTest) {
 }
 
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
-    dariadb::logger("********** ReadWriteTest **********");
+  dariadb::logger("********** ReadWriteTest **********");
 
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
   const size_t cap_B = 2;
-
 
   using namespace dariadb::storage;
 
@@ -235,12 +234,11 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     }
 
     Options::start();
-    Options::instance()->strategy=dariadb::storage::STRATEGY::FAST_WRITE;
+    Options::instance()->strategy = dariadb::storage::STRATEGY::FAST_WRITE;
     Options::instance()->path = storage_path;
     Options::instance()->cap_B = cap_B;
     Options::instance()->cap_max_levels = 4;
-    Options::instance()->aof_max_size =
-        Options::instance()->measurements_count();
+    Options::instance()->aof_max_size = Options::instance()->measurements_count();
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
     std::unique_ptr<Engine> stor{new Engine()};
 
@@ -281,9 +279,9 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
     c1.write(ma);
 
-//    while (stor->writed_count.load() != MEASES_SIZE) {
-//      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-//    }
+    //    while (stor->writed_count.load() != MEASES_SIZE) {
+    //      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    //    }
     dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
                                        dariadb::Time(MEASES_SIZE)};
     auto result = c1.read(qi);

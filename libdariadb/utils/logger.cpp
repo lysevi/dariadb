@@ -31,7 +31,7 @@ LogManager::LogManager(ILogger_ptr &logger) {
 }
 
 void LogManager::message(LOG_MESSAGE_KIND kind, const std::string &msg) {
-    std::lock_guard<utils::Locker> lg(_msg_locker);
+  std::lock_guard<utils::Locker> lg(_msg_locker);
   _logger->message(kind, msg);
 }
 

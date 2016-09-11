@@ -258,7 +258,7 @@ class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
 public:
   std::list<dariadb::Meas> values;
   void call(const dariadb::Meas &m) override { values.push_back(m); }
-  void is_end()override {}
+  void is_end() override {}
   ~Moc_SubscribeClbk() {}
 };
 

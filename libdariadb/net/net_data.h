@@ -61,11 +61,11 @@ struct QueryInterval_header {
   uint16_t ids_count;
 };
 struct QueryTimePoint_header {
-	uint8_t kind;
-	QueryNumber id;
-	Time tp;
-	Flag flag;
-	uint16_t ids_count;
+  uint8_t kind;
+  QueryNumber id;
+  Time tp;
+  Flag flag;
+  uint16_t ids_count;
 };
 #pragma pack(pop)
 
