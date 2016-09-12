@@ -16,7 +16,7 @@ enum class DataKinds : uint8_t {
   DISCONNECT,
   PING,
   PONG,
-  WRITE,
+  APPEND,
   READ_INTERVAL,
   READ_TIMEPOINT,
   CURRENT_VALUE

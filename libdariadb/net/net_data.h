@@ -44,7 +44,7 @@ struct QueryHelloFromServer_header {
   uint8_t kind;
   QueryNumber id;
 };
-struct QueryWrite_header {
+struct QueryAppend_header {
   uint8_t kind;
   QueryNumber id;
   uint32_t count;

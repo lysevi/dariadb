@@ -46,12 +46,13 @@ public:
   /// connection id on server
   int id() const;
 
-  void write(const Meas::MeasArray &ma);
-  Meas::MeasList read(const storage::QueryInterval &qi);
-  ReadResult_ptr read(const storage::QueryInterval &qi, ReadResult::callback &clbk);
+  void append(const Meas::MeasArray &ma);
+  Meas::MeasList readInterval(const storage::QueryInterval &qi);
+  ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
 
-  Meas::Id2Meas read(const storage::QueryTimePoint &qi);
-  ReadResult_ptr read(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
+  Meas::Id2Meas readInTimePoint(const storage::QueryTimePoint &qi);
+  ReadResult_ptr readInTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
+
   ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag);
 protected:

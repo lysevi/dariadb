@@ -33,7 +33,7 @@ struct IOClient : public AsyncConnection {
 
   struct ClientDataReader : public storage::IReaderClb {
     static const size_t BUFFER_LENGTH =
-        (NetData::MAX_MESSAGE_SIZE - sizeof(QueryWrite_header)) / sizeof(Meas);
+        (NetData::MAX_MESSAGE_SIZE - sizeof(QueryAppend_header)) / sizeof(Meas);
     utils::Locker _locker;
     IOClient *_parent;
     QueryNumber _query_num;
@@ -64,7 +64,7 @@ struct IOClient : public AsyncConnection {
   void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) override;
   void onNetworkError(const boost::system::error_code &err) override;
 
-  void writeMeasurementsCall(const NetData_ptr &d);
+  void append(const NetData_ptr &d);
   void readInterval(const NetData_ptr &d);
   void readTimePoint(const NetData_ptr &d);
   void currentValue(const NetData_ptr &d);

@@ -28,9 +28,9 @@ void IOClient::ClientDataReader::call(const Meas &m) {
 void IOClient::ClientDataReader::is_end() {
   send_buffer();
 
-  auto nd = _parent->env->nd_pool->construct(DataKinds::WRITE);
-  nd->size = sizeof(QueryWrite_header);
-  auto hdr = reinterpret_cast<QueryWrite_header *>(&nd->data);
+  auto nd = _parent->env->nd_pool->construct(DataKinds::APPEND);
+  nd->size = sizeof(QueryAppend_header);
+  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
   hdr->id = _query_num;
   hdr->count = 0;
   _parent->send(nd);
@@ -40,10 +40,10 @@ void IOClient::ClientDataReader::send_buffer() {
   if (pos == 0) {
     return;
   }
-  auto nd = _parent->env->nd_pool->construct(DataKinds::WRITE);
-  nd->size = sizeof(QueryWrite_header);
+  auto nd = _parent->env->nd_pool->construct(DataKinds::APPEND);
+  nd->size = sizeof(QueryAppend_header);
 
-  auto hdr = reinterpret_cast<QueryWrite_header *>(&nd->data);
+  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
   hdr->id = _query_num;
   hdr->count = static_cast<uint32_t>(pos);
 
@@ -118,14 +118,14 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
   logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
   auto qh = reinterpret_cast<Query_header *>(d->data);
 
-  if (qh->kind == (uint8_t)DataKinds::WRITE) {
-    auto hdr = reinterpret_cast<QueryWrite_header *>(&d->data);
+  if (qh->kind == (uint8_t)DataKinds::APPEND) {
+    auto hdr = reinterpret_cast<QueryAppend_header *>(&d->data);
     auto count = hdr->count;
     logger_info("server: #", this->id(), " recv #", hdr->id, " write ", count);
     this->env->srv->write_begin();
     dont_free_memory = true;
     env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::writeMeasurementsCall, this, d)));
+        std::bind(&IOClient::append, this, d)));
     sendOk(hdr->id);
     return;
   }
@@ -213,8 +213,8 @@ void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
   send(err_nd);
 }
 
-void IOClient::writeMeasurementsCall(const NetData_ptr &d) {
-  auto hdr = reinterpret_cast<QueryWrite_header *>(d->data);
+void IOClient::append(const NetData_ptr &d) {
+  auto hdr = reinterpret_cast<QueryAppend_header *>(d->data);
   auto count = hdr->count;
   logger_info("server: #", this->id(), " begin async writing ", count, "...");
   Meas::MeasArray ma = hdr->read_measarray();

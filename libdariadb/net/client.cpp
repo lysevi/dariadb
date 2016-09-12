@@ -112,8 +112,8 @@ public:
       return;
     }
 
-    if (qh->kind == (uint8_t)DataKinds::WRITE) {
-      auto qw = reinterpret_cast<QueryWrite_header *>(d->data);
+    if (qh->kind == (uint8_t)DataKinds::APPEND) {
+      auto qw = reinterpret_cast<QueryAppend_header *>(d->data);
       logger_info("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
       auto subres = this->_query_results[qw->id];
       if (qw->count == 0) {
@@ -189,7 +189,7 @@ public:
   size_t pings_answers() const { return _pings_answers.load(); }
   ClientState state() const { return _state; }
 
-  void write(const Meas::MeasArray &ma) {
+  void append(const Meas::MeasArray &ma) {
     std::lock_guard<utils::Locker> lg(this->_locker);
     logger_info("client: send ", ma.size());
     size_t writed = 0;
@@ -198,17 +198,17 @@ public:
       _query_num += 1;
       auto left = (ma.size() - writed);
 
-      auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryWrite_header));
+      auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryAppend_header));
       size_t count_to_write =
           (left * sizeof(Meas)) > cur_msg_space ? cur_msg_space / sizeof(Meas) : left;
       logger_info("client: pack count: ", count_to_write);
 
       auto size_to_write = count_to_write * sizeof(Meas);
 
-      auto nd = this->_pool.construct(DataKinds::WRITE);
-      nd->size = sizeof(QueryWrite_header);
+      auto nd = this->_pool.construct(DataKinds::APPEND);
+      nd->size = sizeof(QueryAppend_header);
 
-      auto hdr = reinterpret_cast<QueryWrite_header *>(&nd->data);
+      auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
       hdr->id = cur_id;
       hdr->count = static_cast<uint32_t>(count_to_write);
 
@@ -221,7 +221,7 @@ public:
     }
   }
 
-  ReadResult_ptr read(const storage::QueryInterval &qi, ReadResult::callback &clbk) {
+  ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
@@ -258,7 +258,7 @@ public:
     return qres;
   }
 
-  Meas::MeasList read(const storage::QueryInterval &qi) {
+  Meas::MeasList readInterval(const storage::QueryInterval &qi) {
     Meas::MeasList result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
       if (!parent->is_closed) {
@@ -266,12 +266,12 @@ public:
       }
     };
     ReadResult::callback clbk = clbk_lambda;
-    auto qres = read(qi, clbk);
+    auto qres = readInterval(qi, clbk);
     qres->wait();
     return result;
   }
 
-  ReadResult_ptr read(const storage::QueryTimePoint &qi, ReadResult::callback &clbk) {
+  ReadResult_ptr readInTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
@@ -306,7 +306,7 @@ public:
     return qres;
   }
 
-  Meas::Id2Meas read(const storage::QueryTimePoint &qi) {
+  Meas::Id2Meas readInTimePoint(const storage::QueryTimePoint &qi) {
     Meas::Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
       if (!parent->is_closed) {
@@ -314,7 +314,7 @@ public:
       }
     };
     ReadResult::callback clbk = clbk_lambda;
-    auto qres = read(qi, clbk);
+    auto qres = readInTimePoint(qi, clbk);
     qres->wait();
     return result;
   }
@@ -405,26 +405,26 @@ size_t Client::pings_answers() const {
   return _Impl->pings_answers();
 }
 
-void Client::write(const Meas::MeasArray &ma) {
-  _Impl->write(ma);
+void Client::append(const Meas::MeasArray &ma) {
+  _Impl->append(ma);
 }
 
-Meas::MeasList Client::read(const storage::QueryInterval &qi) {
-  return _Impl->read(qi);
+Meas::MeasList Client::readInterval(const storage::QueryInterval &qi) {
+  return _Impl->readInterval(qi);
 }
 
-ReadResult_ptr Client::read(const storage::QueryInterval &qi,
+ReadResult_ptr Client::readInterval(const storage::QueryInterval &qi,
                             ReadResult::callback &clbk) {
-  return _Impl->read(qi, clbk);
+  return _Impl->readInterval(qi, clbk);
 }
 
-Meas::Id2Meas Client::read(const storage::QueryTimePoint &qi) {
-  return _Impl->read(qi);
+Meas::Id2Meas Client::readInTimePoint(const storage::QueryTimePoint &qi) {
+  return _Impl->readInTimePoint(qi);
 }
 
-ReadResult_ptr Client::read(const storage::QueryTimePoint &qi,
+ReadResult_ptr Client::readInTimePoint(const storage::QueryTimePoint &qi,
                             ReadResult::callback &clbk) {
-  return _Impl->read(qi, clbk);
+  return _Impl->readInTimePoint(qi, clbk);
 }
 
 ReadResult_ptr Client::currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk) {

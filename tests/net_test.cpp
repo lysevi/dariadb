@@ -277,18 +277,15 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       ids[i] = ma[i].id;
     }
 
-    c1.write(ma);
+    c1.append(ma);
 
-    //    while (stor->writed_count.load() != MEASES_SIZE) {
-    //      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    //    }
     dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
                                        dariadb::Time(MEASES_SIZE)};
-    auto result = c1.read(qi);
+    auto result = c1.readInterval(qi);
     BOOST_CHECK_EQUAL(result.size(), ma.size());
 
     dariadb::storage::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
-    auto result_tp = c1.read(qt);
+    auto result_tp = c1.readInTimePoint(qt);
     BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
     BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
 
