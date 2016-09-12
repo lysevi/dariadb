@@ -36,7 +36,7 @@ inline uint8_t clz(uint64_t x) {
 inline uint8_t ctz(uint64_t x) {
   return static_cast<uint8_t>(__builtin_ctzll(x));
 }
-#else
+#else//TODO speed up
 static uint8_t inline clz(uint64_t v) {
   const int value_max_bit_pos = sizeof(dariadb::Value) * 8 - 1;
   uint8_t result = 0;
