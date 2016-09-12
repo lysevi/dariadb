@@ -150,7 +150,7 @@ void IOClient::onNetworkError(const boost::system::error_code &err) {
 }
 
 void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
-  logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
+  //logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
   auto qh = reinterpret_cast<Query_header *>(d->data);
 
   if (qh->kind == (uint8_t)DataKinds::APPEND) {
@@ -351,6 +351,8 @@ void  IOClient::subscribe(const NetData_ptr &d) {
 	auto query_num = query_hdr->id;
 	env->nd_pool->free(d);
 
-	subscribe_reader = std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
+    if(subscribe_reader==nullptr){
+        subscribe_reader = std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
+    }
 	env->storage->subscribe(all_ids, flag, subscribe_reader);
 }

@@ -80,11 +80,11 @@ public:
   }
 
   void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) override {
-    if (this->_state == ClientState::WORK) {
-      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
-    } else {
-      logger("client: dataRecv ", d->size, " bytes.");
-    }
+//    if (this->_state == ClientState::WORK) {
+//      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
+//    } else {
+//      logger("client: dataRecv ", d->size, " bytes.");
+//    }
 
     auto qh = reinterpret_cast<Query_header *>(d->data);
     if (qh->kind == (uint8_t)DataKinds::OK) {

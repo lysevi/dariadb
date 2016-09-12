@@ -67,7 +67,7 @@ void AsyncConnection::send(const NetData_ptr &d) {
 
 void AsyncConnection::onDataSended(NetData_ptr &d, const boost::system::error_code &err,
                                    size_t read_bytes) {
-  logger("AsyncConnection::onDataSended #", _async_con_id, " readed ", read_bytes);
+  //logger("AsyncConnection::onDataSended #", _async_con_id, " readed ", read_bytes);
   _messages_to_send--;
   assert(_messages_to_send >= 0);
   if (err) {
@@ -86,7 +86,7 @@ void AsyncConnection::readNextAsync() {
 
 void AsyncConnection::onReadMarker(NetData_ptr &d, const boost::system::error_code &err,
                                    size_t read_bytes) {
-  logger("AsyncConnection::onReadMarker #", _async_con_id, " readed ", read_bytes);
+  //logger("AsyncConnection::onReadMarker #", _async_con_id, " readed ", read_bytes);
   if (err) {
     this->onNetworkError(err);
   } else {
@@ -105,7 +105,7 @@ void AsyncConnection::onReadMarker(NetData_ptr &d, const boost::system::error_co
 
 void AsyncConnection::onReadData(NetData_ptr &d, const boost::system::error_code &err,
                                  size_t read_bytes) {
-  logger("AsyncConnection::onReadData #", _async_con_id, " readed ", read_bytes);
+  //logger("AsyncConnection::onReadData #", _async_con_id, " readed ", read_bytes);
   if (err) {
     this->onNetworkError(err);
   } else {
