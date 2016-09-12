@@ -37,7 +37,7 @@ public:
     _env.srv = this;
     _env.nd_pool = &_net_data_pool;
     _env.service = &_service;
-    _env.write_meases_strand = &_write_meases_strand;
+    _env.io_meases_strand = &_write_meases_strand;
   }
 
   ~Private() { stop(); }

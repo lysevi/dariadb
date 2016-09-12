@@ -22,12 +22,12 @@ struct IOClient : public AsyncConnection {
       srv = nullptr;
       storage = nullptr;
       nd_pool = nullptr;
-      write_meases_strand = nullptr;
+      io_meases_strand = nullptr;
     }
     IClientManager *srv;
     storage::Engine *storage;
     NetData_Pool *nd_pool;
-    boost::asio::io_service::strand *write_meases_strand;
+    boost::asio::io_service::strand *io_meases_strand;
     boost::asio::io_service *service;
   };
 
@@ -67,6 +67,7 @@ struct IOClient : public AsyncConnection {
   void writeMeasurementsCall(const NetData_ptr &d);
   void readInterval(const NetData_ptr &d);
   void readTimePoint(const NetData_ptr &d);
+  void currentValue(const NetData_ptr &d);
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
 };

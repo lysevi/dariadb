@@ -318,6 +318,53 @@ public:
     qres->wait();
     return result;
   }
+
+  ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk) {
+	  _locker.lock();
+	  auto cur_id = _query_num;
+	  _query_num += 1;
+	  _locker.unlock();
+
+	  auto qres = std::make_shared<ReadResult>();
+	  qres->locker.lock();
+	  qres->id = cur_id;
+
+	  auto nd = this->_pool.construct(DataKinds::CURRENT_VALUE);
+
+	  auto p_header = reinterpret_cast<QueryCurrentValue_header *>(nd->data);
+	  nd->size = sizeof(QueryCurrentValue_header);
+	  p_header->id = cur_id;
+	  p_header->flag = flag;
+
+	  auto id_size = sizeof(Id) * ids.size();
+	  if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
+		  _pool.free(nd);
+		  THROW_EXCEPTION_SS("client: query to big");
+	  }
+	  p_header->ids_count = (uint16_t)(ids.size());
+	  auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+	  memcpy(ids_ptr, ids.data(), id_size);
+	  nd->size += static_cast<NetData::MessageSize>(id_size);
+
+	  send(nd);
+	  qres->is_closed = false;
+	  qres->clbk = clbk;
+	  this->_query_results[qres->id] = qres;
+	  return qres;
+  }
+  
+  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
+	  Meas::Id2Meas result{};
+	  auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+		  if (!parent->is_closed) {
+			  result[m.id] = m;
+		  }
+	  };
+	  ReadResult::callback clbk = clbk_lambda;
+	  auto qres = currentValue(ids, flag, clbk);
+	  qres->wait();
+	  return result;
+  }
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -378,4 +425,12 @@ Meas::Id2Meas Client::read(const storage::QueryTimePoint &qi) {
 ReadResult_ptr Client::read(const storage::QueryTimePoint &qi,
                             ReadResult::callback &clbk) {
   return _Impl->read(qi, clbk);
+}
+
+ReadResult_ptr Client::currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk) {
+	return _Impl->currentValue(ids, flag,clbk);
+}
+
+Meas::Id2Meas Client::currentValue(const IdArray &ids, const Flag &flag) {
+	return _Impl->currentValue(ids, flag);
 }

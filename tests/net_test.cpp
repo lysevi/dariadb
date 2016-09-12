@@ -292,8 +292,12 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
     BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
 
+	auto result_cv = c1.currentValue({ ids[0], ids[1] }, 0);
+	BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
+
     c1.disconnect();
 
+	
     while (true) {
       auto st1 = c1.state();
       dariadb::logger("ReadWriteTest test>> ", "0  state1: ", st1);
@@ -306,6 +310,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     server_stop_flag = true;
     server_thread.join();
   }
+  Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }

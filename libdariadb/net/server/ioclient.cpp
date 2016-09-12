@@ -124,7 +124,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     logger_info("server: #", this->id(), " recv #", hdr->id, " write ", count);
     this->env->srv->write_begin();
     dont_free_memory = true;
-    env->service->post(env->write_meases_strand->wrap(
+    env->service->post(env->io_meases_strand->wrap(
         std::bind(&IOClient::writeMeasurementsCall, this, d)));
     sendOk(hdr->id);
     return;
@@ -148,7 +148,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
     dont_free_memory = true;
     env->service->post(
-        env->write_meases_strand->wrap(std::bind(&IOClient::readInterval, this, d)));
+        env->io_meases_strand->wrap(std::bind(&IOClient::readInterval, this, d)));
     sendOk(query_hdr->id);
     return;
   }
@@ -157,9 +157,18 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
     dont_free_memory = true;
     env->service->post(
-        env->write_meases_strand->wrap(std::bind(&IOClient::readTimePoint, this, d)));
+        env->io_meases_strand->wrap(std::bind(&IOClient::readTimePoint, this, d)));
     sendOk(query_hdr->id);
     return;
+  }
+
+  if (qh->kind == (uint8_t)DataKinds::CURRENT_VALUE) {
+	  auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
+	  dont_free_memory = true;
+	  env->service->post(
+		  env->io_meases_strand->wrap(std::bind(&IOClient::currentValue, this, d)));
+	  sendOk(query_hdr->id);
+	  return;
   }
 
   if (qh->kind == (uint8_t)DataKinds::HELLO) {
@@ -262,5 +271,26 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
   ClientDataReader *cdr = new ClientDataReader(this, query_num);
   env->storage->foreach (qi, cdr);
   delete cdr;
-  // auto result = env->storage->readInTimePoint(qi);
+}
+
+void  IOClient::currentValue(const NetData_ptr &d) {
+	auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(d->data);
+
+	logger_info("server: #", this->id(), " current values  #", query_hdr->id, " id(",
+		query_hdr->ids_count, ")");
+	auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
+	auto flag = query_hdr->flag;
+	auto query_num = query_hdr->id;
+	env->nd_pool->free(d);
+
+	// TODO use shared ptr
+	auto result = env->storage->currentValue(all_ids, flag);
+	ClientDataReader *cdr = new ClientDataReader(this, query_num);
+	for (auto&v : result) {
+		cdr->call(v.second);
+	}
+	cdr->is_end();
+	delete cdr;
+	// auto result = env->storage->readInTimePoint(qi);
 }

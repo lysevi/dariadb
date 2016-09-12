@@ -52,7 +52,8 @@ public:
 
   Meas::Id2Meas read(const storage::QueryTimePoint &qi);
   ReadResult_ptr read(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
-
+  ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
+  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
