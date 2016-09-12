@@ -176,7 +176,7 @@ public:
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
         break;
       }
-      if (val.inFlag(flag)) {
+      if (val.inFlag(flag) && val.inIds(ids)) {
         replace_if_older(sub_res, val);
         readed_ids.insert(val.id);
       }
