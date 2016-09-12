@@ -53,7 +53,8 @@ struct IOClient : public AsyncConnection {
   ClientState state;
   Environment *env;
   std::atomic_int pings_missed;
-  std::list<storage::IReaderClb *> readers;
+  //std::list<storage::IReaderClb *> readers;
+  std::shared_ptr<storage::IReaderClb> subscribe_reader;
 
   IOClient(int _id, socket_ptr &_sock, Environment *_env);
   ~IOClient();
@@ -68,6 +69,7 @@ struct IOClient : public AsyncConnection {
   void readInterval(const NetData_ptr &d);
   void readTimePoint(const NetData_ptr &d);
   void currentValue(const NetData_ptr &d);
+  void subscribe(const NetData_ptr &d);
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
 };

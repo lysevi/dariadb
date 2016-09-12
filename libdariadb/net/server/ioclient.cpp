@@ -10,6 +10,40 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
+struct SubscribeCallback : public storage::IReaderClb {
+	utils::Locker _locker;
+	IOClient *_parent;
+	QueryNumber _query_num;
+
+	SubscribeCallback(IOClient *parent, QueryNumber query_num) {
+		_parent = parent;
+		_query_num = query_num;
+	}
+	~SubscribeCallback() {
+	}
+	void call(const Meas &m) override {
+		send_buffer(m);
+	}
+	void is_end() override {
+	}
+	void send_buffer(const Meas &m) {
+		auto nd = _parent->env->nd_pool->construct(DataKinds::APPEND);
+		nd->size = sizeof(QueryAppend_header);
+
+		auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
+		hdr->id = _query_num;
+		hdr->count = 1;
+
+		auto size_to_write = hdr->count * sizeof(Meas);
+
+		auto meas_ptr = (Meas *)((char *)(&hdr->count) + sizeof(hdr->count));
+		nd->size += static_cast<NetData::MessageSize>(size_to_write);
+
+		*meas_ptr = m;
+		_parent->send(nd);
+	}
+};
+
 IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query_num) {
   _parent = parent;
   pos = 0;
@@ -65,6 +99,7 @@ IOClient::ClientDataReader::~ClientDataReader() {}
 
 IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env)
     : AsyncConnection(_env->nd_pool) {
+  subscribe_reader = nullptr;
   pings_missed = 0;
   state = ClientState::CONNECT;
   set_id(_id);
@@ -124,9 +159,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     logger_info("server: #", this->id(), " recv #", hdr->id, " write ", count);
     this->env->srv->write_begin();
     dont_free_memory = true;
+	sendOk(hdr->id);
     env->service->post(env->io_meases_strand->wrap(
         std::bind(&IOClient::append, this, d)));
-    sendOk(hdr->id);
+    
     return;
   }
 
@@ -147,27 +183,36 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
   if (qh->kind == (uint8_t)DataKinds::READ_INTERVAL) {
     auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
     dont_free_memory = true;
+	sendOk(query_hdr->id);
     env->service->post(
         env->io_meases_strand->wrap(std::bind(&IOClient::readInterval, this, d)));
-    sendOk(query_hdr->id);
     return;
   }
 
   if (qh->kind == (uint8_t)DataKinds::READ_TIMEPOINT) {
     auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
     dont_free_memory = true;
+	sendOk(query_hdr->id);
     env->service->post(
         env->io_meases_strand->wrap(std::bind(&IOClient::readTimePoint, this, d)));
-    sendOk(query_hdr->id);
     return;
   }
 
   if (qh->kind == (uint8_t)DataKinds::CURRENT_VALUE) {
 	  auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
 	  dont_free_memory = true;
+	  sendOk(query_hdr->id);
 	  env->service->post(
 		  env->io_meases_strand->wrap(std::bind(&IOClient::currentValue, this, d)));
+	  return;
+  }
+
+  if (qh->kind == (uint8_t)DataKinds::SUBSCRIBE) {
+	  auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
+	  dont_free_memory = true;
 	  sendOk(query_hdr->id);
+	  env->service->post(
+		  env->io_meases_strand->wrap(std::bind(&IOClient::subscribe, this, d)));
 	  return;
   }
 
@@ -293,4 +338,19 @@ void  IOClient::currentValue(const NetData_ptr &d) {
 	cdr->is_end();
 	delete cdr;
 	// auto result = env->storage->readInTimePoint(qi);
+}
+
+void  IOClient::subscribe(const NetData_ptr &d) {
+	auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(d->data);
+
+	logger_info("server: #", this->id(), " subscribe to values  #", query_hdr->id, " id(",
+		query_hdr->ids_count, ")");
+	auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
+	auto flag = query_hdr->flag;
+	auto query_num = query_hdr->id;
+	env->nd_pool->free(d);
+
+	subscribe_reader = std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
+	env->storage->subscribe(all_ids, flag, subscribe_reader);
 }

@@ -19,7 +19,8 @@ enum class DataKinds : uint8_t {
   APPEND,
   READ_INTERVAL,
   READ_TIMEPOINT,
-  CURRENT_VALUE
+  CURRENT_VALUE,
+  SUBSCRIBE
 };
 
 enum class ClientState {

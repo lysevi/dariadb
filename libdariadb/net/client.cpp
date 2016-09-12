@@ -94,8 +94,17 @@ public:
       if (this->_state != ClientState::WORK) {
         THROW_EXCEPTION_SS("(this->_state != ClientState::WORK)" << this->_state);
       }
+	  
+	  auto subres_it = this->_query_results.find(query_num);
+	  if (subres_it != this->_query_results.end()) {
+		  subres_it->second->is_ok = true;
+		  if (subres_it->second->kind == DataKinds::SUBSCRIBE) {
+			  subres_it->second->locker.unlock();
+		  }
+	  }
       return;
     }
+
     if (qh->kind == (uint8_t)DataKinds::ERR) {
       auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
       auto query_num = qh_e->id;
@@ -116,6 +125,7 @@ public:
       auto qw = reinterpret_cast<QueryAppend_header *>(d->data);
       logger_info("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
       auto subres = this->_query_results[qw->id];
+	  assert(subres->is_ok);
       if (qw->count == 0) {
         subres->is_closed = true;
         subres->clbk(subres.get(), Meas::empty());
@@ -178,7 +188,7 @@ public:
     QueryHello_header *qh = reinterpret_cast<QueryHello_header *>(nd->data);
     qh->kind = (uint8_t)DataKinds::HELLO;
     qh->version = PROTOCOL_VERSION;
-
+	//TODO add size check.
     auto host_ptr = ((char *)(&qh->host_size) + sizeof(qh->host_size));
     qh->host_size = hn.size();
 
@@ -230,6 +240,7 @@ public:
     auto qres = std::make_shared<ReadResult>();
     qres->locker.lock();
     qres->id = cur_id;
+	qres->kind = DataKinds::READ_INTERVAL;
 
     auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
 
@@ -280,6 +291,7 @@ public:
     auto qres = std::make_shared<ReadResult>();
     qres->locker.lock();
     qres->id = cur_id;
+	qres->kind = DataKinds::READ_TIMEPOINT;
 
     auto nd = this->_pool.construct(DataKinds::READ_TIMEPOINT);
 
@@ -328,6 +340,7 @@ public:
 	  auto qres = std::make_shared<ReadResult>();
 	  qres->locker.lock();
 	  qres->id = cur_id;
+	  qres->kind = DataKinds::CURRENT_VALUE;
 
 	  auto nd = this->_pool.construct(DataKinds::CURRENT_VALUE);
 
@@ -364,6 +377,41 @@ public:
 	  auto qres = currentValue(ids, flag, clbk);
 	  qres->wait();
 	  return result;
+  }
+
+  ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk) {
+	  _locker.lock();
+	  auto cur_id = _query_num;
+	  _query_num += 1;
+	  _locker.unlock();
+
+	  auto qres = std::make_shared<ReadResult>();
+	  qres->locker.lock();
+	  qres->id = cur_id;
+	  qres->kind = DataKinds::SUBSCRIBE;
+
+	  auto nd = this->_pool.construct(DataKinds::SUBSCRIBE);
+
+	  auto p_header = reinterpret_cast<QuerSubscribe_header *>(nd->data);
+	  nd->size = sizeof(QuerSubscribe_header);
+	  p_header->id = cur_id;
+	  p_header->flag = flag;
+
+	  auto id_size = sizeof(Id) * ids.size();
+	  if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
+		  _pool.free(nd);
+		  THROW_EXCEPTION_SS("client: query to big");
+	  }
+	  p_header->ids_count = (uint16_t)(ids.size());
+	  auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+	  memcpy(ids_ptr, ids.data(), id_size);
+	  nd->size += static_cast<NetData::MessageSize>(id_size);
+
+	  send(nd);
+	  qres->is_closed = false;
+	  qres->clbk = clbk;
+	  this->_query_results[qres->id] = qres;
+	  return qres;
   }
   io_service _service;
   socket_ptr _socket;
@@ -433,4 +481,8 @@ ReadResult_ptr Client::currentValue(const IdArray &ids, const Flag &flag, ReadRe
 
 Meas::Id2Meas Client::currentValue(const IdArray &ids, const Flag &flag) {
 	return _Impl->currentValue(ids, flag);
+}
+
+ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk) {
+	return _Impl->subscribe(ids, flag, clbk);
 }

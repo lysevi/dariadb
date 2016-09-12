@@ -73,6 +73,13 @@ struct QueryCurrentValue_header {
 	Flag flag;
 	uint16_t ids_count;
 };
+
+struct QuerSubscribe_header {
+	uint8_t kind;
+	QueryNumber id;
+	Flag flag;
+	uint16_t ids_count;
+};
 #pragma pack(pop)
 
 using NetData_Pool = boost::object_pool<NetData>;

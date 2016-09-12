@@ -14,12 +14,14 @@ namespace client {
 struct ReadResult {
   using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
   QueryNumber id;
+  DataKinds kind;
   utils::Locker locker;
   callback clbk;
-  bool is_closed;
-  bool is_error;
+  bool is_ok;     //true - if server send OK to this query.
+  bool is_closed; //true - if all data sended.
+  bool is_error;  //true - if error. errc contain error type.
   ERRORS errc;
-  ReadResult() { is_error = false; }
+  ReadResult() { is_error = false; is_ok = false; }
   void wait() { locker.lock(); }
 };
 using ReadResult_ptr = std::shared_ptr<ReadResult>;
@@ -55,6 +57,8 @@ public:
 
   ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag);
+
+  ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
