@@ -16,7 +16,7 @@ macro(TEST_CASE name src)
 endmacro(TEST_CASE)
 
 TEST_CASE(net_test net_test.cpp)
-TARGET_LINK_LIBRARIES(net_test libnet-client libnet-server)
+TARGET_LINK_LIBRARIES(net_test libdariadb-cl libnet-server)
 
 TEST_CASE(statistic_test statistic_test.cpp)
 TEST_CASE(engine_test engine_test.cpp)

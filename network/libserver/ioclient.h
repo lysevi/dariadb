@@ -8,8 +8,8 @@
 #include <libdariadb/engine.h>
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
-#include <libnet-common/net_common.h>
-#include <libnet-common/async_connection.h>
+#include <common/net_common.h>
+#include <common/async_connection.h>
 #include "iclientmanager.h"
 
 namespace dariadb {

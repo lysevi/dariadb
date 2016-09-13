@@ -1,4 +1,4 @@
 include_directories(.)
 include_directories(..)
-add_subdirectory (libnet-client)
-add_subdirectory (libnet-server)
+add_subdirectory (libclient)
+add_subdirectory (libserver)

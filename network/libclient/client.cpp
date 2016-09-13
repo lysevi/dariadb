@@ -1,8 +1,8 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/logger.h>
-#include <libnet-common/async_connection.h>
-#include <libnet-common/net_common.h>
+#include <common/async_connection.h>
+#include <common/net_common.h>
 #include "client.h"
 
 #include <boost/asio.hpp>

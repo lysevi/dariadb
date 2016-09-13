@@ -1,8 +1,8 @@
 FILE(GLOB GLOB_HDRS "*.h")
 FILE(GLOB GLOB_SRC "*.cpp")
 
-FILE(GLOB CMN_HDRS "../libnet-common/*.h")
-FILE(GLOB CMN_SRC "../libnet-common/*.cpp")
+FILE(GLOB CMN_HDRS "../common/*.h")
+FILE(GLOB CMN_SRC "../common/*.cpp")
 
 source_group(common FILES ${CMN_HDRS} ${CMN_SRC})
 
