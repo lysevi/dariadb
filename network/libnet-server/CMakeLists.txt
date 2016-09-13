@@ -1,12 +1,18 @@
 FILE(GLOB GLOB_HDRS "*.h")
 FILE(GLOB GLOB_SRC "*.cpp")
 
-SET(SRC  ${GLOB_HDRS} ${GLOB_SRC})
+FILE(GLOB CMN_HDRS "../libnet-common/*.h")
+FILE(GLOB CMN_SRC "../libnet-common/*.cpp")
+
+source_group(common FILES ${CMN_HDRS} ${CMN_SRC})
+
+SET(SRC  ${GLOB_HDRS} ${GLOB_SRC} ${CMN_HDRS} ${CMN_SRC})
+
 if(MSVC)
         add_library(libnet-server STATIC ${SRC})
 else(MSVC)
         add_library(libnet-server SHARED ${SRC})
-        TARGET_LINK_LIBRARIES(libnet-server libdariadb libnet-common ${Boost_LIBRARIES})
+        TARGET_LINK_LIBRARIES(libnet-server libdariadb ${Boost_LIBRARIES})
 endif(MSVC)
 
 IF(WIN32)
