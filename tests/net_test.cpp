@@ -283,6 +283,8 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
 	auto read_res=c1.subscribe({ ma[0].id }, dariadb::Flag(0), clbk);
 	read_res->wait();
+	read_res = c1.subscribe({ ma[1].id }, dariadb::Flag(0), clbk);
+	read_res->wait();
     c1.append(ma);
 
     dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
@@ -298,7 +300,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 	auto result_cv = c1.currentValue({ ids[0], ids[1] }, 0);
 	BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
 
-	BOOST_CHECK_EQUAL(subscribe_calls, size_t(1));
+	BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
     c1.disconnect();
 
 	
