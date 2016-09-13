@@ -79,7 +79,7 @@ public:
     }
   }
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) override {
+  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &) override {
 //    if (this->_state == ClientState::WORK) {
 //      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
 //    } else {
@@ -190,7 +190,7 @@ public:
     qh->version = PROTOCOL_VERSION;
 	//TODO add size check.
     auto host_ptr = ((char *)(&qh->host_size) + sizeof(qh->host_size));
-    qh->host_size = hn.size();
+    qh->host_size = (uint32_t) hn.size();
 
     memcpy(host_ptr, hn.data(), hn.size());
     this->send(nd);

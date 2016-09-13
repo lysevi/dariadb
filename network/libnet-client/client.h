@@ -1,8 +1,8 @@
 #pragma once
 
-#include <meas.h>
-#include <storage/query_param.h>
-#include <utils/locker.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/storage/query_param.h>
+#include <libdariadb/utils/locker.h>
 #include <libnet-common/net_common.h>
 #include <functional>
 #include <memory>
