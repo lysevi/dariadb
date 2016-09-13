@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../meas.h"
-#include "../storage/query_param.h"
-#include "../utils/locker.h"
-#include "net_common.h"
+#include <meas.h>
+#include <storage/query_param.h>
+#include <utils/locker.h>
+#include <libnet-common/net_common.h>
 #include <functional>
 #include <memory>
 #include <string>

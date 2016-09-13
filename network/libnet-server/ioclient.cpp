@@ -1,7 +1,7 @@
 #include "ioclient.h"
-#include "../../meas.h"
-#include "../../timeutil.h"
-#include "../../utils/exception.h"
+#include <libdariadb/meas.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/exception.h>
 #include <json/json.hpp>
 
 using namespace std::placeholders;
@@ -217,17 +217,17 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
   }
 
   if (qh->kind == (uint8_t)DataKinds::HELLO) {
-    QueryHello_header *qh = reinterpret_cast<QueryHello_header *>(d->data);
-    if (qh->version != PROTOCOL_VERSION) {
+    QueryHello_header *qhh = reinterpret_cast<QueryHello_header *>(d->data);
+    if (qhh->version != PROTOCOL_VERSION) {
       logger("server: #", id(), " wrong protocol version: exp=", PROTOCOL_VERSION,
-             ", rec=", qh->version);
+             ", rec=", qhh->version);
       sendError(0, ERRORS::WRONG_PROTOCOL_VERSION);
       this->state = ClientState::DISCONNECTED;
       return;
     }
-    auto host_ptr = ((char *)(&qh->host_size) + sizeof(qh->host_size));
+    auto host_ptr = ((char *)(&qhh->host_size) + sizeof(qhh->host_size));
 
-    std::string msg(host_ptr, host_ptr + qh->host_size);
+    std::string msg(host_ptr, host_ptr + qhh->host_size);
     host = msg;
     env->srv->client_connect(this->id());
 

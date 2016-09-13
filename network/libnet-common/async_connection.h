@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../utils/exception.h"
-#include "../utils/locker.h"
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/locker.h>
 #include "net_common.h"
 #include "net_data.h"
 #include "socket_ptr.h"

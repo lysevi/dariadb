@@ -4,8 +4,8 @@
 #include <iostream>
 #include <map>
 #include <random>
-#include <utils/exception.h>
-#include <utils/skiplist.h>
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/skiplist.h>
 #include <vector>
 
 const size_t insertion_count = 1000000;

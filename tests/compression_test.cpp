@@ -2,12 +2,12 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 
-#include <compression/compression.h>
-#include <compression/delta.h>
-#include <compression/flag.h>
-#include <compression/id.h>
-#include <compression/xor.h>
-#include <timeutil.h>
+#include <libdariadb/compression/compression.h>
+#include <libdariadb/compression/delta.h>
+#include <libdariadb/compression/flag.h>
+#include <libdariadb/compression/id.h>
+#include <libdariadb/compression/xor.h>
+#include <libdariadb/timeutil.h>
 
 #include <chrono>
 #include <iterator>

@@ -1,9 +1,10 @@
 #include "server.h"
-#include "../utils/exception.h"
-#include "../utils/logger.h"
-#include "interfaces/iclientmanager.h"
-#include "net_common.h"
-#include "server/ioclient.h"
+#include "iclientmanager.h"
+#include "ioclient.h"
+#include <utils/exception.h>
+#include <utils/logger.h>
+#include <libnet-common/net_common.h>
+
 #include <atomic>
 #include <boost/asio.hpp>
 #include <functional>

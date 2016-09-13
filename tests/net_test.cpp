@@ -8,12 +8,12 @@
 #include <iostream>
 #include <thread>
 
-#include <engine.h>
-#include <interfaces/imeasstorage.h>
-#include <meas.h>
-#include <net/client.h>
-#include <net/server.h>
-#include <utils/logger.h>
+#include <libdariadb/engine.h>
+#include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/utils/logger.h>
+#include <libnet-client/client.h>
+#include <libnet-server/server.h>
 
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);

@@ -1,11 +1,10 @@
 #include "test_common.h"
-#include <flags.h>
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <thread>
-#include <utils/exception.h>
-#include <utils/utils.h>
+#include <libdariadb/flags.h>
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/utils.h>
 
 namespace dariadb_test {
 #undef NO_DATA

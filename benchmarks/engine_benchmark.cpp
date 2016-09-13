@@ -1,7 +1,7 @@
 #include "bench_common.h"
 #include <atomic>
 #include <boost/program_options.hpp>
-#include <engine.h>
+#include <libdariadb/engine.h>
 #include <iomanip>
 #include <iostream>
 using namespace dariadb;

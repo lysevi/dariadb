@@ -3,19 +3,19 @@
 #include <algorithm>
 #include <boost/test/unit_test.hpp>
 
-#include <compression/compression.h>
-#include <flags.h>
-#include <storage/bloom_filter.h>
-#include <storage/callbacks.h>
-#include <storage/chunk.h>
-#include <storage/manifest.h>
-#include <storage/options.h>
-#include <storage/page.h>
-#include <storage/page_manager.h>
-#include <utils/fs.h>
-#include <utils/logger.h>
-#include <utils/thread_manager.h>
-#include <utils/utils.h>
+#include <libdariadb/compression/compression.h>
+#include <libdariadb/flags.h>
+#include <libdariadb/storage/bloom_filter.h>
+#include <libdariadb/storage/callbacks.h>
+#include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/page.h>
+#include <libdariadb/storage/page_manager.h>
+#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/utils.h>
 
 using dariadb::storage::PageManager;
 using dariadb::storage::Manifest;

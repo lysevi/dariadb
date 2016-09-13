@@ -6,17 +6,17 @@
 #include <ctime>
 #include <iostream>
 #include <thread>
-#include <timeutil.h>
-#include <utils/crc.h>
-#include <utils/fs.h>
-#include <utils/in_interval.h>
-#include <utils/lru.h>
-#include <utils/metrics.h>
-#include <utils/period_worker.h>
-#include <utils/skiplist.h>
-#include <utils/thread_manager.h>
-#include <utils/thread_pool.h>
-#include <utils/utils.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/crc.h>
+#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/in_interval.h>
+#include <libdariadb/utils/lru.h>
+#include <libdariadb/utils/metrics.h>
+#include <libdariadb/utils/period_worker.h>
+#include <libdariadb/utils/skiplist.h>
+#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/thread_pool.h>
+#include <libdariadb/utils/utils.h>
 
 BOOST_AUTO_TEST_CASE(Time) {
   auto ct = dariadb::timeutil::current_time();

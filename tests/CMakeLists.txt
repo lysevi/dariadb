@@ -1,4 +1,5 @@
-include_directories(../libdariadb)
+include_directories(..)
+include_directories(../network)
 
 add_library(libcommon_test STATIC test_common.cpp test_common.h)
 TARGET_LINK_LIBRARIES(libcommon_test libdariadb ${Boost_LIBRARIES})
@@ -15,6 +16,8 @@ macro(TEST_CASE name src)
 endmacro(TEST_CASE)
 
 TEST_CASE(net_test net_test.cpp)
+TARGET_LINK_LIBRARIES(net_test libnet-client libnet-server)
+
 TEST_CASE(statistic_test statistic_test.cpp)
 TEST_CASE(engine_test engine_test.cpp)
 TEST_CASE(aof_test aof_test.cpp)

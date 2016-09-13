@@ -7,7 +7,7 @@
 #include <cmath>
 #include <ctime>
 #include <limits>
-#include <math/statistic.h>
+#include <libdariadb/math/statistic.h>
 
 const size_t K = 5;
 

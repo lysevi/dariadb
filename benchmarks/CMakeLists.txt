@@ -1,4 +1,5 @@
-include_directories(../libdariadb)
+include_directories(..)
+include_directories(../network)
 MESSAGE(STATUS "Benchmarks: ")
 
 macro(ADD_BENCHARK name src)

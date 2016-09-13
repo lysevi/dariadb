@@ -122,8 +122,6 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
 endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
-include_directories(extern)
-
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 option(ENABLE_METRICS "Enable code metrics." ON)
 option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
@@ -137,7 +135,10 @@ if (ENABLE_METRICS)
   add_definitions(-DENABLE_METRICS)
 endif(ENABLE_METRICS)
 
+include_directories(extern)
 add_subdirectory (libdariadb)
+add_subdirectory (network)
+include_directories(network)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 

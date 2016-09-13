@@ -7,14 +7,14 @@
 #include <thread>
 
 #include "test_common.h"
-#include <storage/aof_manager.h>
-#include <storage/aofile.h>
-#include <storage/manifest.h>
-#include <storage/options.h>
-#include <timeutil.h>
-#include <utils/fs.h>
-#include <utils/logger.h>
-#include <utils/thread_manager.h>
+#include <libdariadb/storage/aof_manager.h>
+#include <libdariadb/storage/aofile.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/options.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/thread_manager.h>
 
 class Moc_Dropper : public dariadb::storage::IAofDropper {
 public:

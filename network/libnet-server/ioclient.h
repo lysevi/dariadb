@@ -5,12 +5,12 @@
 #include <boost/system/error_code.hpp>
 #include <memory>
 
-#include "../../engine.h"
-#include "../../interfaces/icallbacks.h"
-#include "../../meas.h"
-#include "../async_connection.h"
-#include "../interfaces/iclientmanager.h"
-#include "../net_common.h"
+#include <libdariadb/engine.h>
+#include <libdariadb/interfaces/icallbacks.h>
+#include <libdariadb/meas.h>
+#include <libnet-common/net_common.h>
+#include <libnet-common/async_connection.h>
+#include "iclientmanager.h"
 
 namespace dariadb {
 namespace net {

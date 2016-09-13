@@ -4,14 +4,14 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
-#include <engine.h>
-#include <storage/bloom_filter.h>
-#include <storage/lock_manager.h>
-#include <storage/manifest.h>
-#include <storage/page_manager.h>
-#include <timeutil.h>
-#include <utils/fs.h>
-#include <utils/logger.h>
+#include <libdariadb/engine.h>
+#include <libdariadb/storage/bloom_filter.h>
+#include <libdariadb/storage/lock_manager.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/page_manager.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/logger.h>
 
 class BenchCallback : public dariadb::storage::IReaderClb {
 public:

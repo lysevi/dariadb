@@ -5,14 +5,14 @@
 
 #include <chrono>
 #include <cmath>
-#include <compression/compression.h>
-#include <compression/delta.h>
-#include <compression/flag.h>
-#include <compression/id.h>
-#include <compression/xor.h>
+#include <libdariadb/compression/compression.h>
+#include <libdariadb/compression/delta.h>
+#include <libdariadb/compression/flag.h>
+#include <libdariadb/compression/id.h>
+#include <libdariadb/compression/xor.h>
 #include <ctime>
 #include <limits>
-#include <timeutil.h>
+#include <libdariadb/timeutil.h>
 
 int main(int argc, char *argv[]) {
   (void)argc;

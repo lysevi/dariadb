@@ -1,8 +1,8 @@
 #pragma once
 
-#include <flags.h>
-#include <interfaces/imeasstorage.h>
-#include <meas.h>
+#include <libdariadb/flags.h>
+#include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/meas.h>
 #include <string>
 
 namespace dariadb_test {

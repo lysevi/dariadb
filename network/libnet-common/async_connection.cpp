@@ -1,5 +1,5 @@
 #include "async_connection.h"
-#include "../utils/exception.h"
+#include <libdariadb/utils/exception.h>
 #include <cassert>
 #include <functional>
 

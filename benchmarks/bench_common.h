@@ -1,14 +1,14 @@
 #pragma once
 #include <algorithm>
 #include <atomic>
-#include <interfaces/imeasstorage.h>
+#include <libdariadb/interfaces/imeasstorage.h>
 #include <iostream>
 #include <random>
 #include <sstream>
-#include <timeutil.h>
+#include <libdariadb/timeutil.h>
 #include <tuple>
-#include <utils/metrics.h>
-#include <utils/thread_manager.h>
+#include <libdariadb/utils/metrics.h>
+#include <libdariadb/utils/thread_manager.h>
 
 namespace dariadb_bench {
 
