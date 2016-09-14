@@ -83,6 +83,7 @@ public:
     if (!_stoped) {
       _subscribe_notify.stop();
 
+	  //TODO remove this from stop.
       this->flush();
 
       ThreadManager::stop();
