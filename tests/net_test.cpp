@@ -2,14 +2,12 @@
 #define BOOST_TEST_MODULE Main
 
 #include <atomic>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <iostream>
 #include <thread>
 
 #include <libdariadb/engine.h>
-#include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/logger.h>
 #include <libclient/client.h>
