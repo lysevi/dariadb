@@ -16,6 +16,7 @@ before_install:
    - gem install coveralls-lcov
    - export CC="gcc-6"
    - export CXX="g++-6"
+   - cmake --version
 
 install:
   - cd ${TRAVIS_BUILD_DIR}
