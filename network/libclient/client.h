@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include "dariadb_cl_exports.h"
+
 namespace dariadb {
 namespace net {
 namespace client {
@@ -19,7 +20,7 @@ struct DARIADBCL_EXPORTS ReadResult {
   utils::Locker locker;
   callback clbk;
   bool is_ok;     //true - if server send OK to this query.
-  bool is_closed; //true - if all data sended.
+  bool is_closed; //true - if all data received.
   bool is_error;  //true - if error. errc contain error type.
   ERRORS errc;
   ReadResult() { is_error = false; is_ok = false; }
