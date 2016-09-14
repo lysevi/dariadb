@@ -7,11 +7,12 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include "dariadb_cl_exports.h"
 namespace dariadb {
 namespace net {
 namespace client {
 
-struct ReadResult {
+struct DARIADBCL_EXPORTS ReadResult {
   using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
   QueryNumber id;
   DataKinds kind;
@@ -26,7 +27,7 @@ struct ReadResult {
 };
 using ReadResult_ptr = std::shared_ptr<ReadResult>;
 
-class Client {
+class DARIADBCL_EXPORTS Client {
 public:
   struct Param {
     std::string host;
