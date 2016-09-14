@@ -112,7 +112,7 @@ public:
     }
 
     _is_runned_flag.store(true);
-    logger_info("server: OK");
+    logger_info("server: ready.");
   }
 
   void handle_clients_thread() { _service.run(); }
