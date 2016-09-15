@@ -49,7 +49,7 @@ void parse_cmdline(int argc, char *argv[]) {
       po::value<Time>(&cap_store_period)->default_value(cap_store_period))(
       "read-benchmark-runs",
       po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs))(
-      "strategy", po::value<STRATEGY>(&strategy)->default_value(STRATEGY::FAST_READ),
+      "strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
       "Write strategy");
 
   po::variables_map vm;

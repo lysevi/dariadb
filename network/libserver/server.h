@@ -18,6 +18,11 @@ public:
       port = _port;
       io_threads = SERVER_IO_THREADS_DEFAULT;
     }
+
+	Param(unsigned short _port, size_t io_threads_count) {
+		port = _port;
+		io_threads = io_threads_count;
+	}
   };
   Server(const Param &p);
   ~Server();
