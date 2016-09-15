@@ -22,7 +22,7 @@ install:
   - lcov --directory . --zerocounters
 
 before_script:
-   - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} --coverage -O0"  .
+   - cmake -DENABLE_INTEGRATION_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} --coverage -O0"  .
 
 script: 
    - make -j2
@@ -34,3 +34,4 @@ after_success:
    - lcov --remove coverage.info 'bin/*' 'tests/*' 'extern/*' '/usr/*' --output-file coverage.info # filter out system and test code
    - lcov --list coverage.info # debug before upload
    - coveralls-lcov --repo-token '7VSWJleC3m9GKbZBakLFL5nBEib1CTFsb' coverage.info # uploads to coveralls
+   - bash <(curl -s https://codecov.io/bash)
