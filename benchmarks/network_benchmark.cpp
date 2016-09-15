@@ -20,9 +20,9 @@ std::string storage_path = "dariadb_storage";
 
 unsigned short server_port = 2001;
 std::string server_host = "127.0.0.1";
-bool run_server_flag = false;
+bool run_server_flag = true;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
-STRATEGY strategy = STRATEGY::DYNAMIC;
+STRATEGY strategy = STRATEGY::FAST_WRITE;
 Time cap_store_period = 0;
 
 Engine* engine = nullptr;
@@ -92,7 +92,7 @@ int main(int argc,char**argv){
 		("io_threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
 		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
 		("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period), "store period in CAP level.")
-		("run-server", "run server in.");
+		("extern-server", "dont run server.");
 
 	po::variables_map vm;
 	try {
@@ -108,7 +108,7 @@ int main(int argc,char**argv){
 		std::cout << desc << std::endl;
 		std::exit(0);
 	}
-	if (vm.count("run-server")) {
+	if (vm.count("extern-server")) {
 		run_server_flag = true;
 	}
 
@@ -118,7 +118,7 @@ int main(int argc,char**argv){
 	}
 	
 	dariadb::net::client::Client::Param p(server_host, server_port);
-	size_t clients_count = 2;
+	size_t clients_count = 5;
 	std::vector<Client_Ptr> clients(clients_count);
 	for (size_t i = 0; i < clients_count; ++i) {
 		Client_Ptr c{ new dariadb::net::client::Client(p) };
