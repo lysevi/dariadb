@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/meas.h>
+#include <libdariadb/utils/locker.h>
 #include "net_common.h"
 #include <tuple>
 
@@ -82,8 +83,33 @@ struct QuerSubscribe_header {
 };
 #pragma pack(pop)
 
-using NetData_Pool = boost::object_pool<NetData>;
-using NetData_ptr = NetData_Pool::element_type *;
+//using NetData_Pool = boost::object_pool<NetData>;
+struct NetData_Pool {
+	utils::Locker _locker;
+	typedef boost::object_pool<NetData> Pool;
+	Pool _pool;
+
+	void free(Pool::element_type*nd) {
+		_locker.lock();
+		_pool.free(nd);
+		_locker.unlock();
+	}
+
+	Pool::element_type* construct() {
+		_locker.lock();
+		auto res=_pool.construct();
+		_locker.unlock();
+		return res;
+	}
+	template<class T>
+	Pool::element_type* construct(T&&a) {
+		_locker.lock();
+		auto res = _pool.construct(a);
+		_locker.unlock();
+		return res;
+	}
+};
+using NetData_ptr = NetData_Pool::Pool::element_type*;
 
 const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
 }
