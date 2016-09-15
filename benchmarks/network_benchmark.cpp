@@ -138,6 +138,10 @@ int main(int argc,char**argv){
 
 	for (size_t i = 0; i < clients_count; ++i) {
 		threads[i].join();
+		clients[i]->disconnect();
+		while (clients[i]->state() != dariadb::net::ClientState::DISCONNECTED) {
+			std::this_thread::yield();
+		}
 	}
 	auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 
