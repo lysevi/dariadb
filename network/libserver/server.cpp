@@ -94,7 +94,7 @@ public:
   void start() {
     logger_info("server: start server on ", _params.port, "...");
 
-    reset_ping_timer();
+    ping_all();
 
     ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
     _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
@@ -174,7 +174,7 @@ public:
   void write_begin() override { _writes_in_progress++; }
   void write_end() override { _writes_in_progress--; }
 
-  void reset_ping_timer() {
+  void ping_all() {
     try {
       _ping_timer.expires_from_now(boost::posix_time::millisec(PING_TIMER_INTERVAL));
       _ping_timer.async_wait(std::bind(&Server::Private::on_check_ping, this));
@@ -204,14 +204,13 @@ public:
       }
     }
     
-	_clients_locker.lock();
+
+
     for (auto &id : to_remove) {
       logger_info("server: remove #", id);
       client_disconnect(id);
-      _clients.erase(id);
     }
-	_clients_locker.unlock();
-    reset_ping_timer();
+    ping_all();
   }
 
   io_service _service;
