@@ -74,9 +74,9 @@ void run_server() {
 const size_t MEASES_SIZE = 2000;
 const size_t SEND_COUNT = 200;
 
-std::vector<float> elapsed(clients_count);
-std::vector<std::thread> threads(clients_count);
-std::vector<dariadb::net::client::Client_Ptr> clients(clients_count);
+std::vector<float> elapsed;
+std::vector<std::thread> threads;
+std::vector<dariadb::net::client::Client_Ptr> clients;
 
 void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
 	dariadb::Meas::MeasArray ma;
@@ -128,6 +128,10 @@ int main(int argc,char**argv){
 		run_server_flag = false;
 	}
 	
+    elapsed.resize(clients_count);
+    threads.resize(clients_count);
+    clients.resize(clients_count);
+
 	if (run_server_flag) {
 		run_server();
 	}
@@ -135,9 +139,8 @@ int main(int argc,char**argv){
 	dariadb::net::client::Client::Param p(server_host, server_port);
 	
 	for (size_t i = 0; i < clients_count; ++i) {
-        dariadb::net::client::Client_Ptr c{ new dariadb::net::client::Client(p) };
-		c->connect();
-		clients[i] = c;
+        clients[i]=dariadb::net::client::Client_Ptr{ new dariadb::net::client::Client(p) };
+        clients[i]->connect();
 	}
 
 	auto start = clock();
