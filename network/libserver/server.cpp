@@ -204,15 +204,13 @@ public:
       }
     }
     
-
+	_clients_locker.lock();
     for (auto &id : to_remove) {
       logger_info("server: remove #", id);
       client_disconnect(id);
-	  _clients_locker.lock();
       _clients.erase(id);
-	  _clients_locker.unlock();
     }
-
+	_clients_locker.unlock();
     reset_ping_timer();
   }
 
