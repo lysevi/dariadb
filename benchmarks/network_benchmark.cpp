@@ -6,6 +6,7 @@
 #include <libdariadb/engine.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/locker.h>
 #include <libclient/client.h>
 #include <libserver/server.h>
 
@@ -24,6 +25,7 @@ bool run_server_flag = true;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::FAST_WRITE;
 Time cap_store_period = 0;
+size_t clients_count = 5;
 
 Engine* engine = nullptr;
 dariadb::net::Server*server_instance = nullptr;
@@ -62,10 +64,11 @@ void run_server() {
 	}
 }
 
-const size_t MEASES_SIZE = 2047 * 3 + 3;
-const size_t SEND_COUNT = 40;
+const size_t MEASES_SIZE = 10;
+const size_t SEND_COUNT = 100;
 typedef std::shared_ptr<dariadb::net::client::Client> Client_Ptr;
-
+std::list<float> elapsed_list;
+dariadb::utils::Locker e_lock;
 void write_thread(Client_Ptr client) {
 	dariadb::Meas::MeasArray ma;
 	ma.resize(MEASES_SIZE);
@@ -92,6 +95,7 @@ int main(int argc,char**argv){
 		("io_threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
 		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
 		("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period), "store period in CAP level.")
+		("clients-count", po::value<size_t>(&clients_count)->default_value(clients_count), "clients count.")
 		("extern-server", "dont run server.");
 
 	po::variables_map vm;
@@ -118,7 +122,7 @@ int main(int argc,char**argv){
 	}
 	
 	dariadb::net::client::Client::Param p(server_host, server_port);
-	size_t clients_count = 5;
+	
 	std::vector<Client_Ptr> clients(clients_count);
 	for (size_t i = 0; i < clients_count; ++i) {
 		Client_Ptr c{ new dariadb::net::client::Client(p) };
@@ -150,5 +154,5 @@ int main(int argc,char**argv){
 	auto total_writed = MEASES_SIZE*SEND_COUNT*clients_count;
 	std::cout << "writed: " << total_writed << std::endl;
 	std::cout << "write time: " << elapsed << std::endl;
-	std::cout << "speed " << total_writed/elapsed<<" per sec." << std::endl;
+	std::cout << "speed " << total_writed /elapsed<<" per sec." << std::endl;
 }
