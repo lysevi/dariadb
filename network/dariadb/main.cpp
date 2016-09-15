@@ -49,7 +49,7 @@ int main(int argc,char**argv){
 		("readonly", "readonly mode")
 		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
 		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
-		("io_threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
+		("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
 		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
 		("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period), "store period in CAP level.");
 		//("log-to-stdout", "logger print message to stdout.");

@@ -64,7 +64,7 @@ void run_server() {
 	}
 }
 
-const size_t MEASES_SIZE = 10;
+const size_t MEASES_SIZE = 2000;
 const size_t SEND_COUNT = 100;
 typedef std::shared_ptr<dariadb::net::client::Client> Client_Ptr;
 std::list<float> elapsed_list;
@@ -113,7 +113,7 @@ int main(int argc,char**argv){
 		std::exit(0);
 	}
 	if (vm.count("extern-server")) {
-		run_server_flag = true;
+		run_server_flag = false;
 	}
 
 	
