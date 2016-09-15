@@ -20,7 +20,8 @@
   - Append-only files layer, for fast write speed and crash-safety.
   - For better read speed, data stored in cache oblivious lookahead arrays.
   - Old values stored in compressed block for better disk space usage.
-* High write speed(1.5 - 2.5 millions values per second).
+* High write speed(2.5 - 3.5 millions values per second) in using as library.
+* High write speed(1k - 1.5 values per second) across the network.
 * Crash recovery.
 * CRC32 for all values.
 * Two variants of API:
