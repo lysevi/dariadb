@@ -188,7 +188,7 @@ public:
       return;
     }
     std::list<int> to_remove;
-    _clients_locker.lock();
+    
     for (auto &kv : _clients) {
       if (kv.second->state == ClientState::CONNECT) {
         continue;
@@ -203,12 +203,14 @@ public:
         kv.second->ping();
       }
     }
-    _clients_locker.unlock();
+    
 
     for (auto &id : to_remove) {
       logger_info("server: remove #", id);
       client_disconnect(id);
+	  _clients_locker.lock();
       _clients.erase(id);
+	  _clients_locker.unlock();
     }
 
     reset_ping_timer();
