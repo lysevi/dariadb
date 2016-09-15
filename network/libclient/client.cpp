@@ -200,13 +200,21 @@ public:
   ClientState state() const { return _state; }
 
   void append(const Meas::MeasArray &ma) {
-    std::lock_guard<utils::Locker> lg(this->_locker);
+	  this->_locker.lock();
     logger_info("client: send ", ma.size());
     size_t writed = 0;
+	std::list<ReadResult_ptr> results;
+
     while (writed != ma.size()) {
       auto cur_id = _query_num;
       _query_num += 1;
       auto left = (ma.size() - writed);
+
+	  auto qres = std::make_shared<ReadResult>();
+	  qres->id = cur_id;
+	  qres->kind = DataKinds::APPEND;
+	  results.push_back(qres);
+	  this->_query_results[qres->id] = qres;
 
       auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryAppend_header));
       size_t count_to_write =
@@ -229,6 +237,15 @@ public:
       send(nd);
       writed += count_to_write;
     }
+	this->_locker.unlock();
+	for (auto&r : results) {
+		while (!r->is_ok && !r->is_error) {
+			std::this_thread::yield();
+		}
+		this->_locker.lock();
+		this->_query_results.erase(r->id);
+		this->_locker.unlock();
+	}
   }
 
   ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk) {

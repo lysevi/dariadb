@@ -159,7 +159,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     logger_info("server: #", this->id(), " recv #", hdr->id, " write ", count);
     this->env->srv->write_begin();
     dont_free_memory = true;
-	sendOk(hdr->id);
+	
     env->service->post(env->io_meases_strand->wrap(
         std::bind(&IOClient::append, this, d)));
     
@@ -266,6 +266,7 @@ void IOClient::append(const NetData_ptr &d) {
 
   auto ar = env->storage->append(ma.begin(), ma.end());
   this->env->srv->write_end();
+  sendOk(hdr->id);
   this->env->nd_pool->free(d);
   logger_info("server: #", this->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }
