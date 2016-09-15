@@ -8,6 +8,7 @@
 | `develop` | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=dev)](https://travis-ci.org/lysevi/dariadb) | [![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=dev)](https://coveralls.io/github/lysevi/dariadb?branch=dev)
 
 # Features
+* Full featured server with client library(C++).
 * Each measurement contains:
   - Id - x64 unsigned integer value.
   - Time - x64 timestamp.
