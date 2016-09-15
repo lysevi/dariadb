@@ -65,6 +65,9 @@ protected:
   class Private;
   std::unique_ptr<Private> _Impl;
 };
+
+typedef std::shared_ptr<dariadb::net::client::Client> Client_Ptr;
+
 }
 }
 }

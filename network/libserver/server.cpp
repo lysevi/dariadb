@@ -94,7 +94,7 @@ public:
   void start() {
     logger_info("server: start server on ", _params.port, "...");
 
-    ping_all();
+    reset_ping_timer();
 
     ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
     _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
@@ -158,37 +158,37 @@ public:
   }
 
   void client_disconnect(int id) override {
-    _clients_locker.lock();
+    std::lock_guard<utils::Locker> lg(_clients_locker);
     auto fres = _clients.find(id);
     if (fres == _clients.end()) {
-      THROW_EXCEPTION_SS("server: client_disconnect - client #" << id << " not found");
+        // may be alread removed.
+        return;
     }
     fres->second->sock->close();
     _clients.erase(fres);
     _connections_accepted -= 1;
     logger_info("server: clients count  ", _clients.size(), " accepted:",
                 _connections_accepted.load());
-    _clients_locker.unlock();
   }
 
   void write_begin() override { _writes_in_progress++; }
   void write_end() override { _writes_in_progress--; }
 
-  void ping_all() {
+  void reset_ping_timer() {
     try {
       _ping_timer.expires_from_now(boost::posix_time::millisec(PING_TIMER_INTERVAL));
-      _ping_timer.async_wait(std::bind(&Server::Private::on_check_ping, this));
+      _ping_timer.async_wait(std::bind(&Server::Private::ping_all, this));
     } catch (std::exception &ex) {
       THROW_EXCEPTION_SS("server: reset_ping_timer - " << ex.what());
     }
   }
 
-  void on_check_ping() {
+  void ping_all() {
     if (_clients.empty() || _in_stop_logic) {
       return;
     }
     std::list<int> to_remove;
-    
+    _clients_locker.lock();
     for (auto &kv : _clients) {
       if (kv.second->state == ClientState::CONNECT) {
         continue;
@@ -203,14 +203,14 @@ public:
         kv.second->ping();
       }
     }
-    
+    _clients_locker.unlock();
 
 
     for (auto &id : to_remove) {
       logger_info("server: remove #", id);
       client_disconnect(id);
     }
-    ping_all();
+    reset_ping_timer();
   }
 
   io_service _service;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <numeric>
 
 #include <libdariadb/timeutil.h>
 #include <libdariadb/engine.h>
@@ -26,7 +27,7 @@ size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::FAST_WRITE;
 Time cap_store_period = 0;
 size_t clients_count = 5;
-
+bool dont_clean=false;
 Engine* engine = nullptr;
 dariadb::net::Server*server_instance = nullptr;
 
@@ -34,7 +35,13 @@ void run_server() {
 
 	bool is_exists = false;
 	if (dariadb::utils::fs::path_exists(storage_path)) {
-		is_exists = true;
+
+        if(!dont_clean){
+            std::cout<<"remove old storage..."<<std::endl;
+            dariadb::utils::fs::rm(storage_path);
+        }else{
+            is_exists = true;
+        }
 	}
 
 	if (is_exists) {
@@ -65,11 +72,13 @@ void run_server() {
 }
 
 const size_t MEASES_SIZE = 2000;
-const size_t SEND_COUNT = 100;
-typedef std::shared_ptr<dariadb::net::client::Client> Client_Ptr;
-std::list<float> elapsed_list;
-dariadb::utils::Locker e_lock;
-void write_thread(Client_Ptr client) {
+const size_t SEND_COUNT = 200;
+
+std::vector<float> elapsed(clients_count);
+std::vector<std::thread> threads(clients_count);
+std::vector<dariadb::net::client::Client_Ptr> clients(clients_count);
+
+void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
 	dariadb::Meas::MeasArray ma;
 	ma.resize(MEASES_SIZE);
 	for (size_t i = 0; i < MEASES_SIZE; ++i) {
@@ -79,23 +88,26 @@ void write_thread(Client_Ptr client) {
 	}
 
 
+    auto start = clock();
 	for(size_t i=0;i<SEND_COUNT;++i){
 		client->append(ma);
 	}
+    auto el = (((float)clock() - start) / CLOCKS_PER_SEC);
+    elapsed[thread_num]=el;
 }
 
 int main(int argc,char**argv){
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
-		("readonly", "readonly mode")
 		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
 		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
 		("server-host", po::value<std::string>(&server_host)->default_value(server_host), "server host.")
-		("io_threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
+        ("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
 		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
 		("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period), "store period in CAP level.")
 		("clients-count", po::value<size_t>(&clients_count)->default_value(clients_count), "clients count.")
+        ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean), "dont clean folder with storage if exists.")
 		("extern-server", "dont run server.");
 
 	po::variables_map vm;
@@ -115,7 +127,6 @@ int main(int argc,char**argv){
 	if (vm.count("extern-server")) {
 		run_server_flag = false;
 	}
-
 	
 	if (run_server_flag) {
 		run_server();
@@ -123,17 +134,16 @@ int main(int argc,char**argv){
 	
 	dariadb::net::client::Client::Param p(server_host, server_port);
 	
-	std::vector<Client_Ptr> clients(clients_count);
 	for (size_t i = 0; i < clients_count; ++i) {
-		Client_Ptr c{ new dariadb::net::client::Client(p) };
+        dariadb::net::client::Client_Ptr c{ new dariadb::net::client::Client(p) };
 		c->connect();
 		clients[i] = c;
 	}
 
 	auto start = clock();
-	std::vector<std::thread> threads(clients_count);
+
 	for (size_t i = 0; i < clients_count; ++i) {
-		threads[i] = std::move(std::thread{ write_thread, clients[i] });
+        threads[i] = std::move(std::thread{ write_thread, clients[i], i });
 	}
 
 	for (size_t i = 0; i < clients_count; ++i) {
@@ -143,7 +153,7 @@ int main(int argc,char**argv){
 			std::this_thread::yield();
 		}
 	}
-	auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+    auto total_elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 
 	if(run_server_flag){
 		server_instance->stop();
@@ -155,8 +165,14 @@ int main(int argc,char**argv){
 		delete engine;
 	}
 
-	auto total_writed = MEASES_SIZE*SEND_COUNT*clients_count;
+    auto count_per_thread=MEASES_SIZE*SEND_COUNT;
+    auto total_writed = count_per_thread*clients_count;
 	std::cout << "writed: " << total_writed << std::endl;
-	std::cout << "write time: " << elapsed << std::endl;
-	std::cout << "speed " << total_writed /elapsed<<" per sec." << std::endl;
+    std::cout << "total write time: " << total_elapsed << std::endl;
+    std::cout << "total speed: " << total_writed /total_elapsed<<" per sec." << std::endl;
+
+
+    auto average_time=std::accumulate(elapsed.begin(),elapsed.end(),0.0)/clients_count;
+    std::cout << "average time: " << average_time<<" sec." << std::endl;
+    std::cout << "average speed: " << count_per_thread/(float)(average_time)<<" per sec." << std::endl;
 }
