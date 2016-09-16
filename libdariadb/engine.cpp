@@ -39,8 +39,8 @@ Engine::Version Engine::Version::from_string(const std::string &str) {
 class Engine::Private {
 public:
   Private() {
-    logger_info("version: ", this->version().to_string());
-    logger_info("strategy: ", Options::instance()->strategy);
+    logger_info("engine: version - ", this->version().to_string());
+    logger_info("engine: strategy - ", Options::instance()->strategy);
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
@@ -101,11 +101,11 @@ public:
     auto current_version = this->version().version;
     auto storage_version = Manifest::instance()->get_version();
     if (storage_version != current_version) {
-      logger_info("openning storage with version: ", storage_version);
+      logger_info("engine: openning storage with version - ", storage_version);
       if (Version::from_string(storage_version) > this->version()) {
-        THROW_EXCEPTION_SS("openning storage with greater version.");
+        THROW_EXCEPTION_SS("engine: openning storage with greater version.");
       } else {
-        logger_info("update storage version to ", current_version);
+        logger_info("engine: update storage version to ", current_version);
         Manifest::instance()->set_version(current_version);
       }
     }

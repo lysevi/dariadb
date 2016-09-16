@@ -61,7 +61,7 @@ public:
 
   void fsck(bool force_check) {
     if (force_check) {
-      logger_info("PageManager: fsck force");
+      logger_info("engine: PageManager fsck force.");
     }
     if (!utils::fs::path_exists(Options::instance()->path)) {
       return;
@@ -73,7 +73,7 @@ public:
       auto file_name = utils::fs::append_path(Options::instance()->path, n);
       auto hdr = Page::readHeader(file_name);
       if (hdr.removed_chunks == hdr.addeded_chunks) {
-        logger_info("page: ", file_name, " is empty.");
+        logger_info("engine: page ", file_name, " is empty.");
         erase_page(file_name);
       } else {
         if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
@@ -88,7 +88,7 @@ public:
   /// file_name - full path.
   void erase_page(const std::string &file_name) {
     auto target_name = utils::fs::extract_filename(file_name);
-    logger_info("page: ", file_name, " removing...");
+    logger_info("engine: page ", file_name, " removing...");
     erase(target_name);
   }
 

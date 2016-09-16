@@ -31,7 +31,7 @@ AOFManager::AOFManager() {
     for (auto f : aofs) {
       auto full_filename = utils::fs::append_path(Options::instance()->path, f);
       if (AOFile::writed(full_filename) != Options::instance()->aof_max_size) {
-        logger_info("AofManager: open exist file ", f);
+        logger_info("engine: AofManager open exist file ", f);
         AOFile_Ptr p{new AOFile(full_filename)};
         _aof = p;
         break;

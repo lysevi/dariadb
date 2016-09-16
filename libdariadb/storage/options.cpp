@@ -49,7 +49,7 @@ void Options::calc_params() {
 }
 
 void Options::set_default() {
-  logger("options: set default options");
+  logger("engine: options set default options");
   aof_buffer_size = AOF_BUFFER_SIZE;
   cap_B = CAP_B;
   cap_store_period = 0; // 1000 * 60 * 60;
@@ -82,7 +82,7 @@ void Options::save() {
 }
 
 void Options::save(const std::string &file) {
-  logger("options: save to ", file);
+  logger("engine: options save to ", file);
   json js;
 
   js["aof_max_size"] = aof_max_size;
@@ -111,7 +111,7 @@ void Options::save(const std::string &file) {
 }
 
 void Options::load(const std::string &file) {
-  logger("options: loading ", file);
+  logger("engine: options loading ", file);
   std::string content = dariadb::utils::fs::read_file(file);
   json js = json::parse(content);
   aof_max_size = js["aof_max_size"];

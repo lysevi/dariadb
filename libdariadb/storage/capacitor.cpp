@@ -32,7 +32,7 @@ File struct:
 #include <list>
 #include <tuple>
 
-const std::string LOG_MSG_PREFIX = "fsck: capacitor ";
+const std::string LOG_MSG_PREFIX = "engine: fsck capacitor ";
 
 using namespace dariadb;
 using namespace dariadb::storage;

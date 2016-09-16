@@ -1,4 +1,4 @@
-# dariadb - numeric time-series storage engine.
+# dariadb - numeric time-series database.
 
 # Continuous Integration
 
