@@ -54,8 +54,8 @@ public:
   Meas::MeasList readInterval(const storage::QueryInterval &qi);
   ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
 
-  Meas::Id2Meas readInTimePoint(const storage::QueryTimePoint &qi);
-  ReadResult_ptr readInTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
+  Meas::Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
+  ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
 
   ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag);

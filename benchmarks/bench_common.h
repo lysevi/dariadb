@@ -152,7 +152,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       cur_id = (cur_id + 1) % random_ids.size();
 
       dariadb::storage::QueryTimePoint qp{current_ids, 0, time_point};
-      stor->readInTimePoint(qp);
+      stor->readTimePoint(qp);
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     if (!quiet) {

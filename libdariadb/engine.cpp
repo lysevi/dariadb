@@ -281,7 +281,7 @@ public:
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
-    auto values = this->readInTimePoint(q);
+    auto values = this->readTimePoint(q);
     for (auto &kv : values) {
       clbk->call(kv.second);
     }
@@ -322,8 +322,8 @@ public:
     return result;
   }
 
-  Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
-    TIMECODE_METRICS(ctmd, "readInTimePoint", "Engine::readInTimePoint");
+  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) {
+    TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
 
     LockManager::instance()->lock(
         LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
@@ -342,13 +342,13 @@ public:
 
       if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
           (minT < q.time_point || maxT < q.time_point)) {
-        auto subres = AOFManager::instance()->readInTimePoint(local_q);
+        auto subres = AOFManager::instance()->readTimePoint(local_q);
         result[id] = subres[id];
         continue;
       }
       if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
           (utils::inInterval(minT, maxT, q.time_point))) {
-        auto subres = CapacitorManager::instance()->readInTimePoint(local_q);
+        auto subres = CapacitorManager::instance()->readTimePoint(local_q);
         result[id] = subres[id];
 
       } else {
@@ -444,8 +444,8 @@ Meas::MeasList Engine::readInterval(const QueryInterval &q) {
   return _impl->readInterval(q);
 }
 
-Meas::Id2Meas Engine::readInTimePoint(const QueryTimePoint &q) {
-  return _impl->readInTimePoint(q);
+Meas::Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
+  return _impl->readTimePoint(q);
 }
 
 void Engine::drop_part_aofs(size_t count) {

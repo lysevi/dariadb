@@ -220,7 +220,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
 void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                         const IdArray &_all_ids_array, bool check_stop_flag) {
   auto qp = storage::QueryTimePoint(_all_ids_array, 0, to + copies_count);
-  auto all_id2meas = as->readInTimePoint(qp);
+  auto all_id2meas = as->readTimePoint(qp);
 
   size_t ids_count = (size_t)((to - from) / step);
   if (all_id2meas.size() < ids_count) {
@@ -238,7 +238,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
   }
 
   qp.time_point = to + copies_count;
-  auto fltr_res_tp = as->readInTimePoint(qp);
+  auto fltr_res_tp = as->readTimePoint(qp);
   if (fltr_res_tp.size() < ids_count) {
     throw MAKE_EXCEPTION("fltr_res.size() < ids_count. must be GE");
   }
@@ -247,7 +247,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
   fltr_res_tp.clear();
   qp.ids = notExstsIDs;
   qp.time_point = to - 1;
-  fltr_res_tp = as->readInTimePoint(qp);
+  fltr_res_tp = as->readTimePoint(qp);
   if (fltr_res_tp.size() != size_t(1)) { // must return NO_DATA
     throw MAKE_EXCEPTION("fltr_res.size() != size_t(1)");
   }
@@ -310,7 +310,7 @@ void readIntervalCommonTest(storage::MeasStorage *ds) {
 
     IdArray all_id = {1, 2, 4, 5, 55};
     {
-      auto tp_reader = ds->readInTimePoint({all_id, 0, 6});
+      auto tp_reader = ds->readTimePoint({all_id, 0, 6});
       Meas::MeasList output_in_point{};
       tp_reader->readAll(&output_in_point);
 
@@ -327,7 +327,7 @@ void readIntervalCommonTest(storage::MeasStorage *ds) {
     }
     {
 
-      auto tp_reader = ds->readInTimePoint({all_id, 0, 3});
+      auto tp_reader = ds->readTimePoint({all_id, 0, 3});
       Meas::MeasList output_in_point{};
       tp_reader->readAll(&output_in_point);
 
@@ -372,7 +372,7 @@ void readIntervalCommonTest(storage::MeasStorage *ds) {
     IdArray second_all_id = {1, 2, 4, 5, 6, 55};
     {
 
-      auto tp_reader = ds->readInTimePoint({second_all_id, 0, 8});
+      auto tp_reader = ds->readTimePoint({second_all_id, 0, 8});
       Meas::MeasList output_in_point{};
       tp_reader->readAll(&output_in_point);
 

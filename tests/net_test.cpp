@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     BOOST_CHECK_EQUAL(result.size(), ma.size());
 
     dariadb::storage::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
-    auto result_tp = c1.readInTimePoint(qt);
+    auto result_tp = c1.readTimePoint(qt);
     BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
     BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
 

@@ -351,8 +351,8 @@ void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   }
 }
 
-Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
-  TIMECODE_METRICS(ctmd, "readInTimePoint", "CapacitorManager::readInTimePoint");
+Meas::Id2Meas CapacitorManager::readTimePoint(const QueryTimePoint &query) {
+  TIMECODE_METRICS(ctmd, "readTimePoint", "CapacitorManager::readTimePoint");
   auto pred = [query](const Capacitor::Header &hdr) {
     if (!hdr.check_flag(query.flag)) {
       return false;
@@ -386,7 +386,7 @@ Meas::Id2Meas CapacitorManager::readInTimePoint(const QueryTimePoint &query) {
     AsyncTask at = [filename, &query, num, &results](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
       std::unique_ptr<Capacitor> cap{new Capacitor(filename, true)};
-      results[num] = cap->readInTimePoint(query);
+      results[num] = cap->readTimePoint(query);
     };
     task_res[num] =
         ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));

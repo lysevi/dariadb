@@ -268,8 +268,8 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   }
 }
 
-Meas::Id2Meas AOFManager::readInTimePoint(const QueryTimePoint &query) {
-  TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFManager::readInTimePoint");
+Meas::Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
+  TIMECODE_METRICS(ctmd, "readTimePoint", "AOFManager::readTimePoint");
   std::lock_guard<utils::Locker> lg(_locker);
   auto files = aof_files();
   dariadb::Meas::Id2Meas sub_result;
@@ -287,7 +287,7 @@ Meas::Id2Meas AOFManager::readInTimePoint(const QueryTimePoint &query) {
     AsyncTask at = [filename, &query, num, &results](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
       AOFile aof(filename, true);
-      results[num] = aof.readInTimePoint(query);
+      results[num] = aof.readTimePoint(query);
     };
     task_res[num] =
         ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));

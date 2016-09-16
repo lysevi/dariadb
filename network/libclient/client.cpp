@@ -299,7 +299,7 @@ public:
     return result;
   }
 
-  ReadResult_ptr readInTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk) {
+  ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
@@ -335,7 +335,7 @@ public:
     return qres;
   }
 
-  Meas::Id2Meas readInTimePoint(const storage::QueryTimePoint &qi) {
+  Meas::Id2Meas readTimePoint(const storage::QueryTimePoint &qi) {
     Meas::Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
       if (!parent->is_closed) {
@@ -343,7 +343,7 @@ public:
       }
     };
     ReadResult::callback clbk = clbk_lambda;
-    auto qres = readInTimePoint(qi, clbk);
+    auto qres = readTimePoint(qi, clbk);
     qres->wait();
     return result;
   }
@@ -483,13 +483,13 @@ ReadResult_ptr Client::readInterval(const storage::QueryInterval &qi,
   return _Impl->readInterval(qi, clbk);
 }
 
-Meas::Id2Meas Client::readInTimePoint(const storage::QueryTimePoint &qi) {
-  return _Impl->readInTimePoint(qi);
+Meas::Id2Meas Client::readTimePoint(const storage::QueryTimePoint &qi) {
+  return _Impl->readTimePoint(qi);
 }
 
-ReadResult_ptr Client::readInTimePoint(const storage::QueryTimePoint &qi,
+ReadResult_ptr Client::readTimePoint(const storage::QueryTimePoint &qi,
                             ReadResult::callback &clbk) {
-  return _Impl->readInTimePoint(qi, clbk);
+  return _Impl->readTimePoint(qi, clbk);
 }
 
 ReadResult_ptr Client::currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk) {

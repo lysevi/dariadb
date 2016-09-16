@@ -249,7 +249,7 @@ public:
   }
 
   Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
-    TIMECODE_METRICS(ctmd, "readInTimePoint", "PageManager::valuesBeforeTimePoint");
+    TIMECODE_METRICS(ctmd, "readTimePoint", "PageManager::valuesBeforeTimePoint");
 
     auto pred = [query](const IndexHeader &hdr) {
       auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||

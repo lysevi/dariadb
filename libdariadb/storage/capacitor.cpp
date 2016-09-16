@@ -560,15 +560,15 @@ public:
     }
   }
 
-  Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
-    TIMECODE_METRICS(ctmd, "readInTimePoint", "Capacitor::readInTimePoint");
+  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) {
+    TIMECODE_METRICS(ctmd, "readTimePoint", "Capacitor::readTimePoint");
     dariadb::Meas::Id2Meas sub_res = timePointValues(q);
 
     return sub_res;
   }
 
   Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    return readInTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
+    return readTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
 
   dariadb::Time minTime() const { return _header->minTime; }
@@ -774,8 +774,8 @@ Meas::MeasArray Capacitor::readAll() const {
   return _Impl->readAll();
 }
 
-Meas::Id2Meas Capacitor::readInTimePoint(const QueryTimePoint &q) {
-  return _Impl->readInTimePoint(q);
+Meas::Id2Meas Capacitor::readTimePoint(const QueryTimePoint &q) {
+  return _Impl->readTimePoint(q);
 }
 
 Meas::Id2Meas Capacitor::currentValue(const IdArray &ids, const Flag &flag) {

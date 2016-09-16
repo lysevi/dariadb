@@ -121,8 +121,8 @@ public:
     std::fclose(file);
   }
 
-  Meas::Id2Meas readInTimePoint(const QueryTimePoint &q) {
-    TIMECODE_METRICS(ctmd, "readInTimePoint", "AOFile::readInTimePoint");
+  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) {
+    TIMECODE_METRICS(ctmd, "readTimePoint", "AOFile::readTimePoint");
 
     dariadb::IdSet readed_ids;
     dariadb::Meas::Id2Meas sub_res;
@@ -334,8 +334,8 @@ void AOFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 
-Meas::Id2Meas AOFile::readInTimePoint(const QueryTimePoint &q) {
-  return _Impl->readInTimePoint(q);
+Meas::Id2Meas AOFile::readTimePoint(const QueryTimePoint &q) {
+  return _Impl->readTimePoint(q);
 }
 
 Meas::Id2Meas AOFile::currentValue(const IdArray &ids, const Flag &flag) {

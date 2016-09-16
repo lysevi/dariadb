@@ -338,7 +338,7 @@ void  IOClient::currentValue(const NetData_ptr &d) {
 	}
 	cdr->is_end();
 	delete cdr;
-	// auto result = env->storage->readInTimePoint(qi);
+	// auto result = env->storage->readTimePoint(qi);
 }
 
 void  IOClient::subscribe(const NetData_ptr &d) {
