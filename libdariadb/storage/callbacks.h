@@ -16,7 +16,7 @@ public:
     mlist.push_back(m);
   }
   void is_end() override { is_end_called = true; }
-  Meas::MeasList mlist;
+  MeasList mlist;
   utils::Locker _locker;
   bool is_end_called;
 };

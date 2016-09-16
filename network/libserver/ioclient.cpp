@@ -262,7 +262,7 @@ void IOClient::append(const NetData_ptr &d) {
   auto hdr = reinterpret_cast<QueryAppend_header *>(d->data);
   auto count = hdr->count;
   logger_info("server: #", this->id(), " begin async writing ", count, "...");
-  Meas::MeasArray ma = hdr->read_measarray();
+  MeasArray ma = hdr->read_measarray();
 
   auto ar = env->storage->append(ma.begin(), ma.end());
   this->env->srv->write_end();

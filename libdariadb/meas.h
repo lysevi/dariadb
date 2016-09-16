@@ -28,17 +28,12 @@ const Id MAX_ID = std::numeric_limits<dariadb::Id>::max();
 bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 
 struct Meas {
-  typedef Meas *PMeas;
-  struct meas_id_compare_less {
-    bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
-      return lhs.time < rhs.time;
-    }
-  };
+	Id id;
+	Time time;
+	Value value;
+	Flag flag;
+	Flag src;
 
-  typedef std::vector<Meas> MeasArray;
-  typedef std::list<Meas> MeasList;
-  typedef std::unordered_map<Id, Meas> Id2Meas;
-  typedef std::set<Meas, meas_id_compare_less> MeasSet;
   static Meas empty();
   static Meas empty(Id id);
 
@@ -68,25 +63,30 @@ struct Meas {
   bool inQuery(const IdArray &ids, const Flag f, const Flag s, Time from, Time to) const {
     return inQuery(ids, f, s) && inInterval(from, to);
   }
+};
 
-  Id id;
-  Time time;
-  Value value;
-  Flag flag;
-  Flag src;
+struct meas_id_compare_less {
+	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+		return lhs.time < rhs.time;
+	}
 };
 
 struct meas_time_compare_less {
-  bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
-    return lhs.time < rhs.time;
-  }
+	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+		return lhs.time < rhs.time;
+	}
 };
 
 struct meas_time_compare_greater {
-  bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
-    return lhs.time > rhs.time;
-  }
+	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+		return lhs.time > rhs.time;
+	}
 };
 
+using PMeas=Meas*;
+using MeasArray=std::vector<Meas>;
+using MeasList=std::list<Meas>;
+using Id2Meas=std::unordered_map<Id, Meas>;
+using MeasSet=std::set<Meas, meas_id_compare_less>;
 using Id2MSet = std::map<Id, std::set<Meas, meas_time_compare_less>>;
 }

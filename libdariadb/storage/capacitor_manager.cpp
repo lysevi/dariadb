@@ -351,7 +351,7 @@ void CapacitorManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   }
 }
 
-Meas::Id2Meas CapacitorManager::readTimePoint(const QueryTimePoint &query) {
+Id2Meas CapacitorManager::readTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readTimePoint", "CapacitorManager::readTimePoint");
   auto pred = [query](const Capacitor::Header &hdr) {
     if (!hdr.check_flag(query.flag)) {
@@ -371,14 +371,14 @@ Meas::Id2Meas CapacitorManager::readTimePoint(const QueryTimePoint &query) {
 
   auto files = caps_by_filter(pred);
 
-  dariadb::Meas::Id2Meas sub_result;
+  dariadb::Id2Meas sub_result;
 
   for (auto id : query.ids) {
     sub_result[id].flag = Flags::_NO_DATA;
     sub_result[id].time = query.time_point;
   }
 
-  std::vector<Meas::Id2Meas> results{files.size()};
+  std::vector<Id2Meas> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
 
   size_t num = 0;
@@ -412,11 +412,11 @@ Meas::Id2Meas CapacitorManager::readTimePoint(const QueryTimePoint &query) {
   return sub_result;
 }
 
-Meas::Id2Meas CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas CapacitorManager::currentValue(const IdArray &ids, const Flag &flag) {
   TIMECODE_METRICS(ctmd, "currentValue", "CapacitorManager::currentValue");
   auto files = cap_files();
 
-  dariadb::Meas::Id2Meas meases;
+  dariadb::Id2Meas meases;
   for (const auto &f : files) {
     auto c = Capacitor_Ptr{new Capacitor(f, true)};
     auto out = c->currentValue(ids, flag);
@@ -435,7 +435,7 @@ Meas::Id2Meas CapacitorManager::currentValue(const IdArray &ids, const Flag &fla
   return meases;
 }
 
-void CapacitorManager::append(std::string filename, const Meas::MeasArray &ma) {
+void CapacitorManager::append(std::string filename, const MeasArray &ma) {
   TIMECODE_METRICS(ctmd, "append", "CapacitorManager::append(std::string filename)");
   auto target = create_new(filename);
   target->append(ma.begin(), ma.end());

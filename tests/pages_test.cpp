@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  dariadb::Meas::MeasList addeded;
+  dariadb::MeasList addeded;
 
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
     first.id = 1;
     first.time = t;
     auto count = chunks_size / 10;
-    dariadb::Meas::MeasArray ma;
+    dariadb::MeasArray ma;
     ma.resize(count);
     for (size_t i = 0; i < count; i++, t++) {
       first.flag = dariadb::Flag(i);
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  dariadb::Meas::MeasList addeded;
+  dariadb::MeasList addeded;
 
   dariadb::storage::Manifest::start(
       dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     first.id = 1;
     first.time = t;
     auto count = chunks_size / 10;
-    dariadb::Meas::MeasArray ma;
+    dariadb::MeasArray ma;
     ma.resize(count);
     for (size_t i = 0; i < count; i++, t++) {
       first.flag = dariadb::Flag(i);
@@ -278,11 +278,11 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   BOOST_CHECK(PageManager::instance() != nullptr);
 
   auto start_time = dariadb::Time(0);
-  dariadb::Meas::MeasList addeded;
+  dariadb::MeasList addeded;
   const dariadb::Id id_count(5);
   dariadb::IdSet all_id_set;
   size_t count = 5000;
-  dariadb::Meas::MeasArray a(count);
+  dariadb::MeasArray a(count);
   auto e = dariadb::Meas::empty();
   for (size_t i = 0; i < count; i++) {
     e.id = i % id_count;

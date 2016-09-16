@@ -197,7 +197,7 @@ public:
     _subscribe_notify.add(new_s);
   }
 
-  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
+  Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     LockManager::instance()->lock(LOCK_KIND::READ, {LockObjects::AOF, LockObjects::CAP});
     auto result = AOFManager::instance()->currentValue(ids, flag);
     auto c_result = CapacitorManager::instance()->currentValue(ids, flag);
@@ -288,7 +288,7 @@ public:
     clbk->is_end();
   }
 
-  void mlist2mset(Meas::MeasList &mlist, Id2MSet &sub_result) {
+  void mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
     for (auto m : mlist) {
       if (m.flag == Flags::_NO_DATA) {
         continue;
@@ -297,7 +297,7 @@ public:
     }
   }
 
-  Meas::MeasList readInterval(const QueryInterval &q) {
+  MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
     std::unique_ptr<MList_ReaderClb> p_clbk{new MList_ReaderClb};
     std::unique_ptr<MList_ReaderClb> c_clbk{new MList_ReaderClb};
@@ -309,7 +309,7 @@ public:
     mlist2mset(c_clbk->mlist, sub_result);
     mlist2mset(a_clbk->mlist, sub_result);
 
-    Meas::MeasList result;
+    MeasList result;
     for (auto id : q.ids) {
       auto sublist = sub_result.find(id);
       if (sublist == sub_result.end()) {
@@ -322,13 +322,13 @@ public:
     return result;
   }
 
-  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) {
+  Id2Meas readTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
 
     LockManager::instance()->lock(
         LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
 
-    Meas::Id2Meas result;
+    Id2Meas result;
     result.reserve(q.ids.size());
     for (auto id : q.ids) {
       result[id].flag = Flags::_NO_DATA;
@@ -417,7 +417,7 @@ void Engine::subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr
   _impl->subscribe(ids, flag, clbk);
 }
 
-Meas::Id2Meas Engine::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas Engine::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
@@ -440,11 +440,11 @@ void Engine::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
   return _impl->foreach (q, clbk);
 }
 
-Meas::MeasList Engine::readInterval(const QueryInterval &q) {
+MeasList Engine::readInterval(const QueryInterval &q) {
   return _impl->readInterval(q);
 }
 
-Meas::Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
+Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
   return _impl->readTimePoint(q);
 }
 

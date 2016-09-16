@@ -14,7 +14,7 @@ void IMeasSource::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
   }
 }
 
-Meas::MeasList IMeasSource::readInterval(const QueryInterval &q) {
+MeasList IMeasSource::readInterval(const QueryInterval &q) {
   TIMECODE_METRICS(ctmd, "readInterval", "IMeasSource::readInterval");
   std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
   this->foreach (q, clbk.get());
@@ -23,7 +23,7 @@ Meas::MeasList IMeasSource::readInterval(const QueryInterval &q) {
   for (auto v : clbk->mlist) {
     sub_result[v.id].insert(v);
   }
-  Meas::MeasList result;
+  MeasList result;
   for (auto id : q.ids) {
     auto sublist = sub_result.find(id);
     if (sublist == sub_result.end()) {

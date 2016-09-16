@@ -51,9 +51,9 @@ public:
   QueueSizes queue_size() const;
 
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  virtual Meas::MeasList readInterval(const QueryInterval &q) override;
-  virtual Meas::Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  virtual MeasList readInterval(const QueryInterval &q) override;
+  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   virtual void foreach (const QueryTimePoint &q, IReaderClb * clbk) override;
 
   Time minTime() override;

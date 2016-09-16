@@ -22,8 +22,8 @@ std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   return std::tie(buf_size, v);
 }
 
-Meas::MeasArray QueryAppend_header::read_measarray() const {
-  Meas::MeasArray ma{size_t(count)};
+MeasArray QueryAppend_header::read_measarray() const {
+  MeasArray ma{size_t(count)};
   memcpy(ma.data(), ((char *)(&count) + sizeof(count)), count * sizeof(Meas));
   return ma;
 }

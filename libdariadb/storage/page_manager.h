@@ -27,7 +27,7 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
-  Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
+  Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) override;
 
@@ -36,7 +36,7 @@ public:
   dariadb::Time minTime();
   dariadb::Time maxTime();
 
-  void append(const std::string &file_prefix, const dariadb::Meas::MeasArray &ma);
+  void append(const std::string &file_prefix, const dariadb::MeasArray &ma);
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
 

@@ -50,15 +50,15 @@ public:
   /// connection id on server
   int id() const;
 
-  void append(const Meas::MeasArray &ma);
-  Meas::MeasList readInterval(const storage::QueryInterval &qi);
+  void append(const MeasArray &ma);
+  MeasList readInterval(const storage::QueryInterval &qi);
   ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
 
-  Meas::Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
+  Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
   ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
 
   ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
-  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag);
+  Id2Meas currentValue(const IdArray &ids, const Flag &flag);
 
   ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
 protected:

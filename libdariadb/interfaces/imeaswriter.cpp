@@ -3,8 +3,8 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-append_result IMeasWriter::append(const Meas::MeasArray::const_iterator &begin,
-                                  const Meas::MeasArray::const_iterator &end) {
+append_result IMeasWriter::append(const MeasArray::const_iterator &begin,
+                                  const MeasArray::const_iterator &end) {
   dariadb::append_result ar{};
 
   for (auto it = begin; it != end; ++it) {
@@ -13,8 +13,8 @@ append_result IMeasWriter::append(const Meas::MeasArray::const_iterator &begin,
   return ar;
 }
 
-append_result IMeasWriter::append(const Meas::MeasList::const_iterator &begin,
-                                  const Meas::MeasList::const_iterator &end) {
+append_result IMeasWriter::append(const MeasList::const_iterator &begin,
+                                  const MeasList::const_iterator &end) {
   dariadb::append_result ar{};
   for (auto it = begin; it != end; ++it) {
     ar = ar + this->append(*it);

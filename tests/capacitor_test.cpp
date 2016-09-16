@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     }
     BOOST_CHECK_EQUAL(cap.size(), writes_count);
 
-    dariadb::Meas::MeasList out;
+    dariadb::MeasList out;
 
     out = cap.readInterval(dariadb::storage::QueryInterval(
         dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(CapacitorInitTest) {
     e.time = writes_count - 1;
     BOOST_CHECK(cap.append(e).writed == 1);
 
-    dariadb::Meas::MeasList out;
+    dariadb::MeasList out;
     auto ids = dariadb::IdArray(id_set.begin(), id_set.end());
     dariadb::storage::QueryInterval qi{ids, 0, 0, writes_count};
     out = cap.readInterval(qi);
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(CapacitorBulk) {
 
     auto e = dariadb::Meas::empty();
     size_t count = dariadb::storage::Options::instance()->measurements_count();
-    dariadb::Meas::MeasArray a(count);
+    dariadb::MeasArray a(count);
     for (size_t i = 0; i < count; i++) {
       e.id = 0;
       e.time++;
@@ -323,7 +323,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
                                           0, 0, total_count);
     auto rdr = ms.readInterval(q_all);
 
-    dariadb::Meas::MeasList allByStep;
+    dariadb::MeasList allByStep;
     rdr = ms.readInterval(q_all);
     rdr->readByStep(&allByStep, 0, total_count, time_step);
     auto expected = size_t(total_count / time_step) * id_count; //+ timepoint
@@ -360,7 +360,7 @@ BOOST_AUTO_TEST_CASE(byStep) {
     auto rdr = ms.readInterval(q_all);
 
     dariadb::Time query_step = 11;
-    dariadb::Meas::MeasList allByStep;
+    dariadb::MeasList allByStep;
     rdr = ms.readInterval(q_all);
     rdr->readByStep(&allByStep, 0, total_count, query_step);
     auto expected = size_t(total_count / query_step) * id_count + id_count; //+ timepoint;
@@ -395,11 +395,11 @@ BOOST_AUTO_TEST_CASE(byStep) {
     dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(), all_id.end()},
                                           0, 0, total_count);
     auto rdr = ms.readInterval(q_all);
-    dariadb::Meas::MeasList all;
+    dariadb::MeasList all;
     rdr->readAll(&all);
 
     dariadb::Time query_step = 5;
-    dariadb::Meas::MeasList allByStep;
+    dariadb::MeasList allByStep;
     rdr = ms.readInterval(q_all);
     rdr->readByStep(&allByStep, 0, total_count, query_step);
     auto expected =
@@ -433,11 +433,11 @@ BOOST_AUTO_TEST_CASE(byStep) {
     dariadb::storage::QueryInterval q_all(dariadb::IdArray{all_id.begin(), all_id.end()},
                                           0, time_step, total_count);
     auto rdr = ms.readInterval(q_all);
-    dariadb::Meas::MeasList all;
+    dariadb::MeasList all;
     rdr->readAll(&all);
 
     dariadb::Time query_step = 5;
-    dariadb::Meas::MeasList allByStep;
+    dariadb::MeasList allByStep;
     rdr = ms.readInterval(q_all);
 
     rdr->readByStep(&allByStep, 0, total_count, query_step);
@@ -673,7 +673,7 @@ BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
       m.time = i;
       m.value = 0;
 
-      dariadb::Meas::MeasArray values{copies_count};
+      dariadb::MeasArray values{copies_count};
       for (size_t j = 1; j < copies_count + 1; j++) {
         m.time++;
         if (dariadb::storage::CapacitorManager::instance()->append(m).ignored != 0) {

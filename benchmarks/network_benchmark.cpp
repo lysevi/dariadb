@@ -79,7 +79,7 @@ std::vector<std::thread> threads;
 std::vector<dariadb::net::client::Client_Ptr> clients;
 
 void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
-	dariadb::Meas::MeasArray ma;
+	dariadb::MeasArray ma;
 	ma.resize(MEASES_SIZE);
 	for (size_t i = 0; i < MEASES_SIZE; ++i) {
 		ma[i].id = dariadb::Id(i);

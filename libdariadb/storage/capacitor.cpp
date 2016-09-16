@@ -252,7 +252,7 @@ public:
   void fsck() {
     using dariadb::timeutil::to_string;
 
-    Meas::MeasList readed;
+    MeasList readed;
     size_t dropped = 0;
 
     for (size_t i = 0; i < _header->levels_count; ++i) {
@@ -300,8 +300,8 @@ public:
   }
 
   /// bulk loading. values should ve sorted by time.
-  append_result bulk(const Meas::MeasArray::const_iterator &begin,
-                     const Meas::MeasArray::const_iterator &end) {
+  append_result bulk(const MeasArray::const_iterator &begin,
+                     const MeasArray::const_iterator &end) {
     level_header *headers_pos = reinterpret_cast<level_header *>(_raw_data);
     Meas *pos_after_headers =
         reinterpret_cast<Meas *>(headers_pos + _header->levels_count);
@@ -331,8 +331,8 @@ public:
     return append_result(src_size, 0);
   }
 
-  append_result append(const Meas::MeasArray::const_iterator &begin,
-                       const Meas::MeasArray::const_iterator &end) {
+  append_result append(const MeasArray::const_iterator &begin,
+                       const MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "Capacitor::append");
     assert(!_is_readonly);
 
@@ -522,10 +522,10 @@ public:
     }
   }
 
-  Meas::MeasArray readAll() const {
+  MeasArray readAll() const {
     TIMECODE_METRICS(ctmd, "foreach", "Capacitor::readall");
 
-    Meas::MeasArray result;
+    MeasArray result;
     result.resize(this->_header->_writed);
     size_t pos = 0;
 
@@ -549,7 +549,7 @@ public:
     return result;
   }
 
-  void insert_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
+  void insert_if_older(dariadb::Id2Meas &s, const dariadb::Meas &m) const {
     auto fres = s.find(m.id);
     if (fres == s.end()) {
       s.insert(std::make_pair(m.id, m));
@@ -560,14 +560,14 @@ public:
     }
   }
 
-  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) {
+  Id2Meas readTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "Capacitor::readTimePoint");
-    dariadb::Meas::Id2Meas sub_res = timePointValues(q);
+    dariadb::Id2Meas sub_res = timePointValues(q);
 
     return sub_res;
   }
 
-  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
+  Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     return readTimePoint(QueryTimePoint(ids, flag, this->maxTime()));
   }
 
@@ -622,9 +622,9 @@ public:
 
   size_t size() const { return _header->_writed; }
 
-  Meas::Id2Meas timePointValues(const QueryTimePoint &q) {
+  Id2Meas timePointValues(const QueryTimePoint &q) {
     IdSet readed_ids;
-    Meas::Id2Meas sub_res;
+    Id2Meas sub_res;
     bool id_exists = _header->check_id(q.ids);
     bool flag_exists = false;
     if (q.flag == Flag(0) || _header->check_flag(q.flag)) {
@@ -761,8 +761,8 @@ append_result Capacitor::append(const Meas &value) {
   return _Impl->append(value);
 }
 
-append_result Capacitor::append(const Meas::MeasArray::const_iterator &begin,
-                                const Meas::MeasArray::const_iterator &end) {
+append_result Capacitor::append(const MeasArray::const_iterator &begin,
+                                const MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
@@ -770,15 +770,15 @@ void Capacitor::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 
-Meas::MeasArray Capacitor::readAll() const {
+MeasArray Capacitor::readAll() const {
   return _Impl->readAll();
 }
 
-Meas::Id2Meas Capacitor::readTimePoint(const QueryTimePoint &q) {
+Id2Meas Capacitor::readTimePoint(const QueryTimePoint &q) {
   return _Impl->readTimePoint(q);
 }
 
-Meas::Id2Meas Capacitor::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas Capacitor::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 

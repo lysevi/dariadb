@@ -56,11 +56,11 @@ public:
   static Header readHeader(std::string file_name);
   Header *header();
   append_result append(const Meas &value) override;
-  append_result append(const Meas::MeasArray::const_iterator &begin,
-                       const Meas::MeasArray::const_iterator &end) override;
+  append_result append(const MeasArray::const_iterator &begin,
+                       const MeasArray::const_iterator &end) override;
   void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
 
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;
@@ -77,7 +77,7 @@ public:
   void fsck();
   void close();
 
-  Meas::MeasArray readAll() const;
+  MeasArray readAll() const;
 
 protected:
   class Private;

@@ -16,13 +16,13 @@ public:
   AOFile(const std::string &fname, bool readonly = false);
 
   append_result append(const Meas &value) override;
-  append_result append(const Meas::MeasArray::const_iterator &begin,
-                       const Meas::MeasArray::const_iterator &end) override;
-  append_result append(const Meas::MeasList::const_iterator &begin,
-                       const Meas::MeasList::const_iterator &end) override;
+  append_result append(const MeasArray::const_iterator &begin,
+                       const MeasArray::const_iterator &end) override;
+  append_result append(const MeasList::const_iterator &begin,
+                       const MeasList::const_iterator &end) override;
   void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   dariadb::Time minTime() override;
   dariadb::Time maxTime() override;
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
@@ -31,7 +31,7 @@ public:
 
   std::string filename() const;
 
-  Meas::MeasArray readAll();
+  MeasArray readAll();
   static size_t writed(std::string fname);
 
 protected:

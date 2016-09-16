@@ -30,7 +30,7 @@ class Page : public IChunkContainer {
 
 public:
   static Page *create(const std::string &file_name, uint64_t chunk_id,
-                      uint32_t max_chunk_size, const Meas::MeasArray &ma);
+                      uint32_t max_chunk_size, const MeasArray &ma);
   static Page *open(std::string file_name, bool read_only = false);
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
@@ -46,7 +46,7 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
   ChunkLinkList chunksByIterval(const QueryInterval &query) override;
-  Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
+  Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) override;
 

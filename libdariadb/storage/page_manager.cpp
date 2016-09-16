@@ -248,7 +248,7 @@ public:
     return result;
   }
 
-  Meas::Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
+  Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "PageManager::valuesBeforeTimePoint");
 
     auto pred = [query](const IndexHeader &hdr) {
@@ -264,7 +264,7 @@ public:
       return false;
     };
 
-    Meas::Id2Meas result;
+    Id2Meas result;
 
     for (auto id : query.ids) {
       result[id].flag = Flags::_NO_DATA;
@@ -327,7 +327,7 @@ public:
     return res;
   }
 
-  void append(const std::string &file_prefix, const dariadb::Meas::MeasArray &ma) {
+  void append(const std::string &file_prefix, const dariadb::MeasArray &ma) {
     TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
     if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
       dariadb::utils::fs::mkdir(Options::instance()->path);
@@ -409,7 +409,7 @@ ChunkLinkList PageManager::chunksByIterval(const QueryInterval &query) {
   return impl->chunksByIterval(query);
 }
 
-dariadb::Meas::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
+dariadb::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
   return impl->valuesBeforeTimePoint(q);
 }
 
@@ -435,7 +435,7 @@ dariadb::Time PageManager::maxTime() {
 }
 
 void PageManager::append(const std::string &file_prefix,
-                         const dariadb::Meas::MeasArray &ma) {
+                         const dariadb::MeasArray &ma) {
   return impl->append(file_prefix, ma);
 }
 void PageManager::fsck(bool force_check) {

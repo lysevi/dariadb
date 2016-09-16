@@ -276,7 +276,7 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
     auto expected = (dariadb_bench::write_per_id_count *
                      dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
 
-    std::map<Id, Meas::MeasList> _dict;
+    std::map<Id, MeasList> _dict;
     for (auto &v : readed) {
       _dict[v.id].push_back(v);
     }

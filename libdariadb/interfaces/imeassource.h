@@ -18,9 +18,9 @@ public:
                           dariadb::Time *maxResult) = 0;
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk) = 0;
   virtual void foreach (const QueryTimePoint &q, IReaderClb * clbk);
-  virtual Meas::MeasList readInterval(const QueryInterval &q);
-  virtual Meas::Id2Meas readTimePoint(const QueryTimePoint &q) = 0;
-  virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) = 0;
+  virtual MeasList readInterval(const QueryInterval &q);
+  virtual Id2Meas readTimePoint(const QueryTimePoint &q) = 0;
+  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) = 0;
   virtual ~IMeasSource() {}
 };
 

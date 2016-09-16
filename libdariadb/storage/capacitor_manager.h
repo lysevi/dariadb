@@ -33,12 +33,12 @@ public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  virtual Meas::Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  virtual Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
 
-  void append(std::string filename, const Meas::MeasArray &ma);
+  void append(std::string filename, const MeasArray &ma);
   std::list<std::string> closed_caps();
   void drop_cap(const std::string &fname);
 

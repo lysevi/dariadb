@@ -263,7 +263,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
-    dariadb::Meas::MeasArray ma;
+    dariadb::MeasArray ma;
     ma.resize(MEASES_SIZE);
     dariadb::IdArray ids;
     ids.resize(MEASES_SIZE);

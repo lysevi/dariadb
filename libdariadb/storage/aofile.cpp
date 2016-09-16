@@ -65,8 +65,8 @@ public:
     return append_result(1, 0);
   }
 
-  append_result append(const Meas::MeasArray::const_iterator &begin,
-                       const Meas::MeasArray::const_iterator &end) {
+  append_result append(const MeasArray::const_iterator &begin,
+                       const MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
 
@@ -83,8 +83,8 @@ public:
     return append_result(write_size, 0);
   }
 
-  append_result append(const Meas::MeasList::const_iterator &begin,
-                       const Meas::MeasList::const_iterator &end) {
+  append_result append(const MeasList::const_iterator &begin,
+                       const MeasList::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
 
@@ -97,7 +97,7 @@ public:
     auto max_size = Options::instance()->aof_max_size;
 
     auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
-    Meas::MeasArray ma{begin, end};
+    MeasArray ma{begin, end};
     std::fwrite(ma.data(), sizeof(Meas), write_size, file);
     std::fclose(file);
     _writed += write_size;
@@ -121,11 +121,11 @@ public:
     std::fclose(file);
   }
 
-  Meas::Id2Meas readTimePoint(const QueryTimePoint &q) {
+  Id2Meas readTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "AOFile::readTimePoint");
 
     dariadb::IdSet readed_ids;
-    dariadb::Meas::Id2Meas sub_res;
+    dariadb::Id2Meas sub_res;
 
     auto file = open_to_read();
 
@@ -155,7 +155,7 @@ public:
     return sub_res;
   }
 
-  void replace_if_older(dariadb::Meas::Id2Meas &s, const dariadb::Meas &m) const {
+  void replace_if_older(dariadb::Id2Meas &s, const dariadb::Meas &m) const {
     auto fres = s.find(m.id);
     if (fres == s.end()) {
       s.insert(std::make_pair(m.id, m));
@@ -166,8 +166,8 @@ public:
     }
   }
 
-  Meas::Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    dariadb::Meas::Id2Meas sub_res;
+  Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
+    dariadb::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
 
     auto file = open_to_read();
@@ -255,11 +255,11 @@ public:
 
   std::string filename() const { return _filename; }
 
-  Meas::MeasArray readAll() {
+  MeasArray readAll() {
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = open_to_read();
 
-    Meas::MeasArray ma(Options::instance()->aof_max_size);
+    MeasArray ma(Options::instance()->aof_max_size);
     size_t pos = 0;
     while (1) {
       Meas val = Meas::empty();
@@ -321,12 +321,12 @@ void AOFile::flush() { // write all to storage;
 append_result AOFile::append(const Meas &value) {
   return _Impl->append(value);
 }
-append_result AOFile::append(const Meas::MeasArray::const_iterator &begin,
-                             const Meas::MeasArray::const_iterator &end) {
+append_result AOFile::append(const MeasArray::const_iterator &begin,
+                             const MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
-append_result AOFile::append(const Meas::MeasList::const_iterator &begin,
-                             const Meas::MeasList::const_iterator &end) {
+append_result AOFile::append(const MeasList::const_iterator &begin,
+                             const MeasList::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
@@ -334,11 +334,11 @@ void AOFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 
-Meas::Id2Meas AOFile::readTimePoint(const QueryTimePoint &q) {
+Id2Meas AOFile::readTimePoint(const QueryTimePoint &q) {
   return _Impl->readTimePoint(q);
 }
 
-Meas::Id2Meas AOFile::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas AOFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
@@ -346,7 +346,7 @@ std::string AOFile::filename() const {
   return _Impl->filename();
 }
 
-Meas::MeasArray AOFile::readAll() {
+MeasArray AOFile::readAll() {
   return _Impl->readAll();
 }
 

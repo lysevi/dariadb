@@ -268,18 +268,18 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   }
 }
 
-Meas::Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
+Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readTimePoint", "AOFManager::readTimePoint");
   std::lock_guard<utils::Locker> lg(_locker);
   auto files = aof_files();
-  dariadb::Meas::Id2Meas sub_result;
+  dariadb::Id2Meas sub_result;
 
   for (auto id : query.ids) {
     sub_result[id].flag = Flags::_NO_DATA;
     sub_result[id].time = query.time_point;
   }
 
-  std::vector<Meas::Id2Meas> results{files.size()};
+  std::vector<Id2Meas> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
 
   size_t num = 0;
@@ -331,10 +331,10 @@ Meas::Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
   return sub_result;
 }
 
-Meas::Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
   auto files = aof_files();
 
-  dariadb::Meas::Id2Meas meases;
+  dariadb::Id2Meas meases;
   for (const auto &f : files) {
     AOFile c(f, true);
     auto sub_rdr = c.currentValue(ids, flag);
