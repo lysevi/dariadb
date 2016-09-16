@@ -23,13 +23,14 @@ using namespace dariadb::net;
 typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
 
 const int PING_TIMER_INTERVAL = 1000;
+const int INFO_TIMER_INTERVAL = 10000;
 const int MAX_MISSED_PINGS = 100;
 
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
       : _write_meases_strand(_service), _params(p), _stop_flag(false),
-        _is_runned_flag(false), _ping_timer(_service) {
+        _is_runned_flag(false), _ping_timer(_service), _info_timer(_service) {
     _in_stop_logic = false;
     _next_client_id = 1;
     _connections_accepted.store(0);
@@ -95,6 +96,7 @@ public:
     logger_info("server: start server on ", _params.port, "...");
 
     reset_ping_timer();
+	reset_info_timer();
 
     ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
     _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
@@ -213,6 +215,31 @@ public:
     reset_ping_timer();
   }
 
+  void reset_info_timer() {
+	  try {
+		  _info_timer.expires_from_now(boost::posix_time::millisec(INFO_TIMER_INTERVAL));
+		  _info_timer.async_wait(std::bind(&Server::Private::log_server_info, this));
+	  }
+	  catch (std::exception &ex) {
+		  THROW_EXCEPTION_SS("server: reset_ping_timer - " << ex.what());
+	  }
+  }
+
+  void log_server_info() {
+    auto queue_sizes = _env.storage->queue_size();
+    std::stringstream stor_ss;
+
+    stor_ss << "(p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count
+            << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
+            << ")";
+
+    stor_ss << "[a:" << queue_sizes.dropper_queues.aof
+            << " c:" << queue_sizes.dropper_queues.cap << "]";
+
+    logger_info("server: stat ", stor_ss.str());
+    reset_info_timer();
+  }
+
   io_service _service;
   io_service::strand _write_meases_strand;
   acceptor_ptr _acc;
@@ -231,6 +258,7 @@ public:
   utils::Locker _clients_locker;
 
   deadline_timer _ping_timer;
+  deadline_timer _info_timer;
 
   IOClient::Environment _env;
   std::atomic_int _writes_in_progress;
