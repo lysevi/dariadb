@@ -148,4 +148,3 @@ if (ENABLE_TESTING)
 endif(ENABLE_TESTING)
 
 add_subdirectory (benchmarks)
-add_subdirectory (tools)
