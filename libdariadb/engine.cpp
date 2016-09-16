@@ -83,16 +83,14 @@ public:
     if (!_stoped) {
       _subscribe_notify.stop();
 
-	  //TODO remove this from stop.
       this->flush();
-
-      ThreadManager::stop();
+	  
+	  ThreadManager::stop();
       AOFManager::stop();
       CapacitorManager::stop();
       PageManager::stop();
       Manifest::stop();
       LockManager::stop();
-
       _stoped = true;
     }
   }
@@ -364,40 +362,6 @@ public:
     return result;
   }
 
-  Id load(const QueryInterval &qi) {
-    std::lock_guard<std::mutex> lg(_locker);
-    Id result = _next_query_id++;
-
-    auto vals = this->readInterval(qi);
-    _load_results.insert(std::make_pair(result, std::make_shared<Meas::MeasList>(vals)));
-    return result;
-  }
-
-  Id load(const QueryTimePoint &qt) {
-    std::lock_guard<std::mutex> lg(_locker);
-    Id result = _next_query_id++;
-
-    auto id2m = this->readInTimePoint(qt);
-    _load_results.insert(std::make_pair(result, std::make_shared<Meas::MeasList>()));
-    for (auto &kv : id2m) {
-      _load_results[result]->push_back(kv.second);
-    }
-    return result;
-  }
-
-  Meas::MeasList getResult(Id id) {
-    Meas::MeasList result;
-    auto fres = _load_results.find(id);
-    if (fres == _load_results.end()) {
-      return result;
-    } else {
-      for (auto &v : *(fres->second)) {
-        result.push_back(v);
-      }
-      return result;
-    }
-  }
-
   void drop_part_caps(size_t count) {
     CapacitorManager::instance()->drop_closed_files(count);
   }
@@ -423,7 +387,6 @@ protected:
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
   Id _next_query_id;
-  std::unordered_map<Id, std::shared_ptr<Meas::MeasList>> _load_results;
   std::unique_ptr<Dropper> _dropper;
   bool _stoped;
 };
@@ -444,18 +407,6 @@ Time Engine::maxTime() {
 bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                         dariadb::Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
-}
-
-Id Engine::load(const QueryInterval &qi) {
-  return _impl->load(qi);
-}
-
-Id Engine::load(const QueryTimePoint &qt) {
-  return _impl->load(qt);
-}
-
-Meas::MeasList Engine::getResult(Id id) {
-  return _impl->getResult(id);
 }
 
 append_result Engine::append(const Meas &value) {

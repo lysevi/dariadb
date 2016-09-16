@@ -61,10 +61,6 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
 
-  Id load(const QueryInterval &qi);
-  Id load(const QueryTimePoint &qt);
-  Meas::MeasList getResult(Id);
-
   void drop_part_aofs(size_t count);
   void drop_part_caps(size_t count);
 
