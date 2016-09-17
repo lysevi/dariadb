@@ -1,6 +1,7 @@
 #pragma once
 
 #include "locker.h"
+#include "strings.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -35,26 +36,9 @@ public:
   void message(LOG_MESSAGE_KIND kind, const std::string &msg);
 
   template <typename... T> void variadic_message(LOG_MESSAGE_KIND kind, T... args) {
-    auto str_message = args_to_string(args...);
+    auto str_message = utils::strings::args_to_string(args...);
     this->message(kind, str_message);
   }
-
-  template <class Head> void args_as_string(std::ostream &s, Head &&head) {
-    s << std::forward<Head>(head);
-  }
-
-  template <class Head, class... Tail>
-  void args_as_string(std::ostream &s, Head &&head, Tail &&... tail) {
-    s << std::forward<Head>(head);
-    args_as_string(s, std::forward<Tail>(tail)...);
-  }
-
-  template <class... Args> std::string args_to_string(Args &&... args) {
-    std::stringstream ss;
-    args_as_string(ss, std::forward<Args>(args)...);
-    return ss.str();
-  }
-
 private:
   static std::shared_ptr<LogManager> _instance;
   static utils::Locker _locker;

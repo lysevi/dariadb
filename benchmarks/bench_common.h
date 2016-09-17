@@ -188,7 +188,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
                 << std::endl;
     }
     if (!clbk->is_end_called) {
-      THROW_EXCEPTION_SS("benchmark: logic error - !clbk->is_end_called");
+      THROW_EXCEPTION("benchmark: logic error - !clbk->is_end_called");
     }
   }
 

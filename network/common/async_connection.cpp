@@ -91,9 +91,9 @@ void AsyncConnection::onReadMarker(NetData_ptr &d, const boost::system::error_co
     this->onNetworkError(err);
   } else {
     if (read_bytes != MARKER_SIZE) {
-      THROW_EXCEPTION_SS("AsyncConnection::onReadMarker #"
-                         << _async_con_id << " - wrong marker size: expected "
-                         << MARKER_SIZE << " readed " << read_bytes);
+      THROW_EXCEPTION("AsyncConnection::onReadMarker #"
+                         , _async_con_id , " - wrong marker size: expected "
+                         , MARKER_SIZE , " readed " , read_bytes);
     }
 
     if (auto spt = _sock.lock()) {
@@ -114,8 +114,8 @@ void AsyncConnection::onReadData(NetData_ptr &d, const boost::system::error_code
     try {
       this->onDataRecv(d, cancel_flag, dont_free_mem);
     } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("exception on async readData. #" << _async_con_id << " - "
-                                                          << ex.what());
+      THROW_EXCEPTION("exception on async readData. #" , _async_con_id , " - "
+                                                          , ex.what());
     }
 
     if (!dont_free_mem) {

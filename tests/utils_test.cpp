@@ -7,16 +7,17 @@
 #include <iostream>
 #include <thread>
 #include <libdariadb/timeutil.h>
+#include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/crc.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/lru.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/period_worker.h>
-#include <libdariadb/utils/skiplist.h>
 #include <libdariadb/utils/thread_manager.h>
 #include <libdariadb/utils/thread_pool.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/utils/strings.h>
 
 BOOST_AUTO_TEST_CASE(Time) {
   auto ct = dariadb::timeutil::current_time();
@@ -83,69 +84,6 @@ BOOST_AUTO_TEST_CASE(LRUCheck) {
   ilru.erase(55);
   BOOST_CHECK_EQUAL(ilru.size(), size_t(9));
   BOOST_CHECK(!ilru.find(55, &out_val));
-}
-
-BOOST_AUTO_TEST_CASE(SkipListCheck) {
-  using int_lst = dariadb::utils::skiplist<size_t, size_t>;
-
-  int_lst lst;
-  const size_t insertions = 33;
-  size_t sum_before = 0;
-  for (size_t i = 0; i < insertions; i += 3) {
-    lst.insert(i, i * 5);
-    lst.insert(i + 2, (i + 2) * 10);
-    lst.insert(i + 1, (i + 1) * 10);
-    lst.insert(i, i * 10);
-    sum_before += i + i + 2 + i + 1;
-  }
-  // lst.print();
-  BOOST_CHECK_EQUAL(lst.size(), size_t(33));
-  for (auto &kv : lst) {
-    kv.second = kv.first * 11;
-  }
-  lst.remove(0);
-  BOOST_CHECK_EQUAL(lst.size(), size_t(32));
-  for (size_t i = 0; i < 33; ++i) {
-    auto fpos = lst.find(i);
-    if (fpos != lst.end()) {
-      auto kv = *fpos;
-      BOOST_CHECK_EQUAL(kv.second, i * 11);
-    } else {
-      if (i != 0) { // we remove 0;
-        BOOST_CHECK(fpos != lst.end());
-      }
-    }
-  }
-  size_t sum = 0;
-  for (auto it = lst.begin(); it != lst.end(); ++it) {
-    sum += it->first;
-  }
-  BOOST_CHECK_EQUAL(sum, sum_before);
-
-  sum = 0;
-  for (auto it = lst.cbegin(); it != lst.cend(); ++it) {
-    sum += it->first;
-  }
-  BOOST_CHECK_EQUAL(sum, sum_before);
-
-  lst.remove(size_t(3));
-  // lst.print();
-  BOOST_CHECK(lst.find(size_t(3)) == lst.end());
-
-  auto ub = lst.upper_bound(size_t(4));
-  BOOST_CHECK_EQUAL(ub->first, size_t(5));
-
-  auto lb = lst.lower_bound(size_t(4));
-  BOOST_CHECK_EQUAL(lb->first, size_t(2));
-
-  lb = lst.lower_bound(size_t(3));
-  BOOST_CHECK_EQUAL(lb->first, size_t(2));
-
-  lst.remove_if(lst.begin(), lst.end(),
-                [](const int_lst::pair_type &kv) { return kv.first < 20; });
-  for (auto it : lst) {
-    BOOST_CHECK(it.first >= 20);
-  }
 }
 
 BOOST_AUTO_TEST_CASE(CountZero) {
@@ -355,9 +293,9 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
 
 BOOST_AUTO_TEST_CASE(SplitString) {
   std::string str = "1 2 3 4 5 6 7 8";
-  auto splitted = dariadb::utils::tokens(str);
+  auto splitted = dariadb::utils::strings::tokens(str);
   BOOST_CHECK_EQUAL(splitted.size(), size_t(8));
 
-  splitted = dariadb::utils::split(str, ' ');
+  splitted = dariadb::utils::strings::split(str, ' ');
   BOOST_CHECK_EQUAL(splitted.size(), size_t(8));
 }

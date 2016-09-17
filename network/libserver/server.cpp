@@ -125,7 +125,7 @@ public:
 
   void handle_accept(socket_ptr sock, const boost::system::error_code &err) {
     if (err) {
-      THROW_EXCEPTION_SS("dariadb::server: error on accept - " << err.message());
+      THROW_EXCEPTION("dariadb::server: error on accept - " , err.message());
     }
 
     logger_info("server: accept connection.");
@@ -151,7 +151,7 @@ public:
     std::lock_guard<utils::Locker> lg(_clients_locker);
     auto fres_it = this->_clients.find(id);
     if (fres_it == this->_clients.end()) {
-      THROW_EXCEPTION_SS("server: client_connect - client #" << id << " not found");
+      THROW_EXCEPTION("server: client_connect - client #" , id , " not found");
     }
     auto client = fres_it->second;
     _connections_accepted += 1;
@@ -181,7 +181,7 @@ public:
       _ping_timer.expires_from_now(boost::posix_time::millisec(PING_TIMER_INTERVAL));
       _ping_timer.async_wait(std::bind(&Server::Private::ping_all, this));
     } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("server: reset_ping_timer - " << ex.what());
+      THROW_EXCEPTION("server: reset_ping_timer - " , ex.what());
     }
   }
 
@@ -221,7 +221,7 @@ public:
 		  _info_timer.async_wait(std::bind(&Server::Private::log_server_info, this));
 	  }
 	  catch (std::exception &ex) {
-		  THROW_EXCEPTION_SS("server: reset_ping_timer - " << ex.what());
+          THROW_EXCEPTION("server: reset_ping_timer - " , ex.what());
 	  }
   }
 

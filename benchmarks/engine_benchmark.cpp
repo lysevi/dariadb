@@ -300,26 +300,23 @@ void check_engine_state(Engine *raw_ptr) {
   switch (strategy) {
   case dariadb::storage::STRATEGY::FAST_WRITE:
     if (files.cola_count != 0 || files.pages_count != 0) {
-      THROW_EXCEPTION_SS("FAST_WRITE error: "
-                             << "(p:" << files.pages_count << " cap:" << files.cola_count
-                             << " a:" << files.aofs_count << " T:" << files.active_works
-                             << ")";);
+      THROW_EXCEPTION("FAST_WRITE error: (p:" ,files.pages_count , " cap:" , files.cola_count
+                             , " a:" , files.aofs_count , " T:" , files.active_works
+                             , ")");
     }
     break;
   case dariadb::storage::STRATEGY::FAST_READ:
     if (files.cola_count == 0 || files.pages_count != 0) {
-      THROW_EXCEPTION_SS("FAST_READ error: "
-                             << "(p:" << files.pages_count << " cap:" << files.cola_count
-                             << " a:" << files.aofs_count << " T:" << files.active_works
-                             << ")";);
+      THROW_EXCEPTION("FAST_READ error: (p:" , files.pages_count , " cap:" , files.cola_count
+                             , " a:" , files.aofs_count , " T:" , files.active_works
+                             , ")");
     }
     break;
   case dariadb::storage::STRATEGY::COMPRESSED:
     if (files.aofs_count >= 1 && files.cola_count != 0 && files.pages_count == 0) {
-      THROW_EXCEPTION_SS("COMPRESSED error: "
-                             << "(p:" << files.pages_count << " cap:" << files.cola_count
-                             << " a:" << files.aofs_count << " T:" << files.active_works
-                             << ")";);
+        THROW_EXCEPTION("COMPRESSED error: (p:" , files.pages_count , " cap:", files.cola_count
+                             , " a:" ,files.aofs_count , " T:" , files.active_works
+                             , ")");
     }
     break;
   case dariadb::storage::STRATEGY::DYNAMIC:
@@ -327,22 +324,20 @@ void check_engine_state(Engine *raw_ptr) {
       auto max_closed_caps = Options::instance()->cap_max_closed_caps;
       if (files.aofs_count > 1 && files.cola_count > max_closed_caps &&
           files.pages_count == 0) {
-        THROW_EXCEPTION_SS("DYNAMIC_SIZE error: "
-                               << "(p:" << files.pages_count
-                               << " cap:" << files.cola_count << " a:" << files.aofs_count
-                               << " T:" << files.active_works << ")";);
+        THROW_EXCEPTION("DYNAMIC_SIZE error: (p:" , files.pages_count
+                               , " cap:" , files.cola_count , " a:" , files.aofs_count
+                               , " T:" , files.active_works , ")");
       }
     } else {
       if (files.aofs_count > 1 && files.pages_count == 0) {
-        THROW_EXCEPTION_SS("DYNAMIC_TIME error: "
-                               << "(p:" << files.pages_count
-                               << " cap:" << files.cola_count << " a:" << files.aofs_count
-                               << " T:" << files.active_works << ")";);
+        THROW_EXCEPTION("DYNAMIC error: (p:" , files.pages_count
+                               , " cap:" , files.cola_count , " a:" , files.aofs_count
+                               , " T:" , files.active_works , ")");
       }
     }
     break;
   default:
-    THROW_EXCEPTION_SS("unknow strategy: " << strategy);
+    THROW_EXCEPTION("unknow strategy: ", strategy);
   }
   std::cout << "OK" << std::endl;
 }

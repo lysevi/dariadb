@@ -226,7 +226,7 @@ PageHeader Page::readHeader(std::string file_name) {
   std::ifstream istream;
   istream.open(file_name, std::fstream::in | std::fstream::binary);
   if (!istream.is_open()) {
-    THROW_EXCEPTION_SS("can't open file. filename=" << file_name);
+    THROW_EXCEPTION("can't open file. filename=", file_name);
   }
   PageHeader result;
   memset(&result, 0, sizeof(PageHeader));
@@ -375,7 +375,7 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     if (ptr_to_chunk_info_raw->kind == ChunkKind::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      THROW_EXCEPTION_SS("Unknow ChunkKind: " << ptr_to_chunk_info_raw->kind);
+      THROW_EXCEPTION("Unknow ChunkKind: " , ptr_to_chunk_info_raw->kind);
     }
 
     Chunk_Ptr c{ptr};
@@ -423,7 +423,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     if (ptr_to_chunk_info_raw->kind == ChunkKind::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      THROW_EXCEPTION_SS("Unknow ChunkKind: " << ptr_to_chunk_info_raw->kind);
+      THROW_EXCEPTION("Unknow ChunkKind: " , ptr_to_chunk_info_raw->kind);
     }
     Chunk_Ptr c{ptr};
     search_res = c;

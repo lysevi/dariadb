@@ -13,6 +13,7 @@
 #include "utils/metrics.h"
 #include "utils/thread_manager.h"
 #include "utils/utils.h"
+#include "utils/strings.h"
 #include <algorithm>
 #include <cassert>
 
@@ -25,7 +26,7 @@ std::string Engine::Version::to_string() const {
 }
 
 Engine::Version Engine::Version::from_string(const std::string &str) {
-  std::vector<std::string> elements = utils::split(str, '.');
+  std::vector<std::string> elements = utils::strings::split(str, '.');
   assert(elements.size() == 3);
 
   Engine::Version result;
@@ -101,7 +102,7 @@ public:
     if (storage_version != current_version) {
       logger_info("engine: openning storage with version - ", storage_version);
       if (Version::from_string(storage_version) > this->version()) {
-        THROW_EXCEPTION_SS("engine: openning storage with greater version.");
+        THROW_EXCEPTION("engine: openning storage with greater version.");
       } else {
         logger_info("engine: update storage version to ", current_version);
         Manifest::instance()->set_version(current_version);

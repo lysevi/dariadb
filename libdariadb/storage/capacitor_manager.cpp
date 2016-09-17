@@ -158,8 +158,7 @@ CapacitorManager::caps_by_filter(std::function<bool(const Capacitor::Header &)> 
 
   auto mnfst = Manifest::instance()->cola_list();
   if (mnfst.size() != _file2header.size()) {
-    THROW_EXCEPTION_SS("mnfst.size(" << mnfst.size() << ") != _file2header.size("
-                                     << _file2header.size() << ")");
+    THROW_EXCEPTION("mnfst.size(",mnfst.size() , ") != _file2header.size(",_file2header.size() , ")");
   }
 
   for (auto f2h : _file2header) {

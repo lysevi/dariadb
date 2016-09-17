@@ -1,11 +1,11 @@
 #include "strategy.h"
-#include "../utils/utils.h"
+#include "../utils/strings.h"
 
 std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
   std::string token;
   in >> token;
 
-  token = utils::to_upper(token);
+  token = utils::strings::to_upper(token);
 
   if (token == "DYNAMIC") {
     strat = dariadb::storage::STRATEGY::DYNAMIC;

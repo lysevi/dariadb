@@ -1,16 +1,17 @@
 #pragma once
 #include "logger.h"
+#include "strings.h"
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
 #define CODE_POS (dariadb::utils::CodePos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg) dariadb::utils::Exception::create_and_log(CODE_POS, msg)
-#define THROW_EXCEPTION_SS(msg)                                                          \
-  std::stringstream sstream_var;                                                         \
-  sstream_var << msg;                                                                    \
-  throw MAKE_EXCEPTION(sstream_var.str());
+#define MAKE_EXCEPTION(msg)                                                    \
+  dariadb::utils::Exception::create_and_log(CODE_POS, msg)
+// macros, because need CODE_POS
+#define THROW_EXCEPTION(msg...)                                                \
+  throw dariadb::utils::Exception::create_and_log(CODE_POS, msg);
 
 namespace dariadb {
 namespace utils {
@@ -33,12 +34,14 @@ struct CodePos {
 
 class Exception : public std::exception {
 public:
-  static Exception create_and_log(const CodePos &pos, const std::string &message) {
+  template <typename... T>
+  static Exception create_and_log(const CodePos &pos, T... message) {
     std::stringstream ss;
+    auto expanded_message = utils::strings::args_to_string(message...);
     ss << "FATAL ERROR. The Exception will be thrown! " << pos.toString()
-       << " Message: " << message;
+       << " Message: " << expanded_message;
     logger_fatal(ss.str());
-    return Exception(message);
+    return Exception(expanded_message);
   }
 
 public:

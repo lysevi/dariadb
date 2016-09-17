@@ -38,7 +38,7 @@ public:
       _service.stop();
       _thread_handler.join();
     } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("client: #" << id() << ex.what());
+      THROW_EXCEPTION("client: #" , id(), ex.what());
     }
   }
 
@@ -75,7 +75,7 @@ public:
 
   void onNetworkError(const boost::system::error_code &err) override {
     if (this->_state != ClientState::DISCONNECTED) {
-      THROW_EXCEPTION_SS("client: #" << id() << err.message());
+      THROW_EXCEPTION("client: #" , id() , err.message());
     }
   }
 
@@ -92,7 +92,7 @@ public:
       auto query_num = qh_ok->id;
       logger_info("client: #", id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
-        THROW_EXCEPTION_SS("(this->_state != ClientState::WORK)" << this->_state);
+        THROW_EXCEPTION("(this->_state != ClientState::WORK)" , this->_state);
       }
 	  
 	  auto subres_it = this->_query_results.find(query_num);
@@ -173,7 +173,7 @@ public:
 
   void connect_handler(const boost::system::error_code &ec) {
     if (ec) {
-      THROW_EXCEPTION_SS("dariadb::client: error on connect - " << ec.message());
+      THROW_EXCEPTION("dariadb::client: error on connect - " , ec.message());
     }
     this->start(this->_socket);
     std::lock_guard<utils::Locker> lg(_locker);
@@ -272,7 +272,7 @@ public:
     auto id_size = sizeof(Id) * qi.ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
       _pool.free(nd);
-      THROW_EXCEPTION_SS("client: query to big");
+      THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
     auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
@@ -321,7 +321,7 @@ public:
     auto id_size = sizeof(Id) * qi.ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
       _pool.free(nd);
-      THROW_EXCEPTION_SS("client: query to big");
+      THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
     auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
@@ -369,7 +369,7 @@ public:
 	  auto id_size = sizeof(Id) * ids.size();
 	  if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
 		  _pool.free(nd);
-		  THROW_EXCEPTION_SS("client: query to big");
+          THROW_EXCEPTION("client: query to big");
 	  }
 	  p_header->ids_count = (uint16_t)(ids.size());
 	  auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
@@ -417,7 +417,7 @@ public:
 	  auto id_size = sizeof(Id) * ids.size();
 	  if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
 		  _pool.free(nd);
-		  THROW_EXCEPTION_SS("client: query to big");
+          THROW_EXCEPTION("client: query to big");
 	  }
 	  p_header->ids_count = (uint16_t)(ids.size());
 	  auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));

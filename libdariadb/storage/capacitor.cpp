@@ -729,7 +729,7 @@ Capacitor::Header Capacitor::readHeader(std::string file_name) {
   std::ifstream istream;
   istream.open(file_name, std::fstream::in | std::fstream::binary);
   if (!istream.is_open()) {
-    THROW_EXCEPTION_SS("can't open file. filename=" << file_name);
+    THROW_EXCEPTION("can't open file. filename=", file_name);
   }
   Capacitor::Header result;
   memset(&result, 0, sizeof(Capacitor::Header));

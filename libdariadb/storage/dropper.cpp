@@ -105,7 +105,7 @@ void Dropper::drop_aof_internal(const std::string fname) {
 
       LockManager::instance()->unlock(LockObjects::DROP_AOF);
     } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("Dropper::drop_aof_internal: " << ex.what());
+      THROW_EXCEPTION("Dropper::drop_aof_internal: " , ex.what());
     }
   };
 
@@ -132,7 +132,7 @@ void Dropper::drop_cap_internal(const std::string &fname) {
       CapacitorManager::instance()->erase(without_path);
       LockManager::instance()->unlock(LockObjects::DROP_CAP);
     } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("Dropper::drop_cap_internal: " << ex.what());
+      THROW_EXCEPTION("Dropper::drop_cap_internal: " , ex.what());
     }
   };
   auto res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
@@ -166,7 +166,7 @@ void Dropper::drop_aof_to_compress(const std::string &fname) {
 
       LockManager::instance()->unlock({LockObjects::AOF, LockObjects::PAGE});
     } catch (std::exception &ex) {
-      THROW_EXCEPTION_SS("Dropper::drop_aof_to_compress: " << ex.what());
+      THROW_EXCEPTION("Dropper::drop_aof_to_compress: " , ex.what());
     }
   };
   auto res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
