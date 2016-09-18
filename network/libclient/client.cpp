@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <thread>
+#include <string>
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -66,11 +67,16 @@ public:
   }
 
   void client_thread() {
-    ip::tcp::endpoint ep(ip::address::from_string(_params.host), _params.port);
-    auto raw_sock_ptr = new ip::tcp::socket(_service);
-    _socket = socket_ptr{raw_sock_ptr};
-    _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
-    _service.run();
+      ip::tcp::resolver resolver(_service);
+
+      ip::tcp::resolver::query query(_params.host, std::to_string(_params.port));
+      ip::tcp::resolver::iterator iter = resolver.resolve( query);
+      ip::tcp::endpoint ep = *iter;
+
+      auto raw_sock_ptr = new ip::tcp::socket(_service);
+      _socket = socket_ptr{raw_sock_ptr};
+      _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
+      _service.run();
   }
 
   void onNetworkError(const boost::system::error_code &err) override {
