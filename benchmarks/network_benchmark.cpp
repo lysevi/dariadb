@@ -82,7 +82,7 @@ void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
 	dariadb::MeasArray ma;
 	ma.resize(MEASES_SIZE);
 	for (size_t i = 0; i < MEASES_SIZE; ++i) {
-		ma[i].id = dariadb::Id(i);
+        ma[i].id = dariadb::Id(thread_num);
 		ma[i].value = dariadb::Value(i);
 		ma[i].time = i;
 	}
@@ -143,9 +143,7 @@ int main(int argc,char**argv){
         clients[i]->connect();
 	}
 
-	auto start = clock();
-
-	for (size_t i = 0; i < clients_count; ++i) {
+    for (size_t i = 0; i < clients_count; ++i) {
         auto t=std::thread{ write_thread, clients[i], i };
         threads[i] = std::move(t);
 	}
@@ -157,7 +155,10 @@ int main(int argc,char**argv){
 			std::this_thread::yield();
 		}
 	}
-    auto total_elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+    dariadb::net::client::Client_Ptr c{ new dariadb::net::client::Client(p) };
+    c->connect();
+    dariadb::storage::QueryInterval ri(dariadb::IdArray{0},0,0,MEASES_SIZE);
+    auto result=c->readInterval(ri);
 
 	if(run_server_flag){
 		server_instance->stop();
@@ -172,11 +173,14 @@ int main(int argc,char**argv){
     auto count_per_thread=MEASES_SIZE*SEND_COUNT;
     auto total_writed = count_per_thread*clients_count;
 	std::cout << "writed: " << total_writed << std::endl;
-    std::cout << "total write time: " << total_elapsed << std::endl;
-    std::cout << "total speed: " << total_writed /total_elapsed<<" per sec." << std::endl;
-
 
     auto average_time=std::accumulate(elapsed.begin(),elapsed.end(),0.0)/clients_count;
     std::cout << "average time: " << average_time<<" sec." << std::endl;
     std::cout << "average speed: " << count_per_thread/(float)(average_time)<<" per sec." << std::endl;
+
+    std::cout<<"result:"<<result.size();
+
+    if(result.size()!=MEASES_SIZE*SEND_COUNT ){
+        THROW_EXCEPTION("result.size()!=MEASES_SIZE*SEND_COUNT: ", result.size());
+    }
 }
