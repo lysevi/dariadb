@@ -2,6 +2,29 @@ cmake_minimum_required (VERSION 3.1)
 set(PROJECT "dariadb")
 project (${PROJECT} VERSION 0.1.1)
 
+
+option(ENABLE_TESTING "Enable testing of the dariadb." ON)
+option(ENABLE_METRICS "Enable code metrics." ON)
+option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
+
+option(CLANG_ASAN_UBSAN "Enable Clang address & undefined behavior sanitizer for binary." OFF)
+option(CLANG_MSAN "Enable Clang memory sanitizer for binary." OFF)
+
+if((CLANG_ASAN_UBSAN AND CLANG_MSAN))
+  message(FATAL_ERROR "Sanitizers cannot be enabled simultaneously.")
+endif()
+
+if((CLANG_ASAN_UBSAN OR CLANG_MSAN) AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+  message(FATAL_ERROR "Sanitizers are only supported for Clang.")
+endif()
+
+MESSAGE(STATUS "Options: ")
+MESSAGE(STATUS "ENABLE_TESTING - " ${ENABLE_TESTING})
+MESSAGE(STATUS "ENABLE_METRICS - " ${ENABLE_METRICS})
+MESSAGE(STATUS "ENABLE_INTEGRATION_TESTS - " ${ENABLE_INTEGRATION_TESTS})
+MESSAGE(STATUS "CLANG_MSAN - " ${CLANG_MSAN})
+MESSAGE(STATUS "CLANG_ASAN_UBSAN - " ${CLANG_ASAN_UBSAN})
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(AddCXXCompilerFlag)
@@ -120,16 +143,16 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch-enum -Wno-switch-default -Wno-covered-switch-default")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -fno-inline -g3 -fstack-protector-all -DDEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
+
+  if(CLANG_ASAN_UBSAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
+  endif(CLANG_ASAN_UBSAN)
+
+  if(CLANG_MSAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
+  endif(CLANG_MSAN)
 endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
-option(ENABLE_TESTING "Enable testing of the dariadb." ON)
-option(ENABLE_METRICS "Enable code metrics." ON)
-option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
-
-MESSAGE(STATUS "Options: ")
-MESSAGE(STATUS "ENABLE_TESTING - " ${ENABLE_TESTING})
-MESSAGE(STATUS "ENABLE_METRICS - " ${ENABLE_METRICS})
-MESSAGE(STATUS "ENABLE_INTEGRATION_TESTS - " ${ENABLE_INTEGRATION_TESTS})
 
 if (ENABLE_METRICS)
   add_definitions(-DENABLE_METRICS)
