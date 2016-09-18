@@ -199,3 +199,4 @@ FakesAssemblies/
 Makefile
 *.cbp
 install_manifest.txt
+CTestTestfile.cmake
