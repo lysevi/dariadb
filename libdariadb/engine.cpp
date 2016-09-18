@@ -31,9 +31,9 @@ Engine::Version Engine::Version::from_string(const std::string &str) {
 
   Engine::Version result;
   result.version = str;
-  result.major = std::stoi(elements[0]);
-  result.minor = std::stoi(elements[1]);
-  result.patch = std::stoi(elements[2]);
+  result.major = (uint16_t)std::stoi(elements[0]);
+  result.minor = (uint16_t)std::stoi(elements[1]);
+  result.patch = (uint16_t)std::stoi(elements[2]);
   return result;
 }
 

@@ -146,7 +146,8 @@ int main(int argc,char**argv){
 	auto start = clock();
 
 	for (size_t i = 0; i < clients_count; ++i) {
-        threads[i] = std::move(std::thread{ write_thread, clients[i], i });
+        auto t=std::thread{ write_thread, clients[i], i };
+        threads[i] = std::move(t);
 	}
 
 	for (size_t i = 0; i < clients_count; ++i) {

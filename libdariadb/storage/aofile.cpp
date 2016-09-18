@@ -273,6 +273,7 @@ public:
     return ma;
   }
 
+  [[noreturn]]
   void throw_open_error_exception() const {
     std::stringstream ss;
     ss << "aof: file open error " << _filename;

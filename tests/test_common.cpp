@@ -17,7 +17,7 @@ public:
     count = 0;
     is_end_called = 0;
   }
-  void call(const Meas &v) {
+  void call(const Meas &v) override{
     std::lock_guard<std::mutex> lg(_locker);
     count++;
     all.push_back(v);

@@ -47,7 +47,8 @@ public:
     logger_info("client: connecting to ", _params.host, ':', _params.port);
 
     _state = ClientState::CONNECT;
-    _thread_handler = std::move(std::thread{&Client::Private::client_thread, this});
+    auto t=std::thread{&Client::Private::client_thread, this};
+    _thread_handler = std::move(t);
 
     while (this->_state != ClientState::WORK) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));

@@ -38,6 +38,7 @@ public:
   virtual append_result append(const Meas &value) override;
   virtual void flush() override;
 
+  using IMeasStorage::append;
   void append(std::string filename, const MeasArray &ma);
   std::list<std::string> closed_caps();
   void drop_cap(const std::string &fname);

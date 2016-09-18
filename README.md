@@ -52,7 +52,7 @@ $ export CXX="g++-6"
 ###clang
 ---
 ```shell
-$ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} -stdlib=libc++" .
+$ cmake -DCMAKE_BUILD_TYPE=Releae -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} -stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS} -lstdc++" .
 $ make
 ```
 

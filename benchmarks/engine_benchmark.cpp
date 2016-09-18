@@ -31,7 +31,7 @@ public:
     count = 0;
     is_end_called = false;
   }
-  void call(const dariadb::Meas &) { count++; }
+  void call(const dariadb::Meas &) override { count++; }
   void is_end() override { is_end_called = true; }
   std::atomic<size_t> count;
   bool is_end_called;

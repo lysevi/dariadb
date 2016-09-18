@@ -26,7 +26,7 @@ public:
   virtual void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                          IReaderClb *clb) = 0;
   virtual void foreach (const QueryInterval &query, IReaderClb * clb);
-  virtual ~IChunkContainer(){};
+  virtual ~IChunkContainer(){}
 };
 }
 }

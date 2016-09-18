@@ -17,7 +17,6 @@ void lock_mutex(LOCK_KIND kind, const RWMutex_Ptr &mtx) {
   }
   case LOCK_KIND::UNKNOW: {
     THROW_EXCEPTION("try to lock unknow state");
-    break;
   }
   };
 }
@@ -32,7 +31,6 @@ bool try_lock_mutex(LOCK_KIND kind, const RWMutex_Ptr &mtx) {
   }
   case LOCK_KIND::UNKNOW: {
     THROW_EXCEPTION("try to try-lock unknow state");
-    break;
   }
   };
   return false;
@@ -50,7 +48,6 @@ void unlock_mutex(const RWMutex_Ptr &mtx) {
   }
   case LOCK_KIND::UNKNOW: {
     THROW_EXCEPTION("try to unlock unknow state");
-    break;
   }
   };
 }
@@ -118,7 +115,6 @@ void LockManager::lock(const LOCK_KIND &lk, const LockObjects &lo) {
   }
   default: {
     THROW_EXCEPTION("Unknow LockObject:", (uint8_t)lo);
-    break;
   }
   }
 }

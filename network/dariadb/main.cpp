@@ -106,7 +106,7 @@ int main(int argc,char**argv){
 	while (!s.is_runned()) {
 	}
 	
-	
+    //TODO this thread can be used for io_service.pool();
 	while (s.is_runned()){
 		std::this_thread::yield();
 	}

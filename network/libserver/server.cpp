@@ -109,8 +109,8 @@ public:
 
     _io_threads.resize(_params.io_threads);
     for (size_t i = 0; i < _params.io_threads; ++i) {
-      _io_threads[i] = std::move(
-          std::thread(std::bind(&Server::Private::handle_clients_thread, this)));
+        auto t=std::thread(std::bind(&Server::Private::handle_clients_thread, this));
+      _io_threads[i] = std::move(t);
     }
 
     _is_runned_flag.store(true);
