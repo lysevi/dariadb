@@ -23,9 +23,14 @@ ADD_BENCHARK(network_benchmark network_benchmark.cpp)
 TARGET_LINK_LIBRARIES(network_benchmark libdariadb-cl libnet-server)
 
 macro(ADD_PERF_TEST name)
-   MESSAGE(STATUS " + engine_benchmark.cpp "  ${name} " "  ${ARGN})
+   MESSAGE(STATUS " + engine_benchmark "  ${name} " "  ${ARGN})
    add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/engine_benchmark --read-benchmark-runs=10  ${ARGN})
 endmacro(ADD_PERF_TEST)
+
+macro(ADD_NT_PERF_TEST name)
+   MESSAGE(STATUS " + netowrk_benchmark "  ${name} " "  ${ARGN})
+   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/network_benchmark --io-threads=5  ${ARGN})
+endmacro(ADD_NT_PERF_TEST)
 
 if(ENABLE_INTEGRATION_TESTS)
    MESSAGE(STATUS "Integration tests: ")
@@ -34,4 +39,7 @@ if(ENABLE_INTEGRATION_TESTS)
    ADD_PERF_TEST(FAST-READ --strategy=FAST_READ)
    ADD_PERF_TEST(FAST-WRITE --strategy=FAST_WRITE)
    ADD_PERF_TEST(COMPRESSED --strategy=COMPRESSED)
+
+   ADD_NT_PERF_TEST(ONE_CLIENT  --clients-count=1)
+   ADD_NT_PERF_TEST(TEN_CLIENTS  --clients-count=10)
 endif(ENABLE_INTEGRATION_TESTS)
