@@ -7,37 +7,16 @@
 
 #include <boost/program_options.hpp>
 
+#include "logger.h"
+
 using namespace dariadb;
 using namespace dariadb::storage;
-
-class ServerLogger : public dariadb::utils::ILogger {
-public:
-	void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) {
-		auto ct = dariadb::timeutil::current_time();
-		auto ct_str = dariadb::timeutil::to_string(ct);
-		std::stringstream ss;
-		ss << ct_str << " ";
-		switch (kind) {
-		case dariadb::utils::LOG_MESSAGE_KIND::FATAL:
-			ss << "[err] " << msg << std::endl;
-			break;
-		case dariadb::utils::LOG_MESSAGE_KIND::INFO:
-			ss << "[inf] " << msg << std::endl;
-			break;
-		case dariadb::utils::LOG_MESSAGE_KIND::MESSAGE:
-			ss << "[dbg] " << msg << std::endl;
-			break;
-		}
-		std::cout << ss.str();
-	}
-};
-
 
 namespace po = boost::program_options;
 
 std::string storage_path = "dariadb_storage";
 unsigned short server_port = 2001;
-//bool logg2stdout = false;
+bool logg2stdout = true;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::DYNAMIC;
 Time cap_store_period = 0;
@@ -47,13 +26,14 @@ int main(int argc,char**argv){
 	desc.add_options()
 		("help", "produce help message")
 		("readonly", "readonly mode")
+		("log-to-file", "logger out to dariadb.log.")
 		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
 		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
 		("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
 		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
 		("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period), "store period in CAP level.");
-		//("log-to-stdout", "logger print message to stdout.");
-
+		
+	
 	po::variables_map vm;
 	try {
 		po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -68,16 +48,17 @@ int main(int argc,char**argv){
 		std::cout << desc << std::endl;
 		std::exit(0);
 	}
-	/*if (vm.count("log-to-stdout")) {
-		logg2stdout = true;
-	}*/
+	if (vm.count("log-to-file")) {
+		logg2stdout = false;
+	}
 
 	bool is_exists = false;
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		is_exists = true;
 	}
-	
-	dariadb::utils::ILogger_ptr log_ptr{ new ServerLogger };
+	ServerLogger::Params p;
+	p.use_stdout = logg2stdout;
+	dariadb::utils::ILogger_ptr log_ptr{ new ServerLogger(p) };
 	dariadb::utils::LogManager::start(log_ptr);
 
 	if (is_exists) {

@@ -16,6 +16,7 @@ endif()
 
 if((CLANG_ASAN_UBSAN OR CLANG_MSAN) AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
   message(FATAL_ERROR "Sanitizers are only supported for Clang.")
+  EXIT()
 endif()
 
 MESSAGE(STATUS "Options: ")
@@ -29,7 +30,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(AddCXXCompilerFlag)
 
-
 set(Boost_USE_STATIC_LIBS        OFF)
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     OFF)
@@ -39,7 +39,7 @@ set(BOOST_ALL_DYN_LINK           ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 #endif(NOT MSVC)
 
-set(BOOST_DEP unit_test_framework system filesystem system)
+set(BOOST_DEP unit_test_framework system filesystem system log)
 
 IF(WIN32)
   MESSAGE(STATUS "WIN32:")
