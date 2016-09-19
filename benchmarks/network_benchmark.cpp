@@ -159,6 +159,7 @@ int main(int argc,char**argv){
     c->connect();
     dariadb::storage::QueryInterval ri(dariadb::IdArray{0},0,0,MEASES_SIZE);
     auto result=c->readInterval(ri);
+	c->disconnect();
 
 	if(run_server_flag){
 		server_instance->stop();
