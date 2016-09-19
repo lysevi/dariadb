@@ -3,6 +3,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 #include <json/json.hpp>
+#include <cassert>
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -48,6 +49,7 @@ IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query
   _parent = parent;
   pos = 0;
   _query_num = query_num;
+  assert(_query_num!=0);
 }
 
 void IOClient::ClientDataReader::call(const Meas &m) {
@@ -245,6 +247,7 @@ void IOClient::sendOk(QueryNumber query_num) {
   auto ok_nd = env->nd_pool->construct(DataKinds::OK);
   auto qh = reinterpret_cast<QueryOk_header *>(ok_nd->data);
   qh->id = query_num;
+  assert(qh->id!=0);
   ok_nd->size = sizeof(QueryOk_header);
   send(ok_nd);
 }
