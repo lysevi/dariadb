@@ -108,7 +108,9 @@ public:
 		  if (subres_it->second->kind == DataKinds::SUBSCRIBE) {
 			  subres_it->second->locker.unlock();
 		  }
-	  }
+      }else{
+          THROW_EXCEPTION("client: query #", qh_ok->id, " not found");
+      }
       return;
     }
 
@@ -286,10 +288,11 @@ public:
     memcpy(ids_ptr, qi.ids.data(), id_size);
     nd->size += static_cast<NetData::MessageSize>(id_size);
 
-    send(nd);
     qres->is_closed = false;
     qres->clbk = clbk;
     this->_query_results[qres->id] = qres;
+
+    send(nd);
     return qres;
   }
 
@@ -335,10 +338,11 @@ public:
     memcpy(ids_ptr, qi.ids.data(), id_size);
     nd->size += static_cast<NetData::MessageSize>(id_size);
 
-    send(nd);
     qres->is_closed = false;
     qres->clbk = clbk;
     this->_query_results[qres->id] = qres;
+
+    send(nd);
     return qres;
   }
 
@@ -383,10 +387,11 @@ public:
 	  memcpy(ids_ptr, ids.data(), id_size);
 	  nd->size += static_cast<NetData::MessageSize>(id_size);
 
-	  send(nd);
 	  qres->is_closed = false;
 	  qres->clbk = clbk;
 	  this->_query_results[qres->id] = qres;
+
+      send(nd);
 	  return qres;
   }
   
@@ -431,10 +436,11 @@ public:
 	  memcpy(ids_ptr, ids.data(), id_size);
 	  nd->size += static_cast<NetData::MessageSize>(id_size);
 
-	  send(nd);
 	  qres->is_closed = false;
 	  qres->clbk = clbk;
 	  this->_query_results[qres->id] = qres;
+
+      send(nd);
 	  return qres;
   }
   io_service _service;
