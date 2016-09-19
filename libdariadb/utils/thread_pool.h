@@ -58,21 +58,20 @@ using TaskQueue = std::deque<AsyncTaskWrap>;
 
 struct TaskResult {
   bool runned;
-  Locker
-      m; // dont use mutex. mutex::lock() requires that the calling thread owns the mutex.
+  std::mutex m;
+  std::condition_variable cond;
   TaskResult() {
     runned = true;
-    m.lock();
   }
   ~TaskResult() {}
   void wait() {
-    m.lock();
-    m.unlock();
+	  std::unique_lock<std::mutex> ul(m);
+	  cond.wait(ul, [this]() {return !runned; });
   }
 
   void unlock() {
     runned = false;
-    m.unlock();
+	cond.notify_all();
   }
 };
 using TaskResult_Ptr = std::shared_ptr<TaskResult>;
