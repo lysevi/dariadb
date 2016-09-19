@@ -22,7 +22,7 @@ bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
 Time cap_store_period = 0;
-size_t read_benchmark_runs = 100;
+size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::FAST_READ;
 
 class BenchCallback : public IReaderClb {
