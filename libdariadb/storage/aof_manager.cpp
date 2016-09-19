@@ -140,7 +140,7 @@ void AOFManager::set_downlevel(IAofDropper *down) {
 }
 
 dariadb::Time AOFManager::minTime() {
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   dariadb::Time result = dariadb::MAX_TIME;
   for (auto filename : files) {
@@ -160,7 +160,7 @@ dariadb::Time AOFManager::minTime() {
 }
 
 dariadb::Time AOFManager::maxTime() {
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   dariadb::Time result = dariadb::MIN_TIME;
   for (auto filename : files) {
@@ -177,7 +177,7 @@ dariadb::Time AOFManager::maxTime() {
 bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
   TIMECODE_METRICS(ctmd, "minMaxTime", "AOFManager::minMaxTime");
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
   std::vector<MMRes> results{files.size()};
@@ -233,7 +233,7 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 
 void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   if (files.empty()) {
     return;
@@ -270,7 +270,7 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
 
 Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
   TIMECODE_METRICS(ctmd, "readTimePoint", "AOFManager::readTimePoint");
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
   dariadb::Id2Meas sub_result;
 
@@ -355,7 +355,7 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
 
 dariadb::append_result AOFManager::append(const Meas &value) {
   TIMECODE_METRICS(ctmd, "append", "AOFManager::append");
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
 

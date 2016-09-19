@@ -55,7 +55,7 @@ private:
   static AOFManager *_instance;
 
   AOFile_Ptr _aof;
-  mutable utils::Locker _locker;
+  mutable std::mutex _locker;
   IAofDropper *_down;
 
   MeasArray _buffer;
