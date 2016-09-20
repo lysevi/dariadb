@@ -65,7 +65,7 @@ void AsyncConnection::send(const NetData_ptr &d) {
     if (auto spt = _sock.lock()) {
       _messages_to_send++;
       auto buf = buffer(send_buffer, send_buffer_size);
-      async_write(*spt.get(), buf, [ptr, &d](auto err, auto read_bytes) {
+      async_write(*spt.get(), buf, [ptr, d](auto err, auto read_bytes) {
         // logger("AsyncConnection::onDataSended #", _async_con_id, " readed ",
         // read_bytes);
         ptr->_messages_to_send--;
@@ -80,50 +80,48 @@ void AsyncConnection::send(const NetData_ptr &d) {
 }
 
 void AsyncConnection::readNextAsync() {
+  using boost::system::error_code;
   if (auto spt = _sock.lock()) {
     auto ptr = shared_from_this();
     NetData_ptr d = this->_pool->construct();
-    async_read(
-        *spt.get(), buffer(reinterpret_cast<uint8_t *>(&d->size), MARKER_SIZE),
-        [ptr, &d](const boost::system::error_code &err, size_t read_bytes) {
-          if (err) {
-            ptr->_on_error_handler(err);
-          } else {
-            if (read_bytes != MARKER_SIZE) {
-              THROW_EXCEPTION("AsyncConnection::onReadMarker #", ptr->_async_con_id,
-                              " - wrong marker size: expected ", MARKER_SIZE, " readed ",
-                              read_bytes);
-            }
+    async_read(*spt.get(), buffer((uint8_t *)(&d->size), MARKER_SIZE),
+               [ptr, d, spt](auto err, auto read_bytes) {
+                 if (err) {
+                   ptr->_on_error_handler(err);
+                 } else {
+                   if (read_bytes != MARKER_SIZE) {
+                     THROW_EXCEPTION("exception on async readMarker. #",
+                                     ptr->_async_con_id,
+                                     " - wrong marker size: expected ", MARKER_SIZE,
+                                     " readed ", read_bytes);
+                   }
+                   auto buf = buffer((uint8_t *)(&d->data), d->size);
+                   async_read(*spt.get(), buf, [ptr, d](auto err, auto read_bytes) {
+                     // logger("AsyncConnection::onReadData #", _async_con_id,
+                     // "
+                     // readed ", read_bytes);
+                     if (err) {
+                       ptr->_on_error_handler(err);
+                     } else {
+                       bool cancel_flag = false;
+                       bool dont_free_mem = false;
+                       try {
+                         ptr->_on_recv_hadler(d, cancel_flag, dont_free_mem);
+                       } catch (std::exception &ex) {
+                         THROW_EXCEPTION("exception on async readData. #",
+                                         ptr->_async_con_id, " - ", ex.what());
+                       }
 
-            if (auto spt = ptr->_sock.lock()) {
-              async_read(
-                  *spt.get(), buffer(reinterpret_cast<uint8_t *>(&d->data), d->size),
-                  [ptr, &d](const boost::system::error_code &err, size_t read_bytes) {
-                    // logger("AsyncConnection::onReadData #", _async_con_id, "
-                    // readed ", read_bytes);
-                    if (err) {
-                      ptr->_on_error_handler(err);
-                    } else {
-                      bool cancel_flag = false;
-                      bool dont_free_mem = false;
-                      try {
-                        ptr->_on_recv_hadler(d, cancel_flag, dont_free_mem);
-                      } catch (std::exception &ex) {
-                        THROW_EXCEPTION("exception on async readData. #",
-                                        ptr->_async_con_id, " - ", ex.what());
-                      }
+                       if (!dont_free_mem) {
+                         ptr->_pool->free(d);
+                       }
 
-                      if (!dont_free_mem) {
-                        ptr->_pool->free(d);
-                      }
-
-                      if (!cancel_flag) {
-                        ptr->readNextAsync();
-                      }
-                    }
-                  });
-            }
-          }
-        });
+                       if (!cancel_flag) {
+                         ptr->readNextAsync();
+                       }
+                     }
+                   });
+                 }
+               });
   }
 }
