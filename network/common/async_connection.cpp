@@ -69,7 +69,7 @@ void AsyncConnection::send(const NetData_ptr &d) {
         // logger("AsyncConnection::onDataSended #", _async_con_id, " readed ",
         // read_bytes);
         ptr->_messages_to_send--;
-        assert(_messages_to_send >= 0);
+        assert(ptr->_messages_to_send >= 0);
         if (err) {
           ptr->_on_error_handler(err);
         }
