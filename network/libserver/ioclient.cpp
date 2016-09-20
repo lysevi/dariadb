@@ -94,6 +94,7 @@ void IOClient::ClientDataReader::send_buffer() {
     *meas_ptr = *it;
     ++meas_ptr;
   }
+  logger("server: #", _parent->id(), " send to client result of #", hdr->id," count ", hdr->count);
   _parent->send(nd);
 }
 
