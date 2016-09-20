@@ -140,7 +140,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   if(CLANG_ASAN_UBSAN)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
   elif(CLANG_MSAN)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=memory")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=memory -fsanitize-memory-track-origins")
   endif(CLANG_MSAN)
 endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
