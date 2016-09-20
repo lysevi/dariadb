@@ -42,7 +42,7 @@ if(ENABLE_BOOST_LOGGER)
  add_definitions(-DBOOST_ALL_DYN_LINK=1)
  add_definitions(-DBOOST_LOG_DYN_LINK=1)
  add_definitions(-DENABLE_BOOST_LOGGER)
- set(BOOST_DEP ${BOOST_DEP} log)
+ set(BOOST_DEP ${BOOST_DEP} log  regex)
 endif(ENABLE_BOOST_LOGGER)
 
 IF(WIN32)

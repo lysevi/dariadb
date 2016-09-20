@@ -1,7 +1,5 @@
 #include "logger.h"
 
-ServerLogger::ServerLogger(const ServerLogger::Params &p) {}
-
 ServerLogger::~ServerLogger() {}
 
 #ifdef ENABLE_BOOST_LOGGER
@@ -19,19 +17,66 @@ is targeting 7.
 */
 #define BOOST_USE_WINAPI_VERSION 0x0601
 
+#include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/sinks/text_file_backend.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/attributes/scoped_attribute.hpp>
+#include <boost/log/support/date_time.hpp>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread.hpp>
+
+namespace logging = boost::log;
+namespace src = boost::log::sources;
+namespace sinks = boost::log::sinks;
+namespace keywords = boost::log::keywords;
+namespace expr = boost::log::expressions;
+
+ServerLogger::ServerLogger(const ServerLogger::Params &p) {
+	if (!p.use_stdout) {
+		logging::add_file_log
+		(
+			keywords::file_name = "dariadb_%Y%m%d.%3N.log",                     /*< file name pattern >*/
+			keywords::rotation_size = 10 * 1024 * 1024,                                   /*< rotate files every 10 MiB... >*/
+			keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0), /*< ...or at midnight >*/
+			keywords::format =
+			(
+				expr::stream
+				//<< expr::attr< unsigned int >("LineID")
+				<< "["<<expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S")
+				<<"] [" << expr::attr< boost::thread::id >("ThreadID")
+				<<"] ["<< logging::trivial::severity<< "] " << expr::smessage
+				)
+		);
+		
+		logging::core::get()->set_filter
+		(
+			logging::trivial::severity >= logging::trivial::info
+		);
+		logging::add_common_attributes();
+	}
+}
 
 void ServerLogger::message(dariadb::utils::LOG_MESSAGE_KIND kind,
                            const std::string &msg) {
+  BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", boost::this_thread::get_id());
+  using namespace logging::trivial;
+  src::severity_logger< severity_level > lg;
+
   switch (kind) {
   case dariadb::utils::LOG_MESSAGE_KIND::FATAL:
-    BOOST_LOG_TRIVIAL(fatal) << msg;
+	  BOOST_LOG_SEV(lg, fatal) << msg;
     break;
   case dariadb::utils::LOG_MESSAGE_KIND::INFO:
-    BOOST_LOG_TRIVIAL(info) << msg;
+	  BOOST_LOG_SEV(lg, info) << msg;
     break;
   case dariadb::utils::LOG_MESSAGE_KIND::MESSAGE:
-    BOOST_LOG_TRIVIAL(debug) << msg;
+	  BOOST_LOG_SEV(lg, debug) << msg;
     break;
   }
 }
@@ -39,6 +84,8 @@ void ServerLogger::message(dariadb::utils::LOG_MESSAGE_KIND kind,
 #include <iostream>
 
 #include <libdariadb/timeutil.h>
+
+ServerLogger::ServerLogger(const ServerLogger::Params &p) {}
 
 void ServerLogger::message(dariadb::utils::LOG_MESSAGE_KIND kind,
                            const std::string &msg) {
