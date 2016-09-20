@@ -3,6 +3,7 @@ tmp
 packages.config
 Options
 .vs
+dariadb_logs*.txt
 *.aof
 *.cap
 *.page
