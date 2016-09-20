@@ -9,14 +9,8 @@ public:
 	struct Params{
 		bool use_stdout;
 		bool color_console;
-		Params() {
-			use_stdout = true;
-#ifdef _WIN32
-			color_console = false;
-#else
-			color_console = true;
-#endif
-		}
+		bool dbg_logging;
+		Params();
 	};
 	ServerLogger(const ServerLogger::Params &p);
 	~ServerLogger();

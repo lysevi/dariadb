@@ -4,6 +4,19 @@ using spdlog::logger;
 
 #include "logger.h"
 
+ServerLogger::Params::Params() {
+	use_stdout = true;
+#if defined(_DEBUG) || defined(DEBUG) || defined(NDEBUG)
+	dbg_logging = true;
+#else
+	dbg_logging = false;
+#endif
+#ifdef _WIN32
+	color_console = false;
+#else
+	color_console = true;
+#endif
+}
 
 ServerLogger::~ServerLogger() {}
 
@@ -14,6 +27,7 @@ ServerLogger::ServerLogger(const ServerLogger::Params &p):_params(p) {
 	else {
 		_logger = spdlog::daily_logger_mt("dariadb", "dariadb_logs", 0, 0);
 	}
+	_logger->set_level(spdlog::level::debug);
 }
 
 void ServerLogger::message(dariadb::utils::LOG_MESSAGE_KIND kind,
