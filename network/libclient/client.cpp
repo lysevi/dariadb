@@ -21,13 +21,19 @@ using namespace dariadb::net::client;
 
 typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 
-class Client::Private : public AsyncConnection {
+class Client::Private{
 public:
-  Private(const Client::Param &p) : AsyncConnection(nullptr), _params(p) {
+  Private(const Client::Param &p): _params(p) {
     _query_num = 1;
     _state = ClientState::CONNECT;
     _pings_answers = 0;
-    this->set_pool(&_pool);
+	AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
+		onDataRecv(d, cancel, dont_free_memory);
+	};
+	AsyncConnection::onNetworkErrorHandler on_n = [this](const boost::system::error_code &err) {
+		onNetworkError(err);
+	};
+	_async_connection = std::shared_ptr<AsyncConnection>{new AsyncConnection(&_pool, on_d, on_n)};
   }
 
   ~Private() noexcept(false) {
@@ -39,7 +45,7 @@ public:
       _service.stop();
       _thread_handler.join();
     } catch (std::exception &ex) {
-      THROW_EXCEPTION("client: #" , id(), ex.what());
+      THROW_EXCEPTION("client: #" , _async_connection->id(), ex.what());
     }
   }
 
@@ -58,11 +64,11 @@ public:
   void disconnect() {
     if (_socket->is_open()) {
       auto nd = _pool.construct(DataKinds::DISCONNECT);
-      this->send(nd);
+      this->_async_connection->send(nd);
     }
 
     while (this->_state != ClientState::DISCONNECTED) {
-      logger_info("client: #", id(), " disconnect - wait server answer...");
+      logger_info("client: #", _async_connection->id(), " disconnect - wait server answer...");
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   }
@@ -80,13 +86,13 @@ public:
       _service.run();
   }
 
-  void onNetworkError(const boost::system::error_code &err) override {
+  void onNetworkError(const boost::system::error_code &err) {
     if (this->_state != ClientState::DISCONNECTED) {
-      THROW_EXCEPTION("client: #" , id() , err.message());
+      THROW_EXCEPTION("client: #" , _async_connection->id() , err.message());
     }
   }
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &) override {
+  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &){
 //    if (this->_state == ClientState::WORK) {
 //      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
 //    } else {
@@ -97,7 +103,7 @@ public:
     if (qh->kind == (uint8_t)DataKinds::OK) {
       auto qh_ok = reinterpret_cast<QueryOk_header *>(d->data);
       auto query_num = qh_ok->id;
-      logger_info("client: #", id(), " query #", query_num, " accepted.");
+      logger_info("client: #", _async_connection->id(), " query #", query_num, " accepted.");
       if (this->_state != ClientState::WORK) {
         THROW_EXCEPTION("(this->_state != ClientState::WORK)" , this->_state);
       }
@@ -118,7 +124,7 @@ public:
       auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
       auto query_num = qh_e->id;
       ERRORS err = (ERRORS)qh_e->error_code;
-      logger_info("client: #", id(), " query #", query_num, " error:", err);
+      logger_info("client: #", _async_connection->id(), " query #", query_num, " error:", err);
       if (this->state() == ClientState::WORK) {
         auto subres = this->_query_results[qh_e->id];
         subres->is_closed = true;
@@ -132,7 +138,7 @@ public:
 
     if (qh->kind == (uint8_t)DataKinds::APPEND) {
       auto qw = reinterpret_cast<QueryAppend_header *>(d->data);
-      logger_info("client: #", id(), " recv ", qw->count, " values to query #", qw->id);
+      logger_info("client: #", _async_connection->id(), " recv ", qw->count, " values to query #", qw->id);
       auto subres = this->_query_results[qw->id];
 	  assert(subres->is_ok);
       if (qw->count == 0) {
@@ -150,23 +156,23 @@ public:
     }
 
     if (qh->kind == (uint8_t)DataKinds::PING) {
-      logger_info("client: #", id(), " ping.");
+      logger_info("client: #", _async_connection->id(), " ping.");
       auto nd = _pool.construct(DataKinds::PONG);
-      this->send(nd);
+      this->_async_connection->send(nd);
       _pings_answers++;
       return;
     }
 
     if (qh->kind == (uint8_t)DataKinds::DISCONNECT) {
       cancel = true;
-      logger_info("client: #", id(), " disconnection.");
+      logger_info("client: #", _async_connection->id(), " disconnection.");
       try {
         _state = ClientState::DISCONNECTED;
-        this->full_stop();
+        this->_async_connection->full_stop();
         this->_socket->close();
       } catch (...) {
       }
-      logger_info("client: #", id(), " disconnected.");
+      logger_info("client: #", _async_connection->id(), " disconnected.");
       return;
     }
 
@@ -174,7 +180,7 @@ public:
     if (qh->kind == (uint8_t)DataKinds::HELLO) {
       auto qh_hello = reinterpret_cast<QueryHelloFromServer_header *>(d->data);
       auto id = qh_hello->id;
-      this->set_id(id);
+      this->_async_connection->set_id(id);
       this->_state = ClientState::WORK;
       logger_info("client: #", id, " ready.");
     }
@@ -184,7 +190,7 @@ public:
     if (ec) {
       THROW_EXCEPTION("dariadb::client: error on connect - " , ec.message());
     }
-    this->start(this->_socket);
+    this->_async_connection->start(this->_socket);
     std::lock_guard<utils::Locker> lg(_locker);
     auto hn = ip::host_name();
 
@@ -202,7 +208,7 @@ public:
     qh->host_size = (uint32_t) hn.size();
 
     memcpy(host_ptr, hn.data(), hn.size());
-    this->send(nd);
+    this->_async_connection->send(nd);
   }
 
   size_t pings_answers() const { return _pings_answers.load(); }
@@ -243,7 +249,7 @@ public:
       memcpy(meas_ptr, ma.data() + writed, size_to_write);
       nd->size += static_cast<NetData::MessageSize>(size_to_write);
 
-      send(nd);
+	  _async_connection->send(nd);
       writed += count_to_write;
     }
 	this->_locker.unlock();
@@ -292,7 +298,7 @@ public:
     qres->clbk = clbk;
     this->_query_results[qres->id] = qres;
 
-    send(nd);
+	_async_connection->send(nd);
     return qres;
   }
 
@@ -342,7 +348,7 @@ public:
     qres->clbk = clbk;
     this->_query_results[qres->id] = qres;
 
-    send(nd);
+	_async_connection->send(nd);
     return qres;
   }
 
@@ -391,7 +397,7 @@ public:
 	  qres->clbk = clbk;
 	  this->_query_results[qres->id] = qres;
 
-      send(nd);
+	  _async_connection->send(nd);
 	  return qres;
   }
   
@@ -440,7 +446,7 @@ public:
 	  qres->clbk = clbk;
 	  this->_query_results[qres->id] = qres;
 
-      send(nd);
+	  _async_connection->send(nd);
 	  return qres;
   }
   io_service _service;
@@ -457,6 +463,7 @@ public:
   MeasArray in_buffer_values;
   NetData_Pool _pool;
   std::map<QueryNumber, ReadResult_ptr> _query_results;
+  std::shared_ptr<AsyncConnection> _async_connection;
 };
 
 Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
@@ -464,7 +471,7 @@ Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
 Client::~Client() {}
 
 int Client::id() const {
-  return _Impl->id();
+  return _Impl->_async_connection->id();
 }
 
 void Client::connect() {

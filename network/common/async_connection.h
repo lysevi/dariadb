@@ -7,14 +7,19 @@
 #include "socket_ptr.h"
 #include <atomic>
 #include <memory>
-#include <numeric>
+#include <functional>
 
 namespace dariadb {
 namespace net {
 
-class AsyncConnection {
+class AsyncConnection: public std::enable_shared_from_this<AsyncConnection>{
 public:
-  AsyncConnection(NetData_Pool *pool);
+	/// if method set 'cancel' to true, then read loop stoping.
+	/// if dont_free_memory, then free NetData_ptr is in client side.
+	using onDataRecvHandler = std::function<void(const NetData_ptr &d, bool &cancel, bool &dont_free_memory)>;
+	using onNetworkErrorHandler = std::function<void(const boost::system::error_code &err)>;
+public:
+  AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv, onNetworkErrorHandler onErr);
   virtual ~AsyncConnection() noexcept(false);
   void set_pool(NetData_Pool *pool);
   NetData_Pool *get_pool() { return _pool; }
@@ -22,11 +27,6 @@ public:
   void start(const socket_ptr &sock);
   void mark_stoped();
   void full_stop(); /// stop thread, clean queue
-
-  /// if method set 'cancel' to true, then read loop stoping.
-  /// if dont_free_memory, then free NetData_ptr is in client side.
-  virtual void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) = 0;
-  virtual void onNetworkError(const boost::system::error_code &err) = 0;
 
   void set_id(int id) { _async_con_id = id; }
   int id() const { return _async_con_id; }
@@ -50,6 +50,9 @@ private:
   bool _is_stoped;
   std::atomic_bool _begin_stoping_flag;
   NetData_Pool *_pool;
+
+  onDataRecvHandler _on_recv_hadler;
+  onNetworkErrorHandler _on_error_handler;
 };
 }
 }

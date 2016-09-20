@@ -15,7 +15,7 @@
 namespace dariadb {
 namespace net {
 
-struct IOClient : public AsyncConnection {
+struct IOClient{
 
   struct Environment {
     Environment() {
@@ -62,8 +62,8 @@ struct IOClient : public AsyncConnection {
   void close();
   void ping();
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) override;
-  void onNetworkError(const boost::system::error_code &err) override;
+  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory);
+  void onNetworkError(const boost::system::error_code &err);
 
   void append(const NetData_ptr &d);
   void readInterval(const NetData_ptr &d);
@@ -72,6 +72,8 @@ struct IOClient : public AsyncConnection {
   void subscribe(const NetData_ptr &d);
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
+
+  std::shared_ptr<AsyncConnection> _async_connection;
 };
 
 typedef std::shared_ptr<IOClient> ClientIO_ptr;

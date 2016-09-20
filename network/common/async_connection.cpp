@@ -10,11 +10,13 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-AsyncConnection::AsyncConnection(NetData_Pool *pool) {
+AsyncConnection::AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv, onNetworkErrorHandler onErr) {
   _pool = pool;
   _async_con_id = 0;
   _messages_to_send = 0;
   _is_stoped = true;
+  _on_recv_hadler = onRecv;
+  _on_error_handler = onErr;
 }
 
 AsyncConnection::~AsyncConnection() noexcept(false) {
@@ -71,7 +73,7 @@ void AsyncConnection::onDataSended(NetData_ptr &d, const boost::system::error_co
   _messages_to_send--;
   assert(_messages_to_send >= 0);
   if (err) {
-    this->onNetworkError(err);
+	  _on_error_handler(err);
   }
   _pool->free(d);
 }
@@ -88,7 +90,7 @@ void AsyncConnection::onReadMarker(NetData_ptr &d, const boost::system::error_co
                                    size_t read_bytes) {
   //logger("AsyncConnection::onReadMarker #", _async_con_id, " readed ", read_bytes);
   if (err) {
-    this->onNetworkError(err);
+	  _on_error_handler(err);
   } else {
     if (read_bytes != MARKER_SIZE) {
       THROW_EXCEPTION("AsyncConnection::onReadMarker #"
@@ -107,12 +109,12 @@ void AsyncConnection::onReadData(NetData_ptr &d, const boost::system::error_code
                                  size_t read_bytes) {
   //logger("AsyncConnection::onReadData #", _async_con_id, " readed ", read_bytes);
   if (err) {
-    this->onNetworkError(err);
+    _on_error_handler(err);
   } else {
     bool cancel_flag = false;
     bool dont_free_mem = false;
     try {
-      this->onDataRecv(d, cancel_flag, dont_free_mem);
+      _on_recv_hadler(d, cancel_flag, dont_free_mem);
     } catch (std::exception &ex) {
       THROW_EXCEPTION("exception on async readData. #" , _async_con_id , " - "
                                                           , ex.what());

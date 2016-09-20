@@ -82,7 +82,7 @@ public:
     for (auto &kv : _clients) {
       if (kv.second->state != ClientState::DISCONNECTED) {
         kv.second->end_session();
-        while (kv.second->queue_size() != 0) {
+        while (kv.second->_async_connection->queue_size() != 0) {
           logger_info("server: wait stop of #", kv.first);
           std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
@@ -136,7 +136,7 @@ public:
     ClientIO_ptr new_client{new IOClient(cur_id, sock, &_env)};
 
     _clients_locker.lock();
-    _clients.insert(std::make_pair(new_client->id(), new_client));
+    _clients.insert(std::make_pair(new_client->_async_connection->id(), new_client));
     _clients_locker.unlock();
 
     socket_ptr new_sock(new ip::tcp::socket(_service));
@@ -155,7 +155,7 @@ public:
     }
     auto client = fres_it->second;
     _connections_accepted += 1;
-    logger_info("server: hello from {", client->host, "}, #", client->id());
+    logger_info("server: hello from {", client->host, "}, #", client->_async_connection->id());
     client->state = ClientState::WORK;
   }
 
