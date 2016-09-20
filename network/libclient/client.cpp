@@ -82,7 +82,33 @@ public:
 
       auto raw_sock_ptr = new ip::tcp::socket(_service);
       _socket = socket_ptr{raw_sock_ptr};
-      _socket->async_connect(ep, std::bind(&Client::Private::connect_handler, this, _1));
+	  _socket->async_connect(ep, [this](auto ec) {
+		  if (ec) {
+			  THROW_EXCEPTION("dariadb::client: error on connect - ", ec.message());
+		  }
+		  this->_async_connection->start(this->_socket);
+		  std::lock_guard<utils::Locker> lg(_locker);
+		  auto hn = ip::host_name();
+
+		  logger_info("client: send hello ", hn);
+
+		  auto nd = this->_pool.construct();
+		  nd->size += static_cast<NetData::MessageSize>(hn.size());
+		  nd->size += sizeof(QueryHello_header);
+
+		  QueryHello_header *qh = reinterpret_cast<QueryHello_header *>(nd->data);
+		  qh->kind = (uint8_t)DataKinds::HELLO;
+		  qh->version = PROTOCOL_VERSION;
+		  
+		  auto host_ptr = ((char *)(&qh->host_size) + sizeof(qh->host_size));
+		  
+		  
+		  auto total_size = (hn.size() + nd->size);
+		  auto sz = total_size >= dariadb::net::NetData::MAX_MESSAGE_SIZE ? (NetData::MAX_MESSAGE_SIZE - nd->size) : hn.size();
+		  qh->host_size = (uint32_t)sz;
+		  memcpy(host_ptr, hn.data(), sz);
+		  this->_async_connection->send(nd);
+	  });
       _service.run();
   }
 
@@ -186,30 +212,6 @@ public:
     }
   }
 
-  void connect_handler(const boost::system::error_code &ec) {
-    if (ec) {
-      THROW_EXCEPTION("dariadb::client: error on connect - " , ec.message());
-    }
-    this->_async_connection->start(this->_socket);
-    std::lock_guard<utils::Locker> lg(_locker);
-    auto hn = ip::host_name();
-
-    logger_info("client: send hello ", hn);
-
-    auto nd = _pool.construct();
-    nd->size += static_cast<NetData::MessageSize>(hn.size());
-    nd->size += sizeof(QueryHello_header);
-
-    QueryHello_header *qh = reinterpret_cast<QueryHello_header *>(nd->data);
-    qh->kind = (uint8_t)DataKinds::HELLO;
-    qh->version = PROTOCOL_VERSION;
-	//TODO add size check.
-    auto host_ptr = ((char *)(&qh->host_size) + sizeof(qh->host_size));
-    qh->host_size = (uint32_t) hn.size();
-
-    memcpy(host_ptr, hn.data(), hn.size());
-    this->_async_connection->send(nd);
-  }
 
   size_t pings_answers() const { return _pings_answers.load(); }
   ClientState state() const { return _state; }
