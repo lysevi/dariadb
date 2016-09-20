@@ -142,6 +142,7 @@ public:
     _clients.insert(std::make_pair(new_client->_async_connection->id(), new_client));
     _clients_locker.unlock();
 
+    new_client->start();
     socket_ptr new_sock(new ip::tcp::socket(_service));
     start_accept(new_sock);
   }

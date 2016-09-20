@@ -115,7 +115,7 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
   };
   _async_connection = std::shared_ptr<AsyncConnection>{ new AsyncConnection(_env->nd_pool, on_d, on_n) };
   _async_connection->set_id(_id);
-  _async_connection->start(sock);
+
 }
 
 IOClient::~IOClient() {

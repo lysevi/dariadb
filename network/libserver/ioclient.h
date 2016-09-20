@@ -58,6 +58,9 @@ struct IOClient{
 
   IOClient(int _id, socket_ptr &_sock, Environment *_env);
   ~IOClient();
+  void start(){
+      _async_connection->start(sock);
+  }
   void end_session();
   void close();
   void ping();
