@@ -159,78 +159,78 @@ void IOClient::onNetworkError(const boost::system::error_code &err) {
   this->close();
 }
 
-void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
-  //logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
+void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
+                          bool &dont_free_memory) {
+  // logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
   auto qh = reinterpret_cast<Query_header *>(d->data);
 
-  if (qh->kind == (uint8_t)DataKinds::APPEND) {
+  DataKinds kind = (DataKinds)qh->kind;
+  switch (kind) {
+  case DataKinds::APPEND: {
     auto hdr = reinterpret_cast<QueryAppend_header *>(&d->data);
     auto count = hdr->count;
-    logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id, " write ", count);
+    logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id,
+                " write ", count);
     this->env->srv->write_begin();
     dont_free_memory = true;
-	
-    env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::append, this, d)));
-    
-    return;
-  }
 
-  if (qh->kind == (uint8_t)DataKinds::PONG) {
+    env->service->post(
+        env->io_meases_strand->wrap(std::bind(&IOClient::append, this, d)));
+
+    break;
+  }
+  case DataKinds::PONG: {
     pings_missed--;
-    logger_info("server: #", this->_async_connection->id(), " pings_missed: ", pings_missed.load());
-    return;
+    logger_info("server: #", this->_async_connection->id(), " pings_missed: ",
+                pings_missed.load());
+    break;
   }
-
-  if (qh->kind == (uint8_t)DataKinds::DISCONNECT) {
-    logger_info("server: #", this->_async_connection->id(), " disconnection request.");
+  case DataKinds::DISCONNECT: {
+    logger_info("server: #", this->_async_connection->id(),
+                " disconnection request.");
     cancel = true;
     this->end_session();
     // this->srv->client_disconnect(this->id);
-    return;
+    break;
   }
-
-  if (qh->kind == (uint8_t)DataKinds::READ_INTERVAL) {
+  case DataKinds::READ_INTERVAL: {
     auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
     dont_free_memory = true;
-	sendOk(query_hdr->id);
-    env->service->post(
-        env->io_meases_strand->wrap(std::bind(&IOClient::readInterval, this, d)));
-    return;
+    sendOk(query_hdr->id);
+    env->service->post(env->io_meases_strand->wrap(
+        std::bind(&IOClient::readInterval, this, d)));
+    break;
   }
-
-  if (qh->kind == (uint8_t)DataKinds::READ_TIMEPOINT) {
+  case DataKinds::READ_TIMEPOINT: {
     auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
     dont_free_memory = true;
-	sendOk(query_hdr->id);
+    sendOk(query_hdr->id);
+    env->service->post(env->io_meases_strand->wrap(
+        std::bind(&IOClient::readTimePoint, this, d)));
+    break;
+  }
+  case DataKinds::CURRENT_VALUE: {
+    auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
+    dont_free_memory = true;
+    sendOk(query_hdr->id);
+    env->service->post(env->io_meases_strand->wrap(
+        std::bind(&IOClient::currentValue, this, d)));
+    break;
+  }
+  case DataKinds::SUBSCRIBE: {
+    auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
+    dont_free_memory = true;
+    sendOk(query_hdr->id);
     env->service->post(
-        env->io_meases_strand->wrap(std::bind(&IOClient::readTimePoint, this, d)));
-    return;
+        env->io_meases_strand->wrap(std::bind(&IOClient::subscribe, this, d)));
+    break;
   }
-
-  if (qh->kind == (uint8_t)DataKinds::CURRENT_VALUE) {
-	  auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
-	  dont_free_memory = true;
-	  sendOk(query_hdr->id);
-	  env->service->post(
-		  env->io_meases_strand->wrap(std::bind(&IOClient::currentValue, this, d)));
-	  return;
-  }
-
-  if (qh->kind == (uint8_t)DataKinds::SUBSCRIBE) {
-	  auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
-	  dont_free_memory = true;
-	  sendOk(query_hdr->id);
-	  env->service->post(
-		  env->io_meases_strand->wrap(std::bind(&IOClient::subscribe, this, d)));
-	  return;
-  }
-
-  if (qh->kind == (uint8_t)DataKinds::HELLO) {
+  case DataKinds::HELLO: {
     QueryHello_header *qhh = reinterpret_cast<QueryHello_header *>(d->data);
     if (qhh->version != PROTOCOL_VERSION) {
-      logger("server: #", _async_connection->id(), " wrong protocol version: exp=", PROTOCOL_VERSION,
-             ", rec=", qhh->version);
+      logger("server: #", _async_connection->id(),
+             " wrong protocol version: exp=", PROTOCOL_VERSION, ", rec=",
+             qhh->version);
       sendError(0, ERRORS::WRONG_PROTOCOL_VERSION);
       this->state = ClientState::DISCONNECTED;
       return;
@@ -247,7 +247,11 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     *idptr = _async_connection->id();
 
     this->_async_connection->send(nd);
-    return;
+    break;
+  }
+  default:
+    logger_fatal("server: unknow query kind - ", (uint8_t)kind);
+    break;
   }
 }
 

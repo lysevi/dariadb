@@ -10,7 +10,7 @@ namespace net {
 const uint32_t PROTOCOL_VERSION = 1;
 
 enum class DataKinds : uint8_t {
-  OK,
+  OK=0,
   ERR,
   HELLO,
   DISCONNECT,

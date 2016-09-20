@@ -118,39 +118,43 @@ public:
     }
   }
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &){
-//    if (this->_state == ClientState::WORK) {
-//      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
-//    } else {
-//      logger("client: dataRecv ", d->size, " bytes.");
-//    }
+  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &) {
+    //    if (this->_state == ClientState::WORK) {
+    //      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
+    //    } else {
+    //      logger("client: dataRecv ", d->size, " bytes.");
+    //    }
 
     auto qh = reinterpret_cast<Query_header *>(d->data);
-    if (qh->kind == (uint8_t)DataKinds::OK) {
+
+    DataKinds kind = (DataKinds)qh->kind;
+    switch (kind) {
+    case DataKinds::OK: {
       auto qh_ok = reinterpret_cast<QueryOk_header *>(d->data);
       auto query_num = qh_ok->id;
-      logger_info("client: #", _async_connection->id(), " query #", query_num, " accepted.");
+      logger_info("client: #", _async_connection->id(), " query #", query_num,
+                  " accepted.");
       if (this->_state != ClientState::WORK) {
-        THROW_EXCEPTION("(this->_state != ClientState::WORK)" , this->_state);
+        THROW_EXCEPTION("(this->_state != ClientState::WORK)", this->_state);
       }
-	  
-	  auto subres_it = this->_query_results.find(query_num);
-	  if (subres_it != this->_query_results.end()) {
-		  subres_it->second->is_ok = true;
-		  if (subres_it->second->kind == DataKinds::SUBSCRIBE) {
-			  subres_it->second->locker.unlock();
-		  }
-      }else{
-          THROW_EXCEPTION("client: query #", qh_ok->id, " not found");
-      }
-      return;
-    }
 
-    if (qh->kind == (uint8_t)DataKinds::ERR) {
+      auto subres_it = this->_query_results.find(query_num);
+      if (subres_it != this->_query_results.end()) {
+        subres_it->second->is_ok = true;
+        if (subres_it->second->kind == DataKinds::SUBSCRIBE) {
+          subres_it->second->locker.unlock();
+        }
+      } else {
+        THROW_EXCEPTION("client: query #", qh_ok->id, " not found");
+      }
+      break;
+    }
+    case DataKinds::ERR: {
       auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
       auto query_num = qh_e->id;
       ERRORS err = (ERRORS)qh_e->error_code;
-      logger_info("client: #", _async_connection->id(), " query #", query_num, " error:", err);
+      logger_info("client: #", _async_connection->id(), " query #", query_num,
+                  " error:", err);
       if (this->state() == ClientState::WORK) {
         auto subres = this->_query_results[qh_e->id];
         subres->is_closed = true;
@@ -159,14 +163,14 @@ public:
         subres->locker.unlock();
         _query_results.erase(qh_e->id);
       }
-      return;
+      break;
     }
-
-    if (qh->kind == (uint8_t)DataKinds::APPEND) {
+    case DataKinds::APPEND: {
       auto qw = reinterpret_cast<QueryAppend_header *>(d->data);
-      logger_info("client: #", _async_connection->id(), " recv ", qw->count, " values to query #", qw->id);
+      logger_info("client: #", _async_connection->id(), " recv ", qw->count,
+                  " values to query #", qw->id);
       auto subres = this->_query_results[qw->id];
-	  assert(subres->is_ok);
+      assert(subres->is_ok);
       if (qw->count == 0) {
         subres->is_closed = true;
         subres->clbk(subres.get(), Meas::empty());
@@ -178,18 +182,16 @@ public:
           subres->clbk(subres.get(), v);
         }
       }
-      return;
+      break;
     }
-
-    if (qh->kind == (uint8_t)DataKinds::PING) {
+    case DataKinds::PING: {
       logger_info("client: #", _async_connection->id(), " ping.");
       auto nd = _pool.construct(DataKinds::PONG);
       this->_async_connection->send(nd);
       _pings_answers++;
-      return;
+      break;
     }
-
-    if (qh->kind == (uint8_t)DataKinds::DISCONNECT) {
+    case DataKinds::DISCONNECT: {
       cancel = true;
       logger_info("client: #", _async_connection->id(), " disconnection.");
       try {
@@ -199,19 +201,23 @@ public:
       } catch (...) {
       }
       logger_info("client: #", _async_connection->id(), " disconnected.");
-      return;
+      break;
     }
 
     // hello id
-    if (qh->kind == (uint8_t)DataKinds::HELLO) {
+    case DataKinds::HELLO: {
       auto qh_hello = reinterpret_cast<QueryHelloFromServer_header *>(d->data);
       auto id = qh_hello->id;
       this->_async_connection->set_id(id);
       this->_state = ClientState::WORK;
       logger_info("client: #", id, " ready.");
+      break;
+    }
+    default:
+      logger_fatal("client: unknow query kind - ", (uint8_t)kind);
+      break;
     }
   }
-
 
   size_t pings_answers() const { return _pings_answers.load(); }
   ClientState state() const { return _state; }
