@@ -17,6 +17,7 @@ namespace po = boost::program_options;
 std::string storage_path = "dariadb_storage";
 unsigned short server_port = 2001;
 bool logg2stdout = true;
+bool logg_coloring = false;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::DYNAMIC;
 Time cap_store_period = 0;
@@ -27,6 +28,7 @@ int main(int argc,char**argv){
 		("help", "produce help message")
 		("readonly", "readonly mode")
 		("log-to-file", "logger out to dariadb.log.")
+		("color-log", "use colors to log to console.")
 		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
 		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
 		("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
@@ -52,12 +54,17 @@ int main(int argc,char**argv){
 		logg2stdout = false;
 	}
 
+	if (vm.count("color-log")) {
+		logg_coloring = true;
+	}
+
 	bool is_exists = false;
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		is_exists = true;
 	}
 	ServerLogger::Params p;
 	p.use_stdout = logg2stdout;
+	p.color_console = logg_coloring;
 	dariadb::utils::ILogger_ptr log_ptr{ new ServerLogger(p) };
 	dariadb::utils::LogManager::start(log_ptr);
 

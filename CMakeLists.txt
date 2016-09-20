@@ -2,12 +2,10 @@ cmake_minimum_required (VERSION 3.1)
 set(PROJECT "dariadb")
 project (${PROJECT} VERSION 0.1.1)
 
-
 option(ENABLE_TESTING "Enable testing of the dariadb." ON)
 option(ENABLE_METRICS "Enable code metrics." ON)
 option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
 option(ENABLE_BOOST_LOGGER "Enable boost log library." ON)
-
 option(CLANG_ASAN_UBSAN "Enable Clang address & undefined behavior sanitizer for binary." OFF)
 option(CLANG_MSAN "Enable Clang memory sanitizer for binary." OFF)
 
@@ -24,7 +22,6 @@ MESSAGE(STATUS "Options: ")
 MESSAGE(STATUS "ENABLE_TESTING - " ${ENABLE_TESTING})
 MESSAGE(STATUS "ENABLE_METRICS - " ${ENABLE_METRICS})
 MESSAGE(STATUS "ENABLE_INTEGRATION_TESTS - " ${ENABLE_INTEGRATION_TESTS})
-MESSAGE(STATUS "ENABLE_BOOST_LOGGER - " ${ENABLE_BOOST_LOGGER})
 MESSAGE(STATUS "CLANG_MSAN - " ${CLANG_MSAN})
 MESSAGE(STATUS "CLANG_ASAN_UBSAN - " ${CLANG_ASAN_UBSAN})
 
@@ -37,13 +34,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 #endif(NOT MSVC)
 
 set(BOOST_DEP unit_test_framework system filesystem system)
-
-if(ENABLE_BOOST_LOGGER)
- add_definitions(-DBOOST_ALL_DYN_LINK=1)
- add_definitions(-DBOOST_LOG_DYN_LINK=1)
- add_definitions(-DENABLE_BOOST_LOGGER)
- set(BOOST_DEP ${BOOST_DEP} log  regex)
-endif(ENABLE_BOOST_LOGGER)
 
 IF(WIN32)
   MESSAGE(STATUS "WIN32:")
@@ -160,6 +150,7 @@ if (ENABLE_METRICS)
 endif(ENABLE_METRICS)
 
 include_directories(extern)
+include_directories(extern/spdlog/include)
 add_subdirectory (libdariadb)
 add_subdirectory (network)
 include_directories(network)
