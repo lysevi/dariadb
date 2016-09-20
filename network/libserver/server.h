@@ -33,6 +33,7 @@ public:
   size_t connections_accepted() const;
   void set_storage(storage::Engine *storage);
 
+  void asio_run();
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

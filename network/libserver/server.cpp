@@ -117,8 +117,11 @@ public:
     logger_info("server: ready.");
   }
 
-  void handle_clients_thread() { _service.run(); }
+  void handle_clients_thread() { asio_run();  }
 
+  void asio_run() {
+	  _service.run();
+  }
   void start_accept(socket_ptr sock) {
     _acc->async_accept(*sock, std::bind(&Server::Private::handle_accept, this, sock, _1));
   }
@@ -289,4 +292,8 @@ void Server::stop() {
 
 void Server::set_storage(storage::Engine *storage) {
   _Impl->set_storage(storage);
+}
+
+void Server::asio_run() {
+	_Impl->asio_run();
 }
