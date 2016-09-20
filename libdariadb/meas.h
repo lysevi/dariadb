@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <limits>
 #include <list>
+#include <deque>
 #include <map>
 #include <memory>
 #include <set>
@@ -85,7 +86,7 @@ struct meas_time_compare_greater {
 
 using PMeas=Meas*;
 using MeasArray=std::vector<Meas>;
-using MeasList=std::list<Meas>;
+using MeasList=std::deque<Meas>;
 using Id2Meas=std::unordered_map<Id, Meas>;
 using MeasSet=std::set<Meas, meas_id_compare_less>;
 using Id2MSet = std::map<Id, std::set<Meas, meas_time_compare_less>>;
