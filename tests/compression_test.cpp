@@ -14,8 +14,8 @@
 #include <iterator>
 #include <sstream>
 
-using dariadb::compression::ByteBuffer;
-using dariadb::compression::ByteBuffer_Ptr;
+using dariadb::compression::v2::ByteBuffer;
+using dariadb::compression::v2::ByteBuffer_Ptr;
 using dariadb::compression::BinaryBuffer;
 using dariadb::compression::BinaryBuffer_Ptr;
 
@@ -728,9 +728,9 @@ BOOST_AUTO_TEST_CASE(ByteBufferTest) {
 		BOOST_CHECK_EQUAL(i64, std::numeric_limits<int64_t>::max());
 
 		auto ui64 = b.read<uint64_t>();
-		BOOST_CHECK_EQUAL(i64, std::numeric_limits<uint64_t>::min());
+		BOOST_CHECK_EQUAL(ui64, std::numeric_limits<uint64_t>::min());
 		ui64 = b.read<uint64_t>();
-		BOOST_CHECK_EQUAL(i64, std::numeric_limits<uint64_t>::max());
+		BOOST_CHECK_EQUAL(ui64, std::numeric_limits<uint64_t>::max());
 
 		auto i32 = b.read<int32_t>();
 		BOOST_CHECK_EQUAL(i32, std::numeric_limits<int32_t>::min());
