@@ -2,6 +2,7 @@
 #define BOOST_TEST_MODULE Main
 #include <boost/test/unit_test.hpp>
 
+#include <libdariadb/compression/v2/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/compression/delta.h>
 #include <libdariadb/compression/flag.h>
@@ -13,6 +14,8 @@
 #include <iterator>
 #include <sstream>
 
+using dariadb::compression::ByteBuffer;
+using dariadb::compression::ByteBuffer_Ptr;
 using dariadb::compression::BinaryBuffer;
 using dariadb::compression::BinaryBuffer_Ptr;
 
@@ -684,4 +687,79 @@ BOOST_AUTO_TEST_CASE(CompressedBlockZeroValues) {
     auto r_m = crr.read();
     BOOST_CHECK(wm == r_m);
   }
+}
+
+BOOST_AUTO_TEST_CASE(ByteBufferTest) {
+	const size_t buffer_size = 256;
+	uint8_t buffer[buffer_size];
+	std::fill_n(buffer, buffer_size, uint8_t(0));
+	{
+		ByteBuffer b({ std::begin(buffer), std::end(buffer) });
+		b.write(std::numeric_limits<int64_t>::min());
+		b.write(std::numeric_limits<int64_t>::max());
+
+		b.write(std::numeric_limits<uint64_t>::min());
+		b.write(std::numeric_limits<uint64_t>::max());
+
+		b.write(std::numeric_limits<int32_t>::min());
+		b.write(std::numeric_limits<int32_t>::max());
+
+		b.write(std::numeric_limits<uint32_t>::min());
+		b.write(std::numeric_limits<uint32_t>::max());
+
+		b.write(std::numeric_limits<int16_t>::min());
+		b.write(std::numeric_limits<int16_t>::max());
+
+		b.write(std::numeric_limits<uint16_t>::min());
+		b.write(std::numeric_limits<uint16_t>::max());
+
+		b.write(std::numeric_limits<int8_t>::min());
+		b.write(std::numeric_limits<int8_t>::max());
+
+		b.write(std::numeric_limits<uint8_t>::min());
+		b.write(std::numeric_limits<uint8_t>::max());
+	}
+	{
+		ByteBuffer b({ std::begin(buffer), std::end(buffer) });
+		
+		auto i64=b.read<int64_t>();
+		BOOST_CHECK_EQUAL(i64, std::numeric_limits<int64_t>::min());
+		i64 = b.read<int64_t>();
+		BOOST_CHECK_EQUAL(i64, std::numeric_limits<int64_t>::max());
+
+		auto ui64 = b.read<uint64_t>();
+		BOOST_CHECK_EQUAL(i64, std::numeric_limits<uint64_t>::min());
+		ui64 = b.read<uint64_t>();
+		BOOST_CHECK_EQUAL(i64, std::numeric_limits<uint64_t>::max());
+
+		auto i32 = b.read<int32_t>();
+		BOOST_CHECK_EQUAL(i32, std::numeric_limits<int32_t>::min());
+		i32 = b.read<int32_t>();
+		BOOST_CHECK_EQUAL(i32, std::numeric_limits<int32_t>::max());
+
+		auto ui32 = b.read<uint32_t>();
+		BOOST_CHECK_EQUAL(ui32, std::numeric_limits<uint32_t>::min());
+		ui32 = b.read<uint32_t>();
+		BOOST_CHECK_EQUAL(ui32, std::numeric_limits<uint32_t>::max());
+
+		auto i16 = b.read<int16_t>();
+		BOOST_CHECK_EQUAL(i16, std::numeric_limits<int16_t>::min());
+		i16 = b.read<int16_t>();
+		BOOST_CHECK_EQUAL(i16, std::numeric_limits<int16_t>::max());
+
+		auto ui16 = b.read<uint16_t>();
+		BOOST_CHECK_EQUAL(ui16, std::numeric_limits<uint16_t>::min());
+		ui16 = b.read<uint16_t>();
+		BOOST_CHECK_EQUAL(ui16, std::numeric_limits<uint16_t>::max());
+
+		auto i8 = b.read<int8_t>();
+		BOOST_CHECK_EQUAL(i8, std::numeric_limits<int8_t>::min());
+		i8 = b.read<int8_t>();
+		BOOST_CHECK_EQUAL(i8, std::numeric_limits<int8_t>::max());
+
+		auto ui8 = b.read<uint8_t>();
+		BOOST_CHECK_EQUAL(ui8, std::numeric_limits<uint8_t>::min());
+		ui8 = b.read<uint8_t>();
+		BOOST_CHECK_EQUAL(ui8, std::numeric_limits<uint8_t>::max());
+	}
 }
