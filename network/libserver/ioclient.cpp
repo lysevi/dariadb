@@ -69,6 +69,7 @@ void IOClient::ClientDataReader::is_end() {
   auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
   hdr->id = _query_num;
   hdr->count = 0;
+  logger("server: #", _parent->_async_connection->id(), " end of #", hdr->id);
   _parent->_async_connection->send(nd);
 }
 
