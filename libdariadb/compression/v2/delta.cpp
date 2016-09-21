@@ -69,7 +69,7 @@ bool DeltaCompressor::append(dariadb::Time t) {
 			bw->write<uint16_t>(d);
 		}
 		else {
-			if ((-14680064 < D) && (D < 14680064)) {
+			if ((-524288 < D) && (D < 524287)) {
 				if (bw->free_size() < 3) {
 					return false;
 				}
@@ -130,6 +130,9 @@ dariadb::Time DeltaDeCompressor::read() {
 	  c.small.hi = (uint8_t)first_unmasked;
 	  c.small.lo = second;
 	  auto ret = prev_time + c.big + prev_delta;
+	  if (ret > delta_3b_mask_inv) {//negative
+		  ret = utils::BitOperations::clr(ret, 19);
+	  }
 	  prev_delta = c.big;
 	  prev_time = ret;
 	  return ret;
