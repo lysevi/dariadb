@@ -11,10 +11,10 @@ struct DeltaCompressor : public BaseCompressor {
 
   bool append(Time t);
 
-  bool _is_first;
-  Time _first;
-  int64_t _prev_delta;
-  Time _prev_time;
+  bool is_first;
+  Time first;
+  int64_t prev_delta;
+  Time prev_time;
 };
 
 struct DeltaDeCompressor : public BaseCompressor {
@@ -22,8 +22,8 @@ struct DeltaDeCompressor : public BaseCompressor {
 
   Time read();
 
-  int64_t _prev_delta;
-  Time _prev_time;
+  int64_t prev_delta;
+  Time prev_time;
 };
 }
 }

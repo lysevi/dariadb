@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <libdariadb/compression/v2/bytebuffer.h>
+#include <libdariadb/compression/v2/delta.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/compression/delta.h>
 #include <libdariadb/compression/flag.h>
@@ -13,6 +14,7 @@
 #include <chrono>
 #include <iterator>
 #include <sstream>
+#include <algorithm>
 
 using dariadb::compression::v2::ByteBuffer;
 using dariadb::compression::v2::ByteBuffer_Ptr;
@@ -761,5 +763,98 @@ BOOST_AUTO_TEST_CASE(ByteBufferTest) {
 		BOOST_CHECK_EQUAL(ui8, std::numeric_limits<uint8_t>::min());
 		ui8 = b.read<uint8_t>();
 		BOOST_CHECK_EQUAL(ui8, std::numeric_limits<uint8_t>::max());
+	}
+}
+
+BOOST_AUTO_TEST_CASE(DeltaDeltaTest) {
+	const size_t test_buffer_size = 100;
+
+	const dariadb::Time t1 = 100;
+	const dariadb::Time t2 = 150;
+	const dariadb::Time t3 = 2000;
+	const dariadb::Time t4 = 1048175;
+	const dariadb::Time t5 = std::numeric_limits<uint32_t>::max();
+
+	uint8_t buffer[test_buffer_size];
+	{// on t1-t0 < 1byte;
+		std::fill_n(buffer, test_buffer_size, 0);
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+		dariadb::compression::v2::DeltaCompressor dc{ bw };
+		BOOST_CHECK(dc.is_first);
+
+		dc.append(t1);
+		dc.append(t2);
+	}
+	{//decompression
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw_d = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::DeltaDeCompressor dc{ bw_d,t1 };
+
+		auto readed2 = dc.read();
+		BOOST_CHECK_EQUAL(readed2, t2);
+	}
+
+
+	{// on t1-t0 < 2bytes;
+		std::fill_n(buffer, test_buffer_size, 0);
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+		dariadb::compression::v2::DeltaCompressor dc{ bw };
+		BOOST_CHECK(dc.is_first);
+
+		dc.append(t1);
+		dc.append(t3);
+	}
+	{//decompression
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw_d = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::DeltaDeCompressor dc{ bw_d,t1 };
+
+		auto readed2 = dc.read();
+		BOOST_CHECK_EQUAL(readed2, t3);
+	}
+
+	{// on t1-t0 < 3bytes;
+		std::fill_n(buffer, test_buffer_size, 0);
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+		dariadb::compression::v2::DeltaCompressor dc{ bw };
+		BOOST_CHECK(dc.is_first);
+
+		dc.append(t1);
+		dc.append(t4);
+	}
+	{//decompression
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw_d = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::DeltaDeCompressor dc{ bw_d,t1 };
+
+		auto readed2 = dc.read();
+		BOOST_CHECK_EQUAL(readed2, t4);
+	}
+
+
+	{// on t1-t0 > 3bytes;
+		std::fill_n(buffer, test_buffer_size, 0);
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+		dariadb::compression::v2::DeltaCompressor dc{ bw };
+		BOOST_CHECK(dc.is_first);
+
+		dc.append(t1);
+		dc.append(t5);
+	}
+	{//decompression
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw_d = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::DeltaDeCompressor dc{ bw_d,t1 };
+
+		auto readed2 = dc.read();
+		BOOST_CHECK_EQUAL(readed2, t5);
 	}
 }
