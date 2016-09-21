@@ -769,6 +769,7 @@ BOOST_AUTO_TEST_CASE(ByteBufferTest) {
 BOOST_AUTO_TEST_CASE(DeltaDeltaTest) {
 	const size_t test_buffer_size = 100;
 
+	const dariadb::Time t0 = 0;
 	const dariadb::Time t1 = 100;
 	const dariadb::Time t2 = 150;
 	const dariadb::Time t3 = 2000;
@@ -856,5 +857,41 @@ BOOST_AUTO_TEST_CASE(DeltaDeltaTest) {
 
 		auto readed2 = dc.read();
 		BOOST_CHECK_EQUAL(readed2, t5);
+	}
+	
+	{// compress all;
+		std::fill_n(buffer, test_buffer_size, 0);
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+		dariadb::compression::v2::DeltaCompressor dc{ bw };
+		
+		dc.append(t0);
+		dc.append(t1);
+		dc.append(t2);
+		/*dc.append(t3);
+		dc.append(t4);
+		dc.append(t5);*/
+	}
+
+	{// decompress all
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw_d = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::DeltaDeCompressor dc{ bw_d,t0 };
+
+		auto readed = dc.read();
+		BOOST_CHECK_EQUAL(readed, t1);
+
+		readed = dc.read();
+		BOOST_CHECK_EQUAL(readed, t2);
+
+		/*readed = dc.read();
+		BOOST_CHECK_EQUAL(readed, t3);
+
+		readed = dc.read();
+		BOOST_CHECK_EQUAL(readed, t4);
+
+		readed = dc.read();
+		BOOST_CHECK_EQUAL(readed, t5);*/
 	}
 }

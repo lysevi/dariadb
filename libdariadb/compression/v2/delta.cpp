@@ -53,7 +53,7 @@ bool DeltaCompressor::append(dariadb::Time t) {
 
   int64_t D = (t - prev_time) - prev_delta;
   {
-    if ((-63 < D) && (D <= 63)) {
+    if ((-32 < D) && (D < 63)) {
       if (bw->free_size() < 1) {
         return false;
       }
@@ -61,7 +61,7 @@ bool DeltaCompressor::append(dariadb::Time t) {
       bw->write<uint8_t>(d);
 	}
 	else {
-		if ((-8391 < D) && (D < 8391)) {
+		if ((-8391 < D) && (D < 8191)) {
 			if (bw->free_size() < 2) {
 				return false;
 			}
@@ -105,7 +105,7 @@ dariadb::Time DeltaDeCompressor::read() {
   if ((first_byte  & delta_1b_mask) == delta_1b_mask && !utils::BitOperations::check(first_byte,6)) {
     auto result = first_byte & delta_1b_mask_inv;
     auto ret = prev_time + result + prev_delta;
-    prev_delta = result;
+	prev_delta = result;
     prev_time = ret;
     return ret;
   }
@@ -115,6 +115,9 @@ dariadb::Time DeltaDeCompressor::read() {
 	  auto first_unmasked = first_byte & (delta_2b_mask_inv >> 8);
 	  auto result = ((uint16_t)first_unmasked << 8) | (uint16_t)second;
 	  auto ret = prev_time + result + prev_delta;
+	  if (ret > delta_2b_mask_inv) {//negative
+		  ret = utils::BitOperations::clr(ret, 13);
+	  }
 	  prev_delta = result;
 	  prev_time = ret;
 	  return ret;
