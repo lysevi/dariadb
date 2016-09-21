@@ -70,7 +70,7 @@ public:
   void fsck();
 
   Version version();
-
+  void eraseOld(const Time&t);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

@@ -5,6 +5,7 @@ v0.2.0
 - New algorithm to drop values between levels depending on the strategies.
 - New logger interface.
 - Full featured server with client library(C++).
+- Now can remove old compressed pages.
 
 v0.1.1
 =====

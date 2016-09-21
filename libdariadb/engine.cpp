@@ -375,6 +375,13 @@ public:
     PageManager::instance()->fsck();
   }
 
+  void eraseOld(const Time&t) {
+	  LockManager::instance()->lock(
+		  LOCK_KIND::EXCLUSIVE, { LockObjects::PAGE });
+	  PageManager::instance()->eraseOld(t);
+	  LockManager::instance()->unlock(LockObjects::PAGE);
+  }
+
   Engine::Version version() {
     Version result;
     result.version = PROJECT_VERSION;
@@ -463,6 +470,10 @@ void Engine::wait_all_asyncs() {
 
 void Engine::fsck() {
   _impl->fsck();
+}
+
+void Engine::eraseOld(const Time&t) {
+	return _impl->eraseOld(t);
 }
 
 Engine::Version Engine::version() {

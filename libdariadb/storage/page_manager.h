@@ -40,6 +40,7 @@ public:
 
   void fsck(bool force_check = true); // if false - check files openned for write-only
 
+  void eraseOld(const Time t);
   static void erase(const std::string &fname);
 
 private:

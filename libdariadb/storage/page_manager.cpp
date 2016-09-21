@@ -364,6 +364,19 @@ public:
     }
   }
 
+  void eraseOld(const Time t) {
+	  TIMECODE_METRICS(ctmd, "readTimePoint", "PageManager::eraseOld");
+
+	  auto pred = [t](const IndexHeader &hdr) {
+		  auto in_check = hdr.maxTime <= t;
+		  return in_check;
+	  };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+	  for (auto&p : page_list) {
+		  this->erase_page(p);
+	  }
+  }
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;
@@ -442,6 +455,11 @@ void PageManager::fsck(bool force_check) {
   return impl->fsck(force_check);
 }
 
+void PageManager::eraseOld(const dariadb::Time t) {
+	impl->eraseOld(t);
+}
+
 void PageManager::erase(const std::string &fname) {
   Private::erase(fname);
 }
+
