@@ -22,17 +22,22 @@ public:
   size_t free_size() const { return _pos; }
   bool is_full() const { return _pos == 0; }
 
+  ///return offset of value sizeof(t) relative of current pos.
+  template<typename T>
+  T* offset_off() {
+	  static_assert(std::is_pod<T>::value, "only POD objects.");
+	  move_pos(sizeof(T));
+	  auto target = reinterpret_cast<T *>(_begin + _pos);
+	  return target;
+  }
+
   template <typename T> void write(T v) {
-    static_assert(std::is_pod<T>::value, "write only POD objects.");
-    move_pos(sizeof(T));
-    auto target = reinterpret_cast<T *>(_begin + _pos);
+	auto target = offset_off<T>();
     *target = v;
   }
 
   template <typename T> T read() {
-    static_assert(std::is_pod<T>::value, "read only POD objects.");
-    auto target = reinterpret_cast<T *>(_begin + _pos);
-    move_pos(sizeof(T));
+	auto target = offset_off<T>();
     return *target;
   }
 
