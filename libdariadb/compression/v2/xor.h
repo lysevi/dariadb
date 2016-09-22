@@ -27,8 +27,6 @@ public:
   bool _is_first;
   uint64_t _first;
   uint64_t _prev_value;
-  uint8_t _prev_lead;
-  uint8_t _prev_tail;
 };
 
 struct XorDeCompressor : public BaseCompressor {
@@ -38,8 +36,6 @@ public:
   Value read();
 
   uint64_t _prev_value;
-  uint8_t _prev_lead;
-  uint8_t _prev_tail;
 };
 }
 }

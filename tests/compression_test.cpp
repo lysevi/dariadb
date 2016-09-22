@@ -4,6 +4,7 @@
 
 #include <libdariadb/compression/v2/bytebuffer.h>
 #include <libdariadb/compression/v2/delta.h>
+#include <libdariadb/compression/v2/xor.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/compression/delta.h>
 #include <libdariadb/compression/flag.h>
@@ -766,7 +767,7 @@ BOOST_AUTO_TEST_CASE(ByteBufferTest) {
 	}
 }
 
-BOOST_AUTO_TEST_CASE(DeltaDeltaTest) {
+BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
 	const size_t test_buffer_size = 100;
 
 	const dariadb::Time t0 = 0;
@@ -930,4 +931,146 @@ BOOST_AUTO_TEST_CASE(DeltaDeltaTest) {
         readed = dc.read();
         BOOST_CHECK_EQUAL(readed, t0);
     }
+}
+
+
+BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
+	const size_t test_buffer_size = 1000;
+
+	const dariadb::Value t1 = 240;
+	// const dariadb::Value t2=224;
+
+	uint8_t buffer[test_buffer_size];
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+	
+	{
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor dc(bw);
+		BOOST_CHECK(dc._is_first);
+
+		dc.append(t1);
+		BOOST_CHECK(!dc._is_first);
+		BOOST_CHECK_EQUAL(dariadb::compression::v2::inner::flat_int_to_double(dc._first), t1);
+		BOOST_CHECK_EQUAL(dariadb::compression::v2::inner::flat_int_to_double(dc._prev_value), t1);
+	}
+	
+	{ // cur==prev
+		std::fill(std::begin(buffer), std::end(buffer), 0);
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor co(bw);
+
+		auto v1 = dariadb::Value(240);
+		auto v2 = dariadb::Value(240);
+		co.append(v1);
+		co.append(v2);
+
+		dariadb::compression::v2::XorDeCompressor dc(bw, t1);
+		BOOST_CHECK_EQUAL(dc.read(), v2);
+	}
+
+	{ // cur!=prev
+		std::fill(std::begin(buffer), std::end(buffer), 0);
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor co(bw);
+
+		auto v1 = dariadb::Value(240);
+		auto v2 = dariadb::Value(96);
+		auto v3 = dariadb::Value(176);
+		co.append(v1);
+		co.append(v2);
+		co.append(v3);
+
+		auto read_bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorDeCompressor dc(read_bw, v1);
+		BOOST_CHECK_EQUAL(dc.read(), v2);
+		BOOST_CHECK_EQUAL(dc.read(), v3);
+	}
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	{ // tail/lead is equals
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor co(bw);
+
+		auto v1 = dariadb::Value(3840);
+		auto v2 = dariadb::Value(3356);
+		co.append(v1);
+		co.append(v2);
+
+		auto read_bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorDeCompressor dc(read_bw, v1);
+		BOOST_CHECK_EQUAL(dc.read(), v2);
+	}
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	{ // tail/lead not equals
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor co(bw);
+
+		auto v1 = dariadb::Value(3840);
+		auto v2 = dariadb::Value(3328);
+		co.append(v1);
+		co.append(v2);
+
+		auto read_bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorDeCompressor dc(read_bw, v1);
+		BOOST_CHECK_EQUAL(dc.read(), v2);
+	}
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	{
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor co(bw);
+
+		std::list<dariadb::Value> values{};
+		dariadb::Value delta = 1;
+
+		for (int i = 0; i < 100; i++) {
+			co.append(delta);
+			values.push_back(delta);
+			delta += 1;
+		}
+
+		auto read_bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorDeCompressor dc(read_bw, values.front());
+		values.pop_front();
+		for (auto &v : values) {
+			BOOST_CHECK_EQUAL(dc.read(), v);
+		}
+	}
+	std::fill(std::begin(buffer), std::end(buffer), 0);
+	
+	{ // 333,0,0,0,0,0
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor co(bw);
+		std::list<dariadb::Value> values{};
+		dariadb::Value delta = dariadb::Value(333);
+
+		for (int i = 0; i < 10; i++) {
+			co.append(delta);
+			values.push_back(delta);
+			delta = 0;
+		}
+
+		auto read_bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorDeCompressor dc(read_bw, values.front());
+		values.pop_front();
+		for (auto &v : values) {
+			auto readed_value = dc.read();
+			BOOST_CHECK_EQUAL(readed_value, v);
+		}
+	}
+	
+	{ // maxValue
+		std::fill(rng.begin, rng.end, 0);
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorCompressor co(bw);
+		auto max_value = std::numeric_limits<dariadb::Value>::max();
+		auto v1 = dariadb::Value(0);
+		auto v2 = dariadb::Value(max_value);
+
+		co.append(v1);
+		co.append(v2);
+
+		auto read_bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::XorDeCompressor dc(read_bw, 0);
+		BOOST_CHECK_EQUAL(dc.read(), v2);
+	}
 }
