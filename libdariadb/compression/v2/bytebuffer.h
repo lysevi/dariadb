@@ -17,11 +17,11 @@ public:
   ~ByteBuffer();
 
   uint64_t pos() const { return _pos; }
-
+  void set_pos(uint64_t bw_pos) { _pos = bw_pos; }
   size_t cap() const { return _cap; }
   size_t free_size() const { return _pos; }
   bool is_full() const { return _pos == 0; }
-
+  void reset_pos(){ _pos = _cap - 1; }
   ///return offset of value sizeof(t) relative of current pos.
   template<typename T>
   T* offset_off() {
@@ -41,6 +41,7 @@ public:
     return *target;
   }
 
+  dariadb::utils::Range get_range() const { return dariadb::utils::Range{ _begin, _end }; }
 protected:
   inline void move_pos(int8_t count) {
     _pos -= count;

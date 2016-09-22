@@ -8,7 +8,7 @@
 using namespace dariadb;
 using namespace dariadb::utils;
 using namespace dariadb::storage;
-using namespace dariadb::compression;
+using namespace dariadb::compression::v2;
 
 // std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
@@ -84,15 +84,14 @@ bool Chunk::check_checksum() {
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
     : Chunk(index, buffer, _size, first_m) {
   header->kind = ChunkKind::Compressed;
-  using compression::BinaryBuffer;
+  
   range = Range{_buffer_t, _buffer_t + index->size};
-  bw = std::make_shared<BinaryBuffer>(range);
+  bw = std::make_shared<ByteBuffer>(range);
   bw->reset_pos();
 
   header->bw_pos = uint32_t(bw->pos());
-  header->bw_bit_num = bw->bitnum();
 
-  c_writer = compression::CopmressedWriter(bw);
+  c_writer = compression::v2::CopmressedWriter(bw);
   c_writer.append(header->first);
 
   header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, first_m.id);
@@ -103,11 +102,10 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buf
   assert(index->kind == ChunkKind::Compressed);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
-  bw = std::make_shared<BinaryBuffer>(range);
-  bw->set_bitnum(header->bw_bit_num);
+  bw = std::make_shared<ByteBuffer>(range);
   bw->set_pos(header->bw_pos);
 
-  c_writer = compression::CopmressedWriter(bw);
+  c_writer = compression::v2::CopmressedWriter(bw);
 }
 
 ZippedChunk::~ZippedChunk() {}
@@ -140,7 +138,6 @@ bool ZippedChunk::append(const Meas &m) {
     return false;
   } else {
     header->bw_pos = uint32_t(bw->pos());
-    header->bw_bit_num = bw->bitnum();
 
     header->count++;
     header->minTime = std::min(header->minTime, m.time);
@@ -173,7 +170,7 @@ public:
   size_t count;
   bool _is_first = true;
   Chunk_Ptr _chunk;
-  std::shared_ptr<BinaryBuffer> bw;
+  std::shared_ptr<ByteBuffer> bw;
   std::shared_ptr<CopmressedReader> _reader;
 };
 
@@ -182,7 +179,7 @@ Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
   raw_res->count = this->header->count;
   raw_res->_chunk = this->shared_from_this();
   raw_res->_is_first = true;
-  raw_res->bw = std::make_shared<BinaryBuffer>(this->bw->get_range());
+  raw_res->bw = std::make_shared<compression::v2::ByteBuffer>(this->bw->get_range());
   raw_res->bw->reset_pos();
   raw_res->_reader = std::make_shared<CopmressedReader>(raw_res->bw, this->header->first);
 

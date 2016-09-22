@@ -8,7 +8,7 @@ using namespace dariadb::compression::v2;
 
 ByteBuffer::ByteBuffer(const utils::Range &r) : _begin(r.begin), _end(r.end) {
   _cap = static_cast<uint64_t>(std::distance(_begin, _end));
-  _pos = _cap - 1;
+  reset_pos();
 }
 
 ByteBuffer::~ByteBuffer() {}
