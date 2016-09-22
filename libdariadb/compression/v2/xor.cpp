@@ -32,6 +32,9 @@ bool XorCompressor::append(Value v) {
   
   uint8_t count_of_bytes=(total_bits - lead - tail)/8+1;
   flag_byte = count_of_bytes;
+  if (bw->free_size() < (count_of_bytes + 2)) {
+	  return false;
+  }
   bw->write(flag_byte);
   bw->write(tail);
   
