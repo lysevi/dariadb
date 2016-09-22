@@ -5,6 +5,8 @@
 #include <libdariadb/compression/v2/bytebuffer.h>
 #include <libdariadb/compression/v2/delta.h>
 #include <libdariadb/compression/v2/xor.h>
+#include <libdariadb/compression/v2/flag.h>
+#include <libdariadb/compression/v2/compression.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/compression/delta.h>
 #include <libdariadb/compression/flag.h>
@@ -1072,5 +1074,77 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
 		auto read_bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
 		dariadb::compression::v2::XorDeCompressor dc(read_bw, 0);
 		BOOST_CHECK_EQUAL(dc.read(), v2);
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE(FlagV2Compressor) {
+	{ // 1,2,3,4,5...
+		const size_t test_buffer_size = 1000;
+		uint8_t buffer[test_buffer_size];
+		std::fill(std::begin(buffer), std::end(buffer), 0);
+
+		dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+		auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::FlagCompressor fc(bw);
+
+		std::list<dariadb::Flag> flags{};
+		dariadb::Flag delta = 1;
+		for (int i = 0; i < 10; i++) {
+			fc.append(delta);
+			flags.push_back(delta);
+			delta++;
+		}
+
+		auto dbw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+		dariadb::compression::v2::FlagDeCompressor fd(dbw, flags.front());
+		flags.pop_front();
+		for (auto f : flags) {
+			auto v = fd.read();
+			BOOST_CHECK_EQUAL(v, f);
+		}
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
+	const size_t test_buffer_size = 513;
+
+	uint8_t b_begin[test_buffer_size];
+	auto b_end = std::end(b_begin);
+
+	std::fill(b_begin, b_end, 0);
+	dariadb::utils::Range rng{ b_begin, b_end };
+
+	using dariadb::compression::v2::CopmressedWriter;
+	using dariadb::compression::v2::CopmressedReader;
+
+	auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+	CopmressedWriter cwr(bw);
+
+	std::list<dariadb::Meas> meases{};
+	auto zer_t = dariadb::timeutil::current_time();
+	for (int i = 0;; i++) {
+		auto m = dariadb::Meas::empty(1);
+		m.time = zer_t++;
+		m.flag = i;
+		m.src = i;
+		m.value = i;
+		if (!cwr.append(m)) {
+			BOOST_CHECK(cwr.is_full());
+			break;
+		}
+		meases.push_back(m);
+	}
+	BOOST_CHECK_LE(cwr.used_space(), test_buffer_size);
+
+	auto rbw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	CopmressedReader crr(rbw, meases.front());
+
+	meases.pop_front();
+	for (auto &m : meases) {
+		auto r_m = crr.read();
+		BOOST_CHECK(m == r_m);
 	}
 }

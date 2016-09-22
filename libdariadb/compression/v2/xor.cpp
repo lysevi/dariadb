@@ -1,9 +1,11 @@
 #include "xor.h"
 #include "../../utils/cz.h"
 #include "../../utils/utils.h"
-
+#include <cassert>
 using namespace dariadb;
 using namespace dariadb::compression::v2;
+
+const size_t buff_size = sizeof(uint64_t);
 
 XorCompressor::XorCompressor(const ByteBuffer_Ptr &bw_)
     : BaseCompressor(bw_), _is_first(true), _first(0), _prev_value(0) {}
@@ -32,7 +34,8 @@ bool XorCompressor::append(Value v) {
   
   uint8_t count_of_bytes=(total_bits - lead - tail)/8+1;
   flag_byte = count_of_bytes;
-  
+  assert(count_of_bytes <= buff_size);
+
   if (bw->free_size() < size_t(count_of_bytes + 2)) {
 	  return false;
   }
@@ -68,6 +71,8 @@ dariadb::Value XorDeCompressor::read() {
 	  const size_t buff_size = sizeof(uint64_t);
 	  uint8_t buff[buff_size];
 	  std::fill_n(buff, buff_size, 0);
+	  assert(byte_count <= buff_size);
+
 	  for (size_t i = 0; i < byte_count; ++i) {
 		  buff[i] = bw->read<uint8_t>();
 	  }

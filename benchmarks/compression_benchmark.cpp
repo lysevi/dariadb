@@ -5,6 +5,10 @@
 
 #include <chrono>
 #include <cmath>
+#include <libdariadb/compression/v2/compression.h>
+#include <libdariadb/compression/v2/delta.h>
+#include <libdariadb/compression/v2/flag.h>
+#include <libdariadb/compression/v2/xor.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/compression/delta.h>
 #include <libdariadb/compression/flag.h>
@@ -207,6 +211,166 @@ int main(int argc, char *argv[]) {
     std::cout << "compress reader : " << elapsed << std::endl;
 
     delete[] buf_begin;
+  }
+  //v2 api
+  std::cout << "V2 API" << std::endl;
+  {
+	  const size_t count = 1000000;
+
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+	  dariadb::compression::v2::DeltaCompressor dc(bw);
+
+	  std::vector<dariadb::Time> deltas{ 50, 2553,1000,2000,500};
+	  dariadb::Time t = 0;
+	  auto start = clock();
+	  for (size_t i = 0; i < count; i++) {
+		  dc.append(t);
+		  t += deltas[i % deltas.size()];
+		  if (t > dariadb::MAX_TIME) {
+			  t = 0;
+		  }
+	  }
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "delta compressor : " << elapsed << std::endl;
+
+	  auto w = dc.used_space();
+	  auto sz = sizeof(dariadb::Time) * count;
+	  std::cout << "used space:  " << (w * 100.0) / (sz) << "%"<< std::endl;
+  }
+  {
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	  dariadb::compression::v2::DeltaDeCompressor dc(bw, 0);
+
+	  auto start = clock();
+	  for (size_t i = 1; i < 1000000; i++) {
+		  dc.read();
+	  }
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "delta decompressor : " << elapsed << std::endl;
+  }
+  // xor compression
+  std::fill(buffer, buffer + test_buffer_size, 0);
+  {
+	  const size_t count = 1000000;
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	  dariadb::compression::v2::XorCompressor dc(bw);
+
+	  dariadb::Value t = 3.14;
+	  auto start = clock();
+	  for (size_t i = 0; i < count; i++) {
+		  dc.append(t);
+		  t *= 1.5;
+	  }
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "\nxor compressor : " << elapsed << std::endl;
+	  auto w = dc.used_space();
+	  auto sz = sizeof(dariadb::Time) * count;
+	  std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
+  }
+  {
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	  dariadb::compression::v2::XorDeCompressor dc(bw, 0);
+
+	  auto start = clock();
+	  for (size_t i = 1; i < 1000000; i++) {
+		  dc.read();
+	  }
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "xor decompressor : " << elapsed << std::endl;
+  }
+
+  // flag compression
+  std::fill(buffer, buffer + test_buffer_size, 0);
+  {
+	  const size_t count = 1000000;
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	  dariadb::compression::v2::FlagCompressor dc(bw);
+
+	  dariadb::Flag t = 1;
+	  auto start = clock();
+	  for (size_t i = 0; i < count / 2; i++) {
+		  dc.append(t);
+		  dc.append(t);
+		  t++;
+	  }
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "\nflag compressor : " << elapsed << std::endl;
+	  auto w = dc.used_space();
+	  auto sz = sizeof(dariadb::Time) * count;
+	  std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
+  }
+  {
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	  dariadb::compression::v2::FlagDeCompressor dc(bw, 0);
+
+	  auto start = clock();
+	  for (size_t i = 1; i < 1000000; i++) {
+		  dc.read();
+	  }
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "flag decompressor : " << elapsed << std::endl;
+  }
+
+  // flag compression
+  std::fill(buffer, buffer + test_buffer_size, 0);
+  {
+	  const size_t count = 1000000;
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	  dariadb::compression::v2::FlagCompressor dc(bw);
+
+	  dariadb::Flag t = 1;
+	  auto start = clock();
+	  for (size_t i = 0; i < count / 2; i++) {
+		  dc.append(t);
+		  dc.append(t);
+		  t++;
+	  }
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "\nid compressor : " << elapsed << std::endl;
+	  auto w = dc.used_space();
+	  auto sz = sizeof(dariadb::Time) * count;
+	  std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
+  }
+
+  
+  {
+	  const size_t count = 1000000;
+	  uint8_t *buf_begin = new uint8_t[test_buffer_size];
+
+	  std::fill(buf_begin, buf_begin + test_buffer_size, 0);
+	  auto bw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+
+	  dariadb::compression::v2::CopmressedWriter cwr{ bw };
+	  auto start = clock();
+	  for (size_t i = 0; i < count; i++) {
+		  auto m = dariadb::Meas::empty();
+		  m.id++;
+		  m.time = static_cast<dariadb::Time>(dariadb::timeutil::current_time());
+		  m.flag = dariadb::Flag(i);
+		  m.value = dariadb::Value(i);
+		  cwr.append(m);
+	  }
+
+	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "\ncompress writer : " << elapsed << std::endl;
+	  auto w = cwr.used_space();
+	  auto sz = sizeof(dariadb::Meas) * count;
+	  std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
+
+	  auto m = dariadb::Meas::empty();
+
+	  auto rbw = std::make_shared<dariadb::compression::v2::ByteBuffer>(rng);
+	  dariadb::compression::v2::CopmressedReader crr{ rbw, m };
+
+	  start = clock();
+	  for (int i = 1; i < 1000000; i++) {
+		  crr.read();
+	  }
+	  elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
+	  std::cout << "compress reader : " << elapsed << std::endl;
+
+	  delete[] buf_begin;
   }
   delete[] buffer;
 }
