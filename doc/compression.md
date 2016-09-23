@@ -14,7 +14,8 @@ We then encode these XOR d values with the following variable length encoding sc
 1. The first value is stored with no compression
 2. If XOR with the previous is zero (same value), store  single '0' byte
 3. When XOR is non-zero, storing byte with count of bytes with meaningful bits. 
-Then storing count of zeros in tail(byte), then XOR moved to the right.
+Then storing count of zeros in tail(byte), then XOR moved 
+to the right (for example '0001010 => 0000101').
 
 ```C++
   auto lead = dariadb::utils::clz(xor_val);
@@ -24,10 +25,6 @@ Then storing count of zeros in tail(byte), then XOR moved to the right.
   uint8_t count_of_bytes=(total_bits - lead - tail)/8+1; //count of byte in XOR
   assert(count_of_bytes <= u64_buffer_size);
 
-  if (bw->free_size() < size_t(count_of_bytes + 2)) {
-	  return false;
-  }
-  
   bw->write(count_of_bytes);
   bw->write(tail);
   
