@@ -16,8 +16,8 @@ public:
   ByteBuffer(const utils::Range &r);
   ~ByteBuffer();
 
-  uint64_t pos() const { return _pos; }
-  void set_pos(uint64_t bw_pos) { _pos = bw_pos; }
+  uint32_t pos() const { return _pos; }
+  void set_pos(uint32_t bw_pos) { _pos = bw_pos; }
   size_t cap() const { return _cap; }
   size_t free_size() const { return _pos; }
   bool is_full() const { return _pos == 0; }
@@ -45,15 +45,17 @@ public:
 protected:
   inline void move_pos(int8_t count) {
     _pos -= count;
+#ifdef DEBUG
     if (_pos > _cap) {
       throw MAKE_EXCEPTION("BinaryBuffer::move_pos");
     }
+#endif
   }
 
 protected:
   uint8_t *_begin, *_end;
-  uint64_t _cap;
-  uint64_t _pos;
+  uint32_t _cap;
+  uint32_t _pos;
 };
 }
 }
