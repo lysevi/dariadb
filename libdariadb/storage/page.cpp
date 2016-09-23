@@ -14,14 +14,20 @@ using namespace dariadb;
 namespace PageInner {
 using HdrAndBuffer = std::tuple<ChunkHeader, std::shared_ptr<uint8_t>>;
 
-std::list<MeasList> splitById(const MeasArray &ma) {
+std::list<MeasArray> splitById(const MeasArray &ma) {
   dariadb::IdSet dropped;
   auto count = ma.size();
   std::vector<bool> visited(count);
   auto begin = ma.cbegin();
   auto end = ma.cend();
   size_t i = 0;
-  std::list<MeasList> result;
+  std::list<MeasArray> result;
+  MeasArray current_id_values;
+  current_id_values.resize(ma.size());
+  
+  assert(current_id_values.size() != 0);
+  assert(current_id_values.size() == ma.size());
+
   for (auto it = begin; it != end; ++it, ++i) {
     if (visited[i]) {
       continue;
@@ -29,26 +35,28 @@ std::list<MeasList> splitById(const MeasArray &ma) {
     if (dropped.find(it->id) != dropped.end()) {
       continue;
     }
-    MeasList current_id_values;
+
     visited[i] = true;
-    current_id_values.push_back(*it);
+	size_t current_id_values_pos = 0;
+    current_id_values[current_id_values_pos++]= *it;
     size_t pos = 0;
     for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
       if (visited[pos]) {
         continue;
       }
       if ((sub_it->id == it->id)) {
-        current_id_values.push_back(*sub_it);
+        current_id_values[current_id_values_pos++] =*sub_it;
         visited[pos] = true;
       }
     }
     dropped.insert(it->id);
-    result.push_back(std::move(current_id_values));
+    result.push_back({ current_id_values.begin(), current_id_values.begin() + current_id_values_pos });
+	current_id_values_pos = 0;
   }
   return result;
 }
 
-std::list<HdrAndBuffer> compressValues(std::list<MeasList> &to_compress,
+std::list<HdrAndBuffer> compressValues(std::list<MeasArray> &to_compress,
                                        PageHeader &phdr, uint32_t max_chunk_size) {
   std::list<HdrAndBuffer> results;
 
@@ -143,7 +151,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size, const MeasArray &ma) {
   TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
 
-  std::list<MeasList> to_compress = PageInner::splitById(ma);
+  std::list<MeasArray> to_compress = PageInner::splitById(ma);
 
   PageHeader phdr;
   memset(&phdr, 0, sizeof(PageHeader));
