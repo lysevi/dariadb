@@ -1,6 +1,5 @@
 #include "delta.h"
 #include "../../utils/utils.h"
-#include "../../utils/logger.h"
 #include <cassert>
 #include <limits>
 #include <sstream>
