@@ -774,7 +774,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
 
 	const dariadb::Time t0 = 0;
 	const dariadb::Time t1 = 100;
-	const dariadb::Time t2 = 150;
+	const dariadb::Time t2 = 130;
 	const dariadb::Time t3 = 2000;
 	const dariadb::Time t4 = 1048175;
 	const dariadb::Time t5 = std::numeric_limits<uint32_t>::max();

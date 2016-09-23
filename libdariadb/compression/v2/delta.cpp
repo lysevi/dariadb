@@ -1,5 +1,6 @@
 #include "delta.h"
 #include "../../utils/utils.h"
+#include "../../utils/logger.h"
 #include <cassert>
 #include <limits>
 #include <sstream>
@@ -23,8 +24,6 @@ const uint16_t delta_2b_mask_inv = 0x1FFF; // 0001 1111 1111 1111
 
 const uint32_t delta_3b_mask = 0xE00000;     // 1110 0000 0000 0000 0000 0000
 const uint32_t delta_3b_mask_inv = 0xFFFFF;  // 0000 1111 1111 1111 1111 1111
-
-const uint32_t delta_4b_mask = 0x0;     // 0000 0000 0000 0000 0000 0000
 
 uint8_t get_delta_1b(int64_t D) {
   return delta_1b_mask | (delta_1b_mask_inv & static_cast<uint8_t>(D));
@@ -53,7 +52,7 @@ bool DeltaCompressor::append(dariadb::Time t) {
 
   int64_t D = (t - prev_time) - prev_delta;
   {
-    if ((-32 < D) && (D < 63)) {
+    if ((-32 < D) && (D < 32)) {
       if (bw->free_size() < 1) {
         return false;
       }
@@ -61,7 +60,7 @@ bool DeltaCompressor::append(dariadb::Time t) {
       bw->write<uint8_t>(d);
 	}
 	else {
-		if ((-8391 < D) && (D < 8191)) {
+		if ((-4096 < D) && (D < 4096)) {
 			if (bw->free_size() < 2) {
 				return false;
 			}
@@ -102,8 +101,12 @@ dariadb::Time DeltaDeCompressor::read() {
   auto first_byte = bw->read<uint8_t>();
   
   //TODO check in one operation; use switch
+  //TODO refact: " auto ret = prev_time + result + prev_delta;" in each calc?
   if ((first_byte  & delta_1b_mask) == delta_1b_mask && !utils::BitOperations::check(first_byte,6)) {
     auto result = first_byte & delta_1b_mask_inv;
+	if (result > 32) {
+		result = (-64) | result;
+	}
     auto ret = prev_time + result + prev_delta;
 	prev_delta = result;
     prev_time = ret;
@@ -114,10 +117,11 @@ dariadb::Time DeltaDeCompressor::read() {
 	  auto second = bw->read<uint8_t>();
 	  auto first_unmasked = first_byte & (delta_2b_mask_inv >> 8);
 	  auto result = ((uint16_t)first_unmasked << 8) | (uint16_t)second;
-	  auto ret = prev_time + result + prev_delta;
-	  if (ret > delta_2b_mask_inv) {//negative
-		  ret = utils::BitOperations::clr(ret, 13);
+	  
+	  if (result > 4096) {//negative
+		  result = (-4096) | result;
 	  }
+	  auto ret = prev_time + result + prev_delta;
 	  prev_delta = result;
 	  prev_time = ret;
 	  return ret;
@@ -129,10 +133,11 @@ dariadb::Time DeltaDeCompressor::read() {
 	  c.big = 0;
 	  c.small.hi = (uint8_t)first_unmasked;
 	  c.small.lo = second;
-	  auto ret = prev_time + c.big + prev_delta;
-	  if (ret > delta_3b_mask_inv) {//negative
-		  ret = utils::BitOperations::clr(ret, 19);
+	  auto result = c.big;
+	  if (result > delta_3b_mask_inv) {//negative
+		  result = (-1048576) | result;
 	  }
+	  auto ret = prev_time + c.big + prev_delta;
 	  prev_delta = c.big;
 	  prev_time = ret;
 	  return ret;
