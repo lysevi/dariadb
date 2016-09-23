@@ -1,34 +1,44 @@
-based on http://www.vldb.org/pvldb/vol8/p1816-teller.pdf
-
 # Compressing time stamps
 
 1. The block header stores the starting time stamp, 
 2. For subsequent time stamps, tn:
  * Calculate the delta of delta: D = (tn - t(n-1)) 
- * If D is zero, then store a single '0' bit
- * If D is l [0:64], store '10' followed by
-the value (7 bits)
- * If D is between [0:256], store '110' followed by
-the value (9 bits)
- * if D is between [0:2048], store '1110' followed
-by the value (12 bits)
- * Otherwise store '1111' followed by D using 32 bits
+ * If D is [-32:32], store '10' followed by the value.
+ * If D is between [-4096:4096], store '1110' followed by the value.
+ * if D is between [-524288:524287], store '1110' followed by the value.
+ * Otherwise store '0' byte followed by D using 64 bits
 
 # Compressing values
 
 We then encode these XOR d values with the following variable length encoding scheme:
 1. The first value is stored with no compression
-2. If XOR with the previous is zero (same value), store  single '0' bit
-3. When XOR is non-zero, calculate the number of leading and trailing zeros in the XOR, store bit '1' followed
-by either a) or b):
+2. If XOR with the previous is zero (same value), store  single '0' byte
+3. When XOR is non-zero, storing byte with count of bytes with meaningful bits. 
+Then storing count of zeros in tail(byte), then XOR moved to the right.
 
-(a) (Control bit '0') If the block of meaningful bits falls within the block of previous meaningful bits,
-i.e., there are at least as many leading zeros and  as many trailing zeros as with the previous value,
-use that information for the block position and just store the meaningful XORed value.
+```C++
+  auto lead = dariadb::utils::clz(xor_val);
+  auto tail = dariadb::utils::ctz(xor_val);
+  const size_t total_bits = sizeof(Value) * 8;
+  
+  uint8_t count_of_bytes=(total_bits - lead - tail)/8+1; //count of byte in XOR
+  assert(count_of_bytes <= u64_buffer_size);
 
-(b) (Control bit '1') Store the length of the number of leading zeros in the next 7 bits, then store the
-length of the meaningful XORed value in the next 6 bits. Finally store the meaningful bits of the
-XORed value.
+  if (bw->free_size() < size_t(count_of_bytes + 2)) {
+	  return false;
+  }
+  
+  bw->write(count_of_bytes);
+  bw->write(tail);
+  
+  auto moved_value = xor_val >> tail; // 0001010 => 0000101
+  uint8_t buff[u64_buffer_size];
+  *reinterpret_cast<uint64_t*>(buff) = moved_value;
+  for (size_t i = 0; i < count_of_bytes; ++i) {
+	   bw->write(buff[i]);
+  }
+```
 
-# Flags and Id compression
-if flag/id equals previous value flag/id, then write '0' else write '1' and result of LEB128 compression;
+# Flags
+
+Using LEB128 compression;
