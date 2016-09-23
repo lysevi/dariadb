@@ -28,7 +28,7 @@ macro(ADD_PERF_TEST name)
 endmacro(ADD_PERF_TEST)
 
 macro(ADD_NT_PERF_TEST name)
-   MESSAGE(STATUS " + netowrk_benchmark "  ${name} " "  ${ARGN})
+   MESSAGE(STATUS " + network_benchmark "  ${name} " "  ${ARGN})
    add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/network_benchmark --io-threads=5  ${ARGN})
 endmacro(ADD_NT_PERF_TEST)
 

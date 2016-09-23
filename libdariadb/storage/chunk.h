@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../compression/binarybuffer.h"
-#include "../compression/compression.h"
+#include "../compression/v2/bytebuffer.h"
+#include "../compression/v2/compression.h"
 #include "../meas.h"
 #include "../utils/locker.h"
 #include "../utils/lru.h"
@@ -28,7 +28,6 @@ struct ChunkHeader {
   uint64_t flag_bloom;
   uint32_t count;
   uint32_t bw_pos;
-  uint8_t bw_bit_num;
 
   size_t size;
   uint32_t crc;
@@ -68,7 +67,7 @@ public:
   ChunkHeader *header;
   u8vector _buffer_t;
 
-  compression::BinaryBuffer_Ptr bw;
+  compression::v2::ByteBuffer_Ptr bw;
 
   bool should_free; // chunk dtor must (delete[]) resource.
 };
@@ -92,7 +91,7 @@ public:
   uint32_t get_checksum() override;
   ChunkReader_Ptr get_reader() override;
   utils::Range range;
-  compression::CopmressedWriter c_writer;
+  compression::v2::CopmressedWriter c_writer;
 };
 }
 }

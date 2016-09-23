@@ -6,6 +6,7 @@ v0.2.0
 - New logger interface.
 - Full featured server with client library(C++).
 - Now can remove old compressed pages.
+- New compression algorithm: speed increased by 3 times.
 
 v0.1.1
 =====
