@@ -1,7 +1,3 @@
-#include <spdlog/spdlog.h>
-
-using spdlog::logger;
-
 #include "logger.h"
 
 ServerLogger::Params::Params() {

@@ -1,8 +1,7 @@
 #pragma once
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <libdariadb/utils/logger.h>
-
-class logger;
 
 class ServerLogger : public dariadb::utils::ILogger {
 public:
@@ -16,6 +15,6 @@ public:
 	~ServerLogger();
 	void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg);
 private:
-	std::shared_ptr<logger> _logger;
+    std::shared_ptr<spdlog::logger> _logger;
 	Params _params;
 };

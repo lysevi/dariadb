@@ -28,7 +28,7 @@ bool FlagCompressor::append(dariadb::Flag v) {
     auto sub_res = x & 0x7fU;
     if (x >>= 7)
       sub_res |= 0x80U;
-    bw->write<uint8_t>(sub_res);
+    bw->write<uint8_t>(static_cast<uint8_t>(sub_res));
   } while (x);
 
   return true;

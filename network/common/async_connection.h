@@ -20,7 +20,7 @@ public:
 	using onNetworkErrorHandler = std::function<void(const boost::system::error_code &err)>;
 public:
   AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv, onNetworkErrorHandler onErr);
-  virtual ~AsyncConnection() noexcept(false);
+  ~AsyncConnection() noexcept(false);
   void set_pool(NetData_Pool *pool);
   NetData_Pool *get_pool() { return _pool; }
   void send(const NetData_ptr &d);
