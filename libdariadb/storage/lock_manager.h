@@ -14,7 +14,7 @@ namespace storage {
 
 enum class LOCK_KIND : uint8_t { UNKNOW, READ, EXCLUSIVE };
 
-enum class LockObjects : uint8_t {
+enum class LOCK_OBJECTS : uint8_t {
   AOF,
   CAP,
   PAGE,
@@ -43,17 +43,17 @@ public:
   static void stop();
   static LockManager *instance();
 
-  void lock(const LOCK_KIND &lk, const LockObjects &lo);
+  void lock(const LOCK_KIND &lk, const LOCK_OBJECTS &lo);
   void
   lock(const LOCK_KIND &lk,
-       const std::vector<LockObjects> &los); /// Only simple locks support (non drop_)
-  void unlock(const LockObjects &lo);
-  void unlock(const std::vector<LockObjects> &los);
+       const std::vector<LOCK_OBJECTS> &los); /// Only simple locks support (non drop_)
+  void unlock(const LOCK_OBJECTS &lo);
+  void unlock(const std::vector<LOCK_OBJECTS> &los);
 
 protected:
-  RWMutex_Ptr get_or_create_lock_object(const LockObjects &lo);
-  RWMutex_Ptr get_lock_object(const LockObjects &lo);
-  void lock_by_kind(const LOCK_KIND &lk, const LockObjects &lo);
+  RWMutex_Ptr get_or_create_lock_object(const LOCK_OBJECTS &lo);
+  RWMutex_Ptr get_lock_object(const LOCK_OBJECTS &lo);
+  void lock_by_kind(const LOCK_KIND &lk, const LOCK_OBJECTS &lo);
 
   void lock_drop_aof();
   void lock_drop_cap();
@@ -61,7 +61,7 @@ protected:
 private:
   static LockManager *_instance;
 
-  std::map<LockObjects, RWMutex_Ptr> _lockers;
+  std::map<LOCK_OBJECTS, RWMutex_Ptr> _lockers;
   std::mutex _mutex;
 };
 }

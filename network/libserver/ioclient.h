@@ -50,7 +50,7 @@ struct IOClient{
   socket_ptr sock;
   std::string host;
 
-  ClientState state;
+  CLIENT_STATE state;
   Environment *env;
   std::atomic_int pings_missed;
   //std::list<storage::IReaderClb *> readers;

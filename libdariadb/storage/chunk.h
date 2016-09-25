@@ -12,15 +12,15 @@
 #include <unordered_map>
 namespace dariadb {
 namespace storage {
-enum class ChunkKind : uint8_t { Simple, Compressed };
+enum class CHUNK_KIND : uint8_t { Simple, Compressed };
 
-std::ostream &operator<<(std::ostream &stream, const ChunkKind &k);
+std::ostream &operator<<(std::ostream &stream, const CHUNK_KIND &k);
 #pragma pack(push, 1)
 struct ChunkHeader {
   uint64_t id; // chunk id;
   bool is_init : 1;
   bool is_readonly : 1;
-  ChunkKind kind;
+  CHUNK_KIND kind;
   Meas first, last;
   Time minTime, maxTime;
   Id minId, maxId;

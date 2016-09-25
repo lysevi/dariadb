@@ -12,13 +12,13 @@ using namespace dariadb::compression::v2;
 
 // std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
-std::ostream &dariadb::storage::operator<<(std::ostream &stream, const ChunkKind &b) {
+std::ostream &dariadb::storage::operator<<(std::ostream &stream, const CHUNK_KIND &b) {
   switch (b) {
-  case ChunkKind::Simple:
-    stream << "ChunkKind::Simple";
+  case CHUNK_KIND::Simple:
+    stream << "CHUNK_KIND::Simple";
     break;
-  case ChunkKind::Compressed:
-    stream << "ChunkKind::Compressed";
+  case CHUNK_KIND::Compressed:
+    stream << "CHUNK_KIND::Compressed";
     break;
   }
   return stream;
@@ -83,7 +83,7 @@ bool Chunk::check_checksum() {
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
     : Chunk(index, buffer, _size, first_m) {
-  header->kind = ChunkKind::Compressed;
+  header->kind = CHUNK_KIND::Compressed;
   
   range = Range{_buffer_t, _buffer_t + index->size};
   bw = std::make_shared<ByteBuffer>(range);
@@ -99,7 +99,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
 }
 
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
-  assert(index->kind == ChunkKind::Compressed);
+  assert(index->kind == CHUNK_KIND::Compressed);
   range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
   bw = std::make_shared<ByteBuffer>(range);

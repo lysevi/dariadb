@@ -380,10 +380,10 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
 
     Chunk_Ptr ptr = nullptr;
-    if (ptr_to_chunk_info_raw->kind == ChunkKind::Compressed) {
+    if (ptr_to_chunk_info_raw->kind == CHUNK_KIND::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      THROW_EXCEPTION("Unknow ChunkKind: " , ptr_to_chunk_info_raw->kind);
+      THROW_EXCEPTION("Unknow CHUNK_KIND: " , ptr_to_chunk_info_raw->kind);
     }
 
     Chunk_Ptr c{ptr};
@@ -428,10 +428,10 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     }
 
     Chunk_Ptr ptr = nullptr;
-    if (ptr_to_chunk_info_raw->kind == ChunkKind::Compressed) {
+    if (ptr_to_chunk_info_raw->kind == CHUNK_KIND::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      THROW_EXCEPTION("Unknow ChunkKind: " , ptr_to_chunk_info_raw->kind);
+      THROW_EXCEPTION("Unknow CHUNK_KIND: " , ptr_to_chunk_info_raw->kind);
     }
     Chunk_Ptr c{ptr};
     search_res = c;

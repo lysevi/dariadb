@@ -151,7 +151,7 @@ int main(int argc,char**argv){
 	for (size_t i = 0; i < clients_count; ++i) {
 		threads[i].join();
 		clients[i]->disconnect();
-		while (clients[i]->state() != dariadb::net::ClientState::DISCONNECTED) {
+		while (clients[i]->state() != dariadb::net::CLIENT_STATE::DISCONNECTED) {
 			std::this_thread::yield();
 		}
 	}

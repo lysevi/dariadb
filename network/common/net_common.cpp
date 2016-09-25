@@ -4,16 +4,16 @@
 
 namespace dariadb {
 namespace net {
-std::ostream &operator<<(std::ostream &stream, const ClientState &state) {
+std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state) {
   switch (state) {
-  case dariadb::net::ClientState::WORK:
-    stream << "ClientState::WORK";
+  case dariadb::net::CLIENT_STATE::WORK:
+    stream << "CLIENT_STATE::WORK";
     break;
-  case dariadb::net::ClientState::DISCONNECTED:
-    stream << "ClientState::DISCONNECTED";
+  case dariadb::net::CLIENT_STATE::DISCONNECTED:
+    stream << "CLIENT_STATE::DISCONNECTED";
     break;
-  case dariadb::net::ClientState::CONNECT:
-    stream << "ClientState::CONNECT";
+  case dariadb::net::CLIENT_STATE::CONNECT:
+    stream << "CLIENT_STATE::CONNECT";
     break;
   }
   return stream;

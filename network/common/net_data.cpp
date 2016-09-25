@@ -8,9 +8,9 @@ NetData::NetData() {
   size = 0;
 }
 
-NetData::NetData(const DataKinds &k) {
+NetData::NetData(const DATA_KINDS &k) {
   memset(data, 0, MAX_MESSAGE_SIZE);
-  size = sizeof(DataKinds);
+  size = sizeof(DATA_KINDS);
   data[0] = static_cast<uint8_t>(k);
 }
 

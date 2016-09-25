@@ -16,7 +16,7 @@ namespace client {
 struct DARIADBCL_EXPORTS ReadResult {
   using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
   QueryNumber id;
-  DataKinds kind;
+  DATA_KINDS kind;
   utils::Locker locker;
   callback clbk;
   bool is_ok;     //true - if server send OK to this query.
@@ -44,7 +44,7 @@ public:
   void connect();
   void disconnect();
 
-  ClientState state() const;
+  CLIENT_STATE state() const;
   size_t pings_answers() const;
 
   /// connection id on server

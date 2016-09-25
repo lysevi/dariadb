@@ -80,7 +80,7 @@ public:
 
   void disconnect_all() {
     for (auto &kv : _clients) {
-      if (kv.second->state != ClientState::DISCONNECTED) {
+      if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
         kv.second->end_session();
         while (kv.second->_async_connection->queue_size() != 0) {
           logger_info("server: wait stop of #", kv.first);
@@ -160,7 +160,7 @@ public:
     auto client = fres_it->second;
     _connections_accepted += 1;
     logger_info("server: hello from {", client->host, "}, #", client->_async_connection->id());
-    client->state = ClientState::WORK;
+    client->state = CLIENT_STATE::WORK;
   }
 
   void client_disconnect(int id) override {
@@ -196,11 +196,11 @@ public:
     std::list<int> to_remove;
     _clients_locker.lock();
     for (auto &kv : _clients) {
-      if (kv.second->state == ClientState::CONNECT) {
+      if (kv.second->state == CLIENT_STATE::CONNECT) {
         continue;
       }
 
-      bool is_stoped = kv.second->state == ClientState::DISCONNECTED;
+      bool is_stoped = kv.second->state == CLIENT_STATE::DISCONNECTED;
       if (kv.second->pings_missed > MAX_MISSED_PINGS || is_stoped) {
         kv.second->close();
         to_remove.push_back(kv.first);

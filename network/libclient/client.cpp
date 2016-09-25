@@ -25,7 +25,7 @@ class Client::Private{
 public:
   Private(const Client::Param &p): _params(p) {
     _query_num = 1;
-    _state = ClientState::CONNECT;
+    _state = CLIENT_STATE::CONNECT;
     _pings_answers = 0;
 	AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
 		onDataRecv(d, cancel, dont_free_memory);
@@ -38,7 +38,7 @@ public:
 
   ~Private() noexcept(false) {
     try {
-      if (_state != ClientState::DISCONNECTED && _socket != nullptr) {
+      if (_state != CLIENT_STATE::DISCONNECTED && _socket != nullptr) {
         this->disconnect();
       }
 
@@ -52,22 +52,22 @@ public:
   void connect() {
     logger_info("client: connecting to ", _params.host, ':', _params.port);
 
-    _state = ClientState::CONNECT;
+    _state = CLIENT_STATE::CONNECT;
     auto t=std::thread{&Client::Private::client_thread, this};
     _thread_handler = std::move(t);
 
-    while (this->_state != ClientState::WORK) {
+    while (this->_state != CLIENT_STATE::WORK) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
   }
 
   void disconnect() {
     if (_socket->is_open()) {
-      auto nd = _pool.construct(DataKinds::DISCONNECT);
+      auto nd = _pool.construct(DATA_KINDS::DISCONNECT);
       this->_async_connection->send(nd);
     }
 
-    while (this->_state != ClientState::DISCONNECTED) {
+    while (this->_state != CLIENT_STATE::DISCONNECTED) {
       logger_info("client: #", _async_connection->id(), " disconnect - wait server answer...");
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
@@ -97,7 +97,7 @@ public:
 		  nd->size += sizeof(QueryHello_header);
 
 		  QueryHello_header *qh = reinterpret_cast<QueryHello_header *>(nd->data);
-		  qh->kind = (uint8_t)DataKinds::HELLO;
+		  qh->kind = (uint8_t)DATA_KINDS::HELLO;
 		  qh->version = PROTOCOL_VERSION;
 		  
 		  auto host_ptr = ((char *)(&qh->host_size) + sizeof(qh->host_size));
@@ -113,13 +113,13 @@ public:
   }
 
   void onNetworkError(const boost::system::error_code &err) {
-    if (this->_state != ClientState::DISCONNECTED) {
+    if (this->_state != CLIENT_STATE::DISCONNECTED) {
       THROW_EXCEPTION("client: #" , _async_connection->id() , err.message());
     }
   }
 
   void onDataRecv(const NetData_ptr &d, bool &cancel, bool &) {
-    //    if (this->_state == ClientState::WORK) {
+    //    if (this->_state == CLIENT_STATE::WORK) {
     //      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
     //    } else {
     //      logger("client: dataRecv ", d->size, " bytes.");
@@ -127,21 +127,21 @@ public:
 
     auto qh = reinterpret_cast<Query_header *>(d->data);
 
-    DataKinds kind = (DataKinds)qh->kind;
+    DATA_KINDS kind = (DATA_KINDS)qh->kind;
     switch (kind) {
-    case DataKinds::OK: {
+    case DATA_KINDS::OK: {
       auto qh_ok = reinterpret_cast<QueryOk_header *>(d->data);
       auto query_num = qh_ok->id;
       logger_info("client: #", _async_connection->id(), " query #", query_num,
                   " accepted.");
-      if (this->_state != ClientState::WORK) {
-        THROW_EXCEPTION("(this->_state != ClientState::WORK)", this->_state);
+      if (this->_state != CLIENT_STATE::WORK) {
+        THROW_EXCEPTION("(this->_state != CLIENT_STATE::WORK)", this->_state);
       }
 
       auto subres_it = this->_query_results.find(query_num);
       if (subres_it != this->_query_results.end()) {
         subres_it->second->is_ok = true;
-        if (subres_it->second->kind == DataKinds::SUBSCRIBE) {
+        if (subres_it->second->kind == DATA_KINDS::SUBSCRIBE) {
           subres_it->second->locker.unlock();
         }
       } else {
@@ -149,13 +149,13 @@ public:
       }
       break;
     }
-    case DataKinds::ERR: {
+    case DATA_KINDS::ERR: {
       auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
       auto query_num = qh_e->id;
       ERRORS err = (ERRORS)qh_e->error_code;
       logger_info("client: #", _async_connection->id(), " query #", query_num,
                   " error:", err);
-      if (this->state() == ClientState::WORK) {
+      if (this->state() == CLIENT_STATE::WORK) {
         auto subres = this->_query_results[qh_e->id];
         subres->is_closed = true;
         subres->is_error = true;
@@ -165,7 +165,7 @@ public:
       }
       break;
     }
-    case DataKinds::APPEND: {
+    case DATA_KINDS::APPEND: {
       auto qw = reinterpret_cast<QueryAppend_header *>(d->data);
       logger_info("client: #", _async_connection->id(), " recv ", qw->count,
                   " values to query #", qw->id);
@@ -184,18 +184,18 @@ public:
       }
       break;
     }
-    case DataKinds::PING: {
+    case DATA_KINDS::PING: {
       logger_info("client: #", _async_connection->id(), " ping.");
-      auto nd = _pool.construct(DataKinds::PONG);
+      auto nd = _pool.construct(DATA_KINDS::PONG);
       this->_async_connection->send(nd);
       _pings_answers++;
       break;
     }
-    case DataKinds::DISCONNECT: {
+    case DATA_KINDS::DISCONNECT: {
       cancel = true;
       logger_info("client: #", _async_connection->id(), " disconnection.");
       try {
-        _state = ClientState::DISCONNECTED;
+        _state = CLIENT_STATE::DISCONNECTED;
         this->_async_connection->full_stop();
         this->_socket->close();
       } catch (...) {
@@ -205,11 +205,11 @@ public:
     }
 
     // hello id
-    case DataKinds::HELLO: {
+    case DATA_KINDS::HELLO: {
       auto qh_hello = reinterpret_cast<QueryHelloFromServer_header *>(d->data);
       auto id = qh_hello->id;
       this->_async_connection->set_id(id);
-      this->_state = ClientState::WORK;
+      this->_state = CLIENT_STATE::WORK;
       logger_info("client: #", id, " ready.");
       break;
     }
@@ -220,7 +220,7 @@ public:
   }
 
   size_t pings_answers() const { return _pings_answers.load(); }
-  ClientState state() const { return _state; }
+  CLIENT_STATE state() const { return _state; }
 
   void append(const MeasArray &ma) {
 	  this->_locker.lock();
@@ -235,7 +235,7 @@ public:
 
 	  auto qres = std::make_shared<ReadResult>();
 	  qres->id = cur_id;
-	  qres->kind = DataKinds::APPEND;
+	  qres->kind = DATA_KINDS::APPEND;
 	  results.push_back(qres);
 	  this->_query_results[qres->id] = qres;
 
@@ -246,7 +246,7 @@ public:
 
       auto size_to_write = count_to_write * sizeof(Meas);
 
-      auto nd = this->_pool.construct(DataKinds::APPEND);
+      auto nd = this->_pool.construct(DATA_KINDS::APPEND);
       nd->size = sizeof(QueryAppend_header);
 
       auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
@@ -280,9 +280,9 @@ public:
     auto qres = std::make_shared<ReadResult>();
     qres->locker.lock();
     qres->id = cur_id;
-	qres->kind = DataKinds::READ_INTERVAL;
+	qres->kind = DATA_KINDS::READ_INTERVAL;
 
-    auto nd = this->_pool.construct(DataKinds::READ_INTERVAL);
+    auto nd = this->_pool.construct(DATA_KINDS::READ_INTERVAL);
 
     auto p_header = reinterpret_cast<QueryInterval_header *>(nd->data);
     nd->size = sizeof(QueryInterval_header);
@@ -332,9 +332,9 @@ public:
     auto qres = std::make_shared<ReadResult>();
     qres->locker.lock();
     qres->id = cur_id;
-	qres->kind = DataKinds::READ_TIMEPOINT;
+	qres->kind = DATA_KINDS::READ_TIMEPOINT;
 
-    auto nd = this->_pool.construct(DataKinds::READ_TIMEPOINT);
+    auto nd = this->_pool.construct(DATA_KINDS::READ_TIMEPOINT);
 
     auto p_header = reinterpret_cast<QueryTimePoint_header *>(nd->data);
     nd->size = sizeof(QueryTimePoint_header);
@@ -382,9 +382,9 @@ public:
 	  auto qres = std::make_shared<ReadResult>();
 	  qres->locker.lock();
 	  qres->id = cur_id;
-	  qres->kind = DataKinds::CURRENT_VALUE;
+	  qres->kind = DATA_KINDS::CURRENT_VALUE;
 
-	  auto nd = this->_pool.construct(DataKinds::CURRENT_VALUE);
+	  auto nd = this->_pool.construct(DATA_KINDS::CURRENT_VALUE);
 
 	  auto p_header = reinterpret_cast<QueryCurrentValue_header *>(nd->data);
 	  nd->size = sizeof(QueryCurrentValue_header);
@@ -431,9 +431,9 @@ public:
 	  auto qres = std::make_shared<ReadResult>();
 	  qres->locker.lock();
 	  qres->id = cur_id;
-	  qres->kind = DataKinds::SUBSCRIBE;
+	  qres->kind = DATA_KINDS::SUBSCRIBE;
 
-	  auto nd = this->_pool.construct(DataKinds::SUBSCRIBE);
+	  auto nd = this->_pool.construct(DATA_KINDS::SUBSCRIBE);
 
 	  auto p_header = reinterpret_cast<QuerSubscribe_header *>(nd->data);
 	  nd->size = sizeof(QuerSubscribe_header);
@@ -464,7 +464,7 @@ public:
   Client::Param _params;
   utils::Locker _locker;
   std::thread _thread_handler;
-  ClientState _state;
+  CLIENT_STATE _state;
   std::atomic_size_t _pings_answers;
 
   QueryNumber _query_num;
@@ -490,7 +490,7 @@ void Client::disconnect() {
   _Impl->disconnect();
 }
 
-ClientState Client::state() const {
+CLIENT_STATE Client::state() const {
   return _Impl->state();
 }
 

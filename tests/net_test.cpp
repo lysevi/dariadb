@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
     auto res = server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("Connect1 test>> ", "0 count: ", res, " state: ", st);
-    if (res == size_t(1) && st == dariadb::net::ClientState::WORK) {
+    if (res == size_t(1) && st == dariadb::net::CLIENT_STATE::WORK) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
   while (true) {
     auto state = c.state();
     dariadb::logger("Connect1 test>> ", "4 state: ", state);
-    if (state == dariadb::net::ClientState::DISCONNECTED) {
+    if (state == dariadb::net::CLIENT_STATE::DISCONNECTED) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     auto res = server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("Connect3 test>> ", "0 count: ", res, " state: ", st);
-    if (res == size_t(1) && st == dariadb::net::ClientState::WORK) {
+    if (res == size_t(1) && st == dariadb::net::CLIENT_STATE::WORK) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
       auto res = server_instance->connections_accepted();
       auto st = c2.state();
       dariadb::logger("Connect3 test>> ", "1 count: ", res, " state: ", st);
-      if (res == size_t(2) && st == dariadb::net::ClientState::WORK) {
+      if (res == size_t(2) && st == dariadb::net::CLIENT_STATE::WORK) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     auto res = server_instance->connections_accepted();
     auto st = c3.state();
     dariadb::logger("Connect3 test>> ", "2 count: ", res, " state: ", st);
-    if (res == size_t(2) && st == dariadb::net::ClientState::WORK) {
+    if (res == size_t(2) && st == dariadb::net::CLIENT_STATE::WORK) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     auto res = server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("Connect3 test>> ", "3 count: ", res, " state: ", st);
-    if (res == size_t(1) && c.state() == dariadb::net::ClientState::DISCONNECTED) {
+    if (res == size_t(1) && c.state() == dariadb::net::CLIENT_STATE::DISCONNECTED) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
   while (true) {
     auto state = c3.state();
     dariadb::logger("Connect3 test>> ", "4 state: ", state);
-    if (state == dariadb::net::ClientState::DISCONNECTED) {
+    if (state == dariadb::net::CLIENT_STATE::DISCONNECTED) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -183,8 +183,8 @@ BOOST_AUTO_TEST_CASE(PingTest) {
     auto st1 = c1.state();
     auto st2 = c2.state();
     dariadb::logger("PingTest test>> ", "0  state1: ", st1, " state2: ", st2);
-    if (st1 == dariadb::net::ClientState::WORK &&
-        st2 == dariadb::net::ClientState::WORK) {
+    if (st1 == dariadb::net::CLIENT_STATE::WORK &&
+        st2 == dariadb::net::CLIENT_STATE::WORK) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -206,8 +206,8 @@ BOOST_AUTO_TEST_CASE(PingTest) {
     auto st1 = c1.state();
     auto st2 = c2.state();
     dariadb::logger("PingTest test>> ", "0  state1: ", st1, " state2: ", st2);
-    if (st1 == dariadb::net::ClientState::DISCONNECTED &&
-        st2 == dariadb::net::ClientState::DISCONNECTED) {
+    if (st1 == dariadb::net::CLIENT_STATE::DISCONNECTED &&
+        st2 == dariadb::net::CLIENT_STATE::DISCONNECTED) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     while (true) {
       auto st1 = c1.state();
       dariadb::logger("ReadWriteTest test>> ", "0  state1: ", st1);
-      if (st1 == dariadb::net::ClientState::WORK) {
+      if (st1 == dariadb::net::CLIENT_STATE::WORK) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     while (true) {
       auto st1 = c1.state();
       dariadb::logger("ReadWriteTest test>> ", "0  state1: ", st1);
-      if (st1 == dariadb::net::ClientState::DISCONNECTED) {
+      if (st1 == dariadb::net::CLIENT_STATE::DISCONNECTED) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));

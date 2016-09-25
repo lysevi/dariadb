@@ -112,27 +112,27 @@ public:
 
   Time minTime() {
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
 
     auto pmin = PageManager::instance()->minTime();
     auto cmin = CapacitorManager::instance()->minTime();
     auto amin = AOFManager::instance()->minTime();
 
     LockManager::instance()->unlock(
-        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
     return std::min(std::min(pmin, cmin), amin);
   }
 
   Time maxTime() {
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
 
     auto pmax = PageManager::instance()->maxTime();
     auto cmax = CapacitorManager::instance()->maxTime();
     auto amax = AOFManager::instance()->maxTime();
 
     LockManager::instance()->unlock(
-        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
 
     return std::max(std::max(pmax, cmax), amax);
   }
@@ -160,7 +160,7 @@ public:
     };
 
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
     auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
@@ -171,7 +171,7 @@ public:
     am_async->wait();
 
     LockManager::instance()->unlock(
-        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
 
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
@@ -199,11 +199,11 @@ public:
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    LockManager::instance()->lock(LOCK_KIND::READ, {LockObjects::AOF, LockObjects::CAP});
+    LockManager::instance()->lock(LOCK_KIND::READ, {LOCK_OBJECTS::AOF, LOCK_OBJECTS::CAP});
     auto result = AOFManager::instance()->currentValue(ids, flag);
     auto c_result = CapacitorManager::instance()->currentValue(ids, flag);
 
-    LockManager::instance()->unlock({LockObjects::AOF, LockObjects::CAP});
+    LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::CAP});
 
     for (auto &kv : c_result) {
       auto it = result.find(kv.first);
@@ -261,7 +261,7 @@ public:
     };
 
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
     auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
@@ -272,7 +272,7 @@ public:
     am_async->wait();
 
     LockManager::instance()->unlock(
-        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
     c_clbk->is_end();
   }
 
@@ -327,7 +327,7 @@ public:
     TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
 
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
 
     Id2Meas result;
     result.reserve(q.ids.size());
@@ -359,7 +359,7 @@ public:
     }
 
     LockManager::instance()->unlock(
-        {LockObjects::PAGE, LockObjects::CAP, LockObjects::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
     return result;
   }
 
@@ -377,9 +377,9 @@ public:
 
   void eraseOld(const Time&t) {
 	  LockManager::instance()->lock(
-		  LOCK_KIND::EXCLUSIVE, { LockObjects::PAGE });
+		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
 	  PageManager::instance()->eraseOld(t);
-	  LockManager::instance()->unlock(LockObjects::PAGE);
+	  LockManager::instance()->unlock(LOCK_OBJECTS::PAGE);
   }
 
   Engine::Version version() {

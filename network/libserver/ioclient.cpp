@@ -28,7 +28,7 @@ struct SubscribeCallback : public storage::IReaderClb {
 	void is_end() override {
 	}
 	void send_buffer(const Meas &m) {
-		auto nd = _parent->env->nd_pool->construct(DataKinds::APPEND);
+		auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
 		nd->size = sizeof(QueryAppend_header);
 
 		auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
@@ -64,7 +64,7 @@ void IOClient::ClientDataReader::call(const Meas &m) {
 void IOClient::ClientDataReader::is_end() {
   send_buffer();
 
-  auto nd = _parent->env->nd_pool->construct(DataKinds::APPEND);
+  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
   nd->size = sizeof(QueryAppend_header);
   auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
   hdr->id = _query_num;
@@ -77,7 +77,7 @@ void IOClient::ClientDataReader::send_buffer() {
   if (pos == 0) {
     return;
   }
-  auto nd = _parent->env->nd_pool->construct(DataKinds::APPEND);
+  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
   nd->size = sizeof(QueryAppend_header);
 
   auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
@@ -104,7 +104,7 @@ IOClient::ClientDataReader::~ClientDataReader() {}
 IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
   subscribe_reader = nullptr;
   pings_missed = 0;
-  state = ClientState::CONNECT;
+  state = CLIENT_STATE::CONNECT;
   sock = _sock;
   env = _env;
   
@@ -125,16 +125,16 @@ IOClient::~IOClient() {
 
 void IOClient::end_session() {
   logger_info("server: #", _async_connection->id(), " send disconnect signal.");
-  this->state = ClientState::DISCONNECTED;
+  this->state = CLIENT_STATE::DISCONNECTED;
 
   if (sock->is_open()) {
-    auto nd = this->_async_connection->get_pool()->construct(DataKinds::DISCONNECT);
+    auto nd = this->_async_connection->get_pool()->construct(DATA_KINDS::DISCONNECT);
     this->_async_connection->send(nd);
   }
 }
 
 void IOClient::close() {
-  state = ClientState::DISCONNECTED;
+  state = CLIENT_STATE::DISCONNECTED;
   _async_connection->mark_stoped();
   if (this->sock->is_open()) {
 	  _async_connection->full_stop();
@@ -146,12 +146,12 @@ void IOClient::close() {
 
 void IOClient::ping() {
   pings_missed++;
-  auto nd = this->_async_connection->get_pool()->construct(DataKinds::PING);
+  auto nd = this->_async_connection->get_pool()->construct(DATA_KINDS::PING);
   this->_async_connection->send(nd);
 }
 
 void IOClient::onNetworkError(const boost::system::error_code &err) {
-  if (state != ClientState::DISCONNECTED) {
+  if (state != CLIENT_STATE::DISCONNECTED) {
     // TODO check this moment.
     logger_info("server: client #", this->_async_connection->id(), " network error - ", err.message());
     logger_info("server: client #", this->_async_connection->id(), " stoping...");
@@ -165,9 +165,9 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
   // logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
   auto qh = reinterpret_cast<Query_header *>(d->data);
 
-  DataKinds kind = (DataKinds)qh->kind;
+  DATA_KINDS kind = (DATA_KINDS)qh->kind;
   switch (kind) {
-  case DataKinds::APPEND: {
+  case DATA_KINDS::APPEND: {
     auto hdr = reinterpret_cast<QueryAppend_header *>(&d->data);
     auto count = hdr->count;
     logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id,
@@ -180,13 +180,13 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
 
     break;
   }
-  case DataKinds::PONG: {
+  case DATA_KINDS::PONG: {
     pings_missed--;
     logger_info("server: #", this->_async_connection->id(), " pings_missed: ",
                 pings_missed.load());
     break;
   }
-  case DataKinds::DISCONNECT: {
+  case DATA_KINDS::DISCONNECT: {
     logger_info("server: #", this->_async_connection->id(),
                 " disconnection request.");
     cancel = true;
@@ -194,7 +194,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     // this->srv->client_disconnect(this->id);
     break;
   }
-  case DataKinds::READ_INTERVAL: {
+  case DATA_KINDS::READ_INTERVAL: {
     auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -202,7 +202,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
         std::bind(&IOClient::readInterval, this, d)));
     break;
   }
-  case DataKinds::READ_TIMEPOINT: {
+  case DATA_KINDS::READ_TIMEPOINT: {
     auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -210,7 +210,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
         std::bind(&IOClient::readTimePoint, this, d)));
     break;
   }
-  case DataKinds::CURRENT_VALUE: {
+  case DATA_KINDS::CURRENT_VALUE: {
     auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -218,7 +218,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
         std::bind(&IOClient::currentValue, this, d)));
     break;
   }
-  case DataKinds::SUBSCRIBE: {
+  case DATA_KINDS::SUBSCRIBE: {
     auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -226,14 +226,14 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
         env->io_meases_strand->wrap(std::bind(&IOClient::subscribe, this, d)));
     break;
   }
-  case DataKinds::HELLO: {
+  case DATA_KINDS::HELLO: {
     QueryHello_header *qhh = reinterpret_cast<QueryHello_header *>(d->data);
     if (qhh->version != PROTOCOL_VERSION) {
       logger("server: #", _async_connection->id(),
              " wrong protocol version: exp=", PROTOCOL_VERSION, ", rec=",
              qhh->version);
       sendError(0, ERRORS::WRONG_PROTOCOL_VERSION);
-      this->state = ClientState::DISCONNECTED;
+      this->state = CLIENT_STATE::DISCONNECTED;
       return;
     }
     auto host_ptr = ((char *)(&qhh->host_size) + sizeof(qhh->host_size));
@@ -242,7 +242,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     host = msg;
     env->srv->client_connect(this->_async_connection->id());
 
-    auto nd = _async_connection->get_pool()->construct(DataKinds::HELLO);
+    auto nd = _async_connection->get_pool()->construct(DATA_KINDS::HELLO);
     nd->size += sizeof(uint32_t);
     auto idptr = (uint32_t *)(&nd->data[1]);
     *idptr = _async_connection->id();
@@ -257,7 +257,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
 }
 
 void IOClient::sendOk(QueryNumber query_num) {
-  auto ok_nd = env->nd_pool->construct(DataKinds::OK);
+  auto ok_nd = env->nd_pool->construct(DATA_KINDS::OK);
   auto qh = reinterpret_cast<QueryOk_header *>(ok_nd->data);
   qh->id = query_num;
   assert(qh->id!=0);
@@ -266,7 +266,7 @@ void IOClient::sendOk(QueryNumber query_num) {
 }
 
 void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
-  auto err_nd = env->nd_pool->construct(DataKinds::OK);
+  auto err_nd = env->nd_pool->construct(DATA_KINDS::OK);
   auto qh = reinterpret_cast<QueryError_header *>(err_nd->data);
   qh->id = query_num;
   qh->error_code = (uint16_t)err;
