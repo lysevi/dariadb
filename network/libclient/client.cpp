@@ -214,7 +214,7 @@ public:
       break;
     }
     default:
-      logger_fatal("client: unknow query kind - ", (uint8_t)kind);
+      logger_fatal("client: unknow query kind - ", (int)kind);
       break;
     }
   }
