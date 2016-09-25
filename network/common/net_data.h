@@ -52,15 +52,16 @@ struct QueryAppend_header {
 
   MeasArray read_measarray() const;
 };
+
 struct QueryInterval_header {
   uint8_t kind;
   QueryNumber id;
   Time from;
   Time to;
   Flag flag;
-  Flag source;
   uint16_t ids_count;
 };
+
 struct QueryTimePoint_header {
   uint8_t kind;
   QueryNumber id;
@@ -68,6 +69,7 @@ struct QueryTimePoint_header {
   Flag flag;
   uint16_t ids_count;
 };
+
 struct QueryCurrentValue_header {
 	uint8_t kind;
 	QueryNumber id;

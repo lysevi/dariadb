@@ -628,7 +628,6 @@ BOOST_AUTO_TEST_CASE(CompressedBlock) {
     auto m = dariadb::Meas::empty(1);
     m.time = zer_t++;
     m.flag = i;
-    m.src = i;
     m.value = i;
     if (!cwr.append(m)) {
       BOOST_CHECK(cwr.is_full());
@@ -669,7 +668,7 @@ BOOST_AUTO_TEST_CASE(CompressedBlockZeroValues) {
   auto m = dariadb::Meas::empty();
   m.time = 111;
   m.value = 222;
-  m.src = m.flag = 333;
+  m.flag = 333;
   cwr.append(m);
   meases.push_back(m);
 
@@ -677,7 +676,6 @@ BOOST_AUTO_TEST_CASE(CompressedBlockZeroValues) {
     m.time = 0;
     m.flag = 0;
     m.value = 0;
-    m.src = 0;
     if (!cwr.append(m)) {
       break;
     }
@@ -1128,8 +1126,7 @@ BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
 	for (int i = 0;; i++) {
 		auto m = dariadb::Meas::empty(1);
 		m.time = zer_t++;
-		m.flag = i;
-		m.src = i;
+        m.flag = i;
 		m.value = i;
 		if (!cwr.append(m)) {
 			BOOST_CHECK(cwr.is_full());

@@ -319,7 +319,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
       _all_ids_set.insert(id_val);
       m.id = id_val;
       m.flag = flg_val;
-      m.src = flg_val;
       m.time = rnd_times[t_pos++];
       m.value = 0;
 

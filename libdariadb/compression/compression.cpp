@@ -15,7 +15,7 @@ using namespace dariadb::compression;
 class CopmressedWriter::Private {
 public:
   Private(const BinaryBuffer_Ptr &bw)
-      : time_comp(bw), value_comp(bw), flag_comp(bw), src_comp(bw) {
+      : time_comp(bw), value_comp(bw), flag_comp(bw) {
     _is_first = true;
     _is_full = false;
   }
@@ -29,9 +29,8 @@ public:
     auto t_f = time_comp.append(m.time);
     auto f_f = value_comp.append(m.value);
     auto v_f = flag_comp.append(m.flag);
-    auto s_f = src_comp.append(m.src);
 
-    if (!t_f || !f_f || !v_f || !s_f) {
+    if (!t_f || !f_f || !v_f) {
       _is_full = true;
       return false;
     } else {
@@ -50,14 +49,13 @@ protected:
   DeltaCompressor time_comp;
   XorCompressor value_comp;
   FlagCompressor flag_comp;
-  FlagCompressor src_comp;
 };
 
 class CopmressedReader::Private {
 public:
   Private(const BinaryBuffer_Ptr &bw, const Meas &first)
       : time_dcomp(bw, first.time), value_dcomp(bw, first.value),
-        flag_dcomp(bw, first.flag), src_dcomp(bw, first.src) {
+        flag_dcomp(bw, first.flag) {
     _first = first;
   }
 
@@ -67,7 +65,6 @@ public:
     result.time = time_dcomp.read();
     result.value = value_dcomp.read();
     result.flag = flag_dcomp.read();
-    result.src = src_dcomp.read();
     return result;
   }
 
@@ -76,7 +73,6 @@ protected:
   DeltaDeCompressor time_dcomp;
   XorDeCompressor value_dcomp;
   FlagDeCompressor flag_dcomp;
-  FlagDeCompressor src_dcomp;
 };
 
 CopmressedWriter::CopmressedWriter() {

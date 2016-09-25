@@ -288,7 +288,6 @@ public:
     nd->size = sizeof(QueryInterval_header);
     p_header->id = cur_id;
     p_header->flag = qi.flag;
-    p_header->source = qi.source;
     p_header->from = qi.from;
     p_header->to = qi.to;
 

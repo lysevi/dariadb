@@ -14,7 +14,7 @@
 
 namespace dariadb {
 typedef uint64_t Time;
-typedef uint64_t Id;
+typedef uint32_t Id;
 typedef uint32_t Flag;
 typedef double Value;
 typedef std::vector<Id> IdArray;
@@ -33,7 +33,6 @@ struct Meas {
 	Time time;
 	Value value;
 	Flag flag;
-	Flag src;
 
   static Meas empty();
   static Meas empty(Id id);
@@ -49,20 +48,18 @@ struct Meas {
 
   bool inFlag(Flag f) const { return (f == 0) || (f == flag); }
 
-  bool inSrc(Flag s) const { return (s == 0) || (s == this->src); }
-
   bool inIds(const IdArray &ids) const {
     return (ids.size() == 0) || (std::find(ids.begin(), ids.end(), id) != ids.end());
   }
 
-  bool inQuery(const IdArray &ids, const Flag f, const Flag s) const {
-    return inFlag(f) && inSrc(s) && inIds(ids);
+  bool inQuery(const IdArray &ids, const Flag f) const {
+    return inFlag(f) && inIds(ids);
   }
 
   bool inInterval(Time from, Time to) const { return utils::inInterval(from, to, time); }
 
-  bool inQuery(const IdArray &ids, const Flag f, const Flag s, Time from, Time to) const {
-    return inQuery(ids, f, s) && inInterval(from, to);
+  bool inQuery(const IdArray &ids, const Flag f, Time from, Time to) const {
+    return inQuery(ids, f) && inInterval(from, to);
   }
 };
 

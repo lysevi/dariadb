@@ -426,7 +426,6 @@ BOOST_AUTO_TEST_CASE(CapManagerDropByPeriod) {
     for (auto i = from; i < to; i += step) {
       m.id = 1;
       m.flag = 1;
-      m.src = 1;
       m.time = i;
       m.value = 0;
 

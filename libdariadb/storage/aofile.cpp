@@ -114,7 +114,7 @@ public:
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
         break;
       }
-      if (val.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+      if (val.inQuery(q.ids, q.flag, q.from, q.to)) {
         clbk->call(val);
       }
     }
@@ -134,7 +134,7 @@ public:
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
         break;
       }
-      if (val.inQuery(q.ids, q.flag, q.source) && (val.time <= q.time_point)) {
+      if (val.inQuery(q.ids, q.flag) && (val.time <= q.time_point)) {
         replace_if_older(sub_res, val);
         readed_ids.insert(val.id);
       }
