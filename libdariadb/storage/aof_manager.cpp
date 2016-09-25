@@ -261,7 +261,7 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
     if (pos >= _buffer_pos) {
       break;
     }
-    if (v.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+    if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
       clbk->call(v);
     }
     ++pos;
@@ -312,7 +312,7 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
   }
   size_t pos = 0;
   for (auto v : _buffer) {
-    if (v.inQuery(query.ids, query.flag, query.source)) {
+    if (v.inQuery(query.ids, query.flag)) {
       auto it = sub_result.find(v.id);
       if (it == sub_result.end()) {
         sub_result.insert(std::make_pair(v.id, v));

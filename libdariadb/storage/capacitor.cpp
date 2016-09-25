@@ -508,7 +508,7 @@ public:
         if (m.time > q.to) {
           break;
         }
-        if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+        if (m.inQuery(q.ids, q.flag, q.from, q.to)) {
           clbk->call(m);
         }
       }
@@ -516,7 +516,7 @@ public:
 
     for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
       auto m = _memvalues[j];
-      if (m.inQuery(q.ids, q.flag, q.source, q.from, q.to)) {
+      if (m.inQuery(q.ids, q.flag, q.from, q.to)) {
         clbk->call(m);
       }
     }
@@ -648,7 +648,7 @@ public:
     if (inInterval(_header->minTime, _header->maxTime, q.time_point)) {
       for (size_t j = 0; j < _header->_memvalues_pos; ++j) {
         auto m = _memvalues[j];
-        if (m.inQuery(q.ids, q.flag, q.source) && (m.time <= q.time_point)) {
+        if (m.inQuery(q.ids, q.flag) && (m.time <= q.time_point)) {
           insert_if_older(sub_res, m);
           readed_ids.insert(m.id);
         }
@@ -682,7 +682,7 @@ public:
         if (m.time > q.time_point) {
           break;
         }
-        if (m.inQuery(q.ids, q.flag, q.source) && (m.time <= q.time_point)) {
+        if (m.inQuery(q.ids, q.flag) && (m.time <= q.time_point)) {
           insert_if_older(sub_res, m);
           readed_ids.insert(m.id);
         }

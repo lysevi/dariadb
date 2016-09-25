@@ -14,7 +14,6 @@
   - Time - x64 timestamp.
   - Value - x64 float.
   - Flag - x32 unsigned integer.
-  - Source - x32 unsigned integer.
 * Accept unordered data.
 * LSM-like storage struct with three layers:
   - Append-only files layer, for fast write speed and crash-safety.

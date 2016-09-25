@@ -10,10 +10,8 @@ namespace storage {
 struct QueryParam {
   IdArray ids;
   Flag flag;
-  Flag source;
-  QueryParam(const IdArray &_ids, Flag _flag) : ids(_ids), flag(_flag), source(0) {}
-  QueryParam(const IdArray &_ids, Flag _flag, Flag _source)
-      : ids(_ids), flag(_flag), source(_source) {}
+  QueryParam(const IdArray &_ids, Flag _flag)
+      : ids(_ids), flag(_flag) {}
 };
 
 struct QueryInterval : public QueryParam {
@@ -22,9 +20,6 @@ struct QueryInterval : public QueryParam {
 
   QueryInterval(const IdArray &_ids, Flag _flag, Time _from, Time _to)
       : QueryParam(_ids, _flag), from(_from), to(_to) {}
-
-  QueryInterval(const IdArray &_ids, Flag _flag, Flag _source, Time _from, Time _to)
-      : QueryParam(_ids, _flag, _source), from(_from), to(_to) {}
 };
 
 struct QueryTimePoint : public QueryParam {

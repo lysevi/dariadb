@@ -299,8 +299,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  storage::QueryInterval qi{all_ids, query_hdr->flag, query_hdr->source, query_hdr->from,
-                            query_hdr->to};
+  storage::QueryInterval qi{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
 
   env->nd_pool->free(d);
 

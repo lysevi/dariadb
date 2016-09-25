@@ -80,7 +80,6 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
 
     for (size_t i = 0; i < write_per_id_count; ++i) {
       m.flag = dariadb::Flag(id);
-      m.src = dariadb::Flag(id);
       m.time += 1000 / writes_per_second;
       *write_time_time = m.time;
       m.value = dariadb::Value(i);

@@ -36,8 +36,7 @@ void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
   for (auto i = from; i < to; i += step) {
     size_t count = 0;
     for (auto &m : res) {
-      if ((m.id == id_val) && ((m.flag == flg_val) || (m.flag == Flags::_NO_DATA)) &&
-          ((m.src == flg_val) || (m.src == Flags::_NO_DATA))) {
+      if ((m.id == id_val) && ((m.flag == flg_val) || (m.flag == Flags::_NO_DATA))) {
         count++;
       }
     }
@@ -100,7 +99,6 @@ size_t fill_storage_for_test(storage::IMeasStorage *as, Time from, Time to, Time
     _all_ids_set->insert(id_val);
     m.id = id_val;
     m.flag = flg_val;
-    m.src = flg_val;
     m.time = i;
     m.value = 0;
 
@@ -127,7 +125,6 @@ size_t fill_storage_for_test(storage::IMeasStorage *as, Time from, Time to, Time
     _all_ids_set->insert(id_val);
     m.id = id_val;
     m.flag = 0;
-    m.src = 0;
     m.time = new_from;
     m.value = 0;
     ++id_val;
@@ -198,22 +195,6 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
 
   if (fltr_res.size() != copies_count) {
     throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
-  }
-  // check filter by source;
-  {
-    fltr_res.clear();
-    fltr_res = as->readInterval(
-        storage::QueryInterval(IdArray{_all_ids_set.begin(), _all_ids_set.end()}, 0,
-                               Flag{2}, from, to + copies_count));
-
-    if (fltr_res.size() != copies_count) {
-      throw MAKE_EXCEPTION("(fltr_res.size() != copies_count)");
-    }
-    for (auto v : fltr_res) {
-      if (v.src != Flag{2}) {
-        throw MAKE_EXCEPTION("(m.src != Flag{ 2 })");
-      }
-    }
   }
 }
 

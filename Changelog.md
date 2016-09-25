@@ -7,6 +7,7 @@ v0.2.0
 - Full featured server with client library(C++).
 - Now can remove old compressed pages.
 - New compression algorithm: speed increased by 3 times.
+- Flag 'source' was removed from measurement.
 
 v0.1.1
 =====
