@@ -11,7 +11,7 @@ IdCompressor::IdCompressor(const BinaryBuffer_Ptr &bw)
 
 bool IdCompressor::append(dariadb::Id v) {
 
-  static_assert(sizeof(dariadb::Id) == 8, "Id not x64 value");
+  static_assert(sizeof(dariadb::Id) == 4, "Id not x32 value");
   if (_is_first) {
     this->_first = v;
     this->_is_first = false;
@@ -36,30 +36,16 @@ bool IdCompressor::append(dariadb::Id v) {
         sub_res |= 0x80U;
       _bw->write(uint16_t(sub_res), 8);
     } while (x);
-    //_bw->write(uint64_t(v), 64);
-
     _first = v;
   }
   return true;
 }
 
-// IdCompressionPosition IdCompressor::get_position() const {
-//  IdCompressionPosition result;
-//  result._first = _first;
-//  result._is_first = _is_first;
-//  return result;
-//}
-
-// void IdCompressor::restore_position(const IdCompressionPosition &pos) {
-//  _first = pos._first;
-//  _is_first = pos._is_first;
-//}
-
 IdDeCompressor::IdDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Id first)
     : BaseCompressor(bw), _prev_value(first) {}
 
 dariadb::Id IdDeCompressor::read() {
-  static_assert(sizeof(dariadb::Id) == 8, "Id not x64 value");
+  static_assert(sizeof(dariadb::Id) == 4, "Id not x32 value");
   dariadb::Id result(0);
   if (_bw->getbit() == 0) {
     _bw->incbit();
@@ -73,7 +59,6 @@ dariadb::Id IdDeCompressor::read() {
       if (!(readed & 0x80U))
         break;
     }
-    // result = (dariadb::Id)_bw->read(64);
   }
   _prev_value = result;
   return result;

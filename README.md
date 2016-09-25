@@ -10,7 +10,7 @@
 # Features
 * Full featured server with client library(C++).
 * Each measurement contains:
-  - Id - x64 unsigned integer value.
+  - Id - x32 unsigned integer value.
   - Time - x64 timestamp.
   - Value - x64 float.
   - Flag - x32 unsigned integer.

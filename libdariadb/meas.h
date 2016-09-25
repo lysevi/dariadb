@@ -14,7 +14,7 @@
 
 namespace dariadb {
 typedef uint64_t Time;
-typedef uint64_t Id;
+typedef uint32_t Id;
 typedef uint32_t Flag;
 typedef double Value;
 typedef std::vector<Id> IdArray;
