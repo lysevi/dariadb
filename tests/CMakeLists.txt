@@ -18,7 +18,6 @@ endmacro(TEST_CASE)
 TEST_CASE(net_test net_test.cpp)
 TARGET_LINK_LIBRARIES(net_test libdariadb-cl libnet-server)
 
-TEST_CASE(statistic_test statistic_test.cpp)
 TEST_CASE(engine_test engine_test.cpp)
 TEST_CASE(aof_test aof_test.cpp)
 TEST_CASE(capacitor_test capacitor_test.cpp)
