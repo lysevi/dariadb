@@ -1,7 +1,6 @@
 #include "engine.h"
 #include "config.h"
 #include "flags.h"
-#include "storage/capacitor_manager.h"
 #include "storage/dropper.h"
 #include "storage/lock_manager.h"
 #include "storage/manifest.h"
@@ -14,6 +13,7 @@
 #include "utils/thread_manager.h"
 #include "utils/utils.h"
 #include "utils/strings.h"
+#include "utils/fs.h"
 #include <algorithm>
 #include <cassert>
 
@@ -70,12 +70,10 @@ public:
     }
 
     AOFManager::start();
-    CapacitorManager::start();
 
     _dropper = std::make_unique<Dropper>();
 
     AOFManager::instance()->set_downlevel(_dropper.get());
-    CapacitorManager::instance()->set_downlevel(_dropper.get());
     _next_query_id = Id();
   }
   ~Private() { this->stop(); }
@@ -88,7 +86,6 @@ public:
 	  
 	  ThreadManager::stop();
       AOFManager::stop();
-      CapacitorManager::stop();
       PageManager::stop();
       Manifest::stop();
       LockManager::stop();
@@ -112,47 +109,40 @@ public:
 
   Time minTime() {
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmin = PageManager::instance()->minTime();
-    auto cmin = CapacitorManager::instance()->minTime();
     auto amin = AOFManager::instance()->minTime();
 
     LockManager::instance()->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
-    return std::min(std::min(pmin, cmin), amin);
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+    return std::min(pmin, amin);
   }
 
   Time maxTime() {
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmax = PageManager::instance()->maxTime();
-    auto cmax = CapacitorManager::instance()->maxTime();
     auto amax = AOFManager::instance()->maxTime();
 
     LockManager::instance()->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
-    return std::max(std::max(pmax, cmax), amax);
+    return std::max(pmax, amax);
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     TIMECODE_METRICS(ctmd, "minMaxTime", "Engine::minMaxTime");
     dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
-    dariadb::Time subMin2 = dariadb::MAX_TIME, subMax2 = dariadb::MIN_TIME;
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
-    bool pr, mr, ar;
-    pr = mr = ar = false;
+    bool pr, ar;
+    pr = ar = false;
 
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
       pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
 
-    };
-    AsyncTask cm_at = [&mr, &subMin2, &subMax2, id](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      mr = CapacitorManager::instance()->minMaxTime(id, &subMin2, &subMax2);
     };
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
@@ -160,27 +150,23 @@ public:
     };
 
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
-    auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
     auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
     pm_async->wait();
-    cm_async->wait();
     am_async->wait();
 
     LockManager::instance()->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
 
-    *minResult = std::min(subMin1, subMin2);
-    *minResult = std::min(*minResult, subMin3);
-    *maxResult = std::max(subMax1, subMax2);
-    *maxResult = std::max(*maxResult, subMax3);
-    return pr || mr || ar;
+    *minResult = std::min(subMin1, subMin3);
+    *maxResult = std::max(subMax1, subMax3);
+    return pr  || ar;
   }
 
   append_result append(const Meas &value) {
@@ -199,22 +185,11 @@ public:
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    LockManager::instance()->lock(LOCK_KIND::READ, {LOCK_OBJECTS::AOF, LOCK_OBJECTS::CAP});
+    LockManager::instance()->lock(LOCK_KIND::READ, {LOCK_OBJECTS::AOF});
     auto result = AOFManager::instance()->currentValue(ids, flag);
-    auto c_result = CapacitorManager::instance()->currentValue(ids, flag);
 
-    LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::CAP});
+    LockManager::instance()->unlock({LOCK_OBJECTS::AOF});
 
-    for (auto &kv : c_result) {
-      auto it = result.find(kv.first);
-      if (it == result.end()) {
-        result[kv.first] = kv.second;
-      } else {
-        if (it->second.time < kv.second.time) {
-          result[kv.first] = kv.second;
-        }
-      }
-    }
     return result;
   }
 
@@ -224,7 +199,6 @@ public:
 
     AOFManager::instance()->flush();
     _dropper->flush();
-    CapacitorManager::instance()->flush();
     _dropper->flush();
     PageManager::instance()->flush();
   }
@@ -235,14 +209,12 @@ public:
     QueueSizes result;
     result.aofs_count = AOFManager::instance()->files_count();
     result.pages_count = PageManager::instance()->files_count();
-    result.cola_count = CapacitorManager::instance()->files_count();
     result.active_works = ThreadManager::instance()->active_works();
     result.dropper_queues = _dropper->queues();
     return result;
   }
 
-  void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *c_clbk,
-                        IReaderClb *a_clbk) {
+  void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
 
     AsyncTask pm_at = [&p_clbk, &q](const ThreadInfo &ti) {
@@ -250,10 +222,6 @@ public:
       PageManager::instance()->foreach (q, p_clbk);
     };
 
-    AsyncTask cm_at = [&c_clbk, &q](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
-      CapacitorManager::instance()->foreach (q, c_clbk);
-    };
 
     AsyncTask am_at = [&a_clbk, &q](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
@@ -261,24 +229,21 @@ public:
     };
 
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
-    auto cm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(cm_at));
     auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
 
     pm_async->wait();
-    cm_async->wait();
     am_async->wait();
 
-    LockManager::instance()->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
-    c_clbk->is_end();
+    LockManager::instance()->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+    a_clbk->is_end();
   }
 
   // Inherited via MeasStorage
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    return foreach_internal(q, clbk, clbk, clbk);
+    return foreach_internal(q, clbk, clbk);
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
@@ -301,13 +266,11 @@ public:
   MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
     std::unique_ptr<MList_ReaderClb> p_clbk{new MList_ReaderClb};
-    std::unique_ptr<MList_ReaderClb> c_clbk{new MList_ReaderClb};
     std::unique_ptr<MList_ReaderClb> a_clbk{new MList_ReaderClb};
-    this->foreach_internal(q, p_clbk.get(), c_clbk.get(), a_clbk.get());
+    this->foreach_internal(q, p_clbk.get(), a_clbk.get());
     Id2MSet sub_result;
 
     mlist2mset(p_clbk->mlist, sub_result);
-    mlist2mset(c_clbk->mlist, sub_result);
     mlist2mset(a_clbk->mlist, sub_result);
 
     MeasList result;
@@ -327,7 +290,7 @@ public:
     TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
 
     LockManager::instance()->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     Id2Meas result;
     result.reserve(q.ids.size());
@@ -346,12 +309,6 @@ public:
         auto subres = AOFManager::instance()->readTimePoint(local_q);
         result[id] = subres[id];
         continue;
-      }
-      if (CapacitorManager::instance()->minMaxTime(id, &minT, &maxT) &&
-          (utils::inInterval(minT, maxT, q.time_point))) {
-        auto subres = CapacitorManager::instance()->readTimePoint(local_q);
-        result[id] = subres[id];
-
       } else {
         auto subres = PageManager::instance()->valuesBeforeTimePoint(local_q);
         result[id] = subres[id];
@@ -359,19 +316,14 @@ public:
     }
 
     LockManager::instance()->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::CAP, LOCK_OBJECTS::AOF});
+        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
     return result;
-  }
-
-  void drop_part_caps(size_t count) {
-    CapacitorManager::instance()->drop_closed_files(count);
   }
 
   void drop_part_aofs(size_t count) { AOFManager::instance()->drop_closed_files(count); }
 
   void fsck() {
     logger_info("engine: fsck ", Options::instance()->path);
-    CapacitorManager::instance()->fsck();
     PageManager::instance()->fsck();
   }
 
@@ -458,10 +410,6 @@ Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
 
 void Engine::drop_part_aofs(size_t count) {
   return _impl->drop_part_aofs(count);
-}
-
-void Engine::drop_part_caps(size_t count) {
-  return _impl->drop_part_caps(count);
 }
 
 void Engine::wait_all_asyncs() {

@@ -10,6 +10,7 @@
 #include <libdariadb/engine.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/fs.h>
 #include <libclient/client.h>
 #include <libserver/server.h>
 
@@ -234,9 +235,6 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     Options::start();
     Options::instance()->strategy = dariadb::storage::STRATEGY::FAST_WRITE;
     Options::instance()->path = storage_path;
-    Options::instance()->cap_B = cap_B;
-    Options::instance()->cap_max_levels = 4;
-    Options::instance()->aof_max_size = Options::instance()->measurements_count();
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
     std::unique_ptr<Engine> stor{new Engine()};
 

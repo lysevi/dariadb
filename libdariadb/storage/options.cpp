@@ -9,11 +9,9 @@ using namespace dariadb::storage;
 using json = nlohmann::json;
 
 const size_t AOF_BUFFER_SIZE = 2000;
-const uint32_t CAP_DEFAULT_MAX_LEVELS = 11;
-const uint32_t CAP_MAX_CLOSED_CAPS = 10;
+const size_t AOF_FILE_SIZE = AOF_BUFFER_SIZE*2;
 const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
 const uint32_t CHUNK_SIZE = 1024;
-const uint32_t CAP_B = 50;
 
 Options *Options::_instance = nullptr;
 
@@ -23,10 +21,8 @@ std::string options_file_path(const std::string &path) {
 
 Options::Options() {
   set_default();
-  cap_max_closed_caps = CAP_MAX_CLOSED_CAPS;
-  cap_store_period = 0;
 
-  strategy = STRATEGY::DYNAMIC;
+  strategy = STRATEGY::COMPRESSED;
 }
 
 void Options::start() {
@@ -44,23 +40,14 @@ void Options::start(const std::string &path) {
   }
 }
 
-void Options::calc_params() {
-  aof_max_size = measurements_count();
-}
-
 void Options::set_default() {
   logger("engine: options set default options");
   aof_buffer_size = AOF_BUFFER_SIZE;
-  cap_B = CAP_B;
-  cap_store_period = 0; // 1000 * 60 * 60;
-  cap_max_levels = CAP_DEFAULT_MAX_LEVELS;
-  cap_max_closed_caps = 0; // 5;
+  aof_max_size = AOF_FILE_SIZE;
   page_chunk_size = CHUNK_SIZE;
   page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
 
-  strategy = STRATEGY::DYNAMIC;
-
-  calc_params();
+  strategy = STRATEGY::COMPRESSED;
 }
 
 void Options::stop() {
@@ -88,11 +75,6 @@ void Options::save(const std::string &file) {
   js["aof_max_size"] = aof_max_size;
   js["aof_buffer_size"] = aof_buffer_size;
 
-  js["cap_B"] = cap_B;
-  js["cap_max_levels"] = cap_max_levels;
-  js["cap_store_period"] = cap_store_period;
-  js["cap_max_closed_caps"] = cap_max_closed_caps;
-
   js["page_chunk_size"] = page_chunk_size;
   js["page_openned_page_cache_size"] = page_openned_page_cache_size;
 
@@ -117,11 +99,6 @@ void Options::load(const std::string &file) {
   aof_max_size = js["aof_max_size"];
   aof_buffer_size = js["aof_buffer_size"];
 
-  cap_B = js["cap_B"];
-  cap_max_levels = js["cap_max_levels"];
-  cap_store_period = js["cap_store_period"];
-  cap_max_closed_caps = js["cap_max_closed_caps"];
-
   page_chunk_size = js["page_chunk_size"];
   page_openned_page_cache_size = js["page_openned_page_cache_size"];
 
@@ -129,6 +106,4 @@ void Options::load(const std::string &file) {
   std::string strat_str = js["stragety"];
   iss.str(strat_str);
   iss >> strategy;
-
-  this->calc_params();
 }

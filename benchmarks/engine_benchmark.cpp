@@ -1,4 +1,5 @@
 #include "bench_common.h"
+#include <libdariadb/utils/fs.h>
 #include <atomic>
 #include <boost/program_options.hpp>
 #include <libdariadb/engine.h>
@@ -21,9 +22,8 @@ bool metrics_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
-Time cap_store_period = 0;
 size_t read_benchmark_runs = 10;
-STRATEGY strategy = STRATEGY::FAST_READ;
+STRATEGY strategy = STRATEGY::COMPRESSED;
 
 class BenchCallback : public IReaderClb {
 public:
@@ -45,8 +45,6 @@ void parse_cmdline(int argc, char *argv[]) {
       "enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
       "enable readers threads")(
       "enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))(
-      "store-period",
-      po::value<Time>(&cap_store_period)->default_value(cap_store_period))(
       "read-benchmark-runs",
       po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs))(
       "strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
@@ -108,8 +106,7 @@ void show_info(Engine *storage) {
     time_ss << timeutil::to_string(write_time);
 
     std::stringstream stor_ss;
-    stor_ss << "(p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count
-            << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
+    stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
             << ")";
 
     std::stringstream read_speed_ss;
@@ -122,8 +119,7 @@ void show_info(Engine *storage) {
     persent_ss << (int64_t(100) * append_count) / dariadb_bench::all_writes << '%';
 
     std::stringstream drop_ss;
-    drop_ss << "[a:" << queue_sizes.dropper_queues.aof
-            << " c:" << queue_sizes.dropper_queues.cap << "]";
+    drop_ss << "[a:" << queue_sizes.dropper_queues.aof << "]";
 
     std::cout << "\r"
               << " time: " << std::setw(20) << std::setfill(OUT_SEP) << time_ss.str()
@@ -149,11 +145,9 @@ void show_drop_info(Engine *storage) {
     auto queue_sizes = storage->queue_size();
 
     std::cout << "\r"
-              << " storage: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+              << " storage: (p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
               << " T:" << queue_sizes.active_works << ")"
-              << "[a:" << queue_sizes.dropper_queues.aof
-              << " c:" << queue_sizes.dropper_queues.cap << "]          ";
+              << "[a:" << queue_sizes.dropper_queues.aof << "]          ";
     std::cout.flush();
     if (stop_info) {
       std::cout.flush();
@@ -299,41 +293,17 @@ void check_engine_state(Engine *raw_ptr) {
   auto files = raw_ptr->queue_size();
   switch (strategy) {
   case dariadb::storage::STRATEGY::FAST_WRITE:
-    if (files.cola_count != 0 || files.pages_count != 0) {
-      THROW_EXCEPTION("FAST_WRITE error: (p:" ,files.pages_count , " cap:" , files.cola_count
-                             , " a:" , files.aofs_count , " T:" , files.active_works
-                             , ")");
-    }
-    break;
-  case dariadb::storage::STRATEGY::FAST_READ:
-    if (files.cola_count == 0 || files.pages_count != 0) {
-      THROW_EXCEPTION("FAST_READ error: (p:" , files.pages_count , " cap:" , files.cola_count
+    if (files.pages_count != 0) {
+      THROW_EXCEPTION("FAST_WRITE error: (p:" ,files.pages_count 
                              , " a:" , files.aofs_count , " T:" , files.active_works
                              , ")");
     }
     break;
   case dariadb::storage::STRATEGY::COMPRESSED:
-    if (files.aofs_count >= 1 && files.cola_count != 0 && files.pages_count == 0) {
-        THROW_EXCEPTION("COMPRESSED error: (p:" , files.pages_count , " cap:", files.cola_count
+    if (files.aofs_count >= 1 && files.pages_count == 0) {
+        THROW_EXCEPTION("COMPRESSED error: (p:" , files.pages_count 
                              , " a:" ,files.aofs_count , " T:" , files.active_works
                              , ")");
-    }
-    break;
-  case dariadb::storage::STRATEGY::DYNAMIC:
-    if (cap_store_period == 0) {
-      auto max_closed_caps = Options::instance()->cap_max_closed_caps;
-      if (files.aofs_count > 1 && files.cola_count > max_closed_caps &&
-          files.pages_count == 0) {
-        THROW_EXCEPTION("DYNAMIC_SIZE error: (p:" , files.pages_count
-                               , " cap:" , files.cola_count , " a:" , files.aofs_count
-                               , " T:" , files.active_works , ")");
-      }
-    } else {
-      if (files.aofs_count > 1 && files.pages_count == 0) {
-        THROW_EXCEPTION("DYNAMIC error: (p:" , files.pages_count
-                               , " cap:" , files.cola_count , " a:" , files.aofs_count
-                               , " T:" , files.active_works , ")");
-      }
     }
     break;
   default:
@@ -373,12 +343,9 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    start_time = timeutil::current_time() - cap_store_period * 2;
-    std::cout << " start time: " << timeutil::to_string(start_time) << std::endl;
 
     Options::start(storage_path);
     if (!is_exists) {
-      Options::instance()->cap_store_period = cap_store_period;
       Options::instance()->strategy = strategy;
     }
 
@@ -426,8 +393,7 @@ int main(int argc, char *argv[]) {
 
     check_engine_state(raw_ptr);
 
-    if (!readonly &&
-        Options::instance()->strategy != dariadb::storage::STRATEGY::DYNAMIC) {
+    if (!readonly ) {
       size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
       std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
       stop_info = false;
@@ -443,26 +409,9 @@ int main(int argc, char *argv[]) {
       std::cout << "drop time: " << elapsed << std::endl;
     }
 
-    if (!readonly) {
-      size_t ccount = size_t(raw_ptr->queue_size().cola_count * 0.5);
-      std::cout << "==> drop part caps to " << ccount << "..." << std::endl;
-      stop_info = false;
-      std::thread flush_info_thread(show_drop_info, raw_ptr);
-
-      auto start = clock();
-      raw_ptr->drop_part_caps(ccount);
-      raw_ptr->flush();
-      raw_ptr->wait_all_asyncs();
-      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-      stop_info = true;
-      flush_info_thread.join();
-      std::cout << "drop time: " << elapsed << std::endl;
-    }
-
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
-              << " storage: (p:" << queue_sizes.pages_count
-              << " cap:" << queue_sizes.cola_count << " a:" << queue_sizes.aofs_count
+              << " storage: (p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
               << ")" << std::endl;
 
     std::cout << "Active threads: "

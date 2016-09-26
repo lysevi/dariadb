@@ -2,7 +2,6 @@
 
 #include "interfaces/imeasstorage.h"
 #include "storage/aof_manager.h"
-#include "storage/capacitor_manager.h"
 #include "storage/dropper.h"
 #include "storage/options.h"
 #include "storage/page_manager.h"
@@ -32,7 +31,6 @@ public:
   struct QueueSizes {
     size_t aofs_count;   ///  AOF count
     size_t pages_count;  /// pages count
-    size_t cola_count;   /// COLA files count.
     size_t active_works; /// async tasks runned.
     Dropper::Queues dropper_queues;
   };
@@ -62,7 +60,6 @@ public:
                   dariadb::Time *maxResult) override;
 
   void drop_part_aofs(size_t count);
-  void drop_part_caps(size_t count);
 
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
   void wait_all_asyncs();

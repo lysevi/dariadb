@@ -8,6 +8,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/fs.h>
 #include <libclient/client.h>
 #include <libserver/server.h>
 
@@ -25,7 +26,6 @@ std::string server_host = "127.0.0.1";
 bool run_server_flag = true;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::FAST_WRITE;
-Time cap_store_period = 0;
 size_t clients_count = 5;
 bool dont_clean=false;
 Engine* engine = nullptr;
@@ -50,10 +50,8 @@ void run_server() {
 	else {
 		Options::start();
 	}
-	Options::instance()->cap_store_period = cap_store_period;
 	Options::instance()->strategy = strategy;
 	Options::instance()->path = storage_path;
-	Options::instance()->aof_max_size = Options::instance()->measurements_count();
 
 	engine = new Engine();
 
@@ -105,7 +103,6 @@ int main(int argc,char**argv){
 		("server-host", po::value<std::string>(&server_host)->default_value(server_host), "server host.")
         ("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
 		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
-		("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period), "store period in CAP level.")
 		("clients-count", po::value<size_t>(&clients_count)->default_value(clients_count), "clients count.")
         ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean), "dont clean folder with storage if exists.")
 		("extern-server", "dont run server.");

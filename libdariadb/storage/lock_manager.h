@@ -16,10 +16,8 @@ enum class LOCK_KIND : uint8_t { UNKNOW, READ, EXCLUSIVE };
 
 enum class LOCK_OBJECTS : uint8_t {
   AOF,
-  CAP,
   PAGE,
   DROP_AOF,
-  DROP_CAP,
 };
 
 struct MutexWrap {

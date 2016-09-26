@@ -20,7 +20,6 @@ TARGET_LINK_LIBRARIES(net_test libdariadb-cl libnet-server)
 
 TEST_CASE(engine_test engine_test.cpp)
 TEST_CASE(aof_test aof_test.cpp)
-TEST_CASE(capacitor_test capacitor_test.cpp)
 TEST_CASE(pages_test pages_test.cpp)
 TEST_CASE(compression_test compression_test.cpp)
 TEST_CASE(utils_test utils_test.cpp)

@@ -3,6 +3,7 @@
 #include <libdariadb/engine.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/fs.h>
 #include <libserver/server.h>
 
 #include <boost/program_options.hpp>
@@ -17,8 +18,7 @@ namespace po = boost::program_options;
 std::string storage_path = "dariadb_storage";
 unsigned short server_port = 2001;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
-STRATEGY strategy = STRATEGY::DYNAMIC;
-Time cap_store_period = 0;
+STRATEGY strategy = STRATEGY::COMPRESSED;
 ServerLogger::Params p;
 
 int main(int argc,char**argv){
@@ -32,9 +32,7 @@ int main(int argc,char**argv){
 		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
 		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
 		("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
-		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
-		("store-period",po::value<Time>(&cap_store_period)->default_value(cap_store_period), "store period in CAP level.");
-		
+		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.");		
 	
 	po::variables_map vm;
 	try {
@@ -77,10 +75,8 @@ int main(int argc,char**argv){
 	else {
 		Options::start();
 	}
-	Options::instance()->cap_store_period = cap_store_period;
 	Options::instance()->strategy = strategy;
 	Options::instance()->path = storage_path;
-	Options::instance()->aof_max_size = Options::instance()->measurements_count();
 
 	std::unique_ptr<Engine> stor{ new Engine() };
 

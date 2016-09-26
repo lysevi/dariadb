@@ -233,12 +233,11 @@ public:
     auto queue_sizes = _env.storage->queue_size();
     std::stringstream stor_ss;
 
-    stor_ss << "(p:" << queue_sizes.pages_count << " cap:" << queue_sizes.cola_count
+    stor_ss << "(p:" << queue_sizes.pages_count
             << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
             << ")";
 
-    stor_ss << "[a:" << queue_sizes.dropper_queues.aof
-            << " c:" << queue_sizes.dropper_queues.cap << "]";
+    stor_ss << "[a:" << queue_sizes.dropper_queues.aof << "]";
 
     logger_info("server: stat ", stor_ss.str());
     reset_info_timer();

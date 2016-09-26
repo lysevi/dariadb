@@ -66,15 +66,9 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   BOOST_CHECK(instance != nullptr);
 
   Options::instance()->aof_buffer_size = 2;
-  Options::instance()->cap_B = 3;
-  Options::instance()->cap_max_levels = 4;
-  Options::instance()->cap_store_period = 5;
-  Options::instance()->cap_max_closed_caps = 6;
-
   Options::instance()->page_chunk_size = 7;
   Options::instance()->page_openned_page_cache_size = 8;
   Options::instance()->strategy = dariadb::storage::STRATEGY::COMPRESSED;
-  Options::instance()->calc_params();
   Options::instance()->save();
 
   Options::stop();
@@ -85,11 +79,6 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 
   Options::start(storage_path);
   BOOST_CHECK_EQUAL(Options::instance()->aof_buffer_size, uint64_t(2));
-  BOOST_CHECK_EQUAL(Options::instance()->cap_B, uint32_t(3));
-  BOOST_CHECK_EQUAL(Options::instance()->cap_max_levels, uint8_t(4));
-  BOOST_CHECK_EQUAL(Options::instance()->cap_store_period, dariadb::Time(5));
-  BOOST_CHECK_EQUAL(Options::instance()->cap_max_closed_caps, uint32_t(6));
-
   BOOST_CHECK_EQUAL(Options::instance()->page_chunk_size, uint32_t(7));
   BOOST_CHECK_EQUAL(Options::instance()->page_openned_page_cache_size, uint32_t(8));
   BOOST_CHECK(Options::instance()->strategy == dariadb::storage::STRATEGY::COMPRESSED);
@@ -141,10 +130,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
-    dariadb::storage::Options::instance()->cap_B = cap_B;
-    dariadb::storage::Options::instance()->cap_max_levels = 4;
-    dariadb::storage::Options::instance()->aof_max_size =
-        dariadb::storage::Options::instance()->measurements_count();
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
     std::unique_ptr<Engine> ms{new Engine()};
 
@@ -166,10 +151,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->aof_max_size = chunk_size;
-    dariadb::storage::Options::instance()->cap_B = cap_B;
-    dariadb::storage::Options::instance()->cap_max_levels = 4;
-    dariadb::storage::Options::instance()->aof_max_size =
-        dariadb::storage::Options::instance()->measurements_count();
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
 
     dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(
@@ -229,10 +210,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
-    dariadb::storage::Options::instance()->cap_B = cap_B;
-    dariadb::storage::Options::instance()->cap_max_levels = 4;
-    dariadb::storage::Options::instance()->aof_max_size =
-        dariadb::storage::Options::instance()->measurements_count();
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
 
     std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine()};
@@ -291,10 +268,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
     dariadb::storage::Options::start();
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
-    dariadb::storage::Options::instance()->cap_B = cap_B;
-    dariadb::storage::Options::instance()->cap_max_levels = 4;
-    dariadb::storage::Options::instance()->aof_max_size =
-        dariadb::storage::Options::instance()->measurements_count();
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
 
     dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine()};
