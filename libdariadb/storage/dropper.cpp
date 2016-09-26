@@ -133,8 +133,6 @@ void Dropper::on_period_drop_aof() {
     auto copy = _aof_files;
     _aof_locker.unlock();
 
-    auto strat = Options::instance()->strategy;
-
     for (auto f : copy) {
       drop_aof_internal(f);
 

@@ -223,7 +223,6 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
-  const size_t cap_B = 2;
 
   using namespace dariadb::storage;
 
