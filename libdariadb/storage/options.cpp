@@ -1,4 +1,5 @@
 #include "options.h"
+#include "../meas.h"
 #include "../utils/exception.h"
 #include "../utils/fs.h"
 #include "../utils/logger.h"
@@ -9,7 +10,7 @@ using namespace dariadb::storage;
 using json = nlohmann::json;
 
 const size_t AOF_BUFFER_SIZE = 2000;
-const size_t AOF_FILE_SIZE = AOF_BUFFER_SIZE*2;
+const size_t AOF_FILE_SIZE = sizeof(dariadb::Meas)*AOF_BUFFER_SIZE*4;
 const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
 const uint32_t CHUNK_SIZE = 1024;
 
