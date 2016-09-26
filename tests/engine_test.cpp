@@ -128,6 +128,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     }
 
     dariadb::storage::Options::start();
+    dariadb::storage::Options::instance()->aof_buffer_size=100;
+    dariadb::storage::Options::instance()->aof_max_size = dariadb::storage::Options::instance()->aof_buffer_size*5;
     dariadb::storage::Options::instance()->path = storage_path;
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
     std::unique_ptr<Engine> ms{new Engine()};
