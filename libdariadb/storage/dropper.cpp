@@ -113,7 +113,6 @@ void Dropper::flush() {
   logger_info("engine: Dropper wait period end...");
   std::lock_guard<std::mutex> lg(_period_locker);
   size_t iter = 0;
-  auto strat = Options::instance()->strategy;
   while (!_aof_files.empty()) {
     logger_info("engine: flush iter=", iter++);
 	_aof_locker.lock();

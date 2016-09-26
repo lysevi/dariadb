@@ -130,7 +130,10 @@ dariadb::Time DeltaDeCompressor::read() {
       } else {
         if (first_byte == 0) {
           result = bw->read<uint64_t>();
-        }
+		}
+		else {
+			assert(false);
+		}
       }
     }
   }
@@ -138,6 +141,4 @@ dariadb::Time DeltaDeCompressor::read() {
   prev_delta = result;
   prev_time = ret;
   return ret;
-  assert(false);
-  return Time(0);
 }
