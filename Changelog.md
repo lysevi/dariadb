@@ -9,6 +9,7 @@ v0.2.0
 - New compression algorithm: speed increased by 3 times.
 - Flag 'source' was removed from measurement.
 - Measurement Id is uint32_t.
+- Remove COLA layer.
 
 v0.1.1
 =====

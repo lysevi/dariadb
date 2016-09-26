@@ -17,7 +17,6 @@
 * Accept unordered data.
 * LSM-like storage struct with three layers:
   - Append-only files layer, for fast write speed and crash-safety.
-  - For better read speed, data stored in cache oblivious lookahead arrays.
   - Old values stored in compressed block for better disk space usage.
 * High write speed(2.5 - 3.5 millions values per second) in using as library.
 * High write speed(150k - 200k values per second) across the network.
