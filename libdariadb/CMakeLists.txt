@@ -19,7 +19,7 @@ source_group(compression FILES ${COMPRESSION_HDRS} ${COMPRESSION_SRC})
 source_group(compression\\v2 FILES ${COMPRESSION_2_HDRS} ${COMPRESSION_2_SRC})
 source_group(storage FILES ${STORE_HDRS} ${STORE_SRC})
 source_group(utils FILES ${UTILS_HDRS} ${UTILS_SRC})
-#source_group(dariadb FILES ${GLOB_HDRS} ${GLOB_SRC})
+source_group(dariadb FILES ${GLOB_HDRS} ${GLOB_SRC})
 source_group(interfaces FILES ${INTERFACES_SRC} ${INTERFACES_HDRS})
 
 SET(SRC  ${GLOB_HDRS} ${GLOB_SRC} 
