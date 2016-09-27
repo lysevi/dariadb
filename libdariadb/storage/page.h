@@ -34,7 +34,7 @@ public:
   static Page *open(std::string file_name, bool read_only = false);
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
-  static uint64_t Page::index_file_size(uint32_t chunk_per_storage);
+  static uint64_t index_file_size(uint32_t chunk_per_storage);
   static void restoreIndexFile(const std::string&file_name);
   ~Page();
   void fsck();
