@@ -168,7 +168,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     BOOST_CHECK_EQUAL(manifest_version, ss.str());
 
     dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
-
+	auto index_files=dariadb::utils::fs::ls(storage_path, ".pagei");
+	for (auto&f : index_files) {
+		dariadb::utils::fs::rm(f);
+	}
     raw_ptr->fsck();
 
     // check first id, because that Id placed in compressed pages.

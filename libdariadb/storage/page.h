@@ -34,14 +34,12 @@ public:
   static Page *open(std::string file_name, bool read_only = false);
   static PageHeader readHeader(std::string file_name);
   static IndexHeader readIndexHeader(std::string page_file_name);
+  static uint64_t Page::index_file_size(uint32_t chunk_per_storage);
+  static void restoreIndexFile(const std::string&file_name);
   ~Page();
   void fsck();
-  // PM
-  bool add_to_target_chunk(const dariadb::Meas &m);
-  /*bool append(const ChunksList &ch) override;*/
   bool is_full() const;
 
-  // ChunksList get_open_chunks();
   // ChunkContainer
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
@@ -53,8 +51,6 @@ public:
   void flush();
 
   void mark_as_non_init(Chunk_Ptr &ch);
-  void mark_as_init(Chunk_Ptr &ch);
-
 private:
   void update_index_recs();
   void init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index);

@@ -143,7 +143,7 @@ Page::~Page() {
   page_mmap->close();
 }
 
-uint64_t index_file_size(uint32_t chunk_per_storage) {
+uint64_t Page::index_file_size(uint32_t chunk_per_storage) {
   return chunk_per_storage * sizeof(IndexReccord) + sizeof(IndexHeader);
 }
 
@@ -213,6 +213,29 @@ Page *Page::open(std::string file_name, bool read_only) {
   return res;
 }
 
+void Page::restoreIndexFile(const std::string&file_name) {
+	logger_info("engine: page - restore index file ", file_name);
+	auto res = new Page;
+	res->readonly = false;
+	auto mmap = utils::fs::MappedFile::open(file_name, false);
+	res->filename = file_name;
+	auto region = mmap->data();
+	
+	res->page_mmap = mmap;
+	res->region = region;
+
+	res->header = reinterpret_cast<PageHeader *>(region);
+	res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+		index_file_size(res->header->addeded_chunks));
+	res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+	res->readonly = false;
+	res->header->is_closed = true;
+	res->header->is_open_to_write = false;
+	res->page_mmap->flush(0, sizeof(PageHeader));
+	res->update_index_recs();
+	res->flush();
+	delete res;
+}
 void Page::check_page_struct() {
 #ifdef DEBUG
   for (uint32_t i = 0; i < header->addeded_chunks; ++i) {

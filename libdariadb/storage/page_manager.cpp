@@ -69,20 +69,27 @@ public:
 
     auto pages = Manifest::instance()->page_list();
 
-    for (auto n : pages) {
-      auto file_name = utils::fs::append_path(Options::instance()->path, n);
-      auto hdr = Page::readHeader(file_name);
-      if (hdr.removed_chunks == hdr.addeded_chunks) {
-        logger_info("engine: page ", file_name, " is empty.");
-        erase_page(file_name);
-      } else {
-        if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
-          auto res = Page_Ptr{Page::open(file_name)};
-          res->fsck();
-          res = nullptr;
-        }
-      }
-    }
+	for (auto n : pages) {
+		auto file_name = utils::fs::append_path(Options::instance()->path, n);
+		auto hdr = Page::readHeader(file_name);
+		if (hdr.removed_chunks == hdr.addeded_chunks) {
+			logger_info("engine: page ", file_name, " is empty.");
+			erase_page(file_name);
+		}
+		else {
+			auto index_filename = PageIndex::index_name_from_page_name(n);
+			auto index_file_path = utils::fs::append_path(Options::instance()->path, index_filename);
+			if (!utils::fs::path_exists(index_file_path)) {
+				Page::restoreIndexFile(file_name);
+			}
+			if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
+				auto res = Page_Ptr{ Page::open(file_name) };
+				res->fsck();
+				res = nullptr;
+			}
+		}
+
+	}
   }
 
   /// file_name - full path.
