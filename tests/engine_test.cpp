@@ -197,10 +197,10 @@ public:
 
 BOOST_AUTO_TEST_CASE(Subscribe) {
   const size_t id_count = 5;
-  std::shared_ptr<Moc_SubscribeClbk> c1(new Moc_SubscribeClbk);
-  std::shared_ptr<Moc_SubscribeClbk> c2(new Moc_SubscribeClbk);
-  std::shared_ptr<Moc_SubscribeClbk> c3(new Moc_SubscribeClbk);
-  std::shared_ptr<Moc_SubscribeClbk> c4(new Moc_SubscribeClbk);
+  auto c1=std::make_shared<Moc_SubscribeClbk>();
+  auto c2 = std::make_shared<Moc_SubscribeClbk>();
+  auto c3 = std::make_shared<Moc_SubscribeClbk>();
+  auto c4 = std::make_shared<Moc_SubscribeClbk>();
 
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     dariadb::storage::Options::instance()->aof_buffer_size = chunk_size;
     dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
 
-    std::shared_ptr<dariadb::storage::Engine> ms{new dariadb::storage::Engine()};
+    auto ms= std::make_shared<dariadb::storage::Engine>();
 
     dariadb::IdArray ids{};
     ms->subscribe(ids, 0, c1); // all

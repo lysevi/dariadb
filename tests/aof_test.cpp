@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::storage::Options::stop();
   }
   {
-    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper());
+	auto stor = std::make_shared<Moc_Dropper>();
     stor->writed_count = 0;
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storagePath, "Manifest"));

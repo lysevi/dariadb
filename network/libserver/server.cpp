@@ -29,7 +29,7 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _write_meases_strand(_service), _params(p), _stop_flag(false),
+      : _write_meases_strand(_service), _params(p),
         _is_runned_flag(false), _ping_timer(_service), _info_timer(_service) {
     _in_stop_logic = false;
     _next_client_id = 1;
@@ -58,7 +58,6 @@ public:
     }
     disconnect_all();
     _ping_timer.cancel();
-    _stop_flag = true;
 
     logger_info("server: stop asio service.");
     _service.stop();
@@ -254,7 +253,6 @@ public:
 
   std::vector<std::thread> _io_threads;
 
-  std::atomic_bool _stop_flag;
   std::atomic_bool _is_runned_flag;
 
   std::unordered_map<int, ClientIO_ptr> _clients;
@@ -266,7 +264,7 @@ public:
   IOClient::Environment _env;
   std::atomic_int _writes_in_progress;
 
-  bool _in_stop_logic; // TODO union with _stop_flag
+  bool _in_stop_logic;
   NetData_Pool _net_data_pool;
 };
 

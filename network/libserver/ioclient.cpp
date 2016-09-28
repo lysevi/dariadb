@@ -152,10 +152,8 @@ void IOClient::ping() {
 
 void IOClient::onNetworkError(const boost::system::error_code &err) {
   if (state != CLIENT_STATE::DISCONNECTED) {
-    // TODO check this moment.
     logger_info("server: client #", this->_async_connection->id(), " network error - ", err.message());
     logger_info("server: client #", this->_async_connection->id(), " stoping...");
-    return;
   }
   this->close();
 }
@@ -306,10 +304,8 @@ void IOClient::readInterval(const NetData_ptr &d) {
   if (query_hdr->from >= query_hdr->to) {
     sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
   } else {
-    // TODO use shared ptr
-    ClientDataReader *cdr = new ClientDataReader(this, query_num);
-    env->storage->foreach (qi, cdr);
-    delete cdr;
+    auto cdr = std::make_unique<ClientDataReader>(this, query_num);
+    env->storage->foreach(qi, cdr.get());
   }
 }
 
@@ -328,10 +324,8 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
 
   env->nd_pool->free(d);
 
-  // TODO use shared ptr
-  ClientDataReader *cdr = new ClientDataReader(this, query_num);
-  env->storage->foreach (qi, cdr);
-  delete cdr;
+  auto cdr =std::make_unique<ClientDataReader>(this, query_num);
+  env->storage->foreach(qi, cdr.get());
 }
 
 void  IOClient::currentValue(const NetData_ptr &d) {
@@ -345,15 +339,12 @@ void  IOClient::currentValue(const NetData_ptr &d) {
 	auto query_num = query_hdr->id;
 	env->nd_pool->free(d);
 
-	// TODO use shared ptr
 	auto result = env->storage->currentValue(all_ids, flag);
-	ClientDataReader *cdr = new ClientDataReader(this, query_num);
+	auto cdr = std::make_unique<ClientDataReader>(this, query_num);
 	for (auto&v : result) {
 		cdr->call(v.second);
 	}
 	cdr->is_end();
-	delete cdr;
-	// auto result = env->storage->readTimePoint(qi);
 }
 
 void  IOClient::subscribe(const NetData_ptr &d) {

@@ -81,31 +81,31 @@ bool Chunk::check_checksum() {
   return exists == calculated;
 }
 
+//TODO rm std::make_shared<ByteBuffer>. use stack veriable.
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
-    : Chunk(index, buffer, _size, first_m) {
+    : Chunk(index, buffer, _size, first_m),
+	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
+	{
   header->kind = CHUNK_KIND::Compressed;
   
-  range = Range{_buffer_t, _buffer_t + index->size};
-  bw = std::make_shared<ByteBuffer>(range);
+  bw = c_writer.get_bb();
   bw->reset_pos();
-
   header->bw_pos = uint32_t(bw->pos());
 
-  c_writer = compression::v2::CopmressedWriter(bw);
   c_writer.append(header->first);
 
   header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, first_m.id);
   header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
 }
 
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
+ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) 
+	: Chunk(index, buffer),
+	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
+{
   assert(index->kind == CHUNK_KIND::Compressed);
-  range = Range{_buffer_t, _buffer_t + index->size};
   assert(size_t(range.end - range.begin) == index->size);
-  bw = std::make_shared<ByteBuffer>(range);
+  bw = c_writer.get_bb();
   bw->set_pos(header->bw_pos);
-
-  c_writer = compression::v2::CopmressedWriter(bw);
 }
 
 ZippedChunk::~ZippedChunk() {}

@@ -6,7 +6,7 @@
 
 namespace dariadb {
 namespace compression {
-
+	//TODO rm pimpl idiom. do like in v2 compression API.
 class CopmressedWriter {
 public:
   CopmressedWriter();

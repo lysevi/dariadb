@@ -3,42 +3,56 @@
 #include "../../meas.h"
 #include "bytebuffer.h"
 #include <memory>
+#include "delta.h"
+#include "flag.h"
+#include "xor.h"
 
 namespace dariadb {
 namespace compression {
 namespace v2 {
 class CopmressedWriter {
 public:
-  CopmressedWriter();
   CopmressedWriter(const ByteBuffer_Ptr &bw_time);
   ~CopmressedWriter();
-  CopmressedWriter(const CopmressedWriter &other);
-
-  void swap(CopmressedWriter &other);
-
-  CopmressedWriter &operator=(const CopmressedWriter &other);
-  CopmressedWriter &operator=(CopmressedWriter &&other);
 
   bool append(const Meas &m);
-  bool is_full() const;
+  bool is_full() const { return _is_full; }
 
-  size_t used_space() const;
+  size_t used_space() const { return time_comp.used_space(); }
 
+  ByteBuffer_Ptr get_bb()const { return _bb; }
 protected:
-  class Private;
-  std::unique_ptr<Private> _Impl;
+	ByteBuffer_Ptr _bb;
+	Meas _first;
+	bool _is_first;
+	bool _is_full;
+	DeltaCompressor time_comp;
+	XorCompressor value_comp;
+	FlagCompressor flag_comp;
 };
 
 class CopmressedReader {
 public:
+	CopmressedReader() = default;
   CopmressedReader(const ByteBuffer_Ptr &bw_time, const Meas &first);
   ~CopmressedReader();
 
-  Meas read();
+
+  dariadb::Meas read() {
+	  Meas result{};
+	  result.id = _first.id;
+	  result.time = time_dcomp.read();
+	  result.value = value_dcomp.read();
+	  result.flag = flag_dcomp.read();
+	  return result;
+  }
+
 
 protected:
-  class Private;
-  std::unique_ptr<Private> _Impl;
+	dariadb::Meas _first;
+	DeltaDeCompressor time_dcomp;
+	XorDeCompressor value_dcomp;
+	FlagDeCompressor flag_dcomp;
 };
 }
 }

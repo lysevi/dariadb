@@ -2,7 +2,7 @@
 
 namespace dariadb {
 namespace net {
-//TODO remove?
+
 class IClientManager {
 public:
   virtual void client_connect(int id) = 0;

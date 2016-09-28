@@ -16,7 +16,7 @@ void IMeasSource::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
 
 MeasList IMeasSource::readInterval(const QueryInterval &q) {
   TIMECODE_METRICS(ctmd, "readInterval", "IMeasSource::readInterval");
-  std::unique_ptr<MList_ReaderClb> clbk{new MList_ReaderClb};
+  auto clbk= std::make_unique<MList_ReaderClb>();
   this->foreach (q, clbk.get());
 
   Id2MSet sub_result;

@@ -78,7 +78,7 @@ int main(int argc,char**argv){
 	Options::instance()->strategy = strategy;
 	Options::instance()->path = storage_path;
 
-	std::unique_ptr<Engine> stor{ new Engine() };
+	auto stor=std::make_unique<Engine>();
 
 	if (!is_exists) {
 		Options::instance()->save();
@@ -93,7 +93,6 @@ int main(int argc,char**argv){
 	while (!s.is_runned()) {
 	}
 	
-    //TODO this thread can be used for io_service.pool();
 	while (s.is_runned()){
 		s.asio_run();
 	}

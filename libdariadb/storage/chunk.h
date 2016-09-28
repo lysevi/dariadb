@@ -90,7 +90,6 @@ public:
   uint32_t calc_checksum() override;
   uint32_t get_checksum() override;
   ChunkReader_Ptr get_reader() override;
-  utils::Range range;
   compression::v2::CopmressedWriter c_writer;
 };
 }

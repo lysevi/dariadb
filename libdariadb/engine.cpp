@@ -265,8 +265,8 @@ public:
 
   MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
-    std::unique_ptr<MList_ReaderClb> p_clbk{new MList_ReaderClb};
-    std::unique_ptr<MList_ReaderClb> a_clbk{new MList_ReaderClb};
+    auto p_clbk= std::make_unique<MList_ReaderClb>();
+    auto a_clbk= std::make_unique<MList_ReaderClb>();;
     this->foreach_internal(q, p_clbk.get(), a_clbk.get());
     Id2MSet sub_result;
 

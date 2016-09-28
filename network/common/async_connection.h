@@ -36,7 +36,7 @@ private:
   void readNextAsync();
 private:
   std::atomic_int _messages_to_send;
-  int _async_con_id; // TODO just for logging. remove after release.
+  int _async_con_id;
   socket_weak _sock;
 
   bool _is_stoped;

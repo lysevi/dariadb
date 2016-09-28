@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     dariadb::utils::async::ThreadManager::start(
         dariadb::storage::Options::instance()->thread_pools_params());
 
-    std::shared_ptr<Moc_Dropper> stor(new Moc_Dropper);
+    auto stor=std::make_shared<Moc_Dropper>();
 
     dariadb::storage::AOFManager::start();
 

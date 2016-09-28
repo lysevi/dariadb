@@ -171,7 +171,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   MeasList all = as->readInterval(qi_all);
 
   check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
-  std::unique_ptr<Callback> clbk{new Callback};
+  auto clbk= std::make_unique<Callback>();
   as->foreach (qi_all, clbk.get());
 
   if (all.size() != clbk->count) {
@@ -208,7 +208,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
     throw MAKE_EXCEPTION("all.size() < ids_count. must be GE");
   }
 
-  std::unique_ptr<Callback> qpoint_clbk{new Callback};
+  auto qpoint_clbk= std::make_unique<Callback>();
   as->foreach (qp, qpoint_clbk.get());
   if (qpoint_clbk->count != all_id2meas.size()) {
     throw MAKE_EXCEPTION("qpoint_clbk->count != all_id2meas.size()");
