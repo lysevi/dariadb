@@ -4,7 +4,7 @@ using namespace dariadb;
 using namespace dariadb::compression::v2;
 
 CopmressedWriter::CopmressedWriter(const ByteBuffer_Ptr &bw)
-	: time_comp(bw), value_comp(bw), flag_comp(bw), _bb(bw) {
+	: _bb(bw), time_comp(bw), value_comp(bw), flag_comp(bw) {
 	_is_first = true;
 	_is_full = false;
 }
