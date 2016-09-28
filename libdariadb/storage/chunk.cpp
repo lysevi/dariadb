@@ -103,7 +103,6 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer)
 	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
 {
   assert(index->kind == CHUNK_KIND::Compressed);
-  assert(size_t(range.end - range.begin) == index->size);
   bw = c_writer.get_bb();
   bw->set_pos(header->bw_pos);
 }
