@@ -169,6 +169,7 @@ void LockManager::unlock(const std::vector<LOCK_OBJECTS> &los) {
 void LockManager::lock_by_kind(const LOCK_KIND &lk, const LOCK_OBJECTS &lo) {
   auto lock_target = get_or_create_lock_object(lo);
   lock_mutex(lk, lock_target);
+  lock_target->kind = lk;
 }
 
 void LockManager::lock_drop_aof() {
