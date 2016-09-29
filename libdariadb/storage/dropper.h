@@ -1,7 +1,9 @@
 #pragma once
 
 #include "aof_manager.h"
-#include <atomic>
+#include <string>
+#include <set>
+#include <mutex>
 
 namespace dariadb {
 namespace storage {
@@ -26,6 +28,8 @@ private:
   void drop_aof_internal(const std::string fname);
 private:
 	std::atomic_int _in_queue;
+	std::mutex            _locker;
+	std::set<std::string> _addeded_files;
 };
 }
 }

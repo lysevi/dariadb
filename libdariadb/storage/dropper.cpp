@@ -47,8 +47,17 @@ void Dropper::drop_aof(const std::string &fname, const std::string &storage_path
 }
 
 void Dropper::drop_aof(const std::string fname) {
-  _in_queue++;
-  drop_aof_internal(fname);
+	std::lock_guard<std::mutex> lg(_locker);
+	auto fres=_addeded_files.find(fname);
+	if (fres != _addeded_files.end()) {
+		return;
+	}
+	auto storage_path = Options::instance()->path;
+	if (utils::fs::path_exists(utils::fs::append_path(storage_path, fname))) {
+		_addeded_files.insert(fname);
+		_in_queue++;
+		drop_aof_internal(fname);
+	}
 }
 
 void Dropper::cleanStorage(std::string storagePath) {
@@ -72,7 +81,7 @@ void Dropper::drop_aof_internal(const std::string fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
-      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_to_compress");
+      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
 
       auto storage_path = Options::instance()->path;
       LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE,
@@ -95,9 +104,12 @@ void Dropper::drop_aof_internal(const std::string fname) {
 
       LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
     } catch (std::exception &ex) {
-      THROW_EXCEPTION("Dropper::drop_aof_to_compress: ", ex.what());
+      THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }
+	this->_locker.lock();
     this->_in_queue--;
+	this->_addeded_files.erase(fname);
+	this->_locker.unlock();
   };
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
 }
