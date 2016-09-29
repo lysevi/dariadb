@@ -104,9 +104,8 @@ void Dropper::drop_aof_internal(const std::string fname) {
 
 void Dropper::flush() {
   logger_info("engine: Dropper flush...");
-  size_t iter = 0;
   while (_in_queue != 0) {
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   logger_info("engine: Dropper flush end.");
 }
