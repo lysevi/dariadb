@@ -59,7 +59,7 @@ void Options::stop() {
 std::vector<dariadb::utils::async::ThreadPool::Params> Options::thread_pools_params() {
   using namespace dariadb::utils::async;
   std::vector<ThreadPool::Params> result{
-      ThreadPool::Params{size_t(3), (ThreadKind)THREAD_COMMON_KINDS::COMMON},
+      ThreadPool::Params{size_t(4), (ThreadKind)THREAD_COMMON_KINDS::COMMON},
       ThreadPool::Params{size_t(1), (ThreadKind)THREAD_COMMON_KINDS::DISK_IO},
       ThreadPool::Params{size_t(1), (ThreadKind)THREAD_COMMON_KINDS::DROP}};
   return result;

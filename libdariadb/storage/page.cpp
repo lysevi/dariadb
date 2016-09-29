@@ -2,6 +2,7 @@
 #include "../timeutil.h"
 #include "../utils/exception.h"
 #include "../utils/metrics.h"
+#include "../utils/thread_manager.h"
 #include "bloom_filter.h"
 #include <algorithm>
 #include <cassert>
@@ -12,119 +13,143 @@ using namespace dariadb::storage;
 using namespace dariadb;
 
 namespace PageInner {
-using HdrAndBuffer = std::tuple<ChunkHeader, std::shared_ptr<uint8_t>>;
+	using HdrAndBuffer = std::tuple<ChunkHeader, std::shared_ptr<uint8_t>>;
 
-std::list<MeasArray> splitById(const MeasArray &ma) {
-  dariadb::IdSet dropped;
-  auto count = ma.size();
-  std::vector<bool> visited(count);
-  auto begin = ma.cbegin();
-  auto end = ma.cend();
-  size_t i = 0;
-  std::list<MeasArray> result;
-  MeasArray current_id_values;
-  current_id_values.resize(ma.size());
-  
-  assert(current_id_values.size() != 0);
-  assert(current_id_values.size() == ma.size());
+	std::list<MeasArray> splitById(const MeasArray &ma) {
+		dariadb::IdSet dropped;
+		auto count = ma.size();
+		std::vector<bool> visited(count);
+		auto begin = ma.cbegin();
+		auto end = ma.cend();
+		size_t i = 0;
+		std::list<MeasArray> result;
+		MeasArray current_id_values;
+		current_id_values.resize(ma.size());
 
-  for (auto it = begin; it != end; ++it, ++i) {
-    if (visited[i]) {
-      continue;
-    }
-    if (dropped.find(it->id) != dropped.end()) {
-      continue;
-    }
+		assert(current_id_values.size() != 0);
+		assert(current_id_values.size() == ma.size());
 
-    visited[i] = true;
-	size_t current_id_values_pos = 0;
-    current_id_values[current_id_values_pos++]= *it;
-    size_t pos = 0;
-    for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
-      if (visited[pos]) {
-        continue;
-      }
-      if ((sub_it->id == it->id)) {
-        current_id_values[current_id_values_pos++] =*sub_it;
-        visited[pos] = true;
-      }
-    }
-    dropped.insert(it->id);
-    result.push_back({ current_id_values.begin(), current_id_values.begin() + current_id_values_pos });
-	current_id_values_pos = 0;
-  }
-  return result;
-}
+		for (auto it = begin; it != end; ++it, ++i) {
+			if (visited[i]) {
+				continue;
+			}
+			if (dropped.find(it->id) != dropped.end()) {
+				continue;
+			}
 
-std::list<HdrAndBuffer> compressValues(std::list<MeasArray> &to_compress,
-                                       PageHeader &phdr, uint32_t max_chunk_size) {
-  std::list<HdrAndBuffer> results;
+			visited[i] = true;
+			size_t current_id_values_pos = 0;
+			current_id_values[current_id_values_pos++] = *it;
+			size_t pos = 0;
+			for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
+				if (visited[pos]) {
+					continue;
+				}
+				if ((sub_it->id == it->id)) {
+					current_id_values[current_id_values_pos++] = *sub_it;
+					visited[pos] = true;
+				}
+			}
+			dropped.insert(it->id);
+			result.push_back(
+			{ current_id_values.begin(), current_id_values.begin() + current_id_values_pos });
+			current_id_values_pos = 0;
+		}
+		return result;
+	}
+	//TODO less allocations and locks.
+	std::list<HdrAndBuffer> compressValues(std::list<MeasArray> &to_compress,
+		PageHeader &phdr, uint32_t max_chunk_size) {
+		using namespace dariadb::utils::async;
+		std::list<HdrAndBuffer> results;
+		utils::Locker result_locker;
+		std::list<utils::async::TaskResult_Ptr> async_compressions;
+		for (auto &lst : to_compress) {
+			utils::async::AsyncTask at = [lst, &results, &phdr, max_chunk_size,
+				&result_locker](const utils::async::ThreadInfo &ti) {
+				TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+				auto it = lst.cbegin();
+				while (it != lst.cend()) {
+					ChunkHeader hdr;
+					memset(&hdr, 0, sizeof(ChunkHeader));
+					auto buff_size = max_chunk_size;
+					std::shared_ptr<uint8_t> buffer_ptr{ new uint8_t[buff_size] };
+					memset(buffer_ptr.get(), 0, buff_size);
+					ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, *it);
+					++it;
+					while (it != lst.cend()) {
+						if (!ch.append(*it)) {
+							break;
+						}
+						++it;
+					}
+					ch.close();
+					result_locker.lock();
+					phdr.max_chunk_id++;
+					phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
+					phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
+					ch.header->id = phdr.max_chunk_id;
 
-  for (auto &lst : to_compress) {
-    auto it = lst.cbegin();
-    while (it != lst.cend()) {
-      ChunkHeader hdr;
-      memset(&hdr, 0, sizeof(ChunkHeader));
-      auto buff_size = max_chunk_size;
-      std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[buff_size]};
-      memset(buffer_ptr.get(), 0, buff_size);
-      ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, *it);
-      ++it;
-      while (it != lst.cend()) {
-        if (!ch.append(*it)) {
-          break;
-        }
-        ++it;
-      }
-      ch.close();
-      phdr.max_chunk_id++;
-      phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
-      phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
-      ch.header->id = phdr.max_chunk_id;
+					HdrAndBuffer subres = std::make_tuple(hdr, buffer_ptr);
 
-      HdrAndBuffer subres = std::make_tuple(hdr, buffer_ptr);
-      results.push_back(subres);
-    }
-  }
-  return results;
-}
+					results.push_back(subres);
+					result_locker.unlock();
+				}
+			};
+			auto cur_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(at));
+			async_compressions.push_back(cur_async);
+		}
+		for (auto tr : async_compressions) {
+			tr->wait();
+		}
+		return results;
+	}
 
-/// result - page file size in bytes
-uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
-                     std::list<HdrAndBuffer> &compressed_results) {
-  auto file = std::fopen(file_name.c_str(), "ab");
-  if (file == nullptr) {
-    throw MAKE_EXCEPTION("aofile: append error.");
-  }
+	/// result - page file size in bytes
+	uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
+		std::list<HdrAndBuffer> &compressed_results) {
+		using namespace dariadb::utils::async;
+		uint64_t page_size = 0;
+		AsyncTask pm_at =
+			[&file_name, &phdr, &compressed_results, &page_size](const ThreadInfo &ti) {
+			TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 
-  std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
-  uint64_t offset = 0;
+			auto file = std::fopen(file_name.c_str(), "ab");
+			if (file == nullptr) {
+				throw MAKE_EXCEPTION("aofile: append error.");
+			}
 
-  for (auto hb : compressed_results) {
-    ChunkHeader chunk_header = std::get<0>(hb);
-    std::shared_ptr<uint8_t> chunk_buffer_ptr = std::get<1>(hb);
+			std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+			uint64_t offset = 0;
 
-    chunk_header.pos_in_page = phdr.addeded_chunks;
-    phdr.addeded_chunks++;
-    auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
-    auto skip_count = chunk_header.size - cur_chunk_buf_size;
+			for (auto hb : compressed_results) {
+				ChunkHeader chunk_header = std::get<0>(hb);
+				std::shared_ptr<uint8_t> chunk_buffer_ptr = std::get<1>(hb);
 
-    chunk_header.size = cur_chunk_buf_size;
-    chunk_header.offset_in_page = offset;
+				chunk_header.pos_in_page = phdr.addeded_chunks;
+				phdr.addeded_chunks++;
+				auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
+				auto skip_count = chunk_header.size - cur_chunk_buf_size;
 
-    ZippedChunk ch(&chunk_header, chunk_buffer_ptr.get());
-    ch.close();
-    std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
-    std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), cur_chunk_buf_size,
-                file);
+				chunk_header.size = cur_chunk_buf_size;
+				chunk_header.offset_in_page = offset;
 
-    offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
-  }
-  auto page_size = offset + sizeof(PageHeader);
-  phdr.filesize = page_size;
-  std::fclose(file);
-  return page_size;
-}
+				ZippedChunk ch(&chunk_header, chunk_buffer_ptr.get());
+				ch.close();
+				std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
+				std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t),
+					cur_chunk_buf_size, file);
+
+				offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+			}
+			page_size = offset + sizeof(PageHeader);
+			phdr.filesize = page_size;
+			std::fclose(file);
+		};
+		auto at = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(pm_at));
+		at->wait();
+		return page_size;
+	}
 }
 
 Page::~Page() {
@@ -213,28 +238,28 @@ Page *Page::open(std::string file_name, bool read_only) {
   return res;
 }
 
-void Page::restoreIndexFile(const std::string&file_name) {
-	logger_info("engine: page - restore index file ", file_name);
-	auto res = new Page;
-	res->readonly = false;
-	auto mmap = utils::fs::MappedFile::open(file_name, false);
-	res->filename = file_name;
-	auto region = mmap->data();
-	
-	res->page_mmap = mmap;
-	res->region = region;
+void Page::restoreIndexFile(const std::string &file_name) {
+  logger_info("engine: page - restore index file ", file_name);
+  auto res = new Page;
+  res->readonly = false;
+  auto mmap = utils::fs::MappedFile::open(file_name, false);
+  res->filename = file_name;
+  auto region = mmap->data();
 
-	res->header = reinterpret_cast<PageHeader *>(region);
-	res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
-		index_file_size(res->header->addeded_chunks));
-	res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-	res->readonly = false;
-	res->header->is_closed = true;
-	res->header->is_open_to_write = false;
-	res->page_mmap->flush(0, sizeof(PageHeader));
-	res->update_index_recs();
-	res->flush();
-	delete res;
+  res->page_mmap = mmap;
+  res->region = region;
+
+  res->header = reinterpret_cast<PageHeader *>(region);
+  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+                                  index_file_size(res->header->addeded_chunks));
+  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+  res->readonly = false;
+  res->header->is_closed = true;
+  res->header->is_open_to_write = false;
+  res->page_mmap->flush(0, sizeof(PageHeader));
+  res->update_index_recs();
+  res->flush();
+  delete res;
 }
 void Page::check_page_struct() {
 #ifdef DEBUG
@@ -406,7 +431,7 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     if (ptr_to_chunk_info_raw->kind == CHUNK_KIND::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      THROW_EXCEPTION("Unknow CHUNK_KIND: " , ptr_to_chunk_info_raw->kind);
+      THROW_EXCEPTION("Unknow CHUNK_KIND: ", ptr_to_chunk_info_raw->kind);
     }
 
     Chunk_Ptr c{ptr};
@@ -454,7 +479,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     if (ptr_to_chunk_info_raw->kind == CHUNK_KIND::Compressed) {
       ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
     } else {
-      THROW_EXCEPTION("Unknow CHUNK_KIND: " , ptr_to_chunk_info_raw->kind);
+      THROW_EXCEPTION("Unknow CHUNK_KIND: ", ptr_to_chunk_info_raw->kind);
     }
     Chunk_Ptr c{ptr};
     search_res = c;
