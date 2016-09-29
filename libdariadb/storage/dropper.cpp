@@ -80,38 +80,52 @@ void Dropper::cleanStorage(std::string storagePath) {
 void Dropper::drop_aof_internal(const std::string fname) {
   AsyncTask at = [fname, this](const ThreadInfo &ti) {
     try {
-      TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+      TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
 
       auto storage_path = Options::instance()->path;
-      LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE,
-                                    {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
-
       auto full_path = fs::append_path(storage_path, fname);
 
-      AOFile_Ptr aof{new AOFile(full_path, true)};
+	  AOFile_Ptr aof{new AOFile(full_path, true)};
 
-      auto all = aof->readAll();
+	  auto all = aof->readAll();
+	  
+	  auto shared = std::make_shared<MeasArray>(std::move(all));
 
-      std::sort(all.begin(), all.end(), meas_time_compare_less());
-
-      auto without_path = fs::extract_filename(fname);
-      auto page_fname = fs::filename(without_path);
-      PageManager::instance()->append(page_fname, all);
-
-      aof = nullptr;
-      AOFManager::instance()->erase(fname);
-
-      LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+	  this->write_aof_to_page(fname, shared);
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }
-	this->_locker.lock();
-    this->_in_queue--;
-	this->_addeded_files.erase(fname);
-	this->_locker.unlock();
   };
-  ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
+  ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+}
+
+void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArray> ma) {
+	AsyncTask at = [fname, this, ma](const ThreadInfo &ti) {
+		try {
+			TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
+			TIMECODE_METRICS(ctmd, "drop", "Dropper::write_aof_to_page");
+		
+			auto storage_path = Options::instance()->path;
+			auto full_path = fs::append_path(storage_path, fname);
+
+			std::sort(ma->begin(), ma->end(), meas_time_compare_less());
+
+			auto without_path = fs::extract_filename(fname);
+			auto page_fname = fs::filename(without_path);
+			PageManager::instance()->append(page_fname, *ma.get());
+
+			AOFManager::instance()->erase(fname);
+		}
+		catch (std::exception &ex) {
+			THROW_EXCEPTION("Dropper::write_aof_to_page: ", ex.what());
+		}
+		this->_locker.lock();
+		this->_in_queue--;
+		this->_addeded_files.erase(fname);
+		this->_locker.unlock();
+	};
+	ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
 }
 
 void Dropper::flush() {
