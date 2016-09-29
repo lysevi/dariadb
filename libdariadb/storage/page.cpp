@@ -8,21 +8,21 @@
 #include <cassert>
 #include <cstring>
 #include <fstream>
-
+#include <map>
 using namespace dariadb::storage;
 using namespace dariadb;
 
 namespace PageInner {
 	using HdrAndBuffer = std::tuple<ChunkHeader, std::shared_ptr<uint8_t>>;
 
-	std::list<MeasArray> splitById(const MeasArray &ma) {
+	std::map<Id,MeasArray> splitById(const MeasArray &ma) {
 		dariadb::IdSet dropped;
 		auto count = ma.size();
 		std::vector<bool> visited(count);
 		auto begin = ma.cbegin();
 		auto end = ma.cend();
 		size_t i = 0;
-		std::list<MeasArray> result;
+		std::map<Id, MeasArray> result;
 		MeasArray current_id_values;
 		current_id_values.resize(ma.size());
 
@@ -51,39 +51,44 @@ namespace PageInner {
 				}
 			}
 			dropped.insert(it->id);
-			result.push_back(
-			{ current_id_values.begin(), current_id_values.begin() + current_id_values_pos });
+			result.insert(std::make_pair(it->id,
+			MeasArray{ current_id_values.begin(), current_id_values.begin() + current_id_values_pos }));
 			current_id_values_pos = 0;
 		}
 		return result;
 	}
-	//TODO less allocations and locks.
-	std::list<HdrAndBuffer> compressValues(std::list<MeasArray> &to_compress,
+	
+	std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
 		PageHeader &phdr, uint32_t max_chunk_size) {
 		using namespace dariadb::utils::async;
 		std::list<HdrAndBuffer> results;
 		utils::Locker result_locker;
 		std::list<utils::async::TaskResult_Ptr> async_compressions;
-		for (auto &lst : to_compress) {
-			utils::async::AsyncTask at = [lst, &results, &phdr, max_chunk_size,
-				&result_locker](const utils::async::ThreadInfo &ti) {
+		for (auto &kv : to_compress) {
+			auto cur_Id = kv.first;
+			utils::async::AsyncTask at = [cur_Id, &results, &phdr, max_chunk_size,
+				&result_locker,&to_compress](const utils::async::ThreadInfo &ti) {
 				TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-				auto it = lst.cbegin();
-				while (it != lst.cend()) {
+				auto fit = to_compress.find(cur_Id);
+				auto begin = fit->second.cbegin();
+				auto end = fit->second.cend();
+				auto it = begin;
+				while (it != end) {
 					ChunkHeader hdr;
 					memset(&hdr, 0, sizeof(ChunkHeader));
-					auto buff_size = max_chunk_size;
-					std::shared_ptr<uint8_t> buffer_ptr{ new uint8_t[buff_size] };
-					memset(buffer_ptr.get(), 0, buff_size);
-					ZippedChunk ch(&hdr, buffer_ptr.get(), buff_size, *it);
+					//TODO use memory_pool
+					std::shared_ptr<uint8_t> buffer_ptr{ new uint8_t[max_chunk_size] };
+					memset(buffer_ptr.get(), 0, max_chunk_size);
+					ZippedChunk ch(&hdr, buffer_ptr.get(), max_chunk_size, *it);
 					++it;
-					while (it != lst.cend()) {
+					while (it != end) {
 						if (!ch.append(*it)) {
 							break;
 						}
 						++it;
 					}
 					ch.close();
+
 					result_locker.lock();
 					phdr.max_chunk_id++;
 					phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
@@ -176,7 +181,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size, const MeasArray &ma) {
   TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
 
-  std::list<MeasArray> to_compress = PageInner::splitById(ma);
+  auto to_compress = PageInner::splitById(ma);
 
   PageHeader phdr;
   memset(&phdr, 0, sizeof(PageHeader));
