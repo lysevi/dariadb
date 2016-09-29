@@ -81,13 +81,18 @@ public:
     for (auto &kv : _clients) {
       if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
         kv.second->end_session();
-        while (kv.second->_async_connection->queue_size() != 0) {
-          logger_info("server: wait stop of #", kv.first);
-          std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
       }
-      kv.second->close();
     }
+
+	for (auto &kv : _clients) {
+		if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
+			while (kv.second->_async_connection->queue_size() != 0) {
+				logger_info("server: wait stop of #", kv.first);
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			}
+		}
+		kv.second->close();
+	}
     _clients.clear();
   }
 
@@ -129,21 +134,25 @@ public:
     if (err) {
       THROW_EXCEPTION("dariadb::server: error on accept - " , err.message());
     }
+	if (this->_in_stop_logic) {
+		logger_info("server: in stop logic. connection refused.");
+	}
+	else {
+		logger_info("server: accept connection.");
 
-    logger_info("server: accept connection.");
+		auto cur_id = _next_client_id.load();
+		_next_client_id++;
 
-    auto cur_id = _next_client_id.load();
-    _next_client_id++;
+		ClientIO_ptr new_client{ new IOClient(cur_id, sock, &_env) };
 
-    ClientIO_ptr new_client{new IOClient(cur_id, sock, &_env)};
+		_clients_locker.lock();
+		_clients.insert(std::make_pair(new_client->_async_connection->id(), new_client));
+		_clients_locker.unlock();
 
-    _clients_locker.lock();
-    _clients.insert(std::make_pair(new_client->_async_connection->id(), new_client));
-    _clients_locker.unlock();
-
-    new_client->start();
-    socket_ptr new_sock(new ip::tcp::socket(_service));
-    start_accept(new_sock);
+		new_client->start();
+		socket_ptr new_sock(new ip::tcp::socket(_service));
+		start_accept(new_sock);
+	}
   }
 
   size_t connections_accepted() const { return _connections_accepted.load(); }
@@ -178,6 +187,7 @@ public:
 
   void write_begin() override { _writes_in_progress++; }
   void write_end() override { _writes_in_progress--; }
+  bool server_begin_stopping()const override { return _in_stop_logic; }
 
   void reset_ping_timer() {
     try {

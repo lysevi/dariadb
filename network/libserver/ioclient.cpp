@@ -166,6 +166,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
   DATA_KINDS kind = (DATA_KINDS)qh->kind;
   switch (kind) {
   case DATA_KINDS::APPEND: {
+	  if (this->env->srv->server_begin_stopping()) {
+		  logger_info("server: #", this->_async_connection->id(), " refuse append query. server in stop.");
+		  return;
+	  }
     auto hdr = reinterpret_cast<QueryAppend_header *>(&d->data);
     auto count = hdr->count;
     logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id,
@@ -193,6 +197,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     break;
   }
   case DATA_KINDS::READ_INTERVAL: {
+	  if (this->env->srv->server_begin_stopping()) {
+		  logger_info("server: #", this->_async_connection->id(), " refuse read_interval query. server in stop.");
+		  return;
+	  }
     auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -201,6 +209,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     break;
   }
   case DATA_KINDS::READ_TIMEPOINT: {
+	  if (this->env->srv->server_begin_stopping()) {
+		  logger_info("server: #", this->_async_connection->id(), " refuse read_timepoint query. server in stop.");
+		  return;
+	  }
     auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -209,6 +221,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     break;
   }
   case DATA_KINDS::CURRENT_VALUE: {
+	  if (this->env->srv->server_begin_stopping()) {
+		  logger_info("server: #", this->_async_connection->id(), " refuse current_value query. server in stop.");
+		  return;
+	  }
     auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -217,6 +233,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     break;
   }
   case DATA_KINDS::SUBSCRIBE: {
+	  if (this->env->srv->server_begin_stopping()) {
+		  logger_info("server: #", this->_async_connection->id(), " refuse subscribe query. server in stop.");
+		  return;
+	  }
     auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
     dont_free_memory = true;
     sendOk(query_hdr->id);
@@ -225,6 +245,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     break;
   }
   case DATA_KINDS::HELLO: {
+	  if (this->env->srv->server_begin_stopping()) {
+		  logger_info("server: #", this->_async_connection->id(), " refuse connection query. server in stop.");
+		  return;
+	  }
     QueryHello_header *qhh = reinterpret_cast<QueryHello_header *>(d->data);
     if (qhh->version != PROTOCOL_VERSION) {
       logger("server: #", _async_connection->id(),
