@@ -140,20 +140,20 @@ public:
     pr = ar = false;
 
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
 
     };
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
     };
 
     LockManager::instance()->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
-    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
 
     pm_async->wait();
     am_async->wait();
@@ -218,21 +218,21 @@ public:
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
 
     AsyncTask pm_at = [&p_clbk, &q](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       PageManager::instance()->foreach (q, p_clbk);
     };
 
 
     AsyncTask am_at = [&a_clbk, &q](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::READ, ti.kind);
+      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       AOFManager::instance()->foreach (q, a_clbk);
     };
 
     LockManager::instance()->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(pm_at));
-    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::READ, AT(am_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
 
     pm_async->wait();
     am_async->wait();

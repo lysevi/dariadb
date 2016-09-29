@@ -115,7 +115,7 @@ public:
 
     for (auto pname : pages) {
       AsyncTask at = [pname, &results, num, this, id](const ThreadInfo &ti) {
-        TKIND_CHECK(THREAD_COMMON_KINDS::FILE_READ, ti.kind);
+        TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
         Page_Ptr pg = open_page_to_read(pname);
         dariadb::Time lmin, lmax;
         if (pg->minMaxTime(id, &lmin, &lmax)) {
@@ -125,7 +125,7 @@ public:
         }
       };
       task_res[num] =
-          ThreadManager::instance()->post(THREAD_COMMON_KINDS::FILE_READ, AT(at));
+          ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
       num++;
     }
 
