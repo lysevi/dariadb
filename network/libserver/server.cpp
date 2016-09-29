@@ -90,8 +90,8 @@ public:
 				logger_info("server: wait stop of #", kv.first);
 				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 			}
+			kv.second->close();
 		}
-		kv.second->close();
 	}
     _clients.clear();
   }

@@ -154,8 +154,8 @@ void IOClient::onNetworkError(const boost::system::error_code &err) {
   if (state != CLIENT_STATE::DISCONNECTED) {
     logger_info("server: client #", this->_async_connection->id(), " network error - ", err.message());
     logger_info("server: client #", this->_async_connection->id(), " stoping...");
+	this->close();
   }
-  this->close();
 }
 
 void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
