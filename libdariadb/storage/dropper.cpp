@@ -113,9 +113,11 @@ void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArr
 
 			auto without_path = fs::extract_filename(fname);
 			auto page_fname = fs::filename(without_path);
-			PageManager::instance()->append(page_fname, *ma.get());
 
+			LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::DROP_AOF });
+			PageManager::instance()->append(page_fname, *ma.get());
 			AOFManager::instance()->erase(fname);
+			LockManager::instance()->unlock(LOCK_OBJECTS::DROP_AOF);
 		}
 		catch (std::exception &ex) {
 			THROW_EXCEPTION("Dropper::write_aof_to_page: ", ex.what());
