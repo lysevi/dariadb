@@ -28,7 +28,7 @@ public:
 
     auto ma = aof->readAll();
     aof = nullptr;
-    writed_count += ma.size();
+    writed_count += ma->size();
     files.insert(fname);
     dariadb::storage::Manifest::instance()->aof_rm(fname);
     dariadb::utils::fs::rm(dariadb::utils::fs::append_path(
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
     BOOST_CHECK(aof_files.size() == size_t(1));
     dariadb::storage::AOFile aof(aof_files.front(), true);
     auto all = aof.readAll();
-    BOOST_CHECK_EQUAL(all.size(), writes_count);
+    BOOST_CHECK_EQUAL(all->size(), writes_count);
   }
   dariadb::storage::Manifest::stop();
   dariadb::storage::Options::stop();

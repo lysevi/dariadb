@@ -255,18 +255,19 @@ public:
 
   std::string filename() const { return _filename; }
 
-  MeasArray readAll() {
+  std::shared_ptr<MeasArray> readAll() {
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = open_to_read();
 
-    MeasArray ma(Options::instance()->aof_max_size);
+    auto ma=std::make_shared<MeasArray>(Options::instance()->aof_max_size);
+	auto raw = ma.get();
     size_t pos = 0;
     while (1) {
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
         break;
       }
-      ma[pos] = val;
+      (*raw)[pos] = val;
       pos++;
     }
     std::fclose(file);
@@ -347,7 +348,7 @@ std::string AOFile::filename() const {
   return _Impl->filename();
 }
 
-MeasArray AOFile::readAll() {
+std::shared_ptr<MeasArray> AOFile::readAll() {
   return _Impl->readAll();
 }
 

@@ -34,11 +34,11 @@ void Dropper::drop_aof(const std::string &fname, const std::string &storage_path
 
   auto all = aof->readAll();
 
-  std::sort(all.begin(), all.end(), meas_time_compare_less());
+  std::sort(all->begin(), all->end(), meas_time_compare_less());
 
   auto without_path = fs::extract_filename(fname);
   auto page_fname = fs::filename(without_path);
-  PageManager::instance()->append(page_fname, all);
+  PageManager::instance()->append(page_fname, *all.get());
 
   aof = nullptr;
   AOFManager::instance()->erase(fname);
@@ -90,9 +90,7 @@ void Dropper::drop_aof_internal(const std::string fname) {
 
 	  auto all = aof->readAll();
 	  
-	  auto shared = std::make_shared<MeasArray>(std::move(all));
-
-	  this->write_aof_to_page(fname, shared);
+	  this->write_aof_to_page(fname, all);
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }

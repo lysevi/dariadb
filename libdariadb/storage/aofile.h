@@ -31,7 +31,7 @@ public:
 
   std::string filename() const;
 
-  MeasArray readAll();
+  std::shared_ptr<MeasArray> readAll();
   static size_t writed(std::string fname);
 
 protected:
