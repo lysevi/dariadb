@@ -11,10 +11,5 @@ public:
    virtual ~IAofDropper(){}
 };
 
-class ICapDropper {
-public:
-  virtual void drop_cap(const std::string &fname) = 0;
-    virtual ~ICapDropper(){}
-};
 }
 }
