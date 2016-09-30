@@ -1,15 +1,18 @@
 v0.2.0
 =====
-- Engine version in manifest.
-- Engine write strategies.
-- New algorithm to drop values between levels depending on the strategies.
-- New logger interface.
-- Full featured server with client library(C++).
-- Now can remove old compressed pages.
-- New compression algorithm: speed increased by 3 times.
-- Flag 'source' was removed from measurement.
-- Measurement Id is uint32_t.
-- Remove COLA layer.
+Server:
+   - Full featured server with client library(C++).
+Storage:
+   - Engine version in manifest.
+   - Engine write strategies.
+   - New algorithm to drop values between levels depending on the strategies.
+   - New logger interface.
+   - Now can remove old compressed pages.
+   - New compression algorithm: speed increased by 3 times.
+   - Flag 'source' was removed from measurement.
+   - Measurement Id is uint32_t.
+   - Remove COLA layer.
+   - Speed up dropping data between layers.
 
 v0.1.1
 =====
