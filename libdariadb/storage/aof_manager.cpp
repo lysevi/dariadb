@@ -344,7 +344,7 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
       if (it == meases.end()) {
         meases.insert(std::make_pair(kv.first, kv.second));
       } else {
-        if (it->second.flag == Flags::_NO_DATA) {
+        if ((it->second.flag == Flags::_NO_DATA) || (it->second.time<kv.second.time)) {
           meases[kv.first] = kv.second;
         }
       }

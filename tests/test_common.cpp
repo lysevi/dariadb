@@ -252,8 +252,8 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
   current_mlist = as->currentValue(_all_ids_array, 0);
 
-  if (current_mlist.size() == 0) {
-    throw MAKE_EXCEPTION("current_mlist.size()>0");
+  if (current_mlist.size() != _all_ids_set.size()) {
+    throw MAKE_EXCEPTION("current_mlist.size()!= _all_ids_set.size()");
   }
 
   as->flush();
