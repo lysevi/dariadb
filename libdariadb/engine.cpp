@@ -1,6 +1,7 @@
 #include "engine.h"
 #include "config.h"
 #include "flags.h"
+#include "timeutil.h"
 #include "storage/dropper.h"
 #include "storage/lock_manager.h"
 #include "storage/manifest.h"
@@ -185,11 +186,37 @@ public:
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    LockManager::instance()->lock(LOCK_KIND::READ, {LOCK_OBJECTS::AOF});
-    auto result = AOFManager::instance()->currentValue(ids, flag);
+    LockManager::instance()->lock(LOCK_KIND::READ,
+                                  {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+    Id2Meas a_result, p_result;
+    AsyncTask am_at = [&ids,flag,&a_result](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      a_result = AOFManager::instance()->currentValue(ids, flag);
+    };
 
-    LockManager::instance()->unlock({LOCK_OBJECTS::AOF});
+    AsyncTask pm_at = [&ids,flag,&p_result](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      QueryTimePoint qt(ids, flag, dariadb::timeutil::current_time());
+      p_result = PageManager::instance()->valuesBeforeTimePoint(qt);
+    };
 
+
+    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
+
+    pm_async->wait();
+    am_async->wait();
+    LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+
+    Id2Meas result;
+    for (auto &r : a_result) {
+      auto fres = p_result.find(r.second.id);
+      if (fres != p_result.end() && fres->second.time > r.second.time) {
+        result.insert(std::make_pair(r.second.id, fres->second));
+      } else {
+        result.insert(std::make_pair(r.second.id, r.second));
+      }
+    }
     return result;
   }
 
