@@ -14,7 +14,7 @@
 
 namespace dariadb {
 namespace net {
-
+   const int PING_TIMER_INTERVAL = 1000;
 struct IOClient{
 
   struct Environment {
@@ -47,15 +47,6 @@ struct IOClient{
     void send_buffer();
   };
 
-  socket_ptr sock;
-  std::string host;
-
-  CLIENT_STATE state;
-  Environment *env;
-  std::atomic_int pings_missed;
-  //std::list<storage::IReaderClb *> readers;
-  std::shared_ptr<storage::IReaderClb> subscribe_reader;
-
   IOClient(int _id, socket_ptr &_sock, Environment *_env);
   ~IOClient();
   void start(){
@@ -76,6 +67,15 @@ struct IOClient{
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
 
+  Time _last_query_time;
+  socket_ptr sock;
+  std::string host;
+
+  CLIENT_STATE state;
+  Environment *env;
+  std::atomic_int pings_missed;
+  //std::list<storage::IReaderClb *> readers;
+  std::shared_ptr<storage::IReaderClb> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
 };
 

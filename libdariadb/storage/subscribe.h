@@ -26,10 +26,10 @@ struct SubscribeNotificator {
 
   SubscribeNotificator() = default;
   ~SubscribeNotificator();
-  // TODO must work in thread;
   void start();
   void stop();
   void add(const SubscribeInfo_ptr &n);
+  //TODO replace Meas to MEasArray and run on thread.
   void on_append(const dariadb::Meas &m) const;
 };
 }

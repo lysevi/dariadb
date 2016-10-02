@@ -22,7 +22,6 @@ using namespace dariadb::net;
 
 typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
 
-const int PING_TIMER_INTERVAL = 1000;
 const int INFO_TIMER_INTERVAL = 10000;
 const int MAX_MISSED_PINGS = 100;
 

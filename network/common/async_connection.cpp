@@ -87,6 +87,9 @@ void AsyncConnection::readNextAsync() {
     async_read(*spt.get(), buffer((uint8_t *)(&d->size), MARKER_SIZE),
                [ptr, d, spt](auto err, auto read_bytes) {
                  if (err) {
+                     if(err == boost::asio::error::operation_aborted){
+                         return;
+                     }
                    ptr->_on_error_handler(err);
                  } else {
                    if (read_bytes != MARKER_SIZE) {

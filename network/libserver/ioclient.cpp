@@ -107,7 +107,8 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
   state = CLIENT_STATE::CONNECT;
   sock = _sock;
   env = _env;
-  
+  _last_query_time=dariadb::timeutil::current_time();
+
   AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
 	  onDataRecv(d, cancel, dont_free_memory);
   };
@@ -134,32 +135,40 @@ void IOClient::end_session() {
 }
 
 void IOClient::close() {
-  state = CLIENT_STATE::DISCONNECTED;
-  _async_connection->mark_stoped();
-  if (this->sock->is_open()) {
-	  _async_connection->full_stop();
+    if(state != CLIENT_STATE::DISCONNECTED){
+        state = CLIENT_STATE::DISCONNECTED;
+        _async_connection->mark_stoped();
+        if (this->sock->is_open()) {
+            _async_connection->full_stop();
 
-    this->sock->close();
-  }
-  logger_info("server: client #", this->_async_connection->id(), " stoped.");
+            this->sock->close();
+        }
+        _async_connection=nullptr;
+        logger_info("server: client #", this->_async_connection->id(), " stoped.");
+    }
 }
 
 void IOClient::ping() {
+    auto delta_time=(dariadb::timeutil::current_time()-_last_query_time);
+    if(delta_time<PING_TIMER_INTERVAL){
+        return;
+    }
   pings_missed++;
   auto nd = this->_async_connection->get_pool()->construct(DATA_KINDS::PING);
   this->_async_connection->send(nd);
 }
 
 void IOClient::onNetworkError(const boost::system::error_code &err) {
-  if (state != CLIENT_STATE::DISCONNECTED) {
-    logger_info("server: client #", this->_async_connection->id(), " network error - ", err.message());
-    logger_info("server: client #", this->_async_connection->id(), " stoping...");
-	this->close();
-  }
+    if (state != CLIENT_STATE::DISCONNECTED) {
+      logger_info("server: client #", this->_async_connection->id(), " network error - ", err.message());
+      logger_info("server: client #", this->_async_connection->id(), " stoping...");
+      this->close();
+    }
 }
 
 void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
                           bool &dont_free_memory) {
+  _last_query_time=dariadb::timeutil::current_time();
   // logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
   auto qh = reinterpret_cast<Query_header *>(d->data);
 
