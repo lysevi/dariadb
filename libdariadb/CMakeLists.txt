@@ -1,4 +1,4 @@
-configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.cmake ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/config.h.cmake ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
 include_directories(..)
 
 FILE(GLOB GLOB_HDRS "*.h")
@@ -28,6 +28,8 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
 	 ${STORE_HDRS} ${STORE_SRC} 
 	 ${UTILS_HDRS}  ${UTILS_SRC} 
          ${INTERFACES_HDRS} ${INTERFACES_SRC})
+
+SET(DARIADB_STORAGE_LIBS libdariadb ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build storage.")
 
 if(MSVC)
         add_library(libdariadb STATIC ${SRC})
