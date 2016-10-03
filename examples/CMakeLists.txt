@@ -1,15 +1,15 @@
 cmake_minimum_required (VERSION 3.1)
-set(PROJECT "dariadb-subproject")
+set(PROJECT "dariadb-example")
 project (${PROJECT} VERSION 0.1.0)
 
 set(ENABLE_TESTS OFF)
 set(ENABLE_METRICS OFF)
 set(ENABLE_INTEGRATION_TESTS OFF)
-set(ENABLE_SERVER OFF)
+set(ENABLE_SERVER ON)
 set(ENABLE_BENCHMARKS OFF)
 
 add_subdirectory(dariadb)
 include_directories(dariadb)
 LINK_DIRECTORIES(${DARIADB_LIB_PATH})
 add_executable(main main.cpp)
-target_link_libraries(main ${DARIADB_STORAGE_LIBS})
+target_link_libraries(main ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS})
