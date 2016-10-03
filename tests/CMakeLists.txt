@@ -15,8 +15,10 @@ macro(TEST_CASE name src)
         set_target_properties(${name} PROPERTIES FOLDER Tests)
 endmacro(TEST_CASE)
 
-TEST_CASE(net_test net_test.cpp)
-TARGET_LINK_LIBRARIES(net_test libdariadb-cl libnet-server)
+if(ENABLE_SERVER)
+   TEST_CASE(net_test net_test.cpp)
+   TARGET_LINK_LIBRARIES(net_test libdariadb-cl libnet-server)
+endif(ENABLE_SERVER)
 
 TEST_CASE(engine_test engine_test.cpp)
 TEST_CASE(aof_test aof_test.cpp)

@@ -44,6 +44,20 @@ $ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-de
 $ export CC="gcc-6"
 $ export CXX="g++-6"
 ```
+### Available build options
+- ENABLE_TESTS - Enable testing of the dariadb. - ON
+- ENABLE_METRICS - Enable code metrics. - ON
+- ENABLE_INTEGRATION_TESTS - Enable integration test. - ON
+- ENABLE_SERVER - Enable build dariadb server. - ON
+- ENABLE_BENCHMARKS - Enable build dariadb benchmarks. - ON
+- CLANG_ASAN_UBSAN  - Enable Clang address & undefined behavior sanitizer for binary. - OFF
+- CLANG_MSAN - Enable Clang memory sanitizer for binary. - OFF
+
+#### Example
+Configure to build with all benchmarks, but without tests and server.
+```shell
+$ cmake -DENABLE_TESTS=OFF -DENABLE_INTEGRATION_TESTS=OFF -DENABLE_BENCHMARKS=ON -DENABLE_SERVER=OFF . 
+```
 
 ###clang
 ---
