@@ -11,8 +11,9 @@ set(ENABLE_SERVER ON)
 set(ENABLE_BENCHMARKS OFF)
 
 add_subdirectory(dariadb)
-include_directories(dariadb)
+INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
 LINK_DIRECTORIES(${DARIADB_LIB_PATH})
-add_executable(main main.cpp)
-target_link_libraries(main ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS})
+add_executable(example main.cpp)
+target_link_libraries(example ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS})
 ```

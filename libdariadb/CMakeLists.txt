@@ -1,5 +1,5 @@
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/config.h.cmake ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
-include_directories(..)
+INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
 
 FILE(GLOB GLOB_HDRS "*.h")
 FILE(GLOB COMPRESSION_HDRS "compression/*.h")

@@ -1,5 +1,5 @@
-include_directories(..)
-include_directories(../network)
+INCLUDE_DIRECTORIES(${DARIADB_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
 
 add_library(libcommon_test STATIC test_common.cpp test_common.h)
 TARGET_LINK_LIBRARIES(libcommon_test libdariadb ${Boost_LIBRARIES})
