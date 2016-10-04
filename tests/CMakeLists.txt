@@ -10,14 +10,16 @@ MESSAGE(STATUS "Test: " ${name})
 macro(TEST_CASE name src)
 	MESSAGE(STATUS " +" ${name} ": " "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}")
 	add_executable(${name} ${src})
-        TARGET_LINK_LIBRARIES(${name} libcommon_test libdariadb ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
-	add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name})
-        set_target_properties(${name} PROPERTIES FOLDER Tests)
+    
+	TARGET_LINK_LIBRARIES(${name} libcommon_test ${DARIADB_STORAGE_LIBS})
+	
+	add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}) 
+	set_target_properties(${name} PROPERTIES FOLDER Tests)
 endmacro(TEST_CASE)
 
 if(ENABLE_SERVER)
    TEST_CASE(net_test net_test.cpp)
-   TARGET_LINK_LIBRARIES(net_test libdariadb-cl libnet-server)
+   TARGET_LINK_LIBRARIES(net_test ${DARIADB_CLIENT_LIBS} libnet-server)
 endif(ENABLE_SERVER)
 
 TEST_CASE(engine_test engine_test.cpp)

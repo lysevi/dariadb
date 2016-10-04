@@ -5,14 +5,12 @@ MESSAGE(STATUS "Benchmarks: ")
 
 macro(ADD_BENCHARK name src)
         MESSAGE(STATUS " +" ${name})
+
         add_executable(${name} ${src} bench_common.h)
 
-        target_link_libraries(${name}
-                                ${CMAKE_THREAD_LIBS_INIT}
-                                ${Boost_LIBRARIES}
-                                libdariadb)
+        target_link_libraries(${name} ${DARIADB_STORAGE_LIBS})
 
-         set_target_properties(${name} PROPERTIES FOLDER Benchmarks)
+        set_target_properties(${name} PROPERTIES FOLDER Benchmarks)
 endmacro(ADD_BENCHARK)
 
 ADD_BENCHARK(compression_benchmark compression_benchmark.cpp)
@@ -21,7 +19,7 @@ ADD_BENCHARK(engine_benchmark engine_benchmark.cpp)
 
 if(ENABLE_SERVER)
 ADD_BENCHARK(network_benchmark network_benchmark.cpp)
-TARGET_LINK_LIBRARIES(network_benchmark libdariadb-cl libnet-server)
+TARGET_LINK_LIBRARIES(network_benchmark ${DARIADB_CLIENT_LIBS} libnet-server)
 endif(ENABLE_SERVER)
 
 macro(ADD_PERF_TEST name)
