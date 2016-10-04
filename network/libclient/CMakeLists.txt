@@ -22,3 +22,5 @@ GENERATE_EXPORT_HEADER(libdariadb-cl
 IF(WIN32)
  target_link_libraries(libdariadb-cl wsock32 ws2_32)
 endif(WIN32)
+
+SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build client.")

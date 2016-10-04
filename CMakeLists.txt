@@ -92,6 +92,7 @@ ENDIF(WIN32)
 IF(Boost_FOUND)
   INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
   LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+  SET(DARIADB_LIB_PATH ${Boost_LIBRARY_DIRS} CACHE STRING "")
 else(Boost_FOUND)
   MESSAGE(FATAL_ERROR "boost not found")
   EXIT()
@@ -163,11 +164,12 @@ endif(ENABLE_METRICS)
 
 include_directories(extern)
 include_directories(extern/spdlog/include)
+SET(DARIADB_STORAGE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "dariadb storage include dir for storage engine.")
+
 add_subdirectory (libdariadb)
 
 if(ENABLE_SERVER)
 add_subdirectory (network)
-include_directories(network)
 endif(ENABLE_SERVER)
 
 if (ENABLE_TESTS)

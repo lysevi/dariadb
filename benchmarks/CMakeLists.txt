@@ -1,5 +1,6 @@
-include_directories(..)
-include_directories(../network)
+INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
+
 MESSAGE(STATUS "Benchmarks: ")
 
 macro(ADD_BENCHARK name src)

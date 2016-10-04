@@ -1,0 +1,19 @@
+cmake file
+```cmake
+cmake_minimum_required (VERSION 3.1)
+set(PROJECT "dariadb-example")
+project (${PROJECT} VERSION 0.1.0)
+
+set(ENABLE_TESTS OFF)
+set(ENABLE_METRICS OFF)
+set(ENABLE_INTEGRATION_TESTS OFF)
+set(ENABLE_SERVER ON)
+set(ENABLE_BENCHMARKS OFF)
+
+add_subdirectory(dariadb)
+INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
+LINK_DIRECTORIES(${DARIADB_LIB_PATH})
+add_executable(example main.cpp)
+target_link_libraries(example ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS})
+```

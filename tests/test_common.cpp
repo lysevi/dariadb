@@ -2,9 +2,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <libdariadb/flags.h>
 #include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/utils.h>
 
 namespace dariadb_test {
 #undef NO_DATA
