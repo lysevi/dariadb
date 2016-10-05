@@ -33,11 +33,11 @@ SET(DARIADB_STORAGE_LIBS libdariadb ${Boost_LIBRARIES} CACHE STRING "Dariadb lib
 
 if(MSVC)
         add_library(libdariadb STATIC ${SRC})
-else(MSVC)
+else()
         add_library(libdariadb SHARED ${SRC})
         TARGET_LINK_LIBRARIES(libdariadb ${Boost_LIBRARIES})
-endif(MSVC)
+endif()
 
 IF(WIN32)
  target_link_libraries(libdariadb wsock32 ws2_32)
-endif(WIN32)
+endif()
