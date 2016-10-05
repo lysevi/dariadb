@@ -4,7 +4,7 @@
 #include <type_traits>
 
 namespace dariadb {
-namespace utils {
+namespace ads {
 
 template <typename K, typename V> 
 class RadixPlusTree {

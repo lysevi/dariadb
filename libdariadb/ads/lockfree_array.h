@@ -1,13 +1,12 @@
 #pragma once
 
-#include "../utils/locker.h"
 #include <atomic>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
 
 namespace dariadb {
-namespace utils {
+namespace ads {
 
 template <typename T> class LockFreeArray {
   static_assert(std::is_pod<T>::value || std::is_copy_assignable<T>::value ||
@@ -27,11 +26,38 @@ public:
     std::fill(_array, _array + _size, T());
   }
 
-  LockFreeArray(const LockFreeArray &other) = delete;
   LockFreeArray(LockFreeArray &&other)
       : _size(other._size), _pos(other._pos.load()), _array(other._array) {
     other._size = 0;
     other._array = nullptr;
+  }
+
+  LockFreeArray(const LockFreeArray&other) {
+	  _size = other._size;
+	  _pos.store(other._pos);
+	  _array = new std::atomic<T>[_size];
+	  for (size_t i = 0; i < _size; ++i) {
+		  _array[i].store(other._array[i].load());
+	  }
+  }
+  LockFreeArray &operator=(const LockFreeArray& other) {
+	  if (this == &other) {
+		  return *this;
+	  }
+	  _size = other._size;
+	  _pos.store(other._pos);
+	  _array = new std::atomic<T>[_size];
+	  for (size_t i = 0; i < _size; ++i) {
+		  _array[i].store(other._array[i].load());
+	  }
+	  return *this;
+  }
+  LockFreeArray &operator=(LockFreeArray &&other){
+	  _size = other._size;
+	  _pos.store(other._pos.load());
+	  _array = other._array;
+	  other._size = 0;
+	  other._array = nullptr;
   }
   ~LockFreeArray() {
     if (_array != nullptr) {
