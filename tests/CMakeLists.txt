@@ -8,7 +8,8 @@ set_target_properties(libcommon_test PROPERTIES FOLDER Tests)
 MESSAGE(STATUS "Test: " ${name})
 
 macro(TEST_CASE name src)
-	MESSAGE(STATUS " +" ${name} ": " "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}")
+	#MESSAGE(STATUS " +" ${name} ": " "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}")
+	MESSAGE(STATUS " +" ${name})
 	add_executable(${name} ${src})
     
 	TARGET_LINK_LIBRARIES(${name} libcommon_test ${DARIADB_STORAGE_LIBS})
