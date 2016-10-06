@@ -44,8 +44,7 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) 
 	  start = std::chrono::duration_cast<std::chrono::milliseconds>(
 		  std::chrono::system_clock::now().time_since_epoch());
 	  for (auto i = from; i < to; i += step) {
-		  m.time = i;
-		  tree.find(i);
+          tree.find(i, &m);
 	  }
 	  end = std::chrono::duration_cast<std::chrono::milliseconds>(
 		  std::chrono::system_clock::now().time_since_epoch());
@@ -71,8 +70,7 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) 
 
 	  start = std::chrono::duration_cast<std::chrono::milliseconds>(
 		  std::chrono::system_clock::now().time_since_epoch());
-	  for (auto i = from; i < to; i += step) {
-		  m.time = i;
+      for (auto i = from; i < to; i += step) {
 		  meas_map.find(i);
 	  }
 	  end = std::chrono::duration_cast<std::chrono::milliseconds>(

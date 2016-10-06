@@ -107,32 +107,28 @@ BOOST_AUTO_TEST_CASE(RadixNodeInsertionTest) {
   int V1 = 1;
   tree.insert(K1, V1);
   BOOST_CHECK_EQUAL(tree.keys_count(), size_t(1));
-  auto result = tree.find(K1);
-
-  BOOST_CHECK_EQUAL(result.size(), size_t(1));
-  BOOST_CHECK_EQUAL(result.front(), V1);
+  int result = 0;
+  BOOST_CHECK(tree.find(K1,&result));
+  BOOST_CHECK_EQUAL(result, V1);
 
   for (uint16_t i = 1; i < 1000; ++i) {
     auto cur_V = int(i);
     tree.insert(i, int(i));
-    result = tree.find(i);
-    BOOST_CHECK_EQUAL(result.size(), size_t(1));
-    BOOST_CHECK_EQUAL(result.front(), cur_V);
+    BOOST_CHECK(tree.find(i,&result));
+    BOOST_CHECK_EQUAL(result, cur_V);
   }
 
   for (uint16_t i = 2000; i > 1500; --i) {
     auto cur_V = int(i);
     tree.insert(i, int(i));
-    result = tree.find(i);
-    BOOST_CHECK_EQUAL(result.size(), size_t(1));
-    BOOST_CHECK_EQUAL(result.front(), cur_V);
+    BOOST_CHECK(tree.find(i,&result));
+    BOOST_CHECK_EQUAL(result, cur_V);
   }
 
   for (uint16_t i = 1100; i < 1300; ++i) {
     auto cur_V = int(i);
     tree.insert(i, int(i));
-    result = tree.find(i);
-    BOOST_CHECK_EQUAL(result.size(), size_t(1));
-    BOOST_CHECK_EQUAL(result.front(), cur_V);
+    BOOST_CHECK(tree.find(i,&result));
+    BOOST_CHECK_EQUAL(result, cur_V);
   }
 }

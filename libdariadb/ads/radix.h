@@ -5,16 +5,13 @@
 #include <list>
 #include <tuple>
 #include <type_traits>
+#include <vector>
 
 namespace dariadb {
 namespace ads {
 
-template <typename K, typename V, typename KeySplitter,
-          typename NodeContainer = std::list<V>>
+template <typename K, typename V, typename KeySplitter>
 class RadixPlusTree {
-
-  static_assert(std::is_default_constructible<NodeContainer>::value,
-                "NodeContainer must be trivially constructible.");
   static_assert(std::is_default_constructible<KeySplitter>::value,
                 "KeySplitter must be trivially constructible.");
   static_assert(std::is_pod<V>::value || std::is_copy_assignable<V>::value,
@@ -22,9 +19,15 @@ class RadixPlusTree {
 
 public:
   struct Node {
+    using KV = std::pair<size_t, V>;
     using Node_Ptr = Node *;
     Node(RadixPlusTree *_rdt, size_t _level, size_t _size)
         : childs(_size), level(_level), size(_size), rdt(_rdt) {}
+
+    Node(RadixPlusTree *_rdt, size_t _level, size_t _size, bool _is_leaf)
+        : childs(), level(_level), size(_size), rdt(_rdt),
+          _leaf_values(_size), is_leaf(_is_leaf) {}
+
     ~Node() {
       for (size_t i = 0; i < childs.size(); ++i) {
         delete childs[i];
@@ -41,7 +44,13 @@ public:
         return old;
       }
       auto new_level_num = level + 1;
-      auto new_child = new Node(rdt, new_level_num, rdt->level_size(new_level_num));
+      Node_Ptr new_child =nullptr;
+
+      if(new_level_num==KeySplitter::levels_count-1){
+          new_child=new Node(rdt, new_level_num, rdt->level_size(new_level_num), true);
+      }else{
+          new_child=new Node(rdt, new_level_num, rdt->level_size(new_level_num));
+      }
 
       childs.compare_exchange(index, old, new_child);
       if (old != nullptr) {
@@ -51,12 +60,19 @@ public:
         return new_child;
       }
     }
-    void append(const V &v) { this->values.push_back(v); }
+    void append(const V &v) {
+        value=v;
+    }
+    void append(const size_t key, const V &v) {
+        this->_leaf_values[key]=std::make_pair(key,v);
+    }
     LockFreeArray<Node_Ptr> childs;
     size_t level;
     size_t size;
     RadixPlusTree *rdt;
-    NodeContainer values;
+    V value;
+    std::vector<KV> _leaf_values;
+    bool is_leaf;
   };
 
   RadixPlusTree() {
@@ -66,34 +82,43 @@ public:
   ~RadixPlusTree() { delete _head; }
 
   size_t keys_count() const { return _keys_count; }
-  size_t level_size(size_t level_num) const { return _splitter.level_size(level_num); }
+  size_t level_size(size_t level_num) const {
+    return _splitter.level_size(level_num);
+  }
 
   void insert(const K &k, const V &v) {
     typename KeySplitter::splited_key splited_k = _splitter.split(k);
     size_t pos = 0;
     auto cur = _head;
-    for (; pos < KeySplitter::levels_count; ++pos) {
+    for (; pos < KeySplitter::levels_count-1; ++pos) {
       cur = cur->create_or_get(splited_k[pos]);
     }
-    cur->append(v);
+    if(cur->is_leaf){
+        cur->append(splited_k[pos],v);
+    }else{
+        cur->append(v);
+    }
     _keys_count += 1;
   }
 
-  NodeContainer find(const K &k) const {
-    NodeContainer result;
-	typename KeySplitter::splited_key splited_k = _splitter.split(k);
+  bool find(const K &k, V*out) const {
+    typename KeySplitter::splited_key splited_k = _splitter.split(k);
     size_t pos = 0;
     auto cur = _head;
-    for (; pos < KeySplitter::levels_count; ++pos) {
+    for (; pos < KeySplitter::levels_count-1; ++pos) {
       cur = cur->get(splited_k[pos]);
       if (cur == nullptr) {
-        return result;
+        return false;
       }
     }
-    for (auto v : cur->values) {
-      result.push_back(v);
+    if(cur->is_leaf){
+        auto v=cur->_leaf_values[splited_k[pos]];
+        *out=v.second;
+    }else{
+        *out=cur->value;
     }
-    return result;
+
+    return true;
   }
 
 protected:
