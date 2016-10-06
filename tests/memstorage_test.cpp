@@ -6,7 +6,7 @@
 #include <libdariadb/ads/radix.h>
 #include <libdariadb/meas.h>
 
-BOOST_AUTO_TEST_CASE(TypeTraitArrayLockFreeTest) {
+BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
   dariadb::ads::LockFreeArray<int> lf(10);
   BOOST_CHECK_EQUAL(lf.size(), size_t(10));
 
@@ -54,7 +54,26 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(TypeTraitsForMeasurement) {
+BOOST_AUTO_TEST_CASE(RadixTypeTraitsTest) {
   dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas> tree;
   BOOST_CHECK_EQUAL(tree.keys_count(), size_t(0));
+}
+
+BOOST_AUTO_TEST_CASE(RadixNodeTest) {
+	using MeasTree=dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas>;
+	MeasTree::Node node2(0,2);
+	BOOST_CHECK(!node2.childExists(0));
+	BOOST_CHECK(!node2.childExists(1));
+
+	auto child0 = node2.create_or_get(0);
+	auto child1 = node2.create_or_get(1);
+
+	BOOST_CHECK(child0 != nullptr);
+	BOOST_CHECK(child1 != nullptr);
+
+	auto child01 = node2.create_or_get(0);
+	auto child11 = node2.create_or_get(1);
+	
+	BOOST_CHECK_EQUAL(child0, child01);
+	BOOST_CHECK_EQUAL(child1, child11);
 }
