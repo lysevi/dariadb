@@ -2,7 +2,7 @@
 #include <iostream>
 #include <map>
 #include <cmath>
-#include <libdariadb/ads/radix.h>
+#include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/meas.h>
 
 template <class T> struct KeySplitter {
@@ -24,8 +24,8 @@ template <class T> struct KeySplitter {
 };
 
 void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) {
-  std::cout << "RadixPlusTree: one thread benchmark..." << std::endl;
-  using TestTree = dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas,
+  std::cout << "FixedTree: one thread benchmark..." << std::endl;
+  using TestTree = dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas,
                                                KeySplitter<dariadb::Time>>;
   TestTree tree;
   auto m = dariadb::Meas::empty();

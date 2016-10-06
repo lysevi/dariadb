@@ -11,7 +11,7 @@ namespace dariadb {
 namespace ads {
 
 template <typename K, typename V, typename KeySplitter>
-class RadixPlusTree {
+class FixedTree {
   static_assert(std::is_default_constructible<KeySplitter>::value,
                 "KeySplitter must be trivially constructible.");
   static_assert(std::is_pod<V>::value || std::is_copy_assignable<V>::value,
@@ -21,10 +21,10 @@ public:
   struct Node {
     using KV = std::pair<size_t, V>;
     using Node_Ptr = Node *;
-    Node(RadixPlusTree *_rdt, size_t _level, size_t _size)
+    Node(FixedTree *_rdt, size_t _level, size_t _size)
         : childs(_size), level(_level), size(_size), rdt(_rdt) {}
 
-    Node(RadixPlusTree *_rdt, size_t _level, size_t _size, bool _is_leaf)
+    Node(FixedTree *_rdt, size_t _level, size_t _size, bool _is_leaf)
         : childs(), level(_level), size(_size), rdt(_rdt),
           _leaf_values(_size), is_leaf(_is_leaf) {}
 
@@ -69,17 +69,17 @@ public:
     LockFreeArray<Node_Ptr> childs;
     size_t level;
     size_t size;
-    RadixPlusTree *rdt;
+    FixedTree *rdt;
     V value;
     std::vector<KV> _leaf_values;
     bool is_leaf;
   };
 
-  RadixPlusTree() {
+  FixedTree() {
     _head = new Node(this, size_t(0), this->level_size(0));
     _keys_count.store(size_t(0));
   }
-  ~RadixPlusTree() { delete _head; }
+  ~FixedTree() { delete _head; }
 
   size_t keys_count() const { return _keys_count; }
   size_t level_size(size_t level_num) const {

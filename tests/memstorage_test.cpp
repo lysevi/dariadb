@@ -4,7 +4,7 @@
 #include <cmath>
 #include <boost/test/unit_test.hpp>
 #include <libdariadb/ads/lockfree_array.h>
-#include <libdariadb/ads/radix.h>
+#include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/meas.h>
 
 BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
@@ -73,14 +73,14 @@ template <class T> struct KeySplitter {
 	}
 };
 
-BOOST_AUTO_TEST_CASE(RadixTypeTraitsTest) {
-  dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>>
+BOOST_AUTO_TEST_CASE(FixedTreeTypeTraitsTest) {
+  dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>>
       tree;
   BOOST_CHECK_EQUAL(tree.keys_count(), size_t(0));
 }
 
-BOOST_AUTO_TEST_CASE(RadixNodeTest) {
-  using MeasTree = dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas,
+BOOST_AUTO_TEST_CASE(FixedTreeNodeTest) {
+  using MeasTree = dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas,
                                                KeySplitter<dariadb::Time>>;
   MeasTree tree;
   MeasTree::Node node2(&tree, 0, 2);
@@ -100,8 +100,8 @@ BOOST_AUTO_TEST_CASE(RadixNodeTest) {
   BOOST_CHECK_EQUAL(child1, child11);
 }
 
-BOOST_AUTO_TEST_CASE(RadixNodeInsertionTest) {
-  using TestTree = dariadb::ads::RadixPlusTree<uint16_t, int, KeySplitter<uint16_t>>;
+BOOST_AUTO_TEST_CASE(FixedTreeNodeInsertionTest) {
+  using TestTree = dariadb::ads::FixedTree<uint16_t, int, KeySplitter<uint16_t>>;
   TestTree tree;
   uint16_t K1 = 0;
   int V1 = 1;
