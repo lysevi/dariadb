@@ -33,7 +33,7 @@ public:
 
     bool childExists(size_t index) { return childs[index] != nullptr; }
 
-    const Node_Ptr get(size_t index) const { return childs[index]; }
+    Node_Ptr get(size_t index) const { return childs[index]; }
 
     Node_Ptr create_or_get(size_t index) {
       auto old = childs[index];

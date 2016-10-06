@@ -1,8 +1,9 @@
 #include <chrono>
 #include <iostream>
+#include <map>
+#include <cmath>
 #include <libdariadb/ads/radix.h>
 #include <libdariadb/meas.h>
-#include <map>
 
 template <class T> struct KeySplitter {
   static const size_t levels_count = sizeof(T);

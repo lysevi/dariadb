@@ -1,6 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 
+#include <cmath>
 #include <boost/test/unit_test.hpp>
 #include <libdariadb/ads/lockfree_array.h>
 #include <libdariadb/ads/radix.h>
@@ -105,7 +106,7 @@ BOOST_AUTO_TEST_CASE(RadixNodeInsertionTest) {
   uint16_t K1 = 0;
   int V1 = 1;
   tree.insert(K1, V1);
-  BOOST_CHECK_EQUAL(tree.keys_count(), 1);
+  BOOST_CHECK_EQUAL(tree.keys_count(), size_t(1));
   auto result = tree.find(K1);
 
   BOOST_CHECK_EQUAL(result.size(), size_t(1));
