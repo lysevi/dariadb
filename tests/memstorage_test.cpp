@@ -57,7 +57,10 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
 template <class T> struct KeySplitter {
   static const size_t levels_count = sizeof(T);
   typedef std::array<size_t, levels_count> splited_key;
-  size_t level_size(size_t level_num) const { return sizeof(T) * 256; }
+  size_t level_size(size_t level_num) const {
+    auto res = std::pow(2, sizeof(uint8_t) * 8);
+    return res;
+  }
 
   splited_key split(const T &k) const {
     splited_key result;

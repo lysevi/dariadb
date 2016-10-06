@@ -33,7 +33,7 @@ public:
 
     bool childExists(size_t index) { return childs[index] != nullptr; }
 
-    const Node_Ptr get(size_t index) { return childs[index]; }
+    const Node_Ptr get(size_t index) const { return childs[index]; }
 
     Node_Ptr create_or_get(size_t index) {
       auto old = childs[index];
@@ -69,7 +69,7 @@ public:
   size_t level_size(size_t level_num) const { return _splitter.level_size(level_num); }
 
   void insert(const K &k, const V &v) {
-    KeySplitter::splited_key splited_k = _splitter.split(k);
+    typename KeySplitter::splited_key splited_k = _splitter.split(k);
     size_t pos = 0;
     auto cur = _head;
     for (; pos < KeySplitter::levels_count; ++pos) {
@@ -81,7 +81,7 @@ public:
 
   NodeContainer find(const K &k) const {
     NodeContainer result;
-    KeySplitter::splited_key splited_k = _splitter.split(k);
+	typename KeySplitter::splited_key splited_k = _splitter.split(k);
     size_t pos = 0;
     auto cur = _head;
     for (; pos < KeySplitter::levels_count; ++pos) {
