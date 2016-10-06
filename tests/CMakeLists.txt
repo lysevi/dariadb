@@ -8,7 +8,8 @@ set_target_properties(libcommon_test PROPERTIES FOLDER Tests)
 MESSAGE(STATUS "Test: " ${name})
 
 macro(TEST_CASE name src)
-	MESSAGE(STATUS " +" ${name} ": " "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}")
+	#MESSAGE(STATUS " +" ${name} ": " "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}")
+	MESSAGE(STATUS " +" ${name})
 	add_executable(${name} ${src})
     
 	TARGET_LINK_LIBRARIES(${name} libcommon_test ${DARIADB_STORAGE_LIBS})
@@ -20,7 +21,7 @@ endmacro(TEST_CASE)
 if(ENABLE_SERVER)
    TEST_CASE(net_test net_test.cpp)
    TARGET_LINK_LIBRARIES(net_test ${DARIADB_CLIENT_LIBS} libnet-server)
-endif(ENABLE_SERVER)
+endif()
 
 TEST_CASE(engine_test engine_test.cpp)
 TEST_CASE(aof_test aof_test.cpp)
