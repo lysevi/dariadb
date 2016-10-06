@@ -54,26 +54,81 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
   }
 }
 
+template <class T> struct KeySplitter {
+  static const size_t levels_count = sizeof(T);
+  typedef std::array<size_t, levels_count> splited_key;
+  size_t level_size(size_t level_num) const { return sizeof(T) * 256; }
+
+  splited_key split(const T &k) const {
+    splited_key result;
+    auto in_bts = reinterpret_cast<const uint8_t *>(&k);
+    for (size_t i = 0; i < levels_count; ++i) {
+      result[i] = in_bts[i];
+    }
+    return result;
+  }
+};
+
 BOOST_AUTO_TEST_CASE(RadixTypeTraitsTest) {
-  dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas> tree;
+  dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>>
+      tree;
   BOOST_CHECK_EQUAL(tree.keys_count(), size_t(0));
 }
 
 BOOST_AUTO_TEST_CASE(RadixNodeTest) {
-	using MeasTree=dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas>;
-	MeasTree::Node node2(0,2);
-	BOOST_CHECK(!node2.childExists(0));
-	BOOST_CHECK(!node2.childExists(1));
+  using MeasTree = dariadb::ads::RadixPlusTree<dariadb::Time, dariadb::Meas,
+                                               KeySplitter<dariadb::Time>>;
+  MeasTree tree;
+  MeasTree::Node node2(&tree, 0, 2);
+  BOOST_CHECK(!node2.childExists(0));
+  BOOST_CHECK(!node2.childExists(1));
 
-	auto child0 = node2.create_or_get(0);
-	auto child1 = node2.create_or_get(1);
+  auto child0 = node2.create_or_get(0);
+  auto child1 = node2.create_or_get(1);
 
-	BOOST_CHECK(child0 != nullptr);
-	BOOST_CHECK(child1 != nullptr);
+  BOOST_CHECK(child0 != nullptr);
+  BOOST_CHECK(child1 != nullptr);
 
-	auto child01 = node2.create_or_get(0);
-	auto child11 = node2.create_or_get(1);
-	
-	BOOST_CHECK_EQUAL(child0, child01);
-	BOOST_CHECK_EQUAL(child1, child11);
+  auto child01 = node2.create_or_get(0);
+  auto child11 = node2.create_or_get(1);
+
+  BOOST_CHECK_EQUAL(child0, child01);
+  BOOST_CHECK_EQUAL(child1, child11);
+}
+
+BOOST_AUTO_TEST_CASE(RadixNodeInsertionTest) {
+  using TestTree = dariadb::ads::RadixPlusTree<uint16_t, int, KeySplitter<uint16_t>>;
+  TestTree tree;
+  uint16_t K1 = 0;
+  int V1 = 1;
+  tree.insert(K1, V1);
+  BOOST_CHECK_EQUAL(tree.keys_count(), 1);
+  auto result = tree.find(K1);
+
+  BOOST_CHECK_EQUAL(result.size(), size_t(1));
+  BOOST_CHECK_EQUAL(result.front(), V1);
+
+  for (uint16_t i = 1; i < 1000; ++i) {
+    auto cur_V = int(i);
+    tree.insert(i, int(i));
+    result = tree.find(i);
+    BOOST_CHECK_EQUAL(result.size(), size_t(1));
+    BOOST_CHECK_EQUAL(result.front(), cur_V);
+  }
+
+  for (uint16_t i = 2000; i > 1500; --i) {
+    auto cur_V = int(i);
+    tree.insert(i, int(i));
+    result = tree.find(i);
+    BOOST_CHECK_EQUAL(result.size(), size_t(1));
+    BOOST_CHECK_EQUAL(result.front(), cur_V);
+  }
+
+  for (uint16_t i = 1100; i < 1300; ++i) {
+    auto cur_V = int(i);
+    tree.insert(i, int(i));
+    result = tree.find(i);
+    BOOST_CHECK_EQUAL(result.size(), size_t(1));
+    BOOST_CHECK_EQUAL(result.front(), cur_V);
+  }
 }
