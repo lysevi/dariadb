@@ -1,9 +1,12 @@
 #include <chrono>
-#include <iostream>
-#include <map>
 #include <cmath>
+#include <iostream>
 #include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/meas.h>
+#include <map>
+#include <numeric>
+#include <thread>
+#include <vector>
 
 template <class T> struct KeySplitter {
   static const size_t levels_count = sizeof(T);
@@ -17,70 +20,118 @@ template <class T> struct KeySplitter {
     splited_key result;
     auto in_bts = reinterpret_cast<const uint8_t *>(&k);
     for (size_t i = 0; i < levels_count; ++i) {
-      result[levels_count - i-1] = in_bts[i];
+      result[levels_count - i - 1] = in_bts[i];
     }
     return result;
   }
 };
 
-void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) {
+using TestTree = dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas,
+                                         KeySplitter<dariadb::Time>>;
+
+void one_thread_bench(dariadb::Time from, dariadb::Time to,
+                      dariadb::Time step) {
   std::cout << "FixedTree: one thread benchmark..." << std::endl;
-  using TestTree = dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas,
-                                               KeySplitter<dariadb::Time>>;
   TestTree tree;
   auto m = dariadb::Meas::empty();
+  size_t count = (to - from) / step;
   {
-	  auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-	  for (auto i = from; i < to; i += step) {
-		  m.time = i;
-		  tree.insert(i, m);
-	  }
-	  auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-	  auto elapsed = end.count() - start.count();
-	  std::cout << "write: "<<elapsed << " ms" << std::endl;
+    auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      m.time = i;
+      tree.insert(i, m);
+    }
+    auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    auto elapsed = end.count() - start.count();
+    std::cout << "write: " << elapsed << " ms" << std::endl;
+    std::cout << "speed: " << count / elapsed << " per sec." << std::endl;
 
-	  start = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-	  for (auto i = from; i < to; i += step) {
-          tree.find(i, &m);
-	  }
-	  end = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-	  elapsed = end.count() - start.count();
-	  std::cout << "read: " << elapsed << " ms" << std::endl;
-	  std::cout << "midle:"<< double(elapsed)/((to-from)/step) << " ms" << std::endl;
+    start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      tree.find(i, &m);
+    }
+    end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    elapsed = end.count() - start.count();
+    std::cout << "read: " << elapsed << " ms" << std::endl;
+    std::cout << "midle: " << double(elapsed) / ((to - from) / step) << " ms"
+              << std::endl;
   }
-  
 
- std::cout << "std::map: one thread benchmark..." << std::endl;
+  std::cout<<std::endl << "std::map: one thread benchmark..." << std::endl;
   std::map<dariadb::Time, dariadb::Meas> meas_map;
   {
-	  auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-	  for (auto i = from; i < to; i += step) {
-		  m.time = i;
-		  meas_map.insert(std::make_pair(i, m));
-	  }
-	  auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-	  auto elapsed = end.count() - start.count();
-	  std::cout << "write: " << elapsed << " ms" << std::endl;
+    auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      m.time = i;
+      meas_map.insert(std::make_pair(i, m));
+    }
+    auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    auto elapsed = end.count() - start.count();
+    std::cout << "write: " << elapsed << " ms" << std::endl;
+    std::cout << "speed: " << count / elapsed << " per sec." << std::endl;
 
-	  start = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-      for (auto i = from; i < to; i += step) {
-		  meas_map.find(i);
-	  }
-	  end = std::chrono::duration_cast<std::chrono::milliseconds>(
-		  std::chrono::system_clock::now().time_since_epoch());
-	  elapsed = end.count() - start.count();
-	  std::cout << "read: " << elapsed << " ms" << std::endl;
-	  std::cout << "midle:" << double(elapsed) / ((to - from) / step) << " ms" << std::endl;
+    start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      meas_map.find(i);
+    }
+    end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    elapsed = end.count() - start.count();
+    std::cout << "read: " << elapsed << " ms" << std::endl;
+    std::cout << "midle: " << double(elapsed) / ((to - from) / step) << " ms"
+              << std::endl;
   }
 }
 
+std::vector<size_t> elapsed_times;
+void write_thread(TestTree *tree, size_t num, dariadb::Time from,
+                  dariadb::Time to, dariadb::Time step) {
+  auto m = dariadb::Meas::empty();
+  auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch());
+  for (auto i = from; i < to; i += step) {
+    m.time = i;
+    tree->insert(i, m);
+  }
+  auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch());
+  auto elapsed = end.count() - start.count();
+  elapsed_times[num] = elapsed;
+}
+
 int main(int argc, char **argv) {
-  one_thread_bench(0, 100000, 2);
+  const dariadb::Time from = 0;
+  const dariadb::Time to = 1000000;
+  const dariadb::Time step = 1;
+  const size_t count = (to - from) / step;
+  one_thread_bench(from, to, step);
+
+  std::cout << std::endl << "Multi thread benchmark..." << std::endl;
+  const size_t threads_count = 5;
+  std::vector<std::thread> threads;
+  threads.resize(threads_count);
+  elapsed_times.resize(threads_count);
+  TestTree tree;
+  for (size_t i = 0; i < threads_count; ++i) {
+    auto t = std::thread{write_thread, &tree, i, from, to, step};
+    threads[i] = std::move(t);
+  }
+
+  for (size_t i = 0; i < threads_count; ++i) {
+    threads[i].join();
+  }
+
+  auto average_time =
+      std::accumulate(elapsed_times.begin(), elapsed_times.end(), 0.0) /
+      threads_count;
+  std::cout << "average time: " << average_time << " sec." << std::endl;
+  std::cout << "average speed: " << count / average_time << " per sec."
+            << std::endl;
 }
