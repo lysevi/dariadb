@@ -55,21 +55,21 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
 }
 
 template <class T> struct KeySplitter {
-  static const size_t levels_count = sizeof(T);
-  typedef std::array<size_t, levels_count> splited_key;
-  size_t level_size(size_t level_num) const {
-    auto res = std::pow(2, sizeof(uint8_t) * 8);
-    return res;
-  }
+	static const size_t levels_count = sizeof(T);
+	typedef std::array<size_t, levels_count> splited_key;
+	size_t level_size(size_t level_num) const {
+		auto res = std::pow(2, sizeof(uint8_t) * 8);
+		return res;
+	}
 
-  splited_key split(const T &k) const {
-    splited_key result;
-    auto in_bts = reinterpret_cast<const uint8_t *>(&k);
-    for (size_t i = 0; i < levels_count; ++i) {
-      result[i] = in_bts[i];
-    }
-    return result;
-  }
+	splited_key split(const T &k) const {
+		splited_key result;
+		auto in_bts = reinterpret_cast<const uint8_t *>(&k);
+		for (size_t i = 0; i < levels_count; ++i) {
+			result[levels_count - i - 1] = in_bts[i];
+		}
+		return result;
+	}
 };
 
 BOOST_AUTO_TEST_CASE(RadixTypeTraitsTest) {

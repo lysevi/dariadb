@@ -16,7 +16,7 @@ template <class T> struct KeySplitter {
     splited_key result;
     auto in_bts = reinterpret_cast<const uint8_t *>(&k);
     for (size_t i = 0; i < levels_count; ++i) {
-      result[i] = in_bts[i];
+      result[levels_count - i-1] = in_bts[i];
     }
     return result;
   }
@@ -50,11 +50,11 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) 
 		  std::chrono::system_clock::now().time_since_epoch());
 	  elapsed = end.count() - start.count();
 	  std::cout << "read: " << elapsed << " ms" << std::endl;
-	  std::cout << "midle:"<< elapsed/((to-from)/step) << " ms" << std::endl;
+	  std::cout << "midle:"<< double(elapsed)/((to-from)/step) << " ms" << std::endl;
   }
   
 
- /* std::cout << "std::map: one thread benchmark..." << std::endl;
+ std::cout << "std::map: one thread benchmark..." << std::endl;
   std::map<dariadb::Time, dariadb::Meas> meas_map;
   {
 	  auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -78,8 +78,8 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) 
 		  std::chrono::system_clock::now().time_since_epoch());
 	  elapsed = end.count() - start.count();
 	  std::cout << "read: " << elapsed << " ms" << std::endl;
-	  std::cout << "midle:" << elapsed / ((to - from) / step) << " ms" << std::endl;
-  }*/
+	  std::cout << "midle:" << double(elapsed) / ((to - from) / step) << " ms" << std::endl;
+  }
 }
 
 int main(int argc, char **argv) {
