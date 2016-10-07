@@ -3,6 +3,7 @@
 #include <iostream>
 #include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/utils/exception.h>
 #include <map>
 #include <numeric>
 #include <thread>
@@ -106,6 +107,25 @@ void write_thread(TestTree *tree, size_t num, dariadb::Time from,
   elapsed_times[num] = elapsed;
 }
 
+void read_thread(TestTree *tree, size_t num, dariadb::Time from,
+	dariadb::Time to, dariadb::Time step) {
+	auto m = dariadb::Meas::empty();
+	auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch());
+	
+	for (auto i = from; i < to; i += step) {
+		auto flag = tree->find(i, &m);
+		if (!flag) {
+			THROW_EXCEPTION("read error: key-", i, " reader-",num);
+		}
+	}
+
+	auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch());
+	auto elapsed = end.count() - start.count();
+	elapsed_times[num] = elapsed;
+}
+
 int main(int argc, char **argv) {
   const dariadb::Time from = 0;
   const dariadb::Time to = 1000000;
@@ -131,7 +151,24 @@ int main(int argc, char **argv) {
   auto average_time =
       std::accumulate(elapsed_times.begin(), elapsed_times.end(), 0.0) /
       threads_count;
-  std::cout << "average time: " << average_time << " sec." << std::endl;
-  std::cout << "average speed: " << count / average_time << " per sec."
+  std::cout << "write average time: " << average_time << " sec." << std::endl;
+  std::cout << "write average speed: " << count / average_time << " per sec."
             << std::endl;
+  
+ 
+  for (size_t i = 0; i < threads_count; ++i) {
+	  auto t = std::thread{ read_thread, &tree, i, from, to, step };
+	  threads[i] = std::move(t);
+  }
+
+  for (size_t i = 0; i < threads_count; ++i) {
+	  threads[i].join();
+  }
+
+  average_time =
+	  std::accumulate(elapsed_times.begin(), elapsed_times.end(), 0.0) /
+	  threads_count;
+  std::cout << "read average time: " << average_time << " sec." << std::endl;
+  std::cout << "read average speed: " << count / average_time << " per sec."
+	  << std::endl;
 }
