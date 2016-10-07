@@ -47,7 +47,7 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to,
         std::chrono::system_clock::now().time_since_epoch());
     auto elapsed = end.count() - start.count();
     std::cout << "write: " << elapsed << " ms" << std::endl;
-    std::cout << "speed: " << count / elapsed << " per sec." << std::endl;
+    std::cout << "speed: " << count / elapsed*1000 << " per sec." << std::endl;
 
     start = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch());
@@ -60,6 +60,7 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to,
     std::cout << "read: " << elapsed << " ms" << std::endl;
     std::cout << "midle: " << double(elapsed) / ((to - from) / step) << " ms"
               << std::endl;
+	std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
   }
 
   std::cout<<std::endl << "std::map: one thread benchmark..." << std::endl;
@@ -75,7 +76,7 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to,
         std::chrono::system_clock::now().time_since_epoch());
     auto elapsed = end.count() - start.count();
     std::cout << "write: " << elapsed << " ms" << std::endl;
-    std::cout << "speed: " << count / elapsed << " per sec." << std::endl;
+    std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
 
     start = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch());
@@ -88,6 +89,7 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to,
     std::cout << "read: " << elapsed << " ms" << std::endl;
     std::cout << "midle: " << double(elapsed) / ((to - from) / step) << " ms"
               << std::endl;
+	std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
   }
 }
 
@@ -152,7 +154,7 @@ int main(int argc, char **argv) {
       std::accumulate(elapsed_times.begin(), elapsed_times.end(), 0.0) /
       threads_count;
   std::cout << "write average time: " << average_time << " sec." << std::endl;
-  std::cout << "write average speed: " << count / average_time << " per sec."
+  std::cout << "write average speed: " << count / average_time * 1000 << " per sec."
             << std::endl;
   
  
@@ -169,6 +171,6 @@ int main(int argc, char **argv) {
 	  std::accumulate(elapsed_times.begin(), elapsed_times.end(), 0.0) /
 	  threads_count;
   std::cout << "read average time: " << average_time << " sec." << std::endl;
-  std::cout << "read average speed: " << count / average_time << " per sec."
+  std::cout << "read average speed: " << count / average_time * 1000 << " per sec."
 	  << std::endl;
 }

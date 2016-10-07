@@ -60,9 +60,6 @@ public:
         return new_child;
       }
     }
-    void append(const V &v) {
-        value=v;
-    }
     void append(const size_t key, const V &v) {
         this->_leaf_values[key]=std::make_pair(key,v);
     }
@@ -70,7 +67,6 @@ public:
     size_t level;
     size_t size;
     FixedTree *rdt;
-    V value;
     std::vector<KV> _leaf_values;
     bool is_leaf;
   };
@@ -93,10 +89,9 @@ public:
     for (; pos < KeySplitter::levels_count-1; ++pos) {
       cur = cur->create_or_get(splited_k[pos]);
     }
+	assert(cur->is_leaf);
     if(cur->is_leaf){
         cur->append(splited_k[pos],v);
-    }else{
-        cur->append(v);
     }
     _keys_count += 1;
   }
@@ -114,10 +109,7 @@ public:
     if(cur->is_leaf){
         auto v=cur->_leaf_values[splited_k[pos]];
         *out=v.second;
-    }else{
-        *out=cur->value;
     }
-
     return true;
   }
 
