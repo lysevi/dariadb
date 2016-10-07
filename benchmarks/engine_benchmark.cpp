@@ -366,7 +366,8 @@ int main(int argc, char *argv[]) {
     append_count = 0;
     stop_info = false;
     auto writers_start = clock();
-
+	
+	start_time = dariadb::timeutil::current_time();
     rw_benchmark(ms, raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);

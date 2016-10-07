@@ -40,5 +40,7 @@ if(ENABLE_INTEGRATION_TESTS)
   if(ENABLE_SERVER)
       ADD_NT_PERF_TEST(ONE_CLIENT  --clients-count=1)
       ADD_NT_PERF_TEST(TEN_CLIENTS  --clients-count=10)
-   endif(ENABLE_SERVER)
+  endif(ENABLE_SERVER)
+
+  add_test(memstorage_benchmark ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/memstorage_benchmark)
 endif(ENABLE_INTEGRATION_TESTS)

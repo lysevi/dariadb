@@ -18,6 +18,7 @@ addons:
       - libasio-dev 
       - libboost-log-dev 
       - libboost-regex-dev 
+      - libboost-date-time-dev
       - cmake  
       - g++-6  
       - gcc-6 

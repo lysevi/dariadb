@@ -2,26 +2,51 @@
 #include <cstdio>
 #include <cstring>
 
+#define BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG // to enable nanoseconds;
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 namespace dariadb {
 namespace timeutil {
+Time from_ptime(boost::posix_time::ptime timestamp) {
+  auto duration = timestamp - boost::posix_time::from_time_t(0);
+  auto ns = duration.total_nanoseconds();
+  return ns;
+}
 
-Time from_chrono(const std::chrono::system_clock::time_point &t) {
+Time current_time() {
+  auto now = boost::posix_time::microsec_clock::local_time();
+  return from_ptime(now);
+}
+
+Time from_chrono(const std::chrono::high_resolution_clock::time_point &t) {
   auto now = t.time_since_epoch();
   return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
 }
 
-std::chrono::system_clock::time_point to_timepoint(Time t) {
-  return std::chrono::system_clock::time_point(std::chrono::milliseconds(t));
+std::chrono::high_resolution_clock::time_point to_timepoint(Time t) {
+  return std::chrono::high_resolution_clock::time_point(std::chrono::nanoseconds(t));
+}
+
+boost::posix_time::ptime to_ptime(Time timestamp) {
+  boost::posix_time::ptime ptime =
+      boost::posix_time::from_time_t(0) + boost::posix_time::nanoseconds(timestamp);
+  return ptime;
 }
 
 int to_string(char *buffer, size_t buffer_size, Time t) {
-  auto ns = dariadb::timeutil::to_timepoint(t);
-  auto ns_c = std::chrono::system_clock::to_time_t(ns);
-  auto lc = localtime(&ns_c);
+  using namespace boost::gregorian;
+  using namespace boost::posix_time;
 
-  int len = std::snprintf(buffer, buffer_size, "%02d:%02d:%02d-%02d.%02d.%d", lc->tm_hour,
-                          lc->tm_min, lc->tm_sec, lc->tm_mday, lc->tm_mon + 1,
-                          1900 + lc->tm_year);
+  auto ptime = to_ptime(t);
+  auto date = ptime.date();
+  auto time = ptime.time_of_day();
+  auto ymd = gregorian_calendar::from_day_number(date.day_number());
+
+  auto ns = time.fractional_seconds();
+
+  int len = snprintf(buffer, buffer_size, "%04d-%02d-%02d %02d:%02d:%02d.%09d",
+                     (int)ymd.year, (int)ymd.month, (int)ymd.day, (int)time.hours(),
+                     (int)time.minutes(), (int)time.seconds(), (int)ns);
 
   return len;
 }
@@ -36,11 +61,6 @@ std::string to_string(Time t) {
     return std::string("buffer to small");
   }
   return std::string(buffer);
-}
-
-Time current_time() {
-  auto now = std::chrono::system_clock::now();
-  return dariadb::timeutil::from_chrono(now);
 }
 }
 }

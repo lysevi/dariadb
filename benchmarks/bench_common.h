@@ -1,14 +1,16 @@
 #pragma once
 #include <algorithm>
 #include <atomic>
-#include <libdariadb/interfaces/imeasstorage.h>
 #include <iostream>
 #include <random>
 #include <sstream>
-#include <libdariadb/timeutil.h>
 #include <tuple>
+#include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/thread_manager.h>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace dariadb_bench {
 
@@ -73,6 +75,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
                             dariadb::storage::IMeasWriter *ms, dariadb::Time start_time,
                             dariadb::Time *write_time_time) {
   try {
+	  auto step = (boost::posix_time::seconds(1) / writes_per_second).total_nanoseconds();
     auto m = dariadb::Meas::empty();
     m.time = start_time;
     auto id_from = get_id_from(id);
@@ -80,7 +83,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
 
     for (size_t i = 0; i < write_per_id_count; ++i) {
       m.flag = dariadb::Flag(id);
-      m.time += 1000 / writes_per_second;
+      m.time += step;
       *write_time_time = m.time;
       m.value = dariadb::Value(i);
       for (size_t j = id_from; j < id_to && i < dariadb_bench::write_per_id_count; j++) {
