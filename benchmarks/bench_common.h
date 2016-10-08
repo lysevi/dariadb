@@ -75,7 +75,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
                             dariadb::storage::IMeasWriter *ms, dariadb::Time start_time,
                             dariadb::Time *write_time_time) {
   try {
-	  auto step = (boost::posix_time::seconds(1) / writes_per_second).total_nanoseconds();
+    auto step = (boost::posix_time::seconds(1).total_nanoseconds()/writes_per_second );
     auto m = dariadb::Meas::empty();
     m.time = start_time;
     auto id_from = get_id_from(id);
