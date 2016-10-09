@@ -27,8 +27,12 @@ template <class T> struct KeySplitter {
   }
 };
 
+template <typename T> struct Statistic {
+  void append(const T &t) {}
+};
+
 using TestTree = dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas,
-                                         KeySplitter<dariadb::Time>>;
+                                         KeySplitter<dariadb::Time>, Statistic<dariadb::Meas>>;
 
 void one_thread_bench(dariadb::Time from, dariadb::Time to,
                       dariadb::Time step) {

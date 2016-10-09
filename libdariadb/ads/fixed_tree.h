@@ -10,8 +10,10 @@
 namespace dariadb {
 namespace ads {
 
-template <typename K, typename V, typename KeySplitter>
+template <typename K, typename V, typename KeySplitter, typename Statistic>
 class FixedTree {
+    static_assert(std::is_default_constructible<Statistic>::value,
+                  "Statistic must be trivially constructible.");
   static_assert(std::is_default_constructible<KeySplitter>::value,
                 "KeySplitter must be trivially constructible.");
   static_assert(std::is_pod<V>::value || std::is_copy_assignable<V>::value,
@@ -22,11 +24,11 @@ public:
     using KV = std::pair<size_t, V>;
     using Node_Ptr = Node *;
     Node(FixedTree *_rdt, size_t _level, size_t _size)
-        : childs(_size), level(_level), size(_size), rdt(_rdt) {}
+        : childs(_size), level(_level), size(_size), rdt(_rdt), stat() {}
 
     Node(FixedTree *_rdt, size_t _level, size_t _size, bool _is_leaf)
         : childs(), level(_level), size(_size), rdt(_rdt),
-          _leaf_values(_size), is_leaf(_is_leaf) {}
+          _leaf_values(_size), is_leaf(_is_leaf), stat() {}
 
     ~Node() {
       for (size_t i = 0; i < childs.size(); ++i) {
@@ -69,6 +71,8 @@ public:
     FixedTree *rdt;
     std::vector<KV> _leaf_values;
     bool is_leaf;
+
+    Statistic stat;
   };
 
   FixedTree() {
@@ -88,6 +92,7 @@ public:
     auto cur = _head;
     for (; pos < KeySplitter::levels_count-1; ++pos) {
       cur = cur->create_or_get(splited_k[pos]);
+      cur->stat.append(v);
     }
 	assert(cur->is_leaf);
     if(cur->is_leaf){

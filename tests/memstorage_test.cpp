@@ -1,10 +1,10 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 
-#include <cmath>
 #include <boost/test/unit_test.hpp>
-#include <libdariadb/ads/lockfree_array.h>
+#include <cmath>
 #include <libdariadb/ads/fixed_tree.h>
+#include <libdariadb/ads/lockfree_array.h>
 #include <libdariadb/meas.h>
 
 BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
@@ -56,32 +56,38 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
 }
 
 template <class T> struct KeySplitter {
-	static const size_t levels_count = sizeof(T);
-	typedef std::array<size_t, levels_count> splited_key;
-	size_t level_size(size_t level_num) const {
-		auto res = std::pow(2, sizeof(uint8_t) * 8);
-		return res;
-	}
+  static const size_t levels_count = sizeof(T);
+  typedef std::array<size_t, levels_count> splited_key;
+  size_t level_size(size_t level_num) const {
+    auto res = std::pow(2, sizeof(uint8_t) * 8);
+    return res;
+  }
 
-	splited_key split(const T &k) const {
-		splited_key result;
-		auto in_bts = reinterpret_cast<const uint8_t *>(&k);
-		for (size_t i = 0; i < levels_count; ++i) {
-			result[levels_count - i - 1] = in_bts[i];
-		}
-		return result;
-	}
+  splited_key split(const T &k) const {
+    splited_key result;
+    auto in_bts = reinterpret_cast<const uint8_t *>(&k);
+    for (size_t i = 0; i < levels_count; ++i) {
+      result[levels_count - i - 1] = in_bts[i];
+    }
+    return result;
+  }
+};
+
+template <typename T> struct Statistic {
+  void append(const T &t) {}
 };
 
 BOOST_AUTO_TEST_CASE(FixedTreeTypeTraitsTest) {
-  dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>>
+  dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>,
+                          Statistic<dariadb::Meas>>
       tree;
   BOOST_CHECK_EQUAL(tree.keys_count(), size_t(0));
 }
 
 BOOST_AUTO_TEST_CASE(FixedTreeNodeTest) {
-  using MeasTree = dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas,
-                                               KeySplitter<dariadb::Time>>;
+  using MeasTree =
+      dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>,
+                              Statistic<dariadb::Meas>>;
   MeasTree tree;
   MeasTree::Node node2(&tree, 0, 2);
   BOOST_CHECK(!node2.childExists(0));
@@ -101,34 +107,35 @@ BOOST_AUTO_TEST_CASE(FixedTreeNodeTest) {
 }
 
 BOOST_AUTO_TEST_CASE(FixedTreeNodeInsertionTest) {
-  using TestTree = dariadb::ads::FixedTree<uint16_t, int, KeySplitter<uint16_t>>;
+  using TestTree =
+      dariadb::ads::FixedTree<uint16_t, int, KeySplitter<uint16_t>, Statistic<int>>;
   TestTree tree;
   uint16_t K1 = 0;
   int V1 = 1;
   tree.insert(K1, V1);
   BOOST_CHECK_EQUAL(tree.keys_count(), size_t(1));
   int result = 0;
-  BOOST_CHECK(tree.find(K1,&result));
+  BOOST_CHECK(tree.find(K1, &result));
   BOOST_CHECK_EQUAL(result, V1);
 
   for (uint16_t i = 1; i < 1000; ++i) {
     auto cur_V = int(i);
     tree.insert(i, int(i));
-    BOOST_CHECK(tree.find(i,&result));
+    BOOST_CHECK(tree.find(i, &result));
     BOOST_CHECK_EQUAL(result, cur_V);
   }
 
   for (uint16_t i = 2000; i > 1500; --i) {
     auto cur_V = int(i);
     tree.insert(i, int(i));
-    BOOST_CHECK(tree.find(i,&result));
+    BOOST_CHECK(tree.find(i, &result));
     BOOST_CHECK_EQUAL(result, cur_V);
   }
 
   for (uint16_t i = 1100; i < 1300; ++i) {
     auto cur_V = int(i);
     tree.insert(i, int(i));
-    BOOST_CHECK(tree.find(i,&result));
+    BOOST_CHECK(tree.find(i, &result));
     BOOST_CHECK_EQUAL(result, cur_V);
   }
 }
