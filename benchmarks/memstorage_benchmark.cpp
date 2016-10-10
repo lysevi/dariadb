@@ -29,7 +29,7 @@ template <class T> struct ByteKeySplitter {
 };
 
 struct KeySplitter {
-  static const size_t levels_count = size_t(4) + sizeof(int64_t) / 2;
+  static const size_t levels_count = size_t(5) + sizeof(int64_t);
   typedef std::array<size_t, levels_count> splited_key;
   size_t level_size(size_t level_num) const {
     switch (level_num) {
@@ -44,7 +44,7 @@ struct KeySplitter {
     case 4: // second
       return 60;
     default: // fraces
-      return 65536;
+      return 256;
     }
   }
 
@@ -57,8 +57,8 @@ struct KeySplitter {
     result[2] = dt.hour;
     result[3] = dt.minute;
     result[4] = dt.second;
-    auto in_bts = reinterpret_cast<const uint16_t *>(&dt.fracsec);
-    for (size_t i = 0; i < sizeof(dt.fracsec) / 2; ++i) {
+    auto in_bts = reinterpret_cast<const uint8_t *>(&dt.fracsec);
+    for (size_t i = 0; i < sizeof(dt.fracsec); ++i) {
       result[levels_count - i - 1] = in_bts[i];
     }
 
