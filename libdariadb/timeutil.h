@@ -8,8 +8,9 @@ namespace timeutil {
 
 struct DateTime {
   uint16_t year;
-  uint16_t month;
+  uint8_t month;
   uint16_t day;
+  uint16_t day_of_year;
   uint8_t hour;
   uint8_t minute;
   uint8_t second;

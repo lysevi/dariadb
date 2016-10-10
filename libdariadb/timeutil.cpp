@@ -43,13 +43,14 @@ DateTime to_datetime(Time t){
     auto date = ptime.date();
     auto time = ptime.time_of_day();
     auto ymd = gregorian_calendar::from_day_number(date.day_number());
-
+	
     auto ns = time.fractional_seconds();
 
     DateTime result;
     result.year=ymd.year;
     result.month=ymd.month;
     result.day=ymd.day;
+	result.day_of_year = date.day_of_year();
     result.hour=(uint8_t)time.hours();
     result.minute=(uint8_t)time.minutes();
     result.second=(uint8_t)time.seconds();
