@@ -93,6 +93,7 @@ public:
     for (; pos < KeySplitter::levels_count-1; ++pos) {
       cur = cur->create_or_get(splited_k[pos]);
       cur->stat.append(v);
+	  assert(cur!=nullptr);
     }
 	assert(cur->is_leaf);
     if(cur->is_leaf){

@@ -8,8 +8,10 @@
 namespace dariadb {
 namespace timeutil {
 
+const boost::posix_time::ptime START = boost::posix_time::from_time_t(0);
+
 Time from_ptime(boost::posix_time::ptime timestamp) {
-  auto duration = timestamp - boost::posix_time::from_time_t(0);
+  auto duration = timestamp - START;
   auto ns = duration.total_nanoseconds();
   return ns;
 }
@@ -29,8 +31,7 @@ std::chrono::high_resolution_clock::time_point to_timepoint(Time t) {
 }
 
 boost::posix_time::ptime to_ptime(Time timestamp) {
-  boost::posix_time::ptime ptime =
-      boost::posix_time::from_time_t(0) + boost::posix_time::nanoseconds(timestamp);
+  boost::posix_time::ptime ptime = START + boost::posix_time::nanoseconds(timestamp);
   return ptime;
 }
 

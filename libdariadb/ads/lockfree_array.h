@@ -76,7 +76,10 @@ public:
     } while (!_array[index].compare_exchange_weak(old, t));
   }
 
-  T operator[](size_t index) const { return _array[index].load(); }
+  T operator[](size_t index) const { 
+	  assert(index < _size);
+	  return _array[index].load(); 
+  }
 
   bool insert(const T &t) {
     size_t oldPos;
