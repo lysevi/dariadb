@@ -23,12 +23,12 @@ public:
   struct Node {
     using KV = std::pair<size_t, V>;
     using Node_Ptr = Node *;
-    Node(FixedTree *_rdt, size_t _level, size_t _size)
-        : childs(_size), level(_level), size(_size), rdt(_rdt), stat() {}
+    Node(FixedTree *_rdt, size_t _level)
+        : childs(), level(_level), rdt(_rdt), stat() {}
 
-    Node(FixedTree *_rdt, size_t _level, size_t _size, bool _is_leaf)
-        : childs(), level(_level), size(_size), rdt(_rdt),
-          _leaf_values(_size), is_leaf(_is_leaf), stat() {}
+    Node(FixedTree *_rdt, size_t _level, bool _is_leaf)
+        : childs(), level(_level), rdt(_rdt),
+          _leaf_values(KeySplitter::levels_size), is_leaf(_is_leaf), stat() {}
 
     ~Node() {
       for (size_t i = 0; i < childs.size(); ++i) {
@@ -49,9 +49,9 @@ public:
       Node_Ptr new_child =nullptr;
 
       if(new_level_num==KeySplitter::levels_count-1){
-          new_child=new Node(rdt, new_level_num, rdt->level_size(new_level_num), true);
+          new_child=new Node(rdt, new_level_num, true);
       }else{
-          new_child=new Node(rdt, new_level_num, rdt->level_size(new_level_num));
+          new_child=new Node(rdt, new_level_num);
       }
 
       childs.compare_exchange(index, old, new_child);
@@ -65,9 +65,8 @@ public:
     void append(const size_t key, const V &v) {
         this->_leaf_values[key]=std::make_pair(key,v);
     }
-    LockFreeArray<Node_Ptr> childs;
+    LockFreeArray<Node_Ptr, KeySplitter::levels_size> childs;
     size_t level;
-    size_t size;
     FixedTree *rdt;
     std::vector<KV> _leaf_values;
     bool is_leaf;
@@ -76,15 +75,12 @@ public:
   };
 
   FixedTree() {
-    _head = new Node(this, size_t(0), this->level_size(0));
+    _head = new Node(this, size_t(0));
     _keys_count.store(size_t(0));
   }
   ~FixedTree() { delete _head; }
 
   size_t keys_count() const { return _keys_count; }
-  size_t level_size(size_t level_num) const {
-    return _splitter.level_size(level_num);
-  }
 
   void insert(const K &k, const V &v) {
     typename KeySplitter::splited_key splited_k = _splitter.split(k);
