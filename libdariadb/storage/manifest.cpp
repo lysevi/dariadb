@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <fstream>
-#include <json/json.hpp>
+#include <json/src/json.hpp>
 
 using json = nlohmann::json;
 using namespace dariadb::storage;
