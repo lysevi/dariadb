@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <cstring>
 
-#define BOOST_DATE_TIME_POSIX_TIME_STD_CONFIG // to enable nanoseconds;
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace dariadb {
@@ -12,7 +11,7 @@ const boost::posix_time::ptime START = boost::posix_time::from_time_t(0);
 
 Time from_ptime(boost::posix_time::ptime timestamp) {
   auto duration = timestamp - START;
-  auto ns = duration.total_nanoseconds();
+  auto ns = duration.total_milliseconds();
   return ns;
 }
 
@@ -31,7 +30,7 @@ std::chrono::high_resolution_clock::time_point to_timepoint(Time t) {
 }
 
 boost::posix_time::ptime to_ptime(Time timestamp) {
-  boost::posix_time::ptime ptime = START + boost::posix_time::nanoseconds(timestamp);
+  boost::posix_time::ptime ptime = START + boost::posix_time::milliseconds(timestamp);
   return ptime;
 }
 
@@ -44,8 +43,6 @@ DateTime to_datetime(Time t){
     auto time = ptime.time_of_day();
     auto ymd = gregorian_calendar::from_day_number(date.day_number());
 	
-    auto ns = time.fractional_seconds();
-
     DateTime result;
     result.year=ymd.year;
     result.month=ymd.month;
@@ -54,16 +51,16 @@ DateTime to_datetime(Time t){
     result.hour=(uint8_t)time.hours();
     result.minute=(uint8_t)time.minutes();
     result.second=(uint8_t)time.seconds();
-    result.fracsec=ns;
+    result.millisecond= (uint16_t)(time.total_milliseconds() % 1000);
     return result;
 }
 
 int to_string(char *buffer, size_t buffer_size, Time t) {
   DateTime dt=to_datetime(t);
 
-  int len = snprintf(buffer, buffer_size, "%04d-%02d-%02d %02d:%02d:%02d.%09d",
+  int len = snprintf(buffer, buffer_size, "%04d-%02d-%02d %02d:%02d:%02d.%04d",
                      (int)dt.year, (int)dt.month, (int)dt.day, (int)dt.hour,
-                     (int)dt.minute, (int)dt.second, (int)dt.fracsec);
+                     (int)dt.minute, (int)dt.second, (int)dt.millisecond);
 
   return len;
 }

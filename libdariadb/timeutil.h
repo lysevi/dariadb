@@ -14,7 +14,7 @@ struct DateTime {
   uint8_t hour;
   uint8_t minute;
   uint8_t second;
-  int64_t fracsec;
+  uint16_t millisecond;
 };
 
 /// current timestamp with nanosecond.
