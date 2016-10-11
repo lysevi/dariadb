@@ -14,7 +14,7 @@ template <class T> struct ByteKeySplitter {
 	static const size_t levels_count = sizeof(T);
 	typedef std::array<size_t, levels_count> splited_key;
 	size_t level_size(size_t level_num) const {
-		auto res = std::pow(2, sizeof(uint8_t) * 8);
+		auto res = (size_t)(std::pow(2, sizeof(uint8_t) * 8));
 		return res;
 	}
 
@@ -43,7 +43,7 @@ struct KeySplitter {
       return 60;
     case 4: // second
       return 60;
-	case 5: // millisecond
+	default: // millisecond
 		return 1000;
     }
   }
@@ -207,9 +207,12 @@ int main(int argc, char **argv) {
   const dariadb::Time to = 1000000;
   const dariadb::Time step = 1;
   const size_t count = (to - from) / step;
+  
+  std::cout << "from:" << from << " to:" << to << " step:" << step << " total:"<<(to- from)/step<< std::endl;
+
   one_thread_bench(from, to, step);
   one_thread_bench_time(from, to, step);
-
+  
   std::cout << std::endl << "Multi thread benchmark..." << std::endl;
   const size_t threads_count = 5;
   std::vector<std::thread> threads;
