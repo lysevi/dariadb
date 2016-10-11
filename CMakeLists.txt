@@ -68,6 +68,8 @@ endif()
 
 include_directories(extern)
 include_directories(extern/spdlog/include)
+include_directories(extern/stx-btree/include)
+
 SET(DARIADB_STORAGE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
             CACHE STRING "dariadb storage include dir for storage engine.")
 

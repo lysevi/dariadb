@@ -43,7 +43,15 @@ $ sudo apt-get update
 $ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6
 $ export CC="gcc-6"
 $ export CXX="g++-6"
+
+### Git submodules
+```shell
+$ cd dariadb
+$ git submodules init 
+$ git submodules update
 ```
+```
+
 ### Available build options
 - ENABLE_TESTS - Enable testing of the dariadb. - ON
 - ENABLE_METRICS - Enable code metrics. - ON

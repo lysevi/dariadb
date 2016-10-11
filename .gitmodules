@@ -1,0 +1,6 @@
+[submodule "extern/stx-btree"]
+	path = extern/stx-btree
+	url = https://github.com/bingmann/stx-btree.git
+[submodule "extern/spdlog"]
+	path = extern/spdlog
+	url = https://github.com/gabime/spdlog.git

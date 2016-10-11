@@ -1,15 +1,17 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
-#include <libdariadb/ads/fixed_tree.h>
-#include <libdariadb/meas.h>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/utils/exception.h>
 #include <map>
 #include <numeric>
 #include <thread>
 #include <vector>
 
+#include <libdariadb/ads/fixed_tree.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/exception.h>
+
+#include <stx/btree_map>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 const dariadb::Time FROM = 0;
@@ -82,6 +84,35 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) 
         std::chrono::system_clock::now().time_since_epoch());
     for (auto i = from; i < to; i += step) {
       meas_map.find(i);
+    }
+    end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    elapsed = end.count() - start.count();
+    std::cout << "read: " << elapsed << " ms" << std::endl;
+    std::cout << "midle: " << double(elapsed) / ((to - from) / step) << " ms"
+              << std::endl;
+    std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
+  }
+
+  std::cout << std::endl << "stx::btree_map: one thread benchmark..." << std::endl;
+  stx::btree_map<dariadb::Time, dariadb::Meas> meas_bmap;
+  {
+    auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      m.time = i;
+      meas_bmap.insert(std::make_pair(i, m));
+    }
+    auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    auto elapsed = end.count() - start.count();
+    std::cout << "write: " << elapsed << " ms" << std::endl;
+    std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
+
+    start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      meas_bmap.find(i);
     }
     end = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch());
