@@ -8,20 +8,28 @@
 namespace dariadb {
 namespace ads {
 
-template <typename T, size_t _size> class LockFreeArray {
+template <typename T> class LockFreeArray {
 public:
   LockFreeArray() {
+    _pos.store(0);
+    _array = nullptr;
+    _size = 0;
+  }
+
+  LockFreeArray(const size_t size) : _size(size) {
     _pos.store(0);
     _array = new std::atomic<T>[_size];
     std::fill(_array, _array + _size, T());
   }
 
   LockFreeArray(LockFreeArray &&other)
-      :  _pos(other._pos.load()), _array(other._array) {
+      : _size(other._size), _pos(other._pos.load()), _array(other._array) {
+    other._size = 0;
     other._array = nullptr;
   }
 
   LockFreeArray(const LockFreeArray &other) {
+    _size = other._size;
     _pos.store(other._pos);
     _array = new std::atomic<T>[_size];
     for (size_t i = 0; i < _size; ++i) {
@@ -32,6 +40,7 @@ public:
     if (this == &other) {
       return *this;
     }
+    _size = other._size;
     _pos.store(other._pos);
     _array = new std::atomic<T>[_size];
     for (size_t i = 0; i < _size; ++i) {
@@ -40,8 +49,10 @@ public:
     return *this;
   }
   LockFreeArray &operator=(LockFreeArray &&other) {
+    _size = other._size;
     _pos.store(other._pos.load());
     _array = other._array;
+    other._size = 0;
     other._array = nullptr;
   }
   ~LockFreeArray() {
@@ -87,6 +98,7 @@ public:
   size_t cap() const { return _size - _pos.load(); }
 
 protected:
+  size_t _size;
   std::atomic_size_t _pos;
   std::atomic<T> *_array;
 };

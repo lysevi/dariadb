@@ -8,22 +8,22 @@
 #include <libdariadb/meas.h>
 
 BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
-  dariadb::ads::LockFreeArray<int, 10> lf;
+  dariadb::ads::LockFreeArray<int> lf(10);
   BOOST_CHECK_EQUAL(lf.size(), size_t(10));
 
-  dariadb::ads::LockFreeArray<int*, 10> lfs;
+  dariadb::ads::LockFreeArray<int *> lfs(10);
   BOOST_CHECK_EQUAL(lfs.size(), size_t(10));
 }
 
 BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
   {
-    dariadb::ads::LockFreeArray<bool,3> lf;
+    dariadb::ads::LockFreeArray<bool> lf(3);
     BOOST_CHECK_EQUAL(lf.size(), size_t(3));
 
     lf.store(0, true);
     lf.store(1, true);
 
-    dariadb::ads::LockFreeArray<bool,3> lf_c(std::move(lf));
+    dariadb::ads::LockFreeArray<bool> lf_c(std::move(lf));
     BOOST_CHECK(lf_c[0]);
     BOOST_CHECK(lf_c[1]);
     BOOST_CHECK(!lf_c[2]);
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
     BOOST_CHECK(!lf_c[0]);
   }
   {
-    dariadb::ads::LockFreeArray<bool,5> lf;
+    dariadb::ads::LockFreeArray<bool> lf(5);
     BOOST_CHECK_EQUAL(lf.cap(), lf.size());
 
     size_t i = 0;
@@ -44,8 +44,8 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
       i++;
     }
     // check ctors
-    dariadb::ads::LockFreeArray<bool,5> midle(lf);
-    dariadb::ads::LockFreeArray<bool,5> lf_c = midle;
+    dariadb::ads::LockFreeArray<bool> midle(lf);
+    dariadb::ads::LockFreeArray<bool> lf_c = midle;
 
     BOOST_CHECK_EQUAL(lf_c.size(), i);
     BOOST_CHECK_EQUAL(lf_c.cap(), size_t(0));
@@ -55,19 +55,22 @@ BOOST_AUTO_TEST_CASE(ArrayLockFreeTest) {
   }
 }
 
-template <class T> struct ByteKeySplitter {
-	static const size_t levels_count = sizeof(T);
-	static const size_t levels_size = 256;
-	typedef std::array<size_t, levels_count> splited_key;
+template <class T> struct KeySplitter {
+  static const size_t levels_count = sizeof(T);
+  typedef std::array<size_t, levels_count> splited_key;
+  size_t level_size(size_t level_num) const {
+    auto res = std::pow(2, sizeof(uint8_t) * 8);
+    return res;
+  }
 
-	splited_key split(const T &k) const {
-		splited_key result;
-		auto in_bts = reinterpret_cast<const uint8_t *>(&k);
-		for (size_t i = 0; i < levels_count; ++i) {
-			result[levels_count - i - 1] = in_bts[i];
-		}
-		return result;
-	}
+  splited_key split(const T &k) const {
+    splited_key result;
+    auto in_bts = reinterpret_cast<const uint8_t *>(&k);
+    for (size_t i = 0; i < levels_count; ++i) {
+      result[levels_count - i - 1] = in_bts[i];
+    }
+    return result;
+  }
 };
 
 template <typename T> struct Statistic {
@@ -75,7 +78,7 @@ template <typename T> struct Statistic {
 };
 
 BOOST_AUTO_TEST_CASE(FixedTreeTypeTraitsTest) {
-  dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, ByteKeySplitter<dariadb::Time>,
+  dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>,
                           Statistic<dariadb::Meas>>
       tree;
   BOOST_CHECK_EQUAL(tree.keys_count(), size_t(0));
@@ -83,7 +86,7 @@ BOOST_AUTO_TEST_CASE(FixedTreeTypeTraitsTest) {
 
 BOOST_AUTO_TEST_CASE(FixedTreeNodeTest) {
   using MeasTree =
-      dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, ByteKeySplitter<dariadb::Time>,
+      dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, KeySplitter<dariadb::Time>,
                               Statistic<dariadb::Meas>>;
   MeasTree tree;
   MeasTree::Node node2(&tree, 0, 2);
@@ -105,7 +108,7 @@ BOOST_AUTO_TEST_CASE(FixedTreeNodeTest) {
 
 BOOST_AUTO_TEST_CASE(FixedTreeNodeInsertionTest) {
   using TestTree =
-      dariadb::ads::FixedTree<uint16_t, int, ByteKeySplitter<uint16_t>, Statistic<int>>;
+      dariadb::ads::FixedTree<uint16_t, int, KeySplitter<uint16_t>, Statistic<int>>;
   TestTree tree;
   uint16_t K1 = 0;
   int V1 = 1;
