@@ -411,7 +411,7 @@ void PageManager::stop() {
 }
 
 void PageManager::flush() {
-  TIMECODE_METRICS(ctmd, "flu.h>, "PageManager::flu.h>);
+  TIMECODE_METRICS(ctmd, "flush", "PageManager::flush");
   this->impl->flush();
 }
 
