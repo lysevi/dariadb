@@ -1,9 +1,9 @@
-#include "libdariadb/compression/compression.h"
-#include "libdariadb/utils/exception.h"
-#include "libdariadb/utils/utils.h"
-#include "libdariadb/compression/delta.h"
-#include "libdariadb/compression/flag.h"
-#include "libdariadb/compression/xor.h"
+#include <libdariadb/compression/compression.h>
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/utils.h>
+#include <libdariadb/compression/delta.h>
+#include <libdariadb/compression/flag.h>
+#include <libdariadb/compression/xor.h>
 
 #include <algorithm>
 #include <cassert>

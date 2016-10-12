@@ -1,4 +1,4 @@
-#include "libdariadb/compression/v2/flag.h"
+#include <libdariadb/compression/v2/flag.h>
 
 #include <cassert>
 #include <limits>

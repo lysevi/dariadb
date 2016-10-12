@@ -1,4 +1,4 @@
-#include "libdariadb/compression/v2/compression.h"
+#include <libdariadb/compression/v2/compression.h>
 
 using namespace dariadb;
 using namespace dariadb::compression::v2;

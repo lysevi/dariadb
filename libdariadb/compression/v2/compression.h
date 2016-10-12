@@ -2,11 +2,11 @@
 
 #include <memory>
 
-#include "libdariadb/meas.h"
-#include "libdariadb/compression/v2/bytebuffer.h"
-#include "libdariadb/compression/v2/delta.h"
-#include "libdariadb/compression/v2/flag.h"
-#include "libdariadb/compression/v2/xor.h"
+#include <libdariadb/meas.h>
+#include <libdariadb/compression/v2/bytebuffer.h>
+#include <libdariadb/compression/v2/delta.h>
+#include <libdariadb/compression/v2/flag.h>
+#include <libdariadb/compression/v2/xor.h>
 
 namespace dariadb {
 namespace compression {

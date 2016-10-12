@@ -1,7 +1,7 @@
 #pragma once
 
-#include "libdariadb/utils/thread_pool.h"
-#include "libdariadb/utils/utils.h"
+#include <libdariadb/utils/thread_pool.h>
+#include <libdariadb/utils/utils.h>
 #include <unordered_map>
 
 namespace dariadb {

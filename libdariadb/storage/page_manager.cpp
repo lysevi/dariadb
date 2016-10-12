@@ -1,16 +1,15 @@
-#include "libdariadb/storage/page_manager.h"
-#include "libdariadb/flags.h"
-#include "libdariadb/utils/fs.h"
-#include "libdariadb/utils/locker.h"
-#include "libdariadb/utils/lru.h"
-#include "libdariadb/utils/metrics.h"
-#include "libdariadb/utils/thread_manager.h"
-#include "libdariadb/utils/utils.h"
-#include "libdariadb/utils/utils.h"
-#include "libdariadb/storage/bloom_filter.h"
-#include "libdariadb/storage/manifest.h"
-#include "libdariadb/storage/options.h"
-#include "libdariadb/storage/page.h"
+#include <libdariadb/storage/page_manager.h>
+#include <libdariadb/flags.h>
+#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/lru.h>
+#include <libdariadb/utils/metrics.h>
+#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/utils.h>
+#include <libdariadb/storage/bloom_filter.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/page.h>
 
 #include <atomic>
 #include <condition_variable>
@@ -412,7 +411,7 @@ void PageManager::stop() {
 }
 
 void PageManager::flush() {
-  TIMECODE_METRICS(ctmd, "flush", "PageManager::flush");
+  TIMECODE_METRICS(ctmd, "flu.h>, "PageManager::flu.h>);
   this->impl->flush();
 }
 

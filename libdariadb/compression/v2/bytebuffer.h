@@ -1,7 +1,7 @@
 #pragma once
 
-#include "libdariadb/utils/exception.h"
-#include "libdariadb/utils/utils.h"
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/utils.h>
 #include <memory>
 #include <ostream>
 #include <type_traits>

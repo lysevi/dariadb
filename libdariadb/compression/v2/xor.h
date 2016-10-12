@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libdariadb/compression/v2/base_compressor.h"
+#include <libdariadb/compression/v2/base_compressor.h>
 
 namespace dariadb {
 namespace compression {

@@ -1,6 +1,6 @@
 #pragma once
-#include "libdariadb/utils/logger.h"
-#include "libdariadb/utils/strings.h"
+#include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/strings.h>
 #include <sstream>
 #include <stdexcept>
 #include <string>

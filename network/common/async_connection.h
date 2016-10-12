@@ -2,9 +2,9 @@
 
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/locker.h>
-#include "common/net_common.h"
-#include "common/net_data.h"
-#include "common/socket_ptr.h"
+#include <common/net_common.h>
+#include <common/net_data.h>
+#include <common/socket_ptr.h>
 #include <atomic>
 #include <memory>
 #include <functional>
