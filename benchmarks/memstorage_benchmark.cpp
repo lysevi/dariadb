@@ -11,13 +11,14 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 
-#include <stx/btree_map>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <stx/btree_map>
 
 const dariadb::Time FROM = 0;
 const size_t WRITES_PER_SEC = 5;
-const dariadb::Time STEP = boost::posix_time::seconds(1).total_milliseconds()/ WRITES_PER_SEC;
-const dariadb::Time TO = STEP*1000000;
+const dariadb::Time STEP =
+    boost::posix_time::seconds(1).total_milliseconds() / WRITES_PER_SEC;
+const dariadb::Time TO = STEP * 1000000;
 
 struct KeySplitter {
   static const size_t levels_count = size_t(6);
@@ -34,8 +35,8 @@ struct KeySplitter {
       return 60;
     case 4: // second
       return 60;
-	default: // millisecond
-		return WRITES_PER_SEC;
+    default: // millisecond
+      return WRITES_PER_SEC;
     }
   }
 
@@ -48,8 +49,9 @@ struct KeySplitter {
     result[2] = dt.hour;
     result[3] = dt.minute;
     result[4] = dt.second;
-	result[5] = dt.millisecond / (uint16_t)STEP;
-	//std::cout << result[0] << ' ' << result[1] << ' ' << result[2] << ' ' << result[3] << ' ' << result[4] << ' ' << result[5] << '\n';
+    result[5] = dt.millisecond / (uint16_t)STEP;
+    // std::cout << result[0] << ' ' << result[1] << ' ' << result[2] << ' ' << result[3]
+    // << ' ' << result[4] << ' ' << result[5] << '\n';
     return result;
   }
 };
@@ -59,10 +61,10 @@ template <typename T> struct Statistic {
 };
 
 using TimeTree = dariadb::ads::FixedTree<dariadb::Time, dariadb::Meas, KeySplitter,
-	Statistic<dariadb::Meas>>;
+                                         Statistic<dariadb::Meas>>;
 
 void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) {
- 
+
   auto m = dariadb::Meas::empty();
   size_t count = (to - from) / step;
   std::cout << std::endl << "std::map: one thread benchmark..." << std::endl;
@@ -125,36 +127,36 @@ void one_thread_bench(dariadb::Time from, dariadb::Time to, dariadb::Time step) 
 }
 
 void one_thread_bench_time(dariadb::Time from, dariadb::Time to, dariadb::Time step) {
-	std::cout << "\nFixedTree_Time: one thread benchmark..." << std::endl;
-	TimeTree tree;
-	auto m = dariadb::Meas::empty();
-	size_t count = (to - from) / step;
-	{
-		auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::system_clock::now().time_since_epoch());
-		for (auto i = from; i < to; i += step) {
-			m.time = i;
-			tree.insert(i, m);
-		}
-		auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::system_clock::now().time_since_epoch());
-		auto elapsed = end.count() - start.count();
-		std::cout << "write: " << elapsed << " ms" << std::endl;
-		std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
+  std::cout << "\nFixedTree_Time: one thread benchmark..." << std::endl;
+  TimeTree tree;
+  auto m = dariadb::Meas::empty();
+  size_t count = (to - from) / step;
+  {
+    auto start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      m.time = i;
+      tree.insert(i, m);
+    }
+    auto end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    auto elapsed = end.count() - start.count();
+    std::cout << "write: " << elapsed << " ms" << std::endl;
+    std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
 
-		start = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::system_clock::now().time_since_epoch());
-		for (auto i = from; i < to; i += step) {
-			tree.find(i, &m);
-		}
-		end = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::system_clock::now().time_since_epoch());
-		elapsed = end.count() - start.count();
-		std::cout << "read: " << elapsed << " ms" << std::endl;
-		std::cout << "midle: " << double(elapsed) / ((to - from) / step) << " ms"
-			<< std::endl;
-		std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
-	}
+    start = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    for (auto i = from; i < to; i += step) {
+      tree.find(i, &m);
+    }
+    end = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    elapsed = end.count() - start.count();
+    std::cout << "read: " << elapsed << " ms" << std::endl;
+    std::cout << "midle: " << double(elapsed) / ((to - from) / step) << " ms"
+              << std::endl;
+    std::cout << "speed: " << count / elapsed * 1000 << " per sec." << std::endl;
+  }
 }
 
 std::vector<size_t> elapsed_times;
@@ -194,12 +196,13 @@ void read_thread(TimeTree *tree, size_t num, dariadb::Time from, dariadb::Time t
 
 int main(int argc, char **argv) {
   const size_t count = (TO - FROM) / STEP;
-  
-  std::cout << "from:" << FROM << " to:" << TO << " step:" << STEP << " total:"<<(TO - FROM)/ STEP << std::endl;
+
+  std::cout << "from:" << FROM << " to:" << TO << " step:" << STEP
+            << " total:" << (TO - FROM) / STEP << std::endl;
 
   one_thread_bench(FROM, TO, STEP);
   one_thread_bench_time(FROM, TO, STEP);
-  
+
   std::cout << std::endl << "Multi thread benchmark..." << std::endl;
   const size_t threads_count = 5;
   std::vector<std::thread> threads;
@@ -207,7 +210,7 @@ int main(int argc, char **argv) {
   elapsed_times.resize(threads_count);
   TimeTree tree;
   for (size_t i = 0; i < threads_count; ++i) {
-    auto t = std::thread{write_thread, &tree, i, FROM, TO, STEP };
+    auto t = std::thread{write_thread, &tree, i, FROM, TO, STEP};
     threads[i] = std::move(t);
   }
 
@@ -222,7 +225,7 @@ int main(int argc, char **argv) {
             << std::endl;
 
   for (size_t i = 0; i < threads_count; ++i) {
-    auto t = std::thread{read_thread, &tree, i, FROM, TO, STEP };
+    auto t = std::thread{read_thread, &tree, i, FROM, TO, STEP};
     threads[i] = std::move(t);
   }
 
