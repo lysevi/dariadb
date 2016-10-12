@@ -1,6 +1,6 @@
-#include "server.h"
-#include "iclientmanager.h"
-#include "ioclient.h"
+#include "libserver/server.h"
+#include "libserver/iclientmanager.h"
+#include "libserver/ioclient.h"
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
 #include <common/net_common.h>

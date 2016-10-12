@@ -8,7 +8,7 @@
 
 #include <boost/program_options.hpp>
 
-#include "logger.h"
+#include "server_logger.h"
 
 using namespace dariadb;
 using namespace dariadb::storage;

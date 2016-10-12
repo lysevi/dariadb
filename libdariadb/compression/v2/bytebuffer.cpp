@@ -1,5 +1,5 @@
-#include "bytebuffer.h"
-#include "../../utils/utils.h"
+#include "libdariadb/compression/v2/bytebuffer.h"
+#include "libdariadb/utils/utils.h"
 #include <cassert>
 #include <sstream>
 

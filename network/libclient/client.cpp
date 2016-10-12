@@ -3,7 +3,7 @@
 #include <libdariadb/utils/logger.h>
 #include <common/async_connection.h>
 #include <common/net_common.h>
-#include "client.h"
+#include "libclient/client.h"
 
 #include <boost/asio.hpp>
 #include <functional>

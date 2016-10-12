@@ -1,4 +1,4 @@
-#include "imeaswriter.h"
+#include "libdariadb/interfaces/imeaswriter.h"
 
 using namespace dariadb;
 using namespace dariadb::storage;

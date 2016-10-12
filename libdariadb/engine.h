@@ -1,11 +1,11 @@
 #pragma once
 
-#include "interfaces/imeasstorage.h"
-#include "storage/aof_manager.h"
-#include "storage/dropper.h"
-#include "storage/options.h"
-#include "storage/page_manager.h"
-#include "utils/utils.h"
+#include "libdariadb/interfaces/imeasstorage.h"
+#include "libdariadb/storage/aof_manager.h"
+#include "libdariadb/storage/dropper.h"
+#include "libdariadb/storage/options.h"
+#include "libdariadb/storage/page_manager.h"
+#include "libdariadb/utils/utils.h"
 
 #include <memory>
 

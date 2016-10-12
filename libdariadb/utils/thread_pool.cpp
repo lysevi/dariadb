@@ -1,5 +1,5 @@
-#include "thread_pool.h"
-#include "logger.h"
+#include "libdariadb/utils/thread_pool.h"
+#include "libdariadb/utils/logger.h"
 #include <cassert>
 
 using namespace dariadb::utils;

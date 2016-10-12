@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../interfaces/ichunkcontainer.h"
-#include "../interfaces/imeasstorage.h"
-#include "../utils/utils.h"
-#include "chunk.h"
+#include "libdariadb/interfaces/ichunkcontainer.h"
+#include "libdariadb/interfaces/imeasstorage.h"
+#include "libdariadb/utils/utils.h"
+#include "libdariadb/storage/chunk.h"
 
 #include <vector>
 

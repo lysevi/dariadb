@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../interfaces/idroppers.h"
-#include "../interfaces/imeasstorage.h"
-#include "../utils/locker.h"
-#include "../utils/utils.h"
-#include "aofile.h"
+#include "libdariadb/interfaces/idroppers.h"
+#include "libdariadb/interfaces/imeasstorage.h"
+#include "libdariadb/utils/locker.h"
+#include "libdariadb/utils/utils.h"
+#include "libdariadb/storage/aofile.h"
 #include <vector>
 
 #include <mutex>

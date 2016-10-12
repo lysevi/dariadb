@@ -1,5 +1,5 @@
-#include "strategy.h"
-#include "../utils/strings.h"
+#include "libdariadb/storage/strategy.h"
+#include "libdariadb/utils/strings.h"
 
 std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
   std::string token;

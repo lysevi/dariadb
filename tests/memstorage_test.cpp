@@ -139,3 +139,7 @@ BOOST_AUTO_TEST_CASE(FixedTreeNodeInsertionTest) {
     BOOST_CHECK_EQUAL(result, cur_V);
   }
 }
+
+
+BOOST_AUTO_TEST_CASE(TimeTree) {
+}

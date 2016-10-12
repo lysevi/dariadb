@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../append_result.h"
-#include "../meas.h"
-#include "../storage/query_param.h"
-#include "icallbacks.h"
+#include "libdariadb/append_result.h"
+#include "libdariadb/meas.h"
+#include "libdariadb/storage/query_param.h"
+#include "libdariadb/interfaces/icallbacks.h"
 #include <memory>
 
 namespace dariadb {

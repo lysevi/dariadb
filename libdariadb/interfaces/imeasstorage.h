@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../utils/utils.h"
-#include "imeassource.h"
-#include "imeaswriter.h"
+#include "libdariadb/utils/utils.h"
+#include "libdariadb/interfaces/imeassource.h"
+#include "libdariadb/interfaces/imeaswriter.h"
 
 namespace dariadb {
 namespace storage {
