@@ -5,7 +5,10 @@
 #include <cmath>
 #include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/ads/lockfree_array.h>
+#include <libdariadb/storage/memstorage.h>
 #include <libdariadb/meas.h>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
   dariadb::ads::LockFreeArray<int> lf(10);
@@ -141,5 +144,22 @@ BOOST_AUTO_TEST_CASE(FixedTreeNodeInsertionTest) {
 }
 
 
-BOOST_AUTO_TEST_CASE(TimeTree) {
+BOOST_AUTO_TEST_CASE(MemStorage) {
+	const dariadb::Time Step3s = boost::posix_time::seconds(2).total_milliseconds();
+	const dariadb::Time Step2s = boost::posix_time::seconds(2).total_milliseconds();
+	const dariadb::Time Step1s = boost::posix_time::seconds(1).total_milliseconds();
+	const size_t ValuesCount = 100;
+	
+	dariadb::storage::MemStorage::Params p;
+	dariadb::storage::MemStorage ms{ p };
+
+	dariadb::MeasArray ma(ValuesCount);
+	for (size_t i = 0; i < ValuesCount; ++i) {
+		ma[i].id = 0;
+		ma[i].time = i*Step1s;
+	}
+
+	BOOST_CHECK_EQUAL(ms.append(Step1s, ma).ignored, size_t(0));
+	BOOST_CHECK_EQUAL(ms.append(Step2s, ma).ignored, size_t(0));
+	BOOST_CHECK_EQUAL(ms.append(Step3s, ma).ignored, size_t(0));
 }
