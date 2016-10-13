@@ -1,7 +1,7 @@
 #pragma once
 
-#include "locker.h"
-#include "utils.h"
+#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/utils.h>
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>

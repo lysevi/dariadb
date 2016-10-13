@@ -1,7 +1,7 @@
 #pragma once
 
-#include "exception.h"
-#include "locker.h"
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/locker.h>
 #include <algorithm>
 #include <chrono>
 #include <iomanip>

@@ -1,4 +1,4 @@
-#include "logger.h"
+#include "server_logger.h"
 
 ServerLogger::Params::Params() {
 	use_stdout = true;

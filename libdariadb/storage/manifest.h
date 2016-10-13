@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utils/locker.h"
+#include <libdariadb/utils/locker.h>
 #include <list>
 #include <memory>
 #include <string>

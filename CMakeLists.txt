@@ -35,7 +35,7 @@ include(CompillerSettings)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(BOOST_DEP system filesystem system)
+set(BOOST_DEP system filesystem system date_time)
 
 if(ENABLE_TESTS)
   set(BOOST_DEP ${BOOST_DEP} unit_test_framework)
@@ -68,6 +68,8 @@ endif()
 
 include_directories(extern)
 include_directories(extern/spdlog/include)
+include_directories(extern/stx-btree/include)
+
 SET(DARIADB_STORAGE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
             CACHE STRING "dariadb storage include dir for storage engine.")
 

@@ -1,6 +1,6 @@
-#include "xor.h"
-#include "../../utils/cz.h"
-#include "../../utils/utils.h"
+#include <libdariadb/compression/v2/xor.h>
+#include <libdariadb/utils/cz.h>
+#include <libdariadb/utils/utils.h>
 #include <cassert>
 using namespace dariadb;
 using namespace dariadb::compression::v2;

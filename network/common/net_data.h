@@ -2,7 +2,7 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/locker.h>
-#include "net_common.h"
+#include <common/net_common.h>
 #include <tuple>
 
 #include <boost/pool/object_pool.hpp>

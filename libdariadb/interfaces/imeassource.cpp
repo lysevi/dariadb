@@ -1,7 +1,7 @@
-#include "imeassource.h"
+#include <libdariadb/interfaces/imeassource.h>
 
-#include "../storage/callbacks.h"
-#include "../utils/metrics.h"
+#include <libdariadb/storage/callbacks.h>
+#include <libdariadb/utils/metrics.h>
 #include <map>
 
 using namespace dariadb;

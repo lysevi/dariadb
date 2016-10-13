@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../interfaces/ichunkcontainer.h"
-#include "../utils/fs.h"
-#include "chunk.h"
+#include <libdariadb/interfaces/ichunkcontainer.h>
+#include <libdariadb/utils/fs.h>
+#include <libdariadb/storage/chunk.h>
 
 namespace dariadb {
 namespace storage {

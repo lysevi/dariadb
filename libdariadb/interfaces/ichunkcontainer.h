@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../meas.h"
-#include "../storage/query_param.h"
-#include "icallbacks.h"
+#include <libdariadb/meas.h>
+#include <libdariadb/storage/query_param.h>
+#include <libdariadb/interfaces/icallbacks.h>
 
 namespace dariadb {
 namespace storage {

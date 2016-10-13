@@ -18,6 +18,7 @@ addons:
       - libasio-dev 
       - libboost-log-dev 
       - libboost-regex-dev 
+      - libboost-date-time-dev
       - cmake  
       - g++-6  
       - gcc-6 
@@ -31,6 +32,9 @@ before_install:
    - sudo make -C lcov-1.11/ install
    - gem install coveralls-lcov
    - cmake --version
+   - cd ${TRAVIS_BUILD_DIR}
+   - git submodule init
+   - git submodule update
 
 matrix:
   include:

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../interfaces/imeasstorage.h"
-#include "../meas.h"
+#include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/meas.h>
 #include <memory>
 
 namespace dariadb {

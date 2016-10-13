@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../append_result.h"
-#include "../meas.h"
-#include "../storage/query_param.h"
+#include <libdariadb/append_result.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/storage/query_param.h>
 #include <memory>
 
 namespace dariadb {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../meas.h"
-#include "../utils/locker.h"
-#include "callbacks.h"
+#include <libdariadb/meas.h>
+#include <libdariadb/utils/locker.h>
+#include <libdariadb/storage/callbacks.h>
 #include <memory>
 
 namespace dariadb {

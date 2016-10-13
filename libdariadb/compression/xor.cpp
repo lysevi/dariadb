@@ -1,7 +1,7 @@
-#include "xor.h"
-#include "../utils/cz.h"
-#include "../utils/utils.h"
-#include "binarybuffer.h"
+#include <libdariadb/compression/xor.h>
+#include <libdariadb/utils/cz.h>
+#include <libdariadb/utils/utils.h>
+#include <libdariadb/compression/binarybuffer.h>
 #include <cassert>
 #include <limits>
 #include <sstream>

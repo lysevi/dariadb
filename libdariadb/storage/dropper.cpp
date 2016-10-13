@@ -1,13 +1,11 @@
-#include "dropper.h"
-#include "../utils/metrics.h"
-#include "../utils/thread_manager.h"
-#include "aof_manager.h"
-#include "lock_manager.h"
-#include "manifest.h"
-#include "options.h"
-#include "options.h"
-#include "page.h"
-#include "page_manager.h"
+#include <libdariadb/storage/dropper.h>
+#include <libdariadb/utils/metrics.h>
+#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/storage/lock_manager.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/page.h>
+#include <libdariadb/storage/page_manager.h>
 
 using namespace dariadb;
 using namespace dariadb::storage;

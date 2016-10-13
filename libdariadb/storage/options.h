@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../meas.h"
-#include "../utils/locker.h"
-#include "../utils/thread_pool.h"
-#include "strategy.h"
+#include <libdariadb/meas.h>
+#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/thread_pool.h>
+#include <libdariadb/storage/strategy.h>
 
 namespace dariadb {
 namespace storage {

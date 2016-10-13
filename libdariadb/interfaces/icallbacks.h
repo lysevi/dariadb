@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../meas.h"
+#include <libdariadb/meas.h>
 #include <memory>
 
 namespace dariadb {

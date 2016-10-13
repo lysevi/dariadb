@@ -1,5 +1,5 @@
-#include "binarybuffer.h"
-#include "../utils/utils.h"
+#include <libdariadb/compression/binarybuffer.h>
+#include <libdariadb/utils/utils.h>
 #include <cassert>
 #include <sstream>
 

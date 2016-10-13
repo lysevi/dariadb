@@ -10,7 +10,7 @@
 #include <libdariadb/meas.h>
 #include <common/net_common.h>
 #include <common/async_connection.h>
-#include "iclientmanager.h"
+#include <libserver/iclientmanager.h>
 
 namespace dariadb {
 namespace net {

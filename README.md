@@ -30,7 +30,7 @@
   - compressed - all values compressed for good disk usage without writing to sorted layer.
 
 # Dependencies
-* Boost 1.53.0 or higher: system, filesystem, interprocess (mmap), unit_test_framework(to build tests), program_options, asio, log and regex(for server only)
+* Boost 1.53.0 or higher: system, filesystem, date_time, interprocess (mmap), unit_test_framework(to build tests), program_options, asio, log and regex(for server only)
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
@@ -40,10 +40,18 @@
 ```shell
 $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update
-$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev cmake  g++-6  gcc-6 cpp-6
+$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6
 $ export CC="gcc-6"
 $ export CXX="g++-6"
+
+### Git submodules
+```shell
+$ cd dariadb
+$ git submodules init 
+$ git submodules update
 ```
+```
+
 ### Available build options
 - ENABLE_TESTS - Enable testing of the dariadb. - ON
 - ENABLE_METRICS - Enable code metrics. - ON
