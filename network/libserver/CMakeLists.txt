@@ -8,7 +8,7 @@ FILE(GLOB CMN_PROTO "../common/messages/*.proto")
 
 SET(CMD protobuf::protoc)
 if(SYSTEM_PROTOBUF)
-  SET(CMD ${Protobuf_PROTOC_EXECUTABLE})
+  SET(CMD protoc)
 endif()
 
 #Code Generation
