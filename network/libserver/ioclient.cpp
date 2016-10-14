@@ -129,19 +129,9 @@ void IOClient::end_session() {
   this->state = CLIENT_STATE::DISCONNECTED;
 
   if (sock->is_open()) {
-    auto nd = _async_connection->get_pool()->construct();
-    nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
-
-    dariadb::net::messages::QueryHeader qhdr_answer;
-    qhdr_answer.set_id(_async_connection->id());
-    qhdr_answer.set_kind(dariadb::net::messages::DISCONNECT);
-
-    if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
-        THROW_EXCEPTION("end_session message serialize error");
-    }
-
-    nd->size=qhdr_answer.ByteSize();
-    this->_async_connection->send(nd);
+      auto nd = _async_connection->get_pool()->construct(
+          dariadb::net::messages::DISCONNECT, _async_connection->id());
+      this->_async_connection->send(nd);
   }
 }
 
@@ -165,18 +155,8 @@ void IOClient::ping() {
         return;
     }
   pings_missed++;
-  auto nd = _async_connection->get_pool()->construct();
-  nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
-
-  dariadb::net::messages::QueryHeader qhdr_answer;
-  qhdr_answer.set_id(_async_connection->id());
-  qhdr_answer.set_kind(dariadb::net::messages::PING);
-
-  if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
-      THROW_EXCEPTION("ping message serialize error");
-  }
-
-  nd->size=qhdr_answer.ByteSize();
+  auto nd = _async_connection->get_pool()->construct(
+      dariadb::net::messages::PING, _async_connection->id());
   this->_async_connection->send(nd);
 }
 
@@ -295,18 +275,8 @@ dariadb::net::messages::QueryKind kind = qhdr.kind();
     host = qhello.host();
     env->srv->client_connect(this->_async_connection->id());
 
-    auto nd = _async_connection->get_pool()->construct();
-    nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
-
-    dariadb::net::messages::QueryHeader qhdr_answer;
-    qhdr_answer.set_id(_async_connection->id());
-    qhdr_answer.set_kind(dariadb::net::messages::HELLO);
-
-    if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
-        THROW_EXCEPTION("hello message serialize error");
-    }
-
-    nd->size=qhdr_answer.ByteSize();
+    auto nd = _async_connection->get_pool()->construct(
+        dariadb::net::messages::HELLO, _async_connection->id());
     this->_async_connection->send(nd);
     break;
   }
@@ -317,111 +287,121 @@ dariadb::net::messages::QueryKind kind = qhdr.kind();
 }
 
 void IOClient::sendOk(QueryNumber query_num) {
-//  auto ok_nd = env->nd_pool->construct(DATA_KINDS::OK);
-//  auto qh = reinterpret_cast<QueryOk_header *>(ok_nd->data);
-//  qh->id = query_num;
-//  assert(qh->id!=0);
-//  ok_nd->size = sizeof(QueryOk_header);
-//  _async_connection->send(ok_nd);
+    auto nd = _async_connection->get_pool()->construct(
+        dariadb::net::messages::OK, query_num);
+    this->_async_connection->send(nd);
 }
 
 void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
-//  auto err_nd = env->nd_pool->construct(DATA_KINDS::OK);
-//  auto qh = reinterpret_cast<QueryError_header *>(err_nd->data);
-//  qh->id = query_num;
-//  qh->error_code = (uint16_t)err;
-//  err_nd->size = sizeof(QueryError_header);
-//  _async_connection->send(err_nd);
+    auto nd = _async_connection->get_pool()->construct();
+    nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
+
+    dariadb::net::messages::QueryHeader qhdr;
+    qhdr.set_id(query_num);
+    qhdr.set_kind(dariadb::net::messages::ERR);
+
+    dariadb::net::messages::QueryError qhm;
+    qhm.set_errpr_code((uint16_t)err);
+    qhdr.set_submessage(qhm.SerializeAsString());
+
+    if(!qhdr.SerializeToArray(nd->data, nd->size)){
+        THROW_EXCEPTION("hello message serialize error");
+    }
+
+    nd->size=qhdr.ByteSize();
+
+
+    this->_async_connection->send(nd);
 }
 
 void IOClient::append(const NetData_ptr &d) {
-  auto hdr = reinterpret_cast<QueryAppend_header *>(d->data);
-  auto count = hdr->count;
-  logger_info("server: #", this->_async_connection->id(), " begin writing ", count);
-  MeasArray ma = hdr->read_measarray();
+//  auto hdr = reinterpret_cast<QueryAppend_header *>(d->data);
+//  auto count = hdr->count;
+//  logger_info("server: #", this->_async_connection->id(), " begin writing ", count);
+//  MeasArray ma = hdr->read_measarray();
 
-  auto ar = env->storage->append(ma.begin(), ma.end());
-  this->env->srv->write_end();
-  sendOk(hdr->id);
-  this->env->nd_pool->free(d);
-  logger_info("server: #", this->_async_connection->id(), " writed ", ar.writed, " ignored ", ar.ignored);
+//  auto ar = env->storage->append(ma.begin(), ma.end());
+//  this->env->srv->write_end();
+//  sendOk(hdr->id);
+//  this->env->nd_pool->free(d);
+//  logger_info("server: #", this->_async_connection->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }
 
 void IOClient::readInterval(const NetData_ptr &d) {
-  auto query_hdr = reinterpret_cast<QueryInterval_header *>(d->data);
+//  auto query_hdr = reinterpret_cast<QueryInterval_header *>(d->data);
 
-  auto from_str = timeutil::to_string(query_hdr->from);
-  auto to_str = timeutil::to_string(query_hdr->from);
+//  auto from_str = timeutil::to_string(query_hdr->from);
+//  auto to_str = timeutil::to_string(query_hdr->from);
 
-  logger_info("server: #", this->_async_connection->id(), " read interval point #", query_hdr->id, " id(",
-              query_hdr->ids_count, ") [", from_str, ',', to_str, "]");
-  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
-  IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
+//  logger_info("server: #", this->_async_connection->id(), " read interval point #", query_hdr->id, " id(",
+//              query_hdr->ids_count, ") [", from_str, ',', to_str, "]");
+//  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+//  IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
-  auto query_num = query_hdr->id;
-  storage::QueryInterval qi{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
+//  auto query_num = query_hdr->id;
+//  storage::QueryInterval qi{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
 
-  env->nd_pool->free(d);
+//  env->nd_pool->free(d);
 
-  if (query_hdr->from >= query_hdr->to) {
-    sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
-  } else {
-    auto cdr = std::make_unique<ClientDataReader>(this, query_num);
-    env->storage->foreach(qi, cdr.get());
-  }
+//  if (query_hdr->from >= query_hdr->to) {
+//    sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
+//  } else {
+//    auto cdr = std::make_unique<ClientDataReader>(this, query_num);
+//    env->storage->foreach(qi, cdr.get());
+//  }
 }
 
 void IOClient::readTimePoint(const NetData_ptr &d) {
-  auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(d->data);
+//  auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(d->data);
 
-  auto tp_str = timeutil::to_string(query_hdr->tp);
+//  auto tp_str = timeutil::to_string(query_hdr->tp);
 
-  logger_info("server: #", this->_async_connection->id(), " read time point  #", query_hdr->id, " id(",
-              query_hdr->ids_count, ") [", tp_str, "]");
-  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
-  IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
+//  logger_info("server: #", this->_async_connection->id(), " read time point  #", query_hdr->id, " id(",
+//              query_hdr->ids_count, ") [", tp_str, "]");
+//  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+//  IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
-  auto query_num = query_hdr->id;
-  storage::QueryTimePoint qi{all_ids, query_hdr->flag, query_hdr->tp};
+//  auto query_num = query_hdr->id;
+//  storage::QueryTimePoint qi{all_ids, query_hdr->flag, query_hdr->tp};
 
-  env->nd_pool->free(d);
+//  env->nd_pool->free(d);
 
-  auto cdr =std::make_unique<ClientDataReader>(this, query_num);
-  env->storage->foreach(qi, cdr.get());
+//  auto cdr =std::make_unique<ClientDataReader>(this, query_num);
+//  env->storage->foreach(qi, cdr.get());
 }
 
 void  IOClient::currentValue(const NetData_ptr &d) {
-	auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(d->data);
+//	auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(d->data);
 
-	logger_info("server: #", this->_async_connection->id(), " current values  #", query_hdr->id, " id(",
-		query_hdr->ids_count, ")");
-	auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
-	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
-	auto flag = query_hdr->flag;
-	auto query_num = query_hdr->id;
-	env->nd_pool->free(d);
+//	logger_info("server: #", this->_async_connection->id(), " current values  #", query_hdr->id, " id(",
+//		query_hdr->ids_count, ")");
+//	auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+//	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
+//	auto flag = query_hdr->flag;
+//	auto query_num = query_hdr->id;
+//	env->nd_pool->free(d);
 
-	auto result = env->storage->currentValue(all_ids, flag);
-	auto cdr = std::make_unique<ClientDataReader>(this, query_num);
-	for (auto&v : result) {
-		cdr->call(v.second);
-	}
-	cdr->is_end();
+//	auto result = env->storage->currentValue(all_ids, flag);
+//	auto cdr = std::make_unique<ClientDataReader>(this, query_num);
+//	for (auto&v : result) {
+//		cdr->call(v.second);
+//	}
+//	cdr->is_end();
 }
 
 void  IOClient::subscribe(const NetData_ptr &d) {
-	auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(d->data);
+//	auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(d->data);
 
-	logger_info("server: #", this->_async_connection->id(), " subscribe to values  #", query_hdr->id, " id(",
-		query_hdr->ids_count, ")");
-	auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
-	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
-	auto flag = query_hdr->flag;
-	auto query_num = query_hdr->id;
-	env->nd_pool->free(d);
+//	logger_info("server: #", this->_async_connection->id(), " subscribe to values  #", query_hdr->id, " id(",
+//		query_hdr->ids_count, ")");
+//	auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+//	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
+//	auto flag = query_hdr->flag;
+//	auto query_num = query_hdr->id;
+//	env->nd_pool->free(d);
 
-    if(subscribe_reader==nullptr){
-        subscribe_reader = std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
-    }
-	env->storage->subscribe(all_ids, flag, subscribe_reader);
+//    if(subscribe_reader==nullptr){
+//        subscribe_reader = std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
+//    }
+//	env->storage->subscribe(all_ids, flag, subscribe_reader);
 }

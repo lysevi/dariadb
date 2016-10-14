@@ -33,7 +33,7 @@ struct IOClient{
 
   struct ClientDataReader : public storage::IReaderClb {
     static const size_t BUFFER_LENGTH =
-        (NetData::MAX_MESSAGE_SIZE - sizeof(QueryAppend_header)) / sizeof(Meas);
+        (NetData::MAX_MESSAGE_SIZE ) / sizeof(Meas);
     utils::Locker _locker;
     IOClient *_parent;
     QueryNumber _query_num;

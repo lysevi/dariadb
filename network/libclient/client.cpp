@@ -64,18 +64,8 @@ public:
 
   void disconnect() {
     if (_socket->is_open()) {
-        auto nd = _async_connection->get_pool()->construct();
-        nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
-
-        dariadb::net::messages::QueryHeader qhdr_answer;
-        qhdr_answer.set_id(_async_connection->id());
-        qhdr_answer.set_kind(dariadb::net::messages::DISCONNECT);
-
-        if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
-            THROW_EXCEPTION("disconnect message serialize error");
-        }
-
-        nd->size=qhdr_answer.ByteSize();
+      auto nd = _async_connection->get_pool()->construct(
+          dariadb::net::messages::DISCONNECT, _async_connection->id());
       this->_async_connection->send(nd);
     }
 
@@ -141,39 +131,39 @@ public:
     dariadb::net::messages::QueryKind kind = qhdr.kind();
     switch (kind) {
     case dariadb::net::messages::QueryKind::OK: {
-//      auto qh_ok = reinterpret_cast<QueryOk_header *>(d->data);
-//      auto query_num = qh_ok->id;
-//      logger_info("client: #", _async_connection->id(), " query #", query_num,
-//                  " accepted.");
-//      if (this->_state != CLIENT_STATE::WORK) {
-//        THROW_EXCEPTION("(this->_state != CLIENT_STATE::WORK)", this->_state);
-//      }
+      auto query_num = qhdr.id();
+      logger_info("client: #", _async_connection->id(), " query #", query_num,
+                  " accepted.");
+      if (this->_state != CLIENT_STATE::WORK) {
+        THROW_EXCEPTION("(this->_state != CLIENT_STATE::WORK)", this->_state);
+      }
 
-//      auto subres_it = this->_query_results.find(query_num);
-//      if (subres_it != this->_query_results.end()) {
-//        subres_it->second->is_ok = true;
-//        if (subres_it->second->kind == DATA_KINDS::SUBSCRIBE) {
-//          subres_it->second->locker.unlock();
-//        }
-//      } else {
-//        THROW_EXCEPTION("client: query #", qh_ok->id, " not found");
-//      }
+      auto subres_it = this->_query_results.find(query_num);
+      if (subres_it != this->_query_results.end()) {
+        subres_it->second->is_ok = true;
+        if (subres_it->second->kind ==  dariadb::net::messages::QueryKind::SUBSCRIBE) {
+          subres_it->second->locker.unlock();
+        }
+      } else {
+        THROW_EXCEPTION("client: query #", query_num, " not found");
+      }
       break;
     }
     case dariadb::net::messages::QueryKind::ERR: {
-//      auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
-//      auto query_num = qh_e->id;
-//      ERRORS err = (ERRORS)qh_e->error_code;
-//      logger_info("client: #", _async_connection->id(), " query #", query_num,
-//                  " error:", err);
-//      if (this->state() == CLIENT_STATE::WORK) {
-//        auto subres = this->_query_results[qh_e->id];
-//        subres->is_closed = true;
-//        subres->is_error = true;
-//        subres->errc = err;
-//        subres->locker.unlock();
-//        _query_results.erase(qh_e->id);
-//      }
+        dariadb::net::messages::QueryError qerr;
+        qerr.ParseFromString(qhdr.submessage());
+      auto query_num = qhdr.id();
+      ERRORS err = (ERRORS)qerr.errpr_code();
+      logger_info("client: #", _async_connection->id(), " query #", query_num,
+                  " error:", err);
+      if (this->state() == CLIENT_STATE::WORK) {
+        auto subres = this->_query_results[query_num];
+        subres->is_closed = true;
+        subres->is_error = true;
+        subres->errc = err;
+        subres->locker.unlock();
+        _query_results.erase(query_num);
+      }
       break;
     }
     case dariadb::net::messages::QueryKind::APPEND: {
@@ -197,18 +187,8 @@ public:
     }
     case dariadb::net::messages::QueryKind::PING: {
       logger_info("client: #", _async_connection->id(), " ping.");
-      auto nd = _async_connection->get_pool()->construct();
-      nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
-
-      dariadb::net::messages::QueryHeader qhdr_answer;
-      qhdr_answer.set_id(_async_connection->id());
-      qhdr_answer.set_kind(dariadb::net::messages::PONG);
-
-      if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
-          THROW_EXCEPTION("ping message serialize error");
-      }
-
-      nd->size=qhdr_answer.ByteSize();
+      auto nd = _async_connection->get_pool()->construct(
+          dariadb::net::messages::PONG, _async_connection->id());
       this->_async_connection->send(nd);
       _pings_answers++;
       break;

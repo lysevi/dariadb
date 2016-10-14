@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <libclient/dariadb_cl_exports.h>
+#include <libclient/messages.pb.h>
 
 namespace dariadb {
 namespace net {
@@ -16,7 +17,7 @@ namespace client {
 struct DARIADBCL_EXPORTS ReadResult {
   using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
   QueryNumber id;
-  DATA_KINDS kind;
+  dariadb::net::messages::QueryKind kind;
   utils::Locker locker;
   callback clbk;
   bool is_ok;     //true - if server send OK to this query.
