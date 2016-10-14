@@ -1,24 +1,69 @@
-package tutorial;
+syntax = "proto2";
+package dariadb.network.messages;
 
-message Person {
-  required string name = 1;
+enum QueryKind {
+    OK=0;
+    ERR=1;
+    HELLO=2;
+    DISCONNECT=3;
+    PING=4;
+    PONG=5;
+    APPEND=6;
+    READ_INTERVAL=7;
+    READ_TIMEPOINT=8;
+    CURRENT_VALUE=9;
+    SUBSCRIBE=10;
+}
+
+message QueryHeader {
+  required QueryKind kind = 1;
   required int32 id = 2;
-  optional string email = 3;
+  required string submessage = 3;
+}  
 
-  enum PhoneType {
-    MOBILE = 0;
-    HOME = 1;
-    WORK = 2;
-  }
-
-  message PhoneNumber {
-    required string number = 1;
-    optional PhoneType type = 2 [default = HOME];
-  }
-
-  repeated PhoneNumber phone = 4;
+message QueryHello{
+  required uint32 version = 1;
+  required string  host = 2;
 }
 
-message AddressBook {
-  repeated Person person = 1;
+message QueryError{
+  required int32  errpr_code = 1;
 }
+
+message QueryAppend{
+  message ValueData{
+     required int64 time=1;
+     required int32 flag=2;
+     required int64 value=3;
+  };
+
+  message ValueArray{
+     required uint64 id=1;
+     repeated ValueData data=2;
+  };
+
+  repeated ValueArray values=2;
+};
+
+message QueryInterval_header {
+  required uint64 from=1;
+  required uint64 to=2;
+  required uint32 flag=3;
+  repeated uint64 ids=4;
+};
+
+message QueryTimePoint_header {
+  required uint64 tp=1;
+  required uint64 flag=2;
+  repeated uint64 ids=3;
+};
+
+message QueryCurrentValue_header {
+  required uint64 flag=1;
+  repeated uint64 ids=2;
+};
+
+message QuerSubscribe_header {
+ required uint64 flag=1;
+ repeated uint64 ids=2;
+};

@@ -1,4 +1,5 @@
 #include <libserver/ioclient.h>
+#include <libserver/messages.pb.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
