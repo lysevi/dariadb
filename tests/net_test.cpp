@@ -14,6 +14,8 @@
 #include <libclient/client.h>
 #include <libserver/server.h>
 
+#include <libclient/messages.pb.h>
+
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
 
@@ -38,6 +40,29 @@ void server_thread_func() {
 
   server_instance = nullptr;
 }
+
+//BOOST_AUTO_TEST_CASE(QueryesTest){
+//    dariadb::net::messages::QueryHeader qhdr;
+//    qhdr.set_id(1);
+//    qhdr.set_kind(dariadb::net::messages::HELLO);
+
+//    dariadb::net::messages::QueryHello qhm;
+//    qhm.set_host("host name");
+//    qhm.set_version(1);
+//    qhdr.set_submessage(qhm.SerializePartialAsString());
+
+//    auto str=qhdr.SerializeAsString();
+
+//    dariadb::net::messages::QueryHeader qhdr_empty;
+//    qhdr_empty.ParseFromString(str);
+
+//    BOOST_CHECK_EQUAL(qhdr.id(),qhdr_empty.id());
+
+//    dariadb::net::messages::QueryHello qhm_e;
+//    qhm_e.ParseFromString(qhdr_empty.submessage());
+
+//    BOOST_CHECK_EQUAL(qhm.host(),qhm_e.host());
+//}
 
 BOOST_AUTO_TEST_CASE(Connect1) {
   dariadb::logger("********** Connect1 **********");
@@ -217,7 +242,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_stop_flag = true;
   server_thread.join();
 }
-
+/*
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   dariadb::logger("********** ReadWriteTest **********");
 
@@ -316,3 +341,4 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
+*/

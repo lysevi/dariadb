@@ -61,13 +61,12 @@ void AsyncConnection::send(const NetData_ptr &d) {
     auto ds = d->as_buffer();
     auto send_buffer = std::get<1>(ds);
     auto send_buffer_size = std::get<0>(ds);
-
+    logger("send ",send_buffer_size);
     if (auto spt = _sock.lock()) {
       _messages_to_send++;
       auto buf = buffer(send_buffer, send_buffer_size);
       async_write(*spt.get(), buf, [ptr, d](auto err, auto read_bytes) {
-        // logger("AsyncConnection::onDataSended #", _async_con_id, " readed ",
-        // read_bytes);
+        logger("AsyncConnection::onDataSended #",ptr->_async_con_id, " readed ",read_bytes);
         ptr->_messages_to_send--;
         assert(ptr->_messages_to_send >= 0);
         if (err) {
@@ -100,9 +99,7 @@ void AsyncConnection::readNextAsync() {
                    }
                    auto buf = buffer((uint8_t *)(&d->data), d->size);
                    async_read(*spt.get(), buf, [ptr, d](auto err, auto read_bytes) {
-                     // logger("AsyncConnection::onReadData #", _async_con_id,
-                     // "
-                     // readed ", read_bytes);
+                      logger("AsyncConnection::onReadData #",ptr->_async_con_id,"readed ", read_bytes);
                      if (err) {
                        ptr->_on_error_handler(err);
                      } else {

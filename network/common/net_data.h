@@ -18,7 +18,6 @@ struct NetData {
   uint8_t data[MAX_MESSAGE_SIZE];
 
   NetData();
-  NetData(const DATA_KINDS &k);
   ~NetData();
 
   std::tuple<MessageSize, uint8_t *> as_buffer();

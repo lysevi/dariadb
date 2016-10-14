@@ -28,20 +28,20 @@ struct SubscribeCallback : public storage::IReaderClb {
 	void is_end() override {
 	}
 	void send_buffer(const Meas &m) {
-		auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
-		nd->size = sizeof(QueryAppend_header);
+//		auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
+//		nd->size = sizeof(QueryAppend_header);
 
-		auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
-		hdr->id = _query_num;
-		hdr->count = 1;
+//		auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
+//		hdr->id = _query_num;
+//		hdr->count = 1;
 
-		auto size_to_write = hdr->count * sizeof(Meas);
+//		auto size_to_write = hdr->count * sizeof(Meas);
 
-		auto meas_ptr = (Meas *)((char *)(&hdr->count) + sizeof(hdr->count));
-		nd->size += static_cast<NetData::MessageSize>(size_to_write);
+//		auto meas_ptr = (Meas *)((char *)(&hdr->count) + sizeof(hdr->count));
+//		nd->size += static_cast<NetData::MessageSize>(size_to_write);
 
-		*meas_ptr = m;
-		_parent->_async_connection->send(nd);
+//		*meas_ptr = m;
+//		_parent->_async_connection->send(nd);
 	}
 };
 
@@ -64,39 +64,39 @@ void IOClient::ClientDataReader::call(const Meas &m) {
 void IOClient::ClientDataReader::is_end() {
   send_buffer();
 
-  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
-  nd->size = sizeof(QueryAppend_header);
-  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
-  hdr->id = _query_num;
-  hdr->count = 0;
-  logger("server: #", _parent->_async_connection->id(), " end of #", hdr->id);
-  _parent->_async_connection->send(nd);
+//  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
+//  nd->size = sizeof(QueryAppend_header);
+//  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
+//  hdr->id = _query_num;
+//  hdr->count = 0;
+//  logger("server: #", _parent->_async_connection->id(), " end of #", hdr->id);
+//  _parent->_async_connection->send(nd);
 }
 
 void IOClient::ClientDataReader::send_buffer() {
   if (pos == 0) {
     return;
   }
-  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
-  nd->size = sizeof(QueryAppend_header);
+//  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
+//  nd->size = sizeof(QueryAppend_header);
 
-  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
-  hdr->id = _query_num;
-  hdr->count = static_cast<uint32_t>(pos);
+//  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
+//  hdr->id = _query_num;
+//  hdr->count = static_cast<uint32_t>(pos);
 
-  auto size_to_write = hdr->count * sizeof(Meas);
+//  auto size_to_write = hdr->count * sizeof(Meas);
 
-  auto meas_ptr = (Meas *)((char *)(&hdr->count) + sizeof(hdr->count));
-  nd->size += static_cast<NetData::MessageSize>(size_to_write);
+//  auto meas_ptr = (Meas *)((char *)(&hdr->count) + sizeof(hdr->count));
+//  nd->size += static_cast<NetData::MessageSize>(size_to_write);
 
-  auto it = _buffer.begin();
-  size_t i = 0;
-  for (; it != _buffer.end() && i < hdr->count; ++it, ++i) {
-    *meas_ptr = *it;
-    ++meas_ptr;
-  }
-  logger("server: #", _parent->_async_connection->id(), " send to client result of #", hdr->id," count ", hdr->count);
-  _parent->_async_connection->send(nd);
+//  auto it = _buffer.begin();
+//  size_t i = 0;
+//  for (; it != _buffer.end() && i < hdr->count; ++it, ++i) {
+//    *meas_ptr = *it;
+//    ++meas_ptr;
+//  }
+//  logger("server: #", _parent->_async_connection->id(), " send to client result of #", hdr->id," count ", hdr->count);
+//  _parent->_async_connection->send(nd);
 }
 
 IOClient::ClientDataReader::~ClientDataReader() {}
@@ -129,7 +129,18 @@ void IOClient::end_session() {
   this->state = CLIENT_STATE::DISCONNECTED;
 
   if (sock->is_open()) {
-    auto nd = this->_async_connection->get_pool()->construct(DATA_KINDS::DISCONNECT);
+    auto nd = _async_connection->get_pool()->construct();
+    nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
+
+    dariadb::net::messages::QueryHeader qhdr_answer;
+    qhdr_answer.set_id(_async_connection->id());
+    qhdr_answer.set_kind(dariadb::net::messages::DISCONNECT);
+
+    if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
+        THROW_EXCEPTION("end_session message serialize error");
+    }
+
+    nd->size=qhdr_answer.ByteSize();
     this->_async_connection->send(nd);
   }
 }
@@ -154,7 +165,18 @@ void IOClient::ping() {
         return;
     }
   pings_missed++;
-  auto nd = this->_async_connection->get_pool()->construct(DATA_KINDS::PING);
+  auto nd = _async_connection->get_pool()->construct();
+  nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
+
+  dariadb::net::messages::QueryHeader qhdr_answer;
+  qhdr_answer.set_id(_async_connection->id());
+  qhdr_answer.set_kind(dariadb::net::messages::PING);
+
+  if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
+      THROW_EXCEPTION("ping message serialize error");
+  }
+
+  nd->size=qhdr_answer.ByteSize();
   this->_async_connection->send(nd);
 }
 
@@ -170,114 +192,121 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
                           bool &dont_free_memory) {
   _last_query_time=dariadb::timeutil::current_time();
   // logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
-  auto qh = reinterpret_cast<Query_header *>(d->data);
+  dariadb::net::messages::QueryHeader qhdr;
+  qhdr.ParseFromArray(d->data, d->size);
 
-  DATA_KINDS kind = (DATA_KINDS)qh->kind;
+dariadb::net::messages::QueryKind kind = qhdr.kind();
   switch (kind) {
-  case DATA_KINDS::APPEND: {
-	  if (this->env->srv->server_begin_stopping()) {
-		  logger_info("server: #", this->_async_connection->id(), " refuse append query. server in stop.");
-		  return;
-	  }
-    auto hdr = reinterpret_cast<QueryAppend_header *>(&d->data);
-    auto count = hdr->count;
-    logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id,
-                " write ", count);
-    this->env->srv->write_begin();
-    dont_free_memory = true;
+  case dariadb::net::messages::QueryKind::APPEND: {
+//	  if (this->env->srv->server_begin_stopping()) {
+//		  logger_info("server: #", this->_async_connection->id(), " refuse append query. server in stop.");
+//		  return;
+//	  }
+//    auto hdr = reinterpret_cast<QueryAppend_header *>(&d->data);
+//    auto count = hdr->count;
+//    logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id,
+//                " write ", count);
+//    this->env->srv->write_begin();
+//    dont_free_memory = true;
 
-    env->service->post(
-        env->io_meases_strand->wrap(std::bind(&IOClient::append, this, d)));
+//    env->service->post(
+//        env->io_meases_strand->wrap(std::bind(&IOClient::append, this, d)));
 
     break;
   }
-  case DATA_KINDS::PONG: {
+  case dariadb::net::messages::QueryKind::PONG: {
     pings_missed--;
     logger_info("server: #", this->_async_connection->id(), " pings_missed: ",
                 pings_missed.load());
     break;
   }
-  case DATA_KINDS::DISCONNECT: {
-    logger_info("server: #", this->_async_connection->id(),
-                " disconnection request.");
+  case dariadb::net::messages::QueryKind::DISCONNECT: {
+    logger_info("server: #", this->_async_connection->id()," disconnection request.");
     cancel = true;
     this->end_session();
-    // this->srv->client_disconnect(this->id);
     break;
   }
-  case DATA_KINDS::READ_INTERVAL: {
-	  if (this->env->srv->server_begin_stopping()) {
-		  logger_info("server: #", this->_async_connection->id(), " refuse read_interval query. server in stop.");
-		  return;
-	  }
-    auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
-    dont_free_memory = true;
-    sendOk(query_hdr->id);
-    env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::readInterval, this, d)));
+  case dariadb::net::messages::QueryKind::READ_INTERVAL: {
+//	  if (this->env->srv->server_begin_stopping()) {
+//		  logger_info("server: #", this->_async_connection->id(), " refuse read_interval query. server in stop.");
+//		  return;
+//	  }
+//    auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
+//    dont_free_memory = true;
+//    sendOk(query_hdr->id);
+//    env->service->post(env->io_meases_strand->wrap(
+//        std::bind(&IOClient::readInterval, this, d)));
     break;
   }
-  case DATA_KINDS::READ_TIMEPOINT: {
-	  if (this->env->srv->server_begin_stopping()) {
-		  logger_info("server: #", this->_async_connection->id(), " refuse read_timepoint query. server in stop.");
-		  return;
-	  }
-    auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
-    dont_free_memory = true;
-    sendOk(query_hdr->id);
-    env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::readTimePoint, this, d)));
+  case dariadb::net::messages::QueryKind::READ_TIMEPOINT: {
+//	  if (this->env->srv->server_begin_stopping()) {
+//		  logger_info("server: #", this->_async_connection->id(), " refuse read_timepoint query. server in stop.");
+//		  return;
+//	  }
+//    auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
+//    dont_free_memory = true;
+//    sendOk(query_hdr->id);
+//    env->service->post(env->io_meases_strand->wrap(
+//        std::bind(&IOClient::readTimePoint, this, d)));
     break;
   }
-  case DATA_KINDS::CURRENT_VALUE: {
-	  if (this->env->srv->server_begin_stopping()) {
-		  logger_info("server: #", this->_async_connection->id(), " refuse current_value query. server in stop.");
-		  return;
-	  }
-    auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
-    dont_free_memory = true;
-    sendOk(query_hdr->id);
-    env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::currentValue, this, d)));
+  case dariadb::net::messages::QueryKind::CURRENT_VALUE: {
+//	  if (this->env->srv->server_begin_stopping()) {
+//		  logger_info("server: #", this->_async_connection->id(), " refuse current_value query. server in stop.");
+//		  return;
+//	  }
+//    auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
+//    dont_free_memory = true;
+//    sendOk(query_hdr->id);
+//    env->service->post(env->io_meases_strand->wrap(
+//        std::bind(&IOClient::currentValue, this, d)));
     break;
   }
-  case DATA_KINDS::SUBSCRIBE: {
-	  if (this->env->srv->server_begin_stopping()) {
-		  logger_info("server: #", this->_async_connection->id(), " refuse subscribe query. server in stop.");
-		  return;
-	  }
-    auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
-    dont_free_memory = true;
-    sendOk(query_hdr->id);
-    env->service->post(
-        env->io_meases_strand->wrap(std::bind(&IOClient::subscribe, this, d)));
+  case dariadb::net::messages::QueryKind::SUBSCRIBE: {
+//	  if (this->env->srv->server_begin_stopping()) {
+//		  logger_info("server: #", this->_async_connection->id(), " refuse subscribe query. server in stop.");
+//		  return;
+//	  }
+//    auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
+//    dont_free_memory = true;
+//    sendOk(query_hdr->id);
+//    env->service->post(
+//        env->io_meases_strand->wrap(std::bind(&IOClient::subscribe, this, d)));
     break;
   }
-  case DATA_KINDS::HELLO: {
+  case dariadb::net::messages::QueryKind::HELLO: {
 	  if (this->env->srv->server_begin_stopping()) {
 		  logger_info("server: #", this->_async_connection->id(), " refuse connection query. server in stop.");
 		  return;
 	  }
-    QueryHello_header *qhh = reinterpret_cast<QueryHello_header *>(d->data);
-    if (qhh->version != PROTOCOL_VERSION) {
+
+      dariadb::net::messages::QueryHello qhello;
+      qhello.ParseFromString(qhdr.submessage());
+
+    if (qhello.version() != PROTOCOL_VERSION) {
       logger("server: #", _async_connection->id(),
              " wrong protocol version: exp=", PROTOCOL_VERSION, ", rec=",
-             qhh->version);
+             qhello.version());
       sendError(0, ERRORS::WRONG_PROTOCOL_VERSION);
       this->state = CLIENT_STATE::DISCONNECTED;
       return;
     }
-    auto host_ptr = ((char *)(&qhh->host_size) + sizeof(qhh->host_size));
 
-    std::string msg(host_ptr, host_ptr + qhh->host_size);
-    host = msg;
+    host = qhello.host();
     env->srv->client_connect(this->_async_connection->id());
 
-    auto nd = _async_connection->get_pool()->construct(DATA_KINDS::HELLO);
-    nd->size += sizeof(uint32_t);
-    auto idptr = (uint32_t *)(&nd->data[1]);
-    *idptr = _async_connection->id();
+    auto nd = _async_connection->get_pool()->construct();
+    nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
 
+    dariadb::net::messages::QueryHeader qhdr_answer;
+    qhdr_answer.set_id(_async_connection->id());
+    qhdr_answer.set_kind(dariadb::net::messages::HELLO);
+
+    if(!qhdr_answer.SerializeToArray(nd->data, nd->size)){
+        THROW_EXCEPTION("hello message serialize error");
+    }
+
+    nd->size=qhdr_answer.ByteSize();
     this->_async_connection->send(nd);
     break;
   }
@@ -288,21 +317,21 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
 }
 
 void IOClient::sendOk(QueryNumber query_num) {
-  auto ok_nd = env->nd_pool->construct(DATA_KINDS::OK);
-  auto qh = reinterpret_cast<QueryOk_header *>(ok_nd->data);
-  qh->id = query_num;
-  assert(qh->id!=0);
-  ok_nd->size = sizeof(QueryOk_header);
-  _async_connection->send(ok_nd);
+//  auto ok_nd = env->nd_pool->construct(DATA_KINDS::OK);
+//  auto qh = reinterpret_cast<QueryOk_header *>(ok_nd->data);
+//  qh->id = query_num;
+//  assert(qh->id!=0);
+//  ok_nd->size = sizeof(QueryOk_header);
+//  _async_connection->send(ok_nd);
 }
 
 void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
-  auto err_nd = env->nd_pool->construct(DATA_KINDS::OK);
-  auto qh = reinterpret_cast<QueryError_header *>(err_nd->data);
-  qh->id = query_num;
-  qh->error_code = (uint16_t)err;
-  err_nd->size = sizeof(QueryError_header);
-  _async_connection->send(err_nd);
+//  auto err_nd = env->nd_pool->construct(DATA_KINDS::OK);
+//  auto qh = reinterpret_cast<QueryError_header *>(err_nd->data);
+//  qh->id = query_num;
+//  qh->error_code = (uint16_t)err;
+//  err_nd->size = sizeof(QueryError_header);
+//  _async_connection->send(err_nd);
 }
 
 void IOClient::append(const NetData_ptr &d) {

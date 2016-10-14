@@ -39,6 +39,7 @@ public:
     _env.nd_pool = &_net_data_pool;
     _env.service = &_service;
     _env.io_meases_strand = &_write_meases_strand;
+    _env.storage=nullptr;
   }
 
   ~Private() { stop(); }
@@ -238,6 +239,9 @@ public:
   }
 
   void log_server_info() {
+       if(this->_env.storage==nullptr){
+           return;
+       }
     auto queue_sizes = _env.storage->queue_size();
     std::stringstream stor_ss;
 

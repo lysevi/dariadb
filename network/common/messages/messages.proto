@@ -1,5 +1,5 @@
 syntax = "proto2";
-package dariadb.network.messages;
+package dariadb.net.messages;
 
 enum QueryKind {
     OK=0;
@@ -18,7 +18,7 @@ enum QueryKind {
 message QueryHeader {
   required QueryKind kind = 1;
   required int32 id = 2;
-  required string submessage = 3;
+  optional string submessage = 3;
 }  
 
 message QueryHello{
