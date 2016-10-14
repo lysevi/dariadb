@@ -8,6 +8,11 @@ FILE(GLOB CMN_SRC "../common/*.cpp")
 
 FILE(GLOB CMN_PROTO "../common/messages/*.proto")
 
+SET(CMD protobuf::protoc)
+if(SYSTEM_PROTOBUF)
+  SET(CMD ${Protobuf_PROTOC_EXECUTABLE})
+endif()
+
 #Code Generation
 if(protobuf_MODULE_COMPATIBLE) #Legacy Support
    protobuf_generate_cpp(common_PROTOC_SRCS common_PROTO_HDRS ${CMN_PROTO})
@@ -24,7 +29,7 @@ else()
 		        
 		add_custom_command(
             OUTPUT ${generated_files}
-            COMMAND protobuf::protoc
+            COMMAND ${CMD}
             ARGS --cpp_out ${CMAKE_CURRENT_BINARY_DIR} -I ${proto_dir} ${proto_file_abs} 
             COMMENT "Generating ${generated_files} from ${proto_file}"
             VERBATIM)
