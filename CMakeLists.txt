@@ -9,6 +9,7 @@ option(ENABLE_SERVER "Enable build dariadb server." ON)
 option(ENABLE_BENCHMARKS "Enable build dariadb benchmarks." ON)
 option(CLANG_ASAN_UBSAN "Enable Clang address & undefined behavior sanitizer for binary." OFF)
 option(CLANG_MSAN "Enable Clang memory sanitizer for binary." OFF)
+option(SYSTEM_PROTOBUF "use system protobuf." ON)
 
 if((CLANG_ASAN_UBSAN AND CLANG_MSAN))
   message(FATAL_ERROR "Sanitizers cannot be enabled simultaneously.")

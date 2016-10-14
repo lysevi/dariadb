@@ -40,7 +40,9 @@
 ```shell
 $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update
-$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6
+$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev 
+$ sudo apt-get install -y cmake  g++-6  gcc-6 cpp-6
+$ sudo apt-get install -y libprotobuf-dev  protobuf-compiler
 $ export CC="gcc-6"
 $ export CXX="g++-6"
 
@@ -60,6 +62,7 @@ $ git submodules update
 - ENABLE_BENCHMARKS - Enable build dariadb benchmarks. - ON
 - CLANG_ASAN_UBSAN  - Enable Clang address & undefined behavior sanitizer for binary. - OFF
 - CLANG_MSAN - Enable Clang memory sanitizer for binary. - OFF
+- SYSTEM_PROTOBUF - Use protobuf installed in system (linux). - ON
 
 #### Example
 Configure to build with all benchmarks, but without tests and server.
@@ -86,10 +89,10 @@ $ make
 $ cmake -G "Visual Studio 12 2013 Win64" .
 $ cmake --build .
 ```
-### build with non system installed boost
+### build with non system installed boost and protobuf
 ---
 ```shell
-$ cmake  -DBOOST_ROOT="path/to/boost/" .
+$ cmake  -DBOOST_ROOT="path/to/boost/" -DSYSTEM_PROTOBUF=OFF -Dprotobuf_DIR=/path/to/protobuf/cmake/cmake.
 $ make
 ```
 

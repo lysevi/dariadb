@@ -1,5 +1,6 @@
 libdariadb/config.h
 tmp
+*.pb.*
 packages.config
 Options
 .vs
