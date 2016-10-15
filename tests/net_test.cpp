@@ -242,7 +242,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_stop_flag = true;
   server_thread.join();
 }
-/*
+
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   dariadb::logger("********** ReadWriteTest **********");
 
@@ -296,31 +296,31 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       ma[i].time = i;
       ids[i] = ma[i].id;
     }
-	size_t subscribe_calls = 0;
-	dariadb::net::client::ReadResult::callback clbk = [&subscribe_calls](const dariadb::net::client::ReadResult *parent, const dariadb::Meas &m) {
-		subscribe_calls++;
-	};
+//	size_t subscribe_calls = 0;
+//	dariadb::net::client::ReadResult::callback clbk = [&subscribe_calls](const dariadb::net::client::ReadResult *parent, const dariadb::Meas &m) {
+//		subscribe_calls++;
+//	};
 
-	auto read_res=c1.subscribe({ ma[0].id }, dariadb::Flag(0), clbk);
-	read_res->wait();
-	read_res = c1.subscribe({ ma[1].id }, dariadb::Flag(0), clbk);
-	read_res->wait();
+//	auto read_res=c1.subscribe({ ma[0].id }, dariadb::Flag(0), clbk);
+//	read_res->wait();
+//	read_res = c1.subscribe({ ma[1].id }, dariadb::Flag(0), clbk);
+//	read_res->wait();
     c1.append(ma);
 
-    dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
-                                       dariadb::Time(MEASES_SIZE)};
-    auto result = c1.readInterval(qi);
-    BOOST_CHECK_EQUAL(result.size(), ma.size());
+//    dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
+//                                       dariadb::Time(MEASES_SIZE)};
+//    auto result = c1.readInterval(qi);
+//    BOOST_CHECK_EQUAL(result.size(), ma.size());
 
-    dariadb::storage::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
-    auto result_tp = c1.readTimePoint(qt);
-    BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
-    BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
+//    dariadb::storage::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
+//    auto result_tp = c1.readTimePoint(qt);
+//    BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
+//    BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
 
-	auto result_cv = c1.currentValue({ ids[0], ids[1] }, 0);
-	BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
+//	auto result_cv = c1.currentValue({ ids[0], ids[1] }, 0);
+//	BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
 
-	BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
+//	BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
     c1.disconnect();
 
 	
@@ -341,4 +341,4 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
-*/
+

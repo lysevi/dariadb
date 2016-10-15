@@ -87,4 +87,6 @@ using MeasList=std::deque<Meas>;
 using Id2Meas=std::unordered_map<Id, Meas>;
 using MeasSet=std::set<Meas, meas_id_compare_less>;
 using Id2MSet = std::map<Id, std::set<Meas, meas_time_compare_less>>;
+
+std::map<Id,MeasArray> splitById(const MeasArray &ma);
 }

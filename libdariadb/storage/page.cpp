@@ -1,5 +1,5 @@
 #include <libdariadb/storage/page.h>
-#include <libdariadb//timeutil.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/thread_manager.h>
@@ -16,50 +16,7 @@ using namespace dariadb;
 namespace PageInner {
 	using HdrAndBuffer = std::tuple<ChunkHeader, std::shared_ptr<uint8_t>>;
 
-	std::map<Id,MeasArray> splitById(const MeasArray &ma) {
-		dariadb::IdSet dropped;
-		auto count = ma.size();
-		std::vector<bool> visited(count);
-		auto begin = ma.cbegin();
-		auto end = ma.cend();
-		size_t i = 0;
-		std::map<Id, MeasArray> result;
-		MeasArray current_id_values;
-		current_id_values.resize(ma.size());
-
-		assert(current_id_values.size() != 0);
-		assert(current_id_values.size() == ma.size());
-
-		for (auto it = begin; it != end; ++it, ++i) {
-			if (visited[i]) {
-				continue;
-			}
-			if (dropped.find(it->id) != dropped.end()) {
-				continue;
-			}
-
-			visited[i] = true;
-			size_t current_id_values_pos = 0;
-			current_id_values[current_id_values_pos++] = *it;
-			size_t pos = 0;
-			for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
-				if (visited[pos]) {
-					continue;
-				}
-				if ((sub_it->id == it->id)) {
-					current_id_values[current_id_values_pos++] = *sub_it;
-					visited[pos] = true;
-				}
-			}
-			dropped.insert(it->id);
-			result.insert(std::make_pair(it->id,
-			MeasArray{ current_id_values.begin(), current_id_values.begin() + current_id_values_pos }));
-			current_id_values_pos = 0;
-		}
-		return result;
-	}
-	
-	std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
+    std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
 		PageHeader &phdr, uint32_t max_chunk_size) {
 		using namespace dariadb::utils::async;
 		std::list<HdrAndBuffer> results;
@@ -182,7 +139,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size, const MeasArray &ma) {
   TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
 
-  auto to_compress = PageInner::splitById(ma);
+  auto to_compress = splitById(ma);
 
   PageHeader phdr;
   memset(&phdr, 0, sizeof(PageHeader));
