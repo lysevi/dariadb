@@ -41,29 +41,6 @@ void server_thread_func() {
   server_instance = nullptr;
 }
 
-//BOOST_AUTO_TEST_CASE(QueryesTest){
-//    dariadb::net::messages::QueryHeader qhdr;
-//    qhdr.set_id(1);
-//    qhdr.set_kind(dariadb::net::messages::HELLO);
-
-//    dariadb::net::messages::QueryHello qhm;
-//    qhm.set_host("host name");
-//    qhm.set_version(1);
-//    qhdr.set_submessage(qhm.SerializePartialAsString());
-
-//    auto str=qhdr.SerializeAsString();
-
-//    dariadb::net::messages::QueryHeader qhdr_empty;
-//    qhdr_empty.ParseFromString(str);
-
-//    BOOST_CHECK_EQUAL(qhdr.id(),qhdr_empty.id());
-
-//    dariadb::net::messages::QueryHello qhm_e;
-//    qhm_e.ParseFromString(qhdr_empty.submessage());
-
-//    BOOST_CHECK_EQUAL(qhm.host(),qhm_e.host());
-//}
-
 BOOST_AUTO_TEST_CASE(Connect1) {
   dariadb::logger("********** Connect1 **********");
   server_runned.store(false);

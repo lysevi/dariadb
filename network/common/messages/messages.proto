@@ -19,6 +19,8 @@ message QueryHeader {
   required QueryKind kind = 1;
   required int32 id = 2;
   optional string submessage = 3;
+
+  extensions 100 to max;
 }  
 
 message QueryHello{
@@ -31,10 +33,14 @@ message QueryError{
 }
 
 message QueryAppend{
+  extend QueryHeader{
+      optional QueryAppend qappend=100;
+  }
+
   message ValueData{
      required int64 time=1;
      required int32 flag=2;
-     required int64 value=3;
+     required double value=3;
   };
 
   message ValueArray{
