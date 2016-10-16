@@ -14,8 +14,6 @@
 #include <libclient/client.h>
 #include <libserver/server.h>
 
-#include <libclient/messages.pb.h>
-
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
 

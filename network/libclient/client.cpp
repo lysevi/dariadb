@@ -4,7 +4,7 @@
 #include <common/async_connection.h>
 #include <common/net_common.h>
 #include <libclient/client.h>
-#include <libclient/messages.pb.h>
+#include <common/messages.pb.h>
 
 #include <boost/asio.hpp>
 #include <functional>
