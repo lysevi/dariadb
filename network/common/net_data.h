@@ -2,7 +2,7 @@
 
 #include <common/net_common.h>
 #include <libdariadb/utils/locker.h>
-#include <libclient/messages.pb.h>
+#include <common/messages.pb.h>
 #include <tuple>
 
 #include <boost/pool/object_pool.hpp>
