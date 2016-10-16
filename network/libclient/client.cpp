@@ -101,10 +101,9 @@ public:
           qhdr.set_id(0);
           qhdr.set_kind(dariadb::net::messages::HELLO);
 
-          dariadb::net::messages::QueryHello qhm;
-          qhm.set_host(hn);
-          qhm.set_version(PROTOCOL_VERSION);
-          qhdr.set_submessage(qhm.SerializeAsString());
+          dariadb::net::messages::QueryHello* qhm=qhdr.MutableExtension(dariadb::net::messages::QueryHello::qhello);
+          qhm->set_host(hn);
+          qhm->set_version(PROTOCOL_VERSION);
 
           if(!qhdr.SerializeToArray(nd->data, nd->size)){
               THROW_EXCEPTION("hello message serialize error");
@@ -150,8 +149,7 @@ public:
       break;
     }
     case dariadb::net::messages::QueryKind::ERR: {
-        dariadb::net::messages::QueryError qerr;
-        qerr.ParseFromString(qhdr.submessage());
+        dariadb::net::messages::QueryError qerr=qhdr.GetExtension(dariadb::net::messages::QueryError::qerror);
       auto query_num = qhdr.id();
       ERRORS err = (ERRORS)qerr.errpr_code();
       logger_info("client: #", _async_connection->id(), " query #", query_num,
