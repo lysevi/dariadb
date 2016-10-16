@@ -45,10 +45,10 @@ TARGET_LINK_LIBRARIES(libdariadb-cl libdariadb ${Boost_LIBRARIES})
 
 if(SYSTEM_PROTOBUF) #Legacy mode
     target_link_libraries(libdariadb-cl ${PROTOBUF_LIBRARIES})
-    SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES} ${PROTOBUF_LIBRARIES} CACHE STRING "Dariadb libs for build client.")
+    SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build client.")
 else()
     target_link_libraries(libdariadb-cl protobuf::libprotobuf)
-    SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES}  protobuf::libprotobuf CACHE STRING "Dariadb libs for build client.")
+    SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES}  CACHE STRING "Dariadb libs for build client.")
 endif()
 
 GENERATE_EXPORT_HEADER(libdariadb-cl           
