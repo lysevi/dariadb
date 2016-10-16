@@ -61,7 +61,6 @@ void AsyncConnection::send(const NetData_ptr &d) {
     auto ds = d->as_buffer();
     auto send_buffer = std::get<1>(ds);
     auto send_buffer_size = std::get<0>(ds);
-    logger("send ",send_buffer_size);
     if (auto spt = _sock.lock()) {
       _messages_to_send++;
       auto buf = buffer(send_buffer, send_buffer_size);

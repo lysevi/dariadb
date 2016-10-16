@@ -35,6 +35,10 @@ endif(protobuf_MODULE_COMPATIBLE)
 SET(SRC ${CMN_HDRS} ${CMN_SRC})
 
 add_library(libcommon-net STATIC ${SRC})
+if(CMAKE_COMPILER_IS_GNUCXX)
+  MESSAGE(STATUS "Enable -fPIC for libcommon-net")
+  SET_TARGET_PROPERTIES(libcommon-net PROPERTIES COMPILE_FLAGS "-fPIC")
+endif()
 
 if(SYSTEM_PROTOBUF) #Legacy mode
     target_link_libraries(libcommon-net ${PROTOBUF_LIBRARIES})
