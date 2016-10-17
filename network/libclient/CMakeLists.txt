@@ -7,14 +7,7 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC})
 
 add_library(libdariadb-cl SHARED ${SRC})
 TARGET_LINK_LIBRARIES(libdariadb-cl libdariadb ${Boost_LIBRARIES} libcommon-net)
-
-if(SYSTEM_PROTOBUF) #Legacy mode
-    target_link_libraries(libdariadb-cl ${PROTOBUF_LIBRARIES})
-    SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build client.")
-else()
-    target_link_libraries(libdariadb-cl protobuf::libprotobuf)
-    SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES}  CACHE STRING "Dariadb libs for build client.")
-endif()
+SET(DARIADB_CLIENT_LIBS libdariadb-cl ${Boost_LIBRARIES}  libcommon-net CACHE STRING "Dariadb libs for build client.")
 
 GENERATE_EXPORT_HEADER(libdariadb-cl           
     BASE_NAME libdariadb-cl

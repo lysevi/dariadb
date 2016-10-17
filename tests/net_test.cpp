@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_stop_flag = true;
   server_thread.join();
 }
-
+/*
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   dariadb::logger("********** ReadWriteTest **********");
 
@@ -317,3 +317,4 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
 }
 
+*/

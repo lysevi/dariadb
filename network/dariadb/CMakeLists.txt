@@ -5,4 +5,4 @@ FILE(GLOB GLOB_HDRS "*.h")
 FILE(GLOB GLOB_SRC "*.cpp")
 
 add_executable(dariadb ${GLOB_SRC} ${GLOB_HDRS})
-TARGET_LINK_LIBRARIES(dariadb libnet-server ${DARIADB_STORAGE_LIBS})
+TARGET_LINK_LIBRARIES(dariadb libnet-server libcommon-net ${DARIADB_STORAGE_LIBS})

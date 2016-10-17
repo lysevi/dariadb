@@ -1,5 +1,4 @@
 #include <libserver/ioclient.h>
-#include <common/messages.pb.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
@@ -172,10 +171,9 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
                           bool &dont_free_memory) {
   _last_query_time=dariadb::timeutil::current_time();
   // logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
-  dariadb::net::messages::QueryHeader qhdr;
-  qhdr.ParseFromArray(d->data, d->size);
+  auto qhdr = d->readHeader();
 
-dariadb::net::messages::QueryKind kind = qhdr.kind();
+  dariadb::net::messages::QueryKind kind = qhdr.kind;
   switch (kind) {
   case dariadb::net::messages::QueryKind::APPEND: {
       if (this->env->srv->server_begin_stopping()) {
@@ -254,19 +252,17 @@ dariadb::net::messages::QueryKind kind = qhdr.kind();
 		  logger_info("server: #", this->_async_connection->id(), " refuse connection query. server in stop.");
 		  return;
 	  }
+	  auto hello = qhdr.host_name();
 
-      dariadb::net::messages::QueryHello qhello=qhdr.GetExtension(dariadb::net::messages::QueryHello::qhello);
-
-    if (qhello.version() != PROTOCOL_VERSION) {
+    if (hello.protocol != PROTOCOL_VERSION) {
       logger("server: #", _async_connection->id(),
-             " wrong protocol version: exp=", PROTOCOL_VERSION, ", rec=",
-             qhello.version());
+             " wrong protocol version: exp=", PROTOCOL_VERSION, ", rec=", hello.protocol);
       sendError(0, ERRORS::WRONG_PROTOCOL_VERSION);
       this->state = CLIENT_STATE::DISCONNECTED;
       return;
     }
 
-    host = qhello.host();
+	host = hello.host;
     env->srv->client_connect(this->_async_connection->id());
 
     auto nd = _async_connection->get_pool()->construct(
@@ -288,27 +284,12 @@ void IOClient::sendOk(QueryNumber query_num) {
 
 void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
     auto nd = _async_connection->get_pool()->construct();
-    nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
-
-    dariadb::net::messages::QueryHeader qhdr;
-    qhdr.set_id(query_num);
-    qhdr.set_kind(dariadb::net::messages::ERR);
-
-    dariadb::net::messages::QueryError *qhm=qhdr.MutableExtension(dariadb::net::messages::QueryError::qerror);
-    qhm->set_errpr_code((uint16_t)err);
-
-    if(!qhdr.SerializeToArray(nd->data, nd->size)){
-        THROW_EXCEPTION("hello message serialize error");
-    }
-
-    nd->size=qhdr.ByteSize();
-
-
+	nd->construct_error(query_num, err);
     this->_async_connection->send(nd);
 }
 
 void IOClient::append(const NetData_ptr &d) {
-    this->env->srv->write_begin();
+    /*this->env->srv->write_begin();
 
     dariadb::net::messages::QueryHeader qhdr;
     qhdr.ParseFromArray(d->data, d->size);
@@ -338,16 +319,10 @@ void IOClient::append(const NetData_ptr &d) {
          }
     }
 
-//  auto hdr = reinterpret_cast<QueryAppend_header *>(d->data);
-//  auto count = hdr->count;
-//  logger_info("server: #", this->_async_connection->id(), " begin writing ", count);
-//  MeasArray ma = hdr->read_measarray();
-
-//  auto ar = env->storage->append(ma.begin(), ma.end());
     this->env->srv->write_end();
     sendOk(qhdr.id());
     this->env->nd_pool->free(d);
-    logger_info("server: #", this->_async_connection->id()," writed ", writed, " ignored ", ignored);
+    logger_info("server: #", this->_async_connection->id()," writed ", writed, " ignored ", ignored);*/
 }
 
 void IOClient::readInterval(const NetData_ptr &d) {

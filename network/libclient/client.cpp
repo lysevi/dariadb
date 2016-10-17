@@ -4,7 +4,6 @@
 #include <common/async_connection.h>
 #include <common/net_common.h>
 #include <libclient/client.h>
-#include <common/messages.pb.h>
 
 #include <boost/asio.hpp>
 #include <functional>
@@ -94,23 +93,8 @@ public:
 
 		  logger_info("client: send hello ", hn);
 
-		  auto nd = this->_pool.construct();
-          nd->size=NetData::MAX_MESSAGE_SIZE-MARKER_SIZE;
-
-          dariadb::net::messages::QueryHeader qhdr;
-          qhdr.set_id(0);
-          qhdr.set_kind(dariadb::net::messages::HELLO);
-
-          dariadb::net::messages::QueryHello* qhm=qhdr.MutableExtension(dariadb::net::messages::QueryHello::qhello);
-          qhm->set_host(hn);
-          qhm->set_version(PROTOCOL_VERSION);
-
-          if(!qhdr.SerializeToArray(nd->data, nd->size)){
-              THROW_EXCEPTION("hello message serialize error");
-          }
-
-          nd->size=qhdr.ByteSize();
-
+		  auto nd = _pool.construct();
+		  nd->construct_hello_query(hn, 0);
 
 		  this->_async_connection->send(nd);
 	  });
@@ -124,13 +108,12 @@ public:
   }
 
   void onDataRecv(const NetData_ptr &d, bool &cancel, bool &) {
-      dariadb::net::messages::QueryHeader qhdr;
-      qhdr.ParseFromArray(d->data, d->size);
+	  auto qhdr = d->readHeader();
 
-    dariadb::net::messages::QueryKind kind = qhdr.kind();
+    dariadb::net::messages::QueryKind kind = qhdr.kind;
     switch (kind) {
     case dariadb::net::messages::QueryKind::OK: {
-      auto query_num = qhdr.id();
+      auto query_num = qhdr.id;
       logger_info("client: #", _async_connection->id(), " query #", query_num,
                   " accepted.");
       if (this->_state != CLIENT_STATE::WORK) {
@@ -149,9 +132,8 @@ public:
       break;
     }
     case dariadb::net::messages::QueryKind::ERR: {
-        dariadb::net::messages::QueryError qerr=qhdr.GetExtension(dariadb::net::messages::QueryError::qerror);
-      auto query_num = qhdr.id();
-      ERRORS err = (ERRORS)qerr.errpr_code();
+      auto query_num = qhdr.id;
+	  ERRORS err = (ERRORS)qhdr.error_code();
       logger_info("client: #", _async_connection->id(), " query #", query_num,
                   " error:", err);
       if (this->state() == CLIENT_STATE::WORK) {
@@ -206,7 +188,7 @@ public:
 
     // hello id
     case dariadb::net::messages::QueryKind::HELLO: {
-      auto id = qhdr.id();
+      auto id = qhdr.id;
       this->_async_connection->set_id(id);
       this->_state = CLIENT_STATE::WORK;
       logger_info("client: #", id, " ready.");
@@ -222,7 +204,7 @@ public:
   CLIENT_STATE state() const { return _state; }
 
   void append(const MeasArray &ma) {
-      if(ma.empty()){
+    /*  if(ma.empty()){
           return;
       }
     this->_locker.lock();
@@ -236,7 +218,6 @@ public:
     dariadb::net::messages::QueryHeader qhdr;
     qhdr.set_id(cur_id);
     qhdr.set_kind(dariadb::net::messages::QueryKind::APPEND);
-    //auto sz_hdr=qhdr.ByteSize();
 
     dariadb::net::messages::QueryAppend *qap=qhdr.MutableExtension(dariadb::net::messages::QueryAppend::qappend);
     size_t total_count=0;
@@ -247,14 +228,12 @@ public:
         for(auto v: kv.second){
             count_to_write++;
             auto data=var->add_data();
-            //auto d_s=data->ByteSize();
             data->set_flag(v.flag);
             data->set_time(v.time);
             data->set_value(v.value);
-            auto total_size=size_t(qhdr.ByteSize());// size_t(sz_hdr+d_s+qap->ByteSize());
+            auto total_size=size_t(qhdr.ByteSize());
             if(total_size >= size_t(NetData::MAX_MESSAGE_SIZE*0.75)){
                 logger_info("client: pack count: ", count_to_write);
-                //qhdr.set_submessage(qap.SerializeAsString());
                 auto nd = this->_pool.construct();
                 nd->size =  NetData::MAX_MESSAGE_SIZE-1;
                 if(!qhdr.SerializeToArray(nd->data, nd->size)){
@@ -314,48 +293,7 @@ public:
         this->_locker.lock();
         this->_query_results.erase(r->id);
         this->_locker.unlock();
-    }
-//    while (writed != ma.size()) {
-//      auto cur_id = _query_num;
-//      _query_num += 1;
-//      auto left = (ma.size() - writed);
-
-//      auto qres = std::make_shared<ReadResult>();
-//      qres->id = cur_id;
-//      qres->kind = DATA_KINDS::APPEND;
-//      results.push_back(qres);
-//      this->_query_results[qres->id] = qres;
-
-//      auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryAppend_header));
-//      size_t count_to_write =
-//          (left * sizeof(Meas)) > cur_msg_space ? cur_msg_space / sizeof(Meas) : left;
-//      logger_info("client: pack count: ", count_to_write);
-
-//      auto size_to_write = count_to_write * sizeof(Meas);
-
-//      auto nd = this->_pool.construct(DATA_KINDS::APPEND);
-//      nd->size = sizeof(QueryAppend_header);
-
-//      auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
-//      hdr->id = cur_id;
-//      hdr->count = static_cast<uint32_t>(count_to_write);
-
-//      auto meas_ptr = ((char *)(&hdr->count) + sizeof(hdr->count));
-//      memcpy(meas_ptr, ma.data() + writed, size_to_write);
-//      nd->size += static_cast<NetData::MessageSize>(size_to_write);
-
-//      _async_connection->send(nd);
-//      writed += count_to_write;
-//    }
-//    this->_locker.unlock();
-//    for (auto&r : results) {
-//        while (!r->is_ok && !r->is_error) {
-//            std::this_thread::yield();
-//        }
-//        this->_locker.lock();
-//        this->_query_results.erase(r->id);
-//        this->_locker.unlock();
-//    }
+    }*/
   }
 
   ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk) {

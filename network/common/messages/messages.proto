@@ -19,12 +19,12 @@ message QueryHeader {
   required QueryKind kind = 1;
   required int32 id = 2;
 
-  extensions 100 to max;
+  extensions 4 to max;
 }  
 
 message QueryHello{
   extend QueryHeader{
-      optional QueryHello qhello=100;
+      optional QueryHello qhello=4;
   }
   required uint32 version = 1;
   required string host = 2;
@@ -32,14 +32,14 @@ message QueryHello{
 
 message QueryError{
   extend QueryHeader{
-      optional QueryError qerror=101;
+      optional QueryError qerror=5;
   }
   required int32  errpr_code = 1;
 }
 
 message QueryAppend{
   extend QueryHeader{
-      optional QueryAppend qappend=102;
+      optional QueryAppend qappend=6;
   }
 
   message ValueData{

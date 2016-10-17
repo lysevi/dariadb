@@ -1,9 +1,9 @@
+set(PROTOBUF_MODULE_COMPATIBLE ON)
 if(SYSTEM_PROTOBUF)
   find_package(Protobuf REQUIRED)
 else()
  find_package(protobuf CONFIG REQUIRED)
 endif()
-
 
 message(STATUS "Using Protocol Buffers ${Protobuf_VERSION}")
 set(CMAKE_INCLUDE_CURRENT_DIR TRUE)
