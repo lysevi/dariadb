@@ -1,3 +1,4 @@
+include(GenerateExportHeader)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/config.h.cmake ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
 INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
 
@@ -45,3 +46,9 @@ endif()
 IF(WIN32)
  target_link_libraries(libdariadb wsock32 ws2_32)
 endif()
+
+GENERATE_EXPORT_HEADER(libdariadb
+    BASE_NAME libdariadb
+    EXPORT_MACRO_NAME DARIADBNET_ST_EXPORTS
+    EXPORT_FILE_NAME dariadb_net_ST_exports.h
+    STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC)

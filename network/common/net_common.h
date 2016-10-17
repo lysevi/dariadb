@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <ostream>
 #include <string>
+#include <common/dariadb_net_cmn_exports.h>
 
 namespace dariadb {
 namespace net {
@@ -34,8 +35,8 @@ enum class ERRORS : uint16_t {
   WRONG_QUERY_PARAM_FROM_GE_TO, // if in readInterval from>=to
 };
 
-std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state);
-std::ostream &operator<<(std::ostream &stream, const ERRORS &state);
+DARIADBNET_CMN_EXPORTS std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state);
+DARIADBNET_CMN_EXPORTS std::ostream &operator<<(std::ostream &stream, const ERRORS &state);
 
 typedef uint32_t QueryNumber;
 }

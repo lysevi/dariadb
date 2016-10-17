@@ -8,6 +8,7 @@
 #include <atomic>
 #include <memory>
 #include <functional>
+#include <common/dariadb_net_cmn_exports.h>
 
 namespace dariadb {
 namespace net {
@@ -19,18 +20,18 @@ public:
 	using onDataRecvHandler = std::function<void(const NetData_ptr &d, bool &cancel, bool &dont_free_memory)>;
 	using onNetworkErrorHandler = std::function<void(const boost::system::error_code &err)>;
 public:
-  AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv, onNetworkErrorHandler onErr);
-  ~AsyncConnection() noexcept(false);
-  void set_pool(NetData_Pool *pool);
-  NetData_Pool *get_pool() { return _pool; }
-  void send(const NetData_ptr &d);
-  void start(const socket_ptr &sock);
-  void mark_stoped();
-  void full_stop(); /// stop thread, clean queue
+  DARIADBNET_CMN_EXPORTS AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv, onNetworkErrorHandler onErr);
+  DARIADBNET_CMN_EXPORTS ~AsyncConnection() noexcept(false);
+  DARIADBNET_CMN_EXPORTS void set_pool(NetData_Pool *pool);
+  DARIADBNET_CMN_EXPORTS NetData_Pool *get_pool() { return _pool; }
+  DARIADBNET_CMN_EXPORTS void send(const NetData_ptr &d);
+  DARIADBNET_CMN_EXPORTS void start(const socket_ptr &sock);
+  DARIADBNET_CMN_EXPORTS void mark_stoped();
+  DARIADBNET_CMN_EXPORTS void full_stop(); /// stop thread, clean queue
 
-  void set_id(int id) { _async_con_id = id; }
-  int id() const { return _async_con_id; }
-  int queue_size() const { return _messages_to_send; }
+  DARIADBNET_CMN_EXPORTS void set_id(int id) { _async_con_id = id; }
+  DARIADBNET_CMN_EXPORTS int id() const { return _async_con_id; }
+  DARIADBNET_CMN_EXPORTS int queue_size() const { return _messages_to_send; }
 
 private:
   void readNextAsync();

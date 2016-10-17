@@ -2,6 +2,7 @@
 
 #include <libdariadb/engine.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libserver/dariadb_net_srv_exports.h>
 #include <memory>
 
 namespace dariadb {
@@ -24,16 +25,16 @@ public:
 		io_threads = io_threads_count;
 	}
   };
-  Server(const Param &p);
-  ~Server();
+  DARIADBNET_SERVER_EXPORTS Server(const Param &p);
+  DARIADBNET_SERVER_EXPORTS ~Server();
 
-  void start();
-  void stop();
-  bool is_runned();
-  size_t connections_accepted() const;
-  void set_storage(storage::Engine *storage);
+  DARIADBNET_SERVER_EXPORTS void start();
+  DARIADBNET_SERVER_EXPORTS void stop();
+  DARIADBNET_SERVER_EXPORTS bool is_runned();
+  DARIADBNET_SERVER_EXPORTS size_t connections_accepted() const;
+  DARIADBNET_SERVER_EXPORTS void set_storage(storage::Engine *storage);
 
-  void asio_run();
+  DARIADBNET_SERVER_EXPORTS void asio_run();
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

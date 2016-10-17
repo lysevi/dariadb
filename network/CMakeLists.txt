@@ -6,6 +6,7 @@ INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
 
 MESSAGE(STATUS "Build network client/server.")
 
+add_subdirectory (common)
 add_subdirectory (libclient)
 add_subdirectory (libserver)
 add_subdirectory (dariadb)

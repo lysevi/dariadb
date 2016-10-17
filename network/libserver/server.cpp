@@ -4,7 +4,6 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
 #include <common/net_common.h>
-
 #include <atomic>
 #include <boost/asio.hpp>
 #include <functional>
