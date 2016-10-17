@@ -286,7 +286,7 @@ void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
     this->_async_connection->send(nd);
 }
 
-void IOClient::append(const const NetData_ptr &d) {
+void IOClient::append(const NetData_ptr &d) {
     this->env->srv->write_begin();
 
 	auto rv = read_values(d);

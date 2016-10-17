@@ -65,7 +65,6 @@ dariadb::net::ReadedValues dariadb::net::read_values(const NetData_ptr&nd) {
 	auto hdr = nd->readHeader();
 	dariadb::net::messages::QueryHeader *qhdr = (dariadb::net::messages::QueryHeader*)hdr.parsed_info;
 	dariadb::net::messages::QueryAppend qap = qhdr->GetExtension(dariadb::net::messages::QueryAppend::qappend);
-	auto count = qap.values_size();
 
 
 	auto bg = qap.values().begin();

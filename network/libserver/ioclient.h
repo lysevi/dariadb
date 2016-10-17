@@ -59,7 +59,7 @@ struct IOClient{
   void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory);
   void onNetworkError(const boost::system::error_code &err);
 
-  void append(const const NetData_ptr &d);
+  void append(const NetData_ptr &d);
   void readInterval(const NetData_ptr &d);
   void readTimePoint(const NetData_ptr &d);
   void currentValue(const NetData_ptr &d);

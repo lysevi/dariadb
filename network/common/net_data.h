@@ -56,13 +56,13 @@ public:
   typedef boost::object_pool<NetData> Pool;
   Pool _pool;
 
-  DARIADBNET_CMN_EXPORTS void free(Pool::element_type *nd) {
+  void free(Pool::element_type *nd) {
     _locker.lock();
     _pool.free(nd);
     _locker.unlock();
   }
 
-  DARIADBNET_CMN_EXPORTS Pool::element_type *construct() {
+  Pool::element_type *construct() {
     _locker.lock();
     auto res = _pool.construct();
     _locker.unlock();
