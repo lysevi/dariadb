@@ -93,18 +93,9 @@ struct NetData_Pool {
 	typedef boost::object_pool<NetData> Pool;
 	Pool _pool;
 
-	void free(Pool::element_type*nd) {
-		_locker.lock();
-		_pool.free(nd);
-		_locker.unlock();
-	}
+    DARIADBNET_CMN_EXPORTS void free(Pool::element_type*nd);
+    DARIADBNET_CMN_EXPORTS Pool::element_type* construct();
 
-	Pool::element_type* construct() {
-		_locker.lock();
-		auto res=_pool.construct();
-		_locker.unlock();
-		return res;
-	}
 	template<class T>
 	Pool::element_type* construct(T&&a) {
 		_locker.lock();

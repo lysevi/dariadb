@@ -1,15 +1,15 @@
 #pragma once
 
 #include <libdariadb/compression/base_compressor.h>
-
+#include <libdariadb/dariadb_st_exports.h>
 namespace dariadb {
 namespace compression {
 
 class IdCompressor : public BaseCompressor {
 public:
-  IdCompressor(const BinaryBuffer_Ptr &bw);
+  DARIADB_ST_EXPORTS IdCompressor(const BinaryBuffer_Ptr &bw);
 
-  bool append(Id v);
+  DARIADB_ST_EXPORTS bool append(Id v);
 
 protected:
   bool _is_first;
@@ -18,9 +18,9 @@ protected:
 
 class IdDeCompressor : public BaseCompressor {
 public:
-  IdDeCompressor(const BinaryBuffer_Ptr &bw, Id first);
+  DARIADB_ST_EXPORTS IdDeCompressor(const BinaryBuffer_Ptr &bw, Id first);
 
-  Id read();
+  DARIADB_ST_EXPORTS Id read();
 
 protected:
   Id _prev_value;

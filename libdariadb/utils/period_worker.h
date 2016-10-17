@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libdariadb/dariadb_st_exports.h>
 #include <chrono>
 #include <thread>
 
@@ -9,14 +10,14 @@ namespace utils {
 // look usage example in utils_test.cpp
 class PeriodWorker {
 public:
-  PeriodWorker(const std::chrono::milliseconds sleep_time);
-  virtual ~PeriodWorker();
+  DARIADB_ST_EXPORTS PeriodWorker(const std::chrono::milliseconds sleep_time);
+  DARIADB_ST_EXPORTS virtual ~PeriodWorker();
   virtual void period_call() = 0;
 
-  void period_worker_start();
+  DARIADB_ST_EXPORTS void period_worker_start();
 
   /// whait, while all works done and stop thread.
-  void period_worker_stop();
+  DARIADB_ST_EXPORTS void period_worker_stop();
   bool stoped() const { return m_stop_flag; }
 
 protected:

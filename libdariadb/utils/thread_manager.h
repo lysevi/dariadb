@@ -2,6 +2,7 @@
 
 #include <libdariadb/utils/thread_pool.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/dariadb_st_exports.h>
 #include <unordered_map>
 
 namespace dariadb {
@@ -15,16 +16,16 @@ public:
     std::vector<ThreadPool::Params> pools;
     Params(std::vector<ThreadPool::Params> _pools) { pools = _pools; }
   };
-  static void start(const Params &params);
-  static void stop();
-  static ThreadManager *instance();
+  DARIADB_ST_EXPORTS static void start(const Params &params);
+  DARIADB_ST_EXPORTS static void stop();
+  DARIADB_ST_EXPORTS static ThreadManager *instance();
 
-  ~ThreadManager();
-  void flush();
+  DARIADB_ST_EXPORTS ~ThreadManager();
+  DARIADB_ST_EXPORTS void flush();
   TaskResult_Ptr post(const THREAD_COMMON_KINDS kind, const AsyncTaskWrap &task) {
     return this->post((ThreadKind)kind, task);
   }
-  TaskResult_Ptr post(const ThreadKind kind, const AsyncTaskWrap &task);
+  DARIADB_ST_EXPORTS TaskResult_Ptr post(const ThreadKind kind, const AsyncTaskWrap &task);
 
   size_t active_works() {
     size_t res = 0;

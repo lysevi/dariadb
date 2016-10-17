@@ -13,7 +13,7 @@ namespace dariadb {
 namespace net {
 namespace client {
 
-struct DARIADBCL_EXPORTS ReadResult {
+struct ReadResult {
   using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
   QueryNumber id;
   DATA_KINDS kind;
@@ -28,7 +28,7 @@ struct DARIADBCL_EXPORTS ReadResult {
 };
 using ReadResult_ptr = std::shared_ptr<ReadResult>;
 
-class DARIADBCL_EXPORTS Client {
+class Client {
 public:
   struct Param {
     std::string host;
@@ -38,29 +38,29 @@ public:
       port = _port;
     }
   };
-  Client(const Param &p);
-  ~Client();
+  DARIADBNET_CL_EXPORTS Client(const Param &p);
+  DARIADBNET_CL_EXPORTS ~Client();
 
-  void connect();
-  void disconnect();
+  DARIADBNET_CL_EXPORTS void connect();
+  DARIADBNET_CL_EXPORTS void disconnect();
 
-  CLIENT_STATE state() const;
-  size_t pings_answers() const;
+  DARIADBNET_CL_EXPORTS CLIENT_STATE state() const;
+  DARIADBNET_CL_EXPORTS size_t pings_answers() const;
 
   /// connection id on server
-  int id() const;
+  DARIADBNET_CL_EXPORTS int id() const;
 
-  void append(const MeasArray &ma);
-  MeasList readInterval(const storage::QueryInterval &qi);
-  ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
+  DARIADBNET_CL_EXPORTS void append(const MeasArray &ma);
+  DARIADBNET_CL_EXPORTS MeasList readInterval(const storage::QueryInterval &qi);
+  DARIADBNET_CL_EXPORTS ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
 
-  Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
-  ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
+  DARIADBNET_CL_EXPORTS Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
+  DARIADBNET_CL_EXPORTS ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
 
-  ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
-  Id2Meas currentValue(const IdArray &ids, const Flag &flag);
+  DARIADBNET_CL_EXPORTS ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
+  DARIADBNET_CL_EXPORTS Id2Meas currentValue(const IdArray &ids, const Flag &flag);
 
-  ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
+  DARIADBNET_CL_EXPORTS ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

@@ -4,6 +4,7 @@
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/thread_pool.h>
 #include <libdariadb/storage/strategy.h>
+#include <libdariadb/dariadb_st_exports.h>
 
 namespace dariadb {
 namespace storage {
@@ -15,17 +16,17 @@ class Options {
   ~Options() = default;
 
 public:
-  static void start();
-  static void start(const std::string &path);
-  static void stop();
+  DARIADB_ST_EXPORTS static void start();
+  DARIADB_ST_EXPORTS static void start(const std::string &path);
+  DARIADB_ST_EXPORTS static void stop();
   static Options *instance() { return _instance; }
 
-  void set_default();
+  DARIADB_ST_EXPORTS void set_default();
 
-  void save();
-  void save(const std::string &file);
-  void load(const std::string &file);
-  std::vector<utils::async::ThreadPool::Params> thread_pools_params();
+  DARIADB_ST_EXPORTS void save();
+  DARIADB_ST_EXPORTS void save(const std::string &file);
+  DARIADB_ST_EXPORTS void load(const std::string &file);
+  DARIADB_ST_EXPORTS std::vector<utils::async::ThreadPool::Params> thread_pools_params();
 
   // aof level options;
   std::string path;
@@ -39,7 +40,7 @@ public:
   STRATEGY strategy;
 
 private:
-  static Options *_instance;
+  DARIADB_ST_EXPORTS static Options *_instance;
 };
 }
 }

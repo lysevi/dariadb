@@ -10,7 +10,7 @@ TARGET_LINK_LIBRARIES(libdariadb-cl libdariadb libcommon-net ${Boost_LIBRARIES})
 
 GENERATE_EXPORT_HEADER(libdariadb-cl           
     BASE_NAME libdariadb-cl
-    EXPORT_MACRO_NAME DARIADBCL_EXPORTS
+    EXPORT_MACRO_NAME DARIADBNET_CL_EXPORTS
     EXPORT_FILE_NAME dariadb_cl_exports.h
     STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC)
 

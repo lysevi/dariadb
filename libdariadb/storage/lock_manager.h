@@ -2,6 +2,7 @@
 
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/dariadb_st_exports.h>
 #include <vector>
 
 #include <map>
@@ -37,16 +38,16 @@ protected:
   LockManager(const Params &param);
 
 public:
-  static void start(const Params &param);
-  static void stop();
-  static LockManager *instance();
+  DARIADB_ST_EXPORTS static void start(const Params &param);
+  DARIADB_ST_EXPORTS static void stop();
+  DARIADB_ST_EXPORTS static LockManager *instance();
 
-  void lock(const LOCK_KIND &lk, const LOCK_OBJECTS &lo);
-  void
+  DARIADB_ST_EXPORTS void lock(const LOCK_KIND &lk, const LOCK_OBJECTS &lo);
+  DARIADB_ST_EXPORTS void
   lock(const LOCK_KIND &lk,
        const std::vector<LOCK_OBJECTS> &los); /// Only simple locks support (non drop_)
-  void unlock(const LOCK_OBJECTS &lo);
-  void unlock(const std::vector<LOCK_OBJECTS> &los);
+  DARIADB_ST_EXPORTS void unlock(const LOCK_OBJECTS &lo);
+  DARIADB_ST_EXPORTS void unlock(const std::vector<LOCK_OBJECTS> &los);
 
 protected:
   RWMutex_Ptr get_or_create_lock_object(const LOCK_OBJECTS &lo);

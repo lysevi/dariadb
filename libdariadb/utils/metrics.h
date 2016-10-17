@@ -2,6 +2,7 @@
 
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/locker.h>
+#include <libdariadb/dariadb_st_exports.h>
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
@@ -90,7 +91,8 @@ protected:
 };
 
 #ifndef MSVC
-template <> std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const;
+template <>
+DARIADB_ST_EXPORTS std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const;
 #else
 template <> std::string TemplateMetric<std::chrono::nanoseconds>::to_string() const {
   std::stringstream ss{};
@@ -134,10 +136,10 @@ protected:
   MetricsManager() = default;
 
 public:
-  static MetricsManager *instance();
-  ~MetricsManager();
-  void add(const std::string &group, const std::string &name, const IMetric_Ptr &value);
-  std::string to_string() const;
+  DARIADB_ST_EXPORTS static MetricsManager *instance();
+  DARIADB_ST_EXPORTS ~MetricsManager();
+  DARIADB_ST_EXPORTS void add(const std::string &group, const std::string &name, const IMetric_Ptr &value);
+  DARIADB_ST_EXPORTS std::string to_string() const;
 
 protected:
   static std::unique_ptr<MetricsManager> _instance;

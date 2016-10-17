@@ -1,18 +1,18 @@
 
-#ifndef DARIADBNET_ST_EXPORTS_H
-#define DARIADBNET_ST_EXPORTS_H
+#ifndef DARIADB_ST_EXPORTS_H
+#define DARIADB_ST_EXPORTS_H
 
 #ifdef SHARED_EXPORTS_BUILT_AS_STATIC
-#  define DARIADBNET_ST_EXPORTS
+#  define DARIADB_ST_EXPORTS
 #  define LIBDARIADB_NO_EXPORT
 #else
-#  ifndef DARIADBNET_ST_EXPORTS
+#  ifndef DARIADB_ST_EXPORTS
 #    ifdef libdariadb_EXPORTS
         /* We are building this library */
-#      define DARIADBNET_ST_EXPORTS 
+#      define DARIADB_ST_EXPORTS __declspec(dllexport)
 #    else
         /* We are using this library */
-#      define DARIADBNET_ST_EXPORTS 
+#      define DARIADB_ST_EXPORTS __declspec(dllimport)
 #    endif
 #  endif
 
@@ -22,11 +22,11 @@
 #endif
 
 #ifndef LIBDARIADB_DEPRECATED
-#  define LIBDARIADB_DEPRECATED __declspec(deprecated)
+#  define LIBDARIADB_DEPRECATED 
 #endif
 
 #ifndef LIBDARIADB_DEPRECATED_EXPORT
-#  define LIBDARIADB_DEPRECATED_EXPORT DARIADBNET_ST_EXPORTS LIBDARIADB_DEPRECATED
+#  define LIBDARIADB_DEPRECATED_EXPORT DARIADB_ST_EXPORTS LIBDARIADB_DEPRECATED
 #endif
 
 #ifndef LIBDARIADB_DEPRECATED_NO_EXPORT
