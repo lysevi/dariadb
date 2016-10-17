@@ -38,7 +38,7 @@ void server_thread_func() {
 
   server_instance = nullptr;
 }
-
+/*
 BOOST_AUTO_TEST_CASE(Connect1) {
   dariadb::logger("********** Connect1 **********");
   server_runned.store(false);
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   server_stop_flag = true;
   server_thread.join();
 }
-/*
+*/
 BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   dariadb::logger("********** ReadWriteTest **********");
 
@@ -316,5 +316,3 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
-
-*/

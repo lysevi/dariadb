@@ -3,6 +3,7 @@
 #include <libdariadb/utils/logger.h>
 #include <common/async_connection.h>
 #include <common/net_common.h>
+#include <common/queryes.h>
 #include <libclient/client.h>
 
 #include <boost/asio.hpp>
@@ -21,7 +22,7 @@ using namespace dariadb::net::client;
 
 typedef boost::shared_ptr<ip::tcp::socket> socket_ptr;
 
-class Client::Private{
+class Client::Private: public DataSender{
 public:
   Private(const Client::Param &p): _params(p) {
     _query_num = 1;
@@ -203,97 +204,52 @@ public:
   size_t pings_answers() const { return _pings_answers.load(); }
   CLIENT_STATE state() const { return _state; }
 
+  void sendData(NetData_ptr&nd, const QueryNumber id, dariadb::net::messages::QueryKind kind) override {
+	  auto qres = std::make_shared<ReadResult>();
+	  qres->id = id;
+	  qres->kind = dariadb::net::messages::QueryKind::APPEND;
+	  //results.push_back(qres);
+	  this->_query_results[qres->id] = qres;
+
+	  _async_connection->send(nd);
+  }
+  
+  QueryNumber getQueryId() override {
+	  auto cur_id = _query_num;
+	  _query_num += 1;
+	  return cur_id;
+  }
+
+  NetData_ptr makeNetData() override {
+	  return  this->_pool.construct();
+  }
+
   void append(const MeasArray &ma) {
-    /*  if(ma.empty()){
-          return;
-      }
+    if (ma.empty()) {
+      return;
+    }
     this->_locker.lock();
     logger_info("client: send ", ma.size());
-    std::list<ReadResult_ptr> results;
-
-    auto cur_id = _query_num;
-    _query_num += 1;
-
-    auto byId=splitById(ma);
-    dariadb::net::messages::QueryHeader qhdr;
-    qhdr.set_id(cur_id);
-    qhdr.set_kind(dariadb::net::messages::QueryKind::APPEND);
-
-    dariadb::net::messages::QueryAppend *qap=qhdr.MutableExtension(dariadb::net::messages::QueryAppend::qappend);
-    size_t total_count=0;
-    size_t count_to_write=0;
-    for(auto kv:byId){
-        auto var=qap->add_values();
-        var->set_id(kv.first);
-        for(auto v: kv.second){
-            count_to_write++;
-            auto data=var->add_data();
-            data->set_flag(v.flag);
-            data->set_time(v.time);
-            data->set_value(v.value);
-            auto total_size=size_t(qhdr.ByteSize());
-            if(total_size >= size_t(NetData::MAX_MESSAGE_SIZE*0.75)){
-                logger_info("client: pack count: ", count_to_write);
-                auto nd = this->_pool.construct();
-                nd->size =  NetData::MAX_MESSAGE_SIZE-1;
-                if(!qhdr.SerializeToArray(nd->data, nd->size)){
-                    THROW_EXCEPTION("append message serialize error");
-                }
-
-                nd->size=qhdr.ByteSize();
-
-                auto qres = std::make_shared<ReadResult>();
-                qres->id = cur_id;
-                qres->kind = dariadb::net::messages::QueryKind::APPEND;
-                results.push_back(qres);
-                this->_query_results[qres->id] = qres;
-
-                 _async_connection->send(nd);
-                 qhdr.Clear();
-
-                cur_id = _query_num;
-                _query_num += 1;
-
-                qhdr.set_id(cur_id);
-                qhdr.set_kind(dariadb::net::messages::QueryKind::APPEND);
-                qap=qhdr.MutableExtension(dariadb::net::messages::QueryAppend::qappend);
-                total_count+=count_to_write;
-                count_to_write=0;
-            }
-        }
-    }
-
-    if(count_to_write>0){
-        logger_info("client: pack count: ", count_to_write);
-        auto nd = this->_pool.construct();
-        nd->size =  NetData::MAX_MESSAGE_SIZE-1;
-        if(!qhdr.SerializeToArray(nd->data, nd->size)){
-            THROW_EXCEPTION("append message serialize error");
-        }
-        nd->size=qhdr.ByteSize();
-        auto qres = std::make_shared<ReadResult>();
-        qres->id = cur_id;
-        qres->kind = dariadb::net::messages::QueryKind::APPEND;
-        results.push_back(qres);
-        this->_query_results[qres->id] = qres;
-
-         _async_connection->send(nd);
-         total_count+=count_to_write;
-    }
-
-    if(total_count!=ma.size()){
-        THROW_EXCEPTION("logic error: total_count-",total_count, " ma-",ma.size());
-    }
+	
+	send_meases(this, ma);
 
     this->_locker.unlock();
-    for (auto&r : results) {
-        while (!r->is_ok && !r->is_error) {
-            std::this_thread::yield();
-        }
-        this->_locker.lock();
-        this->_query_results.erase(r->id);
-        this->_locker.unlock();
-    }*/
+
+	std::list<QueryNumber> to_remove;
+    for (auto &kv : _query_results) {
+		if (kv.second->kind == dariadb::net::messages::QueryKind::APPEND) {
+			auto r = kv.second;
+			while (!r->is_ok && !r->is_error) {
+				std::this_thread::yield();
+			}
+			to_remove.push_back(r->id);
+		}
+    }
+	for (auto id : to_remove) {
+		this->_locker.lock();
+		this->_query_results.erase(id);
+		this->_locker.unlock();
+	}
   }
 
   ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk) {

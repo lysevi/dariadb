@@ -2,6 +2,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
+#include <common/queryes.h>
 #include <cassert>
 
 using namespace std::placeholders;
@@ -180,10 +181,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
           logger_info("server: #", this->_async_connection->id(), " refuse append query. server in stop.");
           return;
       }
-    dont_free_memory = true;
-
-    env->service->post(
-        env->io_meases_strand->wrap(std::bind(&IOClient::append, this, d)));
+	  this->append(d);
 
     break;
   }
@@ -288,41 +286,27 @@ void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
     this->_async_connection->send(nd);
 }
 
-void IOClient::append(const NetData_ptr &d) {
-    /*this->env->srv->write_begin();
+void IOClient::append(const const NetData_ptr &d) {
+    this->env->srv->write_begin();
 
-    dariadb::net::messages::QueryHeader qhdr;
-    qhdr.ParseFromArray(d->data, d->size);
-    dariadb::net::messages::QueryAppend* qap=qhdr.MutableExtension(dariadb::net::messages::QueryAppend::qappend);
-    auto count=qap->values_size();
-    logger_info("server: #", this->_async_connection->id(), " recv #", qhdr.id(), " write ", count);
+	auto rv = read_values(d);
+    auto count=rv.values.size();
+    logger_info("server: #", this->_async_connection->id(), " recv #", rv.id, " write ", count);
 
-    auto bg=qap->values().begin();
-    auto end=qap->values().end();
-
+    
     size_t ignored=0;
     size_t writed=0;
-    for(auto it=bg;it!=end;++it){
-         auto va=*it;
-         for(auto m_it=va.data().begin();m_it!=va.data().end();++m_it){
-            dariadb::Meas m;
-            m.id=va.id();
-            m.time=m_it->time();
-            m.flag=m_it->flag();
-            m.value=m_it->value();
-
-            if(env->storage->append(m).ignored!=0){
-                ++ignored;
-            }else{
-                ++writed;
-            }
-         }
+    for (auto v : rv.values) {
+      if (env->storage->append(v).ignored != 0) {
+        ++ignored;
+      } else {
+        ++writed;
+      }
     }
-
+	
     this->env->srv->write_end();
-    sendOk(qhdr.id());
-    this->env->nd_pool->free(d);
-    logger_info("server: #", this->_async_connection->id()," writed ", writed, " ignored ", ignored);*/
+    sendOk(rv.id);
+    logger_info("server: #", this->_async_connection->id()," writed ", writed, " ignored ", ignored);
 }
 
 void IOClient::readInterval(const NetData_ptr &d) {

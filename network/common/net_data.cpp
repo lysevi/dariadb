@@ -80,9 +80,12 @@ void NetData::construct_error(QueryNumber query_num, const ERRORS &err) {
 }
 
 ParsedQueryHeader::~ParsedQueryHeader() {
-	auto deleted_info = (dariadb::net::messages::QueryHeader *)parsed_info;
-  delete deleted_info;
+	if (parsed_info != nullptr) {
+		auto deleted_info = (dariadb::net::messages::QueryHeader *)parsed_info;
+		delete deleted_info;
+	}
 }
+
 
 int32_t ParsedQueryHeader::error_code() const {
   auto *qhd = (dariadb::net::messages::QueryHeader *)parsed_info;
