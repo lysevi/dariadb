@@ -2,10 +2,8 @@
 #include <libdariadb/storage/aof_manager.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/options.h>
-#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
 
 #include <boost/program_options.hpp>
 
@@ -15,14 +13,6 @@ std::atomic_llong append_count{0};
 dariadb::Time write_time = 0;
 bool stop_info = false;
 
-class Moc_Dropper : public dariadb::storage::IMeasWriter {
-public:
-  dariadb::append_result append(const dariadb::Meas &) override {
-    return dariadb::append_result(1, 0);
-  }
-
-  void flush() override {}
-};
 
 void show_info() {
   clock_t t0 = clock();
@@ -101,8 +91,6 @@ int main(int argc, char *argv[]) {
 
     dariadb::utils::async::ThreadManager::start(
         dariadb::storage::Options::instance()->thread_pools_params());
-
-    auto stor=std::make_shared<Moc_Dropper>();
 
     dariadb::storage::AOFManager::start();
 
