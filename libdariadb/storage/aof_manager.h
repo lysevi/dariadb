@@ -16,15 +16,9 @@ namespace storage {
 class AOFManager : public IMeasStorage {
 public:
 protected:
-  EXPORT virtual ~AOFManager();
-
-  EXPORT AOFManager();
-
 public:
-  EXPORT static void start();
-  EXPORT static void stop();
-  EXPORT static AOFManager *instance();
-
+  EXPORT virtual ~AOFManager();
+  EXPORT AOFManager();
   // Inherited via MeasStorage
   EXPORT virtual Time minTime() override;
   EXPORT virtual Time maxTime() override;
@@ -63,5 +57,7 @@ private:
   size_t _buffer_pos;
   std::set<std::string> _files_send_to_drop;
 };
+
+using AOFManager_ptr = std::shared_ptr<AOFManager>;
 }
 }

@@ -70,11 +70,11 @@ public:
       check_storage_version();
     }
 
-    AOFManager::start();
+	_aof_manager = AOFManager_ptr{ new AOFManager() };
 
-    _dropper = std::make_unique<Dropper>(_page_manager);
+    _dropper = std::make_unique<Dropper>(_page_manager, _aof_manager);
 
-    AOFManager::instance()->set_downlevel(_dropper.get());
+	_aof_manager->set_downlevel(_dropper.get());
     _next_query_id = Id();
   }
   ~Private() { this->stop(); }
@@ -86,10 +86,11 @@ public:
       this->flush();
 	  
 	  ThreadManager::stop();
-      AOFManager::stop();
+	  _aof_manager = nullptr;
 	  _page_manager = nullptr;
       Manifest::stop();
       LockManager::stop();
+	  _dropper = nullptr;
       _stoped = true;
     }
   }
@@ -113,7 +114,7 @@ public:
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmin = _page_manager->minTime();
-    auto amin = AOFManager::instance()->minTime();
+    auto amin = _aof_manager->minTime();
 
     LockManager::instance()->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
@@ -125,7 +126,7 @@ public:
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmax = _page_manager->maxTime();
-    auto amax = AOFManager::instance()->maxTime();
+    auto amax = _aof_manager->maxTime();
 
     LockManager::instance()->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
@@ -145,9 +146,10 @@ public:
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
 
     };
-    AsyncTask am_at = [&ar, &subMin3, &subMax3, id](const ThreadInfo &ti) {
+	auto am = _aof_manager.get();
+    AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      ar = AOFManager::instance()->minMaxTime(id, &subMin3, &subMax3);
+      ar = am->minMaxTime(id, &subMin3, &subMax3);
     };
 
     LockManager::instance()->lock(
@@ -172,7 +174,7 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    result = AOFManager::instance()->append(value);
+    result = _aof_manager->append(value);
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -189,9 +191,10 @@ public:
     LockManager::instance()->lock(LOCK_KIND::READ,
                                   {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
     Id2Meas a_result, p_result;
-    AsyncTask am_at = [&ids, flag, &a_result](const ThreadInfo &ti) {
+	auto am = _aof_manager.get();
+    AsyncTask am_at = [&ids, flag, &a_result, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      a_result = AOFManager::instance()->currentValue(ids, flag);
+      a_result = am->currentValue(ids, flag);
     };
 	auto pm = _page_manager.get();
     AsyncTask pm_at = [&ids, flag, &p_result, pm](const ThreadInfo &ti) {
@@ -226,7 +229,7 @@ public:
     TIMECODE_METRICS(ctmd, "flush", "Engine::flush");
     std::lock_guard<std::mutex> lg(_locker);
 
-    AOFManager::instance()->flush();
+	_aof_manager->flush();
     _dropper->flush();
     _dropper->flush();
 	_page_manager->flush();
@@ -236,7 +239,7 @@ public:
 
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
-    result.aofs_count = AOFManager::instance()->files_count();
+    result.aofs_count = _aof_manager->files_count();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
     result.dropper_queues = _dropper->queues();
@@ -251,10 +254,10 @@ public:
       pm->foreach (q, p_clbk);
     };
 
-
-    AsyncTask am_at = [&a_clbk, &q](const ThreadInfo &ti) {
+	auto am = _aof_manager.get();
+    AsyncTask am_at = [&a_clbk, &q, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      AOFManager::instance()->foreach (q, a_clbk);
+	  am->foreach (q, a_clbk);
     };
 
     LockManager::instance()->lock(
@@ -333,9 +336,9 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
 
-      if (AOFManager::instance()->minMaxTime(id, &minT, &maxT) &&
+      if (_aof_manager->minMaxTime(id, &minT, &maxT) &&
           (minT < q.time_point || maxT < q.time_point)) {
-        auto subres = AOFManager::instance()->readTimePoint(local_q);
+        auto subres = _aof_manager->readTimePoint(local_q);
         result[id] = subres[id];
         continue;
       } else {
@@ -349,7 +352,7 @@ public:
     return result;
   }
 
-  void drop_part_aofs(size_t count) { AOFManager::instance()->drop_closed_files(count); }
+  void drop_part_aofs(size_t count) { _aof_manager->drop_closed_files(count); }
 
   void fsck() {
     logger_info("engine: fsck ", Options::instance()->path);
@@ -378,6 +381,7 @@ protected:
   Id _next_query_id;
   std::unique_ptr<Dropper> _dropper;
   PageManager_ptr _page_manager;
+  AOFManager_ptr _aof_manager;
   bool _stoped;
 };
 

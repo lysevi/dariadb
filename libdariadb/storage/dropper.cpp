@@ -11,8 +11,8 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-Dropper::Dropper(PageManager_ptr page_manager) : _in_queue(0), _page_manager(page_manager) {
-}
+Dropper::Dropper(PageManager_ptr page_manager, AOFManager_ptr aof_manager)
+    : _in_queue(0), _page_manager(page_manager), _aof_manager(aof_manager) {}
 
 Dropper::~Dropper() {}
 
@@ -98,7 +98,8 @@ void Dropper::drop_aof_internal(const std::string fname) {
 
 void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArray> ma) {
 	auto pm = _page_manager.get();
-	AsyncTask at = [fname, this, ma, pm](const ThreadInfo &ti) {
+	auto am = _aof_manager.get();
+	AsyncTask at = [fname, this, ma, pm, am](const ThreadInfo &ti) {
 		try {
 			TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
 			TIMECODE_METRICS(ctmd, "drop", "Dropper::write_aof_to_page");
@@ -113,7 +114,7 @@ void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArr
 
 			LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::DROP_AOF });
 			pm->append(page_fname, *ma.get());
-			AOFManager::instance()->erase(fname);
+			am->erase(fname);
 			LockManager::instance()->unlock(LOCK_OBJECTS::DROP_AOF);
 		}
 		catch (std::exception &ex) {

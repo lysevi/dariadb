@@ -43,24 +43,6 @@ AOFManager::AOFManager() {
   _buffer_pos = 0;
 }
 
-void AOFManager::start() {
-  if (AOFManager::_instance == nullptr) {
-    AOFManager::_instance = new AOFManager();
-  } else {
-    throw MAKE_EXCEPTION("AOFManager::start started twice.");
-  }
-}
-
-void AOFManager::stop() {
-  _instance->flush();
-  delete AOFManager::_instance;
-  AOFManager::_instance = nullptr;
-}
-
-AOFManager *AOFManager::instance() {
-  return AOFManager::_instance;
-}
-
 void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;

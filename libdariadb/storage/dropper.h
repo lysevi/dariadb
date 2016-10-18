@@ -14,7 +14,7 @@ public:
   struct Queues {
     size_t aof;
   };
-  Dropper(PageManager_ptr page_manager);
+  Dropper(PageManager_ptr page_manager, AOFManager_ptr aof_manager);
   ~Dropper();
   /*static void drop_aof(const std::string &fname, const std::string &storage_path);*/
   void drop_aof(const std::string fname) override;
@@ -33,6 +33,7 @@ private:
 	std::mutex            _locker;
 	std::set<std::string> _addeded_files;
 	PageManager_ptr _page_manager;
+	AOFManager_ptr _aof_manager;
 };
 }
 }

@@ -12,7 +12,7 @@ namespace po = boost::program_options;
 std::atomic_llong append_count{0};
 dariadb::Time write_time = 0;
 bool stop_info = false;
-
+dariadb::storage::AOFManager_ptr aof_manager;
 
 void show_info() {
   clock_t t0 = clock();
@@ -24,7 +24,7 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
-              << " aofs: " << dariadb::storage::AOFManager::instance()->files_count()
+              << " aofs: " << aof_manager->files_count()
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:"
               << (int64_t(100) * append_count) / dariadb_bench::all_writes
@@ -92,9 +92,9 @@ int main(int argc, char *argv[]) {
     dariadb::utils::async::ThreadManager::start(
         dariadb::storage::Options::instance()->thread_pools_params());
 
-    dariadb::storage::AOFManager::start();
+    aof_manager = dariadb::storage::AOFManager_ptr{ new dariadb::storage::AOFManager() };
 
-    auto aof = dariadb::storage::AOFManager::instance();
+	auto aof = aof_manager.get();
     std::thread info_thread(show_info);
 
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
