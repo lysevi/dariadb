@@ -27,8 +27,6 @@
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-dariadb::storage::PageManager *PageManager::_instance = nullptr;
-
 using File2PageHeader = std::unordered_map<std::string, IndexHeader>;
 
 class PageManager::Private {
@@ -89,13 +87,6 @@ public:
 		}
 
 	}
-  }
-
-  /// file_name - full path.
-  void erase_page(const std::string &file_name) {
-    auto target_name = utils::fs::extract_filename(file_name);
-    logger_info("engine: page ", file_name, " removing...");
-    erase(target_name);
   }
 
   // PM
@@ -163,13 +154,6 @@ public:
         if (dropped != nullptr) {
           _file2header.erase(dropped->filename);
         }
-        /*if (dropped != nullptr) {
-          _openned_pages.set_max_size(_openned_pages.size() + 1);
-          Page_Ptr should_be_null;
-          if (_openned_pages.put(dropped->filename, dropped, &should_be_null)) {
-            throw MAKE_EXCEPTION("LRU cache logic wrong.");
-          }
-        }*/
       }
     }
     return pg;
@@ -355,19 +339,19 @@ public:
   }
 
   static void erase(const std::string &fname) {
-    if (PageManager::instance() != nullptr) {
       auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
-      PageManager::instance()->impl->_openned_pages.erase(full_file_name);
+      utils::fs::rm(full_file_name);
+      utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+  }
+  
+  void erase_page(const std::string &full_file_name) {
+	  auto fname = utils::fs::extract_filename(full_file_name);
+	  _openned_pages.erase(full_file_name);
 
-      Manifest::instance()->page_rm(fname);
-      utils::fs::rm(full_file_name);
-      utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-      PageManager::instance()->impl->_file2header.erase(fname);
-    } else {
-      auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
-      utils::fs::rm(full_file_name);
-      utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-    }
+	  Manifest::instance()->page_rm(fname);
+	  utils::fs::rm(full_file_name);
+	  utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+	  _file2header.erase(fname);
   }
 
   void eraseOld(const Time t) {
@@ -397,26 +381,9 @@ PageManager::PageManager() : impl(new PageManager::Private) {}
 
 PageManager::~PageManager() {}
 
-void PageManager::start() {
-  if (PageManager::_instance == nullptr) {
-    PageManager::_instance = new PageManager();
-  }
-}
-
-void PageManager::stop() {
-  if (_instance != nullptr) {
-    delete PageManager::_instance;
-    _instance = nullptr;
-  }
-}
-
 void PageManager::flush() {
   TIMECODE_METRICS(ctmd, "flush", "PageManager::flush");
   this->impl->flush();
-}
-
-PageManager *PageManager::instance() {
-  return _instance;
 }
 
 bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
@@ -469,3 +436,6 @@ void PageManager::erase(const std::string &fname) {
   Private::erase(fname);
 }
 
+void PageManager::erase_page(const std::string &fname) {
+	impl->erase_page(fname);
+}

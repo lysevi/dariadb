@@ -5,14 +5,14 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/options.h>
 #include <libdariadb/storage/page.h>
-#include <libdariadb/storage/page_manager.h>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-Dropper::Dropper() : _in_queue(0) {}
+Dropper::Dropper(PageManager_ptr page_manager) : _in_queue(0), _page_manager(page_manager) {
+}
 
 Dropper::~Dropper() {}
 
@@ -22,27 +22,27 @@ Dropper::Queues Dropper::queues() const {
   return result;
 }
 
-void Dropper::drop_aof(const std::string &fname, const std::string &storage_path) {
-  LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE,
-                                {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
-
-  auto full_path = fs::append_path(storage_path, fname);
-
-  AOFile_Ptr aof{new AOFile(full_path, true)};
-
-  auto all = aof->readAll();
-
-  std::sort(all->begin(), all->end(), meas_time_compare_less());
-
-  auto without_path = fs::extract_filename(fname);
-  auto page_fname = fs::filename(without_path);
-  PageManager::instance()->append(page_fname, *all.get());
-
-  aof = nullptr;
-  AOFManager::instance()->erase(fname);
-
-  LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
-}
+//void Dropper::drop_aof(const std::string &fname, const std::string &storage_path) {
+//  LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE,
+//                                {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+//
+//  auto full_path = fs::append_path(storage_path, fname);
+//
+//  AOFile_Ptr aof{new AOFile(full_path, true)};
+//
+//  auto all = aof->readAll();
+//
+//  std::sort(all->begin(), all->end(), meas_time_compare_less());
+//
+//  auto without_path = fs::extract_filename(fname);
+//  auto page_fname = fs::filename(without_path);
+//  _page_manager. ->append(page_fname, *all.get());
+//
+//  aof = nullptr;
+//  AOFManager::instance()->erase(fname);
+//
+//  LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+//}
 
 void Dropper::drop_aof(const std::string fname) {
 	std::lock_guard<std::mutex> lg(_locker);
@@ -97,7 +97,8 @@ void Dropper::drop_aof_internal(const std::string fname) {
 }
 
 void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArray> ma) {
-	AsyncTask at = [fname, this, ma](const ThreadInfo &ti) {
+	auto pm = _page_manager.get();
+	AsyncTask at = [fname, this, ma, pm](const ThreadInfo &ti) {
 		try {
 			TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
 			TIMECODE_METRICS(ctmd, "drop", "Dropper::write_aof_to_page");
@@ -111,7 +112,7 @@ void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArr
 			auto page_fname = fs::filename(without_path);
 
 			LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::DROP_AOF });
-			PageManager::instance()->append(page_fname, *ma.get());
+			pm->append(page_fname, *ma.get());
 			AOFManager::instance()->erase(fname);
 			LockManager::instance()->unlock(LOCK_OBJECTS::DROP_AOF);
 		}

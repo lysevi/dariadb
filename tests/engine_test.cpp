@@ -141,10 +141,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true);
     ms->wait_all_asyncs();
-    auto pages_count = PageManager::instance()->files_count();
-    BOOST_CHECK_GE(pages_count, size_t(2));
-
-    pages_count = dariadb::storage::PageManager::instance()->files_count();
+    
+    auto pages_count = ms->queue_size().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
   }
   {

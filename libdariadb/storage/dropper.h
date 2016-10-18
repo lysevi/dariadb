@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/storage/aof_manager.h>
+#include <libdariadb/storage/page_manager.h>
 #include <string>
 #include <set>
 #include <mutex>
@@ -13,9 +14,9 @@ public:
   struct Queues {
     size_t aof;
   };
-  Dropper();
+  Dropper(PageManager_ptr page_manager);
   ~Dropper();
-  static void drop_aof(const std::string &fname, const std::string &storage_path);
+  /*static void drop_aof(const std::string &fname, const std::string &storage_path);*/
   void drop_aof(const std::string fname) override;
 
   void flush();
@@ -31,6 +32,7 @@ private:
 	std::atomic_int _in_queue;
 	std::mutex            _locker;
 	std::set<std::string> _addeded_files;
+	PageManager_ptr _page_manager;
 };
 }
 }

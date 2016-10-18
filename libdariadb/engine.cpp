@@ -62,7 +62,7 @@ public:
       Dropper::cleanStorage(Options::instance()->path);
     }
 
-    PageManager::start();
+	_page_manager = PageManager_ptr{ new PageManager() };
 
     if (!is_exists) {
       Manifest::instance()->set_version(this->version().version);
@@ -72,7 +72,7 @@ public:
 
     AOFManager::start();
 
-    _dropper = std::make_unique<Dropper>();
+    _dropper = std::make_unique<Dropper>(_page_manager);
 
     AOFManager::instance()->set_downlevel(_dropper.get());
     _next_query_id = Id();
@@ -87,7 +87,7 @@ public:
 	  
 	  ThreadManager::stop();
       AOFManager::stop();
-      PageManager::stop();
+	  _page_manager = nullptr;
       Manifest::stop();
       LockManager::stop();
       _stoped = true;
@@ -112,7 +112,7 @@ public:
     LockManager::instance()->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
-    auto pmin = PageManager::instance()->minTime();
+    auto pmin = _page_manager->minTime();
     auto amin = AOFManager::instance()->minTime();
 
     LockManager::instance()->unlock(
@@ -124,7 +124,7 @@ public:
     LockManager::instance()->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
-    auto pmax = PageManager::instance()->maxTime();
+    auto pmax = _page_manager->maxTime();
     auto amax = AOFManager::instance()->maxTime();
 
     LockManager::instance()->unlock(
@@ -139,10 +139,10 @@ public:
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
     bool pr, ar;
     pr = ar = false;
-
-    AsyncTask pm_at = [&pr, &subMin1, &subMax1, id](const ThreadInfo &ti) {
+	auto pm = _page_manager.get();
+    AsyncTask pm_at = [&pr, &subMin1, &subMax1, id, pm](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      pr = PageManager::instance()->minMaxTime(id, &subMin1, &subMax1);
+      pr = pm->minMaxTime(id, &subMin1, &subMax1);
 
     };
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id](const ThreadInfo &ti) {
@@ -193,11 +193,11 @@ public:
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       a_result = AOFManager::instance()->currentValue(ids, flag);
     };
-
-    AsyncTask pm_at = [&ids, flag, &p_result](const ThreadInfo &ti) {
+	auto pm = _page_manager.get();
+    AsyncTask pm_at = [&ids, flag, &p_result, pm](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       QueryTimePoint qt(ids, flag, dariadb::timeutil::current_time());
-      p_result = PageManager::instance()->valuesBeforeTimePoint(qt);
+      p_result = pm->valuesBeforeTimePoint(qt);
     };
 
     auto pm_async =
@@ -229,7 +229,7 @@ public:
     AOFManager::instance()->flush();
     _dropper->flush();
     _dropper->flush();
-    PageManager::instance()->flush();
+	_page_manager->flush();
   }
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
@@ -237,7 +237,7 @@ public:
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
     result.aofs_count = AOFManager::instance()->files_count();
-    result.pages_count = PageManager::instance()->files_count();
+    result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
     result.dropper_queues = _dropper->queues();
     return result;
@@ -245,10 +245,10 @@ public:
 
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
-
-    AsyncTask pm_at = [&p_clbk, &q](const ThreadInfo &ti) {
+	auto pm = _page_manager.get();
+    AsyncTask pm_at = [&p_clbk, &q, pm](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      PageManager::instance()->foreach (q, p_clbk);
+      pm->foreach (q, p_clbk);
     };
 
 
@@ -339,7 +339,7 @@ public:
         result[id] = subres[id];
         continue;
       } else {
-        auto subres = PageManager::instance()->valuesBeforeTimePoint(local_q);
+        auto subres = _page_manager->valuesBeforeTimePoint(local_q);
         result[id] = subres[id];
       }
     }
@@ -353,13 +353,13 @@ public:
 
   void fsck() {
     logger_info("engine: fsck ", Options::instance()->path);
-    PageManager::instance()->fsck();
+	_page_manager->fsck();
   }
 
   void eraseOld(const Time&t) {
 	  LockManager::instance()->lock(
 		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
-	  PageManager::instance()->eraseOld(t);
+	  _page_manager->eraseOld(t);
 	  LockManager::instance()->unlock(LOCK_OBJECTS::PAGE);
   }
 
@@ -377,6 +377,7 @@ protected:
   SubscribeNotificator _subscribe_notify;
   Id _next_query_id;
   std::unique_ptr<Dropper> _dropper;
+  PageManager_ptr _page_manager;
   bool _stoped;
 };
 

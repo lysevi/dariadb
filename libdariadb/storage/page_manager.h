@@ -5,6 +5,7 @@
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/storage/page_manager.h>
 #include <vector>
 
 namespace dariadb {
@@ -12,17 +13,11 @@ namespace storage {
 
 class PageManager : public utils::NonCopy, public IChunkContainer {
 public:
-protected:
-  virtual ~PageManager();
-
-  PageManager();
 
 public:
-  EXPORT static void start();
-  EXPORT static void stop();
+  EXPORT PageManager();
+  EXPORT virtual ~PageManager();
   EXPORT void flush();
-  EXPORT static PageManager *instance();
-
   // ChunkContainer
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
@@ -41,12 +36,14 @@ public:
   EXPORT void fsck(bool force_check = true); // if false - check files openned for write-only
 
   EXPORT void eraseOld(const Time t);
+  EXPORT void erase_page(const std::string &fname);
   EXPORT static void erase(const std::string &fname);
 
 private:
-  static PageManager *_instance;
   class Private;
   std::unique_ptr<Private> impl;
 };
+
+typedef std::shared_ptr<PageManager> PageManager_ptr;
 }
 }
