@@ -12,6 +12,9 @@ std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state) {
   case dariadb::net::CLIENT_STATE::DISCONNECTED:
     stream << "CLIENT_STATE::DISCONNECTED";
     break;
+  case dariadb::net::CLIENT_STATE::DISCONNETION_START:
+	  stream << "CLIENT_STATE::DISCONNETION_START";
+	  break;
   case dariadb::net::CLIENT_STATE::CONNECT:
     stream << "CLIENT_STATE::CONNECT";
     break;
