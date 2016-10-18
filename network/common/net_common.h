@@ -27,6 +27,7 @@ enum class DATA_KINDS : uint8_t {
 enum class CLIENT_STATE {
   CONNECT, // connection is beginning but a while not ended.
   WORK,    // normal client.
+  DISCONNETION_START,
   DISCONNECTED
 };
 

@@ -47,7 +47,7 @@ void AsyncConnection::full_stop() {
   try {
     if (auto spt = _sock.lock()) {
       if (spt->is_open()) {
-        spt->cancel();
+		  spt->close();
       }
     }
   } catch (...) {

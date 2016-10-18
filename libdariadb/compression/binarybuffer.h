@@ -41,8 +41,6 @@ public:
   EXPORT BinaryBuffer &setbit();
   EXPORT BinaryBuffer &clrbit();
 
-  friend std::ostream &operator<<(std::ostream &stream, const BinaryBuffer &b);
-
   EXPORT void write(uint16_t v, int8_t count);
   EXPORT void write(uint64_t v, int8_t count);
   EXPORT uint64_t read(int8_t count);
@@ -73,6 +71,5 @@ protected:
   int8_t _bitnum;
 };
 
-EXPORT std::ostream &operator<<(std::ostream &stream, const BinaryBuffer &b);
 }
 }

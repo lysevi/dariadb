@@ -78,7 +78,7 @@ int main(int argc,char**argv){
 	Options::instance()->strategy = strategy;
 	Options::instance()->path = storage_path;
 
-	auto stor=std::make_unique<Engine>();
+	auto stor=new Engine();
 
 	if (!is_exists) {
 		Options::instance()->save();
@@ -86,7 +86,7 @@ int main(int argc,char**argv){
 
 	dariadb::net::Server::Param server_param(server_port, server_threads_count);
 	dariadb::net::Server s(server_param);
-	s.set_storage(stor.get());
+	s.set_storage(stor);
 
 	s.start();
 
@@ -96,4 +96,5 @@ int main(int argc,char**argv){
 	while (s.is_runned()){
 		s.asio_run();
 	}
+	delete stor;
 }

@@ -1,3 +1,5 @@
+#define _SCL_SECURE_NO_WARNINGS
+
 #include <chrono>
 #include <cmath>
 #include <iostream>

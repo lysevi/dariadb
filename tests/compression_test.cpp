@@ -127,10 +127,6 @@ BOOST_AUTO_TEST_CASE(binary_writer) {
     b.incbit();
   }
 
-  std::stringstream ss{};
-  ss << b;
-  BOOST_CHECK(ss.str().size() != 0);
-
   b.reset_pos();
   // clear all bits
   for (size_t i = 0; i < writed_bits; i++) {
