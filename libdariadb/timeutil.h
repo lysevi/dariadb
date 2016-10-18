@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
 #include <chrono>
 
 namespace dariadb {
@@ -18,21 +19,21 @@ struct DateTime {
 };
 
 /// current timestamp with nanosecond.
-Time current_time();
+EXPORT Time current_time();
 
 ///convert time to datetime;
-DateTime to_datetime(Time t);
+EXPORT DateTime to_datetime(Time t);
 
 /// convert from time_point
-Time from_chrono(const std::chrono::high_resolution_clock::time_point &t);
+EXPORT Time from_chrono(const std::chrono::high_resolution_clock::time_point &t);
 
 /// convert to time_point
-std::chrono::high_resolution_clock::time_point to_timepoint(Time t);
+EXPORT std::chrono::high_resolution_clock::time_point to_timepoint(Time t);
 
 /// convert to string
-int to_string(char *buffer, size_t buffer_size, Time t);
+EXPORT int to_string(char *buffer, size_t buffer_size, Time t);
 
 /// convert to string
-std::string to_string(Time t);
+EXPORT std::string to_string(Time t);
 }
 }

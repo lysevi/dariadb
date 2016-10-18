@@ -4,7 +4,6 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
 #include <common/net_common.h>
-
 #include <atomic>
 #include <boost/asio.hpp>
 #include <functional>
@@ -46,17 +45,22 @@ public:
   void set_storage(storage::Engine *storage) {
     logger_info("server: set setorage.");
     _env.storage = storage;
+	log_server_info_internal();
   }
 
   void stop() {
     _in_stop_logic = true;
     logger_info("server: *** stopping ***");
+	logger_info("server: stop ping timer...");
+	_ping_timer.cancel();
+	logger_info("server: stop info timer...");
+	_info_timer.cancel();
     while (_writes_in_progress.load() != 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
       logger_info("server: writes in progress ", _writes_in_progress.load());
     }
+
     disconnect_all();
-    _ping_timer.cancel();
 
     logger_info("server: stop asio service.");
     _service.stop();
@@ -69,7 +73,9 @@ public:
 
     logger_info("server: stoping storage engine...");
     if(this->_env.storage!=nullptr){ //in some tests storage not exists
-        this->_env.storage->stop();
+		auto cp = this->_env.storage;
+		this->_env.storage = nullptr;
+        cp->stop();
     }
 
     _is_runned_flag.store(false);
@@ -174,10 +180,10 @@ public:
     std::lock_guard<utils::Locker> lg(_clients_locker);
     auto fres = _clients.find(id);
     if (fres == _clients.end()) {
-        // may be alread removed.
+        // may be already removed.
         return;
     }
-    fres->second->sock->close();
+    //fres->second->sock->close();
     _clients.erase(fres);
     _connections_accepted -= 1;
     logger_info("server: clients count  ", _clients.size(), " accepted:",
@@ -237,18 +243,24 @@ public:
 	  }
   }
 
+  void log_server_info_internal() {
+	  if (_env.storage == nullptr) {//for tests.
+		  return;
+	  }
+	  auto queue_sizes = _env.storage->queue_size();
+	  std::stringstream stor_ss;
+
+	  stor_ss << "(p:" << queue_sizes.pages_count
+		  << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
+		  << ")";
+
+	  stor_ss << "[a:" << queue_sizes.dropper_queues.aof << "]";
+
+	  logger_info("server: stat ", stor_ss.str());
+  }
   void log_server_info() {
-    auto queue_sizes = _env.storage->queue_size();
-    std::stringstream stor_ss;
-
-    stor_ss << "(p:" << queue_sizes.pages_count
-            << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
-            << ")";
-
-    stor_ss << "[a:" << queue_sizes.dropper_queues.aof << "]";
-
-    logger_info("server: stat ", stor_ss.str());
-    reset_info_timer();
+	log_server_info_internal();
+	reset_info_timer();
   }
 
   io_service _service;

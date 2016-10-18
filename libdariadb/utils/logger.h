@@ -2,6 +2,7 @@
 
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/strings.h>
+#include <libdariadb/st_exports.h>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -24,17 +25,17 @@ using ILogger_ptr = std::shared_ptr<ILogger>;
 
 class ConsoleLogger : public ILogger {
 public:
-  void message(LOG_MESSAGE_KIND kind, const std::string &msg) override;
+  EXPORT void message(LOG_MESSAGE_KIND kind, const std::string &msg) override;
 };
 
 class LogManager {
   LogManager(ILogger_ptr &logger);
 
 public:
-  static void start(ILogger_ptr &logger);
-  static LogManager *instance();
+  EXPORT static void start(ILogger_ptr &logger);
+  EXPORT static LogManager *instance();
 
-  void message(LOG_MESSAGE_KIND kind, const std::string &msg);
+  EXPORT void message(LOG_MESSAGE_KIND kind, const std::string &msg);
 
   template <typename... T> void variadic_message(LOG_MESSAGE_KIND kind, T... args) {
     auto str_message = utils::strings::args_to_string(args...);

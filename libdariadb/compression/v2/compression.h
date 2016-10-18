@@ -7,16 +7,17 @@
 #include <libdariadb/compression/v2/delta.h>
 #include <libdariadb/compression/v2/flag.h>
 #include <libdariadb/compression/v2/xor.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace compression {
 namespace v2 {
 class CopmressedWriter {
 public:
-  CopmressedWriter(const ByteBuffer_Ptr &bw_time);
-  ~CopmressedWriter();
+  EXPORT CopmressedWriter(const ByteBuffer_Ptr &bw_time);
+  EXPORT ~CopmressedWriter();
 
-  bool append(const Meas &m);
+  EXPORT bool append(const Meas &m);
   bool is_full() const { return _is_full; }
 
   size_t used_space() const { return time_comp.used_space(); }
@@ -35,8 +36,8 @@ protected:
 class CopmressedReader {
 public:
 	CopmressedReader() = default;
-  CopmressedReader(const ByteBuffer_Ptr &bw_time, const Meas &first);
-  ~CopmressedReader();
+  EXPORT CopmressedReader(const ByteBuffer_Ptr &bw_time, const Meas &first);
+  EXPORT ~CopmressedReader();
 
 
   dariadb::Meas read() {

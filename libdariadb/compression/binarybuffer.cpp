@@ -145,22 +145,3 @@ uint64_t BinaryBuffer::read(int8_t count) {
     return src;
   }
 }
-
-std::ostream &dariadb::compression::operator<<(std::ostream &stream,
-                                               const BinaryBuffer &b) {
-  stream << " pos:" << b.pos() << " cap:" << b.cap() << " bit:" << b.bitnum() << " [";
-  for (size_t i = 0; i <= b.pos(); i++) {
-    for (int bit = int(max_bit_pos); bit >= 0; bit--) {
-      auto is_cur = ((bit == b.bitnum()) && (i == b.pos()));
-      if (is_cur)
-        stream << "[";
-      stream << ((b._begin[i] >> bit) & 1);
-      if (is_cur)
-        stream << "]";
-      if (bit == 4)
-        stream << " ";
-    }
-    stream << std::endl;
-  }
-  return stream << "]";
-}

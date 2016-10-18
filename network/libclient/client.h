@@ -7,13 +7,13 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <libclient/dariadb_cl_exports.h>
+#include <libclient/net_cl_exports.h>
 
 namespace dariadb {
 namespace net {
 namespace client {
 
-struct DARIADBCL_EXPORTS ReadResult {
+struct ReadResult {
   using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
   QueryNumber id;
   DATA_KINDS kind;
@@ -28,7 +28,7 @@ struct DARIADBCL_EXPORTS ReadResult {
 };
 using ReadResult_ptr = std::shared_ptr<ReadResult>;
 
-class DARIADBCL_EXPORTS Client {
+class Client {
 public:
   struct Param {
     std::string host;
@@ -38,29 +38,29 @@ public:
       port = _port;
     }
   };
-  Client(const Param &p);
-  ~Client();
+  CL_EXPORT Client(const Param &p);
+  CL_EXPORT ~Client();
 
-  void connect();
-  void disconnect();
+  CL_EXPORT void connect();
+  CL_EXPORT void disconnect();
 
-  CLIENT_STATE state() const;
-  size_t pings_answers() const;
+  CL_EXPORT CLIENT_STATE state() const;
+  CL_EXPORT size_t pings_answers() const;
 
   /// connection id on server
-  int id() const;
+  CL_EXPORT int id() const;
 
-  void append(const MeasArray &ma);
-  MeasList readInterval(const storage::QueryInterval &qi);
-  ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
+  CL_EXPORT void append(const MeasArray &ma);
+  CL_EXPORT MeasList readInterval(const storage::QueryInterval &qi);
+  CL_EXPORT ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
 
-  Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
-  ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
+  CL_EXPORT Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
+  CL_EXPORT ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
 
-  ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
-  Id2Meas currentValue(const IdArray &ids, const Flag &flag);
+  CL_EXPORT ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
+  CL_EXPORT Id2Meas currentValue(const IdArray &ids, const Flag &flag);
 
-  ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
+  CL_EXPORT ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

@@ -2,6 +2,7 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/compression/binarybuffer.h>
+#include <libdariadb/st_exports.h>
 #include <memory>
 
 namespace dariadb {
@@ -9,20 +10,20 @@ namespace compression {
 	//TODO rm pimpl idiom. do like in v2 compression API.
 class CopmressedWriter {
 public:
-  CopmressedWriter();
-  CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
-  ~CopmressedWriter();
-  CopmressedWriter(const CopmressedWriter &other);
+  EXPORT CopmressedWriter();
+  EXPORT CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
+  EXPORT ~CopmressedWriter();
+  EXPORT CopmressedWriter(const CopmressedWriter &other);
 
-  void swap(CopmressedWriter &other);
+  EXPORT void swap(CopmressedWriter &other);
 
-  CopmressedWriter &operator=(const CopmressedWriter &other);
-  CopmressedWriter &operator=(CopmressedWriter &&other);
+  EXPORT CopmressedWriter &operator=(const CopmressedWriter &other);
+  EXPORT CopmressedWriter &operator=(CopmressedWriter &&other);
 
-  bool append(const Meas &m);
-  bool is_full() const;
+  EXPORT bool append(const Meas &m);
+ EXPORT  bool is_full() const;
 
-  size_t used_space() const;
+  EXPORT size_t used_space() const;
 
 protected:
   class Private;
@@ -31,10 +32,10 @@ protected:
 
 class CopmressedReader {
 public:
-  CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
-  ~CopmressedReader();
+  EXPORT CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
+  EXPORT ~CopmressedReader();
 
-  Meas read();
+  EXPORT Meas read();
 
 protected:
   class Private;

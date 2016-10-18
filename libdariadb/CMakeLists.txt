@@ -1,3 +1,4 @@
+include(GenerateExportHeader)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/config.h.cmake ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
 INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
 
@@ -35,13 +36,15 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
 
 SET(DARIADB_STORAGE_LIBS libdariadb ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build storage.")
 
-if(MSVC)
-        add_library(libdariadb STATIC ${SRC})
-else()
-        add_library(libdariadb SHARED ${SRC})
-        TARGET_LINK_LIBRARIES(libdariadb ${Boost_LIBRARIES})
-endif()
+add_library(libdariadb SHARED ${SRC})
+TARGET_LINK_LIBRARIES(libdariadb ${Boost_LIBRARIES})
 
 IF(WIN32)
  target_link_libraries(libdariadb wsock32 ws2_32)
 endif()
+
+GENERATE_EXPORT_HEADER(libdariadb
+    BASE_NAME libdariadb
+    EXPORT_MACRO_NAME EXPORT
+    EXPORT_FILE_NAME st_exports.h
+    STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC)

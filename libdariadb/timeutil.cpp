@@ -45,7 +45,7 @@ DateTime to_datetime(Time t){
 	
     DateTime result;
     result.year=ymd.year;
-    result.month=ymd.month;
+    result.month=(uint8_t)ymd.month;
     result.day=ymd.day;
 	result.day_of_year = date.day_of_year();
     result.hour=(uint8_t)time.hours();

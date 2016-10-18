@@ -120,12 +120,17 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
 }
 
 IOClient::~IOClient() {
-	_async_connection->full_stop();
+	if (_async_connection != nullptr) {
+		_async_connection->full_stop();
+	}
 }
 
 void IOClient::end_session() {
+	if (this->state == CLIENT_STATE::DISCONNETION_START) {
+		return;
+	}
   logger_info("server: #", _async_connection->id(), " send disconnect signal.");
-  this->state = CLIENT_STATE::DISCONNECTED;
+  this->state = CLIENT_STATE::DISCONNETION_START;
 
   if (sock->is_open()) {
     auto nd = this->_async_connection->get_pool()->construct(DATA_KINDS::DISCONNECT);
@@ -142,8 +147,8 @@ void IOClient::close() {
 
             this->sock->close();
         }
+		logger_info("server: client #", this->_async_connection->id(), " stoped.");
         _async_connection=nullptr;
-        logger_info("server: client #", this->_async_connection->id(), " stoped.");
     }
 }
 
@@ -158,11 +163,11 @@ void IOClient::ping() {
 }
 
 void IOClient::onNetworkError(const boost::system::error_code &err) {
-    if (state != CLIENT_STATE::DISCONNECTED) {
-      logger_info("server: client #", this->_async_connection->id(), " network error - ", err.message());
-      logger_info("server: client #", this->_async_connection->id(), " stoping...");
-      this->close();
-    }
+	if ((state != CLIENT_STATE::DISCONNECTED) && (state != CLIENT_STATE::DISCONNETION_START)) {
+		logger_info("server: client #", this->_async_connection ->id(), " network error - ", err.message());
+		logger_info("server: client #", this->_async_connection->id(), " stoping...");
+		this->close();
+	}
 }
 
 void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
@@ -201,7 +206,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
                 " disconnection request.");
     cancel = true;
     this->end_session();
-    // this->srv->client_disconnect(this->id);
+	env->srv->client_disconnect(this->_async_connection->id());
     break;
   }
   case DATA_KINDS::READ_INTERVAL: {

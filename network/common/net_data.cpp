@@ -27,3 +27,16 @@ MeasArray QueryAppend_header::read_measarray() const {
   memcpy(ma.data(), ((char *)(&count) + sizeof(count)), count * sizeof(Meas));
   return ma;
 }
+
+void NetData_Pool::free(Pool::element_type*nd) {
+    _locker.lock();
+    _pool.free(nd);
+    _locker.unlock();
+}
+
+NetData_Pool::Pool::element_type* NetData_Pool::construct() {
+    _locker.lock();
+    auto res=_pool.construct();
+    _locker.unlock();
+    return res;
+}

@@ -1,15 +1,16 @@
 #pragma once
 
 #include <libdariadb/compression/base_compressor.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace compression {
 
 class FlagCompressor : public BaseCompressor {
 public:
-  FlagCompressor(const BinaryBuffer_Ptr &bw);
+  EXPORT FlagCompressor(const BinaryBuffer_Ptr &bw);
 
-  bool append(Flag v);
+  EXPORT bool append(Flag v);
 
 protected:
   bool _is_first;
@@ -18,10 +19,8 @@ protected:
 
 class FlagDeCompressor : public BaseCompressor {
 public:
-  FlagDeCompressor(const BinaryBuffer_Ptr &bw, Flag first);
-
-  Flag read();
-
+  EXPORT FlagDeCompressor(const BinaryBuffer_Ptr &bw, Flag first);
+  EXPORT Flag read();
 protected:
   Flag _prev_value;
 };

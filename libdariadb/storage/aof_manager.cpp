@@ -17,7 +17,7 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-AOFManager *AOFManager::_instance = nullptr;
+EXPORT AOFManager *AOFManager::_instance = nullptr;
 
 AOFManager::~AOFManager() {
   this->flush();

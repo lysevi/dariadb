@@ -1,6 +1,8 @@
 #pragma once
 
 #include <libdariadb/utils/in_interval.h>
+
+#include <libdariadb/st_exports.h>
 #include <algorithm>
 #include <limits>
 #include <list>
@@ -26,7 +28,7 @@ const Time MAX_TIME = std::numeric_limits<dariadb::Time>::max();
 const Id MIN_ID = std::numeric_limits<dariadb::Id>::min();
 const Id MAX_ID = std::numeric_limits<dariadb::Id>::max();
 
-bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
+EXPORT bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 
 struct Meas {
 	Id id;
@@ -34,10 +36,10 @@ struct Meas {
 	Value value;
 	Flag flag;
 
-  static Meas empty();
-  static Meas empty(Id id);
+  EXPORT static Meas empty();
+  EXPORT static Meas empty(Id id);
 
-  Meas();
+  EXPORT Meas();
 
   bool operator==(const Meas &other) const {
     return id == other.id && time == other.time && flag == other.flag &&

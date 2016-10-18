@@ -7,6 +7,8 @@
 
 #include <boost/pool/object_pool.hpp>
 
+#include <common/net_cmn_exports.h>
+
 namespace dariadb {
 namespace net {
 
@@ -17,11 +19,11 @@ struct NetData {
   MessageSize size;
   uint8_t data[MAX_MESSAGE_SIZE];
 
-  NetData();
-  NetData(const DATA_KINDS &k);
-  ~NetData();
+  CM_EXPORT NetData();
+  CM_EXPORT NetData(const DATA_KINDS &k);
+  CM_EXPORT ~NetData();
 
-  std::tuple<MessageSize, uint8_t *> as_buffer();
+  CM_EXPORT std::tuple<MessageSize, uint8_t *> as_buffer();
 };
 
 struct Query_header {
@@ -50,7 +52,7 @@ struct QueryAppend_header {
   QueryNumber id;
   uint32_t count;
 
-  MeasArray read_measarray() const;
+  CM_EXPORT MeasArray read_measarray() const;
 };
 
 struct QueryInterval_header {
@@ -91,18 +93,9 @@ struct NetData_Pool {
 	typedef boost::object_pool<NetData> Pool;
 	Pool _pool;
 
-	void free(Pool::element_type*nd) {
-		_locker.lock();
-		_pool.free(nd);
-		_locker.unlock();
-	}
+    CM_EXPORT void free(Pool::element_type*nd);
+    CM_EXPORT Pool::element_type* construct();
 
-	Pool::element_type* construct() {
-		_locker.lock();
-		auto res=_pool.construct();
-		_locker.unlock();
-		return res;
-	}
 	template<class T>
 	Pool::element_type* construct(T&&a) {
 		_locker.lock();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/compression/v2/base_compressor.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace compression {
@@ -20,9 +21,9 @@ inline dariadb::Value flat_int_to_double(int64_t i) {
 
 struct XorCompressor : public BaseCompressor {
 public:
-  XorCompressor(const ByteBuffer_Ptr &bw_);
+  EXPORT XorCompressor(const ByteBuffer_Ptr &bw_);
 
-  bool append(Value v);
+  EXPORT bool append(Value v);
 
   bool _is_first;
   uint64_t _first;
@@ -31,9 +32,9 @@ public:
 
 struct XorDeCompressor : public BaseCompressor {
 public:
-  XorDeCompressor(const ByteBuffer_Ptr &bw, Value first);
+  EXPORT XorDeCompressor(const ByteBuffer_Ptr &bw, Value first);
 
-  Value read();
+  EXPORT Value read();
 
   uint64_t _prev_value;
 };

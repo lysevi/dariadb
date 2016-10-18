@@ -4,7 +4,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/chunk.h>
-
+#include <libdariadb/st_exports.h>
 #include <vector>
 
 namespace dariadb {
@@ -18,30 +18,30 @@ protected:
   PageManager();
 
 public:
-  static void start();
-  static void stop();
-  void flush();
-  static PageManager *instance();
+  EXPORT static void start();
+  EXPORT static void stop();
+  EXPORT void flush();
+  EXPORT static PageManager *instance();
 
   // ChunkContainer
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+  EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  ChunkLinkList chunksByIterval(const QueryInterval &query) override;
-  Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  void readLinks(const QueryInterval &query, const ChunkLinkList &links,
+  EXPORT ChunkLinkList chunksByIterval(const QueryInterval &query) override;
+  EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
+  EXPORT void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) override;
 
-  size_t files_count() const;
-  size_t chunks_in_cur_page() const;
-  dariadb::Time minTime();
-  dariadb::Time maxTime();
+  EXPORT size_t files_count() const;
+  EXPORT size_t chunks_in_cur_page() const;
+  EXPORT dariadb::Time minTime();
+  EXPORT dariadb::Time maxTime();
 
-  void append(const std::string &file_prefix, const dariadb::MeasArray &ma);
+  EXPORT void append(const std::string &file_prefix, const dariadb::MeasArray &ma);
 
-  void fsck(bool force_check = true); // if false - check files openned for write-only
+  EXPORT void fsck(bool force_check = true); // if false - check files openned for write-only
 
-  void eraseOld(const Time t);
-  static void erase(const std::string &fname);
+  EXPORT void eraseOld(const Time t);
+  EXPORT static void erase(const std::string &fname);
 
 private:
   static PageManager *_instance;

@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <libdariadb/storage/aofile.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
@@ -5,12 +6,15 @@
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/options.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <mutex>
+
+
 
 using namespace dariadb;
 using namespace dariadb::storage;

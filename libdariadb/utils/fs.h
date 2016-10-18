@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/st_exports.h>
 #include <list>
 #include <memory>
 #include <string>
@@ -8,22 +9,22 @@
 namespace dariadb {
 namespace utils {
 namespace fs {
-std::list<std::string> ls(const std::string &path);
-std::list<std::string> ls(const std::string &path, const std::string &ext);
+EXPORT std::list<std::string> ls(const std::string &path);
+EXPORT std::list<std::string> ls(const std::string &path, const std::string &ext);
 
-bool rm(const std::string &rm_path);
+EXPORT bool rm(const std::string &rm_path);
 
-std::string filename(const std::string &fname); // without ex
-std::string extract_filename(const std::string &fname);
-std::string random_file_name(const std::string ext);
+EXPORT std::string filename(const std::string &fname); // without ex
+EXPORT std::string extract_filename(const std::string &fname);
+EXPORT std::string random_file_name(const std::string ext);
 
-std::string parent_path(const std::string &fname);
-std::string append_path(const std::string &p1, const std::string &p2);
+EXPORT std::string parent_path(const std::string &fname);
+EXPORT std::string append_path(const std::string &p1, const std::string &p2);
 
-bool path_exists(const std::string &path);
-void mkdir(const std::string &path);
+EXPORT bool path_exists(const std::string &path);
+EXPORT void mkdir(const std::string &path);
 
-std::string read_file(const std::string &fname);
+EXPORT std::string read_file(const std::string &fname);
 /// ext - ".ext"
 
 class MappedFile : public utils::NonCopy {
@@ -33,14 +34,14 @@ class MappedFile : public utils::NonCopy {
 public:
   using MapperFile_ptr = std::shared_ptr<MappedFile>;
 
-  ~MappedFile();
-  void close();
-  uint8_t *data();
+  EXPORT ~MappedFile();
+  EXPORT void close();
+  EXPORT uint8_t *data();
 
-  void flush(std::size_t offset = 0, std::size_t bytes = 0);
+  EXPORT void flush(std::size_t offset = 0, std::size_t bytes = 0);
 
-  static MapperFile_ptr open(const std::string &path, bool read_only = false);
-  static MapperFile_ptr touch(const std::string &path, uint64_t size);
+  EXPORT static MapperFile_ptr open(const std::string &path, bool read_only = false);
+  EXPORT static MapperFile_ptr touch(const std::string &path, uint64_t size);
 
 private:
   std::unique_ptr<Private> _impl;

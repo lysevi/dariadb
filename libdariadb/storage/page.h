@@ -4,6 +4,7 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/index.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace storage {
@@ -29,28 +30,28 @@ class Page : public IChunkContainer {
   Page() = default;
 
 public:
-  static Page *create(const std::string &file_name, uint64_t chunk_id,
+  EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
                       uint32_t max_chunk_size, const MeasArray &ma);
-  static Page *open(std::string file_name, bool read_only = false);
-  static PageHeader readHeader(std::string file_name);
-  static IndexHeader readIndexHeader(std::string page_file_name);
-  static uint64_t index_file_size(uint32_t chunk_per_storage);
-  static void restoreIndexFile(const std::string&file_name);
-  ~Page();
-  void fsck();
-  bool is_full() const;
+  EXPORT static Page *open(std::string file_name, bool read_only = false);
+  EXPORT static PageHeader readHeader(std::string file_name);
+  EXPORT static IndexHeader readIndexHeader(std::string page_file_name);
+  EXPORT static uint64_t index_file_size(uint32_t chunk_per_storage);
+  EXPORT static void restoreIndexFile(const std::string&file_name);
+  EXPORT ~Page();
+  EXPORT void fsck();
+  EXPORT bool is_full() const;
 
   // ChunkContainer
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+  EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  ChunkLinkList chunksByIterval(const QueryInterval &query) override;
-  Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  void readLinks(const QueryInterval &query, const ChunkLinkList &links,
+  EXPORT ChunkLinkList chunksByIterval(const QueryInterval &query) override;
+  EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
+  EXPORT void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) override;
 
-  void flush();
+ EXPORT  void flush();
 
-  void mark_as_non_init(Chunk_Ptr &ch);
+  EXPORT void mark_as_non_init(Chunk_Ptr &ch);
 private:
   void update_index_recs();
   void init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index);

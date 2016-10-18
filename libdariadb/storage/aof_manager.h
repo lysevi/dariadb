@@ -5,6 +5,7 @@
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/aofile.h>
+#include <libdariadb/st_exports.h>
 #include <vector>
 
 #include <mutex>
@@ -15,35 +16,35 @@ namespace storage {
 class AOFManager : public IMeasStorage {
 public:
 protected:
-  virtual ~AOFManager();
+  EXPORT virtual ~AOFManager();
 
-  AOFManager();
+  EXPORT AOFManager();
 
 public:
-  static void start();
-  static void stop();
-  static AOFManager *instance();
+  EXPORT static void start();
+  EXPORT static void stop();
+  EXPORT static AOFManager *instance();
 
   // Inherited via MeasStorage
-  virtual Time minTime() override;
-  virtual Time maxTime() override;
-  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+  EXPORT virtual Time minTime() override;
+  EXPORT virtual Time maxTime() override;
+  EXPORT virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-  virtual append_result append(const Meas &value) override;
-  virtual void flush() override;
+  EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
+  EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  EXPORT virtual append_result append(const Meas &value) override;
+  EXPORT virtual void flush() override;
 
-  std::list<std::string> closed_aofs();
-  void drop_aof(const std::string &fname, IAofDropper *storage);
+  EXPORT std::list<std::string> closed_aofs();
+  EXPORT void drop_aof(const std::string &fname, IAofDropper *storage);
 
-  size_t files_count() const;
-  void set_downlevel(IAofDropper *down);
+  EXPORT size_t files_count() const;
+  EXPORT void set_downlevel(IAofDropper *down);
 
-  void erase(const std::string &fname);
+  EXPORT void erase(const std::string &fname);
 
-  void drop_closed_files(size_t count);
+  EXPORT void drop_closed_files(size_t count);
 
 protected:
   void create_new();
@@ -52,7 +53,7 @@ protected:
   void drop_old_if_needed();
 
 private:
-  static AOFManager *_instance;
+  EXPORT static AOFManager *_instance;
 
   AOFile_Ptr _aof;
   mutable std::mutex _locker;

@@ -2,6 +2,7 @@
 
 #include <libdariadb/engine.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libserver/net_srv_exports.h>
 #include <memory>
 
 namespace dariadb {
@@ -24,16 +25,16 @@ public:
 		io_threads = io_threads_count;
 	}
   };
-  Server(const Param &p);
-  ~Server();
+  SRV_EXPORT Server(const Param &p);
+  SRV_EXPORT ~Server();
 
-  void start();
-  void stop();
-  bool is_runned();
-  size_t connections_accepted() const;
-  void set_storage(storage::Engine *storage);
+  SRV_EXPORT void start();
+  SRV_EXPORT void stop();
+  SRV_EXPORT bool is_runned();
+  SRV_EXPORT size_t connections_accepted() const;
+  SRV_EXPORT void set_storage(storage::Engine *storage);
 
-  void asio_run();
+  SRV_EXPORT void asio_run();
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
