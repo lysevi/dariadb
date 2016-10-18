@@ -3,7 +3,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/query_param.h>
 #include <libdariadb/interfaces/icallbacks.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 namespace dariadb {
 namespace storage {
 
@@ -25,7 +25,7 @@ public:
   virtual Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) = 0;
   virtual void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                          IReaderClb *clb) = 0;
-  DARIADB_ST_EXPORTS virtual void foreach (const QueryInterval &query, IReaderClb * clb);
+  EXPORT virtual void foreach (const QueryInterval &query, IReaderClb * clb);
   virtual ~IChunkContainer(){}
 };
 }

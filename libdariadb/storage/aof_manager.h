@@ -5,7 +5,7 @@
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/aofile.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 #include <vector>
 
 #include <mutex>
@@ -16,35 +16,35 @@ namespace storage {
 class AOFManager : public IMeasStorage {
 public:
 protected:
-  DARIADB_ST_EXPORTS virtual ~AOFManager();
+  EXPORT virtual ~AOFManager();
 
-  DARIADB_ST_EXPORTS AOFManager();
+  EXPORT AOFManager();
 
 public:
-  DARIADB_ST_EXPORTS static void start();
-  DARIADB_ST_EXPORTS static void stop();
-  DARIADB_ST_EXPORTS static AOFManager *instance();
+  EXPORT static void start();
+  EXPORT static void stop();
+  EXPORT static AOFManager *instance();
 
   // Inherited via MeasStorage
-  DARIADB_ST_EXPORTS virtual Time minTime() override;
-  DARIADB_ST_EXPORTS virtual Time maxTime() override;
-  DARIADB_ST_EXPORTS virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+  EXPORT virtual Time minTime() override;
+  EXPORT virtual Time maxTime() override;
+  EXPORT virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override;
-  DARIADB_ST_EXPORTS virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  DARIADB_ST_EXPORTS virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  DARIADB_ST_EXPORTS virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-  DARIADB_ST_EXPORTS virtual append_result append(const Meas &value) override;
-  DARIADB_ST_EXPORTS virtual void flush() override;
+  EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
+  EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  EXPORT virtual append_result append(const Meas &value) override;
+  EXPORT virtual void flush() override;
 
-  DARIADB_ST_EXPORTS std::list<std::string> closed_aofs();
-  DARIADB_ST_EXPORTS void drop_aof(const std::string &fname, IAofDropper *storage);
+  EXPORT std::list<std::string> closed_aofs();
+  EXPORT void drop_aof(const std::string &fname, IAofDropper *storage);
 
-  DARIADB_ST_EXPORTS size_t files_count() const;
-  DARIADB_ST_EXPORTS void set_downlevel(IAofDropper *down);
+  EXPORT size_t files_count() const;
+  EXPORT void set_downlevel(IAofDropper *down);
 
-  DARIADB_ST_EXPORTS void erase(const std::string &fname);
+  EXPORT void erase(const std::string &fname);
 
-  DARIADB_ST_EXPORTS void drop_closed_files(size_t count);
+  EXPORT void drop_closed_files(size_t count);
 
 protected:
   void create_new();
@@ -53,7 +53,7 @@ protected:
   void drop_old_if_needed();
 
 private:
-  DARIADB_ST_EXPORTS static AOFManager *_instance;
+  EXPORT static AOFManager *_instance;
 
   AOFile_Ptr _aof;
   mutable std::mutex _locker;

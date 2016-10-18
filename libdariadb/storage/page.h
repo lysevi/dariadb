@@ -4,7 +4,7 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/index.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace storage {
@@ -30,28 +30,28 @@ class Page : public IChunkContainer {
   Page() = default;
 
 public:
-  DARIADB_ST_EXPORTS static Page *create(const std::string &file_name, uint64_t chunk_id,
+  EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
                       uint32_t max_chunk_size, const MeasArray &ma);
-  DARIADB_ST_EXPORTS static Page *open(std::string file_name, bool read_only = false);
-  DARIADB_ST_EXPORTS static PageHeader readHeader(std::string file_name);
-  DARIADB_ST_EXPORTS static IndexHeader readIndexHeader(std::string page_file_name);
-  DARIADB_ST_EXPORTS static uint64_t index_file_size(uint32_t chunk_per_storage);
-  DARIADB_ST_EXPORTS static void restoreIndexFile(const std::string&file_name);
-  DARIADB_ST_EXPORTS ~Page();
-  DARIADB_ST_EXPORTS void fsck();
-  DARIADB_ST_EXPORTS bool is_full() const;
+  EXPORT static Page *open(std::string file_name, bool read_only = false);
+  EXPORT static PageHeader readHeader(std::string file_name);
+  EXPORT static IndexHeader readIndexHeader(std::string page_file_name);
+  EXPORT static uint64_t index_file_size(uint32_t chunk_per_storage);
+  EXPORT static void restoreIndexFile(const std::string&file_name);
+  EXPORT ~Page();
+  EXPORT void fsck();
+  EXPORT bool is_full() const;
 
   // ChunkContainer
-  DARIADB_ST_EXPORTS bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+  EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  DARIADB_ST_EXPORTS ChunkLinkList chunksByIterval(const QueryInterval &query) override;
-  DARIADB_ST_EXPORTS Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  DARIADB_ST_EXPORTS void readLinks(const QueryInterval &query, const ChunkLinkList &links,
+  EXPORT ChunkLinkList chunksByIterval(const QueryInterval &query) override;
+  EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
+  EXPORT void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) override;
 
- DARIADB_ST_EXPORTS  void flush();
+ EXPORT  void flush();
 
-  DARIADB_ST_EXPORTS void mark_as_non_init(Chunk_Ptr &ch);
+  EXPORT void mark_as_non_init(Chunk_Ptr &ch);
 private:
   void update_index_recs();
   void init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index);

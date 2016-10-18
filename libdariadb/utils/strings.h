@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -9,9 +9,9 @@ namespace dariadb {
 namespace utils {
 namespace strings {
 /// split string by space.
-DARIADB_ST_EXPORTS std::vector<std::string> tokens(const std::string &str);
-DARIADB_ST_EXPORTS std::vector<std::string> split(const std::string &text, char sep);
-DARIADB_ST_EXPORTS std::string to_upper(const std::string &text);
+EXPORT std::vector<std::string> tokens(const std::string &str);
+EXPORT std::vector<std::string> split(const std::string &text, char sep);
+EXPORT std::string to_upper(const std::string &text);
 
 namespace inner {
 template <class Head> void args_as_string(std::ostream &s, Head &&head) {

@@ -15,6 +15,6 @@ target_link_libraries(libcommon-net libdariadb)
 
 GENERATE_EXPORT_HEADER(libcommon-net
     BASE_NAME libcommon-net
-    EXPORT_MACRO_NAME DARIADBNET_CMN_EXPORTS
-    EXPORT_FILE_NAME dariadb_net_cmn_exports.h
+    EXPORT_MACRO_NAME CM_EXPORT
+    EXPORT_FILE_NAME net_cmn_exports.h
     STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC)

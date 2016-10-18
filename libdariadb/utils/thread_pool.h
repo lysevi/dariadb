@@ -2,7 +2,7 @@
 
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -88,16 +88,16 @@ public:
       kind = _kind;
     }
   };
-  DARIADB_ST_EXPORTS ThreadPool(const Params &p);
-  DARIADB_ST_EXPORTS ~ThreadPool();
+  EXPORT ThreadPool(const Params &p);
+  EXPORT ~ThreadPool();
   size_t threads_count() const { return _params.threads_count; }
   ThreadKind kind() const { return _params.kind; }
 
   bool is_stoped() const { return _is_stoped; }
 
-  DARIADB_ST_EXPORTS TaskResult_Ptr post(const AsyncTaskWrap &task);
-  DARIADB_ST_EXPORTS void flush();
-  DARIADB_ST_EXPORTS void stop();
+  EXPORT TaskResult_Ptr post(const AsyncTaskWrap &task);
+  EXPORT void flush();
+  EXPORT void stop();
 
   size_t active_works() {
     size_t res = _in_queue.size();

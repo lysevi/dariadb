@@ -7,7 +7,7 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <libclient/dariadb_cl_exports.h>
+#include <libclient/net_cl_exports.h>
 
 namespace dariadb {
 namespace net {
@@ -38,29 +38,29 @@ public:
       port = _port;
     }
   };
-  DARIADBNET_CL_EXPORTS Client(const Param &p);
-  DARIADBNET_CL_EXPORTS ~Client();
+  CL_EXPORT Client(const Param &p);
+  CL_EXPORT ~Client();
 
-  DARIADBNET_CL_EXPORTS void connect();
-  DARIADBNET_CL_EXPORTS void disconnect();
+  CL_EXPORT void connect();
+  CL_EXPORT void disconnect();
 
-  DARIADBNET_CL_EXPORTS CLIENT_STATE state() const;
-  DARIADBNET_CL_EXPORTS size_t pings_answers() const;
+  CL_EXPORT CLIENT_STATE state() const;
+  CL_EXPORT size_t pings_answers() const;
 
   /// connection id on server
-  DARIADBNET_CL_EXPORTS int id() const;
+  CL_EXPORT int id() const;
 
-  DARIADBNET_CL_EXPORTS void append(const MeasArray &ma);
-  DARIADBNET_CL_EXPORTS MeasList readInterval(const storage::QueryInterval &qi);
-  DARIADBNET_CL_EXPORTS ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
+  CL_EXPORT void append(const MeasArray &ma);
+  CL_EXPORT MeasList readInterval(const storage::QueryInterval &qi);
+  CL_EXPORT ReadResult_ptr readInterval(const storage::QueryInterval &qi, ReadResult::callback &clbk);
 
-  DARIADBNET_CL_EXPORTS Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
-  DARIADBNET_CL_EXPORTS ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
+  CL_EXPORT Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
+  CL_EXPORT ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi, ReadResult::callback &clbk);
 
-  DARIADBNET_CL_EXPORTS ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
-  DARIADBNET_CL_EXPORTS Id2Meas currentValue(const IdArray &ids, const Flag &flag);
+  CL_EXPORT ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
+  CL_EXPORT Id2Meas currentValue(const IdArray &ids, const Flag &flag);
 
-  DARIADBNET_CL_EXPORTS ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
+  CL_EXPORT ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

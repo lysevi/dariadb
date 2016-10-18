@@ -2,7 +2,7 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/compression/binarybuffer.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 #include <memory>
 
 namespace dariadb {
@@ -10,20 +10,20 @@ namespace compression {
 	//TODO rm pimpl idiom. do like in v2 compression API.
 class CopmressedWriter {
 public:
-  DARIADB_ST_EXPORTS CopmressedWriter();
-  DARIADB_ST_EXPORTS CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
-  DARIADB_ST_EXPORTS ~CopmressedWriter();
-  DARIADB_ST_EXPORTS CopmressedWriter(const CopmressedWriter &other);
+  EXPORT CopmressedWriter();
+  EXPORT CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
+  EXPORT ~CopmressedWriter();
+  EXPORT CopmressedWriter(const CopmressedWriter &other);
 
-  DARIADB_ST_EXPORTS void swap(CopmressedWriter &other);
+  EXPORT void swap(CopmressedWriter &other);
 
-  DARIADB_ST_EXPORTS CopmressedWriter &operator=(const CopmressedWriter &other);
-  DARIADB_ST_EXPORTS CopmressedWriter &operator=(CopmressedWriter &&other);
+  EXPORT CopmressedWriter &operator=(const CopmressedWriter &other);
+  EXPORT CopmressedWriter &operator=(CopmressedWriter &&other);
 
-  DARIADB_ST_EXPORTS bool append(const Meas &m);
- DARIADB_ST_EXPORTS  bool is_full() const;
+  EXPORT bool append(const Meas &m);
+ EXPORT  bool is_full() const;
 
-  DARIADB_ST_EXPORTS size_t used_space() const;
+  EXPORT size_t used_space() const;
 
 protected:
   class Private;
@@ -32,10 +32,10 @@ protected:
 
 class CopmressedReader {
 public:
-  DARIADB_ST_EXPORTS CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
-  DARIADB_ST_EXPORTS ~CopmressedReader();
+  EXPORT CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
+  EXPORT ~CopmressedReader();
 
-  DARIADB_ST_EXPORTS Meas read();
+  EXPORT Meas read();
 
 protected:
   class Private;

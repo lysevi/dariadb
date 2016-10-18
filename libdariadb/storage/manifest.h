@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libdariadb/utils/locker.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 #include <list>
 #include <memory>
 #include <string>
@@ -15,29 +15,29 @@ class Manifest {
   Manifest(const std::string &fname);
 
 public:
-  DARIADB_ST_EXPORTS Manifest() = delete;
-  DARIADB_ST_EXPORTS static void start(const std::string &fname);
-  DARIADB_ST_EXPORTS static void stop();
-  DARIADB_ST_EXPORTS static Manifest *instance();
-  DARIADB_ST_EXPORTS void restore();
+  EXPORT Manifest() = delete;
+  EXPORT static void start(const std::string &fname);
+  EXPORT static void stop();
+  EXPORT static Manifest *instance();
+  EXPORT void restore();
 
-  DARIADB_ST_EXPORTS std::list<std::string> page_list();
-  DARIADB_ST_EXPORTS void page_append(const std::string &rec);
-  DARIADB_ST_EXPORTS void page_rm(const std::string &rec);
+  EXPORT std::list<std::string> page_list();
+  EXPORT void page_append(const std::string &rec);
+  EXPORT void page_rm(const std::string &rec);
 
-  DARIADB_ST_EXPORTS std::list<std::string> cola_list();
-  DARIADB_ST_EXPORTS void cola_append(const std::string &rec);
-  DARIADB_ST_EXPORTS void cola_rm(const std::string &rec);
+  EXPORT std::list<std::string> cola_list();
+  EXPORT void cola_append(const std::string &rec);
+  EXPORT void cola_rm(const std::string &rec);
 
-  DARIADB_ST_EXPORTS std::list<std::string> aof_list();
-  DARIADB_ST_EXPORTS void aof_append(const std::string &rec);
-  DARIADB_ST_EXPORTS void aof_rm(const std::string &rec);
+  EXPORT std::list<std::string> aof_list();
+  EXPORT void aof_append(const std::string &rec);
+  EXPORT void aof_rm(const std::string &rec);
 
-  DARIADB_ST_EXPORTS std::string read_file(const std::string &fname);
-  DARIADB_ST_EXPORTS void write_file(const std::string &fname, const std::string &content);
+  EXPORT std::string read_file(const std::string &fname);
+  EXPORT void write_file(const std::string &fname, const std::string &content);
 
-  DARIADB_ST_EXPORTS void set_version(const std::string &version);
-  DARIADB_ST_EXPORTS std::string get_version();
+  EXPORT void set_version(const std::string &version);
+  EXPORT std::string get_version();
 
 private:
   void touch();

@@ -2,7 +2,7 @@
 
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 #include <memory>
 #include <ostream>
 
@@ -15,37 +15,37 @@ class BinaryBuffer;
 typedef std::shared_ptr<BinaryBuffer> BinaryBuffer_Ptr;
 class BinaryBuffer {
 public:
-  DARIADB_ST_EXPORTS BinaryBuffer(const utils::Range &r);
+  EXPORT BinaryBuffer(const utils::Range &r);
   BinaryBuffer() = default;
-  DARIADB_ST_EXPORTS ~BinaryBuffer();
-  DARIADB_ST_EXPORTS BinaryBuffer(const BinaryBuffer &other);
-  DARIADB_ST_EXPORTS BinaryBuffer(BinaryBuffer &&other);
+  EXPORT ~BinaryBuffer();
+  EXPORT BinaryBuffer(const BinaryBuffer &other);
+  EXPORT BinaryBuffer(BinaryBuffer &&other);
 
-  DARIADB_ST_EXPORTS void swap(BinaryBuffer &other) noexcept;
+  EXPORT void swap(BinaryBuffer &other) noexcept;
 
   int8_t bitnum() const { return _bitnum; }
   size_t pos() const { return _pos; }
 
-  DARIADB_ST_EXPORTS void set_bitnum(int8_t num);
-  DARIADB_ST_EXPORTS void set_pos(size_t pos);
-  DARIADB_ST_EXPORTS void reset_pos();
+  EXPORT void set_bitnum(int8_t num);
+  EXPORT void set_pos(size_t pos);
+  EXPORT void reset_pos();
 
-  DARIADB_ST_EXPORTS BinaryBuffer &incbit();
-  DARIADB_ST_EXPORTS BinaryBuffer &incpos();
+  EXPORT BinaryBuffer &incbit();
+  EXPORT BinaryBuffer &incpos();
 
   size_t cap() const { return _cap; }
   size_t free_size() const { return _pos; }
   bool is_full() const { return _pos == 0; }
 
-  DARIADB_ST_EXPORTS uint8_t getbit() const;
-  DARIADB_ST_EXPORTS BinaryBuffer &setbit();
-  DARIADB_ST_EXPORTS BinaryBuffer &clrbit();
+  EXPORT uint8_t getbit() const;
+  EXPORT BinaryBuffer &setbit();
+  EXPORT BinaryBuffer &clrbit();
 
   friend std::ostream &operator<<(std::ostream &stream, const BinaryBuffer &b);
 
-  DARIADB_ST_EXPORTS void write(uint16_t v, int8_t count);
-  DARIADB_ST_EXPORTS void write(uint64_t v, int8_t count);
-  DARIADB_ST_EXPORTS uint64_t read(int8_t count);
+  EXPORT void write(uint16_t v, int8_t count);
+  EXPORT void write(uint64_t v, int8_t count);
+  EXPORT uint64_t read(int8_t count);
 
   dariadb::utils::Range get_range() const { return dariadb::utils::Range{_begin, _end}; }
 
@@ -73,6 +73,6 @@ protected:
   int8_t _bitnum;
 };
 
-DARIADB_ST_EXPORTS std::ostream &operator<<(std::ostream &stream, const BinaryBuffer &b);
+EXPORT std::ostream &operator<<(std::ostream &stream, const BinaryBuffer &b);
 }
 }

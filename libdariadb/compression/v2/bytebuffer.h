@@ -2,7 +2,7 @@
 
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/dariadb_st_exports.h>
+#include <libdariadb/st_exports.h>
 #include <memory>
 #include <ostream>
 #include <type_traits>
@@ -14,8 +14,8 @@ class ByteBuffer;
 typedef std::shared_ptr<ByteBuffer> ByteBuffer_Ptr;
 class ByteBuffer {
 public:
-  DARIADB_ST_EXPORTS ByteBuffer(const utils::Range &r);
-  DARIADB_ST_EXPORTS ~ByteBuffer();
+  EXPORT ByteBuffer(const utils::Range &r);
+  EXPORT ~ByteBuffer();
 
   uint32_t pos() const { return _pos; }
   void set_pos(uint32_t bw_pos) { _pos = bw_pos; }
