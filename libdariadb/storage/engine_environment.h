@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/st_exports.h>
 #include <memory>
 
 namespace dariadb {
@@ -12,11 +13,11 @@ public:
 
     };
 public:
-  EngineEnvironment();
-  ~EngineEnvironment();
+  EXPORT EngineEnvironment();
+  EXPORT ~EngineEnvironment();
 
-  void addResource(Resource res, void*ptr);
-  void* getResourcePtr(Resource res)const;
+  EXPORT void addResource(Resource res, void*ptr);
+  EXPORT void* getResourcePtr(Resource res)const;
 
   template<class T>
   T* getResourceObject(Resource res)const{
