@@ -8,7 +8,6 @@
 
 using json = nlohmann::json;
 using namespace dariadb::storage;
-std::unique_ptr<Manifest> Manifest::_instance;
 
 const std::string PAGE_JS_KEY = "pages";
 const std::string COLA_JS_KEY = "cola";
@@ -19,16 +18,6 @@ Manifest::Manifest(const std::string &fname) : _filename(fname) {
   if (utils::fs::path_exists(_filename)) {
     this->restore();
   }
-}
-
-void Manifest::start(const std::string &fname) {
-  _instance = std::unique_ptr<Manifest>{new Manifest(fname)};
-}
-
-void Manifest::stop() {}
-
-Manifest *Manifest::instance() {
-  return Manifest::_instance.get();
 }
 
 void Manifest::touch() {

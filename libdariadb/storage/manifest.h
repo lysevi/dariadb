@@ -12,13 +12,9 @@ namespace storage {
 const std::string MANIFEST_FILE_NAME = "Manifest";
 
 class Manifest {
-  Manifest(const std::string &fname);
-
 public:
   EXPORT Manifest() = delete;
-  EXPORT static void start(const std::string &fname);
-  EXPORT static void stop();
-  EXPORT static Manifest *instance();
+  EXPORT Manifest(const std::string &fname);
   EXPORT void restore();
 
   EXPORT std::list<std::string> page_list();
@@ -46,8 +42,9 @@ private:
 
 protected:
   std::string _filename;
-  static std::unique_ptr<Manifest> _instance;
   utils::Locker _locker;
 };
+
+using Manifest_ptr = std::shared_ptr<Manifest>;
 }
 }

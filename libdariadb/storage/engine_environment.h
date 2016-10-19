@@ -11,7 +11,8 @@ class EngineEnvironment : public utils::NonCopy {
 public:
     enum class Resource{
 		LOCK_MANAGER=0,
-		SETTINGS
+		SETTINGS,
+		MANIFEST
     };
 public:
   EXPORT EngineEnvironment();

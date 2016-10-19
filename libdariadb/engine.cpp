@@ -62,8 +62,8 @@ public:
 	_lock_manager = LockManager_ptr{ new  LockManager(LockManager::Params()) };
 	_engine_env->addResource(EngineEnvironment::Resource::LOCK_MANAGER, _lock_manager.get());
     
-	Manifest::start(
-        utils::fs::append_path(_settings->path, MANIFEST_FILE_NAME));
+	_manifest = Manifest_ptr{ new Manifest{ utils::fs::append_path(_settings->path, MANIFEST_FILE_NAME) } };
+	_engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
     if (is_exists) {
       Dropper::cleanStorage(_settings->path);
@@ -72,7 +72,7 @@ public:
 	_page_manager = PageManager_ptr{ new PageManager(_engine_env) };
 
     if (utils::fs::path_exists(utils::fs::append_path(settings->path, MANIFEST_FILE_NAME))) {
-      Manifest::instance()->set_version(this->version().version);
+		_manifest->set_version(this->version().version);
     } else {
       check_storage_version();
     }
@@ -95,7 +95,7 @@ public:
 	  ThreadManager::stop();
 	  _aof_manager = nullptr;
 	  _page_manager = nullptr;
-      Manifest::stop();
+	  _manifest = nullptr;
 	  _lock_manager = nullptr;
 	  _dropper = nullptr;
       _stoped = true;
@@ -104,14 +104,14 @@ public:
 
   void check_storage_version() {
     auto current_version = this->version().version;
-    auto storage_version = Manifest::instance()->get_version();
+    auto storage_version = _manifest->get_version();
     if (storage_version != current_version) {
       logger_info("engine: openning storage with version - ", storage_version);
       if (Version::from_string(storage_version) > this->version()) {
         THROW_EXCEPTION("engine: openning storage with greater version.");
       } else {
         logger_info("engine: update storage version to ", current_version);
-        Manifest::instance()->set_version(current_version);
+		_manifest->set_version(current_version);
       }
     }
   }
@@ -392,6 +392,7 @@ protected:
   AOFManager_ptr _aof_manager;
   EngineEnvironment_ptr _engine_env;
   Settings_ptr _settings;
+  Manifest_ptr _manifest;
   bool _stoped;
 };
 

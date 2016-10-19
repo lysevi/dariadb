@@ -27,9 +27,9 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
 	_env = env;
 	_settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
   _down = nullptr;
-
+  auto manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
   if (dariadb::utils::fs::path_exists(_settings->path)) {
-    auto aofs = Manifest::instance()->aof_list();
+    auto aofs = manifest->aof_list();
     for (auto f : aofs) {
       auto full_filename = utils::fs::append_path(_settings->path, f);
       if (AOFile::writed(full_filename) != _settings->aof_max_size) {
@@ -69,7 +69,8 @@ void AOFManager::drop_closed_files(size_t count) {
       }
     }
     // clean set of sended to drop files.
-    auto aofs_exists = Manifest::instance()->aof_list();
+	auto manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
+    auto aofs_exists = manifest->aof_list();
     std::set<std::string> aof_exists_set{aofs_exists.begin(), aofs_exists.end()};
     std::set<std::string> new_sended_files;
     for (auto &v : _files_send_to_drop) {
@@ -88,7 +89,7 @@ void AOFManager::drop_old_if_needed() {
 
 std::list<std::string> AOFManager::aof_files() const {
   std::list<std::string> res;
-  auto files = Manifest::instance()->aof_list();
+  auto files = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_list();
   for (auto f : files) {
     auto full_path = utils::fs::append_path(_settings->path, f);
     res.push_back(full_path);
@@ -387,6 +388,6 @@ size_t AOFManager::files_count() const {
 }
 
 void AOFManager::erase(const std::string &fname) {
-  Manifest::instance()->aof_rm(fname);
+  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_rm(fname);
   utils::fs::rm(utils::fs::append_path(_settings->path, fname));
 }

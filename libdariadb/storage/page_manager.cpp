@@ -43,7 +43,7 @@ public:
     last_id = 0;
 
     if (utils::fs::path_exists(_settings->path)) {
-      auto pages = Manifest::instance()->page_list();
+      auto pages = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list();
 
       for (auto n : pages) {
         auto file_name = utils::fs::append_path(_settings->path, n);
@@ -68,7 +68,7 @@ public:
       return;
     }
 
-    auto pages = Manifest::instance()->page_list();
+    auto pages = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list();
 
 	for (auto n : pages) {
 		auto file_name = utils::fs::append_path(_settings->path, n);
@@ -290,7 +290,7 @@ public:
     return _cur_page->header->addeded_chunks;
   }
   // PM
-  size_t files_count() const { return Manifest::instance()->page_list().size(); }
+  size_t files_count() const { return _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list().size(); }
 
   dariadb::Time minTime() {
 
@@ -333,7 +333,7 @@ public:
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->path, page_name);
     res = Page::create(file_name, last_id, _settings->page_chunk_size, ma);
-    Manifest::instance()->page_append(page_name);
+	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
     if (update_id) {
       res->header->max_chunk_id = last_id;
     }
@@ -352,7 +352,7 @@ public:
 	  auto fname = utils::fs::extract_filename(full_file_name);
 	  _openned_pages.erase(full_file_name);
 
-	  Manifest::instance()->page_rm(fname);
+	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_rm(fname);
 	  utils::fs::rm(full_file_name);
 	  utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
 	  _file2header.erase(fname);

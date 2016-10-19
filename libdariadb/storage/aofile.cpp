@@ -28,7 +28,7 @@ public:
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
     _filename = utils::fs::append_path(_settings->path, rnd_fname);
-    Manifest::instance()->aof_append(rnd_fname);
+	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_append(rnd_fname);
     is_full = false;
   }
 
@@ -286,7 +286,7 @@ public:
   void throw_open_error_exception() const {
     std::stringstream ss;
     ss << "aof: file open error " << _filename;
-    auto aofs_manifest = Manifest::instance()->aof_list();
+    auto aofs_manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_list();
     ss << "Manifest:";
     for (auto f : aofs_manifest) {
       ss << f << std::endl;

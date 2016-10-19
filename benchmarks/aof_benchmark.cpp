@@ -82,8 +82,8 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::utils::fs::mkdir(storage_path);
-    dariadb::storage::Manifest::start(
-        dariadb::utils::fs::append_path(storage_path, "Manifest"));
+	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
+		dariadb::utils::fs::append_path(storage_path, "Manifest") } };
 	
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
     settings->aof_buffer_size = 1000;
@@ -91,6 +91,7 @@ int main(int argc, char *argv[]) {
         (1024 * 1024) * 3 / sizeof(dariadb::Meas);
 	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
 
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -121,7 +122,7 @@ int main(int argc, char *argv[]) {
 
     dariadb_bench::readBenchark(all_id_set, aof, 10);
 
-    dariadb::storage::Manifest::stop();
+	manifest = nullptr;
     dariadb::utils::async::ThreadManager::stop();
 
     if (metrics_enable) {

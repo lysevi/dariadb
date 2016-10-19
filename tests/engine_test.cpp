@@ -142,11 +142,12 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->aof_max_size = chunk_size;
     settings->page_chunk_size = chunk_size;
 
-    dariadb::storage::Manifest::start(dariadb::utils::fs::append_path(
-        settings->path, "Manifest"));
-    auto manifest_version = dariadb::storage::Manifest::instance()->get_version();
+	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
+		dariadb::utils::fs::append_path(settings->path, "Manifest") } };
 
-    dariadb::storage::Manifest::stop();
+    auto manifest_version = manifest->get_version();
+
+	manifest = nullptr;
 
     auto raw_ptr = new Engine(settings);
 

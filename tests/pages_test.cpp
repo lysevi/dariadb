@@ -30,47 +30,46 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   std::string version = "0.1.2.3.4.5";
 
   {
-    Manifest::start(fname);
+	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ fname } };
     std::list<std::string> pages_names{"1", "2", "3"};
     for (auto n : pages_names) {
-      Manifest::instance()->page_append(n);
+		manifest->page_append(n);
     }
 
-    Manifest::instance()->set_version(version);
+	manifest->set_version(version);
     std::list<std::string> cola_names{"11", "22", "33"};
     for (auto n : cola_names) {
-      Manifest::instance()->cola_append(n);
+		manifest->cola_append(n);
     }
 
     std::list<std::string> aof_names{"111", "222", "333"};
     for (auto n : aof_names) {
-      Manifest::instance()->aof_append(n);
+		manifest->aof_append(n);
     }
 
-    auto page_lst = Manifest::instance()->page_list();
+    auto page_lst = manifest->page_list();
     BOOST_CHECK_EQUAL(page_lst.size(), pages_names.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
                                   pages_names.end());
 
-    auto cola_lst = Manifest::instance()->cola_list();
+    auto cola_lst = manifest->cola_list();
     BOOST_CHECK_EQUAL(cola_lst.size(), cola_names.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(cola_lst.begin(), cola_lst.end(), cola_names.begin(),
                                   cola_names.end());
 
-    auto aof_lst = Manifest::instance()->aof_list();
+    auto aof_lst = manifest->aof_list();
     BOOST_CHECK_EQUAL(aof_lst.size(), aof_names.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(aof_lst.begin(), aof_lst.end(), aof_names.begin(),
                                   aof_names.end());
 
-    Manifest::stop();
+	manifest = nullptr;
   }
   { // reopen. restore method must remove all records from manifest.
-    Manifest::start(fname);
-    BOOST_CHECK_EQUAL(Manifest::instance()->page_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(Manifest::instance()->cola_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(Manifest::instance()->aof_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(Manifest::instance()->get_version(), version);
-    Manifest::stop();
+    auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ fname } };
+    BOOST_CHECK_EQUAL(manifest->page_list().size(), size_t(0));
+    BOOST_CHECK_EQUAL(manifest->cola_list().size(), size_t(0));
+    BOOST_CHECK_EQUAL(manifest->aof_list().size(), size_t(0));
+    BOOST_CHECK_EQUAL(manifest->get_version(), version);
   }
 
   if (dariadb::utils::fs::path_exists(fname)) {
@@ -88,8 +87,8 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   }
   dariadb::MeasList addeded;
 
-  dariadb::storage::Manifest::start(
-      dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
+  auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
+	  dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME) } };
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
   settings->path = storagePath;
@@ -97,6 +96,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   BOOST_CHECK_GE(mintime_chunks.size(), size_t(1));
 
   pm = nullptr;
-  dariadb::storage::Manifest::stop();
+  manifest = nullptr;
   dariadb::utils::async::ThreadManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
@@ -154,14 +154,15 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     dariadb::utils::fs::rm(storagePath);
   }
   dariadb::MeasList addeded;
+  auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
+	  dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME) } };
 
-  dariadb::storage::Manifest::start(
-      dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
   settings->page_chunk_size = chunks_size;
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -232,7 +233,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   BOOST_CHECK_EQUAL(page_after_erase, size_t(0));
 
   pm = nullptr;
-  dariadb::storage::Manifest::stop();
+  manifest = nullptr;
   dariadb::utils::async::ThreadManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
@@ -247,14 +248,15 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  dariadb::storage::Manifest::start(
-      dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME));
+  auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
+	  dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME) } };
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
   settings->path = storagePath;
   settings->page_chunk_size = chunks_size;
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -327,7 +329,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(storagePath).size(),size_t(4)); // page +index+manifest+settings
 
   
-  dariadb::storage::Manifest::stop();
+  manifest = nullptr;
   dariadb::utils::async::ThreadManager::stop();
 
   if (dariadb::utils::fs::path_exists(storagePath)) {
