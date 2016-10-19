@@ -15,9 +15,8 @@ class Settings {
   
 
 public:
-	Settings() = delete;
   EXPORT Settings(const std::string storage_path);
-  EXPORT ~Settings() = default;
+  EXPORT ~Settings();
 
   EXPORT void set_default();
 

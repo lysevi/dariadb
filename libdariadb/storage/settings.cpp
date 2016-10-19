@@ -30,6 +30,8 @@ Settings::Settings(const std::string storage_path) {
   }
 }
 
+Settings::~Settings(){}
+
 void Settings::set_default() {
   logger("engine: Settings set default Settings");
   aof_buffer_size = AOF_BUFFER_SIZE;
