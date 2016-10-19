@@ -61,10 +61,6 @@ int main(int argc,char**argv){
 		p.dbg_logging = true;
 	}
 
-	bool is_exists = false;
-	if (dariadb::utils::fs::path_exists(storage_path)) {
-		is_exists = true;
-	}
 	
 	dariadb::utils::ILogger_ptr log_ptr{ new ServerLogger(p) };
 	dariadb::utils::LogManager::start(log_ptr);
