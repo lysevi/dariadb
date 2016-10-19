@@ -231,11 +231,11 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    Options::start();
-    Options::instance()->strategy = dariadb::storage::STRATEGY::FAST_WRITE;
-    Options::instance()->path = storage_path;
-    dariadb::storage::Options::instance()->page_chunk_size = chunk_size;
-    std::unique_ptr<Engine> stor{new Engine()};
+	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+	settings->strategy = dariadb::storage::STRATEGY::FAST_WRITE;
+	settings->path = storage_path;
+	settings->page_chunk_size = chunk_size;
+    std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 3 + 3;
 
@@ -311,7 +311,6 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     server_stop_flag = true;
     server_thread.join();
   }
-  Options::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }

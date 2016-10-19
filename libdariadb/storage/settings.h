@@ -1,25 +1,23 @@
 #pragma once
 
-#include <libdariadb/meas.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/thread_pool.h>
 #include <libdariadb/storage/strategy.h>
 #include <libdariadb/st_exports.h>
 
+#include <string>
 namespace dariadb {
 namespace storage {
 
-const std::string OPTIONS_FILE_NAME = "Options";
+const std::string SETTINGS_FILE_NAME = "Settings";
 
-class Options {
-  Options();
-  ~Options() = default;
+class Settings {
+  
 
 public:
-  EXPORT static void start();
-  EXPORT static void start(const std::string &path);
-  EXPORT static void stop();
-  static Options *instance() { return _instance; }
+	Settings() = delete;
+  EXPORT Settings(const std::string storage_path);
+  EXPORT ~Settings() = default;
 
   EXPORT void set_default();
 
@@ -38,9 +36,8 @@ public:
                                          /// pages stored).
 
   STRATEGY strategy;
-
-private:
-  EXPORT static Options *_instance;
 };
+
+using Settings_ptr = std::shared_ptr<Settings>;
 }
 }

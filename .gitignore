@@ -1,7 +1,7 @@
 libdariadb/config.h
 tmp
 packages.config
-Options
+Settings
 .vs
 dariadb_logs*.txt
 *.aof

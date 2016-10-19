@@ -2,7 +2,7 @@
 
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/dropper.h>
-#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
 #include <memory>
@@ -37,7 +37,7 @@ public:
   Engine &operator=(const Engine &) = delete;
   EXPORT virtual ~Engine();
 
-  EXPORT Engine();
+  EXPORT Engine(Settings_ptr settings);
 
   using IMeasStorage::append;
   EXPORT append_result append(const Meas &value) override;

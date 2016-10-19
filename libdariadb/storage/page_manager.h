@@ -5,7 +5,7 @@
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/page_manager.h>
+#include <libdariadb/storage/engine_environment.h>
 #include <vector>
 
 namespace dariadb {
@@ -15,7 +15,7 @@ class PageManager : public utils::NonCopy, public IChunkContainer {
 public:
 
 public:
-  EXPORT PageManager();
+  EXPORT PageManager(const EngineEnvironment_ptr env);
   EXPORT virtual ~PageManager();
   EXPORT void flush();
   // ChunkContainer
@@ -37,7 +37,7 @@ public:
 
   EXPORT void eraseOld(const Time t);
   EXPORT void erase_page(const std::string &fname);
-  EXPORT static void erase(const std::string &fname);
+  EXPORT static void erase(const std::string& storage_path, const std::string &fname);
 
 private:
   class Private;

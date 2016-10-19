@@ -3,7 +3,7 @@
 #include <libdariadb/utils/thread_manager.h>
 #include <libdariadb/storage/lock_manager.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/page.h>
 
 using namespace dariadb;
@@ -12,7 +12,9 @@ using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
 Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager, AOFManager_ptr aof_manager)
-    : _in_queue(0), _page_manager(page_manager), _aof_manager(aof_manager), _engine_env(engine_env) {}
+    : _in_queue(0), _page_manager(page_manager), _aof_manager(aof_manager), _engine_env(engine_env) {
+	_settings = _engine_env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
+}
 
 Dropper::~Dropper() {}
 
@@ -22,35 +24,13 @@ Dropper::Queues Dropper::queues() const {
   return result;
 }
 
-//void Dropper::drop_aof(const std::string &fname, const std::string &storage_path) {
-//  LockManager::instance()->lock(LOCK_KIND::EXCLUSIVE,
-//                                {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
-//
-//  auto full_path = fs::append_path(storage_path, fname);
-//
-//  AOFile_Ptr aof{new AOFile(full_path, true)};
-//
-//  auto all = aof->readAll();
-//
-//  std::sort(all->begin(), all->end(), meas_time_compare_less());
-//
-//  auto without_path = fs::extract_filename(fname);
-//  auto page_fname = fs::filename(without_path);
-//  _page_manager. ->append(page_fname, *all.get());
-//
-//  aof = nullptr;
-//  AOFManager::instance()->erase(fname);
-//
-//  LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
-//}
-
 void Dropper::drop_aof(const std::string fname) {
 	std::lock_guard<std::mutex> lg(_locker);
 	auto fres=_addeded_files.find(fname);
 	if (fres != _addeded_files.end()) {
 		return;
 	}
-	auto storage_path = Options::instance()->path;
+	auto storage_path = _settings->path;
 	if (utils::fs::path_exists(utils::fs::append_path(storage_path, fname))) {
 		_addeded_files.insert(fname);
 		_in_queue++;
@@ -69,22 +49,24 @@ void Dropper::cleanStorage(std::string storagePath) {
       if (page_fname == aof_fname) {
         logger_info("engine: fsck aof drop not finished: ", aof_fname);
         logger_info("engine: fsck rm ", pagef);
-        PageManager::erase(fs::extract_filename(pagef));
+        PageManager::erase(storagePath, fs::extract_filename(pagef));
       }
     }
   }
 }
 
 void Dropper::drop_aof_internal(const std::string fname) {
-  AsyncTask at = [fname, this](const ThreadInfo &ti) {
+	auto env = _engine_env;
+	auto sett = _settings;
+  AsyncTask at = [fname, this,env, sett](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
 
-      auto storage_path = Options::instance()->path;
+      auto storage_path = sett->path;
       auto full_path = fs::append_path(storage_path, fname);
 
-	  AOFile_Ptr aof{new AOFile(full_path, true)};
+	  AOFile_Ptr aof{new AOFile(env, full_path, true)};
 
 	  auto all = aof->readAll();
 	  
@@ -100,12 +82,13 @@ void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArr
 	auto pm = _page_manager.get();
 	auto am = _aof_manager.get();
 	auto lm = _engine_env->getResourceObject<LockManager>(EngineEnvironment::Resource::LOCK_MANAGER);
-	AsyncTask at = [fname, this, ma, pm, am, lm](const ThreadInfo &ti) {
+	auto sett = _settings;
+	AsyncTask at = [fname, this, ma, pm, am, lm,sett](const ThreadInfo &ti) {
 		try {
 			TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
 			TIMECODE_METRICS(ctmd, "drop", "Dropper::write_aof_to_page");
 		
-			auto storage_path = Options::instance()->path;
+			auto storage_path = sett->path;
 			auto full_path = fs::append_path(storage_path, fname);
 
 			std::sort(ma->begin(), ma->end(), meas_time_compare_less());

@@ -69,20 +69,11 @@ int main(int argc,char**argv){
 	dariadb::utils::ILogger_ptr log_ptr{ new ServerLogger(p) };
 	dariadb::utils::LogManager::start(log_ptr);
 
-	if (is_exists) {
-		Options::start(storage_path);
-	}
-	else {
-		Options::start();
-	}
-	Options::instance()->strategy = strategy;
-	Options::instance()->path = storage_path;
+	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+	settings->strategy = strategy;
 
-	auto stor=new Engine();
 
-	if (!is_exists) {
-		Options::instance()->save();
-	}
+	auto stor=new Engine(settings);
 
 	dariadb::net::Server::Param server_param(server_port, server_threads_count);
 	dariadb::net::Server s(server_param);

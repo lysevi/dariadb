@@ -8,7 +8,7 @@
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/page.h>
 
 #include <atomic>
@@ -31,18 +31,22 @@ using File2PageHeader = std::unordered_map<std::string, IndexHeader>;
 
 class PageManager::Private {
 public:
-  Private()
+  Private(const EngineEnvironment_ptr env)
       : _cur_page(nullptr),
-        _openned_pages(Options::instance()->page_openned_page_cache_size) {
+        _openned_pages(0) {
 
-    update_id = false;
+	  _env = env;
+	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
+	  _openned_pages.set_max_size(_settings->page_openned_page_cache_size);
+    
+	  update_id = false;
     last_id = 0;
 
-    if (utils::fs::path_exists(Options::instance()->path)) {
+    if (utils::fs::path_exists(_settings->path)) {
       auto pages = Manifest::instance()->page_list();
 
       for (auto n : pages) {
-        auto file_name = utils::fs::append_path(Options::instance()->path, n);
+        auto file_name = utils::fs::append_path(_settings->path, n);
         auto hdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
         _file2header[n] = hdr;
       }
@@ -60,14 +64,14 @@ public:
     if (force_check) {
       logger_info("engine: PageManager fsck force.");
     }
-    if (!utils::fs::path_exists(Options::instance()->path)) {
+    if (!utils::fs::path_exists(_settings->path)) {
       return;
     }
 
     auto pages = Manifest::instance()->page_list();
 
 	for (auto n : pages) {
-		auto file_name = utils::fs::append_path(Options::instance()->path, n);
+		auto file_name = utils::fs::append_path(_settings->path, n);
 		auto hdr = Page::readHeader(file_name);
 		if (hdr.removed_chunks == hdr.addeded_chunks) {
 			logger_info("engine: page ", file_name, " is empty.");
@@ -75,7 +79,7 @@ public:
 		}
 		else {
 			auto index_filename = PageIndex::index_name_from_page_name(n);
-			auto index_file_path = utils::fs::append_path(Options::instance()->path, index_filename);
+			auto index_file_path = utils::fs::append_path(_settings->path, index_filename);
 			if (!utils::fs::path_exists(index_file_path)) {
 				Page::restoreIndexFile(file_name);
 			}
@@ -231,7 +235,7 @@ public:
       auto hdr = f2h.second;
       if (pred(hdr)) {
         auto page_file_name =
-            utils::fs::append_path(Options::instance()->path, f2h.first);
+            utils::fs::append_path(_settings->path, f2h.first);
         result.push_back(page_file_name);
       }
     }
@@ -319,16 +323,16 @@ public:
 
   void append(const std::string &file_prefix, const dariadb::MeasArray &ma) {
     TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
-    if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
-      dariadb::utils::fs::mkdir(Options::instance()->path);
+    if (!dariadb::utils::fs::path_exists(_settings->path)) {
+      dariadb::utils::fs::mkdir(_settings->path);
     }
 
     Page *res = nullptr;
 
     std::string page_name = file_prefix + PAGE_FILE_EXT;
     std::string file_name =
-        dariadb::utils::fs::append_path(Options::instance()->path, page_name);
-    res = Page::create(file_name, last_id, Options::instance()->page_chunk_size, ma);
+        dariadb::utils::fs::append_path(_settings->path, page_name);
+    res = Page::create(file_name, last_id, _settings->page_chunk_size, ma);
     Manifest::instance()->page_append(page_name);
     if (update_id) {
       res->header->max_chunk_id = last_id;
@@ -338,8 +342,8 @@ public:
         Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
 
-  static void erase(const std::string &fname) {
-      auto full_file_name = utils::fs::append_path(Options::instance()->path, fname);
+  static void erase(const std::string& storage_path,const std::string &fname) {
+      auto full_file_name = utils::fs::append_path(storage_path, fname);
       utils::fs::rm(full_file_name);
       utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
   }
@@ -375,9 +379,11 @@ protected:
   bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
   File2PageHeader _file2header;
+  EngineEnvironment_ptr _env;
+  Settings* _settings;
 };
 
-PageManager::PageManager() : impl(new PageManager::Private) {}
+PageManager::PageManager(const EngineEnvironment_ptr env) : impl(new PageManager::Private(env)) {}
 
 PageManager::~PageManager() {}
 
@@ -432,8 +438,8 @@ void PageManager::eraseOld(const dariadb::Time t) {
 	impl->eraseOld(t);
 }
 
-void PageManager::erase(const std::string &fname) {
-  Private::erase(fname);
+void PageManager::erase(const std::string& storage_path,const std::string &fname) {
+  Private::erase(storage_path, fname);
 }
 
 void PageManager::erase_page(const std::string &fname) {

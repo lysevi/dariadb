@@ -1,10 +1,10 @@
 #include "bench_common.h"
-#include <libdariadb/utils/fs.h>
 #include <atomic>
 #include <boost/program_options.hpp>
-#include <libdariadb/engine.h>
 #include <iomanip>
 #include <iostream>
+#include <libdariadb/engine.h>
+#include <libdariadb/utils/fs.h>
 using namespace dariadb;
 using namespace dariadb::storage;
 
@@ -106,8 +106,8 @@ void show_info(Engine *storage) {
     time_ss << timeutil::to_string(write_time);
 
     std::stringstream stor_ss;
-    stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
-            << ")";
+    stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
+            << " T:" << queue_sizes.active_works << ")";
 
     std::stringstream read_speed_ss;
     read_speed_ss << reads_per_sec << "/sec";
@@ -145,8 +145,9 @@ void show_drop_info(Engine *storage) {
     auto queue_sizes = storage->queue_size();
 
     std::cout << "\r"
-              << " storage: (p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
-              << " T:" << queue_sizes.active_works << ")"
+              << " storage: (p:" << queue_sizes.pages_count
+              << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
+              << ")"
               << "[a:" << queue_sizes.dropper_queues.aof << "]          ";
     std::cout.flush();
     if (stop_info) {
@@ -286,24 +287,22 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
   }
 }
 
-void check_engine_state(Engine *raw_ptr) {
-  auto strategy = Options::instance()->strategy;
+void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr) {
+  auto strategy = settings->strategy;
   std::cout << "==> Check storage state(" << strategy << ")... " << std::flush;
 
   auto files = raw_ptr->queue_size();
   switch (strategy) {
   case dariadb::storage::STRATEGY::FAST_WRITE:
     if (files.pages_count != 0) {
-      THROW_EXCEPTION("FAST_WRITE error: (p:" ,files.pages_count 
-                             , " a:" , files.aofs_count , " T:" , files.active_works
-                             , ")");
+      THROW_EXCEPTION("FAST_WRITE error: (p:", files.pages_count, " a:", files.aofs_count,
+                      " T:", files.active_works, ")");
     }
     break;
   case dariadb::storage::STRATEGY::COMPRESSED:
     if (files.aofs_count >= 1 && files.pages_count == 0) {
-        THROW_EXCEPTION("COMPRESSED error: (p:" , files.pages_count 
-                             , " a:" ,files.aofs_count , " T:" , files.active_works
-                             , ")");
+      THROW_EXCEPTION("COMPRESSED error: (p:", files.pages_count, " a:", files.aofs_count,
+                      " T:", files.active_works, ")");
     }
     break;
   default:
@@ -343,31 +342,23 @@ int main(int argc, char *argv[]) {
       }
     }
 
-
-    Options::start(storage_path);
-    if (!is_exists) {
-      Options::instance()->strategy = strategy;
-    }
-
+    auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    
     utils::LogManager::start(log_ptr);
 
-    auto raw_ptr = new Engine();
+    auto raw_ptr = new Engine(settings);
 
     if (is_exists) {
       raw_ptr->fsck();
     }
     IMeasStorage_ptr ms{raw_ptr};
 
-    if (!is_exists) {
-      Options::instance()->save();
-    }
-
     dariadb::IdSet all_id_set;
     append_count = 0;
     stop_info = false;
     auto writers_start = clock();
-	
-	start_time = dariadb::timeutil::current_time();
+
+    start_time = dariadb::timeutil::current_time();
     rw_benchmark(ms, raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
@@ -392,9 +383,9 @@ int main(int argc, char *argv[]) {
       std::cout << "flush time: " << elapsed << std::endl;
     }
 
-    check_engine_state(raw_ptr);
+    check_engine_state(settings, raw_ptr);
 
-    if (!readonly ) {
+    if (!readonly) {
       size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
       std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
       stop_info = false;
@@ -412,8 +403,8 @@ int main(int argc, char *argv[]) {
 
     auto queue_sizes = raw_ptr->queue_size();
     std::cout << "\r"
-              << " storage: (p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
-              << ")" << std::endl;
+              << " storage: (p:" << queue_sizes.pages_count
+              << " a:" << queue_sizes.aofs_count << ")" << std::endl;
 
     std::cout << "Active threads: "
               << utils::async::ThreadManager::instance()->active_works() << std::endl;
@@ -427,9 +418,9 @@ int main(int argc, char *argv[]) {
 
     std::cout << "stoping storage...\n";
     ms = nullptr;
-    dariadb::storage::Options::stop();
-    if (dynamic_cast<dariadb_bench::BenchmarkLogger *>(log_ptr.get())->_calls.load() ==
-        0) {
+    settings = nullptr;
+    auto blog = dynamic_cast<dariadb_bench::BenchmarkLogger *>(log_ptr.get());
+    if (blog->_calls.load() == 0) {
       throw std::logic_error("log_ptr->_calls.load()==0");
     }
   }

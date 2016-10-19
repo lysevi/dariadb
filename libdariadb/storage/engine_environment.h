@@ -10,7 +10,8 @@ namespace storage {
 class EngineEnvironment : public utils::NonCopy {
 public:
     enum class Resource{
-		LOCK_MANAGER=0
+		LOCK_MANAGER=0,
+		SETTINGS
     };
 public:
   EXPORT EngineEnvironment();

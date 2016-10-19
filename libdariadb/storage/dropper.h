@@ -36,6 +36,7 @@ private:
 	PageManager_ptr _page_manager;
 	AOFManager_ptr _aof_manager;
 	EngineEnvironment_ptr _engine_env;
+	Settings* _settings;
 };
 }
 }

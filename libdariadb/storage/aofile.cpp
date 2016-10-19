@@ -1,11 +1,11 @@
-#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS //disable msvc /sdl warning on fopen call.
 #include <libdariadb/storage/aofile.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/settings.h>
 
 #include <algorithm>
 #include <cassert>
@@ -21,16 +21,20 @@ using namespace dariadb::storage;
 
 class AOFile::Private {
 public:
-  Private() {
+  Private(const EngineEnvironment_ptr env) {
+	  _env = env;
+	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
-    _filename = utils::fs::append_path(Options::instance()->path, rnd_fname);
+    _filename = utils::fs::append_path(_settings->path, rnd_fname);
     Manifest::instance()->aof_append(rnd_fname);
     is_full = false;
   }
 
-  Private(const std::string &fname, bool readonly) {
+  Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
+	  _env = env;
+	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = AOFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
@@ -59,7 +63,7 @@ public:
     TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
 
-    if (_writed > Options::instance()->aof_max_size) {
+    if (_writed > _settings->aof_max_size) {
       return append_result(0, 1);
     }
     auto file = open_to_append();
@@ -79,7 +83,7 @@ public:
       return append_result(0, sz);
     }
     auto file = open_to_append();
-    auto max_size = Options::instance()->aof_max_size;
+    auto max_size = _settings->aof_max_size;
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
     std::fwrite(&(*begin), sizeof(Meas), write_size, file);
     std::fclose(file);
@@ -98,7 +102,7 @@ public:
     }
     auto file = open_to_append();
 
-    auto max_size = Options::instance()->aof_max_size;
+    auto max_size = _settings->aof_max_size;
 
     auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
     MeasArray ma{begin, end};
@@ -263,7 +267,7 @@ public:
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = open_to_read();
 
-    auto ma=std::make_shared<MeasArray>(Options::instance()->aof_max_size);
+    auto ma=std::make_shared<MeasArray>(_settings->aof_max_size);
 	auto raw = ma.get();
     size_t pos = 0;
     while (1) {
@@ -287,7 +291,7 @@ public:
     for (auto f : aofs_manifest) {
       ss << f << std::endl;
     }
-    auto aofs_exists = utils::fs::ls(Options::instance()->path, ".aof");
+    auto aofs_exists = utils::fs::ls(_settings->path, ".aof");
     for (auto f : aofs_exists) {
       ss << f << std::endl;
     }
@@ -299,14 +303,16 @@ protected:
   bool _is_readonly;
   size_t _writed;
   bool is_full;
+  EngineEnvironment_ptr _env;
+  Settings* _settings;
 };
 
 AOFile::~AOFile() {}
 
-AOFile::AOFile() : _Impl(new AOFile::Private()) {}
+AOFile::AOFile(const EngineEnvironment_ptr env) : _Impl(new AOFile::Private(env)) {}
 
-AOFile::AOFile(const std::string &fname, bool readonly)
-    : _Impl(new AOFile::Private(fname, readonly)) {}
+AOFile::AOFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
+    : _Impl(new AOFile::Private(env, fname, readonly)) {}
 
 dariadb::Time AOFile::minTime() {
   return _Impl->minTime();

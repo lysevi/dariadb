@@ -45,19 +45,14 @@ void run_server() {
         }
 	}
 
-	if (is_exists) {
-		Options::start(storage_path);
-	}
-	else {
-		Options::start();
-	}
-	Options::instance()->strategy = strategy;
-	Options::instance()->path = storage_path;
+	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+	settings->strategy = strategy;
+	settings->path = storage_path;
 
-	engine = new Engine();
+	engine = new Engine(settings);
 
 	if (!is_exists) {
-		Options::instance()->save();
+		settings->save();
 	}
 
 	dariadb::net::Server::Param server_param(server_port, server_threads_count);

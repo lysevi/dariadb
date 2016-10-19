@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/interfaces/idroppers.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/utils/locker.h>
@@ -18,7 +19,7 @@ public:
 protected:
 public:
   EXPORT virtual ~AOFManager();
-  EXPORT AOFManager();
+  EXPORT AOFManager(const EngineEnvironment_ptr env);
   // Inherited via MeasStorage
   EXPORT virtual Time minTime() override;
   EXPORT virtual Time maxTime() override;
@@ -56,6 +57,8 @@ private:
   MeasArray _buffer;
   size_t _buffer_pos;
   std::set<std::string> _files_send_to_drop;
+  EngineEnvironment_ptr _env;
+  Settings* _settings;
 };
 
 using AOFManager_ptr = std::shared_ptr<AOFManager>;

@@ -41,41 +41,43 @@ Engine::Version Engine::Version::from_string(const std::string &str) {
 
 class Engine::Private {
 public:
-  Private() {
+  Private(Settings_ptr settings) {
+	  _settings = settings;
+	  _engine_env = EngineEnvironment_ptr{ new EngineEnvironment() };
+	  _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
+
     logger_info("engine: version - ", this->version().to_string());
-    logger_info("engine: strategy - ", Options::instance()->strategy);
+    logger_info("engine: strategy - ", _settings->strategy);
     bool is_exists = false;
     _stoped = false;
-    if (!dariadb::utils::fs::path_exists(Options::instance()->path)) {
-      dariadb::utils::fs::mkdir(Options::instance()->path);
+    if (!dariadb::utils::fs::path_exists(_settings->path)) {
+      dariadb::utils::fs::mkdir(_settings->path);
     } else {
       is_exists = true;
     }
     _subscribe_notify.start();
-	_engine_env = EngineEnvironment_ptr{ new EngineEnvironment() };
-
-    ThreadManager::Params tpm_params(Options::instance()->thread_pools_params());
+    ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
 	
 	_lock_manager = LockManager_ptr{ new  LockManager(LockManager::Params()) };
 	_engine_env->addResource(EngineEnvironment::Resource::LOCK_MANAGER, _lock_manager.get());
     
 	Manifest::start(
-        utils::fs::append_path(Options::instance()->path, MANIFEST_FILE_NAME));
+        utils::fs::append_path(_settings->path, MANIFEST_FILE_NAME));
 
     if (is_exists) {
-      Dropper::cleanStorage(Options::instance()->path);
+      Dropper::cleanStorage(_settings->path);
     }
 
-	_page_manager = PageManager_ptr{ new PageManager() };
+	_page_manager = PageManager_ptr{ new PageManager(_engine_env) };
 
-    if (!is_exists) {
+    if (utils::fs::path_exists(utils::fs::append_path(settings->path, MANIFEST_FILE_NAME))) {
       Manifest::instance()->set_version(this->version().version);
     } else {
       check_storage_version();
     }
 
-	_aof_manager = AOFManager_ptr{ new AOFManager() };
+	_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
     _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
 
@@ -360,7 +362,7 @@ public:
   void drop_part_aofs(size_t count) { _aof_manager->drop_closed_files(count); }
 
   void fsck() {
-    logger_info("engine: fsck ", Options::instance()->path);
+    logger_info("engine: fsck ", _settings->path);
 	_page_manager->fsck();
   }
 
@@ -389,10 +391,11 @@ protected:
   PageManager_ptr _page_manager;
   AOFManager_ptr _aof_manager;
   EngineEnvironment_ptr _engine_env;
+  Settings_ptr _settings;
   bool _stoped;
 };
 
-Engine::Engine() : _impl{new Engine::Private()} {}
+Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}
 
 Engine::~Engine() {
   _impl = nullptr;

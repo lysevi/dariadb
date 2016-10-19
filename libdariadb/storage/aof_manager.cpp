@@ -7,7 +7,7 @@
 #include <libdariadb/utils/thread_manager.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/settings.h>
 
 #include <cassert>
 #include <iterator>
@@ -23,33 +23,35 @@ AOFManager::~AOFManager() {
   this->flush();
 }
 
-AOFManager::AOFManager() {
+AOFManager::AOFManager(const EngineEnvironment_ptr env) {
+	_env = env;
+	_settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
   _down = nullptr;
 
-  if (dariadb::utils::fs::path_exists(Options::instance()->path)) {
+  if (dariadb::utils::fs::path_exists(_settings->path)) {
     auto aofs = Manifest::instance()->aof_list();
     for (auto f : aofs) {
-      auto full_filename = utils::fs::append_path(Options::instance()->path, f);
-      if (AOFile::writed(full_filename) != Options::instance()->aof_max_size) {
+      auto full_filename = utils::fs::append_path(_settings->path, f);
+      if (AOFile::writed(full_filename) != _settings->aof_max_size) {
         logger_info("engine: AofManager open exist file ", f);
-        AOFile_Ptr p{new AOFile(full_filename)};
+        AOFile_Ptr p{new AOFile(_env, full_filename)};
         _aof = p;
         break;
       }
     }
   }
 
-  _buffer.resize(Options::instance()->aof_buffer_size);
+  _buffer.resize(_settings->aof_buffer_size);
   _buffer_pos = 0;
 }
 
 void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
-  if (Options::instance()->strategy != STRATEGY::FAST_WRITE) {
+  if (_settings->strategy != STRATEGY::FAST_WRITE) {
     drop_old_if_needed();
   }
-  _aof = AOFile_Ptr{new AOFile()};
+  _aof = AOFile_Ptr{new AOFile(_env)};
 }
 
 void AOFManager::drop_closed_files(size_t count) {
@@ -88,7 +90,7 @@ std::list<std::string> AOFManager::aof_files() const {
   std::list<std::string> res;
   auto files = Manifest::instance()->aof_list();
   for (auto f : files) {
-    auto full_path = utils::fs::append_path(Options::instance()->path, f);
+    auto full_path = utils::fs::append_path(_settings->path, f);
     res.push_back(full_path);
   }
   return res;
@@ -110,7 +112,7 @@ std::list<std::string> AOFManager::closed_aofs() {
 }
 
 void AOFManager::drop_aof(const std::string &fname, IAofDropper *storage) {
-  AOFile_Ptr ptr = AOFile_Ptr{new AOFile{fname, false}};
+  AOFile_Ptr ptr = AOFile_Ptr{new AOFile{_env, fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.insert(without_path);
   storage->drop_aof(without_path);
@@ -126,7 +128,7 @@ dariadb::Time AOFManager::minTime() {
   auto files = aof_files();
   dariadb::Time result = dariadb::MAX_TIME;
   for (auto filename : files) {
-    AOFile aof(filename, true);
+    AOFile aof(_env, filename, true);
     auto local = aof.minTime();
     result = std::min(local, result);
   }
@@ -146,7 +148,7 @@ dariadb::Time AOFManager::maxTime() {
   auto files = aof_files();
   dariadb::Time result = dariadb::MIN_TIME;
   for (auto filename : files) {
-    AOFile aof(filename, true);
+    AOFile aof(_env, filename, true);
     auto local = aof.maxTime();
     result = std::max(local, result);
   }
@@ -165,11 +167,11 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   std::vector<MMRes> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
   size_t num = 0;
-
+  auto env = _env;
   for (auto filename : files) {
-    AsyncTask at = [filename, &results, num, id](const ThreadInfo &ti) {
+    AsyncTask at = [filename, &results, num, id, env](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
-      AOFile aof(filename, true);
+      AOFile aof(env, filename, true);
       dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
       if (aof.minMaxTime(id, &lmin, &lmax)) {
         results[num] = MMRes(true, lmin, lmax);
@@ -223,11 +225,11 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
 
   std::vector<TaskResult_Ptr> task_res{files.size()};
   size_t num = 0;
-
+  auto env = _env;
   for (auto filename : files) {
-    AsyncTask at = [filename, &q, &clbk](const ThreadInfo &ti) {
+    AsyncTask at = [filename, &q, &clbk,env](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
-      AOFile aof(filename, true);
+      AOFile aof(env, filename, true);
       aof.foreach (q, clbk);
     };
     task_res[num] =
@@ -263,12 +265,12 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
 
   std::vector<Id2Meas> results{files.size()};
   std::vector<TaskResult_Ptr> task_res{files.size()};
-
   size_t num = 0;
+  auto env = _env;
   for (auto filename : files) {
-    AsyncTask at = [filename, &query, num, &results](const ThreadInfo &ti) {
+    AsyncTask at = [filename, &query, num, &results,env](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
-      AOFile aof(filename, true);
+      AOFile aof(env, filename, true);
       results[num] = aof.readTimePoint(query);
     };
     task_res[num] =
@@ -318,7 +320,7 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
 
   dariadb::Id2Meas meases;
   for (const auto &f : files) {
-    AOFile c(f, true);
+    AOFile c(_env, f, true);
     auto sub_rdr = c.currentValue(ids, flag);
 
     for (auto &kv : sub_rdr) {
@@ -341,7 +343,7 @@ dariadb::append_result AOFManager::append(const Meas &value) {
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
 
-  if (_buffer_pos >= Options::instance()->aof_buffer_size) {
+  if (_buffer_pos >= _settings->aof_buffer_size) {
     flush_buffer();
   }
   return dariadb::append_result(1, 0);
@@ -386,5 +388,5 @@ size_t AOFManager::files_count() const {
 
 void AOFManager::erase(const std::string &fname) {
   Manifest::instance()->aof_rm(fname);
-  utils::fs::rm(utils::fs::append_path(Options::instance()->path, fname));
+  utils::fs::rm(utils::fs::append_path(_settings->path, fname));
 }

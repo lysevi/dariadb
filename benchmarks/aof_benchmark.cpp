@@ -1,7 +1,8 @@
 #include "bench_common.h"
 #include <libdariadb/storage/aof_manager.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/options.h>
+#include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/metrics.h>
 
@@ -83,16 +84,17 @@ int main(int argc, char *argv[]) {
     dariadb::utils::fs::mkdir(storage_path);
     dariadb::storage::Manifest::start(
         dariadb::utils::fs::append_path(storage_path, "Manifest"));
-    dariadb::storage::Options::start();
-    dariadb::storage::Options::instance()->path = storage_path;
-    dariadb::storage::Options::instance()->aof_buffer_size = 1000;
-    dariadb::storage::Options::instance()->aof_max_size =
+	
+	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+    settings->aof_buffer_size = 1000;
+    settings->aof_max_size =
         (1024 * 1024) * 3 / sizeof(dariadb::Meas);
+	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
+	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
 
-    dariadb::utils::async::ThreadManager::start(
-        dariadb::storage::Options::instance()->thread_pools_params());
+    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    aof_manager = dariadb::storage::AOFManager_ptr{ new dariadb::storage::AOFManager() };
+    aof_manager = dariadb::storage::AOFManager_ptr{ new dariadb::storage::AOFManager(_engine_env) };
 
 	auto aof = aof_manager.get();
     std::thread info_thread(show_info);
@@ -121,7 +123,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::storage::Manifest::stop();
     dariadb::utils::async::ThreadManager::stop();
-    dariadb::storage::Options::stop();
+
     if (metrics_enable) {
       std::cout << "metrics:\n"
                 << dariadb::utils::metrics::MetricsManager::instance()->to_string()

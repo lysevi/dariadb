@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
@@ -13,8 +14,8 @@ const uint64_t AOF_DEFAULT_SIZE = 1024;
 class AOFile : public IMeasStorage {
 public:
   EXPORT virtual ~AOFile();
-  EXPORT AOFile();
-  EXPORT AOFile(const std::string &fname, bool readonly = false);
+  EXPORT AOFile(const EngineEnvironment_ptr env);
+  EXPORT AOFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly = false);
 
   EXPORT append_result append(const Meas &value) override;
   EXPORT append_result append(const MeasArray::const_iterator &begin,
