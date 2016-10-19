@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/st_exports.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/st_exports.h>
 #include <vector>
 
 #include <map>
@@ -34,13 +34,9 @@ public:
   struct Params {};
 
 protected:
-  virtual ~LockManager();
-  LockManager(const Params &param);
-
 public:
-  EXPORT static void start(const Params &param);
-  EXPORT static void stop();
-  EXPORT static LockManager *instance();
+  EXPORT virtual ~LockManager();
+  EXPORT LockManager(const Params &param);
 
   EXPORT void lock(const LOCK_KIND &lk, const LOCK_OBJECTS &lo);
   EXPORT void
@@ -58,10 +54,10 @@ protected:
   void lock_drop_cap();
 
 private:
-  static LockManager *_instance;
-
   std::map<LOCK_OBJECTS, RWMutex_Ptr> _lockers;
   std::mutex _mutex;
 };
+
+using LockManager_ptr=std::shared_ptr<LockManager>;
 }
 }

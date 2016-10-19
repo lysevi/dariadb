@@ -52,28 +52,10 @@ void unlock_mutex(const RWMutex_Ptr &mtx) {
   };
 }
 
-LockManager *LockManager::_instance = nullptr;
-
 LockManager::~LockManager() {}
 
 LockManager::LockManager(const LockManager::Params &param) {}
 
-void LockManager::start(const LockManager::Params &param) {
-  if (LockManager::_instance == nullptr) {
-    LockManager::_instance = new LockManager(param);
-  } else {
-    throw MAKE_EXCEPTION("LockManager::start started twice.");
-  }
-}
-
-void LockManager::stop() {
-  delete LockManager::_instance;
-  LockManager::_instance = nullptr;
-}
-
-LockManager *LockManager::instance() {
-  return _instance;
-}
 
 RWMutex_Ptr LockManager::get_or_create_lock_object(const LOCK_OBJECTS &lo) {
   std::lock_guard<std::mutex> lg(_mutex);

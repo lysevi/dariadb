@@ -44,13 +44,6 @@ BOOST_AUTO_TEST_CASE(inFilter) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(LockManager_Instance) {
-  BOOST_CHECK(dariadb::storage::LockManager::instance() == nullptr);
-  dariadb::storage::LockManager::start(dariadb::storage::LockManager::Params());
-  BOOST_CHECK(dariadb::storage::LockManager::instance() != nullptr);
-  dariadb::storage::LockManager::stop();
-  BOOST_CHECK(dariadb::storage::LockManager::instance() == nullptr);
-}
 
 BOOST_AUTO_TEST_CASE(Options_Instance) {
   using dariadb::storage::Options;

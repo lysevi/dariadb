@@ -2,6 +2,7 @@
 #include <libdariadb/config.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/timeutil.h>
+#include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/lock_manager.h>
 #include <libdariadb/storage/manifest.h>
@@ -51,11 +52,15 @@ public:
       is_exists = true;
     }
     _subscribe_notify.start();
+	_engine_env = EngineEnvironment_ptr{ new EngineEnvironment() };
 
     ThreadManager::Params tpm_params(Options::instance()->thread_pools_params());
     ThreadManager::start(tpm_params);
-    LockManager::start(LockManager::Params());
-    Manifest::start(
+	
+	_lock_manager = LockManager_ptr{ new  LockManager(LockManager::Params()) };
+	_engine_env->addResource(EngineEnvironment::Resource::LOCK_MANAGER, _lock_manager.get());
+    
+	Manifest::start(
         utils::fs::append_path(Options::instance()->path, MANIFEST_FILE_NAME));
 
     if (is_exists) {
@@ -72,7 +77,7 @@ public:
 
 	_aof_manager = AOFManager_ptr{ new AOFManager() };
 
-    _dropper = std::make_unique<Dropper>(_page_manager, _aof_manager);
+    _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
 
 	_aof_manager->set_downlevel(_dropper.get());
     _next_query_id = Id();
@@ -89,7 +94,7 @@ public:
 	  _aof_manager = nullptr;
 	  _page_manager = nullptr;
       Manifest::stop();
-      LockManager::stop();
+	  _lock_manager = nullptr;
 	  _dropper = nullptr;
       _stoped = true;
     }
@@ -110,25 +115,25 @@ public:
   }
 
   Time minTime() {
-    LockManager::instance()->lock(
+    _lock_manager->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmin = _page_manager->minTime();
     auto amin = _aof_manager->minTime();
 
-    LockManager::instance()->unlock(
+    _lock_manager->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
     return std::min(pmin, amin);
   }
 
   Time maxTime() {
-    LockManager::instance()->lock(
+    _lock_manager->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmax = _page_manager->maxTime();
     auto amax = _aof_manager->maxTime();
 
-    LockManager::instance()->unlock(
+    _lock_manager->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     return std::max(pmax, amax);
@@ -152,7 +157,7 @@ public:
       ar = am->minMaxTime(id, &subMin3, &subMax3);
     };
 
-    LockManager::instance()->lock(
+    _lock_manager->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
@@ -161,7 +166,7 @@ public:
     pm_async->wait();
     am_async->wait();
 
-    LockManager::instance()->unlock(
+    _lock_manager->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     *minResult = dariadb::MAX_TIME;
@@ -188,7 +193,7 @@ public:
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    LockManager::instance()->lock(LOCK_KIND::READ,
+    _lock_manager->lock(LOCK_KIND::READ,
                                   {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
     Id2Meas a_result, p_result;
 	auto am = _aof_manager.get();
@@ -210,7 +215,7 @@ public:
 
     pm_async->wait();
     am_async->wait();
-    LockManager::instance()->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+    _lock_manager->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
 
     Id2Meas result;
     for (auto &r : a_result) {
@@ -260,7 +265,7 @@ public:
 	  am->foreach (q, a_clbk);
     };
 
-    LockManager::instance()->lock(
+    _lock_manager->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
@@ -269,7 +274,7 @@ public:
     pm_async->wait();
     am_async->wait();
 
-    LockManager::instance()->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+    _lock_manager->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
     a_clbk->is_end();
   }
 
@@ -321,7 +326,7 @@ public:
   Id2Meas readTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
 
-    LockManager::instance()->lock(
+    _lock_manager->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     Id2Meas result;
@@ -347,7 +352,7 @@ public:
       }
     }
 
-    LockManager::instance()->unlock(
+    _lock_manager->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
     return result;
   }
@@ -360,10 +365,10 @@ public:
   }
 
   void eraseOld(const Time&t) {
-	  LockManager::instance()->lock(
+	  _lock_manager->lock(
 		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
 	  _page_manager->eraseOld(t);
-	  LockManager::instance()->unlock(LOCK_OBJECTS::PAGE);
+	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
 
   Engine::Version version() {
@@ -380,8 +385,10 @@ protected:
   SubscribeNotificator _subscribe_notify;
   Id _next_query_id;
   std::unique_ptr<Dropper> _dropper;
+  LockManager_ptr _lock_manager;
   PageManager_ptr _page_manager;
   AOFManager_ptr _aof_manager;
+  EngineEnvironment_ptr _engine_env;
   bool _stoped;
 };
 
