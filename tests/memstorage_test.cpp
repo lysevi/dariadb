@@ -5,7 +5,7 @@
 #include <cmath>
 #include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/ads/lockfree_array.h>
-#include <libdariadb/storage/querystorage.h>
+#include <libdariadb/storage/memstorage.h>
 #include <libdariadb/meas.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -145,18 +145,37 @@ BOOST_AUTO_TEST_CASE(FixedTreeNodeInsertionTest) {
 
 
 BOOST_AUTO_TEST_CASE(MemStorage) {
-	const dariadb::Time Step3s = boost::posix_time::seconds(2).total_milliseconds();
-	const dariadb::Time Step2s = boost::posix_time::seconds(2).total_milliseconds();
-	const dariadb::Time Step1s = boost::posix_time::seconds(1).total_milliseconds();
-	
-	dariadb::storage::QueryStorage::Params p;
-	dariadb::storage::QueryStorage ms{ p };
+    using boost::posix_time::seconds;
+  const dariadb::Time Step3s = seconds(2).total_milliseconds();
+  const dariadb::Time Step2s = seconds(2).total_milliseconds();
+  const dariadb::Time Step1s = seconds(1).total_milliseconds();
 
-	auto q1=ms.begin(Step1s, dariadb::Id(1), dariadb::Time(0), Step1s*1000);
-	auto q2 = ms.begin(Step2s, dariadb::Id(1), dariadb::Time(0), Step2s * 1000);
-	auto q3 = ms.begin(Step3s, dariadb::Id(2), dariadb::Time(0), Step3s * 1000);
+  const size_t VALUES_COUNT = 100;
 
-	BOOST_CHECK(q1 != q2);
-	BOOST_CHECK(q2 != q3);
-	BOOST_CHECK(q1 != q3);
+  dariadb::storage::MemStorage::Params p;
+  dariadb::storage::MemStorage ms{p};
+
+  dariadb::MeasArray ma(VALUES_COUNT);
+  for (size_t i = 0; i < VALUES_COUNT; ++i) {
+    ma[i].id = 0;
+    ma[i].time = i * Step1s;
+  }
+  ms.append(ma.begin(), ma.end());
+
+
+  for (size_t i = 0; i < VALUES_COUNT; ++i) {
+    ma[i].id = 0;
+    ma[i].time = i * Step2s;
+  }
+  ms.append(ma.begin(), ma.end());
+
+
+  for (size_t i = 0; i < VALUES_COUNT; ++i) {
+    ma[i].id = 0;
+    ma[i].time = i * Step3s;
+  }
+  ms.append(ma.begin(), ma.end());
+//  BOOST_CHECK_EQUAL(ms.append(Step1s, ma).ignored, size_t(0));
+//  BOOST_CHECK_EQUAL(ms.append(Step2s, ma).ignored, size_t(0));
+//  BOOST_CHECK_EQUAL(ms.append(Step3s, ma).ignored, size_t(0));
 }
