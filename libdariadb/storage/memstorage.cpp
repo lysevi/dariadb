@@ -4,22 +4,37 @@
 #include <stx/btree_map.h>
 using namespace dariadb;
 using namespace dariadb::storage;
+
 /**
 Map:
-  id ->
-       hash:
-           step-> Chunk{from,to,step,data_array}
+  QueryId -> TimeTrack{ from,to,step MemChunkList[MemChunk{data}]}
 */
 
 struct MemChunk {
+    static const size_t MAX_MEM_CHUNK_SIZE = 512;
+    std::array<Meas, MAX_MEM_CHUNK_SIZE> values;
+};
+
+using MemChunk_Ptr = std::shared_ptr<MemChunk>;
+using MemChunkList = std::list<MemChunk_Ptr>;
+
+struct TimeTrack {
+    TimeTrack(const Time _step, const Id _meas_id, const Time _from, const Time _to) {
+        step = _step;
+        meas_id = _meas_id;
+        from = _from;
+        to = _to;
+    }
+
+    Id   meas_id;
+    Time step;
     Time from;
     Time to;
-    Time step;
-    MeasArray values;
+    MemChunkList chunks;
 };
-using MemChunk_Ptr = std::shared_ptr<MemChunk>;
-using Step2Chunk = std::unordered_map<Time, MemChunk_Ptr>;
-using Id2Step = stx::btree_map<Id, Step2Chunk>;
+
+using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
+using Id2Track = stx::btree_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage {
   Private(const MemStorage::Params &p) {}
@@ -53,7 +68,7 @@ struct MemStorage::Private : public IMeasStorage {
       return MeasList{};
   }
 
-  Id2Step _id2steps;
+  Id2Track _id2steps;
 };
 
 
