@@ -30,7 +30,7 @@ private:
   void drop_aof_internal(const std::string fname);
   void write_aof_to_page(const std::string fname, std::shared_ptr<MeasArray> ma);
 private:
-	std::atomic_int _in_queue;
+	std::atomic_size_t _in_queue;
 	std::mutex            _locker;
 	std::set<std::string> _addeded_files;
 	PageManager_ptr _page_manager;
