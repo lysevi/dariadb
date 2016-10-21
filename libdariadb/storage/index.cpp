@@ -79,16 +79,22 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
     }
     if (check_index_rec(_index_it, from, to)) {
       bool bloom_result = false;
-      for (auto i : ids) {
-        bloom_result = check_blooms(_index_it, i, flag);
-        if (bloom_result) {
-          break;
-        }
-      }
+	  if (ids.size() == size_t(0)) {
+		  bloom_result = true;
+	  }
+	  else {
+		  for (auto i : ids) {
+			  bloom_result = check_blooms(_index_it, i, flag);
+			  if (bloom_result) {
+				  break;
+			  }
+		  }
+	  }
       if (bloom_result) {
         ChunkLink sub_result;
         sub_result.id = _index_it.chunk_id;
         sub_result.index_rec_number = pos;
+		sub_result.minTime = _index_it.minTime;
         sub_result.maxTime = _index_it.maxTime;
         sub_result.id_bloom = _index_it.id_bloom;
         result.push_back(sub_result);

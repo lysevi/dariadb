@@ -38,7 +38,7 @@ public:
   EXPORT void eraseOld(const Time t);
   EXPORT void erase_page(const std::string &fname);
   EXPORT static void erase(const std::string& storage_path, const std::string &fname);
-
+  EXPORT void compactTo(uint32_t pagesCount);
 private:
   class Private;
   std::unique_ptr<Private> impl;
