@@ -63,8 +63,12 @@ public:
 
   EXPORT void fsck();
 
-  EXPORT Version version();
   EXPORT void eraseOld(const Time&t);
+
+  EXPORT void compactTo(uint32_t pagesCount);
+  EXPORT void compactbyTime(Time from, Time to);
+
+  EXPORT Version version();
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

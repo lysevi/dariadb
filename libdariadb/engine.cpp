@@ -382,6 +382,14 @@ public:
     return result;
   }
 
+
+  void compactTo(uint32_t pagesCount) {
+	  _page_manager->compactTo(pagesCount);
+  }
+
+  void compactbyTime(Time from, Time to) {
+	  _page_manager->compactbyTime(from, to);
+  }
 protected:
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
@@ -469,6 +477,13 @@ void Engine::eraseOld(const Time&t) {
 	return _impl->eraseOld(t);
 }
 
+void Engine::compactTo(uint32_t pagesCount) {
+	_impl->compactTo(pagesCount);
+}
+
+void Engine::compactbyTime(Time from, Time to) {
+	_impl->compactbyTime(from,to);
+}
 Engine::Version Engine::version() {
-  return _impl->version();
+	return _impl->version();
 }

@@ -359,6 +359,12 @@ int main(int argc, char *argv[]) {
     auto writers_start = clock();
 
     start_time = dariadb::timeutil::current_time();
+    auto first_day = 60 * 60 * dariadb_bench::hours_write_perid / 2;
+    auto first_day_milisec = start_time + first_day * 1000;
+    std::cout << "==> compaction period: [" << dariadb::timeutil::to_string(start_time)
+              << ", " << dariadb::timeutil::to_string(first_day_milisec) << "]"
+              << std::endl;
+
     rw_benchmark(ms, raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
@@ -386,19 +392,35 @@ int main(int argc, char *argv[]) {
     check_engine_state(settings, raw_ptr);
 
     if (!readonly) {
-      size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
-      std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
-      stop_info = false;
-      std::thread flush_info_thread(show_drop_info, raw_ptr);
+		{
+			size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
+			std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
+			stop_info = false;
+			std::thread flush_info_thread(show_drop_info, raw_ptr);
 
-      auto start = clock();
-      raw_ptr->drop_part_aofs(ccount);
-      raw_ptr->flush();
-      raw_ptr->wait_all_asyncs();
-      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-      stop_info = true;
-      flush_info_thread.join();
-      std::cout << "drop time: " << elapsed << std::endl;
+			auto start = clock();
+			raw_ptr->drop_part_aofs(ccount);
+			raw_ptr->flush();
+			raw_ptr->wait_all_asyncs();
+			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+			stop_info = true;
+			flush_info_thread.join();
+			std::cout << "drop time: " << elapsed << std::endl;
+		}
+		{
+			auto pages_before = raw_ptr->queue_size().pages_count;
+			std::cout << "==> pages before compaction " << pages_before << "..." << std::endl;
+			auto start = clock();
+			raw_ptr->compactbyTime(start_time, first_day_milisec);
+			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+			auto pages_after = raw_ptr->queue_size().pages_count;
+			std::cout << "==> pages after compaction " << pages_after << "..." << std::endl;
+			std::cout << "compaction time: " << elapsed << std::endl;
+
+			if (pages_before <= pages_after) {
+				throw std::logic_error("pages_before <= pages_after");
+			}
+		}
     }
 
     auto queue_sizes = raw_ptr->queue_size();

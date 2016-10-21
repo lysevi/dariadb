@@ -28,6 +28,7 @@
 * Write strategies:
   - fast write - optimised for big write load.
   - compressed - all values compressed for good disk usage without writing to sorted layer.
+* Compaction of old pages with filtration values.
 
 # Dependencies
 * Boost 1.53.0 or higher: system, filesystem, date_time, interprocess (mmap), unit_test_framework(to build tests), program_options, asio, log and regex(for server only)

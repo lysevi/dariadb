@@ -377,7 +377,7 @@ public:
 	  };
 
 	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-	  auto in_one = page_list.size() / pagesCount;
+	  auto in_one = page_list.size() / pagesCount+1;
 	  auto it = page_list.begin();
 	  while (it != page_list.end()) {
 		  std::list<std::string> part;
@@ -388,20 +388,32 @@ public:
 				  break;
 			  }
 		  }
-		  Page *res = nullptr;
-		  std::string page_name = utils::fs::random_file_name(".page");
-		  std::string file_name =
-			  dariadb::utils::fs::append_path(_settings->path, page_name);
-		  res = Page::create(file_name, last_id, _settings->page_chunk_size, part);
-		  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-		  last_id = res->header->max_chunk_id;
-		  delete res;
-		  for (auto page_name : part) {
-			  this->erase_page(page_name);
-		  }
-		  _file2header[page_name] =
-			  Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+		  compact(part);
 	  }
+  }
+  void compactbyTime(Time from, Time to) {
+	  auto pred = [from,to](const IndexHeader &hdr) {
+		  return hdr.minTime>=from && hdr.maxTime <= to;
+	  };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+	  compact(page_list);
+  }
+
+  void compact(std::list<std::string> part) {
+	  Page *res = nullptr;
+	  std::string page_name = utils::fs::random_file_name(".page");
+	  std::string file_name =
+		  dariadb::utils::fs::append_path(_settings->path, page_name);
+	  res = Page::create(file_name, last_id, _settings->page_chunk_size, part);
+	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
+	  last_id = res->header->max_chunk_id;
+	  delete res;
+	  for (auto page_name : part) {
+		  this->erase_page(page_name);
+	  }
+	  _file2header[page_name] =
+		  Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
 protected:
   Page_Ptr _cur_page;
@@ -479,4 +491,8 @@ void PageManager::erase_page(const std::string &fname) {
 
 void PageManager::compactTo(uint32_t pagesCount) {
 	impl->compactTo(pagesCount);
+}
+
+void PageManager::compactbyTime(dariadb::Time from, dariadb::Time to) {
+	impl->compactbyTime(from,to);
 }
