@@ -384,11 +384,17 @@ public:
 
 
   void compactTo(uint32_t pagesCount) {
+	  _lock_manager->lock(
+		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
 	  _page_manager->compactTo(pagesCount);
+	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
 
   void compactbyTime(Time from, Time to) {
+	  _lock_manager->lock(
+		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
 	  _page_manager->compactbyTime(from, to);
+	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
 protected:
   mutable std::mutex _locker;
