@@ -2,6 +2,7 @@
 #include <memory>
 #include <unordered_map>
 #include <stx/btree_map.h>
+#include <array>
 using namespace dariadb;
 using namespace dariadb::storage;
 
