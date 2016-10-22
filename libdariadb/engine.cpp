@@ -382,6 +382,10 @@ public:
     return result;
   }
 
+  STRATEGY strategy()const{
+      return this->_settings->strategy;
+  }
+
 
   void compactTo(uint32_t pagesCount) {
 	  _lock_manager->lock(
@@ -494,4 +498,8 @@ void Engine::compactbyTime(Time from, Time to) {
 }
 Engine::Version Engine::version() {
 	return _impl->version();
+}
+
+STRATEGY Engine::strategy()const{
+    return _impl->strategy();
 }

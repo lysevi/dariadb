@@ -456,6 +456,37 @@ public:
 	  _async_connection->send(nd);
 	  return qres;
   }
+
+  void compactTo(size_t pageCount){
+      _locker.lock();
+      auto cur_id = _query_num;
+      _query_num += 1;
+      _locker.unlock();
+      auto nd = this->_pool.construct(DATA_KINDS::COMPACT);
+
+      auto p_header = reinterpret_cast<QuerCompact_header *>(nd->data);
+      nd->size = sizeof(QuerCompact_header);
+      p_header->id = cur_id;
+      p_header->pageCount=pageCount;
+      p_header->from=p_header->to=Time(0);
+      _async_connection->send(nd);
+  }
+
+  void compactbyTime(dariadb::Time from, dariadb::Time to){
+      _locker.lock();
+      auto cur_id = _query_num;
+      _query_num += 1;
+      _locker.unlock();
+      auto nd = this->_pool.construct(DATA_KINDS::COMPACT);
+
+      auto p_header = reinterpret_cast<QuerCompact_header *>(nd->data);
+      nd->size = sizeof(QuerCompact_header);
+      p_header->id = cur_id;
+      p_header->pageCount=size_t(0);
+      p_header->from=from;
+      p_header->to=to;
+      _async_connection->send(nd);
+  }
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -529,4 +560,12 @@ Id2Meas Client::currentValue(const IdArray &ids, const Flag &flag) {
 
 ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag, ReadResult::callback &clbk) {
 	return _Impl->subscribe(ids, flag, clbk);
+}
+
+void Client::compactTo(size_t pageCount){
+    _Impl->compactTo(pageCount);
+}
+
+void Client::compactbyTime(dariadb::Time from, dariadb::Time to){
+    _Impl->compactbyTime(from,to);
 }

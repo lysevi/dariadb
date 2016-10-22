@@ -285,6 +285,26 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     this->_async_connection->send(nd);
     break;
   }
+  case DATA_KINDS::COMPACT:{
+      if (this->env->srv->server_begin_stopping()) {
+          logger_info("server: #", this->_async_connection->id(), " refuse compact query. server in stop.");
+          return;
+      }
+    logger_info("server: #", this->_async_connection->id(), " query to storage compaction.");
+    if(this->env->storage->strategy() == storage::STRATEGY::FAST_WRITE){
+        auto aofs=this->env->storage->queue_size().aofs_count;
+        logger_info("server: #", this->_async_connection->id(), " drop ", aofs," aofs to pages.");
+        this->env->storage->drop_part_aofs(aofs);
+        this->env->storage->flush();
+    }
+    auto query_hdr = reinterpret_cast<QuerCompact_header *>(&d->data);
+    if(query_hdr->pageCount!=0){
+        this->env->storage->compactTo(query_hdr->pageCount);
+    }else{
+        this->env->storage->compactbyTime(query_hdr->from, query_hdr->to);
+    }
+    break;
+  }
   default:
     logger_fatal("server: unknow query kind - ", (uint8_t)kind);
     break;

@@ -5,6 +5,7 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/storage/strategy.h>
 #include <memory>
 
 namespace dariadb {
@@ -69,6 +70,7 @@ public:
   EXPORT void compactbyTime(Time from, Time to);
 
   EXPORT Version version();
+  EXPORT STRATEGY strategy()const;
 protected:
   class Private;
   std::unique_ptr<Private> _impl;
