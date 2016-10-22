@@ -238,7 +238,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     auto clinks = p->chunksByIterval(qi);
     for (auto &cl : clinks) {
       cl.page_name = p_full_path;
-      links[cl.id_bloom].push_back(cl);
+      links[cl.meas_id].push_back(cl);
     }
   }
   assert(openned_pages.size() == pages_full_paths.size());
@@ -469,7 +469,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index) {
 
   cur_index->minTime = ch->header->minTime;
   cur_index->maxTime = ch->header->maxTime;
-  cur_index->id_bloom = ch->header->id_bloom;
+  cur_index->meas_id = ch->header->first.id;
   cur_index->flag_bloom = ch->header->flag_bloom;
 
   _openned_chunk.index = cur_index;
