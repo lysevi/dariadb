@@ -377,7 +377,7 @@ public:
 	  };
 
 	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
-	  auto in_one = page_list.size() / pagesCount+1;
+      auto in_one = (size_t)(float(page_list.size()) / pagesCount+1);
 	  auto it = page_list.begin();
 	  while (it != page_list.end()) {
 		  std::list<std::string> part;
@@ -403,6 +403,10 @@ public:
   void compact(std::list<std::string> part) {
 	  Page *res = nullptr;
 	  std::string page_name = utils::fs::random_file_name(".page");
+      logger_info("engine: compacting to ", page_name);
+      for(auto&p:part){
+          logger_info("==> ",utils::fs::extract_filename(p));
+      }
 	  std::string file_name =
 		  dariadb::utils::fs::append_path(_settings->path, page_name);
 	  res = Page::create(file_name, last_id, _settings->page_chunk_size, part);

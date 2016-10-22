@@ -20,6 +20,7 @@ unsigned short server_port = 2001;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 ServerLogger::Params p;
+size_t compact_to=0;
 
 int main(int argc,char**argv){
 	po::options_description desc("Allowed options");
@@ -32,6 +33,7 @@ int main(int argc,char**argv){
 		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
 		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
 		("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
+        ("compact-to", po::value<size_t>(&compact_to)->default_value(compact_to), "compact all pages and exit.")
 		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.");		
 	
 	po::variables_map vm;
@@ -71,6 +73,11 @@ int main(int argc,char**argv){
 
 	auto stor=new Engine(settings);
 
+    if(compact_to!=0){
+        stor->compactTo(compact_to);
+        delete stor;
+        return 0;
+    }
 	dariadb::net::Server::Param server_param(server_port, server_threads_count);
 	dariadb::net::Server s(server_param);
 	s.set_storage(stor);

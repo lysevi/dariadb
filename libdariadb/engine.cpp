@@ -386,6 +386,7 @@ public:
   void compactTo(uint32_t pagesCount) {
 	  _lock_manager->lock(
 		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
+      logger_info("engine: compacting to ", pagesCount);
 	  _page_manager->compactTo(pagesCount);
 	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
@@ -393,6 +394,7 @@ public:
   void compactbyTime(Time from, Time to) {
 	  _lock_manager->lock(
 		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
+      logger_info("engine: compacting by time ", timeutil::to_string(from), " ",timeutil::to_string(to));
 	  _page_manager->compactbyTime(from, to);
 	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
