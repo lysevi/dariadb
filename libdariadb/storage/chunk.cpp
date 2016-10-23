@@ -43,10 +43,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m) {
   header->last = first_m;
   header->minTime = first_m.time;
   header->maxTime = first_m.time;
-  header->minId = first_m.id;
-  header->maxId = first_m.id;
   header->flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
-  header->id_bloom = dariadb::storage::bloom_empty<dariadb::Id>();
 
   std::fill(_buffer_t, _buffer_t + header->size, 0);
 }
@@ -60,10 +57,10 @@ Chunk::~Chunk() {
 }
 
 bool Chunk::check_id(const Id &id) {
-  if (!dariadb::storage::bloom_check(header->id_bloom, id)) {
+  if (header->first.id!= id) {
     return false;
   }
-  return inInterval(header->minId, header->maxId, id);
+  return true;
 }
 
 bool Chunk::check_flag(const Flag &f) {
@@ -94,7 +91,6 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas
 
   c_writer.append(header->first);
 
-  header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, first_m.id);
   header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
 }
 
@@ -141,10 +137,7 @@ bool ZippedChunk::append(const Meas &m) {
     header->count++;
     header->minTime = std::min(header->minTime, m.time);
     header->maxTime = std::max(header->maxTime, m.time);
-    header->minId = std::min(header->minId, m.id);
-    header->maxId = std::max(header->maxId, m.id);
     header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, m.flag);
-    header->id_bloom = dariadb::storage::bloom_add(header->id_bloom, m.id);
     header->last = m;
 
     return true;

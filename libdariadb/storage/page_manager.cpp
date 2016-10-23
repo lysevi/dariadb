@@ -39,7 +39,6 @@ public:
 	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
 	  _openned_pages.set_max_size(_settings->page_openned_page_cache_size);
     
-	  update_id = false;
     last_id = 0;
 
     if (utils::fs::path_exists(_settings->path)) {
@@ -47,8 +46,10 @@ public:
 
       for (auto n : pages) {
         auto file_name = utils::fs::append_path(_settings->path, n);
-        auto hdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
-        _file2header[n] = hdr;
+		auto phdr = Page::readHeader(file_name);
+		last_id = std::max(phdr.max_chunk_id, last_id);
+        auto ihdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+        _file2header[n] = ihdr;
       }
     }
   }
@@ -334,9 +335,7 @@ public:
         dariadb::utils::fs::append_path(_settings->path, page_name);
     res = Page::create(file_name, last_id, _settings->page_chunk_size, ma);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-    if (update_id) {
-      res->header->max_chunk_id = last_id;
-    }
+	last_id=res->header->max_chunk_id;
     delete res;
     _file2header[page_name] =
         Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
@@ -371,12 +370,60 @@ public:
 		  this->erase_page(p);
 	  }
   }
+
+  void compactTo(uint32_t pagesCount) {
+	  auto pred = [](const IndexHeader &hdr) {
+		  return true;
+	  };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+      auto in_one = (size_t)(float(page_list.size()) / pagesCount+1);
+	  auto it = page_list.begin();
+	  while (it != page_list.end()) {
+		  std::list<std::string> part;
+		  for (size_t i = 0; i < in_one; ++i) {
+			  part.push_back(*it);
+			  ++it;
+			  if (it == page_list.end()) {
+				  break;
+			  }
+		  }
+		  compact(part);
+	  }
+  }
+  void compactbyTime(Time from, Time to) {
+	  auto pred = [from,to](const IndexHeader &hdr) {
+		  return hdr.minTime>=from && hdr.maxTime <= to;
+	  };
+
+	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+	  compact(page_list);
+  }
+
+  void compact(std::list<std::string> part) {
+	  Page *res = nullptr;
+	  std::string page_name = utils::fs::random_file_name(".page");
+      logger_info("engine: compacting to ", page_name);
+      for(auto&p:part){
+          logger_info("==> ",utils::fs::extract_filename(p));
+      }
+	  std::string file_name =
+		  dariadb::utils::fs::append_path(_settings->path, page_name);
+	  res = Page::create(file_name, last_id, _settings->page_chunk_size, part);
+	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
+	  last_id = res->header->max_chunk_id;
+	  delete res;
+	  for (auto page_name : part) {
+		  this->erase_page(page_name);
+	  }
+	  _file2header[page_name] =
+		  Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+  }
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;
 
   uint64_t last_id;
-  bool update_id;
   utils::LRU<std::string, Page_Ptr> _openned_pages;
   File2PageHeader _file2header;
   EngineEnvironment_ptr _env;
@@ -444,4 +491,12 @@ void PageManager::erase(const std::string& storage_path,const std::string &fname
 
 void PageManager::erase_page(const std::string &fname) {
 	impl->erase_page(fname);
+}
+
+void PageManager::compactTo(uint32_t pagesCount) {
+	impl->compactTo(pagesCount);
+}
+
+void PageManager::compactbyTime(dariadb::Time from, dariadb::Time to) {
+	impl->compactbyTime(from,to);
 }

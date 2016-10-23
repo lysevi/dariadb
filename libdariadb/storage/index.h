@@ -21,7 +21,7 @@ struct IndexHeader {
 struct IndexReccord {
   Time minTime, maxTime; // min max time of linked chunk
   size_t flag_bloom;     // bloom filters of writed meases
-  size_t id_bloom;
+  size_t meas_id;
   uint64_t chunk_id; // chunk->id
   uint64_t offset;   // offset in bytes of chunk in page
   bool is_init : 1;  // is init :)

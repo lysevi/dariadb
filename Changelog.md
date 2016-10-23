@@ -13,6 +13,7 @@ Storage:
    - Measurement Id is uint32_t.
    - Remove COLA layer.
    - Speed up dropping data between layers.
+   - Old pages compaction.
 
 v0.1.1
 =====

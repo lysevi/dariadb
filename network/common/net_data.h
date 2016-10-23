@@ -85,6 +85,14 @@ struct QuerSubscribe_header {
 	Flag flag;
 	uint16_t ids_count;
 };
+
+struct QuerCompact_header {
+    uint8_t kind;
+    QueryNumber id;
+    size_t pageCount;
+    Time from;
+    Time to;
+};
 #pragma pack(pop)
 
 //using NetData_Pool = boost::object_pool<NetData>;

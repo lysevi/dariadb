@@ -32,6 +32,8 @@ class Page : public IChunkContainer {
 public:
   EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
                       uint32_t max_chunk_size, const MeasArray &ma);
+  EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
+	  uint32_t max_chunk_size, const std::list<std::string>& pages_full_paths);
   EXPORT static Page *open(std::string file_name, bool read_only = false);
   EXPORT static PageHeader readHeader(std::string file_name);
   EXPORT static IndexHeader readIndexHeader(std::string page_file_name);

@@ -336,3 +336,169 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
+
+BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
+  const std::string storagePath = "testStorage";
+  const size_t chunks_size = 256;
+
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+    dariadb::utils::fs::rm(storagePath);
+  }
+  auto manifest = dariadb::storage::Manifest_ptr{
+      new dariadb::storage::Manifest{dariadb::utils::fs::append_path(
+          storagePath, dariadb::storage::MANIFEST_FILE_NAME)}};
+
+  auto settings =
+      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+  settings->page_chunk_size = chunks_size;
+  auto _engine_env =
+      dariadb::storage::EngineEnvironment_ptr{new dariadb::storage::EngineEnvironment()};
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                           settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+                           manifest.get());
+
+  dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+  auto pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+
+  size_t count = 100;
+  dariadb::MeasArray a(count);
+  /**
+  Id=0 =>  0, count
+  Id=1 =>  0, count
+  Id=0 =>  0, count/2
+  Id=1 =>  count/2, count
+  */
+  auto e = dariadb::Meas::empty();
+  for (size_t i = 0; i < count; i++) {
+    e.id = 0;
+    e.time++;
+    e.value = dariadb::Value(i);
+    a[i] = e;
+  }
+  std::string page_file_prefix1 = "page_prefix1";
+  std::string page_file1 = page_file_prefix1 + ".page";
+  pm->append(page_file_prefix1, a);
+
+  e.time = 0;
+  for (size_t i = 0; i < count; i++) {
+    e.id = 1;
+    e.time++;
+    e.value = dariadb::Value(i);
+    a[i] = e;
+  }
+  std::string page_file_prefix2 = "page_prefix2";
+  std::string page_file2 = page_file_prefix2 + ".page";
+  pm->append(page_file_prefix2, a);
+
+  e.time=0;
+  for (size_t i = 0; i < count / 2; i++) {
+    e.id = 0;
+    e.time++;
+    e.value = dariadb::Value(i) * 3;
+    a[i] = e;
+  }
+  std::string page_file_prefix3 = "page_prefix3";
+  std::string page_file3 = page_file_prefix3 + ".page";
+  pm->append(page_file_prefix3, a);
+  
+  BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(storagePath, ".page").size(), size_t(3));
+  
+  {//id==0
+	  dariadb::storage::QueryInterval qi({ 0 }, 0, 0, dariadb::MAX_TIME);
+	  auto link_list = pm->chunksByIterval(qi);
+
+	  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+		  new dariadb::storage::MList_ReaderClb };
+
+	  pm->readLinks(qi, link_list, clb.get());
+
+	  BOOST_CHECK_GT(clb->mlist.size(), size_t(100));
+  }
+
+  pm->compactTo(1);
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(storagePath, ".page").size(), size_t(1));
+  {//id==0
+	  dariadb::storage::QueryInterval qi({ 0 }, 0, 0, dariadb::MAX_TIME);
+	  auto link_list = pm->chunksByIterval(qi);
+
+	  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+		  new dariadb::storage::MList_ReaderClb };
+
+	  pm->readLinks(qi, link_list, clb.get());
+
+	  BOOST_CHECK_EQUAL(clb->mlist.size(), size_t(100));
+  }
+  {//id==1
+	  dariadb::storage::QueryInterval qi({ 1 }, 0, 0, dariadb::MAX_TIME);
+	  auto link_list = pm->chunksByIterval(qi);
+
+	  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+		  new dariadb::storage::MList_ReaderClb };
+
+	  pm->readLinks(qi, link_list, clb.get());
+
+	  BOOST_CHECK_EQUAL(clb->mlist.size(), size_t(100));
+  }
+  pm = nullptr;
+  manifest = nullptr;
+  dariadb::utils::async::ThreadManager::stop();
+
+  if (dariadb::utils::fs::path_exists(storagePath)) {
+    dariadb::utils::fs::rm(storagePath);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(PageManagerCompactionByTime) {
+	const std::string storagePath = "testStorage";
+	const size_t chunks_size = 256;
+
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+	auto manifest = dariadb::storage::Manifest_ptr{
+		new dariadb::storage::Manifest{ dariadb::utils::fs::append_path(
+			storagePath, dariadb::storage::MANIFEST_FILE_NAME) } };
+
+	auto settings =
+		dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
+	settings->page_chunk_size = chunks_size;
+	auto _engine_env =
+		dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
+	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+		settings.get());
+	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+		manifest.get());
+
+	dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+	auto pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+
+	auto e = dariadb::Meas::empty();
+	for (int pnum = 0; pnum < 10; ++pnum) {
+		size_t count = 100;
+		dariadb::MeasArray a(count);
+
+		for (size_t i = 0; i < count; i++) {
+			e.id = pnum;
+			e.time++;
+			e.value = dariadb::Value(i);
+			a[i] = e;
+		}
+		std::string page_file_prefix1 = "page_prefix"+std::to_string(pnum);
+		std::string page_file1 = page_file_prefix1 + ".page";
+		pm->append(page_file_prefix1, a);
+	}
+	BOOST_CHECK_GE(dariadb::utils::fs::ls(storagePath, ".page").size(), size_t(10));
+	pm->compactbyTime(dariadb::Time(0), e.time);
+	BOOST_CHECK_GE(dariadb::utils::fs::ls(storagePath, ".page").size(), size_t(1));
+	pm = nullptr;
+	manifest = nullptr;
+	dariadb::utils::async::ThreadManager::stop();
+
+	if (dariadb::utils::fs::path_exists(storagePath)) {
+		dariadb::utils::fs::rm(storagePath);
+	}
+}

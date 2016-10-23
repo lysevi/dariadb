@@ -16,16 +16,14 @@ inline bool check_index_rec(IndexReccord &it, dariadb::Time from, dariadb::Time 
 
 inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id,
                          dariadb::Flag flag) {
-  auto id_bloom_result = false;
-  if (dariadb::storage::bloom_check(_index_it.id_bloom, id)) {
-    id_bloom_result = true;
-  }
+  auto id_check_result = false;
+  id_check_result=_index_it.meas_id==id;
   auto flag_bloom_result = false;
   if (flag == dariadb::Flag(0) ||
       dariadb::storage::bloom_check(_index_it.flag_bloom, flag)) {
     flag_bloom_result = true;
   }
-  return id_bloom_result && flag_bloom_result;
+  return id_check_result && flag_bloom_result;
 }
 
 PageIndex::~PageIndex() {
@@ -79,18 +77,24 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
     }
     if (check_index_rec(_index_it, from, to)) {
       bool bloom_result = false;
-      for (auto i : ids) {
-        bloom_result = check_blooms(_index_it, i, flag);
-        if (bloom_result) {
-          break;
-        }
-      }
+	  if (ids.size() == size_t(0)) {
+		  bloom_result = true;
+	  }
+	  else {
+		  for (auto i : ids) {
+			  bloom_result = check_blooms(_index_it, i, flag);
+			  if (bloom_result) {
+				  break;
+			  }
+		  }
+	  }
       if (bloom_result) {
         ChunkLink sub_result;
         sub_result.id = _index_it.chunk_id;
         sub_result.index_rec_number = pos;
+		sub_result.minTime = _index_it.minTime;
         sub_result.maxTime = _index_it.maxTime;
-        sub_result.id_bloom = _index_it.id_bloom;
+        sub_result.meas_id = _index_it.meas_id;
         result.push_back(sub_result);
       }
     }

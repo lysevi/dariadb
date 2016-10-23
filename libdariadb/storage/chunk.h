@@ -23,8 +23,6 @@ struct ChunkHeader {
   CHUNK_KIND kind;
   Meas first, last;
   Time minTime, maxTime;
-  Id minId, maxId;
-  uint64_t id_bloom;
   uint64_t flag_bloom;
   uint32_t count;
   uint32_t bw_pos;

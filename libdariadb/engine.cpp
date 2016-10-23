@@ -382,6 +382,26 @@ public:
     return result;
   }
 
+  STRATEGY strategy()const{
+      return this->_settings->strategy;
+  }
+
+
+  void compactTo(uint32_t pagesCount) {
+	  _lock_manager->lock(
+		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
+      logger_info("engine: compacting to ", pagesCount);
+	  _page_manager->compactTo(pagesCount);
+	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+  }
+
+  void compactbyTime(Time from, Time to) {
+	  _lock_manager->lock(
+		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
+      logger_info("engine: compacting by time ", timeutil::to_string(from), " ",timeutil::to_string(to));
+	  _page_manager->compactbyTime(from, to);
+	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+  }
 protected:
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
@@ -469,6 +489,17 @@ void Engine::eraseOld(const Time&t) {
 	return _impl->eraseOld(t);
 }
 
+void Engine::compactTo(uint32_t pagesCount) {
+	_impl->compactTo(pagesCount);
+}
+
+void Engine::compactbyTime(Time from, Time to) {
+	_impl->compactbyTime(from,to);
+}
 Engine::Version Engine::version() {
-  return _impl->version();
+	return _impl->version();
+}
+
+STRATEGY Engine::strategy()const{
+    return _impl->strategy();
 }

@@ -1,10 +1,13 @@
 #define _CRT_SECURE_NO_WARNINGS
+#define _SCL_SECURE_NO_WARNINGS //for stx::btree in msvc build. 
 #include <libdariadb/storage/page.h>
-#include <libdariadb//timeutil.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/thread_manager.h>
 #include <libdariadb/storage/bloom_filter.h>
+#include <libdariadb/storage/callbacks.h>
+#include <stx/btree_map.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -216,8 +219,93 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   res->header->is_open_to_write = false;
   res->page_mmap->flush(0, sizeof(PageHeader));
   res->update_index_recs();
+  res->flush(); 
+  assert(res->header->addeded_chunks == compressed_results.size());
+  return res;
+}
+
+Page *Page::create(const std::string &file_name, uint64_t chunk_id,
+                   uint32_t max_chunk_size,
+                   const std::list<std::string> &pages_full_paths) {
+  std::unordered_map<std::string, Page *> openned_pages;
+  openned_pages.reserve(pages_full_paths.size());
+  std::map<uint64_t, ChunkLinkList> links;
+  QueryInterval qi({}, 0, MIN_TIME, MAX_TIME);
+  for (auto &p_full_path : pages_full_paths) {
+    Page *p = Page::open(p_full_path, true);
+    openned_pages.insert(std::make_pair(p_full_path, p));
+
+    auto clinks = p->chunksByIterval(qi);
+    for (auto &cl : clinks) {
+      cl.page_name = p_full_path;
+      links[cl.meas_id].push_back(cl);
+    }
+  }
+  assert(openned_pages.size() == pages_full_paths.size());
+  
+  std::map<Id, MeasArray> all_values;
+  for (auto &kv : links) {
+	  auto lst = kv.second;
+	  std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
+	  std::sort(
+		  link_vec.begin(), link_vec.end(),
+		  [](const ChunkLink &left, const ChunkLink &right) { return left.id < right.id; });
+	  stx::btree_map<dariadb::Time, dariadb::Meas> values_map;
+
+	  for (auto c : link_vec) {
+			  MList_ReaderClb clb;
+			  auto p = openned_pages[c.page_name];
+			  p->readLinks(qi, { c }, &clb);
+			  for (auto v : clb.mlist) {
+				  values_map[v.time] = v;
+			  }
+		  }
+	  MeasArray sorted_and_filtered;
+	  sorted_and_filtered.reserve(values_map.size());
+	  for (auto &kv : values_map) {
+		  sorted_and_filtered.push_back(kv.second);
+	  }
+	  all_values[sorted_and_filtered.front().id]=sorted_and_filtered;
+  }
+ 
+  PageHeader phdr;
+  memset(&phdr, 0, sizeof(PageHeader));
+  phdr.maxTime = dariadb::MIN_TIME;
+  phdr.minTime = dariadb::MAX_TIME;
+  phdr.max_chunk_id = chunk_id;
+
+  std::list<PageInner::HdrAndBuffer> compressed_results =
+	  PageInner::compressValues(all_values, phdr, max_chunk_size);
+
+  auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
+  phdr.filesize = page_size;
+
+  auto res = new Page;
+  res->readonly = false;
+  auto mmap = utils::fs::MappedFile::open(file_name, false);
+  res->filename = file_name;
+  auto region = mmap->data();
+
+  res->page_mmap = mmap;
+  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+	  index_file_size(phdr.addeded_chunks));
+  res->region = region;
+
+  res->header = reinterpret_cast<PageHeader *>(region);
+  *(res->header) = phdr;
+  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+  res->readonly = false;
+  res->header->is_closed = true;
+  res->header->is_open_to_write = false;
+  res->page_mmap->flush(0, sizeof(PageHeader));
+  res->update_index_recs();
   res->flush();
   assert(res->header->addeded_chunks == compressed_results.size());
+
+  for (auto kv : openned_pages) {
+	  delete kv.second;
+  }
+
   return res;
 }
 
@@ -381,7 +469,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index) {
 
   cur_index->minTime = ch->header->minTime;
   cur_index->maxTime = ch->header->maxTime;
-  cur_index->id_bloom = ch->header->id_bloom;
+  cur_index->meas_id = ch->header->first.id;
   cur_index->flag_bloom = ch->header->flag_bloom;
 
   _openned_chunk.index = cur_index;
