@@ -21,7 +21,7 @@ ServerLogger::ServerLogger(const ServerLogger::Params &p):_params(p) {
 		_logger = spdlog::stdout_logger_mt("dariadb", _params.color_console);
 	}
 	else {
-		_logger = spdlog::daily_logger_mt("dariadb", "dariadb_logs", 0, 0);
+        _logger = spdlog::daily_logger_mt("dariadb", "dariadb_log", 0, 0);
 	}
 	_logger->set_level(spdlog::level::debug);
 }
