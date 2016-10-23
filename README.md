@@ -33,7 +33,7 @@
   - in network protocol.
 
 # Dependencies
-* Boost 1.53.0 or higher: system, filesystem, date_time, interprocess (mmap), unit_test_framework(to build tests), program_options, asio, log and regex(for server only)
+* Boost 1.53.0 or higher: system, filesystem, date_time, interprocess (mmap), unit_test_framework(to build tests), program_options, asio and regex(for server only)
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
@@ -53,8 +53,6 @@ $ cd dariadb
 $ git submodules init 
 $ git submodules update
 ```
-```
-
 ### Available build options
 - ENABLE_TESTS - Enable testing of the dariadb. - ON
 - ENABLE_METRICS - Enable code metrics. - ON
