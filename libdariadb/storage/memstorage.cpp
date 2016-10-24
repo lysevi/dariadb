@@ -223,6 +223,12 @@ using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 struct MemStorage::Private : public IMeasStorage {
 	Private(const MemStorage::Params &p) : _chunk_allocator(p.max_size, p.chunk_size) {}
 
+	MemStorage::Description description()const {
+		MemStorage::Description result;
+		result.allocated = _chunk_allocator.allocated;
+		result.max_objects = _chunk_allocator._total_count;
+		return result;
+	}
   append_result append(const Meas &value) override { 
 	  auto track = _id2track.find(value.id);
 	  if (track == _id2track.end()) {
@@ -270,6 +276,7 @@ struct MemStorage::Private : public IMeasStorage {
 			  tracker->second->foreach(local_q,clbk);
 		  }
 	  }
+	  clbk->is_end();
   }
 
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { 
@@ -319,6 +326,10 @@ MemStorage::MemStorage(const MemStorage::Params &p) : _impl(new MemStorage::Priv
 
 MemStorage::~MemStorage() {
   _impl = nullptr;
+}
+
+MemStorage::Description MemStorage::description() const{
+	return _impl->description();
 }
 
 Time dariadb::storage::MemStorage::minTime() {

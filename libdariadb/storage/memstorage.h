@@ -32,7 +32,7 @@ struct MemChunkAllocator {
 class MemStorage : public IMeasStorage {
 public:
   struct Params {
-	  static const size_t MAXIMUM_MEMORY_USAGE = 10 * 1024 * 1024; //one mb
+	  static const size_t MAXIMUM_MEMORY_USAGE = 10 * 1024 * 1024; //10 mb
 	  size_t max_size; //in bytes;
 	  size_t chunk_size; //in bytes;
 	  size_t id_count;//for pre-alloc table.
@@ -42,10 +42,15 @@ public:
 		  chunk_size = 512;
 	  }
   };
-
+  //TODO rename to Description
+  struct Description {
+	  size_t allocated;
+	  size_t max_objects;
+  };
 public:
   EXPORT MemStorage(const Params &p);
   EXPORT ~MemStorage();
+  EXPORT Description description()const;
 
   // Inherited via IMeasStorage
   EXPORT virtual Time minTime() override;

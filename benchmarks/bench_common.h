@@ -84,6 +84,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
       for (size_t j = id_from; j < id_to && i < dariadb_bench::write_per_id_count; j++) {
         m.id = j;
         if (ms->append(m).writed != 1) {
+			std::cout << ">>> thread_writer_rnd_stor #" << id << " can`t write new value. aborting." << std::endl;
           return;
         }
         (*append_count)++;
