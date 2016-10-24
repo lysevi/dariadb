@@ -143,8 +143,39 @@ BOOST_AUTO_TEST_CASE(FixedTreeNodeInsertionTest) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
+	const size_t buffer_size = 100;
+	const size_t max_size = 1024;
+	dariadb::storage::MemChunkAllocator allocator(max_size, buffer_size);
+	std::set<dariadb::storage::ChunkHeader*> allocated_headers;
+	std::set<uint8_t*> allocated_buffers;
+	std::set<size_t> positions;
 
-BOOST_AUTO_TEST_CASE(MemStorage) {
+	dariadb::storage::MemChunkAllocator::allocated_data last;
+	do {
+		auto allocated = allocator.allocate();
+		auto hdr = std::get<0>(allocated);
+		auto buf = std::get<1>(allocated);
+		auto pos = std::get<2>(allocated);
+		if (hdr == nullptr) {
+			break;
+		}
+		last = allocated;
+		allocated_headers.insert(hdr);
+		allocated_buffers.insert(buf);
+		positions.insert(pos);
+	} while (1);
+
+	BOOST_CHECK(positions.size() > 0);
+	BOOST_CHECK_EQUAL(positions.size(),allocated_headers.size());
+	BOOST_CHECK_EQUAL(positions.size(), allocated_buffers.size());
+	
+	allocator.free(last);
+	auto new_obj = allocator.allocate();
+	BOOST_CHECK_EQUAL(std::get<2>(new_obj), std::get<2>(last));
+}
+
+BOOST_AUTO_TEST_CASE(MemStorageTest) {
     using boost::posix_time::seconds;
   const dariadb::Time Step3s = seconds(2).total_milliseconds();
   const dariadb::Time Step2s = seconds(2).total_milliseconds();
