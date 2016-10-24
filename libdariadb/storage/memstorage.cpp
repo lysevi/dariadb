@@ -12,14 +12,15 @@ using namespace dariadb::storage;
 MemChunkAllocator::MemChunkAllocator(size_t maxSize, size_t bufferSize) {
   _maxSize = maxSize;
   _bufferSize = bufferSize;
-  allocated = size_t(0);
+  _allocated = size_t(0);
   size_t one_sz = sizeof(ChunkHeader) + bufferSize;
-  _total_count = (int)(float(_maxSize) / one_sz);
+  _capacity = (int)(float(_maxSize) / one_sz);
 
-  _headers.resize(_total_count);
-  _buffers = new uint8_t[_total_count * _bufferSize];
-  _free_list.resize(_total_count);
-  std::fill(_free_list.begin(), _free_list.end(), uint8_t(0));
+  _headers.resize(_capacity);
+  _buffers = new uint8_t[_capacity * _bufferSize];
+  for(size_t i=0;i<_capacity;++i){
+      _free_list.push_back(i);
+  }
 }
 
 MemChunkAllocator::~MemChunkAllocator() {
@@ -28,18 +29,17 @@ MemChunkAllocator::~MemChunkAllocator() {
 
 MemChunkAllocator::allocated_data MemChunkAllocator::allocate() {
   _locker.lock();
-  for (size_t i = 0; i < _total_count; ++i) {
-    if (_free_list[i] == uint8_t(0)) {
-      _free_list[i] = 1;
-      allocated++;
+  if(_free_list.empty()){
       _locker.unlock();
-	  memset(&_headers[i], 0, sizeof(ChunkHeader));
-	  memset(&_buffers[i * _bufferSize], 0, sizeof(_bufferSize));
-      return allocated_data(&_headers[i], &_buffers[i * _bufferSize], i);
-    }
+      return EMPTY;
   }
+  auto pos=_free_list.front();
+  _free_list.pop_front();
+  _allocated++;
   _locker.unlock();
-  return EMPTY;
+  memset(&_headers[pos], 0, sizeof(ChunkHeader));
+  memset(&_buffers[pos * _bufferSize], 0, sizeof(_bufferSize));
+  return allocated_data(&_headers[pos], &_buffers[pos * _bufferSize], pos);
 }
 
 void MemChunkAllocator::free(const MemChunkAllocator::allocated_data &d) {
@@ -49,8 +49,8 @@ void MemChunkAllocator::free(const MemChunkAllocator::allocated_data &d) {
   memset(header, 0, sizeof(ChunkHeader));
   memset(buffer, 0, _bufferSize);
   _locker.lock();
-  allocated--;
-  _free_list[position] = 0;
+  _allocated--;
+  _free_list.push_back(position);
   _locker.unlock();
 }
 
@@ -195,7 +195,7 @@ public:
   }
 
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-	  assert(ids.size() = size_t(1));
+      assert(ids.size() == size_t(1));
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  Id2Meas result;
 	  result[_meas_id] = _chunks.back()->header->last;
@@ -225,8 +225,8 @@ struct MemStorage::Private : public IMeasStorage {
 
 	MemStorage::Description description()const {
 		MemStorage::Description result;
-		result.allocated = _chunk_allocator.allocated;
-		result.max_objects = _chunk_allocator._total_count;
+        result.allocated = _chunk_allocator._allocated;
+        result.allocator_capacity = _chunk_allocator._capacity;
 		return result;
 	}
   append_result append(const Meas &value) override { 

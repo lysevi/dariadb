@@ -16,11 +16,11 @@ struct MemChunkAllocator {
 
   size_t _maxSize;
   size_t _bufferSize;
-  size_t _total_count;
+  size_t _capacity;
+  size_t _allocated;
   std::vector<ChunkHeader> _headers;
   uint8_t *_buffers;
-  std::vector<uint8_t> _free_list;
-  size_t allocated;
+  std::list<size_t> _free_list;
   std::mutex _locker;
 
   EXPORT MemChunkAllocator(size_t maxSize, size_t bufferSize);
@@ -45,7 +45,7 @@ public:
   //TODO rename to Description
   struct Description {
 	  size_t allocated;
-	  size_t max_objects;
+      size_t allocator_capacity;
   };
 public:
   EXPORT MemStorage(const Params &p);

@@ -38,7 +38,7 @@ void show_info() {
 		std::cout << "\r"
 			<< " writes: " << append_count << " speed: " << writes_per_sec
 			<< "/sec"
-			<<" [m:"<< dscr.max_objects<<", a:"<< dscr.allocated<<"]"
+            <<" [m:"<< dscr.allocator_capacity<<", a:"<< dscr.allocated<<"]"
 			<<" progress:"
 			<< (int64_t(100) * append_count) / dariadb_bench::all_writes
 			<< "%                ";
