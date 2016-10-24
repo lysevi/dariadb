@@ -1,9 +1,9 @@
 #include <array>
 #include <libdariadb/storage/memstorage.h>
 #include <memory>
-#include <stx/btree_map.h>
 #include <tuple>
 #include <unordered_map>
+#include <cstdlib>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -32,6 +32,8 @@ MemChunkAllocator::allocated_data MemChunkAllocator::allocate() {
       _free_list[i] = 1;
       allocated++;
       _locker.unlock();
+	  memset(&_headers[i], 0, sizeof(ChunkHeader));
+	  memset(&_buffers[i * _bufferSize], 0, sizeof(_bufferSize));
       return allocated_data(&_headers[i], &_buffers[i * _bufferSize], i);
     }
   }
@@ -108,7 +110,7 @@ public:
 };
 
 using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
-using Id2Track = stx::btree_map<Id, TimeTrack_ptr>;
+using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage {
   Private(const MemStorage::Params &p) {}

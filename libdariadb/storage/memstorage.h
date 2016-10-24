@@ -35,7 +35,9 @@ public:
   struct Params {
 	  static const size_t MAXIMUM_MEMORY_USAGE = 10 * 1024 * 1024; //one mb
 	  size_t maxSize; //in bytes;
+	  size_t id_count;//for pre-alloc table.
 	  Params() {
+		  id_count = 0;
 		  maxSize = MAXIMUM_MEMORY_USAGE;
 	  }
   };
