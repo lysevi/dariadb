@@ -21,7 +21,7 @@ struct MemChunkAllocator {
   uint8_t *_buffers;
   std::vector<uint8_t> _free_list;
   size_t allocated;
-  utils::Locker _locker;
+  std::mutex _locker;
 
   EXPORT MemChunkAllocator(size_t maxSize, size_t bufferSize);
   EXPORT ~MemChunkAllocator();

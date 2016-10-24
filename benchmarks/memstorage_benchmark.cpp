@@ -54,7 +54,6 @@ void show_info() {
 
 int main(int argc, char **argv) {
 	po::options_description desc("Allowed options");
-	bool dont_clean = false;
 	bool metrics_enable = false;
 	desc.add_options()("help", "produce help message")
              ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
@@ -82,6 +81,7 @@ int main(int argc, char **argv) {
 	{
 		dariadb::storage::MemStorage::Params p;
 		p.max_size = 500*1024*1024;
+		p.chunk_size = 1024;
 		memstorage = new dariadb::storage::MemStorage{p};
 
 		std::thread info_thread(show_info);
