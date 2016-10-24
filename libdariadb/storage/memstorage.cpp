@@ -1,9 +1,10 @@
-#include <array>
 #include <libdariadb/storage/memstorage.h>
+#include <libdariadb/flags.h>
 #include <memory>
 #include <tuple>
 #include <unordered_map>
 #include <cstring>
+#include <cassert>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -83,9 +84,11 @@ public:
 	  _allocator = allocator;
     _meas_id = meas_id;
     _step = step;
-    _minTime = _maxTime = Time(0);
+	_minTime = MAX_TIME;
+	_maxTime = MIN_TIME;
   }
   ~TimeTrack() {}
+
   MemChunkAllocator*_allocator;
   Id _meas_id;
   Time _minTime;
@@ -95,6 +98,10 @@ public:
   MemChunk_Ptr _cur_chunk;
   utils::Locker _locker;
 
+  void updateMinMax(const Meas&value) {
+	  _minTime = std::min(_minTime, value.time);
+	  _maxTime = std::max(_maxTime, value.time);
+  }
   virtual append_result append(const Meas &value) override {
     std::lock_guard<utils::Locker> lg(_locker);
     if (_chunks.empty() || _chunks.back()->is_full()) {
@@ -102,6 +109,7 @@ public:
 			return append_result(0,1);
 		}
 		else {
+			updateMinMax(value);
 			return append_result(1, 0);
 		}
     }
@@ -110,29 +118,88 @@ public:
 			return append_result(0, 1);
 		}
 		else {
+			updateMinMax(value);
 			return append_result(1, 0);
 		}
 	}
+	updateMinMax(value);
     return append_result(1, 0);
   }
 
   virtual void flush() {}
   
-  virtual Time minTime() override { return Time(); }
+  virtual Time minTime() override {
+	  return _minTime;
+  }
 
-  virtual Time maxTime() override { return Time(); }
+  virtual Time maxTime() override { 
+	  return _maxTime;
+  }
 
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override {
-    return false;
+	  if (id != this->_meas_id) {
+		  return false;
+	  }    
+	  std::lock_guard<utils::Locker> lg(_locker);
+	  *minResult = MAX_TIME;
+	  *maxResult = MIN_TIME;
+	  for (auto c : _chunks) {
+		  *minResult = std::min(c->header->minTime, *minResult);
+		  *maxResult = std::max(c->header->maxTime, *maxResult);
+	  }
+	  return true;
   }
 
-  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {}
+  //TODO use b+tree for fast search;
+  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+    std::lock_guard<utils::Locker> lg(_locker);
+    for (auto c : _chunks) {
+      if (utils::inInterval(c->header->minTime, c->header->maxTime, q.from)
+		  ||utils::inInterval(c->header->minTime, c->header->maxTime, q.to)
+		  || utils::inInterval(q.from, q.to, c->header->minTime)
+		  || utils::inInterval(q.from, q.to, c->header->maxTime)) {
+        auto rdr = c->get_reader();
 
-  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
+        while (!rdr->is_end()) {
+          auto v = rdr->readNext();
+		  if (utils::inInterval(q.from, q.to, v.time)) {
+			  clbk->call(v);
+		  }
+        }
+      }
+    }
+  }
+
+  //TODO use b+tree for fast search;
+  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { 
+	  std::lock_guard<utils::Locker> lg(_locker);
+	  Id2Meas result;
+	  result[this->_meas_id].flag = Flags::_NO_DATA;
+	  for (auto c : _chunks) {
+		  if (c->header->minTime >= q.time_point && c->header->maxTime <= q.time_point) {
+			  auto rdr = c->get_reader();
+
+			  while (!rdr->is_end()) {
+				  auto v = rdr->readNext();
+				  if (v.time > result[this->_meas_id].time && v.time<=q.time_point) {
+					  result[this->_meas_id] = v;
+				  }
+			  }
+		  }
+	  }
+	  if (result[this->_meas_id].flag == Flags::_NO_DATA) {
+		  result[this->_meas_id].time = q.time_point;
+	  }
+	  return result;
+  }
 
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-    return Id2Meas();
+	  assert(ids.size() = size_t(1));
+	  std::lock_guard<utils::Locker> lg(_locker);
+	  Id2Meas result;
+	  result[_meas_id] = _chunks.back()->header->last;
+	  return result;
   }
 
 
@@ -170,21 +237,76 @@ struct MemStorage::Private : public IMeasStorage {
 	  }
 	  return track->second->append(value);
   }
-  virtual Time minTime() override { return Time(); }
-  virtual Time maxTime() override { return Time(); }
+  Time minTime() override { 
+	  Time result = MAX_TIME;
+	  for (auto t : _id2track) {
+		  result=std::min(result, t.second->minTime());
+	  }
+	  return result;
+  }
+  virtual Time maxTime() override { 
+	  Time result = MIN_TIME;
+	  for (auto t : _id2track) {
+		  result = std::max(result, t.second->maxTime());
+	  }
+	  return result;
+  }
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override {
-    return false;
+	  auto tracker = _id2track.find(id);
+	  if (tracker != _id2track.end()) {
+		  return tracker->second->minMaxTime(id, minResult, maxResult);
+	  }
+	  return false;
   }
   
-  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {}
-  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
-  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-    return Id2Meas();
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+	  QueryInterval local_q({}, q.flag, q.from,q.to);
+	  local_q.ids.resize(1);
+	  for (auto id : q.ids) {
+		  auto tracker = _id2track.find(id);
+		  if (tracker != _id2track.end()) {
+			  local_q.ids[0] = id;
+			  tracker->second->foreach(local_q,clbk);
+		  }
+	  }
   }
 
-  void foreach (const QueryTimePoint &q, IReaderClb * clbk) override {}
-  MeasList readInterval(const QueryInterval &q) override { return MeasList{}; }
+  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { 
+	  QueryTimePoint local_q({}, q.flag, q.time_point);
+	  local_q.ids.resize(1);
+	  Id2Meas result;
+	  for (auto id : q.ids) {
+		  auto tracker = _id2track.find(id);
+		  if (tracker != _id2track.end()) {
+			  local_q.ids[0] = id;
+			  auto sub_res = tracker->second->readTimePoint(local_q);
+			  result[id] = sub_res[id];
+		  }
+		  else {
+			  result[id].flag = Flags::_NO_DATA;
+		  }
+	  }
+	  return result;
+  }
+  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
+	  IdArray local_ids;
+	  local_ids.reserve(1);
+	  Id2Meas result;
+	  for (auto id : ids) {
+		  auto tracker = _id2track.find(id);
+		  if (tracker != _id2track.end()) {
+			  local_ids[0] = id;
+			  auto sub_res = tracker->second->currentValue(local_ids, flag);
+			  result[id] = sub_res[id];
+		  }
+		  else {
+			  result[id].flag = Flags::_NO_DATA;
+		  }
+	  }
+	  return result;
+  }
+
 
   void flush() override {}
 

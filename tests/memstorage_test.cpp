@@ -2,13 +2,14 @@
 #define BOOST_TEST_MODULE Main
 
 #include <boost/test/unit_test.hpp>
-#include <cmath>
 #include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/ads/lockfree_array.h>
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/meas.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
+
+#include "test_common.h"
 
 BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
   dariadb::ads::LockFreeArray<int> lf(10);
@@ -175,38 +176,9 @@ BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
 	BOOST_CHECK_EQUAL(std::get<2>(new_obj), std::get<2>(last));
 }
 
-BOOST_AUTO_TEST_CASE(MemStorageTest) {
-    using boost::posix_time::seconds;
-  const dariadb::Time Step3s = seconds(2).total_milliseconds();
-  const dariadb::Time Step2s = seconds(2).total_milliseconds();
-  const dariadb::Time Step1s = seconds(1).total_milliseconds();
-
-  const size_t VALUES_COUNT = 10000;
-
-  dariadb::storage::MemStorage::Params p;
-  dariadb::storage::MemStorage ms{p};
-
-  dariadb::MeasArray ma(VALUES_COUNT);
-  for (size_t i = 0; i < VALUES_COUNT; ++i) {
-    ma[i].id = 0;
-    ma[i].time = i * Step1s;
-  }
-  ms.append(ma.begin(), ma.end());
-
-
-  for (size_t i = 0; i < VALUES_COUNT; ++i) {
-    ma[i].id = 0;
-    ma[i].time = i * Step2s;
-  }
-  ms.append(ma.begin(), ma.end());
-
-
-  for (size_t i = 0; i < VALUES_COUNT; ++i) {
-    ma[i].id = 0;
-    ma[i].time = i * Step3s;
-  }
-  ms.append(ma.begin(), ma.end());
-//  BOOST_CHECK_EQUAL(ms.append(Step1s, ma).ignored, size_t(0));
-//  BOOST_CHECK_EQUAL(ms.append(Step2s, ma).ignored, size_t(0));
-//  BOOST_CHECK_EQUAL(ms.append(Step3s, ma).ignored, size_t(0));
+BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
+	dariadb::storage::MemStorage::Params p;
+	dariadb::storage::MemStorage ms{ p };
+	
+	dariadb_test::storage_test_check(&ms, 0, 100, 1, false);
 }
