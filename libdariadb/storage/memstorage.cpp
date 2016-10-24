@@ -196,6 +196,7 @@ public:
 
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
       assert(ids.size() == size_t(1));
+      assert(ids[0]==this->_meas_id);
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  Id2Meas result;
 	  result[_meas_id] = _chunks.back()->header->last;
@@ -298,7 +299,7 @@ struct MemStorage::Private : public IMeasStorage {
   }
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
 	  IdArray local_ids;
-	  local_ids.reserve(1);
+      local_ids.resize(1);
 	  Id2Meas result;
 	  for (auto id : ids) {
 		  auto tracker = _id2track.find(id);
