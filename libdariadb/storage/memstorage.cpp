@@ -3,7 +3,7 @@
 #include <memory>
 #include <tuple>
 #include <unordered_map>
-#include <cstdlib>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::storage;
