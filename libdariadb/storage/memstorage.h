@@ -12,8 +12,7 @@ namespace storage {
 struct MemChunkAllocator {
   // header,buffer, position in allocator;
   typedef std::tuple<ChunkHeader *, uint8_t *, size_t> allocated_data;
-  const allocated_data EMPTY =
-      allocated_data(nullptr, nullptr, std::numeric_limits<size_t>::max());
+  const allocated_data EMPTY = allocated_data(nullptr, nullptr, std::numeric_limits<size_t>::max());
 
   size_t _maxSize;
   size_t _bufferSize;
@@ -34,11 +33,13 @@ class MemStorage : public IMeasStorage {
 public:
   struct Params {
 	  static const size_t MAXIMUM_MEMORY_USAGE = 10 * 1024 * 1024; //one mb
-	  size_t maxSize; //in bytes;
+	  size_t max_size; //in bytes;
+	  size_t chunk_size; //in bytes;
 	  size_t id_count;//for pre-alloc table.
 	  Params() {
 		  id_count = 0;
-		  maxSize = MAXIMUM_MEMORY_USAGE;
+		  max_size = MAXIMUM_MEMORY_USAGE;
+		  chunk_size = 512;
 	  }
   };
 

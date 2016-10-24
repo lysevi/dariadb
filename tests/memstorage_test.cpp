@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE(MemStorageTest) {
   const dariadb::Time Step2s = seconds(2).total_milliseconds();
   const dariadb::Time Step1s = seconds(1).total_milliseconds();
 
-  const size_t VALUES_COUNT = 100;
+  const size_t VALUES_COUNT = 10000;
 
   dariadb::storage::MemStorage::Params p;
   dariadb::storage::MemStorage ms{p};

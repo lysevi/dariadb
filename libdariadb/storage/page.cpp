@@ -224,6 +224,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   return res;
 }
 
+//COMPACTION
 Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size,
                    const std::list<std::string> &pages_full_paths) {
