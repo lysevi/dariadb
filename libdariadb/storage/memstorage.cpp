@@ -13,12 +13,16 @@ MemChunkAllocator::MemChunkAllocator(size_t maxSize, size_t bufferSize) {
   _maxSize = maxSize;
   _bufferSize = bufferSize;
   _allocated = size_t(0);
-  size_t one_sz = sizeof(ChunkHeader) + bufferSize;
-  _capacity = (int)(float(_maxSize) / one_sz);
+  size_t one_chunk_size = sizeof(ChunkHeader) + bufferSize;
+  _capacity = (int)(float(_maxSize) / one_chunk_size);
+  size_t buffers_size=_capacity * _bufferSize;
 
   _headers.resize(_capacity);
-  _buffers = new uint8_t[_capacity * _bufferSize];
+  _buffers = new uint8_t[buffers_size];
+
+  memset(_buffers,0,buffers_size);
   for(size_t i=0;i<_capacity;++i){
+      memset(&_headers[i],0,sizeof(ChunkHeader));
       _free_list.push_back(i);
   }
 }
@@ -37,8 +41,6 @@ MemChunkAllocator::allocated_data MemChunkAllocator::allocate() {
   _free_list.pop_front();
   _allocated++;
   _locker.unlock();
-  memset(&_headers[pos], 0, sizeof(ChunkHeader));
-  memset(&_buffers[pos * _bufferSize], 0, sizeof(_bufferSize));
   return allocated_data(&_headers[pos], &_buffers[pos * _bufferSize], pos);
 }
 
