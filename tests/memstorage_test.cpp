@@ -178,6 +178,7 @@ BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
 
 BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 	dariadb::storage::MemStorage::Params p;
+	p.chunk_size = 128;
 	dariadb::storage::MemStorage ms{ p };
 	
 	dariadb_test::storage_test_check(&ms, 0, 100, 1, false);

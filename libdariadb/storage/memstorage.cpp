@@ -1,5 +1,6 @@
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/flags.h>
+#include <stx/btree_map.h>
 #include <memory>
 #include <tuple>
 #include <unordered_map>
@@ -99,7 +100,7 @@ public:
   MemChunkList _chunks;
   MemChunk_Ptr _cur_chunk;
   utils::Locker _locker;
-
+  stx::btree_map<Time, MemChunk_Ptr> _index;
   void updateMinMax(const Meas&value) {
 	  _minTime = std::min(_minTime, value.time);
 	  _maxTime = std::max(_maxTime, value.time);
@@ -156,29 +157,54 @@ public:
   //TODO use b+tree for fast search;
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {
     std::lock_guard<utils::Locker> lg(_locker);
-    for (auto c : _chunks) {
-      if (utils::inInterval(c->header->minTime, c->header->maxTime, q.from)
-		  ||utils::inInterval(c->header->minTime, c->header->maxTime, q.to)
+	auto end=_index.upper_bound(q.to);
+	auto begin = _index.lower_bound(q.from);
+	if (begin != _index.begin()) {
+		--begin;
+	}
+    for(auto it=begin;it!=end;++it) {
+		if (it == _index.end()) {
+			break;
+		}
+	  auto c = it->second;
+	  foreach_interval_call(c, q, clbk);
+    }
+	if (_cur_chunk != nullptr) {
+		foreach_interval_call(_cur_chunk, q, clbk);
+	}
+  }
+  void foreach_interval_call(const MemChunk_Ptr&c, const QueryInterval &q, IReaderClb * clbk) {
+	  if (utils::inInterval(c->header->minTime, c->header->maxTime, q.from)
+		  || utils::inInterval(c->header->minTime, c->header->maxTime, q.to)
 		  || utils::inInterval(q.from, q.to, c->header->minTime)
 		  || utils::inInterval(q.from, q.to, c->header->maxTime)) {
-        auto rdr = c->get_reader();
+		  auto rdr = c->get_reader();
 
-        while (!rdr->is_end()) {
-          auto v = rdr->readNext();
-		  if (utils::inInterval(q.from, q.to, v.time)) {
-			  clbk->call(v);
+		  while (!rdr->is_end()) {
+			  auto v = rdr->readNext();
+			  if (utils::inInterval(q.from, q.to, v.time)) {
+				  clbk->call(v);
+			  }
 		  }
-        }
-      }
-    }
+	  }
   }
-
   //TODO use b+tree for fast search;
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { 
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  Id2Meas result;
 	  result[this->_meas_id].flag = Flags::_NO_DATA;
-	  for (auto c : _chunks) {
+
+	  auto end = _index.upper_bound(q.time_point);
+	  auto begin = _index.lower_bound(q.time_point);
+	  if (begin != _index.begin()) {
+		  --begin;
+	  }
+
+	  for (auto it = begin; it != end; ++it) {
+		  if (it == _index.end()) {
+			  break;
+		  }
+		  auto c = it->second;
 		  if (c->header->minTime >= q.time_point && c->header->maxTime <= q.time_point) {
 			  auto rdr = c->get_reader();
 
@@ -187,6 +213,17 @@ public:
 				  if (v.time > result[this->_meas_id].time && v.time<=q.time_point) {
 					  result[this->_meas_id] = v;
 				  }
+			  }
+		  }
+	  }
+	  
+	  if (_cur_chunk!=nullptr && _cur_chunk->header->minTime >= q.time_point && _cur_chunk->header->maxTime <= q.time_point) {
+		  auto rdr = _cur_chunk->get_reader();
+
+		  while (!rdr->is_end()) {
+			  auto v = rdr->readNext();
+			  if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
+				  result[this->_meas_id] = v;
 			  }
 		  }
 	  }
@@ -207,6 +244,9 @@ public:
 
 
   bool create_new_chunk(const Meas&value) {
+	  if (_cur_chunk != nullptr) {
+		  this->_index.insert(std::make_pair(_cur_chunk->header->maxTime, _cur_chunk));
+	  }
 	  auto new_chunk_data = _allocator->allocate();
 	  if (std::get<0>(new_chunk_data) == nullptr) {
 		  return false;
