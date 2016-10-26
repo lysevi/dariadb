@@ -40,6 +40,7 @@ void Settings::set_default() {
   page_chunk_size = CHUNK_SIZE;
   page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
   memory_limit = MAXIMUM_MEMORY_LIMIT;
+  id_count = 0;
   strategy = STRATEGY::COMPRESSED;
 }
 

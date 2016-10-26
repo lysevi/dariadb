@@ -13,6 +13,15 @@
 
 #include "test_common.h"
 
+class MokChunkWriter :public dariadb::storage::IChunkWriter {
+public:
+	size_t droped;
+	MokChunkWriter() { droped = 0; }
+	void appendChunks(const dariadb::storage::ChunksList&chunks) override{
+		++droped;
+	};
+};
+
 BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
   dariadb::ads::LockFreeArray<int> lf(10);
   BOOST_CHECK_EQUAL(lf.size(), size_t(10));
@@ -267,3 +276,29 @@ BOOST_AUTO_TEST_CASE(MemStorageRndWriteTest) {
 		dariadb::utils::fs::rm(storage_path);
 	}
 }
+
+
+//
+//BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
+//	auto storage_path = "testMemoryStorage";
+//	if (dariadb::utils::fs::path_exists(storage_path)) {
+//		dariadb::utils::fs::rm(storage_path);
+//	}
+//	{
+//		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+//		settings->page_chunk_size = 128;
+//		dariadb::storage::MemStorage ms{ settings };
+//		MokChunkWriter*cw = new MokChunkWriter;
+//		ms.setDownLevel(cw);
+//
+//		auto e = dariadb::Meas::empty();
+//		while (cw->droped != 10) {
+//			e.time++;
+//			ms.append(e);
+//		}
+//		
+//	}
+//	if (dariadb::utils::fs::path_exists(storage_path)) {
+//		dariadb::utils::fs::rm(storage_path);
+//	}
+//}

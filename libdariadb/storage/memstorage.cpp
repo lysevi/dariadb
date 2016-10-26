@@ -177,7 +177,6 @@ public:
 	  return true;
   }
 
-  //TODO use b+tree for fast search;
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {
     std::lock_guard<utils::Locker> lg(_locker);
 	auto end=_index.upper_bound(q.to);
@@ -319,6 +318,7 @@ using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage {
 	Private(const storage::Settings_ptr &s) : _chunk_allocator(s->memory_limit, s->page_chunk_size) {
+		_down_level_storage = nullptr;
 		_settings = s;
 		if (_settings->id_count != 0) {
 			_id2track.reserve(_settings->id_count);
@@ -345,7 +345,16 @@ struct MemStorage::Private : public IMeasStorage {
 		  }
 	  }
 	  _all_tracks_locker.unlock();
-	  return track->second->append(value);
+	  auto result=track->second->append(value);
+	  if (result.ignored == 0) {
+		  return result;
+	  }
+	  else {
+		  drop_by_limit();
+		  return track->second->append(value);
+	  }
+  }
+  void drop_by_limit() {
   }
   Time minTime() override { 
 	  Time result = MAX_TIME;
@@ -421,10 +430,14 @@ struct MemStorage::Private : public IMeasStorage {
 
   void flush() override {}
 
+  void setDownLevel(IChunkWriter*down) {
+	  _down_level_storage = down;
+  }
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;
   utils::Locker _all_tracks_locker;
   storage::Settings_ptr _settings;
+  IChunkWriter* _down_level_storage;
 };
 
 MemStorage::MemStorage(const storage::Settings_ptr &s) : _impl(new MemStorage::Private(s)) {}
@@ -437,35 +450,39 @@ MemStorage::Description MemStorage::description() const{
 	return _impl->description();
 }
 
-Time dariadb::storage::MemStorage::minTime() {
+Time MemStorage::minTime() {
   return _impl->minTime();
 }
 
-Time dariadb::storage::MemStorage::maxTime() {
+Time MemStorage::maxTime() {
   return _impl->maxTime();
 }
 
-bool dariadb::storage::MemStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+bool MemStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                               dariadb::Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-void dariadb::storage::MemStorage::foreach (const QueryInterval &q, IReaderClb * clbk) {
+void MemStorage::foreach (const QueryInterval &q, IReaderClb * clbk) {
   _impl->foreach (q, clbk);
 }
 
-Id2Meas dariadb::storage::MemStorage::readTimePoint(const QueryTimePoint &q) {
+Id2Meas MemStorage::readTimePoint(const QueryTimePoint &q) {
   return _impl->readTimePoint(q);
 }
 
-Id2Meas dariadb::storage::MemStorage::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas MemStorage::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
-append_result dariadb::storage::MemStorage::append(const Meas &value) {
+append_result MemStorage::append(const Meas &value) {
   return _impl->append(value);
 }
 
-void dariadb::storage::MemStorage::flush() {
+void MemStorage::flush() {
   _impl->flush();
+}
+
+void MemStorage::setDownLevel(IChunkWriter*_down) {
+	_impl->setDownLevel(_down);
 }

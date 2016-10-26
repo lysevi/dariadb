@@ -90,5 +90,10 @@ public:
   ChunkReader_Ptr get_reader() override;
   compression::v2::CopmressedWriter c_writer;
 };
+
+class IChunkWriter {
+public:
+	virtual void appendChunks(const ChunksList&chunks) = 0;
+};
 }
 }

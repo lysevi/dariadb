@@ -22,10 +22,15 @@
 
 namespace po = boost::program_options;
 
+using namespace dariadb;
+using namespace dariadb::storage;
+
 std::atomic_llong append_count{ 0 };
 dariadb::Time write_time = 0;
 bool stop_info = false;
 dariadb::storage::MemStorage* memstorage;
+STRATEGY strategy = STRATEGY::MEMORY_STORAGE;
+Time store_period = boost::posix_time::hours(dariadb_bench::hours_write_perid / 2).total_microseconds();
 
 void show_info() {
 	clock_t t0 = clock();
@@ -57,7 +62,8 @@ int main(int argc, char **argv) {
 	po::options_description desc("Allowed options");
 	bool metrics_enable = false;
 	desc.add_options()("help", "produce help message")
-             ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"Write strategy")
+        ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
 	po::variables_map vm;
 	try {
@@ -86,6 +92,7 @@ int main(int argc, char **argv) {
 			dariadb::utils::fs::rm(storage_path);
 		}
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		settings->strategy = strategy;
 		settings->memory_limit = 500*1024*1024;
 		settings->page_chunk_size = 1024;
 		memstorage = new dariadb::storage::MemStorage{ settings };
