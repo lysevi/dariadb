@@ -13,6 +13,7 @@ const size_t AOF_BUFFER_SIZE = 2000;
 const size_t AOF_FILE_SIZE = sizeof(dariadb::Meas) * AOF_BUFFER_SIZE * 4;
 const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
 const uint32_t CHUNK_SIZE = 1024;
+const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; //10 mb
 
 std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
@@ -38,7 +39,7 @@ void Settings::set_default() {
   aof_max_size = AOF_FILE_SIZE;
   page_chunk_size = CHUNK_SIZE;
   page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
-
+  memory_limit = MAXIMUM_MEMORY_LIMIT;
   strategy = STRATEGY::COMPRESSED;
 }
 

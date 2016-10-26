@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libdariadb/meas.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/thread_pool.h>
 #include <libdariadb/storage/strategy.h>
@@ -35,6 +36,11 @@ public:
                                          /// pages stored).
 
   STRATEGY strategy;
+
+  // memstorage options;
+  size_t memory_limit; //in bytes;
+  size_t id_count;//for pre-alloc table.
+  Time   storage_period; //how many old values can be stored in memory with STRATEGY=MEMORY STORAGE
 };
 
 using Settings_ptr = std::shared_ptr<Settings>;

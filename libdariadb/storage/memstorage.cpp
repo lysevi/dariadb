@@ -318,7 +318,12 @@ using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
 using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage {
-	Private(const MemStorage::Params &p) : _chunk_allocator(p.max_size, p.chunk_size) {}
+	Private(const storage::Settings_ptr &s) : _chunk_allocator(s->memory_limit, s->page_chunk_size) {
+		_settings = s;
+		if (_settings->id_count != 0) {
+			_id2track.reserve(_settings->id_count);
+		}
+	}
 
 	MemStorage::Description description()const {
 		MemStorage::Description result;
@@ -419,9 +424,10 @@ struct MemStorage::Private : public IMeasStorage {
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;
   utils::Locker _all_tracks_locker;
+  storage::Settings_ptr _settings;
 };
 
-MemStorage::MemStorage(const MemStorage::Params &p) : _impl(new MemStorage::Private(p)) {}
+MemStorage::MemStorage(const storage::Settings_ptr &s) : _impl(new MemStorage::Private(s)) {}
 
 MemStorage::~MemStorage() {
   _impl = nullptr;

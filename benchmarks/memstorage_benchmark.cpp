@@ -15,6 +15,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/fs.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
@@ -79,10 +80,15 @@ int main(int argc, char **argv) {
 
 	dariadb::IdSet all_id_set;
 	{
-		dariadb::storage::MemStorage::Params p;
-		p.max_size = 500*1024*1024;
-		p.chunk_size = 1024;
-		memstorage = new dariadb::storage::MemStorage{p};
+		auto storage_path = "testMemoryStorage";
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			std::cout << " remove " << storage_path << std::endl;
+			dariadb::utils::fs::rm(storage_path);
+		}
+		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		settings->memory_limit = 500*1024*1024;
+		settings->page_chunk_size = 1024;
+		memstorage = new dariadb::storage::MemStorage{ settings };
 
 		std::thread info_thread(show_info);
 

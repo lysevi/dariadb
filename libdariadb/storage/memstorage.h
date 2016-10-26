@@ -4,6 +4,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/settings.h>
 #include <memory>
 
 namespace dariadb {
@@ -31,24 +32,13 @@ struct MemChunkAllocator {
 
 class MemStorage : public IMeasStorage {
 public:
-  struct Params {
-	  static const size_t MAXIMUM_MEMORY_USAGE = 10 * 1024 * 1024; //10 mb
-	  size_t max_size; //in bytes;
-	  size_t chunk_size; //in bytes;
-	  size_t id_count;//for pre-alloc table.
-	  Params() {
-		  id_count = 0;
-		  max_size = MAXIMUM_MEMORY_USAGE;
-		  chunk_size = 512;
-	  }
-  };
   //TODO rename to Description
   struct Description {
 	  size_t allocated;
       size_t allocator_capacity;
   };
 public:
-  EXPORT MemStorage(const Params &p);
+  EXPORT MemStorage(const storage::Settings_ptr &s);
   EXPORT ~MemStorage();
   EXPORT Description description()const;
 
