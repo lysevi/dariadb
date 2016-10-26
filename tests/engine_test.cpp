@@ -303,7 +303,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
         BOOST_CHECK(mlist.size() == copies_for_id);
       }
       for (auto it = mlist.begin(); it != mlist.end(); ++it) {
-        auto next = ++it;
+        auto next = it;
+		++next;
         if (next == mlist.end()) {
           break;
         }

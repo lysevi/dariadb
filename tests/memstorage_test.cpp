@@ -5,6 +5,7 @@
 #include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/ads/lockfree_array.h>
 #include <libdariadb/storage/memstorage.h>
+#include <libdariadb/storage/callbacks.h>
 #include <libdariadb/meas.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -182,4 +183,68 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 	dariadb::storage::MemStorage ms{ p };
 	
 	dariadb_test::storage_test_check(&ms, 0, 100, 1, false);
+}
+
+BOOST_AUTO_TEST_CASE(MemStorageRndWriteTest) {
+	dariadb::storage::MemStorage::Params p;
+	p.chunk_size = 128;
+	dariadb::storage::MemStorage ms{ p };
+
+	const dariadb::Time from = 0;
+	const dariadb::Time to = 1000;
+	const dariadb::Time step = 10;
+	const size_t copies_for_id = 100;
+	
+	dariadb::Id id_val(0);
+	dariadb::Flag flg_val(0);
+	dariadb::IdSet _all_ids_set;
+	std::vector<dariadb::Time> rnd_times;
+	rnd_times.resize(copies_for_id + 2);
+	dariadb::Time t = 0;
+	auto m = dariadb::Meas::empty();
+	size_t total_count = 0;
+	for (size_t i = 0; i < rnd_times.size(); ++i) {
+		rnd_times[i] = t;
+		++t;
+	}
+	size_t t_pos = 0;
+	for (auto i = from; i < to; i += step) {
+		std::random_shuffle(rnd_times.begin(), rnd_times.end());
+		t_pos = 0;
+		_all_ids_set.insert(id_val);
+		m.id = id_val;
+		m.flag = flg_val;
+		m.time = rnd_times[t_pos++];
+		m.value = 0;
+
+		for (size_t j = 0; j < copies_for_id; j++) {
+			BOOST_CHECK(ms.append(m).writed == 1);
+			total_count++;
+			m.value = dariadb::Value(j);
+			m.time = rnd_times[t_pos++];
+		}
+		++id_val;
+		++flg_val;
+	}
+
+	size_t total_readed = 0;
+	for (dariadb::Id cur_id = 0; cur_id < id_val; ++cur_id) {
+		auto rdr=std::make_shared<dariadb::storage::MList_ReaderClb>();
+		dariadb::IdArray ids;
+		ids.push_back(cur_id);
+		ms.foreach(dariadb::storage::QueryInterval(ids, 0, from, to),rdr.get());
+		total_readed += rdr->mlist.size();
+		if (rdr->mlist.size() != copies_for_id) {
+			BOOST_CHECK(rdr->mlist.size() == copies_for_id);
+		}
+		for (auto it = rdr->mlist.begin(); it != rdr->mlist.end(); ++it) {
+			auto next = it;
+			++next;
+			if (next == rdr->mlist.end()) {
+				break;
+			}
+			BOOST_CHECK_LE(it->time, next->time);
+		}
+	}
+	BOOST_CHECK_GE(total_count, total_readed);
 }

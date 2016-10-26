@@ -1,3 +1,4 @@
+#define _SCL_SECURE_NO_WARNINGS //stx::btree
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/flags.h>
 #include <stx/btree_map.h>
@@ -66,6 +67,7 @@ struct MemChunk : public ZippedChunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
   MemChunkAllocator::allocated_data _a_data;
+  MeasList inserted;
   MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, Meas first_m)
       : ZippedChunk(index, buffer, size, first_m) {
     index_ptr = index;
@@ -76,6 +78,10 @@ struct MemChunk : public ZippedChunk {
     buffer_ptr = buffer;
   }
   ~MemChunk() {}
+
+  void insert(Meas value) {
+	  inserted.push_back(value);
+  }
 };
 
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;
@@ -100,7 +106,7 @@ public:
   MemChunkList _chunks;
   MemChunk_Ptr _cur_chunk;
   utils::Locker _locker;
-  stx::btree_map<Time, MemChunk_Ptr> _index;
+  std::map<Time, MemChunk_Ptr> _index;
   void updateMinMax(const Meas&value) {
 	  _minTime = std::min(_minTime, value.time);
 	  _maxTime = std::max(_maxTime, value.time);
@@ -116,14 +122,31 @@ public:
 			return append_result(1, 0);
 		}
     }
-	if (!_cur_chunk->append(value)) {
-		if (!create_new_chunk(value)) {
-			return append_result(0, 1);
+	if (_cur_chunk->header->maxTime < value.time) {
+		if (!_cur_chunk->append(value)) {
+			if (!create_new_chunk(value)) {
+				return append_result(0, 1);
+			}
+			else {
+				updateMinMax(value);
+				return append_result(1, 0);
+			}
 		}
-		else {
-			updateMinMax(value);
-			return append_result(1, 0);
+	}
+	else {
+		auto target_to_insert = _cur_chunk;
+		auto begin = _index.lower_bound(value.time);
+		auto end = _index.upper_bound(value.time);
+		for (auto it = begin; it != end; ++end) {
+			if (it == _index.end()) {
+				THROW_EXCEPTION("egine: memstorage logic error.");
+			}
+			if (utils::inInterval(it->second->header->minTime, it->second->header->maxTime, value.time)) {
+				target_to_insert = it->second;
+				break;
+			}
 		}
+		target_to_insert->insert(value);
 	}
 	updateMinMax(value);
     return append_result(1, 0);
@@ -178,12 +201,37 @@ public:
 		  || utils::inInterval(c->header->minTime, c->header->maxTime, q.to)
 		  || utils::inInterval(q.from, q.to, c->header->minTime)
 		  || utils::inInterval(q.from, q.to, c->header->maxTime)) {
-		  auto rdr = c->get_reader();
+		  if (c->inserted.empty()) {
+			  auto rdr = c->get_reader();
 
-		  while (!rdr->is_end()) {
-			  auto v = rdr->readNext();
-			  if (utils::inInterval(q.from, q.to, v.time)) {
-				  clbk->call(v);
+			  while (!rdr->is_end()) {
+				  auto v = rdr->readNext();
+				  if (utils::inInterval(q.from, q.to, v.time)) {
+					  clbk->call(v);
+				  }
+			  }
+		  }
+		  else {
+			  auto total_size = c->header->count + c->inserted.size()+1;
+			  MeasArray ma;
+			  ma.reserve(total_size);
+			  size_t i = 0;
+			  auto rdr = c->get_reader();
+
+			  while (!rdr->is_end()) {
+				  auto v = rdr->readNext();
+				  if (utils::inInterval(q.from, q.to, v.time)) {
+					  ma.push_back(v);
+				  }
+			  }
+			  for (auto&v : c->inserted) {
+				  ma.push_back(v);
+			  }
+			  std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+			  for (auto&v : ma) {
+				  if (utils::inInterval(q.from, q.to, v.time)) {
+					  clbk->call(v);
+				  }
 			  }
 		  }
 	  }
@@ -273,17 +321,19 @@ struct MemStorage::Private : public IMeasStorage {
 		return result;
 	}
   append_result append(const Meas &value) override { 
+	  _all_tracks_locker.lock();
 	  auto track = _id2track.find(value.id);
 	  if (track == _id2track.end()) {
-		  std::lock_guard<utils::Locker> lg(_all_tracks_locker);
 		  track = _id2track.find(value.id);
 		  if (track == _id2track.end()) {
 			  auto new_track = std::make_shared<TimeTrack>(Time(0), value.id, &_chunk_allocator);
 			  _id2track.insert(std::make_pair(value.id, new_track));
+			  _all_tracks_locker.unlock();
 			  new_track->append(value);
 			  return append_result(1,0);
 		  }
 	  }
+	  _all_tracks_locker.unlock();
 	  return track->second->append(value);
   }
   Time minTime() override { 
