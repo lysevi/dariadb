@@ -196,6 +196,7 @@ public:
 		foreach_interval_call(_cur_chunk, q, clbk);
 	}
   }
+
   void foreach_interval_call(const MemChunk_Ptr&c, const QueryInterval &q, IReaderClb * clbk) {
 	  if (utils::inInterval(c->header->minTime, c->header->maxTime, q.from)
 		  || utils::inInterval(c->header->minTime, c->header->maxTime, q.to)
@@ -215,7 +216,6 @@ public:
 			  auto total_size = c->header->count + c->inserted.size()+1;
 			  MeasArray ma;
 			  ma.reserve(total_size);
-			  size_t i = 0;
 			  auto rdr = c->get_reader();
 
 			  while (!rdr->is_end()) {
@@ -236,8 +236,8 @@ public:
 		  }
 	  }
   }
-  //TODO use b+tree for fast search;
-  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { 
+
+  Id2Meas readTimePoint(const QueryTimePoint &q) override { 
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  Id2Meas result;
 	  result[this->_meas_id].flag = Flags::_NO_DATA;
@@ -286,7 +286,13 @@ public:
       assert(ids[0]==this->_meas_id);
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  Id2Meas result;
-	  result[_meas_id] = _chunks.back()->header->last;
+	  auto last = _chunks.back()->header->last;
+	  if (last.inFlag(flag)) {
+		  result[_meas_id] = _chunks.back()->header->last;
+	  }
+	  else {
+		  result[_meas_id].flag = Flags::_NO_DATA;
+	  }
 	  return result;
   }
 
