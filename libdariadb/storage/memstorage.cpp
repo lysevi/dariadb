@@ -1,7 +1,7 @@
 #define _SCL_SECURE_NO_WARNINGS //stx::btree
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/flags.h>
-#include <stx/btree_map.h>
+#include <stx/btree_map>
 #include <memory>
 #include <tuple>
 #include <unordered_map>
@@ -62,12 +62,13 @@ void MemChunkAllocator::free(const MemChunkAllocator::allocated_data &d) {
 Map:
   Meas.id -> TimeTrack{ MemChunkList[MemChunk{data}]}
 */
-
+class TimeTrack;
 struct MemChunk : public ZippedChunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
   MemChunkAllocator::allocated_data _a_data;
   MeasList inserted;
+  TimeTrack *_track;
   MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, Meas first_m)
       : ZippedChunk(index, buffer, size, first_m) {
     index_ptr = index;
@@ -87,8 +88,7 @@ struct MemChunk : public ZippedChunk {
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;
 using MemChunkList = std::list<MemChunk_Ptr>;
 
-class TimeTrack : public IMeasStorage {
-public:
+struct TimeTrack : public IMeasStorage {
   TimeTrack(const Time step, Id meas_id, MemChunkAllocator*allocator) {
 	  _allocator = allocator;
     _meas_id = meas_id;
@@ -295,6 +295,26 @@ public:
 	  return result;
   }
 
+  void rm_chunk(MemChunk*c){
+      if(_index.erase(c->header->maxTime)!=1){
+          THROW_EXCEPTION("engine: memstorage logic error.");
+      }
+      this->_allocator->free(c->_a_data);
+      bool removed=false;
+      for(auto it=_chunks.begin();it!=_chunks.end();++it){
+          if(it->get()==c){
+              removed=true;
+              _chunks.erase(it);
+              break;
+          }
+      }
+      if(!removed){
+          THROW_EXCEPTION("engine: memstorage logic error.");
+      }
+      if(_cur_chunk.get()==c){
+          _cur_chunk=nullptr;
+      }
+  }
 
   bool create_new_chunk(const Meas&value) {
 	  if (_cur_chunk != nullptr) {
@@ -307,6 +327,8 @@ public:
 	  auto mc = MemChunk_Ptr{ new MemChunk{ std::get<0>(new_chunk_data),
 		  std::get<1>(new_chunk_data),
 		  _allocator->_bufferSize, value } };
+      mc->_track=this;
+      mc->_a_data=new_chunk_data;
 	  this->_chunks.push_back(mc);
 	  _cur_chunk = mc;
 	  return true;
@@ -344,19 +366,63 @@ struct MemStorage::Private : public IMeasStorage {
 			  return append_result(1,0);
 		  }
 	  }
-	  _all_tracks_locker.unlock();
-	  auto result=track->second->append(value);
+      _all_tracks_locker.unlock();
+      auto result=track->second->append(value);
 	  if (result.ignored == 0) {
 		  return result;
 	  }
 	  else {
+          if(_down_level_storage==nullptr){
+              return result;
+          }
+          _all_tracks_locker.lock();
 		  drop_by_limit();
-		  return track->second->append(value);
+          _all_tracks_locker.unlock();
+          return append(value);
 	  }
   }
+
   void drop_by_limit() {
+    auto current_chunk_count = this->_chunk_allocator._allocated;
+    if(current_chunk_count<this->_chunk_allocator._capacity){
+        return;
+    }
+    auto chunks_to_delete =
+        (int)(current_chunk_count * _settings->chunks_to_free);
+    logger_info("engine: drop ", chunks_to_delete, " chunks of ",
+                current_chunk_count);
+    std::vector<Chunk*> all_chunks;
+    all_chunks.resize(current_chunk_count);
+    size_t pos = 0;
+    for (auto &kv : _id2track) {
+      TimeTrack_ptr t = kv.second;
+      for (auto &c : t->_chunks) {
+        all_chunks[pos++] = c.get();
+      }
+    }
+
+    std::sort(all_chunks.begin(), all_chunks.end(),
+              [](const Chunk* l, const Chunk* r) {
+                return l->header->maxTime < r->header->maxTime;
+              });
+    assert(all_chunks.front()->header->maxTime<=all_chunks.back()->header->maxTime);
+
+    _down_level_storage->appendChunks(all_chunks,chunks_to_delete);
+    std::list<Id> to_remove;
+    for(auto&c:all_chunks){
+        auto mc=dynamic_cast<MemChunk*>(c);
+        assert(mc!=nullptr);
+        TimeTrack *track=mc->_track;
+        track->rm_chunk(mc);
+        if(track->_chunks.empty()){
+            _id2track.erase(track->_meas_id);
+        }
+    }
+
   }
+
   Time minTime() override { 
+      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
 	  Time result = MAX_TIME;
 	  for (auto t : _id2track) {
 		  result=std::min(result, t.second->minTime());
@@ -364,6 +430,7 @@ struct MemStorage::Private : public IMeasStorage {
 	  return result;
   }
   virtual Time maxTime() override { 
+      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
 	  Time result = MIN_TIME;
 	  for (auto t : _id2track) {
 		  result = std::max(result, t.second->maxTime());
@@ -372,6 +439,7 @@ struct MemStorage::Private : public IMeasStorage {
   }
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override {
+      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
 	  auto tracker = _id2track.find(id);
 	  if (tracker != _id2track.end()) {
 		  return tracker->second->minMaxTime(id, minResult, maxResult);
@@ -380,6 +448,7 @@ struct MemStorage::Private : public IMeasStorage {
   }
   
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
 	  QueryInterval local_q({}, q.flag, q.from,q.to);
 	  local_q.ids.resize(1);
 	  for (auto id : q.ids) {
@@ -392,7 +461,8 @@ struct MemStorage::Private : public IMeasStorage {
 	  clbk->is_end();
   }
 
-  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { 
+  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override {
+      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
 	  QueryTimePoint local_q({}, q.flag, q.time_point);
 	  local_q.ids.resize(1);
 	  Id2Meas result;
@@ -410,6 +480,7 @@ struct MemStorage::Private : public IMeasStorage {
 	  return result;
   }
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
+      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
 	  IdArray local_ids;
       local_ids.resize(1);
 	  Id2Meas result;

@@ -42,6 +42,7 @@ void Settings::set_default() {
   memory_limit = MAXIMUM_MEMORY_LIMIT;
   id_count = 0;
   strategy = STRATEGY::COMPRESSED;
+  chunks_to_free=0.45;
 }
 
 std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {

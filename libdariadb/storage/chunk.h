@@ -10,6 +10,8 @@
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <vector>
+
 namespace dariadb {
 namespace storage {
 enum class CHUNK_KIND : uint8_t { Simple, Compressed };
@@ -93,7 +95,8 @@ public:
 
 class IChunkWriter {
 public:
-	virtual void appendChunks(const ChunksList&chunks) = 0;
+    virtual ~IChunkWriter(){}
+    virtual void appendChunks(const std::vector<Chunk*>&a,size_t count) = 0;
 };
 }
 }
