@@ -2,6 +2,7 @@
 
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/dropper.h>
+#include <libdariadb/storage/memstorage.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
@@ -33,6 +34,7 @@ public:
     size_t pages_count;  /// pages count
     size_t active_works; /// async tasks runned.
     Dropper::Queues dropper_queues;
+	MemStorage::Description memstorage;
   };
 
   Engine(const Engine &) = delete;

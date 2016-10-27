@@ -419,6 +419,19 @@ public:
 	  _file2header[page_name] =
 		  Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
   }
+
+  void appendChunks(const std::vector<Chunk*>& a, size_t count) {
+	  Page *res = nullptr;
+	  std::string page_name = utils::fs::random_file_name(".page");
+	  logger_info("engine: write chunks to ", page_name);
+	  std::string file_name =
+		  dariadb::utils::fs::append_path(_settings->path, page_name);
+	  res = Page::create(file_name, last_id, a,count);
+	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
+	  last_id = res->header->max_chunk_id;
+	  delete res;
+	  _file2header[page_name] = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+  }
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;
@@ -499,4 +512,8 @@ void PageManager::compactTo(uint32_t pagesCount) {
 
 void PageManager::compactbyTime(dariadb::Time from, dariadb::Time to) {
 	impl->compactbyTime(from,to);
+}
+
+void PageManager::appendChunks(const std::vector<Chunk*>& a, size_t count){
+	impl->appendChunks(a, count);
 }

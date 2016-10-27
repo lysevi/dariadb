@@ -61,5 +61,6 @@ private:
   struct Private;
   std::unique_ptr<Private> _impl;
 };
+using MemStorage_ptr = std::shared_ptr<MemStorage>;
 }
 }

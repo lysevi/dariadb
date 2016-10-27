@@ -228,6 +228,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size,
                    const std::list<std::string> &pages_full_paths) {
+	TIMECODE_METRICS(ctmd, "create", "Page::create(COMPACTION)");
   std::unordered_map<std::string, Page *> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
   std::map<uint64_t, ChunkLinkList> links;
@@ -308,6 +309,111 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   }
 
   return res;
+}
+
+Page *Page::create(const std::string &file_name, uint64_t chunk_id, const std::vector<Chunk*>& a, size_t count) {
+	TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
+	using namespace dariadb::utils::async;
+	PageHeader phdr;
+	memset(&phdr, 0, sizeof(PageHeader));
+	phdr.maxTime = dariadb::MIN_TIME;
+	phdr.minTime = dariadb::MAX_TIME;
+	phdr.max_chunk_id = chunk_id;
+
+	 AsyncTask pm_at =
+		[&file_name, &phdr, &a, &count](const ThreadInfo &ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+		
+		auto file = std::fopen(file_name.c_str(), "ab");
+		if (file == nullptr) {
+			throw MAKE_EXCEPTION("aofile: append error.");
+		}
+
+		std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+		uint64_t offset = 0;
+		size_t page_size = 0;
+		for (size_t i = 0; i < count; ++i) {
+			ChunkHeader * chunk_header = a[i]->header;
+			auto chunk_buffer_ptr = a[i]->_buffer_t;
+#ifdef  DEBUG
+			{
+				auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr);
+				auto rdr = ch->get_reader();
+				size_t readed = 0;
+				while (!rdr->is_end()) {
+					rdr->readNext();
+					readed++;
+				}
+				assert(readed == (ch->header->count+1));
+			}
+#endif //  DEBUG
+			phdr.max_chunk_id++;
+			phdr.minTime = std::min(phdr.minTime, chunk_header->minTime);
+			phdr.maxTime = std::max(phdr.maxTime, chunk_header->maxTime);
+			chunk_header->id = phdr.max_chunk_id;
+			chunk_header->pos_in_page = phdr.addeded_chunks;
+
+			phdr.addeded_chunks++;
+			auto cur_chunk_buf_size = size_t(0);
+			size_t skip_count = 0;
+			if (chunk_header->is_readonly) {
+				cur_chunk_buf_size = chunk_header->size ;
+			}
+			else { 
+				cur_chunk_buf_size = chunk_header->size - chunk_header->bw_pos + 1; 
+				skip_count = chunk_header->size - cur_chunk_buf_size;
+			}
+
+			chunk_header->size = cur_chunk_buf_size;
+			chunk_header->offset_in_page = offset;
+
+			auto ch=std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
+			ch->close();
+#ifdef  DEBUG
+			auto rdr=ch->get_reader();
+			size_t readed = 0;
+			while (!rdr->is_end()) {
+				rdr->readNext();
+				readed++;
+			}
+			assert(readed == (ch->header->count + 1));
+#endif //  DEBUG
+
+			
+			std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
+			std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), cur_chunk_buf_size, file);
+
+			offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+		}
+		page_size = offset + sizeof(PageHeader);
+		phdr.filesize = page_size;
+		std::fclose(file);
+	};
+	auto at = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(pm_at));
+	at->wait();
+
+	auto res = new Page;
+	res->readonly = false;
+	auto mmap = utils::fs::MappedFile::open(file_name, false);
+	res->filename = file_name;
+	auto region = mmap->data();
+
+	res->page_mmap = mmap;
+	res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+		index_file_size(phdr.addeded_chunks));
+	res->region = region;
+
+	res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+	res->header = reinterpret_cast<PageHeader *>(region);
+	*(res->header) = phdr;
+	
+	res->readonly = false;
+	res->header->is_closed = true;
+	res->header->is_open_to_write = false;
+	res->page_mmap->flush(0, sizeof(PageHeader));
+	res->update_index_recs();
+	res->flush();
+	return res;
 }
 
 Page *Page::open(std::string file_name, bool read_only) {

@@ -11,7 +11,7 @@
 namespace dariadb {
 namespace storage {
 
-class PageManager : public utils::NonCopy, public IChunkContainer {
+class PageManager : public utils::NonCopy, public IChunkContainer, public IChunkWriter {
 public:
 
 public:
@@ -32,6 +32,7 @@ public:
   EXPORT dariadb::Time maxTime();
 
   EXPORT void append(const std::string &file_prefix, const dariadb::MeasArray &ma);
+  EXPORT void appendChunks(const std::vector<Chunk*>& a, size_t count) override;
 
   EXPORT void fsck(bool force_check = true); // if false - check files openned for write-only
 

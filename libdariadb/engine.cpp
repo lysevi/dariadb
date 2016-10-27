@@ -2,6 +2,7 @@
 #include <libdariadb/config.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/timeutil.h>
+#include <libdariadb/storage/memstorage.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/lock_manager.h>
@@ -77,12 +78,20 @@ public:
       check_storage_version();
     }
 
-	_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
+	if (_settings->strategy != STRATEGY::MEMORY_STORAGE) {
+		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
-    _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
+		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
 
-	_aof_manager->set_downlevel(_dropper.get());
-    _next_query_id = Id();
+		_aof_manager->set_downlevel(_dropper.get());
+		this->_top_storage = _aof_manager;
+	}
+	else {
+		_memstorage = MemStorage_ptr{ new MemStorage(_settings) };
+		_memstorage->setDownLevel(_page_manager.get());
+		_top_storage = _memstorage;
+	}
+    
   }
   ~Private() { this->stop(); }
 
@@ -93,6 +102,7 @@ public:
       this->flush();
 	  
 	  ThreadManager::stop();
+	  _memstorage = nullptr;
 	  _aof_manager = nullptr;
 	  _page_manager = nullptr;
 	  _manifest = nullptr;
@@ -121,7 +131,7 @@ public:
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmin = _page_manager->minTime();
-    auto amin = _aof_manager->minTime();
+	Time amin= _top_storage->minTime();
 
     _lock_manager->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
@@ -133,7 +143,8 @@ public:
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
 
     auto pmax = _page_manager->maxTime();
-    auto amax = _aof_manager->maxTime();
+	Time amax= _top_storage->maxTime();
+
 
     _lock_manager->unlock(
         {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
@@ -153,11 +164,12 @@ public:
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
 
     };
-	auto am = _aof_manager.get();
+	auto am = _top_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      ar = am->minMaxTime(id, &subMin3, &subMax3);
-    };
+	  Time amin;
+	  ar = am->minMaxTime(id, &subMin3, &subMax3);
+	};
 
     _lock_manager->lock(
         LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
@@ -181,7 +193,8 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-    result = _aof_manager->append(value);
+	result=_top_storage->append(value);
+
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
     }
@@ -198,10 +211,11 @@ public:
     _lock_manager->lock(LOCK_KIND::READ,
                                   {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
     Id2Meas a_result, p_result;
-	auto am = _aof_manager.get();
+	auto am = _top_storage.get();
     AsyncTask am_at = [&ids, flag, &a_result, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      a_result = am->currentValue(ids, flag);
+      
+	  a_result = am->currentValue(ids, flag);
     };
 	auto pm = _page_manager.get();
     AsyncTask pm_at = [&ids, flag, &p_result, pm](const ThreadInfo &ti) {
@@ -222,8 +236,7 @@ public:
     Id2Meas result;
     for (auto &r : a_result) {
       auto fres = p_result.find(r.second.id);
-      if ((fres != p_result.end()) && (fres->second.time > r.second.time) &&
-          (fres->second.flag != Flags::_NO_DATA)) {
+      if ((fres != p_result.end()) && (fres->second.time > r.second.time) && (fres->second.flag != Flags::_NO_DATA)) {
         result.insert(std::make_pair(r.second.id, fres->second));
       } else {
         result.insert(std::make_pair(r.second.id, r.second));
@@ -236,9 +249,14 @@ public:
     TIMECODE_METRICS(ctmd, "flush", "Engine::flush");
     std::lock_guard<std::mutex> lg(_locker);
 
-	_aof_manager->flush();
-    _dropper->flush();
-    _dropper->flush();
+	if (_aof_manager != nullptr) {
+		_aof_manager->flush();
+		_dropper->flush();
+		_dropper->flush();
+	}
+	if (_memstorage != nullptr) {
+		_memstorage->flush();
+	}
 	_page_manager->flush();
   }
 
@@ -246,10 +264,15 @@ public:
 
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
-    result.aofs_count = _aof_manager->files_count();
+    result.aofs_count = _aof_manager==nullptr?0:_aof_manager->files_count();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
-    result.dropper_queues = _dropper->queues();
+	if (_dropper != nullptr) {
+		result.dropper_queues = _dropper->queues();
+	}
+	if (_memstorage != nullptr) {
+		result.memstorage = _memstorage->description();
+	}
     return result;
   }
 
@@ -261,10 +284,10 @@ public:
       pm->foreach (q, p_clbk);
     };
 
-	auto am = _aof_manager.get();
+	auto am = _top_storage.get();
     AsyncTask am_at = [&a_clbk, &q, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-	  am->foreach (q, a_clbk);
+	  am->foreach(q, a_clbk);
     };
 
     _lock_manager->lock(
@@ -343,9 +366,9 @@ public:
       local_q.ids.clear();
       local_q.ids.push_back(id);
 
-      if (_aof_manager->minMaxTime(id, &minT, &maxT) &&
+      if (_top_storage->minMaxTime(id, &minT, &maxT) &&
           (minT < q.time_point || maxT < q.time_point)) {
-        auto subres = _aof_manager->readTimePoint(local_q);
+        auto subres = _top_storage->readTimePoint(local_q);
         result[id] = subres[id];
         continue;
       } else {
@@ -359,7 +382,11 @@ public:
     return result;
   }
 
-  void drop_part_aofs(size_t count) { _aof_manager->drop_closed_files(count); }
+  void drop_part_aofs(size_t count) { 
+	  if (_aof_manager != nullptr) {
+		  _aof_manager->drop_closed_files(count);
+	  }
+  }
 
   void fsck() {
     logger_info("engine: fsck ", _settings->path);
@@ -405,15 +432,17 @@ public:
 protected:
   mutable std::mutex _locker;
   SubscribeNotificator _subscribe_notify;
-  Id _next_query_id;
   std::unique_ptr<Dropper> _dropper;
   LockManager_ptr _lock_manager;
   PageManager_ptr _page_manager;
   AOFManager_ptr _aof_manager;
+  MemStorage_ptr _memstorage;
   EngineEnvironment_ptr _engine_env;
   Settings_ptr _settings;
   Manifest_ptr _manifest;
   bool _stoped;
+
+  IMeasStorage_ptr _top_storage; //aof or memory storage.
 };
 
 Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}

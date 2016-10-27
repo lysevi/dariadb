@@ -62,7 +62,7 @@ void MemChunkAllocator::free(const MemChunkAllocator::allocated_data &d) {
 Map:
   Meas.id -> TimeTrack{ MemChunkList[MemChunk{data}]}
 */
-class TimeTrack;
+struct TimeTrack;
 struct MemChunk : public ZippedChunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
@@ -106,7 +106,7 @@ struct TimeTrack : public IMeasStorage {
   MemChunkList _chunks;
   MemChunk_Ptr _cur_chunk;
   utils::Locker _locker;
-  std::map<Time, MemChunk_Ptr> _index;
+  stx::btree_map<Time, MemChunk_Ptr> _index;
   void updateMinMax(const Meas&value) {
 	  _minTime = std::min(_minTime, value.time);
 	  _maxTime = std::max(_maxTime, value.time);
@@ -295,25 +295,23 @@ struct TimeTrack : public IMeasStorage {
 	  return result;
   }
 
-  void rm_chunk(MemChunk*c){
-      if(_index.erase(c->header->maxTime)!=1){
-          THROW_EXCEPTION("engine: memstorage logic error.");
+  void rm_chunk(MemChunk *c) {
+    _index.erase(c->header->maxTime);
+    this->_allocator->free(c->_a_data);
+    bool removed = false;
+    for (auto it = _chunks.begin(); it != _chunks.end(); ++it) {
+      if (it->get() == c) {
+        removed = true;
+        _chunks.erase(it);
+        break;
       }
-      this->_allocator->free(c->_a_data);
-      bool removed=false;
-      for(auto it=_chunks.begin();it!=_chunks.end();++it){
-          if(it->get()==c){
-              removed=true;
-              _chunks.erase(it);
-              break;
-          }
-      }
-      if(!removed){
-          THROW_EXCEPTION("engine: memstorage logic error.");
-      }
-      if(_cur_chunk.get()==c){
-          _cur_chunk=nullptr;
-      }
+    }
+    if (!removed) {
+      THROW_EXCEPTION("engine: memstorage logic error.");
+    }
+    if (_cur_chunk.get() == c) {
+      _cur_chunk = nullptr;
+    }
   }
 
   bool create_new_chunk(const Meas&value) {
@@ -355,15 +353,27 @@ struct MemStorage::Private : public IMeasStorage {
 	}
   append_result append(const Meas &value) override { 
 	  _all_tracks_locker.lock();
-	  auto track = _id2track.find(value.id);
+	  auto track = _id2track.find(value.id);//TODO refact!
 	  if (track == _id2track.end()) {
 		  track = _id2track.find(value.id);
 		  if (track == _id2track.end()) {
 			  auto new_track = std::make_shared<TimeTrack>(Time(0), value.id, &_chunk_allocator);
 			  _id2track.insert(std::make_pair(value.id, new_track));
 			  _all_tracks_locker.unlock();
-			  new_track->append(value);
-			  return append_result(1,0);
+			  auto res=new_track->append(value);
+			  if (res.writed != 1) {
+				  if (_down_level_storage == nullptr) {
+					  return res;
+				  }
+				  _all_tracks_locker.lock();
+				  drop_by_limit();
+				  _all_tracks_locker.unlock();
+
+				  return append(value);
+			  }
+			  else {
+				  return append_result(1, 0);
+			  }
 		  }
 	  }
       _all_tracks_locker.unlock();
@@ -408,8 +418,8 @@ struct MemStorage::Private : public IMeasStorage {
     assert(all_chunks.front()->header->maxTime<=all_chunks.back()->header->maxTime);
 
     _down_level_storage->appendChunks(all_chunks,chunks_to_delete);
-    std::list<Id> to_remove;
-    for(auto&c:all_chunks){
+    for(size_t i=0;i<chunks_to_delete;++i){
+		auto c = all_chunks[i];
         auto mc=dynamic_cast<MemChunk*>(c);
         assert(mc!=nullptr);
         TimeTrack *track=mc->_track;
@@ -458,7 +468,6 @@ struct MemStorage::Private : public IMeasStorage {
 			  tracker->second->foreach(local_q,clbk);
 		  }
 	  }
-	  clbk->is_end();
   }
 
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) override {
@@ -467,6 +476,7 @@ struct MemStorage::Private : public IMeasStorage {
 	  local_q.ids.resize(1);
 	  Id2Meas result;
 	  for (auto id : q.ids) {
+		  result[id].id = id;
 		  auto tracker = _id2track.find(id);
 		  if (tracker != _id2track.end()) {
 			  local_q.ids[0] = id;
@@ -485,6 +495,7 @@ struct MemStorage::Private : public IMeasStorage {
       local_ids.resize(1);
 	  Id2Meas result;
 	  for (auto id : ids) {
+		  result[id].id = id;
 		  auto tracker = _id2track.find(id);
 		  if (tracker != _id2track.end()) {
 			  local_ids[0] = id;
