@@ -398,7 +398,7 @@ struct MemStorage::Private : public IMeasStorage {
         return;
     }
     auto chunks_to_delete =
-        (int)(current_chunk_count * _settings->chunks_to_free);
+        (size_t)(current_chunk_count * _settings->chunks_to_free);
     logger_info("engine: drop ", chunks_to_delete, " chunks of ",
                 current_chunk_count);
     std::vector<Chunk*> all_chunks;
