@@ -96,7 +96,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
 }
 
 void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStorage *stor,
-                  size_t reads_count, bool quiet = false) {
+                  size_t reads_count, bool quiet = false, bool check_is_end=true) {
   std::cout << "==> init random ids...." << std::endl;
   dariadb::IdArray random_ids{all_id_set.begin(), all_id_set.end()};
   std::random_shuffle(random_ids.begin(), random_ids.end());
@@ -185,7 +185,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       std::cout << "time: " << elapsed << " average count: " << clbk->count / reads_count
                 << std::endl;
     }
-    if (!clbk->is_end_called) {
+    if (check_is_end && !clbk->is_end_called) {
       THROW_EXCEPTION("benchmark: logic error - !clbk->is_end_called");
     }
   }
