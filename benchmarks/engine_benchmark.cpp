@@ -106,14 +106,19 @@ void show_info(Engine *storage) {
     time_ss << timeutil::to_string(write_time);
 
     std::stringstream stor_ss;
-    stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
-            << " T:" << queue_sizes.active_works << ")";
+	stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
+		<< " T:" << queue_sizes.active_works;
+	if (strategy == STRATEGY::MEMORY_STORAGE) {
+		stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity 
+			<< " a:" << queue_sizes.memstorage.allocated;
+	}
+	stor_ss << ")";
 
     std::stringstream read_speed_ss;
-    read_speed_ss << reads_per_sec << "/sec";
+    read_speed_ss << reads_per_sec << "/s";
 
     std::stringstream write_speed_ss;
-    write_speed_ss << writes_per_sec << "/sec progress:";
+    write_speed_ss << writes_per_sec << "/s :";
 
     std::stringstream persent_ss;
     persent_ss << (int64_t(100) * append_count) / dariadb_bench::all_writes << '%';
@@ -124,8 +129,8 @@ void show_info(Engine *storage) {
     std::cout << "\r"
               << " time: " << std::setw(20) << std::setfill(OUT_SEP) << time_ss.str()
               << " storage:" << stor_ss.str() << drop_ss.str()
-              << " reads: " << reads_count << " speed:" << read_speed_ss.str()
-              << " writes: " << append_count << " speed: " << write_speed_ss.str()
+              << " rd: " << reads_count << " s:" << read_speed_ss.str()
+              << " wr: " << append_count << " s: " << write_speed_ss.str()
               << persent_ss.str();
     w0 = w1;
     t0 = t1;
@@ -288,7 +293,6 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
 }
 
 void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr) {
-  auto strategy = settings->strategy;
   std::cout << "==> Check storage state(" << strategy << ")... " << std::flush;
 
   auto files = raw_ptr->queue_size();
@@ -305,6 +309,12 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr
                       " T:", files.active_works, ")");
     }
     break;
+  case dariadb::storage::STRATEGY::MEMORY_STORAGE:
+	  if (files.aofs_count != 0 && files.pages_count == 0) {
+		  THROW_EXCEPTION("MEMORY_STORAGE error: (p:", files.pages_count, " a:", files.aofs_count,
+			  " T:", files.active_works, ")");
+	  }
+	  break;
   default:
     THROW_EXCEPTION("unknow strategy: ", strategy);
   }
@@ -343,7 +353,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
-    
+	settings->strategy = strategy;
     utils::LogManager::start(log_ptr);
 
     auto raw_ptr = new Engine(settings);
@@ -392,7 +402,7 @@ int main(int argc, char *argv[]) {
     check_engine_state(settings, raw_ptr);
 
     if (!readonly) {
-		{
+		if(strategy!= dariadb::storage::STRATEGY::MEMORY_STORAGE){
 			size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
 			std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
 			stop_info = false;

@@ -19,6 +19,7 @@
 #include <libdariadb/utils/fs.h>
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -167,7 +168,6 @@ public:
 	auto am = _top_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-	  Time amin;
 	  ar = am->minMaxTime(id, &subMin3, &subMax3);
 	};
 
@@ -264,6 +264,7 @@ public:
 
   Engine::QueueSizes queue_size() const {
     QueueSizes result;
+	memset(&result, 0, sizeof(QueueSizes));
     result.aofs_count = _aof_manager==nullptr?0:_aof_manager->files_count();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
