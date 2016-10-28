@@ -129,6 +129,7 @@ struct TimeTrack : public IMeasStorage {
 		}
 	}
 	else {
+		logger_fatal("engine: memstorage - id:",this->_meas_id, ", can't write to past.");
 		return append_result(1, 1);
 	}
 	updateMinMax(value);
@@ -298,11 +299,25 @@ using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage {
 	Private(const storage::Settings_ptr &s) : _chunk_allocator(s->memory_limit, s->page_chunk_size) {
+		_stoped = false;
 		_down_level_storage = nullptr;
 		_settings = s;
 		if (_settings->id_count != 0) {
 			_id2track.reserve(_settings->id_count);
 		}
+	}
+	void stop() {
+		if (!_stoped) {
+			logger_info("engine: stop memstorage.");
+			if (this->_down_level_storage != nullptr) {
+				logger_info("engine: memstorage - drop all chunk to disk");
+				this->drop_by_limit(1.0);
+			}
+			_stoped = true;
+		}
+	}
+	~Private() {
+		stop();
 	}
 
 	MemStorage::Description description()const {
@@ -351,44 +366,45 @@ struct MemStorage::Private : public IMeasStorage {
           return append(value);
 	  }
   }
+  void drop_by_limit(float chunk_to_free) {
+	  auto current_chunk_count = this->_chunk_allocator._allocated;
+	  auto chunks_to_delete =
+		  (size_t)(current_chunk_count * chunk_to_free);
+	  logger_info("engine: drop ", chunks_to_delete, " chunks of ", current_chunk_count);
+	  std::vector<Chunk*> all_chunks;
+	  all_chunks.resize(current_chunk_count);
+	  size_t pos = 0;
+	  for (auto &kv : _id2track) {
+		  TimeTrack_ptr t = kv.second;
+		  for (auto &c : t->_chunks) {
+			  all_chunks[pos++] = c.get();
+		  }
+	  }
 
+	  std::sort(all_chunks.begin(), all_chunks.end(),
+		  [](const Chunk* l, const Chunk* r) {
+		  return l->header->maxTime < r->header->maxTime;
+	  });
+	  assert(all_chunks.front()->header->maxTime <= all_chunks.back()->header->maxTime);
+
+	  _down_level_storage->appendChunks(all_chunks, chunks_to_delete);
+	  for (size_t i = 0; i<chunks_to_delete; ++i) {
+		  auto c = all_chunks[i];
+		  auto mc = dynamic_cast<MemChunk*>(c);
+		  assert(mc != nullptr);
+		  TimeTrack *track = mc->_track;
+		  track->rm_chunk(mc);
+		  if (track->_chunks.empty()) {
+			  _id2track.erase(track->_meas_id);
+		  }
+	  }
+  }
   void drop_by_limit() {
-    auto current_chunk_count = this->_chunk_allocator._allocated;
-    if(current_chunk_count<this->_chunk_allocator._capacity){
-        return;
-    }
-    auto chunks_to_delete =
-        (size_t)(current_chunk_count * _settings->chunks_to_free);
-    logger_info("engine: drop ", chunks_to_delete, " chunks of ",
-                current_chunk_count);
-    std::vector<Chunk*> all_chunks;
-    all_chunks.resize(current_chunk_count);
-    size_t pos = 0;
-    for (auto &kv : _id2track) {
-      TimeTrack_ptr t = kv.second;
-      for (auto &c : t->_chunks) {
-        all_chunks[pos++] = c.get();
-      }
-    }
-
-    std::sort(all_chunks.begin(), all_chunks.end(),
-              [](const Chunk* l, const Chunk* r) {
-                return l->header->maxTime < r->header->maxTime;
-              });
-    assert(all_chunks.front()->header->maxTime<=all_chunks.back()->header->maxTime);
-
-    _down_level_storage->appendChunks(all_chunks,chunks_to_delete);
-    for(size_t i=0;i<chunks_to_delete;++i){
-		auto c = all_chunks[i];
-        auto mc=dynamic_cast<MemChunk*>(c);
-        assert(mc!=nullptr);
-        TimeTrack *track=mc->_track;
-        track->rm_chunk(mc);
-        if(track->_chunks.empty()){
-            _id2track.erase(track->_meas_id);
-        }
-    }
-
+	  auto current_chunk_count = this->_chunk_allocator._allocated;
+	  if (current_chunk_count<this->_chunk_allocator._capacity) {
+		  return;
+	  }
+	  drop_by_limit(_settings->chunks_to_free);
   }
 
   Time minTime() override { 
@@ -480,6 +496,7 @@ struct MemStorage::Private : public IMeasStorage {
   utils::Locker _all_tracks_locker;
   storage::Settings_ptr _settings;
   IChunkWriter* _down_level_storage;
+  bool _stoped;
 };
 
 MemStorage::MemStorage(const storage::Settings_ptr &s) : _impl(new MemStorage::Private(s)) {}
@@ -523,6 +540,10 @@ append_result MemStorage::append(const Meas &value) {
 
 void MemStorage::flush() {
   _impl->flush();
+}
+
+void MemStorage::stop() {
+	_impl->stop();
 }
 
 void MemStorage::setDownLevel(IChunkWriter*_down) {

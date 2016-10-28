@@ -210,12 +210,13 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
     if (dariadb::utils::fs::path_exists(storage_path)) {
         dariadb::utils::fs::rm(storage_path);
     }
+	MokChunkWriter*cw = new MokChunkWriter;
     {
         auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
         settings->memory_limit=1024*1024;
         settings->page_chunk_size = 128;
         dariadb::storage::MemStorage ms{ settings };
-        MokChunkWriter*cw = new MokChunkWriter;
+        
         ms.setDownLevel(cw);
 
         auto e = dariadb::Meas::empty();
@@ -226,9 +227,8 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
                 break;
             }
         }
-        delete cw;
-
     }
+	delete cw;
     if (dariadb::utils::fs::path_exists(storage_path)) {
         dariadb::utils::fs::rm(storage_path);
     }

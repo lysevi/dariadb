@@ -98,18 +98,21 @@ public:
 
   void stop() {
     if (!_stoped) {
+	  _top_storage = nullptr;
       _subscribe_notify.stop();
 
       this->flush();
-	  
-	  ThreadManager::stop();
-	  _memstorage = nullptr;
+	  if (_memstorage != nullptr) {
+		  _memstorage = nullptr;
+	  }
 	  _aof_manager = nullptr;
 	  _page_manager = nullptr;
 	  _manifest = nullptr;
 	  _lock_manager = nullptr;
 	  _dropper = nullptr;
       _stoped = true;
+
+	  ThreadManager::stop();
     }
   }
 

@@ -57,6 +57,7 @@ public:
   EXPORT append_result append(const Meas &value) override;
   EXPORT void flush() override;
   EXPORT void setDownLevel(IChunkWriter*_down);
+  EXPORT void stop();
 private:
   struct Private;
   std::unique_ptr<Private> _impl;
