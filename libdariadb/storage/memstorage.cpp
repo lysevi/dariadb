@@ -67,7 +67,6 @@ struct MemChunk : public ZippedChunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
   MemChunkAllocator::allocated_data _a_data;
-  MeasList inserted;
   TimeTrack *_track;
   MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, Meas first_m)
       : ZippedChunk(index, buffer, size, first_m) {
@@ -79,10 +78,6 @@ struct MemChunk : public ZippedChunk {
     buffer_ptr = buffer;
   }
   ~MemChunk() {}
-
-  void insert(Meas value) {
-	  inserted.push_back(value);
-  }
 };
 
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;
@@ -134,19 +129,7 @@ struct TimeTrack : public IMeasStorage {
 		}
 	}
 	else {
-		auto target_to_insert = _cur_chunk;
-		auto begin = _index.lower_bound(value.time);
-		auto end = _index.upper_bound(value.time);
-		for (auto it = begin; it != end; ++end) {
-			if (it == _index.end()) {
-				THROW_EXCEPTION("egine: memstorage logic error.");
-			}
-			if (utils::inInterval(it->second->header->minTime, it->second->header->maxTime, value.time)) {
-				target_to_insert = it->second;
-				break;
-			}
-		}
-		target_to_insert->insert(value);
+		return append_result(1, 1);
 	}
 	updateMinMax(value);
     return append_result(1, 0);
@@ -201,7 +184,7 @@ struct TimeTrack : public IMeasStorage {
 		  || utils::inInterval(c->header->minTime, c->header->maxTime, q.to)
 		  || utils::inInterval(q.from, q.to, c->header->minTime)
 		  || utils::inInterval(q.from, q.to, c->header->maxTime)) {
-		  if (c->inserted.empty()) {
+
 			  auto rdr = c->get_reader();
 
 			  while (!rdr->is_end()) {
@@ -210,29 +193,6 @@ struct TimeTrack : public IMeasStorage {
 					  clbk->call(v);
 				  }
 			  }
-		  }
-		  else {
-			  auto total_size = c->header->count + c->inserted.size()+1;
-			  MeasArray ma;
-			  ma.reserve(total_size);
-			  auto rdr = c->get_reader();
-
-			  while (!rdr->is_end()) {
-				  auto v = rdr->readNext();
-				  if (utils::inInterval(q.from, q.to, v.time)) {
-					  ma.push_back(v);
-				  }
-			  }
-			  for (auto&v : c->inserted) {
-				  ma.push_back(v);
-			  }
-			  std::sort(ma.begin(), ma.end(), meas_time_compare_less());
-			  for (auto&v : ma) {
-				  if (utils::inInterval(q.from, q.to, v.time)) {
-					  clbk->call(v);
-				  }
-			  }
-		  }
 	  }
   }
 
@@ -378,7 +338,7 @@ struct MemStorage::Private : public IMeasStorage {
 	  }
       _all_tracks_locker.unlock();
       auto result=track->second->append(value);
-	  if (result.ignored == 0) {
+	  if (result.ignored == 0 || (result.writed==1 && result.ignored==1)) {
 		  return result;
 	  }
 	  else {
