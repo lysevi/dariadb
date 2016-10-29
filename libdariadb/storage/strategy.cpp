@@ -14,8 +14,8 @@ std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
     strat = dariadb::storage::STRATEGY::COMPRESSED;
   }
 
-  if (token == "MEMORY_STORAGE") {
-    strat = dariadb::storage::STRATEGY::MEMORY_STORAGE;
+  if (token == "MEMORY") {
+    strat = dariadb::storage::STRATEGY::MEMORY;
   }
   return in;
 }
@@ -28,8 +28,8 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STRATEGY 
   case STRATEGY::FAST_WRITE:
     stream << "FAST_WRITE";
     break;
-  case STRATEGY::MEMORY_STORAGE:
-    stream << "MEMORY_STORAGE";
+  case STRATEGY::MEMORY:
+    stream << "MEMORY";
     break;
   default:
     stream << "UNKNOW: ui16=" << (uint16_t)strat;

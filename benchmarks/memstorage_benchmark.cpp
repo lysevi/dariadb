@@ -29,7 +29,7 @@ std::atomic_llong append_count{ 0 };
 dariadb::Time write_time = 0;
 bool stop_info = false;
 dariadb::storage::MemStorage* memstorage;
-STRATEGY strategy = STRATEGY::MEMORY_STORAGE;
+STRATEGY strategy = STRATEGY::MEMORY;
 Time store_period = boost::posix_time::hours(dariadb_bench::hours_write_perid / 2).total_microseconds();
 
 void show_info() {

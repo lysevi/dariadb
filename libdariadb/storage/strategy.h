@@ -7,7 +7,7 @@
 namespace dariadb {
 namespace storage {
 
-enum class STRATEGY : uint16_t { FAST_WRITE = 0, COMPRESSED, MEMORY_STORAGE};
+enum class STRATEGY : uint16_t { FAST_WRITE = 0, COMPRESSED, MEMORY};
 
 EXPORT std::istream &operator>>(std::istream &in, STRATEGY &strat);
 EXPORT std::ostream &operator<<(std::ostream &stream, const STRATEGY &strat);

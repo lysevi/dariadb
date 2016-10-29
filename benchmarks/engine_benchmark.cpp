@@ -108,7 +108,7 @@ void show_info(Engine *storage) {
     std::stringstream stor_ss;
 	stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
 		<< " T:" << queue_sizes.active_works;
-	if (strategy == STRATEGY::MEMORY_STORAGE) {
+    if (strategy == STRATEGY::MEMORY) {
 		stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity 
 			<< " a:" << queue_sizes.memstorage.allocated;
 	}
@@ -309,9 +309,9 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr
                       " T:", files.active_works, ")");
     }
     break;
-  case dariadb::storage::STRATEGY::MEMORY_STORAGE:
+  case dariadb::storage::STRATEGY::MEMORY:
 	  if (files.aofs_count != 0 && files.pages_count == 0) {
-		  THROW_EXCEPTION("MEMORY_STORAGE error: (p:", files.pages_count, " a:", files.aofs_count,
+          THROW_EXCEPTION("MEMORY_STORAGE error: (p:", files.pages_count, " a:", files.aofs_count,
 			  " T:", files.active_works, ")");
 	  }
 	  break;
@@ -402,7 +402,7 @@ int main(int argc, char *argv[]) {
     check_engine_state(settings, raw_ptr);
 
     if (!readonly) {
-		if(strategy!= dariadb::storage::STRATEGY::MEMORY_STORAGE){
+        if(strategy!= dariadb::storage::STRATEGY::MEMORY){
 			size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
 			std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
 			stop_info = false;

@@ -336,7 +336,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 		}
 
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-		settings->strategy = STRATEGY::MEMORY_STORAGE;
+        settings->strategy = STRATEGY::MEMORY;
 		settings->page_chunk_size = chunk_size;
 		settings->page_chunk_size = 128;
 		settings->memory_limit =  50*1024;

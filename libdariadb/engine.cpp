@@ -79,7 +79,7 @@ public:
       check_storage_version();
     }
 
-	if (_settings->strategy != STRATEGY::MEMORY_STORAGE) {
+    if (_settings->strategy != STRATEGY::MEMORY) {
 		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
 		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);

@@ -250,11 +250,13 @@ public:
 	  auto queue_sizes = _env.storage->queue_size();
 	  std::stringstream stor_ss;
 
-	  stor_ss << "(p:" << queue_sizes.pages_count
-		  << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
-		  << ")";
-
-	  stor_ss << "[a:" << queue_sizes.dropper_queues.aof << "]";
+      stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
+          << " T:" << queue_sizes.active_works;
+      if (_env.storage->strategy() == dariadb::storage::STRATEGY::MEMORY) {
+          stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
+              << " a:" << queue_sizes.memstorage.allocated;
+      }
+      stor_ss << ")";
 
 	  logger_info("server: stat ", stor_ss.str());
   }
