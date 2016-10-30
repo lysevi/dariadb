@@ -28,12 +28,12 @@ public:
              (major == other.major && (minor == other.minor) && (patch > other.patch));
     }
   };
-  //TODO rename to Description.
-  struct QueueSizes {
+
+  struct Description {
     size_t aofs_count;   ///  AOF count
     size_t pages_count;  /// pages count
     size_t active_works; /// async tasks runned.
-    Dropper::Queues dropper_queues;
+    Dropper::Description dropper;
 	MemStorage::Description memstorage;
   };
 
@@ -48,7 +48,7 @@ public:
 
   EXPORT void flush() override;
   EXPORT void stop();
-  EXPORT QueueSizes queue_size() const;//TODO rename to Description
+  EXPORT Description description() const;//TODO rename to Description
 
   EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   EXPORT virtual MeasList readInterval(const QueryInterval &q) override;

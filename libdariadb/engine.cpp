@@ -265,14 +265,14 @@ public:
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
 
-  Engine::QueueSizes queue_size() const {
-    QueueSizes result;
-	memset(&result, 0, sizeof(QueueSizes));
+  Engine::Description description() const {
+    Engine::Description result;
+    memset(&result, 0, sizeof(Description));
     result.aofs_count = _aof_manager==nullptr?0:_aof_manager->files_count();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
 	if (_dropper != nullptr) {
-		result.dropper_queues = _dropper->queues();
+        result.dropper = _dropper->description();
 	}
 	if (_memstorage != nullptr) {
 		result.memstorage = _memstorage->description();
@@ -486,8 +486,8 @@ void Engine::flush() {
 void Engine::stop() {
   _impl->stop();
 }
-Engine::QueueSizes Engine::queue_size() const {
-  return _impl->queue_size();
+Engine::Description Engine::description() const {
+  return _impl->description();
 }
 
 void Engine::foreach (const QueryInterval &q, IReaderClb * clbk) {

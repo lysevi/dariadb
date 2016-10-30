@@ -100,7 +100,7 @@ void show_info(Engine *storage) {
 
     auto writes_per_sec = (w1 - w0) / step_time;
     auto reads_per_sec = (r1 - r0) / step_time;
-    auto queue_sizes = storage->queue_size();
+    auto queue_sizes = storage->description();
 
     std::stringstream time_ss;
     time_ss << timeutil::to_string(write_time);
@@ -124,7 +124,7 @@ void show_info(Engine *storage) {
     persent_ss << (int64_t(100) * append_count) / dariadb_bench::all_writes << '%';
 
     std::stringstream drop_ss;
-    drop_ss << "[a:" << queue_sizes.dropper_queues.aof << "]";
+    drop_ss << "[a:" << queue_sizes.dropper.aof << "]";
 
     std::cout << "\r"
               << " time: " << std::setw(20) << std::setfill(OUT_SEP) << time_ss.str()
@@ -147,13 +147,13 @@ void show_drop_info(Engine *storage) {
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    auto queue_sizes = storage->queue_size();
+    auto queue_sizes = storage->description();
 
     std::cout << "\r"
               << " storage: (p:" << queue_sizes.pages_count
               << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
               << ")"
-              << "[a:" << queue_sizes.dropper_queues.aof << "]          ";
+              << "[a:" << queue_sizes.dropper.aof << "]          ";
     std::cout.flush();
     if (stop_info) {
       std::cout.flush();
@@ -295,7 +295,7 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
 void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr) {
   std::cout << "==> Check storage state(" << strategy << ")... " << std::flush;
 
-  auto files = raw_ptr->queue_size();
+  auto files = raw_ptr->description();
   switch (strategy) {
   case dariadb::storage::STRATEGY::FAST_WRITE:
     if (files.pages_count != 0) {
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
 
     if (!readonly) {
         if(strategy!= dariadb::storage::STRATEGY::MEMORY){
-			size_t ccount = size_t(raw_ptr->queue_size().aofs_count);
+            size_t ccount = size_t(raw_ptr->description().aofs_count);
 			std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
 			stop_info = false;
 			std::thread flush_info_thread(show_drop_info, raw_ptr);
@@ -418,12 +418,12 @@ int main(int argc, char *argv[]) {
 			std::cout << "drop time: " << elapsed << std::endl;
 		}
 		{
-			auto pages_before = raw_ptr->queue_size().pages_count;
+            auto pages_before = raw_ptr->description().pages_count;
 			std::cout << "==> pages before compaction " << pages_before << "..." << std::endl;
 			auto start = clock();
 			raw_ptr->compactbyTime(start_time, first_day_milisec);
 			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-			auto pages_after = raw_ptr->queue_size().pages_count;
+            auto pages_after = raw_ptr->description().pages_count;
 			std::cout << "==> pages after compaction " << pages_after << "..." << std::endl;
 			std::cout << "compaction time: " << elapsed << std::endl;
 
@@ -433,7 +433,7 @@ int main(int argc, char *argv[]) {
 		}
     }
 
-    auto queue_sizes = raw_ptr->queue_size();
+    auto queue_sizes = raw_ptr->description();
     std::cout << "\r"
               << " storage: (p:" << queue_sizes.pages_count
               << " a:" << queue_sizes.aofs_count << ")" << std::endl;

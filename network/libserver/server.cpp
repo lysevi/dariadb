@@ -247,7 +247,7 @@ public:
 	  if (_env.storage == nullptr) {//for tests.
 		  return;
 	  }
-	  auto queue_sizes = _env.storage->queue_size();
+      auto queue_sizes = _env.storage->description();
 	  std::stringstream stor_ss;
 
       stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count

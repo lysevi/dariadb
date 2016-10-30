@@ -32,7 +32,6 @@ struct MemChunkAllocator {
 
 class MemStorage : public IMeasStorage {
 public:
-  //TODO rename to Description
   struct Description {
 	  size_t allocated;
       size_t allocator_capacity;

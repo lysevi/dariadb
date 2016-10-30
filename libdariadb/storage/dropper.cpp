@@ -18,8 +18,8 @@ Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
 
 Dropper::~Dropper() {}
 
-Dropper::Queues Dropper::queues() const {
-  Dropper::Queues result;
+Dropper::Description Dropper::description() const {
+  Dropper::Description result;
   result.aof = _in_queue.load();
   return result;
 }

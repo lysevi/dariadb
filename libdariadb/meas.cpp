@@ -20,7 +20,6 @@ Meas Meas::empty(Id id) {
   return res;
 }
 
-//TODO move to header.
 bool dariadb::areSame(Value a, Value b, const Value EPSILON) {
   return std::fabs(a - b) < EPSILON;
 }

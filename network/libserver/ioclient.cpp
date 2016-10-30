@@ -292,7 +292,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
       }
     logger_info("server: #", this->_async_connection->id(), " query to storage compaction.");
     if(this->env->storage->strategy() == storage::STRATEGY::FAST_WRITE){
-        auto aofs=this->env->storage->queue_size().aofs_count;
+        auto aofs=this->env->storage->description().aofs_count;
         logger_info("server: #", this->_async_connection->id(), " drop ", aofs," aofs to pages.");
         this->env->storage->drop_part_aofs(aofs);
         this->env->storage->flush();

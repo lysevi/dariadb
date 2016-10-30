@@ -12,7 +12,7 @@ namespace storage {
 
 class Dropper : public dariadb::storage::IAofDropper{
 public:
-  struct Queues {
+  struct Description {
     size_t aof;
   };
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager, AOFManager_ptr aof_manager);
@@ -24,7 +24,7 @@ public:
   // 1. rm PAGE files with name exists AOF file.
   static void cleanStorage(std::string storagePath);
 
-  Queues queues() const;
+  Description description() const;
 
 private:
   void drop_aof_internal(const std::string fname);
