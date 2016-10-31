@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cstring>
 #include <cassert>
+#include <set>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -83,13 +84,19 @@ struct MemChunk : public ZippedChunk {
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;
 using MemChunkList = std::list<MemChunk_Ptr>;
 
+class MemoryChunkContainer {
+public:
+	virtual void add_chunk(MemChunk_Ptr&c) = 0;
+};
+
 struct TimeTrack : public IMeasStorage {
-  TimeTrack(const Time step, Id meas_id, MemChunkAllocator*allocator) {
+  TimeTrack(MemoryChunkContainer*mcc, const Time step, Id meas_id, MemChunkAllocator*allocator) {
 	  _allocator = allocator;
     _meas_id = meas_id;
     _step = step;
 	_minTime = MAX_TIME;
 	_maxTime = MIN_TIME;
+	_mcc = mcc;
   }
   ~TimeTrack() {}
 
@@ -98,17 +105,18 @@ struct TimeTrack : public IMeasStorage {
   Time _minTime;
   Time _maxTime;
   Time _step;
-  MemChunkList _chunks;
   MemChunk_Ptr _cur_chunk;
   utils::Locker _locker;
   stx::btree_map<Time, MemChunk_Ptr> _index;
+  MemoryChunkContainer*_mcc;
+
   void updateMinMax(const Meas&value) {
 	  _minTime = std::min(_minTime, value.time);
 	  _maxTime = std::max(_maxTime, value.time);
   }
   virtual append_result append(const Meas &value) override {
     std::lock_guard<utils::Locker> lg(_locker);
-    if (_chunks.empty() || _chunks.back()->is_full()) {
+    if (_cur_chunk==nullptr || _cur_chunk->is_full()) {
 		if (!create_new_chunk(value)) {
 			return append_result(0,1);
 		}
@@ -154,15 +162,19 @@ struct TimeTrack : public IMeasStorage {
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  *minResult = MAX_TIME;
 	  *maxResult = MIN_TIME;
-	  for (auto c : _chunks) {
+	  for (auto kv : _index) {
+		  auto c = kv.second;
 		  *minResult = std::min(c->header->minTime, *minResult);
 		  *maxResult = std::max(c->header->maxTime, *maxResult);
 	  }
+	  *minResult = std::min(_cur_chunk->header->minTime, *minResult);
+	  *maxResult = std::max(_cur_chunk->header->maxTime, *maxResult);
 	  return true;
   }
 
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {
     std::lock_guard<utils::Locker> lg(_locker);
+
 	auto end=_index.upper_bound(q.to);
 	auto begin = _index.lower_bound(q.from);
 	if (begin != _index.begin()) {
@@ -246,33 +258,28 @@ struct TimeTrack : public IMeasStorage {
       assert(ids[0]==this->_meas_id);
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  Id2Meas result;
-	  auto last = _chunks.back()->header->last;
-	  if (last.inFlag(flag)) {
-		  result[_meas_id] = _chunks.back()->header->last;
+	  if (_cur_chunk != nullptr) {
+		  auto last = _cur_chunk->header->last;
+		  if (last.inFlag(flag)) {
+			  result[_meas_id] = last;
+			  return result;
+		  }
 	  }
-	  else {
-		  result[_meas_id].flag = Flags::_NO_DATA;
-	  }
+	  result[_meas_id].flag = Flags::_NO_DATA;
 	  return result;
   }
 
   void rm_chunk(MemChunk *c) {
     _index.erase(c->header->maxTime);
     this->_allocator->free(c->_a_data);
-    bool removed = false;
-    for (auto it = _chunks.begin(); it != _chunks.end(); ++it) {
-      if (it->get() == c) {
-        removed = true;
-        _chunks.erase(it);
-        break;
-      }
-    }
-    if (!removed) {
-      THROW_EXCEPTION("engine: memstorage logic error.");
-    }
+   
     if (_cur_chunk.get() == c) {
       _cur_chunk = nullptr;
-    }
+	}
+  }
+
+  void rereadMinMax() {
+	  this->minMaxTime(this->_cur_chunk->header->first.id, &_minTime, &_maxTime);
   }
 
   bool create_new_chunk(const Meas&value) {
@@ -288,7 +295,7 @@ struct TimeTrack : public IMeasStorage {
 		  _allocator->_bufferSize, value } };
       mc->_track=this;
       mc->_a_data=new_chunk_data;
-	  this->_chunks.push_back(mc);
+	  this->_mcc->add_chunk(mc);
 	  _cur_chunk = mc;
 	  return true;
   }
@@ -297,7 +304,7 @@ struct TimeTrack : public IMeasStorage {
 using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
 using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
-struct MemStorage::Private : public IMeasStorage {
+struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	Private(const storage::Settings_ptr &s) : _chunk_allocator(s->memory_limit, s->page_chunk_size) {
 		_stoped = false;
 		_down_level_storage = nullptr;
@@ -332,7 +339,7 @@ struct MemStorage::Private : public IMeasStorage {
 	  if (track == _id2track.end()) {
 		  track = _id2track.find(value.id);
 		  if (track == _id2track.end()) {
-			  auto new_track = std::make_shared<TimeTrack>(Time(0), value.id, &_chunk_allocator);
+			  auto new_track = std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
 			  _id2track.insert(std::make_pair(value.id, new_track));
 			  _all_tracks_locker.unlock();
 			  auto res=new_track->append(value);
@@ -366,6 +373,7 @@ struct MemStorage::Private : public IMeasStorage {
           return append(value);
 	  }
   }
+  
   void drop_by_limit(float chunk_to_free) {
 	  auto current_chunk_count = this->_chunk_allocator._allocated;
 	  auto chunks_to_delete =
@@ -374,32 +382,40 @@ struct MemStorage::Private : public IMeasStorage {
 	  std::vector<Chunk*> all_chunks;
 	  all_chunks.resize(current_chunk_count);
 	  size_t pos = 0;
-	  for (auto &kv : _id2track) {
-		  TimeTrack_ptr t = kv.second;
-		  for (auto &c : t->_chunks) {
-			  all_chunks[pos++] = c.get();
-		  }
+	  for (auto &c : _chunks) {
+		  all_chunks[pos++] = c.get();
 	  }
 
-	  std::sort(all_chunks.begin(), all_chunks.end(),
-		  [](const Chunk* l, const Chunk* r) {
-		  return l->header->maxTime < r->header->maxTime;
-	  });
-	  assert(all_chunks.front()->header->maxTime <= all_chunks.back()->header->maxTime);
-
 	  _down_level_storage->appendChunks(all_chunks, chunks_to_delete);
+	  std::set<TimeTrack*> updated_tracks;
+	  std::set<TimeTrack*> removed_tracks;
 	  for (size_t i = 0; i<chunks_to_delete; ++i) {
 		  auto c = all_chunks[i];
 		  auto mc = dynamic_cast<MemChunk*>(c);
 		  assert(mc != nullptr);
 		  TimeTrack *track = mc->_track;
 		  track->rm_chunk(mc);
-		  if (track->_chunks.empty()) {
+		  if (track->_cur_chunk==nullptr) {
+			  removed_tracks.insert(track);
 			  _id2track.erase(track->_meas_id);
 		  }
 	  }
+
+	  _chunks_locker.lock();
+	  auto from = _chunks.begin();
+	  auto to = _chunks.begin();
+	  std::advance(to, chunks_to_delete);
+	  _chunks.erase(from, to);
+	  for (auto&t : updated_tracks) {
+		  if (removed_tracks.find(t) != removed_tracks.end()) {
+			  t->rereadMinMax();
+		  }
+	  }
+	  _chunks_locker.unlock();
+	  
   }
   void drop_by_limit() {
+	  std::lock_guard<std::mutex> lg(_drop_locker);
 	  auto current_chunk_count = this->_chunk_allocator._allocated;
 	  if (current_chunk_count<this->_chunk_allocator._capacity) {
 		  return;
@@ -491,11 +507,20 @@ struct MemStorage::Private : public IMeasStorage {
   void setDownLevel(IChunkWriter*down) {
 	  _down_level_storage = down;
   }
+
+  void add_chunk(MemChunk_Ptr&chunk) override{
+	  std::lock_guard<utils::Locker> lg(_chunks_locker);
+	  _chunks.push_back(chunk);
+  }
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;
   utils::Locker _all_tracks_locker;
   storage::Settings_ptr _settings;
   IChunkWriter* _down_level_storage;
+  
+  MemChunkList  _chunks;
+  utils::Locker _chunks_locker;
+  std::mutex _drop_locker;
   bool _stoped;
 };
 

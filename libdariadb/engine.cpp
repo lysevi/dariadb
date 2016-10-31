@@ -236,16 +236,13 @@ public:
     am_async->wait();
     _lock_manager->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
 
-    Id2Meas result;
-    for (auto &r : a_result) {
-      auto fres = p_result.find(r.second.id);
-      if ((fres != p_result.end()) && (fres->second.time > r.second.time) && (fres->second.flag != Flags::_NO_DATA)) {
-        result.insert(std::make_pair(r.second.id, fres->second));
-      } else {
-        result.insert(std::make_pair(r.second.id, r.second));
-      }
+    for (auto &r : p_result) {
+      auto fres = a_result.find(r.second.id);
+      if ((fres == a_result.end()) || ((fres->second.time < r.second.time) && (r.second.flag != Flags::_NO_DATA))) {
+		  a_result[r.second.id] = r.second;
+      } 
     }
-    return result;
+    return a_result;
   }
 
   void flush() {
