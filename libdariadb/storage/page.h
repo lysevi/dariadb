@@ -68,7 +68,7 @@ private:
   ChunkWithIndex _openned_chunk;
 
   void check_page_struct();
-
+  static Page* make_page(const std::string&file_name, const PageHeader&phdr);
 public:
   uint8_t *region; // page  file mapp region
   PageHeader *header;

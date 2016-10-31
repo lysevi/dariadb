@@ -20,6 +20,16 @@ using namespace dariadb;
 namespace PageInner {
 	using HdrAndBuffer = std::tuple<ChunkHeader, std::shared_ptr<uint8_t>>;
 
+	PageHeader emptyPageHeader(uint64_t chunk_id) {
+		PageHeader phdr;
+		memset(&phdr, 0, sizeof(PageHeader));
+		phdr.maxTime = dariadb::MIN_TIME;
+		phdr.minTime = dariadb::MAX_TIME;
+		phdr.max_chunk_id = chunk_id;
+		
+		return phdr;
+	}
+
 	std::map<Id,MeasArray> splitById(const MeasArray &ma) {
 		dariadb::IdSet dropped;
 		auto count = ma.size();
@@ -162,6 +172,7 @@ namespace PageInner {
 	}
 }
 
+
 Page::~Page() {
   if (!this->readonly) {
     if (this->_openned_chunk.ch != nullptr) {
@@ -188,11 +199,8 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
   auto to_compress = PageInner::splitById(ma);
 
-  PageHeader phdr;
-  memset(&phdr, 0, sizeof(PageHeader));
-  phdr.maxTime = dariadb::MIN_TIME;
-  phdr.minTime = dariadb::MAX_TIME;
-  phdr.max_chunk_id = chunk_id;
+  PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+  
 
   std::list<PageInner::HdrAndBuffer> compressed_results =
       PageInner::compressValues(to_compress, phdr, max_chunk_size);
@@ -200,28 +208,32 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
   phdr.filesize = page_size;
 
-  auto res = new Page;
-  res->readonly = false;
-  auto mmap = utils::fs::MappedFile::open(file_name, false);
-  res->filename = file_name;
-  auto region = mmap->data();
+  return make_page(file_name, phdr);;
+}
 
-  res->page_mmap = mmap;
-  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
-                                  index_file_size(phdr.addeded_chunks));
-  res->region = region;
+Page* Page::make_page(const std::string&file_name, const PageHeader&phdr) {
+	auto res = new Page;
+	res->readonly = false;
+	auto mmap = utils::fs::MappedFile::open(file_name, false);
+	res->filename = file_name;
+	auto region = mmap->data();
 
-  res->header = reinterpret_cast<PageHeader *>(region);
-  *(res->header) = phdr;
-  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-  res->readonly = false;
-  res->header->is_closed = true;
-  res->header->is_open_to_write = false;
-  res->page_mmap->flush(0, sizeof(PageHeader));
-  res->update_index_recs();
-  res->flush(); 
-  assert(res->header->addeded_chunks == compressed_results.size());
-  return res;
+	res->page_mmap = mmap;
+	res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
+		index_file_size(phdr.addeded_chunks));
+	res->region = region;
+
+	res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+	res->header = reinterpret_cast<PageHeader *>(region);
+	*(res->header) = phdr;
+
+	res->readonly = false;
+	res->header->is_closed = true;
+	res->header->is_open_to_write = false;
+	res->page_mmap->flush(0, sizeof(PageHeader));
+	res->update_index_recs();
+	res->flush();
+	return res;
 }
 
 //COMPACTION
@@ -229,6 +241,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size,
                    const std::list<std::string> &pages_full_paths) {
 	TIMECODE_METRICS(ctmd, "create", "Page::create(COMPACTION)");
+
   std::unordered_map<std::string, Page *> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
   std::map<uint64_t, ChunkLinkList> links;
@@ -270,11 +283,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 	  all_values[sorted_and_filtered.front().id]=sorted_and_filtered;
   }
  
-  PageHeader phdr;
-  memset(&phdr, 0, sizeof(PageHeader));
-  phdr.maxTime = dariadb::MIN_TIME;
-  phdr.minTime = dariadb::MAX_TIME;
-  phdr.max_chunk_id = chunk_id;
+  PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
 
   std::list<PageInner::HdrAndBuffer> compressed_results =
 	  PageInner::compressValues(all_values, phdr, max_chunk_size);
@@ -282,43 +291,18 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
   phdr.filesize = page_size;
 
-  auto res = new Page;
-  res->readonly = false;
-  auto mmap = utils::fs::MappedFile::open(file_name, false);
-  res->filename = file_name;
-  auto region = mmap->data();
-
-  res->page_mmap = mmap;
-  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
-	  index_file_size(phdr.addeded_chunks));
-  res->region = region;
-
-  res->header = reinterpret_cast<PageHeader *>(region);
-  *(res->header) = phdr;
-  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-  res->readonly = false;
-  res->header->is_closed = true;
-  res->header->is_open_to_write = false;
-  res->page_mmap->flush(0, sizeof(PageHeader));
-  res->update_index_recs();
-  res->flush();
-  assert(res->header->addeded_chunks == compressed_results.size());
-
   for (auto kv : openned_pages) {
 	  delete kv.second;
   }
 
-  return res;
+  return make_page(file_name, phdr);
 }
 
 Page *Page::create(const std::string &file_name, uint64_t chunk_id, const std::vector<Chunk*>& a, size_t count) {
 	TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
 	using namespace dariadb::utils::async;
-	PageHeader phdr;
-	memset(&phdr, 0, sizeof(PageHeader));
-	phdr.maxTime = dariadb::MIN_TIME;
-	phdr.minTime = dariadb::MAX_TIME;
-	phdr.max_chunk_id = chunk_id;
+
+	PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
 
 	 AsyncTask pm_at =
 		[&file_name, &phdr, &a, &count](const ThreadInfo &ti) {
@@ -392,29 +376,9 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id, const std::v
 	auto at = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(pm_at));
 	at->wait();
 
-	auto res = new Page;
-	res->readonly = false;
-	auto mmap = utils::fs::MappedFile::open(file_name, false);
-	res->filename = file_name;
-	auto region = mmap->data();
-
-	res->page_mmap = mmap;
-	res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
-		index_file_size(phdr.addeded_chunks));
-	res->region = region;
-
-	res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-	res->header = reinterpret_cast<PageHeader *>(region);
-	*(res->header) = phdr;
-	
-	res->readonly = false;
-	res->header->is_closed = true;
-	res->header->is_open_to_write = false;
-	res->page_mmap->flush(0, sizeof(PageHeader));
-	res->update_index_recs();
-	res->flush();
-	return res;
+	return Page::make_page(file_name, phdr);
 }
+
 
 Page *Page::open(std::string file_name, bool read_only) {
   TIMECODE_METRICS(ctmd, "open", "Page::open");
