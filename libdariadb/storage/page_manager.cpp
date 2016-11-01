@@ -397,6 +397,10 @@ public:
 	  };
 
 	  auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+	  if (page_list.size() <= 1) {
+		  logger_info("engine: compactbyTime - pages count le 1.");
+		  return;
+	  }
 	  compact(page_list);
   }
 
