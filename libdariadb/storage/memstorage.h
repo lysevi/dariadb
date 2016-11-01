@@ -11,9 +11,23 @@ namespace dariadb {
 namespace storage {
 
 struct MemChunkAllocator {
-  // header,buffer, position in allocator;
-  typedef std::tuple<ChunkHeader *, uint8_t *, size_t> allocated_data;
-  const allocated_data EMPTY = allocated_data(nullptr, nullptr, std::numeric_limits<size_t>::max());
+	struct AllocatedData {
+		ChunkHeader *header;
+		uint8_t *buffer;
+		size_t position;
+		AllocatedData(ChunkHeader *h, uint8_t *buf, size_t pos) {
+			header = h;
+			buffer=buf;
+			position = pos;
+		}
+		AllocatedData() {
+			header = nullptr;
+			buffer = nullptr;
+			position = std::numeric_limits<size_t>::max();
+		}
+	};
+  
+  const AllocatedData EMPTY = AllocatedData(nullptr, nullptr, std::numeric_limits<size_t>::max());
 
   size_t _maxSize;
   size_t _bufferSize;
@@ -26,8 +40,8 @@ struct MemChunkAllocator {
 
   EXPORT MemChunkAllocator(size_t maxSize, size_t bufferSize);
   EXPORT ~MemChunkAllocator();
-  EXPORT allocated_data allocate();
-  EXPORT void free(const allocated_data &d);
+  EXPORT AllocatedData allocate();
+  EXPORT void free(const AllocatedData &d);
 };
 
 class MemStorage : public IMeasStorage {

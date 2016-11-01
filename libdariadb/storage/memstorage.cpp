@@ -34,7 +34,7 @@ MemChunkAllocator::~MemChunkAllocator() {
   delete[] _buffers;
 }
 
-MemChunkAllocator::allocated_data MemChunkAllocator::allocate() {
+MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
   _locker.lock();
   if(_free_list.empty()){
       _locker.unlock();
@@ -44,13 +44,13 @@ MemChunkAllocator::allocated_data MemChunkAllocator::allocate() {
   _free_list.pop_front();
   _allocated++;
   _locker.unlock();
-  return allocated_data(&_headers[pos], &_buffers[pos * _bufferSize], pos);
+  return AllocatedData(&_headers[pos], &_buffers[pos * _bufferSize], pos);
 }
 
-void MemChunkAllocator::free(const MemChunkAllocator::allocated_data &d) {
-  auto header = std::get<0>(d);
-  auto buffer = std::get<1>(d);
-  auto position = std::get<2>(d);
+void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
+	auto header = d.header;
+	auto buffer = d.buffer;
+	auto position = d.position;
   memset(header, 0, sizeof(ChunkHeader));
   memset(buffer, 0, _bufferSize);
   _locker.lock();
@@ -67,7 +67,8 @@ struct TimeTrack;
 struct MemChunk : public ZippedChunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
-  MemChunkAllocator::allocated_data _a_data;
+  MemChunkAllocator::AllocatedData _a_data;
+  MemChunkAllocator *_allocator;
   TimeTrack *_track;
   MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, Meas first_m)
       : ZippedChunk(index, buffer, size, first_m) {
@@ -78,7 +79,9 @@ struct MemChunk : public ZippedChunk {
     index_ptr = index;
     buffer_ptr = buffer;
   }
-  ~MemChunk() {}
+  ~MemChunk() {
+	  _allocator->free(_a_data);
+  }
 };
 
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;
@@ -86,7 +89,7 @@ using MemChunkList = std::list<MemChunk_Ptr>;
 
 class MemoryChunkContainer {
 public:
-	virtual void add_chunk(MemChunk_Ptr&c) = 0;
+	virtual void addChunk(MemChunk_Ptr&c) = 0;
 };
 
 struct TimeTrack : public IMeasStorage {
@@ -271,8 +274,7 @@ struct TimeTrack : public IMeasStorage {
 
   void rm_chunk(MemChunk *c) {
     _index.erase(c->header->maxTime);
-    this->_allocator->free(c->_a_data);
-   
+  
     if (_cur_chunk.get() == c) {
       _cur_chunk = nullptr;
 	}
@@ -287,15 +289,16 @@ struct TimeTrack : public IMeasStorage {
 		  this->_index.insert(std::make_pair(_cur_chunk->header->maxTime, _cur_chunk));
 	  }
 	  auto new_chunk_data = _allocator->allocate();
-	  if (std::get<0>(new_chunk_data) == nullptr) {
+	  if (new_chunk_data.header == nullptr) {
 		  return false;
 	  }
-	  auto mc = MemChunk_Ptr{ new MemChunk{ std::get<0>(new_chunk_data),
-		  std::get<1>(new_chunk_data),
+	  auto mc = MemChunk_Ptr{ new MemChunk{ new_chunk_data.header,
+		  new_chunk_data.buffer,
 		  _allocator->_bufferSize, value } };
       mc->_track=this;
+	  mc->_allocator = _allocator;
       mc->_a_data=new_chunk_data;
-	  this->_mcc->add_chunk(mc);
+	  this->_mcc->addChunk(mc);
 	  _cur_chunk = mc;
 	  return true;
   }
@@ -306,6 +309,7 @@ using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	Private(const storage::Settings_ptr &s) : _chunk_allocator(s->memory_limit, s->page_chunk_size) {
+		_chunks.resize(_chunk_allocator._capacity);
 		_stoped = false;
 		_down_level_storage = nullptr;
 		_settings = s;
@@ -320,6 +324,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 				logger_info("engine: memstorage - drop all chunk to disk");
 				this->drop_by_limit(1.0);
 			}
+			for (size_t i = 0; i < _chunks.size(); ++i) {
+				_chunks[i] = nullptr;
+			}
+			_id2track.clear();
 			_stoped = true;
 		}
 	}
@@ -383,35 +391,35 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  all_chunks.resize(current_chunk_count);
 	  size_t pos = 0;
 	  for (auto &c : _chunks) {
+		  if (c == nullptr) {
+			  continue;
+		  }
 		  all_chunks[pos++] = c.get();
 	  }
 
-	  _down_level_storage->appendChunks(all_chunks, chunks_to_delete);
+	  _down_level_storage->appendChunks(all_chunks, pos);
 	  std::set<TimeTrack*> updated_tracks;
 	  std::set<TimeTrack*> removed_tracks;
-	  for (size_t i = 0; i<chunks_to_delete; ++i) {
+	  for (size_t i = 0; i<pos; ++i) {
 		  auto c = all_chunks[i];
 		  auto mc = dynamic_cast<MemChunk*>(c);
 		  assert(mc != nullptr);
+		  assert(mc->_a_data.position == i);
 		  TimeTrack *track = mc->_track;
 		  track->rm_chunk(mc);
+		  _chunks[i] = nullptr;
 		  if (track->_cur_chunk==nullptr) {
 			  removed_tracks.insert(track);
 			  _id2track.erase(track->_meas_id);
 		  }
 	  }
 
-	  _chunks_locker.lock();
-	  auto from = _chunks.begin();
-	  auto to = _chunks.begin();
-	  std::advance(to, chunks_to_delete);
-	  _chunks.erase(from, to);
 	  for (auto&t : updated_tracks) {
 		  if (removed_tracks.find(t) != removed_tracks.end()) {
 			  t->rereadMinMax();
 		  }
 	  }
-	  _chunks_locker.unlock();
+	  
 	  
   }
   void drop_by_limit() {
@@ -508,9 +516,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  _down_level_storage = down;
   }
 
-  void add_chunk(MemChunk_Ptr&chunk) override{
-	  std::lock_guard<utils::Locker> lg(_chunks_locker);
-	  _chunks.push_back(chunk);
+  void addChunk(MemChunk_Ptr&chunk) override{
+	  assert(chunk->_a_data.position < _chunks.size());
+	  _chunks[chunk->_a_data.position]=chunk;
   }
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;
@@ -518,8 +526,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   storage::Settings_ptr _settings;
   IChunkWriter* _down_level_storage;
   
-  MemChunkList  _chunks;
-  utils::Locker _chunks_locker;
+  std::vector<MemChunk_Ptr>  _chunks;
   std::mutex _drop_locker;
   bool _stoped;
 };

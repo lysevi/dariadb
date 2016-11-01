@@ -164,12 +164,12 @@ BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
 	std::set<uint8_t*> allocated_buffers;
 	std::set<size_t> positions;
 
-	dariadb::storage::MemChunkAllocator::allocated_data last;
+	dariadb::storage::MemChunkAllocator::AllocatedData last;
 	do {
 		auto allocated = allocator.allocate();
-		auto hdr = std::get<0>(allocated);
-		auto buf = std::get<1>(allocated);
-		auto pos = std::get<2>(allocated);
+		auto hdr =  allocated.header;
+		auto buf = allocated.buffer;
+		auto pos = allocated.position;
 		if (hdr == nullptr) {
 			break;
 		}
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
 	
 	allocator.free(last);
 	auto new_obj = allocator.allocate();
-	BOOST_CHECK_EQUAL(std::get<2>(new_obj), std::get<2>(last));
+	BOOST_CHECK_EQUAL(new_obj.position, last.position);
 }
 
 BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
