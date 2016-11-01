@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cassert>
 #include <set>
+#include <shared_mutex>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -68,7 +69,6 @@ struct MemChunk : public ZippedChunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
   MemChunkAllocator::AllocatedData _a_data;
-  MemChunkAllocator *_allocator;
   TimeTrack *_track;
   MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, Meas first_m)
       : ZippedChunk(index, buffer, size, first_m) {
@@ -80,7 +80,6 @@ struct MemChunk : public ZippedChunk {
     buffer_ptr = buffer;
   }
   ~MemChunk() {
-	  _allocator->free(_a_data);
   }
 };
 
@@ -273,6 +272,9 @@ struct TimeTrack : public IMeasStorage {
   }
 
   void rm_chunk(MemChunk *c) {
+	  if (_cur_chunk == nullptr) {//empty track
+			THROW_EXCEPTION("logic error");
+	  }
     _index.erase(c->header->maxTime);
   
     if (_cur_chunk.get() == c) {
@@ -296,7 +298,6 @@ struct TimeTrack : public IMeasStorage {
 		  new_chunk_data.buffer,
 		  _allocator->_bufferSize, value } };
       mc->_track=this;
-	  mc->_allocator = _allocator;
       mc->_a_data=new_chunk_data;
 	  this->_mcc->addChunk(mc);
 	  _cur_chunk = mc;
@@ -342,9 +343,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		return result;
 	}
   append_result append(const Meas &value) override { 
-	  _all_tracks_locker.lock();
-	  auto track = _id2track.find(value.id);//TODO refact!
+	  _all_tracks_locker.lock_shared();
+	  auto track = _id2track.find(value.id);
+	  bool is_created = false;
 	  if (track == _id2track.end()) {
+		  _all_tracks_locker.unlock_shared();
+		  _all_tracks_locker.lock();
+		  is_created = true;
 		  track = _id2track.find(value.id);
 		  if (track == _id2track.end()) {
 			  auto new_track = std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
@@ -355,18 +360,20 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 				  if (_down_level_storage == nullptr) {
 					  return res;
 				  }
-				  _all_tracks_locker.lock();
 				  drop_by_limit();
-				  _all_tracks_locker.unlock();
-
 				  return append(value);
 			  }
 			  else {
 				  return append_result(1, 0);
 			  }
 		  }
+		  else {
+			  _all_tracks_locker.unlock();
+		  }
 	  }
-      _all_tracks_locker.unlock();
+	  if (!is_created) {
+		  _all_tracks_locker.unlock_shared();
+	  }
       auto result=track->second->append(value);
 	  if (result.ignored == 0 || (result.writed==1 && result.ignored==1)) {
 		  return result;
@@ -375,9 +382,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
           if(_down_level_storage==nullptr){
               return result;
           }
-          _all_tracks_locker.lock();
 		  drop_by_limit();
-          _all_tracks_locker.unlock();
           return append(value);
 	  }
   }
@@ -407,10 +412,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		  assert(mc->_a_data.position == i);
 		  TimeTrack *track = mc->_track;
 		  track->rm_chunk(mc);
-		  _chunks[i] = nullptr;
+		  _chunk_allocator.free(mc->_a_data);
+		  _chunks[i] = nullptr;		  
 		  if (track->_cur_chunk==nullptr) {
 			  removed_tracks.insert(track);
+			  _all_tracks_locker.lock();
 			  _id2track.erase(track->_meas_id);
+			  _all_tracks_locker.unlock();
 		  }
 	  }
 
@@ -419,8 +427,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  t->rereadMinMax();
 		  }
 	  }
-	  
-	  
   }
   void drop_by_limit() {
 	  std::lock_guard<std::mutex> lg(_drop_locker);
@@ -432,7 +438,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   Time minTime() override { 
-      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
+	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  Time result = MAX_TIME;
 	  for (auto t : _id2track) {
 		  result=std::min(result, t.second->minTime());
@@ -440,7 +446,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  return result;
   }
   virtual Time maxTime() override { 
-      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
+	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  Time result = MIN_TIME;
 	  for (auto t : _id2track) {
 		  result = std::max(result, t.second->maxTime());
@@ -449,7 +455,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override {
-      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
+	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  auto tracker = _id2track.find(id);
 	  if (tracker != _id2track.end()) {
 		  return tracker->second->minMaxTime(id, minResult, maxResult);
@@ -458,7 +464,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
   
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {
-      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
+	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  QueryInterval local_q({}, q.flag, q.from,q.to);
 	  local_q.ids.resize(1);
 	  for (auto id : q.ids) {
@@ -471,7 +477,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) override {
-      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
+	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  QueryTimePoint local_q({}, q.flag, q.time_point);
 	  local_q.ids.resize(1);
 	  Id2Meas result;
@@ -490,7 +496,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  return result;
   }
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-      std::lock_guard<utils::Locker> lg(_all_tracks_locker);
+	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  IdArray local_ids;
       local_ids.resize(1);
 	  Id2Meas result;
@@ -522,7 +528,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;
-  utils::Locker _all_tracks_locker;
+  std::shared_mutex _all_tracks_locker;
   storage::Settings_ptr _settings;
   IChunkWriter* _down_level_storage;
   
