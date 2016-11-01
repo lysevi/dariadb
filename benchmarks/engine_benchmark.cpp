@@ -173,7 +173,7 @@ void reader(IMeasStorage_ptr ms, IdSet all_id_set, Time from, Time to) {
     clbk->count = 0;
     // auto time_point1 = uniform_dist(e1);
     auto f = from;
-    auto t = dariadb::timeutil::current_time();
+    auto t = write_time;
 
     auto qi = dariadb::storage::QueryInterval(
         dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
