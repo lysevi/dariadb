@@ -526,6 +526,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  assert(chunk->_a_data.position < _chunks.size());
 	  _chunks[chunk->_a_data.position]=chunk;
   }
+  void lock_drop() {
+	  _drop_locker.lock();
+  }
+  void unlock_drop() {
+	  _drop_locker.unlock();
+  }
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;
   std::shared_mutex _all_tracks_locker;
@@ -586,4 +592,11 @@ void MemStorage::stop() {
 
 void MemStorage::setDownLevel(IChunkWriter*_down) {
 	_impl->setDownLevel(_down);
+}
+
+void MemStorage::lock_drop() {
+	_impl->lock_drop();
+}
+void MemStorage::unlock_drop() {
+	_impl->unlock_drop();
 }

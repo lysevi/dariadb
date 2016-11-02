@@ -71,6 +71,8 @@ public:
   EXPORT void flush() override;
   EXPORT void setDownLevel(IChunkWriter*_down);
   EXPORT void stop();
+  EXPORT void lock_drop();
+  EXPORT void unlock_drop();
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

@@ -130,29 +130,41 @@ public:
     }
   }
 
+  void lock_storage() {
+	  if (_memstorage != nullptr) {
+		  _memstorage->lock_drop();
+	  }
+
+	  _lock_manager->lock(
+		  LOCK_KIND::READ, { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
+  }
+
+  void unlock_storage() {
+	  _lock_manager->unlock(
+	  { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
+
+	  if (_memstorage != nullptr) {
+		  _memstorage->unlock_drop();
+	  }
+  }
+
   Time minTime() {
-    _lock_manager->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	lock_storage();
 
     auto pmin = _page_manager->minTime();
 	Time amin= _top_storage->minTime();
 
-    _lock_manager->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	unlock_storage();
     return std::min(pmin, amin);
   }
 
   Time maxTime() {
-    _lock_manager->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	lock_storage();
 
     auto pmax = _page_manager->maxTime();
 	Time amax= _top_storage->maxTime();
 
-
-    _lock_manager->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
-
+	unlock_storage();
     return std::max(pmax, amax);
   }
 
@@ -174,8 +186,7 @@ public:
 	  ar = am->minMaxTime(id, &subMin3, &subMax3);
 	};
 
-    _lock_manager->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	lock_storage();
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
     auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
@@ -183,8 +194,7 @@ public:
     pm_async->wait();
     am_async->wait();
 
-    _lock_manager->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+    unlock_storage();
 
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
@@ -211,8 +221,8 @@ public:
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
-    _lock_manager->lock(LOCK_KIND::READ,
-                                  {LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+	lock_storage();
+
     Id2Meas a_result, p_result;
 	auto am = _top_storage.get();
     AsyncTask am_at = [&ids, flag, &a_result, am](const ThreadInfo &ti) {
@@ -234,7 +244,8 @@ public:
 
     pm_async->wait();
     am_async->wait();
-    _lock_manager->unlock({LOCK_OBJECTS::AOF, LOCK_OBJECTS::PAGE});
+	
+	unlock_storage();
 
     for (auto &r : p_result) {
       auto fres = a_result.find(r.second.id);
@@ -291,8 +302,7 @@ public:
 	  am->foreach(q, a_clbk);
     };
 
-    _lock_manager->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	lock_storage();
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
     auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
@@ -300,7 +310,7 @@ public:
     pm_async->wait();
     am_async->wait();
 
-    _lock_manager->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	unlock_storage();
     a_clbk->is_end();
   }
 
@@ -352,8 +362,7 @@ public:
   Id2Meas readTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
 
-    _lock_manager->lock(
-        LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	lock_storage();
 
     Id2Meas result;
     result.reserve(q.ids.size());
@@ -378,8 +387,7 @@ public:
       }
     }
 
-    _lock_manager->unlock(
-        {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+	unlock_storage();
     return result;
   }
 

@@ -10,6 +10,7 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/page.h>
+#include <libdariadb/storage/lock_manager.h>
 
 #include <atomic>
 #include <condition_variable>
@@ -339,6 +340,7 @@ public:
     delete res;
     _file2header[page_name] =
         Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+
   }
 
   static void erase(const std::string& storage_path,const std::string &fname) {
@@ -372,6 +374,7 @@ public:
   }
 
   void compactTo(uint32_t pagesCount) {
+
 	  auto pred = [](const IndexHeader &hdr) {
 		  return true;
 	  };
@@ -425,6 +428,8 @@ public:
   }
 
   void appendChunks(const std::vector<Chunk*>& a, size_t count) {
+	  auto lm = this->_env->getResourceObject<LockManager>(EngineEnvironment::Resource::LOCK_MANAGER);
+	  lm->lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
 	  Page *res = nullptr;
 	  std::string page_name = utils::fs::random_file_name(".page");
 	  logger_info("engine: write chunks to ", page_name);
@@ -435,6 +440,7 @@ public:
 	  last_id = res->header->max_chunk_id;
 	  delete res;
 	  _file2header[page_name] = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+	  lm->unlock({ LOCK_OBJECTS::PAGE });
   }
 protected:
   Page_Ptr _cur_page;
