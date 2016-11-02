@@ -61,9 +61,9 @@ void show_info() {
 int main(int argc, char **argv) {
 	po::options_description desc("Allowed options");
 	bool metrics_enable = false;
-	desc.add_options()("help", "produce help message")
-		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"Write strategy")
-        ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+	auto aos = desc.add_options()("help", "produce help message");
+	aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "Write strategy");
+	aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
 	po::variables_map vm;
 	try {

@@ -92,16 +92,16 @@ void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
 
 int main(int argc,char**argv){
 	po::options_description desc("Allowed options");
-	desc.add_options()
-		("help", "produce help message")
-		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
-		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
-		("server-host", po::value<std::string>(&server_host)->default_value(server_host), "server host.")
-        ("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
-		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.")
-		("clients-count", po::value<size_t>(&clients_count)->default_value(clients_count), "clients count.")
-        ("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean), "dont clean folder with storage if exists.")
-		("extern-server", "dont run server.");
+	auto aos=desc.add_options();
+	aos("help", "produce help message");
+	aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.");
+	aos("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.");
+	aos("server-host", po::value<std::string>(&server_host)->default_value(server_host), "server host.");
+	aos("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.");
+	aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "write strategy.");
+	aos("clients-count", po::value<size_t>(&clients_count)->default_value(clients_count), "clients count.");
+	aos("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean), "dont clean folder with storage if exists.");
+	aos("extern-server", "dont run server.");
 
 	po::variables_map vm;
 	try {

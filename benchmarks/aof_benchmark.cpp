@@ -46,9 +46,10 @@ int main(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   bool dont_clean = false;
   bool metrics_enable = false;
-  desc.add_options()("help", "produce help message")(
-      "dont-clean", "dont clean storage path before start.")(
-      "enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+  auto aos = desc.add_options();
+  aos("help", "produce help message");
+  aos("dont-clean", "dont clean storage path before start.");
+  aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {

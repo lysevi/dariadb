@@ -24,17 +24,17 @@ size_t compact_to=0;
 
 int main(int argc,char**argv){
 	po::options_description desc("Allowed options");
-	desc.add_options()
-		("help", "produce help message")
-		("readonly", "readonly mode")
-		("log-to-file", "logger out to dariadb.log.")
-		("color-log", "use colors to log to console.")
-		("dbg-log", "verbose logging.")
-		("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.")
-		("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.")
-		("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.")
-        ("compact-to", po::value<size_t>(&compact_to)->default_value(compact_to), "compact all pages and exit.")
-		("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"write strategy.");		
+	auto aos = desc.add_options();
+	aos("help", "produce help message");
+	aos("readonly", "readonly mode");
+	aos("log-to-file", "logger out to dariadb.log.");
+	aos("color-log", "use colors to log to console.");
+	aos("dbg-log", "verbose logging.");
+	aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.");
+	aos("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.");
+	aos("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.");
+	aos("compact-to", po::value<size_t>(&compact_to)->default_value(compact_to), "compact all pages and exit.");
+	aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "write strategy.");
 	
 	po::variables_map vm;
 	try {

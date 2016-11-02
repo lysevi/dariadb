@@ -40,16 +40,16 @@ public:
 
 void parse_cmdline(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
-  desc.add_options()
-	  ("help", "produce help message")
-	  ("readonly", "readonly mode")
-	  ("readall", "read all benchmark enable.")
-	  ("dont-clean","dont clean storage path before start.")
-	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
-	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))
-	  ("read-benchmark-runs",po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs))
-	  ("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"Write strategy")
-     ("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit),"allocation area limit when strategy=MEMORY");
+  auto aos = desc.add_options();
+  aos("help", "produce help message");
+  aos("readonly", "readonly mode");
+  aos("readall", "read all benchmark enable.");
+  aos("dont-clean", "dont clean storage path before start.");
+  aos("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable), "enable readers threads");
+  aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
+  aos("read-benchmark-runs", po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
+  aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "Write strategy");
+  aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit when strategy=MEMORY");;
 
   po::variables_map vm;
   try {
