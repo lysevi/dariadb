@@ -43,6 +43,7 @@ void Settings::set_default() {
   id_count = 0;
   strategy = STRATEGY::COMPRESSED;
   chunks_to_free=0.45;
+  percent_to_drop = 0.75;
 }
 
 std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {
