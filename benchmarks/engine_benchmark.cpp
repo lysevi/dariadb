@@ -24,6 +24,7 @@ bool readall_enabled = false;
 bool dont_clean = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
+size_t memory_limit = 0;
 
 class BenchCallback : public IReaderClb {
 public:
@@ -39,16 +40,16 @@ public:
 
 void parse_cmdline(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")("readonly", "readonly mode")(
-      "readall", "read all benchmark enable.")("dont-clean",
-                                               "dont clean storage path before start.")(
-      "enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
-      "enable readers threads")(
-      "enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))(
-      "read-benchmark-runs",
-      po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs))(
-      "strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
-      "Write strategy");
+  desc.add_options()
+	  ("help", "produce help message")
+	  ("readonly", "readonly mode")
+	  ("readall", "read all benchmark enable.")
+	  ("dont-clean","dont clean storage path before start.")
+	  ("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),"enable readers threads")
+	  ("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable))
+	  ("read-benchmark-runs",po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs))
+	  ("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),"Write strategy")
+     ("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit),"allocation area limit when strategy=MEMORY");
 
   po::variables_map vm;
   try {
@@ -354,6 +355,10 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 	settings->strategy = strategy;
+	if (strategy == STRATEGY::MEMORY && memory_limit!=0) {
+		std::cout << "memory limit: " << memory_limit<<std::endl;
+		settings->memory_limit = memory_limit * 1024 * 1024;
+	}
     utils::LogManager::start(log_ptr);
 
     auto raw_ptr = new Engine(settings);
