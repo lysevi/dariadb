@@ -42,8 +42,8 @@ void Settings::set_default() {
   memory_limit = MAXIMUM_MEMORY_LIMIT;
   id_count = 0;
   strategy = STRATEGY::COMPRESSED;
-  chunks_to_free=0.45;
-  percent_to_drop = 0.75;
+  chunks_to_free=float(0.45);
+  percent_to_drop = float(0.75);
 }
 
 std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {
@@ -73,6 +73,10 @@ void Settings::save(const std::string &file) {
   ss << strategy;
   js["stragety"] = ss.str();
 
+  js["memory_limit"] = memory_limit;
+  js["id_count"] = id_count;
+  js["chunks_to_free"] = chunks_to_free;
+  js["percent_to_drop"] = percent_to_drop;
   std::fstream fs;
   fs.open(file, std::ios::out);
   if (!fs.is_open()) {
@@ -92,6 +96,11 @@ void Settings::load(const std::string &file) {
 
   page_chunk_size = js["page_chunk_size"];
   page_openned_page_cache_size = js["page_openned_page_cache_size"];
+
+  memory_limit=js["memory_limit"];
+  id_count=js["id_count"] ;
+  chunks_to_free=js["chunks_to_free"] ;
+  percent_to_drop=js["percent_to_drop"] ;
 
   std::istringstream iss;
   std::string strat_str = js["stragety"];

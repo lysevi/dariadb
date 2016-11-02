@@ -40,7 +40,6 @@ public:
   // memstorage options;
   size_t memory_limit; //in bytes;
   size_t id_count;//for pre-alloc table.
-  Time   storage_period; //how many old values can be stored in memory with STRATEGY=MEMORY STORAGE
   float  chunks_to_free; //how many chunks must be deleted if memory storage is full
   float  percent_to_drop;
 };
