@@ -169,8 +169,10 @@ struct TimeTrack : public IMeasStorage {
 		  *minResult = std::min(c->header->minTime, *minResult);
 		  *maxResult = std::max(c->header->maxTime, *maxResult);
 	  }
-	  *minResult = std::min(_cur_chunk->header->minTime, *minResult);
-	  *maxResult = std::max(_cur_chunk->header->maxTime, *maxResult);
+	  if (_cur_chunk != nullptr) {
+		  *minResult = std::min(_cur_chunk->header->minTime, *minResult);
+		  *maxResult = std::max(_cur_chunk->header->maxTime, *maxResult);
+	  }
 	  return true;
   }
 
@@ -272,9 +274,6 @@ struct TimeTrack : public IMeasStorage {
   }
 
   void rm_chunk(MemChunk *c) {
-	  if (_cur_chunk == nullptr) {//empty track
-			THROW_EXCEPTION("logic error");
-	  }
     _index.erase(c->header->maxTime);
   
     if (_cur_chunk.get() == c) {
@@ -283,7 +282,9 @@ struct TimeTrack : public IMeasStorage {
   }
 
   void rereadMinMax() {
-	  this->minMaxTime(this->_cur_chunk->header->first.id, &_minTime, &_maxTime);
+	  if (this->_cur_chunk != nullptr) {
+		  this->minMaxTime(this->_cur_chunk->header->first.id, &_minTime, &_maxTime);
+	  }
   }
 
   bool create_new_chunk(const Meas&value) {
@@ -323,7 +324,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			logger_info("engine: stop memstorage.");
 			if (this->_down_level_storage != nullptr) {
 				logger_info("engine: memstorage - drop all chunk to disk");
-				this->drop_by_limit(1.0);
+				this->drop_by_limit(1.0, true);
 			}
 			for (size_t i = 0; i < _chunks.size(); ++i) {
 				_chunks[i] = nullptr;
@@ -386,55 +387,58 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
           return append(value);
 	  }
   }
-  
-  void drop_by_limit(float chunk_to_free) {
-	  auto current_chunk_count = this->_chunk_allocator._allocated;
-	  auto chunks_to_delete =
-		  (size_t)(current_chunk_count * chunk_to_free);
-	  logger_info("engine: drop ", chunks_to_delete, " chunks of ", current_chunk_count);
-	  std::vector<Chunk*> all_chunks;
-	  all_chunks.resize(current_chunk_count);
-	  size_t pos = 0;
-	  for (auto &c : _chunks) {
-		  if (c == nullptr) {
-			  continue;
-		  }
-		  all_chunks[pos++] = c.get();
-	  }
 
-	  _down_level_storage->appendChunks(all_chunks, pos);
-	  std::set<TimeTrack*> updated_tracks;
-	  std::set<TimeTrack*> removed_tracks;
-	  for (size_t i = 0; i<pos; ++i) {
-		  auto c = all_chunks[i];
-		  auto mc = dynamic_cast<MemChunk*>(c);
-		  assert(mc != nullptr);
-		  assert(mc->_a_data.position == i);
-		  TimeTrack *track = mc->_track;
-		  track->rm_chunk(mc);
-		  _chunk_allocator.free(mc->_a_data);
-		  _chunks[i] = nullptr;		  
-		  if (track->_cur_chunk==nullptr) {
-			  removed_tracks.insert(track);
-			  _all_tracks_locker.lock();
-			  _id2track.erase(track->_meas_id);
-			  _all_tracks_locker.unlock();
-		  }
-	  }
+  void drop_by_limit(float chunk_to_free, bool in_stop) {
+    auto cur_chunk_count = this->_chunk_allocator._allocated;
+    auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_to_free);
+    logger_info("engine: drop ", chunks_to_delete, " chunks of ", cur_chunk_count);
+    
+	std::vector<Chunk *> all_chunks;
+    all_chunks.reserve(cur_chunk_count);
+    size_t pos = 0;
+    for (auto &c : _chunks) {
+      if (c == nullptr) {
+        continue;
+      }
+      if (!in_stop & !c->is_full()) { // not full
+        assert(!in_stop);
+        assert(!c->is_full());
+        continue;
+      }
+      if (!c->header->is_init) {
+        continue;
+      }
+      all_chunks.push_back(c.get());
+      ++pos;
+    }
 
-	  for (auto&t : updated_tracks) {
-		  if (removed_tracks.find(t) != removed_tracks.end()) {
-			  t->rereadMinMax();
-		  }
-	  }
+    _down_level_storage->appendChunks(all_chunks, pos);
+    std::set<TimeTrack *> updated_tracks;
+    for (size_t i = 0; i < pos; ++i) {
+      auto c = all_chunks[i];
+      auto mc = dynamic_cast<MemChunk *>(c);
+      assert(mc != nullptr);
+
+      TimeTrack *track = mc->_track;
+      track->rm_chunk(mc);
+      updated_tracks.insert(track);
+
+      auto chunk_pos = mc->_a_data.position;
+      _chunk_allocator.free(mc->_a_data);
+      _chunks[chunk_pos] = nullptr;
+    }
+    for (auto &t : updated_tracks) {
+      t->rereadMinMax();
+    }
   }
+
   void drop_by_limit() {
 	  std::lock_guard<std::mutex> lg(_drop_locker);
 	  auto current_chunk_count = this->_chunk_allocator._allocated;
 	  if (current_chunk_count<this->_chunk_allocator._capacity) {
 		  return;
 	  }
-	  drop_by_limit(_settings->chunks_to_free);
+	  drop_by_limit(_settings->chunks_to_free, false);
   }
 
   Time minTime() override { 
@@ -524,6 +528,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   void addChunk(MemChunk_Ptr&chunk) override{
 	  assert(chunk->_a_data.position < _chunks.size());
+	  assert(chunk->header->is_init);
+
 	  _chunks[chunk->_a_data.position]=chunk;
   }
   void lock_drop() {
