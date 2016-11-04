@@ -14,6 +14,7 @@ Storage:
    - Remove COLA layer.
    - Speed up dropping data between layers.
    - Old pages compaction.
+   - Full futured memory storage.
 
 v0.1.1
 =====
