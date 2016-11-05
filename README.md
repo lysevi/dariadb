@@ -15,19 +15,20 @@
   - Value - x64 float.
   - Flag - x32 unsigned integer.
 * Accept unordered data.
+* Write strategies:
+  - fast write - optimised for big write load.
+  - compressed - all values compressed for good disk usage without writing to sorted layer.
+  - memory - all values stored in memory and dropped to disk when memory limit is ended.
 * LSM-like storage struct with three layers:
   - Append-only files layer, for fast write speed and crash-safety.
   - Old values stored in compressed block for better disk space usage.
-* High write speed(2.5 - 3.5 millions values per second) in using as library.
+* High write speed to disk - 2.5 - 3.5 millions values per second to disk, 7-9 millions when strategy is 'memory'.
 * High write speed(150k - 200k values per second) across the network.
 * Crash recovery.
 * CRC32 for all values.
 * Two variants of API:
   - Functor API -  engine apply given function to each measurement in the incoming request.
   - Standard API - You can Query interval as list or values in time point as dictionary.
-* Write strategies:
-  - fast write - optimised for big write load.
-  - compressed - all values compressed for good disk usage without writing to sorted layer.
 * Compaction old pages with filtration values support:
   - in engine api.
   - in network protocol.
