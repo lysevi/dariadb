@@ -48,7 +48,7 @@ public:
 
   EXPORT void flush() override;
   EXPORT void stop();
-  EXPORT Description description() const;//TODO rename to Description
+  EXPORT Description description() const;
 
   EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   EXPORT virtual MeasList readInterval(const QueryInterval &q) override;

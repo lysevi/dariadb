@@ -96,19 +96,6 @@ void BinaryBuffer::write(uint64_t v, int8_t count) {
     throw MAKE_EXCEPTION("count==0");
   }
 
-  /*
-  //TODO speed up
-  uint8_t *arr = reinterpret_cast<uint8_t*>(&v);
-  auto max_index = count / 8;
-  int8_t bits_in_max = (count + 1) % 8;
-  if (bits_in_max != 0) {
-          this->write((uint16_t)arr[max_index], bits_in_max - 1);
-          max_index--;
-  }
-  for (int i = max_index; i >= 0; i--) {
-          this->write((uint16_t)arr[i], max_bit_pos);
-  }*/
-
   for (int i = count;; i--) {
     if (i < 0) {
       break;
