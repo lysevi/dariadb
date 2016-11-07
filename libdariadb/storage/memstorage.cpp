@@ -9,6 +9,9 @@
 #include <cassert>
 #include <set>
 #include <shared_mutex>
+#include <thread>
+#include <condition_variable>
+#include <functional>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -315,6 +318,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		_stoped = false;
 		_down_level_storage = nullptr;
 		_settings = s;
+		_drop_stop = false;
+		_drop_thread = std::thread{ std::bind(&MemStorage::Private::drop_thread_func,this) };
 		if (_settings->id_count != 0) {
 			_id2track.reserve(_settings->id_count);
 		}
@@ -323,13 +328,20 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		if (!_stoped) {
 			logger_info("engine: stop memstorage.");
 			if (this->_down_level_storage != nullptr) {
+				this->lock_drop();
 				logger_info("engine: memstorage - drop all chunk to disk");
 				this->drop_by_limit(1.0, true);
+				this->unlock_drop();
 			}
 			for (size_t i = 0; i < _chunks.size(); ++i) {
 				_chunks[i] = nullptr;
 			}
 			_id2track.clear();
+
+			_drop_stop = true;
+			_drop_cond.notify_all();
+			_drop_thread.join();
+
 			_stoped = true;
 		}
 	}
@@ -356,17 +368,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  auto new_track = std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
 			  _id2track.insert(std::make_pair(value.id, new_track));
 			  _all_tracks_locker.unlock();
-			  auto res=new_track->append(value);
-			  if (res.writed != 1) {
-				  if (_down_level_storage == nullptr) {
-					  return res;
-				  }
-				  drop_by_limit();
-				  return append(value);
-			  }
-			  else {
-				  return append_result(1, 0);
-			  }
+
+			  while (new_track->append(value).writed != 1) {}
+			  return append_result(1, 0);
 		  }
 		  else {
 			  _all_tracks_locker.unlock();
@@ -375,17 +379,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  if (!is_created) {
 		  _all_tracks_locker.unlock_shared();
 	  }
-      auto result=track->second->append(value);
-	  if (result.ignored == 0 || (result.writed==1 && result.ignored==1)) {
-		  return result;
-	  }
-	  else {
-          if(_down_level_storage==nullptr){
-              return result;
-          }
-		  drop_by_limit();
-          return append(value);
-	  }
+	  while (track->second->append(value).writed != 1) {}
+	  return append_result(1, 0);
+	  
   }
 
   void drop_by_limit(float chunk_to_free, bool in_stop) {
@@ -412,7 +408,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       ++pos;
     }
 
-    _down_level_storage->appendChunks(all_chunks, pos);
+    
+	if (_down_level_storage != nullptr) {
+		_down_level_storage->appendChunks(all_chunks, pos);
+	}
+	else {
+		logger_info("engine: memstorage _down_level_storage == nullptr");
+	}
     std::set<TimeTrack *> updated_tracks;
     for (size_t i = 0; i < pos; ++i) {
       auto c = all_chunks[i];
@@ -531,12 +533,37 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  assert(chunk->header->is_init);
 
 	  _chunks[chunk->_a_data.position]=chunk;
+	  if (is_time_to_drop()) {
+		  _drop_cond.notify_all();
+	  }
   }
   void lock_drop() {
 	  _drop_locker.lock();
   }
   void unlock_drop() {
 	  _drop_locker.unlock();
+  }
+
+  bool is_time_to_drop() {
+	  return (_chunk_allocator._allocated) >= (_chunk_allocator._capacity*_settings->percent_to_drop);
+  }
+
+  void drop_thread_func() {
+	  while (!_drop_stop) {
+		  std::unique_lock<std::mutex> ul(_drop_locker);
+		  _drop_cond.wait(ul);
+		  if (_drop_stop) {
+			  break;
+		  }
+
+		  if (!is_time_to_drop()) {
+			  continue;
+		  }
+
+		  drop_by_limit(_settings->chunks_to_free, false);
+	  }
+
+	  logger_info("engine: memstorage dropping stop.");
   }
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;
@@ -545,8 +572,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   IChunkWriter* _down_level_storage;
   
   std::vector<MemChunk_Ptr>  _chunks;
-  std::mutex _drop_locker;
   bool _stoped;
+
+  std::thread _drop_thread;
+  bool        _drop_stop;
+  std::mutex _drop_locker;
+  std::condition_variable _drop_cond;
 };
 
 MemStorage::MemStorage(const storage::Settings_ptr &s) : _impl(new MemStorage::Private(s)) {}
