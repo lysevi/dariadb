@@ -5,8 +5,9 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <libdariadb/utils/exception.h>
 
-#define NOT_IMPLEMENTED throw std::logic_error("Not implemented");
+#define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
 
 #ifdef _DEBUG
 #define ENSURE(A, E)                                                           \

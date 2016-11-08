@@ -674,3 +674,7 @@ void Page::mark_as_non_init(Chunk_Ptr &ptr) {
   _index->index[pos].is_init = false;
   this->header->removed_chunks++;
 }
+
+void Page::appendChunks(const std::vector<Chunk*>&a, size_t count) {
+	NOT_IMPLEMENTED;
+}

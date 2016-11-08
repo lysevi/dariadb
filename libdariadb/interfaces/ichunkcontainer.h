@@ -2,6 +2,7 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/query_param.h>
+#include <libdariadb/storage/chunk.h>
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/st_exports.h>
 namespace dariadb {
@@ -27,6 +28,8 @@ public:
   virtual void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                          IReaderClb *clb) = 0;
   EXPORT virtual void foreach (const QueryInterval &query, IReaderClb * clb);
+
+  virtual void appendChunks(const std::vector<Chunk*>&a, size_t count) = 0;
   virtual ~IChunkContainer(){}
 };
 }

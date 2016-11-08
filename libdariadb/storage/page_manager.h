@@ -11,7 +11,7 @@
 namespace dariadb {
 namespace storage {
 
-class PageManager : public utils::NonCopy, public IChunkContainer, public IChunkWriter {
+class PageManager : public utils::NonCopy, public IChunkContainer{
 public:
 
 public:

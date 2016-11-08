@@ -93,10 +93,5 @@ public:
   compression::v2::CopmressedWriter c_writer;
 };
 
-class IChunkWriter {
-public:
-    virtual ~IChunkWriter(){}
-    virtual void appendChunks(const std::vector<Chunk*>&a,size_t count) = 0;
-};
 }
 }

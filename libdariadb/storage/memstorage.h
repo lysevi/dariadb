@@ -2,6 +2,7 @@
 
 #include <libdariadb/st_exports.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/interfaces/ichunkcontainer.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/settings.h>
@@ -69,7 +70,7 @@ public:
   using IMeasStorage::append;
   EXPORT append_result append(const Meas &value) override;
   EXPORT void flush() override;
-  EXPORT void setDownLevel(IChunkWriter*_down);
+  EXPORT void setDownLevel(IChunkContainer*_down);
   EXPORT void stop();
   EXPORT void lock_drop();
   EXPORT void unlock_drop();

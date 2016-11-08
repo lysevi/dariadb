@@ -13,7 +13,7 @@
 
 #include "test_common.h"
 
-class MokChunkWriter :public dariadb::storage::IChunkWriter {
+class MokChunkWriter :public dariadb::storage::IChunkContainer {
 public:
 	size_t droped;
 	MokChunkWriter() { droped = 0; }
@@ -21,6 +21,18 @@ public:
     void appendChunks(const std::vector<dariadb::storage::Chunk*>&a,size_t count) override{
         droped+=count;
     }
+
+	bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) override {
+		return false;
+	}
+	dariadb::storage::ChunkLinkList chunksByIterval(const dariadb::storage::QueryInterval &query) override {
+		return dariadb::storage::ChunkLinkList{};
+	}
+	dariadb::Id2Meas valuesBeforeTimePoint(const dariadb::storage::QueryTimePoint &q) {
+		return dariadb::Id2Meas{};
+	}
+	void readLinks(const dariadb::storage::QueryInterval &query, const dariadb::storage::ChunkLinkList &links, dariadb::storage::IReaderClb *clb) override {
+	}
 };
 
 BOOST_AUTO_TEST_CASE(LockFreeArrayTypeTraitTest) {
