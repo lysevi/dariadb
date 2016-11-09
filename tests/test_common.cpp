@@ -243,7 +243,7 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   Time maxWritedTime = MIN_TIME;
   size_t total_count =
       fill_storage_for_test(as, from, to, step, &_all_ids_set, &maxWritedTime);
-  as->flush();
+  
   minMaxCheck(as, from, maxWritedTime);
 
   Id2Meas current_mlist;
@@ -254,7 +254,6 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
     throw MAKE_EXCEPTION("current_mlist.size()!= _all_ids_set.size()");
   }
 
-  as->flush();
   if (as->minTime() != from) {
     throw MAKE_EXCEPTION("as->minTime() != from");
   }
@@ -265,6 +264,8 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
                     check_stop_flag);
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
+
+  as->flush();
 }
 /*
 void readIntervalCommonTest(storage::MeasStorage *ds) {
