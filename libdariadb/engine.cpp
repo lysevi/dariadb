@@ -133,18 +133,22 @@ public:
   void lock_storage() {
 	  if (_memstorage != nullptr) {
 		  _memstorage->lock_drop();
+		  _lock_manager->lock(LOCK_KIND::READ, { LOCK_OBJECTS::PAGE});
 	  }
-
-	  _lock_manager->lock(
-		  LOCK_KIND::READ, { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
+	  else {
+		  _lock_manager->lock(
+			  LOCK_KIND::READ, { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
+	  }
   }
 
   void unlock_storage() {
-	  _lock_manager->unlock(
-	  { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
-
 	  if (_memstorage != nullptr) {
+		  _lock_manager->unlock({ LOCK_OBJECTS::PAGE });
 		  _memstorage->unlock_drop();
+	  }
+	  else {
+		  _lock_manager->unlock(
+		  { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
 	  }
   }
 
