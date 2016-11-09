@@ -172,7 +172,6 @@ void reader(IMeasStorage_ptr ms, IdSet all_id_set, Time from, Time to) {
 
   while (true) {
     clbk->count = 0;
-    // auto time_point1 = uniform_dist(e1);
     auto f = from;
     auto t = write_time;
 
@@ -389,7 +388,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "write time: " << writers_elapsed << std::endl;
     std::cout << "total speed: " << append_count / writers_elapsed << "/s" << std::endl;
-    {
+	if(strategy!= STRATEGY::MEMORY){
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_drop_info, raw_ptr);

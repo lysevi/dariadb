@@ -277,6 +277,7 @@ struct TimeTrack : public IMeasStorage {
   }
 
   void rm_chunk(MemChunk *c) {
+	  std::lock_guard<utils::Locker> lg(_locker);
     _index.erase(c->header->maxTime);
   
     if (_cur_chunk.get() == c) {
