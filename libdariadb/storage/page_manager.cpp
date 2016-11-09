@@ -13,7 +13,6 @@
 #include <libdariadb/storage/lock_manager.h>
 
 #include <atomic>
-#include <condition_variable>
 #include <cstring>
 #include <fstream>
 #include <functional>
@@ -23,22 +22,26 @@
 #include <queue>
 #include <sstream>
 #include <thread>
-#include <unordered_map>
+
+#include <stx/btree_multimap.h>
 
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-using File2PageHeader = std::unordered_map<std::string, IndexHeader>;
+struct PageHeaderDescription {
+	std::string path;
+	IndexHeader hdr;
+};
+
+using File2PageHeader = stx::btree_multimap<dariadb::Time, PageHeaderDescription>;
 
 class PageManager::Private {
 public:
   Private(const EngineEnvironment_ptr env)
-      : _cur_page(nullptr),
-        _openned_pages(0) {
+      : _cur_page(nullptr) {
 
 	  _env = env;
 	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
-	  _openned_pages.set_max_size(_settings->page_openned_page_cache_size);
     
     last_id = 0;
 
@@ -49,8 +52,9 @@ public:
         auto file_name = utils::fs::append_path(_settings->path, n);
 		auto phdr = Page::readHeader(file_name);
 		last_id = std::max(phdr.max_chunk_id, last_id);
+
         auto ihdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
-        _file2header[n] = ihdr;
+		insert_pagedescr(n, ihdr);
       }
     }
   }
@@ -59,7 +63,6 @@ public:
     if (_cur_page != nullptr) {
       _cur_page = nullptr;
     }
-    _openned_pages.clear();
   }
 
   void fsck(bool force_check) {
@@ -151,16 +154,7 @@ public:
     if (_cur_page != nullptr && pname == _cur_page->filename) {
       pg = _cur_page;
     } else {
-      if (_openned_pages.find(pname, &pg)) {
-        return pg;
-      } else {
         pg = Page_Ptr{Page::open(pname, true)};
-        Page_Ptr dropped;
-        _openned_pages.put(pname, pg, &dropped);
-        if (dropped != nullptr) {
-          _file2header.erase(dropped->filename);
-        }
-      }
     }
     return pg;
   }
@@ -234,10 +228,10 @@ public:
     std::list<std::string> result;
 
     for (auto f2h : _file2header) {
-      auto hdr = f2h.second;
+      auto hdr = f2h.second.hdr;
       if (pred(hdr)) {
         auto page_file_name =
-            utils::fs::append_path(_settings->path, f2h.first);
+            utils::fs::append_path(_settings->path, f2h.second.path);
         result.push_back(page_file_name);
       }
     }
@@ -338,9 +332,8 @@ public:
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	last_id=res->header->max_chunk_id;
     delete res;
-    _file2header[page_name] =
-        Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
 
+	insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
   }
 
   static void erase(const std::string& storage_path,const std::string &fname) {
@@ -351,12 +344,17 @@ public:
   
   void erase_page(const std::string &full_file_name) {
 	  auto fname = utils::fs::extract_filename(full_file_name);
-	  _openned_pages.erase(full_file_name);
 
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_rm(fname);
 	  utils::fs::rm(full_file_name);
 	  utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-	  _file2header.erase(fname);
+	  auto it = _file2header.begin();
+	  for (; it != _file2header.end(); ++it) {
+		  if (it->second.path == fname) {
+			  break;
+		  }
+	  }
+	  _file2header.erase(it);
   }
 
   void eraseOld(const Time t) {
@@ -423,8 +421,8 @@ public:
 	  for (auto page_name : part) {
 		  this->erase_page(page_name);
 	  }
-	  _file2header[page_name] =
-		  Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+
+	  insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
   }
 
   void appendChunks(const std::vector<Chunk*>& a, size_t count) {
@@ -439,15 +437,22 @@ public:
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	  last_id = res->header->max_chunk_id;
 	  delete res;
-	  _file2header[page_name] = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
+
+	  insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
 	  lm->unlock({ LOCK_OBJECTS::PAGE });
+  }
+
+  void insert_pagedescr(std::string page_name, IndexHeader hdr) {
+	  PageHeaderDescription ph_d;
+	  ph_d.hdr = hdr;
+	  ph_d.path = page_name;
+	  _file2header.insert(std::make_pair(ph_d.hdr.maxTime, ph_d));
   }
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;
 
   uint64_t last_id;
-  utils::LRU<std::string, Page_Ptr> _openned_pages;
   File2PageHeader _file2header;
   EngineEnvironment_ptr _env;
   Settings* _settings;

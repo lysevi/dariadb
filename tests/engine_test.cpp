@@ -58,7 +58,6 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 
   settings->aof_buffer_size = 2;
   settings->page_chunk_size = 7;
-  settings->page_openned_page_cache_size = 8;
   settings->strategy = dariadb::storage::STRATEGY::COMPRESSED;
   settings->save();
 
@@ -71,7 +70,6 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
   BOOST_CHECK_EQUAL(settings->aof_buffer_size, uint64_t(2));
   BOOST_CHECK_EQUAL(settings->page_chunk_size, uint32_t(7));
-  BOOST_CHECK_EQUAL(settings->page_openned_page_cache_size, uint32_t(8));
   BOOST_CHECK(settings->strategy == dariadb::storage::STRATEGY::COMPRESSED);
 
   settings = nullptr;

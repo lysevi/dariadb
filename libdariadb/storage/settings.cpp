@@ -11,7 +11,6 @@ using json = nlohmann::json;
 
 const size_t AOF_BUFFER_SIZE = 2000;
 const size_t AOF_FILE_SIZE = sizeof(dariadb::Meas) * AOF_BUFFER_SIZE * 4;
-const uint32_t OPENNED_PAGE_CACHE_SIZE = 10;
 const uint32_t CHUNK_SIZE = 1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; //10 mb
 
@@ -38,7 +37,6 @@ void Settings::set_default() {
   aof_buffer_size = AOF_BUFFER_SIZE;
   aof_max_size = AOF_FILE_SIZE;
   page_chunk_size = CHUNK_SIZE;
-  page_openned_page_cache_size = OPENNED_PAGE_CACHE_SIZE;
   memory_limit = MAXIMUM_MEMORY_LIMIT;
   id_count = 0;
   strategy = STRATEGY::COMPRESSED;
@@ -67,7 +65,6 @@ void Settings::save(const std::string &file) {
   js["aof_buffer_size"] = aof_buffer_size;
 
   js["page_chunk_size"] = page_chunk_size;
-  js["page_openned_page_cache_size"] = page_openned_page_cache_size;
 
   std::stringstream ss;
   ss << strategy;
@@ -95,7 +92,6 @@ void Settings::load(const std::string &file) {
   aof_buffer_size = js["aof_buffer_size"];
 
   page_chunk_size = js["page_chunk_size"];
-  page_openned_page_cache_size = js["page_openned_page_cache_size"];
 
   memory_limit=js["memory_limit"];
   id_count=js["id_count"] ;

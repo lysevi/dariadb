@@ -32,8 +32,6 @@ public:
   size_t aof_buffer_size; // inner buffer size
 
   uint32_t page_chunk_size;
-  uint32_t page_openned_page_cache_size; /// max oppend pages in cache(readonly
-                                         /// pages stored).
 
   STRATEGY strategy;
 
