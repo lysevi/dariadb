@@ -32,14 +32,12 @@ struct SubscribeCallback : public storage::IReaderClb {
 
 		auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
 		hdr->id = _query_num;
-		hdr->count = 1;
 
+		QueryAppend_header::make_query(hdr, &m, size_t(1), 0);
+		
 		auto size_to_write = hdr->count * sizeof(Meas);
-
-		auto meas_ptr = (Meas *)((char *)(&hdr->count) + sizeof(hdr->count));
 		nd->size += static_cast<NetData::MessageSize>(size_to_write);
 
-		*meas_ptr = m;
 		_parent->_async_connection->send(nd);
 	}
 };
@@ -76,26 +74,26 @@ void IOClient::ClientDataReader::send_buffer() {
   if (pos == 0) {
     return;
   }
-  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
-  nd->size = sizeof(QueryAppend_header);
 
-  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
-  hdr->id = _query_num;
-  hdr->count = static_cast<uint32_t>(pos);
+  size_t writed = 0;
 
-  auto size_to_write = hdr->count * sizeof(Meas);
+  while (writed != pos) {
+	  auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
+	  nd->size = sizeof(QueryAppend_header);
 
-  auto meas_ptr = (Meas *)((char *)(&hdr->count) + sizeof(hdr->count));
-  nd->size += static_cast<NetData::MessageSize>(size_to_write);
+	  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
+	  hdr->id = _query_num;
+	  QueryAppend_header::make_query(hdr, _buffer.data(), pos, writed);
 
-  auto it = _buffer.begin();
-  size_t i = 0;
-  for (; it != _buffer.end() && i < hdr->count; ++it, ++i) {
-    *meas_ptr = *it;
-    ++meas_ptr;
+	  logger_info("server: pack count: ", hdr->count);
+
+	  auto size_to_write = hdr->count * sizeof(Meas);
+	  nd->size += static_cast<NetData::MessageSize>(size_to_write);
+	  writed += hdr->count;
+
+	  logger("server: #", _parent->_async_connection->id(), " send to client result of #", hdr->id, " count ", hdr->count);
+	  _parent->_async_connection->send(nd);
   }
-  logger("server: #", _parent->_async_connection->id(), " send to client result of #", hdr->id," count ", hdr->count);
-  _parent->_async_connection->send(nd);
 }
 
 IOClient::ClientDataReader::~ClientDataReader() {}

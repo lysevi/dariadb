@@ -231,7 +231,6 @@ public:
     while (writed != ma.size()) {
       auto cur_id = _query_num;
       _query_num += 1;
-      auto left = (ma.size() - writed);
 
 	  auto qres = std::make_shared<ReadResult>();
 	  qres->id = cur_id;
@@ -239,26 +238,22 @@ public:
 	  results.push_back(qres);
 	  this->_query_results[qres->id] = qres;
 
-      auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryAppend_header));
-      size_t count_to_write =
-          (left * sizeof(Meas)) > cur_msg_space ? cur_msg_space / sizeof(Meas) : left;
-      logger_info("client: pack count: ", count_to_write);
-
-      auto size_to_write = count_to_write * sizeof(Meas);
-
       auto nd = this->_pool.construct(DATA_KINDS::APPEND);
       nd->size = sizeof(QueryAppend_header);
 
       auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
       hdr->id = cur_id;
-      hdr->count = static_cast<uint32_t>(count_to_write);
+	  
+	  QueryAppend_header::make_query(hdr, ma.data(), ma.size(), writed);
 
-      auto meas_ptr = ((char *)(&hdr->count) + sizeof(hdr->count));
-      memcpy(meas_ptr, ma.data() + writed, size_to_write);
-      nd->size += static_cast<NetData::MessageSize>(size_to_write);
+	  logger_info("client: pack count: ", hdr->count);
+
+	  auto size_to_write = hdr->count * sizeof(Meas);
+	  nd->size += static_cast<NetData::MessageSize>(size_to_write);
+	  writed += hdr->count;
 
 	  _async_connection->send(nd);
-      writed += count_to_write;
+      
     }
 	this->_locker.unlock();
 	for (auto&r : results) {
