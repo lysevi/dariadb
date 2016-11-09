@@ -1,3 +1,4 @@
+#define _SCL_SECURE_NO_WARNINGS //for stx::btree in msvc build. 
 #include <libdariadb/storage/page_manager.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>

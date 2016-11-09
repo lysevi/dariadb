@@ -220,27 +220,24 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = aof_files();
-  if (files.empty()) {
-    return;
+  if (!files.empty()) {
+	  std::vector<TaskResult_Ptr> task_res{ files.size() };
+	  size_t num = 0;
+	  auto env = _env;
+	  for (auto filename : files) {
+		  AsyncTask at = [filename, &q, &clbk, env](const ThreadInfo &ti) {
+			  TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+			  AOFile aof(env, filename, true);
+			  aof.foreach(q, clbk);
+		  };
+		  task_res[num] =
+			  ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+		  num++;
+	  }
+	  for (auto &t : task_res) {
+		  t->wait();
+	  }
   }
-
-  std::vector<TaskResult_Ptr> task_res{files.size()};
-  size_t num = 0;
-  auto env = _env;
-  for (auto filename : files) {
-    AsyncTask at = [filename, &q, &clbk,env](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
-      AOFile aof(env, filename, true);
-      aof.foreach (q, clbk);
-    };
-    task_res[num] =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
-    num++;
-  }
-  for (auto &t : task_res) {
-    t->wait();
-  }
-
   size_t pos = 0;
   for (auto v : _buffer) {
     if (pos >= _buffer_pos) {
