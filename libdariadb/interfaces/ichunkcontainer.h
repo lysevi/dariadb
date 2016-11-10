@@ -30,7 +30,8 @@ public:
   EXPORT virtual void foreach (const QueryInterval &query, IReaderClb * clb);
 
   virtual void appendChunks(const std::vector<Chunk*>&a, size_t count) = 0;
-  virtual ~IChunkContainer(){}
+  EXPORT IChunkContainer();
+  EXPORT virtual ~IChunkContainer();
 };
 }
 }

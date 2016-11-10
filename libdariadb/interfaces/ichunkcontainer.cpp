@@ -2,6 +2,9 @@
 
 using namespace dariadb::storage;
 
+IChunkContainer::IChunkContainer(){}
+IChunkContainer::~IChunkContainer(){}
+
 void IChunkContainer::foreach (const QueryInterval &query, IReaderClb * clb) {
   auto all_chunkLinks = this->chunksByIterval(query);
   this->readLinks(query, all_chunkLinks, clb);
