@@ -32,11 +32,11 @@ struct SubscribeCallback : public storage::IReaderClb {
 
 		auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
 		hdr->id = _query_num;
-
-		QueryAppend_header::make_query(hdr, &m, size_t(1), 0);
+		size_t space_left = 0;
+		QueryAppend_header::make_query(hdr, &m, size_t(1), 0, &space_left);
 		
-		auto size_to_write = hdr->count * sizeof(Meas);
-		nd->size += static_cast<NetData::MessageSize>(size_to_write);
+		auto size_to_write = NetData::MAX_MESSAGE_SIZE - MARKER_SIZE -space_left;
+		nd->size = static_cast<NetData::MessageSize>(size_to_write);
 
 		_parent->_async_connection->send(nd);
 	}
@@ -83,12 +83,13 @@ void IOClient::ClientDataReader::send_buffer() {
 
 	  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
 	  hdr->id = _query_num;
-	  QueryAppend_header::make_query(hdr, _buffer.data(), pos, writed);
+	  size_t space_left = 0;
+	  QueryAppend_header::make_query(hdr, _buffer.data(), pos, writed, &space_left);
 
 	  logger_info("server: pack count: ", hdr->count);
 
-	  auto size_to_write = hdr->count * sizeof(Meas);
-	  nd->size += static_cast<NetData::MessageSize>(size_to_write);
+	  auto size_to_write = NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - space_left;
+	  nd->size = static_cast<NetData::MessageSize>(size_to_write);
 	  writed += hdr->count;
 
 	  logger("server: #", _parent->_async_connection->id(), " send to client result of #", hdr->id, " count ", hdr->count);

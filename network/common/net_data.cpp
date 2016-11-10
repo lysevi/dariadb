@@ -21,32 +21,81 @@ std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   auto buf_size = static_cast<MessageSize>(MARKER_SIZE + size);
   return std::tie(buf_size, v);
 }
+#pragma pack(push, 1)
+struct PackedMeases {
+	Id id;
+	uint16_t count;
+};
 
-uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos) {
-	auto left = size - pos;
-	auto cur_msg_space = (NetData::MAX_MESSAGE_SIZE - 1 - sizeof(QueryAppend_header));
-	uint32_t count_to_write=0;
+struct SubMeas {
+	dariadb::Flag flg;
+	dariadb::Time tm;
+	dariadb::Value val;
+};
+#pragma pack(pop)
+
+uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos, size_t* space_left) {
+	uint32_t result = 0;
+	auto free_space = (NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - 1 - sizeof(QueryAppend_header));
+
+	auto ptr = ((char *)(&hdr->count) + sizeof(hdr->count)); //first byte after header
+	PackedMeases* pack = (PackedMeases*)ptr;
+	pack->id = m_array[pos].id;
+	pack->count = 0;
+	ptr += sizeof(PackedMeases);
 	
-	if ((left * sizeof(Meas)) > cur_msg_space) {
-		count_to_write =(uint32_t) cur_msg_space / sizeof(Meas);
+	auto end = (char*)(hdr)+free_space;
+
+	while (pos < size) {
+		auto bytes_left = (size_t) (end - ptr);
+		if (m_array[pos].id != pack->id) {
+			if (bytes_left <= (sizeof(PackedMeases) + sizeof(SubMeas))) {
+				break;
+			}
+			pack = (PackedMeases*)ptr;
+			pack->id = m_array[pos].id;
+			pack->count = 0;
+			ptr += sizeof(PackedMeases);
+		}
+		if (bytes_left <= sizeof(SubMeas)) {
+			break;
+		}
+		SubMeas*sm = (SubMeas*)ptr;
+		sm->flg = m_array[pos].flag;
+		sm->tm = m_array[pos].time;
+		sm->val = m_array[pos].value;
+		++pack->count;
+		ptr += sizeof(SubMeas);
+		++pos;
+		++result;
 	}
-	else {
-		count_to_write = (uint32_t)left;
-	}
+	hdr->count = result;
+	*space_left = (size_t)(end - ptr);
 
-	auto meas_ptr = ((char *)(&hdr->count) + sizeof(hdr->count));
-
-	auto size_to_write = count_to_write * sizeof(Meas);
-	memcpy(meas_ptr, m_array + pos, size_to_write);
-	hdr->count =(uint32_t)count_to_write;
-
-	
-	return count_to_write;
+	return result;
 }
 
 MeasArray QueryAppend_header::read_measarray() const {
   MeasArray ma{size_t(count)};
-  memcpy(ma.data(), ((char *)(&count) + sizeof(count)), count * sizeof(Meas));
+  size_t pos = 0;
+  auto ptr = ((char *)(&count) + sizeof(count)); //first byte after header
+  
+  
+  while (pos < count) {
+	  PackedMeases* pack = (PackedMeases*)ptr;
+	  ptr += sizeof(PackedMeases);
+	  assert(pack->count <= count);
+	  for (uint16_t i = 0; i < pack->count; ++i) {
+		  SubMeas*sm = (SubMeas*)ptr;
+
+		  ma[pos].id = pack->id;
+		  ma[pos].flag = sm->flg;
+		  ma[pos].value = sm->val;
+		  ma[pos].time = sm->tm;
+		  ++pos;
+		  ptr += sizeof(SubMeas);
+	  }
+  }
   return ma;
 }
 

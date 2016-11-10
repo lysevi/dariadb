@@ -13,6 +13,7 @@
 #include <libdariadb/utils/fs.h>
 #include <libclient/client.h>
 #include <libserver/server.h>
+#include "../network/common/net_data.h"
 
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
@@ -37,6 +38,48 @@ void server_thread_func() {
   }
 
   server_instance = nullptr;
+}
+BOOST_AUTO_TEST_CASE(NetDataPack) {
+	using dariadb::net::QueryAppend_header;
+	using dariadb::net::NetData;
+	
+	NetData nd;
+	
+	auto hdr = reinterpret_cast<QueryAppend_header *>(&nd.data);
+	dariadb::MeasArray ma;
+	const size_t ma_sz = 5000;
+	ma.resize(ma_sz);
+	dariadb::Id id = 1;
+	for (size_t i = 1; i < ma.size(); ++i) {
+		ma[i].flag = dariadb::Flag(i);
+		ma[i].value= dariadb::Value(i);
+		ma[i].time = i;
+		ma[i].id = id;
+		if (i % 5==0) {
+			++id;
+		}
+	}
+
+	size_t sz = 0;
+	dariadb::net::QueryAppend_header::make_query(hdr, ma.data(),ma.size(), 0, &sz);
+	size_t packe_count = hdr->count;
+
+	auto readed_ma=hdr->read_measarray();
+	BOOST_CHECK_EQUAL(packe_count, readed_ma.size());
+	BOOST_CHECK_EQUAL(readed_ma[0].id,  dariadb::Id(0));
+	BOOST_CHECK_EQUAL(readed_ma[0].flag, dariadb::Flag(0));
+	BOOST_CHECK_EQUAL(readed_ma[0].value, dariadb::Value(0));
+	BOOST_CHECK_EQUAL(readed_ma[0].time, dariadb::Time(0));
+	id = 1;
+	for (size_t i = 1; i < readed_ma.size(); ++i) {
+		BOOST_CHECK_EQUAL(readed_ma[i].id, dariadb::Id(id));
+		BOOST_CHECK_EQUAL(readed_ma[i].flag, dariadb::Flag(i));
+		BOOST_CHECK_EQUAL(readed_ma[i].value, dariadb::Value(i));
+		BOOST_CHECK_EQUAL(readed_ma[i].time, dariadb::Time(i));
+		if (i % 5 == 0) {
+			++id;
+		}
+	}
 }
 
 BOOST_AUTO_TEST_CASE(Connect1) {

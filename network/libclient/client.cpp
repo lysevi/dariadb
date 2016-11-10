@@ -243,13 +243,12 @@ public:
 
       auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
       hdr->id = cur_id;
-	  
-	  QueryAppend_header::make_query(hdr, ma.data(), ma.size(), writed);
+	  size_t space_left = 0;
+	  QueryAppend_header::make_query(hdr, ma.data(), ma.size(), writed, &space_left);
 
 	  logger_info("client: pack count: ", hdr->count);
 
-	  auto size_to_write = hdr->count * sizeof(Meas);
-	  nd->size += static_cast<NetData::MessageSize>(size_to_write);
+	  nd->size = NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - space_left;
 	  writed += hdr->count;
 
 	  _async_connection->send(nd);

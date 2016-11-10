@@ -65,7 +65,7 @@ void run_server() {
 	}
 }
 
-const size_t MEASES_SIZE = 2000;
+const size_t MEASES_SIZE = 4000;
 const size_t SEND_COUNT = 200;
 
 std::vector<float> elapsed;

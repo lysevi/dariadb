@@ -51,7 +51,15 @@ struct QueryAppend_header {
   uint8_t kind;
   QueryNumber id;
   uint32_t count;
-  CM_EXPORT static uint32_t make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos);
+  /**
+  hdr - target header to fill
+  m_array - array with measurements
+  size - length of m_array
+  pos - position in m_array where processing must start.
+  space_left - space left in buffer after processing
+  return - count processed meases;
+  */
+  CM_EXPORT static uint32_t make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos, size_t* space_left);
   CM_EXPORT MeasArray read_measarray() const;
 };
 
