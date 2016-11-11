@@ -16,14 +16,16 @@
   - Flag - x32 unsigned integer.
 * Accept unordered data.
 * Write strategies:
-  - fast write - optimised for big write load.
+  - fast write - little cache and all values storing to disk. optimised for big write load(but slower than 'memory' strategy).
   - compressed - all values compressed for good disk usage without writing to sorted layer.
   - memory - all values stored in memory and dropped to disk when memory limit is ended.
 * LSM-like storage struct with three layers:
-  - Append-only files layer, for fast write speed and crash-safety.
+  - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'fast write').
   - Old values stored in compressed block for better disk space usage.
-* High write speed to disk - 2.5 - 3.5 millions values per second to disk, 7-9 millions when strategy is 'memory'.
-* High write speed(150k - 200k values per second) across the network.
+* High write speed:
+  -  as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
+  -  as memory storage(when strategy is 'memory') - 7-9 millions.
+  -  across the network - 300k - 350k values per second
 * Crash recovery.
 * CRC32 for all values.
 * Two variants of API:
