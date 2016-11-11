@@ -65,7 +65,7 @@ void run_server() {
 	}
 }
 
-const size_t MEASES_SIZE = 4000;
+const size_t MEASES_SIZE = 5500;
 const size_t SEND_COUNT = 100;
 
 std::vector<float> elapsed;
@@ -151,7 +151,9 @@ int main(int argc,char**argv){
     dariadb::net::client::Client_Ptr c{ new dariadb::net::client::Client(p) };
     c->connect();
     dariadb::storage::QueryInterval ri(dariadb::IdArray{0},0,0,MEASES_SIZE);
+	auto read_start = clock();
     auto result=c->readInterval(ri);
+	auto read_end = clock();
 	c->disconnect();
 
 	if(run_server_flag){
@@ -171,6 +173,7 @@ int main(int argc,char**argv){
     auto average_time=std::accumulate(elapsed.begin(),elapsed.end(),0.0)/clients_count;
     std::cout << "average time: " << average_time<<" sec." << std::endl;
     std::cout << "average speed: " << count_per_thread/(float)(average_time)<<" per sec." << std::endl;
+	std::cout << "read speed: " << (((float)read_end - read_start) / CLOCKS_PER_SEC) << " per sec." << std::endl;
 
     std::cout<<"result:"<<result.size();
 

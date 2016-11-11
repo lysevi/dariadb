@@ -1,4 +1,6 @@
 #include <common/net_data.h>
+#include <libdariadb/compression/v2/xor.h>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::net;
@@ -21,20 +23,72 @@ std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   auto buf_size = static_cast<MessageSize>(MARKER_SIZE + size);
   return std::tie(buf_size, v);
 }
-#pragma pack(push, 1)
-struct PackedMeases {
-	Id id;
-	uint16_t count;
-};
 
-struct SubMeas {
-	dariadb::Flag flg;
-	dariadb::Time tm;
-	dariadb::Value val;
-};
+namespace netdata_inner {
+#pragma pack(push, 1)
+	struct PackedMeases {
+		Id id;
+		uint16_t count;
+	};
+
+	const size_t PACKED_BUFFER_MAX_SIZE = sizeof(dariadb::Flag) + sizeof(dariadb::Time) + sizeof(dariadb::Value);
+	struct SubMeas {
+		uint8_t packed[PACKED_BUFFER_MAX_SIZE];
+		size_t  size;
+		SubMeas(dariadb::Flag flg, dariadb::Time tm, dariadb::Value val) {
+			memset(packed, 0, PACKED_BUFFER_MAX_SIZE);
+			size = 0;
+			pack(flg);
+			pack(tm);
+			pack(compression::v2::inner::flat_double_to_int(val));
+		}
+		/// LEB128
+		template<typename T>
+		void pack(const T v) {
+			auto x = v;
+			do {
+				auto sub_res = x & 0x7fU;
+				if (x >>= 7)
+					sub_res |= 0x80U;
+				packed[size]=static_cast<uint8_t>(sub_res);
+				++size;
+			} while (x);
+		}
+	};
+
+	struct  SubMeas_unpack {
+		uint8_t *ptr;
+		dariadb::Flag f;
+		dariadb::Time t;
+		dariadb::Value v;
+		SubMeas_unpack(uint8_t*_ptr) {
+			ptr = _ptr;
+			f = unpack<dariadb::Flag>();
+			t = unpack<dariadb::Time>();
+			v = dariadb::compression::v2::inner::flat_int_to_double(unpack<uint64_t>());
+		}
+
+		template<typename T>
+		T unpack() {
+			T result=T();
+
+			size_t bytes = 0;
+			while (true) {
+				auto readed = *ptr;
+				result |= (readed & 0x7fULL) << (7 * bytes++);
+				++ptr;
+				if (!(readed & 0x80U)) {
+					break;
+				}
+			}
+			return result;
+		}
+	};
 #pragma pack(pop)
+};
 
 uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos, size_t* space_left) {
+	using namespace netdata_inner;
 	uint32_t result = 0;
 	auto free_space = (NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - 1 - sizeof(QueryAppend_header));
 
@@ -46,10 +100,12 @@ uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_ar
 	
 	auto end = (char*)(hdr)+free_space;
 
-	while (pos < size) {
+	while (pos < size && ptr != end) {
+		netdata_inner::SubMeas sm{ m_array[pos].flag, m_array[pos].time, m_array[pos].value };
 		auto bytes_left = (size_t) (end - ptr);
+		assert(bytes_left < NetData::MAX_MESSAGE_SIZE);
 		if (m_array[pos].id != pack->id) {
-			if (bytes_left <= (sizeof(PackedMeases) + sizeof(SubMeas))) {
+			if (bytes_left <= (sizeof(PackedMeases) + sm.size)) {
 				break;
 			}
 			pack = (PackedMeases*)ptr;
@@ -57,15 +113,14 @@ uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_ar
 			pack->count = 0;
 			ptr += sizeof(PackedMeases);
 		}
-		if (bytes_left <= sizeof(SubMeas)) {
+		if (bytes_left <= sm.size) {
 			break;
 		}
-		SubMeas*sm = (SubMeas*)ptr;
-		sm->flg = m_array[pos].flag;
-		sm->tm = m_array[pos].time;
-		sm->val = m_array[pos].value;
+		
+		std::memcpy(ptr, sm.packed, sm.size);
+		ptr += sm.size;
+		assert(ptr < end);
 		++pack->count;
-		ptr += sizeof(SubMeas);
 		++pos;
 		++result;
 	}
@@ -76,9 +131,11 @@ uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_ar
 }
 
 MeasArray QueryAppend_header::read_measarray() const {
+	using namespace netdata_inner;
+
   MeasArray ma{size_t(count)};
   size_t pos = 0;
-  auto ptr = ((char *)(&count) + sizeof(count)); //first byte after header
+  auto ptr = ((uint8_t *)(&count) + sizeof(count)); //first byte after header
   
   
   while (pos < count) {
@@ -86,14 +143,14 @@ MeasArray QueryAppend_header::read_measarray() const {
 	  ptr += sizeof(PackedMeases);
 	  assert(pack->count <= count);
 	  for (uint16_t i = 0; i < pack->count; ++i) {
-		  SubMeas*sm = (SubMeas*)ptr;
+		  SubMeas_unpack sm(ptr);
 
 		  ma[pos].id = pack->id;
-		  ma[pos].flag = sm->flg;
-		  ma[pos].value = sm->val;
-		  ma[pos].time = sm->tm;
+		  ma[pos].flag = sm.f;
+		  ma[pos].value = sm.v;
+		  ma[pos].time = sm.t;
 		  ++pos;
-		  ptr += sizeof(SubMeas);
+		  ptr = sm.ptr;
 	  }
   }
   return ma;
