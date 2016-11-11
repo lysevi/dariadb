@@ -173,7 +173,7 @@ int main(int argc,char**argv){
     auto average_time=std::accumulate(elapsed.begin(),elapsed.end(),0.0)/clients_count;
     std::cout << "average time: " << average_time<<" sec." << std::endl;
     std::cout << "average speed: " << count_per_thread/(float)(average_time)<<" per sec." << std::endl;
-	std::cout << "read speed: " << (((float)read_end - read_start) / CLOCKS_PER_SEC) << " per sec." << std::endl;
+	std::cout << "read speed: " << result.size()/(((float)read_end - read_start) / CLOCKS_PER_SEC) << " per sec." << std::endl;
 
     std::cout<<"result:"<<result.size();
 
