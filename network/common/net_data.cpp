@@ -5,6 +5,68 @@
 using namespace dariadb;
 using namespace dariadb::net;
 
+namespace netdata_inner {
+#pragma pack(push, 1)
+struct PackHeader {
+  Id id;
+  uint16_t count;
+};
+
+const size_t PACKED_BUFFER_MAX_SIZE =
+    sizeof(dariadb::Flag) + sizeof(dariadb::Time) + sizeof(dariadb::Value);
+struct PackMeas {
+  uint8_t packed[PACKED_BUFFER_MAX_SIZE];
+  size_t size;
+  PackMeas(dariadb::Flag flg, dariadb::Time tm, dariadb::Value val) {
+    memset(packed, 0, PACKED_BUFFER_MAX_SIZE);
+    size = 0;
+    pack(flg);
+    pack(tm);
+    pack(compression::v2::inner::flat_double_to_int(val));
+  }
+  /// LEB128
+  template <typename T> void pack(const T v) {
+    auto x = v;
+    do {
+      auto sub_res = x & 0x7fU;
+      if (x >>= 7)
+        sub_res |= 0x80U;
+      packed[size] = static_cast<uint8_t>(sub_res);
+      ++size;
+    } while (x);
+  }
+};
+
+struct UnpackMeas {
+  uint8_t *ptr;
+  dariadb::Flag flag;
+  dariadb::Time time;
+  dariadb::Value value;
+  UnpackMeas(uint8_t *_ptr) {
+    ptr = _ptr;
+    flag = unpack<dariadb::Flag>();
+    time = unpack<dariadb::Time>();
+    value = dariadb::compression::v2::inner::flat_int_to_double(unpack<uint64_t>());
+  }
+
+  template <typename T> T unpack() {
+    T result = T();
+
+    size_t bytes = 0;
+    while (true) {
+      auto readed = *ptr;
+      result |= (readed & 0x7fULL) << (7 * bytes++);
+      ++ptr;
+      if (!(readed & 0x80U)) {
+        break;
+      }
+    }
+    return result;
+  }
+};
+#pragma pack(pop)
+}
+
 NetData::NetData() {
   memset(data, 0, MAX_MESSAGE_SIZE);
   size = 0;
@@ -24,94 +86,31 @@ std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   return std::tie(buf_size, v);
 }
 
-namespace netdata_inner {
-#pragma pack(push, 1)
-	struct PackedMeases {
-		Id id;
-		uint16_t count;
-	};
-
-	const size_t PACKED_BUFFER_MAX_SIZE = sizeof(dariadb::Flag) + sizeof(dariadb::Time) + sizeof(dariadb::Value);
-	struct SubMeas {
-		uint8_t packed[PACKED_BUFFER_MAX_SIZE];
-		size_t  size;
-		SubMeas(dariadb::Flag flg, dariadb::Time tm, dariadb::Value val) {
-			memset(packed, 0, PACKED_BUFFER_MAX_SIZE);
-			size = 0;
-			pack(flg);
-			pack(tm);
-			pack(compression::v2::inner::flat_double_to_int(val));
-		}
-		/// LEB128
-		template<typename T>
-		void pack(const T v) {
-			auto x = v;
-			do {
-				auto sub_res = x & 0x7fU;
-				if (x >>= 7)
-					sub_res |= 0x80U;
-				packed[size]=static_cast<uint8_t>(sub_res);
-				++size;
-			} while (x);
-		}
-	};
-
-	struct  SubMeas_unpack {
-		uint8_t *ptr;
-		dariadb::Flag f;
-		dariadb::Time t;
-		dariadb::Value v;
-		SubMeas_unpack(uint8_t*_ptr) {
-			ptr = _ptr;
-			f = unpack<dariadb::Flag>();
-			t = unpack<dariadb::Time>();
-			v = dariadb::compression::v2::inner::flat_int_to_double(unpack<uint64_t>());
-		}
-
-		template<typename T>
-		T unpack() {
-			T result=T();
-
-			size_t bytes = 0;
-			while (true) {
-				auto readed = *ptr;
-				result |= (readed & 0x7fULL) << (7 * bytes++);
-				++ptr;
-				if (!(readed & 0x80U)) {
-					break;
-				}
-			}
-			return result;
-		}
-	};
-#pragma pack(pop)
-};
-
 uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos, size_t* space_left) {
 	using namespace netdata_inner;
 	uint32_t result = 0;
 	auto free_space = (NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - 1 - sizeof(QueryAppend_header));
 
 	auto ptr = ((char *)(&hdr->count) + sizeof(hdr->count)); //first byte after header
-	PackedMeases* pack = (PackedMeases*)ptr;
+    PackHeader* pack = (PackHeader*)ptr;
 	pack->id = m_array[pos].id;
 	pack->count = 0;
-	ptr += sizeof(PackedMeases);
+    ptr += sizeof(PackHeader);
 	
 	auto end = (char*)(hdr)+free_space;
 
 	while (pos < size && ptr != end) {
-		netdata_inner::SubMeas sm{ m_array[pos].flag, m_array[pos].time, m_array[pos].value };
+        netdata_inner::PackMeas sm{ m_array[pos].flag, m_array[pos].time, m_array[pos].value };
 		auto bytes_left = (size_t) (end - ptr);
 		assert(bytes_left < NetData::MAX_MESSAGE_SIZE);
 		if (m_array[pos].id != pack->id) {
-			if (bytes_left <= (sizeof(PackedMeases) + sm.size)) {
+            if (bytes_left <= (sizeof(PackHeader) + sm.size)) {
 				break;
 			}
-			pack = (PackedMeases*)ptr;
+            pack = (PackHeader*)ptr;
 			pack->id = m_array[pos].id;
 			pack->count = 0;
-			ptr += sizeof(PackedMeases);
+            ptr += sizeof(PackHeader);
 		}
 		if (bytes_left <= sm.size) {
 			break;
@@ -139,16 +138,16 @@ MeasArray QueryAppend_header::read_measarray() const {
   
   
   while (pos < count) {
-	  PackedMeases* pack = (PackedMeases*)ptr;
-	  ptr += sizeof(PackedMeases);
+      PackHeader* pack = (PackHeader*)ptr;
+      ptr += sizeof(PackHeader);
 	  assert(pack->count <= count);
 	  for (uint16_t i = 0; i < pack->count; ++i) {
-		  SubMeas_unpack sm(ptr);
+          UnpackMeas sm(ptr);
 
 		  ma[pos].id = pack->id;
-		  ma[pos].flag = sm.f;
-		  ma[pos].value = sm.v;
-		  ma[pos].time = sm.t;
+          ma[pos].flag = sm.flag;
+          ma[pos].value = sm.value;
+          ma[pos].time = sm.time;
 		  ++pos;
 		  ptr = sm.ptr;
 	  }
