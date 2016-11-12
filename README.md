@@ -25,7 +25,7 @@
 * High write speed:
   -  as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
   -  as memory storage(when strategy is 'memory') - 7-9 millions.
-  -  across the network - 300k - 350k values per second
+  -  across the network - 700k - 800k values per second
 * Crash recovery.
 * CRC32 for all values.
 * Two variants of API:
