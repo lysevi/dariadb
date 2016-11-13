@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <boost/test/unit_test.hpp>
 
-#include <libdariadb/compression/compression.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>

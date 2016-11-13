@@ -9,7 +9,6 @@
 
 namespace dariadb {
 namespace compression {
-namespace v2 {
 class ByteBuffer;
 typedef std::shared_ptr<ByteBuffer> ByteBuffer_Ptr;
 class ByteBuffer {
@@ -60,4 +59,4 @@ protected:
 };
 }
 }
-}
+

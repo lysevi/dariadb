@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libdariadb/compression/v2/bytebuffer.h>
-#include <libdariadb/compression/v2/compression.h>
+#include <libdariadb/compression/bytebuffer.h>
+#include <libdariadb/compression/compression.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/lru.h>
@@ -67,7 +67,7 @@ public:
   ChunkHeader *header;
   u8vector _buffer_t;
 
-  compression::v2::ByteBuffer_Ptr bw;
+  compression::ByteBuffer_Ptr bw;
 
   bool should_free; // chunk dtor must (delete[]) resource.
 };
@@ -90,7 +90,7 @@ public:
   uint32_t calc_checksum() override;
   uint32_t get_checksum() override;
   ChunkReader_Ptr get_reader() override;
-  compression::v2::CopmressedWriter c_writer;
+  compression::CopmressedWriter c_writer;
 };
 
 }

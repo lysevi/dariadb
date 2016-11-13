@@ -1,5 +1,5 @@
 #include <common/net_data.h>
-#include <libdariadb/compression/v2/xor.h>
+#include <libdariadb/compression/xor.h>
 #include <cstring>
 
 using namespace dariadb;
@@ -22,7 +22,7 @@ struct PackMeas {
     size = 0;
     pack(flg);
     pack(tm);
-    pack(compression::v2::inner::flat_double_to_int(val));
+    pack(compression::inner::flat_double_to_int(val));
   }
   /// LEB128
   template <typename T> void pack(const T v) {
@@ -46,7 +46,7 @@ struct UnpackMeas {
     ptr = _ptr;
     flag = unpack<dariadb::Flag>();
     time = unpack<dariadb::Time>();
-    value = dariadb::compression::v2::inner::flat_int_to_double(unpack<uint64_t>());
+    value = dariadb::compression::inner::flat_int_to_double(unpack<uint64_t>());
   }
 
   template <typename T> T unpack() {

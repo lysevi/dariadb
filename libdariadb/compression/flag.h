@@ -5,24 +5,21 @@
 
 namespace dariadb {
 namespace compression {
-
-class FlagCompressor : public BaseCompressor {
-public:
-  EXPORT FlagCompressor(const BinaryBuffer_Ptr &bw);
+struct FlagCompressor : public BaseCompressor {
+  EXPORT FlagCompressor(const ByteBuffer_Ptr &bw);
 
   EXPORT bool append(Flag v);
-
-protected:
-  bool _is_first;
   Flag _first;
+  bool _is_first;
 };
 
-class FlagDeCompressor : public BaseCompressor {
-public:
-  EXPORT FlagDeCompressor(const BinaryBuffer_Ptr &bw, Flag first);
+struct FlagDeCompressor : public BaseCompressor {
+  EXPORT FlagDeCompressor(const ByteBuffer_Ptr &bw, Flag first);
+
   EXPORT Flag read();
-protected:
-  Flag _prev_value;
+  Flag _first;
+  bool _is_first;
 };
 }
 }
+

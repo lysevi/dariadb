@@ -1,45 +1,60 @@
 #pragma once
 
-#include <libdariadb/meas.h>
-#include <libdariadb/compression/binarybuffer.h>
-#include <libdariadb/st_exports.h>
 #include <memory>
+
+#include <libdariadb/meas.h>
+#include <libdariadb/compression/bytebuffer.h>
+#include <libdariadb/compression/delta.h>
+#include <libdariadb/compression/flag.h>
+#include <libdariadb/compression/xor.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace compression {
-	//TODO rm pimpl idiom. do like in v2 compression API.
 class CopmressedWriter {
 public:
-  EXPORT CopmressedWriter();
-  EXPORT CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
+  EXPORT CopmressedWriter(const ByteBuffer_Ptr &bw_time);
   EXPORT ~CopmressedWriter();
-  EXPORT CopmressedWriter(const CopmressedWriter &other);
-
-  EXPORT void swap(CopmressedWriter &other);
-
-  EXPORT CopmressedWriter &operator=(const CopmressedWriter &other);
-  EXPORT CopmressedWriter &operator=(CopmressedWriter &&other);
 
   EXPORT bool append(const Meas &m);
- EXPORT  bool is_full() const;
+  bool is_full() const { return _is_full; }
 
-  EXPORT size_t used_space() const;
+  size_t used_space() const { return time_comp.used_space(); }
 
+  ByteBuffer_Ptr get_bb()const { return _bb; }
 protected:
-  class Private;
-  std::unique_ptr<Private> _Impl;
+	ByteBuffer_Ptr _bb;
+	Meas _first;
+	bool _is_first;
+	bool _is_full;
+	DeltaCompressor time_comp;
+	XorCompressor value_comp;
+	FlagCompressor flag_comp;
 };
 
 class CopmressedReader {
 public:
-  EXPORT CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
+	CopmressedReader() = default;
+  EXPORT CopmressedReader(const ByteBuffer_Ptr &bw_time, const Meas &first);
   EXPORT ~CopmressedReader();
 
-  EXPORT Meas read();
+
+  dariadb::Meas read() {
+	  Meas result{};
+	  result.id = _first.id;
+	  result.time = time_dcomp.read();
+	  result.value = value_dcomp.read();
+	  result.flag = flag_dcomp.read();
+	  return result;
+  }
+
 
 protected:
-  class Private;
-  std::unique_ptr<Private> _Impl;
+	dariadb::Meas _first;
+	DeltaDeCompressor time_dcomp;
+	XorDeCompressor value_dcomp;
+	FlagDeCompressor flag_dcomp;
 };
 }
 }
+

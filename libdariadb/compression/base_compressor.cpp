@@ -2,4 +2,4 @@
 
 using namespace dariadb::compression;
 
-BaseCompressor::BaseCompressor(const BinaryBuffer_Ptr &bw) : _bw(bw) {}
+BaseCompressor::BaseCompressor(const ByteBuffer_Ptr &bw_) : bw(bw_) {}

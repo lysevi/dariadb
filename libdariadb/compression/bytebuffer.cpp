@@ -1,10 +1,10 @@
-#include <libdariadb/compression/v2/bytebuffer.h>
+#include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/utils/utils.h>
 #include <cassert>
 #include <sstream>
 
 using namespace dariadb;
-using namespace dariadb::compression::v2;
+using namespace dariadb::compression;
 
 ByteBuffer::ByteBuffer(const utils::Range &r) : _begin(r.begin), _end(r.end) {
   _cap = static_cast<uint32_t>(std::distance(_begin, _end));

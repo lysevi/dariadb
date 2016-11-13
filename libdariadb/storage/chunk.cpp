@@ -8,7 +8,7 @@
 using namespace dariadb;
 using namespace dariadb::utils;
 using namespace dariadb::storage;
-using namespace dariadb::compression::v2;
+using namespace dariadb::compression;
 
 // std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
 
@@ -171,7 +171,7 @@ Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
   raw_res->count = this->header->count;
   raw_res->_chunk = this->shared_from_this();
   raw_res->_is_first = true;
-  raw_res->bw = std::make_shared<compression::v2::ByteBuffer>(this->bw->get_range());
+  raw_res->bw = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
   raw_res->bw->reset_pos();
   raw_res->_reader = std::make_shared<CopmressedReader>(raw_res->bw, this->header->first);
 
