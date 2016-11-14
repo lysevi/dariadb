@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
 
 namespace dariadb {
 struct append_result {
@@ -13,6 +14,7 @@ struct append_result {
   append_result(const append_result &other) {
     this->writed = other.writed;
     this->ignored = other.ignored;
+      this->error_message=other.error_message;
   }
 
   append_result operator+(const append_result &other) {
@@ -25,8 +27,10 @@ struct append_result {
   void operator=(const append_result &other) {
     this->writed = other.writed;
     this->ignored = other.ignored;
+      this->error_message=other.error_message;
   }
   size_t writed;
   size_t ignored;
+  std::string error_message;
 };
 }

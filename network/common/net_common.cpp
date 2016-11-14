@@ -30,6 +30,9 @@ std::ostream &operator<<(std::ostream &stream, const ERRORS &state) {
   case dariadb::net::ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO:
     stream << "ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO";
     break;
+  case dariadb::net::ERRORS::APPEND_ERROR:
+      stream << "ERRORS::APPEND_ERROR";
+      break;
   }
   return stream;
 }

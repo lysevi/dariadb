@@ -336,7 +336,12 @@ void IOClient::append(const NetData_ptr &d) {
 
   auto ar = env->storage->append(ma.begin(), ma.end());
   this->env->srv->write_end();
-  sendOk(hdr->id);
+  if(ar.ignored!=size_t(0)){
+      logger_info("server: write error - ", ar.error_message);
+      sendError(hdr->id, ERRORS::APPEND_ERROR);
+  }else{
+      sendOk(hdr->id);
+  }
   this->env->nd_pool->free(d);
   logger_info("server: #", this->_async_connection->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }

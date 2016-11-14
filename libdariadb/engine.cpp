@@ -93,6 +93,12 @@ public:
 		_top_storage = _memstorage;
 	}
     
+    _min_max=_page_manager->loadMinMax();
+
+    if(_settings->strategy!= STRATEGY::MEMORY){
+        auto amm=_top_storage->loadMinMax();
+        minmax_append(_min_max,amm);
+    }
   }
   ~Private() { this->stop(); }
 
@@ -222,10 +228,23 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
+      auto fres=_min_max.find(value.flag);
+      if(fres!=_min_max.end()){
+          auto max_v=fres->second;
+          if(max_v.max>value.time){
+            result.ignored=1;
+            auto err_message=std::string("writing to past");
+            result.error_message=err_message;
+            logger_info("engine: ",err_message);
+            return result;
+          }
+      }
+
 	result=_top_storage->append(value);
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
+      _min_max[value.id].max=std::max(_min_max[value.id].max, value.time);
     }
 
     return result;
@@ -468,6 +487,7 @@ protected:
   bool _stoped;
 
   IMeasStorage_ptr _top_storage; //aof or memory storage.
+  Id2MinMax _min_max;
 };
 
 Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}

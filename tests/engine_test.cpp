@@ -137,8 +137,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   {
     
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->aof_max_size = chunk_size;
-    settings->page_chunk_size = chunk_size;
 
 	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
 		dariadb::utils::fs::append_path(settings->path, "Manifest") } };
@@ -148,7 +146,13 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 	manifest = nullptr;
 
     auto raw_ptr = new Engine(settings);
-
+    {
+        auto m=dariadb::Meas::empty();
+        m.time=from;
+        auto res=raw_ptr->append(m);
+        BOOST_CHECK_EQUAL(res.ignored,size_t(1));
+        BOOST_CHECK_GE(res.error_message.size(),size_t(0));
+    }
     auto version = raw_ptr->version();
     std::stringstream ss;
     ss << version.major << '.' << version.minor << '.' << version.patch;
@@ -234,84 +238,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     BOOST_CHECK_EQUAL(c4->values.size(), size_t(1));
     BOOST_CHECK_EQUAL(c4->values.front().flag, dariadb::Flag(1));
   }
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
-
-BOOST_AUTO_TEST_CASE(Engine_common_test_rnd) {
-  const std::string storage_path = "testStorage";
-  const size_t chunk_size = 256;
-
-  const dariadb::Time from = 0;
-  const dariadb::Time to = 1000;
-  const dariadb::Time step = 10;
-  const size_t copies_for_id = 100;
-  {
-    if (dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path);
-    }
-
-	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->aof_buffer_size = chunk_size;
-    settings->page_chunk_size = chunk_size;
-
-    dariadb::storage::IMeasStorage_ptr ms{new dariadb::storage::Engine(settings)};
-    auto m = dariadb::Meas::empty();
-    size_t total_count = 0;
-
-    dariadb::Id id_val(0);
-
-    dariadb::Flag flg_val(0);
-    dariadb::IdSet _all_ids_set;
-    std::vector<dariadb::Time> rnd_times;
-    rnd_times.resize(copies_for_id + 2);
-    dariadb::Time t = 0;
-    for (size_t i = 0; i < rnd_times.size(); ++i) {
-      rnd_times[i] = t;
-      ++t;
-    }
-    size_t t_pos = 0;
-    for (auto i = from; i < to; i += step) {
-      std::random_shuffle(rnd_times.begin(), rnd_times.end());
-      t_pos = 0;
-      _all_ids_set.insert(id_val);
-      m.id = id_val;
-      m.flag = flg_val;
-      m.time = rnd_times[t_pos++];
-      m.value = 0;
-
-      for (size_t j = 0; j < copies_for_id; j++) {
-        BOOST_CHECK(ms->append(m).writed == 1);
-        total_count++;
-        m.value = dariadb::Value(j);
-        m.time = rnd_times[t_pos++];
-      }
-      ++id_val;
-      ++flg_val;
-    }
-    ms->flush();
-    size_t total_readed = 0;
-    for (dariadb::Id cur_id = 0; cur_id < id_val; ++cur_id) {
-      dariadb::IdArray ids;
-      ids.push_back(cur_id);
-      auto mlist = ms->readInterval(dariadb::storage::QueryInterval(ids, 0, from, to));
-      total_readed += mlist.size();
-      if (mlist.size() != copies_for_id) {
-        BOOST_CHECK(mlist.size() == copies_for_id);
-      }
-      for (auto it = mlist.begin(); it != mlist.end(); ++it) {
-        auto next = it;
-		++next;
-        if (next == mlist.end()) {
-          break;
-        }
-        BOOST_CHECK_LE(it->time, next->time);
-      }
-    }
-    BOOST_CHECK_GE(total_count, total_readed);
-  }
-  
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
