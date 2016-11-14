@@ -228,12 +228,15 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
-      auto fres=_min_max.find(value.flag);
+      auto fres=_min_max.find(value.id);
       if(fres!=_min_max.end()){
           auto max_v=fres->second;
           if(max_v.max>value.time){
             result.ignored=1;
-            auto err_message=std::string("writing to past");
+            std::stringstream ss;
+            ss<<"Id:"<<value.id;
+            ss<<", writing to past";
+            auto err_message=ss.str();
             result.error_message=err_message;
             logger_info("engine: ",err_message);
             return result;
