@@ -2,6 +2,7 @@
 
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/utils/metrics.h>
+#include <libdariadb/utils/utils.h>
 #include <map>
 
 using namespace dariadb;
@@ -37,5 +38,6 @@ MeasList IMeasSource::readInterval(const QueryInterval &q) {
 }
 
 Id2MinMax IMeasSource::loadMinMax(){
+    NOT_IMPLEMENTED;
     return Id2MinMax();
 }
