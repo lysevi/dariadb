@@ -208,6 +208,18 @@ public:
     return pr  || ar;
   }
 
+  Id2MinMax loadMinMax(){
+      this->lock_storage();
+
+      auto p_mm=this->_page_manager->loadMinMax();
+      auto t_mm=this->_top_storage->loadMinMax();
+
+      this->unlock_storage();
+
+      minmax_append(p_mm,t_mm);
+      return p_mm;
+  }
+
   append_result append(const Meas &value) {
     append_result result{};
 	result=_top_storage->append(value);
@@ -544,4 +556,8 @@ Engine::Version Engine::version() {
 
 STRATEGY Engine::strategy()const{
     return _impl->strategy();
+}
+
+Id2MinMax Engine::loadMinMax(){
+    return _impl->loadMinMax();
 }

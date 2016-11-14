@@ -223,7 +223,10 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   } else {
     BOOST_ERROR("PageManager::instance()->minMaxTime error!");
   }
-  
+
+  auto mm=pm->loadMinMax();
+  BOOST_CHECK_EQUAL(mm.size(), size_t(1));
+
   auto page_before_erase = dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).size();
   pm->eraseOld(addeded.back().time);
   auto page_after_erase = dariadb::utils::fs::ls(storagePath, dariadb::storage::PAGE_FILE_EXT).size();

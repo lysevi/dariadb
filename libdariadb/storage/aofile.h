@@ -35,7 +35,7 @@ public:
 
   EXPORT std::shared_ptr<MeasArray> readAll();
   EXPORT static size_t writed(std::string fname);
-
+  EXPORT Id2MinMax loadMinMax() override;
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

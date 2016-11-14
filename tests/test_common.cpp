@@ -244,6 +244,22 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   size_t total_count =
       fill_storage_for_test(as, from, to, step, &_all_ids_set, &maxWritedTime);
   
+  auto minMax=as->loadMinMax();
+
+  if(minMax.size()!=_all_ids_set.size()){
+      throw MAKE_EXCEPTION("minMax.size()!=_all_ids_set.size()");
+  }
+
+  for(auto kv:minMax){
+      auto mm=kv.second;
+      if(mm.min<from){
+          throw MAKE_EXCEPTION("mm.min<from");
+      }
+
+      if(mm.max==0 && mm.min>mm.max){
+          throw MAKE_EXCEPTION("mm.max==0 && mm.min>mm.max");
+      }
+  }
   minMaxCheck(as, from, maxWritedTime);
 
   Id2Meas current_mlist;

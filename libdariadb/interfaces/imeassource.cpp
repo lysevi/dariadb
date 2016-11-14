@@ -35,3 +35,7 @@ MeasList IMeasSource::readInterval(const QueryInterval &q) {
   }
   return result;
 }
+
+Id2MinMax IMeasSource::loadMinMax(){
+    return Id2MinMax();
+}

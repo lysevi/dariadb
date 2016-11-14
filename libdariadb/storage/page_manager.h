@@ -41,6 +41,7 @@ public:
   EXPORT static void erase(const std::string& storage_path, const std::string &fname);
   EXPORT void compactTo(uint32_t pagesCount);
   EXPORT void compactbyTime(Time from, Time to);
+  EXPORT Id2MinMax loadMinMax();
 private:
   class Private;
   std::unique_ptr<Private> impl;

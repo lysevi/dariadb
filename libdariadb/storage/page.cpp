@@ -678,3 +678,28 @@ void Page::mark_as_non_init(Chunk_Ptr &ptr) {
 void Page::appendChunks(const std::vector<Chunk*>&a, size_t count) {
 	NOT_IMPLEMENTED;
 }
+
+Id2MinMax Page::loadMinMax(){
+    Id2MinMax result;
+
+    auto byte_it = this->chunks;
+    auto end = this->region + this->header->filesize;
+    while (true) {
+      if (byte_it >= end) {
+        break;
+      }
+      ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+      if (info->is_init) {
+         auto fres=result.find(info->first.id);
+         if(fres==result.end()){
+             result[info->first.id].min=info->minTime;
+             result[info->first.id].max=info->maxTime;
+         }else{
+             result[info->first.id].min=std::min(result[info->first.id].min, info->minTime);
+             result[info->first.id].max=std::min(result[info->first.id].max, info->maxTime);
+         }
+      }
+      byte_it += sizeof(ChunkHeader) + info->size;
+    }
+    return result;
+}

@@ -74,6 +74,8 @@ public:
 
   EXPORT Version version();
   EXPORT STRATEGY strategy()const;
+
+  EXPORT Id2MinMax loadMinMax();
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

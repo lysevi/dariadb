@@ -74,6 +74,7 @@ public:
   EXPORT void stop();
   EXPORT void lock_drop();
   EXPORT void unlock_drop();
+  EXPORT Id2MinMax loadMinMax()override;
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

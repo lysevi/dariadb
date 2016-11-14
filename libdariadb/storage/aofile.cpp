@@ -298,6 +298,28 @@ public:
     throw MAKE_EXCEPTION(ss.str());
   }
 
+  Id2MinMax loadMinMax(){
+      TIMECODE_METRICS(ctmd, "loadMinMax", "AOFile::loadMinMax");
+      auto file = open_to_read();
+      Id2MinMax result;
+      while (1) {
+        Meas val = Meas::empty();
+        if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
+          break;
+        }
+
+        auto fres=result.find(val.id);
+        if(fres==result.end()){
+            result[val.id].min=val.time;
+            result[val.id].max=val.time;
+        }else{
+            fres->second.min=std::min(val.time,fres->second.min);
+            fres->second.max=std::max(val.time,fres->second.max);
+        }
+      }
+      std::fclose(file);
+      return result;
+  }
 protected:
   std::string _filename;
   bool _is_readonly;
@@ -366,4 +388,8 @@ size_t AOFile::writed(std::string fname) {
   TIMECODE_METRICS(ctmd, "read", "AOFile::writed");
   std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
   return in.tellg() / sizeof(Meas);
+}
+
+Id2MinMax AOFile::loadMinMax(){
+   return _Impl->loadMinMax();
 }
