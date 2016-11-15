@@ -388,3 +388,17 @@ void AOFManager::erase(const std::string &fname) {
   _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_rm(fname);
   utils::fs::rm(utils::fs::append_path(_settings->path, fname));
 }
+
+Id2MinMax AOFManager::loadMinMax(){
+     TIMECODE_METRICS(ctmd, "loadMinMax", "AOFManager::loadMinMax");
+    auto files = aof_files();
+
+    dariadb::Id2MinMax result;
+    for (const auto &f : files) {
+      AOFile c(_env, f, true);
+      auto sub_res = c.loadMinMax();
+
+      minmax_append(result,sub_res);
+    }
+    return result;
+}

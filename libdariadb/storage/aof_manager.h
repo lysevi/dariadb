@@ -41,6 +41,7 @@ public:
 
   EXPORT void drop_closed_files(size_t count);
 
+  EXPORT Id2MinMax loadMinMax() override;
 protected:
   void create_new();
   std::list<std::string> aof_files() const;

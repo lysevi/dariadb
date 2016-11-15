@@ -35,6 +35,7 @@ enum class CLIENT_STATE {
 enum class ERRORS : uint16_t {
   WRONG_PROTOCOL_VERSION,
   WRONG_QUERY_PARAM_FROM_GE_TO, // if in readInterval from>=to
+    APPEND_ERROR, //some error on append new value to storage
 };
 
 CM_EXPORT std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state);

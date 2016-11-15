@@ -58,6 +58,8 @@ public:
   EXPORT void mark_as_non_init(Chunk_Ptr &ch);
 
   EXPORT void appendChunks(const std::vector<Chunk*>&a, size_t count)override;
+
+  EXPORT Id2MinMax loadMinMax();
 private:
   void update_index_recs();
   void init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index);

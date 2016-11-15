@@ -65,8 +65,8 @@ void run_server() {
 	}
 }
 
-const size_t MEASES_SIZE = 5500;
-const size_t SEND_COUNT = 100;
+const size_t MEASES_SIZE = 200000;
+const size_t SEND_COUNT = 1;
 
 std::vector<float> elapsed;
 std::vector<std::thread> threads;

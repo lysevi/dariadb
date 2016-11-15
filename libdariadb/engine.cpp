@@ -93,6 +93,12 @@ public:
 		_top_storage = _memstorage;
 	}
     
+    _min_max=_page_manager->loadMinMax();
+
+    if(_settings->strategy!= STRATEGY::MEMORY){
+        auto amm=_top_storage->loadMinMax();
+        minmax_append(_min_max,amm);
+    }
   }
   ~Private() { this->stop(); }
 
@@ -208,12 +214,40 @@ public:
     return pr  || ar;
   }
 
+  Id2MinMax loadMinMax(){
+      this->lock_storage();
+
+      auto p_mm=this->_page_manager->loadMinMax();
+      auto t_mm=this->_top_storage->loadMinMax();
+
+      this->unlock_storage();
+
+      minmax_append(p_mm,t_mm);
+      return p_mm;
+  }
+
   append_result append(const Meas &value) {
     append_result result{};
+      auto fres=_min_max.find(value.id);
+      if(fres!=_min_max.end()){
+          auto max_v=fres->second;
+          if(max_v.max>value.time){
+            result.ignored=1;
+            std::stringstream ss;
+            ss<<"Id:"<<value.id;
+            ss<<", writing to past";
+            auto err_message=ss.str();
+            result.error_message=err_message;
+            logger_info("engine: ",err_message);
+            return result;
+          }
+      }
+
 	result=_top_storage->append(value);
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
+      _min_max[value.id].max=std::max(_min_max[value.id].max, value.time);
     }
 
     return result;
@@ -456,6 +490,7 @@ protected:
   bool _stoped;
 
   IMeasStorage_ptr _top_storage; //aof or memory storage.
+  Id2MinMax _min_max;
 };
 
 Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}
@@ -544,4 +579,8 @@ Engine::Version Engine::version() {
 
 STRATEGY Engine::strategy()const{
     return _impl->strategy();
+}
+
+Id2MinMax Engine::loadMinMax(){
+    return _impl->loadMinMax();
 }

@@ -449,6 +449,42 @@ public:
 	  ph_d.path = page_name;
 	  _file2header.insert(std::make_pair(ph_d.hdr.maxTime, ph_d));
   }
+
+  Id2MinMax loadMinMax(){
+      Id2MinMax result;
+
+      TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
+
+      auto pages = pages_by_filter(
+          [](const IndexHeader &ih) { return true; });
+
+      std::vector<Id2MinMax> sub_results{pages.size()};
+      std::vector<TaskResult_Ptr> task_res{pages.size()};
+      size_t num = 0;
+
+      for (auto pname : pages) {
+        AsyncTask at = [pname, &sub_results, num, this](const ThreadInfo &ti) {
+          TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+          Page_Ptr pg = open_page_to_read(pname);
+
+          sub_results[num] = pg->loadMinMax();
+
+        };
+        task_res[num] =
+            ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+        num++;
+      }
+
+      for (auto &tw : task_res) {
+        tw->wait();
+      }
+
+      for(auto r:sub_results){
+          minmax_append(result,r);
+      }
+
+      return result;
+  }
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;
@@ -532,4 +568,8 @@ void PageManager::compactbyTime(dariadb::Time from, dariadb::Time to) {
 
 void PageManager::appendChunks(const std::vector<Chunk*>& a, size_t count){
 	impl->appendChunks(a, count);
+}
+
+dariadb::Id2MinMax PageManager::loadMinMax(){
+    return impl->loadMinMax();
 }

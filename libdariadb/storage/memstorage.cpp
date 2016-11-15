@@ -444,6 +444,16 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  drop_by_limit(_settings->chunks_to_free, false);
   }
 
+  Id2MinMax loadMinMax()override{
+      Id2MinMax result;
+      std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
+      for (auto t : _id2track) {
+          result[t.first].min = t.second->minTime();
+          result[t.first].max = t.second->maxTime();
+      }
+      return result;
+  }
+
   Time minTime() override { 
 	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  Time result = MAX_TIME;
@@ -637,4 +647,8 @@ void MemStorage::lock_drop() {
 }
 void MemStorage::unlock_drop() {
 	_impl->unlock_drop();
+}
+
+Id2MinMax MemStorage::loadMinMax(){
+    return _impl->loadMinMax();
 }
