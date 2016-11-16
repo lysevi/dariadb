@@ -103,3 +103,11 @@ void Settings::load(const std::string &file) {
   iss.str(strat_str);
   iss >> strategy;
 }
+
+std::string Settings::dump(){
+   auto content=dariadb::utils::fs::read_file(settings_file_path(path));
+   json js = json::parse(content);
+   std::stringstream ss;
+   ss<<js.dump(1)<<std::endl;
+   return ss.str();
+}

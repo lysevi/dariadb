@@ -26,6 +26,7 @@ public:
   EXPORT void load(const std::string &file);
   EXPORT std::vector<utils::async::ThreadPool::Params> thread_pools_params();
 
+  EXPORT std::string dump();
   // aof level options;
   std::string path;
   uint64_t aof_max_size;  // measurements count in one file
