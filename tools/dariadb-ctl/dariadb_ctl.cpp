@@ -38,11 +38,12 @@ public:
 int main(int argc, char *argv[]) {
     po::options_description desc("Allowed options");
     auto aos = desc.add_options();
-    aos("help", "produce help message");
-    aos("settings", "print all settings");
-    aos("format", "print storage format version");
-    aos("verbose", "verbose output");
-    aos("compress", "compress all aof files");
+    aos("help", "produce help message.");
+    aos("settings", "print all settings.");
+    aos("format", "print storage format version.");
+    aos("verbose", "verbose output.");
+    aos("compress", "compress all aof files.");
+    aos("compact", "compact all page files to one.");
     aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.");
 
 
@@ -62,6 +63,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (vm.count("verbose")) {
+        std::cout<<"verbose=on"<<std::endl;
         verbose=true;
     }
 
@@ -89,9 +91,11 @@ int main(int argc, char *argv[]) {
     auto e = std::make_unique<dariadb::storage::Engine>(settings);
 
     if(vm.count("compress")){
-        auto d=e->description();
-        std::cout<<"compressing "<<d.aofs_count<<" files"<<std::endl;
-        e->drop_part_aofs(d.aofs_count);
+        e->compress_all();
+    }
+
+    if(vm.count("compact")){
+        e->compactTo(1);
     }
     e=nullptr;
 }

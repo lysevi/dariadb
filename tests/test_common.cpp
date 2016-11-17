@@ -85,8 +85,8 @@ void check_reader_of_all(MeasList all, Time from, Time to, Time step,
   checkAll(all, message, from, to, step);
 }
 
-size_t fill_storage_for_test(storage::IMeasStorage *as, Time from, Time to, Time step,
-                             IdSet *_all_ids_set, Time *maxWritedTime) {
+size_t fill_storage_for_test(dariadb::storage::IMeasStorage *as, dariadb::Time from, dariadb::Time to,dariadb::Time step,
+                             dariadb::IdSet *_all_ids_set, dariadb::Time *maxWritedTime) {
   auto m = Meas::empty();
   size_t total_count = 0;
 

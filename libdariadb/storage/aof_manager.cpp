@@ -29,16 +29,16 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
   _down = nullptr;
   auto manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
   if (dariadb::utils::fs::path_exists(_settings->path)) {
-    auto aofs = manifest->aof_list();
-    for (auto f : aofs) {
-      auto full_filename = utils::fs::append_path(_settings->path, f);
-      if (AOFile::writed(full_filename) != _settings->aof_max_size) {
-        logger_info("engine: AofManager open exist file ", f);
-        AOFile_Ptr p{new AOFile(_env, full_filename)};
-        _aof = p;
-        break;
-      }
-    }
+          auto aofs = manifest->aof_list();
+          for (auto f : aofs) {
+              auto full_filename = utils::fs::append_path(_settings->path, f);
+              if (AOFile::writed(full_filename) != _settings->aof_max_size) {
+                  logger_info("engine: AofManager open exist file ", f);
+                  AOFile_Ptr p{new AOFile(_env, full_filename)};
+                  _aof = p;
+                  break;
+              }
+          }
   }
 
   _buffer.resize(_settings->aof_buffer_size);
@@ -52,6 +52,22 @@ void AOFManager::create_new() {
     drop_old_if_needed();
   }
   _aof = AOFile_Ptr{new AOFile(_env)};
+}
+
+void  AOFManager::drop_all(){
+    if (_down != nullptr) {
+      auto all_files = aof_files();
+      this->_aof=nullptr;
+      TIMECODE_METRICS(ctmd, "drop", "AOFManager::drop_all");
+      for (auto f:all_files) {
+        auto without_path = utils::fs::extract_filename(f);
+        if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
+          logger_info("engine: drop ",without_path);
+          _files_send_to_drop.insert(without_path);
+          this->drop_aof(f, _down);
+        }
+      }
+    }
 }
 
 void AOFManager::drop_closed_files(size_t count) {
@@ -83,8 +99,10 @@ void AOFManager::drop_closed_files(size_t count) {
 }
 
 void AOFManager::drop_old_if_needed() {
-  auto closed = this->closed_aofs();
-  drop_closed_files(closed.size());
+    if(_settings->strategy==STRATEGY::COMPRESSED){
+        auto closed = this->closed_aofs();
+        drop_closed_files(closed.size());
+    }
 }
 
 std::list<std::string> AOFManager::aof_files() const {

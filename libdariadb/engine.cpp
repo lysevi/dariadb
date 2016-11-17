@@ -431,10 +431,18 @@ public:
 
   void drop_part_aofs(size_t count) { 
 	  if (_aof_manager != nullptr) {
+          logger_info("engine: drop_part_aofs ",count);
 		  _aof_manager->drop_closed_files(count);
 	  }
   }
 
+  void compress_all(){
+      if (_aof_manager != nullptr) {
+          logger_info("engine: compress_all");
+          _aof_manager->drop_all();
+          wait_all_asyncs();
+      }
+  }
   void fsck() {
     logger_info("engine: fsck ", _settings->path);
 	_page_manager->fsck();
@@ -552,6 +560,10 @@ Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
 
 void Engine::drop_part_aofs(size_t count) {
   return _impl->drop_part_aofs(count);
+}
+
+void Engine::compress_all(){
+  return _impl->compress_all();
 }
 
 void Engine::wait_all_asyncs() {

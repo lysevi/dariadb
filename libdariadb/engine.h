@@ -61,6 +61,7 @@ public:
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) override;
 
   EXPORT void drop_part_aofs(size_t count);
+  EXPORT void compress_all();
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
   EXPORT void wait_all_asyncs();

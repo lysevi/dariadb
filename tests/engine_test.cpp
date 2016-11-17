@@ -177,6 +177,51 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   }
 }
 
+BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
+  const std::string storage_path = "testStorage";
+  const size_t chunk_size = 256;
+
+  const dariadb::Time from = 0;
+  const dariadb::Time to = from + 100;
+  const dariadb::Time step = 10;
+
+  using namespace dariadb::storage;
+
+  {
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
+    }
+
+    auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+    settings->aof_buffer_size=100;
+    settings->aof_max_size = settings->aof_buffer_size*5;
+    settings->path = storage_path;
+    settings->page_chunk_size = chunk_size;
+    settings->strategy=dariadb::storage::STRATEGY::FAST_WRITE;
+    std::unique_ptr<Engine> ms{new Engine(settings)};
+
+    auto version = ms->version();
+    std::stringstream ss;
+    ss << version.major << '.' << version.minor << '.' << version.patch;
+    BOOST_CHECK_EQUAL(version.to_string(), ss.str());
+
+    dariadb::IdSet all_ids;
+    dariadb::Time maxWritedTime;
+    dariadb_test::fill_storage_for_test(ms.get(), from, to, step,&all_ids, &maxWritedTime);
+    ms->wait_all_asyncs();
+
+    ms->compress_all();
+
+    auto pages_count = ms->description().pages_count;
+    auto aofs_count = ms->description().aofs_count;
+    BOOST_CHECK_GE(pages_count, size_t(1));
+    BOOST_CHECK_GE(aofs_count, size_t(0));
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+}
+
 class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
 public:
   std::list<dariadb::Meas> values;
