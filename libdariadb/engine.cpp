@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <fstream>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -55,6 +56,7 @@ public:
     if (!dariadb::utils::fs::path_exists(_settings->path)) {
       dariadb::utils::fs::mkdir(_settings->path);
     } else {
+      lockfile_lock_or_die();
       is_exists = true;
     }
     _subscribe_notify.start();
@@ -119,9 +121,36 @@ public:
       _stoped = true;
 
 	  ThreadManager::stop();
+      lockfile_unlock();
     }
   }
 
+  std::string lockfile_path(){
+      return utils::fs::append_path(_settings->path, "lockfile");
+  }
+
+  void lockfile_lock_or_die(){
+      auto lfile=lockfile_path();
+      if(utils::fs::path_exists(lfile)){
+         throw_lock_error( _settings->path);
+      }
+      std::ofstream ofs;
+      ofs.open(lfile, std::ios_base::out | std::ios_base::binary);
+      if(!ofs.is_open()){
+         throw_lock_error( _settings->path);
+      }
+      ofs<<"locked.";
+      ofs.close();
+  }
+
+  void lockfile_unlock(){
+      auto lfile=lockfile_path();
+      utils::fs::rm(lfile);
+  }
+
+  void throw_lock_error(const std::string&lock_file){
+       THROW_EXCEPTION("engine: storage ",lock_file," is locked.");
+  }
   void check_storage_version() {
     auto current_version = this->version().version;
     auto storage_version = _manifest->get_version();

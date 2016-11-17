@@ -15,6 +15,7 @@ Storage:
    - Speed up dropping data between layers.
    - Old pages compaction.
    - Full futured memory storage.
+   - Lockfile in storage.
 
 v0.1.1
 =====
