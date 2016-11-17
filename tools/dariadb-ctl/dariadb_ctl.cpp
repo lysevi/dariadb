@@ -10,7 +10,7 @@
 namespace po = boost::program_options;
 
 std::string storage_path = "dariadb_storage";
-
+bool verbose=false;
 class CtlLogger : public dariadb::utils::ILogger {
 public:
     CtlLogger(){}
@@ -21,10 +21,14 @@ public:
             std::cerr<< msg <<std::endl;
           break;
         case dariadb::utils::LOG_MESSAGE_KIND::INFO:
-            //std::cout<<msg<<std::endl;
+            if(verbose){
+                std::cout<<msg<<std::endl;
+            }
           break;
         case dariadb::utils::LOG_MESSAGE_KIND::MESSAGE:
-            //std::cout<<msg<<std::endl;
+            if(verbose){
+                std::cout<<msg<<std::endl;
+            }
           break;
         }
     }
@@ -37,7 +41,10 @@ int main(int argc, char *argv[]) {
     aos("help", "produce help message");
     aos("settings", "print all settings");
     aos("format", "print storage format version");
+    aos("verbose", "verbose output");
+    aos("compress", "compress all aof files");
     aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.");
+
 
     po::variables_map vm;
     try {
@@ -53,6 +60,11 @@ int main(int argc, char *argv[]) {
         std::cout << desc << std::endl;
         std::exit(0);
     }
+
+    if (vm.count("verbose")) {
+        verbose=true;
+    }
+
     dariadb::utils::ILogger_ptr log_ptr{ new CtlLogger() };
     dariadb::utils::LogManager::start(log_ptr);
 
@@ -72,4 +84,14 @@ int main(int argc, char *argv[]) {
         std::cout<<s.dump()<<std::endl;
         std::exit(0);
     }
+
+    auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto e = std::make_unique<dariadb::storage::Engine>(settings);
+
+    if(vm.count("compress")){
+        auto d=e->description();
+        std::cout<<"compressing "<<d.aofs_count<<" files"<<std::endl;
+        e->drop_part_aofs(d.aofs_count);
+    }
+    e=nullptr;
 }
