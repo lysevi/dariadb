@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
   const size_t chunk_size = 256;
 
   const dariadb::Time from = 0;
-  const dariadb::Time to = from + 100;
+  const dariadb::Time to = from + 300;
   const dariadb::Time step = 10;
 
   using namespace dariadb::storage;
@@ -193,8 +193,8 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     }
 
     auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->aof_buffer_size=100;
-    settings->aof_max_size = settings->aof_buffer_size*5;
+    settings->aof_buffer_size=10;
+    settings->aof_max_size = settings->aof_buffer_size*2;
     settings->path = storage_path;
     settings->page_chunk_size = chunk_size;
     settings->strategy=dariadb::storage::STRATEGY::FAST_WRITE;
