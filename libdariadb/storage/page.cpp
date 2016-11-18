@@ -127,13 +127,14 @@ namespace PageInner {
 		return results;
 	}
 
+    //TODO refactt this. to many arguments.
 	/// result - page file size in bytes
 	uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
-		std::list<HdrAndBuffer> &compressed_results) {
+        std::list<HdrAndBuffer> &compressed_results,uint64_t start_offset=0, bool add_header_size_to_result=true) {
 		using namespace dariadb::utils::async;
 		uint64_t page_size = 0;
 		AsyncTask pm_at =
-			[&file_name, &phdr, &compressed_results, &page_size](const ThreadInfo &ti) {
+            [&file_name, &phdr, &compressed_results, &page_size,start_offset, add_header_size_to_result](const ThreadInfo &ti) {
 			TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 
 			auto file = std::fopen(file_name.c_str(), "ab");
@@ -141,8 +142,10 @@ namespace PageInner {
 				throw MAKE_EXCEPTION("aofile: append error.");
 			}
 
-			std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
-			uint64_t offset = 0;
+            if(start_offset==uint64_t(0)){
+                std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+            }
+            uint64_t offset = start_offset;
 
 			for (auto hb : compressed_results) {
 				ChunkHeader chunk_header = std::get<0>(hb);
@@ -164,8 +167,11 @@ namespace PageInner {
 
 				offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
 			}
-			page_size = offset + sizeof(PageHeader);
-			phdr.filesize = page_size;
+            page_size = offset ;
+            if(add_header_size_to_result){
+                page_size += sizeof(PageHeader);
+                phdr.filesize = page_size;
+            }			
 			std::fclose(file);
 		};
 		auto at = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(pm_at));
@@ -260,8 +266,12 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   }
   assert(openned_pages.size() == pages_full_paths.size());
   
-  std::map<Id, MeasArray> all_values;
+   PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+
+
   for (auto &kv : links) {
+      std::map<Id, MeasArray> all_values;
+
 	  auto lst = kv.second;
 	  std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
 	  std::sort(
@@ -283,15 +293,17 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 		  sorted_and_filtered.push_back(kv.second);
 	  }
 	  all_values[sorted_and_filtered.front().id]=sorted_and_filtered;
+      std::list<PageInner::HdrAndBuffer> compressed_results =
+          PageInner::compressValues(all_values, phdr, max_chunk_size);
+
+      auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results,phdr.filesize, false);
+      phdr.filesize=page_size;
   }
  
-  PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+  phdr.filesize+=sizeof(PageHeader);
 
-  std::list<PageInner::HdrAndBuffer> compressed_results =
-	  PageInner::compressValues(all_values, phdr, max_chunk_size);
 
-  auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
-  phdr.filesize = page_size;
+  //phdr.filesize = page_size;
 
   for (auto kv : openned_pages) {
 	  delete kv.second;
