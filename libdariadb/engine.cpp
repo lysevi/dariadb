@@ -148,7 +148,8 @@ public:
       utils::fs::rm(lfile);
   }
 
-  void throw_lock_error(const std::string&lock_file){
+  [[noreturn]]
+  void throw_lock_error(const std::string&lock_file) {
        THROW_EXCEPTION("engine: storage ",lock_file," is locked.");
   }
   void check_storage_version() {

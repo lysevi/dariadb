@@ -1,5 +1,6 @@
-#define _SCL_SECURE_NO_WARNINGS
-
+#ifdef MSVC
+    #define _SCL_SECURE_NO_WARNINGS
+#endif
 #include <chrono>
 #include <cmath>
 #include <iostream>

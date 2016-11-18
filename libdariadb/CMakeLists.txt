@@ -37,7 +37,7 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
 SET(DARIADB_STORAGE_LIBS libdariadb ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build storage.")
 
 add_library(libdariadb SHARED ${SRC})
-TARGET_LINK_LIBRARIES(libdariadb ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(libdariadb ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 IF(WIN32)
  target_link_libraries(libdariadb wsock32 ws2_32)

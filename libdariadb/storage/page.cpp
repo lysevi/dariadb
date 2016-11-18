@@ -1,5 +1,7 @@
-#define _CRT_SECURE_NO_WARNINGS
-#define _SCL_SECURE_NO_WARNINGS //for stx::btree in msvc build. 
+#ifdef MSVC
+    #define _CRT_SECURE_NO_WARNINGS //for fopen
+    #define _SCL_SECURE_NO_WARNINGS //for stx::btree in msvc build.
+#endif
 #include <libdariadb/storage/page.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>

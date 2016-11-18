@@ -59,6 +59,7 @@ public:
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) override;
+  EXPORT Id2MinMax loadMinMax()override;
 
   EXPORT void drop_part_aofs(size_t count);
   EXPORT void compress_all();
@@ -75,8 +76,6 @@ public:
 
   EXPORT Version version();
   EXPORT STRATEGY strategy()const;
-
-  EXPORT Id2MinMax loadMinMax();
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

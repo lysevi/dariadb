@@ -1,4 +1,6 @@
-#define _SCL_SECURE_NO_WARNINGS //stx::btree
+#ifdef MSVC
+ #define _SCL_SECURE_NO_WARNINGS //stx::btree
+#endif
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/flags.h>
 #include <stx/btree_map>
@@ -92,6 +94,7 @@ using MemChunkList = std::list<MemChunk_Ptr>;
 class MemoryChunkContainer {
 public:
 	virtual void addChunk(MemChunk_Ptr&c) = 0;
+    virtual ~MemoryChunkContainer(){}
 };
 
 struct TimeTrack : public IMeasStorage {
@@ -149,17 +152,17 @@ struct TimeTrack : public IMeasStorage {
     return append_result(1, 0);
   }
 
-  virtual void flush() {}
+  void flush() override {}
   
-  virtual Time minTime() override {
+  Time minTime() override {
 	  return _minTime;
   }
 
-  virtual Time maxTime() override { 
+  Time maxTime() override {
 	  return _maxTime;
   }
 
-  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override {
 	  if (id != this->_meas_id) {
 		  return false;
@@ -179,7 +182,7 @@ struct TimeTrack : public IMeasStorage {
 	  return true;
   }
 
-  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
     std::lock_guard<utils::Locker> lg(_locker);
 
 	auto end=_index.upper_bound(q.to);
