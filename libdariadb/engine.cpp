@@ -81,6 +81,8 @@ public:
       check_storage_version();
     }
 
+    _min_max=_page_manager->loadMinMax();
+
     if (_settings->strategy != STRATEGY::MEMORY) {
 		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
@@ -90,12 +92,12 @@ public:
 		this->_top_storage = _aof_manager;
 	}
 	else {
-		_memstorage = MemStorage_ptr{ new MemStorage(_settings) };
+        _memstorage = MemStorage_ptr{ new MemStorage(_settings,_min_max.size()) };
 		_memstorage->setDownLevel(_page_manager.get());
 		_top_storage = _memstorage;
 	}
     
-    _min_max=_page_manager->loadMinMax();
+
 
     if(_settings->strategy!= STRATEGY::MEMORY){
         auto amm=_top_storage->loadMinMax();

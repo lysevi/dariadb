@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 	{
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		settings->page_chunk_size = 128;
-		dariadb::storage::MemStorage ms{ settings };
+        dariadb::storage::MemStorage ms{ settings, size_t(0) };
 
 		dariadb_test::storage_test_check(&ms, 0, 100, 1, false);
 	}
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
         auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
         settings->memory_limit=1024*1024;
         settings->page_chunk_size = 128;
-        dariadb::storage::MemStorage ms{ settings };
+        dariadb::storage::MemStorage ms{ settings, size_t(0) };
         
         ms.setDownLevel(cw);
 

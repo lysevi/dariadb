@@ -11,6 +11,8 @@ namespace po = boost::program_options;
 
 std::string storage_path = "dariadb_storage";
 bool verbose=false;
+std::string set_var;
+
 class CtlLogger : public dariadb::utils::ILogger {
 public:
     CtlLogger(){}
@@ -45,6 +47,7 @@ int main(int argc, char *argv[]) {
     aos("compress", "compress all aof files.");
     aos("compact", "compact all page files to one.");
     aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.");
+    aos("set", po::value<std::string>(&set_var)->default_value(storage_path), "change setting variable.\nexample: --set=\"strategy=MEMORY\"");
 
 
     po::variables_map vm;
@@ -84,6 +87,13 @@ int main(int argc, char *argv[]) {
     if (vm.count("settings")) {
         dariadb::storage::Settings s(storage_path);
         std::cout<<s.dump()<<std::endl;
+        std::exit(0);
+    }
+
+    if (vm.count("set")) {
+        dariadb::storage::Settings s(storage_path);
+        s.change(set_var);
+        s.save();
         std::exit(0);
     }
 

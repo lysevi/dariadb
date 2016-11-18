@@ -52,7 +52,8 @@ public:
       size_t allocator_capacity;
   };
 public:
-  EXPORT MemStorage(const storage::Settings_ptr &s);
+  /// id_count - for prealloc
+  EXPORT MemStorage(const storage::Settings_ptr &s, const size_t id_count);
   EXPORT ~MemStorage();
   EXPORT Description description()const;
 
