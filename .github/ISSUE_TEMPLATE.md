@@ -5,3 +5,4 @@
 - [ ] - need update protocol version
 - [ ] - need update storage version
 - [ ] - need update settings save/load
+- [ ] - need example.
