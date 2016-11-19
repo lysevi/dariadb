@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     }
     po::notify(vm);
 
-    if (vm.count("help")) {
+    if (vm.count("help") || argc==1) {
         std::cout << desc << std::endl;
         std::exit(0);
     }
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
         std::exit(0);
     }
 
-    if (vm.count("set")) {
+    if (set_var.size()!=0) {
         dariadb::storage::Settings s(storage_path);
         s.change(set_var);
         s.save();
