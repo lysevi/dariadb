@@ -34,17 +34,17 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
          ${INTERFACES_HDRS} ${INTERFACES_SRC}
 	 ${ADS_SRC} ${ADS_HDRS})
 
-SET(DARIADB_STORAGE_LIBS libdariadb ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build storage.")
+SET(DARIADB_STORAGE_LIBS dariadb ${Boost_LIBRARIES} CACHE STRING "Dariadb libs for build storage.")
 
-add_library(libdariadb SHARED ${SRC})
-TARGET_LINK_LIBRARIES(libdariadb ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+add_library(dariadb SHARED ${SRC})
+TARGET_LINK_LIBRARIES(dariadb ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 IF(WIN32)
- target_link_libraries(libdariadb wsock32 ws2_32)
+ target_link_libraries(dariadb wsock32 ws2_32)
 endif()
 
-GENERATE_EXPORT_HEADER(libdariadb
-    BASE_NAME libdariadb
+GENERATE_EXPORT_HEADER(dariadb
+    BASE_NAME dariadb
     EXPORT_MACRO_NAME EXPORT
     EXPORT_FILE_NAME st_exports.h
     STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC)

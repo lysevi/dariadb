@@ -4,5 +4,5 @@ INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
 FILE(GLOB GLOB_HDRS "*.h")
 FILE(GLOB GLOB_SRC "*.cpp")
 
-add_executable(dariadb ${GLOB_SRC} ${GLOB_HDRS})
-TARGET_LINK_LIBRARIES(dariadb libnet-server libcommon-net ${DARIADB_STORAGE_LIBS})
+add_executable(dariadbd ${GLOB_SRC} ${GLOB_HDRS})
+TARGET_LINK_LIBRARIES(dariadbd dariadb-server dariadb-net ${DARIADB_STORAGE_LIBS})
