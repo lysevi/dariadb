@@ -1,4 +1,6 @@
-#define _SCL_SECURE_NO_WARNINGS //stx::btree
+#ifdef MSVC
+ #define _SCL_SECURE_NO_WARNINGS //stx::btree
+#endif
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/flags.h>
 #include <stx/btree_map>
@@ -92,6 +94,7 @@ using MemChunkList = std::list<MemChunk_Ptr>;
 class MemoryChunkContainer {
 public:
 	virtual void addChunk(MemChunk_Ptr&c) = 0;
+    virtual ~MemoryChunkContainer(){}
 };
 
 struct TimeTrack : public IMeasStorage {
@@ -149,17 +152,17 @@ struct TimeTrack : public IMeasStorage {
     return append_result(1, 0);
   }
 
-  virtual void flush() {}
+  void flush() override {}
   
-  virtual Time minTime() override {
+  Time minTime() override {
 	  return _minTime;
   }
 
-  virtual Time maxTime() override { 
+  Time maxTime() override {
 	  return _maxTime;
   }
 
-  virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override {
 	  if (id != this->_meas_id) {
 		  return false;
@@ -179,7 +182,7 @@ struct TimeTrack : public IMeasStorage {
 	  return true;
   }
 
-  virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
     std::lock_guard<utils::Locker> lg(_locker);
 
 	auto end=_index.upper_bound(q.to);
@@ -314,15 +317,15 @@ using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
 using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
-	Private(const storage::Settings_ptr &s) : _chunk_allocator(s->memory_limit, s->page_chunk_size) {
+    Private(const storage::Settings_ptr &s, const size_t id_count) : _chunk_allocator(s->memory_limit, s->page_chunk_size) {
 		_chunks.resize(_chunk_allocator._capacity);
 		_stoped = false;
 		_down_level_storage = nullptr;
 		_settings = s;
 		_drop_stop = false;
 		_drop_thread = std::thread{ std::bind(&MemStorage::Private::drop_thread_func,this) };
-		if (_settings->id_count != 0) {
-			_id2track.reserve(_settings->id_count);
+        if (id_count != 0) {
+            _id2track.reserve(id_count);
 		}
 	}
 	void stop() {
@@ -433,15 +436,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     for (auto &t : updated_tracks) {
       t->rereadMinMax();
     }
-  }
-
-  void drop_by_limit() {
-	  std::lock_guard<std::mutex> lg(_drop_locker);
-	  auto current_chunk_count = this->_chunk_allocator._allocated;
-	  if (current_chunk_count<this->_chunk_allocator._capacity) {
-		  return;
-	  }
-	  drop_by_limit(_settings->chunks_to_free, false);
   }
 
   Id2MinMax loadMinMax()override{
@@ -571,7 +565,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  continue;
 		  }
 
-		  drop_by_limit(_settings->chunks_to_free, false);
+          drop_by_limit(_settings->percent_to_drop, false);
 	  }
 
 	  logger_info("engine: memstorage dropping stop.");
@@ -591,7 +585,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   std::condition_variable _drop_cond;
 };
 
-MemStorage::MemStorage(const storage::Settings_ptr &s) : _impl(new MemStorage::Private(s)) {}
+MemStorage::MemStorage(const storage::Settings_ptr &s, const size_t id_count) : _impl(new MemStorage::Private(s,id_count)) {}
 
 MemStorage::~MemStorage() {
   _impl = nullptr;

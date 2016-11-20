@@ -2,7 +2,7 @@ INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
 
 add_library(libcommon_test STATIC test_common.cpp test_common.h)
-TARGET_LINK_LIBRARIES(libcommon_test libdariadb ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(libcommon_test dariadb ${Boost_LIBRARIES})
 set_target_properties(libcommon_test PROPERTIES FOLDER Tests)
 
 MESSAGE(STATUS "Test: " ${name})
@@ -19,7 +19,7 @@ endmacro(TEST_CASE)
 
 if(ENABLE_SERVER)
    TEST_CASE(net_test net_test.cpp)
-   TARGET_LINK_LIBRARIES(net_test ${DARIADB_CLIENT_LIBS} libnet-server)
+   TARGET_LINK_LIBRARIES(net_test ${DARIADB_CLIENT_LIBS} dariadb-server)
 endif()
 
 TEST_CASE(engine_test engine_test.cpp)

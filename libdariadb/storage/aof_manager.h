@@ -40,6 +40,7 @@ public:
   EXPORT void erase(const std::string &fname);
 
   EXPORT void drop_closed_files(size_t count);
+  EXPORT void drop_all();
 
   EXPORT Id2MinMax loadMinMax() override;
 protected:

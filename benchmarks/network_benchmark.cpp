@@ -175,7 +175,7 @@ int main(int argc,char**argv){
     std::cout << "average speed: " << count_per_thread/(float)(average_time)<<" per sec." << std::endl;
 	std::cout << "read speed: " << result.size()/(((float)read_end - read_start) / CLOCKS_PER_SEC) << " per sec." << std::endl;
 
-    std::cout<<"result:"<<result.size();
+    std::cout<<"readed:"<<result.size()<<std::endl;
 
     if(result.size()!=MEASES_SIZE*SEND_COUNT ){
         THROW_EXCEPTION("result.size()!=MEASES_SIZE*SEND_COUNT: ", result.size());

@@ -76,5 +76,17 @@ std::string to_string(Time t) {
   }
   return std::string(buffer);
 }
+
+/// construct from string "2002-01-20 23:59:59.000"
+Time from_string(const std::string&s){
+    auto pt=boost::posix_time::time_from_string(s);
+return from_ptime(pt);
+}
+
+/// construct from string "20020131T235959"
+Time from_iso_string(const std::string&s){
+    auto pt=boost::posix_time::from_iso_string(s);
+    return from_ptime(pt);
+}
 }
 }

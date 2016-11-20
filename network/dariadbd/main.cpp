@@ -20,7 +20,7 @@ unsigned short server_port = 2001;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 ServerLogger::Params p;
-size_t compact_to=0;
+size_t memory_limit = 0;
 
 int main(int argc,char**argv){
 	po::options_description desc("Allowed options");
@@ -33,9 +33,9 @@ int main(int argc,char**argv){
 	aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path), "path to storage.");
 	aos("port", po::value<unsigned short>(&server_port)->default_value(server_port), "server port.");
 	aos("io-threads", po::value<size_t>(&server_threads_count)->default_value(server_threads_count), "server threads for query processing.");
-	aos("compact-to", po::value<size_t>(&compact_to)->default_value(compact_to), "compact all pages and exit.");
 	aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "write strategy.");
-	
+    aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit  in megabytes when strategy=MEMORY");
+
 	po::variables_map vm;
 	try {
 		po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -69,15 +69,14 @@ int main(int argc,char**argv){
 
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 	settings->strategy = strategy;
-
+    if (strategy == STRATEGY::MEMORY && memory_limit!=0) {
+        logger_info("memory limit: ",memory_limit);
+        settings->memory_limit = memory_limit * 1024 * 1024;
+    }
+    settings->save();
 
 	auto stor=new Engine(settings);
 
-    if(compact_to!=0){
-        stor->compactTo(compact_to);
-        delete stor;
-        return 0;
-    }
 	dariadb::net::Server::Param server_param(server_port, server_threads_count);
 	dariadb::net::Server s(server_param);
 	s.set_storage(stor);

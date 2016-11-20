@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <fstream>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -55,6 +56,7 @@ public:
     if (!dariadb::utils::fs::path_exists(_settings->path)) {
       dariadb::utils::fs::mkdir(_settings->path);
     } else {
+      lockfile_lock_or_die();
       is_exists = true;
     }
     _subscribe_notify.start();
@@ -79,6 +81,8 @@ public:
       check_storage_version();
     }
 
+    _min_max=_page_manager->loadMinMax();
+
     if (_settings->strategy != STRATEGY::MEMORY) {
 		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
@@ -88,12 +92,12 @@ public:
 		this->_top_storage = _aof_manager;
 	}
 	else {
-		_memstorage = MemStorage_ptr{ new MemStorage(_settings) };
+        _memstorage = MemStorage_ptr{ new MemStorage(_settings,_min_max.size()) };
 		_memstorage->setDownLevel(_page_manager.get());
 		_top_storage = _memstorage;
 	}
     
-    _min_max=_page_manager->loadMinMax();
+
 
     if(_settings->strategy!= STRATEGY::MEMORY){
         auto amm=_top_storage->loadMinMax();
@@ -119,9 +123,37 @@ public:
       _stoped = true;
 
 	  ThreadManager::stop();
+      lockfile_unlock();
     }
   }
 
+  std::string lockfile_path(){
+      return utils::fs::append_path(_settings->path, "lockfile");
+  }
+
+  void lockfile_lock_or_die(){
+      auto lfile=lockfile_path();
+      if(utils::fs::path_exists(lfile)){
+         throw_lock_error( _settings->path);
+      }
+      std::ofstream ofs;
+      ofs.open(lfile, std::ios_base::out | std::ios_base::binary);
+      if(!ofs.is_open()){
+         throw_lock_error( _settings->path);
+      }
+      ofs<<"locked.";
+      ofs.close();
+  }
+
+  void lockfile_unlock(){
+      auto lfile=lockfile_path();
+      utils::fs::rm(lfile);
+  }
+
+  [[noreturn]]
+  void throw_lock_error(const std::string&lock_file) {
+       THROW_EXCEPTION("engine: storage ",lock_file," is locked.");
+  }
   void check_storage_version() {
     auto current_version = this->version().version;
     auto storage_version = _manifest->get_version();
@@ -431,10 +463,18 @@ public:
 
   void drop_part_aofs(size_t count) { 
 	  if (_aof_manager != nullptr) {
+          logger_info("engine: drop_part_aofs ",count);
 		  _aof_manager->drop_closed_files(count);
 	  }
   }
 
+  void compress_all(){
+      if (_aof_manager != nullptr) {
+          logger_info("engine: compress_all");
+          _aof_manager->drop_all();
+          wait_all_asyncs();
+      }
+  }
   void fsck() {
     logger_info("engine: fsck ", _settings->path);
 	_page_manager->fsck();
@@ -552,6 +592,10 @@ Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
 
 void Engine::drop_part_aofs(size_t count) {
   return _impl->drop_part_aofs(count);
+}
+
+void Engine::compress_all(){
+  return _impl->compress_all();
 }
 
 void Engine::wait_all_asyncs() {

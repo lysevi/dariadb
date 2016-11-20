@@ -49,7 +49,7 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
   aos("read-benchmark-runs", po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "Write strategy");
-  aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit when strategy=MEMORY");;
+  aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit  in megabytes when strategy=MEMORY");
 
   po::variables_map vm;
   try {
@@ -354,6 +354,7 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 	settings->strategy = strategy;
+    settings->save();
 	if (strategy == STRATEGY::MEMORY && memory_limit!=0) {
 		std::cout << "memory limit: " << memory_limit<<std::endl;
 		settings->memory_limit = memory_limit * 1024 * 1024;

@@ -26,6 +26,8 @@ public:
   EXPORT void load(const std::string &file);
   EXPORT std::vector<utils::async::ThreadPool::Params> thread_pools_params();
 
+  EXPORT std::string dump();
+  EXPORT void change(std::string& expression);
   // aof level options;
   std::string path;
   uint64_t aof_max_size;  // measurements count in one file
@@ -37,9 +39,7 @@ public:
 
   // memstorage options;
   size_t memory_limit; //in bytes;
-  size_t id_count;//for pre-alloc table.
-  float  chunks_to_free; //how many chunks must be deleted if memory storage is full
-  float  percent_to_drop;
+  float  percent_to_drop; //fill percent, when start dropping.
 };
 
 using Settings_ptr = std::shared_ptr<Settings>;

@@ -22,8 +22,8 @@ public:
   EXPORT virtual MeasList readInterval(const QueryInterval &q);
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) = 0;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) = 0;
-  virtual ~IMeasSource() {}
   EXPORT virtual Id2MinMax loadMinMax();
+  virtual ~IMeasSource() {}
 };
 
 typedef std::shared_ptr<IMeasSource> IMeasSource_ptr;
