@@ -375,9 +375,9 @@ public:
 	lock_storage();
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
-    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
-
     pm_async->wait();
+
+    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
     am_async->wait();
 
 	unlock_storage();
