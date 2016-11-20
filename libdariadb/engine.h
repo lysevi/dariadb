@@ -24,8 +24,8 @@ public:
     EXPORT static Version from_string(const std::string &str);
 
     bool operator>(const Version &other) {
-      return (major > other.major) || (major == other.major && (minor > other.minor)) ||
-             (major == other.major && (minor == other.minor) && (patch > other.patch));
+      return (major > other.major) || (major == other.major && (minor > other.minor)) /*||
+             (major == other.major && (minor == other.minor) && (patch > other.patch))*/;
     }
   };
 

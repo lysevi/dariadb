@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(Engine_version_test) {
   }
   {
     auto v1 = dariadb::storage::Engine::Version::from_string("1.2.3");
-    auto v2 = dariadb::storage::Engine::Version::from_string("1.2.4");
+    auto v2 = dariadb::storage::Engine::Version::from_string("2.2.3");
     BOOST_CHECK(v2 > v1);
   }
 
@@ -99,6 +99,12 @@ BOOST_AUTO_TEST_CASE(Engine_version_test) {
     auto v2 = dariadb::storage::Engine::Version::from_string("1.3.1");
     BOOST_CHECK(v2 > v1);
   }
+
+    {
+      auto v1 = dariadb::storage::Engine::Version::from_string("1.2.3");
+      auto v2 = dariadb::storage::Engine::Version::from_string("1.2.1");
+      BOOST_CHECK(!(v2 > v1));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
