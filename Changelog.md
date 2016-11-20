@@ -16,6 +16,7 @@ Storage:
    - Old pages compaction.
    - Full futured memory storage.
    - Lockfile in storage.
+   - New storage control tool.
 
 v0.1.1
 =====
