@@ -375,7 +375,7 @@ int main(int argc, char *argv[]) {
 
     start_time = dariadb::timeutil::current_time();
     auto first_day = 60 * 60 * dariadb_bench::hours_write_perid / 2;
-    auto first_day_milisec = start_time + first_day * 1000;
+    auto first_day_milisec = start_time + (first_day * 1000)/2;
     std::cout << "==> compaction period: [" << dariadb::timeutil::to_string(start_time)
               << ", " << dariadb::timeutil::to_string(first_day_milisec) << "]"
               << std::endl;
