@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/engine.h>
 #include <libdariadb/meas.h>
@@ -67,6 +68,13 @@ int main(int argc,char**argv){
 	dariadb::utils::ILogger_ptr log_ptr{ new ServerLogger(p) };
 	dariadb::utils::LogManager::start(log_ptr);
 
+    std::stringstream ss;
+    ss<<"cmdline: ";
+    for(int i=0;i<argc;++i){
+        ss<<argv[i]<<" ";
+    }
+
+    log_ptr->message(dariadb::utils::LOG_MESSAGE_KIND::INFO, ss.str());
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 	settings->strategy = strategy;
     if (strategy == STRATEGY::MEMORY && memory_limit!=0) {
