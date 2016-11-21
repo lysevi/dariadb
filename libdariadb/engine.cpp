@@ -26,22 +26,6 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-std::string Engine::Version::to_string() const {
-  return version;
-}
-
-Engine::Version Engine::Version::from_string(const std::string &str) {
-  std::vector<std::string> elements = utils::strings::split(str, '.');
-  assert(elements.size() == 3);
-
-  Engine::Version result;
-  result.version = str;
-  result.major = (uint16_t)std::stoi(elements[0]);
-  result.minor = (uint16_t)std::stoi(elements[1]);
-  result.patch = (uint16_t)std::stoi(elements[2]);
-  return result;
-}
-
 class Engine::Private {
 public:
   Private(Settings_ptr settings) {
@@ -49,7 +33,8 @@ public:
 	  _engine_env = EngineEnvironment_ptr{ new EngineEnvironment() };
 	  _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
-    logger_info("engine: version - ", this->version().to_string());
+    logger_info("engine: project version - ", PROJECT_VERSION_MAJOR,'.',PROJECT_VERSION_MINOR,'.',PROJECT_VERSION_PATCH);
+    logger_info("engine: storage version - ", this->version());
     logger_info("engine: strategy - ", _settings->strategy);
     bool is_exists = false;
     _stoped = false;
@@ -76,7 +61,7 @@ public:
 	_page_manager = PageManager_ptr{ new PageManager(_engine_env) };
 
     if (utils::fs::path_exists(utils::fs::append_path(settings->path, MANIFEST_FILE_NAME))) {
-		_manifest->set_version(this->version().version);
+        _manifest->set_version(std::to_string(this->version()));
     } else {
       check_storage_version();
     }
@@ -155,16 +140,11 @@ public:
        THROW_EXCEPTION("engine: storage ",lock_file," is locked.");
   }
   void check_storage_version() {
-    auto current_version = this->version().version;
-    auto storage_version = _manifest->get_version();
+    auto current_version = this->version();
+    auto storage_version = std::stoi(_manifest->get_version());
     if (storage_version != current_version) {
       logger_info("engine: openning storage with version - ", storage_version);
-      if (Version::from_string(storage_version) > this->version()) {
-        THROW_EXCEPTION("engine: openning storage with greater version.");
-      } else {
-        logger_info("engine: update storage version to ", current_version);
-		_manifest->set_version(current_version);
-      }
+      THROW_EXCEPTION("engine: openning storage with greater version.");
     }
   }
 
@@ -487,13 +467,8 @@ public:
 	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
 
-  Engine::Version version() {
-    Version result;
-    result.version = PROJECT_VERSION;
-    result.major = PROJECT_VERSION_MAJOR;
-    result.minor = PROJECT_VERSION_MINOR;
-    result.patch = PROJECT_VERSION_PATCH;
-    return result;
+  uint16_t version() {
+      return STORAGE_VERSION;
   }
 
   STRATEGY strategy()const{
@@ -617,7 +592,7 @@ void Engine::compactTo(uint32_t pagesCount) {
 void Engine::compactbyTime(Time from, Time to) {
 	_impl->compactbyTime(from,to);
 }
-Engine::Version Engine::version() {
+uint16_t Engine::version() {
 	return _impl->version();
 }
 

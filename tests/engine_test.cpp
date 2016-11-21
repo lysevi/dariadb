@@ -78,35 +78,6 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Engine_version_test) {
-  {
-    std::string version = "1.2.3";
-    auto parsed = dariadb::storage::Engine::Version::from_string(version);
-
-    BOOST_CHECK_EQUAL(version, parsed.version);
-    BOOST_CHECK_EQUAL(1, parsed.major);
-    BOOST_CHECK_EQUAL(2, parsed.minor);
-    BOOST_CHECK_EQUAL(3, parsed.patch);
-  }
-  {
-    auto v1 = dariadb::storage::Engine::Version::from_string("1.2.3");
-    auto v2 = dariadb::storage::Engine::Version::from_string("2.2.3");
-    BOOST_CHECK(v2 > v1);
-  }
-
-  {
-    auto v1 = dariadb::storage::Engine::Version::from_string("1.2.3");
-    auto v2 = dariadb::storage::Engine::Version::from_string("1.3.1");
-    BOOST_CHECK(v2 > v1);
-  }
-
-    {
-      auto v1 = dariadb::storage::Engine::Version::from_string("1.2.3");
-      auto v2 = dariadb::storage::Engine::Version::from_string("1.2.1");
-      BOOST_CHECK(!(v2 > v1));
-    }
-}
-
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
@@ -128,11 +99,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->path = storage_path;
     settings->page_chunk_size = chunk_size;
     std::unique_ptr<Engine> ms{new Engine(settings)};
-
-    auto version = ms->version();
-    std::stringstream ss;
-    ss << version.major << '.' << version.minor << '.' << version.patch;
-    BOOST_CHECK_EQUAL(version.to_string(), ss.str());
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true);
     ms->wait_all_asyncs();
@@ -159,10 +125,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
         BOOST_CHECK_EQUAL(res.ignored,size_t(1));
         BOOST_CHECK_GE(res.error_message.size(),size_t(0));
     }
-    auto version = raw_ptr->version();
-    std::stringstream ss;
-    ss << version.major << '.' << version.minor << '.' << version.patch;
-    BOOST_CHECK_EQUAL(manifest_version, ss.str());
 
     dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
 	auto index_files=dariadb::utils::fs::ls(storage_path, ".pagei");
@@ -205,11 +167,6 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     settings->page_chunk_size = chunk_size;
     settings->strategy=dariadb::storage::STRATEGY::FAST_WRITE;
     std::unique_ptr<Engine> ms{new Engine(settings)};
-
-    auto version = ms->version();
-    std::stringstream ss;
-    ss << version.major << '.' << version.minor << '.' << version.patch;
-    BOOST_CHECK_EQUAL(version.to_string(), ss.str());
 
     dariadb::IdSet all_ids;
     dariadb::Time maxWritedTime;
@@ -316,11 +273,6 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 		settings->page_chunk_size = 128;
 		settings->memory_limit =  50*1024;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
-
-		auto version = ms->version();
-		std::stringstream ss;
-		ss << version.major << '.' << version.minor << '.' << version.patch;
-		BOOST_CHECK_EQUAL(version.to_string(), ss.str());
 
 		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
 		ms->wait_all_asyncs();

@@ -12,23 +12,9 @@
 namespace dariadb {
 namespace storage {
 
+const uint16_t STORAGE_VERSION=1;
 class Engine : public IMeasStorage {
 public:
-  struct Version {
-    std::string version;
-    uint16_t major;
-    uint16_t minor;
-    uint16_t patch;
-
-    EXPORT std::string to_string() const;
-    EXPORT static Version from_string(const std::string &str);
-
-    bool operator>(const Version &other) {
-      return (major > other.major) || (major == other.major && (minor > other.minor)) /*||
-             (major == other.major && (minor == other.minor) && (patch > other.patch))*/;
-    }
-  };
-
   struct Description {
     size_t aofs_count;   ///  AOF count
     size_t pages_count;  /// pages count
@@ -74,7 +60,7 @@ public:
   EXPORT void compactTo(uint32_t pagesCount);
   EXPORT void compactbyTime(Time from, Time to);
 
-  EXPORT Version version();
+  EXPORT uint16_t version();
   EXPORT STRATEGY strategy()const;
 protected:
   class Private;
