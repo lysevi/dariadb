@@ -68,7 +68,7 @@ $ git submodules update
 #### Example
 Configure to build with all benchmarks, but without tests and server.
 ```shell
-$ cmake -DENABLE_TESTS=OFF -DENABLE_INTEGRATION_TESTS=OFF -DENABLE_BENCHMARKS=ON -DENABLE_SERVER=OFF . 
+$ cmake  -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF -DENABLE_INTEGRATION_TESTS=OFF -DENABLE_BENCHMARKS=ON -DENABLE_SERVER=OFF . 
 ```
 
 ###clang
@@ -93,7 +93,7 @@ $ cmake --build .
 ### build with non system installed boost
 ---
 ```shell
-$ cmake  -DBOOST_ROOT="path/to/boost/" .
+$ cmake  -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT="path/to/boost/" .
 $ make
 ```
 

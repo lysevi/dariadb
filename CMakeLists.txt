@@ -2,6 +2,13 @@ cmake_minimum_required (VERSION 3.1)
 set(PROJECT "dariadb")
 project (${PROJECT} VERSION 0.1.1)
 
+IF(NOT CMAKE_BUILD_TYPE)
+        message(STATUS "CMAKE_BUILD_TYPE is not set, set to default = RELWITHDEBINFO")
+        SET(CMAKE_BUILD_TYPE "RELWITHDEBINFO")
+ENDIF()
+
+MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
+
 option(ENABLE_TESTS "Enable testing of the dariadb." ON)
 option(ENABLE_METRICS "Enable code metrics." ON)
 option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
