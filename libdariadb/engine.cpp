@@ -137,7 +137,8 @@ public:
 
   [[noreturn]]
   void throw_lock_error(const std::string&lock_file) {
-       THROW_EXCEPTION("engine: storage ",lock_file," is locked.");
+       logger_fatal("engine: storage ",lock_file," is locked.");
+       std::exit(1);
   }
   void check_storage_version() {
     auto current_version = this->version();

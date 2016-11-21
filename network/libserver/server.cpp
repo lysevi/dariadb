@@ -43,7 +43,7 @@ public:
   ~Private() { stop(); }
 
   void set_storage(storage::Engine *storage) {
-    logger_info("server: set setorage.");
+    logger("server: set storage.");
     _env.storage = storage;
 	log_server_info_internal();
   }
