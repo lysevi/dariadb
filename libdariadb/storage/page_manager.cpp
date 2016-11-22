@@ -361,7 +361,8 @@ public:
   }
 
   void eraseOld(const Time t) {
-	  TIMECODE_METRICS(ctmd, "readTimePoint", "PageManager::eraseOld");
+      TIMECODE_METRICS(ctmd, "eraseOld", "PageManager::eraseOld");
+
 
 	  auto pred = [t](const IndexHeader &hdr) {
 		  auto in_check = hdr.maxTime <= t;

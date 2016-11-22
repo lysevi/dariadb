@@ -17,6 +17,7 @@ std::string new_base_name;
 
 std::string compact_from, compact_to;
 bool time_in_iso_format=false;
+std::string erase_to;
 
 class CtlLogger : public dariadb::utils::ILogger {
 public:
@@ -56,13 +57,14 @@ int main(int argc, char *argv[]) {
   aos("format", "print storage format version.");
   aos("verbose", "verbose output.");
   aos("compress", "compress all aof files.");
-  aos("time-iso-format", "if set, all time param is in iso format (\"20020131T235959\")");
+  aos("iso-time", "if set, all time param is in iso format (\"20020131T235959\")");
   aos("compact", "compact all page files to one.");
   aos("storage-path",po::value<std::string>(&storage_path)->default_value(storage_path),"path to storage.");
   aos("set", po::value<std::string>(&set_var)->default_value(set_var),"change setting variable.\nexample: --set=\"strategy=MEMORY\"");
   aos("create",po::value<std::string>(&new_base_name)->default_value(new_base_name),"create new database in selected folder.");
-  aos("compact-from",po::value<std::string>(&compact_from)->default_value(compact_from),"compaction period start date (example 2002-01-20 00:00:00.000).");
-  aos("compact-to",po::value<std::string>(&compact_to)->default_value(compact_to),"compaction period end date (example 2002-01-20 23:59:59.000).");
+  aos("compact-from",po::value<std::string>(&compact_from)->default_value(compact_from),"compaction period start date (example \"2002-01-20 00:00:00.000\").");
+  aos("compact-to",po::value<std::string>(&compact_to)->default_value(compact_to),"compaction period end date (example \"2002-01-20 23:59:59.000\").");
+  aos("erase-to",po::value<std::string>(&erase_to)->default_value(erase_to),"erase values above a specified value. (example \"2002-01-20 23:59:59.000\").");
 
   po::variables_map vm;
   try {
@@ -79,13 +81,17 @@ int main(int argc, char *argv[]) {
   }
 
   if (vm.count("verbose")) {
-    std::cout << "verbose=on" << std::endl;
+    dariadb::logger_info("verbose=on");
     verbose = true;
+  }else{
+    dariadb::logger_info("verbose=off");
   }
 
-  if (vm.count("time-iso-format")) {
-    std::cout << "time-iso-format=on" << std::endl;
+  if (vm.count("iso-time")) {
+      dariadb::logger_info("iso-time=on");
     time_in_iso_format = true;
+  }else{
+      dariadb::logger_info("iso-time=off");
   }
 
   dariadb::utils::ILogger_ptr log_ptr{new CtlLogger()};
@@ -129,6 +135,24 @@ int main(int argc, char *argv[]) {
     auto e = std::make_unique<dariadb::storage::Engine>(settings);
     e->compress_all();
     e->stop();
+  }
+
+  if(erase_to.size()!=0){
+      dariadb::Time to=0;
+      if(time_in_iso_format){
+          to=dariadb::timeutil::from_iso_string(erase_to);
+      }else{
+          to=dariadb::timeutil::from_string(erase_to);
+      }
+
+      auto settings = dariadb::storage::Settings_ptr{
+          new dariadb::storage::Settings(storage_path)};
+
+      auto e = std::make_unique<dariadb::storage::Engine>(settings);
+
+      e->eraseOld(to);
+      e->stop();
+      std::exit(0);
   }
 
   if (vm.count("compact")) {

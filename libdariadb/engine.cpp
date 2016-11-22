@@ -462,6 +462,7 @@ public:
   }
 
   void eraseOld(const Time&t) {
+      logger_info("engine: eraseOld to ", timeutil::to_string(t));
 	  _lock_manager->lock(
 		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
 	  _page_manager->eraseOld(t);
