@@ -4,6 +4,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
+#include <iostream>
 #include <libdariadb/engine.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/lock_manager.h>
@@ -89,6 +90,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   using namespace dariadb::storage;
 
   {
+      std::cout<<"Engine_common_test.\n";
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
@@ -107,7 +109,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     BOOST_CHECK_GE(pages_count, size_t(2));
   }
   {
-    
+    std::cout<<"reopen close storage\n";
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 
 	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
@@ -140,6 +142,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     BOOST_CHECK(current.size() != size_t(0));
   }
+  std::cout<<"end\n";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
@@ -156,6 +159,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
   using namespace dariadb::storage;
 
   {
+    std::cout<<"Engine_compress_all_test\n";
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
@@ -263,6 +267,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 	using namespace dariadb::storage;
 
 	{
+        std::cout<<"Engine_MemStorage_common_test\n";
 		if (dariadb::utils::fs::path_exists(storage_path)) {
 			dariadb::utils::fs::rm(storage_path);
 		}
