@@ -18,53 +18,6 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-MemChunkAllocator::MemChunkAllocator(size_t maxSize, size_t bufferSize) {
-  _maxSize = maxSize;
-  _bufferSize = bufferSize;
-  _allocated = size_t(0);
-  size_t one_chunk_size = sizeof(ChunkHeader) + bufferSize;
-  _capacity = (int)(float(_maxSize) / one_chunk_size);
-  size_t buffers_size=_capacity * _bufferSize;
-
-  _headers.resize(_capacity);
-  _buffers = new uint8_t[buffers_size];
-
-  memset(_buffers,0,buffers_size);
-  for(size_t i=0;i<_capacity;++i){
-      memset(&_headers[i],0,sizeof(ChunkHeader));
-      _free_list.push_back(i);
-  }
-}
-
-MemChunkAllocator::~MemChunkAllocator() {
-  delete[] _buffers;
-}
-
-MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
-  _locker.lock();
-  if(_free_list.empty()){
-      _locker.unlock();
-      return EMPTY;
-  }
-  auto pos=_free_list.front();
-  _free_list.pop_front();
-  _allocated++;
-  _locker.unlock();
-  return AllocatedData(&_headers[pos], &_buffers[pos * _bufferSize], pos);
-}
-
-void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
-	auto header = d.header;
-	auto buffer = d.buffer;
-	auto position = d.position;
-  memset(header, 0, sizeof(ChunkHeader));
-  memset(buffer, 0, _bufferSize);
-  _locker.lock();
-  _allocated--;
-  _free_list.push_back(position);
-  _locker.unlock();
-}
-
 /**
 Map:
   Meas.id -> TimeTrack{ MemChunkList[MemChunk{data}]}
@@ -304,7 +257,7 @@ struct TimeTrack : public IMeasStorage {
 	  }
 	  auto mc = MemChunk_Ptr{ new MemChunk{ new_chunk_data.header,
 		  new_chunk_data.buffer,
-		  _allocator->_bufferSize, value } };
+          _allocator->_chunkSize, value } };
       mc->_track=this;
       mc->_a_data=new_chunk_data;
 	  this->_mcc->addChunk(mc);

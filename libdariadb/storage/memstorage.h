@@ -6,44 +6,11 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/storage/allocators.h>
 #include <memory>
 
 namespace dariadb {
 namespace storage {
-
-struct MemChunkAllocator {
-	struct AllocatedData {
-		ChunkHeader *header;
-		uint8_t *buffer;
-		size_t position;
-		AllocatedData(ChunkHeader *h, uint8_t *buf, size_t pos) {
-			header = h;
-			buffer=buf;
-			position = pos;
-		}
-		AllocatedData() {
-			header = nullptr;
-			buffer = nullptr;
-			position = std::numeric_limits<size_t>::max();
-		}
-	};
-  
-  const AllocatedData EMPTY = AllocatedData(nullptr, nullptr, std::numeric_limits<size_t>::max());
-
-  size_t _maxSize;
-  size_t _bufferSize;
-  size_t _capacity;
-  size_t _allocated;
-  std::vector<ChunkHeader> _headers;
-  uint8_t *_buffers;
-  std::list<size_t> _free_list;
-  std::mutex _locker;
-
-  EXPORT MemChunkAllocator(size_t maxSize, size_t bufferSize);
-  EXPORT ~MemChunkAllocator();
-  EXPORT AllocatedData allocate();
-  EXPORT void free(const AllocatedData &d);
-};
 
 class MemStorage : public IMeasStorage {
 public:
