@@ -11,7 +11,6 @@
 
 #include "bench_common.h"
 
-#include <libdariadb/ads/fixed_tree.h>
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>

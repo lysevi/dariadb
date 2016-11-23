@@ -5,7 +5,6 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/locker.h>
-#include <libdariadb/utils/lru.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/thread_manager.h>
 #include <libdariadb/utils/utils.h>

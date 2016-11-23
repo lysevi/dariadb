@@ -4,7 +4,6 @@
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/locker.h>
-#include <libdariadb/utils/lru.h>
 #include <libdariadb/utils/utils.h>
 
 #include <map>

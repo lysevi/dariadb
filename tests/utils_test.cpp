@@ -11,7 +11,6 @@
 #include <libdariadb/utils/crc.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
-#include <libdariadb/utils/lru.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/period_worker.h>
 #include <libdariadb/utils/thread_manager.h>
@@ -48,42 +47,6 @@ BOOST_AUTO_TEST_CASE(CRC16Test) {
   auto res3 = dariadb::utils::crc16(pdata, sizeof(data));
   BOOST_CHECK_EQUAL(res1, res2);
   BOOST_CHECK(res1 != res3);
-}
-
-BOOST_AUTO_TEST_CASE(LRUCheck) {
-  dariadb::utils::LRU<int, int> ilru(4);
-
-  int out_val;
-  BOOST_CHECK(!ilru.put(1, 10, &out_val));
-  BOOST_CHECK(!ilru.put(2, 20, &out_val));
-  BOOST_CHECK(!ilru.put(3, 30, &out_val));
-  BOOST_CHECK(!ilru.put(4, 40, &out_val));
-  BOOST_CHECK(ilru.put(5, 50, &out_val));
-  BOOST_CHECK_EQUAL(ilru.size(), size_t(4));
-  BOOST_CHECK_EQUAL(out_val, 10);
-
-  BOOST_CHECK(!ilru.find(1, &out_val));
-  BOOST_CHECK(ilru.find(2, &out_val));
-  BOOST_CHECK_EQUAL(out_val, 20);
-  BOOST_CHECK(ilru.find(3, &out_val));
-  BOOST_CHECK_EQUAL(out_val, 30);
-  BOOST_CHECK(ilru.find(4, &out_val));
-  BOOST_CHECK_EQUAL(out_val, 40);
-  BOOST_CHECK(ilru.find(5, &out_val));
-  BOOST_CHECK_EQUAL(out_val, 50);
-
-  ilru.set_max_size(10);
-  for (auto i = ilru.size() + 1; i < size_t(11); ++i) {
-    auto sub_res = ilru.put(int(i), int(i * 10), &out_val);
-    BOOST_CHECK(!sub_res);
-  }
-
-  BOOST_CHECK(ilru.put(55, 550, &out_val));
-  BOOST_CHECK_EQUAL(ilru.size(), size_t(10));
-  BOOST_CHECK_EQUAL(out_val, 20);
-  ilru.erase(55);
-  BOOST_CHECK_EQUAL(ilru.size(), size_t(9));
-  BOOST_CHECK(!ilru.find(55, &out_val));
 }
 
 BOOST_AUTO_TEST_CASE(CountZero) {
