@@ -88,7 +88,6 @@ struct MeasMinMax{
     Time max;
 };
 
-using PMeas=Meas*;
 using MeasArray=std::vector<Meas>;
 using MeasList=std::deque<Meas>;
 using Id2Meas=std::unordered_map<Id, Meas>;
