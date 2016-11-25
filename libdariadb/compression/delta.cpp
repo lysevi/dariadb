@@ -97,17 +97,14 @@ DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_,
 dariadb::Time DeltaDeCompressor::read() {
   auto first_byte = bw->read<uint8_t>();
 
-  // TODO check in one operation; use switch
   int64_t result = 0;
-  if ((first_byte & delta_1b_mask) == delta_1b_mask &&
-      !utils::BitOperations::check(first_byte, 6)) {
+  if ((first_byte & delta_1b_mask) == delta_1b_mask && !utils::BitOperations::check(first_byte, 6)) {
     result = first_byte & delta_1b_mask_inv;
     if (result > 32) { // negative
       result = (-64) | result;
     }
   } else {
-    if ((first_byte & (delta_2b_mask >> 8)) == (delta_2b_mask >> 8) &&
-        !utils::BitOperations::check(first_byte, 5)) {
+    if ((first_byte & (delta_2b_mask >> 8)) == (delta_2b_mask >> 8) && !utils::BitOperations::check(first_byte, 5)) {
       auto second = bw->read<uint8_t>();
       auto first_unmasked = first_byte & (delta_2b_mask_inv >> 8);
       result = ((uint16_t)first_unmasked << 8) | (uint16_t)second;
