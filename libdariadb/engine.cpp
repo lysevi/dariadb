@@ -260,7 +260,13 @@ public:
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
-      _min_max[value.id].max=std::max(_min_max[value.id].max, value.time);
+	  auto fres = _min_max.find(value.id);
+	  if (fres == _min_max.end()) {
+		  _min_max[value.id].max = value.time;
+	  }
+	  else {
+		  fres->second.max = std::max(fres->second.max, value.time);
+	  }
     }
 
     return result;
