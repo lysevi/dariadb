@@ -87,7 +87,7 @@ $ make
 ###on windows with **Microsoft Visual Studio**
 ---
 ```cmd
-$ cmake -G "Visual Studio 12 2013 Win64" .
+$ cmake -G "Visual Studio 14 2015 Win64" .
 $ cmake --build .
 ```
 ### build with non system installed boost
