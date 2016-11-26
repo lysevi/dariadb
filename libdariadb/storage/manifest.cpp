@@ -96,10 +96,10 @@ void Manifest::restore() {
 
 std::list<std::string> Manifest::page_list() {
   std::lock_guard<utils::Locker> lg(_locker);
-  char *sql = "SELECT file from pages;";
+  std::string sql = "SELECT file from pages;";
   std::list<std::string> result{};
   char *zErrMsg = 0;
-  auto rc = sqlite3_exec(db, sql, file_select_callback, (void*)&result, &zErrMsg);
+  auto rc = sqlite3_exec(db, sql.c_str(), file_select_callback, (void*)&result, &zErrMsg);
   if (rc != SQLITE_OK) {
 	  THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
 	  sqlite3_free(zErrMsg);
@@ -140,10 +140,10 @@ void Manifest::page_rm(const std::string &rec) {
 
 std::list<std::string> Manifest::aof_list() {
 	std::lock_guard<utils::Locker> lg(_locker);
-	char *sql = "SELECT file from aofs;";
+	std::string sql = "SELECT file from aofs;";
 	std::list<std::string> result{};
 	char *zErrMsg = 0;
-	auto rc = sqlite3_exec(db, sql, file_select_callback, (void*)&result, &zErrMsg);
+	auto rc = sqlite3_exec(db, sql.c_str(), file_select_callback, (void*)&result, &zErrMsg);
 	if (rc != SQLITE_OK) {
 		THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
@@ -212,10 +212,10 @@ void Manifest::set_version(const std::string &version) {
 }
 
 std::string Manifest::get_version() {
-	char *sql = "SELECT value from params where name='version';";
+	std::string sql = "SELECT value from params where name='version';";
 	std::string result;
 	char *zErrMsg = 0;
-	auto rc = sqlite3_exec(db, sql, version_select_callback, (void*)&result, &zErrMsg);
+	auto rc = sqlite3_exec(db, sql.c_str(), version_select_callback, (void*)&result, &zErrMsg);
 	if (rc != SQLITE_OK) {
 		THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
