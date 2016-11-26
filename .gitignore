@@ -2,6 +2,7 @@ libdariadb/config.h
 tmp
 packages.config
 Settings
+lockfile
 .vs
 dariadb_logs*.txt
 *.aof

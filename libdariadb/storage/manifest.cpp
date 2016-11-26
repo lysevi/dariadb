@@ -34,8 +34,16 @@ static int version_select_callback(void *data, int argc, char **argv, char **azC
 
 Manifest::Manifest(const std::string &fname) : _filename(fname) {
 	std::string storage_path = utils::fs::parent_path(this->_filename);
+	bool is_exists = true;
 	if (!utils::fs::path_exists(storage_path)) {
-		utils::fs::mkdir(storage_path);
+		try {
+			is_exists = false;
+			utils::fs::mkdir(storage_path);
+		}
+		catch (std::exception&ex) {
+			auto msg = ex.what();
+			THROW_EXCEPTION("Can't create folder: ", msg);
+		}
 	}
   int rc = sqlite3_open(fname.c_str(), &db);
   if (rc) {
@@ -43,13 +51,13 @@ Manifest::Manifest(const std::string &fname) : _filename(fname) {
     THROW_EXCEPTION("Can't open database: ", err_msg);
   } 
   char *err = 0;
-  if (sqlite3_exec(db, CREATE_SQL, 0, 0, &err))
-  {
+  if (sqlite3_exec(db, CREATE_SQL, 0, 0, &err)){
 	  fprintf(stderr, "Ошибка SQL: %sn", err);
 	  sqlite3_free(err);
   }
-
-  restore();
+  if (is_exists) {
+	  restore();
+  }
 }
 
 Manifest::~Manifest() {

@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstring>
 #include <fstream>
+#include <shared_mutex>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -241,8 +242,10 @@ public:
 
   append_result append(const Meas &value) {
     append_result result{};
+	_min_max_locker.lock_shared();
       auto fres=_min_max.find(value.id);
       if(fres!=_min_max.end()){
+		  _min_max_locker.unlock_shared();
           auto max_v=fres->second;
           if(max_v.max>value.time){
             result.ignored=1;
@@ -254,19 +257,24 @@ public:
             logger_info("engine: ",err_message);
             return result;
           }
-      }
+	  }
+	  else {
+		  _min_max_locker.unlock_shared();
+	  }
 
 	result=_top_storage->append(value);
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
-	  auto fres = _min_max.find(value.id);
-	  if (fres == _min_max.end()) {
+	  _min_max_locker.lock();
+	  auto insert_fres = _min_max.find(value.id);
+	  if (insert_fres == _min_max.end()) {
 		  _min_max[value.id].max = value.time;
 	  }
 	  else {
-		  fres->second.max = std::max(fres->second.max, value.time);
+		  insert_fres->second.max = std::max(fres->second.max, value.time);
 	  }
+	  _min_max_locker.unlock();
     }
 
     return result;
@@ -514,6 +522,7 @@ protected:
 
   IMeasStorage_ptr _top_storage; //aof or memory storage.
   Id2MinMax _min_max;
+  std::shared_mutex _min_max_locker;
 };
 
 Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}
