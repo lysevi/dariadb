@@ -32,7 +32,10 @@ add_library ( sqlite3 STATIC sqlite3.c )
 if ( CMAKE_USE_PTHREADS_INIT )
   target_link_libraries ( sqlite3 ${EXTRA_LIBS} )
 endif ( )
-install_library ( sqlite3 )
+if(CMAKE_COMPILER_IS_GNUCXX)
+SET_TARGET_PROPERTIES(sqlite3 PROPERTIES COMPILE_FLAGS "-fPIC")
+endif(CMAKE_COMPILER_IS_GNUCXX)
 
+install_library ( sqlite3 )
 # Install Headers
 install_header ( sqlite3.h sqlite3ext.h )
