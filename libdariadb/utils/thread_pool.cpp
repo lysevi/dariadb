@@ -62,7 +62,10 @@ void ThreadPool::flush() {
     _condition.notify_one();
     if (_in_queue.empty() && (_task_runned.load() == size_t(0))) {
       break;
-    }
+	}
+	else {
+		std::this_thread::yield();
+	}	
   }
 }
 

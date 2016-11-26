@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     auto pages_count = ms->description().pages_count;
     auto aofs_count = ms->description().aofs_count;
     BOOST_CHECK_GE(pages_count, size_t(1));
-    BOOST_CHECK_GE(aofs_count, size_t(0));
+    BOOST_CHECK_EQUAL(aofs_count, size_t(0));
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
