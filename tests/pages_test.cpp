@@ -21,7 +21,7 @@ using dariadb::storage::PageManager;
 using dariadb::storage::Manifest;
 
 BOOST_AUTO_TEST_CASE(ManifestFileTest) {
-  const std::string fname = "emptyStorage\\manifest";
+	const std::string fname = dariadb::utils::fs::append_path("emptyStorage", "manifest");
   if (dariadb::utils::fs::path_exists(fname)) {
     dariadb::utils::fs::rm(fname);
   }
