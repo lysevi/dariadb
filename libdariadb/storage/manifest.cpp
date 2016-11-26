@@ -10,29 +10,57 @@ using json = nlohmann::json;
 using namespace dariadb::storage;
 
 const std::string PAGE_JS_KEY = "pages";
-const std::string COLA_JS_KEY = "cola";
-const std::string AOF_JS_KEY = "aof";
-const std::string VERSION_JS_KEY = "version";
+const std::string AOF_JS_KEY = "aofs";
 
-Manifest::Manifest(const std::string &fname) : _filename(fname) {
-  if (utils::fs::path_exists(_filename)) {
-    this->restore();
-  }
+const char* CREATE_SQL =
+"CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "\
+"CREATE TABLE IF NOT EXISTS aofs(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "\
+"CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); "\
+	;
+
+static int file_select_callback(void *data, int argc, char **argv, char **azColName) {
+	std::list<std::string> *ld = (std::list<std::string>*)data;
+	assert(argc == 1);
+	ld->push_back (std::string(argv[0]));
+	return 0;
 }
 
-void Manifest::touch() {
-  if (!utils::fs::path_exists(_filename)) {
-    json js = json::parse(std::string("{ \"") + COLA_JS_KEY + "\": [], \"" + PAGE_JS_KEY +
-                          "\": [] }");
+static int version_select_callback(void *data, int argc, char **argv, char **azColName) {
+	std::string *ld = (std::string*)data;
+	assert(argc == 1);
+	(*ld) = std::string(argv[0]);
+	return 0;
+}
 
-    write_file(_filename, js.dump());
+Manifest::Manifest(const std::string &fname) : _filename(fname) {
+	std::string storage_path = utils::fs::parent_path(this->_filename);
+	if (!utils::fs::path_exists(storage_path)) {
+		utils::fs::mkdir(storage_path);
+	}
+  int rc = sqlite3_open(fname.c_str(), &db);
+  if (rc) {
+	  auto err_msg = sqlite3_errmsg(db);
+    THROW_EXCEPTION("Can't open database: ", err_msg);
+  } 
+  char *err = 0;
+  if (sqlite3_exec(db, CREATE_SQL, 0, 0, &err))
+  {
+	  fprintf(stderr, "Îøèáêà SQL: %sn", err);
+	  sqlite3_free(err);
   }
+
+  restore();
+}
+
+Manifest::~Manifest() {
+  sqlite3_close(db);
 }
 
 void Manifest::restore() {
   std::string storage_path = utils::fs::parent_path(this->_filename);
 
   auto aofs = this->aof_list();
+  auto size_before = aofs.size();
   aofs.erase(std::remove_if(aofs.begin(), aofs.end(),
                             [this, storage_path](std::string fname) {
                               auto full_file_name =
@@ -40,25 +68,16 @@ void Manifest::restore() {
                               return !utils::fs::path_exists(full_file_name);
                             }),
              aofs.end());
-  clear_field_values(AOF_JS_KEY);
-  for (auto fname : aofs) {
-    this->aof_append(fname);
-  }
-
-  auto caps = this->cola_list();
-  caps.erase(std::remove_if(caps.begin(), caps.end(),
-                            [this, storage_path](std::string fname) {
-                              auto full_file_name =
-                                  utils::fs::append_path(storage_path, fname);
-                              return !utils::fs::path_exists(full_file_name);
-                            }),
-             caps.end());
-  clear_field_values(COLA_JS_KEY);
-  for (auto fname : caps) {
-    this->cola_append(fname);
+  auto size_after = aofs.size();
+  if (size_after != size_before) {
+	  clear_field_values(AOF_JS_KEY);
+	  for (auto fname : aofs) {
+		  this->aof_append(fname);
+	  }
   }
 
   auto pages = this->page_list();
+  size_before = pages.size();
   pages.erase(std::remove_if(pages.begin(), pages.end(),
                              [this, storage_path](std::string fname) {
                                auto full_file_name =
@@ -66,179 +85,140 @@ void Manifest::restore() {
                                return !utils::fs::path_exists(full_file_name);
                              }),
               pages.end());
-  clear_field_values(PAGE_JS_KEY);
-  for (auto fname : pages) {
-    this->page_append(fname);
+  size_after = pages.size();
+  if (size_after != size_before) {
+	  clear_field_values(PAGE_JS_KEY);
+	  for (auto fname : pages) {
+		  this->page_append(fname);
+	  }
   }
-}
-
-std::string Manifest::read_file(const std::string &fname) {
-  if (utils::fs::path_exists(fname)) {
-    return utils::fs::read_file(fname);
-  } else {
-    this->touch();
-    return utils::fs::read_file(fname);
-  }
-}
-
-void Manifest::write_file(const std::string &fname, const std::string &content) {
-  std::fstream fs;
-  fs.open(fname, std::ios::out);
-  fs << content;
-  fs.flush();
-  fs.close();
 }
 
 std::list<std::string> Manifest::page_list() {
   std::lock_guard<utils::Locker> lg(_locker);
-
+  char *sql = "SELECT file from pages;";
   std::list<std::string> result{};
-  json js = json::parse(read_file(_filename));
-  for (auto v : js[PAGE_JS_KEY]) {
-    result.push_back(v);
+  char *zErrMsg = 0;
+  auto rc = sqlite3_exec(db, sql, file_select_callback, (void*)&result, &zErrMsg);
+  if (rc != SQLITE_OK) {
+	  THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+	  sqlite3_free(zErrMsg);
   }
+
   return result;
 }
 
 void Manifest::page_append(const std::string &rec) {
   std::lock_guard<utils::Locker> lg(_locker);
 
-  json js = json::parse(read_file(_filename));
-
-  std::list<std::string> page_list{};
-  auto pages_json = js[PAGE_JS_KEY];
-  for (auto v : pages_json) {
-    page_list.push_back(v);
+  std::stringstream ss;
+  ss << "insert into pages (file) values ('" << rec << "');";
+  auto sql = ss.str();
+  std::list<std::string> result{};
+  char *zErrMsg = 0;
+  auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
+  if (rc != SQLITE_OK) {
+	  THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+	  sqlite3_free(zErrMsg);
   }
-  page_list.push_back(rec);
-  js[PAGE_JS_KEY] = page_list;
-  write_file(_filename, js.dump());
 }
 
 void Manifest::page_rm(const std::string &rec) {
   std::lock_guard<utils::Locker> lg(_locker);
 
-  json js = json::parse(read_file(_filename));
-
-  std::list<std::string> pg_list{};
-  auto pages_json = js[PAGE_JS_KEY];
-  for (auto v : pages_json) {
-    std::string str_val = v;
-    if (rec != str_val) {
-      pg_list.push_back(str_val);
-    }
-  }
-  js[PAGE_JS_KEY] = pg_list;
-  write_file(_filename, js.dump());
-}
-
-std::list<std::string> Manifest::cola_list() {
-  std::lock_guard<utils::Locker> lg(_locker);
-
+  std::stringstream ss;
+  ss << "delete from pages where file = '" << rec << "';";
+  auto sql = ss.str();
   std::list<std::string> result{};
-  json js = json::parse(read_file(_filename));
-  for (auto v : js[COLA_JS_KEY]) {
-    result.push_back(v);
+  char *zErrMsg = 0;
+  auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
+  if (rc != SQLITE_OK) {
+	  THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+	  sqlite3_free(zErrMsg);
   }
-  return result;
-}
-
-void Manifest::cola_append(const std::string &rec) {
-  std::lock_guard<utils::Locker> lg(_locker);
-
-  json js = json::parse(read_file(_filename));
-
-  std::list<std::string> cola_list{};
-  auto pages_json = js[COLA_JS_KEY];
-  for (auto v : pages_json) {
-    cola_list.push_back(v);
-  }
-  cola_list.push_back(rec);
-  js[COLA_JS_KEY] = cola_list;
-  write_file(_filename, js.dump());
-}
-
-void Manifest::cola_rm(const std::string &rec) {
-  std::lock_guard<utils::Locker> lg(_locker);
-
-  json js = json::parse(read_file(_filename));
-
-  std::list<std::string> cola_list{};
-  auto pages_json = js[COLA_JS_KEY];
-  for (auto v : pages_json) {
-    std::string str_val = v;
-    if (rec != str_val) {
-      cola_list.push_back(str_val);
-    }
-  }
-  js[COLA_JS_KEY] = cola_list;
-  write_file(_filename, js.dump());
 }
 
 std::list<std::string> Manifest::aof_list() {
-  std::lock_guard<utils::Locker> lg(_locker);
-
-  std::list<std::string> result{};
-  json js = json::parse(read_file(_filename));
-  for (auto v : js[AOF_JS_KEY]) {
-    result.push_back(v);
-  }
-  return result;
+	std::lock_guard<utils::Locker> lg(_locker);
+	char *sql = "SELECT file from aofs;";
+	std::list<std::string> result{};
+	char *zErrMsg = 0;
+	auto rc = sqlite3_exec(db, sql, file_select_callback, (void*)&result, &zErrMsg);
+	if (rc != SQLITE_OK) {
+		THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+	}
+	return result;
 }
 
 void Manifest::clear_field_values(std::string field_name) {
-  json js = json::parse(read_file(_filename));
-
-  std::list<std::string> empty_list{};
-  js[field_name] = empty_list;
-  write_file(_filename, js.dump());
+	std::stringstream ss;
+	ss << "delete from "<<field_name << ";";
+	auto sql = ss.str();
+	std::list<std::string> result{};
+	char *zErrMsg = 0;
+	auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
+	if (rc != SQLITE_OK) {
+		THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+	}
 }
 
 void Manifest::aof_append(const std::string &rec) {
   std::lock_guard<utils::Locker> lg(_locker);
 
-  json js = json::parse(read_file(_filename));
-
-  std::list<std::string> aof_list{};
-  auto pages_json = js[AOF_JS_KEY];
-  for (auto v : pages_json) {
-    aof_list.push_back(v);
+  std::stringstream ss;
+  ss << "insert into aofs (file) values ('" << rec << "');";
+  auto sql = ss.str();
+  std::list<std::string> result{};
+  char *zErrMsg = 0;
+  auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
+  if (rc != SQLITE_OK) {
+	  THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+	  sqlite3_free(zErrMsg);
   }
-  aof_list.push_back(rec);
-  js[AOF_JS_KEY] = aof_list;
-  write_file(_filename, js.dump());
 }
 
 void Manifest::aof_rm(const std::string &rec) {
   std::lock_guard<utils::Locker> lg(_locker);
 
-  json js = json::parse(read_file(_filename));
-
-  std::list<std::string> aof_list{};
-  auto aof_json = js[AOF_JS_KEY];
-  for (auto v : aof_json) {
-    std::string str_val = v;
-    if (rec != str_val) {
-      aof_list.push_back(str_val);
-    }
+  std::stringstream ss;
+  ss << "delete from aofs where file = '" << rec << "';";
+  auto sql = ss.str();
+  std::list<std::string> result{};
+  char *zErrMsg = 0;
+  auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
+  if (rc != SQLITE_OK) {
+	  THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+	  sqlite3_free(zErrMsg);
   }
-  js[AOF_JS_KEY] = aof_list;
-  write_file(_filename, js.dump());
 }
 
 void Manifest::set_version(const std::string &version) {
   std::lock_guard<utils::Locker> lg(_locker);
 
-  json js = json::parse(read_file(_filename));
-
-  js[VERSION_JS_KEY] = version;
-  write_file(_filename, js.dump());
+  std::stringstream ss;
+  ss << "insert or replace into params(id, name, value) values ((select id from params "
+        "where name = 'version'), 'version', '"
+     << version << "' );";
+  auto sql = ss.str();
+  std::list<std::string> result{};
+  char *zErrMsg = 0;
+  auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
+  if (rc != SQLITE_OK) {
+    THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+    sqlite3_free(zErrMsg);
+  }
 }
 
 std::string Manifest::get_version() {
-  std::lock_guard<utils::Locker> lg(_locker);
-
-  json js = json::parse(read_file(_filename));
-
-  return js[VERSION_JS_KEY];
+	char *sql = "SELECT value from params where name='version';";
+	std::string result;
+	char *zErrMsg = 0;
+	auto rc = sqlite3_exec(db, sql, version_select_callback, (void*)&result, &zErrMsg);
+	if (rc != SQLITE_OK) {
+		THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+	}
+	return result;
 }

@@ -41,6 +41,9 @@ include(AddCXXCompilerFlag)
 include(CompillerSettings)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(BOOST_DEP system filesystem system date_time)
 
@@ -76,6 +79,11 @@ endif()
 include_directories(extern)
 include_directories(extern/spdlog/include)
 include_directories(extern/stx-btree/include)
+
+add_subdirectory(extern/libsqlite3)
+include_directories(extern/libsqlite3)
+
+set_target_properties(sqlite3 PROPERTIES FOLDER Extern)
 
 SET(DARIADB_STORAGE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
             CACHE STRING "dariadb storage include dir for storage engine.")

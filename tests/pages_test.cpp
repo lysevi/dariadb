@@ -36,10 +36,6 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     }
 
 	manifest->set_version(version);
-    std::list<std::string> cola_names{"11", "22", "33"};
-    for (auto n : cola_names) {
-		manifest->cola_append(n);
-    }
 
     std::list<std::string> aof_names{"111", "222", "333"};
     for (auto n : aof_names) {
@@ -51,11 +47,6 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
                                   pages_names.end());
 
-    auto cola_lst = manifest->cola_list();
-    BOOST_CHECK_EQUAL(cola_lst.size(), cola_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(cola_lst.begin(), cola_lst.end(), cola_names.begin(),
-                                  cola_names.end());
-
     auto aof_lst = manifest->aof_list();
     BOOST_CHECK_EQUAL(aof_lst.size(), aof_names.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(aof_lst.begin(), aof_lst.end(), aof_names.begin(),
@@ -66,7 +57,6 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   { // reopen. restore method must remove all records from manifest.
     auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ fname } };
     BOOST_CHECK_EQUAL(manifest->page_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(manifest->cola_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(manifest->aof_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(manifest->get_version(), version);
   }
