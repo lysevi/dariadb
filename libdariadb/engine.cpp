@@ -467,7 +467,7 @@ public:
       if (_aof_manager != nullptr) {
           logger_info("engine: compress_all");
           _aof_manager->drop_all();
-          wait_all_asyncs();
+          this->flush();
       }
   }
   void fsck() {
