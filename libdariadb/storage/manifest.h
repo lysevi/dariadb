@@ -17,7 +17,6 @@ public:
   EXPORT Manifest() = delete;
   EXPORT Manifest(const std::string &fname);
   EXPORT ~Manifest();
-  EXPORT void restore();
 
   EXPORT std::list<std::string> page_list();
   EXPORT void page_append(const std::string &rec);
@@ -29,12 +28,10 @@ public:
 
   EXPORT void set_version(const std::string &version);
   EXPORT std::string get_version();
-private:
-  void clear_field_values(std::string key);
+
 protected:
-  std::string _filename;
-  utils::Locker _locker;
-  sqlite3 *db;
+	class Private;
+	std::unique_ptr<Private> _impl;
 };
 
 using Manifest_ptr = std::shared_ptr<Manifest>;
