@@ -46,8 +46,8 @@ class Settings {
       iss >> value;
     }
 
+	std::string key_name;
     T value;
-    std::string key_name;
   };
 
 public:
