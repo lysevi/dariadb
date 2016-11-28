@@ -116,6 +116,7 @@ public:
 
     for (auto pname : pages) {
       AsyncTask at = [pname, &results, num, this, id](const ThreadInfo &ti) {
+		  //TODO must be reading from index.
         TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
         Page_Ptr pg = open_page_to_read(pname);
         dariadb::Time lmin, lmax;
