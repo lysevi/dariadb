@@ -46,7 +46,7 @@ void run_server() {
 	}
 
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-	settings->strategy = strategy;
+	settings->strategy.value = strategy;
 	settings->path = storage_path;
 
 	engine = new Engine(settings);

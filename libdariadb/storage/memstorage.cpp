@@ -270,7 +270,7 @@ using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
 using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
-    Private(const storage::Settings_ptr &s, const size_t id_count) : _chunk_allocator(s->memory_limit, s->chunk_size) {
+    Private(const storage::Settings_ptr &s, const size_t id_count) : _chunk_allocator(s->memory_limit.value, s->chunk_size.value) {
 		_chunks.resize(_chunk_allocator._capacity);
 		_stoped = false;
 		_down_level_storage = nullptr;
@@ -503,7 +503,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   bool is_time_to_drop() {
-	  return (_chunk_allocator._allocated) >= (_chunk_allocator._capacity*_settings->percent_when_start_droping);
+	  return (_chunk_allocator._allocated) >= (_chunk_allocator._capacity*_settings->percent_when_start_droping.value);
   }
 
   void drop_thread_func() {
@@ -518,7 +518,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  continue;
 		  }
 
-          drop_by_limit(_settings->percent_to_drop, false);
+          drop_by_limit(_settings->percent_to_drop.value, false);
 	  }
 
 	  logger_info("engine: memstorage dropping stop.");

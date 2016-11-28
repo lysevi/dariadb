@@ -331,7 +331,7 @@ public:
     std::string page_name = file_prefix + PAGE_FILE_EXT;
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->path, page_name);
-    res = Page::create(file_name, last_id, _settings->chunk_size, ma);
+    res = Page::create(file_name, last_id, _settings->chunk_size.value, ma);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	last_id=res->header->max_chunk_id;
     delete res;
@@ -418,7 +418,7 @@ public:
       }
 	  std::string file_name =
 		  dariadb::utils::fs::append_path(_settings->path, page_name);
-	  res = Page::create(file_name, last_id, _settings->chunk_size, part);
+	  res = Page::create(file_name, last_id, _settings->chunk_size.value, part);
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	  last_id = res->header->max_chunk_id;
 	  delete res;

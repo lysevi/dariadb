@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
   settings->path = storagePath;
-  settings->chunk_size = chunks_size;
+  settings->chunk_size.value = chunks_size;
 
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-  settings->chunk_size = chunks_size;
+  settings->chunk_size.value = chunks_size;
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
   settings->path = storagePath;
-  settings->chunk_size = chunks_size;
+  settings->chunk_size.value = chunks_size;
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
 
   auto settings =
       dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
-  settings->chunk_size = chunks_size;
+  settings->chunk_size.value = chunks_size;
   auto _engine_env =
       dariadb::storage::EngineEnvironment_ptr{new dariadb::storage::EngineEnvironment()};
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
@@ -456,7 +456,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompactionByTime) {
 
 	auto settings =
 		dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-	settings->chunk_size = chunks_size;
+	settings->chunk_size.value = chunks_size;
 	auto _engine_env =
 		dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,

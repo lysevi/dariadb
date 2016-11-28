@@ -36,7 +36,7 @@ public:
 
     logger_info("engine: project version - ", PROJECT_VERSION_MAJOR,'.',PROJECT_VERSION_MINOR,'.',PROJECT_VERSION_PATCH);
     logger_info("engine: storage version - ", this->version());
-    logger_info("engine: strategy - ", _settings->strategy);
+    logger_info("engine: strategy - ", _settings->strategy.value);
     bool is_exists = false;
     _stoped = false;
     if (!dariadb::utils::fs::path_exists(_settings->path)) {
@@ -69,7 +69,7 @@ public:
 
     _min_max=_page_manager->loadMinMax();
 
-    if (_settings->strategy != STRATEGY::MEMORY) {
+    if (_settings->strategy.value != STRATEGY::MEMORY) {
 		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
 		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
@@ -85,7 +85,7 @@ public:
     
 
 
-    if(_settings->strategy!= STRATEGY::MEMORY){
+    if(_settings->strategy.value != STRATEGY::MEMORY){
         auto amm=_top_storage->loadMinMax();
         minmax_append(_min_max,amm);
     }
@@ -488,7 +488,7 @@ public:
   }
 
   STRATEGY strategy()const{
-      return this->_settings->strategy;
+      return this->_settings->strategy.value;
   }
 
 
