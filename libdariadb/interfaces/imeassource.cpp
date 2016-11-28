@@ -22,7 +22,7 @@ MeasList IMeasSource::readInterval(const QueryInterval &q) {
 
   Id2MSet sub_result;
   for (auto v : clbk->mlist) {
-    sub_result[v.id].insert(v);
+    sub_result[v.id].emplace(v);
   }
   MeasList result;
   for (auto id : q.ids) {

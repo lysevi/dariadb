@@ -56,11 +56,11 @@ void MetricsManager::add(const std::string &group, const std::string &name,
 
   auto group_it = this->_values.find(group);
   if (group_it == this->_values.end()) {
-    this->_values[group].insert(std::make_pair(name, value));
+    this->_values[group].emplace(std::make_pair(name, value));
   } else {
     auto name_it = (*group_it).second.find(name);
     if (name_it == (*group_it).second.end()) {
-      (*group_it).second.insert(std::make_pair(name, value));
+      (*group_it).second.emplace(std::make_pair(name, value));
     } else {
       name_it->second->add(value);
     }

@@ -90,7 +90,7 @@ void AOFManager::drop_closed_files(size_t count) {
     std::set<std::string> new_sended_files;
     for (auto &v : _files_send_to_drop) {
       if (aof_exists_set.find(v) != aof_exists_set.end()) {
-        new_sended_files.insert(v);
+        new_sended_files.emplace(v);
       }
     }
     _files_send_to_drop = new_sended_files;
@@ -132,7 +132,7 @@ std::list<std::string> AOFManager::closed_aofs() {
 void AOFManager::drop_aof(const std::string &fname, IAofDropper *storage) {
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{_env, fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
-  _files_send_to_drop.insert(without_path);
+  _files_send_to_drop.emplace(without_path);
   storage->drop_aof(without_path);
 }
 
@@ -301,7 +301,7 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
     for (auto &kv : out) {
       auto it = sub_result.find(kv.first);
       if (it == sub_result.end()) {
-        sub_result.insert(std::make_pair(kv.first, kv.second));
+        sub_result.emplace(std::make_pair(kv.first, kv.second));
       } else {
         if (it->second.flag == Flags::_NO_DATA) {
           sub_result[kv.first] = kv.second;
@@ -314,7 +314,7 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
     if (v.inQuery(query.ids, query.flag)) {
       auto it = sub_result.find(v.id);
       if (it == sub_result.end()) {
-        sub_result.insert(std::make_pair(v.id, v));
+        sub_result.emplace(std::make_pair(v.id, v));
       } else {
         if ((v.time > it->second.time) && (v.time <= query.time_point)) {
           sub_result[v.id] = v;
@@ -341,7 +341,7 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
     for (auto &kv : sub_rdr) {
       auto it = meases.find(kv.first);
       if (it == meases.end()) {
-        meases.insert(std::make_pair(kv.first, kv.second));
+        meases.emplace(std::make_pair(kv.first, kv.second));
       } else {
         if ((it->second.flag == Flags::_NO_DATA) || (it->second.time<kv.second.time)) {
           meases[kv.first] = kv.second;

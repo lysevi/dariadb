@@ -323,7 +323,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		  track = _id2track.find(value.id);
 		  if (track == _id2track.end()) {
 			  auto new_track = std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
-			  _id2track.insert(std::make_pair(value.id, new_track));
+			  _id2track.emplace(std::make_pair(value.id, new_track));
 			  _all_tracks_locker.unlock();
 
 			  while (new_track->append(value).writed != 1) {}

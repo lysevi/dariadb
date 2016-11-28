@@ -271,7 +271,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   QueryInterval qi({}, 0, MIN_TIME, MAX_TIME);
   for (auto &p_full_path : pages_full_paths) {
     Page *p = Page::open(p_full_path, true);
-    openned_pages.insert(std::make_pair(p_full_path, p));
+    openned_pages.emplace(std::make_pair(p_full_path, p));
 
     auto clinks = p->chunksByIterval(qi);
     for (auto &cl : clinks) {

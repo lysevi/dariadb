@@ -53,8 +53,8 @@ BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
 			break;
 		}
 		last = allocated;
-		allocated_headers.insert(hdr);
-		allocated_buffers.insert(buf);
+		allocated_headers.emplace(hdr);
+		allocated_buffers.emplace(buf);
 		positions.insert(pos);
 	} while (1);
 

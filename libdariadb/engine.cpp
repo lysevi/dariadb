@@ -397,7 +397,7 @@ public:
       if (m.flag == Flags::_NO_DATA) {
         continue;
       }
-      sub_result[m.id].insert(m);
+      sub_result[m.id].emplace(m);
     }
   }
 

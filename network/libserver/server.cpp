@@ -151,7 +151,7 @@ public:
 		ClientIO_ptr new_client{ new IOClient(cur_id, sock, &_env) };
 
 		_clients_locker.lock();
-		_clients.insert(std::make_pair(new_client->_async_connection->id(), new_client));
+		_clients.emplace(std::make_pair(new_client->_async_connection->id(), new_client));
 		_clients_locker.unlock();
 
 		new_client->start();

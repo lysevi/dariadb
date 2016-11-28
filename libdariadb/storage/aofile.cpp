@@ -168,10 +168,10 @@ public:
   void replace_if_older(dariadb::Id2Meas &s, const dariadb::Meas &m) const {
     auto fres = s.find(m.id);
     if (fres == s.end()) {
-      s.insert(std::make_pair(m.id, m));
+      s.emplace(std::make_pair(m.id, m));
     } else {
       if (fres->second.time < m.time) {
-        s.insert(std::make_pair(m.id, m));
+        s.emplace(std::make_pair(m.id, m));
       }
     }
   }
@@ -188,7 +188,7 @@ public:
       }
       if (val.inFlag(flag) && val.inIds(ids)) {
         replace_if_older(sub_res, val);
-        readed_ids.insert(val.id);
+        readed_ids.emplace(val.id);
       }
     }
     std::fclose(file);

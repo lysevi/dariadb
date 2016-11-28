@@ -32,7 +32,7 @@ void Dropper::drop_aof(const std::string fname) {
 	}
 	auto storage_path = _settings->path;
 	if (utils::fs::path_exists(utils::fs::append_path(storage_path, fname))) {
-		_addeded_files.insert(fname);
+		_addeded_files.emplace(fname);
 		_in_queue++;
 		drop_aof_internal(fname);
 	}

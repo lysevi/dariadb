@@ -64,7 +64,7 @@ RWMutex_Ptr LockManager::get_or_create_lock_object(const LOCK_OBJECTS &lo) {
     return lock_target_it->second;
   } else {
     RWMutex_Ptr lock_target{new MutexWrap{}};
-    _lockers.insert(std::make_pair(lo, lock_target));
+    _lockers.emplace(std::make_pair(lo, lock_target));
     return lock_target;
   }
 }
