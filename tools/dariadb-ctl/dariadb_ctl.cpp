@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
   aos("compress", "compress all aof files.");
   aos("iso-time", "if set, all time param is in iso format (\"20020131T235959\")");
   aos("compact", "compact all page files to one.");
+  aos("fsck", "run force fsck.");
   aos("storage-path",po::value<std::string>(&storage_path)->default_value(storage_path),"path to storage.");
   aos("set", po::value<std::string>(&set_var)->default_value(set_var),"change setting variable.\nexample: --set=\"strategy=MEMORY\"");
   aos("create",po::value<std::string>(&new_base_name)->default_value(new_base_name),"create new database in selected folder.");
@@ -127,6 +128,14 @@ int main(int argc, char *argv[]) {
     s.change(set_var);
     s.save();
     std::exit(0);
+  }
+
+  if (vm.count("fsck")) {
+	  auto settings = dariadb::storage::Settings_ptr{
+		  new dariadb::storage::Settings(storage_path) };
+	  auto e = std::make_unique<dariadb::storage::Engine>(settings);
+	  e->fsck();
+	  e->stop();
   }
 
   if (vm.count("compress")) {

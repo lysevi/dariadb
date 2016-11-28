@@ -17,6 +17,7 @@ Storage:
    - Full futured memory storage.
    - Lockfile in storage.
    - New storage control tool.
+   - SQLite3 based manifest.
 
 v0.1.1
 =====
