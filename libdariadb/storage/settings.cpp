@@ -17,9 +17,10 @@ const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; //10 mb
 
 const std::string c_aof_max_size="aof_max_size";
 const std::string c_aof_buffer_size="aof_buffer_size";
-const std::string c_page_chunk_size="page_chunk_size";
+const std::string c_chunk_size="chunk_size";
 const std::string c_strategy="strategy";
 const std::string c_memory_limit="memory_limit";
+const std::string c_percent_when_start_droping="percent_when_start_droping";
 const std::string c_percent_to_drop="percent_to_drop";
 
 std::string settings_file_path(const std::string &path) {
@@ -44,10 +45,11 @@ void Settings::set_default() {
   logger("engine: Settings set default Settings");
   aof_buffer_size = AOF_BUFFER_SIZE;
   aof_max_size = AOF_FILE_SIZE;
-  page_chunk_size = CHUNK_SIZE;
+  chunk_size = CHUNK_SIZE;
   memory_limit = MAXIMUM_MEMORY_LIMIT;
   strategy = STRATEGY::COMPRESSED;
-  percent_to_drop = float(0.75);
+  percent_when_start_droping = float(0.75);
+  percent_to_drop = float(0.15);
 }
 
 std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {
@@ -70,13 +72,14 @@ void Settings::save(const std::string &file) {
   js[c_aof_max_size] = aof_max_size;
   js[c_aof_buffer_size] = aof_buffer_size;
 
-  js[c_page_chunk_size] = page_chunk_size;
+  js[c_chunk_size] = chunk_size;
 
   std::stringstream ss;
   ss << strategy;
   js[c_strategy] = ss.str();
 
   js[c_memory_limit] = memory_limit;
+  js[c_percent_when_start_droping] = percent_when_start_droping;
   js[c_percent_to_drop] = percent_to_drop;
   std::fstream fs;
   fs.open(file, std::ios::out);
@@ -95,10 +98,11 @@ void Settings::load(const std::string &file) {
   aof_max_size = js[c_aof_max_size];
   aof_buffer_size = js[c_aof_buffer_size];
 
-  page_chunk_size = js[c_page_chunk_size];
+  chunk_size = js[c_chunk_size];
 
   memory_limit=js[c_memory_limit];
-  percent_to_drop=js[c_percent_to_drop] ;
+  percent_when_start_droping=js[c_percent_when_start_droping] ;
+  percent_to_drop= js[c_percent_to_drop];
 
   std::istringstream iss;
   std::string strat_str = js[c_strategy];
@@ -131,9 +135,9 @@ void Settings::change(std::string& expression){
         return;
     }
 
-    if(splited[0]==c_page_chunk_size){
-        logger_info("engine: change ", c_page_chunk_size);
-        this->page_chunk_size = std::stoi(splited[1]);
+    if(splited[0]==c_chunk_size){
+        logger_info("engine: change ", c_chunk_size);
+        this->chunk_size = std::stoi(splited[1]);
         return;
     }
 
@@ -149,6 +153,11 @@ void Settings::change(std::string& expression){
         this->memory_limit = std::stoi(splited[1]);
         return;
     }
+	if (splited[0] == c_percent_when_start_droping) {
+		logger_info("engine: change ", c_percent_when_start_droping);
+		this->percent_when_start_droping = std::stof(splited[1]);
+		return;
+	}
 
     if(splited[0]==c_percent_to_drop){
         logger_info("engine: change ", c_percent_to_drop);

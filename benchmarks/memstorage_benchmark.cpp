@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		settings->strategy = strategy;
 		settings->memory_limit = 500*1024*1024;
-		settings->page_chunk_size = 1024;
+		settings->chunk_size = 1024;
         memstorage = new dariadb::storage::MemStorage{ settings,size_t(0) };
 
 		std::thread info_thread(show_info);

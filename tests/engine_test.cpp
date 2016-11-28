@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 
   settings->aof_buffer_size = 2;
-  settings->page_chunk_size = 7;
+  settings->chunk_size = 7;
   settings->strategy = dariadb::storage::STRATEGY::COMPRESSED;
   settings->save();
 
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 
   settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
   BOOST_CHECK_EQUAL(settings->aof_buffer_size, uint64_t(2));
-  BOOST_CHECK_EQUAL(settings->page_chunk_size, uint32_t(7));
+  BOOST_CHECK_EQUAL(settings->chunk_size, uint32_t(7));
   BOOST_CHECK(settings->strategy == dariadb::storage::STRATEGY::COMPRESSED);
 
   settings = nullptr;
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->aof_buffer_size=100;
     settings->aof_max_size = settings->aof_buffer_size*5;
     settings->path = storage_path;
-    settings->page_chunk_size = chunk_size;
+    settings->chunk_size = chunk_size;
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true);
@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     settings->aof_buffer_size=100;
     settings->aof_max_size = settings->aof_buffer_size*2;
     settings->path = storage_path;
-    settings->page_chunk_size = chunk_size;
+    settings->chunk_size = chunk_size;
     settings->strategy=dariadb::storage::STRATEGY::FAST_WRITE;
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
     settings->path = storage_path;
     settings->aof_buffer_size = chunk_size;
-    settings->page_chunk_size = chunk_size;
+    settings->chunk_size = chunk_size;
 
     auto ms= std::make_shared<dariadb::storage::Engine>(settings);
 
@@ -274,8 +274,8 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
         settings->strategy = STRATEGY::MEMORY;
-		settings->page_chunk_size = chunk_size;
-		settings->page_chunk_size = 128;
+		settings->chunk_size = chunk_size;
+		settings->chunk_size = 128;
 		settings->memory_limit =  50*1024;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 

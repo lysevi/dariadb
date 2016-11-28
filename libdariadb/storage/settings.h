@@ -13,8 +13,7 @@ namespace storage {
 const std::string SETTINGS_FILE_NAME = "Settings";
 
 class Settings {
-  
-
+	
 public:
   EXPORT Settings(const std::string storage_path);
   EXPORT ~Settings();
@@ -33,13 +32,14 @@ public:
   uint64_t aof_max_size;  // measurements count in one file
   size_t aof_buffer_size; // inner buffer size
 
-  uint32_t page_chunk_size;
+  uint32_t chunk_size;
 
   STRATEGY strategy;
 
   // memstorage options;
   size_t memory_limit; //in bytes;
-  float  percent_to_drop; //fill percent, when start dropping.
+  float  percent_when_start_droping; //fill percent, when start dropping.
+  float  percent_to_drop; //how many chunk drop.
 };
 
 using Settings_ptr = std::shared_ptr<Settings>;
