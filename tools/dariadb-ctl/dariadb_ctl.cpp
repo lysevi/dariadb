@@ -50,6 +50,10 @@ void check_path_exists() {
 }
 
 int main(int argc, char *argv[]) {
+	dariadb::utils::ILogger_ptr log_ptr{ new CtlLogger() };
+	dariadb::utils::LogManager::start(log_ptr);
+
+
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
   aos("help", "produce help message.");
@@ -95,9 +99,7 @@ int main(int argc, char *argv[]) {
       dariadb::logger_info("iso-time=off");
   }
 
-  dariadb::utils::ILogger_ptr log_ptr{new CtlLogger()};
-  dariadb::utils::LogManager::start(log_ptr);
-
+ 
   if (new_base_name.size() != 0) {
       std::cout<<"create "<<new_base_name<<std::endl;
     auto settings = dariadb::storage::Settings_ptr{

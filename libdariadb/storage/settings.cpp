@@ -34,8 +34,8 @@ Settings::Settings(const std::string storage_path):
 	aof_max_size(this, c_aof_max_size, AOF_FILE_SIZE),
 	aof_buffer_size(this, c_aof_buffer_size, AOF_BUFFER_SIZE),
 	chunk_size(this,c_chunk_size, CHUNK_SIZE),
-	memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
 	strategy(this, c_strategy, STRATEGY::COMPRESSED),
+	memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
 	percent_when_start_droping(this, c_percent_when_start_droping, float(0.75)),
 	percent_to_drop(this, c_percent_to_drop, float(0.1)){
   path = storage_path;
@@ -101,19 +101,6 @@ void Settings::load(const std::string &file) {
 	  auto str_val = js[o.first];
 	  o.second->from_string(str_val);
   }
-  /*aof_max_size = js[c_aof_max_size];
-  aof_buffer_size = js[c_aof_buffer_size];
-
-  chunk_size = js[c_chunk_size];
-
-  memory_limit=js[c_memory_limit];
-  percent_when_start_droping=js[c_percent_when_start_droping] ;
-  percent_to_drop= js[c_percent_to_drop];
-
-  std::istringstream iss;
-  std::string strat_str = js[c_strategy];
-  iss.str(strat_str);
-  iss >> strategy;*/
 }
 
 std::string Settings::dump(){
@@ -132,49 +119,10 @@ void Settings::change(std::string& expression){
 
 	auto fres = _all_options.find(splited[0]);
 	if (fres != _all_options.end()) {
+		logger_info("engine: change ", fres->first);
 		fres->second->from_string(splited[1]);
 	}
-    /*if(splited[0]==c_aof_max_size){
-        logger_info("engine: change ", c_aof_max_size);
-        this->aof_max_size = std::stoll(splited[1]);
-        return;
-    }
-
-    if(splited[0]==c_aof_buffer_size){
-        logger_info("engine: change ", c_aof_buffer_size);
-        this->aof_buffer_size = std::stoi(splited[1]);
-        return;
-    }
-
-    if(splited[0]==c_chunk_size){
-        logger_info("engine: change ", c_chunk_size);
-        this->chunk_size = std::stoi(splited[1]);
-        return;
-    }
-
-    if(splited[0]==c_strategy){
-        logger_info("engine: change ", c_strategy);
-        std::istringstream iss(splited[1]);
-        iss>>this->strategy;
-        return;
-    }
-
-    if(splited[0]==c_memory_limit){
-        logger_info("engine: change ", c_memory_limit);
-        this->memory_limit = std::stoi(splited[1]);
-        return;
-    }
-	if (splited[0] == c_percent_when_start_droping) {
-		logger_info("engine: change ", c_percent_when_start_droping);
-		this->percent_when_start_droping = std::stof(splited[1]);
-		return;
+	else {
+		logger_fatal("engine: engine: bad expression ", expression);
 	}
-
-    if(splited[0]==c_percent_to_drop){
-        logger_info("engine: change ", c_percent_to_drop);
-        this->percent_to_drop = std::stof(splited[1]);
-        return;
-    }*/
-
-    logger_fatal("engine: engine: bad expression ", expression);
 }
