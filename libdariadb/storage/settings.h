@@ -80,13 +80,16 @@ public:
 };
 
 using Settings_ptr = std::shared_ptr<Settings>;
-
+#ifndef MSVC
+EXPORT template<>
+std::string Settings::Option<STRATEGY>::value_str()const;
+#else
 template<>
 std::string Settings::Option<STRATEGY>::value_str()const {
 	std::stringstream ss;
 	ss << this->value;
 	return ss.str();
 }
-
+#endif
 }
 }

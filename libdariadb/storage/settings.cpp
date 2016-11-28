@@ -27,8 +27,18 @@ std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
 }
 
+#ifndef MSVC
+template<> std::string Settings::Option<STRATEGY>::value_str()const {
+	std::stringstream ss;
+	ss << this->value;
+	return ss.str();
+}
+#endif
+
 BaseOption::~BaseOption() {
 }
+
+
 
 Settings::Settings(const std::string storage_path):
 	aof_max_size(this, c_aof_max_size, AOF_FILE_SIZE),
