@@ -352,7 +352,7 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
   return meases;
 }
 
-dariadb::append_result AOFManager::append(const Meas &value) {
+dariadb::Status  AOFManager::append(const Meas &value) {
   TIMECODE_METRICS(ctmd, "append", "AOFManager::append");
   std::lock_guard<std::mutex> lg(_locker);
   _buffer[_buffer_pos] = value;
@@ -361,7 +361,7 @@ dariadb::append_result AOFManager::append(const Meas &value) {
   if (_buffer_pos >= _settings->aof_buffer_size) {
     flush_buffer();
   }
-  return dariadb::append_result(1, 0);
+  return dariadb::Status (1, 0);
 }
 
 void AOFManager::flush_buffer() {

@@ -36,7 +36,7 @@ public:
   EXPORT virtual Id2Meas currentValue(const IdArray &ids,
                                                   const Flag &flag) override;
   using IMeasStorage::append;
-  EXPORT append_result append(const Meas &value) override;
+  EXPORT Status  append(const Meas &value) override;
   EXPORT void flush() override;
   EXPORT void setDownLevel(IChunkContainer*_down);
   EXPORT void stop();

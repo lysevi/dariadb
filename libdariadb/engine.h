@@ -30,7 +30,7 @@ public:
   EXPORT Engine(Settings_ptr settings);
 
   using IMeasStorage::append;
-  EXPORT append_result append(const Meas &value) override;
+  EXPORT Status  append(const Meas &value) override;
 
   EXPORT void flush() override;
   EXPORT void stop();

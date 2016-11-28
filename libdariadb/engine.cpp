@@ -240,8 +240,8 @@ public:
       return p_mm;
   }
 
-  append_result append(const Meas &value) {
-    append_result result{};
+  Status  append(const Meas &value) {
+    Status  result{};
 	_min_max_locker.lock_shared();
       auto fres=_min_max.find(value.id);
       if(fres!=_min_max.end()){
@@ -543,7 +543,7 @@ bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-append_result Engine::append(const Meas &value) {
+Status  Engine::append(const Meas &value) {
   return _impl->append(value);
 }
 

@@ -17,10 +17,10 @@ public:
   EXPORT AOFile(const EngineEnvironment_ptr env);
   EXPORT AOFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly = false);
 
-  EXPORT append_result append(const Meas &value) override;
-  EXPORT append_result append(const MeasArray::const_iterator &begin,
+  EXPORT Status  append(const Meas &value) override;
+  EXPORT Status  append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) override;
-  EXPORT append_result append(const MeasList::const_iterator &begin,
+  EXPORT Status  append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) override;
   EXPORT void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   EXPORT Id2Meas readTimePoint(const QueryTimePoint &q) override;

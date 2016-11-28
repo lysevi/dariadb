@@ -31,7 +31,7 @@ ENDIF(WIN32)
 
 if(MSVC)
   add_cxx_compiler_flag(-W4)
-  #add_cxx_compiler_flag(-Wall)
+  add_cxx_compiler_flag(-MP)
   add_definitions(-DMSVC)
   add_definitions(-D_ENABLE_ATOMIC_ALIGNMENT_FIX)
 

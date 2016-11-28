@@ -28,7 +28,7 @@ public:
   EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-  EXPORT virtual append_result append(const Meas &value) override;
+  EXPORT virtual Status  append(const Meas &value) override;
   EXPORT virtual void flush() override;
 
   EXPORT std::list<std::string> closed_aofs();

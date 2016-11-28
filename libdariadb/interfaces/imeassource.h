@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libdariadb/append_result.h>
+#include <libdariadb/status.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/query_param.h>
 #include <libdariadb/interfaces/icallbacks.h>

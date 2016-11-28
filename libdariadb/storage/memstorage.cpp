@@ -75,34 +75,34 @@ struct TimeTrack : public IMeasStorage {
 	  _minTime = std::min(_minTime, value.time);
 	  _maxTime = std::max(_maxTime, value.time);
   }
-  virtual append_result append(const Meas &value) override {
+  virtual Status  append(const Meas &value) override {
     std::lock_guard<utils::Locker> lg(_locker);
     if (_cur_chunk==nullptr || _cur_chunk->is_full()) {
 		if (!create_new_chunk(value)) {
-			return append_result(0,1);
+			return Status (0,1);
 		}
 		else {
 			updateMinMax(value);
-			return append_result(1, 0);
+			return Status (1, 0);
 		}
     }
 	if (_cur_chunk->header->maxTime < value.time) {
 		if (!_cur_chunk->append(value)) {
 			if (!create_new_chunk(value)) {
-				return append_result(0, 1);
+				return Status (0, 1);
 			}
 			else {
 				updateMinMax(value);
-				return append_result(1, 0);
+				return Status (1, 0);
 			}
 		}
 	}
 	else {
 		logger_fatal("engine: memstorage - id:",this->_meas_id, ", can't write to past.");
-		return append_result(1, 1);
+		return Status (1, 1);
 	}
 	updateMinMax(value);
-    return append_result(1, 0);
+    return Status (1, 0);
   }
 
   void flush() override {}
@@ -312,7 +312,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         result.allocator_capacity = _chunk_allocator._capacity;
 		return result;
 	}
-  append_result append(const Meas &value) override { 
+  Status  append(const Meas &value) override { 
 	  _all_tracks_locker.lock_shared();
 	  auto track = _id2track.find(value.id);
 	  bool is_created = false;
@@ -327,7 +327,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  _all_tracks_locker.unlock();
 
 			  while (new_track->append(value).writed != 1) {}
-			  return append_result(1, 0);
+			  return Status (1, 0);
 		  }
 		  else {
 			  _all_tracks_locker.unlock();
@@ -337,7 +337,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		  _all_tracks_locker.unlock_shared();
 	  }
 	  while (track->second->append(value).writed != 1) {}
-	  return append_result(1, 0);
+	  return Status (1, 0);
 	  
   }
 
@@ -573,7 +573,7 @@ Id2Meas MemStorage::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
-append_result MemStorage::append(const Meas &value) {
+Status  MemStorage::append(const Meas &value) {
   return _impl->append(value);
 }
 

@@ -61,28 +61,28 @@ public:
     return file;
   }
 
-  append_result append(const Meas &value) {
+  Status  append(const Meas &value) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
 
     if (_writed > _settings->aof_max_size) {
-      return append_result(0, 1);
+      return Status (0, 1);
     }
     auto file = open_to_append();
     std::fwrite(&value, sizeof(Meas), size_t(1), file);
     std::fclose(file);
     _writed++;
-    return append_result(1, 0);
+    return Status (1, 0);
   }
 
-  append_result append(const MeasArray::const_iterator &begin,
+  Status  append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
     assert(!_is_readonly);
 
     auto sz = std::distance(begin, end);
     if (is_full) {
-      return append_result(0, sz);
+      return Status (0, sz);
     }
     auto file = open_to_append();
     auto max_size = _settings->aof_max_size;
@@ -90,17 +90,17 @@ public:
     std::fwrite(&(*begin), sizeof(Meas), write_size, file);
     std::fclose(file);
     _writed += write_size;
-    return append_result(write_size, 0);
+    return Status (write_size, 0);
   }
 
-  append_result append(const MeasList::const_iterator &begin,
+  Status  append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) {
     TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
     assert(!_is_readonly);
 
     auto list_size = std::distance(begin, end);
     if (is_full) {
-      return append_result(0, list_size);
+      return Status (0, list_size);
     }
     auto file = open_to_append();
 
@@ -111,7 +111,7 @@ public:
     std::fwrite(ma.data(), sizeof(Meas), write_size, file);
     std::fclose(file);
     _writed += write_size;
-    return append_result(write_size, 0);
+    return Status (write_size, 0);
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
@@ -354,14 +354,14 @@ void AOFile::flush() { // write all to storage;
   _Impl->flush();
 }
 
-append_result AOFile::append(const Meas &value) {
+Status  AOFile::append(const Meas &value) {
   return _Impl->append(value);
 }
-append_result AOFile::append(const MeasArray::const_iterator &begin,
+Status  AOFile::append(const MeasArray::const_iterator &begin,
                              const MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
-append_result AOFile::append(const MeasList::const_iterator &begin,
+Status  AOFile::append(const MeasList::const_iterator &begin,
                              const MeasList::const_iterator &end) {
   return _Impl->append(begin, end);
 }
