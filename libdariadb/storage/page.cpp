@@ -146,11 +146,11 @@ uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
 
   using namespace dariadb::utils::async;
   uint64_t page_size = 0;
-  AsyncTask pm_at = [&file_name, &phdr, &compressed_results, &page_size,
+  /*AsyncTask pm_at = [&file_name, &phdr, &compressed_results, &page_size,
                      file_size,
                      add_header_size_to_result](const ThreadInfo &ti) {
 
-    TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+    TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);*/
 
     auto file = std::fopen(file_name.c_str(), "ab");
     if (file == nullptr) {
@@ -188,10 +188,10 @@ uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
       phdr.filesize = page_size;
     }
     std::fclose(file);
-  };
+  /*};
   auto at =
       ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(pm_at));
-  at->wait();
+  at->wait();*/
   return page_size;
 }
 }
@@ -325,87 +325,79 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   return make_page(file_name, phdr);
 }
 
-Page *Page::create(const std::string &file_name, uint64_t chunk_id, const std::vector<Chunk*>& a, size_t count) {
-	TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
-	using namespace dariadb::utils::async;
+Page *Page::create(const std::string &file_name, uint64_t chunk_id,
+                   const std::vector<Chunk *> &a, size_t count) {
+  TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
+  using namespace dariadb::utils::async;
 
-	PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+  PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
 
-	 AsyncTask pm_at =
-		[&file_name, &phdr, &a, &count](const ThreadInfo &ti) {
-		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
-		
-		auto file = std::fopen(file_name.c_str(), "ab");
-		if (file == nullptr) {
-			throw MAKE_EXCEPTION("aofile: append error.");
-		}
+  auto file = std::fopen(file_name.c_str(), "ab");
+  if (file == nullptr) {
+    throw MAKE_EXCEPTION("aofile: append error.");
+  }
 
-		std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
-		uint64_t offset = 0;
-		size_t page_size = 0;
-		for (size_t i = 0; i < count; ++i) {
-			ChunkHeader * chunk_header = a[i]->header;
-			auto chunk_buffer_ptr = a[i]->_buffer_t;
-#ifdef  DEBUG
-			{
-				auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr);
-				auto rdr = ch->get_reader();
-				size_t readed = 0;
-				while (!rdr->is_end()) {
-					rdr->readNext();
-					readed++;
-				}
-				assert(readed == (ch->header->count+1));
-			}
-#endif //  DEBUG
-			phdr.max_chunk_id++;
-			phdr.minTime = std::min(phdr.minTime, chunk_header->minTime);
-			phdr.maxTime = std::max(phdr.maxTime, chunk_header->maxTime);
-			chunk_header->id = phdr.max_chunk_id;
-			chunk_header->pos_in_page = phdr.addeded_chunks;
+  std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+  uint64_t offset = 0;
+  size_t page_size = 0;
+  for (size_t i = 0; i < count; ++i) {
+    ChunkHeader *chunk_header = a[i]->header;
+    auto chunk_buffer_ptr = a[i]->_buffer_t;
+    //#ifdef  DEBUG
+    //			{
+    //				auto ch = std::make_shared<ZippedChunk>(chunk_header,
+    //chunk_buffer_ptr);
+    //				auto rdr = ch->get_reader();
+    //				size_t readed = 0;
+    //				while (!rdr->is_end()) {
+    //					rdr->readNext();
+    //					readed++;
+    //				}
+    //				assert(readed == (ch->header->count+1));
+    //			}
+    //#endif //  DEBUG
+    phdr.max_chunk_id++;
+    phdr.minTime = std::min(phdr.minTime, chunk_header->minTime);
+    phdr.maxTime = std::max(phdr.maxTime, chunk_header->maxTime);
+    chunk_header->id = phdr.max_chunk_id;
+    chunk_header->pos_in_page = phdr.addeded_chunks;
 
-			phdr.addeded_chunks++;
-			auto cur_chunk_buf_size = size_t(0);
-			size_t skip_count = 0;
-			if (chunk_header->is_readonly) {
-				cur_chunk_buf_size = chunk_header->size ;
-			}
-			else { 
-				cur_chunk_buf_size = chunk_header->size - chunk_header->bw_pos + 1; 
-				skip_count = chunk_header->size - cur_chunk_buf_size;
-			}
+    phdr.addeded_chunks++;
+    auto cur_chunk_buf_size = size_t(0);
+    size_t skip_count = 0;
+    if (chunk_header->is_readonly) {
+      cur_chunk_buf_size = chunk_header->size;
+    } else {
+      cur_chunk_buf_size = chunk_header->size - chunk_header->bw_pos + 1;
+      skip_count = chunk_header->size - cur_chunk_buf_size;
+    }
 
-			chunk_header->size = cur_chunk_buf_size;
-			chunk_header->offset_in_page = offset;
+    chunk_header->size = cur_chunk_buf_size;
+    chunk_header->offset_in_page = offset;
 
-			auto ch=std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
-			ch->close();
-#ifdef  DEBUG
-			auto rdr=ch->get_reader();
-			size_t readed = 0;
-			while (!rdr->is_end()) {
-				rdr->readNext();
-				readed++;
-			}
-			assert(readed == (ch->header->count + 1));
-#endif //  DEBUG
+    auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
+    ch->close();
+    //#ifdef  DEBUG
+    //			auto rdr=ch->get_reader();
+    //			size_t readed = 0;
+    //			while (!rdr->is_end()) {
+    //				rdr->readNext();
+    //				readed++;
+    //			}
+    //			assert(readed == (ch->header->count + 1));
+    //#endif //  DEBUG
 
-			
-			std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
-			std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), cur_chunk_buf_size, file);
+    std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
+    std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), cur_chunk_buf_size, file);
 
-			offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
-		}
-		page_size = offset + sizeof(PageHeader);
-		phdr.filesize = page_size;
-		std::fclose(file);
-	};
-	auto at = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(pm_at));
-	at->wait();
+    offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+  }
+  page_size = offset + sizeof(PageHeader);
+  phdr.filesize = page_size;
+  std::fclose(file);
 
-	return Page::make_page(file_name, phdr);
+  return Page::make_page(file_name, phdr);
 }
-
 
 Page *Page::open(std::string file_name, bool read_only) {
   TIMECODE_METRICS(ctmd, "open", "Page::open");

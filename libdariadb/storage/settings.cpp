@@ -76,8 +76,7 @@ std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_pa
   using namespace dariadb::utils::async;
   std::vector<ThreadPool::Params> result{
       ThreadPool::Params{size_t(4), (ThreadKind)THREAD_COMMON_KINDS::COMMON},
-      ThreadPool::Params{size_t(1), (ThreadKind)THREAD_COMMON_KINDS::DISK_IO},
-      ThreadPool::Params{size_t(1), (ThreadKind)THREAD_COMMON_KINDS::DROP}};
+      ThreadPool::Params{size_t(1), (ThreadKind)THREAD_COMMON_KINDS::DISK_IO}};
   return result;
 }
 

@@ -6,6 +6,7 @@
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/thread_manager.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -92,6 +93,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
 	MokChunkWriter*cw = new MokChunkWriter;
     {
         auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
         settings->memory_limit.value =1024*1024;
         settings->chunk_size.value = 128;
         dariadb::storage::MemStorage ms{ settings, size_t(0) };
@@ -106,8 +108,10 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
                 break;
             }
         }
+		
     }
 	delete cw;
+	dariadb::utils::async::ThreadManager::stop();
     if (dariadb::utils::fs::path_exists(storage_path)) {
         dariadb::utils::fs::rm(storage_path);
     }

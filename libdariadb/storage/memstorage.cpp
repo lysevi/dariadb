@@ -3,6 +3,7 @@
 #endif
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/flags.h>
+#include <libdariadb/utils/thread_manager.h>
 #include <stx/btree_map>
 #include <memory>
 #include <tuple>
@@ -17,6 +18,7 @@
 
 using namespace dariadb;
 using namespace dariadb::storage;
+using namespace dariadb::utils::async;
 
 /**
 Map:
@@ -365,13 +367,16 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       ++pos;
     }
 
-    
-	if (_down_level_storage != nullptr) {
-		_down_level_storage->appendChunks(all_chunks, pos);
-	}
-	else {
-		logger_info("engine: memstorage _down_level_storage == nullptr");
-	}
+    if (_down_level_storage != nullptr) {
+      AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
+        TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+        this->_down_level_storage->appendChunks(all_chunks, pos);
+      };
+      auto at_res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+      at_res->wait();
+    } else {
+      logger_info("engine: memstorage _down_level_storage == nullptr");
+    }
     std::set<TimeTrack *> updated_tracks;
     for (size_t i = 0; i < pos; ++i) {
       auto c = all_chunks[i];
