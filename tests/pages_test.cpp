@@ -280,30 +280,31 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     dariadb::storage::QueryInterval qi_all(all_id_array, 0, 0, e.time);
     auto links_list = pm->chunksByIterval(qi_all);
 
-    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+    auto clb1 = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
         new dariadb::storage::MList_ReaderClb};
 
-    pm->readLinks(qi_all, links_list, clb.get());
+    pm->readLinks(qi_all, links_list, clb1.get());
 
-    BOOST_CHECK_EQUAL(addeded.size(), clb->mlist.size());
+    BOOST_CHECK_EQUAL(addeded.size(), clb1->mlist.size());
     dariadb::Time minT = dariadb::MAX_TIME, maxT = dariadb::MIN_TIME;
     BOOST_CHECK(pm->minMaxTime(dariadb::Id(0), &minT, &maxT));
     BOOST_CHECK_EQUAL(minT, dariadb::Time(1));
     BOOST_CHECK_GE(maxT, minT);
+
     {
       dariadb::Time end_time(e.time / 2);
       dariadb::storage::ChunksList chunk_list;
       dariadb::storage::QueryInterval qi(all_id_array, 0, start_time, end_time);
       auto link_list = pm->chunksByIterval(qi);
 
-      auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
+      auto clb2 = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
           new dariadb::storage::MList_ReaderClb};
 
-      pm->readLinks(qi, links_list, clb.get());
+      pm->readLinks(qi, links_list, clb2.get());
 
-      BOOST_CHECK_GT(clb->mlist.size(), size_t(0));
+      BOOST_CHECK_GT(clb2->mlist.size(), size_t(0));
 
-      for (auto &m : clb->mlist) {
+      for (auto &m : clb2->mlist) {
         BOOST_CHECK(m.time <= end_time);
       }
 

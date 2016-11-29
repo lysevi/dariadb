@@ -422,8 +422,8 @@ public:
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	  last_id = res->header->max_chunk_id;
 	  delete res;
-	  for (auto page_name : part) {
-		  this->erase_page(page_name);
+	  for (auto erasedPage : part) {
+		  this->erase_page(erasedPage);
 	  }
 
 	  insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));

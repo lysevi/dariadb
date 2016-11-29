@@ -302,8 +302,8 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 		  }
 	  MeasArray sorted_and_filtered;
 	  sorted_and_filtered.reserve(values_map.size());
-	  for (auto &kv : values_map) {
-		  sorted_and_filtered.push_back(kv.second);
+	  for (auto &time2meas : values_map) {
+		  sorted_and_filtered.push_back(time2meas.second);
 	  }
 
       std::map<Id, MeasArray> all_values;
