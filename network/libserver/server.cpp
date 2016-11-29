@@ -1,11 +1,11 @@
-#include <libserver/server.h>
-#include <libserver/iclientmanager.h>
-#include <libserver/ioclient.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
-#include <common/net_common.h>
-#include <atomic>
+#include <libserver/iclientmanager.h>
+#include <libserver/ioclient.h>
+#include <libserver/server.h>
 #include <boost/asio.hpp>
+#include <atomic>
+#include <common/net_common.h>
 #include <functional>
 #include <istream>
 #include <list>
@@ -27,8 +27,9 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _write_meases_strand(_service), _params(p),
-        _is_runned_flag(false), _ping_timer(_service), _info_timer(_service) {
+      : _signals(_service, SIGINT, SIGTERM, SIGBREAK), _write_meases_strand(_service),
+        _params(p), _is_runned_flag(false), _ping_timer(_service), _info_timer(_service) {
+
     _in_stop_logic = false;
     _next_client_id = 1;
     _connections_accepted.store(0);
@@ -38,9 +39,11 @@ public:
     _env.nd_pool = &_net_data_pool;
     _env.service = &_service;
     _env.io_meases_strand = &_write_meases_strand;
+
+	_signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
   }
 
-  ~Private() { stop(); }
+  ~Private() { if (_is_runned_flag && ! _in_stop_logic) { stop(); } }
 
   void set_storage(storage::Engine *storage) {
     logger("server: set storage.");
@@ -50,7 +53,7 @@ public:
 
   void stop() {
     _in_stop_logic = true;
-    logger_info("server: *** stopping ***");
+    logger_info("server: *** [stopping] ***");
 	logger_info("server: stop ping timer...");
 	_ping_timer.cancel();
 	logger_info("server: stop info timer...");
@@ -64,10 +67,13 @@ public:
 
     logger_info("server: stop asio service.");
     _service.stop();
+	while (!_service.stopped()) {}
     logger_info("server: wait ", _io_threads.size(), " io threads...");
 
     for (auto &t : _io_threads) {
-      t.join();
+		if (t.joinable()) {
+			t.join();
+		}
     }
     logger_info("server: io_threads stoped.");
 
@@ -78,6 +84,7 @@ public:
         cp->stop();
     }
 
+	_in_stop_logic = false;
     _is_runned_flag.store(false);
     logger_info("server: stoped.");
   }
@@ -126,6 +133,29 @@ public:
     logger_info("server: ready.");
   }
 
+  void signal_handler(const boost::system::error_code &error, int signal_number) {
+    if (!error) {
+      switch (signal_number) {
+      case SIGINT:
+        logger_info("server: *** [signal handler - SIGINT] ***");
+		this->stop();
+        break;
+      case SIGTERM:
+        logger_info("server: *** [signal handler - SIGTERM] ***");
+		this->stop();
+        break;
+      case SIGBREAK:
+        logger_info("server: *** [signal handler - SIGBREAK] ***");
+		this->stop();
+        break;
+      default:
+        logger_info("server: signal handler - unknow");
+        break;
+      };
+    } else {
+      logger_fatal("server: signal handler error - ", error.message());
+    }
+  }
   void handle_clients_thread() { asio_run();  }
 
   void asio_run() {
@@ -266,6 +296,7 @@ public:
   }
 
   io_service _service;
+  boost::asio::signal_set _signals;
   io_service::strand _write_meases_strand;
   acceptor_ptr _acc;
 
