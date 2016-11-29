@@ -27,7 +27,7 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _signals(_service, SIGINT, SIGTERM, SIGBREAK), _write_meases_strand(_service),
+      : _signals(_service, SIGINT, SIGTERM, SIGABRT), _write_meases_strand(_service),
         _params(p), _is_runned_flag(false), _ping_timer(_service), _info_timer(_service) {
 
     _in_stop_logic = false;
@@ -144,8 +144,8 @@ public:
         logger_info("server: *** [signal handler - SIGTERM] ***");
 		this->stop();
         break;
-      case SIGBREAK:
-        logger_info("server: *** [signal handler - SIGBREAK] ***");
+      case SIGABRT:
+        logger_info("server: *** [signal handler - SIGABRT] ***");
 		this->stop();
         break;
       default:
