@@ -288,36 +288,24 @@ public:
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
 	lock_storage();
 
-    Id2Meas a_result, p_result;
-	auto am = _top_storage.get();
-    AsyncTask am_at = [&ids, flag, &a_result, am](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      
-	  a_result = am->currentValue(ids, flag);
-    };
-	auto pm = _page_manager.get();
-    AsyncTask pm_at = [&ids, flag, &p_result, pm](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      QueryTimePoint qt(ids, flag, dariadb::timeutil::current_time());
-      p_result = pm->valuesBeforeTimePoint(qt);
-    };
-
-    auto pm_async =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
-    auto am_async =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
-
-    pm_async->wait();
-    am_async->wait();
-	
+	Id2Meas a_result;
+	for (auto kv : _min_max) {
+		bool ids_check = false;
+		if (ids.size() == 0) {
+			ids_check = true;
+		}
+		else {
+			if (std::find(ids.begin(), ids.end(), kv.first) != ids.end()) {
+				ids_check = true;
+			}
+		}
+		if (ids_check) {
+			if (kv.second.max.inFlag(flag)) {
+				a_result.emplace(std::make_pair(kv.first, kv.second.max));
+			}
+		}
+	}
 	unlock_storage();
-
-    for (auto &r : p_result) {
-      auto fres = a_result.find(r.second.id);
-      if ((fres == a_result.end()) || ((fres->second.time < r.second.time) && (r.second.flag != Flags::_NO_DATA))) {
-		  a_result[r.second.id] = r.second;
-      } 
-    }
     return a_result;
   }
 
