@@ -14,7 +14,7 @@ addons:
     project:
       name: "dariadb"
       description: "Build submitted via Travis CI"
-    build_command_prepend: "export CC=gcc-6 && export CXX=g++-6 && cmake -DCMAKE_BUILD_TYPE=Release ."
+    build_command_prepend: "export CC=gcc-6 && export CXX=g++-6 && cov-configure --comptype gcc --compiler `which gcc-6` && cov-configure --comptype g++ --compiler `which g++-6` && cmake -DCMAKE_BUILD_TYPE=Release ."
     build_command: "make -j3"
     branch_pattern: coverity
     notification_email: lysevi@gmail.com
