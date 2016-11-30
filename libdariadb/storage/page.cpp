@@ -701,20 +701,25 @@ void Page::appendChunks(const std::vector<Chunk*>&a, size_t count) {
 Id2MinMax Page::loadMinMax(){
     Id2MinMax result;
 
-	QueryInterval qi{ dariadb::IdArray{}, 0, this->header->minTime, this->header->maxTime };
-	auto all_chunks = this->chunksByIterval(qi);
-
-	for (auto &link : all_chunks) {
-		auto _index_it = this->_index->index[link.index_rec_number];
-		auto fres = result.find(_index_it.meas_id);
-		if (fres == result.end()) {
-			MeasMinMax mm{ _index_it.minTime,_index_it.maxTime };
-			result.emplace(std::make_pair(_index_it.meas_id, mm));
+	auto byte_it = this->chunks;
+	auto end = this->region + this->header->filesize;
+	while (true) {
+		if (byte_it >= end) {
+			break;
 		}
-		else {
-			result[_index_it.meas_id].min = std::min(fres->second.min, _index_it.minTime);
-			result[_index_it.meas_id].max = std::min(fres->second.max, _index_it.maxTime);
+		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
+		if (info->is_init) {
+			auto fres = result.find(info->first.id);
+			if (fres == result.end()) {
+				result[info->first.id].min = info->first;
+				result[info->first.id].max = info->last;
+			}
+			else {
+				result[info->first.id].updateMin(info->first);
+				result[info->first.id].updateMax(info->last);
+			}
 		}
+		byte_it += sizeof(ChunkHeader) + info->size;
 	}
     return result;
 }

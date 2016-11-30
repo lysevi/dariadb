@@ -252,11 +252,11 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
 
   for(auto kv:minMax){
       auto mm=kv.second;
-      if(mm.min<from){
+      if(mm.min.time<from){
           throw MAKE_EXCEPTION("mm.min<from");
       }
 
-      if(mm.max==0 && mm.min>mm.max){
+      if(mm.max.time==0 && mm.min.time>mm.max.time){
           throw MAKE_EXCEPTION("mm.max==0 && mm.min>mm.max");
       }
   }

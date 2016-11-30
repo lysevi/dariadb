@@ -247,7 +247,7 @@ public:
       if(fres!=_min_max.end()){
 		  _min_max_locker.unlock_shared();
           auto max_v=fres->second;
-          if(max_v.max>value.time){
+          if(max_v.max.time>value.time){
             result.ignored=1;
             std::stringstream ss;
             ss<<"Id:"<<value.id;
@@ -269,10 +269,10 @@ public:
 	  _min_max_locker.lock();
 	  auto insert_fres = _min_max.find(value.id);
 	  if (insert_fres == _min_max.end()) {
-		  _min_max[value.id].max = value.time;
+		  _min_max[value.id].max = value;
 	  }
 	  else {
-		  insert_fres->second.max = std::max(fres->second.max, value.time);
+		  insert_fres->second.updateMax(value);
 	  }
 	  _min_max_locker.unlock();
     }

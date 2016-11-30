@@ -31,8 +31,20 @@ void dariadb::minmax_append(Id2MinMax&out, const Id2MinMax &source){
         if(fres==out.end()){
             out[kv.first]=kv.second;
         }else{
-            out[kv.first].min=std::min(kv.second.min,fres->second.min);
-            out[kv.first].max=std::max(kv.second.max,fres->second.max);
+			out[kv.first].updateMax(kv.second.max);
+			out[kv.first].updateMin(kv.second.min);
         }
     }
+}
+
+void MeasMinMax::updateMax(const Meas&m) {
+	if (m.time > this->max.time) {
+		this->max = m;
+	}
+}
+
+void MeasMinMax::updateMin(const Meas&m) {
+	if (m.time < this->min.time) {
+		this->min = m;
+	}
 }

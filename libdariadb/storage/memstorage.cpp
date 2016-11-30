@@ -57,16 +57,15 @@ struct TimeTrack : public IMeasStorage {
 	  _allocator = allocator;
     _meas_id = meas_id;
     _step = step;
-	_minTime = MAX_TIME;
-	_maxTime = MIN_TIME;
+	_min_max.min.time = MAX_TIME;
+	_min_max.max.time = MIN_TIME;
 	_mcc = mcc;
   }
   ~TimeTrack() {}
 
   MemChunkAllocator*_allocator;
   Id _meas_id;
-  Time _minTime;
-  Time _maxTime;
+  MeasMinMax _min_max;
   Time _step;
   MemChunk_Ptr _cur_chunk;
   utils::Locker _locker;
@@ -74,9 +73,10 @@ struct TimeTrack : public IMeasStorage {
   MemoryChunkContainer*_mcc;
 
   void updateMinMax(const Meas&value) {
-	  _minTime = std::min(_minTime, value.time);
-	  _maxTime = std::max(_maxTime, value.time);
+	  _min_max.updateMax(value);
+	  _min_max.updateMin(value);
   }
+
   virtual Status  append(const Meas &value) override {
     std::lock_guard<utils::Locker> lg(_locker);
     if (_cur_chunk==nullptr || _cur_chunk->is_full()) {
@@ -110,11 +110,11 @@ struct TimeTrack : public IMeasStorage {
   void flush() override {}
   
   Time minTime() override {
-	  return _minTime;
+	  return _min_max.min.time;
   }
 
   Time maxTime() override {
-	  return _maxTime;
+	  return _min_max.max.time;
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
@@ -244,8 +244,20 @@ struct TimeTrack : public IMeasStorage {
   }
 
   void rereadMinMax() {
-	  if (this->_cur_chunk != nullptr) {
-		  this->minMaxTime(this->_cur_chunk->header->first.id, &_minTime, &_maxTime);
+	  std::lock_guard<utils::Locker> lg(_locker);
+	  _min_max.max.time = MIN_TIME;
+
+	  if (_index.size() != 0) {
+		  _min_max.min = _index.begin()->second->header->first;
+	  }
+	  else {
+		  if (this->_cur_chunk != nullptr) {
+			  _min_max.min = _cur_chunk->header->first;
+		  }
+	  }
+
+	  if (this->_cur_chunk != nullptr) {		  
+		  _min_max.max = _cur_chunk->header->last;
 	  }
   }
 
@@ -400,8 +412,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       Id2MinMax result;
       std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
       for (auto t : _id2track) {
-          result[t.first].min = t.second->minTime();
-          result[t.first].max = t.second->maxTime();
+		  result[t.first] = t.second->_min_max;
       }
       return result;
   }

@@ -312,11 +312,11 @@ public:
 
         auto fres=result.find(val.id);
         if(fres==result.end()){
-            result[val.id].min=val.time;
-            result[val.id].max=val.time;
+            result[val.id].min=val;
+            result[val.id].max=val;
         }else{
-            fres->second.min=std::min(val.time,fres->second.min);
-            fres->second.max=std::max(val.time,fres->second.max);
+            fres->second.updateMax(val);
+			fres->second.updateMin(val);
         }
       }
       std::fclose(file);

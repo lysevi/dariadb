@@ -84,8 +84,11 @@ struct meas_time_compare_greater {
 };
 
 struct MeasMinMax{
-    Time min;
-    Time max;
+    Meas min;
+    Meas max;
+
+	EXPORT void updateMax(const Meas&m);
+	EXPORT void updateMin(const Meas&m);
 };
 
 using MeasArray=std::vector<Meas>;
