@@ -8,16 +8,15 @@ cache:
 env:
   global:
     - secure: "hcYXA9Ku8X0zpXM8raH/rSucH+GO58Jo+VLm2IrxkyZxOcH8uepPAgs7iwcZ4gtnYo93w7x2NQE/A9z3u3uxKG70+A2AhYGk2OlE3mnV9TMvZaleb2JIEXaaEsVAl+xeMdidJG2/gXm5+5SqZLnHpkzG3PRGGhf5K4AdlnKKL/bbw1NnHvRAvI9P2WgWT5qDCMkiKV8oTUBk0+Wy/yxxlIhTscUXKHKynxwigXteJV03B/gv3EWw/7hWV7sMasb4JOOZQ4qLH4TZ2NHGCNa65x1j6aBN1+lfLsaLtfAw1Z99N2KvhmEYidmxtvxaPWhQOQiHEMlK3JLeLhBPkIhsX+ITl+bdRt0Mv0c1zRXGAnsc7l62xMRmcpONNIibYRX0b7l8LYQTjy3uGzoClswYwPCRYhoAoD27us+IJ6ia2xXfNv9S7eROm0jtCL6JAV6vrNdi/qmTkeny3w7P64iGrF0hCc+DyvuogFfEYRf8C+xuCzRNb3RzjaDL4I4QMy9MyjATqxplefFN2i8+9Qf2wUN8G9z7BZj2w85JaA03fTNOiMe8YcRvTvs+ZNYx9Kvp9a0hR/18ad7SzxEQL8amiAQfxIlOV5eViP5NhSYfH9am/tZUzuAra9/FBHcunSwkeoSEBaxz72Mv1DnSNqDLt+7Rh1K1CeKoQRxn2ZRnyE4="
-    - coverity_branch: dev
 
 addons:
   coverity_scan:
     project:
-      name: "lysevi/dariadb"
+      name: "dariadb"
       description: "Build submitted via Travis CI"
     build_command_prepend: ""
     build_command: "bash .travis/build.sh"
-    branch_pattern: $coverity_branch
+    branch_pattern: dev
     notification_email: lysevi@gmail.com
   apt:
     sources:
