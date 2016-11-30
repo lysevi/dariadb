@@ -29,15 +29,17 @@ struct MemChunk : public ZippedChunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
   MemChunkAllocator::AllocatedData _a_data;
-  TimeTrack *_track;
-  MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, Meas first_m)
+  TimeTrack *_track; /// init in TimeTrack
+  MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, const Meas& first_m)
       : ZippedChunk(index, buffer, size, first_m) {
     index_ptr = index;
     buffer_ptr = buffer;
+	_track = nullptr;
   }
   MemChunk(ChunkHeader *index, uint8_t *buffer) : ZippedChunk(index, buffer) {
     index_ptr = index;
     buffer_ptr = buffer;
+	_track = nullptr;
   }
   ~MemChunk() {
   }

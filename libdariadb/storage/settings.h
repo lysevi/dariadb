@@ -51,7 +51,7 @@ class Settings {
   };
 
 public:
-  EXPORT Settings(const std::string storage_path);
+  EXPORT Settings(const std::string&storage_path);
   EXPORT ~Settings();
 
   EXPORT void set_default();

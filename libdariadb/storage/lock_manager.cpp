@@ -106,9 +106,8 @@ void LockManager::lock(const LOCK_KIND &lk, const std::vector<LOCK_OBJECTS> &los
   }
   bool success = false;
   while (!success) {
-    bool local_status = false;
     for (size_t i = 0; i < los.size(); ++i) {
-      local_status = try_lock_mutex(lk, rw_mtx[i]);
+   	  bool local_status = try_lock_mutex(lk, rw_mtx[i]);
 
       if (!local_status) {
         for (size_t j = 0; j < i; ++j) {

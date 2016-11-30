@@ -99,4 +99,6 @@ using Id2MSet = std::map<Id, std::set<Meas, meas_time_compare_less>>;
 using Id2MinMax = std::unordered_map<Id, MeasMinMax>;
 
 EXPORT void minmax_append(Id2MinMax&out, const Id2MinMax &source);
+EXPORT void mlist2mset(MeasList &mlist, Id2MSet &sub_result);
+
 }

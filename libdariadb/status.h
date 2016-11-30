@@ -17,17 +17,20 @@ struct Status {
       this->error_message=other.error_message;
   }
 
-  Status operator+(const Status &other) {
+  Status operator+(const Status &other)const {
     Status res;
     res.writed = writed + other.writed;
     res.ignored = ignored + other.ignored;
     return res;
   }
 
-  void operator=(const Status &other) {
-    this->writed = other.writed;
-    this->ignored = other.ignored;
-      this->error_message=other.error_message;
+  Status &operator=(const Status &other) {
+    if (this != &other) {
+      this->writed = other.writed;
+      this->ignored = other.ignored;
+      this->error_message = other.error_message;
+    }
+    return *this;
   }
   size_t writed;
   size_t ignored;

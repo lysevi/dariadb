@@ -150,7 +150,7 @@ public:
     return res;
   }
 
-  Page_Ptr open_page_to_read(const std::string &pname) {
+  Page_Ptr open_page_to_read(const std::string &pname)const {
     TIMECODE_METRICS(ctmd, "open", "PageManager::open_page_to_read");
     std::lock_guard<std::mutex> lg(_page_open_lock);
     Page_Ptr pg = nullptr;

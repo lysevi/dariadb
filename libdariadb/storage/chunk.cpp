@@ -30,7 +30,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
   _buffer_t = buffer;
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m) {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m) {
   should_free = false;
   hdr->is_init = true;
   _buffer_t = buffer;
@@ -79,7 +79,7 @@ bool Chunk::check_checksum() {
 }
 
 //TODO rm std::make_shared<ByteBuffer>. use stack veriable.
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m)
+ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, const Meas &first_m)
     : Chunk(index, buffer, _size, first_m),
 	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
 	{

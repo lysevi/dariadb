@@ -380,15 +380,6 @@ public:
     clbk->is_end();
   }
 
-  void mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
-    for (auto m : mlist) {
-      if (m.flag == Flags::_NO_DATA) {
-        continue;
-      }
-      sub_result[m.id].emplace(m);
-    }
-  }
-
   MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
     auto p_clbk= std::make_unique<MList_ReaderClb>();

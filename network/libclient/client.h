@@ -21,9 +21,14 @@ struct ReadResult {
   callback clbk;
   bool is_ok;     //true - if server send OK to this query.
   bool is_closed; //true - if all data received.
-  bool is_error;  //true - if error. errc contain error type.
+  bool is_error;  //true - if error. 'errc' contain error type.
   ERRORS errc;
-  ReadResult() { is_error = false; is_ok = false; }
+  ReadResult() {
+    is_error = false;
+    is_ok = false;
+    id = std::numeric_limits<QueryNumber>::max();
+	is_closed = false;
+  }
   void wait() { locker.lock(); }
 };
 using ReadResult_ptr = std::shared_ptr<ReadResult>;

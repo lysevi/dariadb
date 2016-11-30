@@ -125,7 +125,6 @@ public:
     std::stringstream ss;
     ss << "insert into pages (file) values ('" << rec << "');";
     auto sql = ss.str();
-    std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
@@ -140,7 +139,6 @@ public:
     std::stringstream ss;
     ss << "delete from pages where file = '" << rec << "';";
     auto sql = ss.str();
-    std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
@@ -163,11 +161,10 @@ public:
     return result;
   }
 
-  void clear_field_values(std::string field_name) {
+  void clear_field_values(const std::string &field_name) {
     std::stringstream ss;
     ss << "delete from " << field_name << ";";
     auto sql = ss.str();
-    std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
@@ -182,7 +179,6 @@ public:
     std::stringstream ss;
     ss << "insert into aofs (file) values ('" << rec << "');";
     auto sql = ss.str();
-    std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
@@ -197,7 +193,6 @@ public:
     std::stringstream ss;
     ss << "delete from aofs where file = '" << rec << "';";
     auto sql = ss.str();
-    std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
@@ -214,7 +209,6 @@ public:
           "where name = 'version'), 'version', '"
        << version << "' );";
     auto sql = ss.str();
-    std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {

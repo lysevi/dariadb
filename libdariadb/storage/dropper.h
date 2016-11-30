@@ -18,17 +18,17 @@ public:
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager, AOFManager_ptr aof_manager);
   ~Dropper();
   /*static void drop_aof(const std::string &fname, const std::string &storage_path);*/
-  void drop_aof(const std::string fname) override;
+  void drop_aof(const std::string& fname) override;
 
   void flush();
   // 1. rm PAGE files with name exists AOF file.
-  static void cleanStorage(std::string storagePath);
+  static void cleanStorage(const std::string&storagePath);
 
   Description description() const;
 
 private:
-  void drop_aof_internal(const std::string fname);
-  void write_aof_to_page(const std::string fname, std::shared_ptr<MeasArray> ma);
+  void drop_aof_internal(const std::string &fname);
+  void write_aof_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma);
 private:
 	std::atomic_size_t _in_queue;
 	std::mutex            _locker;

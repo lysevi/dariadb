@@ -1,4 +1,5 @@
 #include <libdariadb/meas.h>
+#include <libdariadb/flags.h>
 #include <libdariadb/utils/utils.h>
 #include <cmath>
 #include <stdlib.h>
@@ -35,6 +36,15 @@ void dariadb::minmax_append(Id2MinMax&out, const Id2MinMax &source){
 			out[kv.first].updateMin(kv.second.min);
         }
     }
+}
+
+void  dariadb::mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
+  for (auto m : mlist) {
+    if (m.flag == Flags::_NO_DATA) {
+      continue;
+    }
+    sub_result[m.id].emplace(m);
+  }
 }
 
 void MeasMinMax::updateMax(const Meas&m) {

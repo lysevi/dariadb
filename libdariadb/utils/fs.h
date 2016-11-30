@@ -16,7 +16,7 @@ EXPORT bool rm(const std::string &rm_path);
 
 EXPORT std::string filename(const std::string &fname); // without ex
 EXPORT std::string extract_filename(const std::string &fname);
-EXPORT std::string random_file_name(const std::string ext);
+EXPORT std::string random_file_name(const std::string &ext);
 
 EXPORT std::string parent_path(const std::string &fname);
 EXPORT std::string append_path(const std::string &p1, const std::string &p2);

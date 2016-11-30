@@ -28,7 +28,7 @@ public:
 	  _settings = settings;
 	  _env = env;
   }
-  void drop_aof(const std::string fname) override {
+  void drop_aof(const std::string &fname) override {
     auto full_path = dariadb::utils::fs::append_path(
 		_settings->path, fname);
     dariadb::storage::AOFile_Ptr aof{new dariadb::storage::AOFile(_env,full_path, true)};

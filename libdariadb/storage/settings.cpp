@@ -40,7 +40,7 @@ BaseOption::~BaseOption() {
 
 
 
-Settings::Settings(const std::string storage_path):
+Settings::Settings(const std::string&storage_path):
 	aof_max_size(this, c_aof_max_size, AOF_FILE_SIZE),
 	aof_buffer_size(this, c_aof_buffer_size, AOF_BUFFER_SIZE),
 	chunk_size(this,c_chunk_size, CHUNK_SIZE),

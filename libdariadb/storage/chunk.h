@@ -49,7 +49,7 @@ public:
 
   typedef uint8_t *u8vector;
 
-  Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m);
+  Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m);
   Chunk(ChunkHeader *hdr, uint8_t *buffer);
   virtual ~Chunk();
 
@@ -79,7 +79,7 @@ typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
 
 class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
 public:
-  ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m);
+  ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, const Meas &first_m);
   ZippedChunk(ChunkHeader *index, uint8_t *buffer);
   ~ZippedChunk();
   bool is_full() const override { return c_writer.is_full(); }

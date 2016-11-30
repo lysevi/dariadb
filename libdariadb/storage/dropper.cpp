@@ -27,7 +27,7 @@ Dropper::Description Dropper::description() const {
   return result;
 }
 
-void Dropper::drop_aof(const std::string fname) {
+void Dropper::drop_aof(const std::string& fname) {
   std::lock_guard<std::mutex> lg(_locker);
   auto fres = _addeded_files.find(fname);
   if (fres != _addeded_files.end()) {
@@ -41,7 +41,7 @@ void Dropper::drop_aof(const std::string fname) {
   }
 }
 
-void Dropper::cleanStorage(std::string storagePath) {
+void Dropper::cleanStorage(const std::string&storagePath) {
   auto aofs_lst = fs::ls(storagePath, AOF_FILE_EXT);
   auto page_lst = fs::ls(storagePath, PAGE_FILE_EXT);
 
@@ -58,7 +58,7 @@ void Dropper::cleanStorage(std::string storagePath) {
   }
 }
 
-void Dropper::drop_aof_internal(const std::string fname) {
+void Dropper::drop_aof_internal(const std::string &fname) {
   auto env = _engine_env;
   auto sett = _settings;
   AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
@@ -74,6 +74,11 @@ void Dropper::drop_aof_internal(const std::string fname) {
       auto all = aof->readAll();
 
       this->write_aof_to_page(fname, all);
+
+	  this->_locker.lock();
+	  this->_in_queue--;
+	  this->_addeded_files.erase(fname);
+	  this->_locker.unlock();
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }
@@ -81,16 +86,12 @@ void Dropper::drop_aof_internal(const std::string fname) {
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
 }
 
-void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArray> ma) {
+void Dropper::write_aof_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma) {
   auto pm = _page_manager.get();
   auto am = _aof_manager.get();
   auto lm = _engine_env->getResourceObject<LockManager>(
       EngineEnvironment::Resource::LOCK_MANAGER);
   auto sett = _settings;
-  /*AsyncTask at = [fname, this, ma, pm, am, lm,sett](const ThreadInfo &ti) {
-          try {
-                  TKIND_CHECK(THREAD_COMMON_KINDS::DROP, ti.kind);
-                  TIMECODE_METRICS(ctmd, "drop", "Dropper::write_aof_to_page");*/
 
   auto storage_path = sett->path;
   auto full_path = fs::append_path(storage_path, fname);
@@ -104,16 +105,6 @@ void Dropper::write_aof_to_page(const std::string fname, std::shared_ptr<MeasArr
   pm->append(page_fname, *ma.get());
   am->erase(fname);
   lm->unlock(LOCK_OBJECTS::DROP_AOF);
-  /*	}
-catch (std::exception &ex) {
-  THROW_EXCEPTION("Dropper::write_aof_to_page: ", ex.what());
-}*/
-  this->_locker.lock();
-  this->_in_queue--;
-  this->_addeded_files.erase(fname);
-  this->_locker.unlock();
-  //};
-  // ThreadManager::instance()->post(THREAD_COMMON_KINDS::DROP, AT(at));
 }
 
 void Dropper::flush() {

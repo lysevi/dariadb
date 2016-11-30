@@ -6,6 +6,7 @@ using namespace dariadb::utils;
 PeriodWorker::PeriodWorker(const std::chrono::milliseconds sleep_time) {
   _sleep_time = sleep_time;
   m_thread_work = false;
+  m_stop_flag = false;
 }
 
 PeriodWorker::~PeriodWorker() {

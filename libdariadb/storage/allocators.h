@@ -3,12 +3,13 @@
 #include <libdariadb/st_exports.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/utils/utils.h>
 #include <memory>
 
 namespace dariadb {
 namespace storage {
 
-struct MemChunkAllocator {
+struct MemChunkAllocator:public utils::NonCopy {
 	struct AllocatedData {
 		ChunkHeader *header;
 		uint8_t *buffer;
@@ -40,6 +41,7 @@ struct MemChunkAllocator {
   utils::Locker _locker;
 
   EXPORT MemChunkAllocator(size_t maxSize, size_t bufferSize);
+  MemChunkAllocator(const MemChunkAllocator&)=delete;
   EXPORT ~MemChunkAllocator();
   EXPORT AllocatedData allocate();
   EXPORT void free(const AllocatedData &d);

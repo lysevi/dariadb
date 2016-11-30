@@ -44,7 +44,7 @@ struct AsyncTaskWrap {
   std::string code_file;
   int code_line;
   AsyncTaskWrap() = default;
-  AsyncTaskWrap(AsyncTask &t, std::string _function, std::string file, int line) {
+  AsyncTaskWrap(AsyncTask &t, const std::string &_function, const std::string &file, int line) {
     task = t;
     parent_function = _function;
     code_file = file;

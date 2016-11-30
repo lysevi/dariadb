@@ -86,7 +86,7 @@ std::string extract_filename(const std::string &fname) {
   return p.filename().string();
 }
 
-std::string random_file_name(const std::string ext) {
+std::string random_file_name(const std::string&ext) {
   boost::uuids::uuid uuid = boost::uuids::random_generator()();
   std::stringstream ss;
   ss << uuid << ext;
@@ -170,7 +170,7 @@ public:
       return Private::open(path, false);
     } catch (std::runtime_error &ex) {
       std::string what = ex.what();
-      throw MAKE_EXCEPTION(ex.what());
+      throw MAKE_EXCEPTION(what);
     }
   }
 
