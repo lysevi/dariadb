@@ -1,6 +1,10 @@
 # dariadb - numeric time-series database.
-
+ 
 # Continuous Integration
+<a href="https://scan.coverity.com/projects/dariadb">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/10983/badge.svg"/>
+</a>
 
 |  version | build & tests | test coverage |
 |---------------------|---------|----------|
