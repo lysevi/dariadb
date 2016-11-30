@@ -14,9 +14,9 @@ addons:
     project:
       name: "dariadb"
       description: "Build submitted via Travis CI"
-    build_command_prepend: ""
-    build_command: "bash .travis/build.sh"
-    branch_pattern: dev
+    build_command_prepend: "cmake -DCMAKE_BUILD_TYPE=Release ."
+    build_command: "make -j3"
+    branch_pattern: coverity
     notification_email: lysevi@gmail.com
   apt:
     sources:
