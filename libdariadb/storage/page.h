@@ -30,17 +30,24 @@ class Page : public IChunkContainer {
   Page() = default;
 
 public:
+	///called by Dropper from Aof level.
   EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
                       uint32_t max_chunk_size, const MeasArray &ma);
+  /// used for compaction many pages to one
   EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
 	  uint32_t max_chunk_size, const std::list<std::string>& pages_full_paths);
+  /// called by dropper from MemoryStorage.
   EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
 	  const std::vector<Chunk*>& a, size_t count);
+
   EXPORT static Page *open(std::string file_name, bool read_only = false);
+  
   EXPORT static PageHeader readHeader(std::string file_name);
   EXPORT static IndexHeader readIndexHeader(std::string page_file_name);
+  
   EXPORT static uint64_t index_file_size(uint32_t chunk_per_storage);
   EXPORT static void restoreIndexFile(const std::string&file_name);
+  
   EXPORT ~Page();
   EXPORT void fsck();
   EXPORT bool is_full() const;
@@ -74,7 +81,7 @@ private:
   void check_page_struct();
   static Page* make_page(const std::string&file_name, const PageHeader&phdr);
 public:
-  uint8_t *region; // page  file mapp region
+  uint8_t *region; // page  file map region
   PageHeader *header;
   uint8_t *chunks;
 
