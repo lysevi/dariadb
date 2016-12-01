@@ -29,8 +29,7 @@ std::atomic_llong append_count{ 0 };
 dariadb::Time write_time = 0;
 bool stop_info = false;
 dariadb::storage::MemStorage* memstorage;
-STRATEGY strategy = STRATEGY::MEMORY;
-Time store_period = boost::posix_time::hours(dariadb_bench::hours_write_perid / 2).total_microseconds();
+size_t memory_limit = 0;
 
 void show_info() {
 	clock_t t0 = clock();
@@ -62,7 +61,7 @@ int main(int argc, char **argv) {
 	po::options_description desc("Allowed options");
 	bool metrics_enable = false;
 	auto aos = desc.add_options()("help", "produce help message");
-	aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "Write strategy");
+	aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit  in megabytes when strategy=MEMORY");
 	aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
 	po::variables_map vm;
@@ -92,9 +91,12 @@ int main(int argc, char **argv) {
 			dariadb::utils::fs::rm(storage_path);
 		}
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-		settings->strategy.value = strategy;
 		settings->memory_limit.value = 500*1024*1024;
 		settings->chunk_size.value = 1024;
+		if (memory_limit != 0) {
+			std::cout << "memory limit: " << memory_limit << std::endl;
+			settings->memory_limit.value = memory_limit * 1024 * 1024;
+		}
         memstorage = new dariadb::storage::MemStorage{ settings,size_t(0) };
 
 		std::thread info_thread(show_info);
