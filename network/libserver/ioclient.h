@@ -22,12 +22,10 @@ struct IOClient{
       srv = nullptr;
       storage = nullptr;
       nd_pool = nullptr;
-      io_meases_strand = nullptr;
     }
     IClientManager *srv;
     storage::Engine *storage;
     NetData_Pool *nd_pool;
-    boost::asio::io_service::strand *io_meases_strand;
     boost::asio::io_service *service;
   };
 
@@ -67,7 +65,8 @@ struct IOClient{
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
 
-  void readerAdd(ClientDataReader*cdr);
+  // data - queryInterval or QueryTimePoint
+  void readerAdd(ClientDataReader*cdr, void*data);
   void readerRemove(QueryNumber number);
   Time _last_query_time;
   socket_ptr sock;
@@ -80,7 +79,7 @@ struct IOClient{
   std::shared_ptr<storage::IReaderClb> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
   
-  std::map<QueryNumber, ClientDataReader*> _readers;
+  std::map<QueryNumber, std::pair<ClientDataReader*, void*>> _readers;
   std::mutex _readers_lock;
 };
 

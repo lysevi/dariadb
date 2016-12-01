@@ -20,7 +20,10 @@ public:
     count++;
     all.push_back(v);
   }
-  void is_end() override { is_end_called++; }
+  void is_end() override {
+	  is_end_called++;
+	  storage::IReaderClb::is_end();
+  }
   size_t count;
   MeasList all;
   std::mutex _locker;
@@ -167,20 +170,24 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                        size_t total_count, bool check_stop_flag) {
   storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
   MeasList all = as->readInterval(qi_all);
-
+  auto all_size = all.size();
   check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
-  auto clbk= std::make_unique<Callback>();
-  as->foreach (qi_all, clbk.get());
-  
-  while (clbk->count != all.size()) {
+  auto clbk = new Callback();
+  as->foreach (qi_all, clbk);
+
+  while (clbk->count != all_size) {
+	  std::this_thread::yield();
   }
-  
-  if (all.size() != clbk->count) {
-    THROW_EXCEPTION("all.size()!=clbk->count: " , all.size() , "!=", clbk->count);
+
+  if (all_size != clbk->count) {
+    THROW_EXCEPTION("all.size()!=clbk->count: ", all.size(), "!=", clbk->count);
   }
-  if (check_stop_flag && clbk->is_end_called != 1) {
-    THROW_EXCEPTION("clbk->is_end_called!=1: " , clbk->is_end_called.load());
+
+  if (check_stop_flag) {
+	  clbk->wait();
   }
+  delete clbk;
+
   IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 
   all = as->readInterval(storage::QueryInterval(

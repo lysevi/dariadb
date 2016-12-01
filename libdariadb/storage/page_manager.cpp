@@ -165,7 +165,7 @@ public:
   ChunkLinkList chunksByIterval(const QueryInterval &query) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::chunksByIterval");
 
-    auto pred = [query](const IndexHeader &hdr) {
+    auto pred = [&query](const IndexHeader &hdr) {
       auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
                           (utils::inInterval(query.from, query.to, hdr.minTime)) ||
                           (utils::inInterval(query.from, query.to, hdr.maxTime)) ||
@@ -182,25 +182,32 @@ public:
       }
       return false;
     };
-    auto page_list = pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
+	ChunkLinkList result;
 
-    ChunkLinkList result;
-    for (auto pname : page_list) {
-      auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname), true);
-      auto sub_result = pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
-      for (auto s : sub_result) {
-        s.page_name = pname;
-        result.push_back(s);
-      }
-    }
+	AsyncTask at = [query, &result, this, &pred](const ThreadInfo &ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 
+		auto page_list = this->pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
+
+
+		for (auto pname : page_list) {
+			auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname), true);
+			auto sub_result = pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
+			for (auto s : sub_result) {
+				s.page_name = pname;
+				result.push_back(s);
+			}
+		}
+	};
+	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+	pm_async->wait();
     return result;
   }
 
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
-	AsyncTask at = [query, &clb, &links, this](const ThreadInfo &ti) {
+	AsyncTask at = [&query, clb, &links, this](const ThreadInfo &ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 		ChunkLinkList to_read;
 
@@ -250,41 +257,46 @@ public:
   Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "PageManager::valuesBeforeTimePoint");
 
-    auto pred = [query](const IndexHeader &hdr) {
-      auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
-                      (hdr.maxTime < query.time_point);
-      if (in_check) {
-        for (auto id : query.ids) {
-          if (storage::bloom_check(hdr.id_bloom, id)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
+	Id2Meas result;
 
-    Id2Meas result;
+	for (auto id : query.ids) {
+		result[id].flag = Flags::_NO_DATA;
+		result[id].time = query.time_point;
+	}
 
-    for (auto id : query.ids) {
-      result[id].flag = Flags::_NO_DATA;
-      result[id].time = query.time_point;
-    }
+	AsyncTask at = [&query, &result,this](const ThreadInfo &ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+		auto pred = [query](const IndexHeader &hdr) {
+			auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
+				(hdr.maxTime < query.time_point);
+			if (in_check) {
+				for (auto id : query.ids) {
+					if (storage::bloom_check(hdr.id_bloom, id)) {
+						return true;
+					}
+				}
+			}
+			return false;
+		};
 
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-    for (auto it = page_list.rbegin(); it != page_list.rend(); ++it) {
-      auto pname = *it;
-      auto pg = open_page_to_read(pname);
+		auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
 
-      auto subres = pg->valuesBeforeTimePoint(query);
-      for (auto kv : subres) {
-        result[kv.first] = kv.second;
-      }
-      if (subres.size() == query.ids.size()) {
-        break;
-      }
-    }
+		for (auto it = page_list.rbegin(); it != page_list.rend(); ++it) {
+			auto pname = *it;
+			auto pg = open_page_to_read(pname);
 
+			auto subres = pg->valuesBeforeTimePoint(query);
+			for (auto kv : subres) {
+				result[kv.first] = kv.second;
+			}
+			if (subres.size() == query.ids.size()) {
+				break;
+			}
+		}
+	};
+	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+	pm_async->wait();
     return result;
   }
 

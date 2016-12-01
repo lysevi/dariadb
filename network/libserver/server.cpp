@@ -27,7 +27,7 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _signals(_service, SIGINT, SIGTERM, SIGABRT), _write_meases_strand(_service),
+      : _signals(_service, SIGINT, SIGTERM, SIGABRT), 
         _params(p), _is_runned_flag(false), _ping_timer(_service), _info_timer(_service) {
 
     _in_stop_logic = false;
@@ -38,7 +38,6 @@ public:
     _env.srv = this;
     _env.nd_pool = &_net_data_pool;
     _env.service = &_service;
-    _env.io_meases_strand = &_write_meases_strand;
 
 	_signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
   }
@@ -297,7 +296,6 @@ public:
 
   io_service _service;
   boost::asio::signal_set _signals;
-  io_service::strand _write_meases_strand;
   acceptor_ptr _acc;
 
   std::atomic_int _next_client_id;

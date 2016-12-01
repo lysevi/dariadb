@@ -59,6 +59,7 @@ void IOClient::ClientDataReader::call(const Meas &m) {
 }
 
 void IOClient::ClientDataReader::is_end() {
+	IReaderClb::is_end();
   send_buffer();
 
   auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
@@ -120,9 +121,13 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
 }
 
 IOClient::~IOClient() {
-	if (_async_connection != nullptr) {
-		_async_connection->full_stop();
-	}
+  if (_async_connection != nullptr) {
+    _async_connection->full_stop();
+  }
+  
+  for (auto kv : _readers) {
+	  this->readerRemove(kv.first);
+  }
 }
 
 void IOClient::end_session() {
@@ -188,10 +193,8 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id,
                 " write ", count);
     this->env->srv->write_begin();
-    dont_free_memory = true;
 
-    env->service->post(
-        env->io_meases_strand->wrap(std::bind(&IOClient::append, this, d)));
+	this->append(d);
 
     break;
   }
@@ -215,10 +218,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
 		  return;
 	  }
     auto query_hdr = reinterpret_cast<QueryInterval_header *>(&d->data);
-    dont_free_memory = true;
+    
     sendOk(query_hdr->id);
-    env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::readInterval, this, d)));
+	this->readInterval( d);
+    
     break;
   }
   case DATA_KINDS::READ_TIMEPOINT: {
@@ -227,10 +230,9 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
 		  return;
 	  }
     auto query_hdr = reinterpret_cast<QueryTimePoint_header *>(&d->data);
-    dont_free_memory = true;
+    
     sendOk(query_hdr->id);
-    env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::readTimePoint, this, d)));
+	this->readTimePoint(d);
     break;
   }
   case DATA_KINDS::CURRENT_VALUE: {
@@ -239,10 +241,8 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
 		  return;
 	  }
     auto query_hdr = reinterpret_cast<QueryCurrentValue_header *>(&d->data);
-    dont_free_memory = true;
     sendOk(query_hdr->id);
-    env->service->post(env->io_meases_strand->wrap(
-        std::bind(&IOClient::currentValue, this, d)));
+	this->currentValue(d);
     break;
   }
   case DATA_KINDS::SUBSCRIBE: {
@@ -251,10 +251,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
 		  return;
 	  }
     auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(&d->data);
-    dont_free_memory = true;
+    
     sendOk(query_hdr->id);
-    env->service->post(
-        env->io_meases_strand->wrap(std::bind(&IOClient::subscribe, this, d)));
+	subscribe(d);
+    
     break;
   }
   case DATA_KINDS::HELLO: {
@@ -343,7 +343,6 @@ void IOClient::append(const NetData_ptr &d) {
   }else{
       sendOk(hdr->id);
   }
-  this->env->nd_pool->free(d);
   logger_info("server: #", this->_async_connection->id(), " writed ", ar.writed, " ignored ", ar.ignored);
 }
 
@@ -359,16 +358,14 @@ void IOClient::readInterval(const NetData_ptr &d) {
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  storage::QueryInterval qi{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
-
-  env->nd_pool->free(d);
+  auto qi=new storage::QueryInterval{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
 
   if (query_hdr->from >= query_hdr->to) {
     sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
   } else {
     auto cdr = new ClientDataReader(this, query_num);
-	this->readerAdd(cdr);
-    env->storage->foreach(qi, cdr);
+	this->readerAdd(cdr,qi);
+    env->storage->foreach(*qi, cdr);
   }
 }
 
@@ -383,13 +380,11 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  storage::QueryTimePoint qi{all_ids, query_hdr->flag, query_hdr->tp};
-
-  env->nd_pool->free(d);
+  auto qi= new storage::QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(cdr);
-  env->storage->foreach(qi, cdr);
+  readerAdd(cdr,qi);
+  env->storage->foreach(*qi, cdr);
 }
 
 void  IOClient::currentValue(const NetData_ptr &d) {
@@ -401,11 +396,10 @@ void  IOClient::currentValue(const NetData_ptr &d) {
 	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
 	auto flag = query_hdr->flag;
 	auto query_num = query_hdr->id;
-	env->nd_pool->free(d);
 
 	auto result = env->storage->currentValue(all_ids, flag);
 	auto cdr = new ClientDataReader(this, query_num);
-	readerAdd(cdr);
+	readerAdd(cdr,nullptr);
 	for (auto&v : result) {
 		cdr->call(v.second);
 	}
@@ -421,7 +415,6 @@ void  IOClient::subscribe(const NetData_ptr &d) {
 	IdArray all_ids{ ids_ptr, ids_ptr + query_hdr->ids_count };
 	auto flag = query_hdr->flag;
 	auto query_num = query_hdr->id;
-	env->nd_pool->free(d);
 
     if(subscribe_reader==nullptr){
         subscribe_reader = std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
@@ -429,9 +422,9 @@ void  IOClient::subscribe(const NetData_ptr &d) {
 	env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
 
-void IOClient::readerAdd(ClientDataReader*cdr) {
+void IOClient::readerAdd(ClientDataReader*cdr, void*data) {
 	std::lock_guard<std::mutex> lg(_readers_lock);
-	this->_readers.insert(std::make_pair(cdr->_query_num, cdr));
+	this->_readers.insert(std::make_pair(cdr->_query_num, std::make_pair(cdr,data)));
 }
 
 void IOClient::readerRemove(QueryNumber number) {
@@ -443,6 +436,9 @@ void IOClient::readerRemove(QueryNumber number) {
 	else {
 		auto ptr = fres->second;
 		this->_readers.erase(fres);
-		delete ptr;
+		delete ptr.first;
+		if (ptr.second != nullptr) {
+			delete ptr.second;
+		}
 	}
 }

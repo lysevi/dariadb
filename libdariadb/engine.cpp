@@ -345,7 +345,7 @@ public:
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
 	auto pm = _page_manager.get();
 	auto am = _top_storage.get();
-    AsyncTask pm_at = [&p_clbk,&a_clbk, &q, this, pm, am](const ThreadInfo &ti) {
+    AsyncTask pm_at = [p_clbk,a_clbk, q, this, pm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
 	  this->lock_storage();
       pm->foreach (q, p_clbk);
@@ -354,8 +354,8 @@ public:
 	  a_clbk->is_end();
     };
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
-    pm_async->wait();
+    /*auto pm_async = */ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+    //pm_async->wait();
   }
 
   // Inherited via MeasStorage
@@ -373,14 +373,15 @@ public:
 
   MeasList readInterval(const QueryInterval &q) {
     TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
-    auto p_clbk= std::make_unique<MList_ReaderClb>();
-    auto a_clbk= std::make_unique<MList_ReaderClb>();;
+	auto p_clbk = std::make_unique<MList_ReaderClb>();
+	auto a_clbk = std::make_unique<MList_ReaderClb>();
     this->foreach_internal(q, p_clbk.get(), a_clbk.get());
+	a_clbk->wait();
     Id2MSet sub_result;
 
     mlist2mset(p_clbk->mlist, sub_result);
     mlist2mset(a_clbk->mlist, sub_result);
-
+	
     MeasList result;
     for (auto id : q.ids) {
       auto sublist = sub_result.find(id);
@@ -391,39 +392,48 @@ public:
         result.push_back(v);
       }
     }
-	a_clbk->wait();
+	
     return result;
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
     TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
-
-	lock_storage();
-
     Id2Meas result;
     result.reserve(q.ids.size());
     for (auto id : q.ids) {
       result[id].flag = Flags::_NO_DATA;
     }
 
-    for (auto id : q.ids) {
-      dariadb::Time minT, maxT;
-      QueryTimePoint local_q = q;
-      local_q.ids.clear();
-      local_q.ids.push_back(id);
+    auto pm = _page_manager.get();
+    auto am = _top_storage.get();
+    AsyncTask pm_at = [&result, &q, this, pm, am](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
 
-      if (_top_storage->minMaxTime(id, &minT, &maxT) &&
-          (minT < q.time_point || maxT < q.time_point)) {
-        auto subres = _top_storage->readTimePoint(local_q);
-        result[id] = subres[id];
-        continue;
-      } else {
-        auto subres = _page_manager->valuesBeforeTimePoint(local_q);
-        result[id] = subres[id];
+      lock_storage();
+
+      for (auto id : q.ids) {
+        dariadb::Time minT, maxT;
+        QueryTimePoint local_q = q;
+        local_q.ids.clear();
+        local_q.ids.push_back(id);
+
+        if (_top_storage->minMaxTime(id, &minT, &maxT) &&
+            (minT < q.time_point || maxT < q.time_point)) {
+          auto subres = _top_storage->readTimePoint(local_q);
+          result[id] = subres[id];
+          continue;
+        } else {
+          auto subres = _page_manager->valuesBeforeTimePoint(local_q);
+          result[id] = subres[id];
+        }
       }
-    }
 
-	unlock_storage();
+      unlock_storage();
+    };
+
+    auto pm_async =
+        ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+    pm_async->wait();
     return result;
   }
 
