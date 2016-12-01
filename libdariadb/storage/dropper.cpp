@@ -5,6 +5,7 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/thread_manager.h>
+#include <ctime>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -65,7 +66,8 @@ void Dropper::drop_aof_internal(const std::string &fname) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
-
+	  logger_info("engine: compressing ", fname);
+	  auto start_time = clock();
       auto storage_path = sett->path;
       auto full_path = fs::append_path(storage_path, fname);
 
@@ -79,6 +81,9 @@ void Dropper::drop_aof_internal(const std::string &fname) {
 	  this->_in_queue--;
 	  this->_addeded_files.erase(fname);
 	  this->_locker.unlock();
+	  auto end = clock();
+	  auto elapsed= double(end - start_time) / CLOCKS_PER_SEC;
+	  logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }

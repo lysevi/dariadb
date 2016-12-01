@@ -18,6 +18,7 @@ std::string new_base_name;
 std::string compact_from, compact_to;
 bool time_in_iso_format=false;
 std::string erase_to;
+bool stop_info=false;
 
 class CtlLogger : public dariadb::utils::ILogger {
 public:
@@ -42,10 +43,28 @@ public:
   }
 };
 
+dariadb::storage::Settings_ptr loadSettings() {
+	auto settings = dariadb::storage::Settings_ptr{
+		new dariadb::storage::Settings(storage_path) };
+	settings->load_min_max = false;
+	return settings;
+}
+
 void check_path_exists() {
   if (!dariadb::utils::fs::path_exists(storage_path)) {
     std::cerr << "path " << storage_path << " not exists" << std::endl;
     std::exit(1);
+  }
+}
+
+void show_drop_info(dariadb::storage::Engine *storage) {
+  while (!stop_info) {
+    auto queue_sizes = storage->description();
+
+    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
+                          queue_sizes.aofs_count, " T:", queue_sizes.active_works, ")",
+                          "[a:", queue_sizes.dropper.aof, "]");
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
   }
 }
 
@@ -133,19 +152,22 @@ int main(int argc, char *argv[]) {
   }
 
   if (vm.count("fsck")) {
-	  auto settings = dariadb::storage::Settings_ptr{
-		  new dariadb::storage::Settings(storage_path) };
+	  auto settings = loadSettings();
 	  auto e = std::make_unique<dariadb::storage::Engine>(settings);
 	  e->fsck();
 	  e->stop();
   }
 
   if (vm.count("compress")) {
-    auto settings = dariadb::storage::Settings_ptr{
-        new dariadb::storage::Settings(storage_path)};
+    auto settings = loadSettings();
     auto e = std::make_unique<dariadb::storage::Engine>(settings);
+	stop_info = false;
+	std::thread info_thread(&show_drop_info, e.get());
     e->compress_all();
+	e->flush();
     e->stop();
+	stop_info = true;
+	info_thread.join();
   }
 
   if(erase_to.size()!=0){
@@ -156,26 +178,23 @@ int main(int argc, char *argv[]) {
           to=dariadb::timeutil::from_string(erase_to);
       }
 
-      auto settings = dariadb::storage::Settings_ptr{
-          new dariadb::storage::Settings(storage_path)};
-
+	  auto settings = loadSettings();
       auto e = std::make_unique<dariadb::storage::Engine>(settings);
 
       e->eraseOld(to);
+	  e->flush();
       e->stop();
       std::exit(0);
   }
 
   if (vm.count("compact")) {
     if(compact_from.size()==0 && compact_to.size()==0){
-        auto settings = dariadb::storage::Settings_ptr{
-            new dariadb::storage::Settings(storage_path)};
-
+		auto settings = loadSettings();
         auto e = std::make_unique<dariadb::storage::Engine>(settings);
-
         e->compactTo(0);
+		e->flush();
         e->stop();
-        std::exit(0);
+		std::exit(0);
     }
 
     if(compact_from.size()!=0 && compact_to.size()!=0){
@@ -190,10 +209,8 @@ int main(int argc, char *argv[]) {
         std::cout<<"compaction from "<<dariadb::timeutil::to_string(from)
                 <<" to "<<dariadb::timeutil::to_string(to)<<std::endl;
 
-        auto settings = dariadb::storage::Settings_ptr{
-            new dariadb::storage::Settings(storage_path)};
-        auto e = std::make_unique<dariadb::storage::Engine>(settings);
-
+		auto settings = loadSettings();
+		auto e = std::make_unique<dariadb::storage::Engine>(settings);
         e->compactbyTime(from,to);
         e->stop();
         std::exit(0);

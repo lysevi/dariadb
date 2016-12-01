@@ -57,6 +57,7 @@ Settings::Settings(const std::string&storage_path):
     set_default();
     save();
   }
+  load_min_max = true;
 }
 
 Settings::~Settings(){}

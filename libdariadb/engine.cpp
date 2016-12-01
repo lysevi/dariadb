@@ -67,7 +67,9 @@ public:
       check_storage_version();
     }
 
-    _min_max=_page_manager->loadMinMax();
+	if (_settings->load_min_max) {
+		_min_max = _page_manager->loadMinMax();
+	}
 
     if (_settings->strategy.value != STRATEGY::MEMORY) {
 		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
@@ -86,9 +88,13 @@ public:
 
 
     if(_settings->strategy.value != STRATEGY::MEMORY){
-        auto amm=_top_storage->loadMinMax();
-        minmax_append(_min_max,amm);
+		if (_settings->load_min_max) {
+			auto amm = _top_storage->loadMinMax();
+			minmax_append(_min_max,amm);
+		}
     }
+
+	logger_info("engine: start - OK ");
   }
   ~Private() { this->stop(); }
 
@@ -476,7 +482,7 @@ public:
   void compactTo(uint32_t pagesCount) {
 	  _lock_manager->lock(
 		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
-      logger_info("engine: compacting to ", pagesCount);
+      logger_info("engine: compacting to ", pagesCount+1);
 	  _page_manager->compactTo(pagesCount);
 	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }

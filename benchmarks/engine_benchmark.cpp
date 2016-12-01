@@ -153,12 +153,10 @@ void show_drop_info(Engine *storage) {
 
     auto queue_sizes = storage->description();
 
-    std::cout << "\r"
-              << " storage: (p:" << queue_sizes.pages_count
-              << " a:" << queue_sizes.aofs_count << " T:" << queue_sizes.active_works
-              << ")"
-              << "[a:" << queue_sizes.dropper.aof << "]          ";
-    std::cout.flush();
+    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
+                          queue_sizes.aofs_count, " T:", queue_sizes.active_works, ")",
+                          "[a:", queue_sizes.dropper.aof, "]");
+
     if (stop_info) {
       std::cout.flush();
       break;
@@ -358,6 +356,8 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 	settings->strategy.value = strategy;
+	settings->aof_buffer_size.value = 1000000;
+	settings->aof_max_size.value = 1000000;
     settings->save();
 	if (strategy == STRATEGY::MEMORY && memory_limit!=0) {
 		std::cout << "memory limit: " << memory_limit<<std::endl;

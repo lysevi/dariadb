@@ -77,6 +77,8 @@ public:
   Option<uint32_t> memory_limit; //in bytes;
   Option<float>  percent_when_start_droping; //fill percent, when start dropping.
   Option<float>  percent_to_drop; //how many chunk drop.
+  
+  bool  load_min_max; //if true - engine dont load min max. needed to ctl tool.
 };
 
 using Settings_ptr = std::shared_ptr<Settings>;

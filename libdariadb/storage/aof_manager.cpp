@@ -62,7 +62,7 @@ void  AOFManager::drop_all(){
       for (auto f:all_files) {
         auto without_path = utils::fs::extract_filename(f);
         if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-          logger_info("engine: drop ",without_path);
+          //logger_info("engine: drop ",without_path);
           this->drop_aof(f, _down);
         }
       }
