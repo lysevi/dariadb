@@ -171,7 +171,10 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
   auto clbk= std::make_unique<Callback>();
   as->foreach (qi_all, clbk.get());
-
+  
+  while (clbk->count != all.size()) {
+  }
+  
   if (all.size() != clbk->count) {
     THROW_EXCEPTION("all.size()!=clbk->count: " , all.size() , "!=", clbk->count);
   }

@@ -18,6 +18,7 @@ Storage:
    - Lockfile in storage.
    - New storage control tool.
    - SQLite3 based manifest.
+   - Foreach - is async.
 
 v0.1.1
 =====

@@ -33,7 +33,7 @@
 * Crash recovery.
 * CRC32 for all values.
 * Two variants of API:
-  - Functor API -  engine apply given function to each measurement in the incoming request.
+  - Functor API (async) -  engine apply given function to each measurement in the incoming request.
   - Standard API - You can Query interval as list or values in time point as dictionary.
 * Compaction old pages with filtration values support:
   - in engine api.

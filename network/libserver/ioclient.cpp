@@ -68,6 +68,7 @@ void IOClient::ClientDataReader::is_end() {
   hdr->count = 0;
   logger("server: #", _parent->_async_connection->id(), " end of #", hdr->id);
   _parent->_async_connection->send(nd);
+  this->_parent->readerRemove(this->_query_num);
 }
 
 void IOClient::ClientDataReader::send_buffer() {
@@ -365,8 +366,9 @@ void IOClient::readInterval(const NetData_ptr &d) {
   if (query_hdr->from >= query_hdr->to) {
     sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
   } else {
-    auto cdr = std::make_unique<ClientDataReader>(this, query_num);
-    env->storage->foreach(qi, cdr.get());
+    auto cdr = new ClientDataReader(this, query_num);
+	this->readerAdd(cdr);
+    env->storage->foreach(qi, cdr);
   }
 }
 
@@ -385,8 +387,9 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
 
   env->nd_pool->free(d);
 
-  auto cdr =std::make_unique<ClientDataReader>(this, query_num);
-  env->storage->foreach(qi, cdr.get());
+  auto cdr = new ClientDataReader(this, query_num);
+  readerAdd(cdr);
+  env->storage->foreach(qi, cdr);
 }
 
 void  IOClient::currentValue(const NetData_ptr &d) {
@@ -401,7 +404,8 @@ void  IOClient::currentValue(const NetData_ptr &d) {
 	env->nd_pool->free(d);
 
 	auto result = env->storage->currentValue(all_ids, flag);
-	auto cdr = std::make_unique<ClientDataReader>(this, query_num);
+	auto cdr = new ClientDataReader(this, query_num);
+	readerAdd(cdr);
 	for (auto&v : result) {
 		cdr->call(v.second);
 	}
@@ -423,4 +427,22 @@ void  IOClient::subscribe(const NetData_ptr &d) {
         subscribe_reader = std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
     }
 	env->storage->subscribe(all_ids, flag, subscribe_reader);
+}
+
+void IOClient::readerAdd(ClientDataReader*cdr) {
+	std::lock_guard<std::mutex> lg(_readers_lock);
+	this->_readers.insert(std::make_pair(cdr->_query_num, cdr));
+}
+
+void IOClient::readerRemove(QueryNumber number) {
+	std::lock_guard<std::mutex> lg(_readers_lock);
+	auto fres=this->_readers.find(number);
+	if (fres == this->_readers.end()) {
+		THROW_EXCEPTION("engien: readerRemove logic error");
+	}
+	else {
+		auto ptr = fres->second;
+		this->_readers.erase(fres);
+		delete ptr;
+	}
 }

@@ -67,6 +67,8 @@ struct IOClient{
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
 
+  void readerAdd(ClientDataReader*cdr);
+  void readerRemove(QueryNumber number);
   Time _last_query_time;
   socket_ptr sock;
   std::string host;
@@ -77,6 +79,9 @@ struct IOClient{
   //std::list<storage::IReaderClb *> readers;
   std::shared_ptr<storage::IReaderClb> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
+  
+  std::map<QueryNumber, ClientDataReader*> _readers;
+  std::mutex _readers_lock;
 };
 
 typedef std::shared_ptr<IOClient> ClientIO_ptr;

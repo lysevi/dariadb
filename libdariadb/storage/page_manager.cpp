@@ -200,30 +200,36 @@ public:
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clb) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
+	AsyncTask at = [query, &clb, &links, this](const ThreadInfo &ti) {
+		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+		ChunkLinkList to_read;
 
-    ChunkLinkList to_read;
-
-    for (auto l : links) {
-      if (to_read.empty()) {
-        to_read.push_back(l);
-      } else {
-        if (l.page_name == to_read.front().page_name) {
-          to_read.push_back(l);
-        } else {
-          auto pname = to_read.front().page_name;
-          Page_Ptr pg = open_page_to_read(pname);
-          pg->readLinks(query, to_read, clb);
-          to_read.clear();
-          to_read.push_back(l);
-        }
-      }
-    }
-    if (!to_read.empty()) {
-      auto pname = to_read.front().page_name;
-      auto pg = open_page_to_read(pname);
-      pg->readLinks(query, to_read, clb);
-      to_read.clear();
-    }
+		for (auto l : links) {
+			if (to_read.empty()) {
+				to_read.push_back(l);
+			}
+			else {
+				if (l.page_name == to_read.front().page_name) {
+					to_read.push_back(l);
+				}
+				else {
+					auto pname = to_read.front().page_name;
+					Page_Ptr pg = open_page_to_read(pname);
+					pg->readLinks(query, to_read, clb);
+					to_read.clear();
+					to_read.push_back(l);
+				}
+			}
+		}
+		if (!to_read.empty()) {
+			auto pname = to_read.front().page_name;
+			auto pg = open_page_to_read(pname);
+			pg->readLinks(query, to_read, clb);
+			to_read.clear();
+		}
+	};
+	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+	pm_async->wait();
   }
 
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {

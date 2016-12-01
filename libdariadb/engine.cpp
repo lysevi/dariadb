@@ -344,27 +344,18 @@ public:
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
 	auto pm = _page_manager.get();
-    AsyncTask pm_at = [&p_clbk, &q, pm](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      pm->foreach (q, p_clbk);
-    };
-
 	auto am = _top_storage.get();
-    AsyncTask am_at = [&a_clbk, &q, am](const ThreadInfo &ti) {
+    AsyncTask pm_at = [&p_clbk,&a_clbk, &q, this, pm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+	  this->lock_storage();
+      pm->foreach (q, p_clbk);
 	  am->foreach(q, a_clbk);
+	  this->unlock_storage();
+	  a_clbk->is_end();
     };
-
-	lock_storage();
 
     auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
     pm_async->wait();
-
-    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
-    am_async->wait();
-
-	unlock_storage();
-    a_clbk->is_end();
   }
 
   // Inherited via MeasStorage
@@ -400,6 +391,7 @@ public:
         result.push_back(v);
       }
     }
+	a_clbk->wait();
     return result;
   }
 
