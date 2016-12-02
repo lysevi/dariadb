@@ -10,8 +10,15 @@
 #define MAKE_EXCEPTION(msg)                                                    \
   dariadb::utils::Exception::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
-#define THROW_EXCEPTION(...)                                                \
+
+#ifdef DEBUG
+#define THROW_EXCEPTION(...)                                                             \
+  dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);                      \
+  std::exit(1);
+#else
+#define THROW_EXCEPTION(...)                                                             \
   throw dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);
+#endif
 
 namespace dariadb {
 namespace utils {

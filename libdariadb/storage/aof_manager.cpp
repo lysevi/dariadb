@@ -98,7 +98,7 @@ void AOFManager::drop_closed_files(size_t count) {
 }
 
 void AOFManager::drop_old_if_needed() {
-    if(_settings->strategy.value ==STRATEGY::COMPRESSED){
+    if(_settings->strategy.value !=STRATEGY::FAST_WRITE){
         auto closed = this->closed_aofs();
         drop_closed_files(closed.size());
     }

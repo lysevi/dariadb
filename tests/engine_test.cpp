@@ -289,3 +289,38 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 		dariadb::utils::fs::rm(storage_path);
 	}
 }
+
+
+BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
+	const std::string storage_path = "testStorage";
+	const size_t chunk_size = 256;
+
+	const dariadb::Time from = 0;
+	const dariadb::Time to = from + 1000;
+	const dariadb::Time step = 10;
+
+	using namespace dariadb::storage;
+
+	{
+		std::cout << "Engine_Cache_common_test\n";
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
+		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		settings->strategy.value = STRATEGY::CACHE;
+		settings->chunk_size.value = 128;
+		settings->memory_limit.value = 50 * 1024;
+		std::unique_ptr<Engine> ms{ new Engine(settings) };
+
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+		ms->wait_all_asyncs();
+
+		auto descr = ms->description();
+		auto files_count = descr.pages_count+descr.aofs_count;
+		BOOST_CHECK_GE(files_count, size_t(0));
+	}
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}

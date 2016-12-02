@@ -254,6 +254,7 @@ struct TimeTrack : public IMeasStorage {
   void rereadMinMax() {
 	  std::lock_guard<utils::Locker> lg(_locker);
 	  _min_max.max.time = MIN_TIME;
+	  _min_max.min.time = MIN_TIME;
 
 	  if (_index.size() != 0) {
 		  _min_max.min = _index.begin()->second->header->first;
@@ -338,6 +339,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	}
 	
 	Status  append(const Meas &value) override{ 
+		//TODO refact!!!
 	  _all_tracks_locker.lock_shared();
 	  auto track = _id2track.find(value.id);
 	  bool is_created = false;
@@ -352,6 +354,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  _all_tracks_locker.unlock();
 
 			  while (new_track->append(value).writed != 1) {}
+			  if (_settings->strategy.value == STRATEGY::CACHE) {
+				  if (_disk_storage != nullptr) {
+					  _disk_storage->append(value);
+				  }
+			  }
 			  return Status (1, 0);
 		  }
 		  else {
@@ -403,7 +410,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       auto at_res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
       at_res->wait();
     } else {
-      logger_info("engine: memstorage _down_level_storage == nullptr");
+		if (_settings->strategy.value != STRATEGY::CACHE) {
+			logger_info("engine: memstorage _down_level_storage == nullptr");
+		}
     }
     std::set<TimeTrack *> updated_tracks;
     for (size_t i = 0; i < pos; ++i) {
@@ -428,6 +437,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       Id2MinMax result;
       std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
       for (auto t : _id2track) {
+		  if (t.second->_cur_chunk == nullptr) {
+			  continue;
+		  }
 		  result[t.first] = t.second->_min_max;
       }
       return result;

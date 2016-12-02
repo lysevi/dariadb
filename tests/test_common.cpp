@@ -49,7 +49,7 @@ void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
   }
 }
 
-void check_reader_of_all(MeasList all, Time from, Time to, Time step,
+void check_reader_of_all(MeasList& all, Time from, Time to, Time step,
                          size_t total_count, std::string message) {
 
   std::map<Id, MeasList> _dict;
@@ -193,7 +193,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   all = as->readInterval(storage::QueryInterval(
       ids, 0, to + copies_count - copies_count / 3, to + copies_count));
   if (all.size() == size_t(0)) {
-    throw MAKE_EXCEPTION("all.size() != == size_t(0)");
+    throw MAKE_EXCEPTION("all.size() != size_t(0)");
   }
 
   ids.clear();

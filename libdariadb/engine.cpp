@@ -31,6 +31,8 @@ class Engine::Private {
 public:
   Private(Settings_ptr settings) {
 	  _settings = settings;
+	  _strategy = _settings->strategy.value;
+
 	  _engine_env = EngineEnvironment_ptr{ new EngineEnvironment() };
 	  _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
@@ -71,23 +73,26 @@ public:
 		_min_max = _page_manager->loadMinMax();
 	}
 
-    if (_settings->strategy.value != STRATEGY::MEMORY) {
+    if (_strategy != STRATEGY::MEMORY) {
 		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
 		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
-
 		_aof_manager->set_downlevel(_dropper.get());
 		this->_top_storage = _aof_manager;
 	}
-	else {
+
+	if(_strategy ==STRATEGY::CACHE || _strategy == STRATEGY::MEMORY){
         _memstorage = MemStorage_ptr{ new MemStorage(_settings,_min_max.size()) };
-		_memstorage->setDownLevel(_page_manager.get());
+		if (_strategy != STRATEGY::CACHE) {
+			_memstorage->setDownLevel(_page_manager.get());
+		}
 		_top_storage = _memstorage;
+		if (_strategy == STRATEGY::CACHE) {
+			_memstorage->setDiskStorage(_aof_manager.get());
+		}
 	}
-    
 
-
-    if(_settings->strategy.value != STRATEGY::MEMORY){
+    if(_strategy == STRATEGY::FAST_WRITE){
 		if (_settings->load_min_max) {
 			auto amm = _top_storage->loadMinMax();
 			minmax_append(_min_max,amm);
@@ -147,6 +152,7 @@ public:
        logger_fatal("engine: storage ",lock_file," is locked.");
        std::exit(1);
   }
+
   void check_storage_version() {
     auto current_version = this->version();
     auto storage_version = std::stoi(_manifest->get_version());
@@ -157,31 +163,51 @@ public:
   }
 
   void lock_storage() {
-	  if (_memstorage != nullptr) {
-		  _memstorage->lock_drop();
-		  _lock_manager->lock(LOCK_KIND::READ, { LOCK_OBJECTS::PAGE});
-	  }
-	  else {
-		  _lock_manager->lock(
-			  LOCK_KIND::READ, { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
-	  }
+    switch (_strategy) {
+    case STRATEGY::COMPRESSED:
+    case STRATEGY::FAST_WRITE:
+      _lock_manager->lock(LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+      break;
+    case STRATEGY::MEMORY: {
+      _memstorage->lock_drop();
+      _lock_manager->lock(LOCK_KIND::READ, {LOCK_OBJECTS::PAGE});
+      break;
+    }
+    case STRATEGY::CACHE: {
+      _memstorage->lock_drop();
+      _lock_manager->lock(LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+      break;
+    }
+    }
   }
 
   void unlock_storage() {
-	  if (_memstorage != nullptr) {
-		  _lock_manager->unlock({ LOCK_OBJECTS::PAGE });
-		  _memstorage->unlock_drop();
-	  }
-	  else {
-		  _lock_manager->unlock(
-		  { LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF });
-	  }
+    switch (_strategy) {
+    case STRATEGY::COMPRESSED:
+    case STRATEGY::FAST_WRITE:
+      _lock_manager->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+      break;
+    case STRATEGY::MEMORY: {
+      _memstorage->unlock_drop();
+      _lock_manager->unlock({LOCK_OBJECTS::PAGE});
+      break;
+    }
+    case STRATEGY::CACHE: {
+      _memstorage->unlock_drop();
+      _lock_manager->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
+      break;
+    }
+    }
   }
 
   Time minTime() {
 	lock_storage();
 
-    auto pmin = _page_manager->minTime();
+	auto pmin = _page_manager->minTime();
+	if (_strategy == STRATEGY::CACHE) {
+		auto amin = this->_aof_manager->minTime();
+		pmin = std::min(pmin, amin);
+	}
 	Time amin= _top_storage->minTime();
 
 	unlock_storage();
@@ -192,6 +218,10 @@ public:
 	lock_storage();
 
     auto pmax = _page_manager->maxTime();
+	if (_strategy == STRATEGY::CACHE) {
+		auto amax = this->_aof_manager->maxTime();
+		pmax = std::max(pmax, amax);
+	}
 	Time amax= _top_storage->maxTime();
 
 	unlock_storage();
@@ -238,6 +268,10 @@ public:
       this->lock_storage();
 
       auto p_mm=this->_page_manager->loadMinMax();
+	  if (_strategy == STRATEGY::CACHE) {
+		  auto a_mm = this->_aof_manager->loadMinMax();
+		  minmax_append(p_mm, a_mm);
+	  }
       auto t_mm=this->_top_storage->loadMinMax();
 
       this->unlock_storage();
@@ -349,23 +383,52 @@ public:
 
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
-	auto pm = _page_manager.get();
-	auto am = _top_storage.get();
-    AsyncTask pm_at = [p_clbk,a_clbk, q, this, pm, am](const ThreadInfo &ti) {
+    auto pm = _page_manager.get();
+    auto tm = _top_storage.get();
+    AOFManager *am = nullptr;
+    if (_aof_manager != nullptr) {
+      am = _aof_manager.get();
+    }
+    AsyncTask pm_at = [p_clbk, a_clbk, q, this, pm, tm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-	  this->lock_storage();
-	  if (!p_clbk->is_canceled()) {
-		  pm->foreach(q, p_clbk);
-	  }
-	  if (!a_clbk->is_canceled()) {
-		  am->foreach(q, a_clbk);
-	  }
-	  this->unlock_storage();
-	  a_clbk->is_end();
+      this->lock_storage();
+      if (this->strategy() == STRATEGY::CACHE) {
+		  auto memory_mm = tm->loadMinMax();
+		  auto local_q = q;
+		  local_q.ids.resize(1);
+		  for (auto id : q.ids) {
+			  local_q.ids[0] = id;
+			  auto id_mm = memory_mm.find(id);
+			  if (id_mm == memory_mm.end()){
+				  pm->foreach(local_q, p_clbk);
+				  am->foreach(local_q, a_clbk);
+			  }
+			  else {
+				  if ((id_mm->second.min.time) > local_q.from) {
+					  pm->foreach(local_q, p_clbk);
+					  am->foreach(local_q, a_clbk);
+				  }
+				  else {
+					  tm->foreach(local_q, a_clbk);
+				  }
+				  if (a_clbk->is_canceled()) {
+					  break;
+				  }
+			  }
+		  }
+      } else {
+        if (!p_clbk->is_canceled()) {
+          pm->foreach (q, p_clbk);
+        }
+        if (!a_clbk->is_canceled()) {
+          tm->foreach (q, a_clbk);
+        }
+      }
+      this->unlock_storage();
+      a_clbk->is_end();
     };
 
-    /*auto pm_async = */ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
-    //pm_async->wait();
+    ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
   }
 
   // Inherited via MeasStorage
@@ -391,11 +454,11 @@ public:
     this->foreach_internal(q, p_clbk.get(), a_clbk.get());
 	a_clbk->wait();
     Id2MSet sub_result;
+	MeasList result;
 
     mlist2mset(p_clbk->mlist, sub_result);
     mlist2mset(a_clbk->mlist, sub_result);
 	
-    MeasList result;
     for (auto id : q.ids) {
       auto sublist = sub_result.find(id);
       if (sublist == sub_result.end()) {
@@ -482,7 +545,8 @@ public:
   }
 
   STRATEGY strategy()const{
-      return this->_settings->strategy.value;
+	  assert(_strategy == _settings->strategy.value);
+      return this->_strategy;
   }
 
 
@@ -511,6 +575,7 @@ protected:
   MemStorage_ptr _memstorage;
   EngineEnvironment_ptr _engine_env;
   Settings_ptr _settings;
+  STRATEGY     _strategy;
   Manifest_ptr _manifest;
   bool _stoped;
 
