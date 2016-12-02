@@ -112,7 +112,7 @@ void show_info(Engine *storage) {
     std::stringstream stor_ss;
 	stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
 		<< " T:" << queue_sizes.active_works;
-    if (strategy == STRATEGY::MEMORY) {
+    if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE) ){
 		stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity 
 			<< " a:" << queue_sizes.memstorage.allocated;
 	}
@@ -313,9 +313,11 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr
     break;
   case dariadb::storage::STRATEGY::MEMORY:
 	  if (files.aofs_count != 0 && files.pages_count == 0) {
-          THROW_EXCEPTION("MEMORY_STORAGE error: (p:", files.pages_count, " a:", files.aofs_count,
+          THROW_EXCEPTION("MEMORY error: (p:", files.pages_count, " a:", files.aofs_count,
 			  " T:", files.active_works, ")");
 	  }
+	  break;
+  case dariadb::storage::STRATEGY::CACHE:
 	  break;
   default:
     THROW_EXCEPTION("unknow strategy: ", strategy);
@@ -359,7 +361,7 @@ int main(int argc, char *argv[]) {
 	settings->aof_buffer_size.value = 1000000;
 	settings->aof_max_size.value = 1000000;
     settings->save();
-	if (strategy == STRATEGY::MEMORY && memory_limit!=0) {
+	if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) && memory_limit!=0) {
 		std::cout << "memory limit: " << memory_limit<<std::endl;
 		settings->memory_limit.value = memory_limit * 1024 * 1024;
 	}
