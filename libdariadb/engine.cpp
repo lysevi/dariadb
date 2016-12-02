@@ -354,8 +354,12 @@ public:
     AsyncTask pm_at = [p_clbk,a_clbk, q, this, pm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
 	  this->lock_storage();
-      pm->foreach (q, p_clbk);
-	  am->foreach(q, a_clbk);
+	  if (!p_clbk->is_canceled()) {
+		  pm->foreach(q, p_clbk);
+	  }
+	  if (!a_clbk->is_canceled()) {
+		  am->foreach(q, a_clbk);
+	  }
 	  this->unlock_storage();
 	  a_clbk->is_end();
     };
@@ -372,6 +376,9 @@ public:
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
     auto values = this->readTimePoint(q);
     for (auto &kv : values) {
+		if (clbk->is_canceled()) {
+			break;
+		}
       clbk->call(kv.second);
     }
     clbk->is_end();

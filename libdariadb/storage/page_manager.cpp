@@ -205,13 +205,16 @@ public:
   }
 
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                 IReaderClb *clb) {
+                 IReaderClb *clbk) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
-	AsyncTask at = [&query, clb, &links, this](const ThreadInfo &ti) {
+	AsyncTask at = [&query, clbk, &links, this](const ThreadInfo &ti) {
 		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 		ChunkLinkList to_read;
 
 		for (auto l : links) {
+			if (clbk->is_canceled()) {
+				break;
+			}
 			if (to_read.empty()) {
 				to_read.push_back(l);
 			}
@@ -222,7 +225,7 @@ public:
 				else {
 					auto pname = to_read.front().page_name;
 					Page_Ptr pg = open_page_to_read(pname);
-					pg->readLinks(query, to_read, clb);
+					pg->readLinks(query, to_read, clbk);
 					to_read.clear();
 					to_read.push_back(l);
 				}
@@ -231,7 +234,7 @@ public:
 		if (!to_read.empty()) {
 			auto pname = to_read.front().page_name;
 			auto pg = open_page_to_read(pname);
-			pg->readLinks(query, to_read, clb);
+			pg->readLinks(query, to_read, clbk);
 			to_read.clear();
 		}
 	};

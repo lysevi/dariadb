@@ -640,7 +640,7 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 }
 
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                     IReaderClb *clb) {
+                     IReaderClb *clbk) {
   TIMECODE_METRICS(ctmd, "readLinks", "Page::readLinks");
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
@@ -648,6 +648,9 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
   }
 
   for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
+	  if (clbk->is_canceled()) {
+		  break;
+	  }
     auto _index_it = this->_index->index[_ch_links_iterator->index_rec_number];
     Chunk_Ptr search_res;
 
@@ -675,7 +678,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
         break;
       }
       if (subres.inQuery(query.ids, query.flag, query.from, query.to)) {
-        clb->call(subres);
+        clbk->call(subres);
       }
     }
   }

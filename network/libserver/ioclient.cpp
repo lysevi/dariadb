@@ -126,6 +126,9 @@ IOClient::~IOClient() {
   }
   
   for (auto kv : _readers) {
+	  logger_info("server: stop reader #", kv.first);
+	  kv.second.first->cancel();
+	  kv.second.first->wait();
 	  this->readerRemove(kv.first);
   }
 }

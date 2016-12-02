@@ -120,6 +120,9 @@ public:
     auto file = open_to_read();
 
     while (1) {
+		if (clbk->is_canceled()) {
+			break;
+		}
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), file) == 0) {
         break;

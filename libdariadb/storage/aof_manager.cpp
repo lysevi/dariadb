@@ -255,7 +255,9 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
     AsyncTask at = [files, &q, clbk, env](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
       for (auto filename : files) {
-
+		  if (clbk->is_canceled()) {
+			  break;
+		  }
         AOFile aof(env, filename, true);
         aof.foreach (q, clbk);
       }

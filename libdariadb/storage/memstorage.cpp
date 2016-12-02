@@ -148,6 +148,9 @@ struct TimeTrack : public IMeasStorage {
 		--begin;
 	}
     for(auto it=begin;it!=end;++it) {
+		if (clbk->is_canceled()) {
+			break;
+		}
 		if (it == _index.end()) {
 			break;
 		}
@@ -168,6 +171,9 @@ struct TimeTrack : public IMeasStorage {
 			  auto rdr = c->get_reader();
 
 			  while (!rdr->is_end()) {
+				  if (clbk->is_canceled()) {
+					  break;
+				  }
 				  auto v = rdr->readNext();
 				  if (utils::inInterval(q.from, q.to, v.time)) {
 					  clbk->call(v);
@@ -450,6 +456,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  QueryInterval local_q({}, q.flag, q.from,q.to);
 	  local_q.ids.resize(1);
 	  for (auto id : q.ids) {
+		  if (clbk->is_canceled()) {
+			  break;
+		  }
 		  auto tracker = _id2track.find(id);
 		  if (tracker != _id2track.end()) {
 			  local_q.ids[0] = id;

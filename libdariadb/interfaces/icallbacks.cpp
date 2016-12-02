@@ -5,6 +5,7 @@ using namespace dariadb::storage;
 
 IReaderClb::IReaderClb() {
 	is_end_called = false;
+	is_cancel = false;
 }
 
 IReaderClb::~IReaderClb() {
@@ -20,4 +21,12 @@ void IReaderClb::wait() {
 	std::unique_lock<std::mutex> locker(mtx);
 	_cond.wait(locker, [this]() { return this->is_end_called; });
 	//mtx.unlock();
+}
+
+void IReaderClb::cancel() {
+  is_cancel = true;
+}
+
+bool IReaderClb::is_canceled()const {
+	return is_cancel;
 }

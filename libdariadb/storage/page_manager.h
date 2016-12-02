@@ -24,7 +24,7 @@ public:
   EXPORT ChunkLinkList chunksByIterval(const QueryInterval &query) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   EXPORT void readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                 IReaderClb *clb) override;
+                 IReaderClb *clbk) override;
 
   EXPORT size_t files_count() const;
   EXPORT size_t chunks_in_cur_page() const;
