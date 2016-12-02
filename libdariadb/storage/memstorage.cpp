@@ -296,9 +296,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		_chunks.resize(_chunk_allocator._capacity);
 		_stoped = false;
 		_down_level_storage = nullptr;
+		_disk_storage = nullptr;
 		_settings = s;
 		_drop_stop = false;
 		_drop_thread = std::thread{ std::bind(&MemStorage::Private::drop_thread_func,this) };
+
         if (id_count != 0) {
             _id2track.reserve(id_count);
 		}
@@ -334,7 +336,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         result.allocator_capacity = _chunk_allocator._capacity;
 		return result;
 	}
-  Status  append(const Meas &value) override { 
+	
+	Status  append(const Meas &value) override{ 
 	  _all_tracks_locker.lock_shared();
 	  auto track = _id2track.find(value.id);
 	  bool is_created = false;
@@ -359,6 +362,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		  _all_tracks_locker.unlock_shared();
 	  }
 	  while (track->second->append(value).writed != 1) {}
+	  if (_settings->strategy.value == STRATEGY::CACHE) {
+		  if (_disk_storage != nullptr) {
+			  _disk_storage->append(value);
+		  }
+	  }
 	  return Status (1, 0);
 	  
   }
@@ -486,6 +494,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  }
 	  return result;
   }
+
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
 	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 	  IdArray local_ids;
@@ -511,6 +520,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   void setDownLevel(IChunkContainer*down) {
 	  _down_level_storage = down;
+  }
+
+  void setDiskStorage(IMeasWriter*_disk) {
+	  _disk_storage = _disk;
   }
 
   void addChunk(MemChunk_Ptr&chunk) override{
@@ -555,6 +568,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   std::shared_mutex _all_tracks_locker;
   storage::Settings_ptr _settings;
   IChunkContainer* _down_level_storage;
+  IMeasWriter* _disk_storage;
   
   std::vector<MemChunk_Ptr>  _chunks;
   bool _stoped;
@@ -616,9 +630,14 @@ void MemStorage::setDownLevel(IChunkContainer*_down) {
 	_impl->setDownLevel(_down);
 }
 
+void MemStorage::setDiskStorage(IMeasWriter *_disk) {
+  _impl->setDiskStorage(_disk);
+}
+
 void MemStorage::lock_drop() {
 	_impl->lock_drop();
 }
+
 void MemStorage::unlock_drop() {
 	_impl->unlock_drop();
 }

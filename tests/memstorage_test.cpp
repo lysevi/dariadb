@@ -12,9 +12,9 @@
 
 #include "test_common.h"
 
-class MokChunkWriter:public dariadb::storage::IChunkContainer {
-public:
+struct MokChunkWriter:public dariadb::storage::IChunkContainer {
 	size_t droped;
+
 	MokChunkWriter() { droped = 0; }
     ~MokChunkWriter(){}
     using IChunkContainer::foreach;
@@ -33,6 +33,18 @@ public:
 		return dariadb::Id2Meas{};
 	}
 	void readLinks(const dariadb::storage::QueryInterval &query, const dariadb::storage::ChunkLinkList &links, dariadb::storage::IReaderClb *clb) override {
+	}
+};
+
+struct MocDiskStorage : public dariadb::storage::IMeasWriter {
+	size_t droped;
+	MocDiskStorage() { droped = 0; }
+	virtual dariadb::Status append(const dariadb::Meas &value)override {
+		droped++;
+		return dariadb::Status();
+	}
+	
+	virtual void flush()override {
 	}
 };
 
@@ -75,6 +87,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 	}
 	{
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		settings->strategy.value = dariadb::storage::STRATEGY::MEMORY;
 		settings->chunk_size.value = 128;
         dariadb::storage::MemStorage ms{ settings, size_t(0) };
 
@@ -94,6 +107,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
     {
         auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+		settings->strategy.value = dariadb::storage::STRATEGY::MEMORY;
         settings->memory_limit.value =1024*1024;
         settings->chunk_size.value = 128;
         dariadb::storage::MemStorage ms{ settings, size_t(0) };
@@ -116,3 +130,38 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
         dariadb::utils::fs::rm(storage_path);
     }
 }
+
+
+BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
+	auto storage_path = "testMemoryStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	MocDiskStorage*cw = new MocDiskStorage;
+	{
+		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+		settings->strategy.value = dariadb::storage::STRATEGY::CACHE;
+		settings->memory_limit.value = 1024 * 1024;
+		settings->chunk_size.value = 128;
+		dariadb::storage::MemStorage ms{ settings, size_t(0) };
+
+		ms.setDiskStorage(cw);
+
+		auto e = dariadb::Meas::empty();
+		while (true) {
+			e.time++;
+			ms.append(e);
+			if (cw->droped != 0) {
+				break;
+			}
+		}
+
+	}
+	delete cw;
+	dariadb::utils::async::ThreadManager::stop();
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}
+

@@ -39,6 +39,7 @@ public:
   EXPORT Status  append(const Meas &value) override;
   EXPORT void flush() override;
   EXPORT void setDownLevel(IChunkContainer*_down);
+  EXPORT void setDiskStorage(IMeasWriter*_disk); //when strategy==CACHE;
   EXPORT void stop();
   EXPORT void lock_drop();
   EXPORT void unlock_drop();
