@@ -1,5 +1,6 @@
 #include <libdariadb/storage/strategy.h>
 #include <libdariadb/utils/strings.h>
+#include <libdariadb/utils/exception.h>
 
 std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
   std::string token;
@@ -9,19 +10,23 @@ std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
 
   if (token == "FAST_WRITE") {
     strat = dariadb::storage::STRATEGY::FAST_WRITE;
+	return in;
   }
   if (token == "COMPRESSED") {
     strat = dariadb::storage::STRATEGY::COMPRESSED;
+	return in;
   }
 
   if (token == "MEMORY") {
     strat = dariadb::storage::STRATEGY::MEMORY;
+	return in;
   }
 
   if (token == "CACHE") {
     strat = dariadb::storage::STRATEGY::CACHE;
+	return in;
   }
-  return in;
+  THROW_EXCEPTION("engine: bad strategy name - ", token);
 }
 
 std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STRATEGY &strat) {
@@ -39,7 +44,7 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STRATEGY 
     stream << "CACHE";
     break;
   default:
-    stream << "UNKNOW: ui16=" << (uint16_t)strat;
+	THROW_EXCEPTION("engine: bad strategy - ", (uint16_t)strat);
     break;
   };
   return stream;
