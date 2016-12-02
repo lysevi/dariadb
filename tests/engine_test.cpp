@@ -293,8 +293,8 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 
 BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 	const std::string storage_path = "testStorage";
-	const size_t chunk_size = 256;
 
+	const size_t chunk_size = 128;
 	const dariadb::Time from = 0;
 	const dariadb::Time to = from + 1000;
 	const dariadb::Time step = 10;
@@ -309,7 +309,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		settings->strategy.value = STRATEGY::CACHE;
-		settings->chunk_size.value = 128;
+		settings->chunk_size.value = chunk_size;
 		settings->memory_limit.value = 50 * 1024;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
