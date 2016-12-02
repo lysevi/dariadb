@@ -43,6 +43,7 @@ void Dropper::drop_aof(const std::string& fname) {
 }
 
 void Dropper::cleanStorage(const std::string&storagePath) {
+	logger_info("engine: dropper - check storage.");
   auto aofs_lst = fs::ls(storagePath, AOF_FILE_EXT);
   auto page_lst = fs::ls(storagePath, PAGE_FILE_EXT);
 
