@@ -7,6 +7,7 @@
 namespace dariadb {
 namespace utils {
 
+//TODO unused. remove.
 // look usage example in utils_test.cpp
 class PeriodWorker {
 public:

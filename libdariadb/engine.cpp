@@ -416,10 +416,6 @@ public:
                                   IReaderClb *a_clbk) {
     auto pm = _page_manager.get();
     auto tm = _top_storage.get();
-    AOFManager *am = nullptr;
-    if (_aof_manager != nullptr) {
-      am = _aof_manager.get();
-    }
     if (!p_clbk->is_canceled()) {
       pm->foreach (q, p_clbk);
     }
