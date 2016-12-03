@@ -381,48 +381,62 @@ public:
     return result;
   }
 
-  void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
-    TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
+  /// when strategy=CACHE
+  void foreach_internal_cache(const QueryInterval &q, IReaderClb *p_clbk,
+                              IReaderClb *a_clbk) {
+    auto pm = _page_manager.get();
+    auto mm = _top_storage.get();
+    auto am = _aof_manager.get();
+
+    auto memory_mm = mm->loadMinMax();
+    auto local_q = q;
+    local_q.ids.resize(1);
+    for (auto id : q.ids) {
+      local_q.ids[0] = id;
+      auto id_mm = memory_mm.find(id);
+      if (id_mm == memory_mm.end()) {
+        pm->foreach (local_q, p_clbk);
+        am->foreach (local_q, a_clbk);
+      } else {
+        if ((id_mm->second.min.time) > local_q.from) {
+          pm->foreach (local_q, p_clbk);
+          am->foreach (local_q, a_clbk);
+        } else {
+          mm->foreach (local_q, a_clbk);
+        }
+        if (a_clbk->is_canceled()) {
+          break;
+        }
+      }
+    }
+  }
+
+  /// when strategy!=CACHEs
+  void foreach_internal_two_level(const QueryInterval &q, IReaderClb *p_clbk,
+                                  IReaderClb *a_clbk) {
     auto pm = _page_manager.get();
     auto tm = _top_storage.get();
     AOFManager *am = nullptr;
     if (_aof_manager != nullptr) {
       am = _aof_manager.get();
     }
-    AsyncTask pm_at = [p_clbk, a_clbk, q, this, pm, tm, am](const ThreadInfo &ti) {
+    if (!p_clbk->is_canceled()) {
+      pm->foreach (q, p_clbk);
+    }
+    if (!a_clbk->is_canceled()) {
+      tm->foreach (q, a_clbk);
+    }
+  }
+
+  void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
+    TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
+    AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       this->lock_storage();
       if (this->strategy() == STRATEGY::CACHE) {
-		  auto memory_mm = tm->loadMinMax();
-		  auto local_q = q;
-		  local_q.ids.resize(1);
-		  for (auto id : q.ids) {
-			  local_q.ids[0] = id;
-			  auto id_mm = memory_mm.find(id);
-			  if (id_mm == memory_mm.end()){
-				  pm->foreach(local_q, p_clbk);
-				  am->foreach(local_q, a_clbk);
-			  }
-			  else {
-				  if ((id_mm->second.min.time) > local_q.from) {
-					  pm->foreach(local_q, p_clbk);
-					  am->foreach(local_q, a_clbk);
-				  }
-				  else {
-					  tm->foreach(local_q, a_clbk);
-				  }
-				  if (a_clbk->is_canceled()) {
-					  break;
-				  }
-			  }
-		  }
+        foreach_internal_cache(q, p_clbk, a_clbk);
       } else {
-        if (!p_clbk->is_canceled()) {
-          pm->foreach (q, p_clbk);
-        }
-        if (!a_clbk->is_canceled()) {
-          tm->foreach (q, a_clbk);
-        }
+        foreach_internal_two_level(q, p_clbk, a_clbk);
       }
       this->unlock_storage();
       a_clbk->is_end();
@@ -431,7 +445,6 @@ public:
     ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
   }
 
-  // Inherited via MeasStorage
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     return foreach_internal(q, clbk, clbk);
   }
