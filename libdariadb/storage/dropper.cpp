@@ -62,6 +62,9 @@ void Dropper::cleanStorage(const std::string&storagePath) {
 void Dropper::drop_aof_internal(const std::string &fname) {
   auto env = _engine_env;
   auto sett = _settings;
+  auto lm = _engine_env->getResourceObject<LockManager>(
+	  EngineEnvironment::Resource::LOCK_MANAGER);
+  lm->lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::DROP_AOF });
   AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
@@ -106,7 +109,6 @@ void Dropper::write_aof_to_page(const std::string &fname, std::shared_ptr<MeasAr
   auto without_path = fs::extract_filename(fname);
   auto page_fname = fs::filename(without_path);
 
-  lm->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::DROP_AOF});
   pm->append(page_fname, *ma.get());
   am->erase(fname);
   lm->unlock(LOCK_OBJECTS::DROP_AOF);
