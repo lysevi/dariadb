@@ -38,6 +38,7 @@ public:
   EXPORT virtual ~LockManager();
   EXPORT LockManager(const Params &param);
 
+  EXPORT bool try_lock(const LOCK_KIND &lk, const std::vector<LOCK_OBJECTS> &los);
   EXPORT void lock(const LOCK_KIND &lk, const LOCK_OBJECTS &lo);
   EXPORT void
   lock(const LOCK_KIND &lk,

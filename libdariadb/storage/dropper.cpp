@@ -64,12 +64,16 @@ void Dropper::drop_aof_internal(const std::string &fname) {
   auto sett = _settings;
   auto lm = _engine_env->getResourceObject<LockManager>(
       EngineEnvironment::Resource::LOCK_MANAGER);
-  lm->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::DROP_AOF});
+  
   AsyncTask at = [fname, this, env, sett, lm](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
-      logger_info("engine: compressing ", fname);
+	  auto lock_result=lm->try_lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::DROP_AOF });
+	  if (!lock_result) {
+		  return true;
+	  }
+	  logger_info("engine: compressing ", fname);
       auto start_time = clock();
       auto storage_path = sett->path;
       auto full_path = fs::append_path(storage_path, fname);

@@ -2,6 +2,7 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
 #include <sstream>
+
 using namespace dariadb;
 using namespace dariadb::storage;
 
@@ -96,31 +97,46 @@ void LockManager::lock(const LOCK_KIND &lk, const LOCK_OBJECTS &lo) {
   }
 }
 
-void LockManager::lock(const LOCK_KIND &lk, const std::vector<LOCK_OBJECTS> &los) {
-  std::vector<RWMutex_Ptr> rw_mtx{los.size()};
+bool LockManager::try_lock(const LOCK_KIND &lk, const std::vector<LOCK_OBJECTS> &los) {
+  // TODO refact.
+  auto mtx_vec_size = los.size();
+  if (std::find(los.begin(), los.end(), LOCK_OBJECTS::DROP_AOF) != los.end()) {
+    ++mtx_vec_size;
+  }
+  std::vector<RWMutex_Ptr> rw_mtx;
+  rw_mtx.resize(mtx_vec_size);
+  size_t insert_pos = 0;
   for (size_t i = 0; i < los.size(); ++i) {
     if (los[i] == LOCK_OBJECTS::DROP_AOF) {
-      throw MAKE_EXCEPTION("Only simple locks support");
+      rw_mtx[insert_pos] = get_or_create_lock_object(LOCK_OBJECTS::AOF);
+      ++insert_pos;
+      rw_mtx[insert_pos] = get_or_create_lock_object(LOCK_OBJECTS::PAGE);
+      ++insert_pos;
+    } else {
+      rw_mtx[insert_pos] = get_or_create_lock_object(los[i]);
+      ++insert_pos;
     }
-    rw_mtx[i] = get_or_create_lock_object(los[i]);
   }
-  bool success = false;
-  while (!success) {
-    for (size_t i = 0; i < los.size(); ++i) {
-   	  bool local_status = try_lock_mutex(lk, rw_mtx[i]);
 
-      if (!local_status) {
-        for (size_t j = 0; j < i; ++j) {
-          unlock_mutex(rw_mtx[j]);
-        }
-        success = false;
-        break;
-      } else {
-        rw_mtx[i]->kind = lk;
-        success = true;
+  for (size_t i = 0; i < mtx_vec_size; ++i) {
+    bool local_status = try_lock_mutex(lk, rw_mtx[i]);
+
+    if (!local_status) {
+      for (size_t j = 0; j < i; ++j) {
+        unlock_mutex(rw_mtx[j]);
       }
+      return false;
+    } else {
+      rw_mtx[i]->kind = lk;
     }
   }
+  return true;
+}
+
+void LockManager::lock(const LOCK_KIND &lk, const std::vector<LOCK_OBJECTS> &los) {
+	while (!try_lock(lk, los)) {
+		std::this_thread::yield();
+	}
 }
 
 void LockManager::unlock(const LOCK_OBJECTS &lo) {
