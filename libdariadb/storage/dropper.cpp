@@ -63,14 +63,14 @@ void Dropper::drop_aof_internal(const std::string &fname) {
   auto env = _engine_env;
   auto sett = _settings;
   auto lm = _engine_env->getResourceObject<LockManager>(
-	  EngineEnvironment::Resource::LOCK_MANAGER);
-  lm->lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::DROP_AOF });
-  AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
+      EngineEnvironment::Resource::LOCK_MANAGER);
+  lm->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::DROP_AOF});
+  AsyncTask at = [fname, this, env, sett, lm](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
-	  logger_info("engine: compressing ", fname);
-	  auto start_time = clock();
+      logger_info("engine: compressing ", fname);
+      auto start_time = clock();
       auto storage_path = sett->path;
       auto full_path = fs::append_path(storage_path, fname);
 
@@ -79,14 +79,14 @@ void Dropper::drop_aof_internal(const std::string &fname) {
       auto all = aof->readAll();
 
       this->write_aof_to_page(fname, all);
-
-	  this->_locker.lock();
-	  this->_in_queue--;
-	  this->_addeded_files.erase(fname);
-	  this->_locker.unlock();
-	  auto end = clock();
-	  auto elapsed= double(end - start_time) / CLOCKS_PER_SEC;
-	  logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
+      lm->unlock(LOCK_OBJECTS::DROP_AOF);
+      this->_locker.lock();
+      this->_in_queue--;
+      this->_addeded_files.erase(fname);
+      this->_locker.unlock();
+      auto end = clock();
+      auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+      logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }
@@ -97,8 +97,6 @@ void Dropper::drop_aof_internal(const std::string &fname) {
 void Dropper::write_aof_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma) {
   auto pm = _page_manager.get();
   auto am = _aof_manager.get();
-  auto lm = _engine_env->getResourceObject<LockManager>(
-      EngineEnvironment::Resource::LOCK_MANAGER);
   auto sett = _settings;
 
   auto storage_path = sett->path;
@@ -111,7 +109,6 @@ void Dropper::write_aof_to_page(const std::string &fname, std::shared_ptr<MeasAr
 
   pm->append(page_fname, *ma.get());
   am->erase(fname);
-  lm->unlock(LOCK_OBJECTS::DROP_AOF);
 }
 
 void Dropper::flush() {
