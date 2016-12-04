@@ -3,6 +3,7 @@ tmp
 packages.config
 Settings
 lockfile
+Manifest-journal
 .vs
 dariadb_logs*.txt
 *.aof

@@ -36,7 +36,7 @@ struct ThreadInfo {
   size_t thread_number;
 };
 
-using AsyncTask = std::function<void(const ThreadInfo &)>;
+using AsyncTask = std::function<bool(const ThreadInfo &)>;
 
 struct AsyncTaskWrap {
   AsyncTask task;

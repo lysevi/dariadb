@@ -30,8 +30,11 @@ TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap &task) {
   TaskResult_Ptr res = std::make_shared<TaskResult>();
   AsyncTask inner_task = [=](const ThreadInfo &ti) {
     try {
-      task.task(ti);
-      res->unlock();
+      auto need_continue=task.task(ti);
+	  if (!need_continue) {
+		  res->unlock();
+	  }
+	  return need_continue;
     } catch (std::exception &ex) {
       logger_fatal("engine: *** async task exception:", task.parent_function, " file:",
                    task.code_file, " line:", task.code_line);
@@ -91,8 +94,15 @@ void ThreadPool::_thread_func(size_t num) {
       this->_in_queue.pop_front();
     }
     // logger("run: "<<task.parent_function<<" file:"<<task.code_file);
-    task.task(ti);
-    --_task_runned;
+    auto need_continue=task.task(ti);
+	if (need_continue) {
+		//TODO refact; move to method
+		_queue_mutex.lock();
+		_in_queue.push_back(task);
+		_queue_mutex.unlock();
+		_condition.notify_all();
+	}
+	--_task_runned;
     // logger("run: "<<task.parent_function<<" file:"<<task.code_file <<" ok");
   }
 }
