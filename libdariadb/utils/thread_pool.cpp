@@ -80,9 +80,12 @@ void ThreadPool::_thread_func(size_t num) {
     {
       std::unique_lock<std::mutex> lock(_queue_mutex);
       this->_condition.wait(
-          lock, [this] { return this->_stop_flag || !this->_in_queue.empty(); });
-      if (this->_stop_flag)
-        return;
+          lock, [this] { 
+		  return this->_stop_flag || !this->_in_queue.empty(); 
+	  });
+	  if (this->_stop_flag) {
+		  return;
+	  }
       _task_runned++;
       task = std::move(this->_in_queue.front());
       this->_in_queue.pop_front();

@@ -70,7 +70,7 @@ public:
     }
 
 	if (_settings->load_min_max) {
-		_min_max = _page_manager->loadMinMax();
+		_min_max_map = _page_manager->loadMinMax();
 	}
 
     if (_strategy != STRATEGY::MEMORY) {
@@ -78,15 +78,15 @@ public:
 
 		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
 		_aof_manager->set_downlevel(_dropper.get());
-		this->_top_storage = _aof_manager;
+		this->_top_level_storage = _aof_manager;
 	}
 
 	if(_strategy ==STRATEGY::CACHE || _strategy == STRATEGY::MEMORY){
-        _memstorage = MemStorage_ptr{ new MemStorage(_settings,_min_max.size()) };
+        _memstorage = MemStorage_ptr{ new MemStorage(_settings,_min_max_map.size()) };
 		if (_strategy != STRATEGY::CACHE) {
 			_memstorage->setDownLevel(_page_manager.get());
 		}
-		_top_storage = _memstorage;
+		_top_level_storage = _memstorage;
 		if (_strategy == STRATEGY::CACHE) {
 			_memstorage->setDiskStorage(_aof_manager.get());
 		}
@@ -94,8 +94,8 @@ public:
 
     if(_strategy == STRATEGY::FAST_WRITE){
 		if (_settings->load_min_max) {
-			auto amm = _top_storage->loadMinMax();
-			minmax_append(_min_max,amm);
+			auto amm = _top_level_storage->loadMinMax();
+			minmax_append(_min_max_map,amm);
 		}
     }
 
@@ -105,7 +105,7 @@ public:
 
   void stop() {
     if (!_stoped) {
-	  _top_storage = nullptr;
+	  _top_level_storage = nullptr;
       _subscribe_notify.stop();
 
       this->flush();
@@ -208,7 +208,7 @@ public:
 		auto amin = this->_aof_manager->minTime();
 		pmin = std::min(pmin, amin);
 	}
-	Time amin= _top_storage->minTime();
+	Time amin= _top_level_storage->minTime();
 
 	unlock_storage();
     return std::min(pmin, amin);
@@ -222,7 +222,7 @@ public:
 		auto amax = this->_aof_manager->maxTime();
 		pmax = std::max(pmax, amax);
 	}
-	Time amax= _top_storage->maxTime();
+	Time amax= _top_level_storage->maxTime();
 
 	unlock_storage();
     return std::max(pmax, amax);
@@ -240,7 +240,7 @@ public:
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
 
     };
-	auto am = _top_storage.get();
+	auto am = _top_level_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
 	  ar = am->minMaxTime(id, &subMin3, &subMax3);
@@ -272,7 +272,7 @@ public:
 		  auto a_mm = this->_aof_manager->loadMinMax();
 		  minmax_append(p_mm, a_mm);
 	  }
-      auto t_mm=this->_top_storage->loadMinMax();
+      auto t_mm=this->_top_level_storage->loadMinMax();
 
       this->unlock_storage();
 
@@ -283,8 +283,8 @@ public:
   Status  append(const Meas &value) {
     Status  result{};
 	_min_max_locker.lock_shared();
-      auto fres=_min_max.find(value.id);
-      if(fres!=_min_max.end()){
+      auto fres=_min_max_map.find(value.id);
+      if(fres!=_min_max_map.end()){
 		  _min_max_locker.unlock_shared();
           auto max_v=fres->second;
           if(max_v.max.time>value.time){
@@ -302,14 +302,14 @@ public:
 		  _min_max_locker.unlock_shared();
 	  }
 
-	result=_top_storage->append(value);
+	result=_top_level_storage->append(value);
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
 	  _min_max_locker.lock();
-	  auto insert_fres = _min_max.find(value.id);
-	  if (insert_fres == _min_max.end()) {
-		  _min_max[value.id].max = value;
+	  auto insert_fres = _min_max_map.find(value.id);
+	  if (insert_fres == _min_max_map.end()) {
+		  _min_max_map[value.id].max = value;
 	  }
 	  else {
 		  insert_fres->second.updateMax(value);
@@ -329,7 +329,7 @@ public:
 	lock_storage();
 
 	Id2Meas a_result;
-	for (auto kv : _min_max) {
+	for (auto kv : _min_max_map) {
 		bool ids_check = false;
 		if (ids.size() == 0) {
 			ids_check = true;
@@ -351,7 +351,7 @@ public:
 
   void flush() {
     TIMECODE_METRICS(ctmd, "flush", "Engine::flush");
-    std::lock_guard<std::mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_flush_locker);
 
 	if (_aof_manager != nullptr) {
 		_aof_manager->flush();
@@ -385,7 +385,7 @@ public:
   void foreach_internal_cache(const QueryInterval &q, IReaderClb *p_clbk,
                               IReaderClb *a_clbk) {
     auto pm = _page_manager.get();
-    auto mm = _top_storage.get();
+    auto mm = _top_level_storage.get();
     auto am = _aof_manager.get();
 
     auto memory_mm = mm->loadMinMax();
@@ -415,7 +415,7 @@ public:
   void foreach_internal_two_level(const QueryInterval &q, IReaderClb *p_clbk,
                                   IReaderClb *a_clbk) {
     auto pm = _page_manager.get();
-    auto tm = _top_storage.get();
+    auto tm = _top_level_storage.get();
     if (!p_clbk->is_canceled()) {
       pm->foreach (q, p_clbk);
     }
@@ -490,8 +490,9 @@ public:
     }
 
     auto pm = _page_manager.get();
-    auto am = _top_storage.get();
-    AsyncTask pm_at = [&result, &q, this, pm, am](const ThreadInfo &ti) {
+    auto mm = _top_level_storage.get();
+	auto am = _aof_manager.get();
+    AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
 
       lock_storage();
@@ -502,14 +503,23 @@ public:
         local_q.ids.clear();
         local_q.ids.push_back(id);
 
-        if (_top_storage->minMaxTime(id, &minT, &maxT) &&
+        if (mm->minMaxTime(id, &minT, &maxT) &&
             (minT < q.time_point || maxT < q.time_point)) {
-          auto subres = _top_storage->readTimePoint(local_q);
+          auto subres = mm->readTimePoint(local_q);
           result[id] = subres[id];
           continue;
         } else {
-          auto subres = _page_manager->valuesBeforeTimePoint(local_q);
-          result[id] = subres[id];
+			bool in_aof_level = false;
+			if (this->strategy() == STRATEGY::CACHE) {
+				auto subres = am->readTimePoint(local_q);
+				auto value= subres[id];
+				result[id] = value;
+				in_aof_level = value.flag != Flags::_NO_DATA;
+			}
+			if (!in_aof_level) {
+				auto subres = _page_manager->valuesBeforeTimePoint(local_q);
+				result[id] = subres[id];
+			}
         }
       }
 
@@ -529,24 +539,23 @@ public:
 	  }
   }
 
-  void compress_all(){
-      if (_aof_manager != nullptr) {
-          logger_info("engine: compress_all");
-          _aof_manager->drop_all();
-          this->flush();
-      }
+  void compress_all() {
+    if (_aof_manager != nullptr) {
+      logger_info("engine: compress_all");
+      _aof_manager->drop_all();
+      this->flush();
+    }
   }
   void fsck() {
     logger_info("engine: fsck ", _settings->path);
-	_page_manager->fsck();
+    _page_manager->fsck();
   }
 
-  void eraseOld(const Time&t) {
-      logger_info("engine: eraseOld to ", timeutil::to_string(t));
-	  _lock_manager->lock(
-		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
-	  _page_manager->eraseOld(t);
-	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+  void eraseOld(const Time &t) {
+    logger_info("engine: eraseOld to ", timeutil::to_string(t));
+    _lock_manager->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::PAGE});
+    _page_manager->eraseOld(t);
+    _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
 
   uint16_t version() {
@@ -558,38 +567,40 @@ public:
       return this->_strategy;
   }
 
-
   void compactTo(uint32_t pagesCount) {
-	  _lock_manager->lock(
-		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
-      logger_info("engine: compacting to ", pagesCount+1);
-	  _page_manager->compactTo(pagesCount);
-	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+    _lock_manager->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::PAGE});
+    logger_info("engine: compacting to ", pagesCount + 1);
+    _page_manager->compactTo(pagesCount);
+    _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
 
   void compactbyTime(Time from, Time to) {
-	  _lock_manager->lock(
-		  LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
-      logger_info("engine: compacting by time ", timeutil::to_string(from), " ",timeutil::to_string(to));
-	  _page_manager->compactbyTime(from, to);
-	  _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+    _lock_manager->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::PAGE});
+    logger_info("engine: compacting by time ", timeutil::to_string(from), "-",
+                timeutil::to_string(to));
+    _page_manager->compactbyTime(from, to);
+    _lock_manager->unlock(LOCK_OBJECTS::PAGE);
   }
+
 protected:
-  mutable std::mutex _locker;
+  mutable std::mutex _flush_locker;
   SubscribeNotificator _subscribe_notify;
+
   std::unique_ptr<Dropper> _dropper;
   LockManager_ptr _lock_manager;
   PageManager_ptr _page_manager;
   AOFManager_ptr _aof_manager;
   MemStorage_ptr _memstorage;
+
   EngineEnvironment_ptr _engine_env;
   Settings_ptr _settings;
   STRATEGY     _strategy;
   Manifest_ptr _manifest;
   bool _stoped;
 
-  IMeasStorage_ptr _top_storage; //aof or memory storage.
-  Id2MinMax _min_max;
+  IMeasStorage_ptr _top_level_storage; //aof or memory storage.
+  
+  Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
 };
 

@@ -273,6 +273,7 @@ struct TimeTrack : public IMeasStorage {
   bool create_new_chunk(const Meas&value) {
 	  if (_cur_chunk != nullptr) {
 		  this->_index.insert(std::make_pair(_cur_chunk->header->maxTime, _cur_chunk));
+		  _cur_chunk = nullptr;
 	  }
 	  auto new_chunk_data = _allocator->allocate();
 	  if (new_chunk_data.header == nullptr) {
@@ -353,7 +354,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  _id2track.emplace(std::make_pair(value.id, new_track));
 			  _all_tracks_locker.unlock();
 
-			  while (new_track->append(value).writed != 1) {}
+			  while (new_track->append(value).writed != 1) {
+				  _drop_cond.notify_all();
+			  }
 			  if (_settings->strategy.value == STRATEGY::CACHE) {
 				  if (_disk_storage != nullptr) {
 					  _disk_storage->append(value);
@@ -368,7 +371,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  if (!is_created) {
 		  _all_tracks_locker.unlock_shared();
 	  }
-	  while (track->second->append(value).writed != 1) {}
+	  while (track->second->append(value).writed != 1) {
+		  _drop_cond.notify_all();
+	  }
 	  if (_settings->strategy.value == STRATEGY::CACHE) {
 		  if (_disk_storage != nullptr) {
 			  _disk_storage->append(value);
@@ -431,6 +436,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     for (auto &t : updated_tracks) {
       t->rereadMinMax();
     }
+
+	logger_info("engine: drop end.");
   }
 
   Id2MinMax loadMinMax()override{
@@ -559,21 +566,21 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   void drop_thread_func() {
-	  while (!_drop_stop) {
-		  std::unique_lock<std::mutex> ul(_drop_locker);
-		  _drop_cond.wait(ul);
-		  if (_drop_stop) {
-			  break;
-		  }
+    while (!_drop_stop) {
+      std::unique_lock<std::mutex> ul(_drop_locker);
+      _drop_cond.wait(ul);
+      if (_drop_stop) {
+        break;
+      }
 
-		  if (!is_time_to_drop()) {
-			  continue;
-		  }
+      if (!is_time_to_drop()) {
+        continue;
+      }
 
-          drop_by_limit(_settings->percent_to_drop.value, false);
-	  }
+      drop_by_limit(_settings->percent_to_drop.value, false);
+    }
 
-	  logger_info("engine: memstorage dropping stop.");
+    logger_info("engine: memstorage - dropping stop.");
   }
   Id2Track _id2track;
   MemChunkAllocator _chunk_allocator;

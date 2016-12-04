@@ -311,14 +311,14 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 		settings->strategy.value = STRATEGY::CACHE;
 		settings->chunk_size.value = chunk_size;
 		settings->memory_limit.value = 50 * 1024;
+		settings->aof_max_size.value = 2000;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
 		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
 		ms->wait_all_asyncs();
 
 		auto descr = ms->description();
-		auto files_count = descr.pages_count+descr.aofs_count;
-		BOOST_CHECK_GE(files_count, size_t(0));
+		BOOST_CHECK_GT(descr.pages_count, size_t(0));
 	}
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
