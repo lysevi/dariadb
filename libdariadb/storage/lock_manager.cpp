@@ -2,6 +2,7 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
 #include <sstream>
+#include <algorithm>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -56,7 +57,6 @@ void unlock_mutex(const RWMutex_Ptr &mtx) {
 LockManager::~LockManager() {}
 
 LockManager::LockManager(const LockManager::Params &param) {}
-
 
 RWMutex_Ptr LockManager::get_or_create_lock_object(const LOCK_OBJECTS &lo) {
   std::lock_guard<std::mutex> lg(_mutex);
