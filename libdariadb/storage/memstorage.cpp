@@ -416,6 +416,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     all_chunks.reserve(cur_chunk_count);
     size_t pos = 0;
     for (auto &c : _chunks) {
+		if (pos >= chunks_to_delete) {
+			break;
+		}
       if (c == nullptr) {
         continue;
       }
