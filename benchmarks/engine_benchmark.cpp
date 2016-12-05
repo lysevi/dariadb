@@ -395,7 +395,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "write time: " << writers_elapsed << std::endl;
     std::cout << "total speed: " << append_count / writers_elapsed << "/s" << std::endl;
-	if(strategy!= STRATEGY::MEMORY){
+	if(strategy!= STRATEGY::MEMORY && strategy != STRATEGY::CACHE){
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
       std::thread flush_info_thread(show_drop_info, raw_ptr);
@@ -413,7 +413,7 @@ int main(int argc, char *argv[]) {
     check_engine_state(settings, raw_ptr);
 
     if (!readonly) {
-        if(strategy!= dariadb::storage::STRATEGY::MEMORY){
+        if(strategy!= dariadb::storage::STRATEGY::MEMORY && strategy != STRATEGY::CACHE){
             size_t ccount = size_t(raw_ptr->description().aofs_count);
 			std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
 			stop_info = false;
