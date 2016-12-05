@@ -630,7 +630,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   // async. drop values to down-level disk storage;
-  //TODO write sorted by time;
   void crawler_thread_func() {
 	  while (!_drop_stop) {
 		  if (_disk_storage == nullptr) {

@@ -23,7 +23,6 @@ ThreadPool::~ThreadPool() {
 }
 
 TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap &task) {
-  std::unique_lock<std::mutex> lg(_queue_mutex);
   if (this->_is_stoped) {
     return nullptr;
   }
@@ -43,9 +42,7 @@ TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap &task) {
       throw;
     }
   };
-  _in_queue.push_back(
-      AsyncTaskWrap(inner_task, task.parent_function, task.code_file, task.code_line));
-  _condition.notify_all();
+  pushTaskToQueue(AsyncTaskWrap(inner_task, task.parent_function, task.code_file, task.code_line));
   return res;
 }
 
@@ -72,6 +69,14 @@ void ThreadPool::flush() {
   }
 }
 
+void ThreadPool::pushTaskToQueue(const AsyncTaskWrap&at) {
+	{
+		std::unique_lock<std::mutex> lock(_queue_mutex);
+		_in_queue.push_back(at);
+	}
+	_condition.notify_all();
+}
+
 void ThreadPool::_thread_func(size_t num) {
   ThreadInfo ti{};
   ti.kind = _params.kind;
@@ -96,11 +101,7 @@ void ThreadPool::_thread_func(size_t num) {
     // logger("run: "<<task.parent_function<<" file:"<<task.code_file);
     auto need_continue=task.task(ti);
 	if (need_continue) {
-		//TODO refact; move to method
-		_queue_mutex.lock();
-		_in_queue.push_back(task);
-		_queue_mutex.unlock();
-		_condition.notify_all();
+		pushTaskToQueue(task);
 	}
 	--_task_runned;
     // logger("run: "<<task.parent_function<<" file:"<<task.code_file <<" ok");

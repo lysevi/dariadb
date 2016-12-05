@@ -106,7 +106,7 @@ public:
 
 protected:
   void _thread_func(size_t num);
-
+  void pushTaskToQueue(const AsyncTaskWrap&at);
 protected:
   Params _params;
   std::vector<std::thread> _threads;
