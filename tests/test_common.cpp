@@ -251,9 +251,10 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
                         bool check_stop_flag) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
+  std::cout << "fill storage\n";
   size_t total_count =
       fill_storage_for_test(as, from, to, step, &_all_ids_set, &maxWritedTime);
-  
+  std::cout << "loadMinMax\n";
   auto minMax=as->loadMinMax();
 
   if(minMax.size()!=_all_ids_set.size()){
@@ -270,8 +271,9 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
           throw MAKE_EXCEPTION("mm.max==0 && mm.min>mm.max");
       }
   }
+  std::cout << "minMaxCheck\n";
   minMaxCheck(as, from, maxWritedTime);
-
+  std::cout << "currentValue\n";
   Id2Meas current_mlist;
   IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
   current_mlist = as->currentValue(_all_ids_array, 0);
@@ -286,11 +288,12 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   if (as->maxTime() < to) {
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
-
+  std::cout << "readIntervalCheck\n";
   readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
                     check_stop_flag);
+  std::cout << "readTimePointCheck\n";
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
-
+  std::cout << "flush\n";
   as->flush();
 }
 /*
