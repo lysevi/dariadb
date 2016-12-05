@@ -290,7 +290,6 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 	}
 }
 
-
 BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 	const std::string storage_path = "testStorage";
 

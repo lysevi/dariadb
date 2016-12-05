@@ -25,13 +25,11 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const CHUNK_KIN
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
-  should_free = false;
   header = hdr;
   _buffer_t = buffer;
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m) {
-  should_free = false;
   hdr->is_init = true;
   _buffer_t = buffer;
   header = hdr;
@@ -49,10 +47,6 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_
 }
 
 Chunk::~Chunk() {
-  if (should_free) {
-    delete header;
-    delete[] _buffer_t;
-  }
   this->bw = nullptr;
 }
 

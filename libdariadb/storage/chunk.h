@@ -68,7 +68,6 @@ public:
 
   compression::ByteBuffer_Ptr bw;
 
-  bool should_free; // chunk dtor must (delete[]) resource.
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;
@@ -82,13 +81,14 @@ public:
   ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, const Meas &first_m);
   ZippedChunk(ChunkHeader *index, uint8_t *buffer);
   ~ZippedChunk();
+  //TODO camel case for methods names.
   bool is_full() const override { return c_writer.is_full(); }
   bool append(const Meas &m) override;
   void close() override;
 
   uint32_t calc_checksum() override;
   uint32_t get_checksum() override;
-  ChunkReader_Ptr get_reader() override;
+  ChunkReader_Ptr get_reader() override; 
   compression::CopmressedWriter c_writer;
 };
 

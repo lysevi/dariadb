@@ -153,7 +153,7 @@ void show_drop_info(Engine *storage) {
 
     auto queue_sizes = storage->description();
 
-    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
+    dariadb::logger_info(" storage: (p:", queue_sizes.pages_count, " a:",
                           queue_sizes.aofs_count, " T:", queue_sizes.active_works, ")",
                           "[a:", queue_sizes.dropper.aof, "]");
 
@@ -261,7 +261,7 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
   clbk->wait();
 
   auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-  std::cout << "readed: " << clbk->count << std::endl;
+  std::cout << "readed: " << clbk->count<< std::endl;
   std::cout << "time: " << elapsed << std::endl;
 
   if (readall_enabled) {
@@ -458,7 +458,7 @@ int main(int argc, char *argv[]) {
     std::cout << "==> interval end time: " << timeutil::to_string(max_time) << std::endl;
 
     read_all_bench(ms, start_time, max_time, all_id_set);
-
+	std::cout << "writed: " << append_count << std::endl;
     std::cout << "stoping storage...\n";
     ms = nullptr;
     settings = nullptr;

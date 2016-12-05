@@ -386,7 +386,7 @@ public:
   void foreach_internal_cache(const QueryInterval &q, IReaderClb *p_clbk,
                               IReaderClb *a_clbk) {
     auto pm = _page_manager.get();
-    auto mm = _top_level_storage.get();
+    auto mm = _memstorage.get();
     auto am = _aof_manager.get();
 
     auto memory_mm = mm->loadMinMax();
@@ -400,8 +400,12 @@ public:
         am->foreach (local_q, a_clbk);
       } else {
         if ((id_mm->second.min.time) > local_q.from) {
-          pm->foreach (local_q, p_clbk);
-          am->foreach (local_q, a_clbk);
+		  //TODO change logic. memstorage must have info about not synced interval.
+		  auto disk_q = local_q;
+		  disk_q.to = id_mm->second.min.time;
+          pm->foreach (disk_q, p_clbk);
+          am->foreach (disk_q, a_clbk);
+		  mm->foreach(local_q, a_clbk);
         } else {
           mm->foreach (local_q, a_clbk);
         }
