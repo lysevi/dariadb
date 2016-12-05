@@ -68,6 +68,7 @@ struct TimeTrack : public IMeasStorage {
     _step = step;
 	_min_max.min.time = MAX_TIME;
 	_min_max.max.time = MIN_TIME;
+	_max_sync_time = MIN_TIME;
 	_mcc = mcc;
   }
   ~TimeTrack() {}
@@ -75,6 +76,7 @@ struct TimeTrack : public IMeasStorage {
   MemChunkAllocator*_allocator;
   Id _meas_id;
   MeasMinMax _min_max;
+  Time _max_sync_time;
   Time _step;
   MemChunk_Ptr _cur_chunk;
   utils::Locker _locker;
@@ -483,7 +485,17 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		logger_info("engine: drop end.");
 	}
   }
-
+  
+  Id2Time getSyncMap() {
+	  Id2Time result;
+	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
+	  result.reserve(_id2track.size());
+	  for (auto t : _id2track) {
+		  result[t.first] = t.second->_max_sync_time;
+	  }
+	  return result;
+  }
+  
   Id2MinMax loadMinMax()override{
       Id2MinMax result;
       std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
@@ -632,6 +644,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   // async. drop values to down-level disk storage;
   void crawler_thread_func() {
 	  while (!_drop_stop) {
+		  std::unique_lock<std::mutex> ul(_crawler_locker);
+		  _crawler_cond.wait(ul);
+
 		  if (_disk_storage == nullptr) {
 			  logger_info("engine: memstorage - disk storage is not set.");
 			  std::this_thread::yield();
@@ -650,14 +665,15 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  if (_drop_stop) {
 				  break;
 			  }
-			  std::unique_lock<std::mutex> ul(_crawler_locker);
-			  _crawler_cond.wait(ul);
+
 			  if (c == nullptr || c->already_in_disk()) {
 				  continue;
 			  }
+
 			  auto rdr = c->get_reader();
 			  int skip = c->in_disk_count;
 			  int writed = 0;
+			  Time max_time = c->_track->_max_sync_time;
 			  while (!rdr->is_end()){
 				  auto value = rdr->readNext();
 				  if (skip != 0) {
@@ -666,6 +682,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 				  else {
 					  auto status=_disk_storage->append(value);
 					  if (status.writed == 1) {
+						  max_time = value.time;
 						  ++writed;
 					  }
 				  }
@@ -673,6 +690,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			  rdr = nullptr;
 			  assert(writed <= (c->header->count+1));
 			  c->in_disk_count+= writed;
+			  c->_track->_max_sync_time = max_time;
 		  }
 	  }
 	  logger_info("engine: memstorage - crawler stop.");
@@ -762,4 +780,8 @@ void MemStorage::unlock_drop() {
 
 Id2MinMax MemStorage::loadMinMax(){
     return _impl->loadMinMax();
+}
+
+Id2Time MemStorage::getSyncMap() {
+	return _impl->getSyncMap();
 }

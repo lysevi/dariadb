@@ -34,7 +34,7 @@ public:
   }
   void call(const dariadb::Meas &) override { count++; }
   void is_end() override {
-	is_end_called = true;
+    is_end_called = true;
     IReaderClb::is_end();
   }
   std::atomic<size_t> count;
@@ -246,6 +246,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
 
 void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
                     IdSet &all_id_set) {
+ 
   if (readonly) {
     start_time = Time(0);
   }
@@ -277,16 +278,15 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
     std::cout << "readed: " << readed.size() << std::endl;
     std::cout << "time: " << elapsed << std::endl;
 
-    auto expected = (dariadb_bench::write_per_id_count *
-                     dariadb_bench::total_threads_count * dariadb_bench::id_per_thread);
+    
 
     std::map<Id, MeasList> _dict;
     for (auto &v : readed) {
       _dict[v.id].push_back(v);
     }
 
-    if (readed.size() != expected) {
-      std::cout << "expected: " << expected << " get:" << clbk->count << std::endl;
+    if (readed.size() != dariadb_bench::all_writes) {
+      std::cout << "expected: " << dariadb_bench::all_writes << " get:" << clbk->count << std::endl;
       std::cout << " all_writes: " << dariadb_bench::all_writes;
       for (auto &kv : _dict) {
         std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
@@ -381,7 +381,7 @@ int main(int argc, char *argv[]) {
     stop_info = false;
     auto writers_start = clock();
 
-    start_time = dariadb::timeutil::current_time();
+	start_time =  dariadb::timeutil::current_time();
     auto first_day = 60 * 60 * dariadb_bench::hours_write_perid / 2;
     auto first_day_milisec = start_time + (first_day * 1000)/2;
     std::cout << "==> compaction period: [" << dariadb::timeutil::to_string(start_time)
@@ -432,16 +432,18 @@ int main(int argc, char *argv[]) {
 		}
 		{
             auto pages_before = raw_ptr->description().pages_count;
-			std::cout << "==> pages before compaction " << pages_before << "..." << std::endl;
-			auto start = clock();
-			raw_ptr->compactbyTime(start_time, first_day_milisec);
-			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            auto pages_after = raw_ptr->description().pages_count;
-			std::cout << "==> pages after compaction " << pages_after << "..." << std::endl;
-			std::cout << "compaction time: " << elapsed << std::endl;
+			if (pages_before != 0) {
+				std::cout << "==> pages before compaction " << pages_before << "..." << std::endl;
+				auto start = clock();
+				raw_ptr->compactbyTime(start_time, first_day_milisec);
+				auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+				auto pages_after = raw_ptr->description().pages_count;
+				std::cout << "==> pages after compaction " << pages_after << "..." << std::endl;
+				std::cout << "compaction time: " << elapsed << std::endl;
 
-			if (strategy!=STRATEGY::MEMORY && pages_before <= pages_after) {
-				THROW_EXCEPTION("pages_before <= pages_after");
+				if (strategy != STRATEGY::MEMORY && pages_before <= pages_after) {
+					THROW_EXCEPTION("pages_before <= pages_after");
+				}
 			}
 		}
     }

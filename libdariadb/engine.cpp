@@ -390,9 +390,12 @@ public:
     auto am = _aof_manager.get();
 
     auto memory_mm = mm->loadMinMax();
+	auto sync_map=mm->getSyncMap();
     auto local_q = q;
     local_q.ids.resize(1);
     for (auto id : q.ids) {
+		local_q.from = q.from;
+		local_q.to = q.to;
       local_q.ids[0] = id;
       auto id_mm = memory_mm.find(id);
       if (id_mm == memory_mm.end()) {
@@ -400,12 +403,20 @@ public:
         am->foreach (local_q, a_clbk);
       } else {
         if ((id_mm->second.min.time) > local_q.from) {
-		  //TODO change logic. memstorage must have info about not synced interval.
-		  auto disk_q = local_q;
-		  disk_q.to = id_mm->second.min.time;
-          pm->foreach (disk_q, p_clbk);
-          am->foreach (disk_q, a_clbk);
-		  mm->foreach(local_q, a_clbk);
+			auto min_mem_time = sync_map[id];
+			local_q.to = min_mem_time;
+          pm->foreach (local_q, p_clbk);
+          am->foreach (local_q, a_clbk);
+		  
+		 
+		  if (min_mem_time < q.to) {
+			  if (min_mem_time != MIN_TIME) {//to read value after min_mem_time;
+				  min_mem_time += 1;
+			  }
+			  local_q.from = min_mem_time;
+			  local_q.to = q.to;
+			  mm->foreach(local_q, a_clbk);
+		  }
         } else {
           mm->foreach (local_q, a_clbk);
         }
@@ -448,7 +459,9 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    return foreach_internal(q, clbk, clbk);
+	  lock_storage();
+      foreach_internal(q, clbk, clbk);
+	  unlock_storage();
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {

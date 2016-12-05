@@ -44,6 +44,7 @@ public:
   EXPORT void lock_drop();
   EXPORT void unlock_drop();
   EXPORT Id2MinMax loadMinMax()override;
+  EXPORT Id2Time getSyncMap(); ///Id to max dropped to disk time.
 private:
   struct Private;
   std::unique_ptr<Private> _impl;
