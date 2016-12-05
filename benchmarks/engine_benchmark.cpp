@@ -129,13 +129,15 @@ void show_info(Engine *storage) {
 
     std::stringstream drop_ss;
     drop_ss << "[a:" << queue_sizes.dropper.aof << "]";
+	std::stringstream ss;
 
-    std::cout << "\r"
+    ss// << "\r"
               << " time: " << std::setw(20) << std::setfill(OUT_SEP) << time_ss.str()
               << " storage:" << stor_ss.str() << drop_ss.str()
               << " rd: " << reads_count << " s:" << read_speed_ss.str()
-              << " wr: " << append_count << " s: " << write_speed_ss.str()
+              << " wr: " << append_count << " s:" << write_speed_ss.str()
               << persent_ss.str();
+	dariadb::logger(ss.str());
     w0 = w1;
     t0 = t1;
     std::cout.flush();

@@ -15,6 +15,7 @@
 #include <thread>
 #include <condition_variable>
 #include <functional>
+#include <algorithm>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -388,7 +389,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
 			  while (new_track->append(value).writed != 1) {
 				  _drop_cond.notify_all();
-				  
+				  _crawler_cond.notify_all();				  
 			  }
 			  _crawler_cond.notify_all();
 			  return Status (1, 0);
@@ -402,6 +403,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  }
 	  while (track->second->append(value).writed != 1) {
 		  _drop_cond.notify_all();
+		  _crawler_cond.notify_all();
 	  }
 	  _crawler_cond.notify_all();
 	  return Status (1, 0);
@@ -415,7 +417,16 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	std::vector<Chunk *> all_chunks;
     all_chunks.reserve(cur_chunk_count);
     size_t pos = 0;
-    for (auto &c : _chunks) {
+
+	std::vector<MemChunk_Ptr>  chunks_copy(_chunks.size());
+	auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) {return c != nullptr; });
+	chunks_copy.resize(std::distance(chunks_copy.begin(), it));
+
+	std::sort(chunks_copy.begin(), chunks_copy.end(),
+		[](const MemChunk_Ptr& left, const MemChunk_Ptr& right) {
+		return left->header->first.time < right->header->first.time;
+		});
+    for (auto &c : chunks_copy) {
 		if (pos >= chunks_to_delete) {
 			break;
 		}
@@ -622,14 +633,26 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   //TODO write sorted by time;
   void crawler_thread_func() {
 	  while (!_drop_stop) {
-		  std::unique_lock<std::mutex> ul(_crawler_locker);
-		  _crawler_cond.wait(ul);
 		  if (_disk_storage == nullptr) {
 			  logger_info("engine: memstorage - disk storage is not set.");
 			  std::this_thread::yield();
 			  continue;
 		  }
-		  for (auto&c : _chunks) {
+		  std::vector<MemChunk_Ptr>  chunks_copy(_chunks.size());
+		  auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) {return c != nullptr; });
+		  chunks_copy.resize(std::distance(chunks_copy.begin(), it));
+
+		  std::sort(chunks_copy.begin(), chunks_copy.end(),
+			  [](const MemChunk_Ptr& left, const MemChunk_Ptr& right) {
+			  return left->header->first.time < right->header->first.time;
+		  });
+
+		  for (auto&c : chunks_copy) {
+			  if (_drop_stop) {
+				  break;
+			  }
+			  std::unique_lock<std::mutex> ul(_crawler_locker);
+			  _crawler_cond.wait(ul);
 			  if (c == nullptr || c->already_in_disk()) {
 				  continue;
 			  }
@@ -648,6 +671,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 					  }
 				  }
 			  }
+			  rdr = nullptr;
 			  assert(writed <= (c->header->count+1));
 			  c->in_disk_count+= writed;
 		  }
