@@ -408,9 +408,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  
   }
 
-  void drop_by_limit(float chunk_to_free, bool in_stop) {
+  void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
     auto cur_chunk_count = this->_chunk_allocator._allocated;
-    auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_to_free);
+    auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_percent_to_free);
     
 	std::vector<Chunk *> all_chunks;
     all_chunks.reserve(cur_chunk_count);

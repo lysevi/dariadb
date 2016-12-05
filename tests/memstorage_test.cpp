@@ -49,6 +49,7 @@ struct MocDiskStorage : public dariadb::storage::IMeasWriter {
 };
 
 BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
+	std::cout << "MemChunkAllocatorTest" << std::endl;
 	const size_t buffer_size = 100;
 	const size_t max_size = 1024;
 	dariadb::storage::MemChunkAllocator allocator(max_size, buffer_size);
@@ -81,6 +82,7 @@ BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
 }
 
 BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
+	std::cout << "MemStorageCommonTest" << std::endl;
 	auto storage_path = "testMemoryStorage";
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
@@ -99,6 +101,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 }
 
 BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
+	std::cout << "MemStorageDropByLimitTest" << std::endl;
     auto storage_path = "testMemoryStorage";
     if (dariadb::utils::fs::path_exists(storage_path)) {
         dariadb::utils::fs::rm(storage_path);
@@ -133,6 +136,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
 
 
 BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
+	std::cout << "MemStorageCacheTest" << std::endl;
 	auto storage_path = "testMemoryStorage";
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
