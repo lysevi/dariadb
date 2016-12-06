@@ -15,6 +15,7 @@ Storage:
    - Speed up dropping data between layers.
    - Old pages compaction.
    - Full futured memory storage.
+   - cache-mode - all values stored in memory with async writes to disk.
    - Lockfile in storage.
    - New storage control tool.
    - SQLite3 based manifest.
