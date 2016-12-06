@@ -441,7 +441,7 @@ int main(int argc, char *argv[]) {
 				std::cout << "==> pages after compaction " << pages_after << "..." << std::endl;
 				std::cout << "compaction time: " << elapsed << std::endl;
 
-				if (strategy != STRATEGY::MEMORY && pages_before <= pages_after) {
+				if (strategy != STRATEGY::MEMORY  && strategy != STRATEGY::CACHE && pages_before <= pages_after) {
 					THROW_EXCEPTION("pages_before <= pages_after");
 				}
 			}
