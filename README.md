@@ -7,7 +7,6 @@
   - Time - x64 timestamp.
   - Value - x64 float.
   - Flag - x32 unsigned integer.
-* Accept unordered data.
 * Write strategies:
   - fast write - little cache and all values storing to disk. optimised for big write load(but slower than 'memory' strategy).
   - compressed - all values compressed for good disk usage without writing to sorted layer.
@@ -25,12 +24,12 @@
 * Two variants of API:
   - Functor API (async) -  engine apply given function to each measurement in the incoming request.
   - Standard API - You can Query interval as list or values in time point as dictionary.
-* Compaction old pages with filtration values support:
+* Compaction old data with filtration support:
   - in engine api.
   - in network protocol.
 
 # Dependencies
-* Boost 1.53.0 or higher: context, system, filesystem, date_time, interprocess (mmap), unit_test_framework(to build tests), program_options, asio and regex(for server only)
+* Boost 1.54.0 or higher: context, system, filesystem, date_time, interprocess (mmap), unit_test_framework(to build tests), program_options, asio and regex(for server only)
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
@@ -40,7 +39,7 @@
 ```shell
 $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update
-$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6
+$ sudo apt-get install -y libboost-dev  libboost-coroutine-dev libboost-context-dev libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6
 $ export CC="gcc-6"
 $ export CXX="g++-6"
 
