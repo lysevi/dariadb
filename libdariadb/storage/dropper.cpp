@@ -67,7 +67,7 @@ void Dropper::drop_aof_internal(const std::string &fname) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 	  if (!this->_dropper_lock.try_lock()) {
-		  return true;
+		  ti.yeild();
 	  }
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
 	  
@@ -93,7 +93,6 @@ void Dropper::drop_aof_internal(const std::string &fname) {
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }
-	return false;
   };
   ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
 }

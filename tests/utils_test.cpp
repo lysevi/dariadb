@@ -256,13 +256,10 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     const size_t tasks_count = 10;
     ThreadManager::start(tpm_params);
 	int called = 0;
-	AsyncTask at_while = [&called](const ThreadInfo &) {
-		if (called != 10) {
+	AsyncTask at_while = [&called](const ThreadInfo &ti) {
+		for(int i=0;i<10;++i){
 			++called;
-			return true;
-		}
-		else {
-			return false;
+			ti.yeild();
 		}
 	};
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {
@@ -271,7 +268,6 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
-	  return false;
     };
     AsyncTask at2 = [tk2](const ThreadInfo &ti) {
       if (tk2 != ti.kind) {
@@ -279,7 +275,6 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
-	  return false;
     };
 	auto at_while_res=ThreadManager::instance()->post(tk1, AT(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {

@@ -241,13 +241,11 @@ public:
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id, pm](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
-	  return false;
     };
 	auto am = _top_level_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
 	  ar = am->minMaxTime(id, &subMin3, &subMax3);
-	  return false;
 	};
 
 	lock_storage();
@@ -455,7 +453,6 @@ public:
       }
       this->unlock_storage();
       a_clbk->is_end();
-	  return false;
     };
 
     ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
@@ -544,7 +541,6 @@ public:
       }
 
       unlock_storage();
-	  return false;
     };
 
     auto pm_async =

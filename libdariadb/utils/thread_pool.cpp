@@ -16,8 +16,13 @@ AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function, const s
 }
 
 bool AsyncTaskWrap::call(const ThreadInfo &ti) {
+	if (_coro == nullptr) {
+		_tinfo = ti;
+		auto f = std::bind(&AsyncTaskWrap::worker,this, std::placeholders::_1);
+		_coro.reset(new Coroutine(f));
+	}
 	try {
-		auto need_continue = _task(ti);
+		bool need_continue = (*_coro)().operator bool();
 		if (!need_continue) {
 			_result->unlock();
 		}
@@ -29,6 +34,11 @@ bool AsyncTaskWrap::call(const ThreadInfo &ti) {
 		_result->unlock();
 		throw;
 	}
+}
+
+void AsyncTaskWrap::worker(Yield&y) {
+	this->_tinfo.coro_yeild = &y;
+	_task(this->_tinfo);
 }
 
 TaskResult_Ptr AsyncTaskWrap::result()const {

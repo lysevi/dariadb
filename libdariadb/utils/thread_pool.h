@@ -35,7 +35,11 @@ enum class THREAD_COMMON_KINDS : ThreadKind { DISK_IO = 1, COMMON};
 struct ThreadInfo {
   ThreadKind kind;
   size_t thread_number;
-  Yield  coro_yeild;
+  Yield  *coro_yeild;
+
+  void yeild() const{
+	  coro_yeild->operator()();
+  }
 };
 
 struct TaskResult {
@@ -57,9 +61,10 @@ struct TaskResult {
 		m.unlock();
 	}
 };
+
 using TaskResult_Ptr = std::shared_ptr<TaskResult>;
 
-using AsyncTask = std::function<bool(const ThreadInfo &)>;
+using AsyncTask = std::function<void(const ThreadInfo &)>;
 
 class AsyncTaskWrap {
 public:
@@ -68,6 +73,10 @@ public:
 	EXPORT bool call(const ThreadInfo &ti);
 	EXPORT TaskResult_Ptr result()const;
 private:
+	void worker(Yield&y);
+private:
+	std::shared_ptr<Coroutine> _coro;
+	ThreadInfo _tinfo;
 	TaskResult_Ptr _result;
   AsyncTask _task;
   std::string _parent_function;

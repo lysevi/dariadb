@@ -421,6 +421,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     all_chunks.reserve(cur_chunk_count);
     size_t pos = 0;
 
+	//TODO move to method;
 	std::vector<MemChunk_Ptr>  chunks_copy(_chunks.size());
 	auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) {return c != nullptr; });
 	chunks_copy.resize(std::distance(chunks_copy.begin(), it));
@@ -456,7 +457,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 			AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
 				TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 				this->_down_level_storage->appendChunks(all_chunks, pos);
-				return false;
 			};
 			auto at_res = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
 			at_res->wait();
@@ -525,6 +525,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  }
 	  return result;
   }
+
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) override {
 	  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
@@ -649,6 +650,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         std::this_thread::yield();
         continue;
       }
+	  //TODO move to method;
       std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
       auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) { 
 		  return c != nullptr && !c->already_in_disk(); 
