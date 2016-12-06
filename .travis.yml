@@ -30,6 +30,8 @@ addons:
       - libboost-log-dev 
       - libboost-regex-dev 
       - libboost-date-time-dev
+      - libboost-context-dev
+      - libboost-coroutine-dev
       - cmake  
       - g++-6  
       - gcc-6 
@@ -67,4 +69,4 @@ matrix:
 #      env: CLANG=TRUE GCOV=FALSE
 
 script: 
-   - bash .travis/build.sh
+    - bash .travis/build.sh

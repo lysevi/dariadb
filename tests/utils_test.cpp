@@ -17,6 +17,30 @@
 #include <libdariadb/utils/thread_pool.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/strings.h>
+#include <libdariadb/utils/coroutine.h>
+
+
+BOOST_AUTO_TEST_CASE(CoroutineTest) {
+  {
+		int incr = 0;
+		dariadb::utils::async::Coroutine c([&] (dariadb::utils::async::Yield&y){
+			incr++;
+			y();
+			incr++;
+			y();
+			incr++;
+			y();
+		});
+		BOOST_CHECK_EQUAL(incr, 0);
+		BOOST_CHECK(c());
+		BOOST_CHECK_EQUAL(incr, 1);
+		BOOST_CHECK(c());
+		BOOST_CHECK_EQUAL(incr, 2);
+		BOOST_CHECK(c());
+		BOOST_CHECK_EQUAL(incr, 3);
+		BOOST_CHECK(!c());
+  }
+}
 
 BOOST_AUTO_TEST_CASE(Time) {
   auto ct = dariadb::timeutil::current_time();
