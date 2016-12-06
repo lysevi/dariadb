@@ -5,6 +5,35 @@
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
+AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function, const std::string &file, int line) {
+	_task = t;
+	_parent_function = _function;
+	_code_file = file;
+	_code_line = line;
+	_result = std::make_shared<TaskResult>();
+	/*auto f = std::bind(&AsyncTaskWrap::call, this, std::placeholders::_1);
+	_coro.reset(new Coroutine(f));*/
+}
+
+bool AsyncTaskWrap::call(const ThreadInfo &ti) {
+	try {
+		auto need_continue = _task(ti);
+		if (!need_continue) {
+			_result->unlock();
+		}
+		return need_continue;
+	}
+	catch (std::exception &ex) {
+		logger_fatal("engine: *** async task exception:", _parent_function, " file:", _code_file, " line:", _code_line);
+		logger_fatal("engine: *** what:", ex.what());
+		_result->unlock();
+		throw;
+	}
+}
+
+TaskResult_Ptr AsyncTaskWrap::result()const {
+	return _result;
+}
 ThreadPool::ThreadPool(const Params &p) : _params(p) {
   assert(_params.threads_count > 0);
   _stop_flag = false;
@@ -22,29 +51,14 @@ ThreadPool::~ThreadPool() {
   }
 }
 
-TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap &task) {
+TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap_Ptr &task) {
   if (this->_is_stoped) {
     return nullptr;
   }
-  TaskResult_Ptr res = std::make_shared<TaskResult>();
-  AsyncTask inner_task = [=](const ThreadInfo &ti) {
-    try {
-      auto need_continue=task.task(ti);
-	  if (!need_continue) {
-		  res->unlock();
-	  }
-	  return need_continue;
-    } catch (std::exception &ex) {
-      logger_fatal("engine: *** async task exception:", task.parent_function, " file:",
-                   task.code_file, " line:", task.code_line);
-      logger_fatal("engine: *** what:", ex.what());
-      res->unlock();
-      throw;
-    }
-  };
-  pushTaskToQueue(AsyncTaskWrap(inner_task, task.parent_function, task.code_file, task.code_line));
-  return res;
+  pushTaskToQueue(task);
+  return task->result();
 }
+
 
 void ThreadPool::stop() {
   {
@@ -69,7 +83,7 @@ void ThreadPool::flush() {
   }
 }
 
-void ThreadPool::pushTaskToQueue(const AsyncTaskWrap&at) {
+void ThreadPool::pushTaskToQueue(const AsyncTaskWrap_Ptr&at) {
 	{
 		std::unique_lock<std::mutex> lock(_queue_mutex);
 		_in_queue.push_back(at);
@@ -83,7 +97,7 @@ void ThreadPool::_thread_func(size_t num) {
   ti.thread_number = num;
 
   while (!_stop_flag) {
-    AsyncTaskWrap task;
+	  std::shared_ptr<AsyncTaskWrap> task;
 
     {
       std::unique_lock<std::mutex> lock(_queue_mutex);
@@ -99,7 +113,7 @@ void ThreadPool::_thread_func(size_t num) {
       this->_in_queue.pop_front();
     }
     // logger("run: "<<task.parent_function<<" file:"<<task.code_file);
-    auto need_continue=task.task(ti);
+    auto need_continue=task->call(ti);
 	if (need_continue) {
 		pushTaskToQueue(task);
 	}

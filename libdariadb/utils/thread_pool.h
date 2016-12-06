@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libdariadb/utils/coroutine.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
@@ -11,7 +12,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-
+#include <memory>
 namespace dariadb {
 namespace utils {
 namespace async {
@@ -34,49 +35,51 @@ enum class THREAD_COMMON_KINDS : ThreadKind { DISK_IO = 1, COMMON};
 struct ThreadInfo {
   ThreadKind kind;
   size_t thread_number;
+  Yield  coro_yeild;
 };
+
+struct TaskResult {
+	bool runned;
+	Locker
+		m; // dont use mutex. mutex::lock() requires that the calling thread owns the mutex.
+	TaskResult() {
+		runned = true;
+		m.lock();
+	}
+	~TaskResult() {}
+	void wait() {
+		m.lock();
+		m.unlock();
+	}
+
+	void unlock() {
+		runned = false;
+		m.unlock();
+	}
+};
+using TaskResult_Ptr = std::shared_ptr<TaskResult>;
 
 using AsyncTask = std::function<bool(const ThreadInfo &)>;
 
-struct AsyncTaskWrap {
-  AsyncTask task;
-  std::string parent_function;
-  std::string code_file;
-  int code_line;
-  AsyncTaskWrap() = default;
-  AsyncTaskWrap(AsyncTask &t, const std::string &_function, const std::string &file, int line) {
-    task = t;
-    parent_function = _function;
-    code_file = file;
-    code_line = line;
-  }
+class AsyncTaskWrap {
+public:
+  /*std::shared_ptr<Coroutine> _coro;*/
+	EXPORT AsyncTaskWrap(AsyncTask &t, const std::string &_function, const std::string &file, int line);
+	EXPORT bool call(const ThreadInfo &ti);
+	EXPORT TaskResult_Ptr result()const;
+private:
+	TaskResult_Ptr _result;
+  AsyncTask _task;
+  std::string _parent_function;
+  std::string _code_file;
+  int _code_line;
 };
-
+using AsyncTaskWrap_Ptr = std::shared_ptr<AsyncTaskWrap>;
 #define AT(task)                                                                         \
-  AsyncTaskWrap(task, std::string(__FUNCTION__), std::string(__FILE__), __LINE__)
+  std::make_shared<AsyncTaskWrap>(task, std::string(__FUNCTION__), std::string(__FILE__), __LINE__)
 
-using TaskQueue = std::deque<AsyncTaskWrap>;
+using TaskQueue = std::deque<AsyncTaskWrap_Ptr>;
 
-struct TaskResult {
-  bool runned;
-  Locker
-      m; // dont use mutex. mutex::lock() requires that the calling thread owns the mutex.
-  TaskResult() {
-    runned = true;
-    m.lock();
-  }
-  ~TaskResult() {}
-  void wait() {
-    m.lock();
-    m.unlock();
-  }
-
-  void unlock() {
-    runned = false;
-    m.unlock();
-  }
-};
-using TaskResult_Ptr = std::shared_ptr<TaskResult>;
 
 class ThreadPool : public utils::NonCopy {
 public:
@@ -95,7 +98,7 @@ public:
 
   bool is_stoped() const { return _is_stoped; }
 
-  EXPORT TaskResult_Ptr post(const AsyncTaskWrap &task);
+  EXPORT TaskResult_Ptr post(const AsyncTaskWrap_Ptr &task);
   EXPORT void flush();
   EXPORT void stop();
 
@@ -106,7 +109,7 @@ public:
 
 protected:
   void _thread_func(size_t num);
-  void pushTaskToQueue(const AsyncTaskWrap&at);
+  void pushTaskToQueue(const std::shared_ptr<AsyncTaskWrap>&at);
 protected:
   Params _params;
   std::vector<std::thread> _threads;

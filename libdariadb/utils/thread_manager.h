@@ -22,10 +22,10 @@ public:
 
   EXPORT ~ThreadManager();
   EXPORT void flush();
-  TaskResult_Ptr post(const THREAD_COMMON_KINDS kind, const AsyncTaskWrap &task) {
+  TaskResult_Ptr post(const THREAD_COMMON_KINDS kind, const std::shared_ptr<AsyncTaskWrap> &task) {
     return this->post((ThreadKind)kind, task);
   }
-  EXPORT TaskResult_Ptr post(const ThreadKind kind, const AsyncTaskWrap &task);
+  EXPORT TaskResult_Ptr post(const ThreadKind kind, const AsyncTaskWrap_Ptr &task);
 
   size_t active_works() {
     size_t res = 0;

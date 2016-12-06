@@ -4,6 +4,7 @@ endif()
 set(__compiler_settings_flag INCLUDED)
 
 IF(WIN32)
+  add_definitions(-DNOMINMAX)
   MESSAGE(STATUS "WIN32:")
   MESSAGE(STATUS "+ boost root: " ${BOOST_ROOT})
 else(WIN32)

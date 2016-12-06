@@ -3,7 +3,6 @@
 #include <cstdint>
 #ifdef MSVC
 #include <intrin.h>
-#define NOMINMAX
 #include <windows.h>
 #endif
 
