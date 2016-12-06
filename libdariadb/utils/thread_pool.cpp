@@ -22,11 +22,11 @@ bool AsyncTaskWrap::call(const ThreadInfo &ti) {
 		_coro.reset(new Coroutine(f));
 	}
 	try {
-		bool need_continue = (*_coro)().operator bool();
-		if (!need_continue) {
+		if(!(*_coro)()){
 			_result->unlock();
+			return false;
 		}
-		return need_continue;
+		return true;
 	}
 	catch (std::exception &ex) {
 		logger_fatal("engine: *** async task exception:", _parent_function, " file:", _code_file, " line:", _code_line);
