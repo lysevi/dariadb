@@ -640,57 +640,53 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   // async. drop values to down-level disk storage;
   void crawler_thread_func() {
-	  while (!_drop_stop) {
-		  std::unique_lock<std::mutex> ul(_crawler_locker);
-		  _crawler_cond.wait(ul);
+    while (!_drop_stop) {
+      std::unique_lock<std::mutex> ul(_crawler_locker);
+      _crawler_cond.wait(ul);
 
-		  if (_disk_storage == nullptr) {
-			  logger_info("engine: memstorage - disk storage is not set.");
-			  std::this_thread::yield();
-			  continue;
-		  }
-		  std::vector<MemChunk_Ptr>  chunks_copy(_chunks.size());
-		  auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) {return c != nullptr; });
-		  chunks_copy.resize(std::distance(chunks_copy.begin(), it));
+      if (_disk_storage == nullptr) {
+        logger_info("engine: memstorage - disk storage is not set.");
+        std::this_thread::yield();
+        continue;
+      }
+      std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
+      auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) { 
+		  return c != nullptr && !c->already_in_disk(); 
+	  });
+      chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
-		  std::sort(chunks_copy.begin(), chunks_copy.end(),
-			  [](const MemChunk_Ptr& left, const MemChunk_Ptr& right) {
-			  return left->header->first.time < right->header->first.time;
-		  });
+      std::sort(chunks_copy.begin(), chunks_copy.end(),
+                [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
+                  return left->header->first.time < right->header->first.time;
+                });
 
-		  for (auto&c : chunks_copy) {
-			  if (_drop_stop) {
-				  break;
-			  }
-
-			  if (c == nullptr || c->already_in_disk()) {
-				  continue;
-			  }
-
-			  auto rdr = c->get_reader();
-			  int skip = c->in_disk_count;
-			  int writed = 0;
-			  Time max_time = c->_track->_max_sync_time;
-			  while (!rdr->is_end()){
-				  auto value = rdr->readNext();
-				  if (skip != 0) {
-					  --skip;
-				  }
-				  else {
-					  auto status=_disk_storage->append(value);
-					  if (status.writed == 1) {
-						  max_time = value.time;
-						  ++writed;
-					  }
-				  }
-			  }
-			  rdr = nullptr;
-			  assert(writed <= (c->header->count+1));
-			  c->in_disk_count+= writed;
-			  c->_track->_max_sync_time = max_time;
-		  }
-	  }
-	  logger_info("engine: memstorage - crawler stop.");
+      for (auto &c : chunks_copy) {
+        if (_drop_stop) {
+          break;
+        }
+        auto rdr = c->get_reader();
+        int skip = c->in_disk_count;
+        int writed = 0;
+        Time max_time = c->_track->_max_sync_time;
+        while (!rdr->is_end()) {
+          auto value = rdr->readNext();
+          if (skip != 0) {
+            --skip;
+          } else {
+            auto status = _disk_storage->append(value);
+            if (status.writed == 1) {
+              max_time = value.time;
+              ++writed;
+            }
+          }
+        }
+        rdr = nullptr;
+        assert(writed <= (c->header->count + 1));
+        c->in_disk_count += writed;
+        c->_track->_max_sync_time = max_time;
+      }
+    }
+    logger_info("engine: memstorage - crawler stop.");
   }
 
   Id2Track _id2track;
