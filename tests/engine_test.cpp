@@ -7,7 +7,6 @@
 #include <iostream>
 #include <libdariadb/engine.h>
 #include <libdariadb/storage/bloom_filter.h>
-#include <libdariadb/storage/lock_manager.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/page_manager.h>
 #include <libdariadb/timeutil.h>

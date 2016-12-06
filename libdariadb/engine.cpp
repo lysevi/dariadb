@@ -5,7 +5,6 @@
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/dropper.h>
-#include <libdariadb/storage/lock_manager.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/page_manager.h>
 #include <libdariadb/storage/subscribe.h>
@@ -51,9 +50,6 @@ public:
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
 	
-	_lock_manager = LockManager_ptr{ new  LockManager(LockManager::Params()) };
-	_engine_env->addResource(EngineEnvironment::Resource::LOCK_MANAGER, _lock_manager.get());
-    
 	_manifest = Manifest_ptr{ new Manifest{ utils::fs::append_path(_settings->path, MANIFEST_FILE_NAME) } };
 	_engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
@@ -115,7 +111,6 @@ public:
 	  _aof_manager = nullptr;
 	  _page_manager = nullptr;
 	  _manifest = nullptr;
-	  _lock_manager = nullptr;
 	  _dropper = nullptr;
       _stoped = true;
 
@@ -163,41 +158,49 @@ public:
   }
 
   void lock_storage() {
-    switch (_strategy) {
-    case STRATEGY::COMPRESSED:
-    case STRATEGY::FAST_WRITE:
-      _lock_manager->lock(LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
-      break;
-    case STRATEGY::MEMORY: {
-      _memstorage->lock_drop();
-      _lock_manager->lock(LOCK_KIND::READ, {LOCK_OBJECTS::PAGE});
-      break;
-    }
-    case STRATEGY::CACHE: {
-      _memstorage->lock_drop();
-      _lock_manager->lock(LOCK_KIND::READ, {LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
-      break;
-    }
-    }
+	  std::lock_guard<std::mutex> lock(_lock_locker);
+	  if (_dropper != nullptr && _memstorage != nullptr) {
+		  auto dl = _dropper->get_locker();
+		  auto lp = _memstorage->get_lockers();
+		  std::lock(*dl, *lp.first, *lp.second);
+		  return;
+	  }
+
+	  if (_dropper == nullptr && _memstorage != nullptr) {
+		  auto lp = _memstorage->get_lockers();
+		  std::lock(*lp.first, *lp.second);
+		  return;
+	  }
+
+	  if (_dropper != nullptr && _memstorage == nullptr) {
+		  auto dl = _dropper->get_locker();
+		  dl->lock();
+		  return;
+	  }
   }
 
   void unlock_storage() {
-    switch (_strategy) {
-    case STRATEGY::COMPRESSED:
-    case STRATEGY::FAST_WRITE:
-      _lock_manager->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
-      break;
-    case STRATEGY::MEMORY: {
-      _memstorage->unlock_drop();
-      _lock_manager->unlock({LOCK_OBJECTS::PAGE});
-      break;
-    }
-    case STRATEGY::CACHE: {
-      _memstorage->unlock_drop();
-      _lock_manager->unlock({LOCK_OBJECTS::PAGE, LOCK_OBJECTS::AOF});
-      break;
-    }
-    }
+	  if (_dropper != nullptr && _memstorage != nullptr) {
+		  auto dl = _dropper->get_locker();
+		  auto lp = _memstorage->get_lockers();
+		  dl->unlock();
+		  lp.first->unlock();
+		  lp.second->unlock();
+		  return;
+	  }
+
+	  if (_dropper == nullptr && _memstorage != nullptr) {
+		  auto lp = _memstorage->get_lockers();
+		  lp.first->unlock();
+		  lp.second->unlock();
+		  return;
+	  }
+
+	  if (_dropper != nullptr && _memstorage == nullptr) {
+		  auto dl = _dropper->get_locker();
+		  dl->unlock();
+		  return;
+	  }
   }
 
   Time minTime() {
@@ -459,9 +462,7 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
-	  lock_storage();
       foreach_internal(q, clbk, clbk);
-	  unlock_storage();
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
@@ -573,9 +574,9 @@ public:
 
   void eraseOld(const Time &t) {
     logger_info("engine: eraseOld to ", timeutil::to_string(t));
-    _lock_manager->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::PAGE});
+	this->lock_storage();
     _page_manager->eraseOld(t);
-    _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+	this->unlock_storage();
   }
 
   uint16_t version() {
@@ -588,26 +589,25 @@ public:
   }
 
   void compactTo(uint32_t pagesCount) {
-    _lock_manager->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::PAGE});
+	  this->lock_storage();
     logger_info("engine: compacting to ", pagesCount + 1);
     _page_manager->compactTo(pagesCount);
-    _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+	this->unlock_storage();
   }
 
   void compactbyTime(Time from, Time to) {
-    _lock_manager->lock(LOCK_KIND::EXCLUSIVE, {LOCK_OBJECTS::PAGE});
+	  this->lock_storage();
     logger_info("engine: compacting by time ", timeutil::to_string(from), "-",
                 timeutil::to_string(to));
     _page_manager->compactbyTime(from, to);
-    _lock_manager->unlock(LOCK_OBJECTS::PAGE);
+	this->unlock_storage();
   }
 
 protected:
-  mutable std::mutex _flush_locker;
+  std::mutex _flush_locker, _lock_locker;
   SubscribeNotificator _subscribe_notify;
 
   std::unique_ptr<Dropper> _dropper;
-  LockManager_ptr _lock_manager;
   PageManager_ptr _page_manager;
   AOFManager_ptr _aof_manager;
   MemStorage_ptr _memstorage;

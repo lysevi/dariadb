@@ -25,18 +25,21 @@ public:
   static void cleanStorage(const std::string&storagePath);
 
   Description description() const;
-
+  std::mutex* get_locker() {
+	  return &_dropper_lock;
+  }
 private:
   void drop_aof_internal(const std::string &fname);
   void write_aof_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma);
 private:
 	std::atomic_size_t _in_queue;
-	std::mutex            _locker;
-	std::set<std::string> _addeded_files;
+	std::mutex            _queue_locker;
+	std::set<std::string> _files_queue;
 	PageManager_ptr _page_manager;
 	AOFManager_ptr _aof_manager;
 	EngineEnvironment_ptr _engine_env;
 	Settings* _settings;
+	std::mutex _dropper_lock;
 };
 }
 }

@@ -20,7 +20,6 @@ public:
 private:
   bool is_end_called;
   bool is_cancel;
-  std::condition_variable _cond;
 };
 
 typedef std::shared_ptr<IReaderClb> ReaderClb_ptr;

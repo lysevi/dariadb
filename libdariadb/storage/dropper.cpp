@@ -1,5 +1,4 @@
 #include <libdariadb/storage/dropper.h>
-#include <libdariadb/storage/lock_manager.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/page.h>
 #include <libdariadb/storage/settings.h>
@@ -29,14 +28,14 @@ Dropper::Description Dropper::description() const {
 }
 
 void Dropper::drop_aof(const std::string& fname) {
-  std::lock_guard<std::mutex> lg(_locker);
-  auto fres = _addeded_files.find(fname);
-  if (fres != _addeded_files.end()) {
+  std::lock_guard<std::mutex> lg(_queue_locker);
+  auto fres = _files_queue.find(fname);
+  if (fres != _files_queue.end()) {
     return;
   }
   auto storage_path = _settings->path;
   if (utils::fs::path_exists(utils::fs::append_path(storage_path, fname))) {
-    _addeded_files.emplace(fname);
+	  _files_queue.emplace(fname);
     _in_queue++;
     drop_aof_internal(fname);
   }
@@ -62,17 +61,16 @@ void Dropper::cleanStorage(const std::string&storagePath) {
 void Dropper::drop_aof_internal(const std::string &fname) {
   auto env = _engine_env;
   auto sett = _settings;
-  auto lm = _engine_env->getResourceObject<LockManager>(
-      EngineEnvironment::Resource::LOCK_MANAGER);
+ 
   
-  AsyncTask at = [fname, this, env, sett, lm](const ThreadInfo &ti) {
+  AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
-      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
-	  auto lock_result=lm->try_lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::DROP_AOF });
-	  if (!lock_result) {
+	  if (!this->_dropper_lock.try_lock()) {
 		  return true;
 	  }
+      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
+	  
 	  logger_info("engine: compressing ", fname);
       auto start_time = clock();
       auto storage_path = sett->path;
@@ -83,14 +81,15 @@ void Dropper::drop_aof_internal(const std::string &fname) {
       auto all = aof->readAll();
 
       this->write_aof_to_page(fname, all);
-      lm->unlock(LOCK_OBJECTS::DROP_AOF);
-      this->_locker.lock();
+
+	  this->_queue_locker.lock();
       this->_in_queue--;
-      this->_addeded_files.erase(fname);
-      this->_locker.unlock();
+      this->_files_queue.erase(fname);
+      this->_queue_locker.unlock();
       auto end = clock();
       auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
-      logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
+	  this->_dropper_lock.unlock();
+	  logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }

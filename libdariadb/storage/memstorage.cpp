@@ -343,10 +343,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		if (!_stoped) {
 			logger_info("engine: stop memstorage.");
 			if (this->_down_level_storage != nullptr) {
-				this->lock_drop();
+				std::lock(_drop_locker, _crawler_locker);
 				logger_info("engine: memstorage - drop all chunk to disk");
 				this->drop_by_limit(1.0, true);
-				this->unlock_drop();
+				_drop_locker.unlock();
+				_crawler_locker.unlock();
 			}
 			for (size_t i = 0; i < _chunks.size(); ++i) {
 				_chunks[i] = nullptr;
@@ -610,13 +611,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		  _drop_cond.notify_all();
 	  }
   }
-  void lock_drop() {
-	  _drop_locker.lock();
-	  _crawler_locker.lock();
-  }
-  void unlock_drop() {
-	  _drop_locker.unlock();
-	  _crawler_locker.unlock();
+
+  std::pair<std::mutex*, std::mutex*> get_lockers(){
+	  return std::make_pair(&_crawler_locker, &_drop_locker);
   }
 
   bool is_time_to_drop() {
@@ -770,13 +767,11 @@ void MemStorage::setDiskStorage(IMeasWriter *_disk) {
   _impl->setDiskStorage(_disk);
 }
 
-void MemStorage::lock_drop() {
-	_impl->lock_drop();
+std::pair<std::mutex*, std::mutex*> MemStorage::get_lockers(){
+	return _impl->get_lockers();
 }
 
-void MemStorage::unlock_drop() {
-	_impl->unlock_drop();
-}
+
 
 Id2MinMax MemStorage::loadMinMax(){
     return _impl->loadMinMax();

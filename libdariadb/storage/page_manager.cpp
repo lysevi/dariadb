@@ -12,7 +12,6 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/page.h>
-#include <libdariadb/storage/lock_manager.h>
 
 #include <atomic>
 #include <cstring>
@@ -455,8 +454,6 @@ public:
   }
 
   void appendChunks(const std::vector<Chunk*>& a, size_t count) {
-	  auto lm = this->_env->getResourceObject<LockManager>(EngineEnvironment::Resource::LOCK_MANAGER);
-	  lm->lock(LOCK_KIND::EXCLUSIVE, { LOCK_OBJECTS::PAGE });
 	  Page *res = nullptr;
 	  std::string page_name = utils::fs::random_file_name(".page");
 	  logger_info("engine: write chunks to ", page_name);
@@ -468,7 +465,6 @@ public:
 	  delete res;
 
 	  insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
-	  lm->unlock({ LOCK_OBJECTS::PAGE });
   }
 
   void insert_pagedescr(std::string page_name, IndexHeader hdr) {

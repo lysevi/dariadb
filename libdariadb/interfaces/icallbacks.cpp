@@ -13,13 +13,13 @@ IReaderClb::~IReaderClb() {
 
 void IReaderClb::is_end() {
 	is_end_called = true;
-	_cond.notify_all();
 }
 
 void IReaderClb::wait() {
-	std::mutex mtx;
-	std::unique_lock<std::mutex> locker(mtx);
-	_cond.wait(locker, [this]() { return this->is_end_called; });
+	//TODO make more smarter.
+	while (!is_cancel && !is_end_called) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	}
 	//mtx.unlock();
 }
 
