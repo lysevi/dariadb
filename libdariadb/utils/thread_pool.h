@@ -75,7 +75,7 @@ public:
 private:
 	void worker(Yield&y);
 private:
-	std::shared_ptr<Coroutine> _coro;
+	Coroutine _coro;
 	ThreadInfo _tinfo;
 	TaskResult_Ptr _result;
   AsyncTask _task;

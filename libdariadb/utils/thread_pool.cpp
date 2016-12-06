@@ -5,24 +5,23 @@
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function, const std::string &file, int line) {
+AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function, const std::string &file, int line)
+	:_coro(std::bind(&AsyncTaskWrap::worker, this, std::placeholders::_1)) {
 	_task = t;
 	_parent_function = _function;
 	_code_file = file;
 	_code_line = line;
 	_result = std::make_shared<TaskResult>();
+	_tinfo.coro_yeild = nullptr;
 	/*auto f = std::bind(&AsyncTaskWrap::call, this, std::placeholders::_1);
 	_coro.reset(new Coroutine(f));*/
 }
 
 bool AsyncTaskWrap::call(const ThreadInfo &ti) {
-	if (_coro == nullptr) {
-		_tinfo = ti;
-		auto f = std::bind(&AsyncTaskWrap::worker,this, std::placeholders::_1);
-		_coro.reset(new Coroutine(f));
-	}
+	_tinfo.kind = ti.kind;
+	_tinfo.thread_number = ti.thread_number;
 	try {
-		if(!(*_coro)()){
+		if(!_coro()){
 			_result->unlock();
 			return false;
 		}
