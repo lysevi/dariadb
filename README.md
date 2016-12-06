@@ -1,7 +1,7 @@
 # dariadb - numeric time-series database.
  
 # Features
-* Full featured server with client library(C++).
+* Can be used as a server application or an embedded library.
 * Each measurement contains:
   - Id - x32 unsigned integer value.
   - Time - x64 timestamp.
