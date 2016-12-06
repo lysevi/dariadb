@@ -278,6 +278,7 @@ public:
 					}
 				}
 			}
+			return false;
 		};
 
 
@@ -295,7 +296,6 @@ public:
 				break;
 			}
 		}
-		return false;
 	};
 	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
 	pm_async->wait();
