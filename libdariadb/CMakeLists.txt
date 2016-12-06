@@ -36,7 +36,6 @@ SET(DARIADB_STORAGE_LIBS dariadb ${Boost_LIBRARIES} sqlite3 CACHE STRING "Dariad
 
 add_library(dariadb SHARED ${SRC})
 TARGET_LINK_LIBRARIES(dariadb ${Boost_LIBRARIES} sqlite3 ${CMAKE_THREAD_LIBS_INIT})
-set_target_properties(dariadb PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 IF(WIN32)
  target_link_libraries(dariadb wsock32 ws2_32)
