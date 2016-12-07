@@ -95,11 +95,14 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 		settings->chunk_size.value = 128;
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
         dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
 
 		dariadb_test::storage_test_check(&ms, 0, 100, 1, false);
+
 	}
+	dariadb::utils::async::ThreadManager::stop();
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
 	}
@@ -120,6 +123,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
         settings->chunk_size.value = 128;
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
 		dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
         
@@ -133,7 +137,6 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
                 break;
             }
         }
-		
     }
 	delete cw;
 	dariadb::utils::async::ThreadManager::stop();
@@ -158,6 +161,8 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
 		settings->chunk_size.value = 128;
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+		
+		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
 		dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
 

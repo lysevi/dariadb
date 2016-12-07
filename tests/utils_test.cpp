@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
 	AsyncTask at_while = [&called](const ThreadInfo &ti) {
 		for(int i=0;i<10;++i){
 			++called;
-			ti.yeild();
+			ti.yield();
 		}
 	};
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {

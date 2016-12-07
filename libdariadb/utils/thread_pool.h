@@ -35,10 +35,10 @@ enum class THREAD_COMMON_KINDS : ThreadKind { DISK_IO = 1, COMMON};
 struct ThreadInfo {
   ThreadKind kind;
   size_t thread_number;
-  Yield  *coro_yeild;
+  Yield  *coro_yield;
 
-  void yeild() const{
-	  coro_yeild->operator()();
+  void yield() const{
+	  coro_yield->operator()();
   }
 };
 

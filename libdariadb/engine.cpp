@@ -468,7 +468,7 @@ public:
 		  local_q.to = q.to;
 		  local_q.ids[0] = id;
 		  while (!this->try_lock_storage()) {
-			  ti.yeild();
+			  ti.yield();
 		  }
 		  if (this->strategy() == STRATEGY::CACHE) {
 			  foreach_internal_cache(local_q, p_clbk, a_clbk);
@@ -540,7 +540,7 @@ public:
 
       for (auto id : q.ids) {
 		  while (!try_lock_storage()) {
-			  ti.yeild();
+			  ti.yield();
 		  }
         dariadb::Time minT, maxT;
         QueryTimePoint local_q = q;

@@ -67,7 +67,7 @@ void Dropper::drop_aof_internal(const std::string &fname) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
 	  while (!this->_dropper_lock.try_lock()) {
-		  ti.yeild();
+		  ti.yield();
 	  }
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
 	  

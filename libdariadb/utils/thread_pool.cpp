@@ -12,7 +12,7 @@ AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function, const s
 	_code_file = file;
 	_code_line = line;
 	_result = std::make_shared<TaskResult>();
-	_tinfo.coro_yeild = nullptr;
+	_tinfo.coro_yield = nullptr;
 	/*auto f = std::bind(&AsyncTaskWrap::call, this, std::placeholders::_1);
 	_coro.reset(new Coroutine(f));*/
 }
@@ -30,7 +30,7 @@ bool AsyncTaskWrap::call(const ThreadInfo &ti) {
 
 void AsyncTaskWrap::worker(Yield &y) {
   try {
-    this->_tinfo.coro_yeild = &y;
+    this->_tinfo.coro_yield = &y;
     _task(this->_tinfo);
   } catch (std::exception &ex) {
     logger_fatal("engine: *** async task exception:", _parent_function, " file:",

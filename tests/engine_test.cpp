@@ -102,7 +102,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true);
-    ms->wait_all_asyncs();
     
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -174,7 +173,6 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     dariadb::IdSet all_ids;
     dariadb::Time maxWritedTime;
     dariadb_test::fill_storage_for_test(ms.get(), from, to, step,&all_ids, &maxWritedTime);
-    ms->wait_all_asyncs();
 
     ms->compress_all();
 
@@ -279,7 +277,6 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
 		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
-		ms->wait_all_asyncs();
 
         auto pages_count = ms->description().pages_count;
 		BOOST_CHECK_GE(pages_count, size_t(2));
@@ -313,7 +310,6 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
 		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
-		ms->wait_all_asyncs();
 
 		auto descr = ms->description();
 		BOOST_CHECK_GT(descr.pages_count, size_t(0));
