@@ -2,6 +2,8 @@
 #define BOOST_TEST_MODULE Main
 
 #include <boost/test/unit_test.hpp>
+#include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/memstorage.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/meas.h>
@@ -91,7 +93,10 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		settings->strategy.value = dariadb::storage::STRATEGY::MEMORY;
 		settings->chunk_size.value = 128;
-        dariadb::storage::MemStorage ms{ settings, size_t(0) };
+		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
+		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+
+        dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
 
 		dariadb_test::storage_test_check(&ms, 0, 100, 1, false);
 	}
@@ -113,7 +118,10 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
 		settings->strategy.value = dariadb::storage::STRATEGY::MEMORY;
         settings->memory_limit.value =1024*1024;
         settings->chunk_size.value = 128;
-        dariadb::storage::MemStorage ms{ settings, size_t(0) };
+		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
+		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+
+		dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
         
         ms.setDownLevel(cw);
 
@@ -148,7 +156,10 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
 		settings->strategy.value = dariadb::storage::STRATEGY::CACHE;
 		settings->memory_limit.value = 1024 * 1024;
 		settings->chunk_size.value = 128;
-		dariadb::storage::MemStorage ms{ settings, size_t(0) };
+		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
+		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
+
+		dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
 
 		ms.setDiskStorage(cw);
 

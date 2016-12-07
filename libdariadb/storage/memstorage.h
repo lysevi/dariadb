@@ -5,7 +5,7 @@
 #include <libdariadb/interfaces/ichunkcontainer.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/storage/settings.h>
+#include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/allocators.h>
 #include <memory>
 
@@ -20,7 +20,7 @@ public:
   };
 public:
   /// id_count - for prealloc
-  EXPORT MemStorage(const storage::Settings_ptr &s, const size_t id_count);
+  EXPORT MemStorage(const EngineEnvironment_ptr &env, size_t id_count);
   EXPORT ~MemStorage();
   EXPORT Description description()const;
 
