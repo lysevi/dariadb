@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
 
 	  auto elapsed = ((float)clock() - start) / CLOCKS_PER_SEC;
 	  std::cout << "\ncompress writer : " << elapsed << std::endl;
-	  auto w = cwr.used_space();
+	  auto w = cwr.usedSpace();
 	  auto sz = sizeof(dariadb::Meas) * count;
 	  std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
 

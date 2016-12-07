@@ -17,11 +17,11 @@ public:
   EXPORT ~CopmressedWriter();
 
   EXPORT bool append(const Meas &m);
-  bool is_full() const { return _is_full; }
+  bool isFull() const { return _is_full; }
 
-  size_t used_space() const { return time_comp.used_space(); }
+  size_t usedSpace() const { return time_comp.used_space(); }
 
-  ByteBuffer_Ptr get_bb()const { return _bb; }
+  ByteBuffer_Ptr getBinaryBuffer()const { return _bb; }
 protected:
 	ByteBuffer_Ptr _bb;
 	Meas _first;

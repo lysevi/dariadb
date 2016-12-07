@@ -20,6 +20,8 @@ const char *CREATE_SQL = "CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KE
 "CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); ";
 
 static int file_select_callback(void *data, int argc, char **argv, char **azColName) {
+	azColName;
+	argc;
   std::list<std::string> *ld = (std::list<std::string> *)data;
   assert(argc == 1);
   ld->push_back(std::string(argv[0]));
@@ -27,6 +29,8 @@ static int file_select_callback(void *data, int argc, char **argv, char **azColN
 }
 
 static int version_select_callback(void *data, int argc, char **argv, char **azColName) {
+	azColName;
+	argc;
   std::string *ld = (std::string *)data;
   assert(argc == 1);
   (*ld) = std::string(argv[0]);
@@ -112,8 +116,9 @@ public:
     auto rc =
         sqlite3_exec(db, sql.c_str(), file_select_callback, (void *)&result, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+      THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
 
     return result;
@@ -128,8 +133,9 @@ public:
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
   }
 
@@ -142,8 +148,9 @@ public:
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
   }
 
@@ -155,8 +162,9 @@ public:
     auto rc =
         sqlite3_exec(db, sql.c_str(), file_select_callback, (void *)&result, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
     return result;
   }
@@ -168,8 +176,9 @@ public:
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
   }
 
@@ -182,8 +191,9 @@ public:
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
   }
 
@@ -196,8 +206,9 @@ public:
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
   }
 
@@ -212,8 +223,9 @@ public:
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
   }
 
@@ -224,8 +236,9 @@ public:
     auto rc =
         sqlite3_exec(db, sql.c_str(), version_select_callback, (void *)&result, &zErrMsg);
     if (rc != SQLITE_OK) {
-      THROW_EXCEPTION("engine: SQL error - %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+		std::string msg = std::string(zErrMsg);
+		sqlite3_free(zErrMsg);
+		THROW_EXCEPTION("engine: SQL error - %s\n", msg);
     }
     return result;
   }

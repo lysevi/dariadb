@@ -462,12 +462,12 @@ BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
         m.flag = i;
 		m.value = i;
 		if (!cwr.append(m)) {
-			BOOST_CHECK(cwr.is_full());
+			BOOST_CHECK(cwr.isFull());
 			break;
 		}
 		meases.push_back(m);
 	}
-	BOOST_CHECK_LE(cwr.used_space(), test_buffer_size);
+	BOOST_CHECK_LE(cwr.usedSpace(), test_buffer_size);
 
     auto rbw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
 	CopmressedReader crr(rbw, meases.front());

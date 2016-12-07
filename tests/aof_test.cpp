@@ -28,7 +28,7 @@ public:
 	  _settings = settings;
 	  _env = env;
   }
-  void drop_aof(const std::string &fname) override {
+  void dropAof(const std::string &fname) override {
     auto full_path = dariadb::utils::fs::append_path(
 		_settings->path, fname);
     dariadb::storage::AOFile_Ptr aof{new dariadb::storage::AOFile(_env,full_path, true)};
@@ -210,19 +210,19 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     auto out = am->readInterval(qi);
     BOOST_CHECK_EQUAL(out.size(), dariadb_test::copies_count);
 
-    auto closed = am->closed_aofs();
+    auto closed = am->closedAofs();
     BOOST_CHECK(closed.size() != size_t(0));
 	auto stor = std::make_shared<Moc_Dropper>(settings, _engine_env);
 	stor->writed_count = 0;
 
     for (auto fname : closed) {
-      am->drop_aof(fname, stor.get());
+      am->dropAof(fname, stor.get());
     }
 
     BOOST_CHECK(stor->writed_count != size_t(0));
     BOOST_CHECK_EQUAL(stor->files.size(), closed.size());
 
-    closed = am->closed_aofs();
+    closed = am->closedAofs();
     BOOST_CHECK_EQUAL(closed.size(), size_t(0));
 
 	am = nullptr;

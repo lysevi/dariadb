@@ -50,14 +50,14 @@ Chunk::~Chunk() {
   this->bw = nullptr;
 }
 
-bool Chunk::check_id(const Id &id) {
+bool Chunk::checkId(const Id &id) {
   if (header->first.id!= id) {
     return false;
   }
   return true;
 }
 
-bool Chunk::check_flag(const Flag &f) {
+bool Chunk::checkFlag(const Flag &f) {
   if (f != 0) {
     if (!dariadb::storage::bloom_check(header->flag_bloom, f)) {
       return false;
@@ -66,9 +66,9 @@ bool Chunk::check_flag(const Flag &f) {
   return true;
 }
 
-bool Chunk::check_checksum() {
-  auto exists = get_checksum();
-  auto calculated = calc_checksum();
+bool Chunk::checkChecksum() {
+  auto exists = getChecksum();
+  auto calculated = calcChecksum();
   return exists == calculated;
 }
 
@@ -79,7 +79,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, cons
 	{
   header->kind = CHUNK_KIND::Compressed;
   
-  bw = c_writer.get_bb();
+  bw = c_writer.getBinaryBuffer();
   bw->reset_pos();
   header->bw_pos = uint32_t(bw->pos());
 
@@ -93,7 +93,7 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer)
 	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
 {
   assert(index->kind == CHUNK_KIND::Compressed);
-  bw = c_writer.get_bb();
+  bw = c_writer.getBinaryBuffer();
   bw->set_pos(header->bw_pos);
 }
 
@@ -102,15 +102,15 @@ ZippedChunk::~ZippedChunk() {}
 void ZippedChunk::close() {
   header->is_readonly = true;
 
-  header->crc = this->calc_checksum();
+  header->crc = this->calcChecksum();
   assert(header->crc != 0);
 }
 
-uint32_t ZippedChunk::calc_checksum() {
+uint32_t ZippedChunk::calcChecksum() {
   return utils::crc32(this->_buffer_t, this->header->size);
 }
 
-uint32_t ZippedChunk::get_checksum() {
+uint32_t ZippedChunk::getChecksum() {
   return header->crc;
 }
 
@@ -123,7 +123,7 @@ bool ZippedChunk::append(const Meas &m) {
 
   if (!t_f) {
     this->close();
-    assert(c_writer.is_full());
+    assert(c_writer.isFull());
     return false;
   } else {
     header->bw_pos = uint32_t(bw->pos());
@@ -160,7 +160,7 @@ public:
   std::shared_ptr<CopmressedReader> _reader;
 };
 
-Chunk::ChunkReader_Ptr ZippedChunk::get_reader() {
+Chunk::ChunkReader_Ptr ZippedChunk::getReader() {
   auto raw_res = new ZippedChunkReader;
   raw_res->count = this->header->count;
   raw_res->_chunk = this->shared_from_this();

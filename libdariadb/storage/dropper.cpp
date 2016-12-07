@@ -27,7 +27,7 @@ Dropper::Description Dropper::description() const {
   return result;
 }
 
-void Dropper::drop_aof(const std::string& fname) {
+void Dropper::dropAof(const std::string& fname) {
   std::lock_guard<std::mutex> lg(_queue_locker);
   auto fres = _files_queue.find(fname);
   if (fres != _files_queue.end()) {

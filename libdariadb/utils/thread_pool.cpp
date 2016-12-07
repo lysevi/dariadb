@@ -18,26 +18,26 @@ AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function, const s
 }
 
 bool AsyncTaskWrap::call(const ThreadInfo &ti) {
-	_tinfo.kind = ti.kind;
-	_tinfo.thread_number = ti.thread_number;
-	try {
-		if(!_coro()){
-			_result->unlock();
-			return false;
-		}
-		return true;
-	}
-	catch (std::exception &ex) {
-		logger_fatal("engine: *** async task exception:", _parent_function, " file:", _code_file, " line:", _code_line);
-		logger_fatal("engine: *** what:", ex.what());
-		_result->unlock();
-		throw;
-	}
+  _tinfo.kind = ti.kind;
+  _tinfo.thread_number = ti.thread_number;
+
+  if (!_coro()) {
+    _result->unlock();
+    return false;
+  }
+  return true;
 }
 
-void AsyncTaskWrap::worker(Yield&y) {
-	this->_tinfo.coro_yeild = &y;
-	_task(this->_tinfo);
+void AsyncTaskWrap::worker(Yield &y) {
+  try {
+    this->_tinfo.coro_yeild = &y;
+    _task(this->_tinfo);
+  } catch (std::exception &ex) {
+    logger_fatal("engine: *** async task exception:", _parent_function, " file:",
+                 _code_file, " line:", _code_line);
+    logger_fatal("engine: *** what:", ex.what());
+    throw;
+  }
 }
 
 TaskResult_Ptr AsyncTaskWrap::result()const {

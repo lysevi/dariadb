@@ -187,9 +187,9 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
     ThreadPool tp(ThreadPool::Params(threads_count, tk));
 
     BOOST_CHECK_EQUAL(tp.threads_count(), threads_count);
-    BOOST_CHECK(!tp.is_stoped());
+    BOOST_CHECK(!tp.isStoped());
     tp.stop();
-    BOOST_CHECK(tp.is_stoped());
+    BOOST_CHECK(tp.isStoped());
   }
 
   {

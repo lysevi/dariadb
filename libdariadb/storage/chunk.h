@@ -54,14 +54,14 @@ public:
   virtual ~Chunk();
 
   virtual bool append(const Meas &m) = 0;
-  virtual bool is_full() const = 0;
-  virtual ChunkReader_Ptr get_reader() = 0;
-  virtual bool check_id(const Id &id);
+  virtual bool isFull() const = 0;
+  virtual ChunkReader_Ptr getReader() = 0;
+  virtual bool checkId(const Id &id);
   virtual void close() = 0;
-  virtual uint32_t calc_checksum() = 0;
-  virtual uint32_t get_checksum() = 0;
-  virtual bool check_checksum();
-  bool check_flag(const Flag &f);
+  virtual uint32_t calcChecksum() = 0;
+  virtual uint32_t getChecksum() = 0;
+  virtual bool checkChecksum();
+  bool checkFlag(const Flag &f);
 
   ChunkHeader *header;
   u8vector _buffer_t;
@@ -81,14 +81,14 @@ public:
   ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, const Meas &first_m);
   ZippedChunk(ChunkHeader *index, uint8_t *buffer);
   ~ZippedChunk();
-  //TODO camel case for methods names.
-  bool is_full() const override { return c_writer.is_full(); }
+
+  bool isFull() const override { return c_writer.isFull(); }
   bool append(const Meas &m) override;
   void close() override;
 
-  uint32_t calc_checksum() override;
-  uint32_t get_checksum() override;
-  ChunkReader_Ptr get_reader() override; 
+  uint32_t calcChecksum() override;
+  uint32_t getChecksum() override;
+  ChunkReader_Ptr getReader() override; 
   compression::CopmressedWriter c_writer;
 };
 

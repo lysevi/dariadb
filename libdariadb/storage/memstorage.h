@@ -41,7 +41,7 @@ public:
   EXPORT void setDownLevel(IChunkContainer*_down);
   EXPORT void setDiskStorage(IMeasWriter*_disk); //when strategy==CACHE;
   EXPORT void stop();
-  EXPORT std::pair<std::mutex*, std::mutex*> get_lockers();
+  EXPORT std::pair<std::mutex*, std::mutex*> getLockers();
   EXPORT Id2MinMax loadMinMax()override;
   EXPORT Id2Time getSyncMap(); ///Id to max dropped to disk time.
 private:

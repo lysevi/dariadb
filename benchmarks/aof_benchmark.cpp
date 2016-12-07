@@ -25,7 +25,7 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
-              << " aofs: " << aof_manager->files_count()
+              << " aofs: " << aof_manager->filesCount()
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:"
               << (int64_t(100) * append_count) / dariadb_bench::all_writes

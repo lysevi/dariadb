@@ -105,7 +105,7 @@ public:
   size_t threads_count() const { return _params.threads_count; }
   ThreadKind kind() const { return _params.kind; }
 
-  bool is_stoped() const { return _is_stoped; }
+  bool isStoped() const { return _is_stoped; }
 
   EXPORT TaskResult_Ptr post(const AsyncTaskWrap_Ptr &task);
   EXPORT void flush();
@@ -118,7 +118,7 @@ public:
 
 protected:
   void _thread_func(size_t num);
-  void pushTaskToQueue(const std::shared_ptr<AsyncTaskWrap>&at);
+  void pushTaskToQueue(const AsyncTaskWrap_Ptr&at);
 protected:
   Params _params;
   std::vector<std::thread> _threads;

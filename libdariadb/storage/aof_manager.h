@@ -31,16 +31,16 @@ public:
   EXPORT virtual Status  append(const Meas &value) override;
   EXPORT virtual void flush() override;
 
-  EXPORT std::list<std::string> closed_aofs();
-  EXPORT void drop_aof(const std::string &fname, IAofDropper *storage);
+  EXPORT std::list<std::string> closedAofs();
+  EXPORT void dropAof(const std::string &fname, IAofDropper *storage);
 
-  EXPORT size_t files_count() const;
-  EXPORT void set_downlevel(IAofDropper *down);
+  EXPORT size_t filesCount() const;
+  EXPORT void setDownlevel(IAofDropper *down);
 
   EXPORT void erase(const std::string &fname);
 
-  EXPORT void drop_closed_files(size_t count);
-  EXPORT void drop_all();
+  EXPORT void dropClosedFiles(size_t count);
+  EXPORT void dropAll();
 
   EXPORT Id2MinMax loadMinMax() override;
 protected:

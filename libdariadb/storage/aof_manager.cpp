@@ -54,7 +54,7 @@ void AOFManager::create_new() {
   _aof = AOFile_Ptr{new AOFile(_env)};
 }
 
-void  AOFManager::drop_all(){
+void  AOFManager::dropAll(){
     if (_down != nullptr) {
       auto all_files = aof_files();
       this->_aof=nullptr;
@@ -63,15 +63,15 @@ void  AOFManager::drop_all(){
         auto without_path = utils::fs::extract_filename(f);
         if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
           //logger_info("engine: drop ",without_path);
-          this->drop_aof(f, _down);
+          this->dropAof(f, _down);
         }
       }
     }
 }
 
-void AOFManager::drop_closed_files(size_t count) {
+void AOFManager::dropClosedFiles(size_t count) {
   if (_down != nullptr) {
-    auto closed = this->closed_aofs();
+    auto closed = this->closedAofs();
 
     TIMECODE_METRICS(ctmd, "drop", "AOFManager::drop_closed_files");
     size_t to_drop = std::min(closed.size(), count);
@@ -80,7 +80,7 @@ void AOFManager::drop_closed_files(size_t count) {
       closed.pop_front();
       auto without_path = utils::fs::extract_filename(f);
       if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-        this->drop_aof(f, _down);
+        this->dropAof(f, _down);
       }
     }
     // clean set of sended to drop files.
@@ -99,8 +99,8 @@ void AOFManager::drop_closed_files(size_t count) {
 
 void AOFManager::drop_old_if_needed() {
     if(_settings->strategy.value !=STRATEGY::FAST_WRITE){
-        auto closed = this->closed_aofs();
-        drop_closed_files(closed.size());
+        auto closed = this->closedAofs();
+        dropClosedFiles(closed.size());
     }
 }
 
@@ -114,7 +114,7 @@ std::list<std::string> AOFManager::aof_files() const {
   return res;
 }
 
-std::list<std::string> AOFManager::closed_aofs() {
+std::list<std::string> AOFManager::closedAofs() {
   auto all_files = aof_files();
   std::list<std::string> result;
   for (auto fn : all_files) {
@@ -129,14 +129,14 @@ std::list<std::string> AOFManager::closed_aofs() {
   return result;
 }
 
-void AOFManager::drop_aof(const std::string &fname, IAofDropper *storage) {
+void AOFManager::dropAof(const std::string &fname, IAofDropper *storage) {
   AOFile_Ptr ptr = AOFile_Ptr{new AOFile{_env, fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.emplace(without_path);
-  storage->drop_aof(without_path);
+  storage->dropAof(without_path);
 }
 
-void AOFManager::set_downlevel(IAofDropper *down) {
+void AOFManager::setDownlevel(IAofDropper *down) {
   _down = down;
   this->drop_old_if_needed();
 }
@@ -412,7 +412,7 @@ void AOFManager::flush() {
   flush_buffer();
 }
 
-size_t AOFManager::files_count() const {
+size_t AOFManager::filesCount() const {
   return aof_files().size();
 }
 

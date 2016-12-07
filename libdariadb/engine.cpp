@@ -21,6 +21,7 @@
 #include <cstring>
 #include <fstream>
 #include <shared_mutex>
+#include <array>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -73,7 +74,7 @@ public:
 		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
 
 		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
-		_aof_manager->set_downlevel(_dropper.get());
+		_aof_manager->setDownlevel(_dropper.get());
 		this->_top_level_storage = _aof_manager;
 	}
 
@@ -157,42 +158,44 @@ public:
     }
   }
 
+  
   bool try_lock_storage() {
 	  std::lock_guard<std::mutex> lock(_lock_locker);
 	  if (_dropper != nullptr && _memstorage != nullptr) {
-		  auto dl = _dropper->get_locker();
-		  auto lp = _memstorage->get_lockers();
-		  return std::try_lock(*dl, *lp.first, *lp.second);
+		  auto dl = _dropper->getLocker();
+		  auto lp = _memstorage->getLockers();
+		  return std::try_lock(*dl, *lp.first, *lp.second)==-1;
 	  }
 
 	  if (_dropper == nullptr && _memstorage != nullptr) {
-		  auto lp = _memstorage->get_lockers();
-		  return std::try_lock(*lp.first, *lp.second);
+		  auto lp = _memstorage->getLockers();
+		  return  std::try_lock(*lp.first, *lp.second)==-1;
 	  }
 
 	  if (_dropper != nullptr && _memstorage == nullptr) {
-		  auto dl = _dropper->get_locker();
+		  auto dl = _dropper->getLocker();
 		  return dl->try_lock();
 	  }
+	  THROW_EXCEPTION("engine: try_lock - bad engine configuration.");
   }
 
   void lock_storage() {
 	  std::lock_guard<std::mutex> lock(_lock_locker);
 	  if (_dropper != nullptr && _memstorage != nullptr) {
-		  auto dl = _dropper->get_locker();
-		  auto lp = _memstorage->get_lockers();
+		  auto dl = _dropper->getLocker();
+		  auto lp = _memstorage->getLockers();
 		  std::lock(*dl, *lp.first, *lp.second);
 		  return;
 	  }
 
 	  if (_dropper == nullptr && _memstorage != nullptr) {
-		  auto lp = _memstorage->get_lockers();
+		  auto lp = _memstorage->getLockers();
 		  std::lock(*lp.first, *lp.second);
 		  return;
 	  }
 
 	  if (_dropper != nullptr && _memstorage == nullptr) {
-		  auto dl = _dropper->get_locker();
+		  auto dl = _dropper->getLocker();
 		  dl->lock();
 		  return;
 	  }
@@ -200,8 +203,8 @@ public:
 
   void unlock_storage() {
 	  if (_dropper != nullptr && _memstorage != nullptr) {
-		  auto dl = _dropper->get_locker();
-		  auto lp = _memstorage->get_lockers();
+		  auto dl = _dropper->getLocker();
+		  auto lp = _memstorage->getLockers();
 		  dl->unlock();
 		  lp.first->unlock();
 		  lp.second->unlock();
@@ -209,14 +212,14 @@ public:
 	  }
 
 	  if (_dropper == nullptr && _memstorage != nullptr) {
-		  auto lp = _memstorage->get_lockers();
+		  auto lp = _memstorage->getLockers();
 		  lp.first->unlock();
 		  lp.second->unlock();
 		  return;
 	  }
 
 	  if (_dropper != nullptr && _memstorage == nullptr) {
-		  auto dl = _dropper->get_locker();
+		  auto dl = _dropper->getLocker();
 		  dl->unlock();
 		  return;
 	  }
@@ -390,7 +393,7 @@ public:
   Engine::Description description() const {
     Engine::Description result;
     memset(&result, 0, sizeof(Description));
-    result.aofs_count = _aof_manager==nullptr?0:_aof_manager->files_count();
+    result.aofs_count = _aof_manager==nullptr?0:_aof_manager->filesCount();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
 	if (_dropper != nullptr) {
@@ -577,14 +580,14 @@ public:
   void drop_part_aofs(size_t count) { 
 	  if (_aof_manager != nullptr) {
           logger_info("engine: drop_part_aofs ",count);
-		  _aof_manager->drop_closed_files(count);
+		  _aof_manager->dropClosedFiles(count);
 	  }
   }
 
   void compress_all() {
     if (_aof_manager != nullptr) {
       logger_info("engine: compress_all");
-      _aof_manager->drop_all();
+      _aof_manager->dropAll();
       this->flush();
     }
   }

@@ -90,7 +90,7 @@ struct TimeTrack : public IMeasStorage {
 
   virtual Status  append(const Meas &value) override {
     std::lock_guard<utils::Locker> lg(_locker);
-    if (_cur_chunk==nullptr || _cur_chunk->is_full()) {
+    if (_cur_chunk==nullptr || _cur_chunk->isFull()) {
 		if (!create_new_chunk(value)) {
 			return Status (0,1);
 		}
@@ -177,7 +177,7 @@ struct TimeTrack : public IMeasStorage {
 		  || utils::inInterval(q.from, q.to, c->header->minTime)
 		  || utils::inInterval(q.from, q.to, c->header->maxTime)) {
 
-			  auto rdr = c->get_reader();
+			  auto rdr = c->getReader();
 			  //auto skip = c->in_disk_count;
 			  while (!rdr->is_end()) {
 				  if (clbk->is_canceled()) {
@@ -214,7 +214,7 @@ struct TimeTrack : public IMeasStorage {
 		  }
 		  auto c = it->second;
 		  if (c->header->minTime >= q.time_point && c->header->maxTime <= q.time_point) {
-			  auto rdr = c->get_reader();
+			  auto rdr = c->getReader();
 			  //auto skip = c->in_disk_count;
 			  while (!rdr->is_end()) {
 				  auto v = rdr->readNext();
@@ -232,7 +232,7 @@ struct TimeTrack : public IMeasStorage {
 	  }
 	  
 	  if (_cur_chunk!=nullptr && _cur_chunk->header->minTime >= q.time_point && _cur_chunk->header->maxTime <= q.time_point) {
-		  auto rdr = _cur_chunk->get_reader();
+		  auto rdr = _cur_chunk->getReader();
 		  //auto skip = _cur_chunk->in_disk_count;
 		  while (!rdr->is_end()) {
 			  auto v = rdr->readNext();
@@ -376,41 +376,31 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	}
 	
 	Status  append(const Meas &value) override{ 
-		//TODO refact!!!
 	  _all_tracks_locker.lock_shared();
 	  auto track = _id2track.find(value.id);
-	  bool is_created = false;
+	  TimeTrack_ptr target_track = nullptr;
 	  if (track == _id2track.end()) {
 		  _all_tracks_locker.unlock_shared();
-		  _all_tracks_locker.lock();
-		  is_created = true;
-		  track = _id2track.find(value.id);
-		  if (track == _id2track.end()) {
-			  auto new_track = std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
-			  _id2track.emplace(std::make_pair(value.id, new_track));
-			  _all_tracks_locker.unlock();
+		  std::lock_guard<std::shared_mutex> lg(_all_tracks_locker);
 
-			  while (new_track->append(value).writed != 1) {
-				  _drop_cond.notify_all();
-				  _crawler_cond.notify_all();				  
-			  }
-			  _crawler_cond.notify_all();
-			  return Status (1, 0);
+		  track = _id2track.find(value.id);
+		  if (track == _id2track.end()) {//still not exists.
+			  target_track = std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
+			  _id2track.emplace(std::make_pair(value.id, target_track));
 		  }
 		  else {
-			  _all_tracks_locker.unlock();
+			  target_track = track->second;
 		  }
-	  }
-	  if (!is_created) {
+	  }else{
+		  target_track = track->second;
 		  _all_tracks_locker.unlock_shared();
 	  }
-	  while (track->second->append(value).writed != 1) {
+	  while (target_track->append(value).writed != 1) {
 		  _drop_cond.notify_all();
 		  _crawler_cond.notify_all();
 	  }
 	  _crawler_cond.notify_all();
 	  return Status (1, 0);
-	  
   }
 
   void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
@@ -421,7 +411,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     all_chunks.reserve(cur_chunk_count);
     size_t pos = 0;
 
-	//TODO move to method;
 	std::vector<MemChunk_Ptr>  chunks_copy(_chunks.size());
 	auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) {return c != nullptr; });
 	chunks_copy.resize(std::distance(chunks_copy.begin(), it));
@@ -437,9 +426,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       if (c == nullptr) {
         continue;
       }
-      if (!in_stop & !c->is_full()) { // not full
+      if (!in_stop & !c->isFull()) { // not full
         assert(!in_stop);
-        assert(!c->is_full());
+        assert(!c->isFull());
         continue;
       }
       if (!c->header->is_init) {
@@ -613,7 +602,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 	  }
   }
 
-  std::pair<std::mutex*, std::mutex*> get_lockers(){
+  std::pair<std::mutex*, std::mutex*> getLockers(){
 	  return std::make_pair(&_crawler_locker, &_drop_locker);
   }
 
@@ -650,11 +639,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         std::this_thread::yield();
         continue;
       }
-	  //TODO move to method;
+
       std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
-      auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) { 
-		  return c != nullptr && !c->already_in_disk(); 
-	  });
+      auto it =
+          std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
+                       [](auto c) { return c != nullptr && !c->already_in_disk(); });
       chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
       std::sort(chunks_copy.begin(), chunks_copy.end(),
@@ -666,8 +655,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         if (_drop_stop) {
           break;
         }
-        auto rdr = c->get_reader();
-        int skip = c->in_disk_count;
+        auto rdr = c->getReader();
+        auto skip = c->in_disk_count;
         int writed = 0;
         Time max_time = c->_track->_max_sync_time;
         while (!rdr->is_end()) {
@@ -765,8 +754,8 @@ void MemStorage::setDiskStorage(IMeasWriter *_disk) {
   _impl->setDiskStorage(_disk);
 }
 
-std::pair<std::mutex*, std::mutex*> MemStorage::get_lockers(){
-	return _impl->get_lockers();
+std::pair<std::mutex*, std::mutex*> MemStorage::getLockers(){
+	return _impl->getLockers();
 }
 
 

@@ -18,14 +18,14 @@ public:
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager, AOFManager_ptr aof_manager);
   ~Dropper();
   /*static void drop_aof(const std::string &fname, const std::string &storage_path);*/
-  void drop_aof(const std::string& fname) override;
+  void dropAof(const std::string& fname) override;
 
   void flush();
   // 1. rm PAGE files with name exists AOF file.
   static void cleanStorage(const std::string&storagePath);
 
   Description description() const;
-  std::mutex* get_locker() {
+  std::mutex* getLocker() {
 	  return &_dropper_lock;
   }
 private:

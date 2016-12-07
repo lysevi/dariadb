@@ -497,7 +497,7 @@ void Page::fsck() {
       Chunk_Ptr ptr = nullptr;
       ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
 
-      if (!ptr->check_checksum()) {
+      if (!ptr->checkChecksum()) {
         logger_fatal("engine: fsck remove broken chunk #", ptr->header->id, " id:",
                      ptr->header->first.id, " time: [", to_string(ptr->header->minTime),
                      " : ", to_string(ptr->header->maxTime), "]");
@@ -568,7 +568,7 @@ void Page::init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index) {
 
 bool Page::is_full() const {
   return this->header->is_full &&
-         (_openned_chunk.ch == nullptr || _openned_chunk.ch->is_full());
+         (_openned_chunk.ch == nullptr || _openned_chunk.ch->isFull());
 }
 
 bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
@@ -620,7 +620,7 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     }
 
     Chunk_Ptr c{ptr};
-    auto reader = c->get_reader();
+    auto reader = c->getReader();
     while (!reader->is_end()) {
       auto m = reader->readNext();
       if (m.time <= q.time_point && m.inQuery(q.ids, q.flag)) {
@@ -671,7 +671,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
     }
     Chunk_Ptr c{ptr};
     search_res = c;
-    auto rdr = search_res->get_reader();
+    auto rdr = search_res->getReader();
     while (!rdr->is_end()) {
       auto subres = rdr->readNext();
       if (subres.time > query.to) {
@@ -697,7 +697,7 @@ void Page::mark_as_non_init(Chunk_Ptr &ptr) {
   this->header->removed_chunks++;
 }
 
-void Page::appendChunks(const std::vector<Chunk*>&a, size_t count) {
+void Page::appendChunks(const std::vector<Chunk*>&, size_t) {
 	NOT_IMPLEMENTED;
 }
 
