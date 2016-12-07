@@ -66,7 +66,7 @@ void Dropper::drop_aof_internal(const std::string &fname) {
   AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
-	  if (!this->_dropper_lock.try_lock()) {
+	  while (!this->_dropper_lock.try_lock()) {
 		  ti.yeild();
 	  }
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");

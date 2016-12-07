@@ -157,6 +157,25 @@ public:
     }
   }
 
+  bool try_lock_storage() {
+	  std::lock_guard<std::mutex> lock(_lock_locker);
+	  if (_dropper != nullptr && _memstorage != nullptr) {
+		  auto dl = _dropper->get_locker();
+		  auto lp = _memstorage->get_lockers();
+		  return std::try_lock(*dl, *lp.first, *lp.second);
+	  }
+
+	  if (_dropper == nullptr && _memstorage != nullptr) {
+		  auto lp = _memstorage->get_lockers();
+		  return std::try_lock(*lp.first, *lp.second);
+	  }
+
+	  if (_dropper != nullptr && _memstorage == nullptr) {
+		  auto dl = _dropper->get_locker();
+		  return dl->try_lock();
+	  }
+  }
+
   void lock_storage() {
 	  std::lock_guard<std::mutex> lock(_lock_locker);
 	  if (_dropper != nullptr && _memstorage != nullptr) {
@@ -391,39 +410,33 @@ public:
     auto am = _aof_manager.get();
 
     auto memory_mm = mm->loadMinMax();
-	auto sync_map=mm->getSyncMap();
-    auto local_q = q;
-    local_q.ids.resize(1);
-    for (auto id : q.ids) {
-		local_q.from = q.from;
-		local_q.to = q.to;
-      local_q.ids[0] = id;
-      auto id_mm = memory_mm.find(id);
-      if (id_mm == memory_mm.end()) {
+    auto sync_map = mm->getSyncMap();
+	QueryInterval local_q = q;
+    auto id = local_q.ids.front();
+    auto id_mm = memory_mm.find(local_q.ids.front());
+    if (id_mm == memory_mm.end()) {
+      pm->foreach (local_q, p_clbk);
+      am->foreach (local_q, a_clbk);
+    } else {
+      if ((id_mm->second.min.time) > local_q.from) {
+        auto min_mem_time = sync_map[id];
+        local_q.to = min_mem_time;
         pm->foreach (local_q, p_clbk);
         am->foreach (local_q, a_clbk);
-      } else {
-        if ((id_mm->second.min.time) > local_q.from) {
-			auto min_mem_time = sync_map[id];
-			local_q.to = min_mem_time;
-          pm->foreach (local_q, p_clbk);
-          am->foreach (local_q, a_clbk);
-		  
-		 
-		  if (min_mem_time < q.to) {
-			  if (min_mem_time != MIN_TIME) {//to read value after min_mem_time;
-				  min_mem_time += 1;
-			  }
-			  local_q.from = min_mem_time;
-			  local_q.to = q.to;
-			  mm->foreach(local_q, a_clbk);
-		  }
-        } else {
+
+        if (min_mem_time < q.to) {
+          if (min_mem_time != MIN_TIME) { // to read value after min_mem_time;
+            min_mem_time += 1;
+          }
+          local_q.from = min_mem_time;
+          local_q.to = q.to;
           mm->foreach (local_q, a_clbk);
         }
-        if (a_clbk->is_canceled()) {
-          break;
-        }
+      } else {
+        mm->foreach (local_q, a_clbk);
+      }
+      if (a_clbk->is_canceled()) {
+        return;
       }
     }
   }
@@ -431,27 +444,37 @@ public:
   /// when strategy!=CACHEs
   void foreach_internal_two_level(const QueryInterval &q, IReaderClb *p_clbk,
                                   IReaderClb *a_clbk) {
-    auto pm = _page_manager.get();
-    auto tm = _top_level_storage.get();
-    if (!p_clbk->is_canceled()) {
-      pm->foreach (q, p_clbk);
-    }
-    if (!a_clbk->is_canceled()) {
-      tm->foreach (q, a_clbk);
-    }
+  auto pm = _page_manager.get();
+  auto tm = _top_level_storage.get();
+  if (!p_clbk->is_canceled()) {
+    pm->foreach (q, p_clbk);
+  }
+  if (!a_clbk->is_canceled()) {
+    tm->foreach (q, a_clbk);
+  }
   }
 
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
     AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
-      this->lock_storage();
-      if (this->strategy() == STRATEGY::CACHE) {
-        foreach_internal_cache(q, p_clbk, a_clbk);
-      } else {
-        foreach_internal_two_level(q, p_clbk, a_clbk);
-      }
-      this->unlock_storage();
+	  auto local_q = q;
+	  local_q.ids.resize(1);
+	  for (auto id : q.ids) {
+		  local_q.from = q.from;
+		  local_q.to = q.to;
+		  local_q.ids[0] = id;
+		  while (!this->try_lock_storage()) {
+			  ti.yeild();
+		  }
+		  if (this->strategy() == STRATEGY::CACHE) {
+			  foreach_internal_cache(local_q, p_clbk, a_clbk);
+		  }
+		  else {
+			  foreach_internal_two_level(local_q, p_clbk, a_clbk);
+		  }
+		  this->unlock_storage();
+	  }
       a_clbk->is_end();
     };
 
@@ -512,9 +535,10 @@ public:
     AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
 
-      lock_storage();
-
       for (auto id : q.ids) {
+		  while (!try_lock_storage()) {
+			  ti.yeild();
+		  }
         dariadb::Time minT, maxT;
         QueryTimePoint local_q = q;
         local_q.ids.clear();
@@ -524,7 +548,6 @@ public:
             (minT < q.time_point || maxT < q.time_point)) {
           auto subres = mm->readTimePoint(local_q);
           result[id] = subres[id];
-          continue;
         } else {
 			bool in_aof_level = false;
 			if (this->strategy() == STRATEGY::CACHE) {
@@ -538,9 +561,11 @@ public:
 				result[id] = subres[id];
 			}
         }
+
+		unlock_storage();
       }
 
-      unlock_storage();
+      
     };
 
     auto pm_async =
