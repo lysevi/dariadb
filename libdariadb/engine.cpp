@@ -21,7 +21,6 @@
 #include <cstring>
 #include <fstream>
 #include <shared_mutex>
-#include <array>
 
 using namespace dariadb;
 using namespace dariadb::storage;
