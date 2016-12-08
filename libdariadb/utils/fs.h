@@ -22,6 +22,8 @@ EXPORT std::string parent_path(const std::string &fname);
 EXPORT std::string append_path(const std::string &p1, const std::string &p2);
 
 EXPORT bool path_exists(const std::string &path);
+EXPORT bool file_exists(const std::string &fname);
+
 EXPORT void mkdir(const std::string &path);
 
 EXPORT std::string read_file(const std::string &fname);

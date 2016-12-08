@@ -105,9 +105,20 @@ std::string append_path(const std::string &p1, const std::string &p2) {
   return p.string();
 }
 
+bool file_exists(const std::string &fname) {
+	std::ifstream fs(fname.c_str());
+	if (fs) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 bool path_exists(const std::string &path) {
   return boost::filesystem::exists(path);
 }
+
 void mkdir(const std::string &path) {
   if (!boost::filesystem::exists(path)) {
     boost::filesystem::create_directory(path);

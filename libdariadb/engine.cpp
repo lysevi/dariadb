@@ -39,32 +39,37 @@ public:
     logger_info("engine: project version - ", PROJECT_VERSION_MAJOR,'.',PROJECT_VERSION_MINOR,'.',PROJECT_VERSION_PATCH);
     logger_info("engine: storage version - ", this->version());
     logger_info("engine: strategy - ", _settings->strategy.value);
-    bool is_exists = false;
     _stoped = false;
+	
     if (!dariadb::utils::fs::path_exists(_settings->path)) {
       dariadb::utils::fs::mkdir(_settings->path);
-    } else {
-      lockfile_lock_or_die();
-      is_exists = true;
     }
+
+	lockfile_lock_or_die();
+	
+	auto manifest_file_name = utils::fs::append_path(_settings->path, MANIFEST_FILE_NAME);
+
+	bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
+	if (is_new_storage) {
+		logger_info("engine: init new storage.");
+	}
     _subscribe_notify.start();
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
 	
-	_manifest = Manifest_ptr{ new Manifest{ utils::fs::append_path(_settings->path, MANIFEST_FILE_NAME) } };
+	_manifest = Manifest_ptr{ new Manifest{ manifest_file_name } };
 	_engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
-    if (is_exists) {
-      Dropper::cleanStorage(_settings->path);
-    }
+	if (is_new_storage) {
+		_manifest->set_version(std::to_string(this->version()));
+	}
+	else {
+		check_storage_version();
+		Dropper::cleanStorage(_settings->path);
+	}
 
 	_page_manager = PageManager_ptr{ new PageManager(_engine_env) };
 
-    if (utils::fs::path_exists(utils::fs::append_path(settings->path, MANIFEST_FILE_NAME))) {
-        _manifest->set_version(std::to_string(this->version()));
-    } else {
-      check_storage_version();
-    }
 
 	if (_settings->load_min_max) {
 		_min_max_map = _page_manager->loadMinMax();
@@ -100,6 +105,9 @@ public:
   }
   ~Private() { this->stop(); }
 
+  void init_storages() {
+
+  }
   void stop() {
     if (!_stoped) {
 	  _top_level_storage = nullptr;
