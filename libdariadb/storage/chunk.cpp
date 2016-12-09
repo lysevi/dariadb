@@ -72,7 +72,6 @@ bool Chunk::checkChecksum() {
   return exists == calculated;
 }
 
-//TODO rm std::make_shared<ByteBuffer>. use stack veriable.
 ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, const Meas &first_m)
     : Chunk(index, buffer, _size, first_m),
 	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
