@@ -648,9 +648,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
                 });
 
       for (auto &c : chunks_copy) {
-        if (_drop_stop) {
-          break;
-        }
         auto rdr = c->getReader();
         auto skip = c->in_disk_count;
         int writed = 0;
