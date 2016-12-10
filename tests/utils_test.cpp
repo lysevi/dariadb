@@ -12,7 +12,6 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/period_worker.h>
 #include <libdariadb/utils/thread_manager.h>
 #include <libdariadb/utils/thread_pool.h>
 #include <libdariadb/utils/utils.h>
@@ -137,25 +136,6 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
   BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(concat_p), parent_p);
 }
 
-class TestPeriodWorker : public dariadb::utils::PeriodWorker {
-public:
-  TestPeriodWorker(const std::chrono::milliseconds sleep_time)
-      : dariadb::utils::PeriodWorker(sleep_time) {
-    call_count = 0;
-  }
-  void period_call() override { call_count++; }
-  size_t call_count;
-};
-
-BOOST_AUTO_TEST_CASE(PeriodWorkerTest) {
-  auto secs_1 = std::chrono::milliseconds(1000);
-  auto secs_3 = std::chrono::milliseconds(1300);
-  std::unique_ptr<TestPeriodWorker> worker{new TestPeriodWorker(secs_1)};
-  worker->period_worker_start();
-  std::this_thread::sleep_for(secs_3);
-  worker->period_worker_stop();
-  BOOST_CHECK_GT(worker->call_count, size_t(1));
-}
 
 BOOST_AUTO_TEST_CASE(Metrics) {
   BOOST_CHECK(dariadb::utils::metrics::MetricsManager::instance() != nullptr);
