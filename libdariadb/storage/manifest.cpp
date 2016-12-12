@@ -1,18 +1,17 @@
-#include <algorithm>
-#include <cassert>
-#include <fstream>
-#include <json/src/json.hpp>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
+#include <libsqlite3/sqlite3.h>
+#include <algorithm>
+#include <cassert>
+#include <fstream>
 
-using json = nlohmann::json;
 using namespace dariadb::storage;
 
 const std::string PAGE_JS_KEY = "pages";
 const std::string AOF_JS_KEY = "aofs";
 
-const char *CREATE_SQL = "CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY "
+const char *MANIFEST_CREATE_SQL = "CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY "
                          "AUTOINCREMENT, file varchar(255)); "
                          \
 "CREATE TABLE IF NOT EXISTS aofs(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
@@ -55,7 +54,7 @@ public:
     }
 	logger_info("engine: manifest file opened.");
     char *err = 0;
-    if (sqlite3_exec(db, CREATE_SQL, 0, 0, &err)) {
+    if (sqlite3_exec(db, MANIFEST_CREATE_SQL, 0, 0, &err)) {
       fprintf(stderr, "Ошибка SQL: %sn", err);
       sqlite3_free(err);
     }

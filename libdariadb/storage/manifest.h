@@ -2,7 +2,6 @@
 
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/st_exports.h>
-#include <libsqlite3/sqlite3.h>
 #include <list>
 #include <memory>
 #include <string>
