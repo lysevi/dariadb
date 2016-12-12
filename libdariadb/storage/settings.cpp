@@ -13,7 +13,7 @@ using json = nlohmann::json;
 const uint64_t AOF_BUFFER_SIZE = 2000;
 const uint64_t AOF_FILE_SIZE = sizeof(dariadb::Meas) * AOF_BUFFER_SIZE * 4;
 const uint32_t CHUNK_SIZE = 1024;
-const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; //10 mb
+const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; //100 mb
 
 const std::string c_aof_max_size="aof_max_size";
 const std::string c_aof_buffer_size="aof_buffer_size";
