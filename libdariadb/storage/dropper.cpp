@@ -1,6 +1,6 @@
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/page.h>
+#include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/thread_manager.h>

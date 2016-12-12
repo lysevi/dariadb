@@ -2,11 +2,11 @@
 #include <libdariadb/config.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/timeutil.h>
-#include <libdariadb/storage/memstorage.h>
+#include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/page_manager.h>
+#include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/subscribe.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/locker.h>

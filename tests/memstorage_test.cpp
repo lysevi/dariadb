@@ -4,7 +4,7 @@
 #include <boost/test/unit_test.hpp>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/settings.h>
-#include <libdariadb/storage/memstorage.h>
+#include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/fs.h>

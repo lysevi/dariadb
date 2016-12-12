@@ -1,7 +1,7 @@
 #ifdef MSVC
     #define _SCL_SECURE_NO_WARNINGS //for stx::btree in msvc build.
 #endif
-#include <libdariadb/storage/page_manager.h>
+#include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/locker.h>
@@ -11,7 +11,7 @@
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
-#include <libdariadb/storage/page.h>
+#include <libdariadb/storage/pages/page.h>
 
 #include <atomic>
 #include <cstring>

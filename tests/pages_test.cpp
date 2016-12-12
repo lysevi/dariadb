@@ -10,8 +10,8 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/settings.h>
-#include <libdariadb/storage/page.h>
-#include <libdariadb/storage/page_manager.h>
+#include <libdariadb/storage/pages/page.h>
+#include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/thread_manager.h>

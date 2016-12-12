@@ -3,7 +3,7 @@
 #include <libdariadb/interfaces/imeaswriter.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/storage/index.h>
+#include <libdariadb/storage/pages/index.h>
 #include <libdariadb/st_exports.h>
 
 namespace dariadb {

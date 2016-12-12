@@ -1,4 +1,4 @@
-#include <libdariadb/storage/index.h>
+#include <libdariadb/storage/pages/index.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <algorithm>
 #include <cassert>

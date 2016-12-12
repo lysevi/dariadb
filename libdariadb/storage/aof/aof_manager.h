@@ -5,7 +5,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/storage/aofile.h>
+#include <libdariadb/storage/aof/aofile.h>
 #include <libdariadb/st_exports.h>
 #include <vector>
 
@@ -13,7 +13,6 @@
 
 namespace dariadb {
 namespace storage {
-
 class AOFManager : public IMeasStorage {
 public:
 protected:

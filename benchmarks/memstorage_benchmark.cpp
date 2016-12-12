@@ -11,7 +11,7 @@
 
 #include "bench_common.h"
 
-#include <libdariadb/storage/memstorage.h>
+#include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>

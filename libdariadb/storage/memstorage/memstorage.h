@@ -6,7 +6,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/engine_environment.h>
-#include <libdariadb/storage/allocators.h>
+#include <libdariadb/storage/memstorage/allocators.h>
 #include <memory>
 
 namespace dariadb {

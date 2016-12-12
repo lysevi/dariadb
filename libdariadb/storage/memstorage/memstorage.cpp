@@ -1,7 +1,7 @@
 #ifdef MSVC
  #define _SCL_SECURE_NO_WARNINGS //stx::btree
 #endif
-#include <libdariadb/storage/memstorage.h>
+#include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/thread_manager.h>

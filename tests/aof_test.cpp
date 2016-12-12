@@ -7,8 +7,8 @@
 #include <thread>
 
 #include "test_common.h"
-#include <libdariadb/storage/aof_manager.h>
-#include <libdariadb/storage/aofile.h>
+#include <libdariadb/storage/aof/aof_manager.h>
+#include <libdariadb/storage/aof/aofile.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/settings.h>
