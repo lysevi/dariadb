@@ -1,14 +1,13 @@
 #include <libdariadb/storage/bystep/bystep_storage.h>
+#include <libdariadb/storage/bystep/io_adapter.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/fs.h>
 #include <libsqlite3/sqlite3.h>
+#include <memory>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 
-const char *BYSTEP_CREATE_SQL = "CREATE TABLE IF NOT EXISTS values(id INTEGER PRIMARY KEY "
-                         "AUTOINCREMENT, chunk blob); ";
-;
 const char *filename = "bystep.db";
 
 struct ByStepStorage::Private : public IMeasStorage {
@@ -16,25 +15,22 @@ struct ByStepStorage::Private : public IMeasStorage {
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)) {
     stoped = false;
+	_db = nullptr;
 
     auto fname = utils::fs::append_path(_settings->path, filename);
     logger_info("engine: opening  bystep storage...");
-    int rc = sqlite3_open(fname.c_str(), &db);
+    int rc = sqlite3_open(fname.c_str(), &_db);
     if (rc) {
-      auto err_msg = sqlite3_errmsg(db);
+      auto err_msg = sqlite3_errmsg(_db);
       THROW_EXCEPTION("Can't open database: ", err_msg);
     }
 
+	_io = std::make_unique<IOAdapter>(_db);
     logger_info("engine: bystep storage file opened.");
-    char *err = 0;
-    if (sqlite3_exec(db, BYSTEP_CREATE_SQL, 0, 0, &err)) {
-      fprintf(stderr, "Ошибка SQL: %sn", err);
-      sqlite3_free(err);
-    }
   }
   void stop() {
     if (!stoped) {
-      sqlite3_close(db);
+      sqlite3_close(_db);
       stoped = true;
     }
   }
@@ -84,7 +80,8 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
-  sqlite3 *db;
+  sqlite3 *_db;
+  std::unique_ptr<IOAdapter> _io;
   bool stoped;
 };
 
