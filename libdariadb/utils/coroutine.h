@@ -12,17 +12,12 @@ namespace dariadb {
 namespace utils {
 namespace async {
 
-#if BOOST_VERSION < 105600
-#define BOOST_COROUTINES_BIDIRECT
-#include <boost/coroutine/all.hpp>
+//if BOOST_VERSION < 105600
+//#define BOOST_COROUTINES_BIDIRECT
 typedef boost::coroutines::symmetric_coroutine<void> CoroT;
 using Coroutine = CoroT::call_type;
 using Yield = CoroT::yield_type;
-#else
-typedef boost::coroutines::symmetric_coroutine<void> CoroT;
-using Coroutine = CoroT::call_type;
-using Yield = CoroT::yield_type;
-#endif
+//#endif
 }
 }
 }
