@@ -313,26 +313,6 @@ public:
 
   Status  append(const Meas &value) {
     Status  result{};
-	_min_max_locker.lock_shared();
-      auto fres=_min_max_map.find(value.id);
-      if(fres!=_min_max_map.end()){
-		  _min_max_locker.unlock_shared();
-          auto max_v=fres->second;
-          if(max_v.max.time>value.time){
-            result.ignored=1;
-            std::stringstream ss;
-            ss<<"Id:"<<value.id;
-            ss<<", writing to past";
-            auto err_message=ss.str();
-            result.error_message=err_message;
-            logger_info("engine: ",err_message);
-            return result;
-          }
-	  }
-	  else {
-		  _min_max_locker.unlock_shared();
-	  }
-
 	result=_top_level_storage->append(value);
 
     if (result.writed == 1) {

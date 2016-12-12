@@ -118,13 +118,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 	manifest = nullptr;
 
     auto raw_ptr = new Engine(settings);
-    {
-        auto m=dariadb::Meas::empty();
-        m.time=from;
-        auto res=raw_ptr->append(m);
-        BOOST_CHECK_EQUAL(res.ignored,size_t(1));
-        BOOST_CHECK_GE(res.error_message.size(),size_t(0));
-    }
 
     dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
 	auto index_files=dariadb::utils::fs::ls(storage_path, ".pagei");
