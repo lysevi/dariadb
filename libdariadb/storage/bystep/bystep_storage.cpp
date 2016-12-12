@@ -15,22 +15,15 @@ struct ByStepStorage::Private : public IMeasStorage {
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)) {
     stoped = false;
-	_db = nullptr;
 
     auto fname = utils::fs::append_path(_settings->path, filename);
     logger_info("engine: opening  bystep storage...");
-    int rc = sqlite3_open(fname.c_str(), &_db);
-    if (rc) {
-      auto err_msg = sqlite3_errmsg(_db);
-      THROW_EXCEPTION("Can't open database: ", err_msg);
-    }
-
-	_io = std::make_unique<IOAdapter>(_db);
+	_io = std::make_unique<IOAdapter>(fname);
     logger_info("engine: bystep storage file opened.");
   }
   void stop() {
     if (!stoped) {
-      sqlite3_close(_db);
+	  _io->stop();
       stoped = true;
     }
   }
@@ -80,7 +73,6 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
-  sqlite3 *_db;
   std::unique_ptr<IOAdapter> _io;
   bool stoped;
 };

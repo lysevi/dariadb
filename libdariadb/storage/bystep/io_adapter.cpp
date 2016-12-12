@@ -5,29 +5,27 @@ using namespace dariadb;
 using namespace dariadb::storage;
 
 const char *BYSTEP_CREATE_SQL =
-"CREATE TABLE IF NOT EXISTS Meases(id INTEGER PRIMARY KEY "
-"AUTOINCREMENT, chunk blob); ";
+    "CREATE TABLE IF NOT EXISTS Meases(id INTEGER PRIMARY KEY "
+    "AUTOINCREMENT, chunk blob); ";
 
-IOAdapter::IOAdapter(sqlite3 *db) {
-  _db = db;
-  _db_owner = false;
+IOAdapter::IOAdapter(const std::string &fname) {
+  _db = nullptr;
+  int rc = sqlite3_open(fname.c_str(), &_db);
+  if (rc) {
+    auto err_msg = sqlite3_errmsg(_db);
+    THROW_EXCEPTION("Can't open database: ", err_msg);
+  }
   init_tables();
 }
 
-IOAdapter::IOAdapter(const std::string &fname) {
-	_db = nullptr;
-	int rc = sqlite3_open(fname.c_str(), &_db);
-	if (rc) {
-		auto err_msg = sqlite3_errmsg(_db);
-		THROW_EXCEPTION("Can't open database: ", err_msg);
-	}
-	_db_owner = true;
-	init_tables();
+IOAdapter::~IOAdapter() {
+  stop();
 }
 
-IOAdapter::~IOAdapter() {
-	if (_db_owner) {
+void IOAdapter::stop() {
+	if (_db != nullptr) {
 		sqlite3_close(_db);
+		_db = nullptr;
 	}
 }
 

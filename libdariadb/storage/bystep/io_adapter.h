@@ -9,12 +9,11 @@
 namespace dariadb {
 namespace storage {
 struct IOAdapter {
-  EXPORT IOAdapter(sqlite3 *db);
   EXPORT IOAdapter(const std::string &fname);
   EXPORT ~IOAdapter();
+  EXPORT void stop();
   EXPORT void init_tables();
   sqlite3 *_db;
-  bool _db_owner;
 };
 }
 }
