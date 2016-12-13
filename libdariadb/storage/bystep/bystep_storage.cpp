@@ -14,17 +14,15 @@ struct ByStepStorage::Private : public IMeasStorage {
   Private(const EngineEnvironment_ptr &env)
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)) {
-    stoped = false;
-
     auto fname = utils::fs::append_path(_settings->path, filename);
     logger_info("engine: opening  bystep storage...");
 	_io = std::make_unique<IOAdapter>(fname);
     logger_info("engine: bystep storage file opened.");
   }
   void stop() {
-    if (!stoped) {
+    if (_io!=nullptr) {
 	  _io->stop();
-      stoped = true;
+	  _io = nullptr;
     }
   }
   ~Private() { stop(); }
@@ -74,7 +72,6 @@ struct ByStepStorage::Private : public IMeasStorage {
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
   std::unique_ptr<IOAdapter> _io;
-  bool stoped;
 };
 
 ByStepStorage::ByStepStorage(const EngineEnvironment_ptr &env)
