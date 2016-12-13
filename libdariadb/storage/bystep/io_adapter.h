@@ -3,7 +3,6 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/st_exports.h>
-#include <extern/libsqlite3/sqlite3.h>
 
 #include <list>
 
@@ -19,10 +18,10 @@ public:
   EXPORT void append(const Chunk_Ptr&ch);
   EXPORT ChunksList readInterval(const QueryInterval &query);
   EXPORT IdToChunkMap readTimePoint(const QueryTimePoint &query);
-protected:
-  void init_tables();
+  EXPORT void replace(const Chunk_Ptr&ch);
 private:
-  sqlite3 *_db;
+  class Private;
+  std::unique_ptr<Private> _impl;
 };
 }
 }

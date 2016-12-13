@@ -35,6 +35,7 @@ BOOST_AUTO_TEST_CASE(IOAdopterInitTest) {
     dariadb::IdSet all_ids;
     dariadb::Time max_time = 0;
     size_t created_chunks = 0;
+	dariadb::MeasList all_values;
     for (int i = 0; i < insertion_count; ++i) {
       memset(&hdr, 0, sizeof(dariadb::storage::ChunkHeader));
       memset(buffer, 0, buffer_size);
@@ -45,36 +46,91 @@ BOOST_AUTO_TEST_CASE(IOAdopterInitTest) {
       for (size_t j = 0; j < 3; ++j) {
         dariadb::storage::Chunk_Ptr ptr{
             new dariadb::storage::ZippedChunk(&hdr, buffer, buffer_size, first)};
+		all_values.push_back(first);
         while (!ptr->isFull()) {
           first.time++;
           first.value++;
           first.flag++;
-          ptr->append(first);
+		  if (ptr->append(first)) {
+			  all_values.push_back(first);
+		  }
           max_time = std::max(max_time, first.time);
         }
+		ptr->header->id = j;
         ptr->close();
         created_chunks++;
         io_adapter->append(ptr);
       }
     }
-    delete[] buffer;
+    
+	{//readInterval
+		dariadb::storage::QueryInterval qi{ dariadb::IdArray{all_ids.begin(), all_ids.end()},
+										   0, 0, max_time };
+		auto all_chunks = io_adapter->readInterval(qi);
+		BOOST_CHECK_EQUAL(all_chunks.size(), created_chunks);
 
-    dariadb::storage::QueryInterval qi{dariadb::IdArray{all_ids.begin(), all_ids.end()},
-                                       0, 0, max_time};
-    auto all_chunks = io_adapter->readInterval(qi);
-    BOOST_CHECK_EQUAL(all_chunks.size(), created_chunks);
+		dariadb::MeasList readed_values;
+		for (auto&c : all_chunks) {
+			auto rdr = c->getReader();
+			while (!rdr->is_end()) {
+				auto v = rdr->readNext();
+				readed_values.push_back(v);
+			}
+		}
+		BOOST_CHECK_EQUAL(readed_values.size(), all_values.size());
+	}
+	{//readTimePoint
+		dariadb::Time tp = max_time / 2;
+		dariadb::storage::QueryTimePoint qtp{ dariadb::IdArray{all_ids.begin(), all_ids.end()},
+											 0, tp };
 
-    dariadb::Time tp = max_time / 2;
-    dariadb::storage::QueryTimePoint qtp{dariadb::IdArray{all_ids.begin(), all_ids.end()},
-                                         0, tp};
+		auto tp_chunks = io_adapter->readTimePoint(qtp);
+		BOOST_CHECK_EQUAL(tp_chunks.size(), all_ids.size());
+		for (auto &kv : tp_chunks) {
+			auto from = kv.second->header->minTime;
+			auto to = kv.second->header->maxTime;
+			BOOST_CHECK(dariadb::utils::inInterval(from, to, tp));
+		}
+	}
+	//replace chunk
+	{
+		memset(&hdr, 0, sizeof(dariadb::storage::ChunkHeader));
+		memset(buffer, 0, buffer_size);
 
-    auto tp_chunks = io_adapter->readTimePoint(qtp);
-    BOOST_CHECK_EQUAL(tp_chunks.size(), all_ids.size());
-    for (auto &kv : tp_chunks) {
-      auto from = kv.second->header->minTime;
-      auto to = kv.second->header->maxTime;
-      BOOST_CHECK(dariadb::utils::inInterval(from, to, tp));
-    }
+		auto first = dariadb::Meas::empty(0);
+		first.time = 1000;
+		dariadb::storage::Chunk_Ptr ptr{ new dariadb::storage::ZippedChunk(&hdr, buffer, buffer_size, first) };
+		while (!ptr->isFull()) {
+			first.time++;
+			first.value++;
+			first.flag++;
+			if (ptr->append(first)) {
+				max_time = std::max(max_time, first.time);
+			}
+		}
+		ptr->header->id = 0;
+		ptr->close();
+		io_adapter->replace(ptr);
+
+		dariadb::IdArray zero(1);
+		zero[0] = 0;
+		dariadb::storage::QueryInterval qi_zero{ zero, 0, 0, first.time };
+
+		auto zero_id_chunks = io_adapter->readInterval(qi_zero);
+		bool success_replace = false;
+		for (auto&c : zero_id_chunks) {
+			auto rdr = c->getReader();
+			while (!rdr->is_end()) {
+				auto v = rdr->readNext();
+				if (v.time >= 1000) {
+					success_replace = true;
+					break;
+				}
+			}
+		}
+		BOOST_CHECK(success_replace);
+	}
+	delete[] buffer;
   }
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -101,7 +157,6 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
     dariadb::storage::ByStepStorage ms{_engine_env};
-    BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(storage_path, ".db").size(), size_t(1));
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
