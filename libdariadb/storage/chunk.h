@@ -3,6 +3,7 @@
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
 #include <libdariadb/utils/locker.h>
 #include <libdariadb/utils/utils.h>
 
@@ -49,25 +50,26 @@ public:
 
   typedef uint8_t *u8vector;
 
-  Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m);
-  Chunk(ChunkHeader *hdr, uint8_t *buffer);
-  virtual ~Chunk();
+  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m);
+  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer);
+  EXPORT virtual ~Chunk();
 
   virtual bool append(const Meas &m) = 0;
   virtual bool isFull() const = 0;
   virtual ChunkReader_Ptr getReader() = 0;
-  virtual bool checkId(const Id &id);
   virtual void close() = 0;
   virtual uint32_t calcChecksum() = 0;
   virtual uint32_t getChecksum() = 0;
-  virtual bool checkChecksum();
-  bool checkFlag(const Flag &f);
+  EXPORT virtual bool checkId(const Id &id);
+  EXPORT virtual bool checkChecksum();
+  EXPORT bool checkFlag(const Flag &f);
 
   ChunkHeader *header;
   u8vector _buffer_t;
 
   compression::ByteBuffer_Ptr bw;
 
+  bool is_owner; //true - dealloc memory for header and buffer.
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;
@@ -78,19 +80,19 @@ typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
 
 class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
 public:
-  ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, const Meas &first_m);
-  ZippedChunk(ChunkHeader *index, uint8_t *buffer);
-  ~ZippedChunk();
+  EXPORT ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size,
+                     const Meas &first_m);
+  EXPORT ZippedChunk(ChunkHeader *index, uint8_t *buffer);
+  EXPORT ~ZippedChunk();
 
-  bool isFull() const override { return c_writer.isFull(); }
-  bool append(const Meas &m) override;
-  void close() override;
+  EXPORT bool isFull() const override;
+  EXPORT bool append(const Meas &m) override;
+  EXPORT void close() override;
 
-  uint32_t calcChecksum() override;
-  uint32_t getChecksum() override;
-  ChunkReader_Ptr getReader() override; 
+  EXPORT uint32_t calcChecksum() override;
+  EXPORT uint32_t getChecksum() override;
+  EXPORT ChunkReader_Ptr getReader() override;
   compression::CopmressedWriter c_writer;
 };
-
 }
 }
