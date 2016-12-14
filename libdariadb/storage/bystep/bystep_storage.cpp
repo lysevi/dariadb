@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 #include <cassert>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -88,6 +89,7 @@ public:
 	  auto pos = ((r_time/ r_kind) - (r_kind*_target_id)) %_values.size();
 	  assert(pos < _values.size());
 	  _values[pos] = value;
+	  _posses.insert(pos);
 	  return Status(1, 0); 
   }
 
@@ -116,10 +118,33 @@ public:
 	  }
 	  return result;
   }
+
+  Chunk_Ptr pack()const {
+	  if (_posses.empty()) {
+		  return nullptr;
+	  }
+	  auto buffer_size = _values.size() * sizeof(Meas);
+	  uint8_t*buffer = new uint8_t[buffer_size];
+	  ChunkHeader*chdr = new ChunkHeader;
+	  memset(buffer, 0, buffer_size);
+	  memset(chdr, 0, sizeof(ChunkHeader));
+
+	  auto it=_posses.begin();
+	  Chunk_Ptr result{ new ZippedChunk{chdr, buffer,buffer_size, _values[*it]} };
+	  ++it;
+	  for (; it != _posses.end(); ++it) {
+		  result->append(_values[*it]);
+	  }
+	  result->close(); //TODO resize buffer like in page::create
+	  result->header->id = _period;
+	  result->is_owner = true;
+	  return result;
+  }
 protected:
   Id _target_id;
   StepKind _step;
   std::vector<Meas> _values;
+  std::set<size_t> _posses; //TODO use vector;
   uint64_t _period;
 };
 
@@ -162,10 +187,13 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  else {
 		  ptr = it->second;
 	  }
-	  logger_info("engine: bystep - period #", value.id, " is ", period_num);
+	  //logger_info("engine: bystep - period #", value.id, " is ", period_num);
 	  if (ptr->period() != period_num) {
 		  auto old_value = ptr;
-		  logger_info("engine: bystep - new period for #", value.id, " old size: ", old_value->size());
+		  auto packed_chunk = old_value->pack();
+		  if (packed_chunk != nullptr) {
+			  _io->append(packed_chunk);
+		  }
 		  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
 		  _values[value.id] = ptr;
 	  }
