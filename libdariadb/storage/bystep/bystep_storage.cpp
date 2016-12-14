@@ -79,7 +79,10 @@ public:
     _target_id;
     _step = step_;
 	_period = period_;
-	_values.resize(bystep_inner::step_to_size(_step));
+
+	auto values_size = bystep_inner::step_to_size(_step);
+	_values.resize(values_size);
+	_posses.resize(values_size);
   }
 
   Status append(const Meas &value) override { 
@@ -89,7 +92,7 @@ public:
 	  auto pos = ((r_time/ r_kind) - (r_kind*_target_id)) %_values.size();
 	  assert(pos < _values.size());
 	  _values[pos] = value;
-	  _posses.insert(pos);
+	  _posses[pos] = true;
 	  return Status(1, 0); 
   }
 
@@ -99,7 +102,16 @@ public:
                   dariadb::Time *maxResult) override {
     return false;
   }
-  void foreach (const QueryInterval &q, IReaderClb * clbk) override {}
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+	  for (size_t i = 0; i < _posses.size(); ++i) {
+		  if (_posses[i]) {
+			  auto v = _values[i];
+			  if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
+				  clbk->call(v);
+			  }
+		  }
+	  }
+  }
   Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     return Id2Meas();
@@ -111,8 +123,8 @@ public:
 
   size_t size()const {
 	  size_t result = 0;
-	  for (auto&v : _values) {
-		  if (v.time != 0) {
+	  for (auto v:_posses) {
+		  if (v) {
 			  result++;
 		  }
 	  }
@@ -120,7 +132,17 @@ public:
   }
 
   Chunk_Ptr pack()const {
-	  if (_posses.empty()) {
+	  size_t it = 0;
+	  bool is_empty = true;
+	  for (size_t i = 0; i < _posses.size(); ++i) {
+		  if (_posses[i] != false) {
+			  is_empty = false;
+			  it = i;
+			  break;
+		  }
+	  }
+
+	  if (is_empty) {
 		  return nullptr;
 	  }
 	  auto buffer_size = _values.size() * sizeof(Meas);
@@ -129,11 +151,11 @@ public:
 	  memset(buffer, 0, buffer_size);
 	  memset(chdr, 0, sizeof(ChunkHeader));
 
-	  auto it=_posses.begin();
-	  Chunk_Ptr result{ new ZippedChunk{chdr, buffer,buffer_size, _values[*it]} };
+	  
+	  Chunk_Ptr result{ new ZippedChunk{chdr, buffer,buffer_size, _values[it]} };
 	  ++it;
-	  for (; it != _posses.end(); ++it) {
-		  result->append(_values[*it]);
+	  for (; it < _posses.size(); ++it) {
+		  result->append(_values[it]);
 	  }
 	  result->close(); //TODO resize buffer like in page::create
 	  result->header->id = _period;
@@ -144,7 +166,7 @@ protected:
   Id _target_id;
   StepKind _step;
   std::vector<Meas> _values;
-  std::set<size_t> _posses; //TODO use vector;
+  std::vector<bool> _posses; 
   uint64_t _period;
 };
 
@@ -224,7 +246,33 @@ struct ByStepStorage::Private : public IMeasStorage {
     return false;
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) override { NOT_IMPLEMENTED; }
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+    QueryInterval local_q = q;
+    local_q.ids.resize(1);
+    for (auto id : q.ids) {
+      local_q.ids[0] = id;
+      auto readed_chunks = _io->readInterval(q);
+
+      for (auto c : readed_chunks) {
+        foreach_chunk(q, clbk, c);
+      }
+
+      auto it = _values.find(id);
+      if (it != _values.end()) {
+        it->second->foreach (local_q, clbk);
+      }
+    }
+  }
+
+  void foreach_chunk(const QueryInterval &q, IReaderClb * clbk, const Chunk_Ptr&c) {
+	  auto rdr = c->getReader();
+	  while (!rdr->is_end()) {
+		  auto v = rdr->readNext();
+		  if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
+			  clbk->call(v);
+		  }
+	  }
+  }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
 

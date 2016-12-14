@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
 }
 
 
-BOOST_AUTO_TEST_CASE(ByStepCommonTest) {
+BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 	std::cout << "ByStepTest" << std::endl;
 	auto storage_path = "testBySTepStorage";
 	if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -188,7 +188,6 @@ BOOST_AUTO_TEST_CASE(ByStepCommonTest) {
 		dariadb::utils::fs::mkdir(storage_path);
 		auto settings =
 			dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-		settings->chunk_size.value = 128;
 
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
 			new dariadb::storage::EngineEnvironment() };
@@ -213,7 +212,7 @@ BOOST_AUTO_TEST_CASE(ByStepCommonTest) {
 		{
 			dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2));
+			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2)+1);
 		}
 	}
 	dariadb::utils::async::ThreadManager::stop();

@@ -21,6 +21,7 @@ class IOAdapter::Private {
 public:
   Private(const std::string &fname) {
     _db = nullptr;
+	logger("engine: io_adapter - open ",fname);
     int rc = sqlite3_open(fname.c_str(), &_db);
     if (rc) {
       auto err_msg = sqlite3_errmsg(_db);
@@ -29,12 +30,13 @@ public:
     init_tables();
   }
   ~Private() { stop(); }
+
   void stop() {
     if (_db != nullptr) {
       sqlite3_close(_db);
       _db = nullptr;
+	  logger("engine: io_adapter - stoped");
     }
-	logger("engine: io_adapter - stoped");
   }
 
   void append(const Chunk_Ptr &ch) {
