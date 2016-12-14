@@ -88,5 +88,17 @@ Time from_iso_string(const std::string&s){
     auto pt=boost::posix_time::from_iso_string(s);
     return from_ptime(pt);
 }
+
+Time round_to_seconds(const Time t) {
+  return Time(float(t) / 1e3) * 1e3;
+}
+
+Time round_to_minutes(const Time t) {
+  return t - (t % (60 * 1000));
+}
+
+Time round_to_hours(const Time t) {
+  return t - (t % (3600 * 1000));
+}
 }
 }
