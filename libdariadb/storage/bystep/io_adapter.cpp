@@ -7,21 +7,20 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-const char *BYSTEP_CREATE_SQL =
-    "CREATE TABLE IF NOT EXISTS Chunks("
-	"id INTEGER PRIMARY KEY AUTOINCREMENT,"
-    "number INTEGER," //chunk::id
-    "meas_id INTEGER," // measurement id
-    "min_time INTEGER,"
-    "max_time INTEGER,"
-    "chunk_header blob,"
-    "chunk_buffer blob);";
+const char *BYSTEP_CREATE_SQL = "CREATE TABLE IF NOT EXISTS Chunks("
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                                "number INTEGER,"  // chunk::id
+                                "meas_id INTEGER," // measurement id
+                                "min_time INTEGER,"
+                                "max_time INTEGER,"
+                                "chunk_header blob,"
+                                "chunk_buffer blob);";
 
 class IOAdapter::Private {
 public:
   Private(const std::string &fname) {
     _db = nullptr;
-	logger("engine: io_adapter - open ",fname);
+    logger("engine: io_adapter - open ", fname);
     int rc = sqlite3_open(fname.c_str(), &_db);
     if (rc) {
       auto err_msg = sqlite3_errmsg(_db);
@@ -35,14 +34,16 @@ public:
     if (_db != nullptr) {
       sqlite3_close(_db);
       _db = nullptr;
-	  logger("engine: io_adapter - stoped");
+      logger("engine: io_adapter - stoped");
     }
   }
 
   void append(const Chunk_Ptr &ch) {
-	  logger("engine: io_adapter - add chunk #", ch->header->id, " id:", ch->header->first.id);
-    const std::string sql_query = "INSERT INTO Chunks(number, meas_id,min_time,max_time,chunk_header, "
-                                  "chunk_buffer) values (?,?,?,?,?,?);";
+    logger("engine: io_adapter - add chunk #", ch->header->id, " id:",
+           ch->header->first.id);
+    const std::string sql_query =
+        "INSERT INTO Chunks(number, meas_id,min_time,max_time,chunk_header, "
+        "chunk_buffer) values (?,?,?,?,?,?);";
     sqlite3_stmt *pStmt;
     int rc;
     do {
@@ -53,7 +54,7 @@ public:
         THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
       }
 
-	  sqlite3_bind_int64(pStmt, 1, ch->header->id);
+      sqlite3_bind_int64(pStmt, 1, ch->header->id);
       sqlite3_bind_int64(pStmt, 2, ch->header->first.id);
       sqlite3_bind_int64(pStmt, 3, ch->header->minTime);
       sqlite3_bind_int64(pStmt, 4, ch->header->maxTime);
@@ -170,10 +171,76 @@ public:
   }
 
   void replace(const Chunk_Ptr &ch) {
-	  logger("engine: io_adapter - replace chunk #", ch->header->id, " id:", ch->header->first.id);
-	  const std::string sql_query = "UPDATE Chunks SET min_time=?, max_time=?, chunk_header=?, chunk_buffer=? where number=? AND meas_id=?";
+    logger("engine: io_adapter - replace chunk #", ch->header->id, " id:",
+           ch->header->first.id);
+    const std::string sql_query = "UPDATE Chunks SET min_time=?, max_time=?, "
+                                  "chunk_header=?, chunk_buffer=? where number=? AND "
+                                  "meas_id=?";
+    sqlite3_stmt *pStmt;
+    int rc;
+    do {
+      rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
+      if (rc != SQLITE_OK) {
+        auto err_msg = std::string(sqlite3_errmsg(_db));
+        this->stop();
+        THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+      }
+
+      sqlite3_bind_int64(pStmt, 1, ch->header->minTime);
+      sqlite3_bind_int64(pStmt, 2, ch->header->maxTime);
+      sqlite3_bind_blob(pStmt, 3, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
+      sqlite3_bind_blob(pStmt, 4, ch->_buffer_t, ch->header->size, SQLITE_STATIC);
+      sqlite3_bind_int64(pStmt, 5, ch->header->id);
+      sqlite3_bind_int64(pStmt, 6, ch->header->first.id);
+      rc = sqlite3_step(pStmt);
+      assert(rc != SQLITE_ROW);
+      rc = sqlite3_finalize(pStmt);
+    } while (rc == SQLITE_SCHEMA);
+  }
+
+  // min and max
+  std::tuple<Time, Time> minMax() {
+    logger("engine: io_adapter - minMax");
+    const std::string sql_query = "SELECT min(min_time), max(max_time), count(max_time) FROM Chunks";
+    sqlite3_stmt *pStmt;
+    int rc;
+    Time min = MAX_TIME;
+    Time max = MIN_TIME;
+    do {
+      rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
+      if (rc != SQLITE_OK) {
+        auto err_msg = std::string(sqlite3_errmsg(_db));
+        this->stop();
+        THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+      }
+
+      rc = sqlite3_step(pStmt);
+      if (rc == SQLITE_ROW) {
+		  auto count = sqlite3_column_int64(pStmt, 2);
+		  if (count > 0) {
+			  min = sqlite3_column_int64(pStmt, 0);
+			  max = sqlite3_column_int64(pStmt, 1);
+		  }
+      }
+
+      rc = sqlite3_finalize(pStmt);
+    } while (rc == SQLITE_SCHEMA);
+
+    return std::tie(min, max);
+  }
+
+  Time minTime() { return std::get<0>(minMax()); }
+
+  Time maxTime() { return std::get<1>(minMax()); }
+
+  bool minMaxTime(Id id, Time *minResult, Time *maxResult) {
+	  logger("engine: io_adapter - minMaxTime #",id);
+	  const std::string sql_query = "SELECT min(min_time), max(max_time), count(max_time) FROM Chunks WHERE meas_id=?";
 	  sqlite3_stmt *pStmt;
 	  int rc;
+	  *minResult = MAX_TIME;
+	  *maxResult = MIN_TIME;
+	  bool result = false;
 	  do {
 		  rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
 		  if (rc != SQLITE_OK) {
@@ -181,17 +248,21 @@ public:
 			  this->stop();
 			  THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
 		  }
-
-		  sqlite3_bind_int64(pStmt, 1, ch->header->minTime);
-		  sqlite3_bind_int64(pStmt, 2, ch->header->maxTime);
-		  sqlite3_bind_blob(pStmt, 3, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
-		  sqlite3_bind_blob(pStmt, 4, ch->_buffer_t, ch->header->size, SQLITE_STATIC);
-		  sqlite3_bind_int64(pStmt, 5, ch->header->id);
-		  sqlite3_bind_int64(pStmt, 6, ch->header->first.id);
+		  sqlite3_bind_int64(pStmt, 1, id);
 		  rc = sqlite3_step(pStmt);
-		  assert(rc != SQLITE_ROW);
+		  if (rc == SQLITE_ROW) {
+			  auto count = sqlite3_column_int64(pStmt, 2);
+			  if (count > 0) {
+				  *minResult = sqlite3_column_int64(pStmt, 0);
+				  *maxResult = sqlite3_column_int64(pStmt, 1);
+				  result = true;
+			  }
+		  }
+
 		  rc = sqlite3_finalize(pStmt);
 	  } while (rc == SQLITE_SCHEMA);
+
+	  return result;
   }
 
   void init_tables() {
@@ -232,4 +303,16 @@ IdToChunkMap IOAdapter::readTimePoint(const QueryTimePoint &query) {
 
 void IOAdapter::replace(const Chunk_Ptr &ch) {
   return _impl->replace(ch);
+}
+
+Time IOAdapter::minTime() {
+  return _impl->minTime();
+}
+
+Time IOAdapter::maxTime() {
+  return _impl->maxTime();
+}
+
+bool IOAdapter::minMaxTime(Id id, Time *minResult, Time *maxResult) {
+  return _impl->minMaxTime(id, minResult, maxResult);
 }

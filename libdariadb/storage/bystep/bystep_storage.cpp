@@ -96,12 +96,45 @@ public:
 	  return Status(1, 0); 
   }
 
-  Time minTime() override { return Time(); }
-  Time maxTime() override { return Time(); }
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                  dariadb::Time *maxResult) override {
-    return false;
+  Time minTime() override { //TODO refact
+	  Time min = MAX_TIME;
+	  for (size_t i = 0; i < _posses.size(); ++i) {
+		  if (_posses[i]) {
+			  auto v = _values[i];
+			  min = std::min(min, v.time);
+		  }
+	  }
+	  return min;
   }
+  Time maxTime() override { //TODO refact
+	  Time max = MIN_TIME;
+	  for (size_t i = 0; i < _posses.size(); ++i) {
+		  if (_posses[i]) {
+			  auto v = _values[i];
+			  max = std::max(max, v.time);
+		  }
+	  }
+	  return max;
+  }
+
+  bool minMaxTime(Id id, Time *minResult, Time *maxResult) override { 
+	  if (id != _target_id) {
+		  return false;
+	  }
+	  *minResult = MAX_TIME;
+	  *maxResult = MIN_TIME;
+	  bool result = false;
+	  for (size_t i = 0; i < _posses.size(); ++i) {
+		  if (_posses[i]) {
+			  auto v = _values[i];
+			  result = true;
+			  *maxResult = std::max(*maxResult, v.time);
+			  *minResult = std::min(*minResult, v.time);
+		  }
+	  }
+	  return result;
+  }
+
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {
 	  for (size_t i = 0; i < _posses.size(); ++i) {
 		  if (_posses[i]) {
@@ -112,6 +145,7 @@ public:
 		  }
 	  }
   }
+
   Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     return Id2Meas();
@@ -233,18 +267,36 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   Time minTime() override {
-    Time result = MAX_TIME;
+	  Time result = _io->minTime();
+	  for (auto&kv : _values) {
+		  result = std::min(result, kv.second->minTime());
+	  }
     return result;
   }
 
   Time maxTime() override {
-    Time result = MIN_TIME;
-    return result;
+	Time result = _io->maxTime();
+	for (auto&kv : _values) {
+		result = std::max(result, kv.second->maxTime());
+	}
+	return result;
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override {
-    return false;
+	  auto res = _io->minMaxTime(id, minResult, maxResult);
+
+	  auto fres = _values.find(id);
+	  if (fres != _values.end()) {
+		  Time subMin, subMax;
+		  auto sub_res = fres->second->minMaxTime(id, &subMin, &subMax);
+		  if (sub_res) {
+			  res = true;
+			  *minResult = std::min(*minResult, subMin);
+			  *maxResult = std::max(*maxResult, subMax);
+		  }
+	  }
+	  return res;
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {

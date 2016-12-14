@@ -144,6 +144,19 @@ BOOST_AUTO_TEST_CASE(IOAdopterInitTest) {
 		BOOST_CHECK(success_replace);
 	}
 	delete[] buffer;
+
+	{//minMax
+		auto minTime = io_adapter->minTime();
+		auto maxTime = io_adapter->maxTime();
+		BOOST_CHECK_LT(minTime, maxTime);
+	}
+
+	{//minMax for id
+		dariadb::Time minTime, maxTime;
+		auto true_val=io_adapter->minMaxTime(0,&minTime,&maxTime);
+		BOOST_CHECK(true_val);
+		BOOST_CHECK_LT(minTime, maxTime);
+	}
   }
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -231,6 +244,21 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 			dariadb::storage::QueryInterval qi({ 2 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
 			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2*60*60)) + 1);
+		}
+
+		{//minMax
+			auto min = ms.minTime();
+			BOOST_CHECK_EQUAL(min,500);
+			auto max = ms.maxTime();
+			BOOST_CHECK_EQUAL(max, value.time);
+
+			auto res = ms.minMaxTime(0, &min, &max);
+			BOOST_CHECK(res);
+			BOOST_CHECK_EQUAL(min, 500);
+			BOOST_CHECK_EQUAL(max, value.time);
+
+			res = ms.minMaxTime(777, &min, &max);
+			BOOST_CHECK(!res);
 		}
 	}
 	dariadb::utils::async::ThreadManager::stop();

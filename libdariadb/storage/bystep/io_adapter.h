@@ -19,6 +19,9 @@ public:
   EXPORT ChunksList readInterval(const QueryInterval &query);
   EXPORT IdToChunkMap readTimePoint(const QueryTimePoint &query);
   EXPORT void replace(const Chunk_Ptr&ch);
+  EXPORT Time minTime();
+  EXPORT Time maxTime();
+  EXPORT bool minMaxTime(Id id, Time *minResult, Time *maxResult);
 private:
   class Private;
   std::unique_ptr<Private> _impl;
