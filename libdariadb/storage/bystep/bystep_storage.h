@@ -5,14 +5,14 @@
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/memstorage/allocators.h>
 #include <memory>
-#include <map>
+#include <unordered_map>
 
 namespace dariadb {
 namespace storage {
 
 enum class StepKind { SECOND, MINUTE, HOUR };
 
-using Id2Step = std::map<Id, StepKind>;
+using Id2Step = std::unordered_map<Id, StepKind>;
 
 class ByStepStorage : public IMeasStorage {
 public:

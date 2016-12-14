@@ -228,7 +228,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   Status append(const Meas &value) override {
 	  auto stepKind_it = _steps.find(value.id);
 	  if (stepKind_it == _steps.end()) {
-		  logger_fatal("engine: bystep - write values #", value.id, " with unknow step.");
+		  logger_fatal("engine: bystep - write values id:", value.id, " with unknow step.");
 	  }
 
 	  auto vals_per_interval = bystep_inner::step_to_size(stepKind_it->second);
@@ -303,7 +303,16 @@ struct ByStepStorage::Private : public IMeasStorage {
     QueryInterval local_q = q;
     local_q.ids.resize(1);
     for (auto id : q.ids) {
+	  auto step_kind_it = _steps.find(id);
+	  if (step_kind_it == _steps.end()) {
+		  logger_fatal("engine: bystep - unknow id:",id);
+		  continue;
+	  }
       local_q.ids[0] = id;
+	  auto round_from = bystep_inner::roundTime(step_kind_it->second, q.from);
+	  auto round_to = bystep_inner::roundTime(step_kind_it->second, q.to+std::get<1>(round_from));
+	  local_q.from = std::get<0>(round_from);
+	  local_q.to = std::get<0>(round_to);
       auto readed_chunks = _io->readInterval(q);
 
       for (auto c : readed_chunks) {
@@ -321,7 +330,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  auto rdr = c->getReader();
 	  while (!rdr->is_end()) {
 		  auto v = rdr->readNext();
-		  if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
+		  if (v.inQuery(q.ids, q.flag) && (v.time>=q.from && v.time<q.to)) {
 			  clbk->call(v);
 		  }
 	  }
