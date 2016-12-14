@@ -200,19 +200,37 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 		
 		steps[0] = dariadb::storage::StepKind::SECOND;
 		steps[1] = dariadb::storage::StepKind::MINUTE;
+		steps[2] = dariadb::storage::StepKind::HOUR;
 		ms.set_steps(steps);
 
 		auto value = dariadb::Meas::empty(0);
-		size_t writes_count = 1000;
+		size_t writes_count = 10000;
 		for (size_t i = 0; i < writes_count; i++) {
+			value.id = 0;
 			value.value = i;
 			value.time += 500;
 			ms.append(value);
+			value.id = 1;
+			ms.append(value);
+			value.id = 2;
+			ms.append(value);
 		}
-		{
+		{//seconds
 			dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
 			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2)+1);
+		}
+
+		{//minutes
+			dariadb::storage::QueryInterval qi({ 1 }, 0, 0, value.time);
+			auto readed = ms.readInterval(qi);
+			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2*60)) + 1); //2*60
+		}
+
+		{//hour
+			dariadb::storage::QueryInterval qi({ 2 }, 0, 0, value.time);
+			auto readed = ms.readInterval(qi);
+			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2*60*60)) + 1);
 		}
 	}
 	dariadb::utils::async::ThreadManager::stop();

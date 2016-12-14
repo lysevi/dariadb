@@ -209,11 +209,12 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  else {
 		  ptr = it->second;
 	  }
-	  //logger_info("engine: bystep - period #", value.id, " is ", period_num);
+	  
 	  if (ptr->period() != period_num) {
 		  auto old_value = ptr;
 		  auto packed_chunk = old_value->pack();
 		  if (packed_chunk != nullptr) {
+			  //TODO write async.
 			  _io->append(packed_chunk);
 		  }
 		  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
