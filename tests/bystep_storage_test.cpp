@@ -21,6 +21,7 @@ BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 1, 1011), uint64_t(1));
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 10, 1000), uint64_t(0));
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 10,20111), uint64_t(2));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 60, 60000), uint64_t(1));
 
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 1 * 1000), uint64_t(0));
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 65*1000), uint64_t(1));
@@ -174,4 +175,49 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+}
+
+
+BOOST_AUTO_TEST_CASE(ByStepCommonTest) {
+	std::cout << "ByStepTest" << std::endl;
+	auto storage_path = "testBySTepStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	{
+		dariadb::utils::fs::mkdir(storage_path);
+		auto settings =
+			dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		settings->chunk_size.value = 128;
+
+		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
+			new dariadb::storage::EngineEnvironment() };
+		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+			settings.get());
+		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+		dariadb::storage::ByStepStorage ms{ _engine_env };
+		dariadb::storage::Id2Step steps;
+		
+		steps[0] = dariadb::storage::StepKind::SECOND;
+		steps[1] = dariadb::storage::StepKind::MINUTE;
+		ms.set_steps(steps);
+
+		auto value = dariadb::Meas::empty(0);
+		size_t writes_count = 1000;
+		for (size_t i = 0; i < writes_count; i++) {
+			value.value = i;
+			value.time += 500;
+			ms.append(value);
+		}
+		{
+			dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
+			auto readed = ms.readInterval(qi);
+			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2));
+		}
+	}
+	dariadb::utils::async::ThreadManager::stop();
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
 }
