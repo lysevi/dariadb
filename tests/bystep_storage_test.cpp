@@ -15,6 +15,18 @@
 #include <algorithm>
 #include <cstring>
 
+BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
+	using namespace dariadb::storage;
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 1, 0777), uint64_t(0));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 1, 1011), uint64_t(1));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 10, 1000), uint64_t(0));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 10,20111), uint64_t(2));
+
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 1 * 1000), uint64_t(0));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 65*1000), uint64_t(1));
+}
+
+
 BOOST_AUTO_TEST_CASE(IOAdopterInitTest) {
   std::cout << "IOAdopterInitTest" << std::endl;
   auto storage_path = "testBySTepStorage";

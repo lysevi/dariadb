@@ -34,9 +34,11 @@ public:
       sqlite3_close(_db);
       _db = nullptr;
     }
+	logger("engine: io_adapter - stoped");
   }
 
   void append(const Chunk_Ptr &ch) {
+	  logger("engine: io_adapter - add chunk #", ch->header->id, " id:", ch->header->first.id);
     const std::string sql_query = "INSERT INTO Chunks(number, meas_id,min_time,max_time,chunk_header, "
                                   "chunk_buffer) values (?,?,?,?,?,?);";
     sqlite3_stmt *pStmt;
@@ -114,7 +116,6 @@ public:
   }
   IdToChunkMap readTimePoint(const QueryTimePoint &query) {
     IdToChunkMap result;
-    // TODO compile on ctor.
     // TODO generate string with needed period and id as variable
     const std::string sql_query = "SELECT chunk_header, chunk_buffer FROM Chunks WHERE "
                                   "meas_id=? AND min_time<=?";
@@ -167,6 +168,7 @@ public:
   }
 
   void replace(const Chunk_Ptr &ch) {
+	  logger("engine: io_adapter - replace chunk #", ch->header->id, " id:", ch->header->first.id);
 	  const std::string sql_query = "UPDATE Chunks SET min_time=?, max_time=?, chunk_header=?, chunk_buffer=? where number=? AND meas_id=?";
 	  sqlite3_stmt *pStmt;
 	  int rc;

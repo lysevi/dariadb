@@ -1,9 +1,11 @@
 #include <libdariadb/storage/bystep/bystep_storage.h>
 #include <libdariadb/storage/bystep/io_adapter.h>
+#include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/fs.h>
-#include <libsqlite3/sqlite3.h>
+#include <libdariadb/timeutil.h>
 #include <memory>
+#include <tuple>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -26,6 +28,10 @@ struct ByStepStorage::Private : public IMeasStorage {
     }
   }
   ~Private() { stop(); }
+
+  void set_steps(const Id2Step&steps) {
+	  _steps = steps;
+  }
 
   Status append(const Meas &value) override {
     NOT_IMPLEMENTED;
@@ -68,10 +74,50 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   void flush() override {}
+  /// result - rounded time and step in miliseconds
+  static std::tuple<Time,Time> roundTime(const StepKind stepkind, const Time t) {
+	  Time rounded = 0;
+	  Time step = 0;
+	  switch (stepkind)
+	  {
+	  case StepKind::SECOND:
+		  rounded = timeutil::round_to_seconds(t);
+		  step = 1000;
+		  break;
+	  case StepKind::MINUTE:
+		  rounded = timeutil::round_to_minutes(t);
+		  step = 60 * 1000;
+		  break;
+	  case StepKind::HOUR:
+		  rounded = timeutil::round_to_hours(t);
+		  step = 3600 * 1000;
+		  break;
+	  }
+	  return std::tie(rounded, step);
+  }
+
+  static uint64_t intervalForTime(const StepKind stepkind, const size_t valsInInterval, const Time t) {
+	  Time rounded = 0;
+	  Time step = 0;
+	  auto rs = roundTime(stepkind, t);
+	  rounded = std::get<0>(rs);
+	  step = std::get<1>(rs);
+
+	  auto stepped = (rounded / step);
+	  if (stepped == valsInInterval) {
+		  return valsInInterval;
+	  }
+	  if (stepped < valsInInterval) {
+		  return 0;
+	  }
+	  return  stepped/valsInInterval;
+  }
 
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
   std::unique_ptr<IOAdapter> _io;
+  std::map<Id, Chunk_Ptr> _chunkmap;
+  Id2Step _steps;
 };
 
 ByStepStorage::ByStepStorage(const EngineEnvironment_ptr &env)
@@ -79,6 +125,10 @@ ByStepStorage::ByStepStorage(const EngineEnvironment_ptr &env)
 
 ByStepStorage::~ByStepStorage() {
   _impl = nullptr;
+}
+
+void ByStepStorage::set_steps(const Id2Step&steps) {
+	_impl->set_steps(steps);
 }
 
 Time ByStepStorage::minTime() {
@@ -120,4 +170,8 @@ void ByStepStorage::stop() {
 
 Id2MinMax ByStepStorage::loadMinMax() {
   return _impl->loadMinMax();
+}
+
+uint64_t ByStepStorage::intervalForTime(const StepKind step, const size_t valsInInterval, const Time t) {
+	return ByStepStorage::Private::intervalForTime(step,valsInInterval, t);
 }
