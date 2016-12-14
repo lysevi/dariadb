@@ -4,6 +4,7 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
+#include <libdariadb/flags.h>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -32,6 +33,22 @@ size_t step_to_size(StepKind kind) {
 	  return 0;
   }
 }
+static Time stepByKind(const StepKind stepkind) {
+	Time step = 0;
+	switch (stepkind) {
+	case StepKind::SECOND:
+		step = 1000;
+		break;
+	case StepKind::MINUTE:
+		step = 60 * 1000;
+		break;
+	case StepKind::HOUR:
+		step = 3600 * 1000;
+		break;
+	}
+	return step;
+}
+
 /// result - rounded time and step in miliseconds
 static std::tuple<Time, Time> roundTime(const StepKind stepkind, const Time t) {
   Time rounded = 0;
@@ -82,7 +99,17 @@ public:
 
 	auto values_size = bystep_inner::step_to_size(_step);
 	_values.resize(values_size);
-	_posses.resize(values_size);
+	auto stepTime = bystep_inner::stepByKind(step_);
+	auto zero_time = (period_*values_size)* stepTime;
+	for (size_t i = 0; i < values_size; ++i) {
+		_values[i].time = zero_time;
+		_values[i].flag = Flags::_NO_DATA;
+		_values[i].id = target_id_;
+		zero_time += stepTime;
+	}
+
+	_minTime = MAX_TIME;
+	_maxTime = MIN_TIME;
   }
 
   Status append(const Meas &value) override { 
@@ -92,58 +119,44 @@ public:
 	  auto pos = ((r_time/ r_kind) - (r_kind*_target_id)) %_values.size();
 	  assert(pos < _values.size());
 	  _values[pos] = value;
-	  _posses[pos] = true;
+	  _minTime = std::min(_minTime, value.time);
+	  _maxTime = std::max(_maxTime, value.time);
 	  return Status(1, 0); 
   }
 
   Time minTime() override { //TODO refact
-	  Time min = MAX_TIME;
-	  for (size_t i = 0; i < _posses.size(); ++i) {
-		  if (_posses[i]) {
-			  auto v = _values[i];
-			  min = std::min(min, v.time);
-		  }
-	  }
-	  return min;
+	  return _minTime;
   }
   Time maxTime() override { //TODO refact
-	  Time max = MIN_TIME;
-	  for (size_t i = 0; i < _posses.size(); ++i) {
-		  if (_posses[i]) {
-			  auto v = _values[i];
-			  max = std::max(max, v.time);
-		  }
-	  }
-	  return max;
+	  return _maxTime;
   }
 
-  bool minMaxTime(Id id, Time *minResult, Time *maxResult) override { 
-	  if (id != _target_id) {
-		  return false;
+  bool minMaxTime(Id id, Time *minResult, Time *maxResult) override {
+    if (id != _target_id) {
+		THROW_EXCEPTION("minMaxTime: logic error.");
+      return false;
+    }
+    *minResult = MAX_TIME;
+    *maxResult = MIN_TIME;
+    bool result = false;
+    for (size_t i = 0; i < _values.size(); ++i) {
+      auto v = _values[i];
+	  if (v.flag != Flags::_NO_DATA) {
+		  result = true;
+		  *maxResult = std::max(*maxResult, v.time);
+		  *minResult = std::min(*minResult, v.time);
 	  }
-	  *minResult = MAX_TIME;
-	  *maxResult = MIN_TIME;
-	  bool result = false;
-	  for (size_t i = 0; i < _posses.size(); ++i) {
-		  if (_posses[i]) {
-			  auto v = _values[i];
-			  result = true;
-			  *maxResult = std::max(*maxResult, v.time);
-			  *minResult = std::min(*minResult, v.time);
-		  }
-	  }
-	  return result;
+    }
+    return result;
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {
-	  for (size_t i = 0; i < _posses.size(); ++i) {
-		  if (_posses[i]) {
-			  auto v = _values[i];
-			  if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
-				  clbk->call(v);
-			  }
-		  }
-	  }
+    for (size_t i = 0; i < _values.size(); ++i) {
+      auto v = _values[i];
+      if (v.inQuery(q.ids, q.flag) && (v.time>=q.from && v.time<q.to)) {
+        clbk->call(v);
+      }
+    }
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
@@ -157,8 +170,8 @@ public:
 
   size_t size()const {
 	  size_t result = 0;
-	  for (auto v:_posses) {
-		  if (v) {
+	  for (auto v: _values) {
+		  if (v.flag!=Flags::_NO_DATA) {
 			  result++;
 		  }
 	  }
@@ -167,18 +180,7 @@ public:
 
   Chunk_Ptr pack()const {
 	  size_t it = 0;
-	  bool is_empty = true;
-	  for (size_t i = 0; i < _posses.size(); ++i) {
-		  if (_posses[i] != false) {
-			  is_empty = false;
-			  it = i;
-			  break;
-		  }
-	  }
 
-	  if (is_empty) {
-		  return nullptr;
-	  }
 	  auto buffer_size = _values.size() * sizeof(Meas);
 	  uint8_t*buffer = new uint8_t[buffer_size];
 	  ChunkHeader*chdr = new ChunkHeader;
@@ -188,10 +190,12 @@ public:
 	  
 	  Chunk_Ptr result{ new ZippedChunk{chdr, buffer,buffer_size, _values[it]} };
 	  ++it;
-	  for (; it < _posses.size(); ++it) {
+	  for (; it < _values.size(); ++it) {
 		  result->append(_values[it]);
 	  }
 	  result->close(); //TODO resize buffer like in page::create
+	  result->header->minTime = _minTime;
+	  result->header->maxTime = _maxTime;
 	  result->header->id = _period;
 	  result->is_owner = true;
 	  return result;
@@ -200,8 +204,9 @@ protected:
   Id _target_id;
   StepKind _step;
   std::vector<Meas> _values;
-  std::vector<bool> _posses; 
   uint64_t _period;
+  Time _minTime;
+  Time _maxTime;
 };
 
 using ByStepTrack_ptr = std::shared_ptr<ByStepTrack>;

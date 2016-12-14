@@ -27,8 +27,7 @@ BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 65*1000), uint64_t(1));
 }
 
-
-BOOST_AUTO_TEST_CASE(IOAdopterInitTest) {
+BOOST_AUTO_TEST_CASE(IOAdopterTest) {
   std::cout << "IOAdopterInitTest" << std::endl;
   auto storage_path = "testBySTepStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
