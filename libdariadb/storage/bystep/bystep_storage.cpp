@@ -16,7 +16,7 @@ using namespace dariadb::storage;
 
 const char *filename = "bystep.db";
 
-const size_t VALUES_PER_SEC = 60;
+const size_t VALUES_PER_SEC = 600;
 const size_t VALUES_PER_MIN = 60;
 const size_t VALUES_PER_HR = 24;
 
@@ -113,15 +113,20 @@ public:
   }
 
   Status append(const Meas &value) override { 
-	  auto rounded_tuple = bystep_inner::roundTime(_step, value.time);
-	  auto r_time = std::get<0>(rounded_tuple);
-	  auto	r_kind = std::get<1>(rounded_tuple);
-	  auto pos = ((r_time/ r_kind) - (r_kind*_target_id)) %_values.size();
-	  assert(pos < _values.size());
+	  auto pos = position_for_time(value.time);
 	  _values[pos] = value;
 	  _minTime = std::min(_minTime, value.time);
 	  _maxTime = std::max(_maxTime, value.time);
 	  return Status(1, 0); 
+  }
+
+  size_t position_for_time(const Time t) {
+	  auto rounded_tuple = bystep_inner::roundTime(_step, t);
+	  auto r_time = std::get<0>(rounded_tuple);
+	  auto	r_kind = std::get<1>(rounded_tuple);
+	  auto pos = ((r_time / r_kind) - (r_kind*_target_id)) % _values.size();
+	  assert(pos < _values.size());
+	  return pos;
   }
 
   Time minTime() override { //TODO refact
@@ -159,7 +164,12 @@ public:
     }
   }
 
-  Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
+  Id2Meas readTimePoint(const QueryTimePoint &q) override { 
+	  Id2Meas result;
+	  result[_target_id] = _values[position_for_time(q.time_point)];
+	  return result;
+  }
+
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     return Id2Meas();
   }
@@ -234,6 +244,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  auto stepKind_it = _steps.find(value.id);
 	  if (stepKind_it == _steps.end()) {
 		  logger_fatal("engine: bystep - write values id:", value.id, " with unknow step.");
+		  return Status(0, 1);
 	  }
 
 	  auto vals_per_interval = bystep_inner::step_to_size(stepKind_it->second);
@@ -341,7 +352,64 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  }
   }
 
-  Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
+  Id2Meas readTimePoint(const QueryTimePoint &q) override {
+    Id2Meas result;
+
+	auto local_q = q;
+	local_q.ids.resize(1);
+	//TODO refact.
+	for (auto&id : q.ids) {
+		
+		auto stepKind_it = _steps.find(id);
+		if (stepKind_it == _steps.end()) {
+			logger_fatal("engine: bystep - readTimePoint id:", id, " with unknow step.");
+			continue;
+		}
+		//find rounded time point for step
+		auto round_tp = bystep_inner::roundTime(stepKind_it->second, q.time_point);
+		
+		local_q.ids[0] = id;
+		local_q.time_point = std::get<0>(round_tp);
+		
+		result[id].time = local_q.time_point;
+		result[id].flag = Flags::_NO_DATA;
+
+		auto vals_per_interval = bystep_inner::step_to_size(stepKind_it->second);
+		auto period_num =
+			bystep_inner::intervalForTime(stepKind_it->second, vals_per_interval, local_q.time_point);
+
+		auto fres = _values.find(id);
+		if (fres != _values.end() && fres->second->period() == period_num) {
+			auto local_res = fres->second->readTimePoint(local_q);
+			result[id] = local_res[id];
+		}
+		else {
+			auto id2chunk = _io->readTimePoint(local_q);
+			if (id2chunk.size() == size_t(0)) {
+				result[id].time = local_q.time_point;
+				result[id].flag = Flags::_NO_DATA;
+			}
+			else {
+				for (auto&c : id2chunk) {
+					auto rdr = c.second->getReader();
+					while (!rdr->is_end()) {
+						auto v = rdr->readNext();
+						auto rounded_time_tuple = bystep_inner::roundTime(stepKind_it->second, v.time);
+						auto rounded_time = std::get<0>(rounded_time_tuple);
+						if (v.inQuery(local_q.ids, local_q.flag) && rounded_time == local_q.time_point) {
+							result[id] = v;
+							break;
+						}
+						if (v.time > local_q.time_point) {
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+    return result;
+  }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     return Id2Meas();

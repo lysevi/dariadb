@@ -259,6 +259,31 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 			res = ms.minMaxTime(777, &min, &max);
 			BOOST_CHECK(!res);
 		}
+
+		{// readInTimePoint from io_adapter
+			dariadb::storage::QueryTimePoint qp({ 0 }, 0, 1100);
+			auto result = ms.readTimePoint(qp);
+			BOOST_CHECK_EQUAL(result.size(), size_t(1));
+			BOOST_CHECK_LE(result[0].time, 2000);
+			BOOST_CHECK(result[0].flag!=dariadb::Flags::_NO_DATA);
+			
+		}
+		{// readInTimePoint from last tracked value
+			dariadb::storage::QueryTimePoint qp({ 0 }, 0, value.time);
+			auto result = ms.readTimePoint(qp);
+			BOOST_CHECK_EQUAL(result.size(), size_t(1));
+			BOOST_CHECK_LE(result[0].time, value.time);
+			BOOST_CHECK(result[0].flag != dariadb::Flags::_NO_DATA);
+		}
+
+		{// readInTimePoint not in interval
+			auto not_exists_time = value.time*value.time;
+			dariadb::storage::QueryTimePoint qp({ 1 }, 0, not_exists_time);
+			auto result = ms.readTimePoint(qp);
+			BOOST_CHECK_EQUAL(result.size(), size_t(1));
+			BOOST_CHECK_LE(result[1].time, not_exists_time);
+			BOOST_CHECK_EQUAL(result[1].flag, dariadb::Flags::_NO_DATA);
+		}
 	}
 	dariadb::utils::async::ThreadManager::stop();
 	if (dariadb::utils::fs::path_exists(storage_path)) {

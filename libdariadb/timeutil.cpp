@@ -90,7 +90,7 @@ Time from_iso_string(const std::string&s){
 }
 
 Time round_to_seconds(const Time t) {
-  return Time(float(t) / 1e3) * 1e3;
+  return (Time)(Time(float(t) / 1e3) * 1e3);
 }
 
 Time round_to_minutes(const Time t) {
