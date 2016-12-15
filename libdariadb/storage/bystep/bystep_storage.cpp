@@ -128,7 +128,7 @@ public:
 	  auto rounded_tuple = bystep_inner::roundTime(_step, t);
 	  auto r_time = std::get<0>(rounded_tuple);
 	  auto	r_kind = std::get<1>(rounded_tuple);
-	  auto pos = ((r_time / r_kind) - (r_kind*_target_id)) % _values.size();
+	  auto pos = ((r_time / r_kind)) % _values.size();
 	  assert(pos < _values.size());
 	  return pos;
   }

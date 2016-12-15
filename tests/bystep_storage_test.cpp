@@ -221,18 +221,27 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 			dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
 			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2)+1);
+			for (auto&v : readed) {
+				BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
+			}
 		}
 
 		{//minutes
 			dariadb::storage::QueryInterval qi({ 1 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(100));
+			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2*60)) + 1);
+			for (auto&v : readed) {
+				BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
+			}
 		}
 
 		{//hour
 			dariadb::storage::QueryInterval qi({ 2 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(4));
+			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2 * 60 * 60)) + 1);
+			for (auto&v : readed) {
+				BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
+			}
 		}
 
 		{//minMax
