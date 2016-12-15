@@ -76,10 +76,8 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
     }
     
 	{//readInterval
-		dariadb::storage::QueryInterval qi{ dariadb::IdArray{all_ids.begin(), all_ids.end()},
-										   0, 0, max_time };
-		auto all_chunks = io_adapter->readInterval(qi);
-		BOOST_CHECK_EQUAL(all_chunks.size(), created_chunks);
+		auto all_chunks = io_adapter->readInterval(0,2,0);
+		BOOST_CHECK_EQUAL(all_chunks.size(), 3);
 
 		dariadb::MeasList readed_values;
 		for (auto&c : all_chunks) {
@@ -89,20 +87,16 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 				readed_values.push_back(v);
 			}
 		}
-		BOOST_CHECK_EQUAL(readed_values.size(), all_values.size());
+		auto count_of_zero = std::count_if(all_values.begin(), all_values.end(), [](auto v) {return v.id == 0; });
+		BOOST_CHECK_EQUAL(readed_values.size(), count_of_zero);
 	}
 	{//readTimePoint
 		dariadb::Time tp = max_time / 2;
-		dariadb::storage::QueryTimePoint qtp{ dariadb::IdArray{all_ids.begin(), all_ids.end()},
-											 0, tp };
-
-		auto tp_chunks = io_adapter->readTimePoint(qtp);
-		BOOST_CHECK_EQUAL(tp_chunks.size(), all_ids.size());
-		for (auto &kv : tp_chunks) {
-			auto from = kv.second->header->minTime;
-			auto to = kv.second->header->maxTime;
-			BOOST_CHECK(dariadb::utils::inInterval(from, to, tp));
-		}
+		auto result = io_adapter->readTimePoint(1,0);
+		BOOST_CHECK(result != nullptr);
+		auto from = result->header->minTime;
+		auto to = result->header->maxTime;
+		BOOST_CHECK(dariadb::utils::inInterval(from, to, tp));
 	}
 	//replace chunk
 	{
@@ -124,11 +118,7 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 		ptr->close();
 		io_adapter->replace(ptr);
 
-		dariadb::IdArray zero(1);
-		zero[0] = 0;
-		dariadb::storage::QueryInterval qi_zero{ zero, 0, 0, first.time };
-
-		auto zero_id_chunks = io_adapter->readInterval(qi_zero);
+		auto zero_id_chunks = io_adapter->readInterval(0,3,0);
 		bool success_replace = false;
 		for (auto&c : zero_id_chunks) {
 			auto rdr = c->getReader();

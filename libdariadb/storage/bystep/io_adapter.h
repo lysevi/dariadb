@@ -16,8 +16,8 @@ public:
   EXPORT ~IOAdapter();
   EXPORT void stop();
   EXPORT void append(const Chunk_Ptr&ch);
-  EXPORT ChunksList readInterval(const QueryInterval &query);
-  EXPORT IdToChunkMap readTimePoint(const QueryTimePoint &query);
+  EXPORT ChunksList readInterval(uint64_t period_from, uint64_t period_to, Id meas_id);
+  EXPORT Chunk_Ptr readTimePoint(uint64_t period, Id meas_id);
   EXPORT void replace(const Chunk_Ptr&ch);
   EXPORT Time minTime();
   EXPORT Time maxTime();

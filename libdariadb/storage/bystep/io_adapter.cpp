@@ -66,106 +66,95 @@ public:
     } while (rc == SQLITE_SCHEMA);
   }
 
-  ChunksList readInterval(const QueryInterval &query) {
+  ChunksList readInterval(uint64_t period_from, uint64_t period_to, Id meas_id) {
     ChunksList result;
-    // TODO generate string with needed period and id as variable. (select chunk_header...
-    // WHERE id=? and from<'..' and to>'...'
-    const std::string sql_query =
-        "SELECT chunk_header, chunk_buffer FROM Chunks WHERE meas_id=? ORDER BY number";
+    const std::string sql_query = "SELECT chunk_header, chunk_buffer FROM Chunks WHERE "
+                                  "meas_id=? AND number>=? AND number<=? ORDER BY number";
     sqlite3_stmt *pStmt;
     int rc;
-    for (auto id : query.ids) {
-      do {
-        rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
-        if (rc != SQLITE_OK) {
-          auto err_msg = std::string(sqlite3_errmsg(_db));
-          this->stop();
-          THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+
+    do {
+      rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
+      if (rc != SQLITE_OK) {
+        auto err_msg = std::string(sqlite3_errmsg(_db));
+        this->stop();
+        THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+      }
+      sqlite3_bind_int64(pStmt, 1, meas_id);
+      sqlite3_bind_int64(pStmt, 2, period_from);
+      sqlite3_bind_int64(pStmt, 3, period_to);
+
+      while (1) {
+        rc = sqlite3_step(pStmt);
+        if (rc == SQLITE_ROW) {
+          using utils::inInterval;
+          auto headerSize = sqlite3_column_bytes(pStmt, 0);
+          assert(headerSize == sizeof(ChunkHeader));
+          auto header_blob = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
+          ChunkHeader *chdr = new ChunkHeader;
+          memcpy(chdr, header_blob, headerSize);
+
+          auto buffSize = sqlite3_column_bytes(pStmt, 1);
+          assert(buffSize == chdr->size);
+          uint8_t *buffer = new uint8_t[buffSize];
+          memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
+
+          Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
+          cptr->is_owner = true;
+          result.push_back(cptr);
+        } else {
+          break;
         }
-        sqlite3_bind_int64(pStmt, 1, id);
-
-        while (1) {
-          rc = sqlite3_step(pStmt);
-          if (rc == SQLITE_ROW) {
-            using utils::inInterval;
-            auto headerSize = sqlite3_column_bytes(pStmt, 0);
-            assert(headerSize == sizeof(ChunkHeader));
-            auto header_blob = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
-            if (inInterval(query.from, query.to, header_blob->minTime) ||
-                inInterval(query.from, query.to, header_blob->maxTime) ||
-                inInterval(header_blob->minTime, header_blob->maxTime, query.from) ||
-                inInterval(header_blob->minTime, header_blob->maxTime, query.to)) {
-              ChunkHeader *chdr = new ChunkHeader;
-              memcpy(chdr, header_blob, headerSize);
-
-              auto buffSize = sqlite3_column_bytes(pStmt, 1);
-              assert(buffSize == chdr->size);
-              uint8_t *buffer = new uint8_t[buffSize];
-              memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
-
-              Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
-              cptr->is_owner = true;
-              result.push_back(cptr);
-            }
-          } else {
-            break;
-          }
-        }
-        rc = sqlite3_finalize(pStmt);
-      } while (rc == SQLITE_SCHEMA);
-    }
+      }
+      rc = sqlite3_finalize(pStmt);
+    } while (rc == SQLITE_SCHEMA);
 
     return result;
   }
-  IdToChunkMap readTimePoint(const QueryTimePoint &query) {
-    IdToChunkMap result;
-    // TODO generate string with needed period and id as variable
+  Chunk_Ptr readTimePoint(uint64_t period, Id meas_id) {
+	Chunk_Ptr result;
+    
     const std::string sql_query = "SELECT chunk_header, chunk_buffer FROM Chunks WHERE "
-                                  "meas_id=? AND min_time<=?";
+                                  "meas_id=? AND number==?";
     sqlite3_stmt *pStmt;
     int rc;
 
-    for (auto id : query.ids) {
-      do {
-        rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
-        if (rc != SQLITE_OK) {
-          auto err_msg = std::string(sqlite3_errmsg(_db));
-          this->stop();
-          THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+    do {
+      rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
+      if (rc != SQLITE_OK) {
+        auto err_msg = std::string(sqlite3_errmsg(_db));
+        this->stop();
+        THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+      }
+
+      sqlite3_bind_int64(pStmt, 1, meas_id);
+      sqlite3_bind_int64(pStmt, 2, period);
+
+      while (1) {
+        rc = sqlite3_step(pStmt);
+        if (rc == SQLITE_ROW) {
+          using utils::inInterval;
+          auto headerSize = sqlite3_column_bytes(pStmt, 0);
+          assert(headerSize == sizeof(ChunkHeader));
+          auto header_blob = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
+
+          ChunkHeader *chdr = new ChunkHeader;
+          memcpy(chdr, header_blob, headerSize);
+
+          auto buffSize = sqlite3_column_bytes(pStmt, 1);
+          assert(buffSize == chdr->size);
+          uint8_t *buffer = new uint8_t[buffSize];
+          memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
+
+          Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
+          cptr->is_owner = true;
+		  result = cptr;
+        } else {
+          break;
         }
-
-        sqlite3_bind_int64(pStmt, 1, id);
-        sqlite3_bind_int64(pStmt, 2, query.time_point);
-
-        while (1) {
-          rc = sqlite3_step(pStmt);
-          if (rc == SQLITE_ROW) {
-            using utils::inInterval;
-            auto headerSize = sqlite3_column_bytes(pStmt, 0);
-            assert(headerSize == sizeof(ChunkHeader));
-            auto header_blob = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
-            auto fres = result.find(id);
-            if (fres == result.end() ||
-                fres->second->header->maxTime < header_blob->maxTime) {
-              ChunkHeader *chdr = new ChunkHeader;
-              memcpy(chdr, header_blob, headerSize);
-
-              auto buffSize = sqlite3_column_bytes(pStmt, 1);
-              assert(buffSize == chdr->size);
-              uint8_t *buffer = new uint8_t[buffSize];
-              memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
-
-              Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
-              cptr->is_owner = true;
-              result[id] = cptr;
-            }
-          } else {
-            break;
-          }
-        }
-        rc = sqlite3_finalize(pStmt);
-      } while (rc == SQLITE_SCHEMA);
-    }
+      }
+      rc = sqlite3_finalize(pStmt);
+    } while (rc == SQLITE_SCHEMA);
 
     return result;
   }
@@ -293,12 +282,12 @@ void IOAdapter::append(const Chunk_Ptr &ch) {
   _impl->append(ch);
 }
 
-ChunksList IOAdapter::readInterval(const QueryInterval &query) {
-  return _impl->readInterval(query);
+ChunksList IOAdapter::readInterval(uint64_t period_from, uint64_t period_to, Id meas_id) {
+  return _impl->readInterval(period_from,period_to,meas_id);
 }
 
-IdToChunkMap IOAdapter::readTimePoint(const QueryTimePoint &query) {
-  return _impl->readTimePoint(query);
+Chunk_Ptr IOAdapter::readTimePoint(uint64_t period, Id meas_id) {
+  return _impl->readTimePoint(period, meas_id);
 }
 
 void IOAdapter::replace(const Chunk_Ptr &ch) {
