@@ -120,6 +120,16 @@ public:
 	  return zero_time;
   }
 
+  void from_chunk(const Chunk_Ptr&c) {
+	  auto rdr = c->getReader();
+	  while (!rdr->is_end()) {
+		  auto v = rdr->readNext();
+		  if (v.flag != Flags::_NO_DATA) {
+			  this->append(v);
+		  }
+	  }
+  }
+
   Status append(const Meas &value) override { 
 	  auto pos = position_for_time(value.time);
 	  _values[pos] = value;
@@ -269,18 +279,20 @@ struct ByStepStorage::Private : public IMeasStorage {
 		  ptr = it->second;
 	  }
 	  
-	  if (ptr->period() < period_num) {
-		  auto old_value = ptr;
-		  auto packed_chunk = old_value->pack();
-		  if (packed_chunk != nullptr) {
-			  //TODO write async.
-			  _io->append(packed_chunk, old_value->minTime(), old_value->maxTime());
-		  }
+	  if (ptr->period() < period_num) {//new storage period.
+		  write_track_to_disk(ptr);
 		  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
 		  _values[value.id] = ptr;
 	  }
-	  if (ptr->period() > period_num) {
-		  NOT_IMPLEMENTED;
+
+	  if (ptr->period() > period_num) {//write to past. replace old. 
+		  auto track = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
+		  auto ch = _io->readTimePoint(period_num, value.id);
+		  if (ch != nullptr) {
+			  track->from_chunk(ch);
+		  }
+		  track->append(value);
+		  replace_track_in_disk(track);
 	  }
 	  else {
 		  auto res = ptr->append(value);
@@ -290,6 +302,23 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  }
 	  return Status(1, 0); 
   }
+
+  void write_track_to_disk(const ByStepTrack_ptr&track) {
+	  auto packed_chunk = track->pack();
+	  if (packed_chunk != nullptr) {
+		  //TODO write async.
+		  _io->append(packed_chunk, track->minTime(), track->maxTime());
+	  }
+  }
+
+  void replace_track_in_disk(const ByStepTrack_ptr&track) {
+	  auto packed_chunk = track->pack();
+	  if (packed_chunk != nullptr) {
+		  //TODO write async.
+		  _io->replace(packed_chunk, track->minTime(), track->maxTime());
+	  }
+  }
+
 
   Id2MinMax loadMinMax() override {
     Id2MinMax result;

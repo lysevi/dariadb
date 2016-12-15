@@ -159,7 +159,7 @@ public:
     return result;
   }
 
-  void replace(const Chunk_Ptr &ch) {
+  void replace(const Chunk_Ptr &ch, Time min, Time max) {
     logger("engine: io_adapter - replace chunk #", ch->header->id, " id:",
            ch->header->first.id);
     const std::string sql_query = "UPDATE Chunks SET min_time=?, max_time=?, "
@@ -175,8 +175,8 @@ public:
         THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
       }
 
-      sqlite3_bind_int64(pStmt, 1, ch->header->minTime);
-      sqlite3_bind_int64(pStmt, 2, ch->header->maxTime);
+      sqlite3_bind_int64(pStmt, 1, min);
+      sqlite3_bind_int64(pStmt, 2, max);
       sqlite3_bind_blob(pStmt, 3, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
       sqlite3_bind_blob(pStmt, 4, ch->_buffer_t, ch->header->size, SQLITE_STATIC);
       sqlite3_bind_int64(pStmt, 5, ch->header->id);
@@ -290,8 +290,8 @@ Chunk_Ptr IOAdapter::readTimePoint(uint64_t period, Id meas_id) {
   return _impl->readTimePoint(period, meas_id);
 }
 
-void IOAdapter::replace(const Chunk_Ptr &ch) {
-  return _impl->replace(ch);
+void IOAdapter::replace(const Chunk_Ptr &ch, Time min, Time max) {
+  return _impl->replace(ch, min,max);
 }
 
 Time IOAdapter::minTime() {
