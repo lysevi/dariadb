@@ -3,16 +3,16 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/engine_environment.h>
-#include <libdariadb/storage/memstorage/allocators.h>
+#include <libdariadb/storage/bystep/step_kind.h>
 #include <memory>
 #include <unordered_map>
+#include <istream>
+#include <ostream>
 
 namespace dariadb {
 namespace storage {
 
-enum class StepKind { SECOND, MINUTE, HOUR };
-
-using Id2Step = std::unordered_map<Id, StepKind>;
+using Id2Step = std::unordered_map<Id, STEP_KIND>;
 
 class ByStepStorage : public IMeasStorage {
 public:
@@ -36,7 +36,7 @@ public:
   EXPORT void stop();
   EXPORT Id2MinMax loadMinMax() override;
 
-  EXPORT static uint64_t intervalForTime(const StepKind step,const size_t valsInInterval, const Time t);
+  EXPORT static uint64_t intervalForTime(const STEP_KIND step,const size_t valsInInterval, const Time t);
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

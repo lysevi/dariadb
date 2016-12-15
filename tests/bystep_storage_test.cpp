@@ -17,14 +17,14 @@
 
 BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
 	using namespace dariadb::storage;
-	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 1, 0777), uint64_t(0));
-	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 1, 1011), uint64_t(1));
-	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 10, 1000), uint64_t(0));
-	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 10,20111), uint64_t(2));
-	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::SECOND, 60, 60000), uint64_t(1));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 1, 0777), uint64_t(0));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 1, 1011), uint64_t(1));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 10, 1000), uint64_t(0));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 10,20111), uint64_t(2));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 60, 60000), uint64_t(1));
 
-	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 1 * 1000), uint64_t(0));
-	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 65*1000), uint64_t(1));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::MINUTE, 1, 1 * 1000), uint64_t(0));
+	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::MINUTE, 1, 65*1000), uint64_t(1));
 }
 
 BOOST_AUTO_TEST_CASE(IOAdopterTest) {
@@ -200,9 +200,9 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 		dariadb::storage::ByStepStorage ms{ _engine_env };
 		dariadb::storage::Id2Step steps;
 		
-		steps[0] = dariadb::storage::StepKind::SECOND;
-		steps[1] = dariadb::storage::StepKind::MINUTE;
-		steps[2] = dariadb::storage::StepKind::HOUR;
+		steps[0] = dariadb::storage::STEP_KIND::SECOND;
+		steps[1] = dariadb::storage::STEP_KIND::MINUTE;
+		steps[2] = dariadb::storage::STEP_KIND::HOUR;
 		ms.set_steps(steps);
 
 		auto value = dariadb::Meas::empty(0);

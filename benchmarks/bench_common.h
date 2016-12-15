@@ -19,7 +19,8 @@ const size_t hours_write_perid = 48;
 const size_t writes_per_second = 2;
 const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
 const size_t total_readers_count = 1;
-const size_t id_per_thread = 100 / total_threads_count;
+const size_t id_count = 100;
+const size_t id_per_thread = id_count / total_threads_count;
 const uint64_t all_writes = total_threads_count * write_per_id_count * id_per_thread;
 
 class BenchmarkLogger : public dariadb::utils::ILogger {

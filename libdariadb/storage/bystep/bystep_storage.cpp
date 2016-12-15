@@ -22,28 +22,28 @@ const size_t VALUES_PER_MIN = 60;
 const size_t VALUES_PER_HR = 24;
 
 namespace bystep_inner {
-size_t step_to_size(StepKind kind) {
+size_t step_to_size(STEP_KIND kind) {
   switch (kind) {
-  case StepKind::SECOND:
+  case STEP_KIND::SECOND:
     return VALUES_PER_SEC;
-  case StepKind::MINUTE:
+  case STEP_KIND::MINUTE:
     return VALUES_PER_MIN;
-  case StepKind::HOUR:
+  case STEP_KIND::HOUR:
     return VALUES_PER_HR;
   default:
 	  return 0;
   }
 }
-static Time stepByKind(const StepKind stepkind) {
+static Time stepByKind(const STEP_KIND stepkind) {
 	Time step = 0;
 	switch (stepkind) {
-	case StepKind::SECOND:
+	case STEP_KIND::SECOND:
 		step = 1000;
 		break;
-	case StepKind::MINUTE:
+	case STEP_KIND::MINUTE:
 		step = 60 * 1000;
 		break;
-	case StepKind::HOUR:
+	case STEP_KIND::HOUR:
 		step = 3600 * 1000;
 		break;
 	}
@@ -51,19 +51,19 @@ static Time stepByKind(const StepKind stepkind) {
 }
 
 /// result - rounded time and step in miliseconds
-static std::tuple<Time, Time> roundTime(const StepKind stepkind, const Time t) {
+static std::tuple<Time, Time> roundTime(const STEP_KIND stepkind, const Time t) {
   Time rounded = 0;
   Time step = 0;
   switch (stepkind) {
-  case StepKind::SECOND:
+  case STEP_KIND::SECOND:
     rounded = timeutil::round_to_seconds(t);
     step = 1000;
     break;
-  case StepKind::MINUTE:
+  case STEP_KIND::MINUTE:
     rounded = timeutil::round_to_minutes(t);
     step = 60 * 1000;
     break;
-  case StepKind::HOUR:
+  case STEP_KIND::HOUR:
     rounded = timeutil::round_to_hours(t);
     step = 3600 * 1000;
     break;
@@ -71,7 +71,7 @@ static std::tuple<Time, Time> roundTime(const StepKind stepkind, const Time t) {
   return std::tie(rounded, step);
 }
 
-static uint64_t intervalForTime(const StepKind stepkind, const size_t valsInInterval,
+static uint64_t intervalForTime(const STEP_KIND stepkind, const size_t valsInInterval,
                                 const Time t) {
   Time rounded = 0;
   Time step = 0;
@@ -93,7 +93,7 @@ static uint64_t intervalForTime(const StepKind stepkind, const size_t valsInInte
 // TODO move to file
 class ByStepTrack : public IMeasStorage {
 public:
-  ByStepTrack(const Id target_id_, const StepKind step_, uint64_t  period_) {
+  ByStepTrack(const Id target_id_, const STEP_KIND step_, uint64_t  period_) {
     _target_id;
     _step = step_;
 	_period = period_;
@@ -113,7 +113,7 @@ public:
 	_maxTime = MIN_TIME;
   }
 
-  static Time get_zero_time(const uint64_t  p, const StepKind s) {
+  static Time get_zero_time(const uint64_t  p, const STEP_KIND s) {
 	  auto values_size = bystep_inner::step_to_size(s);
 	  auto stepTime = bystep_inner::stepByKind(s);
 	  auto zero_time = (p*values_size)* stepTime;
@@ -228,7 +228,7 @@ public:
   }
 protected:
   Id _target_id;
-  StepKind _step;
+  STEP_KIND _step;
   std::vector<Meas> _values;
   uint64_t _period;
   Time _minTime;
@@ -541,7 +541,7 @@ Id2MinMax ByStepStorage::loadMinMax() {
   return _impl->loadMinMax();
 }
 
-uint64_t ByStepStorage::intervalForTime(const StepKind step, const size_t valsInInterval,
+uint64_t ByStepStorage::intervalForTime(const STEP_KIND step, const size_t valsInInterval,
                                         const Time t) {
   return bystep_inner::intervalForTime(step, valsInInterval, t);
 }
