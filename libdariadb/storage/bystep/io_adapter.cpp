@@ -38,7 +38,7 @@ public:
     }
   }
 
-  void append(const Chunk_Ptr &ch) {
+  void append(const Chunk_Ptr &ch, Time min, Time max) {
     logger("engine: io_adapter - add chunk #", ch->header->id, " id:",
            ch->header->first.id);
     const std::string sql_query =
@@ -56,8 +56,8 @@ public:
 
       sqlite3_bind_int64(pStmt, 1, ch->header->id);
       sqlite3_bind_int64(pStmt, 2, ch->header->first.id);
-      sqlite3_bind_int64(pStmt, 3, ch->header->minTime);
-      sqlite3_bind_int64(pStmt, 4, ch->header->maxTime);
+      sqlite3_bind_int64(pStmt, 3, min);
+      sqlite3_bind_int64(pStmt, 4, max);
       sqlite3_bind_blob(pStmt, 5, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
       sqlite3_bind_blob(pStmt, 6, ch->_buffer_t, ch->header->size, SQLITE_STATIC);
       rc = sqlite3_step(pStmt);
@@ -278,8 +278,8 @@ void IOAdapter::stop() {
   _impl->stop();
 }
 
-void IOAdapter::append(const Chunk_Ptr &ch) {
-  _impl->append(ch);
+void IOAdapter::append(const Chunk_Ptr &ch, Time min, Time max) {
+  _impl->append(ch,min,max);
 }
 
 ChunksList IOAdapter::readInterval(uint64_t period_from, uint64_t period_to, Id meas_id) {

@@ -15,7 +15,8 @@ public:
   EXPORT IOAdapter(const std::string &fname);
   EXPORT ~IOAdapter();
   EXPORT void stop();
-  EXPORT void append(const Chunk_Ptr&ch);
+  /// min/max - real min/max values. chunk can be not filled.
+  EXPORT void append(const Chunk_Ptr&ch, Time min, Time max);
   EXPORT ChunksList readInterval(uint64_t period_from, uint64_t period_to, Id meas_id);
   EXPORT Chunk_Ptr readTimePoint(uint64_t period, Id meas_id);
   EXPORT void replace(const Chunk_Ptr&ch);

@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 		ptr->header->id = j;
         ptr->close();
         created_chunks++;
-        io_adapter->append(ptr);
+        io_adapter->append(ptr, ptr->header->minTime, ptr->header->maxTime);
       }
     }
     

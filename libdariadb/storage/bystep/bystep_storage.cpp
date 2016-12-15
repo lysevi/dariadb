@@ -204,8 +204,6 @@ public:
 		  result->append(_values[it]);
 	  }
 	  result->close(); //TODO resize buffer like in page::create
-	  result->header->minTime = _minTime;
-	  result->header->maxTime = _maxTime;
 	  result->header->id = _period;
 	  result->is_owner = true;
 	  return result;
@@ -265,7 +263,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 		  auto packed_chunk = old_value->pack();
 		  if (packed_chunk != nullptr) {
 			  //TODO write async.
-			  _io->append(packed_chunk);
+			  _io->append(packed_chunk, old_value->minTime(), old_value->maxTime());
 		  }
 		  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
 		  _values[value.id] = ptr;
