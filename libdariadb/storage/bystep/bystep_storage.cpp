@@ -101,7 +101,7 @@ public:
 	auto values_size = bystep_inner::step_to_size(_step);
 	_values.resize(values_size);
 	auto stepTime = bystep_inner::stepByKind(step_);
-	auto zero_time = (period_*values_size)* stepTime;
+	auto zero_time = get_zero_time(_period, _step);
 	for (size_t i = 0; i < values_size; ++i) {
 		_values[i].time = zero_time;
 		_values[i].flag = Flags::_NO_DATA;
@@ -111,6 +111,13 @@ public:
 
 	_minTime = MAX_TIME;
 	_maxTime = MIN_TIME;
+  }
+
+  static Time get_zero_time(const uint64_t  p, const StepKind s) {
+	  auto values_size = bystep_inner::step_to_size(s);
+	  auto stepTime = bystep_inner::stepByKind(s);
+	  auto zero_time = (p*values_size)* stepTime;
+	  return zero_time;
   }
 
   Status append(const Meas &value) override { 
@@ -333,8 +340,9 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  }
       
 	  auto round_from = bystep_inner::roundTime(step_kind_it->second, q.from);
-	  auto round_to = bystep_inner::roundTime(step_kind_it->second, q.to+std::get<1>(round_from));
-
+	  auto stepTime = std::get<1>(round_from);
+	  auto round_to = bystep_inner::roundTime(step_kind_it->second, q.to + stepTime);
+	  
 	  auto vals_per_interval = bystep_inner::step_to_size(step_kind_it->second);
 
 	  auto period_from = bystep_inner::intervalForTime(step_kind_it->second, vals_per_interval, std::get<0>(round_from));
@@ -352,7 +360,14 @@ struct ByStepStorage::Private : public IMeasStorage {
 			  foreach_chunk(q, clbk, c);
 		  }
 		  else {
-			  //TODO refact this. dont create object, just call N-times clbk with calculated value
+			  auto values_size = bystep_inner::step_to_size(step_kind_it->second);
+			  auto zero_time = ByStepTrack::get_zero_time(i, step_kind_it->second);
+			  auto empty_value = Meas::empty(id);
+			  for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
+				  empty_value.time = zero_time;
+				  empty_value.flag = Flags::_NO_DATA;
+				  zero_time += stepTime;
+			  }
 			  ByStepTrack tr(id, step_kind_it->second, i);
 			  tr.foreach(local_q, clbk);
 		  }
