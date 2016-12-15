@@ -18,7 +18,7 @@ using namespace dariadb::storage;
 
 const char *filename = "bystep.db";
 
-const size_t VALUES_PER_SEC = 600;
+const size_t VALUES_PER_SEC = 60*60;
 const size_t VALUES_PER_MIN = 60;
 const size_t VALUES_PER_HR = 24;
 
@@ -80,7 +80,7 @@ static uint64_t intervalForTime(const STEP_KIND stepkind, const size_t valsInInt
 class ByStepTrack : public IMeasStorage {
 public:
   ByStepTrack(const Id target_id_, const STEP_KIND step_, uint64_t  period_) {
-    _target_id;
+    _target_id= target_id_;
     _step = step_;
 	_period = period_;
 

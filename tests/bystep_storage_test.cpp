@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 				readed_values.push_back(v);
 			}
 		}
-		auto count_of_zero = std::count_if(all_values.begin(), all_values.end(), [](auto v) {return v.id == 0; });
+		size_t count_of_zero = std::count_if(all_values.begin(), all_values.end(), [](auto v) {return v.id == 0; });
 		BOOST_CHECK_EQUAL(readed_values.size(), count_of_zero);
 	}
 	{//readTimePoint
@@ -226,13 +226,13 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 		{//minutes
 			dariadb::storage::QueryInterval qi({ 1 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2*60)) + 1); //2*60
+			BOOST_CHECK_EQUAL(readed.size(), size_t(100));
 		}
 
 		{//hour
 			dariadb::storage::QueryInterval qi({ 2 }, 0, 0, value.time);
 			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2*60*60)) + 1);
+			BOOST_CHECK_EQUAL(readed.size(), size_t(4));
 		}
 
 		{//minMax
