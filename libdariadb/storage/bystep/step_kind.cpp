@@ -40,3 +40,19 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STEP_KIND
   };
   return stream;
 }
+
+dariadb::Time dariadb::storage::stepByKind(const STEP_KIND stepkind) {
+  dariadb::Time step = 0;
+  switch (stepkind) {
+  case STEP_KIND::SECOND:
+    step = 1000;
+    break;
+  case STEP_KIND::MINUTE:
+    step = 60 * 1000;
+    break;
+  case STEP_KIND::HOUR:
+    step = 3600 * 1000;
+    break;
+  }
+  return step;
+}

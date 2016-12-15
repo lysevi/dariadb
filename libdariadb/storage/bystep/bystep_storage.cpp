@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cstring>
 #include <unordered_map>
+#include <shared_mutex>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -33,21 +34,6 @@ size_t step_to_size(STEP_KIND kind) {
   default:
 	  return 0;
   }
-}
-static Time stepByKind(const STEP_KIND stepkind) {
-	Time step = 0;
-	switch (stepkind) {
-	case STEP_KIND::SECOND:
-		step = 1000;
-		break;
-	case STEP_KIND::MINUTE:
-		step = 60 * 1000;
-		break;
-	case STEP_KIND::HOUR:
-		step = 3600 * 1000;
-		break;
-	}
-	return step;
 }
 
 /// result - rounded time and step in miliseconds
@@ -100,7 +86,7 @@ public:
 
 	auto values_size = bystep_inner::step_to_size(_step);
 	_values.resize(values_size);
-	auto stepTime = bystep_inner::stepByKind(step_);
+	auto stepTime = stepByKind(step_);
 	auto zero_time = get_zero_time(_period, _step);
 	for (size_t i = 0; i < values_size; ++i) {
 		_values[i].time = zero_time;
@@ -115,7 +101,7 @@ public:
 
   static Time get_zero_time(const uint64_t  p, const STEP_KIND s) {
 	  auto values_size = bystep_inner::step_to_size(s);
-	  auto stepTime = bystep_inner::stepByKind(s);
+	  auto stepTime = stepByKind(s);
 	  auto zero_time = (p*values_size)* stepTime;
 	  return zero_time;
   }
@@ -246,15 +232,18 @@ struct ByStepStorage::Private : public IMeasStorage {
     _io = std::make_unique<IOAdapter>(fname);
     logger_info("engine: bystep storage file opened.");
   }
+
   void stop() {
     if (_io != nullptr) {
       _io->stop();
       _io = nullptr;
     }
   }
+
   ~Private() { stop(); }
 
-  void set_steps(const Id2Step &steps) { 
+  void set_steps(const Id2Step &steps) {
+	  std::lock_guard<std::shared_mutex> lg(_values_lock);
 	  _steps = steps; 
 	  _values.reserve(steps.size());
   }
@@ -269,14 +258,25 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  auto vals_per_interval = bystep_inner::step_to_size(stepKind_it->second);
 	  auto period_num = bystep_inner::intervalForTime(stepKind_it->second, vals_per_interval, value.time);
 	  
+	  _values_lock.lock_shared();
 	  auto it = _values.find(value.id);
 	  ByStepTrack_ptr ptr = nullptr;
 	  if (it == _values.end()) {
-		  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
-		  _values[value.id] = ptr;
+		  _values_lock.unlock_shared();
+		  _values_lock.lock();
+		  it = _values.find(value.id);
+		  if (it == _values.end()) {
+			  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
+			  _values[value.id] = ptr;
+		  }
+		  else {
+			  ptr = it->second;
+		  }
+		  _values_lock.unlock();
 	  }
 	  else {
 		  ptr = it->second;
+		  _values_lock.unlock_shared();
 	  }
 	  
 	  if (ptr->period() < period_num) {//new storage period.
@@ -326,6 +326,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   Time minTime() override {
+	  std::shared_lock<std::shared_mutex> lg(_values_lock);
 	  Time result = _io->minTime();
 	  for (auto&kv : _values) {
 		  result = std::min(result, kv.second->minTime());
@@ -334,6 +335,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   Time maxTime() override {
+	  std::shared_lock<std::shared_mutex> lg(_values_lock);
 	Time result = _io->maxTime();
 	for (auto&kv : _values) {
 		result = std::max(result, kv.second->maxTime());
@@ -343,6 +345,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override {
+	  std::shared_lock<std::shared_mutex> lg(_values_lock);
 	  auto res = _io->minMaxTime(id, minResult, maxResult);
 
 	  auto fres = _values.find(id);
@@ -359,6 +362,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+	  std::shared_lock<std::shared_mutex> lg(_values_lock);
     QueryInterval local_q = q;
     local_q.ids.resize(1);
     for (auto id : q.ids) {
@@ -420,6 +424,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) override {
+	  std::shared_lock<std::shared_mutex> lg(_values_lock);
     Id2Meas result;
 
     auto local_q = q;
@@ -486,6 +491,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   storage::Settings *_settings;
   std::unique_ptr<IOAdapter> _io;
   std::unordered_map<Id, ByStepTrack_ptr> _values;
+  std::shared_mutex _values_lock;
   Id2Step _steps;
 };
 
