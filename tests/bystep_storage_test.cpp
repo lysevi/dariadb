@@ -6,14 +6,15 @@
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/thread_manager.h>
 
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <algorithm>
 #include <cstring>
+
 
 BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
 	using namespace dariadb::storage;
@@ -307,4 +308,76 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
 	}
+}
+
+BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
+  std::cout << "ByStepLoadOnStartTest" << std::endl;
+  auto storage_path = "testBySTepStorage";
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+  {
+    dariadb::utils::fs::mkdir(storage_path);
+    auto settings =
+        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+
+    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
+        new dariadb::storage::EngineEnvironment()};
+    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                             settings.get());
+    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+    dariadb::storage::Id2Step steps;
+    steps[0] = dariadb::storage::STEP_KIND::HOUR;
+    {
+      dariadb::storage::ByStepStorage ms{_engine_env};
+      ms.set_steps(steps);
+
+      auto value = dariadb::Meas::empty(0);
+      value.value = 1;
+      value.time = dariadb::timeutil::current_time();
+      ms.append(value);
+
+      { // query
+        dariadb::storage::QueryTimePoint qt({0}, 0, value.time);
+        auto readed = ms.readTimePoint(qt);
+        BOOST_CHECK_EQUAL(readed.size(), size_t(1));
+        BOOST_CHECK_EQUAL(readed[0].value, 1);
+      }
+    }
+    { // update value
+      dariadb::storage::ByStepStorage ms{_engine_env};
+      auto readed = ms.set_steps(steps);
+      BOOST_CHECK_EQUAL(readed, 1);
+      auto value = dariadb::Meas::empty(0);
+      value.value = 2;
+      value.time = dariadb::timeutil::current_time();
+      ms.append(value);
+
+      { // query
+        dariadb::storage::QueryTimePoint qt({0}, 0, value.time);
+        auto readed_values = ms.readTimePoint(qt);
+        BOOST_CHECK_EQUAL(readed_values.size(), size_t(1));
+        BOOST_CHECK_EQUAL(readed_values[0].value, 2);
+      }
+    }
+
+    { // read saved
+      dariadb::storage::ByStepStorage ms{_engine_env};
+      auto readed = ms.set_steps(steps);
+      BOOST_CHECK_EQUAL(readed, 1);
+      auto curtime = dariadb::timeutil::current_time();
+
+      { // query
+        dariadb::storage::QueryTimePoint qt({0}, 0, curtime);
+        auto readed_values = ms.readTimePoint(qt);
+        BOOST_CHECK_EQUAL(readed_values.size(), size_t(1));
+        BOOST_CHECK_EQUAL(readed_values[0].value, 2);
+      }
+    }
+  }
+  dariadb::utils::async::ThreadManager::stop();
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
 }

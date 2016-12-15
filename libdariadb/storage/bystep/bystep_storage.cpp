@@ -80,6 +80,8 @@ static uint64_t intervalForTime(const STEP_KIND stepkind, const size_t valsInInt
 class ByStepTrack : public IMeasStorage {
 public:
   ByStepTrack(const Id target_id_, const STEP_KIND step_, uint64_t  period_) {
+	  was_updated = false;
+	  must_be_replaced = false;
     _target_id= target_id_;
     _step = step_;
 	_period = period_;
@@ -121,6 +123,7 @@ public:
 	  _values[pos] = value;
 	  _minTime = std::min(_minTime, value.time);
 	  _maxTime = std::max(_maxTime, value.time);
+	  was_updated = true;
 	  return Status(1, 0); 
   }
 
@@ -140,6 +143,37 @@ public:
 	  return _maxTime;
   }
 
+  Id2MinMax loadMinMax()override {
+	  Id2MinMax result;
+	  MeasMinMax mm;
+	  bool min_found = false;
+	  for (size_t i = 0; i < _values.size(); ++i) {
+		  if (_values[i].flag != Flags::_NO_DATA) {
+			  if (!min_found) {
+				  mm.min = _values[i];
+				  min_found = true;
+			  }
+			  mm.max = _values[i];
+		  }
+	  }
+	  if (min_found) {
+		  result[_target_id] = mm;
+	  }
+	  return result;
+  }
+
+  Id2Meas currentValue(const IdArray&, const Flag &flag) override {
+	  Id2Meas result{};
+	  for (size_t i = _values.size()-1; i >= 0; --i) {
+		  if (_values[i].flag != Flags::_NO_DATA) {
+			  if (_values[i].inFlag(flag)) {
+				  result[_target_id] = _values[i];
+			  }
+			  break;
+		  }
+	  }
+	  return result;
+  }
   bool minMaxTime(Id id, Time *minResult, Time *maxResult) override {
     if (id != _target_id) {
 		THROW_EXCEPTION("minMaxTime: logic error.");
@@ -172,10 +206,6 @@ public:
 	  Id2Meas result;
 	  result[_target_id] = _values[position_for_time(q.time_point)];
 	  return result;
-  }
-
-  Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-    return Id2Meas();
   }
 
   uint64_t period()const {
@@ -212,6 +242,9 @@ public:
 	  result->is_owner = true;
 	  return result;
   }
+
+  bool must_be_replaced; ///true-if need replace chunk in disk storage.
+  bool was_updated; ///true - if was updated by 'append' method
 protected:
   Id _target_id;
   STEP_KIND _step;
@@ -235,6 +268,10 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   void stop() {
     if (_io != nullptr) {
+		std::lock_guard<std::shared_mutex> lg(_values_lock);
+		for (auto&kv : _values) {
+			write_track_to_disk(kv.second);
+		}
       _io->stop();
       _io = nullptr;
     }
@@ -242,10 +279,29 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   ~Private() { stop(); }
 
-  void set_steps(const Id2Step &steps) {
+  size_t set_steps(const Id2Step &steps) {
 	  std::lock_guard<std::shared_mutex> lg(_values_lock);
 	  _steps = steps; 
 	  _values.reserve(steps.size());
+	  
+	  logger("engine: bystep - load chunks for current time.");
+	  size_t result = 0;
+	  //load current period.
+	  auto cur_time = timeutil::current_time();
+	  for (auto&kv : _steps) {
+		  auto vals_per_interval = bystep_inner::step_to_size(kv.second);
+		  auto period_num = bystep_inner::intervalForTime(kv.second, vals_per_interval, cur_time);
+		  auto chunk=_io->readTimePoint(period_num, kv.first);
+		  if (chunk != nullptr) {
+			  auto track = ByStepTrack_ptr{ new ByStepTrack(kv.first, kv.second, period_num) };
+			  track->from_chunk(chunk);
+			  track->must_be_replaced = true;
+			  track->was_updated = false;
+			  _values[kv.first] = track;
+			  ++result;
+		  }
+	  }
+	  return result;
   }
 
   Status append(const Meas &value) override {
@@ -292,7 +348,8 @@ struct ByStepStorage::Private : public IMeasStorage {
 			  track->from_chunk(ch);
 		  }
 		  track->append(value);
-		  replace_track_in_disk(track);
+		  track->must_be_replaced = true;
+		  write_track_to_disk(track);
 	  }
 	  else {
 		  auto res = ptr->append(value);
@@ -304,24 +361,30 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   void write_track_to_disk(const ByStepTrack_ptr&track) {
-	  auto packed_chunk = track->pack();
-	  if (packed_chunk != nullptr) {
-		  //TODO write async.
-		  _io->append(packed_chunk, track->minTime(), track->maxTime());
+	  if (track->was_updated) {
+		  auto packed_chunk = track->pack();
+		  if (packed_chunk != nullptr) {
+			  //TODO write async.
+			  if (!track->must_be_replaced) {
+				  _io->append(packed_chunk, track->minTime(), track->maxTime());
+			  }
+			  else {
+				  _io->replace(packed_chunk, track->minTime(), track->maxTime());
+			  }
+		  }
 	  }
   }
-
-  void replace_track_in_disk(const ByStepTrack_ptr&track) {
-	  auto packed_chunk = track->pack();
-	  if (packed_chunk != nullptr) {
-		  //TODO write async.
-		  _io->replace(packed_chunk, track->minTime(), track->maxTime());
-	  }
-  }
-
 
   Id2MinMax loadMinMax() override {
     Id2MinMax result;
+	std::shared_lock<std::shared_mutex> lg(_values_lock);
+	for (auto&kv : _values) {
+		auto mm = kv.second->loadMinMax();
+		//TODO read from disk to
+		if (mm.size() != 0) {
+			result[kv.first] = mm[kv.first];
+		}
+	}
     return result;
   }
 
@@ -482,7 +545,16 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-    return Id2Meas();
+	  Id2Meas result;
+	  std::shared_lock<std::shared_mutex> lg(_values_lock);
+	  for (auto&kv : _values) {
+		  auto mm = kv.second->currentValue({},flag);
+		  //TODO read from disk to
+		  if (mm.size() != 0) {
+			  result[kv.first] = mm[kv.first];
+		  }
+	  }
+	  return result;
   }
 
   void flush() override {}
@@ -502,8 +574,8 @@ ByStepStorage::~ByStepStorage() {
   _impl = nullptr;
 }
 
-void ByStepStorage::set_steps(const Id2Step &steps) {
-  _impl->set_steps(steps);
+size_t ByStepStorage::set_steps(const Id2Step &steps) {
+  return _impl->set_steps(steps);
 }
 
 Time ByStepStorage::minTime() {

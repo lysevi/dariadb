@@ -20,7 +20,8 @@ public:
   EXPORT ByStepStorage(const EngineEnvironment_ptr &env);
   EXPORT ~ByStepStorage();
 
-  EXPORT void set_steps(const Id2Step&steps);
+  //return count chunk readed from disk.
+  EXPORT size_t set_steps(const Id2Step&steps);
 
   // Inherited via IMeasStorage
   EXPORT virtual Time minTime() override;
