@@ -10,6 +10,7 @@
 #include <vector>
 #include <cassert>
 #include <cstring>
+#include <unordered_map>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -129,10 +130,10 @@ public:
 	  return pos;
   }
 
-  Time minTime() override { //TODO refact
+  Time minTime() override {
 	  return _minTime;
   }
-  Time maxTime() override { //TODO refact
+  Time maxTime() override {
 	  return _maxTime;
   }
 
@@ -236,7 +237,10 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
   ~Private() { stop(); }
 
-  void set_steps(const Id2Step &steps) { _steps = steps; }
+  void set_steps(const Id2Step &steps) { 
+	  _steps = steps; 
+	  _values.reserve(steps.size());
+  }
 
   Status append(const Meas &value) override {
 	  auto stepKind_it = _steps.find(value.id);
@@ -341,9 +345,18 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  local_q.to = std::get<0>(round_to);
       auto readed_chunks = _io->readInterval(period_from, period_to, id);
 
-      for (auto c : readed_chunks) {
-        foreach_chunk(q, clbk, c);
-      }
+	  for (auto i = period_from; i < period_to; ++i) {
+		  if (!readed_chunks.empty() && readed_chunks.front()->header->id == i) {
+			  auto c = readed_chunks.front();
+			  readed_chunks.pop_front();
+			  foreach_chunk(q, clbk, c);
+		  }
+		  else {
+			  //TODO refact this. dont create object, just call N-times clbk with calculated value
+			  ByStepTrack tr(id, step_kind_it->second, i);
+			  tr.foreach(local_q, clbk);
+		  }
+	  }
 
       auto it = _values.find(id);
       if (it != _values.end()) {
@@ -428,7 +441,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
   std::unique_ptr<IOAdapter> _io;
-  std::map<Id, ByStepTrack_ptr> _values;
+  std::unordered_map<Id, ByStepTrack_ptr> _values;
   Id2Step _steps;
 };
 

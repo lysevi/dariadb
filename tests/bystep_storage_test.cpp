@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 1 * 1000), uint64_t(0));
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(StepKind::MINUTE, 1, 65*1000), uint64_t(1));
 }
-
+/*
 BOOST_AUTO_TEST_CASE(IOAdopterTest) {
   std::cout << "IOAdopterInitTest" << std::endl;
   auto storage_path = "testBySTepStorage";
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-}
+}*/
 
 
 BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
@@ -273,6 +273,15 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 			BOOST_CHECK_EQUAL(result.size(), size_t(1));
 			BOOST_CHECK_LE(result[1].time, not_exists_time);
 			BOOST_CHECK_EQUAL(result[1].flag, dariadb::Flags::_NO_DATA);
+		}
+
+		{//query not exists interval
+			dariadb::storage::QueryInterval qi({ 0 }, 0, value.time*2, value.time*10);
+			auto readed = ms.readInterval(qi);
+			BOOST_CHECK(readed.size() != size_t(0));
+			for (auto&v : readed) {
+				BOOST_CHECK_EQUAL(v.flag, dariadb::Flags::_NO_DATA);
+			}
 		}
 	}
 	dariadb::utils::async::ThreadManager::stop();
