@@ -194,11 +194,17 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+	  if (std::find(q.ids.begin(), q.ids.end(), _target_id) == q.ids.end()) {
+		  return;
+	  }
     for (size_t i = 0; i < _values.size(); ++i) {
       auto v = _values[i];
-      if (v.inQuery(q.ids, q.flag) && (v.time>=q.from && v.time<q.to)) {
-        clbk->call(v);
-      }
+	  if (v.time >= q.from && v.time<q.to) {
+		  if (!v.inFlag(q.flag)) {
+			  v.flag = Flags::_NO_DATA;
+		  }
+		  clbk->call(v);
+	  }
     }
   }
 
@@ -480,7 +486,10 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  auto rdr = c->getReader();
 	  while (!rdr->is_end()) {
 		  auto v = rdr->readNext();
-		  if (v.inQuery(q.ids, q.flag) && (v.time>=q.from && v.time<q.to)) {
+		  if (v.time >= q.from && v.time<q.to) {
+			  if (!v.inFlag(q.flag)) {
+				  v.flag = Flags::_NO_DATA;
+			  }
 			  clbk->call(v);
 		  }
 	  }
