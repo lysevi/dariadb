@@ -325,16 +325,15 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  ByStepTrack_ptr ptr = nullptr;
 	  if (it == _values.end()) {
 		  _values_lock.unlock_shared();
-		  _values_lock.lock();
+		  std::lock_guard<std::shared_mutex> lg(_values_lock);
 		  it = _values.find(value.id);
 		  if (it == _values.end()) {
 			  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
-			  _values[value.id] = ptr;
+			  _values.emplace(std::make_pair(value.id, ptr));
 		  }
 		  else {
 			  ptr = it->second;
 		  }
-		  _values_lock.unlock();
 	  }
 	  else {
 		  ptr = it->second;
@@ -343,6 +342,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  
 	  if (ptr->period() < period_num) {//new storage period.
 		  write_track_to_disk(ptr);
+		  std::lock_guard<std::shared_mutex> lg(_values_lock);
 		  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
 		  _values[value.id] = ptr;
 	  }
@@ -368,6 +368,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   void write_track_to_disk(const ByStepTrack_ptr&track) {
 	  if (track->was_updated) {
+		  std::lock_guard<std::mutex> lg(_drop_lock);
 		  auto packed_chunk = track->pack();
 		  if (packed_chunk != nullptr) {
 			  //TODO write async.
@@ -573,6 +574,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   std::unique_ptr<IOAdapter> _io;
   std::unordered_map<Id, ByStepTrack_ptr> _values;
   std::shared_mutex _values_lock;
+  std::mutex        _drop_lock;
   Id2Step _steps;
 };
 
