@@ -44,7 +44,7 @@ $ sudo apt-get update
 $ sudo apt-get install -y libboost-dev  libboost-coroutine-dev libboost-context-dev libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6
 $ export CC="gcc-6"
 $ export CXX="g++-6"
-
+```
 ### Git submodules
 ```shell
 $ cd dariadb
@@ -79,7 +79,7 @@ $ make
 $ cmake -DCMAKE_BUILD_TYPE=Release .
 $ make
 ```
-###on windows with **Microsoft Visual Studio**
+###Microsoft Visual Studio
 ---
 ```cmd
 $ cmake -G "Visual Studio 14 2015 Win64" .
