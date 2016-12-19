@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/st_exports.h>
 #include <algorithm>
 #include <chrono>
@@ -147,7 +147,7 @@ protected:
   using GroupToName = std::unordered_map<std::string, NameToValue>;
 
   GroupToName _values;
-  utils::Locker _locker;
+  utils::async::Locker _locker;
 };
 
 class RAI_TimeMetric {

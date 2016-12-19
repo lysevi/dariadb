@@ -8,7 +8,7 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 
 #include <boost/test/unit_test.hpp>
 

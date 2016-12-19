@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libdariadb/meas.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>
 #include <tuple>
 
@@ -105,7 +105,7 @@ struct QuerCompact_header {
 
 //using NetData_Pool = boost::object_pool<NetData>;
 struct NetData_Pool {
-	utils::Locker _locker;
+	utils::async::Locker _locker;
 	typedef boost::object_pool<NetData> Pool;
 	Pool _pool;
 

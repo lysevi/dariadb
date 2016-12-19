@@ -12,11 +12,11 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
-#include <libdariadb/utils/thread_pool.h>
+#include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/strings.h>
-#include <libdariadb/utils/coroutine.h>
+#include <libdariadb/utils/async/coroutine.h>
 
 
 BOOST_AUTO_TEST_CASE(CoroutineTest) {

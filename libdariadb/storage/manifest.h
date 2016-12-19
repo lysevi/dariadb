@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/st_exports.h>
 #include <list>
 #include <memory>

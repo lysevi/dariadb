@@ -8,7 +8,7 @@
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/fs.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 

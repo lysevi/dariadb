@@ -1,4 +1,4 @@
-#include <libdariadb/utils/thread_pool.h>
+#include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
 #include <cassert>
 

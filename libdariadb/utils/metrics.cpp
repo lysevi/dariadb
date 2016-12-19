@@ -2,6 +2,7 @@
 #include <iomanip>
 
 using namespace dariadb::utils;
+using namespace dariadb::utils::async;
 using namespace dariadb::utils::metrics;
 
 std::unique_ptr<MetricsManager> MetricsManager::_instance = nullptr;

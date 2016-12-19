@@ -1,6 +1,6 @@
 #include <libdariadb/storage/bystep/io_adapter.h>
 #include <libdariadb/utils/logger.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <cassert>
 #include <extern/libsqlite3/sqlite3.h>
 #include <string>
@@ -40,7 +40,7 @@ public:
 	_stop_flag = false;
 	_is_stoped = false;
 	AsyncTask at = std::bind(&IOAdapter::Private::write_thread_func, this, std::placeholders::_1);
-	ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(at));
+	ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at));
   }
   ~Private() { stop(); }
 
@@ -352,7 +352,7 @@ public:
   }
 
   void write_thread_func(const ThreadInfo&ti) {
-	  TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+	  TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  while (!_stop_flag) {
 		  while(_chunks_list.empty()) {
 			  if (_stop_flag) {

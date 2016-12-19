@@ -104,7 +104,7 @@ public:
   }
 
   std::list<std::string> page_list() {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
     std::string sql = "SELECT file from pages;";
     std::list<std::string> result{};
     char *zErrMsg = 0;
@@ -120,7 +120,7 @@ public:
   }
 
   void page_append(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "insert into pages (file) values ('" << rec << "');";
@@ -135,7 +135,7 @@ public:
   }
 
   void page_rm(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "delete from pages where file = '" << rec << "';";
@@ -150,7 +150,7 @@ public:
   }
 
   std::list<std::string> aof_list() {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
     std::string sql = "SELECT file from aofs;";
     std::list<std::string> result{};
     char *zErrMsg = 0;
@@ -178,7 +178,7 @@ public:
   }
 
   void aof_append(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "insert into aofs (file) values ('" << rec << "');";
@@ -193,7 +193,7 @@ public:
   }
 
   void aof_rm(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "delete from aofs where file = '" << rec << "';";
@@ -208,7 +208,7 @@ public:
   }
 
   void set_version(const std::string &version) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "insert or replace into params(id, name, value) values ((select id from params "
@@ -240,7 +240,7 @@ public:
 
 protected:
   std::string _filename;
-  utils::Locker _locker;
+  utils::async::Locker _locker;
   sqlite3 *db;
 };
 

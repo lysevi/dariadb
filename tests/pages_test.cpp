@@ -14,7 +14,7 @@
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/utils.h>
 
 using dariadb::storage::PageManager;

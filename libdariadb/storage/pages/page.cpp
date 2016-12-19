@@ -6,7 +6,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
 #include <stx/btree_map.h>
@@ -81,14 +81,14 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
                                        uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
   std::list<HdrAndBuffer> results;
-  utils::Locker result_locker;
+  utils::async::Locker result_locker;
   std::list<utils::async::TaskResult_Ptr> async_compressions;
   for (auto &kv : to_compress) {
     auto cur_Id = kv.first;
     utils::async::AsyncTask at =
         [cur_Id, &results, &phdr, max_chunk_size, &result_locker,
          &to_compress](const utils::async::ThreadInfo &ti) {
-          TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+          TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
           auto fit = to_compress.find(cur_Id);
           auto begin = fit->second.cbegin();
           auto end = fit->second.cend();
@@ -122,7 +122,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
           }
         };
     auto cur_async =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(at));
+        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at));
     async_compressions.push_back(cur_async);
   }
   for (auto tr : async_compressions) {
@@ -150,7 +150,7 @@ uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
                      file_size,
                      add_header_size_to_result](const ThreadInfo &ti) {
 
-    TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);*/
+    TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);*/
 
     auto file = std::fopen(file_name.c_str(), "ab");
     if (file == nullptr) {
@@ -190,7 +190,7 @@ uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
     std::fclose(file);
   /*};
   auto at =
-      ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(pm_at));
+      ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(pm_at));
   at->wait();*/
   return page_size;
 }

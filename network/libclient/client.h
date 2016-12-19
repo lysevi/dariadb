@@ -2,7 +2,7 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/query_param.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>
 #include <functional>
 #include <memory>
@@ -17,7 +17,7 @@ struct ReadResult {
   using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
   QueryNumber id;
   DATA_KINDS kind;
-  utils::Locker locker;
+  utils::async::Locker locker;
   callback clbk;
   bool is_ok;     //true - if server send OK to this query.
   bool is_closed; //true - if all data received.

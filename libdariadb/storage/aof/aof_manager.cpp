@@ -4,7 +4,7 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
@@ -147,7 +147,7 @@ dariadb::Time AOFManager::minTime() {
   dariadb::Time result = dariadb::MAX_TIME;
   auto env = _env;
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
-	  TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  for (auto filename : files) {
 		  AOFile aof(env, filename, true);
 		  auto local = aof.minTime();
@@ -155,7 +155,7 @@ dariadb::Time AOFManager::minTime() {
 	  }
   };
 
-  auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+  auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
 
   size_t pos = 0;
@@ -175,7 +175,7 @@ dariadb::Time AOFManager::maxTime() {
   dariadb::Time result = dariadb::MIN_TIME;
   auto env = _env;
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
-	  TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  for (auto filename : files) {
 		  AOFile aof(env, filename, true);
 		  auto local = aof.maxTime();
@@ -183,7 +183,7 @@ dariadb::Time AOFManager::maxTime() {
 	  }
   };
 
-  auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+  auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
   for (auto &v : _buffer) {
     result = std::max(v.time, result);
@@ -200,7 +200,7 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   std::vector<MMRes> results{files.size()};
   auto env = _env;
   AsyncTask at = [files, &results, id, env](const ThreadInfo &ti) {
-	  TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  size_t num = 0;
 
 	  for (auto filename : files) {
@@ -216,7 +216,7 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 		  num++;
 	  }
   };
-  auto am_async=ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+  auto am_async=ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
 
   bool res = false;
@@ -253,7 +253,7 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   if (!files.empty()) {
     auto env = _env;
     AsyncTask at = [files, &q, clbk, env](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
       for (auto filename : files) {
 		  if (clbk->is_canceled()) {
 			  break;
@@ -263,7 +263,7 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
       }
     };
 
-	auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+	auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 	am_async->wait();
   }
   size_t pos = 0;
@@ -292,7 +292,7 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
   std::vector<Id2Meas> results{files.size()};
   auto env = _env;
   AsyncTask at = [files, &query, &results, env](const ThreadInfo &ti) {
-    TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+    TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
     size_t num = 0;
 
     for (auto filename : files) {
@@ -302,7 +302,7 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
     }
   };
 
-  auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+  auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
 
   for (auto &out : results) {
@@ -341,7 +341,7 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
 Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
   dariadb::Id2Meas meases;
   AsyncTask at = [&ids, flag, &meases, this](const ThreadInfo &ti) {
-	  TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  
 	  auto files = aof_files();
 
@@ -362,7 +362,7 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
 		  }
 	  }
   };
-  auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+  auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
   return meases;
 }
@@ -384,7 +384,7 @@ void AOFManager::flush_buffer() {
     return;
   }
   AsyncTask at = [this](const ThreadInfo &ti) {
-	  TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  if (_aof == nullptr) {
 		  create_new();
 	  }
@@ -403,7 +403,7 @@ void AOFManager::flush_buffer() {
 	  }
 	  _buffer_pos = 0;
   };
-  auto async_r = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+  auto async_r = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   async_r->wait();
 }
 

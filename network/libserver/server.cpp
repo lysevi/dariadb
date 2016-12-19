@@ -194,7 +194,7 @@ public:
   bool is_runned() { return _is_runned_flag.load(); }
 
   void client_connect(int id) override {
-    std::lock_guard<utils::Locker> lg(_clients_locker);
+    std::lock_guard<utils::async::Locker> lg(_clients_locker);
     auto fres_it = this->_clients.find(id);
     if (fres_it == this->_clients.end()) {
       THROW_EXCEPTION("server: client_connect - client #" , id , " not found");
@@ -206,7 +206,7 @@ public:
   }
 
   void client_disconnect(int id) override {
-    std::lock_guard<utils::Locker> lg(_clients_locker);
+    std::lock_guard<utils::async::Locker> lg(_clients_locker);
     auto fres = _clients.find(id);
     if (fres == _clients.end()) {
         // may be already removed.
@@ -308,7 +308,7 @@ public:
   std::atomic_bool _is_runned_flag;
 
   std::unordered_map<int, ClientIO_ptr> _clients;
-  utils::Locker _clients_locker;
+  utils::async::Locker _clients_locker;
 
   deadline_timer _ping_timer;
   deadline_timer _info_timer;

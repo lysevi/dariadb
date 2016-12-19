@@ -3,7 +3,7 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/interfaces/idroppers.h>
 #include <libdariadb/interfaces/imeasstorage.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/aof/aofile.h>
 #include <libdariadb/st_exports.h>

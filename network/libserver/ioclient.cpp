@@ -11,7 +11,7 @@ using namespace dariadb;
 using namespace dariadb::net;
 
 struct SubscribeCallback : public storage::IReaderClb {
-	utils::Locker _locker;
+	utils::async::Locker _locker;
 	IOClient *_parent;
 	QueryNumber _query_num;
 
@@ -50,7 +50,7 @@ IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query
 }
 
 void IOClient::ClientDataReader::call(const Meas &m) {
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<utils::async::Locker> lg(_locker);
   if (pos == BUFFER_LENGTH) {
     send_buffer();
     pos = 0;

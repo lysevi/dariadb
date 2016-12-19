@@ -6,7 +6,7 @@
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/memstorage/timetrack.h>
 #include <libdariadb/storage/settings.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <cstring>
 #include <memory>
 #include <set>
@@ -145,11 +145,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       logger_info("engine: drop ", pos, " chunks of ", cur_chunk_count);
       if (_down_level_storage != nullptr) {
         AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
-          TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+          TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
           this->_down_level_storage->appendChunks(all_chunks, pos);
         };
         auto at_res =
-            ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+            ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
         at_res->wait();
       } else {
         if (_settings->strategy.value != STRATEGY::CACHE) {

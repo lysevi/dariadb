@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libdariadb/utils/coroutine.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/coroutine.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
 #include <atomic>
@@ -19,7 +19,7 @@ namespace async {
 
 using ThreadKind = uint16_t;
 //TODO rename to THREAD_KINDS
-enum class THREAD_COMMON_KINDS : ThreadKind { DISK_IO = 1, COMMON};
+enum class THREAD_KINDS : ThreadKind { DISK_IO = 1, COMMON};
 
 #ifdef DEBUG
 #define TKIND_CHECK(expected, exists)                                                    \

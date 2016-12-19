@@ -9,10 +9,10 @@
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/subscribe.h>
 #include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/fs.h>
@@ -268,19 +268,19 @@ public:
     pr = ar = false;
 	auto pm = _page_manager.get();
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id, pm](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
     };
 	auto am = _top_level_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  ar = am->minMaxTime(id, &subMin3, &subMax3);
 	};
 
 	lock_storage();
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
-    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
 
     pm_async->wait();
     am_async->wait();
@@ -447,7 +447,7 @@ public:
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
     AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  auto local_q = q;
 	  local_q.ids.resize(1);
 	  for (auto id : q.ids) {
@@ -468,7 +468,7 @@ public:
       a_clbk->is_end();
     };
 
-    ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+    ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
@@ -523,7 +523,7 @@ public:
     auto mm = _top_level_storage.get();
 	auto am = _aof_manager.get();
     AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 
       for (auto id : q.ids) {
 		  while (!try_lock_storage()) {
@@ -559,7 +559,7 @@ public:
     };
 
     auto pm_async =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
     pm_async->wait();
     return result;
   }

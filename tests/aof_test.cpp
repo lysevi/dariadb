@@ -15,7 +15,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 
 class Moc_Dropper : public dariadb::storage::IAofDropper {
 public:
