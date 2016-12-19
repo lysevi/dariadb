@@ -16,10 +16,14 @@ using Id2Step = std::unordered_map<Id, STEP_KIND>;
 
 class ByStepStorage : public IMeasStorage {
 public:
+	struct Description
+	{
+		size_t in_queue;
+	};
   /// id_count - for prealloc
   EXPORT ByStepStorage(const EngineEnvironment_ptr &env);
   EXPORT ~ByStepStorage();
-
+  EXPORT Description description();
   //return count chunk readed from disk.
   EXPORT size_t set_steps(const Id2Step&steps);
 

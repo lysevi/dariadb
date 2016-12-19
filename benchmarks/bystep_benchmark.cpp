@@ -36,9 +36,10 @@ void show_info() {
 
     clock_t t1 = clock();
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
-
+    auto d = bs_storage->description();
     std::stringstream ss;
-    ss << " writes: " << append_count << " speed: " << writes_per_sec << "/sec"
+    ss << "(q:" << d.in_queue << ")"
+       << " writes: " << append_count << " speed: " << writes_per_sec << "/sec"
        << " progress:" << (int64_t(100) * append_count) / dariadb_bench::all_writes
        << "%";
     dariadb::logger_info(ss.str());
@@ -115,9 +116,12 @@ int main(int argc, char **argv) {
 
     stop_info = true;
     info_thread.join();
+	
+	bs_storage->flush();
 
     dariadb_bench::readBenchark(all_id_set, bs_storage.get(), 10, false, false);
-
+	
+	bs_storage = nullptr;
     dariadb::utils::async::ThreadManager::stop();
 
     if (metrics_enable) {

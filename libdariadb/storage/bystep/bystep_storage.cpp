@@ -326,6 +326,11 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   void flush() override {}
 
+  Description description() {
+	  Description result;
+	  result.in_queue = _io->description().in_queue;
+	  return result;
+  }
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
   std::unique_ptr<IOAdapter> _io;
@@ -390,4 +395,8 @@ Id2MinMax ByStepStorage::loadMinMax() {
 uint64_t ByStepStorage::intervalForTime(const STEP_KIND step, const size_t valsInInterval,
                                         const Time t) {
   return bystep::intervalForTime(step, valsInInterval, t);
+}
+
+ByStepStorage::Description ByStepStorage::description() {
+	return _impl->description();
 }

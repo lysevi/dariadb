@@ -5,6 +5,8 @@ Settings
 lockfile
 Manifest-journal
 *.db
+*.db-wal
+*.db-shm
 .vs
 dariadb_logs*.txt
 *.aof

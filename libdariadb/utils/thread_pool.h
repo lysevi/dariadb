@@ -18,7 +18,7 @@ namespace utils {
 namespace async {
 
 using ThreadKind = uint16_t;
-
+//TODO rename to THREAD_KINDS
 enum class THREAD_COMMON_KINDS : ThreadKind { DISK_IO = 1, COMMON};
 
 #ifdef DEBUG

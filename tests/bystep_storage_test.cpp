@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
 	BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::MINUTE, 1, 65*1000), uint64_t(1));
 }
 
-BOOST_AUTO_TEST_CASE(IOAdopterTest) {
+BOOST_AUTO_TEST_CASE(IOAdapterTest) {
   std::cout << "IOAdopterInitTest" << std::endl;
   auto storage_path = "testBySTepStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -39,26 +39,38 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
   auto fname = dariadb::utils::fs::append_path(storage_path, "io_adapter.db");
   {
     const int insertion_count = 10;
+	auto settings =
+		dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+	settings->chunk_size.value = 128;
+
+	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
+		new dariadb::storage::EngineEnvironment() };
+	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+		settings.get());
+	dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
     auto io_adapter = std::make_unique<dariadb::storage::IOAdapter>(fname);
     BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(storage_path, ".db").size(), size_t(1));
 
-    dariadb::storage::ChunkHeader hdr;
+
     size_t buffer_size = 16;
-    uint8_t *buffer = new uint8_t[buffer_size];
+    
     dariadb::IdSet all_ids;
     dariadb::Time max_time = 0;
     size_t created_chunks = 0;
 	dariadb::MeasList all_values;
     for (int i = 0; i < insertion_count; ++i) {
-      memset(&hdr, 0, sizeof(dariadb::storage::ChunkHeader));
-      memset(buffer, 0, buffer_size);
-
-      hdr.id = i;
       auto first = dariadb::Meas::empty(i);
       all_ids.insert(i);
       for (size_t j = 0; j < 3; ++j) {
+		  dariadb::storage::ChunkHeader *hdr=new dariadb::storage::ChunkHeader;
+		  uint8_t *buffer = new uint8_t[buffer_size];
+
+		  memset(hdr, 0, sizeof(dariadb::storage::ChunkHeader));
+		  memset(buffer, 0, buffer_size);
+
         dariadb::storage::Chunk_Ptr ptr{
-            new dariadb::storage::ZippedChunk(&hdr, buffer, buffer_size, first)};
+            new dariadb::storage::ZippedChunk(hdr, buffer, buffer_size, first)};
 		all_values.push_back(first);
         while (!ptr->isFull()) {
           first.time++;
@@ -70,12 +82,13 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
           max_time = std::max(max_time, first.time);
         }
 		ptr->header->id = j;
+		ptr->is_owner = true;
         ptr->close();
         created_chunks++;
         io_adapter->append(ptr, ptr->header->minTime, ptr->header->maxTime);
       }
     }
-    
+	
 	{//readInterval
 		auto all_chunks = io_adapter->readInterval(0,2,0);
 		BOOST_CHECK_EQUAL(all_chunks.size(), 3);
@@ -101,12 +114,14 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 	}
 	//replace chunk
 	{
-		memset(&hdr, 0, sizeof(dariadb::storage::ChunkHeader));
+		dariadb::storage::ChunkHeader *hdr=new dariadb::storage::ChunkHeader;
+		uint8_t *buffer = new uint8_t[buffer_size];
+		memset(hdr, 0, sizeof(dariadb::storage::ChunkHeader));
 		memset(buffer, 0, buffer_size);
 
 		auto first = dariadb::Meas::empty(0);
 		first.time = 1000;
-		dariadb::storage::Chunk_Ptr ptr{ new dariadb::storage::ZippedChunk(&hdr, buffer, buffer_size, first) };
+		dariadb::storage::Chunk_Ptr ptr{ new dariadb::storage::ZippedChunk(hdr, buffer, buffer_size, first) };
 		while (!ptr->isFull()) {
 			first.time++;
 			first.value++;
@@ -116,6 +131,7 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 			}
 		}
 		ptr->header->id = 0;
+		ptr->is_owner = true;
 		ptr->close();
 		io_adapter->replace(ptr, ptr->header->minTime,ptr->header->maxTime);
 
@@ -133,7 +149,7 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 		}
 		BOOST_CHECK(success_replace);
 	}
-	delete[] buffer;
+
 
 	{//minMax
 		auto minTime = io_adapter->minTime();
@@ -148,7 +164,7 @@ BOOST_AUTO_TEST_CASE(IOAdopterTest) {
 		BOOST_CHECK_LT(minTime, maxTime);
 	}
   }
-
+  dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }

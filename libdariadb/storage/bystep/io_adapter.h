@@ -12,8 +12,13 @@ namespace storage {
 using ChunksList = std::list<Chunk_Ptr>;
 class IOAdapter {
 public:
+	struct Description
+	{
+		size_t in_queue;
+	};
   EXPORT IOAdapter(const std::string &fname);
   EXPORT ~IOAdapter();
+  EXPORT Description description();
   EXPORT void stop();
   /// min/max - real min/max values. chunk can be not filled.
   EXPORT void append(const Chunk_Ptr&ch, Time min, Time max);
@@ -23,6 +28,7 @@ public:
   EXPORT Time minTime();
   EXPORT Time maxTime();
   EXPORT bool minMaxTime(Id id, Time *minResult, Time *maxResult);
+  EXPORT void flush();
 private:
   class Private;
   std::unique_ptr<Private> _impl;
