@@ -1,4 +1,5 @@
 #include <libdariadb/storage/bystep/io_adapter.h>
+#include <libdariadb/flags.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <cassert>
@@ -159,7 +160,7 @@ public:
   }
 
   Chunk_Ptr readTimePoint(uint64_t period, Id meas_id) {
-	  lock();
+	lock();
 	Chunk_Ptr result;
     
     const std::string sql_query = "SELECT chunk_header, chunk_buffer FROM Chunks WHERE "
@@ -216,6 +217,70 @@ public:
     return result;
   }
 
+  Id2Meas currentValue() {
+    lock();
+    Id2Meas result;
+    const std::string sql_query = "SELECT a.id,a.chunk_header, a.chunk_buffer FROM "
+                                  "Chunks a INNER JOIN(select id, number, MAX(number) "
+                                  "from Chunks GROUP BY id) b ON a.id = b.id AND "
+                                  "a.number = b.number";
+     sqlite3_stmt *pStmt;
+     int rc;
+
+     do {
+       rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
+       if (rc != SQLITE_OK) {
+         auto err_msg = std::string(sqlite3_errmsg(_db));
+         this->stop();
+         THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+       }
+
+       while (1) {
+         rc = sqlite3_step(pStmt);
+         if (rc == SQLITE_ROW) {
+           using utils::inInterval;
+		   auto id = sqlite3_column_int64(pStmt,0);
+
+		   ChunkHeader *chdr = (ChunkHeader *)sqlite3_column_blob(pStmt, 1);
+#ifdef DEBUG
+		   auto headerSize = sqlite3_column_bytes(pStmt, 1);
+		   assert(headerSize == sizeof(ChunkHeader));
+#endif // DEBUG
+
+		   uint8_t *buffer = (uint8_t *)sqlite3_column_blob(pStmt, 2);
+		   //TODO move to method
+           Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
+		   auto reader=cptr->getReader();
+		   while (!reader->is_end()) {
+			   auto v=reader->readNext();
+			   if (v.flag != Flags::_NO_DATA) {
+				   if (result[v.id].time < v.time) {
+					   result[v.id] = v;
+				   }
+			   }
+		   }
+         } else {
+           break;
+         }
+       }
+       rc = sqlite3_finalize(pStmt);
+     } while (rc == SQLITE_SCHEMA);
+	 
+	 //TODO move to method
+	 for (auto&cmm : _chunks_list) {
+		 auto reader = cmm.ch->getReader();
+		 while (!reader->is_end()) {
+			 auto v = reader->readNext();
+			 if (v.flag != Flags::_NO_DATA) {
+				 if (result[v.id].time < v.time) {
+					 result[v.id] = v;
+				 }
+			 }
+		 }
+	 }
+     unlock();
+    return result;
+  }
   void replace(const Chunk_Ptr &ch, Time min, Time max) {
 	  this->flush();
 	  lock();
@@ -443,6 +508,10 @@ ChunksList IOAdapter::readInterval(uint64_t period_from, uint64_t period_to, Id 
 
 Chunk_Ptr IOAdapter::readTimePoint(uint64_t period, Id meas_id) {
   return _impl->readTimePoint(period, meas_id);
+}
+
+Id2Meas IOAdapter::currentValue() {
+	return _impl->currentValue();
 }
 
 void IOAdapter::replace(const Chunk_Ptr &ch, Time min, Time max) {

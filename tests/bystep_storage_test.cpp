@@ -112,6 +112,10 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
 		auto to = result->header->maxTime;
 		BOOST_CHECK(dariadb::utils::inInterval(from, to, tp));
 	}
+	{//current value
+		auto values = io_adapter->currentValue();
+		BOOST_CHECK_EQUAL(values.size(), size_t(insertion_count));
+	}
 	//replace chunk
 	{
 		dariadb::storage::ChunkHeader *hdr=new dariadb::storage::ChunkHeader;

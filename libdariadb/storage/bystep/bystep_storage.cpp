@@ -314,12 +314,24 @@ struct ByStepStorage::Private : public IMeasStorage {
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     Id2Meas result;
     std::shared_lock<std::shared_mutex> lg(_values_lock);
+	auto disk_result = _io->currentValue();
+
+	for (auto id : ids) {
+		result[id].flag = Flags::_NO_DATA;
+		result[id].time = MIN_TIME;
+	}
+
     for (auto &kv : _values) {
       auto mm = kv.second->currentValue({}, flag);
-      // TODO read from disk to
       if (mm.size() != 0) {
         result[kv.first] = mm[kv.first];
       }
+	  auto fres = disk_result.find(kv.first);
+	  if (fres != disk_result.end()) {//TODO write test
+		  if (result[kv.first].time < fres->second.time) {
+			  result[kv.first].time = fres->second.time;
+		  }
+	  }
     }
     return result;
   }
