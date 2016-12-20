@@ -388,6 +388,7 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 		BOOST_CHECK_GT(descr.pages_count, size_t(0));
 	}
 	{
+		std::cout << "Reopen storage to load id2id and id2step\n";
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 

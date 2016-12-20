@@ -214,30 +214,58 @@ struct ByStepStorage::Private : public IMeasStorage {
       local_q.from = std::get<0>(round_from);
       local_q.to = std::get<0>(round_to);
       auto readed_chunks = _io->readInterval(period_from, period_to, id);
+	  //TODO refact
+	  if (period_from == period_to) {//in one interval
+		  if (readed_chunks.empty()) {//find in tracks all generate empty period
+			  auto it = _values.find(id);
+			  if (it != _values.end() && it->second->period()==period_from) {
+				  it->second->foreach(local_q, clbk);
+			  }
+			  else {
+				  auto values_size = bystep::step_to_size(step_kind_it->second);
+				  auto zero_time = ByStepTrack::get_zero_time(period_from, step_kind_it->second);
+				  auto empty_value = Meas::empty(id);
+				  for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
+					  empty_value.time = zero_time;
+					  empty_value.flag = Flags::_NO_DATA;
+					  zero_time += stepTime;
+				  }
+				  ByStepTrack tr(id, step_kind_it->second, period_from);
+				  tr.foreach(local_q, clbk);
+			  }
+		  }
+		  else {
+			  auto c = readed_chunks.front();
+			  foreach_chunk(q, clbk, c);
+		  }
+	  }
+	  else {
 
-      for (auto i = period_from; i < period_to; ++i) {
-        if (!readed_chunks.empty() && readed_chunks.front()->header->id == i) {
-          auto c = readed_chunks.front();
-          readed_chunks.pop_front();
-          foreach_chunk(q, clbk, c);
-        } else {
-          auto values_size = bystep::step_to_size(step_kind_it->second);
-          auto zero_time = ByStepTrack::get_zero_time(i, step_kind_it->second);
-          auto empty_value = Meas::empty(id);
-          for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
-            empty_value.time = zero_time;
-            empty_value.flag = Flags::_NO_DATA;
-            zero_time += stepTime;
-          }
-          ByStepTrack tr(id, step_kind_it->second, i);
-          tr.foreach (local_q, clbk);
-        }
-      }
+		  for (auto i = period_from; i < period_to; ++i) {
+			  if (!readed_chunks.empty() && readed_chunks.front()->header->id == i) {
+				  auto c = readed_chunks.front();
+				  readed_chunks.pop_front();
+				  foreach_chunk(q, clbk, c);
+			  }
+			  else {
+				  auto values_size = bystep::step_to_size(step_kind_it->second);
+				  auto zero_time = ByStepTrack::get_zero_time(i, step_kind_it->second);
+				  auto empty_value = Meas::empty(id);
+				  for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
+					  empty_value.time = zero_time;
+					  empty_value.flag = Flags::_NO_DATA;
+					  zero_time += stepTime;
+				  }
+				  ByStepTrack tr(id, step_kind_it->second, i);
+				  tr.foreach(local_q, clbk);
+			  }
+		  }
 
-      auto it = _values.find(id);
-      if (it != _values.end()) {
-        it->second->foreach (local_q, clbk);
-      }
+		  auto it = _values.find(id);
+		  if (it != _values.end()) {
+			  it->second->foreach(local_q, clbk);
+		  }
+	  }
     }
   }
 
