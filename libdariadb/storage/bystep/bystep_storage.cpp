@@ -336,7 +336,9 @@ struct ByStepStorage::Private : public IMeasStorage {
     return result;
   }
 
-  void flush() override {}
+  void flush() override {
+	  _io->flush();
+  }
 
   Description description() {
 	  Description result;

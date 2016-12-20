@@ -117,6 +117,7 @@ int main(int argc, char **argv) {
     stop_info = true;
     info_thread.join();
 	
+	std::cout << "==> flush...." << std::endl;
 	bs_storage->flush();
 
     dariadb_bench::readBenchark(all_id_set, bs_storage.get(), 10, false, false);
