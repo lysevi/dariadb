@@ -25,7 +25,7 @@ public:
   EXPORT ~ByStepStorage();
   EXPORT Description description();
   //return count chunk readed from disk.
-  EXPORT size_t set_steps(const Id2Step&steps);
+  EXPORT size_t setSteps(const Id2Step&steps);
 
   // Inherited via IMeasStorage
   EXPORT virtual Time minTime() override;

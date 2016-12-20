@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 		steps[0] = dariadb::storage::STEP_KIND::SECOND;
 		steps[1] = dariadb::storage::STEP_KIND::MINUTE;
 		steps[2] = dariadb::storage::STEP_KIND::HOUR;
-		ms.set_steps(steps);
+		ms.setSteps(steps);
 
 		auto value = dariadb::Meas::empty(0);
 		size_t writes_count = 10000;
@@ -360,7 +360,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     steps[0] = dariadb::storage::STEP_KIND::HOUR;
     {
       dariadb::storage::ByStepStorage ms{_engine_env};
-      ms.set_steps(steps);
+      ms.setSteps(steps);
 
       auto value = dariadb::Meas::empty(0);
       value.value = 1;
@@ -376,7 +376,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     }
     { // update value
       dariadb::storage::ByStepStorage ms{_engine_env};
-      auto readed = ms.set_steps(steps);
+      auto readed = ms.setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
       auto value = dariadb::Meas::empty(0);
       value.value = 2;
@@ -393,7 +393,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
 
     { // read saved
       dariadb::storage::ByStepStorage ms{_engine_env};
-      auto readed = ms.set_steps(steps);
+      auto readed = ms.setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
       auto curtime = dariadb::timeutil::current_time();
 

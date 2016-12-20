@@ -100,6 +100,8 @@ public:
 		}
     }
 
+	_bystep_storage = ByStepStorage_ptr{ new ByStepStorage(_engine_env) };
+
 	logger_info("engine: start - OK ");
   }
   ~Private() { this->stop(); }
@@ -122,6 +124,8 @@ public:
 	  _dropper = nullptr;
       _stoped = true;
 
+	  _bystep_storage->stop();
+	  _bystep_storage = nullptr;
 	  ThreadManager::stop();
       lockfile_unlock();
     }
@@ -316,6 +320,14 @@ public:
 	result=_top_level_storage->append(value);
 
     if (result.writed == 1) {
+		auto bs = _raw2bystep.find(value.id);
+		
+		if (bs != _raw2bystep.end()) {
+			auto cp = value;
+			cp.id = bs->second;
+			_bystep_storage->append(cp);
+		}
+
       _subscribe_notify.on_append(value);
 	  _min_max_locker.lock();
 	  auto insert_fres = _min_max_map.find(value.id);
@@ -373,6 +385,8 @@ public:
 		_memstorage->flush();
 	}
 	_page_manager->flush();
+
+	_bystep_storage->flush();
   }
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
@@ -383,6 +397,8 @@ public:
     result.aofs_count = _aof_manager==nullptr?0:_aof_manager->filesCount();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
+	result.bystep = _bystep_storage->description();
+
 	if (_dropper != nullptr) {
         result.dropper = _dropper->description();
 	}
@@ -614,6 +630,28 @@ public:
 	this->unlock_storage();
   }
 
+  void setId2Id(const Id2Id&m) {
+	  IdSet all_raws,all_bs;
+	  for (auto&kv : m) {
+		  all_raws.insert(kv.first);
+		  all_bs.insert(kv.second);
+	  }
+	  
+	  _bystep2raw.reserve(m.size());
+
+	  for (auto&id : all_raws) {
+		  auto res = all_bs.find(id);
+		  if (res != all_bs.end()) {
+			  THROW_EXCEPTION("engine: id sets can't be cross.");
+		  }
+		  _bystep2raw[*res] = id;
+	  }
+	  _raw2bystep = m;
+  }
+
+  void setSteps(const Id2Step&m) {
+	  _bystep_storage->setSteps(m);
+  }
 protected:
   std::mutex _flush_locker, _lock_locker;
   SubscribeNotificator _subscribe_notify;
@@ -630,9 +668,15 @@ protected:
   bool _stoped;
 
   IMeasStorage_ptr _top_level_storage; //aof or memory storage.
-  
+  ByStepStorage_ptr _bystep_storage;
+
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
+
+  ///raw to bystep.
+  Id2Id _raw2bystep;
+  ///bystep to raw.
+  Id2Id _bystep2raw;
 };
 
 Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}
@@ -729,4 +773,12 @@ STRATEGY Engine::strategy()const{
 
 Id2MinMax Engine::loadMinMax(){
     return _impl->loadMinMax();
+}
+
+void Engine::setId2Id(const Id2Id&m) {
+	_impl->setId2Id(m);
+}
+
+void Engine::setSteps(const Id2Step&m) {
+	_impl->setSteps(m);
 }

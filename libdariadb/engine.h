@@ -3,6 +3,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/memstorage/memstorage.h>
+#include <libdariadb/storage/bystep/bystep_storage.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
@@ -16,9 +17,10 @@ const uint16_t STORAGE_VERSION=1;
 class Engine : public IMeasStorage {
 public:
   struct Description {
-    size_t aofs_count;   ///  AOF count
-    size_t pages_count;  /// pages count
+    size_t aofs_count;   ///  AOF count.
+    size_t pages_count;  /// pages count.
     size_t active_works; /// async tasks runned.
+	ByStepStorage::Description bystep;
     Dropper::Description dropper;
 	MemStorage::Description memstorage;
   };
@@ -62,6 +64,10 @@ public:
 
   EXPORT uint16_t version();
   EXPORT STRATEGY strategy()const;
+  
+  ///raw.id to step.id;
+  EXPORT void setId2Id(const Id2Id&m);
+  EXPORT void setSteps(const Id2Step&m);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

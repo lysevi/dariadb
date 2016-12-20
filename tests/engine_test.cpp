@@ -311,3 +311,49 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 		dariadb::utils::fs::rm(storage_path);
 	}
 }
+
+
+BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
+	const std::string storage_path = "testStorage";
+
+	const size_t chunk_size = 128;
+	const dariadb::Time from = 0;
+	const dariadb::Time to = from + 1000;
+	const dariadb::Time step = 10;
+
+	using namespace dariadb::storage;
+
+	{
+		std::cout << "Engine_ByStep_common_test\n";
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
+		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		settings->strategy.value = STRATEGY::CACHE;
+		settings->chunk_size.value = chunk_size;
+		settings->memory_limit.value = 50 * 1024;
+		settings->aof_max_size.value = 2000;
+		std::unique_ptr<Engine> ms{ new Engine(settings) };
+		
+		dariadb::Id2Id id2id;
+		dariadb::storage::Id2Step id2step;
+		dariadb::Id id_val = 0;
+		for (auto i = from; i < to; i += step) {
+			auto bs_id = id_val + 100000;
+			id2id[id_val] = bs_id;
+			id2step[bs_id] = dariadb::storage::STEP_KIND::SECOND;
+		}
+
+		ms->setId2Id(id2id);
+		ms->setSteps(id2step);
+
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+
+		auto descr = ms->description();
+		BOOST_CHECK_GT(descr.pages_count, size_t(0));
+	}
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}

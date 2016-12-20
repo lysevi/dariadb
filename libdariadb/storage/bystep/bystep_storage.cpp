@@ -44,7 +44,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 
   ~Private() { stop(); }
 
-  size_t set_steps(const Id2Step &steps) {
+  size_t setSteps(const Id2Step &steps) {
     std::lock_guard<std::shared_mutex> lg(_values_lock);
     _steps = steps;
     _values.reserve(steps.size());
@@ -361,8 +361,8 @@ ByStepStorage::~ByStepStorage() {
   _impl = nullptr;
 }
 
-size_t ByStepStorage::set_steps(const Id2Step &steps) {
-  return _impl->set_steps(steps);
+size_t ByStepStorage::setSteps(const Id2Step &steps) {
+  return _impl->setSteps(steps);
 }
 
 Time ByStepStorage::minTime() {

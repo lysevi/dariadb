@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < dariadb_bench::id_count; ++i) {
       steps[i] = step_kind;
     }
-    bs_storage->set_steps(steps);
+    bs_storage->setSteps(steps);
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
