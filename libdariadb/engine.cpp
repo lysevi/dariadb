@@ -102,6 +102,13 @@ public:
 
 	_bystep_storage = ByStepStorage_ptr{ new ByStepStorage(_engine_env) };
 
+	if (!is_new_storage) {
+		auto result = _manifest->read_id2id();
+		auto id2id = std::get<0>(result);
+		auto id2step = std::get<1>(result);
+		setSteps_inner(id2step);
+		setId2Id_inner(id2id);
+	}
 	logger_info("engine: start - OK ");
   }
   ~Private() { this->stop(); }
@@ -667,13 +674,13 @@ public:
 	this->unlock_storage();
   }
 
-  void setId2Id(const Id2Id&m) {
-	  IdSet all_raws,all_bs;
+  void setId2Id_inner(const Id2Id&m) {
+	  IdSet all_raws, all_bs;
 	  for (auto&kv : m) {
 		  all_raws.insert(kv.first);
 		  all_bs.insert(kv.second);
 	  }
-	  
+
 	  _bystep2raw.reserve(m.size());
 
 	  for (auto&id : all_raws) {
@@ -686,9 +693,22 @@ public:
 		  _raw2bystep[id] = bs_id;
 	  }
   }
+  void setId2Id(const Id2Id&m) {
+	  setId2Id_inner(m);
+	  if (!_raw2bystep.empty() && !_id2steps.empty()) {
+		  _manifest->insert_id2id(_raw2bystep, _id2steps);
+	  }
+  }
 
-  void setSteps(const Id2Step&m) {
+  void setSteps_inner(const Id2Step&m) {
 	  _bystep_storage->setSteps(m);
+	  _id2steps = m;
+  }
+  void setSteps(const Id2Step&m) {
+	  setSteps_inner(m);
+	  if (!_raw2bystep.empty() && !_id2steps.empty()) {
+		  _manifest->insert_id2id(_raw2bystep, _id2steps);
+	  }
   }
 
   bool isBystepId(const Id id) {
@@ -719,6 +739,7 @@ protected:
   Id2Id _raw2bystep;
   ///bystep to raw.
   Id2Id _bystep2raw;
+  Id2Step _id2steps;
 };
 
 Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}

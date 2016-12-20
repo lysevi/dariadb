@@ -12,8 +12,6 @@
 namespace dariadb {
 namespace storage {
 
-using Id2Step = std::unordered_map<Id, STEP_KIND>;
-
 class ByStepStorage : public IMeasStorage {
 public:
 	struct Description

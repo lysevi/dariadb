@@ -6,17 +6,17 @@
 #include <cassert>
 #include <fstream>
 
+using namespace dariadb;
 using namespace dariadb::storage;
 
 const std::string PAGE_JS_KEY = "pages";
 const std::string AOF_JS_KEY = "aofs";
 
-const char *MANIFEST_CREATE_SQL = "CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY "
-                         "AUTOINCREMENT, file varchar(255)); "
-                         \
+const char *MANIFEST_CREATE_SQL = 
+"CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
 "CREATE TABLE IF NOT EXISTS aofs(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
-                         \
-"CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); ";
+"CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); "
+"CREATE TABLE IF NOT EXISTS id2id(raw_id INTEGER PRIMARY KEY AUTOINCREMENT, bystep_id INTEGER, step varchar(50)); ";
 
 static int file_select_callback(void *data, int argc, char **argv, char **azColName) {
   std::list<std::string> *ld = (std::list<std::string> *)data;
@@ -238,6 +238,83 @@ public:
     return result;
   }
 
+  void insert_id2id(const Id2Id&i2i, const Id2Step&i2s) {
+	  sqlite3_exec(db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+
+	  
+	  try {
+		  for (auto&kv : i2i) {
+			  const std::string sql_query =
+				  "INSERT INTO id2id(raw_id, bystep_id, step) values (?,?,?);";
+			  sqlite3_stmt *pStmt;
+			  int rc;
+			  do {
+				  rc = sqlite3_prepare(db, sql_query.c_str(), -1, &pStmt, 0);
+				  if (rc != SQLITE_OK) {
+					  auto err_msg = std::string(sqlite3_errmsg(db));
+					  THROW_EXCEPTION("engine: Manifest - ", err_msg);
+				  }
+				  auto fres = i2s.find(kv.second);
+				  if (fres == i2s.end()) {
+					  THROW_EXCEPTION("engine: Manifest - step for bystep=#", kv.second," not set.");
+				  }
+				  std::stringstream ss;
+				  ss << fres->second;
+				  auto str_step = ss.str();
+				  sqlite3_bind_int64(pStmt, 1, kv.first);
+				  sqlite3_bind_int64(pStmt, 2, kv.second);
+				  sqlite3_bind_text(pStmt, 3, str_step.c_str(), str_step.size(), SQLITE_STATIC);
+
+				  rc = sqlite3_step(pStmt);
+				  assert(rc != SQLITE_ROW);
+				  rc = sqlite3_finalize(pStmt);
+			  } while (rc == SQLITE_SCHEMA);
+		  }
+		  sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+	  }
+	  catch(...){
+		  sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+		  throw;
+	  }
+  }
+
+  std::tuple<Id2Id, Id2Step> read_id2id() {
+	  Id2Id i2i;
+	  Id2Step i2s;
+	  
+	  sqlite3_stmt *pStmt;
+	  int rc;
+	  const std::string sql_query = "SELECT raw_id, bystep_id, step FROM id2id";
+	  do {
+		  rc = sqlite3_prepare(db, sql_query.c_str(), -1, &pStmt, 0);
+		  if (rc != SQLITE_OK) {
+			  auto err_msg = std::string(sqlite3_errmsg(db));
+			  THROW_EXCEPTION("engine: Manifest - ", err_msg);
+		  }
+
+
+		  while (1) {
+			  rc = sqlite3_step(pStmt);
+			  if (rc == SQLITE_ROW) {
+				  auto raw = sqlite3_column_int64(pStmt, 0);
+				  auto bs= sqlite3_column_int64(pStmt, 1);
+				  auto step_str =std::string((char*)sqlite3_column_text(pStmt, 2));
+				  
+				  std::istringstream iss(step_str);
+				  STEP_KIND sk;
+				  iss>>sk;
+
+				  i2i[raw] = bs;
+				  i2s[bs] = sk;
+			  }
+			  else {
+				  break;
+			  }
+		  }
+		  rc = sqlite3_finalize(pStmt);
+	  } while (rc == SQLITE_SCHEMA);
+	  return std::tie(i2i, i2s);
+  }
 protected:
   std::string _filename;
   utils::async::Locker _locker;
@@ -280,4 +357,12 @@ void Manifest::set_version(const std::string &version) {
 
 std::string Manifest::get_version() {
 	return _impl->get_version();
+}
+
+void  Manifest::insert_id2id(const Id2Id&i2i, const Id2Step&i2s) {
+	_impl->insert_id2id(i2i,i2s);
+}
+
+std::tuple<dariadb::Id2Id, Id2Step> Manifest::read_id2id() {
+	return _impl->read_id2id();
 }

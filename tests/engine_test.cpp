@@ -8,6 +8,7 @@
 #include <libdariadb/engine.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/bystep/step_kind.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
@@ -19,6 +20,38 @@ public:
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };
+
+BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
+	const std::string storage_path = "testStorage";
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+	{
+		dariadb::utils::fs::mkdir(storage_path);
+		auto m = new dariadb::storage::Manifest(dariadb::utils::fs::append_path(storage_path, "Manifest"));
+		
+		dariadb::Id2Id id2id;
+		dariadb::storage::Id2Step id2step;
+		dariadb::Id id_val = 0;
+		for (auto i = 0; i < 100; ++i) {
+			auto bs_id = id_val + 100000;
+			id2id[id_val] = bs_id;
+			id2step[bs_id] = dariadb::storage::STEP_KIND::MINUTE;
+			++id_val;
+		}
+		m->insert_id2id(id2id, id2step);
+		auto result = m->read_id2id();
+		id2id = std::get<0>(result);
+		id2step = std::get<1>(result);
+		BOOST_CHECK_EQUAL(id2id.size(), id2step.size());
+		BOOST_CHECK_EQUAL(id2id.size(), size_t(100));
+		BOOST_CHECK_EQUAL(id2step[100000], dariadb::storage::STEP_KIND::MINUTE);
+		delete m;
+	}
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}
 
 BOOST_AUTO_TEST_CASE(BloomTest) {
   size_t u8_fltr = dariadb::storage::bloom_empty<uint8_t>();
@@ -353,6 +386,16 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 
 		auto descr = ms->description();
 		BOOST_CHECK_GT(descr.pages_count, size_t(0));
+	}
+	{
+		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+		std::unique_ptr<Engine> ms{ new Engine(settings) };
+
+		QueryInterval qi({  }, 0, from, to);
+		qi.ids.resize(1);
+		qi.ids[0] = dariadb::Id(100000);
+		auto mlist = ms->readInterval(qi);
+		BOOST_CHECK(!mlist.empty());
 	}
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
