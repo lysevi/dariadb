@@ -17,7 +17,7 @@ void checkAll(dariadb::MeasList res, std::string msg, dariadb::Time from,
 
 void storage_test_check(dariadb::storage::IMeasStorage *as, dariadb::Time from,
                         dariadb::Time to, dariadb::Time step,
-                        bool check_stop_flag);
+                        bool check_stop_flag, const dariadb::Id2Id&raw2bs);
 
 /*void readIntervalCommonTest(dariadb::storage::MeasStorage *ds);*/
 }

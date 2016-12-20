@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->chunk_size.value = chunk_size;
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, dariadb::Id2Id());
     
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 		settings->memory_limit.value =  50*1024;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
-		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true, dariadb::Id2Id());
 
         auto pages_count = ms->description().pages_count;
 		BOOST_CHECK_GE(pages_count, size_t(2));
@@ -302,7 +302,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 		settings->aof_max_size.value = 2000;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
-		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true, dariadb::Id2Id());
 
 		auto descr = ms->description();
 		BOOST_CHECK_GT(descr.pages_count, size_t(0));
@@ -330,7 +330,7 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 		}
 
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-		settings->strategy.value = STRATEGY::CACHE;
+		settings->strategy.value = STRATEGY::MEMORY;
 		settings->chunk_size.value = chunk_size;
 		settings->memory_limit.value = 50 * 1024;
 		settings->aof_max_size.value = 2000;
@@ -343,12 +343,13 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 			auto bs_id = id_val + 100000;
 			id2id[id_val] = bs_id;
 			id2step[bs_id] = dariadb::storage::STEP_KIND::SECOND;
+			++id_val;
 		}
 
 		ms->setId2Id(id2id);
 		ms->setSteps(id2step);
 
-		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true, id2id);
 
 		auto descr = ms->description();
 		BOOST_CHECK_GT(descr.pages_count, size_t(0));

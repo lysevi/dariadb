@@ -312,6 +312,9 @@ public:
       this->unlock_storage();
 
       minmax_append(p_mm,t_mm);
+
+	  auto bs_mm = _bystep_storage->loadMinMax();
+	  minmax_append(p_mm, bs_mm);
       return p_mm;
   }
 
@@ -368,6 +371,22 @@ public:
 			}
 		}
 	}
+
+
+	IdSet bs_ids;
+	for (auto id : ids) {
+		if (isBystepId(id)) {
+			bs_ids.insert(id);
+		}
+	}
+
+	if (!bs_ids.empty()) {
+		auto bs_result = _bystep_storage->currentValue(IdArray(bs_ids.begin(), bs_ids.end()), flag);
+		for (auto&kv : bs_result) {
+			a_result[kv.first] = kv.second;
+		}
+	}
+
 	unlock_storage();
     return a_result;
   }
@@ -460,6 +479,8 @@ public:
   }
   }
 
+
+
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
     AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
@@ -473,11 +494,17 @@ public:
 		  while (!this->try_lock_storage()) {
 			  ti.yield();
 		  }
-		  if (this->strategy() == STRATEGY::CACHE) {
-			  foreach_internal_cache(local_q, p_clbk, a_clbk);
+		  
+		  if (isBystepId(id)) {
+			  _bystep_storage->foreach(local_q, a_clbk);
 		  }
 		  else {
-			  foreach_internal_two_level(local_q, p_clbk, a_clbk);
+			  if (this->strategy() == STRATEGY::CACHE) {
+				  foreach_internal_cache(local_q, p_clbk, a_clbk);
+			  }
+			  else {
+				  foreach_internal_two_level(local_q, p_clbk, a_clbk);
+			  }
 		  }
 		  this->unlock_storage();
 	  }
@@ -545,29 +572,39 @@ public:
 		  while (!try_lock_storage()) {
 			  ti.yield();
 		  }
-        dariadb::Time minT, maxT;
-        QueryTimePoint local_q = q;
-        local_q.ids.clear();
-        local_q.ids.push_back(id);
+		  QueryTimePoint local_q = q;
+		  local_q.ids.clear();
+		  local_q.ids.push_back(id);
+		  if (isBystepId(id)) {
+			  auto bsts = _bystep_storage->readTimePoint(local_q);
+			  for (auto&kv : bsts) {
+				  result[kv.first] = kv.second;
+			  }
+		  }
+		  else {
+			  dariadb::Time minT, maxT;
+			 
 
-        if (mm->minMaxTime(id, &minT, &maxT) &&
-            (minT < q.time_point || maxT < q.time_point)) {
-          auto subres = mm->readTimePoint(local_q);
-          result[id] = subres[id];
-        } else {
-			bool in_aof_level = false;
-			if (this->strategy() == STRATEGY::CACHE) {
-				auto subres = am->readTimePoint(local_q);
-				auto value= subres[id];
-				result[id] = value;
-				in_aof_level = value.flag != Flags::_NO_DATA;
-			}
-			if (!in_aof_level) {
-				auto subres = _page_manager->valuesBeforeTimePoint(local_q);
-				result[id] = subres[id];
-			}
-        }
+			  if (mm->minMaxTime(id, &minT, &maxT) &&
+				  (minT < q.time_point || maxT < q.time_point)) {
+				  auto subres = mm->readTimePoint(local_q);
+				  result[id] = subres[id];
+			  }
+			  else {
+				  bool in_aof_level = false;
+				  if (this->strategy() == STRATEGY::CACHE) {
+					  auto subres = am->readTimePoint(local_q);
+					  auto value = subres[id];
+					  result[id] = value;
+					  in_aof_level = value.flag != Flags::_NO_DATA;
+				  }
+				  if (!in_aof_level) {
+					  auto subres = _page_manager->valuesBeforeTimePoint(local_q);
+					  result[id] = subres[id];
+				  }
 
+			  }
+		  }
 		unlock_storage();
       }
 
@@ -644,13 +681,18 @@ public:
 		  if (res != all_bs.end()) {
 			  THROW_EXCEPTION("engine: id sets can't be cross.");
 		  }
-		  _bystep2raw[*res] = id;
+		  auto bs_id = m.find(id)->second;
+		  _bystep2raw[bs_id] = id;
+		  _raw2bystep[id] = bs_id;
 	  }
-	  _raw2bystep = m;
   }
 
   void setSteps(const Id2Step&m) {
 	  _bystep_storage->setSteps(m);
+  }
+
+  bool isBystepId(const Id id) {
+	  return _bystep2raw.find(id) != _bystep2raw.end();
   }
 protected:
   std::mutex _flush_locker, _lock_locker;
