@@ -327,7 +327,15 @@ public:
 
   Status  append(const Meas &value) {
     Status  result{};
-	result=_top_level_storage->append(value);
+	
+	//direct write to bystep storage
+	auto is_bs = _bystep2raw.find(value.id);
+	if (is_bs == _bystep2raw.end()) {
+		result = _top_level_storage->append(value);
+	}
+	else {
+		result = _bystep_storage->append(value);
+	}
 
     if (result.writed == 1) {
 		auto bs = _raw2bystep.find(value.id);

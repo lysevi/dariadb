@@ -85,14 +85,28 @@ struct ByStepStorage::Private : public IMeasStorage {
     ByStepTrack_ptr ptr = nullptr;
     if (it == _values.end()) {
       _values_lock.unlock_shared();
-      std::lock_guard<std::shared_mutex> lg(_values_lock);
-      it = _values.find(value.id);
-      if (it == _values.end()) {
-        ptr = ByStepTrack_ptr{new ByStepTrack(value.id, stepKind_it->second, period_num)};
-        _values.emplace(std::make_pair(value.id, ptr));
-      } else {
-        ptr = it->second;
-      }
+	 
+	  std::lock_guard<std::shared_mutex> lg(_values_lock);
+	  it = _values.find(value.id);
+	  if (it == _values.end()) {
+		  auto disk_chunk = _io->readTimePoint(period_num, value.id);
+		  if (disk_chunk != nullptr) {//write to disk
+			  auto track =
+				  ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
+			  track->from_chunk(disk_chunk);
+			  track->append(value);
+			  track->must_be_replaced = true;
+			  write_track_to_disk(track);
+			  return Status(1, 0);
+		  }
+		  else {
+			  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
+			  _values.emplace(std::make_pair(value.id, ptr));
+		  }
+	  }
+	  else {
+		  ptr = it->second;
+	  }
     } else {
       ptr = it->second;
       _values_lock.unlock_shared();

@@ -20,7 +20,7 @@ public:
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };
-
+/*
 BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
 	const std::string storage_path = "testStorage";
 	if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -344,7 +344,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 		dariadb::utils::fs::rm(storage_path);
 	}
 }
-
+*/
 
 BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 	const std::string storage_path = "testStorage";
@@ -397,6 +397,14 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 		qi.ids[0] = dariadb::Id(100000);
 		auto mlist = ms->readInterval(qi);
 		BOOST_CHECK(!mlist.empty());
+		
+		auto v = dariadb::Meas::empty(qi.ids[0]);
+		v.time = 0;
+		v.value = 777;
+		ms->append(v);
+		mlist = ms->readInterval(qi);
+		BOOST_CHECK(!mlist.empty());
+		BOOST_CHECK_EQUAL(mlist.front().value,v.value);
 	}
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);

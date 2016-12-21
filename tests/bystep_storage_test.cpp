@@ -200,143 +200,170 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
   }
 }
 
-
 BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
-	std::cout << "ByStepTest" << std::endl;
-	auto storage_path = "testBySTepStorage";
-	if (dariadb::utils::fs::path_exists(storage_path)) {
-		dariadb::utils::fs::rm(storage_path);
+  std::cout << "ByStepTest" << std::endl;
+  auto storage_path = "testBySTepStorage";
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+  auto value = dariadb::Meas::empty(0);
+  {
+    dariadb::utils::fs::mkdir(storage_path);
+    auto settings =
+        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+
+    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
+        new dariadb::storage::EngineEnvironment()};
+    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                             settings.get());
+    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+    dariadb::storage::ByStepStorage ms{_engine_env};
+    dariadb::storage::Id2Step steps;
+
+    steps[0] = dariadb::storage::STEP_KIND::SECOND;
+    steps[1] = dariadb::storage::STEP_KIND::MINUTE;
+    steps[2] = dariadb::storage::STEP_KIND::HOUR;
+    ms.setSteps(steps);
+
+    size_t writes_count = 10000;
+    for (size_t i = 0; i < writes_count; i++) {
+      value.id = 0;
+      value.value = i;
+      value.time += 500;
+      ms.append(value);
+      value.id = 1;
+      ms.append(value);
+      value.id = 2;
+      ms.append(value);
+    }
+    { // seconds
+      dariadb::storage::QueryInterval qi({0}, 0, 0, value.time);
+      auto readed = ms.readInterval(qi);
+      BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
+      for (auto &v : readed) {
+        BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
+      }
+    }
+
+    { // seconds no flag
+      dariadb::storage::QueryInterval qi({0}, 777, 0, value.time);
+      auto readed = ms.readInterval(qi);
+      BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
+      for (auto &v : readed) {
+        BOOST_CHECK(v.flag == dariadb::Flags::_NO_DATA);
+      }
+    }
+
+    { // minutes
+      dariadb::storage::QueryInterval qi({1}, 0, 0, value.time);
+      auto readed = ms.readInterval(qi);
+      BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2 * 60)) + 1);
+      for (auto &v : readed) {
+        BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
+      }
+    }
+
+    { // hour
+      dariadb::storage::QueryInterval qi({2}, 0, 0, value.time);
+      auto readed = ms.readInterval(qi);
+      BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2 * 60 * 60)) + 1);
+      for (auto &v : readed) {
+        BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
+      }
+    }
+
+    { // minMax
+      auto min = ms.minTime();
+      BOOST_CHECK_EQUAL(min, 500);
+      auto max = ms.maxTime();
+      BOOST_CHECK_EQUAL(max, value.time);
+
+      auto res = ms.minMaxTime(0, &min, &max);
+      BOOST_CHECK(res);
+      BOOST_CHECK_EQUAL(min, 500);
+      BOOST_CHECK_EQUAL(max, value.time);
+
+      res = ms.minMaxTime(777, &min, &max);
+      BOOST_CHECK(!res);
+    }
+
+    { // readInTimePoint from io_adapter
+      dariadb::storage::QueryTimePoint qp({0}, 0, 1100);
+      auto result = ms.readTimePoint(qp);
+      BOOST_CHECK_EQUAL(result.size(), size_t(1));
+      BOOST_CHECK_LE(result[0].time, 2000);
+      BOOST_CHECK(result[0].flag != dariadb::Flags::_NO_DATA);
+    }
+    { // readInTimePoint from last tracked value
+      dariadb::storage::QueryTimePoint qp({0}, 0, value.time);
+      auto result = ms.readTimePoint(qp);
+      BOOST_CHECK_EQUAL(result.size(), size_t(1));
+      BOOST_CHECK_LE(result[0].time, value.time);
+      BOOST_CHECK(result[0].flag != dariadb::Flags::_NO_DATA);
+    }
+
+    { // readInTimePoint not in interval
+      auto not_exists_time = value.time * value.time;
+      dariadb::storage::QueryTimePoint qp({1}, 0, not_exists_time);
+      auto result = ms.readTimePoint(qp);
+      BOOST_CHECK_EQUAL(result.size(), size_t(1));
+      BOOST_CHECK_LE(result[1].time, not_exists_time);
+      BOOST_CHECK_EQUAL(result[1].flag, dariadb::Flags::_NO_DATA);
+    }
+
+    { // query not exists interval
+      dariadb::storage::QueryInterval qi({0}, 0, value.time * 2, value.time * 10);
+      auto readed = ms.readInterval(qi);
+      BOOST_CHECK(readed.size() != size_t(0));
+      for (auto &v : readed) {
+        BOOST_CHECK_EQUAL(v.flag, dariadb::Flags::_NO_DATA);
+      }
+    }
+    { // write to past
+      auto new_value = dariadb::Meas::empty(0);
+      new_value.time = 500;
+      new_value.value = 777;
+      ms.append(new_value);
+      dariadb::storage::QueryInterval qi({0}, 0, 0, value.time);
+      auto readed = ms.readInterval(qi);
+      BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
+      BOOST_CHECK_EQUAL(readed.front().value, 777);
+    }
+  }
+  {
+    dariadb::utils::fs::mkdir(storage_path);
+    auto settings =
+        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+
+    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
+        new dariadb::storage::EngineEnvironment()};
+    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                             settings.get());
+    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+    dariadb::storage::ByStepStorage ms{_engine_env};
+    dariadb::storage::Id2Step steps;
+
+    steps[0] = dariadb::storage::STEP_KIND::SECOND;
+    steps[1] = dariadb::storage::STEP_KIND::MINUTE;
+    steps[2] = dariadb::storage::STEP_KIND::HOUR;
+    ms.setSteps(steps);
+
+	{ // write to past
+		auto new_value = dariadb::Meas::empty(0);
+		new_value.time = 500;
+		new_value.value = 888;
+		ms.append(new_value);
+		dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
+		auto readed = ms.readInterval(qi);
+		BOOST_CHECK_EQUAL(readed.front().value, 888);
 	}
-	{
-		dariadb::utils::fs::mkdir(storage_path);
-		auto settings =
-			dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-
-		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-			new dariadb::storage::EngineEnvironment() };
-		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
-			settings.get());
-		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
-
-		dariadb::storage::ByStepStorage ms{ _engine_env };
-		dariadb::storage::Id2Step steps;
-		
-		steps[0] = dariadb::storage::STEP_KIND::SECOND;
-		steps[1] = dariadb::storage::STEP_KIND::MINUTE;
-		steps[2] = dariadb::storage::STEP_KIND::HOUR;
-		ms.setSteps(steps);
-
-		auto value = dariadb::Meas::empty(0);
-		size_t writes_count = 10000;
-		for (size_t i = 0; i < writes_count; i++) {
-			value.id = 0;
-			value.value = i;
-			value.time += 500;
-			ms.append(value);
-			value.id = 1;
-			ms.append(value);
-			value.id = 2;
-			ms.append(value);
-		}
-		{//seconds
-			dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
-			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2)+1);
-			for (auto&v : readed) {
-				BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
-			}
-		}
-
-		{//seconds no flag
-			dariadb::storage::QueryInterval qi({ 0 }, 777, 0, value.time);
-			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
-			for (auto&v : readed) {
-				BOOST_CHECK(v.flag == dariadb::Flags::_NO_DATA);
-			}
-		}
-
-		{//minutes
-			dariadb::storage::QueryInterval qi({ 1 }, 0, 0, value.time);
-			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2*60)) + 1);
-			for (auto&v : readed) {
-				BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
-			}
-		}
-
-		{//hour
-			dariadb::storage::QueryInterval qi({ 2 }, 0, 0, value.time);
-			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2 * 60 * 60)) + 1);
-			for (auto&v : readed) {
-				BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
-			}
-		}
-
-		{//minMax
-			auto min = ms.minTime();
-			BOOST_CHECK_EQUAL(min,500);
-			auto max = ms.maxTime();
-			BOOST_CHECK_EQUAL(max, value.time);
-
-			auto res = ms.minMaxTime(0, &min, &max);
-			BOOST_CHECK(res);
-			BOOST_CHECK_EQUAL(min, 500);
-			BOOST_CHECK_EQUAL(max, value.time);
-
-			res = ms.minMaxTime(777, &min, &max);
-			BOOST_CHECK(!res);
-		}
-
-		{// readInTimePoint from io_adapter
-			dariadb::storage::QueryTimePoint qp({ 0 }, 0, 1100);
-			auto result = ms.readTimePoint(qp);
-			BOOST_CHECK_EQUAL(result.size(), size_t(1));
-			BOOST_CHECK_LE(result[0].time, 2000);
-			BOOST_CHECK(result[0].flag!=dariadb::Flags::_NO_DATA);
-			
-		}
-		{// readInTimePoint from last tracked value
-			dariadb::storage::QueryTimePoint qp({ 0 }, 0, value.time);
-			auto result = ms.readTimePoint(qp);
-			BOOST_CHECK_EQUAL(result.size(), size_t(1));
-			BOOST_CHECK_LE(result[0].time, value.time);
-			BOOST_CHECK(result[0].flag != dariadb::Flags::_NO_DATA);
-		}
-
-		{// readInTimePoint not in interval
-			auto not_exists_time = value.time*value.time;
-			dariadb::storage::QueryTimePoint qp({ 1 }, 0, not_exists_time);
-			auto result = ms.readTimePoint(qp);
-			BOOST_CHECK_EQUAL(result.size(), size_t(1));
-			BOOST_CHECK_LE(result[1].time, not_exists_time);
-			BOOST_CHECK_EQUAL(result[1].flag, dariadb::Flags::_NO_DATA);
-		}
-
-		{//query not exists interval
-			dariadb::storage::QueryInterval qi({ 0 }, 0, value.time*2, value.time*10);
-			auto readed = ms.readInterval(qi);
-			BOOST_CHECK(readed.size() != size_t(0));
-			for (auto&v : readed) {
-				BOOST_CHECK_EQUAL(v.flag, dariadb::Flags::_NO_DATA);
-			}
-		}
-		{//write to past
-			auto new_value = dariadb::Meas::empty(0);
-			new_value.time = 500;
-			new_value.value = 777;
-			ms.append(new_value);
-			dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
-			auto readed = ms.readInterval(qi);
-			BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
-			BOOST_CHECK_EQUAL(readed.front().value, 777);
-		}
-	}
-	dariadb::utils::async::ThreadManager::stop();
-	if (dariadb::utils::fs::path_exists(storage_path)) {
-		dariadb::utils::fs::rm(storage_path);
-	}
+  }
+  dariadb::utils::async::ThreadManager::stop();
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
 }
 
 BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
