@@ -214,7 +214,6 @@ struct ByStepStorage::Private : public IMeasStorage {
       local_q.from = std::get<0>(round_from);
       local_q.to = std::get<0>(round_to);
       auto readed_chunks = _io->readInterval(period_from, period_to, id);
-	  //TODO refact
 	  if (period_from == period_to) {//in one interval
 		  if (readed_chunks.empty()) {//find in tracks all generate empty period
 			  auto it = _values.find(id);
@@ -222,16 +221,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 				  it->second->foreach(local_q, clbk);
 			  }
 			  else {
-				  auto values_size = bystep::step_to_size(step_kind_it->second);
-				  auto zero_time = ByStepTrack::get_zero_time(period_from, step_kind_it->second);
-				  auto empty_value = Meas::empty(id);
-				  for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
-					  empty_value.time = zero_time;
-					  empty_value.flag = Flags::_NO_DATA;
-					  zero_time += stepTime;
-				  }
-				  ByStepTrack tr(id, step_kind_it->second, period_from);
-				  tr.foreach(local_q, clbk);
+				  foreach_notexists_period(local_q, clbk, id, period_from, step_kind_it->second, stepTime);
 			  }
 		  }
 		  else {
@@ -240,7 +230,6 @@ struct ByStepStorage::Private : public IMeasStorage {
 		  }
 	  }
 	  else {
-
 		  for (auto i = period_from; i < period_to; ++i) {
 			  if (!readed_chunks.empty() && readed_chunks.front()->header->id == i) {
 				  auto c = readed_chunks.front();
@@ -248,16 +237,7 @@ struct ByStepStorage::Private : public IMeasStorage {
 				  foreach_chunk(q, clbk, c);
 			  }
 			  else {
-				  auto values_size = bystep::step_to_size(step_kind_it->second);
-				  auto zero_time = ByStepTrack::get_zero_time(i, step_kind_it->second);
-				  auto empty_value = Meas::empty(id);
-				  for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
-					  empty_value.time = zero_time;
-					  empty_value.flag = Flags::_NO_DATA;
-					  zero_time += stepTime;
-				  }
-				  ByStepTrack tr(id, step_kind_it->second, i);
-				  tr.foreach(local_q, clbk);
+				  foreach_notexists_period(local_q, clbk, id, i, step_kind_it->second, stepTime);
 			  }
 		  }
 
@@ -267,6 +247,20 @@ struct ByStepStorage::Private : public IMeasStorage {
 		  }
 	  }
     }
+  }
+
+  void foreach_notexists_period(const QueryInterval &q, IReaderClb *clbk, Id meas_id, uint64_t period, STEP_KIND step, Time stepTime) {
+	  auto values_size = bystep::step_to_size(step);
+	  auto zero_time = ByStepTrack::get_zero_time(period, step);
+	  auto v = Meas::empty(meas_id);
+	  for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
+		  v.time = zero_time;
+		  v.flag = Flags::_NO_DATA;
+		  zero_time += stepTime;
+		  if (v.time >= q.from && v.time < q.to) {
+			  clbk->call(v);
+		  }
+	  }
   }
 
   void foreach_chunk(const QueryInterval &q, IReaderClb *clbk, const Chunk_Ptr &c) {
@@ -288,7 +282,6 @@ struct ByStepStorage::Private : public IMeasStorage {
 
     auto local_q = q;
     local_q.ids.resize(1);
-    // TODO refact.
     for (auto &id : q.ids) {
 
       auto stepKind_it = _steps.find(id);
@@ -319,26 +312,27 @@ struct ByStepStorage::Private : public IMeasStorage {
           result[id].time = local_q.time_point;
           result[id].flag = Flags::_NO_DATA;
         } else {
-          auto rdr = chunk->getReader();
-          while (!rdr->is_end()) {
-            auto v = rdr->readNext();
-            auto rounded_time_tuple = bystep::roundTime(stepKind_it->second, v.time);
-            auto rounded_time = std::get<0>(rounded_time_tuple);
-            if (v.inQuery(local_q.ids, local_q.flag) &&
-                rounded_time == local_q.time_point) {
-              result[id] = v;
-              break;
-            }
-            if (v.time > local_q.time_point) {
-              break;
-            }
-          }
+			readTimePointFromChunk(result, chunk, stepKind_it->second, local_q, id);
         }
       }
     }
     return result;
   }
-
+  void readTimePointFromChunk(Id2Meas&result, const Chunk_Ptr&chunk, STEP_KIND step, const QueryTimePoint&q, Id id) {
+	  auto rdr = chunk->getReader();
+	  while (!rdr->is_end()) {
+		  auto v = rdr->readNext();
+		  auto rounded_time_tuple = bystep::roundTime(step, v.time);
+		  auto rounded_time = std::get<0>(rounded_time_tuple);
+		  if (v.inFlag(q.flag) && v.id==id && rounded_time == q.time_point) {
+			  result[id] = v;
+			  break;
+		  }
+		  if (v.time > q.time_point) {
+			  break;
+		  }
+	  }
+  }
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     Id2Meas result;
     std::shared_lock<std::shared_mutex> lg(_values_lock);
