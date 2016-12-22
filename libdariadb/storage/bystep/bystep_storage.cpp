@@ -376,9 +376,9 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  _io->flush();
   }
 
-  Description description() {
-	  Description result;
-	  result.in_queue = _io->description().in_queue;
+  bystep::Description description() {
+	  bystep::Description result;
+	  result = _io->description();
 	  return result;
   }
   EngineEnvironment_ptr _env;
@@ -447,6 +447,6 @@ uint64_t ByStepStorage::intervalForTime(const STEP_KIND step, const size_t valsI
   return bystep::intervalForTime(step, valsInInterval, t);
 }
 
-ByStepStorage::Description ByStepStorage::description() {
+bystep::Description ByStepStorage::description() {
 	return _impl->description();
 }

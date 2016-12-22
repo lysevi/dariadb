@@ -3,7 +3,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/st_exports.h>
-
+#include <libdariadb/storage/bystep/description.h>
 #include <list>
 
 namespace dariadb {
@@ -12,13 +12,9 @@ namespace storage {
 using ChunksList = std::list<Chunk_Ptr>;
 class IOAdapter {
 public:
-	struct Description
-	{
-		size_t in_queue;
-	};
   EXPORT IOAdapter(const std::string &fname);
   EXPORT ~IOAdapter();
-  EXPORT Description description();
+  EXPORT bystep::Description description();
   EXPORT void stop();
   /// min/max - real min/max values. chunk can be not filled.
   EXPORT void append(const Chunk_Ptr&ch, Time min, Time max);

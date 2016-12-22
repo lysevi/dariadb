@@ -1,21 +1,22 @@
-#include <libdariadb/engine.h>
 #include <libdariadb/config.h>
+#include <libdariadb/engine.h>
 #include <libdariadb/flags.h>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/storage/memstorage/memstorage.h>
-#include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/bystep/bystep_storage.h>
 #include <libdariadb/storage/dropper.h>
+#include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/subscribe.h>
-#include <libdariadb/utils/exception.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
+#include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/async/thread_manager.h>
-#include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/strings.h>
-#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/utils.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -107,7 +108,6 @@ public:
 		auto id2id = std::get<0>(result);
 		auto id2step = std::get<1>(result);
 		setSteps_inner(id2step);
-		setId2Id_inner(id2id);
 	}
 	logger_info("engine: start - OK ");
   }
@@ -338,14 +338,6 @@ public:
 	}
 
     if (result.writed == 1) {
-		auto bs = _raw2bystep.find(value.id);
-		
-		if (bs != _raw2bystep.end()) {
-			auto cp = value;
-			cp.id = bs->second;
-			_bystep_storage->append(cp);
-		}
-
       _subscribe_notify.on_append(value);
 	  _min_max_locker.lock();
 	  auto insert_fres = _min_max_map.find(value.id);
@@ -682,36 +674,11 @@ public:
 	this->unlock_storage();
   }
 
-  void setId2Id_inner(const Id2Id&m) {
-	  IdSet all_raws, all_bs;
-	  for (auto&kv : m) {
-		  all_raws.insert(kv.first);
-		  all_bs.insert(kv.second);
-	  }
-
-	  _bystep2raw.reserve(m.size());
-
-	  for (auto&id : all_raws) {
-		  auto res = all_bs.find(id);
-		  if (res != all_bs.end()) {
-			  THROW_EXCEPTION("engine: id sets can't be cross.");
-		  }
-		  auto bs_id = m.find(id)->second;
-		  _bystep2raw[bs_id] = id;
-		  _raw2bystep[id] = bs_id;
-	  }
-  }
-  void setId2Id(const Id2Id&m) {
-	  setId2Id_inner(m);
-	  if (!_raw2bystep.empty() && !_id2steps.empty()) {
-		  _manifest->insert_id2id(_raw2bystep, _id2steps);
-	  }
-  }
-
   void setSteps_inner(const Id2Step&m) {
 	  _bystep_storage->setSteps(m);
 	  _id2steps = m;
   }
+
   void setSteps(const Id2Step&m) {
 	  setSteps_inner(m);
 	  if (!_raw2bystep.empty() && !_id2steps.empty()) {
@@ -844,10 +811,6 @@ STRATEGY Engine::strategy()const{
 
 Id2MinMax Engine::loadMinMax(){
     return _impl->loadMinMax();
-}
-
-void Engine::setId2Id(const Id2Id&m) {
-	_impl->setId2Id(m);
 }
 
 void Engine::setSteps(const Id2Step&m) {

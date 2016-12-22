@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 
         dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
 
-		dariadb_test::storage_test_check(&ms, 0, 100, 1, false, dariadb::Id2Id());
+		dariadb_test::storage_test_check(&ms, 0, 100, 1, false);
 
 	}
 	dariadb::utils::async::ThreadManager::stop();

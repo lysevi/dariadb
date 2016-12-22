@@ -4,6 +4,7 @@
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/bystep/step_kind.h>
+#include <libdariadb/storage/bystep/description.h>
 #include <memory>
 #include <unordered_map>
 #include <istream>
@@ -14,14 +15,10 @@ namespace storage {
 
 class ByStepStorage : public IMeasStorage {
 public:
-	struct Description
-	{
-		size_t in_queue;
-	};
   /// id_count - for prealloc
   EXPORT ByStepStorage(const EngineEnvironment_ptr &env);
   EXPORT ~ByStepStorage();
-  EXPORT Description description();
+  EXPORT bystep::Description description();
   //return count chunk readed from disk.
   EXPORT size_t setSteps(const Id2Step&steps);
 

@@ -167,15 +167,10 @@ void minMaxCheck(storage::IMeasStorage *as, Time from, Time maxWritedTime) {
 
 void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                        const IdSet &_all_ids_set, const IdArray &_all_ids_array,
-                       size_t total_count, bool check_stop_flag, bool is_bystep_test) {
+                       size_t total_count, bool check_stop_flag) {
   storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
   MeasList all = as->readInterval(qi_all);
-  if(is_bystep_test){
-	  if (all.empty()) {
-		  throw MAKE_EXCEPTION("all.empty()");
-	  }
-  }
-  else {
+  
 	  auto all_size = all.size();
 	  check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
 	  auto clbk = new Callback();
@@ -210,7 +205,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
 	  if (fltr_res.size() != copies_count) {
 		  throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
 	  }
-  }
+  
 }
 
 void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
@@ -255,7 +250,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
 }
 
 void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step,
-                        bool check_stop_flag, const dariadb::Id2Id&raw2bs) {
+                        bool check_stop_flag) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   std::cout << "fill storage\n";
@@ -264,7 +259,7 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   std::cout << "loadMinMax\n";
   auto minMax=as->loadMinMax();
 
-  if(minMax.size()!=_all_ids_set.size()+ raw2bs.size()){
+  if(minMax.size()!=_all_ids_set.size()){
       throw MAKE_EXCEPTION("minMax.size()!=_all_ids_set.size()");
   }
 
@@ -284,13 +279,6 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   Id2Meas current_mlist;
 
   IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
-  if (!raw2bs.empty()) {
-	  for (size_t i = 0; i < _all_ids_array.size(); ++i) {
-		  auto raw_id = _all_ids_array[i];
-		  auto fres = raw2bs.find(raw_id);
-		  _all_ids_array[i] = fres->second;
-	  }
-  }
   current_mlist = as->currentValue(_all_ids_array, 0);
 
   if (current_mlist.size() != _all_ids_set.size()) {
@@ -306,7 +294,7 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   std::cout << "readIntervalCheck\n";
 
   readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
-		  check_stop_flag, !raw2bs.empty());
+		  check_stop_flag);
   std::cout << "readTimePointCheck\n";
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
   std::cout << "flush\n";

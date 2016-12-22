@@ -470,8 +470,8 @@ public:
 	  }
   }
 
-  Description description() {
-    Description result;
+  bystep::Description description() {
+    bystep::Description result;
     _chunks_list_locker.lock();
     result.in_queue = _under_drop;
     _chunks_list_locker.unlock();
@@ -533,6 +533,6 @@ void IOAdapter::flush() {
 	_impl->flush();
 }
 
-IOAdapter::Description IOAdapter::description() {
+bystep::Description IOAdapter::description() {
 	return _impl->description();
 }

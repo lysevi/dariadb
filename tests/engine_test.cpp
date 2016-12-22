@@ -20,7 +20,7 @@ public:
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };
-/*
+
 BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
 	const std::string storage_path = "testStorage";
 	if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->chunk_size.value = chunk_size;
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true, dariadb::Id2Id());
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true);
     
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -302,7 +302,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 		settings->memory_limit.value =  50*1024;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
-		dariadb_test::storage_test_check(ms.get(), from, to, step, true, dariadb::Id2Id());
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
 
         auto pages_count = ms->description().pages_count;
 		BOOST_CHECK_GE(pages_count, size_t(2));
@@ -335,7 +335,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 		settings->aof_max_size.value = 2000;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 
-		dariadb_test::storage_test_check(ms.get(), from, to, step, true, dariadb::Id2Id());
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
 
 		auto descr = ms->description();
 		BOOST_CHECK_GT(descr.pages_count, size_t(0));
@@ -344,7 +344,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 		dariadb::utils::fs::rm(storage_path);
 	}
 }
-*/
+
 
 BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 	const std::string storage_path = "testStorage";
@@ -379,25 +379,24 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 			++id_val;
 		}
 
-		ms->setId2Id(id2id);
 		ms->setSteps(id2step);
 
-		dariadb_test::storage_test_check(ms.get(), from, to, step, true, id2id);
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
 
 		auto descr = ms->description();
 		BOOST_CHECK_GT(descr.pages_count, size_t(0));
 	}
 	{
-		std::cout << "Reopen storage to load id2id and id2step\n";
+		std::cout << "Reopen storage to load id2step\n";
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
-
-		QueryInterval qi({  }, 0, from, to);
+		
+		QueryInterval qi({}, 0, from, to);
 		qi.ids.resize(1);
 		qi.ids[0] = dariadb::Id(100000);
 		auto mlist = ms->readInterval(qi);
-		BOOST_CHECK(!mlist.empty());
-		
+		BOOST_CHECK(mlist.empty());
+
 		auto v = dariadb::Meas::empty(qi.ids[0]);
 		v.time = 0;
 		v.value = 777;

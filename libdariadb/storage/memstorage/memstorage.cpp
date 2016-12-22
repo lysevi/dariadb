@@ -68,8 +68,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
   ~Private() { stop(); }
 
-  MemStorage::Description description() const {
-    MemStorage::Description result;
+  memstorage::Description description() const {
+	memstorage::Description result;
     result.allocated = _chunk_allocator._allocated;
     result.allocator_capacity = _chunk_allocator._capacity;
     return result;
@@ -399,7 +399,7 @@ MemStorage::~MemStorage() {
   _impl = nullptr;
 }
 
-MemStorage::Description MemStorage::description() const {
+memstorage::Description MemStorage::description() const {
   return _impl->description();
 }
 
