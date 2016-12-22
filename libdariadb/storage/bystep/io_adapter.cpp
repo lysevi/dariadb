@@ -41,9 +41,7 @@ public:
 	_under_drop = 0;
     init_tables();
 	_stop_flag = false;
-	_is_stoped = false;
-	AsyncTask at = std::bind(&IOAdapter::Private::write_thread_func, this, std::placeholders::_1);
-	ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+	_write_thread = std::thread(std::bind(&IOAdapter::Private::write_thread_func, this));
   }
   ~Private() { stop(); }
 
@@ -51,9 +49,8 @@ public:
     if (_db != nullptr) {
 		flush();
 		_stop_flag = true;
-		while (!_is_stoped) {
-			std::this_thread::yield();
-		}
+		_cond_var.notify_all();
+		_write_thread.join();
       sqlite3_close(_db);
       _db = nullptr;
       logger("engine: io_adapter - stoped");
@@ -73,6 +70,7 @@ public:
 	  std::lock_guard<std::mutex> lg(_chunks_list_locker);
 	  _chunks_list.push_back(cmm);
 	  ++_under_drop;
+	  _cond_var.notify_all();
   }
 
   void _append(const Chunk_Ptr &ch, Time min, Time max) {
@@ -208,7 +206,7 @@ public:
       rc = sqlite3_finalize(pStmt);
     } while (rc == SQLITE_SCHEMA);
 
-	if (result != nullptr) {
+	if (result == nullptr) {
 		for (auto&cmm : _chunks_list) {
 			if (cmm.ch->header->id == period&&cmm.ch->header->first.id == meas_id) {
 				result = cmm.ch;
@@ -419,30 +417,26 @@ public:
 	  _chunks_list_locker.unlock();
   }
 
-  void write_thread_func(const ThreadInfo &ti) {
-    TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+  void write_thread_func() {
     while (!_stop_flag) {
-      while (_under_drop == 0 && !_stop_flag) {
-        ti.yield();
-      }
+		std::unique_lock<std::mutex> lock(_chunks_list_locker);
+		_cond_var.wait(lock);
+
       if (_stop_flag && _chunks_list.empty()) {
         break;
       }
-      while (!_dropper_locker.try_lock() && !_stop_flag) {
-        ti.yield();
+      while (!_dropper_locker.try_lock()) {
+		  std::this_thread::yield();
       }
 
-      while (!_chunks_list_locker.try_lock()) {
-        ti.yield();
-      }
       std::list<ChunkMinMax> local_copy{_chunks_list.begin(), _chunks_list.end()};
       assert(local_copy.size() == _chunks_list.size());
       _under_drop = local_copy.size();
       _chunks_list.clear();
-      _chunks_list_locker.unlock();
+	  lock.unlock();
 
       auto start_time = clock();
-
+	  //TODO write in DISK_IO pool.
       sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
       for (auto &c : local_copy) {
@@ -459,14 +453,13 @@ public:
       _dropper_locker.unlock();
     }
     logger_info("engine: io_adapter - stoped.");
-    _is_stoped = true;
   }
 
   void flush() {
+	  logger_info("engine: io_adapter - flush.");
 	  while (_under_drop!=0) {//TODO make more smarter.
-		  lock();
-		  unlock();
 		  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		  _cond_var.notify_all();
 	  }
   }
 
@@ -480,12 +473,13 @@ public:
 
   sqlite3 *_db;
   bool                  _stop_flag;
-  bool                  _is_stoped;
   std::list<ChunkMinMax> _chunks_list;
   std::mutex            _chunks_list_locker;
+  std::condition_variable _cond_var;
   std::mutex            _dropper_locker;
   std::atomic_int64_t               _under_drop;
-};
+  std::thread           _write_thread;
+  };
 
 IOAdapter::IOAdapter(const std::string &fname) : _impl(new IOAdapter::Private(fname)) {}
 

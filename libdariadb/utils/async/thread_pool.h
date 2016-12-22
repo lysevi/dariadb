@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
-#include <mutex>
+#include <shared_mutex>
 #include <thread>
 #include <vector>
 #include <memory>
@@ -112,6 +112,7 @@ public:
   EXPORT void stop();
 
   size_t active_works() {
+	std::shared_lock<std::shared_mutex> lg(_queue_mutex);
     size_t res = _in_queue.size();
     return res + (_task_runned);
   }
@@ -123,8 +124,8 @@ protected:
   Params _params;
   std::vector<std::thread> _threads;
   TaskQueue _in_queue;
-  std::mutex _queue_mutex;
-  std::condition_variable _condition;
+  std::shared_mutex _queue_mutex;
+  std::condition_variable_any _condition;
   bool _stop_flag;                 // true - pool under stop.
   bool _is_stoped;                 // true - already stopped.
   std::atomic_size_t _task_runned; // count of runned tasks.
