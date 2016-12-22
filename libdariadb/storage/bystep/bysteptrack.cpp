@@ -170,7 +170,7 @@ Chunk_Ptr ByStepTrack::pack() const {
   for (; it < _values.size(); ++it) {
     result->append(_values[it]);
   }
-  result->close(); // TODO resize buffer like in page::create
+  result->close(); 
   result->header->id = _period;
   result->is_owner = true;
   return result;

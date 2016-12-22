@@ -87,12 +87,17 @@ public:
         THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
       }
 
+	  //TODO move to method.
+	  auto cur_chunk_buf_size = ch->header->size - ch->header->bw_pos + 1;
+	  auto skip_count = ch->header->size - cur_chunk_buf_size;
+	  ch->header->size = cur_chunk_buf_size;
+		
       sqlite3_bind_int64(pStmt, 1, ch->header->id);
       sqlite3_bind_int64(pStmt, 2, ch->header->first.id);
       sqlite3_bind_int64(pStmt, 3, min);
       sqlite3_bind_int64(pStmt, 4, max);
       sqlite3_bind_blob(pStmt, 5, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
-      sqlite3_bind_blob(pStmt, 6, ch->_buffer_t, ch->header->size, SQLITE_STATIC);
+      sqlite3_bind_blob(pStmt, 6, ch->_buffer_t+skip_count, ch->header->size, SQLITE_STATIC);
       rc = sqlite3_step(pStmt);
       assert(rc != SQLITE_ROW);
       rc = sqlite3_finalize(pStmt);
