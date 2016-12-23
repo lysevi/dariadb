@@ -104,9 +104,7 @@ public:
 	_bystep_storage = ByStepStorage_ptr{ new ByStepStorage(_engine_env) };
 
 	if (!is_new_storage) {
-		auto result = _manifest->read_id2id();
-		auto id2id = std::get<0>(result);
-		auto id2step = std::get<1>(result);
+		auto id2step = _manifest->read_id2step();
 		setSteps_inner(id2step);
 	}
 	logger_info("engine: start - OK ");
@@ -675,14 +673,16 @@ public:
   }
 
   void setSteps_inner(const Id2Step&m) {
-	  _bystep_storage->setSteps(m);
-	  _id2steps = m;
+	  for (auto&kv : m) {
+		  _id2steps[kv.first] = kv.second;
+	  }
+	  _bystep_storage->setSteps(_id2steps);
   }
 
   void setSteps(const Id2Step&m) {
 	  setSteps_inner(m);
-	  if (!_raw2bystep.empty() && !_id2steps.empty()) {
-		  _manifest->insert_id2id(_raw2bystep, _id2steps);
+	  if (!_id2steps.empty()) {
+		  _manifest->insert_id2step(_id2steps);
 	  }
   }
 
@@ -710,8 +710,6 @@ protected:
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
 
-  ///raw to bystep.
-  Id2Id _raw2bystep;
   ///bystep to raw.
   Id2Id _bystep2raw;
   Id2Step _id2steps;

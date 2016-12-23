@@ -54,6 +54,9 @@ struct ByStepStorage::Private : public IMeasStorage {
     // load current period.
     auto cur_time = timeutil::current_time();
     for (auto &kv : _steps) {
+		if (_values.find(kv.first) != _values.end()) {//append new id2step
+			continue;
+		}
       auto vals_per_interval = bystep::step_to_size(kv.second);
       auto period_num = bystep::intervalForTime(kv.second, vals_per_interval, cur_time);
       auto chunk = _io->readTimePoint(period_num, kv.first);

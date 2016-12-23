@@ -31,8 +31,8 @@ public:
   EXPORT void set_version(const std::string &version);
   EXPORT std::string get_version();
   
-  EXPORT void insert_id2id(const Id2Id&i2i, const Id2Step&i2s);
-  EXPORT std::tuple<Id2Id, Id2Step> read_id2id();
+  EXPORT void insert_id2step(const Id2Step&i2s);
+  EXPORT Id2Step read_id2step();
 protected:
 	class Private;
 	std::unique_ptr<Private> _impl;

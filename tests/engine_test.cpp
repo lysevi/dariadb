@@ -30,21 +30,16 @@ BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
 		dariadb::utils::fs::mkdir(storage_path);
 		auto m = new dariadb::storage::Manifest(dariadb::utils::fs::append_path(storage_path, "Manifest"));
 		
-		dariadb::Id2Id id2id;
 		dariadb::storage::Id2Step id2step;
 		dariadb::Id id_val = 0;
 		for (auto i = 0; i < 100; ++i) {
 			auto bs_id = id_val + 100000;
-			id2id[id_val] = bs_id;
 			id2step[bs_id] = dariadb::storage::STEP_KIND::MINUTE;
 			++id_val;
 		}
-		m->insert_id2id(id2id, id2step);
-		auto result = m->read_id2id();
-		id2id = std::get<0>(result);
-		id2step = std::get<1>(result);
-		BOOST_CHECK_EQUAL(id2id.size(), id2step.size());
-		BOOST_CHECK_EQUAL(id2id.size(), size_t(100));
+		m->insert_id2step(id2step);
+		id2step = m->read_id2step();
+		BOOST_CHECK_EQUAL(id2step.size(), size_t(100));
 		BOOST_CHECK_EQUAL(id2step[100000], dariadb::storage::STEP_KIND::MINUTE);
 		delete m;
 	}
@@ -356,6 +351,7 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 
 	using namespace dariadb::storage;
 
+	const dariadb::Id spec_id = 1010101;
 	{
 		std::cout << "Engine_ByStep_common_test\n";
 		if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -369,18 +365,17 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 		settings->aof_max_size.value = 2000;
 		std::unique_ptr<Engine> ms{ new Engine(settings) };
 		
-		dariadb::Id2Id id2id;
 		dariadb::storage::Id2Step id2step;
 		dariadb::Id id_val = 0;
 		for (auto i = from; i < to; i += step) {
 			auto bs_id = id_val + 100000;
-			id2id[id_val] = bs_id;
 			id2step[bs_id] = dariadb::storage::STEP_KIND::SECOND;
 			++id_val;
 		}
 
 		ms->setSteps(id2step);
-
+		//must add spec_id steps to exists map;
+		id2step[spec_id]= dariadb::storage::STEP_KIND::SECOND;
 		dariadb_test::storage_test_check(ms.get(), from, to, step, true);
 
 		auto descr = ms->description();
@@ -404,6 +399,16 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 		mlist = ms->readInterval(qi);
 		BOOST_CHECK(!mlist.empty());
 		BOOST_CHECK_EQUAL(mlist.front().value,v.value);
+
+		v.id = spec_id;
+		v.time = 0;
+		v.value = 777;
+		ms->append(v);
+		
+		qi.ids[0] = dariadb::Id(spec_id);
+		mlist = ms->readInterval(qi);
+		BOOST_CHECK(!mlist.empty());
+		BOOST_CHECK_EQUAL(mlist.front().value, v.value);
 	}
 	if (dariadb::utils::fs::path_exists(storage_path)) {
 		dariadb::utils::fs::rm(storage_path);
