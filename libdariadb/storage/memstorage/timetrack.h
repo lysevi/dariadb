@@ -40,7 +40,7 @@ struct TimeTrack : public IMeasStorage {
   Time _max_sync_time;
   Time _step;
   MemChunk_Ptr _cur_chunk;
-  utils::Locker _locker;
+  utils::async::Locker _locker;
   stx::btree_map<Time, MemChunk_Ptr> _index;
   MemoryChunkContainer *_mcc;
 };

@@ -12,11 +12,11 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
-#include <libdariadb/utils/thread_pool.h>
+#include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/strings.h>
-#include <libdariadb/utils/coroutine.h>
+#include <libdariadb/utils/async/coroutine.h>
 
 
 BOOST_AUTO_TEST_CASE(CoroutineTest) {
@@ -41,11 +41,36 @@ BOOST_AUTO_TEST_CASE(CoroutineTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Time) {
+BOOST_AUTO_TEST_CASE(TimeToString) {
   auto ct = dariadb::timeutil::current_time();
   BOOST_CHECK(ct != dariadb::Time(0));
   auto ct_str = dariadb::timeutil::to_string(ct);
   BOOST_CHECK(ct_str.size() != 0);
+}
+
+BOOST_AUTO_TEST_CASE(TimeRound) {
+  auto ct = dariadb::timeutil::current_time();
+  auto ct_d = dariadb::timeutil::to_datetime(ct);
+  {
+    auto rounded = dariadb::timeutil::round_to_seconds(ct);
+    auto rounded_d = dariadb::timeutil::to_datetime(rounded);
+    BOOST_CHECK_EQUAL(rounded_d.millisecond, uint16_t(0));
+  }
+
+  {
+    auto rounded = dariadb::timeutil::round_to_minutes(ct);
+    auto rounded_d = dariadb::timeutil::to_datetime(rounded);
+    BOOST_CHECK_EQUAL(rounded_d.millisecond, uint16_t(0));
+    BOOST_CHECK_EQUAL(rounded_d.second, uint16_t(0));
+  }
+
+  {
+    auto rounded = dariadb::timeutil::round_to_hours(ct);
+    auto rounded_d = dariadb::timeutil::to_datetime(rounded);
+    BOOST_CHECK_EQUAL(rounded_d.millisecond, uint16_t(0));
+    BOOST_CHECK_EQUAL(rounded_d.second, uint16_t(0));
+    BOOST_CHECK_EQUAL(rounded_d.minute, uint16_t(0));
+  }
 }
 
 BOOST_AUTO_TEST_CASE(CRC32Test) {

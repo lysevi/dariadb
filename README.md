@@ -28,6 +28,7 @@
 * Compaction old data with filtration support:
   - in engine api.
   - in network protocol.
+* By step storage: for values with predefined write interval (per second, minute, hour).
 
 # Dependencies
 * Boost 1.54.0 or higher: context, system, filesystem, date_time, interprocess (mmap), unit_test_framework(to build tests), program_options, asio and regex(for server only)

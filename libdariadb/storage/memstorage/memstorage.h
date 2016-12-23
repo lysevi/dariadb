@@ -7,6 +7,7 @@
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/memstorage/allocators.h>
+#include <libdariadb/storage/memstorage/description.h>
 #include <memory>
 
 namespace dariadb {
@@ -14,15 +15,12 @@ namespace storage {
 
 class MemStorage : public IMeasStorage {
 public:
-  struct Description {
-	  size_t allocated;
-      size_t allocator_capacity;
-  };
+
 public:
   /// id_count - for prealloc
   EXPORT MemStorage(const EngineEnvironment_ptr &env, size_t id_count);
   EXPORT ~MemStorage();
-  EXPORT Description description()const;
+  EXPORT memstorage::Description description()const;
 
   // Inherited via IMeasStorage
   EXPORT virtual Time minTime() override;

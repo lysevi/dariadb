@@ -6,6 +6,7 @@
 #include <cassert>
 #include <fstream>
 
+using namespace dariadb;
 using namespace dariadb::storage;
 
 const std::string PAGE_JS_KEY = "pages";
@@ -15,8 +16,8 @@ const char *MANIFEST_CREATE_SQL = "CREATE TABLE IF NOT EXISTS pages(id INTEGER P
                          "AUTOINCREMENT, file varchar(255)); "
                          \
 "CREATE TABLE IF NOT EXISTS aofs(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
-                         \
-"CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); ";
+"CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); "
+"CREATE TABLE IF NOT EXISTS id2step(bystep_id INTEGER UNIQUE PRIMARY KEY, step varchar(50)); ";
 
 static int file_select_callback(void *data, int argc, char **argv, char **azColName) {
   std::list<std::string> *ld = (std::list<std::string> *)data;
@@ -104,7 +105,7 @@ public:
   }
 
   std::list<std::string> page_list() {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
     std::string sql = "SELECT file from pages;";
     std::list<std::string> result{};
     char *zErrMsg = 0;
@@ -120,7 +121,7 @@ public:
   }
 
   void page_append(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "insert into pages (file) values ('" << rec << "');";
@@ -135,7 +136,7 @@ public:
   }
 
   void page_rm(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "delete from pages where file = '" << rec << "';";
@@ -150,7 +151,7 @@ public:
   }
 
   std::list<std::string> aof_list() {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
     std::string sql = "SELECT file from aofs;";
     std::list<std::string> result{};
     char *zErrMsg = 0;
@@ -178,7 +179,7 @@ public:
   }
 
   void aof_append(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "insert into aofs (file) values ('" << rec << "');";
@@ -193,7 +194,7 @@ public:
   }
 
   void aof_rm(const std::string &rec) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "delete from aofs where file = '" << rec << "';";
@@ -208,7 +209,7 @@ public:
   }
 
   void set_version(const std::string &version) {
-    std::lock_guard<utils::Locker> lg(_locker);
+    std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "insert or replace into params(id, name, value) values ((select id from params "
@@ -238,9 +239,79 @@ public:
     return result;
   }
 
+  void insert_id2step(const Id2Step&i2s) {
+	  sqlite3_exec(db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+
+	  
+	  try {
+		  for (auto&kv : i2s) {
+			  const std::string sql_query =
+				  "INSERT INTO id2step(bystep_id, step) values (?,?);";
+			  sqlite3_stmt *pStmt;
+			  int rc;
+			  do {
+				  rc = sqlite3_prepare(db, sql_query.c_str(), -1, &pStmt, 0);
+				  if (rc != SQLITE_OK) {
+					  auto err_msg = std::string(sqlite3_errmsg(db));
+					  THROW_EXCEPTION("engine: Manifest - ", err_msg);
+				  }
+				 
+				  std::stringstream ss;
+				  ss << kv.second;
+				  auto str_step = ss.str();
+				  sqlite3_bind_int64(pStmt, 1, kv.first);
+				  sqlite3_bind_text(pStmt, 2, str_step.c_str(), str_step.size(), SQLITE_STATIC);
+
+				  rc = sqlite3_step(pStmt);
+				  assert(rc != SQLITE_ROW);
+				  rc = sqlite3_finalize(pStmt);
+			  } while (rc == SQLITE_SCHEMA);
+		  }
+		  sqlite3_exec(db, "END TRANSACTION;", NULL, NULL, NULL);
+	  }
+	  catch(...){
+		  sqlite3_exec(db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+		  throw;
+	  }
+  }
+
+  Id2Step read_id2step() {
+	  Id2Step i2s;
+	  
+	  sqlite3_stmt *pStmt;
+	  int rc;
+	  const std::string sql_query = "SELECT bystep_id, step FROM id2step";
+	  do {
+		  rc = sqlite3_prepare(db, sql_query.c_str(), -1, &pStmt, 0);
+		  if (rc != SQLITE_OK) {
+			  auto err_msg = std::string(sqlite3_errmsg(db));
+			  THROW_EXCEPTION("engine: Manifest - ", err_msg);
+		  }
+
+
+		  while (1) {
+			  rc = sqlite3_step(pStmt);
+			  if (rc == SQLITE_ROW) {
+				  auto bs= sqlite3_column_int64(pStmt, 0);
+				  auto step_str =std::string((char*)sqlite3_column_text(pStmt, 1));
+				  
+				  std::istringstream iss(step_str);
+				  STEP_KIND sk;
+				  iss>>sk;
+
+				  i2s[bs] = sk;
+			  }
+			  else {
+				  break;
+			  }
+		  }
+		  rc = sqlite3_finalize(pStmt);
+	  } while (rc == SQLITE_SCHEMA);
+	  return i2s;
+  }
 protected:
   std::string _filename;
-  utils::Locker _locker;
+  utils::async::Locker _locker;
   sqlite3 *db;
 };
 
@@ -280,4 +351,12 @@ void Manifest::set_version(const std::string &version) {
 
 std::string Manifest::get_version() {
 	return _impl->get_version();
+}
+
+void  Manifest::insert_id2step(const Id2Step&i2s) {
+	_impl->insert_id2step(i2s);
+}
+
+Id2Step Manifest::read_id2step() {
+	return _impl->read_id2step();
 }

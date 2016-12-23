@@ -1,4 +1,4 @@
-#include <libdariadb/utils/thread_pool.h>
+#include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
 #include <cassert>
 
@@ -13,8 +13,6 @@ AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function, const s
 	_code_line = line;
 	_result = std::make_shared<TaskResult>();
 	_tinfo.coro_yield = nullptr;
-	/*auto f = std::bind(&AsyncTaskWrap::call, this, std::placeholders::_1);
-	_coro.reset(new Coroutine(f));*/
 }
 
 bool AsyncTaskWrap::call(const ThreadInfo &ti) {
@@ -71,7 +69,7 @@ TaskResult_Ptr ThreadPool::post(const AsyncTaskWrap_Ptr &task) {
 
 void ThreadPool::stop() {
   {
-    std::unique_lock<std::mutex> lock(_queue_mutex);
+    std::unique_lock<std::shared_mutex> lock(_queue_mutex);
     _stop_flag = true;
   }
   _condition.notify_all();
@@ -94,7 +92,7 @@ void ThreadPool::flush() {
 
 void ThreadPool::pushTaskToQueue(const AsyncTaskWrap_Ptr&at) {
 	{
-		std::unique_lock<std::mutex> lock(_queue_mutex);
+		std::unique_lock<std::shared_mutex> lock(_queue_mutex);
 		_in_queue.push_back(at);
 	}
 	_condition.notify_all();
@@ -109,7 +107,7 @@ void ThreadPool::_thread_func(size_t num) {
 	  std::shared_ptr<AsyncTaskWrap> task;
 
     {
-      std::unique_lock<std::mutex> lock(_queue_mutex);
+      std::unique_lock<std::shared_mutex> lock(_queue_mutex);
       this->_condition.wait(
           lock, [this] { 
 		  return this->_stop_flag || !this->_in_queue.empty(); 
@@ -121,12 +119,22 @@ void ThreadPool::_thread_func(size_t num) {
       task = std::move(this->_in_queue.front());
       this->_in_queue.pop_front();
     }
-    // logger("run: "<<task.parent_function<<" file:"<<task.code_file);
-    auto need_continue=task->call(ti);
-	if (need_continue) {
-		pushTaskToQueue(task);
+    
+	//if queue is empty and task is coroutine, it will be run in cycle.
+	while (true) {
+		auto need_continue = task->call(ti);
+		if (!need_continue) {
+			break;
+		}
+		_queue_mutex.lock_shared();
+		if (!_in_queue.empty() || this->_stop_flag) {
+			_queue_mutex.unlock_shared();
+			pushTaskToQueue(task);
+			break;
+		}
+		_queue_mutex.unlock_shared();
 	}
 	--_task_runned;
-    // logger("run: "<<task.parent_function<<" file:"<<task.code_file <<" ok");
+    
   }
 }

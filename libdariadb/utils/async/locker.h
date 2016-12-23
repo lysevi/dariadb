@@ -6,6 +6,7 @@
 
 namespace dariadb {
 namespace utils {
+namespace async {
 // using Locker=std::mutex;
 const size_t LOCKER_MAX_TRY = 10;
 class Locker {
@@ -25,6 +26,7 @@ public:
   void unlock() { locked.clear(std::memory_order_release); }
 };
 
-using Locker_ptr = std::shared_ptr<dariadb::utils::Locker>;
+using Locker_ptr = std::shared_ptr<dariadb::utils::async::Locker>;
+}
 }
 }

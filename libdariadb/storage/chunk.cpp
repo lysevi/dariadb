@@ -27,6 +27,7 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const CHUNK_KIN
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
   header = hdr;
   _buffer_t = buffer;
+  is_owner = false;
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m) {
@@ -44,10 +45,15 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_
   header->flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
 
   std::fill(_buffer_t, _buffer_t + header->size, 0);
+  is_owner = false;
 }
 
 Chunk::~Chunk() {
   this->bw = nullptr;
+  if (is_owner) {
+	  delete[] this->_buffer_t;
+	  delete this->header;
+  }
 }
 
 bool Chunk::checkId(const Id &id) {
@@ -111,6 +117,10 @@ uint32_t ZippedChunk::calcChecksum() {
 
 uint32_t ZippedChunk::getChecksum() {
   return header->crc;
+}
+
+bool ZippedChunk::isFull() const {
+  return c_writer.isFull();
 }
 
 bool ZippedChunk::append(const Meas &m) {

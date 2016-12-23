@@ -3,7 +3,7 @@
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <ctime>
 
 using namespace dariadb;
@@ -66,7 +66,7 @@ void Dropper::drop_aof_internal(const std::string &fname) {
   
   AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
     try {
-      TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  while (!this->_dropper_lock.try_lock()) {
 		  ti.yield();
 	  }
@@ -95,7 +95,7 @@ void Dropper::drop_aof_internal(const std::string &fname) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }
   };
-  ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+  ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 }
 
 void Dropper::write_aof_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma) {

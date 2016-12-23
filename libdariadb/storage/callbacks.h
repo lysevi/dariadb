@@ -2,7 +2,7 @@
 
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/st_exports.h>
 #include <condition_variable>
 #include <memory>
@@ -15,7 +15,7 @@ struct MList_ReaderClb : public IReaderClb {
   EXPORT void call(const Meas &m) override;
 
   MeasList mlist;
-  utils::Locker _locker;
+  utils::async::Locker _locker;
 };
 }
 }

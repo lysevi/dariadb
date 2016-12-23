@@ -2,9 +2,10 @@
 #include <iostream>
 
 using namespace dariadb::utils;
+using namespace dariadb::utils::async;
 
 std::shared_ptr<LogManager> LogManager::_instance = nullptr;
-Locker LogManager::_locker;
+dariadb::utils::async::Locker LogManager::_locker;
 
 void LogManager::start(ILogger_ptr &logger) {
   if (_instance == nullptr) {
@@ -31,7 +32,7 @@ LogManager::LogManager(ILogger_ptr &logger) {
 }
 
 void LogManager::message(LOG_MESSAGE_KIND kind, const std::string &msg) {
-  std::lock_guard<utils::Locker> lg(_msg_locker);
+  std::lock_guard<utils::async::Locker> lg(_msg_locker);
   _logger->message(kind, msg);
 }
 

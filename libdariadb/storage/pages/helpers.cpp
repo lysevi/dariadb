@@ -4,7 +4,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/pages/helpers.h>
 #include <libdariadb/storage/pages/page.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -72,13 +72,14 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
                                        PageHeader &phdr, uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
   std::list<HdrAndBuffer> results;
-  utils::Locker result_locker;
+  utils::async::Locker result_locker;
   std::list<utils::async::TaskResult_Ptr> async_compressions;
   for (auto &kv : to_compress) {
     auto cur_Id = kv.first;
     utils::async::AsyncTask at = [cur_Id, &results, &phdr, max_chunk_size, &result_locker,
                                   &to_compress](const utils::async::ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+  	  using namespace dariadb::utils::async;
+      TKIND_CHECK(dariadb::utils::async::THREAD_KINDS::COMMON, ti.kind);
       auto fit = to_compress.find(cur_Id);
       auto begin = fit->second.cbegin();
       auto end = fit->second.cend();
@@ -111,7 +112,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
         result_locker.unlock();
       }
     };
-    auto cur_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(at));
+    auto cur_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at));
     async_compressions.push_back(cur_async);
   }
   for (auto tr : async_compressions) {

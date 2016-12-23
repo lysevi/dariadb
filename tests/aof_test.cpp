@@ -15,7 +15,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 
 class Moc_Dropper : public dariadb::storage::IAofDropper {
 public:
@@ -186,8 +186,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
 
 	auto am = dariadb::storage::AOFManager_ptr{ new dariadb::storage::AOFManager(_engine_env) };
 
-    dariadb_test::storage_test_check(am.get(), from, to,
-                                     step, false);
+    dariadb_test::storage_test_check(am.get(), from, to, step, false);
 
 	am = nullptr;
     dariadb::utils::async::ThreadManager::stop();

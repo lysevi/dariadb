@@ -170,40 +170,42 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                        size_t total_count, bool check_stop_flag) {
   storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
   MeasList all = as->readInterval(qi_all);
-  auto all_size = all.size();
-  check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
-  auto clbk = new Callback();
-  as->foreach (qi_all, clbk);
+  
+	  auto all_size = all.size();
+	  check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
+	  auto clbk = new Callback();
+	  as->foreach(qi_all, clbk);
 
-  while (clbk->count != all_size) {
-	  std::this_thread::yield();
-  }
+	  while (clbk->count != all_size) {
+		  std::this_thread::yield();
+	  }
 
-  if (all_size != clbk->count) {
-    THROW_EXCEPTION("all.size()!=clbk->count: ", all.size(), "!=", clbk->count);
-  }
+	  if (all_size != clbk->count) {
+		  THROW_EXCEPTION("all.size()!=clbk->count: ", all.size(), "!=", clbk->count);
+	  }
 
-  if (check_stop_flag) {
-	  clbk->wait();
-  }
-  delete clbk;
+	  if (check_stop_flag) {
+		  clbk->wait();
+	  }
+	  delete clbk;
 
-  IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
+	  IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 
-  all = as->readInterval(storage::QueryInterval(
-      ids, 0, to + copies_count - copies_count / 3, to + copies_count));
-  if (all.size() == size_t(0)) {
-    throw MAKE_EXCEPTION("all.size() != size_t(0)");
-  }
+	  all = as->readInterval(storage::QueryInterval(
+		  ids, 0, to + copies_count - copies_count / 3, to + copies_count));
+	  if (all.size() == size_t(0)) {
+		  throw MAKE_EXCEPTION("all.size() != size_t(0)");
+	  }
 
-  ids.clear();
-  ids.push_back(2);
-  MeasList fltr_res{};
-  fltr_res = as->readInterval(storage::QueryInterval(ids, 0, from, to + copies_count));
+	  ids.clear();
+	  ids.push_back(2);
+	  MeasList fltr_res{};
+	  fltr_res = as->readInterval(storage::QueryInterval(ids, 0, from, to + copies_count));
 
-  if (fltr_res.size() != copies_count) {
-    throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
-  }
+	  if (fltr_res.size() != copies_count) {
+		  throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
+	  }
+  
 }
 
 void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
@@ -275,6 +277,7 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   minMaxCheck(as, from, maxWritedTime);
   std::cout << "currentValue\n";
   Id2Meas current_mlist;
+
   IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
   current_mlist = as->currentValue(_all_ids_array, 0);
 
@@ -289,8 +292,9 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
   std::cout << "readIntervalCheck\n";
+
   readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
-                    check_stop_flag);
+		  check_stop_flag);
   std::cout << "readTimePointCheck\n";
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
   std::cout << "flush\n";

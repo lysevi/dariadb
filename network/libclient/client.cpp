@@ -1,5 +1,5 @@
 #include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/logger.h>
 #include <common/async_connection.h>
 #include <common/net_common.h>
@@ -87,7 +87,7 @@ public:
 			  THROW_EXCEPTION("dariadb::client: error on connect - ", ec.message());
 		  }
 		  this->_async_connection->start(this->_socket);
-		  std::lock_guard<utils::Locker> lg(_locker);
+		  std::lock_guard<utils::async::Locker> lg(_locker);
 		  auto hn = ip::host_name();
 
 		  logger_info("client: send hello ", hn);
@@ -486,7 +486,7 @@ public:
   streambuf buff;
 
   Client::Param _params;
-  utils::Locker _locker;
+  utils::async::Locker _locker;
   std::thread _thread_handler;
   CLIENT_STATE _state;
   std::atomic_size_t _pings_answers;

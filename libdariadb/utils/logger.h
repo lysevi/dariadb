@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/st_exports.h>
 #include <atomic>
@@ -43,8 +43,8 @@ public:
   }
 private:
   static std::shared_ptr<LogManager> _instance;
-  static utils::Locker _locker;
-  utils::Locker _msg_locker;
+  static utils::async::Locker _locker;
+  utils::async::Locker _msg_locker;
   ILogger_ptr _logger;
 };
 }

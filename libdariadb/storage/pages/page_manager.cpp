@@ -4,9 +4,9 @@
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/manifest.h>
@@ -116,7 +116,7 @@ public:
     for (auto pname : pages) {
       AsyncTask at = [pname, &results, num, this, id](const ThreadInfo &ti) {
 		  //TODO must be reading from index.
-        TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+        TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
         Page_Ptr pg = open_page_to_read(pname);
         dariadb::Time lmin, lmax;
         if (pg->minMaxTime(id, &lmin, &lmax)) {
@@ -126,7 +126,7 @@ public:
         }
       };
       task_res[num] =
-          ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+          ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
       num++;
     }
 
@@ -184,7 +184,7 @@ public:
 	ChunkLinkList result;
 
 	AsyncTask at = [query, &result, this, &pred](const ThreadInfo &ti) {
-		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+		TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
 		auto page_list = this->pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
 
@@ -198,7 +198,7 @@ public:
 			}
 		}
 	};
-	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+	auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 	pm_async->wait();
     return result;
   }
@@ -207,7 +207,7 @@ public:
                  IReaderClb *clbk) {
     TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
 	AsyncTask at = [&query, clbk, &links, this](const ThreadInfo &ti) {
-		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+		TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 		ChunkLinkList to_read;
 
 		for (auto l : links) {
@@ -237,7 +237,7 @@ public:
 			to_read.clear();
 		}
 	};
-	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+	auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 	pm_async->wait();
   }
 
@@ -267,7 +267,7 @@ public:
 	}
 
 	AsyncTask at = [&query, &result,this](const ThreadInfo &ti) {
-		TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+		TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 		auto pred = [query](const IndexHeader &hdr) {
 			auto in_check = utils::inInterval(hdr.minTime, hdr.maxTime, query.time_point) ||
 				(hdr.maxTime < query.time_point);
@@ -297,7 +297,7 @@ public:
 			}
 		}
 	};
-	auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+	auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 	pm_async->wait();
     return result;
   }
@@ -479,7 +479,7 @@ public:
           [](const IndexHeader &ih) { return true; });
 
 	  AsyncTask at = [&result, &pages, this](const ThreadInfo &ti) {
-		  TKIND_CHECK(THREAD_COMMON_KINDS::DISK_IO, ti.kind);
+		  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 		  for (auto pname : pages) {
 			  Page_Ptr pg = open_page_to_read(pname);
 
@@ -488,7 +488,7 @@ public:
 		  }
         };
 	  auto at_as=
-		  ThreadManager::instance()->post(THREAD_COMMON_KINDS::DISK_IO, AT(at));
+		  ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 
 	  at_as->wait();
 

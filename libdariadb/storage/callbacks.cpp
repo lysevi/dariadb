@@ -7,6 +7,6 @@ MList_ReaderClb::MList_ReaderClb() : mlist() {
 }
 
 void MList_ReaderClb::call(const Meas &m) {
-  std::lock_guard<utils::Locker> lg(_locker);
+  std::lock_guard<utils::async::Locker> lg(_locker);
   mlist.push_back(m);
 }

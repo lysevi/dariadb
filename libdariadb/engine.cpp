@@ -1,21 +1,22 @@
-#include <libdariadb/engine.h>
 #include <libdariadb/config.h>
+#include <libdariadb/engine.h>
 #include <libdariadb/flags.h>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/storage/memstorage/memstorage.h>
-#include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/bystep/bystep_storage.h>
 #include <libdariadb/storage/dropper.h>
+#include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/subscribe.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/async/locker.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/thread_manager.h>
-#include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/strings.h>
-#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/utils.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -100,6 +101,12 @@ public:
 		}
     }
 
+	_bystep_storage = ByStepStorage_ptr{ new ByStepStorage(_engine_env) };
+
+	if (!is_new_storage) {
+		auto id2step = _manifest->read_id2step();
+		setSteps_inner(id2step);
+	}
 	logger_info("engine: start - OK ");
   }
   ~Private() { this->stop(); }
@@ -122,6 +129,8 @@ public:
 	  _dropper = nullptr;
       _stoped = true;
 
+	  _bystep_storage->stop();
+	  _bystep_storage = nullptr;
 	  ThreadManager::stop();
       lockfile_unlock();
     }
@@ -268,19 +277,19 @@ public:
     pr = ar = false;
 	auto pm = _page_manager.get();
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id, pm](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
     };
 	auto am = _top_level_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  ar = am->minMaxTime(id, &subMin3, &subMax3);
 	};
 
 	lock_storage();
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
-    auto am_async = ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(am_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
 
     pm_async->wait();
     am_async->wait();
@@ -308,12 +317,22 @@ public:
       this->unlock_storage();
 
       minmax_append(p_mm,t_mm);
+
+	  auto bs_mm = _bystep_storage->loadMinMax();
+	  minmax_append(p_mm, bs_mm);
       return p_mm;
   }
 
   Status  append(const Meas &value) {
     Status  result{};
-	result=_top_level_storage->append(value);
+	
+	//direct write to bystep storage
+	if (isBystepId(value.id)) {
+		result = _bystep_storage->append(value);
+	}
+	else {
+		result = _top_level_storage->append(value);
+	}
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
@@ -356,6 +375,22 @@ public:
 			}
 		}
 	}
+
+
+	IdSet bs_ids;
+	for (auto id : ids) {
+		if (isBystepId(id)) {
+			bs_ids.insert(id);
+		}
+	}
+
+	if (!bs_ids.empty()) {
+		auto bs_result = _bystep_storage->currentValue(IdArray(bs_ids.begin(), bs_ids.end()), flag);
+		for (auto&kv : bs_result) {
+			a_result[kv.first] = kv.second;
+		}
+	}
+
 	unlock_storage();
     return a_result;
   }
@@ -373,6 +408,8 @@ public:
 		_memstorage->flush();
 	}
 	_page_manager->flush();
+
+	_bystep_storage->flush();
   }
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
@@ -383,6 +420,8 @@ public:
     result.aofs_count = _aof_manager==nullptr?0:_aof_manager->filesCount();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
+	result.bystep = _bystep_storage->description();
+
 	if (_dropper != nullptr) {
         result.dropper = _dropper->description();
 	}
@@ -444,10 +483,12 @@ public:
   }
   }
 
+
+
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
     AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  auto local_q = q;
 	  local_q.ids.resize(1);
 	  for (auto id : q.ids) {
@@ -457,18 +498,24 @@ public:
 		  while (!this->try_lock_storage()) {
 			  ti.yield();
 		  }
-		  if (this->strategy() == STRATEGY::CACHE) {
-			  foreach_internal_cache(local_q, p_clbk, a_clbk);
+		  
+		  if (isBystepId(id)) {
+			  _bystep_storage->foreach(local_q, a_clbk);
 		  }
 		  else {
-			  foreach_internal_two_level(local_q, p_clbk, a_clbk);
+			  if (this->strategy() == STRATEGY::CACHE) {
+				  foreach_internal_cache(local_q, p_clbk, a_clbk);
+			  }
+			  else {
+				  foreach_internal_two_level(local_q, p_clbk, a_clbk);
+			  }
 		  }
 		  this->unlock_storage();
 	  }
       a_clbk->is_end();
     };
 
-    ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+    ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
@@ -523,35 +570,45 @@ public:
     auto mm = _top_level_storage.get();
 	auto am = _aof_manager.get();
     AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_COMMON_KINDS::COMMON, ti.kind);
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 
       for (auto id : q.ids) {
 		  while (!try_lock_storage()) {
 			  ti.yield();
 		  }
-        dariadb::Time minT, maxT;
-        QueryTimePoint local_q = q;
-        local_q.ids.clear();
-        local_q.ids.push_back(id);
+		  QueryTimePoint local_q = q;
+		  local_q.ids.clear();
+		  local_q.ids.push_back(id);
+		  if (isBystepId(id)) {
+			  auto bsts = _bystep_storage->readTimePoint(local_q);
+			  for (auto&kv : bsts) {
+				  result[kv.first] = kv.second;
+			  }
+		  }
+		  else {
+			  dariadb::Time minT, maxT;
+			 
 
-        if (mm->minMaxTime(id, &minT, &maxT) &&
-            (minT < q.time_point || maxT < q.time_point)) {
-          auto subres = mm->readTimePoint(local_q);
-          result[id] = subres[id];
-        } else {
-			bool in_aof_level = false;
-			if (this->strategy() == STRATEGY::CACHE) {
-				auto subres = am->readTimePoint(local_q);
-				auto value= subres[id];
-				result[id] = value;
-				in_aof_level = value.flag != Flags::_NO_DATA;
-			}
-			if (!in_aof_level) {
-				auto subres = _page_manager->valuesBeforeTimePoint(local_q);
-				result[id] = subres[id];
-			}
-        }
+			  if (mm->minMaxTime(id, &minT, &maxT) &&
+				  (minT < q.time_point || maxT < q.time_point)) {
+				  auto subres = mm->readTimePoint(local_q);
+				  result[id] = subres[id];
+			  }
+			  else {
+				  bool in_aof_level = false;
+				  if (this->strategy() == STRATEGY::CACHE) {
+					  auto subres = am->readTimePoint(local_q);
+					  auto value = subres[id];
+					  result[id] = value;
+					  in_aof_level = value.flag != Flags::_NO_DATA;
+				  }
+				  if (!in_aof_level) {
+					  auto subres = _page_manager->valuesBeforeTimePoint(local_q);
+					  result[id] = subres[id];
+				  }
 
+			  }
+		  }
 		unlock_storage();
       }
 
@@ -559,7 +616,7 @@ public:
     };
 
     auto pm_async =
-        ThreadManager::instance()->post(THREAD_COMMON_KINDS::COMMON, AT(pm_at));
+        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
     pm_async->wait();
     return result;
   }
@@ -587,6 +644,10 @@ public:
     logger_info("engine: eraseOld to ", timeutil::to_string(t));
 	this->lock_storage();
     _page_manager->eraseOld(t);
+
+	for (auto &kv : _id2steps) {
+		_bystep_storage->eraseOld(kv.first, 0, t);
+	}
 	this->unlock_storage();
   }
 
@@ -614,6 +675,23 @@ public:
 	this->unlock_storage();
   }
 
+  void setSteps_inner(const Id2Step&m) {
+	  for (auto&kv : m) {
+		  _id2steps[kv.first] = kv.second;
+	  }
+	  _bystep_storage->setSteps(_id2steps);
+  }
+
+  void setSteps(const Id2Step&m) {
+	  setSteps_inner(m);
+	  if (!_id2steps.empty()) {
+		  _manifest->insert_id2step(_id2steps);
+	  }
+  }
+
+  bool isBystepId(const Id id) {
+	  return _id2steps.find(id) != _id2steps.end();
+  }
 protected:
   std::mutex _flush_locker, _lock_locker;
   SubscribeNotificator _subscribe_notify;
@@ -630,9 +708,13 @@ protected:
   bool _stoped;
 
   IMeasStorage_ptr _top_level_storage; //aof or memory storage.
-  
+  ByStepStorage_ptr _bystep_storage;
+
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
+
+  ///bystep to raw.
+  Id2Step _id2steps;
 };
 
 Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}
@@ -729,4 +811,8 @@ STRATEGY Engine::strategy()const{
 
 Id2MinMax Engine::loadMinMax(){
     return _impl->loadMinMax();
+}
+
+void Engine::setSteps(const Id2Step&m) {
+	_impl->setSteps(m);
 }

@@ -2,7 +2,7 @@
 
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
 #include <memory>
 

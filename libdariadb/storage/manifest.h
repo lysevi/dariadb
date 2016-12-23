@@ -1,10 +1,13 @@
 #pragma once
 
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
+#include <libdariadb/storage/bystep/step_kind.h>
+#include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <list>
 #include <memory>
 #include <string>
+#include <tuple>
 
 namespace dariadb {
 namespace storage {
@@ -27,7 +30,9 @@ public:
 
   EXPORT void set_version(const std::string &version);
   EXPORT std::string get_version();
-
+  
+  EXPORT void insert_id2step(const Id2Step&i2s);
+  EXPORT Id2Step read_id2step();
 protected:
 	class Private;
 	std::unique_ptr<Private> _impl;

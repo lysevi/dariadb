@@ -8,7 +8,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
-#include <libdariadb/utils/locker.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/fs.h>
 #include <libclient/client.h>
 #include <libserver/server.h>
