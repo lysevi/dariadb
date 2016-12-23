@@ -37,6 +37,8 @@ public:
   EXPORT Id2MinMax loadMinMax() override;
 
   EXPORT static uint64_t intervalForTime(const STEP_KIND step,const size_t valsInInterval, const Time t);
+
+  EXPORT void eraseOld(Id id, Time from, Time to);
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

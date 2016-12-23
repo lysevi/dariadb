@@ -644,6 +644,10 @@ public:
     logger_info("engine: eraseOld to ", timeutil::to_string(t));
 	this->lock_storage();
     _page_manager->eraseOld(t);
+
+	for (auto &kv : _id2steps) {
+		_bystep_storage->eraseOld(kv.first, 0, t);
+	}
 	this->unlock_storage();
   }
 

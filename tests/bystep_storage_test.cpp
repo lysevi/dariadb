@@ -167,6 +167,11 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
 		BOOST_CHECK(true_val);
 		BOOST_CHECK_LT(minTime, maxTime);
 	}
+	{//erase
+		io_adapter->eraseOld(0, 2, 0);
+		auto all_chunks = io_adapter->readInterval(0, 2, 0);
+		BOOST_CHECK_LT(all_chunks.size(), 3);
+	}
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -207,6 +212,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     dariadb::utils::fs::rm(storage_path);
   }
   auto value = dariadb::Meas::empty(0);
+  size_t writes_count = 10000;
   {
     dariadb::utils::fs::mkdir(storage_path);
     auto settings =
@@ -226,7 +232,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     steps[2] = dariadb::storage::STEP_KIND::HOUR;
     ms.setSteps(steps);
 
-    size_t writes_count = 10000;
+    
     for (size_t i = 0; i < writes_count; i++) {
       value.id = 0;
       value.value = i;
@@ -359,6 +365,13 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 		auto readed = ms.readInterval(qi);
 		BOOST_CHECK_EQUAL(readed.front().value, 888);
 	}
+
+	{//erase
+		ms.eraseOld(0, 0, 3601000*10);
+		dariadb::storage::QueryInterval qi({ 0 }, 0, 0, value.time);
+		auto readed = ms.readInterval(qi);
+		BOOST_CHECK_LT(readed.size(), size_t(writes_count / 2) + 1);
+	}
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -430,7 +443,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
         BOOST_CHECK_EQUAL(readed_values.size(), size_t(1));
         BOOST_CHECK_EQUAL(readed_values[0].value, 2);
       }
-    }
+    }	
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {

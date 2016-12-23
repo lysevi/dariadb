@@ -476,6 +476,31 @@ public:
     return result;
   }
 
+  void eraseOld(uint64_t period_from, uint64_t period_to, Id id) {
+	  lock();
+	  logger("engine: io_adapter - erase id:", id);
+	  const std::string sql_query = " DELETE FROM Chunks WHERE meas_id=? AND number>=? AND number<?;";
+	  sqlite3_stmt *pStmt;
+	  int rc;
+	  do {
+		  rc = sqlite3_prepare(_db, sql_query.c_str(), -1, &pStmt, 0);
+		  if (rc != SQLITE_OK) {
+			  auto err_msg = std::string(sqlite3_errmsg(_db));
+			  this->stop();
+			  THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
+		  }
+
+		  sqlite3_bind_int64(pStmt, 1, id);
+		  sqlite3_bind_int64(pStmt, 2, period_from);
+		  sqlite3_bind_int64(pStmt, 3, period_to);
+
+		  rc = sqlite3_step(pStmt);
+		  assert(rc != SQLITE_ROW);
+		  rc = sqlite3_finalize(pStmt);
+	  } while (rc == SQLITE_SCHEMA);
+	  unlock();
+  }
+
   sqlite3 *_db;
   bool                  _stop_flag;
   std::list<ChunkMinMax> _chunks_list;
@@ -534,4 +559,8 @@ void IOAdapter::flush() {
 
 bystep::Description IOAdapter::description() {
 	return _impl->description();
+}
+
+void IOAdapter::eraseOld(uint64_t period_from, uint64_t period_to, Id id) {
+	_impl->eraseOld(period_from, period_to, id);
 }

@@ -384,6 +384,29 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  result = _io->description();
 	  return result;
   }
+
+  void eraseOld(Id id, Time from, Time to) {
+	  auto step_kind_it = _steps.find(id);
+	  if (step_kind_it == _steps.end()) {
+		  logger_fatal("engine: bystep - unknow id:", id);
+		  return;
+	  }
+
+	  auto round_from = bystep::roundTime(step_kind_it->second, from);
+	  auto stepTime = std::get<1>(round_from);
+	  auto round_to = bystep::roundTime(step_kind_it->second, to);
+
+	  auto vals_per_interval = bystep::step_to_size(step_kind_it->second);
+
+	  auto period_from = bystep::intervalForTime(step_kind_it->second, vals_per_interval,
+		  std::get<0>(round_from));
+	  auto period_to = bystep::intervalForTime(step_kind_it->second, vals_per_interval,
+		  std::get<0>(round_to));
+	  
+	  logger_fatal("engine: bystep - erase id:", id, " from: ", dariadb::timeutil::to_string(std::get<0>(round_from)), " to: ", std::get<0>(round_to));
+	  _io->eraseOld(period_from, period_to, id);
+  }
+
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
   std::unique_ptr<IOAdapter> _io;
@@ -452,4 +475,8 @@ uint64_t ByStepStorage::intervalForTime(const STEP_KIND step, const size_t valsI
 
 bystep::Description ByStepStorage::description() {
 	return _impl->description();
+}
+
+void ByStepStorage::eraseOld(Id id, Time from, Time to) {
+	_impl->eraseOld(id, from, to);
 }

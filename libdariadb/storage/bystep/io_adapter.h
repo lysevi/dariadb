@@ -26,6 +26,7 @@ public:
   EXPORT Time maxTime();
   EXPORT bool minMaxTime(Id id, Time *minResult, Time *maxResult);
   EXPORT void flush();
+  EXPORT void eraseOld(uint64_t period_from, uint64_t period_to, Id id);
 private:
   class Private;
   std::unique_ptr<Private> _impl;
