@@ -78,7 +78,7 @@ public:
 
 	for (auto n : pages) {
 		auto file_name = utils::fs::append_path(_settings->path, n);
-		auto hdr = Page::readHeader(file_name);
+		PageHeader hdr = Page::readHeader(file_name);
 		if (hdr.removed_chunks == hdr.addeded_chunks) {
 			logger_info("engine: page ", file_name, " is empty.");
 			erase_page(file_name);

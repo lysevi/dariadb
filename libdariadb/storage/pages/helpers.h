@@ -4,6 +4,7 @@
 #include <libdariadb/storage/pages/page.h>
 #include <map>
 #include <tuple>
+#include <fstream>
 
 namespace dariadb {
 namespace storage {
@@ -28,9 +29,8 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
 /// @add_header_size_to_result - add to result size of PageHeader. needed if you
 /// dont append many time values.
 /// @result - page file size in bytes
-uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
-                     std::list<HdrAndBuffer> &compressed_results, uint64_t file_size = 0,
-                     bool add_header_size_to_result = true);
+uint64_t writeToFile(FILE* file, PageHeader &phdr,
+                     std::list<HdrAndBuffer> &compressed_results, uint64_t file_size = 0);
 }
 }
 }

@@ -121,20 +121,12 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
   return results;
 }
 
-uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
-                     std::list<HdrAndBuffer> &compressed_results, uint64_t file_size,
-                     bool add_header_size_to_result) {
+uint64_t writeToFile(FILE* file, PageHeader &phdr,
+                     std::list<HdrAndBuffer> &compressed_results, uint64_t file_size) {
 
   using namespace dariadb::utils::async;
   uint64_t page_size = 0;
-  auto file = std::fopen(file_name.c_str(), "ab");
-  if (file == nullptr) {
-    throw MAKE_EXCEPTION("aofile: append error.");
-  }
 
-  if (file_size == uint64_t(0)) {
-    std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
-  }
   uint64_t offset = file_size;
 
   for (auto hb : compressed_results) {
@@ -158,11 +150,6 @@ uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
   }
   page_size = offset;
-  if (add_header_size_to_result) {
-    page_size += sizeof(PageHeader);
-    phdr.filesize = page_size;
-  }
-  std::fclose(file);
   return page_size;
 }
 }

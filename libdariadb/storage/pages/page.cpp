@@ -51,10 +51,16 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
   std::list<PageInner::HdrAndBuffer> compressed_results =
       PageInner::compressValues(to_compress, phdr, max_chunk_size);
-
-  auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
+  auto file = std::fopen(file_name.c_str(), "ab");
+  if (file == nullptr) {
+	  THROW_EXCEPTION("file is null");
+  }
+  auto page_size = PageInner::writeToFile(file, phdr, compressed_results);
   phdr.filesize = page_size;
-
+  phdr.is_closed = true;
+  phdr.is_open_to_write = false;
+  std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
+  std::fclose(file);
   return make_page(file_name, phdr);;
 }
 
@@ -70,13 +76,10 @@ Page* Page::make_page(const std::string&file_name, const PageHeader&phdr) {
 		index_file_size(phdr.addeded_chunks));
 	res->region = region;
 
-	res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-	res->header = reinterpret_cast<PageHeader *>(region);
-	*(res->header) = phdr;
-
+	res->chunks = reinterpret_cast<uint8_t *>(region);
+	res->header = reinterpret_cast<PageHeader *>(region + phdr.filesize);
+	assert(memcmp(res->header, &phdr, sizeof(PageHeader))==0);
 	res->readonly = false;
-	res->header->is_closed = true;
-	res->header->is_open_to_write = false;
 	res->page_mmap->flush(0, sizeof(PageHeader));
 	res->update_index_recs();
 	res->flush();
@@ -107,7 +110,10 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   
    PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
 
-
+  auto file = std::fopen(file_name.c_str(), "ab");
+  if (file == nullptr) {
+	  THROW_EXCEPTION("file is null");
+  }
   for (auto &kv : links) {
 	  auto lst = kv.second;
 	  std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
@@ -136,11 +142,14 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
       auto compressed_results =
           PageInner::compressValues(all_values, phdr, max_chunk_size);
 
-      auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results,phdr.filesize, false);
+      auto page_size = PageInner::writeToFile(file, phdr, compressed_results,phdr.filesize);
       phdr.filesize=page_size;
   }
  
-  phdr.filesize+=sizeof(PageHeader);
+  phdr.is_closed = true;
+  phdr.is_open_to_write = false;
+  std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
+  std::fclose(file);
 
   for (auto kv : openned_pages) {
 	  delete kv.second;
@@ -161,25 +170,24 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     throw MAKE_EXCEPTION("aofile: append error.");
   }
 
-  std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
   uint64_t offset = 0;
   size_t page_size = 0;
   for (size_t i = 0; i < count; ++i) {
     ChunkHeader *chunk_header = a[i]->header;
     auto chunk_buffer_ptr = a[i]->_buffer_t;
-    //#ifdef  DEBUG
-    //			{
-    //				auto ch = std::make_shared<ZippedChunk>(chunk_header,
-    //chunk_buffer_ptr);
-    //				auto rdr = ch->get_reader();
-    //				size_t readed = 0;
-    //				while (!rdr->is_end()) {
-    //					rdr->readNext();
-    //					readed++;
-    //				}
-    //				assert(readed == (ch->header->count+1));
-    //			}
-    //#endif //  DEBUG
+    #ifdef  DEBUG
+    			{
+    				auto ch = std::make_shared<ZippedChunk>(chunk_header,
+    chunk_buffer_ptr);
+    				auto rdr = ch->getReader();
+    				size_t readed = 0;
+    				while (!rdr->is_end()) {
+    					rdr->readNext();
+    					readed++;
+    				}
+    				assert(readed == (ch->header->count+1));
+    			}
+    #endif //  DEBUG
     phdr.max_chunk_id++;
     phdr.minTime = std::min(phdr.minTime, chunk_header->minTime);
     phdr.maxTime = std::max(phdr.maxTime, chunk_header->maxTime);
@@ -201,23 +209,26 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
     auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
     ch->close();
-    //#ifdef  DEBUG
-    //			auto rdr=ch->get_reader();
-    //			size_t readed = 0;
-    //			while (!rdr->is_end()) {
-    //				rdr->readNext();
-    //				readed++;
-    //			}
-    //			assert(readed == (ch->header->count + 1));
-    //#endif //  DEBUG
+    #ifdef  DEBUG
+    			auto rdr=ch->getReader();
+    			size_t readed = 0;
+    			while (!rdr->is_end()) {
+    				rdr->readNext();
+    				readed++;
+    			}
+    			assert(readed == (ch->header->count + 1));
+    #endif //  DEBUG
 
     std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), cur_chunk_buf_size, file);
 
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
   }
-  page_size = offset + sizeof(PageHeader);
+  page_size = offset ;
   phdr.filesize = page_size;
+  phdr.is_closed = true;
+  phdr.is_open_to_write = false;
+  std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
   std::fclose(file);
 
   return Page::make_page(file_name, phdr);
@@ -225,6 +236,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
 Page *Page::open(std::string file_name, bool read_only) {
   TIMECODE_METRICS(ctmd, "open", "Page::open");
+  auto phdr = Page::readHeader(file_name);
   auto res = new Page;
   res->readonly = read_only;
   auto mmap = utils::fs::MappedFile::open(file_name, read_only);
@@ -236,12 +248,12 @@ Page *Page::open(std::string file_name, bool read_only) {
       PageIndex::open(PageIndex::index_name_from_page_name(file_name), read_only);
 
   res->region = region;
-  res->header = reinterpret_cast<PageHeader *>(region);
+  res->header = reinterpret_cast<PageHeader *>(region+phdr.filesize);
   if (!res->readonly) {
     res->header->is_open_to_write = true;
     res->header->is_closed = false;
   }
-  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+  res->chunks = reinterpret_cast<uint8_t *>(region);
   res->page_mmap->flush(0, sizeof(PageHeader));
   res->check_page_struct();
   return res;
@@ -249,6 +261,7 @@ Page *Page::open(std::string file_name, bool read_only) {
 
 void Page::restoreIndexFile(const std::string &file_name) {
   logger_info("engine: page - restore index file ", file_name);
+  auto phdr = Page::readHeader(file_name);
   auto res = new Page;
   res->readonly = false;
   auto mmap = utils::fs::MappedFile::open(file_name, false);
@@ -258,10 +271,11 @@ void Page::restoreIndexFile(const std::string &file_name) {
   res->page_mmap = mmap;
   res->region = region;
 
-  res->header = reinterpret_cast<PageHeader *>(region);
+  res->header = reinterpret_cast<PageHeader *>(region+phdr.filesize);
+  assert(memcmp(res->header, &phdr, sizeof(PageHeader)) == 0);
   res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
                                   index_file_size(res->header->addeded_chunks));
-  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
+  res->chunks = reinterpret_cast<uint8_t *>(region);
   res->readonly = false;
   res->header->is_closed = true;
   res->header->is_open_to_write = false;
@@ -293,6 +307,7 @@ PageHeader Page::readHeader(std::string file_name) {
   if (!istream.is_open()) {
     THROW_EXCEPTION("can't open file. filename=", file_name);
   }
+  istream.seekg(-(int)sizeof(PageHeader), istream.end);
   PageHeader result;
   memset(&result, 0, sizeof(PageHeader));
   istream.read((char *)&result, sizeof(PageHeader));
