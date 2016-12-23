@@ -327,12 +327,11 @@ public:
     Status  result{};
 	
 	//direct write to bystep storage
-	auto is_bs = _bystep2raw.find(value.id);
-	if (is_bs == _bystep2raw.end()) {
-		result = _top_level_storage->append(value);
+	if (isBystepId(value.id)) {
+		result = _bystep_storage->append(value);
 	}
 	else {
-		result = _bystep_storage->append(value);
+		result = _top_level_storage->append(value);
 	}
 
     if (result.writed == 1) {
@@ -687,7 +686,7 @@ public:
   }
 
   bool isBystepId(const Id id) {
-	  return _bystep2raw.find(id) != _bystep2raw.end();
+	  return _id2steps.find(id) != _id2steps.end();
   }
 protected:
   std::mutex _flush_locker, _lock_locker;
@@ -711,7 +710,6 @@ protected:
   std::shared_mutex _min_max_locker;
 
   ///bystep to raw.
-  Id2Id _bystep2raw;
   Id2Step _id2steps;
 };
 

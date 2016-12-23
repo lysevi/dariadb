@@ -42,6 +42,21 @@ public:
   bool is_end_called;
 };
 
+class BenchWriteStepCallback : public IReaderClb {
+public:
+	BenchWriteStepCallback(dariadb::Id target_id, Engine* raw_ptr) {
+		_target_id = target_id;
+		_raw_ptr = raw_ptr;
+	}
+	void call(const dariadb::Meas &v) override { 
+		dariadb::Meas value = v;
+		value.id = _target_id;
+		_raw_ptr->append(value);
+	}
+	dariadb::Id _target_id;
+	Engine*     _raw_ptr;
+};
+
 void parse_cmdline(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
@@ -458,6 +473,7 @@ int main(int argc, char *argv[]) {
 				id2s[100000] = dariadb::storage::STEP_KIND::SECOND;
 				id2s[100001] = dariadb::storage::STEP_KIND::MINUTE;
 				id2s[100002] = dariadb::storage::STEP_KIND::HOUR;
+				id2s[100003] = dariadb::storage::STEP_KIND::SECOND;
 				raw_ptr->setSteps(id2s);
 				dariadb::Time minTime, maxTime;
 				if (!raw_ptr->minMaxTime(0, &minTime, &maxTime)) {
@@ -474,7 +490,6 @@ int main(int argc, char *argv[]) {
 						v.id = 100000;
 						raw_ptr->append(v);
 					}
-					raw_ptr->flush();
 					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 					std::cout << "write time: " << elapsed << std::endl;
 				}
@@ -485,7 +500,6 @@ int main(int argc, char *argv[]) {
 						v.id = 100001;
 						raw_ptr->append(v);
 					}
-					raw_ptr->flush();
 					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 					std::cout << "write time: " << elapsed << std::endl;
 				}
@@ -497,9 +511,18 @@ int main(int argc, char *argv[]) {
 						v.id = 100002;
 						raw_ptr->append(v);
 					}
-					raw_ptr->flush();
 					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 					std::cout << "write time: " << elapsed << std::endl;
+				}
+				{
+					BenchWriteStepCallback*clbk = new BenchWriteStepCallback(100003, raw_ptr);
+					std::cout << "==> clbk bystep value" << std::endl;
+					auto start = clock();
+					raw_ptr->foreach(qi, clbk);
+					clbk->wait();
+					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "write time: " << elapsed << std::endl;
+					delete clbk;
 				}
 			}
 		}
