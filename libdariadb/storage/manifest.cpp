@@ -12,8 +12,9 @@ using namespace dariadb::storage;
 const std::string PAGE_JS_KEY = "pages";
 const std::string AOF_JS_KEY = "aofs";
 
-const char *MANIFEST_CREATE_SQL = 
-"CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
+const char *MANIFEST_CREATE_SQL = "CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY "
+                         "AUTOINCREMENT, file varchar(255)); "
+                         \
 "CREATE TABLE IF NOT EXISTS aofs(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
 "CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); "
 "CREATE TABLE IF NOT EXISTS id2step(bystep_id INTEGER UNIQUE PRIMARY KEY, step varchar(50)); ";

@@ -78,7 +78,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
     auto cur_Id = kv.first;
     utils::async::AsyncTask at = [cur_Id, &results, &phdr, max_chunk_size, &result_locker,
                                   &to_compress](const utils::async::ThreadInfo &ti) {
-		using namespace dariadb::utils::async;
+  	  using namespace dariadb::utils::async;
       TKIND_CHECK(dariadb::utils::async::THREAD_KINDS::COMMON, ti.kind);
       auto fit = to_compress.find(cur_Id);
       auto begin = fit->second.cbegin();
