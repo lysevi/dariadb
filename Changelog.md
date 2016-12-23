@@ -20,6 +20,7 @@ Storage:
    - New storage control tool.
    - SQLite3 based manifest.
    - Foreach - is async.
+   - Bystep storage.
 
 v0.1.1
 =====
