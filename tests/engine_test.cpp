@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
 
 	using namespace dariadb::storage;
 
-	const dariadb::Id spec_id = 1010101;
+	const dariadb::Id spec_id = 777;
 	{
 		std::cout << "Engine_ByStep_common_test\n";
 		if (dariadb::utils::fs::path_exists(storage_path)) {

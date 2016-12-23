@@ -22,6 +22,7 @@ bool metrics_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
+bool disable_bystep_benchmark = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
@@ -53,6 +54,7 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("read-benchmark-runs", po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "Write strategy");
   aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit  in megabytes when strategy=MEMORY");
+  aos("disable-bystep-benchmark", po::value<bool>(&disable_bystep_benchmark)->default_value(disable_bystep_benchmark));
 
   po::variables_map vm;
   try {
@@ -443,6 +445,61 @@ int main(int argc, char *argv[]) {
 
 				if (strategy != STRATEGY::MEMORY  && strategy != STRATEGY::CACHE && pages_before <= pages_after) {
 					THROW_EXCEPTION("pages_before <= pages_after");
+				}
+			}
+		}
+
+		{
+			if (!disable_bystep_benchmark) {
+				std::cout << "==> flush before bystep..." << std::endl;
+				raw_ptr->flush();
+				std::cout << "==> load raw id to bystep..." << std::endl;
+				dariadb::storage::Id2Step id2s;
+				id2s[100000] = dariadb::storage::STEP_KIND::SECOND;
+				id2s[100001] = dariadb::storage::STEP_KIND::MINUTE;
+				id2s[100002] = dariadb::storage::STEP_KIND::HOUR;
+				raw_ptr->setSteps(id2s);
+				dariadb::Time minTime, maxTime;
+				if (!raw_ptr->minMaxTime(0, &minTime, &maxTime)) {
+					THROW_EXCEPTION("id 0 not found.");
+				}
+				dariadb::storage::QueryInterval qi(IdArray(), 0, minTime, maxTime);
+				qi.ids.resize(1);
+				qi.ids[0] = 0;
+				auto all_values = raw_ptr->readInterval(qi);
+				{
+					std::cout << "==> write SECOND value" << std::endl;
+					auto start = clock();
+					for (auto &v:all_values) {
+						v.id = 100000;
+						raw_ptr->append(v);
+					}
+					raw_ptr->flush();
+					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "write time: " << elapsed << std::endl;
+				}
+				{
+					std::cout << "==> write MINUTE value" << std::endl;
+					auto start = clock();
+					for (auto &v : all_values) {
+						v.id = 100001;
+						raw_ptr->append(v);
+					}
+					raw_ptr->flush();
+					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "write time: " << elapsed << std::endl;
+				}
+
+				{
+					std::cout << "==> write HOUR value" << std::endl;
+					auto start = clock();
+					for (auto &v : all_values) {
+						v.id = 100002;
+						raw_ptr->append(v);
+					}
+					raw_ptr->flush();
+					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "write time: " << elapsed << std::endl;
 				}
 			}
 		}
