@@ -4,16 +4,11 @@
 #include <fstream>
 #include <iterator>
 
-#include <boost/interprocess/file_mapping.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-
 #include <boost/uuid/uuid.hpp>            // uuid class
 #include <boost/uuid/uuid_generators.hpp> // generators
 #include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 
 using namespace dariadb::utils::fs;
-
-namespace bi = boost::interprocess;
 
 namespace dariadb {
 namespace utils {
