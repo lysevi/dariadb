@@ -27,27 +27,6 @@ EXPORT bool file_exists(const std::string &fname);
 EXPORT void mkdir(const std::string &path);
 
 EXPORT std::string read_file(const std::string &fname);
-/// ext - ".ext"
-
-class MappedFile : public utils::NonCopy {
-  class Private;
-  MappedFile(Private *im);
-
-public:
-  using MapperFile_ptr = std::shared_ptr<MappedFile>;
-
-  EXPORT ~MappedFile();
-  EXPORT void close();
-  EXPORT uint8_t *data();
-
-  EXPORT void flush(std::size_t offset = 0, std::size_t bytes = 0);
-
-  EXPORT static MapperFile_ptr open(const std::string &path, bool read_only = false);
-  EXPORT static MapperFile_ptr touch(const std::string &path, uint64_t size);
-
-private:
-  std::unique_ptr<Private> _impl;
-};
 }
 }
 }
