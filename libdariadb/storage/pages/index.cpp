@@ -1,3 +1,6 @@
+#ifdef MSVC
+#define _CRT_SECURE_NO_WARNINGS //for fopen
+#endif
 #include <libdariadb/storage/pages/index.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <algorithm>
@@ -27,51 +30,30 @@ inline bool check_blooms(const IndexReccord &_index_it, dariadb::Id id,
 }
 
 PageIndex::~PageIndex() {
-  iheader->is_closed = true;
-  index = nullptr;
-  index_mmap->close();
+ 
 }
 
-PageIndex_ptr PageIndex::create(const std::string &filename, uint64_t size) {
+PageIndex_ptr PageIndex::open(const std::string &_filename) {
   PageIndex_ptr res = std::make_shared<PageIndex>();
-  auto immap = utils::fs::MappedFile::touch(filename, size);
-  auto iregion = immap->data();
-  std::fill(iregion, iregion + size, 0);
-  res->index_mmap = immap;
-  res->iregion = iregion;
-
-  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
-  res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
-
-  res->iheader->maxTime = dariadb::MIN_TIME;
-  res->iheader->minTime = dariadb::MAX_TIME;
-  res->iheader->is_sorted = false;
-  res->iheader->id_bloom = storage::bloom_empty<dariadb::Id>();
-  res->iheader->is_closed = false;
-  res->index_mmap->flush();
-  return res;
-}
-
-PageIndex_ptr PageIndex::open(const std::string &filename, bool read_only) {
-  PageIndex_ptr res = std::make_shared<PageIndex>();
-  res->readonly = read_only;
-  auto immap = utils::fs::MappedFile::open(filename);
-  auto iregion = immap->data();
-  res->index_mmap = immap;
-  res->iregion = iregion;
-  res->iheader = reinterpret_cast<IndexHeader *>(iregion);
-  res->index = reinterpret_cast<IndexReccord *>(iregion + sizeof(IndexHeader));
-  res->iheader->is_closed = false;
-  res->index_mmap->flush();
+  res->filename = _filename;
+  res->iheader = readIndexHeader(_filename);
   return res;
 }
 
 ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                                           dariadb::Time to, dariadb::Flag flag) {
   ChunkLinkList result;
-  for (uint32_t pos = 0; pos < this->iheader->count; ++pos) {
+  IndexReccord * records = new IndexReccord[this->iheader.count];
+  auto index_file=std::fopen(filename.c_str(), "rb");
+  if (index_file == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", this->filename);
+  }
 
-    auto _index_it = this->index[pos];
+  std::fread(records, sizeof(IndexReccord), iheader.count, index_file);
+  std::fclose(index_file);
+  for (uint32_t pos = 0; pos < this->iheader.count; ++pos) {
+
+    auto _index_it = records[pos];
     if (!_index_it.is_init) {
       continue;
     }
@@ -99,8 +81,22 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
       }
     }
   }
+  delete[] records;
 
   return result;
+}
+
+std::vector<IndexReccord> PageIndex::readReccords() {
+	std::vector<IndexReccord> records;
+	records.resize(iheader.count);
+
+	auto index_file = std::fopen(filename.c_str(), "rb");
+	if (index_file == nullptr) {
+		THROW_EXCEPTION("can`t open file ", this->filename);
+	}
+	std::fread(records.data(), sizeof(IndexReccord), iheader.count, index_file);
+	std::fclose(index_file);
+	return records;
 }
 
 IndexHeader PageIndex::readIndexHeader(std::string ifile) {
@@ -109,6 +105,7 @@ IndexHeader PageIndex::readIndexHeader(std::string ifile) {
   if (!istream.is_open()) {
     THROW_EXCEPTION("can't open file. filename=" , ifile);
   }
+  istream.seekg(-(int)sizeof(IndexHeader), istream.end);
   IndexHeader result;
   memset(&result, 0, sizeof(IndexHeader));
   istream.read((char *)&result, sizeof(IndexHeader));

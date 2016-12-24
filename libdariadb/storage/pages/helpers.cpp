@@ -135,14 +135,14 @@ uint64_t writeToFile(FILE* file, PageHeader &phdr,
 
     chunk_header.pos_in_page = phdr.addeded_chunks;
     phdr.addeded_chunks++;
+	phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
+	phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
     auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
     auto skip_count = chunk_header.size - cur_chunk_buf_size;
 
     chunk_header.size = cur_chunk_buf_size;
     chunk_header.offset_in_page = offset;
 
-    ZippedChunk ch(&chunk_header, chunk_buffer_ptr.get());
-    ch.close();
     std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), cur_chunk_buf_size,
                 file);

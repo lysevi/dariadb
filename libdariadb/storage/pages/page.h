@@ -40,7 +40,7 @@ public:
   EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
 	  const std::vector<Chunk*>& a, size_t count);
 
-  EXPORT static Page *open(std::string file_name, bool read_only = false);
+  EXPORT static Page *open(std::string file_name);
   
   EXPORT static PageHeader readHeader(std::string file_name);
   EXPORT static IndexHeader readIndexHeader(std::string page_file_name);
@@ -49,8 +49,6 @@ public:
   EXPORT static void restoreIndexFile(const std::string&file_name);
   
   EXPORT ~Page();
-  EXPORT void fsck();
-  EXPORT bool is_full() const;
 
   // ChunkContainer
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
@@ -60,37 +58,21 @@ public:
   EXPORT void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clbk) override;
 
- EXPORT  void flush();
-
-  EXPORT void mark_as_non_init(Chunk_Ptr &ch);
-
   EXPORT void appendChunks(const std::vector<Chunk*>&a, size_t count)override;
 
   EXPORT Id2MinMax loadMinMax();
 private:
-  void update_index_recs();
-  void init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index);
-  struct ChunkWithIndex {
-    Chunk_Ptr ch;        /// ptr to chunk in page
-    IndexReccord *index; /// ptr to index reccord
-    uint32_t pos;        /// position number of 'index' field in index file.
-  };
-  /// cache of openned chunks. before search chunk in page, we search in cache.
-  ChunkWithIndex _openned_chunk;
+  void update_index_recs(const PageHeader &phdr);
+  IndexReccord  init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* iheader);
 
   void check_page_struct();
   static Page* make_page(const std::string&file_name, const PageHeader&phdr);
+  static Chunk_Ptr readChunkByOffset(FILE* page_io, int offset);
 public:
-  uint8_t *region; // page  file map region
-  PageHeader *header;
-  uint8_t *chunks;
-
+  PageHeader header;
   std::string filename;
-  bool readonly;
-
 protected:
   PageIndex_ptr _index;
-  mutable utils::fs::MappedFile::MapperFile_ptr page_mmap;
 };
 
 typedef std::shared_ptr<Page> Page_Ptr;

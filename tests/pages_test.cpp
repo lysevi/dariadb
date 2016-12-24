@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   {
     first.id = 1;
     first.time = t;
-    auto count = chunks_size / 10;
+    auto count = chunks_size *2;
     dariadb::MeasArray ma;
     ma.resize(count);
     for (size_t i = 0; i < count; i++, t++) {

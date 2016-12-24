@@ -33,21 +33,15 @@ typedef std::shared_ptr<PageIndex> PageIndex_ptr;
 class PageIndex {
 public:
   bool readonly;
-  IndexHeader *iheader;
-  uint8_t *iregion; // index file mapp region
-  IndexReccord *index;
-
   std::string filename;
-
-  mutable utils::fs::MappedFile::MapperFile_ptr index_mmap;
+  IndexHeader iheader;
 
   ~PageIndex();
-  static PageIndex_ptr create(const std::string &filename, uint64_t size);
-  static PageIndex_ptr open(const std::string &filename, bool read_only);
+  static PageIndex_ptr open(const std::string &filename);
 
   ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
                                  dariadb::Time to, dariadb::Flag flag);
-
+  std::vector<IndexReccord> readReccords();
   static IndexHeader readIndexHeader(std::string ifile);
 
   static std::string index_name_from_page_name(const std::string &page_name) {

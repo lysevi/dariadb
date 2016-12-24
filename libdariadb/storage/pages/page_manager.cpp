@@ -89,11 +89,6 @@ public:
 			if (!utils::fs::path_exists(index_file_path)) {
 				Page::restoreIndexFile(file_name);
 			}
-			if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
-				auto res = Page_Ptr{ Page::open(file_name) };
-				res->fsck();
-				res = nullptr;
-			}
 		}
 
 	}
@@ -156,7 +151,7 @@ public:
     if (_cur_page != nullptr && pname == _cur_page->filename) {
       pg = _cur_page;
     } else {
-        pg = Page_Ptr{Page::open(pname, true)};
+        pg = Page_Ptr{Page::open(pname)};
     }
     return pg;
   }
@@ -190,7 +185,7 @@ public:
 
 
 		for (auto pname : page_list) {
-			auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname), true);
+			auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname));
 			auto sub_result = pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
 			for (auto s : sub_result) {
 				s.page_name = pname;
@@ -306,7 +301,7 @@ public:
     if (_cur_page == nullptr) {
       return 0;
     }
-    return _cur_page->header->addeded_chunks;
+    return _cur_page->header.addeded_chunks;
   }
   // PM
   size_t files_count() const { return _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list().size(); }
@@ -353,7 +348,7 @@ public:
         dariadb::utils::fs::append_path(_settings->path, page_name);
     res = Page::create(file_name, last_id, _settings->chunk_size.value, ma);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-	last_id=res->header->max_chunk_id;
+	last_id=res->header.max_chunk_id;
     delete res;
 
 	insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
@@ -440,7 +435,7 @@ public:
 		  dariadb::utils::fs::append_path(_settings->path, page_name);
 	  res = Page::create(file_name, last_id, _settings->chunk_size.value, part);
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-	  last_id = res->header->max_chunk_id;
+	  last_id = res->header.max_chunk_id;
 	  delete res;
 	  for (auto erasedPage : part) {
 		  this->erase_page(erasedPage);
@@ -457,7 +452,7 @@ public:
 		  dariadb::utils::fs::append_path(_settings->path, page_name);
 	  res = Page::create(file_name, last_id, a,count);
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-	  last_id = res->header->max_chunk_id;
+	  last_id = res->header.max_chunk_id;
 	  delete res;
 
 	  insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
