@@ -63,7 +63,7 @@ public:
   EXPORT Id2MinMax loadMinMax();
 private:
   void update_index_recs(const PageHeader &phdr);
-  IndexReccord  init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* iheader);
+
 
   void check_page_struct();
   static Page* make_page(const std::string&file_name, const PageHeader&phdr);

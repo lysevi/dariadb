@@ -5,6 +5,7 @@
 #include <libdariadb/storage/pages/helpers.h>
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -121,14 +122,16 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
   return results;
 }
 
-uint64_t writeToFile(FILE* file, PageHeader &phdr,
+uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader&ihdr,
                      std::list<HdrAndBuffer> &compressed_results, uint64_t file_size) {
 
   using namespace dariadb::utils::async;
   uint64_t page_size = 0;
 
   uint64_t offset = file_size;
-
+  std::vector<IndexReccord> ireccords;
+  ireccords.resize(compressed_results.size());
+  size_t pos = 0;
   for (auto hb : compressed_results) {
     ChunkHeader chunk_header = hb.hdr;
     std::shared_ptr<uint8_t> chunk_buffer_ptr = hb.buffer;
@@ -148,9 +151,39 @@ uint64_t writeToFile(FILE* file, PageHeader &phdr,
                 file);
 
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+
+	if (chunk_header.is_init) {
+		auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
+		ireccords[pos] = index_reccord;
+		pos++;
+	}
   }
+  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
   page_size = offset;
   return page_size;
+}
+
+IndexReccord init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* iheader) {
+	IndexReccord cur_index;
+	memset(&cur_index, 0, sizeof(IndexReccord));
+
+	cur_index.chunk_id = cheader.id;
+	cur_index.is_init = true;
+	cur_index.offset = cheader.offset_in_page; // header->write_offset;
+
+	iheader->minTime = std::min(iheader->minTime, cheader.minTime);
+	iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
+
+	iheader->id_bloom =
+		storage::bloom_add(iheader->id_bloom, cheader.first.id);
+	iheader->flag_bloom =
+		storage::bloom_add(iheader->flag_bloom, cheader.first.flag);
+	iheader->count++;
+	cur_index.minTime = cheader.minTime;
+	cur_index.maxTime = cheader.maxTime;
+	cur_index.meas_id = cheader.first.id;
+	cur_index.flag_bloom = cheader.flag_bloom;
+	return cur_index;
 }
 }
 }

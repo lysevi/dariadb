@@ -43,12 +43,26 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   if (file == nullptr) {
 	  THROW_EXCEPTION("file is null");
   }
-  auto page_size = PageInner::writeToFile(file, phdr, compressed_results);
+
+  IndexHeader ihdr;
+  memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
+  auto index_file = std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  if (index_file == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", file_name);
+  }
+
+  auto page_size = PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
   phdr.filesize = page_size;
   phdr.is_closed = true;
   phdr.is_open_to_write = false;
+  
   std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
   std::fclose(file);
+
+  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fclose(index_file);
   return make_page(file_name, phdr);;
 }
 
@@ -56,7 +70,6 @@ Page* Page::make_page(const std::string&file_name, const PageHeader&phdr) {
 	auto res = new Page;
 	res->header = phdr;
 	res->filename = file_name;
-	res->update_index_recs(phdr);
 	res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 	return res;
 }
@@ -90,6 +103,15 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   if (file == nullptr) {
 	  THROW_EXCEPTION("file is null");
   }
+
+  IndexHeader ihdr;
+  memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
+  auto index_file = std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  if (index_file == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", file_name);
+  }
   for (auto &kv : links) {
 	  auto lst = kv.second;
 	  std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
@@ -118,7 +140,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
       auto compressed_results =
           PageInner::compressValues(all_values, phdr, max_chunk_size);
 
-      auto page_size = PageInner::writeToFile(file, phdr, compressed_results,phdr.filesize);
+      auto page_size = PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results,phdr.filesize);
       phdr.filesize=page_size;
   }
  
@@ -126,6 +148,9 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   phdr.is_open_to_write = false;
   std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
   std::fclose(file);
+
+  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fclose(index_file);
 
   for (auto kv : openned_pages) {
 	  delete kv.second;
@@ -146,8 +171,21 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     throw MAKE_EXCEPTION("aofile: append error.");
   }
 
+  IndexHeader ihdr;
+  memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
+  auto index_file = std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  if (index_file == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", file_name);
+  }
+
   uint64_t offset = 0;
   size_t page_size = 0;
+  std::vector<IndexReccord> ireccords;
+  ireccords.resize(count);
+  size_t pos = 0;
+
   for (size_t i = 0; i < count; ++i) {
     ChunkHeader *chunk_header = a[i]->header;
     auto chunk_buffer_ptr = a[i]->_buffer_t;
@@ -199,6 +237,12 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), cur_chunk_buf_size, file);
 
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+
+	if (chunk_header->is_init) {
+		auto index_reccord = PageInner::init_chunk_index_rec(*chunk_header, &ihdr);
+		ireccords[pos] = index_reccord;
+		pos++;
+	}
   }
   page_size = offset ;
   phdr.filesize = page_size;
@@ -206,6 +250,10 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   phdr.is_open_to_write = false;
   std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
   std::fclose(file);
+  
+  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
+  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fclose(index_file);
 
   return Page::make_page(file_name, phdr);
 }
@@ -318,7 +366,7 @@ void Page::update_index_recs(const PageHeader &phdr) {
 	  ChunkHeader info;
 	  std::fread(&info, sizeof(ChunkHeader), 1, page_io);
     if (info.is_init) {
-      auto index_reccord=init_chunk_index_rec(info, &ihdr);
+      auto index_reccord= PageInner::init_chunk_index_rec(info, &ihdr);
 	  std::fwrite(&index_reccord, sizeof(IndexReccord),1, index_file);
 
 	  std::fseek(page_io, info.size, SEEK_CUR);
@@ -332,30 +380,7 @@ void Page::update_index_recs(const PageHeader &phdr) {
   std::fclose(page_io);
 }
 
-IndexReccord Page::init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* iheader) {
-  TIMECODE_METRICS(ctmd, "write", "Page::init_chunk_index_rec");
 
-  IndexReccord cur_index;
-  memset(&cur_index, 0, sizeof(IndexReccord));
-
-  cur_index.chunk_id = cheader.id;
-  cur_index.is_init = true;
-  cur_index.offset = cheader.offset_in_page; // header->write_offset;
-
-  iheader->minTime = std::min(iheader->minTime, cheader.minTime);
-  iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
-
-  iheader->id_bloom =
-      storage::bloom_add(iheader->id_bloom, cheader.first.id);
-  iheader->flag_bloom =
-      storage::bloom_add(iheader->flag_bloom, cheader.first.flag);
-  iheader->count++;
-  cur_index.minTime = cheader.minTime;
-  cur_index.maxTime = cheader.maxTime;
-  cur_index.meas_id = cheader.first.id;
-  cur_index.flag_bloom = cheader.flag_bloom;
-  return cur_index;
-}
 
 bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
   QueryInterval qi{dariadb::IdArray{id}, 0, this->header.minTime, this->header.maxTime};
