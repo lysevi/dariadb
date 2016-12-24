@@ -312,6 +312,8 @@ void Page::update_index_recs(const PageHeader &phdr) {
 
   IndexHeader ihdr;
   memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
   for(size_t i=0;i<phdr.addeded_chunks;++i){
 	  ChunkHeader info;
 	  std::fread(&info, sizeof(ChunkHeader), 1, page_io);
