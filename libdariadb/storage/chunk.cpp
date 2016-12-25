@@ -10,8 +10,6 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
-// std::unique_ptr<ChunkCache> ChunkCache::_instance = nullptr;
-
 std::ostream &dariadb::storage::operator<<(std::ostream &stream, const CHUNK_KIND &b) {
   switch (b) {
   case CHUNK_KIND::Simple:
@@ -31,12 +29,10 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m) {
-  hdr->is_init = true;
   _buffer_t = buffer;
   header = hdr;
   header->size = _size;
 
-  header->is_readonly = false;
   header->count = 0;
   header->first = first_m;
   header->last = first_m;
@@ -105,8 +101,6 @@ ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer)
 ZippedChunk::~ZippedChunk() {}
 
 void ZippedChunk::close() {
-  header->is_readonly = true;
-
   header->crc = this->calcChecksum();
   assert(header->crc != 0);
 }
@@ -124,10 +118,6 @@ bool ZippedChunk::isFull() const {
 }
 
 bool ZippedChunk::append(const Meas &m) {
-  if (!header->is_init || header->is_readonly) {
-    throw MAKE_EXCEPTION("(!is_not_free || is_readonly)");
-  }
-
   auto t_f = this->c_writer.append(m);
 
   if (!t_f) {

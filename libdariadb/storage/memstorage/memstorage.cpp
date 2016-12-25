@@ -132,9 +132,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         assert(!c->isFull());
         continue;
       }
-      if (!c->header->is_init) {
-        continue;
-      }
       if (_settings->strategy.value == STRATEGY::CACHE && (!c->already_in_disk())) {
         continue;
       }

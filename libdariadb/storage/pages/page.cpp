@@ -2,20 +2,20 @@
     #define _CRT_SECURE_NO_WARNINGS //for fopen
     #define _SCL_SECURE_NO_WARNINGS //for stx::btree in msvc build.
 #endif
-#include <libdariadb/storage/pages/page.h>
-#include <libdariadb/storage/pages/helpers.h>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
-#include <stx/btree_map.h>
+#include <libdariadb/storage/pages/helpers.h>
+#include <libdariadb/storage/pages/page.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/metrics.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <fstream>
 #include <map>
+#include <stx/btree_map.h>
 
 using namespace dariadb::storage;
 using namespace dariadb;
@@ -211,12 +211,9 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     phdr.addeded_chunks++;
     auto cur_chunk_buf_size = size_t(0);
     size_t skip_count = 0;
-    if (chunk_header->is_readonly) {
-      cur_chunk_buf_size = chunk_header->size;
-    } else {
+
       cur_chunk_buf_size = chunk_header->size - chunk_header->bw_pos + 1;
       skip_count = chunk_header->size - cur_chunk_buf_size;
-    }
 
     chunk_header->size = cur_chunk_buf_size;
     chunk_header->offset_in_page = offset;
@@ -238,11 +235,10 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
 
-	if (chunk_header->is_init) {
+
 		auto index_reccord = PageInner::init_chunk_index_rec(*chunk_header, &ihdr);
 		ireccords[pos] = index_reccord;
 		pos++;
-	}
   }
   page_size = offset ;
   phdr.filesize = page_size;
@@ -365,15 +361,10 @@ void Page::update_index_recs(const PageHeader &phdr) {
   for(size_t i=0;i<phdr.addeded_chunks;++i){
 	  ChunkHeader info;
 	  std::fread(&info, sizeof(ChunkHeader), 1, page_io);
-    if (info.is_init) {
       auto index_reccord= PageInner::init_chunk_index_rec(info, &ihdr);
 	  std::fwrite(&index_reccord, sizeof(IndexReccord),1, index_file);
 
 	  std::fseek(page_io, info.size, SEEK_CUR);
-	}
-	else {
-		THROW_EXCEPTION("logic error");
-	}
   }
   std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
   std::fclose(index_file);
@@ -507,7 +498,7 @@ Id2MinMax Page::loadMinMax(){
 	for(int i=0;i<header.addeded_chunks;++i) {
 		auto _index_it = indexReccords[i];
 		Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
-		if (search_res->header->is_init) {
+		
 			auto info = search_res->header;
 			auto fres = result.find(info->first.id);
 			if (fres == result.end()) {
@@ -518,7 +509,7 @@ Id2MinMax Page::loadMinMax(){
 				result[info->first.id].updateMin(info->first);
 				result[info->first.id].updateMax(info->last);
 			}
-		}
+		
 	}
 	std::fclose(page_io);
     return result;

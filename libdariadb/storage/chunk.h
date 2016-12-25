@@ -20,8 +20,6 @@ std::ostream &operator<<(std::ostream &stream, const CHUNK_KIND &k);
 #pragma pack(push, 1)
 struct ChunkHeader {
   uint64_t id; // chunk id;
-  bool is_init : 1;
-  bool is_readonly : 1;
   CHUNK_KIND kind;
   Meas first, last;
   Time minTime, maxTime;

@@ -152,11 +152,11 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
 
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
 
-	if (chunk_header.is_init) {
+	
 		auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
 		ireccords[pos] = index_reccord;
 		pos++;
-	}
+	
   }
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
   page_size = offset;
