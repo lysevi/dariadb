@@ -15,11 +15,7 @@ const std::string PAGE_FILE_EXT = ".page"; // cola-file extension
 struct PageHeader {
   // uint64_t write_offset;      // next write pos (bytes)
   uint32_t addeded_chunks; // total count of chunks in page.
-  uint32_t removed_chunks; // total chunks marked as not init in rollbacks or fsck.
   uint64_t filesize;
-  bool is_full : 1;          // is full :)
-  bool is_closed : 1;        // is correctly closed.
-  bool is_open_to_write : 1; // true if oppened to write.
   Time minTime;              // minimal stored time
   Time maxTime;              // maximum stored time
   uint64_t max_chunk_id;     // max(chunk->id)

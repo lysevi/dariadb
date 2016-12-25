@@ -55,8 +55,6 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
   auto page_size = PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
   phdr.filesize = page_size;
-  phdr.is_closed = true;
-  phdr.is_open_to_write = false;
   
   std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
   std::fclose(file);
@@ -144,8 +142,6 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
       phdr.filesize=page_size;
   }
  
-  phdr.is_closed = true;
-  phdr.is_open_to_write = false;
   std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
   std::fclose(file);
 
@@ -242,8 +238,6 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   }
   page_size = offset ;
   phdr.filesize = page_size;
-  phdr.is_closed = true;
-  phdr.is_open_to_write = false;
   std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
   std::fclose(file);
   

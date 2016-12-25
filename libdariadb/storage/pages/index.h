@@ -12,8 +12,6 @@ struct IndexHeader {
   dariadb::Time minTime;
   dariadb::Time maxTime;
   bool is_sorted; // items in index file sorted by time
-  bool is_closed;
-  bool is_full;
   uint64_t id_bloom;   // bloom filter of Meas.id
   uint64_t flag_bloom; // bloom filter of Meas.flag
 };

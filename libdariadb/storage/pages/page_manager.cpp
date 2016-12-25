@@ -79,11 +79,12 @@ public:
 	for (auto n : pages) {
 		auto file_name = utils::fs::append_path(_settings->path, n);
 		PageHeader hdr = Page::readHeader(file_name);
-		if (hdr.removed_chunks == hdr.addeded_chunks) {
+		/*if (hdr.removed_chunks == hdr.addeded_chunks) {
 			logger_info("engine: page ", file_name, " is empty.");
 			erase_page(file_name);
 		}
-		else {
+		else */
+		{
 			auto index_filename = PageIndex::index_name_from_page_name(n);
 			auto index_file_path = utils::fs::append_path(_settings->path, index_filename);
 			if (!utils::fs::path_exists(index_file_path)) {
