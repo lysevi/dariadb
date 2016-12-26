@@ -30,7 +30,6 @@ struct ChunkHeader {
   size_t size;
   uint32_t crc;
 
-  uint32_t pos_in_page;
   uint64_t offset_in_page;
 };
 #pragma pack(pop)

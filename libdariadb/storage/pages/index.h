@@ -22,7 +22,6 @@ struct IndexReccord {
   size_t meas_id;
   uint64_t chunk_id; // chunk->id
   uint64_t offset;   // offset in bytes of chunk in page
-  bool is_init : 1;  // is init :)
 };
 #pragma pack(pop)
 

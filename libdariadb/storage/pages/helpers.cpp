@@ -136,7 +136,6 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
     ChunkHeader chunk_header = hb.hdr;
     std::shared_ptr<uint8_t> chunk_buffer_ptr = hb.buffer;
 
-    chunk_header.pos_in_page = phdr.addeded_chunks;
     phdr.addeded_chunks++;
 	phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
 	phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
@@ -146,6 +145,11 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
     chunk_header.size = cur_chunk_buf_size;
     chunk_header.offset_in_page = offset;
 
+	//update checksum;
+	//TODO refact. it must work without openning chunk.
+	Chunk_Ptr c{ new ZippedChunk(&chunk_header, chunk_buffer_ptr.get() + skip_count) };
+	c->close();
+	assert(c->checkChecksum());
     std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), cur_chunk_buf_size,
                 file);
@@ -153,9 +157,9 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
 
 	
-		auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
-		ireccords[pos] = index_reccord;
-		pos++;
+	auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
+	ireccords[pos] = index_reccord;
+	pos++;
 	
   }
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
@@ -168,7 +172,6 @@ IndexReccord init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* ihead
 	memset(&cur_index, 0, sizeof(IndexReccord));
 
 	cur_index.chunk_id = cheader.id;
-	cur_index.is_init = true;
 	cur_index.offset = cheader.offset_in_page; // header->write_offset;
 
 	iheader->minTime = std::min(iheader->minTime, cheader.minTime);

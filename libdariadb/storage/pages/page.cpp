@@ -202,7 +202,6 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     phdr.minTime = std::min(phdr.minTime, chunk_header->minTime);
     phdr.maxTime = std::max(phdr.maxTime, chunk_header->maxTime);
     chunk_header->id = phdr.max_chunk_id;
-    chunk_header->pos_in_page = phdr.addeded_chunks;
 
     phdr.addeded_chunks++;
     auto cur_chunk_buf_size = size_t(0);
@@ -308,35 +307,28 @@ PageHeader Page::readHeader(std::string file_name) {
 IndexHeader Page::readIndexHeader(std::string ifile) {
   return PageIndex::readIndexHeader(ifile);
 }
-/*
-void Page::fsck() {
+
+bool Page::checksum() {
   using dariadb::timeutil::to_string;
-  logger_info("engine: fsck page ", this->filename);
+  logger_info("engine: checksum page ", this->filename);
   
-  auto page_io = std::fopen(filename.c_str(), "r");
+  auto page_io = std::fopen(filename.c_str(), "rb");
   if (page_io == nullptr) {
 	  THROW_EXCEPTION("can`t open file ", this->filename);
   }
-
-  for(size_t i=0;i<this->header.addeded_chunks;++i){
-    ChunkHeader info;
-	std::fread(&info, sizeof(ChunkHeader), 1, page_io);
-    if (info.is_init) {
-		uint8_t *buffer = new uint8_t[info.size];
-		std::fread(buffer, info.size, 1, page_io);
-      Chunk_Ptr ptr = nullptr;
-      ptr = Chunk_Ptr{new ZippedChunk(&info, buffer)};
-
-      if (!ptr->checkChecksum()) {
-        logger_fatal("engine: fsck remove broken chunk #", ptr->header->id, " id:",
-                     ptr->header->first.id, " time: [", to_string(ptr->header->minTime),
-                     " : ", to_string(ptr->header->maxTime), "]");
-        mark_as_non_init(ptr);
-      }
-    }
-    byte_it += sizeof(ChunkHeader) + info->size;
+  bool result = true;
+  auto indexReccords = _index->readReccords();
+  for (auto it:indexReccords) {
+	  Chunk_Ptr c = readChunkByOffset(page_io, it.offset);
+	  if (!c->checkChecksum()) {
+		  result = false;
+		  break;
+	  }
   }
-}*/
+
+  std::fclose(page_io);
+  return result;
+}
 
 void Page::update_index_recs(const PageHeader &phdr) {
 	auto index_file=std::fopen(PageIndex::index_name_from_page_name(filename).c_str(), "ab");
@@ -356,6 +348,7 @@ void Page::update_index_recs(const PageHeader &phdr) {
 	  ChunkHeader info;
 	  std::fread(&info, sizeof(ChunkHeader), 1, page_io);
       auto index_reccord= PageInner::init_chunk_index_rec(info, &ihdr);
+	  assert(index_reccord.offset == info.offset_in_page);
 	  std::fwrite(&index_reccord, sizeof(IndexReccord),1, index_file);
 
 	  std::fseek(page_io, info.size, SEEK_CUR);
@@ -396,10 +389,15 @@ Chunk_Ptr Page::readChunkByOffset(FILE* page_io, int offset) {
 	std::fread(cheader, sizeof(ChunkHeader), 1, page_io);
 
 	uint8_t *buffer = new uint8_t[cheader->size];
+	memset(buffer, 0, cheader->size);
 	std::fread(buffer, cheader->size, 1, page_io);
 	Chunk_Ptr ptr = nullptr;
 	ptr = Chunk_Ptr{ new ZippedChunk(cheader, buffer) };
 	ptr->is_owner = true;
+	if(!ptr->checkChecksum()){
+		logger_fatal("engine: bad checksum of chunk #", ptr->header->id, " for measurement id:", ptr->header->first.id, " page: ", this->filename);
+		return nullptr;
+	}
 	return ptr;
 }
 
@@ -424,7 +422,9 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
     }
     auto _index_it = indexReccords[it->index_rec_number];
     Chunk_Ptr c = readChunkByOffset(page_io, _index_it.offset);
-
+	if (c == nullptr) {
+		continue;
+	}
     auto reader = c->getReader();
     while (!reader->is_end()) {
       auto m = reader->readNext();
@@ -464,6 +464,9 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
 	  }
     auto _index_it = indexReccords[_ch_links_iterator->index_rec_number];
 	Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
+	if (search_res == nullptr) {
+		continue;
+	}
     auto rdr = search_res->getReader();
     while (!rdr->is_end()) {
       auto subres = rdr->readNext();
@@ -492,7 +495,9 @@ Id2MinMax Page::loadMinMax(){
 	for(int i=0;i<header.addeded_chunks;++i) {
 		auto _index_it = indexReccords[i];
 		Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
-		
+		if (search_res == nullptr) {
+			continue;
+		}
 			auto info = search_res->header;
 			auto fres = result.find(info->first.id);
 			if (fres == result.end()) {

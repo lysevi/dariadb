@@ -57,13 +57,14 @@ public:
   EXPORT void appendChunks(const std::vector<Chunk*>&a, size_t count)override;
 
   EXPORT Id2MinMax loadMinMax();
+  bool checksum();//return false if bad checksum.
 private:
   void update_index_recs(const PageHeader &phdr);
 
 
   void check_page_struct();
   static Page* make_page(const std::string&file_name, const PageHeader&phdr);
-  static Chunk_Ptr readChunkByOffset(FILE* page_io, int offset);
+  Chunk_Ptr readChunkByOffset(FILE* page_io, int offset);
 public:
   PageHeader header;
   std::string filename;

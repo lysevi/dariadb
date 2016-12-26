@@ -54,9 +54,6 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
   for (uint32_t pos = 0; pos < this->iheader.count; ++pos) {
 
     auto _index_it = records[pos];
-    if (!_index_it.is_init) {
-      continue;
-    }
     if (check_index_rec(_index_it, from, to)) {
       bool bloom_result = false;
 	  if (ids.size() == size_t(0)) {

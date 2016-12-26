@@ -285,7 +285,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   void addChunk(MemChunk_Ptr &chunk) override {
     assert(chunk->_a_data.position < _chunks.size());
-    assert(chunk->header->is_init);
 
     _chunks[chunk->_a_data.position] = chunk;
     if (is_time_to_drop()) {
