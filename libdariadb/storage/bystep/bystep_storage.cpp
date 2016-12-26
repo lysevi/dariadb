@@ -393,7 +393,6 @@ struct ByStepStorage::Private : public IMeasStorage {
 	  }
 
 	  auto round_from = bystep::roundTime(step_kind_it->second, from);
-	  auto stepTime = std::get<1>(round_from);
 	  auto round_to = bystep::roundTime(step_kind_it->second, to);
 
 	  auto vals_per_interval = bystep::step_to_size(step_kind_it->second);

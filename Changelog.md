@@ -21,6 +21,7 @@ Storage:
    - SQLite3 based manifest.
    - Foreach - is async.
    - Bystep storage.
+   - Remove mmap usage.
 
 v0.1.1
 =====

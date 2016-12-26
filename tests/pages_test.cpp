@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   {
     first.id = 1;
     first.time = t;
-    auto count = chunks_size / 10;
+    auto count = chunks_size *2;
     dariadb::MeasArray ma;
     ma.resize(count);
     for (size_t i = 0; i < count; i++, t++) {
@@ -117,10 +117,23 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
   auto iheader = dariadb::storage::Page::readIndexHeader(fname + "i");
   BOOST_CHECK(iheader.count != 0);
-
+  
   pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
 
   auto mintime_chunks =
+	  pm->valuesBeforeTimePoint(dariadb::storage::QueryTimePoint(
+		  dariadb::IdArray{ 1 }, 0, pm->minTime()));
+  BOOST_CHECK_GE(mintime_chunks.size(), size_t(1));
+  pm->fsck();
+  
+  auto index_files = dariadb::utils::fs::ls(storagePath, ".pagei");
+  for (auto&f : index_files) {
+	  dariadb::utils::fs::rm(f);
+  }
+  
+  pm->fsck();
+
+  mintime_chunks =
       pm->valuesBeforeTimePoint(dariadb::storage::QueryTimePoint(
           dariadb::IdArray{1}, 0, pm->minTime()));
   BOOST_CHECK_GE(mintime_chunks.size(), size_t(1));

@@ -45,19 +45,26 @@ public:
 	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     
     last_id = 0;
+	reloadIndexHeaders();
+  }
 
-    if (utils::fs::path_exists(_settings->path)) {
-      auto pages = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list();
+  void reloadIndexHeaders() {
+	  if (utils::fs::path_exists(_settings->path)) {
+		  _file2header.clear();
+		  auto pages = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list();
 
-      for (auto n : pages) {
-        auto file_name = utils::fs::append_path(_settings->path, n);
-		auto phdr = Page::readHeader(file_name);
-		last_id = std::max(phdr.max_chunk_id, last_id);
+		  for (auto n : pages) {
+			  auto file_name = utils::fs::append_path(_settings->path, n);
+			  auto phdr = Page::readHeader(file_name);
+			  last_id = std::max(phdr.max_chunk_id, last_id);
 
-        auto ihdr = Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name));
-		insert_pagedescr(n, ihdr);
-      }
-    }
+			  auto index_filename = PageIndex::index_name_from_page_name(file_name);
+			  if (utils::fs::file_exists(index_filename)) {
+				  auto ihdr = Page::readIndexHeader(index_filename);
+				  insert_pagedescr(n, ihdr);
+			  }
+		  }
+	  }
   }
 
   ~Private() {
@@ -66,6 +73,7 @@ public:
     }
   }
 
+  //TODO rm force_check flag.
   void fsck(bool force_check) {
     if (force_check) {
       logger_info("engine: PageManager fsck force.");
@@ -74,29 +82,31 @@ public:
       return;
     }
 
-    auto pages = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list();
+    auto pages = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
+                     ->page_list();
 
-	for (auto n : pages) {
-		auto file_name = utils::fs::append_path(_settings->path, n);
-		auto hdr = Page::readHeader(file_name);
-		if (hdr.removed_chunks == hdr.addeded_chunks) {
-			logger_info("engine: page ", file_name, " is empty.");
-			erase_page(file_name);
-		}
-		else {
-			auto index_filename = PageIndex::index_name_from_page_name(n);
-			auto index_file_path = utils::fs::append_path(_settings->path, index_filename);
-			if (!utils::fs::path_exists(index_file_path)) {
-				Page::restoreIndexFile(file_name);
-			}
-			if (force_check || (!hdr.is_closed && hdr.is_open_to_write)) {
-				auto res = Page_Ptr{ Page::open(file_name) };
-				res->fsck();
-				res = nullptr;
-			}
-		}
-
-	}
+    for (auto n : pages) {
+      auto file_name = utils::fs::append_path(_settings->path, n);
+	  try {
+		  PageHeader hdr = Page::readHeader(file_name);
+		  auto index_filename = PageIndex::index_name_from_page_name(n);
+		  auto index_file_path = utils::fs::append_path(_settings->path, index_filename);
+		  if (!utils::fs::path_exists(index_file_path)) {
+			  Page::restoreIndexFile(file_name);
+		  }
+		  Page_Ptr p{ Page::open(file_name) };
+		  if (!p->checksum()) {
+			  logger_info("engine: checksum of page ", file_name, " is wrong - removing.");
+			  erase_page(file_name);
+		  }
+	  }
+	  catch (std::exception&ex)
+	  {
+		  logger_fatal("engine: error on check ", file_name,": ",ex.what());
+		  erase_page(file_name);
+	  }
+    }
+	reloadIndexHeaders();
   }
 
   // PM
@@ -156,7 +166,7 @@ public:
     if (_cur_page != nullptr && pname == _cur_page->filename) {
       pg = _cur_page;
     } else {
-        pg = Page_Ptr{Page::open(pname, true)};
+        pg = Page_Ptr{Page::open(pname)};
     }
     return pg;
   }
@@ -190,7 +200,7 @@ public:
 
 
 		for (auto pname : page_list) {
-			auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname), true);
+			auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname));
 			auto sub_result = pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
 			for (auto s : sub_result) {
 				s.page_name = pname;
@@ -306,7 +316,7 @@ public:
     if (_cur_page == nullptr) {
       return 0;
     }
-    return _cur_page->header->addeded_chunks;
+    return _cur_page->header.addeded_chunks;
   }
   // PM
   size_t files_count() const { return _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list().size(); }
@@ -353,7 +363,7 @@ public:
         dariadb::utils::fs::append_path(_settings->path, page_name);
     res = Page::create(file_name, last_id, _settings->chunk_size.value, ma);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-	last_id=res->header->max_chunk_id;
+	last_id=res->header.max_chunk_id;
     delete res;
 
 	insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
@@ -440,7 +450,7 @@ public:
 		  dariadb::utils::fs::append_path(_settings->path, page_name);
 	  res = Page::create(file_name, last_id, _settings->chunk_size.value, part);
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-	  last_id = res->header->max_chunk_id;
+	  last_id = res->header.max_chunk_id;
 	  delete res;
 	  for (auto erasedPage : part) {
 		  this->erase_page(erasedPage);
@@ -457,7 +467,7 @@ public:
 		  dariadb::utils::fs::append_path(_settings->path, page_name);
 	  res = Page::create(file_name, last_id, a,count);
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
-	  last_id = res->header->max_chunk_id;
+	  last_id = res->header.max_chunk_id;
 	  delete res;
 
 	  insert_pagedescr(page_name, Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));

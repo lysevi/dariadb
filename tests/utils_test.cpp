@@ -139,22 +139,6 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
   auto ls_res = dariadb::utils::fs::ls(".");
   BOOST_CHECK(ls_res.size() > 0);
 
-  const std::string fname = "mapped_file.test";
-  auto mapf = dariadb::utils::fs::MappedFile::touch(fname, 1024);
-  for (uint8_t i = 0; i < 100; i++) {
-    mapf->data()[i] = i;
-  }
-  mapf->close();
-
-  ls_res = dariadb::utils::fs::ls(".", ".test");
-  BOOST_CHECK(ls_res.size() == 1);
-  auto reopen_mapf = dariadb::utils::fs::MappedFile::open(fname);
-  for (uint8_t i = 0; i < 100; i++) {
-    BOOST_CHECK_EQUAL(reopen_mapf->data()[i], i);
-  }
-  reopen_mapf->close();
-  dariadb::utils::fs::rm(fname);
-
   std::string parent_p = "path1";
   std::string child_p = "path2";
   auto concat_p = dariadb::utils::fs::append_path(parent_p, child_p);

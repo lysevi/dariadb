@@ -5,6 +5,7 @@
 #include <libdariadb/storage/pages/helpers.h>
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -121,49 +122,71 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
   return results;
 }
 
-uint64_t writeToFile(const std::string &file_name, PageHeader &phdr,
-                     std::list<HdrAndBuffer> &compressed_results, uint64_t file_size,
-                     bool add_header_size_to_result) {
+uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader&ihdr,
+                     std::list<HdrAndBuffer> &compressed_results, uint64_t file_size) {
 
   using namespace dariadb::utils::async;
   uint64_t page_size = 0;
-  auto file = std::fopen(file_name.c_str(), "ab");
-  if (file == nullptr) {
-    throw MAKE_EXCEPTION("aofile: append error.");
-  }
 
-  if (file_size == uint64_t(0)) {
-    std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
-  }
   uint64_t offset = file_size;
-
+  std::vector<IndexReccord> ireccords;
+  ireccords.resize(compressed_results.size());
+  size_t pos = 0;
   for (auto hb : compressed_results) {
     ChunkHeader chunk_header = hb.hdr;
     std::shared_ptr<uint8_t> chunk_buffer_ptr = hb.buffer;
 
-    chunk_header.pos_in_page = phdr.addeded_chunks;
     phdr.addeded_chunks++;
+	phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
+	phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
     auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
     auto skip_count = chunk_header.size - cur_chunk_buf_size;
 
     chunk_header.size = cur_chunk_buf_size;
     chunk_header.offset_in_page = offset;
 
-    ZippedChunk ch(&chunk_header, chunk_buffer_ptr.get());
-    ch.close();
+	//update checksum;
+	//TODO refact. it must work without openning chunk.
+	Chunk_Ptr c{ new ZippedChunk(&chunk_header, chunk_buffer_ptr.get() + skip_count) };
+	c->close();
+	assert(c->checkChecksum());
     std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), cur_chunk_buf_size,
                 file);
 
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+
+	
+	auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
+	ireccords[pos] = index_reccord;
+	pos++;
+	
   }
+  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
   page_size = offset;
-  if (add_header_size_to_result) {
-    page_size += sizeof(PageHeader);
-    phdr.filesize = page_size;
-  }
-  std::fclose(file);
   return page_size;
+}
+
+IndexReccord init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* iheader) {
+	IndexReccord cur_index;
+	memset(&cur_index, 0, sizeof(IndexReccord));
+
+	cur_index.chunk_id = cheader.id;
+	cur_index.offset = cheader.offset_in_page; // header->write_offset;
+
+	iheader->minTime = std::min(iheader->minTime, cheader.minTime);
+	iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
+
+	iheader->id_bloom =
+		storage::bloom_add(iheader->id_bloom, cheader.first.id);
+	iheader->flag_bloom =
+		storage::bloom_add(iheader->flag_bloom, cheader.first.flag);
+	iheader->count++;
+	cur_index.minTime = cheader.minTime;
+	cur_index.maxTime = cheader.maxTime;
+	cur_index.meas_id = cheader.first.id;
+	cur_index.flag_bloom = cheader.flag_bloom;
+	return cur_index;
 }
 }
 }

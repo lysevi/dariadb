@@ -2,38 +2,26 @@
     #define _CRT_SECURE_NO_WARNINGS //for fopen
     #define _SCL_SECURE_NO_WARNINGS //for stx::btree in msvc build.
 #endif
-#include <libdariadb/storage/pages/page.h>
-#include <libdariadb/storage/pages/helpers.h>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/metrics.h>
-#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
-#include <stx/btree_map.h>
+#include <libdariadb/storage/pages/helpers.h>
+#include <libdariadb/storage/pages/page.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/metrics.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <fstream>
 #include <map>
+#include <stx/btree_map.h>
 
 using namespace dariadb::storage;
 using namespace dariadb;
 
 Page::~Page() {
-  if (!this->readonly) {
-    if (this->_openned_chunk.ch != nullptr) {
-      this->_openned_chunk.ch->close();
-    }
-
-    header->is_closed = true;
-    header->is_open_to_write = false;
-  }
-  region = nullptr;
-  header = nullptr;
   _index = nullptr;
-  chunks = nullptr;
-  page_mmap->close();
 }
 
 uint64_t Page::index_file_size(uint32_t chunk_per_storage) {
@@ -51,35 +39,36 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
   std::list<PageInner::HdrAndBuffer> compressed_results =
       PageInner::compressValues(to_compress, phdr, max_chunk_size);
+  auto file = std::fopen(file_name.c_str(), "ab");
+  if (file == nullptr) {
+	  THROW_EXCEPTION("file is null");
+  }
 
-  auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results);
+  IndexHeader ihdr;
+  memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
+  auto index_file = std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  if (index_file == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", file_name);
+  }
+
+  auto page_size = PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
   phdr.filesize = page_size;
+  
+  std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
+  std::fclose(file);
 
+  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fclose(index_file);
   return make_page(file_name, phdr);;
 }
 
 Page* Page::make_page(const std::string&file_name, const PageHeader&phdr) {
 	auto res = new Page;
-	res->readonly = false;
-	auto mmap = utils::fs::MappedFile::open(file_name, false);
+	res->header = phdr;
 	res->filename = file_name;
-	auto region = mmap->data();
-
-	res->page_mmap = mmap;
-	res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
-		index_file_size(phdr.addeded_chunks));
-	res->region = region;
-
-	res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-	res->header = reinterpret_cast<PageHeader *>(region);
-	*(res->header) = phdr;
-
-	res->readonly = false;
-	res->header->is_closed = true;
-	res->header->is_open_to_write = false;
-	res->page_mmap->flush(0, sizeof(PageHeader));
-	res->update_index_recs();
-	res->flush();
+	res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 	return res;
 }
 
@@ -94,7 +83,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   std::map<uint64_t, ChunkLinkList> links;
   QueryInterval qi({}, 0, MIN_TIME, MAX_TIME);
   for (auto &p_full_path : pages_full_paths) {
-    Page *p = Page::open(p_full_path, true);
+    Page *p = Page::open(p_full_path);
     openned_pages.emplace(std::make_pair(p_full_path, p));
 
     auto clinks = p->chunksByIterval(qi);
@@ -106,8 +95,21 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   assert(openned_pages.size() == pages_full_paths.size());
   
    PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+   phdr.minTime = MAX_TIME;
+   phdr.maxTime = MIN_TIME;
+  auto file = std::fopen(file_name.c_str(), "ab");
+  if (file == nullptr) {
+	  THROW_EXCEPTION("file is null");
+  }
 
-
+  IndexHeader ihdr;
+  memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
+  auto index_file = std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  if (index_file == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", file_name);
+  }
   for (auto &kv : links) {
 	  auto lst = kv.second;
 	  std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
@@ -136,11 +138,15 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
       auto compressed_results =
           PageInner::compressValues(all_values, phdr, max_chunk_size);
 
-      auto page_size = PageInner::writeToFile(file_name, phdr, compressed_results,phdr.filesize, false);
+      auto page_size = PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results,phdr.filesize);
       phdr.filesize=page_size;
   }
  
-  phdr.filesize+=sizeof(PageHeader);
+  std::fwrite((char*)&phdr, sizeof(PageHeader), 1, file);
+  std::fclose(file);
+
+  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fclose(index_file);
 
   for (auto kv : openned_pages) {
 	  delete kv.second;
@@ -161,130 +167,127 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     throw MAKE_EXCEPTION("aofile: append error.");
   }
 
-  std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+  IndexHeader ihdr;
+  memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
+  auto index_file = std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  if (index_file == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", file_name);
+  }
+
   uint64_t offset = 0;
   size_t page_size = 0;
+  std::vector<IndexReccord> ireccords;
+  ireccords.resize(count);
+  size_t pos = 0;
+
   for (size_t i = 0; i < count; ++i) {
     ChunkHeader *chunk_header = a[i]->header;
     auto chunk_buffer_ptr = a[i]->_buffer_t;
-    //#ifdef  DEBUG
-    //			{
-    //				auto ch = std::make_shared<ZippedChunk>(chunk_header,
-    //chunk_buffer_ptr);
-    //				auto rdr = ch->get_reader();
-    //				size_t readed = 0;
-    //				while (!rdr->is_end()) {
-    //					rdr->readNext();
-    //					readed++;
-    //				}
-    //				assert(readed == (ch->header->count+1));
-    //			}
-    //#endif //  DEBUG
+    #ifdef  DEBUG
+    			{
+    				auto ch = std::make_shared<ZippedChunk>(chunk_header,
+    chunk_buffer_ptr);
+    				auto rdr = ch->getReader();
+    				size_t readed = 0;
+    				while (!rdr->is_end()) {
+    					rdr->readNext();
+    					readed++;
+    				}
+    				assert(readed == (ch->header->count+1));
+    			}
+    #endif //  DEBUG
     phdr.max_chunk_id++;
     phdr.minTime = std::min(phdr.minTime, chunk_header->minTime);
     phdr.maxTime = std::max(phdr.maxTime, chunk_header->maxTime);
     chunk_header->id = phdr.max_chunk_id;
-    chunk_header->pos_in_page = phdr.addeded_chunks;
 
     phdr.addeded_chunks++;
     auto cur_chunk_buf_size = size_t(0);
     size_t skip_count = 0;
-    if (chunk_header->is_readonly) {
-      cur_chunk_buf_size = chunk_header->size;
-    } else {
+
       cur_chunk_buf_size = chunk_header->size - chunk_header->bw_pos + 1;
       skip_count = chunk_header->size - cur_chunk_buf_size;
-    }
 
     chunk_header->size = cur_chunk_buf_size;
     chunk_header->offset_in_page = offset;
 
     auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
     ch->close();
-    //#ifdef  DEBUG
-    //			auto rdr=ch->get_reader();
-    //			size_t readed = 0;
-    //			while (!rdr->is_end()) {
-    //				rdr->readNext();
-    //				readed++;
-    //			}
-    //			assert(readed == (ch->header->count + 1));
-    //#endif //  DEBUG
+    #ifdef  DEBUG
+    			auto rdr=ch->getReader();
+    			size_t readed = 0;
+    			while (!rdr->is_end()) {
+    				rdr->readNext();
+    				readed++;
+    			}
+    			assert(readed == (ch->header->count + 1));
+    #endif //  DEBUG
 
     std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), cur_chunk_buf_size, file);
 
     offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+
+
+		auto index_reccord = PageInner::init_chunk_index_rec(*chunk_header, &ihdr);
+		ireccords[pos] = index_reccord;
+		pos++;
   }
-  page_size = offset + sizeof(PageHeader);
+  page_size = offset ;
   phdr.filesize = page_size;
+  std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
   std::fclose(file);
+  
+  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
+  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fclose(index_file);
 
   return Page::make_page(file_name, phdr);
 }
 
-Page *Page::open(std::string file_name, bool read_only) {
+Page *Page::open(std::string file_name) {
   TIMECODE_METRICS(ctmd, "open", "Page::open");
+  auto phdr = Page::readHeader(file_name);
   auto res = new Page;
-  res->readonly = read_only;
-  auto mmap = utils::fs::MappedFile::open(file_name, read_only);
+
   res->filename = file_name;
-  auto region = mmap->data();
-
-  res->page_mmap = mmap;
   res->_index =
-      PageIndex::open(PageIndex::index_name_from_page_name(file_name), read_only);
+      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
-  res->region = region;
-  res->header = reinterpret_cast<PageHeader *>(region);
-  if (!res->readonly) {
-    res->header->is_open_to_write = true;
-    res->header->is_closed = false;
-  }
-  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-  res->page_mmap->flush(0, sizeof(PageHeader));
+  res->header = phdr;
   res->check_page_struct();
   return res;
 }
 
 void Page::restoreIndexFile(const std::string &file_name) {
   logger_info("engine: page - restore index file ", file_name);
+  auto phdr = Page::readHeader(file_name);
   auto res = new Page;
-  res->readonly = false;
-  auto mmap = utils::fs::MappedFile::open(file_name, false);
+
   res->filename = file_name;
-  auto region = mmap->data();
 
-  res->page_mmap = mmap;
-  res->region = region;
-
-  res->header = reinterpret_cast<PageHeader *>(region);
-  res->_index = PageIndex::create(PageIndex::index_name_from_page_name(file_name),
-                                  index_file_size(res->header->addeded_chunks));
-  res->chunks = reinterpret_cast<uint8_t *>(region + sizeof(PageHeader));
-  res->readonly = false;
-  res->header->is_closed = true;
-  res->header->is_open_to_write = false;
-  res->page_mmap->flush(0, sizeof(PageHeader));
-  res->update_index_recs();
-  res->flush();
+  res->header = phdr;
+  res->update_index_recs(phdr);
+  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
   delete res;
 }
 void Page::check_page_struct() {
 #ifdef DEBUG
-  for (uint32_t i = 0; i < header->addeded_chunks; ++i) {
-    auto irec = &_index->index[i];
-    if (irec->is_init) {
+  //for (uint32_t i = 0; i < header->addeded_chunks; ++i) {
+  //  auto irec = &_index->index[i];
+  //  if (irec->is_init) {
 
-      ChunkHeader *info = reinterpret_cast<ChunkHeader *>(chunks + irec->offset);
-      if (info->id != irec->chunk_id) {
-        throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
-      }
-      if (info->pos_in_page != i) {
-        throw MAKE_EXCEPTION("(info->pos_in_page != i)");
-      }
-    }
-  }
+  //    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(chunks + irec->offset);
+  //    if (info->id != irec->chunk_id) {
+  //      throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
+  //    }
+  //    if (info->pos_in_page != i) {
+  //      throw MAKE_EXCEPTION("(info->pos_in_page != i)");
+  //    }
+  //  }
+  //}
 #endif
 }
 PageHeader Page::readHeader(std::string file_name) {
@@ -293,6 +296,7 @@ PageHeader Page::readHeader(std::string file_name) {
   if (!istream.is_open()) {
     THROW_EXCEPTION("can't open file. filename=", file_name);
   }
+  istream.seekg(-(int)sizeof(PageHeader), istream.end);
   PageHeader result;
   memset(&result, 0, sizeof(PageHeader));
   istream.read((char *)&result, sizeof(PageHeader));
@@ -304,99 +308,60 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
   return PageIndex::readIndexHeader(ifile);
 }
 
-void Page::fsck() {
+bool Page::checksum() {
   using dariadb::timeutil::to_string;
-  logger_info("engine: fsck page ", this->filename);
-
-  auto byte_it = this->chunks;
-  auto end = this->region + this->header->filesize;
-  while (true) {
-    if (byte_it >= end) {
-      break;
-    }
-    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
-    if (info->is_init) {
-      auto ptr_to_begin = byte_it;
-      auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
-      Chunk_Ptr ptr = nullptr;
-      ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-
-      if (!ptr->checkChecksum()) {
-        logger_fatal("engine: fsck remove broken chunk #", ptr->header->id, " id:",
-                     ptr->header->first.id, " time: [", to_string(ptr->header->minTime),
-                     " : ", to_string(ptr->header->maxTime), "]");
-        mark_as_non_init(ptr);
-      }
-    }
-    byte_it += sizeof(ChunkHeader) + info->size;
+  logger_info("engine: checksum page ", this->filename);
+  
+  auto page_io = std::fopen(filename.c_str(), "rb");
+  if (page_io == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", this->filename);
   }
-}
-
-void Page::update_index_recs() {
-  auto byte_it = this->chunks;
-  auto end = this->region + this->header->filesize;
-  while (true) {
-    if (byte_it == end) {
-      header->is_full = true;
-      break;
-    }
-    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
-    if (info->is_init) {
-      auto ptr_to_begin = byte_it;
-      auto ptr_to_buffer = ptr_to_begin + sizeof(ChunkHeader);
-      Chunk_Ptr ptr = nullptr;
-      ptr = Chunk_Ptr{new ZippedChunk(info, ptr_to_buffer)};
-
-      this->header->max_chunk_id++;
-      ptr->header->id = this->header->max_chunk_id;
-
-      init_chunk_index_rec(ptr, ptr->header->pos_in_page);
-      ptr->close();
-    }
-    byte_it += sizeof(ChunkHeader) + info->size;
+  bool result = true;
+  auto indexReccords = _index->readReccords();
+  for (auto it:indexReccords) {
+	  Chunk_Ptr c = readChunkByOffset(page_io, it.offset);
+	  if (!c->checkChecksum()) {
+		  result = false;
+		  break;
+	  }
   }
-  header->is_full = true;
-  _index->iheader->is_full = true;
+
+  std::fclose(page_io);
+  return result;
 }
 
-void Page::init_chunk_index_rec(Chunk_Ptr ch, uint32_t pos_index) {
-  TIMECODE_METRICS(ctmd, "write", "Page::init_chunk_index_rec");
+void Page::update_index_recs(const PageHeader &phdr) {
+	auto index_file=std::fopen(PageIndex::index_name_from_page_name(filename).c_str(), "ab");
+	if (index_file == nullptr) {
+		THROW_EXCEPTION("can`t open file ", this->filename);
+	}
+	auto page_io= std::fopen(filename.c_str(), "rb");
+	if (page_io == nullptr) {
+		THROW_EXCEPTION("can`t open file ", this->filename);
+	}
 
-  auto cur_index = &_index->index[pos_index];
-  assert(cur_index->chunk_id == 0);
-  assert(cur_index->is_init == false);
-  ch->header->pos_in_page = pos_index;
-  cur_index->chunk_id = ch->header->id;
-  cur_index->is_init = true;
-  cur_index->offset = ch->header->offset_in_page; // header->write_offset;
+  IndexHeader ihdr;
+  memset(&ihdr, 0, sizeof(IndexHeader));
+  ihdr.minTime = MAX_TIME;
+  ihdr.maxTime = MIN_TIME;
+  for(size_t i=0;i<phdr.addeded_chunks;++i){
+	  ChunkHeader info;
+	  std::fread(&info, sizeof(ChunkHeader), 1, page_io);
+      auto index_reccord= PageInner::init_chunk_index_rec(info, &ihdr);
+	  assert(index_reccord.offset == info.offset_in_page);
+	  std::fwrite(&index_reccord, sizeof(IndexReccord),1, index_file);
 
-  header->minTime = std::min(header->minTime, ch->header->minTime);
-  header->maxTime = std::max(header->maxTime, ch->header->maxTime);
-
-  _index->iheader->minTime = std::min(_index->iheader->minTime, ch->header->minTime);
-  _index->iheader->maxTime = std::max(_index->iheader->maxTime, ch->header->maxTime);
-  _index->iheader->id_bloom =
-      storage::bloom_add(_index->iheader->id_bloom, ch->header->first.id);
-  _index->iheader->flag_bloom =
-      storage::bloom_add(_index->iheader->flag_bloom, ch->header->first.flag);
-  _index->iheader->count++;
-
-  cur_index->minTime = ch->header->minTime;
-  cur_index->maxTime = ch->header->maxTime;
-  cur_index->meas_id = ch->header->first.id;
-  cur_index->flag_bloom = ch->header->flag_bloom;
-
-  _openned_chunk.index = cur_index;
-  _openned_chunk.pos = pos_index;
+	  std::fseek(page_io, info.size, SEEK_CUR);
+  }
+  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fclose(index_file);
+  std::fclose(page_io);
 }
 
-bool Page::is_full() const {
-  return this->header->is_full &&
-         (_openned_chunk.ch == nullptr || _openned_chunk.ch->isFull());
-}
+
 
 bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
-  QueryInterval qi{dariadb::IdArray{id}, 0, this->header->minTime, this->header->maxTime};
+  QueryInterval qi{dariadb::IdArray{id}, 0, this->header.minTime, this->header.maxTime};
   auto all_chunks = this->chunksByIterval(qi);
 
   bool result = false;
@@ -405,8 +370,9 @@ bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *max
   }
   *minTime = dariadb::MAX_TIME;
   *maxTime = dariadb::MIN_TIME;
+  auto indexReccords= _index->readReccords();
   for (auto &link : all_chunks) {
-    auto _index_it = this->_index->index[link.index_rec_number];
+    auto _index_it = indexReccords[link.index_rec_number];
     *minTime = std::min(*minTime, _index_it.minTime);
     *maxTime = std::max(*maxTime, _index_it.maxTime);
   }
@@ -417,33 +383,48 @@ ChunkLinkList Page::chunksByIterval(const QueryInterval &query) {
   return _index->get_chunks_links(query.ids, query.from, query.to, query.flag);
 }
 
+Chunk_Ptr Page::readChunkByOffset(FILE* page_io, int offset) {
+	std::fseek(page_io, offset, SEEK_SET);
+	ChunkHeader *cheader = new ChunkHeader;
+	std::fread(cheader, sizeof(ChunkHeader), 1, page_io);
+
+	uint8_t *buffer = new uint8_t[cheader->size];
+	memset(buffer, 0, cheader->size);
+	std::fread(buffer, cheader->size, 1, page_io);
+	Chunk_Ptr ptr = nullptr;
+	ptr = Chunk_Ptr{ new ZippedChunk(cheader, buffer) };
+	ptr->is_owner = true;
+	if(!ptr->checkChecksum()){
+		logger_fatal("engine: bad checksum of chunk #", ptr->header->id, " for measurement id:", ptr->header->first.id, " page: ", this->filename);
+		return nullptr;
+	}
+	return ptr;
+}
+
 dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   TIMECODE_METRICS(ctmd, "readTimePoint", "Page::valuesBeforeTimePoint");
   dariadb::Id2Meas result;
   auto raw_links =
-      _index->get_chunks_links(q.ids, _index->iheader->minTime, q.time_point, q.flag);
+      _index->get_chunks_links(q.ids, _index->iheader.minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }
+  auto page_io = std::fopen(filename.c_str(), "rb");
+  if (page_io == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", this->filename);
+  }
 
   dariadb::IdSet to_read{q.ids.begin(), q.ids.end()};
+  auto indexReccords = _index->readReccords();
   for (auto it = raw_links.rbegin(); it != raw_links.rend(); ++it) {
     if (to_read.empty()) {
       break;
     }
-    auto _index_it = this->_index->index[it->index_rec_number];
-    auto ptr_to_begin = this->chunks + _index_it.offset;
-    auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
-    auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
-
-    Chunk_Ptr ptr = nullptr;
-    if (ptr_to_chunk_info_raw->kind == CHUNK_KIND::Compressed) {
-      ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
-    } else {
-      THROW_EXCEPTION("Unknow CHUNK_KIND: ", ptr_to_chunk_info_raw->kind);
-    }
-
-    Chunk_Ptr c{ptr};
+    auto _index_it = indexReccords[it->index_rec_number];
+    Chunk_Ptr c = readChunkByOffset(page_io, _index_it.offset);
+	if (c == nullptr) {
+		continue;
+	}
     auto reader = c->getReader();
     while (!reader->is_end()) {
       auto m = reader->readNext();
@@ -460,6 +441,8 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
       }
     }
   }
+
+  fclose(page_io);
   return result;
 }
 
@@ -470,31 +453,20 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
   if (_ch_links_iterator == links.cend()) {
     return;
   }
-
+  auto page_io = std::fopen(filename.c_str(), "rb");
+  if (page_io == nullptr) {
+	  THROW_EXCEPTION("can`t open file ", this->filename);
+  }
+  auto indexReccords = _index->readReccords();
   for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
 	  if (clbk->is_canceled()) {
 		  break;
 	  }
-    auto _index_it = this->_index->index[_ch_links_iterator->index_rec_number];
-    Chunk_Ptr search_res;
-
-    auto ptr_to_begin = this->chunks + _index_it.offset;
-    auto ptr_to_chunk_info_raw = reinterpret_cast<ChunkHeader *>(ptr_to_begin);
-    auto ptr_to_buffer_raw = ptr_to_begin + sizeof(ChunkHeader);
-    if (!ptr_to_chunk_info_raw->is_init) {
-      logger_info("engine: Try to read not_init chunk (", ptr_to_chunk_info_raw->id,
-                  "). maybe broken");
-      continue;
-    }
-
-    Chunk_Ptr ptr = nullptr;
-    if (ptr_to_chunk_info_raw->kind == CHUNK_KIND::Compressed) {
-      ptr = Chunk_Ptr{new ZippedChunk(ptr_to_chunk_info_raw, ptr_to_buffer_raw)};
-    } else {
-      THROW_EXCEPTION("Unknow CHUNK_KIND: ", ptr_to_chunk_info_raw->kind);
-    }
-    Chunk_Ptr c{ptr};
-    search_res = c;
+    auto _index_it = indexReccords[_ch_links_iterator->index_rec_number];
+	Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
+	if (search_res == nullptr) {
+		continue;
+	}
     auto rdr = search_res->getReader();
     while (!rdr->is_end()) {
       auto subres = rdr->readNext();
@@ -506,19 +478,7 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
       }
     }
   }
-}
-
-void Page::flush() {
-  this->page_mmap->flush();
-  this->_index->index_mmap->flush();
-}
-
-void Page::mark_as_non_init(Chunk_Ptr &ptr) {
-  ptr->header->is_init = false;
-  auto pos = ptr->header->pos_in_page;
-  _index->iheader->is_sorted = false;
-  _index->index[pos].is_init = false;
-  this->header->removed_chunks++;
+  fclose(page_io);
 }
 
 void Page::appendChunks(const std::vector<Chunk*>&, size_t) {
@@ -527,15 +487,18 @@ void Page::appendChunks(const std::vector<Chunk*>&, size_t) {
 
 Id2MinMax Page::loadMinMax(){
     Id2MinMax result;
-
-	auto byte_it = this->chunks;
-	auto end = this->region + this->header->filesize;
-	while (true) {
-		if (byte_it >= end) {
-			break;
+	auto page_io = std::fopen(filename.c_str(), "rb");
+	if (page_io == nullptr) {
+		THROW_EXCEPTION("can`t open file ", this->filename);
+	}
+	auto indexReccords = _index->readReccords();
+	for(int i=0;i<header.addeded_chunks;++i) {
+		auto _index_it = indexReccords[i];
+		Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
+		if (search_res == nullptr) {
+			continue;
 		}
-		ChunkHeader *info = reinterpret_cast<ChunkHeader *>(byte_it);
-		if (info->is_init) {
+			auto info = search_res->header;
 			auto fres = result.find(info->first.id);
 			if (fres == result.end()) {
 				result[info->first.id].min = info->first;
@@ -545,8 +508,8 @@ Id2MinMax Page::loadMinMax(){
 				result[info->first.id].updateMin(info->first);
 				result[info->first.id].updateMax(info->last);
 			}
-		}
-		byte_it += sizeof(ChunkHeader) + info->size;
+		
 	}
+	std::fclose(page_io);
     return result;
 }
