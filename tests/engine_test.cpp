@@ -28,7 +28,8 @@ BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
 	}
 	{
 		dariadb::utils::fs::mkdir(storage_path);
-		auto m = new dariadb::storage::Manifest(dariadb::utils::fs::append_path(storage_path, "Manifest"));
+		auto s = dariadb::storage::Settings_ptr(new dariadb::storage::Settings(storage_path));
+		auto m = new dariadb::storage::Manifest(s);
 		
 		dariadb::storage::Id2Step id2step;
 		dariadb::Id id_val = 0;
@@ -134,11 +135,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     BOOST_CHECK_GE(pages_count, size_t(2));
   }
   {
-    std::cout<<"reopen close storage\n";
+    std::cout<<"reopen closed storage\n";
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 
-	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
-		dariadb::utils::fs::append_path(settings->raw_path.value(), "Manifest") } };
+	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{settings} };
 
     auto manifest_version = manifest->get_version();
 

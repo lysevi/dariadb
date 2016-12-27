@@ -44,9 +44,9 @@ BaseOption::~BaseOption() {
 
 
 Settings::Settings(const std::string&path_to_storage):
-	storage_path(nullptr, "storage_path",path_to_storage),
-	raw_path(nullptr, "raw_path", path_to_storage),
-	bystep_path(nullptr, "bystep_path", path_to_storage),
+	storage_path(nullptr, "storage path",path_to_storage),
+	raw_path(nullptr, "raw path", utils::fs::append_path(path_to_storage,"raw")),
+	bystep_path(nullptr, "bystep path", utils::fs::append_path(path_to_storage, "bystep")),
 	aof_max_size(this, c_aof_max_size, AOF_FILE_SIZE),
 	aof_buffer_size(this, c_aof_buffer_size, AOF_BUFFER_SIZE),
 	chunk_size(this,c_chunk_size, CHUNK_SIZE),
@@ -59,6 +59,8 @@ Settings::Settings(const std::string&path_to_storage):
     load(f);
   } else {
 	dariadb::utils::fs::mkdir(storage_path.value());
+	dariadb::utils::fs::mkdir(raw_path.value());
+	dariadb::utils::fs::mkdir(bystep_path.value());
     set_default();
     save();
   }

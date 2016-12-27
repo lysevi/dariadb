@@ -59,7 +59,7 @@ public:
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
 	
-	_manifest = Manifest_ptr{ new Manifest{ manifest_file_name } };
+	_manifest = Manifest_ptr{ new Manifest{ _settings } };
 	_engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
 	if (is_new_storage) {

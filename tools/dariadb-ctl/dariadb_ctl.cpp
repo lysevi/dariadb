@@ -130,8 +130,10 @@ int main(int argc, char *argv[]) {
 
   if (vm.count("format")) {
     check_path_exists();
-    dariadb::storage::Manifest m(dariadb::utils::fs::append_path(
-        storage_path, dariadb::storage::MANIFEST_FILE_NAME));
+	auto settings = dariadb::storage::Settings_ptr{
+		new dariadb::storage::Settings(new_base_name) };
+
+    dariadb::storage::Manifest m(settings);
     std::cout << "version: " << m.get_version() << std::endl;
     std::exit(0);
   }
