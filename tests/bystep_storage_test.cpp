@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
     const int insertion_count = 10;
 	auto settings =
 		dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-	settings->chunk_size.value = 128;
+	settings->chunk_size.setValue(128);
 
 	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
 		new dariadb::storage::EngineEnvironment() };
@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
     dariadb::utils::fs::mkdir(storage_path);
     auto settings =
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
-    settings->chunk_size.value = 128;
+    settings->chunk_size.setValue(128);
 
     auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
         new dariadb::storage::EngineEnvironment()};

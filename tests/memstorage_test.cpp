@@ -91,8 +91,8 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 	}
 	{
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-		settings->strategy.value = dariadb::storage::STRATEGY::MEMORY;
-		settings->chunk_size.value = 128;
+		settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
+		settings->chunk_size.setValue(128);
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
 		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -118,9 +118,9 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
     {
         auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
-		settings->strategy.value = dariadb::storage::STRATEGY::MEMORY;
-        settings->memory_limit.value =1024*1024;
-        settings->chunk_size.value = 128;
+		settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
+        settings->memory_limit.setValue(1024*1024);
+        settings->chunk_size.setValue(128);
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
 		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -156,9 +156,9 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
 	{
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
-		settings->strategy.value = dariadb::storage::STRATEGY::CACHE;
-		settings->memory_limit.value = 1024 * 1024;
-		settings->chunk_size.value = 128;
+		settings->strategy.setValue(dariadb::storage::STRATEGY::CACHE);
+		settings->memory_limit.setValue(1024 * 1024);
+		settings->chunk_size.setValue(128);
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
 		

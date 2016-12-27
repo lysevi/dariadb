@@ -32,7 +32,7 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
           auto aofs = manifest->aof_list();
           for (auto f : aofs) {
               auto full_filename = utils::fs::append_path(_settings->path, f);
-              if (AOFile::writed(full_filename) != _settings->aof_max_size.value) {
+              if (AOFile::writed(full_filename) != _settings->aof_max_size.value()) {
                   logger_info("engine: AofManager open exist file ", f);
                   AOFile_Ptr p{new AOFile(_env, full_filename)};
                   _aof = p;
@@ -41,14 +41,14 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
           }
   }
 
-  _buffer.resize(_settings->aof_buffer_size.value);
+  _buffer.resize(_settings->aof_buffer_size.value());
   _buffer_pos = 0;
 }
 
 void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
-  if (_settings->strategy.value != STRATEGY::FAST_WRITE) {
+  if (_settings->strategy.value() != STRATEGY::FAST_WRITE) {
     drop_old_if_needed();
   }
   _aof = AOFile_Ptr{new AOFile(_env)};
@@ -98,7 +98,7 @@ void AOFManager::dropClosedFiles(size_t count) {
 }
 
 void AOFManager::drop_old_if_needed() {
-    if(_settings->strategy.value !=STRATEGY::FAST_WRITE){
+    if(_settings->strategy.value() !=STRATEGY::FAST_WRITE){
         auto closed = this->closedAofs();
         dropClosedFiles(closed.size());
     }
@@ -373,7 +373,7 @@ dariadb::Status  AOFManager::append(const Meas &value) {
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
 
-  if (_buffer_pos >= _settings->aof_buffer_size.value) {
+  if (_buffer_pos >= _settings->aof_buffer_size.value()) {
     flush_buffer();
   }
   return dariadb::Status (1, 0);

@@ -275,9 +275,9 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     }
 
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-	settings->strategy.value = dariadb::storage::STRATEGY::FAST_WRITE;
+	settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
 	settings->path = storage_path;
-	settings->chunk_size.value = chunk_size;
+	settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 3 + 3;
@@ -374,9 +374,9 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
     }
 
     auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->strategy.value = dariadb::storage::STRATEGY::FAST_WRITE;
+    settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
     settings->path = storage_path;
-    settings->chunk_size.value = chunk_size;
+    settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 10 + 3;
@@ -465,9 +465,9 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
     }
 
     auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->strategy.value = dariadb::storage::STRATEGY::FAST_WRITE;
+    settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
     settings->path = storage_path;
-    settings->chunk_size.value = chunk_size;
+    settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 10 + 3;

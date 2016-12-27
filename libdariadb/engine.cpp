@@ -31,14 +31,14 @@ class Engine::Private {
 public:
   Private(Settings_ptr settings) {
 	  _settings = settings;
-	  _strategy = _settings->strategy.value;
+	  _strategy = _settings->strategy.value();
 
 	  _engine_env = EngineEnvironment_ptr{ new EngineEnvironment() };
 	  _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
     logger_info("engine: project version - ", PROJECT_VERSION_MAJOR,'.',PROJECT_VERSION_MINOR,'.',PROJECT_VERSION_PATCH);
     logger_info("engine: storage version - ", this->version());
-    logger_info("engine: strategy - ", _settings->strategy.value);
+    logger_info("engine: strategy - ", _settings->strategy.value());
     _stoped = false;
 	
     if (!dariadb::utils::fs::path_exists(_settings->path)) {

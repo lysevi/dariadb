@@ -27,7 +27,7 @@ class Settings {
   public:
     Option() = delete;
     Option(Settings *s, const std::string &keyname, const T default_value)
-        : key_name(keyname), value(default_value) {
+        : key_name(keyname), _value(default_value) {
 
       auto sres = s->_all_options.find(keyname);
       if (sres == s->_all_options.end()) {
@@ -39,15 +39,18 @@ class Settings {
 
     std::string key_str() const override { return key_name; }
 
-    std::string value_str() const override { return std::to_string(value); }
+    std::string value_str() const override { return std::to_string(_value); }
 
     void from_string(const std::string &s) override {
       std::istringstream iss(s);
-      iss >> value;
+      iss >> _value;
     }
 
+	T value()const { return _value; }
+	void setValue(const T&value_) { _value = value_; }
+protected:
 	std::string key_name;
-    T value;
+    T _value;
   };
 
 public:
@@ -89,7 +92,7 @@ EXPORT std::string Settings::Option<STRATEGY>::value_str()const;
 template<>
 std::string Settings::Option<STRATEGY>::value_str()const {
 	std::stringstream ss;
-	ss << this->value;
+	ss << this->value();
 	return ss.str();
 }
 #endif

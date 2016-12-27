@@ -30,7 +30,7 @@ std::string settings_file_path(const std::string &path) {
 #ifndef MSVC
 template<> std::string Settings::Option<STRATEGY>::value_str()const {
 	std::stringstream ss;
-	ss << this->value;
+	ss << this->value();
 	return ss.str();
 }
 #endif
@@ -64,13 +64,13 @@ Settings::~Settings(){}
 
 void Settings::set_default() {
   logger("engine: Settings set default Settings");
-  aof_buffer_size.value = AOF_BUFFER_SIZE;
-  aof_max_size.value = AOF_FILE_SIZE;
-  chunk_size.value = CHUNK_SIZE;
-  memory_limit.value = MAXIMUM_MEMORY_LIMIT;
-  strategy.value = STRATEGY::COMPRESSED;
-  percent_when_start_droping.value = float(0.75);
-  percent_to_drop.value = float(0.15);
+  aof_buffer_size.setValue(AOF_BUFFER_SIZE);
+  aof_max_size.setValue(AOF_FILE_SIZE);
+  chunk_size.setValue(CHUNK_SIZE);
+  memory_limit.setValue(MAXIMUM_MEMORY_LIMIT);
+  strategy.setValue(STRATEGY::COMPRESSED);
+  percent_when_start_droping.setValue(float(0.75));
+  percent_to_drop.setValue(float(0.15));
 }
 
 std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {

@@ -25,14 +25,14 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   Private(const EngineEnvironment_ptr &env, size_t id_count)
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)),
-        _chunk_allocator(_settings->memory_limit.value, _settings->chunk_size.value) {
+        _chunk_allocator(_settings->memory_limit.value(), _settings->chunk_size.value()) {
     _chunks.resize(_chunk_allocator._capacity);
     _stoped = false;
     _down_level_storage = nullptr;
     _disk_storage = nullptr;
     _drop_stop = false;
     _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
-    if (_settings->strategy.value == STRATEGY::CACHE) {
+    if (_settings->strategy.value() == STRATEGY::CACHE) {
       logger_info("engine: run memory crawler.");
       _crawler_thread =
           std::thread{std::bind(&MemStorage::Private::crawler_thread_func, this)};
@@ -59,7 +59,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       _drop_stop = true;
       _drop_cond.notify_all();
       _drop_thread.join();
-      if (_settings->strategy.value == STRATEGY::CACHE) {
+      if (_settings->strategy.value() == STRATEGY::CACHE) {
         _crawler_cond.notify_all();
         _crawler_thread.join();
       }
@@ -132,7 +132,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         assert(!c->isFull());
         continue;
       }
-      if (_settings->strategy.value == STRATEGY::CACHE && (!c->already_in_disk())) {
+      if (_settings->strategy.value() == STRATEGY::CACHE && (!c->already_in_disk())) {
         continue;
       }
       all_chunks.push_back(c.get());
@@ -149,7 +149,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
             ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
         at_res->wait();
       } else {
-        if (_settings->strategy.value != STRATEGY::CACHE) {
+        if (_settings->strategy.value() != STRATEGY::CACHE) {
           logger_info("engine: memstorage _down_level_storage == nullptr");
         }
       }
@@ -298,7 +298,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   bool is_time_to_drop() {
     return (_chunk_allocator._allocated) >=
-           (_chunk_allocator._capacity * _settings->percent_when_start_droping.value);
+           (_chunk_allocator._capacity * _settings->percent_when_start_droping.value());
   }
 
   void drop_thread_func() {
@@ -313,7 +313,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         continue;
       }
 
-      drop_by_limit(_settings->percent_to_drop.value, false);
+      drop_by_limit(_settings->percent_to_drop.value(), false);
     }
 
     logger_info("engine: memstorage - dropping stop.");
