@@ -29,7 +29,7 @@ public:
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
-    _filename = utils::fs::append_path(_settings->path, rnd_fname);
+    _filename = utils::fs::append_path(_settings->raw_path.value(), rnd_fname);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_append(rnd_fname);
     is_full = false;
   }
@@ -296,7 +296,7 @@ public:
     for (auto f : aofs_manifest) {
       ss << f << std::endl;
     }
-    auto aofs_exists = utils::fs::ls(_settings->path, ".aof");
+    auto aofs_exists = utils::fs::ls(_settings->raw_path.value(), ".aof");
     for (auto f : aofs_exists) {
       ss << f << std::endl;
     }

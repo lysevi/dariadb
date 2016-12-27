@@ -33,6 +33,9 @@ template<> std::string Settings::Option<STRATEGY>::value_str()const {
 	ss << this->value();
 	return ss.str();
 }
+template<> std::string Settings::Option<std::string>::value_str()const {
+	return this->value();
+}
 #endif
 
 BaseOption::~BaseOption() {
@@ -40,7 +43,10 @@ BaseOption::~BaseOption() {
 
 
 
-Settings::Settings(const std::string&storage_path):
+Settings::Settings(const std::string&path_to_storage):
+	storage_path(nullptr, "storage_path",path_to_storage),
+	raw_path(nullptr, "raw_path", path_to_storage),
+	bystep_path(nullptr, "bystep_path", path_to_storage),
 	aof_max_size(this, c_aof_max_size, AOF_FILE_SIZE),
 	aof_buffer_size(this, c_aof_buffer_size, AOF_BUFFER_SIZE),
 	chunk_size(this,c_chunk_size, CHUNK_SIZE),
@@ -48,12 +54,11 @@ Settings::Settings(const std::string&storage_path):
 	memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
 	percent_when_start_droping(this, c_percent_when_start_droping, float(0.75)),
 	percent_to_drop(this, c_percent_to_drop, float(0.1)){
-  path = storage_path;
-  auto f = settings_file_path(path);
+  auto f = settings_file_path(storage_path.value());
   if (utils::fs::path_exists(f)) {
     load(f);
   } else {
-	dariadb::utils::fs::mkdir(path);
+	dariadb::utils::fs::mkdir(storage_path.value());
     set_default();
     save();
   }
@@ -82,7 +87,7 @@ std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_pa
 }
 
 void Settings::save() {
-  save(settings_file_path(this->path));
+  save(settings_file_path(this->storage_path.value()));
 }
 
 void Settings::save(const std::string &file) {
@@ -114,7 +119,7 @@ void Settings::load(const std::string &file) {
 }
 
 std::string Settings::dump(){
-   auto content=dariadb::utils::fs::read_file(settings_file_path(path));
+   auto content=dariadb::utils::fs::read_file(settings_file_path(storage_path.value()));
    json js = json::parse(content);
    std::stringstream ss;
    ss<<js.dump(1)<<std::endl;

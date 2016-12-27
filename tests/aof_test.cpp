@@ -30,7 +30,7 @@ public:
   }
   void dropAof(const std::string &fname) override {
     auto full_path = dariadb::utils::fs::append_path(
-		_settings->path, fname);
+		_settings->raw_path.value(), fname);
     dariadb::storage::AOFile_Ptr aof{new dariadb::storage::AOFile(_env,full_path, true)};
 
     auto ma = aof->readAll();
@@ -38,7 +38,7 @@ public:
     writed_count += ma->size();
     files.insert(fname);
 	_env->getResourceObject<dariadb::storage::Manifest>(dariadb::storage::EngineEnvironment::Resource::MANIFEST)->aof_rm(fname);
-    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_settings->path, fname));
+    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_settings->raw_path.value(), fname));
   }
 };
 

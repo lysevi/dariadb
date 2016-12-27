@@ -29,12 +29,15 @@ class Settings {
     Option(Settings *s, const std::string &keyname, const T default_value)
         : key_name(keyname), _value(default_value) {
 
-      auto sres = s->_all_options.find(keyname);
-      if (sres == s->_all_options.end()) {
-        s->_all_options.emplace(keyname, this);
-      } else {
-        THROW_EXCEPTION("Option duplicate key.");
-      }
+		if (s != nullptr) {
+			auto sres = s->_all_options.find(keyname);
+			if (sres == s->_all_options.end()) {
+				s->_all_options.emplace(keyname, this);
+			}
+			else {
+				THROW_EXCEPTION("Option duplicate key.");
+			}
+		}
     }
 
     std::string key_str() const override { return key_name; }
@@ -66,9 +69,11 @@ public:
 
   EXPORT std::string dump();
   EXPORT void change(std::string& expression);
+  
+  Option<std::string> storage_path;
+  Option<std::string> raw_path;
+  Option<std::string> bystep_path;
   // aof level options;
-  std::string path;
-
   Option<uint64_t> aof_max_size;  // measurements count in one file
   Option<uint64_t> aof_buffer_size; // inner buffer size
 
@@ -88,9 +93,17 @@ using Settings_ptr = std::shared_ptr<Settings>;
 #ifndef MSVC
 template<>
 EXPORT std::string Settings::Option<STRATEGY>::value_str()const;
+template<>
+EXPORT std::string Settings::Option<std::string>::value_str()const;
 #else
 template<>
 std::string Settings::Option<STRATEGY>::value_str()const {
+	std::stringstream ss;
+	ss << this->value();
+	return ss.str();
+}
+template<>
+std::string Settings::Option<std::string>::value_str()const {
 	std::stringstream ss;
 	ss << this->value();
 	return ss.str();

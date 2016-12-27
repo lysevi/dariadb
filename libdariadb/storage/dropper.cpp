@@ -33,7 +33,7 @@ void Dropper::dropAof(const std::string& fname) {
   if (fres != _files_queue.end()) {
     return;
   }
-  auto storage_path = _settings->path;
+  auto storage_path = _settings->raw_path.value();
   if (utils::fs::path_exists(utils::fs::append_path(storage_path, fname))) {
 	  _files_queue.emplace(fname);
     _in_queue++;
@@ -74,7 +74,7 @@ void Dropper::drop_aof_internal(const std::string &fname) {
 	  
 	  logger_info("engine: compressing ", fname);
       auto start_time = clock();
-      auto storage_path = sett->path;
+      auto storage_path = sett->raw_path.value();
       auto full_path = fs::append_path(storage_path, fname);
 
       AOFile_Ptr aof{new AOFile(env, full_path, true)};
@@ -103,7 +103,7 @@ void Dropper::write_aof_to_page(const std::string &fname, std::shared_ptr<MeasAr
   auto am = _aof_manager.get();
   auto sett = _settings;
 
-  auto storage_path = sett->path;
+  auto storage_path = sett->raw_path.value();
   auto full_path = fs::append_path(storage_path, fname);
 
   std::sort(ma->begin(), ma->end(), meas_time_compare_less());

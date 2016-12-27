@@ -80,7 +80,6 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 	  dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME) } };
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-  settings->path = storagePath;
   settings->chunk_size.setValue(chunks_size);
 
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
@@ -257,7 +256,6 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
 	  dariadb::utils::fs::append_path(storagePath, dariadb::storage::MANIFEST_FILE_NAME) } };
 
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-  settings->path = storagePath;
   settings->chunk_size.setValue(chunks_size);
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());

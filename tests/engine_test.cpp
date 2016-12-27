@@ -125,7 +125,6 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
     settings->aof_buffer_size.setValue(100);
     settings->aof_max_size.setValue(settings->aof_buffer_size.value() *5);
-    settings->path = storage_path;
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
@@ -139,7 +138,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
 
 	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
-		dariadb::utils::fs::append_path(settings->path, "Manifest") } };
+		dariadb::utils::fs::append_path(settings->raw_path.value(), "Manifest") } };
 
     auto manifest_version = manifest->get_version();
 
@@ -186,7 +185,6 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
     settings->aof_buffer_size.setValue(100);
     settings->aof_max_size.setValue(settings->aof_buffer_size.value() *2);
-    settings->path = storage_path;
     settings->chunk_size.setValue(chunk_size);
     settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
     std::unique_ptr<Engine> ms{new Engine(settings)};
@@ -231,7 +229,6 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     }
 
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->path = storage_path;
     settings->aof_buffer_size.setValue(chunk_size);
     settings->chunk_size.setValue(chunk_size);
 

@@ -49,12 +49,12 @@ public:
   }
 
   void reloadIndexHeaders() {
-	  if (utils::fs::path_exists(_settings->path)) {
+	  if (utils::fs::path_exists(_settings->raw_path.value())) {
 		  _file2header.clear();
 		  auto pages = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_list();
 
 		  for (auto n : pages) {
-			  auto file_name = utils::fs::append_path(_settings->path, n);
+			  auto file_name = utils::fs::append_path(_settings->raw_path.value(), n);
 			  auto phdr = Page::readHeader(file_name);
 			  last_id = std::max(phdr.max_chunk_id, last_id);
 
@@ -78,7 +78,7 @@ public:
     if (force_check) {
       logger_info("engine: PageManager fsck force.");
     }
-    if (!utils::fs::path_exists(_settings->path)) {
+    if (!utils::fs::path_exists(_settings->raw_path.value())) {
       return;
     }
 
@@ -86,11 +86,11 @@ public:
                      ->page_list();
 
     for (auto n : pages) {
-      auto file_name = utils::fs::append_path(_settings->path, n);
+      auto file_name = utils::fs::append_path(_settings->raw_path.value(), n);
 	  try {
 		  PageHeader hdr = Page::readHeader(file_name);
 		  auto index_filename = PageIndex::index_name_from_page_name(n);
-		  auto index_file_path = utils::fs::append_path(_settings->path, index_filename);
+		  auto index_file_path = utils::fs::append_path(_settings->raw_path.value(), index_filename);
 		  if (!utils::fs::path_exists(index_file_path)) {
 			  Page::restoreIndexFile(file_name);
 		  }
@@ -259,7 +259,7 @@ public:
       auto hdr = f2h.second.hdr;
       if (pred(hdr)) {
         auto page_file_name =
-            utils::fs::append_path(_settings->path, f2h.second.path);
+            utils::fs::append_path(_settings->raw_path.value(), f2h.second.path);
         result.push_back(page_file_name);
       }
     }
@@ -352,15 +352,15 @@ public:
 
   void append(const std::string &file_prefix, const dariadb::MeasArray &ma) {
     TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
-    if (!dariadb::utils::fs::path_exists(_settings->path)) {
-      dariadb::utils::fs::mkdir(_settings->path);
+    if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
+      dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
 
     Page *res = nullptr;
 
     std::string page_name = file_prefix + PAGE_FILE_EXT;
     std::string file_name =
-        dariadb::utils::fs::append_path(_settings->path, page_name);
+        dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::create(file_name, last_id, _settings->chunk_size.value(), ma);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	last_id=res->header.max_chunk_id;
@@ -447,7 +447,7 @@ public:
           logger_info("==> ",utils::fs::extract_filename(p));
       }
 	  std::string file_name =
-		  dariadb::utils::fs::append_path(_settings->path, page_name);
+		  dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
 	  res = Page::create(file_name, last_id, _settings->chunk_size.value(), part);
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	  last_id = res->header.max_chunk_id;
@@ -464,7 +464,7 @@ public:
 	  std::string page_name = utils::fs::random_file_name(".page");
 	  logger_info("engine: write chunks to ", page_name);
 	  std::string file_name =
-		  dariadb::utils::fs::append_path(_settings->path, page_name);
+		  dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
 	  res = Page::create(file_name, last_id, a,count);
 	  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->page_append(page_name);
 	  last_id = res->header.max_chunk_id;
