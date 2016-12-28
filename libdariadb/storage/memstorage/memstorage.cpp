@@ -44,13 +44,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   void stop() {
     if (!_stoped) {
       logger_info("engine: stop memstorage.");
-      if (this->_down_level_storage != nullptr) {
-        std::lock(_drop_locker, _crawler_locker);
-        logger_info("engine: memstorage - drop all chunk to disk");
-        this->drop_by_limit(1.0, true);
-        _drop_locker.unlock();
-        _crawler_locker.unlock();
-      }
       for (size_t i = 0; i < _chunks.size(); ++i) {
         _chunks[i] = nullptr;
       }
@@ -63,6 +56,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         _crawler_cond.notify_all();
         _crawler_thread.join();
       }
+	  if (this->_down_level_storage != nullptr) {
+		  logger_info("engine: memstorage - drop all chunk to disk");
+		  this->drop_by_limit(1.0, true);
+	  }
       _stoped = true;
     }
   }
