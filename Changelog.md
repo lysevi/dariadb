@@ -22,6 +22,7 @@ Storage:
    - Foreach - is async.
    - Bystep storage.
    - Remove mmap usage.
+   - Different folders for 'raw' and 'bystep' values.
 
 v0.1.1
 =====
