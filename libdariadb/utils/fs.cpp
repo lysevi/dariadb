@@ -1,9 +1,11 @@
-#include <libdariadb/utils/fs.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/fs.h>
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <iterator>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace dariadb::utils::fs;
 
@@ -78,9 +80,11 @@ std::string extract_filename(const std::string &fname) {
   return p.filename().string();
 }
 
-std::string random_file_name(const std::string&ext) {
+std::string random_file_name(const std::string &ext) {
+  auto now = boost::posix_time::microsec_clock::local_time();
+  auto duration = now - boost::posix_time::from_time_t(0);
   std::stringstream ss;
-  ss << timeutil::current_time() << ext;
+  ss << duration.total_nanoseconds() << ext;
   return ss.str();
 }
 
@@ -97,13 +101,12 @@ std::string append_path(const std::string &p1, const std::string &p2) {
 }
 
 bool file_exists(const std::string &fname) {
-	std::ifstream fs(fname.c_str());
-	if (fs) {
-		return true;
-	}
-	else {
-		return false;
-	}
+  std::ifstream fs(fname.c_str());
+  if (fs) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool path_exists(const std::string &path) {
