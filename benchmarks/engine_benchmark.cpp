@@ -376,13 +376,13 @@ int main(int argc, char *argv[]) {
     }
 
     auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
-	settings->strategy.value = strategy;
-	settings->aof_buffer_size.value = 1000000;
-	settings->aof_max_size.value = 1000000;
+	settings->strategy.setValue(strategy);
+	settings->aof_buffer_size.setValue(1000000);
+	settings->aof_max_size.setValue(1000000);
     settings->save();
 	if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) && memory_limit!=0) {
 		std::cout << "memory limit: " << memory_limit<<std::endl;
-		settings->memory_limit.value = memory_limit * 1024 * 1024;
+		settings->memory_limit.setValue(memory_limit * 1024 * 1024);
 	}
     utils::LogManager::start(log_ptr);
 

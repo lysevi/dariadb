@@ -30,7 +30,7 @@ public:
   }
   void dropAof(const std::string &fname) override {
     auto full_path = dariadb::utils::fs::append_path(
-		_settings->path, fname);
+		_settings->raw_path.value(), fname);
     dariadb::storage::AOFile_Ptr aof{new dariadb::storage::AOFile(_env,full_path, true)};
 
     auto ma = aof->readAll();
@@ -38,7 +38,7 @@ public:
     writed_count += ma->size();
     files.insert(fname);
 	_env->getResourceObject<dariadb::storage::Manifest>(dariadb::storage::EngineEnvironment::Resource::MANIFEST)->aof_rm(fname);
-    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_settings->path, fname));
+    dariadb::utils::fs::rm(dariadb::utils::fs::append_path(_settings->raw_path.value(), fname));
   }
 };
 
@@ -50,14 +50,13 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
   }
 
   dariadb::utils::fs::mkdir(storage_path);
-  auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
-	  dariadb::utils::fs::append_path(storage_path, "Manifest") } };
-
   auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
   assert(aof_files.size() == 0);
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-  settings->aof_buffer_size.value = block_size;
-  settings->aof_max_size.value = block_size;
+  settings->aof_buffer_size.setValue(block_size);
+  settings->aof_max_size.setValue(block_size);
+
+  auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
 
   auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
@@ -104,7 +103,7 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
       pos++;
     }
     aof.append(ma.begin(), ma.end());
-    aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
+    aof_files = dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::AOF_FILE_EXT);
     BOOST_CHECK_EQUAL(aof_files.size(), size_t(1));
 
     dariadb::MeasList out;
@@ -114,7 +113,7 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
     BOOST_CHECK_EQUAL(out.size(), writes_count);
   }
   {
-    aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
+    aof_files = dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::AOF_FILE_EXT);
     BOOST_CHECK(aof_files.size() == size_t(1));
     dariadb::storage::AOFile aof(_engine_env, aof_files.front(), true);
     auto all = aof.readAll();
@@ -135,11 +134,12 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
   }
   {
     dariadb::utils::fs::mkdir(storage_path);
-	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
-		dariadb::utils::fs::append_path(storage_path, "Manifest") } };
+
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->aof_buffer_size.value = block_size;
-    settings->aof_max_size.value = block_size;
+    settings->aof_buffer_size.setValue(block_size);
+    settings->aof_max_size.setValue(block_size);
+
+	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
 
 	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
@@ -171,13 +171,12 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
-	  auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
-		  dariadb::utils::fs::append_path(storagePath, "Manifest") } };
-
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-    settings->aof_max_size.value = max_size;
-    settings->aof_buffer_size.value = max_size;
+    settings->aof_max_size.setValue(max_size);
+    settings->aof_buffer_size.setValue(max_size);
 	
+	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
+
 	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
 	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
@@ -192,11 +191,11 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
     dariadb::utils::async::ThreadManager::stop();
   }
   {
-	  auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{
-		  dariadb::utils::fs::append_path(storagePath, "Manifest") } };
-
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-    settings->aof_max_size.value = max_size;
+    settings->aof_max_size.setValue(max_size);
+
+	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
+
 	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
 	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());

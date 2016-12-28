@@ -2,6 +2,7 @@
 
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/storage/bystep/step_kind.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <list>
@@ -17,7 +18,7 @@ const std::string MANIFEST_FILE_NAME = "Manifest";
 class Manifest {
 public:
   EXPORT Manifest() = delete;
-  EXPORT Manifest(const std::string &fname);
+  EXPORT Manifest(const Settings_ptr&settings);
   EXPORT ~Manifest();
 
   EXPORT std::list<std::string> page_list();

@@ -28,11 +28,11 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
 	_settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
   _down = nullptr;
   auto manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
-  if (dariadb::utils::fs::path_exists(_settings->path)) {
+  if (dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
           auto aofs = manifest->aof_list();
           for (auto f : aofs) {
-              auto full_filename = utils::fs::append_path(_settings->path, f);
-              if (AOFile::writed(full_filename) != _settings->aof_max_size.value) {
+              auto full_filename = utils::fs::append_path(_settings->raw_path.value(), f);
+              if (AOFile::writed(full_filename) != _settings->aof_max_size.value()) {
                   logger_info("engine: AofManager open exist file ", f);
                   AOFile_Ptr p{new AOFile(_env, full_filename)};
                   _aof = p;
@@ -41,14 +41,14 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
           }
   }
 
-  _buffer.resize(_settings->aof_buffer_size.value);
+  _buffer.resize(_settings->aof_buffer_size.value());
   _buffer_pos = 0;
 }
 
 void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
-  if (_settings->strategy.value != STRATEGY::FAST_WRITE) {
+  if (_settings->strategy.value() != STRATEGY::FAST_WRITE) {
     drop_old_if_needed();
   }
   _aof = AOFile_Ptr{new AOFile(_env)};
@@ -98,7 +98,7 @@ void AOFManager::dropClosedFiles(size_t count) {
 }
 
 void AOFManager::drop_old_if_needed() {
-    if(_settings->strategy.value !=STRATEGY::FAST_WRITE){
+    if(_settings->strategy.value() !=STRATEGY::FAST_WRITE){
         auto closed = this->closedAofs();
         dropClosedFiles(closed.size());
     }
@@ -108,7 +108,7 @@ std::list<std::string> AOFManager::aof_files() const {
   std::list<std::string> res;
   auto files = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_list();
   for (auto f : files) {
-    auto full_path = utils::fs::append_path(_settings->path, f);
+    auto full_path = utils::fs::append_path(_settings->raw_path.value(), f);
     res.push_back(full_path);
   }
   return res;
@@ -373,7 +373,7 @@ dariadb::Status  AOFManager::append(const Meas &value) {
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
 
-  if (_buffer_pos >= _settings->aof_buffer_size.value) {
+  if (_buffer_pos >= _settings->aof_buffer_size.value()) {
     flush_buffer();
   }
   return dariadb::Status (1, 0);
@@ -418,7 +418,7 @@ size_t AOFManager::filesCount() const {
 
 void AOFManager::erase(const std::string &fname) {
   _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_rm(fname);
-  utils::fs::rm(utils::fs::append_path(_settings->path, fname));
+  utils::fs::rm(utils::fs::append_path(_settings->raw_path.value(), fname));
 }
 
 Id2MinMax AOFManager::loadMinMax(){

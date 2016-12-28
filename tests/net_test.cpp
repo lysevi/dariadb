@@ -275,9 +275,8 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     }
 
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-	settings->strategy.value = dariadb::storage::STRATEGY::FAST_WRITE;
-	settings->path = storage_path;
-	settings->chunk_size.value = chunk_size;
+	settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
+	settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 3 + 3;
@@ -374,9 +373,8 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
     }
 
     auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->strategy.value = dariadb::storage::STRATEGY::FAST_WRITE;
-    settings->path = storage_path;
-    settings->chunk_size.value = chunk_size;
+    settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
+    settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 10 + 3;
@@ -414,7 +412,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
           ma[i].time = i;
         }
         c1.append(ma);
-        auto aofs=dariadb::utils::fs::ls(storage_path,".aof").size();
+        auto aofs=dariadb::utils::fs::ls(settings->raw_path.value(),".aof").size();
         dariadb::logger("CompactionTest: aof count:",aofs);
         if(aofs>=size_t(2)){
             break;
@@ -424,7 +422,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
     c1.compactTo(size_t(1));
 
     while(1){
-        auto pages=dariadb::utils::fs::ls(storage_path,".page").size();
+        auto pages=dariadb::utils::fs::ls(settings->raw_path.value(),".page").size();
         //dariadb::logger("CompactionTest: pages count:",pages);
         if(pages==size_t(1)){
             break;
@@ -465,9 +463,8 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
     }
 
     auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->strategy.value = dariadb::storage::STRATEGY::FAST_WRITE;
-    settings->path = storage_path;
-    settings->chunk_size.value = chunk_size;
+    settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
+    settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 10 + 3;
@@ -505,7 +502,7 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
           ma[i].time = i;
         }
         c1.append(ma);
-        auto aofs=dariadb::utils::fs::ls(storage_path,".aof").size();
+        auto aofs=dariadb::utils::fs::ls(settings->raw_path.value(),".aof").size();
         dariadb::logger("CompactionTest: aof count:",aofs);
         if(aofs>=size_t(2)){
             break;
@@ -515,7 +512,7 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
     c1.compactbyTime(0,MEASES_SIZE);
 
     while(1){
-        auto pages=dariadb::utils::fs::ls(storage_path,".page").size();
+        auto pages=dariadb::utils::fs::ls(settings->raw_path.value(),".page").size();
         //dariadb::logger("CompactionTest: pages count:",pages);
         if(pages==size_t(1)){
             break;

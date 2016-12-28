@@ -31,23 +31,25 @@ class Engine::Private {
 public:
   Private(Settings_ptr settings) {
 	  _settings = settings;
-	  _strategy = _settings->strategy.value;
+	  _strategy = _settings->strategy.value();
 
 	  _engine_env = EngineEnvironment_ptr{ new EngineEnvironment() };
 	  _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
     logger_info("engine: project version - ", PROJECT_VERSION_MAJOR,'.',PROJECT_VERSION_MINOR,'.',PROJECT_VERSION_PATCH);
     logger_info("engine: storage version - ", this->version());
-    logger_info("engine: strategy - ", _settings->strategy.value);
+    logger_info("engine: strategy - ", _settings->strategy.value());
     _stoped = false;
 	
-    if (!dariadb::utils::fs::path_exists(_settings->path)) {
-      dariadb::utils::fs::mkdir(_settings->path);
+    if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
+      dariadb::utils::fs::mkdir(_settings->storage_path.value());
+	  dariadb::utils::fs::mkdir(_settings->raw_path.value());
+	  dariadb::utils::fs::mkdir(_settings->bystep_path.value());
     }
 
 	lockfile_lock_or_die();
 	
-	auto manifest_file_name = utils::fs::append_path(_settings->path, MANIFEST_FILE_NAME);
+	auto manifest_file_name = utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
 
 	bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
 	if (is_new_storage) {
@@ -57,7 +59,7 @@ public:
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
 	
-	_manifest = Manifest_ptr{ new Manifest{ manifest_file_name } };
+	_manifest = Manifest_ptr{ new Manifest{ _settings } };
 	_engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
 	if (is_new_storage) {
@@ -65,7 +67,7 @@ public:
 	}
 	else {
 		check_storage_version();
-		Dropper::cleanStorage(_settings->path);
+		Dropper::cleanStorage(_settings->raw_path.value());
 	}
 
 	_page_manager = PageManager_ptr{ new PageManager(_engine_env) };
@@ -137,18 +139,18 @@ public:
   }
 
   std::string lockfile_path(){
-      return utils::fs::append_path(_settings->path, "lockfile");
+      return utils::fs::append_path(_settings->storage_path.value(), "lockfile");
   }
 
   void lockfile_lock_or_die(){
       auto lfile=lockfile_path();
       if(utils::fs::path_exists(lfile)){
-         throw_lock_error( _settings->path);
+         throw_lock_error( _settings->storage_path.value());
       }
       std::ofstream ofs;
       ofs.open(lfile, std::ios_base::out | std::ios_base::binary);
       if(!ofs.is_open()){
-         throw_lock_error( _settings->path);
+         throw_lock_error( _settings->storage_path.value());
       }
       ofs<<"locked.";
       ofs.close();
@@ -636,7 +638,7 @@ public:
     }
   }
   void fsck() {
-    logger_info("engine: fsck ", _settings->path);
+    logger_info("engine: fsck ", _settings->storage_path.value());
     _page_manager->fsck();
   }
 

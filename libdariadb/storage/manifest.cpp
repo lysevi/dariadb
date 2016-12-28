@@ -35,7 +35,8 @@ static int version_select_callback(void *data, int argc, char **argv, char **azC
 
 class Manifest::Private {
 public:
-  Private(const std::string &fname) : _filename(fname) {
+  Private(const Settings_ptr&settings) : _settings(settings) {
+	_filename = utils::fs::append_path(settings->storage_path.value(), MANIFEST_FILE_NAME);
     std::string storage_path = utils::fs::parent_path(this->_filename);
     bool is_exists = true;
     if (!utils::fs::path_exists(storage_path)) {
@@ -48,7 +49,7 @@ public:
       }
     }
 	logger_info("engine: opening  manifest file...");
-    int rc = sqlite3_open(fname.c_str(), &db);
+    int rc = sqlite3_open(_filename.c_str(), &db);
     if (rc) {
       auto err_msg = sqlite3_errmsg(db);
       THROW_EXCEPTION("Can't open database: ", err_msg);
@@ -60,21 +61,19 @@ public:
       sqlite3_free(err);
     }
     if (is_exists) {
-      restore();
+      restore(settings->raw_path.value());
     }
   }
 
   ~Private() { sqlite3_close(db); }
 
-  void restore() {
-    std::string storage_path = utils::fs::parent_path(this->_filename);
-
+  void restore(std::string raw_storage_path) {
     auto aofs = this->aof_list();
     auto size_before = aofs.size();
     aofs.erase(std::remove_if(aofs.begin(), aofs.end(),
-                              [this, storage_path](std::string fname) {
+                              [this, raw_storage_path](std::string fname) {
                                 auto full_file_name =
-                                    utils::fs::append_path(storage_path, fname);
+                                    utils::fs::append_path(raw_storage_path, fname);
                                 return !utils::fs::path_exists(full_file_name);
                               }),
                aofs.end());
@@ -89,9 +88,9 @@ public:
     auto pages = this->page_list();
     size_before = pages.size();
     pages.erase(std::remove_if(pages.begin(), pages.end(),
-                               [this, storage_path](std::string fname) {
+                               [this, raw_storage_path](std::string fname) {
                                  auto full_file_name =
-                                     utils::fs::append_path(storage_path, fname);
+                                     utils::fs::append_path(raw_storage_path, fname);
                                  return !utils::fs::path_exists(full_file_name);
                                }),
                 pages.end());
@@ -313,10 +312,11 @@ protected:
   std::string _filename;
   utils::async::Locker _locker;
   sqlite3 *db;
+  Settings_ptr _settings;
 };
 
 
-Manifest::Manifest(const std::string &fname):_impl(new Manifest::Private(fname)) {}
+Manifest::Manifest(const Settings_ptr&settings):_impl(new Manifest::Private(settings)) {}
 Manifest::~Manifest() {
 	_impl = nullptr;
 }

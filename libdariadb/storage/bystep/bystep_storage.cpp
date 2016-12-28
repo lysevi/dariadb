@@ -25,7 +25,7 @@ struct ByStepStorage::Private : public IMeasStorage {
   Private(const EngineEnvironment_ptr &env)
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)) {
-    auto fname = utils::fs::append_path(_settings->path, filename);
+    auto fname = utils::fs::append_path(_settings->bystep_path.value(), filename);
     logger_info("engine: opening  bystep storage...");
     _io = std::make_unique<IOAdapter>(fname);
     logger_info("engine: bystep storage file opened.");

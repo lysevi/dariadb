@@ -29,7 +29,7 @@ public:
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
-    _filename = utils::fs::append_path(_settings->path, rnd_fname);
+    _filename = utils::fs::append_path(_settings->raw_path.value(), rnd_fname);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_append(rnd_fname);
     is_full = false;
   }
@@ -65,7 +65,7 @@ public:
     TIMECODE_METRICS(ctmd, "append", "AOFile::append");
     assert(!_is_readonly);
 
-    if (_writed > _settings->aof_max_size.value) {
+    if (_writed > _settings->aof_max_size.value()) {
       return Status (0, 1);
     }
     auto file = open_to_append();
@@ -85,7 +85,7 @@ public:
       return Status (0, sz);
     }
     auto file = open_to_append();
-    auto max_size = _settings->aof_max_size.value;
+    auto max_size = _settings->aof_max_size.value();
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
     std::fwrite(&(*begin), sizeof(Meas), write_size, file);
     std::fclose(file);
@@ -104,7 +104,7 @@ public:
     }
     auto file = open_to_append();
 
-    auto max_size = _settings->aof_max_size.value;
+    auto max_size = _settings->aof_max_size.value();
 
     auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
     MeasArray ma{begin, end};
@@ -272,7 +272,7 @@ public:
     TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
     auto file = open_to_read();
 
-    auto ma=std::make_shared<MeasArray>(_settings->aof_max_size.value);
+    auto ma=std::make_shared<MeasArray>(_settings->aof_max_size.value());
 	auto raw = ma.get();
     size_t pos = 0;
     while (1) {
@@ -296,7 +296,7 @@ public:
     for (auto f : aofs_manifest) {
       ss << f << std::endl;
     }
-    auto aofs_exists = utils::fs::ls(_settings->path, ".aof");
+    auto aofs_exists = utils::fs::ls(_settings->raw_path.value(), ".aof");
     for (auto f : aofs_exists) {
       ss << f << std::endl;
     }

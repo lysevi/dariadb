@@ -92,8 +92,8 @@ int main(int argc, char **argv) {
 			dariadb::utils::fs::rm(storage_path);
 		}
 		auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-		settings->memory_limit.value = 500*1024*1024;
-		settings->chunk_size.value = 1024;
+		settings->memory_limit.setValue(500*1024*1024);
+		settings->chunk_size.setValue(1024);
 		auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
 		_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
 		dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 		dariadb::storage::MemStorage ms{ _engine_env, size_t(0) };
 		if (memory_limit != 0) {
 			std::cout << "memory limit: " << memory_limit << std::endl;
-			settings->memory_limit.value = memory_limit * 1024 * 1024;
+			settings->memory_limit.setValue(memory_limit * 1024 * 1024);
 		}
 		mstore = new dariadb::storage::MemStorage{ _engine_env,size_t(0) };
 
