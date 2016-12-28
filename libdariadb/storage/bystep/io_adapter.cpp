@@ -434,22 +434,24 @@ public:
       assert(local_copy.size() == _chunks_list.size());
       _chunks_list.clear();
 	  lock.unlock();
+	  if (!local_copy.empty()) {
 
-      auto start_time = clock();
-	  //TODO write in DISK_IO pool.
-	  
-      sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+		  auto start_time = clock();
+		  //TODO write in DISK_IO pool.
 
-      for (auto &c : local_copy) {
-        this->_append(c.ch, c.min, c.max);
-      }
-      sqlite3_exec(_db, "END TRANSACTION;", NULL, NULL, NULL);
+		  sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
-      auto end = clock();
-      auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+		  for (auto &c : local_copy) {
+			  this->_append(c.ch, c.min, c.max);
+		  }
+		  sqlite3_exec(_db, "END TRANSACTION;", NULL, NULL, NULL);
 
-      logger("engine: io_adapter - write ", local_copy.size(), " chunks. elapsed time - ",
-             elapsed);
+		  auto end = clock();
+		  auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+
+		  logger("engine: io_adapter - write ", local_copy.size(), " chunks. elapsed time - ",
+			  elapsed);
+	  }
       _dropper_locker.unlock();
     }
     logger_info("engine: io_adapter - stoped.");
@@ -466,6 +468,7 @@ public:
 		  }
 		  _cond_var.notify_all();
 	  }
+	  logger_info("engine: io_adapter - flush end.");
   }
 
   bystep::Description description() {
