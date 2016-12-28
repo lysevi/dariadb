@@ -346,7 +346,10 @@ void Page::update_index_recs(const PageHeader &phdr) {
   ihdr.maxTime = MIN_TIME;
   for(size_t i=0;i<phdr.addeded_chunks;++i){
 	  ChunkHeader info;
-	  std::fread(&info, sizeof(ChunkHeader), 1, page_io);
+	  auto readed=std::fread(&info, sizeof(ChunkHeader), 1, page_io);
+	  if (readed < size_t(1)) {
+		  THROW_EXCEPTION("engine: page read error - ", this->filename);
+	  }
       auto index_reccord= PageInner::init_chunk_index_rec(info, &ihdr);
 	  assert(index_reccord.offset == info.offset_in_page);
 	  std::fwrite(&index_reccord, sizeof(IndexReccord),1, index_file);
@@ -386,11 +389,16 @@ ChunkLinkList Page::chunksByIterval(const QueryInterval &query) {
 Chunk_Ptr Page::readChunkByOffset(FILE* page_io, int offset) {
 	std::fseek(page_io, offset, SEEK_SET);
 	ChunkHeader *cheader = new ChunkHeader;
-	std::fread(cheader, sizeof(ChunkHeader), 1, page_io);
-
+	auto readed = std::fread(cheader, sizeof(ChunkHeader), 1, page_io);
+	if (readed < size_t(1)) {
+		THROW_EXCEPTION("engine: page read error - ", this->filename);
+	}
 	uint8_t *buffer = new uint8_t[cheader->size];
 	memset(buffer, 0, cheader->size);
-	std::fread(buffer, cheader->size, 1, page_io);
+	readed=std::fread(buffer, cheader->size, 1, page_io);
+	if (readed < size_t(1)) {
+		THROW_EXCEPTION("engine: page read error - ", this->filename);
+	}
 	Chunk_Ptr ptr = nullptr;
 	ptr = Chunk_Ptr{ new ZippedChunk(cheader, buffer) };
 	ptr->is_owner = true;
@@ -492,7 +500,7 @@ Id2MinMax Page::loadMinMax(){
 		THROW_EXCEPTION("can`t open file ", this->filename);
 	}
 	auto indexReccords = _index->readReccords();
-	for(int i=0;i<header.addeded_chunks;++i) {
+	for(uint32_t i=0;i<header.addeded_chunks;++i) {
 		auto _index_it = indexReccords[i];
 		Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
 		if (search_res == nullptr) {

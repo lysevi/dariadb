@@ -153,6 +153,7 @@ dariadb::Time AOFManager::minTime() {
 		  auto local = aof.minTime();
 		  result = std::min(local, result);
 	  }
+	  return false;
   };
 
   auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
@@ -181,6 +182,7 @@ dariadb::Time AOFManager::maxTime() {
 		  auto local = aof.maxTime();
 		  result = std::max(local, result);
 	  }
+	  return false;
   };
 
   auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
@@ -215,6 +217,7 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 		  }
 		  num++;
 	  }
+	  return false;
   };
   auto am_async=ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
@@ -261,6 +264,7 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
         AOFile aof(env, filename, true);
         aof.foreach (q, clbk);
       }
+	  return false;
     };
 
 	auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
@@ -300,6 +304,7 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
       results[num] = aof.readTimePoint(query);
       num++;
     }
+	return false;
   };
 
   auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
@@ -361,6 +366,7 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
 			  }
 		  }
 	  }
+	  return false;
   };
   auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
@@ -402,6 +408,7 @@ void AOFManager::flush_buffer() {
 		  }
 	  }
 	  _buffer_pos = 0;
+	  return false;
   };
   auto async_r = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   async_r->wait();

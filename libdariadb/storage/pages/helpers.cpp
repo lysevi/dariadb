@@ -112,6 +112,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
         results.push_back(subres);
         result_locker.unlock();
       }
+	  return false;
     };
     auto cur_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at));
     async_compressions.push_back(cur_async);

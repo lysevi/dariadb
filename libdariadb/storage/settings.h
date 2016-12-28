@@ -67,9 +67,9 @@ class Settings {
         : ReadOnlyOption<T>(s, keyname, default_value) {}
 
     void setValue(const T &value_) {
-      logger_info("engine: change settings - ", this->key_name, " ", _value, " to ",
+      logger_info("engine: change settings - ", this->key_name, " ", this->_value, " to ",
                   value_);
-      _value = value_;
+	  this->_value = value_;
     }
   };
 

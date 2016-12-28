@@ -2,6 +2,7 @@
 #include <libdariadb/storage/bystep/bysteptrack.h>
 #include <libdariadb/storage/bystep/helpers.h>
 #include <cassert>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -92,11 +93,14 @@ Id2MinMax ByStepTrack::loadMinMax() {
 
 Id2Meas ByStepTrack::currentValue(const IdArray &, const Flag &flag) {
   Id2Meas result{};
-  for (size_t i = _values.size() - 1; i >= 0; --i) {
+  for (size_t i = _values.size() - 1; ; --i) {
     if (_values[i].flag != Flags::_NO_DATA) {
       if (_values[i].inFlag(flag)) {
         result[_target_id] = _values[i];
       }
+	  if (i == 0) {
+		  break;
+	  }
       break;
     }
   }

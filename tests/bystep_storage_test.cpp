@@ -14,7 +14,7 @@
 
 #include <algorithm>
 #include <cstring>
-
+#include <iostream>
 
 BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
 	using namespace dariadb::storage;

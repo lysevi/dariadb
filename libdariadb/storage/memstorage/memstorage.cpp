@@ -141,6 +141,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
           TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
           this->_down_level_storage->appendChunks(all_chunks, pos);
+		  return false;
         };
         auto at_res =
             ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));

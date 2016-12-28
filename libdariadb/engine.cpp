@@ -281,11 +281,13 @@ public:
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id, pm](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
+	  return false;
     };
 	auto am = _top_level_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  ar = am->minMaxTime(id, &subMin3, &subMax3);
+	  return false;
 	};
 
 	lock_storage();
@@ -491,15 +493,15 @@ public:
     TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
     AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
+	  if (!try_lock_storage()) {
+		  return true;
+	  }
 	  auto local_q = q;
 	  local_q.ids.resize(1);
 	  for (auto id : q.ids) {
 		  local_q.from = q.from;
 		  local_q.to = q.to;
 		  local_q.ids[0] = id;
-		  while (!this->try_lock_storage()) {
-			  ti.yield();
-		  }
 		  
 		  if (isBystepId(id)) {
 			  _bystep_storage->foreach(local_q, a_clbk);
@@ -512,9 +514,10 @@ public:
 				  foreach_internal_two_level(local_q, p_clbk, a_clbk);
 			  }
 		  }
-		  this->unlock_storage();
 	  }
       a_clbk->is_end();
+	  this->unlock_storage();
+	  return false;
     };
 
     ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
@@ -573,11 +576,11 @@ public:
 	auto am = _aof_manager.get();
     AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
-
+	  if (!try_lock_storage()) {
+		  return true;
+	  }
       for (auto id : q.ids) {
-		  while (!try_lock_storage()) {
-			  ti.yield();
-		  }
+		 
 		  QueryTimePoint local_q = q;
 		  local_q.ids.clear();
 		  local_q.ids.push_back(id);
@@ -611,10 +614,9 @@ public:
 
 			  }
 		  }
-		unlock_storage();
       }
-
-      
+	  unlock_storage();
+	  return false;
     };
 
     auto pm_async =

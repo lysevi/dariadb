@@ -39,7 +39,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-make -j2
+make -j2 -k
 
 if [ $? -ne 0 ]; then
     exit 1

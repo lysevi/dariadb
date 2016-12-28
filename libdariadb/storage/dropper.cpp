@@ -67,8 +67,8 @@ void Dropper::drop_aof_internal(const std::string &fname) {
   AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
     try {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-	  while (!this->_dropper_lock.try_lock()) {
-		  ti.yield();
+	  if(!this->_dropper_lock.try_lock()) {
+		  return true;
 	  }
       TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
 	  
@@ -94,6 +94,7 @@ void Dropper::drop_aof_internal(const std::string &fname) {
     } catch (std::exception &ex) {
       THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
     }
+	return false;
   };
   ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 }

@@ -16,30 +16,6 @@
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/strings.h>
-#include <libdariadb/utils/async/coroutine.h>
-
-
-BOOST_AUTO_TEST_CASE(CoroutineTest) {
-  {
-		int incr = 0;
-		dariadb::utils::async::Coroutine c([&] (dariadb::utils::async::Yield&y){
-			incr++;
-			y();
-			incr++;
-			y();
-			incr++;
-			y();
-		});
-		BOOST_CHECK_EQUAL(incr, 0);
-		BOOST_CHECK(c());
-		BOOST_CHECK_EQUAL(incr, 1);
-		BOOST_CHECK(c());
-		BOOST_CHECK_EQUAL(incr, 2);
-		BOOST_CHECK(c());
-		BOOST_CHECK_EQUAL(incr, 3);
-		BOOST_CHECK(!c());
-  }
-}
 
 BOOST_AUTO_TEST_CASE(TimeToString) {
   auto ct = dariadb::timeutil::current_time();
@@ -50,7 +26,6 @@ BOOST_AUTO_TEST_CASE(TimeToString) {
 
 BOOST_AUTO_TEST_CASE(TimeRound) {
   auto ct = dariadb::timeutil::current_time();
-  auto ct_d = dariadb::timeutil::to_datetime(ct);
   {
     auto rounded = dariadb::timeutil::round_to_seconds(ct);
     auto rounded_d = dariadb::timeutil::to_datetime(rounded);
@@ -246,10 +221,11 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     ThreadManager::start(tpm_params);
 	int called = 0;
 	AsyncTask at_while = [&called](const ThreadInfo &ti) {
-		for(int i=0;i<10;++i){
+		if(called<10){
 			++called;
-			ti.yield();
+			return true;
 		}
+		return false;
 	};
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {
       if (tk1 != ti.kind) {
@@ -257,6 +233,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
+	  return false;
     };
     AsyncTask at2 = [tk2](const ThreadInfo &ti) {
       if (tk2 != ti.kind) {
@@ -264,6 +241,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
+	  return false;
     };
 	auto at_while_res=ThreadManager::instance()->post(tk1, AT(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {

@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <ctime>
 #include <atomic>
+#include <cstring>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -226,7 +227,7 @@ public:
   Id2Meas currentValue() {
     lock();
     Id2Meas result;
-    const std::string sql_query = "SELECT a.id,a.chunk_header, a.chunk_buffer FROM "
+    const std::string sql_query = "SELECT a.chunk_header, a.chunk_buffer FROM "
                                   "Chunks a INNER JOIN(select id, number, MAX(number) "
                                   "from Chunks GROUP BY id) b ON a.id = b.id AND "
                                   "a.number = b.number";
@@ -245,15 +246,13 @@ public:
          rc = sqlite3_step(pStmt);
          if (rc == SQLITE_ROW) {
            using utils::inInterval;
-		   auto id = sqlite3_column_int64(pStmt,0);
-
-		   ChunkHeader *chdr = (ChunkHeader *)sqlite3_column_blob(pStmt, 1);
+		   ChunkHeader *chdr = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
 #ifdef DEBUG
 		   auto headerSize = sqlite3_column_bytes(pStmt, 1);
 		   assert(headerSize == sizeof(ChunkHeader));
 #endif // DEBUG
 
-		   uint8_t *buffer = (uint8_t *)sqlite3_column_blob(pStmt, 2);
+		   uint8_t *buffer = (uint8_t *)sqlite3_column_blob(pStmt, 1);
 		   //TODO move to method
            Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
 		   auto reader=cptr->getReader();
@@ -507,7 +506,7 @@ public:
   std::mutex            _chunks_list_locker;
   std::condition_variable _cond_var;
   std::mutex            _dropper_locker;
-  std::atomic_int64_t               _under_drop;
+  std::atomic_int       _under_drop;
   std::thread           _write_thread;
   };
 

@@ -22,7 +22,7 @@ template <class T> uint32_t jenkins_one_at_a_time_hash(T &value) {
 }
 
 template <typename T> static uint64_t bloom_empty() {
-  return size_t();
+  return uint64_t(0);
 }
 
 template <typename T> static uint64_t bloom_add(const uint64_t &fltr, const T &val) {

@@ -49,7 +49,10 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
 	  THROW_EXCEPTION("can`t open file ", this->filename);
   }
 
-  std::fread(records, sizeof(IndexReccord), iheader.count, index_file);
+  auto readed=std::fread(records, sizeof(IndexReccord), iheader.count, index_file);
+  if (readed < iheader.count) {
+	  THROW_EXCEPTION("engine: index read error - ", this->filename);
+  }
   std::fclose(index_file);
   for (uint32_t pos = 0; pos < this->iheader.count; ++pos) {
 
@@ -91,7 +94,10 @@ std::vector<IndexReccord> PageIndex::readReccords() {
 	if (index_file == nullptr) {
 		THROW_EXCEPTION("can`t open file ", this->filename);
 	}
-	std::fread(records.data(), sizeof(IndexReccord), iheader.count, index_file);
+	auto readed=std::fread(records.data(), sizeof(IndexReccord), iheader.count, index_file);
+	if (readed < iheader.count) {
+		THROW_EXCEPTION("engine: index read error - ", this->filename);
+	}
 	std::fclose(index_file);
 	return records;
 }
