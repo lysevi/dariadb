@@ -332,40 +332,44 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         }
         continue;
       }
+	  while (true) {
+		  std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
+		  auto it =
+			  std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
+				  [](auto c) { return c != nullptr && !c->already_in_disk(); });
+		  chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
-      std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
-      auto it =
-          std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
-                       [](auto c) { return c != nullptr && !c->already_in_disk(); });
-      chunks_copy.resize(std::distance(chunks_copy.begin(), it));
-
-      std::sort(chunks_copy.begin(), chunks_copy.end(),
-                [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
-                  return left->header->first.time < right->header->first.time;
-                });
-
-      for (auto &c : chunks_copy) {
-        auto rdr = c->getReader();
-        auto skip = c->in_disk_count;
-        int writed = 0;
-        Time max_time = c->_track->_max_sync_time;
-        while (!rdr->is_end()) {
-          auto value = rdr->readNext();
-          if (skip != 0) {
-            --skip;
-          } else {
-            auto status = _disk_storage->append(value);
-            if (status.writed == 1) {
-              max_time = value.time;
-              ++writed;
-            }
-          }
-        }
-        rdr = nullptr;
-        assert(writed <= (c->header->count + 1));
-        c->in_disk_count += writed;
-        c->_track->_max_sync_time = max_time;
-      }
+		  std::sort(chunks_copy.begin(), chunks_copy.end(),
+			  [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
+			  return left->header->first.time < right->header->first.time;
+		  });
+		  if (chunks_copy.empty()) {
+			  break;
+		  }
+		  for (auto &c : chunks_copy) {
+			  auto rdr = c->getReader();
+			  auto skip = c->in_disk_count;
+			  int writed = 0;
+			  Time max_time = c->_track->_max_sync_time;
+			  while (!rdr->is_end()) {
+				  auto value = rdr->readNext();
+				  if (skip != 0) {
+					  --skip;
+				  }
+				  else {
+					  auto status = _disk_storage->append(value);
+					  if (status.writed == 1) {
+						  max_time = value.time;
+						  ++writed;
+					  }
+				  }
+			  }
+			  rdr = nullptr;
+			  assert(writed <= (c->header->count + 1));
+			  c->in_disk_count += writed;
+			  c->_track->_max_sync_time = max_time;
+		  }
+	  }
     }
     logger_info("engine: memstorage - crawler stop.");
   }
