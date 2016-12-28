@@ -437,6 +437,7 @@ public:
 
       auto start_time = clock();
 	  //TODO write in DISK_IO pool.
+	  
       sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
       for (auto &c : local_copy) {

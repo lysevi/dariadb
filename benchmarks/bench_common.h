@@ -161,6 +161,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       std::cout << "time: " << elapsed << std::endl;
     }
   }
+  std::list<std::tuple<dariadb::Time, dariadb::Time>> interval_list;
   {
     if (!quiet) {
       std::cout << "==> intervals foreach..." << std::endl;
@@ -180,6 +181,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       auto time_point2 = uniform_dist(e1);
       auto f = std::min(time_point1, time_point2);
       auto t = std::max(time_point1, time_point2);
+	  interval_list.push_back(std::tie(f, t));
 
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
@@ -205,14 +207,12 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
     auto start = clock();
     size_t count = 0;
     cur_id = 0;
+	auto it = interval_list.begin();
     for (size_t i = 0; i < reads_count; i++) {
       Id2Times curval = interval_queries[i];
-      std::uniform_int_distribution<dariadb::Time> uniform_dist(std::get<1>(curval),
-                                                                std::get<2>(curval));
-      auto time_point1 = uniform_dist(e1);
-      auto time_point2 = uniform_dist(e1);
-      auto f = std::min(time_point1, time_point2);
-      auto t = std::max(time_point1, time_point2);
+	  auto f = std::get<0>(*it);
+      auto t = std::get<1>(*it);
+	  ++it;
 
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
