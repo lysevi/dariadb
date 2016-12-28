@@ -52,7 +52,7 @@ matrix:
   include:
     - os: linux
       compiler: gcc-6
-      env: GCOV=FALSE CLANG=FALSE
+      env: GCOV=TRUE CLANG=FALSE
 #    - os: linux
 #      compiler: gcc-6
 #      env: GCOV=TRUE CLANG=FALSE
