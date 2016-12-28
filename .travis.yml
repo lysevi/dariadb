@@ -38,9 +38,10 @@ addons:
       
 before_install:
    - pip install --user cpp-coveralls
-   - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
-   - tar xf lcov_1.11.orig.tar.gz
-   - sudo make -C lcov-1.11/ install
+#   - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
+   - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.13.orig.tar.gz
+   - tar xf lcov_1.13.orig.tar.gz
+   - sudo make -C lcov-1.13/ install
    - gem install coveralls-lcov
 #   - gem install travis
    - cmake --version
@@ -52,7 +53,7 @@ matrix:
   include:
     - os: linux
       compiler: gcc-6
-      env: GCOV=FALSE CLANG=FALSE
+      env: GCOV=TRUE CLANG=FALSE
 #    - os: linux
 #      compiler: gcc-6
 #      env: GCOV=TRUE CLANG=FALSE
