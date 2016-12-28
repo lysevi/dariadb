@@ -43,7 +43,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
   void stop() {
     if (!_stoped) {
-      logger_info("engine: stop memstorage.");
+      logger_info("engine: memstorage - begin stoping.");
       _drop_stop = true;
 	  _drop_cond.notify_all();
 	  _drop_thread.join();
@@ -103,6 +103,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
+	  logger_info("engine: memstorage - drop_by_limit ", chunk_percent_to_free);
     auto cur_chunk_count = this->_chunk_allocator._allocated;
     auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_percent_to_free);
 
@@ -138,7 +139,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       ++pos;
     }
     if (pos != 0) {
-      logger_info("engine: drop ", pos, " chunks of ", cur_chunk_count);
+      logger_info("engine: memstorage - drop begin ", pos, " chunks of ", cur_chunk_count);
       if (_down_level_storage != nullptr) {
         AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
           TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
@@ -170,7 +171,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       for (auto &t : updated_tracks) {
         t->rereadMinMax();
       }
-      logger_info("engine: drop end.");
+      logger_info("engine: memstorage - drop end.");
     }
   }
 
@@ -315,8 +316,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       drop_by_limit(_settings->percent_to_drop.value(), false);
     }
-
-    logger_info("engine: memstorage - dropping stop.");
+    logger_info("engine: memstorage - dropping thread stoped.");
   }
 
   // async. drop values to down-level disk storage;

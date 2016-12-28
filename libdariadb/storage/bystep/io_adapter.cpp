@@ -52,7 +52,7 @@ public:
 		_write_thread.join();
       sqlite3_close(_db);
       _db = nullptr;
-      logger("engine: io_adapter - stoped");
+      logger("engine: io_adapter - stoped.");
     }
   }
   struct ChunkMinMax {
@@ -438,7 +438,7 @@ public:
 
 		  auto start_time = clock();
 		  //TODO write in DISK_IO pool.
-
+		  logger("engine: io_adapter - dropping start. ", local_copy.size(), " chunks.");
 		  sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
 		  for (auto &c : local_copy) {
@@ -449,16 +449,15 @@ public:
 		  auto end = clock();
 		  auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
-		  logger("engine: io_adapter - write ", local_copy.size(), " chunks. elapsed time - ",
-			  elapsed);
+		  logger("engine: io_adapter - dropping end. elapsed ", elapsed, "s");
 	  }
       _dropper_locker.unlock();
     }
-    logger_info("engine: io_adapter - stoped.");
+    logger_info("engine: io_adapter - write thread is stoped.");
   }
 
   void flush() {
-	  logger_info("engine: io_adapter - flush.");
+	  logger_info("engine: io_adapter - flush start.");
 	  while (true) {//TODO make more smarter.
 		  _chunks_list_locker.lock();
 		  auto is_empty = _chunks_list.empty();
