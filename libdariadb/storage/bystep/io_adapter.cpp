@@ -10,7 +10,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <ctime>
-#include <atomic>
 #include <cstring>
 
 using namespace dariadb;
@@ -39,7 +38,6 @@ public:
       auto err_msg = sqlite3_errmsg(_db);
       THROW_EXCEPTION("Can't open database: ", err_msg);
     }
-	_under_drop = 0;
     init_tables();
 	_stop_flag = false;
 	_write_thread = std::thread(std::bind(&IOAdapter::Private::write_thread_func, this));
@@ -70,7 +68,6 @@ public:
 	  cmm.max = max;
 	  std::lock_guard<std::mutex> lg(_chunks_list_locker);
 	  _chunks_list.push_back(cmm);
-	  ++_under_drop;
 	  _cond_var.notify_all();
   }
 
@@ -435,7 +432,6 @@ public:
 
       std::list<ChunkMinMax> local_copy{_chunks_list.begin(), _chunks_list.end()};
       assert(local_copy.size() == _chunks_list.size());
-      _under_drop = local_copy.size();
       _chunks_list.clear();
 	  lock.unlock();
 
@@ -453,7 +449,6 @@ public:
 
       logger("engine: io_adapter - write ", local_copy.size(), " chunks. elapsed time - ",
              elapsed);
-	  _under_drop -= local_copy.size();
       _dropper_locker.unlock();
     }
     logger_info("engine: io_adapter - stoped.");
@@ -461,8 +456,13 @@ public:
 
   void flush() {
 	  logger_info("engine: io_adapter - flush.");
-	  while (_under_drop!=0) {//TODO make more smarter.
-		  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	  while (true) {//TODO make more smarter.
+		  _chunks_list_locker.lock();
+		  auto is_empty = _chunks_list.empty();
+		  _chunks_list_locker.unlock();
+		  if (is_empty) {
+			  break;
+		  }
 		  _cond_var.notify_all();
 	  }
   }
@@ -470,7 +470,7 @@ public:
   bystep::Description description() {
     bystep::Description result;
     _chunks_list_locker.lock();
-    result.in_queue = _under_drop;
+    result.in_queue = _chunks_list.size();
     _chunks_list_locker.unlock();
     return result;
   }
@@ -506,7 +506,6 @@ public:
   std::mutex            _chunks_list_locker;
   std::condition_variable _cond_var;
   std::mutex            _dropper_locker;
-  std::atomic_int       _under_drop;
   std::thread           _write_thread;
   };
 
