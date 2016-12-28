@@ -414,6 +414,7 @@ public:
 	_page_manager->flush();
 
 	_bystep_storage->flush();
+	this->wait_all_asyncs();
   }
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
@@ -660,7 +661,7 @@ public:
   }
 
   STRATEGY strategy()const{
-	  assert(_strategy == _settings->strategy.value);
+	  assert(_strategy == _settings->strategy.value());
       return this->_strategy;
   }
 

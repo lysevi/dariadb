@@ -1,12 +1,9 @@
 #include <libdariadb/utils/fs.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <iterator>
-
-#include <boost/uuid/uuid.hpp>            // uuid class
-#include <boost/uuid/uuid_generators.hpp> // generators
-#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 
 using namespace dariadb::utils::fs;
 
@@ -82,9 +79,8 @@ std::string extract_filename(const std::string &fname) {
 }
 
 std::string random_file_name(const std::string&ext) {
-  boost::uuids::uuid uuid = boost::uuids::random_generator()();
   std::stringstream ss;
-  ss << uuid << ext;
+  ss << timeutil::current_time() << ext;
   return ss.str();
 }
 

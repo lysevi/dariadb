@@ -1,4 +1,14 @@
 # dariadb - numeric time-series database.
+# Continuous Integration
+<a href="https://scan.coverity.com/projects/dariadb">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/10983/badge.svg"/>
+</a>
+
+|  version | build & tests | test coverage |
+|---------------------|---------|----------|
+| `master`   | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb) |  [![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=master)](https://coveralls.io/github/lysevi/dariadb?branch=master) |
+| `develop` | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=dev)](https://travis-ci.org/lysevi/dariadb) | [![Coverage Status](https://coveralls.io/repos/github/lysevi/dariadb/badge.svg?branch=dev)](https://coveralls.io/github/lysevi/dariadb?branch=dev)
  
 # Features
 * Can be used as a server application or an embedded library.

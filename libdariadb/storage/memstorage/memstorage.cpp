@@ -45,11 +45,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     if (!_stoped) {
       logger_info("engine: stop memstorage.");
       _drop_stop = true;
-      _drop_cond.notify_all();
-      _drop_thread.join();
+	  _drop_cond.notify_all();
+	  _drop_thread.join();
       if (_settings->strategy.value() == STRATEGY::CACHE) {
-        _crawler_cond.notify_all();
-        _crawler_thread.join();
+		  _crawler_cond.notify_all();
+		  _crawler_thread.join();
       }
 
 	  if (this->_down_level_storage != nullptr) {
@@ -327,7 +327,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       if (_disk_storage == nullptr) {
         logger_info("engine: memstorage - disk storage is not set.");
-        std::this_thread::yield();
+        if (_drop_stop) {
+          break;
+        }
         continue;
       }
 
