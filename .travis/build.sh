@@ -45,8 +45,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-ctest --output-on-failure .
-ctest -V .
+ctest --verbose .
 
 if [ $? -ne 0 ]; then
     exit 1
