@@ -61,7 +61,6 @@ Settings::Settings(const std::string&path_to_storage):
 	dariadb::utils::fs::mkdir(storage_path.value());
 	dariadb::utils::fs::mkdir(raw_path.value());
 	dariadb::utils::fs::mkdir(bystep_path.value());
-    set_default();
     save();
   }
   load_min_max = true;

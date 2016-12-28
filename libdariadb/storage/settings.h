@@ -1,13 +1,14 @@
 #pragma once
 
 #include <libdariadb/meas.h>
-#include <libdariadb/utils/async/locker.h>
+#include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/storage/strategy.h>
 #include <libdariadb/st_exports.h>
 
 #include <unordered_map>
 #include <string>
+
 namespace dariadb {
 namespace storage {
 
@@ -50,7 +51,10 @@ class Settings {
     }
 
 	T value()const { return _value; }
-	void setValue(const T&value_) { _value = value_; }
+	void setValue(const T&value_) { 
+		logger_info("engine: change settings - ", this->key_name, " ", _value, " to ", value_);
+		_value = value_; 
+	}
 protected:
 	std::string key_name;
     T _value;
