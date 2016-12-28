@@ -61,6 +61,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 		  this->drop_by_limit(1.0, true);
 	  }
       _stoped = true;
+	  logger_info("engine: memstorage - stoped.");
     }
   }
   ~Private() { stop(); }
