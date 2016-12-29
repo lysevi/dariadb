@@ -127,7 +127,7 @@ void show_info(Engine *storage) {
     time_ss << timeutil::to_string(write_time);
 
     std::stringstream stor_ss;
-	stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
+	stor_ss << "(p:" << queue_sizes.pages_count << " w:" << queue_sizes.aofs_count
 		<< " T:" << queue_sizes.active_works;
     if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE) ){
 		stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity 

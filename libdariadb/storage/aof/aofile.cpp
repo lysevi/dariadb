@@ -296,7 +296,7 @@ public:
     for (auto f : aofs_manifest) {
       ss << f << std::endl;
     }
-    auto aofs_exists = utils::fs::ls(_settings->raw_path.value(), ".aof");
+    auto aofs_exists = utils::fs::ls(_settings->raw_path.value(), AOF_FILE_EXT);
     for (auto f : aofs_exists) {
       ss << f << std::endl;
     }

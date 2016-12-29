@@ -412,7 +412,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
           ma[i].time = i;
         }
         c1.append(ma);
-        auto aofs=dariadb::utils::fs::ls(settings->raw_path.value(),".aof").size();
+        auto aofs=dariadb::utils::fs::ls(settings->raw_path.value(),dariadb::storage::AOF_FILE_EXT).size();
         dariadb::logger("CompactionTest: aof count:",aofs);
         if(aofs>=size_t(2)){
             break;
@@ -502,7 +502,7 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
           ma[i].time = i;
         }
         c1.append(ma);
-        auto aofs=dariadb::utils::fs::ls(settings->raw_path.value(),".aof").size();
+        auto aofs=dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::AOF_FILE_EXT).size();
         dariadb::logger("CompactionTest: aof count:",aofs);
         if(aofs>=size_t(2)){
             break;

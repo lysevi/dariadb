@@ -8,7 +8,7 @@
 
 namespace dariadb {
 namespace storage {
-const std::string AOF_FILE_EXT = ".aof"; // append-only-file
+const std::string AOF_FILE_EXT = ".wal"; // append-only-file
 const uint64_t AOF_DEFAULT_SIZE = 1024;
 class AOFile : public IMeasStorage {
 public:
