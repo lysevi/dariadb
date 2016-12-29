@@ -36,7 +36,7 @@ endmacro()
 
 if(ENABLE_INTEGRATION_TESTS)
    MESSAGE(STATUS "Integration tests: ")
-   ADD_PERF_TEST(FAST-WRITE --strategy=FAST_WRITE)
+   ADD_PERF_TEST(FAST-WRITE --strategy=WAL)
    ADD_PERF_TEST(COMPRESSED --strategy=COMPRESSED)
    ADD_PERF_TEST(MEMORY --strategy=MEMORY)
    ADD_PERF_TEST(CACHE --strategy=CACHE)

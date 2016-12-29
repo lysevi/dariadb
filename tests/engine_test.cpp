@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     settings->aof_buffer_size.setValue(100);
     settings->aof_max_size.setValue(settings->aof_buffer_size.value() *2);
     settings->chunk_size.setValue(chunk_size);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::FAST_WRITE);
+    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
     dariadb::IdSet all_ids;

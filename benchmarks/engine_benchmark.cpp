@@ -318,9 +318,9 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr
 
   auto files = raw_ptr->description();
   switch (strategy) {
-  case dariadb::storage::STRATEGY::FAST_WRITE:
+  case dariadb::storage::STRATEGY::WAL:
     if (files.pages_count != 0) {
-      THROW_EXCEPTION("FAST_WRITE error: (p:", files.pages_count, " a:", files.aofs_count,
+      THROW_EXCEPTION("WAL error: (p:", files.pages_count, " a:", files.aofs_count,
                       " T:", files.active_works, ")");
     }
     break;

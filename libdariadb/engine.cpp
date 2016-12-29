@@ -96,7 +96,7 @@ public:
 		}
 	}
 
-    if(_strategy == STRATEGY::FAST_WRITE){
+    if(_strategy == STRATEGY::WAL){
 		if (_settings->load_min_max) {
 			auto amm = _top_level_storage->loadMinMax();
 			minmax_append(_min_max_map,amm);

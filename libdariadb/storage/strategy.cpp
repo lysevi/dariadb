@@ -8,8 +8,8 @@ std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
 
   token = utils::strings::to_upper(token);
 
-  if (token == "FAST_WRITE") {
-    strat = dariadb::storage::STRATEGY::FAST_WRITE;
+  if (token == "WAL") {
+    strat = dariadb::storage::STRATEGY::WAL;
 	return in;
   }
   if (token == "COMPRESSED") {
@@ -34,8 +34,8 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STRATEGY 
   case STRATEGY::COMPRESSED:
     stream << "COMPRESSED";
     break;
-  case STRATEGY::FAST_WRITE:
-    stream << "FAST_WRITE";
+  case STRATEGY::WAL:
+    stream << "WAL";
     break;
   case STRATEGY::MEMORY:
     stream << "MEMORY";

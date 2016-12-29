@@ -48,7 +48,7 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
 void AOFManager::create_new() {
   TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
   _aof = nullptr;
-  if (_settings->strategy.value() != STRATEGY::FAST_WRITE) {
+  if (_settings->strategy.value() != STRATEGY::WAL) {
     drop_old_if_needed();
   }
   _aof = AOFile_Ptr{new AOFile(_env)};
@@ -98,7 +98,7 @@ void AOFManager::dropClosedFiles(size_t count) {
 }
 
 void AOFManager::drop_old_if_needed() {
-    if(_settings->strategy.value() !=STRATEGY::FAST_WRITE){
+    if(_settings->strategy.value() !=STRATEGY::WAL){
         auto closed = this->closedAofs();
         dropClosedFiles(closed.size());
     }

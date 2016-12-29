@@ -19,7 +19,7 @@
   - Value - x64 float.
   - Flag - x32 unsigned integer.
 * Write strategies:
-  - fast write - little cache and all values storing to disk. optimised for big write load(but slower than 'memory' strategy).
+  - wal - little cache and all values storing to disk in write ahead log. optimised for big write load(but slower than 'memory' strategy).
   - compressed - all values compressed for good disk usage without writing to sorted layer.
   - memory - all values stored in memory and dropped to disk when memory limit is ended.
   - cache - all values stored in memory with async writes to disk.
