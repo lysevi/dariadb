@@ -279,7 +279,7 @@ public:
       auto queue_sizes = _env.storage->description();
 	  std::stringstream stor_ss;
 
-      stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.aofs_count
+      stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.wal_count
           << " T:" << queue_sizes.active_works;
       if (_env.storage->strategy() == dariadb::storage::STRATEGY::MEMORY) {
           stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity

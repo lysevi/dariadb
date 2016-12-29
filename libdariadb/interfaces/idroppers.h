@@ -5,10 +5,10 @@
 namespace dariadb {
 namespace storage {
 
-class IAofDropper {
+class IWALDropper {
 public:
-  virtual void dropAof(const std::string&fname) = 0;
-   virtual ~IAofDropper(){}
+  virtual void dropWAL(const std::string&fname) = 0;
+   virtual ~IWALDropper(){}
 };
 
 }

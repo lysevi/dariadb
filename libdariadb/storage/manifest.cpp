@@ -10,12 +10,12 @@ using namespace dariadb;
 using namespace dariadb::storage;
 
 const std::string PAGE_JS_KEY = "pages";
-const std::string AOF_JS_KEY = "aofs";
+const std::string WAL_JS_KEY = "wal";
 
 const char *MANIFEST_CREATE_SQL = "CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY "
                          "AUTOINCREMENT, file varchar(255)); "
                          \
-"CREATE TABLE IF NOT EXISTS aofs(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
+"CREATE TABLE IF NOT EXISTS wal(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
 "CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name varchar(255), value varchar(255)); "
 "CREATE TABLE IF NOT EXISTS id2step(bystep_id INTEGER UNIQUE PRIMARY KEY, step varchar(50)); ";
 
@@ -68,20 +68,20 @@ public:
   ~Private() { sqlite3_close(db); }
 
   void restore(std::string raw_storage_path) {
-    auto aofs = this->aof_list();
-    auto size_before = aofs.size();
-    aofs.erase(std::remove_if(aofs.begin(), aofs.end(),
+    auto wals = this->wal_list();
+    auto size_before = wals.size();
+    wals.erase(std::remove_if(wals.begin(), wals.end(),
                               [this, raw_storage_path](std::string fname) {
                                 auto full_file_name =
                                     utils::fs::append_path(raw_storage_path, fname);
                                 return !utils::fs::path_exists(full_file_name);
                               }),
-               aofs.end());
-    auto size_after = aofs.size();
+               wals.end());
+    auto size_after = wals.size();
     if (size_after != size_before) {
-      clear_field_values(AOF_JS_KEY);
-      for (auto fname : aofs) {
-        this->aof_append(fname);
+      clear_field_values(WAL_JS_KEY);
+      for (auto fname : wals) {
+        this->wal_append(fname);
       }
     }
 
@@ -149,9 +149,9 @@ public:
     }
   }
 
-  std::list<std::string> aof_list() {
+  std::list<std::string> wal_list() {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    std::string sql = "SELECT file from aofs;";
+    std::string sql = "SELECT file from wal;";
     std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc =
@@ -177,11 +177,11 @@ public:
     }
   }
 
-  void aof_append(const std::string &rec) {
+  void wal_append(const std::string &rec) {
     std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
-    ss << "insert into aofs (file) values ('" << rec << "');";
+    ss << "insert into wal (file) values ('" << rec << "');";
     auto sql = ss.str();
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
@@ -192,11 +192,11 @@ public:
     }
   }
 
-  void aof_rm(const std::string &rec) {
+  void wal_rm(const std::string &rec) {
     std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
-    ss << "delete from aofs where file = '" << rec << "';";
+    ss << "delete from wal where file = '" << rec << "';";
     auto sql = ss.str();
     char *zErrMsg = 0;
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &zErrMsg);
@@ -333,16 +333,16 @@ void Manifest::page_rm(const std::string &rec) {
 	_impl->page_rm(rec);
 }
 
-std::list<std::string> Manifest::aof_list() {
-	return _impl->aof_list();
+std::list<std::string> Manifest::wal_list() {
+	return _impl->wal_list();
 }
 
-void Manifest::aof_append(const std::string &rec) {
-	_impl->aof_append(rec);
+void Manifest::wal_append(const std::string &rec) {
+	_impl->wal_append(rec);
 }
 
-void Manifest::aof_rm(const std::string &rec) {
-	_impl->aof_rm(rec);
+void Manifest::wal_rm(const std::string &rec) {
+	_impl->wal_rm(rec);
 }
 
 void Manifest::set_version(const std::string &version) {

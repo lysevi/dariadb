@@ -164,7 +164,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
-    throw MAKE_EXCEPTION("aofile: append error.");
+    throw MAKE_EXCEPTION("WALFile: append error.");
   }
 
   IndexHeader ihdr;

@@ -1,4 +1,4 @@
-#include <libdariadb/storage/wal/aof_manager.h>
+#include <libdariadb/storage/wal/wal_manager.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
@@ -17,25 +17,25 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-EXPORT AOFManager *AOFManager::_instance = nullptr;
+EXPORT WALManager *WALManager::_instance = nullptr;
 
-AOFManager::~AOFManager() {
+WALManager::~WALManager() {
   this->flush();
 }
 
-AOFManager::AOFManager(const EngineEnvironment_ptr env) {
+WALManager::WALManager(const EngineEnvironment_ptr env) {
 	_env = env;
 	_settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
   _down = nullptr;
   auto manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
   if (dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
-          auto aofs = manifest->aof_list();
-          for (auto f : aofs) {
+          auto wals = manifest->wal_list();
+          for (auto f : wals) {
               auto full_filename = utils::fs::append_path(_settings->raw_path.value(), f);
-              if (AOFile::writed(full_filename) != _settings->wal_file_size.value()) {
-                  logger_info("engine: AofManager open exist file ", f);
-                  AOFile_Ptr p{new AOFile(_env, full_filename)};
-                  _aof = p;
+              if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
+                  logger_info("engine: WalManager open exist file ", f);
+                  WALFile_Ptr p{new WALFile(_env, full_filename)};
+                  _wal = p;
                   break;
               }
           }
@@ -45,51 +45,51 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
   _buffer_pos = 0;
 }
 
-void AOFManager::create_new() {
-  TIMECODE_METRICS(ctm, "create", "AOFManager::create_new");
-  _aof = nullptr;
+void WALManager::create_new() {
+  TIMECODE_METRICS(ctm, "create", "WALManager::create_new");
+  _wal = nullptr;
   if (_settings->strategy.value() != STRATEGY::WAL) {
     drop_old_if_needed();
   }
-  _aof = AOFile_Ptr{new AOFile(_env)};
+  _wal = WALFile_Ptr{new WALFile(_env)};
 }
 
-void  AOFManager::dropAll(){
+void  WALManager::dropAll(){
     if (_down != nullptr) {
-      auto all_files = aof_files();
-      this->_aof=nullptr;
-      TIMECODE_METRICS(ctmd, "drop", "AOFManager::drop_all");
+      auto all_files = wal_files();
+      this->_wal=nullptr;
+      TIMECODE_METRICS(ctmd, "drop", "WALManager::drop_all");
       for (auto f:all_files) {
         auto without_path = utils::fs::extract_filename(f);
         if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
           //logger_info("engine: drop ",without_path);
-          this->dropAof(f, _down);
+          this->dropWAL(f, _down);
         }
       }
     }
 }
 
-void AOFManager::dropClosedFiles(size_t count) {
+void WALManager::dropClosedFiles(size_t count) {
   if (_down != nullptr) {
-    auto closed = this->closedAofs();
+    auto closed = this->closedWals();
 
-    TIMECODE_METRICS(ctmd, "drop", "AOFManager::drop_closed_files");
+    TIMECODE_METRICS(ctmd, "drop", "WALManager::drop_closed_files");
     size_t to_drop = std::min(closed.size(), count);
     for (size_t i = 0; i < to_drop; ++i) {
       auto f = closed.front();
       closed.pop_front();
       auto without_path = utils::fs::extract_filename(f);
       if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-        this->dropAof(f, _down);
+        this->dropWAL(f, _down);
       }
     }
     // clean set of sended to drop files.
 	auto manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
-    auto aofs_exists = manifest->aof_list();
-    std::set<std::string> aof_exists_set{aofs_exists.begin(), aofs_exists.end()};
+    auto wals_exists = manifest->wal_list();
+    std::set<std::string> wal_exists_set{wals_exists.begin(), wals_exists.end()};
     std::set<std::string> new_sended_files;
     for (auto &v : _files_send_to_drop) {
-      if (aof_exists_set.find(v) != aof_exists_set.end()) {
+      if (wal_exists_set.find(v) != wal_exists_set.end()) {
         new_sended_files.emplace(v);
       }
     }
@@ -97,16 +97,16 @@ void AOFManager::dropClosedFiles(size_t count) {
   }
 }
 
-void AOFManager::drop_old_if_needed() {
+void WALManager::drop_old_if_needed() {
     if(_settings->strategy.value() !=STRATEGY::WAL){
-        auto closed = this->closedAofs();
+        auto closed = this->closedWals();
         dropClosedFiles(closed.size());
     }
 }
 
-std::list<std::string> AOFManager::aof_files() const {
+std::list<std::string> WALManager::wal_files() const {
   std::list<std::string> res;
-  auto files = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_list();
+  auto files = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_list();
   for (auto f : files) {
     auto full_path = utils::fs::append_path(_settings->raw_path.value(), f);
     res.push_back(full_path);
@@ -114,14 +114,14 @@ std::list<std::string> AOFManager::aof_files() const {
   return res;
 }
 
-std::list<std::string> AOFManager::closedAofs() {
-  auto all_files = aof_files();
+std::list<std::string> WALManager::closedWals() {
+  auto all_files = wal_files();
   std::list<std::string> result;
   for (auto fn : all_files) {
-    if (_aof == nullptr) {
+    if (_wal == nullptr) {
       result.push_back(fn);
     } else {
-      if (fn != this->_aof->filename()) {
+      if (fn != this->_wal->filename()) {
         result.push_back(fn);
       }
     }
@@ -129,28 +129,28 @@ std::list<std::string> AOFManager::closedAofs() {
   return result;
 }
 
-void AOFManager::dropAof(const std::string &fname, IAofDropper *storage) {
-  AOFile_Ptr ptr = AOFile_Ptr{new AOFile{_env, fname, false}};
+void WALManager::dropWAL(const std::string &fname, IWALDropper *storage) {
+  WALFile_Ptr ptr = WALFile_Ptr{new WALFile{_env, fname, false}};
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.emplace(without_path);
-  storage->dropAof(without_path);
+  storage->dropWAL(without_path);
 }
 
-void AOFManager::setDownlevel(IAofDropper *down) {
+void WALManager::setDownlevel(IWALDropper *down) {
   _down = down;
   this->drop_old_if_needed();
 }
 
-dariadb::Time AOFManager::minTime() {
+dariadb::Time WALManager::minTime() {
   std::lock_guard<std::mutex> lg(_locker);
-  auto files = aof_files();
+  auto files = wal_files();
   dariadb::Time result = dariadb::MAX_TIME;
   auto env = _env;
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
 	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  for (auto filename : files) {
-		  AOFile aof(env, filename, true);
-		  auto local = aof.minTime();
+		  WALFile wal(env, filename, true);
+		  auto local = wal.minTime();
 		  result = std::min(local, result);
 	  }
 	  return false;
@@ -170,16 +170,16 @@ dariadb::Time AOFManager::minTime() {
   return result;
 }
 
-dariadb::Time AOFManager::maxTime() {
+dariadb::Time WALManager::maxTime() {
   std::lock_guard<std::mutex> lg(_locker);
-  auto files = aof_files();
+  auto files = wal_files();
   dariadb::Time result = dariadb::MIN_TIME;
   auto env = _env;
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
 	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  for (auto filename : files) {
-		  AOFile aof(env, filename, true);
-		  auto local = aof.maxTime();
+		  WALFile wal(env, filename, true);
+		  auto local = wal.maxTime();
 		  result = std::max(local, result);
 	  }
 	  return false;
@@ -193,11 +193,11 @@ dariadb::Time AOFManager::maxTime() {
   return result;
 }
 
-bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
-  TIMECODE_METRICS(ctmd, "minMaxTime", "AOFManager::minMaxTime");
+  TIMECODE_METRICS(ctmd, "minMaxTime", "WALManager::minMaxTime");
   std::lock_guard<std::mutex> lg(_locker);
-  auto files = aof_files();
+  auto files = wal_files();
   using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
   std::vector<MMRes> results{files.size()};
   auto env = _env;
@@ -207,9 +207,9 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 
 	  for (auto filename : files) {
 
-		  AOFile aof(env, filename, true);
+		  WALFile wal(env, filename, true);
 		  dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
-		  if (aof.minMaxTime(id, &lmin, &lmax)) {
+		  if (wal.minMaxTime(id, &lmin, &lmax)) {
 			  results[num] = MMRes(true, lmin, lmax);
 		  }
 		  else {
@@ -249,10 +249,10 @@ bool AOFManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
-void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
-  TIMECODE_METRICS(ctmd, "foreach", "AOFManager::foreach");
+void WALManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
+  TIMECODE_METRICS(ctmd, "foreach", "WALManager::foreach");
   std::lock_guard<std::mutex> lg(_locker);
-  auto files = aof_files();
+  auto files = wal_files();
   if (!files.empty()) {
     auto env = _env;
     AsyncTask at = [files, &q, clbk, env](const ThreadInfo &ti) {
@@ -261,8 +261,8 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
 		  if (clbk->is_canceled()) {
 			  break;
 		  }
-        AOFile aof(env, filename, true);
-        aof.foreach (q, clbk);
+        WALFile wal(env, filename, true);
+        wal.foreach (q, clbk);
       }
 	  return false;
     };
@@ -282,10 +282,10 @@ void AOFManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
   }
 }
 
-Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
-  TIMECODE_METRICS(ctmd, "readTimePoint", "AOFManager::readTimePoint");
+Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
+  TIMECODE_METRICS(ctmd, "readTimePoint", "WALManager::readTimePoint");
   std::lock_guard<std::mutex> lg(_locker);
-  auto files = aof_files();
+  auto files = wal_files();
   dariadb::Id2Meas sub_result;
 
   for (auto id : query.ids) {
@@ -300,8 +300,8 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
     size_t num = 0;
 
     for (auto filename : files) {
-      AOFile aof(env, filename, true);
-      results[num] = aof.readTimePoint(query);
+      WALFile wal(env, filename, true);
+      results[num] = wal.readTimePoint(query);
       num++;
     }
 	return false;
@@ -343,15 +343,15 @@ Id2Meas AOFManager::readTimePoint(const QueryTimePoint &query) {
   return sub_result;
 }
 
-Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas WALManager::currentValue(const IdArray &ids, const Flag &flag) {
   dariadb::Id2Meas meases;
   AsyncTask at = [&ids, flag, &meases, this](const ThreadInfo &ti) {
 	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 	  
-	  auto files = aof_files();
+	  auto files = wal_files();
 
 	  for (const auto &f : files) {
-		  AOFile c(_env, f, true);
+		  WALFile c(_env, f, true);
 		  auto sub_rdr = c.currentValue(ids, flag);
 
 		  for (auto &kv : sub_rdr) {
@@ -373,8 +373,8 @@ Id2Meas AOFManager::currentValue(const IdArray &ids, const Flag &flag) {
   return meases;
 }
 
-dariadb::Status  AOFManager::append(const Meas &value) {
-  TIMECODE_METRICS(ctmd, "append", "AOFManager::append");
+dariadb::Status  WALManager::append(const Meas &value) {
+  TIMECODE_METRICS(ctmd, "append", "WALManager::append");
   std::lock_guard<std::mutex> lg(_locker);
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
@@ -385,19 +385,19 @@ dariadb::Status  AOFManager::append(const Meas &value) {
   return dariadb::Status (1, 0);
 }
 
-void AOFManager::flush_buffer() {
+void WALManager::flush_buffer() {
   if (_buffer_pos == size_t(0)) {
     return;
   }
   AsyncTask at = [this](const ThreadInfo &ti) {
 	  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-	  if (_aof == nullptr) {
+	  if (_wal == nullptr) {
 		  create_new();
 	  }
 	  size_t pos = 0;
 	  size_t total_writed = 0;
 	  while (1) {
-		  auto res = _aof->append(_buffer.begin() + pos, _buffer.begin() + _buffer_pos);
+		  auto res = _wal->append(_buffer.begin() + pos, _buffer.begin() + _buffer_pos);
 		  total_writed += res.writed;
 		  if (total_writed != _buffer_pos) {
 			  create_new();
@@ -414,27 +414,27 @@ void AOFManager::flush_buffer() {
   async_r->wait();
 }
 
-void AOFManager::flush() {
-  TIMECODE_METRICS(ctmd, "flush", "AOFManager::flush");
+void WALManager::flush() {
+  TIMECODE_METRICS(ctmd, "flush", "WALManager::flush");
   flush_buffer();
 }
 
-size_t AOFManager::filesCount() const {
-  return aof_files().size();
+size_t WALManager::filesCount() const {
+  return wal_files().size();
 }
 
-void AOFManager::erase(const std::string &fname) {
-  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_rm(fname);
+void WALManager::erase(const std::string &fname) {
+  _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_rm(fname);
   utils::fs::rm(utils::fs::append_path(_settings->raw_path.value(), fname));
 }
 
-Id2MinMax AOFManager::loadMinMax(){
-     TIMECODE_METRICS(ctmd, "loadMinMax", "AOFManager::loadMinMax");
-    auto files = aof_files();
+Id2MinMax WALManager::loadMinMax(){
+     TIMECODE_METRICS(ctmd, "loadMinMax", "WALManager::loadMinMax");
+    auto files = wal_files();
 
     dariadb::Id2MinMax result;
     for (const auto &f : files) {
-      AOFile c(_env, f, true);
+      WALFile c(_env, f, true);
       auto sub_res = c.loadMinMax();
 
       minmax_append(result,sub_res);

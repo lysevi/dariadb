@@ -38,9 +38,9 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
 
 	manifest->set_version(version);
 
-    std::list<std::string> aof_names{"111", "222", "333"};
-    for (auto n : aof_names) {
-		manifest->aof_append(n);
+    std::list<std::string> wal_names{"111", "222", "333"};
+    for (auto n : wal_names) {
+		manifest->wal_append(n);
     }
 
     auto page_lst = manifest->page_list();
@@ -48,10 +48,10 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
                                   pages_names.end());
 
-    auto aof_lst = manifest->aof_list();
-    BOOST_CHECK_EQUAL(aof_lst.size(), aof_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(aof_lst.begin(), aof_lst.end(), aof_names.begin(),
-                                  aof_names.end());
+    auto wal_lst = manifest->wal_list();
+    BOOST_CHECK_EQUAL(wal_lst.size(), wal_names.size());
+    BOOST_CHECK_EQUAL_COLLECTIONS(wal_lst.begin(), wal_lst.end(), wal_names.begin(),
+                                  wal_names.end());
 
 	manifest = nullptr;
   }
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
     auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
     BOOST_CHECK_EQUAL(manifest->page_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(manifest->aof_list().size(), size_t(0));
+    BOOST_CHECK_EQUAL(manifest->wal_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(manifest->get_version(), version);
   }
 

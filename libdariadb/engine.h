@@ -18,7 +18,7 @@ const uint16_t STORAGE_VERSION=1;
 class Engine : public IMeasStorage {
 public:
   struct Description {
-    size_t aofs_count;   ///  AOF count.
+    size_t wal_count;   ///  wal count.
     size_t pages_count;  /// pages count.
     size_t active_works; /// async tasks runned.
 	bystep::Description bystep;
@@ -50,7 +50,7 @@ public:
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) override;
   EXPORT Id2MinMax loadMinMax()override;
 
-  EXPORT void drop_part_aofs(size_t count);
+  EXPORT void drop_part_wals(size_t count);
   EXPORT void compress_all();
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);

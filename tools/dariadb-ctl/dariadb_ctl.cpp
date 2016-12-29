@@ -62,8 +62,8 @@ void show_drop_info(dariadb::storage::Engine *storage) {
     auto queue_sizes = storage->description();
 
     dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
-                          queue_sizes.aofs_count, " T:", queue_sizes.active_works, ")",
-                          "[a:", queue_sizes.dropper.aof, "]");
+                          queue_sizes.wal_count, " T:", queue_sizes.active_works, ")",
+                          "[a:", queue_sizes.dropper.wal, "]");
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
   }
 }
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   aos("settings", "print all settings.");
   aos("format", "print storage format version.");
   aos("verbose", "verbose output.");
-  aos("compress", "compress all aof files.");
+  aos("compress", "compress all wal files.");
   aos("iso-time", "if set, all time param is in iso format (\"20020131T235959\")");
   aos("compact", "compact all page files to one.");
   aos("fsck", "run force fsck.");

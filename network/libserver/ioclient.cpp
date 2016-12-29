@@ -295,9 +295,9 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
       }
     logger_info("server: #", this->_async_connection->id(), " query to storage compaction.");
     if(this->env->storage->strategy() == storage::STRATEGY::WAL){
-        auto aofs=this->env->storage->description().aofs_count;
-        logger_info("server: #", this->_async_connection->id(), " drop ", aofs," aofs to pages.");
-        this->env->storage->drop_part_aofs(aofs);
+        auto wals=this->env->storage->description().wal_count;
+        logger_info("server: #", this->_async_connection->id(), " drop ", wals," wals to pages.");
+        this->env->storage->drop_part_wals(wals);
         this->env->storage->flush();
     }
     auto query_hdr = reinterpret_cast<QuerCompact_header *>(&d->data);

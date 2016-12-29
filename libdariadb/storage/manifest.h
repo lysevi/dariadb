@@ -25,9 +25,9 @@ public:
   EXPORT void page_append(const std::string &rec);
   EXPORT void page_rm(const std::string &rec);
 
-  EXPORT std::list<std::string> aof_list();
-  EXPORT void aof_append(const std::string &rec);
-  EXPORT void aof_rm(const std::string &rec);
+  EXPORT std::list<std::string> wal_list();
+  EXPORT void wal_append(const std::string &rec);
+  EXPORT void wal_rm(const std::string &rec);
 
   EXPORT void set_version(const std::string &version);
   EXPORT std::string get_version();

@@ -26,7 +26,7 @@ class Page : public IChunkContainer {
   Page() = default;
 
 public:
-	///called by Dropper from Aof level.
+	///called by Dropper from Wal level.
   EXPORT static Page *create(const std::string &file_name, uint64_t chunk_id,
                       uint32_t max_chunk_size, const MeasArray &ma);
   /// used for compaction many pages to one

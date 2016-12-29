@@ -8,13 +8,13 @@
 
 namespace dariadb {
 namespace storage {
-const std::string AOF_FILE_EXT = ".wal"; // append-only-file
-const uint64_t AOF_DEFAULT_SIZE = 1024;
-class AOFile : public IMeasStorage {
+const std::string WAL_FILE_EXT = ".wal"; // append-only-file
+
+class WALFile : public IMeasStorage {
 public:
-  EXPORT virtual ~AOFile();
-  EXPORT AOFile(const EngineEnvironment_ptr env);
-  EXPORT AOFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly = false);
+  EXPORT virtual ~WALFile();
+  EXPORT WALFile(const EngineEnvironment_ptr env);
+  EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly = false);
 
   EXPORT Status  append(const Meas &value) override;
   EXPORT Status  append(const MeasArray::const_iterator &begin,
@@ -40,6 +40,6 @@ protected:
   std::unique_ptr<Private> _Impl;
 };
 
-typedef std::shared_ptr<AOFile> AOFile_Ptr;
+typedef std::shared_ptr<WALFile> WALFile_Ptr;
 }
 }

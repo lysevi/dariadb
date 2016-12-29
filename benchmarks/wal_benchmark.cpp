@@ -1,5 +1,5 @@
 #include "bench_common.h"
-#include <libdariadb/storage/wal/aof_manager.h>
+#include <libdariadb/storage/wal/wal_manager.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/settings.h>
@@ -13,7 +13,7 @@ namespace po = boost::program_options;
 std::atomic_llong append_count{0};
 dariadb::Time write_time = 0;
 bool stop_info = false;
-dariadb::storage::AOFManager_ptr aof_manager;
+dariadb::storage::WALManager_ptr wal_manager;
 
 void show_info() {
   clock_t t0 = clock();
@@ -25,7 +25,7 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
-              << " wal: " << aof_manager->filesCount()
+              << " wal: " << wal_manager->filesCount()
               << " writes: " << append_count << " speed: " << writes_per_sec
               << "/sec progress:"
               << (int64_t(100) * append_count) / dariadb_bench::all_writes
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 
   dariadb::IdSet all_id_set;
   {
-    const std::string storage_path = "aof_benchmark_storage";
+    const std::string storage_path = "wal_benchmark_storage";
 
     if (!dont_clean && dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
@@ -94,9 +94,9 @@ int main(int argc, char *argv[]) {
 
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    aof_manager = dariadb::storage::AOFManager_ptr{ new dariadb::storage::AOFManager(_engine_env) };
+    wal_manager = dariadb::storage::WALManager_ptr{ new dariadb::storage::WALManager(_engine_env) };
 
-	auto aof = aof_manager.get();
+	auto wal = wal_manager.get();
     std::thread info_thread(show_info);
 
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
       std::thread t{
-          dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), &append_count, aof,
+          dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), &append_count, wal,
           dariadb::timeutil::current_time(),     &write_time};
       writers[pos++] = std::move(t);
     }
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
     stop_info = true;
     info_thread.join();
 
-    dariadb_bench::readBenchark(all_id_set, aof, 10);
+    dariadb_bench::readBenchark(all_id_set, wal, 10);
 
 	manifest = nullptr;
     dariadb::utils::async::ThreadManager::stop();

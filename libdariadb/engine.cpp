@@ -78,11 +78,11 @@ public:
 	}
 
     if (_strategy != STRATEGY::MEMORY) {
-		_aof_manager = AOFManager_ptr{ new AOFManager(_engine_env) };
+		_wal_manager = WALManager_ptr{ new WALManager(_engine_env) };
 
-		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _aof_manager);
-		_aof_manager->setDownlevel(_dropper.get());
-		this->_top_level_storage = _aof_manager;
+		_dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
+		_wal_manager->setDownlevel(_dropper.get());
+		this->_top_level_storage = _wal_manager;
 	}
 
 	if(_strategy ==STRATEGY::CACHE || _strategy == STRATEGY::MEMORY){
@@ -92,7 +92,7 @@ public:
 		}
 		_top_level_storage = _memstorage;
 		if (_strategy == STRATEGY::CACHE) {
-			_memstorage->setDiskStorage(_aof_manager.get());
+			_memstorage->setDiskStorage(_wal_manager.get());
 		}
 	}
 
@@ -125,7 +125,7 @@ public:
 	  if (_memstorage != nullptr) {
 		  _memstorage = nullptr;
 	  }
-	  _aof_manager = nullptr;
+	  _wal_manager = nullptr;
 	  _page_manager = nullptr;
 	  _manifest = nullptr;
 	  _dropper = nullptr;
@@ -248,7 +248,7 @@ public:
 
 	auto pmin = _page_manager->minTime();
 	if (_strategy == STRATEGY::CACHE) {
-		auto amin = this->_aof_manager->minTime();
+		auto amin = this->_wal_manager->minTime();
 		pmin = std::min(pmin, amin);
 	}
 	Time amin= _top_level_storage->minTime();
@@ -262,7 +262,7 @@ public:
 
     auto pmax = _page_manager->maxTime();
 	if (_strategy == STRATEGY::CACHE) {
-		auto amax = this->_aof_manager->maxTime();
+		auto amax = this->_wal_manager->maxTime();
 		pmax = std::max(pmax, amax);
 	}
 	Time amax= _top_level_storage->maxTime();
@@ -313,7 +313,7 @@ public:
 
       auto p_mm=this->_page_manager->loadMinMax();
 	  if (_strategy == STRATEGY::CACHE) {
-		  auto a_mm = this->_aof_manager->loadMinMax();
+		  auto a_mm = this->_wal_manager->loadMinMax();
 		  minmax_append(p_mm, a_mm);
 	  }
       auto t_mm=this->_top_level_storage->loadMinMax();
@@ -403,8 +403,8 @@ public:
     TIMECODE_METRICS(ctmd, "flush", "Engine::flush");
     std::lock_guard<std::mutex> lg(_flush_locker);
 
-	if (_aof_manager != nullptr) {
-		_aof_manager->flush();
+	if (_wal_manager != nullptr) {
+		_wal_manager->flush();
 		_dropper->flush();
 		_dropper->flush();
 	}
@@ -422,7 +422,7 @@ public:
   Engine::Description description() const {
     Engine::Description result;
     memset(&result, 0, sizeof(Description));
-    result.aofs_count = _aof_manager==nullptr?0:_aof_manager->filesCount();
+    result.wal_count = _wal_manager==nullptr?0:_wal_manager->filesCount();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
 	result.bystep = _bystep_storage->description();
@@ -441,7 +441,7 @@ public:
                               IReaderClb *a_clbk) {
     auto pm = _page_manager.get();
     auto mm = _memstorage.get();
-    auto am = _aof_manager.get();
+    auto am = _wal_manager.get();
 
     auto memory_mm = mm->loadMinMax();
     auto sync_map = mm->getSyncMap();
@@ -574,7 +574,7 @@ public:
 
     auto pm = _page_manager.get();
     auto mm = _top_level_storage.get();
-	auto am = _aof_manager.get();
+	auto am = _wal_manager.get();
     AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  if (!try_lock_storage()) {
@@ -601,14 +601,14 @@ public:
 				  result[id] = subres[id];
 			  }
 			  else {
-				  bool in_aof_level = false;
+				  bool in_wal_level = false;
 				  if (this->strategy() == STRATEGY::CACHE) {
 					  auto subres = am->readTimePoint(local_q);
 					  auto value = subres[id];
 					  result[id] = value;
-					  in_aof_level = value.flag != Flags::_NO_DATA;
+					  in_wal_level = value.flag != Flags::_NO_DATA;
 				  }
-				  if (!in_aof_level) {
+				  if (!in_wal_level) {
 					  auto subres = _page_manager->valuesBeforeTimePoint(local_q);
 					  result[id] = subres[id];
 				  }
@@ -626,17 +626,17 @@ public:
     return result;
   }
 
-  void drop_part_aofs(size_t count) { 
-	  if (_aof_manager != nullptr) {
-          logger_info("engine: drop_part_aofs ",count);
-		  _aof_manager->dropClosedFiles(count);
+  void drop_part_wals(size_t count) { 
+	  if (_wal_manager != nullptr) {
+          logger_info("engine: drop_part_wals ",count);
+		  _wal_manager->dropClosedFiles(count);
 	  }
   }
 
   void compress_all() {
-    if (_aof_manager != nullptr) {
+    if (_wal_manager != nullptr) {
       logger_info("engine: compress_all");
-      _aof_manager->dropAll();
+      _wal_manager->dropAll();
       this->flush();
     }
   }
@@ -703,7 +703,7 @@ protected:
 
   std::unique_ptr<Dropper> _dropper;
   PageManager_ptr _page_manager;
-  AOFManager_ptr _aof_manager;
+  WALManager_ptr _wal_manager;
   MemStorage_ptr _memstorage;
 
   EngineEnvironment_ptr _engine_env;
@@ -712,7 +712,7 @@ protected:
   Manifest_ptr _manifest;
   bool _stoped;
 
-  IMeasStorage_ptr _top_level_storage; //aof or memory storage.
+  IMeasStorage_ptr _top_level_storage; //wal or memory storage.
   ByStepStorage_ptr _bystep_storage;
 
   Id2MinMax _min_max_map;
@@ -779,8 +779,8 @@ Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
   return _impl->readTimePoint(q);
 }
 
-void Engine::drop_part_aofs(size_t count) {
-  return _impl->drop_part_aofs(count);
+void Engine::drop_part_wals(size_t count) {
+  return _impl->drop_part_wals(count);
 }
 
 void Engine::compress_all(){

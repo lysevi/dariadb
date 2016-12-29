@@ -1,7 +1,7 @@
 #ifdef MSVC
     #define _CRT_SECURE_NO_WARNINGS //disable msvc /sdl warning on fopen call.
 #endif
-#include <libdariadb/storage/wal/aofile.h>
+#include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/metrics.h>
@@ -19,23 +19,23 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-class AOFile::Private {
+class WALFile::Private {
 public:
   Private(const EngineEnvironment_ptr env) {
 	  _env = env;
 	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = 0;
     _is_readonly = false;
-    auto rnd_fname = utils::fs::random_file_name(AOF_FILE_EXT);
+    auto rnd_fname = utils::fs::random_file_name(WAL_FILE_EXT);
     _filename = utils::fs::append_path(_settings->raw_path.value(), rnd_fname);
-	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_append(rnd_fname);
+	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_append(rnd_fname);
     is_full = false;
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
 	  _env = env;
 	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
-    _writed = AOFile::writed(fname);
+    _writed = WALFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
     is_full = false;
@@ -46,7 +46,7 @@ public:
   FILE *open_to_append() const {
     auto file = std::fopen(_filename.c_str(), "ab");
     if (file == nullptr) {
-      throw MAKE_EXCEPTION("aofile: open_to_append error.");
+      throw MAKE_EXCEPTION("WALFile: open_to_append error.");
     }
     return file;
   }
@@ -60,7 +60,7 @@ public:
   }
 
   Status  append(const Meas &value) {
-    TIMECODE_METRICS(ctmd, "append", "AOFile::append");
+    TIMECODE_METRICS(ctmd, "append", "WALFile::append");
     assert(!_is_readonly);
 
     if (_writed > _settings->wal_file_size.value()) {
@@ -75,7 +75,7 @@ public:
 
   Status  append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
-    TIMECODE_METRICS(ctmd, "append", "AOFile::append(ma)");
+    TIMECODE_METRICS(ctmd, "append", "WALFile::append(ma)");
     assert(!_is_readonly);
 
     auto sz = std::distance(begin, end);
@@ -93,7 +93,7 @@ public:
 
   Status  append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) {
-    TIMECODE_METRICS(ctmd, "append", "AOFile::append(ml)");
+    TIMECODE_METRICS(ctmd, "append", "WALFile::append(ml)");
     assert(!_is_readonly);
 
     auto list_size = std::distance(begin, end);
@@ -113,7 +113,7 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    TIMECODE_METRICS(ctmd, "foreach", "AOFile::foreach");
+    TIMECODE_METRICS(ctmd, "foreach", "WALFile::foreach");
 
     auto file = open_to_read();
 
@@ -133,7 +133,7 @@ public:
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
-    TIMECODE_METRICS(ctmd, "readTimePoint", "AOFile::readTimePoint");
+    TIMECODE_METRICS(ctmd, "readTimePoint", "WALFile::readTimePoint");
 
     dariadb::IdSet readed_ids;
     dariadb::Id2Meas sub_res;
@@ -241,7 +241,7 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    TIMECODE_METRICS(ctmd, "minMaxTime", "AOFile::minMaxTime");
+    TIMECODE_METRICS(ctmd, "minMaxTime", "WALFile::minMaxTime");
     auto file = open_to_read();
 
     *minResult = dariadb::MAX_TIME;
@@ -262,12 +262,12 @@ public:
     return result;
   }
 
-  void flush() { TIMECODE_METRICS(ctmd, "flush", "AOFile::flush"); }
+  void flush() { TIMECODE_METRICS(ctmd, "flush", "WALFile::flush"); }
 
   std::string filename() const { return _filename; }
 
   std::shared_ptr<MeasArray> readAll() {
-    TIMECODE_METRICS(ctmd, "drop", "AOFile::drop");
+    TIMECODE_METRICS(ctmd, "drop", "WALFile::drop");
     auto file = open_to_read();
 
     auto ma=std::make_shared<MeasArray>(_settings->wal_file_size.value());
@@ -288,21 +288,21 @@ public:
   [[noreturn]]
   void throw_open_error_exception() const {
     std::stringstream ss;
-    ss << "aof: file open error " << _filename;
-    auto aofs_manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->aof_list();
+    ss << "wal: file open error " << _filename;
+    auto wals_manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_list();
     ss << "Manifest:";
-    for (auto f : aofs_manifest) {
+    for (auto f : wals_manifest) {
       ss << f << std::endl;
     }
-    auto aofs_exists = utils::fs::ls(_settings->raw_path.value(), AOF_FILE_EXT);
-    for (auto f : aofs_exists) {
+    auto wals_exists = utils::fs::ls(_settings->raw_path.value(), WAL_FILE_EXT);
+    for (auto f : wals_exists) {
       ss << f << std::endl;
     }
     throw MAKE_EXCEPTION(ss.str());
   }
 
   Id2MinMax loadMinMax(){
-      TIMECODE_METRICS(ctmd, "loadMinMax", "AOFile::loadMinMax");
+      TIMECODE_METRICS(ctmd, "loadMinMax", "WALFile::loadMinMax");
       auto file = open_to_read();
       Id2MinMax result;
       while (1) {
@@ -332,67 +332,67 @@ protected:
   Settings* _settings;
 };
 
-AOFile::~AOFile() {}
+WALFile::~WALFile() {}
 
-AOFile::AOFile(const EngineEnvironment_ptr env) : _Impl(new AOFile::Private(env)) {}
+WALFile::WALFile(const EngineEnvironment_ptr env) : _Impl(new WALFile::Private(env)) {}
 
-AOFile::AOFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
-    : _Impl(new AOFile::Private(env, fname, readonly)) {}
+WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
+    : _Impl(new WALFile::Private(env, fname, readonly)) {}
 
-dariadb::Time AOFile::minTime() {
+dariadb::Time WALFile::minTime() {
   return _Impl->minTime();
 }
 
-dariadb::Time AOFile::maxTime() {
+dariadb::Time WALFile::maxTime() {
   return _Impl->maxTime();
 }
 
-bool AOFile::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+bool WALFile::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                         dariadb::Time *maxResult) {
   return _Impl->minMaxTime(id, minResult, maxResult);
 }
-void AOFile::flush() { // write all to storage;
+void WALFile::flush() { // write all to storage;
   _Impl->flush();
 }
 
-Status  AOFile::append(const Meas &value) {
+Status  WALFile::append(const Meas &value) {
   return _Impl->append(value);
 }
-Status  AOFile::append(const MeasArray::const_iterator &begin,
+Status  WALFile::append(const MeasArray::const_iterator &begin,
                              const MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
-Status  AOFile::append(const MeasList::const_iterator &begin,
+Status  WALFile::append(const MeasList::const_iterator &begin,
                              const MeasList::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
-void AOFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
+void WALFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
   return _Impl->foreach (q, clbk);
 }
 
-Id2Meas AOFile::readTimePoint(const QueryTimePoint &q) {
+Id2Meas WALFile::readTimePoint(const QueryTimePoint &q) {
   return _Impl->readTimePoint(q);
 }
 
-Id2Meas AOFile::currentValue(const IdArray &ids, const Flag &flag) {
+Id2Meas WALFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-std::string AOFile::filename() const {
+std::string WALFile::filename() const {
   return _Impl->filename();
 }
 
-std::shared_ptr<MeasArray> AOFile::readAll() {
+std::shared_ptr<MeasArray> WALFile::readAll() {
   return _Impl->readAll();
 }
 
-size_t AOFile::writed(std::string fname) {
-  TIMECODE_METRICS(ctmd, "read", "AOFile::writed");
+size_t WALFile::writed(std::string fname) {
+  TIMECODE_METRICS(ctmd, "read", "WALFile::writed");
   std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
   return in.tellg() / sizeof(Meas);
 }
 
-Id2MinMax AOFile::loadMinMax(){
+Id2MinMax WALFile::loadMinMax(){
    return _Impl->loadMinMax();
 }

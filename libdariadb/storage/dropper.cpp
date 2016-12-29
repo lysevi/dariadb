@@ -12,8 +12,8 @@ using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
 Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
-                 AOFManager_ptr aof_manager)
-    : _in_queue(0), _page_manager(page_manager), _aof_manager(aof_manager),
+                 WALManager_ptr wal_manager)
+    : _in_queue(0), _page_manager(page_manager), _wal_manager(wal_manager),
       _engine_env(engine_env) {
   _settings =
       _engine_env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
@@ -23,11 +23,11 @@ Dropper::~Dropper() {}
 
 Dropper::Description Dropper::description() const {
   Dropper::Description result;
-  result.aof = _in_queue.load();
+  result.wal = _in_queue.load();
   return result;
 }
 
-void Dropper::dropAof(const std::string& fname) {
+void Dropper::dropWAL(const std::string& fname) {
   std::lock_guard<std::mutex> lg(_queue_locker);
   auto fres = _files_queue.find(fname);
   if (fres != _files_queue.end()) {
@@ -37,21 +37,21 @@ void Dropper::dropAof(const std::string& fname) {
   if (utils::fs::path_exists(utils::fs::append_path(storage_path, fname))) {
 	  _files_queue.emplace(fname);
     _in_queue++;
-    drop_aof_internal(fname);
+    drop_wal_internal(fname);
   }
 }
 
 void Dropper::cleanStorage(const std::string&storagePath) {
 	logger_info("engine: dropper - check storage.");
-  auto aofs_lst = fs::ls(storagePath, AOF_FILE_EXT);
+  auto wals_lst = fs::ls(storagePath, WAL_FILE_EXT);
   auto page_lst = fs::ls(storagePath, PAGE_FILE_EXT);
 
-  for (auto &aof : aofs_lst) {
-    auto aof_fname = fs::filename(aof);
+  for (auto &wal : wals_lst) {
+    auto wal_fname = fs::filename(wal);
     for (auto &pagef : page_lst) {
       auto page_fname = fs::filename(pagef);
-      if (page_fname == aof_fname) {
-        logger_info("engine: fsck aof drop not finished: ", aof_fname);
+      if (page_fname == wal_fname) {
+        logger_info("engine: fsck wal drop not finished: ", wal_fname);
         logger_info("engine: fsck rm ", pagef);
         PageManager::erase(storagePath, fs::extract_filename(pagef));
       }
@@ -59,7 +59,7 @@ void Dropper::cleanStorage(const std::string&storagePath) {
   }
 }
 
-void Dropper::drop_aof_internal(const std::string &fname) {
+void Dropper::drop_wal_internal(const std::string &fname) {
   auto env = _engine_env;
   auto sett = _settings;
  
@@ -70,18 +70,18 @@ void Dropper::drop_aof_internal(const std::string &fname) {
 	  if(!this->_dropper_lock.try_lock()) {
 		  return true;
 	  }
-      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_aof_internal");
+      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_wal_internal");
 	  
 	  logger_info("engine: compressing ", fname);
       auto start_time = clock();
       auto storage_path = sett->raw_path.value();
       auto full_path = fs::append_path(storage_path, fname);
 
-      AOFile_Ptr aof{new AOFile(env, full_path, true)};
+      WALFile_Ptr wal{new WALFile(env, full_path, true)};
 
-      auto all = aof->readAll();
+      auto all = wal->readAll();
 
-      this->write_aof_to_page(fname, all);
+      this->write_wal_to_page(fname, all);
 
 	  this->_queue_locker.lock();
       this->_in_queue--;
@@ -92,16 +92,16 @@ void Dropper::drop_aof_internal(const std::string &fname) {
 	  this->_dropper_lock.unlock();
 	  logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
     } catch (std::exception &ex) {
-      THROW_EXCEPTION("Dropper::drop_aof_internal: ", ex.what());
+      THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
     }
 	return false;
   };
   ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 }
 
-void Dropper::write_aof_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma) {
+void Dropper::write_wal_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma) {
   auto pm = _page_manager.get();
-  auto am = _aof_manager.get();
+  auto am = _wal_manager.get();
   auto sett = _settings;
 
   auto storage_path = sett->raw_path.value();

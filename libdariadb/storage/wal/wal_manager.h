@@ -5,7 +5,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/storage/wal/aofile.h>
+#include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/st_exports.h>
 #include <vector>
 
@@ -13,12 +13,12 @@
 
 namespace dariadb {
 namespace storage {
-class AOFManager : public IMeasStorage {
+class WALManager : public IMeasStorage {
 public:
 protected:
 public:
-  EXPORT virtual ~AOFManager();
-  EXPORT AOFManager(const EngineEnvironment_ptr env);
+  EXPORT virtual ~WALManager();
+  EXPORT WALManager(const EngineEnvironment_ptr env);
   // Inherited via MeasStorage
   EXPORT virtual Time minTime() override;
   EXPORT virtual Time maxTime() override;
@@ -30,11 +30,11 @@ public:
   EXPORT virtual Status  append(const Meas &value) override;
   EXPORT virtual void flush() override;
 
-  EXPORT std::list<std::string> closedAofs();
-  EXPORT void dropAof(const std::string &fname, IAofDropper *storage);
+  EXPORT std::list<std::string> closedWals();
+  EXPORT void dropWAL(const std::string &fname, IWALDropper *storage);
 
   EXPORT size_t filesCount() const;
-  EXPORT void setDownlevel(IAofDropper *down);
+  EXPORT void setDownlevel(IWALDropper *down);
 
   EXPORT void erase(const std::string &fname);
 
@@ -44,16 +44,16 @@ public:
   EXPORT Id2MinMax loadMinMax() override;
 protected:
   void create_new();
-  std::list<std::string> aof_files() const;
+  std::list<std::string> wal_files() const;
   void flush_buffer();
   void drop_old_if_needed();
 
 private:
-  EXPORT static AOFManager *_instance;
+  EXPORT static WALManager *_instance;
 
-  AOFile_Ptr _aof;
+  WALFile_Ptr _wal;
   mutable std::mutex _locker;
-  IAofDropper *_down;
+  IWALDropper *_down;
 
   MeasArray _buffer;
   size_t _buffer_pos;
@@ -62,6 +62,6 @@ private:
   Settings* _settings;
 };
 
-using AOFManager_ptr = std::shared_ptr<AOFManager>;
+using WALManager_ptr = std::shared_ptr<WALManager>;
 }
 }

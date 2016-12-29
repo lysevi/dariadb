@@ -127,7 +127,7 @@ void show_info(Engine *storage) {
     time_ss << timeutil::to_string(write_time);
 
     std::stringstream stor_ss;
-	stor_ss << "(p:" << queue_sizes.pages_count << " w:" << queue_sizes.aofs_count
+	stor_ss << "(p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count
 		<< " T:" << queue_sizes.active_works;
     if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE) ){
 		stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity 
@@ -145,7 +145,7 @@ void show_info(Engine *storage) {
     persent_ss << (int64_t(100) * append_count) / dariadb_bench::all_writes << '%';
 
     std::stringstream drop_ss;
-    drop_ss << "[a:" << queue_sizes.dropper.aof << "]";
+    drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
 	std::stringstream ss;
 
     ss// << "\r"
@@ -173,8 +173,8 @@ void show_drop_info(Engine *storage) {
     auto queue_sizes = storage->description();
 
     dariadb::logger_info(" storage: (p:", queue_sizes.pages_count, " a:",
-                          queue_sizes.aofs_count, " T:", queue_sizes.active_works, ")",
-                          "[a:", queue_sizes.dropper.aof, "]");
+                          queue_sizes.wal_count, " T:", queue_sizes.active_works, ")",
+                          "[a:", queue_sizes.dropper.wal, "]");
 
     if (stop_info) {
       std::cout.flush();
@@ -320,19 +320,19 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, Engine *raw_ptr
   switch (strategy) {
   case dariadb::storage::STRATEGY::WAL:
     if (files.pages_count != 0) {
-      THROW_EXCEPTION("WAL error: (p:", files.pages_count, " a:", files.aofs_count,
+      THROW_EXCEPTION("WAL error: (p:", files.pages_count, " a:", files.wal_count,
                       " T:", files.active_works, ")");
     }
     break;
   case dariadb::storage::STRATEGY::COMPRESSED:
-    if (files.aofs_count >= 1 && files.pages_count == 0) {
-      THROW_EXCEPTION("COMPRESSED error: (p:", files.pages_count, " a:", files.aofs_count,
+    if (files.wal_count >= 1 && files.pages_count == 0) {
+      THROW_EXCEPTION("COMPRESSED error: (p:", files.pages_count, " a:", files.wal_count,
                       " T:", files.active_works, ")");
     }
     break;
   case dariadb::storage::STRATEGY::MEMORY:
-	  if (files.aofs_count != 0 && files.pages_count == 0) {
-          THROW_EXCEPTION("MEMORY error: (p:", files.pages_count, " a:", files.aofs_count,
+	  if (files.wal_count != 0 && files.pages_count == 0) {
+          THROW_EXCEPTION("MEMORY error: (p:", files.pages_count, " a:", files.wal_count,
 			  " T:", files.active_works, ")");
 	  }
 	  break;
@@ -431,13 +431,13 @@ int main(int argc, char *argv[]) {
 
     if (!readonly) {
         if(strategy!= dariadb::storage::STRATEGY::MEMORY && strategy != STRATEGY::CACHE){
-            size_t ccount = size_t(raw_ptr->description().aofs_count);
-			std::cout << "==> drop part aofs to " << ccount << "..." << std::endl;
+            size_t ccount = size_t(raw_ptr->description().wal_count);
+			std::cout << "==> drop part wals to " << ccount << "..." << std::endl;
 			stop_info = false;
 			std::thread flush_info_thread(show_drop_info, raw_ptr);
 
 			auto start = clock();
-			raw_ptr->drop_part_aofs(ccount);
+			raw_ptr->drop_part_wals(ccount);
 			raw_ptr->flush();
 			raw_ptr->wait_all_asyncs();
 			auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
@@ -529,7 +529,7 @@ int main(int argc, char *argv[]) {
     auto queue_sizes = raw_ptr->description();
     std::cout << "\r"
               << " storage: (p:" << queue_sizes.pages_count
-              << " a:" << queue_sizes.aofs_count << ")" << std::endl;
+              << " a:" << queue_sizes.wal_count << ")" << std::endl;
 
     std::cout << "Active threads: "
               << utils::async::ThreadManager::instance()->active_works() << std::endl;

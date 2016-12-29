@@ -14,7 +14,7 @@ macro(ADD_BENCHARK name src)
 endmacro(ADD_BENCHARK)
 
 ADD_BENCHARK(compression_benchmark compression_benchmark.cpp)
-ADD_BENCHARK(aof_benchmark aof_benchmark.cpp)
+ADD_BENCHARK(wal_benchmark wal_benchmark.cpp)
 ADD_BENCHARK(engine_benchmark engine_benchmark.cpp)
 ADD_BENCHARK(memstorage_benchmark memstorage_benchmark.cpp)
 ADD_BENCHARK(bystep_benchmark bystep_benchmark.cpp)
