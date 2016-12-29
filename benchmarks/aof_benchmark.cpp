@@ -85,8 +85,6 @@ int main(int argc, char *argv[]) {
     dariadb::utils::fs::mkdir(storage_path);
 	
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->aof_buffer_size.setValue(1000);
-    settings->aof_max_size.setValue((1024 * 1024) * 3 / sizeof(dariadb::Meas));
 	
 	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
 	

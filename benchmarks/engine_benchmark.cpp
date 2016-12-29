@@ -377,8 +377,6 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 	settings->strategy.setValue(strategy);
-	settings->aof_buffer_size.setValue(1000000);
-	settings->aof_max_size.setValue(1000000);
     settings->save();
 	if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) && memory_limit!=0) {
 		std::cout << "memory limit: " << memory_limit<<std::endl;

@@ -10,8 +10,8 @@
 using namespace dariadb::storage;
 using json = nlohmann::json;
 
-const uint64_t AOF_BUFFER_SIZE = 2000;
-const uint64_t AOF_FILE_SIZE = sizeof(dariadb::Meas) * AOF_BUFFER_SIZE * 4;
+const uint64_t AOF_BUFFER_SIZE = 4096/sizeof(dariadb::Meas)*10;
+const uint64_t AOF_FILE_SIZE = (1024 * 1024) * 10 / sizeof(dariadb::Meas);
 const uint32_t CHUNK_SIZE = 1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; // 100 mb
 
