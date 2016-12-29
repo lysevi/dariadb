@@ -9,6 +9,7 @@ Manifest-journal
 *.db-shm
 .vs
 dariadb_logs*.txt
+*.wal
 *.aof
 *.cap
 *.page
