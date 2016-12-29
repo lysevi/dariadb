@@ -1,7 +1,7 @@
 #ifdef MSVC
     #define _CRT_SECURE_NO_WARNINGS //disable msvc /sdl warning on fopen call.
 #endif
-#include <libdariadb/storage/aof/aofile.h>
+#include <libdariadb/storage/wal/aofile.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/metrics.h>
@@ -15,8 +15,6 @@
 #include <cstring>
 #include <fstream>
 #include <mutex>
-
-
 
 using namespace dariadb;
 using namespace dariadb::storage;

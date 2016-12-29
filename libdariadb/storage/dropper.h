@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libdariadb/storage/engine_environment.h>
-#include <libdariadb/storage/aof/aof_manager.h>
+#include <libdariadb/storage/wal/aof_manager.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <string>
 #include <set>

@@ -1,4 +1,4 @@
-#include <libdariadb/storage/aof/aof_manager.h>
+#include <libdariadb/storage/wal/aof_manager.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>

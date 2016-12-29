@@ -5,7 +5,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/storage/aof/aofile.h>
+#include <libdariadb/storage/wal/aofile.h>
 #include <libdariadb/st_exports.h>
 #include <vector>
 
