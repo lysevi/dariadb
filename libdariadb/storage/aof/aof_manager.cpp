@@ -32,7 +32,7 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
           auto aofs = manifest->aof_list();
           for (auto f : aofs) {
               auto full_filename = utils::fs::append_path(_settings->raw_path.value(), f);
-              if (AOFile::writed(full_filename) != _settings->aof_max_size.value()) {
+              if (AOFile::writed(full_filename) != _settings->wal_file_size.value()) {
                   logger_info("engine: AofManager open exist file ", f);
                   AOFile_Ptr p{new AOFile(_env, full_filename)};
                   _aof = p;
@@ -41,7 +41,7 @@ AOFManager::AOFManager(const EngineEnvironment_ptr env) {
           }
   }
 
-  _buffer.resize(_settings->aof_buffer_size.value());
+  _buffer.resize(_settings->wal_cache_size.value());
   _buffer_pos = 0;
 }
 
@@ -379,7 +379,7 @@ dariadb::Status  AOFManager::append(const Meas &value) {
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
 
-  if (_buffer_pos >= _settings->aof_buffer_size.value()) {
+  if (_buffer_pos >= _settings->wal_cache_size.value()) {
     flush_buffer();
   }
   return dariadb::Status (1, 0);

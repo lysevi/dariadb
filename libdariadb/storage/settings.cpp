@@ -10,13 +10,13 @@
 using namespace dariadb::storage;
 using json = nlohmann::json;
 
-const uint64_t AOF_BUFFER_SIZE = 4096/sizeof(dariadb::Meas)*10;
-const uint64_t AOF_FILE_SIZE = (1024 * 1024) * 10 / sizeof(dariadb::Meas);
+const uint64_t WAL_CACHE_SIZE = 4096/sizeof(dariadb::Meas)*10;
+const uint64_t WAL_FILE_SIZE = (1024 * 1024) * 10 / sizeof(dariadb::Meas);
 const uint32_t CHUNK_SIZE = 1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; // 100 mb
 
-const std::string c_aof_max_size = "aof_max_size";
-const std::string c_aof_buffer_size = "aof_buffer_size";
+const std::string c_wal_file_size = "wal_file_size";
+const std::string c_wal_cache_size = "wal_cache_size";
 const std::string c_chunk_size = "chunk_size";
 const std::string c_strategy = "strategy";
 const std::string c_memory_limit = "memory_limit";
@@ -45,8 +45,8 @@ Settings::Settings(const std::string &path_to_storage)
       raw_path(nullptr, "raw path", utils::fs::append_path(path_to_storage, "raw")),
       bystep_path(nullptr, "bystep path",
                   utils::fs::append_path(path_to_storage, "bystep")),
-      aof_max_size(this, c_aof_max_size, AOF_FILE_SIZE),
-      aof_buffer_size(this, c_aof_buffer_size, AOF_BUFFER_SIZE),
+      wal_file_size(this, c_wal_file_size, WAL_FILE_SIZE),
+      wal_cache_size(this, c_wal_cache_size, WAL_CACHE_SIZE),
       chunk_size(this, c_chunk_size, CHUNK_SIZE),
       strategy(this, c_strategy, STRATEGY::COMPRESSED),
       memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
@@ -68,8 +68,8 @@ Settings::~Settings() {}
 
 void Settings::set_default() {
   logger("engine: Settings set default Settings");
-  aof_buffer_size.setValue(AOF_BUFFER_SIZE);
-  aof_max_size.setValue(AOF_FILE_SIZE);
+  wal_cache_size.setValue(WAL_CACHE_SIZE);
+  wal_file_size.setValue(WAL_FILE_SIZE);
   chunk_size.setValue(CHUNK_SIZE);
   memory_limit.setValue(MAXIMUM_MEMORY_LIMIT);
   strategy.setValue(STRATEGY::COMPRESSED);

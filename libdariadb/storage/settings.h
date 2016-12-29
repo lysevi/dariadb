@@ -90,9 +90,9 @@ public:
   ReadOnlyOption<std::string> storage_path;
   ReadOnlyOption<std::string> raw_path;
   ReadOnlyOption<std::string> bystep_path;
-  // aof level options;
-  Option<uint64_t> aof_max_size;    // measurements count in one file
-  Option<uint64_t> aof_buffer_size; // inner buffer size
+  // wal level options;
+  Option<uint64_t> wal_file_size;    // measurements count in one file
+  Option<uint64_t> wal_cache_size; // inner buffer size
 
   Option<uint32_t> chunk_size;
 

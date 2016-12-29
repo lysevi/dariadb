@@ -53,8 +53,8 @@ BOOST_AUTO_TEST_CASE(AofInitTest) {
   auto aof_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::AOF_FILE_EXT);
   assert(aof_files.size() == 0);
   auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-  settings->aof_buffer_size.setValue(block_size);
-  settings->aof_max_size.setValue(block_size);
+  settings->wal_cache_size.setValue(block_size);
+  settings->wal_file_size.setValue(block_size);
 
   auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
 
@@ -136,8 +136,8 @@ BOOST_AUTO_TEST_CASE(AOFileCommonTest) {
     dariadb::utils::fs::mkdir(storage_path);
 
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-    settings->aof_buffer_size.setValue(block_size);
-    settings->aof_max_size.setValue(block_size);
+    settings->wal_cache_size.setValue(block_size);
+    settings->wal_file_size.setValue(block_size);
 
 	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
 
@@ -172,8 +172,8 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   dariadb::utils::fs::mkdir(storagePath);
   {
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-    settings->aof_max_size.setValue(max_size);
-    settings->aof_buffer_size.setValue(max_size);
+    settings->wal_file_size.setValue(max_size);
+    settings->wal_cache_size.setValue(max_size);
 	
 	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
 
@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(AofManager_CommonTest) {
   }
   {
 	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storagePath) };
-    settings->aof_max_size.setValue(max_size);
+    settings->wal_file_size.setValue(max_size);
 
 	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
 
