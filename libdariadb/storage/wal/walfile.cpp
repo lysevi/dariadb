@@ -29,7 +29,6 @@ public:
     auto rnd_fname = utils::fs::random_file_name(WAL_FILE_EXT);
     _filename = utils::fs::append_path(_settings->raw_path.value(), rnd_fname);
 	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_append(rnd_fname);
-    is_full = false;
 	_file = nullptr;
   }
 
@@ -39,7 +38,6 @@ public:
     _writed = WALFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
-    is_full = false;
 	_file = nullptr;
   }
 
@@ -93,9 +91,6 @@ public:
     assert(!_is_readonly);
 
     auto sz = std::distance(begin, end);
-    if (is_full) {
-      return Status (0, sz);
-    }
     open_to_append();
     auto max_size = _settings->wal_file_size.value();
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
@@ -111,9 +106,6 @@ public:
     assert(!_is_readonly);
 
     auto list_size = std::distance(begin, end);
-    if (is_full) {
-      return Status (0, list_size);
-    }
     open_to_append();
 
     auto max_size = _settings->wal_file_size.value();
@@ -349,7 +341,6 @@ protected:
   std::string _filename;
   bool _is_readonly;
   size_t _writed;
-  bool is_full;
   EngineEnvironment_ptr _env;
   Settings* _settings;
   FILE *_file;
