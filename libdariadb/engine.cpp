@@ -14,7 +14,6 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
-#include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/utils.h>
 #include <algorithm>
@@ -272,7 +271,6 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    TIMECODE_METRICS(ctmd, "minMaxTime", "Engine::minMaxTime");
     dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
     bool pr, ar;
@@ -400,7 +398,6 @@ public:
   }
 
   void flush() {
-    TIMECODE_METRICS(ctmd, "flush", "Engine::flush");
     std::lock_guard<std::mutex> lg(_flush_locker);
 
 	if (_wal_manager != nullptr) {
@@ -491,7 +488,6 @@ public:
 
 
   void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
-    TIMECODE_METRICS(ctmd, "foreach", "Engine::internal_foreach");
     AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
 	  if (!try_lock_storage()) {
@@ -540,7 +536,6 @@ public:
   }
 
   MeasList readInterval(const QueryInterval &q) {
-    TIMECODE_METRICS(ctmd, "readInterval", "Engine::readInterval");
 	auto p_clbk = std::make_unique<MList_ReaderClb>();
 	auto a_clbk = std::make_unique<MList_ReaderClb>();
     this->foreach_internal(q, p_clbk.get(), a_clbk.get());
@@ -565,7 +560,6 @@ public:
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
-    TIMECODE_METRICS(ctmd, "readTimePoint", "Engine::readTimePoint");
     Id2Meas result;
     result.reserve(q.ids.size());
     for (auto id : q.ids) {

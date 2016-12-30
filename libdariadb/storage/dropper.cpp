@@ -2,7 +2,6 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/settings.h>
-#include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <ctime>
 
@@ -70,8 +69,6 @@ void Dropper::drop_wal_internal(const std::string &fname) {
 	  if(!this->_dropper_lock.try_lock()) {
 		  return true;
 	  }
-      TIMECODE_METRICS(ctmd, "drop", "Dropper::drop_wal_internal");
-	  
 	  logger_info("engine: compressing ", fname);
       auto start_time = clock();
       auto storage_path = sett->raw_path.value();

@@ -51,7 +51,6 @@ void show_info() {
 
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
-  bool metrics_enable = false;
   auto aos = desc.add_options()("help", "produce help message");
   aos("step", po::value<STEP_KIND>(&step_kind)->default_value(step_kind), "step kind");
 
@@ -67,10 +66,6 @@ int main(int argc, char **argv) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     return 1;
-  }
-
-  if (metrics_enable) {
-    std::cout << "enable metrics." << std::endl;
   }
 
   dariadb::IdSet all_id_set;
@@ -124,11 +119,5 @@ int main(int argc, char **argv) {
 	
 	bs_storage = nullptr;
     dariadb::utils::async::ThreadManager::stop();
-
-    if (metrics_enable) {
-      std::cout << "metrics:\n"
-                << dariadb::utils::metrics::MetricsManager::instance()->to_string()
-                << std::endl;
-    }
   }
 }

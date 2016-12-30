@@ -5,7 +5,6 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/async/locker.h>
-#include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/bloom_filter.h>
@@ -112,8 +111,6 @@ public:
   void flush() {}
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
-
     auto pages = pages_by_filter(
         [id](const IndexHeader &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
 
@@ -160,7 +157,6 @@ public:
   }
 
   Page_Ptr open_page_to_read(const std::string &pname)const {
-    TIMECODE_METRICS(ctmd, "open", "PageManager::open_page_to_read");
     std::lock_guard<std::mutex> lg(_page_open_lock);
     Page_Ptr pg = nullptr;
     if (_cur_page != nullptr && pname == _cur_page->filename) {
@@ -172,8 +168,6 @@ public:
   }
 
   ChunkLinkList chunksByIterval(const QueryInterval &query) {
-    TIMECODE_METRICS(ctmd, "read", "PageManager::chunksByIterval");
-
     auto pred = [&query](const IndexHeader &hdr) {
       auto interval_check((hdr.minTime >= query.from && hdr.maxTime <= query.to) ||
                           (utils::inInterval(query.from, query.to, hdr.minTime)) ||
@@ -216,7 +210,6 @@ public:
 
   void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                  IReaderClb *clbk) {
-    TIMECODE_METRICS(ctmd, "read", "PageManager::readLinks");
 	AsyncTask at = [&query, clbk, &links, this](const ThreadInfo &ti) {
 		TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 		ChunkLinkList to_read;
@@ -254,7 +247,6 @@ public:
   }
 
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
-    TIMECODE_METRICS(ctmd, "read", "PageManager::pages_by_filter");
     std::list<std::string> result;
 
     for (auto f2h : _file2header) {
@@ -269,8 +261,6 @@ public:
   }
 
   Id2Meas valuesBeforeTimePoint(const QueryTimePoint &query) {
-    TIMECODE_METRICS(ctmd, "readTimePoint", "PageManager::valuesBeforeTimePoint");
-
 	Id2Meas result;
 
 	for (auto id : query.ids) {
@@ -354,7 +344,6 @@ public:
   }
 
   void append(const std::string &file_prefix, const dariadb::MeasArray &ma) {
-    TIMECODE_METRICS(ctmd, "append", "PageManager::append(array)");
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
@@ -394,9 +383,6 @@ public:
   }
 
   void eraseOld(const Time t) {
-      TIMECODE_METRICS(ctmd, "eraseOld", "PageManager::eraseOld");
-
-
 	  auto pred = [t](const IndexHeader &hdr) {
 		  auto in_check = hdr.maxTime <= t;
 		  return in_check;
@@ -485,9 +471,7 @@ public:
 
   Id2MinMax loadMinMax(){
       Id2MinMax result;
-
-      TIMECODE_METRICS(ctmd, "minMaxTime", "PageManager::minMaxTime");
-
+	  
       auto pages = pages_by_filter(
           [](const IndexHeader &ih) { return true; });
 
@@ -524,7 +508,6 @@ PageManager::PageManager(const EngineEnvironment_ptr env) : impl(new PageManager
 PageManager::~PageManager() {}
 
 void PageManager::flush() {
-  TIMECODE_METRICS(ctmd, "flush", "PageManager::flush");
   this->impl->flush();
 }
 

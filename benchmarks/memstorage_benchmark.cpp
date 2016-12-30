@@ -60,10 +60,8 @@ void show_info() {
 
 int main(int argc, char **argv) {
 	po::options_description desc("Allowed options");
-	bool metrics_enable = false;
 	auto aos = desc.add_options()("help", "produce help message");
 	aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit  in megabytes when strategy=MEMORY");
-	aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
 	po::variables_map vm;
 	try {
@@ -78,10 +76,6 @@ int main(int argc, char **argv) {
 	if (vm.count("help")) {
 		std::cout << desc << std::endl;
 		return 1;
-	}
-
-	if (metrics_enable) {
-		std::cout << "enable metrics." << std::endl;
 	}
 
 	dariadb::IdSet all_id_set;
@@ -136,10 +130,5 @@ int main(int argc, char **argv) {
 		delete mstore;
 		dariadb::utils::async::ThreadManager::stop();
 
-		if (metrics_enable) {
-			std::cout << "metrics:\n"
-				<< dariadb::utils::metrics::MetricsManager::instance()->to_string()
-				<< std::endl;
-		}
 	}
 }

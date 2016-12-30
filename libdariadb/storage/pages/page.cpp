@@ -9,7 +9,6 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/exception.h>
-#include <libdariadb/utils/metrics.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -30,8 +29,6 @@ uint64_t Page::index_file_size(uint32_t chunk_per_storage) {
 
 Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size, const MeasArray &ma) {
-  TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
-
   auto to_compress = PageInner::splitById(ma);
 
   PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
@@ -76,8 +73,6 @@ Page* Page::make_page(const std::string&file_name, const PageHeader&phdr) {
 Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size,
                    const std::list<std::string> &pages_full_paths) {
-	TIMECODE_METRICS(ctmd, "create", "Page::create(COMPACTION)");
-
   std::unordered_map<std::string, Page *> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
   std::map<uint64_t, ChunkLinkList> links;
@@ -157,7 +152,6 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
 Page *Page::create(const std::string &file_name, uint64_t chunk_id,
                    const std::vector<Chunk *> &a, size_t count) {
-  TIMECODE_METRICS(ctmd, "create", "Page::create(array)");
   using namespace dariadb::utils::async;
 
   PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
@@ -248,7 +242,6 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 }
 
 Page *Page::open(std::string file_name) {
-  TIMECODE_METRICS(ctmd, "open", "Page::open");
   auto phdr = Page::readHeader(file_name);
   auto res = new Page;
 
@@ -410,7 +403,6 @@ Chunk_Ptr Page::readChunkByOffset(FILE* page_io, int offset) {
 }
 
 dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
-  TIMECODE_METRICS(ctmd, "readTimePoint", "Page::valuesBeforeTimePoint");
   dariadb::Id2Meas result;
   auto raw_links =
       _index->get_chunks_links(q.ids, _index->iheader.minTime, q.time_point, q.flag);
@@ -456,7 +448,6 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
 void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
                      IReaderClb *clbk) {
-  TIMECODE_METRICS(ctmd, "readLinks", "Page::readLinks");
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
     return;

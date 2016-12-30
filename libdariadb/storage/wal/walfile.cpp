@@ -4,7 +4,6 @@
 #include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/fs.h>
-#include <libdariadb/utils/metrics.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
@@ -72,7 +71,6 @@ public:
   }
 
   Status  append(const Meas &value) {
-    TIMECODE_METRICS(ctmd, "append", "WALFile::append");
     assert(!_is_readonly);
 
     if (_writed > _settings->wal_file_size.value()) {
@@ -87,7 +85,6 @@ public:
 
   Status  append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
-    TIMECODE_METRICS(ctmd, "append", "WALFile::append(ma)");
     assert(!_is_readonly);
 
     auto sz = std::distance(begin, end);
@@ -102,7 +99,6 @@ public:
 
   Status  append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) {
-    TIMECODE_METRICS(ctmd, "append", "WALFile::append(ml)");
     assert(!_is_readonly);
 
     auto list_size = std::distance(begin, end);
@@ -119,8 +115,6 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    TIMECODE_METRICS(ctmd, "foreach", "WALFile::foreach");
-
     open_to_read();
 
     while (1) {
@@ -140,8 +134,6 @@ public:
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
-    TIMECODE_METRICS(ctmd, "readTimePoint", "WALFile::readTimePoint");
-
     dariadb::IdSet readed_ids;
     dariadb::Id2Meas sub_res;
 
@@ -252,7 +244,6 @@ public:
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    TIMECODE_METRICS(ctmd, "minMaxTime", "WALFile::minMaxTime");
     open_to_read();
 
     *minResult = dariadb::MAX_TIME;
@@ -274,12 +265,11 @@ public:
     return result;
   }
 
-  void flush() { TIMECODE_METRICS(ctmd, "flush", "WALFile::flush"); }
+  void flush() { }
 
   std::string filename() const { return _filename; }
 
   std::shared_ptr<MeasArray> readAll() {
-    TIMECODE_METRICS(ctmd, "drop", "WALFile::drop");
     open_to_read();
 
     auto ma=std::make_shared<MeasArray>(_settings->wal_file_size.value());
@@ -315,7 +305,6 @@ public:
   }
 
   Id2MinMax loadMinMax(){
-      TIMECODE_METRICS(ctmd, "loadMinMax", "WALFile::loadMinMax");
       open_to_read();
       Id2MinMax result;
       while (1) {
@@ -402,7 +391,6 @@ std::shared_ptr<MeasArray> WALFile::readAll() {
 }
 
 size_t WALFile::writed(std::string fname) {
-  TIMECODE_METRICS(ctmd, "read", "WALFile::writed");
   std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
   return in.tellg() / sizeof(Meas);
 }

@@ -10,7 +10,6 @@ ENDIF()
 MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
 
 option(ENABLE_TESTS "Enable testing of the dariadb." ON)
-option(ENABLE_METRICS "Enable code metrics." ON)
 option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
 option(ENABLE_SERVER "Enable build dariadb server." ON)
 option(ENABLE_BENCHMARKS "Enable build dariadb benchmarks." ON)
@@ -28,7 +27,6 @@ endif()
 
 MESSAGE(STATUS "Options: ")
 MESSAGE(STATUS "ENABLE_TESTS - " ${ENABLE_TESTS})
-MESSAGE(STATUS "ENABLE_METRICS - " ${ENABLE_METRICS})
 MESSAGE(STATUS "ENABLE_INTEGRATION_TESTS - " ${ENABLE_INTEGRATION_TESTS})
 MESSAGE(STATUS "ENABLE_SERVER - " ${ENABLE_SERVER})
 MESSAGE(STATUS "ENABLE_BENCHMARKS - " ${ENABLE_BENCHMARKS})
@@ -48,6 +46,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
+
 set(BOOST_DEP system filesystem date_time)
 
 if(ENABLE_TESTS)
@@ -74,10 +73,6 @@ ENDIF()
 find_package (Threads)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-if (ENABLE_METRICS)
-  add_definitions(-DENABLE_METRICS)
-endif()
 
 include_directories(extern)
 include_directories(extern/spdlog/include)

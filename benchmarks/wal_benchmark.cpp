@@ -4,7 +4,6 @@
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/fs.h>
-#include <libdariadb/utils/metrics.h>
 
 #include <boost/program_options.hpp>
 
@@ -45,11 +44,9 @@ int main(int argc, char *argv[]) {
 
   po::options_description desc("Allowed options");
   bool dont_clean = false;
-  bool metrics_enable = false;
   auto aos = desc.add_options();
   aos("help", "produce help message");
   aos("dont-clean", "dont clean storage path before start.");
-  aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
 
   po::variables_map vm;
   try {
@@ -63,10 +60,6 @@ int main(int argc, char *argv[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     return 1;
-  }
-
-  if (metrics_enable) {
-    std::cout << "enable metrics." << std::endl;
   }
 
   if (vm.count("dont-clean")) {
@@ -123,11 +116,5 @@ int main(int argc, char *argv[]) {
 
 	manifest = nullptr;
     dariadb::utils::async::ThreadManager::stop();
-
-    if (metrics_enable) {
-      std::cout << "metrics:\n"
-                << dariadb::utils::metrics::MetricsManager::instance()->to_string()
-                << std::endl;
-    }
   }
 }

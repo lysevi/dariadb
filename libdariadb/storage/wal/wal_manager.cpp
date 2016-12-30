@@ -3,7 +3,6 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
-#include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
@@ -46,7 +45,6 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
 }
 
 void WALManager::create_new() {
-  TIMECODE_METRICS(ctm, "create", "WALManager::create_new");
   _wal = nullptr;
   if (_settings->strategy.value() != STRATEGY::WAL) {
     drop_old_if_needed();
@@ -58,7 +56,6 @@ void  WALManager::dropAll(){
     if (_down != nullptr) {
       auto all_files = wal_files();
       this->_wal=nullptr;
-      TIMECODE_METRICS(ctmd, "drop", "WALManager::drop_all");
       for (auto f:all_files) {
         auto without_path = utils::fs::extract_filename(f);
         if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
@@ -73,7 +70,6 @@ void WALManager::dropClosedFiles(size_t count) {
   if (_down != nullptr) {
     auto closed = this->closedWals();
 
-    TIMECODE_METRICS(ctmd, "drop", "WALManager::drop_closed_files");
     size_t to_drop = std::min(closed.size(), count);
     for (size_t i = 0; i < to_drop; ++i) {
       auto f = closed.front();
@@ -195,7 +191,6 @@ dariadb::Time WALManager::maxTime() {
 
 bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
-  TIMECODE_METRICS(ctmd, "minMaxTime", "WALManager::minMaxTime");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = wal_files();
   using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
@@ -250,7 +245,6 @@ bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 }
 
 void WALManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
-  TIMECODE_METRICS(ctmd, "foreach", "WALManager::foreach");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = wal_files();
   if (!files.empty()) {
@@ -283,7 +277,6 @@ void WALManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
 }
 
 Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
-  TIMECODE_METRICS(ctmd, "readTimePoint", "WALManager::readTimePoint");
   std::lock_guard<std::mutex> lg(_locker);
   auto files = wal_files();
   dariadb::Id2Meas sub_result;
@@ -374,7 +367,6 @@ Id2Meas WALManager::currentValue(const IdArray &ids, const Flag &flag) {
 }
 
 dariadb::Status  WALManager::append(const Meas &value) {
-  TIMECODE_METRICS(ctmd, "append", "WALManager::append");
   std::lock_guard<std::mutex> lg(_locker);
   _buffer[_buffer_pos] = value;
   _buffer_pos++;
@@ -415,7 +407,6 @@ void WALManager::flush_buffer() {
 }
 
 void WALManager::flush() {
-  TIMECODE_METRICS(ctmd, "flush", "WALManager::flush");
   flush_buffer();
 }
 
@@ -429,7 +420,6 @@ void WALManager::erase(const std::string &fname) {
 }
 
 Id2MinMax WALManager::loadMinMax(){
-     TIMECODE_METRICS(ctmd, "loadMinMax", "WALManager::loadMinMax");
     auto files = wal_files();
 
     dariadb::Id2MinMax result;

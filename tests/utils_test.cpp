@@ -11,7 +11,6 @@
 #include <libdariadb/utils/crc.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
-#include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/utils.h>
@@ -118,28 +117,6 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
   std::string child_p = "path2";
   auto concat_p = dariadb::utils::fs::append_path(parent_p, child_p);
   BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(concat_p), parent_p);
-}
-
-
-BOOST_AUTO_TEST_CASE(Metrics) {
-  BOOST_CHECK(dariadb::utils::metrics::MetricsManager::instance() != nullptr);
-  {
-    dariadb::utils::metrics::RAI_TimeMetric("group1", "metric2");
-    {
-      dariadb::utils::metrics::RAI_TimeMetric("group1", "metric1");
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    {
-      dariadb::utils::metrics::RAI_TimeMetric("group1", "metric1");
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-    using dariadb::utils::metrics::FloatMetric;
-    ADD_METRICS("group2", "template",
-                dariadb::utils::metrics::IMetric_Ptr{new FloatMetric(float(3.14))});
-  }
-  auto dump = dariadb::utils::metrics::MetricsManager::instance()->to_string();
-  BOOST_CHECK(dump.size() > size_t(0));
 }
 
 BOOST_AUTO_TEST_CASE(ThreadsPool) {

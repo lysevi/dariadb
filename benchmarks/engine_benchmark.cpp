@@ -18,7 +18,6 @@ bool stop_info = false;
 bool stop_readers = false;
 
 bool readers_enable = false;
-bool metrics_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
@@ -65,7 +64,6 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("readall", "read all benchmark enable.");
   aos("dont-clean", "dont clean storage path before start.");
   aos("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable), "enable readers threads");
-  aos("enable-metrics", po::value<bool>(&metrics_enable)->default_value(metrics_enable));
   aos("read-benchmark-runs", po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy), "Write strategy");
   aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit), "allocation area limit  in megabytes when strategy=MEMORY");
@@ -83,10 +81,6 @@ void parse_cmdline(int argc, char *argv[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     std::exit(0);
-  }
-
-  if (metrics_enable) {
-    std::cout << "Enable metrics." << std::endl;
   }
 
   if (vm.count("readonly")) {
@@ -553,10 +547,5 @@ int main(int argc, char *argv[]) {
   if (!(dont_clean || readonly) && (utils::fs::path_exists(storage_path))) {
     std::cout << "cleaning...\n";
     utils::fs::rm(storage_path);
-  }
-
-  if (metrics_enable) {
-    std::cout << "metrics:\n"
-              << utils::metrics::MetricsManager::instance()->to_string() << std::endl;
   }
 }

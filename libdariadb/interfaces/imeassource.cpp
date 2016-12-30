@@ -1,7 +1,6 @@
 #include <libdariadb/interfaces/imeassource.h>
 
 #include <libdariadb/storage/callbacks.h>
-#include <libdariadb/utils/metrics.h>
 #include <libdariadb/utils/utils.h>
 #include <map>
 
@@ -16,7 +15,6 @@ void IMeasSource::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
 }
 
 MeasList IMeasSource::readInterval(const QueryInterval &q) {
-  TIMECODE_METRICS(ctmd, "readInterval", "IMeasSource::readInterval");
   auto clbk= std::make_unique<MList_ReaderClb>();
   this->foreach (q, clbk.get());
 
