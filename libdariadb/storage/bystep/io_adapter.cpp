@@ -250,17 +250,8 @@ public:
 #endif // DEBUG
 
 		   uint8_t *buffer = (uint8_t *)sqlite3_column_blob(pStmt, 1);
-		   //TODO move to method
            Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
-		   auto reader=cptr->getReader();
-		   while (!reader->is_end()) {
-			   auto v=reader->readNext();
-			   if (v.flag != Flags::_NO_DATA) {
-				   if (result[v.id].time < v.time) {
-					   result[v.id] = v;
-				   }
-			   }
-		   }
+		   currentValueFromChunk(result, cptr);
          } else {
            break;
          }
@@ -268,21 +259,25 @@ public:
        rc = sqlite3_finalize(pStmt);
      } while (rc == SQLITE_SCHEMA);
 	 
-	 //TODO move to method
 	 for (auto&cmm : _chunks_list) {
-		 auto reader = cmm.ch->getReader();
-		 while (!reader->is_end()) {
-			 auto v = reader->readNext();
-			 if (v.flag != Flags::_NO_DATA) {
-				 if (result[v.id].time < v.time) {
-					 result[v.id] = v;
-				 }
-			 }
-		 }
+		 currentValueFromChunk(result, cmm.ch);
 	 }
      unlock();
     return result;
   }
+
+  void currentValueFromChunk(Id2Meas &result, Chunk_Ptr&c) {
+	  auto reader = c->getReader();
+	  while (!reader->is_end()) {
+		  auto v = reader->readNext();
+		  if (v.flag != Flags::_NO_DATA) {
+			  if (result[v.id].time < v.time) {
+				  result[v.id] = v;
+			  }
+		  }
+	  }
+  }
+
   void replace(const Chunk_Ptr &ch, Time min, Time max) {
 	  this->flush();
 	  lock();
