@@ -5,12 +5,15 @@ namespace dariadb {
 namespace storage {
 namespace bystep {
 
+const size_t VALUES_PER_MS = 1000;
 const size_t VALUES_PER_SEC = 60 * 60;
 const size_t VALUES_PER_MIN = 60;
 const size_t VALUES_PER_HR = 24;
 
 size_t step_to_size(STEP_KIND kind) {
   switch (kind) {
+  case STEP_KIND::MILLISECOND:
+	  return VALUES_PER_MS;
   case STEP_KIND::SECOND:
     return VALUES_PER_SEC;
   case STEP_KIND::MINUTE:
@@ -27,6 +30,10 @@ std::tuple<Time, Time> roundTime(const STEP_KIND stepkind, const Time t) {
   Time rounded = 0;
   Time step = 0;
   switch (stepkind) {
+  case STEP_KIND::MILLISECOND:
+	  rounded = t;
+	  step = 1;
+	  break;
   case STEP_KIND::SECOND:
     rounded = timeutil::round_to_seconds(t);
     step = 1000;

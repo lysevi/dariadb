@@ -91,7 +91,6 @@ public:
 	  ch->header->size = cur_chunk_buf_size;
 	  //update checksum;
 	  ZippedChunk::updateChecksum(*ch->header, ch->_buffer_t + skip_count);
-	  assert(ch->checkChecksum());
 
       sqlite3_bind_int64(pStmt, 1, ch->header->id);
       sqlite3_bind_int64(pStmt, 2, ch->header->first.id);
@@ -141,6 +140,10 @@ public:
 
           Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
           cptr->is_owner = true;
+		  if (!cptr->checkChecksum()) {
+			  logger_fatal("engine: io_adapter -  bad checksum of chunk #", cptr->header->id, " for measurement id:", cptr->header->first.id);
+			  continue;
+		  }
           result.push_back(cptr);
         } else {
           break;
@@ -248,7 +251,7 @@ public:
            using utils::inInterval;
 		   ChunkHeader *chdr = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
 #ifdef DEBUG
-		   auto headerSize = sqlite3_column_bytes(pStmt, 1);
+		   auto headerSize = sqlite3_column_bytes(pStmt, 0);
 		   assert(headerSize == sizeof(ChunkHeader));
 #endif // DEBUG
 

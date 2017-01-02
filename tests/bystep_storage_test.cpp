@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
 }
 
 BOOST_AUTO_TEST_CASE(ByStepInitTest) {
-  std::cout << "ByStepTest" << std::endl;
+  std::cout << "ByStepInitTest" << std::endl;
   auto storage_path = "testBySTepStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
 }
 
 BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
-  std::cout << "ByStepTest" << std::endl;
+  std::cout << "ByStepAppendTest" << std::endl;
   auto storage_path = "testBySTepStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -230,6 +230,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     steps[0] = dariadb::storage::STEP_KIND::SECOND;
     steps[1] = dariadb::storage::STEP_KIND::MINUTE;
     steps[2] = dariadb::storage::STEP_KIND::HOUR;
+	steps[3] = dariadb::storage::STEP_KIND::MILLISECOND;
     ms.setSteps(steps);
 
     
@@ -242,7 +243,19 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
       ms.append(value);
       value.id = 2;
       ms.append(value);
+	  value.id = 3;
+	  ms.append(value);
     }
+	{ // milliseconds
+		dariadb::storage::QueryInterval qi({ 3 }, 0, 0, value.time);
+		auto readed = ms.readInterval(qi);
+		BOOST_CHECK_EQUAL(readed.size(), size_t(value.time)+1);
+		for (auto &v : readed) {// write step is 500ms
+			if ((v.time != 0) && (v.time % 500 == 0)) {
+				BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
+			}
+		}
+	}
     { // seconds
       dariadb::storage::QueryInterval qi({0}, 0, 0, value.time);
       auto readed = ms.readInterval(qi);

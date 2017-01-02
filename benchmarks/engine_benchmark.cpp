@@ -466,6 +466,7 @@ int main(int argc, char *argv[]) {
 				id2s[100001] = dariadb::storage::STEP_KIND::MINUTE;
 				id2s[100002] = dariadb::storage::STEP_KIND::HOUR;
 				id2s[100003] = dariadb::storage::STEP_KIND::SECOND;
+				id2s[100004] = dariadb::storage::STEP_KIND::MILLISECOND;
 				raw_ptr->setSteps(id2s);
 				dariadb::Time minTime, maxTime;
 				if (!raw_ptr->minMaxTime(0, &minTime, &maxTime)) {
@@ -475,6 +476,16 @@ int main(int argc, char *argv[]) {
 				qi.ids.resize(1);
 				qi.ids[0] = 0;
 				auto all_values = raw_ptr->readInterval(qi);
+				{
+					std::cout << "==> write MILLISECOND value" << std::endl;
+					auto start = clock();
+					for (auto &v : all_values) {
+						v.id = 100004;
+						raw_ptr->append(v);
+					}
+					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "write time: " << elapsed << std::endl;
+				}
 				{
 					std::cout << "==> write SECOND value" << std::endl;
 					auto start = clock();
