@@ -40,6 +40,7 @@ public:
     }
     init_tables();
 	_stop_flag = false;
+	_is_stoped = false;
 	_write_thread = std::thread(std::bind(&IOAdapter::Private::write_thread_func, this));
   }
   ~Private() { stop(); }
@@ -48,7 +49,9 @@ public:
     if (_db != nullptr) {
 		flush();
 		_stop_flag = true;
-		_cond_var.notify_all();
+		while (!_is_stoped) {
+			_cond_var.notify_all();
+		}
 		_write_thread.join();
       sqlite3_close(_db);
       _db = nullptr;
@@ -455,6 +458,7 @@ public:
       _dropper_locker.unlock();
     }
     logger_info("engine: io_adapter - write thread is stoped.");
+	_is_stoped = true;
   }
 
   void flush() {
@@ -505,6 +509,7 @@ public:
   }
 
   sqlite3 *_db;
+  bool                  _is_stoped;
   bool                  _stop_flag;
   std::list<ChunkMinMax> _chunks_list;
   std::mutex            _chunks_list_locker;
