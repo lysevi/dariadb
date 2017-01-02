@@ -105,8 +105,15 @@ void ZippedChunk::close() {
   assert(header->crc != 0);
 }
 
+void ZippedChunk::updateChecksum(ChunkHeader&hdr, u8vector buff) {
+	hdr.crc = utils::crc32(buff, hdr.size);
+}
+
+uint32_t ZippedChunk::calcChecksum(ChunkHeader&hdr, u8vector buff) {
+	return utils::crc32(buff, hdr.size);
+}
 uint32_t ZippedChunk::calcChecksum() {
-  return utils::crc32(this->_buffer_t, this->header->size);
+  return ZippedChunk::calcChecksum(*header, this->_buffer_t);
 }
 
 uint32_t ZippedChunk::getChecksum() {

@@ -207,16 +207,22 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     chunk_header->size = cur_chunk_buf_size;
     chunk_header->offset_in_page = offset;
 
-    auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
-    ch->close();
+	//update checksum;
+	ZippedChunk::updateChecksum(*chunk_header, chunk_buffer_ptr + skip_count);
+    
     #ifdef  DEBUG
-    			auto rdr=ch->getReader();
-    			size_t readed = 0;
-    			while (!rdr->is_end()) {
-    				rdr->readNext();
-    				readed++;
-    			}
-    			assert(readed == (ch->header->count + 1));
+	{
+		auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
+		assert(ch->checkChecksum());
+		auto rdr = ch->getReader();
+		size_t readed = 0;
+		while (!rdr->is_end()) {
+			rdr->readNext();
+			readed++;
+		}
+		assert(readed == (ch->header->count + 1));
+		ch->close();
+	}
     #endif //  DEBUG
 
     std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
@@ -250,7 +256,6 @@ Page *Page::open(std::string file_name) {
       PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
   res->header = phdr;
-  res->check_page_struct();
   return res;
 }
 
@@ -266,23 +271,7 @@ void Page::restoreIndexFile(const std::string &file_name) {
   res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
   delete res;
 }
-void Page::check_page_struct() {
-#ifdef DEBUG
-  //for (uint32_t i = 0; i < header->addeded_chunks; ++i) {
-  //  auto irec = &_index->index[i];
-  //  if (irec->is_init) {
 
-  //    ChunkHeader *info = reinterpret_cast<ChunkHeader *>(chunks + irec->offset);
-  //    if (info->id != irec->chunk_id) {
-  //      throw MAKE_EXCEPTION("(info->id != irec->chunk_id)");
-  //    }
-  //    if (info->pos_in_page != i) {
-  //      throw MAKE_EXCEPTION("(info->pos_in_page != i)");
-  //    }
-  //  }
-  //}
-#endif
-}
 PageHeader Page::readHeader(std::string file_name) {
   std::ifstream istream;
   istream.open(file_name, std::fstream::in | std::fstream::binary);

@@ -61,8 +61,6 @@ public:
 private:
   void update_index_recs(const PageHeader &phdr);
 
-
-  void check_page_struct();
   static Page* make_page(const std::string&file_name, const PageHeader&phdr);
   Chunk_Ptr readChunkByOffset(FILE* page_io, int offset);
 public:

@@ -89,7 +89,10 @@ public:
 	  auto cur_chunk_buf_size = ch->header->size - ch->header->bw_pos + 1;
 	  auto skip_count = ch->header->size - cur_chunk_buf_size;
 	  ch->header->size = cur_chunk_buf_size;
-		
+	  //update checksum;
+	  ZippedChunk::updateChecksum(*ch->header, ch->_buffer_t + skip_count);
+	  assert(ch->checkChecksum());
+
       sqlite3_bind_int64(pStmt, 1, ch->header->id);
       sqlite3_bind_int64(pStmt, 2, ch->header->first.id);
       sqlite3_bind_int64(pStmt, 3, min);

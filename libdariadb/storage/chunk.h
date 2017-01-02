@@ -85,7 +85,8 @@ public:
   EXPORT bool isFull() const override;
   EXPORT bool append(const Meas &m) override;
   EXPORT void close() override;
-
+  EXPORT static void updateChecksum(ChunkHeader&hdr, u8vector buff);
+  EXPORT static uint32_t calcChecksum(ChunkHeader&hdr, u8vector buff);
   EXPORT uint32_t calcChecksum() override;
   EXPORT uint32_t getChecksum() override;
   EXPORT ChunkReader_Ptr getReader() override;

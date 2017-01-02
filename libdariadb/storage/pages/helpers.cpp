@@ -147,10 +147,14 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
     chunk_header.offset_in_page = offset;
 
 	//update checksum;
-	//TODO refact. it must work without openning chunk.
-	Chunk_Ptr c{ new ZippedChunk(&chunk_header, chunk_buffer_ptr.get() + skip_count) };
-	c->close();
-	assert(c->checkChecksum());
+	ZippedChunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
+#ifdef  DEBUG
+	{
+		auto ch = std::make_shared<ZippedChunk>(&chunk_header, chunk_buffer_ptr.get() + skip_count);
+		assert(ch->checkChecksum());
+		ch->close();
+	}
+#endif
     std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), cur_chunk_buf_size,
                 file);
