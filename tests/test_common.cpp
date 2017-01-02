@@ -30,6 +30,32 @@ public:
   std::atomic_int is_end_called;
 };
 
+class OrderCheckCallback : public storage::IReaderClb {
+public:
+	OrderCheckCallback() {
+		is_greater = false;
+		is_first = true;
+	}
+	void call(const Meas &v) override {
+		std::lock_guard<std::mutex> lg(_locker);
+		all.push_back(v);
+		if (is_first) {
+			_last = v.time;
+			is_first = false;
+		}
+		else {
+			is_greater = _last <= v.time;
+			_last = v.time;
+		}
+	}
+	std::mutex _locker;
+	dariadb::Time _last;
+	bool is_first;
+	bool is_greater;
+
+	MeasList all;
+};
+
 void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
 
   Id id_val(0);
@@ -205,7 +231,19 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
 	  if (fltr_res.size() != copies_count) {
 		  throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
 	  }
-  
+
+	  {// calls must be sorted by time.
+		  auto order_clbk = new OrderCheckCallback();
+		  IdArray zero_id;
+		  zero_id.resize(1);
+		  zero_id[0] = dariadb::Id(0);
+		  as->foreach(storage::QueryInterval(zero_id, 0, from, to + copies_count), order_clbk);
+		  order_clbk->wait();
+		  if (!order_clbk->is_greater) {
+			  throw MAKE_EXCEPTION("!order_clbk->is_greater");
+		  }
+		  delete order_clbk;
+	  }
 }
 
 void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
