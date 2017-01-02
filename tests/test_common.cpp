@@ -232,7 +232,8 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
 		  throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
 	  }
 
-	  {// calls must be sorted by time.
+	  if (check_stop_flag) {//this check works only when engine test.
+		  // calls must be sorted by time.
 		  auto order_clbk = new OrderCheckCallback();
 		  IdArray zero_id;
 		  zero_id.resize(1);
