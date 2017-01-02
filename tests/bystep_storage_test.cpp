@@ -412,6 +412,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     dariadb::storage::Id2Step steps;
     steps[0] = dariadb::storage::STEP_KIND::HOUR;
     {
+	  std::cout << "first" << std::endl;
       dariadb::storage::ByStepStorage ms{_engine_env};
       ms.setSteps(steps);
 
@@ -428,6 +429,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
       }
     }
     { // update value
+	  std::cout << "update value" << std::endl;
       dariadb::storage::ByStepStorage ms{_engine_env};
       auto readed = ms.setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
@@ -445,6 +447,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     }
 
     { // read saved
+	  std::cout << "read saved" << std::endl;
       dariadb::storage::ByStepStorage ms{_engine_env};
       auto readed = ms.setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
