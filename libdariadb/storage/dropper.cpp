@@ -107,7 +107,7 @@ void Dropper::drop_wal_internal() {
 
 			  auto end = clock();
 			  auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
-			  this->_dropper_lock.unlock();
+			  
 			  logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
 		  }
 		  catch (std::exception &ex) {
@@ -118,6 +118,7 @@ void Dropper::drop_wal_internal() {
 
 	  auto handle=ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 	  handle->wait();
+	  this->_dropper_lock.unlock();
   }
   _is_stoped = true;
 }

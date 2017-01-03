@@ -32,11 +32,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     _disk_storage = nullptr;
     _drop_stop = false;
     _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
-    if (_settings->strategy.value() == STRATEGY::CACHE) {
+    /*if (_settings->strategy.value() == STRATEGY::CACHE) {
       logger_info("engine: run memory crawler.");
       _crawler_thread =
           std::thread{std::bind(&MemStorage::Private::crawler_thread_func, this)};
-    }
+    }*/
     if (id_count != 0) {
       _id2track.reserve(id_count);
     }
@@ -47,10 +47,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       _drop_stop = true;
 	  _drop_cond.notify_all();
 	  _drop_thread.join();
-      if (_settings->strategy.value() == STRATEGY::CACHE) {
+     /* if (_settings->strategy.value() == STRATEGY::CACHE) {
 		  _crawler_cond.notify_all();
 		  _crawler_thread.join();
-      }
+      }*/
 
 	  if (this->_down_level_storage != nullptr) {
 		  logger_info("engine: memstorage - drop all chunk to disk");
@@ -94,11 +94,15 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       target_track = track->second;
       _all_tracks_locker.unlock_shared();
     }
-    while (target_track->append(value).writed != 1) {
-      _drop_cond.notify_all();
-      _crawler_cond.notify_all();
-    }
-    _crawler_cond.notify_all();
+
+	while (target_track->append(value) != Status(1, 0)) {
+		_drop_cond.notify_all();
+	}
+	
+	if (_disk_storage != nullptr) {
+		_disk_storage->append(value);
+		target_track->_max_sync_time = value.time;
+	}
     return Status(1, 0);
   }
 
@@ -134,9 +138,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         assert(!c->isFull());
         continue;
       }
-      if (_settings->strategy.value() == STRATEGY::CACHE && (!c->already_in_disk())) {
+     /* if (_settings->strategy.value() == STRATEGY::CACHE && (!c->already_in_disk())) {
         continue;
-      }
+      }*/
       all_chunks.push_back(c.get());
       ++pos;
     }
@@ -295,8 +299,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     }
   }
 
-  std::pair<std::mutex *, std::mutex *> getLockers() {
-    return std::make_pair(&_crawler_locker, &_drop_locker);
+  std::mutex* getLockers() {
+    return &_drop_locker;
   }
 
   bool is_time_to_drop() {
@@ -321,63 +325,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     logger_info("engine: memstorage - dropping thread stoped.");
   }
 
-  // async. drop values to down-level disk storage;
-  void crawler_thread_func() {
-    while (!_drop_stop) {
-      std::unique_lock<std::mutex> ul(_crawler_locker);
-      _crawler_cond.wait(ul);
-
-      if (_disk_storage == nullptr) {
-        logger_info("engine: memstorage - disk storage is not set.");
-        if (_drop_stop) {
-          break;
-        }
-        continue;
-      }
-	  while (true) {
-		  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
-		  std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
-		  auto it =
-			  std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
-				  [](auto c) { return c != nullptr && !c->already_in_disk(); });
-		  sl.unlock();
-		  chunks_copy.resize(std::distance(chunks_copy.begin(), it));
-
-		  std::sort(chunks_copy.begin(), chunks_copy.end(),
-			  [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
-			  return left->header->first.time < right->header->first.time;
-		  });
-		  if (chunks_copy.empty()) {
-			  break;
-		  }
-		  for (auto &c : chunks_copy) {
-			  auto rdr = c->getReader();
-			  auto skip = c->in_disk_count;
-			  int writed = 0;
-			  Time max_time = c->_track->_max_sync_time;
-			  while (!rdr->is_end()) {
-				  auto value = rdr->readNext();
-				  if (skip != 0) {
-					  --skip;
-				  }
-				  else {
-					  auto status = _disk_storage->append(value);
-					  if (status.writed == 1) {
-						  max_time = value.time;
-						  ++writed;
-					  }
-				  }
-			  }
-			  rdr = nullptr;
-			  assert(writed <= (c->header->count + 1));
-			  c->in_disk_count += writed;
-			  c->_track->_max_sync_time = max_time;
-		  }
-	  }
-    }
-    logger_info("engine: memstorage - crawler stop.");
-  }
-
   Id2Track _id2track;
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
@@ -390,12 +337,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   bool _stoped;
 
   std::thread _drop_thread;
-  std::thread _crawler_thread;
   bool _drop_stop;
   std::mutex _drop_locker;
-  std::mutex _crawler_locker;
   std::condition_variable _drop_cond;
-  std::condition_variable _crawler_cond;
 };
 
 MemStorage::MemStorage(const EngineEnvironment_ptr &env, size_t id_count)
@@ -454,7 +398,7 @@ void MemStorage::setDiskStorage(IMeasWriter *_disk) {
   _impl->setDiskStorage(_disk);
 }
 
-std::pair<std::mutex *, std::mutex *> MemStorage::getLockers() {
+std::mutex* MemStorage::getLockers() {
   return _impl->getLockers();
 }
 

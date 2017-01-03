@@ -181,12 +181,12 @@ public:
 	  if (_dropper != nullptr && _memstorage != nullptr) {
 		  auto dl = _dropper->getLocker();
 		  auto lp = _memstorage->getLockers();
-		  return std::try_lock(*dl, *lp.first, *lp.second)==-1;
+		  return std::try_lock(*dl, *lp)==-1;
 	  }
 
 	  if (_dropper == nullptr && _memstorage != nullptr) {
 		  auto lp = _memstorage->getLockers();
-		  return  std::try_lock(*lp.first, *lp.second)==-1;
+		  return  std::try_lock(*lp)==-1;
 	  }
 
 	  if (_dropper != nullptr && _memstorage == nullptr) {
@@ -201,13 +201,13 @@ public:
 	  if (_dropper != nullptr && _memstorage != nullptr) {
 		  auto dl = _dropper->getLocker();
 		  auto lp = _memstorage->getLockers();
-		  std::lock(*dl, *lp.first, *lp.second);
+		  std::lock(*dl, *lp);
 		  return;
 	  }
 
 	  if (_dropper == nullptr && _memstorage != nullptr) {
 		  auto lp = _memstorage->getLockers();
-		  std::lock(*lp.first, *lp.second);
+		  lp->lock();
 		  return;
 	  }
 
@@ -223,15 +223,13 @@ public:
 		  auto dl = _dropper->getLocker();
 		  auto lp = _memstorage->getLockers();
 		  dl->unlock();
-		  lp.first->unlock();
-		  lp.second->unlock();
+		  lp->unlock();
 		  return;
 	  }
 
 	  if (_dropper == nullptr && _memstorage != nullptr) {
 		  auto lp = _memstorage->getLockers();
-		  lp.first->unlock();
-		  lp.second->unlock();
+		  lp->unlock();
 		  return;
 	  }
 

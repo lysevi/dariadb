@@ -19,7 +19,7 @@ MemChunk::MemChunk(ChunkHeader *index, uint8_t *buffer) : ZippedChunk(index, buf
 
 MemChunk::~MemChunk() {}
 
-bool MemChunk::already_in_disk()
-    const { // STRATEGY::CACHE, true - if already writed to disk.
-  return in_disk_count == (this->header->count + 1); // compressed + first;
-}
+//bool MemChunk::already_in_disk()
+//    const { // STRATEGY::CACHE, true - if already writed to disk.
+//  return in_disk_count == (this->header->count + 1); // compressed + first;
+//}

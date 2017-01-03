@@ -20,7 +20,7 @@ public:
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };
-
+/*
 BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
 	const std::string storage_path = "testStorage";
 	if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
-
+*/
 
 BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 	const std::string storage_path = "testStorage";

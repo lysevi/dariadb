@@ -32,6 +32,19 @@ struct Status {
     }
     return *this;
   }
+
+  bool operator==(const Status &other) {
+	  if (this != &other) {
+		  return this->ignored == other.ignored && this->writed == other.writed;
+	  }
+	  return true;
+  }
+  bool operator!=(const Status &other) {
+	  if (this != &other) {
+		  return !(*this == other);
+	  }
+	  return true;
+  }
   size_t writed;
   size_t ignored;
   std::string error_message;
