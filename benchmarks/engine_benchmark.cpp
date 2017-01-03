@@ -476,16 +476,16 @@ int main(int argc, char *argv[]) {
 				qi.ids.resize(1);
 				qi.ids[0] = 0;
 				auto all_values = raw_ptr->readInterval(qi);
-				{
-					std::cout << "==> write MILLISECOND value" << std::endl;
-					auto start = clock();
-					for (auto &v : all_values) {
-						v.id = 100004;
-						raw_ptr->append(v);
-					}
-					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-					std::cout << "write time: " << elapsed << std::endl;
-				}
+				//{
+				//	std::cout << "==> write MILLISECOND value" << std::endl;
+				//	auto start = clock();
+				//	for (auto &v : all_values) {
+				//		v.id = 100004;
+				//		raw_ptr->append(v);
+				//	}
+				//	auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+				//	std::cout << "write time: " << elapsed << std::endl;
+				//}
 				{
 					std::cout << "==> write SECOND value" << std::endl;
 					auto start = clock();
