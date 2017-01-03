@@ -46,38 +46,14 @@ public:
 	BenchWriteStepCallback(dariadb::Id target_id, Engine* raw_ptr) {
 		_target_id = target_id;
 		_raw_ptr = raw_ptr;
-
-		is_end_called = false;
-		is_greater = false;
-		is_first = true;
 	}
 	void call(const dariadb::Meas &v) override { 
-		std::lock_guard<std::mutex> lg(_locker);
 		dariadb::Meas value = v;
 		value.id = _target_id;
 		_raw_ptr->append(value);
-
-		
-		if (is_first) {
-			_last = v.time;
-			is_first = false;
-		}
-		else {
-			if (_last > v.time) {
-				THROW_EXCEPTION("(_last > v.time)");
-			}
-			is_greater = _last <= v.time;
-			_last = v.time;
-		}
 	}
 	dariadb::Id _target_id;
 	Engine*     _raw_ptr;
-	std::mutex _locker;
-	size_t count;
-	bool is_end_called;
-	dariadb::Time _last;
-	bool is_first;
-	bool is_greater;
 };
 
 void parse_cmdline(int argc, char *argv[]) {
