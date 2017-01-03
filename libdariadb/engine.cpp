@@ -186,7 +186,7 @@ public:
 
 	  if (_dropper == nullptr && _memstorage != nullptr) {
 		  auto lp = _memstorage->getLockers();
-		  return  std::try_lock(*lp)==-1;
+		  return  lp->try_lock();
 	  }
 
 	  if (_dropper != nullptr && _memstorage == nullptr) {
