@@ -2,6 +2,8 @@
 
 using namespace dariadb::storage;
 
+IChunkStorage::~IChunkStorage(){}
+
 IChunkContainer::IChunkContainer(){}
 IChunkContainer::~IChunkContainer(){}
 

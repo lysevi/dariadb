@@ -286,7 +286,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   void flush() override {}
 
-  void setDownLevel(IChunkContainer *down) { _down_level_storage = down; }
+  void setDownLevel(IChunkStorage *down) { _down_level_storage = down; }
 
   void setDiskStorage(IMeasWriter *_disk) { _disk_storage = _disk; }
 
@@ -330,7 +330,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   storage::Settings *_settings;
   MemChunkAllocator _chunk_allocator;
   std::shared_mutex _all_tracks_locker;
-  IChunkContainer *_down_level_storage;
+  IChunkStorage *_down_level_storage;
   IMeasWriter *_disk_storage;
 
   std::vector<MemChunk_Ptr> _chunks;
@@ -390,7 +390,7 @@ void MemStorage::stop() {
   _impl->stop();
 }
 
-void MemStorage::setDownLevel(IChunkContainer *_down) {
+void MemStorage::setDownLevel(IChunkStorage *_down) {
   _impl->setDownLevel(_down);
 }
 

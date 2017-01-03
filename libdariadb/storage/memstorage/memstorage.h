@@ -36,7 +36,7 @@ public:
   using IMeasStorage::append;
   EXPORT Status  append(const Meas &value) override;
   EXPORT void flush() override;
-  EXPORT void setDownLevel(IChunkContainer*_down);
+  EXPORT void setDownLevel(IChunkStorage*_down);
   EXPORT void setDiskStorage(IMeasWriter*_disk); //when strategy==CACHE;
   EXPORT void stop();
   EXPORT std::mutex* getLockers();
