@@ -78,6 +78,9 @@ public:
     const std::string sql_query =
         "INSERT INTO Chunks(number, meas_id,min_time,max_time,chunk_header, "
         "chunk_buffer) values (?,?,?,?,?,?);";
+	//TODO remove this message.
+	logger("engine: io_adapter - append chunk #", ch->header->id, " id:",
+		ch->header->first.id);
     sqlite3_stmt *pStmt;
     int rc;
     do {
