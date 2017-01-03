@@ -4,22 +4,23 @@
 namespace dariadb {
 namespace storage {
 namespace bystep {
-
-const size_t VALUES_PER_MS = 1000;
-const size_t VALUES_PER_SEC = 60 * 60;
-const size_t VALUES_PER_MIN = 60;
-const size_t VALUES_PER_HR = 24;
+enum INTERVAL_SIZE{
+ MS = 1000*60,
+ SEC = 60 * 60,
+ MIN = 60,
+ HR = 24
+};
 
 size_t step_to_size(STEP_KIND kind) {
   switch (kind) {
   case STEP_KIND::MILLISECOND:
-	  return VALUES_PER_MS;
+	  return (size_t)INTERVAL_SIZE::MS;
   case STEP_KIND::SECOND:
-    return VALUES_PER_SEC;
+    return (size_t)INTERVAL_SIZE::SEC;
   case STEP_KIND::MINUTE:
-    return VALUES_PER_MIN;
+    return (size_t)INTERVAL_SIZE::MIN;
   case STEP_KIND::HOUR:
-    return VALUES_PER_HR;
+    return (size_t)INTERVAL_SIZE::HR;
   default:
     return 0;
   }
