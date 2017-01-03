@@ -51,14 +51,31 @@ public:
   BenchCallback() {
     count = 0;
     is_end_called = false;
+	is_greater = false;
+	is_first = true;
   }
-  void call(const dariadb::Meas &) override { count++; }
+  void call(const dariadb::Meas &v) override { 
+	  count++; 
+	  std::lock_guard<std::mutex> lg(_locker);
+	  if (is_first) {
+		  _last = v.time;
+		  is_first = false;
+	  }
+	  else {
+		  is_greater = _last <= v.time;
+		  _last = v.time;
+	  }
+  }
   void is_end() override {
 	is_end_called = true;
     dariadb::storage::IReaderClb::is_end();
   }
+  std::mutex _locker;
   size_t count;
   bool is_end_called;
+  dariadb::Time _last;
+  bool is_first;
+  bool is_greater;
 };
 
 dariadb::Id get_id_from(dariadb::Id id) {
@@ -188,6 +205,9 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       stor->foreach (qi, clbk.get());
 	  if (check_is_end) {
 		  clbk->wait();
+	  }
+	  if (!clbk->is_greater) {
+		  throw MAKE_EXCEPTION("!clbk->is_greater");
 	  }
 	  total_count += clbk->count;
     }
