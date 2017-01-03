@@ -111,9 +111,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     all_chunks.reserve(cur_chunk_count);
     size_t pos = 0;
 
+	std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
     std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
     auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
                            [](auto c) { return c != nullptr; });
+	sl.unlock();
     chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
     std::sort(chunks_copy.begin(), chunks_copy.end(),
@@ -333,10 +335,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         continue;
       }
 	  while (true) {
+		  std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
 		  std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
 		  auto it =
 			  std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
 				  [](auto c) { return c != nullptr && !c->already_in_disk(); });
+		  sl.unlock();
 		  chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
 		  std::sort(chunks_copy.begin(), chunks_copy.end(),
