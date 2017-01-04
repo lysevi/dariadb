@@ -151,7 +151,7 @@ public:
 
   std::list<std::string> wal_list() {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    std::string sql = "SELECT file from wal;";
+    std::string sql = "SELECT file from wal ORDER BY id;";
     std::list<std::string> result{};
     char *zErrMsg = 0;
     auto rc =
