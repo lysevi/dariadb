@@ -192,9 +192,19 @@ public:
 
 		auto page_list = this->pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
 
-
+		////TODO remove check
+		//Time prev_t = MIN_TIME;
+		//std::list<Time> tm;
+		//for (auto pname : page_list) {
+		//	auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname));
+		//	tm.push_back(pi->iheader.minTime);
+		//}
 		for (auto pname : page_list) {
 			auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname));
+			//if (pi->iheader.minTime < prev_t && prev_t!=MIN_TIME) {//TODO remove check
+			//	THROW_EXCEPTION("logic error")
+			//}
+			//prev_t = pi->iheader.minTime;
 			auto sub_result = pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
 			for (auto s : sub_result) {
 				s.page_name = pname;
@@ -247,16 +257,38 @@ public:
   }
 
   std::list<std::string> pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
-    std::list<std::string> result;
+    std::list<PageHeaderDescription> sub_result;
 
     for (auto f2h : _file2header) {
       auto hdr = f2h.second.hdr;
       if (pred(hdr)) {
-        auto page_file_name =
-            utils::fs::append_path(_settings->raw_path.value(), f2h.second.path);
-        result.push_back(page_file_name);
+       
+		sub_result.push_back(f2h.second);
       }
     }
+
+	std::vector<PageHeaderDescription> vec_res{ sub_result.begin(), sub_result.end() };
+    std::sort(vec_res.begin(), vec_res.end(), [](auto lr, auto rr) {
+         return lr.hdr.minTime < rr.hdr.minTime;
+    });
+	std::list<std::string> result;
+	for (auto hd : vec_res) {
+		auto page_file_name =
+			utils::fs::append_path(_settings->raw_path.value(), hd.path);
+		result.push_back(page_file_name);
+	}
+#ifdef DEBUG
+	std::list<Time> tm;
+	for (auto pname : result) {
+		auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname));
+		if (!tm.empty()) {
+			if (pi->iheader.minTime < tm.back()) {
+				THROW_EXCEPTION("logic_error");
+			}
+		}
+		tm.push_back(pi->iheader.minTime);
+	}
+#endif
     return result;
   }
 
