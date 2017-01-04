@@ -20,7 +20,6 @@
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <sstream>
 #include <thread>
 
 #include <stx/btree_multimap.h>

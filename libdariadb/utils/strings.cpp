@@ -3,7 +3,6 @@
 #include <clocale>
 #include <ctype.h>
 #include <iterator>
-#include <sstream>
 #include <string>
 #include <vector>
 

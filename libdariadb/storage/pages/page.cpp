@@ -373,12 +373,15 @@ Chunk_Ptr Page::readChunkByOffset(FILE* page_io, int offset) {
 	ChunkHeader *cheader = new ChunkHeader;
 	auto readed = std::fread(cheader, sizeof(ChunkHeader), 1, page_io);
 	if (readed < size_t(1)) {
+		delete cheader;
 		THROW_EXCEPTION("engine: page read error - ", this->filename);
 	}
 	uint8_t *buffer = new uint8_t[cheader->size];
 	memset(buffer, 0, cheader->size);
 	readed=std::fread(buffer, cheader->size, 1, page_io);
 	if (readed < size_t(1)) {
+		delete cheader;
+		delete[] buffer;
 		THROW_EXCEPTION("engine: page read error - ", this->filename);
 	}
 	Chunk_Ptr ptr = nullptr;

@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <limits>
-#include <sstream>
 
 using namespace dariadb::compression;
 

@@ -11,7 +11,6 @@
 
 #include <chrono>
 #include <iterator>
-#include <sstream>
 #include <algorithm>
 
 using dariadb::compression::ByteBuffer;

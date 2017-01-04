@@ -2,7 +2,6 @@
 #include <libdariadb/utils/utils.h>
 #include <cassert>
 #include <limits>
-#include <sstream>
 
 using namespace dariadb::compression;
 #pragma pack(push, 1)

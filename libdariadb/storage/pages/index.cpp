@@ -46,11 +46,13 @@ ChunkLinkList PageIndex::get_chunks_links(const dariadb::IdArray &ids, dariadb::
   IndexReccord * records = new IndexReccord[this->iheader.count];
   auto index_file=std::fopen(filename.c_str(), "rb");
   if (index_file == nullptr) {
+	  delete[]records;
 	  THROW_EXCEPTION("can`t open file ", this->filename);
   }
 
   auto readed=std::fread(records, sizeof(IndexReccord), iheader.count, index_file);
   if (readed < iheader.count) {
+	  delete[]records;
 	  THROW_EXCEPTION("engine: index read error - ", this->filename);
   }
   std::fclose(index_file);

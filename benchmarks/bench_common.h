@@ -3,7 +3,6 @@
 #include <atomic>
 #include <iostream>
 #include <random>
-#include <sstream>
 #include <tuple>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/timeutil.h>
