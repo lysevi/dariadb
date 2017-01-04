@@ -81,7 +81,8 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
     m.time = start_time;
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
-
+	dariadb::logger("*** thread #", id, " id:[", id_from, " - ", id_to,']');
+	dariadb::IdSet ids;
     for (size_t i = 0; i < write_per_id_count; ++i) {
       m.flag = dariadb::Flag(id);
       m.time += step;
@@ -89,6 +90,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
       m.value = dariadb::Value(i);
       for (size_t j = id_from; j < id_to && i < dariadb_bench::write_per_id_count; j++) {
         m.id = j;
+		ids.insert(m.id);
         if (ms->append(m).writed != 1) {
 			std::cout << ">>> thread_writer_rnd_stor #" << id << " can`t write new value. aborting." << std::endl;
           return;
@@ -96,6 +98,12 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
         (*append_count)++;
       }
     }
+
+	std::stringstream ss;
+	for (auto id : ids) {
+		ss << " " << id;
+	}
+	dariadb::logger("*** thread #", id," ids: ", ss.str());
   } catch (...) {
     std::cerr << "thread id=#" << id << " catch error!!!!" << std::endl;
   }
