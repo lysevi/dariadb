@@ -206,7 +206,6 @@ struct ByStepStorage::Private : public IMeasStorage {
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) override {
-    std::shared_lock<std::shared_mutex> lg(_values_lock);
     QueryInterval local_q = q;
     local_q.ids.resize(1);
     for (auto id : q.ids) {
@@ -233,11 +232,15 @@ struct ByStepStorage::Private : public IMeasStorage {
       auto readed_chunks = _io->readInterval(period_from, period_to, id);
 	  if (period_from == period_to) {//in one interval
 		  if (readed_chunks.empty()) {//find in tracks all generate empty period
+			  _values_lock.lock_shared();
 			  auto it = _values.find(id);
 			  if (it != _values.end() && it->second->period()==period_from) {
-				  it->second->foreach(local_q, clbk);
+				  auto track = it->second;
+				  _values_lock.unlock_shared();
+				  track->foreach(local_q, clbk);
 			  }
 			  else {
+				  _values_lock.unlock_shared();
 				  foreach_notexists_period(local_q, clbk, id, period_from, step_kind_it->second, stepTime);
 			  }
 		  }
