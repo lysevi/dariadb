@@ -495,6 +495,12 @@ int main(int argc, char *argv[]) {
 					}
 					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 					std::cout << "write time: " << elapsed << std::endl;
+
+					start = clock();
+					qi.ids[0] = 100000;
+					auto readed = raw_ptr->readInterval(qi);
+					elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "read interval time: " << elapsed<< " readed:"<< readed.size() << std::endl;
 				}
 				{
 					std::cout << "==> write MINUTE value" << std::endl;
@@ -505,6 +511,11 @@ int main(int argc, char *argv[]) {
 					}
 					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 					std::cout << "write time: " << elapsed << std::endl;
+					start = clock();
+					qi.ids[0] = 100001;
+					auto readed = raw_ptr->readInterval(qi);
+					elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "read interval time: " << elapsed << " readed:" << readed.size() << std::endl;
 				}
 
 				{
@@ -516,6 +527,12 @@ int main(int argc, char *argv[]) {
 					}
 					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
 					std::cout << "write time: " << elapsed << std::endl;
+
+					start = clock();
+					qi.ids[0] = 100002;
+					auto readed = raw_ptr->readInterval(qi);
+					elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "read interval time: " << elapsed << " readed:" << readed.size() << std::endl;
 				}
 				{
 					BenchWriteStepCallback*clbk = new BenchWriteStepCallback(100003, raw_ptr);
