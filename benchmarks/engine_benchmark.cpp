@@ -466,7 +466,7 @@ int main(int argc, char *argv[]) {
 				id2s[100001] = dariadb::storage::STEP_KIND::MINUTE;
 				id2s[100002] = dariadb::storage::STEP_KIND::HOUR;
 				id2s[100003] = dariadb::storage::STEP_KIND::SECOND;
-				id2s[100004] = dariadb::storage::STEP_KIND::MILLISECOND;
+				id2s[100004] = dariadb::storage::STEP_KIND::SECOND;
 				raw_ptr->setSteps(id2s);
 				dariadb::Time minTime, maxTime;
 				if (!raw_ptr->minMaxTime(0, &minTime, &maxTime)) {
@@ -536,7 +536,20 @@ int main(int argc, char *argv[]) {
 				}
 				{
 					BenchWriteStepCallback*clbk = new BenchWriteStepCallback(100003, raw_ptr);
-					std::cout << "==> clbk bystep value" << std::endl;
+					std::cout << "==> clbk bystep value (bystep => bystep)" << std::endl;
+					qi.ids[0] = 100002;
+					auto start = clock();
+					raw_ptr->foreach(qi, clbk);
+					clbk->wait();
+					auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+					std::cout << "write time: " << elapsed << std::endl;
+					delete clbk;
+				}
+
+				{
+					BenchWriteStepCallback*clbk = new BenchWriteStepCallback(100004, raw_ptr);
+					std::cout << "==> clbk bystep value (raw => bystep)" << std::endl;
+					qi.ids[0] = 0;
 					auto start = clock();
 					raw_ptr->foreach(qi, clbk);
 					clbk->wait();
