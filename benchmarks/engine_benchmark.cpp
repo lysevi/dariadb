@@ -372,10 +372,18 @@ int main(int argc, char *argv[]) {
     auto settings = dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 	settings->strategy.setValue(strategy);
     settings->save();
+
 	if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) && memory_limit!=0) {
 		std::cout << "memory limit: " << memory_limit<<std::endl;
 		settings->memory_limit.setValue(memory_limit * 1024 * 1024);
-	}
+    }else{
+        if (strategy == STRATEGY::MEMORY) {
+            memory_limit=350;
+            std::cout << "default memory limit: " << memory_limit<<std::endl;
+            settings->memory_limit.setValue(memory_limit * 1024 * 1024);
+        }
+    }
+
     utils::LogManager::start(log_ptr);
 
     auto raw_ptr = new Engine(settings);

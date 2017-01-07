@@ -19,7 +19,13 @@ struct ChunkLink {
 
 using ChunkLinkList = std::list<ChunkLink>;
 
-class IChunkContainer {
+class IChunkStorage{
+public:
+    virtual void appendChunks(const std::vector<Chunk*>&a, size_t count) = 0;
+    EXPORT ~IChunkStorage();
+};
+
+class IChunkContainer: public IChunkStorage {
 public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;
@@ -28,8 +34,6 @@ public:
   virtual void readLinks(const QueryInterval &query, const ChunkLinkList &links,
                          IReaderClb *clb) = 0;
   EXPORT virtual void foreach (const QueryInterval &query, IReaderClb * clb);
-
-  virtual void appendChunks(const std::vector<Chunk*>&a, size_t count) = 0;
   EXPORT IChunkContainer();
   EXPORT virtual ~IChunkContainer();
 };
