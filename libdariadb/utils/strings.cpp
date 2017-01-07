@@ -3,6 +3,7 @@
 #include <clocale>
 #include <ctype.h>
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -14,7 +15,8 @@ std::vector<std::string> dariadb::utils::strings::tokens(const std::string &str)
   return tokens;
 }
 
-std::vector<std::string> dariadb::utils::strings::split(const std::string &text, char sep) {
+std::vector<std::string> dariadb::utils::strings::split(const std::string &text,
+                                                        char sep) {
   std::vector<std::string> tokens;
   std::size_t start = 0, end = 0;
   while ((end = text.find(sep, start)) != std::string::npos) {
@@ -36,4 +38,12 @@ std::string dariadb::utils::strings::to_upper(const std::string &text) {
     converted[i] = (char)toupper(converted[i]);
   }
   return converted;
+}
+
+std::string dariadb::utils::strings::inner::to_string(const char *_Val) {
+  return std::string(_Val);
+}
+
+std::string dariadb::utils::strings::inner::to_string(std::string &_Val) {
+  return _Val;
 }

@@ -1,6 +1,7 @@
 #include <common/net_common.h>
 #include <boost/asio.hpp>
 #include <istream>
+#include <ostream>
 
 namespace dariadb {
 namespace net {
@@ -35,6 +36,18 @@ std::ostream &operator<<(std::ostream &stream, const ERRORS &state) {
       break;
   }
   return stream;
+}
+
+std::string to_string(const CLIENT_STATE &st) {
+	std::stringstream ss;
+	ss << st;
+	return ss.str();
+}
+
+std::string to_string(const ERRORS &st) {
+	std::stringstream ss;
+	ss << st;
+	return ss.str();
 }
 }
 }

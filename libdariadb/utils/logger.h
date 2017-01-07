@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/st_exports.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/strings.h>
-#include <libdariadb/st_exports.h>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -17,7 +17,7 @@ enum class LOG_MESSAGE_KIND { MESSAGE, INFO, FATAL };
 class ILogger {
 public:
   virtual void message(LOG_MESSAGE_KIND kind, const std::string &msg) = 0;
-    virtual ~ILogger(){}
+  virtual ~ILogger() {}
 };
 
 using ILogger_ptr = std::shared_ptr<ILogger>;
@@ -40,6 +40,7 @@ public:
     auto str_message = utils::strings::args_to_string(args...);
     this->message(kind, str_message);
   }
+
 private:
   static std::shared_ptr<LogManager> _instance;
   static utils::async::Locker _locker;

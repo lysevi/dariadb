@@ -1,14 +1,12 @@
 #pragma once
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/strings.h>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 
 #define CODE_POS (dariadb::utils::CodePos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg)                                                    \
-  dariadb::utils::Exception::create_and_log(CODE_POS, msg)
+#define MAKE_EXCEPTION(msg) dariadb::utils::Exception::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
 
 #ifdef DEBUG
@@ -32,9 +30,9 @@ struct CodePos {
       : _file(file), _line(line), _func(function) {}
 
   std::string toString() const {
-    std::stringstream ss;
-    ss << _file << " line: " << _line << " function: " << _func << std::endl;
-    return ss.str();
+    auto ss = std::string(_file) + " line: " + std::to_string(_line) + " function: " +
+              std::string(_func) + "\n";
+    return ss;
   }
   CodePos &operator=(const CodePos &) = delete;
 };
@@ -43,11 +41,11 @@ class Exception : public std::exception {
 public:
   template <typename... T>
   static Exception create_and_log(const CodePos &pos, T... message) {
-    std::stringstream ss;
+
     auto expanded_message = utils::strings::args_to_string(message...);
-    ss << "FATAL ERROR. The Exception will be thrown! " << pos.toString()
-       << " Message: " << expanded_message;
-    logger_fatal(ss.str());
+    auto ss = std::string("FATAL ERROR. The Exception will be thrown! ") +
+              pos.toString() + " Message: " + expanded_message;
+    logger_fatal(ss);
     return Exception(expanded_message);
   }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <ostream>
 #include <string>
 #include <common/net_cmn_exports.h>
 
@@ -38,8 +37,11 @@ enum class ERRORS : uint16_t {
     APPEND_ERROR, //some error on append new value to storage
 };
 
-CM_EXPORT std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state);
-CM_EXPORT std::ostream &operator<<(std::ostream &stream, const ERRORS &state);
+//CM_EXPORT std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state);
+//CM_EXPORT std::ostream &operator<<(std::ostream &stream, const ERRORS &e);
+
+CM_EXPORT std::string to_string(const CLIENT_STATE &st);
+CM_EXPORT std::string to_string(const ERRORS &st);
 
 typedef uint32_t QueryNumber;
 }

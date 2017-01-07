@@ -6,6 +6,7 @@
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
 
+#include <sstream>
 #include <string>
 #include <unordered_map>
 

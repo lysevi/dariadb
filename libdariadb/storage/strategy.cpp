@@ -1,6 +1,7 @@
 #include <libdariadb/storage/strategy.h>
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/exception.h>
+#include <sstream>
 
 std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
   std::string token;
@@ -48,4 +49,10 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STRATEGY 
     break;
   };
   return stream;
+}
+
+std::string dariadb::storage::to_string(const STRATEGY &strat) {
+	std::stringstream ss;
+	ss << strat;
+	return ss.str();
 }
