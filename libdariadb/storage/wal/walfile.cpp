@@ -14,6 +14,7 @@
 #include <cstring>
 #include <fstream>
 #include <mutex>
+#include <sstream>
 
 using namespace dariadb;
 using namespace dariadb::storage;

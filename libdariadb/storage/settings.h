@@ -6,7 +6,6 @@
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
 
-#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -49,10 +48,7 @@ class Settings {
 
     std::string key_str() const override { return key_name; }
     std::string value_str() const override { return std::to_string(_value); }
-    void from_string(const std::string &s) override {
-      std::istringstream iss(s);
-      iss >> _value;
-    }
+	void from_string(const std::string &s) override;
     /// return option value
     T value() const { return _value; }
 
@@ -108,16 +104,9 @@ public:
 };
 
 using Settings_ptr = std::shared_ptr<Settings>;
-#ifndef MSVC
+
 template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
 template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
-#else
-template <> std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const {
-  return dariadb::storage::to_string(this->value());
-}
-template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
-  return this->value();
-}
-#endif
+
 }
 }

@@ -6,6 +6,7 @@
 #include <libdariadb/utils/strings.h>
 #include <extern/json/src/json.hpp>
 #include <fstream>
+#include <sstream>
 
 using namespace dariadb::storage;
 using json = nlohmann::json;
@@ -27,14 +28,18 @@ std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
 }
 
-#ifndef MSVC
+template<class T>
+void Settings::ReadOnlyOption<T>::from_string(const std::string &s){
+	std::istringstream iss(s);
+	iss >> _value;
+}
+
 template <> std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const {
   return dariadb::storage::to_string(this->value());
 }
 template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
   return this->value();
 }
-#endif
 
 BaseOption::~BaseOption() {}
 

@@ -4,6 +4,7 @@
 #include <libsqlite3/sqlite3.h>
 #include <algorithm>
 #include <cassert>
+#include <sstream>
 
 using namespace dariadb;
 using namespace dariadb::storage;
