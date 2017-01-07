@@ -29,9 +29,7 @@ std::string settings_file_path(const std::string &path) {
 
 #ifndef MSVC
 template <> std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const {
-  std::stringstream ss;
-  ss << this->value();
-  return ss.str();
+  return dariadb::storage::to_string(this->value());
 }
 template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
   return this->value();

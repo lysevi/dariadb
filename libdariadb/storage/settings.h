@@ -113,14 +113,10 @@ template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() c
 template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
 #else
 template <> std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const {
-  std::stringstream ss;
-  ss << this->value();
-  return ss.str();
+  return dariadb::storage::to_string(this->value());
 }
 template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
-  std::stringstream ss;
-  ss << this->value();
-  return ss.str();
+  return this->value();
 }
 #endif
 }
