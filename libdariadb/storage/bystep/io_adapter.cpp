@@ -444,7 +444,6 @@ public:
 	  if (!local_copy.empty()) {
 
 		  auto start_time = clock();
-		  //TODO write in DISK_IO pool.
 		  logger("engine: io_adapter - dropping start. ", local_copy.size(), " chunks.");
 		  sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
