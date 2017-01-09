@@ -118,9 +118,12 @@ uint32_t ZippedChunk::calcChecksum() {
 
 /// return - count of skipped bytes.
 uint32_t ZippedChunk::compact(ChunkHeader *hdr) {
+  if (hdr->bw_pos == 0) { //full chunk
+	  return 0;
+  }
   auto cur_chunk_buf_size = hdr->size - hdr->bw_pos + 1;
-  auto skip_count = hdr->size - cur_chunk_buf_size;
-  hdr->size = cur_chunk_buf_size;
+  auto skip_count = hdr->size - (uint32_t)cur_chunk_buf_size;
+  hdr->size = (uint32_t)cur_chunk_buf_size;
   return skip_count;
 }
 
