@@ -5,7 +5,7 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-MemChunkAllocator::MemChunkAllocator(size_t maxSize, size_t bufferSize)
+MemChunkAllocator::MemChunkAllocator(size_t maxSize, uint32_t bufferSize)
     : _one_chunk_size(sizeof(ChunkHeader) + bufferSize),
       _capacity((int)(float(maxSize) / _one_chunk_size)), _free_list(_capacity) {
   _maxSize = maxSize;

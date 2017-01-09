@@ -33,7 +33,7 @@ struct MemChunkAllocator : public utils::NonCopy {
 
   size_t _one_chunk_size;
   size_t _maxSize;   /// max size in bytes)
-  size_t _chunkSize; /// size of chunk
+  uint32_t _chunkSize; /// size of chunk
   size_t _capacity;  /// max size in chunks
   size_t _allocated; /// already allocated count of chunks.
 
@@ -43,7 +43,7 @@ struct MemChunkAllocator : public utils::NonCopy {
 
   boost::lockfree::queue<size_t> _free_list;
 
-  EXPORT MemChunkAllocator(size_t maxSize, size_t bufferSize);
+  EXPORT MemChunkAllocator(size_t maxSize, uint32_t bufferSize);
   MemChunkAllocator(const MemChunkAllocator &) = delete;
   EXPORT ~MemChunkAllocator();
   EXPORT AllocatedData allocate();
