@@ -16,7 +16,7 @@ struct MemChunk : public ZippedChunk {
   TimeTrack *_track; /// init in TimeTrack
   size_t in_disk_count;
 
-  MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, const Meas &first_m);
+  MemChunk(ChunkHeader *index, uint8_t *buffer, uint32_t size, const Meas &first_m);
   MemChunk(ChunkHeader *index, uint8_t *buffer);
   ~MemChunk();
   //bool already_in_disk() const; // STRATEGY::CACHE, true - if already writed to disk.

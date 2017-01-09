@@ -28,7 +28,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
   is_owner = false;
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, const Meas &first_m) {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m) {
   _buffer_t = buffer;
   header = hdr;
   header->size = _size;
@@ -74,7 +74,7 @@ bool Chunk::checkChecksum() {
   return exists == calculated;
 }
 
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, const Meas &first_m)
+ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, uint32_t _size, const Meas &first_m)
     : Chunk(index, buffer, _size, first_m),
 	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
 	{
@@ -114,6 +114,14 @@ uint32_t ZippedChunk::calcChecksum(ChunkHeader&hdr, u8vector buff) {
 }
 uint32_t ZippedChunk::calcChecksum() {
   return ZippedChunk::calcChecksum(*header, this->_buffer_t);
+}
+
+/// return - count of skipped bytes.
+uint32_t ZippedChunk::compact(ChunkHeader *hdr) {
+  auto cur_chunk_buf_size = hdr->size - hdr->bw_pos + 1;
+  auto skip_count = hdr->size - cur_chunk_buf_size;
+  hdr->size = cur_chunk_buf_size;
+  return skip_count;
 }
 
 uint32_t ZippedChunk::getChecksum() {

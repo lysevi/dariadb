@@ -3,7 +3,7 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-MemChunk::MemChunk(ChunkHeader *index, uint8_t *buffer, size_t size, const Meas &first_m)
+MemChunk::MemChunk(ChunkHeader *index, uint8_t *buffer, uint32_t size, const Meas &first_m)
     : ZippedChunk(index, buffer, size, first_m) {
   index_ptr = index;
   buffer_ptr = buffer;

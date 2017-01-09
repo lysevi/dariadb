@@ -163,7 +163,7 @@ size_t ByStepTrack::size() const {
 Chunk_Ptr ByStepTrack::pack() const {
   size_t it = 0;
 
-  auto buffer_size = _values.size() * sizeof(Meas);
+  uint32_t buffer_size = static_cast<uint32_t>(_values.size() * sizeof(Meas));
   uint8_t *buffer = new uint8_t[buffer_size];
   ChunkHeader *chdr = new ChunkHeader;
   memset(buffer, 0, buffer_size);

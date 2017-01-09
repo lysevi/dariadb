@@ -198,15 +198,9 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     chunk_header->id = phdr.max_chunk_id;
 
     phdr.addeded_chunks++;
-    auto cur_chunk_buf_size = size_t(0);
-    size_t skip_count = 0;
+	chunk_header->offset_in_page = offset;
 
-      cur_chunk_buf_size = chunk_header->size - chunk_header->bw_pos + 1;
-      skip_count = chunk_header->size - cur_chunk_buf_size;
-
-    chunk_header->size = cur_chunk_buf_size;
-    chunk_header->offset_in_page = offset;
-
+	auto skip_count = ZippedChunk::compact(chunk_header);
 	//update checksum;
 	ZippedChunk::updateChecksum(*chunk_header, chunk_buffer_ptr + skip_count);
     
@@ -226,9 +220,9 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     #endif //  DEBUG
 
     std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
-    std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), cur_chunk_buf_size, file);
+    std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), chunk_header->size, file);
 
-    offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+    offset += sizeof(ChunkHeader) + chunk_header->size;
 
 
 		auto index_reccord = PageInner::init_chunk_index_rec(*chunk_header, &ihdr);

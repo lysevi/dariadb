@@ -140,12 +140,9 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
     phdr.addeded_chunks++;
 	phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
 	phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
-    auto cur_chunk_buf_size = chunk_header.size - chunk_header.bw_pos + 1;
-    auto skip_count = chunk_header.size - cur_chunk_buf_size;
 
-    chunk_header.size = cur_chunk_buf_size;
+	auto skip_count = ZippedChunk::compact(&chunk_header);
     chunk_header.offset_in_page = offset;
-
 	//update checksum;
 	ZippedChunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
 #ifdef  DEBUG
@@ -156,10 +153,10 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
 	}
 #endif
     std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
-    std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), cur_chunk_buf_size,
+    std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), chunk_header.size,
                 file);
 
-    offset += sizeof(ChunkHeader) + cur_chunk_buf_size;
+    offset += sizeof(ChunkHeader) + chunk_header.size;
 
 	
 	auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
