@@ -29,8 +29,12 @@ const char *BYSTEP_CREATE_SQL = "PRAGMA page_size = 4096;"
                                 "chunk_buffer blob);";
 
 class IOAdapter::Private {
+	//TODO move to settings.
+	const size_t MAX_QUEUE_SIZE = 1024;
 public:
   Private(const std::string &fname) {
+	  _chunks_pos = 0;
+	  _chunks_list.resize(MAX_QUEUE_SIZE);
     _db = nullptr;
     logger("engine: io_adapter - open ", fname);
     int rc = sqlite3_open(fname.c_str(), &_db);
@@ -69,18 +73,30 @@ public:
 	  cmm.ch = ch;
 	  cmm.min = min;
 	  cmm.max = max;
-	  std::lock_guard<std::mutex> lg(_chunks_list_locker);
-	  _chunks_list.push_back(cmm);
-	  _cond_var.notify_all();
+	  while (true) {
+		  _chunks_list_locker.lock();
+		  if (_chunks_pos < MAX_QUEUE_SIZE) {
+			  _chunks_list[_chunks_pos] = cmm;
+			  _chunks_pos++;
+			  _chunks_list_locker.unlock();
+			  _cond_var.notify_all();			  
+			  break;
+		  }
+		  else {
+			  _chunks_list_locker.unlock();
+			  _cond_var.notify_all();
+			  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		  }
+	  }
   }
 
   void _append(const Chunk_Ptr &ch, Time min, Time max) {
     const std::string sql_query =
         "INSERT INTO Chunks(number, meas_id,min_time,max_time,chunk_header, "
         "chunk_buffer) values (?,?,?,?,?,?);";
-	//TODO remove this message.
+	/*
 	logger("engine: io_adapter - append chunk #", ch->header->id, " id:",
-		ch->header->first.id);
+		ch->header->first.id);*/
     sqlite3_stmt *pStmt;
     int rc;
     do {
@@ -155,13 +171,11 @@ public:
       rc = sqlite3_finalize(pStmt);
     } while (rc == SQLITE_SCHEMA);
 
-	IdSet ids;
 	//TODO move to method
-	for (auto&cmm : _chunks_list) {
-		ids.insert(cmm.ch->header->first.id);
-		if (cmm.ch->header->first.id == meas_id){
-			if (utils::inInterval(period_from, period_to, cmm.ch->header->id)) {
-				result.push_back(cmm.ch);
+	for (size_t i = 0; i < _chunks_pos;++i) {
+		if (_chunks_list[i].ch->header->first.id == meas_id){
+			if (utils::inInterval(period_from, period_to, _chunks_list[i].ch->header->id)) {
+				result.push_back(_chunks_list[i].ch);
 			}
 		}
 	}
@@ -219,9 +233,9 @@ public:
     } while (rc == SQLITE_SCHEMA);
 
 	if (result == nullptr) {
-		for (auto&cmm : _chunks_list) {
-			if (cmm.ch->header->id == period&&cmm.ch->header->first.id == meas_id) {
-				result = cmm.ch;
+		for (size_t i = 0; i < _chunks_pos; ++i) {
+			if (_chunks_list[i].ch->header->id == period&&_chunks_list[i].ch->header->first.id == meas_id) {
+				result = _chunks_list[i].ch;
 				break;
 			}
 		}
@@ -268,8 +282,8 @@ public:
        rc = sqlite3_finalize(pStmt);
      } while (rc == SQLITE_SCHEMA);
 	 
-	 for (auto&cmm : _chunks_list) {
-		 currentValueFromChunk(result, cmm.ch);
+	 for (size_t i = 0; i < _chunks_pos; ++i) {
+		 currentValueFromChunk(result, _chunks_list[i].ch);
 	 }
      unlock();
     return result;
@@ -352,9 +366,9 @@ public:
       rc = sqlite3_finalize(pStmt);
     } while (rc == SQLITE_SCHEMA);
 
-	for (auto&cmm : _chunks_list) {
-		min = std::min(min, cmm.min);
-		max = std::min(max, cmm.max);
+	for (size_t i = 0; i < _chunks_pos; ++i) {
+		min = std::min(min, _chunks_list[i].min);
+		max = std::min(max, _chunks_list[i].max);
 	}
 	unlock();
     return std::tie(min, max);
@@ -395,11 +409,11 @@ public:
 		  rc = sqlite3_finalize(pStmt);
 	  } while (rc == SQLITE_SCHEMA);
 
-	  for (auto&cmm : _chunks_list) {
-		  if (cmm.ch->header->first.id == id) {
+	  for (size_t i = 0; i < _chunks_pos; ++i) {
+		  if (_chunks_list[i].ch->header->first.id == id) {
 			  result = true;
-			  *minResult = std::min(*minResult, cmm.min);
-			  *maxResult = std::min(*maxResult, cmm.max);
+			  *minResult = std::min(*minResult, _chunks_list[i].min);
+			  *maxResult = std::min(*maxResult, _chunks_list[i].max);
 		  }
 	  }
 	  unlock();
@@ -431,16 +445,21 @@ public:
 		std::unique_lock<std::mutex> lock(_chunks_list_locker);
 		_cond_var.wait(lock);
 
-      if (_stop_flag && _chunks_list.empty()) {
+      if (_stop_flag && _chunks_pos==0) {
         break;
       }
       while (!_dropper_locker.try_lock()) {
 		  std::this_thread::yield();
       }
 
-      std::list<ChunkMinMax> local_copy{_chunks_list.begin(), _chunks_list.end()};
+      std::vector<ChunkMinMax> local_copy;
+	  local_copy.resize(_chunks_pos);
+	  for (size_t i = 0; i < _chunks_pos; ++i) {
+		  local_copy[i] = _chunks_list[i];
+		  _chunks_list[i].ch = nullptr;
+	  }
       assert(local_copy.size() == _chunks_list.size());
-      _chunks_list.clear();
+	  _chunks_pos = 0;
 	  lock.unlock();
 	  if (!local_copy.empty()) {
 
@@ -468,7 +487,7 @@ public:
 	  logger_info("engine: io_adapter - flush start.");
 	  while (true) {//TODO make more smarter.
 		  _chunks_list_locker.lock();
-		  auto is_empty = _chunks_list.empty();
+		  auto is_empty = _chunks_pos==0;
 		  _chunks_list_locker.unlock();
 		  if (is_empty) {
 			  break;
@@ -481,7 +500,7 @@ public:
   bystep::Description description() {
     bystep::Description result;
     _chunks_list_locker.lock();
-    result.in_queue = _chunks_list.size();
+    result.in_queue = _chunks_pos;
     _chunks_list_locker.unlock();
     return result;
   }
@@ -514,7 +533,8 @@ public:
   sqlite3 *_db;
   bool                  _is_stoped;
   bool                  _stop_flag;
-  std::list<ChunkMinMax> _chunks_list;
+  std::vector<ChunkMinMax> _chunks_list;
+  size_t                   _chunks_pos;
   std::mutex            _chunks_list_locker;
   std::condition_variable _cond_var;
   std::mutex            _dropper_locker;
