@@ -441,6 +441,8 @@ public:
   }
 
   void write_thread_func() {
+	  std::vector<ChunkMinMax> local_copy;
+	  local_copy.resize(MAX_QUEUE_SIZE);
     while (!_stop_flag) {
 		std::unique_lock<std::mutex> lock(_chunks_list_locker);
 		_cond_var.wait(lock);
@@ -452,8 +454,7 @@ public:
 		  std::this_thread::yield();
       }
 
-      std::vector<ChunkMinMax> local_copy;
-	  local_copy.resize(_chunks_pos);
+	  auto max_pos = _chunks_pos;
 	  for (size_t i = 0; i < _chunks_pos; ++i) {
 		  local_copy[i] = _chunks_list[i];
 		  _chunks_list[i].ch = nullptr;
@@ -461,17 +462,21 @@ public:
       assert(local_copy.size() == _chunks_list.size());
 	  _chunks_pos = 0;
 	  lock.unlock();
-	  if (!local_copy.empty()) {
+	  if (max_pos!=0) {
 
 		  auto start_time = clock();
-		  logger("engine: io_adapter - dropping start. ", local_copy.size(), " chunks.");
+		  logger("engine: io_adapter - dropping start. ", max_pos, " chunks.");
 		  sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
-		  for (auto &c : local_copy) {
+		  for (size_t i = 0; i < max_pos; ++i) {
+			  auto c = local_copy[i];
 			  this->_append(c.ch, c.min, c.max);
 		  }
 		  sqlite3_exec(_db, "END TRANSACTION;", NULL, NULL, NULL);
 
+		  for (size_t i = 0; i < max_pos; ++i) {
+			  local_copy[i].ch=nullptr;			  
+		  }
 		  auto end = clock();
 		  auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
