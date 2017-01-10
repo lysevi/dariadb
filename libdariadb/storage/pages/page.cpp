@@ -181,7 +181,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     auto chunk_buffer_ptr = a[i]->_buffer_t;
     #ifdef  DEBUG
     			{
-    				auto ch = std::make_shared<ZippedChunk>(chunk_header,
+    				auto ch = std::make_shared<Chunk>(chunk_header,
     chunk_buffer_ptr);
     				auto rdr = ch->getReader();
     				size_t readed = 0;
@@ -200,13 +200,13 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     phdr.addeded_chunks++;
 	chunk_header->offset_in_page = offset;
 
-	auto skip_count = ZippedChunk::compact(chunk_header);
+	auto skip_count = Chunk::compact(chunk_header);
 	//update checksum;
-	ZippedChunk::updateChecksum(*chunk_header, chunk_buffer_ptr + skip_count);
+	Chunk::updateChecksum(*chunk_header, chunk_buffer_ptr + skip_count);
     
     #ifdef  DEBUG
 	{
-		auto ch = std::make_shared<ZippedChunk>(chunk_header, chunk_buffer_ptr + skip_count);
+		auto ch = std::make_shared<Chunk>(chunk_header, chunk_buffer_ptr + skip_count);
 		assert(ch->checkChecksum());
 		auto rdr = ch->getReader();
 		size_t readed = 0;
@@ -379,7 +379,7 @@ Chunk_Ptr Page::readChunkByOffset(FILE* page_io, int offset) {
 		THROW_EXCEPTION("engine: page read error - ", this->filename);
 	}
 	Chunk_Ptr ptr = nullptr;
-	ptr = Chunk_Ptr{ new ZippedChunk(cheader, buffer) };
+	ptr = Chunk_Ptr{ new Chunk(cheader, buffer) };
 	ptr->is_owner = true;
 	if(!ptr->checkChecksum()){
 		logger_fatal("engine: bad checksum of chunk #", ptr->header->id, " for measurement id:", ptr->header->first.id, " page: ", this->filename);

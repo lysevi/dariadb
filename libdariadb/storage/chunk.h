@@ -14,13 +14,9 @@
 
 namespace dariadb {
 namespace storage {
-enum class CHUNK_KIND : uint8_t { Simple, Compressed };
-
-std::ostream &operator<<(std::ostream &stream, const CHUNK_KIND &k);
 #pragma pack(push, 1)
 struct ChunkHeader {
   uint64_t id; // chunk id;
-  CHUNK_KIND kind;
   Meas first, last;
   Time minTime, maxTime;
   uint64_t flag_bloom;
@@ -34,7 +30,7 @@ struct ChunkHeader {
 };
 #pragma pack(pop)
 
-class Chunk {
+class Chunk: public std::enable_shared_from_this<Chunk> {
 public:
   class IChunkReader {
   public:
@@ -49,24 +45,29 @@ public:
 
   EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
   EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer);
-  EXPORT virtual ~Chunk();
+  EXPORT ~Chunk();
 
-  virtual bool append(const Meas &m) = 0;
-  virtual bool isFull() const = 0;
-  virtual ChunkReader_Ptr getReader() = 0;
-  virtual void close() = 0;
-  virtual uint32_t calcChecksum() = 0;
-  virtual uint32_t getChecksum() = 0;
+  EXPORT bool append(const Meas &m);
+  EXPORT bool isFull() const ;
+  EXPORT ChunkReader_Ptr getReader();
+  EXPORT void close();
+  EXPORT uint32_t calcChecksum();
+  EXPORT uint32_t getChecksum();
   EXPORT virtual bool checkId(const Id &id);
   EXPORT virtual bool checkChecksum();
   EXPORT bool checkFlag(const Flag &f);
 
+  EXPORT static void updateChecksum(ChunkHeader&hdr, u8vector buff);
+  EXPORT static uint32_t calcChecksum(ChunkHeader&hdr, u8vector buff);
+  ///return - count of skipped bytes.
+  EXPORT static uint32_t compact(ChunkHeader*hdr);
   ChunkHeader *header;
   u8vector _buffer_t;
 
   compression::ByteBuffer_Ptr bw;
-
+  compression::CopmressedWriter c_writer;
   bool is_owner; //true - dealloc memory for header and buffer.
+  
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;
@@ -75,24 +76,5 @@ typedef std::map<Id, Chunk_Ptr> IdToChunkMap;
 typedef std::map<Id, ChunksList> ChunkMap;
 typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
 
-class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
-public:
-  EXPORT ZippedChunk(ChunkHeader *index, uint8_t *buffer, uint32_t _size,
-                     const Meas &first_m);
-  EXPORT ZippedChunk(ChunkHeader *index, uint8_t *buffer);
-  EXPORT ~ZippedChunk();
-
-  EXPORT bool isFull() const override;
-  EXPORT bool append(const Meas &m) override;
-  EXPORT void close() override;
-  EXPORT static void updateChecksum(ChunkHeader&hdr, u8vector buff);
-  EXPORT static uint32_t calcChecksum(ChunkHeader&hdr, u8vector buff);
-  ///return - count of skipped bytes.
-  EXPORT static uint32_t compact(ChunkHeader*hdr);
-  EXPORT uint32_t calcChecksum() override;
-  EXPORT uint32_t getChecksum() override;
-  EXPORT ChunkReader_Ptr getReader() override;
-  compression::CopmressedWriter c_writer;
-};
 }
 }

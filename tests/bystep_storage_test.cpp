@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
 		  memset(buffer, 0, buffer_size);
 
         dariadb::storage::Chunk_Ptr ptr{
-            new dariadb::storage::ZippedChunk(hdr, buffer, buffer_size, first)};
+            new dariadb::storage::Chunk(hdr, buffer, buffer_size, first)};
 		all_values.push_back(first);
         while (!ptr->isFull()) {
           first.time++;
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
 
 		auto first = dariadb::Meas::empty(0);
 		first.time = 1000;
-		dariadb::storage::Chunk_Ptr ptr{ new dariadb::storage::ZippedChunk(hdr, buffer, buffer_size, first) };
+		dariadb::storage::Chunk_Ptr ptr{ new dariadb::storage::Chunk(hdr, buffer, buffer_size, first) };
 		while (!ptr->isFull()) {
 			first.time++;
 			first.value++;

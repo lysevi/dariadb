@@ -91,7 +91,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
         // TODO use memory_pool
         std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
         memset(buffer_ptr.get(), 0, max_chunk_size);
-        ZippedChunk ch(&hdr, buffer_ptr.get(), max_chunk_size, *it);
+        Chunk ch(&hdr, buffer_ptr.get(), max_chunk_size, *it);
         ++it;
         while (it != end) {
           if (!ch.append(*it)) {
@@ -141,13 +141,13 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
 	phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
 	phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
 
-	auto skip_count = ZippedChunk::compact(&chunk_header);
+	auto skip_count = Chunk::compact(&chunk_header);
     chunk_header.offset_in_page = offset;
 	//update checksum;
-	ZippedChunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
+	Chunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
 #ifdef  DEBUG
 	{
-		auto ch = std::make_shared<ZippedChunk>(&chunk_header, chunk_buffer_ptr.get() + skip_count);
+		auto ch = std::make_shared<Chunk>(&chunk_header, chunk_buffer_ptr.get() + skip_count);
 		assert(ch->checkChecksum());
 		ch->close();
 	}

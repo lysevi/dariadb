@@ -4,14 +4,14 @@ using namespace dariadb;
 using namespace dariadb::storage;
 
 MemChunk::MemChunk(ChunkHeader *index, uint8_t *buffer, uint32_t size, const Meas &first_m)
-    : ZippedChunk(index, buffer, size, first_m) {
+    :Chunk(index, buffer, size, first_m) {
   index_ptr = index;
   buffer_ptr = buffer;
   _track = nullptr;
   in_disk_count = 0;
 }
 
-MemChunk::MemChunk(ChunkHeader *index, uint8_t *buffer) : ZippedChunk(index, buffer) {
+MemChunk::MemChunk(ChunkHeader *index, uint8_t *buffer) : Chunk(index, buffer) {
   index_ptr = index;
   buffer_ptr = buffer;
   _track = nullptr;

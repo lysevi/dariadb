@@ -169,7 +169,7 @@ Chunk_Ptr ByStepTrack::pack() const {
   memset(buffer, 0, buffer_size);
   memset(chdr, 0, sizeof(ChunkHeader));
 
-  Chunk_Ptr result{new ZippedChunk{chdr, buffer, buffer_size, _values[it]}};
+  Chunk_Ptr result{new Chunk{chdr, buffer, buffer_size, _values[it]}};
   ++it;
   for (; it < _values.size(); ++it) {
     result->append(_values[it]);

@@ -1,6 +1,6 @@
+#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/utils/crc.h>
-#include <libdariadb/storage/bloom_filter.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -10,25 +10,18 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
-std::ostream &dariadb::storage::operator<<(std::ostream &stream, const CHUNK_KIND &b) {
-  switch (b) {
-  case CHUNK_KIND::Simple:
-    stream << "CHUNK_KIND::Simple";
-    break;
-  case CHUNK_KIND::Compressed:
-    stream << "CHUNK_KIND::Compressed";
-    break;
-  }
-  return stream;
-}
-
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer) {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
+    : c_writer(std::make_shared<ByteBuffer>(Range{ buffer, buffer + hdr->size})) {
   header = hdr;
   _buffer_t = buffer;
   is_owner = false;
+
+  bw = c_writer.getBinaryBuffer();
+  bw->set_pos(header->bw_pos);
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m) {
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m)
+    : c_writer(std::make_shared<ByteBuffer>(Range{ buffer, buffer + _size })) {
   _buffer_t = buffer;
   header = hdr;
   header->size = _size;
@@ -42,18 +35,26 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
 
   std::fill(_buffer_t, _buffer_t + header->size, 0);
   is_owner = false;
+
+  bw = c_writer.getBinaryBuffer();
+  bw->reset_pos();
+  header->bw_pos = uint32_t(bw->pos());
+
+  c_writer.append(header->first);
+
+  header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
 }
 
 Chunk::~Chunk() {
   this->bw = nullptr;
   if (is_owner) {
-	  delete[] this->_buffer_t;
-	  delete this->header;
+    delete[] this->_buffer_t;
+    delete this->header;
   }
 }
 
 bool Chunk::checkId(const Id &id) {
-  if (header->first.id!= id) {
+  if (header->first.id != id) {
     return false;
   }
   return true;
@@ -74,52 +75,26 @@ bool Chunk::checkChecksum() {
   return exists == calculated;
 }
 
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer, uint32_t _size, const Meas &first_m)
-    : Chunk(index, buffer, _size, first_m),
-	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
-	{
-  header->kind = CHUNK_KIND::Compressed;
-  
-  bw = c_writer.getBinaryBuffer();
-  bw->reset_pos();
-  header->bw_pos = uint32_t(bw->pos());
-
-  c_writer.append(header->first);
-
-  header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
-}
-
-ZippedChunk::ZippedChunk(ChunkHeader *index, uint8_t *buffer) 
-	: Chunk(index, buffer),
-	c_writer(std::make_shared<ByteBuffer>(Range{ _buffer_t, _buffer_t + index->size }))
-{
-  assert(index->kind == CHUNK_KIND::Compressed);
-  bw = c_writer.getBinaryBuffer();
-  bw->set_pos(header->bw_pos);
-}
-
-ZippedChunk::~ZippedChunk() {}
-
-void ZippedChunk::close() {
+void Chunk::close() {
   header->crc = this->calcChecksum();
   assert(header->crc != 0);
 }
 
-void ZippedChunk::updateChecksum(ChunkHeader&hdr, u8vector buff) {
-	hdr.crc = utils::crc32(buff, hdr.size);
+void Chunk::updateChecksum(ChunkHeader &hdr, u8vector buff) {
+  hdr.crc = utils::crc32(buff, hdr.size);
 }
 
-uint32_t ZippedChunk::calcChecksum(ChunkHeader&hdr, u8vector buff) {
-	return utils::crc32(buff, hdr.size);
+uint32_t Chunk::calcChecksum(ChunkHeader &hdr, u8vector buff) {
+  return utils::crc32(buff, hdr.size);
 }
-uint32_t ZippedChunk::calcChecksum() {
-  return ZippedChunk::calcChecksum(*header, this->_buffer_t);
+uint32_t Chunk::calcChecksum() {
+  return Chunk::calcChecksum(*header, this->_buffer_t);
 }
 
 /// return - count of skipped bytes.
-uint32_t ZippedChunk::compact(ChunkHeader *hdr) {
-  if (hdr->bw_pos == 0) { //full chunk
-	  return 0;
+uint32_t Chunk::compact(ChunkHeader *hdr) {
+  if (hdr->bw_pos == 0) { // full chunk
+    return 0;
   }
   auto cur_chunk_buf_size = hdr->size - hdr->bw_pos + 1;
   auto skip_count = hdr->size - (uint32_t)cur_chunk_buf_size;
@@ -127,15 +102,15 @@ uint32_t ZippedChunk::compact(ChunkHeader *hdr) {
   return skip_count;
 }
 
-uint32_t ZippedChunk::getChecksum() {
+uint32_t Chunk::getChecksum() {
   return header->crc;
 }
 
-bool ZippedChunk::isFull() const {
+bool Chunk::isFull() const {
   return c_writer.isFull();
 }
 
-bool ZippedChunk::append(const Meas &m) {
+bool Chunk::append(const Meas &m) {
   auto t_f = this->c_writer.append(m);
 
   if (!t_f) {
@@ -155,7 +130,7 @@ bool ZippedChunk::append(const Meas &m) {
   }
 }
 
-class ZippedChunkReader : public Chunk::IChunkReader {
+class ChunkReader : public Chunk::IChunkReader {
 public:
   virtual Meas readNext() override {
     assert(!is_end());
@@ -177,8 +152,8 @@ public:
   std::shared_ptr<CopmressedReader> _reader;
 };
 
-Chunk::ChunkReader_Ptr ZippedChunk::getReader() {
-  auto raw_res = new ZippedChunkReader;
+Chunk::ChunkReader_Ptr Chunk::getReader() {
+  auto raw_res = new ChunkReader;
   raw_res->count = this->header->count;
   raw_res->_chunk = this->shared_from_this();
   raw_res->_is_first = true;

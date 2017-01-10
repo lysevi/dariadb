@@ -91,9 +91,9 @@ public:
         THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
       }
 
-	  auto skip_count = ZippedChunk::compact(ch->header);
+	  auto skip_count = Chunk::compact(ch->header);
 	  //update checksum;
-	  ZippedChunk::updateChecksum(*ch->header, ch->_buffer_t + skip_count);
+	  Chunk::updateChecksum(*ch->header, ch->_buffer_t + skip_count);
 
       sqlite3_bind_int64(pStmt, 1, ch->header->id);
       sqlite3_bind_int64(pStmt, 2, ch->header->first.id);
@@ -141,7 +141,7 @@ public:
           uint8_t *buffer = new uint8_t[buffSize];
           memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
 
-          Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
+          Chunk_Ptr cptr{new Chunk(chdr, buffer)};
           cptr->is_owner = true;
 		  if (!cptr->checkChecksum()) {
 			  logger_fatal("engine: io_adapter -  bad checksum of chunk #", cptr->header->id, " for measurement id:", cptr->header->first.id);
@@ -208,7 +208,7 @@ public:
           uint8_t *buffer = new uint8_t[buffSize];
           memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
 
-          Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
+          Chunk_Ptr cptr{new Chunk(chdr, buffer)};
           cptr->is_owner = true;
 		  result = cptr;
         } else {
@@ -259,7 +259,7 @@ public:
 #endif // DEBUG
 
 		   uint8_t *buffer = (uint8_t *)sqlite3_column_blob(pStmt, 1);
-           Chunk_Ptr cptr{new ZippedChunk(chdr, buffer)};
+           Chunk_Ptr cptr{new Chunk(chdr, buffer)};
 		   currentValueFromChunk(result, cptr);
          } else {
            break;
@@ -305,9 +305,9 @@ public:
         THROW_EXCEPTION("engine: IOAdapter - ", err_msg);
       }
 
-	  auto skip_count = ZippedChunk::compact(ch->header);
+	  auto skip_count = Chunk::compact(ch->header);
 	  //update checksum;
-	  ZippedChunk::updateChecksum(*ch->header, ch->_buffer_t + skip_count);
+	  Chunk::updateChecksum(*ch->header, ch->_buffer_t + skip_count);
 
       sqlite3_bind_int64(pStmt, 1, min);
       sqlite3_bind_int64(pStmt, 2, max);
