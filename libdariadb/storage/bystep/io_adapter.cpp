@@ -5,13 +5,12 @@
 #include <cassert>
 #include <extern/libsqlite3/sqlite3.h>
 #include <string>
-#include <list>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <ctime>
 #include <cstring>
-
+#include <utility>
 using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils;
@@ -34,7 +33,9 @@ class IOAdapter::Private {
 public:
   Private(const std::string &fname) {
 	  _chunks_pos = 0;
-	  _chunks_list.resize(MAX_QUEUE_SIZE);
+	  _chunks_pos_drop = 0;
+	  _chunks_list=new ChunkMinMax[MAX_QUEUE_SIZE];
+	  _chunks_list_drop = new ChunkMinMax[MAX_QUEUE_SIZE];
     _db = nullptr;
     logger("engine: io_adapter - open ", fname);
     int rc = sqlite3_open(fname.c_str(), &_db);
@@ -59,6 +60,8 @@ public:
 		_write_thread.join();
       sqlite3_close(_db);
       _db = nullptr;
+	  delete[] _chunks_list;
+	  delete[] _chunks_list_drop;
       logger("engine: io_adapter - stoped.");
     }
   }
@@ -441,63 +444,80 @@ public:
   }
 
   void write_thread_func() {
-	  std::vector<ChunkMinMax> local_copy;
-	  local_copy.resize(MAX_QUEUE_SIZE);
     while (!_stop_flag) {
-		std::unique_lock<std::mutex> lock(_chunks_list_locker);
-		_cond_var.wait(lock);
+      std::unique_lock<std::mutex> lock(_chunks_list_locker);
+      _cond_var.wait(lock);
 
-      if (_stop_flag && _chunks_pos==0) {
+      if (_stop_flag && _chunks_pos == 0) {
         break;
       }
+
+      bool not_full = false;
       while (!_dropper_locker.try_lock()) {
-		  std::this_thread::yield();
+        if (_chunks_pos < MAX_QUEUE_SIZE) {
+          not_full = true;
+          break;
+        }
+        std::this_thread::yield();
       }
+      if (not_full) {
+		//need to not lock queue if dropper locked and queue not filled.
+        logger("engine: io_adapter - can't lock dropper and queue not full.");
+        continue;
+      }
+      if (_chunks_pos != 0) {
+        std::swap(_chunks_list, _chunks_list_drop);
+        _chunks_pos_drop = _chunks_pos;
+        _chunks_pos = 0;
+        lock.unlock();
 
-	  auto max_pos = _chunks_pos;
-	  for (size_t i = 0; i < _chunks_pos; ++i) {
-		  local_copy[i] = _chunks_list[i];
-		  _chunks_list[i].ch = nullptr;
-	  }
-      assert(local_copy.size() == _chunks_list.size());
-	  _chunks_pos = 0;
-	  lock.unlock();
-	  if (max_pos!=0) {
+        auto start_time = clock();
+		while (true) {//try drop disk, while not success.
+			logger("engine: io_adapter - dropping start. ", _chunks_pos_drop, " chunks.");
+			try {
+				sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
 
-		  auto start_time = clock();
-		  logger("engine: io_adapter - dropping start. ", max_pos, " chunks.");
-		  sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+				for (size_t i = 0; i < _chunks_pos_drop; ++i) {
+					auto c = _chunks_list_drop[i];
+					this->_append(c.ch, c.min, c.max);
+				}
+				sqlite3_exec(_db, "END TRANSACTION;", NULL, NULL, NULL);
+				break;
+			}
+			catch (const std::exception &e) {
+				logger_fatal("engine: io_adapter - exception on write to disk - ", e.what());
+				sqlite3_exec(_db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+		}
+        for (size_t i = 0; i < _chunks_pos_drop; ++i) {
+          _chunks_list_drop[i].ch = nullptr;
+        }
+        _chunks_pos_drop = 0;
+        auto end = clock();
+        auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
-		  for (size_t i = 0; i < max_pos; ++i) {
-			  auto c = local_copy[i];
-			  this->_append(c.ch, c.min, c.max);
-		  }
-		  sqlite3_exec(_db, "END TRANSACTION;", NULL, NULL, NULL);
-
-		  for (size_t i = 0; i < max_pos; ++i) {
-			  local_copy[i].ch=nullptr;			  
-		  }
-		  auto end = clock();
-		  auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
-
-		  logger("engine: io_adapter - dropping end. elapsed ", elapsed, "s");
-	  }
+        logger("engine: io_adapter - dropping end. elapsed ", elapsed, "s");
+      } else {
+        lock.unlock();
+      }
       _dropper_locker.unlock();
     }
     logger_info("engine: io_adapter - write thread is stoped.");
-	_is_stoped = true;
+    _is_stoped = true;
   }
 
   void flush() {
 	  logger_info("engine: io_adapter - flush start.");
 	  while (true) {//TODO make more smarter.
 		  _chunks_list_locker.lock();
-		  auto is_empty = _chunks_pos==0;
+		  auto is_empty = (_chunks_pos+_chunks_pos_drop )==0;
 		  _chunks_list_locker.unlock();
 		  if (is_empty) {
 			  break;
 		  }
 		  _cond_var.notify_all();
+		  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	  }
 	  logger_info("engine: io_adapter - flush end.");
   }
@@ -505,7 +525,7 @@ public:
   bystep::Description description() {
     bystep::Description result;
     _chunks_list_locker.lock();
-    result.in_queue = _chunks_pos;
+    result.in_queue = _chunks_pos+ _chunks_pos_drop;
     _chunks_list_locker.unlock();
     return result;
   }
@@ -538,8 +558,12 @@ public:
   sqlite3 *_db;
   bool                  _is_stoped;
   bool                  _stop_flag;
-  std::vector<ChunkMinMax> _chunks_list;
+  // in queue
+  ChunkMinMax*          _chunks_list;
   size_t                   _chunks_pos;
+  // queue for dropping to disk.
+  ChunkMinMax*          _chunks_list_drop;
+  size_t                   _chunks_pos_drop;
   std::mutex            _chunks_list_locker;
   std::condition_variable _cond_var;
   std::mutex            _dropper_locker;
