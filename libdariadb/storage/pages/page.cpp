@@ -382,7 +382,7 @@ Chunk_Ptr Page::readChunkByOffset(FILE* page_io, int offset) {
 	ptr = Chunk_Ptr{ new Chunk(cheader, buffer) };
 	ptr->is_owner = true;
 	if(!ptr->checkChecksum()){
-		logger_fatal("engine: bad checksum of chunk #", ptr->header->id, " for measurement id:", ptr->header->first.id, " page: ", this->filename);
+		logger_fatal("engine: bad checksum of chunk #", ptr->header->id, " for measurement id:", ptr->header->meas_id, " page: ", this->filename);
 		return nullptr;
 	}
 	return ptr;
@@ -484,14 +484,14 @@ Id2MinMax Page::loadMinMax(){
 			continue;
 		}
 			auto info = search_res->header;
-			auto fres = result.find(info->first.id);
+			auto fres = result.find(info->meas_id);
 			if (fres == result.end()) {
-				result[info->first.id].min = info->first;
-				result[info->first.id].max = info->last;
+				result[info->meas_id].min = info->first();
+				result[info->meas_id].max = info->last();
 			}
 			else {
-				result[info->first.id].updateMin(info->first);
-				result[info->first.id].updateMax(info->last);
+				result[info->meas_id].updateMin(info->first());
+				result[info->meas_id].updateMax(info->last());
 			}
 		
 	}

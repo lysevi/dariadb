@@ -27,8 +27,8 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
   header->size = _size;
 
   header->count = 0;
-  header->first = first_m;
-  header->last = first_m;
+  header->set_first(first_m);
+  header->set_last(first_m);
   header->minTime = first_m.time;
   header->maxTime = first_m.time;
   header->flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
@@ -40,7 +40,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
   bw->reset_pos();
   header->bw_pos = uint32_t(bw->pos());
 
-  c_writer.append(header->first);
+  c_writer.append(header->first());
 
   header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
 }
@@ -54,7 +54,7 @@ Chunk::~Chunk() {
 }
 
 bool Chunk::checkId(const Id &id) {
-  if (header->first.id != id) {
+  if (header->meas_id != id) {
     return false;
   }
   return true;
@@ -124,7 +124,7 @@ bool Chunk::append(const Meas &m) {
     header->minTime = std::min(header->minTime, m.time);
     header->maxTime = std::max(header->maxTime, m.time);
     header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, m.flag);
-    header->last = m;
+    header->set_last(m);
 
     return true;
   }
@@ -137,7 +137,7 @@ public:
 
     if (_is_first) {
       _is_first = false;
-      return _chunk->header->first;
+      return _chunk->header->first();
     }
     --count;
     return _reader->read();
@@ -159,7 +159,7 @@ Chunk::ChunkReader_Ptr Chunk::getReader() {
   raw_res->_is_first = true;
   raw_res->bw = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
   raw_res->bw->reset_pos();
-  raw_res->_reader = std::make_shared<CopmressedReader>(raw_res->bw, this->header->first);
+  raw_res->_reader = std::make_shared<CopmressedReader>(raw_res->bw, this->header->first());
 
   Chunk::ChunkReader_Ptr result{raw_res};
   return result;

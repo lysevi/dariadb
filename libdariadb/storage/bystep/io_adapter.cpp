@@ -99,7 +99,7 @@ public:
         "chunk_buffer) values (?,?,?,?,?,?);";
 	/*
 	logger("engine: io_adapter - append chunk #", ch->header->id, " id:",
-		ch->header->first.id);*/
+		ch->header->meas_id);*/
     sqlite3_stmt *pStmt;
     int rc;
     do {
@@ -115,7 +115,7 @@ public:
 	  Chunk::updateChecksum(*ch->header, ch->_buffer_t + skip_count);
 
       sqlite3_bind_int64(pStmt, 1, ch->header->id);
-      sqlite3_bind_int64(pStmt, 2, ch->header->first.id);
+      sqlite3_bind_int64(pStmt, 2, ch->header->meas_id);
       sqlite3_bind_int64(pStmt, 3, min);
       sqlite3_bind_int64(pStmt, 4, max);
       sqlite3_bind_blob(pStmt, 5, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
@@ -163,7 +163,7 @@ public:
           Chunk_Ptr cptr{new Chunk(chdr, buffer)};
           cptr->is_owner = true;
 		  if (!cptr->checkChecksum()) {
-			  logger_fatal("engine: io_adapter -  bad checksum of chunk #", cptr->header->id, " for measurement id:", cptr->header->first.id);
+			  logger_fatal("engine: io_adapter -  bad checksum of chunk #", cptr->header->id, " for measurement id:", cptr->header->meas_id);
 			  continue;
 		  }
           result.push_back(cptr);
@@ -176,7 +176,7 @@ public:
 
 	//TODO move to method
 	for (size_t i = 0; i < _chunks_pos;++i) {
-		if (_chunks_list[i].ch->header->first.id == meas_id){
+		if (_chunks_list[i].ch->header->meas_id == meas_id){
 			if (utils::inInterval(period_from, period_to, _chunks_list[i].ch->header->id)) {
 				result.push_back(_chunks_list[i].ch);
 			}
@@ -237,7 +237,7 @@ public:
 
 	if (result == nullptr) {
 		for (size_t i = 0; i < _chunks_pos; ++i) {
-			if (_chunks_list[i].ch->header->id == period&&_chunks_list[i].ch->header->first.id == meas_id) {
+			if (_chunks_list[i].ch->header->id == period&&_chunks_list[i].ch->header->meas_id == meas_id) {
 				result = _chunks_list[i].ch;
 				break;
 			}
@@ -308,7 +308,7 @@ public:
 	  this->flush();
 	  lock();
     logger("engine: io_adapter - replace chunk #", ch->header->id, " id:",
-           ch->header->first.id);
+           ch->header->meas_id);
     const std::string sql_query = "UPDATE Chunks SET min_time=?, max_time=?, "
                                   "chunk_header=?, chunk_buffer=? where number=? AND "
                                   "meas_id=?";
@@ -331,7 +331,7 @@ public:
       sqlite3_bind_blob(pStmt, 3, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
       sqlite3_bind_blob(pStmt, 4, ch->_buffer_t + skip_count, ch->header->size, SQLITE_STATIC);
       sqlite3_bind_int64(pStmt, 5, ch->header->id);
-      sqlite3_bind_int64(pStmt, 6, ch->header->first.id);
+      sqlite3_bind_int64(pStmt, 6, ch->header->meas_id);
       rc = sqlite3_step(pStmt);
       assert(rc != SQLITE_ROW);
       rc = sqlite3_finalize(pStmt);
@@ -413,7 +413,7 @@ public:
 	  } while (rc == SQLITE_SCHEMA);
 
 	  for (size_t i = 0; i < _chunks_pos; ++i) {
-		  if (_chunks_list[i].ch->header->first.id == id) {
+		  if (_chunks_list[i].ch->header->meas_id == id) {
 			  result = true;
 			  *minResult = std::min(*minResult, _chunks_list[i].min);
 			  *maxResult = std::min(*maxResult, _chunks_list[i].max);

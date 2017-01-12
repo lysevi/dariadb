@@ -15,18 +15,54 @@
 namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
+struct  MeasData{
+	Id id;
+	Time time;
+	Value value;
+	Flag flag;
+};
 struct ChunkHeader {
-  uint64_t id; // chunk id;
-  Meas first, last;
-  Time minTime, maxTime;
-  uint64_t flag_bloom;
-  uint32_t count;
-  uint32_t bw_pos;
+  uint64_t id;       /// chunk id.
+  Id       meas_id;  /// measurement id.
+  MeasData data_first, data_last; /// date of first and last added measurements.
+  Time minTime, maxTime;          /// min and max time.
+  uint64_t flag_bloom;            /// bool filter for storead flags.
+  uint32_t count;                 /// count of stored values.
+  uint32_t bw_pos;                /// needed for unpack.
 
-  uint32_t size;
-  uint32_t crc;
+  uint32_t size;                  /// size of buffer with values.
+  uint32_t crc;                   /// checksum.
 
-  uint64_t offset_in_page;
+  uint64_t offset_in_page;        /// pos in page file.
+
+  Meas first()const {
+	  Meas m = Meas::empty(meas_id);
+	  m.flag = data_first.flag;
+	  m.time = data_first.time;
+	  m.value = data_first.value;
+	  return m;
+  }
+
+  Meas last()const {
+	  Meas m = Meas::empty(meas_id);
+	  m.flag = data_last.flag;
+	  m.time = data_last.time;
+	  m.value = data_last.value;
+	  return m;
+  }
+
+  void set_first(Meas m) {
+	  data_first.flag = m.flag;
+	  data_first.time = m.time;
+	  data_first.value = m.value;
+	  meas_id = m.id;
+  }
+
+  void set_last(Meas m) {
+	  data_last.flag = m.flag;
+	  data_last.time = m.time;
+	  data_last.value = m.value;
+  }
 };
 #pragma pack(pop)
 

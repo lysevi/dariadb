@@ -84,7 +84,7 @@ std::string random_file_name(const std::string &ext) {
   auto now = boost::posix_time::microsec_clock::local_time();
   auto duration = now - boost::posix_time::from_time_t(0);
   std::stringstream ss;
-  ss << duration.total_nanoseconds() << ext;
+  ss << duration.total_microseconds() << ext;
   return ss.str();
 }
 

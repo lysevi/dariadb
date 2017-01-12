@@ -180,13 +180,13 @@ IndexReccord init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* ihead
 	iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
 
 	iheader->id_bloom =
-		storage::bloom_add(iheader->id_bloom, cheader.first.id);
+		storage::bloom_add(iheader->id_bloom, cheader.meas_id);
 	iheader->flag_bloom =
-		storage::bloom_add(iheader->flag_bloom, cheader.first.flag);
+		storage::bloom_add(iheader->flag_bloom, cheader.data_first.flag);
 	iheader->count++;
 	cur_index.minTime = cheader.minTime;
 	cur_index.maxTime = cheader.maxTime;
-	cur_index.meas_id = cheader.first.id;
+	cur_index.meas_id = cheader.meas_id;
 	cur_index.flag_bloom = cheader.flag_bloom;
 	return cur_index;
 }

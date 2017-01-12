@@ -124,7 +124,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
     std::sort(chunks_copy.begin(), chunks_copy.end(),
               [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
-                return left->header->first.time < right->header->first.time;
+                return left->header->data_first.time < right->header->data_first.time;
               });
     for (auto &c : chunks_copy) {
       if (pos >= chunks_to_delete) {

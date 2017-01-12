@@ -189,7 +189,7 @@ Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
   std::lock_guard<utils::async::Locker> lg(_locker);
   Id2Meas result;
   if (_cur_chunk != nullptr) {
-    auto last = _cur_chunk->header->last;
+    auto last = _cur_chunk->header->last();
     if (last.inFlag(flag)) {
       result[_meas_id] = last;
       return result;
@@ -215,15 +215,15 @@ void TimeTrack::rereadMinMax() {
 
   if (_index.size() != 0) {
     auto c = _index.begin()->second;
-    _min_max.min = c->header->first;
+    _min_max.min = c->header->first();
   } else {
     if (this->_cur_chunk != nullptr) {
-      _min_max.min = _cur_chunk->header->first;
+      _min_max.min = _cur_chunk->header->first();
     }
   }
 
   if (this->_cur_chunk != nullptr) {
-    _min_max.max = _cur_chunk->header->last;
+    _min_max.max = _cur_chunk->header->last();
   }
 }
 
