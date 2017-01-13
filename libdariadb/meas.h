@@ -29,7 +29,7 @@ const Id MIN_ID = std::numeric_limits<dariadb::Id>::min();
 const Id MAX_ID = std::numeric_limits<dariadb::Id>::max();
 
 EXPORT bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
-
+#pragma pack(push, 1)
 struct Meas {
 	Id id;
 	Time time;
@@ -64,6 +64,7 @@ struct Meas {
     return inQuery(ids, f) && inInterval(from, to);
   }
 };
+#pragma pack(pop)
 
 struct meas_id_compare_less {
 	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
