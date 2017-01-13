@@ -3,11 +3,14 @@ INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
 
 LINK_DIRECTORIES(${DARIADB_LIB_PATH})
 
+MESSAGE(STATUS "Examples")
 macro(EXAMPLE name src)
-	MESSAGE(STATUS " +" ${name})
+        MESSAGE(STATUS "+ example-${name}")
 	add_executable(example-${name} ${src})
 	TARGET_LINK_LIBRARIES(example-${name} ${DARIADB_STORAGE_LIBS})
 	set_target_properties(example-${name} PROPERTIES FOLDER Examples)
+
+        add_test(example-${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/example-${name})
 endmacro(EXAMPLE)
 
 
