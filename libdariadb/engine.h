@@ -9,6 +9,7 @@
 #include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/strategy.h>
+#include <libdariadb/timeutil.h>
 #include <memory>
 
 namespace dariadb {

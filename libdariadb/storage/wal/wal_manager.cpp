@@ -281,11 +281,6 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
   auto files = wal_files();
   dariadb::Id2Meas sub_result;
 
-  for (auto id : query.ids) {
-    sub_result[id].flag = Flags::_NO_DATA;
-    sub_result[id].time = query.time_point;
-  }
-
   std::vector<Id2Meas> results{files.size()};
   auto env = _env;
   AsyncTask at = [files, &query, &results, env](const ThreadInfo &ti) {
@@ -322,7 +317,7 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
       if (it == sub_result.end()) {
         sub_result.emplace(std::make_pair(v.id, v));
       } else {
-        if ((v.time > it->second.time) && (v.time <= query.time_point)) {
+        if ((v.flag == Flags::_NO_DATA) || ((v.time > it->second.time) && (v.time <= query.time_point))) {
           sub_result[v.id] = v;
         }
       }
@@ -333,6 +328,12 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
     }
   }
 
+  for (auto id : query.ids) {
+	  if (sub_result.find(id) == sub_result.end()) {
+		  sub_result[id].flag = Flags::_NO_DATA;
+		  sub_result[id].time = query.time_point;
+	  }
+  }
   return sub_result;
 }
 

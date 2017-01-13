@@ -13,6 +13,7 @@ option(ENABLE_TESTS "Enable testing of the dariadb." ON)
 option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
 option(ENABLE_SERVER "Enable build dariadb server." ON)
 option(ENABLE_BENCHMARKS "Enable build dariadb benchmarks." ON)
+option(ENABLE_SAMPLES "Build dariadb sample programs." ON)
 option(CLANG_ASAN_UBSAN "Enable Clang address & undefined behavior sanitizer for binary." OFF)
 option(CLANG_MSAN "Enable Clang memory sanitizer for binary." OFF)
 
@@ -102,3 +103,7 @@ if(ENABLE_BENCHMARKS)
 endif()
 
 add_subdirectory (tools)
+
+if(ENABLE_SAMPLES)
+  add_subdirectory(examples)
+endif()
