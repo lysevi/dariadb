@@ -9,12 +9,12 @@ macro(EXAMPLE name src)
 	add_executable(example-${name} ${src})
 	TARGET_LINK_LIBRARIES(example-${name} ${DARIADB_STORAGE_LIBS})
 	set_target_properties(example-${name} PROPERTIES FOLDER Examples)
-
-        add_test(example-${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/example-${name})
 endmacro(EXAMPLE)
 
 
 EXAMPLE(embedded embedded.cpp)
+add_test(example-embedded ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/example-embedded)
+
 EXAMPLE(network network.cpp)
 target_link_libraries(example-network ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS})
 
