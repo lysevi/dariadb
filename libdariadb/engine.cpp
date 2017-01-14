@@ -28,7 +28,7 @@ using namespace dariadb::utils::async;
 
 class Engine::Private {
 public:
-  Private(Settings_ptr settings) {
+  Private(Settings_ptr settings, bool ignore_lock_file) {
 	  _settings = settings;
 	  _strategy = _settings->strategy.value();
 
@@ -46,7 +46,7 @@ public:
 	  dariadb::utils::fs::mkdir(_settings->bystep_path.value());
     }
 
-	lockfile_lock_or_die();
+    lockfile_lock_or_die(ignore_lock_file);
 	
 	auto manifest_file_name = utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
 
@@ -141,11 +141,16 @@ public:
       return utils::fs::append_path(_settings->storage_path.value(), "lockfile");
   }
 
-  void lockfile_lock_or_die(){
+  void lockfile_lock_or_die(bool ignore_lock_file){
       auto lfile=lockfile_path();
       if(utils::fs::path_exists(lfile)){
-         throw_lock_error( _settings->storage_path.value());
+          if(!ignore_lock_file){
+            throw_lock_error( _settings->storage_path.value());
+          }else{
+            lockfile_unlock();
+          }
       }
+      //TODO use lockfile from Boost.
       std::ofstream ofs;
       ofs.open(lfile, std::ios_base::out | std::ios_base::binary);
       if(!ofs.is_open()){
@@ -714,7 +719,7 @@ protected:
   Id2Step _id2steps;
 };
 
-Engine::Engine(Settings_ptr settings) : _impl{new Engine::Private(settings)} {}
+Engine::Engine(Settings_ptr settings, bool ignore_lock_file) : _impl{new Engine::Private(settings,ignore_lock_file)} {}
 
 Engine::~Engine() {
   _impl = nullptr;

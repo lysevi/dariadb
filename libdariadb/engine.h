@@ -31,7 +31,7 @@ public:
   Engine &operator=(const Engine &) = delete;
   EXPORT virtual ~Engine();
 
-  EXPORT Engine(Settings_ptr settings);
+  EXPORT Engine(Settings_ptr settings, bool ignore_lock_file=false);
 
   using IMeasStorage::append;
   EXPORT Status  append(const Meas &value) override;

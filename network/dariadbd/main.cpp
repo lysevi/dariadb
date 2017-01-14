@@ -22,12 +22,14 @@ size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 ServerLogger::Params p;
 size_t memory_limit = 0;
+bool force_unlock_storage=false;
 
 int main(int argc,char**argv){
 	po::options_description desc("Allowed options");
 	auto aos = desc.add_options();
 	aos("help", "produce help message");
 	aos("readonly", "readonly mode");
+    aos("force-unlock", "force unlock storage.");
 	aos("log-to-file", "logger out to dariadb.log.");
 	aos("color-log", "use colors to log to console.");
 	aos("dbg-log", "verbose logging.");
@@ -64,6 +66,10 @@ int main(int argc,char**argv){
 		p.dbg_logging = true;
 	}
 
+    if (vm.count("force-unlock")) {
+        dariadb::logger_info("Force unlock storage.");
+        force_unlock_storage=true;
+    }
 	
 	dariadb::utils::ILogger_ptr log_ptr{ new ServerLogger(p) };
 	dariadb::utils::LogManager::start(log_ptr);
@@ -83,7 +89,7 @@ int main(int argc,char**argv){
     }
     settings->save();
 
-	auto stor=new Engine(settings);
+    auto stor=new Engine(settings, force_unlock_storage);
 
 	dariadb::net::Server::Param server_param(server_port, server_threads_count);
 	dariadb::net::Server s(server_param);

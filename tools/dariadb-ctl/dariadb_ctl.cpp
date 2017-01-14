@@ -19,6 +19,7 @@ std::string compact_from, compact_to;
 bool time_in_iso_format=false;
 std::string erase_to;
 bool stop_info=false;
+bool force_unlock_storage=false;
 
 class CtlLogger : public dariadb::utils::ILogger {
 public:
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
   aos("help", "produce help message.");
+  aos("force-unlock", "force unlock storage.");
   aos("settings", "print all settings.");
   aos("format", "print storage format version.");
   aos("verbose", "verbose output.");
@@ -118,7 +120,11 @@ int main(int argc, char *argv[]) {
       dariadb::logger_info("iso-time=off");
   }
 
- 
+  if (vm.count("force-unlock")) {
+      dariadb::logger_info("Force unlock storage.");
+      force_unlock_storage=true;
+  }
+
   if (new_base_name.size() != 0) {
       std::cout<<"create "<<new_base_name<<std::endl;
     auto settings = dariadb::storage::Settings_ptr{
@@ -155,14 +161,14 @@ int main(int argc, char *argv[]) {
 
   if (vm.count("fsck")) {
 	  auto settings = loadSettings();
-	  auto e = std::make_unique<dariadb::storage::Engine>(settings);
+      auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
 	  e->fsck();
 	  e->stop();
   }
 
   if (vm.count("compress")) {
     auto settings = loadSettings();
-    auto e = std::make_unique<dariadb::storage::Engine>(settings);
+    auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
 	stop_info = false;
 	std::thread info_thread(&show_drop_info, e.get());
     e->compress_all();
@@ -181,7 +187,7 @@ int main(int argc, char *argv[]) {
       }
 
 	  auto settings = loadSettings();
-      auto e = std::make_unique<dariadb::storage::Engine>(settings);
+      auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
 
       e->eraseOld(to);
 	  e->flush();
@@ -192,7 +198,7 @@ int main(int argc, char *argv[]) {
   if (vm.count("compact")) {
     if(compact_from.size()==0 && compact_to.size()==0){
 		auto settings = loadSettings();
-        auto e = std::make_unique<dariadb::storage::Engine>(settings);
+        auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
         e->compactTo(0);
 		e->flush();
         e->stop();
@@ -212,7 +218,7 @@ int main(int argc, char *argv[]) {
                 <<" to "<<dariadb::timeutil::to_string(to)<<std::endl;
 
 		auto settings = loadSettings();
-		auto e = std::make_unique<dariadb::storage::Engine>(settings);
+        auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
         e->compactbyTime(from,to);
         e->stop();
         std::exit(0);
