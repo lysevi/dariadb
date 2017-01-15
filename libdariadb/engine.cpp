@@ -17,7 +17,7 @@
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/utils.h>
 #include <algorithm>
-#include <cassert>
+
 #include <cstring>
 #include <fstream>
 #include <shared_mutex>
@@ -658,7 +658,7 @@ public:
   }
 
   STRATEGY strategy()const{
-	  assert(_strategy == _settings->strategy.value());
+	  ENSURE(_strategy == _settings->strategy.value());
       return this->_strategy;
   }
 

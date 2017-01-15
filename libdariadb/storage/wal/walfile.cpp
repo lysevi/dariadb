@@ -9,7 +9,7 @@
 #include <libdariadb/storage/settings.h>
 
 #include <algorithm>
-#include <cassert>
+
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -72,7 +72,7 @@ public:
   }
 
   Status  append(const Meas &value) {
-    assert(!_is_readonly);
+    ENSURE(!_is_readonly);
 
     if (_writed > _settings->wal_file_size.value()) {
       return Status (0, 1);
@@ -86,7 +86,7 @@ public:
 
   Status  append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
-    assert(!_is_readonly);
+    ENSURE(!_is_readonly);
 
     auto sz = std::distance(begin, end);
     open_to_append();
@@ -100,7 +100,7 @@ public:
 
   Status  append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) {
-    assert(!_is_readonly);
+    ENSURE(!_is_readonly);
 
     auto list_size = std::distance(begin, end);
     open_to_append();

@@ -2,7 +2,7 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/async/thread_manager.h>
-#include <cassert>
+
 #include <extern/libsqlite3/sqlite3.h>
 #include <string>
 #include <thread>
@@ -121,7 +121,7 @@ public:
       sqlite3_bind_blob(pStmt, 5, ch->header, sizeof(ChunkHeader), SQLITE_STATIC);
       sqlite3_bind_blob(pStmt, 6, ch->_buffer_t+skip_count, ch->header->size, SQLITE_STATIC);
       rc = sqlite3_step(pStmt);
-      assert(rc != SQLITE_ROW);
+      ENSURE(rc != SQLITE_ROW);
       rc = sqlite3_finalize(pStmt);
     } while (rc == SQLITE_SCHEMA);
   }
@@ -150,13 +150,13 @@ public:
         if (rc == SQLITE_ROW) {
           using utils::inInterval;
           auto headerSize = sqlite3_column_bytes(pStmt, 0);
-          assert(headerSize == sizeof(ChunkHeader));
+          ENSURE(headerSize == sizeof(ChunkHeader));
           auto header_blob = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
           ChunkHeader *chdr = new ChunkHeader;
           memcpy(chdr, header_blob, headerSize);
 
           auto buffSize = sqlite3_column_bytes(pStmt, 1);
-          assert(buffSize == chdr->size);
+          ENSURE(size_t(buffSize) == chdr->size);
           uint8_t *buffer = new uint8_t[buffSize];
           memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
 
@@ -214,14 +214,14 @@ public:
         if (rc == SQLITE_ROW) {
           using utils::inInterval;
           auto headerSize = sqlite3_column_bytes(pStmt, 0);
-          assert(headerSize == sizeof(ChunkHeader));
+          ENSURE(headerSize == sizeof(ChunkHeader));
           auto header_blob = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
 
           ChunkHeader *chdr = new ChunkHeader;
           memcpy(chdr, header_blob, headerSize);
 
           auto buffSize = sqlite3_column_bytes(pStmt, 1);
-          assert(buffSize == chdr->size);
+          ENSURE(size_t(buffSize) == chdr->size);
           uint8_t *buffer = new uint8_t[buffSize];
           memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
 
@@ -272,7 +272,7 @@ public:
 		   ChunkHeader *chdr = (ChunkHeader *)sqlite3_column_blob(pStmt, 0);
 #ifdef DEBUG
 		   auto headerSize = sqlite3_column_bytes(pStmt, 0);
-		   assert(headerSize == sizeof(ChunkHeader));
+		   ENSURE(headerSize == sizeof(ChunkHeader));
 #endif // DEBUG
 
 		   uint8_t *buffer = (uint8_t *)sqlite3_column_blob(pStmt, 1);
@@ -333,7 +333,7 @@ public:
       sqlite3_bind_int64(pStmt, 5, ch->header->id);
       sqlite3_bind_int64(pStmt, 6, ch->header->meas_id);
       rc = sqlite3_step(pStmt);
-      assert(rc != SQLITE_ROW);
+      ENSURE(rc != SQLITE_ROW);
       rc = sqlite3_finalize(pStmt);
     } while (rc == SQLITE_SCHEMA);
 	unlock();
@@ -549,7 +549,7 @@ public:
 		  sqlite3_bind_int64(pStmt, 3, period_to);
 
 		  rc = sqlite3_step(pStmt);
-		  assert(rc != SQLITE_ROW);
+		  ENSURE(rc != SQLITE_ROW);
 		  rc = sqlite3_finalize(pStmt);
 	  } while (rc == SQLITE_SCHEMA);
 	  unlock();

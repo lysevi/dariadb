@@ -1,6 +1,5 @@
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/utils/utils.h>
-#include <cassert>
 
 using namespace dariadb;
 using namespace dariadb::compression;

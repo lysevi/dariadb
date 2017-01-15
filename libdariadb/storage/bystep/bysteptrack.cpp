@@ -1,7 +1,7 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/bystep/bysteptrack.h>
 #include <libdariadb/storage/bystep/helpers.h>
-#include <cassert>
+
 #include <cstring>
 
 using namespace dariadb;
@@ -61,7 +61,7 @@ size_t ByStepTrack::position_for_time(const Time t) {
   auto r_time = std::get<0>(rounded_tuple);
   auto r_kind = std::get<1>(rounded_tuple);
   auto pos = ((r_time / r_kind)) % _values.size();
-  assert(pos < _values.size());
+  ENSURE(pos < _values.size());
   return pos;
 }
 

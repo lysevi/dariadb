@@ -2,7 +2,7 @@
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/utils/crc.h>
 #include <algorithm>
-#include <cassert>
+
 #include <cstring>
 
 using namespace dariadb;
@@ -77,7 +77,7 @@ bool Chunk::checkChecksum() {
 
 void Chunk::close() {
   header->crc = this->calcChecksum();
-  assert(header->crc != 0);
+  ENSURE(header->crc != 0);
 }
 
 void Chunk::updateChecksum(ChunkHeader &hdr, u8vector buff) {
@@ -115,7 +115,7 @@ bool Chunk::append(const Meas &m) {
 
   if (!t_f) {
     this->close();
-    assert(c_writer.isFull());
+    ENSURE(c_writer.isFull());
     return false;
   } else {
     header->bw_pos = uint32_t(bw->pos());
@@ -133,7 +133,7 @@ bool Chunk::append(const Meas &m) {
 class ChunkReader : public Chunk::IChunkReader {
 public:
   virtual Meas readNext() override {
-    assert(!is_end());
+    ENSURE(!is_end());
 
     if (_is_first) {
       _is_first = false;

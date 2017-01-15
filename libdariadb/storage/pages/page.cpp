@@ -10,7 +10,7 @@
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/exception.h>
 #include <algorithm>
-#include <cassert>
+
 #include <cstring>
 #include <fstream>
 #include <map>
@@ -87,7 +87,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
       links[cl.meas_id].push_back(cl);
     }
   }
-  assert(openned_pages.size() == pages_full_paths.size());
+  ENSURE(openned_pages.size() == pages_full_paths.size());
   
    PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
    phdr.minTime = MAX_TIME;
@@ -189,7 +189,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     					rdr->readNext();
     					readed++;
     				}
-    				assert(readed == (ch->header->count+1));
+    				ENSURE(readed == (ch->header->count+1));
     			}
     #endif //  DEBUG
     phdr.max_chunk_id++;
@@ -207,14 +207,14 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     #ifdef  DEBUG
 	{
 		auto ch = std::make_shared<Chunk>(chunk_header, chunk_buffer_ptr + skip_count);
-		assert(ch->checkChecksum());
+		ENSURE(ch->checkChecksum());
 		auto rdr = ch->getReader();
 		size_t readed = 0;
 		while (!rdr->is_end()) {
 			rdr->readNext();
 			readed++;
 		}
-		assert(readed == (ch->header->count + 1));
+		ENSURE(readed == (ch->header->count + 1));
 		ch->close();
 	}
     #endif //  DEBUG
@@ -327,7 +327,7 @@ void Page::update_index_recs(const PageHeader &phdr) {
 		  THROW_EXCEPTION("engine: page read error - ", this->filename);
 	  }
       auto index_reccord= PageInner::init_chunk_index_rec(info, &ihdr);
-	  assert(index_reccord.offset == info.offset_in_page);
+	  ENSURE(index_reccord.offset == info.offset_in_page);
 	  std::fwrite(&index_reccord, sizeof(IndexReccord),1, index_file);
 
 	  std::fseek(page_io, info.size, SEEK_CUR);

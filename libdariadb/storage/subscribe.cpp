@@ -1,6 +1,7 @@
 #include<libdariadb/storage/subscribe.h>
+#include<libdariadb/utils/utils.h>
 #include <algorithm>
-#include <cassert>
+
 
 using namespace dariadb::storage;
 using namespace dariadb;
@@ -35,13 +36,13 @@ void SubscribeNotificator::stop() {
 
 void SubscribeNotificator::add(const SubscribeInfo_ptr &n) {
   std::lock_guard<std::mutex> lg(_locker);
-  assert(!is_stoped);
+  ENSURE(!is_stoped);
   _subscribes.push_back(n);
 }
 
 void SubscribeNotificator::on_append(const dariadb::Meas &m) const {
   for (auto si : _subscribes) {
-    assert(si->clbk != nullptr);
+    ENSURE(si->clbk != nullptr);
     if (si->isYours(m)) {
       si->clbk->call(m);
     }

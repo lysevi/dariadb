@@ -9,14 +9,16 @@
 
 #define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
 
-#ifdef _DEBUG
-#define ENSURE(A, E)                                                           \
+#ifdef DOUBLE_CHECKS
+#define ENSURE_MSG(A, E)                                                        \
   if (!(A)) {                                                                  \
-    throw std::invalid_argument(E);                                            \
+    THROW_EXCEPTION(E); \
   }
-#define ENSURE_NOT_NULL(A) ENSURE(A, "null pointer")
+#define ENSURE(A) ENSURE_MSG(A,"check failed")
+#define ENSURE_NOT_NULL(A) ENSURE_MSG(A, "null pointer")
 #else
-#define ENSURE(A, E)
+#define ENSURE_MSG(A)
+#define ENSURE(A)
 #define ENSURE_NOT_NULL(A)
 #endif
 

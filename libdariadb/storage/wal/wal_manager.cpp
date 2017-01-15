@@ -8,7 +8,7 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
 
-#include <cassert>
+
 #include <iterator>
 #include <tuple>
 

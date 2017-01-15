@@ -1,6 +1,5 @@
 #include <libdariadb/compression/delta.h>
 #include <libdariadb/utils/utils.h>
-#include <cassert>
 #include <limits>
 
 using namespace dariadb::compression;
@@ -128,7 +127,7 @@ dariadb::Time DeltaDeCompressor::read() {
           result = bw->read<uint64_t>();
 		}
 		else {
-			assert(false);
+            ENSURE(false);
 		}
       }
     }

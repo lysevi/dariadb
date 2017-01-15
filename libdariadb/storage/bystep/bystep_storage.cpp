@@ -7,7 +7,7 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
-#include <cassert>
+
 #include <cstring>
 #include <memory>
 #include <shared_mutex>

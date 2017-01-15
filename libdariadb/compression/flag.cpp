@@ -1,6 +1,5 @@
 #include <libdariadb/compression/flag.h>
 
-#include <cassert>
 #include <limits>
 
 using namespace dariadb::compression;

@@ -184,8 +184,8 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
 }
 
 Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
-  assert(ids.size() == size_t(1));
-  assert(ids[0] == this->_meas_id);
+  ENSURE(ids.size() == size_t(1));
+  ENSURE(ids[0] == this->_meas_id);
   std::lock_guard<utils::async::Locker> lg(_locker);
   Id2Meas result;
   if (_cur_chunk != nullptr) {

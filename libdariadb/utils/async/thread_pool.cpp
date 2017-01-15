@@ -1,6 +1,6 @@
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
-#include <cassert>
+
 
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
@@ -41,7 +41,7 @@ TaskResult_Ptr AsyncTaskWrap::result()const {
 	return _result;
 }
 ThreadPool::ThreadPool(const Params &p) : _params(p) {
-  assert(_params.threads_count > 0);
+  ENSURE(_params.threads_count > 0);
   _stop_flag = false;
   _is_stoped = false;
   _task_runned = size_t(0);

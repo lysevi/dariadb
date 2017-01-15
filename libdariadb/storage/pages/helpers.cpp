@@ -7,7 +7,7 @@
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <algorithm>
-#include <cassert>
+
 #include <cstring>
 #include <fstream>
 
@@ -36,8 +36,8 @@ std::map<Id, MeasArray> splitById(const MeasArray &ma) {
   MeasArray current_id_values;
   current_id_values.resize(ma.size());
 
-  assert(current_id_values.size() != 0);
-  assert(current_id_values.size() == ma.size());
+  ENSURE(current_id_values.size() != 0);
+  ENSURE(current_id_values.size() == ma.size());
 
   for (auto it = begin; it != end; ++it, ++i) {
     if (visited[i]) {
@@ -148,7 +148,7 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
 #ifdef  DEBUG
 	{
 		auto ch = std::make_shared<Chunk>(&chunk_header, chunk_buffer_ptr.get() + skip_count);
-		assert(ch->checkChecksum());
+		ENSURE(ch->checkChecksum());
 		ch->close();
 	}
 #endif

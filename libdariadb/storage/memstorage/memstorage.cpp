@@ -134,8 +134,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         continue;
       }
       if (!in_stop & !c->isFull()) { // not full
-        assert(!in_stop);
-        assert(!c->isFull());
+        ENSURE(!in_stop);
+        ENSURE(!c->isFull());
         continue;
       }
      /* if (_settings->strategy.value() == STRATEGY::CACHE && (!c->already_in_disk())) {
@@ -164,7 +164,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       for (size_t i = 0; i < pos; ++i) {
         auto c = all_chunks[i];
         auto mc = dynamic_cast<MemChunk *>(c);
-        assert(mc != nullptr);
+        ENSURE(mc != nullptr);
 
         TimeTrack *track = mc->_track;
         track->rm_chunk(mc);
@@ -291,7 +291,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   void setDiskStorage(IMeasWriter *_disk) { _disk_storage = _disk; }
 
   void addChunk(MemChunk_Ptr &chunk) override {
-    assert(chunk->_a_data.position < _chunks.size());
+    ENSURE(chunk->_a_data.position < _chunks.size());
 
     _chunks[chunk->_a_data.position] = chunk;
     if (is_time_to_drop()) {
