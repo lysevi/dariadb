@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../common.h"
-#include "../meas.h"
-#include "../storage/query_param.h"
+#include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
+#include <libdariadb/status.h>
+#include <libdariadb/storage/query_param.h>
 #include <memory>
 
 namespace dariadb {
@@ -10,14 +11,13 @@ namespace storage {
 
 class IMeasWriter {
 public:
-  virtual append_result append(const Meas &value) = 0;
-  virtual append_result append(const Meas::MeasArray::const_iterator &begin,
-                               const Meas::MeasArray::const_iterator &end);
-  virtual append_result append(const Meas::MeasList::const_iterator &begin,
-                               const Meas::MeasList::const_iterator &end);
-
-  virtual void flush() = 0;
-  virtual ~IMeasWriter() {}
+  EXPORT virtual Status append(const Meas &value);
+  EXPORT virtual void flush();
+  EXPORT virtual Status append(const MeasArray::const_iterator &begin,
+                               const MeasArray::const_iterator &end);
+  EXPORT virtual Status append(const MeasList::const_iterator &begin,
+                               const MeasList::const_iterator &end);
+  EXPORT virtual ~IMeasWriter();
 };
 
 typedef std::shared_ptr<IMeasWriter> IMeasWriter_ptr;

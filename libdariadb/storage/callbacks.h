@@ -1,22 +1,21 @@
 #pragma once
 
-#include "../interfaces/icallbacks.h"
-#include "../meas.h"
-#include "../utils/locker.h"
+#include <libdariadb/interfaces/icallbacks.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
+#include <libdariadb/utils/async/locker.h>
+#include <condition_variable>
 #include <memory>
 
 namespace dariadb {
 namespace storage {
 
-class MList_ReaderClb : public IReaderClb {
-public:
-  MList_ReaderClb() : mlist() {}
-  void call(const Meas &m) override {
-    std::lock_guard<utils::Locker> lg(_locker);
-    mlist.push_back(m);
-  }
-  Meas::MeasList mlist;
-  utils::Locker _locker;
+struct MList_ReaderClb : public IReaderClb {
+  EXPORT MList_ReaderClb();
+  EXPORT void call(const Meas &m) override;
+
+  MeasList mlist;
+  utils::async::Locker _locker;
 };
 }
 }

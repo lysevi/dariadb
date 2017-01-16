@@ -1,152 +1,116 @@
 cmake_minimum_required (VERSION 3.1)
-project (dariadb)
+set(PROJECT "dariadb")
+project (${PROJECT} VERSION 0.2.0)
+
+IF(NOT CMAKE_BUILD_TYPE)
+        message(STATUS "CMAKE_BUILD_TYPE is not set, set to default = RELWITHDEBINFO")
+        SET(CMAKE_BUILD_TYPE "RELWITHDEBINFO")
+ENDIF()
+
+MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
+
+option(ENABLE_TESTS "Enable testing of the dariadb." ON)
+option(ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
+option(ENABLE_SERVER "Enable build dariadb server." ON)
+option(ENABLE_BENCHMARKS "Enable build dariadb benchmarks." ON)
+option(ENABLE_SAMPLES "Build dariadb sample programs." ON)
+option(ENABLE_DOUBLECHECKS "More checks in code." OFF)
+option(CLANG_ASAN_UBSAN "Enable Clang address & undefined behavior sanitizer for binary." OFF)
+option(CLANG_MSAN "Enable Clang memory sanitizer for binary." OFF)
+
+if((CLANG_ASAN_UBSAN AND CLANG_MSAN))
+  message(FATAL_ERROR "Sanitizers cannot be enabled simultaneously.")
+endif()
+
+if((CLANG_ASAN_UBSAN OR CLANG_MSAN) AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+  message(FATAL_ERROR "Sanitizers are only supported for Clang.")
+  EXIT()
+endif()
+
+MESSAGE(STATUS "Options: ")
+MESSAGE(STATUS "ENABLE_TESTS - " ${ENABLE_TESTS})
+MESSAGE(STATUS "ENABLE_INTEGRATION_TESTS - " ${ENABLE_INTEGRATION_TESTS})
+MESSAGE(STATUS "ENABLE_SERVER - " ${ENABLE_SERVER})
+MESSAGE(STATUS "ENABLE_BENCHMARKS - " ${ENABLE_BENCHMARKS})
+MESSAGE(STATUS "ENABLE_SAMPLES - " ${ENABLE_SAMPLES})
+MESSAGE(STATUS "ENABLE_DOUBLECHECKS - " ${ENABLE_DOUBLECHECKS})
+MESSAGE(STATUS "CLANG_MSAN - " ${CLANG_MSAN})
+MESSAGE(STATUS "CLANG_ASAN_UBSAN - " ${CLANG_ASAN_UBSAN})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(AddCXXCompilerFlag)
+include(CompillerSettings)
 
-set(dariadb_MAJOR_VERSION 0)
-set(dariadb_MINOR_VERSION 1)
-set(dariadb_PATCH_VERSION 1)
-set(dariadb_VERSION${dariadb_MAJOR_VERSION}.${dariadb_MINOR_VERSION}.${dariadb_PATCH_VERSION})
-
-
-set(Boost_USE_STATIC_LIBS        OFF)
-set(Boost_USE_MULTITHREADED      ON)
-set(Boost_USE_STATIC_RUNTIME     OFF)
-set(BOOST_ALL_DYN_LINK           ON)
-
-#if(NOT MSVC)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-#endif(NOT MSVC)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(BOOST_DEP unit_test_framework system filesystem)
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
 
-IF(WIN32)
-  MESSAGE(STATUS "WIN32:")
-  MESSAGE(STATUS "+ boost root: " ${BOOST_ROOT})
+set(BOOST_DEP system filesystem date_time)
 
-  if(MSVC)
-    find_package(Boost 1.57.0 REQUIRED ${BOOST_DEP})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  /EHsc")
-    add_cxx_compiler_flag(-W4)
-    add_definitions(-DMSVC)
-    add_definitions(-D_ENABLE_ATOMIC_ALIGNMENT_FIX)
-  else(MSVC)
-    set(BOOST_DEP ${BOOST_DEP} program_options)
-    find_package(Boost 1.57.0 REQUIRED ${BOOST_DEP})
-  endif(MSVC)
+if(ENABLE_TESTS)
+  set(BOOST_DEP ${BOOST_DEP} unit_test_framework)
+endif()
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
-  set(CMAKE_CXX_FLAGS_RELEASE "/Ox /GT /Ot -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Oy") #-fno-omit-frame-pointer analog
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
-else(WIN32)
-  set(BoostUSESTATIC_LIBS OFF)
+IF(ENABLE_DOUBLECHECKS)
+ add_definitions(-DDOUBLE_CHECKS)
+ENDIF()
+
+IF(WIN32 AND MSVC)
+  find_package(Boost 1.54.0 COMPONENTS ${BOOST_DEP} REQUIRED)
+else()
   set(BOOST_DEP ${BOOST_DEP} program_options)
   find_package(Boost  REQUIRED ${BOOST_DEP})
-
-  set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
-    "Flags used by the C++ compiler during coverage builds."
-    FORCE)
-  set(CMAKE_EXE_LINKER_FLAGS_COVERAGE
-    "${CMAKE_EXE_LINKER_FLAGS_DEBUG}" CACHE STRING
-    "Flags used for linking binaries during coverage builds."
-    FORCE)
-  set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE
-    "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}" CACHE STRING
-    "Flags used by the shared libraries linker during coverage builds."
-    FORCE)
-  mark_as_advanced(
-    CMAKE_CXX_FLAGS_COVERAGE
-    CMAKE_EXE_LINKER_FLAGS_COVERAGE
-    CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
-  set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
-    "Choose the type of build, options are: None Debug Release Coverage."
-    FORCE)
-  #add_cxx_compiler_flag(--coverage COVERAGE)
-  #SET(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} --coverage -O0")
-ENDIF(WIN32)
+ENDIF()
 
 IF(Boost_FOUND)
   INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
   LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
-else(Boost_FOUND)
+  SET(DARIADB_LIB_PATH ${Boost_LIBRARY_DIRS}
+              CACHE STRING "dariadb libs path.")
+else()
   MESSAGE(FATAL_ERROR "boost not found")
   EXIT()
-ENDIF(Boost_FOUND)
+ENDIF()
 
 find_package (Threads)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-  MESSAGE(STATUS "gcc compiller")
-  add_definitions(-DGNU_CPP)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -ftemplate-backtrace-limit=0")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -pedantic-errors -Wno-pedantic")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wwrite-strings")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdeprecated-declarations")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftest-coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-compare")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_LOG_DYN_LINK=1")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -fno-inline -g3 -fstack-protector-all -DDEBUG")
-  set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
-
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-strict-aliasing -Werror=pragmas") #boost-shared-mutex error;
-endif(CMAKE_COMPILER_IS_GNUCXX)
-
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  MESSAGE(STATUS "clang compiller")
-  add_definitions(-DCLANG_CPP)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -ftemplate-backtrace-limit=0")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weverything -Werror -pedantic-errors")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-declarations -Wno-error=deprecated")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-return-stack-address -Wno-undef")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-weak-vtables -Wno-padded")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-global-constructors -Wno-exit-time-destructors")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-shorten-64-to-32 -Wno-sign-conversion")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-prototypes -Wno-missing-variable-declarations")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-shadow -Wno-old-style-cast")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-documentation -Wno-documentation-unknown-command")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reserved-id-macro") #for stx::btree
-  #main
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-cast-align -Wno-disabled-macro-expansion")
-  #jsonpp
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch-enum -Wno-switch-default -Wno-covered-switch-default")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -fno-inline -g3 -fstack-protector-all -DDEBUG")
-  set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
-endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include_directories(extern)
+include_directories(extern/spdlog/include)
+include_directories(extern/stx-btree/include)
 
-option(ENABLE_TESTING "Enable testing of the dariadb." ON)
-option(ENABLE_METRICS "Enable code metrics." ON)
-MESSAGE(STATUS "Options: ")
-MESSAGE(STATUS "ENABLE_TESTING - " ${ENABLE_TESTING})
-MESSAGE(STATUS "ENABLE_METRICS - " ${ENABLE_METRICS})
+add_subdirectory(extern/libsqlite3)
+include_directories(extern/libsqlite3)
 
-if (ENABLE_METRICS)
-  add_definitions(-DENABLE_METRICS)
-endif(ENABLE_METRICS)
+set_target_properties(sqlite3 PROPERTIES FOLDER Extern)
+
+SET(DARIADB_STORAGE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
+            CACHE STRING "dariadb storage include dir for storage engine.")
 
 add_subdirectory (libdariadb)
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+if(ENABLE_SERVER)
+  add_subdirectory (network)
+endif()
 
-if (ENABLE_TESTING)
-   enable_testing()
-   add_subdirectory(tests)
-endif(ENABLE_TESTING)
+if (ENABLE_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
 
+if(ENABLE_BENCHMARKS)
+  add_subdirectory (benchmarks)
+endif()
 
-add_subdirectory (benchmarks)
 add_subdirectory (tools)
+
+if(ENABLE_SAMPLES)
+  add_subdirectory(examples)
+endif()

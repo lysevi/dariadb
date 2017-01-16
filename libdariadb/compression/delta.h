@@ -1,42 +1,28 @@
 #pragma once
 
-#include "base_compressor.h"
-#include "positions.h"
+#include <libdariadb/compression/base_compressor.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace compression {
+struct DeltaCompressor : public BaseCompressor {
+  EXPORT DeltaCompressor(const ByteBuffer_Ptr &bw);
 
-class DeltaCompressor : public BaseCompressor {
-public:
-  DeltaCompressor() = default;
-  DeltaCompressor(const BinaryBuffer_Ptr &bw);
+  EXPORT bool append(Time t);
 
-  bool append(Time t);
-
-  DeltaCompressionPosition get_position() const;
-  void restore_position(const DeltaCompressionPosition &pos);
-
-  static uint16_t get_delta_64(int64_t D);
-  static uint16_t get_delta_256(int64_t D);
-  static uint16_t get_delta_2048(int64_t D);
-  static uint64_t get_delta_big(int64_t D);
-
-protected:
-  bool _is_first;
-  Time _first;
-  int64_t _prev_delta;
-  Time _prev_time;
+  bool is_first;
+  Time first;
+  int64_t prev_delta;
+  Time prev_time;
 };
 
-class DeltaDeCompressor : public BaseCompressor {
-public:
-  DeltaDeCompressor(const BinaryBuffer_Ptr &bw, Time first);
+struct DeltaDeCompressor : public BaseCompressor {
+  EXPORT DeltaDeCompressor(const ByteBuffer_Ptr &bw, Time first);
 
-  Time read();
+  EXPORT Time read();
 
-protected:
-  int64_t _prev_delta;
-  Time _prev_time;
+  int64_t prev_delta;
+  Time prev_time;
 };
 }
 }

@@ -1,171 +1,138 @@
-#include "delta.h"
-#include "../utils/exception.h"
-#include "../utils/utils.h"
-#include "binarybuffer.h"
-
-#include <cassert>
+#include <libdariadb/compression/delta.h>
+#include <libdariadb/utils/utils.h>
 #include <limits>
-#include <sstream>
 
 using namespace dariadb::compression;
+#pragma pack(push, 1)
+union conv_32 {
+  uint32_t big;
+  struct {
+    uint16_t lo;
+    uint8_t hi;
+  } small;
+};
+#pragma pack(pop)
 
-const uint16_t delta_64_mask = 0x200;       // 10 0000 0000
-const uint16_t delta_64_mask_inv = 0x7F;    // 00 1111 111
-const uint16_t delta_256_mask = 0xC00;      // 1100 0000 0000
-const uint16_t delta_256_mask_inv = 0x1FF;  // 0001 1111 1111
-const uint16_t delta_2047_mask = 0xE000;    // 1110 0000 0000 0000
-const uint16_t delta_2047_mask_inv = 0xFFF; // 0000 1111 1111 1111
-const uint64_t delta_big_mask =
-    0xF00000000; // 1111 [0000 0000] [0000 0000][0000 0000] [0000 0000]
-const uint64_t delta_big_mask_inv =
-    0xFFFFFFFF; // 0000 1111 1111 1111 1111 1111 1111   1111 1111
+const uint8_t delta_1b_mask = 0x80;     // 1000 0000
+const uint8_t delta_1b_mask_inv = 0x3F; // 0011 1111
 
-DeltaCompressor::DeltaCompressor(const BinaryBuffer_Ptr &bw)
-    : BaseCompressor(bw), _is_first(true), _first(0), _prev_delta(0), _prev_time(0) {}
+const uint16_t delta_2b_mask = 0xC000;     // 1100 0000 0000 0000
+const uint16_t delta_2b_mask_inv = 0x1FFF; // 0001 1111 1111 1111
+
+const uint32_t delta_3b_mask = 0xE00000;    // 1110 0000 0000 0000 0000 0000
+const uint32_t delta_3b_mask_inv = 0xFFFFF; // 0000 1111 1111 1111 1111 1111
+
+uint8_t get_delta_1b(int64_t D) {
+  return delta_1b_mask | (delta_1b_mask_inv & static_cast<uint8_t>(D));
+}
+
+uint16_t get_delta_2b(int64_t D) {
+  return delta_2b_mask | (delta_2b_mask_inv & static_cast<uint16_t>(D));
+}
+
+uint32_t get_delta_3b(int64_t D) {
+  return delta_3b_mask | (delta_3b_mask_inv & static_cast<uint32_t>(D));
+}
+
+DeltaCompressor::DeltaCompressor(const ByteBuffer_Ptr &bw_)
+    : BaseCompressor(bw_), is_first(true), first(0), prev_delta(0), prev_time(0) {}
 
 bool DeltaCompressor::append(dariadb::Time t) {
-  if (_is_first) {
-    _first = t;
-    _is_first = false;
-    _prev_time = t;
-    _prev_delta = 0;
+  if (is_first) {
+    first = t;
+    is_first = false;
+    prev_time = t;
+    prev_delta = 0;
     return true;
   }
 
-  int64_t D = (t - _prev_time) - _prev_delta;
-  if (D == 0) {
-    if (_bw->free_size() < 1) {
+  int64_t D = (t - prev_time) - prev_delta;
+
+  if ((-32 < D) && (D < 32)) {
+    if (bw->free_size() < 1) {
       return false;
     }
-    _bw->clrbit().incbit();
+    auto d = get_delta_1b(D);
+    bw->write<uint8_t>(d);
   } else {
-    if ((-63 < D) && (D < 64)) {
-      if (_bw->free_size() < 2) {
+    if ((-4096 < D) && (D < 4096)) {
+      if (bw->free_size() < 2) {
         return false;
       }
-      auto d = DeltaCompressor::get_delta_64(D);
-      _bw->write(d, 9);
+      auto d = get_delta_2b(D);
+      bw->write<uint16_t>(d);
     } else {
-      if ((-255 < D) && (D < 256)) {
-        if (_bw->free_size() < 2) {
+      if ((-524288 < D) && (D < 524287)) {
+        if (bw->free_size() < 3) {
           return false;
         }
-        auto d = DeltaCompressor::get_delta_256(D);
-        _bw->write(d, 11);
+        auto d = get_delta_3b(D);
+        conv_32 c;
+        c.big = d;
+
+        bw->write<uint8_t>(c.small.hi);
+        bw->write<uint16_t>(c.small.lo);
       } else {
-        if ((-2047 < D) && (D < 2048)) {
-          if (_bw->free_size() < 3) {
-            return false;
-          }
-          auto d = DeltaCompressor::get_delta_2048(D);
-          _bw->write(d, 15);
-        } else {
-          if (_bw->free_size() < 6) {
-            return false;
-          }
-          auto d = DeltaCompressor::get_delta_big(D);
-          _bw->write(d, 35);
+        if (bw->free_size() < 9) {
+          return false;
         }
+        bw->write<uint8_t>(uint8_t(0));
+        bw->write<uint64_t>(D);
       }
     }
   }
 
-  _prev_delta = D;
-  _prev_time = t;
+  prev_delta = D;
+  prev_time = t;
   return true;
 }
 
-DeltaCompressionPosition DeltaCompressor::get_position() const {
-  DeltaCompressionPosition result;
-  result._first = _first;
-  result._is_first = _is_first;
-  result._prev_delta = _prev_delta;
-  result._prev_time = _prev_time;
-  return result;
-}
-
-void DeltaCompressor::restore_position(const DeltaCompressionPosition &pos) {
-  _first = pos._first;
-  _is_first = pos._is_first;
-  _prev_delta = pos._prev_delta;
-  _prev_time = pos._prev_time;
-}
-
-uint16_t DeltaCompressor::get_delta_64(int64_t D) {
-  return delta_64_mask | (delta_64_mask_inv & static_cast<uint16_t>(D));
-}
-
-uint16_t DeltaCompressor::get_delta_256(int64_t D) {
-  return delta_256_mask | (delta_256_mask_inv & static_cast<uint16_t>(D));
-}
-
-uint16_t DeltaCompressor::get_delta_2048(int64_t D) {
-  return delta_2047_mask | (delta_2047_mask_inv & static_cast<uint16_t>(D));
-}
-
-uint64_t DeltaCompressor::get_delta_big(int64_t D) {
-  return delta_big_mask | (delta_big_mask_inv & D);
-}
-
-DeltaDeCompressor::DeltaDeCompressor(const BinaryBuffer_Ptr &bw, dariadb::Time first)
-    : BaseCompressor(bw), _prev_delta(0), _prev_time(first) {}
+DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_, dariadb::Time first)
+    : BaseCompressor(bw_), prev_delta(0), prev_time(first) {}
 
 dariadb::Time DeltaDeCompressor::read() {
-  auto b0 = _bw->getbit();
-  _bw->incbit();
+  auto first_byte = bw->read<uint8_t>();
 
-  if (b0 == 0) {
-    return _prev_time + _prev_delta;
-  }
-
-  auto b1 = _bw->getbit();
-  _bw->incbit();
-  if ((b0 == 1) && (b1 == 0)) { // 64
-    int8_t result = static_cast<int8_t>(_bw->read(7));
-
-    if (result > 64) { // is negative
-      result = (-128) | result;
+  int64_t result = 0;
+  if ((first_byte & delta_1b_mask) == delta_1b_mask &&
+      !utils::BitOperations::check(first_byte, 6)) {
+    result = first_byte & delta_1b_mask_inv;
+    if (result > 32) { // negative
+      result = (-64) | result;
     }
+  } else {
+    if ((first_byte & (delta_2b_mask >> 8)) == (delta_2b_mask >> 8) &&
+        !utils::BitOperations::check(first_byte, 5)) {
+      auto second = bw->read<uint8_t>();
+      auto first_unmasked = first_byte & (delta_2b_mask_inv >> 8);
+      result = ((uint16_t)first_unmasked << 8) | (uint16_t)second;
 
-    auto ret = _prev_time + result + _prev_delta;
-    _prev_delta = result;
-    _prev_time = ret;
-    return ret;
-  }
-
-  auto b2 = _bw->getbit();
-  _bw->incbit();
-  if ((b0 == 1) && (b1 == 1) && (b2 == 0)) { // 256
-    int16_t result = static_cast<int16_t>(_bw->read(8));
-    if (result > 256) { // is negative
-      result = (-256) | result;
+      if (result > 4096) { // negative
+        result = (-4096) | result;
+      }
+    } else {
+      if ((first_byte & (delta_3b_mask >> (16))) == (delta_3b_mask >> 16)) {
+        auto second = bw->read<uint16_t>();
+        auto first_unmasked = first_byte & (uint8_t)(delta_3b_mask_inv >> (16));
+        conv_32 c;
+        c.big = 0;
+        c.small.hi = (uint8_t)first_unmasked;
+        c.small.lo = second;
+        result = c.big;
+        if (result > delta_3b_mask_inv) { // negative
+          result = (-1048576) | result;
+        }
+      } else {
+        if (first_byte == 0) {
+          result = bw->read<uint64_t>();
+        } else {
+          ENSURE(false);
+        }
+      }
     }
-    auto ret = _prev_time + result + _prev_delta;
-    _prev_delta = result;
-    _prev_time = ret;
-    return ret;
   }
-
-  auto b3 = _bw->getbit();
-  _bw->incbit();
-  if ((b0 == 1) && (b1 == 1) && (b2 == 1) && (b3 == 0)) { // 2048
-    int16_t result = static_cast<int16_t>(_bw->read(11));
-    if (result > 2048) { // is negative
-      result = (-2048) | result;
-    }
-
-    auto ret = _prev_time + result + _prev_delta;
-    _prev_delta = result;
-    _prev_time = ret;
-    return ret;
-  }
-
-  int64_t result = _bw->read(31);
-  if (result > std::numeric_limits<int32_t>::max()) {
-    result = (-4294967296) | result;
-  }
-  auto ret = _prev_time + result + _prev_delta;
-  _prev_delta = result;
-  _prev_time = ret;
+  auto ret = prev_time + result + prev_delta;
+  prev_delta = result;
+  prev_time = ret;
   return ret;
 }

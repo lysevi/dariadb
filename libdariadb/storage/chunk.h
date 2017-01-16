@@ -1,47 +1,72 @@
 #pragma once
 
-#include "../compression/binarybuffer.h"
-#include "../compression/compression.h"
-#include "../meas.h"
-#include "../utils/locker.h"
-#include "../utils/lru.h"
-#include "../utils/utils.h"
+#include <libdariadb/compression/bytebuffer.h>
+#include <libdariadb/compression/compression.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
+#include <libdariadb/utils/async/locker.h>
+#include <libdariadb/utils/utils.h>
 
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <vector>
+
 namespace dariadb {
 namespace storage {
-enum class ChunkKind : uint8_t { Simple, Compressed };
-
-std::ostream &operator<<(std::ostream &stream, const ChunkKind &k);
 #pragma pack(push, 1)
+struct MeasData {
+  Id id;
+  Time time;
+  Value value;
+  Flag flag;
+};
 struct ChunkHeader {
-  uint64_t id; // chunk id;
-  bool is_init : 1;
-  bool is_sorted : 1;
-  bool is_readonly : 1;
-  ChunkKind kind;
-  Meas first, last;
-  Time minTime, maxTime;
-  Id minId, maxId;
-  uint64_t id_bloom;
-  uint64_t flag_bloom;
-  uint32_t count;
-  uint32_t bw_pos;
-  uint8_t bw_bit_num;
+  uint64_t id;                    /// chunk id.
+  Id meas_id;                     /// measurement id.
+  MeasData data_first, data_last; /// date of first and last added measurements.
+  Time minTime, maxTime;          /// min and max time.
+  uint64_t flag_bloom;            /// bool filter for storead flags.
+  uint32_t count;                 /// count of stored values.
+  uint32_t bw_pos;                /// needed for unpack.
 
-  compression::CopmressedWriter::Position writer_position;
+  uint32_t size; /// size of buffer with values.
+  uint32_t crc;  /// checksum.
 
-  size_t size;
-  uint32_t crc;
+  uint64_t offset_in_page; /// pos in page file.
 
-  uint32_t pos_in_page;
-  uint64_t offset_in_page;
+  Meas first() const {
+    Meas m = Meas::empty(meas_id);
+    m.flag = data_first.flag;
+    m.time = data_first.time;
+    m.value = data_first.value;
+    return m;
+  }
+
+  Meas last() const {
+    Meas m = Meas::empty(meas_id);
+    m.flag = data_last.flag;
+    m.time = data_last.time;
+    m.value = data_last.value;
+    return m;
+  }
+
+  void set_first(Meas m) {
+    data_first.flag = m.flag;
+    data_first.time = m.time;
+    data_first.value = m.value;
+    meas_id = m.id;
+  }
+
+  void set_last(Meas m) {
+    data_last.flag = m.flag;
+    data_last.time = m.time;
+    data_last.value = m.value;
+  }
 };
 #pragma pack(pop)
 
-class Chunk {
+class Chunk : public std::enable_shared_from_this<Chunk> {
 public:
   class IChunkReader {
   public:
@@ -54,26 +79,30 @@ public:
 
   typedef uint8_t *u8vector;
 
-  Chunk(ChunkHeader *hdr, uint8_t *buffer, size_t _size, Meas first_m);
-  Chunk(ChunkHeader *hdr, uint8_t *buffer);
-  virtual ~Chunk();
+  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
+  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer);
+  EXPORT ~Chunk();
 
-  virtual bool append(const Meas &m) = 0;
-  virtual bool is_full() const = 0;
-  virtual ChunkReader_Ptr get_reader() = 0;
-  virtual bool check_id(const Id &id);
-  virtual void close() = 0;
-  virtual uint32_t calc_checksum() = 0;
-  virtual uint32_t get_checksum() = 0;
-  virtual bool check_checksum();
-  bool check_flag(const Flag &f);
+  EXPORT bool append(const Meas &m);
+  EXPORT bool isFull() const;
+  EXPORT ChunkReader_Ptr getReader();
+  EXPORT void close();
+  EXPORT uint32_t calcChecksum();
+  EXPORT uint32_t getChecksum();
+  EXPORT virtual bool checkId(const Id &id);
+  EXPORT virtual bool checkChecksum();
+  EXPORT bool checkFlag(const Flag &f);
 
+  EXPORT static void updateChecksum(ChunkHeader &hdr, u8vector buff);
+  EXPORT static uint32_t calcChecksum(ChunkHeader &hdr, u8vector buff);
+  /// return - count of skipped bytes.
+  EXPORT static uint32_t compact(ChunkHeader *hdr);
   ChunkHeader *header;
   u8vector _buffer_t;
 
-  compression::BinaryBuffer_Ptr bw;
-
-  bool should_free; // chunk dtor must (delete[]) resource.
+  compression::ByteBuffer_Ptr bw;
+  compression::CopmressedWriter c_writer;
+  bool is_owner; // true - dealloc memory for header and buffer.
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;
@@ -81,21 +110,5 @@ typedef std::list<Chunk_Ptr> ChunksList;
 typedef std::map<Id, Chunk_Ptr> IdToChunkMap;
 typedef std::map<Id, ChunksList> ChunkMap;
 typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
-
-class ZippedChunk : public Chunk, public std::enable_shared_from_this<Chunk> {
-public:
-  ZippedChunk(ChunkHeader *index, uint8_t *buffer, size_t _size, Meas first_m);
-  ZippedChunk(ChunkHeader *index, uint8_t *buffer);
-  ~ZippedChunk();
-  bool is_full() const override { return c_writer.is_full(); }
-  bool append(const Meas &m) override;
-  void close() override;
-
-  uint32_t calc_checksum() override;
-  uint32_t get_checksum() override;
-  ChunkReader_Ptr get_reader() override;
-  utils::Range range;
-  compression::CopmressedWriter c_writer;
-};
 }
 }

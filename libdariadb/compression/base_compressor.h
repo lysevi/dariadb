@@ -1,17 +1,16 @@
 #pragma once
-#include "../meas.h"
-#include "binarybuffer.h"
-
+#include <libdariadb/compression/bytebuffer.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
 namespace dariadb {
 namespace compression {
-class BaseCompressor {
-public:
-  BaseCompressor(const BinaryBuffer_Ptr &bw);
-  bool is_full() const { return _bw->is_full(); }
-  size_t used_space() const { return _bw->cap() - _bw->pos(); }
 
-protected:
-  BinaryBuffer_Ptr _bw;
+struct BaseCompressor {
+  EXPORT BaseCompressor(const ByteBuffer_Ptr &bw_);
+  bool is_full() const { return bw->is_full(); }
+  size_t used_space() const { return bw->cap() - bw->pos(); }
+
+  ByteBuffer_Ptr bw;
 };
 }
 }

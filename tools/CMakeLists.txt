@@ -1,16 +1,4 @@
-include_directories(../libdariadb)
-MESSAGE(STATUS "Tools: ")
+INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
 
-macro(ADD_TOOL name src)
-        MESSAGE(STATUS " +" ${name})
-        add_executable(${name} ${src})
-
-        target_link_libraries(${name}
-                                ${CMAKE_THREAD_LIBS_INIT}
-                                ${Boost_LIBRARIES}
-                                libdariadb)
-
-         set_target_properties(${name} PROPERTIES FOLDER Tools)
-endmacro(ADD_TOOL)
-
-ADD_TOOL(page_info page_info.cpp)
+add_subdirectory (dariadb-ctl)

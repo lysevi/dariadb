@@ -1,56 +1,58 @@
 #pragma once
 
-#include "../meas.h"
-#include "binarybuffer.h"
-#include "positions.h"
 #include <memory>
+
+#include <libdariadb/compression/bytebuffer.h>
+#include <libdariadb/compression/delta.h>
+#include <libdariadb/compression/flag.h>
+#include <libdariadb/compression/xor.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace compression {
-
 class CopmressedWriter {
 public:
-  struct Position {
-    DeltaCompressionPosition time_pos;
-    XorCompressionPosition value_pos;
-    FlagCompressionPosition flag_pos, src_pos;
-    Meas first;
-    bool is_first;
-    bool is_full;
-  };
-  CopmressedWriter();
-  CopmressedWriter(const BinaryBuffer_Ptr &bw_time);
-  ~CopmressedWriter();
-  CopmressedWriter(const CopmressedWriter &other);
+  EXPORT CopmressedWriter(const ByteBuffer_Ptr &bw_time);
+  EXPORT ~CopmressedWriter();
 
-  void swap(CopmressedWriter &other);
+  EXPORT bool append(const Meas &m);
+  bool isFull() const { return _is_full; }
 
-  CopmressedWriter &operator=(const CopmressedWriter &other);
-  CopmressedWriter &operator=(CopmressedWriter &&other);
+  size_t usedSpace() const { return time_comp.used_space(); }
 
-  bool append(const Meas &m);
-  bool is_full() const;
-
-  size_t used_space() const;
-
-  Position get_position() const;
-  void restore_position(const Position &pos);
+  ByteBuffer_Ptr getBinaryBuffer() const { return _bb; }
 
 protected:
-  class Private;
-  std::unique_ptr<Private> _Impl;
+  ByteBuffer_Ptr _bb;
+  Meas _first;
+  bool _is_first;
+  bool _is_full;
+  DeltaCompressor time_comp;
+  XorCompressor value_comp;
+  FlagCompressor flag_comp;
 };
 
 class CopmressedReader {
 public:
-  CopmressedReader(const BinaryBuffer_Ptr &bw_time, const Meas &first);
-  ~CopmressedReader();
+  CopmressedReader() = default;
+  EXPORT CopmressedReader(const ByteBuffer_Ptr &bw_time, const Meas &first);
+  EXPORT ~CopmressedReader();
 
-  Meas read();
+  dariadb::Meas read() {
+    Meas result{};
+    result.id = _first.id;
+    result.time = time_dcomp.read();
+    result.value = value_dcomp.read();
+    result.flag = flag_dcomp.read();
+    return result;
+  }
 
 protected:
-  class Private;
-  std::unique_ptr<Private> _Impl;
+  dariadb::Meas _first;
+  DeltaDeCompressor time_dcomp;
+  XorDeCompressor value_dcomp;
+  FlagDeCompressor flag_dcomp;
 };
 }
 }

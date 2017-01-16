@@ -1,9 +1,14 @@
 #pragma once
 
-#include "../utils/locker.h"
+#include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
+#include <libdariadb/storage/bystep/step_kind.h>
+#include <libdariadb/storage/settings.h>
+#include <libdariadb/utils/async/locker.h>
 #include <list>
 #include <memory>
 #include <string>
+#include <tuple>
 
 namespace dariadb {
 namespace storage {
@@ -11,39 +16,30 @@ namespace storage {
 const std::string MANIFEST_FILE_NAME = "Manifest";
 
 class Manifest {
-  Manifest(const std::string &fname);
-
 public:
-  Manifest() = delete;
-  static void start(const std::string &fname);
-  static void stop();
-  static Manifest *instance();
-  void restore();
+  EXPORT Manifest() = delete;
+  EXPORT Manifest(const Settings_ptr &settings);
+  EXPORT ~Manifest();
 
-  std::list<std::string> page_list();
-  void page_append(const std::string &rec);
-  void page_rm(const std::string &rec);
+  EXPORT std::list<std::string> page_list();
+  EXPORT void page_append(const std::string &rec);
+  EXPORT void page_rm(const std::string &rec);
 
-  std::list<std::string> cola_list();
-  void cola_append(const std::string &rec);
-  void cola_rm(const std::string &rec);
+  EXPORT std::list<std::string> wal_list();
+  EXPORT void wal_append(const std::string &rec);
+  EXPORT void wal_rm(const std::string &rec);
 
-  std::list<std::string> aof_list();
-  void aof_append(const std::string &rec);
-  void aof_rm(const std::string &rec);
+  EXPORT void set_version(const std::string &version);
+  EXPORT std::string get_version();
 
-  std::string read_file(const std::string &fname);
-  void write_file(const std::string &fname, const std::string &content);
-
-private:
-  void touch();
-
-  void clear_field_values(std::string field_name);
+  EXPORT void insert_id2step(const Id2Step &i2s);
+  EXPORT Id2Step read_id2step();
 
 protected:
-  std::string _filename;
-  static std::unique_ptr<Manifest> _instance;
-  utils::Locker _locker;
+  class Private;
+  std::unique_ptr<Private> _impl;
 };
+
+using Manifest_ptr = std::shared_ptr<Manifest>;
 }
 }

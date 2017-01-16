@@ -1,33 +1,24 @@
 #pragma once
 
-#include "base_compressor.h"
-#include "positions.h"
+#include <libdariadb/compression/base_compressor.h>
+#include <libdariadb/st_exports.h>
 
 namespace dariadb {
 namespace compression {
+struct FlagCompressor : public BaseCompressor {
+  EXPORT FlagCompressor(const ByteBuffer_Ptr &bw);
 
-class FlagCompressor : public BaseCompressor {
-public:
-  FlagCompressor(const BinaryBuffer_Ptr &bw);
-
-  bool append(Flag v);
-
-  FlagCompressionPosition get_position() const;
-  void restore_position(const FlagCompressionPosition &pos);
-
-protected:
-  bool _is_first;
+  EXPORT bool append(Flag v);
   Flag _first;
+  bool _is_first;
 };
 
-class FlagDeCompressor : public BaseCompressor {
-public:
-  FlagDeCompressor(const BinaryBuffer_Ptr &bw, Flag first);
+struct FlagDeCompressor : public BaseCompressor {
+  EXPORT FlagDeCompressor(const ByteBuffer_Ptr &bw, Flag first);
 
-  Flag read();
-
-protected:
-  Flag _prev_value;
+  EXPORT Flag read();
+  Flag _first;
+  bool _is_first;
 };
 }
 }

@@ -1,0 +1,12 @@
+include(GenerateExportHeader)
+
+INCLUDE_DIRECTORIES(${DARIADB_STORAGE_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${DARIADB_NETWORK_INCLUDE_DIR})
+
+FILE(GLOB GLOB_HDRS "*.h")
+FILE(GLOB GLOB_SRC "*.cpp")
+
+add_executable(dariadb-ctl ${GLOB_SRC} ${GLOB_HDRS})
+TARGET_LINK_LIBRARIES(dariadb-ctl ${DARIADB_STORAGE_LIBS})
+
+set_target_properties(dariadb-ctl PROPERTIES FOLDER Tools)
