@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
   aos("settings", "print all settings.");
   aos("format", "print storage format version.");
   aos("verbose", "verbose output.");
+  aos("version", "version info.");
   aos("compress", "compress all wal files.");
   aos("iso-time", "if set, all time param is in iso format (\"20020131T235959\")");
   aos("compact", "compact all page files to one.");
@@ -105,6 +106,13 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   po::notify(vm);
+
+  if (vm.count("version")) {
+    std::cout << "format: " << dariadb::storage::Engine::format() << std::endl;
+    std::cout << "version: " << dariadb::storage::Engine::version()
+              << std::endl;
+    std::exit(0);
+  }
 
   if (vm.count("help") || argc == 1) {
     std::cout << desc << std::endl;

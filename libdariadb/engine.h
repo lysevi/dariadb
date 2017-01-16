@@ -15,7 +15,7 @@
 namespace dariadb {
 namespace storage {
 
-const uint16_t STORAGE_VERSION = 1;
+const uint16_t STORAGE_FORMAT = 1;
 class Engine : public IMeasStorage {
 public:
   struct Description {
@@ -65,7 +65,8 @@ public:
   EXPORT void compactTo(uint32_t pagesCount);
   EXPORT void compactbyTime(Time from, Time to);
 
-  EXPORT uint16_t version();
+  EXPORT static uint16_t format();
+  EXPORT static std::string version();
   EXPORT STRATEGY strategy() const;
 
   EXPORT void setSteps(const Id2Step &m);

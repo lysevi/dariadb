@@ -35,9 +35,8 @@ public:
     _engine_env = EngineEnvironment_ptr{new EngineEnvironment()};
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
-    logger_info("engine: project version - ", PROJECT_VERSION_MAJOR, '.',
-                PROJECT_VERSION_MINOR, '.', PROJECT_VERSION_PATCH);
-    logger_info("engine: storage version - ", this->version());
+    logger_info("engine: project version - ", version());
+    logger_info("engine: storage format - ", format());
     logger_info("engine: strategy - ", _settings->strategy.value());
     _stoped = false;
 
@@ -64,7 +63,7 @@ public:
     _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
     if (is_new_storage) {
-      _manifest->set_version(std::to_string(this->version()));
+      _manifest->set_version(std::to_string(format()));
     } else {
       check_storage_version();
       Dropper::cleanStorage(_settings->raw_path.value());
@@ -169,7 +168,7 @@ public:
   }
 
   void check_storage_version() {
-    auto current_version = this->version();
+    auto current_version = format();
     auto storage_version = std::stoi(_manifest->get_version());
     if (storage_version != current_version) {
       logger_info("engine: openning storage with version - ", storage_version);
@@ -637,8 +636,6 @@ public:
     this->unlock_storage();
   }
 
-  uint16_t version() { return STORAGE_VERSION; }
-
   STRATEGY strategy() const {
     ENSURE(_strategy == _settings->strategy.value());
     return this->_strategy;
@@ -785,8 +782,8 @@ void Engine::compactTo(uint32_t pagesCount) {
 void Engine::compactbyTime(Time from, Time to) {
   _impl->compactbyTime(from, to);
 }
-uint16_t Engine::version() {
-  return _impl->version();
+uint16_t Engine::format() {
+	return STORAGE_FORMAT;
 }
 
 STRATEGY Engine::strategy() const {
@@ -799,4 +796,8 @@ Id2MinMax Engine::loadMinMax() {
 
 void Engine::setSteps(const Id2Step &m) {
   _impl->setSteps(m);
+}
+
+std::string Engine::version() {
+	return std::string(PROJECT_VERSION);
 }
