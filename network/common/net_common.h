@@ -1,8 +1,8 @@
 #pragma once
 
+#include <common/net_cmn_exports.h>
 #include <cstdint>
 #include <string>
-#include <common/net_cmn_exports.h>
 
 namespace dariadb {
 namespace net {
@@ -10,7 +10,7 @@ namespace net {
 const uint32_t PROTOCOL_VERSION = 1;
 
 enum class DATA_KINDS : uint8_t {
-  OK=0,
+  OK = 0,
   ERR,
   HELLO,
   DISCONNECT,
@@ -34,11 +34,11 @@ enum class CLIENT_STATE {
 enum class ERRORS : uint16_t {
   WRONG_PROTOCOL_VERSION,
   WRONG_QUERY_PARAM_FROM_GE_TO, // if in readInterval from>=to
-    APPEND_ERROR, //some error on append new value to storage
+  APPEND_ERROR,                 // some error on append new value to storage
 };
 
-//CM_EXPORT std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state);
-//CM_EXPORT std::ostream &operator<<(std::ostream &stream, const ERRORS &e);
+// CM_EXPORT std::ostream &operator<<(std::ostream &stream, const CLIENT_STATE &state);
+// CM_EXPORT std::ostream &operator<<(std::ostream &stream, const ERRORS &e);
 
 CM_EXPORT std::string to_string(const CLIENT_STATE &st);
 CM_EXPORT std::string to_string(const ERRORS &st);

@@ -1,14 +1,14 @@
 #pragma once
 
-#include <libdariadb/st_exports.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/st_exports.h>
 #include <istream>
 #include <ostream>
 
 namespace dariadb {
 namespace storage {
 
-enum class STEP_KIND { MILLISECOND,SECOND, MINUTE, HOUR };
+enum class STEP_KIND { MILLISECOND, SECOND, MINUTE, HOUR };
 
 using Id2Step = std::unordered_map<Id, STEP_KIND>;
 

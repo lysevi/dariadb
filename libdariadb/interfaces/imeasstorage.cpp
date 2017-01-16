@@ -3,5 +3,4 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-IMeasStorage::~IMeasStorage(){
-}
+IMeasStorage::~IMeasStorage() {}

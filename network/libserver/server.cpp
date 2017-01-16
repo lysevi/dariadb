@@ -26,8 +26,8 @@ const int MAX_MISSED_PINGS = 100;
 class Server::Private : public IClientManager {
 public:
   Private(const Server::Param &p)
-      : _signals(_service, SIGINT, SIGTERM, SIGABRT), 
-        _params(p), _is_runned_flag(false), _ping_timer(_service), _info_timer(_service) {
+      : _signals(_service, SIGINT, SIGTERM, SIGABRT), _params(p), _is_runned_flag(false),
+        _ping_timer(_service), _info_timer(_service) {
 
     _in_stop_logic = false;
     _next_client_id = 1;
@@ -38,24 +38,28 @@ public:
     _env.nd_pool = &_net_data_pool;
     _env.service = &_service;
 
-	_signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
+    _signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
   }
 
-  ~Private() { if (_is_runned_flag && ! _in_stop_logic) { stop(); } }
+  ~Private() {
+    if (_is_runned_flag && !_in_stop_logic) {
+      stop();
+    }
+  }
 
   void set_storage(storage::Engine *storage) {
     logger("server: set storage.");
     _env.storage = storage;
-	log_server_info_internal();
+    log_server_info_internal();
   }
 
   void stop() {
     _in_stop_logic = true;
     logger_info("server: *** [stopping] ***");
-	logger_info("server: stop ping timer...");
-	_ping_timer.cancel();
-	logger_info("server: stop info timer...");
-	_info_timer.cancel();
+    logger_info("server: stop ping timer...");
+    _ping_timer.cancel();
+    logger_info("server: stop info timer...");
+    _info_timer.cancel();
     while (_writes_in_progress.load() != 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
       logger_info("server: writes in progress ", _writes_in_progress.load());
@@ -65,24 +69,25 @@ public:
 
     logger_info("server: stop asio service.");
     _service.stop();
-	while (!_service.stopped()) {}
+    while (!_service.stopped()) {
+    }
     logger_info("server: wait ", _io_threads.size(), " io threads...");
 
     for (auto &t : _io_threads) {
-		if (t.joinable()) {
-			t.join();
-		}
+      if (t.joinable()) {
+        t.join();
+      }
     }
     logger_info("server: io_threads stoped.");
 
     logger_info("server: stoping storage engine...");
-    if(this->_env.storage!=nullptr){ //in some tests storage not exists
-		auto cp = this->_env.storage;
-		this->_env.storage = nullptr;
-        cp->stop();
+    if (this->_env.storage != nullptr) { // in some tests storage not exists
+      auto cp = this->_env.storage;
+      this->_env.storage = nullptr;
+      cp->stop();
     }
 
-	_in_stop_logic = false;
+    _in_stop_logic = false;
     _is_runned_flag.store(false);
     logger_info("server: stoped.");
   }
@@ -94,15 +99,15 @@ public:
       }
     }
 
-	for (auto &kv : _clients) {
-		if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
-			while (kv.second->_async_connection->queue_size() != 0) {
-				logger_info("server: wait stop of #", kv.first);
-				std::this_thread::sleep_for(std::chrono::milliseconds(50));
-			}
-			kv.second->close();
-		}
-	}
+    for (auto &kv : _clients) {
+      if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
+        while (kv.second->_async_connection->queue_size() != 0) {
+          logger_info("server: wait stop of #", kv.first);
+          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        kv.second->close();
+      }
+    }
     _clients.clear();
   }
 
@@ -110,7 +115,7 @@ public:
     logger_info("server: start server on ", _params.port, "...");
 
     reset_ping_timer();
-	reset_info_timer();
+    reset_info_timer();
 
     ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
     _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
@@ -123,7 +128,7 @@ public:
 
     _io_threads.resize(_params.io_threads);
     for (size_t i = 0; i < _params.io_threads; ++i) {
-        auto t=std::thread(std::bind(&Server::Private::handle_clients_thread, this));
+      auto t = std::thread(std::bind(&Server::Private::handle_clients_thread, this));
       _io_threads[i] = std::move(t);
     }
 
@@ -136,15 +141,15 @@ public:
       switch (signal_number) {
       case SIGINT:
         logger_info("server: *** [signal handler - SIGINT] ***");
-		this->stop();
+        this->stop();
         break;
       case SIGTERM:
         logger_info("server: *** [signal handler - SIGTERM] ***");
-		this->stop();
+        this->stop();
         break;
       case SIGABRT:
         logger_info("server: *** [signal handler - SIGABRT] ***");
-		this->stop();
+        this->stop();
         break;
       default:
         logger_info("server: signal handler - unknow");
@@ -154,38 +159,35 @@ public:
       logger_fatal("server: signal handler error - ", error.message());
     }
   }
-  void handle_clients_thread() { asio_run();  }
+  void handle_clients_thread() { asio_run(); }
 
-  void asio_run() {
-	  _service.run();
-  }
+  void asio_run() { _service.run(); }
   void start_accept(socket_ptr sock) {
     _acc->async_accept(*sock, std::bind(&Server::Private::handle_accept, this, sock, _1));
   }
 
   void handle_accept(socket_ptr sock, const boost::system::error_code &err) {
     if (err) {
-      THROW_EXCEPTION("dariadb::server: error on accept - " , err.message());
+      THROW_EXCEPTION("dariadb::server: error on accept - ", err.message());
     }
-	if (this->_in_stop_logic) {
-		logger_info("server: in stop logic. connection refused.");
-	}
-	else {
-		logger_info("server: accept connection.");
+    if (this->_in_stop_logic) {
+      logger_info("server: in stop logic. connection refused.");
+    } else {
+      logger_info("server: accept connection.");
 
-		auto cur_id = _next_client_id.load();
-		_next_client_id++;
+      auto cur_id = _next_client_id.load();
+      _next_client_id++;
 
-		ClientIO_ptr new_client{ new IOClient(cur_id, sock, &_env) };
+      ClientIO_ptr new_client{new IOClient(cur_id, sock, &_env)};
 
-		_clients_locker.lock();
-		_clients.emplace(std::make_pair(new_client->_async_connection->id(), new_client));
-		_clients_locker.unlock();
+      _clients_locker.lock();
+      _clients.emplace(std::make_pair(new_client->_async_connection->id(), new_client));
+      _clients_locker.unlock();
 
-		new_client->start();
-		socket_ptr new_sock(new ip::tcp::socket(_service));
-		start_accept(new_sock);
-	}
+      new_client->start();
+      socket_ptr new_sock(new ip::tcp::socket(_service));
+      start_accept(new_sock);
+    }
   }
 
   size_t connections_accepted() const { return _connections_accepted.load(); }
@@ -196,11 +198,12 @@ public:
     std::lock_guard<utils::async::Locker> lg(_clients_locker);
     auto fres_it = this->_clients.find(id);
     if (fres_it == this->_clients.end()) {
-      THROW_EXCEPTION("server: client_connect - client #" , id , " not found");
+      THROW_EXCEPTION("server: client_connect - client #", id, " not found");
     }
     auto client = fres_it->second;
     _connections_accepted += 1;
-    logger_info("server: hello from {", client->host, "}, #", client->_async_connection->id());
+    logger_info("server: hello from {", client->host, "}, #",
+                client->_async_connection->id());
     client->state = CLIENT_STATE::WORK;
   }
 
@@ -208,10 +211,10 @@ public:
     std::lock_guard<utils::async::Locker> lg(_clients_locker);
     auto fres = _clients.find(id);
     if (fres == _clients.end()) {
-        // may be already removed.
-        return;
+      // may be already removed.
+      return;
     }
-    //fres->second->sock->close();
+    // fres->second->sock->close();
     _clients.erase(fres);
     _connections_accepted -= 1;
     logger_info("server: clients count  ", _clients.size(), " accepted:",
@@ -220,14 +223,14 @@ public:
 
   void write_begin() override { _writes_in_progress++; }
   void write_end() override { _writes_in_progress--; }
-  bool server_begin_stopping()const override { return _in_stop_logic; }
+  bool server_begin_stopping() const override { return _in_stop_logic; }
 
   void reset_ping_timer() {
     try {
       _ping_timer.expires_from_now(boost::posix_time::millisec(PING_TIMER_INTERVAL));
       _ping_timer.async_wait(std::bind(&Server::Private::ping_all, this));
     } catch (std::exception &ex) {
-      THROW_EXCEPTION("server: reset_ping_timer - " , ex.what());
+      THROW_EXCEPTION("server: reset_ping_timer - ", ex.what());
     }
   }
 
@@ -253,7 +256,6 @@ public:
     }
     _clients_locker.unlock();
 
-
     for (auto &id : to_remove) {
       logger_info("server: remove #", id);
       client_disconnect(id);
@@ -262,35 +264,34 @@ public:
   }
 
   void reset_info_timer() {
-	  try {
-		  _info_timer.expires_from_now(boost::posix_time::millisec(INFO_TIMER_INTERVAL));
-		  _info_timer.async_wait(std::bind(&Server::Private::log_server_info, this));
-	  }
-	  catch (std::exception &ex) {
-          THROW_EXCEPTION("server: reset_ping_timer - " , ex.what());
-	  }
+    try {
+      _info_timer.expires_from_now(boost::posix_time::millisec(INFO_TIMER_INTERVAL));
+      _info_timer.async_wait(std::bind(&Server::Private::log_server_info, this));
+    } catch (std::exception &ex) {
+      THROW_EXCEPTION("server: reset_ping_timer - ", ex.what());
+    }
   }
 
   void log_server_info_internal() {
-	  if (_env.storage == nullptr) {//for tests.
-		  return;
-	  }
-      auto queue_sizes = _env.storage->description();
-	  std::stringstream stor_ss;
+    if (_env.storage == nullptr) { // for tests.
+      return;
+    }
+    auto queue_sizes = _env.storage->description();
+    std::stringstream stor_ss;
 
-      stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.wal_count
-          << " T:" << queue_sizes.active_works;
-      if (_env.storage->strategy() == dariadb::storage::STRATEGY::MEMORY) {
-          stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
+    stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.wal_count
+            << " T:" << queue_sizes.active_works;
+    if (_env.storage->strategy() == dariadb::storage::STRATEGY::MEMORY) {
+      stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
               << " a:" << queue_sizes.memstorage.allocated;
-      }
-      stor_ss << ")";
+    }
+    stor_ss << ")";
 
-	  logger_info("server: stat ", stor_ss.str());
+    logger_info("server: stat ", stor_ss.str());
   }
   void log_server_info() {
-	log_server_info_internal();
-	reset_info_timer();
+    log_server_info_internal();
+    reset_info_timer();
   }
 
   io_service _service;
@@ -344,5 +345,5 @@ void Server::set_storage(storage::Engine *storage) {
 }
 
 void Server::asio_run() {
-	_Impl->asio_run();
+  _Impl->asio_run();
 }

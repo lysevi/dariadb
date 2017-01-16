@@ -1,7 +1,7 @@
-#include <common/async_connection.h>
-#include <cassert>
-#include <functional>
 #include <libdariadb/utils/exception.h>
+#include <cassert>
+#include <common/async_connection.h>
+#include <functional>
 
 using namespace std::placeholders;
 
@@ -47,7 +47,7 @@ void AsyncConnection::full_stop() {
   try {
     if (auto spt = _sock.lock()) {
       if (spt->is_open()) {
-		  spt->close();
+        spt->close();
       }
     }
   } catch (...) {
@@ -87,9 +87,9 @@ void AsyncConnection::readNextAsync() {
     async_read(*spt.get(), buffer((uint8_t *)(&d->size), MARKER_SIZE),
                [ptr, d, spt](auto err, auto read_bytes) {
                  if (err) {
-                     if(err == boost::asio::error::operation_aborted){
-                         return;
-                     }
+                   if (err == boost::asio::error::operation_aborted) {
+                     return;
+                   }
                    ptr->_on_error_handler(err);
                  } else {
                    if (read_bytes != MARKER_SIZE) {

@@ -12,33 +12,32 @@ using namespace dariadb::utils::async;
 
 Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
                  WALManager_ptr wal_manager)
-    : _page_manager(page_manager), _wal_manager(wal_manager),
-      _engine_env(engine_env) {
-	_stop = false;
-	_is_stoped = false;
+    : _page_manager(page_manager), _wal_manager(wal_manager), _engine_env(engine_env) {
+  _stop = false;
+  _is_stoped = false;
   _settings =
       _engine_env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
   _thread_handle = std::thread(&Dropper::drop_wal_internal, this);
 }
 
 Dropper::~Dropper() {
-	logger("engine: dropper - stop begin.");
-	_stop = true;
-	while (!_is_stoped) {
-		_cond_var.notify_all();
-	}
-	_thread_handle.join();
-	logger("engine: dropper - stop end.");
+  logger("engine: dropper - stop begin.");
+  _stop = true;
+  while (!_is_stoped) {
+    _cond_var.notify_all();
+  }
+  _thread_handle.join();
+  logger("engine: dropper - stop end.");
 }
 
 Dropper::Description Dropper::description() const {
-	std::lock_guard<std::mutex> lg(_queue_locker);
+  std::lock_guard<std::mutex> lg(_queue_locker);
   Dropper::Description result;
   result.wal = _files_queue.size();
   return result;
 }
 
-void Dropper::dropWAL(const std::string& fname) {
+void Dropper::dropWAL(const std::string &fname) {
   std::lock_guard<std::mutex> lg(_queue_locker);
   auto fres = std::find(_files_queue.begin(), _files_queue.end(), fname);
   if (fres != _files_queue.end()) {
@@ -46,13 +45,13 @@ void Dropper::dropWAL(const std::string& fname) {
   }
   auto storage_path = _settings->raw_path.value();
   if (utils::fs::path_exists(utils::fs::append_path(storage_path, fname))) {
-	  _files_queue.emplace_back(fname);
-	  _cond_var.notify_all();
+    _files_queue.emplace_back(fname);
+    _cond_var.notify_all();
   }
 }
 
-void Dropper::cleanStorage(const std::string&storagePath) {
-	logger_info("engine: dropper - check storage.");
+void Dropper::cleanStorage(const std::string &storagePath) {
+  logger_info("engine: dropper - check storage.");
   auto wals_lst = fs::ls(storagePath, WAL_FILE_EXT);
   auto page_lst = fs::ls(storagePath, PAGE_FILE_EXT);
 
@@ -74,51 +73,50 @@ void Dropper::drop_wal_internal() {
   auto sett = _settings;
   _is_stoped = false;
   while (!_stop) {
-	  std::string fname;
-	  {
-		  std::unique_lock<std::mutex> ul(_queue_locker);
-		  _cond_var.wait(ul, [this]() {return !this->_files_queue.empty() || _stop; });
-		  if (_stop) {
-			  break;
-		  }
-		  fname = _files_queue.front();
-		  _files_queue.pop_front();
-	  }
-	  while (!this->_dropper_lock.try_lock() || _stop) {
-		  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	  }
-	  if(_stop){
-		  break;
-	  }
-	  AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
-		  try {
-			  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-			 
-			  logger_info("engine: compressing ", fname);
-			  auto start_time = clock();
-			  auto storage_path = sett->raw_path.value();
-			  auto full_path = fs::append_path(storage_path, fname);
+    std::string fname;
+    {
+      std::unique_lock<std::mutex> ul(_queue_locker);
+      _cond_var.wait(ul, [this]() { return !this->_files_queue.empty() || _stop; });
+      if (_stop) {
+        break;
+      }
+      fname = _files_queue.front();
+      _files_queue.pop_front();
+    }
+    while (!this->_dropper_lock.try_lock() || _stop) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    if (_stop) {
+      break;
+    }
+    AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
+      try {
+        TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
-			  WALFile_Ptr wal{ new WALFile(env, full_path, true) };
+        logger_info("engine: compressing ", fname);
+        auto start_time = clock();
+        auto storage_path = sett->raw_path.value();
+        auto full_path = fs::append_path(storage_path, fname);
 
-			  auto all = wal->readAll();
+        WALFile_Ptr wal{new WALFile(env, full_path, true)};
 
-			  this->write_wal_to_page(fname, all);
+        auto all = wal->readAll();
 
-			  auto end = clock();
-			  auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
-			  
-			  logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
-		  }
-		  catch (std::exception &ex) {
-			  THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
-		  }
-		  return false;
-	  };
+        this->write_wal_to_page(fname, all);
 
-	  auto handle=ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-	  handle->wait();
-	  this->_dropper_lock.unlock();
+        auto end = clock();
+        auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+
+        logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
+      } catch (std::exception &ex) {
+        THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
+      }
+      return false;
+    };
+
+    auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+    handle->wait();
+    this->_dropper_lock.unlock();
   }
   _is_stoped = true;
 }

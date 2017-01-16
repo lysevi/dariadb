@@ -1,7 +1,7 @@
 #pragma once
 
-#include <istream>
 #include <libdariadb/st_exports.h>
+#include <istream>
 #include <ostream>
 
 namespace dariadb {

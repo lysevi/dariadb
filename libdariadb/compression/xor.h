@@ -37,6 +37,5 @@ public:
 
   uint64_t _prev_value;
 };
-
 }
 }

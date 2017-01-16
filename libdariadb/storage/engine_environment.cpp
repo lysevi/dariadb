@@ -9,30 +9,28 @@ struct EngineEnvironment::Private {
 
   ~Private() {}
 
-  void addResource(Resource res, void*ptr){
-	  _resource_map[res] = ptr;
+  void addResource(Resource res, void *ptr) { _resource_map[res] = ptr; }
+
+  void *getResourcePtr(EngineEnvironment::Resource res) const {
+    auto fres = _resource_map.find(res);
+    if (fres == _resource_map.end()) {
+      THROW_EXCEPTION("unknow resource: ", (int)res);
+    }
+    return fres->second;
   }
 
-  void* getResourcePtr(EngineEnvironment::Resource res)const{
-	  auto fres = _resource_map.find(res);
-	  if (fres == _resource_map.end()) {
-		  THROW_EXCEPTION("unknow resource: ", (int)res);
-	  }
-	  return fres->second;
-  }
-
-  std::unordered_map<Resource, void*> _resource_map;
+  std::unordered_map<Resource, void *> _resource_map;
 };
 
-EngineEnvironment::EngineEnvironment():_impl(new EngineEnvironment::Private()) {}
+EngineEnvironment::EngineEnvironment() : _impl(new EngineEnvironment::Private()) {}
 EngineEnvironment::~EngineEnvironment() {
-    _impl=nullptr;
+  _impl = nullptr;
 }
 
-void* EngineEnvironment::getResourcePtr(EngineEnvironment::Resource res)const{
-    return _impl->getResourcePtr(res);
+void *EngineEnvironment::getResourcePtr(EngineEnvironment::Resource res) const {
+  return _impl->getResourcePtr(res);
 }
 
-void EngineEnvironment::addResource(Resource res, void*ptr){
-    _impl->addResource(res,ptr);
+void EngineEnvironment::addResource(Resource res, void *ptr) {
+  _impl->addResource(res, ptr);
 }

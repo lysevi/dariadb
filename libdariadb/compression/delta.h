@@ -26,4 +26,3 @@ struct DeltaDeCompressor : public BaseCompressor {
 };
 }
 }
-

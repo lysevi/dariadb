@@ -11,7 +11,7 @@ using namespace dariadb::storage;
 using namespace dariadb::compression;
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
-    : c_writer(std::make_shared<ByteBuffer>(Range{ buffer, buffer + hdr->size})) {
+    : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
   header = hdr;
   _buffer_t = buffer;
   is_owner = false;
@@ -21,7 +21,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m)
-    : c_writer(std::make_shared<ByteBuffer>(Range{ buffer, buffer + _size })) {
+    : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + _size})) {
   _buffer_t = buffer;
   header = hdr;
   header->size = _size;
@@ -159,7 +159,8 @@ Chunk::ChunkReader_Ptr Chunk::getReader() {
   raw_res->_is_first = true;
   raw_res->bw = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
   raw_res->bw->reset_pos();
-  raw_res->_reader = std::make_shared<CopmressedReader>(raw_res->bw, this->header->first());
+  raw_res->_reader =
+      std::make_shared<CopmressedReader>(raw_res->bw, this->header->first());
 
   Chunk::ChunkReader_Ptr result{raw_res};
   return result;

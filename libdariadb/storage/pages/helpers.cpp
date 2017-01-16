@@ -2,10 +2,10 @@
 #define _CRT_SECURE_NO_WARNINGS // for fopen
 #endif
 #include <libdariadb/meas.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/pages/helpers.h>
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/utils/async/thread_manager.h>
-#include <libdariadb/storage/bloom_filter.h>
 #include <algorithm>
 
 #include <cstring>
@@ -79,7 +79,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
     auto cur_Id = kv.first;
     utils::async::AsyncTask at = [cur_Id, &results, &phdr, max_chunk_size, &result_locker,
                                   &to_compress](const utils::async::ThreadInfo &ti) {
-  	  using namespace dariadb::utils::async;
+      using namespace dariadb::utils::async;
       TKIND_CHECK(dariadb::utils::async::THREAD_KINDS::COMMON, ti.kind);
       auto fit = to_compress.find(cur_Id);
       auto begin = fit->second.cbegin();
@@ -112,7 +112,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
         results.push_back(subres);
         result_locker.unlock();
       }
-	  return false;
+      return false;
     };
     auto cur_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at));
     async_compressions.push_back(cur_async);
@@ -123,7 +123,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
   return results;
 }
 
-uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader&ihdr,
+uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader &ihdr,
                      std::list<HdrAndBuffer> &compressed_results, uint64_t file_size) {
 
   using namespace dariadb::utils::async;
@@ -138,19 +138,20 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
     std::shared_ptr<uint8_t> chunk_buffer_ptr = hb.buffer;
 
     phdr.addeded_chunks++;
-	phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
-	phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
+    phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
+    phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
 
-	auto skip_count = Chunk::compact(&chunk_header);
+    auto skip_count = Chunk::compact(&chunk_header);
     chunk_header.offset_in_page = offset;
-	//update checksum;
-	Chunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
-#ifdef  DEBUG
-	{
-		auto ch = std::make_shared<Chunk>(&chunk_header, chunk_buffer_ptr.get() + skip_count);
-		ENSURE(ch->checkChecksum());
-		ch->close();
-	}
+    // update checksum;
+    Chunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
+#ifdef DEBUG
+    {
+      auto ch =
+          std::make_shared<Chunk>(&chunk_header, chunk_buffer_ptr.get() + skip_count);
+      ENSURE(ch->checkChecksum());
+      ch->close();
+    }
 #endif
     std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), chunk_header.size,
@@ -158,37 +159,33 @@ uint64_t writeToFile(FILE* file, FILE* index_file, PageHeader &phdr, IndexHeader
 
     offset += sizeof(ChunkHeader) + chunk_header.size;
 
-	
-	auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
-	ireccords[pos] = index_reccord;
-	pos++;
-	
+    auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
+    ireccords[pos] = index_reccord;
+    pos++;
   }
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
   page_size = offset;
   return page_size;
 }
 
-IndexReccord init_chunk_index_rec(const ChunkHeader& cheader, IndexHeader* iheader) {
-	IndexReccord cur_index;
-	memset(&cur_index, 0, sizeof(IndexReccord));
+IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexHeader *iheader) {
+  IndexReccord cur_index;
+  memset(&cur_index, 0, sizeof(IndexReccord));
 
-	cur_index.chunk_id = cheader.id;
-	cur_index.offset = cheader.offset_in_page; // header->write_offset;
+  cur_index.chunk_id = cheader.id;
+  cur_index.offset = cheader.offset_in_page; // header->write_offset;
 
-	iheader->minTime = std::min(iheader->minTime, cheader.minTime);
-	iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
+  iheader->minTime = std::min(iheader->minTime, cheader.minTime);
+  iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
 
-	iheader->id_bloom =
-		storage::bloom_add(iheader->id_bloom, cheader.meas_id);
-	iheader->flag_bloom =
-		storage::bloom_add(iheader->flag_bloom, cheader.data_first.flag);
-	iheader->count++;
-	cur_index.minTime = cheader.minTime;
-	cur_index.maxTime = cheader.maxTime;
-	cur_index.meas_id = cheader.meas_id;
-	cur_index.flag_bloom = cheader.flag_bloom;
-	return cur_index;
+  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
+  iheader->flag_bloom = storage::bloom_add(iheader->flag_bloom, cheader.data_first.flag);
+  iheader->count++;
+  cur_index.minTime = cheader.minTime;
+  cur_index.maxTime = cheader.maxTime;
+  cur_index.meas_id = cheader.meas_id;
+  cur_index.flag_bloom = cheader.flag_bloom;
+  return cur_index;
 }
 }
 }

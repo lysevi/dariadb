@@ -35,8 +35,7 @@ uint32_t get_delta_3b(int64_t D) {
 }
 
 DeltaCompressor::DeltaCompressor(const ByteBuffer_Ptr &bw_)
-    : BaseCompressor(bw_), is_first(true), first(0), prev_delta(0),
-      prev_time(0) {}
+    : BaseCompressor(bw_), is_first(true), first(0), prev_delta(0), prev_time(0) {}
 
 bool DeltaCompressor::append(dariadb::Time t) {
   if (is_first) {
@@ -88,21 +87,22 @@ bool DeltaCompressor::append(dariadb::Time t) {
   return true;
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_,
-                                     dariadb::Time first)
+DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_, dariadb::Time first)
     : BaseCompressor(bw_), prev_delta(0), prev_time(first) {}
 
 dariadb::Time DeltaDeCompressor::read() {
   auto first_byte = bw->read<uint8_t>();
 
   int64_t result = 0;
-  if ((first_byte & delta_1b_mask) == delta_1b_mask && !utils::BitOperations::check(first_byte, 6)) {
+  if ((first_byte & delta_1b_mask) == delta_1b_mask &&
+      !utils::BitOperations::check(first_byte, 6)) {
     result = first_byte & delta_1b_mask_inv;
     if (result > 32) { // negative
       result = (-64) | result;
     }
   } else {
-    if ((first_byte & (delta_2b_mask >> 8)) == (delta_2b_mask >> 8) && !utils::BitOperations::check(first_byte, 5)) {
+    if ((first_byte & (delta_2b_mask >> 8)) == (delta_2b_mask >> 8) &&
+        !utils::BitOperations::check(first_byte, 5)) {
       auto second = bw->read<uint8_t>();
       auto first_unmasked = first_byte & (delta_2b_mask_inv >> 8);
       result = ((uint16_t)first_unmasked << 8) | (uint16_t)second;
@@ -125,10 +125,9 @@ dariadb::Time DeltaDeCompressor::read() {
       } else {
         if (first_byte == 0) {
           result = bw->read<uint64_t>();
-		}
-		else {
-            ENSURE(false);
-		}
+        } else {
+          ENSURE(false);
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
-#include <common/net_data.h>
 #include <libdariadb/compression/xor.h>
+#include <common/net_data.h>
 #include <cstring>
 
 using namespace dariadb;
@@ -86,84 +86,85 @@ std::tuple<NetData::MessageSize, uint8_t *> NetData::as_buffer() {
   return std::tie(buf_size, v);
 }
 
-uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos, size_t* space_left) {
-	using namespace netdata_inner;
-	uint32_t result = 0;
-	auto free_space = (NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - 1 - sizeof(QueryAppend_header));
+uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas *m_array,
+                                        size_t size, size_t pos, size_t *space_left) {
+  using namespace netdata_inner;
+  uint32_t result = 0;
+  auto free_space =
+      (NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - 1 - sizeof(QueryAppend_header));
 
-	auto ptr = ((char *)(&hdr->count) + sizeof(hdr->count)); //first byte after header
-    PackHeader* pack = (PackHeader*)ptr;
-	pack->id = m_array[pos].id;
-	pack->count = 0;
-    ptr += sizeof(PackHeader);
-	
-	auto end = (char*)(hdr)+free_space;
+  auto ptr = ((char *)(&hdr->count) + sizeof(hdr->count)); // first byte after header
+  PackHeader *pack = (PackHeader *)ptr;
+  pack->id = m_array[pos].id;
+  pack->count = 0;
+  ptr += sizeof(PackHeader);
 
-	while (pos < size && ptr != end) {
-        netdata_inner::PackMeas sm{ m_array[pos].flag, m_array[pos].time, m_array[pos].value };
-		auto bytes_left = (size_t) (end - ptr);
-		assert(bytes_left < NetData::MAX_MESSAGE_SIZE);
-		if (m_array[pos].id != pack->id) {
-            if (bytes_left <= (sizeof(PackHeader) + sm.size)) {
-				break;
-			}
-            pack = (PackHeader*)ptr;
-			pack->id = m_array[pos].id;
-			pack->count = 0;
-            ptr += sizeof(PackHeader);
-		}
-		if (bytes_left <= sm.size) {
-			break;
-		}
-		
-		std::memcpy(ptr, sm.packed, sm.size);
-		ptr += sm.size;
-		assert(ptr < end);
-		++pack->count;
-		++pos;
-		++result;
-	}
-	hdr->count = result;
-	*space_left = (size_t)(end - ptr);
+  auto end = (char *)(hdr) + free_space;
 
-	return result;
+  while (pos < size && ptr != end) {
+    netdata_inner::PackMeas sm{m_array[pos].flag, m_array[pos].time, m_array[pos].value};
+    auto bytes_left = (size_t)(end - ptr);
+    assert(bytes_left < NetData::MAX_MESSAGE_SIZE);
+    if (m_array[pos].id != pack->id) {
+      if (bytes_left <= (sizeof(PackHeader) + sm.size)) {
+        break;
+      }
+      pack = (PackHeader *)ptr;
+      pack->id = m_array[pos].id;
+      pack->count = 0;
+      ptr += sizeof(PackHeader);
+    }
+    if (bytes_left <= sm.size) {
+      break;
+    }
+
+    std::memcpy(ptr, sm.packed, sm.size);
+    ptr += sm.size;
+    assert(ptr < end);
+    ++pack->count;
+    ++pos;
+    ++result;
+  }
+  hdr->count = result;
+  *space_left = (size_t)(end - ptr);
+
+  return result;
 }
 
 MeasArray QueryAppend_header::read_measarray() const {
-	using namespace netdata_inner;
+  using namespace netdata_inner;
 
   MeasArray ma{size_t(count)};
   size_t pos = 0;
-  auto ptr = ((uint8_t *)(&count) + sizeof(count)); //first byte after header
-  
-  
-  while (pos < count) {
-      PackHeader* pack = (PackHeader*)ptr;
-      ptr += sizeof(PackHeader);
-	  assert(pack->count <= count);
-	  for (uint16_t i = 0; i < pack->count; ++i) {
-          UnpackMeas sm(ptr);
+  auto ptr = ((uint8_t *)(&count) + sizeof(count)); // first byte after header
 
-		  ma[pos].id = pack->id;
-          ma[pos].flag = sm.flag;
-          ma[pos].value = sm.value;
-          ma[pos].time = sm.time;
-		  ++pos;
-		  ptr = sm.ptr;
-	  }
+  while (pos < count) {
+    PackHeader *pack = (PackHeader *)ptr;
+    ptr += sizeof(PackHeader);
+    assert(pack->count <= count);
+    for (uint16_t i = 0; i < pack->count; ++i) {
+      UnpackMeas sm(ptr);
+
+      ma[pos].id = pack->id;
+      ma[pos].flag = sm.flag;
+      ma[pos].value = sm.value;
+      ma[pos].time = sm.time;
+      ++pos;
+      ptr = sm.ptr;
+    }
   }
   return ma;
 }
 
-void NetData_Pool::free(Pool::element_type*nd) {
-    _locker.lock();
-    _pool.free(nd);
-    _locker.unlock();
+void NetData_Pool::free(Pool::element_type *nd) {
+  _locker.lock();
+  _pool.free(nd);
+  _locker.unlock();
 }
 
-NetData_Pool::Pool::element_type* NetData_Pool::construct() {
-    _locker.lock();
-    auto res=_pool.construct();
-    _locker.unlock();
-    return res;
+NetData_Pool::Pool::element_type *NetData_Pool::construct() {
+  _locker.lock();
+  auto res = _pool.construct();
+  _locker.unlock();
+  return res;
 }

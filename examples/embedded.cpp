@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   settings->save();
 
   auto storage = std::make_unique<dariadb::storage::Engine>(settings);
-  
+
   // measurement 2 is a bystep value. step == 1 hour
   dariadb::storage::Id2Step steps;
   steps[0] = dariadb::storage::STEP_KIND::HOUR;
@@ -61,8 +61,8 @@ int main(int argc, char **argv) {
   }
 
   // query writed interval;
-  dariadb::storage::QueryInterval qi(dariadb::IdArray{dariadb::Id(0),dariadb::Id(1)}, dariadb::Flag(),
-                                     start_time, m.time);
+  dariadb::storage::QueryInterval qi(dariadb::IdArray{dariadb::Id(0), dariadb::Id(1)},
+                                     dariadb::Flag(), start_time, m.time);
   dariadb::MeasList readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {

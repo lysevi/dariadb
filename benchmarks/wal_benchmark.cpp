@@ -1,8 +1,8 @@
 #include "bench_common.h"
-#include <libdariadb/storage/wal/wal_manager.h>
-#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/storage/wal/wal_manager.h>
 #include <libdariadb/utils/fs.h>
 
 #include <boost/program_options.hpp>
@@ -24,9 +24,8 @@ void show_info() {
     auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
 
     std::cout << "\r"
-              << " wal: " << wal_manager->filesCount()
-              << " writes: " << append_count << " speed: " << writes_per_sec
-              << "/sec progress:"
+              << " wal: " << wal_manager->filesCount() << " writes: " << append_count
+              << " speed: " << writes_per_sec << "/sec progress:"
               << (int64_t(100) * append_count) / dariadb_bench::all_writes
               << "%                ";
     std::cout.flush();
@@ -76,20 +75,26 @@ int main(int argc, char *argv[]) {
     }
 
     dariadb::utils::fs::mkdir(storage_path);
-	
-	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-	
-	auto manifest = dariadb::storage::Manifest_ptr{ new dariadb::storage::Manifest{ settings } };
-	
-	auto _engine_env = dariadb::storage::EngineEnvironment_ptr{ new dariadb::storage::EngineEnvironment() };
-	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
-	_engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
+
+    auto settings =
+        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+
+    auto manifest =
+        dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
+
+    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
+        new dariadb::storage::EngineEnvironment()};
+    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                             settings.get());
+    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+                             manifest.get());
 
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    wal_manager = dariadb::storage::WALManager_ptr{ new dariadb::storage::WALManager(_engine_env) };
+    wal_manager =
+        dariadb::storage::WALManager_ptr{new dariadb::storage::WALManager(_engine_env)};
 
-	auto wal = wal_manager.get();
+    auto wal = wal_manager.get();
     std::thread info_thread(show_info);
 
     std::vector<std::thread> writers(dariadb_bench::total_threads_count);
@@ -114,7 +119,7 @@ int main(int argc, char *argv[]) {
 
     dariadb_bench::readBenchark(all_id_set, wal, 10);
 
-	manifest = nullptr;
+    manifest = nullptr;
     dariadb::utils::async::ThreadManager::stop();
   }
 }

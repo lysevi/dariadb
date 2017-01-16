@@ -1,10 +1,10 @@
 #pragma once
 
-#include <libdariadb/meas.h>
-#include <libdariadb/storage/query_param.h>
-#include <libdariadb/storage/chunk.h>
 #include <libdariadb/interfaces/icallbacks.h>
+#include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/query_param.h>
 namespace dariadb {
 namespace storage {
 
@@ -19,13 +19,13 @@ struct ChunkLink {
 
 using ChunkLinkList = std::list<ChunkLink>;
 
-class IChunkStorage{
+class IChunkStorage {
 public:
-    virtual void appendChunks(const std::vector<Chunk*>&a, size_t count) = 0;
-    EXPORT ~IChunkStorage();
+  virtual void appendChunks(const std::vector<Chunk *> &a, size_t count) = 0;
+  EXPORT ~IChunkStorage();
 };
 
-class IChunkContainer: public IChunkStorage {
+class IChunkContainer : public IChunkStorage {
 public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;

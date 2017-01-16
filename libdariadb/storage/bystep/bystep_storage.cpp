@@ -54,9 +54,9 @@ struct ByStepStorage::Private : public IMeasStorage {
     // load current period.
     auto cur_time = timeutil::current_time();
     for (auto &kv : _steps) {
-		if (_values.find(kv.first) != _values.end()) {//append new id2step
-			continue;
-		}
+      if (_values.find(kv.first) != _values.end()) { // append new id2step
+        continue;
+      }
       auto vals_per_interval = bystep::step_to_size(kv.second);
       auto period_num = bystep::intervalForTime(kv.second, vals_per_interval, cur_time);
       auto chunk = _io->readTimePoint(period_num, kv.first);
@@ -88,28 +88,27 @@ struct ByStepStorage::Private : public IMeasStorage {
     ByStepTrack_ptr ptr = nullptr;
     if (it == _values.end()) {
       _values_lock.unlock_shared();
-	 
-	  std::lock_guard<std::shared_mutex> lg(_values_lock);
-	  it = _values.find(value.id);
-	  if (it == _values.end()) {
-		  auto disk_chunk = _io->readTimePoint(period_num, value.id);
-		  if (disk_chunk != nullptr) {//write to disk
-			  auto track =
-				  ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
-			  track->from_chunk(disk_chunk);
-			  track->append(value);
-			  track->must_be_replaced = true;
-			  write_track_to_disk(track);
-			  return Status(1, 0);
-		  }
-		  else {
-			  ptr = ByStepTrack_ptr{ new ByStepTrack(value.id, stepKind_it->second, period_num) };
-			  _values.emplace(std::make_pair(value.id, ptr));
-		  }
-	  }
-	  else {
-		  ptr = it->second;
-	  }
+
+      std::lock_guard<std::shared_mutex> lg(_values_lock);
+      it = _values.find(value.id);
+      if (it == _values.end()) {
+        auto disk_chunk = _io->readTimePoint(period_num, value.id);
+        if (disk_chunk != nullptr) { // write to disk
+          auto track =
+              ByStepTrack_ptr{new ByStepTrack(value.id, stepKind_it->second, period_num)};
+          track->from_chunk(disk_chunk);
+          track->append(value);
+          track->must_be_replaced = true;
+          write_track_to_disk(track);
+          return Status(1, 0);
+        } else {
+          ptr =
+              ByStepTrack_ptr{new ByStepTrack(value.id, stepKind_it->second, period_num)};
+          _values.emplace(std::make_pair(value.id, ptr));
+        }
+      } else {
+        ptr = it->second;
+      }
     } else {
       ptr = it->second;
       _values_lock.unlock_shared();
@@ -230,57 +229,56 @@ struct ByStepStorage::Private : public IMeasStorage {
       local_q.from = std::get<0>(round_from);
       local_q.to = std::get<0>(round_to);
       auto readed_chunks = _io->readInterval(period_from, period_to, id);
-	  if (period_from == period_to) {//in one interval
-		  if (readed_chunks.empty()) {//find in tracks all generate empty period
-			  _values_lock.lock_shared();
-			  auto it = _values.find(id);
-			  if (it != _values.end() && it->second->period()==period_from) {
-				  auto track = it->second;
-				  _values_lock.unlock_shared();
-				  track->foreach(local_q, clbk);
-			  }
-			  else {
-				  _values_lock.unlock_shared();
-				  foreach_notexists_period(local_q, clbk, id, period_from, step_kind_it->second, stepTime);
-			  }
-		  }
-		  else {
-			  auto c = readed_chunks.front();
-			  foreach_chunk(q, clbk, c);
-		  }
-	  }
-	  else {
-		  for (auto i = period_from; i < period_to; ++i) {
-			  if (!readed_chunks.empty() && readed_chunks.front()->header->id == i) {
-				  auto c = readed_chunks.front();
-				  readed_chunks.pop_front();
-				  foreach_chunk(q, clbk, c);
-			  }
-			  else {
-				  foreach_notexists_period(local_q, clbk, id, i, step_kind_it->second, stepTime);
-			  }
-		  }
+      if (period_from == period_to) { // in one interval
+        if (readed_chunks.empty()) {  // find in tracks all generate empty period
+          _values_lock.lock_shared();
+          auto it = _values.find(id);
+          if (it != _values.end() && it->second->period() == period_from) {
+            auto track = it->second;
+            _values_lock.unlock_shared();
+            track->foreach (local_q, clbk);
+          } else {
+            _values_lock.unlock_shared();
+            foreach_notexists_period(local_q, clbk, id, period_from, step_kind_it->second,
+                                     stepTime);
+          }
+        } else {
+          auto c = readed_chunks.front();
+          foreach_chunk(q, clbk, c);
+        }
+      } else {
+        for (auto i = period_from; i < period_to; ++i) {
+          if (!readed_chunks.empty() && readed_chunks.front()->header->id == i) {
+            auto c = readed_chunks.front();
+            readed_chunks.pop_front();
+            foreach_chunk(q, clbk, c);
+          } else {
+            foreach_notexists_period(local_q, clbk, id, i, step_kind_it->second,
+                                     stepTime);
+          }
+        }
 
-		  auto it = _values.find(id);
-		  if (it != _values.end()) {
-			  it->second->foreach(local_q, clbk);
-		  }
-	  }
+        auto it = _values.find(id);
+        if (it != _values.end()) {
+          it->second->foreach (local_q, clbk);
+        }
+      }
     }
   }
 
-  void foreach_notexists_period(const QueryInterval &q, IReaderClb *clbk, Id meas_id, uint64_t period, STEP_KIND step, Time stepTime) {
-	  auto values_size = bystep::step_to_size(step);
-	  auto zero_time = ByStepTrack::get_zero_time(period, step);
-	  auto v = Meas::empty(meas_id);
-	  for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
-		  v.time = zero_time;
-		  v.flag = Flags::_NO_DATA;
-		  zero_time += stepTime;
-		  if (v.time >= q.from && v.time < q.to) {
-			  clbk->call(v);
-		  }
-	  }
+  void foreach_notexists_period(const QueryInterval &q, IReaderClb *clbk, Id meas_id,
+                                uint64_t period, STEP_KIND step, Time stepTime) {
+    auto values_size = bystep::step_to_size(step);
+    auto zero_time = ByStepTrack::get_zero_time(period, step);
+    auto v = Meas::empty(meas_id);
+    for (size_t meas_num = 0; meas_num < values_size; ++meas_num) {
+      v.time = zero_time;
+      v.flag = Flags::_NO_DATA;
+      zero_time += stepTime;
+      if (v.time >= q.from && v.time < q.to) {
+        clbk->call(v);
+      }
+    }
   }
 
   void foreach_chunk(const QueryInterval &q, IReaderClb *clbk, const Chunk_Ptr &c) {
@@ -332,81 +330,82 @@ struct ByStepStorage::Private : public IMeasStorage {
           result[id].time = local_q.time_point;
           result[id].flag = Flags::_NO_DATA;
         } else {
-			readTimePointFromChunk(result, chunk, stepKind_it->second, local_q, id);
+          readTimePointFromChunk(result, chunk, stepKind_it->second, local_q, id);
         }
       }
     }
     return result;
   }
-  void readTimePointFromChunk(Id2Meas&result, const Chunk_Ptr&chunk, STEP_KIND step, const QueryTimePoint&q, Id id) {
-	  auto rdr = chunk->getReader();
-	  while (!rdr->is_end()) {
-		  auto v = rdr->readNext();
-		  auto rounded_time_tuple = bystep::roundTime(step, v.time);
-		  auto rounded_time = std::get<0>(rounded_time_tuple);
-		  if (v.inFlag(q.flag) && v.id==id && rounded_time == q.time_point) {
-			  result[id] = v;
-			  break;
-		  }
-		  if (v.time > q.time_point) {
-			  break;
-		  }
-	  }
+  void readTimePointFromChunk(Id2Meas &result, const Chunk_Ptr &chunk, STEP_KIND step,
+                              const QueryTimePoint &q, Id id) {
+    auto rdr = chunk->getReader();
+    while (!rdr->is_end()) {
+      auto v = rdr->readNext();
+      auto rounded_time_tuple = bystep::roundTime(step, v.time);
+      auto rounded_time = std::get<0>(rounded_time_tuple);
+      if (v.inFlag(q.flag) && v.id == id && rounded_time == q.time_point) {
+        result[id] = v;
+        break;
+      }
+      if (v.time > q.time_point) {
+        break;
+      }
+    }
   }
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     Id2Meas result;
     std::shared_lock<std::shared_mutex> lg(_values_lock);
-	auto disk_result = _io->currentValue();
+    auto disk_result = _io->currentValue();
 
-	for (auto id : ids) {
-		result[id].flag = Flags::_NO_DATA;
-		result[id].time = MIN_TIME;
-	}
+    for (auto id : ids) {
+      result[id].flag = Flags::_NO_DATA;
+      result[id].time = MIN_TIME;
+    }
 
     for (auto &kv : _values) {
       auto mm = kv.second->currentValue({}, flag);
       if (mm.size() != 0) {
         result[kv.first] = mm[kv.first];
       }
-	  auto fres = disk_result.find(kv.first);
-	  if (fres != disk_result.end()) {//TODO write test
-		  if (result[kv.first].time < fres->second.time) {
-			  result[kv.first].time = fres->second.time;
-		  }
-	  }
+      auto fres = disk_result.find(kv.first);
+      if (fres != disk_result.end()) { // TODO write test
+        if (result[kv.first].time < fres->second.time) {
+          result[kv.first].time = fres->second.time;
+        }
+      }
     }
     return result;
   }
 
-  void flush() override {
-	  _io->flush();
-  }
+  void flush() override { _io->flush(); }
 
   bystep::Description description() {
-	  bystep::Description result;
-	  result = _io->description();
-	  return result;
+    bystep::Description result;
+    result = _io->description();
+    return result;
   }
 
   void eraseOld(Id id, Time from, Time to) {
-	  auto step_kind_it = _steps.find(id);
-	  if (step_kind_it == _steps.end()) {
-		  logger_fatal("engine: bystep - unknow id:", id);
-		  return;
-	  }
+    auto step_kind_it = _steps.find(id);
+    if (step_kind_it == _steps.end()) {
+      logger_fatal("engine: bystep - unknow id:", id);
+      return;
+    }
 
-	  auto round_from = bystep::roundTime(step_kind_it->second, from);
-	  auto round_to = bystep::roundTime(step_kind_it->second, to);
+    auto round_from = bystep::roundTime(step_kind_it->second, from);
+    auto round_to = bystep::roundTime(step_kind_it->second, to);
 
-	  auto vals_per_interval = bystep::step_to_size(step_kind_it->second);
+    auto vals_per_interval = bystep::step_to_size(step_kind_it->second);
 
-	  auto period_from = bystep::intervalForTime(step_kind_it->second, vals_per_interval,
-		  std::get<0>(round_from));
-	  auto period_to = bystep::intervalForTime(step_kind_it->second, vals_per_interval,
-		  std::get<0>(round_to));
-	  
-	  logger_fatal("engine: bystep - erase id:", id, " from: ", dariadb::timeutil::to_string(std::get<0>(round_from)), " to: ", std::get<0>(round_to));
-	  _io->eraseOld(period_from, period_to, id);
+    auto period_from = bystep::intervalForTime(step_kind_it->second, vals_per_interval,
+                                               std::get<0>(round_from));
+    auto period_to = bystep::intervalForTime(step_kind_it->second, vals_per_interval,
+                                             std::get<0>(round_to));
+
+    logger_fatal("engine: bystep - erase id:", id, " from: ",
+                 dariadb::timeutil::to_string(std::get<0>(round_from)), " to: ",
+                 std::get<0>(round_to));
+    _io->eraseOld(period_from, period_to, id);
   }
 
   EngineEnvironment_ptr _env;
@@ -476,9 +475,9 @@ uint64_t ByStepStorage::intervalForTime(const STEP_KIND step, const size_t valsI
 }
 
 bystep::Description ByStepStorage::description() {
-	return _impl->description();
+  return _impl->description();
 }
 
 void ByStepStorage::eraseOld(Id id, Time from, Time to) {
-	_impl->eraseOld(id, from, to);
+  _impl->eraseOld(id, from, to);
 }

@@ -14,10 +14,10 @@ struct Status {
   Status(const Status &other) {
     this->writed = other.writed;
     this->ignored = other.ignored;
-      this->error_message=other.error_message;
+    this->error_message = other.error_message;
   }
 
-  Status operator+(const Status &other)const {
+  Status operator+(const Status &other) const {
     Status res;
     res.writed = writed + other.writed;
     res.ignored = ignored + other.ignored;
@@ -34,16 +34,16 @@ struct Status {
   }
 
   bool operator==(const Status &other) {
-	  if (this != &other) {
-		  return this->ignored == other.ignored && this->writed == other.writed;
-	  }
-	  return true;
+    if (this != &other) {
+      return this->ignored == other.ignored && this->writed == other.writed;
+    }
+    return true;
   }
   bool operator!=(const Status &other) {
-	  if (this != &other) {
-		  return !(*this == other);
-	  }
-	  return true;
+    if (this != &other) {
+      return !(*this == other);
+    }
+    return true;
   }
   size_t writed;
   size_t ignored;

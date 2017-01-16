@@ -1,21 +1,21 @@
 #pragma once
 
-#include <atomic>
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
+#include <atomic>
 #include <memory>
 
 #include <libdariadb/engine.h>
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
-#include <common/net_common.h>
-#include <common/async_connection.h>
 #include <libserver/iclientmanager.h>
+#include <common/async_connection.h>
+#include <common/net_common.h>
 
 namespace dariadb {
 namespace net {
-   const int PING_TIMER_INTERVAL = 1000;
-struct IOClient{
+const int PING_TIMER_INTERVAL = 1000;
+struct IOClient {
 
   struct Environment {
     Environment() {
@@ -47,9 +47,7 @@ struct IOClient{
 
   IOClient(int _id, socket_ptr &_sock, Environment *_env);
   ~IOClient();
-  void start(){
-      _async_connection->start(sock);
-  }
+  void start() { _async_connection->start(sock); }
   void end_session();
   void close();
   void ping();
@@ -66,7 +64,7 @@ struct IOClient{
   void sendError(QueryNumber query_num, const ERRORS &err);
 
   // data - queryInterval or QueryTimePoint
-  void readerAdd(ClientDataReader*cdr, void*data);
+  void readerAdd(ClientDataReader *cdr, void *data);
   void readerRemove(QueryNumber number);
   Time _last_query_time;
   socket_ptr sock;
@@ -75,11 +73,11 @@ struct IOClient{
   CLIENT_STATE state;
   Environment *env;
   std::atomic_int pings_missed;
-  //std::list<storage::IReaderClb *> readers;
+  // std::list<storage::IReaderClb *> readers;
   std::shared_ptr<storage::IReaderClb> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
-  
-  std::map<QueryNumber, std::pair<ClientDataReader*, void*>> _readers;
+
+  std::map<QueryNumber, std::pair<ClientDataReader *, void *>> _readers;
   std::mutex _readers_lock;
 };
 

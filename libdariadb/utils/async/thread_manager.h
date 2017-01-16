@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/st_exports.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/st_exports.h>
 #include <unordered_map>
 
 namespace dariadb {
@@ -22,7 +22,8 @@ public:
 
   EXPORT ~ThreadManager();
   EXPORT void flush();
-  TaskResult_Ptr post(const THREAD_KINDS kind, const std::shared_ptr<AsyncTaskWrap> &task) {
+  TaskResult_Ptr post(const THREAD_KINDS kind,
+                      const std::shared_ptr<AsyncTaskWrap> &task) {
     return this->post((ThreadKind)kind, task);
   }
   EXPORT TaskResult_Ptr post(const ThreadKind kind, const AsyncTaskWrap_Ptr &task);

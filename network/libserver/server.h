@@ -20,10 +20,10 @@ public:
       io_threads = SERVER_IO_THREADS_DEFAULT;
     }
 
-	Param(unsigned short _port, size_t io_threads_count) {
-		port = _port;
-		io_threads = io_threads_count;
-	}
+    Param(unsigned short _port, size_t io_threads_count) {
+      port = _port;
+      io_threads = io_threads_count;
+    }
   };
   SRV_EXPORT Server(const Param &p);
   SRV_EXPORT ~Server();
@@ -35,6 +35,7 @@ public:
   SRV_EXPORT void set_storage(storage::Engine *storage);
 
   SRV_EXPORT void asio_run();
+
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

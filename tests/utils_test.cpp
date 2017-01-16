@@ -1,20 +1,20 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/utils/async/thread_pool.h>
+#include <libdariadb/utils/crc.h>
+#include <libdariadb/utils/cz.h>
+#include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/in_interval.h>
+#include <libdariadb/utils/strings.h>
+#include <libdariadb/utils/utils.h>
 #include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <ctime>
 #include <ctime>
 #include <iostream>
 #include <thread>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/utils/cz.h>
-#include <libdariadb/utils/crc.h>
-#include <libdariadb/utils/fs.h>
-#include <libdariadb/utils/in_interval.h>
-#include <libdariadb/utils/async/thread_manager.h>
-#include <libdariadb/utils/async/thread_pool.h>
-#include <libdariadb/utils/utils.h>
-#include <libdariadb/utils/strings.h>
 
 BOOST_AUTO_TEST_CASE(TimeToString) {
   auto ct = dariadb::timeutil::current_time();
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
         BOOST_TEST_MESSAGE("(tk != ti.kind)");
         throw MAKE_EXCEPTION("(tk != ti.kind)");
       }
-	  return false;
+      return false;
     };
     for (size_t i = 0; i < tasks_count; ++i) {
       tp.post(AT(at));
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
         BOOST_TEST_MESSAGE("(tk != ti.kind)");
         throw MAKE_EXCEPTION("(tk != ti.kind)");
       }
-	  return false;
+      return false;
     };
     for (size_t i = 0; i < tasks_count; ++i) {
       tp.post(AT(at));
@@ -196,21 +196,21 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
   {
     const size_t tasks_count = 10;
     ThreadManager::start(tpm_params);
-	int called = 0;
-	AsyncTask at_while = [&called](const ThreadInfo &ti) {
-		if(called<10){
-			++called;
-			return true;
-		}
-		return false;
-	};
+    int called = 0;
+    AsyncTask at_while = [&called](const ThreadInfo &ti) {
+      if (called < 10) {
+        ++called;
+        return true;
+      }
+      return false;
+    };
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {
       if (tk1 != ti.kind) {
         BOOST_TEST_MESSAGE("(tk1 != ti.kind)");
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
-	  return false;
+      return false;
     };
     AsyncTask at2 = [tk2](const ThreadInfo &ti) {
       if (tk2 != ti.kind) {
@@ -218,17 +218,17 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
-	  return false;
+      return false;
     };
-	auto at_while_res=ThreadManager::instance()->post(tk1, AT(at_while));
+    auto at_while_res = ThreadManager::instance()->post(tk1, AT(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {
       //            logger("test #"<<i);
       ThreadManager::instance()->post(tk1, AT(at1));
       ThreadManager::instance()->post(tk2, AT(at2));
     }
     BOOST_CHECK_GE(ThreadManager::instance()->active_works(), size_t(0));
-	at_while_res->wait();
-	BOOST_CHECK_EQUAL(called, int(10));
+    at_while_res->wait();
+    BOOST_CHECK_EQUAL(called, int(10));
     ThreadManager::instance()->flush();
     ThreadManager::instance()->stop();
   }

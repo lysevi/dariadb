@@ -2,13 +2,13 @@
 
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/engine_environment.h>
-#include <libdariadb/storage/bystep/step_kind.h>
 #include <libdariadb/storage/bystep/description.h>
-#include <memory>
-#include <unordered_map>
+#include <libdariadb/storage/bystep/step_kind.h>
+#include <libdariadb/storage/engine_environment.h>
 #include <istream>
+#include <memory>
 #include <ostream>
+#include <unordered_map>
 
 namespace dariadb {
 namespace storage {
@@ -19,8 +19,8 @@ public:
   EXPORT ByStepStorage(const EngineEnvironment_ptr &env);
   EXPORT ~ByStepStorage();
   EXPORT bystep::Description description();
-  //return count chunk readed from disk.
-  EXPORT size_t setSteps(const Id2Step&steps);
+  // return count chunk readed from disk.
+  EXPORT size_t setSteps(const Id2Step &steps);
 
   // Inherited via IMeasStorage
   EXPORT virtual Time minTime() override;
@@ -36,9 +36,11 @@ public:
   EXPORT void stop();
   EXPORT Id2MinMax loadMinMax() override;
 
-  EXPORT static uint64_t intervalForTime(const STEP_KIND step,const size_t valsInInterval, const Time t);
+  EXPORT static uint64_t intervalForTime(const STEP_KIND step,
+                                         const size_t valsInInterval, const Time t);
 
   EXPORT void eraseOld(Id id, Time from, Time to);
+
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

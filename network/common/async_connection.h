@@ -1,26 +1,29 @@
 #pragma once
 
-#include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/async/locker.h>
+#include <libdariadb/utils/exception.h>
+#include <atomic>
+#include <common/net_cmn_exports.h>
 #include <common/net_common.h>
 #include <common/net_data.h>
 #include <common/socket_ptr.h>
-#include <atomic>
-#include <memory>
 #include <functional>
-#include <common/net_cmn_exports.h>
+#include <memory>
 
 namespace dariadb {
 namespace net {
 
-class AsyncConnection: public std::enable_shared_from_this<AsyncConnection>{
+class AsyncConnection : public std::enable_shared_from_this<AsyncConnection> {
 public:
-	/// if method set 'cancel' to true, then read loop stoping.
-	/// if dont_free_memory, then free NetData_ptr is in client side.
-	using onDataRecvHandler = std::function<void(const NetData_ptr &d, bool &cancel, bool &dont_free_memory)>;
-	using onNetworkErrorHandler = std::function<void(const boost::system::error_code &err)>;
+  /// if method set 'cancel' to true, then read loop stoping.
+  /// if dont_free_memory, then free NetData_ptr is in client side.
+  using onDataRecvHandler =
+      std::function<void(const NetData_ptr &d, bool &cancel, bool &dont_free_memory)>;
+  using onNetworkErrorHandler = std::function<void(const boost::system::error_code &err)>;
+
 public:
-  CM_EXPORT AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv, onNetworkErrorHandler onErr);
+  CM_EXPORT AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv,
+                            onNetworkErrorHandler onErr);
   CM_EXPORT ~AsyncConnection() noexcept(false);
   CM_EXPORT void set_pool(NetData_Pool *pool);
   NetData_Pool *get_pool() { return _pool; }
@@ -35,6 +38,7 @@ public:
 
 private:
   void readNextAsync();
+
 private:
   std::atomic_int _messages_to_send;
   int _async_con_id;

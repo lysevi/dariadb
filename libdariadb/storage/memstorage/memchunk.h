@@ -19,7 +19,7 @@ struct MemChunk : public Chunk {
   MemChunk(ChunkHeader *index, uint8_t *buffer, uint32_t size, const Meas &first_m);
   MemChunk(ChunkHeader *index, uint8_t *buffer);
   ~MemChunk();
-  //bool already_in_disk() const; // STRATEGY::CACHE, true - if already writed to disk.
+  // bool already_in_disk() const; // STRATEGY::CACHE, true - if already writed to disk.
 };
 
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;

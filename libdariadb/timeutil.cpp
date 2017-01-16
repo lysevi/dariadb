@@ -34,29 +34,29 @@ boost::posix_time::ptime to_ptime(Time timestamp) {
   return ptime;
 }
 
-DateTime to_datetime(Time t){
-    using namespace boost::gregorian;
-    using namespace boost::posix_time;
+DateTime to_datetime(Time t) {
+  using namespace boost::gregorian;
+  using namespace boost::posix_time;
 
-    auto ptime = to_ptime(t);
-    auto date = ptime.date();
-    auto time = ptime.time_of_day();
-    auto ymd = gregorian_calendar::from_day_number(date.day_number());
-	
-    DateTime result;
-    result.year=ymd.year;
-    result.month=(uint8_t)ymd.month;
-    result.day=ymd.day;
-	result.day_of_year = date.day_of_year();
-    result.hour=(uint8_t)time.hours();
-    result.minute=(uint8_t)time.minutes();
-    result.second=(uint8_t)time.seconds();
-    result.millisecond= (uint16_t)(time.total_milliseconds() % 1000);
-    return result;
+  auto ptime = to_ptime(t);
+  auto date = ptime.date();
+  auto time = ptime.time_of_day();
+  auto ymd = gregorian_calendar::from_day_number(date.day_number());
+
+  DateTime result;
+  result.year = ymd.year;
+  result.month = (uint8_t)ymd.month;
+  result.day = ymd.day;
+  result.day_of_year = date.day_of_year();
+  result.hour = (uint8_t)time.hours();
+  result.minute = (uint8_t)time.minutes();
+  result.second = (uint8_t)time.seconds();
+  result.millisecond = (uint16_t)(time.total_milliseconds() % 1000);
+  return result;
 }
 
 int to_string(char *buffer, size_t buffer_size, Time t) {
-  DateTime dt=to_datetime(t);
+  DateTime dt = to_datetime(t);
 
   int len = snprintf(buffer, buffer_size, "%04d-%02d-%02d %02d:%02d:%02d.%04d",
                      (int)dt.year, (int)dt.month, (int)dt.day, (int)dt.hour,
@@ -78,15 +78,15 @@ std::string to_string(Time t) {
 }
 
 /// construct from string "2002-01-20 23:59:59.000"
-Time from_string(const std::string&s){
-    auto pt=boost::posix_time::time_from_string(s);
-return from_ptime(pt);
+Time from_string(const std::string &s) {
+  auto pt = boost::posix_time::time_from_string(s);
+  return from_ptime(pt);
 }
 
 /// construct from string "20020131T235959"
-Time from_iso_string(const std::string&s){
-    auto pt=boost::posix_time::from_iso_string(s);
-    return from_ptime(pt);
+Time from_iso_string(const std::string &s) {
+  auto pt = boost::posix_time::from_iso_string(s);
+  return from_ptime(pt);
 }
 
 Time round_to_seconds(const Time t) {

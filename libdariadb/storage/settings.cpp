@@ -11,7 +11,7 @@
 using namespace dariadb::storage;
 using json = nlohmann::json;
 
-const uint64_t WAL_CACHE_SIZE = 4096/sizeof(dariadb::Meas)*10;
+const uint64_t WAL_CACHE_SIZE = 4096 / sizeof(dariadb::Meas) * 10;
 const uint64_t WAL_FILE_SIZE = (1024 * 1024) * 4 / sizeof(dariadb::Meas);
 const uint32_t CHUNK_SIZE = 1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; // 100 mb
@@ -28,10 +28,9 @@ std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
 }
 
-template<class T>
-void Settings::ReadOnlyOption<T>::from_string(const std::string &s){
-	std::istringstream iss(s);
-	iss >> _value;
+template <class T> void Settings::ReadOnlyOption<T>::from_string(const std::string &s) {
+  std::istringstream iss(s);
+  iss >> _value;
 }
 
 template <> std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const {

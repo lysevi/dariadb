@@ -22,4 +22,3 @@ struct FlagDeCompressor : public BaseCompressor {
 };
 }
 }
-

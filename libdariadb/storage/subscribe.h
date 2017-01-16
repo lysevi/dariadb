@@ -1,8 +1,8 @@
 #pragma once
 
 #include <libdariadb/meas.h>
-#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/storage/callbacks.h>
+#include <libdariadb/utils/async/locker.h>
 #include <memory>
 
 namespace dariadb {
@@ -29,7 +29,7 @@ struct SubscribeNotificator {
   void start();
   void stop();
   void add(const SubscribeInfo_ptr &n);
-  //TODO replace Meas to MEasArray and run on thread.
+  // TODO replace Meas to MEasArray and run on thread.
   void on_append(const dariadb::Meas &m) const;
 };
 }

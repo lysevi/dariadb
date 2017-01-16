@@ -15,58 +15,58 @@
 namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
-struct  MeasData{
-	Id id;
-	Time time;
-	Value value;
-	Flag flag;
+struct MeasData {
+  Id id;
+  Time time;
+  Value value;
+  Flag flag;
 };
 struct ChunkHeader {
-  uint64_t id;       /// chunk id.
-  Id       meas_id;  /// measurement id.
+  uint64_t id;                    /// chunk id.
+  Id meas_id;                     /// measurement id.
   MeasData data_first, data_last; /// date of first and last added measurements.
   Time minTime, maxTime;          /// min and max time.
   uint64_t flag_bloom;            /// bool filter for storead flags.
   uint32_t count;                 /// count of stored values.
   uint32_t bw_pos;                /// needed for unpack.
 
-  uint32_t size;                  /// size of buffer with values.
-  uint32_t crc;                   /// checksum.
+  uint32_t size; /// size of buffer with values.
+  uint32_t crc;  /// checksum.
 
-  uint64_t offset_in_page;        /// pos in page file.
+  uint64_t offset_in_page; /// pos in page file.
 
-  Meas first()const {
-	  Meas m = Meas::empty(meas_id);
-	  m.flag = data_first.flag;
-	  m.time = data_first.time;
-	  m.value = data_first.value;
-	  return m;
+  Meas first() const {
+    Meas m = Meas::empty(meas_id);
+    m.flag = data_first.flag;
+    m.time = data_first.time;
+    m.value = data_first.value;
+    return m;
   }
 
-  Meas last()const {
-	  Meas m = Meas::empty(meas_id);
-	  m.flag = data_last.flag;
-	  m.time = data_last.time;
-	  m.value = data_last.value;
-	  return m;
+  Meas last() const {
+    Meas m = Meas::empty(meas_id);
+    m.flag = data_last.flag;
+    m.time = data_last.time;
+    m.value = data_last.value;
+    return m;
   }
 
   void set_first(Meas m) {
-	  data_first.flag = m.flag;
-	  data_first.time = m.time;
-	  data_first.value = m.value;
-	  meas_id = m.id;
+    data_first.flag = m.flag;
+    data_first.time = m.time;
+    data_first.value = m.value;
+    meas_id = m.id;
   }
 
   void set_last(Meas m) {
-	  data_last.flag = m.flag;
-	  data_last.time = m.time;
-	  data_last.value = m.value;
+    data_last.flag = m.flag;
+    data_last.time = m.time;
+    data_last.value = m.value;
   }
 };
 #pragma pack(pop)
 
-class Chunk: public std::enable_shared_from_this<Chunk> {
+class Chunk : public std::enable_shared_from_this<Chunk> {
 public:
   class IChunkReader {
   public:
@@ -84,7 +84,7 @@ public:
   EXPORT ~Chunk();
 
   EXPORT bool append(const Meas &m);
-  EXPORT bool isFull() const ;
+  EXPORT bool isFull() const;
   EXPORT ChunkReader_Ptr getReader();
   EXPORT void close();
   EXPORT uint32_t calcChecksum();
@@ -93,17 +93,16 @@ public:
   EXPORT virtual bool checkChecksum();
   EXPORT bool checkFlag(const Flag &f);
 
-  EXPORT static void updateChecksum(ChunkHeader&hdr, u8vector buff);
-  EXPORT static uint32_t calcChecksum(ChunkHeader&hdr, u8vector buff);
-  ///return - count of skipped bytes.
-  EXPORT static uint32_t compact(ChunkHeader*hdr);
+  EXPORT static void updateChecksum(ChunkHeader &hdr, u8vector buff);
+  EXPORT static uint32_t calcChecksum(ChunkHeader &hdr, u8vector buff);
+  /// return - count of skipped bytes.
+  EXPORT static uint32_t compact(ChunkHeader *hdr);
   ChunkHeader *header;
   u8vector _buffer_t;
 
   compression::ByteBuffer_Ptr bw;
   compression::CopmressedWriter c_writer;
-  bool is_owner; //true - dealloc memory for header and buffer.
-  
+  bool is_owner; // true - dealloc memory for header and buffer.
 };
 
 typedef std::shared_ptr<Chunk> Chunk_Ptr;
@@ -111,6 +110,5 @@ typedef std::list<Chunk_Ptr> ChunksList;
 typedef std::map<Id, Chunk_Ptr> IdToChunkMap;
 typedef std::map<Id, ChunksList> ChunkMap;
 typedef std::unordered_map<Id, Chunk_Ptr> IdToChunkUMap;
-
 }
 }

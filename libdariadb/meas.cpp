@@ -1,10 +1,10 @@
-#include <libdariadb/meas.h>
 #include <libdariadb/flags.h>
+#include <libdariadb/meas.h>
 #include <libdariadb/utils/utils.h>
+#include <algorithm>
 #include <cmath>
 #include <stdlib.h>
 #include <string.h>
-#include <algorithm>
 
 using namespace dariadb;
 
@@ -26,19 +26,19 @@ bool dariadb::areSame(Value a, Value b, const Value EPSILON) {
   return std::fabs(a - b) < EPSILON;
 }
 
-void dariadb::minmax_append(Id2MinMax&out, const Id2MinMax &source){
-    for(auto kv:source){
-        auto fres=out.find(kv.first);
-        if(fres==out.end()){
-            out[kv.first]=kv.second;
-        }else{
-			out[kv.first].updateMax(kv.second.max);
-			out[kv.first].updateMin(kv.second.min);
-        }
+void dariadb::minmax_append(Id2MinMax &out, const Id2MinMax &source) {
+  for (auto kv : source) {
+    auto fres = out.find(kv.first);
+    if (fres == out.end()) {
+      out[kv.first] = kv.second;
+    } else {
+      out[kv.first].updateMax(kv.second.max);
+      out[kv.first].updateMin(kv.second.min);
     }
+  }
 }
 
-void  dariadb::mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
+void dariadb::mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
   for (auto m : mlist) {
     if (m.flag == Flags::_NO_DATA) {
       continue;
@@ -47,14 +47,14 @@ void  dariadb::mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
   }
 }
 
-void MeasMinMax::updateMax(const Meas&m) {
-	if (m.time > this->max.time) {
-		this->max = m;
-	}
+void MeasMinMax::updateMax(const Meas &m) {
+  if (m.time > this->max.time) {
+    this->max = m;
+  }
 }
 
-void MeasMinMax::updateMin(const Meas&m) {
-	if (m.time < this->min.time) {
-		this->min = m;
-	}
+void MeasMinMax::updateMin(const Meas &m) {
+  if (m.time < this->min.time) {
+    this->min = m;
+  }
 }

@@ -1,12 +1,12 @@
 #ifdef MSVC
-    #define _CRT_SECURE_NO_WARNINGS //disable msvc /sdl warning on fopen call.
+#define _CRT_SECURE_NO_WARNINGS // disable msvc /sdl warning on fopen call.
 #endif
-#include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/flags.h>
-#include <libdariadb/utils/fs.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/storage/wal/walfile.h>
+#include <libdariadb/utils/fs.h>
 
 #include <algorithm>
 
@@ -22,37 +22,38 @@ using namespace dariadb::storage;
 class WALFile::Private {
 public:
   Private(const EngineEnvironment_ptr env) {
-	  _env = env;
-	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
+    _env = env;
+    _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(WAL_FILE_EXT);
     _filename = utils::fs::append_path(_settings->raw_path.value(), rnd_fname);
-	_env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_append(rnd_fname);
-	_file = nullptr;
+    _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
+        ->wal_append(rnd_fname);
+    _file = nullptr;
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
-	  _env = env;
-	  _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
+    _env = env;
+    _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = WALFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
-	_file = nullptr;
+    _file = nullptr;
   }
 
   ~Private() {
     this->flush();
-	if (_file != nullptr) {
-		std::fclose(_file);
-		_file = nullptr;
-	}
+    if (_file != nullptr) {
+      std::fclose(_file);
+      _file = nullptr;
+    }
   }
 
   void open_to_append() {
-	  if (_file != nullptr) {
-		  return;
-	  }
+    if (_file != nullptr) {
+      return;
+    }
 
     _file = std::fopen(_filename.c_str(), "ab");
     if (_file == nullptr) {
@@ -61,31 +62,31 @@ public:
   }
 
   void open_to_read() {
-	  if (_file != nullptr) {
-		  std::fclose(_file);
-		  _file = nullptr;
-	  }
+    if (_file != nullptr) {
+      std::fclose(_file);
+      _file = nullptr;
+    }
     _file = std::fopen(_filename.c_str(), "rb");
     if (_file == nullptr) {
       throw_open_error_exception();
     }
   }
 
-  Status  append(const Meas &value) {
+  Status append(const Meas &value) {
     ENSURE(!_is_readonly);
 
     if (_writed > _settings->wal_file_size.value()) {
-      return Status (0, 1);
+      return Status(0, 1);
     }
     open_to_append();
     std::fwrite(&value, sizeof(Meas), size_t(1), _file);
     std::fflush(_file);
     _writed++;
-    return Status (1, 0);
+    return Status(1, 0);
   }
 
-  Status  append(const MeasArray::const_iterator &begin,
-                       const MeasArray::const_iterator &end) {
+  Status append(const MeasArray::const_iterator &begin,
+                const MeasArray::const_iterator &end) {
     ENSURE(!_is_readonly);
 
     auto sz = std::distance(begin, end);
@@ -93,13 +94,13 @@ public:
     auto max_size = _settings->wal_file_size.value();
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
     std::fwrite(&(*begin), sizeof(Meas), write_size, _file);
-	std::fflush(_file);
+    std::fflush(_file);
     _writed += write_size;
-    return Status (write_size, 0);
+    return Status(write_size, 0);
   }
 
-  Status  append(const MeasList::const_iterator &begin,
-                       const MeasList::const_iterator &end) {
+  Status append(const MeasList::const_iterator &begin,
+                const MeasList::const_iterator &end) {
     ENSURE(!_is_readonly);
 
     auto list_size = std::distance(begin, end);
@@ -110,18 +111,18 @@ public:
     auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
     MeasArray ma{begin, end};
     std::fwrite(ma.data(), sizeof(Meas), write_size, _file);
-	std::fflush(_file);
+    std::fflush(_file);
     _writed += write_size;
-    return Status (write_size, 0);
+    return Status(write_size, 0);
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     open_to_read();
 
     while (1) {
-		if (clbk->is_canceled()) {
-			break;
-		}
+      if (clbk->is_canceled()) {
+        break;
+      }
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
@@ -131,7 +132,7 @@ public:
       }
     }
     std::fclose(_file);
-	_file = nullptr;
+    _file = nullptr;
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
@@ -151,7 +152,7 @@ public:
       }
     }
     std::fclose(_file);
-	_file = nullptr;
+    _file = nullptr;
 
     if (!q.ids.empty() && readed_ids.size() != q.ids.size()) {
       for (auto id : q.ids) {
@@ -193,8 +194,8 @@ public:
         readed_ids.emplace(val.id);
       }
     }
-	std::fclose(_file);
-	_file = nullptr;
+    std::fclose(_file);
+    _file = nullptr;
 
     if (!ids.empty() && readed_ids.size() != ids.size()) {
       for (auto id : ids) {
@@ -222,8 +223,8 @@ public:
       }
       result = std::min(val.time, result);
     }
-	std::fclose(_file);
-	_file = nullptr;
+    std::fclose(_file);
+    _file = nullptr;
     return result;
   }
 
@@ -239,8 +240,8 @@ public:
       }
       result = std::max(val.time, result);
     }
-	std::fclose(_file);
-	_file = nullptr;
+    std::fclose(_file);
+    _file = nullptr;
     return result;
   }
 
@@ -261,20 +262,20 @@ public:
         *maxResult = std::max(*maxResult, val.time);
       }
     }
-	std::fclose(_file);
-	_file = nullptr;
+    std::fclose(_file);
+    _file = nullptr;
     return result;
   }
 
-  void flush() { }
+  void flush() {}
 
   std::string filename() const { return _filename; }
 
   std::shared_ptr<MeasArray> readAll() {
     open_to_read();
 
-    auto ma=std::make_shared<MeasArray>(_settings->wal_file_size.value());
-	auto raw = ma.get();
+    auto ma = std::make_shared<MeasArray>(_settings->wal_file_size.value());
+    auto raw = ma.get();
     size_t pos = 0;
     while (1) {
       Meas val = Meas::empty();
@@ -284,16 +285,17 @@ public:
       (*raw)[pos] = val;
       pos++;
     }
-	std::fclose(_file);
-	_file = nullptr;
+    std::fclose(_file);
+    _file = nullptr;
     return ma;
   }
 
-  [[noreturn]]
-  void throw_open_error_exception() const {
+  [[noreturn]] void throw_open_error_exception() const {
     std::stringstream ss;
     ss << "wal: file open error " << _filename;
-    auto wals_manifest = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_list();
+    auto wals_manifest =
+        _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
+            ->wal_list();
     ss << "Manifest:";
     for (auto f : wals_manifest) {
       ss << f << std::endl;
@@ -305,34 +307,35 @@ public:
     throw MAKE_EXCEPTION(ss.str());
   }
 
-  Id2MinMax loadMinMax(){
-      open_to_read();
-      Id2MinMax result;
-      while (1) {
-        Meas val = Meas::empty();
-        if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-          break;
-        }
-
-        auto fres=result.find(val.id);
-        if(fres==result.end()){
-            result[val.id].min=val;
-            result[val.id].max=val;
-        }else{
-            fres->second.updateMax(val);
-			fres->second.updateMin(val);
-        }
+  Id2MinMax loadMinMax() {
+    open_to_read();
+    Id2MinMax result;
+    while (1) {
+      Meas val = Meas::empty();
+      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
+        break;
       }
-	  std::fclose(_file);
-	  _file = nullptr;
-      return result;
+
+      auto fres = result.find(val.id);
+      if (fres == result.end()) {
+        result[val.id].min = val;
+        result[val.id].max = val;
+      } else {
+        fres->second.updateMax(val);
+        fres->second.updateMin(val);
+      }
+    }
+    std::fclose(_file);
+    _file = nullptr;
+    return result;
   }
+
 protected:
   std::string _filename;
   bool _is_readonly;
   size_t _writed;
   EngineEnvironment_ptr _env;
-  Settings* _settings;
+  Settings *_settings;
   FILE *_file;
 };
 
@@ -352,22 +355,22 @@ dariadb::Time WALFile::maxTime() {
 }
 
 bool WALFile::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                        dariadb::Time *maxResult) {
+                         dariadb::Time *maxResult) {
   return _Impl->minMaxTime(id, minResult, maxResult);
 }
 void WALFile::flush() { // write all to storage;
   _Impl->flush();
 }
 
-Status  WALFile::append(const Meas &value) {
+Status WALFile::append(const Meas &value) {
   return _Impl->append(value);
 }
-Status  WALFile::append(const MeasArray::const_iterator &begin,
-                             const MeasArray::const_iterator &end) {
+Status WALFile::append(const MeasArray::const_iterator &begin,
+                       const MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
-Status  WALFile::append(const MeasList::const_iterator &begin,
-                             const MeasList::const_iterator &end) {
+Status WALFile::append(const MeasList::const_iterator &begin,
+                       const MeasList::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
@@ -396,6 +399,6 @@ size_t WALFile::writed(std::string fname) {
   return in.tellg() / sizeof(Meas);
 }
 
-Id2MinMax WALFile::loadMinMax(){
-   return _Impl->loadMinMax();
+Id2MinMax WALFile::loadMinMax() {
+  return _Impl->loadMinMax();
 }

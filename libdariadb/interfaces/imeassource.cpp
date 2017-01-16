@@ -15,7 +15,7 @@ void IMeasSource::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
 }
 
 MeasList IMeasSource::readInterval(const QueryInterval &q) {
-  auto clbk= std::make_unique<MList_ReaderClb>();
+  auto clbk = std::make_unique<MList_ReaderClb>();
   this->foreach (q, clbk.get());
 
   Id2MSet sub_result;
@@ -35,7 +35,7 @@ MeasList IMeasSource::readInterval(const QueryInterval &q) {
   return result;
 }
 
-Id2MinMax IMeasSource::loadMinMax(){
-    NOT_IMPLEMENTED;
-    //return Id2MinMax();
+Id2MinMax IMeasSource::loadMinMax() {
+  NOT_IMPLEMENTED;
+  // return Id2MinMax();
 }

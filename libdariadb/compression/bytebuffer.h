@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/st_exports.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/st_exports.h>
 #include <memory>
 #include <ostream>
 #include <type_traits>
@@ -21,27 +21,27 @@ public:
   size_t cap() const { return _cap; }
   size_t free_size() const { return _pos; }
   bool is_full() const { return _pos == 0; }
-  void reset_pos(){ _pos = _cap - 1; }
-  ///return offset of value sizeof(t) relative of current pos.
-  template<typename T>
-  T* offset_off() {
-	  static_assert(std::is_pod<T>::value, "only POD objects.");
-	  move_pos(sizeof(T));
-	  auto target = reinterpret_cast<T *>(_begin + _pos);
-	  return target;
+  void reset_pos() { _pos = _cap - 1; }
+  /// return offset of value sizeof(t) relative of current pos.
+  template <typename T> T *offset_off() {
+    static_assert(std::is_pod<T>::value, "only POD objects.");
+    move_pos(sizeof(T));
+    auto target = reinterpret_cast<T *>(_begin + _pos);
+    return target;
   }
 
   template <typename T> void write(T v) {
-	auto target = offset_off<T>();
+    auto target = offset_off<T>();
     *target = v;
   }
 
   template <typename T> T read() {
-	auto target = offset_off<T>();
+    auto target = offset_off<T>();
     return *target;
   }
 
-  dariadb::utils::Range get_range() const { return dariadb::utils::Range{ _begin, _end }; }
+  dariadb::utils::Range get_range() const { return dariadb::utils::Range{_begin, _end}; }
+
 protected:
   inline void move_pos(int8_t count) {
     _pos -= count;
@@ -59,4 +59,3 @@ protected:
 };
 }
 }
-

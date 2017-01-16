@@ -4,8 +4,7 @@
 
 using namespace dariadb::compression;
 
-FlagCompressor::FlagCompressor(const ByteBuffer_Ptr &bw_)
-    : BaseCompressor(bw_) {
+FlagCompressor::FlagCompressor(const ByteBuffer_Ptr &bw_) : BaseCompressor(bw_) {
   _is_first = true;
 }
 
@@ -32,8 +31,7 @@ bool FlagCompressor::append(dariadb::Flag v) {
   return true;
 }
 
-FlagDeCompressor::FlagDeCompressor(const ByteBuffer_Ptr &bw_,
-                                   dariadb::Flag first)
+FlagDeCompressor::FlagDeCompressor(const ByteBuffer_Ptr &bw_, dariadb::Flag first)
     : BaseCompressor(bw_) {
   _first = first;
   _is_first = true;

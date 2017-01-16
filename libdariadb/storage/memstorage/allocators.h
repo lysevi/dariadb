@@ -32,10 +32,10 @@ struct MemChunkAllocator : public utils::NonCopy {
       AllocatedData(nullptr, nullptr, std::numeric_limits<size_t>::max());
 
   size_t _one_chunk_size;
-  size_t _maxSize;   /// max size in bytes)
+  size_t _maxSize;     /// max size in bytes)
   uint32_t _chunkSize; /// size of chunk
-  size_t _capacity;  /// max size in chunks
-  size_t _allocated; /// already allocated count of chunks.
+  size_t _capacity;    /// max size in chunks
+  size_t _allocated;   /// already allocated count of chunks.
 
   ChunkHeader *_headers;
   uint8_t *_buffers;

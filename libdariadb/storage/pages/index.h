@@ -1,8 +1,8 @@
 #pragma once
 
 #include <libdariadb/interfaces/ichunkcontainer.h>
-#include <libdariadb/utils/fs.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/utils/fs.h>
 
 namespace dariadb {
 namespace storage {
@@ -11,7 +11,7 @@ struct IndexHeader {
   uint32_t count; // count of values
   dariadb::Time minTime;
   dariadb::Time maxTime;
-  bool is_sorted; // items in index file sorted by time
+  bool is_sorted;      // items in index file sorted by time
   uint64_t id_bloom;   // bloom filter of Meas.id
   uint64_t flag_bloom; // bloom filter of Meas.flag
 };

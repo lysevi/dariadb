@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libdariadb/utils/utils.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/utils/utils.h>
 #include <list>
 #include <memory>
 #include <string>

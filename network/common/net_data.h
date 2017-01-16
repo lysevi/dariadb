@@ -59,7 +59,8 @@ struct QueryAppend_header {
   space_left - space left in buffer after processing
   return - count processed meases;
   */
-  CM_EXPORT static uint32_t make_query(QueryAppend_header *hdr, const Meas*m_array, size_t size, size_t pos, size_t* space_left);
+  CM_EXPORT static uint32_t make_query(QueryAppend_header *hdr, const Meas *m_array,
+                                       size_t size, size_t pos, size_t *space_left);
   CM_EXPORT MeasArray read_measarray() const;
 };
 
@@ -81,46 +82,45 @@ struct QueryTimePoint_header {
 };
 
 struct QueryCurrentValue_header {
-	uint8_t kind;
-	QueryNumber id;
-	Flag flag;
-	uint16_t ids_count;
+  uint8_t kind;
+  QueryNumber id;
+  Flag flag;
+  uint16_t ids_count;
 };
 
 struct QuerSubscribe_header {
-	uint8_t kind;
-	QueryNumber id;
-	Flag flag;
-	uint16_t ids_count;
+  uint8_t kind;
+  QueryNumber id;
+  Flag flag;
+  uint16_t ids_count;
 };
 
 struct QuerCompact_header {
-    uint8_t kind;
-    QueryNumber id;
-    size_t pageCount;
-    Time from;
-    Time to;
+  uint8_t kind;
+  QueryNumber id;
+  size_t pageCount;
+  Time from;
+  Time to;
 };
 #pragma pack(pop)
 
-//using NetData_Pool = boost::object_pool<NetData>;
+// using NetData_Pool = boost::object_pool<NetData>;
 struct NetData_Pool {
-	utils::async::Locker _locker;
-	typedef boost::object_pool<NetData> Pool;
-	Pool _pool;
+  utils::async::Locker _locker;
+  typedef boost::object_pool<NetData> Pool;
+  Pool _pool;
 
-    CM_EXPORT void free(Pool::element_type*nd);
-    CM_EXPORT Pool::element_type* construct();
+  CM_EXPORT void free(Pool::element_type *nd);
+  CM_EXPORT Pool::element_type *construct();
 
-	template<class T>
-	Pool::element_type* construct(T&&a) {
-		_locker.lock();
-		auto res = _pool.construct(a);
-		_locker.unlock();
-		return res;
-	}
+  template <class T> Pool::element_type *construct(T &&a) {
+    _locker.lock();
+    auto res = _pool.construct(a);
+    _locker.unlock();
+    return res;
+  }
 };
-using NetData_ptr = NetData_Pool::Pool::element_type*;
+using NetData_ptr = NetData_Pool::Pool::element_type *;
 
 const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
 }

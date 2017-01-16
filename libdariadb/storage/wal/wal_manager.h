@@ -1,12 +1,12 @@
 #pragma once
 
-#include <libdariadb/storage/settings.h>
 #include <libdariadb/interfaces/idroppers.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/st_exports.h>
+#include <libdariadb/storage/settings.h>
+#include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/storage/wal/walfile.h>
-#include <libdariadb/st_exports.h>
 #include <vector>
 
 #include <mutex>
@@ -23,11 +23,11 @@ public:
   EXPORT virtual Time minTime() override;
   EXPORT virtual Time maxTime() override;
   EXPORT virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                          dariadb::Time *maxResult) override;
+                                 dariadb::Time *maxResult) override;
   EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-  EXPORT virtual Status  append(const Meas &value) override;
+  EXPORT virtual Status append(const Meas &value) override;
   EXPORT virtual void flush() override;
 
   EXPORT std::list<std::string> closedWals();
@@ -42,6 +42,7 @@ public:
   EXPORT void dropAll();
 
   EXPORT Id2MinMax loadMinMax() override;
+
 protected:
   void create_new();
   std::list<std::string> wal_files() const;
@@ -59,7 +60,7 @@ private:
   size_t _buffer_pos;
   std::set<std::string> _files_send_to_drop;
   EngineEnvironment_ptr _env;
-  Settings* _settings;
+  Settings *_settings;
 };
 
 using WALManager_ptr = std::shared_ptr<WALManager>;

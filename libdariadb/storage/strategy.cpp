@@ -1,6 +1,6 @@
 #include <libdariadb/storage/strategy.h>
-#include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/exception.h>
+#include <libdariadb/utils/strings.h>
 #include <sstream>
 
 std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
@@ -11,21 +11,21 @@ std::istream &dariadb::storage::operator>>(std::istream &in, STRATEGY &strat) {
 
   if (token == "WAL") {
     strat = dariadb::storage::STRATEGY::WAL;
-	return in;
+    return in;
   }
   if (token == "COMPRESSED") {
     strat = dariadb::storage::STRATEGY::COMPRESSED;
-	return in;
+    return in;
   }
 
   if (token == "MEMORY") {
     strat = dariadb::storage::STRATEGY::MEMORY;
-	return in;
+    return in;
   }
 
   if (token == "CACHE") {
     strat = dariadb::storage::STRATEGY::CACHE;
-	return in;
+    return in;
   }
   THROW_EXCEPTION("engine: bad strategy name - ", token);
 }
@@ -45,14 +45,14 @@ std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STRATEGY 
     stream << "CACHE";
     break;
   default:
-	THROW_EXCEPTION("engine: bad strategy - ", (uint16_t)strat);
+    THROW_EXCEPTION("engine: bad strategy - ", (uint16_t)strat);
     break;
   };
   return stream;
 }
 
 std::string dariadb::storage::to_string(const STRATEGY &strat) {
-	std::stringstream ss;
-	ss << strat;
-	return ss.str();
+  std::stringstream ss;
+  ss << strat;
+  return ss.str();
 }

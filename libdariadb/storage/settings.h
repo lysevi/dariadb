@@ -48,7 +48,7 @@ class Settings {
 
     std::string key_str() const override { return key_name; }
     std::string value_str() const override { return std::to_string(_value); }
-	void from_string(const std::string &s) override;
+    void from_string(const std::string &s) override;
     /// return option value
     T value() const { return _value; }
 
@@ -66,7 +66,7 @@ class Settings {
     void setValue(const T &value_) {
       logger_info("engine: change settings - ", this->key_name, " ", this->_value, " to ",
                   value_);
-	  this->_value = value_;
+      this->_value = value_;
     }
   };
 
@@ -88,7 +88,7 @@ public:
   ReadOnlyOption<std::string> raw_path;
   ReadOnlyOption<std::string> bystep_path;
   // wal level options;
-  Option<uint64_t> wal_file_size;    // measurements count in one file
+  Option<uint64_t> wal_file_size;  // measurements count in one file
   Option<uint64_t> wal_cache_size; // inner buffer size
 
   Option<uint32_t> chunk_size;
@@ -107,6 +107,5 @@ using Settings_ptr = std::shared_ptr<Settings>;
 
 template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
 template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
-
 }
 }

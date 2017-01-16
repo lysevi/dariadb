@@ -1,19 +1,19 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 
-#include <atomic>
 #include <boost/test/unit_test.hpp>
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <thread>
 
+#include "../network/common/net_data.h"
+#include <libclient/client.h>
 #include <libdariadb/engine.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/fs.h>
-#include <libclient/client.h>
+#include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
-#include "../network/common/net_data.h"
 
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
@@ -40,46 +40,46 @@ void server_thread_func() {
   server_instance = nullptr;
 }
 BOOST_AUTO_TEST_CASE(NetDataPack) {
-	using dariadb::net::QueryAppend_header;
-	using dariadb::net::NetData;
-	
-	NetData nd;
-	
-	auto hdr = reinterpret_cast<QueryAppend_header *>(&nd.data);
-	dariadb::MeasArray ma;
-	const size_t ma_sz = 5000;
-	ma.resize(ma_sz);
-	dariadb::Id id = 1;
-	for (size_t i = 1; i < ma.size(); ++i) {
-		ma[i].flag = dariadb::Flag(i);
-		ma[i].value= dariadb::Value(i);
-		ma[i].time = i;
-		ma[i].id = id;
-		if (i % 5==0) {
-			++id;
-		}
-	}
+  using dariadb::net::QueryAppend_header;
+  using dariadb::net::NetData;
 
-	size_t sz = 0;
-	dariadb::net::QueryAppend_header::make_query(hdr, ma.data(),ma.size(), 0, &sz);
-	size_t packe_count = hdr->count;
+  NetData nd;
 
-	auto readed_ma=hdr->read_measarray();
-	BOOST_CHECK_EQUAL(packe_count, readed_ma.size());
-	BOOST_CHECK_EQUAL(readed_ma[0].id,  dariadb::Id(0));
-	BOOST_CHECK_EQUAL(readed_ma[0].flag, dariadb::Flag(0));
-	BOOST_CHECK_EQUAL(readed_ma[0].value, dariadb::Value(0));
-	BOOST_CHECK_EQUAL(readed_ma[0].time, dariadb::Time(0));
-	id = 1;
-	for (size_t i = 1; i < readed_ma.size(); ++i) {
-		BOOST_CHECK_EQUAL(readed_ma[i].id, dariadb::Id(id));
-		BOOST_CHECK_EQUAL(readed_ma[i].flag, dariadb::Flag(i));
-		BOOST_CHECK_EQUAL(readed_ma[i].value, dariadb::Value(i));
-		BOOST_CHECK_EQUAL(readed_ma[i].time, dariadb::Time(i));
-		if (i % 5 == 0) {
-			++id;
-		}
-	}
+  auto hdr = reinterpret_cast<QueryAppend_header *>(&nd.data);
+  dariadb::MeasArray ma;
+  const size_t ma_sz = 5000;
+  ma.resize(ma_sz);
+  dariadb::Id id = 1;
+  for (size_t i = 1; i < ma.size(); ++i) {
+    ma[i].flag = dariadb::Flag(i);
+    ma[i].value = dariadb::Value(i);
+    ma[i].time = i;
+    ma[i].id = id;
+    if (i % 5 == 0) {
+      ++id;
+    }
+  }
+
+  size_t sz = 0;
+  dariadb::net::QueryAppend_header::make_query(hdr, ma.data(), ma.size(), 0, &sz);
+  size_t packe_count = hdr->count;
+
+  auto readed_ma = hdr->read_measarray();
+  BOOST_CHECK_EQUAL(packe_count, readed_ma.size());
+  BOOST_CHECK_EQUAL(readed_ma[0].id, dariadb::Id(0));
+  BOOST_CHECK_EQUAL(readed_ma[0].flag, dariadb::Flag(0));
+  BOOST_CHECK_EQUAL(readed_ma[0].value, dariadb::Value(0));
+  BOOST_CHECK_EQUAL(readed_ma[0].time, dariadb::Time(0));
+  id = 1;
+  for (size_t i = 1; i < readed_ma.size(); ++i) {
+    BOOST_CHECK_EQUAL(readed_ma[i].id, dariadb::Id(id));
+    BOOST_CHECK_EQUAL(readed_ma[i].flag, dariadb::Flag(i));
+    BOOST_CHECK_EQUAL(readed_ma[i].value, dariadb::Value(i));
+    BOOST_CHECK_EQUAL(readed_ma[i].time, dariadb::Time(i));
+    if (i % 5 == 0) {
+      ++id;
+    }
+  }
 }
 
 BOOST_AUTO_TEST_CASE(Connect1) {
@@ -274,9 +274,10 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-	auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
-	settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
-	settings->chunk_size.setValue(chunk_size);
+    auto settings =
+        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 3 + 3;
@@ -313,15 +314,15 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       ma[i].time = i;
       ids[i] = ma[i].id;
     }
-	size_t subscribe_calls = 0;
-	dariadb::net::client::ReadResult::callback clbk = [&subscribe_calls](const dariadb::net::client::ReadResult *parent, const dariadb::Meas &m) {
-		subscribe_calls++;
-	};
+    size_t subscribe_calls = 0;
+    dariadb::net::client::ReadResult::callback clbk =
+        [&subscribe_calls](const dariadb::net::client::ReadResult *parent,
+                           const dariadb::Meas &m) { subscribe_calls++; };
 
-	auto read_res=c1.subscribe({ ma[0].id }, dariadb::Flag(0), clbk);
-	read_res->wait();
-	read_res = c1.subscribe({ ma[1].id }, dariadb::Flag(0), clbk);
-	read_res->wait();
+    auto read_res = c1.subscribe({ma[0].id}, dariadb::Flag(0), clbk);
+    read_res->wait();
+    read_res = c1.subscribe({ma[1].id}, dariadb::Flag(0), clbk);
+    read_res->wait();
     c1.append(ma);
 
     dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
@@ -334,13 +335,12 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
     BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
 
-	auto result_cv = c1.currentValue({ ids[0], ids[1] }, 0);
-	BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
+    auto result_cv = c1.currentValue({ids[0], ids[1]}, 0);
+    BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
 
-	BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
+    BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
     c1.disconnect();
 
-	
     while (true) {
       auto st1 = c1.state();
       dariadb::logger("ReadWriteTest test>> ", "0  state1: ", st1);
@@ -358,7 +358,6 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
 }
 
-
 BOOST_AUTO_TEST_CASE(CompactionToTest) {
   dariadb::logger("********** CompactionToTest **********");
 
@@ -372,7 +371,8 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+    auto settings =
+        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
     settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
@@ -400,36 +400,37 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
-    dariadb::Id id=0;
-    while(1){
-        ++id;
-        dariadb::MeasArray ma;
-        ma.resize(MEASES_SIZE);
+    dariadb::Id id = 0;
+    while (1) {
+      ++id;
+      dariadb::MeasArray ma;
+      ma.resize(MEASES_SIZE);
 
-        for (size_t i = 0; i < MEASES_SIZE; ++i) {
-          ma[i].id = id;
-          ma[i].value = dariadb::Value(i);
-          ma[i].time = i;
-        }
-        c1.append(ma);
-        auto wals=dariadb::utils::fs::ls(settings->raw_path.value(),dariadb::storage::WAL_FILE_EXT).size();
-        dariadb::logger("CompactionTest: wal count:",wals);
-        if(wals>=size_t(2)){
-            break;
-        }
+      for (size_t i = 0; i < MEASES_SIZE; ++i) {
+        ma[i].id = id;
+        ma[i].value = dariadb::Value(i);
+        ma[i].time = i;
+      }
+      c1.append(ma);
+      auto wals = dariadb::utils::fs::ls(settings->raw_path.value(),
+                                         dariadb::storage::WAL_FILE_EXT)
+                      .size();
+      dariadb::logger("CompactionTest: wal count:", wals);
+      if (wals >= size_t(2)) {
+        break;
+      }
     }
 
     c1.compactTo(size_t(1));
 
-    while(1){
-        auto pages=dariadb::utils::fs::ls(settings->raw_path.value(),".page").size();
-        //dariadb::logger("CompactionTest: pages count:",pages);
-        if(pages==size_t(1)){
-            break;
-        }
+    while (1) {
+      auto pages = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
+      // dariadb::logger("CompactionTest: pages count:",pages);
+      if (pages == size_t(1)) {
+        break;
+      }
     }
     c1.disconnect();
-
 
     while (true) {
       auto st1 = c1.state();
@@ -448,7 +449,6 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
   }
 }
 
-
 BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
   dariadb::logger("********** CompactionByTimeTest **********");
 
@@ -462,7 +462,8 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    auto settings = dariadb::storage::Settings_ptr{ new dariadb::storage::Settings(storage_path) };
+    auto settings =
+        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
     settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
@@ -490,36 +491,37 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 
-    dariadb::Id id=0;
-    while(1){
-        ++id;
-        dariadb::MeasArray ma;
-        ma.resize(MEASES_SIZE);
+    dariadb::Id id = 0;
+    while (1) {
+      ++id;
+      dariadb::MeasArray ma;
+      ma.resize(MEASES_SIZE);
 
-        for (size_t i = 0; i < MEASES_SIZE; ++i) {
-          ma[i].id = id;
-          ma[i].value = dariadb::Value(i);
-          ma[i].time = i;
-        }
-        c1.append(ma);
-        auto wals=dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::WAL_FILE_EXT).size();
-        dariadb::logger("CompactionTest: wal count:",wals);
-        if(wals>=size_t(2)){
-            break;
-        }
+      for (size_t i = 0; i < MEASES_SIZE; ++i) {
+        ma[i].id = id;
+        ma[i].value = dariadb::Value(i);
+        ma[i].time = i;
+      }
+      c1.append(ma);
+      auto wals = dariadb::utils::fs::ls(settings->raw_path.value(),
+                                         dariadb::storage::WAL_FILE_EXT)
+                      .size();
+      dariadb::logger("CompactionTest: wal count:", wals);
+      if (wals >= size_t(2)) {
+        break;
+      }
     }
 
-    c1.compactbyTime(0,MEASES_SIZE);
+    c1.compactbyTime(0, MEASES_SIZE);
 
-    while(1){
-        auto pages=dariadb::utils::fs::ls(settings->raw_path.value(),".page").size();
-        //dariadb::logger("CompactionTest: pages count:",pages);
-        if(pages==size_t(1)){
-            break;
-        }
+    while (1) {
+      auto pages = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
+      // dariadb::logger("CompactionTest: pages count:",pages);
+      if (pages == size_t(1)) {
+        break;
+      }
     }
     c1.disconnect();
-
 
     while (true) {
       auto st1 = c1.state();

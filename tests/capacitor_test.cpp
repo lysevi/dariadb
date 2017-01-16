@@ -1,7 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
-#include <atomic>
 #include <boost/test/unit_test.hpp>
+#include <atomic>
 #include <cassert>
 #include <iostream>
 #include <map>

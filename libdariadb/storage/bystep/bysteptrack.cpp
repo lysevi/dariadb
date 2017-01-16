@@ -93,14 +93,14 @@ Id2MinMax ByStepTrack::loadMinMax() {
 
 Id2Meas ByStepTrack::currentValue(const IdArray &, const Flag &flag) {
   Id2Meas result{};
-  for (size_t i = _values.size() - 1; ; --i) {
+  for (size_t i = _values.size() - 1;; --i) {
     if (_values[i].flag != Flags::_NO_DATA) {
       if (_values[i].inFlag(flag)) {
         result[_target_id] = _values[i];
       }
-	  if (i == 0) {
-		  break;
-	  }
+      if (i == 0) {
+        break;
+      }
       break;
     }
   }
@@ -174,7 +174,7 @@ Chunk_Ptr ByStepTrack::pack() const {
   for (; it < _values.size(); ++it) {
     result->append(_values[it]);
   }
-  result->close(); 
+  result->close();
   result->header->id = _period;
   result->is_owner = true;
   return result;

@@ -1,8 +1,8 @@
 #include "test_common.h"
+#include <libdariadb/utils/exception.h>
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <libdariadb/utils/exception.h>
 
 namespace dariadb_test {
 #undef NO_DATA
@@ -15,14 +15,14 @@ public:
     count = 0;
     is_end_called = 0;
   }
-  void call(const Meas &v) override{
+  void call(const Meas &v) override {
     std::lock_guard<std::mutex> lg(_locker);
     count++;
     all.push_back(v);
   }
   void is_end() override {
-	  is_end_called++;
-	  storage::IReaderClb::is_end();
+    is_end_called++;
+    storage::IReaderClb::is_end();
   }
   size_t count;
   MeasList all;
@@ -32,28 +32,27 @@ public:
 
 class OrderCheckCallback : public storage::IReaderClb {
 public:
-	OrderCheckCallback() {
-		is_greater = false;
-		is_first = true;
-	}
-	void call(const Meas &v) override {
-		std::lock_guard<std::mutex> lg(_locker);
-		all.push_back(v);
-		if (is_first) {
-			_last = v.time;
-			is_first = false;
-		}
-		else {
-			is_greater = _last <= v.time;
-			_last = v.time;
-		}
-	}
-	std::mutex _locker;
-	dariadb::Time _last;
-	bool is_first;
-	bool is_greater;
+  OrderCheckCallback() {
+    is_greater = false;
+    is_first = true;
+  }
+  void call(const Meas &v) override {
+    std::lock_guard<std::mutex> lg(_locker);
+    all.push_back(v);
+    if (is_first) {
+      _last = v.time;
+      is_first = false;
+    } else {
+      is_greater = _last <= v.time;
+      _last = v.time;
+    }
+  }
+  std::mutex _locker;
+  dariadb::Time _last;
+  bool is_first;
+  bool is_greater;
 
-	MeasList all;
+  MeasList all;
 };
 
 void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
@@ -75,8 +74,8 @@ void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
   }
 }
 
-void check_reader_of_all(MeasList& all, Time from, Time to, Time step,
-                         size_t total_count, std::string message) {
+void check_reader_of_all(MeasList &all, Time from, Time to, Time step, size_t total_count,
+                         std::string message) {
 
   std::map<Id, MeasList> _dict;
   for (auto &v : all) {
@@ -114,7 +113,8 @@ void check_reader_of_all(MeasList& all, Time from, Time to, Time step,
   checkAll(all, message, from, to, step);
 }
 
-size_t fill_storage_for_test(dariadb::storage::IMeasStorage *as, dariadb::Time from, dariadb::Time to,dariadb::Time step,
+size_t fill_storage_for_test(dariadb::storage::IMeasStorage *as, dariadb::Time from,
+                             dariadb::Time to, dariadb::Time step,
                              dariadb::IdSet *_all_ids_set, dariadb::Time *maxWritedTime) {
   auto m = Meas::empty();
   size_t total_count = 0;
@@ -196,55 +196,55 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
                        size_t total_count, bool check_stop_flag) {
   storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
   MeasList all = as->readInterval(qi_all);
-  
-	  auto all_size = all.size();
-	  check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
-	  auto clbk = new Callback();
-	  as->foreach(qi_all, clbk);
 
-	  while (clbk->count != all_size) {
-		  std::this_thread::yield();
-	  }
+  auto all_size = all.size();
+  check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
+  auto clbk = new Callback();
+  as->foreach (qi_all, clbk);
 
-	  if (all_size != clbk->count) {
-		  THROW_EXCEPTION("all.size()!=clbk->count: ", all.size(), "!=", clbk->count);
-	  }
+  while (clbk->count != all_size) {
+    std::this_thread::yield();
+  }
 
-	  if (check_stop_flag) {
-		  clbk->wait();
-	  }
-	  delete clbk;
+  if (all_size != clbk->count) {
+    THROW_EXCEPTION("all.size()!=clbk->count: ", all.size(), "!=", clbk->count);
+  }
 
-	  IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
+  if (check_stop_flag) {
+    clbk->wait();
+  }
+  delete clbk;
 
-	  all = as->readInterval(storage::QueryInterval(
-		  ids, 0, to + copies_count - copies_count / 3, to + copies_count));
-	  if (all.size() == size_t(0)) {
-		  throw MAKE_EXCEPTION("all.size() != size_t(0)");
-	  }
+  IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
 
-	  ids.clear();
-	  ids.push_back(2);
-	  MeasList fltr_res{};
-	  fltr_res = as->readInterval(storage::QueryInterval(ids, 0, from, to + copies_count));
+  all = as->readInterval(storage::QueryInterval(
+      ids, 0, to + copies_count - copies_count / 3, to + copies_count));
+  if (all.size() == size_t(0)) {
+    throw MAKE_EXCEPTION("all.size() != size_t(0)");
+  }
 
-	  if (fltr_res.size() != copies_count) {
-		  throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
-	  }
+  ids.clear();
+  ids.push_back(2);
+  MeasList fltr_res{};
+  fltr_res = as->readInterval(storage::QueryInterval(ids, 0, from, to + copies_count));
 
-	  if (check_stop_flag) {//this check works only when engine test.
-		  // calls must be sorted by time.
-		  auto order_clbk = new OrderCheckCallback();
-		  IdArray zero_id;
-		  zero_id.resize(1);
-		  zero_id[0] = dariadb::Id(0);
-		  as->foreach(storage::QueryInterval(zero_id, 0, from, to + copies_count), order_clbk);
-		  order_clbk->wait();
-		  if (!order_clbk->is_greater) {
-			  throw MAKE_EXCEPTION("!order_clbk->is_greater");
-		  }
-		  delete order_clbk;
-	  }
+  if (fltr_res.size() != copies_count) {
+    throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
+  }
+
+  if (check_stop_flag) { // this check works only when engine test.
+    // calls must be sorted by time.
+    auto order_clbk = new OrderCheckCallback();
+    IdArray zero_id;
+    zero_id.resize(1);
+    zero_id[0] = dariadb::Id(0);
+    as->foreach (storage::QueryInterval(zero_id, 0, from, to + copies_count), order_clbk);
+    order_clbk->wait();
+    if (!order_clbk->is_greater) {
+      throw MAKE_EXCEPTION("!order_clbk->is_greater");
+    }
+    delete order_clbk;
+  }
 }
 
 void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
@@ -257,14 +257,14 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to, Time step
     throw MAKE_EXCEPTION("all.size() < ids_count. must be GE");
   }
 
-  auto qpoint_clbk= std::make_unique<Callback>();
+  auto qpoint_clbk = std::make_unique<Callback>();
   as->foreach (qp, qpoint_clbk.get());
   if (qpoint_clbk->count != all_id2meas.size()) {
     throw MAKE_EXCEPTION("qpoint_clbk->count != all_id2meas.size()");
   }
 
   if (check_stop_flag && qpoint_clbk->is_end_called != 1) {
-    THROW_EXCEPTION("clbk->is_end_called!=1: " , qpoint_clbk->is_end_called.load());
+    THROW_EXCEPTION("clbk->is_end_called!=1: ", qpoint_clbk->is_end_called.load());
   }
 
   qp.time_point = to + copies_count;
@@ -296,21 +296,21 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   size_t total_count =
       fill_storage_for_test(as, from, to, step, &_all_ids_set, &maxWritedTime);
   std::cout << "loadMinMax\n";
-  auto minMax=as->loadMinMax();
+  auto minMax = as->loadMinMax();
 
-  if(minMax.size()!=_all_ids_set.size()){
-      throw MAKE_EXCEPTION("minMax.size()!=_all_ids_set.size()");
+  if (minMax.size() != _all_ids_set.size()) {
+    throw MAKE_EXCEPTION("minMax.size()!=_all_ids_set.size()");
   }
 
-  for(auto kv:minMax){
-      auto mm=kv.second;
-      if(mm.min.time<from){
-          throw MAKE_EXCEPTION("mm.min<from");
-      }
+  for (auto kv : minMax) {
+    auto mm = kv.second;
+    if (mm.min.time < from) {
+      throw MAKE_EXCEPTION("mm.min<from");
+    }
 
-      if(mm.max.time==0 && mm.min.time>mm.max.time){
-          throw MAKE_EXCEPTION("mm.max==0 && mm.min>mm.max");
-      }
+    if (mm.max.time == 0 && mm.min.time > mm.max.time) {
+      throw MAKE_EXCEPTION("mm.max==0 && mm.min>mm.max");
+    }
   }
   std::cout << "minMaxCheck\n";
   minMaxCheck(as, from, maxWritedTime);
@@ -333,7 +333,7 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to, Time step
   std::cout << "readIntervalCheck\n";
 
   readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
-		  check_stop_flag);
+                    check_stop_flag);
   std::cout << "readTimePointCheck\n";
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
   std::cout << "flush\n";

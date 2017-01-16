@@ -8,8 +8,8 @@ std::istream &dariadb::storage::operator>>(std::istream &in, STEP_KIND &strat) {
   token = utils::strings::to_upper(token);
 
   if (token == "MILLISECOND") {
-	  strat = dariadb::storage::STEP_KIND::MILLISECOND;
-	  return in;
+    strat = dariadb::storage::STEP_KIND::MILLISECOND;
+    return in;
   }
   if (token == "SECOND") {
     strat = dariadb::storage::STEP_KIND::SECOND;
@@ -30,8 +30,8 @@ std::istream &dariadb::storage::operator>>(std::istream &in, STEP_KIND &strat) {
 std::ostream &dariadb::storage::operator<<(std::ostream &stream, const STEP_KIND &strat) {
   switch (strat) {
   case STEP_KIND::MILLISECOND:
-	  stream << "MILLISECOND";
-	  break;
+    stream << "MILLISECOND";
+    break;
   case STEP_KIND::SECOND:
     stream << "SECOND";
     break;
@@ -52,8 +52,8 @@ dariadb::Time dariadb::storage::stepByKind(const STEP_KIND stepkind) {
   dariadb::Time step = 0;
   switch (stepkind) {
   case STEP_KIND::MILLISECOND:
-	  step = 1;
-	  break;
+    step = 1;
+    break;
   case STEP_KIND::SECOND:
     step = 1000;
     break;

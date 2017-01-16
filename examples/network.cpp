@@ -6,8 +6,7 @@ int main(int argc, char **argv) {
   std::string server_host = "127.0.0.1";
   dariadb::net::client::Client::Param p(server_host, server_port);
 
-  dariadb::net::client::Client_Ptr connection{
-      new dariadb::net::client::Client(p)};
+  dariadb::net::client::Client_Ptr connection{new dariadb::net::client::Client(p)};
   connection->connect();
 
   dariadb::MeasArray ma;

@@ -2,8 +2,8 @@
 
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/utils/async/locker.h>
 #include <condition_variable>
 #include <memory>
 

@@ -21,7 +21,7 @@ struct DateTime {
 /// current timestamp with nanosecond.
 EXPORT Time current_time();
 
-///convert time to datetime;
+/// convert time to datetime;
 EXPORT DateTime to_datetime(Time t);
 
 /// convert from time_point
@@ -37,10 +37,10 @@ EXPORT int to_string(char *buffer, size_t buffer_size, Time t);
 EXPORT std::string to_string(Time t);
 
 /// construct from string "2002-01-20 23:59:59.000"
-EXPORT Time from_string(const std::string&s);
+EXPORT Time from_string(const std::string &s);
 
 /// construct from string "20020131T235959"
-EXPORT Time from_iso_string(const std::string&s);
+EXPORT Time from_iso_string(const std::string &s);
 
 EXPORT Time round_to_seconds(const Time t);
 EXPORT Time round_to_minutes(const Time t);
