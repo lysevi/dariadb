@@ -27,7 +27,7 @@ uint64_t Page::index_file_size(uint32_t chunk_per_storage) {
   return chunk_per_storage * sizeof(IndexReccord) + sizeof(IndexHeader);
 }
 
-Page *Page::create(const std::string &file_name, uint64_t chunk_id,
+Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size, const MeasArray &ma) {
   auto to_compress = PageInner::splitById(ma);
 
@@ -60,27 +60,26 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
   std::fclose(index_file);
   return make_page(file_name, phdr);
-  ;
 }
 
-Page *Page::make_page(const std::string &file_name, const PageHeader &phdr) {
+Page_Ptr Page::make_page(const std::string &file_name, const PageHeader &phdr) {
   auto res = new Page;
   res->header = phdr;
   res->filename = file_name;
   res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
-  return res;
+  return Page_Ptr(res);
 }
 
 // COMPACTION
-Page *Page::create(const std::string &file_name, uint64_t chunk_id,
+Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
                    uint32_t max_chunk_size,
                    const std::list<std::string> &pages_full_paths) {
-  std::unordered_map<std::string, Page *> openned_pages;
+  std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
   std::map<uint64_t, ChunkLinkList> links;
   QueryInterval qi({}, 0, MIN_TIME, MAX_TIME);
   for (auto &p_full_path : pages_full_paths) {
-    Page *p = Page::open(p_full_path);
+	Page_Ptr p = Page::open(p_full_path);
     openned_pages.emplace(std::make_pair(p_full_path, p));
 
     auto clinks = p->chunksByIterval(qi);
@@ -146,14 +145,10 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
   std::fclose(index_file);
 
-  for (auto kv : openned_pages) {
-    delete kv.second;
-  }
-
   return make_page(file_name, phdr);
 }
 
-Page *Page::create(const std::string &file_name, uint64_t chunk_id,
+Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
                    const std::vector<Chunk *> &a, size_t count) {
   using namespace dariadb::utils::async;
 
@@ -185,7 +180,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
     auto chunk_buffer_ptr = a[i]->_buffer_t;
 #ifdef DEBUG
     {
-      auto ch = std::make_shared<Chunk>(chunk_header, chunk_buffer_ptr);
+      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr);
       auto rdr = ch->getReader();
       size_t readed = 0;
       while (!rdr->is_end()) {
@@ -209,7 +204,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
 
 #ifdef DEBUG
     {
-      auto ch = std::make_shared<Chunk>(chunk_header, chunk_buffer_ptr + skip_count);
+      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr + skip_count);
       ENSURE(ch->checkChecksum());
       auto rdr = ch->getReader();
       size_t readed = 0;
@@ -243,7 +238,7 @@ Page *Page::create(const std::string &file_name, uint64_t chunk_id,
   return Page::make_page(file_name, phdr);
 }
 
-Page *Page::open(std::string file_name) {
+Page_Ptr Page::open(std::string file_name) {
   auto phdr = Page::readHeader(file_name);
   auto res = new Page;
 
@@ -251,7 +246,7 @@ Page *Page::open(std::string file_name) {
   res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
   res->header = phdr;
-  return res;
+  return Page_Ptr{ res };
 }
 
 void Page::restoreIndexFile(const std::string &file_name) {
@@ -379,7 +374,7 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
     THROW_EXCEPTION("engine: page read error - ", this->filename);
   }
   Chunk_Ptr ptr = nullptr;
-  ptr = Chunk_Ptr{new Chunk(cheader, buffer)};
+  ptr = Chunk::open(cheader, buffer);
   ptr->is_owner = true;
   if (!ptr->checkChecksum()) {
     logger_fatal("engine: bad checksum of chunk #", ptr->header->id,

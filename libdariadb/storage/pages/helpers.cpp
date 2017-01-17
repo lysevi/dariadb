@@ -91,21 +91,21 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
         // TODO use memory_pool
         std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
         memset(buffer_ptr.get(), 0, max_chunk_size);
-        Chunk ch(&hdr, buffer_ptr.get(), max_chunk_size, *it);
+        auto ch=Chunk::create(&hdr, buffer_ptr.get(), max_chunk_size, *it);
         ++it;
         while (it != end) {
-          if (!ch.append(*it)) {
+          if (!ch->append(*it)) {
             break;
           }
           ++it;
         }
-        ch.close();
+        ch->close();
 
         result_locker.lock();
         phdr.max_chunk_id++;
-        phdr.minTime = std::min(phdr.minTime, ch.header->minTime);
-        phdr.maxTime = std::max(phdr.maxTime, ch.header->maxTime);
-        ch.header->id = phdr.max_chunk_id;
+        phdr.minTime = std::min(phdr.minTime, ch->header->minTime);
+        phdr.maxTime = std::max(phdr.maxTime, ch->header->maxTime);
+        ch->header->id = phdr.max_chunk_id;
 
         HdrAndBuffer subres{hdr, buffer_ptr};
 
@@ -147,8 +147,7 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader
     Chunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
 #ifdef DEBUG
     {
-      auto ch =
-          std::make_shared<Chunk>(&chunk_header, chunk_buffer_ptr.get() + skip_count);
+      auto ch =Chunk::open(&chunk_header, chunk_buffer_ptr.get() + skip_count);
       ENSURE(ch->checkChecksum());
       ch->close();
     }

@@ -379,7 +379,7 @@ public:
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
 
-    Page *res = nullptr;
+    Page_Ptr res = nullptr;
 
     std::string page_name = file_prefix + PAGE_FILE_EXT;
     std::string file_name =
@@ -388,7 +388,6 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->page_append(page_name);
     last_id = res->header.max_chunk_id;
-    delete res;
 
     insert_pagedescr(page_name, Page::readIndexHeader(
                                     PageIndex::index_name_from_page_name(file_name)));
@@ -461,7 +460,7 @@ public:
   }
 
   void compact(std::list<std::string> part) {
-    Page *res = nullptr;
+    Page_Ptr res = nullptr;
     std::string page_name = utils::fs::random_file_name(".page");
     logger_info("engine: compacting to ", page_name);
     for (auto &p : part) {
@@ -473,7 +472,7 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->page_append(page_name);
     last_id = res->header.max_chunk_id;
-    delete res;
+    
     for (auto erasedPage : part) {
       this->erase_page(erasedPage);
     }
@@ -483,7 +482,7 @@ public:
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
-    Page *res = nullptr;
+    Page_Ptr res = nullptr;
     std::string page_name = utils::fs::random_file_name(".page");
     logger_info("engine: write chunks to ", page_name);
     std::string file_name =
@@ -492,7 +491,6 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->page_append(page_name);
     last_id = res->header.max_chunk_id;
-    delete res;
 
     insert_pagedescr(page_name, Page::readIndexHeader(
                                     PageIndex::index_name_from_page_name(file_name)));

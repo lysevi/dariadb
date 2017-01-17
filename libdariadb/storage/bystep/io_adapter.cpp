@@ -161,7 +161,7 @@ public:
           uint8_t *buffer = new uint8_t[buffSize];
           memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
 
-          Chunk_Ptr cptr{new Chunk(chdr, buffer)};
+          Chunk_Ptr cptr= Chunk::open(chdr, buffer);
           cptr->is_owner = true;
           if (!cptr->checkChecksum()) {
             logger_fatal("engine: io_adapter -  bad checksum of chunk #",
@@ -229,7 +229,7 @@ public:
           uint8_t *buffer = new uint8_t[buffSize];
           memcpy(buffer, sqlite3_column_blob(pStmt, 1), buffSize);
 
-          Chunk_Ptr cptr{new Chunk(chdr, buffer)};
+          Chunk_Ptr cptr= Chunk::open(chdr, buffer);
           cptr->is_owner = true;
           result = cptr;
         } else {
@@ -281,7 +281,7 @@ public:
 #endif // DEBUG
 
           uint8_t *buffer = (uint8_t *)sqlite3_column_blob(pStmt, 1);
-          Chunk_Ptr cptr{new Chunk(chdr, buffer)};
+          Chunk_Ptr cptr= Chunk::open(chdr, buffer);
           currentValueFromChunk(result, cptr);
         } else {
           break;

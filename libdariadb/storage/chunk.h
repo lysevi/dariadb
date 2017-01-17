@@ -66,7 +66,13 @@ struct ChunkHeader {
 };
 #pragma pack(pop)
 
+class Chunk;
+typedef std::shared_ptr<Chunk> Chunk_Ptr;
+
 class Chunk : public std::enable_shared_from_this<Chunk> {
+protected:
+  Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
+  Chunk(ChunkHeader *hdr, uint8_t *buffer);
 public:
   class IChunkReader {
   public:
@@ -79,8 +85,8 @@ public:
 
   typedef uint8_t *u8vector;
 
-  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
-  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer);
+  EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
+  EXPORT static Chunk_Ptr open(ChunkHeader *hdr, uint8_t *buffer);
   EXPORT ~Chunk();
 
   EXPORT bool append(const Meas &m);
@@ -105,7 +111,6 @@ public:
   bool is_owner; // true - dealloc memory for header and buffer.
 };
 
-typedef std::shared_ptr<Chunk> Chunk_Ptr;
 typedef std::list<Chunk_Ptr> ChunksList;
 typedef std::map<Id, Chunk_Ptr> IdToChunkMap;
 typedef std::map<Id, ChunksList> ChunkMap;

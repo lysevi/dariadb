@@ -10,6 +10,14 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
+Chunk_Ptr Chunk::create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m) {
+	return Chunk_Ptr{ new Chunk(hdr,buffer,_size,first_m) };
+}
+
+Chunk_Ptr Chunk::open(ChunkHeader *hdr, uint8_t *buffer) {
+	return Chunk_Ptr{ new Chunk(hdr,buffer) };
+}
+
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
     : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
   header = hdr;
