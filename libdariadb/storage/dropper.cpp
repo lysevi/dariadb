@@ -98,7 +98,7 @@ void Dropper::drop_wal_internal() {
         auto storage_path = sett->raw_path.value();
         auto full_path = fs::append_path(storage_path, fname);
 
-        WALFile_Ptr wal{new WALFile(env, full_path, true)};
+        WALFile_Ptr wal=WALFile::open(env, full_path, true);
 
         auto all = wal->readAll();
 

@@ -31,8 +31,7 @@ public:
   }
   void dropWAL(const std::string &fname) override {
     auto full_path = dariadb::utils::fs::append_path(_settings->raw_path.value(), fname);
-    dariadb::storage::WALFile_Ptr wal{
-        new dariadb::storage::WALFile(_env, full_path, true)};
+    auto  wal=dariadb::storage::WALFile::open(_env, full_path, true);
 
     auto ma = wal->readAll();
     wal = nullptr;
@@ -74,7 +73,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
 
   dariadb::IdSet id_set;
   {
-    dariadb::storage::WALFile wal{_engine_env};
+	auto  wal = dariadb::storage::WALFile::create(_engine_env);
 
     wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK_EQUAL(wal_files.size(), size_t(0));
@@ -88,7 +87,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     id_set.insert(e.id);
     e.time = dariadb::Time(i);
     e.value = dariadb::Value(i);
-    BOOST_CHECK(wal.append(e).writed == 1);
+    BOOST_CHECK(wal->append(e).writed == 1);
     i++;
     dariadb::MeasList ml;
     for (; i < writes_count / 2; i++) {
@@ -98,7 +97,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
       e.value = dariadb::Value(i);
       ml.push_back(e);
     }
-    wal.append(ml.begin(), ml.end());
+    wal->append(ml.begin(), ml.end());
 
     dariadb::MeasArray ma;
     ma.resize(writes_count - i);
@@ -111,14 +110,14 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
       ma[pos] = e;
       pos++;
     }
-    wal.append(ma.begin(), ma.end());
+    wal->append(ma.begin(), ma.end());
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK_EQUAL(wal_files.size(), size_t(1));
 
     dariadb::MeasList out;
 
-    out = wal.readInterval(dariadb::storage::QueryInterval(
+    out = wal->readInterval(dariadb::storage::QueryInterval(
         dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
     BOOST_CHECK_EQUAL(out.size(), writes_count);
   }
@@ -126,8 +125,8 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK(wal_files.size() == size_t(1));
-    dariadb::storage::WALFile wal(_engine_env, wal_files.front(), true);
-    auto all = wal.readAll();
+	auto  wal = dariadb::storage::WALFile::open(_engine_env, wal_files.front(), true);
+    auto all = wal->readAll();
     BOOST_CHECK_EQUAL(all->size(), writes_count);
   }
   manifest = nullptr;
@@ -163,9 +162,9 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
 
     auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK(wal_files.size() == size_t(0));
-    dariadb::storage::WALFile wal(_engine_env);
+    auto wal= dariadb::storage::WALFile::create(_engine_env);
 
-    dariadb_test::storage_test_check(&wal, 0, 100, 1, false);
+    dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false);
     manifest = nullptr;
   }
 

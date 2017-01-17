@@ -339,6 +339,14 @@ protected:
   FILE *_file;
 };
 
+WALFile_Ptr WALFile::create(const EngineEnvironment_ptr env) {
+	return WALFile_Ptr{ new WALFile(env) };
+}
+
+WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
+	return WALFile_Ptr{ new WALFile(env, fname, readonly) };
+}
+
 WALFile::~WALFile() {}
 
 WALFile::WALFile(const EngineEnvironment_ptr env) : _Impl(new WALFile::Private(env)) {}

@@ -33,7 +33,7 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
       auto full_filename = utils::fs::append_path(_settings->raw_path.value(), f);
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
         logger_info("engine: WalManager open exist file ", f);
-        WALFile_Ptr p{new WALFile(_env, full_filename)};
+        WALFile_Ptr p = WALFile::open(_env, full_filename);
         _wal = p;
         break;
       }
@@ -49,7 +49,7 @@ void WALManager::create_new() {
   if (_settings->strategy.value() != STRATEGY::WAL) {
     drop_old_if_needed();
   }
-  _wal = WALFile_Ptr{new WALFile(_env)};
+  _wal = WALFile::create(_env);
 }
 
 void WALManager::dropAll() {
@@ -128,7 +128,7 @@ std::list<std::string> WALManager::closedWals() {
 }
 
 void WALManager::dropWAL(const std::string &fname, IWALDropper *storage) {
-  WALFile_Ptr ptr = WALFile_Ptr{new WALFile{_env, fname, false}};
+  WALFile_Ptr ptr = WALFile::open(_env, fname, false);
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.emplace(without_path);
   storage->dropWAL(without_path);
@@ -147,8 +147,8 @@ dariadb::Time WALManager::minTime() {
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
     for (auto filename : files) {
-      WALFile wal(env, filename, true);
-      auto local = wal.minTime();
+      auto wal = WALFile::open(env, filename, true);
+      auto local = wal->minTime();
       result = std::min(local, result);
     }
     return false;
@@ -176,8 +176,8 @@ dariadb::Time WALManager::maxTime() {
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
     for (auto filename : files) {
-      WALFile wal(env, filename, true);
-      auto local = wal.maxTime();
+      auto wal = WALFile::open(env, filename, true);
+      auto local = wal->maxTime();
       result = std::max(local, result);
     }
     return false;
@@ -204,9 +204,9 @@ bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 
     for (auto filename : files) {
 
-      WALFile wal(env, filename, true);
+      auto wal = WALFile::open(env, filename, true);
       dariadb::Time lmin = dariadb::MAX_TIME, lmax = dariadb::MIN_TIME;
-      if (wal.minMaxTime(id, &lmin, &lmax)) {
+      if (wal->minMaxTime(id, &lmin, &lmax)) {
         results[num] = MMRes(true, lmin, lmax);
       } else {
         results[num] = MMRes(false, lmin, lmax);
@@ -256,8 +256,8 @@ void WALManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
         if (clbk->is_canceled()) {
           break;
         }
-        WALFile wal(env, filename, true);
-        wal.foreach (q, clbk);
+        auto wal = WALFile::open(env, filename, true);
+        wal->foreach (q, clbk);
       }
       return false;
     };
@@ -289,8 +289,8 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
     size_t num = 0;
 
     for (auto filename : files) {
-      WALFile wal(env, filename, true);
-      results[num] = wal.readTimePoint(query);
+      auto wal = WALFile::open(env, filename, true);
+      results[num] = wal->readTimePoint(query);
       num++;
     }
     return false;
@@ -347,8 +347,8 @@ Id2Meas WALManager::currentValue(const IdArray &ids, const Flag &flag) {
     auto files = wal_files();
 
     for (const auto &f : files) {
-      WALFile c(_env, f, true);
-      auto sub_rdr = c.currentValue(ids, flag);
+      auto c = WALFile::open(_env, f, true);
+      auto sub_rdr = c->currentValue(ids, flag);
 
       for (auto &kv : sub_rdr) {
         auto it = meases.find(kv.first);
@@ -426,8 +426,8 @@ Id2MinMax WALManager::loadMinMax() {
 
   dariadb::Id2MinMax result;
   for (const auto &f : files) {
-    WALFile c(_env, f, true);
-    auto sub_res = c.loadMinMax();
+    auto c = WALFile::open(_env, f, true);
+    auto sub_res = c->loadMinMax();
 
     minmax_append(result, sub_res);
   }

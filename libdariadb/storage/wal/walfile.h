@@ -10,13 +10,16 @@ namespace dariadb {
 namespace storage {
 const std::string WAL_FILE_EXT = ".wal"; // append-only-file
 
+class WALFile;
+typedef std::shared_ptr<WALFile> WALFile_Ptr;
+
 class WALFile : public IMeasStorage {
 public:
   EXPORT virtual ~WALFile();
-  EXPORT WALFile(const EngineEnvironment_ptr env);
-  EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname,
-                 bool readonly = false);
 
+  EXPORT static WALFile_Ptr create(const EngineEnvironment_ptr env);
+  EXPORT static WALFile_Ptr open(const EngineEnvironment_ptr env,
+                                 const std::string &fname, bool readonly = false);
   EXPORT Status append(const Meas &value) override;
   EXPORT Status append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) override;
@@ -38,10 +41,13 @@ public:
   EXPORT Id2MinMax loadMinMax() override;
 
 protected:
+  EXPORT WALFile(const EngineEnvironment_ptr env);
+  EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname,
+                 bool readonly);
+
+protected:
   class Private;
   std::unique_ptr<Private> _Impl;
 };
-
-typedef std::shared_ptr<WALFile> WALFile_Ptr;
 }
 }
