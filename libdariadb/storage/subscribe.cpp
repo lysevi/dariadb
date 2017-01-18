@@ -9,7 +9,7 @@ SubscribeInfo::SubscribeInfo(const IdArray &i, const Flag &f, const ReaderClb_pt
     : ids(i), flag(f), clbk(c) {}
 
 bool SubscribeInfo::isYours(const dariadb::Meas &m) const {
-  if ((ids.size() == 0) || (std::find(ids.cbegin(), ids.cend(), m.id) != ids.cend())) {
+  if ((ids.size() == 0) || (std::count(ids.cbegin(), ids.cend(), m.id))) {
     if ((flag == 0) || (flag == m.flag)) {
       return true;
     }

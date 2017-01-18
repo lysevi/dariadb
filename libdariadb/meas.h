@@ -51,7 +51,7 @@ struct Meas {
   bool inFlag(Flag f) const { return (f == 0) || (f == flag); }
 
   bool inIds(const IdArray &ids) const {
-    return (ids.size() == 0) || (std::find(ids.begin(), ids.end(), id) != ids.end());
+    return (ids.size() == 0) || (std::count(ids.begin(), ids.end(), id));
   }
 
   bool inQuery(const IdArray &ids, const Flag f) const { return inFlag(f) && inIds(ids); }
