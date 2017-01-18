@@ -126,7 +126,7 @@ bool ByStepTrack::minMaxTime(Id id, Time *minResult, Time *maxResult) {
 }
 
 void ByStepTrack::foreach (const QueryInterval &q, IReaderClb * clbk) {
-  if (std::count(q.ids.begin(), q.ids.end(), _target_id)) {
+  if (std::find(q.ids.begin(), q.ids.end(), _target_id) == q.ids.end()) {
     return;
   }
   for (size_t i = 0; i < _values.size(); ++i) {
