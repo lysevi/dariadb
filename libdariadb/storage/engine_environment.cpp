@@ -22,6 +22,9 @@ struct EngineEnvironment::Private {
   std::unordered_map<Resource, void *> _resource_map;
 };
 
+EngineEnvironment_ptr EngineEnvironment::create() {
+  return EngineEnvironment_ptr{new EngineEnvironment()};
+}
 EngineEnvironment::EngineEnvironment() : _impl(new EngineEnvironment::Private()) {}
 EngineEnvironment::~EngineEnvironment() {
   _impl = nullptr;

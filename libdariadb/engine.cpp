@@ -32,7 +32,7 @@ public:
     _settings = settings;
     _strategy = _settings->strategy.value();
 
-    _engine_env = EngineEnvironment_ptr{new EngineEnvironment()};
+    _engine_env = EngineEnvironment::create();
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
     logger_info("engine: project version - ", version());

@@ -86,8 +86,7 @@ int main(int argc, char **argv) {
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
     settings->memory_limit.setValue(500 * 1024 * 1024);
     settings->chunk_size.setValue(1024);
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());

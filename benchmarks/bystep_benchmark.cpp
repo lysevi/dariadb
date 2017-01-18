@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
       dariadb::utils::fs::rm(storage_path);
     }
     auto settings = Settings_ptr{new dariadb::storage::Settings(storage_path)};
-    auto _engine_env = EngineEnvironment_ptr{new EngineEnvironment()};
+    auto _engine_env = EngineEnvironment::create();
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 

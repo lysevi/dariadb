@@ -7,6 +7,8 @@
 namespace dariadb {
 namespace storage {
 
+class EngineEnvironment;
+using EngineEnvironment_ptr = std::shared_ptr<EngineEnvironment>;
 class EngineEnvironment : public utils::NonCopy {
 public:
   enum class Resource {
@@ -16,7 +18,7 @@ public:
   };
 
 public:
-  EXPORT EngineEnvironment();
+  EXPORT static EngineEnvironment_ptr create();
   EXPORT ~EngineEnvironment();
 
   EXPORT void addResource(Resource res, void *ptr);
@@ -27,10 +29,11 @@ public:
   }
 
 protected:
+  EXPORT EngineEnvironment();
+
+protected:
   struct Private;
   std::unique_ptr<Private> _impl;
 };
-
-using EngineEnvironment_ptr = std::shared_ptr<EngineEnvironment>;
 }
 }

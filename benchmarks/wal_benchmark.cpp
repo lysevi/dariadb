@@ -82,8 +82,7 @@ int main(int argc, char *argv[]) {
     auto manifest =
         dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
 
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,

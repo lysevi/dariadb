@@ -50,8 +50,7 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
     settings->chunk_size.setValue(128);
 
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -196,8 +195,7 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
     settings->chunk_size.setValue(128);
 
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -223,8 +221,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     auto settings =
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -370,8 +367,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     auto settings =
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -418,8 +414,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     auto settings =
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
 
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());

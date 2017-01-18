@@ -98,8 +98,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
         dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
     settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
     settings->chunk_size.setValue(128);
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -128,8 +127,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
     settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
     settings->memory_limit.setValue(1024 * 1024);
     settings->chunk_size.setValue(128);
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
@@ -168,8 +166,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
     settings->strategy.setValue(dariadb::storage::STRATEGY::CACHE);
     settings->memory_limit.setValue(1024 * 1024);
     settings->chunk_size.setValue(128);
-    auto _engine_env = dariadb::storage::EngineEnvironment_ptr{
-        new dariadb::storage::EngineEnvironment()};
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
 
