@@ -42,6 +42,10 @@ template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const
 
 BaseOption::~BaseOption() {}
 
+Settings_ptr Settings::create(const std::string &storage_path) {
+	return Settings_ptr{ new Settings(storage_path) };
+}
+
 Settings::Settings(const std::string &path_to_storage)
     : storage_path(nullptr, "storage path", path_to_storage),
       raw_path(nullptr, "raw path", utils::fs::append_path(path_to_storage, "raw")),

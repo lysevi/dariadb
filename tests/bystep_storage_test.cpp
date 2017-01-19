@@ -46,8 +46,7 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
   auto fname = dariadb::utils::fs::append_path(storage_path, "io_adapter.db");
   {
     const int insertion_count = 10;
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->chunk_size.setValue(128);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
@@ -191,8 +190,7 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
   }
   {
     dariadb::utils::fs::mkdir(storage_path);
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->chunk_size.setValue(128);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
@@ -218,9 +216,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
   size_t writes_count = 10000;
   {
     dariadb::utils::fs::mkdir(storage_path);
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
-
+    auto settings = dariadb::storage::Settings::create(storage_path);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
@@ -364,8 +360,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
   }
   {
     dariadb::utils::fs::mkdir(storage_path);
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
@@ -411,8 +406,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
   }
   {
     dariadb::utils::fs::mkdir(storage_path);
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,

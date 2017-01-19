@@ -274,8 +274,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
@@ -371,8 +370,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
@@ -462,8 +460,7 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
       dariadb::utils::fs::rm(storage_path);
     }
 
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};

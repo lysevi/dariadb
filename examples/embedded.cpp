@@ -34,8 +34,7 @@ int main(int argc, char **argv) {
   dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+  auto settings = dariadb::storage::Settings::create(storage_path);
   settings->save();
 
   auto storage = std::make_unique<dariadb::storage::Engine>(settings);

@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
       std::cout << " remove " << storage_path << std::endl;
       dariadb::utils::fs::rm(storage_path);
     }
-    auto settings = Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = Settings::create(storage_path);
     auto _engine_env = EngineEnvironment::create();
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());

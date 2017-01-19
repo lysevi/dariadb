@@ -86,8 +86,7 @@ int main(int argc, char **argv) {
   }
 
   log_ptr->message(dariadb::utils::LOG_MESSAGE_KIND::INFO, ss.str());
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+  auto settings = dariadb::storage::Settings::create(storage_path);
   settings->strategy.setValue(strategy);
   if (strategy == STRATEGY::MEMORY && memory_limit != 0) {
     logger_info("memory limit: ", memory_limit);

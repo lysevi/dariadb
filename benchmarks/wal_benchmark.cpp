@@ -76,8 +76,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::utils::fs::mkdir(storage_path);
 
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
 
     auto manifest =
         dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};

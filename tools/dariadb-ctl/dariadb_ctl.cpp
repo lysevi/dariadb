@@ -45,8 +45,7 @@ public:
 };
 
 dariadb::storage::Settings_ptr loadSettings() {
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+  auto settings =dariadb::storage::Settings::create(storage_path);
   settings->load_min_max = false;
   return settings;
 }
@@ -140,8 +139,7 @@ int main(int argc, char *argv[]) {
 
   if (new_base_name.size() != 0) {
     std::cout << "create " << new_base_name << std::endl;
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(new_base_name)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     auto e = std::make_unique<dariadb::storage::Engine>(settings);
     e = nullptr;
     std::exit(1);
@@ -150,7 +148,7 @@ int main(int argc, char *argv[]) {
   if (vm.count("format")) {
     check_path_exists();
     auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(new_base_name)};
+        dariadb::storage::Settings::create(new_base_name);
 
     dariadb::storage::Manifest m(settings);
     std::cout << "version: " << m.get_version() << std::endl;
@@ -159,16 +157,16 @@ int main(int argc, char *argv[]) {
 
   if (vm.count("settings")) {
     check_path_exists();
-    dariadb::storage::Settings s(storage_path);
-    std::cout << s.dump() << std::endl;
+	auto s = dariadb::storage::Settings::create(storage_path);
+    std::cout << s->dump() << std::endl;
     std::exit(0);
   }
 
   if (set_var.size() != 0) {
     check_path_exists();
-    dariadb::storage::Settings s(storage_path);
-    s.change(set_var);
-    s.save();
+	auto s = dariadb::storage::Settings::create(storage_path);
+    s->change(set_var);
+    s->save();
     std::exit(0);
   }
 

@@ -23,7 +23,8 @@ public:
   /// read from string :)
   virtual void from_string(const std::string &s) = 0;
 };
-
+class Settings;
+using Settings_ptr = std::shared_ptr<Settings>;
 /**
 settings - is a dictionary on disk.
 */
@@ -71,7 +72,7 @@ class Settings {
   };
 
 public:
-  EXPORT Settings(const std::string &storage_path);
+  EXPORT static Settings_ptr create(const std::string &storage_path);
   EXPORT ~Settings();
 
   EXPORT void set_default();
@@ -101,9 +102,9 @@ public:
   Option<float> percent_to_drop;            // how many chunk drop.
 
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
+protected:
+  EXPORT Settings(const std::string &storage_path);
 };
-
-using Settings_ptr = std::shared_ptr<Settings>;
 
 template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
 template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;

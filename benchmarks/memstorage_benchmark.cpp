@@ -82,8 +82,7 @@ int main(int argc, char **argv) {
       std::cout << " remove " << storage_path << std::endl;
       dariadb::utils::fs::rm(storage_path);
     }
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->memory_limit.setValue(500 * 1024 * 1024);
     settings->chunk_size.setValue(1024);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();

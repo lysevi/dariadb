@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
 
   {
     auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+        dariadb::storage::Settings::create(storage_path);
     auto manifest =
         dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
     std::list<std::string> pages_names{"1", "2", "3"};
@@ -58,10 +58,8 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     manifest = nullptr;
   }
   { // reopen. restore method must remove all records from manifest.
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
-    auto manifest =
-        dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
+    auto settings = dariadb::storage::Settings::create(storage_path);
+    auto manifest = dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
     BOOST_CHECK_EQUAL(manifest->page_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(manifest->wal_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(manifest->get_version(), version);
@@ -82,8 +80,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   }
   dariadb::MeasList addeded;
 
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+  auto settings = dariadb::storage::Settings::create(storagePath);
   settings->chunk_size.setValue(chunks_size);
 
   auto manifest =
@@ -164,8 +161,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   }
   dariadb::MeasList addeded;
 
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+  auto settings = dariadb::storage::Settings::create(storagePath);
   settings->chunk_size.setValue(chunks_size);
 
   auto manifest =
@@ -269,8 +265,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+  auto settings = dariadb::storage::Settings::create(storagePath);
   settings->chunk_size.setValue(chunks_size);
 
   auto manifest =
@@ -369,8 +364,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+  auto settings = dariadb::storage::Settings::create(storagePath);
   settings->chunk_size.setValue(chunks_size);
 
   auto manifest =
@@ -484,8 +478,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompactionByTime) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+  auto settings = dariadb::storage::Settings::create(storagePath);
   settings->chunk_size.setValue(chunks_size);
 
   auto manifest =

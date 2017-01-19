@@ -94,8 +94,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
     dariadb::utils::fs::rm(storage_path);
   }
   {
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
     settings->chunk_size.setValue(128);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
@@ -121,8 +120,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
   }
   MokChunkWriter *cw = new MokChunkWriter;
   {
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
     settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
     settings->memory_limit.setValue(1024 * 1024);
@@ -160,8 +158,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
   }
   MocDiskStorage *cw = new MocDiskStorage;
   {
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
     settings->strategy.setValue(dariadb::storage::STRATEGY::CACHE);
     settings->memory_limit.setValue(1024 * 1024);

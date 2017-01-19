@@ -55,8 +55,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
   dariadb::utils::fs::mkdir(storage_path);
   auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
   assert(wal_files.size() == 0);
-  auto settings =
-      dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+  auto settings = dariadb::storage::Settings::create(storage_path);
   settings->wal_cache_size.setValue(block_size);
   settings->wal_file_size.setValue(block_size);
 
@@ -144,8 +143,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
   {
     dariadb::utils::fs::mkdir(storage_path);
 
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storage_path)};
+    auto settings = dariadb::storage::Settings::create(storage_path);
     settings->wal_cache_size.setValue(block_size);
     settings->wal_file_size.setValue(block_size);
 
@@ -183,8 +181,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
   }
   dariadb::utils::fs::mkdir(storagePath);
   {
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+    auto settings = dariadb::storage::Settings::create(storagePath);
     settings->wal_file_size.setValue(max_size);
     settings->wal_cache_size.setValue(max_size);
 
@@ -208,8 +205,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
     dariadb::utils::async::ThreadManager::stop();
   }
   {
-    auto settings =
-        dariadb::storage::Settings_ptr{new dariadb::storage::Settings(storagePath)};
+    auto settings = dariadb::storage::Settings::create(storagePath);
     settings->wal_file_size.setValue(max_size);
 
     auto manifest =
