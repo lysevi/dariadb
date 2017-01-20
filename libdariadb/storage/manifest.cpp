@@ -360,6 +360,10 @@ protected:
   Settings_ptr _settings;
 };
 
+Manifest_ptr Manifest::create(const Settings_ptr &settings) {
+	return Manifest_ptr{ new Manifest(settings) };
+}
+
 Manifest::Manifest(const Settings_ptr &settings)
     : _impl(new Manifest::Private(settings)) {}
 Manifest::~Manifest() {

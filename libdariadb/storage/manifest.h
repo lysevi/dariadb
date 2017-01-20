@@ -14,11 +14,12 @@ namespace dariadb {
 namespace storage {
 
 const std::string MANIFEST_FILE_NAME = "Manifest";
-
+class Manifest;
+using Manifest_ptr = std::shared_ptr<Manifest>;
 class Manifest {
 public:
+  EXPORT static Manifest_ptr create(const Settings_ptr &settings);
   EXPORT Manifest() = delete;
-  EXPORT Manifest(const Settings_ptr &settings);
   EXPORT ~Manifest();
 
   EXPORT std::list<std::string> page_list();
@@ -36,10 +37,9 @@ public:
   EXPORT Id2Step read_id2step();
 
 protected:
+  EXPORT Manifest(const Settings_ptr &settings);
   class Private;
   std::unique_ptr<Private> _impl;
 };
-
-using Manifest_ptr = std::shared_ptr<Manifest>;
 }
 }

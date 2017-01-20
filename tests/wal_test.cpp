@@ -59,8 +59,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
   settings->wal_cache_size.setValue(block_size);
   settings->wal_file_size.setValue(block_size);
 
-  auto manifest =
-      dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
+  auto manifest = dariadb::storage::Manifest::create(settings);
 
   auto _engine_env = dariadb::storage::EngineEnvironment::create();
   _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
@@ -147,8 +146,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
     settings->wal_cache_size.setValue(block_size);
     settings->wal_file_size.setValue(block_size);
 
-    auto manifest =
-        dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
+    auto manifest = dariadb::storage::Manifest::create(settings);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
@@ -185,8 +183,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
     settings->wal_file_size.setValue(max_size);
     settings->wal_cache_size.setValue(max_size);
 
-    auto manifest =
-        dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
+    auto manifest = dariadb::storage::Manifest::create(settings);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
@@ -208,8 +205,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
     auto settings = dariadb::storage::Settings::create(storagePath);
     settings->wal_file_size.setValue(max_size);
 
-    auto manifest =
-        dariadb::storage::Manifest_ptr{new dariadb::storage::Manifest{settings}};
+    auto manifest = dariadb::storage::Manifest::create(settings);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
