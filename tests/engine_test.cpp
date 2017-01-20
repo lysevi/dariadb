@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     auto manifest = dariadb::storage::Manifest::create(settings);
 
-    auto manifest_version = manifest->get_version();
+    auto manifest_version = manifest->get_format();
 
     manifest = nullptr;
 

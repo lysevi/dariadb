@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
       manifest->page_append(n);
     }
 
-    manifest->set_version(version);
+    manifest->set_format(version);
 
     std::list<std::string> wal_names{"111", "222", "333"};
     for (auto n : wal_names) {
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     auto manifest = dariadb::storage::Manifest::create(settings);
     BOOST_CHECK_EQUAL(manifest->page_list().size(), size_t(0));
     BOOST_CHECK_EQUAL(manifest->wal_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(manifest->get_version(), version);
+    BOOST_CHECK_EQUAL(manifest->get_format(), version);
   }
 
   if (dariadb::utils::fs::path_exists(storage_path)) {

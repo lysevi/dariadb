@@ -63,7 +63,7 @@ public:
     _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
     if (is_new_storage) {
-      _manifest->set_version(std::to_string(format()));
+      _manifest->set_format(std::to_string(format()));
     } else {
       check_storage_version();
       Dropper::cleanStorage(_settings->raw_path.value());
@@ -169,7 +169,7 @@ public:
 
   void check_storage_version() {
     auto current_version = format();
-    auto storage_version = std::stoi(_manifest->get_version());
+    auto storage_version = std::stoi(_manifest->get_format());
     if (storage_version != current_version) {
       logger_info("engine: openning storage with version - ", storage_version);
       THROW_EXCEPTION("engine: openning storage with greater version.");

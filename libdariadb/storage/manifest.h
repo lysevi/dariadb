@@ -30,8 +30,8 @@ public:
   EXPORT void wal_append(const std::string &rec);
   EXPORT void wal_rm(const std::string &rec);
 
-  EXPORT void set_version(const std::string &version);
-  EXPORT std::string get_version();
+  EXPORT void set_format(const std::string &version);
+  EXPORT std::string get_format();
 
   EXPORT void insert_id2step(const Id2Step &i2s);
   EXPORT Id2Step read_id2step();

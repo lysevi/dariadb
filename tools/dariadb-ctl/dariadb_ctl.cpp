@@ -147,9 +147,9 @@ int main(int argc, char *argv[]) {
 
   if (vm.count("format")) {
     check_path_exists();
-    auto settings = dariadb::storage::Settings::create(new_base_name);
+    auto settings = dariadb::storage::Settings::create(storage_path);
     auto m= dariadb::storage::Manifest::create(settings);
-    std::cout << "version: " << m->get_version() << std::endl;
+    std::cout << "format version: " << m->get_format() << std::endl;
     std::exit(0);
   }
 

@@ -240,12 +240,12 @@ public:
     } while (rc == SQLITE_SCHEMA);
   }
 
-  void set_version(const std::string &version) {
+  void set_format(const std::string &version) {
     std::lock_guard<utils::async::Locker> lg(_locker);
 
     std::stringstream ss;
     ss << "insert or replace into params(id, name, value) values ((select id from params "
-          "where name = 'version'), 'version', '"
+          "where name = 'format'), 'format', '"
        << version << "' );";
     auto sql = ss.str();
     char *zErrMsg = 0;
@@ -257,8 +257,8 @@ public:
     }
   }
 
-  std::string get_version() {
-    std::string sql = "SELECT value from params where name='version';";
+  std::string get_format() {
+    std::string sql = "SELECT value from params where name='format';";
     std::string result;
     sqlite3_stmt *pStmt;
     int rc;
@@ -394,12 +394,12 @@ void Manifest::wal_rm(const std::string &rec) {
   _impl->wal_rm(rec);
 }
 
-void Manifest::set_version(const std::string &version) {
-  _impl->set_version(version);
+void Manifest::set_format(const std::string &version) {
+  _impl->set_format(version);
 }
 
-std::string Manifest::get_version() {
-  return _impl->get_version();
+std::string Manifest::get_format() {
+  return _impl->get_format();
 }
 
 void Manifest::insert_id2step(const Id2Step &i2s) {
