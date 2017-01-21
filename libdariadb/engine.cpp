@@ -69,7 +69,7 @@ public:
       Dropper::cleanStorage(_settings->raw_path.value());
     }
 
-    _page_manager = PageManager_ptr{new PageManager(_engine_env)};
+    _page_manager = PageManager::create(_engine_env);
 
     if (_settings->load_min_max) {
       _min_max_map = _page_manager->loadMinMax();

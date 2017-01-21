@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-  auto pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+  auto pm = dariadb::storage::PageManager::create(_engine_env);
   dariadb::Meas first;
   first.id = 1;
   first.time = t;
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   auto iheader = dariadb::storage::Page::readIndexHeader(fname + "i");
   BOOST_CHECK(iheader.count != 0);
 
-  pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+  pm = dariadb::storage::PageManager::create(_engine_env);
 
   auto mintime_chunks = pm->valuesBeforeTimePoint(
       dariadb::storage::QueryTimePoint(dariadb::IdArray{1}, 0, pm->minTime()));
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-  auto pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+  auto pm = dariadb::storage::PageManager::create(_engine_env);
   dariadb::Meas first;
   first.id = 1;
   first.time = t;
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-  auto pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+  auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   auto start_time = dariadb::Time(0);
   dariadb::MeasList addeded;
@@ -373,7 +373,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-  auto pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+  auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   size_t count = 100;
   dariadb::MeasArray a(count);
@@ -486,7 +486,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompactionByTime) {
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-  auto pm = std::make_shared<dariadb::storage::PageManager>(_engine_env);
+  auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   auto e = dariadb::Meas::empty();
   for (int pnum = 0; pnum < 10; ++pnum) {

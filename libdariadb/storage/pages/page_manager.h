@@ -11,10 +11,11 @@
 namespace dariadb {
 namespace storage {
 
+class PageManager;
+typedef std::shared_ptr<PageManager> PageManager_ptr;
 class PageManager : public utils::NonCopy, public IChunkContainer {
 public:
-public:
-  EXPORT PageManager(const EngineEnvironment_ptr env);
+  EXPORT static PageManager_ptr create(const EngineEnvironment_ptr env);
   EXPORT virtual ~PageManager();
   EXPORT void flush();
   // ChunkContainer
@@ -43,11 +44,11 @@ public:
   EXPORT void compactbyTime(Time from, Time to);
   EXPORT Id2MinMax loadMinMax();
 
+protected:
+  EXPORT PageManager(const EngineEnvironment_ptr env);
 private:
   class Private;
   std::unique_ptr<Private> impl;
 };
-
-typedef std::shared_ptr<PageManager> PageManager_ptr;
 }
 }

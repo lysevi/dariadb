@@ -535,6 +535,10 @@ protected:
   Settings *_settings;
 };
 
+PageManager_ptr PageManager::create(const EngineEnvironment_ptr env){
+    return PageManager_ptr{new PageManager(env)};
+}
+
 PageManager::PageManager(const EngineEnvironment_ptr env)
     : impl(new PageManager::Private(env)) {}
 
