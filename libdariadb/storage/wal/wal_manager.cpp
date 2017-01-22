@@ -21,6 +21,10 @@ WALManager::~WALManager() {
   this->flush();
 }
 
+WALManager_ptr WALManager::create(const EngineEnvironment_ptr env){
+	return WALManager_ptr{ new WALManager(env) };
+}
+
 WALManager::WALManager(const EngineEnvironment_ptr env) {
   _env = env;
   _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);

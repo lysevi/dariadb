@@ -76,7 +76,7 @@ public:
     }
 
     if (_strategy != STRATEGY::MEMORY) {
-      _wal_manager = WALManager_ptr{new WALManager(_engine_env)};
+      _wal_manager = WALManager::create(_engine_env);
 
       _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
       _wal_manager->setDownlevel(_dropper.get());

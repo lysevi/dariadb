@@ -13,20 +13,27 @@
 
 namespace dariadb {
 namespace storage {
+
+class WALManager;
+using WALManager_ptr = std::shared_ptr<WALManager>;
 class WALManager : public IMeasStorage {
 public:
 protected:
+  EXPORT WALManager(const EngineEnvironment_ptr env);
+
 public:
   EXPORT virtual ~WALManager();
-  EXPORT WALManager(const EngineEnvironment_ptr env);
+  EXPORT static WALManager_ptr create(const EngineEnvironment_ptr env);
   // Inherited via MeasStorage
   EXPORT virtual Time minTime() override;
   EXPORT virtual Time maxTime() override;
   EXPORT virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                  dariadb::Time *maxResult) override;
-  EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
+  EXPORT virtual void foreach (const QueryInterval &q,
+                               IReaderClb * clbk) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  EXPORT virtual Id2Meas currentValue(const IdArray &ids,
+                                      const Flag &flag) override;
   EXPORT virtual Status append(const Meas &value) override;
   EXPORT virtual void flush() override;
 
@@ -62,7 +69,5 @@ private:
   EngineEnvironment_ptr _env;
   Settings *_settings;
 };
-
-using WALManager_ptr = std::shared_ptr<WALManager>;
 }
 }

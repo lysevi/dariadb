@@ -88,8 +88,7 @@ int main(int argc, char *argv[]) {
 
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    wal_manager =
-        dariadb::storage::WALManager_ptr{new dariadb::storage::WALManager(_engine_env)};
+    wal_manager = dariadb::storage::WALManager::create(_engine_env);
 
     auto wal = wal_manager.get();
     std::thread info_thread(show_info);

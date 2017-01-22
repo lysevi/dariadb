@@ -193,8 +193,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
 
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    auto am =
-        dariadb::storage::WALManager_ptr{new dariadb::storage::WALManager(_engine_env)};
+    auto am = dariadb::storage::WALManager::create(_engine_env);
 
     dariadb_test::storage_test_check(am.get(), from, to, step, false);
 
@@ -215,8 +214,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
 
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    auto am =
-        dariadb::storage::WALManager_ptr{new dariadb::storage::WALManager(_engine_env)};
+    auto am = dariadb::storage::WALManager::create(_engine_env);
 
     dariadb::storage::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
     auto out = am->readInterval(qi);
