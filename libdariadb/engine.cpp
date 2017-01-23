@@ -84,7 +84,7 @@ public:
     }
 
     if (_strategy == STRATEGY::CACHE || _strategy == STRATEGY::MEMORY) {
-      _memstorage = MemStorage_ptr{new MemStorage(_engine_env, _min_max_map.size())};
+      _memstorage = MemStorage::create(_engine_env, _min_max_map.size());
       if (_strategy != STRATEGY::CACHE) {
         _memstorage->setDownLevel(_page_manager.get());
       }

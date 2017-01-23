@@ -102,9 +102,9 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    dariadb::storage::MemStorage ms{_engine_env, size_t(0)};
+    auto ms= dariadb::storage::MemStorage::create(_engine_env, size_t(0));
 
-    dariadb_test::storage_test_check(&ms, 0, 100, 1, false);
+    dariadb_test::storage_test_check(ms.get(), 0, 100, 1, false);
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -130,14 +130,14 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    dariadb::storage::MemStorage ms{_engine_env, size_t(0)};
+	auto ms = dariadb::storage::MemStorage::create(_engine_env, size_t(0));
 
-    ms.setDownLevel(cw);
+    ms->setDownLevel(cw);
 
     auto e = dariadb::Meas::empty();
     while (true) {
       e.time++;
-      ms.append(e);
+      ms->append(e);
       if (cw->droped != 0) {
         break;
       }
@@ -169,14 +169,14 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
 
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    dariadb::storage::MemStorage ms{_engine_env, size_t(0)};
+	auto ms = dariadb::storage::MemStorage::create(_engine_env, size_t(0));
 
-    ms.setDiskStorage(cw);
+    ms->setDiskStorage(cw);
 
     auto e = dariadb::Meas::empty();
     while (true) {
       e.time++;
-      ms.append(e);
+      ms->append(e);
       if (cw->droped != 0) {
         break;
       }

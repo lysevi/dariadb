@@ -29,7 +29,7 @@ using namespace dariadb::storage;
 std::atomic_llong append_count{0};
 dariadb::Time write_time = 0;
 bool stop_info = false;
-dariadb::storage::MemStorage *mstore;
+dariadb::storage::MemStorage_ptr mstore;
 size_t memory_limit = 0;
 
 void show_info() {
@@ -90,12 +90,11 @@ int main(int argc, char **argv) {
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    dariadb::storage::MemStorage ms{_engine_env, size_t(0)};
     if (memory_limit != 0) {
       std::cout << "memory limit: " << memory_limit << std::endl;
       settings->memory_limit.setValue(memory_limit * 1024 * 1024);
     }
-    mstore = new dariadb::storage::MemStorage{_engine_env, size_t(0)};
+    mstore = dariadb::storage::MemStorage::create(_engine_env, size_t(0));
 
     std::thread info_thread(show_info);
 
@@ -105,7 +104,7 @@ int main(int argc, char **argv) {
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
       std::thread t{
-          dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), &append_count, mstore,
+          dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), &append_count, mstore.get(),
           dariadb::timeutil::current_time(),     &write_time};
       writers[pos++] = std::move(t);
     }
@@ -119,9 +118,9 @@ int main(int argc, char **argv) {
     stop_info = true;
     info_thread.join();
 
-    dariadb_bench::readBenchark(all_id_set, mstore, 10, false, false);
+    dariadb_bench::readBenchark(all_id_set, mstore.get(), 10, false, false);
 
-    delete mstore;
+    mstore=nullptr;
     dariadb::utils::async::ThreadManager::stop();
   }
 }

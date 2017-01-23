@@ -340,6 +340,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   std::condition_variable _drop_cond;
 };
 
+MemStorage_ptr MemStorage::create(const EngineEnvironment_ptr &env, size_t id_count) {
+	return MemStorage_ptr{ new MemStorage(env,id_count) };
+}
+
 MemStorage::MemStorage(const EngineEnvironment_ptr &env, size_t id_count)
     : _impl(new MemStorage::Private(env, id_count)) {}
 
