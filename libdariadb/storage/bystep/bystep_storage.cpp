@@ -402,9 +402,9 @@ struct ByStepStorage::Private : public IMeasStorage {
     auto period_to = bystep::intervalForTime(step_kind_it->second, vals_per_interval,
                                              std::get<0>(round_to));
 
-    logger_fatal("engine: bystep - erase id:", id, " from: ",
-                 dariadb::timeutil::to_string(std::get<0>(round_from)), " to: ",
-                 std::get<0>(round_to));
+    logger_fatal("engine: bystep - erase id:", id,
+                 " from: ", dariadb::timeutil::to_string(std::get<0>(round_from)),
+                 " to: ", std::get<0>(round_to));
     _io->eraseOld(period_from, period_to, id);
   }
 
@@ -416,6 +416,10 @@ struct ByStepStorage::Private : public IMeasStorage {
   std::mutex _drop_lock;
   Id2Step _steps;
 };
+
+ByStepStorage_ptr ByStepStorage::create(const EngineEnvironment_ptr &env) {
+  return ByStepStorage_ptr{new ByStepStorage(env)};
+}
 
 ByStepStorage::ByStepStorage(const EngineEnvironment_ptr &env)
     : _impl(new ByStepStorage::Private(env)) {}

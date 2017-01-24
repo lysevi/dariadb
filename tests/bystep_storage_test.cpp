@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    dariadb::storage::ByStepStorage ms{_engine_env};
+    auto ms= dariadb::storage::ByStepStorage::create(_engine_env);
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -222,31 +222,31 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    dariadb::storage::ByStepStorage ms{_engine_env};
+	auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
     dariadb::storage::Id2Step steps;
 
     steps[0] = dariadb::storage::STEP_KIND::SECOND;
     steps[1] = dariadb::storage::STEP_KIND::MINUTE;
     steps[2] = dariadb::storage::STEP_KIND::HOUR;
     steps[3] = dariadb::storage::STEP_KIND::MILLISECOND;
-    ms.setSteps(steps);
+    ms->setSteps(steps);
 
     for (size_t i = 0; i < writes_count; i++) {
       value.id = 0;
       value.value = i;
       value.time += 500;
-      ms.append(value);
+      ms->append(value);
       value.id = 1;
-      ms.append(value);
+      ms->append(value);
       value.id = 2;
-      ms.append(value);
+      ms->append(value);
       value.id = 3;
-      ms.append(value);
+      ms->append(value);
     }
     { // milliseconds
       std::cout << "readInterval ms" << std::endl;
       dariadb::storage::QueryInterval qi({3}, 0, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_EQUAL(readed.size(), size_t(value.time) + 1);
       for (auto &v : readed) { // write step is 500ms
         if ((v.time != 0) && (v.time % 500 == 0)) {
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     { // seconds
       std::cout << "readInterval sec" << std::endl;
       dariadb::storage::QueryInterval qi({0}, 0, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
       for (auto &v : readed) {
         BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     { // seconds no flag
       std::cout << "readInterval sec no flag" << std::endl;
       dariadb::storage::QueryInterval qi({0}, 777, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
       for (auto &v : readed) {
         BOOST_CHECK(v.flag == dariadb::Flags::_NO_DATA);
@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     { // minutes
       std::cout << "readInterval minutes" << std::endl;
       dariadb::storage::QueryInterval qi({1}, 0, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2 * 60)) + 1);
       for (auto &v : readed) {
         BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
@@ -287,7 +287,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     { // hour
       std::cout << "readInterval hr" << std::endl;
       dariadb::storage::QueryInterval qi({2}, 0, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2 * 60 * 60)) + 1);
       for (auto &v : readed) {
         BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
@@ -296,24 +296,24 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 
     { // minMax
       std::cout << "minMax" << std::endl;
-      auto min = ms.minTime();
+      auto min = ms->minTime();
       BOOST_CHECK_EQUAL(min, 500);
-      auto max = ms.maxTime();
+      auto max = ms->maxTime();
       BOOST_CHECK_EQUAL(max, value.time);
 
-      auto res = ms.minMaxTime(0, &min, &max);
+      auto res = ms->minMaxTime(0, &min, &max);
       BOOST_CHECK(res);
       BOOST_CHECK_EQUAL(min, 500);
       BOOST_CHECK_EQUAL(max, value.time);
 
-      res = ms.minMaxTime(777, &min, &max);
+      res = ms->minMaxTime(777, &min, &max);
       BOOST_CHECK(!res);
     }
 
     { // readInTimePoint from io_adapter
       std::cout << "readInTimePoint from io_adapter" << std::endl;
       dariadb::storage::QueryTimePoint qp({0}, 0, 1100);
-      auto result = ms.readTimePoint(qp);
+      auto result = ms->readTimePoint(qp);
       BOOST_CHECK_EQUAL(result.size(), size_t(1));
       BOOST_CHECK_LE(result[0].time, 2000);
       BOOST_CHECK(result[0].flag != dariadb::Flags::_NO_DATA);
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     { // readInTimePoint from last tracked value
       std::cout << "readInTimePoint from last tracked value" << std::endl;
       dariadb::storage::QueryTimePoint qp({0}, 0, value.time);
-      auto result = ms.readTimePoint(qp);
+      auto result = ms->readTimePoint(qp);
       BOOST_CHECK_EQUAL(result.size(), size_t(1));
       BOOST_CHECK_LE(result[0].time, value.time);
       BOOST_CHECK(result[0].flag != dariadb::Flags::_NO_DATA);
@@ -331,7 +331,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
       std::cout << "readInTimePoint not in interval" << std::endl;
       auto not_exists_time = value.time * value.time;
       dariadb::storage::QueryTimePoint qp({1}, 0, not_exists_time);
-      auto result = ms.readTimePoint(qp);
+      auto result = ms->readTimePoint(qp);
       BOOST_CHECK_EQUAL(result.size(), size_t(1));
       BOOST_CHECK_LE(result[1].time, not_exists_time);
       BOOST_CHECK_EQUAL(result[1].flag, dariadb::Flags::_NO_DATA);
@@ -340,7 +340,7 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     { // query not exists interval
       std::cout << "empty interval" << std::endl;
       dariadb::storage::QueryInterval qi({0}, 0, value.time * 2, value.time * 10);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK(readed.size() != size_t(0));
       for (auto &v : readed) {
         BOOST_CHECK_EQUAL(v.flag, dariadb::Flags::_NO_DATA);
@@ -351,9 +351,9 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
       auto new_value = dariadb::Meas::empty(0);
       new_value.time = 500;
       new_value.value = 777;
-      ms.append(new_value);
+      ms->append(new_value);
       dariadb::storage::QueryInterval qi({0}, 0, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / 2) + 1);
       BOOST_CHECK_EQUAL(readed.front().value, 777);
     }
@@ -367,28 +367,28 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
                              settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    dariadb::storage::ByStepStorage ms{_engine_env};
+	auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
     dariadb::storage::Id2Step steps;
 
     steps[0] = dariadb::storage::STEP_KIND::SECOND;
     steps[1] = dariadb::storage::STEP_KIND::MINUTE;
     steps[2] = dariadb::storage::STEP_KIND::HOUR;
-    ms.setSteps(steps);
+    ms->setSteps(steps);
 
     { // write to past
       auto new_value = dariadb::Meas::empty(0);
       new_value.time = 500;
       new_value.value = 888;
-      ms.append(new_value);
+      ms->append(new_value);
       dariadb::storage::QueryInterval qi({0}, 0, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_EQUAL(readed.front().value, 888);
     }
 
     { // erase
-      ms.eraseOld(0, 0, 3601000 * 10);
+      ms->eraseOld(0, 0, 3601000 * 10);
       dariadb::storage::QueryInterval qi({0}, 0, 0, value.time);
-      auto readed = ms.readInterval(qi);
+      auto readed = ms->readInterval(qi);
       BOOST_CHECK_LT(readed.size(), size_t(writes_count / 2) + 1);
     }
   }
@@ -417,34 +417,34 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     steps[0] = dariadb::storage::STEP_KIND::HOUR;
     {
       std::cout << "first" << std::endl;
-      dariadb::storage::ByStepStorage ms{_engine_env};
-      ms.setSteps(steps);
+	  auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+      ms->setSteps(steps);
 
       auto value = dariadb::Meas::empty(0);
       value.value = 1;
       value.time = dariadb::timeutil::current_time();
-      ms.append(value);
+      ms->append(value);
 
       { // query
         dariadb::storage::QueryTimePoint qt({0}, 0, value.time);
-        auto readed = ms.readTimePoint(qt);
+        auto readed = ms->readTimePoint(qt);
         BOOST_CHECK_EQUAL(readed.size(), size_t(1));
         BOOST_CHECK_EQUAL(readed[0].value, 1);
       }
     }
     { // update value
       std::cout << "update value" << std::endl;
-      dariadb::storage::ByStepStorage ms{_engine_env};
-      auto readed = ms.setSteps(steps);
+	  auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+      auto readed = ms->setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
       auto value = dariadb::Meas::empty(0);
       value.value = 2;
       value.time = dariadb::timeutil::current_time();
-      ms.append(value);
+      ms->append(value);
 
       { // query
         dariadb::storage::QueryTimePoint qt({0}, 0, value.time);
-        auto readed_values = ms.readTimePoint(qt);
+        auto readed_values = ms->readTimePoint(qt);
         BOOST_CHECK_EQUAL(readed_values.size(), size_t(1));
         BOOST_CHECK_EQUAL(readed_values[0].value, 2);
       }
@@ -452,14 +452,14 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
 
     { // read saved
       std::cout << "read saved" << std::endl;
-      dariadb::storage::ByStepStorage ms{_engine_env};
-      auto readed = ms.setSteps(steps);
+	  auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+      auto readed = ms->setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
       auto curtime = dariadb::timeutil::current_time();
 
       { // query
         dariadb::storage::QueryTimePoint qt({0}, 0, curtime);
-        auto readed_values = ms.readTimePoint(qt);
+        auto readed_values = ms->readTimePoint(qt);
         BOOST_CHECK_EQUAL(readed_values.size(), size_t(1));
         BOOST_CHECK_EQUAL(readed_values[0].value, 2);
       }

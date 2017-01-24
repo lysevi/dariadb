@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, settings.get());
     dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-    bs_storage = ByStepStorage_ptr{new ByStepStorage{_engine_env}};
+    bs_storage = ByStepStorage::create(_engine_env);
 
     std::thread info_thread(show_info);
 

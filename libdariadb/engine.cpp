@@ -101,7 +101,7 @@ public:
       }
     }
 
-    _bystep_storage = ByStepStorage_ptr{new ByStepStorage(_engine_env)};
+    _bystep_storage = ByStepStorage::create(_engine_env);
 
     if (!is_new_storage) {
       auto id2step = _manifest->read_id2step();

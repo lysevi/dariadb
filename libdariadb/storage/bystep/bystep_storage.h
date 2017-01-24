@@ -13,10 +13,16 @@
 namespace dariadb {
 namespace storage {
 
+class ByStepStorage;
+using ByStepStorage_ptr = std::shared_ptr<ByStepStorage>;
 class ByStepStorage : public IMeasStorage {
-public:
+protected:
   /// id_count - for prealloc
   EXPORT ByStepStorage(const EngineEnvironment_ptr &env);
+
+public:
+  /// id_count - for prealloc
+  EXPORT static ByStepStorage_ptr create(const EngineEnvironment_ptr &env);
   EXPORT ~ByStepStorage();
   EXPORT bystep::Description description();
   // return count chunk readed from disk.
@@ -45,6 +51,5 @@ private:
   struct Private;
   std::unique_ptr<Private> _impl;
 };
-using ByStepStorage_ptr = std::shared_ptr<ByStepStorage>;
 }
 }
