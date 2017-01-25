@@ -46,6 +46,46 @@ void checkNodeCtor(const clmn::Node::Node_Ptr &n, clmn::generation_t expected_g,
   }
 }
 
+BOOST_AUTO_TEST_CASE(StatisticUpdate) {
+  clmn::Statistic st;
+
+  BOOST_CHECK_EQUAL(st.min_time, dariadb::MAX_TIME);
+  BOOST_CHECK_EQUAL(st.max_time, dariadb::MIN_TIME);
+  BOOST_CHECK_EQUAL(st.count, uint32_t(0));
+  BOOST_CHECK_EQUAL(st.flg_bloom, dariadb::Flag(0));
+  BOOST_CHECK_EQUAL(st.min_value, dariadb::MAX_VALUE);
+  BOOST_CHECK_EQUAL(st.max_value, dariadb::MIN_VALUE);
+  BOOST_CHECK_EQUAL(st.sum, dariadb::MIN_VALUE);
+  auto m = dariadb::Meas::empty(0);
+  m.time = 2;
+  m.flag = 2;
+  m.value = 2;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.min_time, m.time);
+  BOOST_CHECK_EQUAL(st.max_time, m.time);
+  BOOST_CHECK(st.flg_bloom != dariadb::Flag(0));
+  BOOST_CHECK(dariadb::areSame(st.min_value, m.value));
+  BOOST_CHECK(dariadb::areSame(st.max_value, m.value));
+
+  m.time = 3;
+  m.value = 3;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.min_time, dariadb::Time(2));
+  BOOST_CHECK_EQUAL(st.max_time, dariadb::Time(3));
+  BOOST_CHECK(dariadb::areSame(st.min_value, dariadb::Value(2)));
+  BOOST_CHECK(dariadb::areSame(st.max_value, dariadb::Value(3)));
+
+  m.time = 1;
+  m.value = 1;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.min_time, dariadb::Time(1));
+  BOOST_CHECK_EQUAL(st.max_time, dariadb::Time(3));
+  BOOST_CHECK(dariadb::areSame(st.min_value, dariadb::Value(1)));
+  BOOST_CHECK(dariadb::areSame(st.max_value, dariadb::Value(3)));
+  BOOST_CHECK(dariadb::areSame(st.sum, dariadb::Value(6)));
+  BOOST_CHECK_EQUAL(st.count, uint32_t(3));
+}
+
 BOOST_AUTO_TEST_CASE(LeafAndNode) {
   const clmn::generation_t expected_g = 1;
   const clmn::node_id_t expected_i = 2;

@@ -2,6 +2,7 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/utils/utils.h>
 #include <algorithm>
@@ -72,6 +73,7 @@ struct Footer {
 
   // maximal id of child nodes.
   node_id_t max_node_id() const { return hdr.id; }
+
   EXPORT void update_crc();
 };
 
@@ -79,11 +81,38 @@ struct Statistic {
   Time min_time;
   Time max_time;
 
+  uint32_t count;
+
+  Flag flg_bloom;
+
+  Value min_value;
+  Value max_value;
+
+  Value sum;
+
   Statistic() {
+    flg_bloom = bloom_empty<Flag>();
+    count = uint32_t(0);
     min_time = MAX_TIME;
     max_time = MIN_TIME;
+
+	min_value = MAX_VALUE;
+	max_value = MIN_VALUE;
+	
+	sum = MIN_VALUE;
   }
-  void update(const Meas &m) {}
+
+  void update(const Meas &m) {
+    count++;
+    min_time = std::min(m.time, min_time);
+    max_time = std::max(m.time, max_time);
+    flg_bloom = bloom_add<Flag>(flg_bloom, m.time);
+
+	min_value = std::min(m.value, min_value);
+	max_value = std::max(m.value, max_value);
+
+	sum += m.value;
+  }
 };
 
 struct Node {
