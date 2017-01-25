@@ -51,15 +51,22 @@ struct Footer {
   NodeHeader hdr;
   uint32_t crc;
   node_ptr *roots;
+  Id *ids;
 
   Footer(node_size_t sz) : hdr(0, 0, sz, NODE_KIND_FOOTER) {
     magic_num = MAGIC_NUMBER;
-	crc = 0;
+    crc = 0;
     roots = new node_ptr[hdr.size];
     std::fill_n(roots, hdr.size, NODE_PTR_NULL);
+
+    ids = new Id[hdr.size];
+    std::fill_n(ids, hdr.size, MAX_ID);
   }
 
-  ~Footer() { delete[] roots; }
+  ~Footer() {
+    delete[] roots;
+    delete[] ids;
+  }
 
   static Footer_Ptr make_footer(node_size_t sz) { return std::make_shared<Footer>(sz); }
 
@@ -93,13 +100,16 @@ struct Node {
     keys = new Time[sz];
     std::fill_n(keys, hdr.size, Time(0));
 
-	children = new node_ptr[sz];
-	std::fill_n(children, hdr.size, NODE_PTR_NULL);
+    children = new node_ptr[sz];
+    std::fill_n(children, hdr.size, NODE_PTR_NULL);
 
     neighbor = NODE_PTR_NULL;
   }
 
-  ~Node() { delete[] keys; delete[] children; }
+  ~Node() {
+    delete[] keys;
+    delete[] children;
+  }
 
   static Node_Ptr make_node(generation_t g, node_id_t _id, node_size_t sz) {
     return std::make_shared<Node>(g, _id, sz, NODE_KIND_NODE);

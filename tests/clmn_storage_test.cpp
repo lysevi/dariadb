@@ -28,10 +28,14 @@ BOOST_AUTO_TEST_CASE(Footer) {
   for (clmn::node_size_t i = 0; i < expected_s; ++i) {
     BOOST_CHECK_EQUAL(ftr->roots[i], clmn::NODE_PTR_NULL);
   }
+
+  for (clmn::node_size_t i = 0; i < expected_s; ++i) {
+    BOOST_CHECK_EQUAL(ftr->ids[i], dariadb::MAX_ID);
+  }
 }
 
 void checkNodeCtor(const clmn::Node::Node_Ptr &n, clmn::generation_t expected_g,
-               clmn::node_id_t expected_i, clmn::node_size_t expected_s) {
+                   clmn::node_id_t expected_i, clmn::node_size_t expected_s) {
 
   BOOST_CHECK_EQUAL(n->neighbor, clmn::NODE_PTR_NULL);
   BOOST_CHECK_EQUAL(n->hdr.gen, expected_g);
