@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(Footer) {
   }
 }
 
-void checkNode(const clmn::Node::Node_Ptr &n, clmn::generation_t expected_g,
+void checkNodeCtor(const clmn::Node::Node_Ptr &n, clmn::generation_t expected_g,
                clmn::node_id_t expected_i, clmn::node_size_t expected_s) {
 
   BOOST_CHECK_EQUAL(n->neighbor, clmn::NODE_PTR_NULL);
@@ -51,14 +51,14 @@ BOOST_AUTO_TEST_CASE(LeafAndNode) {
     clmn::Node::Node_Ptr r = clmn::Node::make_root(expected_g, expected_i, expected_s);
 
     BOOST_CHECK_EQUAL(r->hdr.kind, clmn::NODE_KIND_ROOT);
-    checkNode(r, expected_g, expected_i, expected_s);
+    checkNodeCtor(r, expected_g, expected_i, expected_s);
   }
 
   {
     clmn::Node::Node_Ptr n = clmn::Node::make_node(expected_g, expected_i, expected_s);
 
     BOOST_CHECK_EQUAL(n->hdr.kind, clmn::NODE_KIND_NODE);
-    checkNode(n, expected_g, expected_i, expected_s);
+    checkNodeCtor(n, expected_g, expected_i, expected_s);
   }
 
   {
