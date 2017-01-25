@@ -96,22 +96,38 @@ struct Statistic {
     min_time = MAX_TIME;
     max_time = MIN_TIME;
 
-	min_value = MAX_VALUE;
-	max_value = MIN_VALUE;
-	
-	sum = MIN_VALUE;
+    min_value = MAX_VALUE;
+    max_value = MIN_VALUE;
+
+    sum = MIN_VALUE;
   }
 
   void update(const Meas &m) {
     count++;
+
     min_time = std::min(m.time, min_time);
     max_time = std::max(m.time, max_time);
+
     flg_bloom = bloom_add<Flag>(flg_bloom, m.time);
 
-	min_value = std::min(m.value, min_value);
-	max_value = std::max(m.value, max_value);
+    min_value = std::min(m.value, min_value);
+    max_value = std::max(m.value, max_value);
 
-	sum += m.value;
+    sum += m.value;
+  }
+
+  void update(const Statistic &st) {
+    count += st.count;
+
+    min_time = std::min(st.min_time, min_time);
+    max_time = std::max(st.max_time, max_time);
+
+    flg_bloom = flg_bloom | st.flg_bloom;
+
+    min_value = std::min(st.min_value, min_value);
+    max_value = std::max(st.max_value, max_value);
+
+    sum += st.sum;
   }
 };
 

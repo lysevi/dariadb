@@ -84,6 +84,20 @@ BOOST_AUTO_TEST_CASE(StatisticUpdate) {
   BOOST_CHECK(dariadb::areSame(st.max_value, dariadb::Value(3)));
   BOOST_CHECK(dariadb::areSame(st.sum, dariadb::Value(6)));
   BOOST_CHECK_EQUAL(st.count, uint32_t(3));
+
+  clmn::Statistic second_st;
+  m.time = 777;
+  m.value = 1;
+  second_st.update(m);
+  BOOST_CHECK_EQUAL(second_st.max_time, m.time);
+
+  second_st.update(st);
+  BOOST_CHECK_EQUAL(second_st.min_time, dariadb::Time(1));
+  BOOST_CHECK_EQUAL(second_st.max_time, dariadb::Time(777));
+  BOOST_CHECK(dariadb::areSame(second_st.min_value, dariadb::Value(1)));
+  BOOST_CHECK(dariadb::areSame(second_st.max_value, dariadb::Value(3)));
+  BOOST_CHECK(dariadb::areSame(second_st.sum, dariadb::Value(7)));
+  BOOST_CHECK_EQUAL(second_st.count, uint32_t(4));
 }
 
 BOOST_AUTO_TEST_CASE(LeafAndNode) {
