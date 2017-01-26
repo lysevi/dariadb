@@ -2,10 +2,25 @@
 #define BOOST_TEST_MODULE Main
 #include "test_common.h"
 #include <libdariadb/storage/clmn/nodes.h>
+#include <libdariadb/storage/clmn/tree.h>
 #include <libdariadb/utils/fs.h>
 
 #include <boost/test/unit_test.hpp>
+
 using namespace dariadb::storage;
+
+void checkNodeCtor(const clmn::Node::Node_Ptr &n, clmn::generation_t expected_g,
+                   clmn::node_id_t expected_i, clmn::node_size_t expected_s) {
+
+  BOOST_CHECK_EQUAL(n->neighbor, clmn::NODE_PTR_NULL);
+  BOOST_CHECK_EQUAL(n->hdr.gen, expected_g);
+  BOOST_CHECK_EQUAL(n->hdr.id, expected_i);
+  BOOST_CHECK_EQUAL(n->hdr.size, expected_s);
+  BOOST_CHECK(!n->children_is_leaf);
+  for (clmn::node_size_t i = 0; i < expected_s; ++i) {
+    BOOST_CHECK_EQUAL(n->children[i], clmn::NODE_PTR_NULL);
+  }
+}
 
 BOOST_AUTO_TEST_CASE(Footer) {
   const char *expected = "dariadb.";
@@ -31,18 +46,6 @@ BOOST_AUTO_TEST_CASE(Footer) {
 
   for (clmn::node_size_t i = 0; i < expected_s; ++i) {
     BOOST_CHECK_EQUAL(ftr->ids[i], dariadb::MAX_ID);
-  }
-}
-
-void checkNodeCtor(const clmn::Node::Node_Ptr &n, clmn::generation_t expected_g,
-                   clmn::node_id_t expected_i, clmn::node_size_t expected_s) {
-
-  BOOST_CHECK_EQUAL(n->neighbor, clmn::NODE_PTR_NULL);
-  BOOST_CHECK_EQUAL(n->hdr.gen, expected_g);
-  BOOST_CHECK_EQUAL(n->hdr.id, expected_i);
-  BOOST_CHECK_EQUAL(n->hdr.size, expected_s);
-  for (clmn::node_size_t i = 0; i < expected_s; ++i) {
-    BOOST_CHECK_EQUAL(n->children[i], clmn::NODE_PTR_NULL);
   }
 }
 
@@ -127,5 +130,12 @@ BOOST_AUTO_TEST_CASE(LeafAndNode) {
     BOOST_CHECK_EQUAL(l->hdr.gen, expected_g);
     BOOST_CHECK_EQUAL(l->hdr.id, expected_i);
     BOOST_CHECK_EQUAL(l->hdr.size, expected_s);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(TreeOneId) {
+  {
+    auto msn = clmn::MemoryNodeStorage::create();
+    clmn::Tree t(msn);
   }
 }

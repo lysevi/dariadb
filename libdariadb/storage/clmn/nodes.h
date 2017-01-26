@@ -83,7 +83,7 @@ struct Statistic {
 
   uint32_t count;
 
-  Flag flg_bloom;
+  uint64_t flg_bloom;
 
   Value min_value;
   Value max_value;
@@ -108,7 +108,7 @@ struct Statistic {
     min_time = std::min(m.time, min_time);
     max_time = std::max(m.time, max_time);
 
-    flg_bloom = bloom_add<Flag>(flg_bloom, m.time);
+    flg_bloom = bloom_add<Flag>(flg_bloom, m.flag);
 
     min_value = std::min(m.value, min_value);
     max_value = std::max(m.value, max_value);
@@ -137,7 +137,7 @@ struct Node {
   Statistic stat;
   node_ptr neighbor; // ptr to neighbor;
   Time *keys;
-
+  bool children_is_leaf;
   node_ptr *children;
 
   Node(generation_t g, node_id_t _id, node_size_t sz, node_kind _k)
@@ -149,6 +149,8 @@ struct Node {
     std::fill_n(children, hdr.size, NODE_PTR_NULL);
 
     neighbor = NODE_PTR_NULL;
+
+    children_is_leaf = false;
   }
 
   ~Node() {
@@ -190,6 +192,27 @@ struct Leaf {
 
 class NodeStorage {
 public:
+  virtual Footer::Footer_Ptr getFooter() = 0;
+  virtual Node::Node_Ptr readNode(const node_ptr ptr) = 0;
+  virtual Leaf::Leaf_Ptr readLeaf(const node_ptr ptr) = 0;
+};
+typedef std::shared_ptr<NodeStorage> NodeStorage_Ptr;
+
+class MemoryNodeStorage : public NodeStorage {
+public:
+  EXPORT static NodeStorage_Ptr create();
+  EXPORT ~MemoryNodeStorage();
+
+  EXPORT virtual Footer::Footer_Ptr getFooter() override;
+  EXPORT virtual Node::Node_Ptr readNode(const node_ptr ptr) override;
+  EXPORT virtual Leaf::Leaf_Ptr readLeaf(const node_ptr ptr) override;
+
+protected:
+  EXPORT MemoryNodeStorage();
+
+private:
+  struct Private;
+  std::unique_ptr<Private> _impl;
 };
 }
 }
