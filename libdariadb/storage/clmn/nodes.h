@@ -17,10 +17,13 @@ namespace clmn {
 const uint64_t MAGIC_NUMBER = 0x2E62646169726164;
 
 typedef uint32_t gnrt_t; // generation
+typedef uint8_t node_kind_t;
 typedef uint32_t node_id_t;
 typedef uint32_t node_sz_t;
-typedef uint64_t node_addr_t;
-typedef uint8_t node_kind_t;
+/// in tree level - just a node id.
+/// in storage level - physical address
+typedef node_id_t node_addr_t;
+
 
 const node_addr_t NODE_ID_ZERO =std::numeric_limits<node_id_t>::max(); // for null pointers
 const node_addr_t NODE_PTR_NULL =
@@ -195,7 +198,7 @@ struct Node {
 
   Node(gnrt_t g, node_id_t _id, node_sz_t sz, node_kind_t _k)
       : hdr(g, _id, sz, _k, MAX_ID), stat() {
-    keys = new Time[sz];
+    keys = new Time[hdr.size];
     std::fill_n(keys, hdr.size, Time(0));
 
     children = new node_addr_t[sz];
@@ -204,6 +207,23 @@ struct Node {
     neighbor = NODE_PTR_NULL;
 
     children_is_leaf = false;
+  }
+
+  Node(const Ptr&other)
+	  : hdr(other->hdr), stat(other->stat) {
+	  keys = new Time[hdr.size];
+	  std::fill_n(keys, hdr.size, Time(0));
+
+	  children = new node_addr_t[hdr.size];
+	  for (node_sz_t i = 0; i < hdr.size;++i) {
+		  children[i] = other->children[i];
+	  }
+
+	  neighbor = other->neighbor;
+
+	  children_is_leaf = other->children_is_leaf;
+
+	  ++hdr.gen;
   }
 
   ~Node() {
@@ -217,6 +237,10 @@ struct Node {
 
   static Ptr make_root(gnrt_t g, node_id_t _id, node_sz_t sz) {
     return std::make_shared<Node>(g, _id, sz, NODE_KIND_ROOT);
+  }
+
+  static Ptr copy_on_write(const Ptr&other) {
+	  return std::make_shared<Node>(other);
   }
 
   // return true if succes.

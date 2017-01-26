@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(Footer) {
     clmn::Footer::Footer_Ptr second_f =
         clmn::Footer::copy_on_write(ftr, expected_i, expected_a + 1);
 
-	BOOST_CHECK_EQUAL(ftr->hdr.meas_id, expected_i);
+    BOOST_CHECK_EQUAL(ftr->hdr.meas_id, expected_i);
     BOOST_CHECK_EQUAL(second_f->hdr.gen, clmn::gnrt_t(1));
 
     for (clmn::node_sz_t i = 0; i < uint32_t(1); ++i) {
@@ -141,6 +141,11 @@ BOOST_AUTO_TEST_CASE(LeafAndNode) {
 
     BOOST_CHECK_EQUAL(n->hdr.kind, clmn::NODE_KIND_NODE);
     checkNodeCtor(n, expected_g, expected_i, expected_s);
+
+    clmn::Node::Ptr cnw = clmn::Node::copy_on_write(n);
+
+    BOOST_CHECK_EQUAL(n->hdr.kind, clmn::NODE_KIND_NODE);
+    checkNodeCtor(cnw, expected_g + 1, expected_i, expected_s);
   }
 
   {
@@ -184,26 +189,26 @@ BOOST_AUTO_TEST_CASE(MemoryNodeStorageTest) {
     for (auto a : addrs) {
       BOOST_CHECK(a != clmn::NODE_PTR_NULL);
     }
-	//insert first
+    // insert first
     msn->write(clmn::node_vector{r, n1, n2});
     auto footer = msn->getFooter();
     BOOST_CHECK(footer != nullptr);
 
     BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(1));
     BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
-	
-	//insert one more time
+
+    // insert one more time
     msn->write(clmn::node_vector{r, n1, n2});
-	footer = msn->getFooter();
+    footer = msn->getFooter();
     BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(1));
     BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
 
-	//insert new root
-	r->hdr.meas_id++;
-	msn->write(clmn::node_vector{ r, n1, n2 });
-	footer = msn->getFooter();
-	BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(2));
-	BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
-	BOOST_CHECK(footer->roots[1] != clmn::NODE_PTR_NULL);
+    // insert new root
+    r->hdr.meas_id++;
+    msn->write(clmn::node_vector{r, n1, n2});
+    footer = msn->getFooter();
+    BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(2));
+    BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
+    BOOST_CHECK(footer->roots[1] != clmn::NODE_PTR_NULL);
   }
 }
