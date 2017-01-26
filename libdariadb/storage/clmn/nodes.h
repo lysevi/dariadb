@@ -24,8 +24,8 @@ typedef uint32_t node_sz_t;
 /// in storage level - physical address
 typedef node_id_t node_addr_t;
 
-
-const node_addr_t NODE_ID_ZERO =std::numeric_limits<node_id_t>::max(); // for null pointers
+const node_addr_t NODE_ID_ZERO =
+    std::numeric_limits<node_id_t>::max(); // for null pointers
 const node_addr_t NODE_PTR_NULL =
     std::numeric_limits<node_addr_t>::max(); // for null pointers
 const node_kind_t NODE_KIND_FOOTER = 1;
@@ -54,7 +54,7 @@ struct NodeHeader {
     id = _id;
     size = sz;
     kind = k;
-	meas_id = m_id;
+    meas_id = m_id;
   }
 };
 
@@ -67,31 +67,32 @@ struct Footer {
   node_addr_t *roots;
   Id *ids;
 
-  Footer(Id m_id, node_addr_t p) : hdr(0, 0, node_sz_t(1), NODE_KIND_FOOTER, m_id) {
+  Footer(Id m_id, node_addr_t p)
+      : hdr(0, 0, node_sz_t(1), NODE_KIND_FOOTER, m_id) {
     magic_num = MAGIC_NUMBER;
     crc = 0;
     roots = new node_addr_t[hdr.size];
     ids = new Id[hdr.size];
 
-	ids[0] = m_id;
-	roots[0] = p;
+    ids[0] = m_id;
+    roots[0] = p;
 
-	update_crc();
+    update_crc();
   }
 
   Footer(const Footer &other, Id m_id, node_addr_t p) : hdr(other.hdr) {
     magic_num = other.magic_num;
     crc = 0;
-	bool exists_in_origin = false;
-	for (node_sz_t i = 0; i < hdr.size; ++i) {
-		if (other.ids[i] == m_id || other.roots[i] == NODE_PTR_NULL) {
-			exists_in_origin = true;
-		}
-	}
-	
-	if (!exists_in_origin) {
-		hdr.size++;
-	}
+    bool exists_in_origin = false;
+    for (node_sz_t i = 0; i < hdr.size; ++i) {
+      if (other.ids[i] == m_id || other.roots[i] == NODE_PTR_NULL) {
+        exists_in_origin = true;
+      }
+    }
+
+    if (!exists_in_origin) {
+      hdr.size++;
+    }
 
     roots = new node_addr_t[hdr.size];
     ids = new Id[hdr.size];
@@ -101,17 +102,17 @@ struct Footer {
       roots[i] = other.roots[i];
     }
 
-	for (node_sz_t i = 0; i < hdr.size; ++i) {
-		if (ids[i] == m_id || roots[i] == NODE_PTR_NULL) {
-			ids[i] = m_id;
-			roots[i] = p;
-			break;
-		}
-	}
+    for (node_sz_t i = 0; i < hdr.size; ++i) {
+      if (ids[i] == m_id || roots[i] == NODE_PTR_NULL) {
+        ids[i] = m_id;
+        roots[i] = p;
+        break;
+      }
+    }
 
     ++hdr.gen;
 
-	update_crc();
+    update_crc();
   }
 
   ~Footer() {
@@ -120,7 +121,7 @@ struct Footer {
   }
 
   static Footer_Ptr make_footer(Id m_id, node_addr_t p) {
-    return std::make_shared<Footer>(m_id,p);
+    return std::make_shared<Footer>(m_id, p);
   }
 
   static Footer_Ptr copy_on_write(const Footer_Ptr f, Id m_id, node_addr_t p) {
@@ -209,21 +210,20 @@ struct Node {
     children_is_leaf = false;
   }
 
-  Node(const Ptr&other)
-	  : hdr(other->hdr), stat(other->stat) {
-	  keys = new Time[hdr.size];
-	  std::fill_n(keys, hdr.size, Time(0));
+  Node(const Ptr &other) : hdr(other->hdr), stat(other->stat) {
+    keys = new Time[hdr.size];
+    std::fill_n(keys, hdr.size, Time(0));
 
-	  children = new node_addr_t[hdr.size];
-	  for (node_sz_t i = 0; i < hdr.size;++i) {
-		  children[i] = other->children[i];
-	  }
+    children = new node_addr_t[hdr.size];
+    for (node_sz_t i = 0; i < hdr.size; ++i) {
+      children[i] = other->children[i];
+    }
 
-	  neighbor = other->neighbor;
+    neighbor = other->neighbor;
 
-	  children_is_leaf = other->children_is_leaf;
+    children_is_leaf = other->children_is_leaf;
 
-	  ++hdr.gen;
+    ++hdr.gen;
   }
 
   ~Node() {
@@ -239,8 +239,8 @@ struct Node {
     return std::make_shared<Node>(g, _id, sz, NODE_KIND_ROOT);
   }
 
-  static Ptr copy_on_write(const Ptr&other) {
-	  return std::make_shared<Node>(other);
+  static Ptr copy_on_write(const Ptr &other) {
+    return std::make_shared<Node>(other);
   }
 
   // return true if succes.
@@ -291,7 +291,7 @@ public:
   virtual Node::Ptr readNode(const node_addr_t ptr) = 0;
   virtual Leaf::Ptr readLeaf(const node_addr_t ptr) = 0;
 
-  virtual void write(const node_vector &nodes) = 0;
+  virtual addr_vector write(const node_vector &nodes) = 0;
   virtual addr_vector write(const leaf_vector &leafs) = 0;
 };
 
@@ -306,8 +306,9 @@ public:
   EXPORT virtual Node::Ptr readNode(const node_addr_t ptr) override;
   EXPORT virtual Leaf::Ptr readLeaf(const node_addr_t ptr) override;
 
-  EXPORT virtual void write(const node_vector &nodes) override;
+  EXPORT virtual addr_vector write(const node_vector &nodes) override;
   EXPORT virtual addr_vector write(const leaf_vector &leafs) override;
+
 protected:
   EXPORT MemoryNodeStorage();
 

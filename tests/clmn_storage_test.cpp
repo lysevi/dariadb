@@ -160,6 +160,19 @@ BOOST_AUTO_TEST_CASE(LeafAndNode) {
   }
 }
 
+void check_addrs(const size_t expect_size, const clmn::addr_vector &addr_vec,
+                 std::set<clmn::node_addr_t> &all_addrs) {
+  BOOST_CHECK_EQUAL(addr_vec.size(), expect_size);
+  for (auto v : addr_vec) {
+    BOOST_CHECK_NE(v, clmn::NODE_PTR_NULL);
+    if (all_addrs.count(v) == 0) {
+      all_addrs.insert(v);
+    } else {
+      THROW_EXCEPTION("all_addrs.count(v) != 0: ", v);
+    }
+  }
+}
+
 BOOST_AUTO_TEST_CASE(MemoryNodeStorageTest) {
   {
     const dariadb::Id expected_id = dariadb::Id(1);
@@ -184,31 +197,42 @@ BOOST_AUTO_TEST_CASE(MemoryNodeStorageTest) {
     l2->hdr.meas_id = expected_id;
 
     BOOST_CHECK(msn->getFooter() == nullptr);
-    auto addrs = msn->write(clmn::leaf_vector{l1, l2});
-    BOOST_CHECK_EQUAL(addrs.size(), size_t(2));
-    for (auto a : addrs) {
-      BOOST_CHECK(a != clmn::NODE_PTR_NULL);
+    std::set<clmn::node_addr_t> all_addrs;
+    auto addr_vec = msn->write(clmn::leaf_vector{l1, l2});
+    BOOST_CHECK_EQUAL(addr_vec.size(), size_t(2));
+    for (auto v : addr_vec) {
+      BOOST_CHECK_NE(v, clmn::NODE_PTR_NULL);
+      if (all_addrs.count(v) == 0) {
+        all_addrs.insert(v);
+      } else {
+        THROW_EXCEPTION("all_addrs.count(v) != 0: ", v);
+      }
     }
     // insert first
-    msn->write(clmn::node_vector{r, n1, n2});
+    addr_vec = msn->write(clmn::node_vector{r, n1, n2});
     auto footer = msn->getFooter();
     BOOST_CHECK(footer != nullptr);
+    check_addrs(size_t(3), addr_vec, all_addrs);
 
     BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(1));
     BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
 
     // insert one more time
-    msn->write(clmn::node_vector{r, n1, n2});
+    addr_vec = msn->write(clmn::node_vector{r, n1, n2});
     footer = msn->getFooter();
     BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(1));
     BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
 
+    check_addrs(size_t(3), addr_vec, all_addrs);
+
     // insert new root
     r->hdr.meas_id++;
-    msn->write(clmn::node_vector{r, n1, n2});
+    addr_vec = msn->write(clmn::node_vector{r, n1, n2});
     footer = msn->getFooter();
     BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(2));
     BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
     BOOST_CHECK(footer->roots[1] != clmn::NODE_PTR_NULL);
+
+    check_addrs(size_t(3), addr_vec, all_addrs);
   }
 }

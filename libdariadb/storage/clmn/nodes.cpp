@@ -7,10 +7,10 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::storage::clmn;
 
-void Footer::update_crc() {  }
+void Footer::update_crc() {}
 
 struct MemoryNodeStorage::Private : public NodeStorage {
-  Private() {}
+  Private() : _ptr() {}
 
   Footer::Footer_Ptr getFooter() override { return _last_footer; }
 
@@ -26,16 +26,24 @@ struct MemoryNodeStorage::Private : public NodeStorage {
     return fres->second;
   }
 
-  void write(const node_vector &nodes) override {
-    for (auto n : nodes) {
-      if (n->hdr.kind == NODE_KIND_ROOT) {
+  addr_vector write(const node_vector &nodes) override {
+    ENSURE(nodes.size() != 0);
+
+    addr_vector result;
+    result.resize(nodes.size());
+
+    for (size_t i = 0; i < nodes.size(); ++i) {
+      if (nodes[i]->hdr.kind == NODE_KIND_ROOT) {
         auto p = ++_ptr;
-        _roots[p] = n;
-        update_footer(n, p);
+        _roots[p] = nodes[i];
+        update_footer(nodes[i], p);
+        result[i] = p;
       } else {
-        _nodes[++_ptr] = n;
+        _nodes[++_ptr] = nodes[i];
+        result[i] = _ptr;
       }
     }
+    return result;
   }
 
   addr_vector write(const leaf_vector &leafs) override {
@@ -90,7 +98,7 @@ Leaf::Ptr MemoryNodeStorage::readLeaf(const node_addr_t ptr) {
   return _impl->readLeaf(ptr);
 }
 
-void MemoryNodeStorage::write(const node_vector &nodes) {
+addr_vector MemoryNodeStorage::write(const node_vector &nodes) {
   return _impl->write(nodes);
 }
 
