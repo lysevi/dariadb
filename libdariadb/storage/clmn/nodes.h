@@ -1,12 +1,12 @@
 #pragma once
 
+#include <algorithm>
+#include <cstdint>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/utils/utils.h>
-#include <algorithm>
-#include <cstdint>
 #include <limits>
 #include <memory>
 
@@ -16,32 +16,42 @@ namespace clmn {
 //"dariadb."
 const uint64_t MAGIC_NUMBER = 0x2E62646169726164;
 
-typedef uint32_t generation_t;
+typedef uint32_t gnrt_t; // generation
 typedef uint32_t node_id_t;
-typedef uint32_t node_size_t;
-typedef uint64_t node_ptr;
-typedef uint8_t node_kind;
+typedef uint32_t node_sz_t;
+typedef uint64_t node_addr_t;
+typedef uint8_t node_kind_t;
 
-const node_ptr NODE_PTR_NULL = std::numeric_limits<node_ptr>::max(); // for null pointers
-const node_kind NODE_KIND_FOOTER = 1;
-const node_kind NODE_KIND_ROOT = 1 << 1;
-const node_kind NODE_KIND_NODE = 1 << 2;
-const node_kind NODE_KIND_LEAF = 1 << 3;
+const node_addr_t NODE_ID_ZERO =std::numeric_limits<node_id_t>::max(); // for null pointers
+const node_addr_t NODE_PTR_NULL =
+    std::numeric_limits<node_addr_t>::max(); // for null pointers
+const node_kind_t NODE_KIND_FOOTER = 1;
+const node_kind_t NODE_KIND_ROOT = 1 << 1;
+const node_kind_t NODE_KIND_NODE = 1 << 2;
+const node_kind_t NODE_KIND_LEAF = 1 << 3;
 
 #pragma pack(push, 1)
 
 struct NodeHeader {
-  node_kind kind;
-  generation_t gen; // generation of storage. increment when writing to disk. need for
-                    // version control.
-  node_id_t id;     // node id
-  node_size_t size; // size of key array
+  node_kind_t kind;
 
-  NodeHeader(generation_t g, node_id_t _id, node_size_t sz, node_kind k) {
+  // generation of storage.
+  // increment when writing to disk. need for
+  // version control.
+  gnrt_t gen;
+  // node id
+  node_id_t id;
+  // size of key array
+  node_sz_t size;
+
+  Id meas_id;
+  NodeHeader(gnrt_t g, node_id_t _id, node_sz_t sz, node_kind_t k, Id m_id) {
+    meas_id = Id(0);
     gen = g;
     id = _id;
     size = sz;
     kind = k;
+	meas_id = m_id;
   }
 };
 
@@ -51,17 +61,54 @@ struct Footer {
   uint64_t magic_num; // for detect foother, when something going wrong
   NodeHeader hdr;
   uint32_t crc;
-  node_ptr *roots;
+  node_addr_t *roots;
   Id *ids;
 
-  Footer(node_size_t sz) : hdr(0, 0, sz, NODE_KIND_FOOTER) {
+  Footer(Id m_id, node_addr_t p) : hdr(0, 0, node_sz_t(1), NODE_KIND_FOOTER, m_id) {
     magic_num = MAGIC_NUMBER;
     crc = 0;
-    roots = new node_ptr[hdr.size];
-    std::fill_n(roots, hdr.size, NODE_PTR_NULL);
-
+    roots = new node_addr_t[hdr.size];
     ids = new Id[hdr.size];
-    std::fill_n(ids, hdr.size, MAX_ID);
+
+	ids[0] = m_id;
+	roots[0] = p;
+
+	update_crc();
+  }
+
+  Footer(const Footer &other, Id m_id, node_addr_t p) : hdr(other.hdr) {
+    magic_num = other.magic_num;
+    crc = 0;
+	bool exists_in_origin = false;
+	for (node_sz_t i = 0; i < hdr.size; ++i) {
+		if (other.ids[i] == m_id || other.roots[i] == NODE_PTR_NULL) {
+			exists_in_origin = true;
+		}
+	}
+	
+	if (!exists_in_origin) {
+		hdr.size++;
+	}
+
+    roots = new node_addr_t[hdr.size];
+    ids = new Id[hdr.size];
+
+    for (node_sz_t i = 0; i < other.hdr.size; ++i) {
+      ids[i] = other.ids[i];
+      roots[i] = other.roots[i];
+    }
+
+	for (node_sz_t i = 0; i < hdr.size; ++i) {
+		if (ids[i] == m_id || roots[i] == NODE_PTR_NULL) {
+			ids[i] = m_id;
+			roots[i] = p;
+			break;
+		}
+	}
+
+    ++hdr.gen;
+
+	update_crc();
   }
 
   ~Footer() {
@@ -69,7 +116,13 @@ struct Footer {
     delete[] ids;
   }
 
-  static Footer_Ptr make_footer(node_size_t sz) { return std::make_shared<Footer>(sz); }
+  static Footer_Ptr make_footer(Id m_id, node_addr_t p) {
+    return std::make_shared<Footer>(m_id,p);
+  }
+
+  static Footer_Ptr copy_on_write(const Footer_Ptr f, Id m_id, node_addr_t p) {
+    return std::make_shared<Footer>(*f, m_id, p);
+  }
 
   // maximal id of child nodes.
   node_id_t max_node_id() const { return hdr.id; }
@@ -132,20 +185,20 @@ struct Statistic {
 };
 
 struct Node {
-  typedef std::shared_ptr<Node> Node_Ptr;
+  typedef std::shared_ptr<Node> Ptr;
   NodeHeader hdr;
   Statistic stat;
-  node_ptr neighbor; // ptr to neighbor;
+  node_addr_t neighbor; // ptr to neighbor;
   Time *keys;
   bool children_is_leaf;
-  node_ptr *children;
+  node_addr_t *children;
 
-  Node(generation_t g, node_id_t _id, node_size_t sz, node_kind _k)
-      : hdr(g, _id, sz, _k), stat() {
+  Node(gnrt_t g, node_id_t _id, node_sz_t sz, node_kind_t _k)
+      : hdr(g, _id, sz, _k, MAX_ID), stat() {
     keys = new Time[sz];
     std::fill_n(keys, hdr.size, Time(0));
 
-    children = new node_ptr[sz];
+    children = new node_addr_t[sz];
     std::fill_n(children, hdr.size, NODE_PTR_NULL);
 
     neighbor = NODE_PTR_NULL;
@@ -158,23 +211,36 @@ struct Node {
     delete[] children;
   }
 
-  static Node_Ptr make_node(generation_t g, node_id_t _id, node_size_t sz) {
+  static Ptr make_node(gnrt_t g, node_id_t _id, node_sz_t sz) {
     return std::make_shared<Node>(g, _id, sz, NODE_KIND_NODE);
   }
 
-  static Node_Ptr make_root(generation_t g, node_id_t _id, node_size_t sz) {
+  static Ptr make_root(gnrt_t g, node_id_t _id, node_sz_t sz) {
     return std::make_shared<Node>(g, _id, sz, NODE_KIND_ROOT);
+  }
+
+  // return true if succes.
+  bool add_child(const Time key, const node_addr_t c) {
+    for (node_sz_t i = 0; i < hdr.size; ++i) {
+      if (keys[i] == NODE_PTR_NULL) {
+        keys[i] = key;
+        children[i] = c;
+        return true;
+      }
+    }
+    return false;
   }
 };
 
 struct Leaf {
-  typedef std::shared_ptr<Leaf> Leaf_Ptr;
+  typedef std::shared_ptr<Leaf> Ptr;
   NodeHeader hdr;
-  node_ptr neighbor; // ptr to neighbor;
+  node_addr_t neighbor; // ptr to neighbor;
   ChunkHeader chunk_hdr;
   uint8_t *chunk_buffer;
 
-  Leaf(generation_t g, node_id_t _id, node_size_t sz) : hdr(g, _id, sz, NODE_KIND_LEAF) {
+  Leaf(gnrt_t g, node_id_t _id, node_sz_t sz)
+      : hdr(g, _id, sz, NODE_KIND_LEAF, MAX_ID) {
     chunk_buffer = new uint8_t[hdr.size];
     std::fill_n(chunk_buffer, hdr.size, uint8_t(0));
 
@@ -183,19 +249,28 @@ struct Leaf {
 
   ~Leaf() { delete[] chunk_buffer; }
 
-  static Leaf_Ptr make_leaf(generation_t g, node_id_t _id, node_size_t sz) {
+  static Ptr make_leaf(gnrt_t g, node_id_t _id, node_sz_t sz) {
     return std::make_shared<Leaf>(g, _id, sz);
   }
 };
 
 #pragma pack(pop)
 
+typedef std::vector<Node::Ptr> node_vector;
+typedef std::vector<Leaf::Ptr> leaf_vector;
+typedef std::vector<node_addr_t> addr_vector;
+
+/// must fill Footer
 class NodeStorage {
 public:
   virtual Footer::Footer_Ptr getFooter() = 0;
-  virtual Node::Node_Ptr readNode(const node_ptr ptr) = 0;
-  virtual Leaf::Leaf_Ptr readLeaf(const node_ptr ptr) = 0;
+  virtual Node::Ptr readNode(const node_addr_t ptr) = 0;
+  virtual Leaf::Ptr readLeaf(const node_addr_t ptr) = 0;
+
+  virtual void write(const node_vector &nodes) = 0;
+  virtual addr_vector write(const leaf_vector &leafs) = 0;
 };
+
 typedef std::shared_ptr<NodeStorage> NodeStorage_Ptr;
 
 class MemoryNodeStorage : public NodeStorage {
@@ -204,9 +279,11 @@ public:
   EXPORT ~MemoryNodeStorage();
 
   EXPORT virtual Footer::Footer_Ptr getFooter() override;
-  EXPORT virtual Node::Node_Ptr readNode(const node_ptr ptr) override;
-  EXPORT virtual Leaf::Leaf_Ptr readLeaf(const node_ptr ptr) override;
+  EXPORT virtual Node::Ptr readNode(const node_addr_t ptr) override;
+  EXPORT virtual Leaf::Ptr readLeaf(const node_addr_t ptr) override;
 
+  EXPORT virtual void write(const node_vector &nodes) override;
+  EXPORT virtual addr_vector write(const leaf_vector &leafs) override;
 protected:
   EXPORT MemoryNodeStorage();
 

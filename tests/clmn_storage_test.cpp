@@ -9,15 +9,15 @@
 
 using namespace dariadb::storage;
 
-void checkNodeCtor(const clmn::Node::Node_Ptr &n, clmn::generation_t expected_g,
-                   clmn::node_id_t expected_i, clmn::node_size_t expected_s) {
+void checkNodeCtor(const clmn::Node::Ptr &n, clmn::gnrt_t expected_g,
+                   clmn::node_id_t expected_i, clmn::node_sz_t expected_s) {
 
   BOOST_CHECK_EQUAL(n->neighbor, clmn::NODE_PTR_NULL);
   BOOST_CHECK_EQUAL(n->hdr.gen, expected_g);
   BOOST_CHECK_EQUAL(n->hdr.id, expected_i);
   BOOST_CHECK_EQUAL(n->hdr.size, expected_s);
   BOOST_CHECK(!n->children_is_leaf);
-  for (clmn::node_size_t i = 0; i < expected_s; ++i) {
+  for (clmn::node_sz_t i = 0; i < expected_s; ++i) {
     BOOST_CHECK_EQUAL(n->children[i], clmn::NODE_PTR_NULL);
   }
 }
@@ -30,22 +30,41 @@ BOOST_AUTO_TEST_CASE(Footer) {
     BOOST_CHECK_EQUAL(magic_str[i], expected[i]);
   }
 
-  const clmn::node_size_t expected_s = 11;
+  const clmn::node_id_t expected_i = 2;
+  const clmn::node_addr_t expected_a = 0xdeadbeef;
 
-  clmn::Footer::Footer_Ptr ftr = clmn::Footer::make_footer(expected_s);
+  clmn::Footer::Footer_Ptr ftr =
+      clmn::Footer::make_footer(expected_i, expected_a);
   BOOST_CHECK_EQUAL(ftr->crc, uint32_t(0));
   BOOST_CHECK_EQUAL(ftr->magic_num, clmn::MAGIC_NUMBER);
+  BOOST_CHECK_EQUAL(ftr->hdr.meas_id, expected_i);
   BOOST_CHECK_EQUAL(ftr->hdr.kind, clmn::NODE_KIND_FOOTER);
-  BOOST_CHECK_EQUAL(ftr->hdr.size, uint32_t(expected_s));
-  BOOST_CHECK_EQUAL(ftr->hdr.gen, clmn::generation_t(0));
+  BOOST_CHECK_EQUAL(ftr->hdr.size, uint32_t(1));
+  BOOST_CHECK_EQUAL(ftr->hdr.gen, clmn::gnrt_t(0));
   BOOST_CHECK_EQUAL(ftr->max_node_id(), clmn::node_id_t(0));
 
-  for (clmn::node_size_t i = 0; i < expected_s; ++i) {
-    BOOST_CHECK_EQUAL(ftr->roots[i], clmn::NODE_PTR_NULL);
+  for (clmn::node_sz_t i = 0; i < uint32_t(1); ++i) {
+    BOOST_CHECK_EQUAL(ftr->roots[i], expected_a);
   }
 
-  for (clmn::node_size_t i = 0; i < expected_s; ++i) {
-    BOOST_CHECK_EQUAL(ftr->ids[i], dariadb::MAX_ID);
+  for (clmn::node_sz_t i = 0; i < uint32_t(1); ++i) {
+    BOOST_CHECK_EQUAL(ftr->ids[i], expected_i);
+  }
+
+  { // copy test;
+    clmn::Footer::Footer_Ptr second_f =
+        clmn::Footer::copy_on_write(ftr, expected_i, expected_a + 1);
+
+	BOOST_CHECK_EQUAL(ftr->hdr.meas_id, expected_i);
+    BOOST_CHECK_EQUAL(second_f->hdr.gen, clmn::gnrt_t(1));
+
+    for (clmn::node_sz_t i = 0; i < uint32_t(1); ++i) {
+      BOOST_CHECK_EQUAL(second_f->roots[i], expected_a + 1);
+    }
+
+    for (clmn::node_sz_t i = 0; i < uint32_t(1); ++i) {
+      BOOST_CHECK_EQUAL(second_f->ids[i], expected_i);
+    }
   }
 }
 
@@ -104,26 +123,29 @@ BOOST_AUTO_TEST_CASE(StatisticUpdate) {
 }
 
 BOOST_AUTO_TEST_CASE(LeafAndNode) {
-  const clmn::generation_t expected_g = 1;
+  const clmn::gnrt_t expected_g = 1;
   const clmn::node_id_t expected_i = 2;
-  const clmn::node_size_t expected_s = 3;
+  const clmn::node_sz_t expected_s = 3;
 
   {
-    clmn::Node::Node_Ptr r = clmn::Node::make_root(expected_g, expected_i, expected_s);
+    clmn::Node::Ptr r =
+        clmn::Node::make_root(expected_g, expected_i, expected_s);
 
     BOOST_CHECK_EQUAL(r->hdr.kind, clmn::NODE_KIND_ROOT);
     checkNodeCtor(r, expected_g, expected_i, expected_s);
   }
 
   {
-    clmn::Node::Node_Ptr n = clmn::Node::make_node(expected_g, expected_i, expected_s);
+    clmn::Node::Ptr n =
+        clmn::Node::make_node(expected_g, expected_i, expected_s);
 
     BOOST_CHECK_EQUAL(n->hdr.kind, clmn::NODE_KIND_NODE);
     checkNodeCtor(n, expected_g, expected_i, expected_s);
   }
 
   {
-    clmn::Leaf::Leaf_Ptr l = clmn::Leaf::make_leaf(expected_g, expected_i, expected_s);
+    clmn::Leaf::Ptr l =
+        clmn::Leaf::make_leaf(expected_g, expected_i, expected_s);
 
     BOOST_CHECK_EQUAL(l->neighbor, clmn::NODE_PTR_NULL);
     BOOST_CHECK_EQUAL(l->hdr.kind, clmn::NODE_KIND_LEAF);
@@ -133,9 +155,55 @@ BOOST_AUTO_TEST_CASE(LeafAndNode) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(TreeOneId) {
+BOOST_AUTO_TEST_CASE(MemoryNodeStorageTest) {
   {
+    const dariadb::Id expected_id = dariadb::Id(1);
+
     auto msn = clmn::MemoryNodeStorage::create();
-    clmn::Tree t(msn);
+    auto r = clmn::Node::make_root(clmn::gnrt_t(0), clmn::node_id_t(1),
+                                   clmn::node_sz_t(1));
+    r->hdr.meas_id = expected_id;
+
+    auto n1 = clmn::Node::make_node(clmn::gnrt_t(0), clmn::node_id_t(1),
+                                    clmn::node_sz_t(1));
+    n1->hdr.meas_id = expected_id;
+    auto n2 = clmn::Node::make_node(clmn::gnrt_t(0), clmn::node_id_t(1),
+                                    clmn::node_sz_t(1));
+    n2->hdr.meas_id = expected_id;
+    auto l1 = clmn::Leaf::make_leaf(clmn::gnrt_t(0), clmn::node_id_t(1),
+                                    clmn::node_sz_t(1));
+
+    l1->hdr.meas_id = expected_id;
+    auto l2 = clmn::Leaf::make_leaf(clmn::gnrt_t(0), clmn::node_id_t(1),
+                                    clmn::node_sz_t(1));
+    l2->hdr.meas_id = expected_id;
+
+    BOOST_CHECK(msn->getFooter() == nullptr);
+    auto addrs = msn->write(clmn::leaf_vector{l1, l2});
+    BOOST_CHECK_EQUAL(addrs.size(), size_t(2));
+    for (auto a : addrs) {
+      BOOST_CHECK(a != clmn::NODE_PTR_NULL);
+    }
+	//insert first
+    msn->write(clmn::node_vector{r, n1, n2});
+    auto footer = msn->getFooter();
+    BOOST_CHECK(footer != nullptr);
+
+    BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(1));
+    BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
+	
+	//insert one more time
+    msn->write(clmn::node_vector{r, n1, n2});
+	footer = msn->getFooter();
+    BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(1));
+    BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
+
+	//insert new root
+	r->hdr.meas_id++;
+	msn->write(clmn::node_vector{ r, n1, n2 });
+	footer = msn->getFooter();
+	BOOST_CHECK_EQUAL(footer->hdr.size, clmn::node_sz_t(2));
+	BOOST_CHECK(footer->roots[0] != clmn::NODE_PTR_NULL);
+	BOOST_CHECK(footer->roots[1] != clmn::NODE_PTR_NULL);
   }
 }

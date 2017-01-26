@@ -1,25 +1,75 @@
 #include <libdariadb/storage/clmn/nodes.h>
 #include <libdariadb/utils/crc.h>
 #include <libdariadb/utils/utils.h>
+#include <unordered_map>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::storage::clmn;
 
-void Footer::update_crc() {
-  NOT_IMPLEMENTED;
-}
+void Footer::update_crc() {  }
 
 struct MemoryNodeStorage::Private : public NodeStorage {
   Private() {}
 
-  virtual Footer::Footer_Ptr getFooter() override { return Footer::Footer_Ptr(); }
-  virtual Node::Node_Ptr readNode(const node_ptr ptr) override {
-    return Node::Node_Ptr();
+  Footer::Footer_Ptr getFooter() override { return _last_footer; }
+
+  Node::Ptr readNode(const node_addr_t ptr) override {
+    auto fres = _nodes.find(ptr);
+    ENSURE(fres != _nodes.end());
+    return fres->second;
   }
-  virtual Leaf::Leaf_Ptr readLeaf(const node_ptr ptr) override {
-    return Leaf::Leaf_Ptr();
+
+  Leaf::Ptr readLeaf(const node_addr_t ptr) override {
+    auto fres = _leafs.find(ptr);
+    ENSURE(fres != _leafs.end());
+    return fres->second;
   }
+
+  void write(const node_vector &nodes) override {
+    for (auto n : nodes) {
+      if (n->hdr.kind == NODE_KIND_ROOT) {
+        auto p = ++_ptr;
+        _roots[p] = n;
+        update_footer(n, p);
+      } else {
+        _nodes[++_ptr] = n;
+      }
+    }
+  }
+
+  addr_vector write(const leaf_vector &leafs) override {
+    ENSURE(leafs.size() != 0);
+
+    addr_vector result;
+    result.resize(leafs.size());
+    std::fill(result.begin(), result.end(), NODE_PTR_NULL);
+
+    for (size_t i = 0; i < leafs.size(); ++i) {
+      _leafs[++_ptr] = leafs[i];
+      result[i] = _ptr;
+    }
+    return result;
+  }
+
+  void update_footer(const Node::Ptr &r, const node_addr_t &ptr) {
+    ENSURE(r->hdr.kind == NODE_KIND_ROOT);
+
+    if (_last_footer == nullptr) {
+      _last_footer = Footer::make_footer(r->hdr.meas_id, ptr);
+    } else {
+      _last_footer = Footer::copy_on_write(_last_footer, r->hdr.meas_id, ptr);
+    }
+
+    _footers[++_ptr] = _last_footer;
+  }
+
+  Footer::Footer_Ptr _last_footer;
+  std::unordered_map<node_addr_t, Footer::Footer_Ptr> _footers;
+  std::unordered_map<node_addr_t, Node::Ptr> _nodes;
+  std::unordered_map<node_addr_t, Leaf::Ptr> _leafs;
+  std::unordered_map<node_addr_t, Node::Ptr> _roots;
+  node_addr_t _ptr;
 };
 
 NodeStorage_Ptr MemoryNodeStorage::create() {
@@ -28,18 +78,22 @@ NodeStorage_Ptr MemoryNodeStorage::create() {
 
 MemoryNodeStorage::MemoryNodeStorage() : _impl{new Private()} {}
 
-MemoryNodeStorage::~MemoryNodeStorage() {
-  _impl = nullptr;
-}
+MemoryNodeStorage::~MemoryNodeStorage() { _impl = nullptr; }
 
-Footer::Footer_Ptr MemoryNodeStorage::getFooter() {
-  return _impl->getFooter();
-}
+Footer::Footer_Ptr MemoryNodeStorage::getFooter() { return _impl->getFooter(); }
 
-Node::Node_Ptr MemoryNodeStorage::readNode(const node_ptr ptr) {
+Node::Ptr MemoryNodeStorage::readNode(const node_addr_t ptr) {
   return _impl->readNode(ptr);
 }
 
-Leaf::Leaf_Ptr MemoryNodeStorage::readLeaf(const node_ptr ptr) {
+Leaf::Ptr MemoryNodeStorage::readLeaf(const node_addr_t ptr) {
   return _impl->readLeaf(ptr);
+}
+
+void MemoryNodeStorage::write(const node_vector &nodes) {
+  return _impl->write(nodes);
+}
+
+addr_vector MemoryNodeStorage::write(const leaf_vector &leafs) {
+  return _impl->write(leafs);
 }
