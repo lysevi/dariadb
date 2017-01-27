@@ -54,10 +54,14 @@ struct MemoryNodeStorage::Private : public NodeStorage {
     std::fill(result.begin(), result.end(), NODE_PTR_NULL);
 
     for (size_t i = 0; i < leafs.size(); ++i) {
-      _leafs[++_ptr] = leafs[i];
-      result[i] = _ptr;
+      result[i] = write_leaf(leafs[i]);
     }
     return result;
+  }
+
+  node_addr_t write_leaf(const Leaf::Ptr &leaf) override {
+	  _leafs[++_ptr] = leaf;
+	  return _ptr;
   }
 
   void update_footer(const Node::Ptr &r, const node_addr_t &ptr) {
@@ -100,6 +104,10 @@ Leaf::Ptr MemoryNodeStorage::readLeaf(const node_addr_t ptr) {
 
 addr_vector MemoryNodeStorage::write(const node_vector &nodes) {
   return _impl->write(nodes);
+}
+
+node_addr_t MemoryNodeStorage::write_leaf(const Leaf::Ptr &leaf) {
+	return _impl->write_leaf(leaf);
 }
 
 addr_vector MemoryNodeStorage::write(const leaf_vector &leafs) {

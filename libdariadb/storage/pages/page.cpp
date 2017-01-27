@@ -41,9 +41,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   }
 
   IndexHeader ihdr;
-  memset(&ihdr, 0, sizeof(IndexHeader));
-  ihdr.minTime = MAX_TIME;
-  ihdr.maxTime = MIN_TIME;
+  
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -91,8 +89,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   ENSURE(openned_pages.size() == pages_full_paths.size());
 
   PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
-  phdr.minTime = MAX_TIME;
-  phdr.maxTime = MIN_TIME;
+
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
     THROW_EXCEPTION("file is null");
@@ -100,8 +97,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 
   IndexHeader ihdr;
   memset(&ihdr, 0, sizeof(IndexHeader));
-  ihdr.minTime = MAX_TIME;
-  ihdr.maxTime = MIN_TIME;
+
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -161,8 +157,6 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 
   IndexHeader ihdr;
   memset(&ihdr, 0, sizeof(IndexHeader));
-  ihdr.minTime = MAX_TIME;
-  ihdr.maxTime = MIN_TIME;
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -187,12 +181,12 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
         rdr->readNext();
         readed++;
       }
-      ENSURE(readed == (ch->header->count + 1));
+      ENSURE(readed == (ch->header->stat.count));
     }
 #endif //  DEBUG
     phdr.max_chunk_id++;
-    phdr.minTime = std::min(phdr.minTime, chunk_header->minTime);
-    phdr.maxTime = std::max(phdr.maxTime, chunk_header->maxTime);
+	phdr.stat.update(chunk_header->stat);
+    
     chunk_header->id = phdr.max_chunk_id;
 
     phdr.addeded_chunks++;
@@ -212,7 +206,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
         rdr->readNext();
         readed++;
       }
-      ENSURE(readed == (ch->header->count + 1));
+      ENSURE(readed == (ch->header->stat.count));
       ch->close();
     }
 #endif //  DEBUG
@@ -315,8 +309,7 @@ void Page::update_index_recs(const PageHeader &phdr) {
 
   IndexHeader ihdr;
   memset(&ihdr, 0, sizeof(IndexHeader));
-  ihdr.minTime = MAX_TIME;
-  ihdr.maxTime = MIN_TIME;
+
   for (size_t i = 0; i < phdr.addeded_chunks; ++i) {
     ChunkHeader info;
     auto readed = std::fread(&info, sizeof(ChunkHeader), 1, page_io);
@@ -335,7 +328,7 @@ void Page::update_index_recs(const PageHeader &phdr) {
 }
 
 bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
-  QueryInterval qi{dariadb::IdArray{id}, 0, this->header.minTime, this->header.maxTime};
+  QueryInterval qi{dariadb::IdArray{id}, 0, this->header.stat.minTime, this->header.stat.maxTime};
   auto all_chunks = this->chunksByIterval(qi);
 
   bool result = false;
@@ -347,8 +340,8 @@ bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *max
   auto indexReccords = _index->readReccords();
   for (auto &link : all_chunks) {
     auto _index_it = indexReccords[link.index_rec_number];
-    *minTime = std::min(*minTime, _index_it.minTime);
-    *maxTime = std::max(*maxTime, _index_it.maxTime);
+    *minTime = std::min(*minTime, _index_it.stat.minTime);
+    *maxTime = std::max(*maxTime, _index_it.stat.maxTime);
   }
   return result;
 }
@@ -387,7 +380,7 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
 dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   dariadb::Id2Meas result;
   auto raw_links =
-      _index->get_chunks_links(q.ids, _index->iheader.minTime, q.time_point, q.flag);
+      _index->get_chunks_links(q.ids, _index->iheader.stat.minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }

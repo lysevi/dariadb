@@ -3,6 +3,8 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
+#include <algorithm>
+#include <iostream>
 #include <libdariadb/engine.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/bystep/step_kind.h>
@@ -11,8 +13,6 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
-#include <algorithm>
-#include <iostream>
 
 class BenchCallback : public dariadb::storage::IReaderClb {
 public:
@@ -90,19 +90,76 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 
   settings = nullptr;
 
-  bool file_exists = dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(
-      storage_path, dariadb::storage::SETTINGS_FILE_NAME));
+  bool file_exists =
+      dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(
+          storage_path, dariadb::storage::SETTINGS_FILE_NAME));
   BOOST_CHECK(file_exists);
 
   settings = dariadb::storage::Settings::create(storage_path);
   BOOST_CHECK_EQUAL(settings->wal_cache_size.value(), uint64_t(2));
   BOOST_CHECK_EQUAL(settings->chunk_size.value(), uint32_t(7));
-  BOOST_CHECK(settings->strategy.value() == dariadb::storage::STRATEGY::COMPRESSED);
+  BOOST_CHECK(settings->strategy.value() ==
+              dariadb::storage::STRATEGY::COMPRESSED);
 
   settings = nullptr;
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+}
+
+BOOST_AUTO_TEST_CASE(StatisticUpdate) {
+  dariadb::storage::Statistic st;
+
+  BOOST_CHECK_EQUAL(st.minTime, dariadb::MAX_TIME);
+  BOOST_CHECK_EQUAL(st.maxTime, dariadb::MIN_TIME);
+  BOOST_CHECK_EQUAL(st.count, uint32_t(0));
+  BOOST_CHECK_EQUAL(st.flag_bloom, dariadb::Flag(0));
+  BOOST_CHECK_EQUAL(st.minValue, dariadb::MAX_VALUE);
+  BOOST_CHECK_EQUAL(st.maxValue, dariadb::MIN_VALUE);
+  BOOST_CHECK_EQUAL(st.sum, dariadb::Value(0));
+
+  auto m = dariadb::Meas::empty(0);
+  m.time = 2;
+  m.flag = 2;
+  m.value = 2;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.minTime, m.time);
+  BOOST_CHECK_EQUAL(st.maxTime, m.time);
+  BOOST_CHECK(st.flag_bloom != dariadb::Flag(0));
+  BOOST_CHECK(dariadb::areSame(st.minValue, m.value));
+  BOOST_CHECK(dariadb::areSame(st.maxValue, m.value));
+
+  m.time = 3;
+  m.value = 3;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(2));
+  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
+  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(2)));
+  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
+
+  m.time = 1;
+  m.value = 1;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(1));
+  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
+  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(1)));
+  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
+  BOOST_CHECK(dariadb::areSame(st.sum, dariadb::Value(6)));
+  BOOST_CHECK_EQUAL(st.count, uint32_t(3));
+
+  dariadb::storage::Statistic second_st;
+  m.time = 777;
+  m.value = 1;
+  second_st.update(m);
+  BOOST_CHECK_EQUAL(second_st.maxTime, m.time);
+
+  second_st.update(st);
+  BOOST_CHECK_EQUAL(second_st.minTime, dariadb::Time(1));
+  BOOST_CHECK_EQUAL(second_st.maxTime, dariadb::Time(777));
+  BOOST_CHECK(dariadb::areSame(second_st.minValue, dariadb::Value(1)));
+  BOOST_CHECK(dariadb::areSame(second_st.maxValue, dariadb::Value(3)));
+  BOOST_CHECK(dariadb::areSame(second_st.sum, dariadb::Value(7)));
+  BOOST_CHECK_EQUAL(second_st.count, uint32_t(4));
 }
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
@@ -152,7 +209,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     raw_ptr->fsck();
 
     // check first id, because that Id placed in compressed pages.
-    auto values = ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
+    auto values =
+        ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
     BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
 
     auto current = ms->currentValue(dariadb::IdArray{}, 0);

@@ -67,12 +67,14 @@ struct Meas {
 };
 #pragma pack(pop)
 
+///time increasing.
 struct meas_id_compare_less {
   bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
     return lhs.time < rhs.time;
   }
 };
 
+/// time deccreasing.
 struct meas_time_compare_less {
   bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
     return lhs.time < rhs.time;

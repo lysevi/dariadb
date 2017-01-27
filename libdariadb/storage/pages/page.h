@@ -16,9 +16,13 @@ struct PageHeader {
   // uint64_t write_offset;      // next write pos (bytes)
   uint32_t addeded_chunks; // total count of chunks in page.
   uint64_t filesize;
-  Time minTime;          // minimal stored time
-  Time maxTime;          // maximum stored time
+  Statistic stat;
   uint64_t max_chunk_id; // max(chunk->id)
+  PageHeader():stat() {
+	  addeded_chunks = 0;
+	  filesize = 0;
+	  max_chunk_id = 0;
+  }
 };
 #pragma pack(pop)
 

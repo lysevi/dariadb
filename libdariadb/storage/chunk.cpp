@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/utils/crc.h>
-#include <algorithm>
 
 #include <cstring>
 
@@ -10,16 +10,18 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
-Chunk_Ptr Chunk::create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m) {
-	return Chunk_Ptr{ new Chunk(hdr,buffer,_size,first_m) };
+Chunk_Ptr Chunk::create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
+                        const Meas &first_m) {
+  return Chunk_Ptr{new Chunk(hdr, buffer, _size, first_m)};
 }
 
 Chunk_Ptr Chunk::open(ChunkHeader *hdr, uint8_t *buffer) {
-	return Chunk_Ptr{ new Chunk(hdr,buffer) };
+  return Chunk_Ptr{new Chunk(hdr, buffer)};
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
-    : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
+    : c_writer(
+          std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
   header = hdr;
   _buffer_t = buffer;
   is_owner = false;
@@ -33,13 +35,10 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
   _buffer_t = buffer;
   header = hdr;
   header->size = _size;
-
-  header->count = 0;
+  
   header->set_first(first_m);
   header->set_last(first_m);
-  header->minTime = first_m.time;
-  header->maxTime = first_m.time;
-  header->flag_bloom = dariadb::storage::bloom_empty<dariadb::Flag>();
+  header->stat.update(first_m);
 
   std::fill(_buffer_t, _buffer_t + header->size, 0);
   is_owner = false;
@@ -49,8 +48,6 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
   header->bw_pos = uint32_t(bw->pos());
 
   c_writer.append(header->first());
-
-  header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, first_m.flag);
 }
 
 Chunk::~Chunk() {
@@ -70,7 +67,7 @@ bool Chunk::checkId(const Id &id) {
 
 bool Chunk::checkFlag(const Flag &f) {
   if (f != 0) {
-    if (!dariadb::storage::bloom_check(header->flag_bloom, f)) {
+    if (!dariadb::storage::bloom_check(header->stat.flag_bloom, f)) {
       return false;
     }
   }
@@ -110,13 +107,9 @@ uint32_t Chunk::compact(ChunkHeader *hdr) {
   return skip_count;
 }
 
-uint32_t Chunk::getChecksum() {
-  return header->crc;
-}
+uint32_t Chunk::getChecksum() { return header->crc; }
 
-bool Chunk::isFull() const {
-  return c_writer.isFull();
-}
+bool Chunk::isFull() const { return c_writer.isFull(); }
 
 bool Chunk::append(const Meas &m) {
   auto t_f = this->c_writer.append(m);
@@ -128,10 +121,7 @@ bool Chunk::append(const Meas &m) {
   } else {
     header->bw_pos = uint32_t(bw->pos());
 
-    header->count++;
-    header->minTime = std::min(header->minTime, m.time);
-    header->maxTime = std::max(header->maxTime, m.time);
-    header->flag_bloom = dariadb::storage::bloom_add(header->flag_bloom, m.flag);
+    header->stat.update(m);
     header->set_last(m);
 
     return true;
@@ -162,10 +152,11 @@ public:
 
 Chunk::ChunkReader_Ptr Chunk::getReader() {
   auto raw_res = new ChunkReader;
-  raw_res->count = this->header->count;
+  raw_res->count = this->header->stat.count-1;
   raw_res->_chunk = this->shared_from_this();
   raw_res->_is_first = true;
-  raw_res->bw = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
+  raw_res->bw =
+      std::make_shared<compression::ByteBuffer>(this->bw->get_range());
   raw_res->bw->reset_pos();
   raw_res->_reader =
       std::make_shared<CopmressedReader>(raw_res->bw, this->header->first());

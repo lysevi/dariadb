@@ -35,7 +35,7 @@ Status TimeTrack::append(const Meas &value) {
       return Status(1, 0);
     }
   }
-  if (_cur_chunk->header->maxTime < value.time) {
+  if (_cur_chunk->header->stat.maxTime < value.time) {
     if (!_cur_chunk->append(value)) {
       if (!create_new_chunk(value)) {
         return Status(0, 1);
@@ -72,12 +72,12 @@ bool TimeTrack::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   *maxResult = MIN_TIME;
   for (auto kv : _index) {
     auto c = kv.second;
-    *minResult = std::min(c->header->minTime, *minResult);
-    *maxResult = std::max(c->header->maxTime, *maxResult);
+    *minResult = std::min(c->header->stat.minTime, *minResult);
+    *maxResult = std::max(c->header->stat.maxTime, *maxResult);
   }
   if (_cur_chunk != nullptr) {
-    *minResult = std::min(_cur_chunk->header->minTime, *minResult);
-    *maxResult = std::max(_cur_chunk->header->maxTime, *maxResult);
+    *minResult = std::min(_cur_chunk->header->stat.minTime, *minResult);
+    *maxResult = std::max(_cur_chunk->header->stat.maxTime, *maxResult);
   }
   return true;
 }
@@ -107,10 +107,10 @@ void TimeTrack::foreach (const QueryInterval &q, IReaderClb * clbk) {
 
 void TimeTrack::foreach_interval_call(const MemChunk_Ptr &c, const QueryInterval &q,
                                       IReaderClb *clbk) {
-  if (utils::inInterval(c->header->minTime, c->header->maxTime, q.from) ||
-      utils::inInterval(c->header->minTime, c->header->maxTime, q.to) ||
-      utils::inInterval(q.from, q.to, c->header->minTime) ||
-      utils::inInterval(q.from, q.to, c->header->maxTime)) {
+  if (utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime, q.from) ||
+      utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime, q.to) ||
+      utils::inInterval(q.from, q.to, c->header->stat.minTime) ||
+      utils::inInterval(q.from, q.to, c->header->stat.maxTime)) {
 
     auto rdr = c->getReader();
     while (!rdr->is_end()) {
@@ -141,7 +141,7 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
       break;
     }
     auto c = it->second;
-    if (c->header->minTime >= q.time_point && c->header->maxTime <= q.time_point) {
+    if (c->header->stat.minTime >= q.time_point && c->header->stat.maxTime <= q.time_point) {
       auto rdr = c->getReader();
       // auto skip = c->in_disk_count;
       while (!rdr->is_end()) {
@@ -159,8 +159,8 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
     }
   }
 
-  if (_cur_chunk != nullptr && _cur_chunk->header->minTime >= q.time_point &&
-      _cur_chunk->header->maxTime <= q.time_point) {
+  if (_cur_chunk != nullptr && _cur_chunk->header->stat.minTime >= q.time_point &&
+      _cur_chunk->header->stat.maxTime <= q.time_point) {
     auto rdr = _cur_chunk->getReader();
     // auto skip = _cur_chunk->in_disk_count;
     while (!rdr->is_end()) {
@@ -201,7 +201,7 @@ Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
 
 void TimeTrack::rm_chunk(MemChunk *c) {
   std::lock_guard<utils::async::Locker> lg(_locker);
-  _index.erase(c->header->maxTime);
+  _index.erase(c->header->stat.maxTime);
 
   if (_cur_chunk.get() == c) {
     _cur_chunk = nullptr;
@@ -229,7 +229,7 @@ void TimeTrack::rereadMinMax() {
 
 bool TimeTrack::create_new_chunk(const Meas &value) {
   if (_cur_chunk != nullptr) {
-    this->_index.insert(std::make_pair(_cur_chunk->header->maxTime, _cur_chunk));
+    this->_index.insert(std::make_pair(_cur_chunk->header->stat.maxTime, _cur_chunk));
     _cur_chunk = nullptr;
   }
   auto new_chunk_data = _allocator->allocate();

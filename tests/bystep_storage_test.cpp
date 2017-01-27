@@ -24,15 +24,19 @@ BOOST_AUTO_TEST_CASE(ByStepIntervalCalculationTest) {
                     uint64_t(1));
   BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 10, 1000),
                     uint64_t(0));
-  BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 10, 20111),
-                    uint64_t(2));
-  BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::SECOND, 60, 60000),
-                    uint64_t(1));
+  BOOST_CHECK_EQUAL(
+      ByStepStorage::intervalForTime(STEP_KIND::SECOND, 10, 20111),
+      uint64_t(2));
+  BOOST_CHECK_EQUAL(
+      ByStepStorage::intervalForTime(STEP_KIND::SECOND, 60, 60000),
+      uint64_t(1));
 
-  BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::MINUTE, 1, 1 * 1000),
-                    uint64_t(0));
-  BOOST_CHECK_EQUAL(ByStepStorage::intervalForTime(STEP_KIND::MINUTE, 1, 65 * 1000),
-                    uint64_t(1));
+  BOOST_CHECK_EQUAL(
+      ByStepStorage::intervalForTime(STEP_KIND::MINUTE, 1, 1 * 1000),
+      uint64_t(0));
+  BOOST_CHECK_EQUAL(
+      ByStepStorage::intervalForTime(STEP_KIND::MINUTE, 1, 65 * 1000),
+      uint64_t(1));
 }
 
 BOOST_AUTO_TEST_CASE(IOAdapterTest) {
@@ -50,12 +54,15 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
     settings->chunk_size.setValue(128);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
-    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
-                             settings.get());
-    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+    _engine_env->addResource(
+        dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+        settings.get());
+    dariadb::utils::async::ThreadManager::start(
+        settings->thread_pools_params());
 
     auto io_adapter = std::make_unique<dariadb::storage::IOAdapter>(fname);
-    BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(storage_path, ".db").size(), size_t(1));
+    BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(storage_path, ".db").size(),
+                      size_t(1));
 
     size_t buffer_size = 16;
 
@@ -73,7 +80,8 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
         memset(hdr, 0, sizeof(dariadb::storage::ChunkHeader));
         memset(buffer, 0, buffer_size);
 
-        dariadb::storage::Chunk_Ptr ptr=dariadb::storage::Chunk::create(hdr, buffer, buffer_size, first);
+        dariadb::storage::Chunk_Ptr ptr =
+            dariadb::storage::Chunk::create(hdr, buffer, buffer_size, first);
         all_values.push_back(first);
         while (!ptr->isFull()) {
           first.time++;
@@ -88,7 +96,8 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
         ptr->is_owner = true;
         ptr->close();
         created_chunks++;
-        io_adapter->append(ptr, ptr->header->minTime, ptr->header->maxTime);
+        io_adapter->append(ptr, ptr->header->stat.minTime,
+                           ptr->header->stat.maxTime);
       }
     }
 
@@ -112,8 +121,8 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
       dariadb::Time tp = max_time / 2;
       auto result = io_adapter->readTimePoint(1, 0);
       BOOST_CHECK(result != nullptr);
-      auto from = result->header->minTime;
-      auto to = result->header->maxTime;
+      auto from = result->header->stat.minTime;
+      auto to = result->header->stat.maxTime;
       BOOST_CHECK(dariadb::utils::inInterval(from, to, tp));
     }
     { // current value
@@ -129,7 +138,8 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
 
       auto first = dariadb::Meas::empty(0);
       first.time = 1000;
-      dariadb::storage::Chunk_Ptr ptr=dariadb::storage::Chunk::create(hdr, buffer, buffer_size, first);
+      dariadb::storage::Chunk_Ptr ptr =
+          dariadb::storage::Chunk::create(hdr, buffer, buffer_size, first);
       while (!ptr->isFull()) {
         first.time++;
         first.value++;
@@ -141,7 +151,8 @@ BOOST_AUTO_TEST_CASE(IOAdapterTest) {
       ptr->header->id = 0;
       ptr->is_owner = true;
       ptr->close();
-      io_adapter->replace(ptr, ptr->header->minTime, ptr->header->maxTime);
+      io_adapter->replace(ptr, ptr->header->stat.minTime,
+                          ptr->header->stat.maxTime);
 
       auto zero_id_chunks = io_adapter->readInterval(0, 3, 0);
       bool success_replace = false;
@@ -194,11 +205,13 @@ BOOST_AUTO_TEST_CASE(ByStepInitTest) {
     settings->chunk_size.setValue(128);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
-    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
-                             settings.get());
-    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+    _engine_env->addResource(
+        dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+        settings.get());
+    dariadb::utils::async::ThreadManager::start(
+        settings->thread_pools_params());
 
-    auto ms= dariadb::storage::ByStepStorage::create(_engine_env);
+    auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -218,11 +231,13 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     dariadb::utils::fs::mkdir(storage_path);
     auto settings = dariadb::storage::Settings::create(storage_path);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
-    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
-                             settings.get());
-    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+    _engine_env->addResource(
+        dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+        settings.get());
+    dariadb::utils::async::ThreadManager::start(
+        settings->thread_pools_params());
 
-	auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+    auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
     dariadb::storage::Id2Step steps;
 
     steps[0] = dariadb::storage::STEP_KIND::SECOND;
@@ -288,7 +303,8 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
       std::cout << "readInterval hr" << std::endl;
       dariadb::storage::QueryInterval qi({2}, 0, 0, value.time);
       auto readed = ms->readInterval(qi);
-      BOOST_CHECK_EQUAL(readed.size(), size_t(writes_count / (2 * 60 * 60)) + 1);
+      BOOST_CHECK_EQUAL(readed.size(),
+                        size_t(writes_count / (2 * 60 * 60)) + 1);
       for (auto &v : readed) {
         BOOST_CHECK(v.flag != dariadb::Flags::_NO_DATA);
       }
@@ -339,7 +355,8 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
 
     { // query not exists interval
       std::cout << "empty interval" << std::endl;
-      dariadb::storage::QueryInterval qi({0}, 0, value.time * 2, value.time * 10);
+      dariadb::storage::QueryInterval qi({0}, 0, value.time * 2,
+                                         value.time * 10);
       auto readed = ms->readInterval(qi);
       BOOST_CHECK(readed.size() != size_t(0));
       for (auto &v : readed) {
@@ -363,11 +380,13 @@ BOOST_AUTO_TEST_CASE(ByStepAppendTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
-    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
-                             settings.get());
-    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+    _engine_env->addResource(
+        dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+        settings.get());
+    dariadb::utils::async::ThreadManager::start(
+        settings->thread_pools_params());
 
-	auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+    auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
     dariadb::storage::Id2Step steps;
 
     steps[0] = dariadb::storage::STEP_KIND::SECOND;
@@ -409,15 +428,17 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
-    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
-                             settings.get());
-    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+    _engine_env->addResource(
+        dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+        settings.get());
+    dariadb::utils::async::ThreadManager::start(
+        settings->thread_pools_params());
 
     dariadb::storage::Id2Step steps;
     steps[0] = dariadb::storage::STEP_KIND::HOUR;
     {
       std::cout << "first" << std::endl;
-	  auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+      auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
       ms->setSteps(steps);
 
       auto value = dariadb::Meas::empty(0);
@@ -434,7 +455,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
     }
     { // update value
       std::cout << "update value" << std::endl;
-	  auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+      auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
       auto readed = ms->setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
       auto value = dariadb::Meas::empty(0);
@@ -452,7 +473,7 @@ BOOST_AUTO_TEST_CASE(ByStepLoadOnStartTest) {
 
     { // read saved
       std::cout << "read saved" << std::endl;
-	  auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
+      auto ms = dariadb::storage::ByStepStorage::create(_engine_env);
       auto readed = ms->setSteps(steps);
       BOOST_CHECK_EQUAL(readed, 1);
       auto curtime = dariadb::timeutil::current_time();
