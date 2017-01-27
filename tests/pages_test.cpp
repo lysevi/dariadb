@@ -20,55 +20,6 @@
 using dariadb::storage::PageManager;
 using dariadb::storage::Manifest;
 
-BOOST_AUTO_TEST_CASE(ManifestFileTest) {
-  const std::string storage_path = "emptyStorage";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-
-  std::string version = "0.1.2.3.4.5";
-
-  {
-    auto settings =
-        dariadb::storage::Settings::create(storage_path);
-    auto manifest = dariadb::storage::Manifest::create(settings);
-    std::list<std::string> pages_names{"1", "2", "3"};
-    for (auto n : pages_names) {
-      manifest->page_append(n);
-    }
-
-    manifest->set_format(version);
-
-    std::list<std::string> wal_names{"111", "222", "333"};
-    for (auto n : wal_names) {
-      manifest->wal_append(n);
-    }
-
-    auto page_lst = manifest->page_list();
-    BOOST_CHECK_EQUAL(page_lst.size(), pages_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
-                                  pages_names.end());
-
-    auto wal_lst = manifest->wal_list();
-    BOOST_CHECK_EQUAL(wal_lst.size(), wal_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(wal_lst.begin(), wal_lst.end(), wal_names.begin(),
-                                  wal_names.end());
-
-    manifest = nullptr;
-  }
-  { // reopen. restore method must remove all records from manifest.
-    auto settings = dariadb::storage::Settings::create(storage_path);
-    auto manifest = dariadb::storage::Manifest::create(settings);
-    BOOST_CHECK_EQUAL(manifest->page_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(manifest->wal_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(manifest->get_format(), version);
-  }
-
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
-
 BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 200;

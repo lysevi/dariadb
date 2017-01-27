@@ -22,6 +22,7 @@ if(ENABLE_SERVER)
    TARGET_LINK_LIBRARIES(net_test ${DARIADB_CLIENT_LIBS} dariadb-server)
 endif()
 
+TEST_CASE(storage_common_test storage_common_test.cpp)
 TEST_CASE(engine_test engine_test.cpp)
 TEST_CASE(wal_test wal_test.cpp)
 TEST_CASE(pages_test pages_test.cpp)
