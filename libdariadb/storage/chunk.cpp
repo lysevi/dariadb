@@ -23,6 +23,8 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
     : c_writer(
           std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
   header = hdr;
+  ENSURE(header->stat.maxTime != MIN_TIME);
+  ENSURE(header->stat.minTime != MAX_TIME);
   _buffer_t = buffer;
   is_owner = false;
 
@@ -38,6 +40,9 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
   
   header->set_first(first_m);
   header->set_last(first_m);
+  header->stat = Statistic();
+  ENSURE(header->stat.maxTime == MIN_TIME);
+  ENSURE(header->stat.minTime == MAX_TIME);
   header->stat.update(first_m);
 
   std::fill(_buffer_t, _buffer_t + header->size, 0);

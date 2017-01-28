@@ -78,7 +78,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
     m.time = start_time;
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
-    dariadb::logger("*** thread #", id, " id:[", id_from, " - ", id_to, ']');
+    dariadb::logger("*** thread #", id, " id:[", id_from, " - ", id_to, "]");
     dariadb::IdSet ids;
     for (size_t i = 0; i < write_per_id_count; ++i) {
       m.flag = dariadb::Flag(id);
