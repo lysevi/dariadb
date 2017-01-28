@@ -4,9 +4,9 @@
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/storage/bloom_filter.h>
 
 #include <map>
 #include <set>
@@ -68,7 +68,7 @@ struct Statistic {
     minTime = std::min(st.minTime, minTime);
     maxTime = std::max(st.maxTime, maxTime);
 
-    flag_bloom = flag_bloom | st.flag_bloom;
+    flag_bloom = bloom_combine(flag_bloom, st.flag_bloom);
 
     minValue = std::min(st.minValue, minValue);
     maxValue = std::max(st.maxValue, maxValue);
@@ -141,8 +141,8 @@ public:
 
   typedef uint8_t *u8vector;
 
-  EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer,
-                                 uint32_t _size, const Meas &first_m);
+  EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
+                                 const Meas &first_m);
   EXPORT static Chunk_Ptr open(ChunkHeader *hdr, uint8_t *buffer);
   EXPORT ~Chunk();
 

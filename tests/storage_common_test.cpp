@@ -11,6 +11,97 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/utils/fs.h>
 
+BOOST_AUTO_TEST_CASE(BloomTest) {
+  uint64_t u8_fltr = dariadb::storage::bloom_empty<uint8_t>();
+
+  BOOST_CHECK_EQUAL(u8_fltr, uint64_t{0});
+
+  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{1});
+  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{2});
+  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{3});
+
+  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{1}));
+  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{2}));
+  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{3}));
+
+  uint64_t u8_fltr_2 = dariadb::storage::bloom_empty<uint8_t>();
+  u8_fltr_2 = dariadb::storage::bloom_add(u8_fltr_2, uint8_t{4});
+
+  BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{4}));
+  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr_2, uint8_t{4}));
+
+  auto super_fltr = dariadb::storage::bloom_combine(u8_fltr, u8_fltr_2);
+  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{1}));
+  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{2}));
+  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{3}));
+  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{4}));
+}
+
+BOOST_AUTO_TEST_CASE(inFilter) {
+  {
+    auto m = dariadb::Meas::empty();
+    m.flag = 100;
+    BOOST_CHECK(m.inFlag(0));
+    BOOST_CHECK(m.inFlag(100));
+    BOOST_CHECK(!m.inFlag(10));
+  }
+}
+
+BOOST_AUTO_TEST_CASE(StatisticUpdate) {
+  dariadb::storage::Statistic st;
+
+  BOOST_CHECK_EQUAL(st.minTime, dariadb::MAX_TIME);
+  BOOST_CHECK_EQUAL(st.maxTime, dariadb::MIN_TIME);
+  BOOST_CHECK_EQUAL(st.count, uint32_t(0));
+  BOOST_CHECK_EQUAL(st.flag_bloom, dariadb::Flag(0));
+  BOOST_CHECK_EQUAL(st.minValue, dariadb::MAX_VALUE);
+  BOOST_CHECK_EQUAL(st.maxValue, dariadb::MIN_VALUE);
+  BOOST_CHECK_EQUAL(st.sum, dariadb::Value(0));
+
+  auto m = dariadb::Meas::empty(0);
+  m.time = 2;
+  m.flag = 2;
+  m.value = 2;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.minTime, m.time);
+  BOOST_CHECK_EQUAL(st.maxTime, m.time);
+  BOOST_CHECK(st.flag_bloom != dariadb::Flag(0));
+  BOOST_CHECK(dariadb::areSame(st.minValue, m.value));
+  BOOST_CHECK(dariadb::areSame(st.maxValue, m.value));
+
+  m.time = 3;
+  m.value = 3;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(2));
+  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
+  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(2)));
+  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
+
+  m.time = 1;
+  m.value = 1;
+  st.update(m);
+  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(1));
+  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
+  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(1)));
+  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
+  BOOST_CHECK(dariadb::areSame(st.sum, dariadb::Value(6)));
+  BOOST_CHECK_EQUAL(st.count, uint32_t(3));
+
+  dariadb::storage::Statistic second_st;
+  m.time = 777;
+  m.value = 1;
+  second_st.update(m);
+  BOOST_CHECK_EQUAL(second_st.maxTime, m.time);
+
+  second_st.update(st);
+  BOOST_CHECK_EQUAL(second_st.minTime, dariadb::Time(1));
+  BOOST_CHECK_EQUAL(second_st.maxTime, dariadb::Time(777));
+  BOOST_CHECK(dariadb::areSame(second_st.minValue, dariadb::Value(1)));
+  BOOST_CHECK(dariadb::areSame(second_st.maxValue, dariadb::Value(3)));
+  BOOST_CHECK(dariadb::areSame(second_st.sum, dariadb::Value(7)));
+  BOOST_CHECK_EQUAL(second_st.count, uint32_t(4));
+}
+
 BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   const std::string storage_path = "emptyStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -86,30 +177,6 @@ BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(BloomTest) {
-  size_t u8_fltr = dariadb::storage::bloom_empty<uint8_t>();
-
-  BOOST_CHECK_EQUAL(u8_fltr, size_t{0});
-
-  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{1});
-  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{2});
-  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{3});
-
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{1}));
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{2}));
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{3}));
-}
-
-BOOST_AUTO_TEST_CASE(inFilter) {
-  {
-    auto m = dariadb::Meas::empty();
-    m.flag = 100;
-    BOOST_CHECK(m.inFlag(0));
-    BOOST_CHECK(m.inFlag(100));
-    BOOST_CHECK(!m.inFlag(10));
-  }
-}
-
 BOOST_AUTO_TEST_CASE(Options_Instance) {
   const std::string storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -142,59 +209,4 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
-}
-
-BOOST_AUTO_TEST_CASE(StatisticUpdate) {
-  dariadb::storage::Statistic st;
-
-  BOOST_CHECK_EQUAL(st.minTime, dariadb::MAX_TIME);
-  BOOST_CHECK_EQUAL(st.maxTime, dariadb::MIN_TIME);
-  BOOST_CHECK_EQUAL(st.count, uint32_t(0));
-  BOOST_CHECK_EQUAL(st.flag_bloom, dariadb::Flag(0));
-  BOOST_CHECK_EQUAL(st.minValue, dariadb::MAX_VALUE);
-  BOOST_CHECK_EQUAL(st.maxValue, dariadb::MIN_VALUE);
-  BOOST_CHECK_EQUAL(st.sum, dariadb::Value(0));
-
-  auto m = dariadb::Meas::empty(0);
-  m.time = 2;
-  m.flag = 2;
-  m.value = 2;
-  st.update(m);
-  BOOST_CHECK_EQUAL(st.minTime, m.time);
-  BOOST_CHECK_EQUAL(st.maxTime, m.time);
-  BOOST_CHECK(st.flag_bloom != dariadb::Flag(0));
-  BOOST_CHECK(dariadb::areSame(st.minValue, m.value));
-  BOOST_CHECK(dariadb::areSame(st.maxValue, m.value));
-
-  m.time = 3;
-  m.value = 3;
-  st.update(m);
-  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(2));
-  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
-  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(2)));
-  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
-
-  m.time = 1;
-  m.value = 1;
-  st.update(m);
-  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(1));
-  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
-  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(1)));
-  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
-  BOOST_CHECK(dariadb::areSame(st.sum, dariadb::Value(6)));
-  BOOST_CHECK_EQUAL(st.count, uint32_t(3));
-
-  dariadb::storage::Statistic second_st;
-  m.time = 777;
-  m.value = 1;
-  second_st.update(m);
-  BOOST_CHECK_EQUAL(second_st.maxTime, m.time);
-
-  second_st.update(st);
-  BOOST_CHECK_EQUAL(second_st.minTime, dariadb::Time(1));
-  BOOST_CHECK_EQUAL(second_st.maxTime, dariadb::Time(777));
-  BOOST_CHECK(dariadb::areSame(second_st.minValue, dariadb::Value(1)));
-  BOOST_CHECK(dariadb::areSame(second_st.maxValue, dariadb::Value(3)));
-  BOOST_CHECK(dariadb::areSame(second_st.sum, dariadb::Value(7)));
-  BOOST_CHECK_EQUAL(second_st.count, uint32_t(4));
 }
