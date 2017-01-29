@@ -31,6 +31,9 @@ const Id MAX_ID = std::numeric_limits<dariadb::Id>::max();
 const Value MIN_VALUE = std::numeric_limits<dariadb::Value>::min();
 const Value MAX_VALUE = std::numeric_limits<dariadb::Value>::max();
 
+const Flag MIN_FLAG = std::numeric_limits<dariadb::Flag>::min();
+const Flag MAX_FLAG = std::numeric_limits<dariadb::Flag>::max();
+
 EXPORT bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 #pragma pack(push, 1)
 struct Meas {
