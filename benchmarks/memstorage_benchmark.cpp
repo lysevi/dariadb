@@ -117,8 +117,8 @@ int main(int argc, char **argv) {
 
     stop_info = true;
     info_thread.join();
-
-    dariadb_bench::readBenchark(all_id_set, mstore.get(), 10, false, false);
+	dariadb_bench::BenchmarkSummaryInfo summary_info;
+    dariadb_bench::readBenchmark(summary_info, all_id_set, mstore.get(), 10, false, false);
 
     mstore=nullptr;
     dariadb::utils::async::ThreadManager::stop();

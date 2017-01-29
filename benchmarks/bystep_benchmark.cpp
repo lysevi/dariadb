@@ -35,13 +35,14 @@ void show_info() {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     clock_t t1 = clock();
-    auto writes_per_sec = append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
+    auto writes_per_sec =
+        append_count.load() / double((t1 - t0) / CLOCKS_PER_SEC);
     auto d = bs_storage->description();
     std::stringstream ss;
     ss << "(q:" << d.in_queue << ")"
        << " writes: " << append_count << " speed: " << writes_per_sec << "/sec"
-       << " progress:" << (int64_t(100) * append_count) / dariadb_bench::all_writes
-       << "%";
+       << " progress:"
+       << (int64_t(100) * append_count) / dariadb_bench::all_writes << "%";
     dariadb::logger_info(ss.str());
     if (stop_info) {
       break;
@@ -52,7 +53,8 @@ void show_info() {
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options()("help", "produce help message");
-  aos("step", po::value<STEP_KIND>(&step_kind)->default_value(step_kind), "step kind");
+  aos("step", po::value<STEP_KIND>(&step_kind)->default_value(step_kind),
+      "step kind");
 
   po::variables_map vm;
   try {
@@ -77,8 +79,10 @@ int main(int argc, char **argv) {
     }
     auto settings = Settings::create(storage_path);
     auto _engine_env = EngineEnvironment::create();
-    _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, settings.get());
-    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+    _engine_env->addResource(EngineEnvironment::Resource::SETTINGS,
+                             settings.get());
+    dariadb::utils::async::ThreadManager::start(
+        settings->thread_pools_params());
 
     bs_storage = ByStepStorage::create(_engine_env);
 
@@ -114,10 +118,14 @@ int main(int argc, char **argv) {
 
     std::cout << "==> flush...." << std::endl;
     bs_storage->flush();
-
-    dariadb_bench::readBenchark(all_id_set, bs_storage.get(), 10, false, false);
+    
+	dariadb_bench::BenchmarkSummaryInfo summary_info;
+    dariadb_bench::readBenchmark(summary_info, all_id_set, bs_storage.get(), 10,
+                                 false, false);
 
     bs_storage = nullptr;
     dariadb::utils::async::ThreadManager::stop();
+
+	summary_info.print();
   }
 }
