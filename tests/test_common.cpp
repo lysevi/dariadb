@@ -358,10 +358,12 @@ void check_reader(const dariadb::Reader_Ptr &rdr) {
         THROW_EXCEPTION("! v.time != top.time: ", v.time, top.time);
       }
     }
-    top = rdr->top();
-    if (v.time > top.time) {
-      THROW_EXCEPTION("! v.time > top.time: ", v.time, top.time);
-    }
+	if (!rdr->is_end()){
+		top = rdr->top();
+		if (v.time > top.time) {
+			THROW_EXCEPTION("! v.time > top.time: ", v.time, top.time);
+		}
+	}
   }
 }
 /*

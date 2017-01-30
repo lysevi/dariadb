@@ -5,10 +5,12 @@
 
 #include <algorithm>
 #include <iostream>
+#include <libdariadb/interfaces/ireader.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/bystep/step_kind.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/readers.h>
 #include <libdariadb/utils/fs.h>
 
 BOOST_AUTO_TEST_CASE(BloomTest) {
@@ -242,5 +244,51 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(0));
     dariadb_test::check_reader(ch->getReader());
     delete[] buff;
+  }
+}
+
+BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
+  dariadb::MeasArray ma1(4);
+  ma1[0].time = 1;
+  ma1[1].time = 2;
+  ma1[2].time = 4;
+  ma1[3].time = 7;
+  auto fr1 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma1)};
+
+  dariadb::MeasArray ma2(3);
+  ma2[0].time = 3;
+  ma2[1].time = 5;
+  ma2[2].time = 6;
+  auto fr2 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma2)};
+
+  dariadb::MeasArray ma3(1);
+  ma3[0].time = 8;
+  auto fr3 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma3)};
+
+  dariadb::storage::MergeSortReader msr{
+      std::list<dariadb::Reader_Ptr>{fr1, fr2, fr3}};
+
+  dariadb::MeasList ml;
+  while (!msr.is_end()) {
+    auto v = msr.readNext();
+    ml.push_back(v);
+
+    if (!msr.is_end()) {
+      auto tp = msr.top();
+      BOOST_CHECK_LT(v.time, tp.time);
+    }
+  }
+
+  BOOST_CHECK_EQUAL(ml.size(), size_t(8));
+
+  for (auto it = ml.begin(); it != ml.end(); ++it) {
+    auto cur_value = *it;
+    auto next = std::next(it);
+    if (next == ml.end()) {
+      break;
+    }
+    auto next_value = *next;
+
+    BOOST_CHECK_LT(cur_value.time, next_value.time);
   }
 }

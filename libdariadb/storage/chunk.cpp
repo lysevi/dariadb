@@ -209,6 +209,9 @@ Reader_Ptr Chunk::getReader() {
       ma[pos++] = v;
     }
 
+	std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+	ENSURE(ma.front().time <= ma.back().time);
+
     FullReader *fr = new FullReader(ma);
     return Reader_Ptr{fr};
   } else {

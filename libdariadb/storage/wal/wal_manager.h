@@ -2,6 +2,7 @@
 
 #include <libdariadb/interfaces/idroppers.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/interfaces/ireader.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/wal/walfile.h>
@@ -29,6 +30,7 @@ public:
   EXPORT virtual Time maxTime() override;
   EXPORT virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                  dariadb::Time *maxResult) override;
+  EXPORT Id2Reader intervalReader(const QueryInterval &q);
   EXPORT virtual void foreach (const QueryInterval &q,
                                IReaderClb * clbk) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;

@@ -4,9 +4,11 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/readers.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/utils.h>
 
 #include <algorithm>
 
@@ -23,7 +25,8 @@ class WALFile::Private {
 public:
   Private(const EngineEnvironment_ptr env) {
     _env = env;
-    _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
+    _settings = _env->getResourceObject<Settings>(
+        EngineEnvironment::Resource::SETTINGS);
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(WAL_FILE_EXT);
@@ -33,9 +36,11 @@ public:
     _file = nullptr;
   }
 
-  Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
+  Private(const EngineEnvironment_ptr env, const std::string &fname,
+          bool readonly) {
     _env = env;
-    _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
+    _settings = _env->getResourceObject<Settings>(
+        EngineEnvironment::Resource::SETTINGS);
     _writed = WALFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
@@ -108,7 +113,8 @@ public:
 
     auto max_size = _settings->wal_file_size.value();
 
-    auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
+    auto write_size =
+        (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
     MeasArray ma{begin, end};
     std::fwrite(ma.data(), sizeof(Meas), write_size, _file);
     std::fflush(_file);
@@ -116,23 +122,44 @@ public:
     return Status(write_size, 0);
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) {
+  Id2Reader intervalReader(const QueryInterval &q) {
     open_to_read();
 
+    Id2MSet subresult;
+
     while (1) {
-      if (clbk->is_canceled()) {
-        break;
-      }
       Meas val = Meas::empty();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
       if (val.inQuery(q.ids, q.flag, q.from, q.to)) {
-        clbk->call(val);
+        subresult[val.id].insert(val);
       }
     }
     std::fclose(_file);
     _file = nullptr;
+
+    if (subresult.empty()) {
+      return Id2Reader();
+    }
+	Id2Reader result;
+    for (auto kv : subresult) {
+      MeasArray ma(kv.second.begin(), kv.second.end());
+      std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+      ENSURE(ma.front().time <= ma.back().time);
+      FullReader *fr = new FullReader(ma);
+      Reader_Ptr reader{fr};
+	  result[kv.first] = reader;
+    }
+    return result;
+  }
+
+  void foreach (const QueryInterval &q, IReaderClb * clbk) {
+    auto readers = intervalReader(q);
+
+	for (auto kv : readers) {
+		kv.second->apply(clbk);
+	}
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
@@ -245,7 +272,8 @@ public:
     return result;
   }
 
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+                  dariadb::Time *maxResult) {
     open_to_read();
 
     *minResult = dariadb::MAX_TIME;
@@ -285,6 +313,7 @@ public:
       (*raw)[pos] = val;
       pos++;
     }
+	ma->resize(pos);
     std::fclose(_file);
     _file = nullptr;
     return ma;
@@ -340,27 +369,26 @@ protected:
 };
 
 WALFile_Ptr WALFile::create(const EngineEnvironment_ptr env) {
-	return WALFile_Ptr{ new WALFile(env) };
+  return WALFile_Ptr{new WALFile(env)};
 }
 
-WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
-	return WALFile_Ptr{ new WALFile(env, fname, readonly) };
+WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env,
+                          const std::string &fname, bool readonly) {
+  return WALFile_Ptr{new WALFile(env, fname, readonly)};
 }
 
 WALFile::~WALFile() {}
 
-WALFile::WALFile(const EngineEnvironment_ptr env) : _Impl(new WALFile::Private(env)) {}
+WALFile::WALFile(const EngineEnvironment_ptr env)
+    : _Impl(new WALFile::Private(env)) {}
 
-WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
+WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname,
+                 bool readonly)
     : _Impl(new WALFile::Private(env, fname, readonly)) {}
 
-dariadb::Time WALFile::minTime() {
-  return _Impl->minTime();
-}
+dariadb::Time WALFile::minTime() { return _Impl->minTime(); }
 
-dariadb::Time WALFile::maxTime() {
-  return _Impl->maxTime();
-}
+dariadb::Time WALFile::maxTime() { return _Impl->maxTime(); }
 
 bool WALFile::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) {
@@ -370,9 +398,7 @@ void WALFile::flush() { // write all to storage;
   _Impl->flush();
 }
 
-Status WALFile::append(const Meas &value) {
-  return _Impl->append(value);
-}
+Status WALFile::append(const Meas &value) { return _Impl->append(value); }
 Status WALFile::append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
@@ -380,6 +406,10 @@ Status WALFile::append(const MeasArray::const_iterator &begin,
 Status WALFile::append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) {
   return _Impl->append(begin, end);
+}
+
+Id2Reader WALFile::intervalReader(const QueryInterval &q) {
+  return _Impl->intervalReader(q);
 }
 
 void WALFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
@@ -394,19 +424,13 @@ Id2Meas WALFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-std::string WALFile::filename() const {
-  return _Impl->filename();
-}
+std::string WALFile::filename() const { return _Impl->filename(); }
 
-std::shared_ptr<MeasArray> WALFile::readAll() {
-  return _Impl->readAll();
-}
+std::shared_ptr<MeasArray> WALFile::readAll() { return _Impl->readAll(); }
 
 size_t WALFile::writed(std::string fname) {
   std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
   return in.tellg() / sizeof(Meas);
 }
 
-Id2MinMax WALFile::loadMinMax() {
-  return _Impl->loadMinMax();
-}
+Id2MinMax WALFile::loadMinMax() { return _Impl->loadMinMax(); }
