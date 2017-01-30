@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/readers.h>
 #include <libdariadb/utils/crc.h>
 
 #include <cstring>
@@ -144,9 +145,9 @@ bool Chunk::append(const Meas &m) {
 class ChunkReader : public IReader {
 public:
   ChunkReader() { _top_value_exists = false; }
-  virtual Meas readNext() override {
+  
+  Meas readNext() override {
     ENSURE(!is_end());
-
     if (_is_first) {
       _is_first = false;
       return _chunk->header->first();
@@ -187,32 +188,6 @@ public:
   std::shared_ptr<CopmressedReader> _reader;
 };
 
-class ChunkFullReader : public IReader {
-public:
-  ChunkFullReader(MeasArray &ml) {
-    _ma = ml;
-    _index = size_t(0);
-  }
-  virtual Meas readNext() override {
-    ENSURE(!is_end());
-
-    auto result = _ma[_index++];
-    return result;
-  }
-
-  bool is_end() const override { return _index < _ma.size(); }
-
-  Meas top() override {
-    if (!is_end()) {
-      return _ma[_index];
-    }
-    THROW_EXCEPTION("is_end()");
-  }
-
-  MeasArray _ma;
-  size_t _index;
-};
-
 Reader_Ptr Chunk::getReader() {
   auto raw_res = new ChunkReader;
   raw_res->count = this->header->stat.count - 1;
@@ -234,7 +209,7 @@ Reader_Ptr Chunk::getReader() {
       ma[pos++] = v;
     }
 
-    ChunkFullReader *fr = new ChunkFullReader(ma);
+    FullReader *fr = new FullReader(ma);
     return Reader_Ptr{fr};
   } else {
     return result;
