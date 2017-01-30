@@ -210,3 +210,37 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
+
+BOOST_AUTO_TEST_CASE(ChunkTest) {
+  {
+    dariadb::storage::ChunkHeader hdr;
+    uint8_t *buff = new uint8_t[1024];
+    std::fill_n(buff, 1024, uint8_t(0));
+    auto m = dariadb::Meas::empty();
+    auto ch = dariadb::storage::Chunk::create(&hdr, buff, 1024, m);
+    m.time = 0;
+    while (!ch->isFull()) {
+      ch->append(m);
+      m.time++;
+    }
+    BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(1));
+    dariadb_test::check_reader(ch->getReader());
+    delete[] buff;
+  }
+  {
+    dariadb::storage::ChunkHeader hdr;
+    uint8_t *buff = new uint8_t[1024];
+    std::fill_n(buff, 1024, uint8_t(0));
+    auto m = dariadb::Meas::empty();
+    m.time = 999;
+    auto ch = dariadb::storage::Chunk::create(&hdr, buff, 1024, m);
+    m.time = 0;
+    while (!ch->isFull()) {
+      ch->append(m);
+      m.time++;
+    }
+    BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(0));
+    dariadb_test::check_reader(ch->getReader());
+    delete[] buff;
+  }
+}

@@ -7,6 +7,7 @@
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/interfaces/ireader.h>
 
 #include <map>
 #include <set>
@@ -89,7 +90,7 @@ struct ChunkHeader {
   uint64_t offset_in_page; /// pos in page file.
 
   Statistic stat;
-
+  uint8_t is_sorted;
   Meas first() const {
     Meas m = Meas::empty(meas_id);
     m.flag = data_first.flag;
@@ -130,14 +131,7 @@ protected:
   Chunk(ChunkHeader *hdr, uint8_t *buffer);
 
 public:
-  class IChunkReader {
-  public:
-    virtual Meas readNext() = 0;
-    virtual bool is_end() const = 0;
-    virtual ~IChunkReader() {}
-  };
-
-  using ChunkReader_Ptr = std::shared_ptr<Chunk::IChunkReader>;
+  
 
   typedef uint8_t *u8vector;
 
@@ -148,7 +142,7 @@ public:
 
   EXPORT bool append(const Meas &m);
   EXPORT bool isFull() const;
-  EXPORT ChunkReader_Ptr getReader();
+  EXPORT Reader_Ptr getReader();
   EXPORT void close();
   EXPORT uint32_t calcChecksum();
   EXPORT uint32_t getChecksum();

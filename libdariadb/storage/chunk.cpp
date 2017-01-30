@@ -32,18 +32,21 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
   bw->set_pos(header->bw_pos);
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m)
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
+             const Meas &first_m)
     : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + _size})) {
   _buffer_t = buffer;
   header = hdr;
   header->size = _size;
-  
+
   header->set_first(first_m);
   header->set_last(first_m);
   header->stat = Statistic();
   ENSURE(header->stat.maxTime == MIN_TIME);
   ENSURE(header->stat.minTime == MAX_TIME);
   header->stat.update(first_m);
+
+  header->is_sorted = uint8_t(1);
 
   std::fill(_buffer_t, _buffer_t + header->size, 0);
   is_owner = false;
@@ -53,6 +56,8 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
   header->bw_pos = uint32_t(bw->pos());
 
   c_writer.append(header->first());
+
+  ENSURE(header->is_sorted == uint8_t(1));
 }
 
 Chunk::~Chunk() {
@@ -124,6 +129,9 @@ bool Chunk::append(const Meas &m) {
     ENSURE(c_writer.isFull());
     return false;
   } else {
+    if (m.time < header->data_last.time) {
+      header->is_sorted = uint8_t(0);
+    }
     header->bw_pos = uint32_t(bw->pos());
 
     header->stat.update(m);
@@ -133,8 +141,9 @@ bool Chunk::append(const Meas &m) {
   }
 }
 
-class ChunkReader : public Chunk::IChunkReader {
+class ChunkReader : public IReader {
 public:
+  ChunkReader() { _top_value_exists = false; }
   virtual Meas readNext() override {
     ENSURE(!is_end());
 
@@ -142,12 +151,35 @@ public:
       _is_first = false;
       return _chunk->header->first();
     }
+    if (_top_value_exists) {
+      _top_value_exists = false;
+      return _top_value;
+    }
     --count;
     return _reader->read();
   }
 
-  bool is_end() const override { return count == 0 && !_is_first; }
+  bool is_end() const override {
+    return count == 0 && !_is_first && _top_value_exists == false;
+  }
 
+  Meas top() override {
+    if (_top_value_exists == false) {
+      if (count != 0 && !_is_first) {
+        _top_value = readNext();
+        _top_value_exists = true;
+      } else {
+        if (_is_first) {
+          _top_value = _chunk->header->first();
+          _top_value_exists = true;
+        }
+      }
+    }
+    return _top_value;
+  }
+
+  bool _top_value_exists;
+  Meas _top_value;
   size_t count;
   bool _is_first = true;
   Chunk_Ptr _chunk;
@@ -155,9 +187,35 @@ public:
   std::shared_ptr<CopmressedReader> _reader;
 };
 
-Chunk::ChunkReader_Ptr Chunk::getReader() {
+class ChunkFullReader : public IReader {
+public:
+  ChunkFullReader(MeasArray &ml) {
+    _ma = ml;
+    _index = size_t(0);
+  }
+  virtual Meas readNext() override {
+    ENSURE(!is_end());
+
+    auto result = _ma[_index++];
+    return result;
+  }
+
+  bool is_end() const override { return _index < _ma.size(); }
+
+  Meas top() override {
+    if (!is_end()) {
+      return _ma[_index];
+    }
+    THROW_EXCEPTION("is_end()");
+  }
+
+  MeasArray _ma;
+  size_t _index;
+};
+
+Reader_Ptr Chunk::getReader() {
   auto raw_res = new ChunkReader;
-  raw_res->count = this->header->stat.count-1;
+  raw_res->count = this->header->stat.count - 1;
   raw_res->_chunk = this->shared_from_this();
   raw_res->_is_first = true;
   raw_res->bw =
@@ -166,6 +224,19 @@ Chunk::ChunkReader_Ptr Chunk::getReader() {
   raw_res->_reader =
       std::make_shared<CopmressedReader>(raw_res->bw, this->header->first());
 
-  Chunk::ChunkReader_Ptr result{raw_res};
-  return result;
+  Reader_Ptr result{raw_res};
+  if (!header->is_sorted) {
+    MeasArray ma(header->stat.count);
+    size_t pos = 0;
+    
+	while (!result->is_end()) {
+      auto v = result->readNext();
+      ma[pos++] = v;
+    }
+
+    ChunkFullReader *fr = new ChunkFullReader(ma);
+    return Reader_Ptr{fr};
+  } else {
+    return result;
+  }
 }
