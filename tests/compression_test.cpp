@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
   const dariadb::Time t1 = 100;
   const dariadb::Time t2 = 130;
   const dariadb::Time t3 = 2000;
-  const dariadb::Time t4 = 1048175;
+  const dariadb::Time t4 = 524285;
   const dariadb::Time t5 = std::numeric_limits<uint32_t>::max();
 
   uint8_t buffer[test_buffer_size];
@@ -259,6 +259,27 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
 
     readed = dc.read();
     BOOST_CHECK_EQUAL(readed, t0);
+  }
+
+
+  { // compress all; big delta
+	  std::fill_n(buffer, test_buffer_size, 0);
+	  dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+	  auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+
+	  dariadb::compression::DeltaCompressor dc{ bw };
+
+	  dc.append(9999);
+	  dc.append(0);
+  }
+
+  { // decompress all
+	  dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
+	  auto bw_d = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+	  dariadb::compression::DeltaDeCompressor dc{ bw_d, 9999 };
+
+	  auto readed = dc.read();
+	  BOOST_CHECK_EQUAL(readed, 0);
   }
 }
 

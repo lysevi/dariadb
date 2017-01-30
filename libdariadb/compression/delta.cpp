@@ -119,8 +119,8 @@ dariadb::Time DeltaDeCompressor::read() {
         c.small.hi = (uint8_t)first_unmasked;
         c.small.lo = second;
         result = c.big;
-        if (result > delta_3b_mask_inv) { // negative
-          result = (-1048576) | result;
+        if (result > 524287) { // negative
+          result = (-524287) | result;
         }
       } else {
         if (first_byte == 0) {
