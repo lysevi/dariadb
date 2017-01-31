@@ -400,51 +400,124 @@ public:
     }
     return result;
   }
-
   /// when strategy=CACHE
-  void interval_cache(const QueryInterval &q, IReaderClb *p_clbk,
-                              IReaderClb *a_clbk) {
+  Id2Reader interval_disk_only(const IdSet &ids, const QueryInterval &q) {
+    if (ids.empty()) {
+      return Id2Reader();
+    }
+    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
+                          q.to};
+
+    auto pm = _page_manager.get();
+    auto am = _wal_manager.get();
+
+    auto pm_readers = pm->intervalReader(local_q);
+    auto am_readers = am->intervalReader(local_q);
+
+    Id2ReadersList all_readers;
+    for (auto kv : am_readers) {
+      all_readers[kv.first].push_back(kv.second);
+    }
+
+    for (auto kv : pm_readers) {
+      all_readers[kv.first].push_back(kv.second);
+    }
+
+    return MergeSortReader::colapseReaders(all_readers);
+  }
+
+  Id2Reader interval_mem_only(const IdSet &ids, const QueryInterval &q) {
+    if (ids.empty()) {
+      return Id2Reader();
+    }
+    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
+                          q.to};
+    return _memstorage->intervalReader(q);
+  }
+
+  Id2Reader interval_cache(const QueryInterval &q) {
     auto pm = _page_manager.get();
     auto mm = _memstorage.get();
     auto am = _wal_manager.get();
 
     auto memory_mm = mm->loadMinMax();
     auto sync_map = mm->getSyncMap();
-	QueryInterval local_q = q;
-	local_q.ids.resize(1);
-	for (auto id : q.ids) {
-		local_q.from = q.from;
-		local_q.to = q.to;
-		local_q.ids[0] = id;
-		auto id_mm = memory_mm.find(id);
-		if (id_mm == memory_mm.end()) {
-			pm->foreach(local_q, p_clbk);
-			am->foreach(local_q, a_clbk);
-		}
-		else {
-			if ((id_mm->second.min.time) > local_q.from) {
-				auto min_mem_time = sync_map[id];
-				local_q.to = min_mem_time;
-				pm->foreach(local_q, p_clbk);
-				am->foreach(local_q, a_clbk);
 
-				if (min_mem_time < q.to) {
-					if (min_mem_time != MIN_TIME) { // to read value after min_mem_time;
-						min_mem_time += 1;
-					}
-					local_q.from = min_mem_time;
-					local_q.to = q.to;
-					mm->foreach(local_q, a_clbk);
-				}
-			}
-			else {
-				mm->foreach(local_q, a_clbk);
-			}
-			if (a_clbk->is_canceled()) {
-				return;
-			}
-		}
-	}
+    IdSet disk_only;
+    IdSet mem_only;
+    IdSet disk_and_mem;
+    // id -> dis_q, mem_q;
+    std::map<Id, std::pair<QueryInterval, QueryInterval>> queryById;
+
+    for (auto id : q.ids) {
+      auto id_mm = memory_mm.find(id);
+      if (id_mm == memory_mm.end()) {
+        disk_only.insert(id);
+      } else {
+        if ((id_mm->second.min.time) > q.from) {
+          auto min_mem_time = sync_map[id];
+          if (min_mem_time < q.to) {
+            disk_and_mem.insert(id);
+
+            QueryInterval disk_q = q;
+            disk_q.ids.resize(1);
+            disk_q.from = q.from;
+            disk_q.to = min_mem_time;
+            disk_q.ids[0] = id;
+
+            QueryInterval mem_q = q;
+            mem_q.ids.resize(1);
+            mem_q.from = min_mem_time + 1;
+            mem_q.to = q.to;
+            mem_q.ids[0] = id;
+
+            queryById.insert(std::make_pair(id, std::make_pair(disk_q, mem_q)));
+          } else {
+            disk_only.insert(id);
+          }
+        } else {
+          mem_only.insert(id);
+        }
+      }
+    }
+    Id2Reader result;
+    auto disk_only_readers = interval_disk_only(disk_only, q);
+    auto mem_only_readers = interval_mem_only(mem_only, q);
+
+    // TODO read fromd disk one time.
+    for (auto id2intervals : queryById) {
+      auto disk_q = id2intervals.second.first;
+      auto mem_q = id2intervals.second.second;
+
+      auto pm_readers = pm->intervalReader(disk_q);
+      auto am_readers = am->intervalReader(disk_q);
+      auto mm_readers = mm->intervalReader(mem_q);
+
+      Id2ReadersList sub_result;
+      for (auto kv : am_readers) {
+        sub_result[kv.first].push_back(kv.second);
+      }
+
+      for (auto kv : pm_readers) {
+        sub_result[kv.first].push_back(kv.second);
+      }
+
+      for (auto kv : mm_readers) {
+        sub_result[kv.first].push_back(kv.second);
+      }
+      auto i2r = MergeSortReader::colapseReaders(sub_result);
+      for (auto kv : i2r) {
+        result[kv.first] = kv.second;
+      }
+    }
+
+    for (auto kv : disk_only_readers) {
+      result[kv.first] = kv.second;
+    }
+    for (auto kv : mem_only_readers) {
+      result[kv.first] = kv.second;
+    }
+    return result;
   }
 
   /// when strategy!=CACHEs
@@ -466,21 +539,21 @@ public:
     return MergeSortReader::colapseReaders(all_readers);
   }
 
-  void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk,
-                        IReaderClb *a_clbk) {
-    AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
+  void foreach_internal(const QueryInterval &q, IReaderClb *a_clbk) {
+    AsyncTask pm_at = [a_clbk, q, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       if (!try_lock_storage()) {
         return true;
       }
 
+      Id2Reader r;
       if (this->strategy() == STRATEGY::CACHE) {
-        interval_cache(q, p_clbk, a_clbk);
+        r = interval_cache(q);
       } else {
-        auto r = internal_two_level(q);
-        for (auto kv : r) {
-          kv.second->apply(a_clbk, q);
-        }
+        r = internal_two_level(q);
+      }
+      for (auto kv : r) {
+        kv.second->apply(a_clbk, q);
       }
 
       a_clbk->is_end();
@@ -492,7 +565,7 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    foreach_internal(q, clbk, clbk);
+    foreach_internal(q, clbk);
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
@@ -507,14 +580,12 @@ public:
   }
 
   MeasList readInterval(const QueryInterval &q) {
-    auto p_clbk = std::make_unique<MList_ReaderClb>();
     auto a_clbk = std::make_unique<MList_ReaderClb>();
-    this->foreach_internal(q, p_clbk.get(), a_clbk.get());
+    this->foreach_internal(q, a_clbk.get());
     a_clbk->wait();
     Id2MSet sub_result;
     MeasList result;
 
-    mlist2mset(p_clbk->mlist, sub_result);
     mlist2mset(a_clbk->mlist, sub_result);
 
     for (auto id : q.ids) {
@@ -605,7 +676,7 @@ public:
     this->lock_storage();
     _page_manager->eraseOld(t);
 
-	this->unlock_storage();
+    this->unlock_storage();
   }
 
   STRATEGY strategy() const {
@@ -627,7 +698,6 @@ public:
     _page_manager->compactbyTime(from, to);
     this->unlock_storage();
   }
-
 
 protected:
   std::mutex _flush_locker, _lock_locker;
