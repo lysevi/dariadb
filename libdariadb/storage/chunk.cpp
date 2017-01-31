@@ -180,7 +180,7 @@ public:
 
   ChunkReader() = delete;
 
-  ChunkReader(size_t count, Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
+  ChunkReader(size_t count,const Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
               std::shared_ptr<CopmressedReader> compressed_rdr) {
     _top_value_exists = false;
     _is_first = true;
