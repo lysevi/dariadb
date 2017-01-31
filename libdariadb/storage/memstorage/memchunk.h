@@ -15,6 +15,7 @@ struct MemChunk : public Chunk {
   MemChunkAllocator::AllocatedData _a_data;
   TimeTrack *_track; /// init in TimeTrack
   size_t in_disk_count;
+  
 
   MemChunk(ChunkHeader *index, uint8_t *buffer, uint32_t size, const Meas &first_m);
   MemChunk(ChunkHeader *index, uint8_t *buffer);

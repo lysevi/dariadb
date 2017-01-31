@@ -150,6 +150,7 @@ public:
     ENSURE(!is_end());
     if (_is_first) {
       _is_first = false;
+	  _top_value_exists = false;
       return _chunk->header->first();
     }
     if (_top_value_exists) {

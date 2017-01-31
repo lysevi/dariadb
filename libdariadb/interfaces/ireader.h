@@ -2,6 +2,7 @@
 
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/storage/query_param.h>
 #include <libdariadb/st_exports.h>
 #include <memory>
 #include <unordered_map>
@@ -18,6 +19,7 @@ public:
   virtual ~IReader() {}
 
   EXPORT virtual void apply(storage::IReaderClb *clbk);
+  EXPORT virtual void apply(storage::IReaderClb *clbk, const storage::QueryInterval&q);
 };
 
 using Id2Reader = std::unordered_map<Id, Reader_Ptr>;

@@ -3,6 +3,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/memstorage/memchunk.h>
 #include <extern/stx-btree/include/stx/btree_map.h>
+#include <memory>
 
 namespace dariadb {
 namespace storage {
@@ -13,7 +14,11 @@ public:
   virtual ~MemoryChunkContainer() {}
 };
 
-struct TimeTrack : public IMeasStorage {
+struct TimeTrack;
+using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
+using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
+
+struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<TimeTrack> {
   TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
             MemChunkAllocator *allocator);
   ~TimeTrack();
@@ -24,9 +29,8 @@ struct TimeTrack : public IMeasStorage {
   Time maxTime() override;
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
+  Id2Reader intervalReader(const QueryInterval &q);
   void foreach (const QueryInterval &q, IReaderClb * clbk) override;
-  void foreach_interval_call(const MemChunk_Ptr &c, const QueryInterval &q,
-                             IReaderClb *clbk);
   Id2Meas readTimePoint(const QueryTimePoint &q) override;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
 
@@ -43,9 +47,7 @@ struct TimeTrack : public IMeasStorage {
   utils::async::Locker _locker;
   stx::btree_map<Time, MemChunk_Ptr> _index;
   MemoryChunkContainer *_mcc;
+  bool is_locked_to_drop;
 };
-
-using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
-using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 }
 }

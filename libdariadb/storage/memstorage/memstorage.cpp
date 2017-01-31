@@ -1,13 +1,13 @@
 #ifdef MSVC
 #define _SCL_SECURE_NO_WARNINGS // stx::btree
 #endif
+#include <cstring>
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/memstorage/memchunk.h>
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/memstorage/timetrack.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/async/thread_manager.h>
-#include <cstring>
 #include <memory>
 #include <set>
 #include <shared_mutex>
@@ -25,18 +25,16 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   Private(const EngineEnvironment_ptr &env, size_t id_count)
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)),
-        _chunk_allocator(_settings->memory_limit.value(), _settings->chunk_size.value()) {
+        _chunk_allocator(_settings->memory_limit.value(),
+                         _settings->chunk_size.value()) {
     _chunks.resize(_chunk_allocator._capacity);
     _stoped = false;
     _down_level_storage = nullptr;
     _disk_storage = nullptr;
     _drop_stop = false;
-    _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
-    /*if (_settings->strategy.value() == STRATEGY::CACHE) {
-      logger_info("engine: run memory crawler.");
-      _crawler_thread =
-          std::thread{std::bind(&MemStorage::Private::crawler_thread_func, this)};
-    }*/
+    _drop_thread =
+        std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
+
     if (id_count != 0) {
       _id2track.reserve(id_count);
     }
@@ -47,10 +45,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       _drop_stop = true;
       _drop_cond.notify_all();
       _drop_thread.join();
-      /* if (_settings->strategy.value() == STRATEGY::CACHE) {
-                   _crawler_cond.notify_all();
-                   _crawler_thread.join();
-       }*/
 
       if (this->_down_level_storage != nullptr) {
         logger_info("engine: memstorage - drop all chunk to disk");
@@ -84,8 +78,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       track = _id2track.find(value.id);
       if (track == _id2track.end()) { // still not exists.
-        target_track =
-            std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
+        target_track = std::make_shared<TimeTrack>(this, Time(0), value.id,
+                                                   &_chunk_allocator);
         _id2track.emplace(std::make_pair(value.id, target_track));
       } else {
         target_track = track->second;
@@ -117,14 +111,16 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
     std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
     std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
-    auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
-                           [](auto c) { return c != nullptr; });
+    auto it = std::copy_if(
+        _chunks.begin(), _chunks.end(), chunks_copy.begin(),
+        [](auto c) { return c != nullptr && !c->_track->is_locked_to_drop; });
     sl.unlock();
     chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
     std::sort(chunks_copy.begin(), chunks_copy.end(),
               [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
-                return left->header->data_first.time < right->header->data_first.time;
+                return left->header->data_first.time <
+                       right->header->data_first.time;
               });
     for (auto &c : chunks_copy) {
       if (pos >= chunks_to_delete) {
@@ -138,9 +134,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         ENSURE(!c->isFull());
         continue;
       }
-      /* if (_settings->strategy.value() == STRATEGY::CACHE && (!c->already_in_disk())) {
-         continue;
-       }*/
       all_chunks.push_back(c.get());
       ++pos;
     }
@@ -153,7 +146,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
           this->_down_level_storage->appendChunks(all_chunks, pos);
           return false;
         };
-        auto at_res = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+        auto at_res =
+            ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
         at_res->wait();
       } else {
         if (_settings->strategy.value() != STRATEGY::CACHE) {
@@ -230,19 +224,25 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     return false;
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+  Id2Reader intervalReader(const QueryInterval &q) {
     std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
-    QueryInterval local_q({}, q.flag, q.from, q.to);
-    local_q.ids.resize(1);
+    Id2Reader result;
     for (auto id : q.ids) {
-      if (clbk->is_canceled()) {
-        break;
-      }
       auto tracker = _id2track.find(id);
       if (tracker != _id2track.end()) {
-        local_q.ids[0] = id;
-        tracker->second->foreach (local_q, clbk);
+        auto rdr = tracker->second->intervalReader(q);
+        if (!rdr.empty()) {
+          result[id] = rdr[id];
+        }
       }
+    }
+    return result;
+  }
+
+  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+    Id2Reader readers = intervalReader(q);
+    for (auto kv : readers) {
+      kv.second->apply(clbk, q);
     }
   }
 
@@ -303,7 +303,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   bool is_time_to_drop() {
     return (_chunk_allocator._allocated) >=
-           (_chunk_allocator._capacity * _settings->percent_when_start_droping.value());
+           (_chunk_allocator._capacity *
+            _settings->percent_when_start_droping.value());
   }
 
   void drop_thread_func() {
@@ -340,28 +341,23 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   std::condition_variable _drop_cond;
 };
 
-MemStorage_ptr MemStorage::create(const EngineEnvironment_ptr &env, size_t id_count) {
-	return MemStorage_ptr{ new MemStorage(env,id_count) };
+MemStorage_ptr MemStorage::create(const EngineEnvironment_ptr &env,
+                                  size_t id_count) {
+  return MemStorage_ptr{new MemStorage(env, id_count)};
 }
 
 MemStorage::MemStorage(const EngineEnvironment_ptr &env, size_t id_count)
     : _impl(new MemStorage::Private(env, id_count)) {}
 
-MemStorage::~MemStorage() {
-  _impl = nullptr;
-}
+MemStorage::~MemStorage() { _impl = nullptr; }
 
 memstorage::Description MemStorage::description() const {
   return _impl->description();
 }
 
-Time MemStorage::minTime() {
-  return _impl->minTime();
-}
+Time MemStorage::minTime() { return _impl->minTime(); }
 
-Time MemStorage::maxTime() {
-  return _impl->maxTime();
-}
+Time MemStorage::maxTime() { return _impl->maxTime(); }
 
 bool MemStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
@@ -380,17 +376,11 @@ Id2Meas MemStorage::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
-Status MemStorage::append(const Meas &value) {
-  return _impl->append(value);
-}
+Status MemStorage::append(const Meas &value) { return _impl->append(value); }
 
-void MemStorage::flush() {
-  _impl->flush();
-}
+void MemStorage::flush() { _impl->flush(); }
 
-void MemStorage::stop() {
-  _impl->stop();
-}
+void MemStorage::stop() { _impl->stop(); }
 
 void MemStorage::setDownLevel(IChunkStorage *_down) {
   _impl->setDownLevel(_down);
@@ -400,14 +390,8 @@ void MemStorage::setDiskStorage(IMeasWriter *_disk) {
   _impl->setDiskStorage(_disk);
 }
 
-std::mutex *MemStorage::getLockers() {
-  return _impl->getLockers();
-}
+std::mutex *MemStorage::getLockers() { return _impl->getLockers(); }
 
-Id2MinMax MemStorage::loadMinMax() {
-  return _impl->loadMinMax();
-}
+Id2MinMax MemStorage::loadMinMax() { return _impl->loadMinMax(); }
 
-Id2Time MemStorage::getSyncMap() {
-  return _impl->getSyncMap();
-}
+Id2Time MemStorage::getSyncMap() { return _impl->getSyncMap(); }
