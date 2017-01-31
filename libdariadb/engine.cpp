@@ -420,12 +420,8 @@ public:
   }
 
   Id2Reader interval_cache(const QueryInterval &q) {
-    auto pm = _page_manager.get();
-    auto mm = _memstorage.get();
-    auto am = _wal_manager.get();
-
-    auto memory_mm = mm->loadMinMax();
-    auto sync_map = mm->getSyncMap();
+    auto memory_mm = _memstorage->loadMinMax();
+    auto sync_map = _memstorage->getSyncMap();
 
     IdSet disk_only;
     IdSet mem_only;
@@ -474,7 +470,7 @@ public:
 
       auto disk_readers =
           internal_two_level(disk_q, _page_manager, _wal_manager);
-      auto mm_readers = mm->intervalReader(mem_q);
+      auto mm_readers = _memstorage->intervalReader(mem_q);
 
       Id2ReadersList sub_result;
       for (auto kv : disk_readers) {
@@ -521,8 +517,9 @@ public:
     return internal_two_level(q, _page_manager, _top_level_storage);
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    AsyncTask pm_at = [clbk, q, this](const ThreadInfo &ti) {
+  Id2Reader intervalReader(const QueryInterval &q) {
+    Id2Reader result;
+    AsyncTask pm_at = [q, this, &result](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       if (!try_lock_storage()) {
         return true;
@@ -538,14 +535,21 @@ public:
       this->unlock_storage();
 
       for (auto kv : r) {
-        kv.second->apply(clbk, q);
+        result[kv.first] = kv.second;
       }
-      clbk->is_end();
-
       return false;
     };
 
-    ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto at = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    at->wait();
+    return result;
+  }
+
+  void foreach (const QueryInterval &q, IReaderClb * clbk) {
+    auto r = intervalReader(q);
+    for (auto kv : r) {
+      kv.second->apply(clbk,q);
+    }
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
@@ -719,7 +723,7 @@ void Engine::foreach (const QueryInterval &q, IReaderClb * clbk) {
 }
 
 Id2Reader Engine::intervalReader(const QueryInterval &query) {
-  NOT_IMPLEMENTED;
+  return _impl->intervalReader(query);
 }
 
 void Engine::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
