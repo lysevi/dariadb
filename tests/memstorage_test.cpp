@@ -31,16 +31,18 @@ struct MokChunkWriter : public dariadb::storage::IChunkContainer {
     return false;
   }
   dariadb::storage::ChunkLinkList
-  chunksByIterval(const dariadb::storage::QueryInterval &query) override {
+  linksByIterval(const dariadb::storage::QueryInterval &query) override {
     return dariadb::storage::ChunkLinkList{};
   }
   dariadb::Id2Meas
   valuesBeforeTimePoint(const dariadb::storage::QueryTimePoint &q) override {
     return dariadb::Id2Meas{};
   }
-  void readLinks(const dariadb::storage::QueryInterval &query,
-                 const dariadb::storage::ChunkLinkList &links,
-                 dariadb::storage::IReaderClb *clb) override {}
+  dariadb::Id2Reader intervalReader(const dariadb::storage::QueryInterval &query,
+	  const dariadb::storage::ChunkLinkList &links) override {
+	  return dariadb::Id2Reader();
+  }
+  
 };
 
 struct MocDiskStorage : public dariadb::storage::IMeasWriter {

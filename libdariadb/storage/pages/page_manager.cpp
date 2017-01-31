@@ -6,6 +6,7 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/pages/page_manager.h>
+#include <libdariadb/storage/readers.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -204,7 +205,7 @@ public:
       // std::list<Time> tm;
       // for (auto pname : page_list) {
       //	auto pi =
-      //PageIndex::open(PageIndex::index_name_from_page_name(pname));
+      // PageIndex::open(PageIndex::index_name_from_page_name(pname));
       //	tm.push_back(pi->iheader.minTime);
       //}
       for (auto pname : page_list) {
@@ -229,16 +230,16 @@ public:
     return result;
   }
 
-  void readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                 IReaderClb *clbk) {
-    AsyncTask at = [&query, clbk, &links, this](const ThreadInfo &ti) {
+  Id2Reader intervalReader(const QueryInterval &query,
+                           const ChunkLinkList &links) {
+    Id2ReadersList result;
+    utils::async::Locker result_locker;
+    AsyncTask at = [&query, &links, this, &result,
+                    &result_locker](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
       ChunkLinkList to_read;
 
       for (auto l : links) {
-        if (clbk->is_canceled()) {
-          break;
-        }
         if (to_read.empty()) {
           to_read.push_back(l);
         } else {
@@ -247,7 +248,11 @@ public:
           } else {
             auto pname = to_read.front().page_name;
             Page_Ptr pg = open_page_to_read(pname);
-            pg->readLinks(query, to_read, clbk);
+            auto sub_result = pg->intervalReader(query, to_read);
+            std::lock_guard<utils::async::Locker> lg(result_locker);
+            for (auto kv : sub_result) {
+              result[kv.first].push_back(kv.second);
+            }
             to_read.clear();
             to_read.push_back(l);
           }
@@ -256,7 +261,11 @@ public:
       if (!to_read.empty()) {
         auto pname = to_read.front().page_name;
         auto pg = open_page_to_read(pname);
-        pg->readLinks(query, to_read, clbk);
+        auto sub_result = pg->intervalReader(query, to_read);
+        std::lock_guard<utils::async::Locker> lg(result_locker);
+        for (auto kv : sub_result) {
+          result[kv.first].push_back(kv.second);
+        }
         to_read.clear();
       }
       return false;
@@ -264,6 +273,7 @@ public:
     auto pm_async =
         ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
     pm_async->wait();
+    return MergeSortReader::colapseReaders(result);
   }
 
   std::list<std::string>
@@ -575,7 +585,7 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return impl->minMaxTime(id, minResult, maxResult);
 }
 
-ChunkLinkList PageManager::chunksByIterval(const QueryInterval &query) {
+ChunkLinkList PageManager::linksByIterval(const QueryInterval &query) {
   return impl->chunksByIterval(query);
 }
 
@@ -583,9 +593,9 @@ dariadb::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
   return impl->valuesBeforeTimePoint(q);
 }
 
-void PageManager::readLinks(const QueryInterval &query,
-                            const ChunkLinkList &links, IReaderClb *clb) {
-  impl->readLinks(query, links, clb);
+dariadb::Id2Reader PageManager::intervalReader(const QueryInterval &query,
+                                               const ChunkLinkList &links) {
+  return impl->intervalReader(query, links);
 }
 
 size_t PageManager::files_count() const { return impl->files_count(); }

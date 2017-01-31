@@ -57,10 +57,9 @@ public:
   // ChunkContainer
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) override;
-  EXPORT ChunkLinkList chunksByIterval(const QueryInterval &query) override;
+  EXPORT ChunkLinkList linksByIterval(const QueryInterval &query) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  EXPORT void readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                        IReaderClb *clbk) override;
+  EXPORT Id2Reader intervalReader(const QueryInterval &query, const ChunkLinkList &links) override;
 
   EXPORT void appendChunks(const std::vector<Chunk *> &a, size_t count) override;
 

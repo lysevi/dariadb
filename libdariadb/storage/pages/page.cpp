@@ -2,14 +2,15 @@
 #define _CRT_SECURE_NO_WARNINGS // for fopen
 #define _SCL_SECURE_NO_WARNINGS // for stx::btree in msvc build.
 #endif
+#include <algorithm>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/pages/helpers.h>
 #include <libdariadb/storage/pages/page.h>
+#include <libdariadb/storage/readers.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/exception.h>
-#include <algorithm>
 
 #include <cstring>
 #include <fstream>
@@ -19,16 +20,14 @@
 using namespace dariadb::storage;
 using namespace dariadb;
 
-Page::~Page() {
-  _index = nullptr;
-}
+Page::~Page() { _index = nullptr; }
 
 uint64_t Page::index_file_size(uint32_t chunk_per_storage) {
   return chunk_per_storage * sizeof(IndexReccord) + sizeof(IndexHeader);
 }
 
 Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
-                   uint32_t max_chunk_size, const MeasArray &ma) {
+                      uint32_t max_chunk_size, const MeasArray &ma) {
   auto to_compress = PageInner::splitById(ma);
 
   PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
@@ -41,7 +40,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   }
 
   IndexHeader ihdr;
-  
+
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -64,23 +63,25 @@ Page_Ptr Page::make_page(const std::string &file_name, const PageHeader &phdr) {
   auto res = new Page;
   res->header = phdr;
   res->filename = file_name;
-  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+  res->_index =
+      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
   return Page_Ptr(res);
 }
 
 // COMPACTION
 Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
-                   uint32_t max_chunk_size,
-                   const std::list<std::string> &pages_full_paths) {
+                      uint32_t max_chunk_size,
+                      const std::list<std::string> &pages_full_paths) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
+  
   std::map<uint64_t, ChunkLinkList> links;
   QueryInterval qi({}, 0, MIN_TIME, MAX_TIME);
   for (auto &p_full_path : pages_full_paths) {
-	Page_Ptr p = Page::open(p_full_path);
+    Page_Ptr p = Page::open(p_full_path);
     openned_pages.emplace(std::make_pair(p_full_path, p));
-
-    auto clinks = p->chunksByIterval(qi);
+	
+    auto clinks = p->linksByIterval(qi);
     for (auto &cl : clinks) {
       cl.page_name = p_full_path;
       links[cl.meas_id].push_back(cl);
@@ -106,15 +107,19 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   for (auto &kv : links) {
     auto lst = kv.second;
     std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
-    std::sort(
-        link_vec.begin(), link_vec.end(),
-        [](const ChunkLink &left, const ChunkLink &right) { return left.id < right.id; });
+    std::sort(link_vec.begin(), link_vec.end(),
+              [](const ChunkLink &left, const ChunkLink &right) {
+                return left.id < right.id;
+              });
     stx::btree_map<dariadb::Time, dariadb::Meas> values_map;
 
     for (auto c : link_vec) {
       MList_ReaderClb clb;
       auto p = openned_pages[c.page_name];
-      p->readLinks(qi, {c}, &clb);
+	  auto rdr=p->intervalReader(qi, { c });
+	  for (auto r : rdr) {
+		  r.second->apply(&clb);
+	  }
       for (auto v : clb.mlist) {
         values_map[v.time] = v;
       }
@@ -128,7 +133,8 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
     std::map<Id, MeasArray> all_values;
     all_values[sorted_and_filtered.front().id] = sorted_and_filtered;
 
-    auto compressed_results = PageInner::compressValues(all_values, phdr, max_chunk_size);
+    auto compressed_results =
+        PageInner::compressValues(all_values, phdr, max_chunk_size);
 
     auto page_size = PageInner::writeToFile(file, index_file, phdr, ihdr,
                                             compressed_results, phdr.filesize);
@@ -145,7 +151,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 }
 
 Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
-                   const std::vector<Chunk *> &a, size_t count) {
+                      const std::vector<Chunk *> &a, size_t count) {
   using namespace dariadb::utils::async;
 
   PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
@@ -185,8 +191,8 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
     }
 #endif //  DEBUG
     phdr.max_chunk_id++;
-	phdr.stat.update(chunk_header->stat);
-    
+    phdr.stat.update(chunk_header->stat);
+
     chunk_header->id = phdr.max_chunk_id;
 
     phdr.addeded_chunks++;
@@ -212,7 +218,8 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 #endif //  DEBUG
 
     std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
-    std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), chunk_header->size, file);
+    std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t),
+                chunk_header->size, file);
 
     offset += sizeof(ChunkHeader) + chunk_header->size;
 
@@ -225,7 +232,8 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
   std::fclose(file);
 
-  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
+  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(),
+              index_file);
   std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
   std::fclose(index_file);
 
@@ -237,10 +245,11 @@ Page_Ptr Page::open(std::string file_name) {
   auto res = new Page;
 
   res->filename = file_name;
-  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+  res->_index =
+      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
   res->header = phdr;
-  return Page_Ptr{ res };
+  return Page_Ptr{res};
 }
 
 void Page::restoreIndexFile(const std::string &file_name) {
@@ -252,7 +261,8 @@ void Page::restoreIndexFile(const std::string &file_name) {
 
   res->header = phdr;
   res->update_index_recs(phdr);
-  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+  res->_index =
+      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
   delete res;
 }
 
@@ -327,9 +337,11 @@ void Page::update_index_recs(const PageHeader &phdr) {
   std::fclose(page_io);
 }
 
-bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
-  QueryInterval qi{dariadb::IdArray{id}, 0, this->header.stat.minTime, this->header.stat.maxTime};
-  auto all_chunks = this->chunksByIterval(qi);
+bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
+                      dariadb::Time *maxTime) {
+  QueryInterval qi{dariadb::IdArray{id}, 0, this->header.stat.minTime,
+                   this->header.stat.maxTime};
+  auto all_chunks = this->linksByIterval(qi);
 
   bool result = false;
   if (!all_chunks.empty()) {
@@ -346,7 +358,7 @@ bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *max
   return result;
 }
 
-ChunkLinkList Page::chunksByIterval(const QueryInterval &query) {
+ChunkLinkList Page::linksByIterval(const QueryInterval &query) {
   return _index->get_chunks_links(query.ids, query.from, query.to, query.flag);
 }
 
@@ -371,7 +383,8 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
   ptr->is_owner = true;
   if (!ptr->checkChecksum()) {
     logger_fatal("engine: bad checksum of chunk #", ptr->header->id,
-                 " for measurement id:", ptr->header->meas_id, " page: ", this->filename);
+                 " for measurement id:", ptr->header->meas_id,
+                 " page: ", this->filename);
     return nullptr;
   }
   return ptr;
@@ -379,8 +392,8 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
 
 dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   dariadb::Id2Meas result;
-  auto raw_links =
-      _index->get_chunks_links(q.ids, _index->iheader.stat.minTime, q.time_point, q.flag);
+  auto raw_links = _index->get_chunks_links(q.ids, _index->iheader.stat.minTime,
+                                            q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }
@@ -421,11 +434,13 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   return result;
 }
 
-void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
-                     IReaderClb *clbk) {
+Id2Reader Page::intervalReader(const QueryInterval &query,
+                               const ChunkLinkList &links) {
+
+  Id2ReadersList sub_result;
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
-    return;
+    return Id2Reader();
   }
   auto page_io = std::fopen(filename.c_str(), "rb");
   if (page_io == nullptr) {
@@ -433,26 +448,17 @@ void Page::readLinks(const QueryInterval &query, const ChunkLinkList &links,
   }
   auto indexReccords = _index->readReccords();
   for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
-    if (clbk->is_canceled()) {
-      break;
-    }
     auto _index_it = indexReccords[_ch_links_iterator->index_rec_number];
     Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
     if (search_res == nullptr) {
       continue;
     }
     auto rdr = search_res->getReader();
-    while (!rdr->is_end()) {
-      auto subres = rdr->readNext();
-      if (subres.time > query.to) {
-        break;
-      }
-      if (subres.inQuery(query.ids, query.flag, query.from, query.to)) {
-        clbk->call(subres);
-      }
-    }
+    sub_result[search_res->header->meas_id].push_back(rdr);
   }
   fclose(page_io);
+  Id2Reader result = MergeSortReader::colapseReaders(sub_result);
+  return result;
 }
 
 void Page::appendChunks(const std::vector<Chunk *> &, size_t) {
