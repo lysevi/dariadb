@@ -92,13 +92,9 @@ void check_reader_of_all(MeasList &all, Time from, Time to, Time step,
   for (; it != all.cend(); ++it) {
     auto cur_m = *it;
     if (cur_m.id != cur_id) {
-      if (cur_m.id < cur_id) {
-        throw MAKE_EXCEPTION("(it->id < cur_id)");
-      } else {
         cur_id = cur_m.id;
         cur_val = cur_m.value;
         continue;
-      }
     }
     if (cur_m.value < cur_val) {
       std::cout << cur_m.value << " => " << cur_val << std::endl;

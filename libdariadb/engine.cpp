@@ -583,22 +583,7 @@ public:
     auto a_clbk = std::make_unique<MList_ReaderClb>();
     this->foreach_internal(q, a_clbk.get());
     a_clbk->wait();
-    Id2MSet sub_result;
-    MeasList result;
-
-    mlist2mset(a_clbk->mlist, sub_result);
-
-    for (auto id : q.ids) {
-      auto sublist = sub_result.find(id);
-      if (sublist == sub_result.end()) {
-        continue;
-      }
-      for (auto v : sublist->second) {
-        result.push_back(v);
-      }
-    }
-
-    return result;
+	return a_clbk->mlist;
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {

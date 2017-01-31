@@ -17,11 +17,12 @@ struct BenchmarkSummaryInfo {
   double read_interval_speed;
   double read_timepoint_speed;
   double read_all_time;
+  double foreach_read_all_time;
 
   BenchmarkSummaryInfo() {
     writed = size_t(0);
     write_speed = read_interval_speed = read_timepoint_speed = read_all_time =
-        0.0;
+        foreach_read_all_time = 0.0;
   }
 
   void print() {
@@ -29,7 +30,9 @@ struct BenchmarkSummaryInfo {
               << " per/sec"
               << "\nread interval: " << read_interval_speed << " per/sec"
               << "\nread timepoint: " << read_timepoint_speed << " per/sec"
-              << "\nread all: " << read_all_time << " secs." << std::endl;
+              << "\nread all: " << read_all_time << " secs."
+              << "\nforeach all: " << foreach_read_all_time << " secs."
+              << std::endl;
   }
 };
 

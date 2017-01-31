@@ -272,7 +272,7 @@ void read_all_bench(dariadb_bench::BenchmarkSummaryInfo &summary_info,
   auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
   std::cout << "readed: " << clbk->count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
-  summary_info.read_all_time = elapsed;
+  summary_info.foreach_read_all_time = elapsed;
 
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;
@@ -284,7 +284,7 @@ void read_all_bench(dariadb_bench::BenchmarkSummaryInfo &summary_info,
     elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
     std::cout << "readed: " << readed.size() << std::endl;
     std::cout << "time: " << elapsed << std::endl;
-	
+	summary_info.read_all_time = elapsed;
     std::map<Id, MeasList> _dict;
     for (auto &v : readed) {
       _dict[v.id].push_back(v);
