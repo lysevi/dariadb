@@ -407,23 +407,7 @@ public:
     }
     QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
                           q.to};
-
-    auto pm = _page_manager.get();
-    auto am = _wal_manager.get();
-
-    auto pm_readers = pm->intervalReader(local_q);
-    auto am_readers = am->intervalReader(local_q);
-
-    Id2ReadersList all_readers;
-    for (auto kv : am_readers) {
-      all_readers[kv.first].push_back(kv.second);
-    }
-
-    for (auto kv : pm_readers) {
-      all_readers[kv.first].push_back(kv.second);
-    }
-
-    return MergeSortReader::colapseReaders(all_readers);
+    return internal_two_level(local_q, _page_manager, _wal_manager);
   }
 
   Id2Reader interval_mem_only(const IdSet &ids, const QueryInterval &q) {
@@ -484,27 +468,23 @@ public:
     auto disk_only_readers = interval_disk_only(disk_only, q);
     auto mem_only_readers = interval_mem_only(mem_only, q);
 
-    // TODO read fromd disk one time.
     for (auto id2intervals : queryById) {
       auto disk_q = id2intervals.second.first;
       auto mem_q = id2intervals.second.second;
 
-      auto pm_readers = pm->intervalReader(disk_q);
-      auto am_readers = am->intervalReader(disk_q);
+      auto disk_readers =
+          internal_two_level(disk_q, _page_manager, _wal_manager);
       auto mm_readers = mm->intervalReader(mem_q);
 
       Id2ReadersList sub_result;
-      for (auto kv : am_readers) {
-        sub_result[kv.first].push_back(kv.second);
-      }
-
-      for (auto kv : pm_readers) {
+      for (auto kv : disk_readers) {
         sub_result[kv.first].push_back(kv.second);
       }
 
       for (auto kv : mm_readers) {
         sub_result[kv.first].push_back(kv.second);
       }
+
       auto i2r = MergeSortReader::colapseReaders(sub_result);
       for (auto kv : i2r) {
         result[kv.first] = kv.second;
@@ -521,9 +501,8 @@ public:
   }
 
   /// when strategy!=CACHEs
-  Id2Reader internal_two_level(const QueryInterval &q) {
-    auto pm = _page_manager.get();
-    auto tm = _top_level_storage.get();
+  Id2Reader internal_two_level(const QueryInterval &q, PageManager_ptr pm,
+                               IMeasSource_ptr tm) {
     auto pm_readers = pm->intervalReader(q);
     auto tm_readers = tm->intervalReader(q);
 
@@ -535,12 +514,15 @@ public:
     for (auto kv : pm_readers) {
       all_readers[kv.first].push_back(kv.second);
     }
-
     return MergeSortReader::colapseReaders(all_readers);
   }
 
-  void foreach_internal(const QueryInterval &q, IReaderClb *a_clbk) {
-    AsyncTask pm_at = [a_clbk, q, this](const ThreadInfo &ti) {
+  Id2Reader internal_two_level(const QueryInterval &q) {
+    return internal_two_level(q, _page_manager, _top_level_storage);
+  }
+
+  void foreach (const QueryInterval &q, IReaderClb * clbk) {
+    AsyncTask pm_at = [clbk, q, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       if (!try_lock_storage()) {
         return true;
@@ -552,20 +534,18 @@ public:
       } else {
         r = internal_two_level(q);
       }
-      for (auto kv : r) {
-        kv.second->apply(a_clbk, q);
-      }
 
-      a_clbk->is_end();
       this->unlock_storage();
+
+      for (auto kv : r) {
+        kv.second->apply(clbk, q);
+      }
+      clbk->is_end();
+
       return false;
     };
 
     ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
-  }
-
-  void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    foreach_internal(q, clbk);
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
@@ -581,9 +561,9 @@ public:
 
   MeasList readInterval(const QueryInterval &q) {
     auto a_clbk = std::make_unique<MList_ReaderClb>();
-    this->foreach_internal(q, a_clbk.get());
+    this->foreach (q, a_clbk.get());
     a_clbk->wait();
-	return a_clbk->mlist;
+    return a_clbk->mlist;
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
