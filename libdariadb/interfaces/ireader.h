@@ -2,6 +2,7 @@
 
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/utils/utils.h>
 #include <libdariadb/storage/query_param.h>
 #include <libdariadb/st_exports.h>
 #include <memory>
@@ -11,7 +12,7 @@ namespace dariadb {
 class IReader;
 using Reader_Ptr = std::shared_ptr<IReader>;
 
-class IReader {
+class IReader:public utils::NonCopy {
 public:
   virtual Meas readNext() = 0;
   virtual Meas top() = 0; /// null if isEnd==true

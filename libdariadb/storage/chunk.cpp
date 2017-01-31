@@ -144,30 +144,28 @@ bool Chunk::append(const Meas &m) {
 
 class ChunkReader : public IReader {
 public:
-  ChunkReader() { _top_value_exists = false; }
-  
   Meas readNext() override {
     ENSURE(!is_end());
     if (_is_first) {
       _is_first = false;
-	  _top_value_exists = false;
+      _top_value_exists = false;
       return _chunk->header->first();
     }
     if (_top_value_exists) {
       _top_value_exists = false;
       return _top_value;
     }
-    --count;
-    return _reader->read();
+    --_count;
+    return _compressed_rdr->read();
   }
 
   bool is_end() const override {
-    return count == 0 && !_is_first && _top_value_exists == false;
+    return _count == 0 && !_is_first && _top_value_exists == false;
   }
 
   Meas top() override {
     if (_top_value_exists == false) {
-      if (count != 0 && !_is_first) {
+      if (_count != 0 && !_is_first) {
         _top_value = readNext();
         _top_value_exists = true;
       } else {
@@ -180,38 +178,46 @@ public:
     return _top_value;
   }
 
+  ChunkReader() = delete;
+
+  ChunkReader(size_t count, Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
+              std::shared_ptr<CopmressedReader> compressed_rdr) {
+    _top_value_exists = false;
+    _is_first = true;
+    _count = count;
+    _chunk = c;
+    _bw = bptr;
+    _compressed_rdr = compressed_rdr;
+  }
+
   bool _top_value_exists;
   Meas _top_value;
-  size_t count;
+  size_t _count;
   bool _is_first = true;
   Chunk_Ptr _chunk;
-  std::shared_ptr<ByteBuffer> bw;
-  std::shared_ptr<CopmressedReader> _reader;
+  std::shared_ptr<ByteBuffer> _bw;
+  std::shared_ptr<CopmressedReader> _compressed_rdr;
 };
 
 Reader_Ptr Chunk::getReader() {
-  auto raw_res = new ChunkReader;
-  raw_res->count = this->header->stat.count - 1;
-  raw_res->_chunk = this->shared_from_this();
-  raw_res->_is_first = true;
-  raw_res->bw =
-      std::make_shared<compression::ByteBuffer>(this->bw->get_range());
-  raw_res->bw->reset_pos();
-  raw_res->_reader =
-      std::make_shared<CopmressedReader>(raw_res->bw, this->header->first());
+  auto b_ptr = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
+  auto raw_res = new ChunkReader(
+      this->header->stat.count - 1, shared_from_this(), b_ptr,
+      std::make_shared<CopmressedReader>(b_ptr, this->header->first()));
 
   Reader_Ptr result{raw_res};
+
   if (!header->is_sorted) {
     MeasArray ma(header->stat.count);
     size_t pos = 0;
-    
-	while (!result->is_end()) {
+
+    while (!result->is_end()) {
       auto v = result->readNext();
       ma[pos++] = v;
     }
 
-	std::sort(ma.begin(), ma.end(), meas_time_compare_less());
-	ENSURE(ma.front().time <= ma.back().time);
+    std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+    ENSURE(ma.front().time <= ma.back().time);
 
     FullReader *fr = new FullReader(ma);
     return Reader_Ptr{fr};
