@@ -1,9 +1,8 @@
 #pragma once
 
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/interfaces/ireader.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/bystep/description.h>
-#include <libdariadb/storage/bystep/step_kind.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
@@ -22,7 +21,6 @@ public:
     size_t wal_count;    ///  wal count.
     size_t pages_count;  /// pages count.
     size_t active_works; /// async tasks runned.
-    bystep::Description bystep;
     Dropper::Description dropper;
     memstorage::Description memstorage;
   };
@@ -44,6 +42,7 @@ public:
   EXPORT virtual MeasList readInterval(const QueryInterval &q) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  EXPORT virtual Id2Reader intervalReader(const QueryInterval &query)override;
   EXPORT virtual void foreach (const QueryTimePoint &q, IReaderClb * clbk) override;
 
   EXPORT Time minTime() override;
@@ -68,8 +67,6 @@ public:
   EXPORT static uint16_t format();
   EXPORT static std::string version();
   EXPORT STRATEGY strategy() const;
-
-  EXPORT void setSteps(const Id2Step &m);
 
 protected:
   class Private;

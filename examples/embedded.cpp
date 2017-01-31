@@ -39,11 +39,6 @@ int main(int argc, char **argv) {
 
   auto storage = std::make_unique<dariadb::storage::Engine>(settings);
 
-  // measurement 2 is a bystep value. step == 1 hour
-  dariadb::storage::Id2Step steps;
-  steps[0] = dariadb::storage::STEP_KIND::HOUR;
-  storage->setSteps(steps);
-
   auto m = dariadb::Meas::empty();
   auto start_time = dariadb::timeutil::current_time();
 

@@ -7,7 +7,6 @@
 #include <iostream>
 #include <libdariadb/interfaces/ireader.h>
 #include <libdariadb/storage/bloom_filter.h>
-#include <libdariadb/storage/bystep/step_kind.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/readers.h>
@@ -147,33 +146,6 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     BOOST_CHECK_EQUAL(manifest->get_format(), version);
   }
 
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
-
-BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
-  const std::string storage_path = "testStorage";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-  {
-    dariadb::utils::fs::mkdir(storage_path);
-    auto s = dariadb::storage::Settings::create(storage_path);
-    auto m = dariadb::storage::Manifest::create(s);
-
-    dariadb::storage::Id2Step id2step;
-    dariadb::Id id_val = 0;
-    for (auto i = 0; i < 100; ++i) {
-      auto bs_id = id_val + 100000;
-      id2step[bs_id] = dariadb::storage::STEP_KIND::MINUTE;
-      ++id_val;
-    }
-    m->insert_id2step(id2step);
-    id2step = m->read_id2step();
-    BOOST_CHECK_EQUAL(id2step.size(), size_t(100));
-    BOOST_CHECK_EQUAL(id2step[100000], dariadb::storage::STEP_KIND::MINUTE);
-  }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }

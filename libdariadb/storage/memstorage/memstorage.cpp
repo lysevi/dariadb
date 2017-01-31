@@ -364,6 +364,10 @@ bool MemStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
+Id2Reader MemStorage::intervalReader(const QueryInterval &q){
+	return _impl->intervalReader(q);
+}
+
 void MemStorage::foreach (const QueryInterval &q, IReaderClb * clbk) {
   _impl->foreach (q, clbk);
 }

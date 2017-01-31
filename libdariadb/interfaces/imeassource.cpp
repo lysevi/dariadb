@@ -17,7 +17,6 @@ void IMeasSource::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
 MeasList IMeasSource::readInterval(const QueryInterval &q) {
   auto clbk = std::make_unique<MList_ReaderClb>();
   this->foreach (q, clbk.get());
-
   Id2MSet sub_result;
   for (auto v : clbk->mlist) {
     sub_result[v.id].emplace(v);

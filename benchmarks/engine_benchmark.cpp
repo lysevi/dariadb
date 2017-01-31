@@ -21,7 +21,6 @@ bool readers_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
-bool disable_bystep_benchmark = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
@@ -39,21 +38,6 @@ public:
   }
   std::atomic<size_t> count;
   bool is_end_called;
-};
-
-class BenchWriteStepCallback : public IReaderClb {
-public:
-  BenchWriteStepCallback(dariadb::Id target_id, Engine *raw_ptr) {
-    _target_id = target_id;
-    _raw_ptr = raw_ptr;
-  }
-  void call(const dariadb::Meas &v) override {
-    dariadb::Meas value = v;
-    value.id = _target_id;
-    _raw_ptr->append(value);
-  }
-  dariadb::Id _target_id;
-  Engine *_raw_ptr;
 };
 
 void parse_cmdline(int argc, char *argv[]) {
@@ -74,9 +58,6 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("memory-limit",
       po::value<size_t>(&memory_limit)->default_value(memory_limit),
       "allocation area limit  in megabytes when strategy=MEMORY");
-  aos("disable-bystep-benchmark",
-      po::value<bool>(&disable_bystep_benchmark)
-          ->default_value(disable_bystep_benchmark));
 
   po::variables_map vm;
   try {
@@ -291,6 +272,7 @@ void read_all_bench(dariadb_bench::BenchmarkSummaryInfo &summary_info,
   auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
   std::cout << "readed: " << clbk->count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
+  summary_info.read_all_time = elapsed;
 
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;
@@ -302,12 +284,12 @@ void read_all_bench(dariadb_bench::BenchmarkSummaryInfo &summary_info,
     elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
     std::cout << "readed: " << readed.size() << std::endl;
     std::cout << "time: " << elapsed << std::endl;
-
+	
     std::map<Id, MeasList> _dict;
     for (auto &v : readed) {
       _dict[v.id].push_back(v);
     }
-	summary_info.read_all_time = elapsed;
+	
     if (readed.size() != dariadb_bench::all_writes) {
       std::cout << "expected: " << dariadb_bench::all_writes
                 << " get:" << clbk->count << std::endl;
@@ -483,116 +465,6 @@ int main(int argc, char *argv[]) {
           if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
               pages_before <= pages_after) {
             THROW_EXCEPTION("pages_before <= pages_after");
-          }
-        }
-      }
-
-      {
-        if (!disable_bystep_benchmark) {
-          std::cout << "==> flush before bystep..." << std::endl;
-          raw_ptr->flush();
-          std::cout << "==> load raw id to bystep..." << std::endl;
-          dariadb::storage::Id2Step id2s;
-          id2s[100000] = dariadb::storage::STEP_KIND::SECOND;
-          id2s[100001] = dariadb::storage::STEP_KIND::MINUTE;
-          id2s[100002] = dariadb::storage::STEP_KIND::HOUR;
-          id2s[100003] = dariadb::storage::STEP_KIND::SECOND;
-          id2s[100004] = dariadb::storage::STEP_KIND::SECOND;
-          raw_ptr->setSteps(id2s);
-          dariadb::Time minTime, maxTime;
-          if (!raw_ptr->minMaxTime(0, &minTime, &maxTime)) {
-            THROW_EXCEPTION("id 0 not found.");
-          }
-          dariadb::storage::QueryInterval qi(IdArray(), 0, minTime, maxTime);
-          qi.ids.resize(1);
-          qi.ids[0] = 0;
-          auto all_values = raw_ptr->readInterval(qi);
-          //{
-          //	std::cout << "==> write MILLISECOND value" << std::endl;
-          //	auto start = clock();
-          //	for (auto &v : all_values) {
-          //		v.id = 100004;
-          //		raw_ptr->append(v);
-          //	}
-          //	auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-          //	std::cout << "write time: " << elapsed << std::endl;
-          //}
-          {
-            std::cout << "==> write SECOND value" << std::endl;
-            auto start = clock();
-            for (auto &v : all_values) {
-              v.id = 100000;
-              raw_ptr->append(v);
-            }
-            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "write time: " << elapsed << std::endl;
-
-            start = clock();
-            qi.ids[0] = 100000;
-            auto readed = raw_ptr->readInterval(qi);
-            elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "read interval time: " << elapsed
-                      << " readed:" << readed.size() << std::endl;
-          }
-          {
-            std::cout << "==> write MINUTE value" << std::endl;
-            auto start = clock();
-            for (auto &v : all_values) {
-              v.id = 100001;
-              raw_ptr->append(v);
-            }
-            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "write time: " << elapsed << std::endl;
-            start = clock();
-            qi.ids[0] = 100001;
-            auto readed = raw_ptr->readInterval(qi);
-            elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "read interval time: " << elapsed
-                      << " readed:" << readed.size() << std::endl;
-          }
-
-          {
-            std::cout << "==> write HOUR value" << std::endl;
-            auto start = clock();
-            for (auto &v : all_values) {
-              v.id = 100002;
-              raw_ptr->append(v);
-            }
-            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "write time: " << elapsed << std::endl;
-
-            start = clock();
-            qi.ids[0] = 100002;
-            auto readed = raw_ptr->readInterval(qi);
-            elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "read interval time: " << elapsed
-                      << " readed:" << readed.size() << std::endl;
-          }
-          {
-            BenchWriteStepCallback *clbk =
-                new BenchWriteStepCallback(100003, raw_ptr);
-            std::cout << "==> clbk bystep value (bystep => bystep)"
-                      << std::endl;
-            qi.ids[0] = 100002;
-            auto start = clock();
-            raw_ptr->foreach (qi, clbk);
-            clbk->wait();
-            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "write time: " << elapsed << std::endl;
-            delete clbk;
-          }
-
-          {
-            BenchWriteStepCallback *clbk =
-                new BenchWriteStepCallback(100004, raw_ptr);
-            std::cout << "==> clbk bystep value (raw => bystep)" << std::endl;
-            qi.ids[0] = 0;
-            auto start = clock();
-            raw_ptr->foreach (qi, clbk);
-            clbk->wait();
-            auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-            std::cout << "write time: " << elapsed << std::endl;
-            delete clbk;
           }
         }
       }

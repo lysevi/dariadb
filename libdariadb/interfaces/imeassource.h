@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/interfaces/icallbacks.h>
+#include <libdariadb/interfaces/ireader.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/status.h>
@@ -18,6 +19,7 @@ public:
   virtual bool minMaxTime(Id id, Time *minResult, Time *maxResult) = 0;
   virtual void foreach (const QueryInterval &q, IReaderClb * clbk) = 0;
   virtual void foreach (const QueryTimePoint &q, IReaderClb * clbk);
+  virtual Id2Reader intervalReader(const QueryInterval &query)=0;
   EXPORT virtual MeasList readInterval(const QueryInterval &q);
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) = 0;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) = 0;

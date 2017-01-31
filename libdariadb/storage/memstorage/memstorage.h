@@ -30,6 +30,7 @@ public:
   EXPORT virtual Time maxTime() override;
   EXPORT virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                  dariadb::Time *maxResult) override;
+  EXPORT virtual Id2Reader intervalReader(const QueryInterval &q)override;
   EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
