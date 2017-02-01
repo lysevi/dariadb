@@ -400,17 +400,17 @@ public:
     }
     return result;
   }
-  /// when strategy=CACHE
-  Id2Reader interval_disk_only(const IdSet &ids, const QueryInterval &q) {
+  
+  Id2Reader interval_readers_from_disk_only(const IdSet &ids, const QueryInterval &q) {
     if (ids.empty()) {
       return Id2Reader();
     }
     QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
                           q.to};
-    return internal_two_level(local_q, _page_manager, _wal_manager);
+    return internal_readers_two_level(local_q, _page_manager, _wal_manager);
   }
 
-  Id2Reader interval_mem_only(const IdSet &ids, const QueryInterval &q) {
+  Id2Reader interval_readers_from_mem_only(const IdSet &ids, const QueryInterval &q) {
     if (ids.empty()) {
       return Id2Reader();
     }
@@ -418,8 +418,8 @@ public:
                           q.to};
     return _memstorage->intervalReader(q);
   }
-
-  Id2Reader interval_cache(const QueryInterval &q) {
+  /// when strategy=CACHE
+  Id2Reader interval_readers_when_cache(const QueryInterval &q) {
     auto memory_mm = _memstorage->loadMinMax();
     auto sync_map = _memstorage->getSyncMap();
 
@@ -461,15 +461,15 @@ public:
       }
     }
     Id2Reader result;
-    auto disk_only_readers = interval_disk_only(disk_only, q);
-    auto mem_only_readers = interval_mem_only(mem_only, q);
+    auto disk_only_readers = interval_readers_from_disk_only(disk_only, q);
+    auto mem_only_readers = interval_readers_from_mem_only(mem_only, q);
 
     for (auto id2intervals : queryById) {
       auto disk_q = id2intervals.second.first;
       auto mem_q = id2intervals.second.second;
 
       auto disk_readers =
-          internal_two_level(disk_q, _page_manager, _wal_manager);
+          internal_readers_two_level(disk_q, _page_manager, _wal_manager);
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
       Id2ReadersList sub_result;
@@ -497,7 +497,7 @@ public:
   }
 
   /// when strategy!=CACHEs
-  Id2Reader internal_two_level(const QueryInterval &q, PageManager_ptr pm,
+  Id2Reader internal_readers_two_level(const QueryInterval &q, PageManager_ptr pm,
                                IMeasSource_ptr tm) {
     auto pm_readers = pm->intervalReader(q);
     auto tm_readers = tm->intervalReader(q);
@@ -513,8 +513,8 @@ public:
     return MergeSortReader::colapseReaders(all_readers);
   }
 
-  Id2Reader internal_two_level(const QueryInterval &q) {
-    return internal_two_level(q, _page_manager, _top_level_storage);
+  Id2Reader internal_readers_two_level(const QueryInterval &q) {
+    return internal_readers_two_level(q, _page_manager, _top_level_storage);
   }
 
   Id2Reader intervalReader(const QueryInterval &q) {
@@ -527,9 +527,9 @@ public:
 
       Id2Reader r;
       if (this->strategy() == STRATEGY::CACHE) {
-        r = interval_cache(q);
+        r = interval_readers_when_cache(q);
       } else {
-        r = internal_two_level(q);
+        r = internal_readers_two_level(q);
       }
 
       this->unlock_storage();
@@ -548,8 +548,9 @@ public:
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     auto r = intervalReader(q);
     for (auto kv : r) {
-      kv.second->apply(clbk,q);
+      kv.second->apply(clbk, q);
     }
+	clbk->is_end();
   }
 
   void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
