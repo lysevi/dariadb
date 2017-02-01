@@ -74,13 +74,13 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
                       const std::list<std::string> &pages_full_paths) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
-  
+
   std::map<uint64_t, ChunkLinkList> links;
   QueryInterval qi({}, 0, MIN_TIME, MAX_TIME);
   for (auto &p_full_path : pages_full_paths) {
     Page_Ptr p = Page::open(p_full_path);
     openned_pages.emplace(std::make_pair(p_full_path, p));
-	
+
     auto clinks = p->linksByIterval(qi);
     for (auto &cl : clinks) {
       cl.page_name = p_full_path;
@@ -116,10 +116,10 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
     for (auto c : link_vec) {
       MList_ReaderClb clb;
       auto p = openned_pages[c.page_name];
-	  auto rdr=p->intervalReader(qi, { c });
-	  for (auto r : rdr) {
-		  r.second->apply(&clb);
-	  }
+      auto rdr = p->intervalReader(qi, {c});
+      for (auto r : rdr) {
+        r.second->apply(&clb);
+      }
       for (auto v : clb.mlist) {
         values_map[v.time] = v;
       }
@@ -284,6 +284,10 @@ IndexHeader Page::readIndexHeader(std::string ifile) {
   return PageIndex::readIndexHeader(ifile);
 }
 
+ChunkLinkList Page::linksByIterval(const QueryInterval &qi) {
+  return _index->get_chunks_links(qi.ids, qi.flag, qi.to, qi.flag);
+}
+
 bool Page::checksum() {
   using dariadb::timeutil::to_string;
   logger_info("engine: checksum page ", this->filename);
@@ -358,10 +362,6 @@ bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
   return result;
 }
 
-ChunkLinkList Page::linksByIterval(const QueryInterval &query) {
-  return _index->get_chunks_links(query.ids, query.from, query.to, query.flag);
-}
-
 Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
   std::fseek(page_io, offset, SEEK_SET);
   ChunkHeader *cheader = new ChunkHeader;
@@ -432,6 +432,10 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
   fclose(page_io);
   return result;
+}
+Id2Reader Page::intervalReader(const QueryInterval &query) {
+  auto links = linksByIterval(query);
+  return intervalReader(query, links);
 }
 
 Id2Reader Page::intervalReader(const QueryInterval &query,

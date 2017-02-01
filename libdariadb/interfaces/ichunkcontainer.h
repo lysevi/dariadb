@@ -30,12 +30,8 @@ class IChunkContainer : public IChunkStorage {
 public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;
-  virtual ChunkLinkList linksByIterval(const QueryInterval &query) = 0;
   virtual Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) = 0;
-  virtual Id2Reader intervalReader(const QueryInterval &query,
-                                   const ChunkLinkList &links) = 0;
-
-  EXPORT virtual Id2Reader intervalReader(const QueryInterval &query);
+  virtual Id2Reader intervalReader(const QueryInterval &query) = 0;
   EXPORT virtual void foreach (const QueryInterval &query, IReaderClb * clb);
   EXPORT IChunkContainer();
   EXPORT virtual ~IChunkContainer();

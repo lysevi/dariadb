@@ -173,101 +173,44 @@ public:
     return pg;
   }
 
-  ChunkLinkList chunksByIterval(const QueryInterval &query) {
-    auto pred = [&query](const IndexHeader &hdr) {
-      auto interval_check(
-          (hdr.stat.minTime >= query.from && hdr.stat.maxTime <= query.to) ||
-          (utils::inInterval(query.from, query.to, hdr.stat.minTime)) ||
-          (utils::inInterval(query.from, query.to, hdr.stat.maxTime)) ||
-          (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.from)) ||
-          (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.to)));
-      if (interval_check) {
-        for (auto id : query.ids) {
-          if (storage::bloom_check(hdr.id_bloom, id) &&
-              (query.flag == Flag(0) ||
-               storage::bloom_check(hdr.stat.flag_bloom, query.flag))) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-    ChunkLinkList result;
+  Id2Reader intervalReader(const QueryInterval &query) {
+	  auto pred = [&query](const IndexHeader &hdr) {
+		  auto interval_check(
+			  (hdr.stat.minTime >= query.from && hdr.stat.maxTime <= query.to) ||
+			  (utils::inInterval(query.from, query.to, hdr.stat.minTime)) ||
+			  (utils::inInterval(query.from, query.to, hdr.stat.maxTime)) ||
+			  (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.from)) ||
+			  (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.to)));
+		  if (interval_check) {
+			  for (auto id : query.ids) {
+				  if (storage::bloom_check(hdr.id_bloom, id) &&
+					  (query.flag == Flag(0) ||
+						  storage::bloom_check(hdr.stat.flag_bloom, query.flag))) {
+					  return true;
+				  }
+			  }
+		  }
+		  return false;
+	  };
 
-    AsyncTask at = [query, &result, this, &pred](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-
-      auto page_list =
-          this->pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
-
-      ////TODO remove check
-      // Time prev_t = MIN_TIME;
-      // std::list<Time> tm;
-      // for (auto pname : page_list) {
-      //	auto pi =
-      // PageIndex::open(PageIndex::index_name_from_page_name(pname));
-      //	tm.push_back(pi->iheader.minTime);
-      //}
-      for (auto pname : page_list) {
-        auto pi = PageIndex::open(PageIndex::index_name_from_page_name(pname));
-        // if (pi->iheader.minTime < prev_t && prev_t!=MIN_TIME) {//TODO remove
-        // check
-        //	THROW_EXCEPTION("logic error")
-        //}
-        // prev_t = pi->iheader.minTime;
-        auto sub_result =
-            pi->get_chunks_links(query.ids, query.from, query.to, query.flag);
-        for (auto s : sub_result) {
-          s.page_name = pname;
-          result.push_back(s);
-        }
-      }
-      return false;
-    };
-    auto pm_async =
-        ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-    pm_async->wait();
-    return result;
-  }
-
-  Id2Reader intervalReader(const QueryInterval &query,
-                           const ChunkLinkList &links) {
     Id2ReadersList result;
     utils::async::Locker result_locker;
-    AsyncTask at = [&query, &links, this, &result,
-                    &result_locker](const ThreadInfo &ti) {
+
+    AsyncTask at = [&query, this, &result,
+                    &result_locker, pred](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
       ChunkLinkList to_read;
+	  
+	  auto page_list = pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
 
-      for (auto l : links) {
-        if (to_read.empty()) {
-          to_read.push_back(l);
-        } else {
-          if (l.page_name == to_read.front().page_name) {
-            to_read.push_back(l);
-          } else {
-            auto pname = to_read.front().page_name;
-            Page_Ptr pg = open_page_to_read(pname);
-            auto sub_result = pg->intervalReader(query, to_read);
-            std::lock_guard<utils::async::Locker> lg(result_locker);
-            for (auto kv : sub_result) {
-              result[kv.first].push_back(kv.second);
-            }
-            to_read.clear();
-            to_read.push_back(l);
-          }
-        }
-      }
-      if (!to_read.empty()) {
-        auto pname = to_read.front().page_name;
-        auto pg = open_page_to_read(pname);
-        auto sub_result = pg->intervalReader(query, to_read);
-        std::lock_guard<utils::async::Locker> lg(result_locker);
-        for (auto kv : sub_result) {
-          result[kv.first].push_back(kv.second);
-        }
-        to_read.clear();
-      }
+	  for (auto pname : page_list) {
+		  auto p = Page::open(pname);
+		  auto sub_result = p->intervalReader(query);
+		  for (auto kv : sub_result) {
+			  result[kv.first].push_back(kv.second);
+		  }
+	  }
+     
       return false;
     };
     auto pm_async =
@@ -585,17 +528,12 @@ bool PageManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return impl->minMaxTime(id, minResult, maxResult);
 }
 
-ChunkLinkList PageManager::linksByIterval(const QueryInterval &query) {
-  return impl->chunksByIterval(query);
-}
-
 dariadb::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
   return impl->valuesBeforeTimePoint(q);
 }
 
-dariadb::Id2Reader PageManager::intervalReader(const QueryInterval &query,
-                                               const ChunkLinkList &links) {
-  return impl->intervalReader(query, links);
+dariadb::Id2Reader PageManager::intervalReader(const QueryInterval &query) {
+  return impl->intervalReader(query);
 }
 
 size_t PageManager::files_count() const { return impl->files_count(); }

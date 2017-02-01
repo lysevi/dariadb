@@ -30,17 +30,12 @@ struct MokChunkWriter : public dariadb::storage::IChunkContainer {
                   dariadb::Time *maxResult) override {
     return false;
   }
-  dariadb::storage::ChunkLinkList
-  linksByIterval(const dariadb::storage::QueryInterval &query) override {
-    return dariadb::storage::ChunkLinkList{};
-  }
   dariadb::Id2Meas
   valuesBeforeTimePoint(const dariadb::storage::QueryTimePoint &q) override {
     return dariadb::Id2Meas{};
   }
   dariadb::Id2Reader
-  intervalReader(const dariadb::storage::QueryInterval &query,
-                 const dariadb::storage::ChunkLinkList &links) override {
+  intervalReader(const dariadb::storage::QueryInterval &query) override {
     return dariadb::Id2Reader();
   }
 };

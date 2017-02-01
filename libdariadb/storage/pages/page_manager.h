@@ -21,10 +21,8 @@ public:
   // ChunkContainer
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) override;
-  EXPORT ChunkLinkList linksByIterval(const QueryInterval &query) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  using IChunkContainer::intervalReader;
-  EXPORT Id2Reader intervalReader(const QueryInterval &query, const ChunkLinkList &links) override;
+  EXPORT Id2Reader intervalReader(const QueryInterval &query) override;
 
   EXPORT size_t files_count() const;
   EXPORT size_t chunks_in_cur_page() const;
