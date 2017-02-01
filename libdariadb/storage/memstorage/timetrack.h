@@ -41,6 +41,8 @@ struct TimeTrack : public IMeasStorage,
   void rereadMinMax();
   bool create_new_chunk(const Meas &value);
 
+  MemChunk_Ptr get_target_to_replace_from_index(const Time t);
+  
   MemChunkAllocator *_allocator;
   Id _meas_id;
   MeasMinMax _min_max;
@@ -48,8 +50,8 @@ struct TimeTrack : public IMeasStorage,
   Time _step;
   MemChunk_Ptr _cur_chunk;
   utils::async::Locker _locker;
-  stx::btree_map<Time, MemChunk_Ptr> _index;
-  // std::map<Time, MemChunk_Ptr> _index;
+  //stx::btree_map<Time, MemChunk_Ptr> _index;
+  std::map<Time, MemChunk_Ptr> _index;
   MemoryChunkContainer *_mcc;
   bool is_locked_to_drop;
 };

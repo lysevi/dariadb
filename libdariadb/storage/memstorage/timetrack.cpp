@@ -71,34 +71,31 @@ Status TimeTrack::append(const Meas &value) {
 }
 
 void TimeTrack::append_to_past(const Meas &value) {
-
+  auto is_cur_chunk = false;
   MemChunk_Ptr target_to_replace = nullptr;
-  { // find target chunk in index.
-    auto end = _index.upper_bound(value.time);
-    auto begin = _index.lower_bound(value.time);
-    if (end != _index.end()) {
-      ++end;
-    }
 
-    auto it = begin;
-    for (; it != end; ++it) {
-      if (it == _index.end()) {
-        break;
-      }
-      auto c = it->second;
-
-      if (utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime,
-                            value.time)) {
-        target_to_replace = c;
-        break;
-      }
-    }
-    ENSURE(target_to_replace != nullptr);
-    _index.erase(it);
+  // find target chunk.
+  if (_index.empty() || _cur_chunk->header->stat.minTime < value.time) {
+    target_to_replace = _cur_chunk;
+    is_cur_chunk = true;
+    ENSURE(target_to_replace.use_count() <= long(3));
+  } else {
+    target_to_replace = get_target_to_replace_from_index(value.time);
   }
 
-  MeasSet mset;
+  ENSURE(target_to_replace != nullptr);
+  MemChunk_Ptr new_chunk = nullptr;
 
+  MeasSet mset;
+  if (is_cur_chunk) {
+    _cur_chunk = nullptr;
+  } else {
+    _index.erase(target_to_replace->header->stat.maxTime);
+  }
+
+  if (target_to_replace->_is_from_pool) {
+    _mcc->freeChunk(target_to_replace);
+  }
   /// unpack and sort.
   auto rdr = target_to_replace->getReader();
   while (!rdr->is_end()) {
@@ -112,14 +109,6 @@ void TimeTrack::append_to_past(const Meas &value) {
 
   mset.insert(value);
 
-  if (target_to_replace->_is_from_pool) {
-    _mcc->freeChunk(target_to_replace);
-  }
-  auto is_cur_chunk = false;
-  if (_cur_chunk == target_to_replace) {
-    _cur_chunk = nullptr;
-    is_cur_chunk = true;
-  }
   /// need to leak detection.
   ENSURE(target_to_replace.use_count() == long(1));
   auto old_chunk_size = target_to_replace->header->size;
@@ -128,13 +117,14 @@ void TimeTrack::append_to_past(const Meas &value) {
   MeasArray mar{mset.begin(), mset.end()};
   ENSURE(mar.front().time <= mar.back().time);
 
-  auto buffer_size = old_chunk_size + sizeof(Meas);
+  auto buffer_size = old_chunk_size + sizeof(Meas) * 2;
   uint8_t *new_buffer = new uint8_t[buffer_size];
   std::fill_n(new_buffer, buffer_size, uint8_t(0));
   ChunkHeader *hdr = new ChunkHeader;
 
-  MemChunk_Ptr new_chunk{
+  new_chunk = MemChunk_Ptr{
       new MemChunk(false, hdr, new_buffer, buffer_size, mar.front())};
+  new_chunk->_track = this;
   for (size_t i = 1; i < mar.size(); ++i) {
     auto v = mar[i];
     auto status = new_chunk->append(v);
@@ -142,10 +132,54 @@ void TimeTrack::append_to_past(const Meas &value) {
       THROW_EXCEPTION("logic error.");
     }
   }
-  _index.insert(std::make_pair(new_chunk->header->stat.maxTime, new_chunk));
+
   if (is_cur_chunk) {
     _cur_chunk = new_chunk;
+  } else {
+    _index.insert(std::make_pair(new_chunk->header->stat.maxTime, new_chunk));
   }
+}
+
+MemChunk_Ptr TimeTrack::get_target_to_replace_from_index(const Time t) {
+  using utils::inInterval;
+
+  MemChunk_Ptr target_to_replace = nullptr;
+
+  std::vector<MemChunk_Ptr> potential_targets;
+  potential_targets.reserve(_index.size());
+  if (_index.size() == 1) {
+    potential_targets.push_back(_index.begin()->second);
+  } else {
+    auto end = _index.upper_bound(t);
+    auto begin = _index.lower_bound(t);
+    if (end != _index.end()) {
+      ++end;
+    }
+    for (auto it = begin; it != end; ++it) {
+      potential_targets.push_back(it->second);
+    }
+  }
+
+  if (potential_targets.size() == size_t(1)) {
+    target_to_replace = potential_targets.front();
+  } else {
+    for (size_t i = 0;; ++i) {
+      auto next = potential_targets[i + 1];
+      auto c = potential_targets[i];
+
+      if (next->header->stat.minTime > t ||
+          inInterval(c->header->stat.minTime, c->header->stat.maxTime, t)) {
+        target_to_replace = c;
+        break;
+      }
+      if (i == potential_targets.size() - 1) {
+        target_to_replace = potential_targets.back();
+      }
+    }
+  }
+
+  ENSURE(target_to_replace != nullptr);
+  return target_to_replace;
 }
 
 void TimeTrack::flush() {}
@@ -213,7 +247,6 @@ Id2Reader TimeTrack::intervalReader(const QueryInterval &q) {
   if (readers.empty()) {
     return Id2Reader();
   }
-
   Reader_Ptr msr{new MergeSortReader(readers)};
   Reader_Ptr result{new MemTrackReader(msr, this->shared_from_this())};
   Id2Reader i2r;

@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
 
     auto ms = dariadb::storage::MemStorage::create(_engine_env, size_t(0));
 
-    dariadb_test::storage_test_check(ms.get(), 0, 100, 1, false);
+    dariadb_test::storage_test_check(ms.get(), 0, 100, 1, false, true);
   }
   dariadb::utils::async::ThreadManager::stop();
   if (dariadb::utils::fs::path_exists(storage_path)) {
