@@ -1,6 +1,7 @@
 v0.3.0
 =====
 - Remove bystep storage engine.
+- Accept unordered data.
 
 v0.2.0
 =====

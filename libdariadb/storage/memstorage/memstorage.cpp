@@ -89,7 +89,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       _all_tracks_locker.unlock_shared();
     }
 
-    while (target_track->append(value) != Status(1, 0)) {
+    while (target_track->append(value) != Status(1, 0) && !_drop_stop) {
       _drop_cond.notify_all();
     }
 
@@ -292,8 +292,19 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   void addChunk(MemChunk_Ptr &chunk) override {
     ENSURE(chunk->_a_data.position < _chunks.size());
+    ENSURE(chunk->_is_from_pool);
 
     _chunks[chunk->_a_data.position] = chunk;
+    if (is_time_to_drop()) {
+      _drop_cond.notify_all();
+    }
+  }
+
+  void freeChunk(MemChunk_Ptr &chunk) {
+    ENSURE(chunk->_a_data.position < _chunks.size());
+    ENSURE(chunk->_is_from_pool);
+
+    _chunks[chunk->_a_data.position] = nullptr;
     if (is_time_to_drop()) {
       _drop_cond.notify_all();
     }
@@ -364,8 +375,8 @@ bool MemStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-Id2Reader MemStorage::intervalReader(const QueryInterval &q){
-	return _impl->intervalReader(q);
+Id2Reader MemStorage::intervalReader(const QueryInterval &q) {
+  return _impl->intervalReader(q);
 }
 
 void MemStorage::foreach (const QueryInterval &q, IReaderClb * clbk) {

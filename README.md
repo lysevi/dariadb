@@ -24,7 +24,7 @@
   - memory - all values stored in memory and dropped to disk when memory limit is ended.
   - cache - all values stored in memory with async writes to disk.
 * LSM-like storage struct with three layers:
-  - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'fast write').
+  - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'wal').
   - Old values stored in compressed block for better disk space usage.
 * High write speed:
   -  as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
@@ -38,7 +38,6 @@
 * Compaction old data with filtration support:
   - in engine api.
   - in network protocol.
-* By step storage: for values with predefined write interval (per millisecond, second, minute, hour).
 
 # Dependencies
 * Boost 1.54.0 or higher: system, filesystem, date_time, unit_test_framework(to build tests), program_options, asio and regex(for server only)

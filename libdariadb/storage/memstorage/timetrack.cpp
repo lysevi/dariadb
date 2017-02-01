@@ -8,6 +8,24 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
+struct MemTrackReader : dariadb::IReader {
+  MemTrackReader(const Reader_Ptr &r, const TimeTrack_ptr &track) {
+    _r = r;
+    _track = track;
+    ENSURE(track != nullptr);
+    ENSURE(r != nullptr);
+    _track->is_locked_to_drop = true;
+  }
+
+  ~MemTrackReader() { _track->is_locked_to_drop = false; }
+  Meas readNext() override { return _r->readNext(); }
+
+  Meas top() override { return _r->top(); }
+  bool is_end() const override { return _r->is_end(); }
+  Reader_Ptr _r;
+  TimeTrack_ptr _track;
+};
+
 TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
                      MemChunkAllocator *allocator) {
   _allocator = allocator;
@@ -43,16 +61,91 @@ Status TimeTrack::append(const Meas &value) {
         return Status(0, 1);
       } else {
         updateMinMax(value);
-        return Status(1, 0);
       }
     }
-  } else {
-    logger_fatal("engine: memstorage - id:", this->_meas_id,
-                 ", can't write to past.");
-    return Status(1, 1);
+  } else { // insertion to past
+    append_to_past(value);
   }
   updateMinMax(value);
   return Status(1, 0);
+}
+
+void TimeTrack::append_to_past(const Meas &value) {
+
+  MemChunk_Ptr target_to_replace = nullptr;
+  { // find target chunk in index.
+    auto end = _index.upper_bound(value.time);
+    auto begin = _index.lower_bound(value.time);
+    if (end != _index.end()) {
+      ++end;
+    }
+
+    auto it = begin;
+    for (; it != end; ++it) {
+      if (it == _index.end()) {
+        break;
+      }
+      auto c = it->second;
+
+      if (utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime,
+                            value.time)) {
+        target_to_replace = c;
+        break;
+      }
+    }
+    ENSURE(target_to_replace != nullptr);
+    _index.erase(it);
+  }
+
+  MeasSet mset;
+
+  /// unpack and sort.
+  auto rdr = target_to_replace->getReader();
+  while (!rdr->is_end()) {
+    auto v = rdr->readNext();
+    if (v.time == value.time) {
+      continue;
+    }
+    mset.insert(v);
+  }
+  rdr = nullptr;
+
+  mset.insert(value);
+
+  if (target_to_replace->_is_from_pool) {
+    _mcc->freeChunk(target_to_replace);
+  }
+  auto is_cur_chunk = false;
+  if (_cur_chunk == target_to_replace) {
+    _cur_chunk = nullptr;
+    is_cur_chunk = true;
+  }
+  /// need to leak detection.
+  ENSURE(target_to_replace.use_count() == long(1));
+  auto old_chunk_size = target_to_replace->header->size;
+  target_to_replace = nullptr;
+
+  MeasArray mar{mset.begin(), mset.end()};
+  ENSURE(mar.front().time <= mar.back().time);
+
+  auto buffer_size = old_chunk_size + sizeof(Meas);
+  uint8_t *new_buffer = new uint8_t[buffer_size];
+  std::fill_n(new_buffer, buffer_size, uint8_t(0));
+  ChunkHeader *hdr = new ChunkHeader;
+
+  MemChunk_Ptr new_chunk{
+      new MemChunk(false, hdr, new_buffer, buffer_size, mar.front())};
+  for (int i = 1; i < mar.size(); ++i) {
+    auto v = mar[i];
+    auto status = new_chunk->append(v);
+    if (!status) {
+      THROW_EXCEPTION("logic error.");
+    }
+  }
+  _index.insert(std::make_pair(new_chunk->header->stat.maxTime, new_chunk));
+  if (is_cur_chunk) {
+    _cur_chunk = new_chunk;
+  }
 }
 
 void TimeTrack::flush() {}
@@ -80,24 +173,6 @@ bool TimeTrack::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   }
   return true;
 }
-
-struct MemTrackReader : dariadb::IReader {
-  MemTrackReader(const Reader_Ptr &r, const TimeTrack_ptr &track) {
-    _r = r;
-    _track = track;
-    ENSURE(track != nullptr);
-    ENSURE(r != nullptr);
-    _track->is_locked_to_drop = true;
-  }
-
-  ~MemTrackReader() { _track->is_locked_to_drop = false; }
-  Meas readNext() override { return _r->readNext(); }
-
-  Meas top() override { return _r->top(); }
-  bool is_end() const override { return _r->is_end(); }
-  Reader_Ptr _r;
-  TimeTrack_ptr _track;
-};
 
 bool chunkInQuery(const QueryInterval &q, const Chunk_Ptr &c) {
   if (utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime,
@@ -127,7 +202,6 @@ Id2Reader TimeTrack::intervalReader(const QueryInterval &q) {
     }
     auto c = it->second;
     if (chunkInQuery(q, c)) {
-
       auto rdr = c->getReader();
       readers.push_back(rdr);
     }
@@ -168,25 +242,27 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
     --begin;
   }
 
+  if (end != _index.end()) {
+    ++end;
+  }
+
   for (auto it = begin; it != end; ++it) {
     if (it == _index.end()) {
       break;
     }
     auto c = it->second;
-    if (c->header->stat.minTime >= q.time_point &&
-        c->header->stat.maxTime <= q.time_point) {
+
+    if (c->header->stat.minTime <= q.time_point &&
+        c->header->stat.maxTime >= q.time_point) {
       auto rdr = c->getReader();
-      // auto skip = c->in_disk_count;
+
       while (!rdr->is_end()) {
         auto v = rdr->readNext();
-        /*if (skip != 0) {
-        --skip;
+        if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
+          result[this->_meas_id] = v;
         }
-        else*/
-        {
-          if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
-            result[this->_meas_id] = v;
-          }
+        if (v.time > q.time_point) {
+          break;
         }
       }
     }
@@ -196,18 +272,10 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
       _cur_chunk->header->stat.minTime >= q.time_point &&
       _cur_chunk->header->stat.maxTime <= q.time_point) {
     auto rdr = _cur_chunk->getReader();
-    // auto skip = _cur_chunk->in_disk_count;
     while (!rdr->is_end()) {
       auto v = rdr->readNext();
-      /*if (skip != 0)
-      {
-      --skip;
-      }
-      else*/
-      {
-        if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
-          result[this->_meas_id] = v;
-        }
+      if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
+        result[this->_meas_id] = v;
       }
     }
   }
@@ -271,9 +339,9 @@ bool TimeTrack::create_new_chunk(const Meas &value) {
   if (new_chunk_data.header == nullptr) {
     return false;
   }
-  auto mc =
-      MemChunk_Ptr{new MemChunk{new_chunk_data.header, new_chunk_data.buffer,
-                                _allocator->_chunkSize, value}};
+  auto mc = MemChunk_Ptr{new MemChunk{true, new_chunk_data.header,
+                                      new_chunk_data.buffer,
+                                      _allocator->_chunkSize, value}};
   mc->_track = this;
   mc->_a_data = new_chunk_data;
   this->_mcc->addChunk(mc);
