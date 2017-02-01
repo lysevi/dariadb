@@ -135,7 +135,7 @@ void TimeTrack::append_to_past(const Meas &value) {
 
   MemChunk_Ptr new_chunk{
       new MemChunk(false, hdr, new_buffer, buffer_size, mar.front())};
-  for (int i = 1; i < mar.size(); ++i) {
+  for (size_t i = 1; i < mar.size(); ++i) {
     auto v = mar[i];
     auto status = new_chunk->append(v);
     if (!status) {
