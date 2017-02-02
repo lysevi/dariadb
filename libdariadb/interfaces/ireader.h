@@ -18,6 +18,9 @@ public:
   virtual Meas top() = 0; /// null if isEnd==true
   virtual bool is_end() const = 0;
   virtual ~IReader() {}
+  
+  virtual Time minTime() = 0;
+  virtual Time maxTime() = 0;
 
   EXPORT virtual void apply(storage::IReaderClb *clbk);
   EXPORT virtual void apply(storage::IReaderClb *clbk, const storage::QueryInterval&q);

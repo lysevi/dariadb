@@ -22,6 +22,11 @@ struct MemTrackReader : dariadb::IReader {
 
   Meas top() override { return _r->top(); }
   bool is_end() const override { return _r->is_end(); }
+
+  Time minTime() override { return _track->minTime(); }
+
+  Time maxTime() override { return _track->minTime(); }
+
   Reader_Ptr _r;
   TimeTrack_ptr _track;
 };

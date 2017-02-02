@@ -14,9 +14,13 @@ public:
   EXPORT bool is_end() const override;
 
   EXPORT Meas top() override;
-
+  EXPORT Time minTime() override;
+  EXPORT Time maxTime() override;
   MeasArray _ma;
   size_t _index;
+
+  Time _minTime;
+  Time _maxTime;
 };
 
 class MergeSortReader : public IReader {
@@ -25,10 +29,14 @@ public:
   EXPORT virtual Meas readNext() override;
   EXPORT bool is_end() const override;
   EXPORT Meas top() override;
+  EXPORT Time minTime() override;
+  EXPORT Time maxTime() override;
 
   std::vector<Reader_Ptr> _readers;
   std::vector<Time> _top_times;
   std::vector<bool> _is_end_status;
+  Time _minTime;
+  Time _maxTime;
 };
 
 struct ReaderFactory {

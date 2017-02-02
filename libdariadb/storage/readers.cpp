@@ -39,8 +39,17 @@ get_reader_with_min_time(std::vector<Time> &top_times,
 }
 
 FullReader::FullReader(MeasArray &ml) {
+  ENSURE(!ml.empty());
   _ma = ml;
   _index = size_t(0);
+  Time _minTime = MAX_TIME;
+  Time _maxTime = MIN_TIME;
+  for (auto &v : _ma) {
+    _minTime = std::min(_minTime, v.time);
+    _maxTime = std::max(_maxTime, v.time);
+  }
+  ENSURE(_minTime != MAX_TIME);
+  ENSURE(_minTime <= _maxTime);
 }
 
 Meas FullReader::readNext() {
@@ -59,11 +68,24 @@ Meas FullReader::top() {
   THROW_EXCEPTION("is_end()");
 }
 
+Time FullReader::minTime() { return _minTime; }
+
+Time FullReader::maxTime() { return _maxTime; }
+
 MergeSortReader::MergeSortReader(const std::list<Reader_Ptr> &readers)
     : _readers(readers.begin(), readers.end()) {
   _top_times.resize(_readers.size());
   _is_end_status.resize(_top_times.size());
   readers_inner::fill_top_times(_top_times, _readers);
+
+  Time _minTime = MAX_TIME;
+  Time _maxTime = MIN_TIME;
+  for (auto &r : _readers) {
+    _minTime = std::min(_minTime, r->minTime());
+    _maxTime = std::max(_maxTime, r->maxTime());
+  }
+  ENSURE(_minTime != MAX_TIME);
+  ENSURE(_minTime <= _maxTime);
 }
 
 Meas MergeSortReader::readNext() {
@@ -106,6 +128,10 @@ Meas MergeSortReader::top() {
   auto r = readers_inner::get_reader_with_min_time(_top_times, _readers);
   return r.second->top();
 }
+
+Time MergeSortReader::minTime() { return _minTime; }
+
+Time MergeSortReader::maxTime() { return _maxTime; }
 
 Id2Reader ReaderFactory::colapseReaders(const Id2ReadersList &i2r) {
   Id2Reader result;
