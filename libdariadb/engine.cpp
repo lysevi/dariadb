@@ -560,9 +560,13 @@ public:
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     auto r = intervalReader(q);
-    for (auto kv : r) {
-      kv.second->apply(clbk, q);
-    }
+	for (auto id : q.ids)
+	{
+		auto fres = r.find(id);
+		if (fres != r.end()) {
+			fres->second->apply(clbk, q);
+		}
+	}
     clbk->is_end();
   }
 
