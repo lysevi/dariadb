@@ -461,7 +461,7 @@ Id2Reader Page::intervalReader(const QueryInterval &query,
     sub_result[search_res->header->meas_id].push_back(rdr);
   }
   fclose(page_io);
-  Id2Reader result = MergeSortReader::colapseReaders(sub_result);
+  Id2Reader result = ReaderFactory::colapseReaders(sub_result);
   return result;
 }
 

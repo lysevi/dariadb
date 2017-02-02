@@ -1,8 +1,8 @@
 #pragma once
 
 #include <libdariadb/interfaces/ireader.h>
-#include <vector>
 #include <list>
+#include <vector>
 
 namespace dariadb {
 namespace storage {
@@ -25,11 +25,14 @@ public:
   EXPORT virtual Meas readNext() override;
   EXPORT bool is_end() const override;
   EXPORT Meas top() override;
-  EXPORT static Id2Reader colapseReaders(const Id2ReadersList &i2r);
-  
+
   std::vector<Reader_Ptr> _readers;
   std::vector<Time> _top_times;
   std::vector<bool> _is_end_status;
+};
+
+struct ReaderFactory {
+  EXPORT static Id2Reader colapseReaders(const Id2ReadersList &i2r);
 };
 }
 }

@@ -508,7 +508,7 @@ public:
     for (auto kv : pm_readers) {
       all_readers[kv.first].push_back(kv.second);
     }
-    return MergeSortReader::colapseReaders(all_readers);
+    return ReaderFactory::colapseReaders(all_readers);
   }
 
   Id2Reader internal_readers_two_level(const QueryInterval &q) {

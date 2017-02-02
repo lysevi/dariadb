@@ -6,7 +6,7 @@ using namespace dariadb;
 using namespace dariadb::storage;
 
 namespace readers_inner {
-Time get_top_time(Reader_Ptr &r) {
+Time get_top_time(IReader *r) {
   if (r->is_end()) {
     return MAX_TIME;
   } else {
@@ -17,12 +17,12 @@ void fill_top_times(std::vector<Time> &top_times,
                     const std::vector<Reader_Ptr> &readers) {
   size_t pos = 0;
   for (auto r : readers) {
-    top_times[pos++] = get_top_time(r);
+    top_times[pos++] = get_top_time(r.get());
   }
 }
 
 /// return: pair(index,ptr)
-std::pair<size_t, Reader_Ptr>
+std::pair<size_t, IReader *>
 get_reader_with_min_time(std::vector<Time> &top_times,
                          const std::vector<Reader_Ptr> &readers) {
   Time min_time = MAX_TIME;
@@ -34,7 +34,7 @@ get_reader_with_min_time(std::vector<Time> &top_times,
     }
   }
   auto reader_it = readers[min_time_index];
-  return std::make_pair(min_time_index, reader_it);
+  return std::make_pair(min_time_index, reader_it.get());
 }
 }
 
@@ -78,8 +78,8 @@ Meas MergeSortReader::readNext() {
 
   // skip duplicates.
   for (size_t i = 0; i < _readers.size(); ++i) {
-    auto r = _readers[i];
-    if (!_is_end_status[i]) {
+    if (!_is_end_status[i] && _top_times[i] == result.time) {
+      auto r = _readers[i].get();
       while (!r->is_end() && r->top().time == result.time) {
         r->readNext();
       }
@@ -107,7 +107,7 @@ Meas MergeSortReader::top() {
   return r.second->top();
 }
 
-Id2Reader MergeSortReader::colapseReaders(const Id2ReadersList &i2r) {
+Id2Reader ReaderFactory::colapseReaders(const Id2ReadersList &i2r) {
   Id2Reader result;
   for (auto kv : i2r) {
     std::list<Reader_Ptr> readers{kv.second.begin(), kv.second.end()};
