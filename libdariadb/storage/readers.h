@@ -39,7 +39,25 @@ public:
   Time _maxTime;
 };
 
+class LinearReader : public IReader {
+public:
+  EXPORT LinearReader(const std::list<Reader_Ptr> &readers);
+  EXPORT virtual Meas readNext() override;
+  EXPORT bool is_end() const override;
+  EXPORT Meas top() override;
+  EXPORT Time minTime() override;
+  EXPORT Time maxTime() override;
+
+  std::list<Reader_Ptr> _readers;
+  Time _minTime;
+  Time _maxTime;
+};
+
 struct ReaderFactory {
+  // if the intervals overlap.
+  EXPORT static bool is_linear_readers(const Reader_Ptr &r1,
+                                       const Reader_Ptr &r2);
+  EXPORT static Reader_Ptr colapseReaders(const std::list<Reader_Ptr> &i2r);
   EXPORT static Id2Reader colapseReaders(const Id2ReadersList &i2r);
 };
 }
