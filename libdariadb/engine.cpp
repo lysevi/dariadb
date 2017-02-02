@@ -44,7 +44,6 @@ public:
     if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
       dariadb::utils::fs::mkdir(_settings->storage_path.value());
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
-      dariadb::utils::fs::mkdir(_settings->bystep_path.value());
     }
 
     lockfile_lock_or_die(ignore_lock_file);
@@ -497,8 +496,8 @@ public:
       }
       MeasArray ma{mset.begin(), mset.end()};
       FullReader *fr = new FullReader(ma);
-	  Reader_Ptr r_ptr(fr);
-	  result[id2intervals.first] = r_ptr;
+      Reader_Ptr r_ptr(fr);
+      result[id2intervals.first] = r_ptr;
     }
 
     for (auto kv : disk_only_readers) {
@@ -677,8 +676,8 @@ public:
 
   void compactbyTime(Time from, Time to) {
     this->lock_storage();
-    logger_info("engine: compacting by time ", timeutil::to_string(from), "-",
-                timeutil::to_string(to));
+    logger_info("engine: compacting by time [", timeutil::to_string(from), "-",
+                timeutil::to_string(to), "]");
     _page_manager->compactbyTime(from, to);
     this->unlock_storage();
   }

@@ -174,43 +174,44 @@ public:
   }
 
   Id2Reader intervalReader(const QueryInterval &query) {
-	  auto pred = [&query](const IndexHeader &hdr) {
-		  auto interval_check(
-			  (hdr.stat.minTime >= query.from && hdr.stat.maxTime <= query.to) ||
-			  (utils::inInterval(query.from, query.to, hdr.stat.minTime)) ||
-			  (utils::inInterval(query.from, query.to, hdr.stat.maxTime)) ||
-			  (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.from)) ||
-			  (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.to)));
-		  if (interval_check) {
-			  for (auto id : query.ids) {
-				  if (storage::bloom_check(hdr.id_bloom, id) &&
-					  (query.flag == Flag(0) ||
-						  storage::bloom_check(hdr.stat.flag_bloom, query.flag))) {
-					  return true;
-				  }
-			  }
-		  }
-		  return false;
-	  };
+    auto pred = [&query](const IndexHeader &hdr) {
+      auto interval_check(
+          (hdr.stat.minTime >= query.from && hdr.stat.maxTime <= query.to) ||
+          (utils::inInterval(query.from, query.to, hdr.stat.minTime)) ||
+          (utils::inInterval(query.from, query.to, hdr.stat.maxTime)) ||
+          (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.from)) ||
+          (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.to)));
+      if (interval_check) {
+        for (auto id : query.ids) {
+          if (storage::bloom_check(hdr.id_bloom, id) &&
+              (query.flag == Flag(0) ||
+               storage::bloom_check(hdr.stat.flag_bloom, query.flag))) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
 
     Id2ReadersList result;
     utils::async::Locker result_locker;
 
-    AsyncTask at = [&query, this, &result,
-                    &result_locker, pred](const ThreadInfo &ti) {
+    AsyncTask at = [&query, this, &result, &result_locker,
+                    pred](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
       ChunkLinkList to_read;
-	  
-	  auto page_list = pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
 
-	  for (auto pname : page_list) {
-		  auto p = Page::open(pname);
-		  auto sub_result = p->intervalReader(query);
-		  for (auto kv : sub_result) {
-			  result[kv.first].push_back(kv.second);
-		  }
-	  }
-     
+      auto page_list =
+          pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
+
+      for (auto pname : page_list) {
+        auto p = Page::open(pname);
+        auto sub_result = p->intervalReader(query);
+        for (auto kv : sub_result) {
+          result[kv.first].push_back(kv.second);
+        }
+      }
+
       return false;
     };
     auto pm_async =
@@ -423,7 +424,8 @@ public:
   }
   void compactbyTime(Time from, Time to) {
     auto pred = [from, to](const IndexHeader &hdr) {
-      return hdr.stat.minTime >= from && hdr.stat.maxTime <= to;
+      return utils::inInterval(from, to, hdr.stat.minTime) ||
+             utils::inInterval(from, to, hdr.stat.maxTime);
     };
 
     auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));

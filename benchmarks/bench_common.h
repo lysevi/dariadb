@@ -18,20 +18,29 @@ struct BenchmarkSummaryInfo {
   double read_timepoint_speed;
   double read_all_time;
   double foreach_read_all_time;
+  double page_compaction_time;
+  size_t page_compacted;
 
   BenchmarkSummaryInfo() {
     writed = size_t(0);
+    page_compacted = size_t(0);
     write_speed = read_interval_speed = read_timepoint_speed = read_all_time =
-        foreach_read_all_time = 0.0;
+        page_compaction_time = foreach_read_all_time = 0.0;
   }
 
   void print() {
-    std::cout << "writed: " << writed << "\nwrite: " << write_speed
-              << " per/sec"
-              << "\nread interval: " << read_interval_speed << " per/sec"
-              << "\nread timepoint: " << read_timepoint_speed << " per/sec"
-              << "\nread all: " << read_all_time << " secs."
-              << "\nforeach all: " << foreach_read_all_time << " secs."
+    std::cout << "writed: " << writed << std::endl;
+    std::cout << "write speed(average): " << write_speed << " per/sec"
+              << std::endl;
+    std::cout << "page compaction: " << page_compaction_time << " secs."
+              << std::endl;
+    std::cout << "page compacted: " << page_compacted << std::endl;
+    std::cout << "read interval: " << read_interval_speed << " per/sec"
+              << std::endl;
+    std::cout << "read timepoint: " << read_timepoint_speed << " per/sec"
+              << std::endl;
+    std::cout << "read all: " << read_all_time << " secs." << std::endl;
+    std::cout << "foreach all: " << foreach_read_all_time << " secs."
               << std::endl;
   }
 };

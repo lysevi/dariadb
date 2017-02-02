@@ -24,6 +24,7 @@ bool dont_clean = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
+dariadb_bench::BenchmarkSummaryInfo summary_info;
 
 class BenchCallback : public IReaderClb {
 public:
@@ -249,8 +250,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   info_thread.join();
 }
 
-void read_all_bench(dariadb_bench::BenchmarkSummaryInfo &summary_info,
-                    IMeasStorage_ptr &ms, Time start_time, Time max_time,
+void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
                     IdSet &all_id_set) {
 
   if (readonly) {
@@ -284,12 +284,12 @@ void read_all_bench(dariadb_bench::BenchmarkSummaryInfo &summary_info,
     elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
     std::cout << "readed: " << readed.size() << std::endl;
     std::cout << "time: " << elapsed << std::endl;
-	summary_info.read_all_time = elapsed;
+    summary_info.read_all_time = elapsed;
     std::map<Id, MeasList> _dict;
     for (auto &v : readed) {
       _dict[v.id].push_back(v);
     }
-	
+
     if (readed.size() != dariadb_bench::all_writes) {
       std::cout << "expected: " << dariadb_bench::all_writes
                 << " get:" << clbk->count << std::endl;
@@ -461,7 +461,8 @@ int main(int argc, char *argv[]) {
           std::cout << "==> pages after compaction " << pages_after << "..."
                     << std::endl;
           std::cout << "compaction time: " << elapsed << std::endl;
-
+          summary_info.page_compacted = pages_before - pages_after - 1;
+          summary_info.page_compaction_time = elapsed;
           if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
               pages_before <= pages_after) {
             THROW_EXCEPTION("pages_before <= pages_after");
@@ -479,7 +480,6 @@ int main(int argc, char *argv[]) {
               << utils::async::ThreadManager::instance()->active_works()
               << std::endl;
 
-    dariadb_bench::BenchmarkSummaryInfo summary_info;
     summary_info.writed = append_count;
     summary_info.write_speed = append_count / writers_elapsed;
     dariadb_bench::readBenchmark(summary_info, all_id_set, ms.get(),
@@ -489,7 +489,7 @@ int main(int argc, char *argv[]) {
     std::cout << "==> interval end time: " << timeutil::to_string(max_time)
               << std::endl;
 
-    read_all_bench(summary_info, ms, start_time, max_time, all_id_set);
+    read_all_bench(ms, start_time, max_time, all_id_set);
     std::cout << "writed: " << append_count << std::endl;
     std::cout << "stoping storage...\n";
     ms = nullptr;
