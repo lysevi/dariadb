@@ -227,10 +227,11 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   ma1[3].time = 7;
   auto fr1 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma1)};
 
-  dariadb::MeasArray ma2(3);
+  dariadb::MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
+  ma2[3].time = 7;
   auto fr2 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma2)};
 
   dariadb::MeasArray ma3(1);

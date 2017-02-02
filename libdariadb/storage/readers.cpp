@@ -61,7 +61,6 @@ Meas FullReader::top() {
 
 MergeSortReader::MergeSortReader(const std::list<Reader_Ptr> &readers)
     : _readers(readers.begin(), readers.end()) {
-
   _top_times.resize(_readers.size());
   _is_end_status.resize(_top_times.size());
   readers_inner::fill_top_times(_top_times, _readers);
@@ -76,6 +75,20 @@ Meas MergeSortReader::readNext() {
   auto result = reader_ptr->readNext();
   _top_times[index_and_reader.first] = readers_inner::get_top_time(reader_ptr);
   _is_end_status[index_and_reader.first] = reader_ptr->is_end();
+
+  // skip duplicates.
+  for (size_t i = 0; i < _readers.size(); ++i) {
+    auto r = _readers[i];
+    if (!_is_end_status[i]) {
+      while (!r->is_end() && r->top().time == result.time) {
+        r->readNext();
+      }
+      if (r->is_end()) {
+        _top_times[i] = MAX_TIME;
+        _is_end_status[i] = true;
+      }
+    }
+  }
   return result;
 }
 

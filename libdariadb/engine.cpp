@@ -472,31 +472,16 @@ public:
           internal_readers_two_level(disk_q, _page_manager, _wal_manager);
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
-      MeasSet mset;
-      if (!disk_readers.empty()) {
-        auto r = disk_readers[id2intervals.first];
-
-        while (!r->is_end()) {
-          auto v = r->readNext();
-          if (v.inQuery(disk_q.ids, disk_q.flag, disk_q.from, disk_q.to)) {
-            mset.insert(v);
-          }
-        }
+      std::list<Reader_Ptr> readers;
+      for (auto kv : mm_readers) {
+        readers.push_back(kv.second);
+      }
+      for (auto kv : disk_readers) {
+        readers.push_back(kv.second);
       }
 
-      if (!mm_readers.empty()) {
-        auto r = mm_readers[id2intervals.first];
-
-        while (!r->is_end()) {
-          auto v = r->readNext();
-          if (v.inQuery(mem_q.ids, mem_q.flag, mem_q.from, mem_q.to)) {
-            mset.insert(v);
-          }
-        }
-      }
-      MeasArray ma{mset.begin(), mset.end()};
-      FullReader *fr = new FullReader(ma);
-      Reader_Ptr r_ptr(fr);
+      MergeSortReader *msr = new MergeSortReader(readers);
+      Reader_Ptr r_ptr(msr);
       result[id2intervals.first] = r_ptr;
     }
 
@@ -560,13 +545,12 @@ public:
 
   void foreach (const QueryInterval &q, IReaderClb * clbk) {
     auto r = intervalReader(q);
-	for (auto id : q.ids)
-	{
-		auto fres = r.find(id);
-		if (fres != r.end()) {
-			fres->second->apply(clbk, q);
-		}
-	}
+    for (auto id : q.ids) {
+      auto fres = r.find(id);
+      if (fres != r.end()) {
+        fres->second->apply(clbk, q);
+      }
+    }
     clbk->is_end();
   }
 
