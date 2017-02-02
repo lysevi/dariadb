@@ -383,7 +383,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
 
     pm->foreach (qi, clb.get());
 
-    BOOST_CHECK_GT(clb->mlist.size(), size_t(100));
+    BOOST_CHECK_GE(clb->mlist.size(), size_t(100));
   }
 
   pm->compactTo(1);
