@@ -3,6 +3,7 @@
 #include <atomic>
 #include <iostream>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/storage/strategy.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <random>
@@ -20,8 +21,10 @@ struct BenchmarkSummaryInfo {
   double foreach_read_all_time;
   double page_compaction_time;
   size_t page_compacted;
+  dariadb::storage::STRATEGY strategy;
 
-  BenchmarkSummaryInfo() {
+  BenchmarkSummaryInfo(dariadb::storage::STRATEGY _strategy) {
+    strategy = _strategy;
     writed = size_t(0);
     page_compacted = size_t(0);
     write_speed = read_interval_speed = read_timepoint_speed = read_all_time =
@@ -29,6 +32,7 @@ struct BenchmarkSummaryInfo {
   }
 
   void print() {
+    std::cout << "benhcmark summary (" << strategy << ")" << std::endl;
     std::cout << "writed: " << writed << std::endl;
     std::cout << "write speed(average): " << write_speed << " per/sec"
               << std::endl;
@@ -143,7 +147,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
   }
 }
 
-void readBenchmark(BenchmarkSummaryInfo &summary_info,
+void readBenchmark(BenchmarkSummaryInfo *summary_info,
                    const dariadb::IdSet &all_id_set,
                    dariadb::storage::IMeasStorage *stor, size_t reads_count,
                    bool quiet = false, bool check_is_end = true) {
@@ -203,7 +207,7 @@ void readBenchmark(BenchmarkSummaryInfo &summary_info,
       stor->readTimePoint(qp);
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-    summary_info.read_timepoint_speed = elapsed;
+    summary_info->read_timepoint_speed = elapsed;
     if (!quiet) {
       std::cout << "time: " << elapsed << std::endl;
     }
@@ -240,7 +244,7 @@ void readBenchmark(BenchmarkSummaryInfo &summary_info,
       total_count += clbk->count;
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-    summary_info.read_interval_speed = elapsed;
+    summary_info->read_interval_speed = elapsed;
     if (!quiet) {
       std::cout << "time: " << elapsed
                 << " average count: " << total_count / reads_count << std::endl;

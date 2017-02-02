@@ -24,7 +24,7 @@ bool dont_clean = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
-dariadb_bench::BenchmarkSummaryInfo summary_info;
+std::unique_ptr<dariadb_bench::BenchmarkSummaryInfo> summary_info;
 
 class BenchCallback : public IReaderClb {
 public:
@@ -272,7 +272,7 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
   auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
   std::cout << "readed: " << clbk->count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
-  summary_info.foreach_read_all_time = elapsed;
+  summary_info->foreach_read_all_time = elapsed;
 
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;
@@ -284,7 +284,7 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
     elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
     std::cout << "readed: " << readed.size() << std::endl;
     std::cout << "time: " << elapsed << std::endl;
-    summary_info.read_all_time = elapsed;
+    summary_info->read_all_time = elapsed;
     std::map<Id, MeasList> _dict;
     for (auto &v : readed) {
       _dict[v.id].push_back(v);
@@ -351,6 +351,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Readers enable. count: " << dariadb_bench::total_readers_count
               << std::endl;
   }
+  summary_info = std::make_unique<dariadb_bench::BenchmarkSummaryInfo>(strategy);
 
   {
     std::cout << "Write..." << std::endl;
@@ -461,8 +462,8 @@ int main(int argc, char *argv[]) {
           std::cout << "==> pages after compaction " << pages_after << "..."
                     << std::endl;
           std::cout << "compaction time: " << elapsed << std::endl;
-          summary_info.page_compacted = pages_before - pages_after - 1;
-          summary_info.page_compaction_time = elapsed;
+          summary_info->page_compacted = pages_before - pages_after - 1;
+          summary_info->page_compaction_time = elapsed;
           if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
               pages_before <= pages_after) {
             THROW_EXCEPTION("pages_before <= pages_after");
@@ -480,9 +481,9 @@ int main(int argc, char *argv[]) {
               << utils::async::ThreadManager::instance()->active_works()
               << std::endl;
 
-    summary_info.writed = append_count;
-    summary_info.write_speed = append_count / writers_elapsed;
-    dariadb_bench::readBenchmark(summary_info, all_id_set, ms.get(),
+    summary_info->writed = append_count;
+    summary_info->write_speed = append_count / writers_elapsed;
+    dariadb_bench::readBenchmark(summary_info.get(), all_id_set, ms.get(),
                                  read_benchmark_runs);
 
     auto max_time = ms->maxTime();
@@ -499,7 +500,7 @@ int main(int argc, char *argv[]) {
       throw std::logic_error("log_ptr->_calls.load()==0");
     }
 
-    summary_info.print();
+    summary_info->print();
   }
 
   if (!(dont_clean || readonly) && (utils::fs::path_exists(storage_path))) {
