@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <libdariadb/storage/readers.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/utils/logger.h>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -85,6 +86,10 @@ MergeSortReader::MergeSortReader(const std::list<Reader_Ptr> &readers)
   }
   ENSURE(!_readers.empty());
   ENSURE(_minTime != MAX_TIME);
+  
+  if (!(_minTime <= _maxTime)) {
+	  logger("minMAX: ", _minTime, "    ", _maxTime);
+  }
   ENSURE(_minTime <= _maxTime);
 }
 
