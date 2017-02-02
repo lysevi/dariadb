@@ -38,9 +38,7 @@ get_reader_with_min_time(std::vector<Time> &top_times,
 }
 }
 
-FullReader::FullReader(MeasArray &ml) {
-  ENSURE(!ml.empty());
-  _ma = ml;
+FullReader::FullReader(MeasArray &ma):_ma(ma) {
   _index = size_t(0);
   Time _minTime = MAX_TIME;
   Time _maxTime = MIN_TIME;
@@ -48,6 +46,7 @@ FullReader::FullReader(MeasArray &ml) {
     _minTime = std::min(_minTime, v.time);
     _maxTime = std::max(_maxTime, v.time);
   }
+  ENSURE(!_ma.empty());
   ENSURE(_minTime != MAX_TIME);
   ENSURE(_minTime <= _maxTime);
 }
@@ -84,6 +83,7 @@ MergeSortReader::MergeSortReader(const std::list<Reader_Ptr> &readers)
     _minTime = std::min(_minTime, r->minTime());
     _maxTime = std::max(_maxTime, r->maxTime());
   }
+  ENSURE(!_readers.empty());
   ENSURE(_minTime != MAX_TIME);
   ENSURE(_minTime <= _maxTime);
 }

@@ -189,6 +189,8 @@ public:
     _chunk = c;
     _bw = bptr;
     _compressed_rdr = compressed_rdr;
+
+	ENSURE(_chunk->header->stat.minTime <= _chunk->header->stat.maxTime);
   }
 
   Time minTime() override { return _chunk->header->stat.minTime; }

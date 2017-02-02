@@ -8,7 +8,7 @@ namespace dariadb {
 namespace storage {
 class FullReader : public IReader {
 public:
-  EXPORT FullReader(MeasArray &ml);
+  EXPORT FullReader(MeasArray &ma);
   EXPORT virtual Meas readNext() override;
 
   EXPORT bool is_end() const override;
