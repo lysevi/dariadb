@@ -377,14 +377,16 @@ void IOClient::readInterval(const NetData_ptr &d) {
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  auto qi = new storage::QueryInterval{all_ids, query_hdr->flag,
-                                       query_hdr->from, query_hdr->to};
 
   if (query_hdr->from >= query_hdr->to) {
     sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
   } else {
+
+    auto qi = new storage::QueryInterval{all_ids, query_hdr->flag,
+                                         query_hdr->from, query_hdr->to};
+
     auto cdr = new ClientDataReader(this, query_num);
-    this->readerAdd(cdr, qi);
+    this->readerAdd(storage::ReaderClb_ptr(cdr), qi);
     env->storage->foreach (*qi, cdr);
   }
 }
@@ -405,7 +407,7 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
       new storage::QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(cdr, qi);
+  readerAdd(storage::ReaderClb_ptr(cdr), qi);
   env->storage->foreach (*qi, cdr);
 }
 
@@ -422,7 +424,7 @@ void IOClient::currentValue(const NetData_ptr &d) {
 
   auto result = env->storage->currentValue(all_ids, flag);
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(cdr, nullptr);
+  readerAdd(storage::ReaderClb_ptr(cdr), nullptr);
   for (auto &v : result) {
     cdr->apply(v.second);
   }
@@ -448,10 +450,12 @@ void IOClient::subscribe(const NetData_ptr &d) {
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
 
-void IOClient::readerAdd(ClientDataReader *cdr, void *data) {
+void IOClient::readerAdd(const storage::ReaderClb_ptr &cdr, void *data) {
   std::lock_guard<std::mutex> lg(_readers_lock);
+  ClientDataReader *cdr_raw = dynamic_cast<ClientDataReader *>(cdr.get());
+  ENSURE(cdr_raw != nullptr);
   this->_readers.insert(
-      std::make_pair(cdr->_query_num, std::make_pair(cdr, data)));
+      std::make_pair(cdr_raw->_query_num, std::make_pair(cdr, data)));
 }
 
 void IOClient::readerRemove(QueryNumber number) {
@@ -462,7 +466,6 @@ void IOClient::readerRemove(QueryNumber number) {
   } else {
     auto ptr = fres->second;
     this->_readers.erase(fres);
-    delete ptr.first;
     if (ptr.second != nullptr) {
       delete ptr.second;
     }
