@@ -271,7 +271,7 @@ void TimeTrack::foreach (const QueryInterval &q, IReaderClb * clbk) {
 Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
   std::lock_guard<utils::async::Locker> lg(_locker);
   Id2Meas result;
-  result[this->_meas_id].flag = Flags::_NO_DATA;
+  result[this->_meas_id].flag = FLAGS::_NO_DATA;
 
   auto end = _index.upper_bound(q.time_point);
   auto begin = _index.lower_bound(q.time_point);
@@ -316,7 +316,7 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
       }
     }
   }
-  if (result[this->_meas_id].flag == Flags::_NO_DATA) {
+  if (result[this->_meas_id].flag == FLAGS::_NO_DATA) {
     result[this->_meas_id].time = q.time_point;
   }
   return result;
@@ -334,7 +334,7 @@ Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
       return result;
     }
   }
-  result[_meas_id].flag = Flags::_NO_DATA;
+  result[_meas_id].flag = FLAGS::_NO_DATA;
   return result;
 }
 

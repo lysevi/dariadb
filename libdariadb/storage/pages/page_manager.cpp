@@ -262,7 +262,7 @@ public:
     Id2Meas result;
 
     for (auto id : query.ids) {
-      result[id].flag = Flags::_NO_DATA;
+      result[id].flag = FLAGS::_NO_DATA;
       result[id].time = query.time_point;
     }
 

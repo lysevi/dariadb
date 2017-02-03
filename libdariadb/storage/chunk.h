@@ -92,7 +92,7 @@ struct ChunkHeader {
   Statistic stat;
   uint8_t is_sorted;
   Meas first() const {
-    Meas m = Meas::empty(meas_id);
+    Meas m(meas_id);
     m.flag = data_first.flag;
     m.time = data_first.time;
     m.value = data_first.value;
@@ -100,7 +100,7 @@ struct ChunkHeader {
   }
 
   Meas last() const {
-    Meas m = Meas::empty(meas_id);
+    Meas m(meas_id);
     m.flag = data_last.flag;
     m.time = data_last.time;
     m.value = data_last.value;

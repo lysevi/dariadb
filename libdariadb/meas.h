@@ -2,9 +2,9 @@
 
 #include <libdariadb/utils/in_interval.h>
 
-#include <libdariadb/st_exports.h>
 #include <algorithm>
 #include <deque>
+#include <libdariadb/st_exports.h>
 #include <limits>
 #include <list>
 #include <map>
@@ -42,27 +42,23 @@ struct Meas {
   Value value;
   Flag flag;
 
-  EXPORT static Meas empty();
-  EXPORT static Meas empty(Id id);
-
   EXPORT Meas();
+  EXPORT Meas(Id i);
+  EXPORT Meas(const Meas &other);
 
-  bool operator==(const Meas &other) const {
-    return id == other.id && time == other.time && flag == other.flag &&
-           areSame(value, other.value);
-  }
-
-  bool operator!=(const Meas &other) const { return !(*this == other); }
-
-  bool inFlag(Flag f) const { return (f == 0) || (f == flag); }
+  bool inFlag(Flag mask) const { return (mask & flag) == mask; }
 
   bool inIds(const IdArray &ids) const {
     return (ids.size() == 0) || (std::count(ids.begin(), ids.end(), id));
   }
 
-  bool inQuery(const IdArray &ids, const Flag f) const { return inFlag(f) && inIds(ids); }
+  bool inQuery(const IdArray &ids, const Flag f) const {
+    return inFlag(f) && inIds(ids);
+  }
 
-  bool inInterval(Time from, Time to) const { return utils::inInterval(from, to, time); }
+  bool inInterval(Time from, Time to) const {
+    return utils::inInterval(from, to, time);
+  }
 
   bool inQuery(const IdArray &ids, const Flag f, Time from, Time to) const {
     return inQuery(ids, f) && inInterval(from, to);
@@ -70,7 +66,7 @@ struct Meas {
 };
 #pragma pack(pop)
 
-///time increasing.
+/// time increasing.
 struct meas_id_compare_less {
   bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
     return lhs.time < rhs.time;
@@ -104,7 +100,8 @@ using MeasList = std::deque<Meas>;
 using Id2Meas = std::unordered_map<Id, Meas>;
 /// sorted by time.
 using MeasSet = std::set<Meas, meas_time_compare_less>;
-/// id to meas, sorted by time. needed in readInterval, to sort and filter raw values.
+/// id to meas, sorted by time. needed in readInterval, to sort and filter raw
+/// values.
 using Id2MSet = std::map<Id, MeasSet>;
 /// in loadMinMax();
 using Id2MinMax = std::unordered_map<Id, MeasMinMax>;

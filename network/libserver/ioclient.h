@@ -40,7 +40,7 @@ struct IOClient {
 
     ClientDataReader(IOClient *parent, QueryNumber query_num);
     ~ClientDataReader();
-    void call(const Meas &m) override;
+    void apply(const Meas &m) override;
     void is_end() override;
     void send_buffer();
   };

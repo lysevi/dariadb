@@ -12,7 +12,7 @@ namespace storage {
 
 struct MList_ReaderClb : public IReaderClb {
   EXPORT MList_ReaderClb();
-  EXPORT void call(const Meas &m) override;
+  EXPORT void apply(const Meas &m) override;
 
   MeasList mlist;
   utils::async::Locker _locker;

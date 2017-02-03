@@ -10,7 +10,7 @@ void dariadb::IReader::apply(dariadb::storage::IReaderClb *clbk) {
       break;
     }
     auto v = readNext();
-    clbk->call(v);
+    clbk->apply(v);
   }
 }
 
@@ -21,7 +21,7 @@ void dariadb::IReader::apply(storage::IReaderClb *clbk, const dariadb::storage::
     }
     auto v = readNext();
     if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
-      clbk->call(v);
+      clbk->apply(v);
     }
   }
 }

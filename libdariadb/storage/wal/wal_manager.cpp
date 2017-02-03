@@ -349,7 +349,7 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
       if (it == sub_result.end()) {
         sub_result.emplace(std::make_pair(kv.first, kv.second));
       } else {
-        if (it->second.flag == Flags::_NO_DATA) {
+        if (it->second.flag == FLAGS::_NO_DATA) {
           sub_result[kv.first] = kv.second;
         }
       }
@@ -362,7 +362,7 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
       if (it == sub_result.end()) {
         sub_result.emplace(std::make_pair(v.id, v));
       } else {
-        if ((v.flag == Flags::_NO_DATA) ||
+        if ((v.flag == FLAGS::_NO_DATA) ||
             ((v.time > it->second.time) && (v.time <= query.time_point))) {
           sub_result[v.id] = v;
         }
@@ -376,7 +376,7 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
 
   for (auto id : query.ids) {
     if (sub_result.find(id) == sub_result.end()) {
-      sub_result[id].flag = Flags::_NO_DATA;
+      sub_result[id].flag = FLAGS::_NO_DATA;
       sub_result[id].time = query.time_point;
     }
   }
@@ -399,7 +399,7 @@ Id2Meas WALManager::currentValue(const IdArray &ids, const Flag &flag) {
         if (it == meases.end()) {
           meases.emplace(std::make_pair(kv.first, kv.second));
         } else {
-          if ((it->second.flag == Flags::_NO_DATA) ||
+          if ((it->second.flag == FLAGS::_NO_DATA) ||
               (it->second.time < kv.second.time)) {
             meases[kv.first] = kv.second;
           }

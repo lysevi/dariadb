@@ -261,25 +261,24 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     BOOST_CHECK_EQUAL(readed, t0);
   }
 
-
   { // compress all; big delta
-	  std::fill_n(buffer, test_buffer_size, 0);
-	  dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
-	  auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+    std::fill_n(buffer, test_buffer_size, 0);
+    dariadb::utils::Range rng{std::begin(buffer), std::end(buffer)};
+    auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
 
-	  dariadb::compression::DeltaCompressor dc{ bw };
+    dariadb::compression::DeltaCompressor dc{bw};
 
-	  dc.append(9999);
-	  dc.append(0);
+    dc.append(9999);
+    dc.append(0);
   }
 
   { // decompress all
-	  dariadb::utils::Range rng{ std::begin(buffer), std::end(buffer) };
-	  auto bw_d = std::make_shared<dariadb::compression::ByteBuffer>(rng);
-	  dariadb::compression::DeltaDeCompressor dc{ bw_d, 9999 };
+    dariadb::utils::Range rng{std::begin(buffer), std::end(buffer)};
+    auto bw_d = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+    dariadb::compression::DeltaDeCompressor dc{bw_d, 9999};
 
-	  auto readed = dc.read();
-	  BOOST_CHECK_EQUAL(readed, 0);
+    auto readed = dc.read();
+    BOOST_CHECK_EQUAL(readed, 0);
   }
 }
 
@@ -300,9 +299,10 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
 
     dc.append(t1);
     BOOST_CHECK(!dc._is_first);
-    BOOST_CHECK_EQUAL(dariadb::compression::inner::flat_int_to_double(dc._first), t1);
-    BOOST_CHECK_EQUAL(dariadb::compression::inner::flat_int_to_double(dc._prev_value),
-                      t1);
+    BOOST_CHECK_EQUAL(
+        dariadb::compression::inner::flat_int_to_double(dc._first), t1);
+    BOOST_CHECK_EQUAL(
+        dariadb::compression::inner::flat_int_to_double(dc._prev_value), t1);
   }
 
   { // cur==prev
@@ -472,7 +472,7 @@ BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
   std::list<dariadb::Meas> meases{};
   auto zer_t = dariadb::timeutil::current_time();
   for (int i = 0;; i++) {
-    auto m = dariadb::Meas::empty(1);
+    auto m = dariadb::Meas(1);
     m.time = zer_t++;
     m.flag = i;
     m.value = i;
@@ -490,6 +490,9 @@ BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
   meases.pop_front();
   for (auto &m : meases) {
     auto r_m = crr.read();
-    BOOST_CHECK(m == r_m);
+    BOOST_CHECK(m.flag == r_m.flag);
+    BOOST_CHECK(m.id == r_m.id);
+    BOOST_CHECK(m.time == r_m.time);
+    BOOST_CHECK(m.value == r_m.value);
   }
 }

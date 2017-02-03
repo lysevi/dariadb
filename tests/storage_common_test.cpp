@@ -3,14 +3,20 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
-#include <algorithm>
-#include <iostream>
 #include <libdariadb/interfaces/ireader.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/readers.h>
 #include <libdariadb/utils/fs.h>
+
+BOOST_AUTO_TEST_CASE(MeasTest) {
+  dariadb::Meas m;
+  m.flag = dariadb::Flag(1);
+  BOOST_CHECK(!m.inFlag(dariadb::Flag(2)));
+  m.flag = 3;
+  BOOST_CHECK(m.inFlag(dariadb::Flag(1)));
+}
 
 BOOST_AUTO_TEST_CASE(BloomTest) {
   uint64_t u8_fltr = dariadb::storage::bloom_empty<uint8_t>();
@@ -40,7 +46,7 @@ BOOST_AUTO_TEST_CASE(BloomTest) {
 
 BOOST_AUTO_TEST_CASE(inFilter) {
   {
-    auto m = dariadb::Meas::empty();
+    auto m = dariadb::Meas();
     m.flag = 100;
     BOOST_CHECK(m.inFlag(0));
     BOOST_CHECK(m.inFlag(100));
@@ -59,7 +65,7 @@ BOOST_AUTO_TEST_CASE(StatisticUpdate) {
   BOOST_CHECK_EQUAL(st.maxValue, dariadb::MIN_VALUE);
   BOOST_CHECK_EQUAL(st.sum, dariadb::Value(0));
 
-  auto m = dariadb::Meas::empty(0);
+  auto m = dariadb::Meas(0);
   m.time = 2;
   m.flag = 2;
   m.value = 2;
@@ -190,7 +196,7 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     dariadb::storage::ChunkHeader hdr;
     uint8_t *buff = new uint8_t[1024];
     std::fill_n(buff, 1024, uint8_t(0));
-    auto m = dariadb::Meas::empty();
+    auto m = dariadb::Meas();
     auto ch = dariadb::storage::Chunk::create(&hdr, buff, 1024, m);
     m.time = 0;
     while (!ch->isFull()) {
@@ -205,7 +211,7 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     dariadb::storage::ChunkHeader hdr;
     uint8_t *buff = new uint8_t[1024];
     std::fill_n(buff, 1024, uint8_t(0));
-    auto m = dariadb::Meas::empty();
+    auto m = dariadb::Meas();
     m.time = 999;
     auto ch = dariadb::storage::Chunk::create(&hdr, buff, 1024, m);
     m.time = 0;

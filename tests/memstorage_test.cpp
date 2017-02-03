@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
 
     ms->setDownLevel(cw);
 
-    auto e = dariadb::Meas::empty();
+    auto e = dariadb::Meas();
     while (true) {
       e.time++;
       ms->append(e);
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
 
     ms->setDiskStorage(cw);
 
-    auto e = dariadb::Meas::empty();
+    auto e = dariadb::Meas();
     while (true) {
       e.time++;
       ms->append(e);
@@ -213,7 +213,7 @@ BOOST_AUTO_TEST_CASE(MemStorageWriteToPastTest) {
 
     auto ms = dariadb::storage::MemStorage::create(_engine_env, size_t(0));
 
-    auto meas = dariadb::Meas::empty();
+    auto meas = dariadb::Meas();
 
     meas.time = 0;
     for (int i = 0; i < 1024; ++i) {

@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   dariadb::IdSet all_id_set;
   size_t count = 5000;
   dariadb::MeasArray a(count);
-  auto e = dariadb::Meas::empty();
+  auto e = dariadb::Meas();
   for (size_t i = 0; i < count; i++) {
     e.id = i % id_count;
     e.time++;
@@ -336,7 +336,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
   Id=0 =>  0, count/2
   Id=1 =>  count/2, count
   */
-  auto e = dariadb::Meas::empty();
+  auto e = dariadb::Meas();
   for (size_t i = 0; i < count; i++) {
     e.id = 0;
     e.time++;
@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompactionByTime) {
 
   auto pm = dariadb::storage::PageManager::create(_engine_env);
 
-  auto e = dariadb::Meas::empty();
+  auto e = dariadb::Meas();
   for (int pnum = 0; pnum < 10; ++pnum) {
     size_t count = 100;
     dariadb::MeasArray a(count);

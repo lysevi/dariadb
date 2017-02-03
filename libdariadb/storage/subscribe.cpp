@@ -43,7 +43,7 @@ void SubscribeNotificator::on_append(const dariadb::Meas &m) const {
   for (auto si : _subscribes) {
     ENSURE(si->clbk != nullptr);
     if (si->isYours(m)) {
-      si->clbk->call(m);
+      si->clbk->apply(m);
     }
   }
 }

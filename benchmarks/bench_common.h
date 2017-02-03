@@ -90,7 +90,7 @@ public:
     count = 0;
     is_end_called = false;
   }
-  void call(const dariadb::Meas &) override { count++; }
+  void apply(const dariadb::Meas &) override { count++; }
   void is_end() override {
     is_end_called = true;
     dariadb::storage::IReaderClb::is_end();
@@ -113,7 +113,7 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
   try {
     auto step = (boost::posix_time::seconds(1).total_milliseconds() /
                  writes_per_second);
-    auto m = dariadb::Meas::empty();
+    dariadb::Meas m;
     m.time = start_time;
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);

@@ -559,7 +559,7 @@ public:
       if (clbk->is_canceled()) {
         break;
       }
-      clbk->call(kv.second);
+      clbk->apply(kv.second);
     }
     clbk->is_end();
   }
@@ -575,7 +575,7 @@ public:
     Id2Meas result;
     result.reserve(q.ids.size());
     for (auto id : q.ids) {
-      result[id].flag = Flags::_NO_DATA;
+      result[id].flag = FLAGS::_NO_DATA;
     }
 
     auto pm = _page_manager.get();
@@ -604,7 +604,7 @@ public:
             auto subres = am->readTimePoint(local_q);
             auto value = subres[id];
             result[id] = value;
-            in_wal_level = value.flag != Flags::_NO_DATA;
+            in_wal_level = value.flag != FLAGS::_NO_DATA;
           }
           if (!in_wal_level) {
             auto subres = _page_manager->valuesBeforeTimePoint(local_q);

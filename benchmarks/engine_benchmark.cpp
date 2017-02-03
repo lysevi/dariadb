@@ -32,7 +32,7 @@ public:
     count = 0;
     is_end_called = false;
   }
-  void call(const dariadb::Meas &) override { count++; }
+  void apply(const dariadb::Meas &) override { count++; }
   void is_end() override {
     is_end_called = true;
     IReaderClb::is_end();

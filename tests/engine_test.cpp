@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
 class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
 public:
   std::list<dariadb::Meas> values;
-  void call(const dariadb::Meas &m) override { values.push_back(m); }
+  void apply(const dariadb::Meas &m) override { values.push_back(m); }
   void is_end() override {}
   ~Moc_SubscribeClbk() {}
 };
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     ids.clear();
     ms->subscribe(ids, 1, c4); // with flag=1
 
-    auto m = dariadb::Meas::empty();
+    auto m = dariadb::Meas();
     const size_t total_count = 100;
     const dariadb::Time time_step = 1;
 

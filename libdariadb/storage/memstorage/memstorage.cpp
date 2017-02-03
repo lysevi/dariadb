@@ -259,7 +259,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         auto sub_res = tracker->second->readTimePoint(local_q);
         result[id] = sub_res[id];
       } else {
-        result[id].flag = Flags::_NO_DATA;
+        result[id].flag = FLAGS::_NO_DATA;
       }
     }
     return result;
@@ -278,7 +278,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         auto sub_res = tracker->second->currentValue(local_ids, flag);
         result[id] = sub_res[id];
       } else {
-        result[id].flag = Flags::_NO_DATA;
+        result[id].flag = FLAGS::_NO_DATA;
       }
     }
     return result;

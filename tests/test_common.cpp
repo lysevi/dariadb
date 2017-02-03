@@ -17,7 +17,7 @@ public:
     count = 0;
     is_end_called = 0;
   }
-  void call(const Meas &v) override {
+  void apply(const Meas &v) override {
     std::lock_guard<std::mutex> lg(_locker);
     count++;
     all.push_back(v);
@@ -38,7 +38,7 @@ public:
     is_greater = false;
     is_first = true;
   }
-  void call(const Meas &v) override {
+  void apply(const Meas &v) override {
     std::lock_guard<std::mutex> lg(_locker);
     all.push_back(v);
     if (is_first) {
@@ -65,7 +65,7 @@ void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
     size_t count = 0;
     for (auto &m : res) {
       if ((m.id == id_val) &&
-          ((m.flag == flg_val) || (m.flag == Flags::_NO_DATA))) {
+          ((m.flag == flg_val) || (m.flag == FLAGS::_NO_DATA))) {
         count++;
       }
     }
@@ -120,7 +120,7 @@ size_t fill_storage_for_test(dariadb::storage::IMeasStorage *as,
                              bool random_timestamps) {
   std::random_device rd;
   std::mt19937 eng(rd());
-  auto m = Meas::empty();
+  auto m = Meas();
   size_t total_count = 0;
 
   Id id_val = 0;
@@ -134,7 +134,7 @@ size_t fill_storage_for_test(dariadb::storage::IMeasStorage *as,
     m.value = 0;
 
     auto copies_for_id = (id_val == 0 ? copies_count / 2 : copies_count);
-    MeasArray values{copies_for_id};
+    MeasArray values(copies_for_id);
     size_t pos = 0;
     for (size_t j = 1; j < copies_for_id + 1; j++) {
       *maxWritedTime = std::max(*maxWritedTime, m.time);
@@ -301,8 +301,8 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to,
   }
 
   Meas m_not_exists = fltr_res_tp[notExstsIDs.front()];
-  if (m_not_exists.flag != Flags::_NO_DATA) {
-    throw MAKE_EXCEPTION("fltr_res.front().flag != Flags::NO_DATA");
+  if (m_not_exists.flag != FLAGS::_NO_DATA) {
+    throw MAKE_EXCEPTION("fltr_res.front().flag != FLAGS::NO_DATA");
   }
 }
 

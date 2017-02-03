@@ -128,7 +128,7 @@ public:
     Id2MSet subresult;
 
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
@@ -169,7 +169,7 @@ public:
     open_to_read();
 
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
@@ -184,8 +184,8 @@ public:
     if (!q.ids.empty() && readed_ids.size() != q.ids.size()) {
       for (auto id : q.ids) {
         if (readed_ids.find(id) == readed_ids.end()) {
-          auto e = Meas::empty(id);
-          e.flag = Flags::_NO_DATA;
+          auto e = Meas(id);
+          e.flag = FLAGS::_NO_DATA;
           e.time = q.time_point;
           sub_res[id] = e;
         }
@@ -212,7 +212,7 @@ public:
 
     open_to_read();
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
@@ -227,8 +227,8 @@ public:
     if (!ids.empty() && readed_ids.size() != ids.size()) {
       for (auto id : ids) {
         if (readed_ids.find(id) == readed_ids.end()) {
-          auto e = Meas::empty(id);
-          e.flag = Flags::_NO_DATA;
+          auto e = Meas(id);
+          e.flag = FLAGS::_NO_DATA;
           e.time = dariadb::Time(0);
           sub_res[id] = e;
         }
@@ -244,7 +244,7 @@ public:
     dariadb::Time result = dariadb::MAX_TIME;
 
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
@@ -261,7 +261,7 @@ public:
     dariadb::Time result = dariadb::MIN_TIME;
 
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
@@ -280,7 +280,7 @@ public:
     *maxResult = dariadb::MIN_TIME;
     bool result = false;
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
@@ -306,7 +306,7 @@ public:
     auto raw = ma.get();
     size_t pos = 0;
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }
@@ -340,7 +340,7 @@ public:
     open_to_read();
     Id2MinMax result;
     while (1) {
-      Meas val = Meas::empty();
+      Meas val = Meas();
       if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
         break;
       }

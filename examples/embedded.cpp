@@ -11,7 +11,7 @@ class Callback : public dariadb::storage::IReaderClb {
 public:
   Callback() {}
 
-  void call(const dariadb::Meas &measurement) override {
+  void apply(const dariadb::Meas &measurement) override {
     std::cout << " id: " << measurement.id
               << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
               << " value:" << measurement.value << std::endl;
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 
   auto storage = std::make_unique<dariadb::storage::Engine>(settings);
 
-  auto m = dariadb::Meas::empty();
+  auto m = dariadb::Meas();
   auto start_time = dariadb::timeutil::current_time();
 
   // write values in interval [currentTime:currentTime+10]
