@@ -310,7 +310,7 @@ Id2Reader WALManager::intervalReader(const QueryInterval &q) {
 	  readers_list[kv.first].push_back(r);
     }
   }
-  return ReaderFactory::colapseReaders(readers_list);
+  return ReaderWrapermaker::colapseReaders(readers_list);
 }
 
 void WALManager::foreach (const QueryInterval &q, IReaderClb * clbk) {

@@ -220,21 +220,23 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
 }
 
 BOOST_AUTO_TEST_CASE(LinearReaderTest) {
+  using namespace dariadb::storage;
+  using namespace dariadb;
   dariadb::MeasArray ma1(4);
   ma1[0].time = 1;
   ma1[1].time = 2;
   ma1[2].time = 3;
   ma1[3].time = 4;
-  auto fr1 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma1)};
+  auto fr1 = dariadb::Reader_Ptr{new FullReader(ma1)};
 
   dariadb::MeasArray ma2(4);
   ma2[0].time = 5;
   ma2[1].time = 6;
   ma2[2].time = 7;
   ma2[3].time = 8;
-  auto fr2 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma2)};
+  auto fr2 = dariadb::Reader_Ptr{new FullReader(ma2)};
 
-  dariadb::storage::LinearReader lr(std::list<dariadb::Reader_Ptr>{fr1, fr2});
+  dariadb::storage::LinearReader lr(ReadersList{fr1, fr2});
 
   dariadb::MeasList ml;
   while (!lr.is_end()) {
@@ -251,26 +253,27 @@ BOOST_AUTO_TEST_CASE(LinearReaderTest) {
 }
 
 BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
+  using namespace dariadb::storage;
+  using namespace dariadb;
   dariadb::MeasArray ma1(4);
   ma1[0].time = 1;
   ma1[1].time = 2;
   ma1[2].time = 4;
   ma1[3].time = 7;
-  auto fr1 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma1)};
+  auto fr1 = dariadb::Reader_Ptr{new FullReader(ma1)};
 
   dariadb::MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
   ma2[3].time = 7;
-  auto fr2 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma2)};
+  auto fr2 = dariadb::Reader_Ptr{new FullReader(ma2)};
 
   dariadb::MeasArray ma3(1);
   ma3[0].time = 8;
-  auto fr3 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma3)};
+  auto fr3 = dariadb::Reader_Ptr{new FullReader(ma3)};
 
-  dariadb::storage::MergeSortReader msr{
-      std::list<dariadb::Reader_Ptr>{fr1, fr2, fr3}};
+  dariadb::storage::MergeSortReader msr{ReadersList{fr1, fr2, fr3}};
 
   dariadb::MeasList ml;
   while (!msr.is_end()) {
@@ -284,9 +287,9 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   }
 
   auto must_be_false =
-      dariadb::storage::ReaderFactory::is_linear_readers(fr1, fr2);
+      dariadb::storage::ReaderWrapermaker::is_linear_readers(fr1, fr2);
   auto must_be_true =
-      dariadb::storage::ReaderFactory::is_linear_readers(fr1, fr3);
+      dariadb::storage::ReaderWrapermaker::is_linear_readers(fr1, fr3);
 
   BOOST_CHECK(must_be_true);
   BOOST_CHECK(!must_be_false);
@@ -306,37 +309,41 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
 }
 
 BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
-  dariadb::MeasArray ma1(4);
+  using namespace dariadb::storage;
+  using namespace dariadb;
+  MeasArray ma1(4);
   ma1[0].time = 1;
   ma1[1].time = 2;
   ma1[2].time = 4;
   ma1[3].time = 7;
-  auto fr1 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma1)};
+  auto fr1 = Reader_Ptr{new FullReader(ma1)};
 
-  dariadb::MeasArray ma2(4);
+  MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
   ma2[3].time = 7;
-  auto fr2 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma2)};
+  auto fr2 = Reader_Ptr{new FullReader(ma2)};
 
-  dariadb::MeasArray ma3(1);
+  MeasArray ma3(1);
   ma3[0].time = 8;
-  auto fr3 = dariadb::Reader_Ptr{new dariadb::storage::FullReader(ma3)};
+  auto fr3 = Reader_Ptr{new FullReader(ma3)};
 
   {
-	  auto msr = dariadb::storage::ReaderFactory::colapseReaders(
-		  std::list<dariadb::Reader_Ptr>{fr1, fr2});
-
-	  auto is_merge_reader = dynamic_cast<dariadb::storage::MergeSortReader*>(msr.get()) !=nullptr;
-	  BOOST_CHECK(is_merge_reader);
+    auto msr = ReaderWrapermaker::colapseReaders(ReadersList{fr1, fr2});
+    auto top_reader = dynamic_cast<LinearReader *>(msr.get());
+    auto is_merge_reader = dynamic_cast<MergeSortReader *>(
+                               top_reader->_readers.front().get()) != nullptr;
+    BOOST_CHECK(is_merge_reader);
+    BOOST_CHECK_EQUAL(top_reader->_readers.size(), size_t(1));
   }
 
   {
-	  auto lsr = dariadb::storage::ReaderFactory::colapseReaders(
-		  std::list<dariadb::Reader_Ptr>{fr1, fr3});
-
-	  auto is_linear_reader = dynamic_cast<dariadb::storage::LinearReader*>(lsr.get()) != nullptr;
-	  BOOST_CHECK(is_linear_reader);
+    auto lsr = ReaderWrapermaker::colapseReaders(ReadersList{fr1, fr3});
+    auto top_reader = dynamic_cast<LinearReader *>(lsr.get());
+    for (auto &r : top_reader->_readers) {
+      auto is_full_reader = dynamic_cast<FullReader *>(r.get()) != nullptr;
+      BOOST_CHECK(is_full_reader);
+    }
   }
 }

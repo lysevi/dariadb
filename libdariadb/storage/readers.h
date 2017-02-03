@@ -6,6 +6,7 @@
 
 namespace dariadb {
 namespace storage {
+
 class FullReader : public IReader {
 public:
   EXPORT FullReader(MeasArray &ma);
@@ -25,7 +26,7 @@ public:
 
 class MergeSortReader : public IReader {
 public:
-  EXPORT MergeSortReader(const std::list<Reader_Ptr> &readers);
+  EXPORT MergeSortReader(const ReadersList &readers);
   EXPORT virtual Meas readNext() override;
   EXPORT bool is_end() const override;
   EXPORT Meas top() override;
@@ -41,7 +42,7 @@ public:
 
 class LinearReader : public IReader {
 public:
-  EXPORT LinearReader(const std::list<Reader_Ptr> &readers);
+  EXPORT LinearReader(const ReadersList &readers);
   EXPORT virtual Meas readNext() override;
   EXPORT bool is_end() const override;
   EXPORT Meas top() override;
@@ -53,11 +54,11 @@ public:
   Time _maxTime;
 };
 
-struct ReaderFactory {
+struct ReaderWrapermaker {
   // if the intervals overlap.
   EXPORT static bool is_linear_readers(const Reader_Ptr &r1,
                                        const Reader_Ptr &r2);
-  EXPORT static Reader_Ptr colapseReaders(const std::list<Reader_Ptr> &i2r);
+  EXPORT static Reader_Ptr colapseReaders(const ReadersList &i2r);
   EXPORT static Id2Reader colapseReaders(const Id2ReadersList &i2r);
 };
 }

@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <libdariadb/storage/readers.h>
 #include <libdariadb/utils/utils.h>
+#include <map>
+#include <set>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -72,7 +74,7 @@ Time FullReader::minTime() { return _minTime; }
 
 Time FullReader::maxTime() { return _maxTime; }
 
-MergeSortReader::MergeSortReader(const std::list<Reader_Ptr> &readers)
+MergeSortReader::MergeSortReader(const ReadersList &readers)
     : _readers(readers.begin(), readers.end()) {
   _top_times.resize(_readers.size());
   _is_end_status.resize(_top_times.size());
@@ -134,9 +136,10 @@ Time MergeSortReader::minTime() { return _minTime; }
 
 Time MergeSortReader::maxTime() { return _maxTime; }
 
-LinearReader::LinearReader(const std::list<Reader_Ptr> &readers) {
+LinearReader::LinearReader(const ReadersList &readers) {
   std::vector<Reader_Ptr> rv(readers.begin(), readers.end());
-  std::sort(rv.begin(), rv.end(), [](auto l, auto r) {return l->minTime() < r->minTime(); });
+  std::sort(rv.begin(), rv.end(),
+            [](auto l, auto r) { return l->minTime() < r->minTime(); });
   _readers = std::list<Reader_Ptr>(rv.begin(), rv.end());
   _minTime = MAX_TIME;
   _maxTime = MIN_TIME;
@@ -170,61 +173,50 @@ Time LinearReader::minTime() { return _minTime; }
 
 Time LinearReader::maxTime() { return _maxTime; }
 
-Reader_Ptr
-ReaderFactory::colapseReaders(const std::list<Reader_Ptr> &readers_list) {
+Reader_Ptr ReaderWrapermaker::colapseReaders(const ReadersList &readers_list) {
   std::vector<Reader_Ptr> readers_vector{readers_list.begin(),
                                          readers_list.end()};
+  typedef std::set<size_t> positions_set;
+  std::map<size_t, positions_set> overlapped;
+  positions_set processed_pos;
+
+  ReadersList result_readers;
   for (size_t i = 0; i < readers_vector.size(); ++i) {
+    bool have_overlap = false;
     for (size_t j = 0; j < readers_vector.size(); ++j) {
       if (i != j) {
-        if (!is_linear_readers(readers_vector[i], readers_vector[j])) {
-          MergeSortReader *msr = new MergeSortReader(readers_list);
-          Reader_Ptr rptr{msr};
-          return rptr;
+        bool is_not_processed = processed_pos.find(j) == processed_pos.end();
+        if (!is_linear_readers(readers_vector[i], readers_vector[j]) &&
+            is_not_processed) {
+          processed_pos.insert(i);
+          processed_pos.insert(j);
+          overlapped[i].insert(j);
+          have_overlap = true;
         }
       }
     }
-  }
-  LinearReader *lsr = new LinearReader(readers_list);
-  Reader_Ptr rptr{lsr};
-  return rptr;
-  /*std::list<Reader_Ptr> cur_sub_result;
-  cur_sub_result.push_back(readers_vector[0]);
-  for (size_t i = 1; i < readers_vector.size(); ++i) {
-    if (is_linear_readers(cur_sub_result.back(), readers_vector[i])) {
-      cur_sub_result.push_back(readers_vector[i]);
-    } else {
-      auto last = cur_sub_result.back();
-      cur_sub_result.pop_back();
-      auto last_as_merge = dynamic_cast<MergeSortReader *>(last.get());
-      if (last_as_merge != nullptr) {
-        std::list<Reader_Ptr> readers(last_as_merge->_readers.begin(),
-                                      last_as_merge->_readers.end());
-        readers.push_back(readers_vector[i]);
-        MergeSortReader *msr = new MergeSortReader(readers);
-        Reader_Ptr rptr{msr};
-        cur_sub_result.push_back(rptr);
-      } else {
-        std::list<Reader_Ptr> readers;
-        readers.push_back(last);
-        readers.push_back(readers_vector[i]);
-        MergeSortReader *msr = new MergeSortReader(readers);
-        Reader_Ptr rptr{msr};
-        cur_sub_result.push_back(rptr);
-      }
+    if (processed_pos.find(i) == processed_pos.end() && !have_overlap) {
+      result_readers.push_back(readers_vector[i]);
     }
   }
 
-  if (cur_sub_result.size() == size_t(1)) {
-    return cur_sub_result.front();
-  } else {
-    LinearReader *lsr = new LinearReader(cur_sub_result);
-    Reader_Ptr rptr{lsr};
-    return rptr;
-  }*/
+  for (auto kv : overlapped) {
+    ReadersList rs;
+    rs.push_back(readers_vector[kv.first]);
+    for (size_t pos : kv.second) {
+      rs.push_back(readers_vector[pos]);
+    }
+    MergeSortReader *msr = new MergeSortReader(rs);
+    Reader_Ptr rptr{msr};
+    result_readers.push_back(rptr);
+  }
+
+  LinearReader *lsr = new LinearReader(result_readers);
+  Reader_Ptr rptr{lsr};
+  return rptr;
 }
 
-Id2Reader ReaderFactory::colapseReaders(const Id2ReadersList &i2r) {
+Id2Reader ReaderWrapermaker::colapseReaders(const Id2ReadersList &i2r) {
   Id2Reader result;
   for (auto kv : i2r) {
     if (kv.second.size() == 1) {
@@ -236,8 +228,8 @@ Id2Reader ReaderFactory::colapseReaders(const Id2ReadersList &i2r) {
   return result;
 }
 
-bool ReaderFactory::is_linear_readers(const Reader_Ptr &r1,
-                                      const Reader_Ptr &r2) {
+bool ReaderWrapermaker::is_linear_readers(const Reader_Ptr &r1,
+                                          const Reader_Ptr &r2) {
   bool is_overlap = utils::intervalsIntersection(r1->minTime(), r1->maxTime(),
                                                  r2->minTime(), r2->maxTime());
   return !is_overlap;
