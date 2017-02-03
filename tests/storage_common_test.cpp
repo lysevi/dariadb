@@ -287,9 +287,9 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   }
 
   auto must_be_false =
-      dariadb::storage::ReaderWrapermaker::is_linear_readers(fr1, fr2);
+      dariadb::storage::ReaderWrapperFactory::is_linear_readers(fr1, fr2);
   auto must_be_true =
-      dariadb::storage::ReaderWrapermaker::is_linear_readers(fr1, fr3);
+      dariadb::storage::ReaderWrapperFactory::is_linear_readers(fr1, fr3);
 
   BOOST_CHECK(must_be_true);
   BOOST_CHECK(!must_be_false);
@@ -330,7 +330,7 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
   auto fr3 = Reader_Ptr{new FullReader(ma3)};
 
   {
-    auto msr = ReaderWrapermaker::colapseReaders(ReadersList{fr1, fr2});
+    auto msr = ReaderWrapperFactory::colapseReaders(ReadersList{fr1, fr2});
     auto top_reader = dynamic_cast<LinearReader *>(msr.get());
     auto is_merge_reader = dynamic_cast<MergeSortReader *>(
                                top_reader->_readers.front().get()) != nullptr;
@@ -339,7 +339,7 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
   }
 
   {
-    auto lsr = ReaderWrapermaker::colapseReaders(ReadersList{fr1, fr3});
+    auto lsr = ReaderWrapperFactory::colapseReaders(ReadersList{fr1, fr3});
     auto top_reader = dynamic_cast<LinearReader *>(lsr.get());
     for (auto &r : top_reader->_readers) {
       auto is_full_reader = dynamic_cast<FullReader *>(r.get()) != nullptr;

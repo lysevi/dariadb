@@ -196,7 +196,7 @@ Time LinearReader::minTime() { return _minTime; }
 
 Time LinearReader::maxTime() { return _maxTime; }
 
-Reader_Ptr ReaderWrapermaker::colapseReaders(const ReadersList &readers_list) {
+Reader_Ptr ReaderWrapperFactory::colapseReaders(const ReadersList &readers_list) {
   std::vector<Reader_Ptr> readers_vector{readers_list.begin(),
                                          readers_list.end()};
   typedef std::set<size_t> positions_set;
@@ -239,7 +239,7 @@ Reader_Ptr ReaderWrapermaker::colapseReaders(const ReadersList &readers_list) {
   return rptr;
 }
 
-Id2Reader ReaderWrapermaker::colapseReaders(const Id2ReadersList &i2r) {
+Id2Reader ReaderWrapperFactory::colapseReaders(const Id2ReadersList &i2r) {
   Id2Reader result;
   for (auto kv : i2r) {
     if (kv.second.size() == 1) {
@@ -251,7 +251,7 @@ Id2Reader ReaderWrapermaker::colapseReaders(const Id2ReadersList &i2r) {
   return result;
 }
 
-bool ReaderWrapermaker::is_linear_readers(const Reader_Ptr &r1,
+bool ReaderWrapperFactory::is_linear_readers(const Reader_Ptr &r1,
                                           const Reader_Ptr &r2) {
   bool is_overlap = utils::intervalsIntersection(r1->minTime(), r1->maxTime(),
                                                  r2->minTime(), r2->maxTime());

@@ -229,7 +229,7 @@ bool chunkInQuery(const QueryInterval &q, const Chunk_Ptr &c) {
 Id2Reader TimeTrack::intervalReader(const QueryInterval &q) {
   std::lock_guard<utils::async::Locker> lg(_locker);
 
-  std::list<Reader_Ptr> readers;
+  ReadersList readers;
   auto end = _index.upper_bound(q.to);
   auto begin = _index.lower_bound(q.from);
   if (begin != _index.begin()) {
@@ -252,8 +252,7 @@ Id2Reader TimeTrack::intervalReader(const QueryInterval &q) {
   if (readers.empty()) {
     return Id2Reader();
   }
-  Reader_Ptr msr{new MergeSortReader(readers)};
-  Reader_Ptr result{new MemTrackReader(msr, this->shared_from_this())};
+  Reader_Ptr result = ReaderWrapperFactory::colapseReaders(readers);
   Id2Reader i2r;
   i2r[this->_meas_id] = result;
   return i2r;

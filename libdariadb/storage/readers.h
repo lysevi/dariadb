@@ -54,7 +54,7 @@ public:
   Time _maxTime;
 };
 
-struct ReaderWrapermaker {
+struct ReaderWrapperFactory {
   // if the intervals overlap.
   EXPORT static bool is_linear_readers(const Reader_Ptr &r1,
                                        const Reader_Ptr &r2);

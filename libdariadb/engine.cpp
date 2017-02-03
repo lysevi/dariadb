@@ -472,7 +472,7 @@ public:
           internal_readers_two_level(disk_q, _page_manager, _wal_manager);
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
-      std::list<Reader_Ptr> readers;
+      ReadersList readers;
       for (auto kv : mm_readers) {
         readers.push_back(kv.second);
       }
@@ -480,8 +480,7 @@ public:
         readers.push_back(kv.second);
       }
 
-      MergeSortReader *msr = new MergeSortReader(readers);
-      Reader_Ptr r_ptr(msr);
+	  Reader_Ptr r_ptr = ReaderWrapperFactory::colapseReaders(readers);
       result[id2intervals.first] = r_ptr;
     }
 
@@ -508,7 +507,7 @@ public:
     for (auto kv : pm_readers) {
       all_readers[kv.first].push_back(kv.second);
     }
-    return ReaderWrapermaker::colapseReaders(all_readers);
+    return ReaderWrapperFactory::colapseReaders(all_readers);
   }
 
   Id2Reader internal_readers_two_level(const QueryInterval &q) {
