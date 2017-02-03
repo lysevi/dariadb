@@ -38,6 +38,23 @@ get_reader_with_min_time(std::vector<Time> &top_times,
   auto reader_it = readers[min_time_index];
   return std::make_pair(min_time_index, reader_it.get());
 }
+
+ReadersList unpack_readers(const ReadersList &readers) {
+  ReadersList tmp_readers_list;
+
+  for (auto r : readers) {
+    // TODO use type enum.
+    auto msr = dynamic_cast<MergeSortReader *>(r.get());
+    if (msr == nullptr) {
+      tmp_readers_list.emplace_back(r);
+    } else {
+      for (auto sub_reader : msr->_readers) {
+        tmp_readers_list.emplace_back(sub_reader);
+      }
+    }
+  }
+  return tmp_readers_list;
+}
 }
 
 FullReader::FullReader(MeasArray &ma) : _ma(ma) {
@@ -74,8 +91,14 @@ Time FullReader::minTime() { return _minTime; }
 
 Time FullReader::maxTime() { return _maxTime; }
 
-MergeSortReader::MergeSortReader(const ReadersList &readers)
-    : _readers(readers.begin(), readers.end()) {
+MergeSortReader::MergeSortReader(const ReadersList &readers) {
+  ReadersList tmp_readers_list = readers_inner::unpack_readers(readers);
+
+  _readers.reserve(tmp_readers_list.size());
+  for (auto r : tmp_readers_list) {
+    _readers.emplace_back(r);
+  }
+
   _top_times.resize(_readers.size());
   _is_end_status.resize(_top_times.size());
   readers_inner::fill_top_times(_top_times, _readers);
@@ -196,19 +219,19 @@ Reader_Ptr ReaderWrapermaker::colapseReaders(const ReadersList &readers_list) {
       }
     }
     if (processed_pos.find(i) == processed_pos.end() && !have_overlap) {
-      result_readers.push_back(readers_vector[i]);
+      result_readers.emplace_back(readers_vector[i]);
     }
   }
 
   for (auto kv : overlapped) {
     ReadersList rs;
-    rs.push_back(readers_vector[kv.first]);
+    rs.emplace_back(readers_vector[kv.first]);
     for (size_t pos : kv.second) {
-      rs.push_back(readers_vector[pos]);
+      rs.emplace_back(readers_vector[pos]);
     }
     MergeSortReader *msr = new MergeSortReader(rs);
     Reader_Ptr rptr{msr};
-    result_readers.push_back(rptr);
+    result_readers.emplace_back(rptr);
   }
 
   LinearReader *lsr = new LinearReader(result_readers);
