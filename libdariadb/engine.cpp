@@ -7,7 +7,7 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/pages/page_manager.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/subscribe.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
@@ -338,7 +338,7 @@ public:
   }
 
   void subscribe(const IdArray &ids, const Flag &flag,
-                 const ReaderClb_ptr &clbk) {
+                 const ReaderCallback_ptr &clbk) {
     auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
     _subscribe_notify.add(new_s);
   }
@@ -400,27 +400,27 @@ public:
     return result;
   }
 
-  Id2Reader interval_readers_from_disk_only(const IdSet &ids,
+  Id2Cursor interval_readers_from_disk_only(const IdSet &ids,
                                             const QueryInterval &q) {
     if (ids.empty()) {
-      return Id2Reader();
+      return Id2Cursor();
     }
     QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
                           q.to};
     return internal_readers_two_level(local_q, _page_manager, _wal_manager);
   }
 
-  Id2Reader interval_readers_from_mem_only(const IdSet &ids,
+  Id2Cursor interval_readers_from_mem_only(const IdSet &ids,
                                            const QueryInterval &q) {
     if (ids.empty()) {
-      return Id2Reader();
+      return Id2Cursor();
     }
     QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
                           q.to};
     return _memstorage->intervalReader(q);
   }
   /// when strategy=CACHE
-  Id2Reader interval_readers_when_cache(const QueryInterval &q) {
+  Id2Cursor interval_readers_when_cache(const QueryInterval &q) {
     auto memory_mm = _memstorage->loadMinMax();
     auto sync_map = _memstorage->getSyncMap();
 
@@ -459,7 +459,7 @@ public:
       }
     }
 
-    Id2Reader result;
+    Id2Cursor result;
     auto disk_only_readers = interval_readers_from_disk_only(disk_only, q);
     auto mem_only_readers = interval_readers_from_mem_only(mem_only, q);
 
@@ -472,7 +472,7 @@ public:
           internal_readers_two_level(disk_q, _page_manager, _wal_manager);
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
-      ReadersList readers;
+      CursorsList readers;
       for (auto kv : mm_readers) {
         readers.push_back(kv.second);
       }
@@ -480,7 +480,7 @@ public:
         readers.push_back(kv.second);
       }
 
-	  Reader_Ptr r_ptr = ReaderWrapperFactory::colapseReaders(readers);
+	  Cursor_Ptr r_ptr = CursorWrapperFactory::colapseReaders(readers);
       result[id2intervals.first] = r_ptr;
     }
 
@@ -494,12 +494,12 @@ public:
   }
 
   /// when strategy!=CACHEs
-  Id2Reader internal_readers_two_level(const QueryInterval &q,
+  Id2Cursor internal_readers_two_level(const QueryInterval &q,
                                        PageManager_ptr pm, IMeasSource_ptr tm) {
     auto pm_readers = pm->intervalReader(q);
     auto tm_readers = tm->intervalReader(q);
 
-    Id2ReadersList all_readers;
+    Id2CursorsList all_readers;
     for (auto kv : tm_readers) {
       all_readers[kv.first].push_back(kv.second);
     }
@@ -507,22 +507,22 @@ public:
     for (auto kv : pm_readers) {
       all_readers[kv.first].push_back(kv.second);
     }
-    return ReaderWrapperFactory::colapseReaders(all_readers);
+    return CursorWrapperFactory::colapseReaders(all_readers);
   }
 
-  Id2Reader internal_readers_two_level(const QueryInterval &q) {
+  Id2Cursor internal_readers_two_level(const QueryInterval &q) {
     return internal_readers_two_level(q, _page_manager, _top_level_storage);
   }
 
-  Id2Reader intervalReader(const QueryInterval &q) {
-    Id2Reader result;
+  Id2Cursor intervalReader(const QueryInterval &q) {
+    Id2Cursor result;
     AsyncTask pm_at = [q, this, &result](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       if (!try_lock_storage()) {
         return true;
       }
 
-      Id2Reader r;
+      Id2Cursor r;
       if (this->strategy() == STRATEGY::CACHE) {
         r = interval_readers_when_cache(q);
       } else {
@@ -542,7 +542,7 @@ public:
     return result;
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) {
+  void foreach (const QueryInterval &q, IReadCallback * clbk) {
     auto r = intervalReader(q);
     for (auto id : q.ids) {
       auto fres = r.find(id);
@@ -553,7 +553,7 @@ public:
     clbk->is_end();
   }
 
-  void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
+  void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
     auto values = this->readTimePoint(q);
     for (auto &kv : values) {
       if (clbk->is_canceled()) {
@@ -706,7 +706,7 @@ bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 Status Engine::append(const Meas &value) { return _impl->append(value); }
 
 void Engine::subscribe(const IdArray &ids, const Flag &flag,
-                       const ReaderClb_ptr &clbk) {
+                       const ReaderCallback_ptr &clbk) {
   _impl->subscribe(ids, flag, clbk);
 }
 
@@ -719,15 +719,15 @@ void Engine::flush() { _impl->flush(); }
 void Engine::stop() { _impl->stop(); }
 Engine::Description Engine::description() const { return _impl->description(); }
 
-void Engine::foreach (const QueryInterval &q, IReaderClb * clbk) {
+void Engine::foreach (const QueryInterval &q, IReadCallback * clbk) {
   return _impl->foreach (q, clbk);
 }
 
-Id2Reader Engine::intervalReader(const QueryInterval &query) {
+Id2Cursor Engine::intervalReader(const QueryInterval &query) {
   return _impl->intervalReader(query);
 }
 
-void Engine::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
+void Engine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   return _impl->foreach (q, clbk);
 }
 

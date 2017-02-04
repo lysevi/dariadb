@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/utils/crc.h>
 
 #include <cstring>
@@ -142,7 +142,7 @@ bool Chunk::append(const Meas &m) {
   }
 }
 
-class ChunkReader : public IReader {
+class ChunkReader : public ICursor {
 public:
   Meas readNext() override {
     ENSURE(!is_end());
@@ -206,13 +206,13 @@ public:
   std::shared_ptr<CopmressedReader> _compressed_rdr;
 };
 
-Reader_Ptr Chunk::getReader() {
+Cursor_Ptr Chunk::getReader() {
   auto b_ptr = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
   auto raw_res = new ChunkReader(
       this->header->stat.count - 1, shared_from_this(), b_ptr,
       std::make_shared<CopmressedReader>(b_ptr, this->header->first()));
 
-  Reader_Ptr result{raw_res};
+  Cursor_Ptr result{raw_res};
 
   if (!header->is_sorted) {
     MeasArray ma(header->stat.count);
@@ -226,8 +226,8 @@ Reader_Ptr Chunk::getReader() {
     std::sort(ma.begin(), ma.end(), meas_time_compare_less());
     ENSURE(ma.front().time <= ma.back().time);
 
-    FullReader *fr = new FullReader(ma);
-    return Reader_Ptr{fr};
+    FullCursor *fr = new FullCursor(ma);
+    return Cursor_Ptr{fr};
   } else {
     return result;
   }

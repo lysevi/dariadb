@@ -3,11 +3,11 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
-#include <libdariadb/interfaces/ireader.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/utils/fs.h>
 
 BOOST_AUTO_TEST_CASE(MeasTest) {
@@ -233,16 +233,16 @@ BOOST_AUTO_TEST_CASE(LinearReaderTest) {
   ma1[1].time = 2;
   ma1[2].time = 3;
   ma1[3].time = 4;
-  auto fr1 = dariadb::Reader_Ptr{new FullReader(ma1)};
+  auto fr1 = dariadb::Cursor_Ptr{new FullCursor(ma1)};
 
   dariadb::MeasArray ma2(4);
   ma2[0].time = 5;
   ma2[1].time = 6;
   ma2[2].time = 7;
   ma2[3].time = 8;
-  auto fr2 = dariadb::Reader_Ptr{new FullReader(ma2)};
+  auto fr2 = dariadb::Cursor_Ptr{new FullCursor(ma2)};
 
-  dariadb::storage::LinearReader lr(ReadersList{fr1, fr2});
+  dariadb::storage::LinearCursor lr(CursorsList{fr1, fr2});
 
   dariadb::MeasList ml;
   while (!lr.is_end()) {
@@ -266,20 +266,20 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   ma1[1].time = 2;
   ma1[2].time = 4;
   ma1[3].time = 7;
-  auto fr1 = dariadb::Reader_Ptr{new FullReader(ma1)};
+  auto fr1 = dariadb::Cursor_Ptr{new FullCursor(ma1)};
 
   dariadb::MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
   ma2[3].time = 7;
-  auto fr2 = dariadb::Reader_Ptr{new FullReader(ma2)};
+  auto fr2 = dariadb::Cursor_Ptr{new FullCursor(ma2)};
 
   dariadb::MeasArray ma3(1);
   ma3[0].time = 8;
-  auto fr3 = dariadb::Reader_Ptr{new FullReader(ma3)};
+  auto fr3 = dariadb::Cursor_Ptr{new FullCursor(ma3)};
 
-  dariadb::storage::MergeSortReader msr{ReadersList{fr1, fr2, fr3}};
+  dariadb::storage::MergeSortCursor msr{CursorsList{fr1, fr2, fr3}};
 
   dariadb::MeasList ml;
   while (!msr.is_end()) {
@@ -293,9 +293,9 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   }
 
   auto must_be_false =
-      dariadb::storage::ReaderWrapperFactory::is_linear_readers(fr1, fr2);
+      dariadb::storage::CursorWrapperFactory::is_linear_readers(fr1, fr2);
   auto must_be_true =
-      dariadb::storage::ReaderWrapperFactory::is_linear_readers(fr1, fr3);
+      dariadb::storage::CursorWrapperFactory::is_linear_readers(fr1, fr3);
 
   BOOST_CHECK(must_be_true);
   BOOST_CHECK(!must_be_false);
@@ -322,33 +322,33 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
   ma1[1].time = 2;
   ma1[2].time = 4;
   ma1[3].time = 7;
-  auto fr1 = Reader_Ptr{new FullReader(ma1)};
+  auto fr1 = Cursor_Ptr{new FullCursor(ma1)};
 
   MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
   ma2[3].time = 7;
-  auto fr2 = Reader_Ptr{new FullReader(ma2)};
+  auto fr2 = Cursor_Ptr{new FullCursor(ma2)};
 
   MeasArray ma3(1);
   ma3[0].time = 8;
-  auto fr3 = Reader_Ptr{new FullReader(ma3)};
+  auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
 
   {
-    auto msr = ReaderWrapperFactory::colapseReaders(ReadersList{fr1, fr2});
-    auto top_reader = dynamic_cast<LinearReader *>(msr.get());
-    auto is_merge_reader = dynamic_cast<MergeSortReader *>(
+    auto msr = CursorWrapperFactory::colapseReaders(CursorsList{fr1, fr2});
+    auto top_reader = dynamic_cast<LinearCursor *>(msr.get());
+    auto is_merge_reader = dynamic_cast<MergeSortCursor *>(
                                top_reader->_readers.front().get()) != nullptr;
     BOOST_CHECK(is_merge_reader);
     BOOST_CHECK_EQUAL(top_reader->_readers.size(), size_t(1));
   }
 
   {
-    auto lsr = ReaderWrapperFactory::colapseReaders(ReadersList{fr1, fr3});
-    auto top_reader = dynamic_cast<LinearReader *>(lsr.get());
+    auto lsr = CursorWrapperFactory::colapseReaders(CursorsList{fr1, fr3});
+    auto top_reader = dynamic_cast<LinearCursor *>(lsr.get());
     for (auto &r : top_reader->_readers) {
-      auto is_full_reader = dynamic_cast<FullReader *>(r.get()) != nullptr;
+      auto is_full_reader = dynamic_cast<FullCursor *>(r.get()) != nullptr;
       BOOST_CHECK(is_full_reader);
     }
   }

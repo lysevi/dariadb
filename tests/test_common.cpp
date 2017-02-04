@@ -11,7 +11,7 @@ namespace dariadb_test {
 using namespace dariadb;
 using namespace dariadb::storage;
 
-class Callback : public storage::IReaderClb {
+class Callback : public storage::IReadCallback {
 public:
   Callback() {
     count = 0;
@@ -24,7 +24,7 @@ public:
   }
   void is_end() override {
     is_end_called++;
-    storage::IReaderClb::is_end();
+    storage::IReadCallback::is_end();
   }
   size_t count;
   MeasList all;
@@ -32,7 +32,7 @@ public:
   std::atomic_int is_end_called;
 };
 
-class OrderCheckCallback : public storage::IReaderClb {
+class OrderCheckCallback : public storage::IReadCallback {
 public:
   OrderCheckCallback() {
     is_greater = false;
@@ -359,7 +359,7 @@ void storage_test_check(storage::IMeasStorage *as, Time from, Time to,
   as->flush();
 }
 
-void check_reader(const dariadb::Reader_Ptr &rdr) {
+void check_reader(const dariadb::Cursor_Ptr &rdr) {
   dariadb::Meas top;
   bool is_first = true;
   while (!rdr->is_end()) {

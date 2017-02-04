@@ -58,12 +58,12 @@ public:
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  EXPORT Id2Reader intervalReader(const QueryInterval &query) override;
+  EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
   EXPORT void appendChunks(const std::vector<Chunk *> &a,
                            size_t count) override;
 
   EXPORT Id2MinMax loadMinMax();
-  EXPORT Id2Reader intervalReader(const QueryInterval &query,
+  EXPORT Id2Cursor intervalReader(const QueryInterval &query,
                                   const ChunkLinkList &links);
 
   bool checksum(); // return false if bad checksum.

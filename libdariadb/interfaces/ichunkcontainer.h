@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libdariadb/interfaces/icallbacks.h>
-#include <libdariadb/interfaces/ireader.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
@@ -31,8 +31,8 @@ public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;
   virtual Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) = 0;
-  virtual Id2Reader intervalReader(const QueryInterval &query) = 0;
-  EXPORT virtual void foreach (const QueryInterval &query, IReaderClb * clb);
+  virtual Id2Cursor intervalReader(const QueryInterval &query) = 0;
+  EXPORT virtual void foreach (const QueryInterval &query, IReadCallback * clb);
   EXPORT IChunkContainer();
   EXPORT virtual ~IChunkContainer();
 };

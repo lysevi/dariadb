@@ -7,7 +7,7 @@
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/interfaces/ireader.h>
+#include <libdariadb/interfaces/icursor.h>
 
 #include <map>
 #include <set>
@@ -142,7 +142,7 @@ public:
 
   EXPORT bool append(const Meas &m);
   EXPORT bool isFull() const;
-  EXPORT Reader_Ptr getReader();
+  EXPORT Cursor_Ptr getReader();
   EXPORT void close();
   EXPORT uint32_t calcChecksum();
   EXPORT uint32_t getChecksum();

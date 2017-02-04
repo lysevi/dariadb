@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libdariadb/interfaces/imeasstorage.h>
-#include <libdariadb/interfaces/ireader.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/memstorage/description.h>
@@ -38,12 +38,12 @@ public:
   EXPORT void stop();
   EXPORT Description description() const;
 
-  EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
+  EXPORT virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   EXPORT virtual MeasList readInterval(const QueryInterval &q) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-  EXPORT virtual Id2Reader intervalReader(const QueryInterval &query)override;
-  EXPORT virtual void foreach (const QueryTimePoint &q, IReaderClb * clbk) override;
+  EXPORT virtual Id2Cursor intervalReader(const QueryInterval &query)override;
+  EXPORT virtual void foreach (const QueryTimePoint &q, IReadCallback * clbk) override;
 
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
@@ -54,7 +54,7 @@ public:
   EXPORT void drop_part_wals(size_t count);
   EXPORT void compress_all();
 
-  EXPORT void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
+  EXPORT void subscribe(const IdArray &ids, const Flag &flag, const ReaderCallback_ptr &clbk);
   EXPORT void wait_all_asyncs();
 
   EXPORT void fsck();

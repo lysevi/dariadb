@@ -5,7 +5,7 @@
 using namespace dariadb::storage;
 using namespace dariadb;
 
-SubscribeInfo::SubscribeInfo(const IdArray &i, const Flag &f, const ReaderClb_ptr &c)
+SubscribeInfo::SubscribeInfo(const IdArray &i, const Flag &f, const ReaderCallback_ptr &c)
     : ids(i), flag(f), clbk(c) {}
 
 bool SubscribeInfo::isYours(const dariadb::Meas &m) const {

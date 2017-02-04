@@ -1,7 +1,7 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/wal/wal_manager.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -256,9 +256,9 @@ bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
-Id2Reader WALManager::intervalReader(const QueryInterval &q) {
+Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
   std::lock_guard<std::mutex> lg(_locker);
-  Id2ReadersList readers_list;
+  Id2CursorsList readers_list;
 
   utils::async::Locker readers_locker;
   auto files = wal_files();
@@ -305,15 +305,15 @@ Id2Reader WALManager::intervalReader(const QueryInterval &q) {
       MeasArray ma(kv.second.begin(), kv.second.end());
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.front().time <= ma.back().time);
-      FullReader *fr = new FullReader(ma);
-      Reader_Ptr r{fr};
+      FullCursor *fr = new FullCursor(ma);
+      Cursor_Ptr r{fr};
 	  readers_list[kv.first].push_back(r);
     }
   }
-  return ReaderWrapperFactory::colapseReaders(readers_list);
+  return CursorWrapperFactory::colapseReaders(readers_list);
 }
 
-void WALManager::foreach (const QueryInterval &q, IReaderClb * clbk) {
+void WALManager::foreach (const QueryInterval &q, IReadCallback * clbk) {
   auto reader = intervalReader(q);
   for (auto kv : reader) {
 	  kv.second->apply(clbk);

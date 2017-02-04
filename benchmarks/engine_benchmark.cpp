@@ -26,7 +26,7 @@ STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
 std::unique_ptr<dariadb_bench::BenchmarkSummaryInfo> summary_info;
 
-class BenchCallback : public IReaderClb {
+class BenchCallback : public IReadCallback {
 public:
   BenchCallback() {
     count = 0;
@@ -35,7 +35,7 @@ public:
   void apply(const dariadb::Meas &) override { count++; }
   void is_end() override {
     is_end_called = true;
-    IReaderClb::is_end();
+    IReadCallback::is_end();
   }
   std::atomic<size_t> count;
   bool is_end_called;

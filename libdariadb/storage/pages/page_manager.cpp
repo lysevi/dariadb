@@ -6,7 +6,7 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/pages/page_manager.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -173,7 +173,7 @@ public:
     return pg;
   }
 
-  Id2Reader intervalReader(const QueryInterval &query) {
+  Id2Cursor intervalReader(const QueryInterval &query) {
     auto pred = [&query](const IndexHeader &hdr) {
       auto interval_check(
           (hdr.stat.minTime >= query.from && hdr.stat.maxTime <= query.to) ||
@@ -193,7 +193,7 @@ public:
       return false;
     };
 
-    Id2ReadersList result;
+    Id2CursorsList result;
     utils::async::Locker result_locker;
 
     AsyncTask at = [&query, this, &result, &result_locker,
@@ -217,7 +217,7 @@ public:
     auto pm_async =
         ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
     pm_async->wait();
-    return ReaderWrapperFactory::colapseReaders(result);
+    return CursorWrapperFactory::colapseReaders(result);
   }
 
   std::list<std::string>
@@ -534,7 +534,7 @@ dariadb::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
   return impl->valuesBeforeTimePoint(q);
 }
 
-dariadb::Id2Reader PageManager::intervalReader(const QueryInterval &query) {
+dariadb::Id2Cursor PageManager::intervalReader(const QueryInterval &query) {
   return impl->intervalReader(query);
 }
 

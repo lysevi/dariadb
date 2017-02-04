@@ -84,7 +84,7 @@ public:
   }
 };
 
-class BenchCallback : public dariadb::storage::IReaderClb {
+class BenchCallback : public dariadb::storage::IReadCallback {
 public:
   BenchCallback() {
     count = 0;
@@ -93,7 +93,7 @@ public:
   void apply(const dariadb::Meas &) override { count++; }
   void is_end() override {
     is_end_called = true;
-    dariadb::storage::IReaderClb::is_end();
+    dariadb::storage::IReadCallback::is_end();
   }
   std::mutex _locker;
   size_t count;

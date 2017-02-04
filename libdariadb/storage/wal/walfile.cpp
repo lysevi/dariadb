@@ -4,7 +4,7 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/fs.h>
@@ -122,7 +122,7 @@ public:
     return Status(write_size, 0);
   }
 
-  Id2Reader intervalReader(const QueryInterval &q) {
+  Id2Cursor intervalReader(const QueryInterval &q) {
     open_to_read();
 
     Id2MSet subresult;
@@ -140,21 +140,21 @@ public:
     _file = nullptr;
 
     if (subresult.empty()) {
-      return Id2Reader();
+      return Id2Cursor();
     }
-	Id2Reader result;
+	Id2Cursor result;
     for (auto kv : subresult) {
       MeasArray ma(kv.second.begin(), kv.second.end());
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.front().time <= ma.back().time);
-      FullReader *fr = new FullReader(ma);
-      Reader_Ptr reader{fr};
+      FullCursor *fr = new FullCursor(ma);
+      Cursor_Ptr reader{fr};
 	  result[kv.first] = reader;
     }
     return result;
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) {
+  void foreach (const QueryInterval &q, IReadCallback * clbk) {
     auto readers = intervalReader(q);
 
 	for (auto kv : readers) {
@@ -408,11 +408,11 @@ Status WALFile::append(const MeasList::const_iterator &begin,
   return _Impl->append(begin, end);
 }
 
-Id2Reader WALFile::intervalReader(const QueryInterval &q) {
+Id2Cursor WALFile::intervalReader(const QueryInterval &q) {
   return _Impl->intervalReader(q);
 }
 
-void WALFile::foreach (const QueryInterval &q, IReaderClb * clbk) {
+void WALFile::foreach (const QueryInterval &q, IReadCallback * clbk) {
   return _Impl->foreach (q, clbk);
 }
 

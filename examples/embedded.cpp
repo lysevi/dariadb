@@ -7,7 +7,7 @@ public:
   void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) override {}
 };
 
-class Callback : public dariadb::storage::IReaderClb {
+class Callback : public dariadb::storage::IReadCallback {
 public:
   Callback() {}
 
@@ -19,7 +19,7 @@ public:
 
   void is_end() override {
     std::cout << "calback end." << std::endl;
-    dariadb::storage::IReaderClb::is_end();
+    dariadb::storage::IReadCallback::is_end();
   }
 };
 

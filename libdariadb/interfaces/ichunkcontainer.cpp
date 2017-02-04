@@ -7,7 +7,7 @@ IChunkStorage::~IChunkStorage() {}
 IChunkContainer::IChunkContainer() {}
 IChunkContainer::~IChunkContainer() {}
 
-void IChunkContainer::foreach (const QueryInterval &query, IReaderClb * clb) {
+void IChunkContainer::foreach (const QueryInterval &query, IReadCallback * clb) {
   auto readers = intervalReader(query);
   for (auto kv : readers) {
     kv.second->apply(clb,query);

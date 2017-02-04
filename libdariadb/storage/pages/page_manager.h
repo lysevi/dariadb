@@ -22,7 +22,7 @@ public:
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
-  EXPORT Id2Reader intervalReader(const QueryInterval &query) override;
+  EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
 
   EXPORT size_t files_count() const;
   EXPORT size_t chunks_in_cur_page() const;

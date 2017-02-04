@@ -7,7 +7,7 @@
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/pages/helpers.h>
 #include <libdariadb/storage/pages/page.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/exception.h>
@@ -433,18 +433,18 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   fclose(page_io);
   return result;
 }
-Id2Reader Page::intervalReader(const QueryInterval &query) {
+Id2Cursor Page::intervalReader(const QueryInterval &query) {
   auto links = linksByIterval(query);
   return intervalReader(query, links);
 }
 
-Id2Reader Page::intervalReader(const QueryInterval &query,
+Id2Cursor Page::intervalReader(const QueryInterval &query,
                                const ChunkLinkList &links) {
 
-  Id2ReadersList sub_result;
+  Id2CursorsList sub_result;
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
-    return Id2Reader();
+    return Id2Cursor();
   }
   auto page_io = std::fopen(filename.c_str(), "rb");
   if (page_io == nullptr) {
@@ -461,7 +461,7 @@ Id2Reader Page::intervalReader(const QueryInterval &query,
     sub_result[search_res->header->meas_id].push_back(rdr);
   }
   fclose(page_io);
-  Id2Reader result = ReaderWrapperFactory::colapseReaders(sub_result);
+  Id2Cursor result = CursorWrapperFactory::colapseReaders(sub_result);
   return result;
 }
 

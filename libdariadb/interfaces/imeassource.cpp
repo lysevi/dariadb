@@ -7,7 +7,7 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-void IMeasSource::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
+void IMeasSource::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   auto values = this->readTimePoint(q);
   for (auto &kv : values) {
     clbk->apply(kv.second);

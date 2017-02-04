@@ -2,7 +2,7 @@
 
 #include <libdariadb/flags.h>
 #include <libdariadb/interfaces/imeasstorage.h>
-#include <libdariadb/interfaces/ireader.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/meas.h>
 #include <string>
 
@@ -20,6 +20,6 @@ void storage_test_check(dariadb::storage::IMeasStorage *as, dariadb::Time from,
                         dariadb::Time to, dariadb::Time step,
                         bool check_stop_flag, bool random_timestamps=false);
 
-void check_reader(const dariadb::Reader_Ptr &rdr);
+void check_reader(const dariadb::Cursor_Ptr &rdr);
 /*void readIntervalCommonTest(dariadb::storage::MeasStorage *ds);*/
 }

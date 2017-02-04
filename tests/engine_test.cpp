@@ -11,7 +11,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 
-class BenchCallback : public dariadb::storage::IReaderClb {
+class BenchCallback : public dariadb::storage::IReadCallback {
 public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &) { count++; }
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
   }
 }
 
-class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
+class Moc_SubscribeClbk : public dariadb::storage::IReadCallback {
 public:
   std::list<dariadb::Meas> values;
   void apply(const dariadb::Meas &m) override { values.push_back(m); }

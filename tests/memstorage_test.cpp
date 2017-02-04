@@ -34,9 +34,9 @@ struct MokChunkWriter : public dariadb::storage::IChunkContainer {
   valuesBeforeTimePoint(const dariadb::storage::QueryTimePoint &q) override {
     return dariadb::Id2Meas{};
   }
-  dariadb::Id2Reader
+  dariadb::Id2Cursor
   intervalReader(const dariadb::storage::QueryInterval &query) override {
-    return dariadb::Id2Reader();
+    return dariadb::Id2Cursor();
   }
 };
 

@@ -3,13 +3,13 @@
 #endif
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/memstorage/timetrack.h>
-#include <libdariadb/storage/readers.h>
+#include <libdariadb/storage/cursors.h>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 
-struct MemTrackReader : dariadb::IReader {
-  MemTrackReader(const Reader_Ptr &r, const TimeTrack_ptr &track) {
+struct MemTrackReader : dariadb::ICursor {
+  MemTrackReader(const Cursor_Ptr &r, const TimeTrack_ptr &track) {
     _r = r;
     _track = track;
     ENSURE(track != nullptr);
@@ -27,7 +27,7 @@ struct MemTrackReader : dariadb::IReader {
 
   Time maxTime() override { return _track->minTime(); }
 
-  Reader_Ptr _r;
+  Cursor_Ptr _r;
   TimeTrack_ptr _track;
 };
 
@@ -226,10 +226,10 @@ bool chunkInQuery(const QueryInterval &q, const Chunk_Ptr &c) {
   }
 }
 
-Id2Reader TimeTrack::intervalReader(const QueryInterval &q) {
+Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
   std::lock_guard<utils::async::Locker> lg(_locker);
 
-  ReadersList readers;
+  CursorsList readers;
   auto end = _index.upper_bound(q.to);
   auto begin = _index.lower_bound(q.from);
   if (begin != _index.begin()) {
@@ -250,15 +250,15 @@ Id2Reader TimeTrack::intervalReader(const QueryInterval &q) {
     readers.push_back(rdr);
   }
   if (readers.empty()) {
-    return Id2Reader();
+    return Id2Cursor();
   }
-  Reader_Ptr result = ReaderWrapperFactory::colapseReaders(readers);
-  Id2Reader i2r;
+  Cursor_Ptr result = CursorWrapperFactory::colapseReaders(readers);
+  Id2Cursor i2r;
   i2r[this->_meas_id] = result;
   return i2r;
 }
 
-void TimeTrack::foreach (const QueryInterval &q, IReaderClb * clbk) {
+void TimeTrack::foreach (const QueryInterval &q, IReadCallback * clbk) {
   auto rdrs = intervalReader(q);
   if (rdrs.empty()) {
     return;

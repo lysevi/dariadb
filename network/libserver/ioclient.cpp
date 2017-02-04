@@ -10,7 +10,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-struct SubscribeCallback : public storage::IReaderClb {
+struct SubscribeCallback : public storage::IReadCallback {
   utils::async::Locker _locker;
   IOClient *_parent;
   QueryNumber _query_num;
@@ -56,7 +56,7 @@ void IOClient::ClientDataReader::apply(const Meas &m) {
 }
 
 void IOClient::ClientDataReader::is_end() {
-  IReaderClb::is_end();
+  IReadCallback::is_end();
   send_buffer();
 
   auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
@@ -386,7 +386,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
                                          query_hdr->from, query_hdr->to};
 
     auto cdr = new ClientDataReader(this, query_num);
-    this->readerAdd(storage::ReaderClb_ptr(cdr), qi);
+    this->readerAdd(storage::ReaderCallback_ptr(cdr), qi);
     env->storage->foreach (*qi, cdr);
   }
 }
@@ -407,7 +407,7 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
       new storage::QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(storage::ReaderClb_ptr(cdr), qi);
+  readerAdd(storage::ReaderCallback_ptr(cdr), qi);
   env->storage->foreach (*qi, cdr);
 }
 
@@ -424,7 +424,7 @@ void IOClient::currentValue(const NetData_ptr &d) {
 
   auto result = env->storage->currentValue(all_ids, flag);
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(storage::ReaderClb_ptr(cdr), nullptr);
+  readerAdd(storage::ReaderCallback_ptr(cdr), nullptr);
   for (auto &v : result) {
     cdr->apply(v.second);
   }
@@ -444,13 +444,13 @@ void IOClient::subscribe(const NetData_ptr &d) {
   auto query_num = query_hdr->id;
 
   if (subscribe_reader == nullptr) {
-    subscribe_reader = std::shared_ptr<storage::IReaderClb>(
+    subscribe_reader = std::shared_ptr<storage::IReadCallback>(
         new SubscribeCallback(this, query_num));
   }
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
 
-void IOClient::readerAdd(const storage::ReaderClb_ptr &cdr, void *data) {
+void IOClient::readerAdd(const storage::ReaderCallback_ptr &cdr, void *data) {
   std::lock_guard<std::mutex> lg(_readers_lock);
   ClientDataReader *cdr_raw = dynamic_cast<ClientDataReader *>(cdr.get());
   ENSURE(cdr_raw != nullptr);

@@ -2,7 +2,7 @@
 
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/interfaces/ireader.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <memory>
@@ -26,8 +26,8 @@ public:
                        const MeasArray::const_iterator &end) override;
   EXPORT Status append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) override;
-  EXPORT Id2Reader intervalReader(const QueryInterval &q);
-  EXPORT void foreach (const QueryInterval &q, IReaderClb * clbk) override;
+  EXPORT Id2Cursor intervalReader(const QueryInterval &q);
+  EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   EXPORT Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   EXPORT dariadb::Time minTime() override;
