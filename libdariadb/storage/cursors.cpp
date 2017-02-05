@@ -196,7 +196,8 @@ Time LinearCursor::minTime() { return _minTime; }
 
 Time LinearCursor::maxTime() { return _maxTime; }
 
-Cursor_Ptr CursorWrapperFactory::colapseReaders(const CursorsList &readers_list) {
+Cursor_Ptr
+CursorWrapperFactory::colapseReaders(const CursorsList &readers_list) {
   std::vector<Cursor_Ptr> readers_vector{readers_list.begin(),
                                          readers_list.end()};
   typedef std::set<size_t> positions_set;
@@ -252,8 +253,10 @@ Id2Cursor CursorWrapperFactory::colapseReaders(const Id2CursorsList &i2r) {
 }
 
 bool CursorWrapperFactory::is_linear_readers(const Cursor_Ptr &r1,
-                                          const Cursor_Ptr &r2) {
+                                             const Cursor_Ptr &r2) {
   bool is_overlap = utils::intervalsIntersection(r1->minTime(), r1->maxTime(),
                                                  r2->minTime(), r2->maxTime());
   return !is_overlap;
 }
+
+void Join::join(const CursorsList &l, Join::Callback *clbk) {}

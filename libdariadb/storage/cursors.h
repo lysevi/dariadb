@@ -61,5 +61,13 @@ struct CursorWrapperFactory {
   EXPORT static Cursor_Ptr colapseReaders(const CursorsList &i2r);
   EXPORT static Id2Cursor colapseReaders(const Id2CursorsList &i2r);
 };
+
+struct Join {
+  struct Callback {
+    virtual void apply(const MeasArray &) = 0;
+  };
+
+  EXPORT static void join(const CursorsList &l, Callback *clbk);
+};
 }
 }
