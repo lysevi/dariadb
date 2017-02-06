@@ -47,7 +47,7 @@ public:
     }
   }
 
-  void set_storage(storage::Engine *storage) {
+  void set_storage(Engine *storage) {
     logger("server: set storage.");
     _env.storage = storage;
     log_server_info_internal();
@@ -281,7 +281,7 @@ public:
 
     stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.wal_count
             << " T:" << queue_sizes.active_works;
-    if (_env.storage->strategy() == dariadb::storage::STRATEGY::MEMORY) {
+    if (_env.storage->strategy() == dariadb::STRATEGY::MEMORY) {
       stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
               << " a:" << queue_sizes.memstorage.allocated;
     }
@@ -340,7 +340,7 @@ void Server::stop() {
   _Impl->stop();
 }
 
-void Server::set_storage(storage::Engine *storage) {
+void Server::set_storage(Engine *storage) {
   _Impl->set_storage(storage);
 }
 

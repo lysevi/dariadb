@@ -25,6 +25,7 @@
 
 #include <stx/btree_multimap.h>
 
+using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 

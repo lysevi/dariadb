@@ -10,7 +10,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-struct SubscribeCallback : public storage::IReadCallback {
+struct SubscribeCallback : public IReadCallback {
   utils::async::Locker _locker;
   IOClient *_parent;
   QueryNumber _query_num;
@@ -305,7 +305,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     }
     logger_info("server: #", this->_async_connection->id(),
                 " query to storage compaction.");
-    if (this->env->storage->strategy() == storage::STRATEGY::WAL) {
+    if (this->env->storage->strategy() == STRATEGY::WAL) {
       auto wals = this->env->storage->description().wal_count;
       logger_info("server: #", this->_async_connection->id(), " drop ", wals,
                   " wals to pages.");
@@ -382,11 +382,11 @@ void IOClient::readInterval(const NetData_ptr &d) {
     sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
   } else {
 
-    auto qi = new storage::QueryInterval{all_ids, query_hdr->flag,
+    auto qi = new QueryInterval{all_ids, query_hdr->flag,
                                          query_hdr->from, query_hdr->to};
 
     auto cdr = new ClientDataReader(this, query_num);
-    this->readerAdd(storage::ReaderCallback_ptr(cdr), qi);
+    this->readerAdd(ReaderCallback_ptr(cdr), qi);
     env->storage->foreach (*qi, cdr);
   }
 }
@@ -404,10 +404,10 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
 
   auto query_num = query_hdr->id;
   auto qi =
-      new storage::QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
+      new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(storage::ReaderCallback_ptr(cdr), qi);
+  readerAdd(ReaderCallback_ptr(cdr), qi);
   env->storage->foreach (*qi, cdr);
 }
 
@@ -424,7 +424,7 @@ void IOClient::currentValue(const NetData_ptr &d) {
 
   auto result = env->storage->currentValue(all_ids, flag);
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(storage::ReaderCallback_ptr(cdr), nullptr);
+  readerAdd(ReaderCallback_ptr(cdr), nullptr);
   for (auto &v : result) {
     cdr->apply(v.second);
   }
@@ -444,13 +444,13 @@ void IOClient::subscribe(const NetData_ptr &d) {
   auto query_num = query_hdr->id;
 
   if (subscribe_reader == nullptr) {
-    subscribe_reader = std::shared_ptr<storage::IReadCallback>(
+    subscribe_reader = std::shared_ptr<IReadCallback>(
         new SubscribeCallback(this, query_num));
   }
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
 
-void IOClient::readerAdd(const storage::ReaderCallback_ptr &cdr, void *data) {
+void IOClient::readerAdd(const ReaderCallback_ptr &cdr, void *data) {
   std::lock_guard<std::mutex> lg(_readers_lock);
   ClientDataReader *cdr_raw = dynamic_cast<ClientDataReader *>(cdr.get());
   ENSURE(cdr_raw != nullptr);

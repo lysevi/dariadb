@@ -57,7 +57,7 @@ void check_path_exists() {
   }
 }
 
-void show_drop_info(dariadb::storage::Engine *storage) {
+void show_drop_info(dariadb::Engine *storage) {
   while (!stop_info) {
     auto queue_sizes = storage->description();
 
@@ -107,8 +107,8 @@ int main(int argc, char *argv[]) {
   po::notify(vm);
 
   if (vm.count("version")) {
-    std::cout << "format: " << dariadb::storage::Engine::format() << std::endl;
-    std::cout << "version: " << dariadb::storage::Engine::version()
+    std::cout << "format: " << dariadb::Engine::format() << std::endl;
+    std::cout << "version: " << dariadb::Engine::version()
               << std::endl;
     std::exit(0);
   }
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
   if (new_base_name.size() != 0) {
     std::cout << "create " << new_base_name << std::endl;
     auto settings = dariadb::storage::Settings::create(storage_path);
-    auto e = std::make_unique<dariadb::storage::Engine>(settings);
+    auto e = std::make_unique<dariadb::Engine>(settings);
     e = nullptr;
     std::exit(1);
   }
@@ -170,14 +170,14 @@ int main(int argc, char *argv[]) {
 
   if (vm.count("fsck")) {
     auto settings = loadSettings();
-    auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
+    auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
     e->fsck();
     e->stop();
   }
 
   if (vm.count("compress")) {
     auto settings = loadSettings();
-    auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
+    auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
     stop_info = false;
     std::thread info_thread(&show_drop_info, e.get());
     e->compress_all();
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto settings = loadSettings();
-    auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
+    auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
 
     e->eraseOld(to);
     e->flush();
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
   if (vm.count("compact")) {
     if (compact_from.size() == 0 && compact_to.size() == 0) {
       auto settings = loadSettings();
-      auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
+      auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
       e->compactTo(0);
       e->flush();
       e->stop();
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
                 << dariadb::timeutil::to_string(to) << std::endl;
 
       auto settings = loadSettings();
-      auto e = std::make_unique<dariadb::storage::Engine>(settings, force_unlock_storage);
+      auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
       e->compactbyTime(from, to);
       e->stop();
       std::exit(0);

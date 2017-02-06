@@ -5,9 +5,9 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/storage/query_param.h>
+#include <libdariadb/query_param.h>
+
 namespace dariadb {
-namespace storage {
 
 struct ChunkLink {
   uint64_t id;
@@ -22,7 +22,7 @@ using ChunkLinkList = std::list<ChunkLink>;
 
 class IChunkStorage {
 public:
-  virtual void appendChunks(const std::vector<Chunk *> &a, size_t count) = 0;
+  virtual void appendChunks(const std::vector<storage::Chunk *> &a, size_t count) = 0;
   EXPORT ~IChunkStorage();
 };
 
@@ -37,4 +37,4 @@ public:
   EXPORT virtual ~IChunkContainer();
 };
 }
-}
+

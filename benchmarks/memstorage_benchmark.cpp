@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 
     stop_info = true;
     info_thread.join();
-	dariadb_bench::BenchmarkSummaryInfo summary_info(dariadb::storage::STRATEGY::MEMORY);
+	dariadb_bench::BenchmarkSummaryInfo summary_info(dariadb::STRATEGY::MEMORY);
     dariadb_bench::readBenchmark(&summary_info, all_id_set, mstore.get(), 10, false, false);
 
     mstore=nullptr;

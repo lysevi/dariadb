@@ -3,7 +3,6 @@
 #include <string>
 
 namespace dariadb {
-namespace storage {
 
 class IWALDropper {
 public:
@@ -11,4 +10,4 @@ public:
   virtual ~IWALDropper() {}
 };
 }
-}
+

@@ -11,7 +11,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 
-class BenchCallback : public dariadb::storage::IReadCallback {
+class BenchCallback : public dariadb::IReadCallback {
 public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &) { count++; }
@@ -25,9 +25,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const dariadb::Time from = 0;
   const dariadb::Time to = from + 1000;
   const dariadb::Time step = 10;
-
+  using namespace dariadb;
   using namespace dariadb::storage;
-
   {
     std::cout << "Engine_common_test.\n";
     if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -57,7 +56,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     auto raw_ptr = new Engine(settings);
 
-    dariadb::storage::IMeasStorage_ptr ms{raw_ptr};
+    dariadb::IMeasStorage_ptr ms{raw_ptr};
     auto index_files = dariadb::utils::fs::ls(storage_path, ".pagei");
     for (auto &f : index_files) {
       dariadb::utils::fs::rm(f);
@@ -86,6 +85,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
   const dariadb::Time to = from + 50;
   const dariadb::Time step = 10;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     settings->wal_cache_size.setValue(100);
     settings->wal_file_size.setValue(settings->wal_cache_size.value() * 2);
     settings->chunk_size.setValue(chunk_size);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
     dariadb::IdSet all_ids;
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
   }
 }
 
-class Moc_SubscribeClbk : public dariadb::storage::IReadCallback {
+class Moc_SubscribeClbk : public dariadb::IReadCallback {
 public:
   std::list<dariadb::Meas> values;
   void apply(const dariadb::Meas &m) override { values.push_back(m); }
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     settings->wal_cache_size.setValue(chunk_size);
     settings->chunk_size.setValue(chunk_size);
 
-    auto ms = std::make_shared<dariadb::storage::Engine>(settings);
+    auto ms = std::make_shared<dariadb::Engine>(settings);
 
     dariadb::IdArray ids{};
     ms->subscribe(ids, 0, c1); // all
@@ -191,6 +191,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
   const dariadb::Time to = from + 1000;
   const dariadb::Time step = 10;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -224,6 +225,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
   const dariadb::Time to = from + 1000;
   const dariadb::Time step = 10;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -257,6 +259,7 @@ BOOST_AUTO_TEST_CASE(Engine_join_test) {
   const dariadb::Time to = from + 50;
   const dariadb::Time step = 10;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -269,7 +272,7 @@ BOOST_AUTO_TEST_CASE(Engine_join_test) {
     settings->wal_cache_size.setValue(100);
     settings->wal_file_size.setValue(settings->wal_cache_size.value() * 2);
     settings->chunk_size.setValue(chunk_size);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
     dariadb::IdSet all_ids;
@@ -278,11 +281,11 @@ BOOST_AUTO_TEST_CASE(Engine_join_test) {
                                         &maxWritedTime, false);
 
     const dariadb::Id no_exists_id = 77676;
-    std::list<dariadb::storage::QueryInterval> qs;
-    qs.push_back(dariadb::storage::QueryInterval({0}, 0, 0, 10));
-    qs.push_back(dariadb::storage::QueryInterval({1}, 0, 10, 20));
-    qs.push_back(dariadb::storage::QueryInterval({2, 3}, 0, 20, to));
-    qs.push_back(dariadb::storage::QueryInterval({no_exists_id}, 0, 20, to));
+    std::list<dariadb::QueryInterval> qs;
+    qs.push_back(dariadb::QueryInterval({0}, 0, 0, 10));
+    qs.push_back(dariadb::QueryInterval({1}, 0, 10, 20));
+    qs.push_back(dariadb::QueryInterval({2, 3}, 0, 20, to));
+    qs.push_back(dariadb::QueryInterval({no_exists_id}, 0, 20, to));
 
     auto tm = std::make_unique<dariadb::storage::Join::TableMaker>();
     ms->join(qs, tm.get());

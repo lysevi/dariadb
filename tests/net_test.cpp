@@ -267,6 +267,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -275,7 +276,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
@@ -324,12 +325,12 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     read_res->wait();
     c1.append(ma);
 
-    dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
+    dariadb::QueryInterval qi{ids, 0, dariadb::Time(0),
                                        dariadb::Time(MEASES_SIZE)};
     auto result = c1.readInterval(qi);
     BOOST_CHECK_EQUAL(result.size(), ma.size());
 
-    dariadb::storage::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
+    dariadb::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
     auto result_tp = c1.readTimePoint(qt);
     BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
     BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
@@ -363,6 +364,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -371,7 +373,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
@@ -453,6 +455,7 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -461,7 +464,7 @@ BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 

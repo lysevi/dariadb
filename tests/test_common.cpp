@@ -9,9 +9,8 @@
 namespace dariadb_test {
 #undef NO_DATA
 using namespace dariadb;
-using namespace dariadb::storage;
 
-class Callback : public storage::IReadCallback {
+class Callback : public IReadCallback {
 public:
   Callback() {
     count = 0;
@@ -24,7 +23,7 @@ public:
   }
   void is_end() override {
     is_end_called++;
-    storage::IReadCallback::is_end();
+    IReadCallback::is_end();
   }
   size_t count;
   MeasList all;
@@ -32,7 +31,7 @@ public:
   std::atomic_int is_end_called;
 };
 
-class OrderCheckCallback : public storage::IReadCallback {
+class OrderCheckCallback : public IReadCallback {
 public:
   OrderCheckCallback() {
     is_greater = false;
@@ -113,7 +112,7 @@ void check_reader_of_all(MeasList &all, Time from, Time to, Time step,
   checkAll(all, message, from, to, step);
 }
 
-size_t fill_storage_for_test(dariadb::storage::IMeasStorage *as,
+size_t fill_storage_for_test(dariadb::IMeasStorage *as,
                              dariadb::Time from, dariadb::Time to,
                              dariadb::Time step, dariadb::IdSet *_all_ids_set,
                              dariadb::Time *maxWritedTime,
@@ -186,7 +185,7 @@ size_t fill_storage_for_test(dariadb::storage::IMeasStorage *as,
   return total_count;
 }
 
-void minMaxCheck(storage::IMeasStorage *as, Time from, Time maxWritedTime) {
+void minMaxCheck(IMeasStorage *as, Time from, Time maxWritedTime) {
   Time minTime, maxTime;
   if (!(as->minMaxTime(Id(0), &minTime, &maxTime))) {
     throw MAKE_EXCEPTION("!(as->minMaxTime)");
@@ -205,12 +204,12 @@ void minMaxCheck(storage::IMeasStorage *as, Time from, Time maxWritedTime) {
   }
 }
 
-void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
+void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
                        const IdSet &_all_ids_set, const IdArray &_all_ids_array,
                        size_t total_count, bool check_stop_flag) {
 
   IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
-  storage::QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
+  QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
   MeasList all = as->readInterval(qi_all);
 
   auto all_size = all.size();
@@ -231,7 +230,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   }
   delete clbk;
 
-  all = as->readInterval(storage::QueryInterval(
+  all = as->readInterval(QueryInterval(
       ids, 0, to + copies_count - copies_count / 3, to + copies_count));
   if (all.size() == size_t(0)) {
     throw MAKE_EXCEPTION("all.size() != size_t(0)");
@@ -241,7 +240,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   ids.push_back(2);
   MeasList fltr_res{};
   fltr_res =
-      as->readInterval(storage::QueryInterval(ids, 0, from, to + copies_count));
+      as->readInterval(QueryInterval(ids, 0, from, to + copies_count));
 
   if (fltr_res.size() != copies_count) {
     throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
@@ -253,7 +252,7 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
     IdArray zero_id;
     zero_id.resize(1);
     zero_id[0] = dariadb::Id(0);
-    as->foreach (storage::QueryInterval(zero_id, 0, from, to + copies_count),
+    as->foreach (QueryInterval(zero_id, 0, from, to + copies_count),
                  order_clbk);
     order_clbk->wait();
     if (!order_clbk->is_greater) {
@@ -263,10 +262,10 @@ void readIntervalCheck(storage::IMeasStorage *as, Time from, Time to, Time step,
   }
 }
 
-void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to,
+void readTimePointCheck(IMeasStorage *as, Time from, Time to,
                         Time step, const IdArray &_all_ids_array,
                         bool check_stop_flag) {
-  auto qp = storage::QueryTimePoint(_all_ids_array, 0, to + copies_count);
+  auto qp = QueryTimePoint(_all_ids_array, 0, to + copies_count);
   auto all_id2meas = as->readTimePoint(qp);
 
   size_t ids_count = (size_t)((to - from) / step);
@@ -306,7 +305,7 @@ void readTimePointCheck(storage::IMeasStorage *as, Time from, Time to,
   }
 }
 
-void storage_test_check(storage::IMeasStorage *as, Time from, Time to,
+void storage_test_check(IMeasStorage *as, Time from, Time to,
                         Time step, bool check_stop_flag,
                         bool random_timestamps) {
   IdSet _all_ids_set;
@@ -409,7 +408,7 @@ void readIntervalCommonTest(storage::MeasStorage *ds) {
         throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5))");
       }
 
-      auto rdr = ds->readInterval(storage::QueryInterval(all_id, 0, 0, 6));
+      auto rdr = ds->readInterval(QueryInterval(all_id, 0, 0, 6));
       output_in_point.clear();
       rdr->readAll(&output_in_point);
       if (output_in_point.size() != size_t(5)) {
@@ -432,7 +431,7 @@ void readIntervalCommonTest(storage::MeasStorage *ds) {
         }
       }
     }
-    auto reader = ds->readInterval(storage::QueryInterval(all_id, 0, 3, 5));
+    auto reader = ds->readInterval(QueryInterval(all_id, 0, 3, 5));
     MeasList output{};
     reader->readAll(&output);
     // if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
@@ -479,7 +478,7 @@ void readIntervalCommonTest(storage::MeasStorage *ds) {
     }
 
     auto reader = ds->readInterval(
-        storage::QueryInterval(IdArray{1, 2, 4, 5, 55}, 0, 8, 10));
+        QueryInterval(IdArray{1, 2, 4, 5, 55}, 0, 8, 10));
     MeasList output{};
     reader->readAll(&output);
     if (output.size() != size_t(7)) {

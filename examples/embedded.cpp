@@ -15,7 +15,7 @@ struct TableMaker : public dariadb::storage::Join::Callback {
   dariadb::storage::Join::Table table;
 };
 
-class Callback : public dariadb::storage::IReadCallback {
+class Callback : public dariadb::IReadCallback {
 public:
   Callback() {}
 
@@ -27,7 +27,7 @@ public:
 
   void is_end() override {
     std::cout << "calback end." << std::endl;
-    dariadb::storage::IReadCallback::is_end();
+    dariadb::IReadCallback::is_end();
   }
 };
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->save();
 
-  auto storage = std::make_unique<dariadb::storage::Engine>(settings);
+  auto storage = std::make_unique<dariadb::Engine>(settings);
 
   auto m = dariadb::Meas();
   auto start_time = dariadb::timeutil::current_time();
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
   }
 
   // query writed interval;
-  dariadb::storage::QueryInterval qi(
+  dariadb::QueryInterval qi(
       dariadb::IdArray{dariadb::Id(0), dariadb::Id(1)}, dariadb::Flag(),
       start_time, m.time);
   dariadb::MeasList readed_values = storage->readInterval(qi);
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   }
 
   // query in timepoint;
-  dariadb::storage::QueryTimePoint qp(
+  dariadb::QueryTimePoint qp(
       dariadb::IdArray{dariadb::Id(0), dariadb::Id(1)}, dariadb::Flag(),
       m.time);
   dariadb::Id2Meas timepoint = storage->readTimePoint(qp);
@@ -111,9 +111,9 @@ int main(int argc, char **argv) {
   callback_ptr->wait();
 
   // join
-  dariadb::storage::QueryInterval qi1(dariadb::IdArray{dariadb::Id(0)},
+  dariadb::QueryInterval qi1(dariadb::IdArray{dariadb::Id(0)},
                                       dariadb::Flag(), start_time, m.time);
-  dariadb::storage::QueryInterval qi2(dariadb::IdArray{dariadb::Id(1)},
+  dariadb::QueryInterval qi2(dariadb::IdArray{dariadb::Id(1)},
                                       dariadb::Flag(), start_time,
                                       start_time + start_time / 2.0);
 
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 
   for (auto row : table_callback->table) {
     std::cout << dariadb::timeutil::to_string(row.front().time) << ":[";
-	dariadb::storage::row2stream(std::cout, row);
+	dariadb::row2stream(std::cout, row);
     std::cout <<"]"<< std::endl;
   }
 }

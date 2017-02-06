@@ -2,9 +2,8 @@
 #include <libdariadb/interfaces/icursor.h>
 
 using namespace dariadb;
-using namespace dariadb::storage;
 
-void dariadb::ICursor::apply(dariadb::storage::IReadCallback *clbk) {
+void dariadb::ICursor::apply(IReadCallback *clbk) {
   while (!this->is_end()) {
     if (clbk->is_canceled()) {
       break;
@@ -14,7 +13,7 @@ void dariadb::ICursor::apply(dariadb::storage::IReadCallback *clbk) {
   }
 }
 
-void dariadb::ICursor::apply(storage::IReadCallback *clbk, const dariadb::storage::QueryInterval &q) {
+void dariadb::ICursor::apply(IReadCallback *clbk, const dariadb::QueryInterval &q) {
   while (!this->is_end()) {
     if (clbk->is_canceled()) {
       break;

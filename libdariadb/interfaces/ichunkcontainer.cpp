@@ -1,6 +1,6 @@
 #include <libdariadb/interfaces/ichunkcontainer.h>
 
-using namespace dariadb::storage;
+using namespace dariadb;
 
 IChunkStorage::~IChunkStorage() {}
 

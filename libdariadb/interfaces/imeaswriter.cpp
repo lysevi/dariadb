@@ -1,7 +1,6 @@
 #include <libdariadb/interfaces/imeaswriter.h>
 
 using namespace dariadb;
-using namespace dariadb::storage;
 
 Status IMeasWriter::append(const Meas &) {
   return Status(0, 1);

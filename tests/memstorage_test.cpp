@@ -14,7 +14,7 @@
 
 #include "test_common.h"
 
-struct MokChunkWriter : public dariadb::storage::IChunkContainer {
+struct MokChunkWriter : public dariadb::IChunkContainer {
   size_t droped;
 
   MokChunkWriter() { droped = 0; }
@@ -31,16 +31,16 @@ struct MokChunkWriter : public dariadb::storage::IChunkContainer {
     return false;
   }
   dariadb::Id2Meas
-  valuesBeforeTimePoint(const dariadb::storage::QueryTimePoint &q) override {
+  valuesBeforeTimePoint(const dariadb::QueryTimePoint &q) override {
     return dariadb::Id2Meas{};
   }
   dariadb::Id2Cursor
-  intervalReader(const dariadb::storage::QueryInterval &query) override {
+  intervalReader(const dariadb::QueryInterval &query) override {
     return dariadb::Id2Cursor();
   }
 };
 
-struct MocDiskStorage : public dariadb::storage::IMeasWriter {
+struct MocDiskStorage : public dariadb::IMeasWriter {
   size_t droped;
   MocDiskStorage() { droped = 0; }
   virtual dariadb::Status append(const dariadb::Meas &value) override {
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
   }
   {
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
+    settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
     settings->chunk_size.setValue(128);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     dariadb::utils::async::ThreadManager::start(
         settings->thread_pools_params());
-    settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
+    settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
     settings->memory_limit.setValue(1024 * 1024);
     settings->chunk_size.setValue(128);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(MemStorageCacheTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     dariadb::utils::async::ThreadManager::start(
         settings->thread_pools_params());
-    settings->strategy.setValue(dariadb::storage::STRATEGY::CACHE);
+    settings->strategy.setValue(dariadb::STRATEGY::CACHE);
     settings->memory_limit.setValue(1024 * 1024);
     settings->chunk_size.setValue(128);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(MemStorageWriteToPastTest) {
   }
   {
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::MEMORY);
+    settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
     settings->chunk_size.setValue(128);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE(MemStorageWriteToPastTest) {
     auto result = ms->append(meas);
     BOOST_CHECK_EQUAL(result.writed, size_t(1));
 
-    auto read_result = ms->readTimePoint(dariadb::storage::QueryTimePoint(
+    auto read_result = ms->readTimePoint(dariadb::QueryTimePoint(
         {0}, dariadb::Flag(0), dariadb::Time(4)));
 
     BOOST_CHECK_EQUAL(read_result[0].time, dariadb::Time(4));

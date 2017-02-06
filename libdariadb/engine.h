@@ -6,7 +6,7 @@
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
-#include <libdariadb/storage/strategy.h>
+#include <libdariadb/strategy.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/utils.h>
@@ -14,7 +14,6 @@
 #include <ostream>
 
 namespace dariadb {
-namespace storage {
 
 const uint16_t STORAGE_FORMAT = 1;
 class Engine : public IMeasStorage {
@@ -23,15 +22,15 @@ public:
     size_t wal_count;    ///  wal count.
     size_t pages_count;  /// pages count.
     size_t active_works; /// async tasks runned.
-    Dropper::Description dropper;
-    memstorage::Description memstorage;
+	storage::Dropper::Description dropper;
+	storage::memstorage::Description memstorage;
   };
 
   Engine(const Engine &) = delete;
   Engine &operator=(const Engine &) = delete;
   EXPORT virtual ~Engine();
 
-  EXPORT Engine(Settings_ptr settings, bool ignore_lock_file = false);
+  EXPORT Engine(storage::Settings_ptr settings, bool ignore_lock_file = false);
 
   using IMeasStorage::append;
   EXPORT Status append(const Meas &value) override;
@@ -70,12 +69,11 @@ public:
   EXPORT static std::string version();
   EXPORT STRATEGY strategy() const;
 
-  EXPORT void join(std::list<QueryInterval> queries, Join::Callback*clbk);
+  EXPORT void join(std::list<QueryInterval> queries, storage::Join::Callback*clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;
 };
 
 EXPORT void row2stream(std::ostream&s, const MeasArray&row);
-}
 }

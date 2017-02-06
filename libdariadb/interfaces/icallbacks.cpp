@@ -1,7 +1,6 @@
 #include <libdariadb/interfaces/icallbacks.h>
 #include <thread>
 using namespace dariadb;
-using namespace dariadb::storage;
 
 IReadCallback::IReadCallback() {
   is_end_called = false;

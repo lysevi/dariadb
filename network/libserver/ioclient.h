@@ -24,12 +24,12 @@ struct IOClient {
       nd_pool = nullptr;
     }
     IClientManager *srv;
-    storage::Engine *storage;
+    Engine *storage;
     NetData_Pool *nd_pool;
     boost::asio::io_service *service;
   };
 
-  struct ClientDataReader : public storage::IReadCallback {
+  struct ClientDataReader : public IReadCallback {
     static const size_t BUFFER_LENGTH =
         (NetData::MAX_MESSAGE_SIZE - sizeof(QueryAppend_header)) / sizeof(Meas);
     utils::async::Locker _locker;
@@ -64,7 +64,7 @@ struct IOClient {
   void sendError(QueryNumber query_num, const ERRORS &err);
 
   // data - queryInterval or QueryTimePoint
-  void readerAdd(const storage::ReaderCallback_ptr &cdr, void *data);
+  void readerAdd(const ReaderCallback_ptr &cdr, void *data);
   void readerRemove(QueryNumber number);
   Time _last_query_time;
   socket_ptr sock;
@@ -73,11 +73,11 @@ struct IOClient {
   CLIENT_STATE state;
   Environment *env;
   std::atomic_int pings_missed;
-  // std::list<storage::IReadCallback *> readers;
-  std::shared_ptr<storage::IReadCallback> subscribe_reader;
+  // std::list<IReadCallback *> readers;
+  std::shared_ptr<IReadCallback> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
 
-  std::map<QueryNumber, std::pair<storage::ReaderCallback_ptr, void *>> _readers;
+  std::map<QueryNumber, std::pair<ReaderCallback_ptr, void *>> _readers;
   std::mutex _readers_lock;
 };
 

@@ -32,7 +32,7 @@ public:
   SRV_EXPORT void stop();
   SRV_EXPORT bool is_runned();
   SRV_EXPORT size_t connections_accepted() const;
-  SRV_EXPORT void set_storage(storage::Engine *storage);
+  SRV_EXPORT void set_storage(Engine *storage);
 
   SRV_EXPORT void asio_run();
 

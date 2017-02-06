@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 
     stop_info = true;
     info_thread.join();
-	dariadb_bench::BenchmarkSummaryInfo summary_info(dariadb::storage::STRATEGY::WAL);
+	dariadb_bench::BenchmarkSummaryInfo summary_info(dariadb::STRATEGY::WAL);
 	summary_info.writed = (size_t)append_count.load();
 	dariadb_bench::readBenchmark(&summary_info, all_id_set, wal, 10);
 

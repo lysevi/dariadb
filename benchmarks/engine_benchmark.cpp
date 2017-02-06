@@ -190,7 +190,7 @@ void reader(IMeasStorage_ptr ms, IdSet all_id_set, Time from, Time to) {
     auto f = from;
     auto t = write_time;
 
-    auto qi = dariadb::storage::QueryInterval(
+    auto qi = dariadb::QueryInterval(
         dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
     ms->foreach (qi, clbk.get());
 
@@ -330,25 +330,25 @@ void check_engine_state(dariadb::storage::Settings_ptr settings,
 
   auto files = raw_ptr->description();
   switch (strategy) {
-  case dariadb::storage::STRATEGY::WAL:
+  case dariadb::STRATEGY::WAL:
     if (files.pages_count != 0) {
       THROW_EXCEPTION("WAL error: (p:", files.pages_count,
                       " a:", files.wal_count, " T:", files.active_works, ")");
     }
     break;
-  case dariadb::storage::STRATEGY::COMPRESSED:
+  case dariadb::STRATEGY::COMPRESSED:
     if (files.wal_count >= 1 && files.pages_count == 0) {
       THROW_EXCEPTION("COMPRESSED error: (p:", files.pages_count,
                       " a:", files.wal_count, " T:", files.active_works, ")");
     }
     break;
-  case dariadb::storage::STRATEGY::MEMORY:
+  case dariadb::STRATEGY::MEMORY:
     if (files.wal_count != 0 && files.pages_count == 0) {
       THROW_EXCEPTION("MEMORY error: (p:", files.pages_count,
                       " a:", files.wal_count, " T:", files.active_works, ")");
     }
     break;
-  case dariadb::storage::STRATEGY::CACHE:
+  case dariadb::STRATEGY::CACHE:
     break;
   default:
     THROW_EXCEPTION("unknow strategy: ", strategy);
@@ -456,7 +456,7 @@ int main(int argc, char *argv[]) {
     check_engine_state(settings, raw_ptr);
 
     if (!readonly) {
-      if (strategy != dariadb::storage::STRATEGY::MEMORY &&
+      if (strategy != dariadb::STRATEGY::MEMORY &&
           strategy != STRATEGY::CACHE) {
         size_t ccount = size_t(raw_ptr->description().wal_count);
         std::cout << "==> drop part wals to " << ccount << "..." << std::endl;

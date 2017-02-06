@@ -33,8 +33,8 @@ template <class T> void Settings::ReadOnlyOption<T>::from_string(const std::stri
   iss >> _value;
 }
 
-template <> std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const {
-  return dariadb::storage::to_string(this->value());
+template <> std::string Settings::ReadOnlyOption<dariadb::STRATEGY>::value_str() const {
+  return dariadb::to_string(this->value());
 }
 template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
   return this->value();

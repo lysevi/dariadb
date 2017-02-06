@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
 
   settings->wal_cache_size.setValue(2);
   settings->chunk_size.setValue(7);
-  settings->strategy.setValue(dariadb::storage::STRATEGY::COMPRESSED);
+  settings->strategy.setValue(dariadb::STRATEGY::COMPRESSED);
   settings->save();
 
   settings = nullptr;
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   BOOST_CHECK_EQUAL(settings->wal_cache_size.value(), uint64_t(2));
   BOOST_CHECK_EQUAL(settings->chunk_size.value(), uint32_t(7));
   BOOST_CHECK(settings->strategy.value() ==
-              dariadb::storage::STRATEGY::COMPRESSED);
+              dariadb::STRATEGY::COMPRESSED);
 
   settings = nullptr;
   if (dariadb::utils::fs::path_exists(storage_path)) {

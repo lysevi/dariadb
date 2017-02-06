@@ -784,6 +784,7 @@ void Engine::compactTo(uint32_t pagesCount) { _impl->compactTo(pagesCount); }
 void Engine::compactbyTime(Time from, Time to) {
   _impl->compactbyTime(from, to);
 }
+
 uint16_t Engine::format() { return STORAGE_FORMAT; }
 
 STRATEGY Engine::strategy() const { return _impl->strategy(); }
@@ -792,11 +793,12 @@ Id2MinMax Engine::loadMinMax() { return _impl->loadMinMax(); }
 
 std::string Engine::version() { return std::string(PROJECT_VERSION); }
 
-void Engine::join(std::list<QueryInterval> queries, Join::Callback *clbk) {
+void Engine::join(std::list<QueryInterval> queries,
+                  storage::Join::Callback *clbk) {
   return _impl->join(queries, clbk);
 }
 
-void dariadb::storage::row2stream(std::ostream &s, const MeasArray &row) {
+void dariadb::row2stream(std::ostream &s, const MeasArray &row) {
   for (auto v : row) {
     std::stringstream ss;
     ss << " f:";
@@ -808,11 +810,11 @@ void dariadb::storage::row2stream(std::ostream &s, const MeasArray &row) {
       ss << std::setw(8) << std::left << "_REPEAT_";
       break;
     default:
-      ss  << std::setw(8) << std::left << std::hex << std::showbase << v.flag;
+      ss << std::setw(8) << std::left << std::hex << std::showbase << v.flag;
       break;
     }
 
-    ss << " v:" << std::setw(5) << std::left  << std::dec << v.value;
+    ss << " v:" << std::setw(5) << std::left << std::dec << v.value;
     s << ss.str();
   }
 }

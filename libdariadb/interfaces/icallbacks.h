@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace dariadb {
-namespace storage {
 
 class IReadCallback;
 typedef std::shared_ptr<IReadCallback> ReaderCallback_ptr;
@@ -22,5 +21,5 @@ private:
   bool is_end_called;
   bool is_cancel;
 };
-}
+
 }

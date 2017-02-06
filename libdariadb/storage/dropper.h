@@ -12,7 +12,7 @@
 namespace dariadb {
 namespace storage {
 
-class Dropper : public dariadb::storage::IWALDropper {
+class Dropper : public dariadb::IWALDropper {
 public:
   struct Description {
     size_t wal;

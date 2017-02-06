@@ -267,7 +267,7 @@ public:
     }
   }
 
-  ReadResult_ptr readInterval(const storage::QueryInterval &qi,
+  ReadResult_ptr readInterval(const QueryInterval &qi,
                               ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
@@ -306,7 +306,7 @@ public:
     return qres;
   }
 
-  MeasList readInterval(const storage::QueryInterval &qi) {
+  MeasList readInterval(const QueryInterval &qi) {
     MeasList result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
       if (!parent->is_closed) {
@@ -319,7 +319,7 @@ public:
     return result;
   }
 
-  ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi,
+  ReadResult_ptr readTimePoint(const QueryTimePoint &qi,
                                ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
@@ -357,7 +357,7 @@ public:
     return qres;
   }
 
-  Id2Meas readTimePoint(const storage::QueryTimePoint &qi) {
+  Id2Meas readTimePoint(const QueryTimePoint &qi) {
     Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
       if (!parent->is_closed) {
@@ -532,20 +532,20 @@ void Client::append(const MeasArray &ma) {
   _Impl->append(ma);
 }
 
-MeasList Client::readInterval(const storage::QueryInterval &qi) {
+MeasList Client::readInterval(const QueryInterval &qi) {
   return _Impl->readInterval(qi);
 }
 
-ReadResult_ptr Client::readInterval(const storage::QueryInterval &qi,
+ReadResult_ptr Client::readInterval(const QueryInterval &qi,
                                     ReadResult::callback &clbk) {
   return _Impl->readInterval(qi, clbk);
 }
 
-Id2Meas Client::readTimePoint(const storage::QueryTimePoint &qi) {
+Id2Meas Client::readTimePoint(const QueryTimePoint &qi) {
   return _Impl->readTimePoint(qi);
 }
 
-ReadResult_ptr Client::readTimePoint(const storage::QueryTimePoint &qi,
+ReadResult_ptr Client::readTimePoint(const QueryTimePoint &qi,
                                      ReadResult::callback &clbk) {
   return _Impl->readTimePoint(qi, clbk);
 }

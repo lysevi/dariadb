@@ -2,7 +2,7 @@
 
 #include <libclient/net_cl_exports.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/storage/query_param.h>
+#include <libdariadb/query_param.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>
@@ -57,12 +57,12 @@ public:
   CL_EXPORT int id() const;
 
   CL_EXPORT void append(const MeasArray &ma);
-  CL_EXPORT MeasList readInterval(const storage::QueryInterval &qi);
-  CL_EXPORT ReadResult_ptr readInterval(const storage::QueryInterval &qi,
+  CL_EXPORT MeasList readInterval(const QueryInterval &qi);
+  CL_EXPORT ReadResult_ptr readInterval(const QueryInterval &qi,
                                         ReadResult::callback &clbk);
 
-  CL_EXPORT Id2Meas readTimePoint(const storage::QueryTimePoint &qi);
-  CL_EXPORT ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi,
+  CL_EXPORT Id2Meas readTimePoint(const QueryTimePoint &qi);
+  CL_EXPORT ReadResult_ptr readTimePoint(const QueryTimePoint &qi,
                                          ReadResult::callback &clbk);
 
   CL_EXPORT ReadResult_ptr currentValue(const IdArray &ids, const Flag &flag,

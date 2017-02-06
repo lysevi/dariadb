@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
   }
   dariadb::net::client::Client_Ptr c{new dariadb::net::client::Client(p)};
   c->connect();
-  dariadb::storage::QueryInterval ri(dariadb::IdArray{0}, 0, 0, MEASES_SIZE);
+  dariadb::QueryInterval ri(dariadb::IdArray{0}, 0, 0, MEASES_SIZE);
   auto read_start = clock();
   auto result = c->readInterval(ri);
   auto read_end = clock();
