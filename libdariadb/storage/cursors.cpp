@@ -264,7 +264,7 @@ bool CursorWrapperFactory::is_linear_readers(const Cursor_Ptr &r1,
 void Join::join(const CursorsList &l, const IdArray &ids,
                 Join::Callback *clbk) {
   std::vector<Cursor_Ptr> cursors{l.begin(), l.end()};
-  ENSURE(ids.size(), cursors.size());
+  ENSURE(ids.size() == cursors.size());
 
   std::vector<bool> end_status(cursors.size());
   std::vector<Time> top_times(cursors.size());
