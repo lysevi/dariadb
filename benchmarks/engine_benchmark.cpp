@@ -41,6 +41,13 @@ public:
   bool is_end_called;
 };
 
+struct JoinCallback : public Join::Callback {
+  JoinCallback() { calls = size_t(0); }
+  void apply(const MeasArray &row) override { calls++; }
+
+  size_t calls;
+};
+
 void parse_cmdline(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
@@ -250,7 +257,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   info_thread.join();
 }
 
-void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
+void read_all_bench(Engine *ms, Time start_time, Time max_time,
                     IdSet &all_id_set) {
 
   if (readonly) {
@@ -273,6 +280,20 @@ void read_all_bench(IMeasStorage_ptr &ms, Time start_time, Time max_time,
   std::cout << "readed: " << clbk->count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
   summary_info->foreach_read_all_time = elapsed;
+
+  std::cout << "==> join all..." << std::endl;
+
+  auto join_callback = std::make_unique<JoinCallback>();
+
+  start = clock();
+
+  ms->join(std::list<QueryInterval>{qi}, join_callback.get());
+
+  elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+  std::cout << "table size: " << join_callback->calls << std::endl;
+  std::cout << "time: " << elapsed << std::endl;
+  summary_info->join_all_time = elapsed;
+  summary_info->join_table_size = join_callback->calls;
 
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;
@@ -351,7 +372,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Readers enable. count: " << dariadb_bench::total_readers_count
               << std::endl;
   }
-  summary_info = std::make_unique<dariadb_bench::BenchmarkSummaryInfo>(strategy);
+  summary_info =
+      std::make_unique<dariadb_bench::BenchmarkSummaryInfo>(strategy);
 
   {
     std::cout << "Write..." << std::endl;
@@ -490,7 +512,7 @@ int main(int argc, char *argv[]) {
     std::cout << "==> interval end time: " << timeutil::to_string(max_time)
               << std::endl;
 
-    read_all_bench(ms, start_time, max_time, all_id_set);
+    read_all_bench(raw_ptr, start_time, max_time, all_id_set);
     std::cout << "writed: " << append_count << std::endl;
     std::cout << "stoping storage...\n";
     ms = nullptr;

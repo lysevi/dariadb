@@ -7,6 +7,7 @@
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/strategy.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/utils.h>
 #include <memory>
@@ -68,6 +69,7 @@ public:
   EXPORT static std::string version();
   EXPORT STRATEGY strategy() const;
 
+  EXPORT void join(std::list<QueryInterval> queries, Join::Callback*clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

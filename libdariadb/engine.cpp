@@ -2,12 +2,12 @@
 #include <libdariadb/config.h>
 #include <libdariadb/engine.h>
 #include <libdariadb/flags.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/pages/page_manager.h>
-#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/subscribe.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
@@ -480,7 +480,7 @@ public:
         readers.push_back(kv.second);
       }
 
-	  Cursor_Ptr r_ptr = CursorWrapperFactory::colapseReaders(readers);
+      Cursor_Ptr r_ptr = CursorWrapperFactory::colapseCursors(readers);
       result[id2intervals.first] = r_ptr;
     }
 
@@ -507,7 +507,7 @@ public:
     for (auto kv : pm_readers) {
       all_readers[kv.first].push_back(kv.second);
     }
-    return CursorWrapperFactory::colapseReaders(all_readers);
+    return CursorWrapperFactory::colapseCursors(all_readers);
   }
 
   Id2Cursor internal_readers_two_level(const QueryInterval &q) {
@@ -669,6 +669,32 @@ public:
     this->unlock_storage();
   }
 
+  void join(std::list<QueryInterval> queries, Join::Callback *clbk) {
+    size_t ids_size = 0;
+    CursorsList cursors;
+    for (auto &q : queries) {
+      auto i2c = this->intervalReader(q);
+      ids_size += q.ids.size();
+      for (auto id : q.ids) {
+        auto cres = i2c.find(id);
+        if (cres != i2c.end()) {
+          cursors.push_back(cres->second);
+        } else {
+          cursors.push_back(std::make_shared<EmptyCursor>());
+        }
+      }
+    }
+    IdArray ids(ids_size);
+    size_t pos = 0;
+    for (auto &q : queries) {
+      for (auto id : q.ids) {
+        ids[pos++] = id;
+      }
+    }
+    ENSURE(ids.size() != size_t(0));
+    Join::join(cursors, ids, clbk);
+  }
+
 protected:
   std::mutex _flush_locker, _lock_locker;
   SubscribeNotificator _subscribe_notify;
@@ -763,3 +789,7 @@ STRATEGY Engine::strategy() const { return _impl->strategy(); }
 Id2MinMax Engine::loadMinMax() { return _impl->loadMinMax(); }
 
 std::string Engine::version() { return std::string(PROJECT_VERSION); }
+
+void Engine::join(std::list<QueryInterval> queries, Join::Callback *clbk) {
+  return _impl->join(queries, clbk);
+}

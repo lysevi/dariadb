@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <libdariadb/flags.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/utils/utils.h>
 #include <map>
@@ -7,7 +8,8 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-namespace readers_inner {
+namespace cursors_inner {
+
 Time get_top_time(ICursor *r) {
   if (r->is_end()) {
     return MAX_TIME;
@@ -92,7 +94,7 @@ Time FullCursor::minTime() { return _minTime; }
 Time FullCursor::maxTime() { return _maxTime; }
 
 MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
-  CursorsList tmp_readers_list = readers_inner::unpack_readers(readers);
+  CursorsList tmp_readers_list = cursors_inner::unpack_readers(readers);
 
   _readers.reserve(tmp_readers_list.size());
   for (auto r : tmp_readers_list) {
@@ -101,7 +103,7 @@ MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
 
   _top_times.resize(_readers.size());
   _is_end_status.resize(_top_times.size());
-  readers_inner::fill_top_times(_top_times, _readers);
+  cursors_inner::fill_top_times(_top_times, _readers);
 
   _minTime = MAX_TIME;
   _maxTime = MIN_TIME;
@@ -116,12 +118,12 @@ MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
 
 Meas MergeSortCursor::readNext() {
   auto index_and_reader =
-      readers_inner::get_reader_with_min_time(_top_times, _readers);
+      cursors_inner::get_reader_with_min_time(_top_times, _readers);
 
   auto Cursor_Ptr = index_and_reader.second;
 
   auto result = Cursor_Ptr->readNext();
-  _top_times[index_and_reader.first] = readers_inner::get_top_time(Cursor_Ptr);
+  _top_times[index_and_reader.first] = cursors_inner::get_top_time(Cursor_Ptr);
   _is_end_status[index_and_reader.first] = Cursor_Ptr->is_end();
 
   // skip duplicates.
@@ -151,7 +153,7 @@ bool MergeSortCursor::is_end() const {
 
 Meas MergeSortCursor::top() {
   ENSURE(!is_end());
-  auto r = readers_inner::get_reader_with_min_time(_top_times, _readers);
+  auto r = cursors_inner::get_reader_with_min_time(_top_times, _readers);
   return r.second->top();
 }
 
@@ -197,7 +199,7 @@ Time LinearCursor::minTime() { return _minTime; }
 Time LinearCursor::maxTime() { return _maxTime; }
 
 Cursor_Ptr
-CursorWrapperFactory::colapseReaders(const CursorsList &readers_list) {
+CursorWrapperFactory::colapseCursors(const CursorsList &readers_list) {
   std::vector<Cursor_Ptr> readers_vector{readers_list.begin(),
                                          readers_list.end()};
   typedef std::set<size_t> positions_set;
@@ -240,13 +242,13 @@ CursorWrapperFactory::colapseReaders(const CursorsList &readers_list) {
   return rptr;
 }
 
-Id2Cursor CursorWrapperFactory::colapseReaders(const Id2CursorsList &i2r) {
+Id2Cursor CursorWrapperFactory::colapseCursors(const Id2CursorsList &i2r) {
   Id2Cursor result;
   for (auto kv : i2r) {
     if (kv.second.size() == 1) {
       result[kv.first] = kv.second.front();
     } else {
-      result[kv.first] = colapseReaders(kv.second);
+      result[kv.first] = colapseCursors(kv.second);
     }
   }
   return result;
@@ -259,4 +261,59 @@ bool CursorWrapperFactory::is_linear_readers(const Cursor_Ptr &r1,
   return !is_overlap;
 }
 
-void Join::join(const CursorsList &l, Join::Callback *clbk) {}
+void Join::join(const CursorsList &l, const IdArray &ids,
+                Join::Callback *clbk) {
+  std::vector<Cursor_Ptr> cursors{l.begin(), l.end()};
+  ENSURE(ids.size(), cursors.size());
+
+  std::vector<bool> end_status(cursors.size());
+  std::vector<Time> top_times(cursors.size());
+  size_t pos = 0;
+  for (auto c : cursors) {
+    end_status[pos++] = c->is_end();
+  }
+
+  cursors_inner::fill_top_times(top_times, cursors);
+
+  MeasArray row(cursors.size());
+  for (size_t i = 0; i < cursors.size(); ++i) {
+    row[i].flag = FLAGS::_NO_DATA;
+    row[i].id = ids[i];
+  }
+
+  while (std::any_of(end_status.begin(), end_status.end(),
+                     [](auto v) { return !v; })) {
+    auto pos_and_cursor =
+        cursors_inner::get_reader_with_min_time(top_times, cursors);
+    auto min_time = top_times[pos_and_cursor.first];
+
+    std::list<size_t> current_row;
+    for (size_t i = 0; i < cursors.size(); ++i) {
+      if (row[i].flag != FLAGS::_NO_DATA) {
+        row[i].flag = FLAGS::_REPEAT;
+      }
+      row[i].time = min_time;
+      if (!end_status[i]) {
+        auto c = cursors[i].get();
+
+        if (c->top().time == min_time) {
+          current_row.push_back(i);
+        }
+      }
+    }
+
+    for (auto i : current_row) {
+      auto c = cursors[i].get();
+      row[i] = c->readNext();
+      end_status[i] = c->is_end();
+      top_times[i] = cursors_inner::get_top_time(c);
+    }
+    clbk->apply(row);
+  }
+}
+
+Join::Table Join::makeTable(const CursorsList &l, const IdArray &ids) {
+  auto tm = std::make_unique<TableMaker>();
+  Join::join(l, ids, tm.get());
+  return tm->result;
+}

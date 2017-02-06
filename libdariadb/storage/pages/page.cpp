@@ -461,7 +461,7 @@ Id2Cursor Page::intervalReader(const QueryInterval &query,
     sub_result[search_res->header->meas_id].push_back(rdr);
   }
   fclose(page_io);
-  Id2Cursor result = CursorWrapperFactory::colapseReaders(sub_result);
+  Id2Cursor result = CursorWrapperFactory::colapseCursors(sub_result);
   return result;
 }
 

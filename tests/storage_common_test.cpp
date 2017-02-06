@@ -6,9 +6,11 @@
 #include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/cursors.h>
+#include <libdariadb/storage/manifest.h>
 #include <libdariadb/utils/fs.h>
+
+#include <iostream>
 
 BOOST_AUTO_TEST_CASE(MeasTest) {
   dariadb::Meas m;
@@ -336,7 +338,7 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
   auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
 
   {
-    auto msr = CursorWrapperFactory::colapseReaders(CursorsList{fr1, fr2});
+    auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2});
     auto top_reader = dynamic_cast<LinearCursor *>(msr.get());
     auto is_merge_reader = dynamic_cast<MergeSortCursor *>(
                                top_reader->_readers.front().get()) != nullptr;
@@ -345,11 +347,49 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
   }
 
   {
-    auto lsr = CursorWrapperFactory::colapseReaders(CursorsList{fr1, fr3});
+    auto lsr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr3});
     auto top_reader = dynamic_cast<LinearCursor *>(lsr.get());
     for (auto &r : top_reader->_readers) {
       auto is_full_reader = dynamic_cast<FullCursor *>(r.get()) != nullptr;
       BOOST_CHECK(is_full_reader);
+    }
+  }
+}
+
+BOOST_AUTO_TEST_CASE(JoinTest) {
+  using namespace dariadb::storage;
+  using namespace dariadb;
+  MeasArray ma1(5);
+  ma1[0].time = 1;
+  ma1[1].time = 2;
+  ma1[2].time = 3;
+  ma1[3].time = 4;
+  ma1[4].time = 5;
+  ma1[0].flag = ma1[1].flag = ma1[2].flag = ma1[3].flag = ma1[4].flag = 1;
+  auto fr1 = Cursor_Ptr{new FullCursor(ma1)};
+
+  MeasArray ma2(2);
+  ma2[0].time = 1;
+  ma2[1].time = 6;
+  ma2[0].flag = ma2[1].flag = 2;
+  auto fr2 = Cursor_Ptr{new FullCursor(ma2)};
+
+  MeasArray ma3(1);
+  ma3[0].time = 7;
+  ma3[0].flag = 3;
+  auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
+
+  {
+    auto tbl =
+        Join::makeTable(CursorsList{fr1, fr2, fr3}, dariadb::IdArray{0, 1, 2});
+
+    BOOST_CHECK(tbl.size(), size_t(7));
+    dariadb::Time t = 0;
+    for (const auto &row : tbl) {
+      t++;
+      for (const auto &v : row) {
+        BOOST_CHECK_EQUAL(v.time, t);
+      }
     }
   }
 }

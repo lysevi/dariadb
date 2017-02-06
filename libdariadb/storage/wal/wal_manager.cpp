@@ -310,7 +310,7 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
 	  readers_list[kv.first].push_back(r);
     }
   }
-  return CursorWrapperFactory::colapseReaders(readers_list);
+  return CursorWrapperFactory::colapseCursors(readers_list);
 }
 
 void WALManager::foreach (const QueryInterval &q, IReadCallback * clbk) {

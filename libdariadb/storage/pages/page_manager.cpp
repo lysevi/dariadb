@@ -217,7 +217,7 @@ public:
     auto pm_async =
         ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
     pm_async->wait();
-    return CursorWrapperFactory::colapseReaders(result);
+    return CursorWrapperFactory::colapseCursors(result);
   }
 
   std::list<std::string>

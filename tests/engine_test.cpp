@@ -248,3 +248,58 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
+
+BOOST_AUTO_TEST_CASE(Engine_join_test) {
+  const std::string storage_path = "testStorage";
+  const size_t chunk_size = 256;
+
+  const dariadb::Time from = 0;
+  const dariadb::Time to = from + 50;
+  const dariadb::Time step = 10;
+
+  using namespace dariadb::storage;
+
+  {
+    std::cout << "Engine_join_test\n";
+    if (dariadb::utils::fs::path_exists(storage_path)) {
+      dariadb::utils::fs::rm(storage_path);
+    }
+
+    auto settings = dariadb::storage::Settings::create(storage_path);
+    settings->wal_cache_size.setValue(100);
+    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 2);
+    settings->chunk_size.setValue(chunk_size);
+    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    std::unique_ptr<Engine> ms{new Engine(settings)};
+
+    dariadb::IdSet all_ids;
+    dariadb::Time maxWritedTime;
+    dariadb_test::fill_storage_for_test(ms.get(), from, to, step, &all_ids,
+                                        &maxWritedTime, false);
+
+    const dariadb::Id no_exists_id = 77676;
+    std::list<dariadb::storage::QueryInterval> qs;
+    qs.push_back(dariadb::storage::QueryInterval({0}, 0, 0, 10));
+    qs.push_back(dariadb::storage::QueryInterval({1}, 0, 10, 20));
+    qs.push_back(dariadb::storage::QueryInterval({2, 3}, 0, 20, to));
+    qs.push_back(dariadb::storage::QueryInterval({no_exists_id}, 0, 20, to));
+
+    auto tm = std::make_unique<dariadb::storage::Join::TableMaker>();
+    ms->join(qs, tm.get());
+    for (auto row : tm->result) {
+      BOOST_CHECK_EQUAL(row[0].id, dariadb::Id(0));
+      BOOST_CHECK_EQUAL(row[1].id, dariadb::Id(1));
+      BOOST_CHECK_EQUAL(row[2].id, dariadb::Id(2));
+      BOOST_CHECK_EQUAL(row[3].id, dariadb::Id(3));
+      BOOST_CHECK_EQUAL(row[4].id, dariadb::Id(no_exists_id));
+	  BOOST_CHECK_EQUAL(row[4].flag, dariadb::FLAGS::_NO_DATA);
+      BOOST_CHECK(
+          std::all_of(row.begin(), row.end(), [&row](const dariadb::Meas &m) {
+            return m.time == row.front().time;
+          }));
+    }
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+}
