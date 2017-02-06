@@ -14,12 +14,12 @@
 
 #include "test_common.h"
 
-struct MokChunkWriter : public dariadb::IChunkContainer {
+struct MokChunkWriter : public dariadb::ChunkContainer {
   size_t droped;
 
   MokChunkWriter() { droped = 0; }
   ~MokChunkWriter() {}
-  using IChunkContainer::foreach;
+  using ChunkContainer::foreach;
 
   void appendChunks(const std::vector<dariadb::storage::Chunk *> &a,
                     size_t count) override {

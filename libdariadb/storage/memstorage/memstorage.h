@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libdariadb/interfaces/ichunkcontainer.h>
+#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>

@@ -26,15 +26,15 @@ public:
   EXPORT ~IChunkStorage();
 };
 
-class IChunkContainer : public IChunkStorage {
+class ChunkContainer : public IChunkStorage {
 public:
   virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                           dariadb::Time *maxResult) = 0;
   virtual Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) = 0;
   virtual Id2Cursor intervalReader(const QueryInterval &query) = 0;
   EXPORT virtual void foreach (const QueryInterval &query, IReadCallback * clb);
-  EXPORT IChunkContainer();
-  EXPORT virtual ~IChunkContainer();
+  EXPORT ChunkContainer();
+  EXPORT virtual ~ChunkContainer();
 };
 }
 

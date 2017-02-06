@@ -1,5 +1,5 @@
 #pragma once
-#include <libdariadb/interfaces/ichunkcontainer.h>
+#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/interfaces/imeaswriter.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
@@ -13,7 +13,6 @@ const std::string PAGE_FILE_EXT = ".page"; // cola-file extension
 
 #pragma pack(push, 1)
 struct PageFooter {
-  // uint64_t write_offset;      // next write pos (bytes)
   uint32_t addeded_chunks; // total count of chunks in page.
   uint64_t filesize;
   Statistic stat;
@@ -29,7 +28,7 @@ struct PageFooter {
 class Page;
 typedef std::shared_ptr<Page> Page_Ptr;
 
-class Page : public IChunkContainer {
+class Page : public ChunkContainer {
   Page() = default;
 
 public:

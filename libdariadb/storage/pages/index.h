@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libdariadb/interfaces/ichunkcontainer.h>
+#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/utils/fs.h>
 
