@@ -20,7 +20,9 @@
 
 #include <cstring>
 #include <fstream>
+#include <iomanip>
 #include <shared_mutex>
+#include <sstream>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -792,4 +794,25 @@ std::string Engine::version() { return std::string(PROJECT_VERSION); }
 
 void Engine::join(std::list<QueryInterval> queries, Join::Callback *clbk) {
   return _impl->join(queries, clbk);
+}
+
+void dariadb::storage::row2stream(std::ostream &s, const MeasArray &row) {
+  for (auto v : row) {
+    std::stringstream ss;
+    ss << " f:";
+    switch (v.flag) {
+    case FLAGS::_NO_DATA:
+      ss << std::setw(8) << std::left << "_NO_DATA";
+      break;
+    case FLAGS::_REPEAT:
+      ss << std::setw(8) << std::left << "_REPEAT_";
+      break;
+    default:
+      ss  << std::setw(8) << std::left << std::hex << std::showbase << v.flag;
+      break;
+    }
+
+    ss << " v:" << std::setw(5) << std::left  << std::dec << v.value;
+    s << ss.str();
+  }
 }

@@ -11,6 +11,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/utils.h>
 #include <memory>
+#include <strstream>
 
 namespace dariadb {
 namespace storage {
@@ -74,5 +75,7 @@ protected:
   class Private;
   std::unique_ptr<Private> _impl;
 };
+
+EXPORT void row2stream(std::ostream&s, const MeasArray&row);
 }
 }
