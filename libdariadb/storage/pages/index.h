@@ -7,13 +7,13 @@
 namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
-struct IndexHeader {
+struct IndexFooter {
   bool is_sorted;    // items in index file sorted by time
   uint64_t id_bloom; // bloom filter of Meas.id
 
   Statistic stat;
   uint64_t recs_count;
-  IndexHeader() : stat() {
+  IndexFooter() : stat() {
     recs_count = 0;
     is_sorted = false;
     id_bloom = bloom_empty<Id>();
@@ -39,7 +39,7 @@ class PageIndex {
 public:
   bool readonly;
   std::string filename;
-  IndexHeader iheader;
+  IndexFooter iheader;
 
   ~PageIndex();
   static PageIndex_ptr open(const std::string &filename);
@@ -48,7 +48,7 @@ public:
                                  dariadb::Time from, dariadb::Time to,
                                  dariadb::Flag flag);
   std::vector<IndexReccord> readReccords();
-  static IndexHeader readIndexHeader(std::string ifile);
+  static IndexFooter readIndexFooter(std::string ifile);
 
   static std::string index_name_from_page_name(const std::string &page_name) {
     return page_name + "i";

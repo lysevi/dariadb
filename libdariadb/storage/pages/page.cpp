@@ -5,9 +5,9 @@
 #include <algorithm>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/pages/helpers.h>
 #include <libdariadb/storage/pages/page.h>
-#include <libdariadb/storage/cursors.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/exception.h>
@@ -22,15 +22,11 @@ using namespace dariadb;
 
 Page::~Page() { _index = nullptr; }
 
-uint64_t Page::index_file_size(uint32_t chunk_per_storage) {
-  return chunk_per_storage * sizeof(IndexReccord) + sizeof(IndexHeader);
-}
-
 Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
                       uint32_t max_chunk_size, const MeasArray &ma) {
   auto to_compress = PageInner::splitById(ma);
 
-  PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+  PageFooter phdr = PageInner::emptyPageHeader(chunk_id);
 
   std::list<PageInner::HdrAndBuffer> compressed_results =
       PageInner::compressValues(to_compress, phdr, max_chunk_size);
@@ -39,7 +35,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
     THROW_EXCEPTION("file is null");
   }
 
-  IndexHeader ihdr;
+  IndexFooter ihdr;
 
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
@@ -51,17 +47,17 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
       PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
   phdr.filesize = page_size;
 
-  std::fwrite((char *)&phdr, sizeof(PageHeader), 1, file);
+  std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
   std::fclose(file);
 
-  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
   return make_page(file_name, phdr);
 }
 
-Page_Ptr Page::make_page(const std::string &file_name, const PageHeader &phdr) {
+Page_Ptr Page::make_page(const std::string &file_name, const PageFooter &phdr) {
   auto res = new Page;
-  res->header = phdr;
+  res->footer = phdr;
   res->filename = file_name;
   res->_index =
       PageIndex::open(PageIndex::index_name_from_page_name(file_name));
@@ -89,15 +85,15 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   }
   ENSURE(openned_pages.size() == pages_full_paths.size());
 
-  PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+  PageFooter phdr = PageInner::emptyPageHeader(chunk_id);
 
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
     THROW_EXCEPTION("file is null");
   }
 
-  IndexHeader ihdr;
-  memset(&ihdr, 0, sizeof(IndexHeader));
+  IndexFooter ihdr;
+  memset(&ihdr, 0, sizeof(IndexFooter));
 
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
@@ -141,10 +137,10 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
     phdr.filesize = page_size;
   }
 
-  std::fwrite((char *)&phdr, sizeof(PageHeader), 1, file);
+  std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
   std::fclose(file);
 
-  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
 
   return make_page(file_name, phdr);
@@ -154,15 +150,15 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
                       const std::vector<Chunk *> &a, size_t count) {
   using namespace dariadb::utils::async;
 
-  PageHeader phdr = PageInner::emptyPageHeader(chunk_id);
+  PageFooter phdr = PageInner::emptyPageHeader(chunk_id);
 
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
     throw MAKE_EXCEPTION("WALFile: append error.");
   }
 
-  IndexHeader ihdr;
-  memset(&ihdr, 0, sizeof(IndexHeader));
+  IndexFooter ihdr;
+  memset(&ihdr, 0, sizeof(IndexFooter));
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -229,59 +225,59 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   }
   page_size = offset;
   phdr.filesize = page_size;
-  std::fwrite(&(phdr), sizeof(PageHeader), 1, file);
+  std::fwrite(&(phdr), sizeof(PageFooter), 1, file);
   std::fclose(file);
 
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(),
               index_file);
-  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
 
   return Page::make_page(file_name, phdr);
 }
 
 Page_Ptr Page::open(std::string file_name) {
-  auto phdr = Page::readHeader(file_name);
+  auto phdr = Page::readFooter(file_name);
   auto res = new Page;
 
   res->filename = file_name;
   res->_index =
       PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
-  res->header = phdr;
+  res->footer = phdr;
   return Page_Ptr{res};
 }
 
 void Page::restoreIndexFile(const std::string &file_name) {
   logger_info("engine: page - restore index file ", file_name);
-  auto phdr = Page::readHeader(file_name);
+  auto phdr = Page::readFooter(file_name);
   auto res = new Page;
 
   res->filename = file_name;
 
-  res->header = phdr;
+  res->footer = phdr;
   res->update_index_recs(phdr);
   res->_index =
       PageIndex::open(PageIndex::index_name_from_page_name(file_name));
   delete res;
 }
 
-PageHeader Page::readHeader(std::string file_name) {
+PageFooter Page::readFooter(std::string file_name) {
   std::ifstream istream;
   istream.open(file_name, std::fstream::in | std::fstream::binary);
   if (!istream.is_open()) {
     THROW_EXCEPTION("can't open file. filename=", file_name);
   }
-  istream.seekg(-(int)sizeof(PageHeader), istream.end);
-  PageHeader result;
-  memset(&result, 0, sizeof(PageHeader));
-  istream.read((char *)&result, sizeof(PageHeader));
+  istream.seekg(-(int)sizeof(PageFooter), istream.end);
+  PageFooter result;
+  memset(&result, 0, sizeof(PageFooter));
+  istream.read((char *)&result, sizeof(PageFooter));
   istream.close();
   return result;
 }
 
-IndexHeader Page::readIndexHeader(std::string ifile) {
-  return PageIndex::readIndexHeader(ifile);
+IndexFooter Page::readIndexFooter(std::string ifile) {
+  return PageIndex::readIndexFooter(ifile);
 }
 
 ChunkLinkList Page::linksByIterval(const QueryInterval &qi) {
@@ -310,7 +306,7 @@ bool Page::checksum() {
   return result;
 }
 
-void Page::update_index_recs(const PageHeader &phdr) {
+void Page::update_index_recs(const PageFooter &phdr) {
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(filename).c_str(), "ab");
   if (index_file == nullptr) {
@@ -321,8 +317,8 @@ void Page::update_index_recs(const PageHeader &phdr) {
     THROW_EXCEPTION("can`t open file ", this->filename);
   }
 
-  IndexHeader ihdr;
-  memset(&ihdr, 0, sizeof(IndexHeader));
+  IndexFooter ihdr;
+  memset(&ihdr, 0, sizeof(IndexFooter));
 
   for (size_t i = 0; i < phdr.addeded_chunks; ++i) {
     ChunkHeader info;
@@ -336,15 +332,15 @@ void Page::update_index_recs(const PageHeader &phdr) {
 
     std::fseek(page_io, info.size, SEEK_CUR);
   }
-  std::fwrite(&ihdr, sizeof(IndexHeader), 1, index_file);
+  std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
   std::fclose(page_io);
 }
 
 bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
                       dariadb::Time *maxTime) {
-  QueryInterval qi{dariadb::IdArray{id}, 0, this->header.stat.minTime,
-                   this->header.stat.maxTime};
+  QueryInterval qi{dariadb::IdArray{id}, 0, this->footer.stat.minTime,
+                   this->footer.stat.maxTime};
   auto all_chunks = this->linksByIterval(qi);
 
   bool result = false;
@@ -476,7 +472,7 @@ Id2MinMax Page::loadMinMax() {
     THROW_EXCEPTION("can`t open file ", this->filename);
   }
   auto indexReccords = _index->readReccords();
-  for (uint32_t i = 0; i < header.addeded_chunks; ++i) {
+  for (uint32_t i = 0; i < footer.addeded_chunks; ++i) {
     auto _index_it = indexReccords[i];
     Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
     if (search_res == nullptr) {

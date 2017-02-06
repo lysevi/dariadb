@@ -3,10 +3,10 @@
 #endif
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/bloom_filter.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/pages/page_manager.h>
-#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -28,13 +28,13 @@
 using namespace dariadb::storage;
 using namespace dariadb::utils::async;
 
-struct PageHeaderDescription {
+struct PageFooterDescription {
   std::string path;
-  IndexHeader hdr;
+  IndexFooter hdr;
 };
 
-using File2PageHeader =
-    stx::btree_multimap<dariadb::Time, PageHeaderDescription>;
+using File2PageFooter =
+    stx::btree_multimap<dariadb::Time, PageFooterDescription>;
 
 class PageManager::Private {
 public:
@@ -43,26 +43,25 @@ public:
     _env = env;
     _settings = _env->getResourceObject<Settings>(
         EngineEnvironment::Resource::SETTINGS);
-
+    _manifest = _env->getResourceObject<Manifest>(
+        EngineEnvironment::Resource::MANIFEST);
     last_id = 0;
-    reloadIndexHeaders();
+    reloadIndexFooters();
   }
 
-  void reloadIndexHeaders() {
+  void reloadIndexFooters() {
     if (utils::fs::path_exists(_settings->raw_path.value())) {
-      _file2header.clear();
-      auto pages = _env->getResourceObject<Manifest>(
-                           EngineEnvironment::Resource::MANIFEST)
-                       ->page_list();
+      _file2footer.clear();
+      auto pages = _manifest->page_list();
 
       for (auto n : pages) {
         auto file_name = utils::fs::append_path(_settings->raw_path.value(), n);
-        auto phdr = Page::readHeader(file_name);
+        auto phdr = Page::readFooter(file_name);
         last_id = std::max(phdr.max_chunk_id, last_id);
 
         auto index_filename = PageIndex::index_name_from_page_name(file_name);
         if (utils::fs::file_exists(index_filename)) {
-          auto ihdr = Page::readIndexHeader(index_filename);
+          auto ihdr = Page::readIndexFooter(index_filename);
           insert_pagedescr(n, ihdr);
         }
       }
@@ -84,9 +83,7 @@ public:
       return;
     }
 
-    auto pages =
-        _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
-            ->page_list();
+    auto pages = _manifest->page_list();
 
     for (auto n : pages) {
       auto file_name = utils::fs::append_path(_settings->raw_path.value(), n);
@@ -108,7 +105,7 @@ public:
         erase_page(file_name);
       }
     }
-    reloadIndexHeaders();
+    reloadIndexFooters();
   }
 
   // PM
@@ -116,7 +113,7 @@ public:
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) {
-    auto pages = pages_by_filter([id](const IndexHeader &ih) {
+    auto pages = pages_by_filter([id](const IndexFooter &ih) {
       return (storage::bloom_check(ih.id_bloom, id));
     });
 
@@ -174,7 +171,7 @@ public:
   }
 
   Id2Cursor intervalReader(const QueryInterval &query) {
-    auto pred = [&query](const IndexHeader &hdr) {
+    auto pred = [&query](const IndexFooter &hdr) {
       auto interval_check(
           (hdr.stat.minTime >= query.from && hdr.stat.maxTime <= query.to) ||
           (utils::inInterval(query.from, query.to, hdr.stat.minTime)) ||
@@ -202,7 +199,7 @@ public:
       ChunkLinkList to_read;
 
       auto page_list =
-          pages_by_filter(std::function<bool(const IndexHeader &)>(pred));
+          pages_by_filter(std::function<bool(const IndexFooter &)>(pred));
 
       for (auto pname : page_list) {
         auto p = Page::open(pname);
@@ -221,10 +218,10 @@ public:
   }
 
   std::list<std::string>
-  pages_by_filter(std::function<bool(const IndexHeader &)> pred) {
-    std::list<PageHeaderDescription> sub_result;
+  pages_by_filter(std::function<bool(const IndexFooter &)> pred) {
+    std::list<PageFooterDescription> sub_result;
 
-    for (auto f2h : _file2header) {
+    for (auto f2h : _file2footer) {
       auto hdr = f2h.second.hdr;
       if (pred(hdr)) {
 
@@ -232,7 +229,7 @@ public:
       }
     }
 
-    std::vector<PageHeaderDescription> vec_res{sub_result.begin(),
+    std::vector<PageFooterDescription> vec_res{sub_result.begin(),
                                                sub_result.end()};
     std::sort(vec_res.begin(), vec_res.end(), [](auto lr, auto rr) {
       return lr.hdr.stat.minTime < rr.hdr.stat.minTime;
@@ -268,7 +265,7 @@ public:
 
     AsyncTask at = [&query, &result, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      auto pred = [query](const IndexHeader &hdr) {
+      auto pred = [query](const IndexFooter &hdr) {
         auto in_check = utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime,
                                           query.time_point) ||
                         (hdr.stat.maxTime < query.time_point);
@@ -282,7 +279,7 @@ public:
         return false;
       };
 
-      auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+      auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
 
       for (auto it = page_list.rbegin(); it != page_list.rend(); ++it) {
         auto pname = *it;
@@ -308,26 +305,21 @@ public:
     if (_cur_page == nullptr) {
       return 0;
     }
-    return _cur_page->header.addeded_chunks;
+    return _cur_page->footer.addeded_chunks;
   }
   // PM
-  size_t files_count() const {
-    return _env
-        ->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
-        ->page_list()
-        .size();
-  }
+  size_t files_count() const { return _manifest->page_list().size(); }
 
   dariadb::Time minTime() {
 
-    auto pred = [](const IndexHeader &) { return true; };
+    auto pred = [](const IndexFooter &) { return true; };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
 
     dariadb::Time res = dariadb::MAX_TIME;
     for (auto pname : page_list) {
       auto ih =
-          Page::readIndexHeader(PageIndex::index_name_from_page_name(pname));
+          Page::readIndexFooter(PageIndex::index_name_from_page_name(pname));
       res = std::min(ih.stat.minTime, res);
     }
 
@@ -335,14 +327,14 @@ public:
   }
   dariadb::Time maxTime() {
 
-    auto pred = [](const IndexHeader &) { return true; };
+    auto pred = [](const IndexFooter &) { return true; };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
 
     dariadb::Time res = dariadb::MIN_TIME;
     for (auto pname : page_list) {
       auto ih =
-          Page::readIndexHeader(PageIndex::index_name_from_page_name(pname));
+          Page::readIndexFooter(PageIndex::index_name_from_page_name(pname));
       res = std::max(ih.stat.maxTime, res);
     }
 
@@ -360,13 +352,12 @@ public:
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::create(file_name, last_id, _settings->chunk_size.value(), ma);
-    _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
-        ->page_append(page_name);
-    last_id = res->header.max_chunk_id;
+    _manifest->page_append(page_name);
+    last_id = res->footer.max_chunk_id;
 
     insert_pagedescr(
         page_name,
-        Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
+        Page::readIndexFooter(PageIndex::index_name_from_page_name(file_name)));
   }
 
   static void erase(const std::string &storage_path, const std::string &fname) {
@@ -378,26 +369,25 @@ public:
   void erase_page(const std::string &full_file_name) {
     auto fname = utils::fs::extract_filename(full_file_name);
 
-    _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
-        ->page_rm(fname);
+    _manifest->page_rm(fname);
     utils::fs::rm(full_file_name);
     utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
-    auto it = _file2header.begin();
-    for (; it != _file2header.end(); ++it) {
+    auto it = _file2footer.begin();
+    for (; it != _file2footer.end(); ++it) {
       if (it->second.path == fname) {
         break;
       }
     }
-    _file2header.erase(it);
+    _file2footer.erase(it);
   }
 
   void eraseOld(const Time t) {
-    auto pred = [t](const IndexHeader &hdr) {
+    auto pred = [t](const IndexFooter &hdr) {
       auto in_check = hdr.stat.maxTime <= t;
       return in_check;
     };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
     for (auto &p : page_list) {
       this->erase_page(p);
     }
@@ -405,9 +395,9 @@ public:
 
   void compactTo(uint32_t pagesCount) {
 
-    auto pred = [](const IndexHeader &hdr) { return true; };
+    auto pred = [](const IndexFooter &hdr) { return true; };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
     auto in_one = (size_t)(float(page_list.size()) / pagesCount + 1);
     auto it = page_list.begin();
     while (it != page_list.end()) {
@@ -423,12 +413,12 @@ public:
     }
   }
   void compactbyTime(Time from, Time to) {
-    auto pred = [from, to](const IndexHeader &hdr) {
+    auto pred = [from, to](const IndexFooter &hdr) {
       return utils::inInterval(from, to, hdr.stat.minTime) ||
              utils::inInterval(from, to, hdr.stat.maxTime);
     };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexHeader)>(pred));
+    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
     if (page_list.size() <= 1) {
       logger_info("engine: compactbyTime - pages count le 1.");
       return;
@@ -446,9 +436,8 @@ public:
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::create(file_name, last_id, _settings->chunk_size.value(), part);
-    _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
-        ->page_append(page_name);
-    last_id = res->header.max_chunk_id;
+    _manifest->page_append(page_name);
+    last_id = res->footer.max_chunk_id;
 
     for (auto erasedPage : part) {
       this->erase_page(erasedPage);
@@ -456,7 +445,7 @@ public:
 
     insert_pagedescr(
         page_name,
-        Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
+        Page::readIndexFooter(PageIndex::index_name_from_page_name(file_name)));
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
@@ -466,26 +455,25 @@ public:
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::create(file_name, last_id, a, count);
-    _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
-        ->page_append(page_name);
-    last_id = res->header.max_chunk_id;
+    _manifest->page_append(page_name);
+    last_id = res->footer.max_chunk_id;
 
     insert_pagedescr(
         page_name,
-        Page::readIndexHeader(PageIndex::index_name_from_page_name(file_name)));
+        Page::readIndexFooter(PageIndex::index_name_from_page_name(file_name)));
   }
 
-  void insert_pagedescr(std::string page_name, IndexHeader hdr) {
-    PageHeaderDescription ph_d;
+  void insert_pagedescr(std::string page_name, IndexFooter hdr) {
+    PageFooterDescription ph_d;
     ph_d.hdr = hdr;
     ph_d.path = page_name;
-    _file2header.insert(std::make_pair(ph_d.hdr.stat.maxTime, ph_d));
+    _file2footer.insert(std::make_pair(ph_d.hdr.stat.maxTime, ph_d));
   }
 
   Id2MinMax loadMinMax() {
     Id2MinMax result;
 
-    auto pages = pages_by_filter([](const IndexHeader &ih) { return true; });
+    auto pages = pages_by_filter([](const IndexFooter &ih) { return true; });
 
     AsyncTask at = [&result, &pages, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
@@ -509,9 +497,10 @@ protected:
   mutable std::mutex _page_open_lock;
 
   uint64_t last_id;
-  File2PageHeader _file2header;
+  File2PageFooter _file2footer;
   EngineEnvironment_ptr _env;
   Settings *_settings;
+  Manifest *_manifest;
 };
 
 PageManager_ptr PageManager::create(const EngineEnvironment_ptr env) {

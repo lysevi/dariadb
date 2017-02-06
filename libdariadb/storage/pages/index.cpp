@@ -34,7 +34,7 @@ PageIndex::~PageIndex() {}
 PageIndex_ptr PageIndex::open(const std::string &_filename) {
   PageIndex_ptr res = std::make_shared<PageIndex>();
   res->filename = _filename;
-  res->iheader = readIndexHeader(_filename);
+  res->iheader = readIndexFooter(_filename);
   return res;
 }
 
@@ -102,16 +102,16 @@ std::vector<IndexReccord> PageIndex::readReccords() {
   return records;
 }
 
-IndexHeader PageIndex::readIndexHeader(std::string ifile) {
+IndexFooter PageIndex::readIndexFooter(std::string ifile) {
   std::ifstream istream;
   istream.open(ifile, std::fstream::in | std::fstream::binary);
   if (!istream.is_open()) {
     THROW_EXCEPTION("can't open file. filename=", ifile);
   }
-  istream.seekg(-(int)sizeof(IndexHeader), istream.end);
-  IndexHeader result;
-  memset(&result, 0, sizeof(IndexHeader));
-  istream.read((char *)&result, sizeof(IndexHeader));
+  istream.seekg(-(int)sizeof(IndexFooter), istream.end);
+  IndexFooter result;
+  memset(&result, 0, sizeof(IndexFooter));
+  istream.read((char *)&result, sizeof(IndexFooter));
   istream.close();
   return result;
 }

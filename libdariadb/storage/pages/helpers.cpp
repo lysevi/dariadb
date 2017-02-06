@@ -15,8 +15,8 @@ namespace dariadb {
 namespace storage {
 namespace PageInner {
 
-dariadb::storage::PageHeader emptyPageHeader(uint64_t chunk_id) {
-  dariadb::storage::PageHeader phdr;
+dariadb::storage::PageFooter emptyPageHeader(uint64_t chunk_id) {
+  dariadb::storage::PageFooter phdr;
   phdr.max_chunk_id = chunk_id;
   return phdr;
 }
@@ -66,7 +66,7 @@ std::map<Id, MeasArray> splitById(const MeasArray &ma) {
 }
 
 std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
-                                       PageHeader &phdr, uint32_t max_chunk_size) {
+                                       PageFooter &phdr, uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
   std::list<HdrAndBuffer> results;
   utils::async::Locker result_locker;
@@ -120,7 +120,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
   return results;
 }
 
-uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader &ihdr,
+uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter &ihdr,
                      std::list<HdrAndBuffer> &compressed_results, uint64_t file_size) {
 
   using namespace dariadb::utils::async;
@@ -163,7 +163,7 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader
   return page_size;
 }
 
-IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexHeader *iheader) {
+IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *iheader) {
   IndexReccord cur_index;
 
   cur_index.chunk_id = cheader.id;

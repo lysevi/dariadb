@@ -12,13 +12,13 @@ namespace storage {
 const std::string PAGE_FILE_EXT = ".page"; // cola-file extension
 
 #pragma pack(push, 1)
-struct PageHeader {
+struct PageFooter {
   // uint64_t write_offset;      // next write pos (bytes)
   uint32_t addeded_chunks; // total count of chunks in page.
   uint64_t filesize;
   Statistic stat;
   uint64_t max_chunk_id; // max(chunk->id)
-  PageHeader() : stat() {
+  PageFooter() : stat() {
     addeded_chunks = 0;
     filesize = 0;
     max_chunk_id = 0;
@@ -46,10 +46,9 @@ public:
 
   EXPORT static Page_Ptr open(std::string file_name);
 
-  EXPORT static PageHeader readHeader(std::string file_name);
-  EXPORT static IndexHeader readIndexHeader(std::string page_file_name);
+  EXPORT static PageFooter readFooter(std::string file_name);
+  EXPORT static IndexFooter readIndexFooter(std::string page_file_name);
 
-  EXPORT static uint64_t index_file_size(uint32_t chunk_per_storage);
   EXPORT static void restoreIndexFile(const std::string &file_name);
 
   EXPORT ~Page();
@@ -68,16 +67,16 @@ public:
 
   bool checksum(); // return false if bad checksum.
 private:
-  void update_index_recs(const PageHeader &phdr);
+  void update_index_recs(const PageFooter &phdr);
 
   static Page_Ptr make_page(const std::string &file_name,
-                            const PageHeader &phdr);
+                            const PageFooter &phdr);
   Chunk_Ptr readChunkByOffset(FILE *page_io, int offset);
 
   ChunkLinkList linksByIterval(const QueryInterval &qi);
 
 public:
-  PageHeader header;
+  PageFooter footer;
   std::string filename;
 
 protected:

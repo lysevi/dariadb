@@ -14,17 +14,17 @@ struct HdrAndBuffer {
   std::shared_ptr<uint8_t> buffer;
 };
 
-dariadb::storage::PageHeader emptyPageHeader(uint64_t chunk_id);
+dariadb::storage::PageFooter emptyPageHeader(uint64_t chunk_id);
 
 std::map<Id, MeasArray> splitById(const MeasArray &ma);
 
 std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
-                                       PageHeader &phdr, uint32_t max_chunk_size);
+                                       PageFooter &phdr, uint32_t max_chunk_size);
 
-uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader &,
+uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter &,
                      std::list<HdrAndBuffer> &compressed_results, uint64_t file_size = 0);
 
-IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexHeader *iheader);
+IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *iheader);
 }
 }
 }
