@@ -804,13 +804,10 @@ void dariadb::row2stream(std::ostream &s, const MeasArray &row) {
     ss << " f:";
     switch (v.flag) {
     case FLAGS::_NO_DATA:
-      ss << std::setw(8) << std::left << "_NO_DATA";
-      break;
-    case FLAGS::_REPEAT:
-      ss << std::setw(8) << std::left << "_REPEAT_";
+      ss << std::setw(10) << std::left << "_NO_DATA";
       break;
     default:
-      ss << std::setw(8) << std::left << std::hex << std::showbase << v.flag;
+      ss << std::setw(10) << std::left << std::hex << std::showbase << v.flag;
       break;
     }
 

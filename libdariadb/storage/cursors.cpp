@@ -290,7 +290,7 @@ void Join::join(const CursorsList &l, const IdArray &ids,
     std::list<size_t> current_row;
     for (size_t i = 0; i < cursors.size(); ++i) {
       if (row[i].flag != FLAGS::_NO_DATA) {
-        row[i].flag = FLAGS::_REPEAT;
+        row[i].addFlag(FLAGS::_REPEAT);
       }
       row[i].time = min_time;
       if (!end_status[i]) {

@@ -63,6 +63,10 @@ struct Meas {
   bool inQuery(const IdArray &ids, const Flag f, Time from, Time to) const {
     return inQuery(ids, f) && inInterval(from, to);
   }
+
+  void addFlag(const Flag f) {
+	  flag = flag | f;
+  }
 };
 #pragma pack(pop)
 
