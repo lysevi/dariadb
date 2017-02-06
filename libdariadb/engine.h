@@ -11,7 +11,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/utils.h>
 #include <memory>
-#include <strstream>
+#include <ostream>
 
 namespace dariadb {
 namespace storage {
