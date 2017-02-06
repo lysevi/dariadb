@@ -3,107 +3,20 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
-#include <libdariadb/engine.h>
-#include <libdariadb/storage/bloom_filter.h>
-#include <libdariadb/storage/bystep/step_kind.h>
-#include <libdariadb/storage/manifest.h>
-#include <libdariadb/storage/pages/page_manager.h>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/utils/fs.h>
-#include <libdariadb/utils/logger.h>
 #include <algorithm>
 #include <iostream>
+#include <libdariadb/engine.h>
+#include <libdariadb/storage/bloom_filter.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/fs.h>
 
-class BenchCallback : public dariadb::storage::IReaderClb {
+class BenchCallback : public dariadb::storage::IReadCallback {
 public:
   BenchCallback() { count = 0; }
   void call(const dariadb::Meas &) { count++; }
   size_t count;
 };
-
-BOOST_AUTO_TEST_CASE(ManifestStoreSteps) {
-  const std::string storage_path = "testStorage";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-  {
-    dariadb::utils::fs::mkdir(storage_path);
-    auto s = dariadb::storage::Settings::create(storage_path);
-    auto m = dariadb::storage::Manifest::create(s);
-
-    dariadb::storage::Id2Step id2step;
-    dariadb::Id id_val = 0;
-    for (auto i = 0; i < 100; ++i) {
-      auto bs_id = id_val + 100000;
-      id2step[bs_id] = dariadb::storage::STEP_KIND::MINUTE;
-      ++id_val;
-    }
-    m->insert_id2step(id2step);
-    id2step = m->read_id2step();
-    BOOST_CHECK_EQUAL(id2step.size(), size_t(100));
-    BOOST_CHECK_EQUAL(id2step[100000], dariadb::storage::STEP_KIND::MINUTE);
-  }
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
-
-BOOST_AUTO_TEST_CASE(BloomTest) {
-  size_t u8_fltr = dariadb::storage::bloom_empty<uint8_t>();
-
-  BOOST_CHECK_EQUAL(u8_fltr, size_t{0});
-
-  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{1});
-  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{2});
-  u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{3});
-
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{1}));
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{2}));
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{3}));
-}
-
-BOOST_AUTO_TEST_CASE(inFilter) {
-  {
-    auto m = dariadb::Meas::empty();
-    m.flag = 100;
-    BOOST_CHECK(m.inFlag(0));
-    BOOST_CHECK(m.inFlag(100));
-    BOOST_CHECK(!m.inFlag(10));
-  }
-}
-
-BOOST_AUTO_TEST_CASE(Options_Instance) {
-
-  const std::string storage_path = "testStorage";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-
-  dariadb::utils::fs::mkdir(storage_path);
-
-  auto settings = dariadb::storage::Settings::create(storage_path);
-
-  settings->wal_cache_size.setValue(2);
-  settings->chunk_size.setValue(7);
-  settings->strategy.setValue(dariadb::storage::STRATEGY::COMPRESSED);
-  settings->save();
-
-  settings = nullptr;
-
-  bool file_exists = dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(
-      storage_path, dariadb::storage::SETTINGS_FILE_NAME));
-  BOOST_CHECK(file_exists);
-
-  settings = dariadb::storage::Settings::create(storage_path);
-  BOOST_CHECK_EQUAL(settings->wal_cache_size.value(), uint64_t(2));
-  BOOST_CHECK_EQUAL(settings->chunk_size.value(), uint32_t(7));
-  BOOST_CHECK(settings->strategy.value() == dariadb::storage::STRATEGY::COMPRESSED);
-
-  settings = nullptr;
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
 
 BOOST_AUTO_TEST_CASE(Engine_common_test) {
   const std::string storage_path = "testStorage";
@@ -127,7 +40,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true);
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -152,7 +65,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     raw_ptr->fsck();
 
     // check first id, because that Id placed in compressed pages.
-    auto values = ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
+    auto values =
+        ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
     BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
 
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
@@ -190,7 +104,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
     dariadb::IdSet all_ids;
     dariadb::Time maxWritedTime;
     dariadb_test::fill_storage_for_test(ms.get(), from, to, step, &all_ids,
-                                        &maxWritedTime);
+                                        &maxWritedTime, false);
 
     ms->compress_all();
 
@@ -204,10 +118,10 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
   }
 }
 
-class Moc_SubscribeClbk : public dariadb::storage::IReaderClb {
+class Moc_SubscribeClbk : public dariadb::storage::IReadCallback {
 public:
   std::list<dariadb::Meas> values;
-  void call(const dariadb::Meas &m) override { values.push_back(m); }
+  void apply(const dariadb::Meas &m) override { values.push_back(m); }
   void is_end() override {}
   ~Moc_SubscribeClbk() {}
 };
@@ -242,7 +156,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     ids.clear();
     ms->subscribe(ids, 1, c4); // with flag=1
 
-    auto m = dariadb::Meas::empty();
+    auto m = dariadb::Meas();
     const size_t total_count = 100;
     const dariadb::Time time_step = 1;
 
@@ -292,7 +206,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
     settings->memory_limit.setValue(50 * 1024);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, false);
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -325,7 +239,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
     settings->wal_file_size.setValue(2000);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true);
 
     auto descr = ms->description();
     BOOST_CHECK_GT(descr.pages_count, size_t(0));
@@ -335,74 +249,55 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Engine_ByStep_common_test) {
+BOOST_AUTO_TEST_CASE(Engine_join_test) {
   const std::string storage_path = "testStorage";
+  const size_t chunk_size = 256;
 
-  const size_t chunk_size = 128;
   const dariadb::Time from = 0;
-  const dariadb::Time to = from + 1000;
+  const dariadb::Time to = from + 50;
   const dariadb::Time step = 10;
 
   using namespace dariadb::storage;
 
-  const dariadb::Id spec_id = 777;
   {
-    std::cout << "Engine_ByStep_common_test\n";
+    std::cout << "Engine_join_test\n";
     if (dariadb::utils::fs::path_exists(storage_path)) {
       dariadb::utils::fs::rm(storage_path);
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(STRATEGY::MEMORY);
+    settings->wal_cache_size.setValue(100);
+    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 2);
     settings->chunk_size.setValue(chunk_size);
-    settings->memory_limit.setValue(50 * 1024);
-    settings->wal_file_size.setValue(2000);
+    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb::storage::Id2Step id2step;
-    dariadb::Id id_val = 0;
-    for (auto i = from; i < to; i += step) {
-      auto bs_id = id_val + 100000;
-      id2step[bs_id] = dariadb::storage::STEP_KIND::SECOND;
-      ++id_val;
+    dariadb::IdSet all_ids;
+    dariadb::Time maxWritedTime;
+    dariadb_test::fill_storage_for_test(ms.get(), from, to, step, &all_ids,
+                                        &maxWritedTime, false);
+
+    const dariadb::Id no_exists_id = 77676;
+    std::list<dariadb::storage::QueryInterval> qs;
+    qs.push_back(dariadb::storage::QueryInterval({0}, 0, 0, 10));
+    qs.push_back(dariadb::storage::QueryInterval({1}, 0, 10, 20));
+    qs.push_back(dariadb::storage::QueryInterval({2, 3}, 0, 20, to));
+    qs.push_back(dariadb::storage::QueryInterval({no_exists_id}, 0, 20, to));
+
+    auto tm = std::make_unique<dariadb::storage::Join::TableMaker>();
+    ms->join(qs, tm.get());
+    for (auto row : tm->result) {
+      BOOST_CHECK_EQUAL(row[0].id, dariadb::Id(0));
+      BOOST_CHECK_EQUAL(row[1].id, dariadb::Id(1));
+      BOOST_CHECK_EQUAL(row[2].id, dariadb::Id(2));
+      BOOST_CHECK_EQUAL(row[3].id, dariadb::Id(3));
+      BOOST_CHECK_EQUAL(row[4].id, dariadb::Id(no_exists_id));
+	  BOOST_CHECK_EQUAL(row[4].flag, dariadb::FLAGS::_NO_DATA);
+      BOOST_CHECK(
+          std::all_of(row.begin(), row.end(), [&row](const dariadb::Meas &m) {
+            return m.time == row.front().time;
+          }));
     }
-
-    ms->setSteps(id2step);
-    // must add spec_id steps to exists map;
-    id2step[spec_id] = dariadb::storage::STEP_KIND::SECOND;
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true);
-
-    auto descr = ms->description();
-    BOOST_CHECK_GT(descr.pages_count, size_t(0));
-  }
-  {
-    std::cout << "Reopen storage to load id2step\n";
-    auto settings = dariadb::storage::Settings::create(storage_path);
-    std::unique_ptr<Engine> ms{new Engine(settings)};
-
-    QueryInterval qi({}, 0, from, to);
-    qi.ids.resize(1);
-    qi.ids[0] = dariadb::Id(100000);
-    auto mlist = ms->readInterval(qi);
-    BOOST_CHECK(mlist.empty());
-
-    auto v = dariadb::Meas::empty(qi.ids[0]);
-    v.time = 0;
-    v.value = 777;
-    ms->append(v);
-    mlist = ms->readInterval(qi);
-    BOOST_CHECK(!mlist.empty());
-    BOOST_CHECK_EQUAL(mlist.front().value, v.value);
-
-    v.id = spec_id;
-    v.time = 0;
-    v.value = 777;
-    ms->append(v);
-
-    qi.ids[0] = dariadb::Id(spec_id);
-    mlist = ms->readInterval(qi);
-    BOOST_CHECK(!mlist.empty());
-    BOOST_CHECK_EQUAL(mlist.front().value, v.value);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

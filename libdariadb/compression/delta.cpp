@@ -35,7 +35,8 @@ uint32_t get_delta_3b(int64_t D) {
 }
 
 DeltaCompressor::DeltaCompressor(const ByteBuffer_Ptr &bw_)
-    : BaseCompressor(bw_), is_first(true), first(0), prev_delta(0), prev_time(0) {}
+    : BaseCompressor(bw_), is_first(true), first(0), prev_delta(0),
+      prev_time(0) {}
 
 bool DeltaCompressor::append(dariadb::Time t) {
   if (is_first) {
@@ -87,7 +88,8 @@ bool DeltaCompressor::append(dariadb::Time t) {
   return true;
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_, dariadb::Time first)
+DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_,
+                                     dariadb::Time first)
     : BaseCompressor(bw_), prev_delta(0), prev_time(first) {}
 
 dariadb::Time DeltaDeCompressor::read() {
@@ -119,8 +121,8 @@ dariadb::Time DeltaDeCompressor::read() {
         c.small.hi = (uint8_t)first_unmasked;
         c.small.lo = second;
         result = c.big;
-        if (result > delta_3b_mask_inv) { // negative
-          result = (-1048576) | result;
+        if (result > 524287) { // negative
+          result = (-524287) | result;
         }
       } else {
         if (first_byte == 0) {

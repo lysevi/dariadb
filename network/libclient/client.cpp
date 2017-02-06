@@ -176,7 +176,7 @@ public:
       assert(subres->is_ok);
       if (qw->count == 0) {
         subres->is_closed = true;
-        subres->clbk(subres.get(), Meas::empty());
+        subres->clbk(subres.get(), Meas());
         subres->locker.unlock();
         _query_results.erase(qw->id);
       } else {

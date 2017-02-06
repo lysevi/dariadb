@@ -17,11 +17,7 @@ namespace PageInner {
 
 dariadb::storage::PageHeader emptyPageHeader(uint64_t chunk_id) {
   dariadb::storage::PageHeader phdr;
-  memset(&phdr, 0, sizeof(PageHeader));
-  phdr.maxTime = dariadb::MIN_TIME;
-  phdr.minTime = dariadb::MAX_TIME;
   phdr.max_chunk_id = chunk_id;
-
   return phdr;
 }
 
@@ -87,7 +83,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
       auto it = begin;
       while (it != end) {
         ChunkHeader hdr;
-        memset(&hdr, 0, sizeof(ChunkHeader));
+       //memset(&hdr, 0, sizeof(ChunkHeader));
         // TODO use memory_pool
         std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
         memset(buffer_ptr.get(), 0, max_chunk_size);
@@ -103,9 +99,10 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
 
         result_locker.lock();
         phdr.max_chunk_id++;
-        phdr.minTime = std::min(phdr.minTime, ch->header->minTime);
-        phdr.maxTime = std::max(phdr.maxTime, ch->header->maxTime);
+
         ch->header->id = phdr.max_chunk_id;
+
+		phdr.stat.update(ch->header->stat);
 
         HdrAndBuffer subres{hdr, buffer_ptr};
 
@@ -138,8 +135,7 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader
     std::shared_ptr<uint8_t> chunk_buffer_ptr = hb.buffer;
 
     phdr.addeded_chunks++;
-    phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
-    phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
+	phdr.stat.update(chunk_header.stat);
 
     auto skip_count = Chunk::compact(&chunk_header);
     chunk_header.offset_in_page = offset;
@@ -169,21 +165,18 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader
 
 IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexHeader *iheader) {
   IndexReccord cur_index;
-  memset(&cur_index, 0, sizeof(IndexReccord));
 
   cur_index.chunk_id = cheader.id;
   cur_index.offset = cheader.offset_in_page; // header->write_offset;
-
-  iheader->minTime = std::min(iheader->minTime, cheader.minTime);
-  iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
+  
+  iheader->stat.update(cheader.stat);
 
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
-  iheader->flag_bloom = storage::bloom_add(iheader->flag_bloom, cheader.data_first.flag);
-  iheader->count++;
-  cur_index.minTime = cheader.minTime;
-  cur_index.maxTime = cheader.maxTime;
+  iheader->recs_count++;
   cur_index.meas_id = cheader.meas_id;
-  cur_index.flag_bloom = cheader.flag_bloom;
+  cur_index.stat = cheader.stat;
+  ENSURE(cur_index.stat.minTime <= cur_index.stat.maxTime);
+  ENSURE(cur_index.stat.minValue <= cur_index.stat.maxValue);
   return cur_index;
 }
 }

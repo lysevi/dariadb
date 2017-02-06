@@ -8,20 +8,28 @@ namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
 struct IndexHeader {
-  uint32_t count; // count of values
-  dariadb::Time minTime;
-  dariadb::Time maxTime;
-  bool is_sorted;      // items in index file sorted by time
-  uint64_t id_bloom;   // bloom filter of Meas.id
-  uint64_t flag_bloom; // bloom filter of Meas.flag
+  bool is_sorted;    // items in index file sorted by time
+  uint64_t id_bloom; // bloom filter of Meas.id
+
+  Statistic stat;
+  uint64_t recs_count;
+  IndexHeader() : stat() {
+    recs_count = 0;
+    is_sorted = false;
+    id_bloom = bloom_empty<Id>();
+  }
 };
 
 struct IndexReccord {
-  Time minTime, maxTime; // min max time of linked chunk
-  size_t flag_bloom;     // bloom filters of writed meases
   size_t meas_id;
   uint64_t chunk_id; // chunk->id
   uint64_t offset;   // offset in bytes of chunk in page
+  Statistic stat;
+  IndexReccord() : stat() {
+    meas_id = 0;
+    chunk_id = 0;
+    offset = 0;
+  }
 };
 #pragma pack(pop)
 
@@ -36,8 +44,9 @@ public:
   ~PageIndex();
   static PageIndex_ptr open(const std::string &filename);
 
-  ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
-                                 dariadb::Time to, dariadb::Flag flag);
+  ChunkLinkList get_chunks_links(const dariadb::IdArray &ids,
+                                 dariadb::Time from, dariadb::Time to,
+                                 dariadb::Flag flag);
   std::vector<IndexReccord> readReccords();
   static IndexHeader readIndexHeader(std::string ifile);
 

@@ -3,18 +3,18 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-IReaderClb::IReaderClb() {
+IReadCallback::IReadCallback() {
   is_end_called = false;
   is_cancel = false;
 }
 
-IReaderClb::~IReaderClb() {}
+IReadCallback::~IReadCallback() {}
 
-void IReaderClb::is_end() {
+void IReadCallback::is_end() {
   is_end_called = true;
 }
 
-void IReaderClb::wait() {
+void IReadCallback::wait() {
   // TODO make more smarter.
   while (!is_cancel && !is_end_called) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -22,10 +22,10 @@ void IReaderClb::wait() {
   // mtx.unlock();
 }
 
-void IReaderClb::cancel() {
+void IReadCallback::cancel() {
   is_cancel = true;
 }
 
-bool IReaderClb::is_canceled() const {
+bool IReadCallback::is_canceled() const {
   return is_cancel;
 }

@@ -1,3 +1,9 @@
+v0.3.0
+=====
+- Remove bystep storage engine.
+- Accept unordered data.
+- Support join of queries.
+
 v0.2.0
 =====
 Server:

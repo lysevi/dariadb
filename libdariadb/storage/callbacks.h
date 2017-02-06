@@ -10,9 +10,9 @@
 namespace dariadb {
 namespace storage {
 
-struct MList_ReaderClb : public IReaderClb {
+struct MList_ReaderClb : public IReadCallback {
   EXPORT MList_ReaderClb();
-  EXPORT void call(const Meas &m) override;
+  EXPORT void apply(const Meas &m) override;
 
   MeasList mlist;
   utils::async::Locker _locker;

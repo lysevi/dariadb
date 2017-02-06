@@ -7,11 +7,11 @@ public:
   void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) override {}
 };
 
-class Callback : public dariadb::storage::IReaderClb {
+class Callback : public dariadb::storage::IReadCallback {
 public:
   Callback() {}
 
-  void call(const dariadb::Meas &measurement) override {
+  void apply(const dariadb::Meas &measurement) override {
     std::cout << " id: " << measurement.id
               << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
               << " value:" << measurement.value << std::endl;
@@ -19,7 +19,7 @@ public:
 
   void is_end() override {
     std::cout << "calback end." << std::endl;
-    dariadb::storage::IReaderClb::is_end();
+    dariadb::storage::IReadCallback::is_end();
   }
 };
 
@@ -39,12 +39,7 @@ int main(int argc, char **argv) {
 
   auto storage = std::make_unique<dariadb::storage::Engine>(settings);
 
-  // measurement 2 is a bystep value. step == 1 hour
-  dariadb::storage::Id2Step steps;
-  steps[0] = dariadb::storage::STEP_KIND::HOUR;
-  storage->setSteps(steps);
-
-  auto m = dariadb::Meas::empty();
+  auto m = dariadb::Meas();
   auto start_time = dariadb::timeutil::current_time();
 
   // write values in interval [currentTime:currentTime+10]

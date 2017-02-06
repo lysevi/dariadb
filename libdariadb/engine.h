@@ -1,13 +1,13 @@
 #pragma once
 
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/bystep/description.h>
-#include <libdariadb/storage/bystep/step_kind.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/strategy.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/utils.h>
 #include <memory>
@@ -22,7 +22,6 @@ public:
     size_t wal_count;    ///  wal count.
     size_t pages_count;  /// pages count.
     size_t active_works; /// async tasks runned.
-    bystep::Description bystep;
     Dropper::Description dropper;
     memstorage::Description memstorage;
   };
@@ -40,11 +39,12 @@ public:
   EXPORT void stop();
   EXPORT Description description() const;
 
-  EXPORT virtual void foreach (const QueryInterval &q, IReaderClb * clbk) override;
+  EXPORT virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   EXPORT virtual MeasList readInterval(const QueryInterval &q) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-  EXPORT virtual void foreach (const QueryTimePoint &q, IReaderClb * clbk) override;
+  EXPORT virtual Id2Cursor intervalReader(const QueryInterval &query)override;
+  EXPORT virtual void foreach (const QueryTimePoint &q, IReadCallback * clbk) override;
 
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
@@ -55,7 +55,7 @@ public:
   EXPORT void drop_part_wals(size_t count);
   EXPORT void compress_all();
 
-  EXPORT void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk);
+  EXPORT void subscribe(const IdArray &ids, const Flag &flag, const ReaderCallback_ptr &clbk);
   EXPORT void wait_all_asyncs();
 
   EXPORT void fsck();
@@ -69,8 +69,7 @@ public:
   EXPORT static std::string version();
   EXPORT STRATEGY strategy() const;
 
-  EXPORT void setSteps(const Id2Step &m);
-
+  EXPORT void join(std::list<QueryInterval> queries, Join::Callback*clbk);
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

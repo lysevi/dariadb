@@ -2,7 +2,6 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/bystep/step_kind.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/async/locker.h>
 #include <list>
@@ -32,10 +31,6 @@ public:
 
   EXPORT void set_format(const std::string &version);
   EXPORT std::string get_format();
-
-  EXPORT void insert_id2step(const Id2Step &i2s);
-  EXPORT Id2Step read_id2step();
-
 protected:
   EXPORT Manifest(const Settings_ptr &settings);
   class Private;

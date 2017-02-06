@@ -49,8 +49,6 @@ Settings_ptr Settings::create(const std::string &storage_path) {
 Settings::Settings(const std::string &path_to_storage)
     : storage_path(nullptr, "storage path", path_to_storage),
       raw_path(nullptr, "raw path", utils::fs::append_path(path_to_storage, "raw")),
-      bystep_path(nullptr, "bystep path",
-                  utils::fs::append_path(path_to_storage, "bystep")),
       wal_file_size(this, c_wal_file_size, WAL_FILE_SIZE),
       wal_cache_size(this, c_wal_cache_size, WAL_CACHE_SIZE),
       chunk_size(this, c_chunk_size, CHUNK_SIZE),
@@ -64,7 +62,6 @@ Settings::Settings(const std::string &path_to_storage)
   } else {
     dariadb::utils::fs::mkdir(storage_path.value());
     dariadb::utils::fs::mkdir(raw_path.value());
-    dariadb::utils::fs::mkdir(bystep_path.value());
     save();
   }
   load_min_max = true;

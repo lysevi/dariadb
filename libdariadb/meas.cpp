@@ -1,27 +1,28 @@
+#include <algorithm>
+#include <cmath>
 #include <libdariadb/flags.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/utils.h>
-#include <algorithm>
-#include <cmath>
 #include <stdlib.h>
 #include <string.h>
 
 using namespace dariadb;
 
 Meas::Meas() {
-  memset(this, 0, sizeof(Meas));
+  id = Id();
+  flag = Flag();
+  value = Value();
+  time = Time();
 }
 
-Meas Meas::empty() {
-  return Meas{};
-}
+Meas::Meas(Id i) : Meas() { id = i; }
 
-Meas Meas::empty(Id id) {
-  auto res = empty();
-  res.id = id;
-  return res;
+Meas::Meas(const Meas &other) {
+  id = other.id;
+  time = other.time;
+  value = other.value;
+  flag = other.flag;
 }
-
 bool dariadb::areSame(Value a, Value b, const Value EPSILON) {
   return std::fabs(a - b) < EPSILON;
 }
@@ -40,7 +41,7 @@ void dariadb::minmax_append(Id2MinMax &out, const Id2MinMax &source) {
 
 void dariadb::mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
   for (auto m : mlist) {
-    if (m.flag == Flags::_NO_DATA) {
+    if (m.flag == FLAGS::_NO_DATA) {
       continue;
     }
     sub_result[m.id].emplace(m);

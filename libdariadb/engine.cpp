@@ -1,7 +1,8 @@
+#include <algorithm>
 #include <libdariadb/config.h>
 #include <libdariadb/engine.h>
 #include <libdariadb/flags.h>
-#include <libdariadb/storage/bystep/bystep_storage.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/dropper.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
@@ -16,7 +17,6 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/utils.h>
-#include <algorithm>
 
 #include <cstring>
 #include <fstream>
@@ -33,7 +33,8 @@ public:
     _strategy = _settings->strategy.value();
 
     _engine_env = EngineEnvironment::create();
-    _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
+    _engine_env->addResource(EngineEnvironment::Resource::SETTINGS,
+                             _settings.get());
 
     logger_info("engine: project version - ", version());
     logger_info("engine: storage format - ", format());
@@ -43,13 +44,12 @@ public:
     if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
       dariadb::utils::fs::mkdir(_settings->storage_path.value());
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
-      dariadb::utils::fs::mkdir(_settings->bystep_path.value());
     }
 
     lockfile_lock_or_die(ignore_lock_file);
 
-    auto manifest_file_name =
-        utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
+    auto manifest_file_name = utils::fs::append_path(
+        _settings->storage_path.value(), MANIFEST_FILE_NAME);
 
     bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
     if (is_new_storage) {
@@ -60,7 +60,8 @@ public:
     ThreadManager::start(tpm_params);
 
     _manifest = Manifest::create(_settings);
-    _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
+    _engine_env->addResource(EngineEnvironment::Resource::MANIFEST,
+                             _manifest.get());
 
     if (is_new_storage) {
       _manifest->set_format(std::to_string(format()));
@@ -78,7 +79,8 @@ public:
     if (_strategy != STRATEGY::MEMORY) {
       _wal_manager = WALManager::create(_engine_env);
 
-      _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
+      _dropper =
+          std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
       _wal_manager->setDownlevel(_dropper.get());
       this->_top_level_storage = _wal_manager;
     }
@@ -101,12 +103,6 @@ public:
       }
     }
 
-    _bystep_storage = ByStepStorage::create(_engine_env);
-
-    if (!is_new_storage) {
-      auto id2step = _manifest->read_id2step();
-      setSteps_inner(id2step);
-    }
     logger_info("engine: start - OK ");
   }
   ~Private() { this->stop(); }
@@ -127,8 +123,6 @@ public:
       _dropper = nullptr;
       _stoped = true;
 
-      _bystep_storage->stop();
-      _bystep_storage = nullptr;
       ThreadManager::stop();
       lockfile_unlock();
     }
@@ -268,7 +262,8 @@ public:
     return std::max(pmax, amax);
   }
 
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
+                  dariadb::Time *maxResult) {
     dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
     bool pr, ar;
@@ -288,8 +283,10 @@ public:
 
     lock_storage();
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
-    auto am_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
+    auto pm_async =
+        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto am_async =
+        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
 
     pm_async->wait();
     am_async->wait();
@@ -317,21 +314,13 @@ public:
     this->unlock_storage();
 
     minmax_append(p_mm, t_mm);
-
-    auto bs_mm = _bystep_storage->loadMinMax();
-    minmax_append(p_mm, bs_mm);
     return p_mm;
   }
 
   Status append(const Meas &value) {
     Status result{};
 
-    // direct write to bystep storage
-    if (isBystepId(value.id)) {
-      result = _bystep_storage->append(value);
-    } else {
-      result = _top_level_storage->append(value);
-    }
+    result = _top_level_storage->append(value);
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
@@ -348,7 +337,8 @@ public:
     return result;
   }
 
-  void subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk) {
+  void subscribe(const IdArray &ids, const Flag &flag,
+                 const ReaderCallback_ptr &clbk) {
     auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
     _subscribe_notify.add(new_s);
   }
@@ -373,21 +363,6 @@ public:
       }
     }
 
-    IdSet bs_ids;
-    for (auto id : ids) {
-      if (isBystepId(id)) {
-        bs_ids.insert(id);
-      }
-    }
-
-    if (!bs_ids.empty()) {
-      auto bs_result =
-          _bystep_storage->currentValue(IdArray(bs_ids.begin(), bs_ids.end()), flag);
-      for (auto &kv : bs_result) {
-        a_result[kv.first] = kv.second;
-      }
-    }
-
     unlock_storage();
     return a_result;
   }
@@ -404,8 +379,6 @@ public:
       _memstorage->flush();
     }
     _page_manager->flush();
-
-    _bystep_storage->flush();
     this->wait_all_asyncs();
   }
 
@@ -417,7 +390,6 @@ public:
     result.wal_count = _wal_manager == nullptr ? 0 : _wal_manager->filesCount();
     result.pages_count = _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
-    result.bystep = _bystep_storage->description();
 
     if (_dropper != nullptr) {
       result.dropper = _dropper->description();
@@ -428,133 +400,182 @@ public:
     return result;
   }
 
+  Id2Cursor interval_readers_from_disk_only(const IdSet &ids,
+                                            const QueryInterval &q) {
+    if (ids.empty()) {
+      return Id2Cursor();
+    }
+    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
+                          q.to};
+    return internal_readers_two_level(local_q, _page_manager, _wal_manager);
+  }
+
+  Id2Cursor interval_readers_from_mem_only(const IdSet &ids,
+                                           const QueryInterval &q) {
+    if (ids.empty()) {
+      return Id2Cursor();
+    }
+    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
+                          q.to};
+    return _memstorage->intervalReader(q);
+  }
   /// when strategy=CACHE
-  void foreach_internal_cache(const QueryInterval &q, IReaderClb *p_clbk,
-                              IReaderClb *a_clbk) {
-    auto pm = _page_manager.get();
-    auto mm = _memstorage.get();
-    auto am = _wal_manager.get();
+  Id2Cursor interval_readers_when_cache(const QueryInterval &q) {
+    auto memory_mm = _memstorage->loadMinMax();
+    auto sync_map = _memstorage->getSyncMap();
 
-    auto memory_mm = mm->loadMinMax();
-    auto sync_map = mm->getSyncMap();
-    QueryInterval local_q = q;
-    auto id = local_q.ids.front();
-    auto id_mm = memory_mm.find(local_q.ids.front());
-    if (id_mm == memory_mm.end()) {
-      pm->foreach (local_q, p_clbk);
-      am->foreach (local_q, a_clbk);
-    } else {
-      if ((id_mm->second.min.time) > local_q.from) {
-        auto min_mem_time = sync_map[id];
-        local_q.to = min_mem_time;
-        pm->foreach (local_q, p_clbk);
-        am->foreach (local_q, a_clbk);
+    IdSet disk_only;
+    IdSet mem_only;
+    // id -> dis_q, mem_q;
+    std::map<Id, std::pair<QueryInterval, QueryInterval>> queryById;
 
-        if (min_mem_time < q.to) {
-          if (min_mem_time != MIN_TIME) { // to read value after min_mem_time;
-            min_mem_time += 1;
-          }
-          local_q.from = min_mem_time;
-          local_q.to = q.to;
-          mm->foreach (local_q, a_clbk);
-        }
+    for (auto id : q.ids) {
+      auto id_mm = memory_mm.find(id);
+      if (id_mm == memory_mm.end()) {
+        disk_only.insert(id);
       } else {
-        mm->foreach (local_q, a_clbk);
-      }
-      if (a_clbk->is_canceled()) {
-        return;
+        if ((id_mm->second.min.time) > q.from) {
+          auto min_mem_time = sync_map[id];
+          if (min_mem_time <= q.to) {
+            QueryInterval disk_q = q;
+            disk_q.ids.resize(1);
+            disk_q.from = q.from;
+            disk_q.to = min_mem_time;
+            disk_q.ids[0] = id;
+
+            QueryInterval mem_q = q;
+            mem_q.ids.resize(1);
+            mem_q.from = min_mem_time + 1;
+            mem_q.to = q.to;
+            mem_q.ids[0] = id;
+
+            queryById.insert(std::make_pair(id, std::make_pair(disk_q, mem_q)));
+          } else {
+            disk_only.insert(id);
+          }
+        } else {
+          mem_only.insert(id);
+        }
       }
     }
+
+    Id2Cursor result;
+    auto disk_only_readers = interval_readers_from_disk_only(disk_only, q);
+    auto mem_only_readers = interval_readers_from_mem_only(mem_only, q);
+
+    for (auto id2intervals : queryById) {
+
+      auto disk_q = id2intervals.second.first;
+      auto mem_q = id2intervals.second.second;
+
+      auto disk_readers =
+          internal_readers_two_level(disk_q, _page_manager, _wal_manager);
+      auto mm_readers = _memstorage->intervalReader(mem_q);
+
+      CursorsList readers;
+      for (auto kv : mm_readers) {
+        readers.push_back(kv.second);
+      }
+      for (auto kv : disk_readers) {
+        readers.push_back(kv.second);
+      }
+
+      Cursor_Ptr r_ptr = CursorWrapperFactory::colapseCursors(readers);
+      result[id2intervals.first] = r_ptr;
+    }
+
+    for (auto kv : disk_only_readers) {
+      result[kv.first] = kv.second;
+    }
+    for (auto kv : mem_only_readers) {
+      result[kv.first] = kv.second;
+    }
+    return result;
   }
 
   /// when strategy!=CACHEs
-  void foreach_internal_two_level(const QueryInterval &q, IReaderClb *p_clbk,
-                                  IReaderClb *a_clbk) {
-    auto pm = _page_manager.get();
-    auto tm = _top_level_storage.get();
-    if (!p_clbk->is_canceled()) {
-      pm->foreach (q, p_clbk);
+  Id2Cursor internal_readers_two_level(const QueryInterval &q,
+                                       PageManager_ptr pm, IMeasSource_ptr tm) {
+    auto pm_readers = pm->intervalReader(q);
+    auto tm_readers = tm->intervalReader(q);
+
+    Id2CursorsList all_readers;
+    for (auto kv : tm_readers) {
+      all_readers[kv.first].push_back(kv.second);
     }
-    if (!a_clbk->is_canceled()) {
-      tm->foreach (q, a_clbk);
+
+    for (auto kv : pm_readers) {
+      all_readers[kv.first].push_back(kv.second);
     }
+    return CursorWrapperFactory::colapseCursors(all_readers);
   }
 
-  void foreach_internal(const QueryInterval &q, IReaderClb *p_clbk, IReaderClb *a_clbk) {
-    AsyncTask pm_at = [p_clbk, a_clbk, q, this](const ThreadInfo &ti) {
+  Id2Cursor internal_readers_two_level(const QueryInterval &q) {
+    return internal_readers_two_level(q, _page_manager, _top_level_storage);
+  }
+
+  Id2Cursor intervalReader(const QueryInterval &q) {
+    Id2Cursor result;
+    AsyncTask pm_at = [q, this, &result](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
       if (!try_lock_storage()) {
         return true;
       }
-      auto local_q = q;
-      local_q.ids.resize(1);
-      for (auto id : q.ids) {
-        local_q.from = q.from;
-        local_q.to = q.to;
-        local_q.ids[0] = id;
 
-        if (isBystepId(id)) {
-          _bystep_storage->foreach (local_q, a_clbk);
-        } else {
-          if (this->strategy() == STRATEGY::CACHE) {
-            foreach_internal_cache(local_q, p_clbk, a_clbk);
-          } else {
-            foreach_internal_two_level(local_q, p_clbk, a_clbk);
-          }
-        }
+      Id2Cursor r;
+      if (this->strategy() == STRATEGY::CACHE) {
+        r = interval_readers_when_cache(q);
+      } else {
+        r = internal_readers_two_level(q);
       }
-      a_clbk->is_end();
+
       this->unlock_storage();
+
+      for (auto kv : r) {
+        result[kv.first] = kv.second;
+      }
       return false;
     };
 
-    ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto at = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    at->wait();
+    return result;
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) {
-    foreach_internal(q, clbk, clbk);
+  void foreach (const QueryInterval &q, IReadCallback * clbk) {
+    auto r = intervalReader(q);
+    for (auto id : q.ids) {
+      auto fres = r.find(id);
+      if (fres != r.end()) {
+        fres->second->apply(clbk, q);
+      }
+    }
+    clbk->is_end();
   }
 
-  void foreach (const QueryTimePoint &q, IReaderClb * clbk) {
+  void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
     auto values = this->readTimePoint(q);
     for (auto &kv : values) {
       if (clbk->is_canceled()) {
         break;
       }
-      clbk->call(kv.second);
+      clbk->apply(kv.second);
     }
     clbk->is_end();
   }
 
   MeasList readInterval(const QueryInterval &q) {
-    auto p_clbk = std::make_unique<MList_ReaderClb>();
     auto a_clbk = std::make_unique<MList_ReaderClb>();
-    this->foreach_internal(q, p_clbk.get(), a_clbk.get());
+    this->foreach (q, a_clbk.get());
     a_clbk->wait();
-    Id2MSet sub_result;
-    MeasList result;
-
-    mlist2mset(p_clbk->mlist, sub_result);
-    mlist2mset(a_clbk->mlist, sub_result);
-
-    for (auto id : q.ids) {
-      auto sublist = sub_result.find(id);
-      if (sublist == sub_result.end()) {
-        continue;
-      }
-      for (auto v : sublist->second) {
-        result.push_back(v);
-      }
-    }
-
-    return result;
+    return a_clbk->mlist;
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
     Id2Meas result;
     result.reserve(q.ids.size());
     for (auto id : q.ids) {
-      result[id].flag = Flags::_NO_DATA;
+      result[id].flag = FLAGS::_NO_DATA;
     }
 
     auto pm = _page_manager.get();
@@ -570,30 +591,24 @@ public:
         QueryTimePoint local_q = q;
         local_q.ids.clear();
         local_q.ids.push_back(id);
-        if (isBystepId(id)) {
-          auto bsts = _bystep_storage->readTimePoint(local_q);
-          for (auto &kv : bsts) {
-            result[kv.first] = kv.second;
-          }
-        } else {
-          dariadb::Time minT, maxT;
 
-          if (mm->minMaxTime(id, &minT, &maxT) &&
-              (minT < q.time_point || maxT < q.time_point)) {
-            auto subres = mm->readTimePoint(local_q);
+        dariadb::Time minT, maxT;
+
+        if (mm->minMaxTime(id, &minT, &maxT) &&
+            (minT < q.time_point || maxT < q.time_point)) {
+          auto subres = mm->readTimePoint(local_q);
+          result[id] = subres[id];
+        } else {
+          bool in_wal_level = false;
+          if (this->strategy() == STRATEGY::CACHE) {
+            auto subres = am->readTimePoint(local_q);
+            auto value = subres[id];
+            result[id] = value;
+            in_wal_level = value.flag != FLAGS::_NO_DATA;
+          }
+          if (!in_wal_level) {
+            auto subres = _page_manager->valuesBeforeTimePoint(local_q);
             result[id] = subres[id];
-          } else {
-            bool in_wal_level = false;
-            if (this->strategy() == STRATEGY::CACHE) {
-              auto subres = am->readTimePoint(local_q);
-              auto value = subres[id];
-              result[id] = value;
-              in_wal_level = value.flag != Flags::_NO_DATA;
-            }
-            if (!in_wal_level) {
-              auto subres = _page_manager->valuesBeforeTimePoint(local_q);
-              result[id] = subres[id];
-            }
           }
         }
       }
@@ -601,7 +616,8 @@ public:
       return false;
     };
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto pm_async =
+        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
     pm_async->wait();
     return result;
   }
@@ -630,9 +646,6 @@ public:
     this->lock_storage();
     _page_manager->eraseOld(t);
 
-    for (auto &kv : _id2steps) {
-      _bystep_storage->eraseOld(kv.first, 0, t);
-    }
     this->unlock_storage();
   }
 
@@ -650,27 +663,37 @@ public:
 
   void compactbyTime(Time from, Time to) {
     this->lock_storage();
-    logger_info("engine: compacting by time ", timeutil::to_string(from), "-",
-                timeutil::to_string(to));
+    logger_info("engine: compacting by time [", timeutil::to_string(from), "-",
+                timeutil::to_string(to), "]");
     _page_manager->compactbyTime(from, to);
     this->unlock_storage();
   }
 
-  void setSteps_inner(const Id2Step &m) {
-    for (auto &kv : m) {
-      _id2steps[kv.first] = kv.second;
+  void join(std::list<QueryInterval> queries, Join::Callback *clbk) {
+    size_t ids_size = 0;
+    CursorsList cursors;
+    for (auto &q : queries) {
+      auto i2c = this->intervalReader(q);
+      ids_size += q.ids.size();
+      for (auto id : q.ids) {
+        auto cres = i2c.find(id);
+        if (cres != i2c.end()) {
+          cursors.push_back(cres->second);
+        } else {
+          cursors.push_back(std::make_shared<EmptyCursor>());
+        }
+      }
     }
-    _bystep_storage->setSteps(_id2steps);
-  }
-
-  void setSteps(const Id2Step &m) {
-    setSteps_inner(m);
-    if (!_id2steps.empty()) {
-      _manifest->insert_id2step(_id2steps);
+    IdArray ids(ids_size);
+    size_t pos = 0;
+    for (auto &q : queries) {
+      for (auto id : q.ids) {
+        ids[pos++] = id;
+      }
     }
+    ENSURE(ids.size() != size_t(0));
+    Join::join(cursors, ids, clbk);
   }
-
-  bool isBystepId(const Id id) { return _id2steps.find(id) != _id2steps.end(); }
 
 protected:
   std::mutex _flush_locker, _lock_locker;
@@ -688,39 +711,28 @@ protected:
   bool _stoped;
 
   IMeasStorage_ptr _top_level_storage; // wal or memory storage.
-  ByStepStorage_ptr _bystep_storage;
 
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
-
-  /// bystep to raw.
-  Id2Step _id2steps;
 };
 
 Engine::Engine(Settings_ptr settings, bool ignore_lock_file)
     : _impl{new Engine::Private(settings, ignore_lock_file)} {}
 
-Engine::~Engine() {
-  _impl = nullptr;
-}
+Engine::~Engine() { _impl = nullptr; }
 
-Time Engine::minTime() {
-  return _impl->minTime();
-}
+Time Engine::minTime() { return _impl->minTime(); }
 
-Time Engine::maxTime() {
-  return _impl->maxTime();
-}
+Time Engine::maxTime() { return _impl->maxTime(); }
 bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                         dariadb::Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-Status Engine::append(const Meas &value) {
-  return _impl->append(value);
-}
+Status Engine::append(const Meas &value) { return _impl->append(value); }
 
-void Engine::subscribe(const IdArray &ids, const Flag &flag, const ReaderClb_ptr &clbk) {
+void Engine::subscribe(const IdArray &ids, const Flag &flag,
+                       const ReaderCallback_ptr &clbk) {
   _impl->subscribe(ids, flag, clbk);
 }
 
@@ -728,22 +740,20 @@ Id2Meas Engine::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
-void Engine::flush() {
-  _impl->flush();
-}
+void Engine::flush() { _impl->flush(); }
 
-void Engine::stop() {
-  _impl->stop();
-}
-Engine::Description Engine::description() const {
-  return _impl->description();
-}
+void Engine::stop() { _impl->stop(); }
+Engine::Description Engine::description() const { return _impl->description(); }
 
-void Engine::foreach (const QueryInterval &q, IReaderClb * clbk) {
+void Engine::foreach (const QueryInterval &q, IReadCallback * clbk) {
   return _impl->foreach (q, clbk);
 }
 
-void Engine::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
+Id2Cursor Engine::intervalReader(const QueryInterval &query) {
+  return _impl->intervalReader(query);
+}
+
+void Engine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   return _impl->foreach (q, clbk);
 }
 
@@ -759,45 +769,27 @@ void Engine::drop_part_wals(size_t count) {
   return _impl->drop_part_wals(count);
 }
 
-void Engine::compress_all() {
-  return _impl->compress_all();
-}
+void Engine::compress_all() { return _impl->compress_all(); }
 
-void Engine::wait_all_asyncs() {
-  return _impl->wait_all_asyncs();
-}
+void Engine::wait_all_asyncs() { return _impl->wait_all_asyncs(); }
 
-void Engine::fsck() {
-  _impl->fsck();
-}
+void Engine::fsck() { _impl->fsck(); }
 
-void Engine::eraseOld(const Time &t) {
-  return _impl->eraseOld(t);
-}
+void Engine::eraseOld(const Time &t) { return _impl->eraseOld(t); }
 
-void Engine::compactTo(uint32_t pagesCount) {
-  _impl->compactTo(pagesCount);
-}
+void Engine::compactTo(uint32_t pagesCount) { _impl->compactTo(pagesCount); }
 
 void Engine::compactbyTime(Time from, Time to) {
   _impl->compactbyTime(from, to);
 }
-uint16_t Engine::format() {
-	return STORAGE_FORMAT;
-}
+uint16_t Engine::format() { return STORAGE_FORMAT; }
 
-STRATEGY Engine::strategy() const {
-  return _impl->strategy();
-}
+STRATEGY Engine::strategy() const { return _impl->strategy(); }
 
-Id2MinMax Engine::loadMinMax() {
-  return _impl->loadMinMax();
-}
+Id2MinMax Engine::loadMinMax() { return _impl->loadMinMax(); }
 
-void Engine::setSteps(const Id2Step &m) {
-  _impl->setSteps(m);
-}
+std::string Engine::version() { return std::string(PROJECT_VERSION); }
 
-std::string Engine::version() {
-	return std::string(PROJECT_VERSION);
+void Engine::join(std::list<QueryInterval> queries, Join::Callback *clbk) {
+  return _impl->join(queries, clbk);
 }

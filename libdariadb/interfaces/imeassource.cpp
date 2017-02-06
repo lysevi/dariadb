@@ -7,17 +7,16 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-void IMeasSource::foreach (const QueryTimePoint &q, IReaderClb * clbk) {
+void IMeasSource::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   auto values = this->readTimePoint(q);
   for (auto &kv : values) {
-    clbk->call(kv.second);
+    clbk->apply(kv.second);
   }
 }
 
 MeasList IMeasSource::readInterval(const QueryInterval &q) {
   auto clbk = std::make_unique<MList_ReaderClb>();
   this->foreach (q, clbk.get());
-
   Id2MSet sub_result;
   for (auto v : clbk->mlist) {
     sub_result[v.id].emplace(v);

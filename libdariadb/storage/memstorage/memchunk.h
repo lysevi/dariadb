@@ -14,12 +14,12 @@ struct MemChunk : public Chunk {
   uint8_t *buffer_ptr;
   MemChunkAllocator::AllocatedData _a_data;
   TimeTrack *_track; /// init in TimeTrack
-  size_t in_disk_count;
+  bool _is_from_pool;
 
-  MemChunk(ChunkHeader *index, uint8_t *buffer, uint32_t size, const Meas &first_m);
-  MemChunk(ChunkHeader *index, uint8_t *buffer);
+  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer,
+           uint32_t size, const Meas &first_m);
+  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer);
   ~MemChunk();
-  // bool already_in_disk() const; // STRATEGY::CACHE, true - if already writed to disk.
 };
 
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;
