@@ -383,7 +383,7 @@ BOOST_AUTO_TEST_CASE(JoinTest) {
     auto tbl =
         Join::makeTable(CursorsList{fr1, fr2, fr3}, dariadb::IdArray{0, 1, 2});
 
-    BOOST_CHECK(tbl.size(), size_t(7));
+    BOOST_CHECK_EQUAL(tbl.size(), size_t(7));
     dariadb::Time t = 0;
     for (const auto &row : tbl) {
       t++;
