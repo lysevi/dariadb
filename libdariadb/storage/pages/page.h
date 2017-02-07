@@ -43,7 +43,7 @@ public:
   EXPORT static Page_Ptr create(const std::string &file_name, uint64_t chunk_id,
                                 const std::vector<Chunk *> &a, size_t count);
 
-  EXPORT static Page_Ptr open(std::string file_name);
+  EXPORT static Page_Ptr open(const std::string &file_name);
 
   EXPORT static PageFooter readFooter(std::string file_name);
   EXPORT static IndexFooter readIndexFooter(std::string page_file_name);
@@ -68,12 +68,13 @@ public:
 private:
   void update_index_recs(const PageFooter &phdr);
 
-  static Page_Ptr make_page(const std::string &file_name,
+  static Page_Ptr open(const std::string &file_name,
                             const PageFooter &phdr);
   Chunk_Ptr readChunkByOffset(FILE *page_io, int offset);
 
   ChunkLinkList linksByIterval(const QueryInterval &qi);
-
+  //callback - return true for break iteration.
+  void apply_to_chunks(const ChunkLinkList &links, std::function<bool(const Chunk_Ptr&)> callback);
 public:
   PageFooter footer;
   std::string filename;

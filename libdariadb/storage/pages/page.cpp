@@ -52,16 +52,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
-  return make_page(file_name, phdr);
-}
-
-Page_Ptr Page::make_page(const std::string &file_name, const PageFooter &phdr) {
-  auto res = new Page;
-  res->footer = phdr;
-  res->filename = file_name;
-  res->_index =
-      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
-  return Page_Ptr(res);
+  return open(file_name, phdr);
 }
 
 // COMPACTION
@@ -143,9 +134,10 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
 
-  return make_page(file_name, phdr);
+  return open(file_name, phdr);
 }
 
+// chunks from memstorage.
 Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
                       const std::vector<Chunk *> &a, size_t count) {
   using namespace dariadb::utils::async;
@@ -233,10 +225,10 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
 
-  return Page::make_page(file_name, phdr);
+  return Page::open(file_name, phdr);
 }
 
-Page_Ptr Page::open(std::string file_name) {
+Page_Ptr Page::open(const std::string &file_name) {
   auto phdr = Page::readFooter(file_name);
   auto res = new Page;
 
@@ -246,6 +238,15 @@ Page_Ptr Page::open(std::string file_name) {
 
   res->footer = phdr;
   return Page_Ptr{res};
+}
+
+Page_Ptr Page::open(const std::string &file_name, const PageFooter &phdr) {
+  auto res = new Page;
+  res->footer = phdr;
+  res->filename = file_name;
+  res->_index =
+      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+  return Page_Ptr(res);
 }
 
 void Page::restoreIndexFile(const std::string &file_name) {
@@ -388,45 +389,32 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
 
 dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
   dariadb::Id2Meas result;
+  dariadb::IdSet to_read{q.ids.begin(), q.ids.end()};
+  auto callback = [&result, &to_read, &q](const Chunk_Ptr &c) {
+    auto reader = c->getReader();
+    auto m = reader->read_time_point(q);
+
+    auto f_res = result.find(m.id);
+    if (f_res == result.end()) {
+      to_read.erase(m.id);
+      result[m.id] = m;
+    } else {
+      if (m.time > f_res->first) {
+        result[m.id] = m;
+      }
+    }
+    if (to_read.empty()) {
+      return true;
+    } else {
+      return false;
+    }
+  };
   auto raw_links = _index->get_chunks_links(q.ids, _index->iheader.stat.minTime,
                                             q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }
-  auto page_io = std::fopen(filename.c_str(), "rb");
-  if (page_io == nullptr) {
-    THROW_EXCEPTION("can`t open file ", this->filename);
-  }
-
-  dariadb::IdSet to_read{q.ids.begin(), q.ids.end()};
-  auto indexReccords = _index->readReccords();
-  for (auto it = raw_links.rbegin(); it != raw_links.rend(); ++it) {
-    if (to_read.empty()) {
-      break;
-    }
-    auto _index_it = indexReccords[it->index_rec_number];
-    Chunk_Ptr c = readChunkByOffset(page_io, _index_it.offset);
-    if (c == nullptr) {
-      continue;
-    }
-    auto reader = c->getReader();
-    while (!reader->is_end()) {
-      auto m = reader->readNext();
-      if (m.time <= q.time_point && m.inQuery(q.ids, q.flag)) {
-        auto f_res = result.find(m.id);
-        if (f_res == result.end()) {
-          to_read.erase(m.id);
-          result[m.id] = m;
-        } else {
-          if (m.time > f_res->first) {
-            result[m.id] = m;
-          }
-        }
-      }
-    }
-  }
-
-  fclose(page_io);
+  apply_to_chunks(raw_links, callback);
   return result;
 }
 Id2Cursor Page::intervalReader(const QueryInterval &query) {
@@ -438,9 +426,24 @@ Id2Cursor Page::intervalReader(const QueryInterval &query,
                                const ChunkLinkList &links) {
 
   Id2CursorsList sub_result;
+  auto callback = [&sub_result](const Chunk_Ptr &c) {
+    auto rdr = c->getReader();
+    sub_result[c->header->meas_id].push_back(rdr);
+    return false;
+  };
+
+  this->apply_to_chunks(links, callback);
+
+  Id2Cursor result = CursorWrapperFactory::colapseCursors(sub_result);
+  return result;
+}
+
+// callback - return true for break iteration.
+void Page::apply_to_chunks(const ChunkLinkList &links,
+                           std::function<bool(const Chunk_Ptr &)> callback) {
   auto _ch_links_iterator = links.cbegin();
   if (_ch_links_iterator == links.cend()) {
-    return Id2Cursor();
+    return;
   }
   auto page_io = std::fopen(filename.c_str(), "rb");
   if (page_io == nullptr) {
@@ -449,16 +452,15 @@ Id2Cursor Page::intervalReader(const QueryInterval &query,
   auto indexReccords = _index->readReccords();
   for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
     auto _index_it = indexReccords[_ch_links_iterator->index_rec_number];
-    Chunk_Ptr search_res = readChunkByOffset(page_io, _index_it.offset);
-    if (search_res == nullptr) {
+    Chunk_Ptr c = readChunkByOffset(page_io, _index_it.offset);
+    if (c == nullptr) {
       continue;
     }
-    auto rdr = search_res->getReader();
-    sub_result[search_res->header->meas_id].push_back(rdr);
+    if (callback(c)) {
+      break;
+    }
   }
   fclose(page_io);
-  Id2Cursor result = CursorWrapperFactory::colapseCursors(sub_result);
-  return result;
 }
 
 void Page::appendChunks(const std::vector<Chunk *> &, size_t) {

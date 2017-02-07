@@ -2,8 +2,8 @@
 #define _SCL_SECURE_NO_WARNINGS // stx::btree
 #endif
 #include <libdariadb/flags.h>
-#include <libdariadb/storage/memstorage/timetrack.h>
 #include <libdariadb/storage/cursors.h>
+#include <libdariadb/storage/memstorage/timetrack.h>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -292,15 +292,9 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
     if (c->header->stat.minTime <= q.time_point &&
         c->header->stat.maxTime >= q.time_point) {
       auto rdr = c->getReader();
-
-      while (!rdr->is_end()) {
-        auto v = rdr->readNext();
-        if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
-          result[this->_meas_id] = v;
-        }
-        if (v.time > q.time_point) {
-          break;
-        }
+      auto m = rdr->read_time_point(q);
+      if (m.time > result[this->_meas_id].time) {
+        result[this->_meas_id] = m;
       }
     }
   }

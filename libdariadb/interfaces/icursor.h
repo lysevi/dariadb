@@ -2,8 +2,8 @@
 
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/st_exports.h>
 #include <libdariadb/query_param.h>
+#include <libdariadb/st_exports.h>
 #include <libdariadb/utils/utils.h>
 #include <memory>
 #include <unordered_map>
@@ -23,8 +23,8 @@ public:
   virtual Time maxTime() = 0;
 
   EXPORT virtual void apply(IReadCallback *clbk);
-  EXPORT virtual void apply(IReadCallback *clbk,
-                            const QueryInterval &q);
+  EXPORT virtual void apply(IReadCallback *clbk, const QueryInterval &q);
+  EXPORT virtual Meas read_time_point(const QueryTimePoint &q);
 };
 
 using Id2Cursor = std::unordered_map<Id, Cursor_Ptr>;
