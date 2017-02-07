@@ -14,8 +14,6 @@ struct HdrAndBuffer {
   std::shared_ptr<uint8_t> buffer;
 };
 
-dariadb::storage::PageFooter emptyPageHeader(uint64_t chunk_id);
-
 std::map<Id, MeasArray> splitById(const MeasArray &ma);
 
 std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,

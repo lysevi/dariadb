@@ -20,13 +20,17 @@
 using namespace dariadb::storage;
 using namespace dariadb;
 
+Page::Page(const PageFooter &ftr, std::string fname)
+    : footer(footer), filename(fname) {}
+
 Page::~Page() { _index = nullptr; }
 
-Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
-                      uint32_t max_chunk_size, const MeasArray &ma) {
+Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
+                      uint64_t chunk_id, uint32_t max_chunk_size,
+                      const MeasArray &ma) {
   auto to_compress = PageInner::splitById(ma);
 
-  PageFooter phdr = PageInner::emptyPageHeader(chunk_id);
+  PageFooter phdr(lvl, chunk_id);
 
   std::list<PageInner::HdrAndBuffer> compressed_results =
       PageInner::compressValues(to_compress, phdr, max_chunk_size);
@@ -46,7 +50,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   auto page_size =
       PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
   phdr.filesize = page_size;
-
+  ihdr.level = phdr.level;
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
   std::fclose(file);
 
@@ -56,7 +60,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 }
 
 // COMPACTION
-Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
+Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                       uint32_t max_chunk_size,
                       const std::list<std::string> &pages_full_paths) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
@@ -76,7 +80,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
   }
   ENSURE(openned_pages.size() == pages_full_paths.size());
 
-  PageFooter phdr = PageInner::emptyPageHeader(chunk_id);
+  PageFooter phdr(lvl,chunk_id);
 
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
@@ -130,7 +134,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
   std::fclose(file);
-
+  ihdr.level = phdr.level;
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
 
@@ -138,11 +142,11 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 }
 
 // chunks from memstorage.
-Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
+Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                       const std::vector<Chunk *> &a, size_t count) {
   using namespace dariadb::utils::async;
 
-  PageFooter phdr = PageInner::emptyPageHeader(chunk_id);
+  PageFooter phdr(lvl, chunk_id);
 
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
@@ -222,6 +226,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(),
               index_file);
+  ihdr.level = phdr.level;
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
 
@@ -230,7 +235,7 @@ Page_Ptr Page::create(const std::string &file_name, uint64_t chunk_id,
 
 Page_Ptr Page::open(const std::string &file_name) {
   auto phdr = Page::readFooter(file_name);
-  auto res = new Page;
+  auto res = new Page(phdr, file_name);
 
   res->filename = file_name;
   res->_index =
@@ -241,9 +246,7 @@ Page_Ptr Page::open(const std::string &file_name) {
 }
 
 Page_Ptr Page::open(const std::string &file_name, const PageFooter &phdr) {
-  auto res = new Page;
-  res->footer = phdr;
-  res->filename = file_name;
+  auto res = new Page(phdr, file_name);
   res->_index =
       PageIndex::open(PageIndex::index_name_from_page_name(file_name));
   return Page_Ptr(res);
@@ -252,9 +255,7 @@ Page_Ptr Page::open(const std::string &file_name, const PageFooter &phdr) {
 void Page::restoreIndexFile(const std::string &file_name) {
   logger_info("engine: page - restore index file ", file_name);
   auto phdr = Page::readFooter(file_name);
-  auto res = new Page;
-
-  res->filename = file_name;
+  auto res = new Page(phdr, file_name);
 
   res->footer = phdr;
   res->update_index_recs(phdr);
@@ -270,7 +271,7 @@ PageFooter Page::readFooter(std::string file_name) {
     THROW_EXCEPTION("can't open file. filename=", file_name);
   }
   istream.seekg(-(int)sizeof(PageFooter), istream.end);
-  PageFooter result;
+  PageFooter result(0,0);
   memset(&result, 0, sizeof(PageFooter));
   istream.read((char *)&result, sizeof(PageFooter));
   istream.close();

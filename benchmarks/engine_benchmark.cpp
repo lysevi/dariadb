@@ -421,13 +421,6 @@ int main(int argc, char *argv[]) {
     auto writers_start = clock();
 
     start_time = dariadb::timeutil::current_time();
-    auto first_day = 60 * 60 * dariadb_bench::hours_write_perid / 2;
-    auto first_day_milisec = start_time + (first_day * 1000) / 2;
-    std::cout << "==> compaction period: ["
-              << dariadb::timeutil::to_string(start_time) << ", "
-              << dariadb::timeutil::to_string(first_day_milisec) << "]"
-              << std::endl;
-
     rw_benchmark(ms, raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
@@ -478,7 +471,7 @@ int main(int argc, char *argv[]) {
           std::cout << "==> pages before compaction " << pages_before << "..."
                     << std::endl;
           auto start = clock();
-          raw_ptr->compactbyTime(start_time, first_day_milisec);
+          raw_ptr->compact();
           auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
           auto pages_after = raw_ptr->description().pages_count;
           std::cout << "==> pages after compaction " << pages_after << "..."

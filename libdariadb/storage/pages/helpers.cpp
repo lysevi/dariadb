@@ -15,12 +15,6 @@ namespace dariadb {
 namespace storage {
 namespace PageInner {
 
-dariadb::storage::PageFooter emptyPageHeader(uint64_t chunk_id) {
-  dariadb::storage::PageFooter phdr;
-  phdr.max_chunk_id = chunk_id;
-  return phdr;
-}
-
 std::map<Id, MeasArray> splitById(const MeasArray &ma) {
   dariadb::IdSet dropped;
   auto count = ma.size();

@@ -100,6 +100,7 @@ public:
   Option<float> percent_when_start_droping; // fill percent, when start dropping.
   Option<float> percent_to_drop;            // how many chunk drop.
 
+  Option<uint16_t> max_pages_in_level;
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
 protected:
   EXPORT Settings(const std::string &storage_path);

@@ -1,9 +1,9 @@
+#include <common/async_connection.h>
+#include <common/net_common.h>
 #include <libclient/client.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
-#include <common/async_connection.h>
-#include <common/net_common.h>
 
 #include <boost/asio.hpp>
 #include <functional>
@@ -27,14 +27,14 @@ public:
     _query_num = 1;
     _state = CLIENT_STATE::CONNECT;
     _pings_answers = 0;
-    AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel,
-                                                     bool &dont_free_memory) {
-      onDataRecv(d, cancel, dont_free_memory);
-    };
+    AsyncConnection::onDataRecvHandler on_d =
+        [this](const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
+          onDataRecv(d, cancel, dont_free_memory);
+        };
     AsyncConnection::onNetworkErrorHandler on_n =
         [this](const boost::system::error_code &err) { onNetworkError(err); };
-    _async_connection =
-        std::shared_ptr<AsyncConnection>{new AsyncConnection(&_pool, on_d, on_n)};
+    _async_connection = std::shared_ptr<AsyncConnection>{
+        new AsyncConnection(&_pool, on_d, on_n)};
   }
 
   ~Private() noexcept(false) {
@@ -156,8 +156,8 @@ public:
       auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
       auto query_num = qh_e->id;
       ERRORS err = (ERRORS)qh_e->error_code;
-      logger_info("client: #", _async_connection->id(), " query #", query_num, " error:",
-                  err);
+      logger_info("client: #", _async_connection->id(), " query #", query_num,
+                  " error:", err);
       if (this->state() == CLIENT_STATE::WORK) {
         auto subres = this->_query_results[qh_e->id];
         subres->is_closed = true;
@@ -247,7 +247,8 @@ public:
       auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
       hdr->id = cur_id;
       size_t space_left = 0;
-      QueryAppend_header::make_query(hdr, ma.data(), ma.size(), writed, &space_left);
+      QueryAppend_header::make_query(hdr, ma.data(), ma.size(), writed,
+                                     &space_left);
 
       logger_info("client: pack count: ", hdr->count);
 
@@ -294,7 +295,8 @@ public:
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
-    auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+    auto ids_ptr =
+        ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
     memcpy(ids_ptr, qi.ids.data(), id_size);
     nd->size += static_cast<NetData::MessageSize>(id_size);
 
@@ -345,7 +347,8 @@ public:
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
-    auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+    auto ids_ptr =
+        ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
     memcpy(ids_ptr, qi.ids.data(), id_size);
     nd->size += static_cast<NetData::MessageSize>(id_size);
 
@@ -395,7 +398,8 @@ public:
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(ids.size());
-    auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+    auto ids_ptr =
+        ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
     memcpy(ids_ptr, ids.data(), id_size);
     nd->size += static_cast<NetData::MessageSize>(id_size);
 
@@ -445,7 +449,8 @@ public:
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(ids.size());
-    auto ids_ptr = ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
+    auto ids_ptr =
+        ((char *)(&p_header->ids_count) + sizeof(p_header->ids_count));
     memcpy(ids_ptr, ids.data(), id_size);
     nd->size += static_cast<NetData::MessageSize>(id_size);
 
@@ -457,7 +462,7 @@ public:
     return qres;
   }
 
-  void compactTo(size_t pageCount) {
+  void compact() {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
@@ -467,26 +472,9 @@ public:
     auto p_header = reinterpret_cast<QuerCompact_header *>(nd->data);
     nd->size = sizeof(QuerCompact_header);
     p_header->id = cur_id;
-    p_header->pageCount = pageCount;
-    p_header->from = p_header->to = Time(0);
     _async_connection->send(nd);
   }
 
-  void compactbyTime(dariadb::Time from, dariadb::Time to) {
-    _locker.lock();
-    auto cur_id = _query_num;
-    _query_num += 1;
-    _locker.unlock();
-    auto nd = this->_pool.construct(DATA_KINDS::COMPACT);
-
-    auto p_header = reinterpret_cast<QuerCompact_header *>(nd->data);
-    nd->size = sizeof(QuerCompact_header);
-    p_header->id = cur_id;
-    p_header->pageCount = size_t(0);
-    p_header->from = from;
-    p_header->to = to;
-    _async_connection->send(nd);
-  }
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -508,29 +496,17 @@ Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
 
 Client::~Client() {}
 
-int Client::id() const {
-  return _Impl->_async_connection->id();
-}
+int Client::id() const { return _Impl->_async_connection->id(); }
 
-void Client::connect() {
-  _Impl->connect();
-}
+void Client::connect() { _Impl->connect(); }
 
-void Client::disconnect() {
-  _Impl->disconnect();
-}
+void Client::disconnect() { _Impl->disconnect(); }
 
-CLIENT_STATE Client::state() const {
-  return _Impl->state();
-}
+CLIENT_STATE Client::state() const { return _Impl->state(); }
 
-size_t Client::pings_answers() const {
-  return _Impl->pings_answers();
-}
+size_t Client::pings_answers() const { return _Impl->pings_answers(); }
 
-void Client::append(const MeasArray &ma) {
-  _Impl->append(ma);
-}
+void Client::append(const MeasArray &ma) { _Impl->append(ma); }
 
 MeasList Client::readInterval(const QueryInterval &qi) {
   return _Impl->readInterval(qi);
@@ -564,10 +540,4 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
   return _Impl->subscribe(ids, flag, clbk);
 }
 
-void Client::compactTo(size_t pageCount) {
-  _Impl->compactTo(pageCount);
-}
-
-void Client::compactbyTime(dariadb::Time from, dariadb::Time to) {
-  _Impl->compactbyTime(from, to);
-}
+void Client::compact() { _Impl->compact(); }

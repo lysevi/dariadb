@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Options_Instance) {
+BOOST_AUTO_TEST_CASE(SettingsInstance) {
   const std::string storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -172,6 +172,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   settings->wal_cache_size.setValue(2);
   settings->chunk_size.setValue(7);
   settings->strategy.setValue(dariadb::STRATEGY::COMPRESSED);
+  settings->max_pages_in_level.setValue(10);
   settings->save();
 
   settings = nullptr;
@@ -184,6 +185,7 @@ BOOST_AUTO_TEST_CASE(Options_Instance) {
   settings = dariadb::storage::Settings::create(storage_path);
   BOOST_CHECK_EQUAL(settings->wal_cache_size.value(), uint64_t(2));
   BOOST_CHECK_EQUAL(settings->chunk_size.value(), uint32_t(7));
+  BOOST_CHECK_EQUAL(settings->max_pages_in_level.value(), uint16_t(10));
   BOOST_CHECK(settings->strategy.value() ==
               dariadb::STRATEGY::COMPRESSED);
 

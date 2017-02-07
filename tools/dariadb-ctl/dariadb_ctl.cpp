@@ -15,7 +15,6 @@ bool verbose = false;
 std::string set_var;
 std::string new_base_name;
 
-std::string compact_from, compact_to;
 bool time_in_iso_format = false;
 std::string erase_to;
 bool stop_info = false;
@@ -45,7 +44,7 @@ public:
 };
 
 dariadb::storage::Settings_ptr loadSettings() {
-  auto settings =dariadb::storage::Settings::create(storage_path);
+  auto settings = dariadb::storage::Settings::create(storage_path);
   settings->load_min_max = false;
   return settings;
 }
@@ -61,8 +60,9 @@ void show_drop_info(dariadb::Engine *storage) {
   while (!stop_info) {
     auto queue_sizes = storage->description();
 
-    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
-                          queue_sizes.wal_count, " T:", queue_sizes.active_works, ")",
+    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count,
+                          " a:", queue_sizes.wal_count,
+                          " T:", queue_sizes.active_works, ")",
                           "[a:", queue_sizes.dropper.wal, "]");
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
   }
@@ -81,21 +81,21 @@ int main(int argc, char *argv[]) {
   aos("verbose", "verbose output.");
   aos("version", "version info.");
   aos("compress", "compress all wal files.");
-  aos("iso-time", "if set, all time param is in iso format (\"20020131T235959\")");
+  aos("iso-time",
+      "if set, all time param is in iso format (\"20020131T235959\")");
   aos("compact", "compact all page files to one.");
   aos("fsck", "run force fsck.");
-  aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path),
+  aos("storage-path",
+      po::value<std::string>(&storage_path)->default_value(storage_path),
       "path to storage.");
   aos("set", po::value<std::string>(&set_var)->default_value(set_var),
       "change setting variable.\nexample: --set=\"strategy=MEMORY\"");
-  aos("create", po::value<std::string>(&new_base_name)->default_value(new_base_name),
+  aos("create",
+      po::value<std::string>(&new_base_name)->default_value(new_base_name),
       "create new database in selected folder.");
-  aos("compact-from", po::value<std::string>(&compact_from)->default_value(compact_from),
-      "compaction period start date (example \"2002-01-20 00:00:00.000\").");
-  aos("compact-to", po::value<std::string>(&compact_to)->default_value(compact_to),
-      "compaction period end date (example \"2002-01-20 23:59:59.000\").");
   aos("erase-to", po::value<std::string>(&erase_to)->default_value(erase_to),
-      "erase values above a specified value. (example \"2002-01-20 23:59:59.000\").");
+      "erase values above a specified value. (example \"2002-01-20 "
+      "23:59:59.000\").");
 
   po::variables_map vm;
   try {
@@ -108,8 +108,7 @@ int main(int argc, char *argv[]) {
 
   if (vm.count("version")) {
     std::cout << "format: " << dariadb::Engine::format() << std::endl;
-    std::cout << "version: " << dariadb::Engine::version()
-              << std::endl;
+    std::cout << "version: " << dariadb::Engine::version() << std::endl;
     std::exit(0);
   }
 
@@ -148,21 +147,21 @@ int main(int argc, char *argv[]) {
   if (vm.count("format")) {
     check_path_exists();
     auto settings = dariadb::storage::Settings::create(storage_path);
-    auto m= dariadb::storage::Manifest::create(settings);
+    auto m = dariadb::storage::Manifest::create(settings);
     std::cout << "format version: " << m->get_format() << std::endl;
     std::exit(0);
   }
 
   if (vm.count("settings")) {
     check_path_exists();
-	auto s = dariadb::storage::Settings::create(storage_path);
+    auto s = dariadb::storage::Settings::create(storage_path);
     std::cout << s->dump() << std::endl;
     std::exit(0);
   }
 
   if (set_var.size() != 0) {
     check_path_exists();
-	auto s = dariadb::storage::Settings::create(storage_path);
+    auto s = dariadb::storage::Settings::create(storage_path);
     s->change(set_var);
     s->save();
     std::exit(0);
@@ -205,35 +204,11 @@ int main(int argc, char *argv[]) {
   }
 
   if (vm.count("compact")) {
-    if (compact_from.size() == 0 && compact_to.size() == 0) {
-      auto settings = loadSettings();
-      auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
-      e->compactTo(0);
-      e->flush();
-      e->stop();
-      std::exit(0);
-    }
-
-    if (compact_from.size() != 0 && compact_to.size() != 0) {
-      dariadb::Time from = 0, to = 0;
-      if (time_in_iso_format) {
-        from = dariadb::timeutil::from_iso_string(compact_from);
-        to = dariadb::timeutil::from_iso_string(compact_to);
-      } else {
-        from = dariadb::timeutil::from_string(compact_from);
-        to = dariadb::timeutil::from_string(compact_to);
-      }
-      std::cout << "compaction from " << dariadb::timeutil::to_string(from) << " to "
-                << dariadb::timeutil::to_string(to) << std::endl;
-
-      auto settings = loadSettings();
-      auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
-      e->compactbyTime(from, to);
-      e->stop();
-      std::exit(0);
-    }
-
-    std::cerr << "you must set compact_from and compact_to." << std::endl;
-    std::exit(1);
+    auto settings = loadSettings();
+    auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
+    e->compact();
+    e->flush();
+    e->stop();
+    std::exit(0);
   }
 }

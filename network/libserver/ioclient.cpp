@@ -313,11 +313,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
       this->env->storage->flush();
     }
     auto query_hdr = reinterpret_cast<QuerCompact_header *>(&d->data);
-    if (query_hdr->pageCount != 0) {
-      this->env->storage->compactTo(query_hdr->pageCount);
-    } else {
-      this->env->storage->compactbyTime(query_hdr->from, query_hdr->to);
-    }
+    this->env->storage->compact();
     break;
   }
   default:

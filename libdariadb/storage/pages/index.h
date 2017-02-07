@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/utils/fs.h>
 
 namespace dariadb {
@@ -13,7 +13,10 @@ struct IndexFooter {
 
   Statistic stat;
   uint64_t recs_count;
+
+  uint16_t level;
   IndexFooter() : stat() {
+    level = 0;
     recs_count = 0;
     is_sorted = false;
     id_bloom = bloom_empty<Id>();

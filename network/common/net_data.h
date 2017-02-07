@@ -98,9 +98,6 @@ struct QuerSubscribe_header {
 struct QuerCompact_header {
   uint8_t kind;
   QueryNumber id;
-  size_t pageCount;
-  Time from;
-  Time to;
 };
 #pragma pack(pop)
 
