@@ -38,6 +38,11 @@ struct MokChunkWriter : public dariadb::ChunkContainer {
   intervalReader(const dariadb::QueryInterval &query) override {
     return dariadb::Id2Cursor();
   }
+
+  dariadb::Statistic stat(const dariadb::Id id, dariadb::Time from,
+                          dariadb::Time to) override {
+    return dariadb::Statistic();
+  }
 };
 
 struct MocDiskStorage : public dariadb::IMeasWriter {
@@ -227,8 +232,8 @@ BOOST_AUTO_TEST_CASE(MemStorageWriteToPastTest) {
     auto result = ms->append(meas);
     BOOST_CHECK_EQUAL(result.writed, size_t(1));
 
-    auto read_result = ms->readTimePoint(dariadb::QueryTimePoint(
-        {0}, dariadb::Flag(0), dariadb::Time(4)));
+    auto read_result = ms->readTimePoint(
+        dariadb::QueryTimePoint({0}, dariadb::Flag(0), dariadb::Time(4)));
 
     BOOST_CHECK_EQUAL(read_result[0].time, dariadb::Time(4));
     BOOST_CHECK(dariadb::areSame(read_result[0].value, dariadb::Value(4)));

@@ -421,6 +421,7 @@ public:
                           q.to};
     return _memstorage->intervalReader(q);
   }
+
   /// when strategy=CACHE
   Id2Cursor interval_readers_when_cache(const QueryInterval &q) {
     auto memory_mm = _memstorage->loadMinMax();
@@ -539,6 +540,67 @@ public:
       return false;
     };
 
+    auto at = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    at->wait();
+    return result;
+  }
+  Statistic stat_from_cache(const Id id, Time from, Time to) {
+    auto memory_mm = _memstorage->loadMinMax();
+    auto sync_map = _memstorage->getSyncMap();
+
+    auto id_mm = memory_mm.find(id);
+    if (id_mm == memory_mm.end()) {
+      return stat_from_disk(id, from, to);
+    } else {
+      if ((id_mm->second.min.time) > from) {
+        auto min_mem_time = sync_map[id];
+        if (min_mem_time <= to) {
+          auto disk_stat = stat_from_disk(id, from, min_mem_time);
+          auto mem_stat = _memstorage->stat(id, min_mem_time + 1, to);
+          disk_stat.update(mem_stat);
+          return disk_stat;
+        } else {
+          return stat_from_disk(id, from, to);
+        }
+      } else {
+        return _memstorage->stat(id, from, to);
+      }
+    }
+  }
+  Statistic stat_from_disk(const Id id, Time from, Time to) {
+    Statistic result;
+    if (_page_manager != nullptr) {
+      result.update(_page_manager->stat(id, from, to));
+    }
+
+    if (_wal_manager != nullptr) {
+      result.update(_wal_manager->stat(id, from, to));
+    }
+    return result;
+  }
+
+  Statistic stat(const Id id, Time from, Time to) {
+    Statistic result;
+
+    AsyncTask pm_at = [id, from, to, this, &result](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
+      if (!try_lock_storage()) {
+        return true;
+      }
+      if (strategy() != STRATEGY::CACHE) {
+        result.update(stat_from_disk(id, from, to));
+
+        if (_memstorage != nullptr) {
+          result.update(_memstorage->stat(id, from, to));
+        }
+      } else {
+        result.update(stat_from_cache(id, from, to));
+      }
+
+      this->unlock_storage();
+
+      return false;
+    };
     auto at = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
     at->wait();
     return result;
@@ -753,6 +815,10 @@ void Engine::foreach (const QueryInterval &q, IReadCallback * clbk) {
 
 Id2Cursor Engine::intervalReader(const QueryInterval &query) {
   return _impl->intervalReader(query);
+}
+
+Statistic Engine::stat(const Id id, Time from, Time to) {
+  return _impl->stat(id, from, to);
 }
 
 void Engine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {

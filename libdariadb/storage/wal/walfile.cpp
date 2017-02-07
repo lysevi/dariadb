@@ -3,8 +3,8 @@
 #endif
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/callbacks.h>
-#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/cursors.h>
+#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/fs.h>
@@ -122,6 +122,27 @@ public:
     return Status(write_size, 0);
   }
 
+  Statistic stat(const Id id, Time from, Time to) {
+    Statistic result;
+    open_to_read();
+
+    IdArray ids{id};
+    ENSURE(ids[0] == id);
+    while (1) {
+      Meas val = Meas();
+      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
+        break;
+      }
+      if (val.inQuery(ids, Flag(0), from, to)) {
+        result.update(val);
+      }
+    }
+    std::fclose(_file);
+    _file = nullptr;
+
+    return result;
+  }
+
   Id2Cursor intervalReader(const QueryInterval &q) {
     open_to_read();
 
@@ -142,14 +163,14 @@ public:
     if (subresult.empty()) {
       return Id2Cursor();
     }
-	Id2Cursor result;
+    Id2Cursor result;
     for (auto kv : subresult) {
       MeasArray ma(kv.second.begin(), kv.second.end());
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.front().time <= ma.back().time);
       FullCursor *fr = new FullCursor(ma);
       Cursor_Ptr reader{fr};
-	  result[kv.first] = reader;
+      result[kv.first] = reader;
     }
     return result;
   }
@@ -157,9 +178,9 @@ public:
   void foreach (const QueryInterval &q, IReadCallback * clbk) {
     auto readers = intervalReader(q);
 
-	for (auto kv : readers) {
-		kv.second->apply(clbk);
-	}
+    for (auto kv : readers) {
+      kv.second->apply(clbk);
+    }
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
@@ -313,7 +334,7 @@ public:
       (*raw)[pos] = val;
       pos++;
     }
-	ma->resize(pos);
+    ma->resize(pos);
     std::fclose(_file);
     _file = nullptr;
     return ma;
@@ -410,6 +431,10 @@ Status WALFile::append(const MeasList::const_iterator &begin,
 
 Id2Cursor WALFile::intervalReader(const QueryInterval &q) {
   return _Impl->intervalReader(q);
+}
+
+Statistic WALFile::stat(const Id id, Time from, Time to) {
+  return _Impl->stat(id, from, to);
 }
 
 void WALFile::foreach (const QueryInterval &q, IReadCallback * clbk) {

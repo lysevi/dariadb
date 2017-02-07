@@ -32,6 +32,7 @@ public:
                           dariadb::Time *maxResult) = 0;
   virtual Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) = 0;
   virtual Id2Cursor intervalReader(const QueryInterval &query) = 0;
+  virtual Statistic stat(const Id id, Time from, Time to) = 0;
   EXPORT virtual void foreach (const QueryInterval &query, IReadCallback * clb);
   EXPORT ChunkContainer();
   EXPORT virtual ~ChunkContainer();

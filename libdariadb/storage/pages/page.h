@@ -51,7 +51,7 @@ public:
   EXPORT static void restoreIndexFile(const std::string &file_name);
 
   EXPORT ~Page();
-
+  
   // ChunkContainer
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) override;
@@ -63,7 +63,7 @@ public:
   EXPORT Id2MinMax loadMinMax();
   EXPORT Id2Cursor intervalReader(const QueryInterval &query,
                                   const ChunkLinkList &links);
-
+  EXPORT Statistic stat(const Id id, Time from, Time to);
   bool checksum(); // return false if bad checksum.
 private:
   void update_index_recs(const PageFooter &phdr);

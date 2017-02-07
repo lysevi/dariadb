@@ -112,9 +112,9 @@ void check_reader_of_all(MeasList &all, Time from, Time to, Time step,
   checkAll(all, message, from, to, step);
 }
 
-size_t fill_storage_for_test(dariadb::IMeasStorage *as,
-                             dariadb::Time from, dariadb::Time to,
-                             dariadb::Time step, dariadb::IdSet *_all_ids_set,
+size_t fill_storage_for_test(dariadb::IMeasStorage *as, dariadb::Time from,
+                             dariadb::Time to, dariadb::Time step,
+                             dariadb::IdSet *_all_ids_set,
                              dariadb::Time *maxWritedTime,
                              bool random_timestamps) {
   std::random_device rd;
@@ -186,6 +186,19 @@ size_t fill_storage_for_test(dariadb::IMeasStorage *as,
 }
 
 void minMaxCheck(IMeasStorage *as, Time from, Time maxWritedTime) {
+  auto stat = as->stat(Id(0), from, maxWritedTime);
+  if (stat.count != copies_count) {
+    throw MAKE_EXCEPTION("stat.count != copies_count");
+  }
+
+  if (stat.minTime != dariadb::MIN_TIME) {
+	  throw MAKE_EXCEPTION("stat.minTime != dariadb::MIN_TIME");
+  }
+
+  if (stat.maxTime != dariadb::Time(copies_count)) {
+	  throw MAKE_EXCEPTION("(stat.maxTime != dariadb::Time(copies_count))");
+  }
+
   Time minTime, maxTime;
   if (!(as->minMaxTime(Id(0), &minTime, &maxTime))) {
     throw MAKE_EXCEPTION("!(as->minMaxTime)");
@@ -239,8 +252,7 @@ void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
   ids.clear();
   ids.push_back(2);
   MeasList fltr_res{};
-  fltr_res =
-      as->readInterval(QueryInterval(ids, 0, from, to + copies_count));
+  fltr_res = as->readInterval(QueryInterval(ids, 0, from, to + copies_count));
 
   if (fltr_res.size() != copies_count) {
     throw MAKE_EXCEPTION("fltr_res.size() != copies_count");
@@ -262,9 +274,8 @@ void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
   }
 }
 
-void readTimePointCheck(IMeasStorage *as, Time from, Time to,
-                        Time step, const IdArray &_all_ids_array,
-                        bool check_stop_flag) {
+void readTimePointCheck(IMeasStorage *as, Time from, Time to, Time step,
+                        const IdArray &_all_ids_array, bool check_stop_flag) {
   auto qp = QueryTimePoint(_all_ids_array, 0, to + copies_count);
   auto all_id2meas = as->readTimePoint(qp);
 
@@ -305,9 +316,8 @@ void readTimePointCheck(IMeasStorage *as, Time from, Time to,
   }
 }
 
-void storage_test_check(IMeasStorage *as, Time from, Time to,
-                        Time step, bool check_stop_flag,
-                        bool random_timestamps) {
+void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
+                        bool check_stop_flag, bool random_timestamps) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   std::cout << "fill storage\n";

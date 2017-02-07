@@ -44,6 +44,7 @@ public:
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   EXPORT virtual Id2Cursor intervalReader(const QueryInterval &query)override;
+  EXPORT Statistic stat(const Id id, Time from, Time to)override;
   EXPORT virtual void foreach (const QueryTimePoint &q, IReadCallback * clbk) override;
 
   EXPORT Time minTime() override;

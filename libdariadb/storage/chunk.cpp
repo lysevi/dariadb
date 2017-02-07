@@ -190,7 +190,7 @@ public:
     _bw = bptr;
     _compressed_rdr = compressed_rdr;
 
-	ENSURE(_chunk->header->stat.minTime <= _chunk->header->stat.maxTime);
+    ENSURE(_chunk->header->stat.minTime <= _chunk->header->stat.maxTime);
   }
 
   Time minTime() override { return _chunk->header->stat.minTime; }
@@ -229,6 +229,23 @@ Cursor_Ptr Chunk::getReader() {
     FullCursor *fr = new FullCursor(ma);
     return Cursor_Ptr{fr};
   } else {
+    return result;
+  }
+}
+
+Statistic Chunk::stat(Time from, Time to) {
+  if (inInterval(from, to, header->stat.minTime) &&
+      inInterval(from, to, header->stat.maxTime)) {
+    return header->stat;
+  } else {
+    Statistic result;
+    auto rdr = getReader();
+    while (!rdr->is_end()) {
+      auto m = rdr->readNext();
+      if (inInterval(from, to, m.time)) {
+        result.update(m);
+      }
+    }
     return result;
   }
 }

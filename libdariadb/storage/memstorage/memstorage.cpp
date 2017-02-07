@@ -224,7 +224,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     return false;
   }
 
-  Id2Cursor intervalReader(const QueryInterval &q) {
+  Id2Cursor intervalReader(const QueryInterval &q) override {
     std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
     Id2Cursor result;
     for (auto id : q.ids) {
@@ -236,6 +236,18 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         }
       }
     }
+    return result;
+  }
+
+  Statistic stat(const Id id, Time from, Time to) override {
+    std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
+    Statistic result;
+
+    auto tracker = _id2track.find(id);
+    if (tracker != _id2track.end()) {
+      result = tracker->second->stat(id, from, to);
+    }
+
     return result;
   }
 
@@ -377,6 +389,10 @@ bool MemStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 
 Id2Cursor MemStorage::intervalReader(const QueryInterval &q) {
   return _impl->intervalReader(q);
+}
+
+Statistic MemStorage::stat(const Id id, Time from, Time to) {
+  return _impl->stat(id, from, to);
 }
 
 void MemStorage::foreach (const QueryInterval &q, IReadCallback * clbk) {

@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(inFilter) {
 }
 
 BOOST_AUTO_TEST_CASE(StatisticUpdate) {
-  dariadb::storage::Statistic st;
+  dariadb::Statistic st;
 
   BOOST_CHECK_EQUAL(st.minTime, dariadb::MAX_TIME);
   BOOST_CHECK_EQUAL(st.maxTime, dariadb::MIN_TIME);
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(StatisticUpdate) {
   BOOST_CHECK(dariadb::areSame(st.sum, dariadb::Value(6)));
   BOOST_CHECK_EQUAL(st.count, uint32_t(3));
 
-  dariadb::storage::Statistic second_st;
+  dariadb::Statistic second_st;
   m.time = 777;
   m.value = 1;
   second_st.update(m);

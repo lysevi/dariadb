@@ -3,6 +3,11 @@ v0.3.0
 - Remove bystep storage engine.
 - Accept unordered data.
 - Support join of queries.
+- Statistic:
+ - time min/max
+ - value min/max
+ - measurement count
+ - values sum
 
 v0.2.0
 =====

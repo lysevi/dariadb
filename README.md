@@ -39,6 +39,11 @@
   - in engine api.
   - in network protocol.
 * Support join of queries.
+* Statistic:
+  - time min/max
+  - value min/max
+  - measurement count
+  - values sum
 
 # Dependencies
 * Boost 1.54.0 or higher: system, filesystem, date_time, unit_test_framework(to build tests), program_options, asio and regex(for server only)

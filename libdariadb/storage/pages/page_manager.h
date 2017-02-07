@@ -23,7 +23,7 @@ public:
                          dariadb::Time *maxResult) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
-
+  EXPORT Statistic stat(const Id id, Time from, Time to)override;
   EXPORT size_t files_count() const;
   EXPORT size_t chunks_in_cur_page() const;
   EXPORT dariadb::Time minTime();

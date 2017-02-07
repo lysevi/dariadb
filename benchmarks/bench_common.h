@@ -23,15 +23,17 @@ struct BenchmarkSummaryInfo {
   double foreach_read_all_time;
   double page_compaction_time;
   size_t page_compacted;
+  double stat_time;
   dariadb::STRATEGY strategy;
 
   BenchmarkSummaryInfo(dariadb::STRATEGY _strategy) {
     strategy = _strategy;
     writed = size_t(0);
     page_compacted = size_t(0);
-	join_table_size = size_t(0);
+    join_table_size = size_t(0);
     write_speed = read_interval_speed = read_timepoint_speed = read_all_time =
-        join_all_time = page_compaction_time = foreach_read_all_time = 0.0;
+        stat_time = join_all_time = page_compaction_time =
+            foreach_read_all_time = 0.0;
   }
 
   void print() {
@@ -44,13 +46,14 @@ struct BenchmarkSummaryInfo {
     std::cout << "page compacted: " << page_compacted << std::endl;
     std::cout << "read interval: " << read_interval_speed << " per/sec"
               << std::endl;
+    std::cout << "stat: " << stat_time << " sec" << std::endl;
     std::cout << "read timepoint: " << read_timepoint_speed << " per/sec"
               << std::endl;
     std::cout << "read all: " << read_all_time << " secs." << std::endl;
     std::cout << "foreach all: " << foreach_read_all_time << " secs."
               << std::endl;
     std::cout << "join all: " << join_all_time << " secs." << std::endl;
-	std::cout << "join size: " << join_table_size << std::endl;
+    std::cout << "join size: " << join_table_size << std::endl;
   }
 };
 
@@ -112,8 +115,7 @@ dariadb::Id get_id_from(dariadb::Id id) {
 dariadb::Id get_id_to(dariadb::Id id) { return (id + 1) * id_per_thread; }
 
 void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
-                            dariadb::IMeasWriter *ms,
-                            dariadb::Time start_time,
+                            dariadb::IMeasWriter *ms, dariadb::Time start_time,
                             dariadb::Time *write_time_time) {
   try {
     auto step = (boost::posix_time::seconds(1).total_milliseconds() /
@@ -186,9 +188,26 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info,
     }
 
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+	
     if (!quiet) {
       std::cout << "time: " << elapsed << std::endl;
     }
+  }
+
+  std::cout << "==> stat...." << std::endl;
+  {//stat
+	  auto start = clock();
+
+	  for (size_t i = 0; i < reads_count; i++) {
+		  Id2Times curval = interval_queries[i];
+		  stor->stat(std::get<0>(curval), std::get<1>(curval), std::get<2>(curval));
+	  }
+
+	  auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+	  summary_info->stat_time = elapsed;
+	  if (!quiet) {
+		  std::cout << "time: " << elapsed << std::endl;
+	  }
   }
   std::random_device r;
   std::default_random_engine e1(r());

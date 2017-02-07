@@ -27,6 +27,7 @@ public:
   EXPORT Status append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &q);
+  EXPORT Statistic stat(const Id id, Time from, Time to)override;
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   EXPORT Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;

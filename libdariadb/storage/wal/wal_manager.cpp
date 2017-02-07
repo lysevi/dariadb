@@ -1,7 +1,7 @@
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/callbacks.h>
-#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/cursors.h>
+#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/wal/wal_manager.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -277,7 +277,7 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
         }
         for (auto kv : rdr_map) {
           std::lock_guard<utils::async::Locker> lg(readers_locker);
-		  readers_list[kv.first].push_back(kv.second);
+          readers_list[kv.first].push_back(kv.second);
         }
       }
       return false;
@@ -307,16 +307,55 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
       ENSURE(ma.front().time <= ma.back().time);
       FullCursor *fr = new FullCursor(ma);
       Cursor_Ptr r{fr};
-	  readers_list[kv.first].push_back(r);
+      readers_list[kv.first].push_back(r);
     }
   }
   return CursorWrapperFactory::colapseCursors(readers_list);
 }
 
+Statistic WALManager::stat(const Id id, Time from, Time to) {
+  std::lock_guard<std::mutex> lg(_locker);
+  Statistic result;
+
+  auto files = wal_files();
+
+  if (!files.empty()) {
+    auto env = _env;
+    AsyncTask at = [files, &result, id, from, to, env](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+      for (auto filename : files) {
+        auto wal = WALFile::open(env, filename, true);
+
+        auto st = wal->stat(id, from, to);
+        result.update(st);
+      }
+      return false;
+    };
+
+    auto am_async =
+        ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+    am_async->wait();
+  }
+
+  size_t pos = 0;
+  IdArray ids{ id };
+  ENSURE(ids[0] == id);
+  for (auto v : _buffer) {
+	  if (pos >= _buffer_pos) {
+		  break;
+	  }
+	  if (v.inQuery(ids, Flag(0), from, to)) {
+		  result.update(v);
+	  }
+	  ++pos;
+  }
+  return result;
+}
+
 void WALManager::foreach (const QueryInterval &q, IReadCallback * clbk) {
   auto reader = intervalReader(q);
   for (auto kv : reader) {
-	  kv.second->apply(clbk);
+    kv.second->apply(clbk);
   }
 }
 

@@ -213,17 +213,20 @@ bool TimeTrack::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return true;
 }
 
-bool chunkInQuery(const QueryInterval &q, const Chunk_Ptr &c) {
+bool chunkInQuery(Time from, Time to, const Chunk_Ptr &c) {
   if (utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime,
-                        q.from) ||
-      utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime,
-                        q.to) ||
-      utils::inInterval(q.from, q.to, c->header->stat.minTime) ||
-      utils::inInterval(q.from, q.to, c->header->stat.maxTime)) {
+                        from) ||
+      utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime, to) ||
+      utils::inInterval(from, to, c->header->stat.minTime) ||
+      utils::inInterval(from, to, c->header->stat.maxTime)) {
     return true;
   } else {
     return false;
   }
+}
+
+bool chunkInQuery(const QueryInterval &q, const Chunk_Ptr &c) {
+  return chunkInQuery(q.from, q.to, c);
 }
 
 Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
@@ -256,6 +259,34 @@ Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
   Id2Cursor i2r;
   i2r[this->_meas_id] = result;
   return i2r;
+}
+
+Statistic TimeTrack::stat(const Id id, Time from, Time to) {
+  std::lock_guard<utils::async::Locker> lg(_locker);
+  ENSURE(id == this->_meas_id);
+  Statistic result;
+  auto end = _index.upper_bound(to);
+  auto begin = _index.lower_bound(from);
+  if (begin != _index.begin()) {
+    --begin;
+  }
+
+  for (auto it = begin; it != end; ++it) {
+    if (it == _index.end()) {
+      break;
+    }
+    auto c = it->second;
+    if (chunkInQuery(from, to, c)) {
+      auto st = c->stat(from, to);
+      result.update(st);
+    }
+  }
+
+  if (_cur_chunk != nullptr && chunkInQuery(from, to, _cur_chunk)) {
+    auto st = _cur_chunk->stat(from, to);
+    result.update(st);
+  }
+  return result;
 }
 
 void TimeTrack::foreach (const QueryInterval &q, IReadCallback * clbk) {

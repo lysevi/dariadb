@@ -3,6 +3,7 @@
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/stat.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/utils/async/locker.h>
@@ -22,60 +23,6 @@ struct MeasData {
   Time time;
   Value value;
   Flag flag;
-};
-struct Statistic {
-  Time minTime;
-  Time maxTime;
-
-  uint32_t count; /// count of stored values.
-
-  uint64_t flag_bloom;
-
-  Value minValue;
-
-  Value maxValue;
-
-  Value sum;
-
-  Statistic() {
-    flag_bloom = bloom_empty<Flag>();
-    count = uint32_t(0);
-    minTime = MAX_TIME;
-    maxTime = MIN_TIME;
-
-    minValue = MAX_VALUE;
-    maxValue = MIN_VALUE;
-
-    sum = Value(0);
-  }
-
-  void update(const Meas &m) {
-    count++;
-
-    minTime = std::min(m.time, minTime);
-    maxTime = std::max(m.time, maxTime);
-
-    flag_bloom = bloom_add<Flag>(flag_bloom, m.flag);
-
-    minValue = std::min(m.value, minValue);
-    maxValue = std::max(m.value, maxValue);
-
-    sum += m.value;
-  }
-
-  void update(const Statistic &st) {
-    count += st.count;
-
-    minTime = std::min(st.minTime, minTime);
-    maxTime = std::max(st.maxTime, maxTime);
-
-    flag_bloom = bloom_combine(flag_bloom, st.flag_bloom);
-
-    minValue = std::min(st.minValue, minValue);
-    maxValue = std::max(st.maxValue, maxValue);
-
-    sum += st.sum;
-  }
 };
 
 struct ChunkHeader {
@@ -149,7 +96,7 @@ public:
   EXPORT virtual bool checkId(const Id &id);
   EXPORT virtual bool checkChecksum();
   EXPORT bool checkFlag(const Flag &f);
-
+  EXPORT Statistic stat(Time from, Time to);
   EXPORT static void updateChecksum(ChunkHeader &hdr, u8vector buff);
   EXPORT static uint32_t calcChecksum(ChunkHeader &hdr, u8vector buff);
   /// return - count of skipped bytes.

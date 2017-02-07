@@ -282,7 +282,7 @@ IndexFooter Page::readIndexFooter(std::string ifile) {
 }
 
 ChunkLinkList Page::linksByIterval(const QueryInterval &qi) {
-  return _index->get_chunks_links(qi.ids, qi.flag, qi.to, qi.flag);
+  return _index->get_chunks_links(qi.ids, qi.from, qi.to, qi.flag);
 }
 
 bool Page::checksum() {
@@ -435,6 +435,37 @@ Id2Cursor Page::intervalReader(const QueryInterval &query,
   this->apply_to_chunks(links, callback);
 
   Id2Cursor result = CursorWrapperFactory::colapseCursors(sub_result);
+  return result;
+}
+
+Statistic Page::stat(const Id id, Time from, Time to) {
+  auto links = _index->get_chunks_links({id}, from, to, Flag(0));
+  Statistic result;
+
+  auto _ch_links_iterator = links.cbegin();
+  if (_ch_links_iterator == links.cend()) {
+    return result;
+  }
+  auto page_io = std::fopen(filename.c_str(), "rb");
+  if (page_io == nullptr) {
+    THROW_EXCEPTION("can`t open file ", this->filename);
+  }
+  auto indexReccords = _index->readReccords();
+  for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
+    auto _index_it = indexReccords[_ch_links_iterator->index_rec_number];
+    if (utils::inInterval(from, to, _index_it.stat.minTime) &&
+        utils::inInterval(from, to, _index_it.stat.maxTime)) {
+      result.update(_index_it.stat);
+    } else {
+      Chunk_Ptr c = readChunkByOffset(page_io, _index_it.offset);
+      if (c == nullptr) {
+        continue;
+      }
+      auto sub_result = c->stat(from, to);
+      result.update(sub_result);
+    }
+  }
+  fclose(page_io);
   return result;
 }
 

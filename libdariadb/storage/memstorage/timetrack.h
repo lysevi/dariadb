@@ -32,7 +32,8 @@ struct TimeTrack : public IMeasStorage,
   Time maxTime() override;
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                   dariadb::Time *maxResult) override;
-  Id2Cursor intervalReader(const QueryInterval &q);
+  Id2Cursor intervalReader(const QueryInterval &q)override;
+  Statistic stat(const Id id, Time from, Time to)override;
   void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   Id2Meas readTimePoint(const QueryTimePoint &q) override;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;

@@ -171,6 +171,44 @@ public:
     return pg;
   }
 
+  Statistic stat(const Id &id, Time from, Time to) {
+    auto pred = [id, from, to](const IndexFooter &hdr) {
+      auto interval_check(
+          (hdr.stat.minTime >= from && hdr.stat.maxTime <= to) ||
+          (utils::inInterval(from, to, hdr.stat.minTime)) ||
+          (utils::inInterval(from, to, hdr.stat.maxTime)) ||
+          (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, from)) ||
+          (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to)));
+      if (interval_check) {
+        if (storage::bloom_check(hdr.id_bloom, id)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    Statistic result;
+
+    AsyncTask at = [id, from, to, pred, this, &result](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+      ChunkLinkList to_read;
+
+      auto page_list =
+          pages_by_filter(std::function<bool(const IndexFooter &)>(pred));
+
+      for (auto pname : page_list) {
+        auto p = Page::open(pname);
+        auto sub_result = p->stat(id, from, to);
+        result.update(sub_result);
+      }
+
+      return false;
+    };
+    auto pm_async =
+        ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+    pm_async->wait();
+    return result;
+  }
+
   Id2Cursor intervalReader(const QueryInterval &query) {
     auto pred = [&query](const IndexFooter &hdr) {
       auto interval_check(
@@ -526,6 +564,10 @@ dariadb::Id2Meas PageManager::valuesBeforeTimePoint(const QueryTimePoint &q) {
 
 dariadb::Id2Cursor PageManager::intervalReader(const QueryInterval &query) {
   return impl->intervalReader(query);
+}
+
+Statistic PageManager::stat(const Id id, Time from, Time to) {
+  return impl->stat(id, from, to);
 }
 
 size_t PageManager::files_count() const { return impl->files_count(); }
