@@ -115,6 +115,7 @@ uint32_t Chunk::compact(ChunkHeader *hdr) {
   auto cur_chunk_buf_size = hdr->size - hdr->bw_pos + 1;
   auto skip_count = hdr->size - (uint32_t)cur_chunk_buf_size;
   hdr->size = (uint32_t)cur_chunk_buf_size;
+  hdr->bw_pos = 0;
   return skip_count;
 }
 

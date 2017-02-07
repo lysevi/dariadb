@@ -41,7 +41,7 @@ public:
   EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                                 uint32_t max_chunk_size, const MeasArray &ma);
   /// used for compaction many pages to one
-  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+  EXPORT static Page_Ptr compactTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                                 uint32_t max_chunk_size,
                                 const std::list<std::string> &pages_full_paths);
   /// called by dropper from MemoryStorage.
@@ -74,7 +74,7 @@ private:
   void update_index_recs(const PageFooter &phdr);
 
   static Page_Ptr open(const std::string &file_name, const PageFooter &phdr);
-  Chunk_Ptr readChunkByOffset(FILE *page_io, int offset);
+  static Chunk_Ptr readChunkByOffset(FILE *page_io, int offset);
 
   ChunkLinkList linksByIterval(const QueryInterval &qi);
   // callback - return true for break iteration.

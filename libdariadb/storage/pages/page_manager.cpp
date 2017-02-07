@@ -476,7 +476,7 @@ public:
     auto start_time = clock();
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res = Page::create(file_name, out_lvl, last_id,
+    res = Page::compactTo(file_name, out_lvl, last_id,
                        _settings->chunk_size.value(), part);
     _manifest->page_append(page_name);
     last_id = res->footer.max_chunk_id;

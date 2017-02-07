@@ -21,7 +21,7 @@ using namespace dariadb::storage;
 using namespace dariadb;
 
 Page::Page(const PageFooter &ftr, std::string fname)
-    : footer(footer), filename(fname) {}
+    : footer(ftr), filename(fname) {}
 
 Page::~Page() { _index = nullptr; }
 
@@ -59,10 +59,9 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
   return open(file_name, phdr);
 }
 
-// COMPACTION
-Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                      uint32_t max_chunk_size,
-                      const std::list<std::string> &pages_full_paths) {
+Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
+                         uint64_t chunk_id, uint32_t max_chunk_size,
+                         const std::list<std::string> &pages_full_paths) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
 
@@ -80,21 +79,25 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
   }
   ENSURE(openned_pages.size() == pages_full_paths.size());
 
-  PageFooter phdr(lvl,chunk_id);
-
-  auto file = std::fopen(file_name.c_str(), "ab");
-  if (file == nullptr) {
-    THROW_EXCEPTION("file is null");
-  }
+  PageFooter phdr(lvl, chunk_id);
+  phdr.level = lvl;
+  phdr.max_chunk_id = chunk_id;
+  ENSURE(phdr.max_chunk_id == chunk_id);
 
   IndexFooter ihdr;
   memset(&ihdr, 0, sizeof(IndexFooter));
 
-  auto index_file =
+  auto out_file = std::fopen(file_name.c_str(), "ab");
+  if (out_file == nullptr) {
+    THROW_EXCEPTION("file is null");
+  }
+
+  auto out_index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
-  if (index_file == nullptr) {
+  if (out_index_file == nullptr) {
     THROW_EXCEPTION("can`t open file ", file_name);
   }
+
   for (auto &kv : links) {
     auto lst = kv.second;
     std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
@@ -102,48 +105,87 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
               [](const ChunkLink &left, const ChunkLink &right) {
                 return left.id < right.id;
               });
-    stx::btree_map<dariadb::Time, dariadb::Meas> values_map;
+    if (!PageInner::have_overlap(link_vec)) {
+      for (auto link : link_vec) {
+        auto page_io = std::fopen(link.page_name.c_str(), "rb");
+        if (page_io == nullptr) {
+          THROW_EXCEPTION("can`t open file ", link.page_name.c_str());
+        }
+        auto index =
+            PageIndex::open(PageIndex::index_name_from_page_name(link.page_name));
 
-    for (auto c : link_vec) {
-      MList_ReaderClb clb;
-      auto p = openned_pages[c.page_name];
-      auto rdr = p->intervalReader(qi, {c});
-      for (auto r : rdr) {
-        r.second->apply(&clb);
+        auto indexReccords = index->readReccords();
+        auto _index_it = indexReccords[link.index_rec_number];
+        Chunk_Ptr chunk = readChunkByOffset(page_io, _index_it.offset);
+        if (chunk == nullptr) {
+          continue;
+        }
+		chunk->close();
+		chunk->is_owner = false;
+		if (!chunk->checkChecksum()) {
+			THROW_EXCEPTION("checksum error");
+		}
+		
+		PageInner::HdrAndBuffer hab;
+		hab.buffer = boost::shared_array<uint8_t>(chunk->_buffer_t);
+		hab.hdr = *(chunk->header);
+		phdr.max_chunk_id++;
+		hab.hdr.id = phdr.max_chunk_id;
+		chunk = nullptr;
+		
+		std::list<PageInner::HdrAndBuffer> compressed_results{ hab };
+		auto page_size = PageInner::writeToFile(
+			out_file, out_index_file, phdr, ihdr, compressed_results, phdr.filesize);
+		phdr.filesize = page_size;
+        fclose(page_io);
+		
       }
-      for (auto v : clb.mlist) {
-        values_map[v.time] = v;
+    } else 
+	{
+      stx::btree_map<dariadb::Time, dariadb::Meas> values_map;
+
+      for (auto c : link_vec) {
+        MList_ReaderClb clb;
+        auto p = openned_pages[c.page_name];
+        auto rdr = p->intervalReader(qi, {c});
+        for (auto r : rdr) {
+          r.second->apply(&clb);
+        }
+        for (auto v : clb.mlist) {
+          values_map[v.time] = v;
+        }
       }
+      MeasArray sorted_and_filtered;
+      sorted_and_filtered.reserve(values_map.size());
+      for (auto &time2meas : values_map) {
+        sorted_and_filtered.push_back(time2meas.second);
+      }
+
+      std::map<Id, MeasArray> all_values;
+      all_values[sorted_and_filtered.front().id] = sorted_and_filtered;
+
+      auto compressed_results =
+          PageInner::compressValues(all_values, phdr, max_chunk_size);
+
+      auto page_size = PageInner::writeToFile(
+          out_file, out_index_file, phdr, ihdr, compressed_results, phdr.filesize);
+      phdr.filesize = page_size;
     }
-    MeasArray sorted_and_filtered;
-    sorted_and_filtered.reserve(values_map.size());
-    for (auto &time2meas : values_map) {
-      sorted_and_filtered.push_back(time2meas.second);
-    }
-
-    std::map<Id, MeasArray> all_values;
-    all_values[sorted_and_filtered.front().id] = sorted_and_filtered;
-
-    auto compressed_results =
-        PageInner::compressValues(all_values, phdr, max_chunk_size);
-
-    auto page_size = PageInner::writeToFile(file, index_file, phdr, ihdr,
-                                            compressed_results, phdr.filesize);
-    phdr.filesize = page_size;
   }
 
-  std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
-  std::fclose(file);
+  std::fwrite((char *)&phdr, sizeof(PageFooter), 1, out_file);
+  std::fclose(out_file);
   ihdr.level = phdr.level;
-  std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
-  std::fclose(index_file);
+  std::fwrite(&ihdr, sizeof(IndexFooter), 1, out_index_file);
+  std::fclose(out_index_file);
 
   return open(file_name, phdr);
 }
 
 // chunks from memstorage.
-Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                      const std::vector<Chunk *> &a, size_t count) {
+Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
+                      uint64_t chunk_id, const std::vector<Chunk *> &a,
+                      size_t count) {
   using namespace dariadb::utils::async;
 
   PageFooter phdr(lvl, chunk_id);
@@ -271,7 +313,7 @@ PageFooter Page::readFooter(std::string file_name) {
     THROW_EXCEPTION("can't open file. filename=", file_name);
   }
   istream.seekg(-(int)sizeof(PageFooter), istream.end);
-  PageFooter result(0,0);
+  PageFooter result(0, 0);
   memset(&result, 0, sizeof(PageFooter));
   istream.read((char *)&result, sizeof(PageFooter));
   istream.close();
@@ -366,7 +408,7 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
   auto readed = std::fread(cheader, sizeof(ChunkHeader), 1, page_io);
   if (readed < size_t(1)) {
     delete cheader;
-    THROW_EXCEPTION("engine: page read error - ", this->filename);
+    THROW_EXCEPTION("engine: page read error");
   }
   uint8_t *buffer = new uint8_t[cheader->size];
   memset(buffer, 0, cheader->size);
@@ -374,15 +416,14 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
   if (readed < size_t(1)) {
     delete cheader;
     delete[] buffer;
-    THROW_EXCEPTION("engine: page read error - ", this->filename);
+    THROW_EXCEPTION("engine: page read error");
   }
   Chunk_Ptr ptr = nullptr;
   ptr = Chunk::open(cheader, buffer);
   ptr->is_owner = true;
   if (!ptr->checkChecksum()) {
     logger_fatal("engine: bad checksum of chunk #", ptr->header->id,
-                 " for measurement id:", ptr->header->meas_id,
-                 " page: ", this->filename);
+                 " for measurement id:", ptr->header->meas_id);
     return nullptr;
   }
   return ptr;
