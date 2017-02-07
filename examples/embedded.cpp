@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
     m.id = i % 2;
     m.time++;
     m.value++;
-	m.flag = 100+i % 2;
+    m.flag = 100 + i % 2;
     auto status = storage->append(m);
     if (status.writed != 1) {
       std::cerr << "Error: " << status.error_message << std::endl;
@@ -64,9 +64,8 @@ int main(int argc, char **argv) {
   }
 
   // query writed interval;
-  dariadb::QueryInterval qi(
-      dariadb::IdArray{dariadb::Id(0), dariadb::Id(1)}, dariadb::Flag(),
-      start_time, m.time);
+  dariadb::QueryInterval qi(dariadb::IdArray{dariadb::Id(0), dariadb::Id(1)},
+                            dariadb::Flag(), start_time, m.time);
   dariadb::MeasList readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
@@ -76,9 +75,8 @@ int main(int argc, char **argv) {
   }
 
   // query in timepoint;
-  dariadb::QueryTimePoint qp(
-      dariadb::IdArray{dariadb::Id(0), dariadb::Id(1)}, dariadb::Flag(),
-      m.time);
+  dariadb::QueryTimePoint qp(dariadb::IdArray{dariadb::Id(0), dariadb::Id(1)},
+                             dariadb::Flag(), m.time);
   dariadb::Id2Meas timepoint = storage->readTimePoint(qp);
   std::cout << "Timepoint: " << std::endl;
   for (auto kv : timepoint) {
@@ -111,18 +109,26 @@ int main(int argc, char **argv) {
   callback_ptr->wait();
 
   // join
-  dariadb::QueryInterval qi1(dariadb::IdArray{dariadb::Id(0)},
-                                      dariadb::Flag(), start_time, m.time);
-  dariadb::QueryInterval qi2(dariadb::IdArray{dariadb::Id(1)},
-                                      dariadb::Flag(), start_time,
-                                      start_time + start_time / 2.0);
+  dariadb::QueryInterval qi1(dariadb::IdArray{dariadb::Id(0)}, dariadb::Flag(),
+                             start_time, m.time);
+  dariadb::QueryInterval qi2(dariadb::IdArray{dariadb::Id(1)}, dariadb::Flag(),
+                             start_time, start_time + start_time / 2.0);
 
   auto table_callback = std::make_unique<TableMaker>();
   storage->join({qi1, qi2}, table_callback.get());
 
   for (auto row : table_callback->table) {
     std::cout << dariadb::timeutil::to_string(row.front().time) << ":[";
-	dariadb::row2stream(std::cout, row);
-    std::cout <<"]"<< std::endl;
+    dariadb::row2stream(std::cout, row);
+    std::cout << "]" << std::endl;
+  }
+  { // stat
+    auto stat = storage->stat(dariadb::Id(0), start_time, m.time);
+    std::cout << "count: " << stat.count << std::endl;
+    std::cout << "time: [" << dariadb::timeutil::to_string(stat.minTime) << " "
+              << dariadb::timeutil::to_string(stat.maxTime) << "]" << std::endl;
+    std::cout << "val: [" << stat.minValue << " " << stat.maxValue << "]"
+              << std::endl;
+    std::cout << "sum: " << stat.sum << std::endl;
   }
 }
