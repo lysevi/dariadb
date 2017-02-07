@@ -125,10 +125,10 @@ Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
 		if (!chunk->checkChecksum()) {
 			THROW_EXCEPTION("checksum error");
 		}
-		
+		auto hdr_ptr = chunk->header;
 		PageInner::HdrAndBuffer hab;
 		hab.buffer = boost::shared_array<uint8_t>(chunk->_buffer_t);
-		hab.hdr = *(chunk->header);
+		hab.hdr = *(hdr_ptr);
 		phdr.max_chunk_id++;
 		hab.hdr.id = phdr.max_chunk_id;
 		chunk = nullptr;
@@ -137,6 +137,7 @@ Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
 		auto page_size = PageInner::writeToFile(
 			out_file, out_index_file, phdr, ihdr, compressed_results, phdr.filesize);
 		phdr.filesize = page_size;
+		delete hdr_ptr;
         fclose(page_io);
 		
       }
