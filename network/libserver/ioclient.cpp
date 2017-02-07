@@ -312,7 +312,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
       this->env->storage->drop_part_wals(wals);
       this->env->storage->flush();
     }
-    auto query_hdr = reinterpret_cast<QuerCompact_header *>(&d->data);
+    //auto query_hdr = reinterpret_cast<QuerCompact_header *>(&d->data);
     this->env->storage->compact();
     break;
   }
