@@ -21,6 +21,7 @@ void fill_top_times(std::vector<Time> &top_times,
                     const std::vector<Cursor_Ptr> &readers) {
   size_t pos = 0;
   for (auto r : readers) {
+    ENSURE(!r->is_end());
     top_times[pos++] = get_top_time(r.get());
   }
 }
@@ -37,6 +38,7 @@ get_cursor_with_min_time(std::vector<Time> &top_times,
       min_time_index = i;
     }
   }
+  ENSURE(min_time != MAX_TIME);
   auto reader_it = readers[min_time_index];
   return std::make_pair(min_time_index, reader_it.get());
 }
@@ -104,6 +106,7 @@ MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
   _top_times.resize(_readers.size());
   _is_end_status.resize(_top_times.size());
   cursors_inner::fill_top_times(_top_times, _readers);
+  std::fill_n(_is_end_status.begin(), _is_end_status.size(), false);
 
   _minTime = MAX_TIME;
   _maxTime = MIN_TIME;
@@ -140,7 +143,7 @@ Meas MergeSortCursor::readNext() {
         r->readNext();
       }
       _top_times[i] = cursors_inner::get_top_time(r);
-	  _is_end_status[i] = r->is_end();
+      _is_end_status[i] = r->is_end();
     }
   }
   return result;
