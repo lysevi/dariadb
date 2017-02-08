@@ -64,16 +64,16 @@ public:
     char **strings;
 
     nptrs = backtrace(buffer, BT_BUF_SIZE);
-    sstr << "backtrace() returned " << nptrs << " addresses" << std::endl;
+    sstr << "\nbacktrace() returned " << nptrs << " addresses" << std::endl;
 
     /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
     would produce similar output to the following: */
 
     strings = backtrace_symbols(buffer, nptrs);
     if (strings == NULL) {
-      sstr << "** backtrace_symbols";
+      sstr << "backtrace_symbols" << std::endl;
     } else {
-      sstr << "BackTrace:" << std::endl;
+      sstr << "trace:" << std::endl;
       for (j = 0; j < nptrs; j++) {
         sstr << strings[j] << std::endl;
       }

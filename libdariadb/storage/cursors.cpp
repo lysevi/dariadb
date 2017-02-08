@@ -138,8 +138,8 @@ Meas MergeSortCursor::readNext() {
         }
         r->readNext();
       }
+      _top_times[i] = cursors_inner::get_top_time(r);
       if (r->is_end()) {
-        _top_times[i] = MAX_TIME;
         _is_end_status[i] = true;
       }
     }
