@@ -106,43 +106,38 @@ Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
                 return left.id < right.id;
               });
     if (!PageInner::have_overlap(link_vec)) {
+		//don't unpack chunks without overlap. write as is.
+      std::unordered_map<std::string, ChunkLinkList> fname2links;
       for (auto link : link_vec) {
-        auto page_io = std::fopen(link.page_name.c_str(), "rb");
-        if (page_io == nullptr) {
-          THROW_EXCEPTION("can`t open file ", link.page_name.c_str());
-        }
-        auto index =
-            PageIndex::open(PageIndex::index_name_from_page_name(link.page_name));
-
-        auto indexReccords = index->readReccords();
-        auto _index_it = indexReccords[link.index_rec_number];
-        Chunk_Ptr chunk = readChunkByOffset(page_io, _index_it.offset);
-        if (chunk == nullptr) {
-          continue;
-        }
-		chunk->close();
-		chunk->is_owner = false;
-		if (!chunk->checkChecksum()) {
-			THROW_EXCEPTION("checksum error");
-		}
-		auto hdr_ptr = chunk->header;
-		PageInner::HdrAndBuffer hab;
-		hab.buffer = boost::shared_array<uint8_t>(chunk->_buffer_t);
-		hab.hdr = *(hdr_ptr);
-		phdr.max_chunk_id++;
-		hab.hdr.id = phdr.max_chunk_id;
-		chunk = nullptr;
-		
-		std::list<PageInner::HdrAndBuffer> compressed_results{ hab };
-		auto page_size = PageInner::writeToFile(
-			out_file, out_index_file, phdr, ihdr, compressed_results, phdr.filesize);
-		phdr.filesize = page_size;
-		delete hdr_ptr;
-        fclose(page_io);
-		
+        fname2links[link.page_name].push_back(link);
       }
-    } else 
-	{
+      for (auto f2l : fname2links) {
+        auto p = openned_pages[f2l.first];
+        auto chunk_callback = [&phdr, &ihdr, &out_index_file,
+                               &out_file](const Chunk_Ptr &chunk) {
+          // chunk->close();
+          chunk->is_owner = false;
+          if (!chunk->checkChecksum()) {
+            THROW_EXCEPTION("checksum error");
+          }
+          auto hdr_ptr = chunk->header;
+          PageInner::HdrAndBuffer hab;
+          hab.buffer = boost::shared_array<uint8_t>(chunk->_buffer_t);
+          hab.hdr = *(hdr_ptr);
+          phdr.max_chunk_id++;
+          hab.hdr.id = phdr.max_chunk_id;
+
+          std::list<PageInner::HdrAndBuffer> compressed_results{hab};
+          auto page_size =
+              PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
+                                     compressed_results, phdr.filesize);
+          phdr.filesize = page_size;
+          delete hdr_ptr;
+		  return false;
+		};
+		p->apply_to_chunks(f2l.second, chunk_callback);
+      }
+    } else {
       stx::btree_map<dariadb::Time, dariadb::Meas> values_map;
 
       for (auto c : link_vec) {
@@ -168,8 +163,9 @@ Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
       auto compressed_results =
           PageInner::compressValues(all_values, phdr, max_chunk_size);
 
-      auto page_size = PageInner::writeToFile(
-          out_file, out_index_file, phdr, ihdr, compressed_results, phdr.filesize);
+      auto page_size =
+          PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
+                                 compressed_results, phdr.filesize);
       phdr.filesize = page_size;
     }
   }
