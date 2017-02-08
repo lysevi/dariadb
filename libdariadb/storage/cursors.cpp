@@ -27,7 +27,7 @@ void fill_top_times(std::vector<Time> &top_times,
 
 /// return: pair(index,ptr)
 std::pair<size_t, ICursor *>
-get_reader_with_min_time(std::vector<Time> &top_times,
+get_cursor_with_min_time(std::vector<Time> &top_times,
                          const std::vector<Cursor_Ptr> &readers) {
   Time min_time = MAX_TIME;
   size_t min_time_index = 0;
@@ -117,20 +117,24 @@ MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
 }
 
 Meas MergeSortCursor::readNext() {
+  ENSURE(!is_end());
   auto index_and_reader =
-      cursors_inner::get_reader_with_min_time(_top_times, _readers);
+      cursors_inner::get_cursor_with_min_time(_top_times, _readers);
 
-  auto Cursor_Ptr = index_and_reader.second;
+  auto cursor = index_and_reader.second;
 
-  auto result = Cursor_Ptr->readNext();
-  _top_times[index_and_reader.first] = cursors_inner::get_top_time(Cursor_Ptr);
-  _is_end_status[index_and_reader.first] = Cursor_Ptr->is_end();
+  auto result = cursor->readNext();
+  _top_times[index_and_reader.first] = cursors_inner::get_top_time(cursor);
+  _is_end_status[index_and_reader.first] = cursor->is_end();
 
   // skip duplicates.
   for (size_t i = 0; i < _readers.size(); ++i) {
     if (!_is_end_status[i] && _top_times[i] == result.time) {
       auto r = _readers[i].get();
-      while (!r->is_end() && r->top().time == result.time) {
+      while (!r->is_end()) {
+        if (r->top().time != result.time) {
+          break;
+        }
         r->readNext();
       }
       if (r->is_end()) {
@@ -153,7 +157,7 @@ bool MergeSortCursor::is_end() const {
 
 Meas MergeSortCursor::top() {
   ENSURE(!is_end());
-  auto r = cursors_inner::get_reader_with_min_time(_top_times, _readers);
+  auto r = cursors_inner::get_cursor_with_min_time(_top_times, _readers);
   return r.second->top();
 }
 
@@ -165,7 +169,7 @@ LinearCursor::LinearCursor(const CursorsList &readers) {
   std::vector<Cursor_Ptr> rv(readers.begin(), readers.end());
   std::sort(rv.begin(), rv.end(),
             [](auto l, auto r) { return l->minTime() < r->minTime(); });
-  _readers = std::list<Cursor_Ptr>(rv.begin(), rv.end());
+  _readers = CursorsList(rv.begin(), rv.end());
   _minTime = MAX_TIME;
   _maxTime = MIN_TIME;
   for (auto &r : _readers) {
@@ -173,6 +177,7 @@ LinearCursor::LinearCursor(const CursorsList &readers) {
     _maxTime = std::max(_maxTime, r->maxTime());
   }
   ENSURE(!_readers.empty());
+  ENSURE(!is_end());
   ENSURE(_minTime != MAX_TIME);
   ENSURE(_minTime <= _maxTime);
 }
@@ -284,7 +289,7 @@ void Join::join(const CursorsList &l, const IdArray &ids,
   while (std::any_of(end_status.begin(), end_status.end(),
                      [](auto v) { return !v; })) {
     auto pos_and_cursor =
-        cursors_inner::get_reader_with_min_time(top_times, cursors);
+        cursors_inner::get_cursor_with_min_time(top_times, cursors);
     auto min_time = top_times[pos_and_cursor.first];
 
     std::list<size_t> current_row;
