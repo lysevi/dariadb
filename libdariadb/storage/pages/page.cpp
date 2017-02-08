@@ -173,6 +173,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, out_file);
   std::fclose(out_file);
   ihdr.level = phdr.level;
+  ihdr.stat=phdr.stat;
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, out_index_file);
   std::fclose(out_index_file);
 
