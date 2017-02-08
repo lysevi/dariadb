@@ -145,6 +145,21 @@ bool Chunk::append(const Meas &m) {
 
 class ChunkReader : public ICursor {
 public:
+  ChunkReader() = delete;
+
+  ChunkReader(size_t count, const Chunk_Ptr &c,
+              std::shared_ptr<ByteBuffer> bptr,
+              std::shared_ptr<CopmressedReader> compressed_rdr) {
+    _top_value_exists = false;
+    _is_first = true;
+    _count = count;
+    _chunk = c;
+    _bw = bptr;
+    _compressed_rdr = compressed_rdr;
+
+    ENSURE(_chunk->header->stat.minTime <= _chunk->header->stat.maxTime);
+  }
+
   Meas readNext() override {
     ENSURE(!is_end());
     if (_is_first) {
@@ -177,21 +192,6 @@ public:
       }
     }
     return _top_value;
-  }
-
-  ChunkReader() = delete;
-
-  ChunkReader(size_t count, const Chunk_Ptr &c,
-              std::shared_ptr<ByteBuffer> bptr,
-              std::shared_ptr<CopmressedReader> compressed_rdr) {
-    _top_value_exists = false;
-    _is_first = true;
-    _count = count;
-    _chunk = c;
-    _bw = bptr;
-    _compressed_rdr = compressed_rdr;
-
-    ENSURE(_chunk->header->stat.minTime <= _chunk->header->stat.maxTime);
   }
 
   Time minTime() override { return _chunk->header->stat.minTime; }

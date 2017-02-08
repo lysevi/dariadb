@@ -21,7 +21,6 @@ void fill_top_times(std::vector<Time> &top_times,
                     const std::vector<Cursor_Ptr> &readers) {
   size_t pos = 0;
   for (auto r : readers) {
-    ENSURE(!r->is_end());
     top_times[pos++] = get_top_time(r.get());
   }
 }
@@ -38,8 +37,9 @@ get_cursor_with_min_time(std::vector<Time> &top_times,
       min_time_index = i;
     }
   }
-  ENSURE(min_time != MAX_TIME);
   auto reader_it = readers[min_time_index];
+  ENSURE(min_time != MAX_TIME);
+  ENSURE(!reader_it->is_end());
   return std::make_pair(min_time_index, reader_it.get());
 }
 
@@ -50,11 +50,14 @@ CursorsList unpack_readers(const CursorsList &readers) {
     // TODO use type enum.
     auto msr = dynamic_cast<MergeSortCursor *>(r.get());
     if (msr == nullptr) {
+      ENSURE(!r->is_end());
       tmp_readers_list.emplace_back(r);
     } else {
       for (auto sub_reader : msr->_readers) {
+        ENSURE(!sub_reader->is_end());
         tmp_readers_list.emplace_back(sub_reader);
       }
+      msr->_readers.clear();
     }
   }
   return tmp_readers_list;
@@ -100,6 +103,7 @@ MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
 
   _readers.reserve(tmp_readers_list.size());
   for (auto r : tmp_readers_list) {
+    ENSURE(!r->is_end());
     _readers.emplace_back(r);
   }
 
@@ -113,6 +117,7 @@ MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
   for (auto &r : _readers) {
     _minTime = std::min(_minTime, r->minTime());
     _maxTime = std::max(_maxTime, r->maxTime());
+    ENSURE(!r->is_end());
   }
   ENSURE(!_readers.empty());
   ENSURE(_minTime != MAX_TIME);
@@ -134,6 +139,8 @@ Meas MergeSortCursor::readNext() {
 
   // skip duplicates.
   for (size_t i = 0; i < _readers.size(); ++i) {
+    ENSURE(_is_end_status[i] == _readers[i]->is_end());
+
     if (!_is_end_status[i] && _top_times[i] == result.time) {
       auto r = _readers[i].get();
       while (!r->is_end()) {
@@ -145,6 +152,8 @@ Meas MergeSortCursor::readNext() {
       _top_times[i] = cursors_inner::get_top_time(r);
       _is_end_status[i] = r->is_end();
     }
+
+    ENSURE(_is_end_status[i] == _readers[i]->is_end());
   }
   return result;
 }

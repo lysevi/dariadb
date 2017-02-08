@@ -159,13 +159,13 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr,
     chunk_header.offset_in_page = offset;
     // update checksum;
     Chunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
-#ifdef DEBUG
+#ifdef DOUBLE_CHECKS
     {
       auto ch = Chunk::open(&chunk_header, chunk_buffer_ptr.get() + skip_count);
       ENSURE(ch->checkChecksum());
 	  auto rdr = ch->getReader();
 	  while (!rdr->is_end()) {
-		  auto m=rdr->readNext();
+		  rdr->readNext();
 	  }
       ch->close();
     }

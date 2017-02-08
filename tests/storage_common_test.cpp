@@ -186,8 +186,7 @@ BOOST_AUTO_TEST_CASE(SettingsInstance) {
   BOOST_CHECK_EQUAL(settings->wal_cache_size.value(), uint64_t(2));
   BOOST_CHECK_EQUAL(settings->chunk_size.value(), uint32_t(7));
   BOOST_CHECK_EQUAL(settings->max_pages_in_level.value(), uint16_t(10));
-  BOOST_CHECK(settings->strategy.value() ==
-              dariadb::STRATEGY::COMPRESSED);
+  BOOST_CHECK(settings->strategy.value() == dariadb::STRATEGY::COMPRESSED);
 
   settings = nullptr;
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -212,6 +211,7 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     delete[] buff;
   }
   {
+    size_t writed = 1;
     dariadb::storage::ChunkHeader hdr;
     uint8_t *buff = new uint8_t[1024];
     std::fill_n(buff, 1024, uint8_t(0));
@@ -220,11 +220,26 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     auto ch = dariadb::storage::Chunk::create(&hdr, buff, 1024, m);
     m.time = 0;
     while (!ch->isFull()) {
-      ch->append(m);
+      if (ch->append(m)) {
+        writed++;
+      }
       m.time++;
     }
     BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(0));
     dariadb_test::check_reader(ch->getReader());
+    {
+      auto skip_size = dariadb::storage::Chunk::compact(&hdr);
+      BOOST_CHECK(dariadb::storage::Chunk::compact(&hdr) == uint32_t(0));
+      auto ch2 = dariadb::storage::Chunk::open(&hdr, buff + skip_size);
+      auto rdr2 = ch2->getReader();
+      size_t readed = 0;
+      while (!rdr2->is_end()) {
+        rdr2->readNext();
+        readed++;
+      }
+      BOOST_CHECK_EQUAL(readed, writed);
+    }
+
     delete[] buff;
   }
 }
