@@ -434,7 +434,7 @@ public:
     }
   }
 
-  void compact() {
+  void repack() {
     auto max_files_per_level = _settings->max_pages_in_level.value();
 
     for (uint16_t level = MIN_LEVEL; level < MAX_LEVEL; ++level) {
@@ -456,23 +456,23 @@ public:
         if (part.size() < size_t(2)) {
           break;
         }
-        compact(level + 1, part);
+        repack(level + 1, part);
       }
     }
   }
 
-  void compact(uint16_t out_lvl, std::list<std::string> part) {
+  void repack(uint16_t out_lvl, std::list<std::string> part) {
     Page_Ptr res = nullptr;
     std::string page_name = utils::fs::random_file_name(".page");
-    logger_info("engine: compacting to level", out_lvl, " page: ", page_name);
+    logger_info("engine: repack to level", out_lvl, " page: ", page_name);
     for (auto &p : part) {
       logger_info("==> ", utils::fs::extract_filename(p));
     }
     auto start_time = clock();
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res = Page::compactTo(file_name, out_lvl, last_id,
-                          _settings->chunk_size.value(), part);
+    res = Page::repackTo(file_name, out_lvl, last_id,
+                         _settings->chunk_size.value(), part);
     _manifest->page_append(page_name);
     last_id = res->footer.max_chunk_id;
 
@@ -485,7 +485,7 @@ public:
         Page::readIndexFooter(PageIndex::index_name_from_page_name(file_name)));
     auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
 
-    logger("engine: compacting end. elapsed ", elapsed, "s");
+    logger("engine: repack end. elapsed ", elapsed, "s");
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
@@ -598,7 +598,7 @@ void PageManager::erase_page(const std::string &fname) {
   impl->erase_page(fname);
 }
 
-void PageManager::compact() { impl->compact(); }
+void PageManager::repack() { impl->repack(); }
 
 void PageManager::appendChunks(const std::vector<Chunk *> &a, size_t count) {
   impl->appendChunks(a, count);

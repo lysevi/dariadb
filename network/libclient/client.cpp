@@ -462,15 +462,15 @@ public:
     return qres;
   }
 
-  void compact() {
+  void repack() {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
     _locker.unlock();
-    auto nd = this->_pool.construct(DATA_KINDS::COMPACT);
+    auto nd = this->_pool.construct(DATA_KINDS::REPACK);
 
-    auto p_header = reinterpret_cast<QuerCompact_header *>(nd->data);
-    nd->size = sizeof(QuerCompact_header);
+    auto p_header = reinterpret_cast<QuerRepack_header *>(nd->data);
+    nd->size = sizeof(QuerRepack_header);
     p_header->id = cur_id;
     _async_connection->send(nd);
   }
@@ -540,4 +540,4 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
   return _Impl->subscribe(ids, flag, clbk);
 }
 
-void Client::compact() { _Impl->compact(); }
+void Client::repack() { _Impl->repack(); }

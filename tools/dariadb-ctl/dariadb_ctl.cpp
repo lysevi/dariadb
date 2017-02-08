@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
   aos("compress", "compress all wal files.");
   aos("iso-time",
       "if set, all time param is in iso format (\"20020131T235959\")");
-  aos("compact", "compact all page files to one.");
+  aos("repack", "repack all page files.");
   aos("fsck", "run force fsck.");
   aos("storage-path",
       po::value<std::string>(&storage_path)->default_value(storage_path),
@@ -203,10 +203,10 @@ int main(int argc, char *argv[]) {
     std::exit(0);
   }
 
-  if (vm.count("compact")) {
+  if (vm.count("repack")) {
     auto settings = loadSettings();
     auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
-    e->compact();
+    e->repack();
     e->flush();
     e->stop();
     std::exit(0);

@@ -59,9 +59,9 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
   return open(file_name, phdr);
 }
 
-Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
-                         uint64_t chunk_id, uint32_t max_chunk_size,
-                         const std::list<std::string> &pages_full_paths) {
+Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
+                        uint64_t chunk_id, uint32_t max_chunk_size,
+                        const std::list<std::string> &pages_full_paths) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
 
@@ -106,7 +106,7 @@ Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
                 return left.id < right.id;
               });
     if (!PageInner::have_overlap(link_vec)) {
-		//don't unpack chunks without overlap. write as is.
+      // don't unpack chunks without overlap. write as is.
       std::unordered_map<std::string, ChunkLinkList> fname2links;
       for (auto link : link_vec) {
         fname2links[link.page_name].push_back(link);
@@ -133,9 +133,9 @@ Page_Ptr Page::compactTo(const std::string &file_name, uint16_t lvl,
                                      compressed_results, phdr.filesize);
           phdr.filesize = page_size;
           delete hdr_ptr;
-		  return false;
-		};
-		p->apply_to_chunks(f2l.second, chunk_callback);
+          return false;
+        };
+        p->apply_to_chunks(f2l.second, chunk_callback);
       }
     } else {
       stx::btree_map<dariadb::Time, dariadb::Meas> values_map;

@@ -95,13 +95,12 @@ struct QuerSubscribe_header {
   uint16_t ids_count;
 };
 
-struct QuerCompact_header {
+struct QuerRepack_header {
   uint8_t kind;
   QueryNumber id;
 };
 #pragma pack(pop)
 
-// using NetData_Pool = boost::object_pool<NetData>;
 struct NetData_Pool {
   utils::async::Locker _locker;
   typedef boost::object_pool<NetData> Pool;

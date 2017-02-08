@@ -297,14 +297,14 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     this->_async_connection->send(nd);
     break;
   }
-  case DATA_KINDS::COMPACT: {
+  case DATA_KINDS::REPACK: {
     if (this->env->srv->server_begin_stopping()) {
       logger_info("server: #", this->_async_connection->id(),
-                  " refuse compact query. server in stop.");
+                  " refuse repack query. server in stop.");
       return;
     }
     logger_info("server: #", this->_async_connection->id(),
-                " query to storage compaction.");
+                " query to storage repack.");
     if (this->env->storage->strategy() == STRATEGY::WAL) {
       auto wals = this->env->storage->description().wal_count;
       logger_info("server: #", this->_async_connection->id(), " drop ", wals,
@@ -312,8 +312,8 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
       this->env->storage->drop_part_wals(wals);
       this->env->storage->flush();
     }
-    //auto query_hdr = reinterpret_cast<QuerCompact_header *>(&d->data);
-    this->env->storage->compact();
+    //auto query_hdr = reinterpret_cast<QuerRepack_header *>(&d->data);
+    this->env->storage->repack();
     break;
   }
   default:

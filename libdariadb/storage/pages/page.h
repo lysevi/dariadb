@@ -40,8 +40,8 @@ public:
   /// called by Dropper from Wal level.
   EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                                 uint32_t max_chunk_size, const MeasArray &ma);
-  /// used for compaction many pages to one
-  EXPORT static Page_Ptr compactTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+  /// used for repack many pages to one
+  EXPORT static Page_Ptr repackTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                                 uint32_t max_chunk_size,
                                 const std::list<std::string> &pages_full_paths);
   /// called by dropper from MemoryStorage.

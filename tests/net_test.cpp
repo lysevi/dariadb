@@ -358,8 +358,8 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(CompactionToTest) {
-  dariadb::logger("********** CompactionToTest **********");
+BOOST_AUTO_TEST_CASE(RepackTest) {
+  dariadb::logger("********** RepackTest **********");
 
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
@@ -393,7 +393,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
     // 1 client
     while (true) {
       auto st1 = c1.state();
-      dariadb::logger("CompactionTest test>> ", "0  state1: ", st1);
+      dariadb::logger("RepackTest test>> ", "0  state1: ", st1);
       if (st1 == dariadb::net::CLIENT_STATE::WORK) {
         break;
       }
@@ -415,17 +415,17 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
       auto wals = dariadb::utils::fs::ls(settings->raw_path.value(),
                                          dariadb::storage::WAL_FILE_EXT)
                       .size();
-      dariadb::logger("CompactionTest: wal count:", wals);
+      dariadb::logger("RepackTest: wal count:", wals);
       if (wals >= size_t(2)) {
         break;
       }
     }
 
-    c1.compact();
+    c1.repack();
 
     while (1) {
       auto pages = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-      // dariadb::logger("CompactionTest: pages count:",pages);
+      // dariadb::logger("RepackTest: pages count:",pages);
       if (pages == size_t(1)) {
         break;
       }
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
 
     while (true) {
       auto st1 = c1.state();
-      dariadb::logger("CompactionTest test>> ", "0  state1: ", st1);
+      dariadb::logger("RepackTest test>> ", "0  state1: ", st1);
       if (st1 == dariadb::net::CLIENT_STATE::DISCONNECTED) {
         break;
       }

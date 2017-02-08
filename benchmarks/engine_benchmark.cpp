@@ -468,17 +468,17 @@ int main(int argc, char *argv[]) {
       {
         auto pages_before = raw_ptr->description().pages_count;
         if (pages_before != 0) {
-          std::cout << "==> pages before compaction " << pages_before << "..."
+          std::cout << "==> pages before repack " << pages_before << "..."
                     << std::endl;
           auto start = clock();
-          raw_ptr->compact();
+          raw_ptr->repack();
           auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
           auto pages_after = raw_ptr->description().pages_count;
-          std::cout << "==> pages after compaction " << pages_after << "..."
+          std::cout << "==> pages after repack " << pages_after << "..."
                     << std::endl;
-          std::cout << "compaction time: " << elapsed << std::endl;
-          summary_info->page_compacted = pages_before - pages_after - 1;
-          summary_info->page_compaction_time = elapsed;
+          std::cout << "repack time: " << elapsed << std::endl;
+          summary_info->page_repacked = pages_before - pages_after - 1;
+          summary_info->page_repack_time = elapsed;
           if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
               pages_before <= pages_after) {
             THROW_EXCEPTION("pages_before <= pages_after");

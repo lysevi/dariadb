@@ -718,10 +718,10 @@ public:
     return this->_strategy;
   }
 
-  void compact() {
+  void repack() {
     this->lock_storage();
-    logger_info("engine: compacting...");
-    _page_manager->compact();
+    logger_info("engine: repack...");
+    _page_manager->repack();
     this->unlock_storage();
   }
 
@@ -837,7 +837,7 @@ void Engine::fsck() { _impl->fsck(); }
 
 void Engine::eraseOld(const Time &t) { return _impl->eraseOld(t); }
 
-void Engine::compact() { _impl->compact(); }
+void Engine::repack() { _impl->repack(); }
 
 uint16_t Engine::format() { return STORAGE_FORMAT; }
 

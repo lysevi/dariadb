@@ -306,7 +306,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   }
 }
 */
-BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
+BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 256;
 
@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompaction) {
   }
 
   auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-  pm->compact();
+  pm->repack();
   auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
   BOOST_CHECK_LT(pages_after, pages_before);
   { // id==0
