@@ -51,6 +51,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
       PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
   phdr.filesize = page_size;
   ihdr.level = phdr.level;
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic))==0);
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
   std::fclose(file);
 
@@ -85,7 +86,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
   ENSURE(phdr.max_chunk_id == chunk_id);
 
   IndexFooter ihdr;
-  memset(&ihdr, 0, sizeof(IndexFooter));
+  //memset(&ihdr, 0, sizeof(IndexFooter));
 
   auto out_file = std::fopen(file_name.c_str(), "ab");
   if (out_file == nullptr) {
@@ -131,6 +132,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
           auto page_size =
               PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
                                      compressed_results, phdr.filesize);
+
           phdr.filesize = page_size;
           delete hdr_ptr;
           return false;
@@ -170,12 +172,16 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
     }
   }
 
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic))==0);
+
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, out_file);
   std::fclose(out_file);
   ihdr.level = phdr.level;
-  ihdr.stat=phdr.stat;
+  //ihdr.stat=phdr.stat;
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, out_index_file);
   std::fclose(out_index_file);
+
+
 
   return open(file_name, phdr);
 }
@@ -194,7 +200,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
   }
 
   IndexFooter ihdr;
-  memset(&ihdr, 0, sizeof(IndexFooter));
+  //memset(&ihdr, 0, sizeof(IndexFooter));
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -224,6 +230,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
 #endif //  DEBUG
     phdr.max_chunk_id++;
     phdr.stat.update(chunk_header->stat);
+    ihdr.stat.update(chunk_header->stat);
 
     chunk_header->id = phdr.max_chunk_id;
 
@@ -259,6 +266,8 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
     ireccords[pos] = index_reccord;
     pos++;
   }
+
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic))==0);
   page_size = offset;
   phdr.filesize = page_size;
   std::fwrite(&(phdr), sizeof(PageFooter), 1, file);

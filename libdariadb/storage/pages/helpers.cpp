@@ -154,7 +154,7 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr,
 
     phdr.addeded_chunks++;
     phdr.stat.update(chunk_header.stat);
-
+    //ihdr.stat.update(chunk_header.stat);
 	auto skip_count = Chunk::compact(&chunk_header);
     chunk_header.offset_in_page = offset;
     // update checksum;
@@ -183,6 +183,8 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr,
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(),
               index_file);
   page_size = offset;
+  ihdr.stat=phdr.stat;
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic))==0);
   return page_size;
 }
 
@@ -193,7 +195,7 @@ IndexReccord init_chunk_index_rec(const ChunkHeader &cheader,
   cur_index.chunk_id = cheader.id;
   cur_index.offset = cheader.offset_in_page; // header->write_offset;
 
-  iheader->stat.update(cheader.stat);
+  //iheader->stat.update(cheader.stat);
 
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
   iheader->recs_count++;
