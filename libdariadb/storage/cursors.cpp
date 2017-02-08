@@ -32,7 +32,7 @@ get_cursor_with_min_time(std::vector<Time> &top_times,
   Time min_time = MAX_TIME;
   size_t min_time_index = 0;
   for (size_t i = 0; i < top_times.size(); ++i) {
-    if (min_time > top_times[i]) {
+    if (top_times[i] != MAX_TIME && min_time > top_times[i]) {
       min_time = top_times[i];
       min_time_index = i;
     }
@@ -122,6 +122,7 @@ Meas MergeSortCursor::readNext() {
       cursors_inner::get_cursor_with_min_time(_top_times, _readers);
 
   auto cursor = index_and_reader.second;
+  ENSURE(!cursor->is_end());
 
   auto result = cursor->readNext();
   _top_times[index_and_reader.first] = cursors_inner::get_top_time(cursor);
