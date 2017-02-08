@@ -167,9 +167,9 @@ void show_drop_info(Engine *storage) {
     auto queue_sizes = storage->description();
 
     dariadb::logger_info(" storage: (p:", queue_sizes.pages_count,
-                         " a:", queue_sizes.wal_count,
+                         " w:", queue_sizes.wal_count,
                          " T:", queue_sizes.active_works, ")",
-                         "[a:", queue_sizes.dropper.wal, "]");
+                         "[w:", queue_sizes.dropper.wal, "]");
 
     if (stop_info) {
       std::cout.flush();

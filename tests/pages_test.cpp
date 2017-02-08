@@ -19,7 +19,7 @@
 
 using dariadb::storage::PageManager;
 using dariadb::storage::Manifest;
-/*
+
 BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 200;
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
-*/
+
 BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 256;
