@@ -444,23 +444,18 @@ public:
 
       auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
 
-      if (page_list.empty()) {
-        break;
-      }
-
-      auto it = page_list.begin();
-      while (page_list.size() > max_files_per_level) { // whil level is full
+      while (page_list.size() > max_files_per_level) { // while level is filled
         std::list<std::string> part;
         for (size_t i = 0; i < max_files_per_level; ++i) {
-          part.push_back(*it);
-          ++it;
-          if (it == page_list.end()) {
+          if (page_list.empty()) {
             break;
           }
+          part.push_back(page_list.front());
+          page_list.pop_front();
         }
-		if (part.size() < size_t(2)) {
-			break;
-		}
+        if (part.size() < size_t(2)) {
+          break;
+        }
         compact(level + 1, part);
       }
     }
@@ -477,7 +472,7 @@ public:
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::compactTo(file_name, out_lvl, last_id,
-                       _settings->chunk_size.value(), part);
+                          _settings->chunk_size.value(), part);
     _manifest->page_append(page_name);
     last_id = res->footer.max_chunk_id;
 
