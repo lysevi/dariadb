@@ -122,6 +122,7 @@ Meas MergeSortCursor::readNext() {
       cursors_inner::get_cursor_with_min_time(_top_times, _readers);
 
   auto cursor = index_and_reader.second;
+  ENSURE(!_is_end_status[index_and_reader.first]);
   ENSURE(!cursor->is_end());
 
   auto result = cursor->readNext();
@@ -139,9 +140,7 @@ Meas MergeSortCursor::readNext() {
         r->readNext();
       }
       _top_times[i] = cursors_inner::get_top_time(r);
-      if (r->is_end()) {
-        _is_end_status[i] = true;
-      }
+	  _is_end_status[i] = r->is_end();
     }
   }
   return result;
