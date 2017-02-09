@@ -4,17 +4,26 @@
 #include <stdexcept>
 #include <string>
 
+#ifdef UNIX_OS
+#include <execinfo.h>
+#include <sstream>
+#include <stdlib.h>
+#include <unistd.h>
+#define BT_BUF_SIZE 512
+#endif
+
 #define CODE_POS (dariadb::utils::CodePos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg) dariadb::utils::Exception::create_and_log(CODE_POS, msg)
+#define MAKE_EXCEPTION(msg)                                                    \
+  dariadb::utils::Exception::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
 
 #ifdef DEBUG
-#define THROW_EXCEPTION(...)                                                             \
-  dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);                      \
+#define THROW_EXCEPTION(...)                                                   \
+  dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);            \
   std::exit(1);
 #else
-#define THROW_EXCEPTION(...)                                                             \
+#define THROW_EXCEPTION(...)                                                   \
   throw dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);
 #endif
 
@@ -30,8 +39,8 @@ struct CodePos {
       : _file(file), _line(line), _func(function) {}
 
   std::string toString() const {
-    auto ss = std::string(_file) + " line: " + std::to_string(_line) + " function: " +
-              std::string(_func) + "\n";
+    auto ss = std::string(_file) + " line: " + std::to_string(_line) +
+              " function: " + std::string(_func) + "\n";
     return ss;
   }
   CodePos &operator=(const CodePos &) = delete;
@@ -43,9 +52,37 @@ public:
   static Exception create_and_log(const CodePos &pos, T... message) {
 
     auto expanded_message = utils::strings::args_to_string(message...);
-    auto ss = std::string("FATAL ERROR. The Exception will be thrown! ") +
-              pos.toString() + " Message: " + expanded_message;
-    logger_fatal(ss);
+    auto str_message =
+        std::string("FATAL ERROR. The Exception will be thrown! ") +
+        pos.toString() + " Message: " + expanded_message;
+
+#ifdef UNIX_OS
+    std::stringstream sstr;
+    sstr << str_message;
+    int j, nptrs;
+    void *buffer[BT_BUF_SIZE];
+    char **strings;
+
+    nptrs = backtrace(buffer, BT_BUF_SIZE);
+    sstr << "\nbacktrace() returned " << nptrs << " addresses" << std::endl;
+
+    /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
+    would produce similar output to the following: */
+
+    strings = backtrace_symbols(buffer, nptrs);
+    if (strings == NULL) {
+      sstr << "backtrace_symbols" << std::endl;
+    } else {
+      sstr << "trace:" << std::endl;
+      for (j = 0; j < nptrs; j++) {
+        sstr << strings[j] << std::endl;
+      }
+    }
+    free(strings);
+    str_message = sstr.str();
+#endif
+
+    logger_fatal(str_message);
     return Exception(expanded_message);
   }
 

@@ -718,18 +718,10 @@ public:
     return this->_strategy;
   }
 
-  void compactTo(uint32_t pagesCount) {
+  void repack() {
     this->lock_storage();
-    logger_info("engine: compacting to ", pagesCount + 1);
-    _page_manager->compactTo(pagesCount);
-    this->unlock_storage();
-  }
-
-  void compactbyTime(Time from, Time to) {
-    this->lock_storage();
-    logger_info("engine: compacting by time [", timeutil::to_string(from), "-",
-                timeutil::to_string(to), "]");
-    _page_manager->compactbyTime(from, to);
+    logger_info("engine: repack...");
+    _page_manager->repack();
     this->unlock_storage();
   }
 
@@ -845,11 +837,7 @@ void Engine::fsck() { _impl->fsck(); }
 
 void Engine::eraseOld(const Time &t) { return _impl->eraseOld(t); }
 
-void Engine::compactTo(uint32_t pagesCount) { _impl->compactTo(pagesCount); }
-
-void Engine::compactbyTime(Time from, Time to) {
-  _impl->compactbyTime(from, to);
-}
+void Engine::repack() { _impl->repack(); }
 
 uint16_t Engine::format() { return STORAGE_FORMAT; }
 

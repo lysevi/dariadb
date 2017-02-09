@@ -21,18 +21,18 @@ struct BenchmarkSummaryInfo {
   double join_all_time;
   size_t join_table_size;
   double foreach_read_all_time;
-  double page_compaction_time;
-  size_t page_compacted;
+  double page_repack_time;
+  size_t page_repacked;
   double stat_time;
   dariadb::STRATEGY strategy;
 
   BenchmarkSummaryInfo(dariadb::STRATEGY _strategy) {
     strategy = _strategy;
     writed = size_t(0);
-    page_compacted = size_t(0);
+    page_repacked = size_t(0);
     join_table_size = size_t(0);
     write_speed = read_interval_speed = read_timepoint_speed = read_all_time =
-        stat_time = join_all_time = page_compaction_time =
+        stat_time = join_all_time = page_repack_time =
             foreach_read_all_time = 0.0;
   }
 
@@ -41,9 +41,9 @@ struct BenchmarkSummaryInfo {
     std::cout << "writed: " << writed << std::endl;
     std::cout << "write speed(average): " << write_speed << " per/sec"
               << std::endl;
-    std::cout << "page compaction: " << page_compaction_time << " secs."
+    std::cout << "page repack: " << page_repack_time << " secs."
               << std::endl;
-    std::cout << "page compacted: " << page_compacted << std::endl;
+    std::cout << "page repacked: " << page_repacked << std::endl;
     std::cout << "read interval: " << read_interval_speed << " per/sec"
               << std::endl;
     std::cout << "stat: " << stat_time << " sec" << std::endl;

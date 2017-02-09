@@ -8,6 +8,7 @@ v0.3.0
  - value min/max
  - measurement count
  - values sum
+- Page can be repacked.
 
 v0.2.0
 =====

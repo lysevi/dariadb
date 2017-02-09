@@ -167,9 +167,9 @@ void show_drop_info(Engine *storage) {
     auto queue_sizes = storage->description();
 
     dariadb::logger_info(" storage: (p:", queue_sizes.pages_count,
-                         " a:", queue_sizes.wal_count,
+                         " w:", queue_sizes.wal_count,
                          " T:", queue_sizes.active_works, ")",
-                         "[a:", queue_sizes.dropper.wal, "]");
+                         "[w:", queue_sizes.dropper.wal, "]");
 
     if (stop_info) {
       std::cout.flush();
@@ -421,13 +421,6 @@ int main(int argc, char *argv[]) {
     auto writers_start = clock();
 
     start_time = dariadb::timeutil::current_time();
-    auto first_day = 60 * 60 * dariadb_bench::hours_write_perid / 2;
-    auto first_day_milisec = start_time + (first_day * 1000) / 2;
-    std::cout << "==> compaction period: ["
-              << dariadb::timeutil::to_string(start_time) << ", "
-              << dariadb::timeutil::to_string(first_day_milisec) << "]"
-              << std::endl;
-
     rw_benchmark(ms, raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
@@ -475,17 +468,17 @@ int main(int argc, char *argv[]) {
       {
         auto pages_before = raw_ptr->description().pages_count;
         if (pages_before != 0) {
-          std::cout << "==> pages before compaction " << pages_before << "..."
+          std::cout << "==> pages before repack " << pages_before << "..."
                     << std::endl;
           auto start = clock();
-          raw_ptr->compactbyTime(start_time, first_day_milisec);
+          raw_ptr->repack();
           auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
           auto pages_after = raw_ptr->description().pages_count;
-          std::cout << "==> pages after compaction " << pages_after << "..."
+          std::cout << "==> pages after repack " << pages_after << "..."
                     << std::endl;
-          std::cout << "compaction time: " << elapsed << std::endl;
-          summary_info->page_compacted = pages_before - pages_after - 1;
-          summary_info->page_compaction_time = elapsed;
+          std::cout << "repack time: " << elapsed << std::endl;
+          summary_info->page_repacked = pages_before - pages_after - 1;
+          summary_info->page_repack_time = elapsed;
           if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
               pages_before <= pages_after) {
             THROW_EXCEPTION("pages_before <= pages_after");

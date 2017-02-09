@@ -8,6 +8,15 @@ IF(WIN32)
   MESSAGE(STATUS "WIN32:")
   MESSAGE(STATUS "+ boost root: " ${BOOST_ROOT})
 else(WIN32)
+  MESSAGE(STATUS "UNIX")
+  add_definitions(-DUNIX_OS)
+
+  IF(ENABLE_DOUBLECHECKS)
+    MESSAGE(STATUS "Enable cc:rdynamic")
+    add_cxx_compiler_flag(-rdynamic)
+  ENDIF()
+
+  
   set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
     "Flags used by the C++ compiler during coverage builds."
     FORCE)

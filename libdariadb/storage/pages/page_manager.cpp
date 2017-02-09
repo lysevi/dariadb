@@ -380,6 +380,7 @@ public:
     return res;
   }
 
+  // from wall
   void append(const std::string &file_prefix, const dariadb::MeasArray &ma) {
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
@@ -390,7 +391,8 @@ public:
     std::string page_name = file_prefix + PAGE_FILE_EXT;
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res = Page::create(file_name, last_id, _settings->chunk_size.value(), ma);
+    res = Page::create(file_name, MIN_LEVEL, last_id,
+                       _settings->chunk_size.value(), ma);
     _manifest->page_append(page_name);
     last_id = res->footer.max_chunk_id;
 
@@ -432,49 +434,45 @@ public:
     }
   }
 
-  void compactTo(uint32_t pagesCount) {
+  void repack() {
+    auto max_files_per_level = _settings->max_pages_in_level.value();
 
-    auto pred = [](const IndexFooter &hdr) { return true; };
+    for (uint16_t level = MIN_LEVEL; level < MAX_LEVEL; ++level) {
+      auto pred = [level](const IndexFooter &hdr) {
+        return hdr.level == level;
+      };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
-    auto in_one = (size_t)(float(page_list.size()) / pagesCount + 1);
-    auto it = page_list.begin();
-    while (it != page_list.end()) {
-      std::list<std::string> part;
-      for (size_t i = 0; i < in_one; ++i) {
-        part.push_back(*it);
-        ++it;
-        if (it == page_list.end()) {
+      auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+
+      while (page_list.size() > max_files_per_level) { // while level is filled
+        std::list<std::string> part;
+        for (size_t i = 0; i < max_files_per_level; ++i) {
+          if (page_list.empty()) {
+            break;
+          }
+          part.push_back(page_list.front());
+          page_list.pop_front();
+        }
+        if (part.size() < size_t(2)) {
           break;
         }
+        repack(level + 1, part);
       }
-      compact(part);
     }
   }
-  void compactbyTime(Time from, Time to) {
-    auto pred = [from, to](const IndexFooter &hdr) {
-      return utils::inInterval(from, to, hdr.stat.minTime) ||
-             utils::inInterval(from, to, hdr.stat.maxTime);
-    };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
-    if (page_list.size() <= 1) {
-      logger_info("engine: compactbyTime - pages count le 1.");
-      return;
-    }
-    compact(page_list);
-  }
-
-  void compact(std::list<std::string> part) {
+  void repack(uint16_t out_lvl, std::list<std::string> part) {
     Page_Ptr res = nullptr;
     std::string page_name = utils::fs::random_file_name(".page");
-    logger_info("engine: compacting to ", page_name);
+    logger_info("engine: repack to level", out_lvl, " page: ", page_name);
     for (auto &p : part) {
       logger_info("==> ", utils::fs::extract_filename(p));
     }
+    auto start_time = clock();
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res = Page::create(file_name, last_id, _settings->chunk_size.value(), part);
+    res = Page::repackTo(file_name, out_lvl, last_id,
+                         _settings->chunk_size.value(), part);
     _manifest->page_append(page_name);
     last_id = res->footer.max_chunk_id;
 
@@ -485,6 +483,9 @@ public:
     insert_pagedescr(
         page_name,
         Page::readIndexFooter(PageIndex::index_name_from_page_name(file_name)));
+    auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
+
+    logger("engine: repack end. elapsed ", elapsed, "s");
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
@@ -493,7 +494,7 @@ public:
     logger_info("engine: write chunks to ", page_name);
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res = Page::create(file_name, last_id, a, count);
+    res = Page::create(file_name, MIN_LEVEL, last_id, a, count);
     _manifest->page_append(page_name);
     last_id = res->footer.max_chunk_id;
 
@@ -597,13 +598,7 @@ void PageManager::erase_page(const std::string &fname) {
   impl->erase_page(fname);
 }
 
-void PageManager::compactTo(uint32_t pagesCount) {
-  impl->compactTo(pagesCount);
-}
-
-void PageManager::compactbyTime(dariadb::Time from, dariadb::Time to) {
-  impl->compactbyTime(from, to);
-}
+void PageManager::repack() { impl->repack(); }
 
 void PageManager::appendChunks(const std::vector<Chunk *> &a, size_t count) {
   impl->appendChunks(a, count);

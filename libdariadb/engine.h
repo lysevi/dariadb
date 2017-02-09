@@ -63,8 +63,7 @@ public:
 
   EXPORT void eraseOld(const Time &t);
 
-  EXPORT void compactTo(uint32_t pagesCount);
-  EXPORT void compactbyTime(Time from, Time to);
+  EXPORT void repack();
 
   EXPORT static uint16_t format();
   EXPORT static std::string version();

@@ -1,14 +1,16 @@
+#include <extern/json/src/json.hpp>
+#include <fstream>
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/strings.h>
-#include <extern/json/src/json.hpp>
-#include <fstream>
 #include <sstream>
 
 using namespace dariadb::storage;
+using namespace dariadb::utils;
+
 using json = nlohmann::json;
 
 const uint64_t WAL_CACHE_SIZE = 4096 / sizeof(dariadb::Meas) * 10;
@@ -23,39 +25,45 @@ const std::string c_strategy = "strategy";
 const std::string c_memory_limit = "memory_limit";
 const std::string c_percent_when_start_droping = "percent_when_start_droping";
 const std::string c_percent_to_drop = "percent_to_drop";
+const std::string c_max_pages_per_level = "max_pages_per_level";
 
 std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
 }
 
-template <class T> void Settings::ReadOnlyOption<T>::from_string(const std::string &s) {
+template <class T>
+void Settings::ReadOnlyOption<T>::from_string(const std::string &s) {
   std::istringstream iss(s);
   iss >> _value;
 }
 
-template <> std::string Settings::ReadOnlyOption<dariadb::STRATEGY>::value_str() const {
+template <>
+std::string Settings::ReadOnlyOption<dariadb::STRATEGY>::value_str() const {
   return dariadb::to_string(this->value());
 }
-template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
+template <>
+std::string Settings::ReadOnlyOption<std::string>::value_str() const {
   return this->value();
 }
 
 BaseOption::~BaseOption() {}
 
 Settings_ptr Settings::create(const std::string &storage_path) {
-	return Settings_ptr{ new Settings(storage_path) };
+  return Settings_ptr{new Settings(storage_path)};
 }
 
 Settings::Settings(const std::string &path_to_storage)
     : storage_path(nullptr, "storage path", path_to_storage),
-      raw_path(nullptr, "raw path", utils::fs::append_path(path_to_storage, "raw")),
+      raw_path(nullptr, "raw path", fs::append_path(path_to_storage, "raw")),
       wal_file_size(this, c_wal_file_size, WAL_FILE_SIZE),
       wal_cache_size(this, c_wal_cache_size, WAL_CACHE_SIZE),
       chunk_size(this, c_chunk_size, CHUNK_SIZE),
       strategy(this, c_strategy, STRATEGY::COMPRESSED),
       memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
-      percent_when_start_droping(this, c_percent_when_start_droping, float(0.75)),
-      percent_to_drop(this, c_percent_to_drop, float(0.1)) {
+      percent_when_start_droping(this, c_percent_when_start_droping,
+                                 float(0.75)),
+      percent_to_drop(this, c_percent_to_drop, float(0.1)),
+      max_pages_in_level(this, c_max_pages_per_level, uint16_t(2)) {
   auto f = settings_file_path(storage_path.value());
   if (utils::fs::path_exists(f)) {
     load(f);
@@ -80,7 +88,8 @@ void Settings::set_default() {
   percent_to_drop.setValue(float(0.15));
 }
 
-std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {
+std::vector<dariadb::utils::async::ThreadPool::Params>
+Settings::thread_pools_params() {
   using namespace dariadb::utils::async;
   std::vector<ThreadPool::Params> result{
       ThreadPool::Params{size_t(4), (ThreadKind)THREAD_KINDS::COMMON},
@@ -88,9 +97,7 @@ std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_pa
   return result;
 }
 
-void Settings::save() {
-  save(settings_file_path(this->storage_path.value()));
-}
+void Settings::save() { save(settings_file_path(this->storage_path.value())); }
 
 void Settings::save(const std::string &file) {
   logger("engine: Settings save to ", file);
@@ -121,7 +128,8 @@ void Settings::load(const std::string &file) {
 }
 
 std::string Settings::dump() {
-  auto content = dariadb::utils::fs::read_file(settings_file_path(storage_path.value()));
+  auto content =
+      dariadb::utils::fs::read_file(settings_file_path(storage_path.value()));
   json js = json::parse(content);
   std::stringstream ss;
   ss << js.dump(1) << std::endl;

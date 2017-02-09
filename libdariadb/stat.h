@@ -4,7 +4,7 @@
 #include <libdariadb/storage/bloom_filter.h>
 
 namespace dariadb {
-
+#pragma pack(push, 1)
 struct Statistic {
   Time minTime;
   Time maxTime;
@@ -59,4 +59,5 @@ struct Statistic {
     sum += st.sum;
   }
 };
+#pragma pack(pop)
 }
