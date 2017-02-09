@@ -86,7 +86,6 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
   ENSURE(phdr.max_chunk_id == chunk_id);
 
   IndexFooter ihdr;
-  //memset(&ihdr, 0, sizeof(IndexFooter));
 
   auto out_file = std::fopen(file_name.c_str(), "ab");
   if (out_file == nullptr) {
@@ -177,7 +176,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, out_file);
   std::fclose(out_file);
   ihdr.level = phdr.level;
-  //ihdr.stat=phdr.stat;
+  
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, out_index_file);
   std::fclose(out_index_file);
 
@@ -200,7 +199,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
   }
 
   IndexFooter ihdr;
-  //memset(&ihdr, 0, sizeof(IndexFooter));
+  
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -310,6 +309,8 @@ void Page::restoreIndexFile(const std::string &file_name) {
   res->update_index_recs(phdr);
   res->_index =
       PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+  
+  ENSURE(memcmp(&phdr.stat, &res->_index->iheader.stat, sizeof(Statistic)) == 0);
   delete res;
 }
 
@@ -369,7 +370,7 @@ void Page::update_index_recs(const PageFooter &phdr) {
   }
 
   IndexFooter ihdr;
-  memset(&ihdr, 0, sizeof(IndexFooter));
+  
 
   for (size_t i = 0; i < phdr.addeded_chunks; ++i) {
     ChunkHeader info;
@@ -383,6 +384,7 @@ void Page::update_index_recs(const PageFooter &phdr) {
 
     std::fseek(page_io, info.size, SEEK_CUR);
   }
+  ihdr.stat = phdr.stat;
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
   std::fclose(page_io);
