@@ -1,8 +1,8 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
 
-#include <boost/test/unit_test.hpp>
 #include <atomic>
+#include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -61,7 +61,8 @@ BOOST_AUTO_TEST_CASE(NetDataPack) {
   }
 
   size_t sz = 0;
-  dariadb::net::QueryAppend_header::make_query(hdr, ma.data(), ma.size(), 0, &sz);
+  dariadb::net::QueryAppend_header::make_query(hdr, ma.data(), ma.size(), 0,
+                                               &sz);
   size_t packe_count = hdr->count;
 
   auto readed_ma = hdr->read_measarray();
@@ -189,7 +190,8 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     auto res = server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("Connect3 test>> ", "3 count: ", res, " state: ", st);
-    if (res == size_t(1) && c.state() == dariadb::net::CLIENT_STATE::DISCONNECTED) {
+    if (res == size_t(1) && c.state() ==
+dariadb::net::CLIENT_STATE::DISCONNECTED) {
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -317,7 +319,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     size_t subscribe_calls = 0;
     dariadb::net::client::ReadResult::callback clbk =
         [&subscribe_calls](const dariadb::net::client::ReadResult *parent,
-                           const dariadb::Meas &m) { subscribe_calls++; };
+                           const dariadb::Meas &m, const dariadb::Statistic&st) { subscribe_calls++; };
 
     auto read_res = c1.subscribe({ma[0].id}, dariadb::Flag(0), clbk);
     read_res->wait();
@@ -326,7 +328,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     c1.append(ma);
 
     dariadb::QueryInterval qi{ids, 0, dariadb::Time(0),
-                                       dariadb::Time(MEASES_SIZE)};
+                              dariadb::Time(MEASES_SIZE)};
     auto result = c1.readInterval(qi);
     BOOST_CHECK_EQUAL(result.size(), ma.size());
 
@@ -339,6 +341,10 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
 
     BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
+
+    auto st =
+        c1.stat(dariadb::Id(0), dariadb::Time(0), dariadb::Time(MEASES_SIZE));
+    BOOST_CHECK_LT(st.count, uint32_t(0));
     c1.disconnect();
 
     while (true) {
@@ -424,7 +430,8 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
     c1.repack();
 
     while (1) {
-      auto pages = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
+      auto pages =
+          dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
       // dariadb::logger("RepackTest: pages count:",pages);
       if (pages == size_t(1)) {
         break;

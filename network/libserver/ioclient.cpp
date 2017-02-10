@@ -211,6 +211,19 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
                 " pings_missed: ", pings_missed.load());
     break;
   }
+  case DATA_KINDS::STAT: {
+	  auto st_hdr = reinterpret_cast<QueryStat_header *>(&d->data);
+	  auto result=this->env->storage->stat(st_hdr->id, st_hdr->from, st_hdr->to);
+	  auto nd = this->env->nd_pool->construct(DATA_KINDS::STAT);
+
+	  auto p_header = reinterpret_cast<QueryStatResult_header *>(nd->data);
+	  nd->size = sizeof(QueryStatResult_header);
+	  p_header->id = st_hdr->id;
+	  p_header->result = result;
+
+	  _async_connection->send(nd);
+	  break;
+  }
   case DATA_KINDS::DISCONNECT: {
     logger_info("server: #", this->_async_connection->id(),
                 " disconnection request.");

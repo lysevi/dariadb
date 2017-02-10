@@ -1,8 +1,9 @@
 #pragma once
 
-#include <libdariadb/meas.h>
-#include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>
+#include <libdariadb/meas.h>
+#include <libdariadb/stat.h>
+#include <libdariadb/utils/async/locker.h>
 #include <tuple>
 
 #include <boost/pool/object_pool.hpp>
@@ -15,7 +16,8 @@ namespace net {
 #pragma pack(push, 1)
 struct NetData {
   typedef uint16_t MessageSize;
-  static const size_t MAX_MESSAGE_SIZE = std::numeric_limits<MessageSize>::max();
+  static const size_t MAX_MESSAGE_SIZE =
+      std::numeric_limits<MessageSize>::max();
   MessageSize size;
   uint8_t data[MAX_MESSAGE_SIZE];
 
@@ -59,8 +61,9 @@ struct QueryAppend_header {
   space_left - space left in buffer after processing
   return - count processed meases;
   */
-  CM_EXPORT static uint32_t make_query(QueryAppend_header *hdr, const Meas *m_array,
-                                       size_t size, size_t pos, size_t *space_left);
+  CM_EXPORT static uint32_t make_query(QueryAppend_header *hdr,
+                                       const Meas *m_array, size_t size,
+                                       size_t pos, size_t *space_left);
   CM_EXPORT MeasArray read_measarray() const;
 };
 
@@ -98,6 +101,20 @@ struct QuerSubscribe_header {
 struct QuerRepack_header {
   uint8_t kind;
   QueryNumber id;
+};
+
+struct QueryStat_header {
+  uint8_t kind;
+  QueryNumber id;
+  Id meas_id;
+  Time from;
+  Time to;
+};
+
+struct QueryStatResult_header {
+	uint8_t kind;
+	QueryNumber id;
+	Statistic result;
 };
 #pragma pack(pop)
 

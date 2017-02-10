@@ -4,6 +4,7 @@
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/utils.h>
 
 #include <boost/asio.hpp>
 #include <functional>
@@ -173,18 +174,31 @@ public:
       logger_info("client: #", _async_connection->id(), " recv ", qw->count,
                   " values to query #", qw->id);
       auto subres = this->_query_results[qw->id];
-      assert(subres->is_ok);
+      ENSURE(subres->is_ok);
       if (qw->count == 0) {
         subres->is_closed = true;
-        subres->clbk(subres.get(), Meas());
+        subres->clbk(subres.get(), Meas(), Statistic());
         subres->locker.unlock();
         _query_results.erase(qw->id);
       } else {
         MeasArray ma = qw->read_measarray();
         for (auto &v : ma) {
-          subres->clbk(subres.get(), v);
+          subres->clbk(subres.get(), v, Statistic());
         }
       }
+      break;
+    }
+    case DATA_KINDS::STAT: {
+      auto qw = reinterpret_cast<QueryStatResult_header *>(d->data);
+      logger_info("state: #", qw->id);
+      auto subres = this->_query_results[qw->id];
+      ENSURE(subres != nullptr);
+
+      subres->is_closed = true;
+      subres->clbk(subres.get(), Meas(), qw->result);
+      subres->locker.unlock();
+      _query_results.erase(qw->id);
+
       break;
     }
     case DATA_KINDS::PING: {
@@ -310,7 +324,8 @@ public:
 
   MeasList readInterval(const QueryInterval &qi) {
     MeasList result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) {
       if (!parent->is_closed) {
         result.push_back(m);
       }
@@ -362,7 +377,8 @@ public:
 
   Id2Meas readTimePoint(const QueryTimePoint &qi) {
     Id2Meas result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -413,7 +429,8 @@ public:
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     Id2Meas result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -473,6 +490,47 @@ public:
     nd->size = sizeof(QuerRepack_header);
     p_header->id = cur_id;
     _async_connection->send(nd);
+  }
+
+  ReadResult_ptr stat(const Id id, const Time from, const Time to,
+                      ReadResult::callback &clbk) {
+    _locker.lock();
+    auto cur_id = _query_num;
+    _query_num += 1;
+    _locker.unlock();
+
+    auto qres = std::make_shared<ReadResult>();
+    qres->locker.lock();
+    qres->id = cur_id;
+    qres->kind = DATA_KINDS::STAT;
+
+    auto nd = this->_pool.construct(DATA_KINDS::STAT);
+
+    auto p_header = reinterpret_cast<QueryStat_header *>(nd->data);
+    nd->size = sizeof(QueryStat_header);
+    p_header->id = cur_id;
+    p_header->from = from;
+    p_header->to = to;
+    p_header->meas_id = id;
+
+    qres->is_closed = false;
+    qres->clbk = clbk;
+    this->_query_results[qres->id] = qres;
+
+    _async_connection->send(nd);
+    return qres;
+  }
+
+  Statistic stat(const Id id, Time from, Time to) {
+    Statistic result{};
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) {
+      result = st;
+    };
+    ReadResult::callback clbk = clbk_lambda;
+    auto qres = stat(id, from, to, clbk);
+    qres->wait();
+    return result;
   }
 
   io_service _service;
@@ -541,3 +599,7 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
 }
 
 void Client::repack() { _Impl->repack(); }
+
+Statistic Client::stat(const Id id, Time from, Time to) {
+  return _Impl->stat(id, from, to);
+}

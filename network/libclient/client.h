@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libclient/net_cl_exports.h>
+#include <libdariadb/stat.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/query_param.h>
 #include <libdariadb/timeutil.h>
@@ -15,7 +16,7 @@ namespace net {
 namespace client {
 
 struct ReadResult {
-  using callback = std::function<void(const ReadResult *parent, const Meas &m)>;
+  using callback = std::function<void(const ReadResult *parent, const Meas &m, const Statistic&st)>;
   QueryNumber id;
   DATA_KINDS kind;
   utils::async::Locker locker;
@@ -73,6 +74,8 @@ public:
                                      ReadResult::callback &clbk);
 
   CL_EXPORT void repack();
+
+  CL_EXPORT Statistic stat(const Id id, Time from, Time to);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
