@@ -344,7 +344,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
     auto st =
         c1.stat(dariadb::Id(0), dariadb::Time(0), dariadb::Time(MEASES_SIZE));
-    BOOST_CHECK_LT(st.count, uint32_t(0));
+    BOOST_CHECK_GT(st.count, uint32_t(0));
     c1.disconnect();
 
     while (true) {
