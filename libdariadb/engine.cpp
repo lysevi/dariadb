@@ -143,7 +143,6 @@ public:
         lockfile_unlock();
       }
     }
-    // TODO use lockfile from Boost.
     std::ofstream ofs;
     ofs.open(lfile, std::ios_base::out | std::ios_base::binary);
     if (!ofs.is_open()) {
