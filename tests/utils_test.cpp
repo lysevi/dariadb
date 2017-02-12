@@ -8,6 +8,7 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/strings.h>
+#include <libdariadb/utils/bitoperations.h>
 #include <libdariadb/utils/utils.h>
 #include <boost/test/unit_test.hpp>
 #include <chrono>

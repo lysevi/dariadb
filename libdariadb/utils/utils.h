@@ -1,11 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <iterator>
 #include <libdariadb/utils/exception.h>
-#include <list>
-#include <string>
-#include <vector>
+
 
 #define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
 
@@ -25,25 +21,6 @@
 namespace dariadb {
 namespace utils {
 
-// TODO move to file.
-struct BitOperations {
-  template <class T> static inline uint8_t get(T v, uint8_t num) {
-    return (v >> num) & 1;
-  }
-
-  template <class T> static inline bool check(T v, uint8_t num) {
-    return get(v, num) == 1;
-  }
-
-  template <class T> static inline T set(T v, uint8_t num) {
-    return v | (static_cast<T>(T(1) << num));
-  }
-
-  template <class T> static inline T clr(T v, uint8_t num) {
-    return v & ~(T(1) << num);
-  }
-};
-
 class NonCopy {
 private:
   NonCopy(const NonCopy &) = delete;
@@ -51,18 +28,6 @@ private:
 
 protected:
   NonCopy() = default;
-};
-
-///TODO move to bytebuffer.h file
-struct Range {
-  uint8_t *begin;
-  uint8_t *end;
-  Range() { begin = end = nullptr; }
-
-  Range(uint8_t *_begin, uint8_t *_end) {
-    begin = _begin;
-    end = _end;
-  }
 };
 }
 }

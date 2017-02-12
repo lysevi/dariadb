@@ -1,5 +1,6 @@
 #include <libdariadb/compression/delta.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/utils/bitoperations.h>
 #include <limits>
 
 using namespace dariadb::compression;

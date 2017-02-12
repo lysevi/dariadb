@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
 
   auto test_buffer_size = 1024 * 1024 * 100;
   uint8_t *buffer = new uint8_t[test_buffer_size];
-  dariadb::utils::Range rng{buffer, buffer + test_buffer_size};
+  dariadb::compression::Range rng{buffer, buffer + test_buffer_size};
   std::fill(buffer, buffer + test_buffer_size, 0);
 
   {
