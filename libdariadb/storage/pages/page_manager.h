@@ -32,8 +32,7 @@ public:
   EXPORT void append(const std::string &file_prefix, const dariadb::MeasArray &ma);
   EXPORT void appendChunks(const std::vector<Chunk *> &a, size_t count) override;
 
-  EXPORT void
-  fsck(bool force_check = true); // if false - check files openned for write-only
+  EXPORT void fsck();
 
   EXPORT void eraseOld(const Time t);
   EXPORT void erase_page(const std::string &fname);

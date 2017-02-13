@@ -75,11 +75,7 @@ public:
     }
   }
 
-  // TODO rm force_check flag.
-  void fsck(bool force_check) {
-    if (force_check) {
-      logger_info("engine: PageManager fsck force.");
-    }
+  void fsck() {
     if (!utils::fs::path_exists(_settings->raw_path.value())) {
       return;
     }
@@ -585,7 +581,7 @@ void PageManager::append(const std::string &file_prefix,
                          const dariadb::MeasArray &ma) {
   return impl->append(file_prefix, ma);
 }
-void PageManager::fsck(bool force_check) { return impl->fsck(force_check); }
+void PageManager::fsck() { return impl->fsck(); }
 
 void PageManager::eraseOld(const dariadb::Time t) { impl->eraseOld(t); }
 
