@@ -1,4 +1,5 @@
 #include <libdariadb/scheme/scheme.h>
+#include <libdariadb/scheme/helpers.h>
 
 using namespace dariadb;
 using namespace dariadb::scheme;

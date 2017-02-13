@@ -4,6 +4,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <libdariadb/scheme/scheme.h>
+#include <libdariadb/scheme/helpers.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/utils/fs.h>
 
