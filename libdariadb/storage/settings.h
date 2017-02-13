@@ -30,7 +30,7 @@ settings - is a dictionary on disk.
 */
 class Settings {
   std::unordered_map<std::string, BaseOption *> _all_options;
-  // TODO make non template class hierarchy.
+  
   template <typename T> class ReadOnlyOption : public BaseOption {
   public:
     ReadOnlyOption() = delete;
@@ -99,8 +99,9 @@ public:
   Option<uint32_t> memory_limit;            // in bytes;
   Option<float> percent_when_start_droping; // fill percent, when start dropping.
   Option<float> percent_to_drop;            // how many chunk drop.
-
+  //pages per level.
   Option<uint16_t> max_pages_in_level;
+
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
 protected:
   EXPORT Settings(const std::string &storage_path);
