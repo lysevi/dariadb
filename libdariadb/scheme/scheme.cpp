@@ -1,10 +1,10 @@
 #include <fstream>
-#include <iostream>
 #include <libdariadb/scheme/helpers.h>
 #include <libdariadb/scheme/scheme.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
+#include <unordered_map>
 
 #include <extern/json/src/json.hpp>
 
@@ -21,8 +21,8 @@ using json = nlohmann::json;
 
 struct Scheme::Private : public IScheme {
   Private(const storage::Settings_ptr s) : _settings(s) {
-    load();
     _next_id = 0;
+    load();
   }
 
   std::string schemeFile() const {
@@ -30,17 +30,23 @@ struct Scheme::Private : public IScheme {
                                   SCHEME_FILE_NAME);
   }
 
-  void addParam(const std::string &param) override {
+  Id addParam(const std::string &param) override {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    MeasurementDescription md;
-    md.name = param;
-    md.id = _next_id++;
-    this->_params.push_back(md);
+    auto fres = _params.find(param);
+    if (fres != _params.end()) {
+      return fres->second;
+    }
+    auto id = _next_id++;
+    this->_params[param] = id;
+    return id;
   }
 
   std::list<MeasurementDescription> ls() override {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    std::list<MeasurementDescription> result(_params.begin(), _params.end());
+    std::list<MeasurementDescription> result;
+    for (auto kv : _params) {
+      result.push_back({kv.first, kv.second});
+    }
     return result;
   }
 
@@ -56,7 +62,7 @@ struct Scheme::Private : public IScheme {
     json js;
 
     for (auto &o : _params) {
-      json reccord = {{key_name, o.name}, {key_id, o.id}};
+      json reccord = {{key_name, o.first}, {key_id, o.second}};
       js[key_params].push_back(reccord);
     }
 
@@ -81,21 +87,21 @@ struct Scheme::Private : public IScheme {
     std::string content = dariadb::utils::fs::read_file(file);
     json js = json::parse(content);
     auto params_array = js[key_params];
+    Id max_id = 0;
     for (auto kv : params_array) {
       auto param_name = kv[key_name].get<std::string>();
       auto param_id = kv[key_id].get<Id>();
-	  MeasurementDescription md;
-	  md.name = param_name;
-	  md.id = param_id;
-	  _params.push_back(md);
-    }
 
-	logger("scheme: ", _params.size(), " params loaded.");
+      _params[param_name] = param_id;
+      max_id = std::max(max_id, param_id);
+    }
+    _next_id = max_id + 1;
+    logger("scheme: ", _params.size(), " params loaded.");
   }
   storage::Settings_ptr _settings;
 
   dariadb::utils::async::Locker _locker;
-  std::list<MeasurementDescription> _params;
+  std::unordered_map<std::string, Id> _params;
   Id _next_id;
 };
 
@@ -105,7 +111,7 @@ Scheme_Ptr Scheme::create(const storage::Settings_ptr s) {
 
 Scheme::Scheme(const storage::Settings_ptr s) : _impl(new Scheme::Private(s)) {}
 
-void Scheme::addParam(const std::string &param) { _impl->addParam(param); }
+Id Scheme::addParam(const std::string &param) { return _impl->addParam(param); }
 
 std::list<MeasurementDescription> Scheme::ls() { return _impl->ls(); }
 

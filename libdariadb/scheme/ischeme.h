@@ -12,7 +12,7 @@ struct MeasurementDescription {
 };
 class IScheme {
 public:
-  virtual void addParam(const std::string &param) = 0;
+  virtual Id addParam(const std::string &param) = 0;
   virtual std::list<MeasurementDescription> ls() = 0;
   virtual std::list<MeasurementDescription> ls(const std::string &pattern) = 0;
 };

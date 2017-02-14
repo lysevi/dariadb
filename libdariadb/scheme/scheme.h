@@ -23,7 +23,7 @@ class Scheme : public IScheme {
 public:
   EXPORT static Scheme_Ptr create(const storage::Settings_ptr s);
 
-  EXPORT void addParam(const std::string &param) override;
+  EXPORT Id addParam(const std::string &param) override;
   EXPORT std::list<MeasurementDescription> ls() override;
   EXPORT std::list<MeasurementDescription> ls(const std::string &pattern) override;
   EXPORT void save();

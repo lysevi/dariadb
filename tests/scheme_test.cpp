@@ -14,17 +14,23 @@ BOOST_AUTO_TEST_CASE(SchemeFileTest) {
     dariadb::utils::fs::rm(storage_path);
   }
 
+  dariadb::Id i1, i2, i3, i4, i5, i6;
+
   {
     auto settings = dariadb::storage::Settings::create(storage_path);
     auto data_scheme = dariadb::scheme::Scheme::create(settings);
 
-    data_scheme->addParam("lvl1.lvl2.lvl3_1.param1");
-    data_scheme->addParam("lvl1.lvl2.lvl3_1.param2");
-    data_scheme->addParam("lvl1.lvl2.lvl3_1.param3");
+    i1 = data_scheme->addParam("lvl1.lvl2.lvl3_1.param1");
+    auto i1_2 = data_scheme->addParam("lvl1.lvl2.lvl3_1.param1");
+    BOOST_CHECK_EQUAL(i1, i1_2);
+    i2 = data_scheme->addParam("lvl1.lvl2.lvl3_1.param2");
+    i3 = data_scheme->addParam("lvl1.lvl2.lvl3_1.param3");
 
-    data_scheme->addParam("lvl1.lvl2.lvl3_2.param1");
-    data_scheme->addParam("lvl1.lvl2.param1");
-    data_scheme->addParam("lvl1.lvl2.lvl3.lvl4.param1");
+    i4 = data_scheme->addParam("lvl1.lvl2.lvl3_2.param1");
+    i5 = data_scheme->addParam("lvl1.lvl2.param1");
+    i6 = data_scheme->addParam("lvl1.lvl2.lvl3.lvl4.param1");
+
+    BOOST_CHECK(i1 != i2 && i2 != i3 && i3 != i4 && i4 != i5 && i5 != i6);
 
     data_scheme->save();
     auto scheme_files = dariadb::utils::fs::ls(storage_path, ".js");
@@ -35,6 +41,31 @@ BOOST_AUTO_TEST_CASE(SchemeFileTest) {
     auto data_scheme = dariadb::scheme::Scheme::create(settings);
     auto all_values = data_scheme->ls();
     BOOST_CHECK_EQUAL(all_values.size(), size_t(6));
+
+    for (auto md : all_values) {
+      if (md.name == "lvl1.lvl2.lvl3_1.param1") {
+        BOOST_CHECK_EQUAL(md.id, i1);
+      }
+      if (md.name == "lvl1.lvl2.lvl3_1.param2") {
+        BOOST_CHECK_EQUAL(md.id, i2);
+      }
+      if (md.name == "lvl1.lvl2.lvl3_1.param3") {
+        BOOST_CHECK_EQUAL(md.id, i3);
+      }
+      if (md.name == "lvl1.lvl2.lvl3_2.param1") {
+        BOOST_CHECK_EQUAL(md.id, i4);
+      }
+      if (md.name == "lvl1.lvl2.param1") {
+        BOOST_CHECK_EQUAL(md.id, i5);
+      }
+      if (md.name == "lvl1.lvl2.lvl3.lvl4.param1") {
+        BOOST_CHECK_EQUAL(md.id, i6);
+      }
+    }
+
+    auto i7 = data_scheme->addParam("lvl1.lvl2.lvl3.lvl4.param77");
+    BOOST_CHECK(i6 < i7);
+    BOOST_CHECK(i7 != dariadb::Id(0));
   }
 
   /* if (dariadb::utils::fs::path_exists(storage_path)) {
