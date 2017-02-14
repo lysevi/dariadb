@@ -1,7 +1,8 @@
 #pragma once
 
+#include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/settings.h>
 #include <memory>
 
 namespace dariadb {
@@ -15,12 +16,20 @@ example:
 -   query 'host1.system.*',
 return [host1.system.memory, host1.system.cpu.bySec, host1.system.cpu.byHour]
 */
-class Scheme {
-public:
-  EXPORT Scheme(const storage::Manifest_ptr m);
+class Scheme;
+using Scheme_Ptr = std::shared_ptr<Scheme>;
 
+class Scheme : public IScheme {
+public:
+  EXPORT static Scheme_Ptr create(const storage::Settings_ptr s);
+
+  EXPORT void addParam(const std::string &param) override;
+  EXPORT std::list<MeasurementDescription> ls() override;
+  EXPORT std::list<MeasurementDescription> ls(const std::string &pattern) override;
+  EXPORT void save();
 protected:
-  class Private;
+  EXPORT Scheme(const storage::Settings_ptr s);
+  struct Private;
   std::unique_ptr<Private> _impl;
 };
 }
