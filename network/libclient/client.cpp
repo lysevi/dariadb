@@ -79,9 +79,14 @@ public:
   void client_thread() {
     ip::tcp::resolver resolver(_service);
 
-    ip::tcp::resolver::query query(_params.host, std::to_string(_params.port));
+    ip::tcp::resolver::query query(_params.host, std::to_string(_params.port), ip::tcp::resolver::query::canonical_name);
     ip::tcp::resolver::iterator iter = resolver.resolve(query);
+    if(iter == ip::tcp::resolver::iterator()){
+        THROW_EXCEPTION("hostname not found.");
+    }
     ip::tcp::endpoint ep = *iter;
+    logger_info("client: ", _params.host,":",_params.port," - ", ep.address().to_string());
+
 
     auto raw_sock_ptr = new ip::tcp::socket(_service);
     _socket = socket_ptr{raw_sock_ptr};

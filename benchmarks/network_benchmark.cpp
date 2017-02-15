@@ -23,7 +23,7 @@ namespace po = boost::program_options;
 std::string storage_path = "dariadb_storage";
 
 unsigned short server_port = 2001;
-std::string server_host = "127.0.0.1";
+std::string server_host = "localhost";
 bool run_server_flag = true;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::WAL;
