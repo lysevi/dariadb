@@ -23,10 +23,10 @@ if(ENABLE_SERVER)
 endif()
 
 TEST_CASE(storage_common_test storage_common_test.cpp)
+TEST_CASE(scheme_test scheme_test.cpp)
 TEST_CASE(engine_test engine_test.cpp)
 TEST_CASE(wal_test wal_test.cpp)
 TEST_CASE(pages_test pages_test.cpp)
 TEST_CASE(compression_test compression_test.cpp)
 TEST_CASE(utils_test utils_test.cpp)
 TEST_CASE(memstorage_test memstorage_test.cpp)
-

@@ -46,7 +46,7 @@
   - values sum
 
 # Dependencies
-* Boost 1.54.0 or higher: system, filesystem, date_time, unit_test_framework(to build tests), program_options, asio and regex(for server only)
+* Boost 1.54.0 or higher: system, filesystem, date_time,regex, unit_test_framework(to build tests), program_options, asio.
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
