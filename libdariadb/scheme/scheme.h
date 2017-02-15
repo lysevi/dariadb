@@ -26,7 +26,6 @@ public:
 
   EXPORT Id addParam(const std::string &param) override;
   EXPORT DescriptionMap ls() override;
-  EXPORT DescriptionMap ls(const std::string &pattern) override;
   EXPORT void save();
 protected:
   EXPORT Scheme(const storage::Settings_ptr s);
