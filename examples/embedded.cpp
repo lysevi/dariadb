@@ -77,9 +77,8 @@ int main(int argc, char **argv) {
   auto all_params = scheme->ls();
   dariadb::IdArray all_id;
   all_id.reserve(all_params.size());
-  for (auto kv : all_params) {
-    all_id.push_back(kv.first);
-  }
+  all_id.push_back(all_params.idByParam("group.param1"));
+  all_id.push_back(all_params.idByParam("group.subgroup.param2"));
 
   // query writed interval;
   dariadb::QueryInterval qi(all_id, dariadb::Flag(), start_time, m.time);

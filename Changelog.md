@@ -9,6 +9,7 @@ v0.3.0
  - measurement count
  - values sum
 - Page can be repacked.
+- Scheme API.
 
 v0.2.0
 =====

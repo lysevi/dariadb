@@ -41,6 +41,8 @@ BOOST_AUTO_TEST_CASE(SchemeFileTest) {
     auto data_scheme = dariadb::scheme::Scheme::create(settings);
     auto all_values = data_scheme->ls();
     BOOST_CHECK_EQUAL(all_values.size(), size_t(6));
+    
+	BOOST_CHECK(all_values.idByParam("lvl1.lvl2.lvl3_1.param1") == i1);
 
     for (auto kv : all_values) {
       auto md = kv.second;
