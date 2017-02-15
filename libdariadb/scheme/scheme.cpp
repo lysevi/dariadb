@@ -8,6 +8,8 @@
 
 #include <extern/json/src/json.hpp>
 
+#include <boost/regex.hpp>
+
 const std::string SCHEME_FILE_NAME = "scheme.js";
 
 const std::string key_params = "params";
@@ -32,27 +34,34 @@ struct Scheme::Private : public IScheme {
 
   Id addParam(const std::string &param) override {
     std::lock_guard<utils::async::Locker> lg(_locker);
+
     auto fres = _params.find(param);
     if (fres != _params.end()) {
-      return fres->second;
+      return fres->second.id;
     }
     auto id = _next_id++;
-    this->_params[param] = id;
+    this->_params[param] = MeasurementDescription{param, id};
     return id;
   }
 
-  std::list<MeasurementDescription> ls() override {
+  DescriptionMap ls() override {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    std::list<MeasurementDescription> result;
+    DescriptionMap result;
     for (auto kv : _params) {
-      result.push_back({kv.first, kv.second});
+      result[kv.second.id] = kv.second;
     }
     return result;
   }
 
-  std::list<MeasurementDescription> ls(const std::string &pattern) override {
+  DescriptionMap ls(const std::string &pattern) override {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    std::list<MeasurementDescription> result;
+    DescriptionMap result;
+    boost::regex e(pattern, boost::regex::extended | boost::regex::icase);
+    for (auto kv : _params) {
+      if (boost::regex_match(kv.second.name, e)) {
+        result[kv.second.id] = kv.second;
+      }
+    }
     return result;
   }
 
@@ -62,7 +71,7 @@ struct Scheme::Private : public IScheme {
     json js;
 
     for (auto &o : _params) {
-      json reccord = {{key_name, o.first}, {key_id, o.second}};
+      json reccord = {{key_name, o.first}, {key_id, o.second.id}};
       js[key_params].push_back(reccord);
     }
 
@@ -92,16 +101,17 @@ struct Scheme::Private : public IScheme {
       auto param_name = kv[key_name].get<std::string>();
       auto param_id = kv[key_id].get<Id>();
 
-      _params[param_name] = param_id;
+      _params[param_name] = MeasurementDescription{param_name, param_id};
       max_id = std::max(max_id, param_id);
     }
     _next_id = max_id + 1;
     logger("scheme: ", _params.size(), " params loaded.");
   }
+
   storage::Settings_ptr _settings;
 
   dariadb::utils::async::Locker _locker;
-  std::unordered_map<std::string, Id> _params;
+  std::unordered_map<std::string, MeasurementDescription> _params;
   Id _next_id;
 };
 
@@ -113,9 +123,9 @@ Scheme::Scheme(const storage::Settings_ptr s) : _impl(new Scheme::Private(s)) {}
 
 Id Scheme::addParam(const std::string &param) { return _impl->addParam(param); }
 
-std::list<MeasurementDescription> Scheme::ls() { return _impl->ls(); }
+DescriptionMap Scheme::ls() { return _impl->ls(); }
 
-std::list<MeasurementDescription> Scheme::ls(const std::string &pattern) {
+DescriptionMap Scheme::ls(const std::string &pattern) {
   return _impl->ls(pattern);
 }
 

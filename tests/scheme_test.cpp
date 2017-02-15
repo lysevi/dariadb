@@ -42,7 +42,8 @@ BOOST_AUTO_TEST_CASE(SchemeFileTest) {
     auto all_values = data_scheme->ls();
     BOOST_CHECK_EQUAL(all_values.size(), size_t(6));
 
-    for (auto md : all_values) {
+    for (auto kv : all_values) {
+      auto md = kv.second;
       if (md.name == "lvl1.lvl2.lvl3_1.param1") {
         BOOST_CHECK_EQUAL(md.id, i1);
       }
@@ -66,6 +67,12 @@ BOOST_AUTO_TEST_CASE(SchemeFileTest) {
     auto i7 = data_scheme->addParam("lvl1.lvl2.lvl3.lvl4.param77");
     BOOST_CHECK(i6 < i7);
     BOOST_CHECK(i7 != dariadb::Id(0));
+  }
+  { // pattern
+    auto settings = dariadb::storage::Settings::create(storage_path);
+    auto data_scheme = dariadb::scheme::Scheme::create(settings);
+    auto lvl3_1_values = data_scheme->ls("lvl1\\.lvl2\\.lvl3_1.*");
+    BOOST_CHECK_EQUAL(lvl3_1_values.size(), size_t(3));
   }
 
   /* if (dariadb::utils::fs::path_exists(storage_path)) {

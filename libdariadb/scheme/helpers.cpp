@@ -2,11 +2,11 @@
 
 namespace dariadb {
 namespace scheme {
-namespace helpers {
-EXPORT bool isParamInPatter(const std::string &param,
-                            const std::string &patter) {
-  return false;
-}
+
+std::ostream &operator<<(std::ostream &stream,
+                         const MeasurementDescription &d) {
+  stream << "{ name:" << d.name << ", id:" << d.id << "}";
+  return stream;
 }
 }
 }

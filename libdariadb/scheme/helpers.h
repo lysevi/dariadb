@@ -1,12 +1,13 @@
 #pragma once
 
+#include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/st_exports.h>
 #include <string>
 
-namespace dariadb{
-namespace scheme{
-namespace helpers{
-	EXPORT bool isParamInPatter(const std::string&param, const std::string&patter);
-}
+namespace dariadb {
+namespace scheme {
+
+EXPORT std::ostream &operator<<(std::ostream &stream,
+                                const MeasurementDescription &d);
 }
 }
