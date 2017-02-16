@@ -4,9 +4,9 @@ using namespace dariadb;
 
 class ShardEngine::Private : IMeasStorage, IEngine {
 public:
-  Private(const ShardEngine::Description &description)
-      : _description(description) {}
-  ShardEngine::Description _description;
+  Private(const std::string &path) {}
+
+  void addShard(const ShardEngine::Description &d) {}
 
   // Inherited via IMeasStorage
   Time minTime() override { return Time(); }
@@ -33,15 +33,14 @@ public:
   void repack() override {}
 };
 
-ShardEngine_Ptr
-ShardEngine::create(const ShardEngine::Description &description) {
-  return nullptr;
+ShardEngine_Ptr ShardEngine::create(const const std::string &path) {
+  return ShardEngine_Ptr{new ShardEngine(path)};
 }
 
-ShardEngine_Ptr ShardEngine::open(const std::string &path) { return nullptr; }
+ShardEngine::ShardEngine(const std::string &path)
+    : _impl(new ShardEngine::Private(path)) {}
 
-ShardEngine::ShardEngine(const Description &description)
-    : _impl(new ShardEngine::Private(description)) {}
+void ShardEngine::addShard(const Description &d) { _impl->addShard(d); }
 
 Time ShardEngine::minTime() { return _impl->minTime(); }
 
