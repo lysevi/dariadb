@@ -33,7 +33,7 @@ public:
   void repack() override {}
 };
 
-ShardEngine_Ptr ShardEngine::create(const const std::string &path) {
+ShardEngine_Ptr ShardEngine::create(const std::string &path) {
   return ShardEngine_Ptr{new ShardEngine(path)};
 }
 
