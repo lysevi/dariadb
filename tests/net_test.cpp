@@ -16,7 +16,7 @@
 #include <libserver/server.h>
 
 const dariadb::net::Server::Param server_param(2001);
-const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
+const dariadb::net::client::Client::Param client_param("localhost", 2001);
 
 std::atomic_bool server_runned;
 std::atomic_bool server_stop_flag;

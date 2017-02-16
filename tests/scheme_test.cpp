@@ -70,14 +70,9 @@ BOOST_AUTO_TEST_CASE(SchemeFileTest) {
     BOOST_CHECK(i6 < i7);
     BOOST_CHECK(i7 != dariadb::Id(0));
   }
-  { // pattern
-    auto settings = dariadb::storage::Settings::create(storage_path);
-    auto data_scheme = dariadb::scheme::Scheme::create(settings);
-    auto lvl3_1_values = data_scheme->ls("lvl1\\.lvl2\\.lvl3_1.*");
-    BOOST_CHECK_EQUAL(lvl3_1_values.size(), size_t(3));
-  }
 
-  /* if (dariadb::utils::fs::path_exists(storage_path)) {
-     dariadb::utils::fs::rm(storage_path);
-   }*/
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
 }

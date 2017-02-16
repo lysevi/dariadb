@@ -51,7 +51,7 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
 
-set(BOOST_DEP system filesystem date_time regex)
+set(BOOST_DEP system filesystem date_time)
 
 if(ENABLE_TESTS)
   set(BOOST_DEP ${BOOST_DEP} unit_test_framework)

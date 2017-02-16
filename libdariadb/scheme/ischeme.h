@@ -31,7 +31,6 @@ class IScheme {
 public:
   virtual Id addParam(const std::string &param) = 0;
   virtual DescriptionMap ls() = 0;
-  virtual DescriptionMap ls(const std::string &pattern) = 0;
 };
 }
 }

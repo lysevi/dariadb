@@ -53,18 +53,6 @@ struct Scheme::Private : public IScheme {
     return result;
   }
 
-  DescriptionMap ls(const std::string &pattern) override {
-    std::lock_guard<utils::async::Locker> lg(_locker);
-    DescriptionMap result;
-    boost::regex e(pattern, boost::regex::extended | boost::regex::icase);
-    for (auto kv : _params) {
-      if (boost::regex_match(kv.second.name, e)) {
-        result[kv.second.id] = kv.second;
-      }
-    }
-    return result;
-  }
-
   void save() {
     auto file = schemeFile();
     logger("scheme: save to ", file);
@@ -124,9 +112,5 @@ Scheme::Scheme(const storage::Settings_ptr s) : _impl(new Scheme::Private(s)) {}
 Id Scheme::addParam(const std::string &param) { return _impl->addParam(param); }
 
 DescriptionMap Scheme::ls() { return _impl->ls(); }
-
-DescriptionMap Scheme::ls(const std::string &pattern) {
-  return _impl->ls(pattern);
-}
 
 void Scheme::save() { _impl->save(); }
