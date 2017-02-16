@@ -30,7 +30,8 @@ using namespace dariadb::utils::async;
 
 class Engine::Private {
 public:
-  Private(Settings_ptr settings, bool ignore_lock_file) {
+  Private(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file) {
+    _thread_pool_owner = init_threadpool;
     _settings = settings;
     _strategy = _settings->strategy.value();
 
@@ -58,20 +59,35 @@ public:
       logger_info("engine: init new storage.");
     }
     _subscribe_notify.start();
-    ThreadManager::Params tpm_params(_settings->thread_pools_params());
-    ThreadManager::start(tpm_params);
+    if (init_threadpool) {
+      ThreadManager::Params tpm_params(_settings->thread_pools_params());
+      ThreadManager::start(tpm_params);
+    }
 
     _manifest = Manifest::create(_settings);
     _engine_env->addResource(EngineEnvironment::Resource::MANIFEST,
                              _manifest.get());
 
-    if (is_new_storage) {
+    if (is_new_storage) {//init new;
       _manifest->set_format(std::to_string(format()));
-    } else {
+    } else {//open exists
       check_storage_version();
       Dropper::cleanStorage(_settings->raw_path.value());
     }
 
+    init_managers();
+
+    if (_strategy == STRATEGY::WAL) {
+      if (_settings->load_min_max) {
+        auto amm = _top_level_storage->loadMinMax();
+        minmax_append(_min_max_map, amm);
+      }
+    }
+
+    logger_info("engine: start - OK ");
+  }
+
+  void init_managers() {
     _page_manager = PageManager::create(_engine_env);
 
     if (_settings->load_min_max) {
@@ -97,16 +113,8 @@ public:
         _memstorage->setDiskStorage(_wal_manager.get());
       }
     }
-
-    if (_strategy == STRATEGY::WAL) {
-      if (_settings->load_min_max) {
-        auto amm = _top_level_storage->loadMinMax();
-        minmax_append(_min_max_map, amm);
-      }
-    }
-
-    logger_info("engine: start - OK ");
   }
+
   ~Private() { this->stop(); }
 
   void init_storages() {}
@@ -125,7 +133,9 @@ public:
       _dropper = nullptr;
       _stoped = true;
 
-      ThreadManager::stop();
+      if (_thread_pool_owner) {
+        ThreadManager::stop();
+      }
       lockfile_unlock();
     }
   }
@@ -769,10 +779,12 @@ protected:
 
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
+  bool _thread_pool_owner;
 };
 
-Engine::Engine(Settings_ptr settings, bool ignore_lock_file)
-    : _impl{new Engine::Private(settings, ignore_lock_file)} {}
+Engine::Engine(Settings_ptr settings, bool init_threadpool,
+               bool ignore_lock_file)
+    : _impl{new Engine::Private(settings, init_threadpool, ignore_lock_file)} {}
 
 Engine::~Engine() { _impl = nullptr; }
 
