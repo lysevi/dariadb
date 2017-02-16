@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <iostream>
 #include <libdariadb/engine.h>
-#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>

@@ -16,7 +16,14 @@
 namespace dariadb {
 
 const uint16_t STORAGE_FORMAT = 1;
-class Engine : public IMeasStorage {
+class IEngine {
+public:
+	virtual void fsck()=0;
+	virtual void eraseOld(const Time &t)=0;
+	virtual void repack()=0;
+};
+
+class Engine : public IMeasStorage, public IEngine {
 public:
   struct Description {
     size_t wal_count;    ///  wal count.
