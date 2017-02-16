@@ -52,7 +52,7 @@ public:
   }
 
   void connect() {
-    logger_info("client: connecting to ", _params.host, ':', _params.port);
+    logger_info("client: connecting to ", _params.host, ":", _params.port);
 
     _state = CLIENT_STATE::CONNECT;
     auto t = std::thread{&Client::Private::client_thread, this};
@@ -81,6 +81,14 @@ public:
 
     ip::tcp::resolver::query query(_params.host, std::to_string(_params.port), ip::tcp::resolver::query::canonical_name);
     ip::tcp::resolver::iterator iter = resolver.resolve(query);
+
+	//find ipv4 address;
+	for (; iter != ip::tcp::resolver::iterator(); ++iter) {
+		auto ep = iter->endpoint();
+		if (ep.protocol() == ip::tcp::v4()) {
+			break;
+		}
+	}
     if(iter == ip::tcp::resolver::iterator()){
         THROW_EXCEPTION("hostname not found.");
     }

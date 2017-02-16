@@ -4,6 +4,7 @@ packages.config
 Settings
 lockfile
 Manifest-journal
+scheme.js
 *.db
 *.db-wal
 *.db-shm
