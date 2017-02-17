@@ -12,8 +12,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
   const std::string storage_path = "testStorage";
   const std::string storage_path_shard1 = "testStorage_shard1";
   const std::string storage_path_shard2 = "testStorage_shard2";
-  const size_t chunk_size = 256;
-
+  
   /* const dariadb::Time from = 0;
    const dariadb::Time to = from + 1000;
    const dariadb::Time step = 10;*/
