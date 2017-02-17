@@ -38,7 +38,7 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
       auto full_filename =
           utils::fs::append_path(_settings->raw_path.value(), f);
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
-        logger_info("engine: WalManager open exist file ", f);
+        logger_info("engine", _settings->alias, ": WalManager open exist file ", f);
         WALFile_Ptr p = WALFile::open(_env, full_filename);
         _wal = p;
         break;

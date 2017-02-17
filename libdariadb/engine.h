@@ -1,10 +1,11 @@
 #pragma once
 
 #include <libdariadb/interfaces/icursor.h>
-#include <libdariadb/interfaces/imeasstorage.h>
+
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/dropper.h>
+#include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/strategy.h>
@@ -16,14 +17,9 @@
 namespace dariadb {
 
 const uint16_t STORAGE_FORMAT = 1;
-class IEngine {
-public:
-	virtual void fsck()=0;
-	virtual void eraseOld(const Time &t)=0;
-	virtual void repack()=0;
-};
 
-class Engine : public IMeasStorage, public IEngine {
+
+class Engine : public IEngine {
 public:
   struct Description {
     size_t wal_count;    ///  wal count.
@@ -44,7 +40,7 @@ public:
   EXPORT Status append(const Meas &value) override;
 
   EXPORT void flush() override;
-  EXPORT void stop();
+  EXPORT void stop()override;
   EXPORT Description description() const;
 
   EXPORT virtual void foreach (const QueryInterval &q,
@@ -71,11 +67,11 @@ public:
                         const ReaderCallback_ptr &clbk);
   EXPORT void wait_all_asyncs();
 
-  EXPORT void fsck();
+  EXPORT void fsck()override;
 
-  EXPORT void eraseOld(const Time &t);
+  EXPORT void eraseOld(const Time &t)override;
 
-  EXPORT void repack();
+  EXPORT void repack()override;
 
   EXPORT static uint16_t format();
   EXPORT static std::string version();

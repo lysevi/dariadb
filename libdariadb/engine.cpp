@@ -39,9 +39,9 @@ public:
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS,
                              _settings.get());
 
-    logger_info("engine: project version - ", version());
-    logger_info("engine: storage format - ", format());
-    logger_info("engine: strategy - ", _settings->strategy.value());
+    logger_info("engine:", _settings->alias,": project version - ", version());
+    logger_info("engine", _settings->alias, ": storage format - ", format());
+    logger_info("engine", _settings->alias, ": strategy - ", _settings->strategy.value());
     _stoped = false;
 
     if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
@@ -56,7 +56,7 @@ public:
 
     bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
     if (is_new_storage) {
-      logger_info("engine: init new storage.");
+      logger_info("engine", _settings->alias, ": init new storage.");
     }
     _subscribe_notify.start();
     if (init_threadpool) {
@@ -84,7 +84,7 @@ public:
       }
     }
 
-    logger_info("engine: start - OK ");
+    logger_info("engine", _settings->alias, ": start - OK ");
   }
 
   void init_managers() {
@@ -168,7 +168,7 @@ public:
   }
 
   [[noreturn]] void throw_lock_error(const std::string &lock_file) {
-    logger_fatal("engine: storage ", lock_file, " is locked.");
+    logger_fatal("engine", _settings->alias, ": storage ", lock_file, " is locked.");
     std::exit(1);
   }
 
@@ -176,8 +176,8 @@ public:
     auto current_version = format();
     auto storage_version = std::stoi(_manifest->get_format());
     if (storage_version != current_version) {
-      logger_info("engine: openning storage with version - ", storage_version);
-      THROW_EXCEPTION("engine: openning storage with greater version.");
+      logger_info("engine", _settings->alias, ": openning storage with version - ", storage_version);
+      THROW_EXCEPTION("engine", _settings->alias, ": openning storage with greater version.");
     }
   }
 
@@ -198,7 +198,7 @@ public:
       auto dl = _dropper->getLocker();
       return dl->try_lock();
     }
-    THROW_EXCEPTION("engine: try_lock - bad engine configuration.");
+    THROW_EXCEPTION("engine", _settings->alias, ": try_lock - bad engine configuration.");
   }
 
   void lock_storage() {
@@ -697,25 +697,25 @@ public:
 
   void drop_part_wals(size_t count) {
     if (_wal_manager != nullptr) {
-      logger_info("engine: drop_part_wals ", count);
+      logger_info("engine", _settings->alias, ": drop_part_wals ", count);
       _wal_manager->dropClosedFiles(count);
     }
   }
 
   void compress_all() {
     if (_wal_manager != nullptr) {
-      logger_info("engine: compress_all");
+      logger_info("engine", _settings->alias, ": compress_all");
       _wal_manager->dropAll();
       this->flush();
     }
   }
   void fsck() {
-    logger_info("engine: fsck ", _settings->storage_path.value());
+    logger_info("engine", _settings->alias, ": fsck ", _settings->storage_path.value());
     _page_manager->fsck();
   }
 
   void eraseOld(const Time &t) {
-    logger_info("engine: eraseOld to ", timeutil::to_string(t));
+    logger_info("engine", _settings->alias, ": eraseOld to ", timeutil::to_string(t));
     this->lock_storage();
     _page_manager->eraseOld(t);
 
@@ -729,7 +729,7 @@ public:
 
   void repack() {
     this->lock_storage();
-    logger_info("engine: repack...");
+    logger_info("engine", _settings->alias, ": repack...");
     _page_manager->repack();
     this->unlock_storage();
   }

@@ -30,11 +30,12 @@ settings - is a dictionary on disk.
 */
 class Settings {
   std::unordered_map<std::string, BaseOption *> _all_options;
-  
+
   template <typename T> class ReadOnlyOption : public BaseOption {
   public:
     ReadOnlyOption() = delete;
-    ReadOnlyOption(Settings *s, const std::string &keyname, const T default_value)
+    ReadOnlyOption(Settings *s, const std::string &keyname,
+                   const T default_value)
         : key_name(keyname), _value(default_value) {
 
       if (s != nullptr) { /// register option in settings dict.
@@ -65,8 +66,8 @@ class Settings {
         : ReadOnlyOption<T>(s, keyname, default_value) {}
 
     void setValue(const T &value_) {
-      logger_info("engine: change settings - ", this->key_name, " ", this->_value, " to ",
-                  value_);
+      logger_info("engine: change settings - ", this->key_name, " ",
+                  this->_value, " to ", value_);
       this->_value = value_;
     }
   };
@@ -96,18 +97,22 @@ public:
   Option<STRATEGY> strategy;
 
   // memstorage options;
-  Option<uint32_t> memory_limit;            // in bytes;
-  Option<float> percent_when_start_droping; // fill percent, when start dropping.
-  Option<float> percent_to_drop;            // how many chunk drop.
-  //pages per level.
+  Option<uint32_t> memory_limit; // in bytes;
+  Option<float>
+      percent_when_start_droping; // fill percent, when start dropping.
+  Option<float> percent_to_drop;  // how many chunk drop.
+  // pages per level.
   Option<uint16_t> max_pages_in_level;
 
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
+  std::string alias; // is set, used in log messages;
 protected:
   EXPORT Settings(const std::string &storage_path);
 };
 
-template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
-template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
+template <>
+EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
+template <>
+EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
 }
 }

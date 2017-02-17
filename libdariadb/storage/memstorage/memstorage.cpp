@@ -41,13 +41,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
   void stop() {
     if (!_stoped) {
-      logger_info("engine: memstorage - begin stoping.");
+      logger_info("engine", _settings->alias, ": memstorage - begin stoping.");
       _drop_stop = true;
       _drop_cond.notify_all();
       _drop_thread.join();
 
       if (this->_down_level_storage != nullptr) {
-        logger_info("engine: memstorage - drop all chunk to disk");
+        logger_info("engine", _settings->alias, ": memstorage - drop all chunk to disk");
         this->drop_by_limit(1.0, true);
       }
 
@@ -56,7 +56,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       }
       _id2track.clear();
       _stoped = true;
-      logger_info("engine: memstorage - stoped.");
+      logger_info("engine", _settings->alias, ": memstorage - stoped.");
     }
   }
   ~Private() { stop(); }
@@ -101,7 +101,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
-    logger_info("engine: memstorage - drop_by_limit ", chunk_percent_to_free);
+    logger_info("engine", _settings->alias, ": memstorage - drop_by_limit ", chunk_percent_to_free);
     auto cur_chunk_count = this->_chunk_allocator._allocated;
     auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_percent_to_free);
 
@@ -138,7 +138,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       ++pos;
     }
     if (pos != 0) {
-      logger_info("engine: memstorage - drop begin ", pos, " chunks of ",
+      logger_info("engine", _settings->alias, ": memstorage - drop begin ", pos, " chunks of ",
                   cur_chunk_count);
       if (_down_level_storage != nullptr) {
         AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
@@ -151,7 +151,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         at_res->wait();
       } else {
         if (_settings->strategy.value() != STRATEGY::CACHE) {
-          logger_info("engine: memstorage _down_level_storage == nullptr");
+          logger_info("engine", _settings->alias, ": memstorage _down_level_storage == nullptr");
         }
       }
       std::set<TimeTrack *> updated_tracks;
@@ -171,7 +171,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       for (auto &t : updated_tracks) {
         t->rereadMinMax();
       }
-      logger_info("engine: memstorage - drop end.");
+      logger_info("engine", _settings->alias, ": memstorage - drop end.");
     }
   }
 
@@ -344,7 +344,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       drop_by_limit(_settings->percent_to_drop.value(), false);
     }
-    logger_info("engine: memstorage - dropping thread stoped.");
+    logger_info("engine", _settings->alias, ": memstorage - dropping thread stoped.");
   }
 
   Id2Track _id2track;

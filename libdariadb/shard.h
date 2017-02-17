@@ -1,21 +1,26 @@
 #pragma once
 
-#include <libdariadb/engine.h>
+#include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/st_exports.h>
 
 namespace dariadb {
 class ShardEngine;
 using ShardEngine_Ptr = std::shared_ptr<ShardEngine>;
-class ShardEngine : public IMeasStorage, public IEngine {
+class ShardEngine : public IEngine {
 public:
-  struct Description {
+  struct Shard {
     const std::string path;
     const std::string name;
     const IdSet ids;
   };
 
   EXPORT static ShardEngine_Ptr create(const std::string &path);
-  EXPORT void addShard(const Description &d);
+  /**
+   shard description with empty ids used as shard by default for values,
+   that not exists in others shard.
+   */
+  EXPORT void shardAdd(const Shard &d);
+  EXPORT std::list<Shard> shardList();
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
   EXPORT bool minMaxTime(Id id, Time *minResult, Time *maxResult) override;
@@ -28,6 +33,7 @@ public:
   EXPORT void fsck() override;
   EXPORT void eraseOld(const Time &t) override;
   EXPORT void repack() override;
+  EXPORT void stop() override;
 
 protected:
   EXPORT ShardEngine(const std::string &path);

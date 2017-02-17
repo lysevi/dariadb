@@ -78,7 +78,7 @@ Settings::Settings(const std::string &path_to_storage)
 Settings::~Settings() {}
 
 void Settings::set_default() {
-  logger("engine: Settings set default Settings");
+  logger("engine",alias,": Settings set default Settings");
   wal_cache_size.setValue(WAL_CACHE_SIZE);
   wal_file_size.setValue(WAL_FILE_SIZE);
   chunk_size.setValue(CHUNK_SIZE);
@@ -100,7 +100,7 @@ Settings::thread_pools_params() {
 void Settings::save() { save(settings_file_path(this->storage_path.value())); }
 
 void Settings::save(const std::string &file) {
-  logger("engine: Settings save to ", file);
+  logger("engine", alias, ": Settings save to ", file);
   json js;
 
   for (auto &o : _all_options) {
@@ -118,7 +118,7 @@ void Settings::save(const std::string &file) {
 }
 
 void Settings::load(const std::string &file) {
-  logger("engine: Settings loading ", file);
+  logger("engine", alias, ": Settings loading ", file);
   std::string content = dariadb::utils::fs::read_file(file);
   json js = json::parse(content);
   for (auto &o : _all_options) {
@@ -144,9 +144,9 @@ void Settings::change(std::string &expression) {
 
   auto fres = _all_options.find(splited[0]);
   if (fres != _all_options.end()) {
-    logger_info("engine: change ", fres->first);
+    logger_info("engine", alias, ": change ", fres->first);
     fres->second->from_string(splited[1]);
   } else {
-    logger_fatal("engine: engine: bad expression ", expression);
+    logger_fatal("engine", alias, ": engine: bad expression ", expression);
   }
 }
