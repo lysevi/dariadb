@@ -21,10 +21,14 @@ public:
    */
   EXPORT void shardAdd(const Shard &d);
   EXPORT std::list<Shard> shardList();
+
+  EXPORT Status append(const Meas &value)override;
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
+  EXPORT Id2MinMax loadMinMax()override;
   EXPORT bool minMaxTime(Id id, Time *minResult, Time *maxResult) override;
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override;
+  EXPORT void foreach(const QueryTimePoint &q, IReadCallback * clbk) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
   EXPORT Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;

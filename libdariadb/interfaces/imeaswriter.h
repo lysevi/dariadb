@@ -9,7 +9,7 @@
 namespace dariadb {
 class IMeasWriter {
 public:
-  EXPORT virtual Status append(const Meas &value);
+  EXPORT virtual Status append(const Meas &value)=0;
   EXPORT virtual void flush();
   EXPORT virtual Status append(const MeasArray::const_iterator &begin,
                                const MeasArray::const_iterator &end);

@@ -195,8 +195,13 @@ dariadb::Time WALManager::maxTime() {
   auto am_async =
       ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
+  size_t pos = 0;
   for (auto &v : _buffer) {
-    result = std::max(v.time, result);
+	  result = std::max(v.time, result);
+	  ++pos;
+	  if (pos > _buffer_pos) {
+		  break;
+	  }
   }
   return result;
 }
@@ -512,6 +517,23 @@ Id2MinMax WALManager::loadMinMax() {
     auto sub_res = c->loadMinMax();
 
     minmax_append(result, sub_res);
+  }
+
+  size_t pos = 0;
+  for (auto val : _buffer) {
+	  if (pos >= _buffer_pos) {
+		  break;
+	  }
+	  auto fres = result.find(val.id);
+	  if (fres == result.end()) {
+		  result[val.id].min = val;
+		  result[val.id].max = val;
+	  }
+	  else {
+		  fres->second.updateMax(val);
+		  fres->second.updateMin(val);
+	  }
+	  ++pos;
   }
   return result;
 }

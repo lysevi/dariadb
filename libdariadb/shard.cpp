@@ -44,6 +44,7 @@ public:
   const std::string SHARD_KEY_PATH = "path";
   const std::string SHARD_KEY_NAME = "name";
   const std::string SHARD_KEY_IDS = "ids";
+
   std::string shardFileName() {
     return utils::fs::append_path(_settings->storage_path.value(),
                                   SHARD_FILE_NAME);
@@ -127,25 +128,150 @@ public:
     return new_shard;
   }
 
-  Time minTime() override { return Time(); }
-  Time maxTime() override { return Time(); }
+  IEngine_Ptr get_shard_for_id(Id id) {
+    IEngine_Ptr target_shard = _default_shard;
+
+    _locker.lock();
+    auto fres = this->_id2shard.find(id);
+    if (fres != this->_id2shard.end()) {
+      target_shard = fres->second;
+    }
+    _locker.unlock();
+
+    if (target_shard == nullptr) {
+      logger_fatal("shard: shard for id:", id,
+                   " not found. default shard is nullptr.");
+      nullptr;
+    }
+    return target_shard;
+  }
+
+  Status append(const Meas &value) override {
+    IEngine_Ptr target_shard = get_shard_for_id(value.id);
+
+    if (target_shard == nullptr) {
+      return Status(0, 1);
+    } else {
+      return target_shard->append(value);
+    }
+  }
+
+  Time minTime() override {
+    Time result = MAX_TIME;
+    for (auto s : this->_sub_storages) {
+      auto subres = s->minTime();
+      result = std::min(subres, result);
+    }
+    return result;
+  }
+
+  Time maxTime() override {
+    Time result = MIN_TIME;
+    for (auto s : this->_sub_storages) {
+      auto subres = s->maxTime();
+      result = std::max(subres, result);
+    }
+    return result;
+  }
+
+  Id2MinMax loadMinMax() {
+    Id2MinMax result;
+    for (auto s : this->_sub_storages) {
+      auto subres = s->loadMinMax();
+      for (auto kv : subres) {
+        result[kv.first] = kv.second;
+      }
+    }
+    return result;
+  }
 
   bool minMaxTime(Id id, Time *minResult, Time *maxResult) override {
-    return false;
+    auto target_shard = get_shard_for_id(id);
+    if (target_shard == nullptr) {
+      return false;
+    } else {
+      return target_shard->minMaxTime(id, minResult, maxResult);
+    }
   }
 
-  void foreach (const QueryInterval &q, IReadCallback * clbk) override {}
-
-  Id2Cursor intervalReader(const QueryInterval &query) override {
-    return Id2Cursor();
+  void foreach (const QueryInterval &q, IReadCallback * clbk) override {
+    auto cursors = intervalReader(q);
+    for (auto id : q.ids) {
+      auto iter = cursors.find(id);
+      if (iter != cursors.end()) {
+        iter->second->apply(clbk, q);
+      }
+    }
+    clbk->is_end();
   }
 
-  Id2Meas readTimePoint(const QueryTimePoint &q) override { return Id2Meas(); }
+  void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
+    auto values = this->readTimePoint(q);
+    for (auto &kv : values) {
+      if (clbk->is_canceled()) {
+        break;
+      }
+      clbk->apply(kv.second);
+    }
+    clbk->is_end();
+  }
+
+  Id2Cursor intervalReader(const QueryInterval &q) override {
+    Id2Cursor result;
+    for (auto id : q.ids) {
+      auto target_shard = get_shard_for_id(id);
+      if (target_shard != nullptr) {
+        QueryInterval local_q = q;
+        local_q.ids.resize(1);
+        local_q.ids[0] = id;
+        auto subresult = target_shard->intervalReader(local_q);
+        for (auto kv : subresult) {
+          result[kv.first] = kv.second;
+        }
+      }
+    }
+    return result;
+  }
+
+  Id2Meas readTimePoint(const QueryTimePoint &q) override {
+    Id2Meas result;
+    for (auto id : q.ids) {
+      auto target_shard = get_shard_for_id(id);
+      if (target_shard != nullptr) {
+        QueryTimePoint local_q = q;
+        local_q.ids.resize(1);
+        local_q.ids[0] = id;
+        auto subresult = target_shard->readTimePoint(local_q);
+        for (auto kv : subresult) {
+          result[kv.first] = kv.second;
+        }
+      }
+    }
+    return result;
+  }
+
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-    return Id2Meas();
+    // TODO do more smarter: group id per id and do one query per shard.
+    Id2Meas result;
+    for (auto id : ids) {
+      auto target_shard = get_shard_for_id(id);
+      if (target_shard != nullptr) {
+        auto subresult = target_shard->currentValue({id}, flag);
+        for (auto kv : subresult) {
+          result[kv.first] = kv.second;
+        }
+      }
+    }
+    return result;
   }
+
   Statistic stat(const Id id, Time from, Time to) override {
-    return Statistic();
+    auto target_shard = get_shard_for_id(id);
+    if (target_shard == nullptr) {
+      return Statistic();
+    } else {
+      return target_shard->stat(id, from, to);
+    }
   }
 
   void fsck() override {}
@@ -176,15 +302,23 @@ std::list<ShardEngine::Shard> ShardEngine::shardList() {
   return _impl->shardList();
 }
 
+Status ShardEngine::append(const Meas &value) { return _impl->append(value); }
+
 Time ShardEngine::minTime() { return _impl->minTime(); }
 
 Time ShardEngine::maxTime() { return _impl->maxTime(); }
+
+Id2MinMax ShardEngine::loadMinMax() { return _impl->loadMinMax(); }
 
 bool ShardEngine::minMaxTime(Id id, Time *minResult, Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
 void ShardEngine::foreach (const QueryInterval &q, IReadCallback * clbk) {
+  _impl->foreach (q, clbk);
+}
+
+void ShardEngine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   _impl->foreach (q, clbk);
 }
 
