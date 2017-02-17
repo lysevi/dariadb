@@ -141,7 +141,7 @@ public:
     if (target_shard == nullptr) {
       logger_fatal("shard: shard for id:", id,
                    " not found. default shard is nullptr.");
-      nullptr;
+      return nullptr;
     }
     return target_shard;
   }
