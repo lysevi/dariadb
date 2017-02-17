@@ -17,7 +17,7 @@ using namespace dariadb::utils::async;
 
 using json = nlohmann::json;
 
-class ShardEngine::Private : IMeasStorage, IEngine {
+class ShardEngine::Private : IEngine {
 public:
   Private(const std::string &path) {
 
@@ -41,7 +41,9 @@ public:
       ThreadManager::stop();
     }
   }
-
+  const std::string SHARD_KEY_PATH = "path";
+  const std::string SHARD_KEY_NAME = "name";
+  const std::string SHARD_KEY_IDS = "ids";
   std::string shardFileName() {
     return utils::fs::append_path(_settings->storage_path.value(),
                                   SHARD_FILE_NAME);
@@ -56,9 +58,9 @@ public:
       auto params_array = js[SHARD_KEY_NAME];
 
       for (auto kv : params_array) {
-        auto param_path = kv["path"].get<std::string>();
-        auto param_name = kv["name"].get<std::string>();
-        auto param_ids = kv["ids"].get<IdSet>();
+        auto param_path = kv[SHARD_KEY_PATH].get<std::string>();
+        auto param_name = kv[SHARD_KEY_NAME].get<std::string>();
+        auto param_ids = kv[SHARD_KEY_IDS].get<IdSet>();
 
         ShardEngine::Shard d{param_path, param_name, param_ids};
 
@@ -74,7 +76,9 @@ public:
     json js;
 
     for (auto &o : _shards) {
-      json reccord = {{"path", o.path}, {"ids", o.ids}, {"name", o.name}};
+      json reccord = {{SHARD_KEY_PATH, o.path},
+                      {SHARD_KEY_IDS, o.ids},
+                      {SHARD_KEY_NAME, o.name}};
       js[SHARD_KEY_NAME].push_back(reccord);
     }
 
