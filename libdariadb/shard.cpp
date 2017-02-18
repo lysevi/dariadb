@@ -2,9 +2,9 @@
 
 #include <libdariadb/engine.h>
 #include <libdariadb/shard.h>
-#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
+#include <shared_mutex>
 
 #include <fstream>
 
@@ -99,7 +99,7 @@ public:
   }
 
   void shardAdd_inner(const ShardEngine::Shard &d) {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::lock_guard<std::shared_mutex> lg(_locker);
     logger_info("shards: add new shard {", d.name, "} => ", d.path);
     _shards.push_back(d);
     auto shard_ptr = open_shard_path(d);
@@ -116,7 +116,7 @@ public:
   }
 
   std::list<Shard> shardList() {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::shared_lock<std::shared_mutex> lg(_locker);
     return std::list<Shard>(_shards.begin(), _shards.end());
   }
 
@@ -157,6 +157,7 @@ public:
   }
 
   Time minTime() override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
     Time result = MAX_TIME;
     for (auto s : this->_sub_storages) {
       auto subres = s->minTime();
@@ -166,6 +167,7 @@ public:
   }
 
   Time maxTime() override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
     Time result = MIN_TIME;
     for (auto s : this->_sub_storages) {
       auto subres = s->maxTime();
@@ -175,6 +177,7 @@ public:
   }
 
   Id2MinMax loadMinMax() {
+    std::shared_lock<std::shared_mutex> lg(_locker);
     Id2MinMax result;
     for (auto s : this->_sub_storages) {
       auto subres = s->loadMinMax();
@@ -274,18 +277,21 @@ public:
   }
 
   void fsck() override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
     for (auto s : _sub_storages) {
       s->fsck();
     }
   }
 
   void eraseOld(const Time &t) override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
     for (auto s : _sub_storages) {
       s->eraseOld(t);
     }
   }
 
   void repack() override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
     for (auto s : _sub_storages) {
       s->repack();
     }
@@ -297,7 +303,7 @@ public:
   std::list<IEngine_Ptr> _sub_storages;
   IEngine_Ptr _default_shard;
   Settings_ptr _settings;
-  utils::async::Locker _locker;
+  std::shared_mutex _locker;
 };
 
 ShardEngine_Ptr ShardEngine::create(const std::string &path) {
