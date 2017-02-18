@@ -273,11 +273,23 @@ public:
     }
   }
 
-  void fsck() override {}
+  void fsck() override {
+    for (auto s : _sub_storages) {
+      s->fsck();
+    }
+  }
 
-  void eraseOld(const Time &t) override {}
+  void eraseOld(const Time &t) override {
+    for (auto s : _sub_storages) {
+      s->eraseOld(t);
+    }
+  }
 
-  void repack() override {}
+  void repack() override {
+    for (auto s : _sub_storages) {
+      s->repack();
+    }
+  }
 
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
