@@ -251,7 +251,6 @@ public:
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-    // TODO do more smarter: group id per id and do one query per shard.
     Id2Meas result;
     for (auto id : ids) {
       auto target_shard = get_shard_for_id(id);
