@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <libdariadb/engine.h>
+#include <libdariadb/shard.h>
 #include <libdariadb/utils/fs.h>
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -21,6 +22,7 @@ bool readers_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
+bool use_shard = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
@@ -66,7 +68,7 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("memory-limit",
       po::value<size_t>(&memory_limit)->default_value(memory_limit),
       "allocation area limit  in megabytes when strategy=MEMORY");
-
+  aos("use_shard", "shard some id per shards");
   po::variables_map vm;
   try {
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -79,6 +81,11 @@ void parse_cmdline(int argc, char *argv[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     std::exit(0);
+  }
+
+  if (vm.count("use_shard")) {
+    std::cout << use_shard << std::endl;
+    use_shard = true;
   }
 
   if (vm.count("readonly")) {
@@ -97,7 +104,7 @@ void parse_cmdline(int argc, char *argv[]) {
   }
 }
 
-void show_info(Engine *storage) {
+void show_info(IEngine *storage) {
   const auto OUT_SEP = ' ';
   clock_t t0 = clock();
   long long w0 = append_count.load();
@@ -160,7 +167,7 @@ void show_info(Engine *storage) {
   std::cout << "\n";
 }
 
-void show_drop_info(Engine *storage) {
+void show_drop_info(IEngine *storage) {
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -201,7 +208,7 @@ void reader(IMeasStorage_ptr ms, IdSet all_id_set, Time from, Time to) {
   }
 }
 
-void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
+void rw_benchmark(IMeasStorage_ptr &ms, IEngine *raw_ptr, Time start_time,
                   IdSet &all_id_set) {
 
   std::thread info_thread(show_info, raw_ptr);
@@ -257,7 +264,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   info_thread.join();
 }
 
-void read_all_bench(Engine *ms, Time start_time, Time max_time,
+void read_all_bench(IEngine *ms, Time start_time, Time max_time,
                     IdSet &all_id_set) {
 
   if (readonly) {
@@ -281,7 +288,7 @@ void read_all_bench(Engine *ms, Time start_time, Time max_time,
   std::cout << "time: " << elapsed << std::endl;
   summary_info->foreach_read_all_time = elapsed;
 
-  std::cout << "==> join all..." << std::endl;
+  /*std::cout << "==> join all..." << std::endl;
 
   auto join_callback = std::make_unique<JoinCallback>();
 
@@ -293,7 +300,7 @@ void read_all_bench(Engine *ms, Time start_time, Time max_time,
   std::cout << "table size: " << join_callback->calls << std::endl;
   std::cout << "time: " << elapsed << std::endl;
   summary_info->join_all_time = elapsed;
-  summary_info->join_table_size = join_callback->calls;
+  summary_info->join_table_size = join_callback->calls;*/
 
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;
@@ -325,9 +332,12 @@ void read_all_bench(Engine *ms, Time start_time, Time max_time,
 }
 
 void check_engine_state(dariadb::storage::Settings_ptr settings,
-                        Engine *raw_ptr) {
+                        IEngine *raw_ptr) {
   std::cout << "==> Check storage state(" << strategy << ")... " << std::flush;
-
+  if (use_shard) {
+    std::cout << "OK" << std::endl;
+    return;
+  }
   auto files = raw_ptr->description();
   switch (strategy) {
   case dariadb::STRATEGY::WAL:
@@ -407,8 +417,30 @@ int main(int argc, char *argv[]) {
     }
 
     utils::LogManager::start(log_ptr);
+    IEngine_Ptr engine_ptr = nullptr;
+    IEngine *raw_ptr = nullptr;
+    if (use_shard) {
+      auto s1_path = utils::fs::append_path(storage_path, "sh1");
+      auto s2_path = utils::fs::append_path(storage_path, "sh2");
+      {
+        auto settings = dariadb::storage::Settings::create(s1_path);
+        settings->strategy.setValue(strategy);
+        std::unique_ptr<Engine> ms{new Engine(settings)};
+      }
 
-    auto raw_ptr = new Engine(settings);
+      {
+        auto settings = dariadb::storage::Settings::create(s2_path);
+        settings->strategy.setValue(strategy);
+        std::unique_ptr<Engine> ms{new Engine(settings)};
+      }
+      engine_ptr = ShardEngine::create(storage_path);
+      auto se = (ShardEngine *)engine_ptr.get();
+      se->shardAdd({s1_path, "shard1", {Id(0), Id(1), Id(2), Id(3)}});
+      se->shardAdd({s2_path, "shard2", IdSet()});
+    } else {
+      engine_ptr = IEngine_Ptr{new Engine(settings)};
+    }
+    raw_ptr = engine_ptr.get();
 
     if (is_exists) {
       raw_ptr->fsck();

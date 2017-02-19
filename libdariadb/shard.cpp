@@ -328,6 +328,26 @@ public:
     }
   }
 
+  Description description() const override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
+    Description result;
+    for (auto &s : _sub_storages) {
+      auto d = s.storage->description();
+      result.update(d);
+    }
+    result.active_works = ThreadManager::instance()->active_works();
+    return result;
+  }
+
+  void wait_all_asyncs() override { ThreadManager::instance()->flush(); }
+
+  void drop_part_wals(size_t count) override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
+    for (auto &s : _sub_storages) {
+      s.storage->drop_part_wals(count);
+    }
+  }
+
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
   std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
@@ -335,7 +355,7 @@ public:
   std::list<ShardRef> _sub_storages;
   IEngine_Ptr _default_shard;
   Settings_ptr _settings;
-  std::shared_mutex _locker;
+  mutable std::shared_mutex _locker;
 };
 
 ShardEngine_Ptr ShardEngine::create(const std::string &path) {
@@ -344,6 +364,16 @@ ShardEngine_Ptr ShardEngine::create(const std::string &path) {
 
 ShardEngine::ShardEngine(const std::string &path)
     : _impl(new ShardEngine::Private(path)) {}
+
+void dariadb::ShardEngine::drop_part_wals(size_t count){
+	_impl->drop_part_wals(count);
+}
+
+void dariadb::ShardEngine::wait_all_asyncs() { _impl->wait_all_asyncs(); }
+
+IEngine::Description dariadb::ShardEngine::description() const {
+  return _impl->description();
+}
 
 void ShardEngine::shardAdd(const Shard &d) { _impl->shardAdd(d); }
 

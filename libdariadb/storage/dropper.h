@@ -16,6 +16,9 @@ class Dropper : public dariadb::IWALDropper {
 public:
   struct Description {
     size_t wal;
+	Description() {
+		wal = size_t(0);
+	}
   };
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
           WALManager_ptr wal_manager);

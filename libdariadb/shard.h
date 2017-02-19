@@ -39,11 +39,18 @@ public:
   EXPORT void repack() override;
   EXPORT void stop() override;
 
+  
+  EXPORT Description description() const override;
+  EXPORT void wait_all_asyncs() override;
+  
+  EXPORT void drop_part_wals(size_t count) override;
 protected:
   EXPORT ShardEngine(const std::string &path);
 
 private:
   class Private;
   std::unique_ptr<Private> _impl;
+
+ 
 };
 }

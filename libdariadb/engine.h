@@ -4,9 +4,7 @@
 
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/cursors.h>
-#include <libdariadb/storage/dropper.h>
 #include <libdariadb/interfaces/iengine.h>
-#include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/strategy.h>
 #include <libdariadb/timeutil.h>
@@ -21,14 +19,6 @@ const uint16_t STORAGE_FORMAT = 1;
 
 class Engine : public IEngine {
 public:
-  struct Description {
-    size_t wal_count;    ///  wal count.
-    size_t pages_count;  /// pages count.
-    size_t active_works; /// async tasks runned.
-    storage::Dropper::Description dropper;
-    storage::memstorage::Description memstorage;
-  };
-
   Engine(const Engine &) = delete;
   Engine &operator=(const Engine &) = delete;
   EXPORT virtual ~Engine();
@@ -41,7 +31,7 @@ public:
 
   EXPORT void flush() override;
   EXPORT void stop()override;
-  EXPORT Description description() const;
+  EXPORT IEngine::Description description() const override;
 
   EXPORT virtual void foreach (const QueryInterval &q,
                                IReadCallback * clbk) override;
@@ -65,7 +55,7 @@ public:
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
                         const ReaderCallback_ptr &clbk);
-  EXPORT void wait_all_asyncs();
+  EXPORT void wait_all_asyncs()override;
 
   EXPORT void fsck()override;
 

@@ -395,7 +395,7 @@ public:
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
 
-  Engine::Description description() const {
+  IEngine::Description description() const {
     Engine::Description result;
     memset(&result, 0, sizeof(Description));
     result.wal_count = _wal_manager == nullptr ? 0 : _wal_manager->filesCount();
