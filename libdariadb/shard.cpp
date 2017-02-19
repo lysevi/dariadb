@@ -21,6 +21,11 @@ using namespace dariadb::utils::async;
 using json = nlohmann::json;
 
 class ShardEngine::Private : IEngine {
+  struct ShardRef {
+    std::string path;
+    IEngine_Ptr storage;
+  };
+
 public:
   Private(const std::string &path) {
 
@@ -39,12 +44,11 @@ public:
       logger_info("shards: stopping");
       _id2shard.clear();
       for (auto s : _sub_storages) {
-        s->stop();
+        s.storage->stop();
       }
       ThreadManager::stop();
     }
   }
-
 
   std::string shardFileName() {
     return utils::fs::append_path(_settings->storage_path.value(),
@@ -80,7 +84,7 @@ public:
     for (auto &kv : _shards) {
       json reccord = {{SHARD_KEY_PATH, kv.second.path},
                       {SHARD_KEY_IDS, kv.second.ids},
-                      {SHARD_KEY_ALIAS, kv.second.alias }};
+                      {SHARD_KEY_ALIAS, kv.second.alias}};
       js[SHARD_KEY_NAME].push_back(reccord);
     }
 
@@ -102,26 +106,48 @@ public:
   void shardAdd_inner(const ShardEngine::Shard &d) {
     std::lock_guard<std::shared_mutex> lg(_locker);
     logger_info("shards: add new shard {", d.alias, "} => ", d.path);
-    _shards.insert(std::make_pair(d.alias, d));
-    auto shard_ptr = open_shard_path(d);
-    _sub_storages.push_back(shard_ptr);
+    auto f_iter = _shards.find(d.alias);
+
+    IEngine_Ptr shard_ptr = nullptr;
+    if (f_iter != _shards.end()) {
+      Shard new_shard_rec(d);
+
+      for (auto &sr : _sub_storages) {
+        if (sr.path == d.path) {
+          shard_ptr = sr.storage;
+          break;
+        }
+      }
+      ENSURE(shard_ptr != nullptr);
+      for (auto id : f_iter->second.ids) {
+        new_shard_rec.ids.insert(id);
+      }
+      _shards.erase(f_iter);
+      _shards.insert(std::make_pair(d.alias, new_shard_rec));
+    } else {
+      _shards.insert(std::make_pair(d.alias, d));
+      shard_ptr = open_shard_path(d);
+      _sub_storages.push_back({d.path, shard_ptr});
+    }
 
     if (d.ids.empty()) {
       ENSURE(_default_shard == nullptr);
       _default_shard = shard_ptr;
     } else {
       for (auto id : d.ids) {
-        _id2shard[id] = shard_ptr;
+        if (_id2shard.count(id) == 0) {
+          _id2shard[id] = shard_ptr;
+        }
       }
     }
   }
 
   std::list<Shard> shardList() {
     std::shared_lock<std::shared_mutex> lg(_locker);
-	std::list<Shard> result;
-	for (auto kv : _shards) {
-		result.push_back(kv.second);
-	}
+    std::list<Shard> result;
+    for (auto kv : _shards) {
+      result.push_back(kv.second);
+    }
     return result;
   }
 
@@ -164,8 +190,8 @@ public:
   Time minTime() override {
     std::shared_lock<std::shared_mutex> lg(_locker);
     Time result = MAX_TIME;
-    for (auto s : this->_sub_storages) {
-      auto subres = s->minTime();
+    for (auto &s : this->_sub_storages) {
+      auto subres = s.storage->minTime();
       result = std::min(subres, result);
     }
     return result;
@@ -174,8 +200,8 @@ public:
   Time maxTime() override {
     std::shared_lock<std::shared_mutex> lg(_locker);
     Time result = MIN_TIME;
-    for (auto s : this->_sub_storages) {
-      auto subres = s->maxTime();
+    for (auto &s : this->_sub_storages) {
+      auto subres = s.storage->maxTime();
       result = std::max(subres, result);
     }
     return result;
@@ -184,8 +210,8 @@ public:
   Id2MinMax loadMinMax() {
     std::shared_lock<std::shared_mutex> lg(_locker);
     Id2MinMax result;
-    for (auto s : this->_sub_storages) {
-      auto subres = s->loadMinMax();
+    for (auto &s : this->_sub_storages) {
+      auto subres = s.storage->loadMinMax();
       for (auto kv : subres) {
         result[kv.first] = kv.second;
       }
@@ -283,29 +309,30 @@ public:
 
   void fsck() override {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto s : _sub_storages) {
-      s->fsck();
+    for (auto &s : _sub_storages) {
+      s.storage->fsck();
     }
   }
 
   void eraseOld(const Time &t) override {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto s : _sub_storages) {
-      s->eraseOld(t);
+    for (auto &s : _sub_storages) {
+      s.storage->eraseOld(t);
     }
   }
 
   void repack() override {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto s : _sub_storages) {
-      s->repack();
+    for (auto &s : _sub_storages) {
+      s.storage->repack();
     }
   }
 
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
-  std::unordered_map<std::string, ShardEngine::Shard> _shards;//alias => shard
-  std::list<IEngine_Ptr> _sub_storages;
+  std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
+
+  std::list<ShardRef> _sub_storages;
   IEngine_Ptr _default_shard;
   Settings_ptr _settings;
   std::shared_mutex _locker;

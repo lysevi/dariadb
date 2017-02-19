@@ -4,6 +4,7 @@ packages.config
 Settings
 lockfile
 Manifest-journal
+shards.js
 scheme.js
 *.db
 *.db-wal

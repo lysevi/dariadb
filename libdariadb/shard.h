@@ -9,9 +9,9 @@ using ShardEngine_Ptr = std::shared_ptr<ShardEngine>;
 class ShardEngine : public IEngine {
 public:
   struct Shard {
-    const std::string path;
-    const std::string alias;
-    const IdSet ids;
+    std::string path;
+    std::string alias;
+    IdSet ids;
   };
 
   EXPORT static ShardEngine_Ptr create(const std::string &path);
