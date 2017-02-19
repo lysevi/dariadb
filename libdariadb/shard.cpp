@@ -10,6 +10,9 @@
 
 const std::string SHARD_FILE_NAME = "shards.js";
 const std::string SHARD_KEY_NAME = "shards";
+const std::string SHARD_KEY_PATH = "path";
+const std::string SHARD_KEY_ALIAS = "alias";
+const std::string SHARD_KEY_IDS = "ids";
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -41,9 +44,7 @@ public:
       ThreadManager::stop();
     }
   }
-  const std::string SHARD_KEY_PATH = "path";
-  const std::string SHARD_KEY_NAME = "name";
-  const std::string SHARD_KEY_IDS = "ids";
+
 
   std::string shardFileName() {
     return utils::fs::append_path(_settings->storage_path.value(),
@@ -60,7 +61,7 @@ public:
 
       for (auto kv : params_array) {
         auto param_path = kv[SHARD_KEY_PATH].get<std::string>();
-        auto param_name = kv[SHARD_KEY_NAME].get<std::string>();
+        auto param_name = kv[SHARD_KEY_ALIAS].get<std::string>();
         auto param_ids = kv[SHARD_KEY_IDS].get<IdSet>();
 
         ShardEngine::Shard d{param_path, param_name, param_ids};
@@ -76,10 +77,10 @@ public:
     logger("shards: save to ", file);
     json js;
 
-    for (auto &o : _shards) {
-      json reccord = {{SHARD_KEY_PATH, o.path},
-                      {SHARD_KEY_IDS, o.ids},
-                      {SHARD_KEY_NAME, o.name}};
+    for (auto &kv : _shards) {
+      json reccord = {{SHARD_KEY_PATH, kv.second.path},
+                      {SHARD_KEY_IDS, kv.second.ids},
+                      {SHARD_KEY_ALIAS, kv.second.alias }};
       js[SHARD_KEY_NAME].push_back(reccord);
     }
 
@@ -100,8 +101,8 @@ public:
 
   void shardAdd_inner(const ShardEngine::Shard &d) {
     std::lock_guard<std::shared_mutex> lg(_locker);
-    logger_info("shards: add new shard {", d.name, "} => ", d.path);
-    _shards.push_back(d);
+    logger_info("shards: add new shard {", d.alias, "} => ", d.path);
+    _shards.insert(std::make_pair(d.alias, d));
     auto shard_ptr = open_shard_path(d);
     _sub_storages.push_back(shard_ptr);
 
@@ -117,13 +118,17 @@ public:
 
   std::list<Shard> shardList() {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    return std::list<Shard>(_shards.begin(), _shards.end());
+	std::list<Shard> result;
+	for (auto kv : _shards) {
+		result.push_back(kv.second);
+	}
+    return result;
   }
 
   IEngine_Ptr open_shard_path(const Shard &s) {
     ENSURE(!s.path.empty());
     auto settings = Settings::create(s.path);
-    settings->alias = "(" + s.name + ")";
+    settings->alias = "(" + s.alias + ")";
     IEngine_Ptr new_shard{new Engine(settings, false)};
     return new_shard;
   }
@@ -299,7 +304,7 @@ public:
 
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
-  std::list<ShardEngine::Shard> _shards;
+  std::unordered_map<std::string, ShardEngine::Shard> _shards;//alias => shard
   std::list<IEngine_Ptr> _sub_storages;
   IEngine_Ptr _default_shard;
   Settings_ptr _settings;

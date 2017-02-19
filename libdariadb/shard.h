@@ -10,7 +10,7 @@ class ShardEngine : public IEngine {
 public:
   struct Shard {
     const std::string path;
-    const std::string name;
+    const std::string alias;
     const IdSet ids;
   };
 

@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
 	shard_storage->fsck();
 	shard_storage->repack();
   }
-  if (dariadb::utils::fs::path_exists(storage_path)) {
+  /*if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
   if (dariadb::utils::fs::path_exists(storage_path_shard1)) {
@@ -79,5 +79,5 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
   }
   if (dariadb::utils::fs::path_exists(storage_path_shard2)) {
     dariadb::utils::fs::rm(storage_path_shard2);
-  }
+  }*/
 }
