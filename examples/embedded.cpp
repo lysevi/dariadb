@@ -1,6 +1,6 @@
 #include <iomanip>
 #include <iostream>
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/scheme/scheme.h>
 #include <libdariadb/utils/fs.h>
 #include <sstream>

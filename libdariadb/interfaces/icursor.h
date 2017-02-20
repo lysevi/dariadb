@@ -2,7 +2,7 @@
 
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/query_param.h>
+#include <libdariadb/query.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/utils/utils.h>
 #include <memory>

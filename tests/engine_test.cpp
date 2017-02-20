@@ -5,7 +5,7 @@
 
 #include <algorithm>
 #include <iostream>
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>

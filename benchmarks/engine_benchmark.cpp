@@ -3,8 +3,8 @@
 #include <boost/program_options.hpp>
 #include <iomanip>
 #include <iostream>
-#include <libdariadb/engine.h>
-#include <libdariadb/shard.h>
+#include <libdariadb/engines/engine.h>
+#include <libdariadb/engines/shard.h>
 #include <libdariadb/utils/fs.h>
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -208,8 +208,7 @@ void reader(IMeasStorage *ms, IdSet all_id_set, Time from, Time to) {
   }
 }
 
-void rw_benchmark(IEngine *raw_ptr, Time start_time,
-                  IdSet &all_id_set) {
+void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   std::thread info_thread(show_info, raw_ptr);
 
@@ -425,13 +424,13 @@ int main(int argc, char *argv[]) {
       {
         auto settings = dariadb::storage::Settings::create(s1_path);
         settings->strategy.setValue(strategy);
-        std::unique_ptr<Engine> ms{new Engine(settings)};
+        settings->save();
       }
 
       {
         auto settings = dariadb::storage::Settings::create(s2_path);
         settings->strategy.setValue(strategy);
-        std::unique_ptr<Engine> ms{new Engine(settings)};
+        settings->save();
       }
       engine_ptr = ShardEngine::create(storage_path);
       auto se = (ShardEngine *)engine_ptr.get();
@@ -445,7 +444,6 @@ int main(int argc, char *argv[]) {
     if (is_exists) {
       raw_ptr->fsck();
     }
-    
 
     dariadb::IdSet all_id_set;
     append_count = 0;
@@ -540,7 +538,7 @@ int main(int argc, char *argv[]) {
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
     std::cout << "writed: " << append_count << std::endl;
     std::cout << "stoping storage...\n";
-	engine_ptr = nullptr;
+    engine_ptr = nullptr;
     settings = nullptr;
     auto blog = dynamic_cast<dariadb_bench::BenchmarkLogger *>(log_ptr.get());
     if (blog->_calls.load() == 0) {

@@ -3,7 +3,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/status.h>
-#include <libdariadb/query_param.h>
+#include <libdariadb/query.h>
 #include <memory>
 
 namespace dariadb {

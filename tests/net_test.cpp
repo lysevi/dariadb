@@ -9,7 +9,7 @@
 
 #include "../network/common/net_data.h"
 #include <libclient/client.h>
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>

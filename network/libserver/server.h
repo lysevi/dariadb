@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libserver/net_srv_exports.h>
 #include <memory>

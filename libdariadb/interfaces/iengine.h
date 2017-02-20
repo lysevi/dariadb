@@ -14,9 +14,7 @@ public:
     storage::Dropper::Description dropper;
     storage::memstorage::Description memstorage;
 
-	Description() {
-		wal_count = pages_count = active_works = size_t(0);
-	}
+    Description() { wal_count = pages_count = active_works = size_t(0); }
 
     void update(const Description &other) {
       wal_count += other.wal_count;
@@ -31,7 +29,7 @@ public:
   virtual void eraseOld(const Time &t) = 0;
   virtual void repack() = 0;
   virtual void stop() = 0;
-  virtual void wait_all_asyncs()=0;
+  virtual void wait_all_asyncs() = 0;
   virtual void drop_part_wals(size_t count) = 0;
 };
 using IEngine_Ptr = std::shared_ptr<IEngine>;

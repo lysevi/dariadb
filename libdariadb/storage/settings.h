@@ -2,7 +2,7 @@
 
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/strategy.h>
+#include <libdariadb/engines/strategy.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
 

@@ -5,7 +5,7 @@
 #include <atomic>
 #include <memory>
 
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
 #include <libserver/iclientmanager.h>

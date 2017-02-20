@@ -3,7 +3,7 @@
 #include <libclient/net_cl_exports.h>
 #include <libdariadb/stat.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/query_param.h>
+#include <libdariadb/query.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>

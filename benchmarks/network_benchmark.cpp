@@ -4,7 +4,7 @@
 #include <thread>
 
 #include <libclient/client.h>
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
