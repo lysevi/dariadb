@@ -68,7 +68,7 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("memory-limit",
       po::value<size_t>(&memory_limit)->default_value(memory_limit),
       "allocation area limit  in megabytes when strategy=MEMORY");
-  aos("use_shard", "shard some id per shards");
+  aos("use-shard", "shard some id per shards");
   po::variables_map vm;
   try {
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -83,7 +83,7 @@ void parse_cmdline(int argc, char *argv[]) {
     std::exit(0);
   }
 
-  if (vm.count("use_shard")) {
+  if (vm.count("use-shard")) {
     std::cout << use_shard << std::endl;
     use_shard = true;
   }
