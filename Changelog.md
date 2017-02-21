@@ -10,6 +10,7 @@ v0.3.0
  - values sum
 - Page can be repacked.
 - Scheme API.
+- Implement shard-storage.
 
 v0.2.0
 =====

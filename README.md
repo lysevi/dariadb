@@ -30,6 +30,7 @@
   - as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
   - as memory storage(when strategy is 'memory') - 7-9 millions.
   - across the network - 700k - 800k values per second
+* Shard-engine: you can split values per shard in disk, for better compaction and read speed up.
 * Crash recovery.
 * CRC32 for all values.
 * Two variants of API:
