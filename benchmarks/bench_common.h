@@ -3,7 +3,7 @@
 #include <atomic>
 #include <iostream>
 #include <libdariadb/interfaces/imeasstorage.h>
-#include <libdariadb/strategy.h>
+#include <libdariadb/engines/strategy.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <random>

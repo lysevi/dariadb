@@ -37,7 +37,11 @@ struct TimeTrack : public IMeasStorage,
   void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   Id2Meas readTimePoint(const QueryTimePoint &q) override;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-
+  
+  Id2MinMax loadMinMax() override {
+	  NOT_IMPLEMENTED;
+  }
+  
   void rm_chunk(MemChunk *c);
   void rereadMinMax();
   bool create_new_chunk(const Meas &value);

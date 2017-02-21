@@ -1,9 +1,9 @@
 #pragma once
 
+#include <condition_variable>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/wal/wal_manager.h>
-#include <condition_variable>
 #include <list>
 #include <mutex>
 #include <string>
@@ -14,8 +14,10 @@ namespace storage {
 
 class Dropper : public dariadb::IWALDropper {
 public:
+  // TODO move to file (like memstorage::description)
   struct Description {
     size_t wal;
+    Description() { wal = size_t(0); }
   };
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
           WALManager_ptr wal_manager);
@@ -31,7 +33,8 @@ public:
 
 private:
   void drop_wal_internal();
-  void write_wal_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma);
+  void write_wal_to_page(const std::string &fname,
+                         std::shared_ptr<MeasArray> ma);
 
 private:
   mutable std::mutex _queue_locker;

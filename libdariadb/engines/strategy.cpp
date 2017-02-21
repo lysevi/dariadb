@@ -1,4 +1,4 @@
-#include <libdariadb/strategy.h>
+#include <libdariadb/engines/strategy.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/strings.h>
 #include <sstream>

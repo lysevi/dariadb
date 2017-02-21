@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <libdariadb/config.h>
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/dropper.h>
@@ -30,7 +30,8 @@ using namespace dariadb::utils::async;
 
 class Engine::Private {
 public:
-  Private(Settings_ptr settings, bool ignore_lock_file) {
+  Private(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file) {
+    _thread_pool_owner = init_threadpool;
     _settings = settings;
     _strategy = _settings->strategy.value();
 
@@ -38,9 +39,9 @@ public:
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS,
                              _settings.get());
 
-    logger_info("engine: project version - ", version());
-    logger_info("engine: storage format - ", format());
-    logger_info("engine: strategy - ", _settings->strategy.value());
+    logger_info("engine:", _settings->alias,": project version - ", version());
+    logger_info("engine", _settings->alias, ": storage format - ", format());
+    logger_info("engine", _settings->alias, ": strategy - ", _settings->strategy.value());
     _stoped = false;
 
     if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
@@ -55,23 +56,38 @@ public:
 
     bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
     if (is_new_storage) {
-      logger_info("engine: init new storage.");
+      logger_info("engine", _settings->alias, ": init new storage.");
     }
     _subscribe_notify.start();
-    ThreadManager::Params tpm_params(_settings->thread_pools_params());
-    ThreadManager::start(tpm_params);
+    if (init_threadpool) {
+      ThreadManager::Params tpm_params(_settings->thread_pools_params());
+      ThreadManager::start(tpm_params);
+    }
 
     _manifest = Manifest::create(_settings);
     _engine_env->addResource(EngineEnvironment::Resource::MANIFEST,
                              _manifest.get());
 
-    if (is_new_storage) {
+    if (is_new_storage) {//init new;
       _manifest->set_format(std::to_string(format()));
-    } else {
+    } else {//open exists
       check_storage_version();
       Dropper::cleanStorage(_settings->raw_path.value());
     }
 
+    init_managers();
+
+    if (_strategy == STRATEGY::WAL) {
+      if (_settings->load_min_max) {
+        auto amm = _top_level_storage->loadMinMax();
+        minmax_append(_min_max_map, amm);
+      }
+    }
+
+    logger_info("engine", _settings->alias, ": start - OK ");
+  }
+
+  void init_managers() {
     _page_manager = PageManager::create(_engine_env);
 
     if (_settings->load_min_max) {
@@ -97,16 +113,8 @@ public:
         _memstorage->setDiskStorage(_wal_manager.get());
       }
     }
-
-    if (_strategy == STRATEGY::WAL) {
-      if (_settings->load_min_max) {
-        auto amm = _top_level_storage->loadMinMax();
-        minmax_append(_min_max_map, amm);
-      }
-    }
-
-    logger_info("engine: start - OK ");
   }
+
   ~Private() { this->stop(); }
 
   void init_storages() {}
@@ -125,7 +133,9 @@ public:
       _dropper = nullptr;
       _stoped = true;
 
-      ThreadManager::stop();
+      if (_thread_pool_owner) {
+        ThreadManager::stop();
+      }
       lockfile_unlock();
     }
   }
@@ -158,7 +168,7 @@ public:
   }
 
   [[noreturn]] void throw_lock_error(const std::string &lock_file) {
-    logger_fatal("engine: storage ", lock_file, " is locked.");
+    logger_fatal("engine", _settings->alias, ": storage ", lock_file, " is locked.");
     std::exit(1);
   }
 
@@ -166,8 +176,8 @@ public:
     auto current_version = format();
     auto storage_version = std::stoi(_manifest->get_format());
     if (storage_version != current_version) {
-      logger_info("engine: openning storage with version - ", storage_version);
-      THROW_EXCEPTION("engine: openning storage with greater version.");
+      logger_info("engine", _settings->alias, ": openning storage with version - ", storage_version);
+      THROW_EXCEPTION("engine", _settings->alias, ": openning storage with greater version.");
     }
   }
 
@@ -188,7 +198,7 @@ public:
       auto dl = _dropper->getLocker();
       return dl->try_lock();
     }
-    THROW_EXCEPTION("engine: try_lock - bad engine configuration.");
+    THROW_EXCEPTION("engine", _settings->alias, ": try_lock - bad engine configuration.");
   }
 
   void lock_storage() {
@@ -385,7 +395,7 @@ public:
 
   void wait_all_asyncs() { ThreadManager::instance()->flush(); }
 
-  Engine::Description description() const {
+  IEngine::Description description() const {
     Engine::Description result;
     memset(&result, 0, sizeof(Description));
     result.wal_count = _wal_manager == nullptr ? 0 : _wal_manager->filesCount();
@@ -687,25 +697,25 @@ public:
 
   void drop_part_wals(size_t count) {
     if (_wal_manager != nullptr) {
-      logger_info("engine: drop_part_wals ", count);
+      logger_info("engine", _settings->alias, ": drop_part_wals ", count);
       _wal_manager->dropClosedFiles(count);
     }
   }
 
   void compress_all() {
     if (_wal_manager != nullptr) {
-      logger_info("engine: compress_all");
+      logger_info("engine", _settings->alias, ": compress_all");
       _wal_manager->dropAll();
       this->flush();
     }
   }
   void fsck() {
-    logger_info("engine: fsck ", _settings->storage_path.value());
+    logger_info("engine", _settings->alias, ": fsck ", _settings->storage_path.value());
     _page_manager->fsck();
   }
 
   void eraseOld(const Time &t) {
-    logger_info("engine: eraseOld to ", timeutil::to_string(t));
+    logger_info("engine", _settings->alias, ": eraseOld to ", timeutil::to_string(t));
     this->lock_storage();
     _page_manager->eraseOld(t);
 
@@ -719,7 +729,7 @@ public:
 
   void repack() {
     this->lock_storage();
-    logger_info("engine: repack...");
+    logger_info("engine", _settings->alias, ": repack...");
     _page_manager->repack();
     this->unlock_storage();
   }
@@ -769,10 +779,12 @@ protected:
 
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
+  bool _thread_pool_owner;
 };
 
-Engine::Engine(Settings_ptr settings, bool ignore_lock_file)
-    : _impl{new Engine::Private(settings, ignore_lock_file)} {}
+Engine::Engine(Settings_ptr settings, bool init_threadpool,
+               bool ignore_lock_file)
+    : _impl{new Engine::Private(settings, init_threadpool, ignore_lock_file)} {}
 
 Engine::~Engine() { _impl = nullptr; }
 

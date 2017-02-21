@@ -2,10 +2,6 @@
 
 using namespace dariadb;
 
-Status IMeasWriter::append(const Meas &) {
-  return Status(0, 1);
-}
-
 void IMeasWriter::flush() {}
 
 Status IMeasWriter::append(const MeasArray::const_iterator &begin,

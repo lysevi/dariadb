@@ -38,7 +38,7 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
       auto full_filename =
           utils::fs::append_path(_settings->raw_path.value(), f);
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
-        logger_info("engine: WalManager open exist file ", f);
+        logger_info("engine", _settings->alias, ": WalManager open exist file ", f);
         WALFile_Ptr p = WALFile::open(_env, full_filename);
         _wal = p;
         break;
@@ -195,8 +195,13 @@ dariadb::Time WALManager::maxTime() {
   auto am_async =
       ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
+  size_t pos = 0;
   for (auto &v : _buffer) {
-    result = std::max(v.time, result);
+	  result = std::max(v.time, result);
+	  ++pos;
+	  if (pos > _buffer_pos) {
+		  break;
+	  }
   }
   return result;
 }
@@ -512,6 +517,23 @@ Id2MinMax WALManager::loadMinMax() {
     auto sub_res = c->loadMinMax();
 
     minmax_append(result, sub_res);
+  }
+
+  size_t pos = 0;
+  for (auto val : _buffer) {
+	  if (pos >= _buffer_pos) {
+		  break;
+	  }
+	  auto fres = result.find(val.id);
+	  if (fres == result.end()) {
+		  result[val.id].min = val;
+		  result[val.id].max = val;
+	  }
+	  else {
+		  fres->second.updateMax(val);
+		  fres->second.updateMin(val);
+	  }
+	  ++pos;
   }
   return result;
 }

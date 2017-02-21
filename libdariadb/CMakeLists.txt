@@ -9,6 +9,7 @@ FILE(GLOB MSTORE_HDRS "storage/memstorage/*.h")
 FILE(GLOB PSTORE_HDRS "storage/pages/*.h")
 FILE(GLOB WSTORE_HDRS "storage/wal/*.h")
 FILE(GLOB SCHEME_HDRS "scheme/*.h")
+FILE(GLOB ENGINES_HDRS "engines/*.h")
 
 
 FILE(GLOB UTILS_HDRS "utils/*.h")
@@ -25,6 +26,7 @@ FILE(GLOB UTILS_SRC "utils/*.cpp")
 FILE(GLOB UTILS_ASYNC_SRC "utils/async/*.cpp")
 FILE(GLOB INTERFACES_SRC "interfaces/*.cpp")
 FILE(GLOB SCHEME_SRC "scheme/*.cpp")
+FILE(GLOB ENGINES_SRC "engines/*.cpp")
 
 source_group(compression FILES ${COMPRESSION_HDRS} ${COMPRESSION_SRC})
 source_group(storage FILES ${STORE_HDRS} ${STORE_SRC})
@@ -33,9 +35,10 @@ source_group(storage\\pages FILES ${PSTORE_HDRS} ${PSTORE_SRC})
 source_group(storage\\wal FILES ${WSTORE_HDRS} ${WSTORE_SRC})
 source_group(utils FILES ${UTILS_HDRS} ${UTILS_SRC})
 source_group(utils\\async FILES ${UTILS_ASYNC_HDRS} ${UTILS_ASYNC_SRC})
-source_group(engine FILES ${GLOB_HDRS} ${GLOB_SRC})
 source_group(interfaces FILES ${INTERFACES_SRC} ${INTERFACES_HDRS})
 source_group(scheme FILES ${SCHEME_SRC} ${SCHEME_HDRS})
+source_group(engines FILES ${ENGINES_SRC} ${ENGINES_HDRS})
+source_group(dariadb FILES ${GLOB_HDRS} ${GLOB_SRC})
 
 SET(SRC  ${GLOB_HDRS} ${GLOB_SRC} 
 	 ${COMPRESSION_HDRS} ${COMPRESSION_SRC}  
@@ -46,7 +49,8 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
 	 ${UTILS_HDRS}  ${UTILS_SRC} 
 	 ${UTILS_ASYNC_HDRS}  ${UTILS_ASYNC_SRC} 
          ${INTERFACES_HDRS} ${INTERFACES_SRC}
-	 ${SCHEME_SRC} ${SCHEME_HDRS})
+	 ${SCHEME_SRC} ${SCHEME_HDRS}
+	 ${ENGINES_SRC} ${ENGINES_HDRS})
 
 SET(DARIADB_STORAGE_LIBS dariadb ${Boost_LIBRARIES} sqlite3 CACHE STRING "Dariadb libs for build storage.")
 

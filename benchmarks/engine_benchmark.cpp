@@ -3,7 +3,8 @@
 #include <boost/program_options.hpp>
 #include <iomanip>
 #include <iostream>
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
+#include <libdariadb/engines/shard.h>
 #include <libdariadb/utils/fs.h>
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -21,6 +22,7 @@ bool readers_enable = false;
 bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
+bool use_shard = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
@@ -66,7 +68,7 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("memory-limit",
       po::value<size_t>(&memory_limit)->default_value(memory_limit),
       "allocation area limit  in megabytes when strategy=MEMORY");
-
+  aos("use-shard", "shard some id per shards");
   po::variables_map vm;
   try {
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -79,6 +81,11 @@ void parse_cmdline(int argc, char *argv[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     std::exit(0);
+  }
+
+  if (vm.count("use-shard")) {
+    std::cout << use_shard << std::endl;
+    use_shard = true;
   }
 
   if (vm.count("readonly")) {
@@ -97,7 +104,7 @@ void parse_cmdline(int argc, char *argv[]) {
   }
 }
 
-void show_info(Engine *storage) {
+void show_info(IEngine *storage) {
   const auto OUT_SEP = ' ';
   clock_t t0 = clock();
   long long w0 = append_count.load();
@@ -160,7 +167,7 @@ void show_info(Engine *storage) {
   std::cout << "\n";
 }
 
-void show_drop_info(Engine *storage) {
+void show_drop_info(IEngine *storage) {
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -179,7 +186,7 @@ void show_drop_info(Engine *storage) {
   std::cout << "\n";
 }
 
-void reader(IMeasStorage_ptr ms, IdSet all_id_set, Time from, Time to) {
+void reader(IMeasStorage *ms, IdSet all_id_set, Time from, Time to) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_int_distribution<dariadb::Id> uniform_dist(from, to);
@@ -201,8 +208,7 @@ void reader(IMeasStorage_ptr ms, IdSet all_id_set, Time from, Time to) {
   }
 }
 
-void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
-                  IdSet &all_id_set) {
+void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   std::thread info_thread(show_info, raw_ptr);
 
@@ -231,7 +237,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   if (readers_enable) {
     pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
-      std::thread t{reader, ms, all_id_set, start_time,
+      std::thread t{reader, raw_ptr, all_id_set, start_time,
                     timeutil::current_time()};
       readers[pos++] = std::move(t);
     }
@@ -257,7 +263,7 @@ void rw_benchmark(IMeasStorage_ptr &ms, Engine *raw_ptr, Time start_time,
   info_thread.join();
 }
 
-void read_all_bench(Engine *ms, Time start_time, Time max_time,
+void read_all_bench(IEngine *ms, Time start_time, Time max_time,
                     IdSet &all_id_set) {
 
   if (readonly) {
@@ -281,7 +287,7 @@ void read_all_bench(Engine *ms, Time start_time, Time max_time,
   std::cout << "time: " << elapsed << std::endl;
   summary_info->foreach_read_all_time = elapsed;
 
-  std::cout << "==> join all..." << std::endl;
+  /*std::cout << "==> join all..." << std::endl;
 
   auto join_callback = std::make_unique<JoinCallback>();
 
@@ -293,7 +299,7 @@ void read_all_bench(Engine *ms, Time start_time, Time max_time,
   std::cout << "table size: " << join_callback->calls << std::endl;
   std::cout << "time: " << elapsed << std::endl;
   summary_info->join_all_time = elapsed;
-  summary_info->join_table_size = join_callback->calls;
+  summary_info->join_table_size = join_callback->calls;*/
 
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;
@@ -325,9 +331,12 @@ void read_all_bench(Engine *ms, Time start_time, Time max_time,
 }
 
 void check_engine_state(dariadb::storage::Settings_ptr settings,
-                        Engine *raw_ptr) {
+                        IEngine *raw_ptr) {
   std::cout << "==> Check storage state(" << strategy << ")... " << std::flush;
-
+  if (use_shard) {
+    std::cout << "OK" << std::endl;
+    return;
+  }
   auto files = raw_ptr->description();
   switch (strategy) {
   case dariadb::STRATEGY::WAL:
@@ -407,13 +416,34 @@ int main(int argc, char *argv[]) {
     }
 
     utils::LogManager::start(log_ptr);
+    IEngine_Ptr engine_ptr = nullptr;
+    IEngine *raw_ptr = nullptr;
+    if (use_shard) {
+      auto s1_path = utils::fs::append_path(storage_path, "sh1");
+      auto s2_path = utils::fs::append_path(storage_path, "sh2");
+      {
+        auto settings = dariadb::storage::Settings::create(s1_path);
+        settings->strategy.setValue(strategy);
+        settings->save();
+      }
 
-    auto raw_ptr = new Engine(settings);
+      {
+        auto settings = dariadb::storage::Settings::create(s2_path);
+        settings->strategy.setValue(strategy);
+        settings->save();
+      }
+      engine_ptr = ShardEngine::create(storage_path);
+      auto se = (ShardEngine *)engine_ptr.get();
+      se->shardAdd({s1_path, "shard1", {Id(0), Id(1), Id(2), Id(3)}});
+      se->shardAdd({s2_path, "shard2", IdSet()});
+    } else {
+      engine_ptr = IEngine_Ptr{new Engine(settings)};
+    }
+    raw_ptr = engine_ptr.get();
 
     if (is_exists) {
       raw_ptr->fsck();
     }
-    IMeasStorage_ptr ms{raw_ptr};
 
     dariadb::IdSet all_id_set;
     append_count = 0;
@@ -421,7 +451,7 @@ int main(int argc, char *argv[]) {
     auto writers_start = clock();
 
     start_time = dariadb::timeutil::current_time();
-    rw_benchmark(ms, raw_ptr, start_time, all_id_set);
+    rw_benchmark(raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
     stop_readers = true;
@@ -498,17 +528,17 @@ int main(int argc, char *argv[]) {
 
     summary_info->writed = append_count;
     summary_info->write_speed = append_count / writers_elapsed;
-    dariadb_bench::readBenchmark(summary_info.get(), all_id_set, ms.get(),
+    dariadb_bench::readBenchmark(summary_info.get(), all_id_set, raw_ptr,
                                  read_benchmark_runs);
 
-    auto max_time = ms->maxTime();
+    auto max_time = raw_ptr->maxTime();
     std::cout << "==> interval end time: " << timeutil::to_string(max_time)
               << std::endl;
 
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
     std::cout << "writed: " << append_count << std::endl;
     std::cout << "stoping storage...\n";
-    ms = nullptr;
+    engine_ptr = nullptr;
     settings = nullptr;
     auto blog = dynamic_cast<dariadb_bench::BenchmarkLogger *>(log_ptr.get());
     if (blog->_calls.load() == 0) {

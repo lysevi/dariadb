@@ -5,7 +5,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/query_param.h>
+#include <libdariadb/query.h>
 
 namespace dariadb {
 

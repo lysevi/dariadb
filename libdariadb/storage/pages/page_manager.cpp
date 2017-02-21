@@ -93,12 +93,12 @@ public:
         }
         Page_Ptr p{Page::open(file_name)};
         if (!p->checksum()) {
-          logger_info("engine: checksum of page ", file_name,
+          logger_info("engine", _settings->alias, ": checksum of page ", file_name,
                       " is wrong - removing.");
           erase_page(file_name);
         }
       } catch (std::exception &ex) {
-        logger_fatal("engine: error on check ", file_name, ": ", ex.what());
+        logger_fatal("engine", _settings->alias, ": error on check ", file_name, ": ", ex.what());
         erase_page(file_name);
       }
     }
@@ -460,7 +460,7 @@ public:
   void repack(uint16_t out_lvl, std::list<std::string> part) {
     Page_Ptr res = nullptr;
     std::string page_name = utils::fs::random_file_name(".page");
-    logger_info("engine: repack to level", out_lvl, " page: ", page_name);
+    logger_info("engine", _settings->alias, ": repack to level", out_lvl, " page: ", page_name);
     for (auto &p : part) {
       logger_info("==> ", utils::fs::extract_filename(p));
     }
@@ -481,13 +481,13 @@ public:
         Page::readIndexFooter(PageIndex::index_name_from_page_name(file_name)));
     auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
 
-    logger("engine: repack end. elapsed ", elapsed, "s");
+    logger("engine", _settings->alias, ": repack end. elapsed ", elapsed, "s");
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
     Page_Ptr res = nullptr;
     std::string page_name = utils::fs::random_file_name(".page");
-    logger_info("engine: write chunks to ", page_name);
+    logger_info("engine", _settings->alias, ": write chunks to ", page_name);
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::create(file_name, MIN_LEVEL, last_id, a, count);

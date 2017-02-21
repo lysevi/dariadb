@@ -36,16 +36,16 @@ public:
         THROW_EXCEPTION("Can't create folder: ", msg);
       }
     }
-    logger_info("engine: opening  manifest file...");
+    logger_info("engine", _settings->alias, ": opening  manifest file...");
     int rc = sqlite3_open(_filename.c_str(), &db);
     if (rc) {
       auto err_msg = sqlite3_errmsg(db);
       THROW_EXCEPTION("Can't open database: ", err_msg);
     }
-    logger_info("engine: manifest file opened.");
+    logger_info("engine", _settings->alias, ": manifest file opened.");
     char *err = 0;
     if (sqlite3_exec(db, MANIFEST_CREATE_SQL, 0, 0, &err)) {
-      fprintf(stderr, "Ошибка SQL: %sn", err);
+	  THROW_EXCEPTION("SQL error: ", err)
       sqlite3_free(err);
     }
     if (is_exists) {

@@ -1,4 +1,4 @@
-#include <libdariadb/query_param.h>
+#include <libdariadb/query.h>
 
 namespace dariadb {
 namespace query_inner {

@@ -5,7 +5,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/status.h>
-#include <libdariadb/query_param.h>
+#include <libdariadb/query.h>
 #include <libdariadb/stat.h>
 #include <memory>
 
@@ -23,7 +23,7 @@ public:
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) = 0;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) = 0;
   virtual Statistic stat(const Id id, Time from, Time to)=0;
-  EXPORT virtual Id2MinMax loadMinMax();
+  EXPORT virtual Id2MinMax loadMinMax()=0;
   EXPORT virtual MeasList readInterval(const QueryInterval &q);
   virtual ~IMeasSource() {}
 };
