@@ -14,11 +14,9 @@ void IReadCallback::is_end() {
 }
 
 void IReadCallback::wait() {
-  // TODO make more smarter.
   while (!is_cancel && !is_end_called) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
-  // mtx.unlock();
 }
 
 void IReadCallback::cancel() {
