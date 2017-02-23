@@ -11,6 +11,7 @@
 #include <libclient/client.h>
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
