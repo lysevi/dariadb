@@ -4,6 +4,7 @@
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/wal/wal_manager.h>
+#include <libdariadb/storage/dropper_description.h>
 #include <list>
 #include <mutex>
 #include <string>
@@ -14,11 +15,6 @@ namespace storage {
 
 class Dropper : public dariadb::IWALDropper {
 public:
-  // TODO move to file (like memstorage::description)
-  struct Description {
-    size_t wal;
-    Description() { wal = size_t(0); }
-  };
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
           WALManager_ptr wal_manager);
   ~Dropper();
@@ -28,7 +24,7 @@ public:
   // 1. rm PAGE files with name exists WAL file.
   static void cleanStorage(const std::string &storagePath);
 
-  Description description() const;
+  DropperDescription description() const;
   std::mutex *getLocker() { return &_dropper_lock; }
 
 private:

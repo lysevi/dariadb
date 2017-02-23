@@ -1,6 +1,6 @@
 #pragma once
 #include <libdariadb/interfaces/imeasstorage.h>
-#include <libdariadb/storage/dropper.h>
+#include <libdariadb/storage/dropper_description.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <memory>
 namespace dariadb {
@@ -11,7 +11,7 @@ public:
     size_t wal_count;    ///  wal count.
     size_t pages_count;  /// pages count.
     size_t active_works; /// async tasks runned.
-    storage::Dropper::Description dropper;
+    storage::DropperDescription dropper;
     storage::memstorage::Description memstorage;
 
     Description() { wal_count = pages_count = active_works = size_t(0); }

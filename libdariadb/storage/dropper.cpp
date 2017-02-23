@@ -30,9 +30,9 @@ Dropper::~Dropper() {
   logger("engine", _settings->alias, ": dropper - stop end.");
 }
 
-Dropper::Description Dropper::description() const {
+DropperDescription Dropper::description() const {
   std::lock_guard<std::mutex> lg(_queue_locker);
-  Dropper::Description result;
+  DropperDescription result;
   result.wal = _files_queue.size();
   return result;
 }
