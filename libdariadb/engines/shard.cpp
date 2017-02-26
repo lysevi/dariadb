@@ -228,6 +228,7 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReadCallback * clbk) override {
+	  //TODO group id per shard.
     auto cursors = intervalReader(q);
     for (auto id : q.ids) {
       auto iter = cursors.find(id);
