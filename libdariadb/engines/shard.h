@@ -45,6 +45,7 @@ public:
 
   EXPORT void drop_part_wals(size_t count) override;
 
+  EXPORT storage::Settings_ptr settings() override;
 protected:
   EXPORT ShardEngine(const std::string &path);
 

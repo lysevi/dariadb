@@ -63,6 +63,7 @@ public:
 
   EXPORT void repack()override;
 
+  EXPORT storage::Settings_ptr settings() override;
   EXPORT static uint16_t format();
   EXPORT static std::string version();
   EXPORT STRATEGY strategy() const;

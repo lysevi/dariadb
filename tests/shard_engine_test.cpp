@@ -57,10 +57,12 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
     shard_storage->shardAdd({storage_path_shard2, "shard2", IdSet()});
     shard_storage->shardAdd(
         {storage_path_shard1, "shard1", {Id(1), Id(2), Id(3), Id(4)}});
+    BOOST_CHECK(shard_storage->settings()->storage_path.value()==storage_path);
   }
   {
     auto shard_storage = dariadb::open_storage(storage_path);
     BOOST_CHECK(shard_storage != nullptr);
+    BOOST_CHECK(shard_storage->settings()->storage_path.value()==storage_path);
 
     auto shard_raw_ptr = dynamic_cast<ShardEngine *>(shard_storage.get());
 

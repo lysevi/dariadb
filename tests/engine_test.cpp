@@ -42,6 +42,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
+    BOOST_CHECK(ms->settings()!=nullptr);
+    BOOST_CHECK(ms->settings()->storage_path.value()==storage_path);
   }
   {
     std::cout << "reopen closed storage\n";

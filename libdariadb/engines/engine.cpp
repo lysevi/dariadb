@@ -760,6 +760,9 @@ public:
     Join::join(cursors, ids, clbk);
   }
 
+  storage::Settings_ptr settings(){
+      return _settings;
+  }
 protected:
   std::mutex _flush_locker, _lock_locker;
   SubscribeNotificator _subscribe_notify;
@@ -849,6 +852,10 @@ void Engine::fsck() { _impl->fsck(); }
 void Engine::eraseOld(const Time &t) { return _impl->eraseOld(t); }
 
 void Engine::repack() { _impl->repack(); }
+
+storage::Settings_ptr Engine::settings(){
+    return _impl->settings();
+}
 
 uint16_t Engine::format() { return STORAGE_FORMAT; }
 

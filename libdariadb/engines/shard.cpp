@@ -365,6 +365,10 @@ public:
     }
   }
 
+  storage::Settings_ptr settings()override {
+      return _settings;
+  }
+
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
   std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
@@ -441,3 +445,8 @@ void ShardEngine::eraseOld(const Time &t) { _impl->eraseOld(t); }
 void ShardEngine::repack() { _impl->repack(); }
 
 void ShardEngine::stop() { _impl->stop(); }
+
+storage::Settings_ptr ShardEngine::settings() {
+    return _impl->settings();
+
+}

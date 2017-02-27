@@ -30,9 +30,8 @@ int main(int , char **) {
   dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
-  auto settings = dariadb::storage::Settings::create(storage_path);
-  auto storage = std::make_unique<dariadb::Engine>(settings);
-  auto scheme = dariadb::scheme::Scheme::create(settings);
+  auto storage = dariadb::open_storage(storage_path);
+  auto scheme = dariadb::scheme::Scheme::create(storage->settings());
 
   // we can get param id`s from scheme file
   auto all_params = scheme->ls();
