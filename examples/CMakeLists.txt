@@ -15,6 +15,10 @@ endmacro(EXAMPLE)
 EXAMPLE(embedded embedded.cpp)
 add_test(example-embedded ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/example-embedded)
 
+EXAMPLE(embedded-create embedded-create.cpp)
+EXAMPLE(embedded-interval embedded-interval.cpp)
+EXAMPLE(embedded-timepoint embedded-timepoint.cpp)
+
 EXAMPLE(shard-embedded shard_embedded.cpp)
 add_test(example-embedded ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/example-shard-embedded)
 

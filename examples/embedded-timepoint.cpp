@@ -1,6 +1,5 @@
 #include <iostream>
 #include <libdariadb/dariadb.h>
-#include <libdariadb/utils/fs.h>
 
 class QuietLogger : public dariadb::utils::ILogger {
 public:
@@ -24,67 +23,28 @@ public:
   }
 };
 
-int main(int argc, char **argv) {
+int main(int , char **) {
   const std::string storage_path = "exampledb";
-  // comment that, for open exists storage.
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
 
   // Replace standart logger.
   dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
   auto settings = dariadb::storage::Settings::create(storage_path);
-  settings->save();
-
+  auto storage = std::make_unique<dariadb::Engine>(settings);
   auto scheme = dariadb::scheme::Scheme::create(settings);
 
-  auto p1 = scheme->addParam("group.param1");
-  auto p2 = scheme->addParam("group.subgroup.param2");
-  scheme->save();
-
-  auto storage = std::make_unique<dariadb::Engine>(settings);
-
-  auto m = dariadb::Meas();
-  auto start_time = dariadb::timeutil::current_time();
-
-  // write values in interval [currentTime:currentTime+10]
-  m.time = start_time;
-  for (size_t i = 0; i < 10; ++i) {
-    if (i % 2) {
-      m.id = p1;
-    } else {
-      m.id = p2;
-    }
-
-    m.time++;
-    m.value++;
-    m.flag = 100 + i % 2;
-    auto status = storage->append(m);
-    if (status.writed != 1) {
-      std::cerr << "Error: " << status.error_message << std::endl;
-    }
-  }
-  // we can get param id`s from scheme
+  // we can get param id`s from scheme file
   auto all_params = scheme->ls();
   dariadb::IdArray all_id;
   all_id.reserve(all_params.size());
   all_id.push_back(all_params.idByParam("group.param1"));
   all_id.push_back(all_params.idByParam("group.subgroup.param2"));
 
-  // query writed interval;
-  dariadb::QueryInterval qi(all_id, dariadb::Flag(), start_time, m.time);
-  dariadb::MeasList readed_values = storage->readInterval(qi);
-  std::cout << "Readed: " << readed_values.size() << std::endl;
-  for (auto measurement : readed_values) {
-    std::cout << " param: " << all_params[measurement.id] << " timepoint: "
-              << dariadb::timeutil::to_string(measurement.time)
-              << " value:" << measurement.value << std::endl;
-  }
+  dariadb::Time cur_time=dariadb::timeutil::current_time();
 
   // query in timepoint;
-  dariadb::QueryTimePoint qp(all_id, dariadb::Flag(), m.time);
+  dariadb::QueryTimePoint qp(all_id, dariadb::Flag(), cur_time);
   dariadb::Id2Meas timepoint = storage->readTimePoint(qp);
   std::cout << "Timepoint: " << std::endl;
   for (auto kv : timepoint) {
@@ -105,23 +65,8 @@ int main(int argc, char **argv) {
   }
 
   // callback
-  std::cout << "Callback in interval: " << std::endl;
-  std::unique_ptr<Callback> callback_ptr{new Callback()};
-  storage->foreach (qi, callback_ptr.get());
-  callback_ptr->wait();
-
-  // callback
   std::cout << "Callback in timepoint: " << std::endl;
+  std::unique_ptr<Callback> callback_ptr{new Callback()};
   storage->foreach (qp, callback_ptr.get());
   callback_ptr->wait();
-
-  { // stat
-    auto stat = storage->stat(dariadb::Id(0), start_time, m.time);
-    std::cout << "count: " << stat.count << std::endl;
-    std::cout << "time: [" << dariadb::timeutil::to_string(stat.minTime) << " "
-              << dariadb::timeutil::to_string(stat.maxTime) << "]" << std::endl;
-    std::cout << "val: [" << stat.minValue << " " << stat.maxValue << "]"
-              << std::endl;
-    std::cout << "sum: " << stat.sum << std::endl;
-  }
 }
