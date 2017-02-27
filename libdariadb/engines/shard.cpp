@@ -228,7 +228,6 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReadCallback * clbk) override {
-	  //TODO group id per shard.
     auto cursors = intervalReader(q);
     for (auto id : q.ids) {
       auto iter = cursors.find(id);
@@ -249,18 +248,33 @@ public:
     }
     clbk->is_end();
   }
+  std::unordered_map<IEngine_Ptr, IdSet> makeStorage2iset(const IdArray &ids) {
+    std::unordered_map<IEngine_Ptr, IdSet> result;
+    for (auto id : ids) {
+      auto target_shard = get_shard_for_id(id);
+      if (target_shard != nullptr) {
+        result[target_shard].insert(id);
+      }
+    }
+
+    ENSURE(result.size() <= this->_sub_storages.size());
+    return result;
+  }
 
   Id2Cursor intervalReader(const QueryInterval &q) override {
     Id2Cursor result;
-    for (auto id : q.ids) {
-      auto target_shard = get_shard_for_id(id);
-      if (target_shard != nullptr) {
+    std::unordered_map<IEngine_Ptr, IdSet> storage2iset =
+        makeStorage2iset(q.ids);
+
+    for (auto kv : storage2iset) {
+      auto target_shard = kv.first;
+      for (auto id : kv.second) {
         QueryInterval local_q = q;
         local_q.ids.resize(1);
         local_q.ids[0] = id;
         auto subresult = target_shard->intervalReader(local_q);
-        for (auto kv : subresult) {
-          result[kv.first] = kv.second;
+        for (auto id2cursor : subresult) {
+          result[id2cursor.first] = id2cursor.second;
         }
       }
     }
@@ -269,15 +283,17 @@ public:
 
   Id2Meas readTimePoint(const QueryTimePoint &q) override {
     Id2Meas result;
-    for (auto id : q.ids) {
-      auto target_shard = get_shard_for_id(id);
-      if (target_shard != nullptr) {
+    std::unordered_map<IEngine_Ptr, IdSet> storage2iset =
+        makeStorage2iset(q.ids);
+    for (auto kv : storage2iset) {
+      auto target_shard = kv.first;
+      for (auto id : kv.second) {
         QueryTimePoint local_q = q;
         local_q.ids.resize(1);
         local_q.ids[0] = id;
         auto subresult = target_shard->readTimePoint(local_q);
-        for (auto kv : subresult) {
-          result[kv.first] = kv.second;
+        for (auto id2time : subresult) {
+          result[id2time.first] = id2time.second;
         }
       }
     }
@@ -286,12 +302,13 @@ public:
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     Id2Meas result;
-    for (auto id : ids) {
-      auto target_shard = get_shard_for_id(id);
-      if (target_shard != nullptr) {
+    std::unordered_map<IEngine_Ptr, IdSet> storage2iset = makeStorage2iset(ids);
+    for (auto kv : storage2iset) {
+      auto target_shard = kv.first;
+      for (auto id : kv.second) {
         auto subresult = target_shard->currentValue({id}, flag);
-        for (auto kv : subresult) {
-          result[kv.first] = kv.second;
+        for (auto id2time : subresult) {
+          result[id2time.first] = id2time.second;
         }
       }
     }
@@ -365,8 +382,8 @@ ShardEngine_Ptr ShardEngine::create(const std::string &path) {
 ShardEngine::ShardEngine(const std::string &path)
     : _impl(new ShardEngine::Private(path)) {}
 
-void dariadb::ShardEngine::drop_part_wals(size_t count){
-	_impl->drop_part_wals(count);
+void dariadb::ShardEngine::drop_part_wals(size_t count) {
+  _impl->drop_part_wals(count);
 }
 
 void dariadb::ShardEngine::wait_all_asyncs() { _impl->wait_all_asyncs(); }
