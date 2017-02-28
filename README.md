@@ -22,14 +22,15 @@
   - wal - little cache and all values storing to disk in write ahead log. optimised for big write load(but slower than 'memory' strategy).
   - compressed - all values compressed for good disk usage without writing to sorted layer.
   - memory - all values stored in memory and dropped to disk when memory limit is ended.
-  - cache - all values stored in memory with async writes to disk.
+  - cache - all values stored in memory with writes to disk.
 * LSM-like storage struct with three layers:
-  - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'fast write').
+  - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'wal').
   - Old values stored in compressed block for better disk space usage.
 * High write speed:
-  -  as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
-  -  as memory storage(when strategy is 'memory') - 7-9 millions.
-  -  across the network - 700k - 800k values per second
+  - as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
+  - as memory storage(when strategy is 'memory') - 7-9 millions.
+  - across the network - 700k - 800k values per second
+* Shard-engine: you can split values per shard in disk, for better compaction and read speed up.
 * Crash recovery.
 * CRC32 for all values.
 * Two variants of API:
@@ -38,10 +39,14 @@
 * Compaction old data with filtration support:
   - in engine api.
   - in network protocol.
-* By step storage: for values with predefined write interval (per millisecond, second, minute, hour).
+* Statistic:
+  - time min/max
+  - value min/max
+  - measurement count
+  - values sum
 
 # Dependencies
-* Boost 1.54.0 or higher: system, filesystem, date_time, unit_test_framework(to build tests), program_options, asio and regex(for server only)
+* Boost 1.54.0 or higher: system, filesystem, date_time,regex, unit_test_framework(to build tests), program_options, asio.
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/engines/strategy.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/strategy.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
 
@@ -30,7 +30,7 @@ settings - is a dictionary on disk.
 */
 class Settings {
   std::unordered_map<std::string, BaseOption *> _all_options;
-  // TODO make non template class hierarchy.
+
   template <typename T> class ReadOnlyOption : public BaseOption {
   public:
     ReadOnlyOption() = delete;
@@ -87,7 +87,6 @@ public:
 
   ReadOnlyOption<std::string> storage_path;
   ReadOnlyOption<std::string> raw_path;
-  ReadOnlyOption<std::string> bystep_path;
   // wal level options;
   Option<uint64_t> wal_file_size;  // measurements count in one file
   Option<uint64_t> wal_cache_size; // inner buffer size
@@ -100,8 +99,11 @@ public:
   Option<uint32_t> memory_limit;            // in bytes;
   Option<float> percent_when_start_droping; // fill percent, when start dropping.
   Option<float> percent_to_drop;            // how many chunk drop.
+  // pages per level.
+  Option<uint16_t> max_pages_in_level;
 
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
+  std::string alias; // is set, used in log messages;
 protected:
   EXPORT Settings(const std::string &storage_path);
 };

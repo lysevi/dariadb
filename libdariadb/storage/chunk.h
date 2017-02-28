@@ -2,8 +2,11 @@
 
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/stat.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
 
@@ -21,13 +24,11 @@ struct MeasData {
   Value value;
   Flag flag;
 };
+
 struct ChunkHeader {
   uint64_t id;                    /// chunk id.
   Id meas_id;                     /// measurement id.
-  MeasData data_first, data_last; /// date of first and last added measurements.
-  Time minTime, maxTime;          /// min and max time.
-  uint64_t flag_bloom;            /// bool filter for storead flags.
-  uint32_t count;                 /// count of stored values.
+  MeasData data_first, data_last; /// data of first and last added measurements.
   uint32_t bw_pos;                /// needed for unpack.
 
   uint32_t size; /// size of buffer with values.
@@ -35,8 +36,10 @@ struct ChunkHeader {
 
   uint64_t offset_in_page; /// pos in page file.
 
+  Statistic stat;
+  uint8_t is_sorted;
   Meas first() const {
-    Meas m = Meas::empty(meas_id);
+    Meas m(meas_id);
     m.flag = data_first.flag;
     m.time = data_first.time;
     m.value = data_first.value;
@@ -44,7 +47,7 @@ struct ChunkHeader {
   }
 
   Meas last() const {
-    Meas m = Meas::empty(meas_id);
+    Meas m(meas_id);
     m.flag = data_last.flag;
     m.time = data_last.time;
     m.value = data_last.value;
@@ -73,32 +76,25 @@ class Chunk : public std::enable_shared_from_this<Chunk> {
 protected:
   Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
   Chunk(ChunkHeader *hdr, uint8_t *buffer);
+
 public:
-  class IChunkReader {
-  public:
-    virtual Meas readNext() = 0;
-    virtual bool is_end() const = 0;
-    virtual ~IChunkReader() {}
-  };
-
-  using ChunkReader_Ptr = std::shared_ptr<Chunk::IChunkReader>;
-
   typedef uint8_t *u8vector;
 
-  EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
+  EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
+                                 const Meas &first_m);
   EXPORT static Chunk_Ptr open(ChunkHeader *hdr, uint8_t *buffer);
   EXPORT ~Chunk();
 
   EXPORT bool append(const Meas &m);
   EXPORT bool isFull() const;
-  EXPORT ChunkReader_Ptr getReader();
+  EXPORT Cursor_Ptr getReader();
   EXPORT void close();
   EXPORT uint32_t calcChecksum();
   EXPORT uint32_t getChecksum();
   EXPORT virtual bool checkId(const Id &id);
   EXPORT virtual bool checkChecksum();
   EXPORT bool checkFlag(const Flag &f);
-
+  EXPORT Statistic stat(Time from, Time to);
   EXPORT static void updateChecksum(ChunkHeader &hdr, u8vector buff);
   EXPORT static uint32_t calcChecksum(ChunkHeader &hdr, u8vector buff);
   /// return - count of skipped bytes.

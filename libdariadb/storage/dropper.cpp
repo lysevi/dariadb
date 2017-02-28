@@ -21,18 +21,18 @@ Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
 }
 
 Dropper::~Dropper() {
-  logger("engine: dropper - stop begin.");
+  logger("engine", _settings->alias, ": dropper - stop begin.");
   _stop = true;
   while (!_is_stoped) {
     _cond_var.notify_all();
   }
   _thread_handle.join();
-  logger("engine: dropper - stop end.");
+  logger("engine", _settings->alias, ": dropper - stop end.");
 }
 
-Dropper::Description Dropper::description() const {
+DropperDescription Dropper::description() const {
   std::lock_guard<std::mutex> lg(_queue_locker);
-  Dropper::Description result;
+  DropperDescription result;
   result.wal = _files_queue.size();
   return result;
 }
@@ -50,7 +50,7 @@ void Dropper::dropWAL(const std::string &fname) {
 }
 
 void Dropper::cleanStorage(const std::string &storagePath) {
-  logger_info("engine: dropper - check storage.");
+  logger_info("engine: dropper - check storage ", storagePath);
   auto wals_lst = fs::ls(storagePath, WAL_FILE_EXT);
   auto page_lst = fs::ls(storagePath, PAGE_FILE_EXT);
 
@@ -92,12 +92,12 @@ void Dropper::drop_wal_internal() {
       try {
         TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
-        logger_info("engine: compressing ", fname);
+        logger_info("engine", _settings->alias, ": compressing ", fname);
         auto start_time = clock();
         auto storage_path = sett->raw_path.value();
         auto full_path = fs::append_path(storage_path, fname);
 
-        WALFile_Ptr wal=WALFile::open(env, full_path, true);
+        WALFile_Ptr wal = WALFile::open(env, full_path, true);
 
         auto all = wal->readAll();
 
@@ -106,7 +106,8 @@ void Dropper::drop_wal_internal() {
         auto end = clock();
         auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
-        logger_info("engine: compressing ", fname, " done. elapsed time - ", elapsed);
+        logger_info("engine", _settings->alias, ": compressing ", fname,
+                    " done. elapsed time - ", elapsed);
       } catch (std::exception &ex) {
         THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
       }
@@ -138,10 +139,10 @@ void Dropper::write_wal_to_page(const std::string &fname, std::shared_ptr<MeasAr
 }
 
 void Dropper::flush() {
-  logger_info("engine: Dropper flush...");
+  logger_info("engine", _settings->alias, ": Dropper flush...");
   while (this->description().wal != 0) {
     this->_cond_var.notify_all();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-  logger_info("engine: Dropper flush end.");
+  logger_info("engine", _settings->alias, ": Dropper flush end.");
 }

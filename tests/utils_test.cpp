@@ -3,6 +3,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/async/thread_pool.h>
+#include <libdariadb/utils/bitoperations.h>
 #include <libdariadb/utils/crc.h>
 #include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/fs.h>

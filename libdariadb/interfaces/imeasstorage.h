@@ -6,7 +6,6 @@
 #include <libdariadb/utils/utils.h>
 
 namespace dariadb {
-namespace storage {
 
 class IMeasStorage : public utils::NonCopy, public IMeasSource, public IMeasWriter {
 public:
@@ -14,5 +13,4 @@ public:
 };
 
 typedef std::shared_ptr<IMeasStorage> IMeasStorage_ptr;
-}
 }

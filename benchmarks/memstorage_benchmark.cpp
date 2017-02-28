@@ -103,9 +103,12 @@ int main(int argc, char **argv) {
     size_t pos = 0;
     for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
       all_id_set.insert(pos);
-      std::thread t{
-          dariadb_bench::thread_writer_rnd_stor, dariadb::Id(pos), &append_count, mstore.get(),
-          dariadb::timeutil::current_time(),     &write_time};
+      std::thread t{dariadb_bench::thread_writer_rnd_stor,
+                    dariadb::Id(pos),
+                    &append_count,
+                    mstore.get(),
+                    dariadb::timeutil::current_time(),
+                    &write_time};
       writers[pos++] = std::move(t);
     }
 
@@ -117,10 +120,11 @@ int main(int argc, char **argv) {
 
     stop_info = true;
     info_thread.join();
+    dariadb_bench::BenchmarkSummaryInfo summary_info(dariadb::STRATEGY::MEMORY);
+    dariadb_bench::readBenchmark(&summary_info, all_id_set, mstore.get(), 10, false,
+                                 false);
 
-    dariadb_bench::readBenchark(all_id_set, mstore.get(), 10, false, false);
-
-    mstore=nullptr;
+    mstore = nullptr;
     dariadb::utils::async::ThreadManager::stop();
   }
 }

@@ -13,7 +13,7 @@ AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function,
   _result = std::make_shared<TaskResult>();
 }
 
-bool AsyncTaskWrap::call(const ThreadInfo &ti) {
+bool AsyncTaskWrap::apply(const ThreadInfo &ti) {
   _tinfo.kind = ti.kind;
   _tinfo.thread_number = ti.thread_number;
 
@@ -117,7 +117,7 @@ void ThreadPool::_thread_func(size_t num) {
 
     // if queue is empty and task is coroutine, it will be run in cycle.
     while (true) {
-      auto need_continue = task->call(ti);
+      auto need_continue = task->apply(ti);
       if (!need_continue) {
         break;
       }

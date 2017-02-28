@@ -10,10 +10,10 @@ namespace storage {
 
 struct SubscribeInfo {
   SubscribeInfo() = default;
-  SubscribeInfo(const IdArray &i, const Flag &f, const ReaderClb_ptr &c);
+  SubscribeInfo(const IdArray &i, const Flag &f, const ReaderCallback_ptr &c);
   IdArray ids;
   Flag flag;
-  mutable ReaderClb_ptr clbk;
+  mutable ReaderCallback_ptr clbk;
   bool isYours(const dariadb::Meas &m) const;
 };
 

@@ -10,7 +10,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-struct SubscribeCallback : public storage::IReaderClb {
+struct SubscribeCallback : public IReadCallback {
   utils::async::Locker _locker;
   IOClient *_parent;
   QueryNumber _query_num;
@@ -20,7 +20,7 @@ struct SubscribeCallback : public storage::IReaderClb {
     _query_num = query_num;
   }
   ~SubscribeCallback() {}
-  void call(const Meas &m) override { send_buffer(m); }
+  void apply(const Meas &m) override { send_buffer(m); }
   void is_end() override {}
   void send_buffer(const Meas &m) {
     auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
@@ -45,7 +45,7 @@ IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query
   assert(_query_num != 0);
 }
 
-void IOClient::ClientDataReader::call(const Meas &m) {
+void IOClient::ClientDataReader::apply(const Meas &m) {
   std::lock_guard<utils::async::Locker> lg(_locker);
   if (pos == BUFFER_LENGTH) {
     send_buffer();
@@ -55,7 +55,7 @@ void IOClient::ClientDataReader::call(const Meas &m) {
 }
 
 void IOClient::ClientDataReader::is_end() {
-  IReaderClb::is_end();
+  IReadCallback::is_end();
   send_buffer();
 
   auto nd = _parent->env->nd_pool->construct(DATA_KINDS::APPEND);
@@ -206,6 +206,19 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
                 pings_missed.load());
     break;
   }
+  case DATA_KINDS::STAT: {
+    auto st_hdr = reinterpret_cast<QueryStat_header *>(&d->data);
+    auto result = this->env->storage->stat(st_hdr->id, st_hdr->from, st_hdr->to);
+    auto nd = this->env->nd_pool->construct(DATA_KINDS::STAT);
+
+    auto p_header = reinterpret_cast<QueryStatResult_header *>(nd->data);
+    nd->size = sizeof(QueryStatResult_header);
+    p_header->id = st_hdr->id;
+    p_header->result = result;
+
+    _async_connection->send(nd);
+    break;
+  }
   case DATA_KINDS::DISCONNECT: {
     logger_info("server: #", this->_async_connection->id(), " disconnection request.");
     cancel = true;
@@ -290,27 +303,22 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     this->_async_connection->send(nd);
     break;
   }
-  case DATA_KINDS::COMPACT: {
+  case DATA_KINDS::REPACK: {
     if (this->env->srv->server_begin_stopping()) {
       logger_info("server: #", this->_async_connection->id(),
-                  " refuse compact query. server in stop.");
+                  " refuse repack query. server in stop.");
       return;
     }
-    logger_info("server: #", this->_async_connection->id(),
-                " query to storage compaction.");
-    if (this->env->storage->strategy() == storage::STRATEGY::WAL) {
+    logger_info("server: #", this->_async_connection->id(), " query to storage repack.");
+    if (this->env->storage->strategy() == STRATEGY::WAL) {
       auto wals = this->env->storage->description().wal_count;
       logger_info("server: #", this->_async_connection->id(), " drop ", wals,
                   " wals to pages.");
       this->env->storage->drop_part_wals(wals);
       this->env->storage->flush();
     }
-    auto query_hdr = reinterpret_cast<QuerCompact_header *>(&d->data);
-    if (query_hdr->pageCount != 0) {
-      this->env->storage->compactTo(query_hdr->pageCount);
-    } else {
-      this->env->storage->compactbyTime(query_hdr->from, query_hdr->to);
-    }
+    // auto query_hdr = reinterpret_cast<QuerRepack_header *>(&d->data);
+    this->env->storage->repack();
     break;
   }
   default:
@@ -368,14 +376,15 @@ void IOClient::readInterval(const NetData_ptr &d) {
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  auto qi = new storage::QueryInterval{all_ids, query_hdr->flag, query_hdr->from,
-                                       query_hdr->to};
 
   if (query_hdr->from >= query_hdr->to) {
     sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
   } else {
+
+    auto qi = new QueryInterval{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
+
     auto cdr = new ClientDataReader(this, query_num);
-    this->readerAdd(cdr, qi);
+    this->readerAdd(ReaderCallback_ptr(cdr), qi);
     env->storage->foreach (*qi, cdr);
   }
 }
@@ -391,10 +400,10 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  auto qi = new storage::QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
+  auto qi = new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(cdr, qi);
+  readerAdd(ReaderCallback_ptr(cdr), qi);
   env->storage->foreach (*qi, cdr);
 }
 
@@ -410,9 +419,9 @@ void IOClient::currentValue(const NetData_ptr &d) {
 
   auto result = env->storage->currentValue(all_ids, flag);
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(cdr, nullptr);
+  readerAdd(ReaderCallback_ptr(cdr), nullptr);
   for (auto &v : result) {
-    cdr->call(v.second);
+    cdr->apply(v.second);
   }
   cdr->is_end();
 }
@@ -429,14 +438,16 @@ void IOClient::subscribe(const NetData_ptr &d) {
 
   if (subscribe_reader == nullptr) {
     subscribe_reader =
-        std::shared_ptr<storage::IReaderClb>(new SubscribeCallback(this, query_num));
+        std::shared_ptr<IReadCallback>(new SubscribeCallback(this, query_num));
   }
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
 
-void IOClient::readerAdd(ClientDataReader *cdr, void *data) {
+void IOClient::readerAdd(const ReaderCallback_ptr &cdr, void *data) {
   std::lock_guard<std::mutex> lg(_readers_lock);
-  this->_readers.insert(std::make_pair(cdr->_query_num, std::make_pair(cdr, data)));
+  ClientDataReader *cdr_raw = dynamic_cast<ClientDataReader *>(cdr.get());
+  ENSURE(cdr_raw != nullptr);
+  this->_readers.insert(std::make_pair(cdr_raw->_query_num, std::make_pair(cdr, data)));
 }
 
 void IOClient::readerRemove(QueryNumber number) {
@@ -447,7 +458,6 @@ void IOClient::readerRemove(QueryNumber number) {
   } else {
     auto ptr = fres->second;
     this->_readers.erase(fres);
-    delete ptr.first;
     if (ptr.second != nullptr) {
       delete ptr.second;
     }

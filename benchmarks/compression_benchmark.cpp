@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
 
   auto test_buffer_size = 1024 * 1024 * 100;
   uint8_t *buffer = new uint8_t[test_buffer_size];
-  dariadb::utils::Range rng{buffer, buffer + test_buffer_size};
+  dariadb::compression::Range rng{buffer, buffer + test_buffer_size};
   std::fill(buffer, buffer + test_buffer_size, 0);
 
   {
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
     dariadb::compression::CopmressedWriter cwr{bw};
     auto start = clock();
     for (size_t i = 0; i < count; i++) {
-      auto m = dariadb::Meas::empty();
+      auto m = dariadb::Meas();
       m.id++;
       m.time = static_cast<dariadb::Time>(dariadb::timeutil::current_time());
       m.flag = dariadb::Flag(i);
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
     auto sz = sizeof(dariadb::Meas) * count;
     std::cout << "used space: " << (w * 100.0) / (sz) << "%" << std::endl;
 
-    auto m = dariadb::Meas::empty();
+    auto m = dariadb::Meas();
 
     auto rbw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::CopmressedReader crr{rbw, m};

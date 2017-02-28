@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/meas.h>
+#include <libdariadb/stat.h>
 #include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>
 #include <tuple>
@@ -95,16 +96,26 @@ struct QuerSubscribe_header {
   uint16_t ids_count;
 };
 
-struct QuerCompact_header {
+struct QuerRepack_header {
   uint8_t kind;
   QueryNumber id;
-  size_t pageCount;
+};
+
+struct QueryStat_header {
+  uint8_t kind;
+  QueryNumber id;
+  Id meas_id;
   Time from;
   Time to;
 };
+
+struct QueryStatResult_header {
+  uint8_t kind;
+  QueryNumber id;
+  Statistic result;
+};
 #pragma pack(pop)
 
-// using NetData_Pool = boost::object_pool<NetData>;
 struct NetData_Pool {
   utils::async::Locker _locker;
   typedef boost::object_pool<NetData> Pool;

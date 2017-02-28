@@ -5,7 +5,7 @@
 #include <atomic>
 #include <memory>
 
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
 #include <libserver/iclientmanager.h>
@@ -24,12 +24,12 @@ struct IOClient {
       nd_pool = nullptr;
     }
     IClientManager *srv;
-    storage::Engine *storage;
+    Engine *storage;
     NetData_Pool *nd_pool;
     boost::asio::io_service *service;
   };
 
-  struct ClientDataReader : public storage::IReaderClb {
+  struct ClientDataReader : public IReadCallback {
     static const size_t BUFFER_LENGTH =
         (NetData::MAX_MESSAGE_SIZE - sizeof(QueryAppend_header)) / sizeof(Meas);
     utils::async::Locker _locker;
@@ -40,7 +40,7 @@ struct IOClient {
 
     ClientDataReader(IOClient *parent, QueryNumber query_num);
     ~ClientDataReader();
-    void call(const Meas &m) override;
+    void apply(const Meas &m) override;
     void is_end() override;
     void send_buffer();
   };
@@ -64,7 +64,7 @@ struct IOClient {
   void sendError(QueryNumber query_num, const ERRORS &err);
 
   // data - queryInterval or QueryTimePoint
-  void readerAdd(ClientDataReader *cdr, void *data);
+  void readerAdd(const ReaderCallback_ptr &cdr, void *data);
   void readerRemove(QueryNumber number);
   Time _last_query_time;
   socket_ptr sock;
@@ -73,11 +73,11 @@ struct IOClient {
   CLIENT_STATE state;
   Environment *env;
   std::atomic_int pings_missed;
-  // std::list<storage::IReaderClb *> readers;
-  std::shared_ptr<storage::IReaderClb> subscribe_reader;
+  // std::list<IReadCallback *> readers;
+  std::shared_ptr<IReadCallback> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
 
-  std::map<QueryNumber, std::pair<ClientDataReader *, void *>> _readers;
+  std::map<QueryNumber, std::pair<ReaderCallback_ptr, void *>> _readers;
   std::mutex _readers_lock;
 };
 

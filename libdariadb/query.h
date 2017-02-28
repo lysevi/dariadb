@@ -5,7 +5,6 @@
 #include <functional>
 
 namespace dariadb {
-namespace storage {
 
 struct QueryParam {
   IdArray ids;
@@ -30,5 +29,4 @@ struct QueryTimePoint : public QueryParam {
   QueryTimePoint(const IdArray &_ids, Flag _flag, Time _time_point)
       : QueryParam(_ids, _flag), time_point(_time_point) {}
 };
-}
 }

@@ -65,7 +65,7 @@ class AsyncTaskWrap {
 public:
   EXPORT AsyncTaskWrap(AsyncTask &t, const std::string &_function,
                        const std::string &file, int line);
-  EXPORT bool call(const ThreadInfo &ti);
+  EXPORT bool apply(const ThreadInfo &ti);
   EXPORT TaskResult_Ptr result() const;
 
 private:

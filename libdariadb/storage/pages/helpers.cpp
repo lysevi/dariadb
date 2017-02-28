@@ -15,14 +15,23 @@ namespace dariadb {
 namespace storage {
 namespace PageInner {
 
-dariadb::storage::PageHeader emptyPageHeader(uint64_t chunk_id) {
-  dariadb::storage::PageHeader phdr;
-  memset(&phdr, 0, sizeof(PageHeader));
-  phdr.maxTime = dariadb::MIN_TIME;
-  phdr.minTime = dariadb::MAX_TIME;
-  phdr.max_chunk_id = chunk_id;
+bool have_overlap(const std::vector<ChunkLink> &links) {
+  for (size_t i = 0; i < links.size(); ++i) {
+    for (size_t j = 0; j < links.size(); ++j) {
+      if (i == j) {
+        continue;
+      }
+      auto from1 = links[i].minTime;
+      auto from2 = links[j].minTime;
+      auto to1 = links[i].maxTime;
+      auto to2 = links[j].maxTime;
 
-  return phdr;
+      if (utils::intervalsIntersection(from1, to1, from2, to2)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 std::map<Id, MeasArray> splitById(const MeasArray &ma) {
@@ -70,7 +79,7 @@ std::map<Id, MeasArray> splitById(const MeasArray &ma) {
 }
 
 std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
-                                       PageHeader &phdr, uint32_t max_chunk_size) {
+                                       PageFooter &phdr, uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
   std::list<HdrAndBuffer> results;
   utils::async::Locker result_locker;
@@ -87,11 +96,9 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
       auto it = begin;
       while (it != end) {
         ChunkHeader hdr;
-        memset(&hdr, 0, sizeof(ChunkHeader));
-        // TODO use memory_pool
-        std::shared_ptr<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
+        boost::shared_array<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
         memset(buffer_ptr.get(), 0, max_chunk_size);
-        auto ch=Chunk::create(&hdr, buffer_ptr.get(), max_chunk_size, *it);
+        auto ch = Chunk::create(&hdr, buffer_ptr.get(), max_chunk_size, *it);
         ++it;
         while (it != end) {
           if (!ch->append(*it)) {
@@ -103,11 +110,14 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
 
         result_locker.lock();
         phdr.max_chunk_id++;
-        phdr.minTime = std::min(phdr.minTime, ch->header->minTime);
-        phdr.maxTime = std::max(phdr.maxTime, ch->header->maxTime);
+
         ch->header->id = phdr.max_chunk_id;
 
-        HdrAndBuffer subres{hdr, buffer_ptr};
+        phdr.stat.update(ch->header->stat);
+
+        HdrAndBuffer subres;
+        subres.hdr = hdr;
+        subres.buffer = buffer_ptr;
 
         results.push_back(subres);
         result_locker.unlock();
@@ -123,7 +133,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
   return results;
 }
 
-uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader &ihdr,
+uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter &ihdr,
                      std::list<HdrAndBuffer> &compressed_results, uint64_t file_size) {
 
   using namespace dariadb::utils::async;
@@ -135,20 +145,23 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader
   size_t pos = 0;
   for (auto hb : compressed_results) {
     ChunkHeader chunk_header = hb.hdr;
-    std::shared_ptr<uint8_t> chunk_buffer_ptr = hb.buffer;
+    auto chunk_buffer_ptr = hb.buffer;
 
     phdr.addeded_chunks++;
-    phdr.minTime = std::min(phdr.minTime, chunk_header.minTime);
-    phdr.maxTime = std::max(phdr.maxTime, chunk_header.maxTime);
-
+    phdr.stat.update(chunk_header.stat);
+    // ihdr.stat.update(chunk_header.stat);
     auto skip_count = Chunk::compact(&chunk_header);
     chunk_header.offset_in_page = offset;
     // update checksum;
     Chunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
-#ifdef DEBUG
+#ifdef DOUBLE_CHECKS
     {
-      auto ch =Chunk::open(&chunk_header, chunk_buffer_ptr.get() + skip_count);
+      auto ch = Chunk::open(&chunk_header, chunk_buffer_ptr.get() + skip_count);
       ENSURE(ch->checkChecksum());
+      auto rdr = ch->getReader();
+      while (!rdr->is_end()) {
+        rdr->readNext();
+      }
       ch->close();
     }
 #endif
@@ -164,26 +177,25 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageHeader &phdr, IndexHeader
   }
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
   page_size = offset;
+  ihdr.stat = phdr.stat;
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic)) == 0);
   return page_size;
 }
 
-IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexHeader *iheader) {
+IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *iheader) {
   IndexReccord cur_index;
-  memset(&cur_index, 0, sizeof(IndexReccord));
 
   cur_index.chunk_id = cheader.id;
   cur_index.offset = cheader.offset_in_page; // header->write_offset;
 
-  iheader->minTime = std::min(iheader->minTime, cheader.minTime);
-  iheader->maxTime = std::max(iheader->maxTime, cheader.maxTime);
+  // iheader->stat.update(cheader.stat);
 
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
-  iheader->flag_bloom = storage::bloom_add(iheader->flag_bloom, cheader.data_first.flag);
-  iheader->count++;
-  cur_index.minTime = cheader.minTime;
-  cur_index.maxTime = cheader.maxTime;
+  iheader->recs_count++;
   cur_index.meas_id = cheader.meas_id;
-  cur_index.flag_bloom = cheader.flag_bloom;
+  cur_index.stat = cheader.stat;
+  ENSURE(cur_index.stat.minTime <= cur_index.stat.maxTime);
+  ENSURE(cur_index.stat.minValue <= cur_index.stat.maxValue);
   return cur_index;
 }
 }

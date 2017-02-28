@@ -9,11 +9,23 @@
 
 namespace dariadb {
 namespace compression {
+
+struct Range {
+  uint8_t *begin;
+  uint8_t *end;
+  Range() { begin = end = nullptr; }
+
+  Range(uint8_t *_begin, uint8_t *_end) {
+    begin = _begin;
+    end = _end;
+  }
+};
+
 class ByteBuffer;
 typedef std::shared_ptr<ByteBuffer> ByteBuffer_Ptr;
 class ByteBuffer {
 public:
-  EXPORT ByteBuffer(const utils::Range &r);
+  EXPORT ByteBuffer(const Range &r);
   EXPORT ~ByteBuffer();
 
   uint32_t pos() const { return _pos; }
@@ -40,7 +52,7 @@ public:
     return *target;
   }
 
-  dariadb::utils::Range get_range() const { return dariadb::utils::Range{_begin, _end}; }
+  Range get_range() const { return Range{_begin, _end}; }
 
 protected:
   inline void move_pos(int8_t count) {

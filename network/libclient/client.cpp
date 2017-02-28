@@ -2,6 +2,7 @@
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/utils.h>
 #include <common/async_connection.h>
 #include <common/net_common.h>
 
@@ -51,7 +52,7 @@ public:
   }
 
   void connect() {
-    logger_info("client: connecting to ", _params.host, ':', _params.port);
+    logger_info("client: connecting to ", _params.host, ":", _params.port);
 
     _state = CLIENT_STATE::CONNECT;
     auto t = std::thread{&Client::Private::client_thread, this};
@@ -78,9 +79,23 @@ public:
   void client_thread() {
     ip::tcp::resolver resolver(_service);
 
-    ip::tcp::resolver::query query(_params.host, std::to_string(_params.port));
+    ip::tcp::resolver::query query(_params.host, std::to_string(_params.port),
+                                   ip::tcp::resolver::query::canonical_name);
     ip::tcp::resolver::iterator iter = resolver.resolve(query);
+
+    // find ipv4 address;
+    for (; iter != ip::tcp::resolver::iterator(); ++iter) {
+      auto ep = iter->endpoint();
+      if (ep.protocol() == ip::tcp::v4()) {
+        break;
+      }
+    }
+    if (iter == ip::tcp::resolver::iterator()) {
+      THROW_EXCEPTION("hostname not found.");
+    }
     ip::tcp::endpoint ep = *iter;
+    logger_info("client: ", _params.host, ":", _params.port, " - ",
+                ep.address().to_string());
 
     auto raw_sock_ptr = new ip::tcp::socket(_service);
     _socket = socket_ptr{raw_sock_ptr};
@@ -173,18 +188,31 @@ public:
       logger_info("client: #", _async_connection->id(), " recv ", qw->count,
                   " values to query #", qw->id);
       auto subres = this->_query_results[qw->id];
-      assert(subres->is_ok);
+      ENSURE(subres->is_ok);
       if (qw->count == 0) {
         subres->is_closed = true;
-        subres->clbk(subres.get(), Meas::empty());
+        subres->clbk(subres.get(), Meas(), Statistic());
         subres->locker.unlock();
         _query_results.erase(qw->id);
       } else {
         MeasArray ma = qw->read_measarray();
         for (auto &v : ma) {
-          subres->clbk(subres.get(), v);
+          subres->clbk(subres.get(), v, Statistic());
         }
       }
+      break;
+    }
+    case DATA_KINDS::STAT: {
+      auto qw = reinterpret_cast<QueryStatResult_header *>(d->data);
+      logger_info("state: #", qw->id);
+      auto subres = this->_query_results[qw->id];
+      ENSURE(subres != nullptr);
+
+      subres->is_closed = true;
+      subres->clbk(subres.get(), Meas(), qw->result);
+      subres->locker.unlock();
+      _query_results.erase(qw->id);
+
       break;
     }
     case DATA_KINDS::PING: {
@@ -267,8 +295,7 @@ public:
     }
   }
 
-  ReadResult_ptr readInterval(const storage::QueryInterval &qi,
-                              ReadResult::callback &clbk) {
+  ReadResult_ptr readInterval(const QueryInterval &qi, ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
@@ -306,9 +333,10 @@ public:
     return qres;
   }
 
-  MeasList readInterval(const storage::QueryInterval &qi) {
+  MeasList readInterval(const QueryInterval &qi) {
     MeasList result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) {
       if (!parent->is_closed) {
         result.push_back(m);
       }
@@ -319,8 +347,7 @@ public:
     return result;
   }
 
-  ReadResult_ptr readTimePoint(const storage::QueryTimePoint &qi,
-                               ReadResult::callback &clbk) {
+  ReadResult_ptr readTimePoint(const QueryTimePoint &qi, ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
@@ -357,9 +384,10 @@ public:
     return qres;
   }
 
-  Id2Meas readTimePoint(const storage::QueryTimePoint &qi) {
+  Id2Meas readTimePoint(const QueryTimePoint &qi) {
     Id2Meas result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -409,7 +437,8 @@ public:
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     Id2Meas result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m) {
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -457,36 +486,58 @@ public:
     return qres;
   }
 
-  void compactTo(size_t pageCount) {
+  void repack() {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
     _locker.unlock();
-    auto nd = this->_pool.construct(DATA_KINDS::COMPACT);
+    auto nd = this->_pool.construct(DATA_KINDS::REPACK);
 
-    auto p_header = reinterpret_cast<QuerCompact_header *>(nd->data);
-    nd->size = sizeof(QuerCompact_header);
+    auto p_header = reinterpret_cast<QuerRepack_header *>(nd->data);
+    nd->size = sizeof(QuerRepack_header);
     p_header->id = cur_id;
-    p_header->pageCount = pageCount;
-    p_header->from = p_header->to = Time(0);
     _async_connection->send(nd);
   }
 
-  void compactbyTime(dariadb::Time from, dariadb::Time to) {
+  ReadResult_ptr stat(const Id id, const Time from, const Time to,
+                      ReadResult::callback &clbk) {
     _locker.lock();
     auto cur_id = _query_num;
     _query_num += 1;
     _locker.unlock();
-    auto nd = this->_pool.construct(DATA_KINDS::COMPACT);
 
-    auto p_header = reinterpret_cast<QuerCompact_header *>(nd->data);
-    nd->size = sizeof(QuerCompact_header);
+    auto qres = std::make_shared<ReadResult>();
+    qres->locker.lock();
+    qres->id = cur_id;
+    qres->kind = DATA_KINDS::STAT;
+
+    auto nd = this->_pool.construct(DATA_KINDS::STAT);
+
+    auto p_header = reinterpret_cast<QueryStat_header *>(nd->data);
+    nd->size = sizeof(QueryStat_header);
     p_header->id = cur_id;
-    p_header->pageCount = size_t(0);
     p_header->from = from;
     p_header->to = to;
+    p_header->meas_id = id;
+
+    qres->is_closed = false;
+    qres->clbk = clbk;
+    this->_query_results[qres->id] = qres;
+
     _async_connection->send(nd);
+    return qres;
   }
+
+  Statistic stat(const Id id, Time from, Time to) {
+    Statistic result{};
+    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
+                                 const Statistic &st) { result = st; };
+    ReadResult::callback clbk = clbk_lambda;
+    auto qres = stat(id, from, to, clbk);
+    qres->wait();
+    return result;
+  }
+
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -532,20 +583,19 @@ void Client::append(const MeasArray &ma) {
   _Impl->append(ma);
 }
 
-MeasList Client::readInterval(const storage::QueryInterval &qi) {
+MeasList Client::readInterval(const QueryInterval &qi) {
   return _Impl->readInterval(qi);
 }
 
-ReadResult_ptr Client::readInterval(const storage::QueryInterval &qi,
-                                    ReadResult::callback &clbk) {
+ReadResult_ptr Client::readInterval(const QueryInterval &qi, ReadResult::callback &clbk) {
   return _Impl->readInterval(qi, clbk);
 }
 
-Id2Meas Client::readTimePoint(const storage::QueryTimePoint &qi) {
+Id2Meas Client::readTimePoint(const QueryTimePoint &qi) {
   return _Impl->readTimePoint(qi);
 }
 
-ReadResult_ptr Client::readTimePoint(const storage::QueryTimePoint &qi,
+ReadResult_ptr Client::readTimePoint(const QueryTimePoint &qi,
                                      ReadResult::callback &clbk) {
   return _Impl->readTimePoint(qi, clbk);
 }
@@ -564,10 +614,10 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
   return _Impl->subscribe(ids, flag, clbk);
 }
 
-void Client::compactTo(size_t pageCount) {
-  _Impl->compactTo(pageCount);
+void Client::repack() {
+  _Impl->repack();
 }
 
-void Client::compactbyTime(dariadb::Time from, dariadb::Time to) {
-  _Impl->compactbyTime(from, to);
+Statistic Client::stat(const Id id, Time from, Time to) {
+  return _Impl->stat(id, from, to);
 }

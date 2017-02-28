@@ -9,14 +9,15 @@
 
 #include "../network/common/net_data.h"
 #include <libclient/client.h>
-#include <libdariadb/engine.h>
+#include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
 
 const dariadb::net::Server::Param server_param(2001);
-const dariadb::net::client::Client::Param client_param("127.0.0.1", 2001);
+const dariadb::net::client::Client::Param client_param("localhost", 2001);
 
 std::atomic_bool server_runned;
 std::atomic_bool server_stop_flag;
@@ -267,6 +268,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -275,7 +277,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
@@ -314,9 +316,9 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       ids[i] = ma[i].id;
     }
     size_t subscribe_calls = 0;
-    dariadb::net::client::ReadResult::callback clbk =
-        [&subscribe_calls](const dariadb::net::client::ReadResult *parent,
-                           const dariadb::Meas &m) { subscribe_calls++; };
+    dariadb::net::client::ReadResult::callback clbk = [&subscribe_calls](
+        const dariadb::net::client::ReadResult *parent, const dariadb::Meas &m,
+        const dariadb::Statistic &st) { subscribe_calls++; };
 
     auto read_res = c1.subscribe({ma[0].id}, dariadb::Flag(0), clbk);
     read_res->wait();
@@ -324,12 +326,11 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     read_res->wait();
     c1.append(ma);
 
-    dariadb::storage::QueryInterval qi{ids, 0, dariadb::Time(0),
-                                       dariadb::Time(MEASES_SIZE)};
+    dariadb::QueryInterval qi{ids, 0, dariadb::Time(0), dariadb::Time(MEASES_SIZE)};
     auto result = c1.readInterval(qi);
     BOOST_CHECK_EQUAL(result.size(), ma.size());
 
-    dariadb::storage::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
+    dariadb::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
     auto result_tp = c1.readTimePoint(qt);
     BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
     BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
@@ -338,6 +339,9 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
 
     BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
+
+    auto st = c1.stat(dariadb::Id(0), dariadb::Time(0), dariadb::Time(MEASES_SIZE));
+    BOOST_CHECK_GT(st.count, uint32_t(0));
     c1.disconnect();
 
     while (true) {
@@ -357,12 +361,13 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(CompactionToTest) {
-  dariadb::logger("********** CompactionToTest **********");
+BOOST_AUTO_TEST_CASE(RepackTest) {
+  dariadb::logger("********** RepackTest **********");
 
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
 
+  using namespace dariadb;
   using namespace dariadb::storage;
 
   {
@@ -371,7 +376,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> stor{new Engine(settings)};
 
@@ -391,7 +396,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
     // 1 client
     while (true) {
       auto st1 = c1.state();
-      dariadb::logger("CompactionTest test>> ", "0  state1: ", st1);
+      dariadb::logger("RepackTest test>> ", "0  state1: ", st1);
       if (st1 == dariadb::net::CLIENT_STATE::WORK) {
         break;
       }
@@ -413,17 +418,17 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
       auto wals = dariadb::utils::fs::ls(settings->raw_path.value(),
                                          dariadb::storage::WAL_FILE_EXT)
                       .size();
-      dariadb::logger("CompactionTest: wal count:", wals);
+      dariadb::logger("RepackTest: wal count:", wals);
       if (wals >= size_t(2)) {
         break;
       }
     }
 
-    c1.compactTo(size_t(1));
+    c1.repack();
 
     while (1) {
       auto pages = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-      // dariadb::logger("CompactionTest: pages count:",pages);
+      // dariadb::logger("RepackTest: pages count:",pages);
       if (pages == size_t(1)) {
         break;
       }
@@ -432,97 +437,7 @@ BOOST_AUTO_TEST_CASE(CompactionToTest) {
 
     while (true) {
       auto st1 = c1.state();
-      dariadb::logger("CompactionTest test>> ", "0  state1: ", st1);
-      if (st1 == dariadb::net::CLIENT_STATE::DISCONNECTED) {
-        break;
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
-
-    server_stop_flag = true;
-    server_thread.join();
-  }
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
-
-BOOST_AUTO_TEST_CASE(CompactionByTimeTest) {
-  dariadb::logger("********** CompactionByTimeTest **********");
-
-  const std::string storage_path = "testStorage";
-  const size_t chunk_size = 256;
-
-  using namespace dariadb::storage;
-
-  {
-    if (dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path);
-    }
-
-    auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::storage::STRATEGY::WAL);
-    settings->chunk_size.setValue(chunk_size);
-    std::unique_ptr<Engine> stor{new Engine(settings)};
-
-    const size_t MEASES_SIZE = 2047 * 10 + 3;
-
-    server_runned.store(false);
-    server_stop_flag = false;
-    std::thread server_thread{server_thread_func};
-
-    while (!server_runned.load()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
-    server_instance->set_storage(stor.get());
-    dariadb::net::client::Client c1(client_param);
-    c1.connect();
-
-    // 1 client
-    while (true) {
-      auto st1 = c1.state();
-      dariadb::logger("CompactionTest test>> ", "0  state1: ", st1);
-      if (st1 == dariadb::net::CLIENT_STATE::WORK) {
-        break;
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
-
-    dariadb::Id id = 0;
-    while (1) {
-      ++id;
-      dariadb::MeasArray ma;
-      ma.resize(MEASES_SIZE);
-
-      for (size_t i = 0; i < MEASES_SIZE; ++i) {
-        ma[i].id = id;
-        ma[i].value = dariadb::Value(i);
-        ma[i].time = i;
-      }
-      c1.append(ma);
-      auto wals = dariadb::utils::fs::ls(settings->raw_path.value(),
-                                         dariadb::storage::WAL_FILE_EXT)
-                      .size();
-      dariadb::logger("CompactionTest: wal count:", wals);
-      if (wals >= size_t(2)) {
-        break;
-      }
-    }
-
-    c1.compactbyTime(0, MEASES_SIZE);
-
-    while (1) {
-      auto pages = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-      // dariadb::logger("CompactionTest: pages count:",pages);
-      if (pages == size_t(1)) {
-        break;
-      }
-    }
-    c1.disconnect();
-
-    while (true) {
-      auto st1 = c1.state();
-      dariadb::logger("CompactionTest test>> ", "0  state1: ", st1);
+      dariadb::logger("RepackTest test>> ", "0  state1: ", st1);
       if (st1 == dariadb::net::CLIENT_STATE::DISCONNECTED) {
         break;
       }

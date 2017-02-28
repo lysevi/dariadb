@@ -1,3 +1,16 @@
+v0.3.0
+=====
+- Remove bystep storage engine.
+- Accept unordered data.
+- Statistic:
+ - time min/max
+ - value min/max
+ - measurement count
+ - values sum
+- Page can be repacked.
+- Scheme API.
+- Implement shard-storage.
+
 v0.2.0
 =====
 Server:

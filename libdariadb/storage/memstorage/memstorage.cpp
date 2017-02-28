@@ -32,28 +32,20 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     _disk_storage = nullptr;
     _drop_stop = false;
     _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
-    /*if (_settings->strategy.value() == STRATEGY::CACHE) {
-      logger_info("engine: run memory crawler.");
-      _crawler_thread =
-          std::thread{std::bind(&MemStorage::Private::crawler_thread_func, this)};
-    }*/
+
     if (id_count != 0) {
       _id2track.reserve(id_count);
     }
   }
   void stop() {
     if (!_stoped) {
-      logger_info("engine: memstorage - begin stoping.");
+      logger_info("engine", _settings->alias, ": memstorage - begin stoping.");
       _drop_stop = true;
       _drop_cond.notify_all();
       _drop_thread.join();
-      /* if (_settings->strategy.value() == STRATEGY::CACHE) {
-                   _crawler_cond.notify_all();
-                   _crawler_thread.join();
-       }*/
 
       if (this->_down_level_storage != nullptr) {
-        logger_info("engine: memstorage - drop all chunk to disk");
+        logger_info("engine", _settings->alias, ": memstorage - drop all chunk to disk");
         this->drop_by_limit(1.0, true);
       }
 
@@ -62,7 +54,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       }
       _id2track.clear();
       _stoped = true;
-      logger_info("engine: memstorage - stoped.");
+      logger_info("engine", _settings->alias, ": memstorage - stoped.");
     }
   }
   ~Private() { stop(); }
@@ -95,7 +87,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       _all_tracks_locker.unlock_shared();
     }
 
-    while (target_track->append(value) != Status(1, 0)) {
+    while (target_track->append(value) != Status(1, 0) && !_drop_stop) {
       _drop_cond.notify_all();
     }
 
@@ -107,7 +99,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
 
   void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
-    logger_info("engine: memstorage - drop_by_limit ", chunk_percent_to_free);
+    logger_info("engine", _settings->alias, ": memstorage - drop_by_limit ",
+                chunk_percent_to_free);
     auto cur_chunk_count = this->_chunk_allocator._allocated;
     auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_percent_to_free);
 
@@ -117,8 +110,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
     std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
     std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
-    auto it = std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(),
-                           [](auto c) { return c != nullptr; });
+    auto it =
+        std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) {
+          return c != nullptr && !c->_track->is_locked_to_drop;
+        });
     sl.unlock();
     chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
@@ -138,15 +133,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         ENSURE(!c->isFull());
         continue;
       }
-      /* if (_settings->strategy.value() == STRATEGY::CACHE && (!c->already_in_disk())) {
-         continue;
-       }*/
       all_chunks.push_back(c.get());
       ++pos;
     }
     if (pos != 0) {
-      logger_info("engine: memstorage - drop begin ", pos, " chunks of ",
-                  cur_chunk_count);
+      logger_info("engine", _settings->alias, ": memstorage - drop begin ", pos,
+                  " chunks of ", cur_chunk_count);
       if (_down_level_storage != nullptr) {
         AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
           TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
@@ -157,7 +149,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         at_res->wait();
       } else {
         if (_settings->strategy.value() != STRATEGY::CACHE) {
-          logger_info("engine: memstorage _down_level_storage == nullptr");
+          logger_info("engine", _settings->alias,
+                      ": memstorage _down_level_storage == nullptr");
         }
       }
       std::set<TimeTrack *> updated_tracks;
@@ -177,7 +170,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       for (auto &t : updated_tracks) {
         t->rereadMinMax();
       }
-      logger_info("engine: memstorage - drop end.");
+      logger_info("engine", _settings->alias, ": memstorage - drop end.");
     }
   }
 
@@ -230,19 +223,37 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     return false;
   }
 
-  void foreach (const QueryInterval &q, IReaderClb * clbk) override {
+  Id2Cursor intervalReader(const QueryInterval &q) override {
     std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
-    QueryInterval local_q({}, q.flag, q.from, q.to);
-    local_q.ids.resize(1);
+    Id2Cursor result;
     for (auto id : q.ids) {
-      if (clbk->is_canceled()) {
-        break;
-      }
       auto tracker = _id2track.find(id);
       if (tracker != _id2track.end()) {
-        local_q.ids[0] = id;
-        tracker->second->foreach (local_q, clbk);
+        auto rdr = tracker->second->intervalReader(q);
+        if (!rdr.empty()) {
+          result[id] = rdr[id];
+        }
       }
+    }
+    return result;
+  }
+
+  Statistic stat(const Id id, Time from, Time to) override {
+    std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
+    Statistic result;
+
+    auto tracker = _id2track.find(id);
+    if (tracker != _id2track.end()) {
+      result = tracker->second->stat(id, from, to);
+    }
+
+    return result;
+  }
+
+  void foreach (const QueryInterval &q, IReadCallback * clbk) override {
+    Id2Cursor readers = intervalReader(q);
+    for (auto kv : readers) {
+      kv.second->apply(clbk, q);
     }
   }
 
@@ -259,7 +270,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         auto sub_res = tracker->second->readTimePoint(local_q);
         result[id] = sub_res[id];
       } else {
-        result[id].flag = Flags::_NO_DATA;
+        result[id].flag = FLAGS::_NO_DATA;
       }
     }
     return result;
@@ -278,7 +289,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         auto sub_res = tracker->second->currentValue(local_ids, flag);
         result[id] = sub_res[id];
       } else {
-        result[id].flag = Flags::_NO_DATA;
+        result[id].flag = FLAGS::_NO_DATA;
       }
     }
     return result;
@@ -292,8 +303,19 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   void addChunk(MemChunk_Ptr &chunk) override {
     ENSURE(chunk->_a_data.position < _chunks.size());
+    ENSURE(chunk->_is_from_pool);
 
     _chunks[chunk->_a_data.position] = chunk;
+    if (is_time_to_drop()) {
+      _drop_cond.notify_all();
+    }
+  }
+
+  void freeChunk(MemChunk_Ptr &chunk) {
+    ENSURE(chunk->_a_data.position < _chunks.size());
+    ENSURE(chunk->_is_from_pool);
+
+    _chunks[chunk->_a_data.position] = nullptr;
     if (is_time_to_drop()) {
       _drop_cond.notify_all();
     }
@@ -320,7 +342,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       drop_by_limit(_settings->percent_to_drop.value(), false);
     }
-    logger_info("engine: memstorage - dropping thread stoped.");
+    logger_info("engine", _settings->alias, ": memstorage - dropping thread stoped.");
   }
 
   Id2Track _id2track;
@@ -341,7 +363,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 };
 
 MemStorage_ptr MemStorage::create(const EngineEnvironment_ptr &env, size_t id_count) {
-	return MemStorage_ptr{ new MemStorage(env,id_count) };
+  return MemStorage_ptr{new MemStorage(env, id_count)};
 }
 
 MemStorage::MemStorage(const EngineEnvironment_ptr &env, size_t id_count)
@@ -368,7 +390,15 @@ bool MemStorage::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-void MemStorage::foreach (const QueryInterval &q, IReaderClb * clbk) {
+Id2Cursor MemStorage::intervalReader(const QueryInterval &q) {
+  return _impl->intervalReader(q);
+}
+
+Statistic MemStorage::stat(const Id id, Time from, Time to) {
+  return _impl->stat(id, from, to);
+}
+
+void MemStorage::foreach (const QueryInterval &q, IReadCallback * clbk) {
   _impl->foreach (q, clbk);
 }
 

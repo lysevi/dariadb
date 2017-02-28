@@ -1,4 +1,5 @@
 #pragma once
+#include <libdariadb/engines/strategy.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -11,6 +12,39 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace dariadb_bench {
+struct BenchmarkSummaryInfo {
+  size_t writed;
+  double write_speed;
+  double read_interval_speed;
+  double read_timepoint_speed;
+  double read_all_time;
+  double foreach_read_all_time;
+  double page_repack_time;
+  size_t page_repacked;
+  double stat_time;
+  dariadb::STRATEGY strategy;
+
+  BenchmarkSummaryInfo(dariadb::STRATEGY _strategy) {
+    strategy = _strategy;
+    writed = size_t(0);
+    page_repacked = size_t(0);
+    write_speed = read_interval_speed = read_timepoint_speed = read_all_time = stat_time =
+        page_repack_time = foreach_read_all_time = 0.0;
+  }
+
+  void print() {
+    std::cout << "benhcmark summary (" << strategy << ")" << std::endl;
+    std::cout << "writed: " << writed << std::endl;
+    std::cout << "write speed(average): " << write_speed << " per/sec" << std::endl;
+    std::cout << "page repack: " << page_repack_time << " secs." << std::endl;
+    std::cout << "page repacked: " << page_repacked << std::endl;
+    std::cout << "read interval: " << read_interval_speed << " per/sec" << std::endl;
+    std::cout << "stat: " << stat_time << " sec" << std::endl;
+    std::cout << "read timepoint: " << read_timepoint_speed << " per/sec" << std::endl;
+    std::cout << "read all: " << read_all_time << " secs." << std::endl;
+    std::cout << "foreach all: " << foreach_read_all_time << " secs." << std::endl;
+  }
+};
 
 const size_t total_threads_count = 2;
 const size_t hours_write_perid = 48;
@@ -45,16 +79,16 @@ public:
   }
 };
 
-class BenchCallback : public dariadb::storage::IReaderClb {
+class BenchCallback : public dariadb::IReadCallback {
 public:
   BenchCallback() {
     count = 0;
     is_end_called = false;
   }
-  void call(const dariadb::Meas &v) override { count++; }
+  void apply(const dariadb::Meas &) override { count++; }
   void is_end() override {
     is_end_called = true;
-    dariadb::storage::IReaderClb::is_end();
+    dariadb::IReadCallback::is_end();
   }
   std::mutex _locker;
   size_t count;
@@ -70,15 +104,15 @@ dariadb::Id get_id_to(dariadb::Id id) {
 }
 
 void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
-                            dariadb::storage::IMeasWriter *ms, dariadb::Time start_time,
+                            dariadb::IMeasWriter *ms, dariadb::Time start_time,
                             dariadb::Time *write_time_time) {
   try {
     auto step = (boost::posix_time::seconds(1).total_milliseconds() / writes_per_second);
-    auto m = dariadb::Meas::empty();
+    dariadb::Meas m;
     m.time = start_time;
     auto id_from = get_id_from(id);
     auto id_to = get_id_to(id);
-    dariadb::logger("*** thread #", id, " id:[", id_from, " - ", id_to, ']');
+    dariadb::logger("*** thread #", id, " id:[", id_from, " - ", id_to, "]");
     dariadb::IdSet ids;
     for (size_t i = 0; i < write_per_id_count; ++i) {
       m.flag = dariadb::Flag(id);
@@ -107,8 +141,9 @@ void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
   }
 }
 
-void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStorage *stor,
-                  size_t reads_count, bool quiet = false, bool check_is_end = true) {
+void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all_id_set,
+                   dariadb::IMeasStorage *stor, size_t reads_count, bool quiet = false,
+                   bool check_is_end = true) {
   std::cout << "==> init random ids...." << std::endl;
   dariadb::IdArray random_ids{all_id_set.begin(), all_id_set.end()};
   std::random_shuffle(random_ids.begin(), random_ids.end());
@@ -139,6 +174,23 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
     }
 
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+
+    if (!quiet) {
+      std::cout << "time: " << elapsed << std::endl;
+    }
+  }
+
+  std::cout << "==> stat...." << std::endl;
+  { // stat
+    auto start = clock();
+
+    for (size_t i = 0; i < reads_count; i++) {
+      Id2Times curval = interval_queries[i];
+      stor->stat(std::get<0>(curval), std::get<1>(curval), std::get<2>(curval));
+    }
+
+    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    summary_info->stat_time = elapsed;
     if (!quiet) {
       std::cout << "time: " << elapsed << std::endl;
     }
@@ -161,10 +213,11 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
 
-      dariadb::storage::QueryTimePoint qp{current_ids, 0, time_point};
+      dariadb::QueryTimePoint qp{current_ids, 0, time_point};
       stor->readTimePoint(qp);
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    summary_info->read_timepoint_speed = elapsed;
     if (!quiet) {
       std::cout << "time: " << elapsed << std::endl;
     }
@@ -193,7 +246,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
 
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
-      auto qi = dariadb::storage::QueryInterval(current_ids, 0, f, t);
+      auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
       stor->foreach (qi, clbk.get());
       if (check_is_end) {
         clbk->wait();
@@ -201,6 +254,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
       total_count += clbk->count;
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    summary_info->read_interval_speed = elapsed;
     if (!quiet) {
       std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
                 << std::endl;
@@ -224,7 +278,7 @@ void readBenchark(const dariadb::IdSet &all_id_set, dariadb::storage::IMeasStora
 
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
-      auto qi = dariadb::storage::QueryInterval(current_ids, 0, f, t);
+      auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
       count += stor->readInterval(qi).size();
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;

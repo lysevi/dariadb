@@ -9,6 +9,8 @@
 #include <sstream>
 
 using namespace dariadb::storage;
+using namespace dariadb::utils;
+
 using json = nlohmann::json;
 
 const uint64_t WAL_CACHE_SIZE = 4096 / sizeof(dariadb::Meas) * 10;
@@ -23,6 +25,7 @@ const std::string c_strategy = "strategy";
 const std::string c_memory_limit = "memory_limit";
 const std::string c_percent_when_start_droping = "percent_when_start_droping";
 const std::string c_percent_to_drop = "percent_to_drop";
+const std::string c_max_pages_per_level = "max_pages_per_level";
 
 std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
@@ -33,8 +36,8 @@ template <class T> void Settings::ReadOnlyOption<T>::from_string(const std::stri
   iss >> _value;
 }
 
-template <> std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const {
-  return dariadb::storage::to_string(this->value());
+template <> std::string Settings::ReadOnlyOption<dariadb::STRATEGY>::value_str() const {
+  return dariadb::to_string(this->value());
 }
 template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
   return this->value();
@@ -43,28 +46,26 @@ template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const
 BaseOption::~BaseOption() {}
 
 Settings_ptr Settings::create(const std::string &storage_path) {
-	return Settings_ptr{ new Settings(storage_path) };
+  return Settings_ptr{new Settings(storage_path)};
 }
 
 Settings::Settings(const std::string &path_to_storage)
     : storage_path(nullptr, "storage path", path_to_storage),
-      raw_path(nullptr, "raw path", utils::fs::append_path(path_to_storage, "raw")),
-      bystep_path(nullptr, "bystep path",
-                  utils::fs::append_path(path_to_storage, "bystep")),
+      raw_path(nullptr, "raw path", fs::append_path(path_to_storage, "raw")),
       wal_file_size(this, c_wal_file_size, WAL_FILE_SIZE),
       wal_cache_size(this, c_wal_cache_size, WAL_CACHE_SIZE),
       chunk_size(this, c_chunk_size, CHUNK_SIZE),
       strategy(this, c_strategy, STRATEGY::COMPRESSED),
       memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
       percent_when_start_droping(this, c_percent_when_start_droping, float(0.75)),
-      percent_to_drop(this, c_percent_to_drop, float(0.1)) {
+      percent_to_drop(this, c_percent_to_drop, float(0.1)),
+      max_pages_in_level(this, c_max_pages_per_level, uint16_t(2)) {
   auto f = settings_file_path(storage_path.value());
   if (utils::fs::path_exists(f)) {
     load(f);
   } else {
     dariadb::utils::fs::mkdir(storage_path.value());
     dariadb::utils::fs::mkdir(raw_path.value());
-    dariadb::utils::fs::mkdir(bystep_path.value());
     save();
   }
   load_min_max = true;
@@ -73,7 +74,7 @@ Settings::Settings(const std::string &path_to_storage)
 Settings::~Settings() {}
 
 void Settings::set_default() {
-  logger("engine: Settings set default Settings");
+  logger("engine", alias, ": Settings set default Settings");
   wal_cache_size.setValue(WAL_CACHE_SIZE);
   wal_file_size.setValue(WAL_FILE_SIZE);
   chunk_size.setValue(CHUNK_SIZE);
@@ -96,7 +97,7 @@ void Settings::save() {
 }
 
 void Settings::save(const std::string &file) {
-  logger("engine: Settings save to ", file);
+  logger("engine", alias, ": Settings save to ", file);
   json js;
 
   for (auto &o : _all_options) {
@@ -114,7 +115,7 @@ void Settings::save(const std::string &file) {
 }
 
 void Settings::load(const std::string &file) {
-  logger("engine: Settings loading ", file);
+  logger("engine", alias, ": Settings loading ", file);
   std::string content = dariadb::utils::fs::read_file(file);
   json js = json::parse(content);
   for (auto &o : _all_options) {
@@ -139,9 +140,9 @@ void Settings::change(std::string &expression) {
 
   auto fres = _all_options.find(splited[0]);
   if (fres != _all_options.end()) {
-    logger_info("engine: change ", fres->first);
+    logger_info("engine", alias, ": change ", fres->first);
     fres->second->from_string(splited[1]);
   } else {
-    logger_fatal("engine: engine: bad expression ", expression);
+    logger_fatal("engine", alias, ": engine: bad expression ", expression);
   }
 }
