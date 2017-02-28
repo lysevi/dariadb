@@ -9,12 +9,10 @@
   if (!(A)) {                                                                            \
     THROW_EXCEPTION(E);                                                                  \
   }
-#define ENSURE(A) ENSURE_MSG(A, "check failed")
-#define ENSURE_NOT_NULL(A) ENSURE_MSG(A, "null pointer")
+#define ENSURE(A) ENSURE_MSG(A, #A)
 #else
 #define ENSURE_MSG(A)
 #define ENSURE(A)
-#define ENSURE_NOT_NULL(A)
 #endif
 
 namespace dariadb {
