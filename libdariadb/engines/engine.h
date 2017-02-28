@@ -67,14 +67,8 @@ public:
   EXPORT static uint16_t format();
   EXPORT static std::string version();
   EXPORT STRATEGY strategy() const;
-
-  EXPORT void join(std::list<QueryInterval> queries,
-                   storage::Join::Callback *clbk);
-
 protected:
   class Private;
   std::unique_ptr<Private> _impl;
 };
-
-EXPORT void row2stream(std::ostream &s, const MeasArray &row);
 }

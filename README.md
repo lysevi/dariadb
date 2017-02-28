@@ -39,7 +39,6 @@
 * Compaction old data with filtration support:
   - in engine api.
   - in network protocol.
-* Support join of queries.
 * Statistic:
   - time min/max
   - value min/max

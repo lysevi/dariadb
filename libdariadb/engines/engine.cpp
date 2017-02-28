@@ -734,32 +734,6 @@ public:
     this->unlock_storage();
   }
 
-  void join(std::list<QueryInterval> queries, Join::Callback *clbk) {
-    size_t ids_size = 0;
-    CursorsList cursors;
-    for (auto &q : queries) {
-      auto i2c = this->intervalReader(q);
-      ids_size += q.ids.size();
-      for (auto id : q.ids) {
-        auto cres = i2c.find(id);
-        if (cres != i2c.end()) {
-          cursors.push_back(cres->second);
-        } else {
-          cursors.push_back(std::make_shared<EmptyCursor>());
-        }
-      }
-    }
-    IdArray ids(ids_size);
-    size_t pos = 0;
-    for (auto &q : queries) {
-      for (auto id : q.ids) {
-        ids[pos++] = id;
-      }
-    }
-    ENSURE(ids.size() != size_t(0));
-    Join::join(cursors, ids, clbk);
-  }
-
   storage::Settings_ptr settings(){
       return _settings;
   }
@@ -864,26 +838,3 @@ STRATEGY Engine::strategy() const { return _impl->strategy(); }
 Id2MinMax Engine::loadMinMax() { return _impl->loadMinMax(); }
 
 std::string Engine::version() { return std::string(PROJECT_VERSION); }
-
-void Engine::join(std::list<QueryInterval> queries,
-                  storage::Join::Callback *clbk) {
-  return _impl->join(queries, clbk);
-}
-
-void dariadb::row2stream(std::ostream &s, const MeasArray &row) {
-  for (auto v : row) {
-    std::stringstream ss;
-    ss << " f:";
-    switch (v.flag) {
-    case FLAGS::_NO_DATA:
-      ss << std::setw(10) << std::left << "_NO_DATA";
-      break;
-    default:
-      ss << std::setw(10) << std::left << std::hex << std::showbase << v.flag;
-      break;
-    }
-
-    ss << " v:" << std::setw(5) << std::left << std::dec << v.value;
-    s << ss.str();
-  }
-}

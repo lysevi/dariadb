@@ -43,13 +43,6 @@ public:
   bool is_end_called;
 };
 
-struct JoinCallback : public Join::Callback {
-  JoinCallback() { calls = size_t(0); }
-  void apply(const MeasArray &row) override { calls++; }
-
-  size_t calls;
-};
-
 void parse_cmdline(int argc, char *argv[]) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
@@ -286,20 +279,6 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time,
   std::cout << "readed: " << clbk->count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
   summary_info->foreach_read_all_time = elapsed;
-
-  /*std::cout << "==> join all..." << std::endl;
-
-  auto join_callback = std::make_unique<JoinCallback>();
-
-  start = clock();
-
-  ms->join(std::list<QueryInterval>{qi}, join_callback.get());
-
-  elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-  std::cout << "table size: " << join_callback->calls << std::endl;
-  std::cout << "time: " << elapsed << std::endl;
-  summary_info->join_all_time = elapsed;
-  summary_info->join_table_size = join_callback->calls;*/
 
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;

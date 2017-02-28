@@ -93,20 +93,5 @@ struct CursorWrapperFactory {
   EXPORT static Cursor_Ptr colapseCursors(const CursorsList &i2r);
   EXPORT static Id2Cursor colapseCursors(const Id2CursorsList &i2r);
 };
-
-struct Join {
-  using Table = std::list<MeasArray>;
-  struct Callback {
-    virtual void apply(const MeasArray &row) = 0;
-  };
-
-  struct TableMaker : public Callback {
-    void apply(const MeasArray &a) override { result.push_back(a); }
-    Join::Table result;
-  };
-
-  EXPORT static void join(const CursorsList &l, const IdArray&ids, Callback *clbk);
-  EXPORT static Table makeTable(const CursorsList &l, const IdArray&ids);
-};
 }
 }

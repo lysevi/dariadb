@@ -18,8 +18,6 @@ struct BenchmarkSummaryInfo {
   double read_interval_speed;
   double read_timepoint_speed;
   double read_all_time;
-  double join_all_time;
-  size_t join_table_size;
   double foreach_read_all_time;
   double page_repack_time;
   size_t page_repacked;
@@ -30,9 +28,8 @@ struct BenchmarkSummaryInfo {
     strategy = _strategy;
     writed = size_t(0);
     page_repacked = size_t(0);
-    join_table_size = size_t(0);
     write_speed = read_interval_speed = read_timepoint_speed = read_all_time =
-        stat_time = join_all_time = page_repack_time =
+        stat_time = page_repack_time =
             foreach_read_all_time = 0.0;
   }
 
@@ -52,8 +49,6 @@ struct BenchmarkSummaryInfo {
     std::cout << "read all: " << read_all_time << " secs." << std::endl;
     std::cout << "foreach all: " << foreach_read_all_time << " secs."
               << std::endl;
-    std::cout << "join all: " << join_all_time << " secs." << std::endl;
-    std::cout << "join size: " << join_table_size << std::endl;
   }
 };
 
