@@ -1,6 +1,19 @@
 #include <libdariadb/dariadb.h>
 #include <iostream>
 
+void print_measurement(dariadb::Meas&measurement) {
+	std::cout << " id: " << measurement.id
+		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+		<< " value:" << measurement.value << std::endl;
+}
+
+
+void print_measurement(dariadb::Meas&measurement, dariadb::scheme::DescriptionMap&dmap) {
+	std::cout << " param: " << dmap[measurement.id]
+		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+		<< " value:" << measurement.value << std::endl;
+}
+
 class QuietLogger : public dariadb::utils::ILogger {
 public:
   void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) override {}
@@ -47,9 +60,7 @@ int main(int, char **) {
   std::cout << "Timepoint: " << std::endl;
   for (auto kv : timepoint) {
     auto measurement = kv.second;
-    std::cout << " param: " << all_params[kv.first]
-              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-              << " value:" << measurement.value << std::endl;
+	print_measurement(measurement, all_params);
   }
 
   // current values
@@ -57,9 +68,7 @@ int main(int, char **) {
   std::cout << "Current: " << std::endl;
   for (auto kv : timepoint) {
     auto measurement = kv.second;
-    std::cout << " id: " << all_params[kv.first]
-              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-              << " value:" << measurement.value << std::endl;
+	print_measurement(measurement, all_params);
   }
 
   // callback
