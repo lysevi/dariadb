@@ -25,8 +25,7 @@ class WALFile::Private {
 public:
   Private(const EngineEnvironment_ptr env) {
     _env = env;
-    _settings = _env->getResourceObject<Settings>(
-        EngineEnvironment::Resource::SETTINGS);
+    _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = 0;
     _is_readonly = false;
     auto rnd_fname = utils::fs::random_file_name(WAL_FILE_EXT);
@@ -36,11 +35,9 @@ public:
     _file = nullptr;
   }
 
-  Private(const EngineEnvironment_ptr env, const std::string &fname,
-          bool readonly) {
+  Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
     _env = env;
-    _settings = _env->getResourceObject<Settings>(
-        EngineEnvironment::Resource::SETTINGS);
+    _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = WALFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
@@ -113,8 +110,7 @@ public:
 
     auto max_size = _settings->wal_file_size.value();
 
-    auto write_size =
-        (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
+    auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
     MeasArray ma{begin, end};
     std::fwrite(ma.data(), sizeof(Meas), write_size, _file);
     std::fflush(_file);
@@ -293,8 +289,7 @@ public:
     return result;
   }
 
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                  dariadb::Time *maxResult) {
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     open_to_read();
 
     *minResult = dariadb::MAX_TIME;
@@ -393,23 +388,25 @@ WALFile_Ptr WALFile::create(const EngineEnvironment_ptr env) {
   return WALFile_Ptr{new WALFile(env)};
 }
 
-WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env,
-                          const std::string &fname, bool readonly) {
+WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env, const std::string &fname,
+                          bool readonly) {
   return WALFile_Ptr{new WALFile(env, fname, readonly)};
 }
 
 WALFile::~WALFile() {}
 
-WALFile::WALFile(const EngineEnvironment_ptr env)
-    : _Impl(new WALFile::Private(env)) {}
+WALFile::WALFile(const EngineEnvironment_ptr env) : _Impl(new WALFile::Private(env)) {}
 
-WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname,
-                 bool readonly)
+WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
     : _Impl(new WALFile::Private(env, fname, readonly)) {}
 
-dariadb::Time WALFile::minTime() { return _Impl->minTime(); }
+dariadb::Time WALFile::minTime() {
+  return _Impl->minTime();
+}
 
-dariadb::Time WALFile::maxTime() { return _Impl->maxTime(); }
+dariadb::Time WALFile::maxTime() {
+  return _Impl->maxTime();
+}
 
 bool WALFile::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) {
@@ -419,7 +416,9 @@ void WALFile::flush() { // write all to storage;
   _Impl->flush();
 }
 
-Status WALFile::append(const Meas &value) { return _Impl->append(value); }
+Status WALFile::append(const Meas &value) {
+  return _Impl->append(value);
+}
 Status WALFile::append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
@@ -449,13 +448,19 @@ Id2Meas WALFile::currentValue(const IdArray &ids, const Flag &flag) {
   return _Impl->currentValue(ids, flag);
 }
 
-std::string WALFile::filename() const { return _Impl->filename(); }
+std::string WALFile::filename() const {
+  return _Impl->filename();
+}
 
-std::shared_ptr<MeasArray> WALFile::readAll() { return _Impl->readAll(); }
+std::shared_ptr<MeasArray> WALFile::readAll() {
+  return _Impl->readAll();
+}
 
 size_t WALFile::writed(std::string fname) {
   std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
   return in.tellg() / sizeof(Meas);
 }
 
-Id2MinMax WALFile::loadMinMax() { return _Impl->loadMinMax(); }
+Id2MinMax WALFile::loadMinMax() {
+  return _Impl->loadMinMax();
+}

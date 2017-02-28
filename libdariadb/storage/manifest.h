@@ -31,6 +31,7 @@ public:
 
   EXPORT void set_format(const std::string &version);
   EXPORT std::string get_format();
+
 protected:
   EXPORT Manifest(const Settings_ptr &settings);
   class Private;

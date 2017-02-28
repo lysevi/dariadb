@@ -1,8 +1,8 @@
-#include <algorithm>
-#include <cmath>
 #include <libdariadb/flags.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/utils/utils.h>
+#include <algorithm>
+#include <cmath>
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,7 +15,9 @@ Meas::Meas() {
   time = Time();
 }
 
-Meas::Meas(Id i) : Meas() { id = i; }
+Meas::Meas(Id i) : Meas() {
+  id = i;
+}
 
 Meas::Meas(const Meas &other) {
   id = other.id;

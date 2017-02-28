@@ -16,8 +16,8 @@ struct MemChunk : public Chunk {
   TimeTrack *_track; /// init in TimeTrack
   bool _is_from_pool;
 
-  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer,
-           uint32_t size, const Meas &first_m);
+  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, uint32_t size,
+           const Meas &first_m);
   MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer);
   ~MemChunk();
 };

@@ -45,7 +45,7 @@ public:
     logger_info("engine", _settings->alias, ": manifest file opened.");
     char *err = 0;
     if (sqlite3_exec(db, MANIFEST_CREATE_SQL, 0, 0, &err)) {
-	  THROW_EXCEPTION("SQL error: ", err)
+      THROW_EXCEPTION("SQL error: ", err)
       sqlite3_free(err);
     }
     if (is_exists) {
@@ -282,6 +282,7 @@ public:
     } while (rc == SQLITE_SCHEMA);
     return result;
   }
+
 protected:
   std::string _filename;
   utils::async::Locker _locker;
@@ -290,7 +291,7 @@ protected:
 };
 
 Manifest_ptr Manifest::create(const Settings_ptr &settings) {
-	return Manifest_ptr{ new Manifest(settings) };
+  return Manifest_ptr{new Manifest(settings)};
 }
 
 Manifest::Manifest(const Settings_ptr &settings)

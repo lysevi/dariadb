@@ -1,7 +1,6 @@
-#include <iostream>
 #include <libdariadb/dariadb.h>
 #include <libdariadb/utils/fs.h>
-
+#include <iostream>
 
 int main(int, char **) {
   const std::string storage_path = "exampledb";
@@ -13,7 +12,7 @@ int main(int, char **) {
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->save();
 
-  //create named param. p1 and p2 contain id of created timeseries.
+  // create named param. p1 and p2 contain id of created timeseries.
   auto scheme = dariadb::scheme::Scheme::create(settings);
   auto p1 = scheme->addParam("group.param1");
   auto p2 = scheme->addParam("group.subgroup.param2");

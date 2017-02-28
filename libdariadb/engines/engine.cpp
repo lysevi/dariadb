@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <libdariadb/config.h>
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/flags.h>
@@ -17,6 +16,7 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/utils.h>
+#include <algorithm>
 
 #include <cstring>
 #include <fstream>
@@ -36,10 +36,9 @@ public:
     _strategy = _settings->strategy.value();
 
     _engine_env = EngineEnvironment::create();
-    _engine_env->addResource(EngineEnvironment::Resource::SETTINGS,
-                             _settings.get());
+    _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
-    logger_info("engine:", _settings->alias,": project version - ", version());
+    logger_info("engine:", _settings->alias, ": project version - ", version());
     logger_info("engine", _settings->alias, ": storage format - ", format());
     logger_info("engine", _settings->alias, ": strategy - ", _settings->strategy.value());
     _stoped = false;
@@ -51,8 +50,8 @@ public:
 
     lockfile_lock_or_die(ignore_lock_file);
 
-    auto manifest_file_name = utils::fs::append_path(
-        _settings->storage_path.value(), MANIFEST_FILE_NAME);
+    auto manifest_file_name =
+        utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
 
     bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
     if (is_new_storage) {
@@ -65,12 +64,11 @@ public:
     }
 
     _manifest = Manifest::create(_settings);
-    _engine_env->addResource(EngineEnvironment::Resource::MANIFEST,
-                             _manifest.get());
+    _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
-    if (is_new_storage) {//init new;
+    if (is_new_storage) { // init new;
       _manifest->set_format(std::to_string(format()));
-    } else {//open exists
+    } else { // open exists
       check_storage_version();
       Dropper::cleanStorage(_settings->raw_path.value());
     }
@@ -97,8 +95,7 @@ public:
     if (_strategy != STRATEGY::MEMORY) {
       _wal_manager = WALManager::create(_engine_env);
 
-      _dropper =
-          std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
+      _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
       _wal_manager->setDownlevel(_dropper.get());
       this->_top_level_storage = _wal_manager;
     }
@@ -176,8 +173,10 @@ public:
     auto current_version = format();
     auto storage_version = std::stoi(_manifest->get_format());
     if (storage_version != current_version) {
-      logger_info("engine", _settings->alias, ": openning storage with version - ", storage_version);
-      THROW_EXCEPTION("engine", _settings->alias, ": openning storage with greater version.");
+      logger_info("engine", _settings->alias, ": openning storage with version - ",
+                  storage_version);
+      THROW_EXCEPTION("engine", _settings->alias,
+                      ": openning storage with greater version.");
     }
   }
 
@@ -273,8 +272,7 @@ public:
     return std::max(pmax, amax);
   }
 
-  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
-                  dariadb::Time *maxResult) {
+  bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
     bool pr, ar;
@@ -294,10 +292,8 @@ public:
 
     lock_storage();
 
-    auto pm_async =
-        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
-    auto am_async =
-        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto am_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
 
     pm_async->wait();
     am_async->wait();
@@ -348,8 +344,7 @@ public:
     return result;
   }
 
-  void subscribe(const IdArray &ids, const Flag &flag,
-                 const ReaderCallback_ptr &clbk) {
+  void subscribe(const IdArray &ids, const Flag &flag, const ReaderCallback_ptr &clbk) {
     auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
     _subscribe_notify.add(new_s);
   }
@@ -411,23 +406,19 @@ public:
     return result;
   }
 
-  Id2Cursor interval_readers_from_disk_only(const IdSet &ids,
-                                            const QueryInterval &q) {
+  Id2Cursor interval_readers_from_disk_only(const IdSet &ids, const QueryInterval &q) {
     if (ids.empty()) {
       return Id2Cursor();
     }
-    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
-                          q.to};
+    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from, q.to};
     return internal_readers_two_level(local_q, _page_manager, _wal_manager);
   }
 
-  Id2Cursor interval_readers_from_mem_only(const IdSet &ids,
-                                           const QueryInterval &q) {
+  Id2Cursor interval_readers_from_mem_only(const IdSet &ids, const QueryInterval &q) {
     if (ids.empty()) {
       return Id2Cursor();
     }
-    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from,
-                          q.to};
+    QueryInterval local_q{IdArray{ids.begin(), ids.end()}, q.flag, q.from, q.to};
     return _memstorage->intervalReader(q);
   }
 
@@ -480,8 +471,7 @@ public:
       auto disk_q = id2intervals.second.first;
       auto mem_q = id2intervals.second.second;
 
-      auto disk_readers =
-          internal_readers_two_level(disk_q, _page_manager, _wal_manager);
+      auto disk_readers = internal_readers_two_level(disk_q, _page_manager, _wal_manager);
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
       CursorsList readers;
@@ -506,8 +496,8 @@ public:
   }
 
   /// when strategy!=CACHEs
-  Id2Cursor internal_readers_two_level(const QueryInterval &q,
-                                       PageManager_ptr pm, IMeasSource_ptr tm) {
+  Id2Cursor internal_readers_two_level(const QueryInterval &q, PageManager_ptr pm,
+                                       IMeasSource_ptr tm) {
     auto pm_readers = pm->intervalReader(q);
     auto tm_readers = tm->intervalReader(q);
 
@@ -689,8 +679,7 @@ public:
       return false;
     };
 
-    auto pm_async =
-        ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
     pm_async->wait();
     return result;
   }
@@ -734,9 +723,8 @@ public:
     this->unlock_storage();
   }
 
-  storage::Settings_ptr settings(){
-      return _settings;
-  }
+  storage::Settings_ptr settings() { return _settings; }
+
 protected:
   std::mutex _flush_locker, _lock_locker;
   SubscribeNotificator _subscribe_notify;
@@ -759,21 +747,28 @@ protected:
   bool _thread_pool_owner;
 };
 
-Engine::Engine(Settings_ptr settings, bool init_threadpool,
-               bool ignore_lock_file)
+Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
     : _impl{new Engine::Private(settings, init_threadpool, ignore_lock_file)} {}
 
-Engine::~Engine() { _impl = nullptr; }
+Engine::~Engine() {
+  _impl = nullptr;
+}
 
-Time Engine::minTime() { return _impl->minTime(); }
+Time Engine::minTime() {
+  return _impl->minTime();
+}
 
-Time Engine::maxTime() { return _impl->maxTime(); }
+Time Engine::maxTime() {
+  return _impl->maxTime();
+}
 bool Engine::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                         dariadb::Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
 }
 
-Status Engine::append(const Meas &value) { return _impl->append(value); }
+Status Engine::append(const Meas &value) {
+  return _impl->append(value);
+}
 
 void Engine::subscribe(const IdArray &ids, const Flag &flag,
                        const ReaderCallback_ptr &clbk) {
@@ -784,10 +779,16 @@ Id2Meas Engine::currentValue(const IdArray &ids, const Flag &flag) {
   return _impl->currentValue(ids, flag);
 }
 
-void Engine::flush() { _impl->flush(); }
+void Engine::flush() {
+  _impl->flush();
+}
 
-void Engine::stop() { _impl->stop(); }
-Engine::Description Engine::description() const { return _impl->description(); }
+void Engine::stop() {
+  _impl->stop();
+}
+Engine::Description Engine::description() const {
+  return _impl->description();
+}
 
 void Engine::foreach (const QueryInterval &q, IReadCallback * clbk) {
   return _impl->foreach (q, clbk);
@@ -817,24 +818,42 @@ void Engine::drop_part_wals(size_t count) {
   return _impl->drop_part_wals(count);
 }
 
-void Engine::compress_all() { return _impl->compress_all(); }
-
-void Engine::wait_all_asyncs() { return _impl->wait_all_asyncs(); }
-
-void Engine::fsck() { _impl->fsck(); }
-
-void Engine::eraseOld(const Time &t) { return _impl->eraseOld(t); }
-
-void Engine::repack() { _impl->repack(); }
-
-storage::Settings_ptr Engine::settings(){
-    return _impl->settings();
+void Engine::compress_all() {
+  return _impl->compress_all();
 }
 
-uint16_t Engine::format() { return STORAGE_FORMAT; }
+void Engine::wait_all_asyncs() {
+  return _impl->wait_all_asyncs();
+}
 
-STRATEGY Engine::strategy() const { return _impl->strategy(); }
+void Engine::fsck() {
+  _impl->fsck();
+}
 
-Id2MinMax Engine::loadMinMax() { return _impl->loadMinMax(); }
+void Engine::eraseOld(const Time &t) {
+  return _impl->eraseOld(t);
+}
 
-std::string Engine::version() { return std::string(PROJECT_VERSION); }
+void Engine::repack() {
+  _impl->repack();
+}
+
+storage::Settings_ptr Engine::settings() {
+  return _impl->settings();
+}
+
+uint16_t Engine::format() {
+  return STORAGE_FORMAT;
+}
+
+STRATEGY Engine::strategy() const {
+  return _impl->strategy();
+}
+
+Id2MinMax Engine::loadMinMax() {
+  return _impl->loadMinMax();
+}
+
+std::string Engine::version() {
+  return std::string(PROJECT_VERSION);
+}

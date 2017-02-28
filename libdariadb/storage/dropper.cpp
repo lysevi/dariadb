@@ -97,7 +97,7 @@ void Dropper::drop_wal_internal() {
         auto storage_path = sett->raw_path.value();
         auto full_path = fs::append_path(storage_path, fname);
 
-        WALFile_Ptr wal=WALFile::open(env, full_path, true);
+        WALFile_Ptr wal = WALFile::open(env, full_path, true);
 
         auto all = wal->readAll();
 
@@ -106,7 +106,8 @@ void Dropper::drop_wal_internal() {
         auto end = clock();
         auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
-        logger_info("engine", _settings->alias, ": compressing ", fname, " done. elapsed time - ", elapsed);
+        logger_info("engine", _settings->alias, ": compressing ", fname,
+                    " done. elapsed time - ", elapsed);
       } catch (std::exception &ex) {
         THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
       }

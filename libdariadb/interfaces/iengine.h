@@ -32,7 +32,7 @@ public:
   virtual void stop() = 0;
   virtual void wait_all_asyncs() = 0;
   virtual void drop_part_wals(size_t count) = 0;
-  virtual storage::Settings_ptr settings()=0;
+  virtual storage::Settings_ptr settings() = 0;
 };
 using IEngine_Ptr = std::shared_ptr<IEngine>;
 }

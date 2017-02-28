@@ -136,13 +136,13 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
 
     auto page_lst = manifest->page_list();
     BOOST_CHECK_EQUAL(page_lst.size(), pages_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(),
-                                  pages_names.begin(), pages_names.end());
+    BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
+                                  pages_names.end());
 
     auto wal_lst = manifest->wal_list();
     BOOST_CHECK_EQUAL(wal_lst.size(), wal_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(wal_lst.begin(), wal_lst.end(),
-                                  wal_names.begin(), wal_names.end());
+    BOOST_CHECK_EQUAL_COLLECTIONS(wal_lst.begin(), wal_lst.end(), wal_names.begin(),
+                                  wal_names.end());
 
     manifest = nullptr;
   }
@@ -177,9 +177,8 @@ BOOST_AUTO_TEST_CASE(SettingsInstance) {
 
   settings = nullptr;
 
-  bool file_exists =
-      dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(
-          storage_path, dariadb::storage::SETTINGS_FILE_NAME));
+  bool file_exists = dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(
+      storage_path, dariadb::storage::SETTINGS_FILE_NAME));
   BOOST_CHECK(file_exists);
 
   settings = dariadb::storage::Settings::create(storage_path);
@@ -313,8 +312,7 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
 
   auto must_be_false =
       dariadb::storage::CursorWrapperFactory::is_linear_readers(fr1, fr2);
-  auto must_be_true =
-      dariadb::storage::CursorWrapperFactory::is_linear_readers(fr1, fr3);
+  auto must_be_true = dariadb::storage::CursorWrapperFactory::is_linear_readers(fr1, fr3);
 
   BOOST_CHECK(must_be_true);
   BOOST_CHECK(!must_be_false);
@@ -357,8 +355,8 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
   {
     auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2});
     auto top_reader = dynamic_cast<LinearCursor *>(msr.get());
-    auto is_merge_reader = dynamic_cast<MergeSortCursor *>(
-                               top_reader->_readers.front().get()) != nullptr;
+    auto is_merge_reader =
+        dynamic_cast<MergeSortCursor *>(top_reader->_readers.front().get()) != nullptr;
     BOOST_CHECK(is_merge_reader);
     BOOST_CHECK_EQUAL(top_reader->_readers.size(), size_t(1));
   }

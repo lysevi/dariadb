@@ -1,7 +1,7 @@
 #include "test_common.h"
+#include <libdariadb/utils/exception.h>
 #include <algorithm>
 #include <iostream>
-#include <libdariadb/utils/exception.h>
 #include <mutex>
 #include <random>
 #include <thread>
@@ -63,8 +63,7 @@ void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
   for (auto i = from; i < to; i += step) {
     size_t count = 0;
     for (auto &m : res) {
-      if ((m.id == id_val) &&
-          ((m.flag == flg_val) || (m.flag == FLAGS::_NO_DATA))) {
+      if ((m.id == id_val) && ((m.flag == flg_val) || (m.flag == FLAGS::_NO_DATA))) {
         count++;
       }
     }
@@ -76,8 +75,8 @@ void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
   }
 }
 
-void check_reader_of_all(MeasList &all, Time from, Time to, Time step,
-                         size_t total_count, std::string message) {
+void check_reader_of_all(MeasList &all, Time from, Time to, Time step, size_t total_count,
+                         std::string message) {
 
   std::map<Id, MeasList> _dict;
   for (auto &v : all) {
@@ -114,8 +113,7 @@ void check_reader_of_all(MeasList &all, Time from, Time to, Time step,
 
 size_t fill_storage_for_test(dariadb::IMeasStorage *as, dariadb::Time from,
                              dariadb::Time to, dariadb::Time step,
-                             dariadb::IdSet *_all_ids_set,
-                             dariadb::Time *maxWritedTime,
+                             dariadb::IdSet *_all_ids_set, dariadb::Time *maxWritedTime,
                              bool random_timestamps) {
   std::random_device rd;
   std::mt19937 eng(rd());
@@ -192,11 +190,11 @@ void minMaxCheck(IMeasStorage *as, Time from, Time maxWritedTime) {
   }
 
   if (stat.minTime != dariadb::MIN_TIME) {
-	  throw MAKE_EXCEPTION("stat.minTime != dariadb::MIN_TIME");
+    throw MAKE_EXCEPTION("stat.minTime != dariadb::MIN_TIME");
   }
 
   if (stat.maxTime != dariadb::Time(copies_count)) {
-	  throw MAKE_EXCEPTION("(stat.maxTime != dariadb::Time(copies_count))");
+    throw MAKE_EXCEPTION("(stat.maxTime != dariadb::Time(copies_count))");
   }
 
   Time minTime, maxTime;
@@ -243,8 +241,8 @@ void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
   }
   delete clbk;
 
-  all = as->readInterval(QueryInterval(
-      ids, 0, to + copies_count - copies_count / 3, to + copies_count));
+  all = as->readInterval(
+      QueryInterval(ids, 0, to + copies_count - copies_count / 3, to + copies_count));
   if (all.size() == size_t(0)) {
     throw MAKE_EXCEPTION("all.size() != size_t(0)");
   }
@@ -264,8 +262,7 @@ void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
     IdArray zero_id;
     zero_id.resize(1);
     zero_id[0] = dariadb::Id(0);
-    as->foreach (QueryInterval(zero_id, 0, from, to + copies_count),
-                 order_clbk);
+    as->foreach (QueryInterval(zero_id, 0, from, to + copies_count), order_clbk);
     order_clbk->wait();
     if (!order_clbk->is_greater) {
       throw MAKE_EXCEPTION("!order_clbk->is_greater");
@@ -291,8 +288,7 @@ void readTimePointCheck(IMeasStorage *as, Time from, Time to, Time step,
   }
 
   if (check_stop_flag && qpoint_clbk->is_end_called != 1) {
-    THROW_EXCEPTION("clbk->is_end_called!=1: ",
-                    qpoint_clbk->is_end_called.load());
+    THROW_EXCEPTION("clbk->is_end_called!=1: ", qpoint_clbk->is_end_called.load());
   }
 
   qp.time_point = to + copies_count;
@@ -360,8 +356,8 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
   }
   std::cout << "readIntervalCheck\n";
 
-  readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array,
-                    total_count, check_stop_flag);
+  readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
+                    check_stop_flag);
   std::cout << "readTimePointCheck\n";
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
   std::cout << "flush\n";

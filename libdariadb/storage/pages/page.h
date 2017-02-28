@@ -35,18 +35,21 @@ typedef std::shared_ptr<Page> Page_Ptr;
 
 class Page : public ChunkContainer {
   Page() = delete;
-  Page(const PageFooter&footer, std::string fname);
+  Page(const PageFooter &footer, std::string fname);
+
 public:
   /// called by Dropper from Wal level.
-  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                                uint32_t max_chunk_size, const MeasArray &ma);
+  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
+                                uint64_t chunk_id, uint32_t max_chunk_size,
+                                const MeasArray &ma);
   /// used for repack many pages to one
-  EXPORT static Page_Ptr repackTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                                uint32_t max_chunk_size,
-                                const std::list<std::string> &pages_full_paths);
+  EXPORT static Page_Ptr repackTo(const std::string &file_name, uint16_t lvl,
+                                  uint64_t chunk_id, uint32_t max_chunk_size,
+                                  const std::list<std::string> &pages_full_paths);
   /// called by dropper from MemoryStorage.
-  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                                const std::vector<Chunk *> &a, size_t count);
+  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
+                                uint64_t chunk_id, const std::vector<Chunk *> &a,
+                                size_t count);
 
   EXPORT static Page_Ptr open(const std::string &file_name);
 
@@ -62,12 +65,10 @@ public:
                          dariadb::Time *maxResult) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
-  EXPORT void appendChunks(const std::vector<Chunk *> &a,
-                           size_t count) override;
+  EXPORT void appendChunks(const std::vector<Chunk *> &a, size_t count) override;
 
   EXPORT Id2MinMax loadMinMax();
-  EXPORT Id2Cursor intervalReader(const QueryInterval &query,
-                                  const ChunkLinkList &links);
+  EXPORT Id2Cursor intervalReader(const QueryInterval &query, const ChunkLinkList &links);
   EXPORT Statistic stat(const Id id, Time from, Time to);
   bool checksum(); // return false if bad checksum.
 private:

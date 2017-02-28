@@ -1,8 +1,8 @@
-#include <algorithm>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/utils/crc.h>
+#include <algorithm>
 
 #include <cstring>
 
@@ -21,8 +21,7 @@ Chunk_Ptr Chunk::open(ChunkHeader *hdr, uint8_t *buffer) {
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
-    : c_writer(
-          std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
+    : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
   header = hdr;
   ENSURE(header->stat.maxTime != MIN_TIME);
   ENSURE(header->stat.minTime != MAX_TIME);
@@ -33,8 +32,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
   bw->set_pos(header->bw_pos);
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
-             const Meas &first_m)
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m)
     : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + _size})) {
   _buffer_t = buffer;
   header = hdr;
@@ -119,9 +117,13 @@ uint32_t Chunk::compact(ChunkHeader *hdr) {
   return skip_count;
 }
 
-uint32_t Chunk::getChecksum() { return header->crc; }
+uint32_t Chunk::getChecksum() {
+  return header->crc;
+}
 
-bool Chunk::isFull() const { return c_writer.isFull(); }
+bool Chunk::isFull() const {
+  return c_writer.isFull();
+}
 
 bool Chunk::append(const Meas &m) {
   auto t_f = this->c_writer.append(m);
@@ -147,8 +149,7 @@ class ChunkReader : public ICursor {
 public:
   ChunkReader() = delete;
 
-  ChunkReader(size_t count, const Chunk_Ptr &c,
-              std::shared_ptr<ByteBuffer> bptr,
+  ChunkReader(size_t count, const Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
               std::shared_ptr<CopmressedReader> compressed_rdr) {
     _top_value_exists = false;
     _is_first = true;
@@ -209,9 +210,9 @@ public:
 
 Cursor_Ptr Chunk::getReader() {
   auto b_ptr = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
-  auto raw_res = new ChunkReader(
-      this->header->stat.count - 1, shared_from_this(), b_ptr,
-      std::make_shared<CopmressedReader>(b_ptr, this->header->first()));
+  auto raw_res =
+      new ChunkReader(this->header->stat.count - 1, shared_from_this(), b_ptr,
+                      std::make_shared<CopmressedReader>(b_ptr, this->header->first()));
 
   Cursor_Ptr result{raw_res};
 

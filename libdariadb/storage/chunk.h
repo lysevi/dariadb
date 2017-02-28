@@ -2,13 +2,13 @@
 
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/stat.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/stat.h>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/interfaces/icursor.h>
 
 #include <map>
 #include <set>
@@ -78,8 +78,6 @@ protected:
   Chunk(ChunkHeader *hdr, uint8_t *buffer);
 
 public:
-  
-
   typedef uint8_t *u8vector;
 
   EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,

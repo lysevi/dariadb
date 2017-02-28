@@ -133,7 +133,7 @@ uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas *m_a
 
 MeasArray QueryAppend_header::read_measarray() const {
   using namespace netdata_inner;
-  
+
   size_t array_size = size_t(count);
   MeasArray ma(array_size);
   size_t pos = 0;

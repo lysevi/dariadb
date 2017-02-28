@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
-#include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <memory>
@@ -27,7 +27,7 @@ public:
   EXPORT Status append(const MeasList::const_iterator &begin,
                        const MeasList::const_iterator &end) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &q);
-  EXPORT Statistic stat(const Id id, Time from, Time to)override;
+  EXPORT Statistic stat(const Id id, Time from, Time to) override;
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   EXPORT Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;

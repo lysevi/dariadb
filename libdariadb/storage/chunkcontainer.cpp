@@ -10,6 +10,6 @@ ChunkContainer::~ChunkContainer() {}
 void ChunkContainer::foreach (const QueryInterval &query, IReadCallback * clb) {
   auto readers = intervalReader(query);
   for (auto kv : readers) {
-    kv.second->apply(clb,query);
+    kv.second->apply(clb, query);
   }
 }

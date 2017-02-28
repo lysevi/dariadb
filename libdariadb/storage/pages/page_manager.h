@@ -1,9 +1,9 @@
 #pragma once
 
-#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/utils/utils.h>
 #include <vector>
@@ -23,7 +23,7 @@ public:
                          dariadb::Time *maxResult) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
-  EXPORT Statistic stat(const Id id, Time from, Time to)override;
+  EXPORT Statistic stat(const Id id, Time from, Time to) override;
   EXPORT size_t files_count() const;
   EXPORT size_t chunks_in_cur_page() const;
   EXPORT dariadb::Time minTime();
@@ -42,6 +42,7 @@ public:
 
 protected:
   EXPORT PageManager(const EngineEnvironment_ptr env);
+
 private:
   class Private;
   std::unique_ptr<Private> impl;

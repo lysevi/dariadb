@@ -3,8 +3,8 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-MemChunk::MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer,
-                   uint32_t size, const Meas &first_m)
+MemChunk::MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, uint32_t size,
+                   const Meas &first_m)
     : Chunk(index, buffer, size, first_m) {
   index_ptr = index;
   buffer_ptr = buffer;

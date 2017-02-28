@@ -3,8 +3,7 @@
 namespace dariadb {
 namespace scheme {
 
-std::ostream &operator<<(std::ostream &stream,
-                         const MeasurementDescription &d) {
+std::ostream &operator<<(std::ostream &stream, const MeasurementDescription &d) {
   stream << "{ name:" << d.name << ", id:" << d.id << "}";
   return stream;
 }

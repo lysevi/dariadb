@@ -3,13 +3,13 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
-#include <algorithm>
-#include <iostream>
 #include <libdariadb/dariadb.h>
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/engines/shard.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/fs.h>
+#include <algorithm>
+#include <iostream>
 
 BOOST_AUTO_TEST_CASE(Shard_common_test) {
   const std::string storage_path = "testStorage";
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
     settings->wal_cache_size.setValue(100);
     settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
     settings->chunk_size.setValue(chunk_size);
-	settings->save();
+    settings->save();
   }
 
   {
@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
     settings->wal_cache_size.setValue(100);
     settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
     settings->chunk_size.setValue(chunk_size);
-	settings->save();
+    settings->save();
   }
   {
     std::cout << "Shard_common_test.\n";
@@ -57,20 +57,19 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
     shard_storage->shardAdd({storage_path_shard2, "shard2", IdSet()});
     shard_storage->shardAdd(
         {storage_path_shard1, "shard1", {Id(1), Id(2), Id(3), Id(4)}});
-    BOOST_CHECK(shard_storage->settings()->storage_path.value()==storage_path);
+    BOOST_CHECK(shard_storage->settings()->storage_path.value() == storage_path);
   }
   {
     auto shard_storage = dariadb::open_storage(storage_path);
     BOOST_CHECK(shard_storage != nullptr);
-    BOOST_CHECK(shard_storage->settings()->storage_path.value()==storage_path);
+    BOOST_CHECK(shard_storage->settings()->storage_path.value() == storage_path);
 
     auto shard_raw_ptr = dynamic_cast<ShardEngine *>(shard_storage.get());
 
     auto all_shards = shard_raw_ptr->shardList();
     BOOST_CHECK_EQUAL(all_shards.size(), size_t(2));
 
-    dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true,
-                                     true);
+    dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, true);
     shard_storage->fsck();
     shard_storage->repack();
   }

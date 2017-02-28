@@ -1,7 +1,7 @@
-#include <algorithm>
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/utils/utils.h>
+#include <algorithm>
 #include <map>
 #include <set>
 
@@ -85,7 +85,9 @@ Meas FullCursor::readNext() {
   return result;
 }
 
-bool FullCursor::is_end() const { return _index >= _ma.size(); }
+bool FullCursor::is_end() const {
+  return _index >= _ma.size();
+}
 
 Meas FullCursor::top() {
   if (!is_end()) {
@@ -94,9 +96,13 @@ Meas FullCursor::top() {
   THROW_EXCEPTION("is_end()");
 }
 
-Time FullCursor::minTime() { return _minTime; }
+Time FullCursor::minTime() {
+  return _minTime;
+}
 
-Time FullCursor::maxTime() { return _maxTime; }
+Time FullCursor::maxTime() {
+  return _maxTime;
+}
 
 MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
   CursorsList tmp_readers_list = cursors_inner::unpack_readers(readers);
@@ -126,8 +132,7 @@ MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
 
 Meas MergeSortCursor::readNext() {
   ENSURE(!is_end());
-  auto index_and_reader =
-      cursors_inner::get_cursor_with_min_time(_top_times, _readers);
+  auto index_and_reader = cursors_inner::get_cursor_with_min_time(_top_times, _readers);
 
   auto cursor = index_and_reader.second;
   ENSURE(!_is_end_status[index_and_reader.first]);
@@ -173,9 +178,13 @@ Meas MergeSortCursor::top() {
   return r.second->top();
 }
 
-Time MergeSortCursor::minTime() { return _minTime; }
+Time MergeSortCursor::minTime() {
+  return _minTime;
+}
 
-Time MergeSortCursor::maxTime() { return _maxTime; }
+Time MergeSortCursor::maxTime() {
+  return _maxTime;
+}
 
 LinearCursor::LinearCursor(const CursorsList &readers) {
   std::vector<Cursor_Ptr> rv(readers.begin(), readers.end());
@@ -204,21 +213,25 @@ Meas LinearCursor::readNext() {
   return result;
 }
 
-bool LinearCursor::is_end() const { return _readers.empty(); }
+bool LinearCursor::is_end() const {
+  return _readers.empty();
+}
 
 Meas LinearCursor::top() {
   ENSURE(!is_end());
   return _readers.front()->top();
 }
 
-Time LinearCursor::minTime() { return _minTime; }
+Time LinearCursor::minTime() {
+  return _minTime;
+}
 
-Time LinearCursor::maxTime() { return _maxTime; }
+Time LinearCursor::maxTime() {
+  return _maxTime;
+}
 
-Cursor_Ptr
-CursorWrapperFactory::colapseCursors(const CursorsList &readers_list) {
-  std::vector<Cursor_Ptr> readers_vector{readers_list.begin(),
-                                         readers_list.end()};
+Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list) {
+  std::vector<Cursor_Ptr> readers_vector{readers_list.begin(), readers_list.end()};
   typedef std::set<size_t> positions_set;
   std::map<size_t, positions_set> overlapped;
   positions_set processed_pos;
@@ -271,8 +284,7 @@ Id2Cursor CursorWrapperFactory::colapseCursors(const Id2CursorsList &i2r) {
   return result;
 }
 
-bool CursorWrapperFactory::is_linear_readers(const Cursor_Ptr &r1,
-                                             const Cursor_Ptr &r2) {
+bool CursorWrapperFactory::is_linear_readers(const Cursor_Ptr &r1, const Cursor_Ptr &r2) {
   bool is_overlap = utils::intervalsIntersection(r1->minTime(), r1->maxTime(),
                                                  r2->minTime(), r2->maxTime());
   return !is_overlap;

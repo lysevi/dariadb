@@ -3,9 +3,9 @@
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/query.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/query.h>
 
 namespace dariadb {
 
@@ -38,4 +38,3 @@ public:
   EXPORT virtual ~ChunkContainer();
 };
 }
-

@@ -14,16 +14,15 @@
 
 #define CODE_POS (dariadb::utils::CodePos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg)                                                    \
-  dariadb::utils::Exception::create_and_log(CODE_POS, msg)
+#define MAKE_EXCEPTION(msg) dariadb::utils::Exception::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
 
 #ifdef DEBUG
-#define THROW_EXCEPTION(...)                                                   \
-  dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);            \
+#define THROW_EXCEPTION(...)                                                             \
+  dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);                      \
   std::exit(1);
 #else
-#define THROW_EXCEPTION(...)                                                   \
+#define THROW_EXCEPTION(...)                                                             \
   throw dariadb::utils::Exception::create_and_log(CODE_POS, __VA_ARGS__);
 #endif
 
@@ -39,8 +38,8 @@ struct CodePos {
       : _file(file), _line(line), _func(function) {}
 
   std::string toString() const {
-    auto ss = std::string(_file) + " line: " + std::to_string(_line) +
-              " function: " + std::string(_func) + "\n";
+    auto ss = std::string(_file) + " line: " + std::to_string(_line) + " function: " +
+              std::string(_func) + "\n";
     return ss;
   }
   CodePos &operator=(const CodePos &) = delete;
@@ -52,9 +51,8 @@ public:
   static Exception create_and_log(const CodePos &pos, T... message) {
 
     auto expanded_message = utils::strings::args_to_string(message...);
-    auto str_message =
-        std::string("FATAL ERROR. The Exception will be thrown! ") +
-        pos.toString() + " Message: " + expanded_message;
+    auto str_message = std::string("FATAL ERROR. The Exception will be thrown! ") +
+                       pos.toString() + " Message: " + expanded_message;
 
 #ifdef UNIX_OS
     std::stringstream sstr;

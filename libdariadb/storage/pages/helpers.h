@@ -28,7 +28,7 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter
 
 IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *iheader);
 
-bool have_overlap(const std::vector<ChunkLink>&links);
+bool have_overlap(const std::vector<ChunkLink> &links);
 }
 }
 }

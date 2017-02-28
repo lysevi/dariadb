@@ -1,11 +1,11 @@
-#include <extern/json/src/json.hpp>
-#include <fstream>
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/strings.h>
+#include <extern/json/src/json.hpp>
+#include <fstream>
 #include <sstream>
 
 using namespace dariadb::storage;
@@ -31,18 +31,15 @@ std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
 }
 
-template <class T>
-void Settings::ReadOnlyOption<T>::from_string(const std::string &s) {
+template <class T> void Settings::ReadOnlyOption<T>::from_string(const std::string &s) {
   std::istringstream iss(s);
   iss >> _value;
 }
 
-template <>
-std::string Settings::ReadOnlyOption<dariadb::STRATEGY>::value_str() const {
+template <> std::string Settings::ReadOnlyOption<dariadb::STRATEGY>::value_str() const {
   return dariadb::to_string(this->value());
 }
-template <>
-std::string Settings::ReadOnlyOption<std::string>::value_str() const {
+template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
   return this->value();
 }
 
@@ -60,8 +57,7 @@ Settings::Settings(const std::string &path_to_storage)
       chunk_size(this, c_chunk_size, CHUNK_SIZE),
       strategy(this, c_strategy, STRATEGY::COMPRESSED),
       memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
-      percent_when_start_droping(this, c_percent_when_start_droping,
-                                 float(0.75)),
+      percent_when_start_droping(this, c_percent_when_start_droping, float(0.75)),
       percent_to_drop(this, c_percent_to_drop, float(0.1)),
       max_pages_in_level(this, c_max_pages_per_level, uint16_t(2)) {
   auto f = settings_file_path(storage_path.value());
@@ -78,7 +74,7 @@ Settings::Settings(const std::string &path_to_storage)
 Settings::~Settings() {}
 
 void Settings::set_default() {
-  logger("engine",alias,": Settings set default Settings");
+  logger("engine", alias, ": Settings set default Settings");
   wal_cache_size.setValue(WAL_CACHE_SIZE);
   wal_file_size.setValue(WAL_FILE_SIZE);
   chunk_size.setValue(CHUNK_SIZE);
@@ -88,8 +84,7 @@ void Settings::set_default() {
   percent_to_drop.setValue(float(0.15));
 }
 
-std::vector<dariadb::utils::async::ThreadPool::Params>
-Settings::thread_pools_params() {
+std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {
   using namespace dariadb::utils::async;
   std::vector<ThreadPool::Params> result{
       ThreadPool::Params{size_t(4), (ThreadKind)THREAD_KINDS::COMMON},
@@ -97,7 +92,9 @@ Settings::thread_pools_params() {
   return result;
 }
 
-void Settings::save() { save(settings_file_path(this->storage_path.value())); }
+void Settings::save() {
+  save(settings_file_path(this->storage_path.value()));
+}
 
 void Settings::save(const std::string &file) {
   logger("engine", alias, ": Settings save to ", file);
@@ -128,8 +125,7 @@ void Settings::load(const std::string &file) {
 }
 
 std::string Settings::dump() {
-  auto content =
-      dariadb::utils::fs::read_file(settings_file_path(storage_path.value()));
+  auto content = dariadb::utils::fs::read_file(settings_file_path(storage_path.value()));
   json js = json::parse(content);
   std::stringstream ss;
   ss << js.dump(1) << std::endl;

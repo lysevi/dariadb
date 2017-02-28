@@ -1,16 +1,15 @@
+#include <libdariadb/engines/shard.h>
+#include <libdariadb/scheme/scheme.h>
+#include <libdariadb/storage/settings.h>
+#include <libdariadb/timeutil.h>
+#include <libdariadb/utils/fs.h>
 #include <iomanip>
 #include <iostream>
-#include <libdariadb/engines/shard.h>
-#include <libdariadb/storage/settings.h>
-#include <libdariadb/scheme/scheme.h>
-#include <libdariadb/utils/fs.h>
-#include <libdariadb/timeutil.h>
 #include <sstream>
 
 class QuietLogger : public dariadb::utils::ILogger {
 public:
-  void message(dariadb::utils::LOG_MESSAGE_KIND kind,
-               const std::string &msg) override {}
+  void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) override {}
 };
 
 int main(int argc, char **argv) {
@@ -20,33 +19,33 @@ int main(int argc, char **argv) {
     dariadb::utils::fs::rm(storage_path);
   }
   // Replace standart logger.
-  dariadb::utils::ILogger_ptr log_ptr{ new QuietLogger() };
+  dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
-  //init shards folder with default settings
+  // init shards folder with default settings
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->save();
   auto storage = dariadb::ShardEngine::create(storage_path);
-  //init each shards with custom settings
-  {//shard for Id==0;
-	  auto path = dariadb::utils::fs::append_path(storage_path, "shard1");
-	  auto settings = dariadb::storage::Settings::create(path);
-	  settings->wal_cache_size.setValue(100);
-	  settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
-	  settings->chunk_size.setValue(512);
-	  settings->strategy.setValue(dariadb::STRATEGY::WAL);
-	  settings->save();
-	  storage->shardAdd({ path, "shard1",{ dariadb::Id(0) } });
+  // init each shards with custom settings
+  { // shard for Id==0;
+    auto path = dariadb::utils::fs::append_path(storage_path, "shard1");
+    auto settings = dariadb::storage::Settings::create(path);
+    settings->wal_cache_size.setValue(100);
+    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
+    settings->chunk_size.setValue(512);
+    settings->strategy.setValue(dariadb::STRATEGY::WAL);
+    settings->save();
+    storage->shardAdd({path, "shard1", {dariadb::Id(0)}});
   }
 
-  {//default shard for all id.
-	  auto path = dariadb::utils::fs::append_path(storage_path, "shard2");
-	  auto settings = dariadb::storage::Settings::create(path);
-	  settings->wal_cache_size.setValue(100);
-	  settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
-	  settings->strategy.setValue(dariadb::STRATEGY::COMPRESSED);
-	  settings->save();
-	  storage->shardAdd({ path, "shard2", dariadb::IdSet() });
+  { // default shard for all id.
+    auto path = dariadb::utils::fs::append_path(storage_path, "shard2");
+    auto settings = dariadb::storage::Settings::create(path);
+    settings->wal_cache_size.setValue(100);
+    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
+    settings->strategy.setValue(dariadb::STRATEGY::COMPRESSED);
+    settings->save();
+    storage->shardAdd({path, "shard2", dariadb::IdSet()});
   }
 
   auto scheme = dariadb::scheme::Scheme::create(settings);
@@ -86,8 +85,8 @@ int main(int argc, char **argv) {
   dariadb::MeasList readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
-    std::cout << " param: " << all_params[measurement.id] << " timepoint: "
-              << dariadb::timeutil::to_string(measurement.time)
+    std::cout << " param: " << all_params[measurement.id]
+              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
               << " value:" << measurement.value << std::endl;
   }
 
@@ -97,8 +96,8 @@ int main(int argc, char **argv) {
   std::cout << "Timepoint: " << std::endl;
   for (auto kv : timepoint) {
     auto measurement = kv.second;
-    std::cout << " param: " << all_params[kv.first] << " timepoint: "
-              << dariadb::timeutil::to_string(measurement.time)
+    std::cout << " param: " << all_params[kv.first]
+              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
               << " value:" << measurement.value << std::endl;
   }
 }

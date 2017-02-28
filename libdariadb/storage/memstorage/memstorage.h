@@ -1,10 +1,10 @@
 #pragma once
 
-#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/memstorage/allocators.h>
 #include <libdariadb/storage/memstorage/description.h>
@@ -17,8 +17,9 @@ class MemStorage;
 using MemStorage_ptr = std::shared_ptr<MemStorage>;
 class MemStorage : public IMeasStorage {
 protected:
-	/// id_count - for prealloc
-	EXPORT MemStorage(const EngineEnvironment_ptr &env, size_t id_count);
+  /// id_count - for prealloc
+  EXPORT MemStorage(const EngineEnvironment_ptr &env, size_t id_count);
+
 public:
   /// id_count - for prealloc
   EXPORT static MemStorage_ptr create(const EngineEnvironment_ptr &env, size_t id_count);
@@ -30,8 +31,8 @@ public:
   EXPORT virtual Time maxTime() override;
   EXPORT virtual bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                                  dariadb::Time *maxResult) override;
-  EXPORT virtual Id2Cursor intervalReader(const QueryInterval &q)override;
-  EXPORT  Statistic stat(const Id id, Time from, Time to)override;
+  EXPORT virtual Id2Cursor intervalReader(const QueryInterval &q) override;
+  EXPORT Statistic stat(const Id id, Time from, Time to) override;
   EXPORT virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;

@@ -88,8 +88,7 @@ make LinearCursor or MergSortCursor
 */
 struct CursorWrapperFactory {
   // if the intervals overlap.
-  EXPORT static bool is_linear_readers(const Cursor_Ptr &r1,
-                                       const Cursor_Ptr &r2);
+  EXPORT static bool is_linear_readers(const Cursor_Ptr &r1, const Cursor_Ptr &r2);
   EXPORT static Cursor_Ptr colapseCursors(const CursorsList &i2r);
   EXPORT static Id2Cursor colapseCursors(const Id2CursorsList &i2r);
 };

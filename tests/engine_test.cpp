@@ -3,12 +3,12 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
-#include <algorithm>
-#include <iostream>
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
+#include <algorithm>
+#include <iostream>
 
 class BenchCallback : public dariadb::IReadCallback {
 public:
@@ -42,8 +42,8 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
-    BOOST_CHECK(ms->settings()!=nullptr);
-    BOOST_CHECK(ms->settings()->storage_path.value()==storage_path);
+    BOOST_CHECK(ms->settings() != nullptr);
+    BOOST_CHECK(ms->settings()->storage_path.value() == storage_path);
   }
   {
     std::cout << "reopen closed storage\n";
@@ -59,17 +59,16 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     dariadb::IMeasStorage_ptr ms{raw_ptr};
     auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
-	BOOST_CHECK(!index_files.empty());
-	for (auto &f : index_files) {
+    BOOST_CHECK(!index_files.empty());
+    for (auto &f : index_files) {
       dariadb::utils::fs::rm(f);
     }
-	index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
-	BOOST_CHECK(index_files.empty());
+    index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
+    BOOST_CHECK(index_files.empty());
     raw_ptr->fsck();
 
     // check first id, because that Id placed in compressed pages.
-    auto values =
-        ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
+    auto values = ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
     BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
 
     auto current = ms->currentValue(dariadb::IdArray{}, 0);

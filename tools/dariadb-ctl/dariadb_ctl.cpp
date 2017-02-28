@@ -60,9 +60,8 @@ void show_drop_info(dariadb::Engine *storage) {
   while (!stop_info) {
     auto queue_sizes = storage->description();
 
-    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count,
-                          " a:", queue_sizes.wal_count,
-                          " T:", queue_sizes.active_works, ")",
+    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
+                          queue_sizes.wal_count, " T:", queue_sizes.active_works, ")",
                           "[a:", queue_sizes.dropper.wal, "]");
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
   }
@@ -81,17 +80,14 @@ int main(int argc, char *argv[]) {
   aos("verbose", "verbose output.");
   aos("version", "version info.");
   aos("compress", "compress all wal files.");
-  aos("iso-time",
-      "if set, all time param is in iso format (\"20020131T235959\")");
+  aos("iso-time", "if set, all time param is in iso format (\"20020131T235959\")");
   aos("repack", "repack all page files.");
   aos("fsck", "run force fsck.");
-  aos("storage-path",
-      po::value<std::string>(&storage_path)->default_value(storage_path),
+  aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path),
       "path to storage.");
   aos("set", po::value<std::string>(&set_var)->default_value(set_var),
       "change setting variable.\nexample: --set=\"strategy=MEMORY\"");
-  aos("create",
-      po::value<std::string>(&new_base_name)->default_value(new_base_name),
+  aos("create", po::value<std::string>(&new_base_name)->default_value(new_base_name),
       "create new database in selected folder.");
   aos("erase-to", po::value<std::string>(&erase_to)->default_value(erase_to),
       "erase values above a specified value. (example \"2002-01-20 "

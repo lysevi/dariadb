@@ -12,4 +12,3 @@ EXPORT std::ostream &operator<<(std::ostream &stream, const STRATEGY &strat);
 
 EXPORT std::string to_string(const STRATEGY &strat);
 }
-

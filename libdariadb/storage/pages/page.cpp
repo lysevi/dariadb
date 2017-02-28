@@ -2,7 +2,6 @@
 #define _CRT_SECURE_NO_WARNINGS // for fopen
 #define _SCL_SECURE_NO_WARNINGS // for stx::btree in msvc build.
 #endif
-#include <algorithm>
 #include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/cursors.h>
@@ -11,6 +10,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/exception.h>
+#include <algorithm>
 
 #include <cstring>
 #include <fstream>
@@ -20,14 +20,14 @@
 using namespace dariadb::storage;
 using namespace dariadb;
 
-Page::Page(const PageFooter &ftr, std::string fname)
-    : footer(ftr), filename(fname) {}
+Page::Page(const PageFooter &ftr, std::string fname) : footer(ftr), filename(fname) {}
 
-Page::~Page() { _index = nullptr; }
+Page::~Page() {
+  _index = nullptr;
+}
 
-Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
-                      uint64_t chunk_id, uint32_t max_chunk_size,
-                      const MeasArray &ma) {
+Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+                      uint32_t max_chunk_size, const MeasArray &ma) {
   auto to_compress = PageInner::splitById(ma);
 
   PageFooter phdr(lvl, chunk_id);
@@ -51,7 +51,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
       PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
   phdr.filesize = page_size;
   ihdr.level = phdr.level;
-  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic))==0);
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic)) == 0);
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
   std::fclose(file);
 
@@ -60,8 +60,8 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
   return open(file_name, phdr);
 }
 
-Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
-                        uint64_t chunk_id, uint32_t max_chunk_size,
+Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+                        uint32_t max_chunk_size,
                         const std::list<std::string> &pages_full_paths) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
@@ -101,10 +101,9 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
   for (auto &kv : links) {
     auto lst = kv.second;
     std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
-    std::sort(link_vec.begin(), link_vec.end(),
-              [](const ChunkLink &left, const ChunkLink &right) {
-                return left.id < right.id;
-              });
+    std::sort(
+        link_vec.begin(), link_vec.end(),
+        [](const ChunkLink &left, const ChunkLink &right) { return left.id < right.id; });
     if (!PageInner::have_overlap(link_vec)) {
       // don't unpack chunks without overlap. write as is.
       std::unordered_map<std::string, ChunkLinkList> fname2links;
@@ -128,9 +127,8 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
           hab.hdr.id = phdr.max_chunk_id;
 
           std::list<PageInner::HdrAndBuffer> compressed_results{hab};
-          auto page_size =
-              PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
-                                     compressed_results, phdr.filesize);
+          auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
+                                                  compressed_results, phdr.filesize);
 
           phdr.filesize = page_size;
           delete hdr_ptr;
@@ -164,31 +162,27 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl,
       auto compressed_results =
           PageInner::compressValues(all_values, phdr, max_chunk_size);
 
-      auto page_size =
-          PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
-                                 compressed_results, phdr.filesize);
+      auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
+                                              compressed_results, phdr.filesize);
       phdr.filesize = page_size;
     }
   }
 
-  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic))==0);
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic)) == 0);
 
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, out_file);
   std::fclose(out_file);
   ihdr.level = phdr.level;
-  
+
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, out_index_file);
   std::fclose(out_index_file);
-
-
 
   return open(file_name, phdr);
 }
 
 // chunks from memstorage.
-Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
-                      uint64_t chunk_id, const std::vector<Chunk *> &a,
-                      size_t count) {
+Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+                      const std::vector<Chunk *> &a, size_t count) {
   using namespace dariadb::utils::async;
 
   PageFooter phdr(lvl, chunk_id);
@@ -199,7 +193,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
   }
 
   IndexFooter ihdr;
-  
+
   auto index_file =
       std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
   if (index_file == nullptr) {
@@ -256,8 +250,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
 #endif //  DEBUG
 
     std::fwrite(chunk_header, sizeof(ChunkHeader), 1, file);
-    std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t),
-                chunk_header->size, file);
+    std::fwrite(chunk_buffer_ptr + skip_count, sizeof(uint8_t), chunk_header->size, file);
 
     offset += sizeof(ChunkHeader) + chunk_header->size;
 
@@ -266,14 +259,13 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl,
     pos++;
   }
 
-  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic))==0);
+  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic)) == 0);
   page_size = offset;
   phdr.filesize = page_size;
   std::fwrite(&(phdr), sizeof(PageFooter), 1, file);
   std::fclose(file);
 
-  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(),
-              index_file);
+  std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
   ihdr.level = phdr.level;
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
   std::fclose(index_file);
@@ -286,8 +278,7 @@ Page_Ptr Page::open(const std::string &file_name) {
   auto res = new Page(phdr, file_name);
 
   res->filename = file_name;
-  res->_index =
-      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
   res->footer = phdr;
   return Page_Ptr{res};
@@ -295,8 +286,7 @@ Page_Ptr Page::open(const std::string &file_name) {
 
 Page_Ptr Page::open(const std::string &file_name, const PageFooter &phdr) {
   auto res = new Page(phdr, file_name);
-  res->_index =
-      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
   return Page_Ptr(res);
 }
 
@@ -307,9 +297,8 @@ void Page::restoreIndexFile(const std::string &file_name) {
 
   res->footer = phdr;
   res->update_index_recs(phdr);
-  res->_index =
-      PageIndex::open(PageIndex::index_name_from_page_name(file_name));
-  
+  res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
+
   ENSURE(memcmp(&phdr.stat, &res->_index->iheader.stat, sizeof(Statistic)) == 0);
   delete res;
 }
@@ -370,7 +359,6 @@ void Page::update_index_recs(const PageFooter &phdr) {
   }
 
   IndexFooter ihdr;
-  
 
   for (size_t i = 0; i < phdr.addeded_chunks; ++i) {
     ChunkHeader info;
@@ -390,8 +378,7 @@ void Page::update_index_recs(const PageFooter &phdr) {
   std::fclose(page_io);
 }
 
-bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime,
-                      dariadb::Time *maxTime) {
+bool Page::minMaxTime(dariadb::Id id, dariadb::Time *minTime, dariadb::Time *maxTime) {
   QueryInterval qi{dariadb::IdArray{id}, 0, this->footer.stat.minTime,
                    this->footer.stat.maxTime};
   auto all_chunks = this->linksByIterval(qi);
@@ -460,8 +447,8 @@ dariadb::Id2Meas Page::valuesBeforeTimePoint(const QueryTimePoint &q) {
       return false;
     }
   };
-  auto raw_links = _index->get_chunks_links(q.ids, _index->iheader.stat.minTime,
-                                            q.time_point, q.flag);
+  auto raw_links =
+      _index->get_chunks_links(q.ids, _index->iheader.stat.minTime, q.time_point, q.flag);
   if (raw_links.empty()) {
     return result;
   }
@@ -473,8 +460,7 @@ Id2Cursor Page::intervalReader(const QueryInterval &query) {
   return intervalReader(query, links);
 }
 
-Id2Cursor Page::intervalReader(const QueryInterval &query,
-                               const ChunkLinkList &links) {
+Id2Cursor Page::intervalReader(const QueryInterval &query, const ChunkLinkList &links) {
 
   Id2CursorsList sub_result;
   auto callback = [&sub_result](const Chunk_Ptr &c) {

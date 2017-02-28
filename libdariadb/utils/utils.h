@@ -2,13 +2,12 @@
 
 #include <libdariadb/utils/exception.h>
 
-
 #define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
 
 #ifdef DOUBLE_CHECKS
-#define ENSURE_MSG(A, E)                                                       \
-  if (!(A)) {                                                                  \
-    THROW_EXCEPTION(E);                                                        \
+#define ENSURE_MSG(A, E)                                                                 \
+  if (!(A)) {                                                                            \
+    THROW_EXCEPTION(E);                                                                  \
   }
 #define ENSURE(A) ENSURE_MSG(A, "check failed")
 #define ENSURE_NOT_NULL(A) ENSURE_MSG(A, "null pointer")

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/meas.h>
 #include <algorithm>
 #include <functional>
-#include <libdariadb/meas.h>
 
 namespace dariadb {
 
@@ -19,8 +19,7 @@ struct QueryInterval : public QueryParam {
   QueryInterval(const IdArray &_ids, Flag _flag, Time _from, Time _to)
       : QueryParam(_ids, _flag), from(_from), to(_to), step(0) {}
 
-  QueryInterval(const IdArray &_ids, Flag _flag, Time _from, Time _to,
-                Time _step)
+  QueryInterval(const IdArray &_ids, Flag _flag, Time _from, Time _to, Time _step)
       : QueryParam(_ids, _flag), from(_from), to(_to), step(_step) {}
 };
 

@@ -1,9 +1,9 @@
-#include <fstream>
 #include <libdariadb/scheme/helpers.h>
 #include <libdariadb/scheme/scheme.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
+#include <fstream>
 #include <unordered_map>
 
 #include <extern/json/src/json.hpp>
@@ -28,8 +28,7 @@ struct Scheme::Private : public IScheme {
   }
 
   std::string schemeFile() const {
-    return utils::fs::append_path(_settings->storage_path.value(),
-                                  SCHEME_FILE_NAME);
+    return utils::fs::append_path(_settings->storage_path.value(), SCHEME_FILE_NAME);
   }
 
   Id addParam(const std::string &param) override {
@@ -109,8 +108,14 @@ Scheme_Ptr Scheme::create(const storage::Settings_ptr s) {
 
 Scheme::Scheme(const storage::Settings_ptr s) : _impl(new Scheme::Private(s)) {}
 
-Id Scheme::addParam(const std::string &param) { return _impl->addParam(param); }
+Id Scheme::addParam(const std::string &param) {
+  return _impl->addParam(param);
+}
 
-DescriptionMap Scheme::ls() { return _impl->ls(); }
+DescriptionMap Scheme::ls() {
+  return _impl->ls();
+}
 
-void Scheme::save() { _impl->save(); }
+void Scheme::save() {
+  _impl->save();
+}

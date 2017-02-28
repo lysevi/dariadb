@@ -2,9 +2,9 @@
 
 #include <libdariadb/utils/in_interval.h>
 
+#include <libdariadb/st_exports.h>
 #include <algorithm>
 #include <deque>
-#include <libdariadb/st_exports.h>
 #include <limits>
 #include <list>
 #include <map>
@@ -52,21 +52,15 @@ struct Meas {
     return (ids.size() == 0) || (std::count(ids.begin(), ids.end(), id));
   }
 
-  bool inQuery(const IdArray &ids, const Flag f) const {
-    return inFlag(f) && inIds(ids);
-  }
+  bool inQuery(const IdArray &ids, const Flag f) const { return inFlag(f) && inIds(ids); }
 
-  bool inInterval(Time from, Time to) const {
-    return utils::inInterval(from, to, time);
-  }
+  bool inInterval(Time from, Time to) const { return utils::inInterval(from, to, time); }
 
   bool inQuery(const IdArray &ids, const Flag f, Time from, Time to) const {
     return inQuery(ids, f) && inInterval(from, to);
   }
 
-  void addFlag(const Flag f) {
-	  flag = flag | f;
-  }
+  void addFlag(const Flag f) { flag = flag | f; }
 };
 #pragma pack(pop)
 

@@ -1,6 +1,6 @@
 #include <libdariadb/compression/delta.h>
-#include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/bitoperations.h>
+#include <libdariadb/utils/utils.h>
 #include <limits>
 
 using namespace dariadb::compression;
@@ -36,8 +36,7 @@ uint32_t get_delta_3b(int64_t D) {
 }
 
 DeltaCompressor::DeltaCompressor(const ByteBuffer_Ptr &bw_)
-    : BaseCompressor(bw_), is_first(true), first(0), prev_delta(0),
-      prev_time(0) {}
+    : BaseCompressor(bw_), is_first(true), first(0), prev_delta(0), prev_time(0) {}
 
 bool DeltaCompressor::append(dariadb::Time t) {
   if (is_first) {
@@ -89,8 +88,7 @@ bool DeltaCompressor::append(dariadb::Time t) {
   return true;
 }
 
-DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_,
-                                     dariadb::Time first)
+DeltaDeCompressor::DeltaDeCompressor(const ByteBuffer_Ptr &bw_, dariadb::Time first)
     : BaseCompressor(bw_), prev_delta(0), prev_time(first) {}
 
 dariadb::Time DeltaDeCompressor::read() {

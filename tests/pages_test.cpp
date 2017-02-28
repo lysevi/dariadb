@@ -1,7 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
-#include <algorithm>
 #include <boost/test/unit_test.hpp>
+#include <algorithm>
 
 #include <libdariadb/flags.h>
 #include <libdariadb/storage/bloom_filter.h>
@@ -36,10 +36,10 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   auto manifest = dariadb::storage::Manifest::create(settings);
 
   auto _engine_env = dariadb::storage::EngineEnvironment::create();
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                           settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+                           manifest.get());
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -64,9 +64,9 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   }
   pm = nullptr;
 
-  auto fname = dariadb::utils::fs::ls(settings->raw_path.value(),
-                                      dariadb::storage::PAGE_FILE_EXT)
-                   .front();
+  auto fname =
+      dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::PAGE_FILE_EXT)
+          .front();
   auto header = dariadb::storage::Page::readFooter(fname);
   BOOST_CHECK(header.addeded_chunks != size_t(0));
 
@@ -116,10 +116,10 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   auto manifest = dariadb::storage::Manifest::create(settings);
 
   auto _engine_env = dariadb::storage::EngineEnvironment::create();
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                           settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+                           manifest.get());
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -130,9 +130,9 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   const size_t page_count = 4;
 
   size_t iteration = 0;
-  while (dariadb::utils::fs::ls(settings->raw_path.value(),
-                                dariadb::storage::PAGE_FILE_EXT)
-             .size() <= page_count) {
+  while (
+      dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::PAGE_FILE_EXT)
+          .size() <= page_count) {
     first.id = 1;
     first.time = t;
     auto count = chunks_size / 10;
@@ -150,12 +150,12 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     pm->append(ss.str(), ma);
   }
 
-  dariadb::QueryInterval qi(dariadb::IdArray{1}, 0,
-                                     addeded.front().time, addeded.back().time);
+  dariadb::QueryInterval qi(dariadb::IdArray{1}, 0, addeded.front().time,
+                            addeded.back().time);
 
-  dariadb::QueryTimePoint qt(
-      dariadb::IdArray{1}, 0,
-      addeded.front().time + (addeded.back().time - addeded.front().time) / 2);
+  dariadb::QueryTimePoint qt(dariadb::IdArray{1}, 0,
+                             addeded.front().time +
+                                 (addeded.back().time - addeded.front().time) / 2);
 
   // auto link_list = pm->linksByIterval(qi);
 
@@ -187,13 +187,11 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   BOOST_CHECK_EQUAL(mm.size(), size_t(1));
 
   auto page_before_erase =
-      dariadb::utils::fs::ls(settings->raw_path.value(),
-                             dariadb::storage::PAGE_FILE_EXT)
+      dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::PAGE_FILE_EXT)
           .size();
   pm->eraseOld(addeded.back().time);
   auto page_after_erase =
-      dariadb::utils::fs::ls(settings->raw_path.value(),
-                             dariadb::storage::PAGE_FILE_EXT)
+      dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::PAGE_FILE_EXT)
           .size();
 
   BOOST_CHECK_LT(page_after_erase, page_before_erase);
@@ -221,10 +219,10 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   auto manifest = dariadb::storage::Manifest::create(settings);
 
   auto _engine_env = dariadb::storage::EngineEnvironment::create();
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                           settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+                           manifest.get());
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -284,8 +282,8 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
         BOOST_CHECK(m.time <= end_time);
       }
 
-      auto id2meas_res = pm->valuesBeforeTimePoint(
-          dariadb::QueryTimePoint(all_id_array, 0, end_time));
+      auto id2meas_res =
+          pm->valuesBeforeTimePoint(dariadb::QueryTimePoint(all_id_array, 0, end_time));
       BOOST_CHECK_EQUAL(id2meas_res.size(), all_id_array.size());
 
       for (auto &kv : id2meas_res) {
@@ -319,10 +317,10 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   auto manifest = dariadb::storage::Manifest::create(settings);
 
   auto _engine_env = dariadb::storage::EngineEnvironment::create();
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::SETTINGS, settings.get());
-  _engine_env->addResource(
-      dariadb::storage::EngineEnvironment::Resource::MANIFEST, manifest.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                           settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+                           manifest.get());
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
@@ -370,9 +368,8 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   pm->append(page_file_prefix3, a);
 
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
-  BOOST_CHECK_EQUAL(
-      dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size(),
-      size_t(3));
+  BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size(),
+                    size_t(3));
 
   { // id==0
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);

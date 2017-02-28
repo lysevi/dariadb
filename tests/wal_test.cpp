@@ -31,7 +31,7 @@ public:
   }
   void dropWAL(const std::string &fname) override {
     auto full_path = dariadb::utils::fs::append_path(_settings->raw_path.value(), fname);
-    auto  wal=dariadb::storage::WALFile::open(_env, full_path, true);
+    auto wal = dariadb::storage::WALFile::open(_env, full_path, true);
 
     auto ma = wal->readAll();
     wal = nullptr;
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
 
   dariadb::IdSet id_set;
   {
-	auto  wal = dariadb::storage::WALFile::create(_engine_env);
+    auto wal = dariadb::storage::WALFile::create(_engine_env);
 
     wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK_EQUAL(wal_files.size(), size_t(0));
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK(wal_files.size() == size_t(1));
-	auto  wal = dariadb::storage::WALFile::open(_engine_env, wal_files.front(), true);
+    auto wal = dariadb::storage::WALFile::open(_engine_env, wal_files.front(), true);
     auto all = wal->readAll();
     BOOST_CHECK_EQUAL(all->size(), writes_count);
   }
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
 
     auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK(wal_files.size() == size_t(0));
-    auto wal= dariadb::storage::WALFile::create(_engine_env);
+    auto wal = dariadb::storage::WALFile::create(_engine_env);
 
     dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false);
     manifest = nullptr;

@@ -1,10 +1,9 @@
-#include <iostream>
 #include <libdariadb/dariadb.h>
+#include <iostream>
 
 class QuietLogger : public dariadb::utils::ILogger {
 public:
-  void message(dariadb::utils::LOG_MESSAGE_KIND kind,
-               const std::string &msg) override {}
+  void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) override {}
 };
 
 class Callback : public dariadb::IReadCallback {
@@ -12,8 +11,8 @@ public:
   Callback() {}
 
   void apply(const dariadb::Meas &measurement) override {
-    std::cout << " id: " << measurement.id << " timepoint: "
-              << dariadb::timeutil::to_string(measurement.time)
+    std::cout << " id: " << measurement.id
+              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
               << " value:" << measurement.value << std::endl;
   }
 
@@ -23,7 +22,7 @@ public:
   }
 };
 
-int main(int , char **) {
+int main(int, char **) {
   const std::string storage_path = "exampledb";
 
   // Replace standart logger.
@@ -40,7 +39,7 @@ int main(int , char **) {
   all_id.push_back(all_params.idByParam("group.param1"));
   all_id.push_back(all_params.idByParam("group.subgroup.param2"));
 
-  dariadb::Time cur_time=dariadb::timeutil::current_time();
+  dariadb::Time cur_time = dariadb::timeutil::current_time();
 
   // query in timepoint;
   dariadb::QueryTimePoint qp(all_id, dariadb::Flag(), cur_time);
@@ -48,8 +47,8 @@ int main(int , char **) {
   std::cout << "Timepoint: " << std::endl;
   for (auto kv : timepoint) {
     auto measurement = kv.second;
-    std::cout << " param: " << all_params[kv.first] << " timepoint: "
-              << dariadb::timeutil::to_string(measurement.time)
+    std::cout << " param: " << all_params[kv.first]
+              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
               << " value:" << measurement.value << std::endl;
   }
 
@@ -58,8 +57,8 @@ int main(int , char **) {
   std::cout << "Current: " << std::endl;
   for (auto kv : timepoint) {
     auto measurement = kv.second;
-    std::cout << " id: " << all_params[kv.first] << " timepoint: "
-              << dariadb::timeutil::to_string(measurement.time)
+    std::cout << " id: " << all_params[kv.first]
+              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
               << " value:" << measurement.value << std::endl;
   }
 

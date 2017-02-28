@@ -13,8 +13,7 @@ void dariadb::ICursor::apply(IReadCallback *clbk) {
   }
 }
 
-void dariadb::ICursor::apply(IReadCallback *clbk,
-                             const dariadb::QueryInterval &q) {
+void dariadb::ICursor::apply(IReadCallback *clbk, const dariadb::QueryInterval &q) {
   while (!this->is_end()) {
     if (clbk->is_canceled()) {
       break;

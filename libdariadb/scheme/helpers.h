@@ -7,7 +7,6 @@
 namespace dariadb {
 namespace scheme {
 
-EXPORT std::ostream &operator<<(std::ostream &stream,
-                                const MeasurementDescription &d);
+EXPORT std::ostream &operator<<(std::ostream &stream, const MeasurementDescription &d);
 }
 }

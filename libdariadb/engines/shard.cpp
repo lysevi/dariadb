@@ -50,8 +50,7 @@ public:
   }
 
   std::string shardFileName() {
-    return utils::fs::append_path(_settings->storage_path.value(),
-                                  SHARD_FILE_NAME);
+    return utils::fs::append_path(_settings->storage_path.value(), SHARD_FILE_NAME);
   }
 
   void loadShardFile() {
@@ -169,8 +168,7 @@ public:
     _locker.unlock();
 
     if (target_shard == nullptr) {
-      logger_fatal("shard: shard for id:", id,
-                   " not found. default shard is nullptr.");
+      logger_fatal("shard: shard for id:", id, " not found. default shard is nullptr.");
       return nullptr;
     }
     return target_shard;
@@ -263,8 +261,7 @@ public:
 
   Id2Cursor intervalReader(const QueryInterval &q) override {
     Id2Cursor result;
-    std::unordered_map<IEngine_Ptr, IdSet> storage2iset =
-        makeStorage2iset(q.ids);
+    std::unordered_map<IEngine_Ptr, IdSet> storage2iset = makeStorage2iset(q.ids);
 
     for (auto kv : storage2iset) {
       auto target_shard = kv.first;
@@ -283,8 +280,7 @@ public:
 
   Id2Meas readTimePoint(const QueryTimePoint &q) override {
     Id2Meas result;
-    std::unordered_map<IEngine_Ptr, IdSet> storage2iset =
-        makeStorage2iset(q.ids);
+    std::unordered_map<IEngine_Ptr, IdSet> storage2iset = makeStorage2iset(q.ids);
     for (auto kv : storage2iset) {
       auto target_shard = kv.first;
       for (auto id : kv.second) {
@@ -365,9 +361,7 @@ public:
     }
   }
 
-  storage::Settings_ptr settings()override {
-      return _settings;
-  }
+  storage::Settings_ptr settings() override { return _settings; }
 
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
@@ -390,25 +384,37 @@ void dariadb::ShardEngine::drop_part_wals(size_t count) {
   _impl->drop_part_wals(count);
 }
 
-void dariadb::ShardEngine::wait_all_asyncs() { _impl->wait_all_asyncs(); }
+void dariadb::ShardEngine::wait_all_asyncs() {
+  _impl->wait_all_asyncs();
+}
 
 IEngine::Description dariadb::ShardEngine::description() const {
   return _impl->description();
 }
 
-void ShardEngine::shardAdd(const Shard &d) { _impl->shardAdd(d); }
+void ShardEngine::shardAdd(const Shard &d) {
+  _impl->shardAdd(d);
+}
 
 std::list<ShardEngine::Shard> ShardEngine::shardList() {
   return _impl->shardList();
 }
 
-Status ShardEngine::append(const Meas &value) { return _impl->append(value); }
+Status ShardEngine::append(const Meas &value) {
+  return _impl->append(value);
+}
 
-Time ShardEngine::minTime() { return _impl->minTime(); }
+Time ShardEngine::minTime() {
+  return _impl->minTime();
+}
 
-Time ShardEngine::maxTime() { return _impl->maxTime(); }
+Time ShardEngine::maxTime() {
+  return _impl->maxTime();
+}
 
-Id2MinMax ShardEngine::loadMinMax() { return _impl->loadMinMax(); }
+Id2MinMax ShardEngine::loadMinMax() {
+  return _impl->loadMinMax();
+}
 
 bool ShardEngine::minMaxTime(Id id, Time *minResult, Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
@@ -438,15 +444,22 @@ Statistic ShardEngine::stat(const Id id, Time from, Time to) {
   return _impl->stat(id, from, to);
 }
 
-void ShardEngine::fsck() { _impl->fsck(); }
+void ShardEngine::fsck() {
+  _impl->fsck();
+}
 
-void ShardEngine::eraseOld(const Time &t) { _impl->eraseOld(t); }
+void ShardEngine::eraseOld(const Time &t) {
+  _impl->eraseOld(t);
+}
 
-void ShardEngine::repack() { _impl->repack(); }
+void ShardEngine::repack() {
+  _impl->repack();
+}
 
-void ShardEngine::stop() { _impl->stop(); }
+void ShardEngine::stop() {
+  _impl->stop();
+}
 
 storage::Settings_ptr ShardEngine::settings() {
-    return _impl->settings();
-
+  return _impl->settings();
 }

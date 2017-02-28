@@ -47,9 +47,8 @@ public:
   ~PageIndex();
   static PageIndex_ptr open(const std::string &filename);
 
-  ChunkLinkList get_chunks_links(const dariadb::IdArray &ids,
-                                 dariadb::Time from, dariadb::Time to,
-                                 dariadb::Flag flag);
+  ChunkLinkList get_chunks_links(const dariadb::IdArray &ids, dariadb::Time from,
+                                 dariadb::Time to, dariadb::Flag flag);
   std::vector<IndexReccord> readReccords();
   static IndexFooter readIndexFooter(std::string ifile);
 

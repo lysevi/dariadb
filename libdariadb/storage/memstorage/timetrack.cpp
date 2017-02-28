@@ -127,8 +127,8 @@ void TimeTrack::append_to_past(const Meas &value) {
   std::fill_n(new_buffer, buffer_size, uint8_t(0));
   ChunkHeader *hdr = new ChunkHeader;
 
-  new_chunk = MemChunk_Ptr{
-      new MemChunk(false, hdr, new_buffer, buffer_size, mar.front())};
+  new_chunk =
+      MemChunk_Ptr{new MemChunk(false, hdr, new_buffer, buffer_size, mar.front())};
   new_chunk->_track = this;
   for (size_t i = 1; i < mar.size(); ++i) {
     auto v = mar[i];
@@ -189,9 +189,13 @@ MemChunk_Ptr TimeTrack::get_target_to_replace_from_index(const Time t) {
 
 void TimeTrack::flush() {}
 
-Time TimeTrack::TimeTrack::minTime() { return _min_max.min.time; }
+Time TimeTrack::TimeTrack::minTime() {
+  return _min_max.min.time;
+}
 
-Time TimeTrack::maxTime() { return _min_max.max.time; }
+Time TimeTrack::maxTime() {
+  return _min_max.max.time;
+}
 
 bool TimeTrack::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                            dariadb::Time *maxResult) {
@@ -214,8 +218,7 @@ bool TimeTrack::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
 }
 
 bool chunkInQuery(Time from, Time to, const Chunk_Ptr &c) {
-  if (utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime,
-                        from) ||
+  if (utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime, from) ||
       utils::inInterval(c->header->stat.minTime, c->header->stat.maxTime, to) ||
       utils::inInterval(from, to, c->header->stat.minTime) ||
       utils::inInterval(from, to, c->header->stat.maxTime)) {
@@ -330,8 +333,7 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
     }
   }
 
-  if (_cur_chunk != nullptr &&
-      _cur_chunk->header->stat.minTime >= q.time_point &&
+  if (_cur_chunk != nullptr && _cur_chunk->header->stat.minTime >= q.time_point &&
       _cur_chunk->header->stat.maxTime <= q.time_point) {
     auto rdr = _cur_chunk->getReader();
     while (!rdr->is_end()) {
@@ -393,16 +395,14 @@ void TimeTrack::rereadMinMax() {
 
 bool TimeTrack::create_new_chunk(const Meas &value) {
   if (_cur_chunk != nullptr) {
-    this->_index.insert(
-        std::make_pair(_cur_chunk->header->stat.maxTime, _cur_chunk));
+    this->_index.insert(std::make_pair(_cur_chunk->header->stat.maxTime, _cur_chunk));
     _cur_chunk = nullptr;
   }
   auto new_chunk_data = _allocator->allocate();
   if (new_chunk_data.header == nullptr) {
     return false;
   }
-  auto mc = MemChunk_Ptr{new MemChunk{true, new_chunk_data.header,
-                                      new_chunk_data.buffer,
+  auto mc = MemChunk_Ptr{new MemChunk{true, new_chunk_data.header, new_chunk_data.buffer,
                                       _allocator->_chunkSize, value}};
   mc->_track = this;
   mc->_a_data = new_chunk_data;

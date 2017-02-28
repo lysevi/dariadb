@@ -1,8 +1,8 @@
-#include <cassert>
 #include <libdariadb/meas.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 #include <libserver/ioclient.h>
+#include <cassert>
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -38,8 +38,7 @@ struct SubscribeCallback : public IReadCallback {
   }
 };
 
-IOClient::ClientDataReader::ClientDataReader(IOClient *parent,
-                                             QueryNumber query_num) {
+IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query_num) {
   _parent = parent;
   pos = 0;
   _query_num = query_num;
@@ -83,8 +82,7 @@ void IOClient::ClientDataReader::send_buffer() {
     auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
     hdr->id = _query_num;
     size_t space_left = 0;
-    QueryAppend_header::make_query(hdr, _buffer.data(), pos, writed,
-                                   &space_left);
+    QueryAppend_header::make_query(hdr, _buffer.data(), pos, writed, &space_left);
 
     logger_info("server: pack count: ", hdr->count);
 
@@ -92,8 +90,8 @@ void IOClient::ClientDataReader::send_buffer() {
     nd->size = static_cast<NetData::MessageSize>(size_to_write);
     writed += hdr->count;
 
-    logger("server: #", _parent->_async_connection->id(),
-           " send to client result of #", hdr->id, " count ", hdr->count);
+    logger("server: #", _parent->_async_connection->id(), " send to client result of #",
+           hdr->id, " count ", hdr->count);
     _parent->_async_connection->send(nd);
   }
 }
@@ -108,14 +106,14 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
   env = _env;
   _last_query_time = dariadb::timeutil::current_time();
 
-  AsyncConnection::onDataRecvHandler on_d =
-      [this](const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
-        onDataRecv(d, cancel, dont_free_memory);
-      };
+  AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel,
+                                                   bool &dont_free_memory) {
+    onDataRecv(d, cancel, dont_free_memory);
+  };
   AsyncConnection::onNetworkErrorHandler on_n =
       [this](const boost::system::error_code &err) { onNetworkError(err); };
-  _async_connection = std::shared_ptr<AsyncConnection>{
-      new AsyncConnection(_env->nd_pool, on_d, on_n)};
+  _async_connection =
+      std::shared_ptr<AsyncConnection>{new AsyncConnection(_env->nd_pool, on_d, on_n)};
   _async_connection->set_id(_id);
 }
 
@@ -140,8 +138,7 @@ void IOClient::end_session() {
   this->state = CLIENT_STATE::DISCONNETION_START;
 
   if (sock->is_open()) {
-    auto nd =
-        this->_async_connection->get_pool()->construct(DATA_KINDS::DISCONNECT);
+    auto nd = this->_async_connection->get_pool()->construct(DATA_KINDS::DISCONNECT);
     this->_async_connection->send(nd);
   }
 }
@@ -173,16 +170,14 @@ void IOClient::ping() {
 void IOClient::onNetworkError(const boost::system::error_code &err) {
   if ((state != CLIENT_STATE::DISCONNECTED) &&
       (state != CLIENT_STATE::DISCONNETION_START)) {
-    logger_info("server: client #", this->_async_connection->id(),
-                " network error - ", err.message());
-    logger_info("server: client #", this->_async_connection->id(),
-                " stoping...");
+    logger_info("server: client #", this->_async_connection->id(), " network error - ",
+                err.message());
+    logger_info("server: client #", this->_async_connection->id(), " stoping...");
     this->close();
   }
 }
 
-void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
-                          bool &dont_free_memory) {
+void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory) {
   _last_query_time = dariadb::timeutil::current_time();
   // logger("server: #", this->id(), " dataRecv ", d->size, " bytes.");
   auto qh = reinterpret_cast<Query_header *>(d->data);
@@ -197,8 +192,8 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     }
     auto hdr = reinterpret_cast<QueryAppend_header *>(&d->data);
     auto count = hdr->count;
-    logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id,
-                " write ", count);
+    logger_info("server: #", this->_async_connection->id(), " recv #", hdr->id, " write ",
+                count);
     this->env->srv->write_begin();
 
     this->append(d);
@@ -207,26 +202,25 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
   }
   case DATA_KINDS::PONG: {
     pings_missed--;
-    logger_info("server: #", this->_async_connection->id(),
-                " pings_missed: ", pings_missed.load());
+    logger_info("server: #", this->_async_connection->id(), " pings_missed: ",
+                pings_missed.load());
     break;
   }
   case DATA_KINDS::STAT: {
-	  auto st_hdr = reinterpret_cast<QueryStat_header *>(&d->data);
-	  auto result=this->env->storage->stat(st_hdr->id, st_hdr->from, st_hdr->to);
-	  auto nd = this->env->nd_pool->construct(DATA_KINDS::STAT);
+    auto st_hdr = reinterpret_cast<QueryStat_header *>(&d->data);
+    auto result = this->env->storage->stat(st_hdr->id, st_hdr->from, st_hdr->to);
+    auto nd = this->env->nd_pool->construct(DATA_KINDS::STAT);
 
-	  auto p_header = reinterpret_cast<QueryStatResult_header *>(nd->data);
-	  nd->size = sizeof(QueryStatResult_header);
-	  p_header->id = st_hdr->id;
-	  p_header->result = result;
+    auto p_header = reinterpret_cast<QueryStatResult_header *>(nd->data);
+    nd->size = sizeof(QueryStatResult_header);
+    p_header->id = st_hdr->id;
+    p_header->result = result;
 
-	  _async_connection->send(nd);
-	  break;
+    _async_connection->send(nd);
+    break;
   }
   case DATA_KINDS::DISCONNECT: {
-    logger_info("server: #", this->_async_connection->id(),
-                " disconnection request.");
+    logger_info("server: #", this->_async_connection->id(), " disconnection request.");
     cancel = true;
     this->end_session();
     env->srv->client_disconnect(this->_async_connection->id());
@@ -289,9 +283,8 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
     }
     QueryHello_header *qhh = reinterpret_cast<QueryHello_header *>(d->data);
     if (qhh->version != PROTOCOL_VERSION) {
-      logger("server: #", _async_connection->id(),
-             " wrong protocol version: exp=", PROTOCOL_VERSION,
-             ", rec=", qhh->version);
+      logger("server: #", _async_connection->id(), " wrong protocol version: exp=",
+             PROTOCOL_VERSION, ", rec=", qhh->version);
       sendError(0, ERRORS::WRONG_PROTOCOL_VERSION);
       this->state = CLIENT_STATE::DISCONNECTED;
       return;
@@ -316,8 +309,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
                   " refuse repack query. server in stop.");
       return;
     }
-    logger_info("server: #", this->_async_connection->id(),
-                " query to storage repack.");
+    logger_info("server: #", this->_async_connection->id(), " query to storage repack.");
     if (this->env->storage->strategy() == STRATEGY::WAL) {
       auto wals = this->env->storage->description().wal_count;
       logger_info("server: #", this->_async_connection->id(), " drop ", wals,
@@ -325,7 +317,7 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel,
       this->env->storage->drop_part_wals(wals);
       this->env->storage->flush();
     }
-    //auto query_hdr = reinterpret_cast<QuerRepack_header *>(&d->data);
+    // auto query_hdr = reinterpret_cast<QuerRepack_header *>(&d->data);
     this->env->storage->repack();
     break;
   }
@@ -356,8 +348,7 @@ void IOClient::sendError(QueryNumber query_num, const ERRORS &err) {
 void IOClient::append(const NetData_ptr &d) {
   auto hdr = reinterpret_cast<QueryAppend_header *>(d->data);
   auto count = hdr->count;
-  logger_info("server: #", this->_async_connection->id(), " begin writing ",
-              count);
+  logger_info("server: #", this->_async_connection->id(), " begin writing ", count);
   MeasArray ma = hdr->read_measarray();
 
   auto ar = env->storage->append(ma.begin(), ma.end());
@@ -378,11 +369,10 @@ void IOClient::readInterval(const NetData_ptr &d) {
   auto from_str = timeutil::to_string(query_hdr->from);
   auto to_str = timeutil::to_string(query_hdr->from);
 
-  logger_info("server: #", this->_async_connection->id(),
-              " read interval point #", query_hdr->id, " id(",
-              query_hdr->ids_count, ") [", from_str, ',', to_str, "]");
-  auto ids_ptr =
-      (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+  logger_info("server: #", this->_async_connection->id(), " read interval point #",
+              query_hdr->id, " id(", query_hdr->ids_count, ") [", from_str, ',', to_str,
+              "]");
+  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
@@ -391,8 +381,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
     sendError(query_num, ERRORS::WRONG_QUERY_PARAM_FROM_GE_TO);
   } else {
 
-    auto qi = new QueryInterval{all_ids, query_hdr->flag,
-                                         query_hdr->from, query_hdr->to};
+    auto qi = new QueryInterval{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
 
     auto cdr = new ClientDataReader(this, query_num);
     this->readerAdd(ReaderCallback_ptr(cdr), qi);
@@ -407,13 +396,11 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
 
   logger_info("server: #", this->_async_connection->id(), " read time point  #",
               query_hdr->id, " id(", query_hdr->ids_count, ") [", tp_str, "]");
-  auto ids_ptr =
-      (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  auto qi =
-      new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
+  auto qi = new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
   readerAdd(ReaderCallback_ptr(cdr), qi);
@@ -425,8 +412,7 @@ void IOClient::currentValue(const NetData_ptr &d) {
 
   logger_info("server: #", this->_async_connection->id(), " current values  #",
               query_hdr->id, " id(", query_hdr->ids_count, ")");
-  auto ids_ptr =
-      (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
   auto flag = query_hdr->flag;
   auto query_num = query_hdr->id;
@@ -443,18 +429,16 @@ void IOClient::currentValue(const NetData_ptr &d) {
 void IOClient::subscribe(const NetData_ptr &d) {
   auto query_hdr = reinterpret_cast<QuerSubscribe_header *>(d->data);
 
-  logger_info("server: #", this->_async_connection->id(),
-              " subscribe to values  #", query_hdr->id, " id(",
-              query_hdr->ids_count, ")");
-  auto ids_ptr =
-      (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
+  logger_info("server: #", this->_async_connection->id(), " subscribe to values  #",
+              query_hdr->id, " id(", query_hdr->ids_count, ")");
+  auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
   auto flag = query_hdr->flag;
   auto query_num = query_hdr->id;
 
   if (subscribe_reader == nullptr) {
-    subscribe_reader = std::shared_ptr<IReadCallback>(
-        new SubscribeCallback(this, query_num));
+    subscribe_reader =
+        std::shared_ptr<IReadCallback>(new SubscribeCallback(this, query_num));
   }
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
@@ -463,8 +447,7 @@ void IOClient::readerAdd(const ReaderCallback_ptr &cdr, void *data) {
   std::lock_guard<std::mutex> lg(_readers_lock);
   ClientDataReader *cdr_raw = dynamic_cast<ClientDataReader *>(cdr.get());
   ENSURE(cdr_raw != nullptr);
-  this->_readers.insert(
-      std::make_pair(cdr_raw->_query_num, std::make_pair(cdr, data)));
+  this->_readers.insert(std::make_pair(cdr_raw->_query_num, std::make_pair(cdr, data)));
 }
 
 void IOClient::readerRemove(QueryNumber number) {

@@ -299,10 +299,9 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
 
     dc.append(t1);
     BOOST_CHECK(!dc._is_first);
-    BOOST_CHECK_EQUAL(
-        dariadb::compression::inner::flat_int_to_double(dc._first), t1);
-    BOOST_CHECK_EQUAL(
-        dariadb::compression::inner::flat_int_to_double(dc._prev_value), t1);
+    BOOST_CHECK_EQUAL(dariadb::compression::inner::flat_int_to_double(dc._first), t1);
+    BOOST_CHECK_EQUAL(dariadb::compression::inner::flat_int_to_double(dc._prev_value),
+                      t1);
   }
 
   { // cur==prev

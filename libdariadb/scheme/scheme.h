@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/scheme/helpers.h>
+#include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/settings.h>
 #include <memory>
@@ -27,6 +27,7 @@ public:
   EXPORT Id addParam(const std::string &param) override;
   EXPORT DescriptionMap ls() override;
   EXPORT void save();
+
 protected:
   EXPORT Scheme(const storage::Settings_ptr s);
   struct Private;
