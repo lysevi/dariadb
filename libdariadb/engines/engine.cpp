@@ -38,7 +38,7 @@ public:
     _engine_env = EngineEnvironment::create();
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
-    logger_info("engine:", _settings->alias, ": project version - ", version());
+    logger_info("engine", _settings->alias, ": project version - ", version());
     logger_info("engine", _settings->alias, ": storage format - ", format());
     logger_info("engine", _settings->alias, ": strategy - ", _settings->strategy.value());
     _stoped = false;

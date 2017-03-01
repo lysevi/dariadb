@@ -19,8 +19,6 @@
 const dariadb::net::Server::Param server_param(2001);
 const dariadb::net::client::Client::Param client_param("localhost", 2001);
 
-std::atomic_bool server_runned;
-std::atomic_bool server_stop_flag;
 dariadb::net::Server *server_instance = nullptr;
 
 void server_thread_func() {
@@ -28,18 +26,12 @@ void server_thread_func() {
 
   BOOST_CHECK(!s.is_runned());
 
-  s.start();
-
-  while (!s.is_runned()) {
-  }
-
   server_instance = &s;
-  server_runned.store(true);
-  while (!server_stop_flag.load()) {
-  }
+  s.start();
 
   server_instance = nullptr;
 }
+
 BOOST_AUTO_TEST_CASE(NetDataPack) {
   using dariadb::net::QueryAppend_header;
   using dariadb::net::NetData;
@@ -85,11 +77,9 @@ BOOST_AUTO_TEST_CASE(NetDataPack) {
 
 BOOST_AUTO_TEST_CASE(Connect1) {
   dariadb::logger("********** Connect1 **********");
-  server_runned.store(false);
-  server_stop_flag = false;
   std::thread server_thread{server_thread_func};
 
-  while (!server_runned.load()) {
+  while (server_instance==nullptr || !server_instance->is_runned()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
@@ -107,7 +97,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
-  server_stop_flag = true;
+  server_instance->stop();
   server_thread.join();
   while (true) {
     auto state = c.state();
@@ -121,12 +111,11 @@ BOOST_AUTO_TEST_CASE(Connect1) {
 
 BOOST_AUTO_TEST_CASE(Connect3) {
   dariadb::logger("********** Connect3 **********");
-  server_runned.store(false);
-  server_stop_flag = false;
+  
   std::thread server_thread{server_thread_func};
 
-  while (!server_runned.load()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  while (server_instance == nullptr || !server_instance->is_runned()) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
   dariadb::net::client::Client c(client_param);
@@ -195,7 +184,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
-  server_stop_flag = true;
+  server_instance->stop();
   server_thread.join();
   while (true) {
     auto state = c3.state();
@@ -210,12 +199,9 @@ BOOST_AUTO_TEST_CASE(Connect3) {
 BOOST_AUTO_TEST_CASE(PingTest) {
   dariadb::logger("********** PingTest **********");
   const size_t MAX_PONGS = 2;
-  server_runned.store(false);
-  server_stop_flag = false;
   std::thread server_thread{server_thread_func};
-
-  while (!server_runned.load()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  while (server_instance == nullptr || !server_instance->is_runned()) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
   dariadb::net::client::Client c1(client_param);
@@ -257,8 +243,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
-
-  server_stop_flag = true;
+  server_instance->stop();
   server_thread.join();
 }
 
@@ -283,13 +268,12 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
     const size_t MEASES_SIZE = 2047 * 3 + 3;
 
-    server_runned.store(false);
-    server_stop_flag = false;
+    
     std::thread server_thread{server_thread_func};
 
-    while (!server_runned.load()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
+	while (server_instance == nullptr || !server_instance->is_runned()) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	}
     server_instance->set_storage(stor.get());
     dariadb::net::client::Client c1(client_param);
     c1.connect();
@@ -352,8 +336,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
-
-    server_stop_flag = true;
+	server_instance->stop();
     server_thread.join();
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -382,13 +365,11 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
 
     const size_t MEASES_SIZE = 2047 * 10 + 3;
 
-    server_runned.store(false);
-    server_stop_flag = false;
     std::thread server_thread{server_thread_func};
 
-    while (!server_runned.load()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
+	while (server_instance == nullptr || !server_instance->is_runned()) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	}
     server_instance->set_storage(stor.get());
     dariadb::net::client::Client c1(client_param);
     c1.connect();
@@ -443,8 +424,7 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
-
-    server_stop_flag = true;
+	server_instance->stop();
     server_thread.join();
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {

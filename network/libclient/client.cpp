@@ -132,7 +132,7 @@ public:
 
   void onNetworkError(const boost::system::error_code &err) {
     if (this->_state != CLIENT_STATE::DISCONNECTED) {
-      THROW_EXCEPTION("client: #", _async_connection->id(), err.message());
+      THROW_EXCEPTION("client: #", _async_connection->id(), " ",err.message());
     }
   }
 

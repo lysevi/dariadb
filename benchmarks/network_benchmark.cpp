@@ -59,9 +59,8 @@ void run_server() {
   server_instance->set_storage(engine);
 
   server_instance->start();
-
-  while (!server_instance->is_runned()) {
-  }
+  delete server_instance;
+  server_instance = nullptr;
 }
 
 const size_t MEASES_SIZE = 200000;
@@ -129,9 +128,9 @@ int main(int argc, char **argv) {
   elapsed.resize(clients_count);
   threads.resize(clients_count);
   clients.resize(clients_count);
-
+  std::thread server_thread;
   if (run_server_flag) {
-    run_server();
+	  server_thread = std::move(std::thread{ run_server });
   }
 
   dariadb::net::client::Client::Param p(server_host, server_port);
@@ -164,9 +163,7 @@ int main(int argc, char **argv) {
   if (run_server_flag) {
     server_instance->stop();
 
-    while (server_instance->is_runned()) {
-      std::this_thread::yield();
-    }
+	server_thread.join();
 
     delete engine;
   }
