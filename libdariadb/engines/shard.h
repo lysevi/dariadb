@@ -38,6 +38,7 @@ public:
   EXPORT void fsck() override;
   EXPORT void eraseOld(const Time &t) override;
   EXPORT void repack() override;
+  EXPORT void compact(ICompactLogic *logic) override;
   EXPORT void stop() override;
 
   EXPORT Description description() const override;
@@ -46,7 +47,6 @@ public:
   EXPORT void drop_part_wals(size_t count) override;
 
   EXPORT storage::Settings_ptr settings() override;
-
 protected:
   EXPORT ShardEngine(const std::string &path);
 

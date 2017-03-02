@@ -1,4 +1,5 @@
 #pragma once
+#include <libdariadb/interfaces/icompactlogic.h>
 #include <libdariadb/interfaces/imeaswriter.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
@@ -42,15 +43,23 @@ public:
   EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
                                 uint64_t chunk_id, uint32_t max_chunk_size,
                                 const MeasArray &ma);
-  /// used for repack many pages to one
+  /**
+  used for repack many pages to one
+  file_name - output page filename
+  lvl - output page level
+  chunk_id - max chunk id in pagemanager
+  max_chunk_size - maximum chunk size
+  pages_full_paths - input pages.
+  logic - if set, to control repacking.
+  */
   EXPORT static Page_Ptr repackTo(const std::string &file_name, uint16_t lvl,
                                   uint64_t chunk_id, uint32_t max_chunk_size,
-                                  const std::list<std::string> &pages_full_paths);
+                                  const std::list<std::string> &pages_full_paths,
+								  ICompactLogic *logic);
   /// called by dropper from MemoryStorage.
   EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
                                 uint64_t chunk_id, const std::vector<Chunk *> &a,
                                 size_t count);
-
   EXPORT static Page_Ptr open(const std::string &file_name);
 
   EXPORT static PageFooter readFooter(std::string file_name);

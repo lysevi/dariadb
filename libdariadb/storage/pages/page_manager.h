@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/interfaces/icompactlogic.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/chunkcontainer.h>
@@ -39,6 +40,8 @@ public:
   EXPORT static void erase(const std::string &storage_path, const std::string &fname);
   EXPORT void repack();
   EXPORT Id2MinMax loadMinMax();
+
+  EXPORT void compact(ICompactLogic *logic);
 
 protected:
   EXPORT PageManager(const EngineEnvironment_ptr env);

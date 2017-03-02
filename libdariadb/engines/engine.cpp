@@ -723,6 +723,13 @@ public:
     this->unlock_storage();
   }
 
+  void compact(ICompactLogic *logic) {
+	  this->lock_storage();
+	  logger_info("engine", _settings->alias, ": compact...");
+	  _page_manager->compact(logic);
+	  this->unlock_storage();
+  }
+
   storage::Settings_ptr settings() { return _settings; }
 
 protected:
@@ -836,6 +843,10 @@ void Engine::eraseOld(const Time &t) {
 
 void Engine::repack() {
   _impl->repack();
+}
+
+void Engine::compact(ICompactLogic*logic) {
+	_impl->compact(logic);
 }
 
 storage::Settings_ptr Engine::settings() {

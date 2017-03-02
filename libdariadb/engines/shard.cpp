@@ -341,6 +341,13 @@ public:
     }
   }
 
+  void compact(ICompactLogic *logic) override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
+    for (auto &s : _sub_storages) {
+      s.storage->compact(logic);
+    }
+  }
+
   Description description() const override {
     std::shared_lock<std::shared_mutex> lg(_locker);
     Description result;
@@ -454,6 +461,9 @@ void ShardEngine::eraseOld(const Time &t) {
 
 void ShardEngine::repack() {
   _impl->repack();
+}
+void ShardEngine::compact(ICompactLogic *logic) {
+  _impl->compact(logic);
 }
 
 void ShardEngine::stop() {
