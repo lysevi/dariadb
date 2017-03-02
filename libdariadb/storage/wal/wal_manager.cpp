@@ -69,22 +69,6 @@ void WALManager::dropAll() {
         this->dropWAL(f, _down);
       }
     }
-  }
-}
-
-void WALManager::dropClosedFiles(size_t count) {
-  if (_down != nullptr) {
-    auto closed = this->closedWals();
-
-    size_t to_drop = std::min(closed.size(), count);
-    for (size_t i = 0; i < to_drop; ++i) {
-      auto f = closed.front();
-      closed.pop_front();
-      auto without_path = utils::fs::extract_filename(f);
-      if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
-        this->dropWAL(f, _down);
-      }
-    }
     // clean set of sended to drop files.
     auto manifest =
         _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
@@ -102,8 +86,7 @@ void WALManager::dropClosedFiles(size_t count) {
 
 void WALManager::drop_old_if_needed() {
   if (_settings->strategy.value() != STRATEGY::WAL) {
-    auto closed = this->closedWals();
-    dropClosedFiles(closed.size());
+    dropAll();
   }
 }
 

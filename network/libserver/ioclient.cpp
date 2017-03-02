@@ -311,10 +311,8 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_me
     }
     logger_info("server: #", this->_async_connection->id(), " query to storage repack.");
     if (this->env->storage->strategy() == STRATEGY::WAL) {
-      auto wals = this->env->storage->description().wal_count;
-      logger_info("server: #", this->_async_connection->id(), " drop ", wals,
-                  " wals to pages.");
-      this->env->storage->drop_part_wals(wals);
+      logger_info("server: #", this->_async_connection->id(), " compress all ");
+      this->env->storage->compress_all();
       this->env->storage->flush();
     }
     // auto query_hdr = reinterpret_cast<QuerRepack_header *>(&d->data);
