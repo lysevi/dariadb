@@ -176,7 +176,7 @@ public:
 
   void handle_clients_thread() {
     _active_workers++;
-    ENSURE(_active_workers.load() <= _params.io_threads);
+    ENSURE(size_t(_active_workers.load()) <= _params.io_threads);
     _service.run();
     _active_workers--;
   }
