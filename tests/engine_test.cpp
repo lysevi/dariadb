@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
                                         &maxWritedTime, false);
 
     ms->compress_all();
-
+	
     auto pages_count = ms->description().pages_count;
     auto wals_count = ms->description().wal_count;
     BOOST_CHECK_GE(pages_count, size_t(1));
