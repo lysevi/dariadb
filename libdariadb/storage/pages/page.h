@@ -55,7 +55,7 @@ public:
   EXPORT static Page_Ptr repackTo(const std::string &file_name, uint16_t lvl,
                                   uint64_t chunk_id, uint32_t max_chunk_size,
                                   const std::list<std::string> &pages_full_paths,
-								  ICompactLogic *logic);
+                                  ICompactLogic *logic);
   /// called by dropper from MemoryStorage.
   EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
                                 uint64_t chunk_id, const std::vector<Chunk *> &a,
@@ -79,7 +79,12 @@ public:
   EXPORT Id2MinMax loadMinMax();
   EXPORT Id2Cursor intervalReader(const QueryInterval &query, const ChunkLinkList &links);
   EXPORT Statistic stat(const Id id, Time from, Time to);
-  bool checksum(); // return false if bad checksum.
+  EXPORT bool checksum(); // return false if bad checksum.
+
+  // callback - return true for break iteration.
+  EXPORT void apply_to_chunks(const ChunkLinkList &links,
+                              std::function<bool(const Chunk_Ptr &)> callback);
+
 private:
   void update_index_recs(const PageFooter &phdr);
 
@@ -87,9 +92,6 @@ private:
   static Chunk_Ptr readChunkByOffset(FILE *page_io, int offset);
 
   ChunkLinkList linksByIterval(const QueryInterval &qi);
-  // callback - return true for break iteration.
-  void apply_to_chunks(const ChunkLinkList &links,
-                       std::function<bool(const Chunk_Ptr &)> callback);
 
 public:
   PageFooter footer;
