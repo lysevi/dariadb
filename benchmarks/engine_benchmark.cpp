@@ -476,7 +476,7 @@ int main(int argc, char *argv[]) {
         flush_info_thread.join();
         std::cout << "drop time: " << elapsed << std::endl;
       }
-      {
+      if (!use_shard) {
         auto pages_before = raw_ptr->description().pages_count;
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
