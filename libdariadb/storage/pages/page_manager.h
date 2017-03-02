@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libdariadb/interfaces/imeasstorage.h>
-#include <libdariadb/interfaces/icompactlogic.h>
+#include <libdariadb/interfaces/icompactioncontroller.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/chunkcontainer.h>
@@ -41,7 +41,7 @@ public:
   EXPORT void repack();
   EXPORT Id2MinMax loadMinMax();
 
-  EXPORT void compact(ICompactLogic *logic);
+  EXPORT void compact(ICompactionController *logic);
 
 protected:
   EXPORT PageManager(const EngineEnvironment_ptr env);

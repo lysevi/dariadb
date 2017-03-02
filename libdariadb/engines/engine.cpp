@@ -723,7 +723,7 @@ public:
     this->unlock_storage();
   }
 
-  void compact(ICompactLogic *logic) {
+  void compact(ICompactionController *logic) {
 	  this->lock_storage();
 	  logger_info("engine", _settings->alias, ": compact...");
 	  _page_manager->compact(logic);
@@ -845,7 +845,7 @@ void Engine::repack() {
   _impl->repack();
 }
 
-void Engine::compact(ICompactLogic*logic) {
+void Engine::compact(ICompactionController*logic) {
 	_impl->compact(logic);
 }
 

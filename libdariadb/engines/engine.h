@@ -58,7 +58,7 @@ public:
   EXPORT void eraseOld(const Time &t) override;
 
   EXPORT void repack() override;
-  EXPORT void compact(ICompactLogic *logic) override;
+  EXPORT void compact(ICompactionController *logic) override;
   EXPORT storage::Settings_ptr settings() override;
   EXPORT static uint16_t format();
   EXPORT static std::string version();

@@ -420,10 +420,10 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
-class RmAllCompaction : public dariadb::ICompactLogic {
+class RmAllCompaction : public dariadb::ICompactionController {
 public:
   RmAllCompaction(dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactLogic(from, to) {}
+      : dariadb::ICompactionController(from, to) {}
 
   void compact(dariadb::MeasArray &values, std::vector<int> &filter) override {
     BOOST_CHECK(values.size() == filter.size());
@@ -435,10 +435,10 @@ public:
   }
 };
 
-class TestCompaction : public dariadb::ICompactLogic {
+class TestCompaction : public dariadb::ICompactionController {
 public:
   TestCompaction(dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactLogic(from, to) {
+      : dariadb::ICompactionController(from, to) {
     calls = 0;
   }
 

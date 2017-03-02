@@ -35,7 +35,7 @@ struct ToBtree_ReaderClb : public IReadCallback {
   utils::async::Locker _locker;
 };
 
-MeasArray applyFilter(MeasArray &inputValues, ICompactLogic *logic) {
+MeasArray applyFilter(MeasArray &inputValues, ICompactionController *logic) {
   MeasArray result;
   MeasArray filtered;
   std::vector<int> data_filter(inputValues.size());
@@ -135,7 +135,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
 Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                         uint32_t max_chunk_size,
                         const std::list<std::string> &pages_full_paths,
-                        ICompactLogic *logic) {
+                        ICompactionController *logic) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
 

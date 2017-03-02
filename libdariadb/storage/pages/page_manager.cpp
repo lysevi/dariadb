@@ -464,7 +464,7 @@ public:
     logger("engine", _settings->alias, ": repack end. elapsed ", elapsed, "s");
   }
 
-  void compact(ICompactLogic *logic) {
+  void compact(ICompactionController *logic) {
     Time from = logic->from;
     Time to = logic->to;
     logger("engine", _settings->alias, ": compact. from ", from, " to ", to);
@@ -633,7 +633,7 @@ void PageManager::repack() {
   impl->repack();
 }
 
-void PageManager::compact(ICompactLogic *logic) {
+void PageManager::compact(ICompactionController *logic) {
   impl->compact(logic);
 }
 

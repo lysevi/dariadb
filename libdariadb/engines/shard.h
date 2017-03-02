@@ -38,7 +38,7 @@ public:
   EXPORT void fsck() override;
   EXPORT void eraseOld(const Time &t) override;
   EXPORT void repack() override;
-  EXPORT void compact(ICompactLogic *logic) override;
+  EXPORT void compact(ICompactionController *logic) override;
   EXPORT void stop() override;
 
   EXPORT Description description() const override;

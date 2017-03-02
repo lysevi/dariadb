@@ -4,9 +4,9 @@
 
 namespace dariadb {
 
-class ICompactLogic {
+class ICompactionController {
 public:
-  ICompactLogic(Time _from, Time _to) {
+  ICompactionController(Time _from, Time _to) {
     from = _from;
     to = _to;
   }

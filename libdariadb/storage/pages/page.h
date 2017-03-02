@@ -1,5 +1,5 @@
 #pragma once
-#include <libdariadb/interfaces/icompactlogic.h>
+#include <libdariadb/interfaces/icompactioncontroller.h>
 #include <libdariadb/interfaces/imeaswriter.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
@@ -55,7 +55,7 @@ public:
   EXPORT static Page_Ptr repackTo(const std::string &file_name, uint16_t lvl,
                                   uint64_t chunk_id, uint32_t max_chunk_size,
                                   const std::list<std::string> &pages_full_paths,
-                                  ICompactLogic *logic);
+                                  ICompactionController *logic);
   /// called by dropper from MemoryStorage.
   EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
                                 uint64_t chunk_id, const std::vector<Chunk *> &a,

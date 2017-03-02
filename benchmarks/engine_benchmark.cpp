@@ -28,10 +28,10 @@ STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
 std::unique_ptr<dariadb_bench::BenchmarkSummaryInfo> summary_info;
 
-class CompactionBenchmark : public dariadb::ICompactLogic {
+class CompactionBenchmark : public dariadb::ICompactionController {
 public:
   CompactionBenchmark(dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactLogic(from, to) {}
+      : dariadb::ICompactionController(from, to) {}
 
   void compact(dariadb::MeasArray &values, std::vector<int> &filter) override {
     for (size_t i = 0; i < values.size(); ++i) {
