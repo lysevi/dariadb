@@ -378,8 +378,8 @@ public:
 
     if (_wal_manager != nullptr) {
       _wal_manager->flush();
-      //_dropper->flush();
-      //_dropper->flush();
+      /*_dropper->flush();
+      _dropper->flush();*/
     }
     if (_memstorage != nullptr) {
       _memstorage->flush();

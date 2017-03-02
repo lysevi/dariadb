@@ -47,7 +47,7 @@ public:
   EXPORT Id2MinMax loadMinMax() override;
 
   EXPORT void drop_part_wals(size_t count);
-  EXPORT void compress_all();
+  EXPORT void compress_all()override;
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
                         const ReaderCallback_ptr &clbk);

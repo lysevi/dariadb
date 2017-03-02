@@ -44,7 +44,7 @@ public:
   EXPORT Description description() const override;
   EXPORT void wait_all_asyncs() override;
 
-  EXPORT void drop_part_wals(size_t count) override;
+  EXPORT void compress_all() override;
 
   EXPORT storage::Settings_ptr settings() override;
 protected:

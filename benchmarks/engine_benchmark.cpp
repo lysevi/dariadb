@@ -468,15 +468,14 @@ int main(int argc, char *argv[]) {
         std::thread flush_info_thread(show_drop_info, raw_ptr);
 
         auto start = clock();
-        raw_ptr->drop_part_wals(ccount);
+        raw_ptr->compress_all();
         raw_ptr->flush();
-        raw_ptr->wait_all_asyncs();
         auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
         stop_info = true;
         flush_info_thread.join();
         std::cout << "drop time: " << elapsed << std::endl;
       }
-      if (!use_shard) {
+	  {
         auto pages_before = raw_ptr->description().pages_count;
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
@@ -488,10 +487,12 @@ int main(int argc, char *argv[]) {
           std::cout << "repack time: " << elapsed << std::endl;
           summary_info->page_repacked = pages_before - pages_after - 1;
           summary_info->page_repack_time = elapsed;
-          if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
-              pages_before <= pages_after) {
-            THROW_EXCEPTION("pages_before <= pages_after");
-          }
+		  if (!use_shard) {
+			  if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
+				  pages_before <= pages_after) {
+				  THROW_EXCEPTION("pages_before <= pages_after");
+			  }
+		  }
         }
       }
     }
