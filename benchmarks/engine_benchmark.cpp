@@ -28,6 +28,23 @@ STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
 std::unique_ptr<dariadb_bench::BenchmarkSummaryInfo> summary_info;
 
+class CompactionBenchmark : public dariadb::ICompactionController {
+public:
+  CompactionBenchmark(dariadb::Time from, dariadb::Time to)
+      : dariadb::ICompactionController(from, to) {}
+
+  void compact(dariadb::MeasArray &values, std::vector<int> &filter) override {
+    for (size_t i = 0; i < values.size(); ++i) {
+      auto v = values[i];
+      if ((v.id % 2) == 1) {
+        filter[i] = i % 2 ? 1 : 0;
+      } else {
+        filter[i] = 0;
+      }
+    }
+  }
+};
+
 class BenchCallback : public IReadCallback {
 public:
   BenchCallback() {
@@ -160,9 +177,9 @@ void show_drop_info(IEngine *storage) {
 
     auto queue_sizes = storage->description();
 
-    dariadb::logger_info(" storage: (p:", queue_sizes.pages_count, " w:",
-                         queue_sizes.wal_count, " T:", queue_sizes.active_works, ")",
-                         "[w:", queue_sizes.dropper.wal, "]");
+    dariadb::logger_info(" storage: (p:", queue_sizes.pages_count,
+                         " w:", queue_sizes.wal_count, " T:", queue_sizes.active_works,
+                         ")", "[w:", queue_sizes.dropper.wal, "]");
 
     if (stop_info) {
       std::cout.flush();
@@ -309,8 +326,8 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, IEngine *raw_pt
   switch (strategy) {
   case dariadb::STRATEGY::WAL:
     if (files.pages_count != 0) {
-      THROW_EXCEPTION("WAL error: (p:", files.pages_count, " a:", files.wal_count, " T:",
-                      files.active_works, ")");
+      THROW_EXCEPTION("WAL error: (p:", files.pages_count, " a:", files.wal_count,
+                      " T:", files.active_works, ")");
     }
     break;
   case dariadb::STRATEGY::COMPRESSED:
@@ -451,15 +468,14 @@ int main(int argc, char *argv[]) {
         std::thread flush_info_thread(show_drop_info, raw_ptr);
 
         auto start = clock();
-        raw_ptr->drop_part_wals(ccount);
+        raw_ptr->compress_all();
         raw_ptr->flush();
-        raw_ptr->wait_all_asyncs();
         auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
         stop_info = true;
         flush_info_thread.join();
         std::cout << "drop time: " << elapsed << std::endl;
       }
-      {
+	  {
         auto pages_before = raw_ptr->description().pages_count;
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
@@ -471,10 +487,12 @@ int main(int argc, char *argv[]) {
           std::cout << "repack time: " << elapsed << std::endl;
           summary_info->page_repacked = pages_before - pages_after - 1;
           summary_info->page_repack_time = elapsed;
-          if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
-              pages_before <= pages_after) {
-            THROW_EXCEPTION("pages_before <= pages_after");
-          }
+		  if (!use_shard) {
+			  if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
+				  pages_before <= pages_after) {
+				  THROW_EXCEPTION("pages_before <= pages_after");
+			  }
+		  }
         }
       }
     }
@@ -496,6 +514,16 @@ int main(int argc, char *argv[]) {
     std::cout << "==> interval end time: " << timeutil::to_string(max_time) << std::endl;
 
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
+
+    { // compaction
+      std::cout << "compaction..." << std::endl;
+      auto compaction_logic = std::make_unique<CompactionBenchmark>(start_time, max_time);
+      auto start = clock();
+      raw_ptr->compact(compaction_logic.get());
+      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+      std::cout << "time: " << elapsed << std::endl;
+      summary_info->compaction_time = elapsed;
+    }
     std::cout << "writed: " << append_count << std::endl;
     std::cout << "stoping storage...\n";
     engine_ptr = nullptr;

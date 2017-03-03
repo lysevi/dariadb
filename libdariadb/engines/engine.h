@@ -46,8 +46,7 @@ public:
                          dariadb::Time *maxResult) override;
   EXPORT Id2MinMax loadMinMax() override;
 
-  EXPORT void drop_part_wals(size_t count);
-  EXPORT void compress_all();
+  EXPORT void compress_all()override;
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
                         const ReaderCallback_ptr &clbk);
@@ -58,7 +57,7 @@ public:
   EXPORT void eraseOld(const Time &t) override;
 
   EXPORT void repack() override;
-
+  EXPORT void compact(ICompactionController *logic) override;
   EXPORT storage::Settings_ptr settings() override;
   EXPORT static uint16_t format();
   EXPORT static std::string version();

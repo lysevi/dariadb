@@ -74,23 +74,30 @@ public:
     }
 
     init_managers();
-
-    if (_strategy == STRATEGY::WAL) {
-      if (_settings->load_min_max) {
-        auto amm = _top_level_storage->loadMinMax();
-        minmax_append(_min_max_map, amm);
-      }
-    }
+    readMinMaxFromStorages();
 
     logger_info("engine", _settings->alias, ": start - OK ");
   }
 
+  void readMinMaxFromStorages() {
+    if (_settings->load_min_max) {
+      if (_page_manager != nullptr) {
+        auto mm = _page_manager->loadMinMax();
+        minmax_append(_min_max_map, mm);
+      }
+      if (_wal_manager != nullptr) {
+        auto mm = _wal_manager->loadMinMax();
+        minmax_append(_min_max_map, mm);
+      }
+      if (_top_level_storage != nullptr) {
+        auto amm = _top_level_storage->loadMinMax();
+        minmax_append(_min_max_map, amm);
+      }
+    }
+  }
+
   void init_managers() {
     _page_manager = PageManager::create(_engine_env);
-
-    if (_settings->load_min_max) {
-      _min_max_map = _page_manager->loadMinMax();
-    }
 
     if (_strategy != STRATEGY::MEMORY) {
       _wal_manager = WALManager::create(_engine_env);
@@ -351,8 +358,11 @@ public:
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     lock_storage();
-
     Id2Meas a_result;
+    if (_min_max_map.empty()) {
+      readMinMaxFromStorages();
+    }
+
     for (auto kv : _min_max_map) {
       bool ids_check = false;
       if (ids.size() == 0) {
@@ -378,8 +388,8 @@ public:
 
     if (_wal_manager != nullptr) {
       _wal_manager->flush();
-      _dropper->flush();
-      _dropper->flush();
+      /*_dropper->flush();
+      _dropper->flush();*/
     }
     if (_memstorage != nullptr) {
       _memstorage->flush();
@@ -684,17 +694,12 @@ public:
     return result;
   }
 
-  void drop_part_wals(size_t count) {
-    if (_wal_manager != nullptr) {
-      logger_info("engine", _settings->alias, ": drop_part_wals ", count);
-      _wal_manager->dropClosedFiles(count);
-    }
-  }
-
   void compress_all() {
     if (_wal_manager != nullptr) {
       logger_info("engine", _settings->alias, ": compress_all");
       _wal_manager->dropAll();
+      _dropper->flush();
+      _dropper->flush();
       this->flush();
     }
   }
@@ -720,6 +725,13 @@ public:
     this->lock_storage();
     logger_info("engine", _settings->alias, ": repack...");
     _page_manager->repack();
+    this->unlock_storage();
+  }
+
+  void compact(ICompactionController *logic) {
+    this->lock_storage();
+    logger_info("engine", _settings->alias, ": compact...");
+    _page_manager->compact(logic);
     this->unlock_storage();
   }
 
@@ -814,10 +826,6 @@ Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
   return _impl->readTimePoint(q);
 }
 
-void Engine::drop_part_wals(size_t count) {
-  return _impl->drop_part_wals(count);
-}
-
 void Engine::compress_all() {
   return _impl->compress_all();
 }
@@ -836,6 +844,10 @@ void Engine::eraseOld(const Time &t) {
 
 void Engine::repack() {
   _impl->repack();
+}
+
+void Engine::compact(ICompactionController *logic) {
+  _impl->compact(logic);
 }
 
 storage::Settings_ptr Engine::settings() {

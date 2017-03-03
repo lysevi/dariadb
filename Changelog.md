@@ -1,3 +1,7 @@
+v0.4.0
+=====
+- Data compaction methods.
+
 v0.3.0
 =====
 - Remove bystep storage engine.

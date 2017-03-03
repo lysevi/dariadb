@@ -20,6 +20,78 @@
 using namespace dariadb::storage;
 using namespace dariadb;
 
+namespace page_utils {
+
+struct ToBtree_ReaderClb : public IReadCallback {
+  ToBtree_ReaderClb(stx::btree_map<dariadb::Time, dariadb::Meas> *target) {
+    _target = target;
+  }
+  void apply(const Meas &m) override {
+    std::lock_guard<utils::async::Locker> lg(_locker);
+    _target->insert(std::make_pair(m.time, m));
+  }
+
+  stx::btree_map<dariadb::Time, dariadb::Meas> *_target;
+  utils::async::Locker _locker;
+};
+
+MeasArray applyFilter(MeasArray &inputValues, ICompactionController *logic) {
+  MeasArray result;
+  MeasArray filtered;
+  std::vector<int> data_filter(inputValues.size());
+  std::fill_n(data_filter.begin(), data_filter.size(), int(1));
+  ENSURE(data_filter.size() == inputValues.size());
+
+  logic->compact(inputValues, data_filter);
+  auto enabled_count = std::count_if(data_filter.begin(), data_filter.end(),
+                                     [](const int v) { return v == int(1); });
+  if (enabled_count != 0) {
+    filtered.reserve(enabled_count);
+    for (size_t i = 0; i < inputValues.size(); ++i) {
+      if (data_filter[i] == uint8_t(1)) {
+        filtered.push_back(inputValues[i]);
+      }
+    }
+    result = std::move(filtered);
+    std::sort(result.begin(), result.end(), meas_time_compare_less());
+    ENSURE(result.empty() || result.front().time <= result.back().time);
+  }
+  return result;
+}
+
+void writeChunkToResultPage(std::unordered_map<std::string, ChunkLinkList> &fname2links,
+                            std::unordered_map<std::string, Page_Ptr> &openned_pages,
+                            PageFooter &phdr, IndexFooter &ihdr, FILE *out_file,
+                            FILE *out_index_file) {
+  for (auto f2l : fname2links) {
+    auto p = openned_pages[f2l.first];
+    auto chunk_callback = [&phdr, &ihdr, &out_index_file,
+                           &out_file](const Chunk_Ptr &chunk) {
+      // chunk->close();
+      chunk->is_owner = false;
+      if (!chunk->checkChecksum()) {
+        THROW_EXCEPTION("checksum error");
+      }
+      auto hdr_ptr = chunk->header;
+      PageInner::HdrAndBuffer hab;
+      hab.buffer = boost::shared_array<uint8_t>(chunk->_buffer_t);
+      hab.hdr = *(hdr_ptr);
+      phdr.max_chunk_id++;
+      hab.hdr.id = phdr.max_chunk_id;
+
+      std::list<PageInner::HdrAndBuffer> compressed_results{hab};
+      auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
+                                              compressed_results, phdr.filesize);
+
+      phdr.filesize = page_size;
+      delete hdr_ptr;
+      return false;
+    };
+    p->apply_to_chunks(f2l.second, chunk_callback);
+  }
+}
+}
+
 Page::Page(const PageFooter &ftr, std::string fname) : footer(ftr), filename(fname) {}
 
 Page::~Page() {
@@ -62,7 +134,8 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
 
 Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                         uint32_t max_chunk_size,
-                        const std::list<std::string> &pages_full_paths) {
+                        const std::list<std::string> &pages_full_paths,
+                        ICompactionController *logic) {
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
 
@@ -91,9 +164,8 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
   if (out_file == nullptr) {
     THROW_EXCEPTION("file is null");
   }
-
-  auto out_index_file =
-      std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  auto index_file_name = PageIndex::index_name_from_page_name(file_name);
+  auto out_index_file = std::fopen(index_file_name.c_str(), "ab");
   if (out_index_file == nullptr) {
     THROW_EXCEPTION("can`t open file ", file_name);
   }
@@ -104,67 +176,49 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
     std::sort(
         link_vec.begin(), link_vec.end(),
         [](const ChunkLink &left, const ChunkLink &right) { return left.id < right.id; });
-    if (!PageInner::have_overlap(link_vec)) {
+    if (logic == nullptr && !PageInner::have_overlap(link_vec)) {
       // don't unpack chunks without overlap. write as is.
       std::unordered_map<std::string, ChunkLinkList> fname2links;
       for (auto link : link_vec) {
         fname2links[link.page_name].push_back(link);
       }
-      for (auto f2l : fname2links) {
-        auto p = openned_pages[f2l.first];
-        auto chunk_callback = [&phdr, &ihdr, &out_index_file,
-                               &out_file](const Chunk_Ptr &chunk) {
-          // chunk->close();
-          chunk->is_owner = false;
-          if (!chunk->checkChecksum()) {
-            THROW_EXCEPTION("checksum error");
-          }
-          auto hdr_ptr = chunk->header;
-          PageInner::HdrAndBuffer hab;
-          hab.buffer = boost::shared_array<uint8_t>(chunk->_buffer_t);
-          hab.hdr = *(hdr_ptr);
-          phdr.max_chunk_id++;
-          hab.hdr.id = phdr.max_chunk_id;
 
-          std::list<PageInner::HdrAndBuffer> compressed_results{hab};
-          auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
-                                                  compressed_results, phdr.filesize);
-
-          phdr.filesize = page_size;
-          delete hdr_ptr;
-          return false;
-        };
-        p->apply_to_chunks(f2l.second, chunk_callback);
-      }
+      page_utils::writeChunkToResultPage(fname2links, openned_pages, phdr, ihdr, out_file,
+                                         out_index_file);
     } else {
       stx::btree_map<dariadb::Time, dariadb::Meas> values_map;
 
       for (auto c : link_vec) {
-        MList_ReaderClb clb;
+        page_utils::ToBtree_ReaderClb clb(&values_map);
         auto p = openned_pages[c.page_name];
         auto rdr = p->intervalReader(qi, {c});
         for (auto r : rdr) {
           r.second->apply(&clb);
         }
-        for (auto v : clb.mlist) {
-          values_map[v.time] = v;
-        }
       }
+
       MeasArray sorted_and_filtered;
       sorted_and_filtered.reserve(values_map.size());
       for (auto &time2meas : values_map) {
         sorted_and_filtered.push_back(time2meas.second);
       }
 
-      std::map<Id, MeasArray> all_values;
-      all_values[sorted_and_filtered.front().id] = sorted_and_filtered;
+      ENSURE(!sorted_and_filtered.empty());
+      if (logic != nullptr) {
+        sorted_and_filtered = page_utils::applyFilter(sorted_and_filtered, logic);
+      }
 
-      auto compressed_results =
-          PageInner::compressValues(all_values, phdr, max_chunk_size);
+      if (!sorted_and_filtered.empty()) {
+        std::map<Id, MeasArray> all_values;
+        all_values[sorted_and_filtered.front().id] = sorted_and_filtered;
 
-      auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
-                                              compressed_results, phdr.filesize);
-      phdr.filesize = page_size;
+        auto compressed_results =
+            PageInner::compressValues(all_values, phdr, max_chunk_size);
+
+        auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
+                                                compressed_results, phdr.filesize);
+        phdr.filesize = page_size;
+      }
     }
   }
 
@@ -176,7 +230,11 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
 
   std::fwrite(&ihdr, sizeof(IndexFooter), 1, out_index_file);
   std::fclose(out_index_file);
-
+  if (phdr.stat.count == 0) {
+    utils::fs::rm(file_name);
+    utils::fs::rm(index_file_name);
+    return nullptr;
+  }
   return open(file_name, phdr);
 }
 

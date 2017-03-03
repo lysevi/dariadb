@@ -438,28 +438,76 @@ public:
   void repack(uint16_t out_lvl, std::list<std::string> part) {
     Page_Ptr res = nullptr;
     std::string page_name = utils::fs::random_file_name(".page");
-    logger_info("engine", _settings->alias, ": repack to level", out_lvl, " page: ",
-                page_name);
+    logger_info("engine", _settings->alias, ": repack to level ", out_lvl,
+                " page: ", page_name);
     for (auto &p : part) {
       logger_info("==> ", utils::fs::extract_filename(p));
     }
     auto start_time = clock();
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res =
-        Page::repackTo(file_name, out_lvl, last_id, _settings->chunk_size.value(), part);
+    res = Page::repackTo(file_name, out_lvl, last_id, _settings->chunk_size.value(), part,
+                         nullptr);
     _manifest->page_append(page_name);
-    last_id = res->footer.max_chunk_id;
-
+    if (res != nullptr) {
+      last_id = res->footer.max_chunk_id;
+    }
     for (auto erasedPage : part) {
       this->erase_page(erasedPage);
     }
-
-    insert_pagedescr(page_name, Page::readIndexFooter(
-                                    PageIndex::index_name_from_page_name(file_name)));
+    if (res != nullptr) {
+      insert_pagedescr(page_name, Page::readIndexFooter(
+                                      PageIndex::index_name_from_page_name(file_name)));
+    }
     auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
 
     logger("engine", _settings->alias, ": repack end. elapsed ", elapsed, "s");
+  }
+
+  void compact(ICompactionController *logic) {
+    Time from = logic->from;
+    Time to = logic->to;
+    logger("engine", _settings->alias, ": compact. from ", from, " to ", to);
+    auto start_time = clock();
+    auto pred = [from, to](const IndexFooter &hdr) {
+      return utils::inInterval(from, to, hdr.stat.minTime) ||
+             utils::inInterval(from, to, hdr.stat.maxTime) ||
+             utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, from) ||
+             utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to);
+    };
+
+    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+    if (page_list.empty()) {
+      logger_info("engine", _settings->alias, ": compact. pages not found for interval");
+      return;
+    }
+
+    uint16_t level = 0;
+    for (auto p : page_list) {
+      logger_info("==> ", utils::fs::extract_filename(p));
+      auto ftr = Page::readFooter(p);
+      level = std::max(ftr.level, level);
+    }
+
+    Page_Ptr res = nullptr;
+    std::string page_name = utils::fs::random_file_name(".page");
+
+    std::string file_name =
+        dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
+    res = Page::repackTo(file_name, level, last_id, _settings->chunk_size.value(),
+                         page_list, logic);
+    if (res != nullptr) {
+      last_id = res->footer.max_chunk_id;
+    }
+    for (auto erasedPage : page_list) {
+      this->erase_page(erasedPage);
+    }
+    if (res != nullptr) {
+      insert_pagedescr(page_name, Page::readIndexFooter(
+                                      PageIndex::index_name_from_page_name(file_name)));
+    }
+    auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
+    logger("engine", _settings->alias, ": compact end. elapsed ", elapsed);
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
@@ -583,6 +631,10 @@ void PageManager::erase_page(const std::string &fname) {
 
 void PageManager::repack() {
   impl->repack();
+}
+
+void PageManager::compact(ICompactionController *logic) {
+  impl->compact(logic);
 }
 
 void PageManager::appendChunks(const std::vector<Chunk *> &a, size_t count) {

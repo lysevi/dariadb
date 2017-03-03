@@ -38,15 +38,15 @@ public:
   EXPORT void fsck() override;
   EXPORT void eraseOld(const Time &t) override;
   EXPORT void repack() override;
+  EXPORT void compact(ICompactionController *logic) override;
   EXPORT void stop() override;
 
   EXPORT Description description() const override;
   EXPORT void wait_all_asyncs() override;
 
-  EXPORT void drop_part_wals(size_t count) override;
+  EXPORT void compress_all() override;
 
   EXPORT storage::Settings_ptr settings() override;
-
 protected:
   EXPORT ShardEngine(const std::string &path);
 

@@ -341,6 +341,13 @@ public:
     }
   }
 
+  void compact(ICompactionController *logic) override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
+    for (auto &s : _sub_storages) {
+      s.storage->compact(logic);
+    }
+  }
+
   Description description() const override {
     std::shared_lock<std::shared_mutex> lg(_locker);
     Description result;
@@ -354,10 +361,10 @@ public:
 
   void wait_all_asyncs() override { ThreadManager::instance()->flush(); }
 
-  void drop_part_wals(size_t count) override {
+  void compress_all() override {
     std::shared_lock<std::shared_mutex> lg(_locker);
     for (auto &s : _sub_storages) {
-      s.storage->drop_part_wals(count);
+      s.storage->compress_all();
     }
   }
 
@@ -380,8 +387,8 @@ ShardEngine_Ptr ShardEngine::create(const std::string &path) {
 ShardEngine::ShardEngine(const std::string &path)
     : _impl(new ShardEngine::Private(path)) {}
 
-void dariadb::ShardEngine::drop_part_wals(size_t count) {
-  _impl->drop_part_wals(count);
+void dariadb::ShardEngine::compress_all() {
+  _impl->compress_all();
 }
 
 void dariadb::ShardEngine::wait_all_asyncs() {
@@ -454,6 +461,9 @@ void ShardEngine::eraseOld(const Time &t) {
 
 void ShardEngine::repack() {
   _impl->repack();
+}
+void ShardEngine::compact(ICompactionController *logic) {
+  _impl->compact(logic);
 }
 
 void ShardEngine::stop() {

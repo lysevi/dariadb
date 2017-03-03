@@ -1,5 +1,6 @@
 #pragma once
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/interfaces/icompactioncontroller.h>
 #include <libdariadb/storage/dropper_description.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
@@ -29,9 +30,10 @@ public:
   virtual void fsck() = 0;
   virtual void eraseOld(const Time &t) = 0;
   virtual void repack() = 0;
+  virtual void compact(ICompactionController *logic) = 0;
   virtual void stop() = 0;
   virtual void wait_all_asyncs() = 0;
-  virtual void drop_part_wals(size_t count) = 0;
+  virtual void compress_all() = 0;
   virtual storage::Settings_ptr settings() = 0;
 };
 using IEngine_Ptr = std::shared_ptr<IEngine>;

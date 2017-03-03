@@ -55,18 +55,20 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
 
     manifest = nullptr;
 
+	auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
+	BOOST_CHECK(!index_files.empty());
+	for (auto &f : index_files) {
+		dariadb::utils::fs::rm(f);
+	}
+	index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
+	BOOST_CHECK(index_files.empty());
+
     auto raw_ptr = new Engine(settings);
 
-    dariadb::IMeasStorage_ptr ms{raw_ptr};
-    auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
-    BOOST_CHECK(!index_files.empty());
-    for (auto &f : index_files) {
-      dariadb::utils::fs::rm(f);
-    }
-    index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
-    BOOST_CHECK(index_files.empty());
+	dariadb::IMeasStorage_ptr ms{raw_ptr};
     raw_ptr->fsck();
 
+	raw_ptr->wait_all_asyncs();
     // check first id, because that Id placed in compressed pages.
     auto values = ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
     BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
@@ -110,7 +112,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
                                         &maxWritedTime, false);
 
     ms->compress_all();
-
+	
     auto pages_count = ms->description().pages_count;
     auto wals_count = ms->description().wal_count;
     BOOST_CHECK_GE(pages_count, size_t(1));
