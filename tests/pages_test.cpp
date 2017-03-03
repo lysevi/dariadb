@@ -1,5 +1,6 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Main
+#include "test_common.h"
 #include <boost/test/unit_test.hpp>
 #include <algorithm>
 #include <iostream>
@@ -30,7 +31,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  dariadb::MeasList addeded;
+  dariadb_test::MeasesList addeded;
 
   auto settings = dariadb::storage::Settings::create(storagePath);
   settings->chunk_size.setValue(chunks_size);
@@ -111,7 +112,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   if (dariadb::utils::fs::path_exists(storagePath)) {
     dariadb::utils::fs::rm(storagePath);
   }
-  dariadb::MeasList addeded;
+  dariadb_test::MeasesList addeded;
 
   auto settings = dariadb::storage::Settings::create(storagePath);
   settings->chunk_size.setValue(chunks_size);
@@ -162,12 +163,12 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 
   // auto link_list = pm->linksByIterval(qi);
 
-  auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-      new dariadb::storage::MList_ReaderClb};
+  auto clb = std::unique_ptr<dariadb::storage::MArray_ReaderClb>{
+      new dariadb::storage::MArray_ReaderClb(addeded.size())};
   pm->foreach (qi, clb.get());
 
   size_t writed = addeded.size();
-  size_t readed = clb->mlist.size();
+  size_t readed = clb->marray.size();
 
   BOOST_CHECK_EQUAL(readed, writed);
 
@@ -233,7 +234,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   auto start_time = dariadb::Time(0);
-  dariadb::MeasList addeded;
+  dariadb_test::MeasesList addeded;
   const dariadb::Id id_count(5);
   dariadb::IdSet all_id_set;
   size_t count = 5000;
@@ -258,12 +259,12 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     dariadb::QueryInterval qi_all(all_id_array, 0, 0, e.time);
     // auto links_list = pm->linksByIterval(qi_all);
 
-    auto clb1 = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-        new dariadb::storage::MList_ReaderClb};
+    auto clb1 = std::unique_ptr<dariadb::storage::MArray_ReaderClb>{
+        new dariadb::storage::MArray_ReaderClb(addeded.size())};
 
     pm->foreach (qi_all, clb1.get());
 
-    BOOST_CHECK_EQUAL(addeded.size(), clb1->mlist.size());
+    BOOST_CHECK_EQUAL(addeded.size(), clb1->marray.size());
     dariadb::Time minT = dariadb::MAX_TIME, maxT = dariadb::MIN_TIME;
     BOOST_CHECK(pm->minMaxTime(dariadb::Id(0), &minT, &maxT));
     BOOST_CHECK_EQUAL(minT, dariadb::Time(1));
@@ -275,14 +276,14 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
       dariadb::QueryInterval qi(all_id_array, 0, start_time, end_time);
       // auto link_list = pm->linksByIterval(qi);
 
-      auto clb2 = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-          new dariadb::storage::MList_ReaderClb};
+      auto clb2 = std::unique_ptr<dariadb::storage::MArray_ReaderClb>{
+          new dariadb::storage::MArray_ReaderClb(0)};
 
       pm->foreach (qi, clb2.get());
 
-      BOOST_CHECK_GT(clb2->mlist.size(), size_t(0));
+      BOOST_CHECK_GT(clb2->marray.size(), size_t(0));
 
-      for (auto &m : clb2->mlist) {
+      for (auto &m : clb2->marray) {
         BOOST_CHECK(m.time <= end_time);
       }
 
@@ -380,12 +381,12 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);
     // auto link_list = pm->linksByIterval(qi);
 
-    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-        new dariadb::storage::MList_ReaderClb};
+    auto clb = std::unique_ptr<dariadb::storage::MArray_ReaderClb>{
+        new dariadb::storage::MArray_ReaderClb(count)};
 
     pm->foreach (qi, clb.get());
 
-    BOOST_CHECK_GE(clb->mlist.size(), count);
+    BOOST_CHECK_GE(clb->marray.size(), count);
   }
 
   auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
@@ -395,22 +396,22 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   { // id==0
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);
 
-    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-        new dariadb::storage::MList_ReaderClb};
+    auto clb = std::unique_ptr<dariadb::storage::MArray_ReaderClb>{
+        new dariadb::storage::MArray_ReaderClb(count)};
 
     pm->foreach (qi, clb.get());
 
-    BOOST_CHECK_EQUAL(clb->mlist.size(), count);
+    BOOST_CHECK_EQUAL(clb->marray.size(), count);
   }
   { // id==1
     dariadb::QueryInterval qi({1}, 0, 0, dariadb::MAX_TIME);
 
-    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-        new dariadb::storage::MList_ReaderClb};
+    auto clb = std::unique_ptr<dariadb::storage::MArray_ReaderClb>{
+        new dariadb::storage::MArray_ReaderClb(count)};
 
     pm->foreach (qi, clb.get());
 
-    BOOST_CHECK_EQUAL(clb->mlist.size(), count);
+    BOOST_CHECK_EQUAL(clb->marray.size(), count);
   }
   pm = nullptr;
   manifest = nullptr;
@@ -531,12 +532,12 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);
     // auto link_list = pm->linksByIterval(qi);
 
-    auto clb = std::unique_ptr<dariadb::storage::MList_ReaderClb>{
-        new dariadb::storage::MList_ReaderClb};
+    auto clb = std::unique_ptr<dariadb::storage::MArray_ReaderClb>{
+        new dariadb::storage::MArray_ReaderClb(count)};
 
     pm->foreach (qi, clb.get());
 
-    BOOST_CHECK_GE(clb->mlist.size(), count);
+    BOOST_CHECK_GE(clb->marray.size(), count);
   }
   auto compaction_logic =
       std::make_unique<TestCompaction>(dariadb::Time(0), dariadb::Time(count / 2));
@@ -551,24 +552,24 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   { // id==0
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);
 
-    auto clb = std::make_unique<dariadb::storage::MList_ReaderClb>();
+    auto clb = std::make_unique<dariadb::storage::MArray_ReaderClb>(count);
 
     pm->foreach (qi, clb.get());
 
-    BOOST_CHECK_EQUAL(clb->mlist.size(), count);
-    for (auto v : clb->mlist) {
+    BOOST_CHECK_EQUAL(clb->marray.size(), count);
+    for (auto v : clb->marray){
       BOOST_CHECK_EQUAL(v.flag, dariadb::Flag(777));
     }
   }
   { // id==1
     dariadb::QueryInterval qi({1}, 0, 0, dariadb::MAX_TIME);
 
-    auto clb = std::make_unique<dariadb::storage::MList_ReaderClb>();
+    auto clb = std::make_unique<dariadb::storage::MArray_ReaderClb>(count);
 
     pm->foreach (qi, clb.get());
 
-    BOOST_CHECK_EQUAL(clb->mlist.size(), count / 2);
-    for (auto v : clb->mlist) {
+    BOOST_CHECK_EQUAL(clb->marray.size(), count / 2);
+    for (auto v : clb->marray) {
       BOOST_CHECK(v.time % 2);
     }
   }

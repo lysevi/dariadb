@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     e.value = dariadb::Value(i);
     BOOST_CHECK(wal->append(e).writed == 1);
     i++;
-    dariadb::MeasList ml;
+    dariadb::MeasArray ml;
     for (; i < writes_count / 2; i++) {
       e.id = i % id_count;
       id_set.insert(e.id);
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
                                        dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK_EQUAL(wal_files.size(), size_t(1));
 
-    dariadb::MeasList out;
+    dariadb::MeasArray out;
 
     out = wal->readInterval(dariadb::QueryInterval(
         dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));

@@ -93,7 +93,7 @@ struct MeasMinMax {
 };
 
 using MeasArray = std::vector<Meas>;
-using MeasList = std::deque<Meas>;
+//using MeasList = std::deque<Meas>;
 /// used in readTimePoint queries.
 using Id2Meas = std::unordered_map<Id, Meas>;
 /// sorted by time.
@@ -109,5 +109,4 @@ using Id2Time = std::unordered_map<Id, Time>;
 using Id2Id = std::unordered_map<Id, Id>;
 
 EXPORT void minmax_append(Id2MinMax &out, const Id2MinMax &source);
-EXPORT void mlist2mset(MeasList &mlist, Id2MSet &sub_result);
 }

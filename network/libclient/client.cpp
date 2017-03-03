@@ -333,8 +333,8 @@ public:
     return qres;
   }
 
-  MeasList readInterval(const QueryInterval &qi) {
-    MeasList result{};
+  MeasArray readInterval(const QueryInterval &qi) {
+	  MeasArray result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
                                  const Statistic &st) {
       if (!parent->is_closed) {
@@ -583,7 +583,7 @@ void Client::append(const MeasArray &ma) {
   _Impl->append(ma);
 }
 
-MeasList Client::readInterval(const QueryInterval &qi) {
+MeasArray Client::readInterval(const QueryInterval &qi) {
   return _Impl->readInterval(qi);
 }
 

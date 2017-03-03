@@ -9,6 +9,8 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
+typedef std::list<dariadb::Meas> MeasesList;
+
 namespace po = boost::program_options;
 
 std::atomic_llong append_count{0};
@@ -299,7 +301,7 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
     std::cout << "readed: " << readed.size() << std::endl;
     std::cout << "time: " << elapsed << std::endl;
     summary_info->read_all_time = elapsed;
-    std::map<Id, MeasList> _dict;
+    std::map<Id, MeasesList> _dict;
     for (auto &v : readed) {
       _dict[v.id].push_back(v);
     }

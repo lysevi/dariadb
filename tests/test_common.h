@@ -8,12 +8,13 @@
 
 namespace dariadb_test {
 const size_t copies_count = 100;
+typedef std::list<dariadb::Meas> MeasesList;
 
 size_t fill_storage_for_test(dariadb::IMeasStorage *as, dariadb::Time from,
                              dariadb::Time to, dariadb::Time step,
                              dariadb::IdSet *_all_ids_set, dariadb::Time *maxWritedTime,
                              bool random_timestamps);
-void checkAll(dariadb::MeasList res, std::string msg, dariadb::Time from,
+void checkAll(dariadb::MeasArray res, std::string msg, dariadb::Time from,
               dariadb::Time to, dariadb::Time step);
 
 void storage_test_check(dariadb::IMeasStorage *as, dariadb::Time from, dariadb::Time to,

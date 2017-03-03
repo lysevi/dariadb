@@ -59,7 +59,7 @@ public:
   CL_EXPORT int id() const;
 
   CL_EXPORT void append(const MeasArray &ma);
-  CL_EXPORT MeasList readInterval(const QueryInterval &qi);
+  CL_EXPORT MeasArray readInterval(const QueryInterval &qi);
   CL_EXPORT ReadResult_ptr readInterval(const QueryInterval &qi,
                                         ReadResult::callback &clbk);
 

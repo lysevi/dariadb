@@ -14,22 +14,21 @@ void IMeasSource::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   }
 }
 
-MeasList IMeasSource::readInterval(const QueryInterval &q) {
-  auto clbk = std::make_unique<MList_ReaderClb>();
-  this->foreach (q, clbk.get());
-  Id2MSet sub_result;
-  for (auto v : clbk->mlist) {
-    sub_result[v.id].emplace(v);
+MeasArray IMeasSource::readInterval(const QueryInterval &q) {
+  size_t max_count = 0;
+  auto r = this->intervalReader(q);
+  for (auto &kv : r) {
+    max_count += kv.second->count();
   }
-  MeasList result;
+  auto clbk = std::make_unique<MArray_ReaderClb>(max_count);
+
   for (auto id : q.ids) {
-    auto sublist = sub_result.find(id);
-    if (sublist == sub_result.end()) {
-      continue;
-    }
-    for (auto v : sublist->second) {
-      result.push_back(v);
+    auto fres = r.find(id);
+    if (fres != r.end()) {
+      fres->second->apply(clbk.get(), q);
     }
   }
-  return result;
+  clbk->is_end();
+  //TODO make readerclb to write to pointer to measarray
+  return MeasArray(clbk->marray.begin(), clbk->marray.end());
 }

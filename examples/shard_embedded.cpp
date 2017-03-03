@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 
   // query writed interval;
   dariadb::QueryInterval qi(all_id, dariadb::Flag(), start_time, m.time);
-  dariadb::MeasList readed_values = storage->readInterval(qi);
+  dariadb::MeasArray readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
     std::cout << " param: " << all_params[measurement.id]

@@ -57,7 +57,7 @@ int main(int, char **) {
 
   // query writed interval;
   dariadb::QueryInterval qi(all_id, dariadb::Flag(), start_time, cur_time);
-  dariadb::MeasList readed_values = storage->readInterval(qi);
+  dariadb::MeasArray readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
 	  print_measurement(measurement, all_params);

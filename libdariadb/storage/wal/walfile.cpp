@@ -101,23 +101,6 @@ public:
     return Status(write_size, 0);
   }
 
-  Status append(const MeasList::const_iterator &begin,
-                const MeasList::const_iterator &end) {
-    ENSURE(!_is_readonly);
-
-    auto list_size = std::distance(begin, end);
-    open_to_append();
-
-    auto max_size = _settings->wal_file_size.value();
-
-    auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
-    MeasArray ma{begin, end};
-    std::fwrite(ma.data(), sizeof(Meas), write_size, _file);
-    std::fflush(_file);
-    _writed += write_size;
-    return Status(write_size, 0);
-  }
-
   Statistic stat(const Id id, Time from, Time to) {
     Statistic result;
     open_to_read();
@@ -421,10 +404,6 @@ Status WALFile::append(const Meas &value) {
 }
 Status WALFile::append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
-  return _Impl->append(begin, end);
-}
-Status WALFile::append(const MeasList::const_iterator &begin,
-                       const MeasList::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 

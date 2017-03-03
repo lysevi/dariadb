@@ -26,7 +26,7 @@ public:
     IReadCallback::is_end();
   }
   size_t count;
-  MeasList all;
+  MeasArray all;
   std::mutex _locker;
   std::atomic_int is_end_called;
 };
@@ -53,10 +53,10 @@ public:
   bool is_first;
   bool is_greater;
 
-  MeasList all;
+  MeasArray all;
 };
 
-void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
+void checkAll(MeasArray res, std::string msg, Time from, Time to, Time step) {
 
   Id id_val(0);
   Flag flg_val(0);
@@ -75,10 +75,10 @@ void checkAll(MeasList res, std::string msg, Time from, Time to, Time step) {
   }
 }
 
-void check_reader_of_all(MeasList &all, Time from, Time to, Time step, size_t total_count,
+void check_reader_of_all(MeasArray &all, Time from, Time to, Time step, size_t total_count,
                          std::string message) {
 
-  std::map<Id, MeasList> _dict;
+  std::map<Id, MeasesList> _dict;
   for (auto &v : all) {
     _dict[v.id].push_back(v);
   }
@@ -167,7 +167,7 @@ size_t fill_storage_for_test(dariadb::IMeasStorage *as, dariadb::Time from,
     m.value = 0;
     ++id_val;
     ++flg_val;
-    MeasList mlist;
+	MeasArray mlist;
     for (size_t j = new_from; j < copies_count + 1; j++) {
       m.value = Value(j);
       *maxWritedTime = std::max(*maxWritedTime, m.time);
@@ -175,7 +175,6 @@ size_t fill_storage_for_test(dariadb::IMeasStorage *as, dariadb::Time from,
       total_count++;
       m.time++;
     }
-
     if (as->append(mlist.begin(), mlist.end()).writed != mlist.size()) {
       throw MAKE_EXCEPTION("->append(m).writed != mlist.size()");
     }
@@ -221,7 +220,7 @@ void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
 
   IdArray ids(_all_ids_set.begin(), _all_ids_set.end());
   QueryInterval qi_all(_all_ids_array, 0, from, to + copies_count);
-  MeasList all = as->readInterval(qi_all);
+  MeasArray all = as->readInterval(qi_all);
 
   auto all_size = all.size();
   check_reader_of_all(all, from, to, step, total_count, "readAll error: ");
@@ -249,7 +248,7 @@ void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
 
   ids.clear();
   ids.push_back(2);
-  MeasList fltr_res{};
+  MeasArray fltr_res{};
   fltr_res = as->readInterval(QueryInterval(ids, 0, from, to + copies_count));
 
   if (fltr_res.size() != copies_count) {

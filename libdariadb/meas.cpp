@@ -41,15 +41,6 @@ void dariadb::minmax_append(Id2MinMax &out, const Id2MinMax &source) {
   }
 }
 
-void dariadb::mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
-  for (auto m : mlist) {
-    if (m.flag == FLAGS::_NO_DATA) {
-      continue;
-    }
-    sub_result[m.id].emplace(m);
-  }
-}
-
 void MeasMinMax::updateMax(const Meas &m) {
   if (m.time > this->max.time) {
     this->max = m;

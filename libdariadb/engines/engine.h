@@ -33,7 +33,7 @@ public:
   EXPORT IEngine::Description description() const override;
 
   EXPORT virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
-  EXPORT virtual MeasList readInterval(const QueryInterval &q) override;
+  EXPORT virtual MeasArray readInterval(const QueryInterval &q) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   EXPORT virtual Id2Cursor intervalReader(const QueryInterval &query) override;

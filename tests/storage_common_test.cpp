@@ -288,7 +288,7 @@ BOOST_AUTO_TEST_CASE(LinearReaderTest) {
   dariadb::storage::LinearCursor lr(CursorsList{fr1, fr2});
   BOOST_CHECK_EQUAL(lr.count(), fr1->count() + fr2->count());
 
-  dariadb::MeasList ml;
+  std::list<dariadb::Meas> ml;
   while (!lr.is_end()) {
     auto v = lr.readNext();
     ml.push_back(v);
@@ -326,7 +326,7 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   dariadb::storage::MergeSortCursor msr{CursorsList{fr1, fr2, fr3}};
   BOOST_CHECK_EQUAL(msr.count(), fr1->count() + fr2->count() + fr3->count());
 
-  dariadb::MeasList ml;
+  std::list<dariadb::Meas> ml;
   while (!msr.is_end()) {
     auto v = msr.readNext();
     ml.push_back(v);

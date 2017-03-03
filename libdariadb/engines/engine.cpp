@@ -637,7 +637,7 @@ public:
     clbk->is_end();
   }
 
-  MeasList readInterval(const QueryInterval &q) {
+  MeasArray readInterval(const QueryInterval &q) {
     size_t max_count = 0;
     auto r = this->intervalReader(q);
     for (auto &kv : r) {
@@ -652,7 +652,8 @@ public:
       }
     }
     clbk->is_end();
-    return MeasList(clbk->marray.begin(), clbk->marray.end());
+	//TODO make readerclb to write to pointer to measarray
+    return MeasArray(clbk->marray.begin(), clbk->marray.end());
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
@@ -829,7 +830,7 @@ void Engine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   return _impl->foreach (q, clbk);
 }
 
-MeasList Engine::readInterval(const QueryInterval &q) {
+MeasArray Engine::readInterval(const QueryInterval &q) {
   return _impl->readInterval(q);
 }
 
