@@ -1,6 +1,7 @@
 v0.4.0
 =====
 - Data compaction methods.
+- Less allocations in read queries.
 
 v0.3.0
 =====
