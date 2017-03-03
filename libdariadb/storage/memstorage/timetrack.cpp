@@ -10,6 +10,7 @@ using namespace dariadb::storage;
 
 struct MemTrackCursor : dariadb::ICursor {
   MemTrackCursor(const Cursor_Ptr &r, const TimeTrack_ptr &track) {
+    ENSURE(track != nullptr);
     _r = r;
     _track = track;
     ENSURE(track != nullptr);
@@ -26,6 +27,8 @@ struct MemTrackCursor : dariadb::ICursor {
   Time minTime() override { return _track->minTime(); }
 
   Time maxTime() override { return _track->minTime(); }
+
+  size_t count() const override { return _track->minTime(); }
 
   Cursor_Ptr _r;
   TimeTrack_ptr _track;
@@ -248,6 +251,7 @@ Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
     auto c = it->second;
     if (chunkInQuery(q, c)) {
       auto rdr = c->getReader();
+      dariadb::Cursor_Ptr cptr{new MemTrackCursor(rdr, this->shared_from_this())};
       readers.push_back(rdr);
     }
   }

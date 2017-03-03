@@ -201,13 +201,17 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     auto m = dariadb::Meas();
     auto ch = dariadb::storage::Chunk::create(&hdr, buff, 1024, m);
     m.time = 0;
+    size_t writed = 0;
     while (!ch->isFull()) {
       ch->append(m);
       ch->append(m);
+      writed += 2;
       m.time++;
     }
     BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(1));
-    dariadb_test::check_reader(ch->getReader());
+    auto rdr = ch->getReader();
+    BOOST_CHECK_EQUAL(rdr->count(), writed);
+    dariadb_test::check_reader(rdr);
     delete[] buff;
   }
   {
@@ -226,7 +230,9 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
       m.time++;
     }
     BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(0));
-    dariadb_test::check_reader(ch->getReader());
+    auto rdr = ch->getReader();
+    BOOST_CHECK_EQUAL(rdr->count(), writed);
+    dariadb_test::check_reader(rdr);
     {
       auto skip_size = dariadb::storage::Chunk::compact(&hdr);
       BOOST_CHECK(dariadb::storage::Chunk::compact(&hdr) == uint32_t(0));
@@ -249,12 +255,15 @@ BOOST_AUTO_TEST_CASE(FullCursorTest) {
     dariadb::MeasArray ma;
     auto m = dariadb::Meas();
     m.time = 0;
+    size_t writed = size_t(0);
     while (ma.size() < size_t(100)) {
       ma.push_back(m);
       ma.push_back(m);
+      writed += 2;
       m.time++;
     }
     dariadb::Cursor_Ptr cptr(new dariadb::storage::FullCursor(ma));
+    BOOST_CHECK_EQUAL(cptr->count(), writed);
     dariadb_test::check_reader(cptr);
   }
 }
@@ -277,6 +286,7 @@ BOOST_AUTO_TEST_CASE(LinearReaderTest) {
   auto fr2 = dariadb::Cursor_Ptr{new FullCursor(ma2)};
 
   dariadb::storage::LinearCursor lr(CursorsList{fr1, fr2});
+  BOOST_CHECK_EQUAL(lr.count(), fr1->count() + fr2->count());
 
   dariadb::MeasList ml;
   while (!lr.is_end()) {
@@ -314,6 +324,7 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   auto fr3 = dariadb::Cursor_Ptr{new FullCursor(ma3)};
 
   dariadb::storage::MergeSortCursor msr{CursorsList{fr1, fr2, fr3}};
+  BOOST_CHECK_EQUAL(msr.count(), fr1->count() + fr2->count() + fr3->count());
 
   dariadb::MeasList ml;
   while (!msr.is_end()) {
@@ -370,6 +381,7 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
 
   {
     auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2});
+    BOOST_CHECK_EQUAL(msr->count(), fr1->count() + fr2->count());
     auto top_reader = dynamic_cast<LinearCursor *>(msr.get());
     auto is_merge_reader =
         dynamic_cast<MergeSortCursor *>(top_reader->_readers.front().get()) != nullptr;
@@ -379,6 +391,7 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
 
   {
     auto lsr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr3});
+    BOOST_CHECK_EQUAL(lsr->count(), fr1->count() + fr3->count());
     auto top_reader = dynamic_cast<LinearCursor *>(lsr.get());
     for (auto &r : top_reader->_readers) {
       auto is_full_reader = dynamic_cast<FullCursor *>(r.get()) != nullptr;

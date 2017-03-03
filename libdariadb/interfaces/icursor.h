@@ -22,6 +22,11 @@ public:
   virtual Time minTime() = 0;
   virtual Time maxTime() = 0;
 
+  /**
+  maximum count of stored values. with duplicates.
+  */
+  virtual size_t count() const = 0;
+
   EXPORT virtual void apply(IReadCallback *clbk);
   EXPORT virtual void apply(IReadCallback *clbk, const QueryInterval &q);
   EXPORT virtual Meas read_time_point(const QueryTimePoint &q);

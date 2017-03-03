@@ -18,6 +18,7 @@ public:
   ChunkReader(size_t count, const Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
               std::shared_ptr<CopmressedReader> compressed_rdr) {
     _top_value_exists = true;
+    _values_count = count+1; //packed + first
     _count = count;
     _chunk = c;
     _top_value = _chunk->header->first();
@@ -61,10 +62,13 @@ public:
     return _top_value;
   }
 
+  size_t count() const override { return _values_count; }
+
   Time minTime() override { return _chunk->header->stat.minTime; }
 
   Time maxTime() override { return _chunk->header->stat.maxTime; }
 
+  size_t _values_count;
   bool _top_value_exists;
   Meas _top_value;
   size_t _count;
@@ -223,7 +227,7 @@ Cursor_Ptr Chunk::getReader() {
       auto v = result->readNext();
       ma[pos++] = v;
     }
-	std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+    std::sort(ma.begin(), ma.end(), meas_time_compare_less());
     ENSURE(ma.front().time <= ma.back().time);
 
     FullCursor *fr = new FullCursor(ma);

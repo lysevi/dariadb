@@ -88,7 +88,7 @@ Meas FullCursor::readNext() {
     if (next.time != result.time) {
       break;
     }
-	_index++;
+    _index++;
   }
   return result;
 }
@@ -112,13 +112,19 @@ Time FullCursor::maxTime() {
   return _maxTime;
 }
 
+size_t FullCursor::count() const {
+  return _ma.size();
+}
+
 MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
   CursorsList tmp_readers_list = cursors_inner::unpack_readers(readers);
 
   _readers.reserve(tmp_readers_list.size());
+  _values_count = size_t(0);
   for (auto r : tmp_readers_list) {
     ENSURE(!r->is_end());
     _readers.emplace_back(r);
+    _values_count += r->count();
   }
 
   _top_times.resize(_readers.size());
@@ -194,16 +200,23 @@ Time MergeSortCursor::maxTime() {
   return _maxTime;
 }
 
+size_t MergeSortCursor::count() const {
+  return _values_count;
+}
+
 LinearCursor::LinearCursor(const CursorsList &readers) {
   std::vector<Cursor_Ptr> rv(readers.begin(), readers.end());
   std::sort(rv.begin(), rv.end(),
             [](auto l, auto r) { return l->minTime() < r->minTime(); });
   _readers = CursorsList(rv.begin(), rv.end());
+  
+  _values_count = size_t(0);
   _minTime = MAX_TIME;
   _maxTime = MIN_TIME;
   for (auto &r : _readers) {
     _minTime = std::min(_minTime, r->minTime());
     _maxTime = std::max(_maxTime, r->maxTime());
+	_values_count += r->count();
   }
   ENSURE(!_readers.empty());
   ENSURE(!is_end());
@@ -236,6 +249,10 @@ Time LinearCursor::minTime() {
 
 Time LinearCursor::maxTime() {
   return _maxTime;
+}
+
+size_t LinearCursor::count() const {
+  return _values_count;
 }
 
 Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list) {
