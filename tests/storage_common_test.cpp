@@ -399,3 +399,32 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
     }
   }
 }
+
+BOOST_AUTO_TEST_CASE(ReaderColapse3Test) {
+  using namespace dariadb::storage;
+  using namespace dariadb;
+  MeasArray ma1(4);
+  ma1[0].time = 1;
+  ma1[1].time = 2;
+  ma1[2].time = 4;
+  ma1[3].time = 5;
+  auto fr1 = Cursor_Ptr{new FullCursor(ma1)};
+
+  MeasArray ma2(4);
+  ma2[0].time = 3;
+  ma2[1].time = 5;
+  ma2[2].time = 6;
+  ma2[3].time = 7;
+  auto fr2 = Cursor_Ptr{new FullCursor(ma2)};
+
+  MeasArray ma3(2);
+  ma3[0].time = 6;
+  ma3[1].time = 9;
+  auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
+
+  auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2, fr3});
+  BOOST_CHECK_EQUAL(msr->count(), fr1->count() + fr2->count()+fr3->count());
+  while (msr->is_end()) {
+	  msr->readNext();
+  }
+}

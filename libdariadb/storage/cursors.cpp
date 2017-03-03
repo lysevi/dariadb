@@ -32,7 +32,7 @@ get_cursor_with_min_time(std::vector<Time> &top_times,
   Time min_time = MAX_TIME;
   size_t min_time_index = 0;
   for (size_t i = 0; i < top_times.size(); ++i) {
-    if (top_times[i] != MAX_TIME && min_time > top_times[i]) {
+    if ((top_times[i] != MAX_TIME) && (min_time > top_times[i])) {
       min_time = top_times[i];
       min_time_index = i;
     }
@@ -209,14 +209,14 @@ LinearCursor::LinearCursor(const CursorsList &readers) {
   std::sort(rv.begin(), rv.end(),
             [](auto l, auto r) { return l->minTime() < r->minTime(); });
   _readers = CursorsList(rv.begin(), rv.end());
-  
+
   _values_count = size_t(0);
   _minTime = MAX_TIME;
   _maxTime = MIN_TIME;
   for (auto &r : _readers) {
     _minTime = std::min(_minTime, r->minTime());
     _maxTime = std::max(_maxTime, r->maxTime());
-	_values_count += r->count();
+    _values_count += r->count();
   }
   ENSURE(!_readers.empty());
   ENSURE(!is_end());
@@ -271,7 +271,19 @@ Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list)
             is_not_processed) {
           processed_pos.insert(i);
           processed_pos.insert(j);
-          overlapped[i].insert(j);
+
+		  //i - can be already in list, because i overlapped with other reader.
+          bool already_in_list = false;
+          for (auto &kv : overlapped) {
+            if (kv.second.find(i) != kv.second.end()) {
+              already_in_list = true;
+              kv.second.insert(j);
+              break;
+            }
+          }
+          if (!already_in_list) {
+            overlapped[i].insert(j);
+          }
           have_overlap = true;
         }
       }
