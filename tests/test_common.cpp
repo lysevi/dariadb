@@ -367,8 +367,14 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
 void check_reader(const dariadb::Cursor_Ptr &rdr) {
   dariadb::Meas top;
   bool is_first = true;
+  std::map<dariadb::Time, size_t> time2count;
   while (!rdr->is_end()) {
     auto v = rdr->readNext();
+    if (time2count.count(v.time) == size_t(0)) {
+      time2count[v.time] = size_t(1);
+    } else {
+      time2count[v.time]++;
+    }
     if (!is_first) {
       is_first = true;
       if (v.time != top.time) {
@@ -380,6 +386,11 @@ void check_reader(const dariadb::Cursor_Ptr &rdr) {
       if (v.time > top.time) {
         THROW_EXCEPTION("! v.time > top.time: ", v.time, top.time);
       }
+    }
+  }
+  for (auto kv : time2count) {
+    if (kv.second > size_t(1)) {
+      THROW_EXCEPTION("kv.second > size_t(1) - ", kv.first," => ", kv.second);
     }
   }
 }

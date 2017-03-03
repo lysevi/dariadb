@@ -203,6 +203,7 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     m.time = 0;
     while (!ch->isFull()) {
       ch->append(m);
+      ch->append(m);
       m.time++;
     }
     BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(1));
@@ -240,6 +241,21 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
     }
 
     delete[] buff;
+  }
+}
+
+BOOST_AUTO_TEST_CASE(FullCursorTest) {
+  {
+    dariadb::MeasArray ma;
+    auto m = dariadb::Meas();
+    m.time = 0;
+    while (ma.size() < size_t(100)) {
+      ma.push_back(m);
+      ma.push_back(m);
+      m.time++;
+    }
+    dariadb::Cursor_Ptr cptr(new dariadb::storage::FullCursor(ma));
+    dariadb_test::check_reader(cptr);
   }
 }
 

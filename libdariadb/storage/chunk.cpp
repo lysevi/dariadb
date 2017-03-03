@@ -11,6 +11,68 @@ using namespace dariadb::utils;
 using namespace dariadb::storage;
 using namespace dariadb::compression;
 
+class ChunkReader : public ICursor {
+public:
+  ChunkReader() = delete;
+
+  ChunkReader(size_t count, const Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
+              std::shared_ptr<CopmressedReader> compressed_rdr) {
+    _top_value_exists = true;
+    _count = count;
+    _chunk = c;
+    _top_value = _chunk->header->first();
+    _bw = bptr;
+    _compressed_rdr = compressed_rdr;
+
+    ENSURE(_chunk->header->stat.minTime <= _chunk->header->stat.maxTime);
+  }
+
+  Meas readNext() override {
+    ENSURE(!is_end());
+    ENSURE(_top_value_exists);
+
+    if (_count == size_t(0)) {
+      _top_value_exists = false;
+      return _top_value;
+    }
+
+    auto result = _top_value;
+    skipDuplicates(result.time);
+    return result;
+  }
+
+  void skipDuplicates(const Time t) {
+    while (_count > 0) {
+      _top_value_exists = true;
+      --_count;
+      _top_value = _compressed_rdr->read();
+      if (_top_value.time != t) {
+        break;
+      }
+    }
+  }
+
+  bool is_end() const override { return _count == 0 && !_top_value_exists; }
+
+  Meas top() override {
+    if (_top_value_exists == false) {
+      THROW_EXCEPTION("logic error: chunkReader::top()");
+    }
+    return _top_value;
+  }
+
+  Time minTime() override { return _chunk->header->stat.minTime; }
+
+  Time maxTime() override { return _chunk->header->stat.maxTime; }
+
+  bool _top_value_exists;
+  Meas _top_value;
+  size_t _count;
+  Chunk_Ptr _chunk;
+  std::shared_ptr<ByteBuffer> _bw;
+  std::shared_ptr<CopmressedReader> _compressed_rdr;
+};
+
 Chunk_Ptr Chunk::create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
                         const Meas &first_m) {
   return Chunk_Ptr{new Chunk(hdr, buffer, _size, first_m)};
@@ -145,69 +207,6 @@ bool Chunk::append(const Meas &m) {
   }
 }
 
-class ChunkReader : public ICursor {
-public:
-  ChunkReader() = delete;
-
-  ChunkReader(size_t count, const Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
-              std::shared_ptr<CopmressedReader> compressed_rdr) {
-    _top_value_exists = false;
-    _is_first = true;
-    _count = count;
-    _chunk = c;
-    _bw = bptr;
-    _compressed_rdr = compressed_rdr;
-
-    ENSURE(_chunk->header->stat.minTime <= _chunk->header->stat.maxTime);
-  }
-
-  Meas readNext() override {
-    ENSURE(!is_end());
-    if (_is_first) {
-      _is_first = false;
-      _top_value_exists = false;
-      return _chunk->header->first();
-    }
-    if (_top_value_exists) {
-      _top_value_exists = false;
-      return _top_value;
-    }
-    --_count;
-    return _compressed_rdr->read();
-  }
-
-  bool is_end() const override {
-    return _count == 0 && !_is_first && _top_value_exists == false;
-  }
-
-  Meas top() override {
-    if (_top_value_exists == false) {
-      if (_count != 0 && !_is_first) {
-        _top_value = readNext();
-        _top_value_exists = true;
-      } else {
-        if (_is_first) {
-          _top_value = _chunk->header->first();
-          _top_value_exists = true;
-        }
-      }
-    }
-    return _top_value;
-  }
-
-  Time minTime() override { return _chunk->header->stat.minTime; }
-
-  Time maxTime() override { return _chunk->header->stat.maxTime; }
-
-  bool _top_value_exists;
-  Meas _top_value;
-  size_t _count;
-  bool _is_first = true;
-  Chunk_Ptr _chunk;
-  std::shared_ptr<ByteBuffer> _bw;
-  std::shared_ptr<CopmressedReader> _compressed_rdr;
-};
-
 Cursor_Ptr Chunk::getReader() {
   auto b_ptr = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
   auto raw_res =
@@ -224,8 +223,7 @@ Cursor_Ptr Chunk::getReader() {
       auto v = result->readNext();
       ma[pos++] = v;
     }
-
-    std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+	std::sort(ma.begin(), ma.end(), meas_time_compare_less());
     ENSURE(ma.front().time <= ma.back().time);
 
     FullCursor *fr = new FullCursor(ma);

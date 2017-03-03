@@ -82,6 +82,14 @@ Meas FullCursor::readNext() {
   ENSURE(!is_end());
 
   auto result = _ma[_index++];
+  // skip duplicates.
+  while (!is_end()) {
+    auto next = _ma[_index];
+    if (next.time != result.time) {
+      break;
+    }
+	_index++;
+  }
   return result;
 }
 

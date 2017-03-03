@@ -8,8 +8,8 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-struct MemTrackReader : dariadb::ICursor {
-  MemTrackReader(const Cursor_Ptr &r, const TimeTrack_ptr &track) {
+struct MemTrackCursor : dariadb::ICursor {
+  MemTrackCursor(const Cursor_Ptr &r, const TimeTrack_ptr &track) {
     _r = r;
     _track = track;
     ENSURE(track != nullptr);
@@ -17,7 +17,7 @@ struct MemTrackReader : dariadb::ICursor {
     _track->is_locked_to_drop = true;
   }
 
-  ~MemTrackReader() { _track->is_locked_to_drop = false; }
+  ~MemTrackCursor() { _track->is_locked_to_drop = false; }
   Meas readNext() override { return _r->readNext(); }
 
   Meas top() override { return _r->top(); }
