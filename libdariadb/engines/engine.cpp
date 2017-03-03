@@ -638,10 +638,21 @@ public:
   }
 
   MeasList readInterval(const QueryInterval &q) {
-    auto a_clbk = std::make_unique<MList_ReaderClb>();
-    this->foreach (q, a_clbk.get());
-    a_clbk->wait();
-    return a_clbk->mlist;
+    size_t max_count = 0;
+    auto r = this->intervalReader(q);
+    for (auto &kv : r) {
+      max_count += kv.second->count();
+    }
+    auto clbk = std::make_unique<MArray_ReaderClb>(max_count);
+
+    for (auto id : q.ids) {
+      auto fres = r.find(id);
+      if (fres != r.end()) {
+        fres->second->apply(clbk.get(), q);
+      }
+    }
+    clbk->is_end();
+    return MeasList(clbk->marray.begin(), clbk->marray.end());
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {

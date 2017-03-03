@@ -15,25 +15,11 @@
 #include <cstring>
 #include <fstream>
 #include <map>
-#include <stx/btree_map.h>
 
 using namespace dariadb::storage;
 using namespace dariadb;
 
 namespace page_utils {
-
-struct ToBtree_ReaderClb : public IReadCallback {
-  ToBtree_ReaderClb(stx::btree_map<dariadb::Time, dariadb::Meas> *target) {
-    _target = target;
-  }
-  void apply(const Meas &m) override {
-    std::lock_guard<utils::async::Locker> lg(_locker);
-    _target->insert(std::make_pair(m.time, m));
-  }
-
-  stx::btree_map<dariadb::Time, dariadb::Meas> *_target;
-  utils::async::Locker _locker;
-};
 
 MeasArray applyFilter(MeasArray &inputValues, ICompactionController *logic) {
   MeasArray result;
@@ -186,31 +172,40 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
       page_utils::writeChunkToResultPage(fname2links, openned_pages, phdr, ihdr, out_file,
                                          out_index_file);
     } else {
-      stx::btree_map<dariadb::Time, dariadb::Meas> values_map;
+      size_t stored_values_count = size_t(0);
 
+      CursorsList cursors;
+      // calculate count of stored values
       for (auto c : link_vec) {
-        page_utils::ToBtree_ReaderClb clb(&values_map);
         auto p = openned_pages[c.page_name];
         auto rdr = p->intervalReader(qi, {c});
         for (auto r : rdr) {
-          r.second->apply(&clb);
+          stored_values_count += r.second->count();
+          cursors.push_back(r.second);
         }
       }
 
-      MeasArray sorted_and_filtered;
-      sorted_and_filtered.reserve(values_map.size());
-      for (auto &time2meas : values_map) {
-        sorted_and_filtered.push_back(time2meas.second);
+      auto clbk = std::make_unique<MArray_ReaderClb>(stored_values_count);
+      for (auto r : cursors) {
+        r->apply(clbk.get());
       }
 
-      ENSURE(!sorted_and_filtered.empty());
+      ENSURE(clbk->marray.size() <= stored_values_count);
+
+      auto &ma = clbk->marray;
+      std::sort(ma.begin(), ma.end(), meas_time_compare_less());
+      ENSURE(ma.empty() || ma.front().time <= ma.back().time);
+      ma.erase(std::unique(ma.begin(), ma.end(),
+                           [](auto m1, auto m2) { return m1.time == m2.time; }),
+               ma.end());
+
       if (logic != nullptr) {
-        sorted_and_filtered = page_utils::applyFilter(sorted_and_filtered, logic);
+        ma = page_utils::applyFilter(ma, logic);
       }
 
-      if (!sorted_and_filtered.empty()) {
+      if (!ma.empty()) {
         std::map<Id, MeasArray> all_values;
-        all_values[sorted_and_filtered.front().id] = sorted_and_filtered;
+        all_values[ma.front().id] = ma;
 
         auto compressed_results =
             PageInner::compressValues(all_values, phdr, max_chunk_size);
