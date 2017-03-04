@@ -185,14 +185,15 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
         }
       }
 
-      auto clbk = std::make_unique<MArray_ReaderClb>(stored_values_count);
+      MeasArray ma;
+      ma.reserve(stored_values_count);
+      auto clbk = std::make_unique<MArrayPtr_ReaderClb>(&ma);
       for (auto r : cursors) {
         r->apply(clbk.get());
       }
 
-      ENSURE(clbk->marray.size() <= stored_values_count);
+      ENSURE(ma.size() <= stored_values_count);
 
-      auto &ma = clbk->marray;
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.empty() || ma.front().time <= ma.back().time);
       ma.erase(std::unique(ma.begin(), ma.end(),

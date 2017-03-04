@@ -643,7 +643,9 @@ public:
     for (auto &kv : r) {
       max_count += kv.second->count();
     }
-    auto clbk = std::make_unique<MArray_ReaderClb>(max_count);
+    MeasArray result;
+    result.reserve(max_count);
+    auto clbk = std::make_unique<MArrayPtr_ReaderClb>(&result);
 
     for (auto id : q.ids) {
       auto fres = r.find(id);
@@ -652,8 +654,7 @@ public:
       }
     }
     clbk->is_end();
-	//TODO make readerclb to write to pointer to measarray
-    return MeasArray(clbk->marray.begin(), clbk->marray.end());
+    return result;
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {

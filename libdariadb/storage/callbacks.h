@@ -17,5 +17,13 @@ struct MArray_ReaderClb : public IReadCallback {
 	MeasArray marray;
 	utils::async::Locker _locker;
 };
+
+struct MArrayPtr_ReaderClb : public IReadCallback {
+    EXPORT MArrayPtr_ReaderClb(MeasArray*output);
+    EXPORT void apply(const Meas &m) override;
+
+    MeasArray *marray;
+    utils::async::Locker _locker;
+};
 }
 }
