@@ -25,5 +25,13 @@ struct MArrayPtr_ReaderClb : public IReadCallback {
     MeasArray *marray;
     utils::async::Locker _locker;
 };
+
+struct FunctorCallback : public IReadCallback {
+	/// return true to cancel;
+	typedef std::function<bool(const Meas&)> FunctorType;
+	EXPORT FunctorCallback(FunctorType&ft);
+	EXPORT void apply(const Meas&m)override;
+	FunctorType functor;
+};
 }
 }

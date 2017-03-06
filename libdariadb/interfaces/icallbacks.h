@@ -17,7 +17,7 @@ public:
   EXPORT void cancel();                  // called by user if want to stop operation.
   EXPORT bool is_canceled() const;       // true - if  `cancel` was called.
   virtual void apply(const Meas &m) = 0; // must be thread safety.
-private:
+protected:
   bool is_end_called;
   bool is_cancel;
 };

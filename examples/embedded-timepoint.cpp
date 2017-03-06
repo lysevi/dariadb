@@ -1,38 +1,16 @@
 #include <libdariadb/dariadb.h>
 #include <iostream>
 
-void print_measurement(dariadb::Meas&measurement) {
-	std::cout << " id: " << measurement.id
-		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		<< " value:" << measurement.value << std::endl;
-}
-
-
-void print_measurement(dariadb::Meas&measurement, dariadb::scheme::DescriptionMap&dmap) {
-	std::cout << " param: " << dmap[measurement.id]
-		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		<< " value:" << measurement.value << std::endl;
+void print_measurement(dariadb::Meas &measurement,
+                       dariadb::scheme::DescriptionMap &dmap) {
+  std::cout << " param: " << dmap[measurement.id]
+            << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+            << " value:" << measurement.value << std::endl;
 }
 
 class QuietLogger : public dariadb::utils::ILogger {
 public:
   void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) override {}
-};
-
-class Callback : public dariadb::IReadCallback {
-public:
-  Callback() {}
-
-  void apply(const dariadb::Meas &measurement) override {
-    std::cout << " id: " << measurement.id
-              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-              << " value:" << measurement.value << std::endl;
-  }
-
-  void is_end() override {
-    std::cout << "calback end." << std::endl;
-    dariadb::IReadCallback::is_end();
-  }
 };
 
 int main(int, char **) {
@@ -60,7 +38,7 @@ int main(int, char **) {
   std::cout << "Timepoint: " << std::endl;
   for (auto kv : timepoint) {
     auto measurement = kv.second;
-	print_measurement(measurement, all_params);
+    print_measurement(measurement, all_params);
   }
 
   // current values
@@ -68,12 +46,17 @@ int main(int, char **) {
   std::cout << "Current: " << std::endl;
   for (auto kv : timepoint) {
     auto measurement = kv.second;
-	print_measurement(measurement, all_params);
+    print_measurement(measurement, all_params);
   }
 
   // callback
   std::cout << "Callback in timepoint: " << std::endl;
-  Callback callback;
-  storage->foreach(qp, &callback);
+  auto f= dariadb::storage::FunctorCallback::FunctorType([](const dariadb::Meas &m) {
+	  std::cout << " id: " << m.id << " timepoint: " << dariadb::timeutil::to_string(m.time)
+		  << " value:" << m.value << std::endl;
+	  return false;
+  });
+  dariadb::storage::FunctorCallback callback(f);
+  storage->foreach (qp, &callback);
   callback.wait();
 }
