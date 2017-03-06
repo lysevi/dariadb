@@ -105,14 +105,14 @@ int main(int argc, char **argv) {
 
   // callback
   std::cout << "Callback in interval: " << std::endl;
-  std::unique_ptr<Callback> callback_ptr{new Callback()};
-  storage->foreach (qi, callback_ptr.get());
-  callback_ptr->wait();
+  Callback callback;
+  storage->foreach (qi, &callback);
+  callback.wait();
 
   // callback
   std::cout << "Callback in timepoint: " << std::endl;
-  storage->foreach (qp, callback_ptr.get());
-  callback_ptr->wait();
+  storage->foreach (qp, &callback);
+  callback.wait();
 
   { // stat
     auto stat = storage->stat(dariadb::Id(0), start_time, m.time);

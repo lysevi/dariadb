@@ -187,9 +187,9 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
 
       MeasArray ma;
       ma.reserve(stored_values_count);
-      auto clbk = std::make_unique<MArrayPtr_ReaderClb>(&ma);
+      MArrayPtr_ReaderClb clbk(&ma);
       for (auto r : cursors) {
-        r->apply(clbk.get());
+        r->apply(&clbk);
       }
 
       ENSURE(ma.size() <= stored_values_count);

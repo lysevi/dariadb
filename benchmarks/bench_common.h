@@ -235,7 +235,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     size_t total_count = 0;
     for (size_t i = 0; i < reads_count; i++) {
-      std::shared_ptr<BenchCallback> clbk{new BenchCallback};
+      BenchCallback clbk;
 
       Id2Times curval = interval_queries[i];
       std::uniform_int_distribution<dariadb::Time> uniform_dist(std::get<1>(curval),
@@ -249,11 +249,11 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
       auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
-      stor->foreach (qi, clbk.get());
+      stor->foreach (qi, &clbk);
       if (check_is_end) {
-        clbk->wait();
+        clbk.wait();
       }
-      total_count += clbk->count;
+      total_count += clbk.count;
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     summary_info->read_interval_speed = elapsed;

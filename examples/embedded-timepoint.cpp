@@ -73,7 +73,7 @@ int main(int, char **) {
 
   // callback
   std::cout << "Callback in timepoint: " << std::endl;
-  std::unique_ptr<Callback> callback_ptr{new Callback()};
-  storage->foreach (qp, callback_ptr.get());
-  callback_ptr->wait();
+  Callback callback;
+  storage->foreach(qp, &callback);
+  callback.wait();
 }
