@@ -543,6 +543,9 @@ Statistic Page::stat(const Id id, Time from, Time to) {
   }
   auto indexReccords = _index->readReccords();
   for (; _ch_links_iterator != links.cend(); ++_ch_links_iterator) {
+    if (_ch_links_iterator->meas_id != id) {
+      continue;
+    }
     auto _index_it = indexReccords[_ch_links_iterator->index_rec_number];
     if (utils::inInterval(from, to, _index_it.stat.minTime) &&
         utils::inInterval(from, to, _index_it.stat.maxTime)) {
