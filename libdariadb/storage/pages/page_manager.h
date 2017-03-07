@@ -43,6 +43,7 @@ public:
 
   EXPORT void compact(ICompactionController *logic);
 
+  EXPORT std::list<std::string> pagesOlderThan(Time t);
 protected:
   EXPORT PageManager(const EngineEnvironment_ptr env);
 

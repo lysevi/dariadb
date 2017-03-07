@@ -76,9 +76,20 @@ public:
     init_managers();
     readMinMaxFromStorages();
 
+    startWorkers();
     logger_info("engine", _settings->alias, ": start - OK ");
   }
 
+  void startWorkers() {
+    logger_info("engine", _settings->alias, ": start async workers...");
+    AsyncTask am_at = [this](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+      this->eraseAction();
+      return true;
+    };
+    ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
+                                    AT_PRIORITY(am_at, TASK_PRIORITY::WORKER));
+  }
   void readMinMaxFromStorages() {
     if (_settings->load_min_max) {
       if (_page_manager != nullptr) {
@@ -128,18 +139,23 @@ public:
       _subscribe_notify.stop();
 
       this->flush();
-      if (_memstorage != nullptr) {
+	 
+	  if (_memstorage != nullptr) {
         _memstorage = nullptr;
       }
-      _wal_manager = nullptr;
+      
+	  _wal_manager = nullptr;
+	  _dropper = nullptr;
+
+	  if (_thread_pool_owner) {
+		  ThreadManager::stop();
+	  }
       _page_manager = nullptr;
       _manifest = nullptr;
-      _dropper = nullptr;
+      
       _stoped = true;
 
-      if (_thread_pool_owner) {
-        ThreadManager::stop();
-      }
+      
       lockfile_unlock();
     }
   }
@@ -719,6 +735,24 @@ public:
   void fsck() {
     logger_info("engine", _settings->alias, ": fsck ", _settings->storage_path.value());
     _page_manager->fsck();
+  }
+
+  void eraseAction() {
+    if (_settings->max_store_period.value() == MAX_TIME) {
+      return;
+    }
+    this->lock_storage();
+    auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
+    auto pages = _page_manager->pagesOlderThan(timepoint);
+    if (pages.empty()) {
+      this->unlock_storage();
+      return;
+    } else {
+      auto candidateToErase = pages.front();
+      logger_info("engine", _settings->alias, ": eraseAction - rm ", candidateToErase);
+      this->_page_manager->erase_page(candidateToErase);
+      this->unlock_storage();
+    }
   }
 
   void eraseOld(const Time &t) {
