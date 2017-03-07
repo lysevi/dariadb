@@ -540,7 +540,7 @@ int main(int argc, char *argv[]) {
       clbk.wait();
 
       std::cout << "==> values after compaction: " << clbk.count << std::endl;
-      if (clbk.count == summary_info->writed) {
+      if ((strategy!= dariadb::STRATEGY::MEMORY && strategy!=dariadb::STRATEGY::CACHE) && clbk.count == summary_info->writed) {
 		  throw std::logic_error("clbk.count == summary_info->writed");
       }
     }
