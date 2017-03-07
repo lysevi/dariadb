@@ -8,6 +8,7 @@
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
@@ -479,11 +480,24 @@ public:
              utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to);
     };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
-    if (page_list.empty()) {
+    auto page_list_in_period = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+    if (page_list_in_period.empty()) {
       logger_info("engine", _settings->alias, ": compact. pages not found for interval");
       return;
     }
+	
+	auto timepoint = dariadb::timeutil::current_time();
+	std::list<std::string> page_list;
+
+	for (auto p : page_list_in_period) {
+		auto ftr = Page::readFooter(p);
+		if (timepoint-ftr.stat.maxTime >= logic->eraseOlderThan) {
+			erase_page(p);
+		}
+		else {
+			page_list.push_back(p);
+		}
+	}
 
     uint16_t level = 0;
     for (auto p : page_list) {
