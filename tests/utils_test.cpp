@@ -13,11 +13,11 @@
 #include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <ctime>
-#include <ctime>
 #include <iostream>
 #include <thread>
 
 BOOST_AUTO_TEST_CASE(TimeToString) {
+  std::cout << "TimeToString" << std::endl;
   auto ct = dariadb::timeutil::current_time();
   BOOST_CHECK(ct != dariadb::Time(0));
   auto ct_str = dariadb::timeutil::to_string(ct);
@@ -25,6 +25,7 @@ BOOST_AUTO_TEST_CASE(TimeToString) {
 }
 
 BOOST_AUTO_TEST_CASE(TimeRound) {
+  std::cout << "TimeRound" << std::endl;
   auto ct = dariadb::timeutil::current_time();
   {
     auto rounded = dariadb::timeutil::round_to_seconds(ct);
@@ -49,6 +50,7 @@ BOOST_AUTO_TEST_CASE(TimeRound) {
 }
 
 BOOST_AUTO_TEST_CASE(CRC32Test) {
+  std::cout << "CRC32Test" << std::endl;
   uint64_t data;
   char *pdata = (char *)&data;
   data = 1;
@@ -61,6 +63,7 @@ BOOST_AUTO_TEST_CASE(CRC32Test) {
 }
 
 BOOST_AUTO_TEST_CASE(CRC16Test) {
+  std::cout << "CRC16Test" << std::endl;
   uint64_t data;
   char *pdata = (char *)&data;
   data = 1;
@@ -73,6 +76,7 @@ BOOST_AUTO_TEST_CASE(CRC16Test) {
 }
 
 BOOST_AUTO_TEST_CASE(CountZero) {
+  std::cout << "CountZero" << std::endl;
   BOOST_CHECK_EQUAL(dariadb::utils::clz(67553994410557440), 8);
   BOOST_CHECK_EQUAL(dariadb::utils::clz(3458764513820540928), 2);
   BOOST_CHECK_EQUAL(dariadb::utils::clz(15), 60);
@@ -82,6 +86,7 @@ BOOST_AUTO_TEST_CASE(CountZero) {
 }
 
 BOOST_AUTO_TEST_CASE(InInterval) {
+  std::cout << "InInterval" << std::endl;
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 1));
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 2));
   BOOST_CHECK(dariadb::utils::inInterval(1, 5, 5));
@@ -90,6 +95,7 @@ BOOST_AUTO_TEST_CASE(InInterval) {
 }
 
 BOOST_AUTO_TEST_CASE(BitOperations) {
+  std::cout << "BitOperations" << std::endl;
   uint8_t value = 0;
   for (int8_t i = 0; i < 7; i++) {
     value = dariadb::utils::BitOperations::set(value, i);
@@ -106,6 +112,7 @@ BOOST_AUTO_TEST_CASE(BitOperations) {
 }
 
 BOOST_AUTO_TEST_CASE(FileUtils) {
+  std::cout << "FileUtils" << std::endl;
   std::string filename = "foo/bar/test.txt";
   BOOST_CHECK_EQUAL(dariadb::utils::fs::filename(filename), "test");
   BOOST_CHECK_EQUAL(dariadb::utils::fs::parent_path(filename), "foo/bar");
@@ -121,6 +128,7 @@ BOOST_AUTO_TEST_CASE(FileUtils) {
 }
 
 BOOST_AUTO_TEST_CASE(ThreadsPool) {
+  std::cout << "ThreadsPool" << std::endl;
   using namespace dariadb::utils::async;
 
   const ThreadKind tk = 1;
@@ -176,6 +184,7 @@ BOOST_AUTO_TEST_CASE(ThreadsPool) {
 }
 
 BOOST_AUTO_TEST_CASE(ThreadsManager) {
+  std::cout << "ThreadsManager" << std::endl;
   using namespace dariadb::utils::async;
 
   const ThreadKind tk1 = 1;
@@ -193,11 +202,16 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     BOOST_CHECK(ThreadManager::instance() == nullptr);
   }
 
-  // while(1)
   {
     const size_t tasks_count = 10;
     ThreadManager::start(tpm_params);
     int called = 0;
+    uint64_t inf_calls = 0;
+    AsyncTask infinite_worker = [&inf_calls](const ThreadInfo &ti) {
+      ++inf_calls;
+      return true;
+    };
+
     AsyncTask at_while = [&called](const ThreadInfo &ti) {
       if (called < 10) {
         ++called;
@@ -221,9 +235,9 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
       }
       return false;
     };
+    ThreadManager::instance()->post(tk1, AT_PRIORITY(infinite_worker, dariadb::utils::async::TASK_PRIORITY::WORKER));
     auto at_while_res = ThreadManager::instance()->post(tk1, AT(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {
-      //            logger("test #"<<i);
       ThreadManager::instance()->post(tk1, AT(at1));
       ThreadManager::instance()->post(tk2, AT(at2));
     }
@@ -236,6 +250,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
 }
 
 BOOST_AUTO_TEST_CASE(SplitString) {
+  std::cout << "SplitString" << std::endl;
   std::string str = "1 2 3 4 5 6 7 8";
   auto splitted = dariadb::utils::strings::tokens(str);
   BOOST_CHECK_EQUAL(splitted.size(), size_t(8));

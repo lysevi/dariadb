@@ -87,6 +87,8 @@ public:
 
   ReadOnlyOption<std::string> storage_path;
   ReadOnlyOption<std::string> raw_path;
+  
+  Option<Time> max_store_period; // period, when old pages must be removed.
   // wal level options;
   Option<uint64_t> wal_file_size;  // measurements count in one file
   Option<uint64_t> wal_cache_size; // inner buffer size

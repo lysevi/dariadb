@@ -8,6 +8,7 @@
 #include <libdariadb/storage/pages/page.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
@@ -399,15 +400,18 @@ public:
   }
 
   void eraseOld(const Time t) {
+    auto page_list = pagesOlderThan(t);
+    for (auto &p : page_list) {
+      this->erase_page(p);
+    }
+  }
+
+  std::list<std::string> pagesOlderThan(Time t) {
     auto pred = [t](const IndexFooter &hdr) {
       auto in_check = hdr.stat.maxTime <= t;
       return in_check;
     };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
-    for (auto &p : page_list) {
-      this->erase_page(p);
-    }
+    return pages_by_filter(std::function<bool(IndexFooter)>(pred));
   }
 
   void repack() {
@@ -476,11 +480,24 @@ public:
              utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to);
     };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
-    if (page_list.empty()) {
+    auto page_list_in_period = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+    if (page_list_in_period.empty()) {
       logger_info("engine", _settings->alias, ": compact. pages not found for interval");
       return;
     }
+	
+	auto timepoint = dariadb::timeutil::current_time();
+	std::list<std::string> page_list;
+
+	for (auto p : page_list_in_period) {
+		auto ftr = Page::readFooter(p);
+		if (timepoint-ftr.stat.maxTime >= logic->eraseOlderThan) {
+			erase_page(p);
+		}
+		else {
+			page_list.push_back(p);
+		}
+	}
 
     uint16_t level = 0;
     for (auto p : page_list) {
@@ -627,6 +644,10 @@ void PageManager::erase(const std::string &storage_path, const std::string &fnam
 
 void PageManager::erase_page(const std::string &fname) {
   impl->erase_page(fname);
+}
+
+std::list<std::string> PageManager::pagesOlderThan(Time t) {
+  return impl->pagesOlderThan(t);
 }
 
 void PageManager::repack() {

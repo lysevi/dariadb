@@ -125,6 +125,8 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
   std::unordered_map<std::string, Page_Ptr> openned_pages;
   openned_pages.reserve(pages_full_paths.size());
 
+  auto timepoint = dariadb::timeutil::current_time();
+
   std::map<uint64_t, ChunkLinkList> links;
   QueryInterval qi({}, 0, MIN_TIME, MAX_TIME);
   for (auto &p_full_path : pages_full_paths) {
@@ -133,6 +135,9 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
 
     auto clinks = p->linksByIterval(qi);
     for (auto &cl : clinks) {
+      if (logic != nullptr && (timepoint - cl.maxTime >= logic->eraseOlderThan)) {
+        continue;
+      }
       cl.page_name = p_full_path;
       links[cl.meas_id].push_back(cl);
     }

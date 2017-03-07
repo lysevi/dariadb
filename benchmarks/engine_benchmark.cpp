@@ -32,8 +32,8 @@ std::unique_ptr<dariadb_bench::BenchmarkSummaryInfo> summary_info;
 
 class CompactionBenchmark : public dariadb::ICompactionController {
 public:
-  CompactionBenchmark(dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactionController(from, to) {}
+  CompactionBenchmark(dariadb::Time eraseThan, dariadb::Time from, dariadb::Time to)
+      : dariadb::ICompactionController(eraseThan, from, to) {}
 
   void compact(dariadb::MeasArray &values, std::vector<int> &filter) override {
     for (size_t i = 0; i < values.size(); ++i) {
@@ -273,7 +273,7 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
     start_time = Time(0);
   }
 
-  std::shared_ptr<BenchCallback> clbk{new BenchCallback()};
+  BenchCallback clbk;
 
   QueryInterval qi{IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
                    max_time};
@@ -282,11 +282,11 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
 
   auto start = clock();
 
-  ms->foreach (qi, clbk.get());
-  clbk->wait();
+  ms->foreach (qi, &clbk);
+  clbk.wait();
 
   auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-  std::cout << "readed: " << clbk->count << std::endl;
+  std::cout << "readed: " << clbk.count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
   summary_info->foreach_read_all_time = elapsed;
 
@@ -307,7 +307,7 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
     }
 
     if (readed.size() != dariadb_bench::all_writes) {
-      std::cout << "expected: " << dariadb_bench::all_writes << " get:" << clbk->count
+      std::cout << "expected: " << dariadb_bench::all_writes << " get:" << clbk.count
                 << std::endl;
       std::cout << " all_writes: " << dariadb_bench::all_writes;
       for (auto &kv : _dict) {
@@ -435,7 +435,9 @@ int main(int argc, char *argv[]) {
     stop_info = false;
     auto writers_start = clock();
 
-    start_time = dariadb::timeutil::current_time();
+    start_time = dariadb::timeutil::current_time() -
+                 (boost::posix_time::seconds(1).total_milliseconds() * 60 * 60 *
+                  dariadb_bench::hours_write_perid);
     rw_benchmark(raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
@@ -477,7 +479,7 @@ int main(int argc, char *argv[]) {
         flush_info_thread.join();
         std::cout << "drop time: " << elapsed << std::endl;
       }
-	  {
+      {
         auto pages_before = raw_ptr->description().pages_count;
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
@@ -489,12 +491,12 @@ int main(int argc, char *argv[]) {
           std::cout << "repack time: " << elapsed << std::endl;
           summary_info->page_repacked = pages_before - pages_after - 1;
           summary_info->page_repack_time = elapsed;
-		  if (!use_shard) {
-			  if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
-				  pages_before <= pages_after) {
-				  THROW_EXCEPTION("pages_before <= pages_after");
-			  }
-		  }
+          if (!use_shard) {
+            if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
+                pages_before <= pages_after) {
+              THROW_EXCEPTION("pages_before <= pages_after");
+            }
+          }
         }
       }
     }
@@ -519,12 +521,32 @@ int main(int argc, char *argv[]) {
 
     { // compaction
       std::cout << "compaction..." << std::endl;
-      auto compaction_logic = std::make_unique<CompactionBenchmark>(start_time, max_time);
+      auto halfTime = dariadb::timeutil::from_days(1);
+      std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
+                << std::endl;
+      auto compaction_logic =
+          std::make_unique<CompactionBenchmark>(halfTime, start_time, max_time);
       auto start = clock();
       raw_ptr->compact(compaction_logic.get());
       auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
       std::cout << "time: " << elapsed << std::endl;
       summary_info->compaction_time = elapsed;
+
+      BenchCallback clbk;
+      QueryInterval qi{IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
+                       max_time};
+
+      std::cout << "==> foreach all..." << std::endl;
+
+      raw_ptr->foreach (qi, &clbk);
+      clbk.wait();
+
+      std::cout << "==> values after compaction: " << clbk.count << std::endl;
+      if ((strategy != dariadb::STRATEGY::MEMORY &&
+           strategy != dariadb::STRATEGY::CACHE) &&
+          clbk.count == summary_info->writed) {
+        throw std::logic_error("clbk.count == summary_info->writed");
+      }
     }
     std::cout << "writed: " << append_count << std::endl;
     std::cout << "stoping storage...\n";
