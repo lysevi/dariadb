@@ -521,7 +521,9 @@ int main(int argc, char *argv[]) {
 
     { // compaction
       std::cout << "compaction..." << std::endl;
-      auto halfTime = (max_time - start_time) / 2;
+      auto halfTime = dariadb::timeutil::from_days(1);
+      std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
+                << std::endl;
       auto compaction_logic =
           std::make_unique<CompactionBenchmark>(halfTime, start_time, max_time);
       auto start = clock();
@@ -540,8 +542,10 @@ int main(int argc, char *argv[]) {
       clbk.wait();
 
       std::cout << "==> values after compaction: " << clbk.count << std::endl;
-      if ((strategy!= dariadb::STRATEGY::MEMORY && strategy!=dariadb::STRATEGY::CACHE) && clbk.count == summary_info->writed) {
-		  throw std::logic_error("clbk.count == summary_info->writed");
+      if ((strategy != dariadb::STRATEGY::MEMORY &&
+           strategy != dariadb::STRATEGY::CACHE) &&
+          clbk.count == summary_info->writed) {
+        throw std::logic_error("clbk.count == summary_info->writed");
       }
     }
     std::cout << "writed: " << append_count << std::endl;
