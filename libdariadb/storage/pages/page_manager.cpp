@@ -86,14 +86,27 @@ public:
         auto index_filename = PageIndex::index_name_from_page_name(n);
         auto index_file_path =
             utils::fs::append_path(_settings->raw_path.value(), index_filename);
+
         if (!utils::fs::path_exists(index_file_path)) {
           Page::restoreIndexFile(file_name);
+        } else {
+          auto ifooter = PageIndex::readIndexFooter(index_file_path);
+          if (!ifooter.check()) {
+            utils::fs::rm(index_file_path);
+            Page::restoreIndexFile(file_name);
+          }
         }
         Page_Ptr p{Page::open(file_name)};
+
         if (!p->checksum()) {
           logger_info("engine", _settings->alias, ": checksum of page ", file_name,
                       " is wrong - removing.");
           erase_page(file_name);
+        } else {
+          if (!p->footer.check()) {
+            logger_info("engine", _settings->alias, ": bad magic nums ", file_name);
+            erase_page(file_name);
+          }
         }
       } catch (std::exception &ex) {
         logger_fatal("engine", _settings->alias, ": error on check ", file_name, ": ",
@@ -485,19 +498,18 @@ public:
       logger_info("engine", _settings->alias, ": compact. pages not found for interval");
       return;
     }
-	
-	auto timepoint = dariadb::timeutil::current_time();
-	std::list<std::string> page_list;
 
-	for (auto p : page_list_in_period) {
-		auto ftr = Page::readFooter(p);
-		if (timepoint-ftr.stat.maxTime >= logic->eraseOlderThan) {
-			erase_page(p);
-		}
-		else {
-			page_list.push_back(p);
-		}
-	}
+    auto timepoint = dariadb::timeutil::current_time();
+    std::list<std::string> page_list;
+
+    for (auto p : page_list_in_period) {
+      auto ftr = Page::readFooter(p);
+      if (timepoint - ftr.stat.maxTime >= logic->eraseOlderThan) {
+        erase_page(p);
+      } else {
+        page_list.push_back(p);
+      }
+    }
 
     uint16_t level = 0;
     for (auto p : page_list) {

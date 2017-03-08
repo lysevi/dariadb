@@ -3,6 +3,7 @@ v0.4.0
 - Data compaction methods.
 - Less allocations in read queries.
 - Auto erase old values.
+- Magic numbers in page file.
 
 v0.3.0
 =====

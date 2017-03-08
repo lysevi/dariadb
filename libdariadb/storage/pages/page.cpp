@@ -373,6 +373,9 @@ PageFooter Page::readFooter(std::string file_name) {
   memset(&result, 0, sizeof(PageFooter));
   istream.read((char *)&result, sizeof(PageFooter));
   istream.close();
+  if (!result.check()) {
+    THROW_EXCEPTION("PageFooter magic number check.")
+  }
   return result;
 }
 
