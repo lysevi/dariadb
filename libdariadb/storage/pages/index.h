@@ -2,12 +2,14 @@
 
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/chunkcontainer.h>
+#include <libdariadb/storage/magic.h>
 #include <libdariadb/utils/fs.h>
 
 namespace dariadb {
 namespace storage {
 #pragma pack(push, 1)
 struct IndexFooter {
+  uint64_t magic_number;
   bool is_sorted;    // items in index file sorted by time
   uint64_t id_bloom; // bloom filter of Meas.id
 
@@ -15,11 +17,24 @@ struct IndexFooter {
   uint64_t recs_count;
 
   uint16_t level;
+  uint8_t ftr_end;
   IndexFooter() : stat() {
+    magic_number = MAGIC_NUMBER_DARIADB;
     level = 0;
     recs_count = 0;
     is_sorted = false;
     id_bloom = bloom_empty<Id>();
+    ftr_end = MAGIC_NUMBER_INDEXFTR;
+  }
+
+  bool check() {
+    if (magic_number != MAGIC_NUMBER_DARIADB) {
+      return false;
+    }
+    if (ftr_end != MAGIC_NUMBER_INDEXFTR) {
+      return false;
+    }
+    return true;
   }
 };
 

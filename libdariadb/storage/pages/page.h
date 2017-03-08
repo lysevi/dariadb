@@ -4,6 +4,7 @@
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/chunkcontainer.h>
+#include <libdariadb/storage/magic.h>
 #include <libdariadb/storage/pages/index.h>
 #include <libdariadb/utils/fs.h>
 
@@ -16,17 +17,31 @@ const uint16_t MAX_LEVEL = std::numeric_limits<uint16_t>::max();
 
 #pragma pack(push, 1)
 struct PageFooter {
+  uint64_t magic_dariadb;
   uint32_t addeded_chunks; // total count of chunks in page.
   uint64_t filesize;
   Statistic stat;
   uint64_t max_chunk_id; // max(chunk->id)
   uint16_t level;
+  uint8_t ftr_end;
   PageFooter(uint16_t lvl, uint64_t chunk_id) : stat() {
+    magic_dariadb = MAGIC_NUMBER_DARIADB;
     level = lvl;
     max_chunk_id = chunk_id;
     addeded_chunks = 0;
     filesize = 0;
     max_chunk_id = 0;
+    ftr_end = MAGIC_NUMBER_PAGEFTR;
+  }
+
+  bool check() {
+    if (magic_dariadb != MAGIC_NUMBER_DARIADB) {
+      return false;
+    }
+    if (ftr_end != MAGIC_NUMBER_PAGEFTR) {
+      return false;
+    }
+    return true;
   }
 };
 #pragma pack(pop)

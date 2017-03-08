@@ -114,5 +114,8 @@ IndexFooter PageIndex::readIndexFooter(std::string ifile) {
   memset(&result, 0, sizeof(IndexFooter));
   istream.read((char *)&result, sizeof(IndexFooter));
   istream.close();
+  if (!result.check()) {
+    THROW_EXCEPTION("IndexFooter magic number check.");
+  }
   return result;
 }
