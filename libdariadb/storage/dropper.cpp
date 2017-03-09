@@ -108,15 +108,16 @@ void Dropper::drop_wal_internal() {
         AsyncTask sort_at = [this, start_time, ma, fname](const ThreadInfo &ti) {
           TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
           std::sort(ma->begin(), ma->end(), meas_time_compare_less());
+		  auto splited=splitById(*ma.get());
 
-          AsyncTask write_at = [this, start_time, fname, ma](const ThreadInfo &ti) {
+          AsyncTask write_at = [this, start_time, fname, splited](const ThreadInfo &ti) {
             TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
             auto without_path = fs::extract_filename(fname);
             auto page_fname = fs::filename(without_path);
             auto pm = _page_manager.get();
             auto am = _wal_manager.get();
 
-            pm->append(page_fname, *ma.get());
+            pm->append(page_fname, *splited.get());
             am->erase(fname);
             auto end = clock();
             auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;

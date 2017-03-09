@@ -57,7 +57,7 @@ public:
   /// called by Dropper from Wal level.
   EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
                                 uint64_t chunk_id, uint32_t max_chunk_size,
-                                const MeasArray &ma);
+                                const SplitedById &ma);
   /**
   used for repack many pages to one
   file_name - output page filename

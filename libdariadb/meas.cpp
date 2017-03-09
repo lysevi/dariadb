@@ -52,3 +52,47 @@ void MeasMinMax::updateMin(const Meas &m) {
     this->min = m;
   }
 }
+
+std::shared_ptr<SplitedById> dariadb::splitById(const MeasArray &ma) {
+  dariadb::IdSet dropped;
+  auto count = ma.size();
+  std::vector<bool> visited(count);
+  auto begin = ma.cbegin();
+  auto end = ma.cend();
+  size_t i = 0;
+  SplitedById_Ptr result=std::make_shared<SplitedById>();
+  MeasArray current_id_values;
+  current_id_values.resize(ma.size());
+
+  ENSURE(current_id_values.size() != 0);
+  ENSURE(current_id_values.size() == ma.size());
+
+  for (auto it = begin; it != end; ++it, ++i) {
+    if (visited[i]) {
+      continue;
+    }
+    if (dropped.find(it->id) != dropped.end()) {
+      continue;
+    }
+
+    visited[i] = true;
+    size_t current_id_values_pos = 0;
+    current_id_values[current_id_values_pos++] = *it;
+    size_t pos = 0;
+    for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
+      if (visited[pos]) {
+        continue;
+      }
+      if ((sub_it->id == it->id)) {
+        current_id_values[current_id_values_pos++] = *sub_it;
+        visited[pos] = true;
+      }
+    }
+    dropped.insert(it->id);
+    result->insert(std::make_pair(
+        it->id, MeasArray{current_id_values.begin(),
+                          current_id_values.begin() + current_id_values_pos}));
+    current_id_values_pos = 0;
+  }
+  return result;
+}

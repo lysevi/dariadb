@@ -85,8 +85,7 @@ Page::~Page() {
 }
 
 Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                      uint32_t max_chunk_size, const MeasArray &ma) {
-  auto to_compress = PageInner::splitById(ma);
+                      uint32_t max_chunk_size, const SplitedById &to_compress) {
 
   PageFooter phdr(lvl, chunk_id);
 

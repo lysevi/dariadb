@@ -54,13 +54,12 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
     first.id = 1;
     first.time = t;
     auto count = chunks_size * 2;
-    dariadb::MeasArray ma;
-    ma.resize(count);
+    dariadb::SplitedById ma;
     for (size_t i = 0; i < count; i++, t++) {
       first.flag = dariadb::Flag(i);
       first.time = t;
       first.value = dariadb::Value(i);
-      ma[i] = first;
+      ma[first.id].push_back(first);
       addeded.push_back(first);
     }
     pm->append("pagename", ma);
@@ -140,13 +139,12 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     first.id = 1;
     first.time = t;
     auto count = chunks_size / 10;
-    dariadb::MeasArray ma;
-    ma.resize(count);
+    dariadb::SplitedById ma;
     for (size_t i = 0; i < count; i++, t++) {
       first.flag = dariadb::Flag(i);
       first.time = t;
       first.value = dariadb::Value(i);
-      ma[i] = first;
+      ma[first.id].push_back(first);
       addeded.push_back(first);
     }
     std::stringstream ss;
@@ -238,13 +236,13 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   const dariadb::Id id_count(5);
   dariadb::IdSet all_id_set;
   size_t count = 5000;
-  dariadb::MeasArray a(count);
+  dariadb::SplitedById a;
   auto e = dariadb::Meas();
   for (size_t i = 0; i < count; i++) {
     e.id = i % id_count;
     e.time++;
     e.value = dariadb::Value(i);
-    a[i] = e;
+    a[e.id].push_back(e);
     all_id_set.insert(e.id);
     addeded.push_back(e);
   }
@@ -333,7 +331,7 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   size_t count = 100;
-  dariadb::MeasArray a(count);
+  dariadb::SplitedById a;
   /**
   Id=0 =>  0, count
   Id=1 =>  0, count
@@ -345,7 +343,7 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i);
-    a[i] = e;
+    a[e.id].push_back(e);
   }
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
@@ -356,7 +354,7 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
     e.id = 1;
     e.time++;
     e.value = dariadb::Value(i);
-    a[i] = e;
+	a[e.id].push_back(e);
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
@@ -367,7 +365,7 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i) * 3;
-    a[i] = e;
+	a[e.id].push_back(e);
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";
@@ -484,7 +482,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   size_t count = 100;
-  dariadb::MeasArray a(count);
+  dariadb::SplitedById a;
   /**
   Id=0 =>  0, count
   Id=1 =>  0, count
@@ -496,7 +494,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i);
-    a[i] = e;
+	a[e.id].push_back(e);
   }
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
@@ -507,7 +505,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     e.id = 1;
     e.time++;
     e.value = dariadb::Value(i);
-    a[i] = e;
+	a[e.id].push_back(e);
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
@@ -518,7 +516,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i) * 3;
-    a[i] = e;
+	a[e.id].push_back(e);
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";

@@ -373,7 +373,7 @@ public:
   }
 
   // from wall
-  void append(const std::string &file_prefix, const dariadb::MeasArray &ma) {
+  void append(const std::string &file_prefix, const dariadb::SplitedById &ma) {
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
@@ -639,7 +639,7 @@ dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
 }
 
-void PageManager::append(const std::string &file_prefix, const dariadb::MeasArray &ma) {
+void PageManager::append(const std::string &file_prefix, const dariadb::SplitedById &ma) {
   return impl->append(file_prefix, ma);
 }
 void PageManager::fsck() {
