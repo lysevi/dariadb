@@ -118,15 +118,15 @@ public:
   bool is_end_called;
 };
 
-dariadb::Id get_id_from(const BenchmarkParams &params, dariadb::Id id) {
+dariadb::Id get_id_from(BenchmarkParams params, dariadb::Id id) {
   return (id + 1) * params.id_per_thread() - params.id_per_thread();
 }
 
-dariadb::Id get_id_to(BenchmarkParams &params, dariadb::Id id) {
+dariadb::Id get_id_to(BenchmarkParams params, dariadb::Id id) {
   return (id + 1) * params.id_per_thread();
 }
 
-void thread_writer_rnd_stor(BenchmarkParams &params, dariadb::Id id,
+void thread_writer_rnd_stor(BenchmarkParams params, dariadb::Id id,
                             std::atomic_llong *append_count, dariadb::IMeasWriter *ms,
                             dariadb::Time start_time, dariadb::Time *write_time_time) {
   try {

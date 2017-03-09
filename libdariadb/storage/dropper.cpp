@@ -13,6 +13,7 @@ using namespace dariadb::utils::async;
 Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
                  WALManager_ptr wal_manager)
     : _page_manager(page_manager), _wal_manager(wal_manager), _engine_env(engine_env) {
+  _active_operations = 0;
   _stop = false;
   _is_stoped = false;
   _settings =
@@ -25,6 +26,7 @@ Dropper::~Dropper() {
   _stop = true;
   while (!_is_stoped) {
     _cond_var.notify_all();
+    _dropper_cond_var.notify_all();
   }
   _thread_handle.join();
   logger("engine", _settings->alias, ": dropper - stop end.");
@@ -82,60 +84,67 @@ void Dropper::drop_wal_internal() {
       fname = _files_queue.front();
       _files_queue.pop_front();
     }
-    while (!this->_dropper_lock.try_lock() || _stop) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    std::unique_lock<std::mutex> lock(_dropper_lock);
+    _dropper_cond_var.wait(lock, [this]() { return _stop || _active_operations == 0; });
+
     if (_stop) {
       break;
     }
+    ENSURE(_active_operations == 0);
+    ++_active_operations;
     AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
       try {
         TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-
+        ENSURE(_active_operations == 1);
         logger_info("engine", _settings->alias, ": compressing ", fname);
         auto start_time = clock();
+
         auto storage_path = sett->raw_path.value();
         auto full_path = fs::append_path(storage_path, fname);
 
         WALFile_Ptr wal = WALFile::open(env, full_path, true);
+        auto ma = wal->readAll();
 
-        auto all = wal->readAll();
+        AsyncTask sort_at = [this, start_time, ma, fname](const ThreadInfo &ti) {
+          TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
+          std::sort(ma->begin(), ma->end(), meas_time_compare_less());
 
-        this->write_wal_to_page(fname, all);
+          AsyncTask write_at = [this, start_time, fname, ma](const ThreadInfo &ti) {
+            TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+            auto without_path = fs::extract_filename(fname);
+            auto page_fname = fs::filename(without_path);
+            auto pm = _page_manager.get();
+            auto am = _wal_manager.get();
 
-        auto end = clock();
-        auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+            pm->append(page_fname, *ma.get());
+            am->erase(fname);
+            auto end = clock();
+            auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
-        logger_info("engine", _settings->alias, ": compressing ", fname,
-                    " done. elapsed time - ", elapsed);
+            logger_info("engine", _settings->alias, ": compressing ", fname,
+                        " done. elapsed time - ", elapsed);
+            ENSURE(_active_operations == 1);
+            --_active_operations;
+            _dropper_cond_var.notify_all();
+            return false;
+          };
+          ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
+                                          AT_PRIORITY(write_at, TASK_PRIORITY::DEFAULT));
+          return false;
+        };
+
+        ThreadManager::instance()->post(THREAD_KINDS::COMMON,
+                                        AT_PRIORITY(sort_at, TASK_PRIORITY::DEFAULT));
       } catch (std::exception &ex) {
         THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
       }
       return false;
     };
 
-    auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-    handle->wait();
-    this->_dropper_lock.unlock();
+    ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
+                                    AT_PRIORITY(at, TASK_PRIORITY::DEFAULT));
   }
   _is_stoped = true;
-}
-
-void Dropper::write_wal_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma) {
-  auto pm = _page_manager.get();
-  auto am = _wal_manager.get();
-  auto sett = _settings;
-
-  auto storage_path = sett->raw_path.value();
-  auto full_path = fs::append_path(storage_path, fname);
-
-  std::sort(ma->begin(), ma->end(), meas_time_compare_less());
-
-  auto without_path = fs::extract_filename(fname);
-  auto page_fname = fs::filename(without_path);
-
-  pm->append(page_fname, *ma.get());
-  am->erase(fname);
 }
 
 void Dropper::flush() {

@@ -120,11 +120,12 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
                                         &maxWritedTime, false);
 
     ms->compress_all();
-
-    auto pages_count = ms->description().pages_count;
-    auto wals_count = ms->description().wal_count;
-    BOOST_CHECK_GE(pages_count, size_t(1));
-    BOOST_CHECK_EQUAL(wals_count, size_t(0));
+    while (true) { 
+      auto wals_count = ms->description().wal_count;
+      if (wals_count == 0) {
+        break;
+      }
+    }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

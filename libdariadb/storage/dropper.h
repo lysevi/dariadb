@@ -29,8 +29,6 @@ public:
 
 private:
   void drop_wal_internal();
-  void write_wal_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma);
-
 private:
   mutable std::mutex _queue_locker;
   std::list<std::string> _files_queue;
@@ -43,6 +41,8 @@ private:
   EngineEnvironment_ptr _engine_env;
   Settings *_settings;
   std::mutex _dropper_lock;
+  std::condition_variable _dropper_cond_var;
+  int _active_operations;
 };
 }
 }
