@@ -94,7 +94,6 @@ struct MeasMinMax {
 
 using MeasArray = std::vector<Meas>;
 using SplitedById = std::map<Id, MeasArray>;
-using SplitedById_Ptr = std::shared_ptr<SplitedById>;
 //using MeasList = std::deque<Meas>;
 /// used in readTimePoint queries.
 using Id2Meas = std::unordered_map<Id, Meas>;
@@ -111,6 +110,4 @@ using Id2Time = std::unordered_map<Id, Time>;
 using Id2Id = std::unordered_map<Id, Id>;
 
 EXPORT void minmax_append(Id2MinMax &out, const Id2MinMax &source);
-
-EXPORT SplitedById_Ptr splitById(const MeasArray &ma);
 }

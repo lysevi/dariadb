@@ -10,6 +10,30 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
+std::shared_ptr<SplitedById> splitById(const MeasArray &ma) {
+	std::shared_ptr<SplitedById> result = std::make_shared<SplitedById>();
+	
+	std::map<Id, size_t> id2count;
+	for (auto v : ma) {
+		auto iter = id2count.find(v.id);
+		if (iter == id2count.end()) {
+			id2count.insert(std::make_pair(v.id, size_t(0)));
+		}
+		else {
+			id2count[v.id]+=1;
+		}
+	}
+	
+	for (auto i2c : id2count) {
+		(*result)[i2c.first].reserve(i2c.second);
+	}
+
+	for (auto v : ma) {
+		(*result)[v.id].push_back(v);
+	}
+	return result;
+}
+
 Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
                  WALManager_ptr wal_manager)
     : _page_manager(page_manager), _wal_manager(wal_manager), _engine_env(engine_env) {
