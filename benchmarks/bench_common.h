@@ -48,14 +48,35 @@ struct BenchmarkSummaryInfo {
   }
 };
 
-const size_t total_threads_count = 2;
-const size_t hours_write_perid = 48;
-const size_t writes_per_second = 2;
-const size_t write_per_id_count = writes_per_second * 60 * 60 * hours_write_perid;
-const size_t total_readers_count = 1;
-const size_t id_count = 100;
-const size_t id_per_thread = id_count / total_threads_count;
-const uint64_t all_writes = total_threads_count * write_per_id_count * id_per_thread;
+struct BenchmarkParams {
+  size_t total_threads_count = 2;
+  size_t hours_write_perid = 48;
+  size_t writes_per_second = 2;
+  size_t total_readers_count = 1;
+  size_t id_count = 100;
+
+  size_t id_per_thread() const { return id_count / total_threads_count; }
+
+  size_t write_per_id_count() const {
+    return writes_per_second * 60 * 60 * hours_write_perid;
+  }
+
+  uint64_t all_writes() const {
+    return total_threads_count * write_per_id_count() * id_per_thread();
+  }
+
+  void print() {
+    std::cout << "Benchmark params:" << std::endl;
+    std::cout << "writers: " << total_threads_count << std::endl;
+    std::cout << "hours: " << hours_write_perid << std::endl;
+    std::cout << "write frequency: " << writes_per_second << std::endl;
+	std::cout << "id count: " << id_count << std::endl;
+	std::cout << "readers: " << total_readers_count << std::endl;
+    std::cout << "id per thread: " << id_per_thread() << std::endl;
+    std::cout << "values per time series: " << write_per_id_count() << std::endl;
+    std::cout << "total writes: " << all_writes() << std::endl;
+  }
+};
 
 class BenchmarkLogger : public dariadb::utils::ILogger {
 public:
@@ -97,31 +118,32 @@ public:
   bool is_end_called;
 };
 
-dariadb::Id get_id_from(dariadb::Id id) {
-  return (id + 1) * id_per_thread - id_per_thread;
+dariadb::Id get_id_from(const BenchmarkParams &params, dariadb::Id id) {
+  return (id + 1) * params.id_per_thread() - params.id_per_thread();
 }
 
-dariadb::Id get_id_to(dariadb::Id id) {
-  return (id + 1) * id_per_thread;
+dariadb::Id get_id_to(BenchmarkParams &params, dariadb::Id id) {
+  return (id + 1) * params.id_per_thread();
 }
 
-void thread_writer_rnd_stor(dariadb::Id id, std::atomic_llong *append_count,
-                            dariadb::IMeasWriter *ms, dariadb::Time start_time,
-                            dariadb::Time *write_time_time) {
+void thread_writer_rnd_stor(BenchmarkParams &params, dariadb::Id id,
+                            std::atomic_llong *append_count, dariadb::IMeasWriter *ms,
+                            dariadb::Time start_time, dariadb::Time *write_time_time) {
   try {
-    auto step = (boost::posix_time::seconds(1).total_milliseconds() / writes_per_second);
+    auto step =
+        (boost::posix_time::seconds(1).total_milliseconds() / params.writes_per_second);
     dariadb::Meas m;
     m.time = start_time;
-    auto id_from = get_id_from(id);
-    auto id_to = get_id_to(id);
+    auto id_from = get_id_from(params, id);
+    auto id_to = get_id_to(params, id);
     dariadb::logger("*** thread #", id, " id:[", id_from, " - ", id_to, "]");
     dariadb::IdSet ids;
-    for (size_t i = 0; i < write_per_id_count; ++i) {
+    for (size_t i = 0; i < params.write_per_id_count(); ++i) {
       m.flag = dariadb::Flag(id);
       m.time += step;
       *write_time_time = m.time;
       m.value = dariadb::Value(i);
-      for (size_t j = id_from; j < id_to && i < dariadb_bench::write_per_id_count; j++) {
+      for (size_t j = id_from; j < id_to && i < params.write_per_id_count(); j++) {
         m.id = j;
         ids.insert(m.id);
         if (ms->append(m).writed != 1) {

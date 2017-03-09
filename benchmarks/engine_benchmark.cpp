@@ -30,6 +30,8 @@ STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
 std::unique_ptr<dariadb_bench::BenchmarkSummaryInfo> summary_info;
 
+dariadb_bench::BenchmarkParams benchmark_params;
+
 class CompactionBenchmark : public dariadb::ICompactionController {
 public:
   CompactionBenchmark(dariadb::Time eraseThan, dariadb::Time from, dariadb::Time to)
@@ -78,6 +80,17 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit),
       "allocation area limit  in megabytes when strategy=MEMORY");
   aos("use-shard", "shard some id per shards");
+  
+  po::options_description writers("Writers params");
+  auto aos_writers = writers.add_options();
+  aos_writers("hours", po::value<size_t>(&benchmark_params.hours_write_perid)->default_value(benchmark_params.hours_write_perid),
+	  "write interval in hours");
+  aos_writers("ids", po::value<size_t>(&benchmark_params.id_count)->default_value(benchmark_params.id_count),
+	  "total id count");
+  aos_writers("wthreads", po::value<size_t>(&benchmark_params.total_threads_count)->default_value(benchmark_params.total_threads_count),
+	  "write threads count");
+  desc.add(writers);
+
   po::variables_map vm;
   try {
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -150,7 +163,7 @@ void show_info(IEngine *storage) {
     write_speed_ss << writes_per_sec << "/s :";
 
     std::stringstream persent_ss;
-    persent_ss << (int64_t(100) * append_count) / dariadb_bench::all_writes << '%';
+    persent_ss << (int64_t(100) * append_count) / benchmark_params.all_writes() << '%';
 
     std::stringstream drop_ss;
     drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
@@ -217,19 +230,20 @@ void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   std::thread info_thread(show_info, raw_ptr);
 
-  std::vector<std::thread> writers(dariadb_bench::total_threads_count);
-  std::vector<std::thread> readers(dariadb_bench::total_readers_count);
+  std::vector<std::thread> writers(benchmark_params.total_threads_count);
+  std::vector<std::thread> readers(benchmark_params.total_readers_count);
 
   size_t pos = 0;
 
-  for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
-    auto id_from = dariadb_bench::get_id_from(pos);
-    auto id_to = dariadb_bench::get_id_to(pos);
+  for (size_t i = 1; i < benchmark_params.total_threads_count + 1; i++) {
+    auto id_from = dariadb_bench::get_id_from(benchmark_params, pos);
+    auto id_to = dariadb_bench::get_id_to(benchmark_params, pos);
     for (size_t j = id_from; j < id_to; j++) {
       all_id_set.insert(j);
     }
     if (!readonly) {
       std::thread t{dariadb_bench::thread_writer_rnd_stor,
+                    benchmark_params,
                     Id(pos),
                     &append_count,
                     raw_ptr,
@@ -241,7 +255,7 @@ void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
   }
   if (readers_enable) {
     pos = 0;
-    for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
+    for (size_t i = 1; i < benchmark_params.total_readers_count + 1; i++) {
       std::thread t{reader, raw_ptr, all_id_set, start_time, timeutil::current_time()};
       readers[pos++] = std::move(t);
     }
@@ -249,7 +263,7 @@ void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   if (!readonly) {
     pos = 0;
-    for (size_t i = 1; i < dariadb_bench::total_threads_count + 1; i++) {
+    for (size_t i = 1; i < benchmark_params.total_threads_count + 1; i++) {
       std::thread t = std::move(writers[pos++]);
       t.join();
     }
@@ -257,7 +271,7 @@ void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   if (readers_enable) {
     pos = 0;
-    for (size_t i = 1; i < dariadb_bench::total_readers_count + 1; i++) {
+    for (size_t i = 1; i < benchmark_params.total_readers_count + 1; i++) {
       std::thread t = std::move(readers[pos++]);
       t.join();
     }
@@ -306,10 +320,10 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
       _dict[v.id].push_back(v);
     }
 
-    if (readed.size() != dariadb_bench::all_writes) {
-      std::cout << "expected: " << dariadb_bench::all_writes << " get:" << clbk.count
+    if (readed.size() != benchmark_params.all_writes()) {
+      std::cout << "expected: " << benchmark_params.all_writes() << " get:" << clbk.count
                 << std::endl;
-      std::cout << " all_writes: " << dariadb_bench::all_writes;
+      std::cout << " all_writes: " << benchmark_params.all_writes();
       for (auto &kv : _dict) {
         std::cout << " " << kv.first << " -> " << kv.second.size() << std::endl;
       }
@@ -357,14 +371,14 @@ int main(int argc, char *argv[]) {
   dariadb::utils::LogManager::start(log_ptr);
 
   std::cout << "Performance benchmark" << std::endl;
-  std::cout << "Writers count:" << dariadb_bench::total_threads_count << std::endl;
+  std::cout << "Writers count:" << benchmark_params.total_threads_count << std::endl;
 
   const std::string storage_path = "engine_benchmark_storage";
 
   parse_cmdline(argc, argv);
 
   if (readers_enable) {
-    std::cout << "Readers enable. count: " << dariadb_bench::total_readers_count
+    std::cout << "Readers enable. count: " << benchmark_params.total_readers_count
               << std::endl;
   }
   summary_info = std::make_unique<dariadb_bench::BenchmarkSummaryInfo>(strategy);
@@ -437,7 +451,7 @@ int main(int argc, char *argv[]) {
 
     start_time = dariadb::timeutil::current_time() -
                  (boost::posix_time::seconds(1).total_milliseconds() * 60 * 60 *
-                  dariadb_bench::hours_write_perid);
+                  benchmark_params.hours_write_perid);
     rw_benchmark(raw_ptr, start_time, all_id_set);
 
     auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
@@ -521,7 +535,7 @@ int main(int argc, char *argv[]) {
 
     { // compaction
       std::cout << "compaction..." << std::endl;
-      auto halfTime = dariadb::timeutil::from_days(1);
+	  auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
                 << std::endl;
       auto compaction_logic =
@@ -557,6 +571,9 @@ int main(int argc, char *argv[]) {
       throw std::logic_error("log_ptr->_calls.load()==0");
     }
 
+	std::cout << std::endl;
+    benchmark_params.print();
+	std::cout << "===" << std::endl;
     summary_info->print();
   }
 
