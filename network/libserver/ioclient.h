@@ -8,6 +8,7 @@
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/interfaces/icallbacks.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/query.h>
 #include <libserver/iclientmanager.h>
 #include <common/async_connection.h>
 #include <common/net_common.h>
@@ -38,6 +39,9 @@ struct IOClient {
     size_t pos;
     std::array<Meas, BUFFER_LENGTH> _buffer;
 
+    QueryInterval*qi;
+    QueryTimePoint*qp;
+
     ClientDataReader(IOClient *parent, QueryNumber query_num);
     ~ClientDataReader();
     void apply(const Meas &m) override;
@@ -64,8 +68,9 @@ struct IOClient {
   void sendError(QueryNumber query_num, const ERRORS &err);
 
   // data - queryInterval or QueryTimePoint
-  void readerAdd(const ReaderCallback_ptr &cdr, void *data);
+  void readerAdd(const ReaderCallback_ptr &cdr);
   void readerRemove(QueryNumber number);
+
   Time _last_query_time;
   socket_ptr sock;
   std::string host;
@@ -77,7 +82,7 @@ struct IOClient {
   std::shared_ptr<IReadCallback> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
 
-  std::map<QueryNumber, std::pair<ReaderCallback_ptr, void *>> _readers;
+  std::map<QueryNumber, ReaderCallback_ptr>  _readers;
   std::mutex _readers_lock;
 };
 

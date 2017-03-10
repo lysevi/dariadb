@@ -39,6 +39,8 @@ struct SubscribeCallback : public IReadCallback {
 };
 
 IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query_num) {
+    qi=nullptr;
+    qp=nullptr;
   _parent = parent;
   pos = 0;
   _query_num = query_num;
@@ -96,7 +98,14 @@ void IOClient::ClientDataReader::send_buffer() {
   }
 }
 
-IOClient::ClientDataReader::~ClientDataReader() {}
+IOClient::ClientDataReader::~ClientDataReader() {
+    if(qi!=nullptr){
+        delete qi;
+    }
+    if(qp!=nullptr){
+        delete qp;
+    }
+}
 
 IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
   subscribe_reader = nullptr;
@@ -124,8 +133,8 @@ IOClient::~IOClient() {
 
   for (auto kv : _readers) {
     logger_info("server: stop reader #", kv.first);
-    kv.second.first->cancel();
-    kv.second.first->wait();
+    kv.second->cancel();
+    kv.second->wait();
     this->readerRemove(kv.first);
   }
 }
@@ -371,7 +380,11 @@ void IOClient::readInterval(const NetData_ptr &d) {
               query_hdr->id, " id(", query_hdr->ids_count, ") [", from_str, ',', to_str,
               "]");
   auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
-  IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
+  IdArray all_ids;
+  all_ids.resize(query_hdr->ids_count);
+  for(size_t i=0;i<query_hdr->ids_count;++i){
+      all_ids[i]=ids_ptr[i];
+  }
 
   auto query_num = query_hdr->id;
 
@@ -382,7 +395,8 @@ void IOClient::readInterval(const NetData_ptr &d) {
     auto qi = new QueryInterval{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
 
     auto cdr = new ClientDataReader(this, query_num);
-    this->readerAdd(ReaderCallback_ptr(cdr), qi);
+    cdr->qi=qi;
+    this->readerAdd(ReaderCallback_ptr(cdr));
     env->storage->foreach (*qi, cdr);
   }
 }
@@ -398,11 +412,13 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
 
   auto query_num = query_hdr->id;
-  auto qi = new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
+  auto qp = new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(ReaderCallback_ptr(cdr), qi);
-  env->storage->foreach (*qi, cdr);
+  cdr->qp=qp;
+
+  readerAdd(ReaderCallback_ptr(cdr));
+  env->storage->foreach (*qp, cdr);
 }
 
 void IOClient::currentValue(const NetData_ptr &d) {
@@ -417,7 +433,7 @@ void IOClient::currentValue(const NetData_ptr &d) {
 
   auto result = env->storage->currentValue(all_ids, flag);
   auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(ReaderCallback_ptr(cdr), nullptr);
+  readerAdd(ReaderCallback_ptr(cdr));
   for (auto &v : result) {
     cdr->apply(v.second);
   }
@@ -441,11 +457,11 @@ void IOClient::subscribe(const NetData_ptr &d) {
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
 
-void IOClient::readerAdd(const ReaderCallback_ptr &cdr, void *data) {
+void IOClient::readerAdd(const ReaderCallback_ptr &cdr) {
   std::lock_guard<std::mutex> lg(_readers_lock);
   ClientDataReader *cdr_raw = dynamic_cast<ClientDataReader *>(cdr.get());
   ENSURE(cdr_raw != nullptr);
-  this->_readers.insert(std::make_pair(cdr_raw->_query_num, std::make_pair(cdr, data)));
+  this->_readers.insert(std::make_pair(cdr_raw->_query_num, cdr));
 }
 
 void IOClient::readerRemove(QueryNumber number) {
@@ -454,10 +470,6 @@ void IOClient::readerRemove(QueryNumber number) {
   if (fres == this->_readers.end()) {
     THROW_EXCEPTION("engien: readerRemove logic error");
   } else {
-    auto ptr = fres->second;
     this->_readers.erase(fres);
-    if (ptr.second != nullptr) {
-      delete ptr.second;
-    }
   }
 }
