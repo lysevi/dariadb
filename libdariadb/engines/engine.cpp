@@ -631,15 +631,15 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReadCallback * clbk) {
-	 /* auto r = intervalReader(q);
+	  auto r = intervalReader(q);
 	  for (auto id : q.ids) {
 		  auto fres = r.find(id);
 		  if (fres != r.end()) {
 			  fres->second->apply(clbk, q);
 		  }
 	  }
-	  clbk->is_end();*/
-    QueryInterval local_q = q;
+	  clbk->is_end();
+    /*QueryInterval local_q = q;
     local_q.ids.resize(1);
     for (auto id : q.ids) {
       local_q.ids[0] = id;
@@ -649,7 +649,7 @@ public:
         fres->second->apply(clbk, local_q);
       }
     }
-    clbk->is_end();
+    clbk->is_end();*/
   }
 
   void foreach (const QueryTimePoint &q, IReadCallback * clbk) {

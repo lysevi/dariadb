@@ -212,6 +212,20 @@ public:
   }
 
   Id2Cursor intervalReader(const QueryInterval &query) {
+    Id2CursorsList result;
+
+    AsyncTask at = [&query, this, &result](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+      this->callback_for_interval_readers(query, result);
+
+      return false;
+    };
+    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+    pm_async->wait();
+    return CursorWrapperFactory::colapseCursors(result);
+  }
+
+  void callback_for_interval_readers(const QueryInterval &query, Id2CursorsList &result) {
     auto pred = [&query](const IndexFooter &hdr) {
       auto interval_check(
           (hdr.stat.minTime >= query.from && hdr.stat.maxTime <= query.to) ||
@@ -230,29 +244,15 @@ public:
       }
       return false;
     };
+    auto page_list = pages_by_filter(std::function<bool(const IndexFooter &)>(pred));
 
-    Id2CursorsList result;
-    utils::async::Locker result_locker;
-
-    AsyncTask at = [&query, this, &result, &result_locker, pred](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      ChunkLinkList to_read;
-
-      auto page_list = pages_by_filter(std::function<bool(const IndexFooter &)>(pred));
-
-      for (auto pname : page_list) {
-        auto p = Page::open(pname);
-        auto sub_result = p->intervalReader(query);
-        for (auto kv : sub_result) {
-          result[kv.first].push_back(kv.second);
-        }
+    for (auto pname : page_list) {
+      auto p = Page::open(pname);
+      auto sub_result = p->intervalReader(query);
+      for (auto kv : sub_result) {
+        result[kv.first].push_back(kv.second);
       }
-
-      return false;
-    };
-    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-    pm_async->wait();
-    return CursorWrapperFactory::colapseCursors(result);
+    }
   }
 
   std::list<std::string> pages_by_filter(std::function<bool(const IndexFooter &)> pred) {

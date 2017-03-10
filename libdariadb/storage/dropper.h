@@ -29,6 +29,10 @@ public:
 
 private:
   void drop_wal_internal();
+
+  void drop_stage_read(std::string fname);
+  void drop_stage_sort(std::string fname, clock_t start_time, std::shared_ptr<MeasArray> ma);
+  void drop_stage_compress(std::string fname, clock_t start_time, std::shared_ptr<SplitedById> splited);
 private:
   mutable std::mutex _queue_locker;
   std::list<std::string> _files_queue;
