@@ -25,6 +25,7 @@ bool readonly = false;
 bool readall_enabled = false;
 bool dont_clean = false;
 bool use_shard = false;
+bool dont_repack = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
@@ -80,7 +81,8 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit),
       "allocation area limit  in megabytes when strategy=MEMORY");
   aos("use-shard", "shard some id per shards");
-  
+  aos("dont-repack", "do not run repack and compact");
+
   po::options_description writers("Writers params");
   auto aos_writers = writers.add_options();
   aos_writers("hours", po::value<size_t>(&benchmark_params.hours_write_perid)->default_value(benchmark_params.hours_write_perid),
@@ -106,8 +108,13 @@ void parse_cmdline(int argc, char *argv[]) {
   }
 
   if (vm.count("use-shard")) {
-    std::cout << use_shard << std::endl;
+    std::cout << "use shard" << std::endl;
     use_shard = true;
+  }
+
+  if (vm.count("dont-repack")) {
+	  std::cout << "dont repack" << std::endl;
+	  dont_repack = true;
   }
 
   if (vm.count("readonly")) {
@@ -478,7 +485,7 @@ int main(int argc, char *argv[]) {
 
     check_engine_state(settings, raw_ptr);
 
-    if (!readonly) {
+    if (!readonly && !dont_repack) {
       if (strategy != dariadb::STRATEGY::MEMORY && strategy != STRATEGY::CACHE) {
         size_t ccount = size_t(raw_ptr->description().wal_count);
         std::cout << "==> drop part wals to " << ccount << "..." << std::endl;
@@ -533,7 +540,7 @@ int main(int argc, char *argv[]) {
 
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
 
-    { // compaction
+    if(!dont_repack){ // compaction
       std::cout << "compaction..." << std::endl;
 	  auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)

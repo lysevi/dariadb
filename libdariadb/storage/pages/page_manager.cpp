@@ -540,8 +540,6 @@ public:
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
-    
-
     std::vector<Chunk *> tmp_buffer;
     tmp_buffer.resize(a.size());
 
