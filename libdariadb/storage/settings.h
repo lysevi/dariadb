@@ -105,6 +105,9 @@ public:
   // pages per level.
   Option<uint16_t> max_pages_in_level;
 
+  Option<size_t> threads_in_common; //threads count in pool 'COMMON'
+  Option<size_t> threads_in_diskio; //threads count in pool 'DISK_IO'
+
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
   std::string alias; // is set, used in log messages;
 protected:
