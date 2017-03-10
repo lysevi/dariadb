@@ -23,6 +23,7 @@ struct BenchmarkSummaryInfo {
   size_t page_repacked;
   double stat_time;
   double compaction_time;
+  double full_read_timeseries;
   dariadb::STRATEGY strategy;
 
   BenchmarkSummaryInfo(dariadb::STRATEGY _strategy) {
@@ -30,7 +31,8 @@ struct BenchmarkSummaryInfo {
     writed = size_t(0);
     page_repacked = size_t(0);
     write_speed = read_interval_speed = read_timepoint_speed = read_all_time = stat_time =
-        page_repack_time = foreach_read_all_time = compaction_time = 0.0;
+        full_read_timeseries = page_repack_time = foreach_read_all_time =
+            compaction_time = 0.0;
   }
 
   void print() {
@@ -42,6 +44,7 @@ struct BenchmarkSummaryInfo {
     std::cout << "read interval: " << read_interval_speed << " per/sec" << std::endl;
     std::cout << "stat: " << stat_time << " sec" << std::endl;
     std::cout << "read timepoint: " << read_timepoint_speed << " per/sec" << std::endl;
+    std::cout << "read timeseries: " << full_read_timeseries << " secs." << std::endl;
     std::cout << "read all: " << read_all_time << " secs." << std::endl;
     std::cout << "foreach all: " << foreach_read_all_time << " secs." << std::endl;
     std::cout << "compaction: " << compaction_time << " secs." << std::endl;
@@ -70,8 +73,8 @@ struct BenchmarkParams {
     std::cout << "writers: " << total_threads_count << std::endl;
     std::cout << "hours: " << hours_write_perid << std::endl;
     std::cout << "write frequency: " << writes_per_second << std::endl;
-	std::cout << "id count: " << id_count << std::endl;
-	std::cout << "readers: " << total_readers_count << std::endl;
+    std::cout << "id count: " << id_count << std::endl;
+    std::cout << "readers: " << total_readers_count << std::endl;
     std::cout << "id per thread: " << id_per_thread() << std::endl;
     std::cout << "values per time series: " << write_per_id_count() << std::endl;
     std::cout << "total writes: " << all_writes() << std::endl;
@@ -285,6 +288,41 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
     }
   }
 
+  {
+    if (!quiet) {
+      std::cout << "==> intervals foreach(full)..." << std::endl;
+    }
+
+    auto start = clock();
+    cur_id = 0;
+
+    size_t total_count = 0;
+    for (size_t i = 0; i < reads_count; i++) {
+      BenchCallback clbk;
+
+      Id2Times curval = interval_queries[i];
+      auto time_point1 = std::get<1>(curval);
+      auto time_point2 = std::get<2>(curval);
+      auto f = std::min(time_point1, time_point2);
+      auto t = std::max(time_point1, time_point2);
+      interval_list.push_back(std::tie(f, t));
+
+      current_ids[0] = std::get<0>(curval);
+      cur_id = (cur_id + 1) % random_ids.size();
+      auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
+      stor->foreach (qi, &clbk);
+      if (check_is_end) {
+        clbk.wait();
+      }
+      total_count += clbk.count;
+    }
+    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    summary_info->full_read_timeseries = elapsed;
+    if (!quiet) {
+      std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
+                << std::endl;
+    }
+  }
   {
     if (!quiet) {
       std::cout << "==> intervals reads..." << std::endl;
