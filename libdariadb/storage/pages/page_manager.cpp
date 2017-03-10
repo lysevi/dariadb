@@ -540,17 +540,40 @@ public:
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {
-    Page_Ptr res = nullptr;
-    std::string page_name = utils::fs::random_file_name(".page");
-    logger_info("engine", _settings->alias, ": write chunks to ", page_name);
-    std::string file_name =
-        dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res = Page::create(file_name, MIN_LEVEL, last_id, a, count);
-    _manifest->page_append(page_name);
-    last_id = res->footer.max_chunk_id;
+    
 
-    insert_pagedescr(page_name, Page::readIndexFooter(
-                                    PageIndex::index_name_from_page_name(file_name)));
+    std::vector<Chunk *> tmp_buffer;
+    tmp_buffer.resize(a.size());
+
+    int64_t left = (int64_t)a.size();
+    auto max_chunks = _settings->max_chunks_per_page.value();
+    size_t pos_in_a = 0;
+    while (left != 0) {
+      std::string page_name = utils::fs::random_file_name(".page");
+      logger_info("engine", _settings->alias, ": write chunks to ", page_name);
+      size_t to_write = 0;
+      if (max_chunks < left) {
+        to_write = max_chunks;
+        left -= to_write;
+      } else {
+        to_write = left;
+        left = 0;
+      }
+
+      std::string file_name =
+          dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
+
+      for (size_t i = 0; i < to_write; ++i) {
+        tmp_buffer[i] = a[pos_in_a++];
+      }
+
+      auto res = Page::create(file_name, MIN_LEVEL, last_id, tmp_buffer, to_write);
+      _manifest->page_append(page_name);
+      last_id = res->footer.max_chunk_id;
+
+      insert_pagedescr(page_name, Page::readIndexFooter(
+                                      PageIndex::index_name_from_page_name(file_name)));
+    }
   }
 
   void insert_pagedescr(std::string page_name, IndexFooter hdr) {

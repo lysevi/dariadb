@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
 
 BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
   const std::string storage_path = "testStorage";
-  const size_t chunk_size = 256;
+  const size_t chunk_size = 128;
 
   const dariadb::Time from = 0;
   const dariadb::Time to = from + 1000;
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(STRATEGY::MEMORY);
     settings->chunk_size.setValue(chunk_size);
-    settings->chunk_size.setValue(128);
+	settings->max_chunks_per_page.setValue(5);
     settings->memory_limit.setValue(50 * 1024);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 

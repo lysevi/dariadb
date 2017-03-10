@@ -4,6 +4,9 @@ v0.4.0
 - Less allocations in read queries.
 - Auto erase old values.
 - Magic numbers in page file.
+- Settings:
+  - max_chunks_per_page - maximum count chunks per page when write from memory storage.
+  - max_store_period - period, when old pages must be removed.
 
 v0.3.0
 =====

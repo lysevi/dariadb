@@ -93,6 +93,7 @@ public:
   Option<uint64_t> wal_file_size;  // measurements count in one file
   Option<uint64_t> wal_cache_size; // inner buffer size
 
+  Option<uint64_t> max_chunks_per_page; // work when drop from memstorage to pages.
   Option<uint32_t> chunk_size;
 
   Option<STRATEGY> strategy;

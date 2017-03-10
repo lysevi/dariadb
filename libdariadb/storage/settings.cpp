@@ -16,10 +16,12 @@ using json = nlohmann::json;
 const uint64_t WAL_CACHE_SIZE = 4096 / sizeof(dariadb::Meas) * 10;
 const uint64_t WAL_FILE_SIZE = (1024 * 1024) * 4 / sizeof(dariadb::Meas);
 const uint32_t CHUNK_SIZE = 1024;
+const uint64_t MAX_CHUNKS_PER_PAGE = 10*1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; // 100 mb
 
 const std::string c_page_store_period = "page_store_period";
 const std::string c_wal_file_size = "wal_file_size";
+const std::string c_chunks_per_page="chunks_per_page";
 const std::string c_wal_cache_size = "wal_cache_size";
 const std::string c_chunk_size = "chunk_size";
 const std::string c_strategy = "strategy";
@@ -56,6 +58,7 @@ Settings::Settings(const std::string &path_to_storage)
 	  max_store_period(this, c_page_store_period, MAX_TIME),
       wal_file_size(this, c_wal_file_size, WAL_FILE_SIZE),
       wal_cache_size(this, c_wal_cache_size, WAL_CACHE_SIZE),
+	  max_chunks_per_page(this, c_chunks_per_page, MAX_CHUNKS_PER_PAGE),
       chunk_size(this, c_chunk_size, CHUNK_SIZE),
       strategy(this, c_strategy, STRATEGY::COMPRESSED),
       memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
@@ -90,7 +93,7 @@ std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_pa
   using namespace dariadb::utils::async;
   std::vector<ThreadPool::Params> result{
       ThreadPool::Params{size_t(4), (ThreadKind)THREAD_KINDS::COMMON},
-      ThreadPool::Params{size_t(1), (ThreadKind)THREAD_KINDS::DISK_IO}};
+      ThreadPool::Params{size_t(2), (ThreadKind)THREAD_KINDS::DISK_IO}};
   return result;
 }
 
