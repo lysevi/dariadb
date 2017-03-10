@@ -139,23 +139,22 @@ public:
       _subscribe_notify.stop();
 
       this->flush();
-	 
-	  if (_memstorage != nullptr) {
+
+      if (_memstorage != nullptr) {
         _memstorage = nullptr;
       }
-      
-	  _wal_manager = nullptr;
-	  _dropper = nullptr;
 
-	  if (_thread_pool_owner) {
-		  ThreadManager::stop();
-	  }
+      _wal_manager = nullptr;
+      _dropper = nullptr;
+
+      if (_thread_pool_owner) {
+        ThreadManager::stop();
+      }
       _page_manager = nullptr;
       _manifest = nullptr;
-      
+
       _stoped = true;
 
-      
       lockfile_unlock();
     }
   }
@@ -632,11 +631,22 @@ public:
   }
 
   void foreach (const QueryInterval &q, IReadCallback * clbk) {
-    auto r = intervalReader(q);
+	 /* auto r = intervalReader(q);
+	  for (auto id : q.ids) {
+		  auto fres = r.find(id);
+		  if (fres != r.end()) {
+			  fres->second->apply(clbk, q);
+		  }
+	  }
+	  clbk->is_end();*/
+    QueryInterval local_q = q;
+    local_q.ids.resize(1);
     for (auto id : q.ids) {
+      local_q.ids[0] = id;
+      auto r = intervalReader(q);
       auto fres = r.find(id);
       if (fres != r.end()) {
-        fres->second->apply(clbk, q);
+        fres->second->apply(clbk, local_q);
       }
     }
     clbk->is_end();

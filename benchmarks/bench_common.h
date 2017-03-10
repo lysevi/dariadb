@@ -158,11 +158,11 @@ void thread_writer_rnd_stor(BenchmarkParams params, dariadb::Id id,
       }
     }
 
-    std::stringstream ss;
+   /* std::stringstream ss;
     for (auto id : ids) {
       ss << " " << id;
     }
-    dariadb::logger("*** thread #", id, " ids: ", ss.str());
+    dariadb::logger("*** thread #", id, " ids: ", ss.str());*/
   } catch (...) {
     std::cerr << "thread id=#" << id << " catch error!!!!" << std::endl;
   }
