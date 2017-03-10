@@ -546,7 +546,7 @@ public:
     tmp_buffer.resize(a.size());
 
     int64_t left = (int64_t)a.size();
-    auto max_chunks = _settings->max_chunks_per_page.value();
+    auto max_chunks = (int64_t)_settings->max_chunks_per_page.value();
     size_t pos_in_a = 0;
     while (left != 0) {
       std::string page_name = utils::fs::random_file_name(".page");
