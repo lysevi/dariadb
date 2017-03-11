@@ -60,9 +60,9 @@ void show_drop_info(dariadb::Engine *storage) {
   while (!stop_info) {
     auto queue_sizes = storage->description();
 
-    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
-                          queue_sizes.wal_count, " T:", queue_sizes.active_works, ")",
-                          "[a:", queue_sizes.dropper.wal, "]");
+    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count,
+                          " a:", queue_sizes.wal_count, " T:", queue_sizes.active_works,
+                          ")", "[a:", queue_sizes.dropper.wal, "]");
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
   }
 }
@@ -177,6 +177,13 @@ int main(int argc, char *argv[]) {
     std::thread info_thread(&show_drop_info, e.get());
     e->compress_all();
     e->flush();
+    while (true) {
+      auto d = e->description();
+      if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     e->stop();
     stop_info = true;
     info_thread.join();

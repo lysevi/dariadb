@@ -59,6 +59,7 @@ DropperDescription Dropper::description() const {
   std::lock_guard<std::mutex> lg(_queue_locker);
   DropperDescription result;
   result.wal = _files_queue.size();
+  result.active_works = _active_operations;
   return result;
 }
 

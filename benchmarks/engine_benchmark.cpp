@@ -85,12 +85,18 @@ void parse_cmdline(int argc, char *argv[]) {
 
   po::options_description writers("Writers params");
   auto aos_writers = writers.add_options();
-  aos_writers("hours", po::value<size_t>(&benchmark_params.hours_write_perid)->default_value(benchmark_params.hours_write_perid),
-	  "write interval in hours");
-  aos_writers("ids", po::value<size_t>(&benchmark_params.id_count)->default_value(benchmark_params.id_count),
-	  "total id count");
-  aos_writers("wthreads", po::value<size_t>(&benchmark_params.total_threads_count)->default_value(benchmark_params.total_threads_count),
-	  "write threads count");
+  aos_writers("hours",
+              po::value<size_t>(&benchmark_params.hours_write_perid)
+                  ->default_value(benchmark_params.hours_write_perid),
+              "write interval in hours");
+  aos_writers("ids",
+              po::value<size_t>(&benchmark_params.id_count)
+                  ->default_value(benchmark_params.id_count),
+              "total id count");
+  aos_writers("wthreads",
+              po::value<size_t>(&benchmark_params.total_threads_count)
+                  ->default_value(benchmark_params.total_threads_count),
+              "write threads count");
   desc.add(writers);
 
   po::variables_map vm;
@@ -113,8 +119,8 @@ void parse_cmdline(int argc, char *argv[]) {
   }
 
   if (vm.count("dont-repack")) {
-	  std::cout << "dont repack" << std::endl;
-	  dont_repack = true;
+    std::cout << "dont repack" << std::endl;
+    dont_repack = true;
   }
 
   if (vm.count("readonly")) {
@@ -407,9 +413,9 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(strategy);
-	/*settings->wal_file_size.setValue((1024 * 1024) * 32 / sizeof(dariadb::Meas));
-	settings->max_chunks_per_page.setValue(100 * 1024);
-	settings->threads_in_common.setValue(4);*/
+    /*settings->wal_file_size.setValue((1024 * 1024) * 32 / sizeof(dariadb::Meas));
+    settings->max_chunks_per_page.setValue(100 * 1024);
+    settings->threads_in_common.setValue(4);*/
     settings->save();
 
     if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) &&
@@ -498,6 +504,13 @@ int main(int argc, char *argv[]) {
         auto start = clock();
         raw_ptr->compress_all();
         raw_ptr->flush();
+        while (true) {
+          auto d = raw_ptr->description();
+          if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
+            break;
+          }
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
         auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
         stop_info = true;
         flush_info_thread.join();
@@ -543,9 +556,9 @@ int main(int argc, char *argv[]) {
 
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
 
-    if(!dont_repack){ // compaction
+    if (!dont_repack) { // compaction
       std::cout << "compaction..." << std::endl;
-	  auto halfTime = (max_time - start_time) / 2;
+      auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
                 << std::endl;
       auto compaction_logic =
@@ -581,9 +594,9 @@ int main(int argc, char *argv[]) {
       throw std::logic_error("log_ptr->_calls.load()==0");
     }
 
-	std::cout << std::endl;
+    std::cout << std::endl;
     benchmark_params.print();
-	std::cout << "===" << std::endl;
+    std::cout << "===" << std::endl;
     summary_info->print();
   }
 

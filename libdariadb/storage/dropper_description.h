@@ -7,7 +7,8 @@ namespace storage {
 
 struct DropperDescription {
   size_t wal;
-  DropperDescription() { wal = size_t(0); }
+  size_t active_works;
+  DropperDescription() { wal = active_works = size_t(0); }
 };
 }
 }
