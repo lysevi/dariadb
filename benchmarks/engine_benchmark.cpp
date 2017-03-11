@@ -503,14 +503,6 @@ int main(int argc, char *argv[]) {
 
         auto start = clock();
         raw_ptr->compress_all();
-        raw_ptr->flush();
-        while (true) {
-          auto d = raw_ptr->description();
-          if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
-            break;
-          }
-          std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
         auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
         stop_info = true;
         flush_info_thread.join();

@@ -747,6 +747,14 @@ public:
       _dropper->flush();
       _dropper->flush();
       this->flush();
+
+      while (true) {
+        auto d = description();
+        if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
     }
   }
   void fsck() {

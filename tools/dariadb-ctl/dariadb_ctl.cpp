@@ -177,13 +177,6 @@ int main(int argc, char *argv[]) {
     std::thread info_thread(&show_drop_info, e.get());
     e->compress_all();
     e->flush();
-    while (true) {
-      auto d = e->description();
-      if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
-        break;
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
     e->stop();
     stop_info = true;
     info_thread.join();
