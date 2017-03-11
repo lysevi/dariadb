@@ -272,6 +272,11 @@ public:
     std::list<std::string> result;
     for (auto hd : vec_res) {
       auto page_file_name = utils::fs::append_path(_settings->raw_path.value(), hd.path);
+#ifdef DOUBLE_CHECKS
+      if(!utils::fs::file_exists(page_file_name)){
+          THROW_EXCEPTION("page no exists ",page_file_name);
+      }
+#endif
       result.push_back(page_file_name);
     }
 #ifdef DEBUG
@@ -392,27 +397,54 @@ public:
   }
 
   static void erase(const std::string &storage_path, const std::string &fname) {
+      logger("pm: erase ",fname);
     auto full_file_name = utils::fs::append_path(storage_path, fname);
+    auto ifull_name=PageIndex::index_name_from_page_name(full_file_name);
     utils::fs::rm(full_file_name);
-    utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+    utils::fs::rm(ifull_name);
+    ENSURE(!utils::fs::file_exists(full_file_name));
+    ENSURE(!utils::fs::file_exists(ifull_name));
   }
 
   void erase_page(const std::string &full_file_name) {
+      logger("pm: erase ",full_file_name);
     auto fname = utils::fs::extract_filename(full_file_name);
+    auto ifull_name=PageIndex::index_name_from_page_name(full_file_name);
 
+#ifdef DOUBLE_CHECKS
+    auto pages_before=_file2footer.size();
+#endif
+    ENSURE(utils::fs::file_exists(full_file_name));
     _manifest->page_rm(fname);
-    utils::fs::rm(full_file_name);
-    utils::fs::rm(PageIndex::index_name_from_page_name(full_file_name));
+
     auto it = _file2footer.begin();
     for (; it != _file2footer.end(); ++it) {
+#ifdef DOUBLE_CHECKS
+        auto full_path=utils::fs::append_path(_settings->raw_path.value(),it->second.path);
+      if(!utils::fs::file_exists(full_path)){
+          THROW_EXCEPTION("page no exists ",full_path);
+      }
+#endif
       if (it->second.path == fname) {
         break;
       }
     }
     _file2footer.erase(it);
+
+    utils::fs::rm(full_file_name);
+    utils::fs::rm(ifull_name);
+
+    ENSURE(!utils::fs::file_exists(full_file_name));
+    ENSURE(!utils::fs::file_exists(ifull_name));
+
+#ifdef DOUBLE_CHECKS
+    auto pages_after=_file2footer.size();
+    ENSURE(pages_before>pages_after);
+#endif
   }
 
   void eraseOld(const Time t) {
+      logger("pm: erase old");
     auto page_list = pagesOlderThan(t);
     for (auto &p : page_list) {
       this->erase_page(p);
