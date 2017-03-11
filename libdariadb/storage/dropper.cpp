@@ -102,6 +102,9 @@ void Dropper::drop_wal_internal() {
       if (_stop) {
         break;
       }
+      if (_files_queue.empty()) {
+        continue;
+      }
       fname = _files_queue.front();
     }
     while (true) {

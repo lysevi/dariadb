@@ -761,7 +761,6 @@ public:
       return;
     }
     this->lock_storage();
-
     auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
     auto pages = _page_manager->pagesOlderThan(timepoint);
     if (pages.empty()) {
@@ -771,7 +770,7 @@ public:
       auto candidateToErase = pages.front();
       logger_info("engine", _settings->alias, ": eraseAction - rm ", candidateToErase);
       this->_page_manager->erase_page(candidateToErase);
-
+      logger_info("engine", _settings->alias, ": eraseAction - complete.");
       this->unlock_storage();
     }
   }
