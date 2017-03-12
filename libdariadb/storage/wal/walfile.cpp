@@ -83,6 +83,8 @@ public:
     open_to_append();
     std::fwrite(&value, sizeof(Meas), size_t(1), _file);
     std::fflush(_file);
+    _minTime = std::min(_minTime, value.time);
+    _maxTime = std::max(_maxTime, value.time);
     _writed++;
     return Status(1, 0);
   }
@@ -97,6 +99,11 @@ public:
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
     std::fwrite(&(*begin), sizeof(Meas), write_size, _file);
     std::fflush(_file);
+    for (auto it = begin; it != begin + write_size; ++it) {
+      auto value = *it;
+      _minTime = std::min(_minTime, value.time);
+      _maxTime = std::max(_maxTime, value.time);
+    }
     _writed += write_size;
     return Status(write_size, 0);
   }
@@ -238,7 +245,12 @@ public:
     return sub_res;
   }
 
+  dariadb::Time _minTime = MAX_TIME;
+  dariadb::Time _maxTime = MIN_TIME;
   dariadb::Time minTime() {
+    if (_minTime != MAX_TIME) {
+      return _minTime;
+    }
     open_to_read();
 
     dariadb::Time result = dariadb::MAX_TIME;
@@ -256,6 +268,9 @@ public:
   }
 
   dariadb::Time maxTime() {
+    if (_maxTime != MIN_TIME) {
+      return _maxTime;
+    }
     open_to_read();
 
     dariadb::Time result = dariadb::MIN_TIME;

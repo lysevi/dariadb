@@ -68,6 +68,12 @@ private:
   std::set<std::string> _files_send_to_drop;
   EngineEnvironment_ptr _env;
   Settings *_settings;
+  struct TimeMinMax{
+	  Time minTime;
+	  Time maxTime;
+  };
+  std::unordered_map<std::string, TimeMinMax> _file2minmax;
+  std::mutex _file2mm_locker;
 };
 }
 }
