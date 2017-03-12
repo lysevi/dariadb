@@ -39,8 +39,8 @@ struct SubscribeCallback : public IReadCallback {
 };
 
 IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query_num) {
-    qi=nullptr;
-    qp=nullptr;
+    linked_query_interval=nullptr;
+    linked_query_point=nullptr;
   _parent = parent;
   pos = 0;
   _query_num = query_num;
@@ -99,11 +99,11 @@ void IOClient::ClientDataReader::send_buffer() {
 }
 
 IOClient::ClientDataReader::~ClientDataReader() {
-    if(qi!=nullptr){
-        delete qi;
+    if(linked_query_interval!=nullptr){
+        delete linked_query_interval;
     }
-    if(qp!=nullptr){
-        delete qp;
+    if(linked_query_point!=nullptr){
+        delete linked_query_point;
     }
 }
 
@@ -395,7 +395,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
     auto qi = new QueryInterval{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
 
     auto cdr = new ClientDataReader(this, query_num);
-    cdr->qi=qi;
+    cdr->linked_query_interval=qi;
     this->readerAdd(ReaderCallback_ptr(cdr));
     env->storage->foreach (*qi, cdr);
   }
@@ -415,7 +415,7 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
   auto qp = new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
   auto cdr = new ClientDataReader(this, query_num);
-  cdr->qp=qp;
+  cdr->linked_query_point=qp;
 
   readerAdd(ReaderCallback_ptr(cdr));
   env->storage->foreach (*qp, cdr);

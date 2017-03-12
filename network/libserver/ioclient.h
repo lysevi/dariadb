@@ -39,8 +39,8 @@ struct IOClient {
     size_t pos;
     std::array<Meas, BUFFER_LENGTH> _buffer;
 
-    QueryInterval*qi;
-    QueryTimePoint*qp;
+    QueryInterval*linked_query_interval;
+    QueryTimePoint*linked_query_point;
 
     ClientDataReader(IOClient *parent, QueryNumber query_num);
     ~ClientDataReader();
