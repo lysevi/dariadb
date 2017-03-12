@@ -649,12 +649,15 @@ public:
     clbk->is_end();*/
 
     for (auto id : q.ids) {
+      auto start_time = clock();
       local_q.ids[0] = id;
       auto r = intervalReader(local_q);
       auto fres = r.find(id);
       if (fres != r.end()) {
         fres->second->apply(clbk, local_q);
       }
+      auto elapsed_time = (((float)clock() - start_time) / CLOCKS_PER_SEC);
+      //logger("foreach: #", id, ": elapsed ", elapsed_time, "s");
     }
     clbk->is_end();
   }
