@@ -15,8 +15,8 @@ ADD_BENCHARK(compression_benchmark compression_benchmark.cpp)
 ADD_BENCHARK(engine_benchmark engine_benchmark.cpp)
 
 if(ENABLE_SERVER)
-ADD_BENCHARK(network_benchmark network_benchmark.cpp)
-TARGET_LINK_LIBRARIES(network_benchmark ${DARIADB_CLIENT_LIBS} dariadb-server)
+  ADD_BENCHARK(network_benchmark network_benchmark.cpp)
+  TARGET_LINK_LIBRARIES(network_benchmark ${DARIADB_CLIENT_LIBS} dariadb-server)
 endif(ENABLE_SERVER)
 
 macro(ADD_PERF_TEST name)
