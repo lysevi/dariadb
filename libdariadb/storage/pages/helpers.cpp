@@ -34,10 +34,10 @@ bool have_overlap(const std::vector<ChunkLink> &links) {
   return false;
 }
 
-std::list<HdrAndBuffer> compressValues(const std::map<Id, MeasArray> &to_compress,
+std::shared_ptr<std::list<HdrAndBuffer>> compressValues(const std::map<Id, MeasArray> &to_compress,
                                        PageFooter &phdr, uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
-  std::list<HdrAndBuffer> results;
+  auto results = std::make_shared<std::list<HdrAndBuffer>>();
   utils::async::Locker result_locker;
   std::list<utils::async::TaskResult_Ptr> async_compressions;
   for (auto &kv : to_compress) {
@@ -75,7 +75,7 @@ std::list<HdrAndBuffer> compressValues(const std::map<Id, MeasArray> &to_compres
         subres.hdr = hdr;
         subres.buffer = buffer_ptr;
 
-        results.push_back(subres);
+        results->push_back(subres);
         result_locker.unlock();
       }
       return false;

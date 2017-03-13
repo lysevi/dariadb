@@ -215,15 +215,19 @@ void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
     auto pm = _page_manager.get();
     auto am = _wal_manager.get();
 
-    pm->append_async(page_fname, *splited.get());
-    am->erase(fname);
-    auto end = clock();
-    auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+    on_create_complete_callback callback = [this, fname, start_time,
+                                            am](const Page_Ptr &p) {
+      am->erase(fname);
+      auto end = clock();
+      auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
-    logger_info("engine", _settings->alias, ": compressing ", fname,
-                " done. elapsed time - ", elapsed);
-    ENSURE(_active_operations == 1);
-    --_active_operations;
+      logger_info("engine", _settings->alias, ": compressing ", fname,
+                  " done. elapsed time - ", elapsed);
+      ENSURE(_active_operations == 1);
+      --_active_operations;
+    };
+    pm->append_async(page_fname, *splited.get(), callback);
+
   } catch (...) {
     _state = DROPPER_STATE::ERROR;
     --_active_operations;

@@ -84,13 +84,20 @@ Page::~Page() {
   _index = nullptr;
 }
 
-Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                      uint32_t max_chunk_size, const SplitedById &to_compress/*, on_create_complete_callback on_complete*/) {
+struct page_create_write_description {
+  PageFooter phdr;
+  IndexFooter ihdr;
+  page_create_write_description(uint16_t lvl, uint64_t chunk_id)
+      : phdr(lvl, chunk_id), ihdr() {}
+};
 
+void Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+                  uint32_t max_chunk_size, const SplitedById &to_compress,
+                  on_create_complete_callback on_complete) {
+  using namespace dariadb::utils::async;
   PageFooter phdr(lvl, chunk_id);
 
-  std::list<PageInner::HdrAndBuffer> compressed_results =
-      PageInner::compressValues(to_compress, phdr, max_chunk_size);
+  auto compressed_results = PageInner::compressValues(to_compress, phdr, max_chunk_size);
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
     THROW_EXCEPTION("file is null");
@@ -104,21 +111,32 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
     THROW_EXCEPTION("can`t open file ", file_name);
   }
 
-  for (auto v : compressed_results) {
-	  std::list<PageInner::HdrAndBuffer> subresult;
-	  subresult.push_back(v);
-	  auto page_size =
-		  PageInner::writeToFile(file, index_file, phdr, ihdr, subresult, phdr.filesize);
-	  phdr.filesize = page_size;
-  }
-  ihdr.level = phdr.level;
-  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic)) == 0);
-  std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
-  std::fclose(file);
+  auto d = std::make_shared<page_create_write_description>(0, 0);
+  d->phdr = phdr;
 
-  std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
-  std::fclose(index_file);
-  return open(file_name, phdr);
+  AsyncTask at = [compressed_results, file, index_file, d, file_name,
+                  on_complete](const ThreadInfo &ti) {
+    if (!compressed_results->empty()) {
+      std::list<PageInner::HdrAndBuffer> subresult;
+      subresult.push_back(compressed_results->front());
+      compressed_results->pop_front();
+      auto page_size = PageInner::writeToFile(file, index_file, d->phdr, d->ihdr,
+                                              subresult, d->phdr.filesize);
+      d->phdr.filesize = page_size;
+      return true;
+    }
+    d->ihdr.level = d->phdr.level;
+    ENSURE(memcmp(&d->phdr.stat, &d->ihdr.stat, sizeof(Statistic)) == 0);
+    std::fwrite((char *)&d->phdr, sizeof(PageFooter), 1, file);
+    std::fclose(file);
+
+    std::fwrite(&d->ihdr, sizeof(IndexFooter), 1, index_file);
+    std::fclose(index_file);
+    auto result = open(file_name, d->phdr);
+    on_complete(result);
+    return false;
+  };
+  ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 }
 
 Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
@@ -220,7 +238,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
             PageInner::compressValues(all_values, phdr, max_chunk_size);
 
         auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
-                                                compressed_results, phdr.filesize);
+                                                *compressed_results, phdr.filesize);
         phdr.filesize = page_size;
       }
     }

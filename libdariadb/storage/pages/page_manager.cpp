@@ -273,8 +273,8 @@ public:
     for (auto hd : vec_res) {
       auto page_file_name = utils::fs::append_path(_settings->raw_path.value(), hd.path);
 #ifdef DOUBLE_CHECKS
-      if(!utils::fs::file_exists(page_file_name)){
-          THROW_EXCEPTION("page no exists ",page_file_name);
+      if (!utils::fs::file_exists(page_file_name)) {
+        THROW_EXCEPTION("page no exists ", page_file_name);
       }
 #endif
       result.push_back(page_file_name);
@@ -378,7 +378,8 @@ public:
   }
 
   // from wall
-  void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma) {
+  void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma,
+                    on_create_complete_callback callback) {
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
@@ -388,18 +389,24 @@ public:
     std::string page_name = file_prefix + PAGE_FILE_EXT;
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-	res = Page::create(file_name, MIN_LEVEL, last_id, _settings->chunk_size.value(), ma);
-    _manifest->page_append(page_name);
-    last_id = res->footer.max_chunk_id;
+    on_create_complete_callback complete_callback = [this, page_name, file_name,
+                                                     callback](const Page_Ptr &res) {
+      _manifest->page_append(page_name);
+      last_id = res->footer.max_chunk_id;
 
-    insert_pagedescr(page_name, Page::readIndexFooter(
-                                    PageIndex::index_name_from_page_name(file_name)));
+      auto index_fname = PageIndex::index_name_from_page_name(file_name);
+      auto index_footer = Page::readIndexFooter(index_fname);
+      insert_pagedescr(page_name, index_footer);
+      callback(res);
+    };
+    Page::create(file_name, MIN_LEVEL, last_id, _settings->chunk_size.value(), ma,
+                 complete_callback);
   }
 
   static void erase(const std::string &storage_path, const std::string &fname) {
-      logger("pm: erase ",fname);
+    logger("pm: erase ", fname);
     auto full_file_name = utils::fs::append_path(storage_path, fname);
-    auto ifull_name=PageIndex::index_name_from_page_name(full_file_name);
+    auto ifull_name = PageIndex::index_name_from_page_name(full_file_name);
     utils::fs::rm(full_file_name);
     utils::fs::rm(ifull_name);
     ENSURE(!utils::fs::file_exists(full_file_name));
@@ -407,12 +414,12 @@ public:
   }
 
   void erase_page(const std::string &full_file_name) {
-      logger("pm: erase ",full_file_name);
+    logger("pm: erase ", full_file_name);
     auto fname = utils::fs::extract_filename(full_file_name);
-    auto ifull_name=PageIndex::index_name_from_page_name(full_file_name);
+    auto ifull_name = PageIndex::index_name_from_page_name(full_file_name);
 
 #ifdef DOUBLE_CHECKS
-    auto pages_before=_file2footer.size();
+    auto pages_before = _file2footer.size();
 #endif
     ENSURE(utils::fs::file_exists(full_file_name));
     _manifest->page_rm(fname);
@@ -420,9 +427,10 @@ public:
     auto it = _file2footer.begin();
     for (; it != _file2footer.end(); ++it) {
 #ifdef DOUBLE_CHECKS
-        auto full_path=utils::fs::append_path(_settings->raw_path.value(),it->second.path);
-      if(!utils::fs::file_exists(full_path)){
-          THROW_EXCEPTION("page no exists ",full_path);
+      auto full_path =
+          utils::fs::append_path(_settings->raw_path.value(), it->second.path);
+      if (!utils::fs::file_exists(full_path)) {
+        THROW_EXCEPTION("page no exists ", full_path);
       }
 #endif
       if (it->second.path == fname) {
@@ -438,13 +446,13 @@ public:
     ENSURE(!utils::fs::file_exists(ifull_name));
 
 #ifdef DOUBLE_CHECKS
-    auto pages_after=_file2footer.size();
-    ENSURE(pages_before>pages_after);
+    auto pages_after = _file2footer.size();
+    ENSURE(pages_before > pages_after);
 #endif
   }
 
   void eraseOld(const Time t) {
-      logger("pm: erase old");
+    logger("pm: erase old");
     auto page_list = pagesOlderThan(t);
     for (auto &p : page_list) {
       this->erase_page(p);
@@ -692,8 +700,10 @@ dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
 }
 
-void PageManager::append_async(const std::string &file_prefix, const dariadb::SplitedById &ma) {
-  return impl->append_async(file_prefix, ma);
+void PageManager::append_async(const std::string &file_prefix,
+                               const dariadb::SplitedById &ma,
+                               on_create_complete_callback callback) {
+  return impl->append_async(file_prefix, ma, callback);
 }
 void PageManager::fsck() {
   return impl->fsck();
