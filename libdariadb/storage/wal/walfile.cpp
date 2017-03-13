@@ -272,7 +272,10 @@ public:
 
     auto ma = std::make_shared<MeasArray>(_writed);
     auto raw = ma.get();
-    fread(raw->data(), sizeof(Meas), _writed, _file);
+    auto result = fread(raw->data(), sizeof(Meas), _writed, _file);
+    if (result < _writed) {
+      THROW_EXCEPTION("result < _writed");
+    }
     std::fclose(_file);
     _file = nullptr;
     return ma;

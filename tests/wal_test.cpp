@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <atomic>
 #include <cassert>
+#include <iostream>
 #include <map>
 #include <thread>
 
@@ -46,6 +47,7 @@ public:
 };
 
 BOOST_AUTO_TEST_CASE(WalInitTest) {
+  std::cout << "WalInitTest" << std::endl;
   const size_t block_size = 1000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -134,6 +136,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
 }
 
 BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
+  std::cout << "WALFileCommonTest" << std::endl;
   const size_t block_size = 10000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -168,6 +171,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
 }
 
 BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
+  std::cout << "WalManager_CommonTest" << std::endl;
   const std::string storagePath = "testStorage";
   const size_t max_size = 150;
   const dariadb::Time from = 0;
