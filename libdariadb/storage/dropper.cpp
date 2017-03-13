@@ -65,7 +65,7 @@ DropperDescription Dropper::description() const {
 
 void Dropper::dropWAL(const std::string &fname) {
   std::lock_guard<std::mutex> lg(_queue_locker);
-  if (std::count(_files_queue.begin(), _files_queue.end(), fname)) {
+  if (std::find(_files_queue.begin(), _files_queue.end(), fname) != _files_queue.end()) {
     return;
   }
   auto storage_path = _settings->raw_path.value();

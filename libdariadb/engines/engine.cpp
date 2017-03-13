@@ -384,7 +384,7 @@ public:
       if (ids.size() == 0) {
         ids_check = true;
       } else {
-        if (std::count(ids.begin(), ids.end(), kv.first)) {
+        if (std::find(ids.begin(), ids.end(), kv.first)!=ids.end()) {
           ids_check = true;
         }
       }
