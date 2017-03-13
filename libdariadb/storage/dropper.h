@@ -13,6 +13,8 @@
 namespace dariadb {
 namespace storage {
 
+enum class DROPPER_STATE { OK, ERROR };
+
 class Dropper : public dariadb::IWALDropper {
 public:
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
@@ -31,8 +33,11 @@ private:
   void drop_wal_internal();
 
   void drop_stage_read(std::string fname);
-  void drop_stage_sort(std::string fname, clock_t start_time, std::shared_ptr<MeasArray> ma);
-  void drop_stage_compress(std::string fname, clock_t start_time, std::shared_ptr<SplitedById> splited);
+  void drop_stage_sort(std::string fname, clock_t start_time,
+                       std::shared_ptr<MeasArray> ma);
+  void drop_stage_compress(std::string fname, clock_t start_time,
+                           std::shared_ptr<SplitedById> splited);
+
 private:
   mutable std::mutex _queue_locker;
   std::list<std::string> _files_queue;
@@ -47,6 +52,7 @@ private:
   std::mutex _dropper_lock;
   std::condition_variable _dropper_cond_var;
   int _active_operations;
+  DROPPER_STATE _state;
 };
 }
 }

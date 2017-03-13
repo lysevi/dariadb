@@ -122,12 +122,14 @@ void Dropper::drop_wal_internal() {
     }
     ENSURE(_active_operations == 0);
     ++_active_operations;
+    _state = DROPPER_STATE::OK;
     AsyncTask at = [fname, this](const ThreadInfo &ti) {
       try {
         TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
         ENSURE(_active_operations == 1);
         this->drop_stage_read(fname);
       } catch (std::exception &ex) {
+        _state = DROPPER_STATE::ERROR;
         THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
       }
       return false;
@@ -135,12 +137,14 @@ void Dropper::drop_wal_internal() {
 
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(at, TASK_PRIORITY::DEFAULT));
-    while (_active_operations != size_t(0)) {
+    while (_active_operations != size_t(0) && !_stop) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    std::lock_guard<std::mutex> lg(_queue_locker);
-    _files_queue.pop_front();
-    _dropper_lock.unlock();
+    if (_state != DROPPER_STATE::ERROR) {
+      std::lock_guard<std::mutex> lg(_queue_locker);
+      _files_queue.pop_front();
+      _dropper_lock.unlock();
+    }
   }
   _is_stoped = true;
 }
@@ -175,6 +179,7 @@ void Dropper::drop_stage_read(std::string fname) {
     ThreadManager::instance()->post(THREAD_KINDS::COMMON,
                                     AT_PRIORITY(sort_at, TASK_PRIORITY::DEFAULT));
   } catch (...) {
+    _state = DROPPER_STATE::ERROR;
     --_active_operations;
     throw;
   }
@@ -195,6 +200,7 @@ void Dropper::drop_stage_sort(std::string fname, clock_t start_time,
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(write_at, TASK_PRIORITY::DEFAULT));
   } catch (...) {
+    _state = DROPPER_STATE::ERROR;
     --_active_operations;
     throw;
   }
@@ -219,6 +225,7 @@ void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
     ENSURE(_active_operations == 1);
     --_active_operations;
   } catch (...) {
+    _state = DROPPER_STATE::ERROR;
     --_active_operations;
     throw;
   }
