@@ -215,7 +215,7 @@ void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
     auto pm = _page_manager.get();
     auto am = _wal_manager.get();
 
-    pm->append(page_fname, *splited.get());
+    pm->append_async(page_fname, *splited.get());
     am->erase(fname);
     auto end = clock();
     auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;

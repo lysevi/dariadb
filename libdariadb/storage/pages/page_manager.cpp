@@ -378,7 +378,7 @@ public:
   }
 
   // from wall
-  void append(const std::string &file_prefix, const dariadb::SplitedById &ma) {
+  void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma) {
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
@@ -388,7 +388,7 @@ public:
     std::string page_name = file_prefix + PAGE_FILE_EXT;
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
-    res = Page::create(file_name, MIN_LEVEL, last_id, _settings->chunk_size.value(), ma);
+	res = Page::create(file_name, MIN_LEVEL, last_id, _settings->chunk_size.value(), ma);
     _manifest->page_append(page_name);
     last_id = res->footer.max_chunk_id;
 
@@ -692,8 +692,8 @@ dariadb::Time PageManager::maxTime() {
   return impl->maxTime();
 }
 
-void PageManager::append(const std::string &file_prefix, const dariadb::SplitedById &ma) {
-  return impl->append(file_prefix, ma);
+void PageManager::append_async(const std::string &file_prefix, const dariadb::SplitedById &ma) {
+  return impl->append_async(file_prefix, ma);
 }
 void PageManager::fsck() {
   return impl->fsck();

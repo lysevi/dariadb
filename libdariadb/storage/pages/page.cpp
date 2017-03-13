@@ -85,7 +85,7 @@ Page::~Page() {
 }
 
 Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                      uint32_t max_chunk_size, const SplitedById &to_compress) {
+                      uint32_t max_chunk_size, const SplitedById &to_compress/*, on_create_complete_callback on_complete*/) {
 
   PageFooter phdr(lvl, chunk_id);
 
@@ -104,9 +104,13 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
     THROW_EXCEPTION("can`t open file ", file_name);
   }
 
-  auto page_size =
-      PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
-  phdr.filesize = page_size;
+  for (auto v : compressed_results) {
+	  std::list<PageInner::HdrAndBuffer> subresult;
+	  subresult.push_back(v);
+	  auto page_size =
+		  PageInner::writeToFile(file, index_file, phdr, ihdr, subresult, phdr.filesize);
+	  phdr.filesize = page_size;
+  }
   ihdr.level = phdr.level;
   ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic)) == 0);
   std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
