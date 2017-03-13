@@ -56,7 +56,7 @@ public:
     count = 0;
     is_end_called = false;
   }
-  void apply(const dariadb::Meas &) override { count++; }
+  void apply(const dariadb::Meas &m) override { count++; }
   void is_end() override {
     is_end_called = true;
     IReadCallback::is_end();
@@ -299,7 +299,6 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
   if (readonly) {
     start_time = Time(0);
   }
-
   BenchCallback clbk;
 
   QueryInterval qi{IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
