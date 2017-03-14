@@ -212,12 +212,9 @@ void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
     ENSURE(_active_operations == 1);
     auto without_path = fs::extract_filename(fname);
     auto page_fname = fs::filename(without_path);
-    auto pm = _page_manager.get();
-    auto am = _wal_manager.get();
 
-    on_create_complete_callback callback = [this, fname, start_time,
-                                            am](const Page_Ptr &p) {
-      am->erase(fname);
+    on_create_complete_callback callback = [this, fname, start_time](const Page_Ptr &) {
+      this->_wal_manager->erase(fname);
       auto end = clock();
       auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
@@ -226,7 +223,8 @@ void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
       ENSURE(_active_operations == 1);
       --_active_operations;
     };
-    pm->append_async(page_fname, *splited.get(), callback);
+
+    _page_manager->append_async(page_fname, *splited.get(), callback);
 
   } catch (...) {
     _state = DROPPER_STATE::ERROR;

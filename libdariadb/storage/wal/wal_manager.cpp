@@ -257,21 +257,8 @@ void WALManager::intervalReader_async_logic(const std::list<std::string> &files,
                                             Id2CursorsList &readers_list,
                                             utils::async::Locker &readers_locker) {
   for (auto filename : files) {
-    auto min_max_iter = this->_file2minmax.find(filename);
-    if (min_max_iter != this->_file2minmax.end() && min_max_iter->second.minTime > q.to) {
+    if (!file_in_query(filename, q)) {
       continue;
-    }
-    if (min_max_iter != this->_file2minmax.end()) {
-      bool bloom_result = false;
-      for (auto id : q.ids) {
-        bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
-        if (bloom_result) {
-          break;
-        }
-      }
-      if (!bloom_result) {
-        continue;
-      }
     }
     auto wal = WALFile::open(_env, filename, true);
 
@@ -338,22 +325,14 @@ Statistic WALManager::stat(const Id id, Time from, Time to) {
   auto files = wal_files();
 
   if (!files.empty()) {
-    auto env = _env;
-    AsyncTask at = [files, &result, id, from, to, env, this](const ThreadInfo &ti) {
+    AsyncTask at = [files, &result, id, from, to, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+      QueryInterval qi({id}, dariadb::Flag(), from, to);
       for (auto filename : files) {
-        auto min_max_iter = this->_file2minmax.find(filename);
-        if (min_max_iter != this->_file2minmax.end() &&
-            min_max_iter->second.minTime > to) {
+        if (!this->file_in_query(filename, qi)) {
           continue;
         }
-        if (min_max_iter != this->_file2minmax.end()) {
-          bool bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
-          if (!bloom_result) {
-            continue;
-          }
-        }
-        auto wal = WALFile::open(env, filename, true);
+        auto wal = WALFile::open(this->_env, filename, true);
 
         auto st = wal->stat(id, from, to);
         result.update(st);
@@ -398,22 +377,8 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
     for (auto filename : files) {
-      auto min_max_iter = this->_file2minmax.find(filename);
-      if (min_max_iter != this->_file2minmax.end() &&
-          min_max_iter->second.minTime > query.time_point) {
+      if (!this->file_in_query(filename, query)) {
         continue;
-      }
-      if (min_max_iter != this->_file2minmax.end()) {
-        bool bloom_result = false;
-        for (auto id : query.ids) {
-          bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
-          if (bloom_result) {
-            break;
-          }
-        }
-        if (!bloom_result) {
-          continue;
-        }
       }
       auto wal = WALFile::open(env, filename, true);
       results.push_back(wal->readTimePoint(query));
@@ -576,4 +541,49 @@ Id2MinMax WALManager::loadMinMax() {
     ++pos;
   }
   return result;
+}
+
+bool WALManager::file_in_query(const std::string &filename, const QueryInterval &q) {
+  std::lock_guard<std::mutex> lg(_file2mm_locker);
+  auto min_max_iter = this->_file2minmax.find(filename);
+  if (min_max_iter == this->_file2minmax.end()) {
+    return true;
+  }
+  bool intevalCheck =
+	  utils::inInterval(min_max_iter->second.minTime, min_max_iter->second.maxTime, q.from)
+	  || utils::inInterval(min_max_iter->second.minTime, min_max_iter->second.maxTime, q.to)
+	  || utils::inInterval(q.from, q.to, min_max_iter->second.minTime)
+	  || utils::inInterval(q.from, q.to, min_max_iter->second.maxTime);
+  if (!intevalCheck) {
+    return false;
+  }
+  for (auto id : q.ids) {
+    bool bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
+    if (bloom_result) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool WALManager::file_in_query(const std::string &filename, const QueryTimePoint &q) {
+  std::lock_guard<std::mutex> lg(_file2mm_locker);
+  auto min_max_iter = this->_file2minmax.find(filename);
+  if (min_max_iter == this->_file2minmax.end()) {
+    return true;
+  }
+  if (min_max_iter != this->_file2minmax.end() &&
+      min_max_iter->second.minTime > q.time_point) {
+    return false;
+  }
+  if (min_max_iter != this->_file2minmax.end()) {
+    bool bloom_result = false;
+    for (auto id : q.ids) {
+      bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
+      if (bloom_result) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
