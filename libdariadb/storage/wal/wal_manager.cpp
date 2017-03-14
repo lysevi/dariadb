@@ -250,6 +250,29 @@ bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
+void WALManager::intervalReader_async_logic(const std::list<std::string> &files,
+                                            const QueryInterval &q,
+                                            Id2CursorsList &readers_list,
+                                            utils::async::Locker &readers_locker) {
+  for (auto filename : files) {
+    auto min_max_iter = this->_file2minmax.find(filename);
+
+    if (min_max_iter != this->_file2minmax.end() && min_max_iter->second.minTime > q.to) {
+      continue;
+    }
+    auto wal = WALFile::open(_env, filename, true);
+
+    auto rdr_map = wal->intervalReader(q);
+    if (rdr_map.empty()) {
+      continue;
+    }
+    for (auto kv : rdr_map) {
+      std::lock_guard<utils::async::Locker> lg(readers_locker);
+      readers_list[kv.first].push_back(kv.second);
+    }
+  }
+}
+
 Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
   std::lock_guard<std::mutex> lg(_locker);
   Id2CursorsList readers_list;
@@ -258,28 +281,11 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
   auto files = wal_files();
 
   if (!files.empty()) {
-    auto env = _env;
-    AsyncTask at = [files, &q, env, &readers_list, &readers_locker,
+
+    AsyncTask at = [files, &q, &readers_list, &readers_locker,
                     this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      for (auto filename : files) {
-        auto min_max_iter = this->_file2minmax.find(filename);
-
-        if (min_max_iter != this->_file2minmax.end() &&
-            min_max_iter->second.minTime > q.to) {
-          continue;
-        }
-        auto wal = WALFile::open(env, filename, true);
-
-        auto rdr_map = wal->intervalReader(q);
-        if (rdr_map.empty()) {
-          continue;
-        }
-        for (auto kv : rdr_map) {
-          std::lock_guard<utils::async::Locker> lg(readers_locker);
-          readers_list[kv.first].push_back(kv.second);
-        }
-      }
+      this->intervalReader_async_logic(files, q, readers_list, readers_locker);
       return false;
     };
 
@@ -502,7 +508,7 @@ size_t WALManager::filesCount() const {
 }
 
 void WALManager::erase(const std::string &fname) {
-	std::lock_guard<std::mutex> lg(_file2mm_locker);
+  std::lock_guard<std::mutex> lg(_file2mm_locker);
   auto full_path = utils::fs::append_path(_settings->raw_path.value(), fname);
   _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_rm(fname);
   _file2minmax.erase(full_path);
