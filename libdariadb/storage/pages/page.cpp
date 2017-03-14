@@ -91,6 +91,40 @@ struct page_create_write_description {
       : phdr(lvl, chunk_id), ihdr() {}
 };
 
+bool create_write_logic(
+    std::shared_ptr<std::list<PageInner::HdrAndBuffer>> compressed_results, FILE *file,
+    FILE *index_file, std::shared_ptr<page_create_write_description> d,
+    const std::string &file_name, on_create_complete_callback on_complete) {
+  if (!compressed_results->empty()) {
+    std::list<PageInner::HdrAndBuffer> subresult;
+    for (size_t i = 0; i < 10; ++i) {
+      if (compressed_results->empty()) {
+        break;
+      }
+      subresult.push_back(compressed_results->front());
+      compressed_results->pop_front();
+    }
+    if (!subresult.empty()) {
+      auto page_size = PageInner::writeToFile(file, index_file, d->phdr, d->ihdr,
+                                              subresult, d->phdr.filesize);
+      d->phdr.filesize = page_size;
+    }
+    if (!compressed_results->empty()) {
+      return true;
+    }
+  }
+  d->ihdr.level = d->phdr.level;
+  ENSURE(memcmp(&d->phdr.stat, &d->ihdr.stat, sizeof(Statistic)) == 0);
+  std::fwrite((char *)&d->phdr, sizeof(PageFooter), 1, file);
+  std::fclose(file);
+
+  std::fwrite(&d->ihdr, sizeof(IndexFooter), 1, index_file);
+  std::fclose(index_file);
+  auto result = Page::open(file_name, d->phdr);
+  on_complete(result);
+  return false;
+}
+
 void Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                   uint32_t max_chunk_size, const SplitedById &to_compress,
                   on_create_complete_callback on_complete) {
@@ -116,25 +150,8 @@ void Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
 
   AsyncTask at = [compressed_results, file, index_file, d, file_name,
                   on_complete](const ThreadInfo &ti) {
-    if (!compressed_results->empty()) {
-      std::list<PageInner::HdrAndBuffer> subresult;
-      subresult.push_back(compressed_results->front());
-      compressed_results->pop_front();
-      auto page_size = PageInner::writeToFile(file, index_file, d->phdr, d->ihdr,
-                                              subresult, d->phdr.filesize);
-      d->phdr.filesize = page_size;
-      return true;
-    }
-    d->ihdr.level = d->phdr.level;
-    ENSURE(memcmp(&d->phdr.stat, &d->ihdr.stat, sizeof(Statistic)) == 0);
-    std::fwrite((char *)&d->phdr, sizeof(PageFooter), 1, file);
-    std::fclose(file);
-
-    std::fwrite(&d->ihdr, sizeof(IndexFooter), 1, index_file);
-    std::fclose(index_file);
-    auto result = open(file_name, d->phdr);
-    on_complete(result);
-    return false;
+    return create_write_logic(compressed_results, file, index_file, d, file_name,
+                              on_complete);
   };
   ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 }
