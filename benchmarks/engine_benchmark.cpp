@@ -412,11 +412,11 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(strategy);
-    settings->chunk_size.setValue(3072);
+   /* settings->chunk_size.setValue(3072);
     settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
     settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
     settings->max_chunks_per_page.setValue(5 * 1024);
-    settings->threads_in_common.setValue(5);
+    settings->threads_in_common.setValue(5);*/
     settings->save();
 
     if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) &&
