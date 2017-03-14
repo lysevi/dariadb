@@ -7,6 +7,7 @@ v0.4.0
 - Settings:
   - max_chunks_per_page - maximum count chunks per page when write from memory storage.
   - max_store_period - period, when old pages must be removed.
+- Wal now contained in-memory index.
 
 v0.3.0
 =====
