@@ -380,11 +380,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
               query_hdr->id, " id(", query_hdr->ids_count, ") [", from_str, ',', to_str,
               "]");
   auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
-  IdArray all_ids;
-  all_ids.resize(query_hdr->ids_count);
-  for(size_t i=0;i<query_hdr->ids_count;++i){
-      all_ids[i]=ids_ptr[i];
-  }
+  IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
   ENSURE(!all_ids.empty());
 
   auto query_num = query_hdr->id;
