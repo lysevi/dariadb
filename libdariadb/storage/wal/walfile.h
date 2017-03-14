@@ -41,6 +41,7 @@ public:
   EXPORT static size_t writed(std::string fname);
   EXPORT Id2MinMax loadMinMax() override;
 
+  EXPORT Id id_bloom();
 protected:
   EXPORT WALFile(const EngineEnvironment_ptr env);
   EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname,

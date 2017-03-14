@@ -2,6 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS // disable msvc /sdl warning on fopen call.
 #endif
 #include <libdariadb/flags.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/manifest.h>
@@ -33,6 +34,7 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->wal_append(rnd_fname);
     _file = nullptr;
+    _idBloom = bloom_empty<Id>();
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
@@ -86,6 +88,7 @@ public:
     _minTime = std::min(_minTime, value.time);
     _maxTime = std::max(_maxTime, value.time);
     _writed++;
+    _idBloom = bloom_add<Id>(_idBloom, value.id);
     return Status(1, 0);
   }
 
@@ -103,6 +106,7 @@ public:
       auto value = *it;
       _minTime = std::min(_minTime, value.time);
       _maxTime = std::max(_maxTime, value.time);
+      _idBloom = bloom_add<Id>(_idBloom, value.id);
     }
     _writed += write_size;
     return Status(write_size, 0);
@@ -223,8 +227,25 @@ public:
     return sub_res;
   }
 
+  void updateBloom() {
+    _idBloom = bloom_empty<Id>();
+    auto all = this->readAll();
+    for (auto v : *all) {
+      _idBloom = bloom_add<Id>(_idBloom, v.id);
+    }
+  }
+
+  dariadb::Id _idBloom = MIN_ID;
+  Id id_bloom() {
+    if (_idBloom == MIN_ID) {
+      updateBloom();
+    }
+    return _idBloom;
+  }
+
   dariadb::Time _minTime = MAX_TIME;
   dariadb::Time _maxTime = MIN_TIME;
+
   dariadb::Time minTime() {
     dariadb::Time result = dariadb::MAX_TIME;
     auto all = readAll();
@@ -340,6 +361,10 @@ WALFile::WALFile(const EngineEnvironment_ptr env) : _Impl(new WALFile::Private(e
 
 WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
     : _Impl(new WALFile::Private(env, fname, readonly)) {}
+
+dariadb::Id WALFile::id_bloom() {
+  return _Impl->id_bloom();
+}
 
 dariadb::Time WALFile::minTime() {
   return _Impl->minTime();

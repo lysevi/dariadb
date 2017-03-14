@@ -113,6 +113,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK_EQUAL(wal_files.size(), size_t(1));
+	BOOST_CHECK(wal->id_bloom() != dariadb::Id(0));
 
     dariadb::MeasArray out;
 

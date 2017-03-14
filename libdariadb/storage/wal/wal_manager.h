@@ -74,6 +74,7 @@ private:
   struct TimeMinMax {
     Time minTime;
     Time maxTime;
+	Id   bloom_id;
   };
   std::unordered_map<std::string, TimeMinMax> _file2minmax;
   std::mutex _file2mm_locker;
