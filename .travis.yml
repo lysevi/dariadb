@@ -61,7 +61,7 @@ matrix:
       env: SANITIZER=ASAN_UBSAN GCOV=FALSE CLANG=FALSE
     - os: linux
       compiler: gcc-6
-      env: IS_RELEASE=TRUE
+      env: IS_RELEASE=TRUE CLANG=FALSE
 
 script: 
     - bash .travis/build.sh
