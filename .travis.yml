@@ -34,7 +34,6 @@ addons:
       - g++-6  
       - gcc-6 
       - cpp-6
-      - clang
       
 before_install:
    - pip install --user cpp-coveralls
@@ -60,6 +59,9 @@ matrix:
     - os: linux
       compiler: gcc-6
       env: SANITIZER=ASAN_UBSAN GCOV=FALSE CLANG=FALSE
+    - os: linux
+      compiler: gcc-6
+      env: IS_RELEASE=TRUE
 
 script: 
     - bash .travis/build.sh
