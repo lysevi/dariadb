@@ -385,6 +385,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
   for(size_t i=0;i<query_hdr->ids_count;++i){
       all_ids[i]=ids_ptr[i];
   }
+  ENSURE(!all_ids.empty());
 
   auto query_num = query_hdr->id;
 
@@ -397,6 +398,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
     auto cdr = new ClientDataReader(this, query_num);
     cdr->linked_query_interval=qi;
     this->readerAdd(ReaderCallback_ptr(cdr));
+	ENSURE(env->storage != nullptr);
     env->storage->foreach (*qi, cdr);
   }
 }
