@@ -47,8 +47,7 @@ public:
   virtual storage::Settings_ptr settings() = 0;
 
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
-  EXPORT void IEngine::foreach (const QueryTimePoint &q,
-                                IReadCallback * clbk) override final;
+  EXPORT void foreach (const QueryTimePoint &q, IReadCallback * clbk) override final;
 };
 
 using IEngine_Ptr = std::shared_ptr<IEngine>;
