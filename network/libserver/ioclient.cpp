@@ -37,11 +37,12 @@ void IOClient::ClientDataReader::is_end() {
   auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
   hdr->id = _query_num;
   hdr->count = 0;
-  logger("server: #", _parent->_async_connection->id(), " end of #", hdr->id);
+  auto cur_id = _parent->_async_connection->id();
+  logger("server: #", cur_id, " end of #", hdr->id);
   _parent->_async_connection->send(nd);
 
   IReadCallback::is_end();
-  this->_parent->readerRemove(this->_query_num);
+  is_needed = false;
   _parent = nullptr;
 }
 
@@ -427,11 +428,30 @@ void IOClient::subscribe(const NetData_ptr &d) {
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }
 
+void IOClient::readersEraseUnneeded() {
+  // erase unneeded readers.
+  while (true) {
+    bool gc_continue = false;
+    for (auto it = _readers.begin(); it != _readers.end(); ++it) {
+      auto cdr_raw = dynamic_cast<ClientDataReader *>(it->second.get());
+      if (!cdr_raw->is_needed) {
+        _readers.erase(it);
+		gc_continue = true;
+		break;
+      }
+    }
+	if (!gc_continue) {
+		break;
+	}
+  }
+}
+
 void IOClient::readerAdd(const ReaderCallback_ptr &cdr) {
   std::lock_guard<std::mutex> lg(_readers_lock);
   ClientDataReader *cdr_raw = dynamic_cast<ClientDataReader *>(cdr.get());
   ENSURE(cdr_raw != nullptr);
   this->_readers.insert(std::make_pair(cdr_raw->_query_num, cdr));
+  readersEraseUnneeded();
 }
 
 void IOClient::readerRemove_unsafe(QueryNumber number) {
@@ -446,10 +466,12 @@ void IOClient::readerRemove_unsafe(QueryNumber number) {
 void IOClient::readerRemove(QueryNumber number) {
   std::lock_guard<std::mutex> lg(_readers_lock);
   readerRemove_unsafe(number);
+  readersEraseUnneeded();
 }
 
 void IOClient::readerClear() {
   std::lock_guard<std::mutex> lg(_readers_lock);
+  readersEraseUnneeded();
   for (auto kv : _readers) {
     logger("server: stop reader #", kv.first);
     kv.second->cancel();

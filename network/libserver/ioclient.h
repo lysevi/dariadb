@@ -36,6 +36,8 @@ struct IOClient {
     QueryNumber _query_num;
     size_t pos;
     std::array<Meas, BUFFER_LENGTH> _buffer;
+	
+	bool is_needed = true;// false - io_client remove from readers.
 
     QueryInterval*linked_query_interval;
     QueryTimePoint*linked_query_point;
@@ -69,6 +71,7 @@ struct IOClient {
   void readerRemove(QueryNumber number);
   void readerRemove_unsafe(QueryNumber number);
   void readerClear();
+  void readersEraseUnneeded();
 
   Time _last_query_time;
   socket_ptr sock;
