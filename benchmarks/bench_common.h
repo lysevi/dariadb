@@ -134,6 +134,9 @@ public:
 		count++;
 		dariadb::Meas nm = m;
 		nm.id = dariadb::MAX_ID - m.id;
+
+		ENSURE(storage != nullptr);
+		
 		storage->append(nm);
 	}
 
