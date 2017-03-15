@@ -67,6 +67,7 @@ struct IOClient {
 
   void readerAdd(const ReaderCallback_ptr &cdr);
   void readerRemove(QueryNumber number);
+  void readerRemove_unsafe(QueryNumber number);
   void readerClear();
 
   Time _last_query_time;

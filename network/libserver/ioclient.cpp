@@ -2,6 +2,7 @@
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/exception.h>
 #include <libserver/ioclient.h>
+#include <libserver/subscribecallback.h>
 #include <cassert>
 
 using namespace std::placeholders;
@@ -9,34 +10,6 @@ using namespace boost::asio;
 
 using namespace dariadb;
 using namespace dariadb::net;
-
-struct SubscribeCallback : public IReadCallback {
-  utils::async::Locker _locker;
-  IOClient *_parent;
-  QueryNumber _query_num;
-
-  SubscribeCallback(IOClient *parent, QueryNumber query_num) {
-    _parent = parent;
-    _query_num = query_num;
-  }
-  ~SubscribeCallback() {}
-  void apply(const Meas &m) override { send_buffer(m); }
-  void is_end() override {}
-  void send_buffer(const Meas &m) {
-    auto nd = std::make_shared<NetData>(DATA_KINDS::APPEND);
-    nd->size = sizeof(QueryAppend_header);
-
-    auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
-    hdr->id = _query_num;
-    size_t space_left = 0;
-    QueryAppend_header::make_query(hdr, &m, size_t(1), 0, &space_left);
-
-    auto size_to_write = NetData::MAX_MESSAGE_SIZE - MARKER_SIZE - space_left;
-    nd->size = static_cast<NetData::MessageSize>(size_to_write);
-
-    _parent->_async_connection->send(nd);
-  }
-};
 
 IOClient::ClientDataReader::ClientDataReader(IOClient *parent, QueryNumber query_num) {
   linked_query_interval = nullptr;
@@ -57,7 +30,6 @@ void IOClient::ClientDataReader::apply(const Meas &m) {
 }
 
 void IOClient::ClientDataReader::is_end() {
-  IReadCallback::is_end();
   send_buffer();
 
   auto nd = std::make_shared<NetData>(DATA_KINDS::APPEND);
@@ -67,7 +39,10 @@ void IOClient::ClientDataReader::is_end() {
   hdr->count = 0;
   logger("server: #", _parent->_async_connection->id(), " end of #", hdr->id);
   _parent->_async_connection->send(nd);
+
+  IReadCallback::is_end();
   this->_parent->readerRemove(this->_query_num);
+  _parent = nullptr;
 }
 
 void IOClient::ClientDataReader::send_buffer() {
@@ -78,6 +53,11 @@ void IOClient::ClientDataReader::send_buffer() {
   size_t writed = 0;
 
   while (writed != pos) {
+    auto p = _parent;
+    if (p == nullptr) {
+      break;
+    }
+
     auto nd = std::make_shared<NetData>(DATA_KINDS::APPEND);
     nd->size = sizeof(QueryAppend_header);
 
@@ -92,13 +72,16 @@ void IOClient::ClientDataReader::send_buffer() {
     nd->size = static_cast<NetData::MessageSize>(size_to_write);
     writed += hdr->count;
 
-    logger("server: #", _parent->_async_connection->id(), " send to client result of #",
+    logger("server: #", p->_async_connection->id(), " send to client result of #",
            hdr->id, " count ", hdr->count);
-    _parent->_async_connection->send(nd);
+    ENSURE(p != nullptr);
+    ENSURE(p->_async_connection != nullptr);
+    p->_async_connection->send(nd);
   }
 }
 
 IOClient::ClientDataReader::~ClientDataReader() {
+  _parent = nullptr;
   if (linked_query_interval != nullptr) {
     delete linked_query_interval;
   }
@@ -125,11 +108,7 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
 }
 
 IOClient::~IOClient() {
-  this->readerClear();
-
-  if (_async_connection != nullptr) {
-    _async_connection->full_stop();
-  }
+  this->close();
 }
 
 void IOClient::end_session() {
@@ -148,14 +127,14 @@ void IOClient::end_session() {
 void IOClient::close() {
   if (state != CLIENT_STATE::DISCONNECTED) {
     state = CLIENT_STATE::DISCONNECTED;
-    _async_connection->mark_stoped();
-    if (this->sock->is_open()) {
-      _async_connection->full_stop();
 
-      this->sock->close();
+    this->readerClear();
+
+    if (_async_connection != nullptr) {
+      _async_connection->full_stop();
+      logger_info("server: client #", this->_async_connection->id(), " stoped.");
+      _async_connection = nullptr;
     }
-    logger_info("server: client #", this->_async_connection->id(), " stoped.");
-    _async_connection = nullptr;
   }
 }
 
@@ -455,8 +434,7 @@ void IOClient::readerAdd(const ReaderCallback_ptr &cdr) {
   this->_readers.insert(std::make_pair(cdr_raw->_query_num, cdr));
 }
 
-void IOClient::readerRemove(QueryNumber number) {
-  std::lock_guard<std::mutex> lg(_readers_lock);
+void IOClient::readerRemove_unsafe(QueryNumber number) {
   auto fres = this->_readers.find(number);
   if (fres == this->_readers.end()) {
     THROW_EXCEPTION("server: readerRemove logic error");
@@ -465,12 +443,17 @@ void IOClient::readerRemove(QueryNumber number) {
   }
 }
 
+void IOClient::readerRemove(QueryNumber number) {
+  std::lock_guard<std::mutex> lg(_readers_lock);
+  readerRemove_unsafe(number);
+}
+
 void IOClient::readerClear() {
   std::lock_guard<std::mutex> lg(_readers_lock);
   for (auto kv : _readers) {
-	logger("server: stop reader #", kv.first);
+    logger("server: stop reader #", kv.first);
     kv.second->cancel();
     kv.second->wait();
-    this->readerRemove(kv.first);
+    readerRemove_unsafe(kv.first);
   }
 }
