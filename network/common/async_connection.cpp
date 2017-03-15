@@ -80,7 +80,7 @@ void AsyncConnection::send(const NetData_ptr &d) {
 }
 
 void AsyncConnection::readNextAsync() {
-  using boost::system::error_code;
+  using error_code = boost::system::error_code;
   if (auto spt = _sock.lock()) {
     auto ptr = shared_from_this();
     NetData_ptr d = this->_pool->construct();
@@ -88,7 +88,10 @@ void AsyncConnection::readNextAsync() {
                [ptr, d, spt](auto err, auto read_bytes) {
                  if (err) {
                    ptr->_pool->free(d);
-                   if (err == boost::asio::error::operation_aborted) {
+
+                   if (err == boost::asio::error::operation_aborted ||
+                       err == boost::asio::error::connection_reset ||
+                       err == boost::asio::error::eof) {
                      return;
                    }
                    ptr->_on_error_handler(err);
