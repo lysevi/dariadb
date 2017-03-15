@@ -117,22 +117,32 @@ struct QueryStatResult_header {
 #pragma pack(pop)
 
 struct NetData_Pool {
-  utils::async::Locker _locker;
-  typedef boost::object_pool<NetData> Pool;
-  Pool _pool;
+	//TODO with jemalloc pool not needed.
+  CM_EXPORT void free(NetData *nd);
+  CM_EXPORT NetData *construct();
 
-  CM_EXPORT void free(Pool::element_type *nd);
-  CM_EXPORT Pool::element_type *construct();
-
-  template <class T> Pool::element_type *construct(T &&a) {
-    _locker.lock();
-    auto res = _pool.construct(a);
-    _locker.unlock();
-    return res;
+  template <class T> NetData *construct(T &&a) {
+	  return new NetData(a);
   }
 };
-using NetData_ptr = NetData_Pool::Pool::element_type *;
+using NetData_ptr = NetData*;
 
+//struct NetData_Pool {
+//	utils::async::Locker _locker;
+//	typedef boost::object_pool<NetData> Pool;
+//	Pool _pool;
+//
+//	CM_EXPORT void free(Pool::element_type *nd);
+//	CM_EXPORT Pool::element_type *construct();
+//
+//	template <class T> Pool::element_type *construct(T &&a) {
+//		_locker.lock();
+//		auto res = _pool.construct(a);
+//		_locker.unlock();
+//		return res;
+//	}
+//};
+//using NetData_ptr = NetData_Pool::Pool::element_type *;
 const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
 }
 }

@@ -34,6 +34,7 @@ addons:
       - g++-6  
       - gcc-6 
       - cpp-6
+      - libjemalloc-dev
       
 before_install:
    - pip install --user cpp-coveralls

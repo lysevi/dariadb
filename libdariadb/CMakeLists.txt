@@ -48,14 +48,14 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
 	 ${WSTORE_HDRS} ${WSTORE_SRC} 
 	 ${UTILS_HDRS}  ${UTILS_SRC} 
 	 ${UTILS_ASYNC_HDRS}  ${UTILS_ASYNC_SRC} 
-         ${INTERFACES_HDRS} ${INTERFACES_SRC}
+     ${INTERFACES_HDRS} ${INTERFACES_SRC}
 	 ${SCHEME_SRC} ${SCHEME_HDRS}
 	 ${ENGINES_SRC} ${ENGINES_HDRS})
 
-SET(DARIADB_STORAGE_LIBS dariadb ${Boost_LIBRARIES} sqlite3 CACHE STRING "Dariadb libs for build storage.")
+SET(DARIADB_STORAGE_LIBS dariadb ${Boost_LIBRARIES}  sqlite3 ${JEMALLOC_LIBS} CACHE STRING "Dariadb libs for build storage.")
 
 add_library(dariadb SHARED ${SRC})
-TARGET_LINK_LIBRARIES(dariadb ${Boost_LIBRARIES} sqlite3 ${CMAKE_THREAD_LIBS_INIT})
+TARGET_LINK_LIBRARIES(dariadb ${Boost_LIBRARIES} sqlite3 ${JEMALLOC_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 IF(WIN32)
  target_link_libraries(dariadb wsock32 ws2_32)

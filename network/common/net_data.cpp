@@ -157,15 +157,18 @@ MeasArray QueryAppend_header::read_measarray() const {
   return ma;
 }
 
-void NetData_Pool::free(Pool::element_type *nd) {
-  _locker.lock();
-  _pool.free(nd);
-  _locker.unlock();
+void NetData_Pool::free(NetData *nd) {
+	delete nd;
 }
 
-NetData_Pool::Pool::element_type *NetData_Pool::construct() {
-  _locker.lock();
-  auto res = _pool.construct();
-  _locker.unlock();
-  return res;
+NetData *NetData_Pool::construct() {
+	return new NetData;
 }
+//TODO with jemalloc pool not needed.
+//void NetData_Pool::free(NetData *nd) {
+//	delete nd;
+//}
+//
+//NetData *NetData_Pool::construct() {
+//	return new NetData;
+//}
