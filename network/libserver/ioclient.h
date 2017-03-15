@@ -22,11 +22,9 @@ struct IOClient {
     Environment() {
       srv = nullptr;
       storage = nullptr;
-      nd_pool = nullptr;
     }
     IClientManager *srv;
     Engine *storage;
-    NetData_Pool *nd_pool;
     boost::asio::io_service *service;
   };
 
@@ -56,7 +54,7 @@ struct IOClient {
   void close();
   void ping();
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory);
+  void onDataRecv(const NetData_ptr &d, bool &cancel);
   void onNetworkError(const boost::system::error_code &err);
 
   void append(const NetData_ptr &d);

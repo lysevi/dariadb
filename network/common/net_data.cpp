@@ -157,18 +157,3 @@ MeasArray QueryAppend_header::read_measarray() const {
   return ma;
 }
 
-void NetData_Pool::free(NetData *nd) {
-	delete nd;
-}
-
-NetData *NetData_Pool::construct() {
-	return new NetData;
-}
-//TODO with jemalloc pool not needed.
-//void NetData_Pool::free(NetData *nd) {
-//	delete nd;
-//}
-//
-//NetData *NetData_Pool::construct() {
-//	return new NetData;
-//}
