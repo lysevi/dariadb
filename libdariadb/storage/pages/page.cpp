@@ -517,11 +517,13 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
   Chunk_Ptr ptr = nullptr;
   ptr = Chunk::open(cheader, buffer);
   ptr->is_owner = true;
-  /*if (!ptr->checkChecksum()) {
+#ifdef DOUBLE_CHECKS
+  if (!ptr->checkChecksum()) {
     logger_fatal("engine: bad checksum of chunk #", ptr->header->id,
                  " for measurement id:", ptr->header->meas_id);
     return nullptr;
-  }*/
+  }
+#endif
   return ptr;
 }
 
