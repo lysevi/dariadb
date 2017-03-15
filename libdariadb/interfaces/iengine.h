@@ -1,11 +1,21 @@
 #pragma once
-#include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/interfaces/icompactioncontroller.h>
+#include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/dropper_description.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
 #include <memory>
 namespace dariadb {
+
+struct foreach_async_data {
+  size_t next_id_pos;
+  QueryInterval q;
+  IReadCallback *clbk;
+
+  foreach_async_data(const QueryInterval &oq, IReadCallback *oclbk) : q(oq), clbk(oclbk) {
+    next_id_pos = size_t(0);
+  }
+};
 
 class IEngine : public IMeasStorage {
 public:
@@ -35,6 +45,11 @@ public:
   virtual void wait_all_asyncs() = 0;
   virtual void compress_all() = 0;
   virtual storage::Settings_ptr settings() = 0;
+
+  EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
+  EXPORT void IEngine::foreach (const QueryTimePoint &q,
+                                IReadCallback * clbk) override final;
 };
+
 using IEngine_Ptr = std::shared_ptr<IEngine>;
 }

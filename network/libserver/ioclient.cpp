@@ -24,7 +24,6 @@ void IOClient::ClientDataReader::apply(const Meas &m) {
   std::lock_guard<utils::async::Locker> lg(_locker);
   if (pos == BUFFER_LENGTH) {
     send_buffer();
-    pos = 0;
   }
   _buffer[pos++] = m;
 }
@@ -79,6 +78,8 @@ void IOClient::ClientDataReader::send_buffer() {
     ENSURE(p->_async_connection != nullptr);
     p->_async_connection->send(nd);
   }
+
+  pos = 0;
 }
 
 IOClient::ClientDataReader::~ClientDataReader() {
