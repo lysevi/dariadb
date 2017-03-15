@@ -80,10 +80,10 @@ void AsyncConnection::send(const NetData_ptr &d) {
 }
 
 void AsyncConnection::readNextAsync() {
-  using error_code = boost::system::error_code;
   if (auto spt = _sock.lock()) {
     auto ptr = shared_from_this();
     NetData_ptr d = this->_pool->construct();
+
     async_read(*spt.get(), buffer((uint8_t *)(&d->size), MARKER_SIZE),
                [ptr, d, spt](auto err, auto read_bytes) {
                  if (err) {
