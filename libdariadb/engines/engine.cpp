@@ -384,7 +384,7 @@ public:
       if (ids.size() == 0) {
         ids_check = true;
       } else {
-        if (std::find(ids.begin(), ids.end(), kv.first)!=ids.end()) {
+        if (std::find(ids.begin(), ids.end(), kv.first) != ids.end()) {
           ids_check = true;
         }
       }
@@ -649,15 +649,18 @@ public:
     clbk->is_end();*/
 
     for (auto id : q.ids) {
-      //auto start_time = clock();
+      // auto start_time = clock();
+      if (clbk->is_canceled()) {
+        break;
+      }
       local_q.ids[0] = id;
       auto r = intervalReader(local_q);
       auto fres = r.find(id);
       if (fres != r.end()) {
         fres->second->apply(clbk, local_q);
       }
-      //auto elapsed_time = (((float)clock() - start_time) / CLOCKS_PER_SEC);
-      //logger("foreach: #", id, ": elapsed ", elapsed_time, "s");
+      // auto elapsed_time = (((float)clock() - start_time) / CLOCKS_PER_SEC);
+      // logger("foreach: #", id, ": elapsed ", elapsed_time, "s");
     }
     clbk->is_end();
   }

@@ -14,7 +14,7 @@ void IReadCallback::is_end() {
 }
 
 void IReadCallback::wait() {
-  while (!is_cancel && !is_end_called) {
+  while (!is_end_called) {
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 }
