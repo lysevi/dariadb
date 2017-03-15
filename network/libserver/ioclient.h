@@ -65,9 +65,9 @@ struct IOClient {
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
 
-  // data - queryInterval or QueryTimePoint
   void readerAdd(const ReaderCallback_ptr &cdr);
   void readerRemove(QueryNumber number);
+  void readerClear();
 
   Time _last_query_time;
   socket_ptr sock;

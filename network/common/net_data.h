@@ -4,10 +4,6 @@
 #include <libdariadb/stat.h>
 #include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>
-#include <tuple>
-
-#include <boost/pool/object_pool.hpp>
-
 #include <common/net_cmn_exports.h>
 
 namespace dariadb {

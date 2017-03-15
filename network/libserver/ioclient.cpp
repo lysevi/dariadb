@@ -125,15 +125,10 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
 }
 
 IOClient::~IOClient() {
+  this->readerClear();
+
   if (_async_connection != nullptr) {
     _async_connection->full_stop();
-  }
-
-  for (auto kv : _readers) {
-    logger_info("server: stop reader #", kv.first);
-    kv.second->cancel();
-    kv.second->wait();
-    this->readerRemove(kv.first);
   }
 }
 
@@ -464,8 +459,18 @@ void IOClient::readerRemove(QueryNumber number) {
   std::lock_guard<std::mutex> lg(_readers_lock);
   auto fres = this->_readers.find(number);
   if (fres == this->_readers.end()) {
-    THROW_EXCEPTION("engien: readerRemove logic error");
+    THROW_EXCEPTION("server: readerRemove logic error");
   } else {
     this->_readers.erase(fres);
+  }
+}
+
+void IOClient::readerClear() {
+  std::lock_guard<std::mutex> lg(_readers_lock);
+  for (auto kv : _readers) {
+	logger("server: stop reader #", kv.first);
+    kv.second->cancel();
+    kv.second->wait();
+    this->readerRemove(kv.first);
   }
 }
