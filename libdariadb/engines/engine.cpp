@@ -630,39 +630,47 @@ public:
     at->wait();
     return result;
   }
+  struct foreach_params {
+    size_t next_id_pos;
+    QueryInterval q;
+    IReadCallback *clbk;
+
+    foreach_params(const QueryInterval &oq, IReadCallback *oclbk) : q(oq), clbk(oclbk) {
+      next_id_pos = size_t(0);
+    }
+  };
 
   void foreach (const QueryInterval &q, IReadCallback * clbk) {
-    QueryInterval local_q = q;
-    local_q.ids.resize(1);
+    auto params = std::make_shared<foreach_params>(q, clbk);
 
-    /*logger("begin read ", q.ids.size());
-    auto r = intervalReader(q);
-    logger("interval recvd ");
-    for (auto id : q.ids) {
-            logger("read id ", id);
-            local_q.ids[0] = id;
-            auto fres = r.find(id);
-            if (fres != r.end()) {
-                    fres->second->apply(clbk, local_q);
-            }
-    }
-    clbk->is_end();*/
+    AsyncTask at_t = [this, params](const ThreadInfo &ti) {
+      if (params->next_id_pos < params->q.ids.size()) {
+        if (!params->clbk->is_canceled()) {
+          // auto start_time = clock();
 
-    for (auto id : q.ids) {
-      // auto start_time = clock();
-      if (clbk->is_canceled()) {
-        break;
+          QueryInterval local_q = params->q;
+          local_q.ids.resize(1);
+          auto id = params->q.ids[params->next_id_pos++];
+
+          local_q.ids[0] = id;
+          auto r = intervalReader(local_q);
+          auto fres = r.find(id);
+          if (fres != r.end()) {
+            fres->second->apply(params->clbk, local_q);
+          }
+          /*auto elapsed_time = (((float)clock() - start_time) / CLOCKS_PER_SEC);
+          logger("foreach: #", id, ": elapsed ", elapsed_time, "s");*/
+
+          if (params->next_id_pos < params->q.ids.size()) {
+            return true;
+          }
+        }
       }
-      local_q.ids[0] = id;
-      auto r = intervalReader(local_q);
-      auto fres = r.find(id);
-      if (fres != r.end()) {
-        fres->second->apply(clbk, local_q);
-      }
-      // auto elapsed_time = (((float)clock() - start_time) / CLOCKS_PER_SEC);
-      // logger("foreach: #", id, ": elapsed ", elapsed_time, "s");
-    }
-    clbk->is_end();
+      params->clbk->is_end();
+      return false;
+    };
+
+    auto at = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at_t));
   }
 
   void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
