@@ -135,6 +135,8 @@ public:
   void init_storages() {}
   void stop() {
     if (!_stoped) {
+		this->lock_storage();
+		this->unlock_storage();
       _top_level_storage = nullptr;
       _subscribe_notify.stop();
 
@@ -144,8 +146,8 @@ public:
         _memstorage = nullptr;
       }
 
+	  _dropper = nullptr;
       _wal_manager = nullptr;
-      _dropper = nullptr;
 
       if (_thread_pool_owner) {
         ThreadManager::stop();

@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
     settings->memory_limit.setValue(50 * 1024);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true, false);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, false, false);
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
     settings->wal_file_size.setValue(2000);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
 
     auto descr = ms->description();
     BOOST_CHECK_GT(descr.pages_count, size_t(0));

@@ -22,6 +22,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <shared_mutex>
 #include <thread>
 
 #include <stx/btree_multimap.h>
@@ -50,7 +51,10 @@ public:
 
   void reloadIndexFooters() {
     if (utils::fs::path_exists(_settings->raw_path.value())) {
-      _file2footer.clear();
+      {
+        std::lock_guard<std::shared_mutex> lg(_file2footer_lock);
+        _file2footer.clear();
+      }
       auto pages = _manifest->page_list();
 
       for (auto n : pages) {
@@ -257,15 +261,16 @@ public:
 
   std::list<std::string> pages_by_filter(std::function<bool(const IndexFooter &)> pred) {
     std::list<PageFooterDescription> sub_result;
+    {
+      std::shared_lock<std::shared_mutex> lg(_file2footer_lock);
+      for (auto f2h : _file2footer) {
+        auto hdr = f2h.second.hdr;
+        if (pred(hdr)) {
 
-    for (auto f2h : _file2footer) {
-      auto hdr = f2h.second.hdr;
-      if (pred(hdr)) {
-
-        sub_result.push_back(f2h.second);
+          sub_result.push_back(f2h.second);
+        }
       }
     }
-
     std::vector<PageFooterDescription> vec_res{sub_result.begin(), sub_result.end()};
     std::sort(vec_res.begin(), vec_res.end(),
               [](auto lr, auto rr) { return lr.hdr.stat.minTime < rr.hdr.stat.minTime; });
@@ -417,8 +422,9 @@ public:
     logger("pm: erase ", full_file_name);
     auto fname = utils::fs::extract_filename(full_file_name);
     auto ifull_name = PageIndex::index_name_from_page_name(full_file_name);
-
+    std::lock_guard<std::shared_mutex> lg(_file2footer_lock);
 #ifdef DOUBLE_CHECKS
+
     auto pages_before = _file2footer.size();
 #endif
     ENSURE(utils::fs::file_exists(full_file_name));
@@ -437,6 +443,7 @@ public:
         break;
       }
     }
+
     _file2footer.erase(it);
 
     utils::fs::rm(full_file_name);
@@ -615,6 +622,7 @@ public:
   }
 
   void insert_pagedescr(std::string page_name, IndexFooter hdr) {
+    std::lock_guard<std::shared_mutex> lg(_file2footer_lock);
     PageFooterDescription ph_d;
     ph_d.hdr = hdr;
     ph_d.path = page_name;
@@ -649,6 +657,8 @@ protected:
 
   uint64_t last_id;
   File2PageFooter _file2footer;
+  std::shared_mutex _file2footer_lock;
+
   EngineEnvironment_ptr _env;
   Settings *_settings;
   Manifest *_manifest;

@@ -46,7 +46,7 @@ struct BenchmarkSummaryInfo {
     std::cout << "stat: " << stat_time << " sec" << std::endl;
     std::cout << "read timepoint: " << read_timepoint_speed << " per/sec" << std::endl;
     std::cout << "read timeseries: " << full_read_timeseries << " secs." << std::endl;
-	std::cout << "copy timeseries: " << copy_to << " secs." << std::endl;
+    std::cout << "copy timeseries: " << copy_to << " secs." << std::endl;
     std::cout << "read all: " << read_all_time << " secs." << std::endl;
     std::cout << "foreach all: " << foreach_read_all_time << " secs." << std::endl;
     std::cout << "compaction: " << compaction_time << " secs." << std::endl;
@@ -125,28 +125,28 @@ public:
 
 class BenchWriteCallback : public dariadb::IReadCallback {
 public:
-	BenchWriteCallback(dariadb::IMeasStorage *store) {
-		count = 0;
-		is_end_called = false;
-		storage = store;
-	}
-	void apply(const dariadb::Meas &m) override {
-		count++;
-		dariadb::Meas nm = m;
-		nm.id = dariadb::MAX_ID - m.id;
+  BenchWriteCallback(dariadb::IMeasStorage *store) {
+    count = 0;
+    is_end_called = false;
+    storage = store;
+  }
+  void apply(const dariadb::Meas &m) override {
+    count++;
+    dariadb::Meas nm = m;
+    nm.id = dariadb::MAX_ID - m.id;
 
-		ENSURE(storage != nullptr);
-		
-		storage->append(nm);
-	}
+    ENSURE(storage != nullptr);
 
-	void is_end() override {
-		is_end_called = true;
-		IReadCallback::is_end();
-	}
-	std::atomic<size_t> count;
-	bool is_end_called;
-	dariadb::IMeasStorage *storage;
+    storage->append(nm);
+  }
+
+  void is_end() override {
+    is_end_called = true;
+    IReadCallback::is_end();
+  }
+  std::atomic<size_t> count;
+  bool is_end_called;
+  dariadb::IMeasStorage *storage;
 };
 
 dariadb::Id get_id_from(BenchmarkParams params, dariadb::Id id) {
@@ -197,8 +197,7 @@ void thread_writer_rnd_stor(BenchmarkParams params, dariadb::Id id,
 }
 
 void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all_id_set,
-                   dariadb::IMeasStorage *stor, size_t reads_count, bool quiet = false,
-                   bool check_is_end = true) {
+                   dariadb::IMeasStorage *stor, size_t reads_count) {
   std::cout << "==> init random ids...." << std::endl;
   dariadb::IdArray random_ids{all_id_set.begin(), all_id_set.end()};
   std::random_shuffle(random_ids.begin(), random_ids.end());
@@ -230,9 +229,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
 
-    if (!quiet) {
-      std::cout << "time: " << elapsed << std::endl;
-    }
+    std::cout << "time: " << elapsed << std::endl;
   }
 
   std::cout << "==> stat...." << std::endl;
@@ -246,17 +243,15 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     summary_info->stat_time = elapsed;
-    if (!quiet) {
-      std::cout << "time: " << elapsed << std::endl;
-    }
+
+    std::cout << "time: " << elapsed << std::endl;
   }
   std::random_device r;
   std::default_random_engine e1(r());
 
   {
-    if (!quiet) {
-      std::cout << "==> time point reads..." << std::endl;
-    }
+
+    std::cout << "==> time point reads..." << std::endl;
 
     auto start = clock();
 
@@ -273,15 +268,13 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     summary_info->read_timepoint_speed = elapsed;
-    if (!quiet) {
-      std::cout << "time: " << elapsed << std::endl;
-    }
+
+    std::cout << "time: " << elapsed << std::endl;
   }
   std::list<std::tuple<dariadb::Time, dariadb::Time>> interval_list;
   {
-    if (!quiet) {
-      std::cout << "==> intervals foreach..." << std::endl;
-    }
+
+    std::cout << "==> intervals foreach..." << std::endl;
 
     auto start = clock();
     cur_id = 0;
@@ -303,23 +296,21 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       cur_id = (cur_id + 1) % random_ids.size();
       auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
       stor->foreach (qi, &clbk);
-      if (check_is_end) {
-        clbk.wait();
-      }
+
+      clbk.wait();
+
       total_count += clbk.count;
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     summary_info->read_interval_speed = elapsed;
-    if (!quiet) {
-      std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
-                << std::endl;
-    }
+
+    std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
+              << std::endl;
   }
 
   {
-    if (!quiet) {
-      std::cout << "==> intervals foreach(full)..." << std::endl;
-    }
+
+    std::cout << "==> intervals foreach(full)..." << std::endl;
 
     auto start = clock();
     cur_id = 0;
@@ -339,57 +330,53 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       cur_id = (cur_id + 1) % random_ids.size();
       auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
       stor->foreach (qi, &clbk);
-      if (check_is_end) {
-        clbk.wait();
-      }
+
+      clbk.wait();
+
       total_count += clbk.count;
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
     summary_info->full_read_timeseries = elapsed;
-    if (!quiet) {
-      std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
-                << std::endl;
-    }
+
+    std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
+              << std::endl;
   }
   {
-	  if (!quiet) {
-		  std::cout << "==> intervals foreach(copy)..." << std::endl;
-	  }
 
-	  auto start = clock();
-	  cur_id = 0;
+    std::cout << "==> intervals foreach(copy)..." << std::endl;
 
-	  size_t total_count = 0;
-	  for (size_t i = 0; i < reads_count; i++) {
-		  BenchWriteCallback clbk(stor);
+    auto start = clock();
+    cur_id = 0;
 
-		  Id2Times curval = interval_queries[i];
-		  auto time_point1 = std::get<1>(curval);
-		  auto time_point2 = std::get<2>(curval);
-		  auto f = std::min(time_point1, time_point2);
-		  auto t = std::max(time_point1, time_point2);
-		  interval_list.push_back(std::tie(f, t));
+    size_t total_count = 0;
+    for (size_t i = 0; i < reads_count; i++) {
+      BenchWriteCallback clbk(stor);
 
-		  current_ids[0] = std::get<0>(curval);
-		  cur_id = (cur_id + 1) % random_ids.size();
-		  auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
-		  stor->foreach(qi, &clbk);
-		  if (check_is_end) {
-			  clbk.wait();
-		  }
-		  total_count += clbk.count;
-	  }
-	  auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-	  summary_info->copy_to = elapsed;
-	  if (!quiet) {
-		  std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
-			  << std::endl;
-	  }
+      Id2Times curval = interval_queries[i];
+      auto time_point1 = std::get<1>(curval);
+      auto time_point2 = std::get<2>(curval);
+      auto f = std::min(time_point1, time_point2);
+      auto t = std::max(time_point1, time_point2);
+      interval_list.push_back(std::tie(f, t));
+
+      current_ids[0] = std::get<0>(curval);
+      cur_id = (cur_id + 1) % random_ids.size();
+      auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
+      stor->foreach (qi, &clbk);
+
+      clbk.wait();
+
+      total_count += clbk.count;
+    }
+    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    summary_info->copy_to = elapsed;
+
+    std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
+              << std::endl;
   }
   {
-    if (!quiet) {
-      std::cout << "==> intervals reads..." << std::endl;
-    }
+
+    std::cout << "==> intervals reads..." << std::endl;
 
     auto start = clock();
     size_t count = 0;
@@ -407,10 +394,9 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       count += stor->readInterval(qi).size();
     }
     auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
-    if (!quiet) {
-      std::cout << "time: " << elapsed << " average count: " << count / reads_count
-                << std::endl;
-    }
+
+    std::cout << "time: " << elapsed << " average count: " << count / reads_count
+              << std::endl;
   }
 }
 }

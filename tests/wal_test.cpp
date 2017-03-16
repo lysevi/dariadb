@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
     BOOST_CHECK(wal_files.size() == size_t(0));
     auto wal = dariadb::storage::WALFile::create(_engine_env);
 
-    dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false);
+    dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false, false, false);
     manifest = nullptr;
   }
 
@@ -200,7 +200,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
 
     auto am = dariadb::storage::WALManager::create(_engine_env);
 
-    dariadb_test::storage_test_check(am.get(), from, to, step, false);
+    dariadb_test::storage_test_check(am.get(), from, to, step, false, false, false);
 
     am = nullptr;
     dariadb::utils::async::ThreadManager::stop();

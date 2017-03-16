@@ -19,7 +19,7 @@ void checkAll(dariadb::MeasArray res, std::string msg, dariadb::Time from,
 
 void storage_test_check(dariadb::IMeasStorage *as, dariadb::Time from, dariadb::Time to,
                         dariadb::Time step, bool check_stop_flag,
-                        bool random_timestamps = false);
+                        bool random_timestamps, bool run_copy_test);
 
 void check_reader(const dariadb::Cursor_Ptr &rdr);
 /*void readIntervalCommonTest(dariadb::storage::MeasStorage *ds);*/
