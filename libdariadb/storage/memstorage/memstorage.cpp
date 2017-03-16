@@ -50,8 +50,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       }
 
       for (size_t i = 0; i < _chunks.size(); ++i) {
+        if (_chunks[i] != nullptr) {
+          _chunk_allocator.free(_chunks[i]->_a_data);
+        }
         _chunks[i] = nullptr;
       }
+	  ENSURE(_chunk_allocator._allocated == size_t());
       _id2track.clear();
       _stoped = true;
       logger_info("engine", _settings->alias, ": memstorage - stoped.");
@@ -128,7 +132,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       if (c == nullptr) {
         continue;
       }
-      //if (!in_stop & !c->isFull()) { // not full
+      // if (!in_stop & !c->isFull()) { // not full
       //  ENSURE(!in_stop);
       //  ENSURE(!c->isFull());
       //  continue;
@@ -163,9 +167,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         track->rm_chunk(mc);
         updated_tracks.insert(track);
 
-        auto chunk_pos = mc->_a_data.position;
+		freeChunk(mc);
+        /*auto chunk_pos = mc->_a_data.position;
         _chunk_allocator.free(mc->_a_data);
-        _chunks[chunk_pos] = nullptr;
+        _chunks[chunk_pos] = nullptr;*/
       }
       for (auto &t : updated_tracks) {
         t->rereadMinMax();
@@ -311,14 +316,24 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     }
   }
 
-  void freeChunk(MemChunk_Ptr &chunk) {
-    ENSURE(chunk->_a_data.position < _chunks.size());
-    ENSURE(chunk->_is_from_pool);
+  void freeChunk(MemChunk *chunk) {
+	  ENSURE(chunk->_a_data.position < _chunks.size());
+	  ENSURE(chunk->_is_from_pool);
 
-    _chunks[chunk->_a_data.position] = nullptr;
-    if (is_time_to_drop()) {
-      _drop_cond.notify_all();
-    }
+	  auto pos = chunk->_a_data.position;
+	  if (chunk->_is_from_pool) {
+		  _chunk_allocator.free(chunk->_a_data);
+		  chunk->header = nullptr;
+		  chunk->buffer_ptr = nullptr;
+	  }
+	  _chunks[pos] = nullptr;
+	  if (is_time_to_drop()) {
+		  _drop_cond.notify_all();
+	  }
+  }
+
+  void freeChunk(MemChunk_Ptr &chunk) {
+	  freeChunk(chunk.get());
   }
 
   std::mutex *getLockers() { return &_drop_locker; }

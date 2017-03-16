@@ -54,38 +54,38 @@ struct MocDiskStorage : public dariadb::IMeasWriter {
   virtual void flush() override {}
 };
 
-BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
-  std::cout << "MemChunkAllocatorTest" << std::endl;
-  const size_t buffer_size = 100;
-  const size_t max_size = 1024;
-  dariadb::storage::MemChunkAllocator allocator(max_size, buffer_size);
-  std::set<dariadb::storage::ChunkHeader *> allocated_headers;
-  std::set<uint8_t *> allocated_buffers;
-  std::set<size_t> positions;
-
-  dariadb::storage::MemChunkAllocator::AllocatedData last;
-  do {
-    auto allocated = allocator.allocate();
-    auto hdr = allocated.header;
-    auto buf = allocated.buffer;
-    auto pos = allocated.position;
-    if (hdr == nullptr) {
-      break;
-    }
-    last = allocated;
-    allocated_headers.emplace(hdr);
-    allocated_buffers.emplace(buf);
-    positions.insert(pos);
-  } while (1);
-
-  BOOST_CHECK(positions.size() > 0);
-  BOOST_CHECK_EQUAL(positions.size(), allocated_headers.size());
-  BOOST_CHECK_EQUAL(positions.size(), allocated_buffers.size());
-
-  allocator.free(last);
-  auto new_obj = allocator.allocate();
-  BOOST_CHECK_EQUAL(new_obj.position, last.position);
-}
+//BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
+//  std::cout << "MemChunkAllocatorTest" << std::endl;
+//  const size_t buffer_size = 100;
+//  const size_t max_size = 1024;
+//  dariadb::storage::MemChunkAllocator allocator(max_size, buffer_size);
+//  std::set<dariadb::storage::ChunkHeader *> allocated_headers;
+//  std::set<uint8_t *> allocated_buffers;
+//  std::set<size_t> positions;
+//
+//  dariadb::storage::MemChunkAllocator::AllocatedData last;
+//  do {
+//    auto allocated = allocator.allocate();
+//    auto hdr = allocated.header;
+//    auto buf = allocated.buffer;
+//    auto pos = allocated.position;
+//    if (hdr == nullptr) {
+//      break;
+//    }
+//    last = allocated;
+//    allocated_headers.emplace(hdr);
+//    allocated_buffers.emplace(buf);
+//    positions.insert(pos);
+//  } while (1);
+//
+//  BOOST_CHECK(positions.size() > 0);
+//  BOOST_CHECK_EQUAL(positions.size(), allocated_headers.size());
+//  BOOST_CHECK_EQUAL(positions.size(), allocated_buffers.size());
+//
+//  allocator.free(last);
+//  auto new_obj = allocator.allocate();
+//  BOOST_CHECK_EQUAL(new_obj.position, last.position);
+//}
 
 BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
   std::cout << "MemStorageCommonTest" << std::endl;
