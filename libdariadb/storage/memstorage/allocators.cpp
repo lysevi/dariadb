@@ -41,6 +41,9 @@ MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
 }
 
 void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
+  ENSURE(d.header != nullptr);
+  ENSURE(d.buffer != nullptr);
+  ENSURE(d.position != EMPTY.position);
   auto header = d.header;
   auto buffer = d.buffer;
   auto position = d.position;

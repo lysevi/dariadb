@@ -50,12 +50,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       }
 
       for (size_t i = 0; i < _chunks.size(); ++i) {
-        if (_chunks[i] != nullptr) {
+        if (_chunks[i] != nullptr && _chunks[i]->_is_from_pool) {
           _chunk_allocator.free(_chunks[i]->_a_data);
         }
         _chunks[i] = nullptr;
       }
-	  ENSURE(_chunk_allocator._allocated == size_t());
+	  ENSURE_MSG(_chunk_allocator._allocated == size_t(), _chunk_allocator._allocated);
       _id2track.clear();
       _stoped = true;
       logger_info("engine", _settings->alias, ": memstorage - stoped.");
