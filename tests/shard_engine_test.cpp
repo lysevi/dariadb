@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_test) {
     BOOST_CHECK_EQUAL(all_shards.size(), size_t(2));
 
     dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, true,
-                                     true);
+                                     false);
     shard_storage->fsck();
     shard_storage->repack();
   }
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_memory_test) {
   const std::string storage_path_shard2 = "testStorage_shard2";
 
   const dariadb::Time from = 0;
-  const dariadb::Time to = from + 1000;
+  const dariadb::Time to = from + 10000;
   const dariadb::Time step = 10;
   const size_t chunk_size = 256;
   using namespace dariadb;
@@ -107,15 +107,17 @@ BOOST_AUTO_TEST_CASE(Shard_common_memory_test) {
   }
   {
     auto settings = dariadb::storage::Settings::create(storage_path_shard1);
-	settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
-	settings->memory_limit.setValue(5 * 1024 * 1024);
+    settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
+    settings->memory_limit.setValue(1024 * 128);
+    settings->chunk_size.setValue(chunk_size);
     settings->save();
   }
 
   {
     auto settings = dariadb::storage::Settings::create(storage_path_shard2);
-	settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
-	settings->memory_limit.setValue(5 * 1024 * 1024);
+    settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
+    settings->memory_limit.setValue(1024 * 128);
+    settings->chunk_size.setValue(chunk_size);
     settings->save();
   }
   {
@@ -141,8 +143,8 @@ BOOST_AUTO_TEST_CASE(Shard_common_memory_test) {
     auto all_shards = shard_raw_ptr->shardList();
     BOOST_CHECK_EQUAL(all_shards.size(), size_t(2));
 
-    dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, true,
-                                     true);
+    dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, false,
+                                     false);
     shard_storage->fsck();
     shard_storage->repack();
   }
