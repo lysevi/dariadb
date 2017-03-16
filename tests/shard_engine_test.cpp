@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_memory_test) {
   {
     auto settings = dariadb::storage::Settings::create(storage_path_shard1);
     settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
-    settings->memory_limit.setValue(5 * 1024 * 128);
+    settings->memory_limit.setValue(10 * 1024 * 128);
     settings->chunk_size.setValue(chunk_size);
     settings->save();
   }
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_memory_test) {
   {
     auto settings = dariadb::storage::Settings::create(storage_path_shard2);
     settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
-    settings->memory_limit.setValue(5 * 1024 * 128);
+    settings->memory_limit.setValue(10 * 1024 * 128);
     settings->chunk_size.setValue(chunk_size);
     settings->save();
   }
@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(Shard_common_memory_test) {
     BOOST_CHECK_EQUAL(all_shards.size(), size_t(2));
 
     dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, false,
-                                     true);
+                                     false);
     shard_storage->fsck();
     shard_storage->repack();
   }
