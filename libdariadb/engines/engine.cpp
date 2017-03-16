@@ -86,12 +86,21 @@ public:
     logger_info("engine", _settings->alias, ": start async workers...");
     AsyncTask am_at = [this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      if (_beginStoping) {
-        this->_eraseActionIsStoped = true;
-        return false;
-      }
-      this->eraseOldAction();
-      return true;
+	  try
+	  {
+		  if (_beginStoping) {
+			  this->_eraseActionIsStoped = true;
+			  return false;
+		  }
+		  this->eraseOldAction();
+		  return true;
+	  }
+	  catch (std::exception&ex) {
+		  logger_fatal("engine", _settings->alias, ": async worker exception: ",ex.what());
+	  }
+	  catch (...) {
+		  logger_fatal("engine", _settings->alias, ": async worker unknow exception");
+	  }
     };
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(am_at, TASK_PRIORITY::WORKER));
@@ -753,7 +762,11 @@ public:
         logger_info("engine", _settings->alias, ": erase old page ", candidateToErase);
         this->_page_manager->erase_page(candidateToErase);
         logger_info("engine", _settings->alias, ": erase old page - complete.");
-      }
+	  }
+	  else {
+		  //TODO remove this
+		  logger_info("engine", _settings->alias, ": erase old page: pages.empty()");
+	  }
     }
     this->unlock_storage();
   }
