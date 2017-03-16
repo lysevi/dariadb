@@ -52,6 +52,7 @@ Dropper::~Dropper() {
     _dropper_cond_var.notify_all();
   }
   _thread_handle.join();
+  ENSURE(_active_operations == 0);
   logger("engine", _settings->alias, ": dropper - stop end.");
 }
 
@@ -137,7 +138,7 @@ void Dropper::drop_wal_internal() {
 
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(at, TASK_PRIORITY::DEFAULT));
-    while (_active_operations != size_t(0) && !_stop) {
+    while (_active_operations != size_t(0)) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     if (_state != DROPPER_STATE::ERROR) {
