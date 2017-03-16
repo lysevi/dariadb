@@ -93,7 +93,6 @@ public:
 			  return false;
 		  }
 		  this->eraseOldAction();
-		  return true;
 	  }
 	  catch (std::exception&ex) {
 		  logger_fatal("engine", _settings->alias, ": async worker exception: ",ex.what());
@@ -101,6 +100,7 @@ public:
 	  catch (...) {
 		  logger_fatal("engine", _settings->alias, ": async worker unknow exception");
 	  }
+	  return true;
     };
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(am_at, TASK_PRIORITY::WORKER));
