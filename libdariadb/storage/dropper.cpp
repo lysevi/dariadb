@@ -125,6 +125,7 @@ void Dropper::drop_wal_internal() {
     }
 
     if (_stop) {
+	  _dropper_lock.unlock();
       break;
     }
     ENSURE(_active_operations == 0);

@@ -31,6 +31,8 @@ using namespace dariadb::utils::async;
 class Engine::Private {
 public:
   Private(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file) {
+    _eraseActionIsStoped = false;
+    _beginStoping = false;
     _thread_pool_owner = init_threadpool;
     _settings = settings;
     _strategy = _settings->strategy.value();
@@ -84,12 +86,25 @@ public:
     logger_info("engine", _settings->alias, ": start async workers...");
     AsyncTask am_at = [this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      this->eraseAction();
+      if (_beginStoping) {
+        this->_eraseActionIsStoped = true;
+        return false;
+      }
+      this->eraseOldAction();
       return true;
     };
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(am_at, TASK_PRIORITY::WORKER));
   }
+
+  void whaitWorkers() {
+    logger("engine", _settings->alias, ": whait stop of async workers...");
+    while (!_eraseActionIsStoped) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+	logger("engine", _settings->alias, ": async workers stoped.");
+  }
+
   void readMinMaxFromStorages() {
     if (_settings->load_min_max) {
       if (_page_manager != nullptr) {
@@ -132,11 +147,10 @@ public:
 
   ~Private() { this->stop(); }
 
-  void init_storages() {}
   void stop() {
     if (!_stoped) {
-		this->lock_storage();
-		this->unlock_storage();
+      _beginStoping = true;
+      whaitWorkers();
       _top_level_storage = nullptr;
       _subscribe_notify.stop();
 
@@ -146,7 +160,7 @@ public:
         _memstorage = nullptr;
       }
 
-	  _dropper = nullptr;
+      _dropper = nullptr;
       _wal_manager = nullptr;
 
       if (_thread_pool_owner) {
@@ -154,9 +168,7 @@ public:
       }
       _page_manager = nullptr;
       _manifest = nullptr;
-
       _stoped = true;
-
       lockfile_unlock();
     }
   }
@@ -633,7 +645,6 @@ public:
     return result;
   }
 
- 
   MeasArray readInterval(const QueryInterval &q) {
     size_t max_count = 0;
     auto r = this->intervalReader(q);
@@ -728,23 +739,23 @@ public:
     this->unlock_storage();
   }
 
-  void eraseAction() {
+  void eraseOldAction() {
     if (_settings->max_store_period.value() == MAX_TIME) {
       return;
     }
     this->lock_storage();
     auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
-    auto pages = _page_manager->pagesOlderThan(timepoint);
-    if (pages.empty()) {
-      this->unlock_storage();
-      return;
-    } else {
-      auto candidateToErase = pages.front();
-      logger_info("engine", _settings->alias, ": eraseAction - rm ", candidateToErase);
-      this->_page_manager->erase_page(candidateToErase);
-      logger_info("engine", _settings->alias, ": eraseAction - complete.");
-      this->unlock_storage();
+
+    if (_page_manager != nullptr) {
+      auto pages = _page_manager->pagesOlderThan(timepoint);
+      if (!pages.empty()) {
+        auto candidateToErase = pages.front();
+        logger_info("engine", _settings->alias, ": erase old page ", candidateToErase);
+        this->_page_manager->erase_page(candidateToErase);
+        logger_info("engine", _settings->alias, ": erase old page - complete.");
+      }
     }
+    this->unlock_storage();
   }
 
   void eraseOld(const Time &t) {
@@ -796,6 +807,8 @@ protected:
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
   bool _thread_pool_owner;
+  bool _eraseActionIsStoped;
+  bool _beginStoping;
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
@@ -840,7 +853,6 @@ void Engine::stop() {
 Engine::Description Engine::description() const {
   return _impl->description();
 }
-
 
 Id2Cursor Engine::intervalReader(const QueryInterval &query) {
   return _impl->intervalReader(query);

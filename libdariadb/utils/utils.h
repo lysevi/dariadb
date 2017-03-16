@@ -11,7 +11,7 @@
   }
 #define ENSURE(A) ENSURE_MSG(A, #A)
 #else
-#define ENSURE_MSG(A)
+#define ENSURE_MSG(A,E)
 #define ENSURE(A)
 #endif
 

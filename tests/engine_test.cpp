@@ -230,6 +230,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
+	ms->settings()->max_store_period.setValue(1);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -264,6 +265,7 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
 
     auto descr = ms->description();
     BOOST_CHECK_GT(descr.pages_count, size_t(0));
+	ms->settings()->max_store_period.setValue(1);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
