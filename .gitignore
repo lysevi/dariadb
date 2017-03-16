@@ -6,6 +6,7 @@ lockfile
 Manifest-journal
 shards.js
 scheme.js
+*.h.in.cmake
 *.db
 *.db-wal
 *.db-shm

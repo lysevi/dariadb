@@ -29,9 +29,6 @@ macro(ADD_NT_PERF_TEST name)
    add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/network_benchmark --io-threads=5  ${ARGN})
 endmacro()
 
-#TODO remove this line
-ADD_PERF_TEST(SHARD_MEM --strategy=MEMORY --use-shard)
-
 if(ENABLE_INTEGRATION_TESTS)
    MESSAGE(STATUS "Integration tests: ")
    ADD_PERF_TEST(WAL --strategy=WAL)

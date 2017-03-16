@@ -20,6 +20,7 @@ public:
   Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
           WALManager_ptr wal_manager);
   ~Dropper();
+  void stop();
   void dropWAL(const std::string &fname) override;
 
   void flush();

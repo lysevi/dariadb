@@ -76,11 +76,16 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     BOOST_CHECK(current.size() != size_t(0));
 
+    std::cout << "erase old files" << std::endl;
     raw_ptr->settings()->max_store_period.setValue(1);
     while (true) {
       index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
       if (index_files.empty()) {
         break;
+      }
+      std::cout << "file left:" << std::endl;
+      for (auto i : index_files) {
+        std::cout << i << std::endl;
       }
     }
   }
@@ -120,7 +125,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
                                         &maxWritedTime, false);
 
     ms->compress_all();
-    while (true) { 
+    while (true) {
       auto wals_count = ms->description().wal_count;
       if (wals_count == 0) {
         break;
@@ -217,7 +222,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(STRATEGY::MEMORY);
     settings->chunk_size.setValue(chunk_size);
-	settings->max_chunks_per_page.setValue(5);
+    settings->max_chunks_per_page.setValue(5);
     settings->memory_limit.setValue(50 * 1024);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 

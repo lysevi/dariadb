@@ -45,15 +45,21 @@ Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
 }
 
 Dropper::~Dropper() {
-  logger("engine", _settings->alias, ": dropper - stop begin.");
-  _stop = true;
-  while (!_is_stoped) {
-    _cond_var.notify_all();
-    _dropper_cond_var.notify_all();
+  stop();
+}
+
+void Dropper::stop() {
+  if (!_stop) {
+    logger("engine", _settings->alias, ": dropper - stop begin.");
+    _stop = true;
+    while (!_is_stoped) {
+      _cond_var.notify_all();
+      _dropper_cond_var.notify_all();
+    }
+    _thread_handle.join();
+    ENSURE(_active_operations == 0);
+    logger("engine", _settings->alias, ": dropper - stop end.");
   }
-  _thread_handle.join();
-  ENSURE(_active_operations == 0);
-  logger("engine", _settings->alias, ": dropper - stop end.");
 }
 
 DropperDescription Dropper::description() const {
