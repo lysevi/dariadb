@@ -128,11 +128,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       if (c == nullptr) {
         continue;
       }
-      if (!in_stop & !c->isFull()) { // not full
-        ENSURE(!in_stop);
-        ENSURE(!c->isFull());
-        continue;
-      }
+      //if (!in_stop & !c->isFull()) { // not full
+      //  ENSURE(!in_stop);
+      //  ENSURE(!c->isFull());
+      //  continue;
+      //}
       all_chunks.push_back(c.get());
       ++pos;
     }
