@@ -17,7 +17,7 @@ macro(TEST_CASE name src)
 	set_target_properties(${name} PROPERTIES FOLDER Tests)
 endmacro(TEST_CASE)
 
-if(ENABLE_SERVER)
+if(DARIADB_ENABLE_SERVER)
    TEST_CASE(net_test net_test.cpp)
    TARGET_LINK_LIBRARIES(net_test ${DARIADB_CLIENT_LIBS} dariadb-server)
 endif()

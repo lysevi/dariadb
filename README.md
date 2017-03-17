@@ -75,15 +75,15 @@ $ git submodules init
 $ git submodules update
 ```
 ### Available build options
-- **ENABLE_TESTS** - Enable testing of the dariadb. - ON
-- **ENABLE_METRICS** - Enable code metrics. - ON
-- **ENABLE_INTEGRATION_TESTS** - Enable integration test. - ON
-- **ENABLE_SERVER** - Enable build dariadb server. - ON
-- **ENABLE_BENCHMARKS** - Enable build dariadb benchmarks. - ON
-- **ENABLE_SAMPLES** - Build dariadb sample programs. - ON
-- **ASAN_UBSAN**  - Enable address & undefined behavior sanitizer for binary. - OFF
-- **MSAN** - Enable memory sanitizer for binary. - OFF
-- **SYSTEM_JEMALLOC** - Use jemalloc installed in the system. - ON
+- **DARIADB_ENABLE_TESTS** - Enable testing of the dariadb. - ON
+- **DARIADB_ENABLE_METRICS** - Enable code metrics. - ON
+- **DARIADB_ENABLE_INTEGRATION_TESTS** - Enable integration test. - ON
+- **DARIADB_ENABLE_SERVER** - Enable build dariadb server. - ON
+- **DARIADB_ENABLE_BENCHMARKS** - Enable build dariadb benchmarks. - ON
+- **DARIADB_ENABLE_SAMPLES** - Build dariadb sample programs. - ON
+- **DARIADB_ASAN_UBSAN**  - Enable address & undefined behavior sanitizer for binary. - OFF
+- **DARIADB_MSAN** - Enable memory sanitizer for binary. - OFF
+- **DARIADB_SYSTEM_JEMALLOC** - Use jemalloc installed in the system. - ON
 
 #### Example
 Configure to build with all benchmarks, but without tests and server.

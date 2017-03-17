@@ -8,6 +8,7 @@ v0.4.0
   - max_chunks_per_page - maximum count chunks per page when write from memory storage.
   - max_store_period - period, when old pages must be removed.
 - Wal now contained in-memory index.
+- Rename build options: add prefix 'DARIADB_'
 
 v0.3.0
 =====
