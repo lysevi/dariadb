@@ -52,7 +52,7 @@ private:
   Settings *_settings;
   std::mutex _dropper_lock;
   std::condition_variable _dropper_cond_var;
-  int _active_operations;
+  std::atomic_int _active_operations;
   DROPPER_STATE _state;
 };
 }
