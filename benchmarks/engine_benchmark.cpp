@@ -72,8 +72,7 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("readonly", "readonly mode");
   aos("readall", "read all benchmark enable.");
   aos("dont-clean", "dont clean storage path before start.");
-  aos("enable-readers", po::value<bool>(&readers_enable)->default_value(readers_enable),
-      "enable readers threads");
+  aos("enable-readers", "enable readers threads");
   aos("read-benchmark-runs",
       po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
@@ -111,6 +110,11 @@ void parse_cmdline(int argc, char *argv[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     std::exit(0);
+  }
+
+  if (vm.count("enable-readers")) {
+    std::cout << "enable-readers" << std::endl;
+    readers_enable = true;
   }
 
   if (vm.count("use-shard")) {
@@ -221,18 +225,19 @@ void reader(IMeasStorage *ms, IdSet all_id_set, Time from, Time to) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_int_distribution<dariadb::Id> uniform_dist(from, to);
-  std::shared_ptr<BenchCallback> clbk{new BenchCallback};
 
   while (true) {
-    clbk->count = 0;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    BenchCallback clbk;
+    clbk.count = 0;
     auto f = from;
     auto t = write_time;
 
     auto qi = dariadb::QueryInterval(
         dariadb::IdArray(all_id_set.begin(), all_id_set.end()), 0, f, t);
-    ms->foreach (qi, clbk.get());
-
-    reads_count += clbk->count;
+    ms->foreach (qi, &clbk);
+    clbk.wait();
+    reads_count += clbk.count;
     if (stop_readers) {
       break;
     }
@@ -284,6 +289,7 @@ void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   if (readers_enable) {
     pos = 0;
+	stop_readers = true;
     for (size_t i = 1; i < benchmark_params.total_readers_count + 1; i++) {
       std::thread t = std::move(readers[pos++]);
       t.join();
@@ -412,11 +418,11 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(strategy);
-   /* settings->chunk_size.setValue(3072);
-    settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
-    settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
-    settings->max_chunks_per_page.setValue(5 * 1024);
-    settings->threads_in_common.setValue(5);*/
+    /* settings->chunk_size.setValue(3072);
+     settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
+     settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
+     settings->max_chunks_per_page.setValue(5 * 1024);
+     settings->threads_in_common.setValue(5);*/
     settings->save();
 
     if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) &&

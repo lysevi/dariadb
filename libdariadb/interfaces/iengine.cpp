@@ -36,7 +36,7 @@ void IEngine::foreach (const QueryInterval &q, IReadCallback * clbk) {
     return false;
   };
 
-  auto at = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at_t));
+  ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at_t));
 }
 
 void IEngine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
