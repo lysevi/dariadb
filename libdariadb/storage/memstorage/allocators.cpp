@@ -12,13 +12,13 @@ MemChunkAllocator::MemChunkAllocator(size_t maxSize, uint32_t bufferSize)
   _chunkSize = bufferSize;
   _allocated = size_t(0);
 
-  //size_t buffers_size = _capacity * (_chunkSize + sizeof(ChunkHeader));
+  size_t buffers_size = _capacity * (_chunkSize + sizeof(ChunkHeader));
 
-  /*_region = new uint8_t[buffers_size];
+  _region = new uint8_t[buffers_size];
   _headers = reinterpret_cast<ChunkHeader *>(_region);
-  _buffers = _region + _capacity * sizeof(ChunkHeader);*/
+  _buffers = _region + _capacity * sizeof(ChunkHeader);
 
- /* memset(_region, 0, buffers_size);*/
+  memset(_region, 0, buffers_size);
   for (size_t i = 0; i < _capacity; ++i) {
     auto res = _free_list.push(i);
     if (!res) {
@@ -28,7 +28,7 @@ MemChunkAllocator::MemChunkAllocator(size_t maxSize, uint32_t bufferSize)
 }
 
 MemChunkAllocator::~MemChunkAllocator() {
-  //delete[] _region;
+  delete[] _region;
 }
 
 MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
@@ -37,9 +37,10 @@ MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
     return EMPTY;
   }
   _allocated++;
-  auto buffer = new uint8_t[_chunkSize];
+  return AllocatedData(&_headers[pos], &_buffers[pos * _chunkSize], pos);
+  /*auto buffer = new uint8_t[_chunkSize];
   std::fill_n(buffer, _chunkSize, uint8_t());
-  return AllocatedData(new ChunkHeader, buffer, pos);
+  return AllocatedData(new ChunkHeader, buffer, pos);*/
 }
 
 void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
@@ -51,8 +52,8 @@ void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
   auto position = d.position;
   memset(header, 0, sizeof(ChunkHeader));
   memset(buffer, 0, _chunkSize);
-  delete header;
-  delete[] buffer;
+ /* delete header;
+  delete[] buffer;*/
 
   _allocated--;
   auto res = _free_list.push(position);
