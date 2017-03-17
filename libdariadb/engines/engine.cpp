@@ -747,12 +747,14 @@ public:
     _page_manager->fsck();
     this->unlock_storage();
   }
-
+  
   void eraseOldAction() {
     if (_settings->max_store_period.value() == MAX_TIME) {
       return;
     }
-    this->lock_storage();
+	if (!this->try_lock_storage()) {
+		return;
+	}
     auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
 
     if (_page_manager != nullptr) {

@@ -416,6 +416,7 @@ public:
     utils::fs::rm(ifull_name);
     ENSURE(!utils::fs::file_exists(full_file_name));
     ENSURE(!utils::fs::file_exists(ifull_name));
+	logger("pm: erase ", fname," done.");
   }
 
   void erase_page(const std::string &full_file_name) {

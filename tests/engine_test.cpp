@@ -130,6 +130,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
       if (wals_count == 0) {
         break;
       }
+	  std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
