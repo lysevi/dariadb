@@ -22,6 +22,8 @@ struct PageFooter {
   Statistic stat;
   uint64_t max_chunk_id; // max(chunk->id)
   uint16_t level;
+  uint64_t parent_offset; // offset of previous footer. need for futer ideas. not used
+                          // currently
   uint8_t ftr_end;
   PageFooter(uint16_t lvl, uint64_t chunk_id) : stat() {
     magic_dariadb = MAGIC_NUMBER_DARIADB;
@@ -30,10 +32,14 @@ struct PageFooter {
     addeded_chunks = 0;
     filesize = 0;
     max_chunk_id = 0;
+    parent_offset = uint64_t();
     ftr_end = MAGIC_NUMBER_PAGEFTR;
   }
 
   bool check() {
+    if (parent_offset != uint64_t()) {
+      return false;
+    }
     if (magic_dariadb != MAGIC_NUMBER_DARIADB) {
       return false;
     }
@@ -100,12 +106,14 @@ public:
                               std::function<bool(const Chunk_Ptr &)> callback);
 
   EXPORT static Page_Ptr open(const std::string &file_name, const PageFooter &phdr);
+
 private:
   void update_index_recs(const PageFooter &phdr);
- 
+
   static Chunk_Ptr readChunkByOffset(FILE *page_io, int offset);
 
   ChunkLinkList linksByIterval(const QueryInterval &qi);
+
 public:
   PageFooter footer;
   std::string filename;

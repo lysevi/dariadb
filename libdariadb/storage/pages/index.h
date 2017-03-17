@@ -17,6 +17,9 @@ struct IndexFooter {
   uint64_t recs_count;
 
   uint16_t level;
+
+  uint64_t parent_offset; // offset of previous footer. need for futer ideas. not used
+                          // currently
   uint8_t ftr_end;
   IndexFooter() : stat() {
     magic_number = MAGIC_NUMBER_DARIADB;
@@ -24,10 +27,14 @@ struct IndexFooter {
     recs_count = 0;
     is_sorted = false;
     id_bloom = bloom_empty<Id>();
+    parent_offset = uint64_t();
     ftr_end = MAGIC_NUMBER_INDEXFTR;
   }
 
   bool check() {
+    if (parent_offset != uint64_t()) {
+      return false;
+    }
     if (magic_number != MAGIC_NUMBER_DARIADB) {
       return false;
     }
