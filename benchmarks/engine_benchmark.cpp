@@ -56,7 +56,7 @@ public:
     count = 0;
     is_end_called = false;
   }
-  void apply(const dariadb::Meas &) override { count++; }
+  void apply(const dariadb::Meas &m) override { count++; }
   void is_end() override {
     is_end_called = true;
     IReadCallback::is_end();
@@ -183,8 +183,8 @@ void show_info(IEngine *storage) {
     std::stringstream ss;
 
     ss // << "\r"
-        << " time: " << std::setw(20) << std::setfill(OUT_SEP) << time_ss.str()
-        << " storage:" << stor_ss.str() << drop_ss.str() << " rd: " << reads_count
+        << " T: " << std::setw(20) << std::setfill(OUT_SEP) << time_ss.str()
+        << " store:" << stor_ss.str() << drop_ss.str() << " rd: " << reads_count
         << " s:" << read_speed_ss.str() << " wr: " << append_count
         << " s:" << write_speed_ss.str() << persent_ss.str();
     dariadb::logger(ss.str());
@@ -299,7 +299,6 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
   if (readonly) {
     start_time = Time(0);
   }
-
   BenchCallback clbk;
 
   QueryInterval qi{IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
@@ -413,11 +412,11 @@ int main(int argc, char *argv[]) {
 
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(strategy);
-    /* settings->chunk_size.setValue(3072);
-     settings->wal_file_size.setValue((1024 * 1024) * 128 / sizeof(dariadb::Meas));
-     settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
-     settings->max_chunks_per_page.setValue(100 * 1024);
-     settings->threads_in_common.setValue(5);*/
+   /* settings->chunk_size.setValue(3072);
+    settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
+    settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
+    settings->max_chunks_per_page.setValue(5 * 1024);
+    settings->threads_in_common.setValue(5);*/
     settings->save();
 
     if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) &&

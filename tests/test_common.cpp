@@ -10,6 +10,32 @@ namespace dariadb_test {
 #undef NO_DATA
 using namespace dariadb;
 
+class WriteCallback : public dariadb::IReadCallback {
+public:
+	WriteCallback(dariadb::IMeasStorage *store) {
+		count = 0;
+		is_end_called = false;
+		storage = store;
+	}
+	void apply(const dariadb::Meas &m) override {
+		count++;
+		dariadb::Meas nm = m;
+		nm.id = dariadb::MAX_ID - m.id;
+
+		ENSURE(storage != nullptr);
+
+		storage->append(nm);
+	}
+
+	void is_end() override {
+		is_end_called = true;
+		IReadCallback::is_end();
+	}
+	std::atomic<size_t> count;
+	bool is_end_called;
+	dariadb::IMeasStorage *storage;
+};
+
 class Callback : public IReadCallback {
 public:
   Callback() {
@@ -312,7 +338,7 @@ void readTimePointCheck(IMeasStorage *as, Time from, Time to, Time step,
 }
 
 void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
-                        bool check_stop_flag, bool random_timestamps) {
+                        bool check_stop_flag, bool random_timestamps, bool run_copy_test) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   std::cout << "fill storage\n";
@@ -359,6 +385,18 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
                     check_stop_flag);
   std::cout << "readTimePointCheck\n";
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
+
+  if (run_copy_test) {
+	  std::cout << "copyCheck" << std::endl;
+	  for (auto id : _all_ids_set) {
+		  WriteCallback clbk(as);
+
+		  auto qi = dariadb::QueryInterval({ id }, 0, from, to);
+		  as->foreach(qi, &clbk);
+		  clbk.wait();
+
+	  }
+  }
   std::cout << "flush\n";
   as->flush();
 }

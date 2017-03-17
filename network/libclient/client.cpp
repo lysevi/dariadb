@@ -28,14 +28,13 @@ public:
     _query_num = 1;
     _state = CLIENT_STATE::CONNECT;
     _pings_answers = 0;
-    AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel,
-                                                     bool &dont_free_memory) {
-      onDataRecv(d, cancel, dont_free_memory);
+    AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel) {
+      onDataRecv(d, cancel);
     };
     AsyncConnection::onNetworkErrorHandler on_n =
         [this](const boost::system::error_code &err) { onNetworkError(err); };
     _async_connection =
-        std::shared_ptr<AsyncConnection>{new AsyncConnection(&_pool, on_d, on_n)};
+        std::shared_ptr<AsyncConnection>{new AsyncConnection(on_d, on_n)};
   }
 
   ~Private() noexcept(false) {
@@ -65,7 +64,7 @@ public:
 
   void disconnect() {
     if (_socket->is_open()) {
-      auto nd = _pool.construct(DATA_KINDS::DISCONNECT);
+      auto nd = std::make_shared<NetData>(DATA_KINDS::DISCONNECT);
       this->_async_connection->send(nd);
     }
 
@@ -109,7 +108,7 @@ public:
 
       logger_info("client: send hello ", hn);
 
-      auto nd = this->_pool.construct();
+      auto nd = std::make_shared<NetData>();
       nd->size += static_cast<NetData::MessageSize>(hn.size());
       nd->size += sizeof(QueryHello_header);
 
@@ -136,7 +135,7 @@ public:
     }
   }
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &) {
+  void onDataRecv(const NetData_ptr &d, bool &cancel) {
     //    if (this->_state == CLIENT_STATE::WORK) {
     //      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
     //    } else {
@@ -217,7 +216,7 @@ public:
     }
     case DATA_KINDS::PING: {
       logger_info("client: #", _async_connection->id(), " ping.");
-      auto nd = _pool.construct(DATA_KINDS::PONG);
+      auto nd = std::make_shared<NetData>(DATA_KINDS::PONG);
       this->_async_connection->send(nd);
       _pings_answers++;
       break;
@@ -269,7 +268,7 @@ public:
       results.push_back(qres);
       this->_query_results[qres->id] = qres;
 
-      auto nd = this->_pool.construct(DATA_KINDS::APPEND);
+      auto nd = std::make_shared<NetData>(DATA_KINDS::APPEND);
       nd->size = sizeof(QueryAppend_header);
 
       auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
@@ -306,7 +305,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::READ_INTERVAL;
 
-    auto nd = this->_pool.construct(DATA_KINDS::READ_INTERVAL);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::READ_INTERVAL);
 
     auto p_header = reinterpret_cast<QueryInterval_header *>(nd->data);
     nd->size = sizeof(QueryInterval_header);
@@ -317,7 +316,6 @@ public:
 
     auto id_size = sizeof(Id) * qi.ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
@@ -358,7 +356,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::READ_TIMEPOINT;
 
-    auto nd = this->_pool.construct(DATA_KINDS::READ_TIMEPOINT);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::READ_TIMEPOINT);
 
     auto p_header = reinterpret_cast<QueryTimePoint_header *>(nd->data);
     nd->size = sizeof(QueryTimePoint_header);
@@ -368,7 +366,6 @@ public:
 
     auto id_size = sizeof(Id) * qi.ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
@@ -410,7 +407,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::CURRENT_VALUE;
 
-    auto nd = this->_pool.construct(DATA_KINDS::CURRENT_VALUE);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::CURRENT_VALUE);
 
     auto p_header = reinterpret_cast<QueryCurrentValue_header *>(nd->data);
     nd->size = sizeof(QueryCurrentValue_header);
@@ -419,7 +416,6 @@ public:
 
     auto id_size = sizeof(Id) * ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(ids.size());
@@ -461,7 +457,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::SUBSCRIBE;
 
-    auto nd = this->_pool.construct(DATA_KINDS::SUBSCRIBE);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::SUBSCRIBE);
 
     auto p_header = reinterpret_cast<QuerSubscribe_header *>(nd->data);
     nd->size = sizeof(QuerSubscribe_header);
@@ -470,7 +466,6 @@ public:
 
     auto id_size = sizeof(Id) * ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(ids.size());
@@ -491,7 +486,7 @@ public:
     auto cur_id = _query_num;
     _query_num += 1;
     _locker.unlock();
-    auto nd = this->_pool.construct(DATA_KINDS::REPACK);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::REPACK);
 
     auto p_header = reinterpret_cast<QuerRepack_header *>(nd->data);
     nd->size = sizeof(QuerRepack_header);
@@ -511,7 +506,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::STAT;
 
-    auto nd = this->_pool.construct(DATA_KINDS::STAT);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::STAT);
 
     auto p_header = reinterpret_cast<QueryStat_header *>(nd->data);
     nd->size = sizeof(QueryStat_header);
@@ -550,7 +545,6 @@ public:
 
   QueryNumber _query_num;
   MeasArray in_buffer_values;
-  NetData_Pool _pool;
   std::map<QueryNumber, ReadResult_ptr> _query_results;
   std::shared_ptr<AsyncConnection> _async_connection;
 };

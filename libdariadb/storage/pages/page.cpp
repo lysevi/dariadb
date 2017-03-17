@@ -84,13 +84,54 @@ Page::~Page() {
   _index = nullptr;
 }
 
-Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                      uint32_t max_chunk_size, const SplitedById &to_compress) {
+struct page_create_write_description {
+  PageFooter phdr;
+  IndexFooter ihdr;
+  page_create_write_description(uint16_t lvl, uint64_t chunk_id)
+      : phdr(lvl, chunk_id), ihdr() {}
+};
 
+bool create_write_logic(
+    std::shared_ptr<std::list<PageInner::HdrAndBuffer>> compressed_results, FILE *file,
+    FILE *index_file, std::shared_ptr<page_create_write_description> d,
+    const std::string &file_name, on_create_complete_callback on_complete) {
+  if (!compressed_results->empty()) {
+    std::list<PageInner::HdrAndBuffer> subresult;
+    for (size_t i = 0; i < 10; ++i) {
+      if (compressed_results->empty()) {
+        break;
+      }
+      subresult.push_back(compressed_results->front());
+      compressed_results->pop_front();
+    }
+    if (!subresult.empty()) {
+      auto page_size = PageInner::writeToFile(file, index_file, d->phdr, d->ihdr,
+                                              subresult, d->phdr.filesize);
+      d->phdr.filesize = page_size;
+    }
+    if (!compressed_results->empty()) {
+      return true;
+    }
+  }
+  d->ihdr.level = d->phdr.level;
+  ENSURE(memcmp(&d->phdr.stat, &d->ihdr.stat, sizeof(Statistic)) == 0);
+  std::fwrite((char *)&d->phdr, sizeof(PageFooter), 1, file);
+  std::fclose(file);
+
+  std::fwrite(&d->ihdr, sizeof(IndexFooter), 1, index_file);
+  std::fclose(index_file);
+  auto result = Page::open(file_name, d->phdr);
+  on_complete(result);
+  return false;
+}
+
+void Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+                  uint32_t max_chunk_size, const SplitedById &to_compress,
+                  on_create_complete_callback on_complete) {
+  using namespace dariadb::utils::async;
   PageFooter phdr(lvl, chunk_id);
 
-  std::list<PageInner::HdrAndBuffer> compressed_results =
-      PageInner::compressValues(to_compress, phdr, max_chunk_size);
+  auto compressed_results = PageInner::compressValues(to_compress, phdr, max_chunk_size);
   auto file = std::fopen(file_name.c_str(), "ab");
   if (file == nullptr) {
     THROW_EXCEPTION("file is null");
@@ -104,17 +145,15 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
     THROW_EXCEPTION("can`t open file ", file_name);
   }
 
-  auto page_size =
-      PageInner::writeToFile(file, index_file, phdr, ihdr, compressed_results);
-  phdr.filesize = page_size;
-  ihdr.level = phdr.level;
-  ENSURE(memcmp(&phdr.stat, &ihdr.stat, sizeof(Statistic)) == 0);
-  std::fwrite((char *)&phdr, sizeof(PageFooter), 1, file);
-  std::fclose(file);
+  auto d = std::make_shared<page_create_write_description>(0, 0);
+  d->phdr = phdr;
 
-  std::fwrite(&ihdr, sizeof(IndexFooter), 1, index_file);
-  std::fclose(index_file);
-  return open(file_name, phdr);
+  AsyncTask at = [compressed_results, file, index_file, d, file_name,
+                  on_complete](const ThreadInfo &ti) {
+    return create_write_logic(compressed_results, file, index_file, d, file_name,
+                              on_complete);
+  };
+  ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
 }
 
 Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
@@ -216,7 +255,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
             PageInner::compressValues(all_values, phdr, max_chunk_size);
 
         auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
-                                                compressed_results, phdr.filesize);
+                                                *compressed_results, phdr.filesize);
         phdr.filesize = page_size;
       }
     }
@@ -478,11 +517,13 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
   Chunk_Ptr ptr = nullptr;
   ptr = Chunk::open(cheader, buffer);
   ptr->is_owner = true;
-  /*if (!ptr->checkChecksum()) {
+#ifdef DOUBLE_CHECKS
+  if (!ptr->checkChecksum()) {
     logger_fatal("engine: bad checksum of chunk #", ptr->header->id,
                  " for measurement id:", ptr->header->meas_id);
     return nullptr;
-  }*/
+  }
+#endif
   return ptr;
 }
 

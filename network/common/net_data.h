@@ -4,10 +4,6 @@
 #include <libdariadb/stat.h>
 #include <libdariadb/utils/async/locker.h>
 #include <common/net_common.h>
-#include <tuple>
-
-#include <boost/pool/object_pool.hpp>
-
 #include <common/net_cmn_exports.h>
 
 namespace dariadb {
@@ -116,23 +112,9 @@ struct QueryStatResult_header {
 };
 #pragma pack(pop)
 
-struct NetData_Pool {
-  utils::async::Locker _locker;
-  typedef boost::object_pool<NetData> Pool;
-  Pool _pool;
+using NetData_ptr = std::shared_ptr<NetData>;
 
-  CM_EXPORT void free(Pool::element_type *nd);
-  CM_EXPORT Pool::element_type *construct();
-
-  template <class T> Pool::element_type *construct(T &&a) {
-    _locker.lock();
-    auto res = _pool.construct(a);
-    _locker.unlock();
-    return res;
-  }
-};
-using NetData_ptr = NetData_Pool::Pool::element_type *;
-
+//using NetData_ptr = NetData_Pool::Pool::element_type *;
 const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
 }
 }

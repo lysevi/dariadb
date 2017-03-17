@@ -62,7 +62,11 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
       ma[first.id].push_back(first);
       addeded.push_back(first);
     }
-    pm->append("pagename", ma);
+	bool complete = false;
+	pm->append_async("pagename", ma, [&complete](auto p) {complete = true; });
+	while (!complete) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
   }
   pm = nullptr;
 
@@ -149,7 +153,11 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     }
     std::stringstream ss;
     ss << std::string("pagename") << iteration++;
-    pm->append(ss.str(), ma);
+	bool complete = false;
+    pm->append_async(ss.str(), ma, [&complete](auto p) {complete = true; });
+	while (!complete) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
   }
 
   dariadb::QueryInterval qi(dariadb::IdArray{1}, 0, addeded.front().time,
@@ -247,7 +255,11 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
     addeded.push_back(e);
   }
   std::string page_file_prefix = "page_prefix";
-  pm->append(page_file_prefix, a);
+  bool complete = false;
+  pm->append_async(page_file_prefix, a, [&complete](auto p) {complete = true; });
+  while (!complete) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   dariadb::IdArray all_id_array{all_id_set.begin(), all_id_set.end()};
   { // Chunks load
@@ -347,7 +359,11 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   }
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
-  pm->append(page_file_prefix1, a);
+  bool complete = false;
+  pm->append_async(page_file_prefix1, a, [&complete](auto p) {complete = true; });
+  while (!complete) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
@@ -358,7 +374,11 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
-  pm->append(page_file_prefix2, a);
+  complete = false;
+  pm->append_async(page_file_prefix2, a, [&complete](auto p) {complete = true; });
+  while (!complete) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   e.time = 0;
   for (size_t i = 0; i < count / 2; i++) {
@@ -369,7 +389,11 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";
-  pm->append(page_file_prefix3, a);
+  complete = false;
+  pm->append_async(page_file_prefix3, a, [&complete](auto p) {complete = true; });
+  while (!complete) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
   BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size(),
@@ -498,8 +522,11 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   }
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
-  pm->append(page_file_prefix1, a);
-
+  bool complete = false;
+  pm->append_async(page_file_prefix1, a, [&complete](auto p) {complete = true; });
+  while (!complete) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
     e.id = 1;
@@ -509,7 +536,12 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
-  pm->append(page_file_prefix2, a);
+  
+  complete = false;
+  pm->append_async(page_file_prefix2, a, [&complete](auto p) {complete = true; });
+  while (!complete) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   e.time = 0;
   for (size_t i = 0; i < count / 2; i++) {
@@ -520,7 +552,12 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";
-  pm->append(page_file_prefix3, a);
+
+  complete = false;
+  pm->append_async(page_file_prefix3, a, [&complete](auto p) {complete = true; });
+  while (!complete) {
+	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
   BOOST_CHECK_EQUAL(dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size(),

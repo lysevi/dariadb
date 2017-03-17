@@ -45,14 +45,21 @@ Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
 }
 
 Dropper::~Dropper() {
-  logger("engine", _settings->alias, ": dropper - stop begin.");
-  _stop = true;
-  while (!_is_stoped) {
-    _cond_var.notify_all();
-    _dropper_cond_var.notify_all();
+  stop();
+}
+
+void Dropper::stop() {
+  if (!_stop) {
+    logger("engine", _settings->alias, ": dropper - stop begin.");
+    _stop = true;
+    while (!_is_stoped) {
+      _cond_var.notify_all();
+      _dropper_cond_var.notify_all();
+    }
+    _thread_handle.join();
+    ENSURE(_active_operations == 0);
+    logger("engine", _settings->alias, ": dropper - stop end.");
   }
-  _thread_handle.join();
-  logger("engine", _settings->alias, ": dropper - stop end.");
 }
 
 DropperDescription Dropper::description() const {
@@ -118,6 +125,7 @@ void Dropper::drop_wal_internal() {
     }
 
     if (_stop) {
+	  _dropper_lock.unlock();
       break;
     }
     ENSURE(_active_operations == 0);
@@ -137,7 +145,7 @@ void Dropper::drop_wal_internal() {
 
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(at, TASK_PRIORITY::DEFAULT));
-    while (_active_operations != size_t(0) && !_stop) {
+    while (_active_operations != size_t(0)) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     if (_state != DROPPER_STATE::ERROR) {
@@ -212,18 +220,20 @@ void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
     ENSURE(_active_operations == 1);
     auto without_path = fs::extract_filename(fname);
     auto page_fname = fs::filename(without_path);
-    auto pm = _page_manager.get();
-    auto am = _wal_manager.get();
 
-    pm->append(page_fname, *splited.get());
-    am->erase(fname);
-    auto end = clock();
-    auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+    on_create_complete_callback callback = [this, fname, start_time](const Page_Ptr &) {
+      this->_wal_manager->erase(fname);
+      auto end = clock();
+      auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
 
-    logger_info("engine", _settings->alias, ": compressing ", fname,
-                " done. elapsed time - ", elapsed);
-    ENSURE(_active_operations == 1);
-    --_active_operations;
+      logger_info("engine", _settings->alias, ": compressing ", fname,
+                  " done. elapsed time - ", elapsed);
+      ENSURE(_active_operations == 1);
+      --_active_operations;
+    };
+
+    _page_manager->append_async(page_fname, *splited.get(), callback);
+
   } catch (...) {
     _state = DROPPER_STATE::ERROR;
     --_active_operations;

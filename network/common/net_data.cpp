@@ -104,7 +104,7 @@ uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas *m_a
   while (pos < size && ptr != end) {
     netdata_inner::PackMeas sm{m_array[pos].flag, m_array[pos].time, m_array[pos].value};
     auto bytes_left = (size_t)(end - ptr);
-    assert(bytes_left < NetData::MAX_MESSAGE_SIZE);
+    ENSURE(bytes_left < NetData::MAX_MESSAGE_SIZE);
     if (m_array[pos].id != pack->id) {
       if (bytes_left <= (sizeof(PackHeader) + sm.size)) {
         break;
@@ -120,7 +120,7 @@ uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas *m_a
 
     std::memcpy(ptr, sm.packed, sm.size);
     ptr += sm.size;
-    assert(ptr < end);
+	ENSURE(ptr < end);
     ++pack->count;
     ++pos;
     ++result;
@@ -142,7 +142,7 @@ MeasArray QueryAppend_header::read_measarray() const {
   while (pos < count) {
     PackHeader *pack = (PackHeader *)ptr;
     ptr += sizeof(PackHeader);
-    assert(pack->count <= count);
+	ENSURE(pack->count <= count);
     for (uint16_t i = 0; i < pack->count; ++i) {
       UnpackMeas sm(ptr);
 
@@ -157,15 +157,3 @@ MeasArray QueryAppend_header::read_measarray() const {
   return ma;
 }
 
-void NetData_Pool::free(Pool::element_type *nd) {
-  _locker.lock();
-  _pool.free(nd);
-  _locker.unlock();
-}
-
-NetData_Pool::Pool::element_type *NetData_Pool::construct() {
-  _locker.lock();
-  auto res = _pool.construct();
-  _locker.unlock();
-  return res;
-}

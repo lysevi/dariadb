@@ -41,6 +41,7 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
       WALFile_Ptr p = WALFile::open(_env, full_filename);
       _file2minmax[full_filename].minTime = p->minTime();
       _file2minmax[full_filename].maxTime = p->maxTime();
+      _file2minmax[full_filename].maxTime = p->id_bloom();
 
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
         logger_info("engine", _settings->alias, ": WalManager open exist file ", f);
@@ -61,6 +62,7 @@ void WALManager::create_new() {
     auto f = _wal->filename();
     _file2minmax[f].minTime = _wal->minTime();
     _file2minmax[f].maxTime = _wal->maxTime();
+    _file2minmax[f].bloom_id = _wal->id_bloom();
   }
   _wal = nullptr;
   if (_settings->strategy.value() != STRATEGY::WAL) {
@@ -250,6 +252,27 @@ bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   return res;
 }
 
+void WALManager::intervalReader_async_logic(const std::list<std::string> &files,
+                                            const QueryInterval &q,
+                                            Id2CursorsList &readers_list,
+                                            utils::async::Locker &readers_locker) {
+  for (auto filename : files) {
+    if (!file_in_query(filename, q)) {
+      continue;
+    }
+    auto wal = WALFile::open(_env, filename, true);
+
+    auto rdr_map = wal->intervalReader(q);
+    if (rdr_map.empty()) {
+      continue;
+    }
+    for (auto kv : rdr_map) {
+      std::lock_guard<utils::async::Locker> lg(readers_locker);
+      readers_list[kv.first].push_back(kv.second);
+    }
+  }
+}
+
 Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
   std::lock_guard<std::mutex> lg(_locker);
   Id2CursorsList readers_list;
@@ -258,28 +281,11 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
   auto files = wal_files();
 
   if (!files.empty()) {
-    auto env = _env;
-    AsyncTask at = [files, &q, env, &readers_list, &readers_locker,
+
+    AsyncTask at = [files, &q, &readers_list, &readers_locker,
                     this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      for (auto filename : files) {
-        auto min_max_iter = this->_file2minmax.find(filename);
-
-        if (min_max_iter != this->_file2minmax.end() &&
-            min_max_iter->second.minTime > q.to) {
-          continue;
-        }
-        auto wal = WALFile::open(env, filename, true);
-
-        auto rdr_map = wal->intervalReader(q);
-        if (rdr_map.empty()) {
-          continue;
-        }
-        for (auto kv : rdr_map) {
-          std::lock_guard<utils::async::Locker> lg(readers_locker);
-          readers_list[kv.first].push_back(kv.second);
-        }
-      }
+      this->intervalReader_async_logic(files, q, readers_list, readers_locker);
       return false;
     };
 
@@ -319,11 +325,14 @@ Statistic WALManager::stat(const Id id, Time from, Time to) {
   auto files = wal_files();
 
   if (!files.empty()) {
-    auto env = _env;
-    AsyncTask at = [files, &result, id, from, to, env](const ThreadInfo &ti) {
+    AsyncTask at = [files, &result, id, from, to, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+      QueryInterval qi({id}, dariadb::Flag(), from, to);
       for (auto filename : files) {
-        auto wal = WALFile::open(env, filename, true);
+        if (!this->file_in_query(filename, qi)) {
+          continue;
+        }
+        auto wal = WALFile::open(this->_env, filename, true);
 
         auto st = wal->stat(id, from, to);
         result.update(st);
@@ -362,21 +371,17 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
   auto files = wal_files();
   dariadb::Id2Meas sub_result;
 
-  std::vector<Id2Meas> results{files.size()};
+  std::list<Id2Meas> results;
   auto env = _env;
   AsyncTask at = [files, &query, &results, env, this](const ThreadInfo &ti) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-    size_t num = 0;
 
     for (auto filename : files) {
-      auto min_max_iter = this->_file2minmax.find(filename);
-      if (min_max_iter != this->_file2minmax.end() &&
-          min_max_iter->second.minTime > query.time_point) {
+      if (!this->file_in_query(filename, query)) {
         continue;
       }
       auto wal = WALFile::open(env, filename, true);
-      results[num] = wal->readTimePoint(query);
-      num++;
+      results.push_back(wal->readTimePoint(query));
     }
     return false;
   };
@@ -502,7 +507,7 @@ size_t WALManager::filesCount() const {
 }
 
 void WALManager::erase(const std::string &fname) {
-	std::lock_guard<std::mutex> lg(_file2mm_locker);
+  std::lock_guard<std::mutex> lg(_file2mm_locker);
   auto full_path = utils::fs::append_path(_settings->raw_path.value(), fname);
   _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)->wal_rm(fname);
   _file2minmax.erase(full_path);
@@ -536,4 +541,49 @@ Id2MinMax WALManager::loadMinMax() {
     ++pos;
   }
   return result;
+}
+
+bool WALManager::file_in_query(const std::string &filename, const QueryInterval &q) {
+  std::lock_guard<std::mutex> lg(_file2mm_locker);
+  auto min_max_iter = this->_file2minmax.find(filename);
+  if (min_max_iter == this->_file2minmax.end()) {
+    return true;
+  }
+  bool intevalCheck =
+	  utils::inInterval(min_max_iter->second.minTime, min_max_iter->second.maxTime, q.from)
+	  || utils::inInterval(min_max_iter->second.minTime, min_max_iter->second.maxTime, q.to)
+	  || utils::inInterval(q.from, q.to, min_max_iter->second.minTime)
+	  || utils::inInterval(q.from, q.to, min_max_iter->second.maxTime);
+  if (!intevalCheck) {
+    return false;
+  }
+  for (auto id : q.ids) {
+    bool bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
+    if (bloom_result) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool WALManager::file_in_query(const std::string &filename, const QueryTimePoint &q) {
+  std::lock_guard<std::mutex> lg(_file2mm_locker);
+  auto min_max_iter = this->_file2minmax.find(filename);
+  if (min_max_iter == this->_file2minmax.end()) {
+    return true;
+  }
+  if (min_max_iter != this->_file2minmax.end() &&
+      min_max_iter->second.minTime > q.time_point) {
+    return false;
+  }
+  if (min_max_iter != this->_file2minmax.end()) {
+    bool bloom_result = false;
+    for (auto id : q.ids) {
+      bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
+      if (bloom_result) {
+        return true;
+      }
+    }
+  }
+  return false;
 }

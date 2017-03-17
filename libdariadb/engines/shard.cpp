@@ -225,27 +225,7 @@ public:
     }
   }
 
-  void foreach (const QueryInterval &q, IReadCallback * clbk) override {
-    auto cursors = intervalReader(q);
-    for (auto id : q.ids) {
-      auto iter = cursors.find(id);
-      if (iter != cursors.end()) {
-        iter->second->apply(clbk, q);
-      }
-    }
-    clbk->is_end();
-  }
 
-  void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-    auto values = this->readTimePoint(q);
-    for (auto &kv : values) {
-      if (clbk->is_canceled()) {
-        break;
-      }
-      clbk->apply(kv.second);
-    }
-    clbk->is_end();
-  }
   std::unordered_map<IEngine_Ptr, IdSet> makeStorage2iset(const IdArray &ids) {
     std::unordered_map<IEngine_Ptr, IdSet> result;
     for (auto id : ids) {
@@ -425,14 +405,6 @@ Id2MinMax ShardEngine::loadMinMax() {
 
 bool ShardEngine::minMaxTime(Id id, Time *minResult, Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
-}
-
-void ShardEngine::foreach (const QueryInterval &q, IReadCallback * clbk) {
-  _impl->foreach (q, clbk);
-}
-
-void ShardEngine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-  _impl->foreach (q, clbk);
 }
 
 Id2Cursor ShardEngine::intervalReader(const QueryInterval &query) {

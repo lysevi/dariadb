@@ -36,7 +36,6 @@ public:
     _writes_in_progress.store(0);
 
     _env.srv = this;
-    _env.nd_pool = &_net_data_pool;
     _env.service = &_service;
 
     _signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
@@ -339,8 +338,6 @@ public:
   std::atomic_int _writes_in_progress;
 
   bool _in_stop_logic;
-  NetData_Pool _net_data_pool;
-
   std::mutex _dtor_mutex;
 };
 

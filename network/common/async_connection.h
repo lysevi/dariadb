@@ -17,16 +17,12 @@ class AsyncConnection : public std::enable_shared_from_this<AsyncConnection> {
 public:
   /// if method set 'cancel' to true, then read loop stoping.
   /// if dont_free_memory, then free NetData_ptr is in client side.
-  using onDataRecvHandler =
-      std::function<void(const NetData_ptr &d, bool &cancel, bool &dont_free_memory)>;
+  using onDataRecvHandler = std::function<void(const NetData_ptr &d, bool &cancel)>;
   using onNetworkErrorHandler = std::function<void(const boost::system::error_code &err)>;
 
 public:
-  CM_EXPORT AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv,
-                            onNetworkErrorHandler onErr);
+  CM_EXPORT AsyncConnection(onDataRecvHandler onRecv, onNetworkErrorHandler onErr);
   CM_EXPORT ~AsyncConnection() noexcept(false);
-  CM_EXPORT void set_pool(NetData_Pool *pool);
-  NetData_Pool *get_pool() { return _pool; }
   CM_EXPORT void send(const NetData_ptr &d);
   CM_EXPORT void start(const socket_ptr &sock);
   CM_EXPORT void mark_stoped();
@@ -46,7 +42,6 @@ private:
 
   bool _is_stoped;
   std::atomic_bool _begin_stoping_flag;
-  NetData_Pool *_pool;
 
   onDataRecvHandler _on_recv_hadler;
   onNetworkErrorHandler _on_error_handler;

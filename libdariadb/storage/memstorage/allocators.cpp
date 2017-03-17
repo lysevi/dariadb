@@ -38,14 +38,22 @@ MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
   }
   _allocated++;
   return AllocatedData(&_headers[pos], &_buffers[pos * _chunkSize], pos);
+  /*auto buffer = new uint8_t[_chunkSize];
+  std::fill_n(buffer, _chunkSize, uint8_t());
+  return AllocatedData(new ChunkHeader, buffer, pos);*/
 }
 
 void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
+  ENSURE(d.header != nullptr);
+  ENSURE(d.buffer != nullptr);
+  ENSURE(d.position != EMPTY.position);
   auto header = d.header;
   auto buffer = d.buffer;
   auto position = d.position;
   memset(header, 0, sizeof(ChunkHeader));
   memset(buffer, 0, _chunkSize);
+ /* delete header;
+  delete[] buffer;*/
 
   _allocated--;
   auto res = _free_list.push(position);

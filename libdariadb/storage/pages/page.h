@@ -14,7 +14,6 @@ namespace storage {
 const std::string PAGE_FILE_EXT = ".page"; // cola-file extension
 const uint16_t MIN_LEVEL = 0;
 const uint16_t MAX_LEVEL = std::numeric_limits<uint16_t>::max();
-
 #pragma pack(push, 1)
 struct PageFooter {
   uint64_t magic_dariadb;
@@ -48,16 +47,16 @@ struct PageFooter {
 
 class Page;
 typedef std::shared_ptr<Page> Page_Ptr;
-
+using on_create_complete_callback = std::function<void(const Page_Ptr &)>;
 class Page : public ChunkContainer {
   Page() = delete;
   Page(const PageFooter &footer, std::string fname);
 
 public:
   /// called by Dropper from Wal level.
-  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
-                                uint64_t chunk_id, uint32_t max_chunk_size,
-                                const SplitedById &ma);
+  EXPORT static void create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
+                            uint32_t max_chunk_size, const SplitedById &ma,
+                            on_create_complete_callback on_complete);
   /**
   used for repack many pages to one
   file_name - output page filename
@@ -100,14 +99,13 @@ public:
   EXPORT void apply_to_chunks(const ChunkLinkList &links,
                               std::function<bool(const Chunk_Ptr &)> callback);
 
+  EXPORT static Page_Ptr open(const std::string &file_name, const PageFooter &phdr);
 private:
   void update_index_recs(const PageFooter &phdr);
-
-  static Page_Ptr open(const std::string &file_name, const PageFooter &phdr);
+ 
   static Chunk_Ptr readChunkByOffset(FILE *page_io, int offset);
 
   ChunkLinkList linksByIterval(const QueryInterval &qi);
-
 public:
   PageFooter footer;
   std::string filename;

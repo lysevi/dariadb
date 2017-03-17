@@ -101,9 +101,7 @@ void TimeTrack::append_to_past(const Meas &value) {
     _index.erase(target_to_replace->header->stat.maxTime);
   }
 
-  if (target_to_replace->_is_from_pool) {
-    _mcc->freeChunk(target_to_replace);
-  }
+ 
   /// unpack and sort.
   auto rdr = target_to_replace->getReader();
   while (!rdr->is_end()) {
@@ -114,12 +112,17 @@ void TimeTrack::append_to_past(const Meas &value) {
     mset.insert(v);
   }
   rdr = nullptr;
+  
+  auto old_chunk_size = target_to_replace->header->size;
+  if (target_to_replace->_is_from_pool) {
+	  _mcc->freeChunk(target_to_replace);
+  }
 
   mset.insert(value);
 
   /// need to leak detection.
   ENSURE(target_to_replace.use_count() == long(1));
-  auto old_chunk_size = target_to_replace->header->size;
+  
   target_to_replace = nullptr;
 
   MeasArray mar{mset.begin(), mset.end()};

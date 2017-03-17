@@ -22,11 +22,9 @@ struct IOClient {
     Environment() {
       srv = nullptr;
       storage = nullptr;
-      nd_pool = nullptr;
     }
     IClientManager *srv;
     Engine *storage;
-    NetData_Pool *nd_pool;
     boost::asio::io_service *service;
   };
 
@@ -38,6 +36,8 @@ struct IOClient {
     QueryNumber _query_num;
     size_t pos;
     std::array<Meas, BUFFER_LENGTH> _buffer;
+	
+	bool is_needed = true;// false - io_client remove from readers.
 
     QueryInterval*linked_query_interval;
     QueryTimePoint*linked_query_point;
@@ -56,7 +56,7 @@ struct IOClient {
   void close();
   void ping();
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &dont_free_memory);
+  void onDataRecv(const NetData_ptr &d, bool &cancel);
   void onNetworkError(const boost::system::error_code &err);
 
   void append(const NetData_ptr &d);
@@ -67,9 +67,11 @@ struct IOClient {
   void sendOk(QueryNumber query_num);
   void sendError(QueryNumber query_num, const ERRORS &err);
 
-  // data - queryInterval or QueryTimePoint
   void readerAdd(const ReaderCallback_ptr &cdr);
   void readerRemove(QueryNumber number);
+  void readerRemove_unsafe(QueryNumber number);
+  void readerClear();
+  void readersEraseUnneeded();
 
   Time _last_query_time;
   socket_ptr sock;

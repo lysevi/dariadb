@@ -31,6 +31,8 @@ using namespace dariadb::utils::async;
 class Engine::Private {
 public:
   Private(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file) {
+    _eraseActionIsStoped = false;
+    _beginStoping = false;
     _thread_pool_owner = init_threadpool;
     _settings = settings;
     _strategy = _settings->strategy.value();
@@ -84,12 +86,34 @@ public:
     logger_info("engine", _settings->alias, ": start async workers...");
     AsyncTask am_at = [this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      this->eraseAction();
-      return true;
+	  try
+	  {
+		  if (_beginStoping) {
+			  this->_eraseActionIsStoped = true;
+			  return false;
+		  }
+		  this->eraseOldAction();
+	  }
+	  catch (std::exception&ex) {
+		  logger_fatal("engine", _settings->alias, ": async worker exception: ",ex.what());
+	  }
+	  catch (...) {
+		  logger_fatal("engine", _settings->alias, ": async worker unknow exception");
+	  }
+	  return true;
     };
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(am_at, TASK_PRIORITY::WORKER));
   }
+
+  void whaitWorkers() {
+    logger("engine", _settings->alias, ": whait stop of async workers...");
+    while (!_eraseActionIsStoped) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+	logger("engine", _settings->alias, ": async workers stoped.");
+  }
+
   void readMinMaxFromStorages() {
     if (_settings->load_min_max) {
       if (_page_manager != nullptr) {
@@ -132,9 +156,10 @@ public:
 
   ~Private() { this->stop(); }
 
-  void init_storages() {}
   void stop() {
     if (!_stoped) {
+      _beginStoping = true;
+      whaitWorkers();
       _top_level_storage = nullptr;
       _subscribe_notify.stop();
 
@@ -144,17 +169,15 @@ public:
         _memstorage = nullptr;
       }
 
-      _wal_manager = nullptr;
       _dropper = nullptr;
+      _wal_manager = nullptr;
 
       if (_thread_pool_owner) {
         ThreadManager::stop();
       }
       _page_manager = nullptr;
       _manifest = nullptr;
-
       _stoped = true;
-
       lockfile_unlock();
     }
   }
@@ -384,7 +407,7 @@ public:
       if (ids.size() == 0) {
         ids_check = true;
       } else {
-        if (std::find(ids.begin(), ids.end(), kv.first)!=ids.end()) {
+        if (std::find(ids.begin(), ids.end(), kv.first) != ids.end()) {
           ids_check = true;
         }
       }
@@ -631,48 +654,6 @@ public:
     return result;
   }
 
-  void foreach (const QueryInterval &q, IReadCallback * clbk) {
-    QueryInterval local_q = q;
-    local_q.ids.resize(1);
-
-    /*logger("begin read ", q.ids.size());
-    auto r = intervalReader(q);
-    logger("interval recvd ");
-    for (auto id : q.ids) {
-            logger("read id ", id);
-            local_q.ids[0] = id;
-            auto fres = r.find(id);
-            if (fres != r.end()) {
-                    fres->second->apply(clbk, local_q);
-            }
-    }
-    clbk->is_end();*/
-
-    for (auto id : q.ids) {
-      //auto start_time = clock();
-      local_q.ids[0] = id;
-      auto r = intervalReader(local_q);
-      auto fres = r.find(id);
-      if (fres != r.end()) {
-        fres->second->apply(clbk, local_q);
-      }
-      //auto elapsed_time = (((float)clock() - start_time) / CLOCKS_PER_SEC);
-      //logger("foreach: #", id, ": elapsed ", elapsed_time, "s");
-    }
-    clbk->is_end();
-  }
-
-  void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-    auto values = this->readTimePoint(q);
-    for (auto &kv : values) {
-      if (clbk->is_canceled()) {
-        break;
-      }
-      clbk->apply(kv.second);
-    }
-    clbk->is_end();
-  }
-
   MeasArray readInterval(const QueryInterval &q) {
     size_t max_count = 0;
     auto r = this->intervalReader(q);
@@ -766,24 +747,30 @@ public:
     _page_manager->fsck();
     this->unlock_storage();
   }
-
-  void eraseAction() {
+  
+  void eraseOldAction() {
     if (_settings->max_store_period.value() == MAX_TIME) {
       return;
     }
-    this->lock_storage();
+	if (!this->try_lock_storage()) {
+		return;
+	}
     auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
-    auto pages = _page_manager->pagesOlderThan(timepoint);
-    if (pages.empty()) {
-      this->unlock_storage();
-      return;
-    } else {
-      auto candidateToErase = pages.front();
-      logger_info("engine", _settings->alias, ": eraseAction - rm ", candidateToErase);
-      this->_page_manager->erase_page(candidateToErase);
-      logger_info("engine", _settings->alias, ": eraseAction - complete.");
-      this->unlock_storage();
+
+    if (_page_manager != nullptr) {
+      auto pages = _page_manager->pagesOlderThan(timepoint);
+      if (!pages.empty()) {
+        auto candidateToErase = pages.front();
+        logger_info("engine", _settings->alias, ": erase old page ", candidateToErase);
+        this->_page_manager->erase_page(candidateToErase);
+        logger_info("engine", _settings->alias, ": erase old page - complete.");
+	  }
+	  else {
+		  //TODO remove this
+		  logger_info("engine", _settings->alias, ": erase old page: pages.empty()");
+	  }
     }
+    this->unlock_storage();
   }
 
   void eraseOld(const Time &t) {
@@ -835,6 +822,8 @@ protected:
   Id2MinMax _min_max_map;
   std::shared_mutex _min_max_locker;
   bool _thread_pool_owner;
+  bool _eraseActionIsStoped;
+  bool _beginStoping;
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
@@ -880,20 +869,12 @@ Engine::Description Engine::description() const {
   return _impl->description();
 }
 
-void Engine::foreach (const QueryInterval &q, IReadCallback * clbk) {
-  return _impl->foreach (q, clbk);
-}
-
 Id2Cursor Engine::intervalReader(const QueryInterval &query) {
   return _impl->intervalReader(query);
 }
 
 Statistic Engine::stat(const Id id, Time from, Time to) {
   return _impl->stat(id, from, to);
-}
-
-void Engine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-  return _impl->foreach (q, clbk);
 }
 
 MeasArray Engine::readInterval(const QueryInterval &q) {

@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     settings->chunk_size.setValue(chunk_size);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
@@ -76,11 +76,16 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     BOOST_CHECK(current.size() != size_t(0));
 
+    std::cout << "erase old files" << std::endl;
     raw_ptr->settings()->max_store_period.setValue(1);
     while (true) {
       index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
       if (index_files.empty()) {
         break;
+      }
+      std::cout << "file left:" << std::endl;
+      for (auto i : index_files) {
+        std::cout << i << std::endl;
       }
     }
   }
@@ -120,11 +125,12 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
                                         &maxWritedTime, false);
 
     ms->compress_all();
-    while (true) { 
+    while (true) {
       auto wals_count = ms->description().wal_count;
       if (wals_count == 0) {
         break;
       }
+	  std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -217,14 +223,15 @@ BOOST_AUTO_TEST_CASE(Engine_MemStorage_common_test) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(STRATEGY::MEMORY);
     settings->chunk_size.setValue(chunk_size);
-	settings->max_chunks_per_page.setValue(5);
+    settings->max_chunks_per_page.setValue(5);
     settings->memory_limit.setValue(50 * 1024);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true, false);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, false, false);
 
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_GE(pages_count, size_t(2));
+	ms->settings()->max_store_period.setValue(1);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -255,10 +262,11 @@ BOOST_AUTO_TEST_CASE(Engine_Cache_common_test) {
     settings->wal_file_size.setValue(2000);
     std::unique_ptr<Engine> ms{new Engine(settings)};
 
-    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true);
+    dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
 
     auto descr = ms->description();
     BOOST_CHECK_GT(descr.pages_count, size_t(0));
+	ms->settings()->max_store_period.setValue(1);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
