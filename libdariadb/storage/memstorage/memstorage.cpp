@@ -55,7 +55,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         }
         _chunks[i] = nullptr;
       }
-	  ENSURE_MSG(_chunk_allocator._allocated.load() == size_t(), _chunk_allocator._allocated.load());
+	  ENSURE(_chunk_allocator._allocated == size_t());
       _id2track.clear();
       _stoped = true;
       logger_info("engine", _settings->alias, ": memstorage - stoped.");
@@ -105,7 +105,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
     logger_info("engine", _settings->alias, ": memstorage - drop_by_limit ",
                 chunk_percent_to_free);
-    auto cur_chunk_count = this->_chunk_allocator._allocated.load();
+    size_t cur_chunk_count = (size_t)this->_chunk_allocator._allocated;
     auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_percent_to_free);
 
     std::vector<Chunk *> all_chunks;
