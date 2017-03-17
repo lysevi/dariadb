@@ -56,10 +56,18 @@
 ```shell
 $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update
-$ sudo apt-get install -y libboost-dev  libboost-coroutine-dev libboost-context-dev libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6
+$ sudo apt-get install -y libboost-dev  libboost-coroutine-dev libboost-context-dev libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6 
 $ export CC="gcc-6"
 $ export CXX="g++-6"
 ```
+### Jemalloc
+Optionaly you can install jemalloc for better memory usage. 
+``shell
+$ sudo apt-get install libjemalloc-dev
+```
+
+Or you may use builtin jemalloc source in dariadb  - just add build option -DSYSTEM_JEMALLOC=OFF
+
 ### Git submodules
 ```shell
 $ cd dariadb
@@ -72,8 +80,10 @@ $ git submodules update
 - ENABLE_INTEGRATION_TESTS - Enable integration test. - ON
 - ENABLE_SERVER - Enable build dariadb server. - ON
 - ENABLE_BENCHMARKS - Enable build dariadb benchmarks. - ON
-- CLANG_ASAN_UBSAN  - Enable Clang address & undefined behavior sanitizer for binary. - OFF
-- CLANG_MSAN - Enable Clang memory sanitizer for binary. - OFF
+- ENABLE_SAMPLES - Build dariadb sample programs. - ON
+- ASAN_UBSAN  - Enable address & undefined behavior sanitizer for binary. - OFF
+- MSAN - Enable memory sanitizer for binary. - OFF
+- SYSTEM_JEMALLOC - Use jemalloc installed in the system. - ON
 
 #### Example
 Configure to build with all benchmarks, but without tests and server.
