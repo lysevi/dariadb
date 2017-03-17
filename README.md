@@ -50,7 +50,7 @@
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
-##Build
+## Build
 ### Install dependencies
 ---
 ```shell
