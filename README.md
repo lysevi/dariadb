@@ -62,11 +62,11 @@ $ export CXX="g++-6"
 ```
 ### Jemalloc
 Optionaly you can install jemalloc for better memory usage. 
-``shell
+```shell
 $ sudo apt-get install libjemalloc-dev
 ```
 
-Or you may use builtin jemalloc source in dariadb  - just add build option -DSYSTEM_JEMALLOC=OFF
+Or you may use builtin jemalloc source in dariadb  - just add build option **-DSYSTEM_JEMALLOC=OFF**
 
 ### Git submodules
 ```shell
@@ -75,15 +75,15 @@ $ git submodules init
 $ git submodules update
 ```
 ### Available build options
-- ENABLE_TESTS - Enable testing of the dariadb. - ON
-- ENABLE_METRICS - Enable code metrics. - ON
-- ENABLE_INTEGRATION_TESTS - Enable integration test. - ON
-- ENABLE_SERVER - Enable build dariadb server. - ON
-- ENABLE_BENCHMARKS - Enable build dariadb benchmarks. - ON
-- ENABLE_SAMPLES - Build dariadb sample programs. - ON
-- ASAN_UBSAN  - Enable address & undefined behavior sanitizer for binary. - OFF
-- MSAN - Enable memory sanitizer for binary. - OFF
-- SYSTEM_JEMALLOC - Use jemalloc installed in the system. - ON
+- **ENABLE_TESTS** - Enable testing of the dariadb. - ON
+- **ENABLE_METRICS** - Enable code metrics. - ON
+- **ENABLE_INTEGRATION_TESTS** - Enable integration test. - ON
+- **ENABLE_SERVER** - Enable build dariadb server. - ON
+- **ENABLE_BENCHMARKS** - Enable build dariadb benchmarks. - ON
+- **ENABLE_SAMPLES** - Build dariadb sample programs. - ON
+- **ASAN_UBSAN**  - Enable address & undefined behavior sanitizer for binary. - OFF
+- **MSAN** - Enable memory sanitizer for binary. - OFF
+- **SYSTEM_JEMALLOC** - Use jemalloc installed in the system. - ON
 
 #### Example
 Configure to build with all benchmarks, but without tests and server.
@@ -91,20 +91,20 @@ Configure to build with all benchmarks, but without tests and server.
 $ cmake  -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF -DENABLE_INTEGRATION_TESTS=OFF -DENABLE_BENCHMARKS=ON -DENABLE_SERVER=OFF . 
 ```
 
-###clang
+### clang
 ---
 ```shell
 $ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_RELEASE} -stdlib=libc++" -DCMAKE_EXE_LINKER_FLAGS="${CMAKE_EXE_LINKER_FLAGS} -lstdc++" .
 $ make
 ```
 
-###gcc
+### gcc
 ---
 ```shell
 $ cmake -DCMAKE_BUILD_TYPE=Release .
 $ make
 ```
-###Microsoft Visual Studio
+### Microsoft Visual Studio
 ---
 ```cmd
 $ cmake -G "Visual Studio 14 2015 Win64" .
