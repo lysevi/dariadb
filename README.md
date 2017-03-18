@@ -45,7 +45,7 @@
   - measurement count
   - values sum
 
-#Usage example
+# Usage example
 - See folder "examples"
 - How to use dariadb as a embedded storage engine: [dariadb-example](https://github.com/lysevi/dariadb-example)
 
@@ -54,7 +54,8 @@
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
-##Build
+## Build
+
 ### Install dependencies
 ---
 ```shell
@@ -79,13 +80,13 @@ $ git submodules update
 - CLANG_ASAN_UBSAN  - Enable Clang address & undefined behavior sanitizer for binary. - OFF
 - CLANG_MSAN - Enable Clang memory sanitizer for binary. - OFF
 
-####Configure to build with all benchmarks, but without tests and server.
+#### Configure to build with all benchmarks, but without tests and server.
 ---
 ```shell
 $ cmake  -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF -DENABLE_INTEGRATION_TESTS=OFF -DENABLE_BENCHMARKS=ON -DENABLE_SERVER=OFF . 
 ```
 
-###clang
+### clang
 ---
 Clang currently does not supported.
 ```shell
@@ -93,14 +94,14 @@ $ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE="${CMAKE_CXX_FLAGS_
 $ make
 ```
 
-###gcc
+### gcc
 ---
 ```shell
 $ cmake -DCMAKE_BUILD_TYPE=Release .
 $ make
 ```
 
-###Microsoft Visual Studio
+### Microsoft Visual Studio
 ---
 ```cmd
 $ cmake -G "Visual Studio 14 2015 Win64" .
