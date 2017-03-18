@@ -341,7 +341,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
               << std::endl;
   }
-  /*{
+  {
 
     std::cout << "==> intervals foreach(copy)..." << std::endl;
 
@@ -373,7 +373,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
               << std::endl;
-  }*/
+  }
   {
 
     std::cout << "==> intervals reads..." << std::endl;
