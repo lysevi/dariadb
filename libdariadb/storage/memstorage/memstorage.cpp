@@ -31,9 +31,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     _down_level_storage = nullptr;
     _disk_storage = nullptr;
     _drop_stop = false;
-
-    _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
-
+    if (!_settings->is_memory_only_mode) {
+      _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
+    }
     if (id_count != 0) {
       _id2track.reserve(id_count);
     }
@@ -41,9 +41,11 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   void stop() {
     if (!_stoped) {
       logger_info("engine", _settings->alias, ": memstorage - begin stoping.");
-      _drop_stop = true;
-      _drop_cond.notify_all();
-      _drop_thread.join();
+      if (!_settings->is_memory_only_mode) {
+        _drop_stop = true;
+        _drop_cond.notify_all();
+        _drop_thread.join();
+      }
 
       if (this->_down_level_storage != nullptr) {
         logger_info("engine", _settings->alias, ": memstorage - drop all chunk to disk");
