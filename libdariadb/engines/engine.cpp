@@ -44,35 +44,40 @@ public:
     logger_info("engine", _settings->alias, ": storage format - ", format());
     logger_info("engine", _settings->alias, ": strategy - ", _settings->strategy.value());
     _stoped = false;
+    bool is_new_storage = false;
+    if (!_settings->is_memory_only_mode) {
+      if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
+        dariadb::utils::fs::mkdir(_settings->storage_path.value());
+        dariadb::utils::fs::mkdir(_settings->raw_path.value());
+      }
 
-    if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
-      dariadb::utils::fs::mkdir(_settings->storage_path.value());
-      dariadb::utils::fs::mkdir(_settings->raw_path.value());
+      lockfile_lock_or_die(ignore_lock_file);
+
+      auto manifest_file_name =
+          utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
+
+      is_new_storage = !utils::fs::file_exists(manifest_file_name);
+      if (is_new_storage) {
+        logger_info("engine", _settings->alias, ": init new storage.");
+      }
     }
 
-    lockfile_lock_or_die(ignore_lock_file);
-
-    auto manifest_file_name =
-        utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
-
-    bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
-    if (is_new_storage) {
-      logger_info("engine", _settings->alias, ": init new storage.");
-    }
     _subscribe_notify.start();
     if (init_threadpool) {
       ThreadManager::Params tpm_params(_settings->thread_pools_params());
       ThreadManager::start(tpm_params);
     }
 
-    _manifest = Manifest::create(_settings);
-    _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
+    if (!_settings->is_memory_only_mode) {
+      _manifest = Manifest::create(_settings);
+      _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
-    if (is_new_storage) { // init new;
-      _manifest->set_format(std::to_string(format()));
-    } else { // open exists
-      check_storage_version();
-      Dropper::cleanStorage(_settings->raw_path.value());
+      if (is_new_storage) { // init new;
+        _manifest->set_format(std::to_string(format()));
+      } else { // open exists
+        check_storage_version();
+        Dropper::cleanStorage(_settings->raw_path.value());
+      }
     }
 
     init_managers();
@@ -86,21 +91,18 @@ public:
     logger_info("engine", _settings->alias, ": start async workers...");
     AsyncTask am_at = [this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-	  try
-	  {
-		  if (_beginStoping) {
-			  this->_eraseActionIsStoped = true;
-			  return false;
-		  }
-		  this->eraseOldAction();
-	  }
-	  catch (std::exception&ex) {
-		  logger_fatal("engine", _settings->alias, ": async worker exception: ",ex.what());
-	  }
-	  catch (...) {
-		  logger_fatal("engine", _settings->alias, ": async worker unknow exception");
-	  }
-	  return true;
+      try {
+        if (_beginStoping) {
+          this->_eraseActionIsStoped = true;
+          return false;
+        }
+        this->eraseOldAction();
+      } catch (std::exception &ex) {
+        logger_fatal("engine", _settings->alias, ": async worker exception: ", ex.what());
+      } catch (...) {
+        logger_fatal("engine", _settings->alias, ": async worker unknow exception");
+      }
+      return true;
     };
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(am_at, TASK_PRIORITY::WORKER));
@@ -111,7 +113,7 @@ public:
     while (!_eraseActionIsStoped) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-	logger("engine", _settings->alias, ": async workers stoped.");
+    logger("engine", _settings->alias, ": async workers stoped.");
   }
 
   void readMinMaxFromStorages() {
@@ -132,24 +134,29 @@ public:
   }
 
   void init_managers() {
-    _page_manager = PageManager::create(_engine_env);
-
-    if (_strategy != STRATEGY::MEMORY) {
-      _wal_manager = WALManager::create(_engine_env);
-
-      _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
-      _wal_manager->setDownlevel(_dropper.get());
-      this->_top_level_storage = _wal_manager;
-    }
-
-    if (_strategy == STRATEGY::CACHE || _strategy == STRATEGY::MEMORY) {
+    if (_settings->is_memory_only_mode) {
       _memstorage = MemStorage::create(_engine_env, _min_max_map.size());
-      if (_strategy != STRATEGY::CACHE) {
-        _memstorage->setDownLevel(_page_manager.get());
-      }
       _top_level_storage = _memstorage;
-      if (_strategy == STRATEGY::CACHE) {
-        _memstorage->setDiskStorage(_wal_manager.get());
+    } else {
+      _page_manager = PageManager::create(_engine_env);
+
+      if (_strategy != STRATEGY::MEMORY) {
+        _wal_manager = WALManager::create(_engine_env);
+
+        _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
+        _wal_manager->setDownlevel(_dropper.get());
+        this->_top_level_storage = _wal_manager;
+      }
+
+      if (_strategy == STRATEGY::CACHE || _strategy == STRATEGY::MEMORY) {
+        _memstorage = MemStorage::create(_engine_env, _min_max_map.size());
+        if (_strategy != STRATEGY::CACHE) {
+          _memstorage->setDownLevel(_page_manager.get());
+        }
+        _top_level_storage = _memstorage;
+        if (_strategy == STRATEGY::CACHE) {
+          _memstorage->setDiskStorage(_wal_manager.get());
+        }
       }
     }
   }
@@ -178,7 +185,9 @@ public:
       _page_manager = nullptr;
       _manifest = nullptr;
       _stoped = true;
-      lockfile_unlock();
+      if (!_settings->is_memory_only_mode) {
+        lockfile_unlock();
+      }
     }
   }
 
@@ -292,7 +301,11 @@ public:
   Time minTime() {
     lock_storage();
 
-    auto pmin = _page_manager->minTime();
+    Time pmin = MAX_TIME;
+    if (_page_manager != nullptr) {
+      pmin = _page_manager->minTime();
+    }
+
     if (_strategy == STRATEGY::CACHE) {
       auto amin = this->_wal_manager->minTime();
       pmin = std::min(pmin, amin);
@@ -306,7 +319,10 @@ public:
   Time maxTime() {
     lock_storage();
 
-    auto pmax = _page_manager->maxTime();
+    Time pmax = MIN_TIME;
+    if (_page_manager != nullptr) {
+      pmax = _page_manager->maxTime();
+    }
     if (_strategy == STRATEGY::CACHE) {
       auto amax = this->_wal_manager->maxTime();
       pmax = std::max(pmax, amax);
@@ -337,10 +353,15 @@ public:
 
     lock_storage();
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    utils::async::TaskResult_Ptr pm_async = nullptr;
+    if (!_settings->is_memory_only_mode) {
+      pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    }
     auto am_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
 
-    pm_async->wait();
+    if (pm_async != nullptr) {
+      pm_async->wait();
+    }
     am_async->wait();
 
     unlock_storage();
@@ -356,11 +377,18 @@ public:
   Id2MinMax loadMinMax() {
     this->lock_storage();
 
-    auto p_mm = this->_page_manager->loadMinMax();
-    if (_strategy == STRATEGY::CACHE) {
-      auto a_mm = this->_wal_manager->loadMinMax();
-      minmax_append(p_mm, a_mm);
+    Id2MinMax p_mm, a_mm;
+    if (_page_manager != nullptr) {
+      p_mm = this->_page_manager->loadMinMax();
     }
+
+    if (_strategy == STRATEGY::CACHE) {
+      if (_wal_manager != nullptr) {
+        a_mm = this->_wal_manager->loadMinMax();
+        minmax_append(p_mm, a_mm);
+      }
+    }
+
     auto t_mm = this->_top_level_storage->loadMinMax();
 
     minmax_append(p_mm, t_mm);
@@ -433,7 +461,9 @@ public:
     if (_memstorage != nullptr) {
       _memstorage->flush();
     }
-    _page_manager->flush();
+    if (_page_manager != nullptr) {
+      _page_manager->flush();
+    }
     this->wait_all_asyncs();
   }
 
@@ -443,7 +473,7 @@ public:
     Engine::Description result;
     memset(&result, 0, sizeof(Description));
     result.wal_count = _wal_manager == nullptr ? 0 : _wal_manager->filesCount();
-    result.pages_count = _page_manager->files_count();
+    result.pages_count = _page_manager == nullptr ? 0 : _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
 
     if (_dropper != nullptr) {
@@ -547,8 +577,14 @@ public:
   /// when strategy!=CACHEs
   Id2Cursor internal_readers_two_level(const QueryInterval &q, PageManager_ptr pm,
                                        IMeasSource_ptr tm) {
-    auto pm_readers = pm->intervalReader(q);
-    auto tm_readers = tm->intervalReader(q);
+    Id2Cursor pm_readers;
+    if (pm != nullptr) {
+      pm_readers = pm->intervalReader(q);
+    }
+    Id2Cursor tm_readers;
+    if (tm != nullptr) {
+      tm_readers = tm->intervalReader(q);
+    }
 
     Id2CursorsList all_readers;
     for (auto kv : tm_readers) {
@@ -709,7 +745,7 @@ public:
             result[id] = value;
             in_wal_level = value.flag != FLAGS::_NO_DATA;
           }
-          if (!in_wal_level) {
+          if (!in_wal_level && _page_manager != nullptr) {
             auto subres = _page_manager->valuesBeforeTimePoint(local_q);
             result[id] = subres[id];
           }
@@ -747,14 +783,14 @@ public:
     _page_manager->fsck();
     this->unlock_storage();
   }
-  
+
   void eraseOldAction() {
     if (_settings->max_store_period.value() == MAX_TIME) {
       return;
     }
-	if (!this->try_lock_storage()) {
-		return;
-	}
+    if (!this->try_lock_storage()) {
+      return;
+    }
     auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
 
     if (_page_manager != nullptr) {
@@ -764,11 +800,10 @@ public:
         logger_info("engine", _settings->alias, ": erase old page ", candidateToErase);
         this->_page_manager->erase_page(candidateToErase);
         logger_info("engine", _settings->alias, ": erase old page - complete.");
-	  }
-	  else {
-		  //TODO remove this
-		  logger_info("engine", _settings->alias, ": erase old page: pages.empty()");
-	  }
+      } else {
+        // TODO remove this
+        logger_info("engine", _settings->alias, ": erase old page: pages.empty()");
+      }
     }
     this->unlock_storage();
   }

@@ -38,18 +38,16 @@ struct IMemoryAllocator {
   virtual void free(const AllocatedData &d) = 0;
 };
 using IMemoryAllocator_Ptr = std::shared_ptr<IMemoryAllocator>;
-/*
-struct MemChunkAllocator : public utils::NonCopy {
 
+struct UnlimitMemoryAllocator : public utils::NonCopy, public IMemoryAllocator {
   size_t _one_chunk_size;
-  size_t _maxSize;     /// max size in bytes)
 
-  EXPORT MemChunkAllocator(size_t maxSize, uint32_t bufferSize);
-  MemChunkAllocator(const MemChunkAllocator &) = delete;
-  EXPORT ~MemChunkAllocator();
+  EXPORT UnlimitMemoryAllocator(uint32_t bufferSize);
+  UnlimitMemoryAllocator(const UnlimitMemoryAllocator &) = delete;
+  EXPORT ~UnlimitMemoryAllocator();
   EXPORT AllocatedData allocate() override;
   EXPORT void free(const AllocatedData &d) override;
-};*/
+};
 
 struct RegionChunkAllocator : public utils::NonCopy, public IMemoryAllocator {
   size_t _one_chunk_size;

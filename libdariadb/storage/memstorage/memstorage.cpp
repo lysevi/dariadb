@@ -25,13 +25,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   Private(const EngineEnvironment_ptr &env, size_t id_count)
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)) {
-    auto alloc_ptr = new RegionChunkAllocator(_settings->memory_limit.value(),
-                                              _settings->chunk_size.value());
-    _chunk_allocator = IMemoryAllocator_Ptr(alloc_ptr);
+
+    allocator_init();
     _stoped = false;
     _down_level_storage = nullptr;
     _disk_storage = nullptr;
     _drop_stop = false;
+
     _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
 
     if (id_count != 0) {
@@ -66,6 +66,17 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   }
   ~Private() { stop(); }
 
+  void allocator_init() {
+    IMemoryAllocator *alloc_ptr;
+    if (_settings->is_memory_only_mode) {
+      alloc_ptr = new UnlimitMemoryAllocator(_settings->chunk_size.value());
+    } else {
+      alloc_ptr = new RegionChunkAllocator(_settings->memory_limit.value(),
+                                           _settings->chunk_size.value());
+    }
+
+    _chunk_allocator = IMemoryAllocator_Ptr(alloc_ptr);
+  }
   memstorage::Description description() const {
     memstorage::Description result;
     auto region_allocator_ptr =
@@ -101,6 +112,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     }
 
     while (target_track->append(value) != Status(1, 0) && !_drop_stop) {
+      if (_settings->is_memory_only_mode) {
+        return Status(0, 1);
+      }
       _drop_cond.notify_all();
     }
 

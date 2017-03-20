@@ -13,6 +13,8 @@ namespace dariadb {
 namespace storage {
 
 const std::string SETTINGS_FILE_NAME = "Settings";
+const std::string MEMORY_ONLY_PATH = "::memory_only::";
+
 class BaseOption {
 public:
   EXPORT virtual ~BaseOption();
@@ -73,6 +75,10 @@ class Settings {
 
 public:
   EXPORT static Settings_ptr create(const std::string &storage_path);
+  /**
+  For memory only storage.
+  */
+  EXPORT static Settings_ptr create();
   EXPORT ~Settings();
 
   EXPORT void set_default();
@@ -110,6 +116,7 @@ public:
 
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
   std::string alias; // is set, used in log messages;
+  bool is_memory_only_mode;
 protected:
   EXPORT Settings(const std::string &storage_path);
 };

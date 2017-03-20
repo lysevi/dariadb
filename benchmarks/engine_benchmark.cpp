@@ -26,6 +26,7 @@ bool readall_enabled = false;
 bool dont_clean = false;
 bool use_shard = false;
 bool dont_repack = false;
+bool memory_only = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
@@ -81,6 +82,7 @@ void parse_cmdline(int argc, char *argv[]) {
       "allocation area limit  in megabytes when strategy=MEMORY");
   aos("use-shard", "shard some id per shards");
   aos("dont-repack", "do not run repack and compact");
+  aos("memory-only", "dont use  the disk");
 
   po::options_description writers("Writers params");
   auto aos_writers = writers.add_options();
@@ -110,6 +112,11 @@ void parse_cmdline(int argc, char *argv[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     std::exit(0);
+  }
+
+  if (vm.count("memory-only")) {
+    std::cout << "memory-only" << std::endl;
+    memory_only = true;
   }
 
   if (vm.count("enable-readers")) {
@@ -289,7 +296,7 @@ void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   if (readers_enable) {
     pos = 0;
-	stop_readers = true;
+    stop_readers = true;
     for (size_t i = 1; i < benchmark_params.total_readers_count + 1; i++) {
       std::thread t = std::move(readers[pos++]);
       t.join();
@@ -357,6 +364,13 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, IEngine *raw_pt
     return;
   }
   auto files = raw_ptr->description();
+  if (memory_only) {
+    if (files.pages_count != files.wal_count && files.wal_count != size_t(0)) {
+      THROW_EXCEPTION("MEMONLY error: (p:", files.pages_count, " a:", files.wal_count,
+                      " T:", files.active_works, ")");
+    }
+    return;
+  }
   switch (strategy) {
   case dariadb::STRATEGY::WAL:
     if (files.pages_count != 0) {
@@ -416,14 +430,19 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(strategy);
-    /* settings->chunk_size.setValue(3072);
-     settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
-     settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
-     settings->max_chunks_per_page.setValue(5 * 1024);
-     settings->threads_in_common.setValue(5);*/
-    settings->save();
+    dariadb::storage::Settings_ptr settings = nullptr;
+    if (!memory_only) {
+      settings = dariadb::storage::Settings::create(storage_path);
+      settings->strategy.setValue(strategy);
+      /* settings->chunk_size.setValue(3072);
+       settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
+       settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
+       settings->max_chunks_per_page.setValue(5 * 1024);
+       settings->threads_in_common.setValue(5);*/
+      settings->save();
+    } else {
+      settings = dariadb::storage::Settings::create();
+    }
 
     if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) &&
         memory_limit != 0) {
@@ -501,7 +520,7 @@ int main(int argc, char *argv[]) {
 
     check_engine_state(settings, raw_ptr);
 
-    if (!readonly && !dont_repack) {
+    if (!readonly && !dont_repack && !memory_only) {
       if (strategy != dariadb::STRATEGY::MEMORY && strategy != STRATEGY::CACHE) {
         size_t ccount = size_t(raw_ptr->description().wal_count);
         std::cout << "==> drop part wals to " << ccount << "..." << std::endl;
@@ -555,7 +574,7 @@ int main(int argc, char *argv[]) {
 
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
 
-    if (!dont_repack) { // compaction
+    if (!dont_repack && !memory_only) { // compaction
       std::cout << "compaction..." << std::endl;
       auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
