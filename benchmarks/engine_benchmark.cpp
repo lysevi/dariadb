@@ -76,6 +76,7 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("enable-readers", "enable readers threads");
   aos("read-benchmark-runs",
       po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
+
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
       "Write strategy");
   aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit),
@@ -98,6 +99,8 @@ void parse_cmdline(int argc, char *argv[]) {
               po::value<size_t>(&benchmark_params.total_threads_count)
                   ->default_value(benchmark_params.total_threads_count),
               "write threads count");
+  aos_writers("freq", po::value<size_t>(&benchmark_params.writes_per_second)
+                  ->default_value(benchmark_params.writes_per_second));
   desc.add(writers);
 
   po::variables_map vm;

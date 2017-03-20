@@ -30,7 +30,6 @@ void UnlimitMemoryAllocator::free(const UnlimitMemoryAllocator::AllocatedData &d
   ENSURE(d.position != EMPTY.position);
   auto header = d.header;
   auto buffer = d.buffer;
-  auto position = d.position;
 
 #ifdef DOUBLE_CHECKS
   memset(header, 0, sizeof(ChunkHeader));
