@@ -61,7 +61,7 @@ void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
 }
 */
 
-MemChunkAllocator::MemChunkAllocator(size_t maxSize, uint32_t bufferSize)
+RegionChunkAllocator::RegionChunkAllocator(size_t maxSize, uint32_t bufferSize)
 	: _one_chunk_size(sizeof(ChunkHeader) + bufferSize),
 	_capacity((int)(float(maxSize) / _one_chunk_size)), _free_list(_capacity) {
 	_maxSize = maxSize;
@@ -83,11 +83,11 @@ MemChunkAllocator::MemChunkAllocator(size_t maxSize, uint32_t bufferSize)
 	}
 }
 
-MemChunkAllocator::~MemChunkAllocator() {
+RegionChunkAllocator::~RegionChunkAllocator() {
 	delete[] _region;
 }
 
-MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
+RegionChunkAllocator::AllocatedData RegionChunkAllocator::allocate() {
 	size_t pos;
 	if (!_free_list.pop(pos)) {
 		return EMPTY;
@@ -96,7 +96,7 @@ MemChunkAllocator::AllocatedData MemChunkAllocator::allocate() {
 	return AllocatedData(&_headers[pos], &_buffers[pos * _chunkSize], pos);
 }
 
-void MemChunkAllocator::free(const MemChunkAllocator::AllocatedData &d) {
+void RegionChunkAllocator::free(const RegionChunkAllocator::AllocatedData &d) {
 	ENSURE(d.header != nullptr);
 	ENSURE(d.buffer != nullptr);
 	ENSURE(d.position != EMPTY.position);

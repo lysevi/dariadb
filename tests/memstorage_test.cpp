@@ -58,12 +58,12 @@ BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
   std::cout << "MemChunkAllocatorTest" << std::endl;
   const size_t buffer_size = 100;
   const size_t max_size = 1024;
-  dariadb::storage::MemChunkAllocator allocator(max_size, buffer_size);
+  dariadb::storage::RegionChunkAllocator allocator(max_size, buffer_size);
   std::set<dariadb::storage::ChunkHeader *> allocated_headers;
   std::set<uint8_t *> allocated_buffers;
   std::set<size_t> positions;
 
-  dariadb::storage::MemChunkAllocator::AllocatedData last;
+  dariadb::storage::RegionChunkAllocator::AllocatedData last;
   do {
     auto allocated = allocator.allocate();
     auto hdr = allocated.header;

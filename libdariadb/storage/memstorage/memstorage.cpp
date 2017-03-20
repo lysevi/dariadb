@@ -25,8 +25,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   Private(const EngineEnvironment_ptr &env, size_t id_count)
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)) {
-    auto alloc_ptr = new MemChunkAllocator(_settings->memory_limit.value(),
-                                           _settings->chunk_size.value());
+    auto alloc_ptr = new RegionChunkAllocator(_settings->memory_limit.value(),
+                                              _settings->chunk_size.value());
     _chunk_allocator = IMemoryAllocator_Ptr(alloc_ptr);
     _stoped = false;
     _down_level_storage = nullptr;
@@ -50,7 +50,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         this->drop_by_limit(1.0, true);
       }
 
-      for (auto ch : _chunks) {
+      for (auto kv : _chunks) {
+        auto ch = kv.second;
         if (ch->_is_from_pool) {
           _chunk_allocator->free(ch->_a_data);
         }
@@ -67,7 +68,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   memstorage::Description description() const {
     memstorage::Description result;
-    auto region_allocator_ptr = dynamic_cast<MemChunkAllocator *>(_chunk_allocator.get());
+    auto region_allocator_ptr =
+        dynamic_cast<RegionChunkAllocator *>(_chunk_allocator.get());
     if (region_allocator_ptr != nullptr) {
 
       result.allocator_capacity = region_allocator_ptr->_capacity;
@@ -120,18 +122,18 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     size_t pos = 0;
 
     std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
-	std::vector<MemChunk_Ptr> chunks_copy;
-	chunks_copy.reserve(_chunks.size());
-	
-    for (auto c : _chunks) {
+    std::vector<MemChunk_Ptr> chunks_copy;
+    chunks_copy.reserve(_chunks.size());
+
+    for (auto kv : _chunks) {
+      auto c = kv.second;
       ENSURE(c != nullptr);
       ENSURE(c->_track != nullptr);
       if (!c->_track->is_locked_to_drop) {
-		  chunks_copy.push_back(c);
+        chunks_copy.push_back(c);
       }
     }
     sl.unlock();
-	
 
     std::sort(chunks_copy.begin(), chunks_copy.end(),
               [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
@@ -321,7 +323,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   void addChunk(MemChunk_Ptr &chunk) override {
     ENSURE(chunk->_is_from_pool);
     std::lock_guard<std::mutex> lg(_chunks_locker);
-    _chunks.push_back(chunk);
+    _chunks.insert(std::make_pair(chunk->_a_data.position, chunk));
     if (is_time_to_drop()) {
       _drop_cond.notify_all();
     }
@@ -337,7 +339,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       chunk->header = nullptr;
       chunk->buffer_ptr = nullptr;
     }
-    _chunks.remove_if([pos](auto c) { return c->_a_data.position == pos; });
+    _chunks.erase(pos);
     if (is_time_to_drop()) {
       _drop_cond.notify_all();
     }
@@ -348,7 +350,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   std::mutex *getLockers() { return &_drop_locker; }
 
   bool is_time_to_drop() {
-    auto region_allocator_ptr = dynamic_cast<MemChunkAllocator *>(_chunk_allocator.get());
+    auto region_allocator_ptr =
+        dynamic_cast<RegionChunkAllocator *>(_chunk_allocator.get());
     if (region_allocator_ptr != nullptr) {
       return (region_allocator_ptr->_allocated) >=
              (region_allocator_ptr->_capacity *
@@ -382,7 +385,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   IChunkStorage *_down_level_storage;
   IMeasWriter *_disk_storage;
 
-  std::list<MemChunk_Ptr> _chunks;
+  std::map<size_t, MemChunk_Ptr> _chunks;
   std::mutex _chunks_locker;
   bool _stoped;
 

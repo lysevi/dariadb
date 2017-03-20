@@ -12,7 +12,7 @@ struct TimeTrack;
 struct MemChunk : public Chunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
-  MemChunkAllocator::AllocatedData _a_data;
+  RegionChunkAllocator::AllocatedData _a_data;
   TimeTrack *_track; /// init in TimeTrack
   bool _is_from_pool;
 
