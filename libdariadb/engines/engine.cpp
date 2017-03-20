@@ -336,7 +336,11 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
-    bool pr, ar;
+	
+	*minResult = dariadb::MAX_TIME;
+	*maxResult = dariadb::MIN_TIME;
+
+    bool pr, ar, wr=false;
     pr = ar = false;
     auto pm = _page_manager.get();
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id, pm](const ThreadInfo &ti) {
@@ -344,6 +348,7 @@ public:
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
       return false;
     };
+	
     auto am = _top_level_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
@@ -364,14 +369,26 @@ public:
     }
     am_async->wait();
 
+	if (_strategy == STRATEGY::CACHE) {
+		auto wm = _wal_manager.get();
+		dariadb::Time subMinW = dariadb::MAX_TIME, subMaxW = dariadb::MIN_TIME;
+		AsyncTask wm_at = [&wr, &subMin3, &subMax3, id, wm](const ThreadInfo &ti) {
+			TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
+			wr = wm->minMaxTime(id, &subMin3, &subMax3);
+			return false;
+		};
+		auto wm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
+		wm_async->wait();
+		*minResult = subMinW;
+		*maxResult = subMaxW;
+	}
     unlock_storage();
 
-    *minResult = dariadb::MAX_TIME;
-    *maxResult = dariadb::MIN_TIME;
+    
 
     *minResult = std::min(subMin1, subMin3);
     *maxResult = std::max(subMax1, subMax3);
-    return pr || ar;
+    return pr || ar || wr;
   }
 
   Id2MinMax loadMinMax() {

@@ -34,6 +34,7 @@ struct IMemoryAllocator {
   uint32_t _chunkSize;           /// size of chunk
 
   IMemoryAllocator() { _allocated = size_t(0); }
+  virtual ~IMemoryAllocator() {}
   virtual AllocatedData allocate() = 0;
   virtual void free(const AllocatedData &d) = 0;
 };

@@ -58,14 +58,17 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
           _chunk_allocator->free(ch->_a_data);
         }
       }
-
+      _chunks.clear();
       ENSURE(_chunk_allocator->_allocated == size_t());
 
       _id2track.clear();
+      _chunk_allocator = nullptr;
+	  ENSURE(_chunk_allocator.use_count() == long(0));
       _stoped = true;
       logger_info("engine", _settings->alias, ": memstorage - stoped.");
     }
   }
+
   ~Private() { stop(); }
 
   void allocator_init() {
@@ -84,10 +87,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     auto region_allocator_ptr =
         dynamic_cast<RegionChunkAllocator *>(_chunk_allocator.get());
     if (region_allocator_ptr != nullptr) {
-
       result.allocator_capacity = region_allocator_ptr->_capacity;
-    } else {
-    }
+    } 
     result.allocated = _chunk_allocator->_allocated;
     return result;
   }

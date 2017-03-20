@@ -46,7 +46,9 @@ TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
   is_locked_to_drop = false;
 }
 
-TimeTrack::~TimeTrack() {}
+TimeTrack::~TimeTrack() {
+  _allocator = nullptr;
+}
 
 void TimeTrack::updateMinMax(const Meas &value) {
   _min_max.updateMax(value);
