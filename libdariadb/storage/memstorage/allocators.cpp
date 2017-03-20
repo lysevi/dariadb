@@ -13,15 +13,14 @@ UnlimitMemoryAllocator::UnlimitMemoryAllocator(uint32_t bufferSize) {
 UnlimitMemoryAllocator::~UnlimitMemoryAllocator() {}
 
 UnlimitMemoryAllocator::AllocatedData UnlimitMemoryAllocator::allocate() {
-	try {
-		auto v = _allocated.fetch_add(1);
-		auto buffer = new uint8_t[_chunkSize];
-		std::fill_n(buffer, _chunkSize, uint8_t());
-		return AllocatedData(new ChunkHeader, buffer, v);
-	}
-	catch (std::bad_alloc&ex) {
-		return EMPTY;
-	}
+  try {
+    auto v = _allocated.fetch_add(1);
+    auto buffer = new uint8_t[_chunkSize];
+    std::fill_n(buffer, _chunkSize, uint8_t());
+    return AllocatedData(new ChunkHeader, buffer, v);
+  } catch (std::bad_alloc) {
+    return EMPTY;
+  }
 }
 
 void UnlimitMemoryAllocator::free(const UnlimitMemoryAllocator::AllocatedData &d) {

@@ -114,18 +114,23 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       _all_tracks_locker.unlock_shared();
     }
 
-    while (target_track->append(value) != Status(1, 0) && !_drop_stop) {
-      if (_settings->is_memory_only_mode) {
-        return Status(0, 1);
-      }
-      _drop_cond.notify_all();
+    while(true){
+		auto st = target_track->append(value);
+		if (st != Status(1) && !_drop_stop) {
+			if (_settings->is_memory_only_mode) {
+				return st;
+			}
+			_drop_cond.notify_all();
+			continue;
+		}
+		break;
     }
 
     if (_disk_storage != nullptr) {
       _disk_storage->append(value);
       target_track->_max_sync_time = value.time;
     }
-    return Status(1, 0);
+    return Status(1);
   }
 
   void drop_by_limit(float chunk_percent_to_free, bool in_stop) {

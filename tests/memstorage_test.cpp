@@ -48,7 +48,7 @@ struct MocDiskStorage : public dariadb::IMeasWriter {
   MocDiskStorage() { droped = 0; }
   virtual dariadb::Status append(const dariadb::Meas &value) override {
     droped++;
-    return dariadb::Status(1, 0);
+    return dariadb::Status(1);
   }
 
   virtual void flush() override {}

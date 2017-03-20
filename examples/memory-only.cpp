@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     m.flag = 100 + i % 2;
     auto status = storage->append(m);
     if (status.writed != 1) {
-      std::cerr << "Error: " << status.error_message << std::endl;
+      std::cerr << "Error: " << dariadb::to_string(status.error) << std::endl;
     }
   }
   // we can get param id`s from scheme

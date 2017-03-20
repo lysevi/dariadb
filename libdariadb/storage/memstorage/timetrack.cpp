@@ -59,16 +59,16 @@ Status TimeTrack::append(const Meas &value) {
   std::lock_guard<utils::async::Locker> lg(_locker);
   if (_cur_chunk == nullptr || _cur_chunk->isFull()) {
     if (!create_new_chunk(value)) {
-      return Status(0, 1);
+      return Status(1, APPEND_ERROR::bad_alloc);
     } else {
       updateMinMax(value);
-      return Status(1, 0);
+      return Status(1);
     }
   }
   if (_cur_chunk->header->stat.maxTime < value.time) {
     if (!_cur_chunk->append(value)) {
       if (!create_new_chunk(value)) {
-        return Status(0, 1);
+        return Status(1, APPEND_ERROR::bad_alloc);
       } else {
         updateMinMax(value);
       }
@@ -77,7 +77,7 @@ Status TimeTrack::append(const Meas &value) {
     append_to_past(value);
   }
   updateMinMax(value);
-  return Status(1, 0);
+  return Status(1);
 }
 
 void TimeTrack::append_to_past(const Meas &value) {
