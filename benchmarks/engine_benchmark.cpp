@@ -88,7 +88,7 @@ void parse_cmdline(int argc, char *argv[]) {
   po::options_description writers("Writers params");
   auto aos_writers = writers.add_options();
   aos_writers("hours",
-              po::value<size_t>(&benchmark_params.hours_write_perid)
+              po::value<float>(&benchmark_params.hours_write_perid)
                   ->default_value(benchmark_params.hours_write_perid),
               "write interval in hours");
   aos_writers("ids",
@@ -99,8 +99,8 @@ void parse_cmdline(int argc, char *argv[]) {
               po::value<size_t>(&benchmark_params.total_threads_count)
                   ->default_value(benchmark_params.total_threads_count),
               "write threads count");
-  aos_writers("freq", po::value<size_t>(&benchmark_params.writes_per_second)
-                  ->default_value(benchmark_params.writes_per_second));
+  aos_writers("freq", po::value<size_t>(&benchmark_params.freq_per_second)
+                          ->default_value(benchmark_params.freq_per_second));
   desc.add(writers);
 
   po::variables_map vm;
@@ -119,7 +119,7 @@ void parse_cmdline(int argc, char *argv[]) {
 
   if (vm.count("memory-only")) {
     std::cout << "memory-only" << std::endl;
-	strategy = STRATEGY::MEMORY;
+    strategy = STRATEGY::MEMORY;
     memory_only = true;
   }
 
@@ -176,8 +176,13 @@ void show_info(IEngine *storage) {
     time_ss << timeutil::to_string(write_time);
 
     std::stringstream stor_ss;
-    stor_ss << "(p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count
-            << " T:" << queue_sizes.active_works;
+    stor_ss << "(";
+    if (!memory_only) {
+      stor_ss << "p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count<<" ";
+    }
+
+    stor_ss << "T:" << queue_sizes.active_works;
+
     if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE)) {
       stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
               << " a:" << queue_sizes.memstorage.allocated;
@@ -194,7 +199,10 @@ void show_info(IEngine *storage) {
     persent_ss << (int64_t(100) * append_count) / benchmark_params.all_writes() << '%';
 
     std::stringstream drop_ss;
-    drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
+    if (!memory_only) {
+      drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
+    }
+
     std::stringstream ss;
 
     ss // << "\r"

@@ -55,15 +55,15 @@ struct BenchmarkSummaryInfo {
 
 struct BenchmarkParams {
   size_t total_threads_count = 2;
-  size_t hours_write_perid = 48;
-  size_t writes_per_second = 2;
+  float hours_write_perid = 48;
+  size_t freq_per_second = 2;
   size_t total_readers_count = 1;
   size_t id_count = 100;
 
   size_t id_per_thread() const { return id_count / total_threads_count; }
 
   size_t write_per_id_count() const {
-    return writes_per_second * 60 * 60 * hours_write_perid;
+    return (size_t)(freq_per_second * 60 * 60 * hours_write_perid);
   }
 
   uint64_t all_writes() const {
@@ -74,7 +74,7 @@ struct BenchmarkParams {
     std::cout << "Benchmark params:" << std::endl;
     std::cout << "writers: " << total_threads_count << std::endl;
     std::cout << "hours: " << hours_write_perid << std::endl;
-    std::cout << "write frequency: " << writes_per_second << std::endl;
+    std::cout << "write frequency: " << freq_per_second << std::endl;
     std::cout << "id count: " << id_count << std::endl;
     std::cout << "readers: " << total_readers_count << std::endl;
     std::cout << "id per thread: " << id_per_thread() << std::endl;
@@ -162,7 +162,7 @@ void thread_writer_rnd_stor(BenchmarkParams params, dariadb::Id id,
                             dariadb::Time start_time, dariadb::Time *write_time_time) {
   try {
     auto step =
-        (boost::posix_time::seconds(1).total_milliseconds() / params.writes_per_second);
+        (boost::posix_time::seconds(1).total_milliseconds() / params.freq_per_second);
     dariadb::Meas m;
     m.time = start_time;
     auto id_from = get_id_from(params, id);
