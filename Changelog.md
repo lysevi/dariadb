@@ -9,6 +9,7 @@ v0.4.0
   - max_store_period - period, when old pages must be removed.
 - Wal now contained in-memory index.
 - Rename build options: add prefix 'DARIADB_'
+- Memory only mode.
 
 v0.3.0
 =====

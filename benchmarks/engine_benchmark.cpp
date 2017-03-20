@@ -119,6 +119,7 @@ void parse_cmdline(int argc, char *argv[]) {
 
   if (vm.count("memory-only")) {
     std::cout << "memory-only" << std::endl;
+	strategy = STRATEGY::MEMORY;
     memory_only = true;
   }
 

@@ -23,6 +23,7 @@
   - compressed - all values compressed for good disk usage without writing to sorted layer.
   - memory - all values stored in memory and dropped to disk when memory limit is ended.
   - cache - all values stored in memory with writes to disk.
+* Memory only mode.
 * LSM-like storage struct with three layers:
   - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'wal').
   - Old values stored in compressed block for better disk space usage.

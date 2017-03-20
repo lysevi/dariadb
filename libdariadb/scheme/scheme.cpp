@@ -28,6 +28,9 @@ struct Scheme::Private : public IScheme {
   }
 
   std::string schemeFile() const {
+    if (_settings->is_memory_only_mode) {
+      return storage::MEMORY_ONLY_PATH;
+    }
     return utils::fs::append_path(_settings->storage_path.value(), SCHEME_FILE_NAME);
   }
 
@@ -53,6 +56,9 @@ struct Scheme::Private : public IScheme {
   }
 
   void save() {
+    if (_settings->is_memory_only_mode) {
+      return;
+    }
     auto file = schemeFile();
     logger("scheme: save to ", file);
     json js;
@@ -73,6 +79,9 @@ struct Scheme::Private : public IScheme {
   }
 
   void load() {
+    if (_settings->is_memory_only_mode) {
+      return;
+    }
     auto file = schemeFile();
     logger_info("scheme: loading ", file);
 
