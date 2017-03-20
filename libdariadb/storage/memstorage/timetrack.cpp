@@ -35,7 +35,7 @@ struct MemTrackCursor : dariadb::ICursor {
 };
 
 TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
-                     MemChunkAllocator *allocator) {
+                     IMemoryAllocator_Ptr allocator) {
   _allocator = allocator;
   _meas_id = meas_id;
   _step = step;
@@ -101,7 +101,6 @@ void TimeTrack::append_to_past(const Meas &value) {
     _index.erase(target_to_replace->header->stat.maxTime);
   }
 
- 
   /// unpack and sort.
   auto rdr = target_to_replace->getReader();
   while (!rdr->is_end()) {
@@ -112,17 +111,17 @@ void TimeTrack::append_to_past(const Meas &value) {
     mset.insert(v);
   }
   rdr = nullptr;
-  
+
   auto old_chunk_size = target_to_replace->header->size;
   if (target_to_replace->_is_from_pool) {
-	  _mcc->freeChunk(target_to_replace);
+    _mcc->freeChunk(target_to_replace);
   }
 
   mset.insert(value);
 
   /// need to leak detection.
   ENSURE(target_to_replace.use_count() == long(1));
-  
+
   target_to_replace = nullptr;
 
   MeasArray mar{mset.begin(), mset.end()};
