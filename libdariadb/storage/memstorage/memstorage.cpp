@@ -96,21 +96,22 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   Status append(const Meas &value) override {
     _all_tracks_locker.lock_shared();
     auto track = _id2track.find(value.id);
-    TimeTrack_ptr target_track = nullptr;
+    TimeTrack *target_track = nullptr;
     if (track == _id2track.end()) {
       _all_tracks_locker.unlock_shared();
       std::lock_guard<std::shared_mutex> lg(_all_tracks_locker);
 
       track = _id2track.find(value.id);
       if (track == _id2track.end()) { // still not exists.
-        target_track =
+        auto new_tr =
             std::make_shared<TimeTrack>(this, Time(0), value.id, _chunk_allocator);
         _id2track.emplace(std::make_pair(value.id, target_track));
+		target_track = new_tr.get();
       } else {
-        target_track = track->second;
+        target_track = track->second.get();
       }
     } else {
-      target_track = track->second;
+      target_track = track->second.get();
       _all_tracks_locker.unlock_shared();
     }
 
