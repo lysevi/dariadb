@@ -89,30 +89,13 @@ public:
 
   void startWorkers() {
     logger_info("engine", _settings->alias, ": start async workers...");
-    AsyncTask am_at = [this](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      try {
-        if (_beginStoping) {
-          this->_eraseActionIsStoped = true;
-          return false;
-        }
-        this->eraseOldAction();
-      } catch (std::exception &ex) {
-        logger_fatal("engine", _settings->alias, ": async worker exception: ", ex.what());
-      } catch (...) {
-        logger_fatal("engine", _settings->alias, ": async worker unknow exception");
-      }
-      return true;
-    };
-    ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
-                                    AT_PRIORITY(am_at, TASK_PRIORITY::WORKER));
+    this->_async_worker_thread_handler =
+        std::thread(std::bind(&Engine::Private::erase_worker_func, this));
   }
 
   void whaitWorkers() {
     logger("engine", _settings->alias, ": whait stop of async workers...");
-    while (!_eraseActionIsStoped) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    this->_async_worker_thread_handler.join();
     logger("engine", _settings->alias, ": async workers stoped.");
   }
 
@@ -799,32 +782,43 @@ public:
     this->unlock_storage();
   }
 
-  void eraseOldAction() {
-    if (_settings->max_store_period.value() == MAX_TIME) {
-      return;
-    }
-    if (!this->try_lock_storage()) {
-      return;
-    }
-    auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
-
-    if (_page_manager != nullptr) {
-      logger_info("engine", _settings->alias, ": erase old page (",
-                  timeutil::to_string(timepoint), ")");
-      _page_manager->eraseOld(timepoint);
-      logger_info("engine", _settings->alias, ": erase old page - complete.");
-    } else {
-      this->_memstorage->dropOld(timepoint);
-    }
-    this->unlock_storage();
-  }
-
   void eraseOld(const Time &t) {
     logger_info("engine", _settings->alias, ": eraseOld to ", timeutil::to_string(t));
     this->lock_storage();
     _page_manager->eraseOld(t);
 
     this->unlock_storage();
+  }
+
+  void erase_worker_func() {
+    while (!_beginStoping) {
+      if (_settings->max_store_period.value() != MAX_TIME) {
+        if (this->try_lock_storage()) {
+          auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
+
+          if (_page_manager != nullptr) {
+            AsyncTask am_at = [this, timepoint](const ThreadInfo &ti) {
+              TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+              logger_info("engine", _settings->alias, ": eraseold ",
+                          timeutil::to_string(timepoint));
+              _page_manager->eraseOld(timepoint);
+              logger_info("engine", _settings->alias, ": eraseold complete.");
+              return false;
+            };
+            auto at = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(am_at));
+            at->wait();
+          } else {
+            this->_memstorage->dropOld(timepoint);
+          }
+          this->unlock_storage();
+        }
+        if (_beginStoping) {
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      }
+    }
+    _eraseActionIsStoped = true;
   }
 
   STRATEGY strategy() const {
@@ -870,6 +864,7 @@ protected:
   bool _thread_pool_owner;
   bool _eraseActionIsStoped;
   bool _beginStoping;
+  std::thread _async_worker_thread_handler;
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
