@@ -331,12 +331,12 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
 
   std::cout << "==> foreach all..." << std::endl;
 
-  auto start = clock();
+  dariadb::utils::ElapsedTime et;
 
   ms->foreach (qi, &clbk);
   clbk.wait();
 
-  auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+  auto elapsed =et.elapsed();
   std::cout << "readed: " << clbk.count << std::endl;
   std::cout << "time: " << elapsed << std::endl;
   summary_info->foreach_read_all_time = elapsed;
@@ -344,11 +344,11 @@ void read_all_bench(IEngine *ms, Time start_time, Time max_time, IdSet &all_id_s
   if (readall_enabled) {
     std::cout << "==> read all..." << std::endl;
 
-    start = clock();
+	dariadb::utils::ElapsedTime et;
 
     auto readed = ms->readInterval(qi);
 
-    elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+    elapsed =et.elapsed();
     std::cout << "readed: " << readed.size() << std::endl;
     std::cout << "time: " << elapsed << std::endl;
     summary_info->read_all_time = elapsed;
@@ -501,14 +501,14 @@ int main(int argc, char *argv[]) {
     dariadb::IdSet all_id_set;
     append_count = 0;
     stop_info = false;
-    auto writers_start = clock();
+	dariadb::utils::ElapsedTime wr_et;
 
     start_time = dariadb::timeutil::current_time() -
                  (boost::posix_time::seconds(1).total_milliseconds() * 60 * 60 *
                   benchmark_params.hours_write_perid);
     rw_benchmark(raw_ptr, start_time, all_id_set);
 
-    auto writers_elapsed = (((float)clock() - writers_start) / CLOCKS_PER_SEC);
+    auto writers_elapsed = wr_et.elapsed();
     stop_readers = true;
 
     std::cout << "total id:" << all_id_set.size() << std::endl;
@@ -520,11 +520,11 @@ int main(int argc, char *argv[]) {
       stop_info = false;
       std::thread flush_info_thread(show_drop_info, raw_ptr);
 
-      auto start = clock();
+	  dariadb::utils::ElapsedTime et;
       raw_ptr->flush();
 
       { raw_ptr->wait_all_asyncs(); }
-      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+      auto elapsed = et.elapsed();
       stop_info = true;
       flush_info_thread.join();
       std::cout << "flush time: " << elapsed << std::endl;
@@ -539,9 +539,9 @@ int main(int argc, char *argv[]) {
         stop_info = false;
         std::thread flush_info_thread(show_drop_info, raw_ptr);
 
-        auto start = clock();
+		dariadb::utils::ElapsedTime et;
         raw_ptr->compress_all();
-        auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+        auto elapsed = et.elapsed();
         stop_info = true;
         flush_info_thread.join();
         std::cout << "drop time: " << elapsed << std::endl;
@@ -550,12 +550,16 @@ int main(int argc, char *argv[]) {
         auto pages_before = raw_ptr->description().pages_count;
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
-          auto start = clock();
+		  
+		  dariadb::utils::ElapsedTime et;
           raw_ptr->repack();
-          auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
+		  auto elapsed = et.elapsed();
+
           auto pages_after = raw_ptr->description().pages_count;
-          std::cout << "==> pages after repack " << pages_after << "..." << std::endl;
+          
+		  std::cout << "==> pages after repack " << pages_after << "..." << std::endl;
           std::cout << "repack time: " << elapsed << std::endl;
+
           summary_info->page_repacked = pages_before - pages_after - 1;
           summary_info->page_repack_time = elapsed;
           if (!use_shard) {
@@ -593,10 +597,12 @@ int main(int argc, char *argv[]) {
                 << std::endl;
       auto compaction_logic =
           std::make_unique<CompactionBenchmark>(halfTime, start_time, max_time);
-      auto start = clock();
+	  
+	  dariadb::utils::ElapsedTime et;
       raw_ptr->compact(compaction_logic.get());
-      auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC);
-      std::cout << "time: " << elapsed << std::endl;
+      auto elapsed = et.elapsed();
+      
+	  std::cout << "time: " << elapsed << std::endl;
       summary_info->compaction_time = elapsed;
 
       BenchCallback clbk;

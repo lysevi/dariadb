@@ -79,11 +79,11 @@ void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
     ma[i].time = i;
   }
 
-  auto start = clock();
+  dariadb::utils::ElapsedTime et;
   for (size_t i = 0; i < SEND_COUNT; ++i) {
     client->append(ma);
   }
-  auto el = (((float)clock() - start) / CLOCKS_PER_SEC);
+  auto el = et.elapsed();
   elapsed[thread_num] = el;
 }
 

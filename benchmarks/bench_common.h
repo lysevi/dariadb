@@ -3,6 +3,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
+#include <libdariadb/utils/utils.h>
 #include <algorithm>
 #include <atomic>
 #include <iostream>
@@ -209,7 +210,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
   std::cout << "==> init random intervals...." << std::endl;
   {
-    auto start = clock();
+    dariadb::utils::ElapsedTime et;
 
     for (size_t i = 0; i < reads_count; i++) {
       auto id = random_ids[cur_id];
@@ -227,21 +228,21 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       interval_queries[i] = std::tie(id, minT, maxT);
     }
 
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+	auto elapsed = et.elapsed();
 
     std::cout << "time: " << elapsed << std::endl;
   }
 
   std::cout << "==> stat...." << std::endl;
   { // stat
-    auto start = clock();
+	  dariadb::utils::ElapsedTime et;
 
     for (size_t i = 0; i < reads_count; i++) {
       Id2Times curval = interval_queries[i];
       stor->stat(std::get<0>(curval), std::get<1>(curval), std::get<2>(curval));
     }
 
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+	auto elapsed = et.elapsed();
     summary_info->stat_time = elapsed;
 
     std::cout << "time: " << elapsed << std::endl;
@@ -253,7 +254,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> time point reads..." << std::endl;
 
-    auto start = clock();
+	dariadb::utils::ElapsedTime et;
 
     for (size_t i = 0; i < reads_count; i++) {
       Id2Times curval = interval_queries[i];
@@ -266,7 +267,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       dariadb::QueryTimePoint qp{current_ids, 0, time_point};
       stor->readTimePoint(qp);
     }
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+	auto elapsed = et.elapsed();
     summary_info->read_timepoint_speed = elapsed;
 
     std::cout << "time: " << elapsed << std::endl;
@@ -276,7 +277,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> intervals foreach..." << std::endl;
 
-    auto start = clock();
+	dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -301,7 +302,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
       total_count += clbk.count;
     }
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+	auto elapsed = et.elapsed();
     summary_info->read_interval_speed = elapsed;
 
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
@@ -312,7 +313,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> intervals foreach(full)..." << std::endl;
 
-    auto start = clock();
+	dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -335,7 +336,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
       total_count += clbk.count;
     }
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    auto elapsed = et.elapsed();
     summary_info->full_read_timeseries = elapsed;
 
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
@@ -345,7 +346,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> intervals foreach(copy)..." << std::endl;
 
-    auto start = clock();
+    dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -368,7 +369,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
       total_count += clbk.count;
     }
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    auto elapsed = et.elapsed();
     summary_info->copy_to = elapsed;
 
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
@@ -378,7 +379,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> intervals reads..." << std::endl;
 
-    auto start = clock();
+	dariadb::utils::ElapsedTime et;
     size_t count = 0;
     cur_id = 0;
     auto it = interval_list.begin();
@@ -393,7 +394,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
       count += stor->readInterval(qi).size();
     }
-    auto elapsed = (((float)clock() - start) / CLOCKS_PER_SEC) / reads_count;
+    auto elapsed = et.elapsed();
 
     std::cout << "time: " << elapsed << " average count: " << count / reads_count
               << std::endl;
