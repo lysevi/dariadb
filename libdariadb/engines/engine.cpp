@@ -791,7 +791,7 @@ public:
   }
 
   void erase_worker_func() {
-    while (!_beginStoping) {
+    while (!_beginStoping) { 
       if (_settings->max_store_period.value() != MAX_TIME) {
         if (this->try_lock_storage()) {
           auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
@@ -810,13 +810,14 @@ public:
           } else {
             this->_memstorage->dropOld(timepoint);
           }
+
           this->unlock_storage();
         }
         if (_beginStoping) {
           break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
       }
+	  std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
     _eraseActionIsStoped = true;
   }
