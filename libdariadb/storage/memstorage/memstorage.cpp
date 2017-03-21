@@ -221,7 +221,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     std::lock_guard<std::shared_mutex> sl(_all_tracks_locker);
     logger_info("engine", _settings->alias, ": memstorage - drop old ",
                 timeutil::to_string(t));
-
+	auto start_time = clock();
     size_t erased = 0;
     while (true) {
       bool find_one = false;
@@ -241,8 +241,9 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         break;
       }
     }
+	auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
     logger_info("engine", _settings->alias, ": memstorage - drop old complete. erased ",
-                erased, " chunks.");
+                erased, " chunks. elapsed ", elapsed);
   }
 
   Id2Time getSyncMap() {
