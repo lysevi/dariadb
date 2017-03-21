@@ -260,6 +260,15 @@ BOOST_AUTO_TEST_CASE(Engine_MemOnlyStorage_common_test) {
     auto pages_count = ms->description().pages_count;
     BOOST_CHECK_EQUAL(pages_count, size_t(0));
     ms->settings()->max_store_period.setValue(1);
+    while (true) {
+      dariadb::QueryInterval qi({dariadb::Id(0)}, dariadb::Flag(), from, to);
+      auto values = ms->readInterval(qi);
+      if (values.empty()) {
+        break;
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      }
+    }
   }
 }
 

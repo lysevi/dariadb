@@ -6,6 +6,7 @@
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/memstorage/timetrack.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <cstring>
 #include <memory>
@@ -63,7 +64,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       _id2track.clear();
       _chunk_allocator = nullptr;
-	  ENSURE(_chunk_allocator.use_count() == long(0));
+      ENSURE(_chunk_allocator.use_count() == long(0));
       _stoped = true;
       logger_info("engine", _settings->alias, ": memstorage - stoped.");
     }
@@ -88,7 +89,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         dynamic_cast<RegionChunkAllocator *>(_chunk_allocator.get());
     if (region_allocator_ptr != nullptr) {
       result.allocator_capacity = region_allocator_ptr->_capacity;
-    } 
+    }
     result.allocated = _chunk_allocator->_allocated;
     return result;
   }
@@ -106,7 +107,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         auto new_tr =
             std::make_shared<TimeTrack>(this, Time(0), value.id, _chunk_allocator);
         _id2track.emplace(std::make_pair(value.id, new_tr));
-		target_track = new_tr.get();
+        target_track = new_tr.get();
       } else {
         target_track = track->second.get();
       }
@@ -115,16 +116,16 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       _all_tracks_locker.unlock_shared();
     }
 
-    while(true){
-		auto st = target_track->append(value);
-		if (st != Status(1) && !_drop_stop) {
-			if (_settings->is_memory_only_mode) {
-				return st;
-			}
-			_drop_cond.notify_all();
-			continue;
-		}
-		break;
+    while (true) {
+      auto st = target_track->append(value);
+      if (st != Status(1) && !_drop_stop) {
+        if (_settings->is_memory_only_mode) {
+          return st;
+        }
+        _drop_cond.notify_all();
+        continue;
+      }
+      break;
     }
 
     if (_disk_storage != nullptr) {
@@ -214,6 +215,34 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       }
       logger_info("engine", _settings->alias, ": memstorage - drop end.");
     }
+  }
+
+  void dropOld(Time t) {
+    std::lock_guard<std::shared_mutex> sl(_all_tracks_locker);
+    logger_info("engine", _settings->alias, ": memstorage - drop old ",
+                timeutil::to_string(t));
+
+    size_t erased = 0;
+    while (true) {
+      bool find_one = false;
+
+      for (auto it = _chunks.begin(); it != _chunks.end(); ++it) {
+        auto c = it->second;
+        if (c->header->stat.maxTime < t) {
+          find_one = true;
+          _chunks.erase(it);
+          c->_track->rm_chunk(c.get());
+          freeChunk(c);
+          erased++;
+		  break;
+        }
+      }
+      if (!find_one) {
+        break;
+      }
+    }
+    logger_info("engine", _settings->alias, ": memstorage - drop old complete. erased ",
+                erased, " chunks.");
   }
 
   Id2Time getSyncMap() {
@@ -496,4 +525,8 @@ Id2MinMax MemStorage::loadMinMax() {
 
 Id2Time MemStorage::getSyncMap() {
   return _impl->getSyncMap();
+}
+
+void MemStorage::dropOld(Time t) {
+  return _impl->dropOld(t);
 }

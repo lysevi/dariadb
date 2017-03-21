@@ -45,6 +45,8 @@ public:
   EXPORT std::mutex *getLockers();
   EXPORT Id2MinMax loadMinMax() override;
   EXPORT Id2Time getSyncMap(); /// Id to max dropped to disk time.
+
+  EXPORT void dropOld(Time t);
 private:
   struct Private;
   std::unique_ptr<Private> _impl;
