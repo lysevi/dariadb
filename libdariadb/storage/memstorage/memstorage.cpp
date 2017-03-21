@@ -105,7 +105,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       if (track == _id2track.end()) { // still not exists.
         auto new_tr =
             std::make_shared<TimeTrack>(this, Time(0), value.id, _chunk_allocator);
-        _id2track.emplace(std::make_pair(value.id, target_track));
+        _id2track.emplace(std::make_pair(value.id, new_tr));
 		target_track = new_tr.get();
       } else {
         target_track = track->second.get();

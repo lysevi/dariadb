@@ -811,16 +811,9 @@ public:
     auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
 
     if (_page_manager != nullptr) {
-      auto pages = _page_manager->pagesOlderThan(timepoint);
-      if (!pages.empty()) {
-        auto candidateToErase = pages.front();
-        logger_info("engine", _settings->alias, ": erase old page ", candidateToErase);
-        this->_page_manager->erase_page(candidateToErase);
-        logger_info("engine", _settings->alias, ": erase old page - complete.");
-      } else {
-        // TODO remove this
-        logger_info("engine", _settings->alias, ": erase old page: pages.empty()");
-      }
+	  logger_info("engine", _settings->alias, ": erase old page (", timeutil::to_string(timepoint),")");
+	  _page_manager->eraseOld(timepoint);
+      logger_info("engine", _settings->alias, ": erase old page - complete.");
     }
     this->unlock_storage();
   }
