@@ -11,7 +11,7 @@
   }
 #define ENSURE(A) ENSURE_MSG(A, #A)
 #else
-#define ENSURE_MSG(A,E)
+#define ENSURE_MSG(A, E)
 #define ENSURE(A)
 #endif
 
@@ -28,14 +28,10 @@ protected:
 };
 
 struct ElapsedTime {
-	ElapsedTime() {
-		start_time = clock();
-	}
+  ElapsedTime() { start_time = clock(); }
 
-	double elapsed() {
-		return double(clock() - start_time) / CLOCKS_PER_SEC;
-	}
-	clock_t start_time;
+  double elapsed() { return double(clock() - start_time) / CLOCKS_PER_SEC; }
+  clock_t start_time;
 };
 }
 }
