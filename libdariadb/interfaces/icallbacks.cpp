@@ -1,4 +1,5 @@
 #include <libdariadb/interfaces/icallbacks.h>
+#include <libdariadb/utils/utils.h>
 #include <thread>
 using namespace dariadb;
 
@@ -15,7 +16,7 @@ void IReadCallback::is_end() {
 
 void IReadCallback::wait() {
   while (!is_end_called) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+	  SLEEP_MLS(300);
   }
 }
 

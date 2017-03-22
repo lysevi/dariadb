@@ -771,7 +771,7 @@ public:
         if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
           break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		SLEEP_MLS(10);
       }
     }
   }
@@ -817,7 +817,7 @@ public:
           break;
         }
       }
-	  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	  SLEEP_MLS(500);
     }
     _eraseActionIsStoped = true;
   }

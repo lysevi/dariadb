@@ -32,6 +32,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     _down_level_storage = nullptr;
     _disk_storage = nullptr;
     _drop_stop = false;
+    _drop_is_stoped = false;
     if (!_settings->is_memory_only_mode) {
       _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
     }
@@ -43,8 +44,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     if (!_stoped) {
       logger_info("engine", _settings->alias, ": memstorage - begin stoping.");
       if (!_settings->is_memory_only_mode) {
-        _drop_stop = true;
-        _drop_cond.notify_all();
+        logger_info("engine", _settings->alias, ": memstorage - stoping drop thread");
+        while (!_drop_is_stoped) {
+          _drop_stop = true;
+          _drop_cond.notify_all();
+		  SLEEP_MLS(100);
+        }
         _drop_thread.join();
       }
 
@@ -52,7 +57,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         logger_info("engine", _settings->alias, ": memstorage - drop all chunk to disk");
         this->drop_by_limit(1.0, true);
       }
-
+      logger_info("engine", _settings->alias, ": memstorage - memory clear.");
       for (auto kv : _chunks) {
         auto ch = kv.second;
         if (ch->_is_from_pool) {
@@ -221,7 +226,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     std::lock_guard<std::shared_mutex> sl(_all_tracks_locker);
     logger_info("engine", _settings->alias, ": memstorage - drop old ",
                 timeutil::to_string(t));
-	utils::ElapsedTime et;
+    utils::ElapsedTime et;
     size_t erased = 0;
     while (true) {
       bool find_one = false;
@@ -234,7 +239,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
           c->_track->rm_chunk(c.get());
           freeChunk(c);
           erased++;
-		  break;
+          break;
         }
       }
       if (!find_one) {
@@ -426,6 +431,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       drop_by_limit(_settings->percent_to_drop.value(), false);
     }
+    _drop_is_stoped = true;
     logger_info("engine", _settings->alias, ": memstorage - dropping thread stoped.");
   }
 
@@ -443,6 +449,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
   std::thread _drop_thread;
   bool _drop_stop;
+  bool _drop_is_stoped;
   std::mutex _drop_locker;
   std::condition_variable _drop_cond;
 };

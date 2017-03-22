@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 
   while (server_instance == nullptr || !server_instance->is_runned()) {
 	  std::cout << "Wait server..." << std::endl;
-	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	  SLEEP_MLS(100);
   }
   dariadb::net::client::Client::Param p(server_host, server_port);
 

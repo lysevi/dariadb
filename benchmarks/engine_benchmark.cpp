@@ -160,7 +160,7 @@ void show_info(IEngine *storage) {
   long long w0 = append_count.load();
   long long r0 = reads_count.load();
   while (true) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    SLEEP_MLS(100);
 
     long long w1 = append_count.load();
     long long r1 = reads_count.load();
@@ -224,7 +224,7 @@ void show_info(IEngine *storage) {
 
 void show_drop_info(IEngine *storage) {
   while (true) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    SLEEP_MLS(100);
 
     auto queue_sizes = storage->description();
 
@@ -246,7 +246,7 @@ void reader(IMeasStorage *ms, IdSet all_id_set, Time from, Time to) {
   std::uniform_int_distribution<dariadb::Id> uniform_dist(from, to);
 
   while (true) {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+	  SLEEP_MLS(10);
     BenchCallback clbk;
     clbk.count = 0;
     auto f = from;

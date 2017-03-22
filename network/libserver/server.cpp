@@ -68,7 +68,7 @@ public:
     logger_info("server: stop info timer...");
     _info_timer.cancel();
     while (_writes_in_progress.load() != 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		SLEEP_MLS(300);
       logger_info("server: writes in progress ", _writes_in_progress.load());
     }
 
@@ -81,7 +81,7 @@ public:
     logger_info("server: wait ", _io_threads.size(), " io threads...");
     while (_active_workers.load() != 0) {
       ENSURE(_service.stopped());
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	  SLEEP_MLS(100);
     }
     for (auto &t : _io_threads) {
       t.join();
@@ -111,7 +111,7 @@ public:
       if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
         while (kv.second->_async_connection->queue_size() != 0) {
           logger_info("server: wait stop of #", kv.first);
-          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		  SLEEP_MLS(50);
         }
         kv.second->close();
       }
@@ -144,7 +144,7 @@ public:
     _is_runned_flag.store(true);
 
 	while (!this->_stop_flag.load()) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		SLEEP_MLS(100);
 	}
 	on_stop();
   }

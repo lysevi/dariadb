@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
       if (wals_count == 0) {
         break;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      SLEEP_MLS(500);
     }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemOnlyStorage_common_test) {
         break;
       } else {
         std::cout << "values !empty() " << values.size() << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        SLEEP_MLS(500);
       }
     }
   }

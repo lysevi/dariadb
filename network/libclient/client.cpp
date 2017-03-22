@@ -58,7 +58,7 @@ public:
     _thread_handler = std::move(t);
 
     while (this->_state != CLIENT_STATE::WORK) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		SLEEP_MLS(300);
     }
   }
 
@@ -71,7 +71,7 @@ public:
     while (this->_state != CLIENT_STATE::DISCONNECTED) {
       logger_info("client: #", _async_connection->id(),
                   " disconnect - wait server answer...");
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	  SLEEP_MLS(500);
     }
   }
 

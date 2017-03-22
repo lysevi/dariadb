@@ -146,7 +146,7 @@ void Dropper::drop_wal_internal() {
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
                                     AT_PRIORITY(at, TASK_PRIORITY::DEFAULT));
     while (_active_operations != size_t(0)) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		SLEEP_MLS(100);
     }
     if (_state != DROPPER_STATE::ERROR) {
       std::lock_guard<std::mutex> lg(_queue_locker);
@@ -161,7 +161,7 @@ void Dropper::flush() {
   logger_info("engine", _settings->alias, ": Dropper flush...");
   while (this->description().wal != 0 && _active_operations != size_t(0)) {
     this->_cond_var.notify_all();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	SLEEP_MLS(100);
   }
   logger_info("engine", _settings->alias, ": Dropper flush end.");
 }
