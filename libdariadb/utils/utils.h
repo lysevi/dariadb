@@ -16,6 +16,7 @@
 #endif
 
 #define SLEEP_MLS(a) std::this_thread::sleep_for(std::chrono::milliseconds(a))
+
 namespace dariadb {
 namespace utils {
 
