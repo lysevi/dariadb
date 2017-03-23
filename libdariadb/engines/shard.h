@@ -22,6 +22,7 @@ public:
    */
   EXPORT void shardAdd(const Shard &d);
   EXPORT std::list<Shard> shardList();
+  EXPORT void shardRm(const std::string&alias, bool rm_shard_folder);
 
   EXPORT Status append(const Meas &value) override;
   EXPORT Time minTime() override;

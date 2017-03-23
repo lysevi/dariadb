@@ -83,7 +83,7 @@ if [[ "$GCOV" == "TRUE" ]]; then
     echo "lcov --directory . --capture --output-file coverage.info"
     lcov --directory . --capture --output-file coverage.info # capture coverage info
     echo "lcov --remove coverage.info 'bin/*' 'tests/*' 'extern/*' 'benchmarks/*' '/usr/*'"
-    lcov --remove coverage.info 'bin/*' 'tests/*' 'extern/*' 'benchmarks/*' '/usr/*' --output-file coverage.info # filter out system and test code
+    lcov --remove coverage.info './bin/*' './tests/*' './extern/*' './benchmarks/*' '/usr/*' --output-file coverage.info # filter out system and test code
     echo "lcov --list coverage.info"    
     lcov --list coverage.info # debug before upload
     coveralls-lcov --repo-token '7VSWJleC3m9GKbZBakLFL5nBEib1CTFsb' coverage.info 

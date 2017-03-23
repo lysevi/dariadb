@@ -101,6 +101,35 @@ public:
     saveShardFile();
   }
 
+  void shardRm(const std::string &alias, bool rm_shard_folder) {
+    std::lock_guard<std::shared_mutex> lg(_locker);
+    logger_info("shards: rm shard {", alias, "}");
+
+    auto f_iter = _shards.find(alias);
+    if (f_iter != _shards.end()) {
+      for (auto iter = _sub_storages.begin(); iter != _sub_storages.end(); ++iter) {
+        auto ss = iter->storage;
+        if (iter->path == f_iter->second.path) {
+          ss->stop();
+          _sub_storages.erase(iter);
+          if (_default_shard.get() == ss.get()) {
+            _default_shard = nullptr;
+          }
+          break;
+        }
+      }
+      if (rm_shard_folder) {
+        logger_info("shards: rm path - ", f_iter->second.path);
+        utils::fs::rm(f_iter->second.path);
+      }
+      for (auto id : f_iter->second.ids) {
+        _id2shard.erase(id);
+      }
+      _shards.erase(f_iter);
+      saveShardFile();
+    }
+  }
+
   void shardAdd_inner(const ShardEngine::Shard &d) {
     std::lock_guard<std::shared_mutex> lg(_locker);
     logger_info("shards: add new shard {", d.alias, "} => ", d.path);
@@ -224,7 +253,6 @@ public:
       return target_shard->minMaxTime(id, minResult, maxResult);
     }
   }
-
 
   std::unordered_map<IEngine_Ptr, IdSet> makeStorage2iset(const IdArray &ids) {
     std::unordered_map<IEngine_Ptr, IdSet> result;
@@ -381,6 +409,10 @@ IEngine::Description dariadb::ShardEngine::description() const {
 
 void ShardEngine::shardAdd(const Shard &d) {
   _impl->shardAdd(d);
+}
+
+void ShardEngine::shardRm(const std::string &alias, bool rm_shard_folder) {
+  _impl->shardRm(alias, rm_shard_folder);
 }
 
 std::list<ShardEngine::Shard> ShardEngine::shardList() {
