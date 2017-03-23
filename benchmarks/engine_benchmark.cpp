@@ -13,6 +13,8 @@ typedef std::list<dariadb::Meas> MeasesList;
 
 namespace po = boost::program_options;
 
+const std::string storage_path = "engine_benchmark_storage";
+
 std::atomic_llong append_count{0};
 std::atomic_size_t reads_count{0};
 Time start_time;
@@ -377,9 +379,11 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, IEngine *raw_pt
   }
   auto files = raw_ptr->description();
   if (memory_only) {
-    if (files.pages_count != files.wal_count && files.wal_count != size_t(0)) {
+    using dariadb::utils::fs::path_exists;
+    if ((files.pages_count != files.wal_count && files.wal_count != size_t(0)) ||
+        path_exists(storage_path)) {
       THROW_EXCEPTION("MEMONLY error: (p:", files.pages_count, " a:", files.wal_count,
-                      " T:", files.active_works, ")");
+                      " T:", files.active_works, ") exists: ", path_exists(storage_path));
     }
     return;
   }
@@ -416,8 +420,6 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Performance benchmark" << std::endl;
   std::cout << "Writers count:" << benchmark_params.total_threads_count << std::endl;
-
-  const std::string storage_path = "engine_benchmark_storage";
 
   parse_cmdline(argc, argv);
 
