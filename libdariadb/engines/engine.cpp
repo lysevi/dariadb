@@ -771,7 +771,7 @@ public:
         if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
           break;
         }
-		SLEEP_MLS(10);
+		utils::sleep_mls(10);
       }
     }
   }
@@ -817,7 +817,7 @@ public:
           break;
         }
       }
-	  SLEEP_MLS(500);
+	  utils::sleep_mls(500);
     }
     _eraseActionIsStoped = true;
   }

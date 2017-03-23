@@ -127,6 +127,8 @@ public:
       }
       _shards.erase(f_iter);
       saveShardFile();
+    } else {
+      logger_info("shards: rm - shard with alias={", alias, "} not found.");
     }
   }
 

@@ -58,7 +58,7 @@ public:
     _thread_handler = std::move(t);
 
     while (this->_state != CLIENT_STATE::WORK) {
-		SLEEP_MLS(300);
+		dariadb::utils::sleep_mls(300);
     }
   }
 
@@ -71,7 +71,7 @@ public:
     while (this->_state != CLIENT_STATE::DISCONNECTED) {
       logger_info("client: #", _async_connection->id(),
                   " disconnect - wait server answer...");
-	  SLEEP_MLS(500);
+	  dariadb::utils::sleep_mls(500);
     }
   }
 

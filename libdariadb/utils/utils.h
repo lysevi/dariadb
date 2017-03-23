@@ -15,10 +15,12 @@
 #define ENSURE(A)
 #endif
 
-#define SLEEP_MLS(a) std::this_thread::sleep_for(std::chrono::milliseconds(a))
-
 namespace dariadb {
 namespace utils {
+
+inline void sleep_mls(long long a) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(a));
+}
 
 class NonCopy {
 private:
@@ -35,5 +37,5 @@ struct ElapsedTime {
   double elapsed() { return double(clock() - start_time) / CLOCKS_PER_SEC; }
   clock_t start_time;
 };
-}
-}
+} // namespace utils
+} // namespace dariadb

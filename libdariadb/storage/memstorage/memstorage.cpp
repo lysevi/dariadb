@@ -48,7 +48,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         while (!_drop_is_stoped) {
           _drop_stop = true;
           _drop_cond.notify_all();
-          SLEEP_MLS(100);
+		  utils::sleep_mls(100);
         }
         _drop_thread.join();
       }

@@ -63,7 +63,7 @@ void show_drop_info(dariadb::Engine *storage) {
     dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count,
                           " a:", queue_sizes.wal_count, " T:", queue_sizes.active_works,
                           ")", "[a:", queue_sizes.dropper.wal, "]");
-	SLEEP_MLS(2000);
+    dariadb::utils::sleep_mls(2000);
   }
 }
 

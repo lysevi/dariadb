@@ -222,7 +222,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {
       if (tk1 != ti.kind) {
         BOOST_TEST_MESSAGE("(tk1 != ti.kind)");
-        SLEEP_MLS(400);
+		dariadb::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
       return false;
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     AsyncTask at2 = [tk2](const ThreadInfo &ti) {
       if (tk2 != ti.kind) {
         BOOST_TEST_MESSAGE("(tk2 != ti.kind)");
-        SLEEP_MLS(400);
+		dariadb::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
       return false;

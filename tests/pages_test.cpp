@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
 	bool complete = false;
 	pm->append_async("pagename", ma, [&complete](auto p) {complete = true; });
 	while (!complete) {
-		SLEEP_MLS(100);
+		dariadb::utils::sleep_mls(100);
 	}
   }
   pm = nullptr;
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
 	bool complete = false;
     pm->append_async(ss.str(), ma, [&complete](auto p) {complete = true; });
 	while (!complete) {
-		SLEEP_MLS(100);
+		dariadb::utils::sleep_mls(100);
 	}
   }
 
@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   bool complete = false;
   pm->append_async(page_file_prefix, a, [&complete](auto p) {complete = true; });
   while (!complete) {
-	  SLEEP_MLS(100);
+	  dariadb::utils::sleep_mls(100);
   }
 
   dariadb::IdArray all_id_array{all_id_set.begin(), all_id_set.end()};
@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   bool complete = false;
   pm->append_async(page_file_prefix1, a, [&complete](auto p) {complete = true; });
   while (!complete) {
-	  SLEEP_MLS(100);
+	  dariadb::utils::sleep_mls(100);
   }
 
   e.time = 0;
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   complete = false;
   pm->append_async(page_file_prefix2, a, [&complete](auto p) {complete = true; });
   while (!complete) {
-	  SLEEP_MLS(100);
+	  dariadb::utils::sleep_mls(100);
   }
 
   e.time = 0;
@@ -392,7 +392,7 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   complete = false;
   pm->append_async(page_file_prefix3, a, [&complete](auto p) {complete = true; });
   while (!complete) {
-	  SLEEP_MLS(100);
+	  dariadb::utils::sleep_mls(100);
   }
 
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
@@ -525,7 +525,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   bool complete = false;
   pm->append_async(page_file_prefix1, a, [&complete](auto p) {complete = true; });
   while (!complete) {
-	  SLEEP_MLS(100);
+	  dariadb::utils::sleep_mls(100);
   }
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
@@ -540,7 +540,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   complete = false;
   pm->append_async(page_file_prefix2, a, [&complete](auto p) {complete = true; });
   while (!complete) {
-	  SLEEP_MLS(100);
+	  dariadb::utils::sleep_mls(100);
   }
 
   e.time = 0;
@@ -556,7 +556,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
   complete = false;
   pm->append_async(page_file_prefix3, a, [&complete](auto p) {complete = true; });
   while (!complete) {
-	  SLEEP_MLS(100);
+	  dariadb::utils::sleep_mls(100);
   }
 
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
