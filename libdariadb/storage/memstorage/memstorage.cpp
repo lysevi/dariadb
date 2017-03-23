@@ -60,14 +60,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       logger_info("engine", _settings->alias, ": memstorage - memory clear.");
       for (auto kv : _chunks) {
         auto ch = kv.second;
-        if (ch->_is_from_pool) {
-          _chunk_allocator->free(ch->_a_data);
-        }
       }
       _chunks.clear();
+	  _id2track.clear();
       ENSURE(_chunk_allocator->_allocated == size_t());
 
-      _id2track.clear();
+      
       _chunk_allocator = nullptr;
       ENSURE(_chunk_allocator.use_count() == long(0));
       _stoped = true;
