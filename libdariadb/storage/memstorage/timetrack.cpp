@@ -15,10 +15,9 @@ struct MemTrackCursor : dariadb::ICursor {
     _track = track;
     ENSURE(track != nullptr);
     ENSURE(r != nullptr);
-    _track->is_locked_to_drop = true;
   }
 
-  ~MemTrackCursor() { _track->is_locked_to_drop = false; }
+  ~MemTrackCursor() {  }
   Meas readNext() override { return _r->readNext(); }
 
   Meas top() override { return _r->top(); }
@@ -43,7 +42,6 @@ TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
   _min_max.max.time = MIN_TIME;
   _max_sync_time = MIN_TIME;
   _mcc = mcc;
-  is_locked_to_drop = false;
 }
 
 TimeTrack::~TimeTrack() {
@@ -135,7 +133,7 @@ void TimeTrack::append_to_past(const Meas &value) {
   ChunkHeader *hdr = new ChunkHeader;
 
   new_chunk =
-      MemChunk_Ptr{new MemChunk(false, hdr, new_buffer, buffer_size, mar.front())};
+      MemChunk_Ptr{new MemChunk(false, hdr, new_buffer, buffer_size, mar.front(), this->_allocator)};
   new_chunk->_track = this;
   for (size_t i = 1; i < mar.size(); ++i) {
     auto v = mar[i];
@@ -411,7 +409,7 @@ bool TimeTrack::create_new_chunk(const Meas &value) {
     return false;
   }
   auto mc = MemChunk_Ptr{new MemChunk{true, new_chunk_data.header, new_chunk_data.buffer,
-                                      _allocator->_chunkSize, value}};
+                                      _allocator->_chunkSize, value, this->_allocator }};
   mc->_track = this;
   mc->_a_data = new_chunk_data;
   this->_mcc->addChunk(mc);

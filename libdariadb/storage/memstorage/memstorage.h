@@ -47,9 +47,10 @@ public:
   EXPORT Id2Time getSyncMap(); /// Id to max dropped to disk time.
 
   EXPORT void dropOld(Time t);
+
 private:
   struct Private;
   std::unique_ptr<Private> _impl;
 };
-}
-}
+} // namespace storage
+} // namespace dariadb

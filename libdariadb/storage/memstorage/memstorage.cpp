@@ -48,14 +48,14 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         while (!_drop_is_stoped) {
           _drop_stop = true;
           _drop_cond.notify_all();
-		  SLEEP_MLS(100);
+          SLEEP_MLS(100);
         }
         _drop_thread.join();
       }
 
       if (this->_down_level_storage != nullptr) {
         logger_info("engine", _settings->alias, ": memstorage - drop all chunk to disk");
-        this->drop_by_limit(1.0, true);
+        this->drop_by_limit(1.0);
       }
       logger_info("engine", _settings->alias, ": memstorage - memory clear.");
       for (auto kv : _chunks) {
@@ -140,7 +140,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     return Status(1);
   }
 
-  void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
+  void drop_by_limit(float chunk_percent_to_free) {
     logger_info("engine", _settings->alias, ": memstorage - drop_by_limit ",
                 chunk_percent_to_free);
     size_t cur_chunk_count = (size_t)this->_chunk_allocator->_allocated;
@@ -158,9 +158,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       auto c = kv.second;
       ENSURE(c != nullptr);
       ENSURE(c->_track != nullptr);
-      if (!c->_track->is_locked_to_drop) {
-        chunks_copy.push_back(c);
-      }
+      chunks_copy.push_back(c);
     }
     sl.unlock();
 
@@ -175,11 +173,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       if (c == nullptr) {
         continue;
       }
-      // if (!in_stop & !c->isFull()) { // not full
-      //  ENSURE(!in_stop);
-      //  ENSURE(!c->isFull());
-      //  continue;
-      //}
       all_chunks.push_back(c.get());
       ++pos;
     }
@@ -391,11 +384,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     ENSURE(chunk->_is_from_pool);
 
     auto pos = chunk->_a_data.position;
-    if (chunk->_is_from_pool) {
-      _chunk_allocator->free(chunk->_a_data);
-      chunk->header = nullptr;
-      chunk->buffer_ptr = nullptr;
-    }
     _chunks.erase(pos);
     if (is_time_to_drop()) {
       _drop_cond.notify_all();
@@ -410,9 +398,8 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     auto region_allocator_ptr =
         dynamic_cast<RegionChunkAllocator *>(_chunk_allocator.get());
     if (region_allocator_ptr != nullptr) {
-      return (region_allocator_ptr->_allocated) >=
-             (region_allocator_ptr->_capacity *
-              _settings->percent_when_start_droping.value());
+      return _chunks.size() >= (region_allocator_ptr->_capacity *
+                                _settings->percent_when_start_droping.value());
     }
     return false;
   }
@@ -429,7 +416,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         continue;
       }
 
-      drop_by_limit(_settings->percent_to_drop.value(), false);
+      drop_by_limit(_settings->percent_to_drop.value());
     }
     _drop_is_stoped = true;
     logger_info("engine", _settings->alias, ": memstorage - dropping thread stoped.");
