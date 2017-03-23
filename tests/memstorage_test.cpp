@@ -48,22 +48,22 @@ struct MocDiskStorage : public dariadb::IMeasWriter {
   MocDiskStorage() { droped = 0; }
   virtual dariadb::Status append(const dariadb::Meas &value) override {
     droped++;
-    return dariadb::Status(1, 0);
+    return dariadb::Status(1);
   }
 
   virtual void flush() override {}
 };
 
-BOOST_AUTO_TEST_CASE(MemChunkAllocatorTest) {
+BOOST_AUTO_TEST_CASE(RegionAllocatorTest) {
   std::cout << "MemChunkAllocatorTest" << std::endl;
   const size_t buffer_size = 100;
   const size_t max_size = 1024;
-  dariadb::storage::MemChunkAllocator allocator(max_size, buffer_size);
+  dariadb::storage::RegionChunkAllocator allocator(max_size, buffer_size);
   std::set<dariadb::storage::ChunkHeader *> allocated_headers;
   std::set<uint8_t *> allocated_buffers;
   std::set<size_t> positions;
 
-  dariadb::storage::MemChunkAllocator::AllocatedData last;
+  dariadb::storage::RegionChunkAllocator::AllocatedData last;
   do {
     auto allocated = allocator.allocate();
     auto hdr = allocated.header;
@@ -97,6 +97,8 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
     settings->chunk_size.setValue(128);
+    settings->save();
+    BOOST_CHECK(!settings->is_memory_only_mode);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
     _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
                              settings.get());
@@ -110,6 +112,26 @@ BOOST_AUTO_TEST_CASE(MemStorageCommonTest) {
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
   }
+}
+
+BOOST_AUTO_TEST_CASE(MemStorageUnlimitAllocatorCommonTest) {
+  std::cout << "MemStorageCommonTest" << std::endl;
+  {
+    auto settings = dariadb::storage::Settings::create();
+    settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
+    settings->chunk_size.setValue(128);
+    settings->save();
+    BOOST_CHECK(settings->is_memory_only_mode);
+    auto _engine_env = dariadb::storage::EngineEnvironment::create();
+    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                             settings.get());
+    dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+    auto ms = dariadb::storage::MemStorage::create(_engine_env, size_t(0));
+
+    dariadb_test::storage_test_check(ms.get(), 0, 100, 1, false, true, false);
+  }
+  dariadb::utils::async::ThreadManager::stop();
 }
 
 BOOST_AUTO_TEST_CASE(MemStorageDropByLimitTest) {

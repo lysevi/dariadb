@@ -335,7 +335,7 @@ void IOClient::append(const NetData_ptr &d) {
   auto ar = env->storage->append(ma.begin(), ma.end());
   this->env->srv->write_end();
   if (ar.ignored != size_t(0)) {
-    logger_info("server: write error - ", ar.error_message);
+    logger_info("server: write error - ", ar.error);
     sendError(hdr->id, ERRORS::APPEND_ERROR);
   } else {
     sendOk(hdr->id);
@@ -437,13 +437,13 @@ void IOClient::readersEraseUnneeded() {
       auto cdr_raw = dynamic_cast<ClientDataReader *>(it->second.get());
       if (!cdr_raw->is_needed) {
         _readers.erase(it);
-		gc_continue = true;
-		break;
+        gc_continue = true;
+        break;
       }
     }
-	if (!gc_continue) {
-		break;
-	}
+    if (!gc_continue) {
+      break;
+    }
   }
 }
 

@@ -1,20 +1,31 @@
 #pragma once
 
+#include <libdariadb/st_exports.h>
 #include <cstddef>
 #include <string>
 
 namespace dariadb {
+
+enum class APPEND_ERROR : int { OK, bad_alloc, bad_shard, wal_file_limit };
+
 struct Status {
   static Status empty() { return Status(); }
   Status() { writed = ignored = 0; }
-  Status(size_t wr, size_t ig) {
+  Status(size_t wr) {
     writed = wr;
-    ignored = ig;
+    ignored = size_t(0);
+    error = APPEND_ERROR::OK;
   }
+
+  Status(size_t ig, APPEND_ERROR err) {
+    ignored = ig;
+    error = err;
+  }
+
   Status(const Status &other) {
     this->writed = other.writed;
     this->ignored = other.ignored;
-    this->error_message = other.error_message;
+    this->error = other.error;
   }
 
   Status operator+(const Status &other) const {
@@ -28,7 +39,7 @@ struct Status {
     if (this != &other) {
       this->writed = other.writed;
       this->ignored = other.ignored;
-      this->error_message = other.error_message;
+      this->error = other.error;
     }
     return *this;
   }
@@ -39,6 +50,7 @@ struct Status {
     }
     return true;
   }
+
   bool operator!=(const Status &other) {
     if (this != &other) {
       return !(*this == other);
@@ -47,6 +59,8 @@ struct Status {
   }
   size_t writed;
   size_t ignored;
-  std::string error_message;
+  APPEND_ERROR error;
 };
+
+EXPORT std::string to_string(const APPEND_ERROR strat);
 }

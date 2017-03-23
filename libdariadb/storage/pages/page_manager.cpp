@@ -508,7 +508,7 @@ public:
     for (auto &p : part) {
       logger_info("==> ", utils::fs::extract_filename(p));
     }
-    auto start_time = clock();
+	utils::ElapsedTime et;
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::repackTo(file_name, out_lvl, last_id, _settings->chunk_size.value(), part,
@@ -524,16 +524,15 @@ public:
       insert_pagedescr(page_name, Page::readIndexFooter(
                                       PageIndex::index_name_from_page_name(file_name)));
     }
-    auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
 
-    logger("engine", _settings->alias, ": repack end. elapsed ", elapsed, "s");
+    logger("engine", _settings->alias, ": repack end. elapsed ", et.elapsed(), "s");
   }
 
   void compact(ICompactionController *logic) {
     Time from = logic->from;
     Time to = logic->to;
     logger("engine", _settings->alias, ": compact. from ", from, " to ", to);
-    auto start_time = clock();
+	utils::ElapsedTime et;
     auto pred = [from, to](const IndexFooter &hdr) {
       return utils::inInterval(from, to, hdr.stat.minTime) ||
              utils::inInterval(from, to, hdr.stat.maxTime) ||
@@ -583,8 +582,7 @@ public:
       insert_pagedescr(page_name, Page::readIndexFooter(
                                       PageIndex::index_name_from_page_name(file_name)));
     }
-    auto elapsed = double(clock() - start_time) / CLOCKS_PER_SEC;
-    logger("engine", _settings->alias, ": compact end. elapsed ", elapsed);
+    logger("engine", _settings->alias, ": compact end. elapsed ", et.elapsed());
   }
 
   void appendChunks(const std::vector<Chunk *> &a, size_t count) {

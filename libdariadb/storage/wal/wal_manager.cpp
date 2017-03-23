@@ -467,7 +467,7 @@ dariadb::Status WALManager::append(const Meas &value) {
   if (_buffer_pos >= _settings->wal_cache_size.value()) {
     flush_buffer();
   }
-  return dariadb::Status(1, 0);
+  return dariadb::Status(1);
 }
 
 void WALManager::flush_buffer() {
@@ -483,6 +483,10 @@ void WALManager::flush_buffer() {
     size_t total_writed = 0;
     while (1) {
       auto res = _wal->append(_buffer.begin() + pos, _buffer.begin() + _buffer_pos);
+	  if (res.error != APPEND_ERROR::OK) {
+		  logger_fatal("engine", this->_settings->alias, ": append to wal error - ", res.error);
+		  return false;
+	  }
       total_writed += res.writed;
       if (total_writed != _buffer_pos) {
         create_new();

@@ -79,11 +79,11 @@ void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
     ma[i].time = i;
   }
 
-  auto start = clock();
+  dariadb::utils::ElapsedTime et;
   for (size_t i = 0; i < SEND_COUNT; ++i) {
     client->append(ma);
   }
-  auto el = (((float)clock() - start) / CLOCKS_PER_SEC);
+  auto el = et.elapsed();
   elapsed[thread_num] = el;
 }
 
@@ -135,7 +135,7 @@ int main(int argc, char **argv) {
 
   while (server_instance == nullptr || !server_instance->is_runned()) {
 	  std::cout << "Wait server..." << std::endl;
-	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	  SLEEP_MLS(100);
   }
   dariadb::net::client::Client::Param p(server_host, server_port);
 

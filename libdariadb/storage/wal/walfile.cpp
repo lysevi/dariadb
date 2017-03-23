@@ -80,7 +80,7 @@ public:
     ENSURE(!_is_readonly);
 
     if (_writed > _settings->wal_file_size.value()) {
-      return Status(0, 1);
+      return Status(1, APPEND_ERROR::wal_file_limit);
     }
     open_to_append();
     std::fwrite(&value, sizeof(Meas), size_t(1), _file);
@@ -89,7 +89,7 @@ public:
     _maxTime = std::max(_maxTime, value.time);
     _writed++;
     _idBloom = bloom_add<Id>(_idBloom, value.id);
-    return Status(1, 0);
+    return Status(1);
   }
 
   Status append(const MeasArray::const_iterator &begin,
@@ -109,7 +109,7 @@ public:
       _idBloom = bloom_add<Id>(_idBloom, value.id);
     }
     _writed += write_size;
-    return Status(write_size, 0);
+    return Status(write_size);
   }
 
   Statistic stat(const Id id, Time from, Time to) {

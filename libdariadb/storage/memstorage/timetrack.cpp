@@ -35,7 +35,7 @@ struct MemTrackCursor : dariadb::ICursor {
 };
 
 TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
-                     MemChunkAllocator *allocator) {
+                     IMemoryAllocator_Ptr allocator) {
   _allocator = allocator;
   _meas_id = meas_id;
   _step = step;
@@ -46,7 +46,9 @@ TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
   is_locked_to_drop = false;
 }
 
-TimeTrack::~TimeTrack() {}
+TimeTrack::~TimeTrack() {
+  _allocator = nullptr;
+}
 
 void TimeTrack::updateMinMax(const Meas &value) {
   _min_max.updateMax(value);
@@ -57,16 +59,16 @@ Status TimeTrack::append(const Meas &value) {
   std::lock_guard<utils::async::Locker> lg(_locker);
   if (_cur_chunk == nullptr || _cur_chunk->isFull()) {
     if (!create_new_chunk(value)) {
-      return Status(0, 1);
+      return Status(1, APPEND_ERROR::bad_alloc);
     } else {
       updateMinMax(value);
-      return Status(1, 0);
+      return Status(1);
     }
   }
   if (_cur_chunk->header->stat.maxTime < value.time) {
     if (!_cur_chunk->append(value)) {
       if (!create_new_chunk(value)) {
-        return Status(0, 1);
+        return Status(1, APPEND_ERROR::bad_alloc);
       } else {
         updateMinMax(value);
       }
@@ -75,7 +77,7 @@ Status TimeTrack::append(const Meas &value) {
     append_to_past(value);
   }
   updateMinMax(value);
-  return Status(1, 0);
+  return Status(1);
 }
 
 void TimeTrack::append_to_past(const Meas &value) {
@@ -101,7 +103,6 @@ void TimeTrack::append_to_past(const Meas &value) {
     _index.erase(target_to_replace->header->stat.maxTime);
   }
 
- 
   /// unpack and sort.
   auto rdr = target_to_replace->getReader();
   while (!rdr->is_end()) {
@@ -112,17 +113,17 @@ void TimeTrack::append_to_past(const Meas &value) {
     mset.insert(v);
   }
   rdr = nullptr;
-  
+
   auto old_chunk_size = target_to_replace->header->size;
   if (target_to_replace->_is_from_pool) {
-	  _mcc->freeChunk(target_to_replace);
+    _mcc->freeChunk(target_to_replace);
   }
 
   mset.insert(value);
 
   /// need to leak detection.
   ENSURE(target_to_replace.use_count() == long(1));
-  
+
   target_to_replace = nullptr;
 
   MeasArray mar{mset.begin(), mset.end()};

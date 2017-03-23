@@ -37,7 +37,7 @@ int main(int, char **) {
     m.flag = 100 + i % 2;
     auto status = storage->append(m);
     if (status.writed != 1) {
-      std::cerr << "Error: " << status.error_message << std::endl;
+      std::cerr << "Error: " << dariadb::to_string(status.error) << std::endl;
     }
   }
 }

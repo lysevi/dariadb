@@ -24,24 +24,15 @@ public:
 };
 
 int main(int argc, char **argv) {
-  const std::string storage_path = "exampledb";
-  // comment that, for open exists storage.
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-
   // Replace standart logger.
   dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
-  auto settings = dariadb::storage::Settings::create(storage_path);
-  settings->save();
+  auto settings = dariadb::storage::Settings::create();
 
   auto scheme = dariadb::scheme::Scheme::create(settings);
-
   auto p1 = scheme->addParam("group.param1");
   auto p2 = scheme->addParam("group.subgroup.param2");
-  scheme->save();
 
   auto storage = std::make_unique<dariadb::Engine>(settings);
 

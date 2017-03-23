@@ -178,7 +178,7 @@ public:
     IEngine_Ptr target_shard = get_shard_for_id(value.id);
 
     if (target_shard == nullptr) {
-      return Status(0, 1);
+      return Status(1, APPEND_ERROR::bad_shard);
     } else {
       return target_shard->append(value);
     }

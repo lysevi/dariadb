@@ -21,7 +21,7 @@ using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 
 struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<TimeTrack> {
   TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
-            MemChunkAllocator *allocator);
+            IMemoryAllocator_Ptr allocator);
   ~TimeTrack();
   void updateMinMax(const Meas &value);
   virtual Status append(const Meas &value) override;
@@ -45,7 +45,7 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
 
   MemChunk_Ptr get_target_to_replace_from_index(const Time t);
 
-  MemChunkAllocator *_allocator;
+  IMemoryAllocator_Ptr _allocator;
   Id _meas_id;
   MeasMinMax _min_max;
   Time _max_sync_time;

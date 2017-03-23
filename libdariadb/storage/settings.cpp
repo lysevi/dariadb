@@ -56,6 +56,13 @@ Settings_ptr Settings::create(const std::string &storage_path) {
   return Settings_ptr{new Settings(storage_path)};
 }
 
+Settings_ptr Settings::create() {
+  auto result = Settings_ptr{new Settings(MEMORY_ONLY_PATH)};
+  result->is_memory_only_mode = true;
+  result->strategy.setValue(STRATEGY::MEMORY);
+  return result;
+}
+
 Settings::Settings(const std::string &path_to_storage)
     : storage_path(nullptr, "storage path", path_to_storage),
       raw_path(nullptr, "raw path", fs::append_path(path_to_storage, "raw")),
@@ -71,15 +78,19 @@ Settings::Settings(const std::string &path_to_storage)
       max_pages_in_level(this, c_max_pages_per_level, uint16_t(2)),
       threads_in_common(this, c_threads_in_common, THREADS_COMMON),
       threads_in_diskio(this, c_threads_in_diskio, THREADS_DISKIO) {
-  auto f = settings_file_path(storage_path.value());
-  if (utils::fs::path_exists(f)) {
-    load(f);
-  } else {
-    dariadb::utils::fs::mkdir(storage_path.value());
-    dariadb::utils::fs::mkdir(raw_path.value());
-    save();
+
+  if (storage_path.value() != MEMORY_ONLY_PATH) {
+    auto f = settings_file_path(storage_path.value());
+    if (utils::fs::path_exists(f)) {
+      load(f);
+    } else {
+      dariadb::utils::fs::mkdir(storage_path.value());
+      dariadb::utils::fs::mkdir(raw_path.value());
+      save();
+    }
   }
   load_min_max = true;
+  is_memory_only_mode = false;
 }
 
 Settings::~Settings() {}
@@ -104,6 +115,9 @@ std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_pa
 }
 
 void Settings::save() {
+  if (this->storage_path.value() == MEMORY_ONLY_PATH) {
+    return;
+  }
   save(settings_file_path(this->storage_path.value()));
 }
 
@@ -126,6 +140,9 @@ void Settings::save(const std::string &file) {
 }
 
 void Settings::load(const std::string &file) {
+  if (this->storage_path.value() == MEMORY_ONLY_PATH) {
+    return;
+  }
   logger("engine", alias, ": Settings loading ", file);
   std::string content = dariadb::utils::fs::read_file(file);
   json js = json::parse(content);

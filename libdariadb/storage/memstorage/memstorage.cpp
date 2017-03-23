@@ -6,6 +6,7 @@
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/memstorage/timetrack.h>
 #include <libdariadb/storage/settings.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <cstring>
 #include <memory>
@@ -24,15 +25,17 @@ Map:
 struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   Private(const EngineEnvironment_ptr &env, size_t id_count)
       : _env(env), _settings(_env->getResourceObject<Settings>(
-                       EngineEnvironment::Resource::SETTINGS)),
-        _chunk_allocator(_settings->memory_limit.value(), _settings->chunk_size.value()) {
-    _chunks.resize(_chunk_allocator._capacity);
+                       EngineEnvironment::Resource::SETTINGS)) {
+
+    allocator_init();
     _stoped = false;
     _down_level_storage = nullptr;
     _disk_storage = nullptr;
     _drop_stop = false;
-    _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
-
+    _drop_is_stoped = false;
+    if (!_settings->is_memory_only_mode) {
+      _drop_thread = std::thread{std::bind(&MemStorage::Private::drop_thread_func, this)};
+    }
     if (id_count != 0) {
       _id2track.reserve(id_count);
     }
@@ -40,72 +43,107 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   void stop() {
     if (!_stoped) {
       logger_info("engine", _settings->alias, ": memstorage - begin stoping.");
-      _drop_stop = true;
-      _drop_cond.notify_all();
-      _drop_thread.join();
+      if (!_settings->is_memory_only_mode) {
+        logger_info("engine", _settings->alias, ": memstorage - stoping drop thread");
+        while (!_drop_is_stoped) {
+          _drop_stop = true;
+          _drop_cond.notify_all();
+		  SLEEP_MLS(100);
+        }
+        _drop_thread.join();
+      }
 
       if (this->_down_level_storage != nullptr) {
         logger_info("engine", _settings->alias, ": memstorage - drop all chunk to disk");
         this->drop_by_limit(1.0, true);
       }
-
-      for (size_t i = 0; i < _chunks.size(); ++i) {
-        if (_chunks[i] != nullptr && _chunks[i]->_is_from_pool) {
-          _chunk_allocator.free(_chunks[i]->_a_data);
+      logger_info("engine", _settings->alias, ": memstorage - memory clear.");
+      for (auto kv : _chunks) {
+        auto ch = kv.second;
+        if (ch->_is_from_pool) {
+          _chunk_allocator->free(ch->_a_data);
         }
-        _chunks[i] = nullptr;
       }
-	  ENSURE(_chunk_allocator._allocated == size_t());
+      _chunks.clear();
+      ENSURE(_chunk_allocator->_allocated == size_t());
+
       _id2track.clear();
+      _chunk_allocator = nullptr;
+      ENSURE(_chunk_allocator.use_count() == long(0));
       _stoped = true;
       logger_info("engine", _settings->alias, ": memstorage - stoped.");
     }
   }
+
   ~Private() { stop(); }
 
+  void allocator_init() {
+    IMemoryAllocator *alloc_ptr;
+    if (_settings->is_memory_only_mode) {
+      alloc_ptr = new UnlimitMemoryAllocator(_settings->chunk_size.value());
+    } else {
+      alloc_ptr = new RegionChunkAllocator(_settings->memory_limit.value(),
+                                           _settings->chunk_size.value());
+    }
+
+    _chunk_allocator = IMemoryAllocator_Ptr(alloc_ptr);
+  }
   memstorage::Description description() const {
     memstorage::Description result;
-    result.allocated = _chunk_allocator._allocated;
-    result.allocator_capacity = _chunk_allocator._capacity;
+    auto region_allocator_ptr =
+        dynamic_cast<RegionChunkAllocator *>(_chunk_allocator.get());
+    if (region_allocator_ptr != nullptr) {
+      result.allocator_capacity = region_allocator_ptr->_capacity;
+    }
+    result.allocated = _chunk_allocator->_allocated;
     return result;
   }
 
   Status append(const Meas &value) override {
     _all_tracks_locker.lock_shared();
     auto track = _id2track.find(value.id);
-    TimeTrack_ptr target_track = nullptr;
+    TimeTrack *target_track = nullptr;
     if (track == _id2track.end()) {
       _all_tracks_locker.unlock_shared();
       std::lock_guard<std::shared_mutex> lg(_all_tracks_locker);
 
       track = _id2track.find(value.id);
       if (track == _id2track.end()) { // still not exists.
-        target_track =
-            std::make_shared<TimeTrack>(this, Time(0), value.id, &_chunk_allocator);
-        _id2track.emplace(std::make_pair(value.id, target_track));
+        auto new_tr =
+            std::make_shared<TimeTrack>(this, Time(0), value.id, _chunk_allocator);
+        _id2track.emplace(std::make_pair(value.id, new_tr));
+        target_track = new_tr.get();
       } else {
-        target_track = track->second;
+        target_track = track->second.get();
       }
     } else {
-      target_track = track->second;
+      target_track = track->second.get();
       _all_tracks_locker.unlock_shared();
     }
 
-    while (target_track->append(value) != Status(1, 0) && !_drop_stop) {
-      _drop_cond.notify_all();
+    while (true) {
+      auto st = target_track->append(value);
+      if (st != Status(1) && !_drop_stop) {
+        if (_settings->is_memory_only_mode) {
+          return st;
+        }
+        _drop_cond.notify_all();
+        continue;
+      }
+      break;
     }
 
     if (_disk_storage != nullptr) {
       _disk_storage->append(value);
       target_track->_max_sync_time = value.time;
     }
-    return Status(1, 0);
+    return Status(1);
   }
 
   void drop_by_limit(float chunk_percent_to_free, bool in_stop) {
     logger_info("engine", _settings->alias, ": memstorage - drop_by_limit ",
                 chunk_percent_to_free);
-    size_t cur_chunk_count = (size_t)this->_chunk_allocator._allocated;
+    size_t cur_chunk_count = (size_t)this->_chunk_allocator->_allocated;
     auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_percent_to_free);
 
     std::vector<Chunk *> all_chunks;
@@ -113,13 +151,18 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     size_t pos = 0;
 
     std::shared_lock<std::shared_mutex> sl(_all_tracks_locker);
-    std::vector<MemChunk_Ptr> chunks_copy(_chunks.size());
-    auto it =
-        std::copy_if(_chunks.begin(), _chunks.end(), chunks_copy.begin(), [](auto c) {
-          return c != nullptr && !c->_track->is_locked_to_drop;
-        });
+    std::vector<MemChunk_Ptr> chunks_copy;
+    chunks_copy.reserve(_chunks.size());
+
+    for (auto kv : _chunks) {
+      auto c = kv.second;
+      ENSURE(c != nullptr);
+      ENSURE(c->_track != nullptr);
+      if (!c->_track->is_locked_to_drop) {
+        chunks_copy.push_back(c);
+      }
+    }
     sl.unlock();
-    chunks_copy.resize(std::distance(chunks_copy.begin(), it));
 
     std::sort(chunks_copy.begin(), chunks_copy.end(),
               [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
@@ -167,7 +210,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         track->rm_chunk(mc);
         updated_tracks.insert(track);
 
-		freeChunk(mc);
+        freeChunk(mc);
         /*auto chunk_pos = mc->_a_data.position;
         _chunk_allocator.free(mc->_a_data);
         _chunks[chunk_pos] = nullptr;*/
@@ -177,6 +220,34 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       }
       logger_info("engine", _settings->alias, ": memstorage - drop end.");
     }
+  }
+
+  void dropOld(Time t) {
+    std::lock_guard<std::shared_mutex> sl(_all_tracks_locker);
+    logger_info("engine", _settings->alias, ": memstorage - drop old ",
+                timeutil::to_string(t));
+    utils::ElapsedTime et;
+    size_t erased = 0;
+    while (true) {
+      bool find_one = false;
+
+      for (auto it = _chunks.begin(); it != _chunks.end(); ++it) {
+        auto c = it->second;
+        if (c->header->stat.maxTime < t) {
+          find_one = true;
+          _chunks.erase(it);
+          c->_track->rm_chunk(c.get());
+          freeChunk(c);
+          erased++;
+          break;
+        }
+      }
+      if (!find_one) {
+        break;
+      }
+    }
+    logger_info("engine", _settings->alias, ": memstorage - drop old complete. erased ",
+                erased, " chunks. elapsed ", et.elapsed(), "s");
   }
 
   Id2Time getSyncMap() {
@@ -307,40 +378,43 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   void setDiskStorage(IMeasWriter *_disk) { _disk_storage = _disk; }
 
   void addChunk(MemChunk_Ptr &chunk) override {
-    ENSURE(chunk->_a_data.position < _chunks.size());
     ENSURE(chunk->_is_from_pool);
-
-    _chunks[chunk->_a_data.position] = chunk;
+    std::lock_guard<std::mutex> lg(_chunks_locker);
+    _chunks.insert(std::make_pair(chunk->_a_data.position, chunk));
     if (is_time_to_drop()) {
       _drop_cond.notify_all();
     }
   }
 
   void freeChunk(MemChunk *chunk) {
-	  ENSURE(chunk->_a_data.position < _chunks.size());
-	  ENSURE(chunk->_is_from_pool);
+    std::lock_guard<std::mutex> lg(_chunks_locker);
+    ENSURE(chunk->_is_from_pool);
 
-	  auto pos = chunk->_a_data.position;
-	  if (chunk->_is_from_pool) {
-		  _chunk_allocator.free(chunk->_a_data);
-		  chunk->header = nullptr;
-		  chunk->buffer_ptr = nullptr;
-	  }
-	  _chunks[pos] = nullptr;
-	  if (is_time_to_drop()) {
-		  _drop_cond.notify_all();
-	  }
+    auto pos = chunk->_a_data.position;
+    if (chunk->_is_from_pool) {
+      _chunk_allocator->free(chunk->_a_data);
+      chunk->header = nullptr;
+      chunk->buffer_ptr = nullptr;
+    }
+    _chunks.erase(pos);
+    if (is_time_to_drop()) {
+      _drop_cond.notify_all();
+    }
   }
 
-  void freeChunk(MemChunk_Ptr &chunk) {
-	  freeChunk(chunk.get());
-  }
+  void freeChunk(MemChunk_Ptr &chunk) { freeChunk(chunk.get()); }
 
   std::mutex *getLockers() { return &_drop_locker; }
 
   bool is_time_to_drop() {
-    return (_chunk_allocator._allocated) >=
-           (_chunk_allocator._capacity * _settings->percent_when_start_droping.value());
+    auto region_allocator_ptr =
+        dynamic_cast<RegionChunkAllocator *>(_chunk_allocator.get());
+    if (region_allocator_ptr != nullptr) {
+      return (region_allocator_ptr->_allocated) >=
+             (region_allocator_ptr->_capacity *
+              _settings->percent_when_start_droping.value());
+    }
+    return false;
   }
 
   void drop_thread_func() {
@@ -357,22 +431,25 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
 
       drop_by_limit(_settings->percent_to_drop.value(), false);
     }
+    _drop_is_stoped = true;
     logger_info("engine", _settings->alias, ": memstorage - dropping thread stoped.");
   }
 
   Id2Track _id2track;
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
-  MemChunkAllocator _chunk_allocator;
+  IMemoryAllocator_Ptr _chunk_allocator;
   std::shared_mutex _all_tracks_locker;
   IChunkStorage *_down_level_storage;
   IMeasWriter *_disk_storage;
 
-  std::vector<MemChunk_Ptr> _chunks;
+  std::map<size_t, MemChunk_Ptr> _chunks;
+  std::mutex _chunks_locker;
   bool _stoped;
 
   std::thread _drop_thread;
   bool _drop_stop;
+  bool _drop_is_stoped;
   std::mutex _drop_locker;
   std::condition_variable _drop_cond;
 };
@@ -455,4 +532,8 @@ Id2MinMax MemStorage::loadMinMax() {
 
 Id2Time MemStorage::getSyncMap() {
   return _impl->getSyncMap();
+}
+
+void MemStorage::dropOld(Time t) {
+  return _impl->dropOld(t);
 }
