@@ -228,21 +228,21 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       interval_queries[i] = std::tie(id, minT, maxT);
     }
 
-	auto elapsed = et.elapsed();
+    auto elapsed = et.elapsed();
 
     std::cout << "time: " << elapsed << std::endl;
   }
 
   std::cout << "==> stat...." << std::endl;
   { // stat
-	  dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
 
     for (size_t i = 0; i < reads_count; i++) {
       Id2Times curval = interval_queries[i];
       stor->stat(std::get<0>(curval), std::get<1>(curval), std::get<2>(curval));
     }
 
-	auto elapsed = et.elapsed();
+    auto elapsed = et.elapsed();
     summary_info->stat_time = elapsed;
 
     std::cout << "time: " << elapsed << std::endl;
@@ -254,7 +254,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> time point reads..." << std::endl;
 
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
 
     for (size_t i = 0; i < reads_count; i++) {
       Id2Times curval = interval_queries[i];
@@ -267,7 +267,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       dariadb::QueryTimePoint qp{current_ids, 0, time_point};
       stor->readTimePoint(qp);
     }
-	auto elapsed = et.elapsed();
+    auto elapsed = et.elapsed();
     summary_info->read_timepoint_speed = elapsed;
 
     std::cout << "time: " << elapsed << std::endl;
@@ -277,7 +277,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> intervals foreach..." << std::endl;
 
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -302,7 +302,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
       total_count += clbk.count;
     }
-	auto elapsed = et.elapsed();
+    auto elapsed = et.elapsed();
     summary_info->read_interval_speed = elapsed;
 
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
@@ -313,7 +313,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "==> intervals foreach(full)..." << std::endl;
 
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -342,7 +342,7 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
               << std::endl;
   }
-  /*{
+  {
 
     std::cout << "==> intervals foreach(copy)..." << std::endl;
 
@@ -374,12 +374,12 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
     std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
               << std::endl;
-  }*/
+  }
   {
 
     std::cout << "==> intervals reads..." << std::endl;
 
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     size_t count = 0;
     cur_id = 0;
     auto it = interval_list.begin();
@@ -400,4 +400,4 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
               << std::endl;
   }
 }
-}
+} // namespace dariadb_bench
