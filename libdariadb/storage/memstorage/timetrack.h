@@ -2,8 +2,10 @@
 
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/memstorage/memchunk.h>
+#include <libdariadb/utils/utils.h>
 #include <extern/stx-btree/include/stx/btree_map.h>
 #include <memory>
+#include <shared_mutex>
 
 namespace dariadb {
 namespace storage {
@@ -39,9 +41,58 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
 
   Id2MinMax loadMinMax() override { NOT_IMPLEMENTED; }
 
-  void rm_chunk(MemChunk *c);
   void rereadMinMax();
   bool create_new_chunk(const Meas &value);
+
+  size_t chunks_count() {
+    std::shared_lock<std::shared_mutex> lg(_locker);
+    return _index.size();
+  }
+
+  std::vector<MemChunk_Ptr> drop_N(size_t n) {
+    std::vector<MemChunk_Ptr> result;
+    result.reserve(n);
+    {
+      std::lock_guard<std::shared_mutex> lg(_locker);
+
+      auto cnt = n;
+      while (!_index.empty()) {
+        auto front = _index.begin();
+        result.push_back(front->second);
+        _index.erase(front);
+        --cnt;
+        if (cnt == size_t(0)) {
+          break;
+        }
+      }
+    }
+    rereadMinMax();
+    return result;
+  }
+
+  size_t drop_Old(Time t) {
+    std::lock_guard<std::shared_mutex> lg(_locker);
+    size_t erased = 0;
+    while (!_index.empty()) {
+      bool find_one = false;
+
+      auto it = _index.begin();
+      auto c = it->second;
+      if (c->header->stat.maxTime < t) {
+        find_one = true;
+        _index.erase(it);
+        erased++;
+      }
+      if (!find_one) {
+        break;
+      }
+    }
+    if (_cur_chunk->header->stat.maxTime < t) {
+      ++erased;
+      _cur_chunk = nullptr;
+    }
+    return erased;
+  }
 
   MemChunk_Ptr get_target_to_replace_from_index(const Time t);
 
@@ -51,10 +102,10 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
   Time _max_sync_time;
   Time _step;
   MemChunk_Ptr _cur_chunk;
-  utils::async::Locker _locker;
-  // stx::btree_map<Time, MemChunk_Ptr> _index;
-  std::map<Time, MemChunk_Ptr> _index;
+  std::shared_mutex _locker;
+  stx::btree_map<Time, MemChunk_Ptr> _index;
+  //std::map<Time, MemChunk_Ptr> _index;
   MemoryChunkContainer *_mcc;
 };
-}
-}
+} // namespace storage
+} // namespace dariadb
