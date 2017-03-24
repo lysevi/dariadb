@@ -24,6 +24,7 @@ bool stop_readers = false;
 
 bool readers_enable = false;
 bool readonly = false;
+bool write_only = false;
 bool readall_enabled = false;
 bool dont_clean = false;
 bool use_shard = false;
@@ -73,6 +74,7 @@ void parse_cmdline(int argc, char *argv[]) {
   auto aos = desc.add_options();
   aos("help", "produce help message");
   aos("readonly", "readonly mode");
+  aos("writeonly", "writeonly mode");
   aos("readall", "read all benchmark enable.");
   aos("dont-clean", "dont clean storage path before start.");
   aos("enable-readers", "enable readers threads");
@@ -143,6 +145,11 @@ void parse_cmdline(int argc, char *argv[]) {
   if (vm.count("readonly")) {
     std::cout << "Readonly mode." << std::endl;
     readonly = true;
+  }
+
+  if (vm.count("writeonly")) {
+	  write_only = true;
+	  std::cout << "Write only mode." << std::endl;
   }
 
   if (vm.count("readall")) {
@@ -517,6 +524,9 @@ int main(int argc, char *argv[]) {
 
     std::cout << "write time: " << writers_elapsed << std::endl;
     std::cout << "total speed: " << append_count / writers_elapsed << "/s" << std::endl;
+	if (write_only) {
+		return 0;
+	}
     if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE) {
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;
