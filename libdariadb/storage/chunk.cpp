@@ -18,7 +18,7 @@ public:
   ChunkReader(size_t count, const Chunk_Ptr &c, std::shared_ptr<ByteBuffer> bptr,
               std::shared_ptr<CopmressedReader> compressed_rdr) {
     _top_value_exists = true;
-    _values_count = count+1; //packed + first
+    _values_count = count + 1; // packed + first
     _count = count;
     _chunk = c;
     _top_value = _chunk->header->first();
@@ -155,10 +155,7 @@ bool Chunk::checkChecksum() {
   return exists == calculated;
 }
 
-void Chunk::close() {
-  header->crc = this->calcChecksum();
-  ENSURE(header->crc != 0);
-}
+void Chunk::close() {}
 
 void Chunk::updateChecksum(ChunkHeader &hdr, u8vector buff) {
   hdr.crc = utils::crc32(buff, hdr.size);
