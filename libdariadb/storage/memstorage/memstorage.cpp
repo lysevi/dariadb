@@ -13,6 +13,7 @@
 #include <set>
 #include <shared_mutex>
 #include <thread>
+#include <atomic>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -381,7 +382,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   IChunkStorage *_down_level_storage;
   IMeasWriter *_disk_storage;
 
-  std::atomic_uint64_t _chunks_count;
+  std::atomic_size_t _chunks_count;
   bool _stoped;
 
   std::thread _drop_thread;
