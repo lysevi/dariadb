@@ -9,12 +9,47 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/strings.h>
+#include <libdariadb/utils/striped_map.h>
 #include <libdariadb/utils/utils.h>
 #include <boost/test/unit_test.hpp>
 #include <chrono>
 #include <ctime>
 #include <iostream>
 #include <thread>
+
+BOOST_AUTO_TEST_CASE(StrippedMapTest) {
+  using namespace dariadb::utils;
+
+  {
+    stripped_map<int, uint64_t> default_ctor;
+    BOOST_CHECK_EQUAL(default_ctor.size(), size_t(0));
+  }
+
+  {
+    stripped_map<int, uint64_t> add;
+    add.add(int(1), uint64_t(2));
+    BOOST_CHECK_EQUAL(add.size(), size_t(1));
+  }
+
+  {
+    stripped_map<int, uint64_t> add_many;
+    int key = 0;
+    uint64_t value = 0;
+    while (add_many.N() == add_many.default_n) {
+      add_many.add(key++, value++);
+    }
+
+    for (int for_search = 0; for_search < key; ++for_search) {
+      uint64_t output = 0;
+      if (add_many.get(for_search, &output)) {
+        BOOST_CHECK_EQUAL(output, uint64_t(for_search));
+      } else {
+        BOOST_CHECK_MESSAGE(false, "key=" << for_search << " not found");
+      }
+    }
+    BOOST_CHECK_EQUAL(add_many.size(), size_t(key));
+  }
+}
 
 BOOST_AUTO_TEST_CASE(TimeToString) {
   std::cout << "TimeToString" << std::endl;
@@ -222,7 +257,7 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {
       if (tk1 != ti.kind) {
         BOOST_TEST_MESSAGE("(tk1 != ti.kind)");
-		dariadb::utils::sleep_mls(400);
+        dariadb::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
       return false;
@@ -230,12 +265,13 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     AsyncTask at2 = [tk2](const ThreadInfo &ti) {
       if (tk2 != ti.kind) {
         BOOST_TEST_MESSAGE("(tk2 != ti.kind)");
-		dariadb::utils::sleep_mls(400);
+        dariadb::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
       return false;
     };
-    ThreadManager::instance()->post(tk1, AT_PRIORITY(infinite_worker, dariadb::utils::async::TASK_PRIORITY::WORKER));
+    ThreadManager::instance()->post(
+        tk1, AT_PRIORITY(infinite_worker, dariadb::utils::async::TASK_PRIORITY::WORKER));
     auto at_while_res = ThreadManager::instance()->post(tk1, AT(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {
       ThreadManager::instance()->post(tk1, AT(at1));
