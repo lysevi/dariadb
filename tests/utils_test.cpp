@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(StrippedMapTest) {
 
   {
     stripped_map<int, uint64_t> add;
-    add.add(int(1), uint64_t(2));
+    add.insert(int(1), uint64_t(2));
     BOOST_CHECK_EQUAL(add.size(), size_t(1));
   }
 
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(StrippedMapTest) {
     int key = 0;
     uint64_t value = 0;
     while (add_many.N() == add_many.default_n) {
-      add_many.add(key++, value++);
+      add_many.insert(key++, value++);
     }
 
     for (int for_search = 0; for_search < key; ++for_search) {

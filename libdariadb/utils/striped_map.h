@@ -78,7 +78,7 @@ public:
     return result;
   }
 
-  void add(const key_type &k, const data_type &v) {
+  void insert(const key_type &k, const data_type &v) {
     static_assert(std::is_trivially_copyable<data_type>::value,
                   "Value must be trivial copyable");
     static_assert(std::is_trivially_copyable<key_type>::value,
@@ -90,7 +90,8 @@ public:
     auto lock_index = hash % _lockers.size();
     _lockers[lock_index].lock();
 
-    auto bucket_index = hash % _N;
+    auto bucket_index = hash % _N; 
+	//TODO insert if key not exists. otherwise, replace value.
     _buckets[bucket_index].push_back(value_type(k, v));
 
     _lockers[lock_index].unlock();
