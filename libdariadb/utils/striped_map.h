@@ -33,7 +33,6 @@ public:
 
   static const size_t default_n = 100;
   static const size_t grow_coefficient = 2;
-  static const size_t max_load_factor = 2;
 
   stripped_map(const size_t N)
       : _lockers(N), _buckets(std::make_shared<_buckets_container>(N)), _size(size_t(0)),
@@ -42,9 +41,6 @@ public:
                   "Value must be is_default_constructible");
     static_assert(std::is_default_constructible<key_type>::value,
                   "Key must be is_default_constructible");
-    for (auto &b : (*_buckets)) {
-      reserve_buckets(b);
-    }
   }
 
   stripped_map() : stripped_map(default_n) {}
@@ -68,9 +64,6 @@ public:
   void reserve(size_t N) {
     _lockers = std::move(std::vector<locker_type>(N));
     _buckets = std::make_shared<_buckets_container>(N);
-    for (auto &b : (*_buckets)) {
-      reserve_buckets(b);
-    }
     _N = N;
   }
 
@@ -162,6 +155,7 @@ public:
   }
 
   void rehash() {
+    const double max_load_factor = 0.6;
     auto lf = load_factor();
 
     if (lf > max_load_factor) { // rehashing
@@ -172,9 +166,7 @@ public:
         _N = _N * grow_coefficient;
 
         auto new_buckets = std::make_shared<_buckets_container>(_N);
-        for (auto &b : (*new_buckets)) {
-          reserve_buckets(b);
-        }
+
         for (auto l : (*_buckets)) {
           for (auto v : l) {
             auto hash = v.hash;
@@ -202,17 +194,11 @@ public:
     unlock_all();
   }
 
-  size_t load_factor() const { return _size.load() / _N; }
+  double load_factor() const { return double(_size.load()) / _N; }
 
   size_t N() const { return _N; }
 
 protected:
-  void reserve_buckets(bucket_array_type &b) {
-    if (b.size() < max_load_factor) {
-      b.reserve(max_load_factor);
-    }
-  }
-
   void lock_all() const {
     for (auto it = _lockers.begin(); it != _lockers.end(); ++it) {
       it->lock();
