@@ -35,6 +35,17 @@ BOOST_AUTO_TEST_CASE(StrippedMapTest) {
     BOOST_CHECK(add.find(int(1), &output));
     BOOST_CHECK_EQUAL(output, uint64_t(3));
   }
+  {
+
+    stripped_map<int, uint64_t> add;
+    {
+      auto iter = add.insertion_pos(1);
+      iter->v->second = uint64_t(3);
+    }
+    uint64_t output = 0;
+    BOOST_CHECK(add.find(1, &output));
+    BOOST_CHECK_EQUAL(output, uint64_t(3));
+  }
 
   {
     stripped_map<int, uint64_t> add_many;
