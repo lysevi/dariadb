@@ -20,14 +20,13 @@ public:
 
   typedef _Locker locker_type;
   typedef _Hash hash_type;
-  typedef std::list<value_type> bucket_type; // TODO replace by
-                                             // std::ordered_queue<value_type> with
-                                             // pri-resize in ctor (use load factor)
+  typedef std::vector<value_type> bucket_type;
   typedef std::vector<bucket_type> _buckets_container;
   typedef stripped_map<_Key, _Data, _Value, _Locker, _Hash> self_type;
 
   static const size_t default_n = 10;
   static const size_t grow_coefficient = 2;
+  static const size_t max_load_factor = 2;
 
   stripped_map(const size_t N) : _lockers(N), _buckets(N), _size(size_t(0)), _N(N) {
     static_assert(std::is_default_constructible<data_type>::value,
@@ -56,7 +55,7 @@ public:
 
   size_t size() const { return _size.load(); }
 
-  bool get(const key_type &k, data_type *output) {
+  bool find(const key_type &k, data_type *output) {
     auto hash = hasher(k);
 
     auto lock_index = hash % _lockers.size();
@@ -67,6 +66,9 @@ public:
 
     auto result = false;
     for (auto kv : *bucket) {
+      if (kv.first > k) {
+        break;
+      }
       if (kv.first == k) {
         *output = kv.second;
         result = true;
@@ -78,25 +80,45 @@ public:
     return result;
   }
 
-  void insert(const key_type &k, const data_type &v) {
+  void insert(const key_type &_k, const data_type &_v) {
     static_assert(std::is_trivially_copyable<data_type>::value,
                   "Value must be trivial copyable");
     static_assert(std::is_trivially_copyable<key_type>::value,
                   "Key must be trivial copyable");
-    const double max_load_factor = 2;
 
-    auto hash = hasher(k);
+    auto hash = hasher(_k);
 
     auto lock_index = hash % _lockers.size();
     _lockers[lock_index].lock();
 
-    auto bucket_index = hash % _N; 
-	//TODO insert if key not exists. otherwise, replace value.
-    _buckets[bucket_index].push_back(value_type(k, v));
+    auto bucket_index = hash % _N;
+
+    auto target_bucket = &_buckets[bucket_index];
+    bool is_update = false;
+    bool is_inserted = false;
+    for (auto iter = target_bucket->begin(); iter != target_bucket->end(); ++iter) {
+      if (iter->first == _k) {
+        is_update = true;
+        iter->second = _v;
+        break;
+      } else {
+        if (iter->first > _k) {
+          is_inserted = true;
+          target_bucket->insert(iter, std::make_pair(_k, _v));
+          break;
+        }
+      }
+    }
+
+    if (!is_update) {
+      _size.fetch_add(size_t(1));
+      if (!is_inserted) {
+        target_bucket->push_back(std::make_pair(_k, _v));
+      }
+    }
 
     _lockers[lock_index].unlock();
     auto lf = load_factor();
-    _size.fetch_add(size_t(1));
 
     if (lf > max_load_factor) { // rehashing
       for (auto it = _lockers.begin(); it != _lockers.end(); ++it) {
@@ -125,7 +147,7 @@ public:
     }
   }
 
-  double load_factor() const { return _size.load() / _N; }
+  size_t load_factor() const { return _size.load() / _N; }
 
   size_t N() const { return _N; }
 
@@ -137,5 +159,5 @@ private:
 
   hash_type hasher;
 };
-}
-}
+} // namespace utils
+} // namespace dariadb
