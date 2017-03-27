@@ -483,10 +483,11 @@ void WALManager::flush_buffer() {
     size_t total_writed = 0;
     while (1) {
       auto res = _wal->append(_buffer.begin() + pos, _buffer.begin() + _buffer_pos);
-	  if (res.error != APPEND_ERROR::OK) {
-		  logger_fatal("engine", this->_settings->alias, ": append to wal error - ", res.error);
-		  return false;
-	  }
+      if (res.error != APPEND_ERROR::OK) {
+        logger_fatal("engine", this->_settings->alias, ": append to wal error - ",
+                     res.error);
+        return false;
+      }
       total_writed += res.writed;
       if (total_writed != _buffer_pos) {
         create_new();
@@ -518,10 +519,10 @@ void WALManager::erase(const std::string &fname) {
   utils::fs::rm(full_path);
 }
 
-Id2MinMax WALManager::loadMinMax() {
+Id2MinMax_Ptr WALManager::loadMinMax() {
   auto files = wal_files();
 
-  dariadb::Id2MinMax result;
+  auto result = std::make_shared<dariadb::Id2MinMax>();
   for (const auto &f : files) {
     auto c = WALFile::open(_env, f, true);
     auto sub_res = c->loadMinMax();
@@ -534,14 +535,10 @@ Id2MinMax WALManager::loadMinMax() {
     if (pos >= _buffer_pos) {
       break;
     }
-    auto fres = result.find(val.id);
-    if (fres == result.end()) {
-      result[val.id].min = val;
-      result[val.id].max = val;
-    } else {
-      fres->second.updateMax(val);
-      fres->second.updateMin(val);
-    }
+    auto fres = result->insertion_pos(val.id);
+
+    fres->v->second.updateMax(val);
+    fres->v->second.updateMin(val);
     ++pos;
   }
   return result;
@@ -553,11 +550,12 @@ bool WALManager::file_in_query(const std::string &filename, const QueryInterval 
   if (min_max_iter == this->_file2minmax.end()) {
     return true;
   }
-  bool intevalCheck =
-	  utils::inInterval(min_max_iter->second.minTime, min_max_iter->second.maxTime, q.from)
-	  || utils::inInterval(min_max_iter->second.minTime, min_max_iter->second.maxTime, q.to)
-	  || utils::inInterval(q.from, q.to, min_max_iter->second.minTime)
-	  || utils::inInterval(q.from, q.to, min_max_iter->second.maxTime);
+  bool intevalCheck = utils::inInterval(min_max_iter->second.minTime,
+                                        min_max_iter->second.maxTime, q.from) ||
+                      utils::inInterval(min_max_iter->second.minTime,
+                                        min_max_iter->second.maxTime, q.to) ||
+                      utils::inInterval(q.from, q.to, min_max_iter->second.minTime) ||
+                      utils::inInterval(q.from, q.to, min_max_iter->second.maxTime);
   if (!intevalCheck) {
     return false;
   }

@@ -40,7 +40,7 @@ public:
   EXPORT void erase_page(const std::string &fname);
   EXPORT static void erase(const std::string &storage_path, const std::string &fname);
   EXPORT void repack();
-  EXPORT Id2MinMax loadMinMax();
+  EXPORT Id2MinMax_Ptr loadMinMax();
 
   EXPORT void compact(ICompactionController *logic);
 

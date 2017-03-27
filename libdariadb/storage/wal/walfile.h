@@ -39,7 +39,7 @@ public:
 
   EXPORT std::shared_ptr<MeasArray> readAll();
   EXPORT static size_t writed(std::string fname);
-  EXPORT Id2MinMax loadMinMax() override;
+  EXPORT Id2MinMax_Ptr loadMinMax() override;
 
   EXPORT Id id_bloom();
 protected:

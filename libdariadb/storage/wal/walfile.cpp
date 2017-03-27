@@ -319,20 +319,16 @@ public:
     throw MAKE_EXCEPTION(ss.str());
   }
 
-  Id2MinMax loadMinMax() {
+  Id2MinMax_Ptr loadMinMax() {
 
-    Id2MinMax result;
+    Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
     auto all = readAll();
     for (size_t i = 0; i < all->size(); ++i) {
       auto val = all->at(i);
-      auto fres = result.find(val.id);
-      if (fres == result.end()) {
-        result[val.id].min = val;
-        result[val.id].max = val;
-      } else {
-        fres->second.updateMax(val);
-        fres->second.updateMin(val);
-      }
+      auto fres = result->insertion_pos(val.id);
+
+      fres->v->second.updateMax(val);
+      fres->v->second.updateMin(val);
     }
     return result;
   }
@@ -423,6 +419,6 @@ size_t WALFile::writed(std::string fname) {
   return in.tellg() / sizeof(Meas);
 }
 
-Id2MinMax WALFile::loadMinMax() {
+Id2MinMax_Ptr WALFile::loadMinMax() {
   return _Impl->loadMinMax();
 }

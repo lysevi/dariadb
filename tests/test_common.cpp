@@ -12,28 +12,28 @@ using namespace dariadb;
 
 class WriteCallback : public dariadb::IReadCallback {
 public:
-	WriteCallback(dariadb::IMeasStorage *store) {
-		count = 0;
-		is_end_called = false;
-		storage = store;
-	}
-	void apply(const dariadb::Meas &m) override {
-		count++;
-		dariadb::Meas nm = m;
-		nm.id = dariadb::MAX_ID - m.id;
+  WriteCallback(dariadb::IMeasStorage *store) {
+    count = 0;
+    is_end_called = false;
+    storage = store;
+  }
+  void apply(const dariadb::Meas &m) override {
+    count++;
+    dariadb::Meas nm = m;
+    nm.id = dariadb::MAX_ID - m.id;
 
-		ENSURE(storage != nullptr);
+    ENSURE(storage != nullptr);
 
-		storage->append(nm);
-	}
+    storage->append(nm);
+  }
 
-	void is_end() override {
-		is_end_called = true;
-		IReadCallback::is_end();
-	}
-	std::atomic<size_t> count;
-	bool is_end_called;
-	dariadb::IMeasStorage *storage;
+  void is_end() override {
+    is_end_called = true;
+    IReadCallback::is_end();
+  }
+  std::atomic<size_t> count;
+  bool is_end_called;
+  dariadb::IMeasStorage *storage;
 };
 
 class Callback : public IReadCallback {
@@ -101,8 +101,8 @@ void checkAll(MeasArray res, std::string msg, Time from, Time to, Time step) {
   }
 }
 
-void check_reader_of_all(MeasArray &all, Time from, Time to, Time step, size_t total_count,
-                         std::string message) {
+void check_reader_of_all(MeasArray &all, Time from, Time to, Time step,
+                         size_t total_count, std::string message) {
 
   std::map<Id, MeasesList> _dict;
   for (auto &v : all) {
@@ -193,7 +193,7 @@ size_t fill_storage_for_test(dariadb::IMeasStorage *as, dariadb::Time from,
     m.value = 0;
     ++id_val;
     ++flg_val;
-	MeasArray mlist;
+    MeasArray mlist;
     for (size_t j = new_from; j < copies_count + 1; j++) {
       m.value = Value(j);
       *maxWritedTime = std::max(*maxWritedTime, m.time);
@@ -338,7 +338,8 @@ void readTimePointCheck(IMeasStorage *as, Time from, Time to, Time step,
 }
 
 void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
-                        bool check_stop_flag, bool random_timestamps, bool run_copy_test) {
+                        bool check_stop_flag, bool random_timestamps,
+                        bool run_copy_test) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
   std::cout << "fill storage\n";
@@ -347,12 +348,12 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
   std::cout << "loadMinMax\n";
   auto minMax = as->loadMinMax();
 
-  if (minMax.size() != _all_ids_set.size()) {
+  if (minMax->size() != _all_ids_set.size()) {
     throw MAKE_EXCEPTION("minMax.size()!=_all_ids_set.size()");
   }
 
-  for (auto kv : minMax) {
-    auto mm = kv.second;
+  auto f = [from](const dariadb::Id2MinMax::value_type &v) {
+    auto mm = v.second;
     if (mm.min.time < from) {
       throw MAKE_EXCEPTION("mm.min<from");
     }
@@ -360,7 +361,9 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
     if (mm.max.time == 0 && mm.min.time > mm.max.time) {
       throw MAKE_EXCEPTION("mm.max==0 && mm.min>mm.max");
     }
-  }
+  };
+  minMax->apply(f);
+
   std::cout << "minMaxCheck\n";
   minMaxCheck(as, from, maxWritedTime);
   std::cout << "currentValue\n";
@@ -387,15 +390,14 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
 
   if (run_copy_test) {
-	  std::cout << "copyCheck" << std::endl;
-	  for (auto id : _all_ids_set) {
-		  WriteCallback clbk(as);
+    std::cout << "copyCheck" << std::endl;
+    for (auto id : _all_ids_set) {
+      WriteCallback clbk(as);
 
-		  auto qi = dariadb::QueryInterval({ id }, 0, from, to);
-		  as->foreach(qi, &clbk);
-		  clbk.wait();
-
-	  }
+      auto qi = dariadb::QueryInterval({id}, 0, from, to);
+      as->foreach (qi, &clbk);
+      clbk.wait();
+    }
   }
   std::cout << "flush\n";
   as->flush();
@@ -427,7 +429,7 @@ void check_reader(const dariadb::Cursor_Ptr &rdr) {
   }
   for (auto kv : time2count) {
     if (kv.second > size_t(1)) {
-      THROW_EXCEPTION("kv.second > size_t(1) - ", kv.first," => ", kv.second);
+      THROW_EXCEPTION("kv.second > size_t(1) - ", kv.first, " => ", kv.second);
     }
   }
 }

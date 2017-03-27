@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
   }
 
   auto mm = pm->loadMinMax();
-  BOOST_CHECK_EQUAL(mm.size(), size_t(1));
+  BOOST_CHECK_EQUAL(mm->size(), size_t(1));
 
   auto page_before_erase =
       dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::PAGE_FILE_EXT)

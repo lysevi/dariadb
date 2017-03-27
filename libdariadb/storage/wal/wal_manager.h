@@ -48,7 +48,7 @@ public:
 
   EXPORT void dropAll();
 
-  EXPORT Id2MinMax loadMinMax() override;
+  EXPORT Id2MinMax_Ptr loadMinMax() override;
 
 protected:
   void create_new();

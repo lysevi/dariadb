@@ -27,7 +27,7 @@ public:
   EXPORT Status append(const Meas &value) override;
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
-  EXPORT Id2MinMax loadMinMax() override;
+  EXPORT Id2MinMax_Ptr loadMinMax() override;
   EXPORT bool minMaxTime(Id id, Time *minResult, Time *maxResult) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
   EXPORT Id2Meas readTimePoint(const QueryTimePoint &q) override;

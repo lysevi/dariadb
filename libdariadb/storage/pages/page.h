@@ -96,7 +96,7 @@ public:
   EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
   EXPORT void appendChunks(const std::vector<Chunk *> &a, size_t count) override;
 
-  EXPORT Id2MinMax loadMinMax();
+  EXPORT Id2MinMax_Ptr loadMinMax();
   EXPORT Id2Cursor intervalReader(const QueryInterval &query, const ChunkLinkList &links);
   EXPORT Statistic stat(const Id id, Time from, Time to);
   EXPORT bool checksum(); // return false if bad checksum.

@@ -42,7 +42,7 @@ public:
   EXPORT Time maxTime() override;
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) override;
-  EXPORT Id2MinMax loadMinMax() override;
+  EXPORT Id2MinMax_Ptr loadMinMax() override;
 
   EXPORT void compress_all()override;
 

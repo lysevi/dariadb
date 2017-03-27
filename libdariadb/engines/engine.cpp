@@ -36,6 +36,7 @@ public:
     _thread_pool_owner = init_threadpool;
     _settings = settings;
     _strategy = _settings->strategy.value();
+    _min_max_map = std::make_shared<Id2MinMax>();
 
     _engine_env = EngineEnvironment::create();
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
@@ -118,7 +119,7 @@ public:
 
   void init_managers() {
     if (_settings->is_memory_only_mode) {
-      _memstorage = MemStorage::create(_engine_env, _min_max_map.size());
+      _memstorage = MemStorage::create(_engine_env, _min_max_map->size());
       _top_level_storage = _memstorage;
     } else {
       _page_manager = PageManager::create(_engine_env);
@@ -132,7 +133,7 @@ public:
       }
 
       if (_strategy == STRATEGY::CACHE || _strategy == STRATEGY::MEMORY) {
-        _memstorage = MemStorage::create(_engine_env, _min_max_map.size());
+        _memstorage = MemStorage::create(_engine_env, _min_max_map->size());
         if (_strategy != STRATEGY::CACHE) {
           _memstorage->setDownLevel(_page_manager.get());
         }
@@ -372,28 +373,29 @@ public:
     return pr || ar || wr;
   }
 
-  Id2MinMax loadMinMax() {
+  Id2MinMax_Ptr loadMinMax() {
     this->lock_storage();
+    Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
 
-    Id2MinMax p_mm, a_mm;
     if (_page_manager != nullptr) {
-      p_mm = this->_page_manager->loadMinMax();
+      auto p_mm = this->_page_manager->loadMinMax();
+      minmax_append(result, p_mm);
     }
 
     if (_strategy == STRATEGY::CACHE) {
       if (_wal_manager != nullptr) {
-        a_mm = this->_wal_manager->loadMinMax();
-        minmax_append(p_mm, a_mm);
+        auto a_mm = this->_wal_manager->loadMinMax();
+        minmax_append(result, a_mm);
       }
     }
 
     auto t_mm = this->_top_level_storage->loadMinMax();
 
-    minmax_append(p_mm, t_mm);
+    minmax_append(result, t_mm);
 
     this->unlock_storage();
 
-    return p_mm;
+    return result;
   }
 
   Status append(const Meas &value) {
@@ -403,14 +405,8 @@ public:
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
-      _min_max_locker.lock();
-      auto insert_fres = _min_max_map.find(value.id);
-      if (insert_fres == _min_max_map.end()) {
-        _min_max_map[value.id].max = value;
-      } else {
-        insert_fres->second.updateMax(value);
-      }
-      _min_max_locker.unlock();
+      auto insert_fres = _min_max_map->insertion_pos(value.id);
+      insert_fres->v->second.updateMax(value);
     }
 
     return result;
@@ -424,25 +420,26 @@ public:
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     lock_storage();
     Id2Meas a_result;
-    if (_min_max_map.empty()) {
+    if (_min_max_map->empty()) {
       readMinMaxFromStorages();
     }
 
-    for (auto kv : _min_max_map) {
+    auto f = [&a_result, &ids, flag](const Id2MinMax::value_type &v) {
       bool ids_check = false;
       if (ids.size() == 0) {
         ids_check = true;
       } else {
-        if (std::find(ids.begin(), ids.end(), kv.first) != ids.end()) {
+        if (std::find(ids.begin(), ids.end(), v.first) != ids.end()) {
           ids_check = true;
         }
       }
       if (ids_check) {
-        if (kv.second.max.inFlag(flag)) {
-          a_result.emplace(std::make_pair(kv.first, kv.second.max));
+        if (v.second.max.inFlag(flag)) {
+          a_result.emplace(std::make_pair(v.first, v.second.max));
         }
       }
-    }
+    };
+    _min_max_map->apply(f);
 
     unlock_storage();
     return a_result;
@@ -510,11 +507,11 @@ public:
     std::map<Id, std::pair<QueryInterval, QueryInterval>> queryById;
 
     for (auto id : q.ids) {
-      auto id_mm = memory_mm.find(id);
-      if (id_mm == memory_mm.end()) {
+      MeasMinMax mm;
+      if (!memory_mm->find(id, &mm)) {
         disk_only.insert(id);
       } else {
-        if ((id_mm->second.min.time) > q.from) {
+        if ((mm.min.time) > q.from) {
           auto min_mem_time = sync_map[id];
           if (min_mem_time <= q.to) {
             QueryInterval disk_q = q;
@@ -630,11 +627,11 @@ public:
     auto memory_mm = _memstorage->loadMinMax();
     auto sync_map = _memstorage->getSyncMap();
 
-    auto id_mm = memory_mm.find(id);
-    if (id_mm == memory_mm.end()) {
+    MeasMinMax mm;
+    if (memory_mm->find(id, &mm)) {
       return stat_from_disk(id, from, to);
     } else {
-      if ((id_mm->second.min.time) > from) {
+      if ((mm.min.time) > from) {
         auto min_mem_time = sync_map[id];
         if (min_mem_time <= to) {
           auto disk_stat = stat_from_disk(id, from, min_mem_time);
@@ -771,7 +768,7 @@ public:
         if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
           break;
         }
-		utils::sleep_mls(10);
+        utils::sleep_mls(10);
       }
     }
   }
@@ -791,7 +788,7 @@ public:
   }
 
   void erase_worker_func() {
-    while (!_beginStoping) { 
+    while (!_beginStoping) {
       if (_settings->max_store_period.value() != MAX_TIME) {
         if (this->try_lock_storage()) {
           auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
@@ -817,7 +814,7 @@ public:
           break;
         }
       }
-	  utils::sleep_mls(500);
+      utils::sleep_mls(500);
     }
     _eraseActionIsStoped = true;
   }
@@ -860,8 +857,7 @@ protected:
 
   IMeasStorage_ptr _top_level_storage; // wal or memory storage.
 
-  Id2MinMax _min_max_map;
-  std::shared_mutex _min_max_locker;
+  Id2MinMax_Ptr _min_max_map;
   bool _thread_pool_owner;
   bool _eraseActionIsStoped;
   bool _beginStoping;
@@ -963,7 +959,7 @@ STRATEGY Engine::strategy() const {
   return _impl->strategy();
 }
 
-Id2MinMax Engine::loadMinMax() {
+Id2MinMax_Ptr Engine::loadMinMax() {
   return _impl->loadMinMax();
 }
 

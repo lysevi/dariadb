@@ -640,8 +640,8 @@ void Page::appendChunks(const std::vector<Chunk *> &, size_t) {
   NOT_IMPLEMENTED;
 }
 
-Id2MinMax Page::loadMinMax() {
-  Id2MinMax result;
+Id2MinMax_Ptr Page::loadMinMax() {
+	Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
   auto page_io = std::fopen(filename.c_str(), "rb");
   if (page_io == nullptr) {
     THROW_EXCEPTION("can`t open file ", this->filename);
@@ -654,14 +654,9 @@ Id2MinMax Page::loadMinMax() {
       continue;
     }
     auto info = search_res->header;
-    auto fres = result.find(info->meas_id);
-    if (fres == result.end()) {
-      result[info->meas_id].min = info->first();
-      result[info->meas_id].max = info->last();
-    } else {
-      result[info->meas_id].updateMin(info->first());
-      result[info->meas_id].updateMax(info->last());
-    }
+    auto fres = result->insertion_pos(info->meas_id);
+	fres->v->second.updateMax(info->first());
+	fres->v->second.updateMin(info->last());
   }
   std::fclose(page_io);
   return result;

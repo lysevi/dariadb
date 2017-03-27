@@ -3,6 +3,7 @@
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/memstorage/memchunk.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/utils/striped_map.h>
 #include <extern/stx-btree/include/stx/btree_map.h>
 #include <memory>
 #include <shared_mutex>
@@ -19,7 +20,8 @@ public:
 
 struct TimeTrack;
 using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
-using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
+//using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
+using Id2Track = utils::stripped_map<Id, TimeTrack_ptr>;
 
 struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<TimeTrack> {
   TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
@@ -39,7 +41,7 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
   Id2Meas readTimePoint(const QueryTimePoint &q) override;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
 
-  Id2MinMax loadMinMax() override { NOT_IMPLEMENTED; }
+  Id2MinMax_Ptr loadMinMax() override { NOT_IMPLEMENTED; }
 
   void rereadMinMax();
   bool create_new_chunk(const Meas &value);

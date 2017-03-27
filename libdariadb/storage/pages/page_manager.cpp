@@ -628,8 +628,8 @@ public:
     _file2footer.insert(std::make_pair(ph_d.hdr.stat.maxTime, ph_d));
   }
 
-  Id2MinMax loadMinMax() {
-    Id2MinMax result;
+  Id2MinMax_Ptr loadMinMax() {
+    auto result=std::make_shared<Id2MinMax>();
 
     auto pages = pages_by_filter([](const IndexFooter &ih) { return true; });
 
@@ -746,6 +746,6 @@ void PageManager::appendChunks(const std::vector<Chunk *> &a, size_t count) {
   impl->appendChunks(a, count);
 }
 
-dariadb::Id2MinMax PageManager::loadMinMax() {
+dariadb::Id2MinMax_Ptr PageManager::loadMinMax() {
   return impl->loadMinMax();
 }

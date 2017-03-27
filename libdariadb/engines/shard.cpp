@@ -235,14 +235,15 @@ public:
     return result;
   }
 
-  Id2MinMax loadMinMax() {
+  Id2MinMax_Ptr loadMinMax() {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    Id2MinMax result;
+	Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
     for (auto &s : this->_sub_storages) {
       auto subres = s.storage->loadMinMax();
-      for (auto kv : subres) {
-        result[kv.first] = kv.second;
-      }
+	  auto f = [&result](const Id2MinMax::value_type&v) {
+		  result->insert(v.first, v.second);
+	  };
+	  subres->apply(f);
     }
     return result;
   }
@@ -433,7 +434,7 @@ Time ShardEngine::maxTime() {
   return _impl->maxTime();
 }
 
-Id2MinMax ShardEngine::loadMinMax() {
+Id2MinMax_Ptr ShardEngine::loadMinMax() {
   return _impl->loadMinMax();
 }
 
