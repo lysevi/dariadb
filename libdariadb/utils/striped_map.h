@@ -3,9 +3,7 @@
 #include <libdariadb/utils/async/locker.h>
 #include <algorithm>
 #include <atomic>
-#include <list>
 #include <memory>
-#include <mutex>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -37,12 +35,14 @@ public:
   static const size_t grow_coefficient = 2;
   static const size_t max_load_factor = 2;
 
-  stripped_map(const size_t N) : _lockers(N), _buckets(N), _size(size_t(0)), _N(N) {
+  stripped_map(const size_t N)
+      : _lockers(N), _buckets(std::make_shared<_buckets_container>(N)), _size(size_t(0)),
+        _N(N) {
     static_assert(std::is_default_constructible<data_type>::value,
                   "Value must be is_default_constructible");
     static_assert(std::is_default_constructible<key_type>::value,
                   "Key must be is_default_constructible");
-    for (auto &b : _buckets) {
+    for (auto &b : (*_buckets)) {
       reserve_buckets(b);
     }
   }
@@ -56,7 +56,7 @@ public:
     for (auto &l : _lockers) {
       l.lock();
     }
-    _buckets.clear();
+    _buckets->clear();
     _size.store(size_t());
 
     for (auto &l : _lockers) {
@@ -67,8 +67,8 @@ public:
 
   void reserve(size_t N) {
     _lockers = std::move(std::vector<locker_type>(N));
-    _buckets.resize(N);
-    for (auto &b : _buckets) {
+    _buckets = std::make_shared<_buckets_container>(N);
+    for (auto &b : (*_buckets)) {
       reserve_buckets(b);
     }
     _N = N;
@@ -79,7 +79,7 @@ public:
       it->lock();
     }
 
-    _buckets.clear();
+    _buckets->clear();
     _N = size_t(0);
 
     for (auto it = _lockers.rbegin(); it != _lockers.rend(); ++it) {
@@ -97,7 +97,7 @@ public:
     _lockers[lock_index].lock();
 
     auto bucket_index = hash % _N;
-    auto bucket = &_buckets[bucket_index];
+    auto bucket = &(*_buckets)[bucket_index];
 
     auto result = false;
     for (auto kv : *bucket) {
@@ -152,7 +152,7 @@ public:
     result->locker = target_locker;
 
     auto bucket_index = hash % _N;
-    auto target_bucket = &_buckets[bucket_index];
+    auto target_bucket = &(this->_buckets->at(bucket_index));
 
     bucket_t b;
     b.hash = hash;
@@ -171,21 +171,21 @@ public:
       if (lf > max_load_factor) {
         _N = _N * grow_coefficient;
 
-        _buckets_container new_buckets(_N);
-        for (auto &b : new_buckets) {
+        auto new_buckets = std::make_shared<_buckets_container>(_N);
+        for (auto &b : (*new_buckets)) {
           reserve_buckets(b);
         }
-        for (auto l : _buckets) {
+        for (auto l : (*_buckets)) {
           for (auto v : l) {
             auto hash = v.hash;
             auto bucket_index = hash % _N;
-            auto target = &(new_buckets[bucket_index]);
+            auto target = &(new_buckets->at(bucket_index));
             target->push_back(v);
             std::sort(target->begin(), target->end(),
                       [](auto v1, auto v2) { return v1._kv.first < v2._kv.first; });
           }
         }
-        _buckets = std::move(new_buckets);
+        _buckets = new_buckets;
       }
 
       unlock_all();
@@ -194,7 +194,7 @@ public:
 
   void apply(std::function<void(const value_type &v)> func) const {
     lock_all();
-    for (auto &l : _buckets) {
+    for (auto &l : (*_buckets)) {
       for (auto &v : l) {
         func(v._kv);
       }
@@ -263,7 +263,7 @@ protected:
 
 private:
   mutable std::vector<locker_type> _lockers;
-  _buckets_container _buckets;
+  std::shared_ptr<_buckets_container> _buckets;
   std::atomic_size_t _size;
   size_t _N;
 
