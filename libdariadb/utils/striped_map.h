@@ -155,7 +155,8 @@ public:
   }
 
   void rehash() {
-    const double max_load_factor = 0.6;
+    const double max_load_factor = 1.0;
+
     auto lf = load_factor();
 
     if (lf > max_load_factor) { // rehashing
