@@ -260,12 +260,12 @@ BOOST_AUTO_TEST_CASE(ThreadsManager) {
     ThreadManager::start(tpm_params);
     int called = 0;
     uint64_t inf_calls = 0;
-    AsyncTask infinite_worker = [&inf_calls](const ThreadInfo &ti) {
+    AsyncTask infinite_worker = [&inf_calls](const ThreadInfo &) {
       ++inf_calls;
       return true;
     };
 
-    AsyncTask at_while = [&called](const ThreadInfo &ti) {
+    AsyncTask at_while = [&called](const ThreadInfo &) {
       if (called < 10) {
         ++called;
         return true;

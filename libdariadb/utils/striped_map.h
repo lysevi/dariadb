@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libdariadb/utils/async/locker.h>
 #include <algorithm>
 #include <atomic>
 #include <list>
@@ -13,7 +14,7 @@ namespace dariadb {
 namespace utils {
 
 template <typename _Key, typename _Data, typename _Value = std::pair<_Key, _Data>,
-          typename _Locker = std::mutex, typename _Hash = std::hash<_Key>>
+          typename _Locker = utils::async::Locker, typename _Hash = std::hash<_Key>>
 class stripped_map {
 public:
   typedef _Key key_type;
@@ -22,13 +23,19 @@ public:
 
   typedef _Locker locker_type;
   typedef _Hash hash_type;
-  typedef std::vector<value_type> bucket_type;
-  typedef std::vector<bucket_type> _buckets_container;
+
+  struct bucket_t {
+    size_t hash;
+    value_type _kv;
+  };
+
+  typedef std::vector<bucket_t> bucket_array_type;
+  typedef std::vector<bucket_array_type> _buckets_container;
   typedef stripped_map<_Key, _Data, _Value, _Locker, _Hash> self_type;
 
   static const size_t default_n = 100;
   static const size_t grow_coefficient = 2;
-  static const size_t max_load_factor = 4;
+  static const size_t max_load_factor = 2;
 
   stripped_map(const size_t N) : _lockers(N), _buckets(N), _size(size_t(0)), _N(N) {
     static_assert(std::is_default_constructible<data_type>::value,
@@ -94,11 +101,11 @@ public:
 
     auto result = false;
     for (auto kv : *bucket) {
-      if (kv.first > k) {
+      if (kv._kv.first > k) {
         break;
       }
-      if (kv.first == k) {
-        *output = kv.second;
+      if (kv._kv.first == k) {
+        *output = kv._kv.second;
         result = true;
         break;
       }
@@ -147,33 +154,10 @@ public:
     auto bucket_index = hash % _N;
     auto target_bucket = &_buckets[bucket_index];
 
-    bool is_update = false;
-    bool is_inserted = false;
-    if (!target_bucket->empty()) {
-      auto kv = std::make_pair(_k, data_type());
-      auto iter = std::lower_bound(target_bucket->begin(), target_bucket->end(), kv,
-                                   [](auto v1, auto v2) { return v1.first < v2.first; });
-      if (iter != target_bucket->end()) {
-        if (iter->first == _k) {
-          is_update = true;
-          result->v = &(*iter);
-        } else {
-          is_inserted = true;
-          auto kv = std::make_pair(_k, data_type());
-          auto insertion_iterator = target_bucket->insert(iter, kv);
-          result->v = &(*insertion_iterator);
-        }
-      }
-    }
-
-    if (!is_update) {
-      _size.fetch_add(size_t(1));
-      if (!is_inserted) {
-        target_bucket->push_back(std::make_pair(_k, data_type()));
-        result->v = &(target_bucket->back());
-      }
-    }
-
+    bucket_t b;
+    b.hash = hash;
+    b._kv = std::make_pair(_k, data_type());
+    insert_to_bucket(result, target_bucket, b);
     return result;
   }
 
@@ -193,9 +177,12 @@ public:
         }
         for (auto l : _buckets) {
           for (auto v : l) {
-            auto hash = hasher(v.first);
+            auto hash = v.hash;
             auto bucket_index = hash % _N;
-            new_buckets[bucket_index].push_back(v);
+            auto target = &(new_buckets[bucket_index]);
+            target->push_back(v);
+            std::sort(target->begin(), target->end(),
+                      [](auto v1, auto v2) { return v1._kv.first < v2._kv.first; });
           }
         }
         _buckets = std::move(new_buckets);
@@ -209,7 +196,7 @@ public:
     lock_all();
     for (auto &l : _buckets) {
       for (auto &v : l) {
-        func(v);
+        func(v._kv);
       }
     }
     unlock_all();
@@ -220,7 +207,11 @@ public:
   size_t N() const { return _N; }
 
 protected:
-  void reserve_buckets(bucket_type &b) { b.reserve(max_load_factor); }
+  void reserve_buckets(bucket_array_type &b) {
+    if (b.size() < max_load_factor) {
+      b.reserve(max_load_factor);
+    }
+  }
 
   void lock_all() const {
     for (auto it = _lockers.begin(); it != _lockers.end(); ++it) {
@@ -231,6 +222,42 @@ protected:
   void unlock_all() const {
     for (auto it = _lockers.rbegin(); it != _lockers.rend(); ++it) {
       it->unlock();
+    }
+  }
+
+  void insert_to_bucket(iterator_ptr &result, bucket_array_type *target_bucket,
+                        const bucket_t &b) {
+    bool is_update = false;
+    bool is_inserted = false;
+    if (!target_bucket->empty()) {
+      auto iter = std::lower_bound(target_bucket->begin(), target_bucket->end(), b,
+                                   [](const bucket_t &v1, const bucket_t &v2) {
+                                     return v1._kv.first < v2._kv.first;
+                                   });
+      if (iter != target_bucket->end()) {
+        if (iter->_kv.first == b._kv.first) {
+          is_update = true;
+          if (result != nullptr) {
+            result->v = &(iter->_kv);
+          }
+        } else {
+          is_inserted = true;
+          auto insertion_iterator = target_bucket->insert(iter, b);
+          if (result != nullptr) {
+            result->v = &(insertion_iterator->_kv);
+          }
+        }
+      }
+    }
+
+    if (!is_update) {
+      _size.fetch_add(size_t(1));
+      if (!is_inserted) {
+        target_bucket->push_back(b);
+        if (result != nullptr) {
+          result->v = &(target_bucket->back()._kv);
+        }
+      }
     }
   }
 
