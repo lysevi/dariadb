@@ -537,8 +537,8 @@ Id2MinMax_Ptr WALManager::loadMinMax() {
     }
     auto fres = result->insertion_pos(val.id);
 
-    fres->v->second.updateMax(val);
-    fres->v->second.updateMin(val);
+    fres.v->second.updateMax(val);
+    fres.v->second.updateMin(val);
     ++pos;
   }
   return result;

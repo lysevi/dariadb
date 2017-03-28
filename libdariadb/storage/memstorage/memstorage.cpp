@@ -98,13 +98,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     {
       auto iterator = _id2track.insertion_pos(value.id);
 
-      if (iterator->v->second == nullptr) {
+      if (iterator.v->second == nullptr) {
         auto new_tr =
             std::make_shared<TimeTrack>(this, Time(0), value.id, _chunk_allocator);
-        iterator->v->second = new_tr;
+        iterator.v->second = new_tr;
         track = new_tr;
       } else {
-        track = iterator->v->second;
+        track = iterator.v->second;
       }
     }
 

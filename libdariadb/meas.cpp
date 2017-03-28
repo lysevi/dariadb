@@ -33,8 +33,8 @@ bool dariadb::areSame(Value a, Value b, const Value EPSILON) {
 void dariadb::minmax_append(Id2MinMax_Ptr &out, const Id2MinMax_Ptr &source) {
   auto f = [&out](const Id2MinMax::value_type &v) {
     auto fres = out->insertion_pos(v.first);
-    fres->v->second.updateMax(v.second.max);
-    fres->v->second.updateMin(v.second.min);
+    fres.v->second.updateMax(v.second.max);
+    fres.v->second.updateMin(v.second.min);
   };
   source->apply(f);
 }

@@ -126,31 +126,45 @@ public:
     }
 
     iterator(const iterator &other) = delete;
-    iterator(const iterator &&other) = delete;
     iterator &operator=(const iterator &other) = delete;
 
-    ~iterator() { locker->unlock(); }
-  };
+    iterator(iterator &&other) : locker(other.locker), v(other.v) {
+      other.locker = nullptr;
+      other.v = nullptr;
+    }
 
-  using iterator_ptr = std::shared_ptr<iterator>;
+    iterator &operator=(iterator &&other) {
+      locker = other.locker;
+      v = other.v;
+      other.locker = nullptr;
+      other.v = nullptr;
+      return *this;
+    }
+
+    ~iterator() {
+      if (locker != nullptr) {
+        locker->unlock();
+      }
+    }
+  };
 
   void insert(const key_type &_k, const data_type &_v) {
     static_assert(std::is_trivially_copyable<key_type>::value,
                   "Key must be trivial copyable");
     auto pos = insertion_pos(_k);
-    pos->v->second = _v;
+    pos.v->second = _v;
   }
 
-  iterator_ptr insertion_pos(const key_type &_k) {
+  iterator insertion_pos(const key_type &_k) {
     rehash();
-    iterator_ptr result = std::make_shared<iterator>();
+    iterator result;
 
     auto hash = hasher(_k);
 
     auto lock_index = hash % _lockers.size();
     auto target_locker = &(_lockers[lock_index]);
     target_locker->lock();
-    result->locker = target_locker;
+    result.locker = target_locker;
 
     auto bucket_index = hash % _N;
     auto target_bucket = &((*_buckets)[bucket_index]);
@@ -178,14 +192,14 @@ public:
         for (auto &b : (*new_buckets)) {
           b.reserve(1);
         }
+        iterator tmp_result;
         for (auto l : (*_buckets)) {
           for (auto v : l) {
             auto hash = v.hash;
             auto bucket_index = hash % _N;
             auto target = &((*new_buckets)[bucket_index]);
             target->push_back(v);
-            std::sort(target->begin(), target->end(),
-                      [](auto v1, auto v2) { return v1._kv.first < v2._kv.first; });
+            insert_to_bucket(tmp_result, target, v);
           }
         }
         _buckets = new_buckets;
@@ -222,7 +236,7 @@ protected:
     }
   }
 
-  void insert_to_bucket(iterator_ptr &result, bucket_array_type *target_bucket,
+  void insert_to_bucket(iterator &result, bucket_array_type *target_bucket,
                         const bucket_t &b) {
     bool is_update = false;
     bool is_inserted = false;
@@ -230,17 +244,13 @@ protected:
       for (auto iter = target_bucket->begin(); iter != target_bucket->end(); ++iter) {
         if (iter->_kv.first == b._kv.first) {
           is_update = true;
-          if (result != nullptr) {
-            result->v = &(iter->_kv);
-          }
+          result.v = &(iter->_kv);
           break;
         } else {
           if (iter->_kv.first > b._kv.first) {
             is_inserted = true;
             auto insertion_iterator = target_bucket->insert(iter, b);
-            if (result != nullptr) {
-              result->v = &(insertion_iterator->_kv);
-            }
+            result.v = &(insertion_iterator->_kv);
             break;
           }
         }
@@ -251,9 +261,7 @@ protected:
       _size.fetch_add(size_t(1));
       if (!is_inserted) {
         target_bucket->push_back(b);
-        if (result != nullptr) {
-          result->v = &(target_bucket->back()._kv);
-        }
+        result.v = &(target_bucket->back()._kv);
       }
     }
   }
@@ -265,6 +273,6 @@ private:
   size_t _N;
 
   hash_type hasher;
-}; // namespace utils
+};
 } // namespace utils
 } // namespace dariadb

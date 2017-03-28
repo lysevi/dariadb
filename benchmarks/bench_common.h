@@ -169,7 +169,6 @@ void thread_writer_rnd_stor(BenchmarkParams params, dariadb::Id id,
     auto id_from = get_id_from(params, id);
     auto id_to = get_id_to(params, id);
     dariadb::logger("*** thread #", id, " id:[", id_from, " - ", id_to, "]");
-    dariadb::IdSet ids;
     for (size_t i = 0; i < params.write_per_id_count(); ++i) {
       m.flag = dariadb::Flag(id);
       m.time += step;
@@ -177,13 +176,12 @@ void thread_writer_rnd_stor(BenchmarkParams params, dariadb::Id id,
       m.value = dariadb::Value(i);
       for (size_t j = id_from; j < id_to && i < params.write_per_id_count(); j++) {
         m.id = j;
-        ids.insert(m.id);
         if (ms->append(m).writed != 1) {
           std::cout << ">>> thread_writer_rnd_stor #" << id
                     << " can`t write new value. aborting." << std::endl;
           return;
         }
-        (*append_count)++;
+        append_count->fetch_add(1);
       }
     }
 

@@ -327,8 +327,8 @@ public:
       auto val = all->at(i);
       auto fres = result->insertion_pos(val.id);
 
-      fres->v->second.updateMax(val);
-      fres->v->second.updateMin(val);
+      fres.v->second.updateMax(val);
+      fres.v->second.updateMin(val);
     }
     return result;
   }

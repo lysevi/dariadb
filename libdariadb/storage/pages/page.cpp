@@ -76,7 +76,7 @@ void writeChunkToResultPage(std::unordered_map<std::string, ChunkLinkList> &fnam
     p->apply_to_chunks(f2l.second, chunk_callback);
   }
 }
-}
+} // namespace page_utils
 
 Page::Page(const PageFooter &ftr, std::string fname) : footer(ftr), filename(fname) {}
 
@@ -641,7 +641,7 @@ void Page::appendChunks(const std::vector<Chunk *> &, size_t) {
 }
 
 Id2MinMax_Ptr Page::loadMinMax() {
-	Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
+  Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
   auto page_io = std::fopen(filename.c_str(), "rb");
   if (page_io == nullptr) {
     THROW_EXCEPTION("can`t open file ", this->filename);
@@ -655,8 +655,8 @@ Id2MinMax_Ptr Page::loadMinMax() {
     }
     auto info = search_res->header;
     auto fres = result->insertion_pos(info->meas_id);
-	fres->v->second.updateMax(info->first());
-	fres->v->second.updateMin(info->last());
+    fres.v->second.updateMax(info->first());
+    fres.v->second.updateMin(info->last());
   }
   std::fclose(page_io);
   return result;
