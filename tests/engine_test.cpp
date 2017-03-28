@@ -87,6 +87,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
       for (auto i : index_files) {
         std::cout << i << std::endl;
       }
+      std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }
   std::cout << "end\n";
@@ -130,7 +131,7 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
       if (wals_count == 0) {
         break;
       }
-	  dariadb::utils::sleep_mls(500);
+      dariadb::utils::sleep_mls(500);
     }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -267,7 +268,7 @@ BOOST_AUTO_TEST_CASE(Engine_MemOnlyStorage_common_test) {
         break;
       } else {
         std::cout << "values !empty() " << values.size() << std::endl;
-		dariadb::utils::sleep_mls(500);
+        dariadb::utils::sleep_mls(500);
       }
     }
   }

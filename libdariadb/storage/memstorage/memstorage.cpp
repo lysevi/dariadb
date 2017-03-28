@@ -144,7 +144,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     for (auto &v : tracks) {
       auto cnt = v->chunks_count();
       if (cnt == size_t()) {
-        return;
+        continue;
       }
       auto percent_from_all = (size_t)((100.0 * cnt) / cur_chunk_count) + 1;
 
