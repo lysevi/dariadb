@@ -1,9 +1,10 @@
 #pragma once
 
-#include <libdariadb/utils/async/locker.h>
+#include <libdariadb/utils/jenkins_hash.h>
 #include <algorithm>
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -12,7 +13,7 @@ namespace dariadb {
 namespace utils {
 
 template <typename _Key, typename _Data, typename _Value = std::pair<_Key, _Data>,
-          typename _Locker = utils::async::Locker, typename _Hash = std::hash<_Key>>
+          typename _Locker = std::mutex, typename _Hash = jenkins_one_hash<_Key>>
 class stripped_map {
 public:
   typedef _Key key_type;
@@ -31,7 +32,7 @@ public:
   typedef std::vector<bucket_array_type> _buckets_container;
   typedef stripped_map<_Key, _Data, _Value, _Locker, _Hash> self_type;
 
-  static const size_t default_n = 100;
+  static const size_t default_n = 1000;
   static const size_t grow_coefficient = 2;
 
   stripped_map(const size_t N)
@@ -41,6 +42,10 @@ public:
                   "Value must be is_default_constructible");
     static_assert(std::is_default_constructible<key_type>::value,
                   "Key must be is_default_constructible");
+
+    for (auto &b : (*_buckets)) {
+      b.reserve(1);
+    }
   }
 
   stripped_map() : stripped_map(default_n) {}
@@ -65,6 +70,9 @@ public:
     _lockers = std::move(std::vector<locker_type>(N));
     _buckets = std::make_shared<_buckets_container>(N);
     _N = N;
+    for (auto &b : (*_buckets)) {
+      b.reserve(1);
+    }
   }
 
   void clear() {
@@ -145,7 +153,7 @@ public:
     result->locker = target_locker;
 
     auto bucket_index = hash % _N;
-    auto target_bucket = &(this->_buckets->at(bucket_index));
+    auto target_bucket = &((*_buckets)[bucket_index]);
 
     bucket_t b;
     b.hash = hash;
@@ -167,12 +175,14 @@ public:
         _N = _N * grow_coefficient;
 
         auto new_buckets = std::make_shared<_buckets_container>(_N);
-
+        for (auto &b : (*new_buckets)) {
+          b.reserve(1);
+        }
         for (auto l : (*_buckets)) {
           for (auto v : l) {
             auto hash = v.hash;
             auto bucket_index = hash % _N;
-            auto target = &(new_buckets->at(bucket_index));
+            auto target = &((*new_buckets)[bucket_index]);
             target->push_back(v);
             std::sort(target->begin(), target->end(),
                       [](auto v1, auto v2) { return v1._kv.first < v2._kv.first; });
@@ -217,21 +227,21 @@ protected:
     bool is_update = false;
     bool is_inserted = false;
     if (!target_bucket->empty()) {
-      auto iter = std::lower_bound(target_bucket->begin(), target_bucket->end(), b,
-                                   [](const bucket_t &v1, const bucket_t &v2) {
-                                     return v1._kv.first < v2._kv.first;
-                                   });
-      if (iter != target_bucket->end()) {
+      for (auto iter = target_bucket->begin(); iter != target_bucket->end(); ++iter) {
         if (iter->_kv.first == b._kv.first) {
           is_update = true;
           if (result != nullptr) {
             result->v = &(iter->_kv);
           }
+          break;
         } else {
-          is_inserted = true;
-          auto insertion_iterator = target_bucket->insert(iter, b);
-          if (result != nullptr) {
-            result->v = &(insertion_iterator->_kv);
+          if (iter->_kv.first > b._kv.first) {
+            is_inserted = true;
+            auto insertion_iterator = target_bucket->insert(iter, b);
+            if (result != nullptr) {
+              result->v = &(insertion_iterator->_kv);
+            }
+            break;
           }
         }
       }
