@@ -210,13 +210,17 @@ public:
   }
 
   void apply(std::function<void(const value_type &v)> func) const {
-    lock_all();
-    for (auto &l : (*_buckets)) {
-      for (auto &v : l) {
+    for (size_t i = 0; i < _buckets->size(); ++i) {
+      auto locker_index = i % _lockers.size();
+      auto target_locker = &_lockers[locker_index];
+      target_locker->lock();
+      auto l = &_buckets->at(i);
+
+      for (auto &v : (*l)) {
         func(v._kv);
       }
+      target_locker->unlock();
     }
-    unlock_all();
   }
 
   double load_factor() const { return double(_size.load()) / _N; }

@@ -137,9 +137,12 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     all_chunks.reserve(cur_chunk_count);
     size_t pos = 0;
 
-    auto f = [cur_chunk_count, chunks_to_delete, &all_chunks,
-              &pos](const Id2Track::value_type &v) {
-      auto cnt = v.second->chunks_count();
+    std::list<TimeTrack_ptr> tracks;
+    auto f = [&tracks](const Id2Track::value_type &v) { tracks.push_back(v.second); };
+    _id2track.apply(f);
+
+    for (auto &v : tracks) {
+      auto cnt = v->chunks_count();
       if (cnt == size_t()) {
         return;
       }
@@ -148,14 +151,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       auto to_drop = (size_t)((chunks_to_delete * percent_from_all) / 100);
       to_drop = to_drop == size_t(0) ? 1 : to_drop;
 
-      auto dropped = v.second->drop_N(to_drop);
+      auto dropped = v->drop_N(to_drop);
 
       for (auto d : dropped) {
         all_chunks.push_back(d);
         pos++;
       }
-    };
-    _id2track.apply(f);
+    }
 
     std::sort(all_chunks.begin(), all_chunks.end(),
               [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
