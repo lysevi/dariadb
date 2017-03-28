@@ -238,32 +238,24 @@ protected:
 
   void insert_to_bucket(iterator &result, bucket_array_type *target_bucket,
                         const bucket_t &b) {
-    bool is_update = false;
-    bool is_inserted = false;
     if (!target_bucket->empty()) {
       for (auto iter = target_bucket->begin(); iter != target_bucket->end(); ++iter) {
         if (iter->_kv.first == b._kv.first) {
-          is_update = true;
           result.v = &(iter->_kv);
-          break;
+          return;
         } else {
           if (iter->_kv.first > b._kv.first) {
-            is_inserted = true;
             auto insertion_iterator = target_bucket->insert(iter, b);
             result.v = &(insertion_iterator->_kv);
-            break;
+            return;
           }
         }
       }
     }
 
-    if (!is_update) {
-      _size.fetch_add(size_t(1));
-      if (!is_inserted) {
-        target_bucket->push_back(b);
-        result.v = &(target_bucket->back()._kv);
-      }
-    }
+    _size.fetch_add(size_t(1));
+    target_bucket->push_back(b);
+    result.v = &(target_bucket->back()._kv);
   }
 
 private:
