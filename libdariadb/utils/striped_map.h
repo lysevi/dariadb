@@ -3,6 +3,7 @@
 #include <libdariadb/utils/jenkins_hash.h>
 #include <algorithm>
 #include <atomic>
+#include <forward_list>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -28,93 +29,9 @@ public:
     value_type _kv;
   };
 
-  typedef std::vector<bucket_t> bucket_array_type;
-  typedef std::vector<bucket_array_type> _buckets_container;
+  typedef std::forward_list<bucket_t> bucket_list_type;
+  typedef std::vector<bucket_list_type> _buckets_container;
   typedef stripped_map<_Key, _Data, _Value, _Locker, _Hash> self_type;
-
-  static const size_t default_n = 1000;
-  static const size_t grow_coefficient = 2;
-
-  stripped_map(const size_t N)
-      : _lockers(N), _buckets(std::make_shared<_buckets_container>(N)), _size(size_t(0)),
-        _N(N) {
-    static_assert(std::is_default_constructible<data_type>::value,
-                  "Value must be is_default_constructible");
-    static_assert(std::is_default_constructible<key_type>::value,
-                  "Key must be is_default_constructible");
-
-    for (auto &b : (*_buckets)) {
-      b.reserve(1);
-    }
-  }
-
-  stripped_map() : stripped_map(default_n) {}
-
-  stripped_map(const self_type &other) = delete;
-  self_type &operator=(const self_type &other) = delete;
-
-  ~stripped_map() {
-    for (auto &l : _lockers) {
-      l.lock();
-    }
-    _buckets->clear();
-    _size.store(size_t());
-
-    for (auto &l : _lockers) {
-      l.unlock();
-    }
-    _lockers.clear();
-  }
-
-  void reserve(size_t N) {
-    _lockers = std::move(std::vector<locker_type>(N));
-    _buckets = std::make_shared<_buckets_container>(N);
-    _N = N;
-    for (auto &b : (*_buckets)) {
-      b.reserve(1);
-    }
-  }
-
-  void clear() {
-    for (auto it = _lockers.begin(); it != _lockers.end(); ++it) {
-      it->lock();
-    }
-
-    _buckets->clear();
-    _N = size_t(0);
-
-    for (auto it = _lockers.rbegin(); it != _lockers.rend(); ++it) {
-      it->unlock();
-    }
-  }
-
-  size_t size() const { return _size.load(); }
-  bool empty() const { return _size.load() == size_t(0); }
-
-  bool find(const key_type &k, data_type *output) {
-    auto hash = hasher(k);
-
-    auto lock_index = hash % _lockers.size();
-    _lockers[lock_index].lock();
-
-    auto bucket_index = hash % _N;
-    auto bucket = &(*_buckets)[bucket_index];
-
-    auto result = false;
-    for (auto kv : *bucket) {
-      if (kv._kv.first > k) {
-        break;
-      }
-      if (kv._kv.first == k) {
-        *output = kv._kv.second;
-        result = true;
-        break;
-      }
-    }
-    _lockers[lock_index].unlock();
-
-    return result;
-  }
 
   struct iterator {
     locker_type *locker;
@@ -147,6 +64,80 @@ public:
       }
     }
   };
+
+  static const size_t default_n = 1000;
+  static const size_t grow_coefficient = 2;
+
+  stripped_map(const size_t N)
+      : _lockers(N), _buckets(std::make_shared<_buckets_container>(N)), _size(size_t(0)),
+        _N(N) {
+    static_assert(std::is_default_constructible<data_type>::value,
+                  "Value must be is_default_constructible");
+    static_assert(std::is_default_constructible<key_type>::value,
+                  "Key must be is_default_constructible");
+  }
+
+  stripped_map() : stripped_map(default_n) {}
+
+  stripped_map(const self_type &other) = delete;
+  self_type &operator=(const self_type &other) = delete;
+
+  ~stripped_map() {
+    for (auto &l : _lockers) {
+      l.lock();
+    }
+    _buckets->clear();
+    _size.store(size_t());
+
+    for (auto &l : _lockers) {
+      l.unlock();
+    }
+    _lockers.clear();
+  }
+
+  void reserve(size_t N) {
+    _lockers = std::move(std::vector<locker_type>(N));
+    _buckets = std::make_shared<_buckets_container>(N);
+    _N = N;
+  }
+
+  void clear() {
+    for (auto it = _lockers.begin(); it != _lockers.end(); ++it) {
+      it->lock();
+    }
+
+    _buckets->clear();
+    _N = size_t(0);
+
+    for (auto it = _lockers.rbegin(); it != _lockers.rend(); ++it) {
+      it->unlock();
+    }
+  }
+
+  size_t size() const { return _size.load(); }
+  bool empty() const { return _size.load() == size_t(0); }
+
+  bool find(const key_type &k, data_type *output) {
+    auto hash = hasher(k);
+
+    auto lock_index = hash % _lockers.size();
+    _lockers[lock_index].lock();
+
+    auto bucket_index = hash % _N;
+    auto bucket = &(*_buckets)[bucket_index];
+
+    auto result = false;
+    for (auto kv : *bucket) {
+      if (kv._kv.first == k) {
+        *output = kv._kv.second;
+        result = true;
+        break;
+      }
+    }
+    _lockers[lock_index].unlock();
+
+    return result;
+  }
 
   void insert(const key_type &_k, const data_type &_v) {
     static_assert(std::is_trivially_copyable<key_type>::value,
@@ -189,16 +180,13 @@ public:
         _N = _N * grow_coefficient;
 
         auto new_buckets = std::make_shared<_buckets_container>(_N);
-        for (auto &b : (*new_buckets)) {
-          b.reserve(1);
-        }
         iterator tmp_result;
         for (auto l : (*_buckets)) {
           for (auto v : l) {
             auto hash = v.hash;
             auto bucket_index = hash % _N;
             auto target = &((*new_buckets)[bucket_index]);
-            target->push_back(v);
+            target->push_front(v);
             insert_to_bucket(tmp_result, target, v);
           }
         }
@@ -240,26 +228,20 @@ protected:
     }
   }
 
-  void insert_to_bucket(iterator &result, bucket_array_type *target_bucket,
+  void insert_to_bucket(iterator &result, bucket_list_type *target_bucket,
                         const bucket_t &b) {
     if (!target_bucket->empty()) {
       for (auto iter = target_bucket->begin(); iter != target_bucket->end(); ++iter) {
         if (iter->_kv.first == b._kv.first) {
           result.v = &(iter->_kv);
           return;
-        } else {
-          if (iter->_kv.first > b._kv.first) {
-            auto insertion_iterator = target_bucket->insert(iter, b);
-            result.v = &(insertion_iterator->_kv);
-            return;
-          }
         }
       }
     }
 
     _size.fetch_add(size_t(1));
-    target_bucket->push_back(b);
-    result.v = &(target_bucket->back()._kv);
+    target_bucket->push_front(b);
+    result.v = &(target_bucket->front()._kv);
   }
 
 private:
