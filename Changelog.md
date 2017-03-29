@@ -10,6 +10,7 @@ v0.4.0
 - Wal now contained in-memory index.
 - Rename build options: add prefix 'DARIADB_'
 - Memory only mode.
+- New memory storage.
 
 v0.3.0
 =====
