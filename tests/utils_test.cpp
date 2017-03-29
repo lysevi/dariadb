@@ -65,7 +65,11 @@ BOOST_AUTO_TEST_CASE(StrippedMapTest) {
         BOOST_CHECK_MESSAGE(false, "key=" << for_search << " not found");
       }
     }
+    size_t cnt = 0;
+    auto f = [&cnt](const stripped_map<int, uint64_t>::value_type &kv) { cnt++; };
+    add_many.apply(f);
     BOOST_CHECK_EQUAL(add_many.size(), size_t(key));
+    BOOST_CHECK_EQUAL(add_many.size(), cnt);
   }
 }
 
