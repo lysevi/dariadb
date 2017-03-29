@@ -405,7 +405,7 @@ public:
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
-      auto insert_fres = _min_max_map->insertion_pos(value.id);
+      auto insert_fres = _min_max_map->find_bucket(value.id);
       insert_fres.v->second.updateMax(value);
     }
 

@@ -535,7 +535,7 @@ Id2MinMax_Ptr WALManager::loadMinMax() {
     if (pos >= _buffer_pos) {
       break;
     }
-    auto fres = result->insertion_pos(val.id);
+    auto fres = result->find_bucket(val.id);
 
     fres.v->second.updateMax(val);
     fres.v->second.updateMin(val);

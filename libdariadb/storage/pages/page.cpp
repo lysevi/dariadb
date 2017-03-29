@@ -654,7 +654,7 @@ Id2MinMax_Ptr Page::loadMinMax() {
       continue;
     }
     auto info = search_res->header;
-    auto fres = result->insertion_pos(info->meas_id);
+    auto fres = result->find_bucket(info->meas_id);
     fres.v->second.updateMax(info->first());
     fres.v->second.updateMin(info->last());
   }

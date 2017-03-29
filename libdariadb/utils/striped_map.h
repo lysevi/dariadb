@@ -24,13 +24,16 @@ public:
   typedef _Locker locker_type;
   typedef _Hash hash_type;
 
+  struct bucket_t;
+  typedef bucket_t *bucket_ptr;
   struct bucket_t {
     size_t hash;
     value_type _kv;
+    bucket_ptr next;
   };
 
-  typedef std::forward_list<bucket_t> bucket_list_type;
-  typedef std::vector<bucket_list_type> _buckets_container;
+  typedef std::vector<bucket_ptr> _buckets_container;
+  typedef std::shared_ptr<_buckets_container> _buckets_container_ptr;
   typedef stripped_map<_Key, _Data, _Value, _Locker, _Hash> self_type;
 
   struct iterator {
@@ -82,36 +85,37 @@ public:
   stripped_map(const self_type &other) = delete;
   self_type &operator=(const self_type &other) = delete;
 
-  ~stripped_map() {
-    for (auto &l : _lockers) {
-      l.lock();
-    }
-    _buckets->clear();
-    _size.store(size_t());
-
-    for (auto &l : _lockers) {
-      l.unlock();
-    }
-    _lockers.clear();
-  }
+  ~stripped_map() { this->clear(); }
 
   void reserve(size_t N) {
+    this->clear();
     _lockers = std::move(std::vector<locker_type>(N));
     _buckets = std::make_shared<_buckets_container>(N);
     _N = N;
   }
 
   void clear() {
-    for (auto it = _lockers.begin(); it != _lockers.end(); ++it) {
-      it->lock();
+    if (_buckets == nullptr) {
+      return;
     }
+    this->lock_all();
 
-    _buckets->clear();
     _N = size_t(0);
+    _size.store(size_t());
 
-    for (auto it = _lockers.rbegin(); it != _lockers.rend(); ++it) {
-      it->unlock();
+    for (auto bucket : (*_buckets)) {
+      if (bucket != nullptr) {
+        for (auto it = bucket; it != nullptr;) {
+          auto next = it->next;
+          delete it;
+          it = next;
+        }
+      }
     }
+
+    _buckets = nullptr;
+    this->unlock_all();
+    _lockers.clear();
   }
 
   size_t size() const { return _size.load(); }
@@ -124,14 +128,16 @@ public:
     _lockers[lock_index].lock();
 
     auto bucket_index = hash % _N;
-    auto bucket = &(*_buckets)[bucket_index];
+    auto bucket = (*_buckets)[bucket_index];
 
     auto result = false;
-    for (auto kv : *bucket) {
-      if (kv._kv.first == k) {
-        *output = kv._kv.second;
-        result = true;
-        break;
+    if (bucket != nullptr) {
+      for (bucket_ptr iter = bucket; iter != nullptr; iter = iter->next) {
+        if (iter->_kv.first == k) {
+          *output = iter->_kv.second;
+          result = true;
+          break;
+        }
       }
     }
     _lockers[lock_index].unlock();
@@ -142,11 +148,11 @@ public:
   void insert(const key_type &_k, const data_type &_v) {
     static_assert(std::is_trivially_copyable<key_type>::value,
                   "Key must be trivial copyable");
-    auto pos = insertion_pos(_k);
+    auto pos = find_bucket(_k);
     pos.v->second = _v;
   }
 
-  iterator insertion_pos(const key_type &_k) {
+  iterator find_bucket(const key_type &_k) {
     rehash();
     iterator result;
 
@@ -158,12 +164,8 @@ public:
     result.locker = target_locker;
 
     auto bucket_index = hash % _N;
-    auto target_bucket = &((*_buckets)[bucket_index]);
 
-    bucket_t b;
-    b.hash = hash;
-    b._kv = std::make_pair(_k, data_type());
-    insert_to_bucket(result, target_bucket, b);
+    find_bucket(result, _buckets, bucket_index, hash, _k);
     return result;
   }
 
@@ -182,12 +184,38 @@ public:
         auto new_buckets = std::make_shared<_buckets_container>(_N);
         iterator tmp_result;
         for (auto l : (*_buckets)) {
-          for (auto v : l) {
-            auto hash = v.hash;
-            auto bucket_index = hash % _N;
-            auto target = &((*new_buckets)[bucket_index]);
-            target->push_front(v);
-            //insert_to_bucket(tmp_result, target, v);
+          if (l != nullptr) {
+            for (auto source_iter = l; source_iter != nullptr;) {
+              auto next = source_iter->next;
+              source_iter->next = nullptr;
+
+              auto hash = source_iter->hash;
+              auto bucket_index = hash % _N;
+
+              auto target_bucket = (*new_buckets)[bucket_index];
+              if (target_bucket == nullptr) {
+                (*new_buckets)[bucket_index] = source_iter;
+                (*new_buckets)[bucket_index]->next = nullptr;
+              } else {
+                for (auto target_iter = target_bucket; target_iter != nullptr;
+                     target_iter = target_iter->next) {
+                  if (target_iter->next != nullptr &&
+                      target_iter->next->_kv.first > source_iter->_kv.first) {
+
+                    auto target_next = target_iter->next;
+                    source_iter->next = target_next;
+                    target_iter->next = source_iter;
+                    break;
+                  }
+                  if (target_iter->next == nullptr) {
+                    target_iter->next = source_iter;
+                    break;
+                  }
+                }
+              }
+
+              source_iter = next;
+            }
           }
         }
         _buckets = new_buckets;
@@ -202,10 +230,11 @@ public:
       auto locker_index = i % _lockers.size();
       auto target_locker = &_lockers[locker_index];
       target_locker->lock();
-      auto l = &_buckets->at(i);
-
-      for (auto &v : (*l)) {
-        func(v._kv);
+      auto l = _buckets->at(i);
+      if (l != nullptr) {
+        for (bucket_ptr iter = l; iter != nullptr; iter = iter->next) {
+          func(iter->_kv);
+        }
       }
       target_locker->unlock();
     }
@@ -228,25 +257,58 @@ protected:
     }
   }
 
-  void insert_to_bucket(iterator &result, bucket_list_type *target_bucket,
-                        const bucket_t &b) {
-    if (!target_bucket->empty()) {
-      for (auto iter = target_bucket->begin(); iter != target_bucket->end(); ++iter) {
-        if (iter->_kv.first == b._kv.first) {
-          result.v = &(iter->_kv);
+  void find_bucket(iterator &result, _buckets_container_ptr &target, size_t bucket_index,
+                   const size_t hash, const key_type &_k) {
+    auto bucket = (*target)[bucket_index];
+    if (bucket == nullptr) {
+      bucket_ptr new_item = new bucket_t;
+      new_item->_kv.first = _k;
+      new_item->hash = hash;
+      new_item->next = nullptr;
+
+      (*target)[bucket_index] = new_item;
+      result.v = &new_item->_kv;
+      _size.fetch_add(size_t(1));
+      return;
+    }
+
+    for (auto iter = bucket; iter != nullptr; iter = iter->next) {
+      if (iter->_kv.first == _k) {
+        result.v = &iter->_kv;
+        return;
+      } else {
+        if (iter->next != nullptr && iter->next->_kv.first > _k) {
+          auto next = iter->next;
+
+          bucket_ptr new_item = new bucket_t;
+          new_item->_kv.first = _k;
+          new_item->hash = hash;
+          new_item->next = next;
+
+          iter->next = new_item;
+          result.v = &new_item->_kv;
+          _size.fetch_add(size_t(1));
+          return;
+        }
+        if (iter->next == nullptr) {
+          bucket_ptr new_item = new bucket_t;
+          new_item->_kv.first = _k;
+          new_item->hash = hash;
+          new_item->next = nullptr;
+
+          iter->next = new_item;
+          result.v = &new_item->_kv;
+          _size.fetch_add(size_t(1));
           return;
         }
       }
     }
-
-    _size.fetch_add(size_t(1));
-    target_bucket->push_front(b);
-    result.v = &(target_bucket->front()._kv);
+    return;
   }
 
 private:
   mutable std::vector<locker_type> _lockers;
-  std::shared_ptr<_buckets_container> _buckets;
+  _buckets_container_ptr _buckets;
   std::atomic_size_t _size;
   size_t _N;
 

@@ -325,7 +325,7 @@ public:
     auto all = readAll();
     for (size_t i = 0; i < all->size(); ++i) {
       auto val = all->at(i);
-      auto fres = result->insertion_pos(val.id);
+      auto fres = result->find_bucket(val.id);
 
       fres.v->second.updateMax(val);
       fres.v->second.updateMin(val);

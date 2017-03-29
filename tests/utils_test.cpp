@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(StrippedMapTest) {
 
     stripped_map<int, uint64_t> add;
     {
-      auto iter = add.insertion_pos(1);
+      auto iter = add.find_bucket(1);
       iter.v->second = uint64_t(3);
     }
     uint64_t output = 0;

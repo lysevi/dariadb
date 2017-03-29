@@ -96,7 +96,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
   Status append(const Meas &value) override {
     TimeTrack_ptr track = nullptr;
     {
-      auto iterator = _id2track.insertion_pos(value.id);
+      auto iterator = _id2track.find_bucket(value.id);
 
       if (iterator.v->second == nullptr) {
         auto new_tr =
