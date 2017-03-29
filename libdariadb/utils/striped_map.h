@@ -187,7 +187,7 @@ public:
             auto bucket_index = hash % _N;
             auto target = &((*new_buckets)[bucket_index]);
             target->push_front(v);
-            insert_to_bucket(tmp_result, target, v);
+            //insert_to_bucket(tmp_result, target, v);
           }
         }
         _buckets = new_buckets;
