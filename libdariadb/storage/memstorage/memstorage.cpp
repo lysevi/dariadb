@@ -168,44 +168,13 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
                   " chunks of ", cur_chunk_count);
       if (_down_level_storage != nullptr) {
         auto chunks_per_page = _settings->max_chunks_per_page.value();
+
         AsyncTask at = [this, &all_chunks, chunks_per_page](const ThreadInfo &ti) {
           TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-          while (!all_chunks.empty()) {
-            auto sz = all_chunks.size();
-            size_t to_copy = 0;
-
-            if ((sz - chunks_per_page) < chunks_per_page) {
-              to_copy = sz;
-            } else {
-              if (sz > chunks_per_page) {
-                to_copy = chunks_per_page;
-              } else {
-                to_copy = sz;
-              }
-            }
-
-            std::vector<Chunk *> raw_ptrs(to_copy);
-            auto last = all_chunks.begin();
-            std::advance(last, to_copy);
-
-            std::transform(all_chunks.begin(), last, raw_ptrs.begin(),
-                           [](const MemChunk_Ptr &mc) { return mc.get(); });
-
-            this->_down_level_storage->appendChunks(raw_ptrs);
-
-            for (auto iter = all_chunks.begin();; ++iter) {
-              if (iter == all_chunks.end()) {
-                break;
-              }
-              if (iter == last) {
-                break;
-              }
-              freeChunk(*iter);
-            }
-            all_chunks.erase(all_chunks.begin(), last);
-          }
+          this->drop_logic(chunks_per_page, all_chunks);
           return false;
         };
+
         auto at_res = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
         at_res->wait();
       } else {
@@ -215,6 +184,43 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
         }
       }
       logger_info("engine", _settings->alias, ": memstorage - drop end.");
+    }
+  }
+
+  void drop_logic(size_t chunks_per_page, std::list<MemChunk_Ptr> &all_chunks) {
+    while (!all_chunks.empty()) {
+      auto sz = all_chunks.size();
+      size_t to_copy = 0;
+
+      if ((sz - chunks_per_page) < chunks_per_page) {
+        to_copy = sz;
+      } else {
+        if (sz > chunks_per_page) {
+          to_copy = chunks_per_page;
+        } else {
+          to_copy = sz;
+        }
+      }
+
+      std::vector<Chunk *> raw_ptrs(to_copy);
+      auto last = all_chunks.begin();
+      std::advance(last, to_copy);
+
+      std::transform(all_chunks.begin(), last, raw_ptrs.begin(),
+                     [](const MemChunk_Ptr &mc) { return mc.get(); });
+
+      this->_down_level_storage->appendChunks(raw_ptrs);
+
+      for (auto iter = all_chunks.begin();; ++iter) {
+        if (iter == all_chunks.end()) {
+          break;
+        }
+        if (iter == last) {
+          break;
+        }
+        freeChunk(*iter);
+      }
+      all_chunks.erase(all_chunks.begin(), last);
     }
   }
 
