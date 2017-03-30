@@ -94,7 +94,7 @@ public:
                          dariadb::Time *maxResult) override;
   EXPORT Id2Meas valuesBeforeTimePoint(const QueryTimePoint &q) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &query) override;
-  EXPORT void appendChunks(const std::vector<Chunk *> &a, size_t count) override;
+  EXPORT void appendChunks(const std::vector<Chunk *> &a) override;
 
   EXPORT Id2MinMax_Ptr loadMinMax();
   EXPORT Id2Cursor intervalReader(const QueryInterval &query, const ChunkLinkList &links);

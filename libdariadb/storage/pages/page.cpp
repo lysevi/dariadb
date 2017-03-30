@@ -636,7 +636,7 @@ void Page::apply_to_chunks(const ChunkLinkList &links,
   fclose(page_io);
 }
 
-void Page::appendChunks(const std::vector<Chunk *> &, size_t) {
+void Page::appendChunks(const std::vector<Chunk *> &) {
   NOT_IMPLEMENTED;
 }
 

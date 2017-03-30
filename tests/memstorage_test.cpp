@@ -21,9 +21,8 @@ struct MokChunkWriter : public dariadb::ChunkContainer {
   ~MokChunkWriter() {}
   using ChunkContainer::foreach;
 
-  void appendChunks(const std::vector<dariadb::storage::Chunk *> &a,
-                    size_t count) override {
-    droped += count;
+  void appendChunks(const std::vector<dariadb::storage::Chunk *> &a) override {
+    droped += a.size();
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,

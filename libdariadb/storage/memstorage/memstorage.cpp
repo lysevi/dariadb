@@ -133,8 +133,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     size_t cur_chunk_count = (size_t)_chunks_count.load();
     auto chunks_to_delete = (size_t)(cur_chunk_count * chunk_percent_to_free);
 
-    std::vector<MemChunk_Ptr> all_chunks;
-    all_chunks.reserve(cur_chunk_count);
+    std::list<MemChunk_Ptr> all_chunks;
     size_t pos = 0;
 
     std::list<TimeTrack_ptr> tracks;
@@ -159,23 +158,52 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       }
     }
 
-    std::sort(all_chunks.begin(), all_chunks.end(),
-              [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
-                return left->header->data_first.time < right->header->data_first.time;
-              });
+    // std::sort(all_chunks.begin(), all_chunks.end(),
+    //          [](const MemChunk_Ptr &left, const MemChunk_Ptr &right) {
+    //            return left->header->data_first.time < right->header->data_first.time;
+    //          });
 
     if (pos != 0) {
       logger_info("engine", _settings->alias, ": memstorage - drop begin ", pos,
                   " chunks of ", cur_chunk_count);
       if (_down_level_storage != nullptr) {
-        AsyncTask at = [this, &all_chunks, pos](const ThreadInfo &ti) {
+        auto chunks_per_page = _settings->max_chunks_per_page.value();
+        AsyncTask at = [this, &all_chunks, chunks_per_page](const ThreadInfo &ti) {
           TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+          while (!all_chunks.empty()) {
+            auto sz = all_chunks.size();
+            size_t to_copy = 0;
 
-          std::vector<Chunk *> raw_ptrs(all_chunks.size());
-          std::transform(all_chunks.begin(), all_chunks.end(), raw_ptrs.begin(),
-                         [](const MemChunk_Ptr &mc) { return mc.get(); });
+            if ((sz - chunks_per_page) < chunks_per_page) {
+              to_copy = sz;
+            } else {
+              if (sz > chunks_per_page) {
+                to_copy = chunks_per_page;
+              } else {
+                to_copy = sz;
+              }
+            }
 
-          this->_down_level_storage->appendChunks(raw_ptrs, pos);
+            std::vector<Chunk *> raw_ptrs(to_copy);
+            auto last = all_chunks.begin();
+            std::advance(last, to_copy);
+
+            std::transform(all_chunks.begin(), last, raw_ptrs.begin(),
+                           [](const MemChunk_Ptr &mc) { return mc.get(); });
+
+            this->_down_level_storage->appendChunks(raw_ptrs);
+
+            for (auto iter = all_chunks.begin();; ++iter) {
+              if (iter == all_chunks.end()) {
+                break;
+              }
+              if (iter == last) {
+                break;
+              }
+              freeChunk(*iter);
+            }
+            all_chunks.erase(all_chunks.begin(), last);
+          }
           return false;
         };
         auto at_res = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
@@ -185,10 +213,6 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
           logger_info("engine", _settings->alias,
                       ": memstorage _down_level_storage == nullptr");
         }
-      }
-      for (size_t i = 0; i < pos; ++i) {
-        auto mc = all_chunks[i];
-        freeChunk(mc);
       }
       logger_info("engine", _settings->alias, ": memstorage - drop end.");
     }

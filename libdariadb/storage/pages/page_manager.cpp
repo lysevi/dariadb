@@ -585,7 +585,7 @@ public:
     logger("engine", _settings->alias, ": compact end. elapsed ", et.elapsed());
   }
 
-  void appendChunks(const std::vector<Chunk *> &a, size_t count) {
+  void appendChunks(const std::vector<Chunk *> &a) {
     std::vector<Chunk *> tmp_buffer;
     tmp_buffer.resize(a.size());
 
@@ -742,8 +742,8 @@ void PageManager::compact(ICompactionController *logic) {
   impl->compact(logic);
 }
 
-void PageManager::appendChunks(const std::vector<Chunk *> &a, size_t count) {
-  impl->appendChunks(a, count);
+void PageManager::appendChunks(const std::vector<Chunk *> &a) {
+  impl->appendChunks(a);
 }
 
 dariadb::Id2MinMax_Ptr PageManager::loadMinMax() {
