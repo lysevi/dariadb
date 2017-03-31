@@ -7,6 +7,10 @@
 #include <iostream>
 #include <thread>
 
+#include <extern/json/src/json.hpp>
+
+using json = nlohmann::json;
+
 #include "../network/common/net_data.h"
 #include <libdariadb/dariadb.h>
 #include <libserver/server.h>
@@ -36,7 +40,6 @@ post_response post(boost::asio::io_service &service, std::string &port,
   tcp::resolver::query query("localhost", port);
   tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
-  // Try each endpoint until we successfully establish a connection.
   tcp::socket socket(service);
   boost::asio::connect(socket, endpoint_iterator);
 
@@ -74,9 +77,9 @@ post_response post(boost::asio::io_service &service, std::string &port,
 	result.code = -1;
     return result;
   }
+  result.code = status_code;
   if (status_code != 200) {
     std::cout << "Response returned with status code " << status_code << "\n";
-	result.code = status_code;
     return result;
   }
 
@@ -118,9 +121,10 @@ void server_thread_func() {
   server_instance = nullptr;
 }
 
-BOOST_AUTO_TEST_CASE(Post) {
+BOOST_AUTO_TEST_CASE(AppendTest) {
   dariadb::logger("********** Connect1 **********");
   std::thread server_thread{server_thread_func};
+  auto http_port = std::to_string(server_param.http_port);
 
   while (server_instance == nullptr || !server_instance->is_runned()) {
     dariadb::utils::sleep_mls(300);
@@ -131,7 +135,12 @@ BOOST_AUTO_TEST_CASE(Post) {
   server_instance->set_storage(engine);
 
   boost::asio::io_service test_service;
-  auto post_result=post(test_service, std::to_string(server_param.http_port), "query");
+  json js;
+  js["Type"] = "append";
+  
+  auto post_result=post(test_service, http_port, js.dump());
+  BOOST_CHECK_EQUAL(post_result.code, 200);
+
   test_service.poll_one();
 
   server_instance->stop();
