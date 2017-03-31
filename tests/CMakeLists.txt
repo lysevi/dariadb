@@ -20,6 +20,9 @@ endmacro(TEST_CASE)
 if(DARIADB_ENABLE_SERVER)
    TEST_CASE(net_test net_test.cpp)
    TARGET_LINK_LIBRARIES(net_test ${DARIADB_CLIENT_LIBS} dariadb-server)
+
+   TEST_CASE(http_test http_test.cpp)
+   TARGET_LINK_LIBRARIES(http_test ${DARIADB_CLIENT_LIBS} dariadb-server)
 endif()
 
 TEST_CASE(storage_common_test storage_common_test.cpp)

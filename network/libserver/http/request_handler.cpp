@@ -17,14 +17,14 @@ void request_handler::handle_request(const request &req, reply &rep) {
     rep = reply::stock_reply(reply::bad_request);
     return;
   }
-  _storage_engine = nullptr;
+  
   if (_storage_engine == nullptr) {
     rep = reply::stock_reply(reply::no_content);
     return;
   }
 
   if (req.method == "POST") {
-    rep = reply::stock_reply(reply::internal_server_error);
+    rep = reply::stock_reply(reply::ok);
     rep.content = req.rest_data;
     return;
   }

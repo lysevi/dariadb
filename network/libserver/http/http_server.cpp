@@ -22,7 +22,7 @@ http_server::http_server(const std::string &address, const std::string &port,
   acceptor_.listen();
 
   do_accept();
-  logger_info("http_server: started");
+  logger_info("http_server: started on port=", port);
 }
 
 void http_server::do_accept() {

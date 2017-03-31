@@ -1,9 +1,9 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
+#include <libserver/http/http_server.h>
 #include <libserver/iclientmanager.h>
 #include <libserver/ioclient.h>
 #include <libserver/server.h>
-#include <libserver/http/http_server.h>
 #include <boost/asio.hpp>
 #include <atomic>
 #include <common/net_common.h>
@@ -30,7 +30,7 @@ public:
       : _signals(_service, SIGINT, SIGTERM, SIGABRT), _params(p), _is_runned_flag(false),
         _ping_timer(_service), _info_timer(_service) {
     _active_workers.store(0);
-	_stop_flag = false;
+    _stop_flag = false;
     _in_stop_logic = false;
     _next_client_id = 1;
     _connections_accepted.store(0);
@@ -41,14 +41,15 @@ public:
 
     _signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
 
-	_http_server = std::make_unique<http::http_server>("localhost", "8080", &_service);
+    _http_server = std::make_unique<http::http_server>(
+        "localhost", std::to_string(p.http_port), &_service);
   }
 
   ~Private() {
     if (_is_runned_flag && !_in_stop_logic) {
       stop();
-	  while (!this->_is_runned_flag.load()) {
-	  }
+      while (!this->_is_runned_flag.load()) {
+      }
     }
   }
 
@@ -56,12 +57,10 @@ public:
     logger("server: set storage.");
     _env.storage = storage;
     log_server_info_internal();
-	_http_server->set_storage(storage);
+    _http_server->set_storage(storage);
   }
 
-  void stop() {
-	  _stop_flag = true;
-  }
+  void stop() { _stop_flag = true; }
 
   void on_stop() {
     std::lock_guard<std::mutex> lg(_dtor_mutex);
@@ -72,7 +71,7 @@ public:
     logger_info("server: stop info timer...");
     _info_timer.cancel();
     while (_writes_in_progress.load() != 0) {
-		dariadb::utils::sleep_mls(300);
+      dariadb::utils::sleep_mls(300);
       logger_info("server: writes in progress ", _writes_in_progress.load());
     }
 
@@ -85,7 +84,7 @@ public:
     logger_info("server: wait ", _io_threads.size(), " io threads...");
     while (_active_workers.load() != 0) {
       ENSURE(_service.stopped());
-	  dariadb::utils::sleep_mls(100);
+      dariadb::utils::sleep_mls(100);
     }
     for (auto &t : _io_threads) {
       t.join();
@@ -115,7 +114,7 @@ public:
       if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
         while (kv.second->_async_connection->queue_size() != 0) {
           logger_info("server: wait stop of #", kv.first);
-		  dariadb::utils::sleep_mls(50);
+          dariadb::utils::sleep_mls(50);
         }
         kv.second->close();
       }
@@ -147,10 +146,10 @@ public:
     logger_info("server: ready.");
     _is_runned_flag.store(true);
 
-	while (!this->_stop_flag.load()) {
-		dariadb::utils::sleep_mls(100);
-	}
-	on_stop();
+    while (!this->_stop_flag.load()) {
+      dariadb::utils::sleep_mls(100);
+    }
+    on_stop();
   }
 
   void signal_handler(const boost::system::error_code &error, int signal_number) {
