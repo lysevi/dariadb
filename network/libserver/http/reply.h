@@ -4,8 +4,9 @@
 #include <string>
 #include <vector>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 /// A reply to be sent to a client.
 struct reply {
@@ -44,5 +45,6 @@ struct reply {
   static reply stock_reply(status_type status);
 };
 
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb

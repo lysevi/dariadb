@@ -1,8 +1,9 @@
 #pragma once
 #include <string>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 struct reply;
 struct request;
@@ -28,6 +29,6 @@ private:
   static bool url_decode(const std::string &in, std::string &out);
 };
 
-} // namespace server
 } // namespace http
-
+} // namespace net
+} // namespace dariadb

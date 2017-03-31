@@ -4,8 +4,7 @@
 #include <utility>
 #include <vector>
 
-namespace http {
-namespace server {
+using namespace dariadb::net::http;
 
 connection::connection(boost::asio::ip::tcp::socket socket, connection_manager &manager,
                        request_handler &handler)
@@ -69,6 +68,3 @@ void connection::do_write() {
         }
       });
 }
-
-} // namespace server
-} // namespace http

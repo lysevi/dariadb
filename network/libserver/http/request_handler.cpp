@@ -1,13 +1,12 @@
-#include <libserver/http/request_handler.h>
 #include <libserver/http/mime_types.h>
 #include <libserver/http/reply.h>
 #include <libserver/http/request.h>
+#include <libserver/http/request_handler.h>
 #include <fstream>
 #include <sstream>
 #include <string>
 
-namespace http {
-namespace server {
+using namespace dariadb::net::http;
 
 request_handler::request_handler(const std::string &doc_root) : doc_root_(doc_root) {}
 
@@ -90,6 +89,3 @@ bool request_handler::url_decode(const std::string &in, std::string &out) {
   }
   return true;
 }
-
-} // namespace server
-} // namespace http

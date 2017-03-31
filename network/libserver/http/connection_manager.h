@@ -3,8 +3,9 @@
 #include <libserver/http/connection.h>
 #include <set>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 /// Manages open connections so that they may be cleanly stopped when the server
 /// needs to shut down.
@@ -30,5 +31,6 @@ private:
   std::set<connection_ptr> connections_;
 };
 
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb

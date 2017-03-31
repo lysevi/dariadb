@@ -6,8 +6,9 @@
 #include <boost/asio.hpp>
 #include <string>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 /// The top-level class of the HTTP server.
 class server {
@@ -46,5 +47,6 @@ private:
   request_handler request_handler_;
 };
 
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb

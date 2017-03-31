@@ -2,8 +2,7 @@
 #include <signal.h>
 #include <utility>
 
-namespace http {
-namespace server {
+using namespace dariadb::net::http;
 
 server::server(const std::string &address, const std::string &port,
                const std::string &doc_root, boost::asio::io_service *io_service_)
@@ -57,6 +56,3 @@ void server::do_await_stop() {
     connection_manager_.stop_all();
   });
 }
-
-} // namespace server
-} // namespace http

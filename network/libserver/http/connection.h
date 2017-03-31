@@ -9,8 +9,9 @@
 #include <array>
 #include <memory>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 class connection_manager;
 const size_t reques_buffer_size = 8192;
@@ -61,5 +62,6 @@ private:
 
 typedef std::shared_ptr<connection> connection_ptr;
 
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb

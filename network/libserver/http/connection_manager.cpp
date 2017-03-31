@@ -1,7 +1,6 @@
 #include <libserver/http/connection_manager.h>
 
-namespace http {
-namespace server {
+using namespace dariadb::net::http;
 
 connection_manager::connection_manager() {}
 
@@ -20,6 +19,3 @@ void connection_manager::stop_all() {
     c->stop();
   connections_.clear();
 }
-
-} // namespace server
-} // namespace http

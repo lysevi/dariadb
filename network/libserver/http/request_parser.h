@@ -2,8 +2,9 @@
 
 #include <tuple>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 struct request;
 
@@ -75,5 +76,6 @@ private:
   } state_;
 };
 
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb

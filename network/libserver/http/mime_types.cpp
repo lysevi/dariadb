@@ -1,7 +1,8 @@
 #include <libserver/http/mime_types.h>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 namespace mime_types {
 
 struct mapping {
@@ -24,5 +25,6 @@ std::string extension_to_type(const std::string &extension) {
 }
 
 } // namespace mime_types
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb

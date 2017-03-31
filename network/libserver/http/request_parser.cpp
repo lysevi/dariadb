@@ -1,8 +1,7 @@
-#include <libserver/http/request_parser.h>
 #include <libserver/http/request.h>
+#include <libserver/http/request_parser.h>
 
-namespace http {
-namespace server {
+using namespace dariadb::net::http;
 
 request_parser::request_parser() : state_(method_start) {}
 
@@ -227,6 +226,3 @@ bool request_parser::is_tspecial(int c) {
 bool request_parser::is_digit(int c) {
   return c >= '0' && c <= '9';
 }
-
-} // namespace server
-} // namespace http

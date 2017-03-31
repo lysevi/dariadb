@@ -3,8 +3,9 @@
 #include <string>
 #include <vector>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 /// A request received from a client.
 struct request {
@@ -17,5 +18,6 @@ struct request {
   std::string rest_data; // all values after headers.
 };
 
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb

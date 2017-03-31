@@ -1,8 +1,9 @@
 #include <libserver/http/reply.h>
 #include <string>
 
+namespace dariadb {
+namespace net {
 namespace http {
-namespace server {
 
 namespace status_strings {
 
@@ -203,5 +204,6 @@ reply reply::stock_reply(reply::status_type status) {
   return rep;
 }
 
-} // namespace server
 } // namespace http
+} // namespace net
+} // namespace dariadb
