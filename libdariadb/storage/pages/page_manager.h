@@ -6,7 +6,7 @@
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/storage/engine_environment.h>
-#include <libdariadb/storage/pages/page.h> //TODO it needed only for callback. move callback to file.
+#include <libdariadb/storage/pages/page.h>
 #include <libdariadb/utils/utils.h>
 #include <vector>
 
