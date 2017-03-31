@@ -1,17 +1,7 @@
-//
-// request_handler.cpp
-// ~~~~~~~~~~~~~~~~~~~
-//
-// Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
-
-#include "request_handler.h"
-#include "mime_types.h"
-#include "reply.h"
-#include "request.h"
+#include <libserver/http/request_handler.h>
+#include <libserver/http/mime_types.h>
+#include <libserver/http/reply.h>
+#include <libserver/http/request.h>
 #include <fstream>
 #include <sstream>
 #include <string>
