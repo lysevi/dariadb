@@ -11,15 +11,19 @@ namespace net {
 namespace http {
 
 /// The top-level class of the HTTP server.
-class server {
+class http_server {
 public:
-  server(const server &) = delete;
-  server &operator=(const server &) = delete;
+  http_server(const http_server &) = delete;
+  http_server &operator=(const http_server &) = delete;
 
   /// Construct the server to listen on the specified TCP address and port, and
   /// serve up files from the given directory.
-  explicit server(const std::string &address, const std::string &port,
-                  const std::string &doc_root, boost::asio::io_service *io_service_);
+  explicit http_server(const std::string &address, const std::string &port,
+                       boost::asio::io_service *io_service_);
+
+  void set_storage(dariadb::IEngine_Ptr &storage_engine) {
+    request_handler_.set_storage(storage_engine);
+  }
 
 private:
   /// Perform an asynchronous accept operation.

@@ -22,7 +22,7 @@ public:
    */
   EXPORT void shardAdd(const Shard &d);
   EXPORT std::list<Shard> shardList();
-  EXPORT void shardRm(const std::string&alias, bool rm_shard_folder);
+  EXPORT void shardRm(const std::string &alias, bool rm_shard_folder);
 
   EXPORT Status append(const Meas &value) override;
   EXPORT Time minTime() override;
@@ -46,6 +46,10 @@ public:
   EXPORT void compress_all() override;
 
   EXPORT storage::Settings_ptr settings() override;
+  EXPORT STRATEGY strategy() const override;
+  EXPORT void subscribe(const IdArray &ids, const Flag &flag,
+                        const ReaderCallback_ptr &clbk) override;
+
 protected:
   EXPORT ShardEngine(const std::string &path);
 
@@ -53,4 +57,4 @@ private:
   class Private;
   std::unique_ptr<Private> _impl;
 };
-}
+} // namespace dariadb

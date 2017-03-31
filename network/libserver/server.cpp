@@ -3,7 +3,7 @@
 #include <libserver/iclientmanager.h>
 #include <libserver/ioclient.h>
 #include <libserver/server.h>
-#include <libserver/http/server.h>
+#include <libserver/http/http_server.h>
 #include <boost/asio.hpp>
 #include <atomic>
 #include <common/net_common.h>
@@ -41,7 +41,7 @@ public:
 
     _signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
 
-	_http_server = std::make_unique<http::server>("localhost", "8080", "doc_root", &_service);
+	_http_server = std::make_unique<http::http_server>("localhost", "8080", &_service);
   }
 
   ~Private() {
@@ -52,10 +52,11 @@ public:
     }
   }
 
-  void set_storage(Engine *storage) {
+  void set_storage(IEngine_Ptr &storage) {
     logger("server: set storage.");
     _env.storage = storage;
     log_server_info_internal();
+	_http_server->set_storage(storage);
   }
 
   void stop() {
@@ -343,7 +344,7 @@ public:
   bool _in_stop_logic;
   std::mutex _dtor_mutex;
 
-  std::unique_ptr<http::server> _http_server;
+  std::unique_ptr<http::http_server> _http_server;
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}
@@ -370,7 +371,7 @@ void Server::stop() {
   _Impl->stop();
 }
 
-void Server::set_storage(Engine *storage) {
+void Server::set_storage(IEngine_Ptr &storage) {
   _Impl->set_storage(storage);
 }
 

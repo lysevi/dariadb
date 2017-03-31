@@ -29,7 +29,7 @@ size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::WAL;
 size_t clients_count = 5;
 bool dont_clean = false;
-Engine *engine = nullptr;
+IEngine_Ptr engine = nullptr;
 dariadb::net::Server *server_instance = nullptr;
 
 void run_server() {
@@ -48,7 +48,7 @@ void run_server() {
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->strategy.setValue(strategy);
 
-  engine = new Engine(settings);
+  engine = IEngine_Ptr{ new Engine(settings) };
 
   if (!is_exists) {
     settings->save();
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
 
 	server_thread.join();
 
-    delete engine;
+    engine=nullptr;
   }
 
   auto count_per_thread = MEASES_SIZE * SEND_COUNT;

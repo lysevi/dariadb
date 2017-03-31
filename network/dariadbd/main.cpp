@@ -94,12 +94,11 @@ int main(int argc, char **argv) {
   }
   settings->save();
 
-  auto stor = new Engine(settings, true, force_unlock_storage);
+  IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
 
   dariadb::net::Server::Param server_param(server_port, server_threads_count);
   dariadb::net::Server s(server_param);
   s.set_storage(stor);
 
   s.start();
-  delete stor;
 }

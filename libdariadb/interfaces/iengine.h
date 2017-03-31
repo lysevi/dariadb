@@ -45,10 +45,12 @@ public:
   virtual void wait_all_asyncs() = 0;
   virtual void compress_all() = 0;
   virtual storage::Settings_ptr settings() = 0;
-
+  virtual STRATEGY strategy() const = 0;
+  virtual void subscribe(const IdArray &ids, const Flag &flag,
+                         const ReaderCallback_ptr &clbk) = 0;
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
   EXPORT void foreach (const QueryTimePoint &q, IReadCallback * clbk) override final;
 };
 
 using IEngine_Ptr = std::shared_ptr<IEngine>;
-}
+} // namespace dariadb

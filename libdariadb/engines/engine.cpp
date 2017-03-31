@@ -182,7 +182,7 @@ public:
   void lockfile_lock_or_die(bool ignore_lock_file) {
 #ifdef DEBUG
 	  return;
-#endif
+#else
     auto lfile = lockfile_path();
     if (utils::fs::path_exists(lfile)) {
       if (!ignore_lock_file) {
@@ -198,6 +198,7 @@ public:
     }
     ofs << "locked.";
     ofs.close();
+#endif
   }
 
   void lockfile_unlock() {

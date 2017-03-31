@@ -24,7 +24,7 @@ struct IOClient {
       storage = nullptr;
     }
     IClientManager *srv;
-    Engine *storage;
+	IEngine_Ptr storage;
     boost::asio::io_service *service;
   };
 

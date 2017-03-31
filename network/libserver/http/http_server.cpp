@@ -1,22 +1,16 @@
-#include <libserver/http/server.h>
+#include <libdariadb/utils/logger.h>
+#include <libserver/http/http_server.h>
 #include <signal.h>
 #include <utility>
 
 using namespace dariadb::net::http;
 
-server::server(const std::string &address, const std::string &port,
-               const std::string &doc_root, boost::asio::io_service *io_service_)
+http_server::http_server(const std::string &address, const std::string &port,
+                         boost::asio::io_service *io_service_)
     : io_service_(io_service_), signals_(*io_service_), acceptor_(*io_service_),
-      connection_manager_(), socket_(*io_service_), request_handler_(doc_root) {
-  // Register to handle the signals that indicate when the server should exit.
-  // It is safe to register for the same signal multiple times in a program,
-  // provided all registration for the specified signal is made through Asio.
+      connection_manager_(), socket_(*io_service_) {
   signals_.add(SIGINT);
   signals_.add(SIGTERM);
-#if defined(SIGQUIT)
-  signals_.add(SIGQUIT);
-#endif // defined(SIGQUIT)
-
   do_await_stop();
 
   // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
@@ -28,9 +22,10 @@ server::server(const std::string &address, const std::string &port,
   acceptor_.listen();
 
   do_accept();
+  logger_info("http_server: started");
 }
 
-void server::do_accept() {
+void http_server::do_accept() {
   acceptor_.async_accept(socket_, [this](boost::system::error_code ec) {
     // Check whether the server was stopped by a signal before this
     // completion handler had a chance to run.
@@ -47,12 +42,10 @@ void server::do_accept() {
   });
 }
 
-void server::do_await_stop() {
+void http_server::do_await_stop() {
   signals_.async_wait([this](boost::system::error_code /*ec*/, int /*signo*/) {
-    // The server is stopped by cancelling all outstanding asynchronous
-    // operations. Once all operations have finished the io_service::run()
-    // call will exit.
     acceptor_.close();
     connection_manager_.stop_all();
+    logger_info("http_server: do_await_stop.");
   });
 }

@@ -264,7 +264,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
-    std::unique_ptr<Engine> stor{new Engine(settings)};
+    IEngine_Ptr stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 3 + 3;
 
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 	while (server_instance == nullptr || !server_instance->is_runned()) {
 		dariadb::utils::sleep_mls(300);
 	}
-    server_instance->set_storage(stor.get());
+    server_instance->set_storage(stor);
     dariadb::net::client::Client c1(client_param);
     c1.connect();
 
@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
-    std::unique_ptr<Engine> stor{new Engine(settings)};
+	IEngine_Ptr stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 10 + 3;
 
@@ -370,7 +370,7 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
 	while (server_instance == nullptr || !server_instance->is_runned()) {
 		dariadb::utils::sleep_mls(300);
 	}
-    server_instance->set_storage(stor.get());
+    server_instance->set_storage(stor);
     dariadb::net::client::Client c1(client_param);
     c1.connect();
 

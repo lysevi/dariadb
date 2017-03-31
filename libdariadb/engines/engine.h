@@ -47,7 +47,7 @@ public:
   EXPORT void compress_all()override;
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
-                        const ReaderCallback_ptr &clbk);
+                        const ReaderCallback_ptr &clbk)override;
   EXPORT void wait_all_asyncs() override;
 
   EXPORT void fsck() override;
@@ -59,7 +59,7 @@ public:
   EXPORT storage::Settings_ptr settings() override;
   EXPORT static uint16_t format();
   EXPORT static std::string version();
-  EXPORT STRATEGY strategy() const;
+  EXPORT STRATEGY strategy() const override;
 
 protected:
   class Private;

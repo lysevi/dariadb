@@ -99,7 +99,7 @@ const char accepted[] = "<html>"
                         "<body><h1>202 Accepted</h1></body>"
                         "</html>";
 const char no_content[] = "<html>"
-                          "<head><title>No Content</title></head>"
+                          "<head><title>Storage does not set</title></head>"
                           "<body><h1>204 Content</h1></body>"
                           "</html>";
 const char multiple_choices[] = "<html>"

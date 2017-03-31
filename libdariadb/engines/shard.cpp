@@ -237,13 +237,13 @@ public:
 
   Id2MinMax_Ptr loadMinMax() {
     std::shared_lock<std::shared_mutex> lg(_locker);
-	Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
+    Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
     for (auto &s : this->_sub_storages) {
       auto subres = s.storage->loadMinMax();
-	  auto f = [&result](const Id2MinMax::value_type&v) {
-		  result->insert(v.first, v.second);
-	  };
-	  subres->apply(f);
+      auto f = [&result](const Id2MinMax::value_type &v) {
+        result->insert(v.first, v.second);
+      };
+      subres->apply(f);
     }
     return result;
   }
@@ -381,6 +381,12 @@ public:
 
   storage::Settings_ptr settings() override { return _settings; }
 
+  STRATEGY strategy() const override { return STRATEGY::SHARD; }
+
+  void subscribe(const IdArray &ids, const Flag &flag,
+                 const ReaderCallback_ptr &clbk) override {
+    NOT_IMPLEMENTED;
+  }
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
   std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
@@ -479,4 +485,13 @@ void ShardEngine::stop() {
 
 storage::Settings_ptr ShardEngine::settings() {
   return _impl->settings();
+}
+
+STRATEGY ShardEngine::strategy() const {
+  return _impl->strategy();
+}
+
+void ShardEngine::subscribe(const IdArray &ids, const Flag &flag,
+                            const ReaderCallback_ptr &clbk) {
+  return _impl->subscribe(ids, flag, clbk);
 }
