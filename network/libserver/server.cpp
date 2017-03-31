@@ -3,6 +3,7 @@
 #include <libserver/iclientmanager.h>
 #include <libserver/ioclient.h>
 #include <libserver/server.h>
+#include <libserver/http/server.h>
 #include <boost/asio.hpp>
 #include <atomic>
 #include <common/net_common.h>
@@ -39,6 +40,8 @@ public:
     _env.service = &_service;
 
     _signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
+
+	_http_server = std::make_unique<http::server::server>("localhost", "8080", "doc_root", &_service);
   }
 
   ~Private() {
@@ -339,6 +342,8 @@ public:
 
   bool _in_stop_logic;
   std::mutex _dtor_mutex;
+
+  std::unique_ptr<http::server::server> _http_server;
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}
