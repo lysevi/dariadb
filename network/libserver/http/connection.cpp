@@ -34,7 +34,7 @@ void connection::do_read() {
           std::tie(result, std::ignore) = request_parser_.parse(request_, begin, end);
 
           if (begin != end) {
-            request_.rest_data = std::string(begin);
+            request_.query = std::string(begin);
           }
 
           if (result == request_parser::good) {

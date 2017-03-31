@@ -1,4 +1,5 @@
 #include <libserver/http/mime_types.h>
+#include <libserver/http/query_parser.h>
 #include <libserver/http/reply.h>
 #include <libserver/http/request.h>
 #include <libserver/http/request_handler.h>
@@ -17,17 +18,23 @@ void request_handler::handle_request(const request &req, reply &rep) {
     rep = reply::stock_reply(reply::bad_request);
     return;
   }
-  
+
   if (_storage_engine == nullptr) {
     rep = reply::stock_reply(reply::no_content);
     return;
   }
 
   if (req.method == "POST") {
-    rep = reply::stock_reply(reply::ok);
-    rep.content = req.rest_data;
-    return;
+    auto parsed_query = parse_query(req.query);
+    if (parsed_query.type == http_query_type::append) {
+      rep = reply::stock_reply(reply::ok);
+      rep.content = req.query;
+      return;
+    }
   }
+
+  rep = reply::stock_reply(reply::no_content);
+  return;
 
   //// Request path must be absolute and not contain "..".
   // if (request_path.empty() || request_path[0] != '/' ||

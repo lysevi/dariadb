@@ -15,7 +15,7 @@ struct request {
   int http_version_minor;
   std::vector<header> headers;
 
-  std::string rest_data; // all values after headers.
+  std::string query; // all values after headers.
 };
 
 } // namespace http

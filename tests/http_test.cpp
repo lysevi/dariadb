@@ -74,7 +74,7 @@ post_response post(boost::asio::io_service &service, std::string &port,
   std::getline(response_stream, status_message);
   if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
     std::cout << "Invalid response\n";
-	result.code = -1;
+    result.code = -1;
     return result;
   }
   result.code = status_code;
@@ -90,19 +90,19 @@ post_response post(boost::asio::io_service &service, std::string &port,
   // Process the response headers.
   std::string header;
   while (std::getline(response_stream, header) && header != "\r") {
-	  ss << header << "\n";
+    ss << header << "\n";
   }
   ss << "\n";
 
   // Write whatever content we already have to output.
   if (response.size() > 0) {
-	  ss << &response;
+    ss << &response;
   }
 
   // Read until EOF, writing data to output as we go.
   boost::system::error_code error;
   while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) {
-	  ss << &response;
+    ss << &response;
   }
   result.answer = ss.str();
   return result;
@@ -136,12 +136,45 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
 
   boost::asio::io_service test_service;
   json js;
-  js["Type"] = "append";
-  
-  auto post_result=post(test_service, http_port, js.dump());
-  BOOST_CHECK_EQUAL(post_result.code, 200);
+  js["type"] = "append";
 
-  test_service.poll_one();
+  std::map<dariadb::Id, dariadb::MeasArray> values;
+  const size_t count = 100;
+  const size_t ids = 10;
+  for (size_t i = 0; i < count; ++i) {
+    dariadb::Meas m;
+    m.id = i % ids;
+    m.time = i;
+    m.flag = dariadb::Flag(i);
+    m.value = dariadb::Value(i);
+    values[m.id].push_back(m);
+  }
+
+  json js_query;
+  for (auto &kv : values) {
+
+    std::vector<dariadb::Flag> flags;
+    std::vector<dariadb::Value> vals;
+    std::vector<dariadb::Time> times;
+
+    for (auto v : kv.second) {
+      vals.push_back(v.value);
+      flags.push_back(v.flag);
+      times.push_back(v.time);
+    }
+
+    json ids_value;
+    ids_value["F"] = flags;
+    ids_value["V"] = vals;
+    ids_value["T"] = times;
+
+    js_query[std::to_string(kv.first)] = ids_value;
+  }
+  js["query"] = js_query;
+
+  auto query_str = js.dump();
+  auto post_result = post(test_service, http_port, query_str);
+  BOOST_CHECK_EQUAL(post_result.code, 200);
 
   server_instance->stop();
   server_thread.join();
