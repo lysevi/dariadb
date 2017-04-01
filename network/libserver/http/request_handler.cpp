@@ -27,8 +27,10 @@ void request_handler::handle_request(const request &req, reply &rep) {
   if (req.method == "POST") {
     auto parsed_query = parse_query(req.query);
     if (parsed_query.type == http_query_type::append) {
+      // TODO write append status as reply info
+      this->_storage_engine->append(parsed_query.append_query->begin(),
+                                    parsed_query.append_query->end());
       rep = reply::stock_reply(reply::ok);
-      rep.content = req.query;
       return;
     }
   }

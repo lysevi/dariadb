@@ -14,17 +14,17 @@ class Server {
 public:
   struct Param {
     unsigned short port;
-	unsigned int http_port;
+    unsigned short http_port;
     size_t io_threads;
-    Param(unsigned short _port, unsigned int _http_port=8080) {
+    Param(unsigned short _port, unsigned short _http_port = 8080) {
       port = _port;
-	  http_port = _http_port;
+      http_port = _http_port;
       io_threads = SERVER_IO_THREADS_DEFAULT;
     }
 
     Param(unsigned short _port, size_t io_threads_count) {
       port = _port;
-	  http_port = 8080;
+      http_port = 8080;
       io_threads = io_threads_count;
     }
   };

@@ -138,9 +138,12 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
   json js;
   js["type"] = "append";
 
+  dariadb::IdSet all_ids;
   std::map<dariadb::Id, dariadb::MeasArray> values;
+
   const size_t count = 100;
   const size_t ids = 10;
+
   for (size_t i = 0; i < count; ++i) {
     dariadb::Meas m;
     m.id = i % ids;
@@ -148,7 +151,15 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
     m.flag = dariadb::Flag(i);
     m.value = dariadb::Value(i);
     values[m.id].push_back(m);
+    all_ids.insert(m.id);
   }
+
+  dariadb::Meas single_value;
+  single_value.id = 777;
+  single_value.flag = 777;
+  single_value.time = 777;
+  single_value.value = 777;
+  all_ids.insert(single_value.id);
 
   json js_query;
   for (auto &kv : values) {
@@ -170,12 +181,50 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
 
     js_query[std::to_string(kv.first)] = ids_value;
   }
-  js["query"] = js_query;
+  js["append_values"] = js_query;
 
   auto query_str = js.dump();
   auto post_result = post(test_service, http_port, query_str);
   BOOST_CHECK_EQUAL(post_result.code, 200);
 
+  {
+
+    json single_append_js;
+    single_append_js["type"] = "append";
+    json single_value_js;
+    single_value_js["T"] = single_value.time;
+    single_value_js["F"] = single_value.flag;
+    single_value_js["V"] = single_value.value;
+    single_value_js["I"] = single_value.id;
+    single_append_js["append_value"] = single_value_js;
+
+    query_str = single_append_js.dump();
+    post_result = post(test_service, http_port, query_str);
+    BOOST_CHECK_EQUAL(post_result.code, 200);
+  }
+
+  dariadb::QueryInterval qi({all_ids.begin(), all_ids.end()}, 0, 0, dariadb::MAX_TIME);
+  while (true) {
+    auto all_values = engine->readInterval(qi);
+    if (all_values.size() == count + 1) {
+      for (auto v : all_values) {
+        auto it = values.find(v.id);
+        if (it == values.end()) {
+          BOOST_TEST_MESSAGE("id " << v.id << " not found");
+        } else {
+          bool founded = false;
+          for (auto subv : it->second) {
+            if (subv.flag == v.flag && subv.time == v.time && subv.value == v.value) {
+              founded = true;
+              break;
+            }
+          }
+          BOOST_CHECK(founded);
+        }
+      }
+      break;
+    }
+  }
   server_instance->stop();
   server_thread.join();
 }
