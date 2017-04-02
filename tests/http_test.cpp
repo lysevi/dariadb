@@ -131,7 +131,9 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
   }
 
   auto memonly_settings = dariadb::storage::Settings::create();
+  auto data_scheme = dariadb::scheme::Scheme::create(memonly_settings);
   dariadb::IEngine_Ptr engine{new dariadb::Engine(memonly_settings)};
+  engine->setScheme(data_scheme);
   server_instance->set_storage(engine);
 
   boost::asio::io_service test_service;
@@ -145,17 +147,18 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
   const size_t ids = 10;
 
   for (size_t i = 0; i < count; ++i) {
+    auto id = i % ids;
     dariadb::Meas m;
-    m.id = i % ids;
+    m.id = data_scheme->addParam(std::to_string(id));
     m.time = i;
     m.flag = dariadb::Flag(i);
     m.value = dariadb::Value(i);
     values[m.id].push_back(m);
     all_ids.insert(m.id);
   }
-
+  auto single_value_id = data_scheme->addParam("single_value");
   dariadb::Meas single_value;
-  single_value.id = 777;
+  single_value.id = single_value_id;
   single_value.flag = 777;
   single_value.time = 777;
   single_value.value = 777;
@@ -195,7 +198,7 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
     single_value_js["T"] = single_value.time;
     single_value_js["F"] = single_value.flag;
     single_value_js["V"] = single_value.value;
-    single_value_js["I"] = single_value.id;
+    single_value_js["I"] = "single_value";
     single_append_js["append_value"] = single_value_js;
 
     query_str = single_append_js.dump();
@@ -226,12 +229,12 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
     }
   }
 
-  dariadb::QueryInterval qi_single({ single_value.id }, 0, 0, dariadb::MAX_TIME);
-  auto single_interval=engine->readInterval(qi_single);
+  dariadb::QueryInterval qi_single({single_value_id}, 0, 0, dariadb::MAX_TIME);
+  auto single_interval = engine->readInterval(qi_single);
   BOOST_CHECK_EQUAL(single_interval.size(), size_t(1));
   BOOST_CHECK_EQUAL(single_interval.front().id, single_value.id);
   BOOST_CHECK_EQUAL(single_interval.front().time, single_value.time);
-  BOOST_CHECK_EQUAL(single_interval.front().flag , single_value.flag);
+  BOOST_CHECK_EQUAL(single_interval.front().flag, single_value.flag);
   BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
   server_instance->stop();
   server_thread.join();

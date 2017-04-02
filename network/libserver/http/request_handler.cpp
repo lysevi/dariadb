@@ -25,20 +25,27 @@ void request_handler::handle_request(const request &req, reply &rep) {
   }
 
   if (req.method == "POST") {
-    auto parsed_query = parse_query(req.query);
-    if (parsed_query.type == http_query_type::append) {
-		
-      auto status = this->_storage_engine->append(parsed_query.append_query->begin(),
-                                                  parsed_query.append_query->end());
-      rep = reply::stock_reply(reply::ok);
-	  rep.content = status2string(status);
+    auto scheme = _storage_engine->getScheme();
+    if (scheme != nullptr) {
+      auto parsed_query = parse_query(scheme, req.query);
+      if (parsed_query.type == http_query_type::append) {
+
+        auto status = this->_storage_engine->append(parsed_query.append_query->begin(),
+                                                    parsed_query.append_query->end());
+        rep = reply::stock_reply(reply::ok);
+        rep.content = status2string(status);
+        return;
+      }
+    } else {
+      rep = reply::stock_reply(reply::no_content);
+      rep.content = "scheme does not set in engine";
       return;
     }
+  } else {
+    rep = reply::stock_reply(reply::no_content);
+    rep.content = "inknow method (must be POST)";
+    return;
   }
-
-  rep = reply::stock_reply(reply::no_content);
-  return;
-
   //// Request path must be absolute and not contain "..".
   // if (request_path.empty() || request_path[0] != '/' ||
   //    request_path.find("..") != std::string::npos) {

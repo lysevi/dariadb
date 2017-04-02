@@ -111,7 +111,7 @@ struct Scheme::Private : public IScheme {
   Id _next_id;
 };
 
-Scheme_Ptr Scheme::create(const storage::Settings_ptr s) {
+IScheme_Ptr Scheme::create(const storage::Settings_ptr s) {
   return std::shared_ptr<Scheme>(new Scheme(s));
 }
 

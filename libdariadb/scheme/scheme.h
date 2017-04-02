@@ -17,12 +17,9 @@ example:
 -   query 'host1.system.*',
 return [host1.system.memory, host1.system.cpu.bySec, host1.system.cpu.byHour]
 */
-class Scheme;
-using Scheme_Ptr = std::shared_ptr<Scheme>;
-
 class Scheme : public IScheme {
 public:
-  EXPORT static Scheme_Ptr create(const storage::Settings_ptr s);
+  EXPORT static IScheme_Ptr create(const storage::Settings_ptr s);
 
   EXPORT Id addParam(const std::string &param) override;
   EXPORT DescriptionMap ls() override;

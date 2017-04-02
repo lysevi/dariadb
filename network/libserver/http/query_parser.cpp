@@ -4,7 +4,8 @@
 using json = nlohmann::json;
 
 namespace dariadb_parse_query_inner {
-std::shared_ptr<dariadb::MeasArray> read_meas_array(const json &js) {
+std::shared_ptr<dariadb::MeasArray>
+read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
   auto result = std::make_shared<dariadb::MeasArray>();
   auto values = js["append_values"];
   for (auto it = values.begin(); it != values.end(); ++it) {
@@ -12,7 +13,7 @@ std::shared_ptr<dariadb::MeasArray> read_meas_array(const json &js) {
     auto id_str = it.key();
     auto val4id = it.value();
 
-    dariadb::Id id(std::atoi(id_str.c_str()));
+    dariadb::Id id = scheme->addParam(id_str);
 
     auto flag_js = val4id["F"];
     auto val_js = val4id["V"];
@@ -44,19 +45,23 @@ std::shared_ptr<dariadb::MeasArray> read_meas_array(const json &js) {
   return result;
 }
 
-std::shared_ptr<dariadb::MeasArray> read_single_meas(const json &js) {
+std::shared_ptr<dariadb::MeasArray>
+read_single_meas(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
   auto result = std::make_shared<dariadb::MeasArray>();
   result->resize(1);
   auto value = js["append_value"];
   result->front().time = value["T"];
   result->front().flag = value["F"];
   result->front().value = value["V"];
-  result->front().id = value["I"];
+  std::string id_str = value["I"];
+  result->front().id = scheme->addParam(id_str);
   return result;
 }
 } // nanespace dariadb_parse_query_inner
 
-dariadb::net::http::http_query dariadb::net::http::parse_query(const std::string &query) {
+dariadb::net::http::http_query
+dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
+                                const std::string &query) {
   http_query result;
   result.type = http_query_type::unknow;
   json js = json::parse(query);
@@ -67,9 +72,9 @@ dariadb::net::http::http_query dariadb::net::http::parse_query(const std::string
 
     auto single_value = js.find("append_value");
     if (single_value == js.end()) {
-      result.append_query = dariadb_parse_query_inner::read_meas_array(js);
+      result.append_query = dariadb_parse_query_inner::read_meas_array(scheme, js);
     } else {
-      result.append_query = dariadb_parse_query_inner::read_single_meas(js);
+      result.append_query = dariadb_parse_query_inner::read_single_meas(scheme, js);
     }
   }
   return result;
