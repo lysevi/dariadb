@@ -1,6 +1,7 @@
 #pragma once
 #include <libdariadb/interfaces/icompactioncontroller.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/storage/dropper_description.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
@@ -50,6 +51,11 @@ public:
                          const ReaderCallback_ptr &clbk) = 0;
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
   EXPORT void foreach (const QueryTimePoint &q, IReadCallback * clbk) override final;
+
+  EXPORT void setScheme(const scheme::IScheme_Ptr &scheme) { _scheme = scheme; }
+  EXPORT scheme::IScheme_Ptr getScheme() { return _scheme; }
+
+  scheme::IScheme_Ptr _scheme;
 };
 
 using IEngine_Ptr = std::shared_ptr<IEngine>;
