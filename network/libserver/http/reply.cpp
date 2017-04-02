@@ -192,10 +192,10 @@ std::string to_string(reply::status_type status) {
 
 } // namespace stock_replies
 
-reply reply::stock_reply(reply::status_type status) {
+reply reply::stock_reply(const std::string &content,reply::status_type status) {
   reply rep;
   rep.status = status;
-  rep.content = stock_replies::to_string(status);
+  rep.content = content;
   rep.headers.resize(2);
   rep.headers[0].name = "Content-Length";
   rep.headers[0].value = std::to_string(rep.content.size());

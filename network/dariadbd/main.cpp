@@ -1,5 +1,6 @@
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/scheme/scheme.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
@@ -94,7 +95,10 @@ int main(int argc, char **argv) {
   }
   settings->save();
 
+  auto scheme = dariadb::scheme::Scheme::create(settings);
+
   IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
+  stor->setScheme(scheme);
 
   dariadb::net::Server::Param server_param(server_port, server_threads_count);
   dariadb::net::Server s(server_param);

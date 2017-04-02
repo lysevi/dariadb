@@ -108,6 +108,80 @@ post_response post(boost::asio::io_service &service, std::string &port,
   return result;
 }
 
+post_response GET(boost::asio::io_service &service, std::string &port,
+                   const std::string &path) {
+  post_response result;
+  result.code = 0;
+
+  tcp::resolver resolver(service);
+  tcp::resolver::query query("localhost", port);
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+
+  tcp::socket socket(service);
+  boost::asio::connect(socket, endpoint_iterator);
+
+  boost::asio::streambuf request;
+  std::ostream request_stream(&request);
+
+  request_stream << "GET "<<path<< " HTTP/1.1\r\n";
+  request_stream << "Host:"
+                 << " localhost:8080"
+                 << "\r\n";
+  request_stream << "User-Agent: C/1.0"
+                 << "\r\n"
+                 << "\r\n";
+
+  boost::asio::write(socket, request);
+
+  // read answer
+  boost::asio::streambuf response;
+  boost::asio::read_until(socket, response, "\r\n");
+
+  // Check that response is OK.
+  std::istream response_stream(&response);
+  std::string http_version;
+  response_stream >> http_version;
+  unsigned int status_code;
+  response_stream >> status_code;
+  std::string status_message;
+  std::getline(response_stream, status_message);
+  if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
+    std::cout << "Invalid response\n";
+    result.code = -1;
+    return result;
+  }
+  result.code = status_code;
+  if (status_code != 200) {
+    std::cout << "Response returned with status code " << status_code << "\n";
+    return result;
+  }
+
+  // Read the response headers, which are terminated by a blank line.
+  boost::asio::read_until(socket, response, "\r\n\r\n");
+
+  std::stringstream ss;
+  // Process the response headers.
+  std::string header;
+  while (std::getline(response_stream, header) && header != "\r") {
+    ss << header << "\n";
+  }
+  ss << "\n";
+
+  // Write whatever content we already have to output.
+  if (response.size() > 0) {
+    ss << &response;
+  }
+
+  // Read until EOF, writing data to output as we go.
+  boost::system::error_code error;
+  while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) {
+    ss << &response;
+  }
+  result.answer = ss.str();
+  return result;
+}
+
+
 dariadb::net::Server *server_instance = nullptr;
 
 void server_thread_func() {
@@ -236,6 +310,11 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
   BOOST_CHECK_EQUAL(single_interval.front().time, single_value.time);
   BOOST_CHECK_EQUAL(single_interval.front().flag, single_value.flag);
   BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
+
+
+  auto scheme_res=GET(test_service, http_port, "/scheme");
+  BOOST_CHECK(scheme_res.answer.find("single_value")!=std::string::npos);
+
   server_instance->stop();
   server_thread.join();
 }

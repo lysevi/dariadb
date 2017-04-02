@@ -87,3 +87,12 @@ std::string dariadb::net::http::status2string(const dariadb::Status &s) {
   js["error"] = to_string(s.error);
   return js.dump();
 }
+
+std::string  dariadb::net::http::scheme2string(const dariadb::scheme::DescriptionMap&dm){
+    json js;
+    for(auto kv:dm){
+        js[kv.second.name]=kv.first;
+    }
+    return js.dump();
+
+}

@@ -24,6 +24,7 @@ SRV_EXPORT http_query parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
                                   const std::string &query);
 
 std::string status2string(const dariadb::Status &s);
+std::string  scheme2string(const dariadb::scheme::DescriptionMap&dm);
 }
 }
 }

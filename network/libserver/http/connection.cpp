@@ -41,7 +41,7 @@ void connection::do_read() {
             request_handler_.handle_request(request_, reply_);
             do_write();
           } else if (result == request_parser::bad) {
-            reply_ = reply::stock_reply(reply::bad_request);
+            reply_ = reply::stock_reply("", reply::bad_request);
             do_write();
           } else {
             do_read();
