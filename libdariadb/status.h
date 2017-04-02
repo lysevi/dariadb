@@ -10,7 +10,10 @@ enum class APPEND_ERROR : int { OK, bad_alloc, bad_shard, wal_file_limit };
 
 struct Status {
   static Status empty() { return Status(); }
-  Status() { writed = ignored = 0; }
+  Status() {
+    writed = ignored = 0;
+    error = APPEND_ERROR::OK;
+  }
   Status(size_t wr) {
     writed = wr;
     ignored = size_t(0);

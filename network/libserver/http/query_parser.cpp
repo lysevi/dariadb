@@ -74,3 +74,11 @@ dariadb::net::http::http_query dariadb::net::http::parse_query(const std::string
   }
   return result;
 }
+
+std::string dariadb::net::http::status2string(const dariadb::Status &s) {
+  json js;
+  js["writed"] = s.writed;
+  js["ignored"] = s.ignored;
+  js["error"] = to_string(s.error);
+  return js.dump();
+}

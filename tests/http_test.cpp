@@ -225,6 +225,14 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
       break;
     }
   }
+
+  dariadb::QueryInterval qi_single({ single_value.id }, 0, 0, dariadb::MAX_TIME);
+  auto single_interval=engine->readInterval(qi_single);
+  BOOST_CHECK_EQUAL(single_interval.size(), size_t(1));
+  BOOST_CHECK_EQUAL(single_interval.front().id, single_value.id);
+  BOOST_CHECK_EQUAL(single_interval.front().time, single_value.time);
+  BOOST_CHECK_EQUAL(single_interval.front().flag , single_value.flag);
+  BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
   server_instance->stop();
   server_thread.join();
 }
