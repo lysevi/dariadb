@@ -57,7 +57,7 @@ read_single_meas(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
   result->front().id = scheme->addParam(id_str);
   return result;
 }
-} // nanespace dariadb_parse_query_inner
+} // namespace dariadb_parse_query_inner
 
 dariadb::net::http::http_query
 dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
@@ -76,6 +76,23 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
     } else {
       result.append_query = dariadb_parse_query_inner::read_single_meas(scheme, js);
     }
+    return result;
+  }
+
+  if (type == "readInterval") {
+    result.type = http_query_type::readInterval;
+    dariadb::Time from = js["from"];
+    dariadb::Time to = js["to"];
+    dariadb::Flag flag = js["flag"];
+    std::vector<std::string> values = js["id"];
+    dariadb::IdArray ids;
+    ids.reserve(values.size());
+    auto name_map = scheme->ls();
+    for (auto v : values) {
+      ids.push_back(name_map.idByParam(v));
+    }
+    result.interval_query = std::make_shared<QueryInterval>(ids, flag, from, to);
+    return result;
   }
   return result;
 }
@@ -88,11 +105,34 @@ std::string dariadb::net::http::status2string(const dariadb::Status &s) {
   return js.dump();
 }
 
-std::string  dariadb::net::http::scheme2string(const dariadb::scheme::DescriptionMap&dm){
-    json js;
-    for(auto kv:dm){
-        js[kv.second.name]=kv.first;
-    }
-    return js.dump();
+std::string dariadb::net::http::scheme2string(const dariadb::scheme::DescriptionMap &dm) {
+  json js;
+  for (auto kv : dm) {
+    js[kv.second.name] = kv.first;
+  }
+  return js.dump();
+}
 
+std::string dariadb::net::http::meases2string(const dariadb::scheme::IScheme_Ptr &scheme,
+                                              const dariadb::MeasArray &ma) {
+	auto nameMap = scheme->ls();
+  std::map<dariadb::Id, dariadb::MeasArray> values;
+  for (auto &m : ma) {
+    values[m.id].push_back(m);
+  }
+
+  json js_result;
+  for (auto &kv : values) {
+	  std::list<json> js_values_list;
+	  for (auto v : kv.second) {
+		  json value_js;
+		  value_js["F"] = v.flag;
+		  value_js["T"] = v.time;
+		  value_js["V"] = v.value;
+		  js_values_list.push_back(value_js);
+	  }
+	  js_result[nameMap[kv.first].name] = js_values_list;
+  }
+  auto result = js_result.dump(1);
+  return result;
 }

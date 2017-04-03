@@ -109,7 +109,7 @@ post_response post(boost::asio::io_service &service, std::string &port,
 }
 
 post_response GET(boost::asio::io_service &service, std::string &port,
-                   const std::string &path) {
+                  const std::string &path) {
   post_response result;
   result.code = 0;
 
@@ -123,7 +123,7 @@ post_response GET(boost::asio::io_service &service, std::string &port,
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
 
-  request_stream << "GET "<<path<< " HTTP/1.1\r\n";
+  request_stream << "GET " << path << " HTTP/1.1\r\n";
   request_stream << "Host:"
                  << " localhost:8080"
                  << "\r\n";
@@ -180,7 +180,6 @@ post_response GET(boost::asio::io_service &service, std::string &port,
   result.answer = ss.str();
   return result;
 }
-
 
 dariadb::net::Server *server_instance = nullptr;
 
@@ -311,10 +310,30 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
   BOOST_CHECK_EQUAL(single_interval.front().flag, single_value.flag);
   BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
 
+  auto scheme_res = GET(test_service, http_port, "/scheme");
+  // TODO parse result and check return value.
+  BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
 
-  auto scheme_res=GET(test_service, http_port, "/scheme");
-  BOOST_CHECK(scheme_res.answer.find("single_value")!=std::string::npos);
+  // readInterval
+  {
+    json readinterval_js;
+    readinterval_js["type"] = "readInterval";
+    readinterval_js["from"] = dariadb::MIN_TIME;
+    readinterval_js["to"] = dariadb::MAX_TIME;
+    readinterval_js["flag"] = dariadb::Flag();
+    std::vector<std::string> values_names;
+    auto values_from_scheme = engine->getScheme()->ls();
+    values_names.reserve(values_from_scheme.size());
+    for (auto &kv : values_from_scheme) {
+      values_names.push_back(kv.second.name);
+    }
+    readinterval_js["id"] = values_names;
 
+    query_str = readinterval_js.dump();
+    post_result = post(test_service, http_port, query_str);
+    BOOST_CHECK_EQUAL(post_result.code, 200);
+    BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
+  }
   server_instance->stop();
   server_thread.join();
 }

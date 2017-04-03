@@ -28,33 +28,40 @@ void request_handler::handle_request(const request &req, reply &rep) {
     auto scheme = _storage_engine->getScheme();
     if (scheme != nullptr) {
       auto parsed_query = parse_query(scheme, req.query);
-      if (parsed_query.type == http_query_type::append) {
+      switch (parsed_query.type) {
+      case http_query_type::append: {
         logger("POST query 'append'");
         auto status = this->_storage_engine->append(parsed_query.append_query->begin(),
                                                     parsed_query.append_query->end());
         rep = reply::stock_reply(status2string(status), reply::ok);
         return;
       }
+	  case http_query_type::readInterval: {
+		  auto values = this->_storage_engine->readInterval(*parsed_query.interval_query.get());
+		  rep = reply::stock_reply(meases2string(scheme, values), reply::ok);
+		  return;
+	  }
+      }
     } else {
-      rep = reply::stock_reply("scheme does not set in engine",reply::no_content);
+      rep = reply::stock_reply("scheme does not set in engine", reply::no_content);
       return;
     }
   } else {
     logger("GET query ", req.uri);
-    if(req.uri=="/scheme"){
-        auto scheme = _storage_engine->getScheme();
-        if (scheme != nullptr) {
-            auto scheme_map=scheme->ls();
-            auto answer=scheme2string(scheme_map);
-            rep = reply::stock_reply(answer, reply::ok);
-            return;
-        }else{
-            rep = reply::stock_reply("scheme does not set in engine", reply::no_content);
-            return;
-        }
+    if (req.uri == "/scheme") {
+      auto scheme = _storage_engine->getScheme();
+      if (scheme != nullptr) {
+        auto scheme_map = scheme->ls();
+        auto answer = scheme2string(scheme_map);
+        rep = reply::stock_reply(answer, reply::ok);
+        return;
+      } else {
+        rep = reply::stock_reply("scheme does not set in engine", reply::no_content);
+        return;
+      }
     }
   }
-  rep = reply::stock_reply("unknow query: " + req.query,reply::no_content);
+  rep = reply::stock_reply("unknow query: " + req.query, reply::no_content);
   return;
   //// Request path must be absolute and not contain "..".
   // if (request_path.empty() || request_path[0] != '/' ||
