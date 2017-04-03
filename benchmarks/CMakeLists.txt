@@ -41,5 +41,8 @@ if(DARIADB_ENABLE_INTEGRATION_TESTS)
   if(DARIADB_ENABLE_SERVER)
       ADD_NT_PERF_TEST(ONE_CLIENT  --clients-count=1)
       ADD_NT_PERF_TEST(TEN_CLIENTS  --clients-count=10)
+      
+      ADD_NT_PERF_TEST(HTTP_ONE_CLIENTS  --clients-count=1  --http-benchmark)
+      ADD_NT_PERF_TEST(HTTP_TEN_CLIENTS  --clients-count=10 --http-benchmark)
   endif(DARIADB_ENABLE_SERVER)
 endif(DARIADB_ENABLE_INTEGRATION_TESTS)

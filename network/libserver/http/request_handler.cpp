@@ -1,3 +1,4 @@
+#include <libdariadb/timeutil.h>
 #include <libserver/http/query_parser.h>
 #include <libserver/http/reply.h>
 #include <libserver/http/request.h>
@@ -22,19 +23,24 @@ void request_handler::handle_request(const request &req, reply &rep) {
       auto parsed_query = parse_query(scheme, req.query);
       switch (parsed_query.type) {
       case http_query_type::append: {
-        logger("POST query 'append'");
+        logger("POST query 'append': ", parsed_query.append_query->size(), " values");
         auto status = this->_storage_engine->append(parsed_query.append_query->begin(),
                                                     parsed_query.append_query->end());
         rep = reply::stock_reply(status2string(status), reply::ok);
         return;
       }
       case http_query_type::readInterval: {
+        logger("POST query 'readInterval' from:",
+               timeutil::to_string(parsed_query.interval_query->from),
+               " to:", timeutil::to_string(parsed_query.interval_query->to));
         auto values =
             this->_storage_engine->readInterval(*parsed_query.interval_query.get());
         rep = reply::stock_reply(meases2string(scheme, values), reply::ok);
         return;
       }
       case http_query_type::readTimepoint: {
+        logger("POST query 'readTimepoint': ", timeutil::to_string(parsed_query.timepoint_query->time_point));
+
         auto values =
             this->_storage_engine->readTimePoint(*parsed_query.timepoint_query.get());
         dariadb::MeasArray ma;
@@ -46,6 +52,7 @@ void request_handler::handle_request(const request &req, reply &rep) {
         return;
       }
       case http_query_type::stat: {
+        logger("POST query 'stat'");
         auto stat = this->_storage_engine->stat(parsed_query.stat_query->ids[0],
                                                 parsed_query.stat_query->from,
                                                 parsed_query.stat_query->to);

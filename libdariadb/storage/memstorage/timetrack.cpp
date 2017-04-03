@@ -54,7 +54,7 @@ void TimeTrack::updateMinMax(const Meas &value) {
 }
 
 Status TimeTrack::append(const Meas &value) {
-  std::lock_guard<std::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   if (_cur_chunk == nullptr || _cur_chunk->isFull()) {
     if (!create_new_chunk(value)) {
       return Status(1, APPEND_ERROR::bad_alloc);
@@ -83,7 +83,7 @@ void TimeTrack::append_to_past(const Meas &value) {
   MemChunk_Ptr target_to_replace = nullptr;
 
   // find target chunk.
-  if (_index.empty() || _cur_chunk->header->stat.minTime < value.time) {
+  if (_index.empty() || _cur_chunk->header->stat.minTime <= value.time) {
     target_to_replace = _cur_chunk;
     is_cur_chunk = true;
     ENSURE(target_to_replace.use_count() <= long(3));
@@ -207,7 +207,7 @@ bool TimeTrack::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   if (id != this->_meas_id) {
     return false;
   }
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   *minResult = MAX_TIME;
   *maxResult = MIN_TIME;
   for (auto kv : _index) {
@@ -238,7 +238,7 @@ bool chunkInQuery(const QueryInterval &q, const Chunk_Ptr &c) {
 }
 
 Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
 
   CursorsList readers;
   auto end = _index.upper_bound(q.to);
@@ -271,7 +271,7 @@ Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
 }
 
 Statistic TimeTrack::stat(const Id id, Time from, Time to) {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   ENSURE(id == this->_meas_id);
   Statistic result;
   auto end = _index.upper_bound(to);
@@ -309,7 +309,7 @@ void TimeTrack::foreach (const QueryInterval &q, IReadCallback * clbk) {
 }
 
 Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   Id2Meas result;
   result[this->_meas_id].flag = FLAGS::_NO_DATA;
 
@@ -357,7 +357,7 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
 Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
   ENSURE(ids.size() == size_t(1));
   ENSURE(ids[0] == this->_meas_id);
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   Id2Meas result;
   if (_cur_chunk != nullptr) {
     auto last = _cur_chunk->header->last();
@@ -371,7 +371,7 @@ Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
 }
 
 void TimeTrack::rereadMinMax() {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   _min_max.max.time = MIN_TIME;
   _min_max.min.time = MIN_TIME;
 

@@ -2,11 +2,10 @@
 
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/storage/memstorage/memchunk.h>
-#include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/striped_map.h>
+#include <libdariadb/utils/utils.h>
 #include <extern/stx-btree/include/stx/btree_map.h>
 #include <memory>
-#include <shared_mutex>
 
 namespace dariadb {
 namespace storage {
@@ -20,7 +19,7 @@ public:
 
 struct TimeTrack;
 using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
-//using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
+// using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 using Id2Track = utils::stripped_map<Id, TimeTrack_ptr>;
 
 struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<TimeTrack> {
@@ -47,7 +46,7 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
   bool create_new_chunk(const Meas &value);
 
   size_t chunks_count() {
-    std::shared_lock<std::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     return _index.size();
   }
 
@@ -55,7 +54,7 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
     std::vector<MemChunk_Ptr> result;
     result.reserve(n);
     {
-      std::lock_guard<std::shared_mutex> lg(_locker);
+      std::lock_guard<std::mutex> lg(_locker);
 
       auto cnt = n;
       while (!_index.empty()) {
@@ -73,7 +72,7 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
   }
 
   size_t drop_Old(Time t) {
-    std::lock_guard<std::shared_mutex> lg(_locker);
+    std::lock_guard<std::mutex> lg(_locker);
     size_t erased = 0;
     while (!_index.empty()) {
       bool find_one = false;
@@ -104,9 +103,9 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
   Time _max_sync_time;
   Time _step;
   MemChunk_Ptr _cur_chunk;
-  std::shared_mutex _locker;
-  stx::btree_map<Time, MemChunk_Ptr> _index;
-  //std::map<Time, MemChunk_Ptr> _index;
+  std::mutex _locker;
+  //stx::btree_map<Time, MemChunk_Ptr> _index;
+  std::map<Time, MemChunk_Ptr> _index;
   MemoryChunkContainer *_mcc;
 };
 } // namespace storage
