@@ -194,8 +194,8 @@ void server_thread_func() {
   server_instance = nullptr;
 }
 
-BOOST_AUTO_TEST_CASE(AppendTest) {
-  dariadb::logger("********** Connect1 **********");
+BOOST_AUTO_TEST_CASE(HttpTest) {
+  dariadb::logger("********** HttpTest **********");
   std::thread server_thread{server_thread_func};
   auto http_port = std::to_string(server_param.http_port);
 
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
   dariadb::Meas single_value;
   single_value.id = single_value_id;
   single_value.flag = 777;
-  single_value.time = 777;
+  single_value.time = dariadb::timeutil::current_time();
   single_value.value = 777;
   all_ids.insert(single_value.id);
 
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
   }
   js["append_values"] = js_query;
 
-  auto query_str = js.dump();
+  auto query_str = js.dump(1);
   auto post_result = post(test_service, http_port, query_str);
   BOOST_CHECK_EQUAL(post_result.code, 200);
 
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
     single_value_js["I"] = "single_value";
     single_append_js["append_value"] = single_value_js;
 
-    query_str = single_append_js.dump();
+    query_str = single_append_js.dump(1);
     post_result = post(test_service, http_port, query_str);
     BOOST_CHECK_EQUAL(post_result.code, 200);
   }
@@ -329,7 +329,7 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
     }
     readinterval_js["id"] = values_names;
 
-    query_str = readinterval_js.dump();
+    query_str = readinterval_js.dump(1);
     post_result = post(test_service, http_port, query_str);
     BOOST_CHECK_EQUAL(post_result.code, 200);
     BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
@@ -350,7 +350,7 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
 	  }
 	  readinterval_js["id"] = values_names;
 
-	  query_str = readinterval_js.dump();
+	  query_str = readinterval_js.dump(1);
 	  post_result = post(test_service, http_port, query_str);
 	  BOOST_CHECK_EQUAL(post_result.code, 200);
 	  BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
