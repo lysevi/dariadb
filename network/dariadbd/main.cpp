@@ -24,7 +24,7 @@ STRATEGY strategy = STRATEGY::COMPRESSED;
 ServerLogger::Params p;
 size_t memory_limit = 0;
 bool force_unlock_storage = false;
-
+bool memonly = false;
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
   aos("log-to-file", "logger out to dariadb.log.");
   aos("color-log", "use colors to log to console.");
   aos("dbg-log", "verbose logging.");
+  aos("memory-only", "run as memory only database.");
   aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path),
       "path to storage.");
   aos("port", po::value<unsigned short>(&server_port)->default_value(server_port),
@@ -58,6 +59,11 @@ int main(int argc, char **argv) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     std::exit(0);
+  }
+
+  if (vm.count("memory-only")) {
+    std::cout << "memory-only" << std::endl;
+    memonly = true;
   }
 
   if (vm.count("log-to-file")) {
@@ -87,9 +93,15 @@ int main(int argc, char **argv) {
   }
 
   log_ptr->message(dariadb::utils::LOG_MESSAGE_KIND::INFO, ss.str());
-  auto settings = dariadb::storage::Settings::create(storage_path);
-  settings->strategy.setValue(strategy);
-  if (strategy == STRATEGY::MEMORY && memory_limit != 0) {
+  dariadb::storage::Settings_ptr settings;
+  if (!memonly) {
+    settings = dariadb::storage::Settings::create(storage_path);
+    settings->strategy.setValue(strategy);
+  } else {
+    settings = dariadb::storage::Settings::create();
+  }
+
+  if (strategy == STRATEGY::MEMORY && memory_limit != 0 && !memonly) {
     logger_info("memory limit: ", memory_limit);
     settings->memory_limit.setValue(memory_limit * 1024 * 1024);
   }
