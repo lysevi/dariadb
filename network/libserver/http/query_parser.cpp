@@ -109,6 +109,21 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
     result.timepoint_query = std::make_shared<QueryTimePoint>(ids, flag, timepoint);
     return result;
   }
+
+  if (type == "stat") {
+    result.type = http_query_type::stat;
+    dariadb::Time from = js["from"];
+    dariadb::Time to = js["to"];
+    std::string value = js["id"];
+
+    dariadb::IdArray id;
+    id.resize(1);
+    auto name_map = scheme->ls();
+    id[0] = name_map.idByParam(value);
+
+    result.stat_query = std::make_shared<QueryInterval>(id, dariadb::Flag(), from, to);
+    return result;
+  }
   return result;
 }
 
@@ -148,4 +163,24 @@ std::string dariadb::net::http::meases2string(const dariadb::scheme::IScheme_Ptr
   }
   auto result = js_result.dump(1);
   return result;
+}
+
+std::string dariadb::net::http::stat2string(const dariadb::scheme::IScheme_Ptr &scheme,
+                                            dariadb::Id id, const dariadb::Statistic &s) {
+  json stat_js;
+  stat_js["minTime"] = s.minTime;
+  stat_js["maxTime"] = s.maxTime;
+
+  stat_js["count"] = s.count;
+
+  stat_js["minValue"] = s.minValue;
+  stat_js["maxValue"] = s.maxValue;
+
+  stat_js["sum"] = s.sum;
+
+  auto nameMap = scheme->ls();
+  auto name = nameMap[id].name;
+  json result_js;
+  result_js[name] = stat_js;
+  return result_js.dump(1);
 }

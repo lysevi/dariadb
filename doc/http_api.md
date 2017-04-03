@@ -52,6 +52,16 @@ send POST query:
 ```
 , where "from", "to" - time interval as count of milliseconds since from zero-time, "id" - measurements.
 
+answer example:
+
+```json
+{
+ "cpu1": [{"F": 0,"T": 0,"V": 0.0 } ],
+ "memory": [{"F": 1,"T": 1,"V": 1.0 }, { "F": 11, "T": 11, "V": 11.0 }],
+ "network": [{"F": 777,"T": 1491209163670,"V": 777.0}]
+}
+```
+
 # Read timepoint
 
 send POST query:
@@ -61,6 +71,15 @@ send POST query:
  "id": [ "cpu1", "memory", "network" ],
  "time": 18446744073709551615,
  "type": "readTimepoint"
+}
+```
+answer example:
+
+```json
+{
+ "cpu1": [{"F": 0,"T": 0,"V": 0.0 } ],
+ "memory": [{ "F": 11, "T": 11, "V": 11.0 }],
+ "network": [{"F": 777,"T": 1491209163670,"V": 777.0}]
 }
 ```
 
@@ -73,3 +92,30 @@ send GET query to URL "http://dariadb_host:port/scheme". Result example:
 ```
 
 , is a dictinary, where name is a key, and id as value.
+
+# Read statistic for value
+send POST query:
+```json
+{
+ "from": 0,
+ "id": "cpu1",
+ "to": 18446744073709551615,
+ "type": "stat"
+}
+```
+, where "from", "to" - time, "id" - measurement name.
+
+answer example:
+
+```json
+{
+ "cpu1": {
+  "count": 1,
+  "maxTime": 1491209163670,
+  "maxValue": 777.0,
+  "minTime": 1491209163670,
+  "minValue": 777.0,
+  "sum": 777.0
+ }
+}
+```

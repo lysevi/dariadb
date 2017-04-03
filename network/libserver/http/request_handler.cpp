@@ -53,6 +53,15 @@ void request_handler::handle_request(const request &req, reply &rep) {
         rep = reply::stock_reply(meases2string(scheme, ma), reply::ok);
         return;
       }
+      case http_query_type::stat: {
+        auto stat = this->_storage_engine->stat(parsed_query.stat_query->ids[0],
+                                                parsed_query.stat_query->from,
+                                                parsed_query.stat_query->to);
+
+        rep = reply::stock_reply(
+            stat2string(scheme, parsed_query.stat_query->ids[0], stat), reply::ok);
+        return;
+      }
       default: {
         rep = reply::stock_reply("unknow query " + req.query, reply::no_content);
         return;

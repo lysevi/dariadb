@@ -332,7 +332,7 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
     query_str = readinterval_js.dump(1);
     post_result = post(test_service, http_port, query_str);
     BOOST_CHECK_EQUAL(post_result.code, 200);
-    BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
+    BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
   }
 
   // readTimepoint
@@ -353,7 +353,22 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 	  query_str = readinterval_js.dump(1);
 	  post_result = post(test_service, http_port, query_str);
 	  BOOST_CHECK_EQUAL(post_result.code, 200);
-	  BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
+	  BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
+  }
+
+  // stat
+  {
+	  json stat_js;
+	  stat_js["type"] = "stat";
+	  stat_js["id"] = "single_value";
+	  stat_js["from"] = dariadb::MIN_TIME;
+	  stat_js["to"] = dariadb::MAX_TIME;
+
+	 
+	  query_str = stat_js.dump(1);
+	  post_result = post(test_service, http_port, query_str);
+	  BOOST_CHECK_EQUAL(post_result.code, 200);
+	  BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
   }
   server_instance->stop();
   server_thread.join();
