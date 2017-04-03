@@ -94,6 +94,21 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
     result.interval_query = std::make_shared<QueryInterval>(ids, flag, from, to);
     return result;
   }
+
+  if (type == "readTimepoint") {
+    result.type = http_query_type::readTimepoint;
+    dariadb::Time timepoint = js["time"];
+    dariadb::Flag flag = js["flag"];
+    std::vector<std::string> values = js["id"];
+    dariadb::IdArray ids;
+    ids.reserve(values.size());
+    auto name_map = scheme->ls();
+    for (auto v : values) {
+      ids.push_back(name_map.idByParam(v));
+    }
+    result.timepoint_query = std::make_shared<QueryTimePoint>(ids, flag, timepoint);
+    return result;
+  }
   return result;
 }
 
@@ -115,7 +130,7 @@ std::string dariadb::net::http::scheme2string(const dariadb::scheme::Description
 
 std::string dariadb::net::http::meases2string(const dariadb::scheme::IScheme_Ptr &scheme,
                                               const dariadb::MeasArray &ma) {
-	auto nameMap = scheme->ls();
+  auto nameMap = scheme->ls();
   std::map<dariadb::Id, dariadb::MeasArray> values;
   for (auto &m : ma) {
     values[m.id].push_back(m);
@@ -123,15 +138,13 @@ std::string dariadb::net::http::meases2string(const dariadb::scheme::IScheme_Ptr
 
   json js_result;
   for (auto &kv : values) {
-	  std::list<json> js_values_list;
-	  for (auto v : kv.second) {
-		  json value_js;
-		  value_js["F"] = v.flag;
-		  value_js["T"] = v.time;
-		  value_js["V"] = v.value;
-		  js_values_list.push_back(value_js);
-	  }
-	  js_result[nameMap[kv.first].name] = js_values_list;
+    for (auto v : kv.second) {
+      json value_js;
+      value_js["F"] = v.flag;
+      value_js["T"] = v.time;
+      value_js["V"] = v.value;
+      js_result[nameMap[kv.first].name].push_back(value_js);
+    }
   }
   auto result = js_result.dump(1);
   return result;

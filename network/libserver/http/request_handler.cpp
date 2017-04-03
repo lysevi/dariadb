@@ -36,11 +36,27 @@ void request_handler::handle_request(const request &req, reply &rep) {
         rep = reply::stock_reply(status2string(status), reply::ok);
         return;
       }
-	  case http_query_type::readInterval: {
-		  auto values = this->_storage_engine->readInterval(*parsed_query.interval_query.get());
-		  rep = reply::stock_reply(meases2string(scheme, values), reply::ok);
-		  return;
-	  }
+      case http_query_type::readInterval: {
+        auto values =
+            this->_storage_engine->readInterval(*parsed_query.interval_query.get());
+        rep = reply::stock_reply(meases2string(scheme, values), reply::ok);
+        return;
+      }
+      case http_query_type::readTimepoint: {
+        auto values =
+            this->_storage_engine->readTimePoint(*parsed_query.timepoint_query.get());
+        dariadb::MeasArray ma;
+        ma.reserve(values.size());
+        for (const auto &kv : values) {
+          ma.push_back(kv.second);
+        }
+        rep = reply::stock_reply(meases2string(scheme, ma), reply::ok);
+        return;
+      }
+      default: {
+        rep = reply::stock_reply("unknow query " + req.query, reply::no_content);
+        return;
+      }
       }
     } else {
       rep = reply::stock_reply("scheme does not set in engine", reply::no_content);

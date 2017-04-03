@@ -334,6 +334,27 @@ BOOST_AUTO_TEST_CASE(AppendTest) {
     BOOST_CHECK_EQUAL(post_result.code, 200);
     BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
   }
+
+  // readTimepoint
+  {
+	  json readinterval_js;
+	  readinterval_js["type"] = "readTimepoint";
+	  readinterval_js["time"] = dariadb::MAX_TIME;
+	  readinterval_js["flag"] = dariadb::Flag();
+	  
+	  std::vector<std::string> values_names;
+	  auto values_from_scheme = engine->getScheme()->ls();
+	  values_names.reserve(values_from_scheme.size());
+	  for (auto &kv : values_from_scheme) {
+		  values_names.push_back(kv.second.name);
+	  }
+	  readinterval_js["id"] = values_names;
+
+	  query_str = readinterval_js.dump();
+	  post_result = post(test_service, http_port, query_str);
+	  BOOST_CHECK_EQUAL(post_result.code, 200);
+	  BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
+  }
   server_instance->stop();
   server_thread.join();
 }
