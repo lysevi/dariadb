@@ -16,15 +16,15 @@ public:
     unsigned short port;
     unsigned short http_port;
     size_t io_threads;
-    Param(unsigned short _port, unsigned short _http_port = 8080) {
+    Param(unsigned short _port, unsigned short _http_port) {
       port = _port;
       http_port = _http_port;
       io_threads = SERVER_IO_THREADS_DEFAULT;
     }
 
-    Param(unsigned short _port, size_t io_threads_count) {
+    Param(unsigned short _port, unsigned short _http_port, size_t io_threads_count) {
       port = _port;
-      http_port = 8080;
+      http_port = _http_port;
       io_threads = io_threads_count;
     }
   };

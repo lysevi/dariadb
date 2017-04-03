@@ -16,7 +16,7 @@
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
 
-const dariadb::net::Server::Param server_param(2001);
+const dariadb::net::Server::Param server_param(2001, 2002);
 const dariadb::net::client::Client::Param client_param("localhost", 2001);
 
 dariadb::net::Server *server_instance = nullptr;

@@ -24,7 +24,7 @@ using json = nlohmann::json;
 
 using boost::asio::ip::tcp;
 
-const dariadb::net::Server::Param server_param(2001);
+const dariadb::net::Server::Param server_param(2001, 8080);
 
 struct post_response {
   int code;

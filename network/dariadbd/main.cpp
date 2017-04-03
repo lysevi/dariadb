@@ -19,33 +19,54 @@ namespace po = boost::program_options;
 
 std::string storage_path = "dariadb_storage";
 unsigned short server_port = 2001;
+unsigned short server_http_port = 2002;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 ServerLogger::Params p;
 size_t memory_limit = 0;
 bool force_unlock_storage = false;
 bool memonly = false;
+
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
   aos("help", "produce help message");
-  aos("readonly", "readonly mode");
-  aos("force-unlock", "force unlock storage.");
-  aos("log-to-file", "logger out to dariadb.log.");
-  aos("color-log", "use colors to log to console.");
-  aos("dbg-log", "verbose logging.");
-  aos("memory-only", "run as memory only database.");
-  aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path),
-      "path to storage.");
-  aos("port", po::value<unsigned short>(&server_port)->default_value(server_port),
-      "server port.");
-  aos("io-threads",
+
+  po::options_description logger_params("Logger params");
+  auto log_options = logger_params.add_options();
+  log_options("log-to-file", "logger out to dariadb.log.");
+  log_options("color-log", "use colors to log to console.");
+  log_options("dbg-log", "verbose logging.");
+  desc.add(logger_params);
+
+  po::options_description storage_params("Storage params");
+  auto stor_options = storage_params.add_options();
+  stor_options("memory-only", "run as memory only database.");
+  stor_options("storage-path",
+               po::value<std::string>(&storage_path)->default_value(storage_path),
+               "path to storage.");
+
+  stor_options("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
+               "write strategy.");
+  stor_options("memory-limit",
+               po::value<size_t>(&memory_limit)->default_value(memory_limit),
+               "allocation area limit  in megabytes when strategy=MEMORY");
+  stor_options("force-unlock", "force unlock storage.");
+  desc.add(storage_params);
+
+  po::options_description server_params("Server params");
+  auto srv_options = server_params.add_options();
+  srv_options("port", po::value<unsigned short>(&server_port)->default_value(server_port),
+              "server port.");
+  srv_options(
+      "http-port",
+      po::value<unsigned short>(&server_http_port)->default_value(server_http_port),
+      "server http port.");
+  srv_options(
+      "io-threads",
       po::value<size_t>(&server_threads_count)->default_value(server_threads_count),
       "server threads for query processing.");
-  aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
-      "write strategy.");
-  aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit),
-      "allocation area limit  in megabytes when strategy=MEMORY");
+  desc.add(server_params);
 
   po::variables_map vm;
   try {
@@ -112,7 +133,8 @@ int main(int argc, char **argv) {
   IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
   stor->setScheme(scheme);
 
-  dariadb::net::Server::Param server_param(server_port, server_threads_count);
+  dariadb::net::Server::Param server_param(server_port, server_http_port,
+                                           server_threads_count);
   dariadb::net::Server s(server_param);
   s.set_storage(stor);
 
