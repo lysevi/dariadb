@@ -24,10 +24,6 @@ public:
 
 private:
   dariadb::IEngine_Ptr _storage_engine;
-
-  /// Perform URL-decoding on a string. Returns false if the encoding was
-  /// invalid.
-  static bool url_decode(const std::string &in, std::string &out);
 };
 
 } // namespace http

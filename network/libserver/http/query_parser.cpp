@@ -153,13 +153,15 @@ std::string dariadb::net::http::meases2string(const dariadb::scheme::IScheme_Ptr
 
   json js_result;
   for (auto &kv : values) {
+    std::list<json> js_values;
     for (auto v : kv.second) {
       json value_js;
       value_js["F"] = v.flag;
       value_js["T"] = v.time;
       value_js["V"] = v.value;
-      js_result[nameMap[kv.first].name].push_back(value_js);
+	  js_values.push_back(value_js);
     }
+	js_result[nameMap[kv.first].name]=js_values;
   }
   auto result = js_result.dump(1);
   return result;

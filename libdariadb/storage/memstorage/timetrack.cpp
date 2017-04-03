@@ -339,12 +339,11 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
     }
   }
 
-  if (_cur_chunk != nullptr && _cur_chunk->header->stat.minTime >= q.time_point &&
-      _cur_chunk->header->stat.maxTime <= q.time_point) {
+  if (_cur_chunk != nullptr && _cur_chunk->header->stat.maxTime <= q.time_point) {
     auto rdr = _cur_chunk->getReader();
     while (!rdr->is_end()) {
       auto v = rdr->readNext();
-      if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
+      if (v.time >= result[this->_meas_id].time && v.time <= q.time_point) {
         result[this->_meas_id] = v;
       }
     }
@@ -370,7 +369,6 @@ Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
   result[_meas_id].flag = FLAGS::_NO_DATA;
   return result;
 }
-
 
 void TimeTrack::rereadMinMax() {
   std::shared_lock<std::shared_mutex> lg(_locker);
