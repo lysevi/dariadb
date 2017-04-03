@@ -23,6 +23,7 @@ namespace po = boost::program_options;
 std::string storage_path = "dariadb_storage";
 
 unsigned short server_port = 2001;
+unsigned short server_http_port = 8080;
 std::string server_host = "localhost";
 bool run_server_flag = true;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
@@ -48,13 +49,14 @@ void run_server() {
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->strategy.setValue(strategy);
 
-  engine = IEngine_Ptr{ new Engine(settings) };
+  engine = IEngine_Ptr{new Engine(settings)};
 
   if (!is_exists) {
     settings->save();
   }
 
-  dariadb::net::Server::Param server_param(server_port, server_threads_count);
+  dariadb::net::Server::Param server_param(server_port, server_http_port,
+                                           server_threads_count);
   server_instance = new dariadb::net::Server(server_param);
   server_instance->set_storage(engine);
 
@@ -130,12 +132,12 @@ int main(int argc, char **argv) {
   clients.resize(clients_count);
   std::thread server_thread;
   if (run_server_flag) {
-	  server_thread = std::move(std::thread{ run_server });
+    server_thread = std::move(std::thread{run_server});
   }
 
   while (server_instance == nullptr || !server_instance->is_runned()) {
-	  std::cout << "Wait server..." << std::endl;
-	  dariadb::utils::sleep_mls(100);
+    std::cout << "Wait server..." << std::endl;
+    dariadb::utils::sleep_mls(100);
   }
   dariadb::net::client::Client::Param p(server_host, server_port);
 
@@ -167,9 +169,9 @@ int main(int argc, char **argv) {
   if (run_server_flag) {
     server_instance->stop();
 
-	server_thread.join();
+    server_thread.join();
 
-    engine=nullptr;
+    engine = nullptr;
   }
 
   auto count_per_thread = MEASES_SIZE * SEND_COUNT;
