@@ -1,4 +1,5 @@
 #include <libserver/http/query_parser.h>
+#include <libdariadb/utils/logger.h>
 #include <extern/json/src/json.hpp>
 
 using json = nlohmann::json;

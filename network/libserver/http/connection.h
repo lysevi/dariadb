@@ -3,7 +3,6 @@
 #include <libserver/http/reply.h>
 #include <libserver/http/request.h>
 #include <libserver/http/request_handler.h>
-#include <libserver/http/request_parser.h>
 
 #include <boost/asio.hpp>
 #include <array>
@@ -32,8 +31,8 @@ public:
   void stop();
 
 private:
-  /// Perform an asynchronous read operation.
-  void do_read();
+  void do_query_read(size_t length);
+  void do_headers_read();
 
   /// Perform an asynchronous write operation.
   void do_write();
@@ -47,14 +46,10 @@ private:
   /// The handler used to process the incoming request.
   request_handler &request_handler_;
 
-  /// Buffer for incoming data.
-  std::array<char, reques_buffer_size> buffer_;
+  boost::asio::streambuf _request_buf;
 
   /// The incoming request.
   request request_;
-
-  /// The parser for the incoming request.
-  request_parser request_parser_;
 
   /// The reply to be sent back to the client.
   reply reply_;

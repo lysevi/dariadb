@@ -55,7 +55,8 @@ post_response post(boost::asio::io_service &service, std::string &port,
   request_stream << "Content-Type: application/json; charset=utf-8 \r\n";
   request_stream << "Accept: */*\r\n";
   request_stream << "Content-Length: " << json_query.length() << "\r\n";
-  request_stream << "Connection: close\r\n\r\n"; // NOTE THE Double line feed
+  request_stream << "Connection: close"; 
+  request_stream << "\r\n\r\n";// NOTE THE Double line feed
   request_stream << json_query;
 
   boost::asio::write(socket, request);

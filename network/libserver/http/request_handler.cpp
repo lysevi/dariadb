@@ -20,7 +20,8 @@ void request_handler::handle_request(const request &req, reply &rep) {
   if (req.method == "POST") {
     auto scheme = _storage_engine->getScheme();
     if (scheme != nullptr) {
-      auto parsed_query = parse_query(scheme, req.query);
+		auto js_query = req.query;
+      auto parsed_query = parse_query(scheme, js_query);
       switch (parsed_query.type) {
       case http_query_type::append: {
         logger("POST query 'append': ", parsed_query.append_query->size(), " values");

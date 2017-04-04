@@ -248,7 +248,7 @@ int main(int argc, char **argv) {
   if (vm.count("http-benchmark")) {
     std::cout << "http-benchmark" << std::endl;
     http_benchmark = true;
-	MEASES_SIZE = 200;
+	MEASES_SIZE = 2000;
 	SEND_COUNT = 100;
   }
 
