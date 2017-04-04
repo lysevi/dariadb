@@ -36,8 +36,6 @@ dariadb::net::Server *server_instance = nullptr;
 
 using boost::asio::ip::tcp;
 
-const dariadb::net::Server::Param server_param(2001, 8080);
-
 struct post_response {
   int code;
   std::string answer;
@@ -146,10 +144,10 @@ void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
   dariadb::Time t = dariadb::MIN_TIME;
   dariadb::utils::ElapsedTime et;
   for (size_t i = 0; i < SEND_COUNT; ++i) {
-    for (size_t i = 0; i < MEASES_SIZE; ++i) {
-      ma[i].id = dariadb::Id(thread_num);
-      ma[i].value = dariadb::Value(i);
-      ma[i].time = t++;
+    for (size_t j = 0; j < MEASES_SIZE; ++j) {
+      ma[j].id = dariadb::Id(thread_num);
+      ma[j].value = dariadb::Value(j);
+      ma[j].time = t++;
     }
 
     client->append(ma);
@@ -159,7 +157,7 @@ void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
 }
 
 void write_http_thread(size_t thread_num) {
-  auto http_port = std::to_string(server_param.http_port);
+  auto http_port = std::to_string(server_http_port);
   using nlohmann::json;
   boost::asio::io_service test_service;
   dariadb::Time t = dariadb::MIN_TIME;
@@ -169,10 +167,10 @@ void write_http_thread(size_t thread_num) {
   dariadb::utils::ElapsedTime et;
   for (size_t i = 0; i < SEND_COUNT; ++i) {
 
-    for (size_t i = 0; i < MEASES_SIZE; ++i) {
-      ma[i].id = dariadb::Id(thread_num);
-      ma[i].value = dariadb::Value(i);
-      ma[i].time = t++;
+    for (size_t j = 0; j < MEASES_SIZE; ++j) {
+      ma[j].id = dariadb::Id(thread_num);
+      ma[j].value = dariadb::Value(j);
+      ma[j].time = t++;
     }
 
     json js;
