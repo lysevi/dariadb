@@ -11,6 +11,7 @@ v0.4.0
 - Rename build options: add prefix 'DARIADB_'
 - Memory only mode.
 - New memory storage.
+- Full featured http api.
 
 v0.3.0
 =====

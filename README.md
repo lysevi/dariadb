@@ -12,6 +12,7 @@
  
 # Features
 * Can be used as a server application or an embedded library.
+* Full featured http api.
 * Accept unordered data.
 * Each measurement contains:
   - Id - x32 unsigned integer value.
