@@ -181,7 +181,7 @@ public:
 
   void lockfile_lock_or_die(bool ignore_lock_file) {
 #ifdef DEBUG
-	  return;
+    return;
 #else
     auto lfile = lockfile_path();
     if (utils::fs::path_exists(lfile)) {
@@ -808,7 +808,9 @@ public:
             };
             auto at = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(am_at));
             at->wait();
-          } else {
+          }
+
+          if (this->strategy() == STRATEGY::MEMORY) {
             this->_memstorage->dropOld(timepoint);
           }
 
