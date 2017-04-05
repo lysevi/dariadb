@@ -134,7 +134,7 @@ void run_server() {
 size_t MEASES_SIZE = 200000;
 size_t SEND_COUNT = 1;
 
-std::vector<float> elapsed;
+std::vector<double> elapsed;
 std::vector<std::thread> threads;
 std::vector<dariadb::net::client::Client_Ptr> clients;
 
@@ -246,8 +246,8 @@ int main(int argc, char **argv) {
   if (vm.count("http-benchmark")) {
     std::cout << "http-benchmark" << std::endl;
     http_benchmark = true;
-	MEASES_SIZE = 2000;
-	SEND_COUNT = 100;
+    MEASES_SIZE = 2000;
+    SEND_COUNT = 100;
   }
 
   elapsed.resize(clients_count);
@@ -290,6 +290,7 @@ int main(int argc, char **argv) {
     }
   }
 
+  std::cout << "write end. create binary client for reading" << std::endl;
   dariadb::net::client::Client_Ptr c{new dariadb::net::client::Client(p)};
   c->connect();
   dariadb::IdArray ids;
