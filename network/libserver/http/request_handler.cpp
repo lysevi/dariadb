@@ -78,6 +78,7 @@ void request_handler::handle_request(const request &req, reply &rep) {
       } catch (const std::exception &ex) {
         logger_fatal("http: query parse error: ", ex.what(), " query: ", req.query);
         rep = reply::stock_reply(ex.what(), reply::status_type::bad_request);
+        return;
       }
 
       switch (parsed_query.type) {
