@@ -1,5 +1,4 @@
 #include <libdariadb/timeutil.h>
-#include <libserver/http/query_parser.h>
 #include <libserver/http/reply.h>
 #include <libserver/http/request.h>
 #include <libserver/http/request_handler.h>
@@ -11,64 +10,103 @@ using namespace dariadb::net::http;
 
 request_handler::request_handler() : _storage_engine(nullptr) {}
 
+namespace requers_handler_inner {
+void append_query(dariadb::IEngine_Ptr storage_engine, const http_query &q, reply &rep) {
+  dariadb::logger("POST query 'append': ", q.append_query->size(), " values");
+
+  auto status = storage_engine->append(q.append_query->begin(), q.append_query->end());
+  rep = reply::stock_reply(status2string(status), reply::status_type::ok);
+
+  dariadb::logger("POST 'append' end.");
+}
+
+void interval_query(dariadb::scheme::IScheme_Ptr scheme,
+                    dariadb::IEngine_Ptr storage_engine, const http_query &q,
+                    reply &rep) {
+
+  dariadb::logger("POST query 'readInterval' from:",
+                  dariadb::timeutil::to_string(q.interval_query->from),
+                  " to:", dariadb::timeutil::to_string(q.interval_query->to));
+
+  auto values = storage_engine->readInterval(*q.interval_query.get());
+  rep = reply::stock_reply(meases2string(scheme, values), reply::status_type::ok);
+}
+
+void timepoint_query(dariadb::scheme::IScheme_Ptr scheme,
+                     dariadb::IEngine_Ptr storage_engine, const http_query &q,
+                     reply &rep) {
+  auto time_point_str = dariadb::timeutil::to_string(q.timepoint_query->time_point);
+  dariadb::logger("POST query 'readTimepoint': ", time_point_str);
+
+  auto values = storage_engine->readTimePoint(*q.timepoint_query.get());
+  dariadb::MeasArray ma;
+  ma.reserve(values.size());
+  for (const auto &kv : values) {
+    ma.push_back(kv.second);
+  }
+  rep = reply::stock_reply(meases2string(scheme, ma), reply::status_type::ok);
+}
+
+void stat_query(dariadb::scheme::IScheme_Ptr scheme, dariadb::IEngine_Ptr storage_engine,
+                const http_query &q, reply &rep) {
+
+  auto id = q.stat_query->ids[0];
+  auto from = q.stat_query->from;
+  auto to = q.stat_query->to;
+  dariadb::logger("POST query 'stat' - id:", id,
+                  " from:", dariadb::timeutil::to_string(from),
+                  " to:", dariadb::timeutil::to_string(to));
+
+  auto stat = storage_engine->stat(id, from, to);
+  rep = reply::stock_reply(stat2string(scheme, id, stat), reply::status_type::ok);
+}
+} // namespace requers_handler_inner
+
 void request_handler::handle_request(const request &req, reply &rep) {
   if (_storage_engine == nullptr) {
-    rep = reply::stock_reply("", reply::no_content);
+    rep = reply::stock_reply("", reply::status_type::no_content);
     return;
   }
 
   if (req.method == "POST") {
-    auto scheme = _storage_engine->getScheme();
+    dariadb::scheme::IScheme_Ptr scheme = _storage_engine->getScheme();
     if (scheme != nullptr) {
-		auto js_query = req.query;
-      auto parsed_query = parse_query(scheme, js_query);
+      http_query parsed_query;
+      logger("http: parse query");
+      try {
+        parsed_query = parse_query(scheme, req.query);
+      } catch (const std::exception &ex) {
+        logger_fatal("http: query parse error: ", ex.what(), " query: ", req.query);
+        rep = reply::stock_reply(ex.what(), reply::status_type::bad_request);
+      }
+
       switch (parsed_query.type) {
       case http_query_type::append: {
-        logger("POST query 'append': ", parsed_query.append_query->size(), " values");
-        auto status = this->_storage_engine->append(parsed_query.append_query->begin(),
-                                                    parsed_query.append_query->end());
-        rep = reply::stock_reply(status2string(status), reply::ok);
+        requers_handler_inner::append_query(_storage_engine, parsed_query, rep);
         return;
       }
       case http_query_type::readInterval: {
-        logger("POST query 'readInterval' from:",
-               timeutil::to_string(parsed_query.interval_query->from),
-               " to:", timeutil::to_string(parsed_query.interval_query->to));
-        auto values =
-            this->_storage_engine->readInterval(*parsed_query.interval_query.get());
-        rep = reply::stock_reply(meases2string(scheme, values), reply::ok);
+        requers_handler_inner::interval_query(scheme, _storage_engine, parsed_query, rep);
         return;
       }
       case http_query_type::readTimepoint: {
-        logger("POST query 'readTimepoint': ", timeutil::to_string(parsed_query.timepoint_query->time_point));
-
-        auto values =
-            this->_storage_engine->readTimePoint(*parsed_query.timepoint_query.get());
-        dariadb::MeasArray ma;
-        ma.reserve(values.size());
-        for (const auto &kv : values) {
-          ma.push_back(kv.second);
-        }
-        rep = reply::stock_reply(meases2string(scheme, ma), reply::ok);
+        requers_handler_inner::timepoint_query(scheme, _storage_engine, parsed_query,
+                                               rep);
         return;
       }
       case http_query_type::stat: {
-        logger("POST query 'stat'");
-        auto stat = this->_storage_engine->stat(parsed_query.stat_query->ids[0],
-                                                parsed_query.stat_query->from,
-                                                parsed_query.stat_query->to);
-
-        rep = reply::stock_reply(
-            stat2string(scheme, parsed_query.stat_query->ids[0], stat), reply::ok);
+        requers_handler_inner::stat_query(scheme, _storage_engine, parsed_query, rep);
         return;
       }
       default: {
-        rep = reply::stock_reply("unknow query " + req.query, reply::no_content);
+        rep = reply::stock_reply("unknow query " + req.query,
+                                 reply::status_type::no_content);
         return;
       }
       }
     } else {
-      rep = reply::stock_reply("scheme does not set in engine", reply::no_content);
+      rep = reply::stock_reply("scheme does not set in engine",
+                               reply::status_type::service_unavailable);
       return;
     }
   } else {
@@ -78,14 +116,15 @@ void request_handler::handle_request(const request &req, reply &rep) {
       if (scheme != nullptr) {
         auto scheme_map = scheme->ls();
         auto answer = scheme2string(scheme_map);
-        rep = reply::stock_reply(answer, reply::ok);
+        rep = reply::stock_reply(answer, reply::status_type::ok);
         return;
       } else {
-        rep = reply::stock_reply("scheme does not set in engine", reply::no_content);
+        rep = reply::stock_reply("scheme does not set in engine",
+                                 reply::status_type::service_unavailable);
         return;
       }
     }
   }
-  rep = reply::stock_reply("unknow query: " + req.query, reply::no_content);
+  rep = reply::stock_reply("unknow query: " + req.query, reply::status_type::no_content);
   return;
 }

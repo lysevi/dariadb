@@ -92,12 +92,12 @@ void connection::do_headers_read() {
           }
           if (request_.method == "POST") {
             if (!content_length_exists) {
-              reply_ = reply::stock_reply("content-length not exists.", reply::not_found);
+              reply_ = reply::stock_reply("content-length not exists.", reply::status_type::not_found);
               do_write();
               return;
             }
             if (parse_error) {
-              reply_ = reply::stock_reply("header parse error", reply::not_found);
+              reply_ = reply::stock_reply("header parse error", reply::status_type::not_found);
               do_write();
               return;
             }
