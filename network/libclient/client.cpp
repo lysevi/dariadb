@@ -33,8 +33,7 @@ public:
     };
     AsyncConnection::onNetworkErrorHandler on_n =
         [this](const boost::system::error_code &err) { onNetworkError(err); };
-    _async_connection =
-        std::shared_ptr<AsyncConnection>{new AsyncConnection(on_d, on_n)};
+    _async_connection = std::shared_ptr<AsyncConnection>{new AsyncConnection(on_d, on_n)};
   }
 
   ~Private() noexcept(false) {
@@ -58,7 +57,7 @@ public:
     _thread_handler = std::move(t);
 
     while (this->_state != CLIENT_STATE::WORK) {
-		dariadb::utils::sleep_mls(300);
+      dariadb::utils::sleep_mls(300);
     }
   }
 
@@ -71,7 +70,7 @@ public:
     while (this->_state != CLIENT_STATE::DISCONNECTED) {
       logger_info("client: #", _async_connection->id(),
                   " disconnect - wait server answer...");
-	  dariadb::utils::sleep_mls(500);
+      dariadb::utils::sleep_mls(500);
     }
   }
 
@@ -131,7 +130,7 @@ public:
 
   void onNetworkError(const boost::system::error_code &err) {
     if (this->_state != CLIENT_STATE::DISCONNECTED) {
-      THROW_EXCEPTION("client: #", _async_connection->id(), " ",err.message());
+      THROW_EXCEPTION("client: #", _async_connection->id(), " ", err.message());
     }
   }
 
@@ -170,8 +169,8 @@ public:
       auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
       auto query_num = qh_e->id;
       ERRORS err = (ERRORS)qh_e->error_code;
-      logger_info("client: #", _async_connection->id(), " query #", query_num, " error:",
-                  err);
+      logger_info("client: #", _async_connection->id(), " query #", query_num,
+                  " error:", err);
       if (this->state() == CLIENT_STATE::WORK) {
         auto subres = this->_query_results[qh_e->id];
         subres->is_closed = true;
@@ -256,7 +255,6 @@ public:
     this->_locker.lock();
     logger_info("client: send ", ma.size());
     size_t writed = 0;
-    std::list<ReadResult_ptr> results;
 
     while (writed != ma.size()) {
       auto cur_id = _query_num;
@@ -265,7 +263,6 @@ public:
       auto qres = std::make_shared<ReadResult>();
       qres->id = cur_id;
       qres->kind = DATA_KINDS::APPEND;
-      results.push_back(qres);
       this->_query_results[qres->id] = qres;
 
       auto nd = std::make_shared<NetData>(DATA_KINDS::APPEND);
@@ -282,16 +279,13 @@ public:
       writed += hdr->count;
 
       _async_connection->send(nd);
+
+      while (!qres->is_ok && !qres->is_error) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+      this->_query_results.erase(qres->id);
     }
     this->_locker.unlock();
-    for (auto &r : results) {
-      while (!r->is_ok && !r->is_error) {
-        std::this_thread::yield();
-      }
-      this->_locker.lock();
-      this->_query_results.erase(r->id);
-      this->_locker.unlock();
-    }
   }
 
   ReadResult_ptr readInterval(const QueryInterval &qi, ReadResult::callback &clbk) {
@@ -332,7 +326,7 @@ public:
   }
 
   MeasArray readInterval(const QueryInterval &qi) {
-	  MeasArray result{};
+    MeasArray result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
                                  const Statistic &st) {
       if (!parent->is_closed) {
