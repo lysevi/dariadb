@@ -60,7 +60,10 @@ public:
     _http_server->set_storage(storage);
   }
 
-  void stop() { _stop_flag = true; }
+  void stop() {
+    _http_server->do_stop();
+    _stop_flag = true;
+  }
 
   void on_stop() {
     std::lock_guard<std::mutex> lg(_dtor_mutex);

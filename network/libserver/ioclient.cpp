@@ -351,7 +351,7 @@ void IOClient::readInterval(const NetData_ptr &d) {
   auto to_str = timeutil::to_string(query_hdr->from);
 
   logger_info("server: #", this->_async_connection->id(), " read interval point #",
-              query_hdr->id, " id(", query_hdr->ids_count, ") [", from_str, ',', to_str,
+              query_hdr->id, " id(", query_hdr->ids_count, ") [", from_str, ', ', to_str,
               "]");
   auto ids_ptr = (Id *)((char *)(&query_hdr->ids_count) + sizeof(query_hdr->ids_count));
   IdArray all_ids{ids_ptr, ids_ptr + query_hdr->ids_count};
