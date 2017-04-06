@@ -27,6 +27,9 @@ read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
     auto val_js = val4id["V"];
     auto time_js = val4id["T"];
 
+	ENSURE(flag_js.size() == val_js.size());
+	ENSURE(time_js.size() == val_js.size());
+
     sub_result.resize(flag_js.size());
     size_t pos = 0;
     for (auto f_it = flag_js.begin(); f_it != flag_js.end(); ++f_it) {
@@ -45,6 +48,8 @@ read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
       dariadb::Time t = *t_it;
       sub_result[pos++].time = t;
     }
+
+	dariadb::logger("in query ", sub_result.size(), " values for id:", id);
     for (auto v : sub_result) {
       v.id = id;
       result->push_back(v);
@@ -86,10 +91,10 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
 
     auto single_value = js.find("append_value");
     if (single_value == js.end()) {
-      logger("append_value query.");
+      logger("append_values query.");
       result.append_query = dariadb_parse_query_inner::read_meas_array(scheme, js);
     } else {
-      logger("append_values query.");
+      logger("append_value query.");
       result.append_query = dariadb_parse_query_inner::read_single_meas(scheme, js);
     }
     if (result.append_query == nullptr) {
