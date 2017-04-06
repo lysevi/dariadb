@@ -32,7 +32,8 @@ struct post_response {
 };
 
 post_response post(boost::asio::io_service &service, std::string &port,
-                   const std::string &json_query) {
+                   const std::string &json_query, bool set_content_length = true,
+                   bool parse_error = false) {
   post_response result;
   result.code = 0;
 
@@ -45,20 +46,25 @@ post_response post(boost::asio::io_service &service, std::string &port,
 
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
-
-  request_stream << "POST / HTTP/1.0\r\n";
-  request_stream << "Host:"
-                 << " localhost:8080"
-                 << "\r\n";
-  request_stream << "User-Agent: C/1.0"
-                 << "\r\n";
-  request_stream << "Content-Type: application/json; charset=utf-8 \r\n";
-  request_stream << "Accept: */*\r\n";
-  request_stream << "Content-Length: " << json_query.length() << "\r\n";
-  request_stream << "Connection: close"; 
-  request_stream << "\r\n\r\n";// NOTE THE Double line feed
-  request_stream << json_query;
-
+  if (!parse_error) {
+    request_stream << "POST / HTTP/1.0\r\n";
+    request_stream << "Host:"
+                   << " localhost:8080"
+                   << "\r\n";
+    request_stream << "User-Agent: C/1.0"
+                   << "\r\n";
+    request_stream << "Content-Type: application/json; charset=utf-8 \r\n";
+    request_stream << "Accept: */*\r\n";
+    if (set_content_length) { // for test
+      request_stream << "Content-Length: " << json_query.length() << "\r\n";
+    }
+    request_stream << "Connection: close";
+    request_stream << "\r\n\r\n"; // NOTE THE Double line feed
+    request_stream << json_query;
+  } else {
+    request_stream << "asddasdadad";
+    request_stream << "\r\n\r\n"; // NOTE THE Double line feed
+  }
   boost::asio::write(socket, request);
 
   // read answer
@@ -338,38 +344,66 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
   // readTimepoint
   {
-	  json readinterval_js;
-	  readinterval_js["type"] = "readTimepoint";
-	  readinterval_js["time"] = dariadb::MAX_TIME;
-	  readinterval_js["flag"] = dariadb::Flag();
-	  
-	  std::vector<std::string> values_names;
-	  auto values_from_scheme = engine->getScheme()->ls();
-	  values_names.reserve(values_from_scheme.size());
-	  for (auto &kv : values_from_scheme) {
-		  values_names.push_back(kv.second.name);
-	  }
-	  readinterval_js["id"] = values_names;
+    json readinterval_js;
+    readinterval_js["type"] = "readTimepoint";
+    readinterval_js["time"] = dariadb::MAX_TIME;
+    readinterval_js["flag"] = dariadb::Flag();
 
-	  query_str = readinterval_js.dump(1);
-	  post_result = post(test_service, http_port, query_str);
-	  BOOST_CHECK_EQUAL(post_result.code, 200);
-	  BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
+    std::vector<std::string> values_names;
+    auto values_from_scheme = engine->getScheme()->ls();
+    values_names.reserve(values_from_scheme.size());
+    for (auto &kv : values_from_scheme) {
+      values_names.push_back(kv.second.name);
+    }
+    readinterval_js["id"] = values_names;
+
+    query_str = readinterval_js.dump(1);
+    post_result = post(test_service, http_port, query_str);
+    BOOST_CHECK_EQUAL(post_result.code, 200);
+    BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
   }
 
   // stat
   {
-	  json stat_js;
-	  stat_js["type"] = "stat";
-	  stat_js["id"] = "single_value";
-	  stat_js["from"] = dariadb::MIN_TIME;
-	  stat_js["to"] = dariadb::MAX_TIME;
+    json stat_js;
+    stat_js["type"] = "stat";
+    stat_js["id"] = "single_value";
+    stat_js["from"] = dariadb::MIN_TIME;
+    stat_js["to"] = dariadb::MAX_TIME;
 
-	 
+    query_str = stat_js.dump(1);
+    post_result = post(test_service, http_port, query_str);
+    BOOST_CHECK_EQUAL(post_result.code, 200);
+    BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
+  }
+
+  // unknow query
+  {
+	  json stat_js;
+	  stat_js["bad"] = "query";
+
 	  query_str = stat_js.dump(1);
 	  post_result = post(test_service, http_port, query_str);
-	  BOOST_CHECK_EQUAL(post_result.code, 200);
-	  BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
+	  BOOST_CHECK_EQUAL(post_result.code, 404);
+  }
+
+  // bad query
+  {
+    json stat_js;
+    stat_js["type"] = "stat";
+    stat_js["id"] = "single_value";
+    stat_js["from"] = dariadb::MIN_TIME;
+    stat_js["to"] = dariadb::MAX_TIME;
+
+    query_str = stat_js.dump(1);
+    post_result = post(test_service, http_port, query_str, false);
+    BOOST_CHECK_EQUAL(post_result.code, 404);
+  }
+
+  // parse error
+  {
+    post_result = post(test_service, http_port, "", false, true);
+    BOOST_CHECK_EQUAL(post_result.code, 204); // no content
   }
   server_instance->stop();
   server_thread.join();
