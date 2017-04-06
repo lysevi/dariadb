@@ -1,5 +1,6 @@
-#include <libserver/http/query_parser.h>
 #include <libdariadb/utils/logger.h>
+#include <libdariadb/utils/utils.h>
+#include <libserver/http/query_parser.h>
 #include <extern/json/src/json.hpp>
 
 using json = nlohmann::json;
@@ -8,7 +9,13 @@ namespace dariadb_parse_query_inner {
 std::shared_ptr<dariadb::MeasArray>
 read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
   auto result = std::make_shared<dariadb::MeasArray>();
-  auto values = js["append_values"];
+  auto js_iter = js.find("append_values");
+  if (js_iter == js.end()) {
+    dariadb::logger_fatal("append_values not found");
+    return nullptr;
+  }
+
+  auto values = *js_iter;
   for (auto it = values.begin(); it != values.end(); ++it) {
     dariadb::MeasArray sub_result;
     auto id_str = it.key();
@@ -67,20 +74,32 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
   result.type = http_query_type::unknow;
   json js = json::parse(query);
 
-  std::string type = js["type"];
+  auto find_iter = js.find("type");
+  if (find_iter == js.end()) {
+    logger_fatal("query without type.");
+    return result;
+  }
+
+  std::string type = *find_iter;
   if (type == "append") {
     result.type = http_query_type::append;
 
     auto single_value = js.find("append_value");
     if (single_value == js.end()) {
+      logger("append_value query.");
       result.append_query = dariadb_parse_query_inner::read_meas_array(scheme, js);
     } else {
+      logger("append_values query.");
       result.append_query = dariadb_parse_query_inner::read_single_meas(scheme, js);
+    }
+    if (result.append_query == nullptr) {
+      logger_fatal("result.append_query is empty.");
     }
     return result;
   }
 
   if (type == "readInterval") {
+    logger_fatal("readInterval query.");
     result.type = http_query_type::readInterval;
     dariadb::Time from = js["from"];
     dariadb::Time to = js["to"];
@@ -97,6 +116,7 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
   }
 
   if (type == "readTimepoint") {
+    logger_fatal("readTimepoint query.");
     result.type = http_query_type::readTimepoint;
     dariadb::Time timepoint = js["time"];
     dariadb::Flag flag = js["flag"];
@@ -160,9 +180,9 @@ std::string dariadb::net::http::meases2string(const dariadb::scheme::IScheme_Ptr
       value_js["F"] = v.flag;
       value_js["T"] = v.time;
       value_js["V"] = v.value;
-	  js_values.push_back(value_js);
+      js_values.push_back(value_js);
     }
-	js_result[nameMap[kv.first].name]=js_values;
+    js_result[nameMap[kv.first].name] = js_values;
   }
   auto result = js_result.dump(1);
   return result;
