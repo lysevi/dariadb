@@ -131,8 +131,8 @@ void run_server() {
   server_instance = nullptr;
 }
 
-size_t MEASES_SIZE = 200000;
-size_t SEND_COUNT = 1;
+size_t MEASES_SIZE = 20000;
+size_t SEND_COUNT = 10;
 
 std::vector<double> elapsed;
 std::vector<std::thread> threads;
@@ -246,8 +246,8 @@ int main(int argc, char **argv) {
   if (vm.count("http-benchmark")) {
     std::cout << "http-benchmark" << std::endl;
     http_benchmark = true;
-    MEASES_SIZE = 2000;
-    SEND_COUNT = 100;
+    /*MEASES_SIZE = 2000;
+    SEND_COUNT = 100;*/
   }
 
   elapsed.resize(clients_count);
@@ -324,11 +324,16 @@ int main(int argc, char **argv) {
   auto total_writed = count_per_thread * clients_count;
   std::cout << "writed: " << total_writed << std::endl;
 
-  auto average_time =
-      std::accumulate(elapsed.begin(), elapsed.end(), 0.0) / clients_count;
+  auto summary_time = std::accumulate(elapsed.begin(), elapsed.end(), 0.0);
+
+  auto average_time = summary_time / clients_count;
+  auto summary_speed = summary_time/ total_writed;
+
+  std::cout << "summary time: " << summary_time << " sec." << std::endl;
   std::cout << "average time: " << average_time << " sec." << std::endl;
   std::cout << "average speed: " << count_per_thread / (float)(average_time)
             << " per sec." << std::endl;
+  std::cout << "summary speed: " << summary_speed << " per sec." << std::endl;
   std::cout << "read speed: "
             << result.size() / (((float)read_end - read_start) / CLOCKS_PER_SEC)
             << " per sec." << std::endl;
