@@ -56,7 +56,7 @@ post_response post(boost::asio::io_service &service, std::string &port,
   boost::asio::streambuf request;
   std::ostream request_stream(&request);
 
-  request_stream << "POST / HTTP/1.1\r\n";
+  request_stream << "POST / HTTP/1.0\r\n";
   request_stream << "Host:"
                  << " localhost:8080"
                  << "\r\n";
