@@ -27,8 +27,10 @@ read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
     auto val_js = val4id["V"];
     auto time_js = val4id["T"];
 
-	ENSURE(flag_js.size() == val_js.size());
-	ENSURE(time_js.size() == val_js.size());
+    if (flag_js.size() != val_js.size() || time_js.size() != val_js.size()) {
+      THROW_EXCEPTION("bad query format, flags:", flag_js.size(), " values:", val_js.size(),
+                      " times:", time_js.size(), " query: ", js.dump(1));
+    }
 
     sub_result.resize(flag_js.size());
     size_t pos = 0;
@@ -49,7 +51,7 @@ read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
       sub_result[pos++].time = t;
     }
 
-	dariadb::logger("in query ", sub_result.size(), " values for id:", id);
+    dariadb::logger("in query ", sub_result.size(), " values for id:", id);
     for (auto v : sub_result) {
       v.id = id;
       result->push_back(v);
@@ -104,7 +106,7 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
   }
 
   if (type == "readInterval") {
-	  logger("readInterval query.");
+    logger("readInterval query.");
     result.type = http_query_type::readInterval;
     dariadb::Time from = js["from"];
     dariadb::Time to = js["to"];
@@ -121,7 +123,7 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
   }
 
   if (type == "readTimepoint") {
-	  logger("readTimepoint query.");
+    logger("readTimepoint query.");
     result.type = http_query_type::readTimepoint;
     dariadb::Time timepoint = js["time"];
     dariadb::Flag flag = js["flag"];
