@@ -99,7 +99,7 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
   }
 
   if (type == "readInterval") {
-    logger_fatal("readInterval query.");
+	  logger("readInterval query.");
     result.type = http_query_type::readInterval;
     dariadb::Time from = js["from"];
     dariadb::Time to = js["to"];
@@ -116,7 +116,7 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
   }
 
   if (type == "readTimepoint") {
-    logger_fatal("readTimepoint query.");
+	  logger("readTimepoint query.");
     result.type = http_query_type::readTimepoint;
     dariadb::Time timepoint = js["time"];
     dariadb::Flag flag = js["flag"];

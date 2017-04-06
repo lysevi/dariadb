@@ -32,7 +32,7 @@ void connection::do_headers_read() {
         if (!ec) {
           std::istream request_stream(&_request_buf);
 
-		  // parse status line "POST / HTTP/1.1\r\n"
+          // parse status line "POST / HTTP/1.1\r\n"
           std::string status_line;
           std::getline(request_stream, status_line);
 
@@ -53,13 +53,14 @@ void connection::do_headers_read() {
               }
               prev_pos = i;
               status_word_num++;
-              if (status_word_num > 1) { //already read POST and path. protocol version unneeded to us.
+              if (status_word_num > 1) {
+                // already read POST and path. protocol version unneeded to us.
                 break;
               }
             }
           }
 
-		  //parse headers and find content length.
+          // parse headers and find content length.
           std::string header_record;
           bool content_length_exists = false;
           bool parse_error = false;
@@ -67,6 +68,7 @@ void connection::do_headers_read() {
           while (request_stream.good() && header_record != "\r") {
             std::getline(request_stream, header_record);
 
+            // to lower case
             std::transform(header_record.begin(), header_record.end(),
                            header_record.begin(), ::tolower);
 
@@ -91,28 +93,31 @@ void connection::do_headers_read() {
             }
           }
           if (request_.method == "POST") {
+
             if (!content_length_exists) {
-              reply_ = reply::stock_reply("content-length not exists.", reply::status_type::not_found);
+              reply_ = reply::stock_reply("content-length not exists.",
+                                          reply::status_type::not_found);
               do_write();
               return;
             }
             if (parse_error) {
-              reply_ = reply::stock_reply("header parse error", reply::status_type::not_found);
+              reply_ =
+                  reply::stock_reply("header parse error", reply::status_type::not_found);
               do_write();
               return;
             }
             auto query_length = std::atoll(content_length.c_str());
             do_query_read(query_length - _request_buf.size());
-          } else {
+
+          } else { // GET query
             request_handler_.handle_request(request_, reply_);
             do_write();
           }
+        } else if (ec != boost::asio::error::operation_aborted) {
+          auto error_message = ec.message();
+          logger_fatal("http: error ", error_message);
+          connection_manager_.stop(shared_from_this());
         }
-		else if (ec != boost::asio::error::operation_aborted) {
-			auto error_message = ec.message();
-			logger_fatal("http: error ", error_message);
-			connection_manager_.stop(shared_from_this());
-		}
       });
 }
 

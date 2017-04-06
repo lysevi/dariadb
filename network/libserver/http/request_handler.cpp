@@ -100,6 +100,7 @@ void request_handler::handle_request(const request &req, reply &rep) {
         return;
       }
       default: {
+        logger_fatal("http: bad query - ", req.query);
         rep = reply::stock_reply("unknow query " + req.query,
                                  reply::status_type::no_content);
         return;
