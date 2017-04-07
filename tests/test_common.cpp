@@ -433,6 +433,68 @@ void check_reader(const dariadb::Cursor_Ptr &rdr) {
     }
   }
 }
+
+class Moc_SubscribeClbk : public dariadb::IReadCallback {
+public:
+  std::list<dariadb::Meas> values;
+  void apply(const dariadb::Meas &m) override { values.push_back(m); }
+  void is_end() override {}
+  ~Moc_SubscribeClbk() {}
+};
+
+void subscribe_test(dariadb::IEngine *ms) {
+  const size_t id_count = 5;
+  auto c1 = std::make_shared<Moc_SubscribeClbk>();
+  auto c2 = std::make_shared<Moc_SubscribeClbk>();
+  auto c3 = std::make_shared<Moc_SubscribeClbk>();
+  auto c4 = std::make_shared<Moc_SubscribeClbk>();
+
+  dariadb::IdArray ids{};
+  ms->subscribe(ids, 0, c1); // all
+  ids.push_back(2);
+  ms->subscribe(ids, 0, c2); // 2
+  ids.push_back(1);
+  ms->subscribe(ids, 0, c3); // 1 2
+  ids.clear();
+  ms->subscribe(ids, 1, c4); // with flag=1
+
+  auto m = dariadb::Meas();
+  const size_t total_count = 100;
+  const dariadb::Time time_step = 1;
+
+  for (size_t i = 0; i < total_count; i += time_step) {
+    m.id = i % id_count;
+    m.flag = dariadb::Flag(i);
+    m.time = i;
+    m.value = 0;
+    ms->append(m);
+  }
+  if (c1->values.size() != total_count) {
+    THROW_EXCEPTION("c1->values.size() != total_count", c1->values.size(), total_count);
+  }
+
+  if (c2->values.size() != size_t(total_count / id_count)) {
+    THROW_EXCEPTION("c2->values.size() != size_t(total_count / id_count)");
+  }
+  if (c2->values.front().id != dariadb::Id(2)) {
+    THROW_EXCEPTION("c2->values.size() != size_t(total_count / id_count)");
+  }
+
+  if (c3->values.size() != (size_t(total_count / id_count) * 2)) {
+    THROW_EXCEPTION("c3->values.size() != size_t(total_count / id_count) * 2");
+  }
+  if (c3->values.front().id != dariadb::Id(1)) {
+    THROW_EXCEPTION("c3->values.front().id != dariadb::Id(1)");
+  }
+
+  if (c4->values.size() != size_t(1)) {
+    THROW_EXCEPTION("c4->values.size() != size_t(1)");
+  }
+  if (c4->values.front().flag != dariadb::Flag(1)) {
+    THROW_EXCEPTION("c4->values.front().flag != dariadb::Flag(1)");
+  }
+}
+
 /*
 void readIntervalCommonTest(storage::MeasStorage *ds) {
   Meas m;

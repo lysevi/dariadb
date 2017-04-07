@@ -2,6 +2,7 @@
 
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/engines/shard.h>
+#include <libdariadb/storage/subscribe.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
 #include <shared_mutex>
@@ -32,6 +33,7 @@ public:
     _settings = Settings::create(path);
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
+    _subscribe_notify.start();
 
     loadShardFile();
   }
@@ -41,6 +43,7 @@ public:
   void stop() {
     if (!_stoped) {
       logger_info("shards: stopping");
+      _subscribe_notify.stop();
       _id2shard.clear();
       for (auto s : _sub_storages) {
         s.storage->stop();
@@ -211,7 +214,11 @@ public:
     if (target_shard == nullptr) {
       return Status(1, APPEND_ERROR::bad_shard);
     } else {
-      return target_shard->append(value);
+      auto result = target_shard->append(value);
+      if (result.writed == 1) {
+        _subscribe_notify.on_append(value);
+      }
+      return result;
     }
   }
 
@@ -385,8 +392,10 @@ public:
 
   void subscribe(const IdArray &ids, const Flag &flag,
                  const ReaderCallback_ptr &clbk) override {
-    NOT_IMPLEMENTED;
+    auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
+    _subscribe_notify.add(new_s);
   }
+
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
   std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
@@ -395,6 +404,8 @@ public:
   IEngine_Ptr _default_shard;
   Settings_ptr _settings;
   mutable std::shared_mutex _locker;
+
+  SubscribeNotificator _subscribe_notify;
 };
 
 ShardEngine_Ptr ShardEngine::create(const std::string &path) {

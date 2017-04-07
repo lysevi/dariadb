@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libdariadb/flags.h>
+#include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
@@ -22,5 +23,6 @@ void storage_test_check(dariadb::IMeasStorage *as, dariadb::Time from, dariadb::
                         bool random_timestamps, bool run_copy_test);
 
 void check_reader(const dariadb::Cursor_Ptr &rdr);
+void subscribe_test(dariadb::IEngine *ms);
 /*void readIntervalCommonTest(dariadb::storage::MeasStorage *ds);*/
 }

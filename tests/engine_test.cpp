@@ -139,23 +139,8 @@ BOOST_AUTO_TEST_CASE(Engine_compress_all_test) {
   }
 }
 
-class Moc_SubscribeClbk : public dariadb::IReadCallback {
-public:
-  std::list<dariadb::Meas> values;
-  void apply(const dariadb::Meas &m) override { values.push_back(m); }
-  void is_end() override {}
-  ~Moc_SubscribeClbk() {}
-};
-
 BOOST_AUTO_TEST_CASE(Subscribe) {
-  const size_t id_count = 5;
-  auto c1 = std::make_shared<Moc_SubscribeClbk>();
-  auto c2 = std::make_shared<Moc_SubscribeClbk>();
-  auto c3 = std::make_shared<Moc_SubscribeClbk>();
-  auto c4 = std::make_shared<Moc_SubscribeClbk>();
-
   const std::string storage_path = "testStorage";
-  const size_t chunk_size = 256;
 
   {
     if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -163,41 +148,10 @@ BOOST_AUTO_TEST_CASE(Subscribe) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->wal_cache_size.setValue(chunk_size);
-    settings->chunk_size.setValue(chunk_size);
 
-    auto ms = std::make_shared<dariadb::Engine>(settings);
+    dariadb::IEngine_Ptr ms = std::make_shared<dariadb::Engine>(settings);
 
-    dariadb::IdArray ids{};
-    ms->subscribe(ids, 0, c1); // all
-    ids.push_back(2);
-    ms->subscribe(ids, 0, c2); // 2
-    ids.push_back(1);
-    ms->subscribe(ids, 0, c3); // 1 2
-    ids.clear();
-    ms->subscribe(ids, 1, c4); // with flag=1
-
-    auto m = dariadb::Meas();
-    const size_t total_count = 100;
-    const dariadb::Time time_step = 1;
-
-    for (size_t i = 0; i < total_count; i += time_step) {
-      m.id = i % id_count;
-      m.flag = dariadb::Flag(i);
-      m.time = i;
-      m.value = 0;
-      ms->append(m);
-    }
-    BOOST_CHECK_EQUAL(c1->values.size(), total_count);
-
-    BOOST_CHECK_EQUAL(c2->values.size(), size_t(total_count / id_count));
-    BOOST_CHECK_EQUAL(c2->values.front().id, dariadb::Id(2));
-
-    BOOST_CHECK_EQUAL(c3->values.size(), size_t(total_count / id_count) * 2);
-    BOOST_CHECK_EQUAL(c3->values.front().id, dariadb::Id(1));
-
-    BOOST_CHECK_EQUAL(c4->values.size(), size_t(1));
-    BOOST_CHECK_EQUAL(c4->values.front().flag, dariadb::Flag(1));
+    dariadb_test::subscribe_test(ms.get());
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

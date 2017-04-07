@@ -62,8 +62,9 @@ public:
         logger_info("engine", _settings->alias, ": init new storage.");
       }
     }
-
-    _subscribe_notify.start();
+	if (_thread_pool_owner) {
+		_subscribe_notify.start();
+	}
     if (init_threadpool) {
       ThreadManager::Params tpm_params(_settings->thread_pools_params());
       ThreadManager::start(tpm_params);
@@ -152,8 +153,9 @@ public:
       _beginStoping = true;
       whaitWorkers();
       _top_level_storage = nullptr;
-      _subscribe_notify.stop();
-
+	  if (_thread_pool_owner) {
+		  _subscribe_notify.stop();
+	  }
       this->flush();
 
       if (_memstorage != nullptr) {
@@ -417,8 +419,12 @@ public:
   }
 
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderCallback_ptr &clbk) {
-    auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
-    _subscribe_notify.add(new_s);
+    if (_thread_pool_owner) {
+      auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
+      _subscribe_notify.add(new_s);
+    } else {
+      THROW_EXCEPTION("subscribe in shard.")
+    }
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
