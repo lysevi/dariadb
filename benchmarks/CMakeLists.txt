@@ -29,8 +29,6 @@ macro(ADD_NT_PERF_TEST name)
    add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/network_benchmark --io-threads=5  ${ARGN})
 endmacro()
 
-ADD_NT_PERF_TEST(HTTP_TEN_CLIENTS  --clients-count=10 --http-benchmark)
-
 if(DARIADB_ENABLE_INTEGRATION_TESTS)
    MESSAGE(STATUS "Integration tests: ")
    ADD_PERF_TEST(WAL --strategy=WAL)
