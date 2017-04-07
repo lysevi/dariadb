@@ -3,7 +3,7 @@
 #include "test_common.h"
 #include <boost/test/unit_test.hpp>
 
-#include <libdariadb/engines/engine.h>
+#include <libdariadb/dariadb.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/fs.h>
@@ -47,14 +47,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   }
   {
     std::cout << "reopen closed storage\n";
-    auto settings = dariadb::storage::Settings::create(storage_path);
-
-    auto manifest = dariadb::storage::Manifest::create(settings);
-
-    auto manifest_version = manifest->get_format();
-
-    manifest = nullptr;
-
+    
+	auto ms = dariadb::open_storage(storage_path);
+	auto settings = ms->settings();
+    
     auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
     BOOST_CHECK(!index_files.empty());
     for (auto &f : index_files) {
@@ -63,12 +59,10 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
     BOOST_CHECK(index_files.empty());
 
-    auto raw_ptr = new Engine(settings);
+    ms->fsck();
 
-    dariadb::IMeasStorage_ptr ms{raw_ptr};
-    raw_ptr->fsck();
+    ms->wait_all_asyncs();
 
-    raw_ptr->wait_all_asyncs();
     // check first id, because that Id placed in compressed pages.
     auto values = ms->readInterval(QueryInterval({dariadb::Id(0)}, 0, from, to));
     BOOST_CHECK_EQUAL(values.size(), dariadb_test::copies_count);
@@ -77,7 +71,7 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
     BOOST_CHECK(current.size() != size_t(0));
 
     std::cout << "erase old files" << std::endl;
-    raw_ptr->settings()->max_store_period.setValue(1);
+    ms->settings()->max_store_period.setValue(1);
     while (true) {
       index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
       if (index_files.empty()) {
