@@ -21,8 +21,6 @@ enum class DATA_KINDS : uint8_t {
   READ_TIMEPOINT,
   CURRENT_VALUE,
   SUBSCRIBE,
-  REPACK,
-  STAT
 };
 
 enum class CLIENT_STATE {

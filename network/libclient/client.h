@@ -74,10 +74,6 @@ public:
   CL_EXPORT ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag,
                                      ReadResult::callback &clbk);
 
-  CL_EXPORT void repack();
-
-  CL_EXPORT Statistic stat(const Id id, Time from, Time to);
-
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

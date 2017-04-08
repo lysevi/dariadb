@@ -189,19 +189,6 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel) {
                 " pings_missed: ", pings_missed.load());
     break;
   }
-  case DATA_KINDS::STAT: {
-    auto st_hdr = reinterpret_cast<QueryStat_header *>(&d->data);
-    auto result = this->env->storage->stat(st_hdr->id, st_hdr->from, st_hdr->to);
-    auto nd = std::make_shared<NetData>(DATA_KINDS::STAT);
-
-    auto p_header = reinterpret_cast<QueryStatResult_header *>(nd->data);
-    nd->size = sizeof(QueryStatResult_header);
-    p_header->id = st_hdr->id;
-    p_header->result = result;
-
-    _async_connection->send(nd);
-    break;
-  }
   case DATA_KINDS::DISCONNECT: {
     logger_info("server: #", this->_async_connection->id(), " disconnection request.");
     cancel = true;
@@ -284,22 +271,6 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel) {
     *idptr = _async_connection->id();
 
     this->_async_connection->send(nd);
-    break;
-  }
-  case DATA_KINDS::REPACK: {
-    if (this->env->srv->server_begin_stopping()) {
-      logger_info("server: #", this->_async_connection->id(),
-                  " refuse repack query. server in stop.");
-      return;
-    }
-    logger_info("server: #", this->_async_connection->id(), " query to storage repack.");
-    if (this->env->storage->strategy() == STRATEGY::WAL) {
-      logger_info("server: #", this->_async_connection->id(), " compress all ");
-      this->env->storage->compress_all();
-      this->env->storage->flush();
-    }
-    // auto query_hdr = reinterpret_cast<QuerRepack_header *>(&d->data);
-    this->env->storage->repack();
     break;
   }
   default:

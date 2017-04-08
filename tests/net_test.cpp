@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
   dariadb::logger("********** Connect1 **********");
   std::thread server_thread{server_thread_func};
 
-  while (server_instance==nullptr || !server_instance->is_runned()) {
+  while (server_instance == nullptr || !server_instance->is_runned()) {
     dariadb::utils::sleep_mls(300);
   }
 
@@ -111,11 +111,11 @@ BOOST_AUTO_TEST_CASE(Connect1) {
 
 BOOST_AUTO_TEST_CASE(Connect3) {
   dariadb::logger("********** Connect3 **********");
-  
+
   std::thread server_thread{server_thread_func};
 
   while (server_instance == nullptr || !server_instance->is_runned()) {
-	  dariadb::utils::sleep_mls(300);
+    dariadb::utils::sleep_mls(300);
   }
 
   dariadb::net::client::Client c(client_param);
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(PingTest) {
   const size_t MAX_PONGS = 2;
   std::thread server_thread{server_thread_func};
   while (server_instance == nullptr || !server_instance->is_runned()) {
-	  dariadb::utils::sleep_mls(300);
+    dariadb::utils::sleep_mls(300);
   }
 
   dariadb::net::client::Client c1(client_param);
@@ -268,12 +268,11 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
     const size_t MEASES_SIZE = 2047 * 3 + 3;
 
-    
     std::thread server_thread{server_thread_func};
 
-	while (server_instance == nullptr || !server_instance->is_runned()) {
-		dariadb::utils::sleep_mls(300);
-	}
+    while (server_instance == nullptr || !server_instance->is_runned()) {
+      dariadb::utils::sleep_mls(300);
+    }
     server_instance->set_storage(stor);
     dariadb::net::client::Client c1(client_param);
     c1.connect();
@@ -324,8 +323,6 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
     BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
 
-    auto st = c1.stat(dariadb::Id(0), dariadb::Time(0), dariadb::Time(MEASES_SIZE));
-    BOOST_CHECK_GT(st.count, uint32_t(0));
     c1.disconnect();
 
     while (true) {
@@ -336,7 +333,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       }
       dariadb::utils::sleep_mls(300);
     }
-	server_instance->stop();
+    server_instance->stop();
     server_thread.join();
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -361,15 +358,15 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
     auto settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(dariadb::STRATEGY::WAL);
     settings->chunk_size.setValue(chunk_size);
-	IEngine_Ptr stor{new Engine(settings)};
+    IEngine_Ptr stor{new Engine(settings)};
 
     const size_t MEASES_SIZE = 2047 * 10 + 3;
 
     std::thread server_thread{server_thread_func};
 
-	while (server_instance == nullptr || !server_instance->is_runned()) {
-		dariadb::utils::sleep_mls(300);
-	}
+    while (server_instance == nullptr || !server_instance->is_runned()) {
+      dariadb::utils::sleep_mls(300);
+    }
     server_instance->set_storage(stor);
     dariadb::net::client::Client c1(client_param);
     c1.connect();
@@ -405,15 +402,6 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
       }
     }
 
-    c1.repack();
-
-    while (1) {
-      auto pages = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-      // dariadb::logger("RepackTest: pages count:",pages);
-      if (pages == size_t(1)) {
-        break;
-      }
-    }
     c1.disconnect();
 
     while (true) {
@@ -424,7 +412,7 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
       }
       dariadb::utils::sleep_mls(300);
     }
-	server_instance->stop();
+    server_instance->stop();
     server_thread.join();
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {

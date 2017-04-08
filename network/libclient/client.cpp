@@ -200,19 +200,7 @@ public:
       }
       break;
     }
-    case DATA_KINDS::STAT: {
-      auto qw = reinterpret_cast<QueryStatResult_header *>(d->data);
-      logger_info("state: #", qw->id);
-      auto subres = this->_query_results[qw->id];
-      ENSURE(subres != nullptr);
 
-      subres->is_closed = true;
-      subres->clbk(subres.get(), Meas(), qw->result);
-      subres->locker.unlock();
-      _query_results.erase(qw->id);
-
-      break;
-    }
     case DATA_KINDS::PING: {
       logger_info("client: #", _async_connection->id(), " ping.");
       auto nd = std::make_shared<NetData>(DATA_KINDS::PONG);
@@ -475,58 +463,6 @@ public:
     return qres;
   }
 
-  void repack() {
-    _locker.lock();
-    auto cur_id = _query_num;
-    _query_num += 1;
-    _locker.unlock();
-    auto nd = std::make_shared<NetData>(DATA_KINDS::REPACK);
-
-    auto p_header = reinterpret_cast<QuerRepack_header *>(nd->data);
-    nd->size = sizeof(QuerRepack_header);
-    p_header->id = cur_id;
-    _async_connection->send(nd);
-  }
-
-  ReadResult_ptr stat(const Id id, const Time from, const Time to,
-                      ReadResult::callback &clbk) {
-    _locker.lock();
-    auto cur_id = _query_num;
-    _query_num += 1;
-    _locker.unlock();
-
-    auto qres = std::make_shared<ReadResult>();
-    qres->locker.lock();
-    qres->id = cur_id;
-    qres->kind = DATA_KINDS::STAT;
-
-    auto nd = std::make_shared<NetData>(DATA_KINDS::STAT);
-
-    auto p_header = reinterpret_cast<QueryStat_header *>(nd->data);
-    nd->size = sizeof(QueryStat_header);
-    p_header->id = cur_id;
-    p_header->from = from;
-    p_header->to = to;
-    p_header->meas_id = id;
-
-    qres->is_closed = false;
-    qres->clbk = clbk;
-    this->_query_results[qres->id] = qres;
-
-    _async_connection->send(nd);
-    return qres;
-  }
-
-  Statistic stat(const Id id, Time from, Time to) {
-    Statistic result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) { result = st; };
-    ReadResult::callback clbk = clbk_lambda;
-    auto qres = stat(id, from, to, clbk);
-    qres->wait();
-    return result;
-  }
-
   io_service _service;
   socket_ptr _socket;
   streambuf buff;
@@ -602,10 +538,3 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
   return _Impl->subscribe(ids, flag, clbk);
 }
 
-void Client::repack() {
-  _Impl->repack();
-}
-
-Statistic Client::stat(const Id id, Time from, Time to) {
-  return _Impl->stat(id, from, to);
-}
