@@ -13,7 +13,8 @@ macro(TEST_CASE name src)
 	add_executable(${name} ${src})
     
 	TARGET_LINK_LIBRARIES(${name} libcommon_test ${DARIADB_STORAGE_LIBS} gtest_main)
-	
+	add_dependencies(${name} gtest_main)	
+
 	add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}) 
 	set_target_properties(${name} PROPERTIES FOLDER Tests)
 endmacro(TEST_CASE)

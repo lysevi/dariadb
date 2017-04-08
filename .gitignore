@@ -1,6 +1,5 @@
-googletest-src
-googletest-download
 libdariadb/config.h
+extern/*
 tmp
 packages.config
 Settings
