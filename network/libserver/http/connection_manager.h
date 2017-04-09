@@ -2,6 +2,7 @@
 
 #include <libserver/http/connection.h>
 #include <set>
+#include <mutex>
 
 namespace dariadb {
 namespace net {
@@ -29,6 +30,7 @@ public:
 private:
   /// The managed connections.
   std::set<connection_ptr> connections_;
+  std::mutex _locker;
 };
 
 } // namespace http
