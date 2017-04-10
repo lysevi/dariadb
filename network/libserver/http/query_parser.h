@@ -24,7 +24,7 @@ struct http_query {
   std::shared_ptr<QueryInterval> interval_query;
   std::shared_ptr<QueryTimePoint> timepoint_query;
   std::shared_ptr<QueryInterval> stat_query;
-  std::shared_ptr<scheme_change_query> scheme_change_query;
+  std::shared_ptr<scheme_change_query> scheme_query;
 };
 
 SRV_EXPORT http_query parse_query(const dariadb::scheme::IScheme_Ptr &scheme,

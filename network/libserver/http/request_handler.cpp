@@ -64,7 +64,7 @@ void stat_query(dariadb::scheme::IScheme_Ptr scheme, dariadb::IEngine_Ptr storag
 void scheme_change_query(dariadb::scheme::IScheme_Ptr scheme, const http_query &q,
                          reply &rep) {
   std::list<std::pair<std::string, dariadb::Id>> new_names;
-  for (auto v : q.scheme_change_query->new_params) {
+  for (auto v : q.scheme_query->new_params) {
     auto id = scheme->addParam(v);
     new_names.push_back(std::make_pair(v, id));
   }

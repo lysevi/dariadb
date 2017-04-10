@@ -163,10 +163,10 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
         result.type = http_query_type::unknow;
         return result;
       }
-      result.scheme_change_query = std::make_shared<scheme_change_query>();
+      result.scheme_query = std::make_shared<scheme_change_query>();
       auto values = *add_iter;
       for (auto v : values) {
-        result.scheme_change_query->new_params.push_back(v);
+        result.scheme_query->new_params.push_back(v);
       }
     }
   }
