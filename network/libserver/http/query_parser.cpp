@@ -28,8 +28,9 @@ read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
     auto time_js = val4id["T"];
 
     if (flag_js.size() != val_js.size() || time_js.size() != val_js.size()) {
-      THROW_EXCEPTION("bad query format, flags:", flag_js.size(), " values:", val_js.size(),
-                      " times:", time_js.size(), " query: ", js.dump(1));
+      THROW_EXCEPTION("bad query format, flags:", flag_js.size(),
+                      " values:", val_js.size(), " times:", time_js.size(),
+                      " query: ", js.dump(1));
     }
 
     sub_result.resize(flag_js.size());
@@ -152,6 +153,23 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
     result.stat_query = std::make_shared<QueryInterval>(id, dariadb::Flag(), from, to);
     return result;
   }
+
+  if (type == "scheme") {
+    result.type = http_query_type::scheme;
+
+    auto add_iter = js.find("add");
+    if (add_iter != js.end()) {
+      if (!add_iter->is_array()) {
+        result.type = http_query_type::unknow;
+        return result;
+      }
+      result.scheme_change_query = std::make_shared<scheme_change_query>();
+      auto values = *add_iter;
+      for (auto v : values) {
+        result.scheme_change_query->new_params.push_back(v);
+      }
+    }
+  }
   return result;
 }
 
@@ -213,4 +231,13 @@ std::string dariadb::net::http::stat2string(const dariadb::scheme::IScheme_Ptr &
   json result_js;
   result_js[name] = stat_js;
   return result_js.dump(1);
+}
+
+std::string dariadb::net::http::newScheme2string(
+    const std::list<std::pair<std::string, dariadb::Id>> &new_names) {
+  json result;
+  for (auto kv : new_names) {
+    result[kv.first] = kv.second;
+  }
+  return result.dump(1);
 }

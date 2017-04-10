@@ -60,6 +60,16 @@ void stat_query(dariadb::scheme::IScheme_Ptr scheme, dariadb::IEngine_Ptr storag
   auto stat = storage_engine->stat(id, from, to);
   rep = reply::stock_reply(stat2string(scheme, id, stat), reply::status_type::ok);
 }
+
+void scheme_change_query(dariadb::scheme::IScheme_Ptr scheme, const http_query &q,
+                         reply &rep) {
+  std::list<std::pair<std::string, dariadb::Id>> new_names;
+  for (auto v : q.scheme_change_query->new_params) {
+    auto id = scheme->addParam(v);
+    new_names.push_back(std::make_pair(v, id));
+  }
+  rep = reply::stock_reply(newScheme2string(new_names), reply::status_type::ok);
+}
 } // namespace requers_handler_inner
 
 void request_handler::handle_request(const request &req, reply &rep) {
@@ -97,6 +107,10 @@ void request_handler::handle_request(const request &req, reply &rep) {
       }
       case http_query_type::stat: {
         requers_handler_inner::stat_query(scheme, _storage_engine, parsed_query, rep);
+        return;
+      }
+      case http_query_type::scheme: {
+        requers_handler_inner::scheme_change_query(scheme, parsed_query, rep);
         return;
       }
       default: {

@@ -317,6 +317,17 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
   BOOST_CHECK_EQUAL(single_interval.front().flag, single_value.flag);
   BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
 
+  {// add param to scheme
+	  json add_param_js;
+	  add_param_js["type"] = "scheme";
+	  add_param_js["add"] = { "new1", "new2","new3" };
+	  query_str = add_param_js.dump(1);
+	  auto add_scheme_result = post(test_service, http_port, query_str);
+	  BOOST_CHECK(add_scheme_result.answer.find("new1") != std::string::npos);
+	  BOOST_CHECK(add_scheme_result.answer.find("new2") != std::string::npos);
+	  BOOST_CHECK(add_scheme_result.answer.find("new3") != std::string::npos);
+  }
+
   auto scheme_res = GET(test_service, http_port, "/scheme");
   // TODO parse result and check return value.
   BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
