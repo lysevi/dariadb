@@ -317,6 +317,7 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
   BOOST_CHECK_EQUAL(single_interval.front().flag, single_value.flag);
   BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
 
+  //TODO move creation this query to common lib and use them in binary client.
   {// add param to scheme
 	  json add_param_js;
 	  add_param_js["type"] = "scheme";

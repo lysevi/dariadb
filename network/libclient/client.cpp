@@ -4,6 +4,7 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
 #include <common/async_connection.h>
+#include <common/http_helpers.h>
 #include <common/net_common.h>
 
 #include <boost/asio.hpp>
@@ -12,6 +13,10 @@
 #include <memory>
 #include <string>
 #include <thread>
+
+#include <extern/json/src/json.hpp>
+
+using json = nlohmann::json;
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -316,7 +321,7 @@ public:
   MeasArray readInterval(const QueryInterval &qi) {
     MeasArray result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result.push_back(m);
       }
@@ -366,7 +371,7 @@ public:
   Id2Meas readTimePoint(const QueryTimePoint &qi) {
     Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -416,7 +421,7 @@ public:
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -461,6 +466,34 @@ public:
 
     _async_connection->send(nd);
     return qres;
+  }
+
+  std::map<std::string, dariadb::Id> loadScheme() {
+    std::map<std::string, dariadb::Id> result;
+    auto scheme_res = http::GET(_service, std::to_string(_params.http_port), "/scheme");
+    if (scheme_res.code != 200) { // is http::OK?
+      return result;
+    } else {
+      // TODO move parse to common
+      json js = json::parse(scheme_res.answer);
+	  for (auto it = js.begin(); it != js.end();++it) {
+		  std::string key = it.key();
+		  dariadb::Id val = it.value();
+		  result[key] = val;
+	  }
+    }
+    return result;
+  }
+
+  bool addToScheme(const std::string &value) {
+    json add_param_js;
+    add_param_js["type"] = "scheme";
+    add_param_js["add"] = {value};
+    auto query_str = add_param_js.dump(1);
+    auto add_scheme_result =
+        http::POST(_service, std::to_string(_params.http_port), query_str);
+    // TODO move http answer constants to net_common;
+    return add_scheme_result.code == 200; // is http::OK?
   }
 
   io_service _service;
@@ -538,3 +571,10 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
   return _Impl->subscribe(ids, flag, clbk);
 }
 
+std::map<std::string, dariadb::Id> Client::loadScheme() {
+  return _Impl->loadScheme();
+}
+
+bool Client::addToScheme(const std::string &value) {
+  return _Impl->addToScheme(value);
+}

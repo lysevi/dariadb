@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
     std::cout << "Wait server..." << std::endl;
     dariadb::utils::sleep_mls(100);
   }
-  dariadb::net::client::Client::Param p(server_host, server_port);
+  dariadb::net::client::Client::Param p(server_host, server_port, server_http_port);
 
   if (!http_benchmark) {
     for (size_t i = 0; i < clients_count; ++i) {

@@ -8,7 +8,7 @@ namespace dariadb {
 namespace net {
 namespace http {
 
-http_response POST(boost::asio::io_service &service, std::string &port,
+http_response POST(boost::asio::io_service &service, const std::string &port,
                    const std::string &json_query) {
   http_response result;
   result.code = 0;
@@ -86,7 +86,7 @@ http_response POST(boost::asio::io_service &service, std::string &port,
   return result;
 }
 
-http_response GET(boost::asio::io_service &service, std::string &port,
+http_response GET(boost::asio::io_service &service, const std::string &port,
                   const std::string &path) {
   http_response result;
   result.code = 0;
@@ -145,17 +145,18 @@ http_response GET(boost::asio::io_service &service, std::string &port,
   }
   ss << "\n";
 
+  std::stringstream ss_content;
   // Write whatever content we already have to output.
   if (response.size() > 0) {
-    ss << &response;
+	  ss_content << &response;
   }
 
   // Read until EOF, writing data to output as we go.
   boost::system::error_code error;
   while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) {
-    ss << &response;
+	  ss_content << &response;
   }
-  result.answer = ss.str();
+  result.answer = ss_content.str();
   return result;
 }
 

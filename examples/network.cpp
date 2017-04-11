@@ -3,8 +3,9 @@
 int main(int argc, char **argv) {
   const size_t MEASES_SIZE = 200000;
   unsigned short server_port = 2001;
+  unsigned short server_http_port = 2002;
   std::string server_host = "127.0.0.1";
-  dariadb::net::client::Client::Param p(server_host, server_port);
+  dariadb::net::client::Client::Param p(server_host, server_port, server_http_port);
 
   dariadb::net::client::Client_Ptr connection{new dariadb::net::client::Client(p)};
   connection->connect();

@@ -12,9 +12,9 @@ struct http_response {
   std::string answer;
 };
 
-CM_EXPORT http_response POST(boost::asio::io_service &service, std::string &port,
+CM_EXPORT http_response POST(boost::asio::io_service &service, const std::string &port,
                              const std::string &json_query);
-CM_EXPORT http_response GET(boost::asio::io_service &service, std::string &port,
+CM_EXPORT http_response GET(boost::asio::io_service &service, const std::string &port,
                             const std::string &path);
 } // namespace http
 } // namespace net

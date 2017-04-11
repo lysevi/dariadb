@@ -41,9 +41,11 @@ public:
   struct Param {
     std::string host;
     unsigned short port;
-    Param(const std::string &_host, unsigned short _port) {
+	unsigned short http_port;
+    Param(const std::string &_host, unsigned short _port,unsigned short _http_port) {
       host = _host;
       port = _port;
+	  http_port = _http_port;
     }
   };
   CL_EXPORT Client(const Param &p);
@@ -73,7 +75,9 @@ public:
 
   CL_EXPORT ReadResult_ptr subscribe(const IdArray &ids, const Flag &flag,
                                      ReadResult::callback &clbk);
-
+  
+  CL_EXPORT std::map<std::string, dariadb::Id> loadScheme();
+  CL_EXPORT bool addToScheme(const std::string &value);
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

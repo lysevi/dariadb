@@ -11,13 +11,14 @@
 #include <libclient/client.h>
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/scheme/scheme.h>
 #include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
 
 const dariadb::net::Server::Param server_param(2001, 2002);
-const dariadb::net::client::Client::Param client_param("localhost", 2001);
+const dariadb::net::client::Client::Param client_param("localhost", 2001, 2002);
 
 dariadb::net::Server *server_instance = nullptr;
 
@@ -299,9 +300,10 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       ids[i] = ma[i].id;
     }
     size_t subscribe_calls = 0;
-    dariadb::net::client::ReadResult::callback clbk = [&subscribe_calls](
-        const dariadb::net::client::ReadResult *parent, const dariadb::Meas &m,
-        const dariadb::Statistic &st) { subscribe_calls++; };
+    dariadb::net::client::ReadResult::callback clbk =
+        [&subscribe_calls](const dariadb::net::client::ReadResult *parent,
+                           const dariadb::Meas &m,
+                           const dariadb::Statistic &st) { subscribe_calls++; };
 
     auto read_res = c1.subscribe({ma[0].id}, dariadb::Flag(0), clbk);
     read_res->wait();
@@ -341,27 +343,18 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(RepackTest) {
-  dariadb::logger("********** RepackTest **********");
-
-  const std::string storage_path = "testStorage";
-  const size_t chunk_size = 256;
+BOOST_AUTO_TEST_CASE(SchemeTest) {
+  dariadb::logger("********** SchemeTest **********");
 
   using namespace dariadb;
   using namespace dariadb::storage;
 
   {
-    if (dariadb::utils::fs::path_exists(storage_path)) {
-      dariadb::utils::fs::rm(storage_path);
-    }
-
-    auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(dariadb::STRATEGY::WAL);
-    settings->chunk_size.setValue(chunk_size);
+    auto settings = dariadb::storage::Settings::create();
+	auto data_scheme = dariadb::scheme::Scheme::create(settings);
     IEngine_Ptr stor{new Engine(settings)};
-
-    const size_t MEASES_SIZE = 2047 * 10 + 3;
-
+	stor->setScheme(data_scheme);
+    
     std::thread server_thread{server_thread_func};
 
     while (server_instance == nullptr || !server_instance->is_runned()) {
@@ -374,33 +367,23 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
     // 1 client
     while (true) {
       auto st1 = c1.state();
-      dariadb::logger("RepackTest test>> ", "0  state1: ", st1);
+      dariadb::logger("SchemeTest test>> ", "0  state1: ", st1);
       if (st1 == dariadb::net::CLIENT_STATE::WORK) {
         break;
       }
       dariadb::utils::sleep_mls(300);
     }
 
-    dariadb::Id id = 0;
-    while (1) {
-      ++id;
-      dariadb::MeasArray ma;
-      ma.resize(MEASES_SIZE);
-
-      for (size_t i = 0; i < MEASES_SIZE; ++i) {
-        ma[i].id = id;
-        ma[i].value = dariadb::Value(i);
-        ma[i].time = i;
-      }
-      c1.append(ma);
-      auto wals = dariadb::utils::fs::ls(settings->raw_path.value(),
-                                         dariadb::storage::WAL_FILE_EXT)
-                      .size();
-      dariadb::logger("RepackTest: wal count:", wals);
-      if (wals >= size_t(2)) {
-        break;
-      }
-    }
+	BOOST_CHECK(c1.addToScheme("test1"));
+	BOOST_CHECK(c1.addToScheme("test2"));
+	BOOST_CHECK(c1.addToScheme("test3"));
+   
+	auto v2id = c1.loadScheme();
+	BOOST_CHECK_EQUAL(v2id.size(), size_t(3));
+	
+	BOOST_CHECK(v2id.find("test1") != v2id.end());
+	BOOST_CHECK(v2id.find("test2") != v2id.end());
+	BOOST_CHECK(v2id.find("test3") != v2id.end());
 
     c1.disconnect();
 
@@ -414,8 +397,5 @@ BOOST_AUTO_TEST_CASE(RepackTest) {
     }
     server_instance->stop();
     server_thread.join();
-  }
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
   }
 }
