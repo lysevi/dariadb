@@ -331,6 +331,9 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
   auto scheme_res = GET(test_service, http_port, "/scheme");
   // TODO parse result and check return value.
   BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
+  BOOST_CHECK(scheme_res.answer.find("new1") != std::string::npos);
+  BOOST_CHECK(scheme_res.answer.find("new2") != std::string::npos);
+  BOOST_CHECK(scheme_res.answer.find("new3") != std::string::npos);
 
   // readInterval
   {
