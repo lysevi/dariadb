@@ -120,7 +120,7 @@ uint32_t QueryAppend_header::make_query(QueryAppend_header *hdr, const Meas *m_a
 
     std::memcpy(ptr, sm.packed, sm.size);
     ptr += sm.size;
-	ENSURE(ptr < end);
+    ENSURE(ptr < end);
     ++pack->count;
     ++pos;
     ++result;
@@ -142,7 +142,7 @@ MeasArray QueryAppend_header::read_measarray() const {
   while (pos < count) {
     PackHeader *pack = (PackHeader *)ptr;
     ptr += sizeof(PackHeader);
-	ENSURE(pack->count <= count);
+    ENSURE(pack->count <= count);
     for (uint16_t i = 0; i < pack->count; ++i) {
       UnpackMeas sm(ptr);
 
@@ -156,4 +156,3 @@ MeasArray QueryAppend_header::read_measarray() const {
   }
   return ma;
 }
-

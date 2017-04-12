@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(Shard_subscribe_test) {
 
     shard_storage->shardAdd({storage_path_shard2, "shard2", IdSet()});
 
-	dariadb_test::subscribe_test(shard_storage.get());
+    dariadb_test::subscribe_test(shard_storage.get());
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

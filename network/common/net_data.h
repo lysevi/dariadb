@@ -3,8 +3,8 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/stat.h>
 #include <libdariadb/utils/async/locker.h>
-#include <common/net_common.h>
 #include <common/net_cmn_exports.h>
+#include <common/net_common.h>
 
 namespace dariadb {
 namespace net {
@@ -114,7 +114,7 @@ struct QueryStatResult_header {
 
 using NetData_ptr = std::shared_ptr<NetData>;
 
-//using NetData_ptr = NetData_Pool::Pool::element_type *;
+// using NetData_ptr = NetData_Pool::Pool::element_type *;
 const size_t MARKER_SIZE = sizeof(NetData::MessageSize);
 }
 }

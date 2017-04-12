@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libserver/http/connection.h>
+#include <mutex>
 #include <set>
 
 namespace dariadb {
@@ -29,6 +30,7 @@ public:
 private:
   /// The managed connections.
   std::set<connection_ptr> connections_;
+  std::mutex _locker;
 };
 
 } // namespace http

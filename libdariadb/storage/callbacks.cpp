@@ -21,10 +21,8 @@ void MArrayPtr_ReaderClb::apply(const Meas &m) {
   marray->push_back(m);
 }
 
+FunctorCallback::FunctorCallback(FunctorCallback::FunctorType &ft) : functor(ft) {}
 
-FunctorCallback::FunctorCallback(FunctorCallback::FunctorType&ft):functor(ft){
-}
-
-void FunctorCallback::apply(const Meas&m) {
-	is_cancel =this->functor(m);
+void FunctorCallback::apply(const Meas &m) {
+  is_cancel = this->functor(m);
 }

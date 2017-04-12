@@ -4,6 +4,7 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
 #include <common/async_connection.h>
+#include <common/http_helpers.h>
 #include <common/net_common.h>
 
 #include <boost/asio.hpp>
@@ -12,6 +13,10 @@
 #include <memory>
 #include <string>
 #include <thread>
+
+#include <extern/json/src/json.hpp>
+
+using json = nlohmann::json;
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -200,19 +205,7 @@ public:
       }
       break;
     }
-    case DATA_KINDS::STAT: {
-      auto qw = reinterpret_cast<QueryStatResult_header *>(d->data);
-      logger_info("state: #", qw->id);
-      auto subres = this->_query_results[qw->id];
-      ENSURE(subres != nullptr);
 
-      subres->is_closed = true;
-      subres->clbk(subres.get(), Meas(), qw->result);
-      subres->locker.unlock();
-      _query_results.erase(qw->id);
-
-      break;
-    }
     case DATA_KINDS::PING: {
       logger_info("client: #", _async_connection->id(), " ping.");
       auto nd = std::make_shared<NetData>(DATA_KINDS::PONG);
@@ -328,7 +321,7 @@ public:
   MeasArray readInterval(const QueryInterval &qi) {
     MeasArray result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result.push_back(m);
       }
@@ -378,7 +371,7 @@ public:
   Id2Meas readTimePoint(const QueryTimePoint &qi) {
     Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -428,7 +421,7 @@ public:
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -475,56 +468,30 @@ public:
     return qres;
   }
 
-  void repack() {
-    _locker.lock();
-    auto cur_id = _query_num;
-    _query_num += 1;
-    _locker.unlock();
-    auto nd = std::make_shared<NetData>(DATA_KINDS::REPACK);
-
-    auto p_header = reinterpret_cast<QuerRepack_header *>(nd->data);
-    nd->size = sizeof(QuerRepack_header);
-    p_header->id = cur_id;
-    _async_connection->send(nd);
-  }
-
-  ReadResult_ptr stat(const Id id, const Time from, const Time to,
-                      ReadResult::callback &clbk) {
-    _locker.lock();
-    auto cur_id = _query_num;
-    _query_num += 1;
-    _locker.unlock();
-
-    auto qres = std::make_shared<ReadResult>();
-    qres->locker.lock();
-    qres->id = cur_id;
-    qres->kind = DATA_KINDS::STAT;
-
-    auto nd = std::make_shared<NetData>(DATA_KINDS::STAT);
-
-    auto p_header = reinterpret_cast<QueryStat_header *>(nd->data);
-    nd->size = sizeof(QueryStat_header);
-    p_header->id = cur_id;
-    p_header->from = from;
-    p_header->to = to;
-    p_header->meas_id = id;
-
-    qres->is_closed = false;
-    qres->clbk = clbk;
-    this->_query_results[qres->id] = qres;
-
-    _async_connection->send(nd);
-    return qres;
-  }
-
-  Statistic stat(const Id id, Time from, Time to) {
-    Statistic result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) { result = st; };
-    ReadResult::callback clbk = clbk_lambda;
-    auto qres = stat(id, from, to, clbk);
-    qres->wait();
+  std::map<std::string, dariadb::Id> loadScheme() {
+    std::map<std::string, dariadb::Id> result;
+    auto scheme_res = http::GET(_service, std::to_string(_params.http_port), "/scheme");
+    if (scheme_res.code != 200) { // is http::OK?
+      return result;
+    } else {
+      json js = json::parse(scheme_res.answer);
+      for (auto it = js.begin(); it != js.end(); ++it) {
+        std::string key = it.key();
+        dariadb::Id val = it.value();
+        result[key] = val;
+      }
+    }
     return result;
+  }
+
+  bool addToScheme(const std::string &value) {
+    json add_param_js;
+    add_param_js["type"] = "scheme";
+    add_param_js["add"] = {value};
+    auto query_str = add_param_js.dump(1);
+    auto add_scheme_result =
+        http::POST(_service, std::to_string(_params.http_port), query_str);
+    return add_scheme_result.code == 200; // is http::OK?
   }
 
   io_service _service;
@@ -602,10 +569,10 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
   return _Impl->subscribe(ids, flag, clbk);
 }
 
-void Client::repack() {
-  _Impl->repack();
+std::map<std::string, dariadb::Id> Client::loadScheme() {
+  return _Impl->loadScheme();
 }
 
-Statistic Client::stat(const Id id, Time from, Time to) {
-  return _Impl->stat(id, from, to);
+bool Client::addToScheme(const std::string &value) {
+  return _Impl->addToScheme(value);
 }

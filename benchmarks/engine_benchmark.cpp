@@ -103,8 +103,9 @@ void parse_cmdline(int argc, char *argv[]) {
               po::value<size_t>(&benchmark_params.total_threads_count)
                   ->default_value(benchmark_params.total_threads_count),
               "write threads count");
-  aos_writers("freq", po::value<size_t>(&benchmark_params.freq_per_second)
-                          ->default_value(benchmark_params.freq_per_second));
+  aos_writers("freq",
+              po::value<size_t>(&benchmark_params.freq_per_second)
+                  ->default_value(benchmark_params.freq_per_second));
   desc.add(writers);
 
   po::variables_map vm;
@@ -148,8 +149,8 @@ void parse_cmdline(int argc, char *argv[]) {
   }
 
   if (vm.count("writeonly")) {
-	  write_only = true;
-	  std::cout << "Write only mode." << std::endl;
+    write_only = true;
+    std::cout << "Write only mode." << std::endl;
   }
 
   if (vm.count("readall")) {
@@ -524,9 +525,9 @@ int main(int argc, char *argv[]) {
 
     std::cout << "write time: " << writers_elapsed << std::endl;
     std::cout << "total speed: " << append_count / writers_elapsed << "/s" << std::endl;
-	if (write_only) {
-		return 0;
-	}
+    if (write_only) {
+      return 0;
+    }
     if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE) {
       std::cout << "==> full flush..." << std::endl;
       stop_info = false;

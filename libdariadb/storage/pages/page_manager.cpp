@@ -416,7 +416,7 @@ public:
     utils::fs::rm(ifull_name);
     ENSURE(!utils::fs::file_exists(full_file_name));
     ENSURE(!utils::fs::file_exists(ifull_name));
-	logger("pm: erase ", fname," done.");
+    logger("pm: erase ", fname, " done.");
   }
 
   void erase_page(const std::string &full_file_name) {
@@ -508,7 +508,7 @@ public:
     for (auto &p : part) {
       logger_info("==> ", utils::fs::extract_filename(p));
     }
-	utils::ElapsedTime et;
+    utils::ElapsedTime et;
     std::string file_name =
         dariadb::utils::fs::append_path(_settings->raw_path.value(), page_name);
     res = Page::repackTo(file_name, out_lvl, last_id, _settings->chunk_size.value(), part,
@@ -532,7 +532,7 @@ public:
     Time from = logic->from;
     Time to = logic->to;
     logger("engine", _settings->alias, ": compact. from ", from, " to ", to);
-	utils::ElapsedTime et;
+    utils::ElapsedTime et;
     auto pred = [from, to](const IndexFooter &hdr) {
       return utils::inInterval(from, to, hdr.stat.minTime) ||
              utils::inInterval(from, to, hdr.stat.maxTime) ||
@@ -629,7 +629,7 @@ public:
   }
 
   Id2MinMax_Ptr loadMinMax() {
-    auto result=std::make_shared<Id2MinMax>();
+    auto result = std::make_shared<Id2MinMax>();
 
     auto pages = pages_by_filter([](const IndexFooter &ih) { return true; });
 

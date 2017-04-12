@@ -42,6 +42,7 @@ public:
   EXPORT Id2MinMax_Ptr loadMinMax() override;
 
   EXPORT Id id_bloom();
+
 protected:
   EXPORT WALFile(const EngineEnvironment_ptr env);
   EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname,

@@ -62,11 +62,11 @@ BOOST_AUTO_TEST_CASE(PageManagerReadWriteWithContinue) {
       ma[first.id].push_back(first);
       addeded.push_back(first);
     }
-	bool complete = false;
-	pm->append_async("pagename", ma, [&complete](auto p) {complete = true; });
-	while (!complete) {
-		dariadb::utils::sleep_mls(100);
-	}
+    bool complete = false;
+    pm->append_async("pagename", ma, [&complete](auto p) { complete = true; });
+    while (!complete) {
+      dariadb::utils::sleep_mls(100);
+    }
   }
   pm = nullptr;
 
@@ -153,11 +153,11 @@ BOOST_AUTO_TEST_CASE(PageManagerMultiPageRead) {
     }
     std::stringstream ss;
     ss << std::string("pagename") << iteration++;
-	bool complete = false;
-    pm->append_async(ss.str(), ma, [&complete](auto p) {complete = true; });
-	while (!complete) {
-		dariadb::utils::sleep_mls(100);
-	}
+    bool complete = false;
+    pm->append_async(ss.str(), ma, [&complete](auto p) { complete = true; });
+    while (!complete) {
+      dariadb::utils::sleep_mls(100);
+    }
   }
 
   dariadb::QueryInterval qi(dariadb::IdArray{1}, 0, addeded.front().time,
@@ -256,9 +256,9 @@ BOOST_AUTO_TEST_CASE(PageManagerBulkWrite) {
   }
   std::string page_file_prefix = "page_prefix";
   bool complete = false;
-  pm->append_async(page_file_prefix, a, [&complete](auto p) {complete = true; });
+  pm->append_async(page_file_prefix, a, [&complete](auto p) { complete = true; });
   while (!complete) {
-	  dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(100);
   }
 
   dariadb::IdArray all_id_array{all_id_set.begin(), all_id_set.end()};
@@ -360,9 +360,9 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
   bool complete = false;
-  pm->append_async(page_file_prefix1, a, [&complete](auto p) {complete = true; });
+  pm->append_async(page_file_prefix1, a, [&complete](auto p) { complete = true; });
   while (!complete) {
-	  dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(100);
   }
 
   e.time = 0;
@@ -370,14 +370,14 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
     e.id = 1;
     e.time++;
     e.value = dariadb::Value(i);
-	a[e.id].push_back(e);
+    a[e.id].push_back(e);
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
   complete = false;
-  pm->append_async(page_file_prefix2, a, [&complete](auto p) {complete = true; });
+  pm->append_async(page_file_prefix2, a, [&complete](auto p) { complete = true; });
   while (!complete) {
-	  dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(100);
   }
 
   e.time = 0;
@@ -385,14 +385,14 @@ BOOST_AUTO_TEST_CASE(PageManagerRepack) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i) * 3;
-	a[e.id].push_back(e);
+    a[e.id].push_back(e);
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";
   complete = false;
-  pm->append_async(page_file_prefix3, a, [&complete](auto p) {complete = true; });
+  pm->append_async(page_file_prefix3, a, [&complete](auto p) { complete = true; });
   while (!complete) {
-	  dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(100);
   }
 
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
@@ -518,29 +518,29 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i);
-	a[e.id].push_back(e);
+    a[e.id].push_back(e);
   }
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
   bool complete = false;
-  pm->append_async(page_file_prefix1, a, [&complete](auto p) {complete = true; });
+  pm->append_async(page_file_prefix1, a, [&complete](auto p) { complete = true; });
   while (!complete) {
-	  dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(100);
   }
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
     e.id = 1;
     e.time++;
     e.value = dariadb::Value(i);
-	a[e.id].push_back(e);
+    a[e.id].push_back(e);
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
-  
+
   complete = false;
-  pm->append_async(page_file_prefix2, a, [&complete](auto p) {complete = true; });
+  pm->append_async(page_file_prefix2, a, [&complete](auto p) { complete = true; });
   while (!complete) {
-	  dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(100);
   }
 
   e.time = 0;
@@ -548,15 +548,15 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i) * 3;
-	a[e.id].push_back(e);
+    a[e.id].push_back(e);
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";
 
   complete = false;
-  pm->append_async(page_file_prefix3, a, [&complete](auto p) {complete = true; });
+  pm->append_async(page_file_prefix3, a, [&complete](auto p) { complete = true; });
   while (!complete) {
-	  dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(100);
   }
 
   BOOST_CHECK(dariadb::utils::fs::path_exists(storagePath));
@@ -592,7 +592,7 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     pm->foreach (qi, clb.get());
 
     BOOST_CHECK_EQUAL(clb->marray.size(), count);
-    for (auto v : clb->marray){
+    for (auto v : clb->marray) {
       BOOST_CHECK_EQUAL(v.flag, dariadb::Flag(777));
     }
   }
@@ -609,16 +609,16 @@ BOOST_AUTO_TEST_CASE(PageManagerCompact) {
     }
   }
   {
-	  auto compaction_logic =
-		  std::make_unique<RmAllCompaction>(dariadb::Time(0), dariadb::Time(count / 2));
+    auto compaction_logic =
+        std::make_unique<RmAllCompaction>(dariadb::Time(0), dariadb::Time(count / 2));
 
-	  pm->compact(compaction_logic.get());
+    pm->compact(compaction_logic.get());
 
-	  auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page");
-	  BOOST_CHECK(pages_after.empty());
+    auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page");
+    BOOST_CHECK(pages_after.empty());
 
-	  auto index_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
-	  BOOST_CHECK(index_after.empty());
+    auto index_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
+    BOOST_CHECK(index_after.empty());
   }
   pm = nullptr;
   manifest = nullptr;

@@ -423,8 +423,8 @@ BOOST_AUTO_TEST_CASE(ReaderColapse3Test) {
   auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
 
   auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2, fr3});
-  BOOST_CHECK_EQUAL(msr->count(), fr1->count() + fr2->count()+fr3->count());
+  BOOST_CHECK_EQUAL(msr->count(), fr1->count() + fr2->count() + fr3->count());
   while (msr->is_end()) {
-	  msr->readNext();
+    msr->readNext();
   }
 }

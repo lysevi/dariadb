@@ -13,6 +13,7 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
+#include <common/http_helpers.h>
 
 #include <boost/asio.hpp>
 #include <boost/program_options.hpp>
@@ -35,85 +36,6 @@ IEngine_Ptr engine = nullptr;
 dariadb::net::Server *server_instance = nullptr;
 
 using boost::asio::ip::tcp;
-
-struct post_response {
-  int code;
-  std::string answer;
-};
-
-post_response post(boost::asio::io_service &service, std::string &port,
-                   const std::string &json_query) {
-  post_response result;
-  result.code = 0;
-
-  tcp::resolver resolver(service);
-  tcp::resolver::query query("localhost", port);
-  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-  tcp::socket socket(service);
-  boost::asio::connect(socket, endpoint_iterator);
-
-  boost::asio::streambuf request;
-  std::ostream request_stream(&request);
-
-  request_stream << "POST / HTTP/1.0\r\n";
-  request_stream << "Host:"
-                 << " localhost:8080"
-                 << "\r\n";
-  request_stream << "User-Agent: C/1.0"
-                 << "\r\n";
-  request_stream << "Content-Type: application/json; charset=utf-8 \r\n";
-  request_stream << "Accept: */*\r\n";
-  request_stream << "Content-Length: " << json_query.length() << "\r\n";
-  request_stream << "Connection: close\r\n\r\n"; // NOTE THE Double line feed
-  request_stream << json_query;
-
-  boost::asio::write(socket, request);
-
-  // read answer
-  boost::asio::streambuf response;
-  boost::asio::read_until(socket, response, "\r\n");
-
-  // Check that response is OK.
-  std::istream response_stream(&response);
-  std::string http_version;
-  response_stream >> http_version;
-  unsigned int status_code;
-  response_stream >> status_code;
-  std::string status_message;
-  std::getline(response_stream, status_message);
-  if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
-    std::cout << "Invalid response\n";
-    result.code = -1;
-    return result;
-  }
-  result.code = status_code;
-  if (status_code != 200) {
-    std::cout << "Response returned with status code " << status_code << "\n";
-    return result;
-  }
-
-  boost::asio::read_until(socket, response, "\r\n\r\n");
-
-  std::stringstream ss;
-  // Process the response headers.
-  std::string header;
-  while (std::getline(response_stream, header) && header != "\r") {
-    ss << header << "\n";
-  }
-  ss << "\n";
-
-  if (response.size() > 0) {
-    ss << &response;
-  }
-
-  boost::system::error_code error;
-  while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) {
-    ss << &response;
-  }
-  result.answer = ss.str();
-  return result;
-}
 
 void run_server() {
   auto settings = dariadb::storage::Settings::create();
@@ -197,7 +119,7 @@ void write_http_thread(size_t thread_num) {
     js["append_values"] = js_query;
     std::string query = js.dump();
 
-    auto post_result = post(test_service, http_port, query);
+    auto post_result = net::http::POST(test_service, http_port, query);
     if (post_result.code != 200) {
       THROW_EXCEPTION("http result is not ok.");
     }
@@ -262,7 +184,7 @@ int main(int argc, char **argv) {
     std::cout << "Wait server..." << std::endl;
     dariadb::utils::sleep_mls(100);
   }
-  dariadb::net::client::Client::Param p(server_host, server_port);
+  dariadb::net::client::Client::Param p(server_host, server_port, server_http_port);
 
   if (!http_benchmark) {
     for (size_t i = 0; i < clients_count; ++i) {
@@ -327,7 +249,7 @@ int main(int argc, char **argv) {
   auto summary_time = std::accumulate(elapsed.begin(), elapsed.end(), 0.0);
 
   auto average_time = summary_time / clients_count;
-  auto summary_speed = summary_time/ total_writed;
+  auto summary_speed = summary_time / total_writed;
 
   std::cout << "summary time: " << summary_time << " sec." << std::endl;
   std::cout << "average time: " << average_time << " sec." << std::endl;

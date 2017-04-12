@@ -19,7 +19,8 @@ struct MemChunk : public Chunk {
 
   MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, uint32_t size,
            const Meas &first_m, IMemoryAllocator_Ptr _a);
-  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, IMemoryAllocator_Ptr _a);
+  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer,
+           IMemoryAllocator_Ptr _a);
   ~MemChunk();
 };
 

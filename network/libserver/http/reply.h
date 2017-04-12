@@ -42,7 +42,7 @@ struct reply {
   std::vector<boost::asio::const_buffer> to_buffers();
 
   /// Get a stock reply.
-  static reply stock_reply(const std::string &content,status_type status);
+  static reply stock_reply(const std::string &content, status_type status);
 };
 
 } // namespace http

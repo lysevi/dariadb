@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/interfaces/icompactioncontroller.h>
+#include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/chunkcontainer.h>
@@ -31,7 +31,8 @@ public:
   EXPORT dariadb::Time minTime();
   EXPORT dariadb::Time maxTime();
 
-  EXPORT void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma, on_create_complete_callback callback);
+  EXPORT void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma,
+                           on_create_complete_callback callback);
   EXPORT void appendChunks(const std::vector<Chunk *> &a) override;
 
   EXPORT void fsck();
@@ -45,6 +46,7 @@ public:
   EXPORT void compact(ICompactionController *logic);
 
   EXPORT std::list<std::string> pagesOlderThan(Time t);
+
 protected:
   EXPORT PageManager(const EngineEnvironment_ptr env);
 

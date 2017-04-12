@@ -87,7 +87,7 @@ std::vector<boost::asio::const_buffer> reply::to_buffers() {
   return buffers;
 }
 
-reply reply::stock_reply(const std::string &content,reply::status_type status) {
+reply reply::stock_reply(const std::string &content, reply::status_type status) {
   reply rep;
   rep.status = status;
   rep.content = content;

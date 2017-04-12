@@ -14,7 +14,7 @@ MemChunk::MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, uint3
 }
 
 MemChunk::MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer,
-	IMemoryAllocator_Ptr _a)
+                   IMemoryAllocator_Ptr _a)
     : Chunk(index, buffer) {
   index_ptr = index;
   buffer_ptr = buffer;

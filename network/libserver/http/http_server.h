@@ -26,6 +26,7 @@ public:
   }
 
   void do_stop();
+
 private:
   void do_accept();
 

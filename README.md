@@ -20,12 +20,12 @@
   - compressed - all values compressed for good disk usage without writing to sorted layer.
   - memory - all values stored in memory and dropped to disk when memory limit is ended.
   - cache - all values stored in memory with writes to disk.
-* Memory only mode.
+  - memory-only - all valeus stored only in memory.
 * LSM-like storage struct with three layers:
   - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'wal').
   - Old values stored in compressed block for better disk space usage.
 * High write speed:
-  - as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
+  - as embedded engine - to disk - 1.5 - 3.5 millions values per second to disk
   - as memory storage(when strategy is 'memory') - 7-9 millions.
   - across the network - 700k - 800k values per second
 * Shard-engine: you can split values per shard in disk, for better compaction and read speed up.
@@ -34,9 +34,7 @@
 * Two variants of API:
   - Functor API (async) -  engine apply given function to each measurement in the incoming request.
   - Standard API - You can Query interval as list or values in time point as dictionary.
-* Compaction old data with filtration support:
-  - in engine api.
-  - in network protocol.
+* Compaction old data with filtration support;
 * Statistic:
   - time min/max
   - value min/max
@@ -45,7 +43,7 @@
 
 # Usage example
 - See folder "examples"
-- How to use dariadb as a embedded storage engine: [dariadb-example](https://github.com/lysevi/dariadb-example)
+- How to use dariadb as a embedded storage engine: [dariadb-example](	)
 
 # Dependencies
 * Boost 1.54.0 or higher: system, filesystem, date_time,regex, unit_test_framework(to build tests), program_options, asio.
@@ -53,8 +51,10 @@
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
 ## Build
-### Install dependencies
 ---
+
+### Install dependencies
+
 ```shell
 $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update
@@ -62,6 +62,7 @@ $ sudo apt-get install -y libboost-dev  libboost-coroutine-dev libboost-context-
 $ export CC="gcc-6"
 $ export CXX="g++-6"
 ```
+
 ### Jemalloc
 Optionaly you can install jemalloc for better memory usage. 
 ```shell
@@ -86,6 +87,7 @@ $ git submodules update
 - **DARIADB_ASAN_UBSAN**  - Enable address & undefined behavior sanitizer for binary. - OFF
 - **DARIADB_MSAN** - Enable memory sanitizer for binary. - OFF
 - **DARIADB_SYSTEM_JEMALLOC** - Use jemalloc installed in the system. - ON
+- **DARIADB_ENABLE_TOOLS** - Build utility tools. - ON
 
 #### Configure to build with all benchmarks, but without tests and server.
 ---
@@ -107,6 +109,7 @@ $ make
 $ cmake -DCMAKE_BUILD_TYPE=Release .
 $ make
 ```
+
 ### Microsoft Visual Studio
 ---
 ```cmd

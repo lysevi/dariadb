@@ -10,8 +10,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-AsyncConnection::AsyncConnection(onDataRecvHandler onRecv,
-                                 onNetworkErrorHandler onErr) {
+AsyncConnection::AsyncConnection(onDataRecvHandler onRecv, onNetworkErrorHandler onErr) {
   _async_con_id = 0;
   _messages_to_send = 0;
   _is_stoped = true;
@@ -76,7 +75,7 @@ void AsyncConnection::send(const NetData_ptr &d) {
 void AsyncConnection::readNextAsync() {
   if (auto spt = _sock.lock()) {
     auto ptr = shared_from_this();
-	NetData_ptr d = std::make_shared<NetData>();
+    NetData_ptr d = std::make_shared<NetData>();
 
     async_read(*spt.get(), buffer((uint8_t *)(&d->size), MARKER_SIZE),
                [ptr, d, spt](auto err, auto read_bytes) {

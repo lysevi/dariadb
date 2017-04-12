@@ -24,7 +24,7 @@ struct IOClient {
       storage = nullptr;
     }
     IClientManager *srv;
-	IEngine_Ptr storage;
+    IEngine_Ptr storage;
     boost::asio::io_service *service;
   };
 
@@ -36,11 +36,11 @@ struct IOClient {
     QueryNumber _query_num;
     size_t pos;
     std::array<Meas, BUFFER_LENGTH> _buffer;
-	
-	bool is_needed = true;// false - io_client remove from readers.
 
-    QueryInterval*linked_query_interval;
-    QueryTimePoint*linked_query_point;
+    bool is_needed = true; // false - io_client remove from readers.
+
+    QueryInterval *linked_query_interval;
+    QueryTimePoint *linked_query_point;
 
     ClientDataReader(IOClient *parent, QueryNumber query_num);
     ~ClientDataReader();
@@ -84,7 +84,7 @@ struct IOClient {
   std::shared_ptr<IReadCallback> subscribe_reader;
   std::shared_ptr<AsyncConnection> _async_connection;
 
-  std::map<QueryNumber, ReaderCallback_ptr>  _readers;
+  std::map<QueryNumber, ReaderCallback_ptr> _readers;
   std::mutex _readers_lock;
 };
 

@@ -51,10 +51,10 @@ int main(int, char **) {
 
   // callback
   std::cout << "Callback in timepoint: " << std::endl;
-  auto f= dariadb::storage::FunctorCallback::FunctorType([](const dariadb::Meas &m) {
-	  std::cout << " id: " << m.id << " timepoint: " << dariadb::timeutil::to_string(m.time)
-		  << " value:" << m.value << std::endl;
-	  return false;
+  auto f = dariadb::storage::FunctorCallback::FunctorType([](const dariadb::Meas &m) {
+    std::cout << " id: " << m.id << " timepoint: " << dariadb::timeutil::to_string(m.time)
+              << " value:" << m.value << std::endl;
+    return false;
   });
   dariadb::storage::FunctorCallback callback(f);
   storage->foreach (qp, &callback);

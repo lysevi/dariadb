@@ -93,6 +93,27 @@ send GET query to URL "http://dariadb_host:port/scheme". Result example:
 
 , is a dictinary, where name is a key, and id as value.
 
+# Add new param to scheme
+send POST query:
+```json
+{
+ "add": ["new1","new2","new3"],
+ "type": "scheme"
+}
+```
+, where "new1", "new2", "new3" - names of new params
+
+answer example:
+
+```json
+{
+ "new1": 11,
+ "new2": 12,
+ "new3": 13
+}
+```
+, is a dictinary, where "key" - param name, and value - param id.
+
 # Read statistic for value
 send POST query:
 ```json

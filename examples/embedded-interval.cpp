@@ -1,17 +1,17 @@
 #include <libdariadb/dariadb.h>
 #include <iostream>
 
-void print_measurement(dariadb::Meas&measurement){
-	std::cout << " id: " << measurement.id
-		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		<< " value:" << measurement.value << std::endl;
+void print_measurement(dariadb::Meas &measurement) {
+  std::cout << " id: " << measurement.id
+            << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+            << " value:" << measurement.value << std::endl;
 }
 
-
-void print_measurement(dariadb::Meas&measurement, dariadb::scheme::DescriptionMap&dmap) {
-	std::cout << " param: " << dmap[measurement.id]
-		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		<< " value:" << measurement.value << std::endl;
+void print_measurement(dariadb::Meas &measurement,
+                       dariadb::scheme::DescriptionMap &dmap) {
+  std::cout << " param: " << dmap[measurement.id]
+            << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+            << " value:" << measurement.value << std::endl;
 }
 
 class QuietLogger : public dariadb::utils::ILogger {
@@ -24,9 +24,9 @@ public:
   Callback() {}
 
   void apply(const dariadb::Meas &measurement) override {
-	  std::cout << " id: " << measurement.id
-		  << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		  << " value:" << measurement.value << std::endl;
+    std::cout << " id: " << measurement.id
+              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+              << " value:" << measurement.value << std::endl;
   }
 
   void is_end() override {
@@ -60,13 +60,13 @@ int main(int, char **) {
   dariadb::MeasArray readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
-	  print_measurement(measurement, all_params);
+    print_measurement(measurement, all_params);
   }
 
   // callback
   std::cout << "Callback in interval: " << std::endl;
   Callback callback;
-  storage->foreach(qi, &callback);
+  storage->foreach (qi, &callback);
   callback.wait();
 
   { // stat

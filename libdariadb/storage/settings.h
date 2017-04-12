@@ -93,7 +93,7 @@ public:
 
   ReadOnlyOption<std::string> storage_path;
   ReadOnlyOption<std::string> raw_path;
-  
+
   Option<Time> max_store_period; // period, when old pages must be removed.
   // wal level options;
   Option<uint64_t> wal_file_size;  // measurements count in one file
@@ -111,12 +111,13 @@ public:
   // pages per level.
   Option<uint16_t> max_pages_in_level;
 
-  Option<size_t> threads_in_common; //threads count in pool 'COMMON'
-  Option<size_t> threads_in_diskio; //threads count in pool 'DISK_IO'
+  Option<size_t> threads_in_common; // threads count in pool 'COMMON'
+  Option<size_t> threads_in_diskio; // threads count in pool 'DISK_IO'
 
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
   std::string alias; // is set, used in log messages;
   bool is_memory_only_mode;
+
 protected:
   EXPORT Settings(const std::string &storage_path);
 };

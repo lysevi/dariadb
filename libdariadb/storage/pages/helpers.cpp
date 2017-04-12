@@ -34,8 +34,9 @@ bool have_overlap(const std::vector<ChunkLink> &links) {
   return false;
 }
 
-std::shared_ptr<std::list<HdrAndBuffer>> compressValues(const std::map<Id, MeasArray> &to_compress,
-                                       PageFooter &phdr, uint32_t max_chunk_size) {
+std::shared_ptr<std::list<HdrAndBuffer>>
+compressValues(const std::map<Id, MeasArray> &to_compress, PageFooter &phdr,
+               uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
   auto results = std::make_shared<std::list<HdrAndBuffer>>();
   utils::async::Locker result_locker;
@@ -141,7 +142,7 @@ IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *ihead
   IndexReccord cur_index;
 
   cur_index.chunk_id = cheader.id;
-  cur_index.offset = cheader.offset_in_page; 
+  cur_index.offset = cheader.offset_in_page;
 
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
   iheader->recs_count++;
