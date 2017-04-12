@@ -12,9 +12,7 @@ macro(TEST_CASE name src)
 	MESSAGE(STATUS " +" ${name})
 	add_executable(${name} ${src})
     
-	TARGET_LINK_LIBRARIES(${name} libcommon_test ${DARIADB_STORAGE_LIBS} gtest_main)
-	add_dependencies(${name} gtest_main )
-
+	TARGET_LINK_LIBRARIES(${name} libcommon_test ${DARIADB_STORAGE_LIBS})
 	add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}) 
 	set_target_properties(${name} PROPERTIES FOLDER Tests)
 endmacro(TEST_CASE)
@@ -36,5 +34,3 @@ TEST_CASE(pages_test pages_test.cpp)
 TEST_CASE(compression_test compression_test.cpp)
 TEST_CASE(utils_test utils_test.cpp)
 TEST_CASE(memstorage_test memstorage_test.cpp)
-
-TEST_CASE(gtest_example gtest_example.cpp)
