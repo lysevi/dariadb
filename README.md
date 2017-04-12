@@ -25,7 +25,7 @@
   - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'wal').
   - Old values stored in compressed block for better disk space usage.
 * High write speed:
-  - as embedded engine - to disk - 2.5 - 3.5 millions values per second to disk
+  - as embedded engine - to disk - 1.5 - 3.5 millions values per second to disk
   - as memory storage(when strategy is 'memory') - 7-9 millions.
   - across the network - 700k - 800k values per second
 * Shard-engine: you can split values per shard in disk, for better compaction and read speed up.
