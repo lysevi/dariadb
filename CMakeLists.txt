@@ -148,9 +148,11 @@ endif()
 if (DARIADB_ENABLE_TESTS)
   enable_testing()
   add_subdirectory(tests)
+  add_subdirectory(unittests)
 endif()
 
 if(DARIADB_ENABLE_BENCHMARKS)
+  add_subdirectory (microbenchmarks)
   add_subdirectory (benchmarks)
 endif()
 
