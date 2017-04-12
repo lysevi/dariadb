@@ -20,7 +20,7 @@
   - compressed - all values compressed for good disk usage without writing to sorted layer.
   - memory - all values stored in memory and dropped to disk when memory limit is ended.
   - cache - all values stored in memory with writes to disk.
-* Memory only mode.
+  - memory-only - all valeus stored only in memory.
 * LSM-like storage struct with three layers:
   - Memory cache or Append-only files layer, for fast write speed and crash-safety(if strategy is 'wal').
   - Old values stored in compressed block for better disk space usage.
@@ -34,9 +34,7 @@
 * Two variants of API:
   - Functor API (async) -  engine apply given function to each measurement in the incoming request.
   - Standard API - You can Query interval as list or values in time point as dictionary.
-* Compaction old data with filtration support:
-  - in engine api.
-  - in network protocol.
+* Compaction old data with filtration support;
 * Statistic:
   - time min/max
   - value min/max
@@ -45,7 +43,7 @@
 
 # Usage example
 - See folder "examples"
-- How to use dariadb as a embedded storage engine: [dariadb-example](https://github.com/lysevi/dariadb-example)
+- How to use dariadb as a embedded storage engine: [dariadb-example](	)
 
 # Dependencies
 * Boost 1.54.0 or higher: system, filesystem, date_time,regex, unit_test_framework(to build tests), program_options, asio.

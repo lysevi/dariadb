@@ -12,6 +12,7 @@ v0.4.0
 - Memory only mode.
 - New memory storage.
 - Full featured http api.
+- Network client now can work with scheme.
 
 v0.3.0
 =====
