@@ -317,7 +317,6 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
   BOOST_CHECK_EQUAL(single_interval.front().flag, single_value.flag);
   BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
 
-  //TODO move creation this query to common lib and use them in binary client.
   {// add param to scheme
 	  json add_param_js;
 	  add_param_js["type"] = "scheme";
@@ -330,7 +329,6 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
   }
 
   auto scheme_res = GET(test_service, http_port, "/scheme");
-  // TODO parse result and check return value.
   BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
   BOOST_CHECK(scheme_res.answer.find("new1") != std::string::npos);
   BOOST_CHECK(scheme_res.answer.find("new2") != std::string::npos);

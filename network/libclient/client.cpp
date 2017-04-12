@@ -474,7 +474,6 @@ public:
     if (scheme_res.code != 200) { // is http::OK?
       return result;
     } else {
-      // TODO move parse to common
       json js = json::parse(scheme_res.answer);
 	  for (auto it = js.begin(); it != js.end();++it) {
 		  std::string key = it.key();
@@ -492,7 +491,6 @@ public:
     auto query_str = add_param_js.dump(1);
     auto add_scheme_result =
         http::POST(_service, std::to_string(_params.http_port), query_str);
-    // TODO move http answer constants to net_common;
     return add_scheme_result.code == 200; // is http::OK?
   }
 
