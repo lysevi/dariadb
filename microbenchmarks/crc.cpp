@@ -6,8 +6,8 @@ const size_t CRC_BIG_BENCHMARK_BUFFER = CRC_SMALL_BENCHMARK_BUFFER * 10;
 
 class CrcFixture : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &st) {
-    buffer = new char[st.range_x()];
-    size = st.range_x();
+    buffer = new char[st.range(0)];
+    size = st.range(0);
   }
 
   virtual void TearDown() {
