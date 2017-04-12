@@ -14,14 +14,17 @@ class Server {
 public:
   struct Param {
     unsigned short port;
+    unsigned short http_port;
     size_t io_threads;
-    Param(unsigned short _port) {
+    Param(unsigned short _port, unsigned short _http_port) {
       port = _port;
+      http_port = _http_port;
       io_threads = SERVER_IO_THREADS_DEFAULT;
     }
 
-    Param(unsigned short _port, size_t io_threads_count) {
+    Param(unsigned short _port, unsigned short _http_port, size_t io_threads_count) {
       port = _port;
+      http_port = _http_port;
       io_threads = io_threads_count;
     }
   };
@@ -30,9 +33,10 @@ public:
 
   SRV_EXPORT void start();
   SRV_EXPORT void stop();
+  SRV_EXPORT bool is_asio_stoped();
   SRV_EXPORT bool is_runned();
   SRV_EXPORT size_t connections_accepted() const;
-  SRV_EXPORT void set_storage(Engine *storage);
+  SRV_EXPORT void set_storage(IEngine_Ptr &storage);
 
   SRV_EXPORT void asio_run();
 

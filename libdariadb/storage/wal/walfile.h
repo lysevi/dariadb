@@ -24,8 +24,6 @@ public:
   EXPORT Status append(const Meas &value) override;
   EXPORT Status append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) override;
-  EXPORT Status append(const MeasList::const_iterator &begin,
-                       const MeasList::const_iterator &end) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &q);
   EXPORT Statistic stat(const Id id, Time from, Time to) override;
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override;
@@ -41,7 +39,9 @@ public:
 
   EXPORT std::shared_ptr<MeasArray> readAll();
   EXPORT static size_t writed(std::string fname);
-  EXPORT Id2MinMax loadMinMax() override;
+  EXPORT Id2MinMax_Ptr loadMinMax() override;
+
+  EXPORT Id id_bloom();
 
 protected:
   EXPORT WALFile(const EngineEnvironment_ptr env);

@@ -12,17 +12,19 @@ struct TimeTrack;
 struct MemChunk : public Chunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
-  MemChunkAllocator::AllocatedData _a_data;
+  IMemoryAllocator::AllocatedData _a_data;
+  IMemoryAllocator_Ptr _allocator;
   TimeTrack *_track; /// init in TimeTrack
   bool _is_from_pool;
 
   MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, uint32_t size,
-           const Meas &first_m);
-  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer);
+           const Meas &first_m, IMemoryAllocator_Ptr _a);
+  MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer,
+           IMemoryAllocator_Ptr _a);
   ~MemChunk();
 };
 
 using MemChunk_Ptr = std::shared_ptr<MemChunk>;
 using MemChunkList = std::list<MemChunk_Ptr>;
-}
-}
+} // namespace storage
+} // namespace dariadb

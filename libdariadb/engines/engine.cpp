@@ -31,109 +31,149 @@ using namespace dariadb::utils::async;
 class Engine::Private {
 public:
   Private(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file) {
+    _eraseActionIsStoped = false;
+    _beginStoping = false;
     _thread_pool_owner = init_threadpool;
     _settings = settings;
     _strategy = _settings->strategy.value();
+    _min_max_map = std::make_shared<Id2MinMax>();
 
     _engine_env = EngineEnvironment::create();
     _engine_env->addResource(EngineEnvironment::Resource::SETTINGS, _settings.get());
 
-    logger_info("engine:", _settings->alias, ": project version - ", version());
+    logger_info("engine", _settings->alias, ": project version - ", version());
     logger_info("engine", _settings->alias, ": storage format - ", format());
     logger_info("engine", _settings->alias, ": strategy - ", _settings->strategy.value());
     _stoped = false;
+    bool is_new_storage = false;
+    if (!_settings->is_memory_only_mode) {
+      if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
+        dariadb::utils::fs::mkdir(_settings->storage_path.value());
+        dariadb::utils::fs::mkdir(_settings->raw_path.value());
+      }
 
-    if (!dariadb::utils::fs::path_exists(_settings->storage_path.value())) {
-      dariadb::utils::fs::mkdir(_settings->storage_path.value());
-      dariadb::utils::fs::mkdir(_settings->raw_path.value());
+      lockfile_lock_or_die(ignore_lock_file);
+
+      auto manifest_file_name =
+          utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
+
+      is_new_storage = !utils::fs::file_exists(manifest_file_name);
+      if (is_new_storage) {
+        logger_info("engine", _settings->alias, ": init new storage.");
+      }
     }
-
-    lockfile_lock_or_die(ignore_lock_file);
-
-    auto manifest_file_name =
-        utils::fs::append_path(_settings->storage_path.value(), MANIFEST_FILE_NAME);
-
-    bool is_new_storage = !utils::fs::file_exists(manifest_file_name);
-    if (is_new_storage) {
-      logger_info("engine", _settings->alias, ": init new storage.");
+    if (_thread_pool_owner) {
+      _subscribe_notify.start();
     }
-    _subscribe_notify.start();
     if (init_threadpool) {
       ThreadManager::Params tpm_params(_settings->thread_pools_params());
       ThreadManager::start(tpm_params);
     }
 
-    _manifest = Manifest::create(_settings);
-    _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
+    if (!_settings->is_memory_only_mode) {
+      _manifest = Manifest::create(_settings);
+      _engine_env->addResource(EngineEnvironment::Resource::MANIFEST, _manifest.get());
 
-    if (is_new_storage) { // init new;
-      _manifest->set_format(std::to_string(format()));
-    } else { // open exists
-      check_storage_version();
-      Dropper::cleanStorage(_settings->raw_path.value());
+      if (is_new_storage) { // init new;
+        _manifest->set_format(std::to_string(format()));
+      } else { // open exists
+        check_storage_version();
+        Dropper::cleanStorage(_settings->raw_path.value());
+      }
     }
 
     init_managers();
+    readMinMaxFromStorages();
 
-    if (_strategy == STRATEGY::WAL) {
-      if (_settings->load_min_max) {
+    startWorkers();
+    logger_info("engine", _settings->alias, ": start - OK ");
+  }
+
+  void startWorkers() {
+    logger_info("engine", _settings->alias, ": start async workers...");
+    this->_async_worker_thread_handler =
+        std::thread(std::bind(&Engine::Private::erase_worker_func, this));
+  }
+
+  void whaitWorkers() {
+    logger("engine", _settings->alias, ": whait stop of async workers...");
+    this->_async_worker_thread_handler.join();
+    logger("engine", _settings->alias, ": async workers stoped.");
+  }
+
+  void readMinMaxFromStorages() {
+    if (_settings->load_min_max) {
+      if (_page_manager != nullptr) {
+        auto mm = _page_manager->loadMinMax();
+        minmax_append(_min_max_map, mm);
+      }
+      if (_wal_manager != nullptr) {
+        auto mm = _wal_manager->loadMinMax();
+        minmax_append(_min_max_map, mm);
+      }
+      if (_top_level_storage != nullptr) {
         auto amm = _top_level_storage->loadMinMax();
         minmax_append(_min_max_map, amm);
       }
     }
-
-    logger_info("engine", _settings->alias, ": start - OK ");
   }
 
   void init_managers() {
-    _page_manager = PageManager::create(_engine_env);
-
-    if (_settings->load_min_max) {
-      _min_max_map = _page_manager->loadMinMax();
-    }
-
-    if (_strategy != STRATEGY::MEMORY) {
-      _wal_manager = WALManager::create(_engine_env);
-
-      _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
-      _wal_manager->setDownlevel(_dropper.get());
-      this->_top_level_storage = _wal_manager;
-    }
-
-    if (_strategy == STRATEGY::CACHE || _strategy == STRATEGY::MEMORY) {
-      _memstorage = MemStorage::create(_engine_env, _min_max_map.size());
-      if (_strategy != STRATEGY::CACHE) {
-        _memstorage->setDownLevel(_page_manager.get());
-      }
+    if (_settings->is_memory_only_mode) {
+      _memstorage = MemStorage::create(_engine_env, _min_max_map->size());
       _top_level_storage = _memstorage;
-      if (_strategy == STRATEGY::CACHE) {
-        _memstorage->setDiskStorage(_wal_manager.get());
+    } else {
+      _page_manager = PageManager::create(_engine_env);
+
+      if (_strategy != STRATEGY::MEMORY) {
+        _wal_manager = WALManager::create(_engine_env);
+
+        _dropper = std::make_unique<Dropper>(_engine_env, _page_manager, _wal_manager);
+        _wal_manager->setDownlevel(_dropper.get());
+        this->_top_level_storage = _wal_manager;
+      }
+
+      if (_strategy == STRATEGY::CACHE || _strategy == STRATEGY::MEMORY) {
+        _memstorage = MemStorage::create(_engine_env, _min_max_map->size());
+        if (_strategy != STRATEGY::CACHE) {
+          _memstorage->setDownLevel(_page_manager.get());
+        }
+        _top_level_storage = _memstorage;
+        if (_strategy == STRATEGY::CACHE) {
+          _memstorage->setDiskStorage(_wal_manager.get());
+        }
       }
     }
   }
 
   ~Private() { this->stop(); }
 
-  void init_storages() {}
   void stop() {
     if (!_stoped) {
+      _beginStoping = true;
+      whaitWorkers();
       _top_level_storage = nullptr;
-      _subscribe_notify.stop();
-
+      if (_thread_pool_owner) {
+        _subscribe_notify.stop();
+      }
       this->flush();
+
       if (_memstorage != nullptr) {
         _memstorage = nullptr;
       }
-      _wal_manager = nullptr;
-      _page_manager = nullptr;
-      _manifest = nullptr;
+
       _dropper = nullptr;
-      _stoped = true;
+      _wal_manager = nullptr;
 
       if (_thread_pool_owner) {
         ThreadManager::stop();
       }
-      lockfile_unlock();
+      _page_manager = nullptr;
+      _manifest = nullptr;
+      _stoped = true;
+      if (!_settings->is_memory_only_mode) {
+        lockfile_unlock();
+      }
     }
   }
 
@@ -142,6 +182,9 @@ public:
   }
 
   void lockfile_lock_or_die(bool ignore_lock_file) {
+#ifdef DEBUG
+    return;
+#else
     auto lfile = lockfile_path();
     if (utils::fs::path_exists(lfile)) {
       if (!ignore_lock_file) {
@@ -157,6 +200,7 @@ public:
     }
     ofs << "locked.";
     ofs.close();
+#endif
   }
 
   void lockfile_unlock() {
@@ -247,7 +291,11 @@ public:
   Time minTime() {
     lock_storage();
 
-    auto pmin = _page_manager->minTime();
+    Time pmin = MAX_TIME;
+    if (_page_manager != nullptr) {
+      pmin = _page_manager->minTime();
+    }
+
     if (_strategy == STRATEGY::CACHE) {
       auto amin = this->_wal_manager->minTime();
       pmin = std::min(pmin, amin);
@@ -261,7 +309,10 @@ public:
   Time maxTime() {
     lock_storage();
 
-    auto pmax = _page_manager->maxTime();
+    Time pmax = MIN_TIME;
+    if (_page_manager != nullptr) {
+      pmax = _page_manager->maxTime();
+    }
     if (_strategy == STRATEGY::CACHE) {
       auto amax = this->_wal_manager->maxTime();
       pmax = std::max(pmax, amax);
@@ -275,7 +326,11 @@ public:
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
     dariadb::Time subMin1 = dariadb::MAX_TIME, subMax1 = dariadb::MIN_TIME;
     dariadb::Time subMin3 = dariadb::MAX_TIME, subMax3 = dariadb::MIN_TIME;
-    bool pr, ar;
+
+    *minResult = dariadb::MAX_TIME;
+    *maxResult = dariadb::MIN_TIME;
+
+    bool pr, ar, wr = false;
     pr = ar = false;
     auto pm = _page_manager.get();
     AsyncTask pm_at = [&pr, &subMin1, &subMax1, id, pm](const ThreadInfo &ti) {
@@ -283,6 +338,7 @@ public:
       pr = pm->minMaxTime(id, &subMin1, &subMax1);
       return false;
     };
+
     auto am = _top_level_storage.get();
     AsyncTask am_at = [&ar, &subMin3, &subMax3, id, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
@@ -292,36 +348,60 @@ public:
 
     lock_storage();
 
-    auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    utils::async::TaskResult_Ptr pm_async = nullptr;
+    if (!_settings->is_memory_only_mode) {
+      pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
+    }
     auto am_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
 
-    pm_async->wait();
+    if (pm_async != nullptr) {
+      pm_async->wait();
+    }
     am_async->wait();
 
+    if (_strategy == STRATEGY::CACHE) {
+      auto wm = _wal_manager.get();
+      dariadb::Time subMinW = dariadb::MAX_TIME, subMaxW = dariadb::MIN_TIME;
+      AsyncTask wm_at = [&wr, &subMin3, &subMax3, id, wm](const ThreadInfo &ti) {
+        TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
+        wr = wm->minMaxTime(id, &subMin3, &subMax3);
+        return false;
+      };
+      auto wm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
+      wm_async->wait();
+      *minResult = subMinW;
+      *maxResult = subMaxW;
+    }
     unlock_storage();
-
-    *minResult = dariadb::MAX_TIME;
-    *maxResult = dariadb::MIN_TIME;
 
     *minResult = std::min(subMin1, subMin3);
     *maxResult = std::max(subMax1, subMax3);
-    return pr || ar;
+    return pr || ar || wr;
   }
 
-  Id2MinMax loadMinMax() {
+  Id2MinMax_Ptr loadMinMax() {
     this->lock_storage();
+    Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
 
-    auto p_mm = this->_page_manager->loadMinMax();
-    if (_strategy == STRATEGY::CACHE) {
-      auto a_mm = this->_wal_manager->loadMinMax();
-      minmax_append(p_mm, a_mm);
+    if (_page_manager != nullptr) {
+      auto p_mm = this->_page_manager->loadMinMax();
+      minmax_append(result, p_mm);
     }
+
+    if (_strategy == STRATEGY::CACHE) {
+      if (_wal_manager != nullptr) {
+        auto a_mm = this->_wal_manager->loadMinMax();
+        minmax_append(result, a_mm);
+      }
+    }
+
     auto t_mm = this->_top_level_storage->loadMinMax();
+
+    minmax_append(result, t_mm);
 
     this->unlock_storage();
 
-    minmax_append(p_mm, t_mm);
-    return p_mm;
+    return result;
   }
 
   Status append(const Meas &value) {
@@ -331,43 +411,45 @@ public:
 
     if (result.writed == 1) {
       _subscribe_notify.on_append(value);
-      _min_max_locker.lock();
-      auto insert_fres = _min_max_map.find(value.id);
-      if (insert_fres == _min_max_map.end()) {
-        _min_max_map[value.id].max = value;
-      } else {
-        insert_fres->second.updateMax(value);
-      }
-      _min_max_locker.unlock();
+      auto insert_fres = _min_max_map->find_bucket(value.id);
+      insert_fres.v->second.updateMax(value);
     }
 
     return result;
   }
 
   void subscribe(const IdArray &ids, const Flag &flag, const ReaderCallback_ptr &clbk) {
-    auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
-    _subscribe_notify.add(new_s);
+    if (_thread_pool_owner) {
+      auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
+      _subscribe_notify.add(new_s);
+    } else {
+      THROW_EXCEPTION("subscribe in shard.")
+    }
   }
 
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     lock_storage();
-
     Id2Meas a_result;
-    for (auto kv : _min_max_map) {
+    if (_min_max_map->empty()) {
+      readMinMaxFromStorages();
+    }
+
+    auto f = [&a_result, &ids, flag](const Id2MinMax::value_type &v) {
       bool ids_check = false;
       if (ids.size() == 0) {
         ids_check = true;
       } else {
-        if (std::count(ids.begin(), ids.end(), kv.first)) {
+        if (std::find(ids.begin(), ids.end(), v.first) != ids.end()) {
           ids_check = true;
         }
       }
       if (ids_check) {
-        if (kv.second.max.inFlag(flag)) {
-          a_result.emplace(std::make_pair(kv.first, kv.second.max));
+        if (v.second.max.inFlag(flag)) {
+          a_result.emplace(std::make_pair(v.first, v.second.max));
         }
       }
-    }
+    };
+    _min_max_map->apply(f);
 
     unlock_storage();
     return a_result;
@@ -378,13 +460,15 @@ public:
 
     if (_wal_manager != nullptr) {
       _wal_manager->flush();
-      _dropper->flush();
-      _dropper->flush();
+      /*_dropper->flush();
+      _dropper->flush();*/
     }
     if (_memstorage != nullptr) {
       _memstorage->flush();
     }
-    _page_manager->flush();
+    if (_page_manager != nullptr) {
+      _page_manager->flush();
+    }
     this->wait_all_asyncs();
   }
 
@@ -394,7 +478,7 @@ public:
     Engine::Description result;
     memset(&result, 0, sizeof(Description));
     result.wal_count = _wal_manager == nullptr ? 0 : _wal_manager->filesCount();
-    result.pages_count = _page_manager->files_count();
+    result.pages_count = _page_manager == nullptr ? 0 : _page_manager->files_count();
     result.active_works = ThreadManager::instance()->active_works();
 
     if (_dropper != nullptr) {
@@ -433,11 +517,11 @@ public:
     std::map<Id, std::pair<QueryInterval, QueryInterval>> queryById;
 
     for (auto id : q.ids) {
-      auto id_mm = memory_mm.find(id);
-      if (id_mm == memory_mm.end()) {
+      MeasMinMax mm;
+      if (!memory_mm->find(id, &mm)) {
         disk_only.insert(id);
       } else {
-        if ((id_mm->second.min.time) > q.from) {
+        if ((mm.min.time) > q.from) {
           auto min_mem_time = sync_map[id];
           if (min_mem_time <= q.to) {
             QueryInterval disk_q = q;
@@ -498,8 +582,14 @@ public:
   /// when strategy!=CACHEs
   Id2Cursor internal_readers_two_level(const QueryInterval &q, PageManager_ptr pm,
                                        IMeasSource_ptr tm) {
-    auto pm_readers = pm->intervalReader(q);
-    auto tm_readers = tm->intervalReader(q);
+    Id2Cursor pm_readers;
+    if (pm != nullptr) {
+      pm_readers = pm->intervalReader(q);
+    }
+    Id2Cursor tm_readers;
+    if (tm != nullptr) {
+      tm_readers = tm->intervalReader(q);
+    }
 
     Id2CursorsList all_readers;
     for (auto kv : tm_readers) {
@@ -547,11 +637,11 @@ public:
     auto memory_mm = _memstorage->loadMinMax();
     auto sync_map = _memstorage->getSyncMap();
 
-    auto id_mm = memory_mm.find(id);
-    if (id_mm == memory_mm.end()) {
+    MeasMinMax mm;
+    if (memory_mm->find(id, &mm)) {
       return stat_from_disk(id, from, to);
     } else {
-      if ((id_mm->second.min.time) > from) {
+      if ((mm.min.time) > from) {
         auto min_mem_time = sync_map[id];
         if (min_mem_time <= to) {
           auto disk_stat = stat_from_disk(id, from, min_mem_time);
@@ -605,33 +695,24 @@ public:
     return result;
   }
 
-  void foreach (const QueryInterval &q, IReadCallback * clbk) {
-    auto r = intervalReader(q);
+  MeasArray readInterval(const QueryInterval &q) {
+    size_t max_count = 0;
+    auto r = this->intervalReader(q);
+    for (auto &kv : r) {
+      max_count += kv.second->count();
+    }
+    MeasArray result;
+    result.reserve(max_count);
+    auto clbk = std::make_unique<MArrayPtr_ReaderClb>(&result);
+
     for (auto id : q.ids) {
       auto fres = r.find(id);
       if (fres != r.end()) {
-        fres->second->apply(clbk, q);
+        fres->second->apply(clbk.get(), q);
       }
     }
     clbk->is_end();
-  }
-
-  void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-    auto values = this->readTimePoint(q);
-    for (auto &kv : values) {
-      if (clbk->is_canceled()) {
-        break;
-      }
-      clbk->apply(kv.second);
-    }
-    clbk->is_end();
-  }
-
-  MeasList readInterval(const QueryInterval &q) {
-    auto a_clbk = std::make_unique<MList_ReaderClb>();
-    this->foreach (q, a_clbk.get());
-    a_clbk->wait();
-    return a_clbk->mlist;
+    return result;
   }
 
   Id2Meas readTimePoint(const QueryTimePoint &q) {
@@ -669,7 +750,7 @@ public:
             result[id] = value;
             in_wal_level = value.flag != FLAGS::_NO_DATA;
           }
-          if (!in_wal_level) {
+          if (!in_wal_level && _page_manager != nullptr) {
             auto subres = _page_manager->valuesBeforeTimePoint(local_q);
             result[id] = subres[id];
           }
@@ -684,23 +765,28 @@ public:
     return result;
   }
 
-  void drop_part_wals(size_t count) {
-    if (_wal_manager != nullptr) {
-      logger_info("engine", _settings->alias, ": drop_part_wals ", count);
-      _wal_manager->dropClosedFiles(count);
-    }
-  }
-
   void compress_all() {
     if (_wal_manager != nullptr) {
       logger_info("engine", _settings->alias, ": compress_all");
       _wal_manager->dropAll();
+      _dropper->flush();
+      _dropper->flush();
       this->flush();
+
+      while (true) {
+        auto d = description();
+        if (d.dropper.active_works == d.dropper.wal && d.dropper.wal == size_t(0)) {
+          break;
+        }
+        utils::sleep_mls(10);
+      }
     }
   }
   void fsck() {
     logger_info("engine", _settings->alias, ": fsck ", _settings->storage_path.value());
+    this->lock_storage();
     _page_manager->fsck();
+    this->unlock_storage();
   }
 
   void eraseOld(const Time &t) {
@@ -709,6 +795,40 @@ public:
     _page_manager->eraseOld(t);
 
     this->unlock_storage();
+  }
+
+  void erase_worker_func() {
+    while (!_beginStoping) {
+      if (_settings->max_store_period.value() != MAX_TIME) {
+        if (this->try_lock_storage()) {
+          auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
+
+          if (_page_manager != nullptr) {
+            AsyncTask am_at = [this, timepoint](const ThreadInfo &ti) {
+              TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+              logger_info("engine", _settings->alias, ": eraseold ",
+                          timeutil::to_string(timepoint));
+              _page_manager->eraseOld(timepoint);
+              logger_info("engine", _settings->alias, ": eraseold complete.");
+              return false;
+            };
+            auto at = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(am_at));
+            at->wait();
+          }
+
+          if (this->strategy() == STRATEGY::MEMORY) {
+            this->_memstorage->dropOld(timepoint);
+          }
+
+          this->unlock_storage();
+        }
+        if (_beginStoping) {
+          break;
+        }
+      }
+      utils::sleep_mls(500);
+    }
+    _eraseActionIsStoped = true;
   }
 
   STRATEGY strategy() const {
@@ -720,6 +840,13 @@ public:
     this->lock_storage();
     logger_info("engine", _settings->alias, ": repack...");
     _page_manager->repack();
+    this->unlock_storage();
+  }
+
+  void compact(ICompactionController *logic) {
+    this->lock_storage();
+    logger_info("engine", _settings->alias, ": compact...");
+    _page_manager->compact(logic);
     this->unlock_storage();
   }
 
@@ -742,9 +869,11 @@ protected:
 
   IMeasStorage_ptr _top_level_storage; // wal or memory storage.
 
-  Id2MinMax _min_max_map;
-  std::shared_mutex _min_max_locker;
+  Id2MinMax_Ptr _min_max_map;
   bool _thread_pool_owner;
+  bool _eraseActionIsStoped;
+  bool _beginStoping;
+  std::thread _async_worker_thread_handler;
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
@@ -790,10 +919,6 @@ Engine::Description Engine::description() const {
   return _impl->description();
 }
 
-void Engine::foreach (const QueryInterval &q, IReadCallback * clbk) {
-  return _impl->foreach (q, clbk);
-}
-
 Id2Cursor Engine::intervalReader(const QueryInterval &query) {
   return _impl->intervalReader(query);
 }
@@ -802,20 +927,12 @@ Statistic Engine::stat(const Id id, Time from, Time to) {
   return _impl->stat(id, from, to);
 }
 
-void Engine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-  return _impl->foreach (q, clbk);
-}
-
-MeasList Engine::readInterval(const QueryInterval &q) {
+MeasArray Engine::readInterval(const QueryInterval &q) {
   return _impl->readInterval(q);
 }
 
 Id2Meas Engine::readTimePoint(const QueryTimePoint &q) {
   return _impl->readTimePoint(q);
-}
-
-void Engine::drop_part_wals(size_t count) {
-  return _impl->drop_part_wals(count);
 }
 
 void Engine::compress_all() {
@@ -838,6 +955,10 @@ void Engine::repack() {
   _impl->repack();
 }
 
+void Engine::compact(ICompactionController *logic) {
+  _impl->compact(logic);
+}
+
 storage::Settings_ptr Engine::settings() {
   return _impl->settings();
 }
@@ -850,7 +971,7 @@ STRATEGY Engine::strategy() const {
   return _impl->strategy();
 }
 
-Id2MinMax Engine::loadMinMax() {
+Id2MinMax_Ptr Engine::loadMinMax() {
   return _impl->loadMinMax();
 }
 

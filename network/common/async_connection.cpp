@@ -10,9 +10,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-AsyncConnection::AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv,
-                                 onNetworkErrorHandler onErr) {
-  _pool = pool;
+AsyncConnection::AsyncConnection(onDataRecvHandler onRecv, onNetworkErrorHandler onErr) {
   _async_con_id = 0;
   _messages_to_send = 0;
   _is_stoped = true;
@@ -22,10 +20,6 @@ AsyncConnection::AsyncConnection(NetData_Pool *pool, onDataRecvHandler onRecv,
 
 AsyncConnection::~AsyncConnection() noexcept(false) {
   full_stop();
-}
-
-void AsyncConnection::set_pool(NetData_Pool *pool) {
-  _pool = pool;
 }
 
 void AsyncConnection::start(const socket_ptr &sock) {
@@ -73,21 +67,22 @@ void AsyncConnection::send(const NetData_ptr &d) {
         if (err) {
           ptr->_on_error_handler(err);
         }
-        ptr->_pool->free(d);
       });
     }
   }
 }
 
 void AsyncConnection::readNextAsync() {
-  using boost::system::error_code;
   if (auto spt = _sock.lock()) {
     auto ptr = shared_from_this();
-    NetData_ptr d = this->_pool->construct();
+    NetData_ptr d = std::make_shared<NetData>();
+
     async_read(*spt.get(), buffer((uint8_t *)(&d->size), MARKER_SIZE),
                [ptr, d, spt](auto err, auto read_bytes) {
                  if (err) {
-                   if (err == boost::asio::error::operation_aborted) {
+                   if (err == boost::asio::error::operation_aborted ||
+                       err == boost::asio::error::connection_reset ||
+                       err == boost::asio::error::eof) {
                      return;
                    }
                    ptr->_on_error_handler(err);
@@ -107,16 +102,11 @@ void AsyncConnection::readNextAsync() {
                        ptr->_on_error_handler(err);
                      } else {
                        bool cancel_flag = false;
-                       bool dont_free_mem = false;
                        try {
-                         ptr->_on_recv_hadler(d, cancel_flag, dont_free_mem);
+                         ptr->_on_recv_hadler(d, cancel_flag);
                        } catch (std::exception &ex) {
                          THROW_EXCEPTION("exception on async readData. #",
                                          ptr->_async_con_id, " - ", ex.what());
-                       }
-
-                       if (!dont_free_mem) {
-                         ptr->_pool->free(d);
                        }
 
                        if (!cancel_flag) {

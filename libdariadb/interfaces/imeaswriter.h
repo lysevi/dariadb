@@ -13,8 +13,6 @@ public:
   EXPORT virtual void flush();
   EXPORT virtual Status append(const MeasArray::const_iterator &begin,
                                const MeasArray::const_iterator &end);
-  EXPORT virtual Status append(const MeasList::const_iterator &begin,
-                               const MeasList::const_iterator &end);
   EXPORT virtual ~IMeasWriter();
 };
 

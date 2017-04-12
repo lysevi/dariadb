@@ -20,6 +20,8 @@ public:
   EXPORT Meas top() override;
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
+
+  EXPORT size_t count() const override;
   MeasArray _ma;
   size_t _index;
 
@@ -38,7 +40,9 @@ public:
   EXPORT Meas top() override;
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
+  EXPORT size_t count() const override;
 
+  size_t _values_count;
   std::vector<Cursor_Ptr> _readers;
   std::vector<Time> _top_times;
   std::vector<bool> _is_end_status;
@@ -57,30 +61,12 @@ public:
   EXPORT Meas top() override;
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
+  EXPORT size_t count() const override;
 
+  size_t _values_count;
   std::list<Cursor_Ptr> _readers;
   Time _minTime;
   Time _maxTime;
-};
-
-struct EmptyCursor : public ICursor {
-  Meas readNext() override {
-    NOT_IMPLEMENTED;
-    return Meas();
-  }
-  Meas top() override {
-    NOT_IMPLEMENTED;
-    return Meas();
-  }
-  bool is_end() const override { return true; }
-  Time minTime() override {
-    NOT_IMPLEMENTED;
-    return Time();
-  }
-  Time maxTime() override {
-    NOT_IMPLEMENTED;
-    return Time();
-  }
 };
 
 /**

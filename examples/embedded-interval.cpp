@@ -1,17 +1,17 @@
 #include <libdariadb/dariadb.h>
 #include <iostream>
 
-void print_measurement(dariadb::Meas&measurement){
-	std::cout << " id: " << measurement.id
-		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		<< " value:" << measurement.value << std::endl;
+void print_measurement(dariadb::Meas &measurement) {
+  std::cout << " id: " << measurement.id
+            << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+            << " value:" << measurement.value << std::endl;
 }
 
-
-void print_measurement(dariadb::Meas&measurement, dariadb::scheme::DescriptionMap&dmap) {
-	std::cout << " param: " << dmap[measurement.id]
-		<< " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		<< " value:" << measurement.value << std::endl;
+void print_measurement(dariadb::Meas &measurement,
+                       dariadb::scheme::DescriptionMap &dmap) {
+  std::cout << " param: " << dmap[measurement.id]
+            << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+            << " value:" << measurement.value << std::endl;
 }
 
 class QuietLogger : public dariadb::utils::ILogger {
@@ -24,9 +24,9 @@ public:
   Callback() {}
 
   void apply(const dariadb::Meas &measurement) override {
-	  std::cout << " id: " << measurement.id
-		  << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
-		  << " value:" << measurement.value << std::endl;
+    std::cout << " id: " << measurement.id
+              << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+              << " value:" << measurement.value << std::endl;
   }
 
   void is_end() override {
@@ -57,17 +57,17 @@ int main(int, char **) {
 
   // query writed interval;
   dariadb::QueryInterval qi(all_id, dariadb::Flag(), start_time, cur_time);
-  dariadb::MeasList readed_values = storage->readInterval(qi);
+  dariadb::MeasArray readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
-	  print_measurement(measurement, all_params);
+    print_measurement(measurement, all_params);
   }
 
   // callback
   std::cout << "Callback in interval: " << std::endl;
-  std::unique_ptr<Callback> callback_ptr{new Callback()};
-  storage->foreach (qi, callback_ptr.get());
-  callback_ptr->wait();
+  Callback callback;
+  storage->foreach (qi, &callback);
+  callback.wait();
 
   { // stat
     auto stat = storage->stat(dariadb::Id(0), start_time, cur_time);

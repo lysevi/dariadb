@@ -1,8 +1,8 @@
 #pragma once
 
-#include <libdariadb/utils/in_interval.h>
-
 #include <libdariadb/st_exports.h>
+#include <libdariadb/utils/in_interval.h>
+#include <libdariadb/utils/striped_map.h>
 #include <algorithm>
 #include <deque>
 #include <limits>
@@ -49,7 +49,7 @@ struct Meas {
   bool inFlag(Flag mask) const { return (mask & flag) == mask; }
 
   bool inIds(const IdArray &ids) const {
-    return (ids.size() == 0) || (std::count(ids.begin(), ids.end(), id));
+    return (ids.size() == 0) || (std::find(ids.begin(), ids.end(), id) != ids.end());
   }
 
   bool inQuery(const IdArray &ids, const Flag f) const { return inFlag(f) && inIds(ids); }
@@ -93,7 +93,8 @@ struct MeasMinMax {
 };
 
 using MeasArray = std::vector<Meas>;
-using MeasList = std::deque<Meas>;
+using SplitedById = std::map<Id, MeasArray>;
+// using MeasList = std::deque<Meas>;
 /// used in readTimePoint queries.
 using Id2Meas = std::unordered_map<Id, Meas>;
 /// sorted by time.
@@ -102,12 +103,12 @@ using MeasSet = std::set<Meas, meas_time_compare_less>;
 /// values.
 using Id2MSet = std::map<Id, MeasSet>;
 /// in loadMinMax();
-using Id2MinMax = std::unordered_map<Id, MeasMinMax>;
+using Id2MinMax = utils::stripped_map<Id, MeasMinMax>;
+using Id2MinMax_Ptr = std::shared_ptr<Id2MinMax>;
 /// in memory_storage.
 using Id2Time = std::unordered_map<Id, Time>;
 /// to map raw.id=>bystep.id.
 using Id2Id = std::unordered_map<Id, Id>;
 
-EXPORT void minmax_append(Id2MinMax &out, const Id2MinMax &source);
-EXPORT void mlist2mset(MeasList &mlist, Id2MSet &sub_result);
-}
+EXPORT void minmax_append(Id2MinMax_Ptr &out, const Id2MinMax_Ptr &source);
+} // namespace dariadb

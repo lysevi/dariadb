@@ -22,7 +22,7 @@ using ChunkLinkList = std::list<ChunkLink>;
 
 class IChunkStorage {
 public:
-  virtual void appendChunks(const std::vector<storage::Chunk *> &a, size_t count) = 0;
+  virtual void appendChunks(const std::vector<storage::Chunk *> &a) = 0;
   EXPORT ~IChunkStorage();
 };
 

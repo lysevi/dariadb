@@ -23,8 +23,8 @@ public:
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) = 0;
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) = 0;
   virtual Statistic stat(const Id id, Time from, Time to) = 0;
-  EXPORT virtual Id2MinMax loadMinMax() = 0;
-  EXPORT virtual MeasList readInterval(const QueryInterval &q);
+  EXPORT virtual Id2MinMax_Ptr loadMinMax() = 0;
+  EXPORT virtual MeasArray readInterval(const QueryInterval &q);
   virtual ~IMeasSource() {}
 };
 

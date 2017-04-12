@@ -34,18 +34,20 @@ addons:
       - g++-6  
       - gcc-6 
       - cpp-6
-      - clang
+      - libjemalloc-dev
+      - lcov
       
 before_install:
    - pip install --user cpp-coveralls
-#   - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.11.orig.tar.gz
+   - cd ${TRAVIS_BUILD_DIR}
    - wget http://ftp.de.debian.org/debian/pool/main/l/lcov/lcov_1.13.orig.tar.gz
    - tar xf lcov_1.13.orig.tar.gz
-   - sudo make -C lcov-1.13/ install
-   - gem install coveralls-lcov
-#   - gem install travis
+   - cd lcov-1.13/
+   - sudo make install
+   - cd ..
+   - lcov --version
+   - g++ --version
    - cmake --version
-   - cd ${TRAVIS_BUILD_DIR}
    - git submodule init
    - git submodule update
 
@@ -53,19 +55,16 @@ matrix:
   include:
     - os: linux
       compiler: gcc-6
-      env: GCOV=FALSE CLANG=FALSE
-#    - os: linux
-#      compiler: gcc-6
-#      env: GCOV=TRUE CLANG=FALSE
-#    - os: linux
-#      compiler: clang
-#      env: CLANG_SANITIZER=ASAN_UBSAN CLANG=TRUE GCOV=FALSE
-#    - os: linux
-#      compiler: clang
-#      env: CLANG_SANITIZER=TSAN CLANG=TRUE GCOV=FALSE
-#    - os: linux
-#      compiler: clang 
-#      env: CLANG=TRUE GCOV=FALSE
+      env: GCOV=TRUE CLANG=FALSE
+    - os: linux
+      compiler: gcc-6
+      env: SANITIZER=MSAN GCOV=FALSE CLANG=FALSE
+    - os: linux
+      compiler: gcc-6
+      env: SANITIZER=ASAN_UBSAN GCOV=FALSE CLANG=FALSE
+    - os: linux
+      compiler: gcc-6
+      env: IS_RELEASE=TRUE CLANG=FALSE
 
 script: 
     - bash .travis/build.sh

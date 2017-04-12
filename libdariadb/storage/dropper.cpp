@@ -10,9 +10,33 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
+std::shared_ptr<SplitedById> splitById(const MeasArray &ma) {
+  std::shared_ptr<SplitedById> result = std::make_shared<SplitedById>();
+
+  std::map<Id, size_t> id2count;
+  for (auto v : ma) {
+    auto iter = id2count.find(v.id);
+    if (iter == id2count.end()) {
+      id2count.insert(std::make_pair(v.id, size_t(0)));
+    } else {
+      id2count[v.id] += 1;
+    }
+  }
+
+  for (auto i2c : id2count) {
+    (*result)[i2c.first].reserve(i2c.second);
+  }
+
+  for (auto v : ma) {
+    (*result)[v.id].push_back(v);
+  }
+  return result;
+}
+
 Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
                  WALManager_ptr wal_manager)
     : _page_manager(page_manager), _wal_manager(wal_manager), _engine_env(engine_env) {
+  _active_operations = 0;
   _stop = false;
   _is_stoped = false;
   _settings =
@@ -21,25 +45,34 @@ Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
 }
 
 Dropper::~Dropper() {
-  logger("engine", _settings->alias, ": dropper - stop begin.");
-  _stop = true;
-  while (!_is_stoped) {
-    _cond_var.notify_all();
+  stop();
+}
+
+void Dropper::stop() {
+  if (!_stop) {
+    logger("engine", _settings->alias, ": dropper - stop begin.");
+    _stop = true;
+    while (!_is_stoped) {
+      _cond_var.notify_all();
+      _dropper_cond_var.notify_all();
+    }
+    _thread_handle.join();
+    ENSURE(_active_operations == 0);
+    logger("engine", _settings->alias, ": dropper - stop end.");
   }
-  _thread_handle.join();
-  logger("engine", _settings->alias, ": dropper - stop end.");
 }
 
 DropperDescription Dropper::description() const {
   std::lock_guard<std::mutex> lg(_queue_locker);
   DropperDescription result;
   result.wal = _files_queue.size();
+  result.active_works = _active_operations;
   return result;
 }
 
 void Dropper::dropWAL(const std::string &fname) {
   std::lock_guard<std::mutex> lg(_queue_locker);
-  if (std::count(_files_queue.begin(), _files_queue.end(), fname)) {
+  if (std::find(_files_queue.begin(), _files_queue.end(), fname) != _files_queue.end()) {
     return;
   }
   auto storage_path = _settings->raw_path.value();
@@ -68,8 +101,6 @@ void Dropper::cleanStorage(const std::string &storagePath) {
 }
 
 void Dropper::drop_wal_internal() {
-  auto env = _engine_env;
-  auto sett = _settings;
   _is_stoped = false;
   while (!_stop) {
     std::string fname;
@@ -79,70 +110,133 @@ void Dropper::drop_wal_internal() {
       if (_stop) {
         break;
       }
+      if (_files_queue.empty()) {
+        continue;
+      }
       fname = _files_queue.front();
-      _files_queue.pop_front();
     }
-    while (!this->_dropper_lock.try_lock() || _stop) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    while (true) {
+      if (_stop) {
+        break;
+      }
+      if (_dropper_lock.try_lock()) {
+        break;
+      }
     }
+
     if (_stop) {
+      _dropper_lock.unlock();
       break;
     }
-    AsyncTask at = [fname, this, env, sett](const ThreadInfo &ti) {
+    ENSURE(_active_operations == 0);
+    ++_active_operations;
+    _state = DROPPER_STATE::OK;
+    AsyncTask at = [fname, this](const ThreadInfo &ti) {
       try {
         TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-
-        logger_info("engine", _settings->alias, ": compressing ", fname);
-        auto start_time = clock();
-        auto storage_path = sett->raw_path.value();
-        auto full_path = fs::append_path(storage_path, fname);
-
-        WALFile_Ptr wal = WALFile::open(env, full_path, true);
-
-        auto all = wal->readAll();
-
-        this->write_wal_to_page(fname, all);
-
-        auto end = clock();
-        auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
-
-        logger_info("engine", _settings->alias, ": compressing ", fname,
-                    " done. elapsed time - ", elapsed);
+        ENSURE(_active_operations == 1);
+        this->drop_stage_read(fname);
       } catch (std::exception &ex) {
+        _state = DROPPER_STATE::ERROR;
         THROW_EXCEPTION("Dropper::drop_wal_internal: ", ex.what());
       }
       return false;
     };
 
-    auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-    handle->wait();
-    this->_dropper_lock.unlock();
+    ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
+                                    AT_PRIORITY(at, TASK_PRIORITY::DEFAULT));
+    while (_active_operations != size_t(0)) {
+      sleep_mls(100);
+    }
+    if (_state != DROPPER_STATE::ERROR) {
+      std::lock_guard<std::mutex> lg(_queue_locker);
+      _files_queue.pop_front();
+      _dropper_lock.unlock();
+    }
   }
   _is_stoped = true;
 }
 
-void Dropper::write_wal_to_page(const std::string &fname, std::shared_ptr<MeasArray> ma) {
-  auto pm = _page_manager.get();
-  auto am = _wal_manager.get();
-  auto sett = _settings;
-
-  auto storage_path = sett->raw_path.value();
-  auto full_path = fs::append_path(storage_path, fname);
-
-  std::sort(ma->begin(), ma->end(), meas_time_compare_less());
-
-  auto without_path = fs::extract_filename(fname);
-  auto page_fname = fs::filename(without_path);
-
-  pm->append(page_fname, *ma.get());
-  am->erase(fname);
-}
-
 void Dropper::flush() {
   logger_info("engine", _settings->alias, ": Dropper flush...");
-  while (this->description().wal != 0) {
+  while (this->description().wal != 0 && _active_operations != size_t(0)) {
     this->_cond_var.notify_all();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    sleep_mls(100);
   }
   logger_info("engine", _settings->alias, ": Dropper flush end.");
+}
+
+void Dropper::drop_stage_read(std::string fname) {
+  try {
+    ENSURE(_active_operations == 1);
+    logger_info("engine", _settings->alias, ": compressing ", fname);
+    auto start_time = clock();
+
+    auto storage_path = _settings->raw_path.value();
+    auto full_path = fs::append_path(storage_path, fname);
+
+    WALFile_Ptr wal = WALFile::open(_engine_env, full_path, true);
+    auto ma = wal->readAll();
+
+    AsyncTask sort_at = [this, start_time, ma, fname](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
+      drop_stage_sort(fname, start_time, ma);
+      return false;
+    };
+
+    ThreadManager::instance()->post(THREAD_KINDS::COMMON,
+                                    AT_PRIORITY(sort_at, TASK_PRIORITY::DEFAULT));
+  } catch (...) {
+    _state = DROPPER_STATE::ERROR;
+    --_active_operations;
+    throw;
+  }
+}
+
+void Dropper::drop_stage_sort(std::string fname, clock_t start_time,
+                              std::shared_ptr<MeasArray> ma) {
+  try {
+    ENSURE(_active_operations == 1);
+    std::sort(ma->begin(), ma->end(), meas_time_compare_less());
+    auto splited = splitById(*ma.get());
+
+    AsyncTask write_at = [this, start_time, fname, splited](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+      this->drop_stage_compress(fname, start_time, splited);
+      return false;
+    };
+    ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
+                                    AT_PRIORITY(write_at, TASK_PRIORITY::DEFAULT));
+  } catch (...) {
+    _state = DROPPER_STATE::ERROR;
+    --_active_operations;
+    throw;
+  }
+}
+
+void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
+                                  std::shared_ptr<SplitedById> splited) {
+  try {
+    ENSURE(_active_operations == 1);
+    auto without_path = fs::extract_filename(fname);
+    auto page_fname = fs::filename(without_path);
+
+    on_create_complete_callback callback = [this, fname, start_time](const Page_Ptr &) {
+      this->_wal_manager->erase(fname);
+      auto end = clock();
+      auto elapsed = double(end - start_time) / CLOCKS_PER_SEC;
+
+      logger_info("engine", _settings->alias, ": compressing ", fname,
+                  " done. elapsed time - ", elapsed);
+      ENSURE(_active_operations == 1);
+      --_active_operations;
+    };
+
+    _page_manager->append_async(page_fname, *splited.get(), callback);
+
+  } catch (...) {
+    _state = DROPPER_STATE::ERROR;
+    --_active_operations;
+    throw;
+  }
 }

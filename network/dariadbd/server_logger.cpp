@@ -18,7 +18,11 @@ ServerLogger::~ServerLogger() {}
 
 ServerLogger::ServerLogger(const ServerLogger::Params &p) : _params(p) {
   if (_params.use_stdout) {
-    _logger = spdlog::stdout_logger_mt("dariadb", _params.color_console);
+    if (_params.color_console) {
+      _logger = spdlog::stdout_color_mt("dariadb");
+    } else {
+      _logger = spdlog::stdout_logger_mt("dariadb");
+    }
   } else {
     _logger = spdlog::daily_logger_mt("dariadb", "dariadb_log", 0, 0);
   }

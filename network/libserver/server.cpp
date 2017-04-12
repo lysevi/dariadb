@@ -1,5 +1,6 @@
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/logger.h>
+#include <libserver/http/http_server.h>
 #include <libserver/iclientmanager.h>
 #include <libserver/ioclient.h>
 #include <libserver/server.h>
@@ -28,32 +29,44 @@ public:
   Private(const Server::Param &p)
       : _signals(_service, SIGINT, SIGTERM, SIGABRT), _params(p), _is_runned_flag(false),
         _ping_timer(_service), _info_timer(_service) {
-
+    _active_workers.store(0);
+    _stop_flag = false;
     _in_stop_logic = false;
     _next_client_id = 1;
     _connections_accepted.store(0);
     _writes_in_progress.store(0);
 
     _env.srv = this;
-    _env.nd_pool = &_net_data_pool;
     _env.service = &_service;
 
     _signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
+
+    _http_server = std::make_unique<http::http_server>(
+        "localhost", std::to_string(p.http_port), &_service);
   }
 
   ~Private() {
     if (_is_runned_flag && !_in_stop_logic) {
       stop();
+      while (!this->_is_runned_flag.load()) {
+      }
     }
   }
 
-  void set_storage(Engine *storage) {
+  void set_storage(IEngine_Ptr &storage) {
     logger("server: set storage.");
     _env.storage = storage;
     log_server_info_internal();
+    _http_server->set_storage(storage);
   }
 
   void stop() {
+    _http_server->do_stop();
+    _stop_flag = true;
+  }
+
+  void on_stop() {
+    std::lock_guard<std::mutex> lg(_dtor_mutex);
     _in_stop_logic = true;
     logger_info("server: *** [stopping] ***");
     logger_info("server: stop ping timer...");
@@ -61,7 +74,7 @@ public:
     logger_info("server: stop info timer...");
     _info_timer.cancel();
     while (_writes_in_progress.load() != 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      dariadb::utils::sleep_mls(300);
       logger_info("server: writes in progress ", _writes_in_progress.load());
     }
 
@@ -72,11 +85,12 @@ public:
     while (!_service.stopped()) {
     }
     logger_info("server: wait ", _io_threads.size(), " io threads...");
-
+    while (_active_workers.load() != 0) {
+      ENSURE(_service.stopped());
+      dariadb::utils::sleep_mls(100);
+    }
     for (auto &t : _io_threads) {
-      if (t.joinable()) {
-        t.join();
-      }
+      t.join();
     }
     logger_info("server: io_threads stoped.");
 
@@ -103,7 +117,7 @@ public:
       if (kv.second->state != CLIENT_STATE::DISCONNECTED) {
         while (kv.second->_async_connection->queue_size() != 0) {
           logger_info("server: wait stop of #", kv.first);
-          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          dariadb::utils::sleep_mls(50);
         }
         kv.second->close();
       }
@@ -132,8 +146,13 @@ public:
       _io_threads[i] = std::move(t);
     }
 
-    _is_runned_flag.store(true);
     logger_info("server: ready.");
+    _is_runned_flag.store(true);
+
+    while (!this->_stop_flag.load()) {
+      dariadb::utils::sleep_mls(100);
+    }
+    on_stop();
   }
 
   void signal_handler(const boost::system::error_code &error, int signal_number) {
@@ -159,9 +178,16 @@ public:
       logger_fatal("server: signal handler error - ", error.message());
     }
   }
-  void handle_clients_thread() { asio_run(); }
 
-  void asio_run() { _service.run(); }
+  void handle_clients_thread() {
+    _active_workers++;
+    ENSURE(size_t(_active_workers.load()) <= _params.io_threads);
+    _service.run();
+    _active_workers--;
+  }
+
+  void asio_run() { _service.run_one(); }
+
   void start_accept(socket_ptr sock) {
     _acc->async_accept(*sock, std::bind(&Server::Private::handle_accept, this, sock, _1));
   }
@@ -192,6 +218,7 @@ public:
 
   size_t connections_accepted() const { return _connections_accepted.load(); }
 
+  bool is_asio_stoped() { return _service.stopped(); }
   bool is_runned() { return _is_runned_flag.load(); }
 
   void client_connect(int id) override {
@@ -214,11 +241,10 @@ public:
       // may be already removed.
       return;
     }
-    // fres->second->sock->close();
     _clients.erase(fres);
     _connections_accepted -= 1;
-    logger_info("server: clients count  ", _clients.size(), " accepted:",
-                _connections_accepted.load());
+    logger_info("server: clients count  ", _clients.size(),
+                " accepted:", _connections_accepted.load());
   }
 
   void write_begin() override { _writes_in_progress++; }
@@ -304,8 +330,9 @@ public:
   Server::Param _params;
 
   std::vector<std::thread> _io_threads;
-
+  std::atomic_int _active_workers;
   std::atomic_bool _is_runned_flag;
+  std::atomic_bool _stop_flag; // set to true if need begin stoping procedure.
 
   std::unordered_map<int, ClientIO_ptr> _clients;
   utils::async::Locker _clients_locker;
@@ -317,12 +344,18 @@ public:
   std::atomic_int _writes_in_progress;
 
   bool _in_stop_logic;
-  NetData_Pool _net_data_pool;
+  std::mutex _dtor_mutex;
+
+  std::unique_ptr<http::http_server> _http_server;
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}
 
 Server::~Server() {}
+
+bool Server::is_asio_stoped() {
+  return _Impl->is_asio_stoped();
+}
 
 bool Server::is_runned() {
   return _Impl->is_runned();
@@ -340,7 +373,7 @@ void Server::stop() {
   _Impl->stop();
 }
 
-void Server::set_storage(Engine *storage) {
+void Server::set_storage(IEngine_Ptr &storage) {
   _Impl->set_storage(storage);
 }
 

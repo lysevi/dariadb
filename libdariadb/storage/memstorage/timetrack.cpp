@@ -8,16 +8,16 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-struct MemTrackReader : dariadb::ICursor {
-  MemTrackReader(const Cursor_Ptr &r, const TimeTrack_ptr &track) {
+struct MemTrackCursor : dariadb::ICursor {
+  MemTrackCursor(const Cursor_Ptr &r, const TimeTrack_ptr &track) {
+    ENSURE(track != nullptr);
     _r = r;
     _track = track;
     ENSURE(track != nullptr);
     ENSURE(r != nullptr);
-    _track->is_locked_to_drop = true;
   }
 
-  ~MemTrackReader() { _track->is_locked_to_drop = false; }
+  ~MemTrackCursor() {}
   Meas readNext() override { return _r->readNext(); }
 
   Meas top() override { return _r->top(); }
@@ -27,12 +27,14 @@ struct MemTrackReader : dariadb::ICursor {
 
   Time maxTime() override { return _track->minTime(); }
 
+  size_t count() const override { return _track->minTime(); }
+
   Cursor_Ptr _r;
   TimeTrack_ptr _track;
 };
 
 TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
-                     MemChunkAllocator *allocator) {
+                     IMemoryAllocator_Ptr allocator) {
   _allocator = allocator;
   _meas_id = meas_id;
   _step = step;
@@ -40,10 +42,11 @@ TimeTrack::TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
   _min_max.max.time = MIN_TIME;
   _max_sync_time = MIN_TIME;
   _mcc = mcc;
-  is_locked_to_drop = false;
 }
 
-TimeTrack::~TimeTrack() {}
+TimeTrack::~TimeTrack() {
+  _allocator = nullptr;
+}
 
 void TimeTrack::updateMinMax(const Meas &value) {
   _min_max.updateMax(value);
@@ -51,19 +54,19 @@ void TimeTrack::updateMinMax(const Meas &value) {
 }
 
 Status TimeTrack::append(const Meas &value) {
-  std::lock_guard<utils::async::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   if (_cur_chunk == nullptr || _cur_chunk->isFull()) {
     if (!create_new_chunk(value)) {
-      return Status(0, 1);
+      return Status(1, APPEND_ERROR::bad_alloc);
     } else {
       updateMinMax(value);
-      return Status(1, 0);
+      return Status(1);
     }
   }
   if (_cur_chunk->header->stat.maxTime < value.time) {
     if (!_cur_chunk->append(value)) {
       if (!create_new_chunk(value)) {
-        return Status(0, 1);
+        return Status(1, APPEND_ERROR::bad_alloc);
       } else {
         updateMinMax(value);
       }
@@ -72,7 +75,7 @@ Status TimeTrack::append(const Meas &value) {
     append_to_past(value);
   }
   updateMinMax(value);
-  return Status(1, 0);
+  return Status(1);
 }
 
 void TimeTrack::append_to_past(const Meas &value) {
@@ -80,7 +83,7 @@ void TimeTrack::append_to_past(const Meas &value) {
   MemChunk_Ptr target_to_replace = nullptr;
 
   // find target chunk.
-  if (_index.empty() || _cur_chunk->header->stat.minTime < value.time) {
+  if (_index.empty() || _cur_chunk->header->stat.minTime <= value.time) {
     target_to_replace = _cur_chunk;
     is_cur_chunk = true;
     ENSURE(target_to_replace.use_count() <= long(3));
@@ -98,9 +101,6 @@ void TimeTrack::append_to_past(const Meas &value) {
     _index.erase(target_to_replace->header->stat.maxTime);
   }
 
-  if (target_to_replace->_is_from_pool) {
-    _mcc->freeChunk(target_to_replace);
-  }
   /// unpack and sort.
   auto rdr = target_to_replace->getReader();
   while (!rdr->is_end()) {
@@ -112,11 +112,16 @@ void TimeTrack::append_to_past(const Meas &value) {
   }
   rdr = nullptr;
 
+  auto old_chunk_size = target_to_replace->header->size;
+  if (target_to_replace->_is_from_pool) {
+    _mcc->freeChunk(target_to_replace);
+  }
+
   mset.insert(value);
 
   /// need to leak detection.
   ENSURE(target_to_replace.use_count() == long(1));
-  auto old_chunk_size = target_to_replace->header->size;
+
   target_to_replace = nullptr;
 
   MeasArray mar{mset.begin(), mset.end()};
@@ -127,8 +132,8 @@ void TimeTrack::append_to_past(const Meas &value) {
   std::fill_n(new_buffer, buffer_size, uint8_t(0));
   ChunkHeader *hdr = new ChunkHeader;
 
-  new_chunk =
-      MemChunk_Ptr{new MemChunk(false, hdr, new_buffer, buffer_size, mar.front())};
+  new_chunk = MemChunk_Ptr{
+      new MemChunk(false, hdr, new_buffer, buffer_size, mar.front(), this->_allocator)};
   new_chunk->_track = this;
   for (size_t i = 1; i < mar.size(); ++i) {
     auto v = mar[i];
@@ -202,7 +207,7 @@ bool TimeTrack::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   if (id != this->_meas_id) {
     return false;
   }
-  std::lock_guard<utils::async::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   *minResult = MAX_TIME;
   *maxResult = MIN_TIME;
   for (auto kv : _index) {
@@ -233,7 +238,7 @@ bool chunkInQuery(const QueryInterval &q, const Chunk_Ptr &c) {
 }
 
 Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
-  std::lock_guard<utils::async::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
 
   CursorsList readers;
   auto end = _index.upper_bound(q.to);
@@ -248,6 +253,7 @@ Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
     auto c = it->second;
     if (chunkInQuery(q, c)) {
       auto rdr = c->getReader();
+      dariadb::Cursor_Ptr cptr{new MemTrackCursor(rdr, this->shared_from_this())};
       readers.push_back(rdr);
     }
   }
@@ -265,7 +271,7 @@ Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
 }
 
 Statistic TimeTrack::stat(const Id id, Time from, Time to) {
-  std::lock_guard<utils::async::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   ENSURE(id == this->_meas_id);
   Statistic result;
   auto end = _index.upper_bound(to);
@@ -303,7 +309,7 @@ void TimeTrack::foreach (const QueryInterval &q, IReadCallback * clbk) {
 }
 
 Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
-  std::lock_guard<utils::async::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   Id2Meas result;
   result[this->_meas_id].flag = FLAGS::_NO_DATA;
 
@@ -333,12 +339,11 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
     }
   }
 
-  if (_cur_chunk != nullptr && _cur_chunk->header->stat.minTime >= q.time_point &&
-      _cur_chunk->header->stat.maxTime <= q.time_point) {
+  if (_cur_chunk != nullptr && _cur_chunk->header->stat.maxTime <= q.time_point) {
     auto rdr = _cur_chunk->getReader();
     while (!rdr->is_end()) {
       auto v = rdr->readNext();
-      if (v.time > result[this->_meas_id].time && v.time <= q.time_point) {
+      if (v.time >= result[this->_meas_id].time && v.time <= q.time_point) {
         result[this->_meas_id] = v;
       }
     }
@@ -352,7 +357,7 @@ Id2Meas TimeTrack::readTimePoint(const QueryTimePoint &q) {
 Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
   ENSURE(ids.size() == size_t(1));
   ENSURE(ids[0] == this->_meas_id);
-  std::lock_guard<utils::async::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   Id2Meas result;
   if (_cur_chunk != nullptr) {
     auto last = _cur_chunk->header->last();
@@ -365,17 +370,8 @@ Id2Meas TimeTrack::currentValue(const IdArray &ids, const Flag &flag) {
   return result;
 }
 
-void TimeTrack::rm_chunk(MemChunk *c) {
-  std::lock_guard<utils::async::Locker> lg(_locker);
-  _index.erase(c->header->stat.maxTime);
-
-  if (_cur_chunk.get() == c) {
-    _cur_chunk = nullptr;
-  }
-}
-
 void TimeTrack::rereadMinMax() {
-  std::lock_guard<utils::async::Locker> lg(_locker);
+  std::lock_guard<std::mutex> lg(_locker);
   _min_max.max.time = MIN_TIME;
   _min_max.min.time = MIN_TIME;
 
@@ -403,7 +399,7 @@ bool TimeTrack::create_new_chunk(const Meas &value) {
     return false;
   }
   auto mc = MemChunk_Ptr{new MemChunk{true, new_chunk_data.header, new_chunk_data.buffer,
-                                      _allocator->_chunkSize, value}};
+                                      _allocator->_chunkSize, value, this->_allocator}};
   mc->_track = this;
   mc->_a_data = new_chunk_data;
   this->_mcc->addChunk(mc);

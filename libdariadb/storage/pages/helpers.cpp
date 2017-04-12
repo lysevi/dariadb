@@ -34,54 +34,11 @@ bool have_overlap(const std::vector<ChunkLink> &links) {
   return false;
 }
 
-std::map<Id, MeasArray> splitById(const MeasArray &ma) {
-  dariadb::IdSet dropped;
-  auto count = ma.size();
-  std::vector<bool> visited(count);
-  auto begin = ma.cbegin();
-  auto end = ma.cend();
-  size_t i = 0;
-  std::map<Id, MeasArray> result;
-  MeasArray current_id_values;
-  current_id_values.resize(ma.size());
-
-  ENSURE(current_id_values.size() != 0);
-  ENSURE(current_id_values.size() == ma.size());
-
-  for (auto it = begin; it != end; ++it, ++i) {
-    if (visited[i]) {
-      continue;
-    }
-    if (dropped.find(it->id) != dropped.end()) {
-      continue;
-    }
-
-    visited[i] = true;
-    size_t current_id_values_pos = 0;
-    current_id_values[current_id_values_pos++] = *it;
-    size_t pos = 0;
-    for (auto sub_it = begin; sub_it != end; ++sub_it, ++pos) {
-      if (visited[pos]) {
-        continue;
-      }
-      if ((sub_it->id == it->id)) {
-        current_id_values[current_id_values_pos++] = *sub_it;
-        visited[pos] = true;
-      }
-    }
-    dropped.insert(it->id);
-    result.insert(std::make_pair(
-        it->id, MeasArray{current_id_values.begin(),
-                          current_id_values.begin() + current_id_values_pos}));
-    current_id_values_pos = 0;
-  }
-  return result;
-}
-
-std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
-                                       PageFooter &phdr, uint32_t max_chunk_size) {
+std::shared_ptr<std::list<HdrAndBuffer>>
+compressValues(const std::map<Id, MeasArray> &to_compress, PageFooter &phdr,
+               uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
-  std::list<HdrAndBuffer> results;
+  auto results = std::make_shared<std::list<HdrAndBuffer>>();
   utils::async::Locker result_locker;
   std::list<utils::async::TaskResult_Ptr> async_compressions;
   for (auto &kv : to_compress) {
@@ -119,7 +76,7 @@ std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
         subres.hdr = hdr;
         subres.buffer = buffer_ptr;
 
-        results.push_back(subres);
+        results->push_back(subres);
         result_locker.unlock();
       }
       return false;
@@ -149,7 +106,6 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter
 
     phdr.addeded_chunks++;
     phdr.stat.update(chunk_header.stat);
-    // ihdr.stat.update(chunk_header.stat);
     auto skip_count = Chunk::compact(&chunk_header);
     chunk_header.offset_in_page = offset;
     // update checksum;
@@ -186,9 +142,7 @@ IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *ihead
   IndexReccord cur_index;
 
   cur_index.chunk_id = cheader.id;
-  cur_index.offset = cheader.offset_in_page; // header->write_offset;
-
-  // iheader->stat.update(cheader.stat);
+  cur_index.offset = cheader.offset_in_page;
 
   iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
   iheader->recs_count++;

@@ -18,10 +18,9 @@ struct HdrAndBuffer {
   boost::shared_array<uint8_t> buffer;
 };
 
-std::map<Id, MeasArray> splitById(const MeasArray &ma);
-
-std::list<HdrAndBuffer> compressValues(std::map<Id, MeasArray> &to_compress,
-                                       PageFooter &phdr, uint32_t max_chunk_size);
+std::shared_ptr<std::list<HdrAndBuffer>>
+compressValues(const std::map<Id, MeasArray> &to_compress, PageFooter &phdr,
+               uint32_t max_chunk_size);
 
 uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter &,
                      std::list<HdrAndBuffer> &compressed_results, uint64_t file_size = 0);

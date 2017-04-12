@@ -14,13 +14,4 @@ Status IMeasWriter::append(const MeasArray::const_iterator &begin,
   return ar;
 }
 
-Status IMeasWriter::append(const MeasList::const_iterator &begin,
-                           const MeasList::const_iterator &end) {
-  dariadb::Status ar{};
-  for (auto it = begin; it != end; ++it) {
-    ar = ar + this->append(*it);
-  }
-  return ar;
-}
-
 IMeasWriter::~IMeasWriter() {}

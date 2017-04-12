@@ -60,10 +60,10 @@ void show_drop_info(dariadb::Engine *storage) {
   while (!stop_info) {
     auto queue_sizes = storage->description();
 
-    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count, " a:",
-                          queue_sizes.wal_count, " T:", queue_sizes.active_works, ")",
-                          "[a:", queue_sizes.dropper.wal, "]");
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    dariadb::logger_fatal(" storage: (p:", queue_sizes.pages_count,
+                          " a:", queue_sizes.wal_count, " T:", queue_sizes.active_works,
+                          ")", "[a:", queue_sizes.dropper.wal, "]");
+    dariadb::utils::sleep_mls(2000);
   }
 }
 

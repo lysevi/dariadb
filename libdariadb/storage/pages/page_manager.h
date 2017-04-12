@@ -1,10 +1,12 @@
 #pragma once
 
+#include <libdariadb/interfaces/icompactioncontroller.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/chunkcontainer.h>
 #include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/pages/page.h>
 #include <libdariadb/utils/utils.h>
 #include <vector>
 
@@ -29,8 +31,9 @@ public:
   EXPORT dariadb::Time minTime();
   EXPORT dariadb::Time maxTime();
 
-  EXPORT void append(const std::string &file_prefix, const dariadb::MeasArray &ma);
-  EXPORT void appendChunks(const std::vector<Chunk *> &a, size_t count) override;
+  EXPORT void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma,
+                           on_create_complete_callback callback);
+  EXPORT void appendChunks(const std::vector<Chunk *> &a) override;
 
   EXPORT void fsck();
 
@@ -38,7 +41,11 @@ public:
   EXPORT void erase_page(const std::string &fname);
   EXPORT static void erase(const std::string &storage_path, const std::string &fname);
   EXPORT void repack();
-  EXPORT Id2MinMax loadMinMax();
+  EXPORT Id2MinMax_Ptr loadMinMax();
+
+  EXPORT void compact(ICompactionController *logic);
+
+  EXPORT std::list<std::string> pagesOlderThan(Time t);
 
 protected:
   EXPORT PageManager(const EngineEnvironment_ptr env);

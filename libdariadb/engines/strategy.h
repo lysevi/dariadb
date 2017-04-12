@@ -5,10 +5,10 @@
 #include <ostream>
 
 namespace dariadb {
-enum class STRATEGY : uint16_t { WAL = 0, COMPRESSED, MEMORY, CACHE };
+enum class STRATEGY : uint16_t { WAL = 0, COMPRESSED, MEMORY, CACHE, SHARD };
 
 EXPORT std::istream &operator>>(std::istream &in, STRATEGY &strat);
 EXPORT std::ostream &operator<<(std::ostream &stream, const STRATEGY &strat);
 
 EXPORT std::string to_string(const STRATEGY &strat);
-}
+} // namespace dariadb

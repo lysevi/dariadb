@@ -3,6 +3,7 @@
 #include <boost/test/unit_test.hpp>
 #include <atomic>
 #include <cassert>
+#include <iostream>
 #include <map>
 #include <thread>
 
@@ -46,6 +47,7 @@ public:
 };
 
 BOOST_AUTO_TEST_CASE(WalInitTest) {
+  std::cout << "WalInitTest" << std::endl;
   const size_t block_size = 1000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -86,7 +88,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     e.value = dariadb::Value(i);
     BOOST_CHECK(wal->append(e).writed == 1);
     i++;
-    dariadb::MeasList ml;
+    dariadb::MeasArray ml;
     for (; i < writes_count / 2; i++) {
       e.id = i % id_count;
       id_set.insert(e.id);
@@ -111,8 +113,9 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
     BOOST_CHECK_EQUAL(wal_files.size(), size_t(1));
+    BOOST_CHECK(wal->id_bloom() != dariadb::Id(0));
 
-    dariadb::MeasList out;
+    dariadb::MeasArray out;
 
     out = wal->readInterval(dariadb::QueryInterval(
         dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
@@ -134,6 +137,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
 }
 
 BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
+  std::cout << "WALFileCommonTest" << std::endl;
   const size_t block_size = 10000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -158,7 +162,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
     BOOST_CHECK(wal_files.size() == size_t(0));
     auto wal = dariadb::storage::WALFile::create(_engine_env);
 
-    dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false);
+    dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false, false, false);
     manifest = nullptr;
   }
 
@@ -168,6 +172,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
 }
 
 BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
+  std::cout << "WalManager_CommonTest" << std::endl;
   const std::string storagePath = "testStorage";
   const size_t max_size = 150;
   const dariadb::Time from = 0;
@@ -195,7 +200,7 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
 
     auto am = dariadb::storage::WALManager::create(_engine_env);
 
-    dariadb_test::storage_test_check(am.get(), from, to, step, false);
+    dariadb_test::storage_test_check(am.get(), from, to, step, false, false, false);
 
     am = nullptr;
     dariadb::utils::async::ThreadManager::stop();

@@ -3,9 +3,26 @@
 using namespace dariadb;
 using namespace dariadb::storage;
 
-MList_ReaderClb::MList_ReaderClb() : mlist() {}
+MArray_ReaderClb::MArray_ReaderClb(size_t count) {
+  this->marray.reserve(count);
+}
 
-void MList_ReaderClb::apply(const Meas &m) {
+void MArray_ReaderClb::apply(const Meas &m) {
   std::lock_guard<utils::async::Locker> lg(_locker);
-  mlist.push_back(m);
+  marray.push_back(m);
+}
+
+MArrayPtr_ReaderClb::MArrayPtr_ReaderClb(MeasArray *output) {
+  this->marray = output;
+}
+
+void MArrayPtr_ReaderClb::apply(const Meas &m) {
+  std::lock_guard<utils::async::Locker> lg(_locker);
+  marray->push_back(m);
+}
+
+FunctorCallback::FunctorCallback(FunctorCallback::FunctorType &ft) : functor(ft) {}
+
+void FunctorCallback::apply(const Meas &m) {
+  is_cancel = this->functor(m);
 }

@@ -89,6 +89,22 @@ Time from_iso_string(const std::string &s) {
   return from_ptime(pt);
 }
 
+Time from_days(const int day) {
+  return from_hours(day * 24);
+}
+
+Time from_hours(const int h) {
+  return from_minutes(h * 60);
+}
+
+Time from_minutes(const int m) {
+  return from_seconds(m * 60);
+}
+
+Time from_seconds(const int s) {
+  return Time(s) * 1000;
+}
+
 Time round_to_seconds(const Time t) {
   return (Time)(Time(float(t) / 1e3) * 1e3);
 }

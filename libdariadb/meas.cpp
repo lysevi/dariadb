@@ -25,29 +25,18 @@ Meas::Meas(const Meas &other) {
   value = other.value;
   flag = other.flag;
 }
+
 bool dariadb::areSame(Value a, Value b, const Value EPSILON) {
   return std::fabs(a - b) < EPSILON;
 }
 
-void dariadb::minmax_append(Id2MinMax &out, const Id2MinMax &source) {
-  for (auto kv : source) {
-    auto fres = out.find(kv.first);
-    if (fres == out.end()) {
-      out[kv.first] = kv.second;
-    } else {
-      out[kv.first].updateMax(kv.second.max);
-      out[kv.first].updateMin(kv.second.min);
-    }
-  }
-}
-
-void dariadb::mlist2mset(MeasList &mlist, Id2MSet &sub_result) {
-  for (auto m : mlist) {
-    if (m.flag == FLAGS::_NO_DATA) {
-      continue;
-    }
-    sub_result[m.id].emplace(m);
-  }
+void dariadb::minmax_append(Id2MinMax_Ptr &out, const Id2MinMax_Ptr &source) {
+  auto f = [&out](const Id2MinMax::value_type &v) {
+    auto fres = out->find_bucket(v.first);
+    fres.v->second.updateMax(v.second.max);
+    fres.v->second.updateMin(v.second.min);
+  };
+  source->apply(f);
 }
 
 void MeasMinMax::updateMax(const Meas &m) {

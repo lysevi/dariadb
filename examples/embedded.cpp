@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     m.flag = 100 + i % 2;
     auto status = storage->append(m);
     if (status.writed != 1) {
-      std::cerr << "Error: " << status.error_message << std::endl;
+      std::cerr << "Error: " << dariadb::to_string(status.error) << std::endl;
     }
   }
   // we can get param id`s from scheme
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 
   // query writed interval;
   dariadb::QueryInterval qi(all_id, dariadb::Flag(), start_time, m.time);
-  dariadb::MeasList readed_values = storage->readInterval(qi);
+  dariadb::MeasArray readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
     std::cout << " param: " << all_params[measurement.id]
@@ -105,14 +105,14 @@ int main(int argc, char **argv) {
 
   // callback
   std::cout << "Callback in interval: " << std::endl;
-  std::unique_ptr<Callback> callback_ptr{new Callback()};
-  storage->foreach (qi, callback_ptr.get());
-  callback_ptr->wait();
+  Callback callback;
+  storage->foreach (qi, &callback);
+  callback.wait();
 
   // callback
   std::cout << "Callback in timepoint: " << std::endl;
-  storage->foreach (qp, callback_ptr.get());
-  callback_ptr->wait();
+  storage->foreach (qp, &callback);
+  callback.wait();
 
   { // stat
     auto stat = storage->stat(dariadb::Id(0), start_time, m.time);

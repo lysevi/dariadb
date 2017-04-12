@@ -2,6 +2,7 @@
 
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/engines/shard.h>
+#include <libdariadb/storage/subscribe.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
 #include <shared_mutex>
@@ -32,6 +33,7 @@ public:
     _settings = Settings::create(path);
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
+    _subscribe_notify.start();
 
     loadShardFile();
   }
@@ -41,6 +43,7 @@ public:
   void stop() {
     if (!_stoped) {
       logger_info("shards: stopping");
+      _subscribe_notify.stop();
       _id2shard.clear();
       for (auto s : _sub_storages) {
         s.storage->stop();
@@ -99,6 +102,37 @@ public:
   void shardAdd(const ShardEngine::Shard &d) {
     shardAdd_inner(d);
     saveShardFile();
+  }
+
+  void shardRm(const std::string &alias, bool rm_shard_folder) {
+    std::lock_guard<std::shared_mutex> lg(_locker);
+    logger_info("shards: rm shard {", alias, "}");
+
+    auto f_iter = _shards.find(alias);
+    if (f_iter != _shards.end()) {
+      for (auto iter = _sub_storages.begin(); iter != _sub_storages.end(); ++iter) {
+        auto ss = iter->storage;
+        if (iter->path == f_iter->second.path) {
+          ss->stop();
+          _sub_storages.erase(iter);
+          if (_default_shard.get() == ss.get()) {
+            _default_shard = nullptr;
+          }
+          break;
+        }
+      }
+      if (rm_shard_folder) {
+        logger_info("shards: rm path - ", f_iter->second.path);
+        utils::fs::rm(f_iter->second.path);
+      }
+      for (auto id : f_iter->second.ids) {
+        _id2shard.erase(id);
+      }
+      _shards.erase(f_iter);
+      saveShardFile();
+    } else {
+      logger_info("shards: rm - shard with alias={", alias, "} not found.");
+    }
   }
 
   void shardAdd_inner(const ShardEngine::Shard &d) {
@@ -178,9 +212,13 @@ public:
     IEngine_Ptr target_shard = get_shard_for_id(value.id);
 
     if (target_shard == nullptr) {
-      return Status(0, 1);
+      return Status(1, APPEND_ERROR::bad_shard);
     } else {
-      return target_shard->append(value);
+      auto result = target_shard->append(value);
+      if (result.writed == 1) {
+        _subscribe_notify.on_append(value);
+      }
+      return result;
     }
   }
 
@@ -204,14 +242,15 @@ public:
     return result;
   }
 
-  Id2MinMax loadMinMax() {
+  Id2MinMax_Ptr loadMinMax() {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    Id2MinMax result;
+    Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
     for (auto &s : this->_sub_storages) {
       auto subres = s.storage->loadMinMax();
-      for (auto kv : subres) {
-        result[kv.first] = kv.second;
-      }
+      auto f = [&result](const Id2MinMax::value_type &v) {
+        result->insert(v.first, v.second);
+      };
+      subres->apply(f);
     }
     return result;
   }
@@ -225,27 +264,6 @@ public:
     }
   }
 
-  void foreach (const QueryInterval &q, IReadCallback * clbk) override {
-    auto cursors = intervalReader(q);
-    for (auto id : q.ids) {
-      auto iter = cursors.find(id);
-      if (iter != cursors.end()) {
-        iter->second->apply(clbk, q);
-      }
-    }
-    clbk->is_end();
-  }
-
-  void foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-    auto values = this->readTimePoint(q);
-    for (auto &kv : values) {
-      if (clbk->is_canceled()) {
-        break;
-      }
-      clbk->apply(kv.second);
-    }
-    clbk->is_end();
-  }
   std::unordered_map<IEngine_Ptr, IdSet> makeStorage2iset(const IdArray &ids) {
     std::unordered_map<IEngine_Ptr, IdSet> result;
     for (auto id : ids) {
@@ -341,6 +359,13 @@ public:
     }
   }
 
+  void compact(ICompactionController *logic) override {
+    std::shared_lock<std::shared_mutex> lg(_locker);
+    for (auto &s : _sub_storages) {
+      s.storage->compact(logic);
+    }
+  }
+
   Description description() const override {
     std::shared_lock<std::shared_mutex> lg(_locker);
     Description result;
@@ -354,14 +379,22 @@ public:
 
   void wait_all_asyncs() override { ThreadManager::instance()->flush(); }
 
-  void drop_part_wals(size_t count) override {
+  void compress_all() override {
     std::shared_lock<std::shared_mutex> lg(_locker);
     for (auto &s : _sub_storages) {
-      s.storage->drop_part_wals(count);
+      s.storage->compress_all();
     }
   }
 
   storage::Settings_ptr settings() override { return _settings; }
+
+  STRATEGY strategy() const override { return STRATEGY::SHARD; }
+
+  void subscribe(const IdArray &ids, const Flag &flag,
+                 const ReaderCallback_ptr &clbk) override {
+    auto new_s = std::make_shared<SubscribeInfo>(ids, flag, clbk);
+    _subscribe_notify.add(new_s);
+  }
 
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
@@ -371,6 +404,8 @@ public:
   IEngine_Ptr _default_shard;
   Settings_ptr _settings;
   mutable std::shared_mutex _locker;
+
+  SubscribeNotificator _subscribe_notify;
 };
 
 ShardEngine_Ptr ShardEngine::create(const std::string &path) {
@@ -380,8 +415,8 @@ ShardEngine_Ptr ShardEngine::create(const std::string &path) {
 ShardEngine::ShardEngine(const std::string &path)
     : _impl(new ShardEngine::Private(path)) {}
 
-void dariadb::ShardEngine::drop_part_wals(size_t count) {
-  _impl->drop_part_wals(count);
+void dariadb::ShardEngine::compress_all() {
+  _impl->compress_all();
 }
 
 void dariadb::ShardEngine::wait_all_asyncs() {
@@ -394,6 +429,10 @@ IEngine::Description dariadb::ShardEngine::description() const {
 
 void ShardEngine::shardAdd(const Shard &d) {
   _impl->shardAdd(d);
+}
+
+void ShardEngine::shardRm(const std::string &alias, bool rm_shard_folder) {
+  _impl->shardRm(alias, rm_shard_folder);
 }
 
 std::list<ShardEngine::Shard> ShardEngine::shardList() {
@@ -412,20 +451,12 @@ Time ShardEngine::maxTime() {
   return _impl->maxTime();
 }
 
-Id2MinMax ShardEngine::loadMinMax() {
+Id2MinMax_Ptr ShardEngine::loadMinMax() {
   return _impl->loadMinMax();
 }
 
 bool ShardEngine::minMaxTime(Id id, Time *minResult, Time *maxResult) {
   return _impl->minMaxTime(id, minResult, maxResult);
-}
-
-void ShardEngine::foreach (const QueryInterval &q, IReadCallback * clbk) {
-  _impl->foreach (q, clbk);
-}
-
-void ShardEngine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
-  _impl->foreach (q, clbk);
 }
 
 Id2Cursor ShardEngine::intervalReader(const QueryInterval &query) {
@@ -455,6 +486,9 @@ void ShardEngine::eraseOld(const Time &t) {
 void ShardEngine::repack() {
   _impl->repack();
 }
+void ShardEngine::compact(ICompactionController *logic) {
+  _impl->compact(logic);
+}
 
 void ShardEngine::stop() {
   _impl->stop();
@@ -462,4 +496,13 @@ void ShardEngine::stop() {
 
 storage::Settings_ptr ShardEngine::settings() {
   return _impl->settings();
+}
+
+STRATEGY ShardEngine::strategy() const {
+  return _impl->strategy();
+}
+
+void ShardEngine::subscribe(const IdArray &ids, const Flag &flag,
+                            const ReaderCallback_ptr &clbk) {
+  return _impl->subscribe(ids, flag, clbk);
 }

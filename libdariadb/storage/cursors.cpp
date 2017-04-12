@@ -32,7 +32,7 @@ get_cursor_with_min_time(std::vector<Time> &top_times,
   Time min_time = MAX_TIME;
   size_t min_time_index = 0;
   for (size_t i = 0; i < top_times.size(); ++i) {
-    if (top_times[i] != MAX_TIME && min_time > top_times[i]) {
+    if ((top_times[i] != MAX_TIME) && (min_time > top_times[i])) {
       min_time = top_times[i];
       min_time_index = i;
     }
@@ -43,7 +43,7 @@ get_cursor_with_min_time(std::vector<Time> &top_times,
   return std::make_pair(min_time_index, reader_it.get());
 }
 
-CursorsList unpack_readers(const CursorsList &readers) {
+CursorsList unpack_merge_readers(const CursorsList &readers) {
   CursorsList tmp_readers_list;
 
   for (auto r : readers) {
@@ -58,6 +58,25 @@ CursorsList unpack_readers(const CursorsList &readers) {
         tmp_readers_list.emplace_back(sub_reader);
       }
       msr->_readers.clear();
+    }
+  }
+  return tmp_readers_list;
+}
+
+CursorsList unpack_linear_readers(const CursorsList &readers) {
+  CursorsList tmp_readers_list;
+
+  for (auto r : readers) {
+    auto lsr = dynamic_cast<LinearCursor *>(r.get());
+    if (lsr == nullptr) {
+      ENSURE(!r->is_end());
+      tmp_readers_list.emplace_back(r);
+    } else {
+      for (auto sub_reader : lsr->_readers) {
+        ENSURE(!sub_reader->is_end());
+        tmp_readers_list.emplace_back(sub_reader);
+      }
+      lsr->_readers.clear();
     }
   }
   return tmp_readers_list;
@@ -82,6 +101,14 @@ Meas FullCursor::readNext() {
   ENSURE(!is_end());
 
   auto result = _ma[_index++];
+  // skip duplicates.
+  while (!is_end()) {
+    auto next = _ma[_index];
+    if (next.time != result.time) {
+      break;
+    }
+    _index++;
+  }
   return result;
 }
 
@@ -104,13 +131,19 @@ Time FullCursor::maxTime() {
   return _maxTime;
 }
 
+size_t FullCursor::count() const {
+  return _ma.size();
+}
+
 MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
-  CursorsList tmp_readers_list = cursors_inner::unpack_readers(readers);
+  CursorsList tmp_readers_list = cursors_inner::unpack_merge_readers(readers);
 
   _readers.reserve(tmp_readers_list.size());
+  _values_count = size_t(0);
   for (auto r : tmp_readers_list) {
     ENSURE(!r->is_end());
     _readers.emplace_back(r);
+    _values_count += r->count();
   }
 
   _top_times.resize(_readers.size());
@@ -186,16 +219,26 @@ Time MergeSortCursor::maxTime() {
   return _maxTime;
 }
 
+size_t MergeSortCursor::count() const {
+  return _values_count;
+}
+
 LinearCursor::LinearCursor(const CursorsList &readers) {
-  std::vector<Cursor_Ptr> rv(readers.begin(), readers.end());
+  auto sub_readers = cursors_inner::unpack_linear_readers(readers);
+  ENSURE(sub_readers.size() >= readers.size());
+
+  std::vector<Cursor_Ptr> rv(sub_readers.begin(), sub_readers.end());
   std::sort(rv.begin(), rv.end(),
             [](auto l, auto r) { return l->minTime() < r->minTime(); });
   _readers = CursorsList(rv.begin(), rv.end());
+
+  _values_count = size_t(0);
   _minTime = MAX_TIME;
   _maxTime = MIN_TIME;
   for (auto &r : _readers) {
     _minTime = std::min(_minTime, r->minTime());
     _maxTime = std::max(_maxTime, r->maxTime());
+    _values_count += r->count();
   }
   ENSURE(!_readers.empty());
   ENSURE(!is_end());
@@ -230,6 +273,10 @@ Time LinearCursor::maxTime() {
   return _maxTime;
 }
 
+size_t LinearCursor::count() const {
+  return _values_count;
+}
+
 Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list) {
   std::vector<Cursor_Ptr> readers_vector{readers_list.begin(), readers_list.end()};
   typedef std::set<size_t> positions_set;
@@ -246,7 +293,19 @@ Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list)
             is_not_processed) {
           processed_pos.insert(i);
           processed_pos.insert(j);
-          overlapped[i].insert(j);
+
+          // i - can be already in list, because i overlapped with other reader.
+          bool already_in_list = false;
+          for (auto &kv : overlapped) {
+            if (kv.second.find(i) != kv.second.end()) {
+              already_in_list = true;
+              kv.second.insert(j);
+              break;
+            }
+          }
+          if (!already_in_list) {
+            overlapped[i].insert(j);
+          }
           have_overlap = true;
         }
       }

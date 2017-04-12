@@ -4,6 +4,7 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
 #include <common/async_connection.h>
+#include <common/http_helpers.h>
 #include <common/net_common.h>
 
 #include <boost/asio.hpp>
@@ -12,6 +13,10 @@
 #include <memory>
 #include <string>
 #include <thread>
+
+#include <extern/json/src/json.hpp>
+
+using json = nlohmann::json;
 
 using namespace std::placeholders;
 using namespace boost::asio;
@@ -28,14 +33,12 @@ public:
     _query_num = 1;
     _state = CLIENT_STATE::CONNECT;
     _pings_answers = 0;
-    AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel,
-                                                     bool &dont_free_memory) {
-      onDataRecv(d, cancel, dont_free_memory);
+    AsyncConnection::onDataRecvHandler on_d = [this](const NetData_ptr &d, bool &cancel) {
+      onDataRecv(d, cancel);
     };
     AsyncConnection::onNetworkErrorHandler on_n =
         [this](const boost::system::error_code &err) { onNetworkError(err); };
-    _async_connection =
-        std::shared_ptr<AsyncConnection>{new AsyncConnection(&_pool, on_d, on_n)};
+    _async_connection = std::shared_ptr<AsyncConnection>{new AsyncConnection(on_d, on_n)};
   }
 
   ~Private() noexcept(false) {
@@ -59,20 +62,20 @@ public:
     _thread_handler = std::move(t);
 
     while (this->_state != CLIENT_STATE::WORK) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      dariadb::utils::sleep_mls(300);
     }
   }
 
   void disconnect() {
     if (_socket->is_open()) {
-      auto nd = _pool.construct(DATA_KINDS::DISCONNECT);
+      auto nd = std::make_shared<NetData>(DATA_KINDS::DISCONNECT);
       this->_async_connection->send(nd);
     }
 
     while (this->_state != CLIENT_STATE::DISCONNECTED) {
       logger_info("client: #", _async_connection->id(),
                   " disconnect - wait server answer...");
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      dariadb::utils::sleep_mls(500);
     }
   }
 
@@ -109,7 +112,7 @@ public:
 
       logger_info("client: send hello ", hn);
 
-      auto nd = this->_pool.construct();
+      auto nd = std::make_shared<NetData>();
       nd->size += static_cast<NetData::MessageSize>(hn.size());
       nd->size += sizeof(QueryHello_header);
 
@@ -132,11 +135,11 @@ public:
 
   void onNetworkError(const boost::system::error_code &err) {
     if (this->_state != CLIENT_STATE::DISCONNECTED) {
-      THROW_EXCEPTION("client: #", _async_connection->id(), err.message());
+      THROW_EXCEPTION("client: #", _async_connection->id(), " ", err.message());
     }
   }
 
-  void onDataRecv(const NetData_ptr &d, bool &cancel, bool &) {
+  void onDataRecv(const NetData_ptr &d, bool &cancel) {
     //    if (this->_state == CLIENT_STATE::WORK) {
     //      logger("client: #", id(), " dataRecv ", d->size, " bytes.");
     //    } else {
@@ -171,8 +174,8 @@ public:
       auto qh_e = reinterpret_cast<QueryError_header *>(d->data);
       auto query_num = qh_e->id;
       ERRORS err = (ERRORS)qh_e->error_code;
-      logger_info("client: #", _async_connection->id(), " query #", query_num, " error:",
-                  err);
+      logger_info("client: #", _async_connection->id(), " query #", query_num,
+                  " error:", err);
       if (this->state() == CLIENT_STATE::WORK) {
         auto subres = this->_query_results[qh_e->id];
         subres->is_closed = true;
@@ -202,22 +205,10 @@ public:
       }
       break;
     }
-    case DATA_KINDS::STAT: {
-      auto qw = reinterpret_cast<QueryStatResult_header *>(d->data);
-      logger_info("state: #", qw->id);
-      auto subres = this->_query_results[qw->id];
-      ENSURE(subres != nullptr);
 
-      subres->is_closed = true;
-      subres->clbk(subres.get(), Meas(), qw->result);
-      subres->locker.unlock();
-      _query_results.erase(qw->id);
-
-      break;
-    }
     case DATA_KINDS::PING: {
       logger_info("client: #", _async_connection->id(), " ping.");
-      auto nd = _pool.construct(DATA_KINDS::PONG);
+      auto nd = std::make_shared<NetData>(DATA_KINDS::PONG);
       this->_async_connection->send(nd);
       _pings_answers++;
       break;
@@ -257,7 +248,6 @@ public:
     this->_locker.lock();
     logger_info("client: send ", ma.size());
     size_t writed = 0;
-    std::list<ReadResult_ptr> results;
 
     while (writed != ma.size()) {
       auto cur_id = _query_num;
@@ -266,10 +256,9 @@ public:
       auto qres = std::make_shared<ReadResult>();
       qres->id = cur_id;
       qres->kind = DATA_KINDS::APPEND;
-      results.push_back(qres);
       this->_query_results[qres->id] = qres;
 
-      auto nd = this->_pool.construct(DATA_KINDS::APPEND);
+      auto nd = std::make_shared<NetData>(DATA_KINDS::APPEND);
       nd->size = sizeof(QueryAppend_header);
 
       auto hdr = reinterpret_cast<QueryAppend_header *>(&nd->data);
@@ -283,16 +272,13 @@ public:
       writed += hdr->count;
 
       _async_connection->send(nd);
+
+      while (!qres->is_ok && !qres->is_error) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+      this->_query_results.erase(qres->id);
     }
     this->_locker.unlock();
-    for (auto &r : results) {
-      while (!r->is_ok && !r->is_error) {
-        std::this_thread::yield();
-      }
-      this->_locker.lock();
-      this->_query_results.erase(r->id);
-      this->_locker.unlock();
-    }
   }
 
   ReadResult_ptr readInterval(const QueryInterval &qi, ReadResult::callback &clbk) {
@@ -306,7 +292,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::READ_INTERVAL;
 
-    auto nd = this->_pool.construct(DATA_KINDS::READ_INTERVAL);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::READ_INTERVAL);
 
     auto p_header = reinterpret_cast<QueryInterval_header *>(nd->data);
     nd->size = sizeof(QueryInterval_header);
@@ -317,7 +303,6 @@ public:
 
     auto id_size = sizeof(Id) * qi.ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
@@ -333,10 +318,10 @@ public:
     return qres;
   }
 
-  MeasList readInterval(const QueryInterval &qi) {
-    MeasList result{};
+  MeasArray readInterval(const QueryInterval &qi) {
+    MeasArray result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result.push_back(m);
       }
@@ -358,7 +343,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::READ_TIMEPOINT;
 
-    auto nd = this->_pool.construct(DATA_KINDS::READ_TIMEPOINT);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::READ_TIMEPOINT);
 
     auto p_header = reinterpret_cast<QueryTimePoint_header *>(nd->data);
     nd->size = sizeof(QueryTimePoint_header);
@@ -368,7 +353,6 @@ public:
 
     auto id_size = sizeof(Id) * qi.ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(qi.ids.size());
@@ -387,7 +371,7 @@ public:
   Id2Meas readTimePoint(const QueryTimePoint &qi) {
     Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -410,7 +394,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::CURRENT_VALUE;
 
-    auto nd = this->_pool.construct(DATA_KINDS::CURRENT_VALUE);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::CURRENT_VALUE);
 
     auto p_header = reinterpret_cast<QueryCurrentValue_header *>(nd->data);
     nd->size = sizeof(QueryCurrentValue_header);
@@ -419,7 +403,6 @@ public:
 
     auto id_size = sizeof(Id) * ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(ids.size());
@@ -438,7 +421,7 @@ public:
   Id2Meas currentValue(const IdArray &ids, const Flag &flag) {
     Id2Meas result{};
     auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) {
+                                 const Statistic &) {
       if (!parent->is_closed) {
         result[m.id] = m;
       }
@@ -461,7 +444,7 @@ public:
     qres->id = cur_id;
     qres->kind = DATA_KINDS::SUBSCRIBE;
 
-    auto nd = this->_pool.construct(DATA_KINDS::SUBSCRIBE);
+    auto nd = std::make_shared<NetData>(DATA_KINDS::SUBSCRIBE);
 
     auto p_header = reinterpret_cast<QuerSubscribe_header *>(nd->data);
     nd->size = sizeof(QuerSubscribe_header);
@@ -470,7 +453,6 @@ public:
 
     auto id_size = sizeof(Id) * ids.size();
     if ((id_size + nd->size) > NetData::MAX_MESSAGE_SIZE) {
-      _pool.free(nd);
       THROW_EXCEPTION("client: query to big");
     }
     p_header->ids_count = (uint16_t)(ids.size());
@@ -486,56 +468,30 @@ public:
     return qres;
   }
 
-  void repack() {
-    _locker.lock();
-    auto cur_id = _query_num;
-    _query_num += 1;
-    _locker.unlock();
-    auto nd = this->_pool.construct(DATA_KINDS::REPACK);
-
-    auto p_header = reinterpret_cast<QuerRepack_header *>(nd->data);
-    nd->size = sizeof(QuerRepack_header);
-    p_header->id = cur_id;
-    _async_connection->send(nd);
-  }
-
-  ReadResult_ptr stat(const Id id, const Time from, const Time to,
-                      ReadResult::callback &clbk) {
-    _locker.lock();
-    auto cur_id = _query_num;
-    _query_num += 1;
-    _locker.unlock();
-
-    auto qres = std::make_shared<ReadResult>();
-    qres->locker.lock();
-    qres->id = cur_id;
-    qres->kind = DATA_KINDS::STAT;
-
-    auto nd = this->_pool.construct(DATA_KINDS::STAT);
-
-    auto p_header = reinterpret_cast<QueryStat_header *>(nd->data);
-    nd->size = sizeof(QueryStat_header);
-    p_header->id = cur_id;
-    p_header->from = from;
-    p_header->to = to;
-    p_header->meas_id = id;
-
-    qres->is_closed = false;
-    qres->clbk = clbk;
-    this->_query_results[qres->id] = qres;
-
-    _async_connection->send(nd);
-    return qres;
-  }
-
-  Statistic stat(const Id id, Time from, Time to) {
-    Statistic result{};
-    auto clbk_lambda = [&result](const ReadResult *parent, const Meas &m,
-                                 const Statistic &st) { result = st; };
-    ReadResult::callback clbk = clbk_lambda;
-    auto qres = stat(id, from, to, clbk);
-    qres->wait();
+  std::map<std::string, dariadb::Id> loadScheme() {
+    std::map<std::string, dariadb::Id> result;
+    auto scheme_res = http::GET(_service, std::to_string(_params.http_port), "/scheme");
+    if (scheme_res.code != 200) { // is http::OK?
+      return result;
+    } else {
+      json js = json::parse(scheme_res.answer);
+      for (auto it = js.begin(); it != js.end(); ++it) {
+        std::string key = it.key();
+        dariadb::Id val = it.value();
+        result[key] = val;
+      }
+    }
     return result;
+  }
+
+  bool addToScheme(const std::string &value) {
+    json add_param_js;
+    add_param_js["type"] = "scheme";
+    add_param_js["add"] = {value};
+    auto query_str = add_param_js.dump(1);
+    auto add_scheme_result =
+        http::POST(_service, std::to_string(_params.http_port), query_str);
+    return add_scheme_result.code == 200; // is http::OK?
   }
 
   io_service _service;
@@ -550,7 +506,6 @@ public:
 
   QueryNumber _query_num;
   MeasArray in_buffer_values;
-  NetData_Pool _pool;
   std::map<QueryNumber, ReadResult_ptr> _query_results;
   std::shared_ptr<AsyncConnection> _async_connection;
 };
@@ -583,7 +538,7 @@ void Client::append(const MeasArray &ma) {
   _Impl->append(ma);
 }
 
-MeasList Client::readInterval(const QueryInterval &qi) {
+MeasArray Client::readInterval(const QueryInterval &qi) {
   return _Impl->readInterval(qi);
 }
 
@@ -614,10 +569,10 @@ ReadResult_ptr Client::subscribe(const IdArray &ids, const Flag &flag,
   return _Impl->subscribe(ids, flag, clbk);
 }
 
-void Client::repack() {
-  _Impl->repack();
+std::map<std::string, dariadb::Id> Client::loadScheme() {
+  return _Impl->loadScheme();
 }
 
-Statistic Client::stat(const Id id, Time from, Time to) {
-  return _Impl->stat(id, from, to);
+bool Client::addToScheme(const std::string &value) {
+  return _Impl->addToScheme(value);
 }

@@ -1,8 +1,15 @@
 include(GenerateExportHeader)
+
 FILE(GLOB GLOB_HDRS "*.h")
 FILE(GLOB GLOB_SRC "*.cpp")
 
-SET(SRC  ${GLOB_HDRS} ${GLOB_SRC})
+FILE(GLOB HTTP_HDRS "http/*.h")
+FILE(GLOB HTTP_SRC "http/*.cpp")
+
+SET(SRC  ${GLOB_HDRS} ${GLOB_SRC} ${HTTP_HDRS} ${HTTP_SRC})
+
+source_group(http FILES ${HTTP_HDRS} ${HTTP_SRC})
+source_group(server FILES ${GLOB_HDRS} ${GLOB_SRC})
 
 add_library(dariadb-server SHARED ${SRC})
 TARGET_LINK_LIBRARIES(dariadb-server dariadb dariadb-net ${Boost_LIBRARIES})

@@ -16,9 +16,14 @@ using json = nlohmann::json;
 const uint64_t WAL_CACHE_SIZE = 4096 / sizeof(dariadb::Meas) * 10;
 const uint64_t WAL_FILE_SIZE = (1024 * 1024) * 4 / sizeof(dariadb::Meas);
 const uint32_t CHUNK_SIZE = 1024;
+const uint64_t MAX_CHUNKS_PER_PAGE = 10 * 1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; // 100 mb
+const size_t THREADS_COMMON = 2;
+const size_t THREADS_DISKIO = 1;
 
+const std::string c_page_store_period = "page_store_period";
 const std::string c_wal_file_size = "wal_file_size";
+const std::string c_chunks_per_page = "chunks_per_page";
 const std::string c_wal_cache_size = "wal_cache_size";
 const std::string c_chunk_size = "chunk_size";
 const std::string c_strategy = "strategy";
@@ -26,6 +31,8 @@ const std::string c_memory_limit = "memory_limit";
 const std::string c_percent_when_start_droping = "percent_when_start_droping";
 const std::string c_percent_to_drop = "percent_to_drop";
 const std::string c_max_pages_per_level = "max_pages_per_level";
+const std::string c_threads_in_common = "threads_in_common";
+const std::string c_threads_in_diskio = "threads_in_diskio";
 
 std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
@@ -49,26 +56,41 @@ Settings_ptr Settings::create(const std::string &storage_path) {
   return Settings_ptr{new Settings(storage_path)};
 }
 
+Settings_ptr Settings::create() {
+  auto result = Settings_ptr{new Settings(MEMORY_ONLY_PATH)};
+  result->is_memory_only_mode = true;
+  result->strategy.setValue(STRATEGY::MEMORY);
+  return result;
+}
+
 Settings::Settings(const std::string &path_to_storage)
     : storage_path(nullptr, "storage path", path_to_storage),
       raw_path(nullptr, "raw path", fs::append_path(path_to_storage, "raw")),
+      max_store_period(this, c_page_store_period, MAX_TIME),
       wal_file_size(this, c_wal_file_size, WAL_FILE_SIZE),
       wal_cache_size(this, c_wal_cache_size, WAL_CACHE_SIZE),
+      max_chunks_per_page(this, c_chunks_per_page, MAX_CHUNKS_PER_PAGE),
       chunk_size(this, c_chunk_size, CHUNK_SIZE),
       strategy(this, c_strategy, STRATEGY::COMPRESSED),
       memory_limit(this, c_memory_limit, MAXIMUM_MEMORY_LIMIT),
       percent_when_start_droping(this, c_percent_when_start_droping, float(0.75)),
       percent_to_drop(this, c_percent_to_drop, float(0.1)),
-      max_pages_in_level(this, c_max_pages_per_level, uint16_t(2)) {
-  auto f = settings_file_path(storage_path.value());
-  if (utils::fs::path_exists(f)) {
-    load(f);
-  } else {
-    dariadb::utils::fs::mkdir(storage_path.value());
-    dariadb::utils::fs::mkdir(raw_path.value());
-    save();
+      max_pages_in_level(this, c_max_pages_per_level, uint16_t(2)),
+      threads_in_common(this, c_threads_in_common, THREADS_COMMON),
+      threads_in_diskio(this, c_threads_in_diskio, THREADS_DISKIO) {
+
+  if (storage_path.value() != MEMORY_ONLY_PATH) {
+    auto f = settings_file_path(storage_path.value());
+    if (utils::fs::path_exists(f)) {
+      load(f);
+    } else {
+      dariadb::utils::fs::mkdir(storage_path.value());
+      dariadb::utils::fs::mkdir(raw_path.value());
+      save();
+    }
   }
   load_min_max = true;
+  is_memory_only_mode = false;
 }
 
 Settings::~Settings() {}
@@ -87,12 +109,15 @@ void Settings::set_default() {
 std::vector<dariadb::utils::async::ThreadPool::Params> Settings::thread_pools_params() {
   using namespace dariadb::utils::async;
   std::vector<ThreadPool::Params> result{
-      ThreadPool::Params{size_t(4), (ThreadKind)THREAD_KINDS::COMMON},
-      ThreadPool::Params{size_t(1), (ThreadKind)THREAD_KINDS::DISK_IO}};
+      ThreadPool::Params{threads_in_common.value(), (ThreadKind)THREAD_KINDS::COMMON},
+      ThreadPool::Params{threads_in_diskio.value(), (ThreadKind)THREAD_KINDS::DISK_IO}};
   return result;
 }
 
 void Settings::save() {
+  if (this->storage_path.value() == MEMORY_ONLY_PATH) {
+    return;
+  }
   save(settings_file_path(this->storage_path.value()));
 }
 
@@ -115,6 +140,9 @@ void Settings::save(const std::string &file) {
 }
 
 void Settings::load(const std::string &file) {
+  if (this->storage_path.value() == MEMORY_ONLY_PATH) {
+    return;
+  }
   logger("engine", alias, ": Settings loading ", file);
   std::string content = dariadb::utils::fs::read_file(file);
   json js = json::parse(content);

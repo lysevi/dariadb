@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
     m.flag = 100 + i % 2;
     auto status = storage->append(m);
     if (status.writed != 1) {
-      std::cerr << "Error: " << status.error_message << std::endl;
+      std::cerr << "Error: " << dariadb::to_string(status.error) << std::endl;
     }
   }
   // we can get param id`s from scheme
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 
   // query writed interval;
   dariadb::QueryInterval qi(all_id, dariadb::Flag(), start_time, m.time);
-  dariadb::MeasList readed_values = storage->readInterval(qi);
+  dariadb::MeasArray readed_values = storage->readInterval(qi);
   std::cout << "Readed: " << readed_values.size() << std::endl;
   for (auto measurement : readed_values) {
     std::cout << " param: " << all_params[measurement.id]

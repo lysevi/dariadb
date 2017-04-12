@@ -2,6 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS // disable msvc /sdl warning on fopen call.
 #endif
 #include <libdariadb/flags.h>
+#include <libdariadb/storage/bloom_filter.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/manifest.h>
@@ -33,6 +34,7 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->wal_append(rnd_fname);
     _file = nullptr;
+    _idBloom = bloom_empty<Id>();
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
@@ -78,13 +80,16 @@ public:
     ENSURE(!_is_readonly);
 
     if (_writed > _settings->wal_file_size.value()) {
-      return Status(0, 1);
+      return Status(1, APPEND_ERROR::wal_file_limit);
     }
     open_to_append();
     std::fwrite(&value, sizeof(Meas), size_t(1), _file);
     std::fflush(_file);
+    _minTime = std::min(_minTime, value.time);
+    _maxTime = std::max(_maxTime, value.time);
     _writed++;
-    return Status(1, 0);
+    _idBloom = bloom_add<Id>(_idBloom, value.id);
+    return Status(1);
   }
 
   Status append(const MeasArray::const_iterator &begin,
@@ -97,68 +102,46 @@ public:
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
     std::fwrite(&(*begin), sizeof(Meas), write_size, _file);
     std::fflush(_file);
+    for (auto it = begin; it != begin + write_size; ++it) {
+      auto value = *it;
+      _minTime = std::min(_minTime, value.time);
+      _maxTime = std::max(_maxTime, value.time);
+      _idBloom = bloom_add<Id>(_idBloom, value.id);
+    }
     _writed += write_size;
-    return Status(write_size, 0);
-  }
-
-  Status append(const MeasList::const_iterator &begin,
-                const MeasList::const_iterator &end) {
-    ENSURE(!_is_readonly);
-
-    auto list_size = std::distance(begin, end);
-    open_to_append();
-
-    auto max_size = _settings->wal_file_size.value();
-
-    auto write_size = (list_size + _writed) > max_size ? (max_size - _writed) : list_size;
-    MeasArray ma{begin, end};
-    std::fwrite(ma.data(), sizeof(Meas), write_size, _file);
-    std::fflush(_file);
-    _writed += write_size;
-    return Status(write_size, 0);
+    return Status(write_size);
   }
 
   Statistic stat(const Id id, Time from, Time to) {
     Statistic result;
-    open_to_read();
 
     IdArray ids{id};
     ENSURE(ids[0] == id);
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
       if (val.inQuery(ids, Flag(0), from, to)) {
         result.update(val);
       }
     }
-    std::fclose(_file);
-    _file = nullptr;
 
     return result;
   }
 
   Id2Cursor intervalReader(const QueryInterval &q) {
-    open_to_read();
-
     Id2MSet subresult;
-
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
       if (val.inQuery(q.ids, q.flag, q.from, q.to)) {
         subresult[val.id].insert(val);
       }
     }
-    std::fclose(_file);
-    _file = nullptr;
 
     if (subresult.empty()) {
       return Id2Cursor();
     }
+
     Id2Cursor result;
     for (auto kv : subresult) {
       MeasArray ma(kv.second.begin(), kv.second.end());
@@ -183,20 +166,14 @@ public:
     dariadb::IdSet readed_ids;
     dariadb::Id2Meas sub_res;
 
-    open_to_read();
-
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
       if (val.inQuery(q.ids, q.flag) && (val.time <= q.time_point)) {
         replace_if_older(sub_res, val);
         readed_ids.insert(val.id);
       }
     }
-    std::fclose(_file);
-    _file = nullptr;
 
     if (!q.ids.empty() && readed_ids.size() != q.ids.size()) {
       for (auto id : q.ids) {
@@ -227,19 +204,14 @@ public:
     dariadb::Id2Meas sub_res;
     dariadb::IdSet readed_ids;
 
-    open_to_read();
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
       if (val.inFlag(flag) && val.inIds(ids)) {
         replace_if_older(sub_res, val);
         readed_ids.emplace(val.id);
       }
     }
-    std::fclose(_file);
-    _file = nullptr;
 
     if (!ids.empty() && readed_ids.size() != ids.size()) {
       for (auto id : ids) {
@@ -255,59 +227,60 @@ public:
     return sub_res;
   }
 
+  void updateBloom() {
+    _idBloom = bloom_empty<Id>();
+    auto all = this->readAll();
+    for (auto v : *all) {
+      _idBloom = bloom_add<Id>(_idBloom, v.id);
+    }
+  }
+
+  dariadb::Id _idBloom = MIN_ID;
+  Id id_bloom() {
+    if (_idBloom == MIN_ID) {
+      updateBloom();
+    }
+    return _idBloom;
+  }
+
+  dariadb::Time _minTime = MAX_TIME;
+  dariadb::Time _maxTime = MIN_TIME;
+
   dariadb::Time minTime() {
-    open_to_read();
-
     dariadb::Time result = dariadb::MAX_TIME;
-
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
       result = std::min(val.time, result);
     }
-    std::fclose(_file);
-    _file = nullptr;
     return result;
   }
 
   dariadb::Time maxTime() {
-    open_to_read();
-
     dariadb::Time result = dariadb::MIN_TIME;
 
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
       result = std::max(val.time, result);
     }
-    std::fclose(_file);
-    _file = nullptr;
     return result;
   }
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    open_to_read();
-
     *minResult = dariadb::MAX_TIME;
     *maxResult = dariadb::MIN_TIME;
+
     bool result = false;
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
       if (val.id == id) {
         result = true;
         *minResult = std::min(*minResult, val.time);
         *maxResult = std::max(*maxResult, val.time);
       }
     }
-    std::fclose(_file);
-    _file = nullptr;
     return result;
   }
 
@@ -318,18 +291,12 @@ public:
   std::shared_ptr<MeasArray> readAll() {
     open_to_read();
 
-    auto ma = std::make_shared<MeasArray>(_settings->wal_file_size.value());
+    auto ma = std::make_shared<MeasArray>(_writed);
     auto raw = ma.get();
-    size_t pos = 0;
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
-      (*raw)[pos] = val;
-      pos++;
+    auto result = fread(raw->data(), sizeof(Meas), _writed, _file);
+    if (result < _writed) {
+      THROW_EXCEPTION("result < _writed");
     }
-    ma->resize(pos);
     std::fclose(_file);
     _file = nullptr;
     return ma;
@@ -352,26 +319,17 @@ public:
     throw MAKE_EXCEPTION(ss.str());
   }
 
-  Id2MinMax loadMinMax() {
-    open_to_read();
-    Id2MinMax result;
-    while (1) {
-      Meas val = Meas();
-      if (fread(&val, sizeof(Meas), size_t(1), _file) == 0) {
-        break;
-      }
+  Id2MinMax_Ptr loadMinMax() {
 
-      auto fres = result.find(val.id);
-      if (fres == result.end()) {
-        result[val.id].min = val;
-        result[val.id].max = val;
-      } else {
-        fres->second.updateMax(val);
-        fres->second.updateMin(val);
-      }
+    Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
+    auto all = readAll();
+    for (size_t i = 0; i < all->size(); ++i) {
+      auto val = all->at(i);
+      auto fres = result->find_bucket(val.id);
+
+      fres.v->second.updateMax(val);
+      fres.v->second.updateMin(val);
     }
-    std::fclose(_file);
-    _file = nullptr;
     return result;
   }
 
@@ -400,6 +358,10 @@ WALFile::WALFile(const EngineEnvironment_ptr env) : _Impl(new WALFile::Private(e
 WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
     : _Impl(new WALFile::Private(env, fname, readonly)) {}
 
+dariadb::Id WALFile::id_bloom() {
+  return _Impl->id_bloom();
+}
+
 dariadb::Time WALFile::minTime() {
   return _Impl->minTime();
 }
@@ -421,10 +383,6 @@ Status WALFile::append(const Meas &value) {
 }
 Status WALFile::append(const MeasArray::const_iterator &begin,
                        const MeasArray::const_iterator &end) {
-  return _Impl->append(begin, end);
-}
-Status WALFile::append(const MeasList::const_iterator &begin,
-                       const MeasList::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
@@ -461,6 +419,6 @@ size_t WALFile::writed(std::string fname) {
   return in.tellg() / sizeof(Meas);
 }
 
-Id2MinMax WALFile::loadMinMax() {
+Id2MinMax_Ptr WALFile::loadMinMax() {
   return _Impl->loadMinMax();
 }

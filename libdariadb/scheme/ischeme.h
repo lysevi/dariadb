@@ -29,6 +29,9 @@ class IScheme {
 public:
   virtual Id addParam(const std::string &param) = 0;
   virtual DescriptionMap ls() = 0;
+  virtual void save() = 0;
 };
+
+using IScheme_Ptr = std::shared_ptr<IScheme>;
 }
 }

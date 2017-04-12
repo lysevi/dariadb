@@ -46,16 +46,20 @@ public:
 
   EXPORT void erase(const std::string &fname);
 
-  EXPORT void dropClosedFiles(size_t count);
   EXPORT void dropAll();
 
-  EXPORT Id2MinMax loadMinMax() override;
+  EXPORT Id2MinMax_Ptr loadMinMax() override;
 
 protected:
   void create_new();
   std::list<std::string> wal_files() const;
   void flush_buffer();
   void drop_old_if_needed();
+  bool file_in_query(const std::string &filename, const QueryInterval &q);
+  bool file_in_query(const std::string &filename, const QueryTimePoint &q);
+  void intervalReader_async_logic(const std::list<std::string> &files,
+                                  const QueryInterval &q, Id2CursorsList &readers_list,
+                                  utils::async::Locker &readers_locker);
 
 private:
   EXPORT static WALManager *_instance;
@@ -69,6 +73,13 @@ private:
   std::set<std::string> _files_send_to_drop;
   EngineEnvironment_ptr _env;
   Settings *_settings;
+  struct TimeMinMax {
+    Time minTime;
+    Time maxTime;
+    Id bloom_id;
+  };
+  std::unordered_map<std::string, TimeMinMax> _file2minmax;
+  std::mutex _file2mm_locker;
 };
 }
 }

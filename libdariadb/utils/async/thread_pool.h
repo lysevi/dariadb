@@ -20,6 +20,11 @@ using ThreadKind = uint16_t;
 
 enum class THREAD_KINDS : ThreadKind { DISK_IO = 1, COMMON };
 
+enum class TASK_PRIORITY : uint8_t {
+  DEFAULT = 0,
+  WORKER = std::numeric_limits<uint8_t>::max()
+};
+
 #ifdef DEBUG
 #define TKIND_CHECK(expected, exists)                                                    \
   if ((ThreadKind)expected != exists) {                                                  \
@@ -65,8 +70,12 @@ class AsyncTaskWrap {
 public:
   EXPORT AsyncTaskWrap(AsyncTask &t, const std::string &_function,
                        const std::string &file, int line);
+  EXPORT AsyncTaskWrap(AsyncTask &t, const std::string &_function,
+                       const std::string &file, int line, TASK_PRIORITY p);
   EXPORT bool apply(const ThreadInfo &ti);
   EXPORT TaskResult_Ptr result() const;
+
+  TASK_PRIORITY priority;
 
 private:
   /// return true if need recall.
@@ -80,10 +89,15 @@ private:
   std::string _code_file;
   int _code_line;
 };
+
 using AsyncTaskWrap_Ptr = std::shared_ptr<AsyncTaskWrap>;
 #define AT(task)                                                                         \
   std::make_shared<AsyncTaskWrap>(task, std::string(__FUNCTION__),                       \
                                   std::string(__FILE__), __LINE__)
+
+#define AT_PRIORITY(task, pr)                                                            \
+  std::make_shared<AsyncTaskWrap>(task, std::string(__FUNCTION__),                       \
+                                  std::string(__FILE__), __LINE__, pr)
 
 using TaskQueue = std::deque<AsyncTaskWrap_Ptr>;
 
@@ -115,7 +129,7 @@ public:
   }
 
 protected:
-  void _thread_func(size_t num);
+  void _pool_logic(size_t num);
   void pushTaskToQueue(const AsyncTaskWrap_Ptr &at);
 
 protected:

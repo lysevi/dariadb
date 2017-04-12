@@ -6,85 +6,125 @@
 #include <libclient/client.h>
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
+#include <libdariadb/scheme/scheme.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
+#include <common/http_helpers.h>
 
+#include <boost/asio.hpp>
 #include <boost/program_options.hpp>
+#include <extern/json/src/json.hpp>
 
 using namespace dariadb;
 using namespace dariadb::storage;
 
 namespace po = boost::program_options;
 
-std::string storage_path = "dariadb_storage";
-
 unsigned short server_port = 2001;
+unsigned short server_http_port = 8080;
 std::string server_host = "localhost";
 bool run_server_flag = true;
 size_t server_threads_count = dariadb::net::SERVER_IO_THREADS_DEFAULT;
-STRATEGY strategy = STRATEGY::WAL;
 size_t clients_count = 5;
 bool dont_clean = false;
-Engine *engine = nullptr;
+bool http_benchmark = false;
+IEngine_Ptr engine = nullptr;
 dariadb::net::Server *server_instance = nullptr;
 
+using boost::asio::ip::tcp;
+
 void run_server() {
+  auto settings = dariadb::storage::Settings::create();
+  auto scheme = dariadb::scheme::Scheme::create(settings);
+  engine = IEngine_Ptr{new Engine(settings)};
+  engine->setScheme(scheme);
 
-  bool is_exists = false;
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-
-    if (!dont_clean) {
-      std::cout << "remove old storage..." << std::endl;
-      dariadb::utils::fs::rm(storage_path);
-    } else {
-      is_exists = true;
-    }
-  }
-
-  auto settings = dariadb::storage::Settings::create(storage_path);
-  settings->strategy.setValue(strategy);
-
-  engine = new Engine(settings);
-
-  if (!is_exists) {
-    settings->save();
-  }
-
-  dariadb::net::Server::Param server_param(server_port, server_threads_count);
+  dariadb::net::Server::Param server_param(server_port, server_http_port,
+                                           server_threads_count);
   server_instance = new dariadb::net::Server(server_param);
   server_instance->set_storage(engine);
 
   server_instance->start();
-
-  while (!server_instance->is_runned()) {
-  }
+  delete server_instance;
+  server_instance = nullptr;
 }
 
-const size_t MEASES_SIZE = 200000;
-const size_t SEND_COUNT = 1;
+size_t MEASES_SIZE = 20000;
+size_t SEND_COUNT = 10;
 
-std::vector<float> elapsed;
+std::vector<double> elapsed;
 std::vector<std::thread> threads;
 std::vector<dariadb::net::client::Client_Ptr> clients;
 
 void write_thread(dariadb::net::client::Client_Ptr client, size_t thread_num) {
   dariadb::MeasArray ma;
   ma.resize(MEASES_SIZE);
-  for (size_t i = 0; i < MEASES_SIZE; ++i) {
-    ma[i].id = dariadb::Id(thread_num);
-    ma[i].value = dariadb::Value(i);
-    ma[i].time = i;
-  }
-
-  auto start = clock();
+  dariadb::Time t = dariadb::MIN_TIME;
+  dariadb::utils::ElapsedTime et;
   for (size_t i = 0; i < SEND_COUNT; ++i) {
+    for (size_t j = 0; j < MEASES_SIZE; ++j) {
+      ma[j].id = dariadb::Id(thread_num);
+      ma[j].value = dariadb::Value(j);
+      ma[j].time = t++;
+    }
+
     client->append(ma);
   }
-  auto el = (((float)clock() - start) / CLOCKS_PER_SEC);
+  auto el = et.elapsed();
+  elapsed[thread_num] = el;
+}
+
+void write_http_thread(size_t thread_num) {
+  auto http_port = std::to_string(server_http_port);
+  using nlohmann::json;
+  boost::asio::io_service test_service;
+  dariadb::Time t = dariadb::MIN_TIME;
+
+  dariadb::MeasArray ma;
+  ma.resize(MEASES_SIZE);
+  dariadb::utils::ElapsedTime et;
+  for (size_t i = 0; i < SEND_COUNT; ++i) {
+
+    for (size_t j = 0; j < MEASES_SIZE; ++j) {
+      ma[j].id = dariadb::Id(thread_num);
+      ma[j].value = dariadb::Value(j);
+      ma[j].time = t++;
+    }
+
+    json js;
+    js["type"] = "append";
+    json js_query;
+
+    std::vector<dariadb::Flag> flags;
+    std::vector<dariadb::Value> vals;
+    std::vector<dariadb::Time> times;
+
+    for (auto v : ma) {
+      vals.push_back(v.value);
+      flags.push_back(v.flag);
+      times.push_back(v.time);
+    }
+
+    json ids_value;
+    ids_value["F"] = flags;
+    ids_value["V"] = vals;
+    ids_value["T"] = times;
+
+    js_query[std::to_string(thread_num)] = ids_value;
+
+    js["append_values"] = js_query;
+    std::string query = js.dump();
+
+    auto post_result = net::http::POST(test_service, http_port, query);
+    if (post_result.code != 200) {
+      THROW_EXCEPTION("http result is not ok.");
+    }
+  }
+  auto el = et.elapsed();
   elapsed[thread_num] = el;
 }
 
@@ -92,8 +132,6 @@ int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
   aos("help", "produce help message");
-  aos("storage-path", po::value<std::string>(&storage_path)->default_value(storage_path),
-      "path to storage.");
   aos("port", po::value<unsigned short>(&server_port)->default_value(server_port),
       "server port.");
   aos("server-host", po::value<std::string>(&server_host)->default_value(server_host),
@@ -101,13 +139,12 @@ int main(int argc, char **argv) {
   aos("io-threads",
       po::value<size_t>(&server_threads_count)->default_value(server_threads_count),
       "server threads for query processing.");
-  aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
-      "write strategy.");
   aos("clients-count", po::value<size_t>(&clients_count)->default_value(clients_count),
       "clients count.");
   aos("dont-clean", po::value<bool>(&dont_clean)->default_value(dont_clean),
       "dont clean folder with storage if exists.");
   aos("extern-server", "dont run server.");
+  aos("http-benchmark", "benchmark for http query engine.");
 
   po::variables_map vm;
   try {
@@ -122,40 +159,76 @@ int main(int argc, char **argv) {
     std::cout << desc << std::endl;
     std::exit(0);
   }
+
   if (vm.count("extern-server")) {
+    std::cout << "extern-server" << std::endl;
     run_server_flag = false;
+  }
+
+  if (vm.count("http-benchmark")) {
+    std::cout << "http-benchmark" << std::endl;
+    http_benchmark = true;
+    /*MEASES_SIZE = 2000;
+    SEND_COUNT = 100;*/
   }
 
   elapsed.resize(clients_count);
   threads.resize(clients_count);
   clients.resize(clients_count);
-
+  std::thread server_thread;
   if (run_server_flag) {
-    run_server();
+    server_thread = std::move(std::thread{run_server});
   }
 
-  dariadb::net::client::Client::Param p(server_host, server_port);
-
-  for (size_t i = 0; i < clients_count; ++i) {
-    clients[i] = dariadb::net::client::Client_Ptr{new dariadb::net::client::Client(p)};
-    clients[i]->connect();
+  while (server_instance == nullptr || !server_instance->is_runned()) {
+    std::cout << "Wait server..." << std::endl;
+    dariadb::utils::sleep_mls(100);
   }
+  dariadb::net::client::Client::Param p(server_host, server_port, server_http_port);
 
+  if (!http_benchmark) {
+    for (size_t i = 0; i < clients_count; ++i) {
+      clients[i] = dariadb::net::client::Client_Ptr{new dariadb::net::client::Client(p)};
+      clients[i]->connect();
+    }
+  }
   for (size_t i = 0; i < clients_count; ++i) {
-    auto t = std::thread{write_thread, clients[i], i};
-    threads[i] = std::move(t);
+    if (http_benchmark) {
+      auto t = std::thread{write_http_thread, i};
+      threads[i] = std::move(t);
+    } else {
+      auto t = std::thread{write_thread, clients[i], i};
+      threads[i] = std::move(t);
+    }
   }
 
   for (size_t i = 0; i < clients_count; ++i) {
     threads[i].join();
-    clients[i]->disconnect();
-    while (clients[i]->state() != dariadb::net::CLIENT_STATE::DISCONNECTED) {
-      std::this_thread::yield();
+    if (!http_benchmark) {
+      clients[i]->disconnect();
+      while (clients[i]->state() != dariadb::net::CLIENT_STATE::DISCONNECTED) {
+        std::this_thread::yield();
+      }
     }
   }
+
+  std::cout << "write end. create binary client for reading" << std::endl;
   dariadb::net::client::Client_Ptr c{new dariadb::net::client::Client(p)};
   c->connect();
-  dariadb::QueryInterval ri(dariadb::IdArray{0}, 0, 0, MEASES_SIZE);
+  dariadb::IdArray ids;
+  if (http_benchmark) {
+    auto name_map = engine->getScheme()->ls();
+
+    for (auto kv : name_map) {
+      ids.push_back(kv.first);
+    }
+  } else {
+    ids.resize(clients_count);
+    for (size_t i = 0; i < clients_count; ++i) {
+      ids[i] = dariadb::Id(i);
+    }
+  }
+  dariadb::QueryInterval ri(ids, 0, 0, MEASES_SIZE * SEND_COUNT);
   auto read_start = clock();
   auto result = c->readInterval(ri);
   auto read_end = clock();
@@ -164,29 +237,32 @@ int main(int argc, char **argv) {
   if (run_server_flag) {
     server_instance->stop();
 
-    while (server_instance->is_runned()) {
-      std::this_thread::yield();
-    }
+    server_thread.join();
 
-    delete engine;
+    engine = nullptr;
   }
 
   auto count_per_thread = MEASES_SIZE * SEND_COUNT;
   auto total_writed = count_per_thread * clients_count;
   std::cout << "writed: " << total_writed << std::endl;
 
-  auto average_time =
-      std::accumulate(elapsed.begin(), elapsed.end(), 0.0) / clients_count;
+  auto summary_time = std::accumulate(elapsed.begin(), elapsed.end(), 0.0);
+
+  auto average_time = summary_time / clients_count;
+  auto summary_speed = summary_time / total_writed;
+
+  std::cout << "summary time: " << summary_time << " sec." << std::endl;
   std::cout << "average time: " << average_time << " sec." << std::endl;
   std::cout << "average speed: " << count_per_thread / (float)(average_time)
             << " per sec." << std::endl;
+  std::cout << "summary speed: " << summary_speed << " per sec." << std::endl;
   std::cout << "read speed: "
             << result.size() / (((float)read_end - read_start) / CLOCKS_PER_SEC)
             << " per sec." << std::endl;
 
   std::cout << "readed:" << result.size() << std::endl;
 
-  if (result.size() != MEASES_SIZE * SEND_COUNT) {
-    THROW_EXCEPTION("result.size()!=MEASES_SIZE*SEND_COUNT: ", result.size());
+  if (result.size() != MEASES_SIZE * clients_count * SEND_COUNT) {
+    THROW_EXCEPTION("result.size()!=MEASES_SIZE*clients_count: ", result.size());
   }
 }

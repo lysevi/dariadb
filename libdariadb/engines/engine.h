@@ -14,7 +14,7 @@
 
 namespace dariadb {
 
-const uint16_t STORAGE_FORMAT = 1;
+const uint16_t STORAGE_FORMAT = 2;
 
 class Engine : public IEngine {
 public:
@@ -32,25 +32,22 @@ public:
   EXPORT void stop() override;
   EXPORT IEngine::Description description() const override;
 
-  EXPORT virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
-  EXPORT virtual MeasList readInterval(const QueryInterval &q) override;
+  EXPORT virtual MeasArray readInterval(const QueryInterval &q) override;
   EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   EXPORT virtual Id2Cursor intervalReader(const QueryInterval &query) override;
   EXPORT Statistic stat(const Id id, Time from, Time to) override;
-  EXPORT virtual void foreach (const QueryTimePoint &q, IReadCallback * clbk) override;
 
   EXPORT Time minTime() override;
   EXPORT Time maxTime() override;
   EXPORT bool minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                          dariadb::Time *maxResult) override;
-  EXPORT Id2MinMax loadMinMax() override;
+  EXPORT Id2MinMax_Ptr loadMinMax() override;
 
-  EXPORT void drop_part_wals(size_t count);
-  EXPORT void compress_all();
+  EXPORT void compress_all() override;
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
-                        const ReaderCallback_ptr &clbk);
+                        const ReaderCallback_ptr &clbk) override;
   EXPORT void wait_all_asyncs() override;
 
   EXPORT void fsck() override;
@@ -58,11 +55,11 @@ public:
   EXPORT void eraseOld(const Time &t) override;
 
   EXPORT void repack() override;
-
+  EXPORT void compact(ICompactionController *logic) override;
   EXPORT storage::Settings_ptr settings() override;
   EXPORT static uint16_t format();
   EXPORT static std::string version();
-  EXPORT STRATEGY strategy() const;
+  EXPORT STRATEGY strategy() const override;
 
 protected:
   class Private;

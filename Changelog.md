@@ -1,3 +1,19 @@
+v0.4.0
+=====
+- Data compaction methods.
+- Less allocations in read queries.
+- Auto erase old values.
+- Magic numbers in page file.
+- Settings:
+  - max_chunks_per_page - maximum count chunks per page when write from memory storage.
+  - max_store_period - period, when old pages must be removed.
+- Wal now contained in-memory index.
+- Rename build options: add prefix 'DARIADB_'
+- Memory only mode.
+- New memory storage.
+- Full featured http api.
+- Network client now can work with scheme.
+
 v0.3.0
 =====
 - Remove bystep storage engine.

@@ -1,10 +1,22 @@
 #pragma once
+#include <libdariadb/interfaces/icompactioncontroller.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/storage/dropper_description.h>
 #include <libdariadb/storage/memstorage/description.h>
 #include <libdariadb/storage/settings.h>
 #include <memory>
 namespace dariadb {
+
+struct foreach_async_data {
+  size_t next_id_pos;
+  QueryInterval q;
+  IReadCallback *clbk;
+
+  foreach_async_data(const QueryInterval &oq, IReadCallback *oclbk) : q(oq), clbk(oclbk) {
+    next_id_pos = size_t(0);
+  }
+};
 
 class IEngine : public IMeasStorage {
 public:
@@ -29,10 +41,22 @@ public:
   virtual void fsck() = 0;
   virtual void eraseOld(const Time &t) = 0;
   virtual void repack() = 0;
+  virtual void compact(ICompactionController *logic) = 0;
   virtual void stop() = 0;
   virtual void wait_all_asyncs() = 0;
-  virtual void drop_part_wals(size_t count) = 0;
+  virtual void compress_all() = 0;
   virtual storage::Settings_ptr settings() = 0;
+  virtual STRATEGY strategy() const = 0;
+  virtual void subscribe(const IdArray &ids, const Flag &flag,
+                         const ReaderCallback_ptr &clbk) = 0;
+  EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
+  EXPORT void foreach (const QueryTimePoint &q, IReadCallback * clbk) override final;
+
+  EXPORT void setScheme(const scheme::IScheme_Ptr &scheme) { _scheme = scheme; }
+  EXPORT scheme::IScheme_Ptr getScheme() { return _scheme; }
+
+  scheme::IScheme_Ptr _scheme;
 };
+
 using IEngine_Ptr = std::shared_ptr<IEngine>;
-}
+} // namespace dariadb
