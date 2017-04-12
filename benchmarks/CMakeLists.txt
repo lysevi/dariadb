@@ -11,6 +11,16 @@ macro(ADD_BENCHARK name src)
         set_target_properties(${name} PROPERTIES FOLDER Benchmarks)
 endmacro(ADD_BENCHARK)
 
+macro(ADD_G_BENCHARK name src)
+        MESSAGE(STATUS " +" ${name})
+        add_executable(${name} ${src})
+		add_dependencies(${name} benchmark)
+        target_link_libraries(${name} benchmark)
+        set_target_properties(${name} PROPERTIES FOLDER Benchmarks)
+endmacro(ADD_G_BENCHARK)
+
+ADD_G_BENCHARK(gbench_simple gbench_simple.cpp)
+
 ADD_BENCHARK(compression_benchmark compression_benchmark.cpp)
 ADD_BENCHARK(engine_benchmark engine_benchmark.cpp)
 

@@ -124,6 +124,13 @@ if(DARIADB_ENABLE_TESTS)
    set_target_properties(gmock_main PROPERTIES FOLDER Extern)
 endif(DARIADB_ENABLE_TESTS)
 
+if(DARIADB_ENABLE_BENCHMARKS)
+   set(BENCHMARK_ENABLE_TESTING OFF)
+   add_subdirectory(extern/benchmark)
+   include_directories(extern/benchmark/include)
+   set_target_properties(benchmark PROPERTIES FOLDER Extern)
+endif(DARIADB_ENABLE_BENCHMARKS)
+
 add_subdirectory(extern/libsqlite3)
 include_directories(extern/libsqlite3)
 
