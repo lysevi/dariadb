@@ -7,8 +7,8 @@ using namespace dariadb::net::http;
 
 http_server::http_server(const std::string &address, const std::string &port,
                          boost::asio::io_service *io_service_)
-    : io_service_(io_service_), acceptor_(*io_service_),
-      connection_manager_(), socket_(*io_service_) {
+    : io_service_(io_service_), acceptor_(*io_service_), connection_manager_(),
+      socket_(*io_service_) {
   // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
   boost::asio::ip::tcp::resolver resolver(*io_service_);
   boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve({address, port});

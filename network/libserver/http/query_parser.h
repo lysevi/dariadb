@@ -37,7 +37,8 @@ std::string meases2string(const dariadb::scheme::IScheme_Ptr &scheme,
 std::string stat2string(const dariadb::scheme::IScheme_Ptr &scheme, dariadb::Id id,
                         const dariadb::Statistic &s);
 
-std::string newScheme2string(const std::list<std::pair<std::string, dariadb::Id>>&new_names);
+std::string
+newScheme2string(const std::list<std::pair<std::string, dariadb::Id>> &new_names);
 } // namespace http
 } // namespace net
 } // namespace dariadb

@@ -42,13 +42,13 @@ EXPORT Time from_string(const std::string &s);
 /// construct from string "20020131T235959"
 EXPORT Time from_iso_string(const std::string &s);
 
-///construct time from days
+/// construct time from days
 EXPORT Time from_days(const int day);
-///construct time from hours
+/// construct time from hours
 EXPORT Time from_hours(const int h);
-///construct time from minutes
+/// construct time from minutes
 EXPORT Time from_minutes(const int m);
-///construct time from seconds
+/// construct time from seconds
 EXPORT Time from_seconds(const int s);
 
 EXPORT Time round_to_seconds(const Time t);

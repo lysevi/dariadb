@@ -5,8 +5,8 @@
 #include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/scheme/scheme.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/callbacks.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
 
 #include <string>

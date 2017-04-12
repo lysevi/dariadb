@@ -44,10 +44,10 @@ public:
                          dariadb::Time *maxResult) override;
   EXPORT Id2MinMax_Ptr loadMinMax() override;
 
-  EXPORT void compress_all()override;
+  EXPORT void compress_all() override;
 
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
-                        const ReaderCallback_ptr &clbk)override;
+                        const ReaderCallback_ptr &clbk) override;
   EXPORT void wait_all_asyncs() override;
 
   EXPORT void fsck() override;

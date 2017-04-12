@@ -118,7 +118,7 @@ void write_http_thread(size_t thread_num) {
 
     js["append_values"] = js_query;
     std::string query = js.dump();
-	
+
     auto post_result = net::http::POST(test_service, http_port, query);
     if (post_result.code != 200) {
       THROW_EXCEPTION("http result is not ok.");
@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
   auto summary_time = std::accumulate(elapsed.begin(), elapsed.end(), 0.0);
 
   auto average_time = summary_time / clients_count;
-  auto summary_speed = summary_time/ total_writed;
+  auto summary_speed = summary_time / total_writed;
 
   std::cout << "summary time: " << summary_time << " sec." << std::endl;
   std::cout << "average time: " << average_time << " sec." << std::endl;

@@ -148,13 +148,13 @@ http_response GET(boost::asio::io_service &service, const std::string &port,
   std::stringstream ss_content;
   // Write whatever content we already have to output.
   if (response.size() > 0) {
-	  ss_content << &response;
+    ss_content << &response;
   }
 
   // Read until EOF, writing data to output as we go.
   boost::system::error_code error;
   while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) {
-	  ss_content << &response;
+    ss_content << &response;
   }
   result.answer = ss_content.str();
   return result;

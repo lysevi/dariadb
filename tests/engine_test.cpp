@@ -47,26 +47,26 @@ BOOST_AUTO_TEST_CASE(Engine_common_test) {
   }
   {
     std::cout << "reopen closed storage\n";
-	{// bad idea remove files from working storage.
-		auto ms = dariadb::open_storage(storage_path);
-		auto settings = ms->settings();
+    { // bad idea remove files from working storage.
+      auto ms = dariadb::open_storage(storage_path);
+      auto settings = ms->settings();
 
-		auto path_to_raw = settings->raw_path.value();
-		settings = nullptr;
-		ms->stop();
+      auto path_to_raw = settings->raw_path.value();
+      settings = nullptr;
+      ms->stop();
 
-		ms = nullptr;
-		auto index_files = dariadb::utils::fs::ls(path_to_raw, ".pagei");
-		BOOST_CHECK(!index_files.empty());
-		for (auto &f : index_files) {
-			dariadb::utils::fs::rm(f);
-		}
-		index_files = dariadb::utils::fs::ls(path_to_raw, ".pagei");
-		BOOST_CHECK(index_files.empty());
-	}
-	
-	auto ms = dariadb::open_storage(storage_path);
-	auto settings = ms->settings();
+      ms = nullptr;
+      auto index_files = dariadb::utils::fs::ls(path_to_raw, ".pagei");
+      BOOST_CHECK(!index_files.empty());
+      for (auto &f : index_files) {
+        dariadb::utils::fs::rm(f);
+      }
+      index_files = dariadb::utils::fs::ls(path_to_raw, ".pagei");
+      BOOST_CHECK(index_files.empty());
+    }
+
+    auto ms = dariadb::open_storage(storage_path);
+    auto settings = ms->settings();
 
     ms->fsck();
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <libdariadb/flags.h>
-#include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/interfaces/icursor.h>
+#include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
 #include <string>
@@ -19,8 +19,8 @@ void checkAll(dariadb::MeasArray res, std::string msg, dariadb::Time from,
               dariadb::Time to, dariadb::Time step);
 
 void storage_test_check(dariadb::IMeasStorage *as, dariadb::Time from, dariadb::Time to,
-                        dariadb::Time step, bool check_stop_flag,
-                        bool random_timestamps, bool run_copy_test);
+                        dariadb::Time step, bool check_stop_flag, bool random_timestamps,
+                        bool run_copy_test);
 
 void check_reader(const dariadb::Cursor_Ptr &rdr);
 void subscribe_test(dariadb::IEngine *ms);

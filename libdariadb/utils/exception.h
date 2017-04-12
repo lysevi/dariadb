@@ -38,8 +38,8 @@ struct CodePos {
       : _file(file), _line(line), _func(function) {}
 
   std::string toString() const {
-    auto ss = std::string(_file) + " line: " + std::to_string(_line) + " function: " +
-              std::string(_func) + "\n";
+    auto ss = std::string(_file) + " line: " + std::to_string(_line) +
+              " function: " + std::string(_func) + "\n";
     return ss;
   }
   CodePos &operator=(const CodePos &) = delete;

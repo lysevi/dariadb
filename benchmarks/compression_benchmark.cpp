@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<dariadb::Time> deltas{50, 2553, 1000, 2000, 500};
     dariadb::Time t = 0;
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 0; i < count; i++) {
       dc.append(t);
       t += deltas[i % deltas.size()];
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::DeltaDeCompressor dc(bw, 0);
 
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 1; i < 1000000; i++) {
       dc.read();
     }
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     dariadb::compression::XorCompressor dc(bw);
 
     dariadb::Value t = 3.14;
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 0; i < count; i++) {
       dc.append(t);
       t *= 1.5;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::XorDeCompressor dc(bw, 0);
 
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 1; i < 1000000; i++) {
       dc.read();
     }
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     dariadb::compression::FlagCompressor dc(bw);
 
     dariadb::Flag t = 1;
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 0; i < count / 2; i++) {
       dc.append(t);
       dc.append(t);
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::FlagDeCompressor dc(bw, 0);
 
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 1; i < 1000000; i++) {
       dc.read();
     }
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
     dariadb::compression::FlagCompressor dc(bw);
 
     dariadb::Flag t = 1;
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 0; i < count / 2; i++) {
       dc.append(t);
       dc.append(t);
@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
 
     dariadb::compression::CopmressedWriter cwr{bw};
-	dariadb::utils::ElapsedTime et;
+    dariadb::utils::ElapsedTime et;
     for (size_t i = 0; i < count; i++) {
       auto m = dariadb::Meas();
       m.id++;
@@ -169,14 +169,14 @@ int main(int argc, char *argv[]) {
 
     auto rbw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::CopmressedReader crr{rbw, m};
-	{
-		dariadb::utils::ElapsedTime et;
-		for (int i = 1; i < 1000000; i++) {
-			crr.read();
-		}
-		elapsed = et.elapsed();
-		std::cout << "compress reader : " << elapsed << std::endl;
-	}
+    {
+      dariadb::utils::ElapsedTime et;
+      for (int i = 1; i < 1000000; i++) {
+        crr.read();
+      }
+      elapsed = et.elapsed();
+      std::cout << "compress reader : " << elapsed << std::endl;
+    }
     delete[] buf_begin;
   }
   delete[] buffer;

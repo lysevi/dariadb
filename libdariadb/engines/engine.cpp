@@ -62,9 +62,9 @@ public:
         logger_info("engine", _settings->alias, ": init new storage.");
       }
     }
-	if (_thread_pool_owner) {
-		_subscribe_notify.start();
-	}
+    if (_thread_pool_owner) {
+      _subscribe_notify.start();
+    }
     if (init_threadpool) {
       ThreadManager::Params tpm_params(_settings->thread_pools_params());
       ThreadManager::start(tpm_params);
@@ -153,9 +153,9 @@ public:
       _beginStoping = true;
       whaitWorkers();
       _top_level_storage = nullptr;
-	  if (_thread_pool_owner) {
-		  _subscribe_notify.stop();
-	  }
+      if (_thread_pool_owner) {
+        _subscribe_notify.stop();
+      }
       this->flush();
 
       if (_memstorage != nullptr) {

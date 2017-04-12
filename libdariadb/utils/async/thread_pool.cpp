@@ -16,8 +16,9 @@ AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function,
 }
 
 AsyncTaskWrap::AsyncTaskWrap(AsyncTask &t, const std::string &_function,
-	const std::string &file, int line, TASK_PRIORITY p) :AsyncTaskWrap(t, _function, file, line) {
-	this->priority = p;
+                             const std::string &file, int line, TASK_PRIORITY p)
+    : AsyncTaskWrap(t, _function, file, line) {
+  this->priority = p;
 }
 
 bool AsyncTaskWrap::apply(const ThreadInfo &ti) {
@@ -87,14 +88,15 @@ void ThreadPool::flush() {
   while (true) {
     _condition.notify_one();
     std::unique_lock<std::shared_mutex> lock(_queue_mutex);
-	if (!_in_queue.empty()) {
-		auto is_workers_only = std::all_of(_in_queue.begin(), _in_queue.end(), [](const AsyncTaskWrap_Ptr &t) {
-			return t->priority == TASK_PRIORITY::WORKER;
-		});
-		if (!is_workers_only) {
-			continue;
-		}
-	}
+    if (!_in_queue.empty()) {
+      auto is_workers_only =
+          std::all_of(_in_queue.begin(), _in_queue.end(), [](const AsyncTaskWrap_Ptr &t) {
+            return t->priority == TASK_PRIORITY::WORKER;
+          });
+      if (!is_workers_only) {
+        continue;
+      }
+    }
     if (_task_runned.load() == size_t(0)) {
       break;
     } else {
@@ -106,7 +108,7 @@ void ThreadPool::flush() {
 void ThreadPool::pushTaskToQueue(const AsyncTaskWrap_Ptr &at) {
   {
     std::unique_lock<std::shared_mutex> lock(_queue_mutex);
-	_in_queue.push_back(at);
+    _in_queue.push_back(at);
   }
   _condition.notify_all();
 }
@@ -117,7 +119,7 @@ void ThreadPool::_pool_logic(size_t num) {
   ti.thread_number = num;
 
   while (!_stop_flag) {
-    std::shared_ptr<AsyncTaskWrap> task=nullptr;
+    std::shared_ptr<AsyncTaskWrap> task = nullptr;
 
     {
       std::unique_lock<std::shared_mutex> lock(_queue_mutex);
@@ -127,21 +129,20 @@ void ThreadPool::_pool_logic(size_t num) {
         return;
       }
       _task_runned++;
-	  for (auto v : _in_queue) {
-		  if (task == nullptr) {
-			  task = v;
-			  if (task->priority != TASK_PRIORITY::WORKER) {
-				  break;
-			  }
-		  }
-		  else {
-			  if (v->priority < task->priority) {
-				  task = v;
-				  break;
-			  }
-		  }
-	  }
-	  this->_in_queue.erase(std::find(_in_queue.begin(), _in_queue.end(), task));
+      for (auto v : _in_queue) {
+        if (task == nullptr) {
+          task = v;
+          if (task->priority != TASK_PRIORITY::WORKER) {
+            break;
+          }
+        } else {
+          if (v->priority < task->priority) {
+            task = v;
+            break;
+          }
+        }
+      }
+      this->_in_queue.erase(std::find(_in_queue.begin(), _in_queue.end(), task));
     }
 
     // if queue is empty and task is coroutine, it will be run in cycle.
@@ -151,7 +152,8 @@ void ThreadPool::_pool_logic(size_t num) {
         break;
       }
       _queue_mutex.lock_shared();
-      if (!_in_queue.empty() || this->_stop_flag || task->priority== TASK_PRIORITY::WORKER) {
+      if (!_in_queue.empty() || this->_stop_flag ||
+          task->priority == TASK_PRIORITY::WORKER) {
         _queue_mutex.unlock_shared();
         pushTaskToQueue(task);
         break;

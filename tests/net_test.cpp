@@ -300,10 +300,9 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       ids[i] = ma[i].id;
     }
     size_t subscribe_calls = 0;
-    dariadb::net::client::ReadResult::callback clbk =
-        [&subscribe_calls](const dariadb::net::client::ReadResult *parent,
-                           const dariadb::Meas &m,
-                           const dariadb::Statistic &st) { subscribe_calls++; };
+    dariadb::net::client::ReadResult::callback clbk = [&subscribe_calls](
+        const dariadb::net::client::ReadResult *parent, const dariadb::Meas &m,
+        const dariadb::Statistic &st) { subscribe_calls++; };
 
     auto read_res = c1.subscribe({ma[0].id}, dariadb::Flag(0), clbk);
     read_res->wait();
@@ -351,10 +350,10 @@ BOOST_AUTO_TEST_CASE(SchemeTest) {
 
   {
     auto settings = dariadb::storage::Settings::create();
-	auto data_scheme = dariadb::scheme::Scheme::create(settings);
+    auto data_scheme = dariadb::scheme::Scheme::create(settings);
     IEngine_Ptr stor{new Engine(settings)};
-	stor->setScheme(data_scheme);
-    
+    stor->setScheme(data_scheme);
+
     std::thread server_thread{server_thread_func};
 
     while (server_instance == nullptr || !server_instance->is_runned()) {
@@ -374,16 +373,16 @@ BOOST_AUTO_TEST_CASE(SchemeTest) {
       dariadb::utils::sleep_mls(300);
     }
 
-	BOOST_CHECK(c1.addToScheme("test1"));
-	BOOST_CHECK(c1.addToScheme("test2"));
-	BOOST_CHECK(c1.addToScheme("test3"));
-   
-	auto v2id = c1.loadScheme();
-	BOOST_CHECK_EQUAL(v2id.size(), size_t(3));
-	
-	BOOST_CHECK(v2id.find("test1") != v2id.end());
-	BOOST_CHECK(v2id.find("test2") != v2id.end());
-	BOOST_CHECK(v2id.find("test3") != v2id.end());
+    BOOST_CHECK(c1.addToScheme("test1"));
+    BOOST_CHECK(c1.addToScheme("test2"));
+    BOOST_CHECK(c1.addToScheme("test3"));
+
+    auto v2id = c1.loadScheme();
+    BOOST_CHECK_EQUAL(v2id.size(), size_t(3));
+
+    BOOST_CHECK(v2id.find("test1") != v2id.end());
+    BOOST_CHECK(v2id.find("test2") != v2id.end());
+    BOOST_CHECK(v2id.find("test3") != v2id.end());
 
     c1.disconnect();
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <libserver/http/connection.h>
-#include <set>
 #include <mutex>
+#include <set>
 
 namespace dariadb {
 namespace net {

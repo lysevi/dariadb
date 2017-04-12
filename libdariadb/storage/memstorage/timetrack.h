@@ -104,7 +104,7 @@ struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<Time
   Time _step;
   MemChunk_Ptr _cur_chunk;
   std::mutex _locker;
-  //stx::btree_map<Time, MemChunk_Ptr> _index;
+  // stx::btree_map<Time, MemChunk_Ptr> _index;
   std::map<Time, MemChunk_Ptr> _index;
   MemoryChunkContainer *_mcc;
 };

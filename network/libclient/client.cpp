@@ -475,11 +475,11 @@ public:
       return result;
     } else {
       json js = json::parse(scheme_res.answer);
-	  for (auto it = js.begin(); it != js.end();++it) {
-		  std::string key = it.key();
-		  dariadb::Id val = it.value();
-		  result[key] = val;
-	  }
+      for (auto it = js.begin(); it != js.end(); ++it) {
+        std::string key = it.key();
+        dariadb::Id val = it.value();
+        result[key] = val;
+      }
     }
     return result;
   }

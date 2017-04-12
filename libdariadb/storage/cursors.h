@@ -69,7 +69,6 @@ public:
   Time _maxTime;
 };
 
-
 /**
 make LinearCursor or MergSortCursor
 */
