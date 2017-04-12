@@ -17,7 +17,19 @@ macro(ADD_G_BENCHARK name src)
 		add_dependencies(${name} benchmark)
         target_link_libraries(${name} benchmark)
         set_target_properties(${name} PROPERTIES FOLDER Benchmarks)
+        add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name}) 
 endmacro(ADD_G_BENCHARK)
+
+
+macro(ADD_PERF_TEST name)
+   MESSAGE(STATUS " + engine_benchmark "  ${name} " "  ${ARGN})
+   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/engine_benchmark --read-benchmark-runs=10  ${ARGN})
+endmacro()
+
+macro(ADD_NT_PERF_TEST name)
+   MESSAGE(STATUS " + network_benchmark "  ${name} " "  ${ARGN})
+   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/network_benchmark --io-threads=5  ${ARGN})
+endmacro()
 
 ADD_G_BENCHARK(gbench_simple gbench_simple.cpp)
 
@@ -29,15 +41,6 @@ if(DARIADB_ENABLE_SERVER)
   TARGET_LINK_LIBRARIES(network_benchmark ${DARIADB_CLIENT_LIBS} dariadb-server)
 endif(DARIADB_ENABLE_SERVER)
 
-macro(ADD_PERF_TEST name)
-   MESSAGE(STATUS " + engine_benchmark "  ${name} " "  ${ARGN})
-   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/engine_benchmark --read-benchmark-runs=10  ${ARGN})
-endmacro()
-
-macro(ADD_NT_PERF_TEST name)
-   MESSAGE(STATUS " + network_benchmark "  ${name} " "  ${ARGN})
-   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/network_benchmark --io-threads=5  ${ARGN})
-endmacro()
 
 if(DARIADB_ENABLE_INTEGRATION_TESTS)
    MESSAGE(STATUS "Integration tests: ")
