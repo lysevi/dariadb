@@ -38,14 +38,14 @@ private:
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
 #ifdef ENABLE_MEMORY_LEAK_DETECTION
-  _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+ /* _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
   _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
   _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
   _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
   _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
   _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
   TestEventListeners &listeners = UnitTest::GetInstance()->listeners();
-  listeners.Append(new LeakChecker);
+  listeners.Append(new LeakChecker);*/
 #endif
   return RUN_ALL_TESTS();
 }
