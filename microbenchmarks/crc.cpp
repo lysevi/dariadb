@@ -22,7 +22,7 @@ public:
 
 BENCHMARK_DEFINE_F(CrcFixture, BufferParam)(benchmark::State &st) {
   while (st.KeepRunning()) {
-    dariadb::utils::crc32(buffer, size);
+    benchmark::DoNotOptimize(dariadb::utils::crc32(buffer, size));
   }
 }
 

@@ -151,12 +151,12 @@ TEST(Utils, FileUtils) {
 }
 
 TEST(Utils, SplitString) {
-	std::string str = "1 2 3 4 5 6 7 8";
-	auto splitted = dariadb::utils::strings::tokens(str);
-	EXPECT_EQ(splitted.size(), size_t(8));
+  std::string str = "1 2 3 4 5 6 7 8";
+  auto splitted = dariadb::utils::strings::tokens(str);
+  EXPECT_EQ(splitted.size(), size_t(8));
 
-	splitted = dariadb::utils::strings::split(str, ' ');
-	EXPECT_EQ(splitted.size(), size_t(8));
+  splitted = dariadb::utils::strings::split(str, ' ');
+  EXPECT_EQ(splitted.size(), size_t(8));
 }
 
 TEST(Utils, ThreadsPool) {
@@ -279,4 +279,3 @@ TEST(Utils, ThreadsManager) {
     ThreadManager::instance()->stop();
   }
 }
-

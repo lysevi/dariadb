@@ -1,6 +1,4 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE Main
-#include <boost/test/unit_test.hpp>
+#include <gtest/gtest.h>
 
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
@@ -16,14 +14,14 @@
 using dariadb::compression::ByteBuffer;
 using dariadb::compression::ByteBuffer_Ptr;
 
-BOOST_AUTO_TEST_CASE(flat_converters) {
+TEST(Compression, flat_converters) {
   double pi = 3.14;
   auto ival = dariadb::compression::inner::flat_double_to_int(pi);
   auto dval = dariadb::compression::inner::flat_int_to_double(ival);
-  BOOST_CHECK_CLOSE(dval, pi, 0.0001);
+  EXPECT_DOUBLE_EQ(dval, pi);
 }
 
-BOOST_AUTO_TEST_CASE(ByteBufferTest) {
+TEST(Compression, ByteBufferTest) {
   const size_t buffer_size = 256;
   uint8_t buffer[buffer_size];
   std::fill_n(buffer, buffer_size, uint8_t(0));
@@ -57,48 +55,48 @@ BOOST_AUTO_TEST_CASE(ByteBufferTest) {
     ByteBuffer b({std::begin(buffer), std::end(buffer)});
 
     auto i64 = b.read<int64_t>();
-    BOOST_CHECK_EQUAL(i64, std::numeric_limits<int64_t>::min());
+    EXPECT_EQ(i64, std::numeric_limits<int64_t>::min());
     i64 = b.read<int64_t>();
-    BOOST_CHECK_EQUAL(i64, std::numeric_limits<int64_t>::max());
+    EXPECT_EQ(i64, std::numeric_limits<int64_t>::max());
 
     auto ui64 = b.read<uint64_t>();
-    BOOST_CHECK_EQUAL(ui64, std::numeric_limits<uint64_t>::min());
+    EXPECT_EQ(ui64, std::numeric_limits<uint64_t>::min());
     ui64 = b.read<uint64_t>();
-    BOOST_CHECK_EQUAL(ui64, std::numeric_limits<uint64_t>::max());
+    EXPECT_EQ(ui64, std::numeric_limits<uint64_t>::max());
 
     auto i32 = b.read<int32_t>();
-    BOOST_CHECK_EQUAL(i32, std::numeric_limits<int32_t>::min());
+    EXPECT_EQ(i32, std::numeric_limits<int32_t>::min());
     i32 = b.read<int32_t>();
-    BOOST_CHECK_EQUAL(i32, std::numeric_limits<int32_t>::max());
+    EXPECT_EQ(i32, std::numeric_limits<int32_t>::max());
 
     auto ui32 = b.read<uint32_t>();
-    BOOST_CHECK_EQUAL(ui32, std::numeric_limits<uint32_t>::min());
+    EXPECT_EQ(ui32, std::numeric_limits<uint32_t>::min());
     ui32 = b.read<uint32_t>();
-    BOOST_CHECK_EQUAL(ui32, std::numeric_limits<uint32_t>::max());
+    EXPECT_EQ(ui32, std::numeric_limits<uint32_t>::max());
 
     auto i16 = b.read<int16_t>();
-    BOOST_CHECK_EQUAL(i16, std::numeric_limits<int16_t>::min());
+    EXPECT_EQ(i16, std::numeric_limits<int16_t>::min());
     i16 = b.read<int16_t>();
-    BOOST_CHECK_EQUAL(i16, std::numeric_limits<int16_t>::max());
+    EXPECT_EQ(i16, std::numeric_limits<int16_t>::max());
 
     auto ui16 = b.read<uint16_t>();
-    BOOST_CHECK_EQUAL(ui16, std::numeric_limits<uint16_t>::min());
+    EXPECT_EQ(ui16, std::numeric_limits<uint16_t>::min());
     ui16 = b.read<uint16_t>();
-    BOOST_CHECK_EQUAL(ui16, std::numeric_limits<uint16_t>::max());
+    EXPECT_EQ(ui16, std::numeric_limits<uint16_t>::max());
 
     auto i8 = b.read<int8_t>();
-    BOOST_CHECK_EQUAL(i8, std::numeric_limits<int8_t>::min());
+    EXPECT_EQ(i8, std::numeric_limits<int8_t>::min());
     i8 = b.read<int8_t>();
-    BOOST_CHECK_EQUAL(i8, std::numeric_limits<int8_t>::max());
+    EXPECT_EQ(i8, std::numeric_limits<int8_t>::max());
 
     auto ui8 = b.read<uint8_t>();
-    BOOST_CHECK_EQUAL(ui8, std::numeric_limits<uint8_t>::min());
+    EXPECT_EQ(ui8, std::numeric_limits<uint8_t>::min());
     ui8 = b.read<uint8_t>();
-    BOOST_CHECK_EQUAL(ui8, std::numeric_limits<uint8_t>::max());
+    EXPECT_EQ(ui8, std::numeric_limits<uint8_t>::max());
   }
 }
 
-BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
+TEST(Compression, DeltaDeltav2Test) {
   const size_t test_buffer_size = 100;
 
   const dariadb::Time t0 = 0;
@@ -115,7 +113,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
 
     dariadb::compression::DeltaCompressor dc{bw};
-    BOOST_CHECK(dc.is_first);
+    EXPECT_TRUE(dc.is_first);
 
     dc.append(t1);
     dc.append(t2);
@@ -126,7 +124,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, t1};
 
     auto readed2 = dc.read();
-    BOOST_CHECK_EQUAL(readed2, t2);
+    EXPECT_EQ(readed2, t2);
   }
 
   { // on t1-t0 < 2bytes;
@@ -135,7 +133,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
 
     dariadb::compression::DeltaCompressor dc{bw};
-    BOOST_CHECK(dc.is_first);
+    EXPECT_TRUE(dc.is_first);
 
     dc.append(t1);
     dc.append(t3);
@@ -146,7 +144,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, t1};
 
     auto readed2 = dc.read();
-    BOOST_CHECK_EQUAL(readed2, t3);
+    EXPECT_EQ(readed2, t3);
   }
 
   { // on t1-t0 < 3bytes;
@@ -155,7 +153,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
 
     dariadb::compression::DeltaCompressor dc{bw};
-    BOOST_CHECK(dc.is_first);
+    EXPECT_TRUE(dc.is_first);
 
     dc.append(t1);
     dc.append(t4);
@@ -166,7 +164,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, t1};
 
     auto readed2 = dc.read();
-    BOOST_CHECK_EQUAL(readed2, t4);
+    EXPECT_EQ(readed2, t4);
   }
 
   { // on t1-t0 > 3bytes;
@@ -175,7 +173,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
 
     dariadb::compression::DeltaCompressor dc{bw};
-    BOOST_CHECK(dc.is_first);
+    EXPECT_TRUE(dc.is_first);
 
     dc.append(t1);
     dc.append(t5);
@@ -186,7 +184,7 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, t1};
 
     auto readed2 = dc.read();
-    BOOST_CHECK_EQUAL(readed2, t5);
+    EXPECT_EQ(readed2, t5);
   }
 
   { // compress all;
@@ -210,19 +208,19 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, t0};
 
     auto readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t1);
+    EXPECT_EQ(readed, t1);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t2);
+    EXPECT_EQ(readed, t2);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t3);
+    EXPECT_EQ(readed, t3);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t4);
+    EXPECT_EQ(readed, t4);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t5);
+    EXPECT_EQ(readed, t5);
   }
 
   { // compress all; backward
@@ -246,19 +244,19 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, t5};
 
     auto readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t4);
+    EXPECT_EQ(readed, t4);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t3);
+    EXPECT_EQ(readed, t3);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t2);
+    EXPECT_EQ(readed, t2);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t1);
+    EXPECT_EQ(readed, t1);
 
     readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, t0);
+    EXPECT_EQ(readed, t0);
   }
 
   { // compress all; big delta
@@ -278,11 +276,11 @@ BOOST_AUTO_TEST_CASE(DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, 9999};
 
     auto readed = dc.read();
-    BOOST_CHECK_EQUAL(readed, 0);
+    EXPECT_EQ(readed, 0);
   }
 }
 
-BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
+TEST(Compression, XorCompressorV2Test) {
   const size_t test_buffer_size = 1000;
 
   const dariadb::Value t1 = 240;
@@ -295,12 +293,12 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
   {
     auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::XorCompressor dc(bw);
-    BOOST_CHECK(dc._is_first);
+    EXPECT_TRUE(dc._is_first);
 
     dc.append(t1);
-    BOOST_CHECK(!dc._is_first);
-    BOOST_CHECK_EQUAL(dariadb::compression::inner::flat_int_to_double(dc._first), t1);
-    BOOST_CHECK_EQUAL(dariadb::compression::inner::flat_int_to_double(dc._prev_value),
+    EXPECT_TRUE(!dc._is_first);
+    EXPECT_EQ(dariadb::compression::inner::flat_int_to_double(dc._first), t1);
+    EXPECT_EQ(dariadb::compression::inner::flat_int_to_double(dc._prev_value),
                       t1);
   }
 
@@ -315,7 +313,7 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
     co.append(v2);
 
     dariadb::compression::XorDeCompressor dc(bw, t1);
-    BOOST_CHECK_EQUAL(dc.read(), v2);
+    EXPECT_EQ(dc.read(), v2);
   }
 
   { // cur!=prev
@@ -332,8 +330,8 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
 
     auto read_bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::XorDeCompressor dc(read_bw, v1);
-    BOOST_CHECK_EQUAL(dc.read(), v2);
-    BOOST_CHECK_EQUAL(dc.read(), v3);
+    EXPECT_EQ(dc.read(), v2);
+    EXPECT_EQ(dc.read(), v3);
   }
   std::fill(std::begin(buffer), std::end(buffer), 0);
   { // tail/lead is equals
@@ -347,7 +345,7 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
 
     auto read_bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::XorDeCompressor dc(read_bw, v1);
-    BOOST_CHECK_EQUAL(dc.read(), v2);
+    EXPECT_EQ(dc.read(), v2);
   }
   std::fill(std::begin(buffer), std::end(buffer), 0);
   { // tail/lead not equals
@@ -361,7 +359,7 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
 
     auto read_bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::XorDeCompressor dc(read_bw, v1);
-    BOOST_CHECK_EQUAL(dc.read(), v2);
+    EXPECT_EQ(dc.read(), v2);
   }
   std::fill(std::begin(buffer), std::end(buffer), 0);
   {
@@ -381,7 +379,7 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
     dariadb::compression::XorDeCompressor dc(read_bw, values.front());
     values.pop_front();
     for (auto &v : values) {
-      BOOST_CHECK_EQUAL(dc.read(), v);
+      EXPECT_EQ(dc.read(), v);
     }
   }
   std::fill(std::begin(buffer), std::end(buffer), 0);
@@ -403,7 +401,7 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
     values.pop_front();
     for (auto &v : values) {
       auto readed_value = dc.read();
-      BOOST_CHECK_EQUAL(readed_value, v);
+      EXPECT_EQ(readed_value, v);
     }
   }
 
@@ -420,11 +418,11 @@ BOOST_AUTO_TEST_CASE(XorCompressorV2Test) {
 
     auto read_bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::XorDeCompressor dc(read_bw, 0);
-    BOOST_CHECK_EQUAL(dc.read(), v2);
+    EXPECT_EQ(dc.read(), v2);
   }
 }
 
-BOOST_AUTO_TEST_CASE(FlagV2Compressor) {
+TEST(Compression, FlagV2Compressor) {
   { // 1,2,3,4,5...
     const size_t test_buffer_size = 1000;
     uint8_t buffer[test_buffer_size];
@@ -447,12 +445,12 @@ BOOST_AUTO_TEST_CASE(FlagV2Compressor) {
     flags.pop_front();
     for (auto f : flags) {
       auto v = fd.read();
-      BOOST_CHECK_EQUAL(v, f);
+      EXPECT_EQ(v, f);
     }
   }
 }
 
-BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
+TEST(Compression, CompressedBlockV2Test) {
   const size_t test_buffer_size = 513;
 
   uint8_t b_begin[test_buffer_size];
@@ -476,12 +474,12 @@ BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
     m.flag = i;
     m.value = i;
     if (!cwr.append(m)) {
-      BOOST_CHECK(cwr.isFull());
+      EXPECT_TRUE(cwr.isFull());
       break;
     }
     meases.push_back(m);
   }
-  BOOST_CHECK_LE(cwr.usedSpace(), test_buffer_size);
+  EXPECT_LE(cwr.usedSpace(), test_buffer_size);
 
   auto rbw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
   CopmressedReader crr(rbw, meases.front());
@@ -489,9 +487,9 @@ BOOST_AUTO_TEST_CASE(CompressedBlockV2Test) {
   meases.pop_front();
   for (auto &m : meases) {
     auto r_m = crr.read();
-    BOOST_CHECK(m.flag == r_m.flag);
-    BOOST_CHECK(m.id == r_m.id);
-    BOOST_CHECK(m.time == r_m.time);
-    BOOST_CHECK(m.value == r_m.value);
+    EXPECT_TRUE(m.flag == r_m.flag);
+    EXPECT_TRUE(m.id == r_m.id);
+    EXPECT_TRUE(m.time == r_m.time);
+    EXPECT_TRUE(m.value == r_m.value);
   }
 }
