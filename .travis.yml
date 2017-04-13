@@ -24,7 +24,6 @@ addons:
     packages:
       - libboost-dev  
       - libboost-filesystem-dev 
-      - libboost-test-dev 
       - libboost-program-options-dev 
       - libasio-dev 
       - libboost-log-dev 

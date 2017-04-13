@@ -53,10 +53,6 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 set(BOOST_DEP system filesystem date_time)
 
-if(DARIADB_ENABLE_TESTS)
-  set(BOOST_DEP ${BOOST_DEP} unit_test_framework)
-endif()
-
 IF(DARIADB_ENABLE_DOUBLECHECKS)
  add_definitions(-DDOUBLE_CHECKS)
 ENDIF()
