@@ -276,7 +276,7 @@ TEST(Compression, DeltaDeltav2Test) {
     dariadb::compression::DeltaDeCompressor dc{bw_d, 9999};
 
     auto readed = dc.read();
-    EXPECT_EQ(readed, 0);
+    EXPECT_EQ(readed, dariadb::Time(0));
   }
 }
 

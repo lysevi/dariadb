@@ -35,6 +35,7 @@ public:
       ss << "[dbg] " << msg << std::endl;
       break;
     }
+	//std::cout << ss.str();
     _messages.push_back(ss.str());
   }
 

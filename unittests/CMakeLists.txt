@@ -8,7 +8,7 @@ FILE(GLOB HDRS "*.h")
 FILE(GLOB SRC "*.cpp")
 
 add_executable(unittests ${HDRS} ${SRC})
-TARGET_LINK_LIBRARIES(unittests ${DARIADB_STORAGE_LIBS} gtest_main)
+TARGET_LINK_LIBRARIES(unittests ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS} dariadb-server gtest_main)
 add_dependencies(unittests gtest_main )
 add_test(unittests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittests) 
 set_target_properties(unittests PROPERTIES FOLDER Tests)
