@@ -10,7 +10,7 @@ class CRC : public benchmark::Fixture {
     size = st.range(0);
   }
 
-  virtual void TearDown() {
+  virtual void TearDown(const ::benchmark::State &) {
     delete[] buffer;
     size = 0;
   }

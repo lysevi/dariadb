@@ -12,7 +12,7 @@ class Jenkins : public benchmark::Fixture {
     size = st.range(0);
   }
 
-  virtual void TearDown() {
+  virtual void TearDown(const ::benchmark::State &) {
     delete[] buffer;
     size = 0;
   }
@@ -35,7 +35,7 @@ BENCHMARK_REGISTER_F(Jenkins, Hash)->Arg(Jenkins_BIG_BENCHMARK_BUFFER);
 class StripedMap : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &) {}
 
-  virtual void TearDown() {}
+  virtual void TearDown(const ::benchmark::State &) {}
 
 public:
   dariadb::utils::stripped_map<int, int> target;
