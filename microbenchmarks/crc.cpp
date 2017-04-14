@@ -20,8 +20,8 @@ public:
   size_t size;
 };
 
-BENCHMARK_DEFINE_F(CRC, BufferParam)(benchmark::State &st) {
-  while (st.KeepRunning()) {
+BENCHMARK_DEFINE_F(CRC, BufferParam)(benchmark::State &state) {
+  while (state.KeepRunning()) {
     benchmark::DoNotOptimize(dariadb::utils::crc32(buffer, size));
   }
 }
