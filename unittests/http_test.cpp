@@ -409,20 +409,20 @@ TEST(Http, Test) {
     EXPECT_EQ(post_result.code, 204); // no content
   }
 
-  // bad query
-  try {
-    json stat_js;
-    stat_js["type"] = "stat";
-    stat_js["id"] = "single_value";
-    stat_js["from"] = dariadb::MIN_TIME;
-    stat_js["to"] = dariadb::MAX_TIME;
+  //// bad query
+  //try {
+  //  json stat_js;
+  //  stat_js["type"] = "stat";
+  //  stat_js["id"] = "single_value";
+  //  stat_js["from"] = dariadb::MIN_TIME;
+  //  stat_js["to"] = dariadb::MAX_TIME;
 
-    query_str = stat_js.dump(1);
-    post_result = post(test_service, http_port, query_str, false);
-    EXPECT_EQ(post_result.code, 404);
-  } catch (...){
+  //  query_str = stat_js.dump(1);
+  //  post_result = post(test_service, http_port, query_str, false);
+  //  EXPECT_EQ(post_result.code, 404);
+  //} catch (...){
 
-  }
+  //}
 
   http_server_instance->stop();
   server_thread.join();
