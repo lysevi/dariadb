@@ -43,7 +43,7 @@ public:
 
 BENCHMARK_DEFINE_F(StripedMap, Insertion)(benchmark::State &state) {
   while (state.KeepRunning()) {
-    for (size_t i = 0; i < state.range(0); ++i) {
+    for (int i = 0; i < state.range(0); ++i) {
       target.insert(i, i);
     }
   }
@@ -51,7 +51,7 @@ BENCHMARK_DEFINE_F(StripedMap, Insertion)(benchmark::State &state) {
 
 BENCHMARK_DEFINE_F(StripedMap, Search)(benchmark::State &state) {
   while (state.KeepRunning()) {
-    for (size_t i = 0; i < state.range(0); ++i) {
+    for (int i = 0; i < state.range(0); ++i) {
       benchmark::DoNotOptimize(target.find_bucket(i));
     }
   }
