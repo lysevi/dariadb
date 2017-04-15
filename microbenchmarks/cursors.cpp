@@ -28,7 +28,10 @@ BENCHMARK_DEFINE_F(Cursors, Colapse)(benchmark::State &state) {
         dariadb::storage::CursorWrapperFactory::colapseCursors(cursors));
   }
 }
-BENCHMARK_REGISTER_F(Cursors, Colapse)->Args({10, 100})->Args({100, 100 })->Args({1000, 1000});
+BENCHMARK_REGISTER_F(Cursors, Colapse)
+    ->Args({10, 100})
+    ->Args({100, 100})
+    ->Args({1000, 1000});
 
 BENCHMARK_DEFINE_F(Cursors, MergeReaderCreate)(benchmark::State &state) {
   while (state.KeepRunning()) {
@@ -39,3 +42,17 @@ BENCHMARK_REGISTER_F(Cursors, MergeReaderCreate)
     ->Args({10, 100})
     ->Args({100, 100})
     ->Args({1000, 100});
+
+BENCHMARK_DEFINE_F(Cursors, MergeReaderRead)(benchmark::State &state) {
+  dariadb::storage::MergeSortCursor msr{cursors};
+  while (state.KeepRunning() && !msr.is_end()) {
+    while (!msr.is_end()) {
+      benchmark::DoNotOptimize(msr.readNext());
+    }
+  }
+}
+BENCHMARK_REGISTER_F(Cursors, MergeReaderRead)
+    ->Args({10000, 200})
+    ->Args({12000, 200})
+    ->Args({13000, 200})
+    ->Args({14000, 200});
