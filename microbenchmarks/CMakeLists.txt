@@ -8,7 +8,7 @@ FILE(GLOB HDRS "*.h")
 FILE(GLOB SRC "*.cpp")
 
 add_executable(microbenchmarks ${HDRS} ${SRC})
-TARGET_LINK_LIBRARIES(microbenchmarks ${DARIADB_STORAGE_LIBS} benchmark)
+TARGET_LINK_LIBRARIES(microbenchmarks ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS} dariadb-server benchmark)
 target_link_libraries(microbenchmarks benchmark)
 set_target_properties(microbenchmarks PROPERTIES FOLDER Benchmarks)
 add_test(microbenchmarks ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/microbenchmarks) 

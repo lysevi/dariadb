@@ -61,7 +61,7 @@ BENCHMARK_DEFINE_F(Compression, Xor)(benchmark::State &state) {
   }
 
   auto w = dc.used_space();
-  auto sz = sizeof(dariadb::Time) * state.range(0);
+  auto sz = sizeof(dariadb::Value) * state.range(0);
   state.counters["used space"] = ((w * 100.0) / (sz)) / runs;
 }
 
@@ -85,7 +85,7 @@ BENCHMARK_DEFINE_F(Compression, Flag)(benchmark::State &state) {
   }
 
   auto w = dc.used_space();
-  auto sz = sizeof(dariadb::Time) * state.range(0);
+  auto sz = sizeof(dariadb::Flag) * state.range(0);
   state.counters["used space"] = ((w * 100.0) / (sz)) / runs;
 }
 
@@ -109,7 +109,7 @@ BENCHMARK_DEFINE_F(Compression, Meas)(benchmark::State &state) {
   }
 
   auto w = cwr.usedSpace();
-  auto sz = sizeof(dariadb::Time) * state.range(0);
+  auto sz = sizeof(dariadb::Meas) * state.range(0);
   state.counters["used space"] = ((w * 100.0) / (sz)) / runs;
 }
 BENCHMARK_REGISTER_F(Compression, Delta)->Arg(100)->Arg(10000);
