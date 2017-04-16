@@ -6,8 +6,7 @@
 #include <benchmark/benchmark_api.h>
 
 class Compression : public benchmark::Fixture {
-  virtual void SetUp(const ::benchmark::State &st) {
-    auto test_buffer_size = 1024 * 1024 * 100;
+  virtual void SetUp(const ::benchmark::State &) {
     buffer = new uint8_t[test_buffer_size];
     std::fill_n(buffer, test_buffer_size, uint8_t());
     size = test_buffer_size;
@@ -19,84 +18,93 @@ class Compression : public benchmark::Fixture {
   }
 
 public:
+  size_t test_buffer_size = 1024 * 1024 * 100;
   uint8_t *buffer;
   size_t size;
 };
 
 BENCHMARK_DEFINE_F(Compression, Delta)(benchmark::State &state) {
   dariadb::compression::Range rng{buffer, buffer + size};
-  auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
-  dariadb::compression::DeltaCompressor dc(bw);
+
   std::vector<dariadb::Time> deltas{50, 2553, 1000, 524277, 500};
   dariadb::Time t = 0;
-  size_t runs = 0;
+
   while (state.KeepRunning()) {
+    size_t packed = 0;
+    auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+    dariadb::compression::DeltaCompressor dc(bw);
+    std::fill_n(buffer, test_buffer_size, uint8_t());
+
     for (int i = 0; i < state.range(0); i++) {
-      dc.append(t);
+      if (!dc.append(t)) {
+        break;
+      }
+      packed++;
       t += deltas[i % deltas.size()];
       if (t > dariadb::MAX_TIME) {
         t = 0;
       }
     }
-    runs++;
-  }
 
-  auto w = dc.used_space();
-  auto sz = sizeof(dariadb::Time) * state.range(0);
-  state.counters["used space"] = ((w * 100.0) / (sz)) / runs;
+    auto w = dc.used_space();
+    auto sz = sizeof(dariadb::Time) * packed;
+    state.counters["used space"] = ((w * 100.0) / (sz));
+  }
 }
 
 BENCHMARK_DEFINE_F(Compression, Xor)(benchmark::State &state) {
-  dariadb::compression::Range rng{buffer, buffer + size};
-  auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
-  dariadb::compression::XorCompressor dc(bw);
-  size_t runs = 0;
   dariadb::Value t = 3.14;
   while (state.KeepRunning()) {
+    size_t packed = 0;
+    dariadb::compression::Range rng{buffer, buffer + size};
+    auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+    dariadb::compression::XorCompressor dc(bw);
     for (int i = 0; i < state.range(0); i++) {
-      dc.append(t);
+      if (!dc.append(t)) {
+        break;
+      }
       t *= 1.5;
+      packed++;
     }
-    runs++;
+    auto w = dc.used_space();
+    auto sz = sizeof(dariadb::Value) * packed;
+    state.counters["used space"] = ((w * 100.0) / (sz));
   }
-
-  auto w = dc.used_space();
-  auto sz = sizeof(dariadb::Value) * state.range(0);
-  state.counters["used space"] = ((w * 100.0) / (sz)) / runs;
 }
 
 BENCHMARK_DEFINE_F(Compression, Flag)(benchmark::State &state) {
-  dariadb::compression::Range rng{buffer, buffer + size};
-  auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
-  dariadb::compression::XorCompressor dc(bw);
-  size_t runs = 0;
   dariadb::Flag t = 1;
   while (state.KeepRunning()) {
+    dariadb::compression::Range rng{buffer, buffer + size};
+    auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+    dariadb::compression::XorCompressor dc(bw);
+    size_t packed = 0;
     for (int i = 0; i < state.range(0) / 2; i++) {
       if (!dc.append(t)) {
         break;
       }
+      packed++;
       if (!dc.append(t)) {
         break;
       }
+      packed++;
       t++;
     }
-    runs++;
+    auto w = dc.used_space();
+    auto sz = sizeof(dariadb::Flag) * packed;
+    state.counters["used space"] = ((w * 100.0) / (sz));
   }
-
-  auto w = dc.used_space();
-  auto sz = sizeof(dariadb::Flag) * state.range(0);
-  state.counters["used space"] = ((w * 100.0) / (sz)) / runs;
 }
 
 BENCHMARK_DEFINE_F(Compression, Meas)(benchmark::State &state) {
-  dariadb::compression::Range rng{buffer, buffer + size};
-  auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
-  dariadb::compression::CopmressedWriter cwr{bw};
-  size_t runs = 0;
+
   dariadb::Time t = 0;
   auto m = dariadb::Meas();
   while (state.KeepRunning()) {
+    dariadb::compression::Range rng{buffer, buffer + size};
+    auto bw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
+    dariadb::compression::CopmressedWriter cwr{bw};
+    size_t packed = 0;
     for (int i = 0; i < state.range(0) / 2; i++) {
       m.time = t++;
       m.flag = dariadb::Flag(i);
@@ -104,13 +112,12 @@ BENCHMARK_DEFINE_F(Compression, Meas)(benchmark::State &state) {
       if (!cwr.append(m)) {
         break;
       }
+      packed++;
     }
-    runs++;
+    auto w = cwr.usedSpace();
+    auto sz = sizeof(dariadb::Meas) * packed;
+    state.counters["used space"] = ((w * 100.0) / (sz));
   }
-
-  auto w = cwr.usedSpace();
-  auto sz = sizeof(dariadb::Meas) * state.range(0);
-  state.counters["used space"] = ((w * 100.0) / (sz)) / runs;
 }
 BENCHMARK_REGISTER_F(Compression, Delta)->Arg(100)->Arg(10000);
 BENCHMARK_REGISTER_F(Compression, Xor)->Arg(100)->Arg(10000);
