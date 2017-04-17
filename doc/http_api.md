@@ -12,8 +12,7 @@ send POST query:
  "type": "append"
 }
 ```
-
-, where "F" - flag, "I" - measurement name, "T" - time as count of milliseconds since from zero-time, "V" - value.
+where "F" - flag, "I" - measurement name, "T" - time as count of milliseconds since from zero-time, "V" - value.
 
 # Write many values
 
@@ -34,9 +33,8 @@ send POST query:
  },
  "type": "append"
 }
-
-, where "cpu1", "memoryUsage" - measurements names, "F" - array of flags, "T" - array of times, "V" - array of values.
 ```
+where "cpu1", "memoryUsage" - measurements names, "F" - array of flags, "T" - array of times, "V" - array of values.
 
 # Read interval
 
@@ -50,7 +48,7 @@ send POST query:
  "type": "readInterval"
 }
 ```
-, where "from", "to" - time interval as count of milliseconds since from zero-time, "id" - measurements.
+where "from", "to" - time interval as count of milliseconds since from zero-time, "id" - measurements.
 
 answer example:
 
@@ -90,8 +88,7 @@ send GET query to URL "http://dariadb_host:port/scheme". Result example:
 ```json
 {"cpu":0, "memory":1,"network":2, "single_value":10}
 ```
-
-, is a dictinary, where name is a key, and id as value.
+is a dictinary, where name is a key, and id as value.
 
 # Add new param to scheme
 send POST query:
@@ -101,7 +98,7 @@ send POST query:
  "type": "scheme"
 }
 ```
-, where "new1", "new2", "new3" - names of new params
+where "new1", "new2", "new3" - names of new params
 
 answer example:
 
@@ -112,7 +109,7 @@ answer example:
  "new3": 13
 }
 ```
-, is a dictinary, where "key" - param name, and value - param id.
+is a dictinary, where "key" - param name, and value - param id.
 
 # Read statistic for value
 send POST query:
@@ -124,7 +121,7 @@ send POST query:
  "type": "stat"
 }
 ```
-, where "from", "to" - time, "id" - measurement name.
+where "from", "to" - time, "id" - measurement name.
 
 answer example:
 
