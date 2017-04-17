@@ -1,3 +1,7 @@
+v0.4.1
+=====
+- google.test for unittests.
+
 v0.4.0
 =====
 - Data compaction methods.
