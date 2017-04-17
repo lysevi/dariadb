@@ -243,7 +243,7 @@ BENCHMARK_DEFINE_F(Compression, MeasUnpack)(benchmark::State &state) {
   while (state.KeepRunning()) {
     auto rbw = std::make_shared<dariadb::compression::ByteBuffer>(rng);
     dariadb::compression::CopmressedReader crr{rbw, m};
-    for (int i = 1; i < packed; i++) {
+    for (size_t i = 1; i < packed; i++) {
       crr.read();
     }
   }
