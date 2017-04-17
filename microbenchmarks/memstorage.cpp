@@ -1,23 +1,15 @@
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/async/thread_manager.h>
-#include <libdariadb/utils/logger.h>
+
 
 #include <benchmark/benchmark_api.h>
+#include "common.h"
 
-class BenchmarkLogger : public dariadb::utils::ILogger {
-public:
-  BenchmarkLogger() {}
-  ~BenchmarkLogger() {}
-  void message(dariadb::utils::LOG_MESSAGE_KIND, const std::string &) {}
-};
 
 class Memstorage : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &) {
-    auto _raw_ptr = new BenchmarkLogger();
-    auto _logger = dariadb::utils::ILogger_ptr{_raw_ptr};
-
-    dariadb::utils::LogManager::start(_logger);
+	  microbenchmark_common::replace_std_logger();
     settings = dariadb::storage::Settings::create();
     settings->chunk_size.setValue(10);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
