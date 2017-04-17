@@ -793,7 +793,9 @@ public:
     logger_info("engine", _settings->alias, ": eraseOld to ", timeutil::to_string(t));
     this->lock_storage();
     _page_manager->eraseOld(t);
-
+    if (this->strategy() == STRATEGY::MEMORY) {
+      this->_memstorage->dropOld(t);
+    }
     this->unlock_storage();
   }
 
