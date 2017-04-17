@@ -88,6 +88,8 @@ include_directories(extern)
 include_directories(extern/spdlog/include)
 include_directories(extern/stx-btree/include)
 
+UNSET(JEMALLOC_LIBS)
+
 if(DARIADB_SYSTEM_JEMALLOC)
    include(FindJeMalloc)
    if(JEMALLOC_FOUND)
