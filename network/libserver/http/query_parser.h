@@ -30,15 +30,16 @@ struct http_query {
 SRV_EXPORT http_query parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
                                   const std::string &query);
 
-std::string status2string(const dariadb::Status &s);
-std::string scheme2string(const dariadb::scheme::DescriptionMap &dm);
-std::string meases2string(const dariadb::scheme::IScheme_Ptr &scheme,
-                          const dariadb::MeasArray &ma);
-std::string stat2string(const dariadb::scheme::IScheme_Ptr &scheme, dariadb::Id id,
-                        const dariadb::Statistic &s);
+SRV_EXPORT std::string status2string(const dariadb::Status &s);
+SRV_EXPORT std::string scheme2string(const dariadb::scheme::DescriptionMap &dm);
+SRV_EXPORT std::string meases2string(const dariadb::scheme::IScheme_Ptr &scheme,
+                                     const dariadb::MeasArray &ma);
+SRV_EXPORT std::string stat2string(const dariadb::scheme::IScheme_Ptr &scheme,
+                                   dariadb::Id id, const dariadb::Statistic &s);
 
-std::string
-newScheme2string(const std::list<std::pair<std::string, dariadb::Id>> &new_names);
+using Name2IdPair = std::pair<std::string, dariadb::Id>;
+SRV_EXPORT std::string
+newScheme2string(const std::list<Name2IdPair> &new_names);
 } // namespace http
 } // namespace net
 } // namespace dariadb

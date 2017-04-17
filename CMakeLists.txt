@@ -40,6 +40,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(AddCXXCompilerFlag)
 include(CompillerSettings)
+include(CompillerSettings)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -52,10 +53,6 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 set(BOOST_DEP system filesystem date_time)
 
-if(DARIADB_ENABLE_TESTS)
-  set(BOOST_DEP ${BOOST_DEP} unit_test_framework)
-endif()
-
 IF(DARIADB_ENABLE_DOUBLECHECKS)
  add_definitions(-DDOUBLE_CHECKS)
 ENDIF()
@@ -67,6 +64,9 @@ else()
   find_package(Boost  REQUIRED ${BOOST_DEP})
 ENDIF()
 
+
+########## BOOST
+
 IF(Boost_FOUND)
   INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
   LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
@@ -77,8 +77,11 @@ else()
   EXIT()
 ENDIF()
 
+
+##### THREADS
 find_package (Threads)
 
+##### MISC
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include_directories(extern)
@@ -108,6 +111,22 @@ else(DARIADB_SYSTEM_JEMALLOC)
    set_target_properties(jemalloc PROPERTIES FOLDER Extern)
 endif(DARIADB_SYSTEM_JEMALLOC)
 
+if(DARIADB_ENABLE_TESTS)
+   cmake_policy(SET CMP0048 OLD)
+   add_subdirectory(extern/googletest)
+   set_target_properties(gtest PROPERTIES FOLDER Extern)
+   set_target_properties(gtest_main PROPERTIES FOLDER Extern)
+   set_target_properties(gmock PROPERTIES FOLDER Extern)
+   set_target_properties(gmock_main PROPERTIES FOLDER Extern)
+endif(DARIADB_ENABLE_TESTS)
+
+if(DARIADB_ENABLE_BENCHMARKS)
+   set(BENCHMARK_ENABLE_TESTING OFF)
+   add_subdirectory(extern/benchmark)
+   include_directories(extern/benchmark/include)
+   set_target_properties(benchmark PROPERTIES FOLDER Extern)
+endif(DARIADB_ENABLE_BENCHMARKS)
+
 add_subdirectory(extern/libsqlite3)
 include_directories(extern/libsqlite3)
 
@@ -124,10 +143,11 @@ endif()
 
 if (DARIADB_ENABLE_TESTS)
   enable_testing()
-  add_subdirectory(tests)
+  add_subdirectory(unittests)
 endif()
 
 if(DARIADB_ENABLE_BENCHMARKS)
+  add_subdirectory (microbenchmarks)
   add_subdirectory (benchmarks)
 endif()
 

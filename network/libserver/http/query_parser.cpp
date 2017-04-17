@@ -233,8 +233,8 @@ std::string dariadb::net::http::stat2string(const dariadb::scheme::IScheme_Ptr &
   return result_js.dump(1);
 }
 
-std::string dariadb::net::http::newScheme2string(
-    const std::list<std::pair<std::string, dariadb::Id>> &new_names) {
+std::string
+dariadb::net::http::newScheme2string(const std::list<Name2IdPair> &new_names) {
   json result;
   for (auto kv : new_names) {
     result[kv.first] = kv.second;

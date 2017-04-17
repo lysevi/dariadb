@@ -1,13 +1,6 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE Main
-#include <boost/test/unit_test.hpp>
-#include <atomic>
-#include <cassert>
-#include <iostream>
-#include <map>
-#include <thread>
+#include <gtest/gtest.h>
 
-#include "test_common.h"
+#include "helpers.h"
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/settings.h>
@@ -46,8 +39,7 @@ public:
   }
 };
 
-BOOST_AUTO_TEST_CASE(WalInitTest) {
-  std::cout << "WalInitTest" << std::endl;
+TEST(Wal, FileInitTest) {
   const size_t block_size = 1000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -75,7 +67,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     auto wal = dariadb::storage::WALFile::create(_engine_env);
 
     wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
-    BOOST_CHECK_EQUAL(wal_files.size(), size_t(0));
+    EXPECT_EQ(wal_files.size(), size_t(0));
 
     auto e = dariadb::Meas();
 
@@ -86,7 +78,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     id_set.insert(e.id);
     e.time = dariadb::Time(i);
     e.value = dariadb::Value(i);
-    BOOST_CHECK(wal->append(e).writed == 1);
+    EXPECT_TRUE(wal->append(e).writed == 1);
     i++;
     dariadb::MeasArray ml;
     for (; i < writes_count / 2; i++) {
@@ -112,22 +104,22 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
     wal->append(ma.begin(), ma.end());
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
-    BOOST_CHECK_EQUAL(wal_files.size(), size_t(1));
-    BOOST_CHECK(wal->id_bloom() != dariadb::Id(0));
+    EXPECT_EQ(wal_files.size(), size_t(1));
+    EXPECT_TRUE(wal->id_bloom() != dariadb::Id(0));
 
     dariadb::MeasArray out;
 
     out = wal->readInterval(dariadb::QueryInterval(
         dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
-    BOOST_CHECK_EQUAL(out.size(), writes_count);
+    EXPECT_EQ(out.size(), writes_count);
   }
   {
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
-    BOOST_CHECK(wal_files.size() == size_t(1));
+    EXPECT_TRUE(wal_files.size() == size_t(1));
     auto wal = dariadb::storage::WALFile::open(_engine_env, wal_files.front(), true);
     auto all = wal->readAll();
-    BOOST_CHECK_EQUAL(all->size(), writes_count);
+    EXPECT_EQ(all->size(), writes_count);
   }
   manifest = nullptr;
 
@@ -136,8 +128,7 @@ BOOST_AUTO_TEST_CASE(WalInitTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
-  std::cout << "WALFileCommonTest" << std::endl;
+TEST(Wal, FileCommonTest) {
   const size_t block_size = 10000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -159,7 +150,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
                              manifest.get());
 
     auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
-    BOOST_CHECK(wal_files.size() == size_t(0));
+    EXPECT_TRUE(wal_files.size() == size_t(0));
     auto wal = dariadb::storage::WALFile::create(_engine_env);
 
     dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false, false, false);
@@ -171,8 +162,7 @@ BOOST_AUTO_TEST_CASE(WALFileCommonTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
-  std::cout << "WalManager_CommonTest" << std::endl;
+TEST(Wal, Manager_CommonTest) {
   const std::string storagePath = "testStorage";
   const size_t max_size = 150;
   const dariadb::Time from = 0;
@@ -223,10 +213,10 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
 
     dariadb::QueryInterval qi(dariadb::IdArray{0}, dariadb::Flag(), from, to);
     auto out = am->readInterval(qi);
-    BOOST_CHECK_EQUAL(out.size(), dariadb_test::copies_count);
+    EXPECT_EQ(out.size(), dariadb_test::copies_count);
 
     auto closed = am->closedWals();
-    BOOST_CHECK(closed.size() != size_t(0));
+    EXPECT_TRUE(closed.size() != size_t(0));
     auto stor = std::make_shared<Moc_Dropper>(settings, _engine_env);
     stor->writed_count = 0;
 
@@ -234,11 +224,11 @@ BOOST_AUTO_TEST_CASE(WalManager_CommonTest) {
       am->dropWAL(fname, stor.get());
     }
 
-    BOOST_CHECK(stor->writed_count != size_t(0));
-    BOOST_CHECK_EQUAL(stor->files.size(), closed.size());
+    EXPECT_TRUE(stor->writed_count != size_t(0));
+    EXPECT_EQ(stor->files.size(), closed.size());
 
     closed = am->closedWals();
-    BOOST_CHECK_EQUAL(closed.size(), size_t(0));
+    EXPECT_EQ(closed.size(), size_t(0));
 
     am = nullptr;
     dariadb::utils::async::ThreadManager::stop();
