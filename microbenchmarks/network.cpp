@@ -48,7 +48,7 @@ BENCHMARK_DEFINE_F(NetworkPack, Pack)(benchmark::State &state) {
     sz = 0;
     count_processed = QueryAppend_header::make_query(hdr, ma.data(), ma.size(), 0, &sz);
   }
-  state.counters["packed"] = ((count_processed * 100.0) / (ma.size()));
+  state.counters["capacity"] = ((count_processed * 100.0) / (ma.size()));
 }
 
 BENCHMARK_REGISTER_F(NetworkPack, Pack)
@@ -67,8 +67,7 @@ BENCHMARK_DEFINE_F(NetworkPack, HttpMeasArray2JSON)(benchmark::State &state) {
   using dariadb::net::NetData;
 
   while (state.KeepRunning()) {
-    state.counters["packed"] =
-        (double)dariadb::net::http::meases2string(scheme, ma).size();
+    state.counters["size"] = (double)dariadb::net::http::meases2string(scheme, ma).size();
   }
 }
 
