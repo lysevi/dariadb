@@ -116,7 +116,7 @@ $ make
 $ cmake -G "Visual Studio 14 2015 Win64" .
 $ cmake --build .
 ```
-if you want to build benchmarks
+if you want to build benchmarks and tests
 ```cmd
 $ cmake -G "Visual Studio 14 2015 Win64" -DBUILD_SHARED_LIBS=FALSE  .
 $ cmake --build .

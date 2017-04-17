@@ -21,7 +21,6 @@ macro(ADD_NT_PERF_TEST name)
    add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/network_benchmark --io-threads=5  ${ARGN})
 endmacro()
 
-ADD_BENCHARK(compression_benchmark compression_benchmark.cpp)
 ADD_BENCHARK(engine_benchmark engine_benchmark.cpp)
 
 if(DARIADB_ENABLE_SERVER)

@@ -12,3 +12,7 @@ TARGET_LINK_LIBRARIES(unittests ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS} d
 add_dependencies(unittests gtest_main )
 add_test(unittests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittests) 
 set_target_properties(unittests PROPERTIES FOLDER Tests)
+
+if(MSVC)
+	SET_TARGET_PROPERTIES(unittests PROPERTIES COMPILE_FLAGS "/MT")
+endif(msvc)
