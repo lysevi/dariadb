@@ -20,6 +20,7 @@ public:
 
 protected:
   Meas _result;
+  size_t _count;
 };
 
 EXPORT std::istream &operator>>(std::istream &in, FUNCKTION_KIND &f);

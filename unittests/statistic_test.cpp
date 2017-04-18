@@ -30,4 +30,13 @@ TEST(Statistic, Average) {
   dariadb::statistic::Average av;
   EXPECT_EQ(av.kind(), (int)dariadb::statistic::FUNCKTION_KIND::AVERAGE);
   EXPECT_EQ(av.result().value, dariadb::Value());
+  dariadb::Meas m;
+
+  m.value = 2;
+  av.apply(m);
+  EXPECT_EQ(av.result().value, dariadb::Value(2));
+
+  m.value = 6;
+  av.apply(m);
+  EXPECT_EQ(av.result().value, dariadb::Value(4));
 }

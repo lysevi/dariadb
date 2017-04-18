@@ -26,11 +26,21 @@ std::ostream &dariadb::statistic::operator<<(std::ostream &stream,
   return stream;
 }
 
-Average::Average() : _result() {}
-void Average::apply(const Meas &ma) {}
+Average::Average() : _result(), _count() {}
+
+void Average::apply(const Meas &ma) {
+  _result.id = ma.id;
+  _result.value += ma.value;
+  _count++;
+}
 
 Meas Average::result() const {
-  return _result;
+  if (_count == 0) {
+    return Meas();
+  }
+  Meas m = _result;
+  m.value = m.value / _count;
+  return m;
 }
 
 std::vector<IFunction_ptr>
