@@ -70,3 +70,27 @@ TEST(Statistic, Median) {
   median.apply(m);
   EXPECT_EQ(median.result().value, dariadb::Value(3));
 }
+
+TEST(Statistic, Percentile) {
+  using namespace dariadb::statistic;
+  check_function_factory({FUNCTION_KIND::PERCENTILE90, FUNCTION_KIND::PERCENTILE99});
+
+  dariadb::statistic::Percentile90 p90;
+  dariadb::statistic::Percentile99 p99;
+  EXPECT_EQ(p90.kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE90);
+  EXPECT_EQ(p90.result().value, dariadb::Value());
+
+  EXPECT_EQ(p99.kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE99);
+  EXPECT_EQ(p99.result().value, dariadb::Value());
+
+  dariadb::Meas m;
+  std::vector<dariadb::Value> values{43, 54, 56, 61, 62, 66, 68, 69, 69, 70, 71, 72, 77,
+                                     78, 79, 85, 87, 88, 89, 93, 95, 96, 98, 99, 99};
+  for (auto v : values) {
+    m.value = v;
+    p90.apply(m);
+    p99.apply(m);
+  }
+  EXPECT_EQ(p90.result().value, dariadb::Value(98));
+  EXPECT_EQ(p99.result().value, dariadb::Value(99));
+}

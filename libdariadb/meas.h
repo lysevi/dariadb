@@ -84,6 +84,13 @@ struct meas_time_compare_greater {
   }
 };
 
+/// value deccreasing.
+struct meas_value_compare_less {
+  bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
+    return lhs.value < rhs.value;
+  }
+};
+
 struct MeasMinMax {
   Meas min;
   Meas max;

@@ -4,14 +4,6 @@ using namespace dariadb;
 using namespace dariadb::storage;
 using namespace dariadb::statistic;
 
-/// value deccreasing.
-struct meas_value_compare_less {
-	bool operator()(const dariadb::Meas &lhs, const dariadb::Meas &rhs) const {
-		return lhs.value < rhs.value;
-	}
-};
-
-
 std::istream &dariadb::statistic::operator>>(std::istream &in, FUNCTION_KIND &f) {
   std::string token;
   in >> token;
@@ -23,6 +15,14 @@ std::istream &dariadb::statistic::operator>>(std::istream &in, FUNCTION_KIND &f)
   }
   if (token == "median") {
     f = FUNCTION_KIND::MEDIAN;
+    return in;
+  }
+  if (token == "percentile90") {
+    f = FUNCTION_KIND::PERCENTILE90;
+    return in;
+  }
+  if (token == "percentile99") {
+    f = FUNCTION_KIND::PERCENTILE99;
     return in;
   }
   return in;
@@ -37,7 +37,14 @@ std::ostream &dariadb::statistic::operator<<(std::ostream &stream,
   case FUNCTION_KIND::MEDIAN:
     stream << "median";
     break;
+  case FUNCTION_KIND::PERCENTILE90:
+    stream << "percentile90";
+    break;
+  case FUNCTION_KIND::PERCENTILE99:
+    stream << "percentile99";
+    break;
   }
+
   return stream;
 }
 
@@ -58,34 +65,6 @@ Meas Average::result() const {
   return m;
 }
 
-Median::Median() {}
-
-void Median::apply(const Meas &ma) {
-  _result.push_back(ma);
-}
-
-Meas Median::result() const {
-  if (_result.empty()) {
-    return Meas();
-  }
-
-  if (_result.size() == 1) {
-    return _result.front();
-  }
-
-  if (_result.size() == 2) {
-    Meas m = _result[0];
-    m.value += _result[1].value;
-    m.value /= 2;
-    return m;
-  }
-  
-  auto mid = _result.begin();
-  std::advance(mid, _result.size() / 2);
-  std::partial_sort(_result.begin(), mid + 1, _result.end(), meas_value_compare_less());
-  return *mid;
-}
-
 std::vector<IFunction_ptr> FunctionFactory::make(const FunctionKinds &kinds) {
   std::vector<IFunction_ptr> result(kinds.size());
   size_t i = 0;
@@ -97,13 +76,21 @@ std::vector<IFunction_ptr> FunctionFactory::make(const FunctionKinds &kinds) {
     case FUNCTION_KIND::MEDIAN:
       result[i] = std::make_shared<Median>();
       break;
+    case FUNCTION_KIND::PERCENTILE90:
+      result[i] = std::make_shared<Percentile90>();
+      break;
+    case FUNCTION_KIND::PERCENTILE99:
+      result[i] = std::make_shared<Percentile99>();
+      break;
     }
+	i++;
   }
   return result;
 }
 
 FunctionKinds FunctionFactory::functions() {
-  return {FUNCTION_KIND::AVERAGE, FUNCTION_KIND::MEDIAN};
+  return {FUNCTION_KIND::AVERAGE, FUNCTION_KIND::MEDIAN, FUNCTION_KIND::PERCENTILE90,
+          FUNCTION_KIND::PERCENTILE99};
 }
 
 Calculator::Calculator(const IEngine_Ptr &storage) : _storage(storage) {}

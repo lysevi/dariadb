@@ -53,7 +53,7 @@ BENCHMARK_REGISTER_F(StatisticFunction, Average)
     ->Arg(1000)
     ->Arg(10000);
 
-BENCHMARK_DEFINE_F(StatisticFunction, Median)(benchmark::State &state) {
+BENCHMARK_DEFINE_F(StatisticFunction, Percentile)(benchmark::State &state) {
   while (state.KeepRunning()) {
     dariadb::statistic::Median media;
     for (const auto &m : ma) {
@@ -62,4 +62,8 @@ BENCHMARK_DEFINE_F(StatisticFunction, Median)(benchmark::State &state) {
     }
   }
 }
-BENCHMARK_REGISTER_F(StatisticFunction, Median)->Arg(10)->Arg(100)->Arg(1000)->Arg(10000);
+BENCHMARK_REGISTER_F(StatisticFunction, Percentile)
+    ->Arg(10)
+    ->Arg(100)
+    ->Arg(1000)
+    ->Arg(10000);
