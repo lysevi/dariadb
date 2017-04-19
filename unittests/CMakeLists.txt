@@ -12,13 +12,3 @@ TARGET_LINK_LIBRARIES(unittests ${DARIADB_STORAGE_LIBS} ${DARIADB_CLIENT_LIBS} d
 add_dependencies(unittests gtest_main )
 add_test(unittests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittests) 
 set_target_properties(unittests PROPERTIES FOLDER Tests)
-
-if(MSVC)
- if (${CMAKE_BUILD_TYPE} STREQUAL "DEBUG")
-   MESSAGE(STATUS "unittest debug build")
-   SET_TARGET_PROPERTIES(unittests PROPERTIES COMPILE_FLAGS "/MTd")
- else()
-   MESSAGE(STATUS "unittest release build")
-   SET_TARGET_PROPERTIES(unittests PROPERTIES COMPILE_FLAGS "/MT")
- endif()
-endif(msvc)
