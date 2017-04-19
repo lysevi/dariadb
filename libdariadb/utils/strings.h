@@ -8,10 +8,12 @@
 namespace dariadb {
 namespace utils {
 namespace strings {
+
 /// split string by space.
 EXPORT std::vector<std::string> tokens(const std::string &str);
 EXPORT std::vector<std::string> split(const std::string &text, char sep);
 EXPORT std::string to_upper(const std::string &text);
+EXPORT std::string to_lower(const std::string &text);
 
 namespace inner {
 using std::to_string;
@@ -32,7 +34,7 @@ void args_as_string(std::list<std::string> &s, size_t &sz, Head &&head, Tail &&.
   s.push_back(str);
   args_as_string(s, sz, std::forward<Tail>(tail)...);
 }
-}
+} // namespace inner
 
 template <class... Args> std::string args_to_string(Args &&... args) {
   std::list<std::string> ss;
@@ -45,6 +47,6 @@ template <class... Args> std::string args_to_string(Args &&... args) {
   }
   return result;
 }
-}
-}
-}
+} // namespace strings
+} // namespace utils
+} // namespace dariadb

@@ -20,8 +20,8 @@ public:
 };
 
 void StatisticFunctionKind(benchmark::State &state) {
-  using dariadb::statistic::FUNCKTION_KIND;
-  std::vector<FUNCKTION_KIND> kinds{FUNCKTION_KIND::AVERAGE};
+  using dariadb::statistic::FUNCTION_KIND;
+  std::vector<FUNCTION_KIND> kinds{FUNCTION_KIND::AVERAGE};
 
   while (state.KeepRunning()) {
     std::stringstream ss;
@@ -30,7 +30,7 @@ void StatisticFunctionKind(benchmark::State &state) {
     }
     auto str = ss.str();
     std::istringstream iss(str);
-    FUNCKTION_KIND fc;
+    FUNCTION_KIND fc;
     while (iss.good()) {
       iss >> fc;
     }
@@ -52,3 +52,14 @@ BENCHMARK_REGISTER_F(StatisticFunction, Average)
     ->Arg(100)
     ->Arg(1000)
     ->Arg(10000);
+
+BENCHMARK_DEFINE_F(StatisticFunction, Median)(benchmark::State &state) {
+  while (state.KeepRunning()) {
+    dariadb::statistic::Median media;
+    for (const auto &m : ma) {
+      media.apply(m);
+      benchmark::DoNotOptimize(media.result());
+    }
+  }
+}
+BENCHMARK_REGISTER_F(StatisticFunction, Median)->Arg(10)->Arg(100)->Arg(1000)->Arg(10000);

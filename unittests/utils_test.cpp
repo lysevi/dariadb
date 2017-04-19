@@ -103,6 +103,18 @@ TEST(Utils, SplitString) {
   EXPECT_EQ(splitted.size(), size_t(8));
 }
 
+TEST(Utils, StringToUpper) {
+  auto s = "lower string";
+  auto res = dariadb::utils::strings::to_upper(s);
+  EXPECT_EQ(res, "LOWER STRING");
+}
+
+TEST(Utils, StringToLower) {
+  auto s = "UPPER STRING";
+  auto res = dariadb::utils::strings::to_lower(s);
+  EXPECT_EQ(res, "upper string");
+}
+
 TEST(Utils, ThreadsPool) {
   using namespace dariadb::utils::async;
 
