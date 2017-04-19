@@ -2,6 +2,8 @@
 #include <benchmark/benchmark_api.h>
 #include <sstream>
 
+using namespace dariadb::statistic;
+
 class StatisticFunction : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &st) {
     auto count = st.range(0);
@@ -20,7 +22,6 @@ public:
 };
 
 void StatisticFunctionKind(benchmark::State &state) {
-  using dariadb::statistic::FUNCTION_KIND;
   std::vector<FUNCTION_KIND> kinds{FUNCTION_KIND::AVERAGE};
 
   while (state.KeepRunning()) {
@@ -40,10 +41,10 @@ BENCHMARK(StatisticFunctionKind)->Arg(1000)->Arg(10000)->Arg(20000)->Arg(30000);
 
 BENCHMARK_DEFINE_F(StatisticFunction, Average)(benchmark::State &state) {
   while (state.KeepRunning()) {
-    dariadb::statistic::Average av;
+    auto av = FunctionFactory::make_one(FUNCTION_KIND::MEDIAN);
     for (const auto &m : ma) {
-      av.apply(m);
-      benchmark::DoNotOptimize(av.result());
+      av->apply(m);
+      benchmark::DoNotOptimize(av->result());
     }
   }
 }
@@ -55,10 +56,10 @@ BENCHMARK_REGISTER_F(StatisticFunction, Average)
 
 BENCHMARK_DEFINE_F(StatisticFunction, Percentile)(benchmark::State &state) {
   while (state.KeepRunning()) {
-    dariadb::statistic::Median media;
+    auto media = FunctionFactory::make_one(FUNCTION_KIND::MEDIAN);
     for (const auto &m : ma) {
-      media.apply(m);
-      benchmark::DoNotOptimize(media.result());
+      media->apply(m);
+      benchmark::DoNotOptimize(media->result());
     }
   }
 }

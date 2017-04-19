@@ -31,66 +31,67 @@ TEST(Statistic, Average) {
   using namespace dariadb::statistic;
   check_function_factory({FUNCTION_KIND::AVERAGE});
 
-  dariadb::statistic::Average av;
-  EXPECT_EQ(av.kind(), (int)dariadb::statistic::FUNCTION_KIND::AVERAGE);
-  EXPECT_EQ(av.result().value, dariadb::Value());
+  auto av = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::AVERAGE);
+  EXPECT_EQ(av->kind(), (int)dariadb::statistic::FUNCTION_KIND::AVERAGE);
+  EXPECT_EQ(av->result().value, dariadb::Value());
+
   dariadb::Meas m;
 
   m.value = 2;
-  av.apply(m);
-  EXPECT_EQ(av.result().value, dariadb::Value(2));
+  av->apply(m);
+  EXPECT_EQ(av->result().value, dariadb::Value(2));
 
   m.value = 6;
-  av.apply(m);
-  EXPECT_EQ(av.result().value, dariadb::Value(4));
+  av->apply(m);
+  EXPECT_EQ(av->result().value, dariadb::Value(4));
 }
 
 TEST(Statistic, Median) {
   using namespace dariadb::statistic;
   check_function_factory({FUNCTION_KIND::MEDIAN});
 
-  dariadb::statistic::Median median;
-  EXPECT_EQ(median.kind(), (int)dariadb::statistic::FUNCTION_KIND::MEDIAN);
-  EXPECT_EQ(median.result().value, dariadb::Value());
+  auto median = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::MEDIAN);
+  EXPECT_EQ(median->kind(), (int)dariadb::statistic::FUNCTION_KIND::MEDIAN);
+  EXPECT_EQ(median->result().value, dariadb::Value());
   dariadb::Meas m;
 
   m.value = 2;
-  median.apply(m);
-  EXPECT_EQ(median.result().value, dariadb::Value(2));
+  median->apply(m);
+  EXPECT_EQ(median->result().value, dariadb::Value(2));
 
   m.value = 6;
-  median.apply(m);
-  EXPECT_EQ(median.result().value, dariadb::Value(4));
+  median->apply(m);
+  EXPECT_EQ(median->result().value, dariadb::Value(4));
 
   m.value = 3;
-  median.apply(m);
-  EXPECT_EQ(median.result().value, dariadb::Value(3));
+  median->apply(m);
+  EXPECT_EQ(median->result().value, dariadb::Value(3));
 
   m.value = 0;
-  median.apply(m);
-  EXPECT_EQ(median.result().value, dariadb::Value(3));
+  median->apply(m);
+  EXPECT_EQ(median->result().value, dariadb::Value(3));
 }
 
 TEST(Statistic, Percentile) {
   using namespace dariadb::statistic;
   check_function_factory({FUNCTION_KIND::PERCENTILE90, FUNCTION_KIND::PERCENTILE99});
 
-  dariadb::statistic::Percentile90 p90;
-  dariadb::statistic::Percentile99 p99;
-  EXPECT_EQ(p90.kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE90);
-  EXPECT_EQ(p90.result().value, dariadb::Value());
+  auto p90 = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::PERCENTILE90);
+  auto p99 = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::PERCENTILE99);
+  EXPECT_EQ(p90->kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE90);
+  EXPECT_EQ(p90->result().value, dariadb::Value());
 
-  EXPECT_EQ(p99.kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE99);
-  EXPECT_EQ(p99.result().value, dariadb::Value());
+  EXPECT_EQ(p99->kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE99);
+  EXPECT_EQ(p99->result().value, dariadb::Value());
 
   dariadb::Meas m;
   std::vector<dariadb::Value> values{43, 54, 56, 61, 62, 66, 68, 69, 69, 70, 71, 72, 77,
                                      78, 79, 85, 87, 88, 89, 93, 95, 96, 98, 99, 99};
   for (auto v : values) {
     m.value = v;
-    p90.apply(m);
-    p99.apply(m);
+    p90->apply(m);
+    p99->apply(m);
   }
-  EXPECT_EQ(p90.result().value, dariadb::Value(98));
-  EXPECT_EQ(p99.result().value, dariadb::Value(99));
+  EXPECT_EQ(p90->result().value, dariadb::Value(98));
+  EXPECT_EQ(p99->result().value, dariadb::Value(99));
 }
