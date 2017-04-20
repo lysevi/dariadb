@@ -5,18 +5,18 @@
 namespace dariadb {
 
 IEngine_Ptr open_storage(const std::string &path) {
-  if (path == "") {
-    auto settings = dariadb::storage::Settings::create();
+  if (utils::fs::file_exists(utils::fs::append_path(path, SHARD_FILE_NAME))) {
+    return ShardEngine::create(path);
+  } else {
+    auto settings = dariadb::storage::Settings::create(path);
     IEngine_Ptr result{new Engine(settings)};
     return result;
-  } else {
-    if (utils::fs::file_exists(utils::fs::append_path(path, SHARD_FILE_NAME))) {
-      return ShardEngine::create(path);
-    } else {
-      auto settings = dariadb::storage::Settings::create(path);
-      IEngine_Ptr result{new Engine(settings)};
-      return result;
-    }
   }
+}
+
+IEngine_Ptr memory_only_storage() {
+  auto settings = dariadb::storage::Settings::create();
+  IEngine_Ptr result{new Engine(settings)};
+  return result;
 }
 } // namespace dariadb

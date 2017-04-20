@@ -107,7 +107,7 @@ TEST(Statistic, Sigma) {
 }
 
 TEST(Statistic, Calculator) {
-  auto storage = dariadb::open_storage("");
+  auto storage = dariadb::memory_only_storage();
   dariadb::Meas meas;
   meas.id = 10;
   for (size_t i = 0; i < 100; ++i) {

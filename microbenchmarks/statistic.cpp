@@ -11,10 +11,10 @@ class StatisticFunction : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &st) {
     auto count = st.range(0);
     ma.resize(count);
-    for (int i = 1; i <= count; ++i) {
+    for (int i = 0; i < count; ++i) {
       ma[i].id = dariadb::Id(0);
       ma[i].time = i;
-      ma[i].value = std::sin(1.0 / i);
+      ma[i].value = std::sin(1.0 / (i + 1));
     }
   }
 
@@ -27,13 +27,13 @@ public:
 class StatisticCalculation : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &st) {
     microbenchmark_common::replace_std_logger();
-    storage = dariadb::open_storage("");
+    storage = dariadb::memory_only_storage();
     auto count = st.range(0);
     for (int i = 0; i < count; ++i) {
       dariadb::Meas m;
       m.id = dariadb::Id(0);
       m.time = i;
-      m.value = std::sin(1.0 / i);
+      m.value = std::sin(1.0 / (i + 1));
       storage->append(m);
     }
   }
