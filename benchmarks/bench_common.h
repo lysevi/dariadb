@@ -51,13 +51,21 @@ struct BenchmarkSummaryInfo {
   void print(const std::vector<SpeedMetric> &metrics) {
     using namespace std;
     const char separator = ' ';
-    size_t nameWidth = 4; // sizeof "name"
-    size_t minWidth = 0;
-    size_t maxWidth = 0;
-    size_t avWidth = 0;
-    size_t medWidth = 0;
-    size_t p90Width = 0;
-    size_t sigmaWidth = 0;
+    const std::string nameName = "name";
+    const std::string nameMin = "min";
+    const std::string nameMax = "max";
+    const std::string nameAv = "average";
+    const std::string nameMedian = "median";
+    const std::string nameP90 = "percentile";
+    const std::string nameSigma = "standard deviation";
+    size_t nameWidth = nameName.size(); 
+    size_t minWidth = nameMin.size();
+    size_t maxWidth = nameMax.size();
+    size_t avWidth = nameAv.size();
+    size_t medWidth = nameMedian.size();
+    size_t p90Width = nameP90.size();
+    size_t sigmaWidth = nameSigma.size();
+    
     auto align_base = right;
     for (auto sm : metrics) {
       nameWidth = std::max(nameWidth, sm.name.size());
@@ -68,15 +76,20 @@ struct BenchmarkSummaryInfo {
       p90Width = std::max(p90Width, std::to_string(sm.p90).size());
       sigmaWidth = std::max(sigmaWidth, std::to_string(sm.sigma).size());
     }
-    nameWidth += 2;
+    nameWidth += 1;
+    minWidth += 1;
+    maxWidth += 1;
+    avWidth += 1;
+    medWidth += 1;
+    sigmaWidth += 1;
 
-    cout << left << setw(nameWidth) << setfill(separator) << "name";
-    cout << align_base << setw(minWidth) << setfill(separator) << "min";
-    cout << align_base << setw(maxWidth) << setfill(separator) << "max";
-    cout << align_base << setw(avWidth) << setfill(separator) << "average";
-    cout << align_base << setw(medWidth) << setfill(separator) << "median";
-    cout << align_base << setw(p90Width) << setfill(separator) << "percentile(90)";
-    cout << align_base << setw(sigmaWidth) << setfill(separator) << "standard deviation";
+    cout << left << setw(nameWidth) << setfill(separator) << nameName;
+    cout << align_base << setw(minWidth) << setfill(separator) << nameMin;
+    cout << align_base << setw(maxWidth) << setfill(separator) << nameMax;
+    cout << align_base << setw(avWidth) << setfill(separator) << nameAv;
+    cout << align_base << setw(medWidth) << setfill(separator) << nameMedian;
+    cout << align_base << setw(p90Width) << setfill(separator) << nameP90;
+    cout << align_base << setw(sigmaWidth) << setfill(separator) << nameSigma;
     cout << std::endl;
     for (auto sm : metrics) {
       cout << left << setw(nameWidth) << setfill(separator) << sm.name;
