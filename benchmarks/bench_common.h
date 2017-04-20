@@ -47,8 +47,8 @@ struct BenchmarkSummaryInfo {
     page_repacked = size_t(0);
     read_all_time = page_repack_time = foreach_read_all_time = compaction_time = 0.0;
   }
-  //TODO move to cpp file
-  void print(std::vector<SpeedMetric> &metrics) {
+  // TODO move to cpp file
+  void print(const std::vector<SpeedMetric> &metrics) {
     using namespace std;
     const char separator = ' ';
     size_t nameWidth = 4; // sizeof "name"
@@ -103,8 +103,10 @@ struct BenchmarkSummaryInfo {
           metrics("read timeseries", full_read_timeseries_metrics);
       SpeedMetric copy_sm = metrics("copy timeseries", copy_to_metrics);
       SpeedMetric stat_sm = metrics("stat", stat_metrics);
-      print(std::vector<SpeedMetric>{write_sm, read_tp_sm, read_interval_sm,
-                                     full_read_interval_sm, copy_sm, stat_sm});
+      std::vector<SpeedMetric> all_metrics{write_sm,         read_tp_sm,
+                                           read_interval_sm, full_read_interval_sm,
+                                           copy_sm,          stat_sm};
+      print(all_metrics);
     }
 
     std::cout << "page repack: " << page_repack_time << " secs." << std::endl;
