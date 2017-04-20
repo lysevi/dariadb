@@ -57,7 +57,7 @@ struct BenchmarkSummaryInfo {
     const std::string nameAv = "average";
     const std::string nameMedian = "median";
     const std::string nameP90 = "percentile";
-    const std::string nameSigma = "standard deviation";
+    const std::string nameSigma = "sigma";
     size_t nameWidth = nameName.size(); 
     size_t minWidth = nameMin.size();
     size_t maxWidth = nameMax.size();
