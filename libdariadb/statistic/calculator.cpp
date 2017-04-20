@@ -7,17 +7,21 @@ using namespace dariadb::storage;
 using namespace dariadb::statistic;
 
 IFunction_ptr FunctionFactory::make_one(const std::string &k) {
-  if (k == "average") {
+  auto token = utils::strings::to_lower(k);
+  if (token == "average") {
     return std::make_shared<Average>("average");
   }
-  if (k == "median") {
+  if (token == "median") {
     return std::make_shared<Median>("median");
   }
-  if (k == "percentile90") {
+  if (token == "percentile90") {
     return std::make_shared<Percentile90>("percentile90");
   }
-  if (k == "percentile99") {
+  if (token == "percentile99") {
     return std::make_shared<Percentile99>("percentile99");
+  }
+  if (token == "sigma") {
+    return std::make_shared<StandartDeviation>("sigma");
   }
   return nullptr;
 }
@@ -32,7 +36,7 @@ std::vector<IFunction_ptr> FunctionFactory::make(const std::vector<std::string> 
 }
 
 std::vector<std::string> FunctionFactory::functions() {
-  return {"average", "median", "percentile90", "percentile99"};
+  return {"average", "median", "percentile90", "percentile99", "sigma"};
 }
 
 Calculator::Calculator(const IEngine_Ptr &storage) : _storage(storage) {}

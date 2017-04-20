@@ -17,6 +17,15 @@ protected:
   size_t _count;
 };
 
+class StandartDeviation : public IFunction {
+public:
+	EXPORT StandartDeviation(const std::string&s);
+	EXPORT void apply(const Meas&m)override;
+	EXPORT Meas result()const override;
+protected:
+	MeasArray ma;
+};
+
 template <int percentile> class Percentile : public IFunction {
 public:
   Percentile(const std::string &s) : IFunction(s) {}
