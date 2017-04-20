@@ -11,19 +11,19 @@ namespace statistic {
 
 class FunctionFactory {
 public:
-  EXPORT static IFunction_ptr make_one(const FUNCTION_KIND k);
-  EXPORT static std::vector<IFunction_ptr> make(const FunctionKinds &kinds);
+  EXPORT static IFunction_ptr make_one(const std::string &k);
+  EXPORT static std::vector<IFunction_ptr> make(const std::vector<std::string> &kinds);
   /***
   return vector of available functions.
   */
-  EXPORT static FunctionKinds functions();
+  EXPORT static std::vector<std::string> functions();
 };
 
 class Calculator {
 public:
   EXPORT Calculator(const IEngine_Ptr &storage);
   EXPORT MeasArray apply(const IdArray &ids, Time from, Time to, Flag f,
-                         const FunctionKinds &functions, const MeasArray &ma);
+                         const std::vector<std::string> &functions, const MeasArray &ma);
 
 protected:
   IEngine_Ptr _storage;

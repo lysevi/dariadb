@@ -1,25 +1,13 @@
 #include <libdariadb/statistic/calculator.h>
 #include <gtest/gtest.h>
 
-void check_functionkind_conversion(const dariadb::statistic::FUNCTION_KIND tested) {
-  using namespace dariadb::statistic;
-  std::stringstream ss;
-  ss << tested;
-  auto token = ss.str();
-  std::istringstream oss(token);
-  FUNCTION_KIND converted;
-  oss >> converted;
-  EXPECT_EQ(converted, tested);
-}
-
-void check_function_factory(const dariadb::statistic::FunctionKinds &tested) {
+void check_function_factory(const std::vector<std::string> &tested) {
   auto result = dariadb::statistic::FunctionFactory::make(tested);
   EXPECT_EQ(result.size(), tested.size());
 
   auto all_functions = dariadb::statistic::FunctionFactory::functions();
   for (size_t i = 0; i < tested.size(); ++i) {
-    EXPECT_EQ((int)tested[i], result[i]->kind());
-    check_functionkind_conversion(tested[i]);
+    EXPECT_EQ(tested[i], result[i]->kind());
 
     EXPECT_TRUE(std::find(all_functions.begin(), all_functions.end(), tested[i]) !=
                 all_functions.end())
@@ -29,10 +17,10 @@ void check_function_factory(const dariadb::statistic::FunctionKinds &tested) {
 
 TEST(Statistic, Average) {
   using namespace dariadb::statistic;
-  check_function_factory({FUNCTION_KIND::AVERAGE});
+  check_function_factory({"average"});
 
-  auto av = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::AVERAGE);
-  EXPECT_EQ(av->kind(), (int)dariadb::statistic::FUNCTION_KIND::AVERAGE);
+  auto av = dariadb::statistic::FunctionFactory::make_one("average");
+  EXPECT_EQ(av->kind(), "average");
   EXPECT_EQ(av->result().value, dariadb::Value());
 
   dariadb::Meas m;
@@ -48,10 +36,10 @@ TEST(Statistic, Average) {
 
 TEST(Statistic, Median) {
   using namespace dariadb::statistic;
-  check_function_factory({FUNCTION_KIND::MEDIAN});
+  check_function_factory({"median"});
 
-  auto median = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::MEDIAN);
-  EXPECT_EQ(median->kind(), (int)dariadb::statistic::FUNCTION_KIND::MEDIAN);
+  auto median = dariadb::statistic::FunctionFactory::make_one("median");
+  EXPECT_EQ(median->kind(), "median");
   EXPECT_EQ(median->result().value, dariadb::Value());
   dariadb::Meas m;
 
@@ -74,14 +62,14 @@ TEST(Statistic, Median) {
 
 TEST(Statistic, Percentile) {
   using namespace dariadb::statistic;
-  check_function_factory({FUNCTION_KIND::PERCENTILE90, FUNCTION_KIND::PERCENTILE99});
+  check_function_factory({"percentile90", "percentile99"});
 
-  auto p90 = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::PERCENTILE90);
-  auto p99 = dariadb::statistic::FunctionFactory::make_one(FUNCTION_KIND::PERCENTILE99);
-  EXPECT_EQ(p90->kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE90);
+  auto p90 = dariadb::statistic::FunctionFactory::make_one("percentile90");
+  auto p99 = dariadb::statistic::FunctionFactory::make_one("percentile99");
+  EXPECT_EQ(p90->kind(), "percentile90");
   EXPECT_EQ(p90->result().value, dariadb::Value());
 
-  EXPECT_EQ(p99->kind(), (int)dariadb::statistic::FUNCTION_KIND::PERCENTILE99);
+  EXPECT_EQ(p99->kind(), "percentile99");
   EXPECT_EQ(p99->result().value, dariadb::Value());
 
   dariadb::Meas m;

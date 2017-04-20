@@ -3,7 +3,7 @@
 using namespace dariadb;
 using namespace dariadb::statistic;
 
-Average::Average() : _result(), _count() {}
+Average::Average(const std::string &s) : IFunction(s), _result(), _count() {}
 
 void Average::apply(const Meas &ma) {
   _result.id = ma.id;

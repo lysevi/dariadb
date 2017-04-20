@@ -2,25 +2,19 @@
 
 #include <libdariadb/meas.h>
 #include <memory>
-#include <istream>
-#include <ostream>
-
+#include <string>
 namespace dariadb {
 namespace statistic {
 class IFunction {
 public:
+  IFunction(const std::string &s) : _kindname(s) {}
   virtual void apply(const Meas &ma) = 0;
   virtual Meas result() const = 0;
-  virtual int kind() const = 0;
+  std::string kind() const { return _kindname; };
+
+protected:
+  std::string _kindname;
 };
 using IFunction_ptr = std::shared_ptr<IFunction>;
-
-enum class FUNCTION_KIND : int { AVERAGE, MEDIAN, PERCENTILE90, PERCENTILE99 };
-
-using FunctionKinds = std::vector<FUNCTION_KIND>;
-
-EXPORT std::istream &operator>>(std::istream &in, FUNCTION_KIND &f);
-EXPORT std::ostream &operator<<(std::ostream &stream, const FUNCTION_KIND &f);
-
 } // namespace statistic
 } // namespace dariadb

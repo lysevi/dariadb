@@ -8,20 +8,21 @@ namespace statistic {
 
 class Average : public IFunction {
 public:
-  EXPORT Average();
+  EXPORT Average(const std::string &s);
   EXPORT void apply(const Meas &ma) override;
   EXPORT Meas result() const override;
-  int kind() const override { return (int)FUNCTION_KIND::AVERAGE; }
 
 protected:
   Meas _result;
   size_t _count;
 };
 
-template <FUNCTION_KIND funckind, int percentile> class Percentile : public IFunction {
+template <int percentile> class Percentile : public IFunction {
 public:
-  Percentile() {}
+  Percentile(const std::string &s) : IFunction(s) {}
+
   void apply(const Meas &ma) override { _result.push_back(ma); }
+
   Meas result() const override {
     if (_result.empty()) {
       return Meas();
@@ -44,14 +45,12 @@ public:
     return _result.at(index);
   }
 
-  int kind() const override { return (int)funckind; }
-
 protected:
   mutable MeasArray _result;
 };
 
-using Median = Percentile<FUNCTION_KIND::MEDIAN, 50>;
-using Percentile90 = Percentile<FUNCTION_KIND::PERCENTILE90, 90>;
-using Percentile99 = Percentile<FUNCTION_KIND::PERCENTILE99, 99>;
+using Median = Percentile<50>;
+using Percentile90 = Percentile<90>;
+using Percentile99 = Percentile<99>;
 } // namespace statistic
 } // namespace dariadb
