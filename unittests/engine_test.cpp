@@ -16,6 +16,19 @@ public:
   size_t count;
 };
 
+void test_statistic_on_engine(dariadb::IEngine_Ptr &storage) {
+  dariadb::statistic::Calculator calc(storage);
+  auto all_functions = dariadb::statistic::FunctionFactory::functions();
+  auto result = calc.apply(dariadb::Id(0), dariadb::Time(0), dariadb::MAX_TIME,
+                           dariadb::Flag(), all_functions);
+
+  EXPECT_EQ(result.size(), all_functions.size());
+  for (size_t i = 0; i < all_functions.size() - 1; ++i) {
+    auto m = result[i];
+    EXPECT_TRUE(m.value != dariadb::Value());
+  }
+}
+
 TEST(Engine, Common_test) {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
@@ -34,9 +47,11 @@ TEST(Engine, Common_test) {
     settings->wal_cache_size.setValue(100);
     settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
     settings->chunk_size.setValue(chunk_size);
-    std::unique_ptr<Engine> ms{new Engine(settings)};
+    dariadb::IEngine_Ptr ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
+
+    test_statistic_on_engine(ms);
 
     auto pages_count = ms->description().pages_count;
     EXPECT_GE(pages_count, size_t(2));
@@ -76,7 +91,7 @@ TEST(Engine, Common_test) {
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     EXPECT_TRUE(current.size() != size_t(0));
 
-	dariadb::logger_info("erase old files");
+    dariadb::logger_info("erase old files");
     ms->settings()->max_store_period.setValue(1);
     while (true) {
       auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
@@ -85,7 +100,7 @@ TEST(Engine, Common_test) {
       }
       dariadb::logger_info("file left:");
       for (auto i : index_files) {
-		dariadb::logger_info(i);
+        dariadb::logger_info(i);
       }
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
@@ -177,9 +192,10 @@ TEST(Engine, MemStorage_common_test) {
     settings->chunk_size.setValue(chunk_size);
     settings->max_chunks_per_page.setValue(5);
     settings->memory_limit.setValue(50 * 1024);
-    std::unique_ptr<Engine> ms{new Engine(settings)};
+    dariadb::IEngine_Ptr ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true, false, false);
+    test_statistic_on_engine(ms);
 
     auto pages_count = ms->description().pages_count;
     EXPECT_GE(pages_count, size_t(2));
@@ -203,9 +219,11 @@ TEST(Engine, MemOnlyStorage_common_test) {
   {
     auto settings = dariadb::storage::Settings::create();
     settings->chunk_size.setValue(chunk_size);
-    std::unique_ptr<Engine> ms{new Engine(settings)};
+    dariadb::IEngine_Ptr ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true, false, false);
+
+    test_statistic_on_engine(ms);
 
     auto pages_count = ms->description().pages_count;
     EXPECT_EQ(pages_count, size_t(0));
@@ -217,7 +235,7 @@ TEST(Engine, MemOnlyStorage_common_test) {
         break;
       } else {
         dariadb::logger_info("values !empty() ", values.size());
-		  
+
         dariadb::utils::sleep_mls(500);
       }
     }
@@ -245,10 +263,11 @@ TEST(Engine, Cache_common_test) {
     settings->chunk_size.setValue(chunk_size);
     settings->memory_limit.setValue(50 * 1024);
     settings->wal_file_size.setValue(2000);
-    std::unique_ptr<Engine> ms{new Engine(settings)};
+    dariadb::IEngine_Ptr ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
 
+    test_statistic_on_engine(ms);
     auto descr = ms->description();
     EXPECT_GT(descr.pages_count, size_t(0));
     ms->settings()->max_store_period.setValue(1);

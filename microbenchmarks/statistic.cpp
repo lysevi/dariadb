@@ -11,7 +11,7 @@ class StatisticFunction : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &st) {
     auto count = st.range(0);
     ma.resize(count);
-    for (int i = 0; i < count; ++i) {
+    for (int i = 1; i <= count; ++i) {
       ma[i].id = dariadb::Id(0);
       ma[i].time = i;
       ma[i].value = std::sin(1.0 / i);
