@@ -1,3 +1,4 @@
+#include <libdariadb/flags.h>
 #include <libdariadb/statistic/calculator.h>
 #include <libdariadb/statistic/functions.h>
 #include <libdariadb/utils/utils.h>
@@ -41,8 +42,36 @@ std::vector<std::string> FunctionFactory::functions() {
 
 Calculator::Calculator(const IEngine_Ptr &storage) : _storage(storage) {}
 
-MeasArray Calculator::apply(const IdArray &ids, Time from, Time to, Flag f,
-                            const std::vector<std::string> &functions,
-                            const MeasArray &ma) {
-  return MeasArray();
+MeasArray Calculator::apply(const Id id, Time from, Time to, Flag flag,
+                            const std::vector<std::string> &functions) {
+
+  dariadb::QueryInterval qi({id}, flag, from, to);
+  auto ma = _storage->readInterval(qi);
+  if (ma.empty()) {
+    return MeasArray();
+  }
+  auto all_functions = FunctionFactory::make(functions);
+  for (size_t i = 0; i < all_functions.size(); ++i) {
+    if (all_functions[i] == nullptr) {
+      logger_fatal("unknow function '", functions[i], "'");
+    }
+  }
+  for (auto m : ma) {
+    for (auto f : all_functions) {
+      if (f != nullptr) {
+        f->apply(m);
+      }
+    }
+  }
+  MeasArray result;
+  result.reserve(functions.size());
+  for (auto f : all_functions) {
+    Meas m;
+    m.id = id;
+    if (f != nullptr) {
+      m.value = f->result().value;
+    }
+    result.push_back(m);
+  }
+  return result;
 }

@@ -1,3 +1,4 @@
+#include <libdariadb/dariadb.h>
 #include <libdariadb/statistic/calculator.h>
 #include <gtest/gtest.h>
 
@@ -93,14 +94,39 @@ TEST(Statistic, Sigma) {
   EXPECT_EQ(sigma->kind(), "sigma");
   EXPECT_EQ(sigma->result().value, dariadb::Value());
   dariadb::Meas m;
-  
+
   sigma->apply(m);
   sigma->apply(m);
-  
+
   m.value = 14.0;
   sigma->apply(m);
   sigma->apply(m);
 
   auto calulated = sigma->result().value;
   EXPECT_DOUBLE_EQ(calulated, 7.0);
+}
+
+TEST(Statistic, Calculator) {
+  auto storage = dariadb::open_storage("");
+  dariadb::Meas meas;
+  meas.id = 10;
+  for (size_t i = 0; i < 100; ++i) {
+    meas.value++;
+    meas.time++;
+    storage->append(meas);
+  }
+  dariadb::statistic::Calculator calc(storage);
+  auto all_functions = dariadb::statistic::FunctionFactory::functions();
+  all_functions.push_back("UNKNOW FUNCTION");
+  auto result = calc.apply(dariadb::Id(10), dariadb::Time(0), meas.time, dariadb::Flag(),
+                           all_functions);
+
+  EXPECT_EQ(result.size(), all_functions.size());
+  for (size_t i = 0; i < all_functions.size() - 1; ++i) {
+    auto m = result[i];
+    EXPECT_EQ(m.id, dariadb::Id(10));
+    EXPECT_TRUE(m.value != dariadb::Value());
+  }
+
+  EXPECT_EQ(result.back().value, 0);
 }

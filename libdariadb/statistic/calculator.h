@@ -22,8 +22,8 @@ public:
 class Calculator {
 public:
   EXPORT Calculator(const IEngine_Ptr &storage);
-  EXPORT MeasArray apply(const IdArray &ids, Time from, Time to, Flag f,
-                         const std::vector<std::string> &functions, const MeasArray &ma);
+  EXPORT MeasArray apply(const Id id, Time from, Time to, Flag f,
+                         const std::vector<std::string> &functions);
 
 protected:
   IEngine_Ptr _storage;

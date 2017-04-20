@@ -5,6 +5,7 @@
 #include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/scheme/scheme.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/statistic/calculator.h>
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
@@ -16,4 +17,4 @@ namespace dariadb {
 autodetect engine type in folder and return instance.
 */
 EXPORT IEngine_Ptr open_storage(const std::string &path);
-}
+} // namespace dariadb
