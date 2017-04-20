@@ -179,6 +179,7 @@ void show_info(IEngine *storage) {
     auto step_time = double(double(t1 - t0) / (double)CLOCKS_PER_SEC);
 
     auto writes_per_sec = (w1 - w0) / step_time;
+	summary_info->write_speed_metrics.push_back(writes_per_sec);
     auto reads_per_sec = (r1 - r0) / step_time;
     auto queue_sizes = storage->description();
 
@@ -594,7 +595,6 @@ int main(int argc, char *argv[]) {
               << utils::async::ThreadManager::instance()->active_works() << std::endl;
 
     summary_info->writed = append_count;
-    summary_info->write_speed = append_count / writers_elapsed;
     dariadb_bench::readBenchmark(summary_info.get(), all_id_set, raw_ptr,
                                  read_benchmark_runs);
 

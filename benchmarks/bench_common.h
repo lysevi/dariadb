@@ -1,56 +1,147 @@
 #pragma once
 #include <libdariadb/engines/strategy.h>
 #include <libdariadb/interfaces/imeasstorage.h>
+#include <libdariadb/statistic/functions.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/utils.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <algorithm>
 #include <atomic>
+#include <iomanip>
 #include <iostream>
+#include <list>
 #include <random>
 #include <tuple>
-
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <vector>
 
 namespace dariadb_bench {
 struct BenchmarkSummaryInfo {
+  struct SpeedMetric {
+    double min;
+    double max;
+    double average;
+    double median;
+    double p90;
+    double sigma;
+    std::string name;
+  };
   size_t writed;
-  double write_speed;
-  double read_interval_speed;
-  double read_timepoint_speed;
   double read_all_time;
-  double copy_to;
   double foreach_read_all_time;
   double page_repack_time;
   size_t page_repacked;
-  double stat_time;
   double compaction_time;
-  double full_read_timeseries;
   dariadb::STRATEGY strategy;
+
+  std::list<double> write_speed_metrics;
+  std::list<double> read_timepoint_speed_metrics;
+  std::list<double> read_interval_speed_metrics;
+  std::list<double> full_read_timeseries_metrics;
+  std::list<double> copy_to_metrics;
+  std::list<double> stat_metrics;
 
   BenchmarkSummaryInfo(dariadb::STRATEGY _strategy) {
     strategy = _strategy;
     writed = size_t(0);
     page_repacked = size_t(0);
-    write_speed = read_interval_speed = read_timepoint_speed = read_all_time = stat_time =
-        full_read_timeseries = page_repack_time = foreach_read_all_time = copy_to =
-            compaction_time = 0.0;
+    read_all_time = page_repack_time = foreach_read_all_time = compaction_time = 0.0;
+  }
+  //TODO move to cpp file
+  void print(std::vector<SpeedMetric> &metrics) {
+    using namespace std;
+    const char separator = ' ';
+    size_t nameWidth = 4; // sizeof "name"
+    size_t minWidth = 0;
+    size_t maxWidth = 0;
+    size_t avWidth = 0;
+    size_t medWidth = 0;
+    size_t p90Width = 0;
+    size_t sigmaWidth = 0;
+    auto align_base = right;
+    for (auto sm : metrics) {
+      nameWidth = std::max(nameWidth, sm.name.size());
+      minWidth = std::max(minWidth, std::to_string(sm.min).size());
+      maxWidth = std::max(maxWidth, std::to_string(sm.max).size());
+      avWidth = std::max(avWidth, std::to_string(sm.average).size());
+      medWidth = std::max(medWidth, std::to_string(sm.median).size());
+      p90Width = std::max(p90Width, std::to_string(sm.p90).size());
+      sigmaWidth = std::max(sigmaWidth, std::to_string(sm.sigma).size());
+    }
+    nameWidth += 2;
+
+    cout << left << setw(nameWidth) << setfill(separator) << "name";
+    cout << align_base << setw(minWidth) << setfill(separator) << "min";
+    cout << align_base << setw(maxWidth) << setfill(separator) << "max";
+    cout << align_base << setw(avWidth) << setfill(separator) << "average";
+    cout << align_base << setw(medWidth) << setfill(separator) << "median";
+    cout << align_base << setw(p90Width) << setfill(separator) << "percentile(90)";
+    cout << align_base << setw(sigmaWidth) << setfill(separator) << "standard deviation";
+    cout << std::endl;
+    for (auto sm : metrics) {
+      cout << left << setw(nameWidth) << setfill(separator) << sm.name;
+      cout << align_base << setw(minWidth) << setfill(separator) << sm.min;
+      cout << align_base << setw(maxWidth) << setfill(separator) << sm.max;
+      cout << align_base << setw(avWidth) << setfill(separator) << sm.average;
+      cout << align_base << setw(medWidth) << setfill(separator) << sm.median;
+      cout << align_base << setw(p90Width) << setfill(separator) << sm.p90;
+      cout << align_base << setw(sigmaWidth) << setfill(separator) << sm.sigma;
+      cout << std::endl;
+    }
   }
 
   void print() {
+
     std::cout << "benhcmark summary (" << strategy << ")" << std::endl;
     std::cout << "writed: " << writed << std::endl;
-    std::cout << "write speed(average): " << write_speed << " per/sec" << std::endl;
+    {
+      SpeedMetric write_sm = metrics("write speed", write_speed_metrics);
+      SpeedMetric read_tp_sm = metrics("read timepoint", read_timepoint_speed_metrics);
+      SpeedMetric read_interval_sm =
+          metrics("read interval", read_interval_speed_metrics);
+      SpeedMetric full_read_interval_sm =
+          metrics("read timeseries", full_read_timeseries_metrics);
+      SpeedMetric copy_sm = metrics("copy timeseries", copy_to_metrics);
+      SpeedMetric stat_sm = metrics("stat", stat_metrics);
+      print(std::vector<SpeedMetric>{write_sm, read_tp_sm, read_interval_sm,
+                                     full_read_interval_sm, copy_sm, stat_sm});
+    }
+
     std::cout << "page repack: " << page_repack_time << " secs." << std::endl;
     std::cout << "page repacked: " << page_repacked << std::endl;
-    std::cout << "read interval: " << read_interval_speed << " per/sec" << std::endl;
-    std::cout << "stat: " << stat_time << " sec" << std::endl;
-    std::cout << "read timepoint: " << read_timepoint_speed << " per/sec" << std::endl;
-    std::cout << "read timeseries: " << full_read_timeseries << " secs." << std::endl;
-    std::cout << "copy timeseries: " << copy_to << " secs." << std::endl;
+
     std::cout << "read all: " << read_all_time << " secs." << std::endl;
     std::cout << "foreach all: " << foreach_read_all_time << " secs." << std::endl;
     std::cout << "compaction: " << compaction_time << " secs." << std::endl;
+  }
+
+  SpeedMetric metrics(const std::string &name, const std::list<double> &values_list) {
+    std::vector<double> values(values_list.begin(), values_list.end());
+    dariadb::statistic::Average av("average");
+    dariadb::statistic::Median md("median");
+    dariadb::statistic::Percentile90 p90("p90");
+    dariadb::statistic::StandartDeviation sigma("sigma");
+    SpeedMetric result;
+    result.name = name;
+    result.min = dariadb::MAX_VALUE;
+    result.max = dariadb::MIN_VALUE;
+
+    for (auto v : values) {
+      dariadb::Meas m;
+      m.value = v;
+      av.apply(m);
+      md.apply(m);
+      p90.apply(m);
+      sigma.apply(m);
+      result.min = std::min(result.min, v);
+      result.max = std::max(result.max, v);
+    }
+
+    result.average = av.result().value;
+    result.median = md.result().value;
+    result.p90 = p90.result().value;
+    result.sigma = sigma.result().value;
+    return result;
   }
 };
 
@@ -233,17 +324,14 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
   std::cout << "==> stat...." << std::endl;
   { // stat
-    dariadb::utils::ElapsedTime et;
 
     for (size_t i = 0; i < reads_count; i++) {
       Id2Times curval = interval_queries[i];
+      dariadb::utils::ElapsedTime et;
       stor->stat(std::get<0>(curval), std::get<1>(curval), std::get<2>(curval));
+      auto elapsed = et.elapsed();
+      summary_info->stat_metrics.push_back(elapsed);
     }
-
-    auto elapsed = et.elapsed();
-    summary_info->stat_time = elapsed;
-
-    std::cout << "time: " << elapsed << std::endl;
   }
   std::random_device r;
   std::default_random_engine e1(r());
@@ -251,8 +339,6 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
   {
 
     std::cout << "==> time point reads..." << std::endl;
-
-    dariadb::utils::ElapsedTime et;
 
     for (size_t i = 0; i < reads_count; i++) {
       Id2Times curval = interval_queries[i];
@@ -263,19 +349,17 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       cur_id = (cur_id + 1) % random_ids.size();
 
       dariadb::QueryTimePoint qp{current_ids, 0, time_point};
+      dariadb::utils::ElapsedTime et;
       stor->readTimePoint(qp);
+      auto elapsed = et.elapsed();
+      summary_info->read_timepoint_speed_metrics.push_back(elapsed);
     }
-    auto elapsed = et.elapsed();
-    summary_info->read_timepoint_speed = elapsed;
-
-    std::cout << "time: " << elapsed << std::endl;
   }
   std::list<std::tuple<dariadb::Time, dariadb::Time>> interval_list;
   {
 
     std::cout << "==> intervals foreach..." << std::endl;
 
-    dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -293,25 +377,22 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
 
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
+      dariadb::utils::ElapsedTime et;
       auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
       stor->foreach (qi, &clbk);
 
       clbk.wait();
 
+      auto elapsed = et.elapsed();
+      summary_info->read_interval_speed_metrics.push_back(elapsed);
       total_count += clbk.count;
     }
-    auto elapsed = et.elapsed();
-    summary_info->read_interval_speed = elapsed;
-
-    std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
-              << std::endl;
   }
 
   {
 
     std::cout << "==> intervals foreach(full)..." << std::endl;
 
-    dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -328,23 +409,19 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
       auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
+      dariadb::utils::ElapsedTime et;
       stor->foreach (qi, &clbk);
 
       clbk.wait();
-
+      auto elapsed = et.elapsed();
+      summary_info->full_read_timeseries_metrics.push_back(elapsed);
       total_count += clbk.count;
     }
-    auto elapsed = et.elapsed();
-    summary_info->full_read_timeseries = elapsed;
-
-    std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
-              << std::endl;
   }
   {
 
     std::cout << "==> intervals foreach(copy)..." << std::endl;
 
-    dariadb::utils::ElapsedTime et;
     cur_id = 0;
 
     size_t total_count = 0;
@@ -361,17 +438,14 @@ void readBenchmark(BenchmarkSummaryInfo *summary_info, const dariadb::IdSet &all
       current_ids[0] = std::get<0>(curval);
       cur_id = (cur_id + 1) % random_ids.size();
       auto qi = dariadb::QueryInterval(current_ids, 0, f, t);
+      dariadb::utils::ElapsedTime et;
       stor->foreach (qi, &clbk);
 
       clbk.wait();
-
+      auto elapsed = et.elapsed();
+      summary_info->copy_to_metrics.push_back(elapsed);
       total_count += clbk.count;
     }
-    auto elapsed = et.elapsed();
-    summary_info->copy_to = elapsed;
-
-    std::cout << "time: " << elapsed << " average count: " << total_count / reads_count
-              << std::endl;
   }
   {
 
