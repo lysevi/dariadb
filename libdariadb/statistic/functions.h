@@ -9,54 +9,41 @@ namespace statistic {
 class Average : public IFunction {
 public:
   EXPORT Average(const std::string &s);
-  EXPORT void apply(const Meas &ma) override;
-  EXPORT Meas result() const override;
-
-protected:
-  Meas _result;
-  size_t _count;
+  EXPORT Meas apply(const MeasArray &ma) override;
 };
 
 class StandartDeviation : public IFunction {
 public:
-	EXPORT StandartDeviation(const std::string&s);
-	EXPORT void apply(const Meas&m)override;
-	EXPORT Meas result()const override;
-protected:
-	MeasArray ma;
+  EXPORT StandartDeviation(const std::string &s);
+  EXPORT Meas apply(const MeasArray &ma) override;
 };
 
 template <int percentile> class Percentile : public IFunction {
 public:
   Percentile(const std::string &s) : IFunction(s) {}
 
-  void apply(const Meas &ma) override { _result.push_back(ma); }
-
-  Meas result() const override {
-    if (_result.empty()) {
+  EXPORT Meas apply(const MeasArray &ma) override {
+    if (ma.empty()) {
       return Meas();
     }
 
-    if (_result.size() == 1) {
-      return _result.front();
+    if (ma.size() == 1) {
+      return ma.front();
     }
 
-    if (_result.size() == 2) {
-      Meas m = _result[0];
-      m.value += _result[1].value;
+    if (ma.size() == 2) {
+      Meas m = ma[0];
+      m.value += ma[1].value;
       m.value /= 2;
       return m;
     }
-
+    MeasArray _result(ma);
     std::sort(_result.begin(), _result.end(), meas_value_compare_less());
     auto perc_float = percentile * 0.01;
     auto index = (size_t)(perc_float * _result.size());
     return _result.at(index);
   }
-
-protected:
-  mutable MeasArray _result;
-};
+}; // namespace statistic
 
 using Median = Percentile<50>;
 using Percentile90 = Percentile<90>;

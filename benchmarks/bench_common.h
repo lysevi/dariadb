@@ -58,14 +58,14 @@ struct BenchmarkSummaryInfo {
     const std::string nameMedian = "median";
     const std::string nameP90 = "percentile";
     const std::string nameSigma = "sigma";
-    size_t nameWidth = nameName.size(); 
+    size_t nameWidth = nameName.size();
     size_t minWidth = nameMin.size();
     size_t maxWidth = nameMax.size();
     size_t avWidth = nameAv.size();
     size_t medWidth = nameMedian.size();
     size_t p90Width = nameP90.size();
     size_t sigmaWidth = nameSigma.size();
-    
+
     auto align_base = right;
     for (auto sm : metrics) {
       nameWidth = std::max(nameWidth, sm.name.size());
@@ -132,10 +132,14 @@ struct BenchmarkSummaryInfo {
 
   SpeedMetric metrics(const std::string &name, const std::list<double> &values_list) {
     std::vector<double> values(values_list.begin(), values_list.end());
+    std::vector<dariadb::Meas> meases;
+    meases.reserve(values.size());
+
     dariadb::statistic::Average av("average");
     dariadb::statistic::Median md("median");
     dariadb::statistic::Percentile90 p90("p90");
     dariadb::statistic::StandartDeviation sigma("sigma");
+
     SpeedMetric result;
     result.name = name;
     result.min = dariadb::MAX_VALUE;
@@ -144,18 +148,15 @@ struct BenchmarkSummaryInfo {
     for (auto v : values) {
       dariadb::Meas m;
       m.value = v;
-      av.apply(m);
-      md.apply(m);
-      p90.apply(m);
-      sigma.apply(m);
+      meases.push_back(m);
       result.min = std::min(result.min, v);
       result.max = std::max(result.max, v);
     }
 
-    result.average = av.result().value;
-    result.median = md.result().value;
-    result.p90 = p90.result().value;
-    result.sigma = sigma.result().value;
+    result.average = av.apply(meases).value;
+    result.median = md.apply(meases).value;
+    result.p90 = p90.apply(meases).value;
+    result.sigma = sigma.apply(meases).value;
     return result;
   }
 };

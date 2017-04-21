@@ -4,34 +4,30 @@
 using namespace dariadb;
 using namespace dariadb::statistic;
 
-Average::Average(const std::string &s) : IFunction(s), _result(), _count() {}
+Average::Average(const std::string &s) : IFunction(s) {}
 
-void Average::apply(const Meas &ma) {
-  _result.id = ma.id;
-  _result.value += ma.value;
-  _count++;
-}
-
-Meas Average::result() const {
-  if (_count == 0) {
+Meas Average::apply(const MeasArray &ma) {
+  Meas result;
+  size_t count = 0;
+  for (auto m : ma) {
+    result.id = m.id;
+    result.value += m.value;
+    count++;
+  }
+  if (count == 0) {
     return Meas();
   }
-  Meas m = _result;
-  m.value = m.value / _count;
+  Meas m = result;
+  m.value = m.value / count;
   return m;
 }
 
 StandartDeviation::StandartDeviation(const std::string &s) : IFunction(s) {}
 
-void StandartDeviation::apply(const Meas &m) {
-  ma.push_back(m);
-}
-
-Meas StandartDeviation::result() const {
+Meas StandartDeviation::apply(const MeasArray &ma) {
   if (ma.empty()) {
     return Meas();
   }
-
   auto collection_size = ma.size();
 
   Value average_value = Value();

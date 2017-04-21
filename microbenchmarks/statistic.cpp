@@ -47,8 +47,7 @@ BENCHMARK_DEFINE_F(StatisticFunction, Average)(benchmark::State &state) {
   while (state.KeepRunning()) {
     auto av = FunctionFactory::make_one("average");
     for (const auto &m : ma) {
-      av->apply(m);
-      benchmark::DoNotOptimize(av->result());
+      benchmark::DoNotOptimize(av->apply(ma));
     }
   }
 }
@@ -60,10 +59,9 @@ BENCHMARK_REGISTER_F(StatisticFunction, Average)
 
 BENCHMARK_DEFINE_F(StatisticFunction, Percentile)(benchmark::State &state) {
   while (state.KeepRunning()) {
-    auto media = FunctionFactory::make_one("median");
+    auto median = FunctionFactory::make_one("median");
     for (const auto &m : ma) {
-      media->apply(m);
-      benchmark::DoNotOptimize(media->result());
+		benchmark::DoNotOptimize(median->apply(ma));
     }
   }
 }
@@ -77,8 +75,7 @@ BENCHMARK_DEFINE_F(StatisticFunction, Sigma)(benchmark::State &state) {
   while (state.KeepRunning()) {
     auto sigma = FunctionFactory::make_one("sigma");
     for (const auto &m : ma) {
-      sigma->apply(m);
-      benchmark::DoNotOptimize(sigma->result());
+		benchmark::DoNotOptimize(sigma->apply(ma));
     }
   }
 }

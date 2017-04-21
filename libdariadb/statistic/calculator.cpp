@@ -56,20 +56,14 @@ MeasArray Calculator::apply(const Id id, Time from, Time to, Flag flag,
       logger_fatal("unknow function '", functions[i], "'");
     }
   }
-  for (auto m : ma) {
-    for (auto f : all_functions) {
-      if (f != nullptr) {
-        f->apply(m);
-      }
-    }
-  }
+
   MeasArray result;
   result.reserve(functions.size());
   for (auto f : all_functions) {
     Meas m;
     m.id = id;
     if (f != nullptr) {
-      m.value = f->result().value;
+      m.value = f->apply(ma).value;
     }
     result.push_back(m);
   }
