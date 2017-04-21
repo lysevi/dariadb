@@ -43,12 +43,11 @@ class StatisticCalculation : public benchmark::Fixture {
 public:
   dariadb::IEngine_Ptr storage;
 };
+
 BENCHMARK_DEFINE_F(StatisticFunction, Average)(benchmark::State &state) {
   while (state.KeepRunning()) {
     auto av = FunctionFactory::make_one("average");
-    for (const auto &m : ma) {
-      benchmark::DoNotOptimize(av->apply(ma));
-    }
+    benchmark::DoNotOptimize(av->apply(ma));
   }
 }
 BENCHMARK_REGISTER_F(StatisticFunction, Average)
@@ -60,9 +59,7 @@ BENCHMARK_REGISTER_F(StatisticFunction, Average)
 BENCHMARK_DEFINE_F(StatisticFunction, Percentile)(benchmark::State &state) {
   while (state.KeepRunning()) {
     auto median = FunctionFactory::make_one("median");
-    for (const auto &m : ma) {
-		benchmark::DoNotOptimize(median->apply(ma));
-    }
+    benchmark::DoNotOptimize(median->apply(ma));
   }
 }
 BENCHMARK_REGISTER_F(StatisticFunction, Percentile)
@@ -74,9 +71,7 @@ BENCHMARK_REGISTER_F(StatisticFunction, Percentile)
 BENCHMARK_DEFINE_F(StatisticFunction, Sigma)(benchmark::State &state) {
   while (state.KeepRunning()) {
     auto sigma = FunctionFactory::make_one("sigma");
-    for (const auto &m : ma) {
-		benchmark::DoNotOptimize(sigma->apply(ma));
-    }
+    benchmark::DoNotOptimize(sigma->apply(ma));
   }
 }
 BENCHMARK_REGISTER_F(StatisticFunction, Sigma)->Arg(10)->Arg(100)->Arg(1000)->Arg(10000);
