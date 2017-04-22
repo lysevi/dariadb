@@ -1,6 +1,5 @@
 #pragma once
 #include <libdariadb/interfaces/iengine.h>
-#include <libserver/http/query_parser.h>
 #include <string>
 
 namespace dariadb {

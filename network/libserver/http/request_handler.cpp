@@ -1,5 +1,7 @@
+#include <libdariadb/statistic/calculator.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/logger.h>
+#include <libserver/http/query_parser.h>
 #include <libserver/http/reply.h>
 #include <libserver/http/request.h>
 #include <libserver/http/request_handler.h>
@@ -26,8 +28,8 @@ void interval_query(dariadb::scheme::IScheme_Ptr scheme,
                     reply &rep) {
 
   dariadb::logger("POST query 'readInterval' from:",
-                  dariadb::timeutil::to_string(q.interval_query->from),
-                  " to:", dariadb::timeutil::to_string(q.interval_query->to));
+                  dariadb::timeutil::to_string(q.interval_query->from), " to:",
+                  dariadb::timeutil::to_string(q.interval_query->to));
 
   auto values = storage_engine->readInterval(*q.interval_query.get());
   rep = reply::stock_reply(meases2string(scheme, values), reply::status_type::ok);
@@ -54,9 +56,9 @@ void stat_query(dariadb::scheme::IScheme_Ptr scheme, dariadb::IEngine_Ptr storag
   auto id = q.stat_query->ids[0];
   auto from = q.stat_query->from;
   auto to = q.stat_query->to;
-  dariadb::logger("POST query 'stat' - id:", id,
-                  " from:", dariadb::timeutil::to_string(from),
-                  " to:", dariadb::timeutil::to_string(to));
+  dariadb::logger("POST query 'stat' - id:", id, " from:",
+                  dariadb::timeutil::to_string(from), " to:",
+                  dariadb::timeutil::to_string(to));
 
   auto stat = storage_engine->stat(id, from, to);
   rep = reply::stock_reply(stat2string(scheme, id, stat), reply::status_type::ok);
@@ -72,6 +74,25 @@ void scheme_change_query(dariadb::scheme::IScheme_Ptr scheme, const http_query &
   }
   rep = reply::stock_reply(newScheme2string(new_names), reply::status_type::ok);
 }
+
+void statistic_calculation_query(dariadb::scheme::IScheme_Ptr scheme,
+                                 dariadb::IEngine_Ptr storage_engine, const http_query &q,
+                                 reply &rep) {
+
+  auto interval = q.statistic_calc->interval;
+  dariadb::logger("POST query 'statistic calculation' from:",
+                  dariadb::timeutil::to_string(interval.from), " to:",
+                  dariadb::timeutil::to_string(interval.to));
+
+  dariadb::statistic::Calculator calc(storage_engine);
+  auto result = calc.apply(interval.ids[0], interval.from, interval.to, interval.flag,
+                           q.statistic_calc->functions);
+
+  rep = reply::stock_reply(
+      statCalculationResult2string(scheme, result, q.statistic_calc->functions),
+      reply::status_type::ok);
+}
+
 } // namespace requers_handler_inner
 
 void request_handler::handle_request(const request &req, reply &rep) {
@@ -115,6 +136,11 @@ void request_handler::handle_request(const request &req, reply &rep) {
         requers_handler_inner::scheme_change_query(scheme, parsed_query, rep);
         return;
       }
+      case http_query_type::statistic: {
+        requers_handler_inner::statistic_calculation_query(scheme, _storage_engine,
+                                                           parsed_query, rep);
+        return;
+      }
       default: {
         logger_fatal("http: bad query - ", req.query);
         rep = reply::stock_reply("unknow query " + req.query,
@@ -141,6 +167,12 @@ void request_handler::handle_request(const request &req, reply &rep) {
                                  reply::status_type::service_unavailable);
         return;
       }
+    }
+    if (req.uri == "/statfuncs") {
+      auto available_funcstions = dariadb::statistic::FunctionFactory::functions();
+      auto answer = available_functions2string(available_funcstions);
+      rep = reply::stock_reply(answer, reply::status_type::ok);
+      return;
     }
   }
   rep = reply::stock_reply("unknow query: " + req.query, reply::status_type::no_content);

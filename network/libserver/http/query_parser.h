@@ -12,10 +12,25 @@ namespace dariadb {
 namespace net {
 namespace http {
 
-enum class http_query_type { unknow, append, readInterval, readTimepoint, stat, scheme };
+enum class http_query_type {
+  unknow,
+  append,
+  readInterval,
+  readTimepoint,
+  stat,
+  scheme,
+  statistic
+};
 
 struct scheme_change_query {
   std::vector<std::string> new_params;
+};
+
+struct statistic_calculation {
+  QueryInterval interval;
+  std::vector<std::string> functions;
+  statistic_calculation(const QueryInterval &qi, const std::vector<std::string> &funcs)
+      : interval(qi), functions(funcs) {}
 };
 
 struct http_query {
@@ -25,6 +40,7 @@ struct http_query {
   std::shared_ptr<QueryTimePoint> timepoint_query;
   std::shared_ptr<QueryInterval> stat_query;
   std::shared_ptr<scheme_change_query> scheme_query;
+  std::shared_ptr<statistic_calculation> statistic_calc;
 };
 
 SRV_EXPORT http_query parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
@@ -38,8 +54,13 @@ SRV_EXPORT std::string stat2string(const dariadb::scheme::IScheme_Ptr &scheme,
                                    dariadb::Id id, const dariadb::Statistic &s);
 
 using Name2IdPair = std::pair<std::string, dariadb::Id>;
+SRV_EXPORT std::string newScheme2string(const std::list<Name2IdPair> &new_names);
+
+SRV_EXPORT std::string available_functions2string(const std::vector<std::string> &funcs);
 SRV_EXPORT std::string
-newScheme2string(const std::list<Name2IdPair> &new_names);
+statCalculationResult2string(const dariadb::scheme::IScheme_Ptr &scheme,
+                             const dariadb::MeasArray &ma,
+                             const std::vector<std::string> &funcs);
 } // namespace http
 } // namespace net
 } // namespace dariadb

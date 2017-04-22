@@ -137,3 +137,61 @@ answer example:
  }
 }
 ```
+
+# Query available statistic functions
+
+send GET query to URL "http://dariadb_host:port/statfuncs". Result example:
+
+```json
+{
+ "functions": [
+  "average",
+  "median",
+  "percentile90",
+  "percentile99",
+  "sigma"
+ ]
+}
+```
+
+# Query statistic calculation
+
+```json
+{
+ "type": "statistic",
+ "flag": 0,
+ "from": 0,
+ "id": "memory",
+ "to": 18446744073709551615,
+ "functions": [
+  "average",
+  "median",
+  "percentile90"
+ ]
+}
+
+```
+where from,to,flag, id - query interval params, funcstions - statistical functions to calculation. Result example:
+
+```json
+{
+ "measurement": "memory",
+ "average": {
+  "F": 0,
+  "T": 0,
+  "V": 777.0
+ },
+ "median": {
+  "F": 0,
+  "T": 0,
+  "V": 700.0
+ },
+ "percentile90": {
+  "F": 0,
+  "T": 0,
+  "V": 700.0
+ }
+}
+
+```
+

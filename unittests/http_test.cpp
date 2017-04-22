@@ -393,6 +393,29 @@ TEST(Http, Test) {
     EXPECT_TRUE(post_result.answer.find("single_value") != std::string::npos);
   }
 
+  {
+     auto statistic_functions_list_res = GET(test_service, http_port, "/statfuncs");
+     EXPECT_TRUE(statistic_functions_list_res.answer.find("functions") != std::string::npos);
+     EXPECT_TRUE(statistic_functions_list_res.answer.find("percentile90") != std::string::npos);
+  }
+
+  {// statistic calculator
+    json stat_js;
+    stat_js["type"] = "statistic";
+    stat_js["id"] = "single_value";
+    stat_js["from"] = dariadb::MIN_TIME;
+    stat_js["to"] = dariadb::MAX_TIME;
+    stat_js["flag"] = dariadb::Flag();
+    stat_js["functions"] = {"average","median", "percentile90"};
+
+    query_str = stat_js.dump(1);
+    post_result = post(test_service, http_port, query_str);
+    EXPECT_EQ(post_result.code, 200);
+    EXPECT_TRUE(post_result.answer.find("single_value") != std::string::npos);
+    EXPECT_TRUE(post_result.answer.find("average") != std::string::npos);
+    EXPECT_TRUE(post_result.answer.find("median") != std::string::npos);
+    EXPECT_TRUE(post_result.answer.find("percentile90") != std::string::npos);
+  }
   // unknow query
   {
     json stat_js;
