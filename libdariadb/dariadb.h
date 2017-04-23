@@ -9,6 +9,7 @@
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
+#include <libdariadb/flags.h>
 
 #include <string>
 

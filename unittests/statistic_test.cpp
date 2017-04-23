@@ -99,7 +99,6 @@ TEST(Statistic, Sigma) {
   ma.push_back(m);
   m.value = 14.0;
   ma.push_back(m);
-  
 
   auto calulated = sigma->apply(ma).value;
   EXPECT_DOUBLE_EQ(calulated, 7.0);
@@ -125,6 +124,7 @@ TEST(Statistic, Calculator) {
     auto m = result[i];
     EXPECT_EQ(m.id, dariadb::Id(10));
     EXPECT_TRUE(m.value != dariadb::Value());
+    EXPECT_TRUE(m.inFlag((dariadb::FLAGS::_STATS)));
   }
 
   EXPECT_EQ(result.back().value, 0);
