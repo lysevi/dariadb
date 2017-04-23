@@ -48,7 +48,7 @@ int main(int, char **) {
   auto all_functions = dariadb::statistic::FunctionFactory::functions();
   std::cout << "available functions: " << std::endl;
   for (auto fname : all_functions) {
-	  std::cout << " " << fname << std::endl;
+    std::cout << " " << fname << std::endl;
   }
 
   // we can get param id`s from scheme file
@@ -63,8 +63,8 @@ int main(int, char **) {
 
   { // statistical functions
     dariadb::statistic::Calculator calc(storage);
-    auto result = calc.apply(all_id.front(), dariadb::MIN_TIME, dariadb::MAX_TIME,
-                             dariadb::Flag(), all_functions);
+    auto result =
+        calc.apply(all_id.front(), start_time, cur_time, dariadb::Flag(), all_functions);
 
     for (size_t i = 0; i < result.size(); ++i) {
       auto measurement = result[i];
