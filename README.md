@@ -40,6 +40,12 @@
   - value min/max
   - measurement count
   - values sum
+* Statistical functions: 
+  - average
+  - median
+  - sigma(standard deviation)
+  - percentile90
+  - percentile99
 
 # Usage example
 - See folder "examples"

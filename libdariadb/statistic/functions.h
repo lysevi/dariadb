@@ -35,6 +35,7 @@ public:
       Meas m = ma[0];
       m.value += ma[1].value;
       m.value /= 2;
+      m.time = std::max(ma[0].time, ma[1].time);
       return m;
     }
     MeasArray _result(ma);

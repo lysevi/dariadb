@@ -61,11 +61,11 @@ MeasArray Calculator::apply(const Id id, Time from, Time to, Flag flag,
   result.reserve(functions.size());
   for (auto f : all_functions) {
     Meas m;
-    m.id = id;
-	m.flag = m.flag | FLAGS::_STATS;
     if (f != nullptr) {
-      m.value = f->apply(ma).value;
+      m = f->apply(ma);
     }
+    m.id = id;
+    m.flag = m.flag | FLAGS::_STATS;
     result.push_back(m);
   }
   return result;

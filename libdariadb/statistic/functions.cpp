@@ -12,6 +12,7 @@ Meas Average::apply(const MeasArray &ma) {
   for (auto m : ma) {
     result.id = m.id;
     result.value += m.value;
+    result.time = std::max(result.time, m.time);
     count++;
   }
   if (count == 0) {
@@ -31,8 +32,10 @@ Meas StandartDeviation::apply(const MeasArray &ma) {
   auto collection_size = ma.size();
 
   Value average_value = Value();
+  Time maxtime = MIN_TIME;
   for (auto m : ma) {
     average_value += m.value;
+    maxtime = std::max(maxtime, m.time);
   }
   average_value = average_value / collection_size;
 
@@ -42,5 +45,6 @@ Meas StandartDeviation::apply(const MeasArray &ma) {
   }
   Meas result;
   result.value = std::sqrt(sum_value / collection_size);
+  result.time = maxtime;
   return result;
 }

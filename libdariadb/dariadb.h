@@ -2,6 +2,7 @@
 
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/engines/shard.h>
+#include <libdariadb/flags.h>
 #include <libdariadb/interfaces/iengine.h>
 #include <libdariadb/scheme/scheme.h>
 #include <libdariadb/st_exports.h>
@@ -9,7 +10,6 @@
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
-#include <libdariadb/flags.h>
 
 #include <string>
 

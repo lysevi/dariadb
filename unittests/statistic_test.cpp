@@ -52,12 +52,16 @@ TEST(Statistic, Median) {
   EXPECT_EQ(median->apply(ma).value, dariadb::Value(2));
 
   m.value = 6;
+  m.time = 999;
   ma.push_back(m);
   EXPECT_EQ(median->apply(ma).value, dariadb::Value(4));
+  EXPECT_EQ(median->apply(ma).time, m.time);
 
   m.value = 3;
+  m.time = 777;
   ma.push_back(m);
   EXPECT_EQ(median->apply(ma).value, dariadb::Value(3));
+  EXPECT_EQ(median->apply(ma).time, m.time);
 
   m.value = 0;
   ma.push_back(m);
@@ -98,10 +102,12 @@ TEST(Statistic, Sigma) {
   dariadb::MeasArray ma;
   ma.push_back(m);
   m.value = 14.0;
+  m.time = 999;
   ma.push_back(m);
 
-  auto calulated = sigma->apply(ma).value;
-  EXPECT_DOUBLE_EQ(calulated, 7.0);
+  auto calulated = sigma->apply(ma);
+  EXPECT_DOUBLE_EQ(calulated.value, 7.0);
+  EXPECT_EQ(calulated.time, dariadb::Time(999));
 }
 
 TEST(Statistic, Calculator) {

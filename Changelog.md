@@ -1,6 +1,7 @@
 v0.4.1
 =====
 - google.test for unittests.
+- statistical functions: average, median, sigma(standard deviation), percentile90, percentile99
 
 v0.4.0
 =====
