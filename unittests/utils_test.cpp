@@ -1,4 +1,3 @@
-#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/bitoperations.h>
@@ -11,40 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include <chrono>
-#include <ctime>
 #include <thread>
-
-TEST(Utils, TimeToString) {
-  auto ct = dariadb::timeutil::current_time();
-  EXPECT_TRUE(ct != dariadb::Time(0));
-  auto ct_str = dariadb::timeutil::to_string(ct);
-  EXPECT_TRUE(ct_str.size() != 0);
-}
-
-TEST(Utils, TimeRound) {
-  auto ct = dariadb::timeutil::current_time();
-  {
-    auto rounded = dariadb::timeutil::round_to_seconds(ct);
-    auto rounded_d = dariadb::timeutil::to_datetime(rounded);
-    EXPECT_EQ(rounded_d.millisecond, uint16_t(0));
-  }
-
-  {
-    auto rounded = dariadb::timeutil::round_to_minutes(ct);
-    auto rounded_d = dariadb::timeutil::to_datetime(rounded);
-    EXPECT_EQ(rounded_d.millisecond, uint16_t(0));
-    EXPECT_EQ(rounded_d.second, uint16_t(0));
-  }
-
-  {
-    auto rounded = dariadb::timeutil::round_to_hours(ct);
-    auto rounded_d = dariadb::timeutil::to_datetime(rounded);
-    EXPECT_EQ(rounded_d.millisecond, uint16_t(0));
-    EXPECT_EQ(rounded_d.second, uint16_t(0));
-    EXPECT_EQ(rounded_d.minute, uint16_t(0));
-  }
-}
 
 TEST(Utils, CountZero) {
   EXPECT_EQ(dariadb::utils::clz(67553994410557440), 8);

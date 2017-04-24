@@ -116,5 +116,24 @@ Time round_to_minutes(const Time t) {
 Time round_to_hours(const Time t) {
   return t - (t % (3600 * 1000));
 }
+
+Time intervalName2time(const std::string &interval) {
+  const Time minute = 1000 * 60;
+  const Time hour = minute * 60;
+  const Time day = hour * 24;
+  if (interval == "halfhour") {
+    return minute * 30;
+  }
+  if (interval == "hour") {
+    return hour;
+  }
+  if (interval == "day") {
+    return day;
+  }
+  if (interval == "month31") {
+	  return day*31;
+  }
+  return 0;
 }
-}
+} // namespace timeutil
+} // namespace dariadb
