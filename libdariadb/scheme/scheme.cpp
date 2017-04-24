@@ -26,6 +26,7 @@ using namespace dariadb::scheme;
 using json = nlohmann::json;
 
 struct Scheme::Private : public IScheme {
+  using Param2Description = std::unordered_map<std::string, MeasurementDescription>;
   Private(const storage::Settings_ptr s) : _settings(s) {
     _next_id = 0;
     load();
@@ -81,20 +82,25 @@ struct Scheme::Private : public IScheme {
       }
     }
 
-    auto fres = _params.find(param);
-    if (fres != _params.end()) {
-      return fres->second.id;
+    auto interval_fres = _params.find(md.interval);
+    if (interval_fres != _params.end()) {
+      auto fres = interval_fres->second.find(md.name);
+      if (fres != interval_fres->second.end()) {
+        return fres->second.id;
+      }
     }
     md.id = _next_id++;
-    this->_params[param] = md;
+    this->_params[md.interval][param] = md;
     return md.id;
   }
 
   DescriptionMap ls() override {
     std::lock_guard<utils::async::Locker> lg(_locker);
     DescriptionMap result;
-    for (auto kv : _params) {
-      result[kv.second.id] = kv.second;
+    for (auto &inter : _params) {
+      for (const auto &kv : inter.second) {
+        result[kv.second.id] = kv.second;
+      }
     }
     return result;
   }
@@ -102,20 +108,42 @@ struct Scheme::Private : public IScheme {
   DescriptionMap lsInterval(const std::string &interval) {
     std::lock_guard<utils::async::Locker> lg(_locker);
     DescriptionMap result;
-    for (auto kv : _params) {
-      if (kv.second.interval == interval) {
+    auto iter = _params.find(interval);
+    if (iter != _params.end()) {
+      for (auto kv : iter->second) {
         result[kv.second.id] = kv.second;
       }
     }
     return result;
   }
 
-  DescriptionMap linkedForValue(const MeasurementDescription&param) {
-	  std::lock_guard<utils::async::Locker> lg(_locker);
-	  DescriptionMap result;
-	  return result;
+  DescriptionMap linkedForValue(const MeasurementDescription &param) {
+    std::lock_guard<utils::async::Locker> lg(_locker);
+    DescriptionMap result;
+    std::vector<std::string> all_intervals;
+    for (auto &kv : _params) {
+      all_intervals.push_back(kv.first);
+    }
+    std::sort(all_intervals.begin(), all_intervals.end(),
+              [](auto &r, auto &l) { return timeutil::intervalsLessCmp(r, l); });
+
+	auto source_prefix = param.prefix();
+    for (size_t i = 0; i < (all_intervals.size() - 1); ++i) {
+      if (all_intervals[i] == param.interval) {
+        auto target_inteval = all_intervals[i + 1];
+        auto all_from_target = _params[target_inteval];
+        for (auto kv : all_from_target) {
+			auto candidate_prefix = kv.second.prefix();
+			if (candidate_prefix.compare(0, source_prefix.size(), source_prefix)==0) {
+				auto new_value = std::make_pair(kv.second.id, kv.second);
+				result.insert(new_value);
+			}
+        }
+      }
+    }
+    return result;
   }
-  
+
   void save() {
     if (_settings->is_memory_only_mode) {
       return;
@@ -124,12 +152,14 @@ struct Scheme::Private : public IScheme {
     logger("scheme: save to ", file);
     json js;
 
-    for (auto &o : _params) {
-      json reccord = {{scheme_key_name, o.first},
-                      {scheme_key_id, o.second.id},
-                      {scheme_key_interval, o.second.interval},
-                      {scheme_key_afunction, o.second.aggregation_func}};
-      js[scheme_key_params].push_back(reccord);
+    for (const auto &interval : _params) {
+      for (auto &o : interval.second) {
+        json reccord = {{scheme_key_name, o.first},
+                        {scheme_key_id, o.second.id},
+                        {scheme_key_interval, o.second.interval},
+                        {scheme_key_afunction, o.second.aggregation_func}};
+        js[scheme_key_params].push_back(reccord);
+      }
     }
 
     std::fstream fs;
@@ -164,8 +194,8 @@ struct Scheme::Private : public IScheme {
       auto param_interval = kv[scheme_key_interval].get<std::string>();
       auto param_function = kv[scheme_key_afunction].get<std::string>();
 
-      _params[param_name] =
-          MeasurementDescription{param_name, param_id, param_interval, param_function};
+      MeasurementDescription descr{param_name, param_id, param_interval, param_function};
+      _params[param_interval].insert(std::make_pair(param_name, descr));
       max_id = std::max(max_id, param_id);
     }
     _next_id = max_id + 1;
@@ -174,8 +204,8 @@ struct Scheme::Private : public IScheme {
 
   storage::Settings_ptr _settings;
 
-  dariadb::utils::async::Locker _locker;
-  std::unordered_map<std::string, MeasurementDescription> _params;
+  mutable dariadb::utils::async::Locker _locker;
+  std::unordered_map<std::string, Param2Description> _params;
   Id _next_id;
 };
 
@@ -197,8 +227,8 @@ DescriptionMap Scheme::lsInterval(const std::string &interval) {
   return _impl->lsInterval(interval);
 }
 
-DescriptionMap Scheme::linkedForValue(const MeasurementDescription&param) {
-	return _impl->linkedForValue(param);
+DescriptionMap Scheme::linkedForValue(const MeasurementDescription &param) {
+  return _impl->linkedForValue(param);
 }
 void Scheme::save() {
   _impl->save();
