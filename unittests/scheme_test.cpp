@@ -86,10 +86,10 @@ TEST(Scheme, Intervals) {
     auto data_scheme = dariadb::scheme::Scheme::create(settings);
 
     raw_id = data_scheme->addParam("memory.raw");
-	raw_cpu = data_scheme->addParam("cpu.raw");
+    raw_cpu = data_scheme->addParam("cpu.raw");
     hour_median_id = data_scheme->addParam("memory.median.hour");
     hour_sigma_id = data_scheme->addParam("memory.sigma.hour");
-	day_cpu = data_scheme->addParam("cpu.sigma.hour");
+    day_cpu = data_scheme->addParam("cpu.sigma.hour");
     day_median_id = data_scheme->addParam("memory.median.day");
     data_scheme->save();
   }
@@ -128,9 +128,12 @@ TEST(Scheme, Intervals) {
 
     auto linkedHours = data_scheme->linkedForValue(all_values[raw_id]);
     EXPECT_EQ(linkedHours.size(), size_t(2));
-	
-	linkedHours = data_scheme->linkedForValue(all_values[raw_cpu]);
-	EXPECT_EQ(linkedHours.size(), size_t(1));
+
+    linkedHours = data_scheme->linkedForValue(all_values[raw_cpu]);
+    EXPECT_EQ(linkedHours.size(), size_t(1));
+
+    linkedHours = data_scheme->linkedForValue(all_values[day_median_id]);
+    EXPECT_EQ(linkedHours.size(), size_t(0));
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
