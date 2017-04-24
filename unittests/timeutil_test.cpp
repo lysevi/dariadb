@@ -33,31 +33,47 @@ TEST(Time, TimeRound) {
   }
 }
 
-TEST(Time, Interval2String) {
+TEST(Time, IntervalFromString) {
   {
     auto hh = dariadb::timeutil::intervalName2time("halfhour");
     auto dt = dariadb::timeutil::to_datetime(hh);
-	EXPECT_EQ(dt.minute, uint8_t(30));
+    EXPECT_EQ(dt.minute, uint8_t(30));
   }
   {
-	  auto hh = dariadb::timeutil::intervalName2time("hour");
-	  auto dt = dariadb::timeutil::to_datetime(hh);
-	  EXPECT_EQ(dt.minute, uint8_t(0));
-	  EXPECT_EQ(dt.hour, uint8_t(1));
+    auto hh = dariadb::timeutil::intervalName2time("hour");
+    auto dt = dariadb::timeutil::to_datetime(hh);
+    EXPECT_EQ(dt.minute, uint8_t(0));
+    EXPECT_EQ(dt.hour, uint8_t(1));
   }
   {
-	  auto hh = dariadb::timeutil::intervalName2time("day");
-	  auto dt = dariadb::timeutil::to_datetime(hh);
-	  EXPECT_EQ(dt.minute, uint8_t(0));
-	  EXPECT_EQ(dt.hour, uint8_t(0));
-	  EXPECT_EQ(dt.day, uint8_t(2)); //boost datetime count of full days.
+    auto hh = dariadb::timeutil::intervalName2time("day");
+    auto dt = dariadb::timeutil::to_datetime(hh);
+    EXPECT_EQ(dt.minute, uint8_t(0));
+    EXPECT_EQ(dt.hour, uint8_t(0));
+    EXPECT_EQ(dt.day, uint8_t(2)); // boost datetime count of full days.
   }
   {
-	  auto hh = dariadb::timeutil::intervalName2time("month31");
-	  auto dt = dariadb::timeutil::to_datetime(hh);
-	  EXPECT_EQ(dt.minute, uint8_t(0));
-	  EXPECT_EQ(dt.hour, uint8_t(0));
-	  EXPECT_EQ(dt.day, uint8_t(1));
-	  EXPECT_EQ(dt.month, uint8_t(2));
+    auto hh = dariadb::timeutil::intervalName2time("week");
+    auto dt = dariadb::timeutil::to_datetime(hh);
+    EXPECT_EQ(dt.minute, uint8_t(0));
+    EXPECT_EQ(dt.hour, uint8_t(0));
+    EXPECT_EQ(dt.day, uint8_t(8));
   }
+  {
+    auto hh = dariadb::timeutil::intervalName2time("month31");
+    auto dt = dariadb::timeutil::to_datetime(hh);
+    EXPECT_EQ(dt.minute, uint8_t(0));
+    EXPECT_EQ(dt.hour, uint8_t(0));
+    EXPECT_EQ(dt.day, uint8_t(1));
+    EXPECT_EQ(dt.month, uint8_t(2));
+  }
+}
+
+TEST(Time, IntervalCompare) {
+  using namespace dariadb::timeutil;
+  EXPECT_TRUE(intervalsLessCmp("halfhour", "hour"));
+  EXPECT_FALSE(intervalsLessCmp("halfhour", "halfhour"));
+  EXPECT_TRUE(intervalsLessCmp("hour", "day"));
+  EXPECT_TRUE(intervalsLessCmp("day", "week"));
+  EXPECT_TRUE(intervalsLessCmp("week", "month31"));
 }
