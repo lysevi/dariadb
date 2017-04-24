@@ -1,8 +1,8 @@
 #include <libdariadb/utils/logger.h>
+#include <cstring>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <list>
-
 using ::testing::EmptyTestEventListener;
 using ::testing::InitGoogleTest;
 using ::testing::Test;
@@ -20,6 +20,7 @@ using ::testing::UnitTest;
 
 class UnitTestLogger : public dariadb::utils::ILogger {
 public:
+  static bool verbose;
   UnitTestLogger() {}
   ~UnitTestLogger() {}
   void message(dariadb::utils::LOG_MESSAGE_KIND kind, const std::string &msg) {
@@ -35,7 +36,9 @@ public:
       ss << "[dbg] " << msg << std::endl;
       break;
     }
-	//std::cout << ss.str();
+    if (verbose) {
+      std::cout << ss.str();
+    }
     _messages.push_back(ss.str());
   }
 
@@ -46,8 +49,11 @@ public:
   }
 
 private:
+  bool _verbose;
   std::list<std::string> _messages;
 };
+
+bool UnitTestLogger::verbose = false;
 
 class LoggerControl : public EmptyTestEventListener {
 private:
@@ -88,7 +94,7 @@ private:
 };
 #endif
 
-//TEST(Logger, FailedTest) {
+// TEST(Logger, FailedTest) {
 //  dariadb::logger_info(1);
 //  dariadb::logger_info(2);
 //  dariadb::logger_info(3);
@@ -99,6 +105,13 @@ private:
 //}
 
 int main(int argc, char **argv) {
+  for (int i = 0; i < argc; ++i) {
+    if (std::strcmp(argv[i], "--verbose") == 0) {
+      UnitTestLogger::verbose = true;
+      continue;
+    }
+  }
+
   ::testing::InitGoogleTest(&argc, argv);
   TestEventListeners &listeners = UnitTest::GetInstance()->listeners();
 #ifdef ENABLE_MEMORY_LEAK_DETECTION
