@@ -1,5 +1,7 @@
 #include <libdariadb/scheme/helpers.h>
 #include <libdariadb/scheme/scheme.h>
+#include <libdariadb/statistic/calculator.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
@@ -8,13 +10,15 @@
 
 #include <extern/json/src/json.hpp>
 
-#include <boost/regex.hpp>
+#include <regex>
 
 const std::string SCHEME_FILE_NAME = "scheme.js";
 
-const std::string key_params = "params";
-const std::string key_name = "name";
-const std::string key_id = "id";
+const std::string scheme_key_params = "params";
+const std::string scheme_key_name = "name";
+const std::string scheme_key_id = "id";
+const std::string scheme_key_interval = "interval";
+const std::string scheme_key_afunction = "aggregation_func";
 
 using namespace dariadb;
 using namespace dariadb::scheme;
@@ -34,16 +38,56 @@ struct Scheme::Private : public IScheme {
     return utils::fs::append_path(_settings->storage_path.value(), SCHEME_FILE_NAME);
   }
 
+  bool is_interval(const std::string &s) {
+    if (s == "raw") {
+      return true;
+    }
+    auto predefined = timeutil::predefinedIntervals();
+    for (auto v : predefined) {
+      if (s == v) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool is_aggregate_fn(const std::string &s) {
+    auto all_functions = dariadb::statistic::FunctionFactory::functions();
+    for (auto fn : all_functions) {
+      if (fn == s) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Id addParam(const std::string &param) override {
     std::lock_guard<utils::async::Locker> lg(_locker);
+
+    auto splited = utils::strings::split(param, '.');
+    MeasurementDescription md;
+    md.name = param;
+
+    if (splited.size() > 1) {
+      if (is_interval(splited.back())) {
+        md.interval = splited.back();
+      }
+      if (splited.size() >= 3) { // may contain aggregate functions name
+        auto rbegin = splited.rbegin();
+        rbegin++;
+        if (is_aggregate_fn(*rbegin)) {
+          md.aggregation_func = *rbegin;
+        }
+      }
+    }
 
     auto fres = _params.find(param);
     if (fres != _params.end()) {
       return fres->second.id;
     }
-    auto id = _next_id++;
-    this->_params[param] = MeasurementDescription{param, id};
-    return id;
+    md.id = _next_id++;
+    this->_params[param] = md;
+    return md.id;
   }
 
   DescriptionMap ls() override {
@@ -64,8 +108,11 @@ struct Scheme::Private : public IScheme {
     json js;
 
     for (auto &o : _params) {
-      json reccord = {{key_name, o.first}, {key_id, o.second.id}};
-      js[key_params].push_back(reccord);
+      json reccord = {{scheme_key_name, o.first},
+                      {scheme_key_id, o.second.id},
+                      {scheme_key_interval, o.second.interval},
+                      {scheme_key_afunction, o.second.aggregation_func}};
+      js[scheme_key_params].push_back(reccord);
     }
 
     std::fstream fs;
@@ -91,13 +138,17 @@ struct Scheme::Private : public IScheme {
     }
     std::string content = dariadb::utils::fs::read_file(file);
     json js = json::parse(content);
-    auto params_array = js[key_params];
+    auto params_array = js[scheme_key_params];
     Id max_id = 0;
-    for (auto kv : params_array) {
-      auto param_name = kv[key_name].get<std::string>();
-      auto param_id = kv[key_id].get<Id>();
 
-      _params[param_name] = MeasurementDescription{param_name, param_id};
+    for (auto kv : params_array) {
+      auto param_name = kv[scheme_key_name].get<std::string>();
+      auto param_id = kv[scheme_key_id].get<Id>();
+      auto param_interval = kv[scheme_key_interval].get<std::string>();
+      auto param_function = kv[scheme_key_afunction].get<std::string>();
+
+      _params[param_name] =
+          MeasurementDescription{param_name, param_id, param_interval, param_function};
       max_id = std::max(max_id, param_id);
     }
     _next_id = max_id + 1;

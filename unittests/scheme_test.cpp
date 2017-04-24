@@ -74,3 +74,50 @@ TEST(Scheme, FileTest) {
     dariadb::utils::fs::rm(storage_path);
   }
 }
+
+TEST(Scheme, Intervals) {
+  const std::string storage_path = "schemeStorage";
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+  dariadb::Id raw_id, hour_median_id, hour_sigma_id, day_median_id;
+  {
+    auto settings = dariadb::storage::Settings::create(storage_path);
+    auto data_scheme = dariadb::scheme::Scheme::create(settings);
+
+    raw_id = data_scheme->addParam("memory.raw");
+    hour_median_id = data_scheme->addParam("memory.median.hour");
+    hour_sigma_id = data_scheme->addParam("memory.sigma.hour");
+    day_median_id = data_scheme->addParam("memory.median.day");
+    data_scheme->save();
+  }
+  {
+    auto settings = dariadb::storage::Settings::create(storage_path);
+    auto data_scheme = dariadb::scheme::Scheme::create(settings);
+
+    auto all_values = data_scheme->ls();
+    
+	auto raw_id_descr = all_values[raw_id];
+    EXPECT_TRUE(raw_id_descr.aggregation_func.empty());
+    EXPECT_EQ(raw_id_descr.interval, "raw");
+
+	auto id_descr = all_values[hour_median_id];
+	EXPECT_EQ(id_descr.name, "memory.median.hour");
+	EXPECT_EQ(id_descr.aggregation_func,"median");
+	EXPECT_EQ(id_descr.interval, "hour");
+
+
+	id_descr = all_values[hour_sigma_id];
+	EXPECT_EQ(id_descr.name, "memory.sigma.hour");
+	EXPECT_EQ(id_descr.aggregation_func, "sigma");
+	EXPECT_EQ(id_descr.interval, "hour");
+
+	id_descr = all_values[day_median_id];
+	EXPECT_EQ(id_descr.name, "memory.median.day");
+	EXPECT_EQ(id_descr.aggregation_func, "median");
+	EXPECT_EQ(id_descr.interval, "day");
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+}

@@ -10,6 +10,8 @@ namespace scheme {
 struct MeasurementDescription {
   std::string name;
   Id id;
+  std::string interval;
+  std::string aggregation_func;
 };
 
 class DescriptionMap : public std::unordered_map<Id, MeasurementDescription> {

@@ -131,7 +131,7 @@ Time intervalName2time(const std::string &interval) {
     return day;
   }
   if (interval == "week") {
-	  return day*7;
+    return day * 7;
   }
   if (interval == "month31") {
     return day * 31;
@@ -143,6 +143,11 @@ bool intervalsLessCmp(const std::string &l, const std::string &r) {
   auto ltime = intervalName2time(l);
   auto rtime = intervalName2time(r);
   return ltime < rtime;
+}
+
+std::vector<std::string> predefinedIntervals() {
+  std::vector<std::string> predefined = {"halfhour", "hour", "day", "week", "month31"};
+  return predefined;
 }
 } // namespace timeutil
 } // namespace dariadb

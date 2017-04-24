@@ -61,5 +61,6 @@ interval -> "halfhour", "hour", "day", "month31", "year"
 EXPORT Time intervalName2time(const std::string&interval);
 
 EXPORT bool intervalsLessCmp(const std::string&l, const std::string&r);
+EXPORT std::vector<std::string> predefinedIntervals();
 }
 }

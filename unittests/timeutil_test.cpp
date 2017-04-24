@@ -77,3 +77,8 @@ TEST(Time, IntervalCompare) {
   EXPECT_TRUE(intervalsLessCmp("day", "week"));
   EXPECT_TRUE(intervalsLessCmp("week", "month31"));
 }
+
+TEST(Time, IntervalPredefined) {
+  using namespace dariadb::timeutil;
+  EXPECT_EQ(predefinedIntervals().size(), size_t(5));
+}
