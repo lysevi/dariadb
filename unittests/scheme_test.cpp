@@ -101,20 +101,24 @@ TEST(Scheme, Intervals) {
     auto raw_id_descr = all_values[raw_id];
     EXPECT_TRUE(raw_id_descr.aggregation_func.empty());
     EXPECT_EQ(raw_id_descr.interval, "raw");
+	EXPECT_EQ(raw_id_descr.prefix(), "memory");
 
     auto id_descr = all_values[hour_median_id];
     EXPECT_EQ(id_descr.name, "memory.median.hour");
     EXPECT_EQ(id_descr.aggregation_func, "median");
+	EXPECT_EQ(id_descr.prefix(), "memory.median");
     EXPECT_EQ(id_descr.interval, "hour");
 
     id_descr = all_values[hour_sigma_id];
     EXPECT_EQ(id_descr.name, "memory.sigma.hour");
+	EXPECT_EQ(id_descr.prefix(), "memory.sigma");
     EXPECT_EQ(id_descr.aggregation_func, "sigma");
     EXPECT_EQ(id_descr.interval, "hour");
 
     id_descr = all_values[day_median_id];
     EXPECT_EQ(id_descr.name, "memory.median.day");
     EXPECT_EQ(id_descr.aggregation_func, "median");
+	EXPECT_EQ(id_descr.prefix(), "memory.median");
     EXPECT_EQ(id_descr.interval, "day");
 
     auto all_hour_vaues = data_scheme->lsInterval("hour");

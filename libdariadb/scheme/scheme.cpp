@@ -110,6 +110,12 @@ struct Scheme::Private : public IScheme {
     return result;
   }
 
+  DescriptionMap linkedForValue(const MeasurementDescription&param) {
+	  std::lock_guard<utils::async::Locker> lg(_locker);
+	  DescriptionMap result;
+	  return result;
+  }
+  
   void save() {
     if (_settings->is_memory_only_mode) {
       return;
@@ -191,6 +197,9 @@ DescriptionMap Scheme::lsInterval(const std::string &interval) {
   return _impl->lsInterval(interval);
 }
 
+DescriptionMap Scheme::linkedForValue(const MeasurementDescription&param) {
+	return _impl->linkedForValue(param);
+}
 void Scheme::save() {
   _impl->save();
 }
