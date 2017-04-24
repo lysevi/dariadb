@@ -13,6 +13,10 @@ void LogManager::start(ILogger_ptr &logger) {
   }
 }
 
+void LogManager::stop() {
+  _instance = nullptr;
+}
+
 LogManager *LogManager::instance() {
   auto tmp = _instance.get();
   if (tmp == nullptr) {

@@ -1,10 +1,11 @@
-#include "test_common.h"
+#include "helpers.h"
 #include <libdariadb/utils/exception.h>
 #include <algorithm>
-#include <iostream>
 #include <mutex>
 #include <random>
 #include <thread>
+
+#include <gtest/gtest.h>
 
 namespace dariadb_test {
 #undef NO_DATA
@@ -123,7 +124,6 @@ void check_reader_of_all(MeasArray &all, Time from, Time to, Time step,
       continue;
     }
     if (cur_m.value < cur_val) {
-      std::cout << cur_m.value << " => " << cur_val << std::endl;
       throw MAKE_EXCEPTION("(it->value < cur_val)");
     }
   }
@@ -282,7 +282,7 @@ void readIntervalCheck(IMeasStorage *as, Time from, Time to, Time step,
   }
 
   if (check_stop_flag) { // this check works only when engine test.
-    // calls must be sorted by time.
+                         // calls must be sorted by time.
     auto order_clbk = new OrderCheckCallback();
     IdArray zero_id;
     zero_id.resize(1);
@@ -342,10 +342,10 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
                         bool run_copy_test) {
   IdSet _all_ids_set;
   Time maxWritedTime = MIN_TIME;
-  std::cout << "fill storage\n";
+  dariadb::logger_info("fill storage");
   size_t total_count = fill_storage_for_test(as, from, to, step, &_all_ids_set,
                                              &maxWritedTime, random_timestamps);
-  std::cout << "loadMinMax\n";
+  dariadb::logger_info("loadMinMax");
   auto minMax = as->loadMinMax();
 
   if (minMax->size() != _all_ids_set.size()) {
@@ -364,9 +364,9 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
   };
   minMax->apply(f);
 
-  std::cout << "minMaxCheck\n";
+  dariadb::logger_info("minMaxCheck");
   minMaxCheck(as, from, maxWritedTime);
-  std::cout << "currentValue\n";
+  dariadb::logger_info("currentValue");
   Id2Meas current_mlist;
 
   IdArray _all_ids_array(_all_ids_set.begin(), _all_ids_set.end());
@@ -382,15 +382,15 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
   if (as->maxTime() < to) {
     throw MAKE_EXCEPTION("as->maxTime() < to");
   }
-  std::cout << "readIntervalCheck\n";
+  dariadb::logger_info("readIntervalCheck");
 
   readIntervalCheck(as, from, to, step, _all_ids_set, _all_ids_array, total_count,
                     check_stop_flag);
-  std::cout << "readTimePointCheck\n";
+  dariadb::logger_info("readTimePointCheck");
   readTimePointCheck(as, from, to, step, _all_ids_array, check_stop_flag);
 
   if (run_copy_test) {
-    std::cout << "copyCheck" << std::endl;
+    dariadb::logger_info("copyCheck");
     for (auto id : _all_ids_set) {
       WriteCallback clbk(as);
 
@@ -399,7 +399,7 @@ void storage_test_check(IMeasStorage *as, Time from, Time to, Time step,
       clbk.wait();
     }
   }
-  std::cout << "flush\n";
+  dariadb::logger_info("flush");
   as->flush();
 }
 
@@ -494,125 +494,4 @@ void subscribe_test(dariadb::IEngine *ms) {
     THROW_EXCEPTION("c4->values.front().flag != dariadb::Flag(1)");
   }
 }
-
-/*
-void readIntervalCommonTest(storage::MeasStorage *ds) {
-  Meas m;
-  {
-    m.id = 1;
-    m.time = 1;
-    ds->append(m);
-    m.id = 2;
-    m.time = 2;
-    ds->append(m);
-
-    m.id = 4;
-    m.time = 4;
-    ds->append(m);
-    m.id = 5;
-    m.time = 5;
-    ds->append(m);
-    m.id = 55;
-    m.time = 5;
-    ds->append(m);
-
-    IdArray all_id = {1, 2, 4, 5, 55};
-    {
-      auto tp_reader = ds->readTimePoint({all_id, 0, 6});
-      MeasList output_in_point{};
-      tp_reader->readAll(&output_in_point);
-
-      if (output_in_point.size() != size_t(5)) {
-        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5))");
-      }
-
-      auto rdr = ds->readInterval(QueryInterval(all_id, 0, 0, 6));
-      output_in_point.clear();
-      rdr->readAll(&output_in_point);
-      if (output_in_point.size() != size_t(5)) {
-        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5))");
-      }
-    }
-    {
-
-      auto tp_reader = ds->readTimePoint({all_id, 0, 3});
-      MeasList output_in_point{};
-      tp_reader->readAll(&output_in_point);
-
-      ///+ timepoint(3) with no_data
-      if (output_in_point.size() != size_t(2 + 3)) {
-        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(2 + 3))");
-      }
-      for (auto v : output_in_point) {
-        if (!(v.time <= 3)) {
-          throw MAKE_EXCEPTION("!(v.time <= 3)");
-        }
-      }
-    }
-    auto reader = ds->readInterval(QueryInterval(all_id, 0, 3, 5));
-    MeasList output{};
-    reader->readAll(&output);
-    // if (output.size() != size_t(5 + 3)) { //+ timepoint(3) with no_data
-    //  throw MAKE_EXCEPTION("output.size() != size_t(5 + 3)");
-    //}
-    if (output.size() != size_t(5)) { //+ timepoint(3) with no_data
-      throw MAKE_EXCEPTION("output.size() != size_t(5)");
-    }
-  }
-  // from this point read not from firsts.
-  {
-    m.id = 1;
-    m.time = 6;
-    ds->append(m);
-    m.id = 2;
-    m.time = 7;
-    ds->append(m);
-
-    m.id = 4;
-    m.time = 9;
-    ds->append(m);
-    m.id = 5;
-    m.time = 10;
-    ds->append(m);
-    m.id = 6;
-    m.time = 10;
-    ds->append(m);
-    IdArray second_all_id = {1, 2, 4, 5, 6, 55};
-    {
-
-      auto tp_reader = ds->readTimePoint({second_all_id, 0, 8});
-      MeasList output_in_point{};
-      tp_reader->readAll(&output_in_point);
-
-      ///+ timepoimt(8) with no_data
-      if (output_in_point.size() != size_t(5 + 1)) {
-        throw MAKE_EXCEPTION("(output_in_point.size() != size_t(5 + 1))");
-      }
-      for (auto v : output_in_point) {
-        if (!(v.time <= 8)) {
-          throw MAKE_EXCEPTION("!(v.time <= 8))");
-        }
-      }
-    }
-
-    auto reader = ds->readInterval(
-        QueryInterval(IdArray{1, 2, 4, 5, 55}, 0, 8, 10));
-    MeasList output{};
-    reader->readAll(&output);
-    if (output.size() != size_t(7)) {
-      throw MAKE_EXCEPTION("output.size() != size_t(7)");
-    }
-    // expect: {1,8} {2,8} {4,8} {55,8} {4,9} {5,10}
-    if (output.size() != size_t(7)) {
-      std::cout << " ERROR!!!!" << std::endl;
-
-      for (Meas v : output) {
-        std::cout << " id:" << v.id << " flg:" << v.flag << " v:" << v.value
-                  << " t:" << v.time << std::endl;
-      }
-      throw MAKE_EXCEPTION("!!!");
-    }
-  }
-}
-*/
 }

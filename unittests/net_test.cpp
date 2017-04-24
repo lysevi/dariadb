@@ -1,7 +1,5 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE Main
+#include <gtest/gtest.h>
 
-#include <boost/test/unit_test.hpp>
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -17,23 +15,24 @@
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
 
-const dariadb::net::Server::Param server_param(2001, 2002);
+const dariadb::net::Server::Param binary_server_param(2001, 2002);
 const dariadb::net::client::Client::Param client_param("localhost", 2001, 2002);
 
-dariadb::net::Server *server_instance = nullptr;
+// TODO replace by fixture
+dariadb::net::Server *binary_server_instance = nullptr;
 
 void server_thread_func() {
-  dariadb::net::Server s(server_param);
+  dariadb::net::Server s(binary_server_param);
 
-  BOOST_CHECK(!s.is_runned());
+  EXPECT_TRUE(!s.is_runned());
 
-  server_instance = &s;
+  binary_server_instance = &s;
   s.start();
 
-  server_instance = nullptr;
+  binary_server_instance = nullptr;
 }
 
-BOOST_AUTO_TEST_CASE(NetDataPack) {
+TEST(Network, DataPack) {
   using dariadb::net::QueryAppend_header;
   using dariadb::net::NetData;
 
@@ -59,28 +58,28 @@ BOOST_AUTO_TEST_CASE(NetDataPack) {
   size_t packe_count = hdr->count;
 
   auto readed_ma = hdr->read_measarray();
-  BOOST_CHECK_EQUAL(packe_count, readed_ma.size());
-  BOOST_CHECK_EQUAL(readed_ma[0].id, dariadb::Id(0));
-  BOOST_CHECK_EQUAL(readed_ma[0].flag, dariadb::Flag(0));
-  BOOST_CHECK_EQUAL(readed_ma[0].value, dariadb::Value(0));
-  BOOST_CHECK_EQUAL(readed_ma[0].time, dariadb::Time(0));
+  EXPECT_EQ(packe_count, readed_ma.size());
+  EXPECT_EQ(readed_ma[0].id, dariadb::Id(0));
+  EXPECT_EQ(readed_ma[0].flag, dariadb::Flag(0));
+  EXPECT_EQ(readed_ma[0].value, dariadb::Value(0));
+  EXPECT_EQ(readed_ma[0].time, dariadb::Time(0));
   id = 1;
   for (size_t i = 1; i < readed_ma.size(); ++i) {
-    BOOST_CHECK_EQUAL(readed_ma[i].id, dariadb::Id(id));
-    BOOST_CHECK_EQUAL(readed_ma[i].flag, dariadb::Flag(i));
-    BOOST_CHECK_EQUAL(readed_ma[i].value, dariadb::Value(i));
-    BOOST_CHECK_EQUAL(readed_ma[i].time, dariadb::Time(i));
+    EXPECT_EQ(readed_ma[i].id, dariadb::Id(id));
+    EXPECT_EQ(readed_ma[i].flag, dariadb::Flag(i));
+    EXPECT_EQ(readed_ma[i].value, dariadb::Value(i));
+    EXPECT_EQ(readed_ma[i].time, dariadb::Time(i));
     if (i % 5 == 0) {
       ++id;
     }
   }
 }
 
-BOOST_AUTO_TEST_CASE(Connect1) {
+TEST(Network, Connect1) {
   dariadb::logger("********** Connect1 **********");
   std::thread server_thread{server_thread_func};
 
-  while (server_instance == nullptr || !server_instance->is_runned()) {
+  while (binary_server_instance == nullptr || !binary_server_instance->is_runned()) {
     dariadb::utils::sleep_mls(300);
   }
 
@@ -89,7 +88,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
 
   // 1 client
   while (true) {
-    auto res = server_instance->connections_accepted();
+    auto res = binary_server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("Connect1 test>> ", "0 count: ", res, " state: ", st);
     if (res == size_t(1) && st == dariadb::net::CLIENT_STATE::WORK) {
@@ -98,7 +97,7 @@ BOOST_AUTO_TEST_CASE(Connect1) {
     dariadb::utils::sleep_mls(300);
   }
 
-  server_instance->stop();
+  binary_server_instance->stop();
   server_thread.join();
   while (true) {
     auto state = c.state();
@@ -110,12 +109,12 @@ BOOST_AUTO_TEST_CASE(Connect1) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(Connect3) {
+TEST(Network, Connect3) {
   dariadb::logger("********** Connect3 **********");
 
   std::thread server_thread{server_thread_func};
 
-  while (server_instance == nullptr || !server_instance->is_runned()) {
+  while (binary_server_instance == nullptr || !binary_server_instance->is_runned()) {
     dariadb::utils::sleep_mls(300);
   }
 
@@ -124,7 +123,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
 
   // 1 client
   while (true) {
-    auto res = server_instance->connections_accepted();
+    auto res = binary_server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("Connect3 test>> ", "0 count: ", res, " state: ", st);
     if (res == size_t(1) && st == dariadb::net::CLIENT_STATE::WORK) {
@@ -139,7 +138,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
 
     // 2 client: c and c2
     while (true) {
-      auto res = server_instance->connections_accepted();
+      auto res = binary_server_instance->connections_accepted();
       auto st = c2.state();
       dariadb::logger("Connect3 test>> ", "1 count: ", res, " state: ", st);
       if (res == size_t(2) && st == dariadb::net::CLIENT_STATE::WORK) {
@@ -151,8 +150,8 @@ BOOST_AUTO_TEST_CASE(Connect3) {
 
   // 1 client: c
   while (true) {
-    auto res = server_instance->connections_accepted();
-    std::cout << "Connect3 one expect: " << res << std::endl;
+    auto res = binary_server_instance->connections_accepted();
+    dariadb::logger_fatal("Connect3 one expect: ", res);
     if (res == size_t(1)) {
       break;
     }
@@ -164,7 +163,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
 
   // 2 client: c and c3
   while (true) {
-    auto res = server_instance->connections_accepted();
+    auto res = binary_server_instance->connections_accepted();
     auto st = c3.state();
     dariadb::logger("Connect3 test>> ", "2 count: ", res, " state: ", st);
     if (res == size_t(2) && st == dariadb::net::CLIENT_STATE::WORK) {
@@ -177,7 +176,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
 
   // 1 client: c3
   while (true) {
-    auto res = server_instance->connections_accepted();
+    auto res = binary_server_instance->connections_accepted();
     auto st = c.state();
     dariadb::logger("Connect3 test>> ", "3 count: ", res, " state: ", st);
     if (res == size_t(1) && c.state() == dariadb::net::CLIENT_STATE::DISCONNECTED) {
@@ -185,7 +184,7 @@ BOOST_AUTO_TEST_CASE(Connect3) {
     }
     dariadb::utils::sleep_mls(300);
   }
-  server_instance->stop();
+  binary_server_instance->stop();
   server_thread.join();
   while (true) {
     auto state = c3.state();
@@ -197,11 +196,11 @@ BOOST_AUTO_TEST_CASE(Connect3) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(PingTest) {
+TEST(Network, PingTest) {
   dariadb::logger("********** PingTest **********");
   const size_t MAX_PONGS = 2;
   std::thread server_thread{server_thread_func};
-  while (server_instance == nullptr || !server_instance->is_runned()) {
+  while (binary_server_instance == nullptr || !binary_server_instance->is_runned()) {
     dariadb::utils::sleep_mls(300);
   }
 
@@ -244,11 +243,11 @@ BOOST_AUTO_TEST_CASE(PingTest) {
     }
     dariadb::utils::sleep_mls(300);
   }
-  server_instance->stop();
+  binary_server_instance->stop();
   server_thread.join();
 }
 
-BOOST_AUTO_TEST_CASE(ReadWriteTest) {
+TEST(Network, ReadWriteTest) {
   dariadb::logger("********** ReadWriteTest **********");
 
   const std::string storage_path = "testStorage";
@@ -271,10 +270,10 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
     std::thread server_thread{server_thread_func};
 
-    while (server_instance == nullptr || !server_instance->is_runned()) {
+    while (binary_server_instance == nullptr || !binary_server_instance->is_runned()) {
       dariadb::utils::sleep_mls(300);
     }
-    server_instance->set_storage(stor);
+    binary_server_instance->set_storage(stor);
     dariadb::net::client::Client c1(client_param);
     c1.connect();
 
@@ -312,17 +311,17 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
 
     dariadb::QueryInterval qi{ids, 0, dariadb::Time(0), dariadb::Time(MEASES_SIZE)};
     auto result = c1.readInterval(qi);
-    BOOST_CHECK_EQUAL(result.size(), ma.size());
+    EXPECT_EQ(result.size(), ma.size());
 
     dariadb::QueryTimePoint qt{{ids.front()}, 0, dariadb::Time(MEASES_SIZE)};
     auto result_tp = c1.readTimePoint(qt);
-    BOOST_CHECK_EQUAL(result_tp.size(), size_t(1));
-    BOOST_CHECK_EQUAL(result_tp[ids[0]].time, ma.front().time);
+    EXPECT_EQ(result_tp.size(), size_t(1));
+    EXPECT_EQ(result_tp[ids[0]].time, ma.front().time);
 
     auto result_cv = c1.currentValue({ids[0], ids[1]}, 0);
-    BOOST_CHECK_EQUAL(result_cv.size(), size_t(2));
+    EXPECT_EQ(result_cv.size(), size_t(2));
 
-    BOOST_CHECK_EQUAL(subscribe_calls, size_t(2));
+    EXPECT_EQ(subscribe_calls, size_t(2));
 
     c1.disconnect();
 
@@ -334,7 +333,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
       }
       dariadb::utils::sleep_mls(300);
     }
-    server_instance->stop();
+    binary_server_instance->stop();
     server_thread.join();
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -342,7 +341,7 @@ BOOST_AUTO_TEST_CASE(ReadWriteTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(SchemeTest) {
+TEST(Network, SchemeTest) {
   dariadb::logger("********** SchemeTest **********");
 
   using namespace dariadb;
@@ -356,10 +355,10 @@ BOOST_AUTO_TEST_CASE(SchemeTest) {
 
     std::thread server_thread{server_thread_func};
 
-    while (server_instance == nullptr || !server_instance->is_runned()) {
+    while (binary_server_instance == nullptr || !binary_server_instance->is_runned()) {
       dariadb::utils::sleep_mls(300);
     }
-    server_instance->set_storage(stor);
+    binary_server_instance->set_storage(stor);
     dariadb::net::client::Client c1(client_param);
     c1.connect();
 
@@ -373,16 +372,16 @@ BOOST_AUTO_TEST_CASE(SchemeTest) {
       dariadb::utils::sleep_mls(300);
     }
 
-    BOOST_CHECK(c1.addToScheme("test1"));
-    BOOST_CHECK(c1.addToScheme("test2"));
-    BOOST_CHECK(c1.addToScheme("test3"));
+    EXPECT_TRUE(c1.addToScheme("test1"));
+    EXPECT_TRUE(c1.addToScheme("test2"));
+    EXPECT_TRUE(c1.addToScheme("test3"));
 
     auto v2id = c1.loadScheme();
-    BOOST_CHECK_EQUAL(v2id.size(), size_t(3));
+    EXPECT_EQ(v2id.size(), size_t(3));
 
-    BOOST_CHECK(v2id.find("test1") != v2id.end());
-    BOOST_CHECK(v2id.find("test2") != v2id.end());
-    BOOST_CHECK(v2id.find("test3") != v2id.end());
+    EXPECT_TRUE(v2id.find("test1") != v2id.end());
+    EXPECT_TRUE(v2id.find("test2") != v2id.end());
+    EXPECT_TRUE(v2id.find("test3") != v2id.end());
 
     c1.disconnect();
 
@@ -394,7 +393,7 @@ BOOST_AUTO_TEST_CASE(SchemeTest) {
       }
       dariadb::utils::sleep_mls(300);
     }
-    server_instance->stop();
+    binary_server_instance->stop();
     server_thread.join();
   }
 }

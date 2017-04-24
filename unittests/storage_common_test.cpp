@@ -1,7 +1,6 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE Main
-#include "test_common.h"
-#include <boost/test/unit_test.hpp>
+#include <gtest/gtest.h>
+
+#include "helpers.h"
 
 #include <libdariadb/interfaces/icursor.h>
 #include <libdariadb/storage/bloom_filter.h>
@@ -12,106 +11,106 @@
 
 #include <iostream>
 
-BOOST_AUTO_TEST_CASE(MeasTest) {
+TEST(Common, MeasTest) {
   dariadb::Meas m;
   m.flag = dariadb::Flag(1);
-  BOOST_CHECK(!m.inFlag(dariadb::Flag(2)));
+  EXPECT_TRUE(!m.inFlag(dariadb::Flag(2)));
   m.flag = 3;
-  BOOST_CHECK(m.inFlag(dariadb::Flag(1)));
+  EXPECT_TRUE(m.inFlag(dariadb::Flag(1)));
 }
 
-BOOST_AUTO_TEST_CASE(BloomTest) {
+TEST(Common, BloomTest) {
   uint64_t u8_fltr = dariadb::storage::bloom_empty<uint8_t>();
 
-  BOOST_CHECK_EQUAL(u8_fltr, uint64_t{0});
+  EXPECT_EQ(u8_fltr, uint64_t{0});
 
   u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{1});
   u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{2});
   u8_fltr = dariadb::storage::bloom_add(u8_fltr, uint8_t{3});
 
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{1}));
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{2}));
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr, uint8_t{3}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(u8_fltr, uint8_t{1}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(u8_fltr, uint8_t{2}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(u8_fltr, uint8_t{3}));
 
   uint64_t u8_fltr_2 = dariadb::storage::bloom_empty<uint8_t>();
   u8_fltr_2 = dariadb::storage::bloom_add(u8_fltr_2, uint8_t{4});
 
-  BOOST_CHECK(!dariadb::storage::bloom_check(u8_fltr, uint8_t{4}));
-  BOOST_CHECK(dariadb::storage::bloom_check(u8_fltr_2, uint8_t{4}));
+  EXPECT_TRUE(!dariadb::storage::bloom_check(u8_fltr, uint8_t{4}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(u8_fltr_2, uint8_t{4}));
 
   auto super_fltr = dariadb::storage::bloom_combine(u8_fltr, u8_fltr_2);
-  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{1}));
-  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{2}));
-  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{3}));
-  BOOST_CHECK(dariadb::storage::bloom_check(super_fltr, uint8_t{4}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(super_fltr, uint8_t{1}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(super_fltr, uint8_t{2}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(super_fltr, uint8_t{3}));
+  EXPECT_TRUE(dariadb::storage::bloom_check(super_fltr, uint8_t{4}));
 }
 
-BOOST_AUTO_TEST_CASE(inFilter) {
+TEST(Common, inFilter) {
   {
     auto m = dariadb::Meas();
     m.flag = 100;
-    BOOST_CHECK(m.inFlag(0));
-    BOOST_CHECK(m.inFlag(100));
-    BOOST_CHECK(!m.inFlag(10));
+    EXPECT_TRUE(m.inFlag(0));
+    EXPECT_TRUE(m.inFlag(100));
+    EXPECT_TRUE(!m.inFlag(10));
   }
 }
 
-BOOST_AUTO_TEST_CASE(StatisticUpdate) {
+TEST(Common, StatisticUpdate) {
   dariadb::Statistic st;
 
-  BOOST_CHECK_EQUAL(st.minTime, dariadb::MAX_TIME);
-  BOOST_CHECK_EQUAL(st.maxTime, dariadb::MIN_TIME);
-  BOOST_CHECK_EQUAL(st.count, uint32_t(0));
-  BOOST_CHECK_EQUAL(st.flag_bloom, dariadb::Flag(0));
-  BOOST_CHECK_EQUAL(st.minValue, dariadb::MAX_VALUE);
-  BOOST_CHECK_EQUAL(st.maxValue, dariadb::MIN_VALUE);
-  BOOST_CHECK_EQUAL(st.sum, dariadb::Value(0));
+  EXPECT_EQ(st.minTime, dariadb::MAX_TIME);
+  EXPECT_EQ(st.maxTime, dariadb::MIN_TIME);
+  EXPECT_EQ(st.count, uint32_t(0));
+  EXPECT_EQ(st.flag_bloom, dariadb::Flag(0));
+  EXPECT_EQ(st.minValue, dariadb::MAX_VALUE);
+  EXPECT_EQ(st.maxValue, dariadb::MIN_VALUE);
+  EXPECT_EQ(st.sum, dariadb::Value(0));
 
   auto m = dariadb::Meas(0);
   m.time = 2;
   m.flag = 2;
   m.value = 2;
   st.update(m);
-  BOOST_CHECK_EQUAL(st.minTime, m.time);
-  BOOST_CHECK_EQUAL(st.maxTime, m.time);
-  BOOST_CHECK(st.flag_bloom != dariadb::Flag(0));
-  BOOST_CHECK(dariadb::areSame(st.minValue, m.value));
-  BOOST_CHECK(dariadb::areSame(st.maxValue, m.value));
+  EXPECT_EQ(st.minTime, m.time);
+  EXPECT_EQ(st.maxTime, m.time);
+  EXPECT_TRUE(st.flag_bloom != dariadb::Flag(0));
+  EXPECT_TRUE(dariadb::areSame(st.minValue, m.value));
+  EXPECT_TRUE(dariadb::areSame(st.maxValue, m.value));
 
   m.time = 3;
   m.value = 3;
   st.update(m);
-  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(2));
-  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
-  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(2)));
-  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
+  EXPECT_EQ(st.minTime, dariadb::Time(2));
+  EXPECT_EQ(st.maxTime, dariadb::Time(3));
+  EXPECT_TRUE(dariadb::areSame(st.minValue, dariadb::Value(2)));
+  EXPECT_TRUE(dariadb::areSame(st.maxValue, dariadb::Value(3)));
 
   m.time = 1;
   m.value = 1;
   st.update(m);
-  BOOST_CHECK_EQUAL(st.minTime, dariadb::Time(1));
-  BOOST_CHECK_EQUAL(st.maxTime, dariadb::Time(3));
-  BOOST_CHECK(dariadb::areSame(st.minValue, dariadb::Value(1)));
-  BOOST_CHECK(dariadb::areSame(st.maxValue, dariadb::Value(3)));
-  BOOST_CHECK(dariadb::areSame(st.sum, dariadb::Value(6)));
-  BOOST_CHECK_EQUAL(st.count, uint32_t(3));
+  EXPECT_EQ(st.minTime, dariadb::Time(1));
+  EXPECT_EQ(st.maxTime, dariadb::Time(3));
+  EXPECT_TRUE(dariadb::areSame(st.minValue, dariadb::Value(1)));
+  EXPECT_TRUE(dariadb::areSame(st.maxValue, dariadb::Value(3)));
+  EXPECT_TRUE(dariadb::areSame(st.sum, dariadb::Value(6)));
+  EXPECT_EQ(st.count, uint32_t(3));
 
   dariadb::Statistic second_st;
   m.time = 777;
   m.value = 1;
   second_st.update(m);
-  BOOST_CHECK_EQUAL(second_st.maxTime, m.time);
+  EXPECT_EQ(second_st.maxTime, m.time);
 
   second_st.update(st);
-  BOOST_CHECK_EQUAL(second_st.minTime, dariadb::Time(1));
-  BOOST_CHECK_EQUAL(second_st.maxTime, dariadb::Time(777));
-  BOOST_CHECK(dariadb::areSame(second_st.minValue, dariadb::Value(1)));
-  BOOST_CHECK(dariadb::areSame(second_st.maxValue, dariadb::Value(3)));
-  BOOST_CHECK(dariadb::areSame(second_st.sum, dariadb::Value(7)));
-  BOOST_CHECK_EQUAL(second_st.count, uint32_t(4));
+  EXPECT_EQ(second_st.minTime, dariadb::Time(1));
+  EXPECT_EQ(second_st.maxTime, dariadb::Time(777));
+  EXPECT_TRUE(dariadb::areSame(second_st.minValue, dariadb::Value(1)));
+  EXPECT_TRUE(dariadb::areSame(second_st.maxValue, dariadb::Value(3)));
+  EXPECT_TRUE(dariadb::areSame(second_st.sum, dariadb::Value(7)));
+  EXPECT_EQ(second_st.count, uint32_t(4));
 }
 
-BOOST_AUTO_TEST_CASE(ManifestFileTest) {
+TEST(Common, ManifestFileTest) {
   const std::string storage_path = "emptyStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -135,23 +134,34 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
     }
 
     auto page_lst = manifest->page_list();
-    BOOST_CHECK_EQUAL(page_lst.size(), pages_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(page_lst.begin(), page_lst.end(), pages_names.begin(),
-                                  pages_names.end());
+    EXPECT_EQ(page_lst.size(), pages_names.size());
+
+	auto page_lst_it = page_lst.begin();
+	auto page_names_it = pages_names.begin();
+	while (page_lst_it != page_lst.end() || page_names_it != pages_names.end()) {
+		EXPECT_EQ(*page_lst_it, *page_names_it);
+		++page_lst_it;
+		++page_names_it;
+	}
 
     auto wal_lst = manifest->wal_list();
-    BOOST_CHECK_EQUAL(wal_lst.size(), wal_names.size());
-    BOOST_CHECK_EQUAL_COLLECTIONS(wal_lst.begin(), wal_lst.end(), wal_names.begin(),
-                                  wal_names.end());
+
+	auto wal_lst_it = wal_lst.begin();
+	auto wal_names_it = wal_names.begin();
+	while (wal_lst_it != wal_lst.end() || wal_names_it != wal_names.end()) {
+		EXPECT_EQ(*wal_lst_it, *wal_names_it);
+		++wal_lst_it;
+		++wal_names_it;
+	}
 
     manifest = nullptr;
   }
   { // reopen. restore method must remove all records from manifest.
     auto settings = dariadb::storage::Settings::create(storage_path);
     auto manifest = dariadb::storage::Manifest::create(settings);
-    BOOST_CHECK_EQUAL(manifest->page_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(manifest->wal_list().size(), size_t(0));
-    BOOST_CHECK_EQUAL(manifest->get_format(), version);
+    EXPECT_EQ(manifest->page_list().size(), size_t(0));
+    EXPECT_EQ(manifest->wal_list().size(), size_t(0));
+    EXPECT_EQ(manifest->get_format(), version);
   }
 
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -159,7 +169,7 @@ BOOST_AUTO_TEST_CASE(ManifestFileTest) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(SettingsInstance) {
+TEST(Common, SettingsInstance) {
   const std::string storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -179,13 +189,13 @@ BOOST_AUTO_TEST_CASE(SettingsInstance) {
 
   bool file_exists = dariadb::utils::fs::path_exists(dariadb::utils::fs::append_path(
       storage_path, dariadb::storage::SETTINGS_FILE_NAME));
-  BOOST_CHECK(file_exists);
+  EXPECT_TRUE(file_exists);
 
   settings = dariadb::storage::Settings::create(storage_path);
-  BOOST_CHECK_EQUAL(settings->wal_cache_size.value(), uint64_t(2));
-  BOOST_CHECK_EQUAL(settings->chunk_size.value(), uint32_t(7));
-  BOOST_CHECK_EQUAL(settings->max_pages_in_level.value(), uint16_t(10));
-  BOOST_CHECK(settings->strategy.value() == dariadb::STRATEGY::COMPRESSED);
+  EXPECT_EQ(settings->wal_cache_size.value(), uint64_t(2));
+  EXPECT_EQ(settings->chunk_size.value(), uint32_t(7));
+  EXPECT_EQ(settings->max_pages_in_level.value(), uint16_t(10));
+  EXPECT_TRUE(settings->strategy.value() == dariadb::STRATEGY::COMPRESSED);
 
   settings = nullptr;
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -193,7 +203,7 @@ BOOST_AUTO_TEST_CASE(SettingsInstance) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(ChunkTest) {
+TEST(Common, ChunkTest) {
   {
     dariadb::storage::ChunkHeader hdr;
     uint8_t *buff = new uint8_t[1024];
@@ -208,9 +218,9 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
       writed += 2;
       m.time++;
     }
-    BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(1));
+    EXPECT_EQ(hdr.is_sorted, uint8_t(1));
     auto rdr = ch->getReader();
-    BOOST_CHECK_EQUAL(rdr->count(), writed);
+    EXPECT_EQ(rdr->count(), writed);
     dariadb_test::check_reader(rdr);
     delete[] buff;
   }
@@ -229,13 +239,13 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
       }
       m.time++;
     }
-    BOOST_CHECK_EQUAL(hdr.is_sorted, uint8_t(0));
+    EXPECT_EQ(hdr.is_sorted, uint8_t(0));
     auto rdr = ch->getReader();
-    BOOST_CHECK_EQUAL(rdr->count(), writed);
+    EXPECT_EQ(rdr->count(), writed);
     dariadb_test::check_reader(rdr);
     {
       auto skip_size = dariadb::storage::Chunk::compact(&hdr);
-      BOOST_CHECK(dariadb::storage::Chunk::compact(&hdr) == uint32_t(0));
+      EXPECT_TRUE(dariadb::storage::Chunk::compact(&hdr) == uint32_t(0));
       auto ch2 = dariadb::storage::Chunk::open(&hdr, buff + skip_size);
       auto rdr2 = ch2->getReader();
       size_t readed = 0;
@@ -243,14 +253,14 @@ BOOST_AUTO_TEST_CASE(ChunkTest) {
         rdr2->readNext();
         readed++;
       }
-      BOOST_CHECK_EQUAL(readed, writed);
+      EXPECT_EQ(readed, writed);
     }
 
     delete[] buff;
   }
 }
 
-BOOST_AUTO_TEST_CASE(FullCursorTest) {
+TEST(Common, FullCursorTest) {
   {
     dariadb::MeasArray ma;
     auto m = dariadb::Meas();
@@ -263,12 +273,12 @@ BOOST_AUTO_TEST_CASE(FullCursorTest) {
       m.time++;
     }
     dariadb::Cursor_Ptr cptr(new dariadb::storage::FullCursor(ma));
-    BOOST_CHECK_EQUAL(cptr->count(), writed);
+    EXPECT_EQ(cptr->count(), writed);
     dariadb_test::check_reader(cptr);
   }
 }
 
-BOOST_AUTO_TEST_CASE(LinearReaderTest) {
+TEST(Common, LinearReaderTest) {
   using namespace dariadb::storage;
   using namespace dariadb;
   dariadb::MeasArray ma1(4);
@@ -286,7 +296,7 @@ BOOST_AUTO_TEST_CASE(LinearReaderTest) {
   auto fr2 = dariadb::Cursor_Ptr{new FullCursor(ma2)};
 
   dariadb::storage::LinearCursor lr(CursorsList{fr1, fr2});
-  BOOST_CHECK_EQUAL(lr.count(), fr1->count() + fr2->count());
+  EXPECT_EQ(lr.count(), fr1->count() + fr2->count());
 
   std::list<dariadb::Meas> ml;
   while (!lr.is_end()) {
@@ -295,14 +305,14 @@ BOOST_AUTO_TEST_CASE(LinearReaderTest) {
 
     if (!lr.is_end()) {
       auto tp = lr.top();
-      BOOST_CHECK_LT(v.time, tp.time);
+      EXPECT_LT(v.time, tp.time);
     }
   }
 
-  BOOST_CHECK_EQUAL(ml.size(), size_t(8));
+  EXPECT_EQ(ml.size(), size_t(8));
 }
 
-BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
+TEST(Common, MergeSortReaderTest) {
   using namespace dariadb::storage;
   using namespace dariadb;
   dariadb::MeasArray ma1(4);
@@ -324,7 +334,7 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
   auto fr3 = dariadb::Cursor_Ptr{new FullCursor(ma3)};
 
   dariadb::storage::MergeSortCursor msr{CursorsList{fr1, fr2, fr3}};
-  BOOST_CHECK_EQUAL(msr.count(), fr1->count() + fr2->count() + fr3->count());
+  EXPECT_EQ(msr.count(), fr1->count() + fr2->count() + fr3->count());
 
   std::list<dariadb::Meas> ml;
   while (!msr.is_end()) {
@@ -333,7 +343,7 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
 
     if (!msr.is_end()) {
       auto tp = msr.top();
-      BOOST_CHECK_LT(v.time, tp.time);
+      EXPECT_LT(v.time, tp.time);
     }
   }
 
@@ -341,10 +351,10 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
       dariadb::storage::CursorWrapperFactory::is_linear_readers(fr1, fr2);
   auto must_be_true = dariadb::storage::CursorWrapperFactory::is_linear_readers(fr1, fr3);
 
-  BOOST_CHECK(must_be_true);
-  BOOST_CHECK(!must_be_false);
+  EXPECT_TRUE(must_be_true);
+  EXPECT_TRUE(!must_be_false);
 
-  BOOST_CHECK_EQUAL(ml.size(), size_t(8));
+  EXPECT_EQ(ml.size(), size_t(8));
 
   for (auto it = ml.begin(); it != ml.end(); ++it) {
     auto cur_value = *it;
@@ -354,11 +364,11 @@ BOOST_AUTO_TEST_CASE(MergeSortReaderTest) {
     }
     auto next_value = *next;
 
-    BOOST_CHECK_LT(cur_value.time, next_value.time);
+    EXPECT_LT(cur_value.time, next_value.time);
   }
 }
 
-BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
+TEST(Common, ReaderColapseTest) {
   using namespace dariadb::storage;
   using namespace dariadb;
   MeasArray ma1(4);
@@ -381,26 +391,26 @@ BOOST_AUTO_TEST_CASE(ReaderColapseTest) {
 
   {
     auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2});
-    BOOST_CHECK_EQUAL(msr->count(), fr1->count() + fr2->count());
+    EXPECT_EQ(msr->count(), fr1->count() + fr2->count());
     auto top_reader = dynamic_cast<LinearCursor *>(msr.get());
     auto is_merge_reader =
         dynamic_cast<MergeSortCursor *>(top_reader->_readers.front().get()) != nullptr;
-    BOOST_CHECK(is_merge_reader);
-    BOOST_CHECK_EQUAL(top_reader->_readers.size(), size_t(1));
+    EXPECT_TRUE(is_merge_reader);
+    EXPECT_EQ(top_reader->_readers.size(), size_t(1));
   }
 
   {
     auto lsr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr3});
-    BOOST_CHECK_EQUAL(lsr->count(), fr1->count() + fr3->count());
+    EXPECT_EQ(lsr->count(), fr1->count() + fr3->count());
     auto top_reader = dynamic_cast<LinearCursor *>(lsr.get());
     for (auto &r : top_reader->_readers) {
       auto is_full_reader = dynamic_cast<FullCursor *>(r.get()) != nullptr;
-      BOOST_CHECK(is_full_reader);
+      EXPECT_TRUE(is_full_reader);
     }
   }
 }
 
-BOOST_AUTO_TEST_CASE(ReaderColapse3Test) {
+TEST(Common, ReaderColapse3Test) {
   using namespace dariadb::storage;
   using namespace dariadb;
   MeasArray ma1(4);
@@ -423,7 +433,7 @@ BOOST_AUTO_TEST_CASE(ReaderColapse3Test) {
   auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
 
   auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2, fr3});
-  BOOST_CHECK_EQUAL(msr->count(), fr1->count() + fr2->count() + fr3->count());
+  EXPECT_EQ(msr->count(), fr1->count() + fr2->count() + fr3->count());
   while (msr->is_end()) {
     msr->readNext();
   }

@@ -66,7 +66,7 @@ int to_string(char *buffer, size_t buffer_size, Time t) {
 }
 
 std::string to_string(Time t) {
-  char buffer[256];
+  char buffer[512];
   int buff_size = sizeof(buffer);
   std::memset(buffer, 0, buff_size);
   int res = to_string(buffer, buff_size, t);

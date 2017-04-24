@@ -32,6 +32,7 @@ class LogManager {
 
 public:
   EXPORT static void start(ILogger_ptr &logger);
+  EXPORT static void stop();
   EXPORT static LogManager *instance();
 
   EXPORT void message(LOG_MESSAGE_KIND kind, const std::string &msg);

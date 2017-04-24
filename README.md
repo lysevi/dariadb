@@ -40,13 +40,19 @@
   - value min/max
   - measurement count
   - values sum
+* Statistical functions: 
+  - average
+  - median
+  - sigma(standard deviation)
+  - percentile90
+  - percentile99
 
 # Usage example
 - See folder "examples"
 - How to use dariadb as a embedded storage engine: [dariadb-example](	)
 
 # Dependencies
-* Boost 1.54.0 or higher: system, filesystem, date_time,regex, unit_test_framework(to build tests), program_options, asio.
+* Boost 1.54.0 or higher: system, filesystem, date_time,regex, program_options, asio.
 * cmake 3.1 or higher
 * c++ 14/17 compiler (MSVC 2015, gcc 6.0, clang 3.8)
 
@@ -116,6 +122,12 @@ $ make
 $ cmake -G "Visual Studio 14 2015 Win64" .
 $ cmake --build .
 ```
+if you want to build benchmarks and tests
+```cmd
+$ cmake -G "Visual Studio 14 2015 Win64" -DBUILD_SHARED_LIBS=FALSE  .
+$ cmake --build .
+```
+
 ### build with non system installed boost
 ---
 ```shell

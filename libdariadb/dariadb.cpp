@@ -13,4 +13,10 @@ IEngine_Ptr open_storage(const std::string &path) {
     return result;
   }
 }
+
+IEngine_Ptr memory_only_storage() {
+  auto settings = dariadb::storage::Settings::create();
+  IEngine_Ptr result{new Engine(settings)};
+  return result;
 }
+} // namespace dariadb

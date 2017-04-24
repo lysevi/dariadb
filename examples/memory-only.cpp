@@ -1,5 +1,4 @@
 #include <libdariadb/dariadb.h>
-#include <libdariadb/utils/fs.h>
 #include <iostream>
 
 class QuietLogger : public dariadb::utils::ILogger {
@@ -28,13 +27,12 @@ int main(int argc, char **argv) {
   dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
-  auto settings = dariadb::storage::Settings::create();
+  auto storage=dariadb::memory_only_storage();
+  auto settings = storage->settings();
 
   auto scheme = dariadb::scheme::Scheme::create(settings);
   auto p1 = scheme->addParam("group.param1");
   auto p2 = scheme->addParam("group.subgroup.param2");
-
-  auto storage = std::make_unique<dariadb::Engine>(settings);
 
   auto m = dariadb::Meas();
   auto start_time = dariadb::timeutil::current_time();

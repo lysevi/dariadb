@@ -40,6 +40,15 @@ std::string dariadb::utils::strings::to_upper(const std::string &text) {
   return converted;
 }
 
+std::string dariadb::utils::strings::to_lower(const std::string &text) {
+  std::string converted = text;
+
+  for (size_t i = 0; i < converted.size(); ++i) {
+    converted[i] = (char)tolower(converted[i]);
+  }
+  return converted;
+}
+
 std::string dariadb::utils::strings::inner::to_string(const char *_Val) {
   return std::string(_Val);
 }

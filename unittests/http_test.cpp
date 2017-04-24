@@ -1,7 +1,7 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE Main
+#include <gtest/gtest.h>
 
-#include <boost/test/unit_test.hpp>
+#include "helpers.h"
+
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -24,7 +24,7 @@ using json = nlohmann::json;
 
 using boost::asio::ip::tcp;
 
-const dariadb::net::Server::Param server_param(2001, 8080);
+const dariadb::net::Server::Param http_server_param(2001, 8080);
 
 struct post_response {
   int code;
@@ -80,13 +80,13 @@ post_response post(boost::asio::io_service &service, std::string &port,
   std::string status_message;
   std::getline(response_stream, status_message);
   if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
-    std::cout << "Invalid response\n";
+    dariadb::logger_fatal("Invalid response");
     result.code = -1;
     return result;
   }
   result.code = status_code;
   if (status_code != 200) {
-    std::cout << "Response returned with status code " << status_code << "\n";
+    dariadb::logger_fatal("Response returned with status code ", status_code);
     return result;
   }
 
@@ -153,13 +153,13 @@ post_response GET(boost::asio::io_service &service, std::string &port,
   std::string status_message;
   std::getline(response_stream, status_message);
   if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
-    std::cout << "Invalid response\n";
+    dariadb::logger_fatal("Invalid response");
     result.code = -1;
     return result;
   }
   result.code = status_code;
   if (status_code != 200) {
-    std::cout << "Response returned with status code " << status_code << "\n";
+    dariadb::logger_fatal("Response returned with status code ", status_code);
     return result;
   }
 
@@ -188,25 +188,26 @@ post_response GET(boost::asio::io_service &service, std::string &port,
   return result;
 }
 
-dariadb::net::Server *server_instance = nullptr;
+// TODO replace by fixture
+static dariadb::net::Server *http_server_instance = nullptr;
 
-void server_thread_func() {
-  dariadb::net::Server s(server_param);
+void http_server_thread_func() {
+  dariadb::net::Server s(http_server_param);
 
-  BOOST_CHECK(!s.is_runned());
+  EXPECT_TRUE(!s.is_runned());
 
-  server_instance = &s;
+  http_server_instance = &s;
   s.start();
 
-  server_instance = nullptr;
+  http_server_instance = nullptr;
 }
 
-BOOST_AUTO_TEST_CASE(HttpTest) {
+TEST(Http, Test) {
   dariadb::logger("********** HttpTest **********");
-  std::thread server_thread{server_thread_func};
-  auto http_port = std::to_string(server_param.http_port);
+  std::thread server_thread{http_server_thread_func};
+  auto http_port = std::to_string(http_server_param.http_port);
 
-  while (server_instance == nullptr || !server_instance->is_runned()) {
+  while (http_server_instance == nullptr || !http_server_instance->is_runned()) {
     dariadb::utils::sleep_mls(300);
   }
 
@@ -214,7 +215,7 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
   auto data_scheme = dariadb::scheme::Scheme::create(memonly_settings);
   dariadb::IEngine_Ptr engine{new dariadb::Engine(memonly_settings)};
   engine->setScheme(data_scheme);
-  server_instance->set_storage(engine);
+  http_server_instance->set_storage(engine);
 
   boost::asio::io_service test_service;
   json js;
@@ -244,6 +245,8 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
   single_value.value = 777;
   all_ids.insert(single_value.id);
 
+  values[single_value.id].push_back(single_value);
+
   json js_query;
   for (auto &kv : values) {
 
@@ -268,7 +271,7 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
   auto query_str = js.dump(1);
   auto post_result = post(test_service, http_port, query_str);
-  BOOST_CHECK_EQUAL(post_result.code, 200);
+  EXPECT_EQ(post_result.code, 200);
 
   {
 
@@ -283,7 +286,7 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
     query_str = single_append_js.dump(1);
     post_result = post(test_service, http_port, query_str);
-    BOOST_CHECK_EQUAL(post_result.code, 200);
+    EXPECT_EQ(post_result.code, 200);
   }
 
   dariadb::QueryInterval qi({all_ids.begin(), all_ids.end()}, 0, 0, dariadb::MAX_TIME);
@@ -293,7 +296,7 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
       for (auto v : all_values) {
         auto it = values.find(v.id);
         if (it == values.end()) {
-          BOOST_TEST_MESSAGE("id " << v.id << " not found");
+          EXPECT_TRUE(false) << "id " << v.id << " not found";
         } else {
           bool founded = false;
           for (auto subv : it->second) {
@@ -302,7 +305,7 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
               break;
             }
           }
-          BOOST_CHECK(founded);
+          EXPECT_TRUE(founded);
         }
       }
       break;
@@ -311,11 +314,11 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
   dariadb::QueryInterval qi_single({single_value_id}, 0, 0, dariadb::MAX_TIME);
   auto single_interval = engine->readInterval(qi_single);
-  BOOST_CHECK_EQUAL(single_interval.size(), size_t(1));
-  BOOST_CHECK_EQUAL(single_interval.front().id, single_value.id);
-  BOOST_CHECK_EQUAL(single_interval.front().time, single_value.time);
-  BOOST_CHECK_EQUAL(single_interval.front().flag, single_value.flag);
-  BOOST_CHECK_EQUAL(single_interval.front().value, single_value.value);
+  EXPECT_EQ(single_interval.size(), size_t(1));
+  EXPECT_EQ(single_interval.front().id, single_value.id);
+  EXPECT_EQ(single_interval.front().time, single_value.time);
+  EXPECT_EQ(single_interval.front().flag, single_value.flag);
+  EXPECT_EQ(single_interval.front().value, single_value.value);
 
   { // add param to scheme
     json add_param_js;
@@ -323,16 +326,16 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
     add_param_js["add"] = {"new1", "new2", "new3"};
     query_str = add_param_js.dump(1);
     auto add_scheme_result = post(test_service, http_port, query_str);
-    BOOST_CHECK(add_scheme_result.answer.find("new1") != std::string::npos);
-    BOOST_CHECK(add_scheme_result.answer.find("new2") != std::string::npos);
-    BOOST_CHECK(add_scheme_result.answer.find("new3") != std::string::npos);
+    EXPECT_TRUE(add_scheme_result.answer.find("new1") != std::string::npos);
+    EXPECT_TRUE(add_scheme_result.answer.find("new2") != std::string::npos);
+    EXPECT_TRUE(add_scheme_result.answer.find("new3") != std::string::npos);
   }
 
   auto scheme_res = GET(test_service, http_port, "/scheme");
-  BOOST_CHECK(scheme_res.answer.find("single_value") != std::string::npos);
-  BOOST_CHECK(scheme_res.answer.find("new1") != std::string::npos);
-  BOOST_CHECK(scheme_res.answer.find("new2") != std::string::npos);
-  BOOST_CHECK(scheme_res.answer.find("new3") != std::string::npos);
+  EXPECT_TRUE(scheme_res.answer.find("single_value") != std::string::npos);
+  EXPECT_TRUE(scheme_res.answer.find("new1") != std::string::npos);
+  EXPECT_TRUE(scheme_res.answer.find("new2") != std::string::npos);
+  EXPECT_TRUE(scheme_res.answer.find("new3") != std::string::npos);
 
   // readInterval
   {
@@ -351,8 +354,8 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
     query_str = readinterval_js.dump(1);
     post_result = post(test_service, http_port, query_str);
-    BOOST_CHECK_EQUAL(post_result.code, 200);
-    BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
+    EXPECT_EQ(post_result.code, 200);
+    EXPECT_TRUE(post_result.answer.find("single_value") != std::string::npos);
   }
 
   // readTimepoint
@@ -372,8 +375,8 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
     query_str = readinterval_js.dump(1);
     post_result = post(test_service, http_port, query_str);
-    BOOST_CHECK_EQUAL(post_result.code, 200);
-    BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
+    EXPECT_EQ(post_result.code, 200);
+    EXPECT_TRUE(post_result.answer.find("single_value") != std::string::npos);
   }
 
   // stat
@@ -386,10 +389,33 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
     query_str = stat_js.dump(1);
     post_result = post(test_service, http_port, query_str);
-    BOOST_CHECK_EQUAL(post_result.code, 200);
-    BOOST_CHECK(post_result.answer.find("single_value") != std::string::npos);
+    EXPECT_EQ(post_result.code, 200);
+    EXPECT_TRUE(post_result.answer.find("single_value") != std::string::npos);
   }
 
+  {
+     auto statistic_functions_list_res = GET(test_service, http_port, "/statfuncs");
+     EXPECT_TRUE(statistic_functions_list_res.answer.find("functions") != std::string::npos);
+     EXPECT_TRUE(statistic_functions_list_res.answer.find("percentile90") != std::string::npos);
+  }
+
+  {// statistic calculator
+    json stat_js;
+    stat_js["type"] = "statistic";
+    stat_js["id"] = "single_value";
+    stat_js["from"] = dariadb::MIN_TIME;
+    stat_js["to"] = dariadb::MAX_TIME;
+    stat_js["flag"] = dariadb::Flag();
+    stat_js["functions"] = {"average","median", "percentile90"};
+
+    query_str = stat_js.dump(1);
+    post_result = post(test_service, http_port, query_str);
+    EXPECT_EQ(post_result.code, 200);
+    EXPECT_TRUE(post_result.answer.find("single_value") != std::string::npos);
+    EXPECT_TRUE(post_result.answer.find("average") != std::string::npos);
+    EXPECT_TRUE(post_result.answer.find("median") != std::string::npos);
+    EXPECT_TRUE(post_result.answer.find("percentile90") != std::string::npos);
+  }
   // unknow query
   {
     json stat_js;
@@ -397,27 +423,30 @@ BOOST_AUTO_TEST_CASE(HttpTest) {
 
     query_str = stat_js.dump(1);
     post_result = post(test_service, http_port, query_str);
-    BOOST_CHECK_EQUAL(post_result.code, 404);
-  }
-
-  // bad query
-  {
-    json stat_js;
-    stat_js["type"] = "stat";
-    stat_js["id"] = "single_value";
-    stat_js["from"] = dariadb::MIN_TIME;
-    stat_js["to"] = dariadb::MAX_TIME;
-
-    query_str = stat_js.dump(1);
-    post_result = post(test_service, http_port, query_str, false);
-    BOOST_CHECK_EQUAL(post_result.code, 404);
+    EXPECT_EQ(post_result.code, 404);
   }
 
   // parse error
   {
     post_result = post(test_service, http_port, "", false, true);
-    BOOST_CHECK_EQUAL(post_result.code, 204); // no content
+    EXPECT_EQ(post_result.code, 204); // no content
   }
-  server_instance->stop();
+
+  //// bad query
+  //try {
+  //  json stat_js;
+  //  stat_js["type"] = "stat";
+  //  stat_js["id"] = "single_value";
+  //  stat_js["from"] = dariadb::MIN_TIME;
+  //  stat_js["to"] = dariadb::MAX_TIME;
+
+  //  query_str = stat_js.dump(1);
+  //  post_result = post(test_service, http_port, query_str, false);
+  //  EXPECT_EQ(post_result.code, 404);
+  //} catch (...){
+
+  //}
+
+  http_server_instance->stop();
   server_thread.join();
 }

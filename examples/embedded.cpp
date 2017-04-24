@@ -34,16 +34,14 @@ int main(int argc, char **argv) {
   dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
-  auto settings = dariadb::storage::Settings::create(storage_path);
-  settings->save();
+  auto storage = dariadb::open_storage(storage_path);
+  auto settings = storage->settings();
 
   auto scheme = dariadb::scheme::Scheme::create(settings);
 
   auto p1 = scheme->addParam("group.param1");
   auto p2 = scheme->addParam("group.subgroup.param2");
   scheme->save();
-
-  auto storage = std::make_unique<dariadb::Engine>(settings);
 
   auto m = dariadb::Meas();
   auto start_time = dariadb::timeutil::current_time();
@@ -121,5 +119,22 @@ int main(int argc, char **argv) {
               << dariadb::timeutil::to_string(stat.maxTime) << "]" << std::endl;
     std::cout << "val: [" << stat.minValue << " " << stat.maxValue << "]" << std::endl;
     std::cout << "sum: " << stat.sum << std::endl;
+  }
+
+  { // statistical functions
+    dariadb::statistic::Calculator calc(storage);
+    auto all_functions = dariadb::statistic::FunctionFactory::functions();
+    std::cout << "available functions: " << std::endl;
+    for (auto fname : all_functions) {
+      std::cout << " " << fname << std::endl;
+    }
+    auto result =
+        calc.apply(dariadb::Id(0), start_time, m.time, dariadb::Flag(), all_functions);
+    for (size_t i = 0; i < result.size(); ++i) {
+      auto measurement = result[i];
+      std::cout << all_functions[i] << " id: " << all_params[m.id].name
+                << " timepoint: " << dariadb::timeutil::to_string(measurement.time)
+                << " value:" << measurement.value << std::endl;
+    }
   }
 }

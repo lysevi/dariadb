@@ -28,9 +28,8 @@ read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
     auto time_js = val4id["T"];
 
     if (flag_js.size() != val_js.size() || time_js.size() != val_js.size()) {
-      THROW_EXCEPTION("bad query format, flags:", flag_js.size(),
-                      " values:", val_js.size(), " times:", time_js.size(),
-                      " query: ", js.dump(1));
+      THROW_EXCEPTION("bad query format, flags:", flag_js.size(), " values:",
+                      val_js.size(), " times:", time_js.size(), " query: ", js.dump(1));
     }
 
     sub_result.resize(flag_js.size());
@@ -169,6 +168,27 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
         result.scheme_query->new_params.push_back(v);
       }
     }
+    return result;
+  }
+
+  if (type == "statistic") {
+    logger("statistic query.");
+    result.type = http_query_type::statistic;
+    dariadb::Time from = js["from"];
+    dariadb::Time to = js["to"];
+    dariadb::Flag flag = js["flag"];
+    std::string value = js["id"];
+    std::vector<std::string> functions = js["functions"];
+
+    dariadb::IdArray ids;
+    ids.reserve(1);
+    auto name_map = scheme->ls();
+    ids.push_back(name_map.idByParam(value));
+
+
+    result.statistic_calc = std::make_shared<statistic_calculation>(
+        QueryInterval(ids, flag, from, to), functions);
+    return result;
   }
   return result;
 }
@@ -233,11 +253,39 @@ std::string dariadb::net::http::stat2string(const dariadb::scheme::IScheme_Ptr &
   return result_js.dump(1);
 }
 
-std::string dariadb::net::http::newScheme2string(
-    const std::list<std::pair<std::string, dariadb::Id>> &new_names) {
+std::string
+dariadb::net::http::newScheme2string(const std::list<Name2IdPair> &new_names) {
   json result;
   for (auto kv : new_names) {
     result[kv.first] = kv.second;
   }
+  return result.dump(1);
+}
+
+std::string
+dariadb::net::http::available_functions2string(const std::vector<std::string> &funcs) {
+  json result;
+  result["functions"] = funcs;
+  return result.dump(1);
+}
+
+std::string dariadb::net::http::statCalculationResult2string(
+    const dariadb::scheme::IScheme_Ptr &scheme, const dariadb::MeasArray &ma,
+    const std::vector<std::string> &funcs) {
+  json result;
+  if (ma.empty()) {
+    return std::string();
+  }
+  ENSURE(ma.size() == funcs.size());
+  auto nameMap = scheme->ls();
+  for (size_t i = 0; i < ma.size(); ++i) {
+    json func_res;
+    func_res["F"] = ma[i].flag;
+    func_res["T"] = ma[i].time;
+    func_res["V"] = ma[i].value;
+    result[funcs[i]] = func_res;
+  }
+
+  result["measurement"] = nameMap[ma.front().id].name;
   return result.dump(1);
 }

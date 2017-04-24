@@ -21,6 +21,7 @@ add_test(example-memory-only ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/example-memory-on
 EXAMPLE(embedded-create embedded-create.cpp)
 EXAMPLE(embedded-interval embedded-interval.cpp)
 EXAMPLE(embedded-timepoint embedded-timepoint.cpp)
+EXAMPLE(embedded-statistic embedded-statistic.cpp)
 
 EXAMPLE(shard-embedded shard_embedded.cpp)
 add_test(example-embedded ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/example-shard-embedded)
