@@ -37,6 +37,7 @@ TEST(Time, Interval2String) {
   {
     auto hh = dariadb::timeutil::intervalName2time("halfhour");
     auto dt = dariadb::timeutil::to_datetime(hh);
+	EXPECT_EQ(dt.minute, uint8_t(30));
   }
   {
 	  auto hh = dariadb::timeutil::intervalName2time("hour");
