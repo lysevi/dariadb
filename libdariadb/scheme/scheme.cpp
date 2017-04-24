@@ -99,6 +99,17 @@ struct Scheme::Private : public IScheme {
     return result;
   }
 
+  DescriptionMap lsInterval(const std::string &interval) {
+    std::lock_guard<utils::async::Locker> lg(_locker);
+    DescriptionMap result;
+    for (auto kv : _params) {
+      if (kv.second.interval == interval) {
+        result[kv.second.id] = kv.second;
+      }
+    }
+    return result;
+  }
+
   void save() {
     if (_settings->is_memory_only_mode) {
       return;
@@ -174,6 +185,10 @@ Id Scheme::addParam(const std::string &param) {
 
 DescriptionMap Scheme::ls() {
   return _impl->ls();
+}
+
+DescriptionMap Scheme::lsInterval(const std::string &interval) {
+  return _impl->lsInterval(interval);
 }
 
 void Scheme::save() {

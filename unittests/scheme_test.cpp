@@ -96,26 +96,29 @@ TEST(Scheme, Intervals) {
     auto data_scheme = dariadb::scheme::Scheme::create(settings);
 
     auto all_values = data_scheme->ls();
-    
-	auto raw_id_descr = all_values[raw_id];
+    EXPECT_EQ(all_values.size(), size_t(4));
+
+    auto raw_id_descr = all_values[raw_id];
     EXPECT_TRUE(raw_id_descr.aggregation_func.empty());
     EXPECT_EQ(raw_id_descr.interval, "raw");
 
-	auto id_descr = all_values[hour_median_id];
-	EXPECT_EQ(id_descr.name, "memory.median.hour");
-	EXPECT_EQ(id_descr.aggregation_func,"median");
-	EXPECT_EQ(id_descr.interval, "hour");
+    auto id_descr = all_values[hour_median_id];
+    EXPECT_EQ(id_descr.name, "memory.median.hour");
+    EXPECT_EQ(id_descr.aggregation_func, "median");
+    EXPECT_EQ(id_descr.interval, "hour");
 
+    id_descr = all_values[hour_sigma_id];
+    EXPECT_EQ(id_descr.name, "memory.sigma.hour");
+    EXPECT_EQ(id_descr.aggregation_func, "sigma");
+    EXPECT_EQ(id_descr.interval, "hour");
 
-	id_descr = all_values[hour_sigma_id];
-	EXPECT_EQ(id_descr.name, "memory.sigma.hour");
-	EXPECT_EQ(id_descr.aggregation_func, "sigma");
-	EXPECT_EQ(id_descr.interval, "hour");
+    id_descr = all_values[day_median_id];
+    EXPECT_EQ(id_descr.name, "memory.median.day");
+    EXPECT_EQ(id_descr.aggregation_func, "median");
+    EXPECT_EQ(id_descr.interval, "day");
 
-	id_descr = all_values[day_median_id];
-	EXPECT_EQ(id_descr.name, "memory.median.day");
-	EXPECT_EQ(id_descr.aggregation_func, "median");
-	EXPECT_EQ(id_descr.interval, "day");
+    auto all_hour_vaues = data_scheme->lsInterval("hour");
+	EXPECT_EQ(all_hour_vaues.size(), size_t(2));
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
