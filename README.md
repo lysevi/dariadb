@@ -64,7 +64,7 @@
 ```shell
 $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update
-$ sudo apt-get install -y libboost-dev  libboost-coroutine-dev libboost-context-dev libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6 
+$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-program-options-dev libasio-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6 
 $ export CC="gcc-6"
 $ export CXX="g++-6"
 ```
