@@ -134,9 +134,12 @@ TEST(Scheme, Intervals) {
 
     auto linkedHours = data_scheme->linkedForValue(all_values[raw_id]);
     EXPECT_EQ(linkedHours.size(), size_t(2));
+	EXPECT_TRUE(linkedHours.find(hour_sigma_id) != linkedHours.end());
+	EXPECT_TRUE(linkedHours.find(hour_median_id) != linkedHours.end());
 
     linkedHours = data_scheme->linkedForValue(all_values[raw_cpu]);
     EXPECT_EQ(linkedHours.size(), size_t(1));
+	EXPECT_TRUE(linkedHours.find(hour_cpu) != linkedHours.end());
 
     linkedHours = data_scheme->linkedForValue(all_values[day_median_id]);
     EXPECT_EQ(linkedHours.size(), size_t(0));
