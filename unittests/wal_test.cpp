@@ -64,7 +64,7 @@ TEST(Wal, FileInitTest) {
 
   dariadb::IdSet id_set;
   {
-    auto wal = dariadb::storage::WALFile::create(_engine_env);
+    auto wal = dariadb::storage::WALFile::create(_engine_env, 0);
 
     wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     EXPECT_EQ(wal_files.size(), size_t(0));
@@ -151,7 +151,7 @@ TEST(Wal, FileCommonTest) {
 
     auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     EXPECT_TRUE(wal_files.size() == size_t(0));
-    auto wal = dariadb::storage::WALFile::create(_engine_env);
+    auto wal = dariadb::storage::WALFile::create(_engine_env, 0);
 
     dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false, false, false);
     manifest = nullptr;

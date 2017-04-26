@@ -25,8 +25,15 @@ public:
   EXPORT void page_append(const std::string &rec);
   EXPORT void page_rm(const std::string &rec);
 
-  EXPORT std::list<std::string> wal_list();
-  EXPORT void wal_append(const std::string &rec);
+  struct WalFileDescription
+  {
+	  std::string fname;
+	  dariadb::Id id;
+  };
+
+  EXPORT std::list<WalFileDescription> wal_list();
+  EXPORT std::list<WalFileDescription> wal_list(dariadb::Id id);
+  EXPORT void wal_append(const std::string &rec, dariadb::Id id);
   EXPORT void wal_rm(const std::string &rec);
 
   EXPORT void set_format(const std::string &version);

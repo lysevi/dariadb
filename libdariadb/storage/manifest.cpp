@@ -15,8 +15,8 @@ const std::string WAL_JS_KEY = "wal";
 const char *MANIFEST_CREATE_SQL =
     "CREATE TABLE IF NOT EXISTS pages(id INTEGER PRIMARY KEY "
     "AUTOINCREMENT, file varchar(255)); "
-    \
-"CREATE TABLE IF NOT EXISTS wal(id INTEGER PRIMARY KEY AUTOINCREMENT, file varchar(255)); "
+    "CREATE TABLE IF NOT EXISTS wal(id INTEGER PRIMARY KEY AUTOINCREMENT, measId "
+    "INTEGER, file varchar(255)); "
     "CREATE TABLE IF NOT EXISTS params(id INTEGER PRIMARY KEY AUTOINCREMENT, name "
     "varchar(255), value varchar(255)); ";
 
@@ -59,9 +59,9 @@ public:
     auto wals = this->wal_list();
     auto size_before = wals.size();
     wals.erase(std::remove_if(wals.begin(), wals.end(),
-                              [this, raw_storage_path](std::string fname) {
+                              [this, raw_storage_path](const WalFileDescription &d) {
                                 auto full_file_name =
-                                    utils::fs::append_path(raw_storage_path, fname);
+                                    utils::fs::append_path(raw_storage_path, d.fname);
                                 return !utils::fs::path_exists(full_file_name);
                               }),
                wals.end());
@@ -69,7 +69,7 @@ public:
     if (size_after != size_before) {
       clear_field_values(WAL_JS_KEY);
       for (auto fname : wals) {
-        this->wal_append(fname);
+        this->wal_append(fname.fname, fname.id);
       }
     }
 
@@ -158,10 +158,10 @@ public:
     } while (rc == SQLITE_SCHEMA);
   }
 
-  std::list<std::string> wal_list() {
+  std::list<WalFileDescription> wal_list() {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    std::string sql = "SELECT file from wal ORDER BY id;";
-    std::list<std::string> result{};
+    std::string sql = "SELECT measId, file from wal ORDER BY id;";
+    std::list<WalFileDescription> result{};
     sqlite3_stmt *pStmt;
     int rc;
 
@@ -174,10 +174,48 @@ public:
       while (1) {
         rc = sqlite3_step(pStmt);
         if (rc == SQLITE_ROW) {
-          auto n = sqlite3_column_bytes(pStmt, 0);
-          auto pStr = sqlite3_column_text(pStmt, 0);
+          auto id = sqlite3_column_int64(pStmt, 0);
+          auto n = sqlite3_column_bytes(pStmt, 1);
+          auto pStr = sqlite3_column_text(pStmt, 1);
           std::string s((char *)pStr, n);
-          result.push_back(s);
+          WalFileDescription descr;
+          descr.id = dariadb::Id(id);
+          descr.fname = s;
+          result.push_back(descr);
+        } else {
+          break;
+        }
+      }
+      rc = sqlite3_finalize(pStmt);
+    } while (rc == SQLITE_SCHEMA);
+    return result;
+  }
+
+  std::list<WalFileDescription> wal_list(dariadb::Id id) {
+    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::string sql = "SELECT measId, file from wal WHERE measId = ?;";
+    std::list<WalFileDescription> result{};
+    sqlite3_stmt *pStmt;
+    int rc;
+
+    do {
+      rc = sqlite3_prepare(db, sql.c_str(), -1, &pStmt, 0);
+      if (rc != SQLITE_OK) {
+        auto err_msg = std::string(sqlite3_errmsg(db));
+        THROW_EXCEPTION("engine: Manifest - ", err_msg);
+      }
+      sqlite3_bind_int64(pStmt, 1, id);
+      while (1) {
+        rc = sqlite3_step(pStmt);
+        if (rc == SQLITE_ROW) {
+          auto id_val = sqlite3_column_int64(pStmt, 0);
+          auto n = sqlite3_column_bytes(pStmt, 1);
+          auto pStr = sqlite3_column_text(pStmt, 1);
+          std::string s((char *)pStr, n);
+          WalFileDescription descr;
+          descr.id = dariadb::Id(id_val);
+          descr.fname = s;
+          result.push_back(descr);
         } else {
           break;
         }
@@ -200,9 +238,9 @@ public:
     }
   }
 
-  void wal_append(const std::string &rec) {
+  void wal_append(const std::string &rec, dariadb::Id id) {
     std::lock_guard<utils::async::Locker> lg(_locker);
-    const std::string sql_query = "insert into wal (file) values (?);";
+    const std::string sql_query = "insert into wal (measId, file) values (?,?);";
     sqlite3_stmt *pStmt;
     int rc;
     do {
@@ -212,7 +250,8 @@ public:
         THROW_EXCEPTION("engine: manifest - ", err_msg);
       }
 
-      sqlite3_bind_text(pStmt, 1, rec.c_str(), (int)rec.size(), SQLITE_STATIC);
+      sqlite3_bind_int64(pStmt, 1, id);
+      sqlite3_bind_text(pStmt, 2, rec.c_str(), (int)rec.size(), SQLITE_STATIC);
       rc = sqlite3_step(pStmt);
       assert(rc != SQLITE_ROW);
       rc = sqlite3_finalize(pStmt);
@@ -312,12 +351,16 @@ void Manifest::page_rm(const std::string &rec) {
   _impl->page_rm(rec);
 }
 
-std::list<std::string> Manifest::wal_list() {
+std::list<Manifest::WalFileDescription> Manifest::wal_list() {
   return _impl->wal_list();
 }
 
-void Manifest::wal_append(const std::string &rec) {
-  _impl->wal_append(rec);
+std::list<Manifest::WalFileDescription> Manifest::wal_list(dariadb::Id id) {
+  return _impl->wal_list(id);
+}
+
+void Manifest::wal_append(const std::string &rec, dariadb::Id id) {
+  _impl->wal_append(rec, id);
 }
 
 void Manifest::wal_rm(const std::string &rec) {

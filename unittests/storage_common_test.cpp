@@ -129,30 +129,38 @@ TEST(Common, ManifestFileTest) {
     manifest->set_format(version);
 
     std::list<std::string> wal_names{"111", "222", "333"};
+    dariadb::Id id = 0;
     for (auto n : wal_names) {
-      manifest->wal_append(n);
+      manifest->wal_append(n, id++);
     }
 
     auto page_lst = manifest->page_list();
     EXPECT_EQ(page_lst.size(), pages_names.size());
 
-	auto page_lst_it = page_lst.begin();
-	auto page_names_it = pages_names.begin();
-	while (page_lst_it != page_lst.end() || page_names_it != pages_names.end()) {
-		EXPECT_EQ(*page_lst_it, *page_names_it);
-		++page_lst_it;
-		++page_names_it;
-	}
+    auto page_lst_it = page_lst.begin();
+    auto page_names_it = pages_names.begin();
+    while (page_lst_it != page_lst.end() || page_names_it != pages_names.end()) {
+      EXPECT_EQ(*page_lst_it, *page_names_it);
+      ++page_lst_it;
+      ++page_names_it;
+    }
 
     auto wal_lst = manifest->wal_list();
 
-	auto wal_lst_it = wal_lst.begin();
-	auto wal_names_it = wal_names.begin();
-	while (wal_lst_it != wal_lst.end() || wal_names_it != wal_names.end()) {
-		EXPECT_EQ(*wal_lst_it, *wal_names_it);
-		++wal_lst_it;
-		++wal_names_it;
-	}
+    auto wal_lst_it = wal_lst.begin();
+    auto wal_names_it = wal_names.begin();
+    while (wal_lst_it != wal_lst.end() || wal_names_it != wal_names.end()) {
+      EXPECT_EQ(wal_lst_it->fname, *wal_names_it);
+      ++wal_lst_it;
+      ++wal_names_it;
+    }
+
+    auto loaded_wal_names = manifest->wal_list(dariadb::Id(0));
+    EXPECT_EQ(loaded_wal_names.size(), size_t(1));
+	loaded_wal_names = manifest->wal_list(dariadb::Id(1));
+    EXPECT_EQ(loaded_wal_names.size(), size_t(1));
+	loaded_wal_names = manifest->wal_list(dariadb::Id(2));
+    EXPECT_EQ(loaded_wal_names.size(), size_t(1));
 
     manifest = nullptr;
   }

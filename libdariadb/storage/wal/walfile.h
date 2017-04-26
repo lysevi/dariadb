@@ -18,7 +18,7 @@ class WALFile : public IMeasStorage {
 public:
   EXPORT virtual ~WALFile();
 
-  EXPORT static WALFile_Ptr create(const EngineEnvironment_ptr env);
+  EXPORT static WALFile_Ptr create(const EngineEnvironment_ptr env, dariadb::Id id);
   EXPORT static WALFile_Ptr open(const EngineEnvironment_ptr env,
                                  const std::string &fname, bool readonly = false);
   EXPORT Status append(const Meas &value) override;
@@ -46,7 +46,7 @@ public:
 
   EXPORT size_t writed()const;
 protected:
-  EXPORT WALFile(const EngineEnvironment_ptr env);
+  EXPORT WALFile(const EngineEnvironment_ptr env, dariadb::Id id);
   EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname,
                  bool readonly);
 

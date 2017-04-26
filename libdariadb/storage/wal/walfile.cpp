@@ -24,7 +24,7 @@ using namespace dariadb::storage;
 
 class WALFile::Private {
 public:
-  Private(const EngineEnvironment_ptr env) {
+  Private(const EngineEnvironment_ptr env, dariadb::Id id) {
     _env = env;
     _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = 0;
@@ -32,7 +32,7 @@ public:
     auto rnd_fname = utils::fs::random_file_name(WAL_FILE_EXT);
     _filename = utils::fs::append_path(_settings->raw_path.value(), rnd_fname);
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
-        ->wal_append(rnd_fname);
+        ->wal_append(rnd_fname, id);
     _file = nullptr;
     _idBloom = bloom_empty<Id>();
   }
@@ -316,7 +316,7 @@ public:
             ->wal_list();
     ss << "Manifest:";
     for (auto f : wals_manifest) {
-      ss << f << std::endl;
+      ss << f.fname << std::endl;
     }
     auto wals_exists = utils::fs::ls(_settings->raw_path.value(), WAL_FILE_EXT);
     for (auto f : wals_exists) {
@@ -360,8 +360,8 @@ protected:
   FILE *_file;
 };
 
-WALFile_Ptr WALFile::create(const EngineEnvironment_ptr env) {
-  return WALFile_Ptr{new WALFile(env)};
+WALFile_Ptr WALFile::create(const EngineEnvironment_ptr env, dariadb::Id id) {
+  return WALFile_Ptr{new WALFile(env, id)};
 }
 
 WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env, const std::string &fname,
@@ -371,7 +371,7 @@ WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env, const std::string &fn
 
 WALFile::~WALFile() {}
 
-WALFile::WALFile(const EngineEnvironment_ptr env) : _Impl(new WALFile::Private(env)) {}
+WALFile::WALFile(const EngineEnvironment_ptr env, dariadb::Id id) : _Impl(new WALFile::Private(env, id)) {}
 
 WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
     : _Impl(new WALFile::Private(env, fname, readonly)) {}

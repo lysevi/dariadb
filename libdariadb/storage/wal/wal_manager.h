@@ -53,7 +53,8 @@ public:
 protected:
   void dropFile(const std::string& wal);
   WALFile_Ptr create_new(dariadb::Id id);
-  std::list<std::string> wal_files() const;
+  std::list<std::string> wal_files_all() const;
+  std::list<std::string> wal_files(dariadb::Id id) const;
   void flush_buffer(dariadb::Id id, bool sync = false);
   void drop_old_if_needed();
   bool file_in_query(const std::string &filename, const QueryInterval &q);

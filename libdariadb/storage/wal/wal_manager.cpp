@@ -36,20 +36,20 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
   if (dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
     auto wals = manifest->wal_list();
     for (auto f : wals) {
-      auto full_filename = utils::fs::append_path(_settings->raw_path.value(), f);
+      auto full_filename = utils::fs::append_path(_settings->raw_path.value(), f.fname);
 
       WALFile_Ptr p = WALFile::open(_env, full_filename);
-	  auto writed = p->writed();
-	  if (writed == 0) {
-		  p = nullptr;
-		  this->erase(f);
-	  }
+      auto writed = p->writed();
+      if (writed == 0) {
+        p = nullptr;
+        this->erase(f.fname);
+      }
       _file2minmax[full_filename].minTime = p->minTime();
       _file2minmax[full_filename].maxTime = p->maxTime();
       _file2minmax[full_filename].bloom_id = p->id_bloom();
 
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
-        logger_info("engine", _settings->alias, ": WalManager open exist file ", f);
+        logger_info("engine", _settings->alias, ": WalManager open exist file ", f.fname);
 
         _wal[p->id_from_first()] = p;
       }
@@ -75,9 +75,9 @@ WALFile_Ptr WALManager::create_new(dariadb::Id id) {
     _wal.erase(fres);
   }
 
-  auto result = WALFile::create(_env);
+  auto result = WALFile::create(_env, id);
   _wal[id] = result;
-  //logger_info("create #", id, " => ", result->filename());
+  logger_info("create #", id, " => ", result->filename());
   return result;
 }
 
@@ -92,7 +92,7 @@ void WALManager::dropAll() {
       }
     }
     _wal.clear();
-    auto all_files = wal_files();
+    auto all_files = wal_files_all();
 
     for (auto f : all_files) {
       dropFile(f);
@@ -110,7 +110,10 @@ void WALManager::dropFile(const std::string &f) {
     auto manifest =
         _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
     auto wals_exists = manifest->wal_list();
-    std::set<std::string> wal_exists_set{wals_exists.begin(), wals_exists.end()};
+    std::set<std::string> wal_exists_set;
+    for (auto we : wals_exists) {
+      wal_exists_set.insert(we.fname);
+    }
     std::set<std::string> new_sended_files;
     for (auto &v : _files_send_to_drop) {
       if (wal_exists_set.find(v) != wal_exists_set.end()) {
@@ -123,7 +126,7 @@ void WALManager::dropFile(const std::string &f) {
 
 void WALManager::drop_old_if_needed() {
   if (_settings->strategy.value() != STRATEGY::WAL) {
-    auto all_files = wal_files();
+    auto all_files = wal_files_all();
     for (auto f : all_files) {
       bool exists = false;
       for (auto kv : _wal) {
@@ -139,19 +142,30 @@ void WALManager::drop_old_if_needed() {
   }
 }
 
-std::list<std::string> WALManager::wal_files() const {
+std::list<std::string> WALManager::wal_files(dariadb::Id id) const {
+  std::list<std::string> res;
+  auto files = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
+                   ->wal_list(id);
+  for (auto f : files) {
+    auto full_path = utils::fs::append_path(_settings->raw_path.value(), f.fname);
+    res.push_back(full_path);
+  }
+  return res;
+}
+
+std::list<std::string> WALManager::wal_files_all() const {
   std::list<std::string> res;
   auto files = _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
                    ->wal_list();
   for (auto f : files) {
-    auto full_path = utils::fs::append_path(_settings->raw_path.value(), f);
+    auto full_path = utils::fs::append_path(_settings->raw_path.value(), f.fname);
     res.push_back(full_path);
   }
   return res;
 }
 
 std::list<std::string> WALManager::closedWals() {
-  auto all_files = wal_files();
+  auto all_files = wal_files_all();
   std::list<std::string> result;
   for (auto fn : all_files) {
     if (_wal.empty()) {
@@ -182,7 +196,7 @@ void WALManager::setDownlevel(IWALDropper *down) {
 
 dariadb::Time WALManager::minTime() {
   std::shared_lock<std::shared_mutex> lg(_global_lock);
-  auto files = wal_files();
+  auto files = wal_files_all();
   dariadb::Time result = dariadb::MAX_TIME;
   auto env = _env;
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
@@ -209,7 +223,7 @@ dariadb::Time WALManager::minTime() {
 
 dariadb::Time WALManager::maxTime() {
   std::shared_lock<std::shared_mutex> lg(_global_lock);
-  auto files = wal_files();
+  auto files = wal_files_all();
   dariadb::Time result = dariadb::MIN_TIME;
   auto env = _env;
   AsyncTask at = [files, &result, env](const ThreadInfo &ti) {
@@ -236,7 +250,7 @@ dariadb::Time WALManager::maxTime() {
 bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
   std::shared_lock<std::shared_mutex> lg(_global_lock);
-  auto files = wal_files();
+  auto files = wal_files(id);
   using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
   std::vector<MMRes> results{files.size()};
   auto env = _env;
@@ -310,20 +324,26 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
   std::shared_lock<std::shared_mutex> lg(_global_lock);
   Id2CursorsList readers_list;
 
-  utils::async::Locker readers_locker;
-  auto files = wal_files();
+  QueryInterval local_q = q;
+  local_q.ids.resize(1);
 
-  if (!files.empty()) {
+  for (auto id : q.ids) {
 
-    AsyncTask at = [files, &q, &readers_list, &readers_locker,
-                    this](const ThreadInfo &ti) {
-      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      this->intervalReader_async_logic(files, q, readers_list, readers_locker);
-      return false;
-    };
+    local_q.ids[0] = id;
+    auto files = wal_files(id);
+    if (!files.empty()) {
+      utils::async::Locker readers_locker;
 
-    auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-    am_async->wait();
+      AsyncTask at = [files, &local_q, &readers_list, &readers_locker,
+                      this](const ThreadInfo &ti) {
+        TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+        this->intervalReader_async_logic(files, local_q, readers_list, readers_locker);
+        return false;
+      };
+
+      auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+      am_async->wait();
+    }
   }
 
   size_t pos = 0;
@@ -360,7 +380,7 @@ Statistic WALManager::stat(const Id id, Time from, Time to) {
   std::shared_lock<std::shared_mutex> lg(_global_lock);
   Statistic result;
 
-  auto files = wal_files();
+  auto files = wal_files(id);
 
   if (!files.empty()) {
     AsyncTask at = [files, &result, id, from, to, this](const ThreadInfo &ti) {
@@ -412,27 +432,38 @@ void WALManager::foreach (const QueryInterval &q, IReadCallback * clbk) {
 
 Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
   std::shared_lock<std::shared_mutex> lg(_global_lock);
-  auto files = wal_files();
+
+  QueryTimePoint local_q = query;
+  local_q.ids.resize(1);
+  std::list<Id2Meas> results;
   dariadb::Id2Meas sub_result;
 
-  std::list<Id2Meas> results;
-  auto env = _env;
-  AsyncTask at = [files, &query, &results, env, this](const ThreadInfo &ti) {
-    TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+  for (auto id : query.ids) {
+    auto files = wal_files(id);
 
-    for (auto filename : files) {
-      if (!this->file_in_query(filename, query)) {
-        continue;
-      }
-      auto wal = WALFile::open(env, filename, true);
-      results.push_back(wal->readTimePoint(query));
+    if (files.empty()) {
+      continue;
     }
-    return false;
-  };
 
-  auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-  am_async->wait();
+    local_q.ids[0] = id;
 
+    auto env = _env;
+    AsyncTask at = [files, &local_q, &results, env, this](const ThreadInfo &ti) {
+      TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+
+      for (auto filename : files) {
+        if (!this->file_in_query(filename, local_q)) {
+          continue;
+        }
+        auto wal = WALFile::open(env, filename, true);
+        results.push_back(wal->readTimePoint(local_q));
+      }
+      return false;
+    };
+
+    auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+    am_async->wait();
+  }
   for (auto &out : results) {
     for (auto &kv : out) {
       auto it = sub_result.find(kv.first);
@@ -481,20 +512,22 @@ Id2Meas WALManager::currentValue(const IdArray &ids, const Flag &flag) {
   AsyncTask at = [&ids, flag, &meases, this](const ThreadInfo &ti) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
-    auto files = wal_files();
+    for (auto id : ids) {
+      auto files = wal_files(id);
 
-    for (const auto &f : files) {
-      auto c = WALFile::open(_env, f, true);
-      auto sub_rdr = c->currentValue(ids, flag);
+      for (const auto &f : files) {
+        auto c = WALFile::open(_env, f, true);
+        auto sub_rdr = c->currentValue(ids, flag);
 
-      for (auto &kv : sub_rdr) {
-        auto it = meases.find(kv.first);
-        if (it == meases.end()) {
-          meases.emplace(std::make_pair(kv.first, kv.second));
-        } else {
-          if ((it->second.flag == FLAGS::_NO_DATA) ||
-              (it->second.time < kv.second.time)) {
-            meases[kv.first] = kv.second;
+        for (auto &kv : sub_rdr) {
+          auto it = meases.find(kv.first);
+          if (it == meases.end()) {
+            meases.emplace(std::make_pair(kv.first, kv.second));
+          } else {
+            if ((it->second.flag == FLAGS::_NO_DATA) ||
+                (it->second.time < kv.second.time)) {
+              meases[kv.first] = kv.second;
+            }
           }
         }
       }
@@ -604,7 +637,7 @@ void WALManager::flush() {
 }
 
 size_t WALManager::filesCount() const {
-  return wal_files().size();
+  return wal_files_all().size();
 }
 
 void WALManager::erase(const std::string &fname) {
@@ -616,7 +649,7 @@ void WALManager::erase(const std::string &fname) {
 }
 
 Id2MinMax_Ptr WALManager::loadMinMax() {
-  auto files = wal_files();
+  auto files = wal_files_all();
 
   auto result = std::make_shared<dariadb::Id2MinMax>();
   for (const auto &f : files) {
