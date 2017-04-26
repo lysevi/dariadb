@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <mutex>
-
+#include <shared_mutex>
 namespace dariadb {
 namespace storage {
 
@@ -51,9 +51,10 @@ public:
   EXPORT Id2MinMax_Ptr loadMinMax() override;
 
 protected:
-  void create_new();
+  void dropFile(const std::string& wal);
+  WALFile_Ptr create_new(dariadb::Id id);
   std::list<std::string> wal_files() const;
-  void flush_buffer();
+  void flush_buffer(dariadb::Id id, bool sync = false);
   void drop_old_if_needed();
   bool file_in_query(const std::string &filename, const QueryInterval &q);
   bool file_in_query(const std::string &filename, const QueryTimePoint &q);
@@ -64,15 +65,19 @@ protected:
 private:
   EXPORT static WALManager *_instance;
 
-  WALFile_Ptr _wal;
-  mutable std::mutex _locker;
+  
   IWALDropper *_down;
 
-  MeasArray _buffer;
-  size_t _buffer_pos;
+  //TODO use striped map from utils.
+  std::unordered_map<dariadb::Id, WALFile_Ptr> _wal;
+  std::unordered_map<dariadb::Id, MeasArray> _buffer;
+  std::unordered_map<dariadb::Id, size_t> _buffer_pos;
+  std::unordered_map<dariadb::Id, utils::async::Locker> _lockers;
+  std::shared_mutex _global_lock;
   std::set<std::string> _files_send_to_drop;
   EngineEnvironment_ptr _env;
   Settings *_settings;
+
   struct TimeMinMax {
     Time minTime;
     Time maxTime;
@@ -81,5 +86,5 @@ private:
   std::unordered_map<std::string, TimeMinMax> _file2minmax;
   std::mutex _file2mm_locker;
 };
-}
-}
+} // namespace storage
+} // namespace dariadb

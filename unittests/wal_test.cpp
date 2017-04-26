@@ -164,7 +164,7 @@ TEST(Wal, FileCommonTest) {
 
 TEST(Wal, Manager_CommonTest) {
   const std::string storagePath = "testStorage";
-  const size_t max_size = 150;
+  const size_t max_size = 70;
   const dariadb::Time from = 0;
   const dariadb::Time to = from + 1021;
   const dariadb::Time step = 10;
@@ -175,9 +175,9 @@ TEST(Wal, Manager_CommonTest) {
   dariadb::utils::fs::mkdir(storagePath);
   {
     auto settings = dariadb::storage::Settings::create(storagePath);
-    settings->wal_file_size.setValue(max_size);
+    settings->wal_file_size.setValue(size_t(50));
     settings->wal_cache_size.setValue(max_size);
-
+    settings->save();
     auto manifest = dariadb::storage::Manifest::create(settings);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
@@ -197,7 +197,6 @@ TEST(Wal, Manager_CommonTest) {
   }
   {
     auto settings = dariadb::storage::Settings::create(storagePath);
-    settings->wal_file_size.setValue(max_size);
 
     auto manifest = dariadb::storage::Manifest::create(settings);
 

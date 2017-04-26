@@ -95,11 +95,17 @@ public:
   Status append(const MeasArray::const_iterator &begin,
                 const MeasArray::const_iterator &end) {
     ENSURE(!_is_readonly);
-
+	
     auto sz = std::distance(begin, end);
     open_to_append();
     auto max_size = _settings->wal_file_size.value();
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
+	if (write_size == size_t()) {
+		Status result;
+		result.ignored = sz;
+		result.error = APPEND_ERROR::wal_file_limit;
+		return result;
+	}
     std::fwrite(&(*begin), sizeof(Meas), write_size, _file);
     std::fflush(_file);
     for (auto it = begin; it != begin + write_size; ++it) {
@@ -333,6 +339,18 @@ public:
     return result;
   }
 
+  Id id_from_first() {
+    auto all = readAll();
+    if (all->empty()) {
+      return MAX_ID;
+    } else {
+      return all->front().id;
+    }
+  }
+
+  size_t writed()const {
+	  return _writed;
+  }
 protected:
   std::string _filename;
   bool _is_readonly;
@@ -421,4 +439,12 @@ size_t WALFile::writed(std::string fname) {
 
 Id2MinMax_Ptr WALFile::loadMinMax() {
   return _Impl->loadMinMax();
+}
+
+Id WALFile::id_from_first() {
+  return _Impl->id_from_first();
+}
+
+size_t WALFile::writed()const {
+	return _Impl->writed();
 }

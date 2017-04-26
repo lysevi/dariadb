@@ -44,8 +44,8 @@ TEST(Engine, Common_test) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->wal_cache_size.setValue(100);
-    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
+    settings->wal_cache_size.setValue(size_t(90));
+    settings->wal_file_size.setValue(size_t(80));
     settings->chunk_size.setValue(chunk_size);
     dariadb::IEngine_Ptr ms{new Engine(settings)};
 
@@ -262,7 +262,8 @@ TEST(Engine, Cache_common_test) {
     settings->strategy.setValue(STRATEGY::CACHE);
     settings->chunk_size.setValue(chunk_size);
     settings->memory_limit.setValue(50 * 1024);
-    settings->wal_file_size.setValue(2000);
+    settings->wal_file_size.setValue(50);
+	settings->wal_cache_size.setValue(70);
     dariadb::IEngine_Ptr ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
