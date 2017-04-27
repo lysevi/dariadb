@@ -388,6 +388,7 @@ public:
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
+    ENSURE(ma.size() == size_t(1));
 
     Page_Ptr res = nullptr;
 
@@ -586,6 +587,11 @@ public:
   }
 
   void appendChunks(const std::vector<Chunk *> &a) {
+#ifdef DOUBLE_CHECKS
+    for (auto c : a) {
+      ENSURE(c->header->meas_id == a.front()->header->meas_id);
+    }
+#endif
     std::vector<Chunk *> tmp_buffer;
     tmp_buffer.resize(a.size());
 

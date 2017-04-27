@@ -128,6 +128,7 @@ bool create_write_logic(
 void Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                   uint32_t max_chunk_size, const SplitedById &to_compress,
                   on_create_complete_callback on_complete) {
+  ENSURE(to_compress.size() == size_t(1));
   using namespace dariadb::utils::async;
   PageFooter phdr(lvl, chunk_id);
 
