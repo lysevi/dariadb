@@ -238,7 +238,7 @@ TEST(PageManager, BulkWrite) {
 
   auto start_time = dariadb::Time(0);
   dariadb_test::MeasesList addeded;
-  const dariadb::Id id_count(5);
+  const dariadb::Id id_count(1);
   dariadb::IdSet all_id_set;
   size_t count = 5000;
   dariadb::SplitedById a;
@@ -360,6 +360,11 @@ TEST(PageManager, Repack) {
     dariadb::utils::sleep_mls(100);
   }
 
+  pm->append_async(page_file_prefix1, a, [&complete](auto p) { complete = true; });
+  while (!complete) {
+	  dariadb::utils::sleep_mls(100);
+  }
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
     e.id = 1;
@@ -375,6 +380,7 @@ TEST(PageManager, Repack) {
     dariadb::utils::sleep_mls(100);
   }
 
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count / 2; i++) {
     e.id = 0;
@@ -522,6 +528,7 @@ TEST(PageManager, Compact) {
   while (!complete) {
     dariadb::utils::sleep_mls(100);
   }
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
     e.id = 1;
@@ -537,7 +544,7 @@ TEST(PageManager, Compact) {
   while (!complete) {
     dariadb::utils::sleep_mls(100);
   }
-
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count / 2; i++) {
     e.id = 0;
