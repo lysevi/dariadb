@@ -7,6 +7,7 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/wal/walfile.h>
 #include <libdariadb/utils/async/locker.h>
+#include <libdariadb/utils/striped_map.h>
 #include <libdariadb/utils/utils.h>
 #include <vector>
 
@@ -19,6 +20,19 @@ class WALManager;
 using WALManager_ptr = std::shared_ptr<WALManager>;
 class WALManager : public IMeasStorage {
 public:
+  struct BufferDescription {
+    WALFile_Ptr walfile;
+    MeasArray buffer;
+    size_t pos;
+    utils::async::Locker locker;
+    BufferDescription(WALFile_Ptr file, size_t buffer_size) {
+      walfile = file;
+      buffer.resize(buffer_size);
+      pos = size_t(0);
+    }
+  };
+  using BufferDescription_Ptr = std::shared_ptr<BufferDescription>;
+
 protected:
   EXPORT WALManager(const EngineEnvironment_ptr env);
 
@@ -51,11 +65,11 @@ public:
   EXPORT Id2MinMax_Ptr loadMinMax() override;
 
 protected:
-  void dropFile(const std::string& wal);
-  WALFile_Ptr create_new(dariadb::Id id);
+  void dropFile(const std::string &wal);
+  WALFile_Ptr create_new(BufferDescription_Ptr bd, dariadb::Id id);
   std::list<std::string> wal_files_all() const;
   std::list<std::string> wal_files(dariadb::Id id) const;
-  void flush_buffer(dariadb::Id id, bool sync = false);
+  void flush_buffer(BufferDescription_Ptr &bd, bool sync = false);
   void drop_old_if_needed();
   bool file_in_query(const std::string &filename, const QueryInterval &q);
   bool file_in_query(const std::string &filename, const QueryTimePoint &q);
@@ -66,15 +80,11 @@ protected:
 private:
   EXPORT static WALManager *_instance;
 
-  
   IWALDropper *_down;
 
-  //TODO use striped map from utils.
-  std::unordered_map<dariadb::Id, WALFile_Ptr> _wal;
-  std::unordered_map<dariadb::Id, MeasArray> _buffer;
-  std::unordered_map<dariadb::Id, size_t> _buffer_pos;
-  std::unordered_map<dariadb::Id, utils::async::Locker> _lockers;
-  std::shared_mutex _global_lock;
+  using Id2Buffer = utils::stripped_map<dariadb::Id, BufferDescription_Ptr>;
+  Id2Buffer _buffers;
+
   std::set<std::string> _files_send_to_drop;
   EngineEnvironment_ptr _env;
   Settings *_settings;

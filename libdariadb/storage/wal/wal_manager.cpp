@@ -50,8 +50,9 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
 
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
         logger_info("engine", _settings->alias, ": WalManager open exist file ", f.fname);
-
-        _wal[p->id_from_first()] = p;
+        auto bd =
+            std::make_shared<BufferDescription>(p, _settings->wal_cache_size.value());
+        _buffers.insert(p->id_from_first(), bd);
       }
     }
   }
@@ -60,11 +61,10 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
   //_buffer_pos = 0;
 }
 
-WALFile_Ptr WALManager::create_new(dariadb::Id id) {
-  auto fres = _wal.find(id);
-  if (fres != _wal.end()) {
+WALFile_Ptr WALManager::create_new(BufferDescription_Ptr bd, dariadb::Id id) {
+  if (bd->walfile != nullptr) {
     std::lock_guard<std::mutex> lg(_file2mm_locker);
-    auto walfile_ptr = fres->second;
+    auto walfile_ptr = bd->walfile;
     auto f = walfile_ptr->filename();
     _file2minmax[f].minTime = walfile_ptr->minTime();
     _file2minmax[f].maxTime = walfile_ptr->maxTime();
@@ -72,32 +72,32 @@ WALFile_Ptr WALManager::create_new(dariadb::Id id) {
     if (_settings->strategy.value() != STRATEGY::WAL) {
       dropFile(f);
     }
-    _wal.erase(fres);
+   bd->walfile = nullptr;
   }
 
   auto result = WALFile::create(_env, id);
-  _wal[id] = result;
+  if (bd != nullptr) {
+    bd->walfile = result;
+  }
   logger_info("create #", id, " => ", result->filename());
   return result;
 }
 
 void WALManager::dropAll() {
   if (_down != nullptr) {
-    _global_lock.lock();
     this->flush();
-    for (auto kv : _wal) {
-      if (kv.second != nullptr) {
-        auto fname = kv.second->filename();
+    _buffers.apply([this](const Id2Buffer::value_type &kv) {
+      if (kv.second != nullptr && kv.second->walfile != nullptr) {
+        auto fname = kv.second->walfile->filename();
         dropFile(fname);
       }
-    }
-    _wal.clear();
+    });
+    _buffers.clear();
     auto all_files = wal_files_all();
 
     for (auto f : all_files) {
       dropFile(f);
     }
-    _global_lock.unlock();
   }
 }
 
@@ -129,12 +129,15 @@ void WALManager::drop_old_if_needed() {
     auto all_files = wal_files_all();
     for (auto f : all_files) {
       bool exists = false;
-      for (auto kv : _wal) {
-        if (kv.second != nullptr && kv.second->filename() == f) {
-          exists = true;
-          break;
+      _buffers.apply([this, &exists, &f](const Id2Buffer::value_type &kv) {
+        if (kv.second != nullptr && kv.second->walfile != nullptr) {
+          auto wfile = kv.second->walfile;
+          if (wfile->filename() == f) {
+            exists = true;
+          }
         }
-      }
+      });
+
       if (!exists) {
         dropFile(f);
       }
@@ -168,15 +171,21 @@ std::list<std::string> WALManager::closedWals() {
   auto all_files = wal_files_all();
   std::list<std::string> result;
   for (auto fn : all_files) {
-    if (_wal.empty()) {
+    if (_buffers.empty()) {
       result.push_back(fn);
     } else {
-      for (auto kv : _wal) {
-        if (kv.second->filename() == fn) {
-          continue;
+      bool exists = false;
+      _buffers.apply([this, &exists, &fn](const Id2Buffer::value_type &kv) {
+        if (kv.second != nullptr && kv.second->walfile != nullptr) {
+          auto wfile = kv.second->walfile;
+          if (wfile->filename() == fn) {
+            exists = true;
+          }
         }
+      });
+      if (!exists) {
+        result.push_back(fn);
       }
-      result.push_back(fn);
     }
   }
   return result;
@@ -195,7 +204,6 @@ void WALManager::setDownlevel(IWALDropper *down) {
 }
 
 dariadb::Time WALManager::minTime() {
-  std::shared_lock<std::shared_mutex> lg(_global_lock);
   auto files = wal_files_all();
   dariadb::Time result = dariadb::MAX_TIME;
   auto env = _env;
@@ -212,17 +220,17 @@ dariadb::Time WALManager::minTime() {
   auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
 
-  for (auto pos_kv : _buffer_pos) {
-    auto target_buffer = &_buffer[pos_kv.first];
-    for (size_t pos = 0; pos < pos_kv.second; ++pos) {
+  _buffers.apply([this, &result](const Id2Buffer::value_type &kv) {
+    auto target_buffer = &kv.second->buffer;
+    for (size_t pos = 0; pos < kv.second->pos; ++pos) {
       result = std::min(target_buffer->at(pos).time, result);
     }
-  }
+  });
+
   return result;
 }
 
 dariadb::Time WALManager::maxTime() {
-  std::shared_lock<std::shared_mutex> lg(_global_lock);
   auto files = wal_files_all();
   dariadb::Time result = dariadb::MIN_TIME;
   auto env = _env;
@@ -238,18 +246,18 @@ dariadb::Time WALManager::maxTime() {
 
   auto am_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
   am_async->wait();
-  for (auto pos_kv : _buffer_pos) {
-    auto target_buffer = &_buffer[pos_kv.first];
-    for (size_t pos = 0; pos < pos_kv.second; ++pos) {
+
+  _buffers.apply([this, &result](const Id2Buffer::value_type &kv) {
+    auto target_buffer = &kv.second->buffer;
+    for (size_t pos = 0; pos < kv.second->pos; ++pos) {
       result = std::max(target_buffer->at(pos).time, result);
     }
-  }
+  });
   return result;
 }
 
 bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
                             dariadb::Time *maxResult) {
-  std::shared_lock<std::shared_mutex> lg(_global_lock);
   auto files = wal_files(id);
   using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
   std::vector<MMRes> results{files.size()};
@@ -285,11 +293,10 @@ bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
       *maxResult = std::max(std::get<2>(subRes), *maxResult);
     }
   }
-
-  auto pos_fres = _buffer_pos.find(id);
-  if (pos_fres != _buffer_pos.end()) {
-    auto target_buffer = &_buffer[pos_fres->first];
-    for (size_t pos = 0; pos < pos_fres->second; ++pos) {
+  BufferDescription_Ptr bd = nullptr;
+  if (_buffers.find(id, &bd)) {
+    auto target_buffer = &bd->buffer;
+    for (size_t pos = 0; pos < bd->pos; ++pos) {
       Meas v = target_buffer->at(pos);
       res = true;
       *minResult = std::min(v.time, *minResult);
@@ -321,7 +328,6 @@ void WALManager::intervalReader_async_logic(const std::list<std::string> &files,
 }
 
 Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
-  std::shared_lock<std::shared_mutex> lg(_global_lock);
   Id2CursorsList readers_list;
 
   QueryInterval local_q = q;
@@ -346,20 +352,17 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
     }
   }
 
-  size_t pos = 0;
   Id2MSet i2ms;
   for (auto id : q.ids) {
-    auto pos_it = _buffer_pos.find(id);
-    if (pos_it == _buffer_pos.end()) {
-      continue;
-    }
-    auto target_buffer = &_buffer[pos_it->first];
-    for (size_t i = 0; i < pos_it->second; ++i) {
-      Meas v = target_buffer->at(i);
-      if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
-        i2ms[v.id].insert(v);
+    BufferDescription_Ptr bd = nullptr;
+    if (_buffers.find(id, &bd)) {
+      auto target_buffer = &bd->buffer;
+      for (size_t pos = 0; pos < bd->pos; ++pos) {
+        Meas v = target_buffer->at(pos);
+        if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
+          i2ms[v.id].insert(v);
+        }
       }
-      ++pos;
     }
   }
 
@@ -377,7 +380,6 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
 }
 
 Statistic WALManager::stat(const Id id, Time from, Time to) {
-  std::shared_lock<std::shared_mutex> lg(_global_lock);
   Statistic result;
 
   auto files = wal_files(id);
@@ -409,17 +411,19 @@ Statistic WALManager::stat(const Id id, Time from, Time to) {
 
   IdArray ids{id};
   ENSURE(ids[0] == id);
-  auto pos_it = _buffer_pos.find(id);
-  if (pos_it != _buffer_pos.end()) {
-    auto pos = pos_it->second;
-    auto target_buffer = &_buffer[pos_it->first];
-    for (size_t i = 0; i < pos; ++i) {
-      Meas v = target_buffer->at(i);
+
+  BufferDescription_Ptr bd;
+  if (_buffers.find(id, &bd)) {
+    auto target_buffer = &bd->buffer;
+
+    for (size_t pos = 0; pos < bd->pos; ++pos) {
+      Meas v = target_buffer->at(pos);
       if (v.inInterval(from, to)) {
         result.update(v);
       }
     }
   }
+
   return result;
 }
 
@@ -431,8 +435,6 @@ void WALManager::foreach (const QueryInterval &q, IReadCallback * clbk) {
 }
 
 Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
-  std::shared_lock<std::shared_mutex> lg(_global_lock);
-
   QueryTimePoint local_q = query;
   local_q.ids.resize(1);
   std::list<Id2Meas> results;
@@ -477,21 +479,22 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
     }
   }
   for (auto id : query.ids) {
-    auto pos_it = _buffer_pos.find(id);
-    if (pos_it == _buffer_pos.end()) {
-      continue;
-    }
-    auto target_buffer = &_buffer[pos_it->first];
-    for (size_t i = 0; i < pos_it->second; ++i) {
-      Meas v = target_buffer->at(i);
-      if (v.inQuery(query.ids, query.flag)) {
-        auto it = sub_result.find(v.id);
-        if (it == sub_result.end()) {
-          sub_result.emplace(std::make_pair(v.id, v));
-        } else {
-          if ((v.flag == FLAGS::_NO_DATA) ||
-              ((v.time > it->second.time) && (v.time <= query.time_point))) {
-            sub_result[v.id] = v;
+    BufferDescription_Ptr bd = nullptr;
+    if (_buffers.find(id, &bd)) {
+      auto target_buffer = &bd->buffer;
+      for (size_t pos = 0; pos < bd->pos; ++pos) {
+        Meas v = target_buffer->at(pos);
+
+        if (v.inQuery(query.ids, query.flag)) {
+          auto it = sub_result.find(v.id);
+
+          if (it == sub_result.end()) {
+            sub_result.emplace(std::make_pair(v.id, v));
+          } else {
+            if ((v.flag == FLAGS::_NO_DATA) ||
+                ((v.time > it->second.time) && (v.time <= query.time_point))) {
+              sub_result[v.id] = v;
+            }
           }
         }
       }
@@ -540,70 +543,63 @@ Id2Meas WALManager::currentValue(const IdArray &ids, const Flag &flag) {
 }
 
 dariadb::Status WALManager::append(const Meas &value) {
-  _global_lock.lock_shared();
-  bool creation_lock = false;
-  auto pos_it = _buffer_pos.find(value.id);
-  if (pos_it == _buffer_pos.end()) {
-    _global_lock.unlock_shared();
-    _global_lock.lock();
-    pos_it = _buffer_pos.find(value.id);
-    if (pos_it == _buffer_pos.end()) {
-      _buffer_pos[value.id] = size_t(1);
-      _buffer[value.id].resize(_settings->wal_cache_size.value());
-      _buffer[value.id][0] = value;
 
-      _lockers[value.id].lock();
-      _lockers[value.id].unlock();
-
-      _global_lock.unlock();
+  BufferDescription_Ptr buffer_description = nullptr;
+  {
+    auto iterator = _buffers.find_bucket(value.id);
+    if (iterator.v->second == nullptr) {
+      buffer_description =
+          std::make_shared<BufferDescription>(nullptr, _settings->wal_cache_size.value());
+      iterator.v->second = buffer_description;
+      buffer_description->buffer[0] = value;
+	  buffer_description->pos = size_t(1);
       return dariadb::Status(1);
     } else {
-      creation_lock = true;
+      buffer_description = iterator.v->second;
+	  ENSURE(buffer_description->pos == size_t(0) || buffer_description->buffer.front().id == value.id);
+      buffer_description->locker.lock();
     }
-  } else {
-    _lockers[value.id].lock();
+  }
 
-    _buffer[pos_it->first][pos_it->second] = value;
-    pos_it->second++;
-    if (pos_it->second >= _settings->wal_cache_size.value()) {
-      flush_buffer(pos_it->first);
-    } else {
-      _lockers[value.id].unlock();
-    }
-  }
-  if (creation_lock) {
-    _global_lock.unlock();
+  buffer_description->buffer[buffer_description->pos++] = value;
+  if (buffer_description->pos >= _settings->wal_cache_size.value()) {
+    flush_buffer(buffer_description, true);
   } else {
-    _global_lock.unlock_shared();
+    buffer_description->locker.unlock();
   }
+
   return dariadb::Status(1);
 }
 
-void WALManager::flush_buffer(dariadb::Id id, bool sync) {
+void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
   /*if (_buffer_pos == size_t(0)) {
     return;
   }*/
-  AsyncTask at = [this, id](const ThreadInfo &ti) {
+  AsyncTask at = [this, bd](const ThreadInfo &ti) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-    if (_buffer_pos[id] == 0) {
-      _lockers[id].unlock();
+    
+    if (bd->pos == 0) {
+      bd->locker.unlock();
       return false;
     }
+	dariadb::Id id = bd->buffer.front().id;
     size_t pos = 0;
     size_t total_writed = 0;
-    if (_wal.find(id) == _wal.end()) {
-      create_new(id);
+    if (bd->walfile == nullptr) {
+      create_new(bd, id);
+      ENSURE(bd->walfile != nullptr);
     }
-    auto target_buffer = &_buffer[id];
+
+    auto target_buffer = &bd->buffer;
     while (1) {
       auto it = target_buffer->begin();
       auto begin = it + pos;
-      auto end = it + _buffer_pos[id];
+      auto end = it + bd->pos;
       Status res;
-      res = _wal[id]->append(begin, end);
+      res = bd->walfile->append(begin, end);
       total_writed += res.writed;
       if (res.error == APPEND_ERROR::wal_file_limit) {
-        create_new(id);
+        create_new(bd, id);
       } else {
         if (res.error != APPEND_ERROR::OK) {
           logger_fatal("engine", this->_settings->alias, ": append to wal error - ",
@@ -611,15 +607,15 @@ void WALManager::flush_buffer(dariadb::Id id, bool sync) {
           return false;
         }
       }
-      if (total_writed != _buffer_pos[id]) {
+      if (total_writed != bd->pos) {
         pos += res.writed;
       } else {
         break;
       }
     }
-    _buffer_pos[id] = size_t(0);
-    std::fill_n(_buffer[id].begin(), _buffer[id].size(), Meas());
-    _lockers[id].unlock();
+    bd->pos = size_t(0);
+    //std::fill_n(bd->buffer.begin(), bd->buffer.size(), Meas());
+    bd->locker.unlock();
     return false;
   };
   auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
@@ -629,11 +625,12 @@ void WALManager::flush_buffer(dariadb::Id id, bool sync) {
 }
 
 void WALManager::flush() {
-  for (auto kv : _buffer_pos) {
-    if (kv.second != size_t(0)) {
-      flush_buffer(kv.first, true);
+  _buffers.apply([this](const Id2Buffer::value_type &kv) {
+    if (kv.second->pos != size_t(0)) {
+		auto nonconst = const_cast<BufferDescription_Ptr*>(&kv.second);
+      flush_buffer(*nonconst, true);
     }
-  }
+  });
 }
 
 size_t WALManager::filesCount() const {
@@ -659,16 +656,16 @@ Id2MinMax_Ptr WALManager::loadMinMax() {
     minmax_append(result, sub_res);
   }
 
-  for (auto pos_it : _buffer_pos) {
-    auto target_buffer = &_buffer[pos_it.first];
-    for (size_t i = 0; i < pos_it.second; ++i) {
-      Meas val = target_buffer->at(i);
+  _buffers.apply([this, &result](const Id2Buffer::value_type &kv) {
+    auto target_buffer = &kv.second->buffer;
+    for (size_t pos = 0; pos < kv.second->pos; ++pos) {
+      Meas val = target_buffer->at(pos);
       auto fres = result->find_bucket(val.id);
 
       fres.v->second.updateMax(val);
       fres.v->second.updateMin(val);
     }
-  }
+  });
 
   return result;
 }
