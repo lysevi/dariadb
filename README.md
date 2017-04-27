@@ -85,7 +85,6 @@ $ git submodules update
 ```
 ### Available build options
 - **DARIADB_ENABLE_TESTS** - Enable testing of the dariadb. - ON
-- **DARIADB_ENABLE_METRICS** - Enable code metrics. - ON
 - **DARIADB_ENABLE_INTEGRATION_TESTS** - Enable integration test. - ON
 - **DARIADB_ENABLE_SERVER** - Enable build dariadb server. - ON
 - **DARIADB_ENABLE_BENCHMARKS** - Enable build dariadb benchmarks. - ON
@@ -98,7 +97,7 @@ $ git submodules update
 #### Configure to build with all benchmarks, but without tests and server.
 ---
 ```shell
-$ cmake  -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=OFF -DENABLE_INTEGRATION_TESTS=OFF -DENABLE_BENCHMARKS=ON -DENABLE_SERVER=OFF . 
+$ cmake  -DCMAKE_BUILD_TYPE=Release -DDARIADB_ENABLE_TESTS=OFF -DDARIADB_ENABLE_INTEGRATION_TESTS=OFF -DDARIADB_ENABLE_BENCHMARKS=ON -DDARIADB_ENABLE_SERVER=OFF . 
 ```
 
 ### clang
