@@ -1,4 +1,5 @@
 # dariadb - numeric time-series database.
+
 # Continuous Integration
 
 |  version | build & tests | test coverage |
@@ -6,7 +7,9 @@
 | `master`   | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb) |  [![codecov](https://codecov.io/gh/lysevi/dariadb/branch/master/graph/badge.svg)](https://codecov.io/gh/lysevi/dariadb) |
 | `develop` | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=dev)](https://travis-ci.org/lysevi/dariadb) | [![codecov](https://codecov.io/gh/lysevi/dariadb/branch/dev/graph/badge.svg)](https://codecov.io/gh/lysevi/dariadb) |
  
+
 # Features
+* True columnar storage
 * Can be used as a server application or an embedded library.
 * Full featured http api.
 * Accept unordered data.

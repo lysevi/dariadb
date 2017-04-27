@@ -1,3 +1,7 @@
+v0.5.0
+=====
+- true columnar database.
+
 v0.4.1
 =====
 - google.test for unittests.
