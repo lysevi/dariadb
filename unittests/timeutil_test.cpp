@@ -35,6 +35,11 @@ TEST(Time, TimeRound) {
 
 TEST(Time, IntervalFromString) {
   {
+    auto hh = dariadb::timeutil::intervalName2time("minute");
+    auto dt = dariadb::timeutil::to_datetime(hh);
+    EXPECT_EQ(dt.minute, uint8_t(1));
+  }
+  {
     auto hh = dariadb::timeutil::intervalName2time("halfhour");
     auto dt = dariadb::timeutil::to_datetime(hh);
     EXPECT_EQ(dt.minute, uint8_t(30));
@@ -71,6 +76,7 @@ TEST(Time, IntervalFromString) {
 
 TEST(Time, IntervalCompare) {
   using namespace dariadb::timeutil;
+  EXPECT_TRUE(intervalsLessCmp("minute", "halfhour"));
   EXPECT_TRUE(intervalsLessCmp("halfhour", "hour"));
   EXPECT_FALSE(intervalsLessCmp("halfhour", "halfhour"));
   EXPECT_TRUE(intervalsLessCmp("hour", "day"));
@@ -80,5 +86,5 @@ TEST(Time, IntervalCompare) {
 
 TEST(Time, IntervalPredefined) {
   using namespace dariadb::timeutil;
-  EXPECT_EQ(predefinedIntervals().size(), size_t(5));
+  EXPECT_EQ(predefinedIntervals().size(), size_t(6));
 }

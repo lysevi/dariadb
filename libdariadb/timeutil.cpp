@@ -121,6 +121,9 @@ Time intervalName2time(const std::string &interval) {
   const Time minute = 1000 * 60;
   const Time hour = minute * 60;
   const Time day = hour * 24;
+  if (interval == "minute") {
+    return minute;
+  }
   if (interval == "halfhour") {
     return minute * 30;
   }
@@ -146,7 +149,7 @@ bool intervalsLessCmp(const std::string &l, const std::string &r) {
 }
 
 std::vector<std::string> predefinedIntervals() {
-  std::vector<std::string> predefined = {"halfhour", "hour", "day", "week", "month31"};
+  std::vector<std::string> predefined = {"minute", "halfhour", "hour", "day", "week", "month31"};
   return predefined;
 }
 } // namespace timeutil
