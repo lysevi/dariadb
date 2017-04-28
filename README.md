@@ -52,7 +52,7 @@
 
 # Usage example
 - See folder "examples"
-- How to use dariadb as a embedded storage engine: [dariadb-example](	)
+- How to use dariadb as a embedded storage engine: [dariadb-example](https://github.com/lysevi/dariadb-example)
 
 # Dependencies
 * Boost 1.54.0 or higher: system, filesystem, date_time,regex, program_options, asio.

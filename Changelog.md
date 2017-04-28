@@ -1,11 +1,12 @@
 v0.5.0
 =====
-- true columnar database.
+- True columnar database.
+- Automatic data erasing was disabled. Timeseries removing only by manual.
 
 v0.4.1
 =====
 - google.test for unittests.
-- statistical functions: average, median, sigma(standard deviation), percentile90, percentile99
+- Statistical functions: average, median, sigma(standard deviation), percentile90, percentile99
 
 v0.4.0
 =====
