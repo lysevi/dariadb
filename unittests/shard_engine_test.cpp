@@ -71,7 +71,7 @@ TEST(Shard, Common_test) {
     dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, true,
                                      false);
     shard_storage->fsck();
-    shard_storage->repack();
+    shard_storage->repack(dariadb::Id(0));
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

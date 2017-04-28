@@ -476,11 +476,14 @@ public:
     return pages_by_filter(std::function<bool(IndexFooter)>(pred));
   }
 
-  void repack() {
+  void repack(const dariadb::Id id) {
+    logger_info("engine", _settings->alias, ": repack #", id);
     auto max_files_per_level = _settings->max_pages_in_level.value();
 
     for (uint16_t level = MIN_LEVEL; level < MAX_LEVEL; ++level) {
-      auto pred = [level](const IndexFooter &hdr) { return hdr.level == level; };
+      auto pred = [level, id](const IndexFooter &hdr) {
+        return hdr.target_id == id && hdr.level == level;
+      };
 
       auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
 
@@ -742,8 +745,8 @@ std::list<std::string> PageManager::pagesOlderThan(const dariadb::Id id, const T
   return impl->pagesOlderThan(id, t);
 }
 
-void PageManager::repack() {
-  impl->repack();
+void PageManager::repack(const dariadb::Id id) {
+  impl->repack(id);
 }
 
 void PageManager::compact(ICompactionController *logic) {

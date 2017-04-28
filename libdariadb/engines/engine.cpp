@@ -799,49 +799,50 @@ public:
     this->unlock_storage();
   }
 
- /* void erase_worker_func() {
-    while (!_beginStoping) {
-      if (_settings->max_store_period.value() != MAX_TIME) {
-        if (this->try_lock_storage()) {
-          auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
+  /* void erase_worker_func() {
+     while (!_beginStoping) {
+       if (_settings->max_store_period.value() != MAX_TIME) {
+         if (this->try_lock_storage()) {
+           auto timepoint = timeutil::current_time() -
+   _settings->max_store_period.value();
 
-          if (_page_manager != nullptr) {
-            AsyncTask am_at = [this, timepoint](const ThreadInfo &ti) {
-              TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-              logger_info("engine", _settings->alias, ": eraseold ",
-                          timeutil::to_string(timepoint));
-              _page_manager->eraseOld(timepoint);
-              logger_info("engine", _settings->alias, ": eraseold complete.");
-              return false;
-            };
-            auto at = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(am_at));
-            at->wait();
-          }
+           if (_page_manager != nullptr) {
+             AsyncTask am_at = [this, timepoint](const ThreadInfo &ti) {
+               TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+               logger_info("engine", _settings->alias, ": eraseold ",
+                           timeutil::to_string(timepoint));
+               _page_manager->eraseOld(timepoint);
+               logger_info("engine", _settings->alias, ": eraseold complete.");
+               return false;
+             };
+             auto at = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(am_at));
+             at->wait();
+           }
 
-          if (this->strategy() == STRATEGY::MEMORY) {
-            this->_memstorage->dropOld(timepoint);
-          }
+           if (this->strategy() == STRATEGY::MEMORY) {
+             this->_memstorage->dropOld(timepoint);
+           }
 
-          this->unlock_storage();
-        }
-        if (_beginStoping) {
-          break;
-        }
-      }
-      utils::sleep_mls(500);
-    }
-    _eraseActionIsStoped = true;
-  }*/
+           this->unlock_storage();
+         }
+         if (_beginStoping) {
+           break;
+         }
+       }
+       utils::sleep_mls(500);
+     }
+     _eraseActionIsStoped = true;
+   }*/
 
   STRATEGY strategy() const {
     ENSURE(_strategy == _settings->strategy.value());
     return this->_strategy;
   }
 
-  void repack() {
+  void repack(dariadb::Id id) {
     this->lock_storage();
     logger_info("engine", _settings->alias, ": repack...");
-    _page_manager->repack();
+    _page_manager->repack(id);
     this->unlock_storage();
   }
 
@@ -875,7 +876,7 @@ protected:
   bool _thread_pool_owner;
   bool _eraseActionIsStoped;
   bool _beginStoping;
-  //std::thread _async_worker_thread_handler;
+  // std::thread _async_worker_thread_handler;
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
@@ -953,8 +954,8 @@ void Engine::eraseOld(const Id id, const Time t) {
   return _impl->eraseOld(id, t);
 }
 
-void Engine::repack() {
-  _impl->repack();
+void Engine::repack(dariadb::Id id) {
+  _impl->repack(id);
 }
 
 void Engine::compact(ICompactionController *logic) {

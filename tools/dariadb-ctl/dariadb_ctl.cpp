@@ -199,12 +199,12 @@ int main(int argc, char *argv[]) {
     std::exit(0);
   }*/
 
-  if (vm.count("repack")) {
+ /* if (vm.count("repack")) {
     auto settings = loadSettings();
     auto e = std::make_unique<dariadb::Engine>(settings, force_unlock_storage);
     e->repack();
     e->flush();
     e->stop();
     std::exit(0);
-  }
+  }*/
 }

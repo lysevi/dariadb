@@ -565,17 +565,17 @@ int main(int argc, char *argv[]) {
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
 
-          dariadb::utils::ElapsedTime et;
-          raw_ptr->repack();
-          auto elapsed = et.elapsed();
-
+          for (auto id : all_id_set) {
+            dariadb::utils::ElapsedTime et;
+            raw_ptr->repack(id);
+            auto elapsed = et.elapsed();
+            summary_info->repack_metrics.push_back(elapsed);
+          }
           auto pages_after = raw_ptr->description().pages_count;
 
           std::cout << "==> pages after repack " << pages_after << "..." << std::endl;
-          std::cout << "repack time: " << elapsed << std::endl;
 
           summary_info->page_repacked = pages_before - pages_after - 1;
-          summary_info->page_repack_time = elapsed;
           if (!use_shard) {
             if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
                 pages_before <= pages_after) {

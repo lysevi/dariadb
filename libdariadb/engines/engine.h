@@ -54,7 +54,7 @@ public:
 
   EXPORT void eraseOld(const Id id, const Time t) override;
 
-  EXPORT void repack() override;
+  EXPORT void repack(dariadb::Id id) override;
   EXPORT void compact(ICompactionController *logic) override;
   EXPORT storage::Settings_ptr settings() override;
   EXPORT static uint16_t format();

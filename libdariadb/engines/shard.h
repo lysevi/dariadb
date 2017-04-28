@@ -36,7 +36,7 @@ public:
 
   EXPORT void fsck() override;
   EXPORT void eraseOld(const Id id, const Time t) override;
-  EXPORT void repack() override;
+  EXPORT void repack(dariadb::Id id) override;
   EXPORT void compact(ICompactionController *logic) override;
   EXPORT void stop() override;
 

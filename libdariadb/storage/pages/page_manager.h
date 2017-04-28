@@ -40,7 +40,7 @@ public:
   EXPORT void eraseOld(const dariadb::Id id, const Time t);
   EXPORT void erase_page(const std::string &fname);
   EXPORT static void erase(const std::string &storage_path, const std::string &fname);
-  EXPORT void repack();
+  EXPORT void repack(const dariadb::Id id);
   EXPORT Id2MinMax_Ptr loadMinMax();
 
   EXPORT void compact(ICompactionController *logic);

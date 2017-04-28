@@ -413,7 +413,7 @@ TEST(PageManager, Repack) {
   }
 
   auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-  pm->repack();
+  pm->repack(dariadb::Id(0));
   auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
   EXPECT_LT(pages_after, pages_before);
   { // id==0

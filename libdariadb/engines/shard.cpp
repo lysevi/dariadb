@@ -353,10 +353,11 @@ public:
     }
   }
 
-  void repack() override {
+  void repack(dariadb::Id id) override {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto &s : _sub_storages) {
-      s.storage->repack();
+    auto target = this->get_shard_for_id(id);
+    if (target != nullptr) {
+      target->repack(id);
     }
   }
 
@@ -484,8 +485,8 @@ void ShardEngine::eraseOld(const Id id, const Time t) {
   _impl->eraseOld(id, t);
 }
 
-void ShardEngine::repack() {
-  _impl->repack();
+void ShardEngine::repack(dariadb::Id id) {
+  _impl->repack(id);
 }
 void ShardEngine::compact(ICompactionController *logic) {
   _impl->compact(logic);
