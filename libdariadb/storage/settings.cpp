@@ -66,7 +66,7 @@ Settings_ptr Settings::create() {
 Settings::Settings(const std::string &path_to_storage)
     : storage_path(nullptr, "storage path", path_to_storage),
       raw_path(nullptr, "raw path", fs::append_path(path_to_storage, "raw")),
-      max_store_period(this, c_page_store_period, MAX_TIME),
+      /*max_store_period(this, c_page_store_period, MAX_TIME),*/
       wal_file_size(this, c_wal_file_size, WAL_FILE_SIZE),
       wal_cache_size(this, c_wal_cache_size, WAL_CACHE_SIZE),
       max_chunks_per_page(this, c_chunks_per_page, MAX_CHUNKS_PER_PAGE),

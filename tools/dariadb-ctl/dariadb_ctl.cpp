@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
     info_thread.join();
   }
 
-  if (erase_to.size() != 0) {
+ /* if (erase_to.size() != 0) {
     dariadb::Time to = 0;
     if (time_in_iso_format) {
       to = dariadb::timeutil::from_iso_string(erase_to);
@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
     e->flush();
     e->stop();
     std::exit(0);
-  }
+  }*/
 
   if (vm.count("repack")) {
     auto settings = loadSettings();

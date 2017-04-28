@@ -125,8 +125,8 @@ public:
   void flush() {}
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    auto pages = pages_by_filter(
-        [id](const IndexFooter &ih) { return (storage::bloom_check(ih.id_bloom, id)); });
+    auto pages =
+        pages_by_filter([id](const IndexFooter &ih) { return ih.target_id == id; });
 
     using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
     std::vector<MMRes> results{pages.size()};
@@ -188,7 +188,7 @@ public:
                           (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, from)) ||
                           (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to)));
       if (interval_check) {
-        if (storage::bloom_check(hdr.id_bloom, id)) {
+        if (hdr.target_id == id) {
           return true;
         }
       }
@@ -239,7 +239,7 @@ public:
           (utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, query.to)));
       if (interval_check) {
         for (auto id : query.ids) {
-          if (storage::bloom_check(hdr.id_bloom, id) &&
+          if (hdr.target_id == id &&
               (query.flag == Flag(0) ||
                storage::bloom_check(hdr.stat.flag_bloom, query.flag))) {
             return true;
@@ -315,7 +315,7 @@ public:
             (hdr.stat.maxTime < query.time_point);
         if (in_check) {
           for (auto id : query.ids) {
-            if (storage::bloom_check(hdr.id_bloom, id)) {
+            if (hdr.target_id == id) {
               return true;
             }
           }
@@ -460,17 +460,17 @@ public:
 #endif
   }
 
-  void eraseOld(const Time t) {
+  void eraseOld(const dariadb::Id id, const Time t) {
     logger("pm: erase old");
-    auto page_list = pagesOlderThan(t);
+    auto page_list = pagesOlderThan(id, t);
     for (auto &p : page_list) {
       this->erase_page(p);
     }
   }
 
-  std::list<std::string> pagesOlderThan(Time t) {
-    auto pred = [t](const IndexFooter &hdr) {
-      auto in_check = hdr.stat.maxTime <= t;
+  std::list<std::string> pagesOlderThan(const dariadb::Id id, const Time t) {
+    auto pred = [id, t](const IndexFooter &hdr) {
+      auto in_check = hdr.stat.maxTime <= t && hdr.target_id == id;
       return in_check;
     };
     return pages_by_filter(std::function<bool(IndexFooter)>(pred));
@@ -532,13 +532,15 @@ public:
   void compact(ICompactionController *logic) {
     Time from = logic->from;
     Time to = logic->to;
+    Id targetId = logic->targetId;
     logger("engine", _settings->alias, ": compact. from ", from, " to ", to);
     utils::ElapsedTime et;
-    auto pred = [from, to](const IndexFooter &hdr) {
-      return utils::inInterval(from, to, hdr.stat.minTime) ||
-             utils::inInterval(from, to, hdr.stat.maxTime) ||
-             utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, from) ||
-             utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to);
+    auto pred = [from, to, targetId](const IndexFooter &hdr) {
+      return hdr.target_id == targetId &&
+             (utils::inInterval(from, to, hdr.stat.minTime) ||
+              utils::inInterval(from, to, hdr.stat.maxTime) ||
+              utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, from) ||
+              utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to));
     };
 
     auto page_list_in_period = pages_by_filter(std::function<bool(IndexFooter)>(pred));
@@ -724,8 +726,8 @@ void PageManager::fsck() {
   return impl->fsck();
 }
 
-void PageManager::eraseOld(const dariadb::Time t) {
-  impl->eraseOld(t);
+void PageManager::eraseOld(const dariadb::Id id, const Time t) {
+  impl->eraseOld(id, t);
 }
 
 void PageManager::erase(const std::string &storage_path, const std::string &fname) {
@@ -736,8 +738,8 @@ void PageManager::erase_page(const std::string &fname) {
   impl->erase_page(fname);
 }
 
-std::list<std::string> PageManager::pagesOlderThan(Time t) {
-  return impl->pagesOlderThan(t);
+std::list<std::string> PageManager::pagesOlderThan(const dariadb::Id id, const Time t) {
+  return impl->pagesOlderThan(id, t);
 }
 
 void PageManager::repack() {

@@ -91,14 +91,14 @@ public:
 
   void startWorkers() {
     logger_info("engine", _settings->alias, ": start async workers...");
-    this->_async_worker_thread_handler =
-        std::thread(std::bind(&Engine::Private::erase_worker_func, this));
+    /*this->_async_worker_thread_handler =
+        std::thread(std::bind(&Engine::Private::erase_worker_func, this));*/
   }
 
   void whaitWorkers() {
-    logger("engine", _settings->alias, ": whait stop of async workers...");
+    /*logger("engine", _settings->alias, ": whait stop of async workers...");
     this->_async_worker_thread_handler.join();
-    logger("engine", _settings->alias, ": async workers stoped.");
+    logger("engine", _settings->alias, ": async workers stoped.");*/
   }
 
   void readMinMaxFromStorages() {
@@ -789,17 +789,17 @@ public:
     this->unlock_storage();
   }
 
-  void eraseOld(const Time &t) {
+  void eraseOld(const Id id, const Time t) {
     logger_info("engine", _settings->alias, ": eraseOld to ", timeutil::to_string(t));
     this->lock_storage();
-    _page_manager->eraseOld(t);
+    _page_manager->eraseOld(id, t);
     if (this->strategy() == STRATEGY::MEMORY) {
-      this->_memstorage->dropOld(t);
+      this->_memstorage->dropOld(id, t);
     }
     this->unlock_storage();
   }
 
-  void erase_worker_func() {
+ /* void erase_worker_func() {
     while (!_beginStoping) {
       if (_settings->max_store_period.value() != MAX_TIME) {
         if (this->try_lock_storage()) {
@@ -831,7 +831,7 @@ public:
       utils::sleep_mls(500);
     }
     _eraseActionIsStoped = true;
-  }
+  }*/
 
   STRATEGY strategy() const {
     ENSURE(_strategy == _settings->strategy.value());
@@ -875,7 +875,7 @@ protected:
   bool _thread_pool_owner;
   bool _eraseActionIsStoped;
   bool _beginStoping;
-  std::thread _async_worker_thread_handler;
+  //std::thread _async_worker_thread_handler;
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
@@ -949,8 +949,8 @@ void Engine::fsck() {
   _impl->fsck();
 }
 
-void Engine::eraseOld(const Time &t) {
-  return _impl->eraseOld(t);
+void Engine::eraseOld(const Id id, const Time t) {
+  return _impl->eraseOld(id, t);
 }
 
 void Engine::repack() {

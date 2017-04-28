@@ -39,7 +39,7 @@ public:
   };
   virtual Description description() const = 0;
   virtual void fsck() = 0;
-  virtual void eraseOld(const Time &t) = 0;
+  virtual void eraseOld(const Id id, const Time t) = 0;
   virtual void repack() = 0;
   virtual void compact(ICompactionController *logic) = 0;
   virtual void stop() = 0;

@@ -10,8 +10,8 @@ namespace storage {
 #pragma pack(push, 1)
 struct IndexFooter {
   uint64_t magic_number;
-  bool is_sorted;    // items in index file sorted by time
-  uint64_t id_bloom; // bloom filter of Meas.id
+  bool is_sorted; // items in index file sorted by time
+  Id target_id;   // measurement id
 
   Statistic stat;
   uint64_t recs_count;
@@ -26,7 +26,7 @@ struct IndexFooter {
     level = 0;
     recs_count = 0;
     is_sorted = false;
-    id_bloom = bloom_empty<Id>();
+    target_id = Id();
     parent_offset = uint64_t();
     ftr_end = MAGIC_NUMBER_INDEXFTR;
   }
@@ -46,12 +46,12 @@ struct IndexFooter {
 };
 
 struct IndexReccord {
-  size_t meas_id;
+  size_t target_id;  // measurement id
   uint64_t chunk_id; // chunk->id
   uint64_t offset;   // offset in bytes of chunk in page
   Statistic stat;
   IndexReccord() : stat() {
-    meas_id = 0;
+    target_id = 0;
     chunk_id = 0;
     offset = 0;
   }
@@ -79,4 +79,4 @@ public:
   }
 };
 }
-}
+} // namespace dariadb

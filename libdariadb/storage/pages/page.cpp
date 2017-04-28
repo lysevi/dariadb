@@ -174,7 +174,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
 
     auto clinks = p->linksByIterval(qi);
     for (auto &cl : clinks) {
-      if (logic != nullptr && (timepoint - cl.maxTime >= logic->eraseOlderThan)) {
+      if (logic != nullptr && ((timepoint - cl.maxTime) >= logic->eraseOlderThan)) {
         continue;
       }
       cl.page_name = p_full_path;

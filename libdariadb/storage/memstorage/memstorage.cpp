@@ -187,7 +187,7 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     }
   }
 
-  void drop_logic(size_t , std::list<MemChunk_Ptr> &all_chunks) {
+  void drop_logic(size_t, std::list<MemChunk_Ptr> &all_chunks) {
     std::unordered_map<dariadb::Id, std::vector<Chunk *>> c2i;
     std::unordered_map<dariadb::Id, std::vector<MemChunk_Ptr>> c2i_to_drop;
     std::vector<Chunk *> raw_ptrs(all_chunks.size());
@@ -196,30 +196,32 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
       c2i[mc->header->meas_id].push_back(mc.get());
       c2i_to_drop[mc->header->meas_id].push_back(mc);
     }
-	all_chunks.clear();
+    all_chunks.clear();
     for (auto kv : c2i) {
       this->_down_level_storage->appendChunks(kv.second);
       for (auto mc : c2i_to_drop[kv.first]) {
         freeChunk(mc);
       }
-	  c2i_to_drop[kv.first].clear();
+      c2i_to_drop[kv.first].clear();
     }
-
-    
   }
 
-  void dropOld(Time t) {
-    logger_info("engine", _settings->alias, ": memstorage - drop old ",
-                timeutil::to_string(t));
+  void dropOld(dariadb::Id id, Time t) {
+    logger_info("engine", _settings->alias, ": memstorage - drop old #", id, " [",
+                timeutil::to_string(t), "]");
     utils::ElapsedTime et;
     size_t erased = 0;
-    auto f = [t, &erased](const Id2Track::value_type &v) {
+	TimeTrack_ptr target = nullptr;
+	if (_id2track.find(id, &target)) {
+		erased += target->drop_Old(t);
+	}
+    /*auto f = [t, &erased](const Id2Track::value_type &v) {
       erased += v.second->drop_Old(t);
     };
 
     _id2track.apply(f);
 
-    _chunks_count.fetch_sub(erased);
+    _chunks_count.fetch_sub(erased);*/
     logger_info("engine", _settings->alias, ": memstorage - drop old complete. erased ",
                 erased, " chunks. elapsed ", et.elapsed(), "s");
   }
@@ -482,6 +484,6 @@ Id2Time MemStorage::getSyncMap() {
   return _impl->getSyncMap();
 }
 
-void MemStorage::dropOld(Time t) {
-  return _impl->dropOld(t);
+void MemStorage::dropOld(dariadb::Id id, Time t) {
+  return _impl->dropOld(id, t);
 }

@@ -345,10 +345,11 @@ public:
     }
   }
 
-  void eraseOld(const Time &t) override {
+  void eraseOld(const Id id, const Time t) override {
     std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto &s : _sub_storages) {
-      s.storage->eraseOld(t);
+    auto target = this->get_shard_for_id(id);
+    if (target != nullptr) {
+      target->eraseOld(id, t);
     }
   }
 
@@ -479,8 +480,8 @@ void ShardEngine::fsck() {
   _impl->fsck();
 }
 
-void ShardEngine::eraseOld(const Time &t) {
-  _impl->eraseOld(t);
+void ShardEngine::eraseOld(const Id id, const Time t) {
+  _impl->eraseOld(id, t);
 }
 
 void ShardEngine::repack() {

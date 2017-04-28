@@ -31,7 +31,6 @@ struct BenchmarkSummaryInfo {
   double foreach_read_all_time;
   double page_repack_time;
   size_t page_repacked;
-  double compaction_time;
   dariadb::STRATEGY strategy;
 
   std::list<double> write_speed_metrics;
@@ -40,12 +39,12 @@ struct BenchmarkSummaryInfo {
   std::list<double> full_read_timeseries_metrics;
   std::list<double> copy_to_metrics;
   std::list<double> stat_metrics;
-
+  std::list<double> compaction_metrics;
   BenchmarkSummaryInfo(dariadb::STRATEGY _strategy) {
     strategy = _strategy;
     writed = size_t(0);
     page_repacked = size_t(0);
-    read_all_time = page_repack_time = foreach_read_all_time = compaction_time = 0.0;
+    read_all_time = page_repack_time = foreach_read_all_time = 0.0;
   }
   // TODO move to cpp file
   void print(const std::vector<SpeedMetric> &metrics) {
@@ -116,9 +115,10 @@ struct BenchmarkSummaryInfo {
           metrics("read timeseries", full_read_timeseries_metrics);
       SpeedMetric copy_sm = metrics("copy timeseries", copy_to_metrics);
       SpeedMetric stat_sm = metrics("stat", stat_metrics);
-      std::vector<SpeedMetric> all_metrics{write_sm,         read_tp_sm,
-                                           read_interval_sm, full_read_interval_sm,
-                                           copy_sm,          stat_sm};
+      SpeedMetric compact_sm = metrics("compaction", compaction_metrics);
+      std::vector<SpeedMetric> all_metrics{
+          write_sm, read_tp_sm, read_interval_sm, full_read_interval_sm,
+          copy_sm,  stat_sm,    compact_sm};
       print(all_metrics);
     }
 
@@ -127,7 +127,6 @@ struct BenchmarkSummaryInfo {
 
     std::cout << "read all: " << read_all_time << " secs." << std::endl;
     std::cout << "foreach all: " << foreach_read_all_time << " secs." << std::endl;
-    std::cout << "compaction: " << compaction_time << " secs." << std::endl;
   }
 
   SpeedMetric metrics(const std::string &name, const std::list<double> &values_list) {

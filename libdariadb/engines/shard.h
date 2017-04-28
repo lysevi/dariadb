@@ -35,7 +35,7 @@ public:
   EXPORT Statistic stat(const Id id, Time from, Time to) override;
 
   EXPORT void fsck() override;
-  EXPORT void eraseOld(const Time &t) override;
+  EXPORT void eraseOld(const Id id, const Time t) override;
   EXPORT void repack() override;
   EXPORT void compact(ICompactionController *logic) override;
   EXPORT void stop() override;

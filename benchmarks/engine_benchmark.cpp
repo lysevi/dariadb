@@ -39,8 +39,9 @@ dariadb_bench::BenchmarkParams benchmark_params;
 
 class CompactionBenchmark : public dariadb::ICompactionController {
 public:
-  CompactionBenchmark(dariadb::Time eraseThan, dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactionController(eraseThan, from, to) {}
+  CompactionBenchmark(dariadb::Id id, dariadb::Time eraseThan, dariadb::Time from,
+                      dariadb::Time to)
+      : dariadb::ICompactionController(id, eraseThan, from, to) {}
 
   void compact(dariadb::MeasArray &values, std::vector<int> &filter) override {
     for (size_t i = 0; i < values.size(); ++i) {
@@ -103,9 +104,8 @@ void parse_cmdline(int argc, char *argv[]) {
               po::value<size_t>(&benchmark_params.total_threads_count)
                   ->default_value(benchmark_params.total_threads_count),
               "write threads count");
-  aos_writers("freq",
-              po::value<size_t>(&benchmark_params.freq_per_second)
-                  ->default_value(benchmark_params.freq_per_second));
+  aos_writers("freq", po::value<size_t>(&benchmark_params.freq_per_second)
+                          ->default_value(benchmark_params.freq_per_second));
   desc.add(writers);
 
   po::variables_map vm;
@@ -179,7 +179,7 @@ void show_info(IEngine *storage) {
     auto step_time = double(double(t1 - t0) / (double)CLOCKS_PER_SEC);
 
     auto writes_per_sec = (w1 - w0) / step_time;
-	summary_info->write_speed_metrics.push_back(writes_per_sec);
+    summary_info->write_speed_metrics.push_back(writes_per_sec);
     auto reads_per_sec = (r1 - r0) / step_time;
     auto queue_sizes = storage->description();
 
@@ -608,16 +608,15 @@ int main(int argc, char *argv[]) {
       auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
                 << std::endl;
-      auto compaction_logic =
-          std::make_unique<CompactionBenchmark>(halfTime, start_time, max_time);
+      for (auto id : all_id_set) {
+        auto compaction_logic =
+            std::make_unique<CompactionBenchmark>(id, halfTime, start_time, max_time);
 
-      dariadb::utils::ElapsedTime et;
-      raw_ptr->compact(compaction_logic.get());
-      auto elapsed = et.elapsed();
-
-      std::cout << "time: " << elapsed << std::endl;
-      summary_info->compaction_time = elapsed;
-
+        dariadb::utils::ElapsedTime et;
+        raw_ptr->compact(compaction_logic.get());
+        auto elapsed = et.elapsed();
+        summary_info->compaction_metrics.push_back(elapsed);
+      }
       BenchCallback clbk;
       QueryInterval qi{IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
                        max_time};
