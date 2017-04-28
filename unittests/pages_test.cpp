@@ -360,10 +360,6 @@ TEST(PageManager, Repack) {
     dariadb::utils::sleep_mls(100);
   }
 
-  pm->append_async(page_file_prefix1, a, [&complete](auto p) { complete = true; });
-  while (!complete) {
-    dariadb::utils::sleep_mls(100);
-  }
   a.clear();
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
@@ -412,10 +408,10 @@ TEST(PageManager, Repack) {
     EXPECT_GE(clb->marray.size(), count);
   }
 
-  auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
+  auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page");
   pm->repack(dariadb::Id(0));
-  auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-  EXPECT_LT(pages_after, pages_before);
+  auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page");
+  EXPECT_LT(pages_after.size(), pages_before.size());
   { // id==0
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);
 

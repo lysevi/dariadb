@@ -487,7 +487,7 @@ public:
 
       auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
 
-      while (page_list.size() > max_files_per_level) { // while level is filled
+      while (page_list.size() >= max_files_per_level) { // while level is filled
         std::list<std::string> part;
         for (size_t i = 0; i < max_files_per_level; ++i) {
           if (page_list.empty()) {

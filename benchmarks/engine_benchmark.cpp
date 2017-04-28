@@ -565,11 +565,16 @@ int main(int argc, char *argv[]) {
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
 
+          size_t pack_count = 0;
           for (auto id : all_id_set) {
             dariadb::utils::ElapsedTime et;
             raw_ptr->repack(id);
             auto elapsed = et.elapsed();
             summary_info->repack_metrics.push_back(elapsed);
+            pack_count++;
+            if (pack_count == read_benchmark_runs) {
+              break;
+            }
           }
           auto pages_after = raw_ptr->description().pages_count;
 
@@ -608,6 +613,7 @@ int main(int argc, char *argv[]) {
       auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
                 << std::endl;
+      size_t i = 0;
       for (auto id : all_id_set) {
         auto compaction_logic =
             std::make_unique<CompactionBenchmark>(id, halfTime, start_time, max_time);
@@ -616,6 +622,10 @@ int main(int argc, char *argv[]) {
         raw_ptr->compact(compaction_logic.get());
         auto elapsed = et.elapsed();
         summary_info->compaction_metrics.push_back(elapsed);
+        i++;
+        if (i == read_benchmark_runs) {
+          break;
+        }
       }
       BenchCallback clbk;
       QueryInterval qi{IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
