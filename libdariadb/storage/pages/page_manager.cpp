@@ -125,8 +125,7 @@ public:
   void flush() {}
 
   bool minMaxTime(dariadb::Id id, dariadb::Time *minResult, dariadb::Time *maxResult) {
-    auto pages =
-        pages_by_filter([id](const IndexFooter &ih) { return ih.target_id == id; });
+    auto pages = pages_by_filter(IdArray{id}, [](const IndexFooter &ih) { return true; });
 
     using MMRes = std::tuple<bool, dariadb::Time, dariadb::Time>;
     std::vector<MMRes> results{pages.size()};
@@ -200,7 +199,8 @@ public:
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
       ChunkLinkList to_read;
 
-      auto page_list = pages_by_filter(std::function<bool(const IndexFooter &)>(pred));
+      auto page_list =
+          pages_by_filter(IdArray{id}, std::function<bool(const IndexFooter &)>(pred));
 
       for (auto pname : page_list) {
         auto p = Page::open(pname);
@@ -248,7 +248,8 @@ public:
       }
       return false;
     };
-    auto page_list = pages_by_filter(std::function<bool(const IndexFooter &)>(pred));
+    auto page_list =
+        pages_by_filter(query.ids, std::function<bool(const IndexFooter &)>(pred));
 
     for (auto pname : page_list) {
       auto p = Page::open(pname);
@@ -259,15 +260,18 @@ public:
     }
   }
 
-  std::list<std::string> pages_by_filter(std::function<bool(const IndexFooter &)> pred) {
+  std::list<std::string> pages_by_filter(dariadb::IdArray ids,
+                                         std::function<bool(const IndexFooter &)> pred) {
     std::list<PageFooterDescription> sub_result;
     {
       std::shared_lock<std::shared_mutex> lg(_file2footer_lock);
-      for (auto f2h : _file2footer) {
-        auto hdr = f2h.second.hdr;
-        if (pred(hdr)) {
+      for (auto id : ids) {
+        for (auto f2h : _file2footer[id]) {
+          auto hdr = f2h.second.hdr;
+          if (pred(hdr)) {
 
-          sub_result.push_back(f2h.second);
+            sub_result.push_back(f2h.second);
+          }
         }
       }
     }
@@ -323,7 +327,7 @@ public:
         return false;
       };
 
-      auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+      auto page_list = pages_by_filter(query.ids, std::function<bool(IndexFooter)>(pred));
 
       for (auto it = page_list.rbegin(); it != page_list.rend(); ++it) {
         auto pname = *it;
@@ -356,8 +360,7 @@ public:
   dariadb::Time minTime() {
 
     auto pred = [](const IndexFooter &) { return true; };
-
-    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+    auto page_list = pages_by_filter(all_ids(), std::function<bool(IndexFooter)>(pred));
 
     dariadb::Time res = dariadb::MAX_TIME;
     for (auto pname : page_list) {
@@ -371,7 +374,7 @@ public:
 
     auto pred = [](const IndexFooter &) { return true; };
 
-    auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+    auto page_list = pages_by_filter(all_ids(), std::function<bool(IndexFooter)>(pred));
 
     dariadb::Time res = dariadb::MIN_TIME;
     for (auto pname : page_list) {
@@ -427,26 +430,36 @@ public:
     std::lock_guard<std::shared_mutex> lg(_file2footer_lock);
 #ifdef DOUBLE_CHECKS
 
-    auto pages_before = _file2footer.size();
+    size_t pages_before = 0;
+    for (auto &kv : _file2footer) {
+      pages_before += kv.second.size();
+    }
+
 #endif
     ENSURE(utils::fs::file_exists(full_file_name));
     _manifest->page_rm(fname);
 
-    auto it = _file2footer.begin();
-    for (; it != _file2footer.end(); ++it) {
+    for (auto &kv : _file2footer) {
+      bool founded = false;
+      auto it = kv.second.begin();
+      for (; it != kv.second.end(); ++it) {
 #ifdef DOUBLE_CHECKS
-      auto full_path =
-          utils::fs::append_path(_settings->raw_path.value(), it->second.path);
-      if (!utils::fs::file_exists(full_path)) {
-        THROW_EXCEPTION("page no exists ", full_path);
-      }
+        auto full_path =
+            utils::fs::append_path(_settings->raw_path.value(), it->second.path);
+        if (!utils::fs::file_exists(full_path)) {
+          THROW_EXCEPTION("page no exists ", full_path);
+        }
 #endif
-      if (it->second.path == fname) {
+        if (it->second.path == fname) {
+          founded = true;
+          break;
+        }
+      }
+      if (founded) {
+        kv.second.erase(it);
         break;
       }
     }
-
-    _file2footer.erase(it);
 
     utils::fs::rm(full_file_name);
     utils::fs::rm(ifull_name);
@@ -455,7 +468,10 @@ public:
     ENSURE(!utils::fs::file_exists(ifull_name));
 
 #ifdef DOUBLE_CHECKS
-    auto pages_after = _file2footer.size();
+    size_t pages_after = 0;
+    for (auto &kv : _file2footer) {
+      pages_after += kv.second.size();
+    }
     ENSURE(pages_before > pages_after);
 #endif
   }
@@ -473,7 +489,7 @@ public:
       auto in_check = hdr.stat.maxTime <= t && hdr.target_id == id;
       return in_check;
     };
-    return pages_by_filter(std::function<bool(IndexFooter)>(pred));
+    return pages_by_filter({id}, std::function<bool(IndexFooter)>(pred));
   }
 
   void repack(const dariadb::Id id) {
@@ -485,7 +501,7 @@ public:
         return hdr.target_id == id && hdr.level == level;
       };
 
-      auto page_list = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+      auto page_list = pages_by_filter({id}, std::function<bool(IndexFooter)>(pred));
 
       while (page_list.size() >= max_files_per_level) { // while level is filled
         std::list<std::string> part;
@@ -546,7 +562,8 @@ public:
               utils::inInterval(hdr.stat.minTime, hdr.stat.maxTime, to));
     };
 
-    auto page_list_in_period = pages_by_filter(std::function<bool(IndexFooter)>(pred));
+    auto page_list_in_period =
+        pages_by_filter({targetId}, std::function<bool(IndexFooter)>(pred));
     if (page_list_in_period.empty()) {
       logger_info("engine", _settings->alias, ": compact. pages not found for interval");
       return;
@@ -636,13 +653,13 @@ public:
     PageFooterDescription ph_d;
     ph_d.hdr = hdr;
     ph_d.path = page_name;
-    _file2footer.insert(std::make_pair(ph_d.hdr.stat.maxTime, ph_d));
+    _file2footer[hdr.target_id].insert(std::make_pair(ph_d.hdr.stat.maxTime, ph_d));
   }
 
   Id2MinMax_Ptr loadMinMax() {
     auto result = std::make_shared<Id2MinMax>();
 
-    auto pages = pages_by_filter([](const IndexFooter &ih) { return true; });
+    auto pages = pages_by_filter(all_ids(), [](const IndexFooter &ih) { return true; });
 
     AsyncTask at = [&result, &pages, this](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
@@ -661,12 +678,22 @@ public:
     return result;
   }
 
+  IdArray all_ids() {
+    IdArray result;
+    result.reserve(this->_file2footer.size());
+    for (auto &kv : _file2footer) {
+      result.push_back(kv.first);
+    }
+    return result;
+  }
+
 protected:
   Page_Ptr _cur_page;
   mutable std::mutex _page_open_lock;
 
   uint64_t last_id;
-  File2PageFooter _file2footer;
+  std::unordered_map<dariadb::Id, File2PageFooter> _file2footer;
+
   std::shared_mutex _file2footer_lock;
 
   EngineEnvironment_ptr _env;
