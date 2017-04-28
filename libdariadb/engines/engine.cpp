@@ -844,6 +844,9 @@ public:
   void repack(dariadb::Id id) {
     this->lock_storage();
     logger_info("engine", _settings->alias, ": repack...");
+    if (_wal_manager != nullptr) {
+      _wal_manager->flush(id);
+    }
     _page_manager->repack(id);
     this->unlock_storage();
   }
@@ -851,6 +854,9 @@ public:
   void compact(ICompactionController *logic) {
     this->lock_storage();
     logger_info("engine", _settings->alias, ": compact...");
+    if (_wal_manager != nullptr && logic != nullptr) {
+      _wal_manager->flush(logic->targetId);
+    }
     _page_manager->compact(logic);
     this->unlock_storage();
   }

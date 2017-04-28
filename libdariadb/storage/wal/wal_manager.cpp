@@ -72,7 +72,7 @@ WALFile_Ptr WALManager::create_new(BufferDescription_Ptr bd, dariadb::Id id) {
     if (_settings->strategy.value() != STRATEGY::WAL) {
       dropFile(f);
     }
-   bd->walfile = nullptr;
+    bd->walfile = nullptr;
   }
 
   auto result = WALFile::create(_env, id);
@@ -552,11 +552,12 @@ dariadb::Status WALManager::append(const Meas &value) {
           std::make_shared<BufferDescription>(nullptr, _settings->wal_cache_size.value());
       iterator.v->second = buffer_description;
       buffer_description->buffer[0] = value;
-	  buffer_description->pos = size_t(1);
+      buffer_description->pos = size_t(1);
       return dariadb::Status(1);
     } else {
       buffer_description = iterator.v->second;
-	  ENSURE(buffer_description->pos == size_t(0) || buffer_description->buffer.front().id == value.id);
+      ENSURE(buffer_description->pos == size_t(0) ||
+             buffer_description->buffer.front().id == value.id);
       buffer_description->locker.lock();
     }
   }
@@ -577,12 +578,12 @@ void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
   }*/
   AsyncTask at = [this, bd](const ThreadInfo &ti) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-    
+
     if (bd->pos == 0) {
       bd->locker.unlock();
       return false;
     }
-	dariadb::Id id = bd->buffer.front().id;
+    dariadb::Id id = bd->buffer.front().id;
     size_t pos = 0;
     size_t total_writed = 0;
     if (bd->walfile == nullptr) {
@@ -614,7 +615,7 @@ void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
       }
     }
     bd->pos = size_t(0);
-    //std::fill_n(bd->buffer.begin(), bd->buffer.size(), Meas());
+    // std::fill_n(bd->buffer.begin(), bd->buffer.size(), Meas());
     bd->locker.unlock();
     return false;
   };
@@ -627,10 +628,19 @@ void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
 void WALManager::flush() {
   _buffers.apply([this](const Id2Buffer::value_type &kv) {
     if (kv.second->pos != size_t(0)) {
-		auto nonconst = const_cast<BufferDescription_Ptr*>(&kv.second);
+      auto nonconst = const_cast<BufferDescription_Ptr *>(&kv.second);
       flush_buffer(*nonconst, true);
     }
   });
+}
+
+void WALManager::flush(Id id) {
+  BufferDescription_Ptr bd = nullptr;
+  if (_buffers.find(id, &bd)) {
+    if (bd->pos != size_t(0)) {
+      flush_buffer(bd, true);
+    }
+  };
 }
 
 size_t WALManager::filesCount() const {

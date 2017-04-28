@@ -51,6 +51,7 @@ public:
   EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
   EXPORT virtual Status append(const Meas &value) override;
   EXPORT virtual void flush() override;
+  EXPORT virtual void flush(Id id) override;
 
   EXPORT std::list<std::string> closedWals();
   EXPORT void dropWAL(const std::string &fname, IWALDropper *storage);
