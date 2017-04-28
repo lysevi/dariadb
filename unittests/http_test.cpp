@@ -416,6 +416,16 @@ TEST(Http, Test) {
     EXPECT_TRUE(post_result.answer.find("median") != std::string::npos);
     EXPECT_TRUE(post_result.answer.find("percentile90") != std::string::npos);
   }
+  {// remove id
+	  json erase_js;
+	  erase_js["type"] = "erase";
+	  erase_js["id"] = "single_value";
+	  erase_js["to"] = dariadb::MAX_TIME;
+
+	  query_str = erase_js.dump(1);
+	  post_result = post(test_service, http_port, query_str);
+	  EXPECT_EQ(post_result.code, 200);
+  }
   // unknow query
   {
     json stat_js;

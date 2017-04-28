@@ -792,8 +792,10 @@ public:
   void eraseOld(const Id id, const Time t) {
     logger_info("engine", _settings->alias, ": eraseOld to ", timeutil::to_string(t));
     this->lock_storage();
-    _page_manager->eraseOld(id, t);
-    if (this->strategy() == STRATEGY::MEMORY) {
+    if (_page_manager != nullptr) {
+      _page_manager->eraseOld(id, t);
+    }
+    if (_memstorage != nullptr) {
       this->_memstorage->dropOld(id, t);
     }
     this->unlock_storage();

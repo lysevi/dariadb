@@ -91,19 +91,25 @@ TEST(Engine, Common_test) {
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     EXPECT_TRUE(current.size() != size_t(0));
 
-   /* dariadb::logger_info("erase old files");
-    ms->settings()->max_store_period.setValue(1);
-    while (true) {
-      auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
-      if (index_files.empty()) {
-        break;
-      }
-      dariadb::logger_info("file left:");
-      for (auto i : index_files) {
-        dariadb::logger_info(i);
-      }
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    }*/
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
+    /* dariadb::logger_info("erase old files");
+     ms->settings()->max_store_period.setValue(1);
+     while (true) {
+       auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
+       if (index_files.empty()) {
+         break;
+       }
+       dariadb::logger_info("file left:");
+       for (auto i : index_files) {
+         dariadb::logger_info(i);
+       }
+       std::this_thread::sleep_for(std::chrono::seconds(1));
+     }*/
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -199,7 +205,14 @@ TEST(Engine, MemStorage_common_test) {
 
     auto pages_count = ms->description().pages_count;
     EXPECT_GE(pages_count, size_t(2));
-    //ms->settings()->max_store_period.setValue(1);
+    // ms->settings()->max_store_period.setValue(1);
+
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      auto values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -227,18 +240,25 @@ TEST(Engine, MemOnlyStorage_common_test) {
 
     auto pages_count = ms->description().pages_count;
     EXPECT_EQ(pages_count, size_t(0));
-   /* ms->settings()->max_store_period.setValue(1);
-    while (true) {
-      dariadb::QueryInterval qi({dariadb::Id(0)}, dariadb::Flag(), from, to);
-      auto values = ms->readInterval(qi);
-      if (values.empty()) {
-        break;
-      } else {
-        dariadb::logger_info("values !empty() ", values.size());
 
-        dariadb::utils::sleep_mls(500);
-      }
-    }*/
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      auto values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
+    /* ms->settings()->max_store_period.setValue(1);
+     while (true) {
+       dariadb::QueryInterval qi({dariadb::Id(0)}, dariadb::Flag(), from, to);
+       auto values = ms->readInterval(qi);
+       if (values.empty()) {
+         break;
+       } else {
+         dariadb::logger_info("values !empty() ", values.size());
+
+         dariadb::utils::sleep_mls(500);
+       }
+     }*/
   }
 }
 
@@ -263,7 +283,7 @@ TEST(Engine, Cache_common_test) {
     settings->chunk_size.setValue(chunk_size);
     settings->memory_limit.setValue(50 * 1024);
     settings->wal_file_size.setValue(50);
-	settings->wal_cache_size.setValue(70);
+    settings->wal_cache_size.setValue(70);
     dariadb::IEngine_Ptr ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
@@ -271,7 +291,14 @@ TEST(Engine, Cache_common_test) {
     test_statistic_on_engine(ms);
     auto descr = ms->description();
     EXPECT_GT(descr.pages_count, size_t(0));
-    //ms->settings()->max_store_period.setValue(1);
+
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      auto values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
+    // ms->settings()->max_store_period.setValue(1);
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

@@ -346,7 +346,6 @@ public:
   }
 
   void eraseOld(const Id id, const Time t) override {
-    std::shared_lock<std::shared_mutex> lg(_locker);
     auto target = this->get_shard_for_id(id);
     if (target != nullptr) {
       target->eraseOld(id, t);
@@ -354,7 +353,6 @@ public:
   }
 
   void repack(dariadb::Id id) override {
-    std::shared_lock<std::shared_mutex> lg(_locker);
     auto target = this->get_shard_for_id(id);
     if (target != nullptr) {
       target->repack(id);
@@ -362,9 +360,9 @@ public:
   }
 
   void compact(ICompactionController *logic) override {
-    std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto &s : _sub_storages) {
-      s.storage->compact(logic);
+    auto target = this->get_shard_for_id(logic->targetId);
+    if (target != nullptr) {
+      target->compact(logic);
     }
   }
 
