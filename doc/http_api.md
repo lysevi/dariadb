@@ -206,4 +206,4 @@ send post query
  "type": "erase"
 }
 ```
-where to - time point
+where "to" is time point, all values older than  will be removed.
