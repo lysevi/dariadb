@@ -14,7 +14,7 @@
 
 namespace dariadb {
 
-const uint16_t STORAGE_FORMAT = 2;
+const uint16_t STORAGE_FORMAT = 3;
 
 class Engine : public IEngine {
 public:
