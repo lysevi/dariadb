@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "boost/date_time/gregorian/gregorian.hpp"
+#include <boost/date_time/gregorian/greg_weekday.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace dariadb {
@@ -156,6 +158,64 @@ bool intervalsLessCmp(const std::string &l, const std::string &r) {
   auto ltime = intervalName2time(l);
   auto rtime = intervalName2time(r);
   return ltime < rtime;
+}
+
+Time next_interval_start_time(const std::string &period, Time currentTime) {
+  using namespace boost::gregorian;
+  using namespace boost::posix_time;
+  DateTime dt = to_datetime(currentTime);
+
+  if (period == "minute") {
+    date d(dt.year, (date::month_type)dt.month, dt.day);
+    ptime pt(d, hours(dt.hour) + minutes(dt.minute + 1) + seconds(0) + milliseconds(0));
+    Time result = from_ptime(pt);
+    return result;
+  }
+
+  if (period == "halfhour") {
+    date d(dt.year, (date::month_type)dt.month, dt.day);
+    if (dt.minute < 30) {
+      ptime pt(d, hours(dt.hour) + minutes(30) + seconds(0) + milliseconds(0));
+      Time result = from_ptime(pt);
+      return result;
+    } else {
+      ptime pt(d, hours(dt.hour + 1) + minutes(0) + seconds(0) + milliseconds(0));
+      Time result = from_ptime(pt);
+      return result;
+    }
+  }
+
+  if (period == "hour") {
+    date d(dt.year, (date::month_type)dt.month, dt.day);
+    ptime pt(d, hours(dt.hour + 1) + minutes(0) + seconds(0) + milliseconds(0));
+    Time result = from_ptime(pt);
+    return result;
+  }
+
+  if (period == "day") {
+    date d(dt.year, (date::month_type)dt.month, dt.day);
+    d += days(1);
+    ptime pt(d, hours(0) + minutes(0) + seconds(0) + milliseconds(0));
+    Time result = from_ptime(pt);
+    return result;
+  }
+
+  if (period == "week") {
+    date d(dt.year, (date::month_type)dt.month, dt.day);
+    date d_result = next_weekday(d, greg_weekday(Monday));
+    ptime pt(d_result, hours(0) + minutes(0) + seconds(0) + milliseconds(0));
+    Time result = from_ptime(pt);
+    return result;
+  }
+
+  if (period == "month31") {
+    date d(dt.year, (date::month_type)dt.month, 1);
+    d += months(1);
+    ptime pt(d, hours(0) + minutes(0) + seconds(0) + milliseconds(0));
+    Time result = from_ptime(pt);
+    return result;
+  }
+  return MAX_TIME;
 }
 
 std::vector<std::string> predefinedIntervals() {

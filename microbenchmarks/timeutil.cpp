@@ -34,3 +34,13 @@ static void Time_from_string(benchmark::State &state) {
   }
 }
 BENCHMARK(Time_from_string);
+
+static void Time_next_interval_start_time(benchmark::State &state) {
+  auto all_intervals = dariadb::timeutil::predefinedIntervals();
+  auto t = dariadb::timeutil::current_time();
+  while (state.KeepRunning()) {
+    for (auto &i : all_intervals)
+      benchmark::DoNotOptimize(dariadb::timeutil::next_interval_start_time(i, t));
+  }
+}
+BENCHMARK(Time_next_interval_start_time);

@@ -90,24 +90,118 @@ TEST(Time, IntervalPredefined) {
 }
 
 TEST(Time, DateTime) {
-	using namespace dariadb::timeutil;
-	DateTime dt1;
-	dt1.year = 2017;
-	dt1.month = 3;
-	dt1.day = 5;
-	dt1.hour = 11;
-	dt1.minute = 45;
-	dt1.second = 55;
-	dt1.millisecond = 11;
+  using namespace dariadb::timeutil;
+  DateTime dt1;
+  dt1.year = 2017;
+  dt1.month = 3;
+  dt1.day = 5;
+  dt1.hour = 11;
+  dt1.minute = 45;
+  dt1.second = 55;
+  dt1.millisecond = 11;
 
-	auto t = from_datetime(dt1);
+  auto t = from_datetime(dt1);
 
-	auto dt2 = to_datetime(t);
-	EXPECT_EQ(dt1.year, dt2.year);
-	EXPECT_EQ(dt1.month, dt2.month);
-	EXPECT_EQ(dt1.day, dt2.day);
-	EXPECT_EQ(dt1.hour, dt2.hour);
-	EXPECT_EQ(dt1.minute, dt2.minute);
-	EXPECT_EQ(dt1.second, dt2.second);
-	EXPECT_EQ(dt1.millisecond, dt2.millisecond);
+  auto dt2 = to_datetime(t);
+  EXPECT_EQ(dt1.year, dt2.year);
+  EXPECT_EQ(dt1.month, dt2.month);
+  EXPECT_EQ(dt1.day, dt2.day);
+  EXPECT_EQ(dt1.hour, dt2.hour);
+  EXPECT_EQ(dt1.minute, dt2.minute);
+  EXPECT_EQ(dt1.second, dt2.second);
+  EXPECT_EQ(dt1.millisecond, dt2.millisecond);
+}
+
+TEST(Time, NextInterval) {
+  using namespace dariadb::timeutil;
+
+  DateTime dt;
+  dt.year = 2017;
+  dt.month = 1;
+  dt.day = 1;
+  dt.hour = 23;
+  dt.minute = 59;
+  dt.second = 1;
+  dt.millisecond = 1;
+  //all result must be 1.02.17 (except halfhour2)
+  auto time_dt = from_datetime(dt);
+  {
+    auto to_minute = next_interval_start_time("minute", time_dt);
+
+    auto result_dt = to_datetime(to_minute);
+    EXPECT_EQ(result_dt.day, dt.day + 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
+  {
+    auto to_hh = next_interval_start_time("halfhour", time_dt);
+
+    auto result_dt = to_datetime(to_hh);
+    EXPECT_EQ(result_dt.day, dt.day + 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
+
+  {
+    DateTime dt_begin = dt;
+    dt_begin.minute = 3;
+    auto time_dt_begin = from_datetime(dt_begin);
+    auto to_hh = next_interval_start_time("halfhour", time_dt_begin);
+
+    auto result_dt = to_datetime(to_hh);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, dt.hour);
+    EXPECT_EQ(result_dt.minute, 30);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
+
+  {
+    auto to_hr = next_interval_start_time("hour", time_dt);
+
+    auto result_dt = to_datetime(to_hr);
+    EXPECT_EQ(result_dt.day, dt.day + 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
+
+  {
+    auto to_hr = next_interval_start_time("day", time_dt);
+
+    auto result_dt = to_datetime(to_hr);
+    EXPECT_EQ(result_dt.day, dt.day + 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
+
+  {
+    auto to_hr = next_interval_start_time("week", time_dt);
+
+    auto result_dt = to_datetime(to_hr);
+    EXPECT_EQ(result_dt.day, dt.day + 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
+
+  {
+    auto to_hr = next_interval_start_time("month31", time_dt);
+
+    auto result_dt = to_datetime(to_hr);
+    EXPECT_EQ(result_dt.month, dt.month + 1);
+    EXPECT_EQ(result_dt.day, 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
 }
