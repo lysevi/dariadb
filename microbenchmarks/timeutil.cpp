@@ -40,7 +40,7 @@ static void Time_next_interval_start_time(benchmark::State &state) {
   auto t = dariadb::timeutil::current_time();
   while (state.KeepRunning()) {
     for (auto &i : all_intervals)
-      benchmark::DoNotOptimize(dariadb::timeutil::next_interval_start_time(i, t));
+      benchmark::DoNotOptimize(dariadb::timeutil::interval_end_time(i, t));
   }
 }
 BENCHMARK(Time_next_interval_start_time);

@@ -160,58 +160,63 @@ bool intervalsLessCmp(const std::string &l, const std::string &r) {
   return ltime < rtime;
 }
 
-Time next_interval_start_time(const std::string &period, Time currentTime) {
+Time interval_end_time(const std::string &period, Time currentTime) {
   using namespace boost::gregorian;
   using namespace boost::posix_time;
   DateTime dt = to_datetime(currentTime);
 
-  if (period == "minute") {
+  if (period == "minute") { // 59:999 sec of each minute
     date d(dt.year, (date::month_type)dt.month, dt.day);
-    ptime pt(d, hours(dt.hour) + minutes(dt.minute + 1) + seconds(0) + milliseconds(0));
+    ptime pt(d, hours(dt.hour) + minutes(dt.minute) + seconds(59) + milliseconds(999));
     Time result = from_ptime(pt);
     return result;
   }
 
-  if (period == "halfhour") {
+  if (period == "halfhour") { // 29:59:999 or 59:59:999
     date d(dt.year, (date::month_type)dt.month, dt.day);
     if (dt.minute < 30) {
-      ptime pt(d, hours(dt.hour) + minutes(30) + seconds(0) + milliseconds(0));
+      ptime pt(d, hours(dt.hour) + minutes(29) + seconds(59) + milliseconds(999));
       Time result = from_ptime(pt);
       return result;
     } else {
-      ptime pt(d, hours(dt.hour + 1) + minutes(0) + seconds(0) + milliseconds(0));
+      ptime pt(d, hours(dt.hour) + minutes(59) + seconds(59) + milliseconds(999));
       Time result = from_ptime(pt);
       return result;
     }
   }
 
-  if (period == "hour") {
+  if (period == "hour") { // 59:59:999 of each hour
     date d(dt.year, (date::month_type)dt.month, dt.day);
-    ptime pt(d, hours(dt.hour + 1) + minutes(0) + seconds(0) + milliseconds(0));
+    ptime pt(d, hours(dt.hour) + minutes(59) + seconds(59) + milliseconds(999));
     Time result = from_ptime(pt);
     return result;
   }
 
-  if (period == "day") {
+  if (period == "day") { // 23:59:999 of each day
     date d(dt.year, (date::month_type)dt.month, dt.day);
-    d += days(1);
-    ptime pt(d, hours(0) + minutes(0) + seconds(0) + milliseconds(0));
+    ptime pt(d, hours(23) + minutes(59) + seconds(59) + milliseconds(999));
     Time result = from_ptime(pt);
     return result;
   }
 
-  if (period == "week") {
-    date d(dt.year, (date::month_type)dt.month, dt.day);
-    date d_result = next_weekday(d, greg_weekday(Monday));
-    ptime pt(d_result, hours(0) + minutes(0) + seconds(0) + milliseconds(0));
+  if (period == "week") { // 23::59::59:99 of sanday
+    date start_day(dt.year, (date::month_type)dt.month, dt.day);
+    while (true) {
+      auto dow = start_day.day_of_week();
+      if (dow == greg_weekday(boost::date_time::Sunday)) {
+        break;
+      }
+      start_day += days(1);
+    }
+    ptime pt(start_day, hours(23) + minutes(59) + seconds(59) + milliseconds(999));
     Time result = from_ptime(pt);
     return result;
   }
 
-  if (period == "month31") {
-    date d(dt.year, (date::month_type)dt.month, 1);
-    d += months(1);
-    ptime pt(d, hours(0) + minutes(0) + seconds(0) + milliseconds(0));
+  if (period == "month31") { // 23.59.59 of each last day of month
+    date d(dt.year, (date::month_type)dt.month, dt.day);
+	d=d.end_of_month();
+    ptime pt(d, hours(23) + minutes(59) + seconds(59) + milliseconds(999));
     Time result = from_ptime(pt);
     return result;
   }

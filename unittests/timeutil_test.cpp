@@ -126,82 +126,82 @@ TEST(Time, NextInterval) {
   //all result must be 1.02.17 (except halfhour2)
   auto time_dt = from_datetime(dt);
   {
-    auto to_minute = next_interval_start_time("minute", time_dt);
+    auto to_minute = interval_end_time("minute", time_dt);
 
     auto result_dt = to_datetime(to_minute);
-    EXPECT_EQ(result_dt.day, dt.day + 1);
-    EXPECT_EQ(result_dt.hour, 0);
-    EXPECT_EQ(result_dt.minute, 0);
-    EXPECT_EQ(result_dt.second, 0);
-    EXPECT_EQ(result_dt.millisecond, 0);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, dt.hour);
+    EXPECT_EQ(result_dt.minute, dt.minute);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
   }
   {
-    auto to_hh = next_interval_start_time("halfhour", time_dt);
+    auto to_hh = interval_end_time("halfhour", time_dt);
 
     auto result_dt = to_datetime(to_hh);
-    EXPECT_EQ(result_dt.day, dt.day + 1);
-    EXPECT_EQ(result_dt.hour, 0);
-    EXPECT_EQ(result_dt.minute, 0);
-    EXPECT_EQ(result_dt.second, 0);
-    EXPECT_EQ(result_dt.millisecond, 0);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, dt.hour);
+    EXPECT_EQ(result_dt.minute, dt.minute);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
   }
 
   {
     DateTime dt_begin = dt;
     dt_begin.minute = 3;
     auto time_dt_begin = from_datetime(dt_begin);
-    auto to_hh = next_interval_start_time("halfhour", time_dt_begin);
+    auto to_hh = interval_end_time("halfhour", time_dt_begin);
 
     auto result_dt = to_datetime(to_hh);
     EXPECT_EQ(result_dt.day, dt.day);
     EXPECT_EQ(result_dt.hour, dt.hour);
-    EXPECT_EQ(result_dt.minute, 30);
-    EXPECT_EQ(result_dt.second, 0);
-    EXPECT_EQ(result_dt.millisecond, 0);
+    EXPECT_EQ(result_dt.minute, 29);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
   }
 
   {
-    auto to_hr = next_interval_start_time("hour", time_dt);
+    auto to_hr = interval_end_time("hour", time_dt);
 
     auto result_dt = to_datetime(to_hr);
-    EXPECT_EQ(result_dt.day, dt.day + 1);
-    EXPECT_EQ(result_dt.hour, 0);
-    EXPECT_EQ(result_dt.minute, 0);
-    EXPECT_EQ(result_dt.second, 0);
-    EXPECT_EQ(result_dt.millisecond, 0);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, dt.hour);
+    EXPECT_EQ(result_dt.minute, dt.minute);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
   }
 
   {
-    auto to_hr = next_interval_start_time("day", time_dt);
+    auto to_hr = interval_end_time("day", time_dt);
 
     auto result_dt = to_datetime(to_hr);
-    EXPECT_EQ(result_dt.day, dt.day + 1);
-    EXPECT_EQ(result_dt.hour, 0);
-    EXPECT_EQ(result_dt.minute, 0);
-    EXPECT_EQ(result_dt.second, 0);
-    EXPECT_EQ(result_dt.millisecond, 0);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, 23);
+    EXPECT_EQ(result_dt.minute, 59);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
   }
 
   {
-    auto to_hr = next_interval_start_time("week", time_dt);
+    auto to_hr = interval_end_time("week", time_dt);
 
     auto result_dt = to_datetime(to_hr);
-    EXPECT_EQ(result_dt.day, dt.day + 1);
-    EXPECT_EQ(result_dt.hour, 0);
-    EXPECT_EQ(result_dt.minute, 0);
-    EXPECT_EQ(result_dt.second, 0);
-    EXPECT_EQ(result_dt.millisecond, 0);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, 23);
+    EXPECT_EQ(result_dt.minute, 59);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
   }
 
   {
-    auto to_hr = next_interval_start_time("month31", time_dt);
+    auto to_hr = interval_end_time("month31", time_dt);
 
     auto result_dt = to_datetime(to_hr);
-    EXPECT_EQ(result_dt.month, dt.month + 1);
-    EXPECT_EQ(result_dt.day, 1);
-    EXPECT_EQ(result_dt.hour, 0);
-    EXPECT_EQ(result_dt.minute, 0);
-    EXPECT_EQ(result_dt.second, 0);
-    EXPECT_EQ(result_dt.millisecond, 0);
+    EXPECT_EQ(result_dt.month, dt.month);
+    EXPECT_EQ(result_dt.day, 31);
+    EXPECT_EQ(result_dt.hour, 23);
+    EXPECT_EQ(result_dt.minute, 59);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
   }
 }
