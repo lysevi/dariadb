@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libdariadb/aggregate/aggregator.h>
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/engines/shard.h>
 #include <libdariadb/flags.h>
@@ -10,7 +11,6 @@
 #include <libdariadb/storage/callbacks.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/timeutil.h>
-
 #include <string>
 
 namespace dariadb {

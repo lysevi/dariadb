@@ -11,7 +11,7 @@ FILE(GLOB WSTORE_HDRS "storage/wal/*.h")
 FILE(GLOB SCHEME_HDRS "scheme/*.h")
 FILE(GLOB ENGINES_HDRS "engines/*.h")
 FILE(GLOB STATISTIC_HDRS "statistic/*.h")
-
+FILE(GLOB AGGREGATE_HDRS "aggregate/*.h")
 
 FILE(GLOB UTILS_HDRS "utils/*.h")
 FILE(GLOB UTILS_ASYNC_HDRS "utils/async/*.h")
@@ -29,6 +29,7 @@ FILE(GLOB INTERFACES_SRC "interfaces/*.cpp")
 FILE(GLOB SCHEME_SRC "scheme/*.cpp")
 FILE(GLOB ENGINES_SRC "engines/*.cpp")
 FILE(GLOB STATISTIC_SRC "statistic/*.cpp")
+FILE(GLOB AGGREGATE_SRC "aggregate/*.cpp")
 
 source_group(compression FILES ${COMPRESSION_HDRS} ${COMPRESSION_SRC})
 source_group(storage FILES ${STORE_HDRS} ${STORE_SRC})
@@ -42,6 +43,7 @@ source_group(scheme FILES ${SCHEME_SRC} ${SCHEME_HDRS})
 source_group(engines FILES ${ENGINES_SRC} ${ENGINES_HDRS})
 source_group(dariadb FILES ${GLOB_HDRS} ${GLOB_SRC})
 source_group(statistic FILES ${STATISTIC_HDRS} ${STATISTIC_SRC})
+source_group(aggregate FILES ${AGGREGATE_SRC} ${AGGREGATE_HDRS})
 
 SET(SRC  ${GLOB_HDRS} ${GLOB_SRC} 
 	 ${COMPRESSION_HDRS} ${COMPRESSION_SRC}  
@@ -54,7 +56,8 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
          ${INTERFACES_HDRS} ${INTERFACES_SRC}
 	 ${SCHEME_SRC} ${SCHEME_HDRS}
 	 ${ENGINES_SRC} ${ENGINES_HDRS}
-	 ${STATISTIC_HDRS} ${STATISTIC_SRC})
+	 ${STATISTIC_HDRS} ${STATISTIC_SRC}
+	 ${AGGREGATE_SRC} ${AGGREGATE_HDRS})
 
 SET(DARIADB_STORAGE_LIBS dariadb ${Boost_LIBRARIES}  sqlite3 ${JEMALLOC_LIBS} CACHE STRING "Dariadb libs for build storage.")
 
