@@ -9,6 +9,15 @@ static void Time_to_datetime(benchmark::State &state) {
 }
 BENCHMARK(Time_to_datetime);
 
+static void Time_from_datetime(benchmark::State &state) {
+  auto t = dariadb::timeutil::current_time();
+  auto dt = dariadb::timeutil::to_datetime(t);
+  while (state.KeepRunning()) {
+    benchmark::DoNotOptimize(dariadb::timeutil::from_datetime(dt));
+  }
+}
+BENCHMARK(Time_from_datetime);
+
 static void Time_to_string(benchmark::State &state) {
   auto t = dariadb::timeutil::current_time();
   while (state.KeepRunning()) {

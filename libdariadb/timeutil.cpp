@@ -55,6 +55,16 @@ DateTime to_datetime(Time t) {
   return result;
 }
 
+Time from_datetime(const DateTime &dt) {
+  using namespace boost::gregorian;
+  using namespace boost::posix_time;
+
+  date d(dt.year, (date::month_type)dt.month, dt.day);
+  ptime pt(d, hours(dt.hour) + minutes(dt.minute) + seconds(dt.second) +
+                  milliseconds(dt.millisecond));
+  return from_ptime(pt);
+}
+
 int to_string(char *buffer, size_t buffer_size, Time t) {
   DateTime dt = to_datetime(t);
 
@@ -149,7 +159,8 @@ bool intervalsLessCmp(const std::string &l, const std::string &r) {
 }
 
 std::vector<std::string> predefinedIntervals() {
-  std::vector<std::string> predefined = {"minute", "halfhour", "hour", "day", "week", "month31"};
+  std::vector<std::string> predefined = {"minute", "halfhour", "hour",
+                                         "day",    "week",     "month31"};
   return predefined;
 }
 } // namespace timeutil

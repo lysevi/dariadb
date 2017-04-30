@@ -88,3 +88,26 @@ TEST(Time, IntervalPredefined) {
   using namespace dariadb::timeutil;
   EXPECT_EQ(predefinedIntervals().size(), size_t(6));
 }
+
+TEST(Time, DateTime) {
+	using namespace dariadb::timeutil;
+	DateTime dt1;
+	dt1.year = 2017;
+	dt1.month = 3;
+	dt1.day = 5;
+	dt1.hour = 11;
+	dt1.minute = 45;
+	dt1.second = 55;
+	dt1.millisecond = 11;
+
+	auto t = from_datetime(dt1);
+
+	auto dt2 = to_datetime(t);
+	EXPECT_EQ(dt1.year, dt2.year);
+	EXPECT_EQ(dt1.month, dt2.month);
+	EXPECT_EQ(dt1.day, dt2.day);
+	EXPECT_EQ(dt1.hour, dt2.hour);
+	EXPECT_EQ(dt1.minute, dt2.minute);
+	EXPECT_EQ(dt1.second, dt2.second);
+	EXPECT_EQ(dt1.millisecond, dt2.millisecond);
+}

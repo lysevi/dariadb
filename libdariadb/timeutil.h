@@ -25,6 +25,9 @@ EXPORT Time current_time();
 /// convert time to datetime;
 EXPORT DateTime to_datetime(Time t);
 
+/// convert time from datetime;
+EXPORT Time from_datetime(const DateTime &dt);
+
 /// convert from time_point
 EXPORT Time from_chrono(const std::chrono::high_resolution_clock::time_point &t);
 
