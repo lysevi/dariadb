@@ -160,43 +160,48 @@ bool intervalsLessCmp(const std::string &l, const std::string &r) {
   return ltime < rtime;
 }
 
+namespace {
+Time last_moment(const boost::gregorian::date &d) {
+  using namespace boost::posix_time;
+  ptime pt(d, hours(23) + minutes(59) + seconds(59) + milliseconds(999));
+  Time result = from_ptime(pt);
+  return result;
+}
+} // namespace
+
 Time interval_end_time(const std::string &period, Time currentTime) {
   using namespace boost::gregorian;
   using namespace boost::posix_time;
   DateTime dt = to_datetime(currentTime);
-
+  const time_duration last_sec = seconds(59)+ milliseconds(999);
   if (period == "minute") { // 59:999 sec of each minute
     date d(dt.year, (date::month_type)dt.month, dt.day);
-    ptime pt(d, hours(dt.hour) + minutes(dt.minute) + seconds(59) + milliseconds(999));
+    ptime pt(d, hours(dt.hour) + minutes(dt.minute) + last_sec);
     Time result = from_ptime(pt);
     return result;
   }
 
   if (period == "halfhour") { // 29:59:999 or 59:59:999
     date d(dt.year, (date::month_type)dt.month, dt.day);
+    minutes mints(59);
     if (dt.minute < 30) {
-      ptime pt(d, hours(dt.hour) + minutes(29) + seconds(59) + milliseconds(999));
-      Time result = from_ptime(pt);
-      return result;
-    } else {
-      ptime pt(d, hours(dt.hour) + minutes(59) + seconds(59) + milliseconds(999));
-      Time result = from_ptime(pt);
-      return result;
+      mints = minutes(29);
     }
+    ptime pt(d, hours(dt.hour) + mints + last_sec);
+    Time result = from_ptime(pt);
+    return result;
   }
 
   if (period == "hour") { // 59:59:999 of each hour
     date d(dt.year, (date::month_type)dt.month, dt.day);
-    ptime pt(d, hours(dt.hour) + minutes(59) + seconds(59) + milliseconds(999));
+    ptime pt(d, hours(dt.hour) + minutes(59) + last_sec);
     Time result = from_ptime(pt);
     return result;
   }
 
   if (period == "day") { // 23:59:999 of each day
     date d(dt.year, (date::month_type)dt.month, dt.day);
-    ptime pt(d, hours(23) + minutes(59) + seconds(59) + milliseconds(999));
-    Time result = from_ptime(pt);
-    return result;
+    return last_moment(d);
   }
 
   if (period == "week") { // 23::59::59:99 of sanday
@@ -208,17 +213,13 @@ Time interval_end_time(const std::string &period, Time currentTime) {
       }
       start_day += days(1);
     }
-    ptime pt(start_day, hours(23) + minutes(59) + seconds(59) + milliseconds(999));
-    Time result = from_ptime(pt);
-    return result;
+    return last_moment(start_day);
   }
 
   if (period == "month31") { // 23.59.59 of each last day of month
     date d(dt.year, (date::month_type)dt.month, dt.day);
-	d=d.end_of_month();
-    ptime pt(d, hours(23) + minutes(59) + seconds(59) + milliseconds(999));
-    Time result = from_ptime(pt);
-    return result;
+    d = d.end_of_month();
+    return last_moment(d);
   }
   return MAX_TIME;
 }
