@@ -1,4 +1,6 @@
 #include <libdariadb/aggregate/aggregator.h>
+#include <libdariadb/aggregate/timer.h>
+#include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/statistic/calculator.h>
 #include <libdariadb/timeutil.h>
 #include <sstream>
@@ -7,14 +9,74 @@ using namespace dariadb;
 using namespace dariadb::aggregator;
 using namespace dariadb::storage;
 using namespace dariadb::timeutil;
+using namespace dariadb::scheme;
 
-class Aggreagator::Private {
+namespace {
+class TimerCallback : public ITimer::Callback {
 public:
+  TimerCallback(const std::string &interval_from, const std::string &interval_to,
+                IEngine_Ptr storage) {
+    _ifrom = interval_from;
+    _ito = interval_to;
+    _storage = storage;
+  }
+  Time apply(Time current_time) override {
+    auto delta = timeutil::intervalName2time(_ito);
+    auto interval_to_target = timeutil::target_interval(_ito, current_time);
+    Aggregator::aggregate(_ifrom, _ito, _storage, interval_to_target.first,
+                          interval_to_target.second);
+
+    // move to half of next interval.
+    current_time += delta / 2;
+    interval_to_target = timeutil::target_interval(_ito, current_time);
+    return interval_to_target.second;
+  }
+
+  std::string _ifrom, _ito;
+  IEngine_Ptr _storage;
+};
+} // namespace
+
+class Aggregator::Private {
+public:
+  Private(IEngine_Ptr storage) : _timer(new Timer), _storage(storage) { fill_timer(); }
+
+  Private(IEngine_Ptr storage, ITimer_Ptr timer) : _timer(timer), _storage(storage) {
+    fill_timer();
+  }
+  ~Private() { _timer = nullptr; }
+
+  void fill_timer() {
+    if (_scheme == nullptr) {
+      _scheme = _storage->getScheme();
+    }
+    if (_scheme == nullptr) {
+      logger("aggregator: can't fill timer. scheme does not set.");
+      return;
+    }
+
+    auto all_intervals = predefinedIntervals();
+    all_intervals.insert(all_intervals.begin(), "raw");
+    ENSURE(all_intervals.front() == "raw");
+
+    for (size_t i = 0; i < all_intervals.size() - 1; ++i) {
+      auto interval_from = all_intervals[i];
+      auto interval_to = all_intervals[i];
+
+      ITimer::Callback_Ptr clbk{new TimerCallback(interval_from, interval_to, _storage)};
+      auto interval_to_target =
+          timeutil::target_interval(interval_to, _timer->currentTime());
+      _timer->addCallback(interval_to_target.second, clbk);
+    }
+  }
+  ITimer_Ptr _timer;
+  IEngine_Ptr _storage;
+  IScheme_Ptr _scheme;
 };
 
-void Aggreagator::aggregate(const std::string &from_interval,
-                            const std::string &to_interval, IEngine_Ptr _storage,
-                            Time start, Time end) {
+void Aggregator::aggregate(const std::string &from_interval,
+                           const std::string &to_interval, IEngine_Ptr _storage,
+                           Time start, Time end) {
 
   logger("aggregator: from: ", from_interval, " to:", to_interval, "[",
          timeutil::to_string(start), ", ", timeutil::to_string(end), "]");
@@ -75,4 +137,12 @@ void Aggreagator::aggregate(const std::string &from_interval,
   }
 }
 
-Aggreagator::Aggreagator() : _Impl(std::make_unique<Aggreagator::Private>()) {}
+Aggregator::Aggregator(IEngine_Ptr storage)
+    : _Impl(std::make_unique<Aggregator::Private>(storage)) {}
+
+Aggregator::Aggregator(IEngine_Ptr storage, ITimer_Ptr timer)
+    : _Impl(std::make_unique<Aggregator::Private>(storage, timer)) {}
+
+Aggregator::~Aggregator() {
+  _Impl = nullptr;
+}
