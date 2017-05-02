@@ -114,6 +114,7 @@ int main(int argc, char **argv) {
   if (!memonly) {
     settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(strategy);
+	settings->save();
   } else {
     settings = dariadb::storage::Settings::create();
   }

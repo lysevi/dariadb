@@ -72,6 +72,7 @@ void scheme_change_query(dariadb::scheme::IScheme_Ptr scheme, const http_query &
     dariadb::logger_info("http: add to scheme '", v, "' = ", id);
     new_names.push_back(std::make_pair(v, id));
   }
+  scheme->save();
   rep = reply::stock_reply(newScheme2string(new_names), reply::status_type::ok);
 }
 
