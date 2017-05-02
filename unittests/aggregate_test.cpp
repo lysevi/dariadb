@@ -39,7 +39,7 @@ TEST_F(Aggregate, DownsamplingIntervals) {
   auto hour_id = _scheme->addParam("param1.average.hour");
   auto day_id = _scheme->addParam("param1.average.day");
   auto week_id = _scheme->addParam("param1.average.week");
-  auto month_id = _scheme->addParam("param1.average.month31");
+  auto month_id = _scheme->addParam("param1.average.month");
 
   DateTime dt;
   dt.year = 2017;
@@ -117,8 +117,8 @@ TEST_F(Aggregate, DownsamplingIntervals) {
   }
 
   { // week->month
-    auto interval = target_interval("month31", from_datetime(dt));
-    Aggreagator::aggregate("week", "month31", _storage, interval.first, interval.second);
+    auto interval = target_interval("month", from_datetime(dt));
+    Aggreagator::aggregate("week", "month", _storage, interval.first, interval.second);
 
     dariadb::QueryInterval qi({month_id}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME);
     auto values = _storage->readInterval(qi);

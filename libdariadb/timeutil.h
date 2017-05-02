@@ -59,7 +59,7 @@ EXPORT Time round_to_seconds(const Time t);
 EXPORT Time round_to_minutes(const Time t);
 EXPORT Time round_to_hours(const Time t);
 /**
-interval -> "halfhour", "hour", "day", "month31", "year"
+interval -> "halfhour", "hour", "day", "month", "year"
 */
 EXPORT Time intervalName2time(const std::string&interval);
 

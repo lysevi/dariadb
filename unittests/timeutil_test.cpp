@@ -65,7 +65,7 @@ TEST(Time, IntervalFromString) {
     EXPECT_EQ(dt.day, uint8_t(8));
   }
   {
-    auto hh = dariadb::timeutil::intervalName2time("month31");
+    auto hh = dariadb::timeutil::intervalName2time("month");
     auto dt = dariadb::timeutil::to_datetime(hh);
     EXPECT_EQ(dt.minute, uint8_t(0));
     EXPECT_EQ(dt.hour, uint8_t(0));
@@ -81,7 +81,7 @@ TEST(Time, IntervalCompare) {
   EXPECT_FALSE(intervalsLessCmp("halfhour", "halfhour"));
   EXPECT_TRUE(intervalsLessCmp("hour", "day"));
   EXPECT_TRUE(intervalsLessCmp("day", "week"));
-  EXPECT_TRUE(intervalsLessCmp("week", "month31"));
+  EXPECT_TRUE(intervalsLessCmp("week", "month"));
 }
 
 TEST(Time, IntervalPredefined) {
@@ -238,7 +238,7 @@ TEST(Time, TargetInterval) {
   }
 
   {
-    auto to_hr = target_interval("month31", time_dt);
+    auto to_hr = target_interval("month", time_dt);
 
     auto result_dt = to_datetime(to_hr.second);
     EXPECT_EQ(result_dt.month, dt.month);

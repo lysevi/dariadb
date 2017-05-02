@@ -16,7 +16,7 @@ example:
 * memory.sigma.hour
 * memory.sigma.'T\d{19}'
 * memory.median.day
-* memory.median.month31
+* memory.median.month
 */
 class Scheme : public IScheme {
 public:
