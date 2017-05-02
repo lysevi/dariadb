@@ -67,7 +67,7 @@ public:
 
     for (size_t i = 0; i < all_intervals.size() - 1; ++i) {
       auto interval_from = all_intervals[i];
-      auto interval_to = all_intervals[i];
+      auto interval_to = all_intervals[i+1];
 
       ITimer::Callback_Ptr clbk{new TimerCallback(interval_from, interval_to, _storage)};
       auto interval_to_target =
@@ -135,6 +135,9 @@ void Aggregator::aggregate(const std::string &from_interval,
     statistic::Calculator calc(_storage);
     auto result_functions =
         calc.apply(kv.second.id, start, end, dariadb::Flag(), statistic_functions);
+	if (result_functions.empty()) {
+		return;
+	}
     ENSURE(result_functions.size() == target_ids.size());
     for (size_t i = 0; i < target_ids.size(); ++i) {
       _storage->append(target_ids[i], result_functions[i].time,

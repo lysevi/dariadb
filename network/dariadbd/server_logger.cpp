@@ -2,11 +2,11 @@
 
 ServerLogger::Params::Params() {
   use_stdout = true;
-#if defined(_DEBUG) || defined(DEBUG) || defined(NDEBUG)
-  dbg_logging = true;
-#else
+  //#if defined(_DEBUG) || defined(DEBUG) || defined(NDEBUG)
+  //  dbg_logging = true;
+  //#else
   dbg_logging = false;
-#endif
+//#endif
 #ifdef _WIN32
   color_console = false;
 #else
@@ -39,7 +39,9 @@ void ServerLogger::message(dariadb::utils::LOG_MESSAGE_KIND kind,
     _logger->info(msg);
     break;
   case dariadb::utils::LOG_MESSAGE_KIND::MESSAGE:
-    _logger->debug(msg);
+    if (_params.dbg_logging) {
+      _logger->debug(msg);
+    }
     break;
   }
   _logger->flush();
