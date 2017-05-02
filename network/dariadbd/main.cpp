@@ -1,8 +1,4 @@
-#include <libdariadb/engines/engine.h>
-#include <libdariadb/meas.h>
-#include <libdariadb/scheme/scheme.h>
-#include <libdariadb/timeutil.h>
-#include <libdariadb/utils/fs.h>
+#include <libdariadb/dariadb.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
 #include <iostream>
@@ -132,6 +128,8 @@ int main(int argc, char **argv) {
 
   IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
   stor->setScheme(scheme);
+
+  aggregator::Aggregator aggregator(stor);
 
   dariadb::net::Server::Param server_param(server_port, server_http_port,
                                            server_threads_count);

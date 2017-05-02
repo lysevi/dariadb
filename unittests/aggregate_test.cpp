@@ -177,7 +177,7 @@ TEST_F(Aggregate, Aggregator) {
     if (c.first == first_minute) {
       exists = true;
       auto next_minute = c.second->apply(first_minute);
-      auto dt = to_datetime(next_minute);
+      dt = to_datetime(next_minute);
       EXPECT_EQ(dt.minute, 1);
       EXPECT_EQ(dt.second, 59);
       EXPECT_EQ(dt.millisecond, 999);
@@ -211,3 +211,23 @@ TEST_F(Aggregate, Timer) {
     dariadb::logger_fatal("calls: ", calls);
   }
 }
+
+//TEST_F(Aggregate, longTest) {
+//  using namespace dariadb::aggregator;
+//  using namespace dariadb::timeutil;
+//  using namespace dariadb::storage;
+//
+//  _storage->setScheme(_scheme);
+//  _scheme->addParam("param1.raw");
+//  _scheme->addParam("param1.average.minute");
+//  _scheme->addParam("param1.average.halfhour");
+//  _scheme->addParam("param1.average.hour");
+//  _scheme->addParam("param1.average.day");
+//  _scheme->addParam("param1.average.week");
+//  _scheme->addParam("param1.average.month");
+//
+//  Aggregator agg(_storage);
+//  
+//  while (true) {
+//  }
+//}

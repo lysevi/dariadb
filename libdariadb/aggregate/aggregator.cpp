@@ -20,7 +20,10 @@ public:
     _ito = interval_to;
     _storage = storage;
   }
+
   Time apply(Time current_time) override {
+    logger_info("aggregator: callback for '", _ito, "': ", to_string(current_time));
+
     auto delta = timeutil::intervalName2time(_ito);
     auto interval_to_target = timeutil::target_interval(_ito, current_time);
     Aggregator::aggregate(_ifrom, _ito, _storage, interval_to_target.first,
@@ -29,6 +32,8 @@ public:
     // move to half of next interval.
     current_time += delta / 2;
     interval_to_target = timeutil::target_interval(_ito, current_time);
+    logger_info("aggregator: next call for '", _ito,
+                "': ", to_string(interval_to_target.second));
     return interval_to_target.second;
   }
 
@@ -51,10 +56,11 @@ public:
       _scheme = _storage->getScheme();
     }
     if (_scheme == nullptr) {
-      logger("aggregator: can't fill timer. scheme does not set.");
+      logger_fatal("aggregator: can't fill timer. scheme does not set.");
       return;
     }
 
+    logger_info("agregator: init timers.");
     auto all_intervals = predefinedIntervals();
     all_intervals.insert(all_intervals.begin(), "raw");
     ENSURE(all_intervals.front() == "raw");
@@ -78,8 +84,8 @@ void Aggregator::aggregate(const std::string &from_interval,
                            const std::string &to_interval, IEngine_Ptr _storage,
                            Time start, Time end) {
 
-  logger("aggregator: from: ", from_interval, " to:", to_interval, "[",
-         timeutil::to_string(start), ", ", timeutil::to_string(end), "]");
+  logger_info("aggregator: from: '", from_interval, "' to:'", to_interval, "'[",
+              timeutil::to_string(start), ", ", timeutil::to_string(end), "]");
   if (_storage == nullptr) {
     logger("aggregator: call with null storage");
     return;
@@ -87,7 +93,7 @@ void Aggregator::aggregate(const std::string &from_interval,
 
   auto scheme = _storage->getScheme();
   if (scheme == nullptr) {
-    logger("aggregator: call with null scheme");
+    logger_fatal("aggregator: call with null scheme");
     return;
   }
 
@@ -121,7 +127,7 @@ void Aggregator::aggregate(const std::string &from_interval,
       statistic_functions.push_back(l.second.aggregation_func);
     }
 
-    logger("aggregator: write ", kv.second.name, " to ", ss.str());
+    logger_info("aggregator: write '", kv.second.name, "' to '", ss.str(), "'");
 
     QueryInterval qi({kv.second.id}, dariadb::Flag(), start, end);
     auto values_from_to = _storage->readInterval(qi);

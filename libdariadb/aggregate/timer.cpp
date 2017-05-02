@@ -32,7 +32,7 @@ void Timer::async_loop() {
     auto ct = currentTime();
     for (auto it = _queue.begin(); it != _queue.end(); ++it) {
       if (it->target <= ct) {
-        it->target = it->clbk->apply(ct);
+        it->target = it->clbk->apply(it->target);
       }
     }
   }
