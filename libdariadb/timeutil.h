@@ -65,6 +65,6 @@ EXPORT Time intervalName2time(const std::string&interval);
 
 EXPORT bool intervalsLessCmp(const std::string&l, const std::string&r);
 EXPORT std::vector<std::string> predefinedIntervals();
-EXPORT Time interval_end_time(const std::string&period, Time currentTime);
+EXPORT std::pair<Time, Time> target_interval(const std::string&period, Time currentTime);
 }
 }
