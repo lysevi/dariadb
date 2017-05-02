@@ -6,14 +6,18 @@
 #include <memory>
 
 namespace dariadb {
-namespace aggregate {
+namespace aggregator {
 class Aggreagator {
 public:
   EXPORT Aggreagator();
+
+  EXPORT static void aggregate(const std::string &from_interval,
+                               const std::string &to_interval, IEngine_Ptr engine,
+                               Time start, Time end);
 
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
 };
-} // namespace aggregate
+} // namespace aggregator
 } // namespace dariadb
