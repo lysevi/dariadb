@@ -18,7 +18,7 @@ Time from_ptime(boost::posix_time::ptime timestamp) {
 }
 
 Time current_time() {
-  auto now = boost::posix_time::microsec_clock::local_time();
+  auto now = boost::posix_time::microsec_clock::universal_time();
   return from_ptime(now);
 }
 
