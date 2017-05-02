@@ -91,6 +91,7 @@ struct Scheme::Private : public IScheme {
     }
     md.id = _next_id++;
     this->_params[md.interval][param] = md;
+	this->save();
     return md.id;
   }
 
