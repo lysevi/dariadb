@@ -22,7 +22,7 @@ struct MeasurementDescription {
     if (interval_pos == std::string::npos) {
       return name;
     }
-    return name.substr(0, interval_pos - 1);
+    return name.substr(0, interval_pos);
   }
 };
 

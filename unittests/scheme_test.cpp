@@ -103,46 +103,58 @@ TEST(Scheme, Intervals) {
     auto raw_id_descr = all_values[raw_id];
     EXPECT_TRUE(raw_id_descr.aggregation_func.empty());
     EXPECT_EQ(raw_id_descr.interval, "raw");
-    EXPECT_EQ(raw_id_descr.prefix(), "memory");
+    EXPECT_EQ(raw_id_descr.prefix(), "memory.");
 
     auto id_descr = all_values[hour_median_id];
     EXPECT_EQ(id_descr.name, "memory.median.hour");
     EXPECT_EQ(id_descr.aggregation_func, "median");
-    EXPECT_EQ(id_descr.prefix(), "memory.median");
+    EXPECT_EQ(id_descr.prefix(), "memory.median.");
     EXPECT_EQ(id_descr.interval, "hour");
 
     id_descr = all_values[hour_sigma_id];
     EXPECT_EQ(id_descr.name, "memory.sigma.hour");
-    EXPECT_EQ(id_descr.prefix(), "memory.sigma");
+    EXPECT_EQ(id_descr.prefix(), "memory.sigma.");
     EXPECT_EQ(id_descr.aggregation_func, "sigma");
     EXPECT_EQ(id_descr.interval, "hour");
 
     id_descr = all_values[day_median_id];
     EXPECT_EQ(id_descr.name, "memory.median.day");
     EXPECT_EQ(id_descr.aggregation_func, "median");
-    EXPECT_EQ(id_descr.prefix(), "memory.median");
+    EXPECT_EQ(id_descr.prefix(), "memory.median.");
     EXPECT_EQ(id_descr.interval, "day");
 
-	id_descr = all_values[hour_cpu];
-	EXPECT_EQ(id_descr.name, "cpu.sigma.hour");
-	EXPECT_EQ(id_descr.aggregation_func, "sigma");
-	EXPECT_EQ(id_descr.prefix(), "cpu.sigma");
-	EXPECT_EQ(id_descr.interval, "hour");
+    id_descr = all_values[hour_cpu];
+    EXPECT_EQ(id_descr.name, "cpu.sigma.hour");
+    EXPECT_EQ(id_descr.aggregation_func, "sigma");
+    EXPECT_EQ(id_descr.prefix(), "cpu.sigma.");
+    EXPECT_EQ(id_descr.interval, "hour");
 
     auto all_hour_vaues = data_scheme->lsInterval("hour");
     EXPECT_EQ(all_hour_vaues.size(), size_t(3));
 
     auto linkedHours = data_scheme->linkedForValue(all_values[raw_id]);
     EXPECT_EQ(linkedHours.size(), size_t(2));
-	EXPECT_TRUE(linkedHours.find(hour_sigma_id) != linkedHours.end());
-	EXPECT_TRUE(linkedHours.find(hour_median_id) != linkedHours.end());
+    EXPECT_TRUE(linkedHours.find(hour_sigma_id) != linkedHours.end());
+    EXPECT_TRUE(linkedHours.find(hour_median_id) != linkedHours.end());
 
     linkedHours = data_scheme->linkedForValue(all_values[raw_cpu]);
     EXPECT_EQ(linkedHours.size(), size_t(1));
-	EXPECT_TRUE(linkedHours.find(hour_cpu) != linkedHours.end());
+    EXPECT_TRUE(linkedHours.find(hour_cpu) != linkedHours.end());
 
     linkedHours = data_scheme->linkedForValue(all_values[day_median_id]);
     EXPECT_EQ(linkedHours.size(), size_t(0));
+  }
+  {
+    auto settings = dariadb::storage::Settings::create();
+    auto data_scheme = dariadb::scheme::Scheme::create(settings);
+
+    data_scheme->addParam("param1.raw");
+    auto p3_id = data_scheme->addParam("param3.raw");
+    data_scheme->addParam("param3.average.minute");
+    data_scheme->addParam("param33.average.minute");
+    auto vm = data_scheme->ls();
+    auto result = data_scheme->linkedForValue(vm[p3_id]);
+    EXPECT_EQ(result.size(), size_t(1));
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
