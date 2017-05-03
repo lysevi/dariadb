@@ -28,7 +28,7 @@ public:
 
 protected:
   void async_loop();
-
+  void resort_queue();
 private:
   std::vector<QueueReccord> _queue;
   std::mutex _locker;
