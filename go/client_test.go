@@ -75,4 +75,23 @@ func TestAppend(t *testing.T) {
 		t.Error(err)
 	}
 	checkResult(allparams, values, t)
+
+	fncs, err := client.StatFuncs()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(fncs) < 2 {
+		t.Errorf("len(fncs)<2: %v", fncs)
+	}
+
+	statresult, err := client.Statistic("param1.raw", fncs, ts, ts+ts, Flag(0))
+	if err != nil {
+		t.Error(err)
+	}
+
+	for _, f := range fncs {
+		if _, ok := statresult[f]; !ok {
+			t.Errorf("%v not found in statistic result", f)
+		}
+	}
 }
