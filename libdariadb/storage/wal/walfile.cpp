@@ -54,6 +54,12 @@ public:
     }
   }
 
+  void close() {
+	  if (_file != nullptr) {
+		  std::fclose(_file);
+	  }
+  }
+
   void open_to_append() {
     if (_file != nullptr) {
       return;
@@ -61,7 +67,11 @@ public:
 
     _file = std::fopen(_filename.c_str(), "ab");
     if (_file == nullptr) {
-      throw MAKE_EXCEPTION("WALFile: open_to_append error.");
+      std::stringstream ss;
+      ss << "WALFile: open_to_append error. file:" << _filename
+         << " errno:" << std::string(std::strerror(errno));
+      logger_fatal(ss.str());
+      throw MAKE_EXCEPTION(ss.str());
     }
   }
 
@@ -89,23 +99,24 @@ public:
     _maxTime = std::max(_maxTime, value.time);
     _writed++;
     _idBloom = bloom_add<Id>(_idBloom, value.id);
+	close();
     return Status(1);
   }
 
   Status append(const MeasArray::const_iterator &begin,
                 const MeasArray::const_iterator &end) {
     ENSURE(!_is_readonly);
-	
+
     auto sz = std::distance(begin, end);
     open_to_append();
     auto max_size = _settings->wal_file_size.value();
     auto write_size = (sz + _writed) > max_size ? (max_size - _writed) : sz;
-	if (write_size == size_t()) {
-		Status result;
-		result.ignored = sz;
-		result.error = APPEND_ERROR::wal_file_limit;
-		return result;
-	}
+    if (write_size == size_t()) {
+      Status result;
+      result.ignored = sz;
+      result.error = APPEND_ERROR::wal_file_limit;
+      return result;
+    }
     std::fwrite(&(*begin), sizeof(Meas), write_size, _file);
     std::fflush(_file);
     for (auto it = begin; it != begin + write_size; ++it) {
@@ -115,6 +126,7 @@ public:
       _idBloom = bloom_add<Id>(_idBloom, value.id);
     }
     _writed += write_size;
+	close();
     return Status(write_size);
   }
 
@@ -303,7 +315,7 @@ public:
     if (result < _writed) {
       THROW_EXCEPTION("result < _writed");
     }
-    std::fclose(_file);
+	close();
     _file = nullptr;
     return ma;
   }
@@ -348,9 +360,8 @@ public:
     }
   }
 
-  size_t writed()const {
-	  return _writed;
-  }
+  size_t writed() const { return _writed; }
+
 protected:
   std::string _filename;
   bool _is_readonly;
@@ -371,7 +382,8 @@ WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env, const std::string &fn
 
 WALFile::~WALFile() {}
 
-WALFile::WALFile(const EngineEnvironment_ptr env, dariadb::Id id) : _Impl(new WALFile::Private(env, id)) {}
+WALFile::WALFile(const EngineEnvironment_ptr env, dariadb::Id id)
+    : _Impl(new WALFile::Private(env, id)) {}
 
 WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
     : _Impl(new WALFile::Private(env, fname, readonly)) {}
@@ -445,6 +457,6 @@ Id WALFile::id_from_first() {
   return _Impl->id_from_first();
 }
 
-size_t WALFile::writed()const {
-	return _Impl->writed();
+size_t WALFile::writed() const {
+  return _Impl->writed();
 }
