@@ -303,7 +303,5 @@ std::string dariadb::net::http::statCalculationResult2string(
     func_res["V"] = ma[i].value;
     result[funcs[i]] = func_res;
   }
-
-  result["measurement"] = nameMap[ma.front().id].name;
   return result.dump(1);
 }

@@ -411,7 +411,6 @@ TEST(Http, Test) {
     query_str = stat_js.dump(1);
     post_result = post(test_service, http_port, query_str);
     EXPECT_EQ(post_result.code, 200);
-    EXPECT_TRUE(post_result.answer.find("single_value") != std::string::npos);
     EXPECT_TRUE(post_result.answer.find("average") != std::string::npos);
     EXPECT_TRUE(post_result.answer.find("median") != std::string::npos);
     EXPECT_TRUE(post_result.answer.find("percentile90") != std::string::npos);

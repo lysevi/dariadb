@@ -175,7 +175,6 @@ where from,to,flag, id - query interval params, funcstions - statistical functio
 
 ```json
 {
- "measurement": "memory",
  "average": {
   "F": 0,
   "T": 0,
