@@ -51,6 +51,8 @@ func printInfoValues() {
 		for k, v := range res {
 			log.Printf("%v => %v", k, len(v))
 		}
+	} else {
+		log.Println(err)
 	}
 }
 
@@ -106,6 +108,8 @@ func main() {
 	db = dariadb.New(server)
 
 	initScheme()
+
+	printInfoValues()
 
 	ctx := context.Background()
 	asyncWriterChanel = make(chan query)
