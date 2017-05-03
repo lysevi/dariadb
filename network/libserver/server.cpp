@@ -98,7 +98,6 @@ public:
     if (this->_env.storage != nullptr) { // in some tests storage not exists
       auto cp = this->_env.storage;
       this->_env.storage = nullptr;
-      cp->stop();
     }
 
     _in_stop_logic = false;
