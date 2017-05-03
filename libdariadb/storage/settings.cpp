@@ -31,7 +31,7 @@ const dariadb::Time LIFETIME_HALFHOUR = HOUR_INTERVAL * 5;
 const dariadb::Time LIFETIME_HOUR = DAY_INTERVAL * 2;
 const dariadb::Time LIFETIME_DAY = DAY_INTERVAL * 3;
 const dariadb::Time LIFETIME_WEEK = DAY_INTERVAL * 7 * 2;
-const dariadb::Time LIFETIME_MONTH = DAY_INTERVAL * 31*2;
+const dariadb::Time LIFETIME_MONTH = DAY_INTERVAL * 31 * 2;
 
 const std::string c_page_store_period = "page_store_period";
 const std::string c_wal_file_size = "wal_file_size";
@@ -200,4 +200,34 @@ void Settings::change(std::string &expression) {
   } else {
     logger_fatal("engine", alias, ": engine: bad expression ", expression);
   }
+}
+
+dariadb::Time Settings::lifetime_for_interval(const std::string &interval) const {
+  if (interval == "raw") {
+    return lifetime_raw.value();
+  }
+  if (interval == "minute") {
+    return lifetime_minute.value();
+  }
+  if (interval == "halfhour") {
+    return lifetime_halfhour.value();
+  }
+
+  if (interval == "hour") {
+    return lifetime_hour.value();
+  }
+
+  if (interval == "day") {
+    return lifetime_day.value();
+  }
+
+  if (interval == "week") {
+    return lifetime_week.value();
+  }
+
+  if (interval == "month") {
+    return lifetime_month.value();
+  }
+
+  THROW_EXCEPTION("UNKNOW INTERVAL! ", interval);
 }

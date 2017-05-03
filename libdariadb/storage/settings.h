@@ -94,7 +94,7 @@ public:
   ReadOnlyOption<std::string> storage_path;
   ReadOnlyOption<std::string> raw_path;
 
-  //Option<Time> max_store_period; // period, when old pages must be removed.
+  // Option<Time> max_store_period; // period, when old pages must be removed.
   // wal level options;
   Option<uint64_t> wal_file_size;  // measurements count in one file
   Option<uint64_t> wal_cache_size; // inner buffer size
@@ -114,14 +114,15 @@ public:
   Option<size_t> threads_in_common; // threads count in pool 'COMMON'
   Option<size_t> threads_in_diskio; // threads count in pool 'DISK_IO'
 
-  Option<Time> lifetime_raw; // store interval for raw values.
-  Option<Time> lifetime_minute; // store interval for 'minute' values.
+  Option<Time> lifetime_raw;      // store interval for raw values.
+  Option<Time> lifetime_minute;   // store interval for 'minute' values.
   Option<Time> lifetime_halfhour; // store interval for 'halfhour' values.
-  Option<Time> lifetime_hour; // store interval for 'hour' values.
-  Option<Time> lifetime_day; // store interval for 'day' values.
-  Option<Time> lifetime_week; // store interval for 'week' values.
-  Option<Time> lifetime_month; // store interval for 'month' values.
+  Option<Time> lifetime_hour;     // store interval for 'hour' values.
+  Option<Time> lifetime_day;      // store interval for 'day' values.
+  Option<Time> lifetime_week;     // store interval for 'week' values.
+  Option<Time> lifetime_month;    // store interval for 'month' values.
 
+  EXPORT Time lifetime_for_interval(const std::string &intervalName) const;
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
   std::string alias; // is set, used in log messages;
   bool is_memory_only_mode;
@@ -132,5 +133,5 @@ protected:
 
 template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
 template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
-}
-}
+} // namespace storage
+} // namespace dariadb

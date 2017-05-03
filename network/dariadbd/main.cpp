@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
   IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
   stor->setScheme(scheme);
 
-  aggregator::Aggregator aggregator(stor);
+  auto aggregator=std::make_shared<aggregator::Aggregator>(stor);
 
   dariadb::net::Server::Param server_param(server_port, server_http_port,
                                            server_threads_count);
@@ -138,4 +138,5 @@ int main(int argc, char **argv) {
   s.set_storage(stor);
 
   s.start();
+  aggregator = nullptr;
 }

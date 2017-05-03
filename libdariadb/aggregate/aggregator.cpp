@@ -100,6 +100,8 @@ void Aggregator::aggregate(const std::string &from_interval,
   auto interval_values = scheme->lsInterval(from_interval);
   logger("aggregator: find ", interval_values.size(), " values.");
 
+  statistic::Calculator calc(_storage);
+
   for (auto kv : interval_values) {
     auto all_linked = scheme->linkedForValue(kv.second);
 
@@ -129,54 +131,21 @@ void Aggregator::aggregate(const std::string &from_interval,
 
     logger_info("aggregator: write '", kv.second.name, "' to '", ss.str(), "'");
 
-    QueryInterval qi({kv.second.id}, dariadb::Flag(), start, end);
-    auto values_from_to = _storage->readInterval(qi);
-
-    statistic::Calculator calc(_storage);
     auto result_functions =
         calc.apply(kv.second.id, start, end, dariadb::Flag(), statistic_functions);
     if (result_functions.empty()) {
-      return;
+      continue;
     }
     ENSURE(result_functions.size() == target_ids.size());
+
     for (size_t i = 0; i < target_ids.size(); ++i) {
       _storage->append(target_ids[i], result_functions[i].time,
                        result_functions[i].value);
     }
 
-    dariadb::Time interval_lifetime;
-    auto settings = _storage->settings();
-    if (from_interval == "raw") {
-      interval_lifetime = settings->lifetime_raw.value();
-    } else {
-      if (from_interval == "minute") {
-        interval_lifetime = settings->lifetime_minute.value();
-      } else {
-        if (from_interval == "halfhour") {
-          interval_lifetime = settings->lifetime_halfhour.value();
-        } else {
-          if (from_interval == "hour") {
-            interval_lifetime = settings->lifetime_hour.value();
-          } else {
-            if (from_interval == "day") {
-              interval_lifetime = settings->lifetime_day.value();
-            } else {
-              if (from_interval == "week") {
-                interval_lifetime = settings->lifetime_week.value();
-              } else {
-                if (from_interval == "month") {
-                  interval_lifetime = settings->lifetime_month.value();
-                } else {
-                  THROW_EXCEPTION("UNKNOW INTERVAL! ", from_interval);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    auto interval_lifetime = _storage->settings()->lifetime_for_interval(from_interval);
 
-	_storage->eraseOld(kv.first, end - interval_lifetime);
+    _storage->eraseOld(kv.first, end - interval_lifetime);
   }
 }
 
