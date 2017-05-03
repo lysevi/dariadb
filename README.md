@@ -12,6 +12,7 @@
 * True columnar storage
 * Can be used as a server application or an embedded library.
 * Full featured http api.
+* Golang client (see folders "go" and "examples/go")
 * Accept unordered data.
 * Each measurement contains:
   - Id - x32 unsigned integer value.

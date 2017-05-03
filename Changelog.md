@@ -3,6 +3,7 @@ v0.5.0
 - True columnar database.
 - Automatic data erasing was disabled. Timeseries removing only by manual.
 - UTC time in inner functions.
+- Golang http client
 
 v0.4.1
 =====
