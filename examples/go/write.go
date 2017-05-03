@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -40,6 +41,12 @@ func init() {
 
 var values map[string]interface{}
 
+type paramArray []string
+
+func (a paramArray) Len() int           { return len(a) }
+func (a paramArray) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a paramArray) Less(i, j int) bool { return a[i] < a[j] }
+
 func printInfoValues() {
 	curtime := time.Now()
 	from := time.Date(curtime.Year(), curtime.Month(), curtime.Day(), 0, 0, 0, 0, time.UTC)
@@ -48,8 +55,11 @@ func printInfoValues() {
 	res, err := db.Interval(allParams, dariadb.MakeTimestampFrom(from), dariadb.MakeTimestampFrom(to), dariadb.Flag(0))
 
 	if err == nil {
-		for k, v := range res {
-			log.Printf("%v => %v", k, len(v))
+
+		for _, k := range allParams {
+			if v, ok := res[k]; ok {
+				log.Printf("%v => %v\n", k, len(v))
+			}
 		}
 	} else {
 		log.Println(err)
@@ -79,6 +89,7 @@ func initScheme() {
 		rawParams = append(rawParams, params[0])
 		db.AddToScheme(params)
 	}
+	sort.Sort(paramArray(allParams))
 }
 
 func writeValues(ctx context.Context, paramname string) {
