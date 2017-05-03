@@ -22,7 +22,7 @@ var asyncWriterChanel chan query
 var networkMutex sync.Mutex
 
 var server string
-var disableReader bool
+var readOnly bool
 var paramsFrom int
 var paramsTo int
 
@@ -34,7 +34,7 @@ func init() {
 	flag.StringVar(&server, "host", "http://localhost:2002", "host with dariadb")
 	flag.IntVar(&paramsFrom, "from", 0, "first param number")
 	flag.IntVar(&paramsTo, "to", 10, "last param number")
-	flag.BoolVar(&disableReader, "disableReader", false, "enable reader")
+	flag.BoolVar(&readOnly, "readOnly", false, "readOnly")
 	flag.Parse()
 }
 
@@ -109,25 +109,27 @@ func main() {
 
 	initScheme()
 
-	printInfoValues()
+	if !readOnly {
 
-	ctx := context.Background()
-	asyncWriterChanel = make(chan query)
-	// var cancel context.CancelFunc
-	//
-	// ctx, cancel = context.WithCancel(context.Background())
+		ctx := context.Background()
+		asyncWriterChanel = make(chan query)
+		// var cancel context.CancelFunc
+		//
+		// ctx, cancel = context.WithCancel(context.Background())
 
-	scheme, _ := db.Scheme()
+		scheme, _ := db.Scheme()
 
-	log.Println(scheme)
-	for _, v := range rawParams {
-		go writeValues(ctx, v)
+		log.Println(scheme)
+		for _, v := range rawParams {
+			go writeValues(ctx, v)
+		}
 	}
 
 	for {
-		if !disableReader {
+		if readOnly {
 			printInfoValues()
 		}
-		time.Sleep(time.Second)
+		log.Println("***********************")
+		time.Sleep(1000 * time.Millisecond)
 	}
 }
