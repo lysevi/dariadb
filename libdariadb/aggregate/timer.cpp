@@ -22,7 +22,7 @@ void Timer::resort_queue() {
     return;
   }
   std::sort(_queue.begin(), _queue.end(),
-            [](const auto &r, const auto &l) { return l.target < r.target; });
+            [](const auto &r, const auto &l) { return l.target > r.target; });
   ENSURE(_queue.front().target <= _queue.back().target);
 }
 

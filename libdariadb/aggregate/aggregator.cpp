@@ -67,7 +67,7 @@ public:
 
     for (size_t i = 0; i < all_intervals.size() - 1; ++i) {
       auto interval_from = all_intervals[i];
-      auto interval_to = all_intervals[i+1];
+      auto interval_to = all_intervals[i + 1];
 
       ITimer::Callback_Ptr clbk{new TimerCallback(interval_from, interval_to, _storage)};
       auto interval_to_target =
@@ -135,14 +135,48 @@ void Aggregator::aggregate(const std::string &from_interval,
     statistic::Calculator calc(_storage);
     auto result_functions =
         calc.apply(kv.second.id, start, end, dariadb::Flag(), statistic_functions);
-	if (result_functions.empty()) {
-		return;
-	}
+    if (result_functions.empty()) {
+      return;
+    }
     ENSURE(result_functions.size() == target_ids.size());
     for (size_t i = 0; i < target_ids.size(); ++i) {
       _storage->append(target_ids[i], result_functions[i].time,
                        result_functions[i].value);
     }
+
+    dariadb::Time interval_lifetime;
+    auto settings = _storage->settings();
+    if (from_interval == "raw") {
+      interval_lifetime = settings->lifetime_raw.value();
+    } else {
+      if (from_interval == "minute") {
+        interval_lifetime = settings->lifetime_minute.value();
+      } else {
+        if (from_interval == "halfhour") {
+          interval_lifetime = settings->lifetime_halfhour.value();
+        } else {
+          if (from_interval == "hour") {
+            interval_lifetime = settings->lifetime_hour.value();
+          } else {
+            if (from_interval == "day") {
+              interval_lifetime = settings->lifetime_day.value();
+            } else {
+              if (from_interval == "week") {
+                interval_lifetime = settings->lifetime_week.value();
+              } else {
+                if (from_interval == "month") {
+                  interval_lifetime = settings->lifetime_month.value();
+                } else {
+                  THROW_EXCEPTION("UNKNOW INTERVAL! ", from_interval);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+	_storage->eraseOld(kv.first, end - interval_lifetime);
   }
 }
 

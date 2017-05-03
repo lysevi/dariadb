@@ -114,6 +114,14 @@ public:
   Option<size_t> threads_in_common; // threads count in pool 'COMMON'
   Option<size_t> threads_in_diskio; // threads count in pool 'DISK_IO'
 
+  Option<Time> lifetime_raw; // store interval for raw values.
+  Option<Time> lifetime_minute; // store interval for 'minute' values.
+  Option<Time> lifetime_halfhour; // store interval for 'halfhour' values.
+  Option<Time> lifetime_hour; // store interval for 'hour' values.
+  Option<Time> lifetime_day; // store interval for 'day' values.
+  Option<Time> lifetime_week; // store interval for 'week' values.
+  Option<Time> lifetime_month; // store interval for 'month' values.
+
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
   std::string alias; // is set, used in log messages;
   bool is_memory_only_mode;

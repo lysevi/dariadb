@@ -12,6 +12,10 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 
 using json = nlohmann::json;
+namespace {
+#define MINUTE_INTERVAL dariadb::Time(1000) * 60
+#define HOUR_INTERVAL dariadb::Time(1000) * 60 * 60
+#define DAY_INTERVAL dariadb::Time(1000) * 60 * 60 * 24
 
 const uint64_t WAL_CACHE_SIZE = 4096 / sizeof(dariadb::Meas) * 10;
 const uint64_t WAL_FILE_SIZE = (1024 * 1024) * 4 / sizeof(dariadb::Meas);
@@ -20,6 +24,14 @@ const uint64_t MAX_CHUNKS_PER_PAGE = 10 * 1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; // 100 mb
 const size_t THREADS_COMMON = 2;
 const size_t THREADS_DISKIO = 1;
+
+const dariadb::Time LIFETIME_RAW = MINUTE_INTERVAL * 60;
+const dariadb::Time LIFETIME_MINUTE = HOUR_INTERVAL * 2;
+const dariadb::Time LIFETIME_HALFHOUR = HOUR_INTERVAL * 5;
+const dariadb::Time LIFETIME_HOUR = DAY_INTERVAL * 2;
+const dariadb::Time LIFETIME_DAY = DAY_INTERVAL * 3;
+const dariadb::Time LIFETIME_WEEK = DAY_INTERVAL * 7 * 2;
+const dariadb::Time LIFETIME_MONTH = DAY_INTERVAL * 31*2;
 
 const std::string c_page_store_period = "page_store_period";
 const std::string c_wal_file_size = "wal_file_size";
@@ -33,6 +45,14 @@ const std::string c_percent_to_drop = "percent_to_drop";
 const std::string c_max_pages_per_level = "max_pages_per_level";
 const std::string c_threads_in_common = "threads_in_common";
 const std::string c_threads_in_diskio = "threads_in_diskio";
+const std::string c_lifetime_raw = "lifetime_raw";
+const std::string c_lifetime_minute = "lifetime_minute";
+const std::string c_lifetime_halfhour = "lifetime_halfhour";
+const std::string c_lifetime_hour = "lifetime_hour";
+const std::string c_lifetime_day = "lifetime_day";
+const std::string c_lifetime_week = "lifetime_week";
+const std::string c_lifetime_month = "lifetime_month";
+} // namespace
 
 std::string settings_file_path(const std::string &path) {
   return dariadb::utils::fs::append_path(path, SETTINGS_FILE_NAME);
@@ -77,7 +97,14 @@ Settings::Settings(const std::string &path_to_storage)
       percent_to_drop(this, c_percent_to_drop, float(0.1)),
       max_pages_in_level(this, c_max_pages_per_level, uint16_t(2)),
       threads_in_common(this, c_threads_in_common, THREADS_COMMON),
-      threads_in_diskio(this, c_threads_in_diskio, THREADS_DISKIO) {
+      threads_in_diskio(this, c_threads_in_diskio, THREADS_DISKIO),
+      lifetime_raw(this, c_lifetime_raw, LIFETIME_RAW),
+      lifetime_minute(this, c_lifetime_minute, LIFETIME_MINUTE),
+      lifetime_halfhour(this, c_lifetime_halfhour, LIFETIME_HALFHOUR),
+      lifetime_hour(this, c_lifetime_hour, LIFETIME_HOUR),
+      lifetime_day(this, c_lifetime_day, LIFETIME_DAY),
+      lifetime_week(this, c_lifetime_week, LIFETIME_WEEK),
+      lifetime_month(this, c_lifetime_month, LIFETIME_MONTH) {
 
   if (storage_path.value() != MEMORY_ONLY_PATH) {
     auto f = settings_file_path(storage_path.value());
