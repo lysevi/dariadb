@@ -57,6 +57,7 @@ public:
   void close() {
 	  if (_file != nullptr) {
 		  std::fclose(_file);
+		  _file = nullptr;
 	  }
   }
 
