@@ -50,6 +50,7 @@
   - sigma(standard deviation)
   - percentile90
   - percentile99
+* Interval aggregation support. Available intervals: raw,minute, half hour, hour, day, week, month, year.
 
 # Usage example
 - See folder "examples"

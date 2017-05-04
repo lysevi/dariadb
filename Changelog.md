@@ -4,6 +4,7 @@ v0.5.0
 - Automatic data erasing was disabled. Timeseries removing only by manual.
 - UTC time in inner functions.
 - Golang http client
+- Interval aggregation support. Available intervals: raw,minute, half hour, hour, day, week, month, year.
 
 v0.4.1
 =====
