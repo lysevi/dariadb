@@ -54,6 +54,7 @@ public:
         s.storage->stop();
       }
       ThreadManager::stop();
+	  _stoped = true;
     }
   }
 
