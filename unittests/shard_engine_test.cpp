@@ -239,7 +239,6 @@ TEST(Shard, AutomaticShardCreation) {
   const dariadb::Time from = 0;
   const dariadb::Time to = from + 1000;
   const dariadb::Time step = 10;
-  const size_t chunk_size = 256;
 
   using namespace dariadb;
   using namespace dariadb::storage;

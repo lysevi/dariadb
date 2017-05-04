@@ -171,6 +171,11 @@ int main(int argc, char **argv) {
     } else {
       stor = IEngine_Ptr{new Engine(settings, true, force_unlock_storage)};
     }
+
+    if (init_and_stop) {
+      stor->stop();
+      return 0;
+    }
   } else {
     stor = dariadb::open_storage(storage_path);
     settings = stor->settings();
@@ -178,11 +183,6 @@ int main(int argc, char **argv) {
   auto scheme = dariadb::scheme::Scheme::create(stor->settings());
 
   stor->setScheme(scheme);
-
-  if (init_and_stop) {
-    stor->stop();
-    return 0;
-  }
 
   if (fsck) {
     stor->fsck();
