@@ -43,9 +43,11 @@ class IScheme {
 public:
   virtual Id addParam(const std::string &param) = 0;
   virtual DescriptionMap ls() = 0;
+  virtual MeasurementDescription descriptionFor(dariadb::Id id) = 0;
   virtual DescriptionMap lsInterval(const std::string &interval) = 0;
   virtual DescriptionMap linkedForValue(const MeasurementDescription &param) = 0;
   virtual void save() = 0;
+  
 };
 
 using IScheme_Ptr = std::shared_ptr<IScheme>;

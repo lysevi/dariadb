@@ -91,7 +91,8 @@ struct Scheme::Private : public IScheme {
     }
     md.id = _next_id++;
     this->_params[md.interval][param] = md;
-	this->save();
+    _id2descr[md.id] = md;
+    this->save();
     return md.id;
   }
 
@@ -102,6 +103,18 @@ struct Scheme::Private : public IScheme {
       for (const auto &kv : inter.second) {
         result[kv.second.id] = kv.second;
       }
+    }
+    return result;
+  }
+
+  MeasurementDescription descriptionFor(dariadb::Id id) override {
+    std::lock_guard<utils::async::Locker> lg(_locker);
+    MeasurementDescription result;
+    auto fiter = _id2descr.find(id);
+    if (fiter == _id2descr.end()) {
+      result.id = MAX_ID;
+    } else {
+      result = fiter->second;
     }
     return result;
   }
@@ -128,17 +141,17 @@ struct Scheme::Private : public IScheme {
     std::sort(all_intervals.begin(), all_intervals.end(),
               [](auto &r, auto &l) { return timeutil::intervalsLessCmp(r, l); });
 
-	auto source_prefix = param.prefix();
+    auto source_prefix = param.prefix();
     for (size_t i = 0; i < (all_intervals.size() - 1); ++i) {
       if (all_intervals[i] == param.interval) {
         auto target_inteval = all_intervals[i + 1];
         auto all_from_target = _params[target_inteval];
         for (auto kv : all_from_target) {
-			auto candidate_prefix = kv.second.prefix();
-			if (candidate_prefix.compare(0, source_prefix.size(), source_prefix)==0) {
-				auto new_value = std::make_pair(kv.second.id, kv.second);
-				result.insert(new_value);
-			}
+          auto candidate_prefix = kv.second.prefix();
+          if (candidate_prefix.compare(0, source_prefix.size(), source_prefix) == 0) {
+            auto new_value = std::make_pair(kv.second.id, kv.second);
+            result.insert(new_value);
+          }
         }
       }
     }
@@ -197,6 +210,7 @@ struct Scheme::Private : public IScheme {
 
       MeasurementDescription descr{param_name, param_id, param_interval, param_function};
       _params[param_interval].insert(std::make_pair(param_name, descr));
+      _id2descr[descr.id] = descr;
       max_id = std::max(max_id, param_id);
     }
     _next_id = max_id + 1;
@@ -207,6 +221,7 @@ struct Scheme::Private : public IScheme {
 
   mutable dariadb::utils::async::Locker _locker;
   std::unordered_map<std::string, Param2Description> _params;
+  std::unordered_map<Id, MeasurementDescription> _id2descr;
   Id _next_id;
 };
 
@@ -222,6 +237,10 @@ Id Scheme::addParam(const std::string &param) {
 
 DescriptionMap Scheme::ls() {
   return _impl->ls();
+}
+
+MeasurementDescription Scheme::descriptionFor(dariadb::Id id) {
+  return _impl->descriptionFor(id);
 }
 
 DescriptionMap Scheme::lsInterval(const std::string &interval) {

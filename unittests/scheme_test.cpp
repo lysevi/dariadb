@@ -143,6 +143,13 @@ TEST(Scheme, Intervals) {
 
     linkedHours = data_scheme->linkedForValue(all_values[day_median_id]);
     EXPECT_EQ(linkedHours.size(), size_t(0));
+
+    auto median_descr = data_scheme->descriptionFor(day_median_id);
+    EXPECT_EQ(median_descr.id, day_median_id);
+    EXPECT_EQ(median_descr.interval, "day");
+
+    auto unknow_descr = data_scheme->descriptionFor(77787);
+    EXPECT_EQ(unknow_descr.id, dariadb::MAX_ID);
   }
   {
     auto settings = dariadb::storage::Settings::create();
