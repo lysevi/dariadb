@@ -33,6 +33,14 @@ const dariadb::Time LIFETIME_DAY = DAY_INTERVAL * 3;
 const dariadb::Time LIFETIME_WEEK = DAY_INTERVAL * 7 * 2;
 const dariadb::Time LIFETIME_MONTH = DAY_INTERVAL * 31 * 2;
 
+const dariadb::STRATEGY STRATEGY_RAW = dariadb::STRATEGY::MEMORY;
+const dariadb::STRATEGY STRATEGY_MINUTE = dariadb::STRATEGY::COMPRESSED;
+const dariadb::STRATEGY STRATEGY_HALFHOUR = dariadb::STRATEGY::COMPRESSED;
+const dariadb::STRATEGY STRATEGY_HOUR = dariadb::STRATEGY::COMPRESSED;
+const dariadb::STRATEGY STRATEGY_DAY = dariadb::STRATEGY::COMPRESSED;
+const dariadb::STRATEGY STRATEGY_WEEK = dariadb::STRATEGY::COMPRESSED;
+const dariadb::STRATEGY STRATEGY_MONTH = dariadb::STRATEGY::COMPRESSED;
+
 const std::string c_page_store_period = "page_store_period";
 const std::string c_wal_file_size = "wal_file_size";
 const std::string c_chunks_per_page = "chunks_per_page";
@@ -52,6 +60,13 @@ const std::string c_lifetime_hour = "lifetime_hour";
 const std::string c_lifetime_day = "lifetime_day";
 const std::string c_lifetime_week = "lifetime_week";
 const std::string c_lifetime_month = "lifetime_month";
+const std::string c_strategy_raw = "strategy_raw";
+const std::string c_strategy_minute = "strategy_minute";
+const std::string c_strategy_halfhour = "strategy_halfhour";
+const std::string c_strategy_hour = "strategy_hour";
+const std::string c_strategy_day = "strategy_day";
+const std::string c_strategy_week = "strategy_week";
+const std::string c_strategy_month = "strategy_month";
 } // namespace
 
 std::string settings_file_path(const std::string &path) {
@@ -104,7 +119,14 @@ Settings::Settings(const std::string &path_to_storage)
       lifetime_hour(this, c_lifetime_hour, LIFETIME_HOUR),
       lifetime_day(this, c_lifetime_day, LIFETIME_DAY),
       lifetime_week(this, c_lifetime_week, LIFETIME_WEEK),
-      lifetime_month(this, c_lifetime_month, LIFETIME_MONTH) {
+      lifetime_month(this, c_lifetime_month, LIFETIME_MONTH),
+      strategy_raw(this, c_strategy_raw, STRATEGY_RAW),
+      strategy_minute(this, c_strategy_minute, STRATEGY_MINUTE),
+      strategy_halfhour(this, c_strategy_halfhour, STRATEGY_HALFHOUR),
+      strategy_hour(this, c_strategy_hour, STRATEGY_HOUR),
+      strategy_day(this, c_strategy_day, STRATEGY_DAY),
+      strategy_week(this, c_strategy_week, STRATEGY_WEEK),
+      strategy_month(this, c_strategy_month, STRATEGY_MONTH) {
 
   if (storage_path.value() != MEMORY_ONLY_PATH) {
     auto f = settings_file_path(storage_path.value());
@@ -161,7 +183,7 @@ void Settings::save(const std::string &file) {
   if (!fs.is_open()) {
     throw MAKE_EXCEPTION("!fs.is_open()");
   }
-  fs << js.dump();
+  fs << js.dump(1);
   fs.flush();
   fs.close();
 }
@@ -230,4 +252,35 @@ dariadb::Time Settings::lifetime_for_interval(const std::string &interval) const
   }
 
   THROW_EXCEPTION("UNKNOW INTERVAL! ", interval);
+}
+
+EXPORT dariadb::STRATEGY
+Settings::strategy_for_interval(const std::string &interval) const {
+  if (interval == "raw") {
+    return strategy_raw.value();
+  }
+  if (interval == "minute") {
+    return strategy_minute.value();
+  }
+  if (interval == "halfhour") {
+    return strategy_halfhour.value();
+  }
+
+  if (interval == "hour") {
+    return strategy_hour.value();
+  }
+
+  if (interval == "day") {
+    return strategy_day.value();
+  }
+
+  if (interval == "week") {
+    return strategy_week.value();
+  }
+
+  if (interval == "month") {
+    return strategy_month.value();
+  }
+
+  return strategy.value();
 }

@@ -122,7 +122,17 @@ public:
   Option<Time> lifetime_week;     // store interval for 'week' values.
   Option<Time> lifetime_month;    // store interval for 'month' values.
 
-  EXPORT Time lifetime_for_interval(const std::string &intervalName) const;
+  Option<STRATEGY> strategy_raw;      // strategy for raw values.
+  Option<STRATEGY> strategy_minute;   // strategy for 'minute' values.
+  Option<STRATEGY> strategy_halfhour; // strategy for 'halfhour' values.
+  Option<STRATEGY> strategy_hour;     // strategy for 'hour' values.
+  Option<STRATEGY> strategy_day;      // strategy for 'day' values.
+  Option<STRATEGY> strategy_week;     // strategy for 'week' values.
+  Option<STRATEGY> strategy_month;    // strategy for 'month' values.
+
+  EXPORT Time lifetime_for_interval(const std::string &interval) const;
+  EXPORT STRATEGY strategy_for_interval(const std::string &interval) const;
+
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
   std::string alias; // is set, used in log messages;
   bool is_memory_only_mode;

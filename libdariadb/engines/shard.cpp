@@ -226,7 +226,9 @@ public:
       utils::fs::mkdir(interval_dir);
     }
     auto settings = Settings::create(interval_dir);
+    settings->strategy_for_interval(interval);
     settings->alias = "(" + interval + ")";
+	settings->save();
     IEngine_Ptr new_shard{new Engine(settings, false)};
     _interval2shard[interval] = new_shard;
 
