@@ -10,6 +10,7 @@ public:
   virtual void write_begin() = 0;
   virtual void write_end() = 0;
   virtual bool server_begin_stopping() const = 0;
+  virtual void addWritedCount(size_t count) = 0;
   virtual ~IClientManager() {}
 };
 }

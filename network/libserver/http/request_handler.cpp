@@ -14,10 +14,12 @@ using namespace dariadb::net::http;
 request_handler::request_handler() : _storage_engine(nullptr) {}
 
 namespace requers_handler_inner {
-void append_query(dariadb::IEngine_Ptr storage_engine, const http_query &q, reply &rep) {
+void append_query(dariadb::IEngine_Ptr storage_engine, const http_query &q, reply &rep,
+                  dariadb::net::IClientManager *cm) {
   dariadb::logger("POST query 'append': ", q.append_query->size(), " values");
 
   auto status = storage_engine->append(q.append_query->begin(), q.append_query->end());
+  cm->addWritedCount(q.append_query->size());
   rep = reply::stock_reply(status2string(status), reply::status_type::ok);
 
   dariadb::logger("POST 'append' end.");
@@ -126,7 +128,7 @@ void request_handler::handle_request(const request &req, reply &rep) {
 
       switch (parsed_query.type) {
       case http_query_type::append: {
-        requers_handler_inner::append_query(_storage_engine, parsed_query, rep);
+        requers_handler_inner::append_query(_storage_engine, parsed_query, rep, this->_clientmanager);
         return;
       }
       case http_query_type::readInterval: {

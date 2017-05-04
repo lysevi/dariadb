@@ -1,5 +1,6 @@
 #pragma once
 #include <libdariadb/interfaces/iengine.h>
+#include <libserver/iclientmanager.h>
 #include <string>
 
 namespace dariadb {
@@ -22,8 +23,11 @@ public:
     _storage_engine = storage_engine;
   }
 
+  void set_clientmanager(IClientManager *cm) { _clientmanager = cm; }
+
 private:
   dariadb::IEngine_Ptr _storage_engine;
+  IClientManager *_clientmanager;
 };
 
 } // namespace http

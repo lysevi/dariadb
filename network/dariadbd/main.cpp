@@ -1,4 +1,6 @@
 #include <libdariadb/dariadb.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
 #include <iostream>
@@ -22,11 +24,17 @@ ServerLogger::Params p;
 size_t memory_limit = 0;
 bool force_unlock_storage = false;
 bool memonly = false;
+bool init_and_stop = false;
+bool fsck = false;
+bool showinfo = false;
 
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
   aos("help", "produce help message");
+  aos("init", "init storage and stop.");
+  aos("fsck", "fsck storage and stop.");
+  aos("format", "show info about storage format and stop.");
 
   po::options_description logger_params("Logger params");
   auto log_options = logger_params.add_options();
@@ -78,6 +86,18 @@ int main(int argc, char **argv) {
     std::exit(0);
   }
 
+  if (vm.count("init")) {
+    init_and_stop = true;
+  }
+
+  if (vm.count("fsck")) {
+    fsck = true;
+  }
+
+  if (vm.count("format")) {
+    showinfo = true;
+  }
+
   if (vm.count("memory-only")) {
     std::cout << "memory-only" << std::endl;
     memonly = true;
@@ -109,12 +129,23 @@ int main(int argc, char **argv) {
     ss << argv[i] << " ";
   }
 
+  if (showinfo) {
+    if (!dariadb::utils::fs::path_exists(storage_path)) {
+      std::cerr << "path not exists" << std::endl;
+      return 1;
+    }
+    auto settings = dariadb::storage::Settings::create(storage_path);
+    auto m = dariadb::storage::Manifest::create(settings);
+    std::cout << "format version: " << m->get_format() << std::endl;
+    return 0;
+  }
+
   log_ptr->message(dariadb::utils::LOG_MESSAGE_KIND::INFO, ss.str());
   dariadb::storage::Settings_ptr settings;
   if (!memonly) {
     settings = dariadb::storage::Settings::create(storage_path);
     settings->strategy.setValue(strategy);
-	settings->save();
+    settings->save();
   } else {
     settings = dariadb::storage::Settings::create();
   }
@@ -130,7 +161,17 @@ int main(int argc, char **argv) {
   IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
   stor->setScheme(scheme);
 
-  auto aggregator=std::make_shared<aggregator::Aggregator>(stor);
+  if (init_and_stop) {
+    stor->stop();
+    return 0;
+  }
+
+  if (fsck) {
+    stor->fsck();
+    return 0;
+  }
+
+  auto aggregator = std::make_shared<aggregator::Aggregator>(stor);
 
   dariadb::net::Server::Param server_param(server_port, server_http_port,
                                            server_threads_count);
