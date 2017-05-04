@@ -54,7 +54,7 @@ public:
         s.storage->stop();
       }
       ThreadManager::stop();
-	  _stoped = true;
+      _stoped = true;
     }
   }
 
@@ -226,11 +226,11 @@ public:
     if (!utils::fs::path_exists(interval_dir)) {
       utils::fs::mkdir(interval_dir);
     }
-    auto settings = Settings::create(interval_dir);
-    settings->strategy_for_interval(interval);
-    settings->alias = "(" + interval + ")";
-	settings->save();
-    IEngine_Ptr new_shard{new Engine(settings, false)};
+    auto shard_settigns = Settings::create(interval_dir);
+    shard_settigns->strategy.setValue(_settings->strategy_for_interval(interval));
+    shard_settigns->alias = "(" + interval + ")";
+    shard_settigns->save();
+    IEngine_Ptr new_shard{new Engine(shard_settigns, false)};
     _interval2shard[interval] = new_shard;
 
     ShardEngine::Shard sd;
