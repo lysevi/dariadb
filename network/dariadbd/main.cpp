@@ -27,6 +27,7 @@ bool memonly = false;
 bool init_and_stop = false;
 bool fsck = false;
 bool showinfo = false;
+bool use_shards = false;
 
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
@@ -56,6 +57,7 @@ int main(int argc, char **argv) {
                po::value<size_t>(&memory_limit)->default_value(memory_limit),
                "allocation area limit  in megabytes when strategy=MEMORY");
   stor_options("force-unlock", "force unlock storage.");
+  stor_options("use-shards", "use shard engine.");
   desc.add(storage_params);
 
   po::options_description server_params("Server params");
@@ -120,14 +122,12 @@ int main(int argc, char **argv) {
     force_unlock_storage = true;
   }
 
+  if (vm.count("use-shards")) {
+    use_shards = true;
+  }
+
   dariadb::utils::ILogger_ptr log_ptr{new ServerLogger(p)};
   dariadb::utils::LogManager::start(log_ptr);
-
-  std::stringstream ss;
-  ss << "cmdline: ";
-  for (int i = 0; i < argc; ++i) {
-    ss << argv[i] << " ";
-  }
 
   if (showinfo) {
     if (!dariadb::utils::fs::path_exists(storage_path)) {
@@ -140,25 +140,43 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  std::stringstream ss;
+  ss << "cmdline: ";
+  for (int i = 0; i < argc; ++i) {
+    ss << argv[i] << " ";
+  }
   log_ptr->message(dariadb::utils::LOG_MESSAGE_KIND::INFO, ss.str());
+
+  IEngine_Ptr stor;
   dariadb::storage::Settings_ptr settings;
-  if (!memonly) {
-    settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(strategy);
+
+  if (!dariadb::utils::fs::path_exists(storage_path)) {
+
+    if (!memonly) {
+      settings = dariadb::storage::Settings::create(storage_path);
+      settings->strategy.setValue(strategy);
+      settings->save();
+    } else {
+      settings = dariadb::storage::Settings::create();
+    }
+
+    if (strategy == STRATEGY::MEMORY && memory_limit != 0 && !memonly) {
+      logger_info("memory limit: ", memory_limit);
+      settings->memory_limit.setValue(memory_limit * 1024 * 1024);
+    }
     settings->save();
+
+    if (use_shards) {
+      stor = ShardEngine::create(storage_path);
+    } else {
+      stor = IEngine_Ptr{new Engine(settings, true, force_unlock_storage)};
+    }
   } else {
-    settings = dariadb::storage::Settings::create();
+    stor = dariadb::open_storage(storage_path);
+    settings = stor->settings();
   }
+  auto scheme = dariadb::scheme::Scheme::create(stor->settings());
 
-  if (strategy == STRATEGY::MEMORY && memory_limit != 0 && !memonly) {
-    logger_info("memory limit: ", memory_limit);
-    settings->memory_limit.setValue(memory_limit * 1024 * 1024);
-  }
-  settings->save();
-
-  auto scheme = dariadb::scheme::Scheme::create(settings);
-
-  IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
   stor->setScheme(scheme);
 
   if (init_and_stop) {
