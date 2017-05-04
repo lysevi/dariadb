@@ -5,6 +5,7 @@
 #include <libdariadb/storage/subscribe.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/utils.h>
 #include <shared_mutex>
 
 #include <fstream>
@@ -20,7 +21,7 @@ using namespace dariadb::utils::async;
 
 using json = nlohmann::json;
 
-class ShardEngine::Private : IEngine {
+class ShardEngine::Private : public IEngine {
   struct ShardRef {
     std::string path;
     IEngine_Ptr storage;
@@ -57,6 +58,7 @@ public:
   }
 
   void loadShardFile() {
+    std::lock_guard<std::shared_mutex> lg(_locker);
     auto fname = shardFileName();
     if (utils::fs::file_exists(fname)) {
       logger("shards: loading ", fname);
@@ -100,6 +102,7 @@ public:
   }
 
   void shardAdd(const ShardEngine::Shard &d) {
+    std::lock_guard<std::shared_mutex> lg(_locker);
     shardAdd_inner(d);
     saveShardFile();
   }
@@ -136,12 +139,22 @@ public:
   }
 
   void shardAdd_inner(const ShardEngine::Shard &d) {
-    std::lock_guard<std::shared_mutex> lg(_locker);
+
     logger_info("shards: add new shard {", d.alias, "} => ", d.path);
+
     auto f_iter = _shards.find(d.alias);
+
+    auto all_intervals = timeutil::predefinedIntervals();
+    bool is_interval_shard = false;
+    auto interval_name = d.alias;
+    if (interval_name == "raw" || std::find(all_intervals.begin(), all_intervals.end(),
+                                            interval_name) != all_intervals.end()) {
+      is_interval_shard = true;
+    }
 
     IEngine_Ptr shard_ptr = nullptr;
     if (f_iter != _shards.end()) {
+      ENSURE(!is_interval_shard);
       Shard new_shard_rec(d);
 
       for (auto &sr : _sub_storages) {
@@ -162,13 +175,19 @@ public:
       _sub_storages.push_back({d.path, shard_ptr});
     }
 
-    if (d.ids.empty()) {
-      ENSURE(_default_shard == nullptr);
-      _default_shard = shard_ptr;
+    if (is_interval_shard) {
+      _interval2shard[interval_name] = shard_ptr;
     } else {
-      for (auto id : d.ids) {
-        if (_id2shard.count(id) == 0) {
-          _id2shard[id] = shard_ptr;
+      if (d.ids.empty()) {
+
+        ENSURE(_default_shard == nullptr);
+        _default_shard = shard_ptr;
+
+      } else {
+        for (auto id : d.ids) {
+          if (_id2shard.count(id) == 0) {
+            _id2shard[id] = shard_ptr;
+          }
         }
       }
     }
@@ -191,13 +210,52 @@ public:
     return new_shard;
   }
 
+  IEngine_Ptr createShardForInterval(const std::string &interval) {
+    logger_info("shards: create shard for '", interval, "'");
+    auto shards_dir = utils::fs::append_path(_settings->storage_path.value(), "shards");
+    if (!utils::fs::path_exists(shards_dir)) {
+      utils::fs::mkdir(shards_dir);
+    }
+
+    auto interval_dir = utils::fs::append_path(shards_dir, interval);
+    if (!utils::fs::path_exists(interval_dir)) {
+      utils::fs::mkdir(interval_dir);
+    }
+    auto settings = Settings::create(interval_dir);
+    settings->alias = "(" + interval + ")";
+    IEngine_Ptr new_shard{new Engine(settings, false)};
+    _interval2shard[interval] = new_shard;
+
+    ShardEngine::Shard sd;
+    sd.alias = interval;
+    sd.path = interval_dir;
+    _shards[sd.alias] = sd;
+    saveShardFile();
+    _sub_storages.push_back({sd.path, new_shard});
+    return new_shard;
+  }
+
   IEngine_Ptr get_shard_for_id(Id id) {
     IEngine_Ptr target_shard = _default_shard;
 
     _locker.lock();
-    auto fres = this->_id2shard.find(id);
-    if (fres != this->_id2shard.end()) {
-      target_shard = fres->second;
+    if (this->_scheme != nullptr) {
+      auto d = _scheme->descriptionFor(id);
+      if (d.id != MAX_ID && !d.interval.empty()) {
+
+        auto fiter = this->_interval2shard.find(d.interval);
+        if (fiter == _interval2shard.end()) {
+          target_shard = createShardForInterval(d.interval);
+        } else {
+          target_shard = fiter->second;
+        }
+      }
+
+    } else {
+      auto fres = this->_id2shard.find(id);
+      if (fres != this->_id2shard.end()) {
+        target_shard = fres->second;
+      }
     }
     _locker.unlock();
 
@@ -399,6 +457,7 @@ public:
   bool _stoped;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
   std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
+  std::unordered_map<std::string, IEngine_Ptr> _interval2shard;
 
   std::list<ShardRef> _sub_storages;
   IEngine_Ptr _default_shard;
@@ -505,4 +564,12 @@ STRATEGY ShardEngine::strategy() const {
 void ShardEngine::subscribe(const IdArray &ids, const Flag &flag,
                             const ReaderCallback_ptr &clbk) {
   return _impl->subscribe(ids, flag, clbk);
+}
+
+void ShardEngine::setScheme(const scheme::IScheme_Ptr &scheme) {
+  _impl->setScheme(scheme);
+}
+
+scheme::IScheme_Ptr ShardEngine::getScheme() {
+  return _impl->getScheme();
 }

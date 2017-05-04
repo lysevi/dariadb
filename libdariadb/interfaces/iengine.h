@@ -52,8 +52,8 @@ public:
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
   EXPORT void foreach (const QueryTimePoint &q, IReadCallback * clbk) override final;
 
-  EXPORT void setScheme(const scheme::IScheme_Ptr &scheme) { _scheme = scheme; }
-  EXPORT scheme::IScheme_Ptr getScheme() { return _scheme; }
+  EXPORT virtual void setScheme(const scheme::IScheme_Ptr &scheme) { _scheme = scheme; }
+  EXPORT virtual scheme::IScheme_Ptr getScheme() { return _scheme; }
 
   scheme::IScheme_Ptr _scheme;
 };
