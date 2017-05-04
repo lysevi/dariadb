@@ -28,9 +28,14 @@ type Measurement struct {
 	Value     Value `json:"V"`
 }
 
+// ToDate convert time to time.Time
+func (t Time) ToDate() time.Time {
+	return time.Unix(int64(t)/1e3, (int64(t)%1e3)*int64(time.Millisecond)/int64(time.Nanosecond))
+}
+
 // MakeTimestampFrom - convert d to dariadb timestamp format
 func MakeTimestampFrom(d time.Time) Time {
-	return Time(d.UnixNano() / int64(time.Millisecond))
+	return Time(d.UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)))
 }
 
 // MakeTimestamp - return current time in dariadb format

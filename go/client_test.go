@@ -3,12 +3,18 @@ package dariadb
 import (
 	"math"
 	"testing"
+	"time"
 )
 
 func checkResult(allparams []string, values map[string][]Measurement, t *testing.T) {
 	const TOLERANCE = 0.000001
+	now := time.Now()
 	for i, p := range allparams {
 		if v, ok := values[p]; ok {
+			testedTime := v[0].Timestamp.ToDate()
+			if now.Hour() != testedTime.Hour() {
+				t.Errorf("now.Hour() != v[0].Timestamp.ToDate().Hour(): %v %v", now, testedTime)
+			}
 			if len(v) < 1 {
 				t.Errorf("len(v)<1")
 			} else {
