@@ -49,3 +49,11 @@ void IEngine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   }
   clbk->is_end();
 }
+
+void IEngine::setScheme(const scheme::IScheme_Ptr &scheme) {
+  _scheme = scheme;
+}
+
+scheme::IScheme_Ptr IEngine::getScheme() {
+  return _scheme;
+}

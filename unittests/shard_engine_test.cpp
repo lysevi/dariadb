@@ -253,16 +253,7 @@ TEST(Shard, AutomaticShardCreation) {
   }
 
   {
-    auto settings = dariadb::storage::Settings::create(storage_path_shard1);
-    settings->strategy.setValue(dariadb::STRATEGY::MEMORY);
-    settings->memory_limit.setValue(10 * 1024 * 128);
-    settings->chunk_size.setValue(chunk_size);
-    settings->save();
-  }
-
-  {
     auto shard_storage = ShardEngine::create(storage_path);
-    shard_storage->shardAdd({storage_path_shard1, "shard1", {}});
 
     auto scheme = dariadb::scheme::Scheme::create(shard_storage->settings());
     scheme->addParam("0.raw");
@@ -285,7 +276,7 @@ TEST(Shard, AutomaticShardCreation) {
     auto shard_raw_ptr = dynamic_cast<ShardEngine *>(shard_storage.get());
 
     auto all_shards = shard_raw_ptr->shardList();
-    EXPECT_EQ(all_shards.size(), size_t(1));
+    EXPECT_EQ(all_shards.size(), size_t(0));
 
     dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, true,
                                      false);

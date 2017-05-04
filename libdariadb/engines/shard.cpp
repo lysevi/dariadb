@@ -29,9 +29,13 @@ class ShardEngine::Private : public IEngine {
 
 public:
   Private(const std::string &path) {
-
     _stoped = false;
     _settings = Settings::create(path);
+    auto fname = shardFileName();
+    if (!utils::fs::file_exists(fname)) {
+      saveShardFile();
+    }
+
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
     _subscribe_notify.start();
@@ -248,6 +252,11 @@ public:
           target_shard = createShardForInterval(d.interval);
         } else {
           target_shard = fiter->second;
+        }
+      } else {
+        if (_default_shard == nullptr) {
+          _default_shard = createShardForInterval("default");
+          target_shard = _default_shard;
         }
       }
 
