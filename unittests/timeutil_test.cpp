@@ -72,6 +72,15 @@ TEST(Time, IntervalFromString) {
     EXPECT_EQ(dt.day, uint8_t(1));
     EXPECT_EQ(dt.month, uint8_t(2));
   }
+  {
+	  auto hh = dariadb::timeutil::intervalName2time("year");
+	  auto dt = dariadb::timeutil::to_datetime(hh);
+	  EXPECT_EQ(dt.year, uint16_t(1971));
+	  EXPECT_EQ(dt.minute, uint8_t(0));
+	  EXPECT_EQ(dt.hour, uint8_t(0));
+	  EXPECT_EQ(dt.day, uint8_t(1));
+	  EXPECT_EQ(dt.month, uint8_t(1));
+  }
 }
 
 TEST(Time, IntervalCompare) {
@@ -82,11 +91,12 @@ TEST(Time, IntervalCompare) {
   EXPECT_TRUE(intervalsLessCmp("hour", "day"));
   EXPECT_TRUE(intervalsLessCmp("day", "week"));
   EXPECT_TRUE(intervalsLessCmp("week", "month"));
+  EXPECT_TRUE(intervalsLessCmp("month", "year"));
 }
 
 TEST(Time, IntervalPredefined) {
   using namespace dariadb::timeutil;
-  EXPECT_EQ(predefinedIntervals().size(), size_t(6));
+  EXPECT_EQ(predefinedIntervals().size(), size_t(7));
 }
 
 TEST(Time, DateTime) {
@@ -123,7 +133,7 @@ TEST(Time, TargetInterval) {
   dt.minute = 59;
   dt.second = 1;
   dt.millisecond = 1;
-  //all result must be 1.02.17 (except halfhour2)
+  // all result must be 1.02.17 (except halfhour2)
   auto time_dt = from_datetime(dt);
   {
     auto to_minute = target_interval("minute", time_dt);
@@ -135,12 +145,12 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.second, 59);
     EXPECT_EQ(result_dt.millisecond, 999);
 
-	auto end_dt = to_datetime(to_minute.first);
-	EXPECT_EQ(end_dt.day, dt.day);
-	EXPECT_EQ(end_dt.hour, dt.hour);
-	EXPECT_EQ(end_dt.minute, dt.minute);
-	EXPECT_EQ(end_dt.second, 0);
-	EXPECT_EQ(end_dt.millisecond, 0);
+    auto end_dt = to_datetime(to_minute.first);
+    EXPECT_EQ(end_dt.day, dt.day);
+    EXPECT_EQ(end_dt.hour, dt.hour);
+    EXPECT_EQ(end_dt.minute, dt.minute);
+    EXPECT_EQ(end_dt.second, 0);
+    EXPECT_EQ(end_dt.millisecond, 0);
   }
   {
     auto to_hh = target_interval("halfhour", time_dt);
@@ -152,12 +162,12 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.second, 59);
     EXPECT_EQ(result_dt.millisecond, 999);
 
-	result_dt = to_datetime(to_hh.first);
-	EXPECT_EQ(result_dt.day, dt.day);
-	EXPECT_EQ(result_dt.hour, dt.hour);
-	EXPECT_EQ(result_dt.minute, 30);
-	EXPECT_EQ(result_dt.second, 0);
-	EXPECT_EQ(result_dt.millisecond, 0);
+    result_dt = to_datetime(to_hh.first);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, dt.hour);
+    EXPECT_EQ(result_dt.minute, 30);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
   }
 
   {
@@ -173,12 +183,12 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.second, 59);
     EXPECT_EQ(result_dt.millisecond, 999);
 
-	result_dt = to_datetime(to_hh.first);
-	EXPECT_EQ(result_dt.day, dt.day);
-	EXPECT_EQ(result_dt.hour, dt.hour);
-	EXPECT_EQ(result_dt.minute, 0);
-	EXPECT_EQ(result_dt.second, 0);
-	EXPECT_EQ(result_dt.millisecond, 0);
+    result_dt = to_datetime(to_hh.first);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, dt.hour);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
   }
 
   {
@@ -191,12 +201,12 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.second, 59);
     EXPECT_EQ(result_dt.millisecond, 999);
 
-	result_dt = to_datetime(to_hr.first);
-	EXPECT_EQ(result_dt.day, dt.day);
-	EXPECT_EQ(result_dt.hour, dt.hour);
-	EXPECT_EQ(result_dt.minute, 0);
-	EXPECT_EQ(result_dt.second, 0);
-	EXPECT_EQ(result_dt.millisecond, 0);
+    result_dt = to_datetime(to_hr.first);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, dt.hour);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
   }
 
   {
@@ -209,13 +219,12 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.second, 59);
     EXPECT_EQ(result_dt.millisecond, 999);
 
-
-	result_dt = to_datetime(to_hr.first);
-	EXPECT_EQ(result_dt.day, dt.day);
-	EXPECT_EQ(result_dt.hour, 0);
-	EXPECT_EQ(result_dt.minute, 0);
-	EXPECT_EQ(result_dt.second, 0);
-	EXPECT_EQ(result_dt.millisecond, 0);
+    result_dt = to_datetime(to_hr.first);
+    EXPECT_EQ(result_dt.day, dt.day);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
   }
 
   {
@@ -228,13 +237,12 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.second, 59);
     EXPECT_EQ(result_dt.millisecond, 999);
 
-
-	result_dt = to_datetime(to_hr.first);
-	EXPECT_EQ(result_dt.day, 26);
-	EXPECT_EQ(result_dt.hour, 0);
-	EXPECT_EQ(result_dt.minute, 0);
-	EXPECT_EQ(result_dt.second, 0);
-	EXPECT_EQ(result_dt.millisecond, 0);
+    result_dt = to_datetime(to_hr.first);
+    EXPECT_EQ(result_dt.day, 26);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
   }
 
   {
@@ -248,12 +256,34 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.second, 59);
     EXPECT_EQ(result_dt.millisecond, 999);
 
-	result_dt = to_datetime(to_hr.first);
-	EXPECT_EQ(result_dt.month, dt.month);
-	EXPECT_EQ(result_dt.day, 1);
-	EXPECT_EQ(result_dt.hour, 0);
-	EXPECT_EQ(result_dt.minute, 0);
-	EXPECT_EQ(result_dt.second, 0);
-	EXPECT_EQ(result_dt.millisecond, 0);
+    result_dt = to_datetime(to_hr.first);
+    EXPECT_EQ(result_dt.month, dt.month);
+    EXPECT_EQ(result_dt.day, 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
+  }
+
+
+  {
+	  auto to_hr = target_interval("year", time_dt);
+
+	  auto result_dt = to_datetime(to_hr.second);
+	  EXPECT_EQ(result_dt.year, dt.year);
+	  EXPECT_EQ(result_dt.month, 12);
+	  EXPECT_EQ(result_dt.day, 31);
+	  EXPECT_EQ(result_dt.hour, 23);
+	  EXPECT_EQ(result_dt.minute, 59);
+	  EXPECT_EQ(result_dt.second, 59);
+	  EXPECT_EQ(result_dt.millisecond, 999);
+
+	  result_dt = to_datetime(to_hr.first);
+	  EXPECT_EQ(result_dt.month, 1);
+	  EXPECT_EQ(result_dt.day, 1);
+	  EXPECT_EQ(result_dt.hour, 0);
+	  EXPECT_EQ(result_dt.minute, 0);
+	  EXPECT_EQ(result_dt.second, 0);
+	  EXPECT_EQ(result_dt.millisecond, 0);
   }
 }

@@ -130,8 +130,8 @@ Time round_to_hours(const Time t) {
 }
 
 std::vector<std::string> predefinedIntervals() {
-  std::vector<std::string> predefined = {"minute", "halfhour", "hour",
-                                         "day",    "week",     "month"};
+  std::vector<std::string> predefined = {"minute", "halfhour", "hour", "day",
+                                         "week",   "month",    "year"};
   return predefined;
 }
 
@@ -156,6 +156,9 @@ Time intervalName2time(const std::string &interval) {
   }
   if (interval == "month") {
     return day * 31;
+  }
+  if (interval == "year") {
+    return day * 365;
   }
   return 0;
 }
@@ -246,6 +249,12 @@ std::pair<Time, Time> target_interval(const std::string &period, Time currentTim
     date d(dt.year, (date::month_type)dt.month, dt.day);
     date d_start(dt.year, (date::month_type)dt.month, 1);
     auto d_end = d.end_of_month();
+    return std::make_pair(first_moment(d_start), last_moment(d_end));
+  }
+
+  if (period == "year") {
+    date d_start(dt.year, 1, 1);
+    date d_end(dt.year, 12, 31);
     return std::make_pair(first_moment(d_start), last_moment(d_end));
   }
   return std::make_pair(MAX_TIME, MAX_TIME);
