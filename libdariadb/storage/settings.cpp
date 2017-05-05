@@ -60,6 +60,7 @@ const std::string c_lifetime_hour = "lifetime_hour";
 const std::string c_lifetime_day = "lifetime_day";
 const std::string c_lifetime_week = "lifetime_week";
 const std::string c_lifetime_month = "lifetime_month";
+const std::string c_raw_is_memonly = "raw_is_memonly";
 const std::string c_strategy_raw = "strategy_raw";
 const std::string c_strategy_minute = "strategy_minute";
 const std::string c_strategy_halfhour = "strategy_halfhour";
@@ -120,6 +121,7 @@ Settings::Settings(const std::string &path_to_storage)
       lifetime_day(this, c_lifetime_day, LIFETIME_DAY),
       lifetime_week(this, c_lifetime_week, LIFETIME_WEEK),
       lifetime_month(this, c_lifetime_month, LIFETIME_MONTH),
+      raw_is_memonly(this, c_raw_is_memonly, false),
       strategy_raw(this, c_strategy_raw, STRATEGY_RAW),
       strategy_minute(this, c_strategy_minute, STRATEGY_MINUTE),
       strategy_halfhour(this, c_strategy_halfhour, STRATEGY_HALFHOUR),
@@ -196,8 +198,13 @@ void Settings::load(const std::string &file) {
   std::string content = dariadb::utils::fs::read_file(file);
   json js = json::parse(content);
   for (auto &o : _all_options) {
-    auto str_val = js[o.first];
-    o.second->from_string(str_val);
+    auto iter = js.find(o.first);
+    if (iter == js.end()) {
+      continue;
+    } else {
+      auto str_val = *iter;
+      o.second->from_string(str_val);
+    }
   }
 }
 

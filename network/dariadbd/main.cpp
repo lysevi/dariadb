@@ -29,6 +29,8 @@ bool fsck = false;
 bool showinfo = false;
 bool use_shards = false;
 bool repack = false;
+bool raw_is_memonly = false;
+
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
@@ -59,6 +61,7 @@ int main(int argc, char **argv) {
                "allocation area limit  in megabytes when strategy=MEMORY");
   stor_options("force-unlock", "force unlock storage.");
   stor_options("use-shards", "use shard engine.");
+  stor_options("memory-only-raw", "raw values stored only in memory (when shard engine enabled).");
   desc.add(storage_params);
 
   po::options_description server_params("Server params");
@@ -106,8 +109,11 @@ int main(int argc, char **argv) {
   }
 
   if (vm.count("memory-only")) {
-    std::cout << "memory-only" << std::endl;
     memonly = true;
+  }
+
+  if (vm.count("memory-only-raw")) {
+    raw_is_memonly = true;
   }
 
   if (vm.count("log-to-file")) {
@@ -123,7 +129,6 @@ int main(int argc, char **argv) {
   }
 
   if (vm.count("force-unlock")) {
-    dariadb::logger_info("Force unlock storage.");
     force_unlock_storage = true;
   }
 
@@ -173,7 +178,7 @@ int main(int argc, char **argv) {
     settings->save();
 
     if (use_shards) {
-      stor = ShardEngine::create(storage_path);
+      stor = ShardEngine::create(storage_path, force_unlock_storage);
     } else {
       stor = IEngine_Ptr{new Engine(settings, true, force_unlock_storage)};
     }
@@ -183,12 +188,17 @@ int main(int argc, char **argv) {
       return 0;
     }
   } else {
-    stor = dariadb::open_storage(storage_path);
+    stor = dariadb::open_storage(storage_path, force_unlock_storage);
     settings = stor->settings();
   }
   auto scheme = dariadb::scheme::Scheme::create(stor->settings());
 
   stor->setScheme(scheme);
+
+  if (settings->raw_is_memonly.value() != raw_is_memonly) {
+    settings->raw_is_memonly.setValue(raw_is_memonly);
+    settings->save();
+  }
 
   if (repack) {
     stor->repack(scheme);

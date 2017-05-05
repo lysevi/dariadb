@@ -122,6 +122,7 @@ public:
   Option<Time> lifetime_week;     // store interval for 'week' values.
   Option<Time> lifetime_month;    // store interval for 'month' values.
 
+  Option<bool> raw_is_memonly;      // raw values is memory only.
   Option<STRATEGY> strategy_raw;      // strategy for raw values.
   Option<STRATEGY> strategy_minute;   // strategy for 'minute' values.
   Option<STRATEGY> strategy_halfhour; // strategy for 'halfhour' values.

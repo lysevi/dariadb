@@ -28,9 +28,10 @@ class ShardEngine::Private : public IEngine {
   };
 
 public:
-  Private(const std::string &path) {
+  Private(const std::string &path, bool force_unlock) {
     _stoped = false;
     _settings = Settings::create(path);
+    _force_unlock = force_unlock;
     auto fname = shardFileName();
     if (!utils::fs::file_exists(fname)) {
       saveShardFile();
@@ -176,7 +177,12 @@ public:
       _shards.insert(std::make_pair(d.alias, new_shard_rec));
     } else {
       _shards.insert(std::make_pair(d.alias, d));
-      shard_ptr = open_shard_path(d);
+      if (interval_name == "raw" && _settings->raw_is_memonly.value()) {
+        shard_ptr = open_memonly_shard(d);
+      } else {
+        shard_ptr = open_shard_path(d);
+      }
+
       _sub_storages.push_back({d.path, shard_ptr});
     }
 
@@ -211,6 +217,14 @@ public:
     ENSURE(!s.path.empty());
     auto settings = Settings::create(s.path);
     settings->alias = "(" + s.alias + ")";
+    IEngine_Ptr new_shard{new Engine(settings,false, _force_unlock)};
+    return new_shard;
+  }
+
+  IEngine_Ptr open_memonly_shard(const Shard &s) {
+    ENSURE(!s.path.empty());
+    auto settings = Settings::create();
+    settings->alias = "(" + s.alias + ")";
     IEngine_Ptr new_shard{new Engine(settings, false)};
     return new_shard;
   }
@@ -221,16 +235,26 @@ public:
     if (!utils::fs::path_exists(shards_dir)) {
       utils::fs::mkdir(shards_dir);
     }
+    IEngine_Ptr new_shard = nullptr;
+    Settings_ptr shard_settings = nullptr;
 
     auto interval_dir = utils::fs::append_path(shards_dir, interval);
-    if (!utils::fs::path_exists(interval_dir)) {
-      utils::fs::mkdir(interval_dir);
+    // if raw is memonly storage
+    if (interval == "raw" && _settings->raw_is_memonly.value()) {
+      shard_settings = Settings::create();
+      interval_dir = "raw";
+    } else {
+
+      if (!utils::fs::path_exists(interval_dir)) {
+        utils::fs::mkdir(interval_dir);
+      }
+      shard_settings = Settings::create(interval_dir);
+      shard_settings->strategy.setValue(_settings->strategy_for_interval(interval));
     }
-    auto shard_settigns = Settings::create(interval_dir);
-    shard_settigns->strategy.setValue(_settings->strategy_for_interval(interval));
-    shard_settigns->alias = "(" + interval + ")";
-    shard_settigns->save();
-    IEngine_Ptr new_shard{new Engine(shard_settigns, false)};
+
+    new_shard = IEngine_Ptr{new Engine(shard_settings, false)};
+    shard_settings->alias = "(" + interval + ")";
+    shard_settings->save();
     _interval2shard[interval] = new_shard;
 
     ShardEngine::Shard sd;
@@ -467,6 +491,7 @@ public:
   }
 
   bool _stoped;
+  bool _force_unlock;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
   std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
   std::unordered_map<std::string, IEngine_Ptr> _interval2shard;
@@ -479,12 +504,12 @@ public:
   SubscribeNotificator _subscribe_notify;
 };
 
-ShardEngine_Ptr ShardEngine::create(const std::string &path) {
-  return ShardEngine_Ptr{new ShardEngine(path)};
+ShardEngine_Ptr ShardEngine::create(const std::string &path, bool force_unlock) {
+  return ShardEngine_Ptr{new ShardEngine(path, force_unlock)};
 }
 
-ShardEngine::ShardEngine(const std::string &path)
-    : _impl(new ShardEngine::Private(path)) {}
+ShardEngine::ShardEngine(const std::string &path, bool force_unlock)
+    : _impl(new ShardEngine::Private(path, force_unlock)) {}
 
 void dariadb::ShardEngine::compress_all() {
   _impl->compress_all();
