@@ -7,22 +7,20 @@ import (
 	"log"
 	"os"
 	"sort"
-	"sync"
 	"time"
 
 	dariadb "github.com/lysevi/dariadb/go"
 )
 
-type query struct {
-	queryJSON []byte
-	paramname string
-	v         float64
-}
+var paramsSuffix = [...]string{
+	".raw",
+	".average.minute",
+	".median.minute",
+	".average.halfhour",
+	".median.halfhour",
+	".average.hour", ".average.day"}
 
-var asyncWriterChanel chan query
-var networkMutex sync.Mutex
-
-var server string
+var hostname string
 var readOnly bool
 var paramsFrom int
 var paramsTo int
@@ -32,7 +30,7 @@ var allParams []string
 var db *dariadb.Dariadb
 
 func init() {
-	flag.StringVar(&server, "host", "http://localhost:2002", "host with dariadb")
+	flag.StringVar(&hostname, "host", "http://localhost:2002", "host with dariadb")
 	flag.IntVar(&paramsFrom, "from", 0, "first param number")
 	flag.IntVar(&paramsTo, "to", 10, "last param number")
 	flag.BoolVar(&readOnly, "readOnly", false, "readOnly")
@@ -67,12 +65,11 @@ func printInfoValues() {
 }
 
 func initScheme() {
-	hostname, err := os.Hostname()
+	localhostname, err := os.Hostname()
 	if err != nil {
-		hostname = "localhost"
+		localhostname = "localhost"
 	}
-	paramPrefix := hostname + ".param"
-	paramsSuffix := [...]string{".raw", ".average.minute", ".median.minute", ".average.halfhour", ".median.halfhour", ".average.hour", ".average.day"}
+	paramPrefix := localhostname + ".param"
 
 	paramsCount := paramsTo - paramsFrom
 	rawParams = make([]string, 0, paramsCount)
@@ -99,7 +96,7 @@ func writeValues(ctx context.Context, paramname string) {
 		select {
 		case <-ctx.Done():
 			break
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(50 * time.Millisecond):
 			err := db.Append(paramname, dariadb.MakeTimestamp(), dariadb.Flag(0), dariadb.Value(v))
 			if err != nil {
 				log.Printf("append error: %v", err)
@@ -116,14 +113,13 @@ func writeValues(ctx context.Context, paramname string) {
 }
 
 func main() {
-	db = dariadb.New(server)
+	db = dariadb.New(hostname)
 
 	initScheme()
 
 	if !readOnly {
 
 		ctx := context.Background()
-		asyncWriterChanel = make(chan query)
 		// var cancel context.CancelFunc
 		//
 		// ctx, cancel = context.WithCancel(context.Background())

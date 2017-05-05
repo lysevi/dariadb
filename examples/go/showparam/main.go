@@ -104,6 +104,7 @@ func main() {
 		bc.Data = data
 		bc.Width = 40
 		bc.Height = 15
+		bc.BarWidth = 4
 		bc.DataLabels = bclabels
 		bc.TextColor = termui.ColorGreen
 		bc.BarColor = termui.ColorRed
