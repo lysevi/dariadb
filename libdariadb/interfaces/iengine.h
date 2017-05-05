@@ -49,12 +49,13 @@ public:
   virtual STRATEGY strategy() const = 0;
   virtual void subscribe(const IdArray &ids, const Flag &flag,
                          const ReaderCallback_ptr &clbk) = 0;
+  EXPORT virtual void repack(const scheme::IScheme_Ptr s);
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
   EXPORT void foreach (const QueryTimePoint &q, IReadCallback * clbk) override final;
 
   EXPORT virtual void setScheme(const scheme::IScheme_Ptr &scheme);
   EXPORT virtual scheme::IScheme_Ptr getScheme();
-
+  
   scheme::IScheme_Ptr _scheme;
 };
 

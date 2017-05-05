@@ -98,7 +98,6 @@ $ git submodules update
 - **DARIADB_ASAN_UBSAN**  - Enable address & undefined behavior sanitizer for binary. - OFF
 - **DARIADB_MSAN** - Enable memory sanitizer for binary. - OFF
 - **DARIADB_SYSTEM_JEMALLOC** - Use jemalloc installed in the system. - ON
-- **DARIADB_ENABLE_TOOLS** - Build utility tools. - ON
 
 #### Configure to build with all benchmarks, but without tests and server.
 ---
