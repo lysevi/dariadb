@@ -63,6 +63,7 @@ public:
     logger_info("agregator: init timers.");
     auto all_intervals = predefinedIntervals();
     all_intervals.insert(all_intervals.begin(), "raw");
+    auto start_time = _timer->currentTime();
     ENSURE(all_intervals.front() == "raw");
 
     for (size_t i = 0; i < all_intervals.size() - 1; ++i) {
@@ -70,10 +71,40 @@ public:
       auto interval_to = all_intervals[i + 1];
 
       ITimer::Callback_Ptr clbk{new TimerCallback(interval_from, interval_to, _storage)};
-      auto interval_to_target =
-          timeutil::target_interval(interval_to, _timer->currentTime());
+
+      auto from_time = mininum_time_of_interval(interval_from);
+      auto to_time = mininum_time_of_interval(interval_to);
+      std::pair<Time, Time> interval_to_target;
+      if (to_time == from_time && to_time == MAX_TIME) {
+        /// above intervals does not exists
+        interval_to_target = timeutil::target_interval(interval_to, start_time);
+      } else {
+        if (to_time == MAX_TIME || to_time < from_time) {
+          /// from interval exists, "to" - not exists or less
+          to_time = to_time == MAX_TIME ? from_time : to_time;
+          interval_to_target = timeutil::target_interval(interval_to, to_time);
+        } else {
+          interval_to_target = timeutil::target_interval(interval_to, start_time);
+        }
+      }
       _timer->addCallback(interval_to_target.second, clbk);
     }
+  }
+
+  dariadb::Time mininum_time_of_interval(const std::string &interval) {
+    auto vals = _scheme->lsInterval(interval);
+    IdArray ids;
+    ids.reserve(vals.size());
+    for (auto kv : vals) {
+      ids.push_back(kv.first);
+    }
+
+    auto curvals = _storage->currentValue(ids, Flag());
+    dariadb::Time result = MAX_TIME;
+    for (auto v : curvals) {
+      result = std::min(result, v.second.time);
+    }
+    return result;
   }
   ITimer_Ptr _timer;
   IEngine_Ptr _storage;
