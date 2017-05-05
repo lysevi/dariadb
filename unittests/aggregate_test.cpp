@@ -177,8 +177,6 @@ TEST_F(Aggregate, Aggregator) {
     auto curdt = to_datetime(c.first);
     if (curdt.year < dt.year) {
       exists = true;
-      auto next_minute = c.second->apply(curtime);
-
       EXPECT_EQ(curdt.minute, 59);
       EXPECT_EQ(curdt.second, 59);
       EXPECT_EQ(curdt.millisecond, 999);
