@@ -28,7 +28,7 @@ bool init_and_stop = false;
 bool fsck = false;
 bool showinfo = false;
 bool use_shards = false;
-
+bool repack = false;
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
   aos("init", "init storage and stop.");
   aos("fsck", "fsck storage and stop.");
   aos("format", "show info about storage format and stop.");
+  aos("repack", "repack values from scheme and exit.");
 
   po::options_description logger_params("Logger params");
   auto log_options = logger_params.add_options();
@@ -100,6 +101,10 @@ int main(int argc, char **argv) {
     showinfo = true;
   }
 
+  if (vm.count("repack")) {
+    repack = true;
+  }
+
   if (vm.count("memory-only")) {
     std::cout << "memory-only" << std::endl;
     memonly = true;
@@ -150,7 +155,8 @@ int main(int argc, char **argv) {
   IEngine_Ptr stor;
   dariadb::storage::Settings_ptr settings;
 
-  if (!dariadb::utils::fs::path_exists(storage_path)) {
+  bool is_exists = dariadb::utils::fs::path_exists(storage_path);
+  if (!is_exists) {
 
     if (!memonly) {
       settings = dariadb::storage::Settings::create(storage_path);
@@ -183,6 +189,11 @@ int main(int argc, char **argv) {
   auto scheme = dariadb::scheme::Scheme::create(stor->settings());
 
   stor->setScheme(scheme);
+
+  if (repack) {
+    stor->repack(scheme);
+    return 0;
+  }
 
   if (fsck) {
     stor->fsck();
