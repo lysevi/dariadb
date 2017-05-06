@@ -72,6 +72,10 @@ public:
 
       ITimer::Callback_Ptr clbk{new TimerCallback(interval_from, interval_to, _storage)};
 
+	 /* dariadb::Time from_min, from_max;
+	  dariadb::Time to_min, to_max;
+	  bool from_exists = false, to_exists = false;
+	  from_exists=_storage->minMaxTime()*/
       auto from_time = mininum_time_of_interval(interval_from);
       auto to_time = mininum_time_of_interval(interval_to);
       std::pair<Time, Time> interval_to_target;
@@ -92,19 +96,19 @@ public:
   }
 
   dariadb::Time mininum_time_of_interval(const std::string &interval) {
-    auto vals = _scheme->lsInterval(interval);
-    IdArray ids;
-    ids.reserve(vals.size());
-    for (auto kv : vals) {
-      ids.push_back(kv.first);
-    }
+	  auto vals = _scheme->lsInterval(interval);
+	  IdArray ids;
+	  ids.reserve(vals.size());
+	  for (auto kv : vals) {
+		  ids.push_back(kv.first);
+	  }
 
-    auto curvals = _storage->currentValue(ids, Flag());
-    dariadb::Time result = MAX_TIME;
-    for (auto v : curvals) {
-      result = std::min(result, v.second.time);
-    }
-    return result;
+	  auto curvals = _storage->currentValue(ids, Flag());
+	  dariadb::Time result = MAX_TIME;
+	  for (auto v : curvals) {
+		  result = std::min(result, v.second.time);
+	  }
+	  return result;
   }
   ITimer_Ptr _timer;
   IEngine_Ptr _storage;

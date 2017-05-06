@@ -110,6 +110,34 @@ TEST(Statistic, Sigma) {
   EXPECT_EQ(calulated.time, dariadb::Time(999));
 }
 
+TEST(Statistic, Minimum) {
+  using namespace dariadb::statistic;
+  check_function_factory({"minimum"});
+
+  auto median = dariadb::statistic::FunctionFactory::make_one("Minimum");
+  EXPECT_EQ(median->kind(), "minimum");
+  EXPECT_EQ(median->apply(dariadb::MeasArray()).value, dariadb::Value());
+
+  dariadb::MeasArray ma;
+  dariadb::Meas m;
+
+  m.value = 2;
+  ma.push_back(m);
+  EXPECT_EQ(median->apply(ma).value, dariadb::Value(2));
+
+  m.value = 6;
+  m.time = 999;
+  ma.push_back(m);
+  EXPECT_EQ(median->apply(ma).value, dariadb::Value(2));
+  EXPECT_EQ(median->apply(ma).time, 0);
+
+  m.value = 1;
+  m.time = 777;
+  ma.push_back(m);
+  EXPECT_EQ(median->apply(ma).value, dariadb::Value(1));
+  EXPECT_EQ(median->apply(ma).time, m.time);
+}
+
 TEST(Statistic, Calculator) {
   auto storage = dariadb::memory_only_storage();
   dariadb::Meas meas;

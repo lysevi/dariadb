@@ -24,6 +24,9 @@ IFunction_ptr FunctionFactory::make_one(const std::string &k) {
   if (token == "sigma") {
     return std::make_shared<StandartDeviation>("sigma");
   }
+  if (token == "minimum") {
+    return std::make_shared<Minimum>("minimum");
+  }
   return nullptr;
 }
 
@@ -37,7 +40,7 @@ std::vector<IFunction_ptr> FunctionFactory::make(const std::vector<std::string> 
 }
 
 std::vector<std::string> FunctionFactory::functions() {
-  return {"average", "median", "percentile90", "percentile99", "sigma"};
+  return {"average", "median", "percentile90", "percentile99", "sigma", "minimum"};
 }
 
 Calculator::Calculator(const IEngine_Ptr &storage) : _storage(storage) {}
