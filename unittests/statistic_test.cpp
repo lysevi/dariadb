@@ -129,7 +129,7 @@ TEST(Statistic, Minimum) {
   m.time = 999;
   ma.push_back(m);
   EXPECT_EQ(median->apply(ma).value, dariadb::Value(2));
-  EXPECT_EQ(median->apply(ma).time, 0);
+  EXPECT_EQ(median->apply(ma).time, dariadb::Time(0));
 
   m.value = 1;
   m.time = 777;
