@@ -18,6 +18,12 @@ public:
 	EXPORT Meas apply(const MeasArray &ma) override;
 };
 
+class Maximum : public IFunction {
+public:
+    EXPORT Maximum(const std::string &s);
+    EXPORT Meas apply(const MeasArray &ma) override;
+};
+
 class StandartDeviation : public IFunction {
 public:
 	EXPORT StandartDeviation(const std::string &s);

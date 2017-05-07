@@ -27,6 +27,9 @@ IFunction_ptr FunctionFactory::make_one(const std::string &k) {
   if (token == "minimum") {
     return std::make_shared<Minimum>("minimum");
   }
+  if (token == "maximum") {
+    return std::make_shared<Maximum>("maximum");
+  }
   return nullptr;
 }
 
@@ -40,7 +43,7 @@ std::vector<IFunction_ptr> FunctionFactory::make(const std::vector<std::string> 
 }
 
 std::vector<std::string> FunctionFactory::functions() {
-  return {"average", "median", "percentile90", "percentile99", "sigma", "minimum"};
+  return {"average", "median", "percentile90", "percentile99", "sigma", "minimum", "maximum"};
 }
 
 Calculator::Calculator(const IEngine_Ptr &storage) : _storage(storage) {}
