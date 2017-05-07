@@ -23,10 +23,6 @@ void test_statistic_on_engine(dariadb::IEngine_Ptr &storage) {
                            dariadb::Flag(), all_functions);
 
   EXPECT_EQ(result.size(), all_functions.size());
-  for (size_t i = 0; i < all_functions.size() - 1; ++i) {
-    auto m = result[i];
-    EXPECT_TRUE(m.value != dariadb::Value());
-  }
 }
 
 TEST(Engine, Common_test) {
