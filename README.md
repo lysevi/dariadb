@@ -45,6 +45,9 @@
   - measurement count
   - values sum
 * Statistical functions: 
+  - minimum
+  - maximum
+  - count
   - average
   - median
   - sigma(standard deviation)

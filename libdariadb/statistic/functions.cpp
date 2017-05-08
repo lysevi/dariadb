@@ -63,6 +63,17 @@ Meas Maximum::apply(const MeasArray &ma) {
   return result;
 }
 
+Count::Count(const std::string &s) : IFunction(s) {}
+
+Meas Count::apply(const MeasArray &ma) {
+  Meas result;
+  result.value = ma.size();
+  if (!ma.empty()) {
+    result.time = ma.back().time;
+  }
+  return result;
+}
+
 StandartDeviation::StandartDeviation(const std::string &s) : IFunction(s) {}
 
 Meas StandartDeviation::apply(const MeasArray &ma) {
