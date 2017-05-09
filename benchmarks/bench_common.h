@@ -138,20 +138,19 @@ struct BenchmarkSummaryInfo {
     dariadb::statistic::Median md("median");
     dariadb::statistic::Percentile90 p90("p90");
     dariadb::statistic::StandartDeviation sigma("sigma");
+    dariadb::statistic::Minimum minimum("min");
+    dariadb::statistic::Maximum maximum("max");
 
     SpeedMetric result;
     result.name = name;
-    result.min = dariadb::MAX_VALUE;
-    result.max = dariadb::MIN_VALUE;
-
     for (auto v : values) {
       dariadb::Meas m;
       m.value = v;
       meases.push_back(m);
-      result.min = std::min(result.min, v);
-      result.max = std::max(result.max, v);
     }
 
+    result.min = minimum.apply(meases).value;
+    result.max = maximum.apply(meases).value;
     result.average = av.apply(meases).value;
     result.median = md.apply(meases).value;
     result.p90 = p90.apply(meases).value;
