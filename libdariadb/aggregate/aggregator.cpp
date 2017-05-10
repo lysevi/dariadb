@@ -60,10 +60,14 @@ public:
       return;
     }
 
+    auto start_time = _timer->currentTime();
+
+    aggregate_on_start(start_time);
+
     logger_info("agregator: init timers.");
     auto all_intervals = predefinedIntervals();
     all_intervals.insert(all_intervals.begin(), "raw");
-    auto start_time = _timer->currentTime();
+
     ENSURE(all_intervals.front() == "raw");
 
     for (size_t i = 0; i < all_intervals.size() - 1; ++i) {
@@ -72,43 +76,78 @@ public:
 
       ITimer::Callback_Ptr clbk{new TimerCallback(interval_from, interval_to, _storage)};
 
-	 /* dariadb::Time from_min, from_max;
-	  dariadb::Time to_min, to_max;
-	  bool from_exists = false, to_exists = false;
-	  from_exists=_storage->minMaxTime()*/
-      auto from_time = mininum_time_of_interval(interval_from);
-      auto to_time = mininum_time_of_interval(interval_to);
-      std::pair<Time, Time> interval_to_target;
-      if (to_time == from_time && to_time == MAX_TIME) {
-        /// above intervals does not exists
-        interval_to_target = timeutil::target_interval(interval_to, start_time);
-      } else {
-        if (to_time == MAX_TIME || to_time < from_time) {
-          /// from interval exists, "to" - not exists or less
-          to_time = to_time == MAX_TIME ? from_time : to_time;
-          interval_to_target = timeutil::target_interval(interval_to, to_time);
-        } else {
-          interval_to_target = timeutil::target_interval(interval_to, start_time);
-        }
-      }
+      auto interval_to_target = timeutil::target_interval(interval_to, start_time);
+
       _timer->addCallback(interval_to_target.second, clbk);
     }
   }
 
   dariadb::Time mininum_time_of_interval(const std::string &interval) {
-	  auto vals = _scheme->lsInterval(interval);
-	  IdArray ids;
-	  ids.reserve(vals.size());
-	  for (auto kv : vals) {
-		  ids.push_back(kv.first);
-	  }
+    auto vals = _scheme->lsInterval(interval);
+    IdArray ids;
+    ids.reserve(vals.size());
+    for (auto kv : vals) {
+      ids.push_back(kv.first);
+    }
 
-	  auto curvals = _storage->currentValue(ids, Flag());
-	  dariadb::Time result = MAX_TIME;
-	  for (auto v : curvals) {
-		  result = std::min(result, v.second.time);
-	  }
-	  return result;
+    auto curvals = _storage->currentValue(ids, Flag());
+    dariadb::Time result = MAX_TIME;
+    for (auto v : curvals) {
+      result = std::min(result, v.second.time);
+    }
+    return result;
+  }
+
+  void aggregate_on_start(Time currentTime) {
+    logger_info("agregator: aggregate_on_start.");
+    auto all_intervals = predefinedIntervals();
+    all_intervals.insert(all_intervals.begin(), "raw");
+    ENSURE(all_intervals.front() == "raw");
+
+    statistic::Calculator calc(_storage);
+
+    for (size_t i = 0; i < all_intervals.size() - 1; ++i) {
+      auto interval_from = all_intervals[i];
+      auto interval_to = all_intervals[i + 1];
+
+      auto currentInterval = timeutil::target_interval(interval_to, currentTime);
+      logger_info("agregator:  current - [", timeutil::to_string(currentInterval.first),
+                  "-", timeutil::to_string(currentInterval.second), "]");
+
+      auto interval_from_values = _scheme->lsInterval(interval_from);
+      for (auto kv : interval_from_values) {
+        Time fromMinTime, fromMaxTime;
+        if (!_storage->minMaxTime(kv.first, &fromMinTime, &fromMaxTime)) {
+          continue;
+        }
+        logger_info("agregator: aggregate for ", kv.second.name);
+        auto linkedValues = _scheme->linkedForValue(kv.second);
+        for (auto linkedKv : linkedValues) {
+          Time toMinTime, toMaxTime;
+          if (!_storage->minMaxTime(linkedKv.first, &toMinTime, &toMaxTime)) {
+            toMaxTime = fromMinTime;
+          }
+
+          if (fromMaxTime > toMaxTime) {
+            auto targetInterval = timeutil::target_interval(interval_to, toMaxTime);
+            if (targetInterval.second <= currentInterval.second) {
+              logger_info("agregator: different intervals.", " target: [",
+                          timeutil::to_string(targetInterval.first), "-",
+                          timeutil::to_string(targetInterval.second), "]");
+              auto result_functions =
+                  calc.apply(kv.second.id, targetInterval.first, targetInterval.second,
+                             dariadb::Flag(), {linkedKv.second.aggregation_func});
+              if (result_functions.empty()) {
+                continue;
+              }
+              ENSURE(result_functions.size() == size_t(1));
+              _storage->append(linkedKv.first, result_functions[i].time,
+                               result_functions[i].value);
+            }
+          }
+        }
+      }
+    }
   }
   ITimer_Ptr _timer;
   IEngine_Ptr _storage;

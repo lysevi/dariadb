@@ -149,6 +149,8 @@ TEST_F(Aggregate, Aggregator) {
   using namespace dariadb::aggregator;
   using namespace dariadb::timeutil;
 
+  _storage->setScheme(_scheme);
+
   DateTime dt;
   dt.year = 2017;
   dt.month = 1;
@@ -158,34 +160,31 @@ TEST_F(Aggregate, Aggregator) {
   dt.second = 0;
   dt.millisecond = 0;
 
-  _storage->setScheme(_scheme);
-  auto raw_id = _scheme->addParam("param1.raw");
-  auto minute_id = _scheme->addParam("param1.average.minute");
-
-  auto past = from_datetime(dt);
-  auto curtime = past;
-  past -= dariadb::timeutil::intervalName2time("minute") / 2;
-  this->_storage->append(minute_id, past, dariadb::Value(1.0));
-  this->_storage->append(raw_id, curtime, dariadb::Value(2.0));
-
   auto raw_timer = new MockTimer(from_datetime(dt));
   ITimer_Ptr mock_timer(raw_timer);
   Aggregator agg(_storage, mock_timer);
+
+  // raw=>minute, minute=>halfhour, halfhour=>hour, hour=>day, day=>week, week=>month;
+  EXPECT_EQ(raw_timer->_callbacks.size(), predefinedIntervals().size());
+
+  dt.second = 59;
+  dt.millisecond = 999;
+  auto first_minute = from_datetime(dt);
+  raw_timer->_ctime = first_minute;
+
   bool exists = false;
-  past = dariadb::timeutil::target_interval("minute", past).second;
   for (auto c : raw_timer->_callbacks) {
-    auto curdt = to_datetime(c.first);
-    if (curdt.year < dt.year) {
+    if (c.first == first_minute) {
       exists = true;
-      EXPECT_EQ(curdt.minute, 59);
-      EXPECT_EQ(curdt.second, 59);
-      EXPECT_EQ(curdt.millisecond, 999);
+      auto next_minute = c.second->apply(first_minute);
+      dt = to_datetime(next_minute);
+      EXPECT_EQ(dt.minute, 1);
+      EXPECT_EQ(dt.second, 59);
+      EXPECT_EQ(dt.millisecond, 999);
       break;
     }
   }
   EXPECT_TRUE(exists);
-  // raw=>minute, minute=>halfhour, halfhour=>hour, hour=>day, day=>week, week=>month;
-  EXPECT_EQ(raw_timer->_callbacks.size(), predefinedIntervals().size());
 }
 
 class MockTimerCallback : public dariadb::aggregator::ITimer::Callback {

@@ -15,7 +15,6 @@ public:
   EXPORT
   static void aggregate(const std::string &from_interval, const std::string &to_interval,
                         IEngine_Ptr engine, Time start, Time end);
-
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;
