@@ -3,6 +3,7 @@
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <chrono>
+#include <vector>
 
 namespace dariadb {
 namespace timeutil {
@@ -23,6 +24,9 @@ EXPORT Time current_time();
 
 /// convert time to datetime;
 EXPORT DateTime to_datetime(Time t);
+
+/// convert time from datetime;
+EXPORT Time from_datetime(const DateTime &dt);
 
 /// convert from time_point
 EXPORT Time from_chrono(const std::chrono::high_resolution_clock::time_point &t);
@@ -54,5 +58,13 @@ EXPORT Time from_seconds(const int s);
 EXPORT Time round_to_seconds(const Time t);
 EXPORT Time round_to_minutes(const Time t);
 EXPORT Time round_to_hours(const Time t);
+/**
+interval -> "halfhour", "hour", "day", "month", "year"
+*/
+EXPORT Time intervalName2time(const std::string&interval);
+
+EXPORT bool intervalsLessCmp(const std::string&l, const std::string&r);
+EXPORT std::vector<std::string> predefinedIntervals();
+EXPORT std::pair<Time, Time> target_interval(const std::string&period, Time currentTime);
 }
 }

@@ -175,7 +175,6 @@ where from,to,flag, id - query interval params, funcstions - statistical functio
 
 ```json
 {
- "measurement": "memory",
  "average": {
   "F": 0,
   "T": 0,
@@ -195,3 +194,15 @@ where from,to,flag, id - query interval params, funcstions - statistical functio
 
 ```
 
+# Erase old value older than time
+
+send post query
+
+``` json
+{
+ "id": "memory",
+ "to": 18446744073709551615,
+ "type": "erase"
+}
+```
+where "to" is time point, all values older than  will be removed.

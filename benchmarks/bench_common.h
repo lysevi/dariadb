@@ -29,9 +29,7 @@ struct BenchmarkSummaryInfo {
   size_t writed;
   double read_all_time;
   double foreach_read_all_time;
-  double page_repack_time;
   size_t page_repacked;
-  double compaction_time;
   dariadb::STRATEGY strategy;
 
   std::list<double> write_speed_metrics;
@@ -40,12 +38,13 @@ struct BenchmarkSummaryInfo {
   std::list<double> full_read_timeseries_metrics;
   std::list<double> copy_to_metrics;
   std::list<double> stat_metrics;
-
+  std::list<double> compaction_metrics;
+  std::list<double> repack_metrics;
   BenchmarkSummaryInfo(dariadb::STRATEGY _strategy) {
     strategy = _strategy;
     writed = size_t(0);
     page_repacked = size_t(0);
-    read_all_time = page_repack_time = foreach_read_all_time = compaction_time = 0.0;
+    read_all_time = foreach_read_all_time = 0.0;
   }
   // TODO move to cpp file
   void print(const std::vector<SpeedMetric> &metrics) {
@@ -116,18 +115,18 @@ struct BenchmarkSummaryInfo {
           metrics("read timeseries", full_read_timeseries_metrics);
       SpeedMetric copy_sm = metrics("copy timeseries", copy_to_metrics);
       SpeedMetric stat_sm = metrics("stat", stat_metrics);
-      std::vector<SpeedMetric> all_metrics{write_sm,         read_tp_sm,
-                                           read_interval_sm, full_read_interval_sm,
-                                           copy_sm,          stat_sm};
+      SpeedMetric compact_sm = metrics("compaction", compaction_metrics);
+      SpeedMetric repack_sm = metrics("repack", repack_metrics);
+      std::vector<SpeedMetric> all_metrics{
+          write_sm, read_tp_sm, read_interval_sm, full_read_interval_sm,
+          copy_sm,  stat_sm,    compact_sm,       repack_sm};
       print(all_metrics);
     }
 
-    std::cout << "page repack: " << page_repack_time << " secs." << std::endl;
     std::cout << "page repacked: " << page_repacked << std::endl;
 
     std::cout << "read all: " << read_all_time << " secs." << std::endl;
     std::cout << "foreach all: " << foreach_read_all_time << " secs." << std::endl;
-    std::cout << "compaction: " << compaction_time << " secs." << std::endl;
   }
 
   SpeedMetric metrics(const std::string &name, const std::list<double> &values_list) {
@@ -139,20 +138,19 @@ struct BenchmarkSummaryInfo {
     dariadb::statistic::Median md("median");
     dariadb::statistic::Percentile90 p90("p90");
     dariadb::statistic::StandartDeviation sigma("sigma");
+    dariadb::statistic::Minimum minimum("min");
+    dariadb::statistic::Maximum maximum("max");
 
     SpeedMetric result;
     result.name = name;
-    result.min = dariadb::MAX_VALUE;
-    result.max = dariadb::MIN_VALUE;
-
     for (auto v : values) {
       dariadb::Meas m;
       m.value = v;
       meases.push_back(m);
-      result.min = std::min(result.min, v);
-      result.max = std::max(result.max, v);
     }
 
+    result.min = minimum.apply(meases).value;
+    result.max = maximum.apply(meases).value;
     result.average = av.apply(meases).value;
     result.median = md.apply(meases).value;
     result.p90 = p90.apply(meases).value;

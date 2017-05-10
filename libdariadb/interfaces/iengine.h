@@ -39,8 +39,8 @@ public:
   };
   virtual Description description() const = 0;
   virtual void fsck() = 0;
-  virtual void eraseOld(const Time &t) = 0;
-  virtual void repack() = 0;
+  virtual void eraseOld(const Id id, const Time t) = 0;
+  virtual void repack(dariadb::Id id) = 0;
   virtual void compact(ICompactionController *logic) = 0;
   virtual void stop() = 0;
   virtual void wait_all_asyncs() = 0;
@@ -49,12 +49,13 @@ public:
   virtual STRATEGY strategy() const = 0;
   virtual void subscribe(const IdArray &ids, const Flag &flag,
                          const ReaderCallback_ptr &clbk) = 0;
+  EXPORT virtual void repack(const scheme::IScheme_Ptr s);
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override final;
   EXPORT void foreach (const QueryTimePoint &q, IReadCallback * clbk) override final;
 
-  EXPORT void setScheme(const scheme::IScheme_Ptr &scheme) { _scheme = scheme; }
-  EXPORT scheme::IScheme_Ptr getScheme() { return _scheme; }
-
+  EXPORT virtual void setScheme(const scheme::IScheme_Ptr &scheme);
+  EXPORT virtual scheme::IScheme_Ptr getScheme();
+  
   scheme::IScheme_Ptr _scheme;
 };
 

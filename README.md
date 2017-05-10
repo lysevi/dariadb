@@ -1,4 +1,5 @@
 # dariadb - numeric time-series database.
+
 # Continuous Integration
 
 |  version | build & tests | test coverage |
@@ -6,9 +7,12 @@
 | `master`   | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb) |  [![codecov](https://codecov.io/gh/lysevi/dariadb/branch/master/graph/badge.svg)](https://codecov.io/gh/lysevi/dariadb) |
 | `develop` | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=dev)](https://travis-ci.org/lysevi/dariadb) | [![codecov](https://codecov.io/gh/lysevi/dariadb/branch/dev/graph/badge.svg)](https://codecov.io/gh/lysevi/dariadb) |
  
+
 # Features
+* True columnar storage
 * Can be used as a server application or an embedded library.
 * Full featured http api.
+* Golang client (see folders "go" and "examples/go")
 * Accept unordered data.
 * Each measurement contains:
   - Id - x32 unsigned integer value.
@@ -41,15 +45,19 @@
   - measurement count
   - values sum
 * Statistical functions: 
+  - minimum
+  - maximum
+  - count
   - average
   - median
   - sigma(standard deviation)
   - percentile90
   - percentile99
+* Interval aggregation support. Available intervals: raw,minute, half hour, hour, day, week, month, year.
 
 # Usage example
 - See folder "examples"
-- How to use dariadb as a embedded storage engine: [dariadb-example](	)
+- How to use dariadb as a embedded storage engine: [dariadb-example](https://github.com/lysevi/dariadb-example)
 
 # Dependencies
 * Boost 1.54.0 or higher: system, filesystem, date_time,regex, program_options, asio.
@@ -93,7 +101,6 @@ $ git submodules update
 - **DARIADB_ASAN_UBSAN**  - Enable address & undefined behavior sanitizer for binary. - OFF
 - **DARIADB_MSAN** - Enable memory sanitizer for binary. - OFF
 - **DARIADB_SYSTEM_JEMALLOC** - Use jemalloc installed in the system. - ON
-- **DARIADB_ENABLE_TOOLS** - Build utility tools. - ON
 
 #### Configure to build with all benchmarks, but without tests and server.
 ---

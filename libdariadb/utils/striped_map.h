@@ -80,7 +80,18 @@ public:
   stripped_map(const self_type &other) = delete;
   self_type &operator=(const self_type &other) = delete;
 
-  ~stripped_map() { clear(); }
+  ~stripped_map() {
+    clear();
+
+    delete[] _buckets;
+    _buckets = nullptr;
+
+    delete[] _lockers;
+    _lockers = nullptr;
+
+    _N = size_t(0);
+    _size.store(size_t());
+  }
 
   void reserve(size_t N) {
     clear();
@@ -106,17 +117,10 @@ public:
           it = next;
         }
       }
+	  _buckets[i] = nullptr;
     }
 
-    delete[] _buckets;
-    _buckets = nullptr;
     this->unlock_all();
-
-    delete[] _lockers;
-    _lockers = nullptr;
-
-    _N = size_t(0);
-    _size.store(size_t());
   }
 
   size_t size() const { return _size.load(); }

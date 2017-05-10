@@ -5,6 +5,7 @@
 #include <libdariadb/storage/subscribe.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
+#include <libdariadb/utils/utils.h>
 #include <shared_mutex>
 
 #include <fstream>
@@ -20,17 +21,22 @@ using namespace dariadb::utils::async;
 
 using json = nlohmann::json;
 
-class ShardEngine::Private : IEngine {
+class ShardEngine::Private : public IEngine {
   struct ShardRef {
     std::string path;
     IEngine_Ptr storage;
   };
 
 public:
-  Private(const std::string &path) {
-
+  Private(const std::string &path, bool force_unlock) {
     _stoped = false;
     _settings = Settings::create(path);
+    _force_unlock = force_unlock;
+    auto fname = shardFileName();
+    if (!utils::fs::file_exists(fname)) {
+      saveShardFile();
+    }
+
     ThreadManager::Params tpm_params(_settings->thread_pools_params());
     ThreadManager::start(tpm_params);
     _subscribe_notify.start();
@@ -49,6 +55,7 @@ public:
         s.storage->stop();
       }
       ThreadManager::stop();
+      _stoped = true;
     }
   }
 
@@ -57,6 +64,7 @@ public:
   }
 
   void loadShardFile() {
+    std::lock_guard<std::shared_mutex> lg(_locker);
     auto fname = shardFileName();
     if (utils::fs::file_exists(fname)) {
       logger("shards: loading ", fname);
@@ -100,6 +108,7 @@ public:
   }
 
   void shardAdd(const ShardEngine::Shard &d) {
+    std::lock_guard<std::shared_mutex> lg(_locker);
     shardAdd_inner(d);
     saveShardFile();
   }
@@ -136,12 +145,22 @@ public:
   }
 
   void shardAdd_inner(const ShardEngine::Shard &d) {
-    std::lock_guard<std::shared_mutex> lg(_locker);
+
     logger_info("shards: add new shard {", d.alias, "} => ", d.path);
+
     auto f_iter = _shards.find(d.alias);
+
+    auto all_intervals = timeutil::predefinedIntervals();
+    bool is_interval_shard = false;
+    auto interval_name = d.alias;
+    if (interval_name == "raw" || std::find(all_intervals.begin(), all_intervals.end(),
+                                            interval_name) != all_intervals.end()) {
+      is_interval_shard = true;
+    }
 
     IEngine_Ptr shard_ptr = nullptr;
     if (f_iter != _shards.end()) {
+      ENSURE(!is_interval_shard);
       Shard new_shard_rec(d);
 
       for (auto &sr : _sub_storages) {
@@ -158,17 +177,28 @@ public:
       _shards.insert(std::make_pair(d.alias, new_shard_rec));
     } else {
       _shards.insert(std::make_pair(d.alias, d));
-      shard_ptr = open_shard_path(d);
+      if (interval_name == "raw" && _settings->raw_is_memonly.value()) {
+        shard_ptr = open_memonly_shard(d);
+      } else {
+        shard_ptr = open_shard_path(d);
+      }
+
       _sub_storages.push_back({d.path, shard_ptr});
     }
 
-    if (d.ids.empty()) {
-      ENSURE(_default_shard == nullptr);
-      _default_shard = shard_ptr;
+    if (is_interval_shard) {
+      _interval2shard[interval_name] = shard_ptr;
     } else {
-      for (auto id : d.ids) {
-        if (_id2shard.count(id) == 0) {
-          _id2shard[id] = shard_ptr;
+      if (d.ids.empty()) {
+
+        ENSURE(_default_shard == nullptr);
+        _default_shard = shard_ptr;
+
+      } else {
+        for (auto id : d.ids) {
+          if (_id2shard.count(id) == 0) {
+            _id2shard[id] = shard_ptr;
+          }
         }
       }
     }
@@ -187,7 +217,52 @@ public:
     ENSURE(!s.path.empty());
     auto settings = Settings::create(s.path);
     settings->alias = "(" + s.alias + ")";
+    IEngine_Ptr new_shard{new Engine(settings, false, _force_unlock)};
+    return new_shard;
+  }
+
+  IEngine_Ptr open_memonly_shard(const Shard &s) {
+    ENSURE(!s.path.empty());
+    auto settings = Settings::create();
+    settings->alias = "(" + s.alias + ")";
     IEngine_Ptr new_shard{new Engine(settings, false)};
+    return new_shard;
+  }
+
+  IEngine_Ptr createShardForInterval(const std::string &interval) {
+    logger_info("shards: create shard for '", interval, "'");
+    auto shards_dir = utils::fs::append_path(_settings->storage_path.value(), "shards");
+    if (!utils::fs::path_exists(shards_dir)) {
+      utils::fs::mkdir(shards_dir);
+    }
+    IEngine_Ptr new_shard = nullptr;
+    Settings_ptr shard_settings = nullptr;
+
+    auto interval_dir = utils::fs::append_path(shards_dir, interval);
+    // if raw is memonly storage
+    if (interval == "raw" && _settings->raw_is_memonly.value()) {
+      shard_settings = Settings::create();
+      interval_dir = "raw";
+    } else {
+
+      if (!utils::fs::path_exists(interval_dir)) {
+        utils::fs::mkdir(interval_dir);
+      }
+      shard_settings = Settings::create(interval_dir);
+      shard_settings->strategy.setValue(_settings->strategy_for_interval(interval));
+    }
+
+    new_shard = IEngine_Ptr{new Engine(shard_settings, false)};
+    shard_settings->alias = "(" + interval + ")";
+    shard_settings->save();
+    _interval2shard[interval] = new_shard;
+
+    ShardEngine::Shard sd;
+    sd.alias = interval;
+    sd.path = interval_dir;
+    _shards[sd.alias] = sd;
+    saveShardFile();
+    _sub_storages.push_back({sd.path, new_shard});
     return new_shard;
   }
 
@@ -198,6 +273,25 @@ public:
     auto fres = this->_id2shard.find(id);
     if (fres != this->_id2shard.end()) {
       target_shard = fres->second;
+    } else {
+      if (this->_scheme != nullptr) {
+        auto d = _scheme->descriptionFor(id);
+        if (d.id != MAX_ID && !d.interval.empty()) {
+
+          auto fiter = this->_interval2shard.find(d.interval);
+          if (fiter == _interval2shard.end()) {
+            target_shard = createShardForInterval(d.interval);
+          } else {
+            target_shard = fiter->second;
+          }
+          _id2shard[id] = target_shard;
+        } else {
+          if (_default_shard == nullptr) {
+            _default_shard = createShardForInterval("default");
+            target_shard = _default_shard;
+          }
+        }
+      }
     }
     _locker.unlock();
 
@@ -345,24 +439,24 @@ public:
     }
   }
 
-  void eraseOld(const Time &t) override {
-    std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto &s : _sub_storages) {
-      s.storage->eraseOld(t);
+  void eraseOld(const Id id, const Time t) override {
+    auto target = this->get_shard_for_id(id);
+    if (target != nullptr) {
+      target->eraseOld(id, t);
     }
   }
 
-  void repack() override {
-    std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto &s : _sub_storages) {
-      s.storage->repack();
+  void repack(dariadb::Id id) override {
+    auto target = this->get_shard_for_id(id);
+    if (target != nullptr) {
+      target->repack(id);
     }
   }
 
   void compact(ICompactionController *logic) override {
-    std::shared_lock<std::shared_mutex> lg(_locker);
-    for (auto &s : _sub_storages) {
-      s.storage->compact(logic);
+    auto target = this->get_shard_for_id(logic->targetId);
+    if (target != nullptr) {
+      target->compact(logic);
     }
   }
 
@@ -397,8 +491,10 @@ public:
   }
 
   bool _stoped;
+  bool _force_unlock;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
   std::unordered_map<std::string, ShardEngine::Shard> _shards; // alias => shard
+  std::unordered_map<std::string, IEngine_Ptr> _interval2shard;
 
   std::list<ShardRef> _sub_storages;
   IEngine_Ptr _default_shard;
@@ -408,12 +504,12 @@ public:
   SubscribeNotificator _subscribe_notify;
 };
 
-ShardEngine_Ptr ShardEngine::create(const std::string &path) {
-  return ShardEngine_Ptr{new ShardEngine(path)};
+ShardEngine_Ptr ShardEngine::create(const std::string &path, bool force_unlock) {
+  return ShardEngine_Ptr{new ShardEngine(path, force_unlock)};
 }
 
-ShardEngine::ShardEngine(const std::string &path)
-    : _impl(new ShardEngine::Private(path)) {}
+ShardEngine::ShardEngine(const std::string &path, bool force_unlock)
+    : _impl(new ShardEngine::Private(path, force_unlock)) {}
 
 void dariadb::ShardEngine::compress_all() {
   _impl->compress_all();
@@ -479,12 +575,12 @@ void ShardEngine::fsck() {
   _impl->fsck();
 }
 
-void ShardEngine::eraseOld(const Time &t) {
-  _impl->eraseOld(t);
+void ShardEngine::eraseOld(const Id id, const Time t) {
+  _impl->eraseOld(id, t);
 }
 
-void ShardEngine::repack() {
-  _impl->repack();
+void ShardEngine::repack(dariadb::Id id) {
+  _impl->repack(id);
 }
 void ShardEngine::compact(ICompactionController *logic) {
   _impl->compact(logic);
@@ -505,4 +601,12 @@ STRATEGY ShardEngine::strategy() const {
 void ShardEngine::subscribe(const IdArray &ids, const Flag &flag,
                             const ReaderCallback_ptr &clbk) {
   return _impl->subscribe(ids, flag, clbk);
+}
+
+void ShardEngine::setScheme(const scheme::IScheme_Ptr &scheme) {
+  _impl->setScheme(scheme);
+}
+
+scheme::IScheme_Ptr ShardEngine::getScheme() {
+  return _impl->getScheme();
 }

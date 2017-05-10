@@ -15,7 +15,7 @@ public:
     IdSet ids;
   };
 
-  EXPORT static ShardEngine_Ptr create(const std::string &path);
+  EXPORT static ShardEngine_Ptr create(const std::string &path, bool force_unlock=false);
   /**
    shard description with empty ids used as shard by default for values,
    that not exists in others shard.
@@ -35,8 +35,8 @@ public:
   EXPORT Statistic stat(const Id id, Time from, Time to) override;
 
   EXPORT void fsck() override;
-  EXPORT void eraseOld(const Time &t) override;
-  EXPORT void repack() override;
+  EXPORT void eraseOld(const Id id, const Time t) override;
+  EXPORT void repack(dariadb::Id id) override;
   EXPORT void compact(ICompactionController *logic) override;
   EXPORT void stop() override;
 
@@ -50,8 +50,10 @@ public:
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
                         const ReaderCallback_ptr &clbk) override;
 
+  EXPORT void setScheme(const scheme::IScheme_Ptr &scheme) override;
+  EXPORT virtual scheme::IScheme_Ptr getScheme() override;
 protected:
-  EXPORT ShardEngine(const std::string &path);
+  EXPORT ShardEngine(const std::string &path, bool force_unlock);
 
 private:
   class Private;

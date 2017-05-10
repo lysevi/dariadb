@@ -1,7 +1,15 @@
+v0.5.0
+=====
+- True columnar database.
+- Automatic data erasing was disabled. Timeseries removing only by manual.
+- UTC time in inner functions.
+- Golang http client
+- Interval aggregation support. Available intervals: raw,minute, half hour, hour, day, week, month, year.
+
 v0.4.1
 =====
 - google.test for unittests.
-- statistical functions: average, median, sigma(standard deviation), percentile90, percentile99
+- Statistical functions: average, median, sigma(standard deviation), percentile90, percentile99
 
 v0.4.0
 =====

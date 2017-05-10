@@ -144,9 +144,9 @@ IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *ihead
   cur_index.chunk_id = cheader.id;
   cur_index.offset = cheader.offset_in_page;
 
-  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
+  iheader->target_id = cheader.meas_id;
   iheader->recs_count++;
-  cur_index.meas_id = cheader.meas_id;
+  cur_index.target_id = cheader.meas_id;
   cur_index.stat = cheader.stat;
   ENSURE(cur_index.stat.minTime <= cur_index.stat.maxTime);
   ENSURE(cur_index.stat.minValue <= cur_index.stat.maxValue);

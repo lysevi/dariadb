@@ -39,10 +39,12 @@ public:
     _env.srv = this;
     _env.service = &_service;
 
+    lastStat = clock();
+
     _signals.async_wait(std::bind(&Server::Private::signal_handler, this, _1, _2));
 
     _http_server = std::make_unique<http::http_server>(
-        "localhost", std::to_string(p.http_port), &_service);
+        "localhost", std::to_string(p.http_port), &_service, this);
   }
 
   ~Private() {
@@ -69,9 +71,9 @@ public:
     std::lock_guard<std::mutex> lg(_dtor_mutex);
     _in_stop_logic = true;
     logger_info("server: *** [stopping] ***");
-    logger_info("server: stop ping timer...");
+    logger("server: stop ping timer...");
     _ping_timer.cancel();
-    logger_info("server: stop info timer...");
+    logger("server: stop info timer...");
     _info_timer.cancel();
     while (_writes_in_progress.load() != 0) {
       dariadb::utils::sleep_mls(300);
@@ -98,7 +100,6 @@ public:
     if (this->_env.storage != nullptr) { // in some tests storage not exists
       auto cp = this->_env.storage;
       this->_env.storage = nullptr;
-      cp->stop();
     }
 
     _in_stop_logic = false;
@@ -221,6 +222,8 @@ public:
   bool is_asio_stoped() { return _service.stopped(); }
   bool is_runned() { return _is_runned_flag.load(); }
 
+  void addWritedCount(size_t count) override { this->total_writed.fetch_add(count); }
+
   void client_connect(int id) override {
     std::lock_guard<utils::async::Locker> lg(_clients_locker);
     auto fres_it = this->_clients.find(id);
@@ -305,6 +308,14 @@ public:
     auto queue_sizes = _env.storage->description();
     std::stringstream stor_ss;
 
+    auto writed = total_writed.load();
+    total_writed.store(size_t(0));
+    auto curT = clock();
+
+    auto step_time = double(double(curT - lastStat) / (double)CLOCKS_PER_SEC);
+    auto writes_per_sec = writed / step_time;
+
+	lastStat = curT;
     stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.wal_count
             << " T:" << queue_sizes.active_works;
     if (_env.storage->strategy() == dariadb::STRATEGY::MEMORY) {
@@ -312,9 +323,10 @@ public:
               << " a:" << queue_sizes.memstorage.allocated;
     }
     stor_ss << ")";
-
+    stor_ss << " write: " << writes_per_sec << "/s";
     logger_info("server: stat ", stor_ss.str());
   }
+
   void log_server_info() {
     log_server_info_internal();
     reset_info_timer();
@@ -326,6 +338,7 @@ public:
 
   std::atomic_int _next_client_id;
   std::atomic_size_t _connections_accepted;
+  std::atomic_size_t total_writed;
 
   Server::Param _params;
 
@@ -347,6 +360,7 @@ public:
   std::mutex _dtor_mutex;
 
   std::unique_ptr<http::http_server> _http_server;
+  clock_t lastStat;
 };
 
 Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}

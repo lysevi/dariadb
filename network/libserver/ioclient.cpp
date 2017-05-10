@@ -185,8 +185,10 @@ void IOClient::onDataRecv(const NetData_ptr &d, bool &cancel) {
   }
   case DATA_KINDS::PONG: {
     pings_missed--;
-    logger_info("server: #", this->_async_connection->id(),
-                " pings_missed: ", pings_missed.load());
+    if (pings_missed != 0) {
+      logger_info("server: #", this->_async_connection->id(),
+                  " pings_missed: ", pings_missed.load());
+    }
     break;
   }
   case DATA_KINDS::DISCONNECT: {
@@ -303,6 +305,7 @@ void IOClient::append(const NetData_ptr &d) {
   logger_info("server: #", this->_async_connection->id(), " begin writing ", count);
   MeasArray ma = hdr->read_measarray();
 
+  this->env->srv->addWritedCount(ma.size());
   auto ar = env->storage->append(ma.begin(), ma.end());
   this->env->srv->write_end();
   if (ar.ignored != size_t(0)) {

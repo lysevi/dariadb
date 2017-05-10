@@ -1,5 +1,6 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
+#include <libdariadb/timeutil.h>
 #include <libserver/http/query_parser.h>
 #include <extern/json/src/json.hpp>
 
@@ -28,8 +29,9 @@ read_meas_array(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
     auto time_js = val4id["T"];
 
     if (flag_js.size() != val_js.size() || time_js.size() != val_js.size()) {
-      THROW_EXCEPTION("bad query format, flags:", flag_js.size(), " values:",
-                      val_js.size(), " times:", time_js.size(), " query: ", js.dump(1));
+      THROW_EXCEPTION("bad query format, flags:", flag_js.size(),
+                      " values:", val_js.size(), " times:", time_js.size(),
+                      " query: ", js.dump(1));
     }
 
     sub_result.resize(flag_js.size());
@@ -68,6 +70,7 @@ read_single_meas(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
   result->front().time = value["T"];
   result->front().flag = value["F"];
   result->front().value = value["V"];
+  //dariadb::logger("T:", dariadb::timeutil::to_string(result->front().time));
   std::string id_str = value["I"];
   result->front().id = scheme->addParam(id_str);
   return result;
@@ -185,11 +188,26 @@ dariadb::net::http::parse_query(const dariadb::scheme::IScheme_Ptr &scheme,
     auto name_map = scheme->ls();
     ids.push_back(name_map.idByParam(value));
 
-
     result.statistic_calc = std::make_shared<statistic_calculation>(
         QueryInterval(ids, flag, from, to), functions);
     return result;
   }
+
+  if (type == "erase") {
+    logger("erase query.");
+    result.type = http_query_type::erase;
+    dariadb::Time to = js["to"];
+    std::string value = js["id"];
+    dariadb::IdArray ids(1);
+
+    auto name_map = scheme->ls();
+    ids[0] = name_map.idByParam(value);
+
+    result.erase_old =
+        std::make_shared<QueryInterval>(ids, dariadb::Flag(), dariadb::MIN_TIME, to);
+    return result;
+  }
+
   return result;
 }
 
@@ -285,7 +303,5 @@ std::string dariadb::net::http::statCalculationResult2string(
     func_res["V"] = ma[i].value;
     result[funcs[i]] = func_res;
   }
-
-  result["measurement"] = nameMap[ma.front().id].name;
   return result.dump(1);
 }

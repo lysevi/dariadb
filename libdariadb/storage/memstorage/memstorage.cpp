@@ -187,55 +187,41 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
     }
   }
 
-  void drop_logic(size_t chunks_per_page, std::list<MemChunk_Ptr> &all_chunks) {
-    while (!all_chunks.empty()) {
-      auto sz = all_chunks.size();
-      size_t to_copy = 0;
+  void drop_logic(size_t, std::list<MemChunk_Ptr> &all_chunks) {
+    std::unordered_map<dariadb::Id, std::vector<Chunk *>> c2i;
+    std::unordered_map<dariadb::Id, std::vector<MemChunk_Ptr>> c2i_to_drop;
+    std::vector<Chunk *> raw_ptrs(all_chunks.size());
 
-      if ((sz - chunks_per_page) < chunks_per_page) {
-        to_copy = sz;
-      } else {
-        if (sz > chunks_per_page) {
-          to_copy = chunks_per_page;
-        } else {
-          to_copy = sz;
-        }
+    for (auto mc : all_chunks) {
+      c2i[mc->header->meas_id].push_back(mc.get());
+      c2i_to_drop[mc->header->meas_id].push_back(mc);
+    }
+    all_chunks.clear();
+    for (auto kv : c2i) {
+      this->_down_level_storage->appendChunks(kv.second);
+      for (auto mc : c2i_to_drop[kv.first]) {
+        freeChunk(mc);
       }
-
-      std::vector<Chunk *> raw_ptrs(to_copy);
-      auto last = all_chunks.begin();
-      std::advance(last, to_copy);
-
-      std::transform(all_chunks.begin(), last, raw_ptrs.begin(),
-                     [](const MemChunk_Ptr &mc) { return mc.get(); });
-
-      this->_down_level_storage->appendChunks(raw_ptrs);
-
-      for (auto iter = all_chunks.begin();; ++iter) {
-        if (iter == all_chunks.end()) {
-          break;
-        }
-        if (iter == last) {
-          break;
-        }
-        freeChunk(*iter);
-      }
-      all_chunks.erase(all_chunks.begin(), last);
+      c2i_to_drop[kv.first].clear();
     }
   }
 
-  void dropOld(Time t) {
-    logger_info("engine", _settings->alias, ": memstorage - drop old ",
-                timeutil::to_string(t));
+  void dropOld(dariadb::Id id, Time t) {
+    logger_info("engine", _settings->alias, ": memstorage - drop old #", id, " [",
+                timeutil::to_string(t), "]");
     utils::ElapsedTime et;
     size_t erased = 0;
-    auto f = [t, &erased](const Id2Track::value_type &v) {
+	TimeTrack_ptr target = nullptr;
+	if (_id2track.find(id, &target)) {
+		erased += target->drop_Old(t);
+	}
+    /*auto f = [t, &erased](const Id2Track::value_type &v) {
       erased += v.second->drop_Old(t);
     };
 
     _id2track.apply(f);
 
-    _chunks_count.fetch_sub(erased);
+    _chunks_count.fetch_sub(erased);*/
     logger_info("engine", _settings->alias, ": memstorage - drop old complete. erased ",
                 erased, " chunks. elapsed ", et.elapsed(), "s");
   }
@@ -498,6 +484,6 @@ Id2Time MemStorage::getSyncMap() {
   return _impl->getSyncMap();
 }
 
-void MemStorage::dropOld(Time t) {
-  return _impl->dropOld(t);
+void MemStorage::dropOld(dariadb::Id id, Time t) {
+  return _impl->dropOld(id, t);
 }
