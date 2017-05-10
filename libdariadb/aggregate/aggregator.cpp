@@ -106,7 +106,7 @@ public:
 
     statistic::Calculator calc(_storage);
 
-    for (size_t i = 0; i < all_intervals.size() - 1; ++i) {
+    for (size_t i = 0; i < all_intervals.size() - 1; ++i) { /// chech each interval
       auto interval_from = all_intervals[i];
       auto interval_to = all_intervals[i + 1];
 
@@ -115,34 +115,47 @@ public:
                   "-", timeutil::to_string(currentInterval.second), "]");
 
       auto interval_from_values = _scheme->lsInterval(interval_from);
-      for (auto kv : interval_from_values) {
+      for (auto kv : interval_from_values) { /// check each value from interval 'from'
         Time fromMinTime, fromMaxTime;
         if (!_storage->minMaxTime(kv.first, &fromMinTime, &fromMaxTime)) {
           continue;
         }
         logger_info("agregator: aggregate for ", kv.second.name);
         auto linkedValues = _scheme->linkedForValue(kv.second);
-        for (auto linkedKv : linkedValues) {
+        for (auto linkedKv : linkedValues) { // for each linked value
           Time toMinTime, toMaxTime;
           if (!_storage->minMaxTime(linkedKv.first, &toMinTime, &toMaxTime)) {
+            /// if value not exist, replace start interval by start 'from'
             toMaxTime = fromMinTime;
           }
 
           if (fromMaxTime > toMaxTime) {
             auto targetInterval = timeutil::target_interval(interval_to, toMaxTime);
             if (targetInterval.second <= currentInterval.second) {
-              logger_info("agregator: different intervals.", " target: [",
-                          timeutil::to_string(targetInterval.first), "-",
-                          timeutil::to_string(targetInterval.second), "]");
-              auto result_functions =
-                  calc.apply(kv.second.id, targetInterval.first, targetInterval.second,
-                             dariadb::Flag(), {linkedKv.second.aggregation_func});
-              if (result_functions.empty()) {
-                continue;
+              /// if 'to' interval less the 'from'
+
+              QueryInterval qi({kv.first}, Flag(), toMaxTime, currentTime);
+              auto values = _storage->readInterval(qi);
+
+              /// split by interval
+              std::set<std::pair<Time, Time>> intervals;
+              for (auto v : values) {
+                auto i = timeutil::target_interval(interval_to, v.time);
+                intervals.insert(i);
               }
-              ENSURE(result_functions.size() == size_t(1));
-              _storage->append(linkedKv.first, result_functions[i].time,
-                               result_functions[i].value);
+              for (auto i : intervals) {
+                logger_info("agregator: write #", kv.first, " to #", linkedKv.first,
+                            " intervals: [", timeutil::to_string(i.first), "-",
+                            timeutil::to_string(i.second), "]");
+                auto resfuncs =
+                    calc.apply(kv.second.id, i.first, i.second, dariadb::Flag(),
+                               {linkedKv.second.aggregation_func});
+                if (resfuncs.empty()) {
+                  continue;
+                }
+                ENSURE(resfuncs.size() == size_t(1));
+                _storage->append(linkedKv.first, resfuncs[0].time, resfuncs[0].value);
+              }
             }
           }
         }
