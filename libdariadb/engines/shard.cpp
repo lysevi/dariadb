@@ -217,7 +217,7 @@ public:
     ENSURE(!s.path.empty());
     auto settings = Settings::create(s.path);
     settings->alias = "(" + s.alias + ")";
-    IEngine_Ptr new_shard{new Engine(settings,false, _force_unlock)};
+    IEngine_Ptr new_shard{new Engine(settings, false, _force_unlock)};
     return new_shard;
   }
 
@@ -270,27 +270,27 @@ public:
     IEngine_Ptr target_shard = _default_shard;
 
     _locker.lock();
-    if (this->_scheme != nullptr) {
-      auto d = _scheme->descriptionFor(id);
-      if (d.id != MAX_ID && !d.interval.empty()) {
-
-        auto fiter = this->_interval2shard.find(d.interval);
-        if (fiter == _interval2shard.end()) {
-          target_shard = createShardForInterval(d.interval);
-        } else {
-          target_shard = fiter->second;
-        }
-      } else {
-        if (_default_shard == nullptr) {
-          _default_shard = createShardForInterval("default");
-          target_shard = _default_shard;
-        }
-      }
-
+    auto fres = this->_id2shard.find(id);
+    if (fres != this->_id2shard.end()) {
+      target_shard = fres->second;
     } else {
-      auto fres = this->_id2shard.find(id);
-      if (fres != this->_id2shard.end()) {
-        target_shard = fres->second;
+      if (this->_scheme != nullptr) {
+        auto d = _scheme->descriptionFor(id);
+        if (d.id != MAX_ID && !d.interval.empty()) {
+
+          auto fiter = this->_interval2shard.find(d.interval);
+          if (fiter == _interval2shard.end()) {
+            target_shard = createShardForInterval(d.interval);
+          } else {
+            target_shard = fiter->second;
+          }
+          _id2shard[id] = target_shard;
+        } else {
+          if (_default_shard == nullptr) {
+            _default_shard = createShardForInterval("default");
+            target_shard = _default_shard;
+          }
+        }
       }
     }
     _locker.unlock();
