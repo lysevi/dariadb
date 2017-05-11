@@ -572,6 +572,48 @@ dariadb::Status WALManager::append(const Meas &value) {
   return dariadb::Status(1);
 }
 
+void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
+  if (bd->pos == 0) {
+    bd->locker.unlock();
+    return;
+  }
+  dariadb::Id id = bd->buffer.front().id;
+  size_t pos = 0;
+  size_t total_writed = 0;
+  if (bd->walfile == nullptr) {
+    create_new(bd, id);
+    ENSURE(bd->walfile != nullptr);
+  }
+
+  auto target_buffer = &bd->buffer;
+  while (1) {
+    auto it = target_buffer->begin();
+    auto begin = it + pos;
+    auto end = it + bd->pos;
+    Status res;
+    res = bd->walfile->append(begin, end);
+    total_writed += res.writed;
+    if (res.error == APPEND_ERROR::wal_file_limit) {
+      create_new(bd, id);
+    } else {
+      if (res.error != APPEND_ERROR::OK) {
+        logger_fatal("engine", this->_settings->alias, ": append to wal error - ",
+                     res.error);
+        return;
+      }
+    }
+    if (total_writed != bd->pos) {
+      pos += res.writed;
+    } else {
+      break;
+    }
+  }
+  bd->pos = size_t(0);
+
+  bd->locker.unlock();
+  return;
+}
+
 void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
   /*if (_buffer_pos == size_t(0)) {
     return;
@@ -579,44 +621,7 @@ void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
   AsyncTask at = [this, bd](const ThreadInfo &ti) {
     TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
-    if (bd->pos == 0) {
-      bd->locker.unlock();
-      return false;
-    }
-    dariadb::Id id = bd->buffer.front().id;
-    size_t pos = 0;
-    size_t total_writed = 0;
-    if (bd->walfile == nullptr) {
-      create_new(bd, id);
-      ENSURE(bd->walfile != nullptr);
-    }
-
-    auto target_buffer = &bd->buffer;
-    while (1) {
-      auto it = target_buffer->begin();
-      auto begin = it + pos;
-      auto end = it + bd->pos;
-      Status res;
-      res = bd->walfile->append(begin, end);
-      total_writed += res.writed;
-      if (res.error == APPEND_ERROR::wal_file_limit) {
-        create_new(bd, id);
-      } else {
-        if (res.error != APPEND_ERROR::OK) {
-          logger_fatal("engine", this->_settings->alias, ": append to wal error - ",
-                       res.error);
-          return false;
-        }
-      }
-      if (total_writed != bd->pos) {
-        pos += res.writed;
-      } else {
-        break;
-      }
-    }
-    bd->pos = size_t(0);
-    // std::fill_n(bd->buffer.begin(), bd->buffer.size(), Meas());
-    bd->locker.unlock();
+    flush_buffer_logic(bd);
     return false;
   };
   auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));

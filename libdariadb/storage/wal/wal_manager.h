@@ -71,6 +71,7 @@ protected:
   std::list<std::string> wal_files_all() const;
   std::list<std::string> wal_files(dariadb::Id id) const;
   void flush_buffer(BufferDescription_Ptr &bd, bool sync = false);
+  void flush_buffer_logic(const BufferDescription_Ptr &bd);
   void drop_old_if_needed();
   bool file_in_query(const std::string &filename, const QueryInterval &q);
   bool file_in_query(const std::string &filename, const QueryTimePoint &q);
