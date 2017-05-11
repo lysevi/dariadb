@@ -1,11 +1,17 @@
 #include "bench_common.h"
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/engines/shard.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
+
 #include <atomic>
 #include <iomanip>
 #include <iostream>
+#include <random>
+
 using namespace dariadb;
 using namespace dariadb::storage;
 

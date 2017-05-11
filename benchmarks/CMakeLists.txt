@@ -5,7 +5,7 @@ MESSAGE(STATUS "Benchmarks: ")
 
 macro(ADD_BENCHARK name src)
         MESSAGE(STATUS " +" ${name})
-        add_executable(${name} ${src} bench_common.h)
+        add_executable(${name} ${src} bench_common.h bench_common.cpp)
         
         target_link_libraries(${name} ${DARIADB_STORAGE_LIBS})
         set_target_properties(${name} PROPERTIES FOLDER Benchmarks)
