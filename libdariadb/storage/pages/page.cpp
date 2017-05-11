@@ -126,9 +126,14 @@ bool create_write_logic(
 }
 
 void Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
-                  uint32_t max_chunk_size, const SplitedById &to_compress,
+                  uint32_t max_chunk_size, const MeasArray &to_compress,
                   on_create_complete_callback on_complete) {
-  ENSURE(to_compress.size() == size_t(1));
+  ENSURE(!to_compress.empty());
+#ifdef DOUBLE_CHECKS
+  for (const auto &m : to_compress) {
+    ENSURE(to_compress.front().id == m.id);
+  }
+#endif
   using namespace dariadb::utils::async;
   PageFooter phdr(lvl, chunk_id);
 
@@ -249,11 +254,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
       }
 
       if (!ma.empty()) {
-        std::map<Id, MeasArray> all_values;
-        all_values[ma.front().id] = ma;
-
-        auto compressed_results =
-            PageInner::compressValues(all_values, phdr, max_chunk_size);
+        auto compressed_results = PageInner::compressValues(ma, phdr, max_chunk_size);
 
         auto page_size = PageInner::writeToFile(out_file, out_index_file, phdr, ihdr,
                                                 *compressed_results, phdr.filesize);

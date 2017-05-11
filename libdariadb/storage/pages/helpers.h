@@ -19,8 +19,7 @@ struct HdrAndBuffer {
 };
 
 std::shared_ptr<std::list<HdrAndBuffer>>
-compressValues(const std::map<Id, MeasArray> &to_compress, PageFooter &phdr,
-               uint32_t max_chunk_size);
+compressValues(const MeasArray &to_compress, PageFooter &phdr, uint32_t max_chunk_size);
 
 uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter &,
                      std::list<HdrAndBuffer> &compressed_results, uint64_t file_size = 0);

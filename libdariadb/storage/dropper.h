@@ -37,7 +37,7 @@ private:
   void drop_stage_sort(std::string fname, clock_t start_time,
                        std::shared_ptr<MeasArray> ma);
   void drop_stage_compress(std::string fname, clock_t start_time,
-                           std::shared_ptr<SplitedById> splited);
+                           std::shared_ptr<MeasArray> splited);
 
 private:
   mutable std::mutex _queue_locker;
@@ -55,5 +55,5 @@ private:
   std::atomic_int _active_operations;
   DROPPER_STATE _state;
 };
-}
-}
+} // namespace storage
+} // namespace dariadb

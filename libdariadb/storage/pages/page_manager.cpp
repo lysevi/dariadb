@@ -386,12 +386,17 @@ public:
   }
 
   // from wall
-  void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma,
+  void append_async(const std::string &file_prefix, const dariadb::MeasArray &ma,
                     on_create_complete_callback callback) {
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
-    ENSURE(ma.size() == size_t(1));
+    ENSURE(!ma.empty());
+#ifdef DOUBLE_CHECKS
+    for (const auto &m : ma) {
+      ENSURE(ma.front().id == m.id);
+    }
+#endif
 
     Page_Ptr res = nullptr;
 
@@ -748,7 +753,7 @@ dariadb::Time PageManager::maxTime() {
 }
 
 void PageManager::append_async(const std::string &file_prefix,
-                               const dariadb::SplitedById &ma,
+                               const dariadb::MeasArray &ma,
                                on_create_complete_callback callback) {
   return impl->append_async(file_prefix, ma, callback);
 }

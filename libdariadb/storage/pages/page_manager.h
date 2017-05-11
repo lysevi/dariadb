@@ -31,7 +31,7 @@ public:
   EXPORT dariadb::Time minTime();
   EXPORT dariadb::Time maxTime();
 
-  EXPORT void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma,
+  EXPORT void append_async(const std::string &file_prefix, const dariadb::MeasArray &ma,
                            on_create_complete_callback callback);
   EXPORT void appendChunks(const std::vector<Chunk *> &a) override;
 

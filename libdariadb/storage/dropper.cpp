@@ -10,29 +10,6 @@ using namespace dariadb::storage;
 using namespace dariadb::utils;
 using namespace dariadb::utils::async;
 
-std::shared_ptr<SplitedById> splitById(const MeasArray &ma) {
-  std::shared_ptr<SplitedById> result = std::make_shared<SplitedById>();
-
-  std::map<Id, size_t> id2count;
-  for (auto v : ma) {
-    auto iter = id2count.find(v.id);
-    if (iter == id2count.end()) {
-      id2count.insert(std::make_pair(v.id, size_t(0)));
-    } else {
-      id2count[v.id] += 1;
-    }
-  }
-
-  for (auto i2c : id2count) {
-    (*result)[i2c.first].reserve(i2c.second);
-  }
-
-  for (auto v : ma) {
-    (*result)[v.id].push_back(v);
-  }
-  return result;
-}
-
 Dropper::Dropper(EngineEnvironment_ptr engine_env, PageManager_ptr page_manager,
                  WALManager_ptr wal_manager)
     : _page_manager(page_manager), _wal_manager(wal_manager), _engine_env(engine_env) {
@@ -198,11 +175,10 @@ void Dropper::drop_stage_sort(std::string fname, clock_t start_time,
   try {
     ENSURE(_active_operations == 1);
     std::sort(ma->begin(), ma->end(), meas_time_compare_less());
-    auto splited = splitById(*ma.get());
 
-    AsyncTask write_at = [this, start_time, fname, splited](const ThreadInfo &ti) {
+    AsyncTask write_at = [this, start_time, fname, ma](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-      this->drop_stage_compress(fname, start_time, splited);
+      this->drop_stage_compress(fname, start_time, ma);
       return false;
     };
     ThreadManager::instance()->post(THREAD_KINDS::DISK_IO,
@@ -215,7 +191,7 @@ void Dropper::drop_stage_sort(std::string fname, clock_t start_time,
 }
 
 void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
-                                  std::shared_ptr<SplitedById> splited) {
+                                  std::shared_ptr<MeasArray> ma) {
   try {
     ENSURE(_active_operations == 1);
     auto without_path = fs::extract_filename(fname);
@@ -232,7 +208,7 @@ void Dropper::drop_stage_compress(std::string fname, clock_t start_time,
       --_active_operations;
     };
 
-    _page_manager->append_async(page_fname, *splited.get(), callback);
+    _page_manager->append_async(page_fname, *ma.get(), callback);
 
   } catch (...) {
     _state = DROPPER_STATE::ERROR;
