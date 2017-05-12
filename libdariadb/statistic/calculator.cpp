@@ -46,7 +46,8 @@ std::vector<IFunction_ptr> FunctionFactory::make(const std::vector<std::string> 
 }
 
 std::vector<std::string> FunctionFactory::functions() {
-  return {"average", "median", "percentile90", "percentile99", "sigma", "minimum", "maximum", "count"};
+  return {"average", "median",  "percentile90", "percentile99",
+          "sigma",   "minimum", "maximum",      "count"};
 }
 
 Calculator::Calculator(const IEngine_Ptr &storage) : _storage(storage) {}

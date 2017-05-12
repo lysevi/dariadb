@@ -128,7 +128,8 @@ void request_handler::handle_request(const request &req, reply &rep) {
 
       switch (parsed_query.type) {
       case http_query_type::append: {
-        requers_handler_inner::append_query(_storage_engine, parsed_query, rep, this->_clientmanager);
+        requers_handler_inner::append_query(_storage_engine, parsed_query, rep,
+                                            this->_clientmanager);
         return;
       }
       case http_query_type::readInterval: {

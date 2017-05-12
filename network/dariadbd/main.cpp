@@ -61,7 +61,8 @@ int main(int argc, char **argv) {
                "allocation area limit  in megabytes when strategy=MEMORY");
   stor_options("force-unlock", "force unlock storage.");
   stor_options("use-shards", "use shard engine.");
-  stor_options("memory-only-raw", "raw values stored only in memory (when shard engine enabled).");
+  stor_options("memory-only-raw",
+               "raw values stored only in memory (when shard engine enabled).");
   desc.add(storage_params);
 
   po::options_description server_params("Server params");

@@ -157,9 +157,9 @@ TEST(Common, ManifestFileTest) {
 
     auto loaded_wal_names = manifest->wal_list(dariadb::Id(0));
     EXPECT_EQ(loaded_wal_names.size(), size_t(1));
-	loaded_wal_names = manifest->wal_list(dariadb::Id(1));
+    loaded_wal_names = manifest->wal_list(dariadb::Id(1));
     EXPECT_EQ(loaded_wal_names.size(), size_t(1));
-	loaded_wal_names = manifest->wal_list(dariadb::Id(2));
+    loaded_wal_names = manifest->wal_list(dariadb::Id(2));
     EXPECT_EQ(loaded_wal_names.size(), size_t(1));
 
     manifest = nullptr;

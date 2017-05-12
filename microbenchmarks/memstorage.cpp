@@ -2,14 +2,12 @@
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/utils/async/thread_manager.h>
 
-
-#include <benchmark/benchmark_api.h>
 #include "common.h"
-
+#include <benchmark/benchmark_api.h>
 
 class Memstorage : public benchmark::Fixture {
   virtual void SetUp(const ::benchmark::State &) {
-	  microbenchmark_common::replace_std_logger();
+    microbenchmark_common::replace_std_logger();
     settings = dariadb::storage::Settings::create();
     settings->chunk_size.setValue(10);
     auto _engine_env = dariadb::storage::EngineEnvironment::create();

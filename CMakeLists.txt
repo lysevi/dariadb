@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.1)
 set(PROJECT "dariadb")
-project (${PROJECT} VERSION 0.4.0)
+project (${PROJECT} VERSION 0.5.0)
 
 IF(NOT CMAKE_BUILD_TYPE)
         message(STATUS "CMAKE_BUILD_TYPE is not set, set to default = RELWITHDEBINFO")

@@ -138,7 +138,6 @@ TEST(Statistic, Minimum) {
   EXPECT_EQ(median->apply(ma).time, m.time);
 }
 
-
 TEST(Statistic, Maximum) {
   using namespace dariadb::statistic;
   check_function_factory({"maximum"});

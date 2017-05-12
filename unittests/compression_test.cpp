@@ -298,8 +298,7 @@ TEST(Compression, XorCompressorV2Test) {
     dc.append(t1);
     EXPECT_TRUE(!dc._is_first);
     EXPECT_EQ(dariadb::compression::inner::flat_int_to_double(dc._first), t1);
-    EXPECT_EQ(dariadb::compression::inner::flat_int_to_double(dc._prev_value),
-                      t1);
+    EXPECT_EQ(dariadb::compression::inner::flat_int_to_double(dc._prev_value), t1);
   }
 
   { // cur==prev

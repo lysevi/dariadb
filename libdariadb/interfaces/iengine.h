@@ -55,7 +55,7 @@ public:
 
   EXPORT virtual void setScheme(const scheme::IScheme_Ptr &scheme);
   EXPORT virtual scheme::IScheme_Ptr getScheme();
-  
+
   scheme::IScheme_Ptr _scheme;
 };
 

@@ -67,7 +67,6 @@ struct BenchmarkParams {
 dariadb::Id get_id_from(BenchmarkParams params, dariadb::Id id);
 dariadb::Id get_id_to(BenchmarkParams params, dariadb::Id id);
 
-
 class BenchmarkLogger : public dariadb::utils::ILogger {
 public:
   std::atomic<uint64_t> _calls;

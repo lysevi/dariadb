@@ -7,8 +7,8 @@
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/scheme/scheme.h>
-#include <libdariadb/timeutil.h>
 #include <libdariadb/statistic/calculator.h>
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/exception.h>
 #include <libdariadb/utils/fs.h>
@@ -235,30 +235,30 @@ int main(int argc, char **argv) {
   auto read_end = clock();
   c->disconnect();
 
-  double statistic_total_elapsed=0;
+  double statistic_total_elapsed = 0;
   if (http_benchmark) {
     auto name_map = engine->getScheme()->ls();
     boost::asio::io_service test_service;
-    auto http_port=std::to_string(server_http_port);
-    for(auto n:name_map){
-        using nlohmann::json;
-        json stat_js;
-        stat_js["type"] = "statistic";
-        stat_js["id"] = n.second.name;
-        stat_js["from"] = dariadb::MIN_TIME;
-        stat_js["to"] = dariadb::MAX_TIME;
-        stat_js["flag"] = dariadb::Flag();
-        stat_js["functions"] = dariadb::statistic::FunctionFactory::functions();
-        auto stat_query=stat_js.dump(1);
-        dariadb::utils::ElapsedTime et;
-        auto post_result = net::http::POST(test_service, http_port, stat_query);
-        if (post_result.code != 200) {
-          THROW_EXCEPTION("http result is not ok.");
-        }
-        auto el = et.elapsed();
-        statistic_total_elapsed+=el;
+    auto http_port = std::to_string(server_http_port);
+    for (auto n : name_map) {
+      using nlohmann::json;
+      json stat_js;
+      stat_js["type"] = "statistic";
+      stat_js["id"] = n.second.name;
+      stat_js["from"] = dariadb::MIN_TIME;
+      stat_js["to"] = dariadb::MAX_TIME;
+      stat_js["flag"] = dariadb::Flag();
+      stat_js["functions"] = dariadb::statistic::FunctionFactory::functions();
+      auto stat_query = stat_js.dump(1);
+      dariadb::utils::ElapsedTime et;
+      auto post_result = net::http::POST(test_service, http_port, stat_query);
+      if (post_result.code != 200) {
+        THROW_EXCEPTION("http result is not ok.");
+      }
+      auto el = et.elapsed();
+      statistic_total_elapsed += el;
     }
-    statistic_total_elapsed/=name_map.size();
+    statistic_total_elapsed /= name_map.size();
   }
   if (run_server_flag) {
     server_instance->stop();
@@ -285,7 +285,8 @@ int main(int argc, char **argv) {
   std::cout << "read speed: "
             << result.size() / (((float)read_end - read_start) / CLOCKS_PER_SEC)
             << " per sec." << std::endl;
-  std::cout << "average statistic time: " << statistic_total_elapsed << " sec." << std::endl;
+  std::cout << "average statistic time: " << statistic_total_elapsed << " sec."
+            << std::endl;
   std::cout << "readed:" << result.size() << std::endl;
 
   if (result.size() != MEASES_SIZE * clients_count * SEND_COUNT) {

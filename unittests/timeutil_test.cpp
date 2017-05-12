@@ -73,13 +73,13 @@ TEST(Time, IntervalFromString) {
     EXPECT_EQ(dt.month, uint8_t(2));
   }
   {
-	  auto hh = dariadb::timeutil::intervalName2time("year");
-	  auto dt = dariadb::timeutil::to_datetime(hh);
-	  EXPECT_EQ(dt.year, uint16_t(1971));
-	  EXPECT_EQ(dt.minute, uint8_t(0));
-	  EXPECT_EQ(dt.hour, uint8_t(0));
-	  EXPECT_EQ(dt.day, uint8_t(1));
-	  EXPECT_EQ(dt.month, uint8_t(1));
+    auto hh = dariadb::timeutil::intervalName2time("year");
+    auto dt = dariadb::timeutil::to_datetime(hh);
+    EXPECT_EQ(dt.year, uint16_t(1971));
+    EXPECT_EQ(dt.minute, uint8_t(0));
+    EXPECT_EQ(dt.hour, uint8_t(0));
+    EXPECT_EQ(dt.day, uint8_t(1));
+    EXPECT_EQ(dt.month, uint8_t(1));
   }
 }
 
@@ -265,25 +265,24 @@ TEST(Time, TargetInterval) {
     EXPECT_EQ(result_dt.millisecond, 0);
   }
 
-
   {
-	  auto to_hr = target_interval("year", time_dt);
+    auto to_hr = target_interval("year", time_dt);
 
-	  auto result_dt = to_datetime(to_hr.second);
-	  EXPECT_EQ(result_dt.year, dt.year);
-	  EXPECT_EQ(result_dt.month, 12);
-	  EXPECT_EQ(result_dt.day, 31);
-	  EXPECT_EQ(result_dt.hour, 23);
-	  EXPECT_EQ(result_dt.minute, 59);
-	  EXPECT_EQ(result_dt.second, 59);
-	  EXPECT_EQ(result_dt.millisecond, 999);
+    auto result_dt = to_datetime(to_hr.second);
+    EXPECT_EQ(result_dt.year, dt.year);
+    EXPECT_EQ(result_dt.month, 12);
+    EXPECT_EQ(result_dt.day, 31);
+    EXPECT_EQ(result_dt.hour, 23);
+    EXPECT_EQ(result_dt.minute, 59);
+    EXPECT_EQ(result_dt.second, 59);
+    EXPECT_EQ(result_dt.millisecond, 999);
 
-	  result_dt = to_datetime(to_hr.first);
-	  EXPECT_EQ(result_dt.month, 1);
-	  EXPECT_EQ(result_dt.day, 1);
-	  EXPECT_EQ(result_dt.hour, 0);
-	  EXPECT_EQ(result_dt.minute, 0);
-	  EXPECT_EQ(result_dt.second, 0);
-	  EXPECT_EQ(result_dt.millisecond, 0);
+    result_dt = to_datetime(to_hr.first);
+    EXPECT_EQ(result_dt.month, 1);
+    EXPECT_EQ(result_dt.day, 1);
+    EXPECT_EQ(result_dt.hour, 0);
+    EXPECT_EQ(result_dt.minute, 0);
+    EXPECT_EQ(result_dt.second, 0);
+    EXPECT_EQ(result_dt.millisecond, 0);
   }
 }

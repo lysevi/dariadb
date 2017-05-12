@@ -153,8 +153,9 @@ public:
     auto all_intervals = timeutil::predefinedIntervals();
     bool is_interval_shard = false;
     auto interval_name = d.alias;
-    if (interval_name == "raw" || std::find(all_intervals.begin(), all_intervals.end(),
-                                            interval_name) != all_intervals.end()) {
+    if (interval_name == "raw" ||
+        std::find(all_intervals.begin(), all_intervals.end(), interval_name) !=
+            all_intervals.end()) {
       is_interval_shard = true;
     }
 

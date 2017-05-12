@@ -315,7 +315,7 @@ public:
     auto step_time = double(double(curT - lastStat) / (double)CLOCKS_PER_SEC);
     auto writes_per_sec = writed / step_time;
 
-	lastStat = curT;
+    lastStat = curT;
     stor_ss << "(p:" << queue_sizes.pages_count << " a:" << queue_sizes.wal_count
             << " T:" << queue_sizes.active_works;
     if (_env.storage->strategy() == dariadb::STRATEGY::MEMORY) {

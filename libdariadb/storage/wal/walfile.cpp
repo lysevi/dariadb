@@ -55,10 +55,10 @@ public:
   }
 
   void close() {
-	  if (_file != nullptr) {
-		  std::fclose(_file);
-		  _file = nullptr;
-	  }
+    if (_file != nullptr) {
+      std::fclose(_file);
+      _file = nullptr;
+    }
   }
 
   void open_to_append() {
@@ -100,7 +100,7 @@ public:
     _maxTime = std::max(_maxTime, value.time);
     _writed++;
     _idBloom = bloom_add<Id>(_idBloom, value.id);
-	close();
+    close();
     return Status(1);
   }
 
@@ -127,7 +127,7 @@ public:
       _idBloom = bloom_add<Id>(_idBloom, value.id);
     }
     _writed += write_size;
-	close();
+    close();
     return Status(write_size);
   }
 
@@ -316,7 +316,7 @@ public:
     if (result < _writed) {
       THROW_EXCEPTION("result < _writed");
     }
-	close();
+    close();
     _file = nullptr;
     return ma;
   }

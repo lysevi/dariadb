@@ -110,8 +110,9 @@ void parse_cmdline(int argc, char *argv[]) {
               po::value<size_t>(&benchmark_params.total_threads_count)
                   ->default_value(benchmark_params.total_threads_count),
               "write threads count");
-  aos_writers("freq", po::value<size_t>(&benchmark_params.freq_per_second)
-                          ->default_value(benchmark_params.freq_per_second));
+  aos_writers("freq",
+              po::value<size_t>(&benchmark_params.freq_per_second)
+                  ->default_value(benchmark_params.freq_per_second));
   desc.add(writers);
 
   po::variables_map vm;

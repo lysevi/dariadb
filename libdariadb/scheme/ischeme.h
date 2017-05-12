@@ -47,7 +47,6 @@ public:
   virtual DescriptionMap lsInterval(const std::string &interval) = 0;
   virtual DescriptionMap linkedForValue(const MeasurementDescription &param) = 0;
   virtual void save() = 0;
-  
 };
 
 using IScheme_Ptr = std::shared_ptr<IScheme>;

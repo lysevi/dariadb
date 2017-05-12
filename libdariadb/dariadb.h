@@ -17,7 +17,7 @@ namespace dariadb {
 /**
 autodetect engine type in folder and return instance.
 */
-EXPORT IEngine_Ptr open_storage(const std::string &path, bool force_unlock=false);
+EXPORT IEngine_Ptr open_storage(const std::string &path, bool force_unlock = false);
 /**
 create memory only storage.
 */

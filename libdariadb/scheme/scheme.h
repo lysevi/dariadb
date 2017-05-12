@@ -24,10 +24,11 @@ public:
 
   EXPORT Id addParam(const std::string &param) override;
   EXPORT DescriptionMap ls() override;
-  EXPORT MeasurementDescription descriptionFor(dariadb::Id id)override;
-  EXPORT DescriptionMap lsInterval(const std::string&interval) override;
-  EXPORT DescriptionMap linkedForValue(const MeasurementDescription&param) override;
+  EXPORT MeasurementDescription descriptionFor(dariadb::Id id) override;
+  EXPORT DescriptionMap lsInterval(const std::string &interval) override;
+  EXPORT DescriptionMap linkedForValue(const MeasurementDescription &param) override;
   EXPORT void save();
+
 protected:
   EXPORT Scheme(const storage::Settings_ptr s);
   struct Private;

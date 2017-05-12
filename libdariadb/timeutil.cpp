@@ -62,8 +62,9 @@ Time from_datetime(const DateTime &dt) {
   using namespace boost::posix_time;
 
   date d(dt.year, (date::month_type)dt.month, dt.day);
-  ptime pt(d, hours(dt.hour) + minutes(dt.minute) + seconds(dt.second) +
-                  milliseconds(dt.millisecond));
+  ptime pt(d,
+           hours(dt.hour) + minutes(dt.minute) + seconds(dt.second) +
+               milliseconds(dt.millisecond));
   return from_ptime(pt);
 }
 

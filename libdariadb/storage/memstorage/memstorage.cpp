@@ -211,10 +211,10 @@ struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
                 timeutil::to_string(t), "]");
     utils::ElapsedTime et;
     size_t erased = 0;
-	TimeTrack_ptr target = nullptr;
-	if (_id2track.find(id, &target)) {
-		erased += target->drop_Old(t);
-	}
+    TimeTrack_ptr target = nullptr;
+    if (_id2track.find(id, &target)) {
+      erased += target->drop_Old(t);
+    }
     /*auto f = [t, &erased](const Id2Track::value_type &v) {
       erased += v.second->drop_Old(t);
     };

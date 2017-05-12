@@ -2,5 +2,3 @@
 
 using namespace dariadb;
 using namespace dariadb::aggregator;
-
-

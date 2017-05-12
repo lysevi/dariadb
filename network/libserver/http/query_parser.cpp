@@ -1,6 +1,6 @@
+#include <libdariadb/timeutil.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/timeutil.h>
 #include <libserver/http/query_parser.h>
 #include <extern/json/src/json.hpp>
 
@@ -70,7 +70,7 @@ read_single_meas(const dariadb::scheme::IScheme_Ptr &scheme, const json &js) {
   result->front().time = value["T"];
   result->front().flag = value["F"];
   result->front().value = value["V"];
-  //dariadb::logger("T:", dariadb::timeutil::to_string(result->front().time));
+  // dariadb::logger("T:", dariadb::timeutil::to_string(result->front().time));
   std::string id_str = value["I"];
   result->front().id = scheme->addParam(id_str);
   return result;
