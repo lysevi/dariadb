@@ -31,21 +31,21 @@ public:
   EXPORT dariadb::Time minTime();
   EXPORT dariadb::Time maxTime();
 
-  EXPORT void append_async(const std::string &file_prefix, const dariadb::SplitedById &ma,
+  EXPORT void append_async(const std::string &file_prefix, const dariadb::MeasArray &ma,
                            on_create_complete_callback callback);
   EXPORT void appendChunks(const std::vector<Chunk *> &a) override;
 
   EXPORT void fsck();
 
-  EXPORT void eraseOld(const Time t);
+  EXPORT void eraseOld(const dariadb::Id id, const Time t);
   EXPORT void erase_page(const std::string &fname);
   EXPORT static void erase(const std::string &storage_path, const std::string &fname);
-  EXPORT void repack();
+  EXPORT void repack(const dariadb::Id id);
   EXPORT Id2MinMax_Ptr loadMinMax();
 
   EXPORT void compact(ICompactionController *logic);
 
-  EXPORT std::list<std::string> pagesOlderThan(Time t);
+  EXPORT std::list<std::string> pagesOlderThan(const dariadb::Id id, const Time t);
 
 protected:
   EXPORT PageManager(const EngineEnvironment_ptr env);

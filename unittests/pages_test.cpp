@@ -53,12 +53,12 @@ TEST(PageManager, ReadWriteWithContinue) {
     first.id = 1;
     first.time = t;
     auto count = chunks_size * 2;
-    dariadb::SplitedById ma;
+    dariadb::MeasArray ma;
     for (size_t i = 0; i < count; i++, t++) {
       first.flag = dariadb::Flag(i);
       first.time = t;
       first.value = dariadb::Value(i);
-      ma[first.id].push_back(first);
+      ma.push_back(first);
       addeded.push_back(first);
     }
     bool complete = false;
@@ -141,12 +141,12 @@ TEST(PageManager, MultiPageRead) {
     first.id = 1;
     first.time = t;
     auto count = chunks_size / 10;
-    dariadb::SplitedById ma;
+    dariadb::MeasArray ma;
     for (size_t i = 0; i < count; i++, t++) {
       first.flag = dariadb::Flag(i);
       first.time = t;
       first.value = dariadb::Value(i);
-      ma[first.id].push_back(first);
+      ma.push_back(first);
       addeded.push_back(first);
     }
     std::stringstream ss;
@@ -197,7 +197,7 @@ TEST(PageManager, MultiPageRead) {
   auto page_before_erase =
       dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::PAGE_FILE_EXT)
           .size();
-  pm->eraseOld(addeded.back().time);
+  pm->eraseOld(addeded.back().id, addeded.back().time);
   auto page_after_erase =
       dariadb::utils::fs::ls(settings->raw_path.value(), dariadb::storage::PAGE_FILE_EXT)
           .size();
@@ -238,10 +238,10 @@ TEST(PageManager, BulkWrite) {
 
   auto start_time = dariadb::Time(0);
   dariadb_test::MeasesList addeded;
-  const dariadb::Id id_count(5);
+  const dariadb::Id id_count(1);
   dariadb::IdSet all_id_set;
   size_t count = 5000;
-  dariadb::SplitedById a;
+  std::map<dariadb::Id, dariadb::MeasArray> a;
   auto e = dariadb::Meas();
   for (size_t i = 0; i < count; i++) {
     e.id = i % id_count;
@@ -253,7 +253,10 @@ TEST(PageManager, BulkWrite) {
   }
   std::string page_file_prefix = "page_prefix";
   bool complete = false;
-  pm->append_async(page_file_prefix, a, [&complete](auto p) { complete = true; });
+  for (auto kv : a) {
+    pm->append_async(page_file_prefix, kv.second,
+                     [&complete](auto p) { complete = true; });
+  }
   while (!complete) {
     dariadb::utils::sleep_mls(100);
   }
@@ -338,7 +341,7 @@ TEST(PageManager, Repack) {
   auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   size_t count = 100;
-  dariadb::SplitedById a;
+  dariadb::MeasArray a;
   /**
   Id=0 =>  0, count
   Id=1 =>  0, count
@@ -350,7 +353,7 @@ TEST(PageManager, Repack) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i);
-    a[e.id].push_back(e);
+    a.push_back(e);
   }
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
@@ -360,12 +363,13 @@ TEST(PageManager, Repack) {
     dariadb::utils::sleep_mls(100);
   }
 
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
     e.id = 1;
     e.time++;
     e.value = dariadb::Value(i);
-    a[e.id].push_back(e);
+    a.push_back(e);
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
@@ -375,12 +379,13 @@ TEST(PageManager, Repack) {
     dariadb::utils::sleep_mls(100);
   }
 
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count / 2; i++) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i) * 3;
-    a[e.id].push_back(e);
+    a.push_back(e);
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";
@@ -406,10 +411,10 @@ TEST(PageManager, Repack) {
     EXPECT_GE(clb->marray.size(), count);
   }
 
-  auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-  pm->repack();
-  auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-  EXPECT_LT(pages_after, pages_before);
+  auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page");
+  pm->repack(dariadb::Id(0));
+  auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page");
+  EXPECT_LT(pages_after.size(), pages_before.size());
   { // id==0
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);
 
@@ -441,14 +446,13 @@ TEST(PageManager, Repack) {
 
 class RmAllCompaction : public dariadb::ICompactionController {
 public:
-  RmAllCompaction(dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactionController(dariadb::MAX_TIME, from, to) {}
+  RmAllCompaction(dariadb::Id id, dariadb::Time from, dariadb::Time to)
+      : dariadb::ICompactionController(id, dariadb::MAX_TIME, from, to) {}
 
   void compact(dariadb::MeasArray &values, std::vector<int> &filter) override {
     EXPECT_TRUE(values.size() == filter.size());
 
     for (size_t i = 0; i < values.size(); ++i) {
-
       filter[i] = int(0);
     }
   }
@@ -456,8 +460,8 @@ public:
 
 class TestCompaction : public dariadb::ICompactionController {
 public:
-  TestCompaction(dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactionController(dariadb::MAX_TIME, from, to) {
+  TestCompaction(dariadb::Id id, dariadb::Time from, dariadb::Time to)
+      : dariadb::ICompactionController(id, dariadb::MAX_TIME, from, to) {
     calls = 0;
   }
 
@@ -501,7 +505,7 @@ TEST(PageManager, Compact) {
   auto pm = dariadb::storage::PageManager::create(_engine_env);
 
   size_t count = 100;
-  dariadb::SplitedById a;
+  dariadb::MeasArray a;
   /**
   Id=0 =>  0, count
   Id=1 =>  0, count
@@ -513,7 +517,7 @@ TEST(PageManager, Compact) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i);
-    a[e.id].push_back(e);
+    a.push_back(e);
   }
   std::string page_file_prefix1 = "page_prefix1";
   std::string page_file1 = page_file_prefix1 + ".page";
@@ -522,12 +526,13 @@ TEST(PageManager, Compact) {
   while (!complete) {
     dariadb::utils::sleep_mls(100);
   }
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count; i++) {
     e.id = 1;
     e.time++;
     e.value = dariadb::Value(i);
-    a[e.id].push_back(e);
+    a.push_back(e);
   }
   std::string page_file_prefix2 = "page_prefix2";
   std::string page_file2 = page_file_prefix2 + ".page";
@@ -537,13 +542,13 @@ TEST(PageManager, Compact) {
   while (!complete) {
     dariadb::utils::sleep_mls(100);
   }
-
+  a.clear();
   e.time = 0;
   for (size_t i = 0; i < count / 2; i++) {
     e.id = 0;
     e.time++;
     e.value = dariadb::Value(i) * 3;
-    a[e.id].push_back(e);
+    a.push_back(e);
   }
   std::string page_file_prefix3 = "page_prefix3";
   std::string page_file3 = page_file_prefix3 + ".page";
@@ -569,16 +574,24 @@ TEST(PageManager, Compact) {
 
     EXPECT_GE(clb->marray.size(), count);
   }
-  auto compaction_logic =
-      std::make_unique<TestCompaction>(dariadb::Time(0), dariadb::Time(count / 2));
+  {
+    auto compaction_logic_0 = std::make_unique<TestCompaction>(
+        dariadb::Id(0), dariadb::Time(0), dariadb::Time(count / 2));
 
-  auto pages_before = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-  pm->compact(compaction_logic.get());
+    auto compaction_logic_1 = std::make_unique<TestCompaction>(
+        dariadb::Id(1), dariadb::Time(1), dariadb::Time(count / 2));
 
-  EXPECT_TRUE(compaction_logic->calls == size_t(2));
+    auto pages_before =
+        dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
+    pm->compact(compaction_logic_0.get());
+    pm->compact(compaction_logic_1.get());
 
-  auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
-  EXPECT_LT(pages_after, pages_before);
+    EXPECT_TRUE(compaction_logic_0->calls == size_t(1));
+    EXPECT_TRUE(compaction_logic_1->calls == size_t(1));
+
+    auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page").size();
+    EXPECT_LT(pages_after, pages_before);
+  }
   { // id==0
     dariadb::QueryInterval qi({0}, 0, 0, dariadb::MAX_TIME);
 
@@ -604,10 +617,13 @@ TEST(PageManager, Compact) {
     }
   }
   {
-    auto compaction_logic =
-        std::make_unique<RmAllCompaction>(dariadb::Time(0), dariadb::Time(count / 2));
+    auto compaction_logic_0 = std::make_unique<RmAllCompaction>(
+        dariadb::Id(0), dariadb::Time(0), dariadb::Time(count / 2));
+    auto compaction_logic_1 = std::make_unique<RmAllCompaction>(
+        dariadb::Id(1), dariadb::Time(0), dariadb::Time(count / 2));
 
-    pm->compact(compaction_logic.get());
+    pm->compact(compaction_logic_0.get());
+    pm->compact(compaction_logic_1.get());
 
     auto pages_after = dariadb::utils::fs::ls(settings->raw_path.value(), ".page");
     EXPECT_TRUE(pages_after.empty());

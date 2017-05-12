@@ -11,11 +11,12 @@ namespace scheme {
 
 /***
 example:
--   'host1.system.memory'
--   'host1.system.cpu.bySec'
--   'host1.system.cpu.byHour'
--   query 'host1.system.*',
-return [host1.system.memory, host1.system.cpu.bySec, host1.system.cpu.byHour]
+* memory.raw
+* memory.median.hour
+* memory.sigma.hour
+* memory.sigma.'T\d{19}'
+* memory.median.day
+* memory.median.month
 */
 class Scheme : public IScheme {
 public:
@@ -23,6 +24,9 @@ public:
 
   EXPORT Id addParam(const std::string &param) override;
   EXPORT DescriptionMap ls() override;
+  EXPORT MeasurementDescription descriptionFor(dariadb::Id id) override;
+  EXPORT DescriptionMap lsInterval(const std::string &interval) override;
+  EXPORT DescriptionMap linkedForValue(const MeasurementDescription &param) override;
   EXPORT void save();
 
 protected:

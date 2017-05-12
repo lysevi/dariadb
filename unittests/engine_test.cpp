@@ -23,10 +23,6 @@ void test_statistic_on_engine(dariadb::IEngine_Ptr &storage) {
                            dariadb::Flag(), all_functions);
 
   EXPECT_EQ(result.size(), all_functions.size());
-  for (size_t i = 0; i < all_functions.size() - 1; ++i) {
-    auto m = result[i];
-    EXPECT_TRUE(m.value != dariadb::Value());
-  }
 }
 
 TEST(Engine, Common_test) {
@@ -44,8 +40,8 @@ TEST(Engine, Common_test) {
     }
 
     auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->wal_cache_size.setValue(100);
-    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
+    settings->wal_cache_size.setValue(size_t(90));
+    settings->wal_file_size.setValue(size_t(80));
     settings->chunk_size.setValue(chunk_size);
     dariadb::IEngine_Ptr ms{new Engine(settings)};
 
@@ -91,18 +87,11 @@ TEST(Engine, Common_test) {
     auto current = ms->currentValue(dariadb::IdArray{}, 0);
     EXPECT_TRUE(current.size() != size_t(0));
 
-    dariadb::logger_info("erase old files");
-    ms->settings()->max_store_period.setValue(1);
-    while (true) {
-      auto index_files = dariadb::utils::fs::ls(settings->raw_path.value(), ".pagei");
-      if (index_files.empty()) {
-        break;
-      }
-      dariadb::logger_info("file left:");
-      for (auto i : index_files) {
-        dariadb::logger_info(i);
-      }
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
     }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -199,7 +188,12 @@ TEST(Engine, MemStorage_common_test) {
 
     auto pages_count = ms->description().pages_count;
     EXPECT_GE(pages_count, size_t(2));
-    ms->settings()->max_store_period.setValue(1);
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      auto values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -227,17 +221,12 @@ TEST(Engine, MemOnlyStorage_common_test) {
 
     auto pages_count = ms->description().pages_count;
     EXPECT_EQ(pages_count, size_t(0));
-    ms->settings()->max_store_period.setValue(1);
-    while (true) {
-      dariadb::QueryInterval qi({dariadb::Id(0)}, dariadb::Flag(), from, to);
-      auto values = ms->readInterval(qi);
-      if (values.empty()) {
-        break;
-      } else {
-        dariadb::logger_info("values !empty() ", values.size());
 
-        dariadb::utils::sleep_mls(500);
-      }
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      auto values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
     }
   }
 }
@@ -262,7 +251,8 @@ TEST(Engine, Cache_common_test) {
     settings->strategy.setValue(STRATEGY::CACHE);
     settings->chunk_size.setValue(chunk_size);
     settings->memory_limit.setValue(50 * 1024);
-    settings->wal_file_size.setValue(2000);
+    settings->wal_file_size.setValue(50);
+    settings->wal_cache_size.setValue(70);
     dariadb::IEngine_Ptr ms{new Engine(settings)};
 
     dariadb_test::storage_test_check(ms.get(), from, to, step, true, true, false);
@@ -270,7 +260,13 @@ TEST(Engine, Cache_common_test) {
     test_statistic_on_engine(ms);
     auto descr = ms->description();
     EXPECT_GT(descr.pages_count, size_t(0));
-    ms->settings()->max_store_period.setValue(1);
+
+    {
+      ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      auto values = ms->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);

@@ -1,4 +1,5 @@
 # dariadb - numeric time-series database.
+
 # Continuous Integration
 
 |  version | build & tests | test coverage |
@@ -6,9 +7,12 @@
 | `master`   | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=master)](https://travis-ci.org/lysevi/dariadb) |  [![codecov](https://codecov.io/gh/lysevi/dariadb/branch/master/graph/badge.svg)](https://codecov.io/gh/lysevi/dariadb) |
 | `develop` | [![Build Status](https://travis-ci.org/lysevi/dariadb.svg?branch=dev)](https://travis-ci.org/lysevi/dariadb) | [![codecov](https://codecov.io/gh/lysevi/dariadb/branch/dev/graph/badge.svg)](https://codecov.io/gh/lysevi/dariadb) |
  
+
 # Features
+* True columnar storage
 * Can be used as a server application or an embedded library.
 * Full featured http api.
+* Golang client (see folders "go" and "examples/go")
 * Accept unordered data.
 * Each measurement contains:
   - Id - x32 unsigned integer value.
@@ -41,11 +45,15 @@
   - measurement count
   - values sum
 * Statistical functions: 
+  - minimum
+  - maximum
+  - count
   - average
   - median
   - sigma(standard deviation)
   - percentile90
   - percentile99
+* Interval aggregation support. Available intervals: raw,minute, half hour, hour, day, week, month, year.
 
 # Usage example
 - See folder "examples"
@@ -64,7 +72,7 @@
 ```shell
 $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update
-$ sudo apt-get install -y libboost-dev  libboost-coroutine-dev libboost-context-dev libboost-filesystem-dev libboost-test-dev libboost-program-options-dev libasio-dev libboost-log-dev libboost-regex-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6 
+$ sudo apt-get install -y libboost-dev  libboost-filesystem-dev libboost-program-options-dev libasio-dev libboost-date-time-dev cmake  g++-6  gcc-6 cpp-6 
 $ export CC="gcc-6"
 $ export CXX="g++-6"
 ```
@@ -92,7 +100,6 @@ $ git submodules update
 - **DARIADB_ASAN_UBSAN**  - Enable address & undefined behavior sanitizer for binary. - OFF
 - **DARIADB_MSAN** - Enable memory sanitizer for binary. - OFF
 - **DARIADB_SYSTEM_JEMALLOC** - Use jemalloc installed in the system. - ON
-- **DARIADB_ENABLE_TOOLS** - Build utility tools. - ON
 
 #### Configure to build with all benchmarks, but without tests and server.
 ---

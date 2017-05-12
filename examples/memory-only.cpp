@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   dariadb::utils::ILogger_ptr log_ptr{new QuietLogger()};
   dariadb::utils::LogManager::start(log_ptr);
 
-  auto storage=dariadb::memory_only_storage();
+  auto storage = dariadb::memory_only_storage();
   auto settings = storage->settings();
 
   auto scheme = dariadb::scheme::Scheme::create(settings);

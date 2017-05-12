@@ -35,58 +35,47 @@ bool have_overlap(const std::vector<ChunkLink> &links) {
 }
 
 std::shared_ptr<std::list<HdrAndBuffer>>
-compressValues(const std::map<Id, MeasArray> &to_compress, PageFooter &phdr,
-               uint32_t max_chunk_size) {
+compressValues(const MeasArray &to_compress, PageFooter &phdr, uint32_t max_chunk_size) {
   using namespace dariadb::utils::async;
   auto results = std::make_shared<std::list<HdrAndBuffer>>();
-  utils::async::Locker result_locker;
-  std::list<utils::async::TaskResult_Ptr> async_compressions;
-  for (auto &kv : to_compress) {
-    auto cur_Id = kv.first;
-    utils::async::AsyncTask at = [cur_Id, &results, &phdr, max_chunk_size, &result_locker,
-                                  &to_compress](const utils::async::ThreadInfo &ti) {
-      using namespace dariadb::utils::async;
-      TKIND_CHECK(dariadb::utils::async::THREAD_KINDS::COMMON, ti.kind);
-      auto fit = to_compress.find(cur_Id);
-      auto begin = fit->second.cbegin();
-      auto end = fit->second.cend();
-      auto it = begin;
+
+  utils::async::AsyncTask at = [&results, &phdr, max_chunk_size,
+                                &to_compress](const utils::async::ThreadInfo &ti) {
+    using namespace dariadb::utils::async;
+    TKIND_CHECK(dariadb::utils::async::THREAD_KINDS::COMMON, ti.kind);
+    auto begin = to_compress.cbegin();
+    auto end = to_compress.cend();
+    auto it = begin;
+    while (it != end) {
+      ChunkHeader hdr;
+      boost::shared_array<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
+      memset(buffer_ptr.get(), 0, max_chunk_size);
+      auto ch = Chunk::create(&hdr, buffer_ptr.get(), max_chunk_size, *it);
+      ++it;
       while (it != end) {
-        ChunkHeader hdr;
-        boost::shared_array<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
-        memset(buffer_ptr.get(), 0, max_chunk_size);
-        auto ch = Chunk::create(&hdr, buffer_ptr.get(), max_chunk_size, *it);
-        ++it;
-        while (it != end) {
-          if (!ch->append(*it)) {
-            break;
-          }
-          ++it;
+        if (!ch->append(*it)) {
+          break;
         }
-        ch->close();
-
-        result_locker.lock();
-        phdr.max_chunk_id++;
-
-        ch->header->id = phdr.max_chunk_id;
-
-        phdr.stat.update(ch->header->stat);
-
-        HdrAndBuffer subres;
-        subres.hdr = hdr;
-        subres.buffer = buffer_ptr;
-
-        results->push_back(subres);
-        result_locker.unlock();
+        ++it;
       }
-      return false;
-    };
-    auto cur_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at));
-    async_compressions.push_back(cur_async);
-  }
-  for (auto tr : async_compressions) {
-    tr->wait();
-  }
+      ch->close();
+
+      phdr.max_chunk_id++;
+
+      ch->header->id = phdr.max_chunk_id;
+
+      phdr.stat.update(ch->header->stat);
+
+      HdrAndBuffer subres;
+      subres.hdr = hdr;
+      subres.buffer = buffer_ptr;
+
+      results->push_back(subres);
+    }
+    return false;
+  };
+  auto cur_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(at));
+  cur_async->wait();
   return results;
 }
 
@@ -144,14 +133,14 @@ IndexReccord init_chunk_index_rec(const ChunkHeader &cheader, IndexFooter *ihead
   cur_index.chunk_id = cheader.id;
   cur_index.offset = cheader.offset_in_page;
 
-  iheader->id_bloom = storage::bloom_add(iheader->id_bloom, cheader.meas_id);
+  iheader->target_id = cheader.meas_id;
   iheader->recs_count++;
-  cur_index.meas_id = cheader.meas_id;
+  cur_index.target_id = cheader.meas_id;
   cur_index.stat = cheader.stat;
   ENSURE(cur_index.stat.minTime <= cur_index.stat.maxTime);
   ENSURE(cur_index.stat.minValue <= cur_index.stat.maxValue);
   return cur_index;
 }
-}
-}
-}
+} // namespace PageInner
+} // namespace storage
+} // namespace dariadb

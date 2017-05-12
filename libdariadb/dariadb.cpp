@@ -4,12 +4,12 @@
 #include <libdariadb/utils/fs.h>
 namespace dariadb {
 
-IEngine_Ptr open_storage(const std::string &path) {
+IEngine_Ptr open_storage(const std::string &path, bool force_unlock) {
   if (utils::fs::file_exists(utils::fs::append_path(path, SHARD_FILE_NAME))) {
-    return ShardEngine::create(path);
+    return ShardEngine::create(path, force_unlock);
   } else {
     auto settings = dariadb::storage::Settings::create(path);
-    IEngine_Ptr result{new Engine(settings)};
+    IEngine_Ptr result{new Engine(settings, true, force_unlock)};
     return result;
   }
 }

@@ -1,7 +1,5 @@
-#include <libdariadb/engines/engine.h>
-#include <libdariadb/meas.h>
-#include <libdariadb/scheme/scheme.h>
-#include <libdariadb/timeutil.h>
+#include <libdariadb/dariadb.h>
+#include <libdariadb/storage/manifest.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
@@ -26,11 +24,21 @@ ServerLogger::Params p;
 size_t memory_limit = 0;
 bool force_unlock_storage = false;
 bool memonly = false;
+bool init_and_stop = false;
+bool fsck = false;
+bool showinfo = false;
+bool use_shards = false;
+bool repack = false;
+bool raw_is_memonly = false;
 
 int main(int argc, char **argv) {
   po::options_description desc("Allowed options");
   auto aos = desc.add_options();
   aos("help", "produce help message");
+  aos("init", "init storage and stop.");
+  aos("fsck", "fsck storage and stop.");
+  aos("format", "show info about storage format and stop.");
+  aos("repack", "repack values from scheme and exit.");
 
   po::options_description logger_params("Logger params");
   auto log_options = logger_params.add_options();
@@ -52,6 +60,9 @@ int main(int argc, char **argv) {
                po::value<size_t>(&memory_limit)->default_value(memory_limit),
                "allocation area limit  in megabytes when strategy=MEMORY");
   stor_options("force-unlock", "force unlock storage.");
+  stor_options("use-shards", "use shard engine.");
+  stor_options("memory-only-raw",
+               "raw values stored only in memory (when shard engine enabled).");
   desc.add(storage_params);
 
   po::options_description server_params("Server params");
@@ -82,9 +93,28 @@ int main(int argc, char **argv) {
     std::exit(0);
   }
 
+  if (vm.count("init")) {
+    init_and_stop = true;
+  }
+
+  if (vm.count("fsck")) {
+    fsck = true;
+  }
+
+  if (vm.count("format")) {
+    showinfo = true;
+  }
+
+  if (vm.count("repack")) {
+    repack = true;
+  }
+
   if (vm.count("memory-only")) {
-    std::cout << "memory-only" << std::endl;
     memonly = true;
+  }
+
+  if (vm.count("memory-only-raw")) {
+    raw_is_memonly = true;
   }
 
   if (vm.count("log-to-file")) {
@@ -100,38 +130,88 @@ int main(int argc, char **argv) {
   }
 
   if (vm.count("force-unlock")) {
-    dariadb::logger_info("Force unlock storage.");
     force_unlock_storage = true;
+  }
+
+  if (vm.count("use-shards")) {
+    use_shards = true;
   }
 
   dariadb::utils::ILogger_ptr log_ptr{new ServerLogger(p)};
   dariadb::utils::LogManager::start(log_ptr);
+
+  if (showinfo) {
+    if (!dariadb::utils::fs::path_exists(storage_path)) {
+      std::cerr << "path not exists" << std::endl;
+      return 1;
+    }
+    auto settings = dariadb::storage::Settings::create(storage_path);
+    auto m = dariadb::storage::Manifest::create(settings);
+    std::cout << "format version: " << m->get_format() << std::endl;
+    return 0;
+  }
 
   std::stringstream ss;
   ss << "cmdline: ";
   for (int i = 0; i < argc; ++i) {
     ss << argv[i] << " ";
   }
-
   log_ptr->message(dariadb::utils::LOG_MESSAGE_KIND::INFO, ss.str());
+
+  IEngine_Ptr stor;
   dariadb::storage::Settings_ptr settings;
-  if (!memonly) {
-    settings = dariadb::storage::Settings::create(storage_path);
-    settings->strategy.setValue(strategy);
+
+  bool is_exists = dariadb::utils::fs::path_exists(storage_path);
+  if (!is_exists) {
+
+    if (!memonly) {
+      settings = dariadb::storage::Settings::create(storage_path);
+      settings->strategy.setValue(strategy);
+      settings->save();
+    } else {
+      settings = dariadb::storage::Settings::create();
+    }
+
+    if (strategy == STRATEGY::MEMORY && memory_limit != 0 && !memonly) {
+      logger_info("memory limit: ", memory_limit);
+      settings->memory_limit.setValue(memory_limit * 1024 * 1024);
+    }
+    settings->save();
+
+    if (use_shards) {
+      stor = ShardEngine::create(storage_path, force_unlock_storage);
+    } else {
+      stor = IEngine_Ptr{new Engine(settings, true, force_unlock_storage)};
+    }
+
+    if (init_and_stop) {
+      stor->stop();
+      return 0;
+    }
   } else {
-    settings = dariadb::storage::Settings::create();
+    stor = dariadb::open_storage(storage_path, force_unlock_storage);
+    settings = stor->settings();
   }
+  auto scheme = dariadb::scheme::Scheme::create(stor->settings());
 
-  if (strategy == STRATEGY::MEMORY && memory_limit != 0 && !memonly) {
-    logger_info("memory limit: ", memory_limit);
-    settings->memory_limit.setValue(memory_limit * 1024 * 1024);
-  }
-  settings->save();
-
-  auto scheme = dariadb::scheme::Scheme::create(settings);
-
-  IEngine_Ptr stor{new Engine(settings, true, force_unlock_storage)};
   stor->setScheme(scheme);
+
+  if (settings->raw_is_memonly.value() != raw_is_memonly) {
+    settings->raw_is_memonly.setValue(raw_is_memonly);
+    settings->save();
+  }
+
+  if (repack) {
+    stor->repack(scheme);
+    return 0;
+  }
+
+  if (fsck) {
+    stor->fsck();
+    return 0;
+  }
+
+  auto aggregator = std::make_shared<aggregator::Aggregator>(stor);
 
   dariadb::net::Server::Param server_param(server_port, server_http_port,
                                            server_threads_count);
@@ -139,4 +219,5 @@ int main(int argc, char **argv) {
   s.set_storage(stor);
 
   s.start();
+  aggregator = nullptr;
 }

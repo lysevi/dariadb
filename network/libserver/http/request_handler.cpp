@@ -14,10 +14,12 @@ using namespace dariadb::net::http;
 request_handler::request_handler() : _storage_engine(nullptr) {}
 
 namespace requers_handler_inner {
-void append_query(dariadb::IEngine_Ptr storage_engine, const http_query &q, reply &rep) {
+void append_query(dariadb::IEngine_Ptr storage_engine, const http_query &q, reply &rep,
+                  dariadb::net::IClientManager *cm) {
   dariadb::logger("POST query 'append': ", q.append_query->size(), " values");
 
   auto status = storage_engine->append(q.append_query->begin(), q.append_query->end());
+  cm->addWritedCount(q.append_query->size());
   rep = reply::stock_reply(status2string(status), reply::status_type::ok);
 
   dariadb::logger("POST 'append' end.");
@@ -28,8 +30,8 @@ void interval_query(dariadb::scheme::IScheme_Ptr scheme,
                     reply &rep) {
 
   dariadb::logger("POST query 'readInterval' from:",
-                  dariadb::timeutil::to_string(q.interval_query->from), " to:",
-                  dariadb::timeutil::to_string(q.interval_query->to));
+                  dariadb::timeutil::to_string(q.interval_query->from),
+                  " to:", dariadb::timeutil::to_string(q.interval_query->to));
 
   auto values = storage_engine->readInterval(*q.interval_query.get());
   rep = reply::stock_reply(meases2string(scheme, values), reply::status_type::ok);
@@ -56,9 +58,9 @@ void stat_query(dariadb::scheme::IScheme_Ptr scheme, dariadb::IEngine_Ptr storag
   auto id = q.stat_query->ids[0];
   auto from = q.stat_query->from;
   auto to = q.stat_query->to;
-  dariadb::logger("POST query 'stat' - id:", id, " from:",
-                  dariadb::timeutil::to_string(from), " to:",
-                  dariadb::timeutil::to_string(to));
+  dariadb::logger("POST query 'stat' - id:", id,
+                  " from:", dariadb::timeutil::to_string(from),
+                  " to:", dariadb::timeutil::to_string(to));
 
   auto stat = storage_engine->stat(id, from, to);
   rep = reply::stock_reply(stat2string(scheme, id, stat), reply::status_type::ok);
@@ -72,6 +74,7 @@ void scheme_change_query(dariadb::scheme::IScheme_Ptr scheme, const http_query &
     dariadb::logger_info("http: add to scheme '", v, "' = ", id);
     new_names.push_back(std::make_pair(v, id));
   }
+  scheme->save();
   rep = reply::stock_reply(newScheme2string(new_names), reply::status_type::ok);
 }
 
@@ -81,8 +84,8 @@ void statistic_calculation_query(dariadb::scheme::IScheme_Ptr scheme,
 
   auto interval = q.statistic_calc->interval;
   dariadb::logger("POST query 'statistic calculation' from:",
-                  dariadb::timeutil::to_string(interval.from), " to:",
-                  dariadb::timeutil::to_string(interval.to));
+                  dariadb::timeutil::to_string(interval.from),
+                  " to:", dariadb::timeutil::to_string(interval.to));
 
   dariadb::statistic::Calculator calc(storage_engine);
   auto result = calc.apply(interval.ids[0], interval.from, interval.to, interval.flag,
@@ -93,6 +96,15 @@ void statistic_calculation_query(dariadb::scheme::IScheme_Ptr scheme,
       reply::status_type::ok);
 }
 
+void erase_query(dariadb::IEngine_Ptr storage_engine, const http_query &q, reply &rep) {
+  auto interval = q.erase_old;
+  dariadb::logger("POST query 'erase old' to:",
+                  dariadb::timeutil::to_string(interval->to));
+
+  storage_engine->eraseOld(interval->ids.front(), interval->to);
+
+  rep = reply::stock_reply("", reply::status_type::ok);
+}
 } // namespace requers_handler_inner
 
 void request_handler::handle_request(const request &req, reply &rep) {
@@ -116,7 +128,8 @@ void request_handler::handle_request(const request &req, reply &rep) {
 
       switch (parsed_query.type) {
       case http_query_type::append: {
-        requers_handler_inner::append_query(_storage_engine, parsed_query, rep);
+        requers_handler_inner::append_query(_storage_engine, parsed_query, rep,
+                                            this->_clientmanager);
         return;
       }
       case http_query_type::readInterval: {
@@ -139,6 +152,10 @@ void request_handler::handle_request(const request &req, reply &rep) {
       case http_query_type::statistic: {
         requers_handler_inner::statistic_calculation_query(scheme, _storage_engine,
                                                            parsed_query, rep);
+        return;
+      }
+      case http_query_type::erase: {
+        requers_handler_inner::erase_query(_storage_engine, parsed_query, rep);
         return;
       }
       default: {

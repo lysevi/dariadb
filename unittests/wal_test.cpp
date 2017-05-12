@@ -64,7 +64,7 @@ TEST(Wal, FileInitTest) {
 
   dariadb::IdSet id_set;
   {
-    auto wal = dariadb::storage::WALFile::create(_engine_env);
+    auto wal = dariadb::storage::WALFile::create(_engine_env, 0);
 
     wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     EXPECT_EQ(wal_files.size(), size_t(0));
@@ -151,7 +151,7 @@ TEST(Wal, FileCommonTest) {
 
     auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     EXPECT_TRUE(wal_files.size() == size_t(0));
-    auto wal = dariadb::storage::WALFile::create(_engine_env);
+    auto wal = dariadb::storage::WALFile::create(_engine_env, 0);
 
     dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false, false, false);
     manifest = nullptr;
@@ -164,7 +164,7 @@ TEST(Wal, FileCommonTest) {
 
 TEST(Wal, Manager_CommonTest) {
   const std::string storagePath = "testStorage";
-  const size_t max_size = 150;
+  const size_t max_size = 70;
   const dariadb::Time from = 0;
   const dariadb::Time to = from + 1021;
   const dariadb::Time step = 10;
@@ -175,9 +175,9 @@ TEST(Wal, Manager_CommonTest) {
   dariadb::utils::fs::mkdir(storagePath);
   {
     auto settings = dariadb::storage::Settings::create(storagePath);
-    settings->wal_file_size.setValue(max_size);
+    settings->wal_file_size.setValue(size_t(50));
     settings->wal_cache_size.setValue(max_size);
-
+    settings->save();
     auto manifest = dariadb::storage::Manifest::create(settings);
 
     auto _engine_env = dariadb::storage::EngineEnvironment::create();
@@ -197,7 +197,6 @@ TEST(Wal, Manager_CommonTest) {
   }
   {
     auto settings = dariadb::storage::Settings::create(storagePath);
-    settings->wal_file_size.setValue(max_size);
 
     auto manifest = dariadb::storage::Manifest::create(settings);
 

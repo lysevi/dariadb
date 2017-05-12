@@ -100,8 +100,6 @@ struct MeasMinMax {
 };
 
 using MeasArray = std::vector<Meas>;
-using SplitedById = std::map<Id, MeasArray>;
-// using MeasList = std::deque<Meas>;
 /// used in readTimePoint queries.
 using Id2Meas = std::unordered_map<Id, Meas>;
 /// sorted by time.

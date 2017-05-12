@@ -19,7 +19,8 @@ enum class http_query_type {
   readTimepoint,
   stat,
   scheme,
-  statistic
+  statistic,
+  erase
 };
 
 struct scheme_change_query {
@@ -41,6 +42,7 @@ struct http_query {
   std::shared_ptr<QueryInterval> stat_query;
   std::shared_ptr<scheme_change_query> scheme_query;
   std::shared_ptr<statistic_calculation> statistic_calc;
+  std::shared_ptr<QueryInterval> erase_old;
 };
 
 SRV_EXPORT http_query parse_query(const dariadb::scheme::IScheme_Ptr &scheme,

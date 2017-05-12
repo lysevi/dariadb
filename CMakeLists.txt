@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.1)
 set(PROJECT "dariadb")
-project (${PROJECT} VERSION 0.4.0)
+project (${PROJECT} VERSION 0.5.0)
 
 IF(NOT CMAKE_BUILD_TYPE)
         message(STATUS "CMAKE_BUILD_TYPE is not set, set to default = RELWITHDEBINFO")
@@ -18,7 +18,6 @@ option(DARIADB_ENABLE_DOUBLECHECKS "More checks in code." OFF)
 option(DARIADB_ASAN_UBSAN "Enable address & undefined behavior sanitizer for binary." OFF)
 option(DARIADB_MSAN "Enable memory sanitizer for binary." OFF)
 option(DARIADB_SYSTEM_JEMALLOC "Use jemalloc installed in the system." ON)
-option(DARIADB_ENABLE_TOOLS "Build utility tools." ON)
 
 if((DARIADB_ASAN_UBSAN AND DARIADB_MSAN))
   message(FATAL_ERROR "Sanitizers cannot be enabled simultaneously.")
@@ -34,7 +33,6 @@ MESSAGE(STATUS "DARIADB_ENABLE_DOUBLECHECKS - " ${DARIADB_ENABLE_DOUBLECHECKS})
 MESSAGE(STATUS "DARIADB_MSAN - " ${DARIADB_MSAN})
 MESSAGE(STATUS "DARIADB_ASAN_UBSAN - " ${DARIADB_ASAN_UBSAN})
 MESSAGE(STATUS "DARIADB_SYSTEM_JEMALLOC - " ${DARIADB_SYSTEM_JEMALLOC})
-MESSAGE(STATUS "DARIADB_ENABLE_TOOLS - ${DARIADB_ENABLE_TOOLS}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -153,9 +151,6 @@ if(DARIADB_ENABLE_BENCHMARKS)
   add_subdirectory (benchmarks)
 endif()
 
-if (DARIADB_ENABLE_TOOLS)
-  add_subdirectory (tools)
-endif(DARIADB_ENABLE_TOOLS)
 
 if(DARIADB_ENABLE_SAMPLES)
   add_subdirectory(examples)

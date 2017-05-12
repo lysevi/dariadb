@@ -46,7 +46,7 @@ public:
   EXPORT Id2MinMax_Ptr loadMinMax() override;
   EXPORT Id2Time getSyncMap(); /// Id to max dropped to disk time.
 
-  EXPORT void dropOld(Time t);
+  EXPORT void dropOld(dariadb::Id id, Time t);
 
 private:
   struct Private;

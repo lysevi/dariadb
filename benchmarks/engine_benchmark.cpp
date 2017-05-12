@@ -1,11 +1,17 @@
 #include "bench_common.h"
 #include <libdariadb/engines/engine.h>
 #include <libdariadb/engines/shard.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
+
 #include <atomic>
 #include <iomanip>
 #include <iostream>
+#include <random>
+
 using namespace dariadb;
 using namespace dariadb::storage;
 
@@ -39,8 +45,9 @@ dariadb_bench::BenchmarkParams benchmark_params;
 
 class CompactionBenchmark : public dariadb::ICompactionController {
 public:
-  CompactionBenchmark(dariadb::Time eraseThan, dariadb::Time from, dariadb::Time to)
-      : dariadb::ICompactionController(eraseThan, from, to) {}
+  CompactionBenchmark(dariadb::Id id, dariadb::Time eraseThan, dariadb::Time from,
+                      dariadb::Time to)
+      : dariadb::ICompactionController(id, eraseThan, from, to) {}
 
   void compact(dariadb::MeasArray &values, std::vector<int> &filter) override {
     for (size_t i = 0; i < values.size(); ++i) {
@@ -179,7 +186,7 @@ void show_info(IEngine *storage) {
     auto step_time = double(double(t1 - t0) / (double)CLOCKS_PER_SEC);
 
     auto writes_per_sec = (w1 - w0) / step_time;
-	summary_info->write_speed_metrics.push_back(writes_per_sec);
+    summary_info->write_speed_metrics.push_back(writes_per_sec);
     auto reads_per_sec = (r1 - r0) / step_time;
     auto queue_sizes = storage->description();
 
@@ -565,17 +572,22 @@ int main(int argc, char *argv[]) {
         if (pages_before != 0) {
           std::cout << "==> pages before repack " << pages_before << "..." << std::endl;
 
-          dariadb::utils::ElapsedTime et;
-          raw_ptr->repack();
-          auto elapsed = et.elapsed();
-
+          size_t pack_count = 0;
+          for (auto id : all_id_set) {
+            dariadb::utils::ElapsedTime et;
+            raw_ptr->repack(id);
+            auto elapsed = et.elapsed();
+            summary_info->repack_metrics.push_back(elapsed);
+            pack_count++;
+            if (pack_count == read_benchmark_runs) {
+              break;
+            }
+          }
           auto pages_after = raw_ptr->description().pages_count;
 
           std::cout << "==> pages after repack " << pages_after << "..." << std::endl;
-          std::cout << "repack time: " << elapsed << std::endl;
 
           summary_info->page_repacked = pages_before - pages_after - 1;
-          summary_info->page_repack_time = elapsed;
           if (!use_shard) {
             if (strategy != STRATEGY::MEMORY && strategy != STRATEGY::CACHE &&
                 pages_before <= pages_after) {
@@ -608,16 +620,20 @@ int main(int argc, char *argv[]) {
       auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
                 << std::endl;
-      auto compaction_logic =
-          std::make_unique<CompactionBenchmark>(halfTime, start_time, max_time);
+      size_t i = 0;
+      for (auto id : all_id_set) {
+        auto compaction_logic =
+            std::make_unique<CompactionBenchmark>(id, halfTime, start_time, max_time);
 
-      dariadb::utils::ElapsedTime et;
-      raw_ptr->compact(compaction_logic.get());
-      auto elapsed = et.elapsed();
-
-      std::cout << "time: " << elapsed << std::endl;
-      summary_info->compaction_time = elapsed;
-
+        dariadb::utils::ElapsedTime et;
+        raw_ptr->compact(compaction_logic.get());
+        auto elapsed = et.elapsed();
+        summary_info->compaction_metrics.push_back(elapsed);
+        i++;
+        if (i == read_benchmark_runs) {
+          break;
+        }
+      }
       BenchCallback clbk;
       QueryInterval qi{IdArray(all_id_set.begin(), all_id_set.end()), 0, start_time,
                        max_time};

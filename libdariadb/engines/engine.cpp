@@ -85,20 +85,7 @@ public:
     init_managers();
     readMinMaxFromStorages();
 
-    startWorkers();
     logger_info("engine", _settings->alias, ": start - OK ");
-  }
-
-  void startWorkers() {
-    logger_info("engine", _settings->alias, ": start async workers...");
-    this->_async_worker_thread_handler =
-        std::thread(std::bind(&Engine::Private::erase_worker_func, this));
-  }
-
-  void whaitWorkers() {
-    logger("engine", _settings->alias, ": whait stop of async workers...");
-    this->_async_worker_thread_handler.join();
-    logger("engine", _settings->alias, ": async workers stoped.");
   }
 
   void readMinMaxFromStorages() {
@@ -151,7 +138,6 @@ public:
   void stop() {
     if (!_stoped) {
       _beginStoping = true;
-      whaitWorkers();
       _top_level_storage = nullptr;
       if (_thread_pool_owner) {
         _subscribe_notify.stop();
@@ -789,48 +775,16 @@ public:
     this->unlock_storage();
   }
 
-  void eraseOld(const Time &t) {
+  void eraseOld(const Id id, const Time t) {
     logger_info("engine", _settings->alias, ": eraseOld to ", timeutil::to_string(t));
     this->lock_storage();
-    _page_manager->eraseOld(t);
-    if (this->strategy() == STRATEGY::MEMORY) {
-      this->_memstorage->dropOld(t);
+    if (_page_manager != nullptr) {
+      _page_manager->eraseOld(id, t);
+    }
+    if (_memstorage != nullptr) {
+      this->_memstorage->dropOld(id, t);
     }
     this->unlock_storage();
-  }
-
-  void erase_worker_func() {
-    while (!_beginStoping) {
-      if (_settings->max_store_period.value() != MAX_TIME) {
-        if (this->try_lock_storage()) {
-          auto timepoint = timeutil::current_time() - _settings->max_store_period.value();
-
-          if (_page_manager != nullptr) {
-            AsyncTask am_at = [this, timepoint](const ThreadInfo &ti) {
-              TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
-              logger_info("engine", _settings->alias, ": eraseold ",
-                          timeutil::to_string(timepoint));
-              _page_manager->eraseOld(timepoint);
-              logger_info("engine", _settings->alias, ": eraseold complete.");
-              return false;
-            };
-            auto at = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(am_at));
-            at->wait();
-          }
-
-          if (this->strategy() == STRATEGY::MEMORY) {
-            this->_memstorage->dropOld(timepoint);
-          }
-
-          this->unlock_storage();
-        }
-        if (_beginStoping) {
-          break;
-        }
-      }
-      utils::sleep_mls(500);
-    }
-    _eraseActionIsStoped = true;
   }
 
   STRATEGY strategy() const {
@@ -838,16 +792,22 @@ public:
     return this->_strategy;
   }
 
-  void repack() {
+  void repack(dariadb::Id id) {
     this->lock_storage();
     logger_info("engine", _settings->alias, ": repack...");
-    _page_manager->repack();
+    if (_wal_manager != nullptr) {
+      _wal_manager->flush(id);
+    }
+    _page_manager->repack(id);
     this->unlock_storage();
   }
 
   void compact(ICompactionController *logic) {
     this->lock_storage();
     logger_info("engine", _settings->alias, ": compact...");
+    if (_wal_manager != nullptr && logic != nullptr) {
+      _wal_manager->flush(logic->targetId);
+    }
     _page_manager->compact(logic);
     this->unlock_storage();
   }
@@ -875,7 +835,6 @@ protected:
   bool _thread_pool_owner;
   bool _eraseActionIsStoped;
   bool _beginStoping;
-  std::thread _async_worker_thread_handler;
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
@@ -949,12 +908,12 @@ void Engine::fsck() {
   _impl->fsck();
 }
 
-void Engine::eraseOld(const Time &t) {
-  return _impl->eraseOld(t);
+void Engine::eraseOld(const Id id, const Time t) {
+  return _impl->eraseOld(id, t);
 }
 
-void Engine::repack() {
-  _impl->repack();
+void Engine::repack(dariadb::Id id) {
+  _impl->repack(id);
 }
 
 void Engine::compact(ICompactionController *logic) {

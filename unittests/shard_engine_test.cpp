@@ -35,7 +35,7 @@ TEST(Shard, Common_test) {
   {
     auto settings = dariadb::storage::Settings::create(storage_path_shard1);
     settings->wal_cache_size.setValue(100);
-    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
+    settings->wal_file_size.setValue(50);
     settings->chunk_size.setValue(chunk_size);
     settings->save();
   }
@@ -43,7 +43,7 @@ TEST(Shard, Common_test) {
   {
     auto settings = dariadb::storage::Settings::create(storage_path_shard2);
     settings->wal_cache_size.setValue(100);
-    settings->wal_file_size.setValue(settings->wal_cache_size.value() * 5);
+    settings->wal_file_size.setValue(50);
     settings->chunk_size.setValue(chunk_size);
     settings->save();
   }
@@ -71,7 +71,13 @@ TEST(Shard, Common_test) {
     dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, true,
                                      false);
     shard_storage->fsck();
-    shard_storage->repack();
+    shard_storage->repack(dariadb::Id(0));
+    {
+      shard_storage->eraseOld(dariadb::Id(4), dariadb::MAX_TIME);
+      auto values = shard_storage->readInterval(
+          QueryInterval({dariadb::Id(4)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
   }
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -188,8 +194,8 @@ TEST(Shard, Common_memory_test) {
 
     dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, false,
                                      false);
-    /*shard_storage->fsck();
-    shard_storage->repack();*/
+    shard_storage->fsck();
+    shard_storage->repack(dariadb::Id(0));
   }
 
   {
@@ -200,6 +206,13 @@ TEST(Shard, Common_memory_test) {
     auto shard_raw_ptr = dynamic_cast<ShardEngine *>(shard_storage.get());
 
     EXPECT_TRUE(dariadb::utils::fs::path_exists(storage_path_shard1));
+
+    {
+      shard_storage->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+      auto values = shard_storage->readInterval(
+          QueryInterval({dariadb::Id(0)}, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+      EXPECT_LT(values.size(), dariadb_test::copies_count);
+    }
 
     shard_raw_ptr->shardRm("shard1", true);
 
@@ -217,5 +230,69 @@ TEST(Shard, Common_memory_test) {
   }
   if (dariadb::utils::fs::path_exists(storage_path_shard2)) {
     dariadb::utils::fs::rm(storage_path_shard2);
+  }
+}
+
+TEST(Shard, AutomaticShardCreation) {
+  const std::string storage_path = "testStorage";
+  const std::string storage_path_shard1 = "testStorage_shard1";
+  const dariadb::Time from = 0;
+  const dariadb::Time to = from + 1000;
+  const dariadb::Time step = 10;
+
+  using namespace dariadb;
+  using namespace dariadb::storage;
+
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+
+  if (dariadb::utils::fs::path_exists(storage_path_shard1)) {
+    dariadb::utils::fs::rm(storage_path_shard1);
+  }
+
+  {
+    auto shard_storage = ShardEngine::create(storage_path);
+
+    auto scheme = dariadb::scheme::Scheme::create(shard_storage->settings());
+    scheme->addParam("0.raw");
+    scheme->addParam("1.minute");
+    scheme->addParam("2.hour");
+    scheme->save();
+    shard_storage->setScheme(scheme);
+
+    EXPECT_TRUE(shard_storage != nullptr);
+    EXPECT_TRUE(shard_storage->settings()->storage_path.value() == storage_path);
+  }
+  {
+    auto shard_storage = dariadb::open_storage(storage_path);
+    auto scheme = dariadb::scheme::Scheme::create(shard_storage->settings());
+    shard_storage->setScheme(scheme);
+
+    EXPECT_TRUE(shard_storage != nullptr);
+    EXPECT_TRUE(shard_storage->settings()->storage_path.value() == storage_path);
+
+    auto shard_raw_ptr = dynamic_cast<ShardEngine *>(shard_storage.get());
+
+    auto all_shards = shard_raw_ptr->shardList();
+    EXPECT_EQ(all_shards.size(), size_t(0));
+
+    dariadb_test::storage_test_check(shard_storage.get(), from, to, step, true, true,
+                                     false);
+    all_shards = shard_raw_ptr->shardList();
+    EXPECT_EQ(all_shards.size(), size_t(4));
+  }
+  {
+    auto shard_storage = dariadb::open_storage(storage_path);
+    auto scheme = dariadb::scheme::Scheme::create(shard_storage->settings());
+    auto shard_raw_ptr = dynamic_cast<ShardEngine *>(shard_storage.get());
+    auto all_shards = shard_raw_ptr->shardList();
+    EXPECT_EQ(all_shards.size(), size_t(4));
+  }
+  if (dariadb::utils::fs::path_exists(storage_path)) {
+    dariadb::utils::fs::rm(storage_path);
+  }
+  if (dariadb::utils::fs::path_exists(storage_path_shard1)) {
+    dariadb::utils::fs::rm(storage_path_shard1);
   }
 }

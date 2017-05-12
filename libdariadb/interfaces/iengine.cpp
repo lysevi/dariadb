@@ -49,3 +49,24 @@ void IEngine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
   }
   clbk->is_end();
 }
+
+void IEngine::setScheme(const scheme::IScheme_Ptr &scheme) {
+  _scheme = scheme;
+}
+
+scheme::IScheme_Ptr IEngine::getScheme() {
+  return _scheme;
+}
+
+void IEngine::repack(const scheme::IScheme_Ptr s) {
+  logger_info("engine: all repack...");
+  if (s == nullptr) {
+    dariadb::logger_fatal("engine: repack. scheme==nullptr");
+    return;
+  } else {
+    auto datamap = s->ls();
+    for (auto kv : datamap) {
+      this->repack(kv.first);
+    }
+  }
+}
