@@ -1,6 +1,6 @@
 v0.5.0
 =====
-- True columnar database.
+- True columnar database - each time-series stored in dedicated file.
 - Automatic data erasing was disabled. Timeseries removing only by manual.
 - UTC time in inner functions.
 - Golang http client
