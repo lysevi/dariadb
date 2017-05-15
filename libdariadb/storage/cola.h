@@ -9,17 +9,20 @@ namespace storage {
 class Cola {
 public:
   struct Param {
-    size_t levels;
-    size_t B;
-    Param(const size_t levels_count, const size_t B_) {
+    uint8_t levels;
+    uint8_t B;
+    Param(const uint8_t levels_count, const uint8_t B_) {
       levels = levels_count;
       B = B_;
     }
   };
 
-  EXPORT Cola(const Param &p, const uint8_t *buffer);
+  EXPORT Cola(const Param &p, Id measId, uint8_t *buffer);
+  EXPORT Cola(uint8_t *buffer);
   /// Calculate needed buffer size for store index.
   EXPORT static size_t index_size(const Param &p);
+  EXPORT uint8_t levels() const;
+  EXPORT Id targetId() const;
 
 private:
   struct Private;

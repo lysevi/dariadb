@@ -12,13 +12,27 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
 
-TEST(COLA, CalculateSize) {
+TEST(COLA, InitIndex) {
   using namespace dariadb::storage;
-  Cola::Param p{size_t(15), size_t(32)};
+  Cola::Param p{uint8_t(15), uint8_t(32)};
   auto sz = Cola::index_size(p);
   EXPECT_GT(sz, size_t(0));
-}
 
+  uint8_t *buffer = new uint8_t[sz];
+  dariadb::Id targetId{10};
+  {
+    Cola c(p, targetId, buffer);
+    EXPECT_EQ(c.levels(), p.levels);
+    EXPECT_EQ(c.targetId(), targetId);
+  }
+  {
+    Cola c(buffer);
+    EXPECT_EQ(c.levels(), p.levels);
+    EXPECT_EQ(c.targetId(), targetId);
+  }
+  delete[] buffer;
+}
+/*
 TEST(COLA, Init) {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 200;
@@ -48,3 +62,4 @@ TEST(COLA, Init) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
+*/
