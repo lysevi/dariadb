@@ -5,13 +5,19 @@
 #include <iostream>
 
 #include <libdariadb/storage/cola.h>
-#include <libdariadb/storage/manifest.h>
 #include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/manifest.h>
+#include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/utils/async/thread_manager.h>
 
+TEST(COLA, CalculateSize) {
+  using namespace dariadb::storage;
+  Cola::Param p{size_t(15), size_t(32)};
+  auto sz = Cola::index_size(p);
+  EXPECT_GT(sz, size_t(0));
+}
 
 TEST(COLA, Init) {
   const std::string storagePath = "testStorage";
@@ -35,7 +41,6 @@ TEST(COLA, Init) {
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-
   manifest = nullptr;
   dariadb::utils::async::ThreadManager::stop();
 
@@ -43,4 +48,3 @@ TEST(COLA, Init) {
     dariadb::utils::fs::rm(storagePath);
   }
 }
-
