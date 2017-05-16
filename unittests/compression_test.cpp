@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 
+#include <catch.hpp>
+#include "helpers.h"
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
 #include <libdariadb/compression/delta.h>
@@ -14,14 +15,14 @@
 using dariadb::compression::ByteBuffer;
 using dariadb::compression::ByteBuffer_Ptr;
 
-TEST(Compression, flat_converters) {
+TEST_CASE("Compression.flat_converters") {
   double pi = 3.14;
   auto ival = dariadb::compression::inner::flat_double_to_int(pi);
   auto dval = dariadb::compression::inner::flat_int_to_double(ival);
   EXPECT_DOUBLE_EQ(dval, pi);
 }
 
-TEST(Compression, ByteBufferTest) {
+TEST_CASE("Compression.ByteBufferTest") {
   const size_t buffer_size = 256;
   uint8_t buffer[buffer_size];
   std::fill_n(buffer, buffer_size, uint8_t(0));
@@ -96,7 +97,7 @@ TEST(Compression, ByteBufferTest) {
   }
 }
 
-TEST(Compression, DeltaDeltav2Test) {
+TEST_CASE("Compression.DeltaDeltav2Test") {
   const size_t test_buffer_size = 100;
 
   const dariadb::Time t0 = 0;
@@ -280,7 +281,7 @@ TEST(Compression, DeltaDeltav2Test) {
   }
 }
 
-TEST(Compression, XorCompressorV2Test) {
+TEST_CASE("Compression.XorCompressorV2Test") {
   const size_t test_buffer_size = 1000;
 
   const dariadb::Value t1 = 240;
@@ -421,7 +422,7 @@ TEST(Compression, XorCompressorV2Test) {
   }
 }
 
-TEST(Compression, FlagV2Compressor) {
+TEST_CASE("Compression.FlagV2Compressor") {
   { // 1,2,3,4,5...
     const size_t test_buffer_size = 1000;
     uint8_t buffer[test_buffer_size];
@@ -449,7 +450,7 @@ TEST(Compression, FlagV2Compressor) {
   }
 }
 
-TEST(Compression, CompressedBlockV2Test) {
+TEST_CASE("Compression.CompressedBlockV2Test") {
   const size_t test_buffer_size = 513;
 
   uint8_t b_begin[test_buffer_size];

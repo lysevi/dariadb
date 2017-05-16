@@ -1,6 +1,8 @@
+
+#include "helpers.h"
 #include <libdariadb/dariadb.h>
 #include <libdariadb/statistic/calculator.h>
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 void check_function_factory(const std::vector<std::string> &tested) {
   auto result = dariadb::statistic::FunctionFactory::make(tested);
@@ -12,12 +14,11 @@ void check_function_factory(const std::vector<std::string> &tested) {
     EXPECT_EQ(tested[i], result[i]->kind());
 
     EXPECT_TRUE(std::find(all_functions.begin(), all_functions.end(), tested[i]) !=
-                all_functions.end())
-        << "unknow function: " << tested[i];
+                all_functions.end());
   }
 }
 
-TEST(Statistic, Average) {
+TEST_CASE("Statistic.Average") {
   using namespace dariadb::statistic;
   check_function_factory({"average"});
 
@@ -36,7 +37,7 @@ TEST(Statistic, Average) {
   EXPECT_EQ(av->apply(ma).value, dariadb::Value(4));
 }
 
-TEST(Statistic, Median) {
+TEST_CASE("Statistic.Median") {
   using namespace dariadb::statistic;
   check_function_factory({"median"});
 
@@ -68,7 +69,7 @@ TEST(Statistic, Median) {
   EXPECT_EQ(median->apply(ma).value, dariadb::Value(3));
 }
 
-TEST(Statistic, Percentile) {
+TEST_CASE("Statistic.Percentile") {
   using namespace dariadb::statistic;
   check_function_factory({"percentile90", "percentile99"});
 
@@ -91,7 +92,7 @@ TEST(Statistic, Percentile) {
   EXPECT_EQ(p99->apply(ma).value, dariadb::Value(99));
 }
 
-TEST(Statistic, Sigma) {
+TEST_CASE("Statistic.Sigma") {
   using namespace dariadb::statistic;
   check_function_factory({"sigma"});
 
@@ -110,7 +111,7 @@ TEST(Statistic, Sigma) {
   EXPECT_EQ(calulated.time, dariadb::Time(999));
 }
 
-TEST(Statistic, Minimum) {
+TEST_CASE("Statistic.Minimum") {
   using namespace dariadb::statistic;
   check_function_factory({"minimum"});
 
@@ -138,7 +139,7 @@ TEST(Statistic, Minimum) {
   EXPECT_EQ(median->apply(ma).time, m.time);
 }
 
-TEST(Statistic, Maximum) {
+TEST_CASE("Statistic.Maximum") {
   using namespace dariadb::statistic;
   check_function_factory({"maximum"});
 
@@ -166,7 +167,7 @@ TEST(Statistic, Maximum) {
   EXPECT_EQ(median->apply(ma).time, m.time);
 }
 
-TEST(Statistic, Count) {
+TEST_CASE("Statistic.Count") {
   using namespace dariadb::statistic;
   check_function_factory({"count"});
 
@@ -194,7 +195,7 @@ TEST(Statistic, Count) {
   EXPECT_EQ(median->apply(ma).time, m.time);
 }
 
-TEST(Statistic, Calculator) {
+TEST_CASE("Statistic.Calculator") {
   auto storage = dariadb::memory_only_storage();
   dariadb::Meas meas;
   meas.id = 10;

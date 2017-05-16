@@ -1,10 +1,12 @@
+
 #include <libdariadb/utils/striped_map.h>
-#include <gtest/gtest.h>
+#include <catch.hpp>
+#include "helpers.h"
 #include <thread>
 
 using namespace dariadb::utils;
 
-TEST(StrippedMap, OneThread) {
+TEST_CASE("StrippedMap.OneThread") {
   {
     stripped_map<int, uint64_t> default_ctor;
     EXPECT_EQ(default_ctor.size(), size_t(0));
@@ -46,7 +48,7 @@ TEST(StrippedMap, OneThread) {
       if (add_many.find(for_search, &output)) {
         EXPECT_EQ(output, uint64_t(for_search));
       } else {
-        EXPECT_TRUE(false) << "key=" << for_search << " not found";
+        INFO("key=" << for_search << " not found");
       }
     }
     size_t cnt = 0;
@@ -64,7 +66,7 @@ void StrippedMap_write_thread_func(stripped_map<int, int> *target, int key_from,
   }
 }
 
-TEST(StrippedMap, MultiThread) {
+TEST_CASE("StrippedMap.MultiThread") {
   stripped_map<int, int> smap;
   const size_t count = 10;
   std::vector<std::thread> wthreads(count);

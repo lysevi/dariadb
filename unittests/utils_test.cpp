@@ -1,3 +1,4 @@
+
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/bitoperations.h>
@@ -8,11 +9,11 @@
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/utils.h>
 
-#include <gtest/gtest.h>
-
+#include <catch.hpp>
+#include "helpers.h"
 #include <thread>
 
-TEST(Utils, CountZero) {
+TEST_CASE("Utils.CountZero") {
   EXPECT_EQ(dariadb::utils::clz(67553994410557440), 8);
   EXPECT_EQ(dariadb::utils::clz(3458764513820540928), 2);
   EXPECT_EQ(dariadb::utils::clz(15), 60);
@@ -21,7 +22,7 @@ TEST(Utils, CountZero) {
   EXPECT_EQ(dariadb::utils::ctz(3840), 8);
 }
 
-TEST(Utils, InInterval) {
+TEST_CASE("Utils.InInterval") {
   EXPECT_TRUE(dariadb::utils::inInterval(1, 5, 1));
   EXPECT_TRUE(dariadb::utils::inInterval(1, 5, 2));
   EXPECT_TRUE(dariadb::utils::inInterval(1, 5, 5));
@@ -29,7 +30,7 @@ TEST(Utils, InInterval) {
   EXPECT_TRUE(!dariadb::utils::inInterval(0, 1, 2));
 }
 
-TEST(Utils, BitOperations) {
+TEST_CASE("Utils.BitOperations") {
   uint8_t value = 0;
   for (int8_t i = 0; i < 7; i++) {
     value = dariadb::utils::BitOperations::set(value, i);
@@ -45,7 +46,7 @@ TEST(Utils, BitOperations) {
   }
 }
 
-TEST(Utils, FileUtils) {
+TEST_CASE("Utils.FileUtils") {
   std::string filename = "foo/bar/test.txt";
   EXPECT_EQ(dariadb::utils::fs::filename(filename), "test");
   EXPECT_EQ(dariadb::utils::fs::parent_path(filename), "foo/bar");
@@ -76,7 +77,7 @@ TEST(Utils, FileUtils) {
   EXPECT_EQ(dariadb::utils::fs::parent_path(concat_p), parent_p);
 }
 
-TEST(Utils, SplitString) {
+TEST_CASE("Utils.SplitString") {
   std::string str = "1 2 3 4 5 6 7 8";
   auto splitted = dariadb::utils::strings::tokens(str);
   EXPECT_EQ(splitted.size(), size_t(8));
@@ -85,19 +86,19 @@ TEST(Utils, SplitString) {
   EXPECT_EQ(splitted.size(), size_t(8));
 }
 
-TEST(Utils, StringToUpper) {
+TEST_CASE("Utils.StringToUpper") {
   auto s = "lower string";
   auto res = dariadb::utils::strings::to_upper(s);
   EXPECT_EQ(res, "LOWER STRING");
 }
 
-TEST(Utils, StringToLower) {
+TEST_CASE("Utils.StringToLower") {
   auto s = "UPPER STRING";
   auto res = dariadb::utils::strings::to_lower(s);
   EXPECT_EQ(res, "upper string");
 }
 
-TEST(Utils, ThreadsPool) {
+TEST_CASE("Utils.ThreadsPool") {
   using namespace dariadb::utils::async;
 
   const ThreadKind tk = 1;
@@ -117,7 +118,7 @@ TEST(Utils, ThreadsPool) {
     const size_t tasks_count = 100;
     AsyncTask at = [tk](const ThreadInfo &ti) {
       if (tk != ti.kind) {
-        EXPECT_TRUE(false) << "(tk != ti.kind)";
+        INFO("(tk != ti.kind)");
         throw MAKE_EXCEPTION("(tk != ti.kind)");
       }
       return false;
@@ -139,7 +140,7 @@ TEST(Utils, ThreadsPool) {
     const size_t tasks_count = 100;
     AsyncTask at = [tk](const ThreadInfo &ti) {
       if (tk != ti.kind) {
-        EXPECT_TRUE(false) << "(tk != ti.kind)";
+        INFO("(tk != ti.kind)");
         throw MAKE_EXCEPTION("(tk != ti.kind)");
       }
       return false;
@@ -152,7 +153,7 @@ TEST(Utils, ThreadsPool) {
   }
 }
 
-TEST(Utils, ThreadsManager) {
+TEST_CASE("Utils.ThreadsManager") {
   using namespace dariadb::utils::async;
 
   const ThreadKind tk1 = 1;
@@ -189,7 +190,7 @@ TEST(Utils, ThreadsManager) {
     };
     AsyncTask at1 = [tk1](const ThreadInfo &ti) {
       if (tk1 != ti.kind) {
-        EXPECT_TRUE(false) << "(tk != ti.kind)";
+        INFO("(tk != ti.kind)");
         dariadb::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
@@ -197,7 +198,7 @@ TEST(Utils, ThreadsManager) {
     };
     AsyncTask at2 = [tk2](const ThreadInfo &ti) {
       if (tk2 != ti.kind) {
-        EXPECT_TRUE(false) << "(tk != ti.kind)";
+        INFO("(tk != ti.kind)");
         dariadb::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }

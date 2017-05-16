@@ -1,17 +1,19 @@
+
 #include <libdariadb/aggregate/aggregator.h>
 #include <libdariadb/aggregate/timer.h>
 #include <libdariadb/dariadb.h>
 #include <libdariadb/timeutil.h>
-#include <gtest/gtest.h>
+#include "helpers.h"
+#include <catch.hpp>
 
-class Aggregate : public testing::Test {
-protected:
-  virtual void SetUp() {
+class Aggregate {
+public:
+  Aggregate() {
     _storage = dariadb::memory_only_storage();
     _scheme = dariadb::scheme::Scheme::create(_storage->settings());
   }
 
-  virtual void TearDown() {
+  ~Aggregate() {
     _scheme = nullptr;
     _storage = nullptr;
   }
@@ -36,14 +38,14 @@ public:
   dariadb::Time _ctime;
 };
 
-TEST_F(Aggregate, EmptyScheme) {
+TEST_CASE_METHOD(Aggregate, "EmptyScheme") {
   using namespace dariadb::aggregator;
   using namespace dariadb;
   Aggregator::aggregate("raw", "minute", IEngine_Ptr(), MIN_TIME, MAX_TIME);
   Aggregator::aggregate("raw", "minute", _storage, MIN_TIME, MAX_TIME);
 }
 
-TEST_F(Aggregate, DownsamplingIntervals) {
+TEST_CASE_METHOD(Aggregate, "DownsamplingIntervals") {
   using namespace dariadb::aggregator;
   using namespace dariadb::timeutil;
   using namespace dariadb::storage;
@@ -145,10 +147,10 @@ TEST_F(Aggregate, DownsamplingIntervals) {
   }
 }
 
-TEST_F(Aggregate, Aggregator) {
+TEST_CASE_METHOD(Aggregate, "Aggregator") {
   using namespace dariadb::aggregator;
   using namespace dariadb::timeutil;
-
+  
   _storage->setScheme(_scheme);
 
   DateTime dt;
@@ -162,6 +164,7 @@ TEST_F(Aggregate, Aggregator) {
 
   auto raw_timer = new MockTimer(from_datetime(dt));
   ITimer_Ptr mock_timer(raw_timer);
+  
   Aggregator agg(_storage, mock_timer);
 
   // raw=>minute, minute=>halfhour, halfhour=>hour, hour=>day, day=>week, week=>month;
@@ -197,7 +200,7 @@ public:
   size_t *calls_ptr;
 };
 
-TEST_F(Aggregate, Timer) {
+TEST_CASE_METHOD(Aggregate, "Timer") {
   using namespace dariadb::aggregator;
   using namespace dariadb::timeutil;
 

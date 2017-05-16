@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 
+#include <catch.hpp>
 #include "helpers.h"
 
 #include <libdariadb/dariadb.h>
@@ -25,7 +25,7 @@ void test_statistic_on_engine(dariadb::IEngine_Ptr &storage) {
   EXPECT_EQ(result.size(), all_functions.size());
 }
 
-TEST(Engine, Common_test) {
+TEST_CASE("Engine.Common_test") {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
 
@@ -99,7 +99,7 @@ TEST(Engine, Common_test) {
   }
 }
 
-TEST(Engine, compress_all_test) {
+TEST_CASE("Engine.compress_all_test") {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 256;
 
@@ -141,7 +141,7 @@ TEST(Engine, compress_all_test) {
   }
 }
 
-TEST(Engine, Subscribe) {
+TEST_CASE("Engine.Subscribe") {
   const std::string storage_path = "testStorage";
 
   {
@@ -160,7 +160,7 @@ TEST(Engine, Subscribe) {
   }
 }
 
-TEST(Engine, MemStorage_common_test) {
+TEST_CASE("Engine.MemStorage_common_test") {
   const std::string storage_path = "testStorage";
   const size_t chunk_size = 128;
 
@@ -200,7 +200,7 @@ TEST(Engine, MemStorage_common_test) {
   }
 }
 
-TEST(Engine, MemOnlyStorage_common_test) {
+TEST_CASE("Engine.MemOnlyStorage_common_test") {
   const size_t chunk_size = 128;
 
   const dariadb::Time from = 0;
@@ -231,7 +231,7 @@ TEST(Engine, MemOnlyStorage_common_test) {
   }
 }
 
-TEST(Engine, Cache_common_test) {
+TEST_CASE("Engine.Cache_common_test") {
   const std::string storage_path = "testStorage";
 
   const size_t chunk_size = 128;

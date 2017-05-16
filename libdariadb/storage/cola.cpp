@@ -178,7 +178,8 @@ struct Cola::Private {
 
   static size_t index_size(const Param &p) {
     size_t result = 0;
-    result += sizeof(IndexHeader) + one_block_size(p.B); /// space to _memvalues
+    result += sizeof(IndexHeader);
+    result += sizeof(LevelHeader) + one_block_size(p.B); /// space to _memvalues
     for (size_t lvl = 0; lvl < p.levels; ++lvl) {
       auto cur_level_links = bytes_in_level(p.B, lvl);
       result += sizeof(LevelHeader) + cur_level_links;

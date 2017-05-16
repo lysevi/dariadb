@@ -7,6 +7,16 @@
 #include <libdariadb/meas.h>
 #include <string>
 
+#define EXPECT_EQ(a, b) REQUIRE((a) == (b))
+#define EXPECT_TRUE(a) REQUIRE((a))
+#define EXPECT_FALSE(a) REQUIRE_FALSE(a)
+#define EXPECT_DOUBLE_EQ(a, b) REQUIRE((a) == Approx((b)))
+#define EXPECT_GT(a, b) REQUIRE((a) > (b))
+#define EXPECT_LT(a, b) REQUIRE((a) < (b))
+#define EXPECT_LE(a, b) REQUIRE((a) <= (b))
+#define EXPECT_NE(a, b) REQUIRE((a) != (b))
+#define EXPECT_GE(a, b) REQUIRE((a) >= (b))
+
 namespace dariadb_test {
 const size_t copies_count = 100;
 typedef std::list<dariadb::Meas> MeasesList;
@@ -25,4 +35,4 @@ void storage_test_check(dariadb::IMeasStorage *as, dariadb::Time from, dariadb::
 void check_reader(const dariadb::Cursor_Ptr &rdr);
 void subscribe_test(dariadb::IEngine *ms);
 /*void readIntervalCommonTest(dariadb::storage::MeasStorage *ds);*/
-}
+} // namespace dariadb_test

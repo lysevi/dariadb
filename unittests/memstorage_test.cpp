@@ -1,4 +1,5 @@
-#include <gtest/gtest.h>
+
+#include <catch.hpp>
 
 #include <libdariadb/meas.h>
 #include <libdariadb/storage/callbacks.h>
@@ -39,7 +40,6 @@ struct MokChunkWriter : public dariadb::ChunkContainer {
   }
 };
 
-// TODO replace by google.mock
 struct MocDiskStorage : public dariadb::IMeasWriter {
   size_t droped;
   MocDiskStorage() { droped = 0; }
@@ -51,7 +51,7 @@ struct MocDiskStorage : public dariadb::IMeasWriter {
   virtual void flush() override {}
 };
 
-TEST(MemoryStorage, RegionAllocatorTest) {
+TEST_CASE("MemoryStorage.RegionAllocatorTest") {
   const size_t buffer_size = 100;
   const size_t max_size = 1024;
   dariadb::storage::RegionChunkAllocator allocator(max_size, buffer_size);
@@ -83,7 +83,7 @@ TEST(MemoryStorage, RegionAllocatorTest) {
   EXPECT_EQ(new_obj.position, last.position);
 }
 
-TEST(MemoryStorage, CommonTest) {
+TEST_CASE("MemoryStorage.CommonTest") {
   auto storage_path = "testMemoryStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -109,7 +109,7 @@ TEST(MemoryStorage, CommonTest) {
   }
 }
 
-TEST(MemoryStorage, DropByLimitTest) {
+TEST_CASE("MemoryStorage.DropByLimitTest") {
   auto storage_path = "testMemoryStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -146,7 +146,7 @@ TEST(MemoryStorage, DropByLimitTest) {
   }
 }
 
-TEST(MemoryStorage, CacheTest) {
+TEST_CASE("MemoryStorage.CacheTest") {
   auto storage_path = "testMemoryStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -184,7 +184,7 @@ TEST(MemoryStorage, CacheTest) {
   }
 }
 
-TEST(MemoryStorage, WriteToPastTest) {
+TEST_CASE("MemoryStorage.WriteToPastTest") {
   auto storage_path = "testMemoryStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -226,7 +226,7 @@ TEST(MemoryStorage, WriteToPastTest) {
   }
 }
 
-TEST(MemoryStorage, UnlimitAllocatorCommonTest) {
+TEST_CASE("MemoryStorage.UnlimitAllocatorCommonTest") {
   {
     auto settings = dariadb::storage::Settings::create();
     settings->strategy.setValue(dariadb::STRATEGY::MEMORY);

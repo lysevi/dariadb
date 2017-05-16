@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 
+#include <catch.hpp>
 #include "helpers.h"
 
 #include <atomic>
@@ -202,7 +202,7 @@ void http_server_thread_func() {
   http_server_instance = nullptr;
 }
 
-TEST(Http, Test) {
+TEST_CASE("Http.Test") {
   dariadb::logger("********** HttpTest **********");
   std::thread server_thread{http_server_thread_func};
   auto http_port = std::to_string(http_server_param.http_port);
@@ -296,7 +296,7 @@ TEST(Http, Test) {
       for (auto v : all_values) {
         auto it = values.find(v.id);
         if (it == values.end()) {
-          EXPECT_TRUE(false) << "id " << v.id << " not found";
+          INFO("id " << v.id << " not found");
         } else {
           bool founded = false;
           for (auto subv : it->second) {

@@ -1,4 +1,5 @@
-#include <gtest/gtest.h>
+
+#include <catch.hpp>
 
 #include "helpers.h"
 
@@ -22,7 +23,7 @@
 using dariadb::storage::PageManager;
 using dariadb::storage::Manifest;
 
-TEST(PageManager, ReadWriteWithContinue) {
+TEST_CASE("PageManager.ReadWriteWithContinue") {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 200;
   auto t = dariadb::Time(0);
@@ -105,7 +106,7 @@ TEST(PageManager, ReadWriteWithContinue) {
   }
 }
 
-TEST(PageManager, MultiPageRead) {
+TEST_CASE("PageManager.MultiPageRead") {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 200;
   auto t = dariadb::Time(0);
@@ -188,7 +189,7 @@ TEST(PageManager, MultiPageRead) {
     EXPECT_EQ(minTime, qi.from);
     EXPECT_EQ(maxTime, qi.to);
   } else {
-    EXPECT_TRUE(false) << "PageManager::instance()->minMaxTime error!";
+    INFO("PageManager::instance()->minMaxTime error!");
   }
 
   auto mm = pm->loadMinMax();
@@ -214,7 +215,7 @@ TEST(PageManager, MultiPageRead) {
   }
 }
 
-TEST(PageManager, BulkWrite) {
+TEST_CASE("PageManager.BulkWrite") {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 256;
 
@@ -318,7 +319,7 @@ TEST(PageManager, BulkWrite) {
   }
 }
 
-TEST(PageManager, Repack) {
+TEST_CASE("PageManager.Repack") {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 256;
 
@@ -482,7 +483,7 @@ public:
   size_t calls;
 };
 
-TEST(PageManager, Compact) {
+TEST_CASE("PageManager.Compact") {
   const std::string storagePath = "testStorage";
   const size_t chunks_size = 256;
 

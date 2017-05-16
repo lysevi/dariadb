@@ -113,11 +113,7 @@ endif(DARIADB_SYSTEM_JEMALLOC)
 
 if(DARIADB_ENABLE_TESTS)
    cmake_policy(SET CMP0048 OLD)
-   add_subdirectory(extern/googletest)
-   set_target_properties(gtest PROPERTIES FOLDER Extern)
-   set_target_properties(gtest_main PROPERTIES FOLDER Extern)
-   set_target_properties(gmock PROPERTIES FOLDER Extern)
-   set_target_properties(gmock_main PROPERTIES FOLDER Extern)
+   include_directories(extern/Catch/include)
 endif(DARIADB_ENABLE_TESTS)
 
 if(DARIADB_ENABLE_BENCHMARKS)

@@ -1,4 +1,5 @@
-#include <gtest/gtest.h>
+
+#include <catch.hpp>
 
 #include "helpers.h"
 
@@ -10,7 +11,7 @@
 #include <algorithm>
 #include <iostream>
 
-TEST(Shard, Common_test) {
+TEST_CASE("Shard.Common_test") {
   const std::string storage_path = "testStorage";
   const std::string storage_path_shard1 = "testStorage_shard1";
   const std::string storage_path_shard2 = "testStorage_shard2";
@@ -90,7 +91,7 @@ TEST(Shard, Common_test) {
   }
 }
 
-TEST(Shard, Subscribe_test) {
+TEST_CASE("Shard.Subscribe_test") {
   const std::string storage_path = "testStorage";
   const std::string storage_path_shard1 = "testStorage_shard1";
   const std::string storage_path_shard2 = "testStorage_shard2";
@@ -136,7 +137,7 @@ TEST(Shard, Subscribe_test) {
   }
 }
 
-TEST(Shard, Common_memory_test) {
+TEST_CASE("Shard.Common_memory_test") {
   const std::string storage_path = "testStorage";
   const std::string storage_path_shard1 = "testStorage_shard1";
   const std::string storage_path_shard2 = "testStorage_shard2";
@@ -233,7 +234,7 @@ TEST(Shard, Common_memory_test) {
   }
 }
 
-TEST(Shard, AutomaticShardCreation) {
+TEST_CASE("Shard.AutomaticShardCreation") {
   const std::string storage_path = "testStorage";
   const std::string storage_path_shard1 = "testStorage_shard1";
   const dariadb::Time from = 0;

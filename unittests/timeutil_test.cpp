@@ -1,15 +1,17 @@
+
 #include <libdariadb/timeutil.h>
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
+#include "helpers.h"
 
-TEST(Time, TimeToString) {
+TEST_CASE("Time.TimeToString") {
   auto ct = dariadb::timeutil::current_time();
   EXPECT_TRUE(ct != dariadb::Time(0));
   auto ct_str = dariadb::timeutil::to_string(ct);
   EXPECT_TRUE(ct_str.size() != 0);
 }
 
-TEST(Time, TimeRound) {
+TEST_CASE("Time.TimeRound") {
   auto ct = dariadb::timeutil::current_time();
   {
     auto rounded = dariadb::timeutil::round_to_seconds(ct);
@@ -33,7 +35,7 @@ TEST(Time, TimeRound) {
   }
 }
 
-TEST(Time, IntervalFromString) {
+TEST_CASE("Time.IntervalFromString") {
   {
     auto hh = dariadb::timeutil::intervalName2time("minute");
     auto dt = dariadb::timeutil::to_datetime(hh);
@@ -83,7 +85,7 @@ TEST(Time, IntervalFromString) {
   }
 }
 
-TEST(Time, IntervalCompare) {
+TEST_CASE("Time.IntervalCompare") {
   using namespace dariadb::timeutil;
   EXPECT_TRUE(intervalsLessCmp("minute", "halfhour"));
   EXPECT_TRUE(intervalsLessCmp("halfhour", "hour"));
@@ -94,12 +96,12 @@ TEST(Time, IntervalCompare) {
   EXPECT_TRUE(intervalsLessCmp("month", "year"));
 }
 
-TEST(Time, IntervalPredefined) {
+TEST_CASE("Time.IntervalPredefined") {
   using namespace dariadb::timeutil;
   EXPECT_EQ(predefinedIntervals().size(), size_t(7));
 }
 
-TEST(Time, DateTime) {
+TEST_CASE("Time.DateTime") {
   using namespace dariadb::timeutil;
   DateTime dt1;
   dt1.year = 2017;
@@ -122,7 +124,7 @@ TEST(Time, DateTime) {
   EXPECT_EQ(dt1.millisecond, dt2.millisecond);
 }
 
-TEST(Time, TargetInterval) {
+TEST_CASE("Time.TargetInterval") {
   using namespace dariadb::timeutil;
 
   DateTime dt;

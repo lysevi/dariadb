@@ -5,7 +5,7 @@
 #include <random>
 #include <thread>
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 namespace dariadb_test {
 #undef NO_DATA

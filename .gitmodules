@@ -7,11 +7,10 @@
 [submodule "extern/json"]
 	path = extern/json
 	url = https://github.com/nlohmann/json.git
-[submodule "extern/googletest"]
-	path = extern/googletest
-	url = https://github.com/google/googletest/
-	ignore = dirty
 [submodule "extern/benchmark"]
 	path = extern/benchmark
 	url = https://github.com/google/benchmark
 	ignore = dirty
+[submodule "extern/Catch"]
+	path = extern/Catch
+	url = https://github.com/philsquared/Catch

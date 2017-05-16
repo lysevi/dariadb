@@ -1,4 +1,6 @@
-#include <gtest/gtest.h>
+
+#include <catch.hpp>
+#include "helpers.h"
 
 #include <atomic>
 #include <chrono>
@@ -32,7 +34,7 @@ void server_thread_func() {
   binary_server_instance = nullptr;
 }
 
-TEST(Network, DataPack) {
+TEST_CASE("Network.DataPack") {
   using dariadb::net::QueryAppend_header;
   using dariadb::net::NetData;
 
@@ -75,7 +77,7 @@ TEST(Network, DataPack) {
   }
 }
 
-TEST(Network, Connect1) {
+TEST_CASE("Network.Connect1") {
   dariadb::logger("********** Connect1 **********");
   std::thread server_thread{server_thread_func};
 
@@ -109,7 +111,7 @@ TEST(Network, Connect1) {
   }
 }
 
-TEST(Network, Connect3) {
+TEST_CASE("Network.Connect3") {
   dariadb::logger("********** Connect3 **********");
 
   std::thread server_thread{server_thread_func};
@@ -196,7 +198,7 @@ TEST(Network, Connect3) {
   }
 }
 
-TEST(Network, PingTest) {
+TEST_CASE("Network.PingTest") {
   dariadb::logger("********** PingTest **********");
   const size_t MAX_PONGS = 2;
   std::thread server_thread{server_thread_func};
@@ -247,7 +249,7 @@ TEST(Network, PingTest) {
   server_thread.join();
 }
 
-TEST(Network, ReadWriteTest) {
+TEST_CASE("Network.ReadWriteTest") {
   dariadb::logger("********** ReadWriteTest **********");
 
   const std::string storage_path = "testStorage";
@@ -341,7 +343,7 @@ TEST(Network, ReadWriteTest) {
   }
 }
 
-TEST(Network, SchemeTest) {
+TEST_CASE("Network.SchemeTest") {
   dariadb::logger("********** SchemeTest **********");
 
   using namespace dariadb;

@@ -1,4 +1,5 @@
-#include <gtest/gtest.h>
+
+#include <catch.hpp>
 
 #include "helpers.h"
 
@@ -11,7 +12,7 @@
 
 #include <iostream>
 
-TEST(Common, MeasTest) {
+TEST_CASE("Common.MeasTest") {
   dariadb::Meas m;
   m.flag = dariadb::Flag(1);
   EXPECT_TRUE(!m.inFlag(dariadb::Flag(2)));
@@ -19,7 +20,7 @@ TEST(Common, MeasTest) {
   EXPECT_TRUE(m.inFlag(dariadb::Flag(1)));
 }
 
-TEST(Common, BloomTest) {
+TEST_CASE("Common.BloomTest") {
   uint64_t u8_fltr = dariadb::storage::bloom_empty<uint8_t>();
 
   EXPECT_EQ(u8_fltr, uint64_t{0});
@@ -45,7 +46,7 @@ TEST(Common, BloomTest) {
   EXPECT_TRUE(dariadb::storage::bloom_check(super_fltr, uint8_t{4}));
 }
 
-TEST(Common, inFilter) {
+TEST_CASE("Common.inFilter") {
   {
     auto m = dariadb::Meas();
     m.flag = 100;
@@ -55,7 +56,7 @@ TEST(Common, inFilter) {
   }
 }
 
-TEST(Common, StatisticUpdate) {
+TEST_CASE("Common.StatisticUpdate") {
   dariadb::Statistic st;
 
   EXPECT_EQ(st.minTime, dariadb::MAX_TIME);
@@ -110,7 +111,7 @@ TEST(Common, StatisticUpdate) {
   EXPECT_EQ(second_st.count, uint32_t(4));
 }
 
-TEST(Common, ManifestFileTest) {
+TEST_CASE("Common.ManifestFileTest") {
   const std::string storage_path = "emptyStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -177,7 +178,7 @@ TEST(Common, ManifestFileTest) {
   }
 }
 
-TEST(Common, SettingsInstance) {
+TEST_CASE("Common.SettingsInstance") {
   const std::string storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -211,7 +212,7 @@ TEST(Common, SettingsInstance) {
   }
 }
 
-TEST(Common, ChunkTest) {
+TEST_CASE("Common.ChunkTest") {
   {
     dariadb::storage::ChunkHeader hdr;
     uint8_t *buff = new uint8_t[1024];
@@ -268,7 +269,7 @@ TEST(Common, ChunkTest) {
   }
 }
 
-TEST(Common, FullCursorTest) {
+TEST_CASE("Common.FullCursorTest") {
   {
     dariadb::MeasArray ma;
     auto m = dariadb::Meas();
@@ -286,7 +287,7 @@ TEST(Common, FullCursorTest) {
   }
 }
 
-TEST(Common, LinearReaderTest) {
+TEST_CASE("Common.LinearReaderTest") {
   using namespace dariadb::storage;
   using namespace dariadb;
   dariadb::MeasArray ma1(4);
@@ -320,7 +321,7 @@ TEST(Common, LinearReaderTest) {
   EXPECT_EQ(ml.size(), size_t(8));
 }
 
-TEST(Common, MergeSortReaderTest) {
+TEST_CASE("Common.MergeSortReaderTest") {
   using namespace dariadb::storage;
   using namespace dariadb;
   dariadb::MeasArray ma1(4);
@@ -376,7 +377,7 @@ TEST(Common, MergeSortReaderTest) {
   }
 }
 
-TEST(Common, ReaderColapseTest) {
+TEST_CASE("Common.ReaderColapseTest") {
   using namespace dariadb::storage;
   using namespace dariadb;
   MeasArray ma1(4);
@@ -418,7 +419,7 @@ TEST(Common, ReaderColapseTest) {
   }
 }
 
-TEST(Common, ReaderColapse3Test) {
+TEST_CASE("Common.ReaderColapse3Test") {
   using namespace dariadb::storage;
   using namespace dariadb;
   MeasArray ma1(4);

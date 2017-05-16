@@ -1,4 +1,5 @@
-#include <gtest/gtest.h>
+
+#include <catch.hpp>
 
 #include "helpers.h"
 #include <libdariadb/storage/engine_environment.h>
@@ -39,7 +40,7 @@ public:
   }
 };
 
-TEST(Wal, FileInitTest) {
+TEST_CASE("Wal.FileInitTest") {
   const size_t block_size = 1000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -48,7 +49,7 @@ TEST(Wal, FileInitTest) {
 
   dariadb::utils::fs::mkdir(storage_path);
   auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
-  assert(wal_files.size() == 0);
+  EXPECT_TRUE(wal_files.size() == 0);
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->wal_cache_size.setValue(block_size);
   settings->wal_file_size.setValue(block_size);
@@ -128,7 +129,7 @@ TEST(Wal, FileInitTest) {
   }
 }
 
-TEST(Wal, FileCommonTest) {
+TEST_CASE("Wal.FileCommonTest") {
   const size_t block_size = 10000;
   auto storage_path = "testStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
@@ -162,7 +163,7 @@ TEST(Wal, FileCommonTest) {
   }
 }
 
-TEST(Wal, Manager_CommonTest) {
+TEST_CASE("Wal.Manager_CommonTest") {
   const std::string storagePath = "testStorage";
   const size_t max_size = 70;
   const dariadb::Time from = 0;

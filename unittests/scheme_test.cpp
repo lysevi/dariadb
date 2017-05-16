@@ -1,4 +1,5 @@
-#include <gtest/gtest.h>
+
+#include <catch.hpp>
 
 #include "helpers.h"
 
@@ -7,7 +8,7 @@
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/utils/fs.h>
 
-TEST(Scheme, FileTest) {
+TEST_CASE("Scheme.FileTest") {
   const std::string storage_path = "schemeStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
@@ -75,7 +76,7 @@ TEST(Scheme, FileTest) {
   }
 }
 
-TEST(Scheme, Intervals) {
+TEST_CASE("Scheme.Intervals") {
   const std::string storage_path = "schemeStorage";
   if (dariadb::utils::fs::path_exists(storage_path)) {
     dariadb::utils::fs::rm(storage_path);
