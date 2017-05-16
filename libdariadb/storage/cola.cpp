@@ -215,7 +215,7 @@ struct Cola::Private {
 
     auto merge_target = _levels[outlvl];
 
-    if (outlvl == (_header->params.levels - 1)) {
+    if (outlvl == size_t(_header->params.levels - 1)) {
       if (merge_target.isFull()) {
         this->_header->is_full = true;
         return false;
