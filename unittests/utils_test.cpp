@@ -211,7 +211,7 @@ TEST_CASE("Utils.ThreadsManager") {
       ThreadManager::instance()->post(tk1, AT(at1));
       ThreadManager::instance()->post(tk2, AT(at2));
     }
-    EXPECT_GE(ThreadManager::instance()->active_works(), size_t(0));
+    //EXPECT_GT(ThreadManager::instance()->active_works(), size_t(0));
     at_while_res->wait();
     EXPECT_EQ(called, int(10));
     ThreadManager::instance()->flush();
