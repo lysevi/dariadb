@@ -72,6 +72,8 @@ int main(int argc, char **argv) {
     }
   }
 
-  int result = Catch::Session().run(argc, argv);
+  Catch::Session sesssion;
+  sesssion.configData().showDurations = Catch::ShowDurations::OrNot::Always;
+  int result = sesssion.run(argc, argv);
   return (result < 0xff ? result : 0xff);
 }

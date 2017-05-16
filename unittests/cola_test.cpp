@@ -21,11 +21,10 @@ TEST_CASE("COLA.IndexreadWrite") {
 
   uint8_t *buffer = new uint8_t[sz + 1];
   buffer[sz] = uint8_t(255);
-  dariadb::Id targetId{10};
-
   uint64_t address = 1, chunk_id = 1;
   size_t addeded = 0;
   dariadb::Time maxTime = 1;
+  dariadb::Id targetId{10};
   {
     Cola c(p, targetId, buffer);
     EXPECT_EQ(buffer[sz], uint8_t(255));
@@ -34,24 +33,24 @@ TEST_CASE("COLA.IndexreadWrite") {
 
     while (c.addLink(address, chunk_id, maxTime)) {
       addeded++;
-     /* auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
-      EXPECT_EQ(addeded, queryResult.size());*/
-	  EXPECT_EQ(buffer[sz], uint8_t(255));
+      auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
+      EXPECT_EQ(addeded, queryResult.size());
+      EXPECT_EQ(buffer[sz], uint8_t(255));
       address++;
       chunk_id++;
       maxTime++;
     }
-    /*EXPECT_GT(addeded, size_t(0));
+    EXPECT_GT(addeded, size_t(0));
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
-    EXPECT_EQ(addeded, queryResult.size());*/
+    EXPECT_EQ(addeded, queryResult.size());
   }
- /* {
+  {
     Cola c(buffer);
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
     EXPECT_EQ(addeded, queryResult.size());
-  }*/
+  }
   delete[] buffer;
 }
 

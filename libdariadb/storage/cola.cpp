@@ -3,9 +3,6 @@
 #include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/in_interval.h>
 
-// TODO remove
-#include <iostream>
-
 using namespace dariadb;
 using namespace dariadb::storage;
 
@@ -59,9 +56,6 @@ struct Cola::Private {
 
     bool addLink(const Link &lnk) {
       if (isFull()) {
-        std::cout << "append to full level "
-                  << "sz:" << _lvl_header->size << " pos:" << _lvl_header->pos
-                  << std::endl;
         return false;
       }
       // TODO check to duplicates
@@ -74,12 +68,10 @@ struct Cola::Private {
 
     void queryLink(Time from, Time to, std::list<Link> *result) const {
       ENSURE(result != nullptr);
-      std::cout << "queryLink: " << (uint16_t)_lvl_header->num << std::endl;
       // TODO use upper/lower bounds
       for (size_t i = 0; i < _lvl_header->pos; ++i) {
         auto lnk = _links[i];
         if (utils::inInterval(from, to, lnk.max_time)) {
-          std::cout << "id: " << lnk.chunk_id << std::endl;
           result->push_back(lnk);
         }
       }
@@ -125,6 +117,7 @@ struct Cola::Private {
       lhdr->maxTime = MIN_TIME;
       lhdr->minTime = MAX_TIME;
       lhdr->size = block_in_level(i) * _header->params.B;
+	  ENSURE(lhdr->num == i);
       ENSURE(lhdr->pos == size_t());
 
       levels_ptr += sizeof(LevelHeader);
@@ -138,16 +131,15 @@ struct Cola::Private {
   void initPointers(uint8_t *buffer) {
     _header = reinterpret_cast<IndexHeader *>(buffer);
     _levels.reserve(_header->params.levels);
-
-    auto levels_ptr = buffer + sizeof(IndexHeader);
+    uint8_t *levels_ptr = buffer + sizeof(IndexHeader);
 
     { // memory level
       LevelHeader *lhdr = reinterpret_cast<LevelHeader *>(levels_ptr);
+
       levels_ptr += sizeof(LevelHeader);
       Link *links = reinterpret_cast<Link *>(levels_ptr);
       Level l{lhdr, links};
       _memory_level = l;
-      ENSURE(_memory_level._lvl_header->num == uint8_t(0));
       levels_ptr += sizeof(Link) * lhdr->size;
     }
 
@@ -163,7 +155,7 @@ struct Cola::Private {
     }
   }
 
-  uint8_t levels() const { return static_cast<uint8_t>(_levels.size()); }
+  uint8_t levels() const { return uint8_t(_levels.size()); }
   Id targetId() const { return _header->measId; }
 
   static constexpr size_t one_block_size(const size_t B) { return sizeof(Link) * B; }
@@ -190,7 +182,6 @@ struct Cola::Private {
   bool addLink(uint64_t address, uint64_t chunk_id, Time maxTime) {
     if (_memory_level.isFull()) {
       if (!merge_levels()) {
-        std::cout << "isFUll" << std::endl;
         return false;
       }
     }
@@ -207,7 +198,6 @@ struct Cola::Private {
   /// return false on failure.
   bool merge_levels() {
     size_t outlvl = calc_outlevel_num();
-    std::cout << "out level: " << outlvl << std::endl;
 
     if (outlvl >= _header->params.levels) {
       this->_header->is_full = true;
