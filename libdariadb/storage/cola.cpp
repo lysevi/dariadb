@@ -94,38 +94,19 @@ struct Cola::Private {
     _header->measId = measId;
 
     uint8_t *levels_ptr = buffer + sizeof(IndexHeader);
-
-    { // memory level
-      LevelHeader *lhdr = reinterpret_cast<LevelHeader *>(levels_ptr);
-      lhdr->num = 0;
+    initLevelsPointers(p, levels_ptr, [this](LevelHeader *lhdr, uint8_t num) {
+      lhdr->num = num;
       lhdr->maxTime = MIN_TIME;
       lhdr->minTime = MAX_TIME;
-      lhdr->size = block_in_level(0) * _header->params.B;
+      lhdr->size = block_in_level(num) * _header->params.B;
 
       ENSURE(lhdr->pos == size_t());
 
-      levels_ptr += sizeof(LevelHeader);
-      Link *links = reinterpret_cast<Link *>(levels_ptr);
+      auto linkPtr = reinterpret_cast<uint8_t *>(lhdr + 1);
+      Link *links = reinterpret_cast<Link *>(linkPtr);
       Level l{lhdr, links};
-      _memory_level = l;
-      levels_ptr += sizeof(Link) * lhdr->size;
-    }
-
-    for (uint8_t i = 0; i < p.levels; ++i) {
-      LevelHeader *lhdr = reinterpret_cast<LevelHeader *>(levels_ptr);
-      lhdr->num = i;
-      lhdr->maxTime = MIN_TIME;
-      lhdr->minTime = MAX_TIME;
-      lhdr->size = block_in_level(i) * _header->params.B;
-	  ENSURE(lhdr->num == i);
-      ENSURE(lhdr->pos == size_t());
-
-      levels_ptr += sizeof(LevelHeader);
-      Link *links = reinterpret_cast<Link *>(levels_ptr);
-      Level l{lhdr, links};
-      _levels.push_back(l);
-      levels_ptr += sizeof(Link) * lhdr->size;
-    }
+      return l;
+    });
   }
 
   void initPointers(uint8_t *buffer) {
@@ -133,25 +114,36 @@ struct Cola::Private {
     _levels.reserve(_header->params.levels);
     uint8_t *levels_ptr = buffer + sizeof(IndexHeader);
 
+    initLevelsPointers(_header->params, levels_ptr, [](LevelHeader *lhdr, uint8_t num) {
+      ENSURE(lhdr->num == num);
+      auto linkPtr = reinterpret_cast<uint8_t *>(lhdr + 1);
+      Link *links = reinterpret_cast<Link *>(linkPtr);
+      Level l{lhdr, links};
+      return l;
+    });
+  }
+
+  /**
+  p - cola params
+  levels_ptr - pointer to a memory after index header
+  levelInitFunc - function must return initialized Level.
+  */
+  void initLevelsPointers(const Cola::Param &p, uint8_t *levels_ptr,
+                          std::function<Level(LevelHeader *, uint8_t)> levelInitFunc) {
     { // memory level
       LevelHeader *lhdr = reinterpret_cast<LevelHeader *>(levels_ptr);
-
-      levels_ptr += sizeof(LevelHeader);
-      Link *links = reinterpret_cast<Link *>(levels_ptr);
-      Level l{lhdr, links};
+      auto l = levelInitFunc(lhdr, 0);
       _memory_level = l;
-      levels_ptr += sizeof(Link) * lhdr->size;
+      levels_ptr += sizeof(LevelHeader) + sizeof(Link) * lhdr->size;
     }
 
-    for (uint8_t i = 0; i < _header->params.levels; ++i) {
+    for (uint8_t i = 0; i < p.levels; ++i) {
       LevelHeader *lhdr = reinterpret_cast<LevelHeader *>(levels_ptr);
+      auto l = levelInitFunc(lhdr, i);
       ENSURE(lhdr->num == i);
-
-      levels_ptr += sizeof(LevelHeader);
-      Link *links = reinterpret_cast<Link *>(levels_ptr);
-      Level l{lhdr, links};
       _levels.push_back(l);
-      levels_ptr += sizeof(Link) * lhdr->size;
+
+      levels_ptr += sizeof(LevelHeader) + sizeof(Link) * lhdr->size;
     }
   }
 

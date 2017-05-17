@@ -3,7 +3,7 @@
 #include <libdariadb/utils/crc.h>
 #include <catch.hpp>
 
-TEST_CASE("CrcTest.NotEqualToSourc") {
+TEST_CASE("CrcTest.NotEqualToSource") {
   int value;
   char *buffer;
   size_t size;
