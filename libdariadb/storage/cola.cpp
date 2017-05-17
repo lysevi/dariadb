@@ -7,10 +7,11 @@ using namespace dariadb;
 using namespace dariadb::storage;
 
 /**
-|VolumeHeader|Index1, Index2, Index3,....-> ... <- ChunkN, Chunk<|
-      +-------^
-          V
-|IndexHeader|Levels|
+|IndexHeader|Level1|Level2|Level3|...
+      +--------+
+	  |
+	  V
+   LevelHeader|Link1|Link2...
 */
 struct Cola::Private {
 #pragma pack(push, 1)
