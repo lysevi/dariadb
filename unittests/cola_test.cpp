@@ -3,8 +3,6 @@
 
 #include "helpers.h"
 
-#include <iostream>
-
 #include <libdariadb/storage/cola.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
@@ -36,6 +34,13 @@ TEST_CASE("COLA.IndexreadWrite") {
       auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
       EXPECT_EQ(addeded, queryResult.size());
       EXPECT_EQ(buffer[sz], uint8_t(255));
+
+      bool sorted = std::is_sorted(queryResult.begin(), queryResult.end(),
+                                   [](const Cola::Link &l, const Cola::Link &r) {
+                                     return l.max_time < r.max_time;
+                                   });
+      EXPECT_TRUE(sorted);
+
       address++;
       chunk_id++;
       maxTime++;

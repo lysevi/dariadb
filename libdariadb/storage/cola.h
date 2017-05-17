@@ -33,7 +33,7 @@ public:
   EXPORT Id targetId() const;
 
   EXPORT bool addLink(uint64_t address, uint64_t chunk_id, Time maxTime);
-  EXPORT std::list<Link> queryLink(Time from, Time to) const;
+  EXPORT std::vector<Link> queryLink(Time from, Time to) const;
 
 private:
   struct Private;

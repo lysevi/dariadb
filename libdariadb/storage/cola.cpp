@@ -66,7 +66,7 @@ struct Cola::Private {
       return true;
     }
 
-    void queryLink(Time from, Time to, std::list<Link> *result) const {
+    void queryLink(Time from, Time to, std::vector<Link> *result) const {
       ENSURE(result != nullptr);
       // TODO use upper/lower bounds
       for (size_t i = 0; i < _lvl_header->pos; ++i) {
@@ -187,6 +187,12 @@ struct Cola::Private {
     size_t new_merge_count = _header->merge_count + 1;
     return dariadb::utils::ctz(~size_t(0) & new_merge_count);
   }
+
+  static void sort_links(Link *begin, Link *end) {
+    std::sort(begin, end,
+              [](const Link &l, const Link &r) { return l.max_time < r.max_time; });
+  }
+
   /// return false on failure.
   bool merge_levels() {
     size_t outlvl = calc_outlevel_num();
@@ -222,13 +228,16 @@ struct Cola::Private {
       l->clear();
     }
 
+    sort_links(merge_target._links, merge_target._links + merge_target.size());
+    ENSURE(merge_target._links->max_time <=
+           (merge_target._links + merge_target.size() - 1)->max_time);
     ++_header->merge_count;
 
     return true;
   }
 
-  std::list<Link> queryLink(Time from, Time to) const {
-    std::list<Link> result;
+  std::vector<Link> queryLink(Time from, Time to) const {
+    std::vector<Link> result;
 
     if (!_memory_level.isEmpty() && _memory_level._lvl_header->inInterval(from, to)) {
       _memory_level.queryLink(from, to, &result);
@@ -239,6 +248,7 @@ struct Cola::Private {
         l.queryLink(from, to, &result);
       }
     }
+    sort_links(result.data(), result.data() + result.size());
     return result;
   }
   IndexHeader *_header;
@@ -267,6 +277,6 @@ bool Cola::addLink(uint64_t address, uint64_t chunk_id, Time maxTime) {
   return _impl->addLink(address, chunk_id, maxTime);
 }
 
-std::list<Cola::Link> Cola::queryLink(Time from, Time to) const {
+std::vector<Cola::Link> Cola::queryLink(Time from, Time to) const {
   return _impl->queryLink(from, to);
 }
