@@ -22,14 +22,20 @@ public:
     Time max_time;
     uint64_t chunk_id;
     uint64_t address;
+	bool erased;
+
+	static Link makeEmpty(){
+		return Link{ MIN_TIME, std::numeric_limits<uint64_t>::max() ,std::numeric_limits<uint64_t>::max() , true };
+	}
 
     bool IsEmpty() const {
-      return max_time == MAX_TIME && chunk_id == std::numeric_limits<uint64_t>::max() &&
-             address == std::numeric_limits<uint64_t>::max();
+      return erased ||(
+		  max_time == MIN_TIME && chunk_id == std::numeric_limits<uint64_t>::max() &&
+             address == std::numeric_limits<uint64_t>::max());
     }
 
     bool operator==(const Link &other) {
-      return max_time == other.max_time && chunk_id == other.chunk_id &&
+      return erased==other.erased && max_time == other.max_time && chunk_id == other.chunk_id &&
              address == other.address;
     }
   };
@@ -45,7 +51,7 @@ public:
   EXPORT bool addLink(uint64_t address, uint64_t chunk_id, Time maxTime);
   EXPORT std::vector<Link> queryLink(Time from, Time to) const;
   EXPORT Link queryLink(Time tp) const;
-
+  EXPORT void rm(Time maxTime, uint64_t chunk_id);
 private:
   struct Private;
   std::shared_ptr<Private> _impl;

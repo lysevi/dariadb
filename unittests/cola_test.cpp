@@ -67,7 +67,17 @@ TEST_CASE("COLA.IndexreadWrite") {
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
-    EXPECT_EQ(addeded, queryResult.size());
+	auto size_on_start = queryResult.size();
+	EXPECT_EQ(addeded, size_on_start);
+	
+	for (size_t i = addeded; i >= 0 && size_on_start != 0; --i) {
+		c.rm(dariadb::Time(addeded), uint64_t(addeded));
+		addeded--;
+
+		queryResult = c.queryLink(dariadb::Time(1), maxTime);
+		EXPECT_GT(size_on_start, queryResult.size());
+		size_on_start = queryResult.size();
+	}
   }
   delete[] buffer;
 }

@@ -31,6 +31,10 @@ struct Cola::Private {
              utils::inInterval(minTime, maxTime, from) ||
              utils::inInterval(minTime, maxTime, to);
     }
+
+	bool hasTimePoint(Time tp) const {
+		return utils::inInterval(minTime, maxTime, tp) ||  maxTime<= tp;
+	}
   };
 
   struct IndexHeader {
@@ -72,7 +76,7 @@ struct Cola::Private {
       // TODO use upper/lower bounds
       for (size_t i = 0; i < _lvl_header->pos; ++i) {
         auto lnk = _links[i];
-        if (utils::inInterval(from, to, lnk.max_time)) {
+        if (utils::inInterval(from, to, lnk.max_time) && !lnk.erased) {
           result->push_back(lnk);
         }
       }
@@ -83,7 +87,7 @@ struct Cola::Private {
       // TODO use upper/lower bounds
       for (size_t i = 1; i < _lvl_header->pos; ++i) {
         auto lnk = _links[i];
-        if (lnk.max_time <= tp) {
+        if (lnk.max_time <= tp && !lnk.erased) {
           result = i;
         } else {
           if (lnk.max_time > tp) {
@@ -93,6 +97,19 @@ struct Cola::Private {
       }
       return _links[result];
     }
+
+	void rm(Time maxTime, uint64_t chunk_id) {
+		for (size_t i = 0; i < _lvl_header->pos; ++i) {
+			auto lnk = _links[i];
+			//if (lnk.max_time > maxTime) {
+			//	break;
+			//}
+			if (lnk.max_time == maxTime && chunk_id==lnk.chunk_id) {
+				_links[i].erased = true;
+				break;
+			}
+		}
+	}
   };
 
   /// init index in memory.
@@ -194,7 +211,7 @@ struct Cola::Private {
         return false;
       }
     }
-    Link lnk{maxTime, chunk_id, address};
+    Link lnk{maxTime, chunk_id, address, false};
     auto result = _memory_level.addLink(lnk);
     ENSURE(result);
     return result;
@@ -268,18 +285,34 @@ struct Cola::Private {
     sort_links(result.data(), result.data() + result.size());
     return result;
   }
+  
   Link queryLink(Time tp) const {
-    if (!_memory_level.isEmpty() && _memory_level._lvl_header->inInterval(MIN_TIME, tp)) {
-      return _memory_level.queryLink(tp);
+	Link result = Link::makeEmpty();
+    if (!_memory_level.isEmpty() && _memory_level._lvl_header->hasTimePoint(tp)) {
+      result=_memory_level.queryLink(tp);
     }
-    // TODO optimize
+    // TODO optimize: find level with maximum "hasTimePoint"
     for (const auto &l : _levels) {
-      if (!l.isEmpty() && l._lvl_header->inInterval(MIN_TIME, tp)) {
-        return l.queryLink(tp);
+      if (!l.isEmpty() && l._lvl_header->hasTimePoint(tp)) {
+        auto sub_result=l.queryLink(tp);
+		if (sub_result.max_time > result.max_time || result.IsEmpty()) {
+			result = sub_result;
+		}
       }
     }
-    return {MAX_TIME, std::numeric_limits<uint64_t>::max(),
-            std::numeric_limits<uint64_t>::max()};
+    return result;
+  }
+
+  void rm(Time maxTime, uint64_t chunk_id) {
+	  if (!_memory_level.isEmpty() && _memory_level._lvl_header->hasTimePoint(maxTime)) {
+		  _memory_level.rm(maxTime, chunk_id);
+	  }
+	  // TODO optimize
+	  for (auto &l : _levels) {
+		  if (!l.isEmpty() && l._lvl_header->hasTimePoint(maxTime)) {
+			  l.rm(maxTime, chunk_id);
+		  }
+	  }
   }
   IndexHeader *_header;
   Level _memory_level;
@@ -313,4 +346,8 @@ std::vector<Cola::Link> Cola::queryLink(Time from, Time to) const {
 
 Cola::Link Cola::queryLink(Time tp) const {
   return _impl->queryLink(tp);
+}
+
+void Cola::rm(Time maxTime, uint64_t chunk_id) {
+	return _impl->rm(maxTime, chunk_id);
 }
