@@ -70,13 +70,16 @@ TEST_CASE("COLA.IndexreadWrite") {
 	auto size_on_start = queryResult.size();
 	EXPECT_EQ(addeded, size_on_start);
 	
-	for (size_t i = addeded; i >= 0 && size_on_start != 0; --i) {
+	for (size_t i = addeded;; --i) {
 		c.rm(dariadb::Time(addeded), uint64_t(addeded));
 		addeded--;
 
 		queryResult = c.queryLink(dariadb::Time(1), maxTime);
 		EXPECT_GT(size_on_start, queryResult.size());
 		size_on_start = queryResult.size();
+		if (i == 0 && size_on_start == 0) {
+			break;
+		}
 	}
   }
   delete[] buffer;
