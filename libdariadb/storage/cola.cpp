@@ -9,8 +9,8 @@ using namespace dariadb::storage;
 /**
 |IndexHeader|Level1|Level2|Level3|...
       +--------+
-	  |
-	  V
+      |
+      V
    LevelHeader|Link1|Link2...
 */
 struct Cola::Private {
@@ -76,6 +76,22 @@ struct Cola::Private {
           result->push_back(lnk);
         }
       }
+    }
+
+    Link queryLink(Time tp) const {
+      size_t result = size_t(0);
+      // TODO use upper/lower bounds
+      for (size_t i = 1; i < _lvl_header->pos; ++i) {
+        auto lnk = _links[i];
+        if (lnk.max_time <= tp) {
+          result = i;
+        } else {
+          if (lnk.max_time > tp) {
+            break;
+          }
+        }
+      }
+      return _links[result];
     }
   };
 
@@ -252,6 +268,19 @@ struct Cola::Private {
     sort_links(result.data(), result.data() + result.size());
     return result;
   }
+  Link queryLink(Time tp) const {
+    if (!_memory_level.isEmpty() && _memory_level._lvl_header->inInterval(MIN_TIME, tp)) {
+      return _memory_level.queryLink(tp);
+    }
+    // TODO optimize
+    for (const auto &l : _levels) {
+      if (!l.isEmpty() && l._lvl_header->inInterval(MIN_TIME, tp)) {
+        return l.queryLink(tp);
+      }
+    }
+    return {MAX_TIME, std::numeric_limits<uint64_t>::max(),
+            std::numeric_limits<uint64_t>::max()};
+  }
   IndexHeader *_header;
   Level _memory_level;
   std::vector<Level> _levels;
@@ -280,4 +309,8 @@ bool Cola::addLink(uint64_t address, uint64_t chunk_id, Time maxTime) {
 
 std::vector<Cola::Link> Cola::queryLink(Time from, Time to) const {
   return _impl->queryLink(from, to);
+}
+
+Cola::Link Cola::queryLink(Time tp) const {
+  return _impl->queryLink(tp);
 }

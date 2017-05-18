@@ -22,6 +22,16 @@ public:
     Time max_time;
     uint64_t chunk_id;
     uint64_t address;
+
+    bool IsEmpty() const {
+      return max_time == MAX_TIME && chunk_id == std::numeric_limits<uint64_t>::max() &&
+             address == std::numeric_limits<uint64_t>::max();
+    }
+
+    bool operator==(const Link &other) {
+      return max_time == other.max_time && chunk_id == other.chunk_id &&
+             address == other.address;
+    }
   };
   //#pragma pack(pop)
 
@@ -34,6 +44,7 @@ public:
 
   EXPORT bool addLink(uint64_t address, uint64_t chunk_id, Time maxTime);
   EXPORT std::vector<Link> queryLink(Time from, Time to) const;
+  EXPORT Link queryLink(Time tp) const;
 
 private:
   struct Private;
