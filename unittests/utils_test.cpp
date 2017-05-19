@@ -9,8 +9,8 @@
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/utils.h>
 
-#include <catch.hpp>
 #include "helpers.h"
+#include <catch.hpp>
 #include <thread>
 
 TEST_CASE("Utils.CountZero") {
@@ -58,7 +58,7 @@ TEST_CASE("Utils.FileUtils") {
   const std::string fname = "mapped_file.test";
   auto mapf = dariadb::utils::fs::MappedFile::touch(fname, 1024);
   for (uint8_t i = 0; i < 100; i++) {
-	  mapf->data()[i] = i;
+    mapf->data()[i] = i;
   }
   mapf->close();
 
@@ -66,7 +66,7 @@ TEST_CASE("Utils.FileUtils") {
   EXPECT_TRUE(ls_res.size() == 1);
   auto reopen_mapf = dariadb::utils::fs::MappedFile::open(fname);
   for (uint8_t i = 0; i < 100; i++) {
-	  EXPECT_EQ(reopen_mapf->data()[i], i);
+    EXPECT_EQ(reopen_mapf->data()[i], i);
   }
   reopen_mapf->close();
   dariadb::utils::fs::rm(fname);
@@ -211,7 +211,7 @@ TEST_CASE("Utils.ThreadsManager") {
       ThreadManager::instance()->post(tk1, AT(at1));
       ThreadManager::instance()->post(tk2, AT(at2));
     }
-    //EXPECT_GT(ThreadManager::instance()->active_works(), size_t(0));
+    // EXPECT_GT(ThreadManager::instance()->active_works(), size_t(0));
     at_while_res->wait();
     EXPECT_EQ(called, int(10));
     ThreadManager::instance()->flush();

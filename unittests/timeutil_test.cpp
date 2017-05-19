@@ -1,8 +1,8 @@
 
 #include <libdariadb/timeutil.h>
 
-#include <catch.hpp>
 #include "helpers.h"
+#include <catch.hpp>
 
 TEST_CASE("Time.TimeToString") {
   auto ct = dariadb::timeutil::current_time();

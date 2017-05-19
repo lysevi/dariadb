@@ -1,5 +1,4 @@
 
-#include <catch.hpp>
 #include "helpers.h"
 #include <libdariadb/compression/bytebuffer.h>
 #include <libdariadb/compression/compression.h>
@@ -7,6 +6,7 @@
 #include <libdariadb/compression/flag.h>
 #include <libdariadb/compression/xor.h>
 #include <libdariadb/timeutil.h>
+#include <catch.hpp>
 
 #include <algorithm>
 #include <chrono>

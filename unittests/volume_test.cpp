@@ -3,15 +3,15 @@
 
 #include "helpers.h"
 
-#include <libdariadb/storage/volume.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
+#include <libdariadb/storage/volume.h>
 #include <libdariadb/utils/async/thread_manager.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
 
-TEST_CASE("Volume.IndexreadWrite") {
+TEST_CASE("Volume.Index") {
   using namespace dariadb::storage;
   VolumeIndex::Param p{uint8_t(3), uint8_t(5)};
   auto sz = VolumeIndex::index_size(p);
@@ -29,8 +29,8 @@ TEST_CASE("Volume.IndexreadWrite") {
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
 
-	auto lnk = c.queryLink(maxTime);
-	EXPECT_TRUE(lnk.IsEmpty());
+    auto lnk = c.queryLink(maxTime);
+    EXPECT_TRUE(lnk.IsEmpty());
 
     while (c.addLink(address, chunk_id, maxTime)) {
       addeded++;
@@ -38,22 +38,23 @@ TEST_CASE("Volume.IndexreadWrite") {
       EXPECT_EQ(addeded, queryResult.size());
       EXPECT_EQ(buffer[sz], uint8_t(255));
 
-      bool sorted = std::is_sorted(queryResult.begin(), queryResult.end(),
-                                   [](const VolumeIndex::Link &l, const VolumeIndex::Link &r) {
-                                     return l.max_time < r.max_time;
-                                   });
+      bool sorted =
+          std::is_sorted(queryResult.begin(), queryResult.end(),
+                         [](const VolumeIndex::Link &l, const VolumeIndex::Link &r) {
+                           return l.max_time < r.max_time;
+                         });
       EXPECT_TRUE(sorted);
 
-	  lnk = c.queryLink(maxTime);
-	  EXPECT_EQ(lnk.max_time , maxTime);
+      lnk = c.queryLink(maxTime);
+      EXPECT_EQ(lnk.max_time, maxTime);
 
-	  lnk = c.queryLink(maxTime+1);
-	  EXPECT_EQ(lnk.max_time, maxTime);
+      lnk = c.queryLink(maxTime + 1);
+      EXPECT_EQ(lnk.max_time, maxTime);
 
-	  if (maxTime != size_t(1)) {
-		  lnk = c.queryLink(maxTime - 1);
-		  EXPECT_EQ(lnk.max_time, maxTime - 1);
-	  }
+      if (maxTime != size_t(1)) {
+        lnk = c.queryLink(maxTime - 1);
+        EXPECT_EQ(lnk.max_time, maxTime - 1);
+      }
       address++;
       chunk_id++;
       maxTime++;
@@ -67,21 +68,112 @@ TEST_CASE("Volume.IndexreadWrite") {
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
-	auto size_on_start = queryResult.size();
-	EXPECT_EQ(addeded, size_on_start);
-	
-	for (size_t i = addeded;; --i) {
-		if (i == 0 || size_on_start == 0) {
-			break;
-		}
-		c.rm(dariadb::Time(addeded), uint64_t(addeded));
-		addeded--;
+    auto size_on_start = queryResult.size();
+    EXPECT_EQ(addeded, size_on_start);
 
-		queryResult = c.queryLink(dariadb::Time(1), maxTime);
-		EXPECT_GT(size_on_start, queryResult.size());
-		size_on_start = queryResult.size();
-		
-	}
+    for (size_t i = addeded;; --i) {
+      if (i == 0 || size_on_start == 0) {
+        break;
+      }
+      c.rm(dariadb::Time(addeded), uint64_t(addeded));
+      addeded--;
+
+      queryResult = c.queryLink(dariadb::Time(1), maxTime);
+      EXPECT_GT(size_on_start, queryResult.size());
+      size_on_start = queryResult.size();
+    }
   }
   delete[] buffer;
+}
+
+dariadb::storage::Chunk_Ptr createChunk(dariadb::storage::ChunkHeader *hdr,
+                                        uint8_t *buffer, size_t chunk_sz, dariadb::Id id,
+                                        dariadb::Time startTime) {
+  using namespace dariadb;
+  using namespace dariadb::storage;
+
+  Meas m = Meas(id);
+  m.time = startTime;
+  m.value = Value(10);
+  auto ch = dariadb::storage::Chunk::create(hdr, buffer, uint32_t(chunk_sz), m);
+  while (ch->append(m)) {
+    m.time++;
+    m.value++;
+  }
+  return ch;
+}
+
+TEST_CASE("Volume.Init") {
+  using namespace dariadb::storage;
+  using namespace dariadb::utils;
+  using namespace dariadb;
+
+  const size_t chunk_size = 100;
+  auto storage_path = "testStorage";
+
+  if (fs::path_exists(storage_path)) {
+    fs::rm(storage_path);
+  }
+  fs::mkdir(storage_path);
+
+  auto file_path = fs::append_path(storage_path, "volume1");
+
+  const Id idCount = 10;
+
+  Time t = 0;
+  uint64_t chunkId = 0;
+  bool isFull = false;
+  std::unordered_map<dariadb::Id, size_t> id2chunks_count;
+
+  { // create
+    EXPECT_TRUE(fs::ls(storage_path).empty());
+    Volume::Params params(1024 * 3, chunk_size, 3, 1);
+    Volume vlm(params, file_path);
+
+    EXPECT_EQ(fs::ls(storage_path).size(), size_t(1));
+
+    while (!isFull) {
+      for (Id id = 0; id < idCount && !isFull; ++id) {
+        for (size_t i = 0; i < 2 && !isFull; ++i) {
+          ChunkHeader chdr;
+
+          uint8_t *buffer = new uint8_t[chunk_size];
+          auto c = createChunk(&chdr, buffer, chunk_size, id, t);
+          t = c->header->stat.maxTime;
+          c->header->id = ++chunkId;
+
+          isFull = !vlm.addChunk(c);
+          delete[] buffer;
+
+          if (!isFull) {
+            id2chunks_count[id] += size_t(1);
+            auto chunks = vlm.queryChunks(id, MIN_TIME, t);
+            EXPECT_EQ(chunks.size(), id2chunks_count[id]);
+          }
+        }
+      }
+    }
+    auto ids = vlm.indexes();
+    EXPECT_EQ(ids.size(), id2chunks_count.size());
+    for (auto id : ids) {
+      EXPECT_TRUE(id2chunks_count.find(id) != id2chunks_count.end());
+    }
+  }
+  {
+    Volume vlm(file_path);
+    auto ids = vlm.indexes();
+    EXPECT_EQ(ids.size(), id2chunks_count.size());
+    for (auto id : ids) {
+      EXPECT_TRUE(id2chunks_count.find(id) != id2chunks_count.end());
+    }
+
+    for (auto kv : id2chunks_count) {
+      auto chunks = vlm.queryChunks(kv.first, MIN_TIME, t);
+      EXPECT_EQ(chunks.size(), kv.second);
+    }
+  }
+
+  if (fs::path_exists(storage_path)) {
+    fs::rm(storage_path);
+  }
 }

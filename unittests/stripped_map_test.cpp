@@ -1,7 +1,7 @@
 
+#include "helpers.h"
 #include <libdariadb/utils/striped_map.h>
 #include <catch.hpp>
-#include "helpers.h"
 #include <thread>
 
 using namespace dariadb::utils;

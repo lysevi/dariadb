@@ -1,6 +1,6 @@
 
-#include <catch.hpp>
 #include "helpers.h"
+#include <catch.hpp>
 
 #include <libdariadb/dariadb.h>
 #include <libdariadb/storage/manifest.h>

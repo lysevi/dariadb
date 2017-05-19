@@ -1,7 +1,9 @@
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/volume.h>
 #include <libdariadb/utils/cz.h>
+#include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
+#include <libdariadb/utils/utils.h>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -118,6 +120,11 @@ struct VolumeIndex::Private {
 
   Private(uint8_t *buffer) { initPointers(buffer); }
 
+  ~Private() {
+    _levels.clear();
+    _header = nullptr;
+  }
+
   void initPointers(const VolumeIndex::Param &p, Id measId, uint8_t *buffer) {
     _levels.reserve(p.levels);
     _header = reinterpret_cast<IndexHeader *>(buffer);
@@ -191,13 +198,13 @@ struct VolumeIndex::Private {
     return one_block_size(B) * block_in_level(lvl);
   }
 
-  static size_t index_size(const Param &p) {
-    size_t result = 0;
-    result += sizeof(IndexHeader);
-    result += sizeof(LevelHeader) + one_block_size(p.B); /// space to _memvalues
+  static uint32_t index_size(const Param &p) {
+    uint32_t result = 0;
+    result += uint32_t(sizeof(IndexHeader));
+    result += uint32_t(sizeof(LevelHeader) + one_block_size(p.B)); /// space to _memvalues
     for (size_t lvl = 0; lvl < p.levels; ++lvl) {
       auto cur_level_links = bytes_in_level(p.B, lvl);
-      result += sizeof(LevelHeader) + cur_level_links;
+      result += uint32_t(sizeof(LevelHeader) + cur_level_links);
     }
     return result;
   }
@@ -321,7 +328,11 @@ VolumeIndex::VolumeIndex(const Param &p, Id measId, uint8_t *buffer)
 
 VolumeIndex::VolumeIndex(uint8_t *buffer) : _impl(new VolumeIndex::Private(buffer)) {}
 
-size_t VolumeIndex::index_size(const Param &p) {
+VolumeIndex::~VolumeIndex() {
+  _impl = nullptr;
+}
+
+uint32_t VolumeIndex::index_size(const Param &p) {
   return VolumeIndex::Private::index_size(p);
 }
 
@@ -347,4 +358,171 @@ VolumeIndex::Link VolumeIndex::queryLink(Time tp) const {
 
 void VolumeIndex::rm(Time maxTime, uint64_t chunk_id) {
   return _impl->rm(maxTime, chunk_id);
+}
+
+/////////// VOLUME ///////////
+using dariadb::utils::fs::MappedFile;
+
+struct Volume::Private {
+#pragma pack(push, 1)
+  struct Header {
+    uint32_t one_chunk_size; // with header
+    VolumeIndex::Param _index_param;
+    uint32_t index_pos; // from 0
+    uint32_t chunk_pos; // from size
+  };
+#pragma pack(pop)
+  Private(const Params &p, const std::string &fname) {
+    ENSURE(p.size >
+           (sizeof(Header) + VolumeIndex::index_size(p.indexParams) + p.chunk_size));
+    _volume = MappedFile::touch(fname, p.size);
+    _data = _volume->data();
+    _header = reinterpret_cast<Header *>(_data);
+    _header->index_pos = sizeof(Header);
+    _header->one_chunk_size = p.chunk_size;
+    _header->chunk_pos = p.size;
+    _header->_index_param = p.indexParams;
+  }
+
+  Private(const std::string &fname) {
+    _volume = MappedFile::open(fname);
+    _data = _volume->data();
+    _header = reinterpret_cast<Header *>(_data);
+    auto isz = VolumeIndex::index_size(_header->_index_param);
+
+    auto indexes_count = (_header->index_pos - sizeof(Header)) / isz;
+    auto it = _data + sizeof(Header);
+    for (size_t i = 0; i < indexes_count; ++i) {
+      auto new_index = std::make_shared<VolumeIndex>(it);
+      _indexes[new_index->targetId()] = new_index;
+      it += isz;
+    }
+  }
+
+  ~Private() {
+    _volume->flush();
+    _volume->close();
+  }
+
+  IdArray indexes() const {
+    IdArray result(_indexes.size());
+    size_t result_pos = 0;
+    for (const auto &kv : _indexes) {
+      result[result_pos++] = kv.first;
+    }
+    return result;
+  }
+
+  bool havePlaceForNewIndex() const {
+    auto exist = ((int64_t(_header->chunk_pos) - _header->index_pos -
+                   (_header->one_chunk_size + sizeof(ChunkHeader))) >=
+                  VolumeIndex::index_size(_header->_index_param));
+    return exist;
+  }
+
+  bool havePlaceForNewChunk() const {
+    auto exist = (int64_t(_header->chunk_pos) - _header->index_pos >=
+                  int64_t(_header->one_chunk_size + sizeof(ChunkHeader)));
+    return exist;
+  }
+
+  uint64_t writeChunk(const Chunk_Ptr &c) {
+    _header->chunk_pos -= _header->one_chunk_size + sizeof(ChunkHeader);
+    auto firstByte = _header->chunk_pos;
+    std::memcpy(_data + firstByte, c->header, sizeof(ChunkHeader));
+    std::memcpy(_data + firstByte + sizeof(ChunkHeader), c->_buffer_t, c->header->size);
+    return firstByte;
+  }
+
+  bool addChunk(const Chunk_Ptr &c) {
+    auto fres = _indexes.find(c->header->meas_id);
+    if (fres == _indexes.end()) {
+      if (havePlaceForNewIndex()) {
+        auto address = writeChunk(c);
+        auto isz = VolumeIndex::index_size(_header->_index_param);
+        auto newIndex = std::make_shared<VolumeIndex>(
+            _header->_index_param, c->header->meas_id, _data + _header->index_pos);
+        _header->index_pos += isz;
+        newIndex->addLink(address, c->header->id, c->header->stat.maxTime);
+        _indexes[c->header->meas_id] = newIndex;
+        return true;
+      }
+      return false;
+    }
+    if (havePlaceForNewChunk()) {
+      auto address = writeChunk(c);
+      fres->second->addLink(address, c->header->id, c->header->stat.maxTime);
+      return true;
+    }
+    return false;
+  }
+
+  std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to) {
+    std::vector<Chunk_Ptr> result;
+
+    auto fres = _indexes.find(id);
+    if (fres == _indexes.end()) {
+      return result;
+    } else {
+      auto links = fres->second->queryLink(from, to);
+      if (links.empty()) {
+        return result;
+      }
+      result.reserve(links.size());
+
+      for (auto lnk : links) {
+        ENSURE(!lnk.erased);
+
+        auto firstByte = lnk.address;
+        ChunkHeader *chdr = new ChunkHeader();
+        memcpy(chdr, _data + firstByte, sizeof(ChunkHeader));
+        ENSURE(chdr->meas_id == id);
+
+        uint8_t *byte_buffer = new uint8_t[_header->one_chunk_size];
+        memcpy(byte_buffer, _data + firstByte + sizeof(ChunkHeader),
+               _header->one_chunk_size);
+
+        auto cptr = Chunk::open(chdr, byte_buffer);
+        cptr->is_owner = true;
+#ifdef DOUBLE_CHECKS
+        auto rdr = cptr->getReader();
+        while (!rdr->is_end()) {
+          auto m = rdr->readNext();
+          ENSURE(m.id == id);
+        }
+#endif // DOUBLE_CHECKS
+
+        result.emplace_back(cptr);
+      }
+      std::sort(result.begin(), result.end(), [](const Chunk_Ptr &l, const Chunk_Ptr &r) {
+        return l->header->id < r->header->id;
+      });
+      return result;
+    }
+  }
+  MappedFile::MapperFile_ptr _volume;
+  uint8_t *_data;
+  Header *_header;
+  std::unordered_map<Id, std::shared_ptr<VolumeIndex>> _indexes;
+};
+
+Volume::Volume(const Params &p, const std::string &fname)
+    : _impl(new Private(p, fname)) {}
+
+Volume::Volume(const std::string &fname) : _impl(new Private(fname)) {}
+
+Volume::~Volume() {
+  _impl = nullptr;
+}
+
+bool Volume::addChunk(const Chunk_Ptr &c) {
+  return _impl->addChunk(c);
+}
+
+std::vector<Chunk_Ptr> Volume::queryChunks(Id id, Time from, Time to) {
+  return _impl->queryChunks(id, from, to);
+}
+
+IdArray Volume::indexes() const {
+  return _impl->indexes();
 }

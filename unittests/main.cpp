@@ -42,7 +42,7 @@ private:
 
 bool UnitTestLogger::verbose = false;
 
-struct  LoggerControl : Catch::TestEventListenerBase {
+struct LoggerControl : Catch::TestEventListenerBase {
   using TestEventListenerBase::TestEventListenerBase; // inherit constructor
 
   virtual void testCaseStarting(Catch::TestCaseInfo const &) override {
@@ -51,7 +51,7 @@ struct  LoggerControl : Catch::TestEventListenerBase {
     dariadb::utils::LogManager::start(_logger);
   }
 
-  virtual void testCaseEnded(Catch::TestCaseStats const& testCaseStats)override {
+  virtual void testCaseEnded(Catch::TestCaseStats const &testCaseStats) override {
     if (testCaseStats.testInfo.expectedToFail()) {
       _raw_ptr->dump_all();
     }

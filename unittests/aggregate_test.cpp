@@ -1,9 +1,9 @@
 
+#include "helpers.h"
 #include <libdariadb/aggregate/aggregator.h>
 #include <libdariadb/aggregate/timer.h>
 #include <libdariadb/dariadb.h>
 #include <libdariadb/timeutil.h>
-#include "helpers.h"
 #include <catch.hpp>
 
 class Aggregate {
@@ -150,7 +150,7 @@ TEST_CASE_METHOD(Aggregate, "DownsamplingIntervals") {
 TEST_CASE_METHOD(Aggregate, "Aggregator") {
   using namespace dariadb::aggregator;
   using namespace dariadb::timeutil;
-  
+
   _storage->setScheme(_scheme);
 
   DateTime dt;
@@ -164,7 +164,7 @@ TEST_CASE_METHOD(Aggregate, "Aggregator") {
 
   auto raw_timer = new MockTimer(from_datetime(dt));
   ITimer_Ptr mock_timer(raw_timer);
-  
+
   Aggregator agg(_storage, mock_timer);
 
   // raw=>minute, minute=>halfhour, halfhour=>hour, hour=>day, day=>week, week=>month;
