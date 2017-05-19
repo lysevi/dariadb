@@ -3,7 +3,7 @@
 
 #include "helpers.h"
 
-#include <libdariadb/storage/cola.h>
+#include <libdariadb/storage/volume.h>
 #include <libdariadb/storage/engine_environment.h>
 #include <libdariadb/storage/manifest.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -11,10 +11,10 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
 
-TEST_CASE("COLA.IndexreadWrite") {
+TEST_CASE("Volume.IndexreadWrite") {
   using namespace dariadb::storage;
-  Cola::Param p{uint8_t(3), uint8_t(5)};
-  auto sz = Cola::index_size(p);
+  VolumeIndex::Param p{uint8_t(3), uint8_t(5)};
+  auto sz = VolumeIndex::index_size(p);
   EXPECT_GT(sz, size_t(0));
 
   uint8_t *buffer = new uint8_t[sz + 1];
@@ -24,7 +24,7 @@ TEST_CASE("COLA.IndexreadWrite") {
   dariadb::Time maxTime = 1;
   dariadb::Id targetId{10};
   {
-    Cola c(p, targetId, buffer);
+    VolumeIndex c(p, targetId, buffer);
     EXPECT_EQ(buffer[sz], uint8_t(255));
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
@@ -39,7 +39,7 @@ TEST_CASE("COLA.IndexreadWrite") {
       EXPECT_EQ(buffer[sz], uint8_t(255));
 
       bool sorted = std::is_sorted(queryResult.begin(), queryResult.end(),
-                                   [](const Cola::Link &l, const Cola::Link &r) {
+                                   [](const VolumeIndex::Link &l, const VolumeIndex::Link &r) {
                                      return l.max_time < r.max_time;
                                    });
       EXPECT_TRUE(sorted);
@@ -63,7 +63,7 @@ TEST_CASE("COLA.IndexreadWrite") {
     EXPECT_EQ(addeded, queryResult.size());
   }
   {
-    Cola c(buffer);
+    VolumeIndex c(buffer);
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);

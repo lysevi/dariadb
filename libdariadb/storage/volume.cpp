@@ -1,5 +1,5 @@
 #include <libdariadb/storage/chunk.h>
-#include <libdariadb/storage/cola.h>
+#include <libdariadb/storage/volume.h>
 #include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/in_interval.h>
 
@@ -13,7 +13,7 @@ using namespace dariadb::storage;
       V
    LevelHeader|Link1|Link2...
 */
-struct Cola::Private {
+struct VolumeIndex::Private {
 #pragma pack(push, 1)
   struct LevelHeader {
     uint8_t num;
@@ -38,7 +38,7 @@ struct Cola::Private {
   };
 
   struct IndexHeader {
-    Cola::Param params;
+    VolumeIndex::Param params;
     Id measId;
     size_t merge_count; // how many time levels was merged.
     bool is_full : 1;
@@ -110,7 +110,7 @@ struct Cola::Private {
   };
 
   /// init index in memory.
-  Private(const Cola::Param &p, Id measId, uint8_t *buffer) {
+  Private(const VolumeIndex::Param &p, Id measId, uint8_t *buffer) {
     size_t sz = index_size(p);
     std::fill_n(buffer, sz, uint8_t());
     initPointers(p, measId, buffer);
@@ -118,7 +118,7 @@ struct Cola::Private {
 
   Private(uint8_t *buffer) { initPointers(buffer); }
 
-  void initPointers(const Cola::Param &p, Id measId, uint8_t *buffer) {
+  void initPointers(const VolumeIndex::Param &p, Id measId, uint8_t *buffer) {
     _levels.reserve(p.levels);
     _header = reinterpret_cast<IndexHeader *>(buffer);
     _header->params = p;
@@ -159,7 +159,7 @@ struct Cola::Private {
   levels_ptr - pointer to a memory after index header
   levelInitFunc - function must return initialized Level.
   */
-  void initLevelsPointers(const Cola::Param &p, uint8_t *levels_ptr,
+  void initLevelsPointers(const VolumeIndex::Param &p, uint8_t *levels_ptr,
                           std::function<Level(LevelHeader *, uint8_t)> levelInitFunc) {
     { // memory level
       LevelHeader *lhdr = reinterpret_cast<LevelHeader *>(levels_ptr);
@@ -316,35 +316,35 @@ struct Cola::Private {
   std::vector<Level> _levels;
 };
 
-Cola::Cola(const Param &p, Id measId, uint8_t *buffer)
-    : _impl(new Cola::Private(p, measId, buffer)) {}
+VolumeIndex::VolumeIndex(const Param &p, Id measId, uint8_t *buffer)
+    : _impl(new VolumeIndex::Private(p, measId, buffer)) {}
 
-Cola::Cola(uint8_t *buffer) : _impl(new Cola::Private(buffer)) {}
+VolumeIndex::VolumeIndex(uint8_t *buffer) : _impl(new VolumeIndex::Private(buffer)) {}
 
-size_t Cola::index_size(const Param &p) {
-  return Cola::Private::index_size(p);
+size_t VolumeIndex::index_size(const Param &p) {
+  return VolumeIndex::Private::index_size(p);
 }
 
-uint8_t Cola::levels() const {
+uint8_t VolumeIndex::levels() const {
   return _impl->levels();
 }
 
-Id Cola::targetId() const {
+Id VolumeIndex::targetId() const {
   return _impl->targetId();
 }
 
-bool Cola::addLink(uint64_t address, uint64_t chunk_id, Time maxTime) {
+bool VolumeIndex::addLink(uint64_t address, uint64_t chunk_id, Time maxTime) {
   return _impl->addLink(address, chunk_id, maxTime);
 }
 
-std::vector<Cola::Link> Cola::queryLink(Time from, Time to) const {
+std::vector<VolumeIndex::Link> VolumeIndex::queryLink(Time from, Time to) const {
   return _impl->queryLink(from, to);
 }
 
-Cola::Link Cola::queryLink(Time tp) const {
+VolumeIndex::Link VolumeIndex::queryLink(Time tp) const {
   return _impl->queryLink(tp);
 }
 
-void Cola::rm(Time maxTime, uint64_t chunk_id) {
+void VolumeIndex::rm(Time maxTime, uint64_t chunk_id) {
   return _impl->rm(maxTime, chunk_id);
 }

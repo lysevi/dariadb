@@ -6,7 +6,7 @@
 namespace dariadb {
 namespace storage {
 
-class Cola {
+class VolumeIndex {
 public:
   struct Param {
     uint8_t levels;
@@ -42,8 +42,8 @@ public:
   };
   //#pragma pack(pop)
 
-  EXPORT Cola(const Param &p, Id measId, uint8_t *buffer);
-  EXPORT Cola(uint8_t *buffer);
+  EXPORT VolumeIndex(const Param &p, Id measId, uint8_t *buffer);
+  EXPORT VolumeIndex(uint8_t *buffer);
   /// Calculate needed buffer size for store index.
   EXPORT static size_t index_size(const Param &p);
   EXPORT uint8_t levels() const;
