@@ -127,7 +127,7 @@ TEST_CASE("Volume.Init") {
 
   { // create
     EXPECT_TRUE(fs::ls(storage_path).empty());
-    Volume::Params params(1024 * 3, chunk_size, 3, 1);
+    Volume::Params params(1024 * 10, chunk_size, 3, 1);
     Volume vlm(params, file_path);
 
     EXPECT_EQ(fs::ls(storage_path).size(), size_t(1));

@@ -5,6 +5,8 @@
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/utils.h>
 
+#include <cstring>
+
 using namespace dariadb;
 using namespace dariadb::storage;
 
