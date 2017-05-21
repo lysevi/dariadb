@@ -84,7 +84,7 @@ public:
   // true - on success.
   EXPORT bool addChunk(const Chunk_Ptr &c);
   EXPORT std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to);
-
+  EXPORT Chunk_Ptr queryChunks(Id id, Time timepoint);
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

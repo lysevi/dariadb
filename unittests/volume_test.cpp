@@ -150,12 +150,20 @@ TEST_CASE("Volume.Init") {
             auto chunks = vlm.queryChunks(id, MIN_TIME, t);
             EXPECT_EQ(chunks.size(), id2chunks_count[id]);
 
-            for (auto c : chunks) {
-              auto rdr = c->getReader();
+            for (auto ch : chunks) {
+              auto rdr = ch->getReader();
               while (!rdr->is_end()) {
                 rdr->readNext();
               }
             }
+
+			auto singleC = vlm.queryChunks(id, t + 1);
+			EXPECT_TRUE(singleC != nullptr);
+			EXPECT_EQ(singleC->header->stat.maxTime, t);
+			auto rdr = singleC->getReader();
+			while (!rdr->is_end()) {
+				rdr->readNext();
+			}
           }
         }
       }
@@ -183,6 +191,14 @@ TEST_CASE("Volume.Init") {
           rdr->readNext();
         }
       }
+
+	  auto singleC = vlm.queryChunks(kv.first, t);
+	  EXPECT_TRUE(singleC != nullptr);
+	  EXPECT_LE(singleC->header->stat.maxTime, t);
+	  auto rdr = singleC->getReader();
+	  while (!rdr->is_end()) {
+		  rdr->readNext();
+	  }
     }
   }
 
