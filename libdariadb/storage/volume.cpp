@@ -559,7 +559,7 @@ struct Volume::Private {
 #ifdef DOUBLE_CHECKS
     auto rdr = cptr->getReader();
     while (!rdr->is_end()) {
-      auto m = rdr->readNext();
+      rdr->readNext();
     }
 #endif // DOUBLE_CHECKS
     return cptr;
@@ -698,6 +698,7 @@ public:
     logger_info("engine: vmanager - create new volume ", fname);
     return std::make_shared<Volume>(p, fname);
   }
+
   // Inherited via IMeasStorage
   virtual Time minTime() override { NOT_IMPLEMENTED; }
   virtual Time maxTime() override { NOT_IMPLEMENTED; }
