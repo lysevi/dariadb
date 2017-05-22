@@ -164,8 +164,9 @@ public:
     try {
       bi::file_mapping::remove(path.c_str());
       std::filebuf fbuf;
-      fbuf.open(path, std::ios_base::in | std::ios_base::out | std::ios_base::trunc |
-                          std::ios_base::binary);
+      fbuf.open(path,
+                std::ios_base::in | std::ios_base::out | std::ios_base::trunc |
+                    std::ios_base::binary);
       // Set the size
       fbuf.pubseekoff(size - 1, std::ios_base::beg);
       fbuf.sputc(0);

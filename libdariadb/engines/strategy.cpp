@@ -27,8 +27,14 @@ std::istream &dariadb::operator>>(std::istream &in, STRATEGY &strat) {
     strat = dariadb::STRATEGY::CACHE;
     return in;
   }
+
   if (token == "SHARD") {
     strat = dariadb::STRATEGY::SHARD;
+    return in;
+  }
+
+  if (token == "VOLUME") {
+    strat = dariadb::STRATEGY::VOLUME;
     return in;
   }
   THROW_EXCEPTION("engine: bad strategy name - ", token);
@@ -50,6 +56,9 @@ std::ostream &dariadb::operator<<(std::ostream &stream, const STRATEGY &strat) {
     break;
   case STRATEGY::SHARD:
     stream << "SHARD";
+    break;
+  case STRATEGY::VOLUME:
+    stream << "VOLUME";
     break;
   default:
     THROW_EXCEPTION("engine: bad strategy - ", (uint16_t)strat);

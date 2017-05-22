@@ -5,7 +5,7 @@
 #include <ostream>
 
 namespace dariadb {
-enum class STRATEGY : uint16_t { WAL = 0, COMPRESSED, MEMORY, CACHE, SHARD };
+enum class STRATEGY : uint16_t { WAL = 0, COMPRESSED, MEMORY, CACHE, SHARD, VOLUME };
 
 EXPORT std::istream &operator>>(std::istream &in, STRATEGY &strat);
 EXPORT std::ostream &operator<<(std::ostream &stream, const STRATEGY &strat);

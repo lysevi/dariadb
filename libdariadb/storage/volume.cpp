@@ -665,7 +665,7 @@ public:
   }
 
   Chunk_Ptr create_chunk(const Meas &value) {
-    logger_info("engine: vmanager - create chunk for ", value.id);
+    ///logger_info("engine: vmanager - create chunk for ", value.id);
     ChunkHeader *chdr = new ChunkHeader;
     uint8_t *cbuffer = new uint8_t[_chunk_size];
     auto target_chunk = Chunk::create(chdr, cbuffer, _chunk_size, value);

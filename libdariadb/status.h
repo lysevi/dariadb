@@ -35,9 +35,9 @@ struct Status {
     Status res;
     res.writed = writed + other.writed;
     res.ignored = ignored + other.ignored;
-	if (other.error != APPEND_ERROR::OK) {
-		res.error = other.error;
-	}
+    if (other.error != APPEND_ERROR::OK) {
+      res.error = other.error;
+    }
     return res;
   }
 

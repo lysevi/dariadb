@@ -8,6 +8,7 @@
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/subscribe.h>
+#include <libdariadb/storage/volume.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -106,6 +107,10 @@ public:
   }
 
   void init_managers() {
+    if (_settings->strategy.value() == STRATEGY::VOLUME) {
+      _top_level_storage = VolumeManager::create(_engine_env);
+      return;
+    }
     if (_settings->is_memory_only_mode) {
       _memstorage = MemStorage::create(_engine_env, _min_max_map->size());
       _top_level_storage = _memstorage;
