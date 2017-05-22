@@ -55,6 +55,9 @@ TEST_CASE("Volume.Index") {
         lnk = c.queryLink(maxTime - 1);
         EXPECT_EQ(lnk.max_time, maxTime - 1);
       }
+	  auto mm = c.minMax();
+	  EXPECT_EQ(mm.second.max_time, maxTime);
+
       address++;
       chunk_id++;
       maxTime++;
@@ -146,6 +149,10 @@ TEST_CASE("Volume.Init") {
           delete[] buffer;
 
           if (!isFull) {
+			  auto mm = vlm.loadMinMax();
+			  EXPECT_EQ(mm[id].first.id, id);
+			  EXPECT_EQ(mm[id].second.id, id);
+			  EXPECT_EQ(mm[id].second.time, t);
             id2chunks_count[id] += size_t(1);
             auto chunks = vlm.queryChunks(id, MIN_TIME, t);
             EXPECT_EQ(chunks.size(), id2chunks_count[id]);
@@ -212,7 +219,7 @@ TEST_CASE("Volume.Manager") {
   using namespace dariadb::utils;
   using namespace dariadb;
 
-  const size_t chunk_size = 100;
+  const size_t chunk_size = 10;
   auto storage_path = "testStorage";
 
   if (fs::path_exists(storage_path)) {
@@ -224,6 +231,9 @@ TEST_CASE("Volume.Manager") {
 
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->chunk_size.setValue(chunk_size);
+  settings->volume_size.setValue(1024 *1024 * 1);
+  settings->volume_levels_count.setValue(3);
+  settings->volume_B.setValue(2);
 
   auto manifest = dariadb::storage::Manifest::create(settings);
 
@@ -235,7 +245,12 @@ TEST_CASE("Volume.Manager") {
 
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
-  SECTION("ManagerInit") {}
+  SECTION("ManagerCommon") {
+	  auto vlm = VolumeManager::create(_engine_env);
+	  //dariadb_test::storage_test_check(vlm.get(), 0, 250, 1, false, false, false);
+	  //auto files = fs::ls(settings->raw_path.value());
+	  //EXPECT_TRUE(files.size() > size_t(1));
+  }
 
   manifest = nullptr;
   dariadb::utils::async::ThreadManager::stop();

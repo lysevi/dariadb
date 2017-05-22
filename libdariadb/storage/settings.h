@@ -131,6 +131,9 @@ public:
   Option<STRATEGY> strategy_week;     // strategy for 'week' values.
   Option<STRATEGY> strategy_month;    // strategy for 'month' values.
 
+  Option<uint32_t> volume_size;        // size of volume file.
+  Option<uint8_t> volume_levels_count; // levels in vulume index
+  Option<uint8_t> volume_B;            // B in index
   EXPORT Time lifetime_for_interval(const std::string &interval) const;
   EXPORT STRATEGY strategy_for_interval(const std::string &interval) const;
 

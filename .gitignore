@@ -1,4 +1,5 @@
 .vscode*
+*.vlm
 libdariadb/config.h
 tmp
 packages.config

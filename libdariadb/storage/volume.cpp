@@ -1,4 +1,5 @@
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/volume.h>
 #include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/fs.h>
@@ -110,6 +111,10 @@ struct VolumeIndex::Private {
           break;
         }
       }
+    }
+
+    std::pair<Link, Link> minMax() const {
+      return std::make_pair(_links[0], _links[_lvl_header->pos - 1]);
     }
   };
 
@@ -320,6 +325,38 @@ struct VolumeIndex::Private {
       }
     }
   }
+
+  std::pair<VolumeIndex::Link, VolumeIndex::Link> minMax() const {
+    auto minResult = Link::makeEmpty();
+    auto maxResult = Link::makeEmpty();
+    minResult.max_time = MAX_TIME;
+    maxResult.max_time = MIN_TIME;
+    if (!_memory_level.isEmpty()) {
+      auto l_mm = _memory_level.minMax();
+      if (l_mm.first.max_time < minResult.max_time) {
+        minResult = l_mm.first;
+      }
+
+      if (l_mm.second.max_time > maxResult.max_time) {
+        maxResult = l_mm.second;
+      }
+    }
+
+    for (const auto &l : _levels) {
+      if (!l.isEmpty()) {
+        auto l_mm = l.minMax();
+        if (l_mm.first.max_time < minResult.max_time) {
+          minResult = l_mm.first;
+        }
+
+        if (l_mm.second.max_time > maxResult.max_time) {
+          maxResult = l_mm.second;
+        }
+      }
+    }
+    return std::make_pair(minResult, maxResult);
+  }
+
   IndexHeader *_header;
   Level _memory_level;
   std::vector<Level> _levels;
@@ -362,6 +399,10 @@ void VolumeIndex::rm(Time maxTime, uint64_t chunk_id) {
   return _impl->rm(maxTime, chunk_id);
 }
 
+std::pair<VolumeIndex::Link, VolumeIndex::Link> VolumeIndex::minMax() const {
+  return _impl->minMax();
+}
+
 /////////// VOLUME ///////////
 using dariadb::utils::fs::MappedFile;
 
@@ -384,12 +425,14 @@ struct Volume::Private {
     _header->one_chunk_size = p.chunk_size;
     _header->chunk_pos = p.size;
     _header->_index_param = p.indexParams;
+    _filename = fname;
   }
 
   Private(const std::string &fname) {
     _volume = MappedFile::open(fname);
     _data = _volume->data();
     _header = reinterpret_cast<Header *>(_data);
+    _filename = fname;
     auto isz = VolumeIndex::index_size(_header->_index_param);
 
     auto indexes_count = (_header->index_pos - sizeof(Header)) / isz;
@@ -405,6 +448,8 @@ struct Volume::Private {
     _volume->flush();
     _volume->close();
   }
+
+  std::string fname() const { return this->_filename; }
 
   IdArray indexes() const {
     IdArray result(_indexes.size());
@@ -459,7 +504,7 @@ struct Volume::Private {
     return false;
   }
 
-  std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to) {
+  std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to) const {
     std::vector<Chunk_Ptr> result;
 
     auto fres = _indexes.find(id);
@@ -475,24 +520,8 @@ struct Volume::Private {
       for (auto lnk : links) {
         ENSURE(!lnk.erased);
 
-        auto firstByte = lnk.address;
-        ChunkHeader *chdr = new ChunkHeader();
-        memcpy(chdr, _data + firstByte, sizeof(ChunkHeader));
-        ENSURE(chdr->meas_id == id);
-
-        uint8_t *byte_buffer = new uint8_t[_header->one_chunk_size];
-        memcpy(byte_buffer, _data + firstByte + sizeof(ChunkHeader),
-               _header->one_chunk_size);
-
-        auto cptr = Chunk::open(chdr, byte_buffer);
-        cptr->is_owner = true;
-#ifdef DOUBLE_CHECKS
-        auto rdr = cptr->getReader();
-        while (!rdr->is_end()) {
-          auto m = rdr->readNext();
-          ENSURE(m.id == id);
-        }
-#endif // DOUBLE_CHECKS
+        auto cptr = chunkByLink(lnk);
+        ENSURE(cptr->header->meas_id == id);
 
         result.emplace_back(cptr);
       }
@@ -503,41 +532,65 @@ struct Volume::Private {
     }
   }
 
-  Chunk_Ptr queryChunks(Id id, Time timepoint) {
+  Chunk_Ptr queryChunks(Id id, Time timepoint) const {
     auto fres = _indexes.find(id);
     if (fres == _indexes.end()) {
       return nullptr;
     } else {
       auto lnk = fres->second->queryLink(timepoint);
 
-      ENSURE(!lnk.erased);
-
-      auto firstByte = lnk.address;
-      ChunkHeader *chdr = new ChunkHeader();
-      memcpy(chdr, _data + firstByte, sizeof(ChunkHeader));
-      ENSURE(chdr->meas_id == id);
-
-      uint8_t *byte_buffer = new uint8_t[_header->one_chunk_size];
-      memcpy(byte_buffer, _data + firstByte + sizeof(ChunkHeader),
-             _header->one_chunk_size);
-
-      auto cptr = Chunk::open(chdr, byte_buffer);
-      cptr->is_owner = true;
-#ifdef DOUBLE_CHECKS
-      auto rdr = cptr->getReader();
-      while (!rdr->is_end()) {
-        auto m = rdr->readNext();
-        ENSURE(m.id == id);
-      }
-#endif // DOUBLE_CHECKS
+      auto cptr = chunkByLink(lnk);
+      ENSURE(cptr->header->meas_id == id);
 
       return cptr;
     }
   }
+
+  Chunk_Ptr chunkByLink(const VolumeIndex::Link &lnk) const {
+    auto firstByte = lnk.address;
+    ChunkHeader *chdr = new ChunkHeader();
+    memcpy(chdr, _data + firstByte, sizeof(ChunkHeader));
+
+    uint8_t *byte_buffer = new uint8_t[_header->one_chunk_size];
+    memcpy(byte_buffer, _data + firstByte + sizeof(ChunkHeader), _header->one_chunk_size);
+
+    auto cptr = Chunk::open(chdr, byte_buffer);
+    cptr->is_owner = true;
+#ifdef DOUBLE_CHECKS
+    auto rdr = cptr->getReader();
+    while (!rdr->is_end()) {
+      auto m = rdr->readNext();
+    }
+#endif // DOUBLE_CHECKS
+    return cptr;
+  }
+
+  std::map<Id, std::pair<Meas, Meas>> loadMinMax() const {
+    std::map<Id, std::pair<Meas, Meas>> result;
+
+    for (const auto &i : _indexes) {
+      auto mm = i.second->minMax();
+      Meas minMeas, maxMeas;
+      ENSURE(!mm.first.IsEmpty());
+
+      ChunkHeader chdr;
+      memcpy(&chdr, _data + mm.first.address, sizeof(ChunkHeader));
+
+      minMeas = chdr.first();
+
+      memcpy(&chdr, _data + mm.second.address, sizeof(ChunkHeader));
+      maxMeas = chdr.last();
+
+      result[i.first] = std::make_pair(minMeas, maxMeas);
+    }
+    return result;
+  }
+
   MappedFile::MapperFile_ptr _volume;
   uint8_t *_data;
   Header *_header;
   std::unordered_map<Id, std::shared_ptr<VolumeIndex>> _indexes;
+  std::string _filename;
 };
 
 Volume::Volume(const Params &p, const std::string &fname)
@@ -553,24 +606,98 @@ bool Volume::addChunk(const Chunk_Ptr &c) {
   return _impl->addChunk(c);
 }
 
-std::vector<Chunk_Ptr> Volume::queryChunks(Id id, Time from, Time to) {
+std::vector<Chunk_Ptr> Volume::queryChunks(Id id, Time from, Time to) const {
   return _impl->queryChunks(id, from, to);
 }
 
-Chunk_Ptr Volume::queryChunks(Id id, Time timepoint) {
+Chunk_Ptr Volume::queryChunks(Id id, Time timepoint) const {
   return _impl->queryChunks(id, timepoint);
 }
 IdArray Volume::indexes() const {
   return _impl->indexes();
 }
 
+std::string Volume::fname() const {
+  return _impl->fname();
+}
+
+std::map<Id, std::pair<Meas, Meas>> Volume::loadMinMax() const {
+  return _impl->loadMinMax();
+}
 /////////// VOLUME MANAGER ///////////
+
+namespace {
+const char *VOLUME_EXT = ".vlm";
+}
 
 class VolumeManager::Private : public IMeasStorage {
 public:
-  Private(const EngineEnvironment_ptr env) {}
+  Private(const EngineEnvironment_ptr env) {
+    _env = env;
+    _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
+    _chunk_size = _settings->chunk_size.value();
+  }
+
   ~Private() {}
 
+  std::list<std::string> volume_list() {
+    // TODO use manifest.
+    return utils::fs::ls(_settings->raw_path.value(), ::VOLUME_EXT);
+  }
+
+  virtual Status append(const Meas &value) override {
+    auto fres = _id2chunk.find(value.id);
+    if (fres == _id2chunk.end()) {
+      auto target_chunk = create_chunk(value);
+      _id2chunk[value.id] = target_chunk;
+      return Status(size_t(1));
+    } else {
+      Chunk_Ptr target_chunk = fres->second;
+      if (!target_chunk->append(value)) {
+        dropToDisk(target_chunk);
+        target_chunk = create_chunk(value);
+        _id2chunk[value.id] = target_chunk;
+        return Status(size_t(1));
+      } else {
+        return Status(size_t(1));
+      }
+    }
+  }
+
+  Chunk_Ptr create_chunk(const Meas &value) {
+    logger_info("engine: vmanager - create chunk for ", value.id);
+    ChunkHeader *chdr = new ChunkHeader;
+    uint8_t *cbuffer = new uint8_t[_chunk_size];
+    auto target_chunk = Chunk::create(chdr, cbuffer, _chunk_size, value);
+    target_chunk->is_owner = true;
+    return target_chunk;
+  }
+
+  void dropToDisk(const Chunk_Ptr &c) {
+    // TODO do in disk io thread;
+    auto createAndAppendToVolume = [&c, this]() {
+      _current_volume = createNewVolume();
+      if (!_current_volume->addChunk(c)) {
+        THROW_EXCEPTION("logic error!");
+      }
+    };
+    if (_current_volume == nullptr) {
+      createAndAppendToVolume();
+    } else {
+      if (!_current_volume->addChunk(c)) {
+        createAndAppendToVolume();
+      }
+    }
+  }
+
+  std::shared_ptr<Volume> createNewVolume() {
+    Volume::Params p(_settings->volume_size.value(), _chunk_size,
+                     _settings->volume_levels_count.value(), _settings->volume_B.value());
+    auto fname = utils::fs::random_file_name(VOLUME_EXT);
+    fname = utils::fs::append_path(_settings->raw_path.value(), fname);
+    logger_info("engine: vmanager - create new volume ", fname);
+    return std::make_shared<Volume>(p, fname);
+  }
   // Inherited via IMeasStorage
   virtual Time minTime() override { NOT_IMPLEMENTED; }
   virtual Time maxTime() override { NOT_IMPLEMENTED; }
@@ -587,9 +714,43 @@ public:
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     NOT_IMPLEMENTED;
   }
+
   virtual Statistic stat(const Id id, Time from, Time to) override { NOT_IMPLEMENTED; }
-  virtual Id2MinMax_Ptr loadMinMax() override { NOT_IMPLEMENTED; }
-  virtual Status append(const Meas &value) override { NOT_IMPLEMENTED; }
+
+  virtual Id2MinMax_Ptr loadMinMax() override {
+    Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
+    auto visitor = [&result](const Volume *v) {
+      logger_info("engine: vmanager - loadMinMax in ", v->fname());
+	  auto mm = v->loadMinMax();
+	  for (auto kv : mm) {
+		  MeasMinMax measMM;
+		  measMM.min = kv.second.first;
+		  measMM.max = kv.second.second;
+		  result->insert(kv.first, measMM);
+	  }
+    };
+	apply_for_each_volume(visitor);
+    return result;
+  }
+
+  void apply_for_each_volume(std::function<void(const Volume *)> visitor) {
+    // TODO LRU cache needed.
+    auto files = this->volume_list();
+    for (auto f : files) {
+      if (_current_volume->fname() == f) {
+        visitor(_current_volume.get());
+      } else {
+        Volume v(f);
+        visitor(&v);
+      }
+    }
+  }
+
+  std::unordered_map<Id, Chunk_Ptr> _id2chunk; // TODO use striped map;
+  EngineEnvironment_ptr _env;
+  Settings *_settings;
+  uint32_t _chunk_size;
+  std::shared_ptr<Volume> _current_volume;
 };
 
 VolumeManager::~VolumeManager() {

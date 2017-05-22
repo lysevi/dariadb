@@ -34,9 +34,8 @@ public:
     }
 
     bool IsEmpty() const {
-      return erased ||
-             (max_time == MIN_TIME && chunk_id == std::numeric_limits<uint64_t>::max() &&
-              address == std::numeric_limits<uint64_t>::max());
+      return erased || (chunk_id == std::numeric_limits<uint64_t>::max() ||
+                        address == std::numeric_limits<uint64_t>::max());
     }
 
     bool operator==(const Link &other) {
@@ -57,6 +56,7 @@ public:
   EXPORT bool addLink(uint64_t address, uint64_t chunk_id, Time maxTime);
   EXPORT std::vector<Link> queryLink(Time from, Time to) const;
   EXPORT Link queryLink(Time tp) const;
+  EXPORT std::pair<Link, Link> minMax() const;
   EXPORT void rm(Time maxTime, uint64_t chunk_id);
 
 private:
@@ -85,8 +85,10 @@ public:
   EXPORT IdArray indexes() const;
   // true - on success.
   EXPORT bool addChunk(const Chunk_Ptr &c);
-  EXPORT std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to);
-  EXPORT Chunk_Ptr queryChunks(Id id, Time timepoint);
+  EXPORT std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to) const;
+  EXPORT Chunk_Ptr queryChunks(Id id, Time timepoint) const;
+  EXPORT std::map<Id, std::pair<Meas, Meas>> loadMinMax() const;
+  EXPORT std::string fname() const;
 
 private:
   struct Private;
@@ -99,19 +101,19 @@ using VolumeManager_Ptr = std::shared_ptr<VolumeManager>;
 class VolumeManager : public IMeasStorage {
 public:
   ~VolumeManager();
-  static VolumeManager_Ptr create(const EngineEnvironment_ptr env);
+  EXPORT static VolumeManager_Ptr create(const EngineEnvironment_ptr env);
 
   // Inherited via IMeasStorage
-  virtual Time minTime() override;
-  virtual Time maxTime() override;
-  virtual bool minMaxTime(Id id, Time *minResult, Time *maxResult) override;
-  virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
-  virtual Id2Cursor intervalReader(const QueryInterval &query) override;
-  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
-  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
-  virtual Statistic stat(const Id id, Time from, Time to) override;
-  virtual Id2MinMax_Ptr loadMinMax() override;
-  virtual Status append(const Meas &value) override;
+  EXPORT virtual Time minTime() override;
+  EXPORT virtual Time maxTime() override;
+  EXPORT virtual bool minMaxTime(Id id, Time *minResult, Time *maxResult) override;
+  EXPORT virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
+  EXPORT virtual Id2Cursor intervalReader(const QueryInterval &query) override;
+  EXPORT virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  EXPORT virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  EXPORT virtual Statistic stat(const Id id, Time from, Time to) override;
+  EXPORT virtual Id2MinMax_Ptr loadMinMax() override;
+  EXPORT virtual Status append(const Meas &value) override;
 
 protected:
   VolumeManager(const EngineEnvironment_ptr env);
