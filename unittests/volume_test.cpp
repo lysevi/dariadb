@@ -219,7 +219,7 @@ TEST_CASE("Volume.Manager") {
   using namespace dariadb::utils;
   using namespace dariadb;
 
-  const size_t chunk_size = 10;
+  const size_t chunk_size = 50;
   auto storage_path = "testStorage";
 
   if (fs::path_exists(storage_path)) {
@@ -231,7 +231,7 @@ TEST_CASE("Volume.Manager") {
 
   auto settings = dariadb::storage::Settings::create(storage_path);
   settings->chunk_size.setValue(chunk_size);
-  settings->volume_size.setValue(1024 *1024 * 1);
+  settings->volume_size.setValue(1024 * 50);
   settings->volume_levels_count.setValue(3);
   settings->volume_B.setValue(2);
 
@@ -246,10 +246,10 @@ TEST_CASE("Volume.Manager") {
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
   SECTION("ManagerCommon") {
-	  auto vlm = VolumeManager::create(_engine_env);
-	  //dariadb_test::storage_test_check(vlm.get(), 0, 250, 1, false, false, false);
-	  //auto files = fs::ls(settings->raw_path.value());
-	  //EXPECT_TRUE(files.size() > size_t(1));
+	  /*auto vlm = VolumeManager::create(_engine_env);
+	  dariadb_test::storage_test_check(vlm.get(), 0, 100, 1, false, false, false);
+	  auto files = fs::ls(settings->raw_path.value());
+	  EXPECT_TRUE(files.size() > size_t(1));*/
   }
 
   manifest = nullptr;

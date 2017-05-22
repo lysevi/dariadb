@@ -89,7 +89,6 @@ public:
   EXPORT Chunk_Ptr queryChunks(Id id, Time timepoint) const;
   EXPORT std::map<Id, std::pair<Meas, Meas>> loadMinMax() const;
   EXPORT std::string fname() const;
-
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

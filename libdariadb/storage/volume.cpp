@@ -665,7 +665,7 @@ public:
   }
 
   Chunk_Ptr create_chunk(const Meas &value) {
-    ///logger_info("engine: vmanager - create chunk for ", value.id);
+    /// logger_info("engine: vmanager - create chunk for ", value.id);
     ChunkHeader *chdr = new ChunkHeader;
     uint8_t *cbuffer = new uint8_t[_chunk_size];
     auto target_chunk = Chunk::create(chdr, cbuffer, _chunk_size, value);
@@ -673,7 +673,8 @@ public:
     return target_chunk;
   }
 
-  void dropToDisk(const Chunk_Ptr &c) {
+  void dropToDisk(Chunk_Ptr &c) {
+    Chunk::updateChecksum(*c->header, c->_buffer_t);
     // TODO do in disk io thread;
     auto createAndAppendToVolume = [&c, this]() {
       _current_volume = createNewVolume();
@@ -716,21 +717,44 @@ public:
     NOT_IMPLEMENTED;
   }
 
-  virtual Statistic stat(const Id id, Time from, Time to) override { NOT_IMPLEMENTED; }
+  virtual Statistic stat(const Id id, Time from, Time to) override {
+    Statistic result;
+	auto fres = this->_id2chunk.find(id);
+	if (fres != _id2chunk.end()) {
+		result.update(fres->second->stat(from, to));
+	}
+    auto visitor = [=, &result](const Volume *v) {
+      logger_info("engine: vmanager - stat in ", v->fname());
+      // TODO implement in volume to decrease reads (don unpack chunk if chunk in
+      // [from,to]).
+      auto chunks = v->queryChunks(id, from, to);
+      for (const auto &c : chunks) {
+        result.update(c->stat(from, to));
+      }
+    };
+    apply_for_each_volume(visitor);
+    return result;
+  }
 
   virtual Id2MinMax_Ptr loadMinMax() override {
     Id2MinMax_Ptr result = std::make_shared<Id2MinMax>();
     auto visitor = [&result](const Volume *v) {
       logger_info("engine: vmanager - loadMinMax in ", v->fname());
-	  auto mm = v->loadMinMax();
-	  for (auto kv : mm) {
-		  MeasMinMax measMM;
-		  measMM.min = kv.second.first;
-		  measMM.max = kv.second.second;
-		  result->insert(kv.first, measMM);
-	  }
+      auto mm = v->loadMinMax();
+      for (auto kv : mm) {
+		auto bucket_it = result->find_bucket(kv.first);
+		bucket_it.v->second.updateMax(kv.second.first);
+		bucket_it.v->second.updateMax(kv.second.second);
+      }
     };
-	apply_for_each_volume(visitor);
+
+    apply_for_each_volume(visitor);
+
+	for (const auto&kv : _id2chunk) {
+		auto fres = result->find_bucket(kv.first);
+		fres.v->second.updateMax(kv.second->header->last());
+		fres.v->second.updateMax(kv.second->header->first());
+	}
     return result;
   }
 
