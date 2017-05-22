@@ -157,13 +157,13 @@ TEST_CASE("Volume.Init") {
               }
             }
 
-			auto singleC = vlm.queryChunks(id, t + 1);
-			EXPECT_TRUE(singleC != nullptr);
-			EXPECT_EQ(singleC->header->stat.maxTime, t);
-			auto rdr = singleC->getReader();
-			while (!rdr->is_end()) {
-				rdr->readNext();
-			}
+            auto singleC = vlm.queryChunks(id, t + 1);
+            EXPECT_TRUE(singleC != nullptr);
+            EXPECT_EQ(singleC->header->stat.maxTime, t);
+            auto rdr = singleC->getReader();
+            while (!rdr->is_end()) {
+              rdr->readNext();
+            }
           }
         }
       }
@@ -192,15 +192,53 @@ TEST_CASE("Volume.Init") {
         }
       }
 
-	  auto singleC = vlm.queryChunks(kv.first, t);
-	  EXPECT_TRUE(singleC != nullptr);
-	  EXPECT_LE(singleC->header->stat.maxTime, t);
-	  auto rdr = singleC->getReader();
-	  while (!rdr->is_end()) {
-		  rdr->readNext();
-	  }
+      auto singleC = vlm.queryChunks(kv.first, t);
+      EXPECT_TRUE(singleC != nullptr);
+      EXPECT_LE(singleC->header->stat.maxTime, t);
+      auto rdr = singleC->getReader();
+      while (!rdr->is_end()) {
+        rdr->readNext();
+      }
     }
   }
+
+  if (fs::path_exists(storage_path)) {
+    fs::rm(storage_path);
+  }
+}
+
+TEST_CASE("Volume.Manager") {
+  using namespace dariadb::storage;
+  using namespace dariadb::utils;
+  using namespace dariadb;
+
+  const size_t chunk_size = 100;
+  auto storage_path = "testStorage";
+
+  if (fs::path_exists(storage_path)) {
+    fs::rm(storage_path);
+  }
+  fs::mkdir(storage_path);
+
+  const Id idCount = 10;
+
+  auto settings = dariadb::storage::Settings::create(storage_path);
+  settings->chunk_size.setValue(chunk_size);
+
+  auto manifest = dariadb::storage::Manifest::create(settings);
+
+  auto _engine_env = dariadb::storage::EngineEnvironment::create();
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+                           settings.get());
+  _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+                           manifest.get());
+
+  dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
+
+  SECTION("ManagerInit") {}
+
+  manifest = nullptr;
+  dariadb::utils::async::ThreadManager::stop();
 
   if (fs::path_exists(storage_path)) {
     fs::rm(storage_path);

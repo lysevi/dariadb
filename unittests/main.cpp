@@ -65,15 +65,32 @@ struct LoggerControl : Catch::TestEventListenerBase {
 CATCH_REGISTER_LISTENER(LoggerControl);
 
 int main(int argc, char **argv) {
+  int _argc = argc;
+  char **_argv = argv;
   for (int i = 0; i < argc; ++i) {
     if (std::strcmp(argv[i], "--verbose") == 0) {
       UnitTestLogger::verbose = true;
-      continue;
+      _argc--;
+      _argv = new char *[_argc];
+      int r_pos = 0, w_pos = 0;
+      for (int a = 0; a < argc; ++a) {
+        if (a != i) {
+
+          _argv[w_pos] = argv[r_pos];
+          r_pos++;
+        }
+        w_pos++;
+      }
+      break;
+      ;
     }
   }
 
   Catch::Session sesssion;
   sesssion.configData().showDurations = Catch::ShowDurations::OrNot::Always;
-  int result = sesssion.run(argc, argv);
+  int result = sesssion.run(_argc, _argv);
+  if (UnitTestLogger::verbose) {
+    delete[] _argv;
+  }
   return (result < 0xff ? result : 0xff);
 }

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <libdariadb/interfaces/imeasstorage.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/engine_environment.h>
 
 namespace dariadb {
 namespace storage {
@@ -85,8 +87,35 @@ public:
   EXPORT bool addChunk(const Chunk_Ptr &c);
   EXPORT std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to);
   EXPORT Chunk_Ptr queryChunks(Id id, Time timepoint);
+
 private:
   struct Private;
+  std::unique_ptr<Private> _impl;
+};
+
+class VolumeManager;
+using VolumeManager_Ptr = std::shared_ptr<VolumeManager>;
+
+class VolumeManager : public IMeasStorage {
+public:
+  ~VolumeManager();
+  static VolumeManager_Ptr create(const EngineEnvironment_ptr env);
+
+  // Inherited via IMeasStorage
+  virtual Time minTime() override;
+  virtual Time maxTime() override;
+  virtual bool minMaxTime(Id id, Time *minResult, Time *maxResult) override;
+  virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override;
+  virtual Id2Cursor intervalReader(const QueryInterval &query) override;
+  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override;
+  virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override;
+  virtual Statistic stat(const Id id, Time from, Time to) override;
+  virtual Id2MinMax_Ptr loadMinMax() override;
+  virtual Status append(const Meas &value) override;
+
+protected:
+  VolumeManager(const EngineEnvironment_ptr env);
+  class Private;
   std::unique_ptr<Private> _impl;
 };
 
