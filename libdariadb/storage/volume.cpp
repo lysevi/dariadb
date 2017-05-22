@@ -586,6 +586,41 @@ struct Volume::Private {
     return result;
   }
 
+  bool minMaxTime(Id id, Time *minResult, Time *maxResult) {
+	  auto fres = _indexes.find(id);
+	  if (fres == _indexes.end()) {
+		  return false;
+	  }
+	  auto mm=fres->second->minMax();
+	  *maxResult = std::max(*maxResult, mm.second.max_time);
+	  
+	  ChunkHeader chdr; //TODO store minMax time in index;
+	  memcpy(&chdr, _data + mm.first.address, sizeof(ChunkHeader));
+
+	  *minResult = std::min(*minResult, chdr.stat.minTime);
+	  return true;
+  }
+
+  Time minTime() const {
+    Time result = MAX_TIME;
+    for (auto i : _indexes) {
+      auto lnk = i.second->minMax().first;
+
+      ChunkHeader chdr;
+      memcpy(&chdr, _data + lnk.address, sizeof(ChunkHeader));
+
+      result = std::min(chdr.stat.minTime, result);
+    }
+    return result;
+  }
+
+  Time maxTime() const {
+    Time result = MIN_TIME;
+    for (auto i : _indexes) {
+      result = std::max(i.second->minMax().second.max_time, result);
+    }
+    return result;
+  }
   MappedFile::MapperFile_ptr _volume;
   uint8_t *_data;
   Header *_header;
@@ -623,6 +658,18 @@ std::string Volume::fname() const {
 
 std::map<Id, std::pair<Meas, Meas>> Volume::loadMinMax() const {
   return _impl->loadMinMax();
+}
+
+bool Volume::minMaxTime(Id id, Time *minResult, Time *maxResult)const {
+	return _impl->minMaxTime(id, minResult, maxResult);
+}
+
+Time Volume::minTime() const {
+  return _impl->minTime();
+}
+
+Time Volume::maxTime() const {
+  return _impl->maxTime();
 }
 /////////// VOLUME MANAGER ///////////
 
@@ -701,28 +748,73 @@ public:
   }
 
   // Inherited via IMeasStorage
-  virtual Time minTime() override { NOT_IMPLEMENTED; }
-  virtual Time maxTime() override { NOT_IMPLEMENTED; }
-  virtual bool minMaxTime(Id id, Time *minResult, Time *maxResult) override {
-    NOT_IMPLEMENTED;
+  virtual Time minTime() override { 
+	  Time result=MAX_TIME;
+	  for (auto kv : _id2chunk) {
+		  result = std::min(result, kv.second->header->stat.minTime);
+	  }
+	  auto visitor = [=, &result](const Volume *v) {
+		  logger_info("engine: vmanager - min in ", v->fname());
+		  result = std::min(result, v->minTime());
+	  };
+	  apply_for_each_volume(visitor);
+	  return result;
   }
+  
+  virtual Time maxTime() override {
+	  Time result = MIN_TIME;
+	  for (auto kv : _id2chunk) {
+		  result = std::max(result, kv.second->header->stat.maxTime);
+	  }
+	  auto visitor = [=, &result](const Volume *v) {
+		  logger_info("engine: vmanager - max in ", v->fname());
+		  result = std::max(result, v->maxTime());
+	  };
+	  apply_for_each_volume(visitor);
+	  return result;
+  }
+
+  virtual bool minMaxTime(Id id, Time *minResult, Time *maxResult) override {
+	  *maxResult = MIN_TIME;
+	  *minResult = MAX_TIME;
+	  auto result = false;
+	  auto fres = this->_id2chunk.find(id);
+	  if (fres != _id2chunk.end()) {
+		  result = true;
+		  *minResult = std::min(*minResult, fres->second->header->stat.minTime);
+		  *maxResult = std::max(*maxResult, fres->second->header->stat.maxTime);
+	  }
+
+	  auto visitor = [=, &result, &minResult, &maxResult](const Volume *v) {
+		  logger_info("engine: vmanager - minMaxTime in ", v->fname());
+		  // TODO implement in volume to decrease reads (don unpack chunk if chunk in
+		  // [from,to]).
+		  result = result || v->minMaxTime(id, minResult, maxResult);
+	  };
+	  apply_for_each_volume(visitor);
+	  return result;
+  }
+  
   virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override {
     NOT_IMPLEMENTED;
   }
+  
   virtual Id2Cursor intervalReader(const QueryInterval &query) override {
     NOT_IMPLEMENTED;
   }
+
   virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { NOT_IMPLEMENTED; }
+
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
     NOT_IMPLEMENTED;
   }
 
   virtual Statistic stat(const Id id, Time from, Time to) override {
     Statistic result;
-	auto fres = this->_id2chunk.find(id);
-	if (fres != _id2chunk.end()) {
-		result.update(fres->second->stat(from, to));
-	}
+    auto fres = this->_id2chunk.find(id);
+    if (fres != _id2chunk.end()) {
+      result.update(fres->second->stat(from, to));
+    }
     auto visitor = [=, &result](const Volume *v) {
       logger_info("engine: vmanager - stat in ", v->fname());
       // TODO implement in volume to decrease reads (don unpack chunk if chunk in
@@ -742,19 +834,19 @@ public:
       logger_info("engine: vmanager - loadMinMax in ", v->fname());
       auto mm = v->loadMinMax();
       for (auto kv : mm) {
-		auto bucket_it = result->find_bucket(kv.first);
-		bucket_it.v->second.updateMax(kv.second.first);
-		bucket_it.v->second.updateMax(kv.second.second);
+        auto bucket_it = result->find_bucket(kv.first);
+        bucket_it.v->second.updateMax(kv.second.first);
+        bucket_it.v->second.updateMax(kv.second.second);
       }
     };
 
     apply_for_each_volume(visitor);
 
-	for (const auto&kv : _id2chunk) {
-		auto fres = result->find_bucket(kv.first);
-		fres.v->second.updateMax(kv.second->header->last());
-		fres.v->second.updateMax(kv.second->header->first());
-	}
+    for (const auto &kv : _id2chunk) {
+      auto fres = result->find_bucket(kv.first);
+      fres.v->second.updateMax(kv.second->header->last());
+      fres.v->second.updateMax(kv.second->header->first());
+    }
     return result;
   }
 
