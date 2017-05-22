@@ -1,4 +1,6 @@
+#include <libdariadb/flags.h>
 #include <libdariadb/storage/chunk.h>
+#include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/volume.h>
 #include <libdariadb/utils/cz.h>
@@ -796,16 +798,87 @@ public:
   }
 
   virtual void foreach (const QueryInterval &q, IReadCallback * clbk) override {
-    NOT_IMPLEMENTED;
+    auto cursors = this->intervalReader(q);
+
+    for (const auto &c : cursors) {
+      c.second->apply(clbk);
+    }
+  }
+
+  virtual Id2Meas readTimePoint(const QueryTimePoint &query) override {
+    Id2Meas result;
+    Meas m;
+    m.time = MIN_TIME;
+    m.flag = FLAGS::_NO_DATA;
+    m.time = query.time_point;
+    for (auto id : query.ids) {
+      m.id = id;
+      result[id] = m;
+      auto fres = _id2chunk.find(id);
+      if (fres != _id2chunk.end()) {
+        auto f = fres->second->header->first();
+        if (f.time >= query.time_point) {
+          result[id] = f;
+          continue;
+        }
+      }
+      auto visitor = [id, &query, &result](const Volume *v) {
+        logger_info("engine: vmanager - readTimePoint in ", v->fname());
+
+        auto c = v->queryChunks(id, query.time_point);
+        if (c != nullptr) {
+          auto rdr = c->getReader();
+          auto val = rdr->readNext();
+          while (!rdr->is_end()) {
+            auto subV = rdr->readNext();
+            if (subV.time <= query.time_point) {
+              val = subV;
+            } else {
+              break;
+            }
+          }
+          if (val.time >= result[id].time) {
+            result[id] = val;
+          }
+        }
+
+      };
+      apply_for_each_volume(visitor);
+    }
+
+    return result;
   }
 
   virtual Id2Cursor intervalReader(const QueryInterval &query) override {
-    NOT_IMPLEMENTED;
+    Id2CursorsList result;
+
+    for (auto id : query.ids) {
+      auto fres = _id2chunk.find(id);
+      if (fres != _id2chunk.end()) {
+        result[id].push_back(fres->second->getReader());
+        if (fres->second->header->first().time <= query.from) {
+          continue;
+        }
+      }
+
+      auto visitor = [id, &query, &result](const Volume *v) {
+        logger_info("engine: vmanager - currentValue in ", v->fname());
+
+        auto chunks = v->queryChunks(id, query.from, query.to);
+        for (auto c : chunks) {
+          auto rdr = c->getReader();
+          result[id].push_back(rdr);
+        }
+
+      };
+      apply_for_each_volume(visitor);
+    }
+
+    return CursorWrapperFactory::colapseCursors(result);
   }
 
-  virtual Id2Meas readTimePoint(const QueryTimePoint &q) override { NOT_IMPLEMENTED; }
-
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
+    // TODO use readInTimePoint(MAX_TIME)
     Id2Meas result;
     for (auto id : ids) {
       auto fres = this->_id2chunk.find(id);

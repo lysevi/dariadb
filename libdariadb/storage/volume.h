@@ -90,8 +90,9 @@ public:
   EXPORT std::map<Id, std::pair<Meas, Meas>> loadMinMax() const;
   EXPORT bool minMaxTime(Id id, Time *minResult, Time *maxResult) const;
   EXPORT std::string fname() const;
-  EXPORT Time minTime()const;
-  EXPORT Time maxTime()const;
+  EXPORT Time minTime() const;
+  EXPORT Time maxTime() const;
+
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

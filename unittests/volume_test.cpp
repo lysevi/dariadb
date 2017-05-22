@@ -246,10 +246,10 @@ TEST_CASE("Volume.Manager") {
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
   SECTION("ManagerCommon") {
-	  /*auto vlm = VolumeManager::create(_engine_env);
+	  auto vlm = VolumeManager::create(_engine_env);
 	  dariadb_test::storage_test_check(vlm.get(), 0, 100, 1, false, false, false);
 	  auto files = fs::ls(settings->raw_path.value());
-	  EXPECT_TRUE(files.size() > size_t(1));*/
+	  EXPECT_TRUE(files.size() > size_t(1));
   }
 
   manifest = nullptr;
