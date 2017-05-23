@@ -195,10 +195,14 @@ void show_info(IEngine *storage) {
 
     std::stringstream stor_ss;
     stor_ss << "(";
-    if (!memory_only) {
-      stor_ss << "p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count << " ";
-    }
-
+	if (strategy == dariadb::STRATEGY::VOLUME) {
+		stor_ss << "v:" << queue_sizes.volumes_count<<" ";
+	}
+	else {
+		if (!memory_only) {
+			stor_ss << "p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count << " ";
+		}
+	}
     stor_ss << "T:" << queue_sizes.active_works;
 
     if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE)) {
@@ -424,6 +428,12 @@ void check_engine_state(dariadb::storage::Settings_ptr settings, IEngine *raw_pt
     break;
   case dariadb::STRATEGY::CACHE:
     break;
+  case dariadb::STRATEGY::VOLUME:
+	  if (files.volumes_count==0) {
+		  THROW_EXCEPTION("VOLUME error: (p:", files.pages_count, " a:", files.wal_count,
+			  " T:", files.active_works, "V:", files.volumes_count, ")");
+	  }
+	  break;
   default:
     THROW_EXCEPTION("unknow strategy: ", strategy);
   }
@@ -554,7 +564,7 @@ int main(int argc, char *argv[]) {
     check_engine_state(settings, raw_ptr);
 
     if (!readonly && !dont_repack && !memory_only) {
-      if (strategy != dariadb::STRATEGY::MEMORY && strategy != STRATEGY::CACHE) {
+      if (strategy != dariadb::STRATEGY::MEMORY && strategy != STRATEGY::CACHE && strategy!= STRATEGY::VOLUME) {
         size_t ccount = size_t(raw_ptr->description().wal_count);
         std::cout << "==> drop part wals to " << ccount << "..." << std::endl;
         stop_info = false;
@@ -615,7 +625,7 @@ int main(int argc, char *argv[]) {
 
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
 
-    if (!dont_repack && !memory_only) { // compaction
+    if (!dont_repack && !memory_only && strategy!= STRATEGY::VOLUME) { // compaction
       std::cout << "compaction..." << std::endl;
       auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)

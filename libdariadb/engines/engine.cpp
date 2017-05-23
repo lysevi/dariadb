@@ -108,9 +108,11 @@ public:
 
   void init_managers() {
     if (_settings->strategy.value() == STRATEGY::VOLUME) {
-      _top_level_storage = VolumeManager::create(_engine_env);
+      _volumes = VolumeManager::create(_engine_env);
+      _top_level_storage = _volumes;
       return;
     }
+
     if (_settings->is_memory_only_mode) {
       _memstorage = MemStorage::create(_engine_env, _min_max_map->size());
       _top_level_storage = _memstorage;
@@ -216,7 +218,11 @@ public:
   }
 
   bool try_lock_storage() {
+    if (_strategy == STRATEGY::VOLUME) {
+      return true;
+    }
     std::lock_guard<std::mutex> lock(_lock_locker);
+
     if (_dropper != nullptr && _memstorage != nullptr) {
       auto dl = _dropper->getLocker();
       auto lp = _memstorage->getLockers();
@@ -236,6 +242,10 @@ public:
   }
 
   void lock_storage() {
+    if (_strategy == STRATEGY::VOLUME) {
+      return;
+    }
+
     std::lock_guard<std::mutex> lock(_lock_locker);
     if (_dropper != nullptr && _memstorage != nullptr) {
       auto dl = _dropper->getLocker();
@@ -258,6 +268,9 @@ public:
   }
 
   void unlock_storage() {
+    if (_strategy == STRATEGY::VOLUME) {
+      return;
+    }
     if (_dropper != nullptr && _memstorage != nullptr) {
       auto dl = _dropper->getLocker();
       auto lp = _memstorage->getLockers();
@@ -340,7 +353,7 @@ public:
     lock_storage();
 
     utils::async::TaskResult_Ptr pm_async = nullptr;
-    if (!_settings->is_memory_only_mode) {
+    if (_page_manager != nullptr) {
       pm_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(pm_at));
     }
     auto am_async = ThreadManager::instance()->post(THREAD_KINDS::COMMON, AT(am_at));
@@ -460,6 +473,10 @@ public:
     if (_page_manager != nullptr) {
       _page_manager->flush();
     }
+
+    if (_volumes != nullptr) {
+      _volumes->flush();
+    }
     this->wait_all_asyncs();
   }
 
@@ -477,6 +494,10 @@ public:
     }
     if (_memstorage != nullptr) {
       result.memstorage = _memstorage->description();
+    }
+    if (_volumes != nullptr) {
+      auto vd = _volumes->description();
+      result.volumes_count = vd.files;
     }
     return result;
   }
@@ -667,16 +688,19 @@ public:
       if (!try_lock_storage()) {
         return true;
       }
-      if (strategy() != STRATEGY::CACHE) {
-        result.update(stat_from_disk(id, from, to));
-
-        if (_memstorage != nullptr) {
-          result.update(_memstorage->stat(id, from, to));
-        }
+      if (strategy() == STRATEGY::VOLUME) {
+        result.update(_top_level_storage->stat(id, from, to));
       } else {
-        result.update(stat_from_cache(id, from, to));
-      }
+        if (strategy() != STRATEGY::CACHE) {
+          result.update(stat_from_disk(id, from, to));
 
+          if (_memstorage != nullptr) {
+            result.update(_memstorage->stat(id, from, to));
+          }
+        } else {
+          result.update(stat_from_cache(id, from, to));
+        }
+      }
       this->unlock_storage();
 
       return false;
@@ -827,6 +851,7 @@ protected:
   PageManager_ptr _page_manager;
   WALManager_ptr _wal_manager;
   MemStorage_ptr _memstorage;
+  VolumeManager_Ptr _volumes;
 
   EngineEnvironment_ptr _engine_env;
   Settings_ptr _settings;

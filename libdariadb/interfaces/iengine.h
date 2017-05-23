@@ -24,10 +24,11 @@ public:
     size_t wal_count;    ///  wal count.
     size_t pages_count;  /// pages count.
     size_t active_works; /// async tasks runned.
+	size_t volumes_count;  /// volumes count.
     storage::DropperDescription dropper;
     storage::memstorage::Description memstorage;
 
-    Description() { wal_count = pages_count = active_works = size_t(0); }
+    Description() { wal_count = pages_count= volumes_count = active_works = size_t(0); }
 
     void update(const Description &other) {
       wal_count += other.wal_count;
@@ -35,6 +36,7 @@ public:
       dropper.wal += other.dropper.wal;
       memstorage.allocated += other.memstorage.allocated;
       memstorage.allocator_capacity = other.memstorage.allocator_capacity;
+	  volumes_count += other.volumes_count;
     }
   };
   virtual Description description() const = 0;

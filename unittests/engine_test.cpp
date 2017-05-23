@@ -272,3 +272,45 @@ TEST_CASE("Engine.Cache_common_test") {
     dariadb::utils::fs::rm(storage_path);
   }
 }
+
+
+TEST_CASE("Engine.Volume") {
+	const std::string storage_path = "testStorage";
+	const size_t chunk_size = 50;
+
+	const dariadb::Time from = 0;
+	const dariadb::Time to = from + 100;
+	const dariadb::Time step = 1;
+
+	using namespace dariadb;
+	using namespace dariadb::storage;
+
+	{
+		if (dariadb::utils::fs::path_exists(storage_path)) {
+			dariadb::utils::fs::rm(storage_path);
+		}
+
+		auto settings = dariadb::storage::Settings::create(storage_path);
+		settings->strategy.setValue(STRATEGY::VOLUME);
+		settings->chunk_size.setValue(chunk_size);
+		settings->volume_size.setValue(1024 * 50);
+		settings->volume_levels_count.setValue(3);
+		settings->volume_B.setValue(2);
+		dariadb::IEngine_Ptr ms{ new Engine(settings) };
+
+		dariadb_test::storage_test_check(ms.get(), from, to, step, true, false, false);
+		test_statistic_on_engine(ms);
+
+		auto volumes_count = ms->description().volumes_count;
+		EXPECT_GE(volumes_count, size_t(2));
+		/*{
+			ms->eraseOld(dariadb::Id(0), dariadb::MAX_TIME);
+			auto values = ms->readInterval(
+				QueryInterval({ dariadb::Id(0) }, 0, dariadb::MIN_TIME, dariadb::MAX_TIME));
+			EXPECT_LT(values.size(), dariadb_test::copies_count);
+		}*/
+	}
+	if (dariadb::utils::fs::path_exists(storage_path)) {
+		dariadb::utils::fs::rm(storage_path);
+	}
+}

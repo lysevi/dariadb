@@ -482,21 +482,30 @@ struct Volume::Private {
     return result;
   }
 
+  uint32_t index_size() const { return VolumeIndex::index_size(_header->_index_param); }
+
+  uint32_t one_chunk_size() const {
+    return _header->one_chunk_size + sizeof(ChunkHeader);
+  }
+
+  int64_t place_exist() const { return int64_t(_header->chunk_pos) - _header->index_pos; }
+
   bool havePlaceForNewIndex() const {
-    auto exist = ((int64_t(_header->chunk_pos) - _header->index_pos -
-                   (_header->one_chunk_size + sizeof(ChunkHeader))) >=
-                  VolumeIndex::index_size(_header->_index_param));
-    return exist;
+    auto needed = index_size() + one_chunk_size();
+    auto exist = place_exist();
+    return exist >= needed;
   }
 
   bool havePlaceForNewChunk() const {
-    auto exist = (int64_t(_header->chunk_pos) - _header->index_pos >=
-                  int64_t(_header->one_chunk_size + sizeof(ChunkHeader)));
-    return exist;
+    auto needed = one_chunk_size();
+    auto exist = place_exist();
+    return exist >= needed;
   }
 
   uint64_t writeChunk(const Chunk_Ptr &c) {
     _header->chunk_pos -= _header->one_chunk_size + sizeof(ChunkHeader);
+    ENSURE(_header->chunk_pos >= _header->index_pos);
+
     auto firstByte = _header->chunk_pos;
     std::memcpy(_data + firstByte, c->header, sizeof(ChunkHeader));
     std::memcpy(_data + firstByte + sizeof(ChunkHeader), c->_buffer_t, c->header->size);
@@ -627,6 +636,7 @@ struct Volume::Private {
     lock();
     auto fres = _indexes.find(id);
     if (fres == _indexes.end()) {
+      unlock();
       return false;
     }
     auto mm = fres->second->minMax();
@@ -669,6 +679,10 @@ struct Volume::Private {
 
   void unlock() const { _locker.unlock(); }
 
+  void flush() {
+    logger_info("engine: flush ", this->_filename);
+    _volume->flush();
+  }
   MappedFile::MapperFile_ptr _volume;
   uint8_t *_data;
   Header *_header;
@@ -720,6 +734,10 @@ Time Volume::minTime() const {
 Time Volume::maxTime() const {
   return _impl->maxTime();
 }
+
+void Volume::flush() {
+  return _impl->flush();
+}
 /////////// VOLUME MANAGER ///////////
 
 namespace {
@@ -734,9 +752,22 @@ public:
     _chunk_size = _settings->chunk_size.value();
   }
 
-  ~Private() {}
+  ~Private() {
+    logger_info("engine: stoping vmanager");
+    for (auto kv : _id2chunk) {
+      dropToDisk(kv.second);
+    }
+    _id2chunk.clear();
+    _current_volume = nullptr;
+  }
 
-  std::list<std::string> volume_list() {
+  Description description() const {
+    Description d;
+    d.files = volume_list().size();
+    return d;
+  }
+
+  std::list<std::string> volume_list() const {
     // TODO use manifest.
     return utils::fs::ls(_settings->raw_path.value(), ::VOLUME_EXT);
   }
@@ -1039,6 +1070,13 @@ public:
 
   void unlock() const { _locker.unlock(); }
 
+  void flush() {
+    lock();
+    if (_current_volume != nullptr) {
+      _current_volume->flush();
+    }
+    unlock();
+  }
   std::unordered_map<Id, Chunk_Ptr> _id2chunk; // TODO use striped map;
   mutable std::shared_mutex _chunks_locker;
   EngineEnvironment_ptr _env;
@@ -1052,6 +1090,9 @@ VolumeManager::~VolumeManager() {
   _impl = nullptr;
 }
 
+VolumeManager::Description VolumeManager::description() const {
+  return _impl->description();
+}
 VolumeManager_Ptr VolumeManager::create(const EngineEnvironment_ptr env) {
   return VolumeManager_Ptr(new VolumeManager(env));
 }
@@ -1096,4 +1137,8 @@ Id2MinMax_Ptr VolumeManager::loadMinMax() {
 
 Status VolumeManager::append(const Meas &value) {
   return _impl->append(value);
+}
+
+void VolumeManager::flush() {
+  return _impl->flush();
 }
