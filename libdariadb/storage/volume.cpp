@@ -3,12 +3,15 @@
 #include <libdariadb/storage/cursors.h>
 #include <libdariadb/storage/settings.h>
 #include <libdariadb/storage/volume.h>
+#include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/utils.h>
 
+#include <atomic>
 #include <cstring>
+#include <shared_mutex>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -48,7 +51,8 @@ struct VolumeIndex::Private {
     VolumeIndex::Param params;
     Id measId;
     size_t merge_count; // how many time levels was merged.
-    bool is_full : 1;
+    uint8_t is_full;
+    uint8_t locked; // for sync
   };
 #pragma pack(pop)
   struct Level {
@@ -219,14 +223,17 @@ struct VolumeIndex::Private {
   }
 
   bool addLink(uint64_t address, uint64_t chunk_id, Time maxTime) {
+    lock();
     if (_memory_level.isFull()) {
       if (!merge_levels()) {
+        unlock();
         return false;
       }
     }
     Link lnk{maxTime, chunk_id, address, false};
     auto result = _memory_level.addLink(lnk);
     ENSURE(result);
+    unlock();
     return result;
   }
 
@@ -245,7 +252,7 @@ struct VolumeIndex::Private {
     size_t outlvl = calc_outlevel_num();
 
     if (outlvl >= _header->params.levels) {
-      this->_header->is_full = true;
+      this->_header->is_full = uint8_t(1);
       return false;
     }
 
@@ -253,7 +260,7 @@ struct VolumeIndex::Private {
 
     if (outlvl == size_t(_header->params.levels - 1)) {
       if (merge_target.isFull()) {
-        this->_header->is_full = true;
+        this->_header->is_full = uint8_t(1);
         return false;
       }
     }
@@ -284,6 +291,7 @@ struct VolumeIndex::Private {
   }
 
   std::vector<Link> queryLink(Time from, Time to) const {
+    lock();
     std::vector<Link> result;
 
     if (!_memory_level.isEmpty() && _memory_level._lvl_header->inInterval(from, to)) {
@@ -295,11 +303,13 @@ struct VolumeIndex::Private {
         l.queryLink(from, to, &result);
       }
     }
+    unlock();
     sort_links(result.data(), result.data() + result.size());
     return result;
   }
 
   Link queryLink(Time tp) const {
+    lock();
     Link result = Link::makeEmpty();
     if (!_memory_level.isEmpty() && _memory_level._lvl_header->hasTimePoint(tp)) {
       result = _memory_level.queryLink(tp);
@@ -313,10 +323,12 @@ struct VolumeIndex::Private {
         }
       }
     }
+    unlock();
     return result;
   }
 
   void rm(Time maxTime, uint64_t chunk_id) {
+    lock();
     if (!_memory_level.isEmpty() && _memory_level._lvl_header->hasTimePoint(maxTime)) {
       _memory_level.rm(maxTime, chunk_id);
     }
@@ -326,9 +338,11 @@ struct VolumeIndex::Private {
         l.rm(maxTime, chunk_id);
       }
     }
+    unlock();
   }
 
   std::pair<VolumeIndex::Link, VolumeIndex::Link> minMax() const {
+    lock();
     auto minResult = Link::makeEmpty();
     auto maxResult = Link::makeEmpty();
     minResult.max_time = MAX_TIME;
@@ -356,12 +370,18 @@ struct VolumeIndex::Private {
         }
       }
     }
+    unlock();
     return std::make_pair(minResult, maxResult);
   }
+
+  void lock() const { _locker.lock(); }
+
+  void unlock() const { _locker.unlock(); }
 
   IndexHeader *_header;
   Level _memory_level;
   std::vector<Level> _levels;
+  mutable utils::async::Locker _locker;
 };
 
 VolumeIndex::VolumeIndex(const Param &p, Id measId, uint8_t *buffer)
@@ -484,37 +504,47 @@ struct Volume::Private {
   }
 
   bool addChunk(const Chunk_Ptr &c) {
+    lock();
     auto fres = _indexes.find(c->header->meas_id);
     if (fres == _indexes.end()) {
       if (havePlaceForNewIndex()) {
         auto address = writeChunk(c);
+
         auto isz = VolumeIndex::index_size(_header->_index_param);
         auto newIndex = std::make_shared<VolumeIndex>(
             _header->_index_param, c->header->meas_id, _data + _header->index_pos);
         _header->index_pos += isz;
         newIndex->addLink(address, c->header->id, c->header->stat.maxTime);
         _indexes[c->header->meas_id] = newIndex;
+
+        unlock();
         return true;
       }
+      unlock();
       return false;
     }
+
     if (havePlaceForNewChunk()) {
       auto address = writeChunk(c);
       fres->second->addLink(address, c->header->id, c->header->stat.maxTime);
+      unlock();
       return true;
     }
+    unlock();
     return false;
   }
 
   std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to) const {
     std::vector<Chunk_Ptr> result;
-
+    lock();
     auto fres = _indexes.find(id);
     if (fres == _indexes.end()) {
+      unlock();
       return result;
     } else {
       auto links = fres->second->queryLink(from, to);
       if (links.empty()) {
+        unlock();
         return result;
       }
       result.reserve(links.size());
@@ -530,20 +560,23 @@ struct Volume::Private {
       std::sort(result.begin(), result.end(), [](const Chunk_Ptr &l, const Chunk_Ptr &r) {
         return l->header->id < r->header->id;
       });
+      unlock();
       return result;
     }
   }
 
   Chunk_Ptr queryChunks(Id id, Time timepoint) const {
+    lock();
     auto fres = _indexes.find(id);
     if (fres == _indexes.end()) {
+      unlock();
       return nullptr;
     } else {
       auto lnk = fres->second->queryLink(timepoint);
 
       auto cptr = chunkByLink(lnk);
       ENSURE(cptr->header->meas_id == id);
-
+      unlock();
       return cptr;
     }
   }
@@ -568,6 +601,7 @@ struct Volume::Private {
   }
 
   std::map<Id, std::pair<Meas, Meas>> loadMinMax() const {
+    lock();
     std::map<Id, std::pair<Meas, Meas>> result;
 
     for (const auto &i : _indexes) {
@@ -585,10 +619,12 @@ struct Volume::Private {
 
       result[i.first] = std::make_pair(minMeas, maxMeas);
     }
+    unlock();
     return result;
   }
 
   bool minMaxTime(Id id, Time *minResult, Time *maxResult) {
+    lock();
     auto fres = _indexes.find(id);
     if (fres == _indexes.end()) {
       return false;
@@ -600,10 +636,12 @@ struct Volume::Private {
     memcpy(&chdr, _data + mm.first.address, sizeof(ChunkHeader));
 
     *minResult = std::min(*minResult, chdr.stat.minTime);
+    unlock();
     return true;
   }
 
   Time minTime() const {
+    lock();
     Time result = MAX_TIME;
     for (auto i : _indexes) {
       auto lnk = i.second->minMax().first;
@@ -613,21 +651,30 @@ struct Volume::Private {
 
       result = std::min(chdr.stat.minTime, result);
     }
+    unlock();
     return result;
   }
 
   Time maxTime() const {
+    lock();
     Time result = MIN_TIME;
     for (auto i : _indexes) {
       result = std::max(i.second->minMax().second.max_time, result);
     }
+    unlock();
     return result;
   }
+
+  void lock() const { _locker.lock(); }
+
+  void unlock() const { _locker.unlock(); }
+
   MappedFile::MapperFile_ptr _volume;
   uint8_t *_data;
   Header *_header;
   std::unordered_map<Id, std::shared_ptr<VolumeIndex>> _indexes;
   std::string _filename;
+  mutable utils::async::Locker _locker;
 };
 
 Volume::Volume(const Params &p, const std::string &fname)
@@ -695,6 +742,7 @@ public:
   }
 
   virtual Status append(const Meas &value) override {
+    std::lock_guard<std::shared_mutex> lg(_chunks_locker);
     auto fres = _id2chunk.find(value.id);
     if (fres == _id2chunk.end()) {
       auto target_chunk = create_chunk(value);
@@ -741,20 +789,27 @@ public:
   }
 
   std::shared_ptr<Volume> createNewVolume() {
+    lock();
     Volume::Params p(_settings->volume_size.value(), _chunk_size,
                      _settings->volume_levels_count.value(), _settings->volume_B.value());
     auto fname = utils::fs::random_file_name(VOLUME_EXT);
     fname = utils::fs::append_path(_settings->raw_path.value(), fname);
     logger_info("engine: vmanager - create new volume ", fname);
+    unlock();
     return std::make_shared<Volume>(p, fname);
   }
 
   // Inherited via IMeasStorage
   virtual Time minTime() override {
     Time result = MAX_TIME;
-    for (auto kv : _id2chunk) {
-      result = std::min(result, kv.second->header->stat.minTime);
+
+    {
+      std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+      for (auto kv : _id2chunk) {
+        result = std::min(result, kv.second->header->stat.minTime);
+      }
     }
+
     auto visitor = [=, &result](const Volume *v) {
       logger_info("engine: vmanager - min in ", v->fname());
       result = std::min(result, v->minTime());
@@ -765,8 +820,11 @@ public:
 
   virtual Time maxTime() override {
     Time result = MIN_TIME;
-    for (auto kv : _id2chunk) {
-      result = std::max(result, kv.second->header->stat.maxTime);
+    {
+      std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+      for (auto kv : _id2chunk) {
+        result = std::max(result, kv.second->header->stat.maxTime);
+      }
     }
     auto visitor = [=, &result](const Volume *v) {
       logger_info("engine: vmanager - max in ", v->fname());
@@ -780,11 +838,14 @@ public:
     *maxResult = MIN_TIME;
     *minResult = MAX_TIME;
     auto result = false;
-    auto fres = this->_id2chunk.find(id);
-    if (fres != _id2chunk.end()) {
-      result = true;
-      *minResult = std::min(*minResult, fres->second->header->stat.minTime);
-      *maxResult = std::max(*maxResult, fres->second->header->stat.maxTime);
+    {
+      std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+      auto fres = this->_id2chunk.find(id);
+      if (fres != _id2chunk.end()) {
+        result = true;
+        *minResult = std::min(*minResult, fres->second->header->stat.minTime);
+        *maxResult = std::max(*maxResult, fres->second->header->stat.maxTime);
+      }
     }
 
     auto visitor = [=, &result, &minResult, &maxResult](const Volume *v) {
@@ -814,12 +875,15 @@ public:
     for (auto id : query.ids) {
       m.id = id;
       result[id] = m;
-      auto fres = _id2chunk.find(id);
-      if (fres != _id2chunk.end()) {
-        auto f = fres->second->header->first();
-        if (f.time >= query.time_point) {
-          result[id] = f;
-          continue;
+      {
+        std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+        auto fres = _id2chunk.find(id);
+        if (fres != _id2chunk.end()) {
+          auto f = fres->second->header->first();
+          if (f.time >= query.time_point) {
+            result[id] = f;
+            continue;
+          }
         }
       }
       auto visitor = [id, &query, &result](const Volume *v) {
@@ -853,14 +917,16 @@ public:
     Id2CursorsList result;
 
     for (auto id : query.ids) {
-      auto fres = _id2chunk.find(id);
-      if (fres != _id2chunk.end()) {
-        result[id].push_back(fres->second->getReader());
-        if (fres->second->header->first().time <= query.from) {
-          continue;
+      {
+        std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+        auto fres = _id2chunk.find(id);
+        if (fres != _id2chunk.end()) {
+          result[id].push_back(fres->second->getReader());
+          if (fres->second->header->first().time <= query.from) {
+            continue;
+          }
         }
       }
-
       auto visitor = [id, &query, &result](const Volume *v) {
         logger_info("engine: vmanager - currentValue in ", v->fname());
 
@@ -881,13 +947,16 @@ public:
     // TODO use readInTimePoint(MAX_TIME)
     Id2Meas result;
     for (auto id : ids) {
+      std::shared_lock<std::shared_mutex> lg(_chunks_locker);
       auto fres = this->_id2chunk.find(id);
       if (fres != _id2chunk.end()) {
+        lg.unlock();
         auto last = fres->second->header->last();
         if (last.inFlag(flag)) {
           result[id] = last;
         }
       } else {
+        lg.unlock();
         auto visitor = [=, &result](const Volume *v) {
           logger_info("engine: vmanager - currentValue in ", v->fname());
 
@@ -908,9 +977,12 @@ public:
 
   virtual Statistic stat(const Id id, Time from, Time to) override {
     Statistic result;
-    auto fres = this->_id2chunk.find(id);
-    if (fres != _id2chunk.end()) {
-      result.update(fres->second->stat(from, to));
+    {
+      std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+      auto fres = this->_id2chunk.find(id);
+      if (fres != _id2chunk.end()) {
+        result.update(fres->second->stat(from, to));
+      }
     }
     auto visitor = [=, &result](const Volume *v) {
       logger_info("engine: vmanager - stat in ", v->fname());
@@ -939,6 +1011,7 @@ public:
 
     apply_for_each_volume(visitor);
 
+    std::shared_lock<std::shared_mutex> lg(_chunks_locker);
     for (const auto &kv : _id2chunk) {
       auto fres = result->find_bucket(kv.first);
       fres.v->second.updateMax(kv.second->header->last());
@@ -948,6 +1021,7 @@ public:
   }
 
   void apply_for_each_volume(std::function<void(const Volume *)> visitor) {
+    lock();
     // TODO LRU cache needed.
     auto files = this->volume_list();
     for (auto f : files) {
@@ -958,13 +1032,20 @@ public:
         visitor(&v);
       }
     }
+    unlock();
   }
 
+  void lock() const { _locker.lock(); }
+
+  void unlock() const { _locker.unlock(); }
+
   std::unordered_map<Id, Chunk_Ptr> _id2chunk; // TODO use striped map;
+  mutable std::shared_mutex _chunks_locker;
   EngineEnvironment_ptr _env;
   Settings *_settings;
   uint32_t _chunk_size;
   std::shared_ptr<Volume> _current_volume;
+  mutable utils::async::Locker _locker;
 };
 
 VolumeManager::~VolumeManager() {
