@@ -438,6 +438,7 @@ struct Volume::Private {
   };
 #pragma pack(pop)
   Private(const Params &p, const std::string &fname) {
+    logger("egine: create volume ", fname);
     ENSURE(p.size >
            (sizeof(Header) + VolumeIndex::index_size(p.indexParams) + p.chunk_size));
     _volume = MappedFile::touch(fname, p.size);
@@ -451,6 +452,7 @@ struct Volume::Private {
   }
 
   Private(const std::string &fname) {
+    logger("egine: open volume ", fname);
     _volume = MappedFile::open(fname);
     _data = _volume->data();
     _header = reinterpret_cast<Header *>(_data);

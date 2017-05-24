@@ -93,6 +93,7 @@ public:
   EXPORT Time minTime() const;
   EXPORT Time maxTime() const;
   EXPORT void flush();
+
 private:
   struct Private;
   std::unique_ptr<Private> _impl;
@@ -103,14 +104,14 @@ using VolumeManager_Ptr = std::shared_ptr<VolumeManager>;
 
 class VolumeManager : public IMeasStorage {
 public:
-	struct Description {
-		size_t files;
-	};
+  struct Description {
+    size_t files;
+  };
   ~VolumeManager();
   EXPORT static VolumeManager_Ptr create(const EngineEnvironment_ptr env);
-  EXPORT Description description()const;
+  EXPORT Description description() const;
   // Inherited via IMeasStorage
-  EXPORT virtual void flush()override;
+  EXPORT virtual void flush() override;
   EXPORT virtual Time minTime() override;
   EXPORT virtual Time maxTime() override;
   EXPORT virtual bool minMaxTime(Id id, Time *minResult, Time *maxResult) override;
