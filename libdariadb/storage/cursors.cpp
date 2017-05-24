@@ -20,7 +20,7 @@ Time get_top_time(ICursor *r) {
 void fill_top_times(std::vector<Time> &top_times,
                     const std::vector<Cursor_Ptr> &readers) {
   size_t pos = 0;
-  for (auto r : readers) {
+  for (auto&r : readers) {
     top_times[pos++] = get_top_time(r.get());
   }
 }

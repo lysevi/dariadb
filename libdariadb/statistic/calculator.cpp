@@ -39,7 +39,7 @@ IFunction_ptr FunctionFactory::make_one(const std::string &k) {
 std::vector<IFunction_ptr> FunctionFactory::make(const std::vector<std::string> &kinds) {
   std::vector<IFunction_ptr> result(kinds.size());
   size_t i = 0;
-  for (const auto k : kinds) {
+  for (const auto&k : kinds) {
     result[i++] = make_one(k);
   }
   return result;

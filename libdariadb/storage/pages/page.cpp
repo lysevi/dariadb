@@ -205,7 +205,7 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
     THROW_EXCEPTION("can`t open file ", file_name);
   }
 
-  for (auto &kv : links) {
+  for (auto&kv : links) {
     auto lst = kv.second;
     std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
     std::sort(

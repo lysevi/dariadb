@@ -54,7 +54,7 @@ struct Scheme::Private : public IScheme {
 
   bool is_aggregate_fn(const std::string &s) {
     auto all_functions = dariadb::statistic::FunctionFactory::functions();
-    for (auto fn : all_functions) {
+    for (auto&&fn : all_functions) {
       if (fn == s) {
         return true;
       }
@@ -98,7 +98,7 @@ struct Scheme::Private : public IScheme {
   DescriptionMap ls() override {
     std::lock_guard<utils::async::Locker> lg(_locker);
     DescriptionMap result;
-    for (auto &inter : _params) {
+    for (const auto &inter : _params) {
       for (const auto &kv : inter.second) {
         result[kv.second.id] = kv.second;
       }

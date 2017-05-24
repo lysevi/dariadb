@@ -21,7 +21,7 @@ ThreadManager *ThreadManager::instance() {
 }
 
 ThreadManager::ThreadManager(const ThreadManager::Params &params) : _params(params) {
-  for (auto kv : _params.pools) {
+  for (const auto&kv : _params.pools) {
     _pools[kv.kind] = std::make_shared<ThreadPool>(kv);
   }
   _stoped = false;
@@ -43,7 +43,7 @@ TaskResult_Ptr ThreadManager::post(const ThreadKind kind, const AsyncTaskWrap_Pt
 
 ThreadManager::~ThreadManager() {
   if (!_stoped) {
-    for (auto &kv : _pools) {
+    for (auto&&kv : _pools) {
       kv.second->stop();
     }
     _pools.clear();

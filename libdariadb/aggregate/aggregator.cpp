@@ -86,13 +86,13 @@ public:
     auto vals = _scheme->lsInterval(interval);
     IdArray ids;
     ids.reserve(vals.size());
-    for (auto kv : vals) {
+    for (const auto&kv : vals) {
       ids.push_back(kv.first);
     }
 
     auto curvals = _storage->currentValue(ids, Flag());
     dariadb::Time result = MAX_TIME;
-    for (auto v : curvals) {
+    for (const auto& v : curvals) {
       result = std::min(result, v.second.time);
     }
     return result;
@@ -115,14 +115,14 @@ public:
                   "-", timeutil::to_string(currentInterval.second), "]");
 
       auto interval_from_values = _scheme->lsInterval(interval_from);
-      for (auto kv : interval_from_values) { /// check each value from interval 'from'
+      for (const auto& kv : interval_from_values) { /// check each value from interval 'from'
         Time fromMinTime, fromMaxTime;
         if (!_storage->minMaxTime(kv.first, &fromMinTime, &fromMaxTime)) {
           continue;
         }
         logger_info("agregator: aggregate for ", kv.second.name);
         auto linkedValues = _scheme->linkedForValue(kv.second);
-        for (auto linkedKv : linkedValues) { // for each linked value
+        for (const auto& linkedKv : linkedValues) { // for each linked value
           Time toMinTime, toMaxTime;
           if (!_storage->minMaxTime(linkedKv.first, &toMinTime, &toMaxTime)) {
             /// if value not exist, replace start interval by start 'from'

@@ -571,22 +571,22 @@ public:
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
       CursorsList readers;
-      for (auto kv : mm_readers) {
-        readers.push_back(kv.second);
+      for (auto&& kv : mm_readers) {
+        readers.push_back(std::move(kv.second));
       }
-      for (auto kv : disk_readers) {
-        readers.push_back(kv.second);
+      for (auto&& kv : disk_readers) {
+        readers.push_back(std::move(kv.second));
       }
 
       Cursor_Ptr r_ptr = CursorWrapperFactory::colapseCursors(readers);
       result[id2intervals.first] = r_ptr;
     }
 
-    for (auto kv : disk_only_readers) {
-      result[kv.first] = kv.second;
+    for (auto&&kv : disk_only_readers) {
+      result[kv.first] = std::move(kv.second);
     }
-    for (auto kv : mem_only_readers) {
-      result[kv.first] = kv.second;
+    for (auto&&kv : mem_only_readers) {
+      result[kv.first] = std::move(kv.second);
     }
     return result;
   }
@@ -638,8 +638,8 @@ public:
       }
       this->unlock_storage();
 
-      for (auto kv : r) {
-        result[kv.first] = kv.second;
+      for (auto&&kv : r) {
+        result[kv.first] = std::move(kv.second);
       }
       return false;
     };
@@ -716,7 +716,7 @@ public:
   MeasArray readInterval(const QueryInterval &q) {
     size_t max_count = 0;
     auto r = this->intervalReader(q);
-    for (auto &kv : r) {
+    for (const auto &kv : r) {
       max_count += kv.second->count();
     }
     MeasArray result;
