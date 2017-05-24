@@ -1,8 +1,8 @@
 #pragma once
 
+#include <libdariadb/utils/utils.h>
 #include <list>
 #include <unordered_map>
-#include <libdariadb/utils/utils.h>
 namespace dariadb {
 namespace utils {
 
@@ -40,9 +40,9 @@ public:
     item_map.insert(make_pair(key, item_list.begin()));
     clean();
   };
-  
+
   bool exist(const KEY_T &key) { return (item_map.count(key) > 0); };
-  
+
   VAL_T get(const KEY_T &key) {
     ENSURE(exist(key));
     auto it = item_map.find(key);

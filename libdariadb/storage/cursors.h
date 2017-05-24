@@ -10,7 +10,7 @@ namespace storage {
 /**
 Store all values in memory.
 */
-class FullCursor : public ICursor {
+class FullCursor final : public ICursor {
 public:
   EXPORT FullCursor(MeasArray &ma);
   EXPORT virtual Meas readNext() override;
@@ -32,7 +32,7 @@ public:
 /**
 Merge sort.
 */
-class MergeSortCursor : public ICursor {
+class MergeSortCursor final : public ICursor {
 public:
   EXPORT MergeSortCursor(const CursorsList &readers);
   EXPORT virtual Meas readNext() override;
@@ -53,7 +53,7 @@ public:
 /**
 Sequential read
 */
-class LinearCursor : public ICursor {
+class LinearCursor final : public ICursor {
 public:
   EXPORT LinearCursor(const CursorsList &readers);
   EXPORT virtual Meas readNext() override;

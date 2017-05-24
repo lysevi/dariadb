@@ -54,7 +54,7 @@ struct PageFooter {
 class Page;
 typedef std::shared_ptr<Page> Page_Ptr;
 using on_create_complete_callback = std::function<void(const Page_Ptr &)>;
-class Page : public ChunkContainer {
+class Page final : public ChunkContainer {
   Page() = delete;
   Page(const PageFooter &footer, std::string fname);
 

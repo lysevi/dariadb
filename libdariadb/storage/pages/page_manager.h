@@ -15,7 +15,7 @@ namespace storage {
 
 class PageManager;
 typedef std::shared_ptr<PageManager> PageManager_ptr;
-class PageManager : public utils::NonCopy, public ChunkContainer {
+class PageManager final : public utils::NonCopy, public ChunkContainer {
 public:
   EXPORT static PageManager_ptr create(const EngineEnvironment_ptr env);
   EXPORT virtual ~PageManager();

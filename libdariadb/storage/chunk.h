@@ -79,7 +79,7 @@ public:
   EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
                                  const Meas &first_m);
   EXPORT static Chunk_Ptr open(ChunkHeader *hdr, uint8_t *buffer);
-  
+
   EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
   EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer);
 

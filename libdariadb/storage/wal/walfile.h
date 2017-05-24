@@ -14,7 +14,7 @@ const std::string WAL_FILE_EXT = ".wal"; // append-only-file
 class WALFile;
 typedef std::shared_ptr<WALFile> WALFile_Ptr;
 
-class WALFile : public IMeasStorage {
+class WALFile final : public IMeasStorage {
 public:
   EXPORT virtual ~WALFile();
 

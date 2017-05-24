@@ -748,7 +748,7 @@ const char *VOLUME_EXT = ".vlm";
 const size_t LRU_CACHE_SIZE = 10; // TODO move to settings
 }
 
-class VolumeManager::Private : public IMeasStorage {
+class VolumeManager::Private final : public IMeasStorage {
 public:
   Private(const EngineEnvironment_ptr env) : _volumes(LRU_CACHE_SIZE) {
     _env = env;

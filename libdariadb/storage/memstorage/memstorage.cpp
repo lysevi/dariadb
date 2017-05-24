@@ -23,7 +23,7 @@ using namespace dariadb::utils::async;
 Map:
   Meas.id -> TimeTrack{ MemChunkList[MemChunk{data}]}
 */
-struct MemStorage::Private : public IMeasStorage, public MemoryChunkContainer {
+struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContainer {
   Private(const EngineEnvironment_ptr &env, size_t id_count)
       : _env(env), _settings(_env->getResourceObject<Settings>(
                        EngineEnvironment::Resource::SETTINGS)) {

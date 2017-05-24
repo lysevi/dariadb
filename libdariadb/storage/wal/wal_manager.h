@@ -18,7 +18,7 @@ namespace storage {
 
 class WALManager;
 using WALManager_ptr = std::shared_ptr<WALManager>;
-class WALManager : public IMeasStorage {
+class WALManager final : public IMeasStorage {
 public:
   struct BufferDescription {
     WALFile_Ptr walfile;

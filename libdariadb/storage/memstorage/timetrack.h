@@ -22,7 +22,8 @@ using TimeTrack_ptr = std::shared_ptr<TimeTrack>;
 // using Id2Track = std::unordered_map<Id, TimeTrack_ptr>;
 using Id2Track = utils::stripped_map<Id, TimeTrack_ptr>;
 
-struct TimeTrack : public IMeasStorage, public std::enable_shared_from_this<TimeTrack> {
+struct TimeTrack final : public IMeasStorage,
+                         public std::enable_shared_from_this<TimeTrack> {
   TimeTrack(MemoryChunkContainer *mcc, const Time step, Id meas_id,
             IMemoryAllocator_Ptr allocator);
   ~TimeTrack();

@@ -9,7 +9,7 @@ namespace dariadb {
 namespace storage {
 
 struct TimeTrack;
-struct MemChunk : public Chunk {
+struct MemChunk final : public Chunk {
   ChunkHeader *index_ptr;
   uint8_t *buffer_ptr;
   IMemoryAllocator::AllocatedData _a_data;

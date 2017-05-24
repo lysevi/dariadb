@@ -64,7 +64,7 @@ private:
   std::unique_ptr<Private> _impl;
 };
 
-class Volume : utils::NonCopy {
+class Volume final : utils::NonCopy {
 public:
   struct Params {
     uint32_t chunk_size;
@@ -102,7 +102,7 @@ private:
 class VolumeManager;
 using VolumeManager_Ptr = std::shared_ptr<VolumeManager>;
 
-class VolumeManager : public IMeasStorage {
+class VolumeManager final : public IMeasStorage {
 public:
   struct Description {
     size_t files;
