@@ -350,7 +350,7 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
 
   void addChunk(MemChunk_Ptr &) override { _chunks_count.fetch_add(uint64_t(1)); }
 
-  void freeChunk(MemChunk_Ptr &) { _chunks_count.fetch_sub(uint64_t(1)); }
+  void freeChunk(MemChunk_Ptr &&) override { _chunks_count.fetch_sub(uint64_t(1)); }
 
   std::mutex *getLockers() { return &_drop_locker; }
 

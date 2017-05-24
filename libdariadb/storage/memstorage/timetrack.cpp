@@ -114,7 +114,7 @@ void TimeTrack::append_to_past(const Meas &value) {
 
   auto old_chunk_size = target_to_replace->header->size;
   if (target_to_replace->_is_from_pool) {
-    _mcc->freeChunk(target_to_replace);
+    _mcc->freeChunk(std::move(target_to_replace));
   }
 
   mset.insert(value);

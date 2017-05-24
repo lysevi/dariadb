@@ -13,7 +13,7 @@ namespace storage {
 class MemoryChunkContainer {
 public:
   virtual void addChunk(MemChunk_Ptr &c) = 0;
-  virtual void freeChunk(MemChunk_Ptr &c) = 0;
+  virtual void freeChunk(MemChunk_Ptr &&c) = 0;
   virtual ~MemoryChunkContainer() {}
 };
 
