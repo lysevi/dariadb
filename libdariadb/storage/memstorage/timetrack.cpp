@@ -113,14 +113,16 @@ void TimeTrack::append_to_past(const Meas &value) {
   rdr = nullptr;
 
   auto old_chunk_size = target_to_replace->header->size;
+  /// need to leak detection.
+  ENSURE(target_to_replace.use_count() == long(1));
+
   if (target_to_replace->_is_from_pool) {
     _mcc->freeChunk(std::move(target_to_replace));
   }
 
   mset.insert(value);
 
-  /// need to leak detection.
-  ENSURE(target_to_replace.use_count() == long(1));
+  
 
   target_to_replace = nullptr;
 
