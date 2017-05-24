@@ -7,6 +7,7 @@
 #include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
+#include <libdariadb/utils/lru.h>
 #include <libdariadb/utils/utils.h>
 
 #include <atomic>
@@ -744,11 +745,12 @@ void Volume::flush() {
 
 namespace {
 const char *VOLUME_EXT = ".vlm";
+const size_t LRU_CACHE_SIZE = 10; // TODO move to settings
 }
 
 class VolumeManager::Private : public IMeasStorage {
 public:
-  Private(const EngineEnvironment_ptr env) {
+  Private(const EngineEnvironment_ptr env) : _volumes(LRU_CACHE_SIZE) {
     _env = env;
     _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _chunk_size = _settings->chunk_size.value();
@@ -823,6 +825,9 @@ public:
 
   std::shared_ptr<Volume> createNewVolume() {
     lock();
+    if (_current_volume != nullptr) {
+      _volumes.put(_current_volume->fname(), _current_volume);
+    }
     Volume::Params p(_settings->volume_size.value(), _chunk_size,
                      _settings->volume_levels_count.value(), _settings->volume_B.value());
     auto fname = utils::fs::random_file_name(VOLUME_EXT);
@@ -1055,15 +1060,20 @@ public:
 
   void apply_for_each_volume(std::function<void(const Volume *)> visitor) {
     lock();
-    // TODO LRU cache needed.
     auto files = this->volume_list();
     for (auto f : files) {
+      std::shared_ptr<Volume> target;
       if (_current_volume->fname() == f) {
-        visitor(_current_volume.get());
+        target = _current_volume;
       } else {
-        Volume v(f);
-        visitor(&v);
+        if (_volumes.exist(f)) {
+          target = _volumes.get(f);
+        } else {
+          target = std::make_shared<Volume>(f);
+          _volumes.put(f, target);
+        }
       }
+      visitor(target.get());
     }
     unlock();
   }
@@ -1080,6 +1090,7 @@ public:
     unlock();
   }
   std::unordered_map<Id, Chunk_Ptr> _id2chunk; // TODO use striped map;
+  utils::LRUCache<std::string, std::shared_ptr<Volume>> _volumes;
   mutable std::shared_mutex _chunks_locker;
   EngineEnvironment_ptr _env;
   Settings *_settings;
