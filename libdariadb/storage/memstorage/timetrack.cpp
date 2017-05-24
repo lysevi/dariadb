@@ -132,8 +132,7 @@ void TimeTrack::append_to_past(const Meas &value) {
   std::fill_n(new_buffer, buffer_size, uint8_t(0));
   ChunkHeader *hdr = new ChunkHeader;
 
-  new_chunk = MemChunk_Ptr{
-      new MemChunk(false, hdr, new_buffer, buffer_size, mar.front(), this->_allocator)};
+  new_chunk = std::make_shared<MemChunk>(false, hdr, new_buffer, buffer_size, mar.front(), this->_allocator);
   new_chunk->_track = this;
   for (size_t i = 1; i < mar.size(); ++i) {
     auto v = mar[i];
@@ -253,7 +252,7 @@ Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
     auto c = it->second;
     if (chunkInQuery(q, c)) {
       auto rdr = c->getReader();
-      dariadb::Cursor_Ptr cptr{new MemTrackCursor(rdr, this->shared_from_this())};
+      dariadb::Cursor_Ptr cptr=std::make_shared<MemTrackCursor>(rdr, this->shared_from_this());
       readers.push_back(rdr);
     }
   }
@@ -398,8 +397,8 @@ bool TimeTrack::create_new_chunk(const Meas &value) {
   if (new_chunk_data.header == nullptr) {
     return false;
   }
-  auto mc = MemChunk_Ptr{new MemChunk{true, new_chunk_data.header, new_chunk_data.buffer,
-                                      _allocator->_chunkSize, value, this->_allocator}};
+  auto mc = std::make_shared<MemChunk>(true, new_chunk_data.header, new_chunk_data.buffer,
+                                      _allocator->_chunkSize, value, this->_allocator);
   mc->_track = this;
   mc->_a_data = new_chunk_data;
   this->_mcc->addChunk(mc);

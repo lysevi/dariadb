@@ -79,11 +79,11 @@ public:
 
 Chunk_Ptr Chunk::create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
                         const Meas &first_m) {
-  return Chunk_Ptr{new Chunk(hdr, buffer, _size, first_m)};
+  return std::make_shared<Chunk>(hdr, buffer, _size, first_m);
 }
 
 Chunk_Ptr Chunk::open(ChunkHeader *hdr, uint8_t *buffer) {
-  return Chunk_Ptr{new Chunk(hdr, buffer)};
+  return std::make_shared<Chunk>(hdr, buffer);
 }
 
 Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
