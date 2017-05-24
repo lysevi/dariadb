@@ -627,12 +627,15 @@ public:
       }
 
       Id2Cursor r;
-      if (this->strategy() == STRATEGY::CACHE) {
-        r = interval_readers_when_cache(q);
+      if (this->strategy() == STRATEGY::VOLUME) {
+        r = this->_top_level_storage->intervalReader(q);
       } else {
-        r = internal_readers_two_level(q);
+        if (this->strategy() == STRATEGY::CACHE) {
+          r = interval_readers_when_cache(q);
+        } else {
+          r = internal_readers_two_level(q);
+        }
       }
-
       this->unlock_storage();
 
       for (auto kv : r) {

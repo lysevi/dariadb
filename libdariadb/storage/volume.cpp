@@ -910,6 +910,9 @@ public:
     m.time = MIN_TIME;
     m.flag = FLAGS::_NO_DATA;
     m.time = query.time_point;
+
+    IdSet disk_reads; // TODO use vector with preallocated memory.
+
     for (auto id : query.ids) {
       m.id = id;
       result[id] = m;
@@ -924,9 +927,13 @@ public:
           }
         }
       }
-      auto visitor = [id, &query, &result](const Volume *v) {
-        logger_info("engine: vmanager - readTimePoint in ", v->fname());
+      disk_reads.insert(id);
+    }
 
+    auto visitor = [disk_reads, &query, &result](const Volume *v) {
+      logger_info("engine: vmanager - readTimePoint in ", v->fname());
+
+      for (auto id : disk_reads) {
         auto c = v->queryChunks(id, query.time_point);
         if (c != nullptr) {
           auto rdr = c->getReader();
@@ -943,16 +950,16 @@ public:
             result[id] = val;
           }
         }
-
-      };
-      apply_for_each_volume(visitor);
-    }
-
+      }
+    };
+    apply_for_each_volume(visitor);
     return result;
   }
 
   virtual Id2Cursor intervalReader(const QueryInterval &query) override {
     Id2CursorsList result;
+
+    IdSet disk_reads; // TODO use vector with preallocated memory.
 
     for (auto id : query.ids) {
       {
@@ -965,52 +972,26 @@ public:
           }
         }
       }
-      auto visitor = [id, &query, &result](const Volume *v) {
-        logger_info("engine: vmanager - currentValue in ", v->fname());
+      disk_reads.insert(id);
+    }
 
+    auto visitor = [&disk_reads, &query, &result](const Volume *v) {
+      logger_info("engine: vmanager - intervalReader in ", v->fname());
+      for (auto id : disk_reads) {
         auto chunks = v->queryChunks(id, query.from, query.to);
         for (auto c : chunks) {
           auto rdr = c->getReader();
           result[id].push_back(rdr);
         }
-
-      };
-      apply_for_each_volume(visitor);
-    }
+      }
+    };
+    apply_for_each_volume(visitor);
 
     return CursorWrapperFactory::colapseCursors(result);
   }
 
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {
-    // TODO use readInTimePoint(MAX_TIME)
-    Id2Meas result;
-    for (auto id : ids) {
-      std::shared_lock<std::shared_mutex> lg(_chunks_locker);
-      auto fres = this->_id2chunk.find(id);
-      if (fres != _id2chunk.end()) {
-        lg.unlock();
-        auto last = fres->second->header->last();
-        if (last.inFlag(flag)) {
-          result[id] = last;
-        }
-      } else {
-        lg.unlock();
-        auto visitor = [=, &result](const Volume *v) {
-          logger_info("engine: vmanager - currentValue in ", v->fname());
-
-          auto c = v->queryChunks(id, MAX_TIME);
-          if (c != nullptr) {
-            auto res_fres = result.find(id);
-            auto last = c->header->last();
-            if (res_fres == result.end() || last.time > res_fres->second.time) {
-              result[id] = last;
-            }
-          }
-        };
-        apply_for_each_volume(visitor);
-      }
-    }
-    return result;
+    return readTimePoint(QueryTimePoint(ids, flag, MAX_TIME));
   }
 
   virtual Statistic stat(const Id id, Time from, Time to) override {
