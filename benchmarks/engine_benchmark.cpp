@@ -484,6 +484,10 @@ int main(int argc, char *argv[]) {
       settings = dariadb::storage::Settings::create();
     }
 
+	settings->volume_B.setValue(3);
+	settings->volume_levels_count.setValue(5);
+	settings->volume_size.setValue(1024*1024*15);
+
     if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) &&
         memory_limit != 0) {
       std::cout << "memory limit: " << memory_limit << std::endl;
