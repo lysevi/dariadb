@@ -863,7 +863,6 @@ public:
   }
 
   std::shared_ptr<Volume> createNewVolume() {
-    lock();
     if (_current_volume != nullptr) {
       _volumes.put(_current_volume->fname(), _current_volume);
     }
@@ -872,7 +871,6 @@ public:
     auto fname = utils::fs::random_file_name(VOLUME_EXT);
     fname = utils::fs::append_path(_settings->raw_path.value(), fname);
     logger_info("engine: vmanager - create new volume ", fname);
-    unlock();
     return std::make_shared<Volume>(p, fname, _settings->volume_flush.value());
   }
 
