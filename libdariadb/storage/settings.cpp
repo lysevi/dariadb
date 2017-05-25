@@ -103,11 +103,11 @@ template <> std::string Settings::ReadOnlyOption<FlushModel>::value_str() const 
 BaseOption::~BaseOption() {}
 
 Settings_ptr Settings::create(const std::string &storage_path) {
-  return Settings_ptr{new Settings(storage_path)};
+  return std::make_shared<Settings>(storage_path);
 }
 
 Settings_ptr Settings::create() {
-  auto result = Settings_ptr{new Settings(MEMORY_ONLY_PATH)};
+  auto result = std::make_shared<Settings>(MEMORY_ONLY_PATH);
   result->is_memory_only_mode = true;
   result->strategy.setValue(STRATEGY::MEMORY);
   return result;

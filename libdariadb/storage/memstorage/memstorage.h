@@ -16,13 +16,12 @@ namespace storage {
 class MemStorage;
 using MemStorage_ptr = std::shared_ptr<MemStorage>;
 class MemStorage final : public IMeasStorage {
-protected:
-  /// id_count - for prealloc
-  EXPORT MemStorage(const EngineEnvironment_ptr &env, size_t id_count);
 
 public:
   /// id_count - for prealloc
   EXPORT static MemStorage_ptr create(const EngineEnvironment_ptr &env, size_t id_count);
+  /// id_count - for prealloc
+  EXPORT MemStorage(const EngineEnvironment_ptr &env, size_t id_count);
   EXPORT ~MemStorage();
   EXPORT memstorage::Description description() const;
 

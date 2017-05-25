@@ -400,11 +400,11 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
 };
 
 MemStorage_ptr MemStorage::create(const EngineEnvironment_ptr &env, size_t id_count) {
-  return MemStorage_ptr{new MemStorage(env, id_count)};
+  return std::make_shared<MemStorage>(env, id_count);
 }
 
 MemStorage::MemStorage(const EngineEnvironment_ptr &env, size_t id_count)
-    : _impl(new MemStorage::Private(env, id_count)) {}
+    : _impl(std::make_unique<MemStorage::Private>(env, id_count)) {}
 
 MemStorage::~MemStorage() {
   _impl = nullptr;

@@ -408,10 +408,10 @@ struct VolumeIndex::Private {
 };
 
 VolumeIndex::VolumeIndex(const Param &p, IFlushable *flusher, Id measId, uint8_t *buffer)
-    : _impl(new VolumeIndex::Private(p, flusher, measId, buffer)) {}
+    : _impl(std::make_unique<Private>(p, flusher, measId, buffer)) {}
 
 VolumeIndex::VolumeIndex(IFlushable *flusher, uint8_t *buffer)
-    : _impl(new VolumeIndex::Private(flusher, buffer)) {}
+    : _impl(std::make_unique<Private>(flusher, buffer)) {}
 
 VolumeIndex::~VolumeIndex() {
   _impl = nullptr;
@@ -731,10 +731,10 @@ struct Volume::Private final : public IFlushable {
 };
 
 Volume::Volume(const Params &p, const std::string &fname, FlushModel syncModel)
-    : _impl(new Private(p, fname, syncModel)) {}
+    : _impl(std::make_unique<Private>(p, fname, syncModel)) {}
 
 Volume::Volume(const std::string &fname, FlushModel syncModel)
-    : _impl(new Private(fname, syncModel)) {}
+    : _impl(std::make_unique<Private>(fname, syncModel)) {}
 
 Volume::~Volume() {
   _impl = nullptr;
@@ -1118,18 +1118,19 @@ public:
   mutable utils::async::Locker _locker;
 };
 
-VolumeManager::~VolumeManager() {
-  _impl = nullptr;
-}
-
 VolumeManager::Description VolumeManager::description() const {
   return _impl->description();
 }
 VolumeManager_Ptr VolumeManager::create(const EngineEnvironment_ptr env) {
-  return VolumeManager_Ptr(new VolumeManager(env));
+  return std::make_shared<VolumeManager>(env);
 }
 
-VolumeManager::VolumeManager(const EngineEnvironment_ptr env) : _impl(new Private(env)) {}
+VolumeManager::VolumeManager(const EngineEnvironment_ptr env)
+    : _impl(std::make_unique<Private>(env)) {}
+
+VolumeManager::~VolumeManager() {
+  _impl = nullptr;
+}
 
 Time VolumeManager::minTime() {
   return _impl->minTime();

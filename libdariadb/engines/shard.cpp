@@ -218,7 +218,7 @@ public:
     ENSURE(!s.path.empty());
     auto settings = Settings::create(s.path);
     settings->alias = "(" + s.alias + ")";
-    IEngine_Ptr new_shard{new Engine(settings, false, _force_unlock)};
+    IEngine_Ptr new_shard = std::make_shared<Engine>(settings, false, _force_unlock);
     return new_shard;
   }
 
@@ -226,7 +226,7 @@ public:
     ENSURE(!s.path.empty());
     auto settings = Settings::create();
     settings->alias = "(" + s.alias + ")";
-    IEngine_Ptr new_shard{new Engine(settings, false)};
+    IEngine_Ptr new_shard = std::make_shared<Engine>(settings, false);
     return new_shard;
   }
 
@@ -253,7 +253,7 @@ public:
       shard_settings->strategy.setValue(_settings->strategy_for_interval(interval));
     }
 
-    new_shard = IEngine_Ptr{new Engine(shard_settings, false)};
+    new_shard = std::make_shared<Engine>(shard_settings, false);
     shard_settings->alias = "(" + interval + ")";
     shard_settings->save();
     _interval2shard[interval] = new_shard;
@@ -506,11 +506,11 @@ public:
 };
 
 ShardEngine_Ptr ShardEngine::create(const std::string &path, bool force_unlock) {
-  return ShardEngine_Ptr{new ShardEngine(path, force_unlock)};
+  return std::make_shared<ShardEngine>(path, force_unlock);
 }
 
 ShardEngine::ShardEngine(const std::string &path, bool force_unlock)
-    : _impl(new ShardEngine::Private(path, force_unlock)) {}
+    : _impl(std::make_unique<ShardEngine::Private>(path, force_unlock)) {}
 
 void dariadb::ShardEngine::compress_all() {
   _impl->compress_all();

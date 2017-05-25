@@ -321,13 +321,11 @@ Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list)
     for (size_t pos : kv.second) {
       rs.emplace_back(readers_vector[pos]);
     }
-    MergeSortCursor *msr = new MergeSortCursor(rs);
-    Cursor_Ptr rptr{msr};
+    Cursor_Ptr rptr = std::make_shared<MergeSortCursor>(rs);
     result_readers.emplace_back(rptr);
   }
 
-  LinearCursor *lsr = new LinearCursor(result_readers);
-  Cursor_Ptr rptr{lsr};
+  Cursor_Ptr rptr = std::make_shared<LinearCursor>(result_readers);
   return rptr;
 }
 

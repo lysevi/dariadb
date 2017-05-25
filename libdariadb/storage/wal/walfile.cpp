@@ -166,8 +166,7 @@ public:
       MeasArray ma(kv.second.begin(), kv.second.end());
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.front().time <= ma.back().time);
-      FullCursor *fr = new FullCursor(ma);
-      Cursor_Ptr reader{fr};
+      Cursor_Ptr reader = std::make_shared<FullCursor>(ma);
       result[kv.first] = reader;
     }
     return result;
@@ -373,21 +372,21 @@ protected:
 };
 
 WALFile_Ptr WALFile::create(const EngineEnvironment_ptr env, dariadb::Id id) {
-  return WALFile_Ptr{new WALFile(env, id)};
+  return std::make_shared<WALFile>(env, id);
 }
 
 WALFile_Ptr WALFile::open(const EngineEnvironment_ptr env, const std::string &fname,
                           bool readonly) {
-  return WALFile_Ptr{new WALFile(env, fname, readonly)};
+  return std::make_shared<WALFile>(env, fname, readonly);
 }
 
 WALFile::~WALFile() {}
 
 WALFile::WALFile(const EngineEnvironment_ptr env, dariadb::Id id)
-    : _Impl(new WALFile::Private(env, id)) {}
+    : _Impl(std::make_unique<WALFile::Private>(env, id)) {}
 
 WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
-    : _Impl(new WALFile::Private(env, fname, readonly)) {}
+    : _Impl(std::make_unique<WALFile::Private>(env, fname, readonly)) {}
 
 dariadb::Id WALFile::id_bloom() {
   return _Impl->id_bloom();

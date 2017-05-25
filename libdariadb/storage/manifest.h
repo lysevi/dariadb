@@ -19,6 +19,7 @@ class Manifest {
 public:
   EXPORT static Manifest_ptr create(const Settings_ptr &settings);
   EXPORT Manifest() = delete;
+  EXPORT Manifest(const Settings_ptr &settings);
   EXPORT ~Manifest();
 
   EXPORT std::list<std::string> page_list();
@@ -39,7 +40,6 @@ public:
   EXPORT std::string get_format();
 
 protected:
-  EXPORT Manifest(const Settings_ptr &settings);
   class Private;
   std::unique_ptr<Private> _impl;
 };

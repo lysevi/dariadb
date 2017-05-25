@@ -112,7 +112,8 @@ public:
   struct Description {
     size_t files;
   };
-  ~VolumeManager();
+  EXPORT VolumeManager(const EngineEnvironment_ptr env);
+  EXPORT ~VolumeManager();
   EXPORT static VolumeManager_Ptr create(const EngineEnvironment_ptr env);
   EXPORT Description description() const;
   // Inherited via IMeasStorage
@@ -129,7 +130,6 @@ public:
   EXPORT virtual Status append(const Meas &value) override;
 
 protected:
-  VolumeManager(const EngineEnvironment_ptr env);
   class Private;
   std::unique_ptr<Private> _impl;
 };

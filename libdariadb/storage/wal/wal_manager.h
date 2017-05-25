@@ -33,10 +33,8 @@ public:
   };
   using BufferDescription_Ptr = std::shared_ptr<BufferDescription>;
 
-protected:
-  EXPORT WALManager(const EngineEnvironment_ptr env);
-
 public:
+  EXPORT WALManager(const EngineEnvironment_ptr env);
   EXPORT virtual ~WALManager();
   EXPORT static WALManager_ptr create(const EngineEnvironment_ptr env);
   // Inherited via MeasStorage

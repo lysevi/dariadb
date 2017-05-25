@@ -9,14 +9,14 @@ IEngine_Ptr open_storage(const std::string &path, bool force_unlock) {
     return ShardEngine::create(path, force_unlock);
   } else {
     auto settings = dariadb::storage::Settings::create(path);
-    IEngine_Ptr result{new Engine(settings, true, force_unlock)};
+    IEngine_Ptr result = std::make_shared<Engine>(settings, true, force_unlock);
     return result;
   }
 }
 
 IEngine_Ptr memory_only_storage() {
   auto settings = dariadb::storage::Settings::create();
-  IEngine_Ptr result{new Engine(settings)};
+  IEngine_Ptr result = std::make_shared<Engine>(settings);
   return result;
 }
 } // namespace dariadb

@@ -21,7 +21,7 @@ example:
 class Scheme : public IScheme {
 public:
   EXPORT static IScheme_Ptr create(const storage::Settings_ptr s);
-
+  EXPORT Scheme(const storage::Settings_ptr s);
   EXPORT Id addParam(const std::string &param) override;
   EXPORT DescriptionMap ls() override;
   EXPORT MeasurementDescription descriptionFor(dariadb::Id id) override;
@@ -30,7 +30,6 @@ public:
   EXPORT void save();
 
 protected:
-  EXPORT Scheme(const storage::Settings_ptr s);
   struct Private;
   std::unique_ptr<Private> _impl;
 };

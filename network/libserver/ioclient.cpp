@@ -105,7 +105,7 @@ IOClient::IOClient(int _id, socket_ptr &_sock, IOClient::Environment *_env) {
   };
   AsyncConnection::onNetworkErrorHandler on_n =
       [this](const boost::system::error_code &err) { onNetworkError(err); };
-  _async_connection = std::shared_ptr<AsyncConnection>{new AsyncConnection(on_d, on_n)};
+  _async_connection = std::make_shared<AsyncConnection>(on_d, on_n);
   _async_connection->set_id(_id);
 }
 
@@ -339,11 +339,11 @@ void IOClient::readInterval(const NetData_ptr &d) {
 
     auto qi = new QueryInterval{all_ids, query_hdr->flag, query_hdr->from, query_hdr->to};
 
-    auto cdr = new ClientDataReader(this, query_num);
+    auto cdr = std::make_shared<ClientDataReader>(this, query_num);
     cdr->linked_query_interval = qi;
-    this->readerAdd(ReaderCallback_ptr(cdr));
+    this->readerAdd(cdr);
     ENSURE(env->storage != nullptr);
-    env->storage->foreach (*qi, cdr);
+    env->storage->foreach (*qi, cdr.get());
   }
 }
 
@@ -360,11 +360,11 @@ void IOClient::readTimePoint(const NetData_ptr &d) {
   auto query_num = query_hdr->id;
   auto qp = new QueryTimePoint{all_ids, query_hdr->flag, query_hdr->tp};
 
-  auto cdr = new ClientDataReader(this, query_num);
+  auto cdr = std::make_shared<ClientDataReader>(this, query_num);
   cdr->linked_query_point = qp;
 
-  readerAdd(ReaderCallback_ptr(cdr));
-  env->storage->foreach (*qp, cdr);
+  readerAdd(cdr);
+  env->storage->foreach (*qp, cdr.get());
 }
 
 void IOClient::currentValue(const NetData_ptr &d) {
@@ -378,8 +378,8 @@ void IOClient::currentValue(const NetData_ptr &d) {
   auto query_num = query_hdr->id;
 
   auto result = env->storage->currentValue(all_ids, flag);
-  auto cdr = new ClientDataReader(this, query_num);
-  readerAdd(ReaderCallback_ptr(cdr));
+  auto cdr = std::make_shared<ClientDataReader>(this, query_num);
+  readerAdd(cdr);
   for (auto &v : result) {
     cdr->apply(v.second);
   }
@@ -397,8 +397,7 @@ void IOClient::subscribe(const NetData_ptr &d) {
   auto query_num = query_hdr->id;
 
   if (subscribe_reader == nullptr) {
-    subscribe_reader =
-        std::shared_ptr<IReadCallback>(new SubscribeCallback(this, query_num));
+    subscribe_reader = std::make_shared<SubscribeCallback>(this, query_num);
   }
   env->storage->subscribe(all_ids, flag, subscribe_reader);
 }

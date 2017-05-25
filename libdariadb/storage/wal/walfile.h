@@ -16,6 +16,9 @@ typedef std::shared_ptr<WALFile> WALFile_Ptr;
 
 class WALFile final : public IMeasStorage {
 public:
+  EXPORT WALFile(const EngineEnvironment_ptr env, dariadb::Id id);
+  EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname,
+                 bool readonly);
   EXPORT virtual ~WALFile();
 
   EXPORT static WALFile_Ptr create(const EngineEnvironment_ptr env, dariadb::Id id);
@@ -45,11 +48,6 @@ public:
   EXPORT Id id_from_first();
 
   EXPORT size_t writed() const;
-
-protected:
-  EXPORT WALFile(const EngineEnvironment_ptr env, dariadb::Id id);
-  EXPORT WALFile(const EngineEnvironment_ptr env, const std::string &fname,
-                 bool readonly);
 
 protected:
   class Private;

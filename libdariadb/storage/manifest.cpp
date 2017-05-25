@@ -330,11 +330,11 @@ protected:
 };
 
 Manifest_ptr Manifest::create(const Settings_ptr &settings) {
-  return Manifest_ptr{new Manifest(settings)};
+  return std::make_shared<Manifest>(settings);
 }
 
 Manifest::Manifest(const Settings_ptr &settings)
-    : _impl(new Manifest::Private(settings)) {}
+    : _impl(std::make_unique<Manifest::Private>(settings)) {}
 Manifest::~Manifest() {
   _impl = nullptr;
 }

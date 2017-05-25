@@ -24,7 +24,7 @@ WALManager::~WALManager() {
 }
 
 WALManager_ptr WALManager::create(const EngineEnvironment_ptr env) {
-  return WALManager_ptr{new WALManager(env)};
+  return std::make_shared<WALManager>(env);
 }
 
 WALManager::WALManager(const EngineEnvironment_ptr env) {
@@ -371,8 +371,7 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
       MeasArray ma(kv.second.begin(), kv.second.end());
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.front().time <= ma.back().time);
-      FullCursor *fr = new FullCursor(ma);
-      Cursor_Ptr r{fr};
+      Cursor_Ptr r = std::make_shared<FullCursor>(ma);
       readers_list[kv.first].push_back(r);
     }
   }

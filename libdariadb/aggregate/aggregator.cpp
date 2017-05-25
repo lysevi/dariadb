@@ -74,7 +74,7 @@ public:
       auto interval_from = all_intervals[i];
       auto interval_to = all_intervals[i + 1];
 
-      ITimer::Callback_Ptr clbk{new TimerCallback(interval_from, interval_to, _storage)};
+      auto clbk = std::make_shared<TimerCallback>(interval_from, interval_to, _storage);
 
       auto interval_to_target = timeutil::target_interval(interval_to, start_time);
 

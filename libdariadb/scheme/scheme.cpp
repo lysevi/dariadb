@@ -225,10 +225,11 @@ struct Scheme::Private : public IScheme {
 };
 
 IScheme_Ptr Scheme::create(const storage::Settings_ptr s) {
-  return std::shared_ptr<Scheme>(new Scheme(s));
+  return std::make_shared<Scheme>(s);
 }
 
-Scheme::Scheme(const storage::Settings_ptr s) : _impl(new Scheme::Private(s)) {}
+Scheme::Scheme(const storage::Settings_ptr s)
+    : _impl(std::make_unique<Scheme::Private>(s)) {}
 
 Id Scheme::addParam(const std::string &param) {
   return _impl->addParam(param);

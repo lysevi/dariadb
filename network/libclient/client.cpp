@@ -38,7 +38,7 @@ public:
     };
     AsyncConnection::onNetworkErrorHandler on_n =
         [this](const boost::system::error_code &err) { onNetworkError(err); };
-    _async_connection = std::shared_ptr<AsyncConnection>{new AsyncConnection(on_d, on_n)};
+    _async_connection = std::make_shared<AsyncConnection>(on_d, on_n);
   }
 
   ~Private() noexcept(false) {
@@ -100,8 +100,7 @@ public:
     logger_info("client: ", _params.host, ":", _params.port, " - ",
                 ep.address().to_string());
 
-    auto raw_sock_ptr = new ip::tcp::socket(_service);
-    _socket = socket_ptr{raw_sock_ptr};
+    _socket = std::make_shared<ip::tcp::socket>(_service);
     _socket->async_connect(ep, [this](auto ec) {
       if (ec) {
         THROW_EXCEPTION("dariadb::client: error on connect - ", ec.message());
@@ -510,7 +509,7 @@ public:
   std::shared_ptr<AsyncConnection> _async_connection;
 };
 
-Client::Client(const Param &p) : _Impl(new Client::Private(p)) {}
+Client::Client(const Param &p) : _Impl(std::make_unique<Private>(p)) {}
 
 Client::~Client() {}
 

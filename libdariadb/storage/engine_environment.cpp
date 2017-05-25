@@ -23,9 +23,11 @@ struct EngineEnvironment::Private {
 };
 
 EngineEnvironment_ptr EngineEnvironment::create() {
-  return EngineEnvironment_ptr{new EngineEnvironment()};
+  return std::make_shared<EngineEnvironment>();
 }
-EngineEnvironment::EngineEnvironment() : _impl(new EngineEnvironment::Private()) {}
+
+EngineEnvironment::EngineEnvironment()
+    : _impl(std::make_unique<EngineEnvironment::Private>()) {}
 EngineEnvironment::~EngineEnvironment() {
   _impl = nullptr;
 }

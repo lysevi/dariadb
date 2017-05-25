@@ -30,11 +30,10 @@ EXPORT std::string read_file(const std::string &fname);
 
 class MappedFile : public utils::NonCopy {
   class Private;
-  MappedFile(Private *im);
 
 public:
   using MapperFile_ptr = std::shared_ptr<MappedFile>;
-
+  EXPORT MappedFile(Private *im);
   EXPORT ~MappedFile();
   EXPORT void close();
   EXPORT uint8_t *data();

@@ -871,7 +871,8 @@ protected:
 };
 
 Engine::Engine(Settings_ptr settings, bool init_threadpool, bool ignore_lock_file)
-    : _impl{new Engine::Private(settings, init_threadpool, ignore_lock_file)} {}
+    : _impl{std::make_unique<Engine::Private>(settings, init_threadpool,
+                                              ignore_lock_file)} {}
 
 Engine::~Engine() {
   _impl = nullptr;

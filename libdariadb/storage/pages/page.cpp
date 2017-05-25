@@ -374,32 +374,31 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
 
 Page_Ptr Page::open(const std::string &file_name) {
   auto phdr = Page::readFooter(file_name);
-  auto res = new Page(phdr, file_name);
+  auto res = std::make_shared<Page>(phdr, file_name);
 
   res->filename = file_name;
   res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
   res->footer = phdr;
-  return Page_Ptr{res};
+  return res;
 }
 
 Page_Ptr Page::open(const std::string &file_name, const PageFooter &phdr) {
-  auto res = new Page(phdr, file_name);
+  auto res = std::make_shared<Page>(phdr, file_name);
   res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
-  return Page_Ptr(res);
+  return res;
 }
 
 void Page::restoreIndexFile(const std::string &file_name) {
   logger_info("engine: page - restore index file ", file_name);
   auto phdr = Page::readFooter(file_name);
-  auto res = new Page(phdr, file_name);
+  auto res = std::make_shared<Page>(phdr, file_name);
 
   res->footer = phdr;
   res->update_index_recs(phdr);
   res->_index = PageIndex::open(PageIndex::index_name_from_page_name(file_name));
 
   ENSURE(memcmp(&phdr.stat, &res->_index->iheader.stat, sizeof(Statistic)) == 0);
-  delete res;
 }
 
 PageFooter Page::readFooter(std::string file_name) {

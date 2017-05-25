@@ -23,9 +23,8 @@ LogManager *LogManager::instance() {
     std::lock_guard<Locker> lock(_locker);
     tmp = _instance.get();
     if (tmp == nullptr) {
-      ILogger_ptr l{new ConsoleLogger};
-      tmp = new LogManager(l);
-      _instance = std::shared_ptr<LogManager>{tmp};
+      ILogger_ptr l = std::make_shared<ConsoleLogger>();
+      _instance = std::make_shared<LogManager>(l);
     }
   }
   return tmp;

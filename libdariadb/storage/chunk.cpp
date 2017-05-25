@@ -210,11 +210,9 @@ bool Chunk::append(const Meas &m) {
 
 Cursor_Ptr Chunk::getReader() {
   auto b_ptr = std::make_shared<compression::ByteBuffer>(this->bw->get_range());
-  auto raw_res =
-      new ChunkReader(this->header->stat.count - 1, shared_from_this(), b_ptr,
-                      std::make_shared<CopmressedReader>(b_ptr, this->header->first()));
-
-  Cursor_Ptr result{raw_res};
+  Cursor_Ptr result = std::make_shared<ChunkReader>(
+      this->header->stat.count - 1, shared_from_this(), b_ptr,
+      std::make_shared<CopmressedReader>(b_ptr, this->header->first()));
 
   if (!header->is_sorted) {
     MeasArray ma(header->stat.count);
@@ -227,8 +225,7 @@ Cursor_Ptr Chunk::getReader() {
     std::sort(ma.begin(), ma.end(), meas_time_compare_less());
     ENSURE(ma.front().time <= ma.back().time);
 
-    FullCursor *fr = new FullCursor(ma);
-    return Cursor_Ptr{fr};
+    return std::make_shared<FullCursor>(ma);
   } else {
     return result;
   }

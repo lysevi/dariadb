@@ -28,9 +28,9 @@ public:
 };
 
 class LogManager {
+public:
   LogManager(ILogger_ptr &logger);
 
-public:
   EXPORT static void start(ILogger_ptr &logger);
   EXPORT static void stop();
   EXPORT static LogManager *instance();

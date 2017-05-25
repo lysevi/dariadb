@@ -212,14 +212,12 @@ MappedFile::~MappedFile() {}
 
 MappedFile::MapperFile_ptr MappedFile::open(const std::string &path, bool read_only) {
   auto impl_res = MappedFile::Private::open(path, read_only);
-  MappedFile::MapperFile_ptr result{new MappedFile{impl_res}};
-  return result;
+  return std::make_shared<MappedFile>(impl_res);
 }
 
 MappedFile::MapperFile_ptr MappedFile::touch(const std::string &path, uint64_t size) {
   auto impl_res = MappedFile::Private::touch(path, size);
-  MappedFile::MapperFile_ptr result{new MappedFile{impl_res}};
-  return result;
+  return std::make_shared<MappedFile>(impl_res);
 }
 
 void MappedFile::close() {

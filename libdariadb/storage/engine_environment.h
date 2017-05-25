@@ -19,6 +19,8 @@ public:
 
 public:
   EXPORT static EngineEnvironment_ptr create();
+
+  EXPORT EngineEnvironment();
   EXPORT ~EngineEnvironment();
 
   EXPORT void addResource(Resource res, void *ptr);
@@ -27,9 +29,6 @@ public:
   template <class T> T *getResourceObject(Resource res) const {
     return (T *)getResourcePtr(res);
   }
-
-protected:
-  EXPORT EngineEnvironment();
 
 protected:
   struct Private;

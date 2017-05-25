@@ -80,6 +80,7 @@ public:
   For memory only storage.
   */
   EXPORT static Settings_ptr create();
+  EXPORT Settings(const std::string &storage_path);
   EXPORT ~Settings();
 
   EXPORT void set_default();
@@ -142,9 +143,6 @@ public:
   bool load_min_max; // if true - engine dont load min max. needed to ctl tool.
   std::string alias; // is set, used in log messages;
   bool is_memory_only_mode;
-
-protected:
-  EXPORT Settings(const std::string &storage_path);
 };
 
 template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;

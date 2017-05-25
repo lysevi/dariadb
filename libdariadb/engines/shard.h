@@ -17,6 +17,9 @@ public:
 
   EXPORT static ShardEngine_Ptr create(const std::string &path,
                                        bool force_unlock = false);
+
+  EXPORT ShardEngine(const std::string &path, bool force_unlock);
+
   /**
    shard description with empty ids used as shard by default for values,
    that not exists in others shard.
@@ -53,9 +56,6 @@ public:
 
   EXPORT void setScheme(const scheme::IScheme_Ptr &scheme) override;
   EXPORT virtual scheme::IScheme_Ptr getScheme() override;
-
-protected:
-  EXPORT ShardEngine(const std::string &path, bool force_unlock);
 
 private:
   class Private;

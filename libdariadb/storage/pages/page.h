@@ -56,13 +56,13 @@ typedef std::shared_ptr<Page> Page_Ptr;
 using on_create_complete_callback = std::function<void(const Page_Ptr &)>;
 class Page final : public ChunkContainer {
   Page() = delete;
-  Page(const PageFooter &footer, std::string fname);
 
 public:
   /// called by Dropper from Wal level.
   EXPORT static void create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                             uint32_t max_chunk_size, const MeasArray &ma,
                             on_create_complete_callback on_complete);
+  EXPORT Page(const PageFooter &footer, std::string fname);
   /**
   used for repack many pages to one
   file_name - output page filename

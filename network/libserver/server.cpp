@@ -19,7 +19,7 @@ using namespace boost::asio;
 using namespace dariadb;
 using namespace dariadb::net;
 
-typedef boost::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
+typedef std::shared_ptr<ip::tcp::acceptor> acceptor_ptr;
 
 const int INFO_TIMER_INTERVAL = 10000;
 const int MAX_MISSED_PINGS = 100;
@@ -133,9 +133,9 @@ public:
     reset_info_timer();
 
     ip::tcp::endpoint ep(ip::tcp::v4(), _params.port);
-    _acc = acceptor_ptr{new ip::tcp::acceptor(_service, ep)};
-    socket_ptr sock(new ip::tcp::socket(_service));
-    start_accept(sock);
+    _acc = std::make_shared<ip::tcp::acceptor>(_service, ep);
+    
+    start_accept(std::make_shared<ip::tcp::socket>(_service));
 
     _service.poll_one();
 
@@ -205,14 +205,14 @@ public:
       auto cur_id = _next_client_id.load();
       _next_client_id++;
 
-      ClientIO_ptr new_client{new IOClient(cur_id, sock, &_env)};
+      ClientIO_ptr new_client=std::make_shared<IOClient>(cur_id, sock, &_env);
 
       _clients_locker.lock();
       _clients.emplace(std::make_pair(new_client->_async_connection->id(), new_client));
       _clients_locker.unlock();
 
       new_client->start();
-      socket_ptr new_sock(new ip::tcp::socket(_service));
+      socket_ptr new_sock=std::make_shared<ip::tcp::socket>(_service);
       start_accept(new_sock);
     }
   }
@@ -363,7 +363,7 @@ public:
   clock_t lastStat;
 };
 
-Server::Server(const Param &p) : _Impl(new Server::Private(p)) {}
+Server::Server(const Param &p) : _Impl(std::make_unique<Private>(p)) {}
 
 Server::~Server() {}
 
