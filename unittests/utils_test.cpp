@@ -6,9 +6,9 @@
 #include <libdariadb/utils/cz.h>
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
+#include <libdariadb/utils/lru.h>
 #include <libdariadb/utils/strings.h>
 #include <libdariadb/utils/utils.h>
-#include <libdariadb/utils/lru.h>
 
 #include "helpers.h"
 #include <catch.hpp>
@@ -220,25 +220,23 @@ TEST_CASE("Utils.ThreadsManager") {
   }
 }
 
-
 TEST_CASE("Utils.LRU") {
-	dariadb::utils::LRUCache<int, int> ilru(4);
+  dariadb::utils::LRUCache<int, int> ilru(4);
 
-	ilru.put(1, 10);
-	ilru.put(2, 20);
-	ilru.put(3, 30);
-	ilru.put(4, 40);
-	ilru.put(5, 50);
-	EXPECT_EQ(ilru.size(), size_t(4));
-	EXPECT_TRUE(!ilru.exist(1));
-	EXPECT_TRUE(ilru.exist(2));
-	EXPECT_TRUE(ilru.exist(3));
-	EXPECT_TRUE(ilru.exist(4));
-	EXPECT_TRUE(ilru.exist(5));
+  ilru.put(1, 10);
+  ilru.put(2, 20);
+  ilru.put(3, 30);
+  ilru.put(4, 40);
+  ilru.put(5, 50);
+  EXPECT_EQ(ilru.size(), size_t(4));
+  EXPECT_TRUE(!ilru.exist(1));
+  EXPECT_TRUE(ilru.exist(2));
+  EXPECT_TRUE(ilru.exist(3));
+  EXPECT_TRUE(ilru.exist(4));
+  EXPECT_TRUE(ilru.exist(5));
 
-	
-	EXPECT_EQ(ilru.get(5), 50);
-	EXPECT_EQ(ilru.get(4), 40);
-	EXPECT_EQ(ilru.get(3), 30);
-	EXPECT_EQ(ilru.get(2), 20);
+  EXPECT_EQ(ilru.get(5), 50);
+  EXPECT_EQ(ilru.get(4), 40);
+  EXPECT_EQ(ilru.get(3), 30);
+  EXPECT_EQ(ilru.get(2), 20);
 }

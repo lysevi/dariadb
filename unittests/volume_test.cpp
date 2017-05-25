@@ -13,11 +13,9 @@
 
 class MockFlushable final : public dariadb::storage::IFlushable {
 public:
-	// Inherited via IFlushable
-	void flush(uint8_t *, size_t) override{
-		calls++;
-	}
-	size_t calls = 0;
+  // Inherited via IFlushable
+  void flush(uint8_t *, size_t) override { calls++; }
+  size_t calls = 0;
 };
 
 TEST_CASE("Volume.Index") {
@@ -65,14 +63,14 @@ TEST_CASE("Volume.Index") {
         lnk = c.queryLink(maxTime - 1);
         EXPECT_EQ(lnk.max_time, maxTime - 1);
       }
-	  auto mm = c.minMax();
-	  EXPECT_EQ(mm.second.max_time, maxTime);
+      auto mm = c.minMax();
+      EXPECT_EQ(mm.second.max_time, maxTime);
 
       address++;
       chunk_id++;
       maxTime++;
     }
-	EXPECT_GT(flushable->calls, size_t(0));
+    EXPECT_GT(flushable->calls, size_t(0));
     EXPECT_GT(addeded, size_t(0));
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
     EXPECT_EQ(addeded, queryResult.size());
@@ -160,10 +158,10 @@ TEST_CASE("Volume.Init") {
           delete[] buffer;
 
           if (!isFull) {
-			  auto mm = vlm.loadMinMax();
-			  EXPECT_EQ(mm[id].first.id, id);
-			  EXPECT_EQ(mm[id].second.id, id);
-			  EXPECT_EQ(mm[id].second.time, t);
+            auto mm = vlm.loadMinMax();
+            EXPECT_EQ(mm[id].first.id, id);
+            EXPECT_EQ(mm[id].second.id, id);
+            EXPECT_EQ(mm[id].second.time, t);
             id2chunks_count[id] += size_t(1);
             auto chunks = vlm.queryChunks(id, MIN_TIME, t);
             EXPECT_EQ(chunks.size(), id2chunks_count[id]);
@@ -257,10 +255,10 @@ TEST_CASE("Volume.Manager") {
   dariadb::utils::async::ThreadManager::start(settings->thread_pools_params());
 
   SECTION("ManagerCommon") {
-	  auto vlm = VolumeManager::create(_engine_env);
-	  dariadb_test::storage_test_check(vlm.get(), 0, 100, 1, false, false, false);
-	  auto files = fs::ls(settings->raw_path.value());
-	  EXPECT_TRUE(files.size() > size_t(1));
+    auto vlm = VolumeManager::create(_engine_env);
+    dariadb_test::storage_test_check(vlm.get(), 0, 100, 1, false, false, false);
+    auto files = fs::ls(settings->raw_path.value());
+    EXPECT_TRUE(files.size() > size_t(1));
   }
 
   manifest = nullptr;

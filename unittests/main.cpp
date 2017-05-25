@@ -77,9 +77,9 @@ int main(int argc, char **argv) {
         if (a != i) {
 
           _argv[w_pos] = argv[r_pos];
-		  w_pos++;
+          w_pos++;
         }
-		r_pos++;
+        r_pos++;
       }
       break;
       ;

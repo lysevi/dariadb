@@ -74,10 +74,10 @@ const std::string c_strategy_hour = "strategy_hour";
 const std::string c_strategy_day = "strategy_day";
 const std::string c_strategy_week = "strategy_week";
 const std::string c_strategy_month = "strategy_month";
-const std::string c_volume_flush = "c_volume_flush";
-const std::string c_volume_size = "c_volume_size";
-const std::string c_volume_levels = "c_volume_levels";
-const std::string c_volume_B = "c_volume_B";
+const std::string c_volume_flush = "volume_flush";
+const std::string c_volume_size = "volume_size";
+const std::string c_volume_levels = "volume_levels";
+const std::string c_volume_B = "volume_B";
 } // namespace
 
 std::string settings_file_path(const std::string &path) {
