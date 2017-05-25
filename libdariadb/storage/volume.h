@@ -5,10 +5,15 @@
 #include <libdariadb/st_exports.h>
 #include <libdariadb/storage/chunk.h>
 #include <libdariadb/storage/engine_environment.h>
+#include <libdariadb/storage/flush_model.h>
+#include <libdariadb/storage/settings.h>
 
 namespace dariadb {
 namespace storage {
-
+class IFlushable {
+public:
+  virtual void flush(uint8_t *ptr, size_t size) = 0;
+};
 class VolumeIndex {
 public:
   struct Param {
@@ -45,8 +50,8 @@ public:
   };
 #pragma pack(pop)
 
-  EXPORT VolumeIndex(const Param &p, Id measId, uint8_t *buffer);
-  EXPORT VolumeIndex(uint8_t *buffer);
+  EXPORT VolumeIndex(const Param &p, IFlushable *flusher, Id measId, uint8_t *buffer);
+  EXPORT VolumeIndex(IFlushable *flusher, uint8_t *buffer);
   EXPORT ~VolumeIndex();
   /// Calculate needed buffer size for store index.
   EXPORT static uint32_t index_size(const Param &p);
@@ -78,8 +83,8 @@ public:
     }
   };
 
-  EXPORT Volume(const Params &p, const std::string &fname);
-  EXPORT Volume(const std::string &fname);
+  EXPORT Volume(const Params &p, const std::string &fname, FlushModel syncModel);
+  EXPORT Volume(const std::string &fname, FlushModel syncModel);
   EXPORT ~Volume();
 
   EXPORT IdArray indexes() const;

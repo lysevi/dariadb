@@ -195,7 +195,7 @@ public:
     auto flush_res = this->m_region->flush(offset, bytes, true);
     assert(flush_res);
 #else
-    this->m_region->flush(offset, bytes, true);
+    this->m_region->flush(offset, bytes, false);
 #endif
   }
 

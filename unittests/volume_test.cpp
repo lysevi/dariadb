@@ -11,6 +11,15 @@
 #include <libdariadb/utils/logger.h>
 #include <libdariadb/utils/utils.h>
 
+class MockFlushable final : public dariadb::storage::IFlushable {
+public:
+	// Inherited via IFlushable
+	void flush(uint8_t *, size_t) override{
+		calls++;
+	}
+	size_t calls = 0;
+};
+
 TEST_CASE("Volume.Index") {
   using namespace dariadb::storage;
   VolumeIndex::Param p{uint8_t(3), uint8_t(5)};
@@ -23,8 +32,9 @@ TEST_CASE("Volume.Index") {
   size_t addeded = 0;
   dariadb::Time maxTime = 1;
   dariadb::Id targetId{10};
+  auto flushable = std::make_unique<MockFlushable>();
   {
-    VolumeIndex c(p, targetId, buffer);
+    VolumeIndex c(p, flushable.get(), targetId, buffer);
     EXPECT_EQ(buffer[sz], uint8_t(255));
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
@@ -62,12 +72,13 @@ TEST_CASE("Volume.Index") {
       chunk_id++;
       maxTime++;
     }
+	EXPECT_GT(flushable->calls, size_t(0));
     EXPECT_GT(addeded, size_t(0));
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
     EXPECT_EQ(addeded, queryResult.size());
   }
   {
-    VolumeIndex c(buffer);
+    VolumeIndex c(flushable.get(), buffer);
     EXPECT_EQ(c.levels(), p.levels);
     EXPECT_EQ(c.targetId(), targetId);
     auto queryResult = c.queryLink(dariadb::Time(1), maxTime);
@@ -119,7 +130,7 @@ TEST_CASE("Volume.Init") {
   }
   fs::mkdir(storage_path);
 
-  auto file_path = fs::append_path(storage_path, "volume1");
+  auto file_path = fs::append_path(storage_path, "volume1.vlm");
 
   const Id idCount = 10;
 
@@ -131,7 +142,7 @@ TEST_CASE("Volume.Init") {
   { // create
     EXPECT_TRUE(fs::ls(storage_path).empty());
     Volume::Params params(1024 * 10, chunk_size, 3, 1);
-    Volume vlm(params, file_path);
+    Volume vlm(params, file_path, FlushModel::NOT_SAFETY);
 
     EXPECT_EQ(fs::ls(storage_path).size(), size_t(1));
 
@@ -182,7 +193,7 @@ TEST_CASE("Volume.Init") {
     }
   }
   {
-    Volume vlm(file_path);
+    Volume vlm(file_path, FlushModel::NOT_SAFETY);
     auto ids = vlm.indexes();
     EXPECT_EQ(ids.size(), id2chunks_count.size());
     for (auto id : ids) {

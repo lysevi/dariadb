@@ -3,9 +3,9 @@
 #include <libdariadb/engines/strategy.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
+#include <libdariadb/storage/flush_model.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
-
 #include <string>
 #include <unordered_map>
 
@@ -51,6 +51,7 @@ class Settings {
 
     std::string key_str() const override { return key_name; }
     std::string value_str() const override { return std::to_string(_value); }
+
     void from_string(const std::string &s) override;
     /// return option value
     T value() const { return _value; }
@@ -131,6 +132,7 @@ public:
   Option<STRATEGY> strategy_week;     // strategy for 'week' values.
   Option<STRATEGY> strategy_month;    // strategy for 'month' values.
 
+  Option<FlushModel> volume_flush;
   Option<uint32_t> volume_size;        // size of volume file.
   Option<uint8_t> volume_levels_count; // levels in vulume index
   Option<uint8_t> volume_B;            // B in index
@@ -147,5 +149,6 @@ protected:
 
 template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
 template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
+template <> EXPORT std::string Settings::ReadOnlyOption<FlushModel>::value_str() const;
 } // namespace storage
 } // namespace dariadb

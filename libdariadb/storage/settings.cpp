@@ -41,6 +41,7 @@ const dariadb::STRATEGY STRATEGY_DAY = dariadb::STRATEGY::COMPRESSED;
 const dariadb::STRATEGY STRATEGY_WEEK = dariadb::STRATEGY::COMPRESSED;
 const dariadb::STRATEGY STRATEGY_MONTH = dariadb::STRATEGY::COMPRESSED;
 
+const FlushModel VOLUME_FLUSHMODEL = FlushModel::NOT_SAFETY;
 const uint32_t VOLUME_FSIZE = 1024 * 1024 * 500;
 // TODO calc optimal size;
 const uint8_t VOLUME_LEVELS = 10;
@@ -73,6 +74,7 @@ const std::string c_strategy_hour = "strategy_hour";
 const std::string c_strategy_day = "strategy_day";
 const std::string c_strategy_week = "strategy_week";
 const std::string c_strategy_month = "strategy_month";
+const std::string c_volume_flush = "c_volume_flush";
 const std::string c_volume_size = "c_volume_size";
 const std::string c_volume_levels = "c_volume_levels";
 const std::string c_volume_B = "c_volume_B";
@@ -92,6 +94,10 @@ template <> std::string Settings::ReadOnlyOption<dariadb::STRATEGY>::value_str()
 }
 template <> std::string Settings::ReadOnlyOption<std::string>::value_str() const {
   return this->value();
+}
+
+template <> std::string Settings::ReadOnlyOption<FlushModel>::value_str() const {
+  return storage::to_string(this->_value);
 }
 
 BaseOption::~BaseOption() {}
@@ -137,6 +143,7 @@ Settings::Settings(const std::string &path_to_storage)
       strategy_day(this, c_strategy_day, STRATEGY_DAY),
       strategy_week(this, c_strategy_week, STRATEGY_WEEK),
       strategy_month(this, c_strategy_month, STRATEGY_MONTH),
+      volume_flush(this, c_volume_flush, VOLUME_FLUSHMODEL),
       volume_size(this, c_volume_size, VOLUME_FSIZE),
       volume_levels_count(this, c_volume_levels, VOLUME_LEVELS),
       volume_B(this, c_volume_B, VOLUME_B) {

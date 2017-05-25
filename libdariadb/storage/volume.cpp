@@ -62,8 +62,8 @@ struct VolumeIndex::Private {
 
     bool isFull() const { return _lvl_header->isFull(); }
     bool isEmpty() const { return _lvl_header->isEmpty(); }
-
     size_t size() const { return _lvl_header->size; }
+
     void clear() {
       std::fill_n(_links, _lvl_header->size, Link());
       _lvl_header->maxTime = MIN_TIME;
@@ -80,6 +80,20 @@ struct VolumeIndex::Private {
       _lvl_header->pos++;
       _lvl_header->maxTime = std::max(lnk.max_time, _lvl_header->maxTime);
       _lvl_header->minTime = std::min(lnk.max_time, _lvl_header->minTime);
+      return true;
+    }
+
+    bool addLink(IFlushable *flusher, const Link &lnk) {
+      if (isFull()) {
+        return false;
+      }
+      // TODO check to duplicates
+      _links[_lvl_header->pos] = lnk;
+      flusher->flush((uint8_t *)&_links[_lvl_header->pos], sizeof(Link));
+      _lvl_header->pos++;
+      _lvl_header->maxTime = std::max(lnk.max_time, _lvl_header->maxTime);
+      _lvl_header->minTime = std::min(lnk.max_time, _lvl_header->minTime);
+      flusher->flush((uint8_t *)_lvl_header, sizeof(LevelHeader));
       return true;
     }
 
@@ -126,13 +140,17 @@ struct VolumeIndex::Private {
   };
 
   /// init index in memory.
-  Private(const VolumeIndex::Param &p, Id measId, uint8_t *buffer) {
+  Private(const VolumeIndex::Param &p, IFlushable *flusher, Id measId, uint8_t *buffer) {
+    _flusher = flusher;
     size_t sz = index_size(p);
     std::fill_n(buffer, sz, uint8_t());
     initPointers(p, measId, buffer);
   }
 
-  Private(uint8_t *buffer) { initPointers(buffer); }
+  Private(IFlushable *flusher, uint8_t *buffer) {
+    _flusher = flusher;
+    initPointers(buffer);
+  }
 
   ~Private() {
     _levels.clear();
@@ -232,7 +250,7 @@ struct VolumeIndex::Private {
       }
     }
     Link lnk{maxTime, chunk_id, address, false};
-    auto result = _memory_level.addLink(lnk);
+    auto result = _memory_level.addLink(_flusher, lnk);
     ENSURE(result);
     unlock();
     return result;
@@ -284,6 +302,9 @@ struct VolumeIndex::Private {
     }
 
     sort_links(merge_target._links, merge_target._links + merge_target.size());
+    this->_flusher->flush((uint8_t *)&merge_target._links,
+                          sizeof(Link) * merge_target.size());
+    this->_flusher->flush((uint8_t *)merge_target._lvl_header, sizeof(LevelHeader));
     ENSURE(merge_target._links->max_time <=
            (merge_target._links + merge_target.size() - 1)->max_time);
     ++_header->merge_count;
@@ -383,12 +404,14 @@ struct VolumeIndex::Private {
   Level _memory_level;
   std::vector<Level> _levels;
   mutable utils::async::Locker _locker;
+  IFlushable *_flusher;
 };
 
-VolumeIndex::VolumeIndex(const Param &p, Id measId, uint8_t *buffer)
-    : _impl(new VolumeIndex::Private(p, measId, buffer)) {}
+VolumeIndex::VolumeIndex(const Param &p, IFlushable *flusher, Id measId, uint8_t *buffer)
+    : _impl(new VolumeIndex::Private(p, flusher, measId, buffer)) {}
 
-VolumeIndex::VolumeIndex(uint8_t *buffer) : _impl(new VolumeIndex::Private(buffer)) {}
+VolumeIndex::VolumeIndex(IFlushable *flusher, uint8_t *buffer)
+    : _impl(new VolumeIndex::Private(flusher, buffer)) {}
 
 VolumeIndex::~VolumeIndex() {
   _impl = nullptr;
@@ -429,7 +452,7 @@ std::pair<VolumeIndex::Link, VolumeIndex::Link> VolumeIndex::minMax() const {
 /////////// VOLUME ///////////
 using dariadb::utils::fs::MappedFile;
 
-struct Volume::Private {
+struct Volume::Private final : public IFlushable {
 #pragma pack(push, 1)
   struct Header {
     uint32_t one_chunk_size; // with header
@@ -438,10 +461,11 @@ struct Volume::Private {
     uint32_t chunk_pos; // from size
   };
 #pragma pack(pop)
-  Private(const Params &p, const std::string &fname) {
+  Private(const Params &p, const std::string &fname, FlushModel syncModel) {
     logger("egine: create volume ", fname);
     ENSURE(p.size >
            (sizeof(Header) + VolumeIndex::index_size(p.indexParams) + p.chunk_size));
+    _syncModel = syncModel;
     _volume = MappedFile::touch(fname, p.size);
     _data = _volume->data();
     _header = reinterpret_cast<Header *>(_data);
@@ -452,8 +476,9 @@ struct Volume::Private {
     _filename = fname;
   }
 
-  Private(const std::string &fname) {
+  Private(const std::string &fname, FlushModel syncModel) {
     logger("egine: open volume ", fname);
+    _syncModel = syncModel;
     _volume = MappedFile::open(fname);
     _data = _volume->data();
     _header = reinterpret_cast<Header *>(_data);
@@ -463,7 +488,7 @@ struct Volume::Private {
     auto indexes_count = (_header->index_pos - sizeof(Header)) / isz;
     auto it = _data + sizeof(Header);
     for (size_t i = 0; i < indexes_count; ++i) {
-      auto new_index = std::make_shared<VolumeIndex>(it);
+      auto new_index = std::make_shared<VolumeIndex>(this, it);
       _indexes[new_index->targetId()] = new_index;
       it += isz;
     }
@@ -472,6 +497,13 @@ struct Volume::Private {
   ~Private() {
     _volume->flush();
     _volume->close();
+  }
+
+  void flush(uint8_t *ptr, size_t size) override {
+    if (_syncModel != FlushModel::NOT_SAFETY) {
+      auto offset = ptr - _volume->data();
+      _volume->flush(offset, size);
+    }
   }
 
   std::string fname() const { return this->_filename; }
@@ -524,7 +556,7 @@ struct Volume::Private {
 
         auto isz = VolumeIndex::index_size(_header->_index_param);
         auto newIndex = std::make_shared<VolumeIndex>(
-            _header->_index_param, c->header->meas_id, _data + _header->index_pos);
+            _header->_index_param, this, c->header->meas_id, _data + _header->index_pos);
         _header->index_pos += isz;
         newIndex->addLink(address, c->header->id, c->header->stat.maxTime);
         _indexes[c->header->meas_id] = newIndex;
@@ -538,10 +570,10 @@ struct Volume::Private {
 
     if (havePlaceForNewChunk()) {
       auto address = writeChunk(c);
-	  if (!fres->second->addLink(address, c->header->id, c->header->stat.maxTime)) {
-		  unlock();
-		  return Status(0, APPEND_ERROR::VOLUME_INDEX_IS_FULL);
-	  }
+      if (!fres->second->addLink(address, c->header->id, c->header->stat.maxTime)) {
+        unlock();
+        return Status(0, APPEND_ERROR::VOLUME_INDEX_IS_FULL);
+      }
       unlock();
       return Status(1);
     }
@@ -689,6 +721,7 @@ struct Volume::Private {
     logger_info("engine: flush ", this->_filename);
     _volume->flush();
   }
+  FlushModel _syncModel;
   MappedFile::MapperFile_ptr _volume;
   uint8_t *_data;
   Header *_header;
@@ -697,10 +730,11 @@ struct Volume::Private {
   mutable utils::async::Locker _locker;
 };
 
-Volume::Volume(const Params &p, const std::string &fname)
-    : _impl(new Private(p, fname)) {}
+Volume::Volume(const Params &p, const std::string &fname, FlushModel syncModel)
+    : _impl(new Private(p, fname, syncModel)) {}
 
-Volume::Volume(const std::string &fname) : _impl(new Private(fname)) {}
+Volume::Volume(const std::string &fname, FlushModel syncModel)
+    : _impl(new Private(fname, syncModel)) {}
 
 Volume::~Volume() {
   _impl = nullptr;
@@ -813,14 +847,14 @@ public:
     // TODO do in disk io thread;
     auto createAndAppendToVolume = [&c, this]() {
       _current_volume = createNewVolume();
-      if (_current_volume->addChunk(c).error!= APPEND_ERROR::OK) {
+      if (_current_volume->addChunk(c).error != APPEND_ERROR::OK) {
         THROW_EXCEPTION("logic error!");
       }
     };
     if (_current_volume == nullptr) {
       createAndAppendToVolume();
     } else {
-		auto stats = _current_volume->addChunk(c);
+      auto stats = _current_volume->addChunk(c);
       if (stats.error != APPEND_ERROR::OK) {
         createAndAppendToVolume();
       }
@@ -838,7 +872,7 @@ public:
     fname = utils::fs::append_path(_settings->raw_path.value(), fname);
     logger_info("engine: vmanager - create new volume ", fname);
     unlock();
-    return std::make_shared<Volume>(p, fname);
+    return std::make_shared<Volume>(p, fname, _settings->volume_flush.value());
   }
 
   // Inherited via IMeasStorage
@@ -1054,7 +1088,7 @@ public:
         if (_volumes.exist(f)) {
           target = _volumes.get(f);
         } else {
-          target = std::make_shared<Volume>(f);
+          target = std::make_shared<Volume>(f, _settings->volume_flush.value());
           _volumes.put(f, target);
         }
       }
