@@ -515,7 +515,7 @@ struct Volume::Private {
     return firstByte;
   }
 
-  bool addChunk(const Chunk_Ptr &c) {
+  Status addChunk(const Chunk_Ptr &c) {
     lock();
     auto fres = _indexes.find(c->header->meas_id);
     if (fres == _indexes.end()) {
@@ -530,20 +530,23 @@ struct Volume::Private {
         _indexes[c->header->meas_id] = newIndex;
 
         unlock();
-        return true;
+        return Status(1);
       }
       unlock();
-      return false;
+      return Status(0, APPEND_ERROR::VOLUME_INDEX_REGION_IS_FULL);
     }
 
     if (havePlaceForNewChunk()) {
       auto address = writeChunk(c);
-      fres->second->addLink(address, c->header->id, c->header->stat.maxTime);
+	  if (!fres->second->addLink(address, c->header->id, c->header->stat.maxTime)) {
+		  unlock();
+		  return Status(0, APPEND_ERROR::VOLUME_INDEX_IS_FULL);
+	  }
       unlock();
-      return true;
+      return Status(1);
     }
     unlock();
-    return false;
+    return Status(0, APPEND_ERROR::VOLUME_CHUNK_REGION_IS_FULL);
   }
 
   std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to) const {
@@ -703,7 +706,7 @@ Volume::~Volume() {
   _impl = nullptr;
 }
 
-bool Volume::addChunk(const Chunk_Ptr &c) {
+Status Volume::addChunk(const Chunk_Ptr &c) {
   return _impl->addChunk(c);
 }
 
@@ -810,14 +813,15 @@ public:
     // TODO do in disk io thread;
     auto createAndAppendToVolume = [&c, this]() {
       _current_volume = createNewVolume();
-      if (!_current_volume->addChunk(c)) {
+      if (_current_volume->addChunk(c).error!= APPEND_ERROR::OK) {
         THROW_EXCEPTION("logic error!");
       }
     };
     if (_current_volume == nullptr) {
       createAndAppendToVolume();
     } else {
-      if (!_current_volume->addChunk(c)) {
+		auto stats = _current_volume->addChunk(c);
+      if (stats.error != APPEND_ERROR::OK) {
         createAndAppendToVolume();
       }
     }

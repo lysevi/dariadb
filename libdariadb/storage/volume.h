@@ -84,7 +84,7 @@ public:
 
   EXPORT IdArray indexes() const;
   // true - on success.
-  EXPORT bool addChunk(const Chunk_Ptr &c);
+  EXPORT Status addChunk(const Chunk_Ptr &c);
   EXPORT std::vector<Chunk_Ptr> queryChunks(Id id, Time from, Time to) const;
   EXPORT Chunk_Ptr queryChunks(Id id, Time timepoint) const;
   EXPORT std::map<Id, std::pair<Meas, Meas>> loadMinMax() const;

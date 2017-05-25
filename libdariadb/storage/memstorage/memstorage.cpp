@@ -140,7 +140,7 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
     auto f = [&tracks](const Id2Track::value_type &v) { tracks.push_back(v.second); };
     _id2track.apply(f);
 
-    for (auto&&v : tracks) {
+    for (auto &&v : tracks) {
       auto cnt = v->chunks_count();
       if (cnt == size_t()) {
         continue;
@@ -152,7 +152,7 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
 
       auto dropped = v->drop_N(to_drop);
 
-      for (auto&d : dropped) {
+      for (auto &d : dropped) {
         all_chunks.push_back(d);
         pos++;
       }
@@ -187,14 +187,14 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
     std::unordered_map<dariadb::Id, std::vector<MemChunk_Ptr>> c2i_to_drop;
     std::vector<Chunk *> raw_ptrs(all_chunks.size());
 
-    for (auto&&mc : all_chunks) {
+    for (auto &&mc : all_chunks) {
       c2i[mc->header->meas_id].push_back(mc.get());
       c2i_to_drop[mc->header->meas_id].push_back(std::move(mc));
     }
     all_chunks.clear();
-    for (auto&&kv : c2i) {
+    for (auto &&kv : c2i) {
       this->_down_level_storage->appendChunks(kv.second);
-      for (auto&&mc : c2i_to_drop[kv.first]) {
+      for (auto &&mc : c2i_to_drop[kv.first]) {
         freeChunk(std::move(mc));
       }
       c2i_to_drop[kv.first].clear();
@@ -299,7 +299,7 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
 
   void foreach (const QueryInterval &q, IReadCallback * clbk) override {
     Id2Cursor readers = intervalReader(q);
-    for (auto&kv : readers) {
+    for (auto &kv : readers) {
       kv.second->apply(clbk, q);
     }
   }

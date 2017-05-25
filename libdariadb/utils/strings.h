@@ -42,7 +42,7 @@ template <class... Args> std::string args_to_string(Args &&... args) {
   inner::args_as_string(ss, sz, std::forward<Args>(args)...);
   std::string result;
   result.reserve(sz);
-  for (auto&&v : ss) {
+  for (auto &&v : ss) {
     result += std::move(v);
   }
   return result;

@@ -122,8 +122,6 @@ void TimeTrack::append_to_past(const Meas &value) {
 
   mset.insert(value);
 
-  
-
   target_to_replace = nullptr;
 
   MeasArray mar{mset.begin(), mset.end()};

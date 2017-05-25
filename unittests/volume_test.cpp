@@ -145,7 +145,7 @@ TEST_CASE("Volume.Init") {
           t = c->header->stat.maxTime;
           c->header->id = ++chunkId;
 
-          isFull = !vlm.addChunk(c);
+          isFull = vlm.addChunk(c).error != dariadb::APPEND_ERROR::OK;
           delete[] buffer;
 
           if (!isFull) {

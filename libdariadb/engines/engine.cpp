@@ -571,10 +571,10 @@ public:
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
       CursorsList readers;
-      for (auto&& kv : mm_readers) {
+      for (auto &&kv : mm_readers) {
         readers.push_back(std::move(kv.second));
       }
-      for (auto&& kv : disk_readers) {
+      for (auto &&kv : disk_readers) {
         readers.push_back(std::move(kv.second));
       }
 
@@ -582,10 +582,10 @@ public:
       result[id2intervals.first] = r_ptr;
     }
 
-    for (auto&&kv : disk_only_readers) {
+    for (auto &&kv : disk_only_readers) {
       result[kv.first] = std::move(kv.second);
     }
-    for (auto&&kv : mem_only_readers) {
+    for (auto &&kv : mem_only_readers) {
       result[kv.first] = std::move(kv.second);
     }
     return result;
@@ -638,7 +638,7 @@ public:
       }
       this->unlock_storage();
 
-      for (auto&&kv : r) {
+      for (auto &&kv : r) {
         result[kv.first] = std::move(kv.second);
       }
       return false;

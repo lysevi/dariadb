@@ -72,7 +72,7 @@ public:
       json js = json::parse(content);
       auto params_array = js[SHARD_KEY_NAME];
 
-      for (auto&&kv : params_array) {
+      for (auto &&kv : params_array) {
         auto param_path = kv[SHARD_KEY_PATH].get<std::string>();
         auto param_name = kv[SHARD_KEY_ALIAS].get<std::string>();
         auto param_ids = kv[SHARD_KEY_IDS].get<IdSet>();

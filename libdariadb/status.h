@@ -6,7 +6,15 @@
 
 namespace dariadb {
 
-enum class APPEND_ERROR : int { OK, bad_alloc, bad_shard, wal_file_limit };
+enum class APPEND_ERROR : int {
+  OK,
+  bad_alloc,
+  bad_shard,
+  wal_file_limit,
+  VOLUME_INDEX_IS_FULL, // index is full.
+  VOLUME_INDEX_REGION_IS_FULL, // does not have place to create index for new value
+  VOLUME_CHUNK_REGION_IS_FULL // does not have place to insert new chunk
+};
 
 struct Status {
   static Status empty() { return Status(); }
