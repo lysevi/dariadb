@@ -251,18 +251,18 @@ public:
   }
 
   void apply_to_values(std::function<void(data_type &v)> func) {
-	  for (size_t i = 0; i < _N; ++i) {
-		  auto locker_index = i % _L;
-		  auto target_locker = &_lockers[locker_index];
-		  target_locker->lock();
-		  auto l = _buckets[i];
-		  if (l != nullptr) {
-			  for (bucket_ptr iter = l; iter != nullptr; iter = iter->next) {
-				  func(iter->_kv.second);
-			  }
-		  }
-		  target_locker->unlock();
-	  }
+    for (size_t i = 0; i < _N; ++i) {
+      auto locker_index = i % _L;
+      auto target_locker = &_lockers[locker_index];
+      target_locker->lock();
+      auto l = _buckets[i];
+      if (l != nullptr) {
+        for (bucket_ptr iter = l; iter != nullptr; iter = iter->next) {
+          func(iter->_kv.second);
+        }
+      }
+      target_locker->unlock();
+    }
   }
 
   double load_factor() const { return double(_size.load()) / _N; }

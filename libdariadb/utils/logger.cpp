@@ -25,7 +25,7 @@ LogManager *LogManager::instance() {
     if (tmp == nullptr) {
       ILogger_ptr l = std::make_shared<ConsoleLogger>();
       _instance = std::make_shared<LogManager>(l);
-	  tmp = _instance.get();
+      tmp = _instance.get();
     }
   }
   return tmp;

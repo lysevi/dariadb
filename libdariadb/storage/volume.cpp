@@ -8,8 +8,8 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/in_interval.h>
 #include <libdariadb/utils/lru.h>
-#include <libdariadb/utils/utils.h>
 #include <libdariadb/utils/striped_map.h>
+#include <libdariadb/utils/utils.h>
 
 #include <atomic>
 #include <cstring>
@@ -796,10 +796,7 @@ public:
 
   ~Private() {
     logger_info("engine: stoping vmanager");
-	_id2chunk.apply_to_values([this](Chunk_Ptr&kv)
-    {
-      dropToDisk(kv);
-	});
+    _id2chunk.apply_to_values([this](Chunk_Ptr &kv) { dropToDisk(kv); });
     _id2chunk.clear();
     _current_volume = nullptr;
   }
@@ -816,7 +813,7 @@ public:
   }
 
   virtual Status append(const Meas &value) override {
-    
+
     auto fres = _id2chunk.find_bucket(value.id);
     if (fres.v->second == nullptr) {
       auto target_chunk = create_chunk(value);
@@ -827,7 +824,7 @@ public:
       if (!target_chunk->append(value)) {
         dropToDisk(target_chunk);
         target_chunk = create_chunk(value);
-		fres.v->second = target_chunk;
+        fres.v->second = target_chunk;
         return Status(size_t(1));
       } else {
         return Status(size_t(1));
@@ -845,6 +842,7 @@ public:
   }
 
   void dropToDisk(Chunk_Ptr &c) {
+	  lock();
     Chunk::updateChecksum(*c->header, c->_buffer_t);
     // TODO do in disk io thread;
     auto createAndAppendToVolume = [&c, this]() {
@@ -861,6 +859,7 @@ public:
         createAndAppendToVolume();
       }
     }
+	unlock();
   }
 
   std::shared_ptr<Volume> createNewVolume() {
@@ -882,9 +881,9 @@ public:
     Time result = MAX_TIME;
 
     {
-      _id2chunk.apply([this, &result](auto&kv){
+      _id2chunk.apply([this, &result](auto &kv) {
         result = std::min(result, kv.second->header->stat.minTime);
-	  });
+      });
     }
 
     auto visitor = [=, &result](const Volume *v) {
@@ -898,9 +897,9 @@ public:
   virtual Time maxTime() override {
     Time result = MIN_TIME;
     {
-		_id2chunk.apply([this, &result](auto&kv) {
+      _id2chunk.apply([this, &result](auto &kv) {
         result = std::max(result, kv.second->header->stat.maxTime);
-		});
+      });
     }
     auto visitor = [=, &result](const Volume *v) {
       logger_info("engine: vmanager - max in ", v->fname());
@@ -915,13 +914,13 @@ public:
     *minResult = MAX_TIME;
     auto result = false;
     {
-      //std::shared_lock<std::shared_mutex> lg(_chunks_locker);
-		Chunk_Ptr output;
-		if(_id2chunk.find(id, &output)){
-				result = true;
-				*minResult = std::min(*minResult, output->header->stat.minTime);
-				*maxResult = std::max(*maxResult, output->header->stat.maxTime);
-		};
+      // std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+      Chunk_Ptr output;
+      if (_id2chunk.find(id, &output)) {
+        result = true;
+        *minResult = std::min(*minResult, output->header->stat.minTime);
+        *maxResult = std::max(*maxResult, output->header->stat.maxTime);
+      };
     }
 
     auto visitor = [=, &result, &minResult, &maxResult](const Volume *v) {
@@ -955,15 +954,15 @@ public:
       m.id = id;
       result[id] = m;
       {
-        //std::shared_lock<std::shared_mutex> lg(_chunks_locker);
-		  Chunk_Ptr output;
-		  if (_id2chunk.find(id, &output)) {
-			  auto f = output->header->first();
-			  if (f.time >= query.time_point) {
-				  result[id] = f;
-				  continue;
-			  }
-		  };
+        // std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+        Chunk_Ptr output;
+        if (_id2chunk.find(id, &output)) {
+          auto f = output->header->first();
+          if (f.time >= query.time_point) {
+            result[id] = f;
+            continue;
+          }
+        };
       }
       disk_reads.insert(id);
     }
@@ -1001,14 +1000,14 @@ public:
 
     for (auto id : query.ids) {
       {
-        //std::shared_lock<std::shared_mutex> lg(_chunks_locker);
-			Chunk_Ptr output;
-			if (_id2chunk.find(id, &output)) {
-				result[id].push_back(output->getReader());
-				if (output->header->first().time <= query.from) {
-					continue;
-				}
-			}
+        // std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+        Chunk_Ptr output;
+        if (_id2chunk.find(id, &output)) {
+          result[id].push_back(output->getReader());
+          if (output->header->first().time <= query.from) {
+            continue;
+          }
+        }
       }
       disk_reads.insert(id);
     }
@@ -1035,11 +1034,11 @@ public:
   virtual Statistic stat(const Id id, Time from, Time to) override {
     Statistic result;
     {
-      //std::shared_lock<std::shared_mutex> lg(_chunks_locker);
-		Chunk_Ptr output;
-		if (_id2chunk.find(id, &output)) {
-			result.update(output->stat(from, to));
-		}
+      // std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+      Chunk_Ptr output;
+      if (_id2chunk.find(id, &output)) {
+        result.update(output->stat(from, to));
+      }
     }
     auto visitor = [=, &result](const Volume *v) {
       logger_info("engine: vmanager - stat in ", v->fname());
@@ -1068,12 +1067,12 @@ public:
 
     apply_for_each_volume(visitor);
 
-    //std::shared_lock<std::shared_mutex> lg(_chunks_locker);
-    _id2chunk.apply([&result](auto&kv){
+    // std::shared_lock<std::shared_mutex> lg(_chunks_locker);
+    _id2chunk.apply([&result](auto &kv) {
       auto fres = result->find_bucket(kv.first);
       fres.v->second.updateMax(kv.second->header->last());
       fres.v->second.updateMax(kv.second->header->first());
-	});
+    });
     return result;
   }
 
