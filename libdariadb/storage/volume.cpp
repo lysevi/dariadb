@@ -501,6 +501,7 @@ struct Volume::Private final : public IFlushable {
   }
 
   void flush(uint8_t *ptr, size_t size) override {
+	  // TODO do in disk io thread;
     if (_syncModel != FlushModel::NOT_SAFETY) {
       auto offset = ptr - _volume->data();
       _volume->flush(offset, size);
