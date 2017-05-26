@@ -37,7 +37,7 @@ public:
 
   EXPORT void message(LOG_MESSAGE_KIND kind, const std::string &msg);
 
-  template <typename... T> void variadic_message(LOG_MESSAGE_KIND kind, T... args) {
+  template <typename... T> void variadic_message(LOG_MESSAGE_KIND kind, T&&... args) {
     auto str_message = utils::strings::args_to_string(args...);
     this->message(kind, str_message);
   }

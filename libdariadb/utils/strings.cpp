@@ -53,6 +53,7 @@ std::string dariadb::utils::strings::inner::to_string(const char *_Val) {
   return std::string(_Val);
 }
 
-std::string dariadb::utils::strings::inner::to_string(std::string &_Val) {
+std::string dariadb::utils::strings::inner::to_string(const std::string &_Val) {
   return _Val;
 }
+

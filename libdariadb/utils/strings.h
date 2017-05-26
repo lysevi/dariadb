@@ -18,7 +18,7 @@ EXPORT std::string to_lower(const std::string &text);
 namespace inner {
 using std::to_string;
 EXPORT std::string to_string(const char *_Val);
-EXPORT std::string to_string(std::string &_Val);
+EXPORT std::string to_string(const std::string &_Val);
 
 template <class Head>
 void args_as_string(std::list<std::string> &s, size_t &sz, Head &&head) {
