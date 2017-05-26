@@ -281,7 +281,7 @@ TEST_CASE("Common.FullCursorTest") {
       writed += 2;
       m.time++;
     }
-    dariadb::Cursor_Ptr cptr(new dariadb::storage::FullCursor(ma));
+    dariadb::Cursor_Ptr cptr(new dariadb::storage::FullCursor(std::move(ma)));
     EXPECT_EQ(cptr->count(), writed);
     dariadb_test::check_reader(cptr);
   }
@@ -295,14 +295,14 @@ TEST_CASE("Common.LinearReaderTest") {
   ma1[1].time = 2;
   ma1[2].time = 3;
   ma1[3].time = 4;
-  auto fr1 = dariadb::Cursor_Ptr{new FullCursor(ma1)};
+  auto fr1 = dariadb::Cursor_Ptr{new FullCursor(std::move(ma1))};
 
   dariadb::MeasArray ma2(4);
   ma2[0].time = 5;
   ma2[1].time = 6;
   ma2[2].time = 7;
   ma2[3].time = 8;
-  auto fr2 = dariadb::Cursor_Ptr{new FullCursor(ma2)};
+  auto fr2 = dariadb::Cursor_Ptr{new FullCursor(std::move(ma2))};
 
   dariadb::storage::LinearCursor lr(CursorsList{fr1, fr2});
   EXPECT_EQ(lr.count(), fr1->count() + fr2->count());
@@ -329,18 +329,18 @@ TEST_CASE("Common.MergeSortReaderTest") {
   ma1[1].time = 2;
   ma1[2].time = 4;
   ma1[3].time = 7;
-  auto fr1 = dariadb::Cursor_Ptr{new FullCursor(ma1)};
+  auto fr1 = dariadb::Cursor_Ptr{new FullCursor(std::move(ma1))};
 
   dariadb::MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
   ma2[3].time = 7;
-  auto fr2 = dariadb::Cursor_Ptr{new FullCursor(ma2)};
+  auto fr2 = dariadb::Cursor_Ptr{new FullCursor(std::move(ma2))};
 
   dariadb::MeasArray ma3(1);
   ma3[0].time = 8;
-  auto fr3 = dariadb::Cursor_Ptr{new FullCursor(ma3)};
+  auto fr3 = dariadb::Cursor_Ptr{new FullCursor(std::move(ma3))};
 
   dariadb::storage::MergeSortCursor msr{CursorsList{fr1, fr2, fr3}};
   EXPECT_EQ(msr.count(), fr1->count() + fr2->count() + fr3->count());
@@ -385,18 +385,18 @@ TEST_CASE("Common.ReaderColapseTest") {
   ma1[1].time = 2;
   ma1[2].time = 4;
   ma1[3].time = 7;
-  auto fr1 = Cursor_Ptr{new FullCursor(ma1)};
+  auto fr1 = Cursor_Ptr{new FullCursor(std::move(ma1))};
 
   MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
   ma2[3].time = 7;
-  auto fr2 = Cursor_Ptr{new FullCursor(ma2)};
+  auto fr2 = Cursor_Ptr{new FullCursor(std::move(ma2))};
 
   MeasArray ma3(1);
   ma3[0].time = 8;
-  auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
+  auto fr3 = Cursor_Ptr{new FullCursor(std::move(ma3))};
 
   {
     auto msr = CursorWrapperFactory::colapseCursors(std::move(CursorsList{fr1, fr2}));
@@ -427,19 +427,19 @@ TEST_CASE("Common.ReaderColapse3Test") {
   ma1[1].time = 2;
   ma1[2].time = 4;
   ma1[3].time = 5;
-  auto fr1 = Cursor_Ptr{new FullCursor(ma1)};
+  auto fr1 = Cursor_Ptr{new FullCursor(std::move(ma1))};
 
   MeasArray ma2(4);
   ma2[0].time = 3;
   ma2[1].time = 5;
   ma2[2].time = 6;
   ma2[3].time = 7;
-  auto fr2 = Cursor_Ptr{new FullCursor(ma2)};
+  auto fr2 = Cursor_Ptr{new FullCursor(std::move(ma2))};
 
   MeasArray ma3(2);
   ma3[0].time = 6;
   ma3[1].time = 9;
-  auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
+  auto fr3 = Cursor_Ptr{new FullCursor(std::move(ma3))};
 
   auto msr = CursorWrapperFactory::colapseCursors(std::move(CursorsList{fr1, fr2, fr3}));
   EXPECT_EQ(msr->count(), fr1->count() + fr2->count() + fr3->count());

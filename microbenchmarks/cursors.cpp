@@ -14,7 +14,7 @@ public:
         ma[j].time = i + j;
         ma[j].value = i + j;
       }
-      auto fr = dariadb::Cursor_Ptr{new dariadb::storage::FullCursor(ma)};
+      auto fr = dariadb::Cursor_Ptr{new dariadb::storage::FullCursor(std::move(ma))};
       cursors.push_back(fr);
     }
     return cursors;

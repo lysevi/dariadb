@@ -367,11 +367,11 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
   }
 
   if (!i2ms.empty()) {
-    for (auto kv : i2ms) {
+    for (auto &&kv : i2ms) {
       MeasArray ma(kv.second.begin(), kv.second.end());
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.front().time <= ma.back().time);
-      Cursor_Ptr r = std::make_shared<FullCursor>(ma);
+      Cursor_Ptr r = std::make_shared<FullCursor>(std::move(ma));
       readers_list[kv.first].push_back(r);
     }
   }

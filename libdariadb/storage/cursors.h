@@ -12,7 +12,7 @@ Store all values in memory.
 */
 class FullCursor final : public ICursor {
 public:
-  EXPORT FullCursor(MeasArray &ma);
+  EXPORT FullCursor(MeasArray &&ma);
   EXPORT virtual Meas readNext() override;
 
   EXPORT bool is_end() const override;

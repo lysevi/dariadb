@@ -225,7 +225,7 @@ Cursor_Ptr Chunk::getReader() {
     std::sort(ma.begin(), ma.end(), meas_time_compare_less());
     ENSURE(ma.front().time <= ma.back().time);
 
-    return std::make_shared<FullCursor>(ma);
+    return std::make_shared<FullCursor>(std::move(ma));
   } else {
     return result;
   }

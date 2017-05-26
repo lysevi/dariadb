@@ -162,11 +162,11 @@ public:
     }
 
     Id2Cursor result;
-    for (auto kv : subresult) {
+    for (auto &&kv : subresult) {
       MeasArray ma(kv.second.begin(), kv.second.end());
       std::sort(ma.begin(), ma.end(), meas_time_compare_less());
       ENSURE(ma.front().time <= ma.back().time);
-      Cursor_Ptr reader = std::make_shared<FullCursor>(ma);
+      Cursor_Ptr reader = std::make_shared<FullCursor>(std::move(ma));
       result[kv.first] = reader;
     }
     return result;

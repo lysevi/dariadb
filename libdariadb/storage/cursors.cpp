@@ -83,7 +83,7 @@ CursorsList unpack_linear_readers(CursorsList &&readers) {
 }
 }
 
-FullCursor::FullCursor(MeasArray &ma) : _ma(ma) {
+FullCursor::FullCursor(MeasArray &&ma) : _ma(ma) {
   _index = size_t(0);
 
   _minTime = MAX_TIME;
