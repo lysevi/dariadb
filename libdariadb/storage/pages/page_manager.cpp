@@ -226,7 +226,7 @@ public:
     };
     auto pm_async = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
     pm_async->wait();
-    return CursorWrapperFactory::colapseCursors(result);
+    return CursorWrapperFactory::colapseCursors(std::move(result));
   }
 
   void callback_for_interval_readers(const QueryInterval &query, Id2CursorsList &result) {

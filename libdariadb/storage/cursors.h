@@ -34,7 +34,7 @@ Merge sort.
 */
 class MergeSortCursor final : public ICursor {
 public:
-  EXPORT MergeSortCursor(const CursorsList &readers);
+  EXPORT MergeSortCursor(CursorsList &&readers);
   EXPORT virtual Meas readNext() override;
   EXPORT bool is_end() const override;
   EXPORT Meas top() override;
@@ -55,7 +55,7 @@ Sequential read
 */
 class LinearCursor final : public ICursor {
 public:
-  EXPORT LinearCursor(const CursorsList &readers);
+  EXPORT LinearCursor(CursorsList &&readers);
   EXPORT virtual Meas readNext() override;
   EXPORT bool is_end() const override;
   EXPORT Meas top() override;
@@ -75,8 +75,8 @@ make LinearCursor or MergSortCursor
 struct CursorWrapperFactory {
   // if the intervals overlap.
   EXPORT static bool is_linear_readers(const Cursor_Ptr &r1, const Cursor_Ptr &r2);
-  EXPORT static Cursor_Ptr colapseCursors(const CursorsList &i2r);
-  EXPORT static Id2Cursor colapseCursors(const Id2CursorsList &i2r);
+  EXPORT static Cursor_Ptr colapseCursors(CursorsList &&i2r);
+  EXPORT static Id2Cursor colapseCursors(Id2CursorsList &&i2r);
 };
 }
 }

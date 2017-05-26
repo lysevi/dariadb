@@ -43,19 +43,19 @@ get_cursor_with_min_time(std::vector<Time> &top_times,
   return std::make_pair(min_time_index, reader_it.get());
 }
 
-CursorsList unpack_merge_readers(const CursorsList &readers) {
+CursorsList unpack_merge_readers(CursorsList &&readers) {
   CursorsList tmp_readers_list;
 
-  for (auto r : readers) {
+  for (auto &&r : readers) {
     // TODO use type enum.
     auto msr = dynamic_cast<MergeSortCursor *>(r.get());
     if (msr == nullptr) {
       ENSURE(!r->is_end());
-      tmp_readers_list.emplace_back(r);
+      tmp_readers_list.emplace_back(std::move(r));
     } else {
-      for (auto sub_reader : msr->_readers) {
+      for (auto &&sub_reader : msr->_readers) {
         ENSURE(!sub_reader->is_end());
-        tmp_readers_list.emplace_back(sub_reader);
+        tmp_readers_list.emplace_back(std::move(sub_reader));
       }
       msr->_readers.clear();
     }
@@ -63,18 +63,18 @@ CursorsList unpack_merge_readers(const CursorsList &readers) {
   return tmp_readers_list;
 }
 
-CursorsList unpack_linear_readers(const CursorsList &readers) {
+CursorsList unpack_linear_readers(CursorsList &&readers) {
   CursorsList tmp_readers_list;
 
-  for (auto r : readers) {
+  for (auto &&r : readers) {
     auto lsr = dynamic_cast<LinearCursor *>(r.get());
     if (lsr == nullptr) {
       ENSURE(!r->is_end());
-      tmp_readers_list.emplace_back(r);
+      tmp_readers_list.emplace_back(std::move(r));
     } else {
-      for (auto sub_reader : lsr->_readers) {
+      for (auto &&sub_reader : lsr->_readers) {
         ENSURE(!sub_reader->is_end());
-        tmp_readers_list.emplace_back(sub_reader);
+        tmp_readers_list.emplace_back(std::move(sub_reader));
       }
       lsr->_readers.clear();
     }
@@ -135,16 +135,17 @@ size_t FullCursor::count() const {
   return _ma.size();
 }
 
-MergeSortCursor::MergeSortCursor(const CursorsList &readers) {
-  CursorsList tmp_readers_list = cursors_inner::unpack_merge_readers(readers);
+MergeSortCursor::MergeSortCursor(CursorsList &&readers) {
+  CursorsList tmp_readers_list = cursors_inner::unpack_merge_readers(std::move(readers));
 
   _readers.reserve(tmp_readers_list.size());
   _values_count = size_t(0);
-  for (auto r : tmp_readers_list) {
+  for (auto &&r : tmp_readers_list) {
     ENSURE(!r->is_end());
-    _readers.emplace_back(r);
     _values_count += r->count();
+    _readers.emplace_back(std::move(r));
   }
+  tmp_readers_list.clear();
 
   _top_times.resize(_readers.size());
   _is_end_status.resize(_top_times.size());
@@ -223,14 +224,22 @@ size_t MergeSortCursor::count() const {
   return _values_count;
 }
 
-LinearCursor::LinearCursor(const CursorsList &readers) {
-  auto sub_readers = cursors_inner::unpack_linear_readers(readers);
+LinearCursor::LinearCursor(CursorsList &&readers) {
+  auto sub_readers = cursors_inner::unpack_linear_readers(std::move(readers));
   ENSURE(sub_readers.size() >= readers.size());
 
-  std::vector<Cursor_Ptr> rv(sub_readers.begin(), sub_readers.end());
+  std::vector<Cursor_Ptr> rv;
+  rv.reserve(sub_readers.size());
+  for (auto &&sr : sub_readers) {
+    rv.emplace_back(std::move(sr));
+  }
+
   std::sort(rv.begin(), rv.end(),
-            [](auto l, auto r) { return l->minTime() < r->minTime(); });
-  _readers = CursorsList(rv.begin(), rv.end());
+            [](auto &l, auto &r) { return l->minTime() < r->minTime(); });
+
+  for (auto &&sr : rv) {
+    _readers.emplace_back(std::move(sr));
+  }
 
   _values_count = size_t(0);
   _minTime = MAX_TIME;
@@ -277,7 +286,7 @@ size_t LinearCursor::count() const {
   return _values_count;
 }
 
-Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list) {
+Cursor_Ptr CursorWrapperFactory::colapseCursors(CursorsList &&readers_list) {
   std::vector<Cursor_Ptr> readers_vector{readers_list.begin(), readers_list.end()};
   typedef std::set<size_t> positions_set;
   std::map<size_t, positions_set> overlapped;
@@ -315,27 +324,27 @@ Cursor_Ptr CursorWrapperFactory::colapseCursors(const CursorsList &readers_list)
     }
   }
 
-  for (auto kv : overlapped) {
+  for (const auto &kv : overlapped) {
     CursorsList rs;
     rs.emplace_back(readers_vector[kv.first]);
     for (size_t pos : kv.second) {
       rs.emplace_back(readers_vector[pos]);
     }
-    Cursor_Ptr rptr = std::make_shared<MergeSortCursor>(rs);
+    Cursor_Ptr rptr = std::make_shared<MergeSortCursor>(std::move(rs));
     result_readers.emplace_back(rptr);
   }
 
-  Cursor_Ptr rptr = std::make_shared<LinearCursor>(result_readers);
+  Cursor_Ptr rptr = std::make_shared<LinearCursor>(std::move(result_readers));
   return rptr;
 }
 
-Id2Cursor CursorWrapperFactory::colapseCursors(const Id2CursorsList &i2r) {
+Id2Cursor CursorWrapperFactory::colapseCursors(Id2CursorsList &&i2r) {
   Id2Cursor result;
-  for (auto kv : i2r) {
+  for (auto &&kv : i2r) {
     if (kv.second.size() == 1) {
-      result[kv.first] = kv.second.front();
+      result[kv.first] = std::move(kv.second.front());
     } else {
-      result[kv.first] = colapseCursors(kv.second);
+      result[kv.first] = colapseCursors(std::move(kv.second));
     }
   }
   return result;

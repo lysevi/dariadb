@@ -265,7 +265,7 @@ Id2Cursor TimeTrack::intervalReader(const QueryInterval &q) {
   if (readers.empty()) {
     return Id2Cursor();
   }
-  Cursor_Ptr result = CursorWrapperFactory::colapseCursors(readers);
+  Cursor_Ptr result = CursorWrapperFactory::colapseCursors(std::move(readers));
   Id2Cursor i2r;
   i2r[this->_meas_id] = result;
   return i2r;

@@ -208,9 +208,8 @@ public:
   std::list<Shard> shardList() {
     std::shared_lock<std::shared_mutex> lg(_locker);
     std::list<Shard> result;
-    for (auto kv : _shards) {
-      result.push_back(kv.second);
-    }
+    std::transform(_shards.begin(), _shards.end(), std::back_inserter(result),
+                   [](auto &kv) { return kv.second; });
     return result;
   }
 

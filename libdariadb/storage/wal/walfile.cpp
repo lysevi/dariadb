@@ -175,7 +175,7 @@ public:
   void foreach (const QueryInterval &q, IReadCallback * clbk) {
     auto readers = intervalReader(q);
 
-    for (auto kv : readers) {
+    for (auto &&kv : std::move(readers)) {
       kv.second->apply(clbk);
     }
   }

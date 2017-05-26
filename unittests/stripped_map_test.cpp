@@ -57,11 +57,11 @@ TEST_CASE("StrippedMap.OneThread") {
     EXPECT_EQ(add_many.size(), size_t(key));
     EXPECT_EQ(add_many.size(), cnt);
 
-	cnt = 0;
-	auto f_values = [&cnt](const stripped_map<int, uint64_t>::data_type &) { cnt++; };
-	add_many.apply_to_values(f_values);
-	EXPECT_EQ(add_many.size(), size_t(key));
-	EXPECT_EQ(add_many.size(), cnt);
+    cnt = 0;
+    auto f_values = [&cnt](const stripped_map<int, uint64_t>::data_type &) { cnt++; };
+    add_many.apply_to_values(f_values);
+    EXPECT_EQ(add_many.size(), size_t(key));
+    EXPECT_EQ(add_many.size(), cnt);
   }
 }
 

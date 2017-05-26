@@ -399,7 +399,7 @@ TEST_CASE("Common.ReaderColapseTest") {
   auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
 
   {
-    auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2});
+    auto msr = CursorWrapperFactory::colapseCursors(std::move(CursorsList{fr1, fr2}));
     EXPECT_EQ(msr->count(), fr1->count() + fr2->count());
     auto top_reader = dynamic_cast<LinearCursor *>(msr.get());
     auto is_merge_reader =
@@ -409,7 +409,7 @@ TEST_CASE("Common.ReaderColapseTest") {
   }
 
   {
-    auto lsr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr3});
+    auto lsr = CursorWrapperFactory::colapseCursors(std::move(CursorsList{fr1, fr3}));
     EXPECT_EQ(lsr->count(), fr1->count() + fr3->count());
     auto top_reader = dynamic_cast<LinearCursor *>(lsr.get());
     for (auto &r : top_reader->_readers) {
@@ -441,7 +441,7 @@ TEST_CASE("Common.ReaderColapse3Test") {
   ma3[1].time = 9;
   auto fr3 = Cursor_Ptr{new FullCursor(ma3)};
 
-  auto msr = CursorWrapperFactory::colapseCursors(CursorsList{fr1, fr2, fr3});
+  auto msr = CursorWrapperFactory::colapseCursors(std::move(CursorsList{fr1, fr2, fr3}));
   EXPECT_EQ(msr->count(), fr1->count() + fr2->count() + fr3->count());
   while (msr->is_end()) {
     msr->readNext();

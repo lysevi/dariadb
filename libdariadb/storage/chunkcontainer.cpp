@@ -9,7 +9,7 @@ ChunkContainer::~ChunkContainer() {}
 
 void ChunkContainer::foreach (const QueryInterval &query, IReadCallback * clb) {
   auto readers = intervalReader(query);
-  for (auto kv : readers) {
+  for (auto &&kv : std::move(readers)) {
     kv.second->apply(clb, query);
   }
 }

@@ -375,7 +375,7 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
       readers_list[kv.first].push_back(r);
     }
   }
-  return CursorWrapperFactory::colapseCursors(readers_list);
+  return CursorWrapperFactory::colapseCursors(std::move(readers_list));
 }
 
 Statistic WALManager::stat(const Id id, Time from, Time to) {

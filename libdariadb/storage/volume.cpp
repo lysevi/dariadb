@@ -501,7 +501,7 @@ struct Volume::Private final : public IFlushable {
   }
 
   void flush(uint8_t *ptr, size_t size) override {
-	  // TODO do in disk io thread;
+    // TODO do in disk io thread;
     if (_syncModel != FlushModel::NOT_SAFETY) {
       auto offset = ptr - _volume->data();
       _volume->flush(offset, size);
@@ -843,7 +843,7 @@ public:
   }
 
   void dropToDisk(Chunk_Ptr &c) {
-	  lock();
+    lock();
     Chunk::updateChecksum(*c->header, c->_buffer_t);
     // TODO do in disk io thread;
     auto createAndAppendToVolume = [&c, this]() {
@@ -860,7 +860,7 @@ public:
         createAndAppendToVolume();
       }
     }
-	unlock();
+    unlock();
   }
 
   std::shared_ptr<Volume> createNewVolume() {
@@ -1023,7 +1023,7 @@ public:
     };
     apply_for_each_volume(visitor);
 
-    return CursorWrapperFactory::colapseCursors(result);
+    return CursorWrapperFactory::colapseCursors(std::move(result));
   }
 
   virtual Id2Meas currentValue(const IdArray &ids, const Flag &flag) override {

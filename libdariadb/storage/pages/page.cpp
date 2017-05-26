@@ -574,7 +574,7 @@ Id2Cursor Page::intervalReader(const QueryInterval &query, const ChunkLinkList &
 
   this->apply_to_chunks(links, callback);
 
-  Id2Cursor result = CursorWrapperFactory::colapseCursors(sub_result);
+  Id2Cursor result = CursorWrapperFactory::colapseCursors(std::move(sub_result));
   return result;
 }
 

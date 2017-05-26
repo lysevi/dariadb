@@ -37,5 +37,6 @@ struct ElapsedTime {
   double elapsed() { return double(clock() - start_time) / CLOCKS_PER_SEC; }
   clock_t start_time;
 };
+
 } // namespace utils
 } // namespace dariadb

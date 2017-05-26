@@ -562,6 +562,8 @@ public:
     auto disk_only_readers = interval_readers_from_disk_only(disk_only, q);
     auto mem_only_readers = interval_readers_from_mem_only(mem_only, q);
 
+    auto get_second = [](auto &kv) { return kv.second; };
+
     for (auto id2intervals : queryById) {
 
       auto disk_q = id2intervals.second.first;
@@ -571,23 +573,23 @@ public:
       auto mm_readers = _memstorage->intervalReader(mem_q);
 
       CursorsList readers;
-      for (auto &&kv : mm_readers) {
-        readers.push_back(std::move(kv.second));
-      }
-      for (auto &&kv : disk_readers) {
-        readers.push_back(std::move(kv.second));
-      }
 
-      Cursor_Ptr r_ptr = CursorWrapperFactory::colapseCursors(readers);
+      std::transform(mm_readers.begin(), mm_readers.end(), std::back_inserter(readers),
+                     get_second);
+
+      std::transform(disk_readers.begin(), disk_readers.end(),
+                     std::back_inserter(readers), get_second);
+
+      Cursor_Ptr r_ptr = CursorWrapperFactory::colapseCursors(std::move(readers));
       result[id2intervals.first] = r_ptr;
     }
 
-    for (auto &&kv : disk_only_readers) {
-      result[kv.first] = std::move(kv.second);
-    }
-    for (auto &&kv : mem_only_readers) {
-      result[kv.first] = std::move(kv.second);
-    }
+    auto result_inserter = [&result](auto &&v) { result.insert(v); };
+
+    std::for_each(disk_only_readers.begin(), disk_only_readers.end(), result_inserter);
+
+    std::for_each(mem_only_readers.begin(), mem_only_readers.end(), result_inserter);
+
     return result;
   }
 
@@ -604,14 +606,14 @@ public:
     }
 
     Id2CursorsList all_readers;
-    for (auto kv : tm_readers) {
+    auto inserter = [&all_readers](auto &&kv) {
       all_readers[kv.first].push_back(kv.second);
-    }
+    };
+    std::for_each(tm_readers.begin(), tm_readers.end(), inserter);
 
-    for (auto kv : pm_readers) {
-      all_readers[kv.first].push_back(kv.second);
-    }
-    return CursorWrapperFactory::colapseCursors(all_readers);
+    std::for_each(pm_readers.begin(), pm_readers.end(), inserter);
+
+    return CursorWrapperFactory::colapseCursors(std::move(all_readers));
   }
 
   Id2Cursor internal_readers_two_level(const QueryInterval &q) {

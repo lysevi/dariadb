@@ -122,7 +122,7 @@ public:
   EXPORT void flush();
   EXPORT void stop();
 
-  size_t active_works() {
+  size_t active_works() const {
     std::shared_lock<std::shared_mutex> lg(_queue_mutex);
     size_t res = _in_queue.size();
     return res + (_task_runned);
@@ -136,7 +136,7 @@ protected:
   Params _params;
   std::vector<std::thread> _threads;
   TaskQueue _in_queue;
-  std::shared_mutex _queue_mutex;
+  mutable std::shared_mutex _queue_mutex;
   std::condition_variable_any _condition;
   bool _stop_flag;                 // true - pool under stop.
   bool _is_stoped;                 // true - already stopped.

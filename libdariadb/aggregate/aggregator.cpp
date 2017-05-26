@@ -3,6 +3,8 @@
 #include <libdariadb/scheme/ischeme.h>
 #include <libdariadb/statistic/calculator.h>
 #include <libdariadb/timeutil.h>
+#include <iterator>
+#include <numeric>
 #include <sstream>
 
 using namespace dariadb;
@@ -86,15 +88,14 @@ public:
     auto vals = _scheme->lsInterval(interval);
     IdArray ids;
     ids.reserve(vals.size());
-    for (const auto &kv : vals) {
-      ids.push_back(kv.first);
-    }
+    std::transform(vals.begin(), vals.end(), std::back_inserter(ids),
+                   [](auto &kv) { return kv.first; });
 
     auto curvals = _storage->currentValue(ids, Flag());
     dariadb::Time result = MAX_TIME;
-    for (const auto &v : curvals) {
-      result = std::min(result, v.second.time);
-    }
+
+    std::for_each(curvals.begin(), curvals.end(),
+                  [&result](auto &v) { result = std::min(result, v.second.time); });
     return result;
   }
 
@@ -115,8 +116,8 @@ public:
                   "-", timeutil::to_string(currentInterval.second), "]");
 
       auto interval_from_values = _scheme->lsInterval(interval_from);
-      for (const auto &kv :
-           interval_from_values) { /// check each value from interval 'from'
+      /// check each value from interval 'from'
+      for (const auto &kv : interval_from_values) {
         Time fromMinTime, fromMaxTime;
         if (!_storage->minMaxTime(kv.first, &fromMinTime, &fromMaxTime)) {
           continue;
@@ -140,11 +141,11 @@ public:
 
               /// split by interval
               std::set<std::pair<Time, Time>> intervals;
-              for (auto v : values) {
+              for (const auto &v : values) {
                 auto i = timeutil::target_interval(interval_to, v.time);
                 intervals.insert(i);
               }
-              for (auto i : intervals) {
+              for (const auto &i : intervals) {
                 logger_info("agregator: write #", kv.first, " to #", linkedKv.first,
                             " intervals: [", timeutil::to_string(i.first), "-",
                             timeutil::to_string(i.second), "]");
@@ -190,7 +191,7 @@ void Aggregator::aggregate(const std::string &from_interval,
 
   statistic::Calculator calc(_storage);
 
-  for (auto kv : interval_values) {
+  for (const auto &kv : interval_values) {
     auto all_linked = scheme->linkedForValue(kv.second);
 
     dariadb::scheme::DescriptionMap linked_for_interval;

@@ -30,7 +30,7 @@ public:
 
   size_t active_works() {
     size_t res = 0;
-    for (auto &kv : _pools) {
+    for (const auto &kv : _pools) {
       res += kv.second->active_works();
     }
     return res;
