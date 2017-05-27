@@ -947,7 +947,8 @@ public:
     m.flag = FLAGS::_NO_DATA;
     m.time = query.time_point;
 
-    IdSet disk_reads; // TODO use vector with preallocated memory.
+    IdArray id_in_disk;
+	id_in_disk.reserve(query.ids.size());
 
     for (auto id : query.ids) {
       m.id = id;
@@ -963,13 +964,13 @@ public:
           }
         };
       }
-      disk_reads.insert(id);
+      id_in_disk.push_back(id);
     }
 
-    auto visitor = [disk_reads, &query, &result](const Volume *v) {
+    auto visitor = [id_in_disk, &query, &result](const Volume *v) {
       logger_info("engine: vmanager - readTimePoint in ", v->fname());
 
-      for (auto id : disk_reads) {
+      for (auto id : id_in_disk) {
         auto c = v->queryChunks(id, query.time_point);
         if (c != nullptr) {
           auto rdr = c->getReader();
