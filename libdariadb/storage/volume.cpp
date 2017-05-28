@@ -954,7 +954,6 @@ public:
       m.id = id;
       result[id] = m;
       {
-        // std::shared_lock<std::shared_mutex> lg(_chunks_locker);
         Chunk_Ptr output;
         if (_id2chunk.find(id, &output)) {
           auto f = output->header->first();
@@ -996,11 +995,10 @@ public:
   virtual Id2Cursor intervalReader(const QueryInterval &query) override {
     Id2CursorsList result;
 
-    IdSet disk_reads; // TODO use vector with preallocated memory.
-
+    IdArray disk_reads;
+	disk_reads.reserve(query.ids.size());
     for (auto id : query.ids) {
       {
-        // std::shared_lock<std::shared_mutex> lg(_chunks_locker);
         Chunk_Ptr output;
         if (_id2chunk.find(id, &output)) {
           result[id].push_back(output->getReader());
@@ -1009,7 +1007,7 @@ public:
           }
         }
       }
-      disk_reads.insert(id);
+      disk_reads.push_back(id);
     }
 
     auto visitor = [&disk_reads, &query, &result](const Volume *v) {
