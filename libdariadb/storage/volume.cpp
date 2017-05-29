@@ -65,6 +65,14 @@ struct VolumeIndex::Private {
     bool isEmpty() const { return _lvl_header->isEmpty(); }
     size_t size() const { return _lvl_header->size; }
 
+	Link*begin() const {
+		return _links;
+	}
+
+	Link*end() const{
+		return &_links[_lvl_header->pos];
+	}
+
     void clear() {
       std::fill_n(_links, _lvl_header->size, Link());
       _lvl_header->maxTime = MIN_TIME;
@@ -98,31 +106,58 @@ struct VolumeIndex::Private {
       return true;
     }
 
+	static bool linkCmp(const Link&l, const Link&r)  {
+		return l.max_time < r.max_time;
+	}
+
+	std::pair<Link*, Link*> lower_upper(Time from, Time to) const {
+		Link from_link;
+		from_link.max_time = from;
+
+		Link to_link;
+		to_link.max_time = to;
+
+		auto lb = std::lower_bound(begin(), end(), from_link, linkCmp);
+		auto ub = std::upper_bound(begin(), end(), to_link, linkCmp);
+
+		return std::make_pair(lb, ub);
+	}
+
     void queryLink(Time from, Time to, std::vector<Link> *result) const {
       ENSURE(result != nullptr);
-      // TODO use upper/lower bounds
-      for (size_t i = 0; i < _lvl_header->pos; ++i) {
-        auto lnk = _links[i];
-        if (utils::inInterval(from, to, lnk.max_time) && !lnk.erased) {
-          result->push_back(lnk);
+	  
+	  auto low_up = lower_upper(from, to);
+
+	  if (low_up.first == end()) {
+		  return;
+	  }
+
+	  for (auto lnk = low_up.first; lnk != low_up.second;++lnk) {
+        if (!lnk->erased && utils::inInterval(from, to, lnk->max_time) ) {
+          result->push_back(*lnk);
         }
       }
     }
 
     Link queryLink(Time tp) const {
-      size_t result = size_t(0);
-      // TODO use upper/lower bounds
-      for (size_t i = 1; i < _lvl_header->pos; ++i) {
-        auto lnk = _links[i];
-        if (lnk.max_time <= tp && !lnk.erased) {
-          result = i;
+      Link* result = nullptr;
+
+	  Link to_link;
+	  to_link.max_time = tp;
+
+	  auto ub = std::upper_bound(begin(), end(), to_link, linkCmp);
+
+
+	  for (auto lnk = _links; lnk != ub; ++lnk) {
+        if (!lnk->erased && lnk->max_time <= tp) {
+          result = lnk;
         } else {
-          if (lnk.max_time > tp) {
+          if (lnk->max_time > tp) {
             break;
           }
         }
       }
-      return _links[result];
+      return *result;
     }
 
     void rm(Time maxTime, uint64_t chunk_id) {
