@@ -52,6 +52,13 @@ void IEngine::foreach (const QueryTimePoint &q, IReadCallback * clbk) {
 
 void IEngine::setScheme(const scheme::IScheme_Ptr &scheme) {
   _scheme = scheme;
+  auto all = scheme->ls();
+  IdArray ids;
+  ids.reserve(all.size());
+  for (auto kv : all) {
+	  ids.push_back(kv.first);
+  }
+  this->reserve(ids);
 }
 
 scheme::IScheme_Ptr IEngine::getScheme() {

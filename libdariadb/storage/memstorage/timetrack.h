@@ -46,6 +46,9 @@ struct TimeTrack final : public IMeasStorage,
   void rereadMinMax();
   bool create_new_chunk(const Meas &value);
 
+  void reserve(const IdArray&) override {
+  }
+
   size_t chunks_count() {
     std::lock_guard<std::mutex> lg(_locker);
     return _index.size();

@@ -49,6 +49,8 @@ struct MocDiskStorage : public dariadb::IMeasWriter {
   }
 
   virtual void flush() override {}
+  virtual void reserve(const dariadb::IdArray&ids) override{
+  }
 };
 
 TEST_CASE("MemoryStorage.RegionAllocatorTest") {

@@ -48,7 +48,8 @@ public:
   EXPORT Id id_from_first();
 
   EXPORT size_t writed() const;
-
+  void reserve(const IdArray&) override {
+  }
 protected:
   class Private;
   std::unique_ptr<Private> _Impl;

@@ -490,6 +490,13 @@ public:
     _subscribe_notify.add(new_s);
   }
 
+  void reserve(const IdArray&ids)override {
+	  for (auto id : ids) {
+		  //TODO opt. group id by shard.
+		  auto s = this->get_shard_for_id(id);
+		  s->reserve({ id });
+	  }
+  }
   bool _stoped;
   bool _force_unlock;
   std::unordered_map<Id, IEngine_Ptr> _id2shard;
@@ -603,10 +610,10 @@ void ShardEngine::subscribe(const IdArray &ids, const Flag &flag,
   return _impl->subscribe(ids, flag, clbk);
 }
 
-void ShardEngine::setScheme(const scheme::IScheme_Ptr &scheme) {
-  _impl->setScheme(scheme);
-}
-
 scheme::IScheme_Ptr ShardEngine::getScheme() {
   return _impl->getScheme();
+}
+
+void ShardEngine::reserve(const IdArray&ids) {
+	return _impl->reserve(ids);
 }

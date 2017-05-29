@@ -62,7 +62,7 @@ public:
   EXPORT void dropAll();
 
   EXPORT Id2MinMax_Ptr loadMinMax() override;
-
+  EXPORT void reserve(const IdArray&ids) override;
 protected:
   void dropFile(const std::string &wal);
   WALFile_Ptr create_new(BufferDescription_Ptr bd, dariadb::Id id);

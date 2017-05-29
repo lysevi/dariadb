@@ -149,6 +149,16 @@ size_t fill_storage_for_test(dariadb::IMeasStorage *as, dariadb::Time from,
   Id id_val = 0;
 
   Flag flg_val(0);
+  
+  dariadb::logger_info("reserve place for id");
+  IdArray reservedIds;
+  reservedIds.reserve(to - from);
+  for (auto i = from; i < to; i += step) {
+	  reservedIds.push_back(id_val);
+	  ++id_val;
+  }
+  as->reserve(reservedIds);
+  id_val = 0;
   for (auto i = from; i < to; i += step) {
     _all_ids_set->insert(id_val);
     m.id = id_val;

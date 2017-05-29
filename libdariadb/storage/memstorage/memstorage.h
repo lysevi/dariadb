@@ -46,7 +46,7 @@ public:
   EXPORT Id2Time getSyncMap(); /// Id to max dropped to disk time.
 
   EXPORT void dropOld(dariadb::Id id, Time t);
-
+  EXPORT void reserve(const IdArray&ids)override;
 private:
   struct Private;
   std::unique_ptr<Private> _impl;

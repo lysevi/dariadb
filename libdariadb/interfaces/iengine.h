@@ -39,6 +39,7 @@ public:
       volumes_count += other.volumes_count;
     }
   };
+
   virtual Description description() const = 0;
   virtual void fsck() = 0;
   virtual void eraseOld(const Id id, const Time t) = 0;
