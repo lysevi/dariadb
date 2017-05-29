@@ -128,7 +128,7 @@ public:
   EXPORT virtual Statistic stat(const Id id, Time from, Time to) override;
   EXPORT virtual Id2MinMax_Ptr loadMinMax() override;
   EXPORT virtual Status append(const Meas &value) override;
-  EXPORT virtual void reserve(const IdArray&ids) override;
+
 protected:
   class Private;
   std::unique_ptr<Private> _impl;

@@ -868,10 +868,6 @@ public:
     }
   }
 
-  void reserve(const IdArray&) override {
- 
-  }
-
   Chunk_Ptr create_chunk(const Meas &value) {
     /// logger_info("engine: vmanager - create chunk for ", value.id);
     ChunkHeader *chdr = new ChunkHeader;
@@ -1210,8 +1206,4 @@ Status VolumeManager::append(const Meas &value) {
 
 void VolumeManager::flush() {
   return _impl->flush();
-}
-
-void VolumeManager::reserve(const IdArray&ids){
-	return _impl->reserve(ids);
 }

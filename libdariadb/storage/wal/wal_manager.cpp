@@ -729,17 +729,3 @@ bool WALManager::file_in_query(const std::string &filename, const QueryTimePoint
   }
   return false;
 }
-
-void WALManager::reserve(const IdArray&ids) {
-	std::lock_guard<std::mutex> lg(_file2mm_locker);
-	for (auto id : ids) {
-		auto iterator = _buffers.find_bucket(id);
-		if (iterator.v->second == nullptr) {
-			auto bd =
-				std::make_shared<BufferDescription>(nullptr, _settings->wal_cache_size.value());
-			iterator.v->second = bd;
-			create_new(bd, id);
-			ENSURE(bd->walfile != nullptr);
-		}
-	}
-}

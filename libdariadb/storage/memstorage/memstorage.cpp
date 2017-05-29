@@ -382,18 +382,6 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
     logger_info("engine", _settings->alias, ": memstorage - dropping thread stoped.");
   }
 
-  void reserve(const IdArray&ids)override {
-	  for(auto id:ids){
-		  auto iterator = _id2track.find_bucket(id);
-
-		  if (iterator.v->second == nullptr) {
-			  auto new_tr =
-				  std::make_shared<TimeTrack>(this, Time(0), id, _chunk_allocator);
-			  iterator.v->second = new_tr;
-		  }
-	  }
-  }
-
   Id2Track _id2track;
   EngineEnvironment_ptr _env;
   storage::Settings *_settings;
@@ -493,8 +481,4 @@ Id2Time MemStorage::getSyncMap() {
 
 void MemStorage::dropOld(dariadb::Id id, Time t) {
   return _impl->dropOld(id, t);
-}
-
-void MemStorage::reserve(const IdArray&ids) {
-	return _impl->reserve(ids);
 }

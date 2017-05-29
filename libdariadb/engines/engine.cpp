@@ -103,11 +103,6 @@ public:
         auto amm = _top_level_storage->loadMinMax();
         minmax_append(_min_max_map, amm);
       }
-	  IdArray ids;
-	  _min_max_map->apply([&ids](const Id2MinMax::value_type &v) {
-		  ids.push_back(v.first);
-	  });
-	  this->reserve(ids);
     }
   }
 
@@ -853,24 +848,6 @@ public:
 
   storage::Settings_ptr settings() { return _settings; }
 
-  void reserve(const IdArray&ids){
-	  this->lock_storage();
-	  logger_info("engine", _settings->alias, ": reserve place for ", ids.size(), " ids");
-	  
-	  if (_wal_manager != nullptr) {
-		  _wal_manager->reserve(ids);
-	  }
-
-	  if (_memstorage != nullptr) {
-		  _memstorage->reserve(ids);
-	  }
-
-	  if (_volumes != nullptr) {
-		  _volumes->reserve(ids);
-	  }
-	  this->unlock_storage();
-  }
-
 protected:
   std::mutex _flush_locker, _lock_locker;
   SubscribeNotificator _subscribe_notify;
@@ -997,8 +974,4 @@ Id2MinMax_Ptr Engine::loadMinMax() {
 
 std::string Engine::version() {
   return std::string(PROJECT_VERSION);
-}
-
-void Engine::reserve(const IdArray&ids) {
-	return _impl->reserve(ids);
 }

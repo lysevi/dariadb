@@ -54,8 +54,9 @@ public:
   EXPORT void subscribe(const IdArray &ids, const Flag &flag,
                         const ReaderCallback_ptr &clbk) override;
 
+  EXPORT void setScheme(const scheme::IScheme_Ptr &scheme) override;
   EXPORT virtual scheme::IScheme_Ptr getScheme() override;
-  EXPORT void reserve(const IdArray&ids)override;
+
 private:
   class Private;
   std::unique_ptr<Private> _impl;

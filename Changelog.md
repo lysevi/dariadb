@@ -1,7 +1,3 @@
-v0.5.1
-=====
-- API to reserve palce for new Id.
-
 v0.5.0
 =====
 - True columnar database - each time-series stored in dedicated file.

@@ -288,25 +288,12 @@ void reader(IMeasStorage *ms, IdSet all_id_set, Time from, Time to) {
   }
 }
 
-void reservePlace(IEngine *raw_ptr) {
-	dariadb::IdArray ids;
-	ids.reserve(benchmark_params.id_count);
-	dariadb::Id curId = 0;
-	for (size_t i = 0; i < benchmark_params.id_count; ++i) {
-		ids.push_back(curId++);
-	}
-	logger_info("benchmark: reserve palce for ", ids.size(), " id");
-	raw_ptr->reserve(ids);
-}
-
 void rw_benchmark(IEngine *raw_ptr, Time start_time, IdSet &all_id_set) {
 
   std::thread info_thread(show_info, raw_ptr);
 
   std::vector<std::thread> writers(benchmark_params.total_threads_count);
   std::vector<std::thread> readers(benchmark_params.total_readers_count);
-
- 
 
   size_t pos = 0;
 
@@ -546,8 +533,6 @@ int main(int argc, char *argv[]) {
     if (is_exists) {
       raw_ptr->fsck();
     }
-
-	reservePlace(raw_ptr);
 
     dariadb::IdSet all_id_set;
     append_count = 0;
