@@ -8,7 +8,6 @@
 #include <libdariadb/storage/memstorage/memstorage.h>
 #include <libdariadb/storage/pages/page_manager.h>
 #include <libdariadb/storage/subscribe.h>
-#include <libdariadb/storage/volume.h>
 #include <libdariadb/timeutil.h>
 #include <libdariadb/utils/async/locker.h>
 #include <libdariadb/utils/async/thread_manager.h>
@@ -107,12 +106,6 @@ public:
   }
 
   void init_managers() {
-    if (_settings->strategy.value() == STRATEGY::VOLUME) {
-      _volumes = VolumeManager::create(_engine_env);
-      _top_level_storage = _volumes;
-      return;
-    }
-
     if (_settings->is_memory_only_mode) {
       _memstorage = MemStorage::create(_engine_env, _min_max_map->size());
       _top_level_storage = _memstorage;
@@ -218,9 +211,6 @@ public:
   }
 
   bool try_lock_storage() {
-    if (_strategy == STRATEGY::VOLUME) {
-      return true;
-    }
     std::lock_guard<std::mutex> lock(_lock_locker);
 
     if (_dropper != nullptr && _memstorage != nullptr) {
@@ -242,10 +232,6 @@ public:
   }
 
   void lock_storage() {
-    if (_strategy == STRATEGY::VOLUME) {
-      return;
-    }
-
     std::lock_guard<std::mutex> lock(_lock_locker);
     if (_dropper != nullptr && _memstorage != nullptr) {
       auto dl = _dropper->getLocker();
@@ -268,9 +254,6 @@ public:
   }
 
   void unlock_storage() {
-    if (_strategy == STRATEGY::VOLUME) {
-      return;
-    }
     if (_dropper != nullptr && _memstorage != nullptr) {
       auto dl = _dropper->getLocker();
       auto lp = _memstorage->getLockers();
@@ -474,9 +457,6 @@ public:
       _page_manager->flush();
     }
 
-    if (_volumes != nullptr) {
-      _volumes->flush();
-    }
     this->wait_all_asyncs();
   }
 
@@ -494,10 +474,6 @@ public:
     }
     if (_memstorage != nullptr) {
       result.memstorage = _memstorage->description();
-    }
-    if (_volumes != nullptr) {
-      auto vd = _volumes->description();
-      result.volumes_count = vd.files;
     }
     return result;
   }
@@ -629,14 +605,10 @@ public:
       }
 
       Id2Cursor r;
-      if (this->strategy() == STRATEGY::VOLUME) {
-        r = this->_top_level_storage->intervalReader(q);
+      if (this->strategy() == STRATEGY::CACHE) {
+        r = interval_readers_when_cache(q);
       } else {
-        if (this->strategy() == STRATEGY::CACHE) {
-          r = interval_readers_when_cache(q);
-        } else {
-          r = internal_readers_two_level(q);
-        }
+        r = internal_readers_two_level(q);
       }
       this->unlock_storage();
 
@@ -693,9 +665,7 @@ public:
       if (!try_lock_storage()) {
         return true;
       }
-      if (strategy() == STRATEGY::VOLUME) {
-        result.update(_top_level_storage->stat(id, from, to));
-      } else {
+
         if (strategy() != STRATEGY::CACHE) {
           result.update(stat_from_disk(id, from, to));
 
@@ -705,7 +675,6 @@ public:
         } else {
           result.update(stat_from_cache(id, from, to));
         }
-      }
       this->unlock_storage();
 
       return false;
@@ -747,9 +716,6 @@ public:
     auto am = _wal_manager.get();
     AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
-      if (!try_lock_storage()) {
-        return true;
-      }
       for (auto id : q.ids) {
 
         QueryTimePoint local_q = q;
@@ -856,7 +822,6 @@ protected:
   PageManager_ptr _page_manager;
   WALManager_ptr _wal_manager;
   MemStorage_ptr _memstorage;
-  VolumeManager_Ptr _volumes;
 
   EngineEnvironment_ptr _engine_env;
   Settings_ptr _settings;
