@@ -38,7 +38,6 @@ bool dont_repack = false;
 bool memory_only = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
-FlushModel flush_model = FlushModel::NOT_SAFETY;
 size_t memory_limit = 0;
 std::unique_ptr<dariadb_bench::BenchmarkSummaryInfo> summary_info;
 
@@ -91,8 +90,6 @@ void parse_cmdline(int argc, char *argv[]) {
 
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
       "Write strategy");
-  aos("flush-model", po::value<FlushModel>(&flush_model)->default_value(flush_model),
-      "flushing model.");
   aos("memory-limit", po::value<size_t>(&memory_limit)->default_value(memory_limit),
       "allocation area limit  in megabytes when strategy=MEMORY");
   aos("use-shard", "shard some id per shards");
@@ -469,6 +466,7 @@ int main(int argc, char *argv[]) {
     if (!memory_only) {
       settings = dariadb::storage::Settings::create(storage_path);
       settings->strategy.setValue(strategy);
+	  //settings->threads_in_diskio.setValue(3);
       /* settings->chunk_size.setValue(3072);
        settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
        settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
@@ -478,11 +476,6 @@ int main(int argc, char *argv[]) {
     } else {
       settings = dariadb::storage::Settings::create();
     }
-
-    settings->volume_B.setValue(3);
-    settings->volume_levels_count.setValue(5);
-    settings->volume_size.setValue(1024 * 1024 * 15);
-    settings->volume_flush.setValue(flush_model);
 
     if ((strategy == STRATEGY::MEMORY || strategy == STRATEGY::CACHE) &&
         memory_limit != 0) {

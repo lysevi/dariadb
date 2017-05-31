@@ -3,7 +3,6 @@
 #include <libdariadb/engines/strategy.h>
 #include <libdariadb/meas.h>
 #include <libdariadb/st_exports.h>
-#include <libdariadb/storage/flush_model.h>
 #include <libdariadb/utils/async/thread_pool.h>
 #include <libdariadb/utils/logger.h>
 #include <string>
@@ -133,10 +132,6 @@ public:
   Option<STRATEGY> strategy_week;     // strategy for 'week' values.
   Option<STRATEGY> strategy_month;    // strategy for 'month' values.
 
-  Option<FlushModel> volume_flush;
-  Option<uint32_t> volume_size;        // size of volume file.
-  Option<uint8_t> volume_levels_count; // levels in vulume index
-  Option<uint8_t> volume_B;            // B in index
   EXPORT Time lifetime_for_interval(const std::string &interval) const;
   EXPORT STRATEGY strategy_for_interval(const std::string &interval) const;
 
@@ -147,6 +142,5 @@ public:
 
 template <> EXPORT std::string Settings::ReadOnlyOption<STRATEGY>::value_str() const;
 template <> EXPORT std::string Settings::ReadOnlyOption<std::string>::value_str() const;
-template <> EXPORT std::string Settings::ReadOnlyOption<FlushModel>::value_str() const;
 } // namespace storage
 } // namespace dariadb

@@ -89,19 +89,23 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter
   std::vector<IndexReccord> ireccords;
   ireccords.resize(compressed_results.size());
   size_t pos = 0;
-  for (auto hb : compressed_results) {
-    ChunkHeader chunk_header = hb.hdr;
+  
+  size_t output_size = 0;
+  std::vector < std::pair<HdrAndBuffer, size_t>> result_and_skiped;
+  result_and_skiped.reserve(compressed_results.size());
+  for (auto &hb : compressed_results) {
+    ChunkHeader *chunk_header = &hb.hdr;
     auto chunk_buffer_ptr = hb.buffer;
 
     phdr.addeded_chunks++;
-    phdr.stat.update(chunk_header.stat);
-    auto skip_count = Chunk::compact(&chunk_header);
-    chunk_header.offset_in_page = offset;
+    phdr.stat.update(chunk_header->stat);
+    auto skip_count = Chunk::compact(chunk_header);
+    chunk_header->offset_in_page = offset;
     // update checksum;
-    Chunk::updateChecksum(chunk_header, chunk_buffer_ptr.get() + skip_count);
+    Chunk::updateChecksum(*chunk_header, chunk_buffer_ptr.get() + skip_count);
 #ifdef DOUBLE_CHECKS
     {
-      auto ch = Chunk::open(&chunk_header, chunk_buffer_ptr.get() + skip_count);
+      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr.get() + skip_count);
       ENSURE(ch->checkChecksum());
       auto rdr = ch->getReader();
       while (!rdr->is_end()) {
@@ -110,16 +114,35 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter
       ch->close();
     }
 #endif
-    std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
+    /*std::fwrite(&(chunk_header), sizeof(ChunkHeader), 1, file);
     std::fwrite(chunk_buffer_ptr.get() + skip_count, sizeof(uint8_t), chunk_header.size,
-                file);
+                file);*/
 
-    offset += sizeof(ChunkHeader) + chunk_header.size;
+    offset += sizeof(ChunkHeader) + chunk_header->size;
+	output_size += sizeof(ChunkHeader) + chunk_header->size;
+	result_and_skiped.push_back(std::make_pair(hb, skip_count));
 
-    auto index_reccord = init_chunk_index_rec(chunk_header, &ihdr);
+    auto index_reccord = init_chunk_index_rec(*chunk_header, &ihdr);
     ireccords[pos] = index_reccord;
     pos++;
   }
+  ENSURE(compressed_results.size() == result_and_skiped.size());
+
+  char *output_buffer = new char[output_size];
+  std::fill_n(output_buffer, output_size, char());
+  size_t output_buyf_offset = 0;
+  for (auto&&prs : result_and_skiped) {
+	  auto hb = prs.first;
+	  auto skip_count = prs.second;
+	  memcpy(&output_buffer[output_buyf_offset], &hb.hdr, sizeof(ChunkHeader));
+	  output_buyf_offset += sizeof(ChunkHeader);
+	  memcpy(&output_buffer[output_buyf_offset], hb.buffer.get() + skip_count, hb.hdr.size);
+	  output_buyf_offset += hb.hdr.size;
+	  ENSURE(output_buyf_offset <= output_size);
+  }
+  ENSURE(output_buyf_offset == output_size);
+  std::fwrite(output_buffer, 1, output_size, file);
+  delete[] output_buffer;
   std::fwrite(ireccords.data(), sizeof(IndexReccord), ireccords.size(), index_file);
   page_size = offset;
   ihdr.stat = phdr.stat;
