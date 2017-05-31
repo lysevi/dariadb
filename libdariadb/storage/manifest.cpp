@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <sstream>
+#include <shared_mutex>
 
 using namespace dariadb;
 using namespace dariadb::storage;
@@ -92,7 +93,7 @@ public:
   }
 
   std::list<std::string> page_list() {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::shared_lock<std::shared_mutex> lg(_locker);
     std::string sql = "SELECT file from pages;";
     std::list<std::string> result{};
     sqlite3_stmt *pStmt;
@@ -121,7 +122,7 @@ public:
   }
 
   void page_append(const std::string &rec) {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::lock_guard<std::shared_mutex> lg(_locker);
     const std::string sql_query = "insert into pages (file) values (?);";
     sqlite3_stmt *pStmt;
     int rc;
@@ -140,7 +141,7 @@ public:
   }
 
   void page_rm(const std::string &rec) {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::lock_guard<std::shared_mutex> lg(_locker);
     const std::string sql_query = "delete from pages where file = ?;";
     sqlite3_stmt *pStmt;
     int rc;
@@ -159,7 +160,7 @@ public:
   }
 
   std::list<WalFileDescription> wal_list() {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+	  std::shared_lock<std::shared_mutex> lg(_locker);
     std::string sql = "SELECT measId, file from wal ORDER BY id;";
     std::list<WalFileDescription> result{};
     sqlite3_stmt *pStmt;
@@ -192,7 +193,7 @@ public:
   }
 
   std::list<WalFileDescription> wal_list(dariadb::Id id) {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+	  std::shared_lock<std::shared_mutex> lg(_locker);
     std::string sql = "SELECT measId, file from wal WHERE measId = ?;";
     std::list<WalFileDescription> result{};
     sqlite3_stmt *pStmt;
@@ -239,7 +240,7 @@ public:
   }
 
   void wal_append(const std::string &rec, dariadb::Id id) {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::lock_guard<std::shared_mutex> lg(_locker);
     const std::string sql_query = "insert into wal (measId, file) values (?,?);";
     sqlite3_stmt *pStmt;
     int rc;
@@ -259,7 +260,7 @@ public:
   }
 
   void wal_rm(const std::string &rec) {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+    std::lock_guard<std::shared_mutex> lg(_locker);
     const std::string sql_query = "delete from wal where file = ?;";
     sqlite3_stmt *pStmt;
     int rc;
@@ -278,7 +279,7 @@ public:
   }
 
   void set_format(const std::string &version) {
-    std::lock_guard<utils::async::Locker> lg(_locker);
+	  std::shared_lock<std::shared_mutex> lg(_locker);
 
     std::stringstream ss;
     ss << "insert or replace into params(id, name, value) values ((select id from params "
@@ -324,7 +325,7 @@ public:
 
 protected:
   std::string _filename;
-  utils::async::Locker _locker;
+  std::shared_mutex _locker;
   sqlite3 *db;
   Settings_ptr _settings;
 };
