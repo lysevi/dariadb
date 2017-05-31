@@ -1,3 +1,7 @@
+v0.5.1
+=====
+- Speed up pages creation.
+
 v0.5.0
 =====
 - True columnar database - each time-series stored in dedicated file.
