@@ -613,20 +613,20 @@ void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
   return;
 }
 
-void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
+void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool /*sync*/) {
   /*if (_buffer_pos == size_t(0)) {
     return;
   }*/
-  AsyncTask at = [this, bd](const ThreadInfo &ti) {
-    TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+  //AsyncTask at = [this, bd](const ThreadInfo &ti) {
+  //  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
     flush_buffer_logic(bd);
-    return false;
-  };
-  auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-  if (sync) {
-    handle->wait();
-  }
+   // return false;
+  //};
+  //auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+  //if (sync) {
+  //  handle->wait();
+  //}
 }
 
 void WALManager::flush() {
