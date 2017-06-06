@@ -466,7 +466,8 @@ int main(int argc, char *argv[]) {
     if (!memory_only) {
       settings = dariadb::storage::Settings::create(storage_path);
       settings->strategy.setValue(strategy);
-	  //settings->threads_in_diskio.setValue(3);
+	  settings->threads_in_diskio.setValue(3);
+	  settings->threads_in_common.setValue(7);
       /* settings->chunk_size.setValue(3072);
        settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
        settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
