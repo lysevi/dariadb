@@ -95,24 +95,12 @@ bool create_write_logic(
     std::shared_ptr<std::list<PageInner::HdrAndBuffer>> compressed_results, FILE *file,
     FILE *index_file, std::shared_ptr<page_create_write_description> d,
     const std::string &file_name, on_create_complete_callback on_complete) {
-  if (!compressed_results->empty()) {
-    std::list<PageInner::HdrAndBuffer> subresult;
-    for (size_t i = 0; i < 10; ++i) {
-      if (compressed_results->empty()) {
-        break;
-      }
-      subresult.push_back(compressed_results->front());
-      compressed_results->pop_front();
-    }
-    if (!subresult.empty()) {
-      auto page_size = PageInner::writeToFile(file, index_file, d->phdr, d->ihdr,
-                                              subresult, d->phdr.filesize);
-      d->phdr.filesize = page_size;
-    }
-    if (!compressed_results->empty()) {
-      return true;
-    }
-  }
+
+  auto page_size = PageInner::writeToFile(file, index_file, d->phdr, d->ihdr,
+                                          *compressed_results, d->phdr.filesize);
+  d->phdr.filesize = page_size;
+  compressed_results->clear();
+
   d->ihdr.level = d->phdr.level;
   ENSURE(memcmp(&d->phdr.stat, &d->ihdr.stat, sizeof(Statistic)) == 0);
   std::fwrite((char *)&d->phdr, sizeof(PageFooter), 1, file);
@@ -145,8 +133,9 @@ void Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
 
   IndexFooter ihdr;
 
-  auto index_file =
-      std::fopen(PageIndex::index_name_from_page_name(file_name).c_str(), "ab");
+  auto index_fil_name = PageIndex::index_name_from_page_name(file_name);
+  auto index_file = std::fopen(index_fil_name.c_str(), "ab");
+
   if (index_file == nullptr) {
     THROW_EXCEPTION("can`t open file ", file_name);
   }
@@ -208,10 +197,10 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
   for (auto &kv : links) {
     auto lst = kv.second;
     std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
-	auto begin = link_vec.begin();
-	auto end = link_vec.end();
-    std::sort(begin,end,
-        [](const auto &left, const auto &right) { return left.id < right.id; });
+    auto begin = link_vec.begin();
+    auto end = link_vec.end();
+    std::sort(begin, end,
+              [](const auto &left, const auto &right) { return left.id < right.id; });
     if (logic == nullptr && !PageInner::have_overlap(link_vec)) {
       // don't unpack chunks without overlap. write as is.
       std::unordered_map<std::string, ChunkLinkList> fname2links;
