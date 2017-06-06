@@ -208,9 +208,10 @@ Page_Ptr Page::repackTo(const std::string &file_name, uint16_t lvl, uint64_t chu
   for (auto &kv : links) {
     auto lst = kv.second;
     std::vector<ChunkLink> link_vec(lst.begin(), lst.end());
-    std::sort(
-        link_vec.begin(), link_vec.end(),
-        [](const ChunkLink &left, const ChunkLink &right) { return left.id < right.id; });
+	auto begin = link_vec.begin();
+	auto end = link_vec.end();
+    std::sort(begin,end,
+        [](const auto &left, const auto &right) { return left.id < right.id; });
     if (logic == nullptr && !PageInner::have_overlap(link_vec)) {
       // don't unpack chunks without overlap. write as is.
       std::unordered_map<std::string, ChunkLinkList> fname2links;

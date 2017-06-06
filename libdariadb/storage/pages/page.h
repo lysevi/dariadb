@@ -62,6 +62,10 @@ public:
   EXPORT static void create(const std::string &file_name, uint16_t lvl, uint64_t chunk_id,
                             uint32_t max_chunk_size, const MeasArray &ma,
                             on_create_complete_callback on_complete);
+  /// called by dropper from MemoryStorage.
+  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
+	  uint64_t chunk_id, const std::vector<Chunk *> &a,
+	  size_t count);
   EXPORT Page(const PageFooter &footer, std::string fname);
   /**
   used for repack many pages to one
@@ -76,12 +80,8 @@ public:
                                   uint64_t chunk_id, uint32_t max_chunk_size,
                                   const std::list<std::string> &pages_full_paths,
                                   ICompactionController *logic);
-  /// called by dropper from MemoryStorage.
-  EXPORT static Page_Ptr create(const std::string &file_name, uint16_t lvl,
-                                uint64_t chunk_id, const std::vector<Chunk *> &a,
-                                size_t count);
+  
   EXPORT static Page_Ptr open(const std::string &file_name);
-
   EXPORT static PageFooter readFooter(std::string file_name);
   EXPORT static IndexFooter readIndexFooter(std::string page_file_name);
 
