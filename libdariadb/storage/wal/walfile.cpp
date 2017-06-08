@@ -34,7 +34,7 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->wal_append(rnd_fname, id);
     _file = nullptr;
-    _idBloom = bloom_empty<Id>();
+    _target_id = id;
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
@@ -99,8 +99,8 @@ public:
     _minTime = std::min(_minTime, value.time);
     _maxTime = std::max(_maxTime, value.time);
     _writed++;
-    _idBloom = bloom_add<Id>(_idBloom, value.id);
-    close();
+    _target_id = value.id;
+    close(); // TODO lru cache for openned wal files (needed?)
     return Status(1);
   }
 
@@ -124,10 +124,10 @@ public:
       auto value = *it;
       _minTime = std::min(_minTime, value.time);
       _maxTime = std::max(_maxTime, value.time);
-      _idBloom = bloom_add<Id>(_idBloom, value.id);
+      _target_id = value.id;
     }
     _writed += write_size;
-    close();
+    close(); // TODO lru cache for openned wal files (needed?)
     return Status(write_size);
   }
 
@@ -245,20 +245,26 @@ public:
     return sub_res;
   }
 
-  void updateBloom() {
-    _idBloom = bloom_empty<Id>();
-    auto all = this->readAll();
-    for (auto v : *all) {
-      _idBloom = bloom_add<Id>(_idBloom, v.id);
+  void readIdOfFirst() {
+    open_to_read();
+
+    Meas m;
+    auto result = fread(&m, sizeof(Meas), 1, _file);
+    if (result < 1) {
+      THROW_EXCEPTION("result < _writed");
     }
+    close();
+    _file = nullptr;
+
+    _target_id = m.id;
   }
 
-  dariadb::Id _idBloom = MIN_ID;
-  Id id_bloom() {
-    if (_idBloom == MIN_ID) {
-      updateBloom();
+  dariadb::Id _target_id = MIN_ID;
+  Id id_of_first() {
+    if (_target_id == MIN_ID) {
+      readIdOfFirst();
     }
-    return _idBloom;
+    return _target_id;
   }
 
   dariadb::Time _minTime = MAX_TIME;
@@ -388,8 +394,8 @@ WALFile::WALFile(const EngineEnvironment_ptr env, dariadb::Id id)
 WALFile::WALFile(const EngineEnvironment_ptr env, const std::string &fname, bool readonly)
     : _Impl(std::make_unique<WALFile::Private>(env, fname, readonly)) {}
 
-dariadb::Id WALFile::id_bloom() {
-  return _Impl->id_bloom();
+dariadb::Id WALFile::id_of_first() {
+  return _Impl->id_of_first();
 }
 
 dariadb::Time WALFile::minTime() {

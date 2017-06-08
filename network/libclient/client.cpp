@@ -133,9 +133,7 @@ public:
   }
 
   void onNetworkError(const boost::system::error_code &err) {
-    if (this->_state != CLIENT_STATE::DISCONNECTED) {
-      THROW_EXCEPTION("client: #", _async_connection->id(), " ", err.message());
-    }
+    logger_info("client: #", _async_connection->id(), " ", err.message());
   }
 
   void onDataRecv(const NetData_ptr &d, bool &cancel) {

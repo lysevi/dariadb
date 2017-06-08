@@ -44,7 +44,7 @@ public:
   EXPORT static size_t writed(std::string fname);
   EXPORT Id2MinMax_Ptr loadMinMax() override;
 
-  EXPORT Id id_bloom();
+  EXPORT Id id_of_first();
   EXPORT Id id_from_first();
 
   EXPORT size_t writed() const;

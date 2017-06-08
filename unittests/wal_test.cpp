@@ -106,7 +106,7 @@ TEST_CASE("Wal.FileInitTest") {
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
     EXPECT_EQ(wal_files.size(), size_t(1));
-    EXPECT_TRUE(wal->id_bloom() != dariadb::Id(0));
+    EXPECT_TRUE(wal->id_of_first() != dariadb::Id(0));
 
     dariadb::MeasArray out;
 

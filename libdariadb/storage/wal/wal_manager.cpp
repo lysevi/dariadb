@@ -46,7 +46,7 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
       }
       _file2minmax[full_filename].minTime = p->minTime();
       _file2minmax[full_filename].maxTime = p->maxTime();
-      _file2minmax[full_filename].bloom_id = p->id_bloom();
+      _file2minmax[full_filename].target_id = p->id_of_first();
 
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
         logger_info("engine", _settings->alias, ": WalManager open exist file ", f.fname);
@@ -66,9 +66,13 @@ WALFile_Ptr WALManager::create_new(BufferDescription_Ptr bd, dariadb::Id id) {
     std::lock_guard<std::mutex> lg(_file2mm_locker);
     auto walfile_ptr = bd->walfile;
     auto f = walfile_ptr->filename();
-    _file2minmax[f].minTime = walfile_ptr->minTime();
-    _file2minmax[f].maxTime = walfile_ptr->maxTime();
-    _file2minmax[f].bloom_id = walfile_ptr->id_bloom();
+	Time minTime, maxTime;
+	if (!walfile_ptr->minMaxTime(id, &minTime, &maxTime)) {
+		THROW_EXCEPTION("logic error.")
+	}
+    _file2minmax[f].minTime = minTime;
+    _file2minmax[f].maxTime = maxTime;
+    _file2minmax[f].target_id = id;
     if (_settings->strategy.value() != STRATEGY::WAL) {
       dropFile(f);
     }
@@ -700,7 +704,7 @@ bool WALManager::file_in_query(const std::string &filename, const QueryInterval 
     return false;
   }
   for (auto id : q.ids) {
-    bool bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
+    bool bloom_result = min_max_iter->second.target_id==id;
     if (bloom_result) {
       return true;
     }
@@ -721,7 +725,7 @@ bool WALManager::file_in_query(const std::string &filename, const QueryTimePoint
   if (min_max_iter != this->_file2minmax.end()) {
     bool bloom_result = false;
     for (auto id : q.ids) {
-      bloom_result = bloom_check<Id>(min_max_iter->second.bloom_id, id);
+      bloom_result = min_max_iter->second.target_id==id;
       if (bloom_result) {
         return true;
       }
