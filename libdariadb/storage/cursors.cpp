@@ -47,7 +47,6 @@ CursorsList unpack_merge_readers(CursorsList &&readers) {
   CursorsList tmp_readers_list;
 
   for (auto &&r : readers) {
-    // TODO use type enum.
     auto msr = dynamic_cast<MergeSortCursor *>(r.get());
     if (msr == nullptr) {
       ENSURE(!r->is_end());
