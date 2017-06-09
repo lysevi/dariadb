@@ -666,15 +666,15 @@ public:
         return true;
       }
 
-        if (strategy() != STRATEGY::CACHE) {
-          result.update(stat_from_disk(id, from, to));
+      if (strategy() != STRATEGY::CACHE) {
+        result.update(stat_from_disk(id, from, to));
 
-          if (_memstorage != nullptr) {
-            result.update(_memstorage->stat(id, from, to));
-          }
-        } else {
-          result.update(stat_from_cache(id, from, to));
+        if (_memstorage != nullptr) {
+          result.update(_memstorage->stat(id, from, to));
         }
+      } else {
+        result.update(stat_from_cache(id, from, to));
+      }
       this->unlock_storage();
 
       return false;
@@ -716,7 +716,7 @@ public:
     auto am = _wal_manager.get();
     AsyncTask pm_at = [&result, &q, this, pm, mm, am](const ThreadInfo &ti) {
       TKIND_CHECK(THREAD_KINDS::COMMON, ti.kind);
-	  this->lock_storage();
+      this->lock_storage();
       for (auto id : q.ids) {
 
         QueryTimePoint local_q = q;

@@ -66,10 +66,10 @@ WALFile_Ptr WALManager::create_new(BufferDescription_Ptr bd, dariadb::Id id) {
     std::lock_guard<std::mutex> lg(_file2mm_locker);
     auto walfile_ptr = bd->walfile;
     auto f = walfile_ptr->filename();
-	Time minTime, maxTime;
-	if (!walfile_ptr->minMaxTime(id, &minTime, &maxTime)) {
-		THROW_EXCEPTION("logic error.")
-	}
+    Time minTime, maxTime;
+    if (!walfile_ptr->minMaxTime(id, &minTime, &maxTime)) {
+      THROW_EXCEPTION("logic error.")
+    }
     _file2minmax[f].minTime = minTime;
     _file2minmax[f].maxTime = maxTime;
     _file2minmax[f].target_id = id;
@@ -621,14 +621,14 @@ void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool /*sync*/) {
   /*if (_buffer_pos == size_t(0)) {
     return;
   }*/
-  //AsyncTask at = [this, bd](const ThreadInfo &ti) {
+  // AsyncTask at = [this, bd](const ThreadInfo &ti) {
   //  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
-    flush_buffer_logic(bd);
-   // return false;
+  flush_buffer_logic(bd);
+  // return false;
   //};
-  //auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-  //if (sync) {
+  // auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+  // if (sync) {
   //  handle->wait();
   //}
 }
@@ -704,7 +704,7 @@ bool WALManager::file_in_query(const std::string &filename, const QueryInterval 
     return false;
   }
   for (auto id : q.ids) {
-    bool bloom_result = min_max_iter->second.target_id==id;
+    bool bloom_result = min_max_iter->second.target_id == id;
     if (bloom_result) {
       return true;
     }
@@ -725,7 +725,7 @@ bool WALManager::file_in_query(const std::string &filename, const QueryTimePoint
   if (min_max_iter != this->_file2minmax.end()) {
     bool bloom_result = false;
     for (auto id : q.ids) {
-      bloom_result = min_max_iter->second.target_id==id;
+      bloom_result = min_max_iter->second.target_id == id;
       if (bloom_result) {
         return true;
       }
