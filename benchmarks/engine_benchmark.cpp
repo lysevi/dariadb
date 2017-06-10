@@ -36,6 +36,7 @@ bool dont_clean = false;
 bool use_shard = false;
 bool dont_repack = false;
 bool memory_only = false;
+bool show_description = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 size_t memory_limit = 0;
@@ -87,6 +88,8 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("enable-readers", "enable readers threads");
   aos("read-benchmark-runs",
       po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
+  aos("show-description",
+      po::value<bool>(&show_description)->default_value(show_description));
 
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
       "Write strategy");
@@ -177,7 +180,7 @@ void show_info(IEngine *storage) {
   long long w0 = append_count.load();
   long long r0 = reads_count.load();
   while (true) {
-    dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(500);
 
     long long w1 = append_count.load();
     long long r1 = reads_count.load();
@@ -188,27 +191,33 @@ void show_info(IEngine *storage) {
     auto writes_per_sec = (w1 - w0) / step_time;
     summary_info->write_speed_metrics.push_back(writes_per_sec);
     auto reads_per_sec = (r1 - r0) / step_time;
-    auto queue_sizes = storage->description();
 
     std::stringstream time_ss;
     time_ss << timeutil::to_string(write_time);
-
     std::stringstream stor_ss;
-    stor_ss << "(";
 
+    std::stringstream drop_ss;
+    if (show_description) {
+      auto queue_sizes = storage->description();
+
+      stor_ss << "(";
       if (!memory_only) {
         stor_ss << "p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count
                 << " ";
       }
 
-    stor_ss << "T:" << queue_sizes.active_works;
+      stor_ss << "T:" << queue_sizes.active_works;
 
-    if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE)) {
-      stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
-              << " a:" << queue_sizes.memstorage.allocated;
+      if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE)) {
+        stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
+                << " a:" << queue_sizes.memstorage.allocated;
+      }
+      stor_ss << ")";
+
+      if (!memory_only) {
+        drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
+      }
     }
-    stor_ss << ")";
-
     std::stringstream read_speed_ss;
     read_speed_ss << reads_per_sec << "/s";
 
@@ -217,11 +226,6 @@ void show_info(IEngine *storage) {
 
     std::stringstream persent_ss;
     persent_ss << (int64_t(100) * append_count) / benchmark_params.all_writes() << '%';
-
-    std::stringstream drop_ss;
-    if (!memory_only) {
-      drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
-    }
 
     std::stringstream ss;
 
@@ -466,8 +470,8 @@ int main(int argc, char *argv[]) {
     if (!memory_only) {
       settings = dariadb::storage::Settings::create(storage_path);
       settings->strategy.setValue(strategy);
-	  settings->threads_in_diskio.setValue(3);
-	  settings->threads_in_common.setValue(7);
+      settings->threads_in_diskio.setValue(3);
+      settings->threads_in_common.setValue(7);
       /* settings->chunk_size.setValue(3072);
        settings->wal_file_size.setValue((1024 * 1024) * 64 / sizeof(dariadb::Meas));
        settings->wal_cache_size.setValue(4096 / sizeof(dariadb::Meas) * 30);
@@ -619,7 +623,7 @@ int main(int argc, char *argv[]) {
 
     read_all_bench(raw_ptr, start_time, max_time, all_id_set);
 
-    if (!dont_repack && !memory_only ) { // compaction
+    if (!dont_repack && !memory_only) { // compaction
       std::cout << "compaction..." << std::endl;
       auto halfTime = (max_time - start_time) / 2;
       std::cout << "compaction period " << dariadb::timeutil::to_string(halfTime)
