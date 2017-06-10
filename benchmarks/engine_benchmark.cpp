@@ -36,6 +36,7 @@ bool dont_clean = false;
 bool use_shard = false;
 bool dont_repack = false;
 bool memory_only = false;
+bool show_description = false;
 size_t read_benchmark_runs = 10;
 STRATEGY strategy = STRATEGY::COMPRESSED;
 FlushModel flush_model = FlushModel::NOT_SAFETY;
@@ -88,6 +89,8 @@ void parse_cmdline(int argc, char *argv[]) {
   aos("enable-readers", "enable readers threads");
   aos("read-benchmark-runs",
       po::value<size_t>(&read_benchmark_runs)->default_value(read_benchmark_runs));
+  aos("show-description",
+      po::value<bool>(&show_description)->default_value(show_description));
 
   aos("strategy", po::value<STRATEGY>(&strategy)->default_value(strategy),
       "Write strategy");
@@ -180,7 +183,7 @@ void show_info(IEngine *storage) {
   long long w0 = append_count.load();
   long long r0 = reads_count.load();
   while (true) {
-    dariadb::utils::sleep_mls(100);
+    dariadb::utils::sleep_mls(500);
 
     long long w1 = append_count.load();
     long long r1 = reads_count.load();
@@ -191,29 +194,35 @@ void show_info(IEngine *storage) {
     auto writes_per_sec = (w1 - w0) / step_time;
     summary_info->write_speed_metrics.push_back(writes_per_sec);
     auto reads_per_sec = (r1 - r0) / step_time;
-    auto queue_sizes = storage->description();
 
     std::stringstream time_ss;
     time_ss << timeutil::to_string(write_time);
-
     std::stringstream stor_ss;
-    stor_ss << "(";
-    if (strategy == dariadb::STRATEGY::VOLUME) {
-      stor_ss << "v:" << queue_sizes.volumes_count << " ";
-    } else {
+    std::stringstream drop_ss;
+    if (show_description) {
+      auto queue_sizes = storage->description();
+
+      stor_ss << "(";
+      if (strategy == dariadb::STRATEGY::VOLUME) {
+        stor_ss << "v:" << queue_sizes.volumes_count << " ";
+      } else {
+        if (!memory_only) {
+          stor_ss << "p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count
+                  << " ";
+        }
+      }
+      stor_ss << "T:" << queue_sizes.active_works;
+
+      if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE)) {
+        stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
+                << " a:" << queue_sizes.memstorage.allocated;
+      }
+      stor_ss << ")";
+
       if (!memory_only) {
-        stor_ss << "p:" << queue_sizes.pages_count << " w:" << queue_sizes.wal_count
-                << " ";
+        drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
       }
     }
-    stor_ss << "T:" << queue_sizes.active_works;
-
-    if ((strategy == STRATEGY::MEMORY) || (strategy == STRATEGY::CACHE)) {
-      stor_ss << " am:" << queue_sizes.memstorage.allocator_capacity
-              << " a:" << queue_sizes.memstorage.allocated;
-    }
-    stor_ss << ")";
-
     std::stringstream read_speed_ss;
     read_speed_ss << reads_per_sec << "/s";
 
@@ -222,11 +231,6 @@ void show_info(IEngine *storage) {
 
     std::stringstream persent_ss;
     persent_ss << (int64_t(100) * append_count) / benchmark_params.all_writes() << '%';
-
-    std::stringstream drop_ss;
-    if (!memory_only) {
-      drop_ss << "[a:" << queue_sizes.dropper.wal << "]";
-    }
 
     std::stringstream ss;
 
