@@ -180,7 +180,7 @@ void show_info(IEngine *storage) {
   long long w0 = append_count.load();
   long long r0 = reads_count.load();
   while (true) {
-    dariadb::utils::sleep_mls(500);
+    dariadb::utils::sleep_mls(300);
 
     long long w1 = append_count.load();
     long long r1 = reads_count.load();
