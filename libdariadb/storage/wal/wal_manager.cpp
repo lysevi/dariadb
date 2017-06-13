@@ -107,11 +107,10 @@ void WALManager::dropAll() {
 
 void WALManager::dropFile(const std::string &f) {
   if (_down != nullptr) {
-	  /*auto without_path = utils::fs::extract_filename(f);
-    if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) 
-	{*/
+    auto without_path = utils::fs::extract_filename(f);
+    if (_files_send_to_drop.find(without_path) == _files_send_to_drop.end()) {
       this->dropWAL(f, _down);
-	  /* }
+    }
     auto manifest =
         _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST);
     auto wals_exists = manifest->wal_list();
@@ -125,7 +124,7 @@ void WALManager::dropFile(const std::string &f) {
         new_sended_files.emplace(v);
       }
     }
-    _files_send_to_drop = new_sended_files;*/
+    _files_send_to_drop = new_sended_files;
   }
 }
 
@@ -199,7 +198,7 @@ std::list<std::string> WALManager::closedWals() {
 void WALManager::dropWAL(const std::string &fname, IWALDropper *storage) {
   WALFile_Ptr ptr = WALFile::open(_env, fname, false);
   auto without_path = utils::fs::extract_filename(fname);
-  //_files_send_to_drop.emplace(without_path);
+  _files_send_to_drop.emplace(without_path);
   storage->dropWAL(without_path);
 }
 

@@ -85,7 +85,7 @@ private:
   using Id2Buffer = utils::stripped_map<dariadb::Id, BufferDescription_Ptr>;
   Id2Buffer _buffers;
 
-  //std::set<std::string> _files_send_to_drop;
+  std::set<std::string> _files_send_to_drop;
   EngineEnvironment_ptr _env;
   Settings *_settings;
 
