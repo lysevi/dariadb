@@ -66,13 +66,11 @@ WALFile_Ptr WALManager::create_new(BufferDescription_Ptr bd, dariadb::Id id) {
     std::lock_guard<std::mutex> lg(_file2mm_locker);
     auto walfile_ptr = bd->walfile;
     auto f = walfile_ptr->filename();
-    Time minTime, maxTime;
+    /*Time minTime, maxTime;
     if (!walfile_ptr->minMaxTime(id, &minTime, &maxTime)) {
       THROW_EXCEPTION("logic error.")
-    }
-    _file2minmax[f].minTime = minTime;
-    _file2minmax[f].maxTime = maxTime;
-    _file2minmax[f].target_id = id;
+    }*/
+
     if (_settings->strategy.value() != STRATEGY::WAL) {
       dropFile(f);
     }
@@ -596,6 +594,22 @@ void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
     Status res;
     res = bd->walfile->append(begin, end);
     total_writed += res.writed;
+
+    {
+      std::lock_guard<std::mutex> lg(_file2mm_locker);
+      auto fit = _file2minmax.find(bd->walfile->filename());
+      if (fit == _file2minmax.end()) {
+        fit = _file2minmax.insert(std::make_pair(bd->walfile->filename(), TimeMinMax()))
+                  .first;
+        fit->second.target_id = id;
+      }
+
+      for (auto it = begin; it != end; ++it) {
+        fit->second.minTime = std::min(fit->second.minTime, it->time);
+        fit->second.maxTime = std::max(fit->second.maxTime, it->time);
+      }
+    }
+
     if (res.error == APPEND_ERROR::wal_file_limit) {
       create_new(bd, id);
     } else {

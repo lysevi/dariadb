@@ -90,9 +90,9 @@ private:
   Settings *_settings;
 
   struct TimeMinMax {
-    Time minTime;
-    Time maxTime;
-    Id target_id;
+    Time minTime=MAX_TIME;
+    Time maxTime=MIN_TIME;
+    Id target_id=MIN_ID;
   };
   std::unordered_map<std::string, TimeMinMax> _file2minmax;
   std::mutex _file2mm_locker;
