@@ -36,6 +36,7 @@ const Flag MAX_FLAG = std::numeric_limits<dariadb::Flag>::max();
 
 EXPORT bool areSame(Value a, Value b, const Value EPSILON = 1E-5);
 #pragma pack(push, 1)
+struct ShortMeas;
 struct Meas {
   Id id;
   Time time;
@@ -45,6 +46,7 @@ struct Meas {
   EXPORT Meas();
   EXPORT Meas(Id i);
   EXPORT Meas(const Meas &other);
+  EXPORT Meas(const ShortMeas&sm, Id id_);
 
   bool inFlag(Flag mask) const { return (mask & flag) == mask; }
 
@@ -61,6 +63,26 @@ struct Meas {
   }
 
   void addFlag(const Flag f) { flag = flag | f; }
+};
+
+struct ShortMeas {
+	Time time;
+	Value value;
+	Flag flag;
+
+	EXPORT ShortMeas();
+	EXPORT ShortMeas(const Meas &other);
+	EXPORT ShortMeas(const ShortMeas &other);
+
+	bool inFlag(Flag mask) const { return (mask & flag) == mask; }
+
+	bool inInterval(Time from, Time to) const { return utils::inInterval(from, to, time); }
+
+	void addFlag(const Flag f) { flag = flag | f; }
+
+	bool inQuery(const Flag f, Time from, Time to) const {
+		return inFlag(f) && inInterval(from, to);
+	}
 };
 #pragma pack(pop)
 
@@ -100,6 +122,7 @@ struct MeasMinMax {
 };
 
 using MeasArray = std::vector<Meas>;
+using ShortMeasArray = std::vector<ShortMeas>;
 /// used in readTimePoint queries.
 using Id2Meas = std::unordered_map<Id, Meas>;
 /// sorted by time.

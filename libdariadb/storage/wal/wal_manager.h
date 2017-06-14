@@ -21,11 +21,13 @@ using WALManager_ptr = std::shared_ptr<WALManager>;
 class WALManager final : public IMeasStorage {
 public:
   struct BufferDescription {
+    Id target_id;
     WALFile_Ptr walfile;
-    MeasArray buffer;
+    ShortMeasArray buffer;
     size_t pos;
     utils::async::Locker locker;
-    BufferDescription(WALFile_Ptr file, size_t buffer_size) {
+    BufferDescription(WALFile_Ptr file, size_t buffer_size, Id target_id_) {
+      target_id = target_id_;
       walfile = file;
       buffer.resize(buffer_size);
       pos = size_t(0);
@@ -90,9 +92,9 @@ private:
   Settings *_settings;
 
   struct TimeMinMax {
-    Time minTime=MAX_TIME;
-    Time maxTime=MIN_TIME;
-    Id target_id=MIN_ID;
+    Time minTime = MAX_TIME;
+    Time maxTime = MIN_TIME;
+    Id target_id = MIN_ID;
   };
   std::unordered_map<std::string, TimeMinMax> _file2minmax;
   std::mutex _file2mm_locker;

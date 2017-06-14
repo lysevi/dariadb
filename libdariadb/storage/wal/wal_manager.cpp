@@ -44,14 +44,15 @@ WALManager::WALManager(const EngineEnvironment_ptr env) {
         p = nullptr;
         this->erase(f.fname);
       }
+      auto cur_id = p->id_of_first();
       _file2minmax[full_filename].minTime = p->minTime();
       _file2minmax[full_filename].maxTime = p->maxTime();
-      _file2minmax[full_filename].target_id = p->id_of_first();
+      _file2minmax[full_filename].target_id = cur_id;
 
       if (WALFile::writed(full_filename) != _settings->wal_file_size.value()) {
         logger_info("engine", _settings->alias, ": WalManager open exist file ", f.fname);
-        auto bd =
-            std::make_shared<BufferDescription>(p, _settings->wal_cache_size.value());
+        auto bd = std::make_shared<BufferDescription>(
+            p, _settings->wal_cache_size.value(), cur_id);
         _buffers.insert(p->id_from_first(), bd);
       }
     }
@@ -299,7 +300,7 @@ bool WALManager::minMaxTime(dariadb::Id id, dariadb::Time *minResult,
   if (_buffers.find(id, &bd)) {
     auto target_buffer = &bd->buffer;
     for (size_t pos = 0; pos < bd->pos; ++pos) {
-      Meas v = target_buffer->at(pos);
+      ShortMeas v = target_buffer->at(pos);
       res = true;
       *minResult = std::min(v.time, *minResult);
       *maxResult = std::max(v.time, *maxResult);
@@ -360,9 +361,10 @@ Id2Cursor WALManager::intervalReader(const QueryInterval &q) {
     if (_buffers.find(id, &bd)) {
       auto target_buffer = &bd->buffer;
       for (size_t pos = 0; pos < bd->pos; ++pos) {
-        Meas v = target_buffer->at(pos);
-        if (v.inQuery(q.ids, q.flag, q.from, q.to)) {
-          i2ms[v.id].insert(v);
+        ShortMeas v = target_buffer->at(pos);
+
+        if (v.inQuery(q.flag, q.from, q.to)) {
+          i2ms[id].insert(Meas(v, id));
         }
       }
     }
@@ -418,9 +420,9 @@ Statistic WALManager::stat(const Id id, Time from, Time to) {
     auto target_buffer = &bd->buffer;
 
     for (size_t pos = 0; pos < bd->pos; ++pos) {
-      Meas v = target_buffer->at(pos);
+      ShortMeas v = target_buffer->at(pos);
       if (v.inInterval(from, to)) {
-        result.update(v);
+        result.update(Meas(v, id));
       }
     }
   }
@@ -484,17 +486,17 @@ Id2Meas WALManager::readTimePoint(const QueryTimePoint &query) {
     if (_buffers.find(id, &bd)) {
       auto target_buffer = &bd->buffer;
       for (size_t pos = 0; pos < bd->pos; ++pos) {
-        Meas v = target_buffer->at(pos);
+        ShortMeas v = target_buffer->at(pos);
 
-        if (v.inQuery(query.ids, query.flag)) {
-          auto it = sub_result.find(v.id);
+        if (v.inFlag(query.flag)) {
+          auto it = sub_result.find(id);
 
           if (it == sub_result.end()) {
-            sub_result.emplace(std::make_pair(v.id, v));
+            sub_result.emplace(std::make_pair(id, Meas(v, id)));
           } else {
             if ((v.flag == FLAGS::_NO_DATA) ||
                 ((v.time > it->second.time) && (v.time <= query.time_point))) {
-              sub_result[v.id] = v;
+              sub_result[id] = Meas(v, id);
             }
           }
         }
@@ -549,16 +551,16 @@ dariadb::Status WALManager::append(const Meas &value) {
   {
     auto iterator = _buffers.find_bucket(value.id);
     if (iterator.v->second == nullptr) {
-      buffer_description =
-          std::make_shared<BufferDescription>(nullptr, _settings->wal_cache_size.value());
+      buffer_description = std::make_shared<BufferDescription>(
+          nullptr, _settings->wal_cache_size.value(), value.id);
       iterator.v->second = buffer_description;
       buffer_description->buffer[0] = value;
       buffer_description->pos = size_t(1);
       return dariadb::Status(1);
     } else {
       buffer_description = iterator.v->second;
-      ENSURE(buffer_description->pos == size_t(0) ||
-             buffer_description->buffer.front().id == value.id);
+      /*ENSURE(buffer_description->pos == size_t(0) ||
+             buffer_description->buffer.front().id == value.id);*/
       buffer_description->locker.lock();
     }
   }
@@ -578,7 +580,7 @@ void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
     bd->locker.unlock();
     return;
   }
-  dariadb::Id id = bd->buffer.front().id;
+  dariadb::Id id = bd->target_id;
   size_t pos = 0;
   size_t total_writed = 0;
   if (bd->walfile == nullptr) {
@@ -586,9 +588,13 @@ void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
     ENSURE(bd->walfile != nullptr);
   }
 
-  auto target_buffer = &bd->buffer;
+  MeasArray mar;
+  mar.reserve((bd->buffer.size()));
+  for (auto sm : bd->buffer) {
+	  mar.push_back(Meas(sm, bd->target_id));
+  }
+  auto it = mar.begin();
   while (1) {
-    auto it = target_buffer->begin();
     auto begin = it + pos;
     auto end = it + bd->pos;
     Status res;
@@ -604,9 +610,9 @@ void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
         fit->second.target_id = id;
       }
 
-      for (auto it = begin; it != end; ++it) {
-        fit->second.minTime = std::min(fit->second.minTime, it->time);
-        fit->second.maxTime = std::max(fit->second.maxTime, it->time);
+      for (auto sub_it = begin; sub_it != end; ++sub_it) {
+        fit->second.minTime = std::min(fit->second.minTime, sub_it->time);
+        fit->second.maxTime = std::max(fit->second.maxTime, sub_it->time);
       }
     }
 
@@ -691,11 +697,11 @@ Id2MinMax_Ptr WALManager::loadMinMax() {
   _buffers.apply([this, &result](const Id2Buffer::value_type &kv) {
     auto target_buffer = &kv.second->buffer;
     for (size_t pos = 0; pos < kv.second->pos; ++pos) {
-      Meas val = target_buffer->at(pos);
-      auto fres = result->find_bucket(val.id);
-
-      fres.v->second.updateMax(val);
-      fres.v->second.updateMin(val);
+      ShortMeas val = target_buffer->at(pos);
+      auto fres = result->find_bucket(kv.first);
+      auto m = Meas(val, kv.first);
+      fres.v->second.updateMax(m);
+      fres.v->second.updateMin(m);
     }
   });
 

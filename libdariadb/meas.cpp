@@ -26,6 +26,31 @@ Meas::Meas(const Meas &other) {
   flag = other.flag;
 }
 
+Meas::Meas(const ShortMeas&sm, Id id_) {
+	id = id_;
+	time = sm.time;
+	value = sm.value;
+	flag = sm.flag;
+}
+
+ShortMeas::ShortMeas() {
+  flag = Flag();
+  value = Value();
+  time = Time();
+}
+
+ShortMeas::ShortMeas(const Meas &other) {
+  time = other.time;
+  value = other.value;
+  flag = other.flag;
+}
+
+ShortMeas::ShortMeas(const ShortMeas &other) {
+	time = other.time;
+	value = other.value;
+	flag = other.flag;
+}
+
 bool dariadb::areSame(Value a, Value b, const Value EPSILON) {
   return std::fabs(a - b) < EPSILON;
 }
