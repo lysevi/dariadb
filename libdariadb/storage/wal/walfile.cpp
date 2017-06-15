@@ -44,19 +44,22 @@ public:
     open_to_append();
     fwrite(&_hdr, sizeof(header), 1, _file);
     close();
+	ENSURE(utils::fs::file_exists(_filename));
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
+	ENSURE(utils::fs::file_exists(fname));
+
     _env = env;
     _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
     _writed = WALFile::writed(fname);
     _is_readonly = readonly;
     _filename = fname;
     _file = nullptr;
-    if (utils::fs::file_exists(fname)) {
+    if (utils::fs::file_exists(_filename)) {
       readHeader();
     } else {
-      THROW_EXCEPTION("file ", fname, " not exists.");
+      THROW_EXCEPTION("file ", fname, " not exists. writed=", _writed);
     }
   }
 
