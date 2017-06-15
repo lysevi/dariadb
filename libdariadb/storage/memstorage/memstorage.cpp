@@ -108,6 +108,10 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
       }
     }
 
+	if (_disk_storage != nullptr) {
+		_disk_storage->append(value);
+	}
+
     while (true) {
       auto st = track->append(value);
       if (st != Status(1) && !_drop_stop) {
@@ -116,14 +120,12 @@ struct MemStorage::Private final : public IMeasStorage, public MemoryChunkContai
         }
         _drop_cond.notify_all();
         continue;
-      }
+	  }
       break;
     }
-
-    if (_disk_storage != nullptr) {
-      _disk_storage->append(value);
-      track->_max_sync_time = value.time;
-    }
+	if (_disk_storage != nullptr) {
+		track->_max_sync_time = value.time;
+	}
     return Status(1);
   }
 
