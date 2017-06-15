@@ -25,9 +25,9 @@ using namespace dariadb::storage;
 class WALFile::Private {
 public:
 #pragma pack(push, 1)
-	struct header {
-		Id target_id;
-	};
+  struct header {
+    Id target_id;
+  };
 
 #pragma pack(pop)
   Private(const EngineEnvironment_ptr env, dariadb::Id id) {
@@ -40,10 +40,10 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->wal_append(rnd_fname, id);
     _file = nullptr;
-	_hdr.target_id = id;
-	open_to_append();
-	fwrite(&_hdr, sizeof(header), 1, _file);
-	close();
+    _hdr.target_id = id;
+    open_to_append();
+    fwrite(&_hdr, sizeof(header), 1, _file);
+    close();
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
@@ -53,7 +53,11 @@ public:
     _is_readonly = readonly;
     _filename = fname;
     _file = nullptr;
-	readHeader();
+    if (utils::fs::file_exists(fname)) {
+      readHeader();
+    } else {
+      THROW_EXCEPTION("file ", fname, " not exists.");
+    }
   }
 
   ~Private() {
@@ -264,9 +268,7 @@ public:
     _file = nullptr;
   }
 
-  Id id_of_first() {
-    return _hdr.target_id;
-  }
+  Id id_of_first() { return _hdr.target_id; }
 
   dariadb::Time _minTime = MAX_TIME;
   dariadb::Time _maxTime = MIN_TIME;
@@ -318,7 +320,7 @@ public:
 
     auto ma = std::make_shared<ShortMeasArray>(_writed);
     auto raw = ma.get();
-	fseek(_file, sizeof(header), SEEK_SET);
+    fseek(_file, sizeof(header), SEEK_SET);
     auto result = fread(raw->data(), sizeof(ShortMeas), _writed, _file);
     if (result < _writed) {
       THROW_EXCEPTION("result < _writed");
@@ -326,11 +328,11 @@ public:
     close();
     _file = nullptr;
 
-	//TODO rm this. readAll must return shortmeasarray;
-	auto result_array = std::make_shared<MeasArray>(result);
-	for (size_t i = 0; i < result; ++i) {
-		(*result_array)[i] = Meas(ma->at(i), _hdr.target_id);
-	}
+    // TODO rm this. readAll must return shortmeasarray;
+    auto result_array = std::make_shared<MeasArray>(result);
+    for (size_t i = 0; i < result; ++i) {
+      (*result_array)[i] = Meas(ma->at(i), _hdr.target_id);
+    }
     return result_array;
   }
 
@@ -461,7 +463,7 @@ std::shared_ptr<MeasArray> WALFile::readAll() {
 
 size_t WALFile::writed(std::string fname) {
   std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
-  return (size_t(in.tellg()) - sizeof(WALFile::Private::header))/ sizeof(ShortMeas);
+  return (size_t(in.tellg()) - sizeof(WALFile::Private::header)) / sizeof(ShortMeas);
 }
 
 Id2MinMax_Ptr WALFile::loadMinMax() {
