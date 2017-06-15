@@ -24,6 +24,12 @@ using namespace dariadb::storage;
 
 class WALFile::Private {
 public:
+#pragma pack(push, 1)
+	struct header {
+		Id target_id;
+	};
+
+#pragma pack(pop)
   Private(const EngineEnvironment_ptr env, dariadb::Id id) {
     _env = env;
     _settings = _env->getResourceObject<Settings>(EngineEnvironment::Resource::SETTINGS);
@@ -34,7 +40,10 @@ public:
     _env->getResourceObject<Manifest>(EngineEnvironment::Resource::MANIFEST)
         ->wal_append(rnd_fname, id);
     _file = nullptr;
-    _target_id = id;
+	_hdr.target_id = id;
+	open_to_append();
+	fwrite(&_hdr, sizeof(header), 1, _file);
+	close();
   }
 
   Private(const EngineEnvironment_ptr env, const std::string &fname, bool readonly) {
@@ -44,6 +53,7 @@ public:
     _is_readonly = readonly;
     _filename = fname;
     _file = nullptr;
+	readHeader();
   }
 
   ~Private() {
@@ -87,25 +97,24 @@ public:
     }
   }
 
-  Status append(const Meas &value) {
+  Status append(const ShortMeas &value) {
     ENSURE(!_is_readonly);
 
     if (_writed > _settings->wal_file_size.value()) {
       return Status(1, APPEND_ERROR::wal_file_limit);
     }
     open_to_append();
-    std::fwrite(&value, sizeof(Meas), size_t(1), _file);
+    std::fwrite(&value, sizeof(ShortMeas), size_t(1), _file);
     std::fflush(_file);
     _minTime = std::min(_minTime, value.time);
     _maxTime = std::max(_maxTime, value.time);
     _writed++;
-    _target_id = value.id;
     close(); // TODO lru cache for openned wal files (needed?)
     return Status(1);
   }
 
-  Status append(const MeasArray::const_iterator &begin,
-                const MeasArray::const_iterator &end) {
+  Status append(const ShortMeasArray::const_iterator &begin,
+                const ShortMeasArray::const_iterator &end) {
     ENSURE(!_is_readonly);
 
     auto sz = std::distance(begin, end);
@@ -118,13 +127,12 @@ public:
       result.error = APPEND_ERROR::wal_file_limit;
       return result;
     }
-    std::fwrite(&(*begin), sizeof(Meas), write_size, _file);
+    std::fwrite(&(*begin), sizeof(ShortMeas), write_size, _file);
     std::fflush(_file);
     for (auto it = begin; it != begin + write_size; ++it) {
       auto value = *it;
       _minTime = std::min(_minTime, value.time);
       _maxTime = std::max(_maxTime, value.time);
-      _target_id = value.id;
     }
     _writed += write_size;
     close(); // TODO lru cache for openned wal files (needed?)
@@ -245,26 +253,19 @@ public:
     return sub_res;
   }
 
-  void readIdOfFirst() {
+  void readHeader() {
     open_to_read();
 
-    Meas m;
-    auto result = fread(&m, sizeof(Meas), 1, _file);
+    auto result = fread(&_hdr, sizeof(header), 1, _file);
     if (result < 1) {
       THROW_EXCEPTION("result < _writed");
     }
     close();
     _file = nullptr;
-
-    _target_id = m.id;
   }
 
-  dariadb::Id _target_id = MIN_ID;
   Id id_of_first() {
-    if (_target_id == MIN_ID) {
-      readIdOfFirst();
-    }
-    return _target_id;
+    return _hdr.target_id;
   }
 
   dariadb::Time _minTime = MAX_TIME;
@@ -315,15 +316,22 @@ public:
   std::shared_ptr<MeasArray> readAll() {
     open_to_read();
 
-    auto ma = std::make_shared<MeasArray>(_writed);
+    auto ma = std::make_shared<ShortMeasArray>(_writed);
     auto raw = ma.get();
-    auto result = fread(raw->data(), sizeof(Meas), _writed, _file);
+	fseek(_file, sizeof(header), SEEK_SET);
+    auto result = fread(raw->data(), sizeof(ShortMeas), _writed, _file);
     if (result < _writed) {
       THROW_EXCEPTION("result < _writed");
     }
     close();
     _file = nullptr;
-    return ma;
+
+	//TODO rm this. readAll must return shortmeasarray;
+	auto result_array = std::make_shared<MeasArray>(result);
+	for (size_t i = 0; i < result; ++i) {
+		(*result_array)[i] = Meas(ma->at(i), _hdr.target_id);
+	}
+    return result_array;
   }
 
   [[noreturn]] void throw_open_error_exception() const {
@@ -375,6 +383,7 @@ protected:
   EngineEnvironment_ptr _env;
   Settings *_settings;
   FILE *_file;
+  header _hdr;
 };
 
 WALFile_Ptr WALFile::create(const EngineEnvironment_ptr env, dariadb::Id id) {
@@ -414,11 +423,11 @@ void WALFile::flush() { // write all to storage;
   _Impl->flush();
 }
 
-Status WALFile::append(const Meas &value) {
+Status WALFile::append(const ShortMeas &value) {
   return _Impl->append(value);
 }
-Status WALFile::append(const MeasArray::const_iterator &begin,
-                       const MeasArray::const_iterator &end) {
+Status WALFile::append(const ShortMeasArray::const_iterator &begin,
+                       const ShortMeasArray::const_iterator &end) {
   return _Impl->append(begin, end);
 }
 
@@ -452,7 +461,7 @@ std::shared_ptr<MeasArray> WALFile::readAll() {
 
 size_t WALFile::writed(std::string fname) {
   std::ifstream in(fname, std::ifstream::ate | std::ifstream::binary);
-  return in.tellg() / sizeof(Meas);
+  return (size_t(in.tellg()) - sizeof(WALFile::Private::header))/ sizeof(ShortMeas);
 }
 
 Id2MinMax_Ptr WALFile::loadMinMax() {

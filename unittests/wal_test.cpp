@@ -63,46 +63,27 @@ TEST_CASE("Wal.FileInitTest") {
                            manifest.get());
   size_t writes_count = block_size;
 
-  dariadb::IdSet id_set;
   {
-    auto wal = dariadb::storage::WALFile::create(_engine_env, 0);
+    auto wal = dariadb::storage::WALFile::create(_engine_env, dariadb::Id(1));
 
     wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
     EXPECT_EQ(wal_files.size(), size_t(0));
 
-    auto e = dariadb::Meas();
-
-    size_t id_count = 10;
+    auto e = dariadb::ShortMeas();
 
     size_t i = 0;
-    e.id = i % id_count;
-    id_set.insert(e.id);
     e.time = dariadb::Time(i);
     e.value = dariadb::Value(i);
     EXPECT_TRUE(wal->append(e).writed == 1);
     i++;
-    dariadb::MeasArray ml;
-    for (; i < writes_count / 2; i++) {
-      e.id = i % id_count;
-      id_set.insert(e.id);
+    dariadb::ShortMeasArray ml;
+    for (; i < writes_count; i++) {
       e.time = dariadb::Time(i);
       e.value = dariadb::Value(i);
       ml.push_back(e);
     }
-    wal->append(ml.begin(), ml.end());
-
-    dariadb::MeasArray ma;
-    ma.resize(writes_count - i);
-    size_t pos = 0;
-    for (; i < writes_count; i++) {
-      e.id = i % id_count;
-      id_set.insert(e.id);
-      e.time = dariadb::Time(i);
-      e.value = dariadb::Value(i);
-      ma[pos] = e;
-      pos++;
-    }
-    wal->append(ma.begin(), ma.end());
+    auto write_status=wal->append(ml.begin(), ml.end());
+	EXPECT_GT(write_status.writed, size_t(0));
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
                                        dariadb::storage::WAL_FILE_EXT);
     EXPECT_EQ(wal_files.size(), size_t(1));
@@ -110,9 +91,8 @@ TEST_CASE("Wal.FileInitTest") {
 
     dariadb::MeasArray out;
 
-    out = wal->readInterval(dariadb::QueryInterval(
-        dariadb::IdArray(id_set.begin(), id_set.end()), 0, 0, writes_count));
-    EXPECT_EQ(out.size(), writes_count);
+    out = wal->readInterval(dariadb::QueryInterval({dariadb::Id(1)}, 0, 0, writes_count));
+    EXPECT_EQ(out.size(), write_status.writed+1);
   }
   {
     wal_files = dariadb::utils::fs::ls(settings->raw_path.value(),
@@ -128,40 +108,40 @@ TEST_CASE("Wal.FileInitTest") {
     dariadb::utils::fs::rm(storage_path);
   }
 }
-
-TEST_CASE("Wal.FileCommonTest") {
-  const size_t block_size = 10000;
-  auto storage_path = "testStorage";
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-  {
-    dariadb::utils::fs::mkdir(storage_path);
-
-    auto settings = dariadb::storage::Settings::create(storage_path);
-    settings->wal_cache_size.setValue(block_size);
-    settings->wal_file_size.setValue(block_size);
-
-    auto manifest = dariadb::storage::Manifest::create(settings);
-
-    auto _engine_env = dariadb::storage::EngineEnvironment::create();
-    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
-                             settings.get());
-    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
-                             manifest.get());
-
-    auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
-    EXPECT_TRUE(wal_files.size() == size_t(0));
-    auto wal = dariadb::storage::WALFile::create(_engine_env, 0);
-
-    dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false, false, false);
-    manifest = nullptr;
-  }
-
-  if (dariadb::utils::fs::path_exists(storage_path)) {
-    dariadb::utils::fs::rm(storage_path);
-  }
-}
+//
+//TEST_CASE("Wal.FileCommonTest") {
+//  const size_t block_size = 10000;
+//  auto storage_path = "testStorage";
+//  if (dariadb::utils::fs::path_exists(storage_path)) {
+//    dariadb::utils::fs::rm(storage_path);
+//  }
+//  {
+//    dariadb::utils::fs::mkdir(storage_path);
+//
+//    auto settings = dariadb::storage::Settings::create(storage_path);
+//    settings->wal_cache_size.setValue(block_size);
+//    settings->wal_file_size.setValue(block_size);
+//
+//    auto manifest = dariadb::storage::Manifest::create(settings);
+//
+//    auto _engine_env = dariadb::storage::EngineEnvironment::create();
+//    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::SETTINGS,
+//                             settings.get());
+//    _engine_env->addResource(dariadb::storage::EngineEnvironment::Resource::MANIFEST,
+//                             manifest.get());
+//
+//    auto wal_files = dariadb::utils::fs::ls(storage_path, dariadb::storage::WAL_FILE_EXT);
+//    EXPECT_TRUE(wal_files.size() == size_t(0));
+//    auto wal = dariadb::storage::WALFile::create(_engine_env, 0);
+//
+//    dariadb_test::storage_test_check(wal.get(), 0, 100, 1, false, false, false);
+//    manifest = nullptr;
+//  }
+//
+//  if (dariadb::utils::fs::path_exists(storage_path)) {
+//    dariadb::utils::fs::rm(storage_path);
+//  }
+//}
 
 TEST_CASE("Wal.Manager_CommonTest") {
   const std::string storagePath = "testStorage";

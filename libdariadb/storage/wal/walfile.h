@@ -24,9 +24,9 @@ public:
   EXPORT static WALFile_Ptr create(const EngineEnvironment_ptr env, dariadb::Id id);
   EXPORT static WALFile_Ptr open(const EngineEnvironment_ptr env,
                                  const std::string &fname, bool readonly = false);
-  EXPORT Status append(const Meas &value) override;
-  EXPORT Status append(const MeasArray::const_iterator &begin,
-                       const MeasArray::const_iterator &end) override;
+  EXPORT Status append(const ShortMeas &value) override;
+  EXPORT Status append(const ShortMeasArray::const_iterator &begin,
+                       const ShortMeasArray::const_iterator &end) override;
   EXPORT Id2Cursor intervalReader(const QueryInterval &q);
   EXPORT Statistic stat(const Id id, Time from, Time to) override;
   EXPORT void foreach (const QueryInterval &q, IReadCallback * clbk) override;

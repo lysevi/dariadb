@@ -587,13 +587,8 @@ void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
     create_new(bd, id);
     ENSURE(bd->walfile != nullptr);
   }
-
-  MeasArray mar;
-  mar.reserve((bd->buffer.size()));
-  for (auto sm : bd->buffer) {
-	  mar.push_back(Meas(sm, bd->target_id));
-  }
-  auto it = mar.begin();
+  auto target_buffer = &bd->buffer;
+  auto it = target_buffer->begin();
   while (1) {
     auto begin = it + pos;
     auto end = it + bd->pos;
