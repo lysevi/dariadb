@@ -195,7 +195,6 @@ std::list<std::string> WALManager::closedWals() {
 }
 
 void WALManager::dropWAL(const std::string &fname, IWALDropper *storage) {
-  WALFile_Ptr ptr = WALFile::open(_env, fname, false);
   auto without_path = utils::fs::extract_filename(fname);
   _files_send_to_drop.emplace(without_path);
   storage->dropWAL(without_path);

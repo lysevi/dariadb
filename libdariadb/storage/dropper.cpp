@@ -152,6 +152,7 @@ void Dropper::drop_stage_read(std::string fname) {
     auto storage_path = _settings->raw_path.value();
     auto full_path = fs::append_path(storage_path, fname);
 
+    ENSURE(utils::fs::file_exists(full_path));
     WALFile_Ptr wal = WALFile::open(_engine_env, full_path, true);
     auto ma = wal->readAll();
 
