@@ -67,7 +67,6 @@ CATCH_REGISTER_LISTENER(LoggerControl);
 int main(int argc, char **argv) {
   int _argc = argc;
   char **_argv = argv;
-  UnitTestLogger::verbose = true;
   for (int i = 0; i < argc; ++i) {
     if (std::strcmp(argv[i], "--verbose") == 0) {
       UnitTestLogger::verbose = true;
@@ -90,8 +89,8 @@ int main(int argc, char **argv) {
   Catch::Session sesssion;
   sesssion.configData().showDurations = Catch::ShowDurations::OrNot::Always;
   int result = sesssion.run(_argc, _argv);
- /* if (UnitTestLogger::verbose) {
+  if (UnitTestLogger::verbose) {
     delete[] _argv;
-  }*/
+  }
   return (result < 0xff ? result : 0xff);
 }
