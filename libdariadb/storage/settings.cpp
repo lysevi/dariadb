@@ -18,7 +18,7 @@ namespace {
 #define DAY_INTERVAL dariadb::Time(1000) * 60 * 60 * 24
 
 const uint64_t WAL_CACHE_SIZE = 4096 / sizeof(dariadb::Meas) * 10;
-const uint64_t WAL_FILE_SIZE = (1024 * 1024) * 4 / sizeof(dariadb::Meas);
+const uint64_t WAL_FILE_SIZE = WAL_CACHE_SIZE * 100;// (1024 * 1024) * 4 / sizeof(dariadb::Meas);
 const uint32_t CHUNK_SIZE = 1024;
 const uint64_t MAX_CHUNKS_PER_PAGE = 10 * 1024;
 const size_t MAXIMUM_MEMORY_LIMIT = 100 * 1024 * 1024; // 100 mb
