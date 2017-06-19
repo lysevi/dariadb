@@ -331,7 +331,6 @@ public:
     close();
     _file = nullptr;
 
-    // TODO rm this. readAll must return shortmeasarray;
     auto result_array = std::make_shared<MeasArray>(result);
     for (size_t i = 0; i < result; ++i) {
       (*result_array)[i] = Meas(ma->at(i), _hdr.target_id);
