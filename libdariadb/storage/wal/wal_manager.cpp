@@ -558,8 +558,6 @@ dariadb::Status WALManager::append(const Meas &value) {
       return dariadb::Status(1);
     } else {
       buffer_description = iterator.v->second;
-      /*ENSURE(buffer_description->pos == size_t(0) ||
-             buffer_description->buffer.front().id == value.id);*/
       buffer_description->locker.lock();
     }
   }
@@ -631,20 +629,20 @@ void WALManager::flush_buffer_logic(const BufferDescription_Ptr &bd) {
   return;
 }
 
-void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool /*sync*/) {
-  /*if (_buffer_pos == size_t(0)) {
-    return;
-  }*/
-  // AsyncTask at = [this, bd](const ThreadInfo &ti) {
-  //  TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
+void WALManager::flush_buffer(BufferDescription_Ptr &bd, bool sync) {
+	/*if (_buffer_pos == size_t(0)) {
+	  return;
+	}*/
+	AsyncTask at = [this, bd](const ThreadInfo &ti) {
+		TKIND_CHECK(THREAD_KINDS::DISK_IO, ti.kind);
 
-  flush_buffer_logic(bd);
-  // return false;
-  //};
-  // auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
-  // if (sync) {
-  //  handle->wait();
-  //}
+		flush_buffer_logic(bd);
+		return false;
+	};
+	auto handle = ThreadManager::instance()->post(THREAD_KINDS::DISK_IO, AT(at));
+	if (sync) {
+		handle->wait();
+	}
 }
 
 void WALManager::flush() {

@@ -1,6 +1,7 @@
 v0.5.1
 =====
 - Speed up pages creation.
+- New format for WAL files.
 
 v0.5.0
 =====

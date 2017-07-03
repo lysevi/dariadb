@@ -188,7 +188,6 @@ post_response GET(boost::asio::io_service &service, std::string &port,
   return result;
 }
 
-// TODO replace by fixture
 static dariadb::net::Server *http_server_instance = nullptr;
 
 void http_server_thread_func() {

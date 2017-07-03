@@ -388,6 +388,7 @@ public:
   // from wall
   void append_async(const std::string &file_prefix, const dariadb::MeasArray &ma,
                     on_create_complete_callback callback) {
+	logger("engine: page::append_async start for ", file_prefix);
     if (!dariadb::utils::fs::path_exists(_settings->raw_path.value())) {
       dariadb::utils::fs::mkdir(_settings->raw_path.value());
     }
@@ -412,6 +413,7 @@ public:
       auto index_footer = Page::readIndexFooter(index_fname);
       insert_pagedescr(page_name, index_footer);
       callback(res);
+	  logger("engine: page::append_async end for ", page_name);
     };
     Page::create(file_name, MIN_LEVEL, last_id, _settings->chunk_size.value(), ma,
                  complete_callback);
