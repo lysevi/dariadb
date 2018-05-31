@@ -37,7 +37,7 @@ public:
 	  if (dataPtr != nullptr) {
 		  munmap(dataPtr, sz);
 	  }
-	  auto result = truncate(m_path.c_str(), newSize);
+	  auto result = ftruncate(fd, newSize);
 	  if (result != 0) {
 		  auto errorCode = errno;
 		  std::stringstream ss;
