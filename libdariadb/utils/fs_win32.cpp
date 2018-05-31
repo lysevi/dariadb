@@ -34,52 +34,52 @@ namespace {
 
 	BOOL WinApiSetPrivilege()
 	{
-		LPCTSTR lpszPrivilege = "SeCreateGlobalPrivilege";
-		BOOL bEnablePrivilege = TRUE;
-		HANDLE hToken;
-		// Open a handle to the access token for the calling process. That is this running program
-		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken))
-		{
-			auto ec = GetLastError();
-			MAKE_EXCEPTION("OpenProcessToken() error:"+ errocode_to_string(ec));
-			return FALSE;
-		}
+		//LPCTSTR lpszPrivilege = "SeCreateGlobalPrivilege";
+		//BOOL bEnablePrivilege = TRUE;
+		//HANDLE hToken;
+		//// Open a handle to the access token for the calling process. That is this running program
+		//if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken))
+		//{
+		//	auto ec = GetLastError();
+		//	MAKE_EXCEPTION("OpenProcessToken() error:"+ errocode_to_string(ec));
+		//	return FALSE;
+		//}
 
-		TOKEN_PRIVILEGES tp;
-		LUID luid;
+		//TOKEN_PRIVILEGES tp;
+		//LUID luid;
 
-		if (!LookupPrivilegeValue(
-			NULL,            // lookup privilege on local system
-			lpszPrivilege,   // privilege to lookup 
-			&luid))        // receives LUID of privilege
-		{
-			printf("LookupPrivilegeValue error: %u\n", GetLastError());
-			return FALSE;
-		}
+		//if (!LookupPrivilegeValue(
+		//	NULL,            // lookup privilege on local system
+		//	lpszPrivilege,   // privilege to lookup 
+		//	&luid))        // receives LUID of privilege
+		//{
+		//	printf("LookupPrivilegeValue error: %u\n", GetLastError());
+		//	return FALSE;
+		//}
 
-		tp.PrivilegeCount = 1;
-		tp.Privileges[0].Luid = luid;
-		if (bEnablePrivilege)
-			tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-		else
-			tp.Privileges[0].Attributes = 0;
+		//tp.PrivilegeCount = 1;
+		//tp.Privileges[0].Luid = luid;
+		//if (bEnablePrivilege)
+		//	tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+		//else
+		//	tp.Privileges[0].Attributes = 0;
 
-		// Enable the privilege or disable all privileges.
+		//// Enable the privilege or disable all privileges.
 
-		if (!AdjustTokenPrivileges(
-			hToken,
-			FALSE,
-			&tp,
-			sizeof(TOKEN_PRIVILEGES),
-			(PTOKEN_PRIVILEGES)NULL,
-			(PDWORD)NULL))
-		{
-			throw MAKE_EXCEPTION("AdjustTokenPrivileges error:"+GetLastError());
-		}
+		//if (!AdjustTokenPrivileges(
+		//	hToken,
+		//	FALSE,
+		//	&tp,
+		//	sizeof(TOKEN_PRIVILEGES),
+		//	(PTOKEN_PRIVILEGES)NULL,
+		//	(PDWORD)NULL))
+		//{
+		//	throw MAKE_EXCEPTION("AdjustTokenPrivileges error:"+GetLastError());
+		//}
 
-		if (GetLastError() == ERROR_NOT_ALL_ASSIGNED){
-			throw MAKE_EXCEPTION("WinApiSetPrivilege " + errocode_to_string(GetLastError()));
-		}
+		//if (GetLastError() == ERROR_NOT_ALL_ASSIGNED){
+		//	throw MAKE_EXCEPTION("WinApiSetPrivilege " + errocode_to_string(GetLastError()));
+		//}
 
 		return TRUE;
 	}
