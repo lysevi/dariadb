@@ -66,6 +66,10 @@ TEST_CASE("Utils.FileUtils") {
   for (std::size_t i = 0; i < 2048; i++) {
 	  mapf->data()[i] = uint8_t(2);
   }
+  EXPECT_EQ(mapf->size(), 2048);
+  for (std::size_t i = 0; i < 2048; i++) {
+	  EXPECT_EQ(mapf->data()[i], uint8_t(2));
+  }
   mapf->close();
 
   ls_res = dariadb::utils::fs::ls(".", ".test");
