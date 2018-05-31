@@ -40,7 +40,7 @@ private:
   std::list<std::string> _messages;
 };
 
-bool UnitTestLogger::verbose = true;
+bool UnitTestLogger::verbose = false;
 
 struct LoggerControl : Catch::TestEventListenerBase {
   using TestEventListenerBase::TestEventListenerBase; // inherit constructor

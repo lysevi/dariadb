@@ -36,13 +36,23 @@ public:
   void resize(std::size_t newSize, bool updateDataPtr = true) {
 	  auto sz = size();
 	  if (dataPtr != nullptr) {
-		  munmap(dataPtr, sz);
+		  if (munmap(dataPtr, sz) == -1) {
+			  auto errorCode = errno;
+			  std::stringstream ss;
+			  ss << "resize error: munmap error code:" << errorCode;
+			  if (errorCode != 0)
+			  {
+				  ss << strerror(errno);
+			  }
+			  auto msg = ss.str();
+			  throw MAKE_EXCEPTION(msg);
+		  }
 	  }
 	  auto result = ftruncate(fd, newSize);
 	  if (result != 0) {
 		  auto errorCode = errno;
 		  std::stringstream ss;
-		  ss << "result error: code:" << errorCode;
+		  ss << "resize error: code: ftruncate" << errorCode;
 		  if (errorCode != 0)
 		  {
 			  ss << strerror(errno);
@@ -122,14 +132,18 @@ public:
   }
 
   void closeMap() {
-	  std::cout << "closeMap";
     _closed = true;
 	auto sz = size();
-	std::cout << "size";
-	munmap(dataPtr, sz);
-	std::cout << "munmap";
+	if (munmap(dataPtr, sz) == -1) {
+		std::stringstream ss;
+		ss << "close error: code:" << errno;
+		if (errno != 0) {
+			ss << strerror(errno);
+		}
+		auto msg = ss.str();
+		throw MAKE_EXCEPTION(msg);
+	}
 	::close(fd);
-	std::cout << "close";
   }
 
   uint8_t *data() {
