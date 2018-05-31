@@ -68,7 +68,7 @@ TEST_CASE("Utils.FileUtils") {
   }
   mapf->close();
 
-  ls_res = dariadb::utils::fs::ls(".", ".test");
+  /*ls_res = dariadb::utils::fs::ls(".", ".test");
   EXPECT_TRUE(ls_res.size() == 1);
   auto reopen_mapf = dariadb::utils::fs::MappedFile::open(fname);
   EXPECT_EQ(reopen_mapf->size(), 2048);
@@ -76,7 +76,7 @@ TEST_CASE("Utils.FileUtils") {
   for (std::size_t i = 0; i < 2048; i++) {
     EXPECT_EQ(reopen_mapf->data()[i], uint8_t(2));
   }
-  reopen_mapf->close();
+  reopen_mapf->close();*/
   dariadb::utils::fs::rm(fname);
 
   std::string parent_p = "path1";
