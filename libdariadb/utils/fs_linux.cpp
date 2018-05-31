@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iterator>
 #include <sstream>
-
+#include <iostream>
 void empty_function_fs_linux32() {}
 
 #ifndef WIN32
@@ -122,10 +122,14 @@ public:
   }
 
   void closeMap() {
+	  std::cout << "closeMap";
     _closed = true;
 	auto sz = size();
+	std::cout << "size";
 	munmap(dataPtr, sz);
+	std::cout << "munmap";
 	::close(fd);
+	std::cout << "close";
   }
 
   uint8_t *data() {
