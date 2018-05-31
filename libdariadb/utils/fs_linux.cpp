@@ -60,7 +60,7 @@ public:
 		  auto msg = ss.str();
 		  throw MAKE_EXCEPTION(msg);
 	  }
-	  _fsize = newSize;
+	  updateSize();
 	  if (updateDataPtr) {
 		  remapFile();
 	  }
@@ -76,7 +76,17 @@ public:
 		  throw MAKE_EXCEPTION(ss.str());
 	  }
   }
-	
+
+  void updateSize() {
+	  struct stat st;
+	  if (fstat(fd, &st) < 0) {
+		  std::stringstream ss;
+		  ss << "fileMappingCreate - updateSize failed, fname = "
+			  << m_path << ", " << strerror(errno);
+		  throw MAKE_EXCEPTION(ss.str());
+	  }
+	  _fsize = st.st_size;
+  }
 
   std::size_t size() {
 	  return _fsize;
@@ -100,16 +110,7 @@ public:
 		  if (with_size!=0) {
 			  result->resize(with_size, false);
 		  }
-		  else {
-			  struct stat st;
-			  if (fstat(result->fd, &st) < 0) {
-				  std::stringstream ss;
-				  ss << "fileMappingCreate - fstat failed, fname = "
-					  << result->m_path << ", " << strerror(errno);
-				  throw MAKE_EXCEPTION(ss.str());
-			  }
-			  result->_fsize=st.st_size;
-		  }
+		  result->updateSize();
 		  result->remapFile();
 	  }
 	  catch (std::exception &ex)
