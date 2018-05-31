@@ -6,6 +6,7 @@
 #include <sstream>
 
 #ifndef WIN32
+#include <string.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -34,7 +35,7 @@ public:
 	  if (dataPtr != nullptr) {
 		  munmap(dataPtr, sz);
 	  }
-	  auto result = truncate(newSize);
+	  auto result = truncate(m_path.c_str(), newSize);
 	  if (result != 0) {
 		  auto errorCode = errno;
 		  std::stringstream ss;
@@ -60,7 +61,6 @@ public:
 		  ss<< "fileMappingCreate - mmap failed, fname = "
 			  << m_path << ", " << strerror(errno) << std::endl;
 		  throw MAKE_EXCEPTION(ss.str());
-		  close(fd);
 	  }
   }
 	
@@ -72,7 +72,6 @@ public:
 		  std::stringstream ss;
 		  ss<< "fileMappingCreate - fstat failed, fname = "
 			  << m_path << ", " << strerror(errno);
-		  close(fd);
 		  throw MAKE_EXCEPTION(ss.str());
 	  }
 	  return (size_t)st.st_size;
@@ -89,7 +88,7 @@ public:
 	  
 	  try
 	  {
-		  result->fd = open(result->m_path.c_str(), O_RDONLY, 0);
+		  result->fd = ::open(result->m_path.c_str(), O_RDONLY, 0);
 		  if (result->fd < 0) {
 			  throw MAKE_EXCEPTION("fileMappingCreate - CreateFile failed, fname = " + path +" " + strerror(errno));
 		  }
@@ -120,9 +119,9 @@ public:
 
   void closeMap() {
     _closed = true;
-	sz = size();
+	auto sz = size();
 	munmap(dataPtr, sz);
-	close(fd);
+	::close(fd);
   }
 
   uint8_t *data() {
