@@ -88,7 +88,7 @@ public:
 	  
 	  try
 	  {
-		  result->fd = ::open(result->m_path.c_str(), O_RDONLY, 0);
+		  result->fd = ::open(result->m_path.c_str(), open_flag, 0);
 		  if (result->fd < 0) {
 			  throw MAKE_EXCEPTION("fileMappingCreate - CreateFile failed, fname = " + path +" " + strerror(errno));
 		  }
