@@ -22,6 +22,7 @@ class MappedFile::Private {
 public:
 
   Private() {
+	  _closed = false;
 	  fd = 0;
 	  dataPtr = nullptr;
   }
@@ -49,6 +50,7 @@ public:
 		  auto msg = ss.str();
 		  throw MAKE_EXCEPTION(msg);
 	  }
+	  _fsize = newSize;
 	  if (updateDataPtr) {
 		  remapFile();
 	  }
@@ -56,8 +58,7 @@ public:
   }
 
   void remapFile() {
-	  auto fsize = size();
-	  dataPtr = (unsigned char*)mmap(nullptr, fsize, _read_only?PROT_READ: PROT_WRITE, MAP_PRIVATE, fd, 0);
+	  dataPtr = (unsigned char*)mmap(nullptr, _fsize, _read_only?PROT_READ: PROT_WRITE, MAP_PRIVATE, fd, 0);
 	  if (dataPtr == MAP_FAILED) {
 		  std::stringstream ss;
 		  ss<< "fileMappingCreate - mmap failed, fname = "
@@ -68,15 +69,7 @@ public:
 	
 
   std::size_t size() {
-    // TODO Cache it!
-	  struct stat st;
-	  if (fstat(fd, &st) < 0) {
-		  std::stringstream ss;
-		  ss<< "fileMappingCreate - fstat failed, fname = "
-			  << m_path << ", " << strerror(errno);
-		  throw MAKE_EXCEPTION(ss.str());
-	  }
-	  return (size_t)st.st_size;
+	  return _fsize;
   }
 
   static Private *open(const std::string &path, bool read_only, std::size_t with_size=0) {
@@ -97,6 +90,16 @@ public:
 		  if (with_size!=0) {
 			  result->resize(with_size, false);
 		  }
+		  else {
+			  struct stat st;
+			  if (fstat(result->fd, &st) < 0) {
+				  std::stringstream ss;
+				  ss << "fileMappingCreate - fstat failed, fname = "
+					  << result->m_path << ", " << strerror(errno);
+				  throw MAKE_EXCEPTION(ss.str());
+			  }
+			  result->_fsize=st.st_size;
+		  }
 		  result->remapFile();
 	  }
 	  catch (std::exception &ex)
@@ -104,8 +107,7 @@ public:
 		  std::stringstream ss;
 		  ss << "Exception: " << ex.what();
 		  ss << ", code:" << errno;
-		  if (errno != 0)
-		  {
+		  if (errno != 0){
 			  ss << strerror(errno);
 		  }
 		  auto msg = ss.str();
@@ -152,6 +154,7 @@ protected:
   int fd;
   uint8_t *dataPtr;
   std::string m_path;
+  std::size_t _fsize;
 };
 
 MappedFile::MappedFile(Private *im) : _impl(im) {}
