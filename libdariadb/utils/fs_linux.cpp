@@ -93,7 +93,7 @@ public:
 	  open_flag |= O_CREAT | O_SYNC;
 	  try
 	  {
-		  result->fd = ::open(result->m_path.c_str(), open_flag, 0);
+		  result->fd = ::open(result->m_path.c_str(), open_flag, 0644);
 		  if (result->fd < 0) {
 			  throw MAKE_EXCEPTION("fileMappingCreate - CreateFile failed, fname = " + path +" " + strerror(errno));
 		  }
