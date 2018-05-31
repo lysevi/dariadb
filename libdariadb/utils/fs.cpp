@@ -9,6 +9,82 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#ifdef WIN32
+#include <windows.h>
+#pragma comment(lib, "advapi32.lib")
+namespace {
+	std::string errocode_to_string(DWORD errorCode)
+	{
+		if (errorCode != 0)
+		{
+
+			LPSTR messageBuffer = nullptr;
+			size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+
+			std::string message(messageBuffer, size);
+
+			LocalFree(messageBuffer);
+			return message;
+		}
+		return std::string();
+	}
+
+	BOOL WinApiSetPrivilege()
+	{
+		LPCTSTR lpszPrivilege = "SeCreateGlobalPrivilege";
+		BOOL bEnablePrivilege = TRUE;
+		HANDLE hToken;
+		// Open a handle to the access token for the calling process. That is this running program
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken))
+		{
+			auto ec = GetLastError();
+			MAKE_EXCEPTION("OpenProcessToken() error:", errocode_to_string(ec));
+			return FALSE;
+		}
+
+		TOKEN_PRIVILEGES tp;
+		LUID luid;
+
+		if (!LookupPrivilegeValue(
+			NULL,            // lookup privilege on local system
+			lpszPrivilege,   // privilege to lookup 
+			&luid))        // receives LUID of privilege
+		{
+			printf("LookupPrivilegeValue error: %u\n", GetLastError());
+			return FALSE;
+		}
+
+		tp.PrivilegeCount = 1;
+		tp.Privileges[0].Luid = luid;
+		if (bEnablePrivilege)
+			tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+		else
+			tp.Privileges[0].Attributes = 0;
+
+		// Enable the privilege or disable all privileges.
+
+		if (!AdjustTokenPrivileges(
+			hToken,
+			FALSE,
+			&tp,
+			sizeof(TOKEN_PRIVILEGES),
+			(PTOKEN_PRIVILEGES)NULL,
+			(PDWORD)NULL))
+		{
+			throw MAKE_EXCEPTION("AdjustTokenPrivileges error:"+GetLastError());
+			return FALSE;
+		}
+
+		if (GetLastError() == ERROR_NOT_ALL_ASSIGNED){
+			throw MAKE_EXCEPTION("WinApiSetPrivilege " + errocode_to_string(GetLastError()));
+		}
+
+		return TRUE;
+	}
+}
+#endif
+
 using namespace dariadb::utils::fs;
 namespace bi = boost::interprocess;
 
@@ -138,12 +214,20 @@ std::string read_file(const std::string &fname) {
   return ss.str();
 }
 
+#ifdef WIN32
+//static bool winapi_priv_status = WinApiSetPrivilege();
+#endif
+
 class MappedFile::Private {
 public:
+
   Private() {
+#ifdef WIN32
     _closed = false;
-    m_file = nullptr;
-    m_region = nullptr;
+	dataPtr = NULL;
+	hMapping = NULL;
+	hFile = NULL;
+#endif
   }
 
   ~Private() {
@@ -152,63 +236,180 @@ public:
     }
   }
 
-  static Private *open(const std::string &path, bool read_only) {
-    auto result = new Private();
-    auto open_flag = read_only ? bi::read_only : bi::read_write;
-    result->m_file = new bi::file_mapping(path.c_str(), open_flag);
-    result->m_region = new bi::mapped_region(*(result->m_file), open_flag);
+  void resize(std::size_t newSize, bool updateDataPtr = true) {
+#ifdef WIN32
+	  if(dataPtr!=NULL)
+		UnmapViewOfFile(dataPtr);
+	  if(hMapping!=NULL)
+		CloseHandle(hMapping);
+
+	  auto result = SetFilePointer(hFile, static_cast<DWORD>(newSize), NULL, FILE_BEGIN);
+	  if (result != NULL)
+		  result = SetEndOfFile(hFile);
+	  /*if(result!=NULL)
+		result = SetFilePointer(hFile, 0, NULL, FILE_BEGIN);*/
+	  if (result == NULL) {
+		  auto errorCode = GetLastError();
+		  std::stringstream ss;
+		  ss << "result error: code:" << errorCode;
+		  if (errorCode != 0)
+		  {
+			  ss << errocode_to_string(errorCode);
+		  }
+		  auto msg = ss.str();
+		  throw MAKE_EXCEPTION(msg);
+	  }
+	  if (updateDataPtr) {
+		  hMapping = CreateFileMapping(hFile, nullptr, _read_only ? PAGE_READONLY : PAGE_READWRITE, 0, 0, nullptr);
+		  if (hMapping == nullptr) {
+			  throw MAKE_EXCEPTION("fileMappingCreate - CreateFileMapping failed, fname = " + m_path);
+		  }
+
+		  auto dwFileSize = size();
+		  dataPtr = (unsigned char*)MapViewOfFile(hMapping,
+			  _read_only?FILE_MAP_READ: FILE_MAP_ALL_ACCESS,
+			  0,
+			  0,
+			  dwFileSize);
+		  if (dataPtr == nullptr) {
+			  auto msg = errocode_to_string(GetLastError());
+			  throw MAKE_EXCEPTION("resize - MapViewOfFile failed msg:" + msg);
+		  }
+	  }
+#endif
+  }
+	
+
+  std::size_t size() {
+#ifdef WIN32
+    // TODO Cache it!
+    DWORD dwFileSize = GetFileSize(hFile, nullptr);
+    if (dwFileSize == INVALID_FILE_SIZE) {
+      CloseHandle(hFile);
+	  throw  MAKE_EXCEPTION("fileMappingCreate - GetFileSize failed, fname = " + m_path);
+    }
+    return static_cast<std::size_t>(dwFileSize);
+#endif
+  }
+
+  static Private *open(const std::string &path, bool read_only, std::size_t with_size=0) {
+	  auto result = new Private();
+	  result->m_path = path;
+	  result->_read_only = read_only;
+	  auto open_flag = GENERIC_READ;
+	  if (!read_only) {
+		  open_flag |= GENERIC_WRITE;
+	  }
+#ifdef WIN32
+	  try
+	  {
+		  WinApiSetPrivilege();
+		  result->hFile = CreateFile(path.c_str(), open_flag, 0, nullptr, OPEN_ALWAYS,
+			  FILE_ATTRIBUTE_NORMAL, nullptr);
+		  if (result->hFile == INVALID_HANDLE_VALUE) {
+			  throw MAKE_EXCEPTION("fileMappingCreate - CreateFile failed, fname = " + path);
+		  }
+		  if (with_size!=0) {
+			  result->resize(with_size, false);
+		  }
+		  result->hMapping =
+			  CreateFileMapping(result->hFile, nullptr, read_only?PAGE_READONLY: PAGE_READWRITE, 0, 0, nullptr);
+		  if (result->hMapping == nullptr) {
+			  throw MAKE_EXCEPTION("fileMappingCreate - CreateFileMapping failed, fname = " + path);
+		  }
+		  auto dwFileSize = result->size();
+		  result->dataPtr = (unsigned char*)MapViewOfFile(result->hMapping,
+			  read_only?FILE_MAP_READ: FILE_MAP_ALL_ACCESS,
+			  0,
+			  0,
+			  dwFileSize);
+		  if (result->dataPtr == nullptr) {
+			  throw MAKE_EXCEPTION("fileMappingCreate - MapViewOfFile failed, fname = " + path);
+			  return nullptr;
+		  }
+	  }
+	  catch (std::exception &ex)
+	  {
+		  auto errorCode = GetLastError();
+		  std::stringstream ss;
+		  ss << "Exception: " << ex.what();
+		  ss << ", code:" << errorCode;
+		  if (errorCode != 0)
+		  {
+			  ss << errocode_to_string(errorCode);
+		  }
+		  auto msg = ss.str();
+		  throw MAKE_EXCEPTION(msg);
+	  }
+#endif
+
     return result;
   }
 
   static Private *touch(const std::string &path, uint64_t size) {
-    try {
-      bi::file_mapping::remove(path.c_str());
-      std::filebuf fbuf;
-      fbuf.open(path,
-                std::ios_base::in | std::ios_base::out | std::ios_base::trunc |
-                    std::ios_base::binary);
-      // Set the size
-      fbuf.pubseekoff(size - 1, std::ios_base::beg);
-      fbuf.sputc(0);
-      fbuf.close();
-      return Private::open(path, false);
-    } catch (std::runtime_error &ex) {
-      std::string what = ex.what();
-      throw MAKE_EXCEPTION(ex.what());
-    }
+#ifdef WIN32
+		auto result = Private::open(path, false, size);
+		return result;
+#endif
   }
 
   void close() {
     _closed = true;
-    m_region->flush();
-    delete m_region;
-    delete m_file;
-    m_region = nullptr;
-    m_file = nullptr;
+#ifdef WIN32
+	UnmapViewOfFile(dataPtr);
+    CloseHandle(hMapping);
+    CloseHandle(hFile);
+#endif
   }
 
-  uint8_t *data() { return static_cast<uint8_t *>(m_region->get_address()); }
+  uint8_t *data() {
+#ifdef WIN32
+    return dataPtr;
+#endif
+  }
 
   void flush(std::size_t offset = 0, std::size_t bytes = 0) {
-#ifdef DEBUG
-    // in debug sync flush is very slow.
-    auto flush_res = this->m_region->flush(offset, bytes, true);
-    assert(flush_res);
-#else
-    this->m_region->flush(offset, bytes, false);
+#ifdef WIN32
+	  auto result=FlushViewOfFile(dataPtr+offset, bytes);
+	  if (result != TRUE)
+	  {
+		  auto errorCode = GetLastError();
+		  std::stringstream ss;
+		  ss << "flush error. code:" << errorCode;
+		  if (errorCode != 0)
+		  {
+			  ss << errocode_to_string(errorCode);
+		  }
+		  auto msg = ss.str();
+		  throw MAKE_EXCEPTION(msg);
+	  }
 #endif
   }
 
 protected:
   bool _closed;
+  bool _read_only;
+  std::size_t fsize;
+#ifdef WIN32
+  HANDLE hFile;
+  HANDLE hMapping;
 
-  bi::file_mapping *m_file;
-  bi::mapped_region *m_region;
+  uint8_t *dataPtr;
+#endif
+  std::string m_path;
 };
 
 MappedFile::MappedFile(Private *im) : _impl(im) {}
 
 MappedFile::~MappedFile() {}
+
+void MappedFile::resize(std::size_t newSize) {
+  return _impl->resize(newSize);
+}
+
+std::size_t MappedFile::size() {
+  return _impl->size();
+}
 
 MappedFile::MapperFile_ptr MappedFile::open(const std::string &path, bool read_only) {
   auto impl_res = MappedFile::Private::open(path, read_only);

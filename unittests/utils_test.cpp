@@ -58,16 +58,23 @@ TEST_CASE("Utils.FileUtils") {
 
   const std::string fname = "mapped_file.test";
   auto mapf = dariadb::utils::fs::MappedFile::touch(fname, 1024);
-  for (uint8_t i = 0; i < 100; i++) {
-    mapf->data()[i] = i;
+  for (std::size_t i = 0; i < 1024; i++) {
+    mapf->data()[i] = uint8_t(1);
+  }
+  mapf->flush();
+  mapf->resize(mapf->size() * 2);
+  for (std::size_t i = 0; i < 2048; i++) {
+	  mapf->data()[i] = uint8_t(2);
   }
   mapf->close();
 
   ls_res = dariadb::utils::fs::ls(".", ".test");
   EXPECT_TRUE(ls_res.size() == 1);
   auto reopen_mapf = dariadb::utils::fs::MappedFile::open(fname);
-  for (uint8_t i = 0; i < 100; i++) {
-    EXPECT_EQ(reopen_mapf->data()[i], i);
+  EXPECT_EQ(reopen_mapf->size(), 2048);
+
+  for (std::size_t i = 0; i < 2048; i++) {
+    EXPECT_EQ(reopen_mapf->data()[i], uint8_t(2));
   }
   reopen_mapf->close();
   dariadb::utils::fs::rm(fname);

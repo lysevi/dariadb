@@ -34,9 +34,11 @@ class MappedFile : public utils::NonCopy {
 public:
   using MapperFile_ptr = std::shared_ptr<MappedFile>;
   EXPORT MappedFile(Private *im);
+  EXPORT void resize(std::size_t newSize);
   EXPORT ~MappedFile();
   EXPORT void close();
   EXPORT uint8_t *data();
+  EXPORT std::size_t size();
 
   EXPORT void flush(std::size_t offset = 0, std::size_t bytes = 0);
 
