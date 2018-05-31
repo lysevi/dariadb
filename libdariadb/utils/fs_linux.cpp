@@ -87,7 +87,7 @@ public:
 	  if (!read_only) {
 		  open_flag = O_RDWR ;
 	  }
-	  
+	  open_flag |= O_CREAT | O_SYNC;
 	  try
 	  {
 		  result->fd = ::open(result->m_path.c_str(), open_flag, 0);
@@ -187,7 +187,8 @@ uint8_t *MappedFile::data() {
 void MappedFile::flush(std::size_t offset, std::size_t bytes) {
   _impl->flush(offset, bytes);
 }
-#endif
+
 } // namespace fs
 } // namespace utils
 } // namespace dariadb
+#endif
