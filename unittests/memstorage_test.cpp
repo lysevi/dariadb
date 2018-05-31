@@ -12,7 +12,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "helpers.h"
-
+/*
 // TODO replace by google.mock
 struct MokChunkWriter : public dariadb::ChunkContainer {
   size_t droped;
@@ -243,4 +243,4 @@ TEST_CASE("MemoryStorage.UnlimitAllocatorCommonTest") {
     dariadb_test::storage_test_check(ms.get(), 0, 100, 1, false, true, false);
   }
   dariadb::utils::async::ThreadManager::stop();
-}
+}*/

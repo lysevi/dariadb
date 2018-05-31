@@ -16,7 +16,7 @@
 #include <libdariadb/utils/fs.h>
 #include <libdariadb/utils/logger.h>
 #include <libserver/server.h>
-
+/*
 const dariadb::net::Server::Param binary_server_param(2001, 2002);
 const dariadb::net::client::Client::Param client_param("localhost", 2001, 2002);
 
@@ -399,3 +399,4 @@ TEST_CASE("Network.SchemeTest") {
     server_thread.join();
   }
 }
+*/
