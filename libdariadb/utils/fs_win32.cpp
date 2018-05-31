@@ -9,6 +9,8 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+void empty_function_fs_win32() {}
+
 #ifdef WIN32
 #include <windows.h>
 #pragma comment(lib, "advapi32.lib")
@@ -277,7 +279,9 @@ uint8_t *MappedFile::data() {
 void MappedFile::flush(std::size_t offset, std::size_t bytes) {
   _impl->flush(offset, bytes);
 }
-#endif
+
 } // namespace fs
 } // namespace utils
 } // namespace dariadb
+
+#endif

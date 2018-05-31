@@ -5,6 +5,8 @@
 #include <iterator>
 #include <sstream>
 
+void empty_function_fs_linux32() {}
+
 #ifndef WIN32
 #include <string.h>
 #include <sys/mman.h>
