@@ -68,7 +68,7 @@ public:
   }
 
   void remapFile() {
-	  dataPtr = (unsigned char*)mmap(nullptr, _fsize, _read_only?PROT_READ: PROT_WRITE, MAP_PRIVATE, fd, 0);
+	  dataPtr = (unsigned char*)mmap(nullptr, _fsize, _read_only?PROT_READ: PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	  if (dataPtr == MAP_FAILED) {
 		  std::stringstream ss;
 		  ss<< "fileMappingCreate - mmap failed, fname = "
