@@ -105,7 +105,7 @@ uint64_t writeToFile(FILE *file, FILE *index_file, PageFooter &phdr, IndexFooter
     Chunk::updateChecksum(*chunk_header, chunk_buffer_ptr.get() + skip_count);
 #ifdef DOUBLE_CHECKS
     {
-      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr.get() + skip_count);
+      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr.get() + skip_count, false);
       ENSURE(ch->checkChecksum());
       auto rdr = ch->getReader();
       while (!rdr->is_end()) {
