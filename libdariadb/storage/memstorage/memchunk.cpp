@@ -5,7 +5,7 @@ using namespace dariadb::storage;
 
 MemChunk::MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, uint32_t size,
                    const Meas &first_m, IMemoryAllocator_Ptr _a)
-    : Chunk(index, buffer, size, first_m) {
+    : Chunk(index, buffer, size, first_m, false) {
   index_ptr = index;
   buffer_ptr = buffer;
   _track = nullptr;
@@ -15,7 +15,7 @@ MemChunk::MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer, uint3
 
 MemChunk::MemChunk(bool is_from_pool, ChunkHeader *index, uint8_t *buffer,
                    IMemoryAllocator_Ptr _a)
-    : Chunk(index, buffer) {
+    : Chunk(index, buffer, false) {
   index_ptr = index;
   buffer_ptr = buffer;
   _track = nullptr;

@@ -255,7 +255,7 @@ TEST_CASE("Common.ChunkTest") {
     {
       auto skip_size = dariadb::storage::Chunk::compact(&hdr);
       EXPECT_TRUE(dariadb::storage::Chunk::compact(&hdr) == uint32_t(0));
-      auto ch2 = dariadb::storage::Chunk::open(&hdr, buff + skip_size);
+      auto ch2 = dariadb::storage::Chunk::open(&hdr, buff + skip_size, false);
       auto rdr2 = ch2->getReader();
       size_t readed = 0;
       while (!rdr2->is_end()) {

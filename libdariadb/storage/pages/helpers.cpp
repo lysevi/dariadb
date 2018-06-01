@@ -50,7 +50,7 @@ compressValues(const MeasArray &to_compress, PageFooter &phdr, uint32_t max_chun
       ChunkHeader hdr;
       boost::shared_array<uint8_t> buffer_ptr{new uint8_t[max_chunk_size]};
       memset(buffer_ptr.get(), 0, max_chunk_size);
-      auto ch = Chunk::create(&hdr, buffer_ptr.get(), max_chunk_size, *it);
+      auto ch = Chunk::create(&hdr, buffer_ptr.get(), max_chunk_size, *it, false);
       ++it;
       while (it != end) {
         if (!ch->append(*it)) {

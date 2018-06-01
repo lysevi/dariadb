@@ -54,7 +54,7 @@ void writeChunkToResultPage(std::unordered_map<std::string, ChunkLinkList> &fnam
     auto chunk_callback = [&phdr, &ihdr, &out_index_file,
                            &out_file](const Chunk_Ptr &chunk) {
       // chunk->close();
-      chunk->is_owner = false;
+      chunk->setIsBufferOwner(false);
       if (!chunk->checkChecksum()) {
         THROW_EXCEPTION("checksum error");
       }
@@ -300,7 +300,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
     auto chunk_buffer_ptr = a[i]->_buffer_t;
 #ifdef DEBUG
     {
-      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr);
+      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr, false);
       auto rdr = ch->getReader();
       size_t readed = 0;
       while (!rdr->is_end()) {
@@ -325,7 +325,7 @@ Page_Ptr Page::create(const std::string &file_name, uint16_t lvl, uint64_t chunk
 
 #ifdef DEBUG
     {
-      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr + skip_count);
+      auto ch = Chunk::open(chunk_header, chunk_buffer_ptr + skip_count, false);
       ENSURE(ch->checkChecksum());
       auto rdr = ch->getReader();
       size_t readed = 0;
@@ -506,8 +506,7 @@ Chunk_Ptr Page::readChunkByOffset(FILE *page_io, int offset) {
     THROW_EXCEPTION("engine: page read error");
   }
   Chunk_Ptr ptr = nullptr;
-  ptr = Chunk::open(cheader, buffer);
-  ptr->is_owner = true;
+  ptr = Chunk::open(cheader, buffer, true);
 #ifdef DOUBLE_CHECKS
   if (!ptr->checkChecksum()) {
     logger_fatal("engine: bad checksum of chunk #", ptr->header->id,

@@ -78,28 +78,29 @@ public:
 };
 
 Chunk_Ptr Chunk::create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
-                        const Meas &first_m) {
-  return std::make_shared<Chunk>(hdr, buffer, _size, first_m);
+                        const Meas &first_m, bool is_data_owner) {
+  return std::make_shared<Chunk>(hdr, buffer, _size, first_m, is_data_owner);
 }
 
-Chunk_Ptr Chunk::open(ChunkHeader *hdr, uint8_t *buffer) {
-  return std::make_shared<Chunk>(hdr, buffer);
+Chunk_Ptr Chunk::open(ChunkHeader *hdr, uint8_t *buffer, bool is_data_owner) {
+  return std::make_shared<Chunk>(hdr, buffer, is_data_owner);
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer)
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, bool is_buffer_owner)
     : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + hdr->size})) {
+	_is_owner = is_buffer_owner;
   header = hdr;
   ENSURE(header->stat.maxTime != MIN_TIME);
   ENSURE(header->stat.minTime != MAX_TIME);
   _buffer_t = buffer;
-  is_owner = false;
 
   bw = c_writer.getBinaryBuffer();
   bw->set_pos(header->bw_pos);
 }
 
-Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m)
+Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m, bool is_buffer_owner)
     : c_writer(std::make_shared<ByteBuffer>(Range{buffer, buffer + _size})) {
+	_is_owner = is_buffer_owner;
   _buffer_t = buffer;
   header = hdr;
   header->size = _size;
@@ -114,7 +115,6 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
   header->is_sorted = uint8_t(1);
 
   std::fill(_buffer_t, _buffer_t + header->size, 0);
-  is_owner = false;
 
   bw = c_writer.getBinaryBuffer();
   bw->reset_pos();
@@ -127,7 +127,7 @@ Chunk::Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &firs
 
 Chunk::~Chunk() {
   this->bw = nullptr;
-  if (is_owner) {
+  if (_is_owner) {
     delete[] this->_buffer_t;
     delete this->header;
   }

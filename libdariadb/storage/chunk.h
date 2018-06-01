@@ -77,11 +77,11 @@ public:
   typedef uint8_t *u8vector;
 
   EXPORT static Chunk_Ptr create(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size,
-                                 const Meas &first_m);
-  EXPORT static Chunk_Ptr open(ChunkHeader *hdr, uint8_t *buffer);
+                                 const Meas &first_m, bool is_data_owner = false);
+  EXPORT static Chunk_Ptr open(ChunkHeader *hdr, uint8_t *buffer, bool is_data_owner);
 
-  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m);
-  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer);
+  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, uint32_t _size, const Meas &first_m, bool is_data_owner);
+  EXPORT Chunk(ChunkHeader *hdr, uint8_t *buffer, bool is_data_owner);
 
   EXPORT ~Chunk();
 
@@ -99,12 +99,14 @@ public:
   EXPORT static uint32_t calcChecksum(ChunkHeader &hdr, u8vector buff);
   /// return - count of skipped bytes.
   EXPORT static uint32_t compact(ChunkHeader *hdr);
+  void setIsBufferOwner(bool is_owner) { _is_owner = is_owner; }
   ChunkHeader *header;
   u8vector _buffer_t;
 
   compression::ByteBuffer_Ptr bw;
   compression::CopmressedWriter c_writer;
-  bool is_owner; // true - dealloc memory for header and buffer.
+private:
+  bool _is_owner; // true - dealloc memory for header and buffer.
 };
 
 typedef std::list<Chunk_Ptr> ChunksList;
