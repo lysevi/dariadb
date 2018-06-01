@@ -11,7 +11,7 @@ MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
 
 option(DARIADB_ENABLE_TESTS "Enable testing of the dariadb." ON)
 option(DARIADB_ENABLE_INTEGRATION_TESTS "Enable integration test." ON)
-option(DARIADB_ENABLE_SERVER "Enable build dariadb server." OFF)
+option(DARIADB_ENABLE_SERVER "Enable build dariadb server." OÒ)
 option(DARIADB_ENABLE_BENCHMARKS "Enable build dariadb benchmarks." ON)
 option(DARIADB_ENABLE_SAMPLES "Build dariadb sample programs." OFF)
 option(DARIADB_ENABLE_DOUBLECHECKS "More checks in code." OFF)
