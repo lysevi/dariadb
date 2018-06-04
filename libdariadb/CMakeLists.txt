@@ -8,6 +8,7 @@ FILE(GLOB STORE_HDRS "storage/*.h")
 FILE(GLOB MSTORE_HDRS "storage/memstorage/*.h")
 FILE(GLOB PSTORE_HDRS "storage/pages/*.h")
 FILE(GLOB WSTORE_HDRS "storage/wal/*.h")
+FILE(GLOB KVSTORE_HDRS "storage/kvs/*.h")
 FILE(GLOB SCHEME_HDRS "scheme/*.h")
 FILE(GLOB ENGINES_HDRS "engines/*.h")
 FILE(GLOB STATISTIC_HDRS "statistic/*.h")
@@ -23,6 +24,7 @@ FILE(GLOB STORE_SRC "storage/*.cpp")
 FILE(GLOB MSTORE_SRC "storage/memstorage/*.cpp")
 FILE(GLOB PSTORE_SRC "storage/pages/*.cpp")
 FILE(GLOB WSTORE_SRC "storage/wal/*.cpp")
+FILE(GLOB KVSTORE_SRC "storage/kvs/*.cpp")
 FILE(GLOB UTILS_SRC "utils/*.cpp")
 FILE(GLOB UTILS_ASYNC_SRC "utils/async/*.cpp")
 FILE(GLOB INTERFACES_SRC "interfaces/*.cpp")
@@ -36,6 +38,7 @@ source_group(storage FILES ${STORE_HDRS} ${STORE_SRC})
 source_group(storage\\memstorage FILES ${MSTORE_HDRS} ${MSTORE_SRC})
 source_group(storage\\pages FILES ${PSTORE_HDRS} ${PSTORE_SRC})
 source_group(storage\\wal FILES ${WSTORE_HDRS} ${WSTORE_SRC})
+source_group(storage\\kvs FILES ${KVSTORE_HDRS} ${KVSTORE_SRC})
 source_group(utils FILES ${UTILS_HDRS} ${UTILS_SRC})
 source_group(utils\\async FILES ${UTILS_ASYNC_HDRS} ${UTILS_ASYNC_SRC})
 source_group(interfaces FILES ${INTERFACES_SRC} ${INTERFACES_HDRS})
@@ -51,6 +54,7 @@ SET(SRC  ${GLOB_HDRS} ${GLOB_SRC}
 	 ${MSTORE_HDRS} ${MSTORE_SRC} 
 	 ${PSTORE_HDRS} ${PSTORE_SRC} 
 	 ${WSTORE_HDRS} ${WSTORE_SRC} 
+	 ${KVSTORE_HDRS} ${KVSTORE_SRC}
 	 ${UTILS_HDRS}  ${UTILS_SRC} 
 	 ${UTILS_ASYNC_HDRS}  ${UTILS_ASYNC_SRC} 
          ${INTERFACES_HDRS} ${INTERFACES_SRC}
